@@ -15,6 +15,12 @@
 #define S32_AT(p, o) (*(s32*)((u8*)(p) + (o)))
 #define U32_AT(p, o) (*(u32*)((u8*)(p) + (o)))
 
+/**
+ * @brief Form a typed pointer from a byte offset plus a base address.
+ * @note The integer sum keeps the offset as the first addu operand; pointer + int would not.
+ */
+#define OFFSET_FIRST_PTR(type, offset, base) ((type*)((offset) + (s32)(base)))
+
 /** @brief Geometry span, image allocation, and flags for an actor resource. */
 typedef struct
 {
@@ -87,37 +93,6 @@ typedef struct
     s32 y;
     s32 z;
 } MoverPosition;
-
-/** @brief Map bounds stored in the field scratch area. */
-typedef struct
-{
-    s16 width;
-    s16 height;
-    s16 unknown_0x04;
-    u8 _pad6[0xC - 6];
-    s16 unknown_0x0c;
-} MoverBounds;
-
-/** @brief Scratchpad position, motion, and collision resolver state. */
-typedef struct
-{
-    s32 position[3];
-    s32 motion[3];
-    s32 height;
-    s32 contact;
-    s32 surface;
-    s16 radius;
-    s16 depth;
-    union
-    {
-        s32 word;
-        struct
-        {
-            s16 status;
-            s16 flags;
-        } halves;
-    } mode;
-} ScratchMover;
 
 /** @brief Default scene spawn position and packed facing selector. */
 typedef union
@@ -328,7 +303,6 @@ static void field_prepare_transition_tiles(void);
  */
 void field_seek_scene_resource(s32 scene_selector)
 {
-
     cdrom_queue_seek((scene_selector & 0x7FFF) + CD_RES_FIELD_SCENE_BASE);
 }
 
@@ -368,7 +342,6 @@ void field_set_scene_parameters(s32 scene_id, s32 object_id, u32 spawn_id, s32 m
  */
 void field_update_scene(void)
 {
-
     void akao_cmd_c1();
     void akao_cmd_f1();
 
@@ -475,7 +448,6 @@ void field_update_scene(void)
     u8* direction_entry;
     u8* list_source;
     u8* list_output;
-    FieldSceneActorPosition* actor_flags;
     FieldSceneActorPosition* actor_position;
     u8* scene_cursor;
     FieldSceneActorPosition* initial_position;
@@ -687,12 +659,12 @@ void field_update_scene(void)
         }
         g_field_scene_data_size = resource_output - g_field_scene_data_buffer;
         g_field_previous_song_volume = g_field_song_volume;
-        g_field_song_volume = (s32)U16_AT(scene_cursor, 0x0);
-        g_field_party_palette_index = (s32)U16_AT(scene_cursor, 0x2);
+        g_field_song_volume = U16_AT(scene_cursor, 0x0);
+        g_field_party_palette_index = U16_AT(scene_cursor, 0x2);
         scene_cursor += 4;
         field_set_party_palettes();
         actor_index = 3;
-        field_initialize_actor_parts((u16)U16_AT(scene_cursor, 0) >> 0xF);
+        field_initialize_actor_parts(U16_AT(scene_cursor, 0) >> 15);
         g_field_hide_actor_panels = 0;
         field_upload_transition_tiles();
         *persistent_map = U16_AT(scene_cursor, 0) & 0x7FFF;
@@ -732,15 +704,15 @@ void field_update_scene(void)
                     }
                 }
                 palette_index += image_count;
-                if ((u32)(palette_index - 6) < 4U)
+                if (palette_index >= 6 && palette_index < 10)
                 {
                     palette_index += 4;
                 }
                 if (image_count != 0)
                 {
                     resource_base = resource_table;
-                    resource_fields = (FieldSceneResource*)(resource_offset + (s32)resource_base);
-                    resource_fields->palette = (u16)description->palette;
+                    resource_fields = OFFSET_FIRST_PTR(FieldSceneResource, resource_offset, resource_base);
+                    resource_fields->palette = description->palette;
                     resource_fields->image_page = palette_index;
                     if (D_80115890 != 0)
                     {
@@ -748,44 +720,38 @@ void field_update_scene(void)
                     }
                     else
                     {
-                        resource_fields->multiple_images = (s8)(image_count != 1);
+                        resource_fields->multiple_images = image_count != 1;
                     }
                     D_80115890 = image_count != 1;
                     resource_base = resource_table;
-                    resource = (FieldSceneResource*)(resource_offset + (s32)resource_base);
-                    resource->geometry_start = (s32)g_field_resource_cursor;
-                    resource->flags = (s32)((resource->flags & ~1) | ((u8)description->flags >> 7));
+                    resource = OFFSET_FIRST_PTR(FieldSceneResource, resource_offset, resource_base);
+                    resource->geometry_start = g_field_resource_cursor;
+                    resource->flags = (resource->flags & ~1) | (description->flags >> 7);
                     field_copy_scene_geometry((s32*)(geometry_base + geometry_offsets[0]), (s32*)(geometry_base + geometry_offsets[1]));
-                    resource->geometry_end = (s32)g_field_resource_cursor;
-                    resource->flags = (s32)(resource->flags | 2);
+                    resource->geometry_end = g_field_resource_cursor;
+                    resource->flags |= 2;
                     action_ids = description->actions;
-                    resource->unknown_0x0e = (u16)description->unknown_0x0a;
+                    resource->unknown_0x0e = description->unknown_0x0a;
                     image_index = description->action_count;
                     action_index = 0;
                     if (image_index > 0)
                     {
                         action_fields = description->actions;
-
                         do
                         {
-                            action = (FieldSceneAction*)(action_offset + action_index * sizeof(FieldSceneAction) + (s32)action_base);
+                            action = OFFSET_FIRST_PTR(FieldSceneAction, action_offset + action_index * sizeof(FieldSceneAction), action_base);
                             action->flags.bits.special = action_fields->flags.bits.special;
-                            action->id = (u16)action_ids->id;
-
+                            action->id = action_ids->id;
                             action->flags.bytes.low = (u8)action_fields->flags.word;
                             action_index += 1;
-                            action->animation = (u16)action_fields->animation;
+                            action->animation = action_fields->animation;
                             action_ids++;
-                            action->requirement = (u16)action_fields->requirement;
+                            action->requirement = action_fields->requirement;
                             action->flags.bits.mode = action_fields->flags.bits.mode;
                             action_fields++;
                         } while (action_index < image_index);
-                        image_index = 0;
                     }
-                    else
-                    {
-                        image_index = 0;
-                    }
+                    image_index = 0;
                 }
                 else
                 {
@@ -796,34 +762,32 @@ void field_update_scene(void)
                     MoveImage(&rect, 0, actor_index + 0x1F7);
                     previous_resource = (FieldSceneResource*)(((actor_index + 2) * 0x14) + g_field_resource_entries);
                     resource_base = g_field_resource_entries;
-                    inherited_resource = (FieldSceneResource*)(resource_offset + (s32)resource_base);
-                    inherited_resource->palette = (u16)previous_resource->palette;
-                    inherited_resource->image_page = (u8)previous_resource->image_page;
+                    inherited_resource = OFFSET_FIRST_PTR(FieldSceneResource, resource_offset, resource_base);
+                    inherited_resource->palette = previous_resource->palette;
+                    inherited_resource->image_page = previous_resource->image_page;
                     inherited_resource->multiple_images = 0;
-                    inherited_resource->geometry_start = (s32)g_field_resource_cursor;
-                    inherited_resource->flags = (s32)((inherited_resource->flags & ~1) | ((u8)description->flags >> 7));
+                    inherited_resource->geometry_start = g_field_resource_cursor;
+                    inherited_resource->flags = (inherited_resource->flags & ~1) | (description->flags >> 7);
                     field_copy_scene_geometry((s32*)(geometry_base + geometry_offsets[0]), (s32*)(geometry_base + geometry_offsets[1]));
-                    inherited_resource->geometry_end = (s32)g_field_resource_cursor;
-                    inherited_resource->flags = (s32)(inherited_resource->flags | 2);
+                    inherited_resource->geometry_end = g_field_resource_cursor;
+                    inherited_resource->flags |= 2;
                     action_ids = description->actions;
-                    inherited_resource->unknown_0x0e = (u16)description->unknown_0x0a;
+                    inherited_resource->unknown_0x0e = description->unknown_0x0a;
                     image_index = description->action_count;
                     action_index = 0;
                     if (image_count < image_index)
                     {
                         action_fields = description->actions;
-
                         do
                         {
-                            action = (FieldSceneAction*)(action_offset + action_index * sizeof(FieldSceneAction) + (s32)action_base);
+                            action = OFFSET_FIRST_PTR(FieldSceneAction, action_offset + action_index * sizeof(FieldSceneAction), action_base);
                             action->flags.bits.special = action_fields->flags.bits.special;
-                            action->id = (u16)action_ids->id;
-
+                            action->id = action_ids->id;
                             action->flags.bytes.low = (u8)action_fields->flags.word;
                             action_index += 1;
-                            action->animation = (u16)action_fields->animation;
+                            action->animation = action_fields->animation;
                             action_ids++;
-                            action->requirement = (u16)action_fields->requirement;
+                            action->requirement = action_fields->requirement;
                             action->flags.bits.mode = action_fields->flags.bits.mode;
                             action_fields++;
                         } while (action_index < image_index);
@@ -838,7 +802,7 @@ void field_update_scene(void)
                     do
                     {
                         first_image = image_index == 0;
-                        field_upload_actor_image(image_base + *(s32*)((s32)image_base + (*image_cursor << 2)), image_palette, actor_index + 3, first_image);
+                        field_upload_actor_image(image_base + *(s32*)(image_base + (*image_cursor << 2)), image_palette, actor_index + 3, first_image);
                         image_cursor++;
                         image_count--;
                         image_index++;
@@ -929,24 +893,23 @@ void field_update_scene(void)
         direction_base = g_field_direction_animation_modes;
         do
         {
-            actor_flags = actor_position;
-            if (actor_flags->presence != 0xFF)
+            if (actor_position->presence != 0xFF)
             {
                 actor_position->x = spawn_record->h.x << 8;
-                actor_flags->y = (s32)(spawn_record->h.y << 8);
-                actor_flags->z = (s32)(spawn_record->h.z << 8);
+                actor_position->y = spawn_record->h.y << 8;
+                actor_position->z = spawn_record->h.z << 8;
                 offset.vx = S16_AT(spacing_base, (spawn_record->h.facing & 0xF) * 4) * actor_index;
                 offset.vy = 0;
                 offset.vz = S16_AT(spacing_base, (spawn_record->h.facing & 0xF) * 4 + 2) * actor_index;
                 field_move_actor_position(actor_position, &offset.vx);
-                actor_flags->facing = (s8)((spawn_record->h.facing & 0xF) << 5);
-                direction_entry = (u8*)(((spawn_record->h.facing & 0xF) * 4) + (s32)direction_base);
+                actor_position->facing = (spawn_record->h.facing & 0xF) << 5;
+                direction_entry = OFFSET_FIRST_PTR(u8, (spawn_record->h.facing & 0xF) * 4, direction_base);
                 actor_mode = (S32_AT(direction_entry, 0) & ~0x80) % 5;
                 direction_flag = U8_AT(direction_entry, 0) & 0x80;
                 actor_mode |= direction_flag;
-                actor_flags->animation_mode = actor_mode;
-                actor_flags->animation_timer = 0;
-                actor_flags->active = 1;
+                actor_position->animation_mode = actor_mode;
+                actor_position->animation_timer = 0;
+                actor_position->active = 1;
                 field_restart_actor_animation(actor_position);
             }
             actor_index += 1;
@@ -987,7 +950,6 @@ void field_update_scene(void)
  */
 static void field_reset_fallback_resource(void)
 {
-
     extern FieldFallbackResourceTable g_field_resource_entries;
     extern u8 D_800EB274[];
 
@@ -1031,19 +993,12 @@ static void field_upload_actor_image(void* image_data, s32 image_page, s32 actor
     height = ((FieldTimBlock*)image_data)->rect.h;
     if (image_page >= 10)
     {
-        rect.x = 960 - ((image_page - 9) << 6);
-        rect.y = 256;
+        setRECT(&rect, 960 - ((image_page - 9) << 6), 256, width, height);
     }
     else
     {
-        rect.x = 832 - (image_page << 6);
-        rect.y = 0;
+        setRECT(&rect, 832 - (image_page << 6), 0, width, height);
     }
-    do
-    {
-        rect.w = width;
-    } while (0);
-    rect.h = height;
     LoadImage(&rect, ((FieldTimBlock*)image_data)->pixels);
     DrawSync(0);
 }
@@ -1081,7 +1036,6 @@ static void field_copy_scene_geometry(s32* src, s32* end)
  */
 static void field_load_scene_actors(s32* data)
 {
-
     extern FieldLoadedActor g_field_scene_actors[];
     extern FieldLoadedActorSlot g_field_scene_object_states[];
     extern FieldLoadedActorVisual g_field_object_parts[];
@@ -1093,8 +1047,8 @@ static void field_load_scene_actors(s32* data)
     FieldLoadedActor* actor = g_field_scene_actors;
     FieldLoadedActorSlot* slot = g_field_scene_object_states;
     FieldActionRequest* entry = (FieldActionRequest*)(data + 1);
-    s32 active = 0;
-    s32 index = active;
+    s32 loaded_count = 0;
+    s32 index = 0;
     s32 count = *data;
     s32 i;
     u32 tag;
@@ -1102,73 +1056,58 @@ static void field_load_scene_actors(s32* data)
     u8 blue;
 
     D_800FE774 = 3;
-    if (count > 0)
+    for (; index < count; index++, entry++)
     {
-        do
+        slot->tag &= 0x7FFFFFFF;
+        field_install_actor_action(entry, index);
+        if (entry->control.flags < 0)
         {
-            slot->tag &= 0x7FFFFFFF;
-            field_install_actor_action(entry, index);
-            if (entry->control.flags < 0)
+            field_initialize_actor_record(loaded_count + 3, entry->source.actor + 3);
+            if (((u32)entry->control.flags >> 30) & 1)
             {
-                field_initialize_actor_record(active + 3, entry->source.actor + 3);
-                if (((u32)entry->control.flags >> 30) & 1)
-                {
-                    actor->presence = 0xFE;
-                }
-                else
-                {
-                    actor->presence = 0;
-                }
-                actor->mode.bits.group = (u32)entry->control.flags >> 28;
-                if ((g_field_pending_scene_id & 0x7FFF) == 0x13D)
-                {
-                    actor->mode.bits.group = 0;
-                }
-                actor->mode.bits.render = (u32)entry->control.flags >> 24;
-                actor->x = entry->position.halves.x << 8;
-                actor->z = (entry->position.halves.z & 0x7FF) << 8;
-                actor->y = (entry->position.word >> 30) << 8;
-                slot->state.bits.bit6 = 0;
-                slot->state.bits.bit7 = 0;
-                slot->options &= 0xFFFF7FFF;
-                slot->red = g_field_object_parts[actor->slot].red;
-                slot->green = g_field_object_parts[actor->slot].green;
-                blue = g_field_object_parts[actor->slot].blue;
-                slot->alpha = 0;
-                slot->unknown18e = 0;
-                tag = slot->tag & 0x80FFFFFF;
-                slot->state.bits.bit5 = 0;
-                slot->tag = tag;
-                slot->blue = blue;
-                slot->tag = (tag & 0xFF000000) | (slot->base & 0xFFFFFF);
-                i = 0;
-                do
-                {
-                    slot_base = slot->base;
-                    slot->index = index + 3;
-                } while (0);
-
-                slot->link = slot_base & 0xFFFFFF;
-                slot->id = entry->enabled_events;
-                slot->flags = entry->control.flags;
-                do
-                {
-                    slot->params[i] = entry->scripts[i];
-                    i++;
-                } while (i < FIELD_ACTION_SCRIPT_COUNT);
-                field_restart_actor_animation(actor);
-                slot++;
-                actor++;
-                active++;
-                D_800FE774++;
+                actor->presence = 0xFE;
             }
-            do
+            else
             {
-                index++;
-            } while (0);
-
-            entry++;
-        } while (index < count);
+                actor->presence = 0;
+            }
+            actor->mode.bits.group = (u32)entry->control.flags >> 28;
+            if ((g_field_pending_scene_id & 0x7FFF) == 0x13D)
+            {
+                actor->mode.bits.group = 0;
+            }
+            actor->mode.bits.render = (u32)entry->control.flags >> 24;
+            actor->x = entry->position.halves.x << 8;
+            actor->z = (entry->position.halves.z & 0x7FF) << 8;
+            actor->y = (entry->position.word >> 30) << 8;
+            slot->state.bits.bit6 = 0;
+            slot->state.bits.bit7 = 0;
+            slot->options &= 0xFFFF7FFF;
+            slot->red = g_field_object_parts[actor->slot].red;
+            slot->green = g_field_object_parts[actor->slot].green;
+            blue = g_field_object_parts[actor->slot].blue;
+            slot->alpha = 0;
+            slot->unknown18e = 0;
+            tag = slot->tag & 0x80FFFFFF;
+            slot->state.bits.bit5 = 0;
+            slot->tag = tag;
+            slot->blue = blue;
+            slot->tag = (tag & 0xFF000000) | (slot->base & 0xFFFFFF);
+            slot_base = slot->base;
+            slot->index = index + 3;
+            slot->link = slot_base & 0xFFFFFF;
+            slot->id = entry->enabled_events;
+            slot->flags = entry->control.flags;
+            for (i = 0; i < FIELD_ACTION_SCRIPT_COUNT; i++)
+            {
+                slot->params[i] = entry->scripts[i];
+            }
+            field_restart_actor_animation(actor);
+            slot++;
+            actor++;
+            loaded_count++;
+            D_800FE774++;
+        }
     }
 }
 
@@ -1178,7 +1117,6 @@ static void field_load_scene_actors(s32* data)
  */
 static void field_refresh_actor_collisions(void)
 {
-
     extern FieldCollisionActor g_field_actors[];
     extern FieldCollisionSlot g_field_object_states[];
     extern s32 func_8005B6AC(FieldCollisionRequest*);
@@ -1236,13 +1174,12 @@ static void field_refresh_actor_collisions(void)
 void field_move_actor_position(void* actor, void* motion)
 {
     extern u8 D_800FE3CE;
-    extern s32 func_8005B6AC(ScratchMover * mover);
+    extern s32 func_8005B6AC(FieldCollisionRequest*);
 
-    MoverBounds* bounds = (MoverBounds*)0x801ED400;
-    ScratchMover* mover = (ScratchMover*)0x1F800000;
+    FieldCollisionBounds* bounds = (FieldCollisionBounds*)0x801ED400;
+    FieldCollisionRequest* mover = (FieldCollisionRequest*)0x1F800000;
     s32 position_z;
     s32 position_x;
-    s32 mode_flags;
 
     position_x = ((MoverPosition*)actor)->x;
     if (position_x < 0)
@@ -1264,37 +1201,35 @@ void field_move_actor_position(void* actor, void* motion)
         return;
     }
 
-    mover->position[0] = position_x;
-    mover->position[1] = ((MoverPosition*)actor)->y;
-    mover->position[2] = ((MoverPosition*)actor)->z;
-    mover->motion[0] = ((s32*)motion)[0];
-    mover->motion[1] = ((s32*)motion)[1];
-    mover->motion[2] = ((s32*)motion)[2];
+    mover->x = position_x;
+    mover->y = ((MoverPosition*)actor)->y;
+    mover->z = ((MoverPosition*)actor)->z;
+    mover->dx = ((s32*)motion)[0];
+    mover->dy = ((s32*)motion)[1];
+    mover->dz = ((s32*)motion)[2];
 
     if ((u8)D_800FE3CE >= 0x40)
     {
         mover->radius = 0xC;
-        mover->mode.halves.status = 8;
+        mover->mode.bits.step = 8;
     }
     else
     {
         mover->radius = 9;
-        mover->mode.halves.status = 6;
+        mover->mode.bits.step = 6;
     }
 
-    ((volatile ScratchMover*)mover)->depth = 0x10;
-    mode_flags = ((volatile ScratchMover*)mover)->mode.word;
+    mover->depth = 0x10;
     mover->contact = -1;
     mover->surface = 0;
-    mode_flags &= 0xFFFDFFFF;
-    mode_flags &= 0xFFFEFFFF;
-    mover->mode.word = mode_flags;
+    mover->mode.bits.bit17 = 0;
+    mover->mode.bits.bit16 = 0;
 
     func_8005B6AC(mover);
 
-    ((MoverPosition*)actor)->x = mover->position[0];
-    ((MoverPosition*)actor)->z = mover->position[2];
-    ((MoverPosition*)actor)->y = mover->position[1];
+    ((MoverPosition*)actor)->x = mover->x;
+    ((MoverPosition*)actor)->z = mover->z;
+    ((MoverPosition*)actor)->y = mover->y;
 }
 
 /**
@@ -1303,7 +1238,6 @@ void field_move_actor_position(void* actor, void* motion)
  */
 void field_set_party_palettes(void)
 {
-
     extern FieldPaletteResource g_field_resource_entries[];
     extern FieldPartyResource g_field_player_records[];
     extern u16 D_800EB2B4[];
@@ -1331,7 +1265,7 @@ void field_set_party_palettes(void)
 }
 
 /**
- * @brief Refresh the two field fade actions in VRAM and flip the source bank.
+ * @brief Upload the two field transition tiles to VRAM and flip the source bank.
  */
 static void field_upload_transition_tiles(void)
 {
@@ -1369,11 +1303,10 @@ static void field_upload_transition_tiles(void)
 }
 
 /**
- * @brief Replace black pixels in the transition actions for a white fade target.
+ * @brief Recolor the transition tile pixels for a white or a black fade target.
  */
 static void field_prepare_transition_tiles(void)
 {
-
     extern s32 D_801178B8;
     extern FieldTransitionFade g_field_fade_target;
     extern u16 D_800EB2D4[];
@@ -1388,7 +1321,9 @@ static void field_prepare_transition_tiles(void)
         for (i = 0; i < 0x800; i++, p++)
         {
             if ((*p & 0x7FFF) == 0)
+            {
                 *p = 0xFFFF;
+            }
         }
     }
     else
@@ -1397,7 +1332,9 @@ static void field_prepare_transition_tiles(void)
         for (i = 0; i < 0x800; i++, p++)
         {
             if (*p == 0xFFFF)
+            {
                 *p = 0;
+            }
         }
     }
 }

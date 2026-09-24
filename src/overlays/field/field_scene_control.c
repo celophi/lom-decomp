@@ -17,7 +17,10 @@
  * @note Clearing bit 0x40 through this view reproduces the target's codegen for
  *       the movie tear-down path (see field_update_scene_animations).
  */
-typedef struct { u32 word : 32; } CdWordBits;
+typedef struct
+{
+    u32 word : 32;
+} CdWordBits;
 
 extern u16 g_field_movie_frame_width;
 extern u16 g_field_movie_frame_height;
@@ -313,8 +316,7 @@ void field_start_animation(FieldSeq* seq)
         {
             anim->timer = 1;
         }
-        if (((*(s32*)&def->flags & 0xFF000007) == 3) ||
-            ((def->handler_group == 1) && ((def->flags & 7) >= 2)))
+        if (((*(s32*)&def->flags & 0xFF000007) == 3) || ((def->handler_group == 1) && ((def->flags & 7) >= 2)))
         {
             anim->flags.word |= 0x20;
         }
@@ -400,7 +402,7 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
     case 1:
         anim = scene->strips;
         break;
-        /*hack*/
+        /* Unreachable loop note before case 3: stops CSE following the dispatch (CSE-11 in idioms.md). */
         do
         {
         } while (0);
@@ -473,8 +475,7 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
             {
                 anim->timer = 1;
             }
-            if (((*(s32*)&def->flags & 0xFF000007) == 3) ||
-                ((def->handler_group == 1) && ((def->flags & 7) >= 2)))
+            if (((*(s32*)&def->flags & 0xFF000007) == 3) || ((def->handler_group == 1) && ((def->flags & 7) >= 2)))
             {
                 anim->flags.word |= 0x20;
             }
@@ -858,9 +859,7 @@ void func_8005A0D0(s16 index, u16 red_scale, u16 green_scale, u16 blue_scale)
     owner = (FieldTintSrc*)scene->objects;
     while (owner != NULL)
     {
-        if ((index == -1 || index == i) &&
-            (owner->red_scale != red_scale || owner->green_scale != green_scale ||
-             owner->blue_scale != blue_scale))
+        if ((index == -1 || index == i) && (owner->red_scale != red_scale || owner->green_scale != green_scale || owner->blue_scale != blue_scale))
         {
             tint = owner->palette;
             rgb[0] = owner->red * red_scale;
@@ -2085,9 +2084,8 @@ void func_8005B0F4(s32 index, s32 from_keyframe)
 }
 
 
-#include "common.h"
-
-typedef struct {
+typedef struct
+{
     u8 _pad[0x2C];
     s32 unk2C;
     s32 unk30;
@@ -2095,28 +2093,28 @@ typedef struct {
 
 typedef struct ApiNode
 {
-    struct ApiNode *unk0;   /* 0x00 next pointer */
-    s32 definition;      /* 0x04 compared by field_find_object_by_definition */
-    u8 _pad[0x10];       /* 0x08-0x17 */
-    s8 unk18;            /* 0x18 byte written by func_8005B228 */
+    struct ApiNode* unk0; /* 0x00 next pointer */
+    s32 definition;       /* 0x04 compared by field_find_object_by_definition */
+    u8 _pad[0x10];        /* 0x08-0x17 */
+    s8 unk18;             /* 0x18 byte written by func_8005B228 */
 } ApiNode;
 
 struct CollNode;
 
 typedef struct
 {
-    u8 _pad0[4];           /* 0x00-0x03 */
-    ApiNode *objects;          /* 0x04 head of the scene object list */
-    ApiNode *unk8;             /* 0x08 head of the node list */
-    u8 _pad1[0x10 - 0xC];   /* 0x0C-0x0F */
-    struct CollNode *coll_list; /* 0x10 collision-node list traversed by func_8005B368 */
-    u8 _pad2[0x28 - 0x14];  /* 0x14-0x27 */
-    s32 unk28;              /* 0x28 flag gating the func_8005F5BC call */
+    u8 _pad0[4];                /* 0x00-0x03 */
+    ApiNode* objects;           /* 0x04 head of the scene object list */
+    ApiNode* unk8;              /* 0x08 head of the node list */
+    u8 _pad1[0x10 - 0xC];       /* 0x0C-0x0F */
+    struct CollNode* coll_list; /* 0x10 collision-node list traversed by func_8005B368 */
+    u8 _pad2[0x28 - 0x14];      /* 0x14-0x27 */
+    s32 unk28;                  /* 0x28 flag gating the func_8005F5BC call */
 } ApiFieldScene;
 
 typedef struct
 {
-    ApiFieldScene *scene;
+    ApiFieldScene* scene;
 } ApiFieldSceneGlobals;
 
 extern s32 D_801ED02C;
@@ -2130,9 +2128,11 @@ void func_8005F5BC(s32, ApiNode*, ApiFieldScene*, s32);
  * @brief If D_801ED02C is zero, set it to 1 and write 0x100 to D_801ED030.
  * @see decomp.me (100%) TODO
  */
-void func_8005B1EC(void) {
-    volatile ApiFieldState *s = (volatile ApiFieldState *)0x801ED000;
-    if (s->unk2C == 0) {
+void func_8005B1EC(void)
+{
+    volatile ApiFieldState* s = (volatile ApiFieldState*)0x801ED000;
+    if (s->unk2C == 0)
+    {
         s->unk2C = 1;
         s->unk30 = 0x100;
     }
@@ -2143,7 +2143,8 @@ void func_8005B1EC(void) {
  * @return 1 if D_801ED02C != 0, 0 otherwise.
  * @see decomp.me (100%) TODO
  */
-s32 func_8005B218(void) {
+s32 func_8005B218(void)
+{
     return D_801ED02C != 0;
 }
 
@@ -2163,19 +2164,22 @@ s32 func_8005B218(void) {
  *       without changing another instruction.
  * @see decomp.me (100%) https://decomp.me/scratch/lN7ye
  */
-void func_8005B228(s32 arg0, s32 arg1) {
+void func_8005B228(s32 arg0, s32 arg1)
+{
     ApiNode* var_a1;
     s32 var_v0;
-    ApiFieldScene* scene = ((ApiFieldScene *)g_field_scene.scene);
+    ApiFieldScene* scene = ((ApiFieldScene*)g_field_scene.scene);
 
     var_a1 = scene->unk8;
     var_v0 = arg0 - 1;
-    while (var_v0 != -1) {
+    while (var_v0 != -1)
+    {
         var_a1 = var_a1->unk0;
         var_v0 -= 1;
     }
     var_a1->unk18 = arg1;
-    if (scene->unk28 != 0) {
+    if (scene->unk28 != 0)
+    {
         func_8005F5BC(0, var_a1, scene, arg1);
     }
 }
@@ -2185,7 +2189,8 @@ void func_8005B228(s32 arg0, s32 arg1) {
  * @param arg0 Value to store.
  * @see decomp.me (100%) TODO
  */
-void func_8005B288(s32 arg0) {
+void func_8005B288(s32 arg0)
+{
     D_801ED490 = arg0;
 }
 
@@ -2241,8 +2246,7 @@ void field_apply_pixel_lookup(u16* pixels, s32 pixel_count, s32 table_index, voi
             count -= 1;
             *ptr = *(u16*)(table_base + max_component * 2) + (pixel & 0x8000);
             ptr += 1;
-        }
-        while (count != -1);
+        } while (count != -1);
     }
 }
 
@@ -2262,7 +2266,7 @@ void* field_find_object_by_definition(s32 definition)
 {
     ApiNode* node;
 
-    node = ((ApiFieldScene *)g_field_scene.scene)->objects;
+    node = ((ApiFieldScene*)g_field_scene.scene)->objects;
     if (node != 0)
     {
         do
@@ -2272,8 +2276,7 @@ void* field_find_object_by_definition(s32 definition)
                 return node;
             }
             node = node->unk0;
-        }
-        while (node != 0);
+        } while (node != 0);
     }
     return 0;
 }

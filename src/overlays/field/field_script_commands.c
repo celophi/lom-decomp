@@ -418,17 +418,9 @@ void func_800BD99C(void)
     s32 i;
 
     func_800B177C();
-    do
+    for (i = 0; i < (s32)((Foo*)D_80122B78)->f400.count; i++)
     {
-        i = 0;
-    } while (0);
-    if (((Foo*)D_80122B78)->f400.count != 0)
-    {
-        do
-        {
-            func_800B286C(((Foo*)D_80122B78)->elem[i].unk0, 0xD, 0x82);
-            i += 1;
-        } while (i < (s32)((Foo*)D_80122B78)->f400.count);
+        func_800B286C(((Foo*)D_80122B78)->elem[i].unk0, 0xD, 0x82);
     }
     ((Foo*)D_80122B78)->f400.flags &= 0xFFF9FFFF;
     D_8010AE78 = 0;
@@ -510,12 +502,12 @@ void func_800BDBAC(s32 unused, FieldNibbleRecord* record)
     {
         {
             SourceEntry* entry;
-            entry = (SourceEntry*)(base + ((record->row * 0x30) + (*(volatile u16*)&record->offset - 0x60)));
+            entry = (SourceEntry*)(base + ((record->offset - 0x60) + (record->row * 0x30)));
             record->low = entry->packed & 0xF;
         }
         {
             SourceEntry* entry;
-            entry = (SourceEntry*)(base + ((record->row * 0x30) + (*(volatile u16*)&record->offset - 0x60)));
+            entry = (SourceEntry*)(base + ((record->offset - 0x60) + (record->row * 0x30)));
             record->high = entry->packed >> 4;
         }
     }
@@ -524,15 +516,15 @@ void func_800BDBAC(s32 unused, FieldNibbleRecord* record)
 void func_800BDC40(s32 arg0, UnkStruct800BDC40* arg1)
 {
     FieldPos pos;
-    s32 var_a1;
+    s32 index;
 
-    var_a1 = -1;
+    index = -1;
     if (arg1->unk14 != 0xFF)
     {
-        var_a1 = arg1->unk14;
+        index = arg1->unk14;
     }
 
-    func_8005AF5C(arg1->unk10, var_a1, &pos);
+    func_8005AF5C(arg1->unk10, index, &pos);
 
     arg1->unk4 = pos.x;
     arg1->unk8 = pos.y;
@@ -546,44 +538,44 @@ void func_800BDC40(s32 arg0, UnkStruct800BDC40* arg1)
  */
 void func_800BDCA4(s32 arg0, Command* arg1)
 {
-    u8* temp_a1;
+    u8* buffer;
 
     u8** context;
-    s32 temp_v0_4;
-    s32 temp_v0_5;
-    u16 temp_v1;
-    u32 temp_v1_2;
-    u8* temp_s1;
-    s32 temp_v0_2;
-    s32 temp_v0_3;
-    u8* temp_a1_2;
-    u8* temp_v1_3;
-    u8* temp_v1_4;
+    s32 remaining;
+    s32 repeat_left;
+    u16 opcode;
+    u32 item_id;
+    u8* record;
+    s32 count;
+    s32 stock;
+    u8* frame;
+    u8* inventory;
+    u8* counts;
     u32 allocation_offset;
 
-    temp_v1 = arg1->opcode;
-    switch (temp_v1)
+    opcode = arg1->opcode;
+    switch (opcode)
     {
     case 0:
-        temp_a1 = D_80122B78 + 0x104;
-        D_80123FC4 = temp_a1;
-        func_800C1EC8(0, temp_a1, 0x60);
+        buffer = D_80122B78 + 0x104;
+        D_80123FC4 = buffer;
+        func_800C1EC8(0, buffer, 0x60);
         return;
     case 1:
-        temp_s1 = field_find_free_inventory_record();
-        if (temp_s1 != 0)
+        record = field_find_free_inventory_record();
+        if (record != 0)
         {
             context = &D_80122B74;
-            temp_v1_2 = arg1->argC;
-            if (temp_v1_2 < 0x40U)
+            item_id = arg1->argC;
+            if (item_id < 0x40U)
             {
-                temp_v1_3 = *context + temp_v1_2;
-                temp_v0_2 = temp_v1_3[0x25E0];
-                if (temp_v0_2 != 0)
+                inventory = *context + item_id;
+                count = inventory[0x25E0];
+                if (count != 0)
                 {
-                    temp_v1_3[0x25E0] = (u8)(temp_v0_2 - 1);
-                    func_800BE888(temp_s1, arg1->arg4, arg1->arg8, arg1->argC);
-                    allocation_offset = (u32)temp_s1 - 0xCE0;
+                    inventory[0x25E0] = (u8)(count - 1);
+                    func_800BE888(record, arg1->arg4, arg1->arg8, arg1->argC);
+                    allocation_offset = (u32)record - 0xCE0;
                     arg1->result = (u16)((allocation_offset - (u32)*context) >> 12);
                     return;
                 }
@@ -602,15 +594,15 @@ void func_800BDCA4(s32 arg0, Command* arg1)
         arg1->result = 0xFA;
         return;
     case 2:
-        temp_s1 = D_80122B74 + ((arg1->arg4 << 6) + 0xCE0);
-        if (*temp_s1 != 0)
+        record = D_80122B74 + ((arg1->arg4 << 6) + 0xCE0);
+        if (*record != 0)
         {
-            temp_v1_4 = D_80122B74 + arg1->arg8;
-            temp_v0_3 = temp_v1_4[0x25E0];
-            if (temp_v0_3 != 0)
+            counts = D_80122B74 + arg1->arg8;
+            stock = counts[0x25E0];
+            if (stock != 0)
             {
-                temp_v1_4[0x25E0] = (u8)(temp_v0_3 - 1);
-                func_800BEC44(temp_s1, arg1->arg8);
+                counts[0x25E0] = (u8)(stock - 1);
+                func_800BEC44(record, arg1->arg8);
                 arg1->result = (u16)arg1->arg4;
                 return;
             }
@@ -625,9 +617,9 @@ void func_800BDCA4(s32 arg0, Command* arg1)
             do
             {
                 func_800BF9A0(arg1->arg4);
-                temp_v0_4 = arg1->arg8 - 1;
-                arg1->arg8 = temp_v0_4;
-            } while (temp_v0_4 != 0);
+                remaining = arg1->arg8 - 1;
+                arg1->arg8 = remaining;
+            } while (remaining != 0);
             return;
         }
         break;
@@ -637,16 +629,16 @@ void func_800BDCA4(s32 arg0, Command* arg1)
             do
             {
                 func_800BF880(arg1->arg4);
-                temp_v0_5 = arg1->arg8 - 1;
-                arg1->arg8 = temp_v0_5;
-            } while (temp_v0_5 != 0);
+                repeat_left = arg1->arg8 - 1;
+                arg1->arg8 = repeat_left;
+            } while (repeat_left != 0);
             return;
         }
         break;
     case 5:
-        temp_v0_4 = func_800BF9F0(arg1->arg4);
-        temp_a1_2 = g_field_script + (*(s32*)(g_field_script + 4) * 0xC);
-        *(s32*)(temp_a1_2 + 0xC) = (s32)((*(s32*)(temp_a1_2 + 0xC) & ~1) | (temp_v0_4 & 1));
+        remaining = func_800BF9F0(arg1->arg4);
+        frame = g_field_script + (*(s32*)(g_field_script + 4) * 0xC);
+        *(s32*)(frame + 0xC) = (s32)((*(s32*)(frame + 0xC) & ~1) | (remaining & 1));
         return;
     case 6:
         func_800BD520(0, 0x7100, func_800BF68C(arg1->arg4, arg1->arg8, arg1->argC));
@@ -743,27 +735,27 @@ void func_800BE0E0(s32 arg0, CameraCommand* arg1)
     Bounds* bounds;
     s32* destination;
     State* state;
-    s32 temp_a0;
-    s32 temp_a0_2;
-    s32 temp_v0;
-    s32 temp_v0_2;
-    s32 temp_v1_2;
-    s32 var_v1;
-    s32 var_v1_2;
-    u16 temp_v1;
-    s32 var_a0;
+    s32 offset_x;
+    s32 offset_y;
+    s32 view_y;
+    s32 half_y;
+    s32 view_x;
+    s32 limit_x;
+    s32 limit_y;
+    u16 mode;
+    s32 actor;
 
-    temp_v1 = arg1->unk2;
-    switch (temp_v1)
+    mode = arg1->unk2;
+    switch (mode)
     { /* irregular */
     case 0:
-        temp_v1_2 = (s32)-D_80122B70->unk4 >> 8;
-        ((State*)D_80122B78)->unk424 = temp_v1_2;
-        D_8010CFD8 = temp_v1_2;
-        temp_v0 = (s32)-D_80122B70->unkC >> 9;
-        ((State*)D_80122B78)->unk428 = temp_v0;
-        D_8010CFDC = temp_v0;
-        if ((temp_v1_2 | temp_v0) == 0)
+        view_x = (s32)-D_80122B70->unk4 >> 8;
+        ((State*)D_80122B78)->unk424 = view_x;
+        D_8010CFD8 = view_x;
+        view_y = (s32)-D_80122B70->unkC >> 9;
+        ((State*)D_80122B78)->unk428 = view_y;
+        D_8010CFDC = view_y;
+        if ((view_x | view_y) == 0)
         {
             D_8010CFDC = 1;
         }
@@ -772,55 +764,55 @@ void func_800BE0E0(s32 arg0, CameraCommand* arg1)
     case 1:
         D_8010CFD8 = arg1->unk4;
         D_8010CFDC = arg1->unk8;
-        goto block_26;
+        D_8010AE74 = arg1->unkC;
+        return;
     case 2:
         bounds = (Bounds*)0x801ED400;
         if (arg1->unk0 == 0xFF)
         {
-            var_a0 = *g_field_script;
+            actor = *g_field_script;
         }
         else
         {
-            var_a0 = arg1->unk0;
+            actor = arg1->unk0;
         }
-        func_80087F44(var_a0, position);
-        temp_a0 = (position[0] >> 8) - 0xA0;
+        func_80087F44(actor, position);
+        offset_x = (position[0] >> 8) - 0xA0;
         destination = &D_8010CFD8;
-        if (temp_a0 > 0)
+        if (offset_x > 0)
         {
-            var_v1 = bounds->width - 0x140;
-            if (temp_a0 < var_v1)
+            limit_x = bounds->width - 0x140;
+            if (offset_x < limit_x)
             {
-                var_v1 = temp_a0;
+                limit_x = offset_x;
             }
-            *destination = var_v1;
+            *destination = limit_x;
         }
         else
         {
             *destination = 0;
         }
-        temp_a0_2 = ((s32)(position[2] - position[1]) >> 8) - 0xE0;
+        offset_y = ((s32)(position[2] - position[1]) >> 8) - 0xE0;
         destination = &D_8010CFDC;
-        if (temp_a0_2 > 0)
+        if (offset_y > 0)
         {
-            var_v1_2 = (s16)bounds->height - 0x1C0;
-            if (temp_a0_2 < var_v1_2)
+            limit_y = (s16)bounds->height - 0x1C0;
+            if (offset_y < limit_y)
             {
-                var_v1_2 = temp_a0_2;
+                limit_y = offset_y;
             }
-            *destination = var_v1_2;
+            *destination = limit_y;
         }
         else
         {
             *destination = 0;
         }
-        temp_v0_2 = D_8010CFDC / 2;
-        D_8010CFDC = temp_v0_2;
-        if ((D_8010CFD8 | temp_v0_2) == 0)
+        half_y = D_8010CFDC / 2;
+        D_8010CFDC = half_y;
+        if ((D_8010CFD8 | half_y) == 0)
         {
             D_8010CFDC = 1;
         }
-    block_26:
         D_8010AE74 = arg1->unkC;
         return;
     case 3:
@@ -839,18 +831,18 @@ void func_800BE2F0(s32 arg0, UnkStruct800BE2F0* arg1)
 
 void func_800BE324(s32 arg0, UnkStruct800BE324* arg1)
 {
-    s32 var_a0;
+    s32 actor;
 
     if (arg1->unk0 == 0xFF)
     {
-        var_a0 = *g_field_script;
+        actor = *g_field_script;
     }
     else
     {
-        var_a0 = arg1->unk0;
+        actor = arg1->unk0;
     }
 
-    func_80087D8C(var_a0, arg1->unk4, -arg1->unk8, arg1->unkC);
+    func_80087D8C(actor, arg1->unk4, -arg1->unk8, arg1->unkC);
 }
 
 /**
@@ -868,31 +860,31 @@ void func_800BE324(s32 arg0, UnkStruct800BE324* arg1)
  */
 void func_800BE37C(s32 arg0, SomeStruct* arg1)
 {
-    s32 var_a0;
-    u16 temp_v1;
-    s32 var_v0;
-    s32 var_a3;
+    s32 actor;
+    u16 packed;
+    s32 index;
+    s32 flag;
 
     if (arg1->unk0 == 0xFF)
     {
-        var_a0 = *g_field_script;
+        actor = *g_field_script;
     }
     else
     {
-        var_a0 = arg1->unk0;
+        actor = arg1->unk0;
     }
-    temp_v1 = arg1->unk2;
-    var_a3 = 1;
-    if (temp_v1 & 0x80)
+    packed = arg1->unk2;
+    flag = 1;
+    if (packed & 0x80)
     {
-        var_v0 = temp_v1 & 0x7F;
+        index = packed & 0x7F;
     }
     else
     {
-        var_a3 = 0;
-        var_v0 = arg1->unk2;
+        flag = 0;
+        index = arg1->unk2;
     }
-    field_set_actor_render_state(arg1->unk4, arg1->unk8, arg1->unkC, var_a3, var_v0, var_a0);
+    field_set_actor_render_state(arg1->unk4, arg1->unk8, arg1->unkC, flag, index, actor);
 }
 
 /**
@@ -904,9 +896,9 @@ void func_800BE404(s32 arg0, ArgB800BE404* arg1)
 {
     s32 id;
     s32 handle;
-    s32 s4;
-    s32 s3;
-    s32 s1;
+    s32 override_0;
+    s32 override_1;
+    s32 override_2;
 
     if (arg1->unk0 == 0xFF)
     {
@@ -922,25 +914,25 @@ void func_800BE404(s32 arg0, ArgB800BE404* arg1)
         if (handle != 0)
         {
             func_80087D8C(id, arg1->unk4, arg1->unk8, arg1->unkC);
-            s4 = -1;
+            override_0 = -1;
             func_80087614(id, ((StructB78B800BE404*)D_80122B78)->unk403);
             if (arg1->unk10 != 0xFF)
             {
-                s4 = arg1->unk10;
+                override_0 = arg1->unk10;
             }
-            s3 = -1;
+            override_1 = -1;
             if (arg1->unk14 != 0xFF)
             {
-                s3 = arg1->unk14;
+                override_1 = arg1->unk14;
             }
-            s1 = -1;
+            override_2 = -1;
             if (arg1->unk18 != 0xFF)
             {
-                s1 = arg1->unk18;
+                override_2 = arg1->unk18;
             }
             func_800C1EC8(0, (void*)handle, 0x68);
             func_800B3F1C(id, handle, (s32)func_80087F0C(id));
-            func_80089D44(id, s4, s3, s1);
+            func_80089D44(id, override_0, override_1, override_2);
         }
     }
 }

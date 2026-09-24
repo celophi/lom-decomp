@@ -129,7 +129,6 @@ void func_800A4D1C(u8 *render_context);
  * @param cancel_index Selection used when cancelling, or minus one to disable it.
  * @note The six-halfword load buffer also holds the signed screen coordinates.
  * @note Subtracting the negated offset preserves the original addition operand order.
- * @note GCC 2.7.2 CDK matches all 215 instructions (860 bytes).
  */
 void func_800A43E8(s32 position_mode, s32 resource_index, u16 excluded_mask, s32 cancel_index)
 {
@@ -139,14 +138,9 @@ void func_800A43E8(s32 position_mode, s32 resource_index, u16 excluded_mask, s32
     s16 screen_x;
     s16 screen_y;
     s32 rotation;
-    s32 unused_count;
-    s32 unused_actor_x;
-    s32 unused_actor_z;
     s32 bit;
-    s32 unused_actor_y;
     s32 camera_x;
     s32 camera_y;
-    s32 unused_camera_z;
     s32 index;
     u32 resource_info;
     u8 *saved_index;
@@ -266,10 +260,10 @@ u8 func_800A4778(void)
 
 /**
  * @brief Drive the ring selection state machine for one frame and redraw it.
- * @param arg0 Render context passed through to the draw routine.
+ * @param render_context Render context passed through to the draw routine.
  * @return 1 while the ring is active, 0 when it is idle.
  */
-s32 func_800A4798(s32 arg0)
+s32 func_800A4798(u8 *render_context)
 {
     extern s32 D_8011F3AC;
     s32 state;
@@ -295,7 +289,7 @@ s32 func_800A4798(s32 arg0)
             break;
     }
 
-    func_800A4D1C(arg0);
+    func_800A4D1C(render_context);
     return 1;
 }
 
@@ -370,7 +364,6 @@ void func_800A496C(void)
  * @note Active rotation interpolates over ten updates before snapping to its target.
  * @note Input branches remain independent so simultaneous button bits retain order.
  * @note Save the current rotation before decrementing the selected index.
- * @note GCC 2.7.2 CDK matches all 196 instructions (784 bytes), with no stack frame.
  */
 void func_800A4A0C(void)
 {
@@ -392,20 +385,12 @@ void func_800A4A0C(void)
     if (g_pad_input & 0x220)
     {
         D_8011F3AC = 3;
-        if (D_8011F37C != -1)
+        if ((D_8011F37C != -1) && (D_8011F378 == D_8011F37C))
         {
-            if (D_8011F378 == D_8011F37C)
-            {
-                D_8011F358[D_8011F334] = 0;
-            }
-            else
-            {
-                goto select_current;
-            }
+            D_8011F358[D_8011F334] = 0;
         }
         else
         {
-select_current:
             D_8011F358[D_8011F334] = (u8) D_8011F378;
         }
     }
@@ -447,9 +432,6 @@ select_current:
 void func_800A4D1C(u8 *render_context)
 {
     extern u8 D_8011F388[];
-    s32 top;
-    s16 right;
-    s32 bottom;
     s32 *bucket;
     POLY_FT4 *prim;
     u32 address_mask;
@@ -470,7 +452,6 @@ void func_800A4D1C(u8 *render_context)
     s32 right_u;
     s32 bottom_v;
     s32 brightness;
-    s32 packet_code;
     u16 left;
     u8 *entry;
     u8 tile;
@@ -486,20 +467,8 @@ void func_800A4D1C(u8 *render_context)
         entry = D_8011F388;
         do
         {
-            do
-            {
-                setPolyFT4(prim);
-                packet_code = D_8011F3B4;
-                if (packet_code == 0)
-                {
-                    packet_code = 0x2C;
-                }
-                else
-                {
-                    packet_code = 0x2E;
-                }
-                prim->code = packet_code;
-            } while (0);
+            setPolyFT4(prim);
+            setSemiTrans(prim, D_8011F3B4);
             columns = 0x100 / (s32)D_8011F348;
             tile = *entry;
             u_or_angle = ((s32)tile % columns) * D_8011F348;
@@ -515,10 +484,7 @@ void func_800A4D1C(u8 *render_context)
             prim->v3 = bottom_v;
             prim->v2 = bottom_v;
             u_or_angle = ((s32)(index << 0xC) / (s32)D_8011F3B8) + D_8011F3C0;
-            do
-            {
-                final_cosine = rcos(u_or_angle);
-            } while (0);
+            final_cosine = rcos(u_or_angle);
             brightness = (u8)D_8011F3BC +
                          ((s32)(((s32)D_8011F3BC >> 1) * (final_cosine - 0x1000)) >> 0xD);
             prim->b0 = brightness;
@@ -539,47 +505,14 @@ void func_800A4D1C(u8 *render_context)
             prim->x0 = left;
             vertical_product = D_8011F350 * rcos(u_or_angle);
             prim->tpage = 0x25;
-            do
-            {
-                top = (u16)D_8011F344;
-            } while (0);
-            top += vertical_product >> 0xE;
-            top -= height >> 1;
-            prim->y0 = top;
-            do
-            {
-                bottom = top;
-                top++;
-                top--;
-                do
-                {
-                    right = (u16)prim->x0;
-                } while (0);
-                bottom += height;
-                prim->y1 = top;
-                prim->y3 = bottom;
-                prim->y2 = bottom;
-            } while (0);
-            do
-            {
-                do
-                {
-                    do
-                    {
-                        right += v_or_width;
-                        prim->x3 = right;
-                        prim->x1 = right;
-                    } while (0);
-                } while (0);
-            } while (0);
+            prim->y1 = prim->y0 = (u16)D_8011F344 + (vertical_product >> 0xE) - (height >> 1);
+            prim->y2 = prim->y3 = prim->y0 + height;
+            prim->x1 = prim->x3 = prim->x0 + v_or_width;
             prim->clut = (s16)((*entry & 0x3F) | 0x7C80);
             visible_depth = (rcos(u_or_angle) - 0x1000) / 64;
             if (visible_depth <= 0)
             {
-                do
-                {
-                    depth_cosine = rcos(u_or_angle);
-                } while (0);
+                depth_cosine = rcos(u_or_angle);
                 depth_numerator = depth_cosine - 0x1000;
                 if (depth_numerator < 0)
                 {
@@ -612,36 +545,37 @@ void func_800A4D1C(u8 *render_context)
 
 /**
  * @brief Stream a field data chunk from CD and copy its sections into RAM.
- * @param arg0 Destination bank selector; also scales the D_801148B0 copy offset.
- * @param arg1 CD queue id (low 16 bits) of the chunk to read.
+ * @param bank Destination bank; bank 2 also copies the action table, and it scales the D_801148B0 offset.
+ * @param queue_id CD queue id (low 16 bits) of the chunk to read.
  */
-void func_800A5174(s32 arg0, s32 arg1)
+void func_800A5174(s32 bank, s32 queue_id)
 {
-    s32 *temp_v0;
-    s32 temp_v0_2;
-    BufHdr *temp_s0;
-    u8 *temp_a0;
+    s32 *action_section;
+    s32 section_start;
+    BufHdr *header;
+    u8 *action_entries;
     s32 count;
 
-    temp_s0 = (BufHdr *)D_8010D038;
-    cdrom_queue_read(arg1 & 0xFFFF, temp_s0);
+    header = (BufHdr *)D_8010D038;
+    cdrom_queue_read(queue_id & 0xFFFF, header);
     cdrom_wait_queue_empty();
-    temp_v0 = (s32 *)(D_8010D038 + temp_s0->unk0);
-    temp_a0 = (u8 *)temp_v0 + 4;
-    count = *temp_v0;
-    if (arg0 == 2) {
+    action_section = (s32 *)(D_8010D038 + header->unk0);
+    action_entries = (u8 *)action_section + 4;
+    count = *action_section;
+    if (bank == 2)
+    {
         u8 *dst = g_field_resource_actions;
         dst += 0x320;
-        bcopy(temp_a0, dst, count * 8);
+        bcopy(action_entries, dst, count * 8);
     }
-    temp_s0 = (BufHdr *)((u8 *)temp_s0 + 4);
+    header = (BufHdr *)((u8 *)header + 4);
     {
         u8 *src = D_8010D038;
         s32 end;
-        temp_v0_2 = temp_s0->unk0;
-        end = temp_s0->unk4;
-        src += temp_v0_2;
-        bcopy(src, D_801148B0 + (arg0 << 12), end - temp_v0_2);
+        section_start = header->unk0;
+        end = header->unk4;
+        src += section_start;
+        bcopy(src, D_801148B0 + (bank << 12), end - section_start);
     }
 }
 
@@ -758,7 +692,8 @@ void func_800A5224(RenderContext *context, s32 layout)
     }
 }
 
-/** @brief Upload palettes for the three active runtime slots.
+/**
+ * @brief Upload palettes for the three active runtime slots.
  * @see decomp.me (100%)
  */
 void func_800A54D0(void)

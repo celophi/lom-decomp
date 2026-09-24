@@ -175,6 +175,7 @@ void func_800A2594(s32 player, s32 age_sequence)
         player_word_offset = player * 4;
         current_buttons = buttons & 0xFFFF;
         direction_nibble = current_buttons >> 12;
+        /* Goto loop: as a real loop, loop.c hoists D_80117E88 and spills (88.6%). */
 button_loop:
         {
             pressed_bit = current_buttons & button_mask;
@@ -245,16 +246,16 @@ button_loop:
 
 /**
  * @brief Shift a player's row of the byte history table down by one entry.
- * @param arg0 Row index into D_80117E98.
+ * @param player Row index into D_80117E98.
  */
-void func_800A2958(s32 arg0)
+void func_800A2958(s32 player)
 {
     extern u8 D_80117E98[][0x10];
     s32 i;
 
     for (i = 0; i < 0xF; i++)
     {
-        D_80117E98[arg0][i] = D_80117E98[arg0][i + 1];
+        D_80117E98[player][i] = D_80117E98[player][i + 1];
     }
 }
 
@@ -370,7 +371,6 @@ s32 func_800A29F8(s32 player, s32 unused, s32 peek)
                     } while (direction_row[direction_end++] < 0x10);
                     direction_end--;
                 }
-            block_10:
                 pattern_index = 0;
                 if (*(history_row + direction_end) == 0x50)
                 {
@@ -424,12 +424,10 @@ s32 func_800A29F8(s32 player, s32 unused, s32 peek)
                                 }
                             }
                         }
-                    block_23:
-                        do { pattern_index += 1; } while (0);
+                                do { pattern_index += 1; } while (0);
                         pattern_offset += 8;
                     } while (pattern_index < 6);
                 }
-            block_24:
                 scan_index = direction_end - 1;
                 break;
             case 0x50:
@@ -481,56 +479,49 @@ s32 func_800A29F8(s32 player, s32 unused, s32 peek)
                 }
                 return command_id;
             case 0x70:
+                /* 0x70/0x80/0x40/0x20 keep a do/while(0); it sets the player/peek registers (99.46% without). */
                 command_id = 1;
                 do
                 {
-                    if (peek != 0)
+                    if (peek == 0)
                     {
-                        goto case70_done;
+                        func_800A2DD8(player);
+                        return 1U;
                     }
                 } while (0);
-                do { func_800A2DD8(player); } while (0);
-                return 1U;
-            case70_done:
                 return command_id;
             case 0x80:
                 command_id = 0;
                 do
                 {
-                    if (peek != 0)
+                    if (peek == 0)
                     {
-                        goto case80_done;
+                        func_800A2DD8(player);
+                        return 0U;
                     }
                 } while (0);
-                do { func_800A2DD8(player); } while (0);
-                return 0U;
-            case80_done:
                 return command_id;
             case 0x40:
                 command_id = 4;
                 do
                 {
-                    if (peek != 0)
+                    if (peek == 0)
                     {
-                        goto case40_done;
+                        func_800A2DD8(player);
+                        return 4U;
                     }
                 } while (0);
-                do { func_800A2DD8(player); } while (0);
-                return 4U;
-            case40_done:
                 return command_id;
             case 0x20:
                 command_id = 6;
                 do
                 {
-                    if (peek != 0)
+                    if (peek == 0)
                     {
-                        goto case20_done;
+                        func_800A2DD8(player);
+                        return 6U;
                     }
                 } while (0);
-                do { func_800A2DD8(player); } while (0);
-                return 6U;
-            case20_done:
                 return command_id;
             case 0x30:
                 command_id = 5;
@@ -568,13 +559,13 @@ s32 func_800A29F8(s32 player, s32 unused, s32 peek)
 
 /**
  * @brief Clear a player's history count if the index is in range.
- * @param arg0 Player index; only indices below two are cleared.
+ * @param player Player index; only indices below two are cleared.
  */
-void func_800A2DD8(s32 arg0)
+void func_800A2DD8(s32 player)
 {
-    if (arg0 < 2)
+    if (player < 2)
     {
-        D_80117E88[arg0] = 0;
+        D_80117E88[player] = 0;
     }
 }
 

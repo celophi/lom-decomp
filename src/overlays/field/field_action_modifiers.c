@@ -1,210 +1,165 @@
+/**
+ * @file field_action_modifiers.c
+ * @brief Field battle action handlers: damage, status effects, defeat
+ *        handling and the attack/defense modifiers they share.
+ */
+
 #include "game_audio.h"
 #include "common.h"
-typedef struct
+#include "field_records.h"
+
+/** @brief Script variable: number of party records still standing. */
+#define FIELD_VAR_ALLY_COUNT 0x4280
+
+/** @brief Script variable: number of monster records still standing. */
+#define FIELD_VAR_ENEMY_COUNT 0x4284
+
+/** @brief Script variable: battle result reported by func_800B65CC. */
+#define FIELD_VAR_BATTLE_RESULT 0x4288
+
+/** @brief Script variable: record id watched by func_800B6334 (-1 when none). */
+#define FIELD_VAR_WATCHED_RECORD 0x428C
+
+/** @brief Per-record script variable receiving the element mask of an action. */
+#define FIELD_VAR_RECORD_ELEMENTS 0xD008
+
+/** @brief Debug flags: log damage, and spare the party or the monsters. */
+#define FIELD_VAR_DEBUG_LOG_DAMAGE 0xFFC
+#define FIELD_VAR_DEBUG_SPARE_PARTY 0xFFA
+#define FIELD_VAR_DEBUG_SPARE_ENEMIES 0xFFB
+
+/** @brief func_800B62D8 results. */
+#define FIELD_BATTLE_ONGOING 0
+#define FIELD_BATTLE_PARTY_DEFEATED 1
+#define FIELD_BATTLE_ENEMIES_DEFEATED 2
+
+/** @brief FieldStatusRecordMeta::packed bit of bits.ally. */
+#define FIELD_STATUS_META_ALLY 0x200
+
+/** @brief Number of party records; higher record ids are monsters. */
+#define FIELD_PARTY_RECORD_COUNT 3
+
+/** @brief Item id of the revive item consumed by func_800B6744. */
+#define FIELD_ITEM_REVIVE 0x58
+
+/** @brief Value of an empty FieldItemRecord::special_ids slot. */
+#define FIELD_ITEM_ID_NONE 0xFF
+
+/** @brief Number of handlers in D_800F0B98. */
+#define FIELD_ACTION_HANDLER_COUNT 8
+
+/** @brief First and one-past-last status id applied by func_800B78C0. */
+#define FIELD_ON_HIT_STATUS_FIRST 0x50
+#define FIELD_ON_HIT_STATUS_END 0x60
+
+/** @brief Kind of an action descriptor (low nibble of its first word). */
+#define FIELD_DESCRIPTOR_KIND(descriptor) ((descriptor)->info.word & 0xF)
+
+/** @brief Defense slot of an action descriptor (bits 6-7). */
+#define FIELD_DESCRIPTOR_DEFENSE_SLOT(descriptor) ((descriptor)->info.bytes.flags >> 6)
+
+/** @brief Handler for one action descriptor kind; returns the damage dealt. */
+typedef s32 (*FieldActionHandler)(void);
+
+/** @brief Chance and duration of one on-hit status, indexed from FIELD_ON_HIT_STATUS_FIRST. */
+typedef struct FieldOnHitStatus
 {
-    u8 pad[0x14];
-    u32 unk14;
-    u8 *unk18;
-    s32 *unk1C;
-    s32 unk20;
-    s32 unk24;
-} FieldB78C0State;
-extern FieldB78C0State *D_80123FB0;
+    u8 chance;
+    u8 duration;
+} FieldOnHitStatus;
 
-extern void field_clear_record_state(s32, s32);
-extern void func_800B30B8(s32, s32);
-extern s32 func_800B4CE4(s32, s32);
-extern s32 func_800B76F8(s32);
-extern s32 func_800B788C(s32);
-extern s32 func_800BD414(s32, s32);
-extern void saturating_counter_add(s32, s32);
+extern FieldBattleContext* D_80123FB0;
+extern FieldGameState* D_80122B74;
 
-
-extern void func_800B70F4(s32, s32 *);
-extern void func_800B7164(s32, s32 *);
-extern void func_800B729C(s32, s32, s32 *, s32 *);
-extern void func_800B78C0(void);
-extern void func_800B2B54(s32, s32, s32, s32, s32, s32);
-
-extern void func_800BD520(s32, s32, s32);
-
-#define FB0_BYTES ((u8 *)D_80123FB0)
-
-/** @brief Sub-state block pointed to by FieldStateBlockView::unk18. */
-typedef struct
-{
-    u8 pad0[4];
-    s32 unk4;
-} SubState;
-
-/**
- * @brief Entry pointed to by FieldStateBlockView::unk1C. Byte 3 selects a D_800F0B98
- *        handler; the handlers also read the word at +0 (low nibble) and the
- *        packed word at +4.
- */
-typedef struct
-{
-    u8 pad0[3];
-    u8 unk3;
-} Entry;
-
-/**
- * @brief View of the 0x4A4-byte block at D_80123FB0 (D_80123B08, built by
- *        func_800B3580 in field_state_ops.c). Word 0 carries flag 0x80000000,
- *        which field309.c tests as the sign bit; the pointers at 0x18 and 0x1C
- *        select the active sub-state and entry.
- */
-typedef struct
-{
-    u32 unk0;
-    u8 pad4[0x18 - 4];
-    SubState *unk18;
-    Entry *unk1C;
-    s32 unk20;
-    s32 unk24;
-} FieldStateBlockView;
-
-/** @brief Actor record; unk4 selects a 0x250-byte block in the layout buffer. */
-typedef struct
-{
-    u8 pad0[4];
-    u8 unk4;
-    u8 pad5[5];
-    u16 unkA;
-} ActorB4934;
-
-/*
- * D_800F0B98 holds eight handlers indexed by Entry::unk3: func_800B6890,
- * func_800B69B0, func_800B6B28, func_800B6C48, func_800B6D3C, func_800B6EC0,
- * func_800B7020 and func_800B70EC. All eight handlers are defined below.
- */
-typedef s32 (*Handler)(void);
-
-
-u8 *func_800C1E40(s32 arg0);
-/*
- * Declared without a prototype: func_800B2A9C takes an id argument (see
- * func_800B2A9C.c), but func_800B66F0 calls it with none and lets the caller's
- * a0 flow through. A void prototype would misstate that; an s32 one would add
- * an argument load.
- */
-s32 func_800B2A9C();
-s32 func_800B6334(u8 *arg0);
-void func_800B65CC(s32 value);
-void func_800B4934(ActorB4934 *arg0);
-
-
+/** @brief Nonzero while the party includes the character of type 2. */
 extern s32 D_80122698;
-extern u8 *D_801228F8[];
-extern u8 *D_80122B74;
-extern Handler D_800F0B98[];
 
+/** @brief Three pointers into resource 9 selected by func_800B661C. */
+extern u8* D_801228F8[];
 
-extern void func_800B28E0();
+/** @brief Action handlers indexed by FieldActionDescriptor::info.bytes.handler. */
+extern FieldActionHandler D_800F0B98[];
 
+/** @brief Resistance slot of each element bit, indexes FieldStatusRecord::unk44. */
+extern u8 D_800F0BB8[];
 
-void func_800B61C4(s32 arg0)
+extern FieldOnHitStatus D_800F0BC0[];
+
+/* Unprototyped: called with three arguments here and four in func_800B65CC. */
+void func_800B28E0();
+s32 func_800B4CE4(FieldStatusRecord* record, s32 status_id);
+void func_800B4934(FieldStatusRecord* record);
+s32 func_800BD414(s32 owner, s32 variable);
+void func_800BD520(s32 owner, s32 variable, s32 value);
+u8* func_800C1E40(s32 resource_id);
+s32 func_800C0A38(FieldStatusRecord* record);
+void func_800C2848(s32 actor_id, s32 value);
+s32 func_8008ADB4(s32 record_id);
+s32 func_8008AE14(s32 actor_id, s32 animation_id);
+s32 func_8008B500(s32 actor_id, s32 signal_id);
+s32 func_80089BE8(s32 actor_id, s32 arg1, s32 arg2, s32 arg3, s32 duration);
+s32 rand(void);
+
+s32 func_800B62D8(FieldStatusRecord* record);
+s32 func_800B6334(FieldStatusRecord* record);
+void func_800B65CC(s32 result);
+void func_800B6744(FieldStatusRecord* record);
+void func_800B70F4(s32 stat_index, s32* attack);
+void func_800B7164(s32 stat_index, s32* defense);
+void func_800B729C(s32 unused, s32 element_mask, s32* attack, s32* defense);
+s32 func_800B742C(u32 attack, u32 defense);
+s32 func_800B76F8(s32 damage);
+s32 func_800B788C(s32 damage);
+void func_800B78C0(void);
+
+/**
+ * @brief Store a record id in the watched-record script variable.
+ * @param record_id Record id to watch, or -1 for none.
+ */
+void func_800B61C4(s32 record_id)
 {
-    func_800BD520(-1, 0x428C, arg0);
+    func_800BD520(-1, FIELD_VAR_WATCHED_RECORD, record_id);
 }
 
-
-
+/**
+ * @brief Run event 12 in mode 3 on the three party records.
+ */
 void func_800B61EC(void)
 {
     s32 i;
 
-    i = 0;
-    do
+    for (i = 0; i < FIELD_PARTY_RECORD_COUNT; i++)
     {
         func_800B28E0(i, 0xC, 3);
-        i++;
-    } while (i < 3);
+    }
 }
 
-
-typedef struct B
-{
-    u16 unk0;
-    u16 unk2;
-    union
-    {
-        u32 unk4;
-        struct
-        {
-            u16 lo;
-            u16 unk6;
-        } h;
-    } u;
-} B;
-
-typedef struct Node
-{
-    u32 unk0;
-    u32 unk4;
-} Node;
-
-typedef struct A
-{
-    u8 pad0[0x1C];
-    u32 *unk1C;
-    Node *unk20;
-    B *unk24;
-} A;
-
-
-
 /**
- * @brief Compute the active record status from its parity and selector bits.
- * @return -1 for selectors 2-3, or for selectors 0-1 when parity is set; otherwise 0.
+ * @brief Check whether the bound action may hit its target.
+ * @return -1 when the action applies to the target, otherwise 0.
  */
 s32 func_800B622C(void)
 {
-    s32 selector;
-    s32 parity;
-    s32 case_one;
-    u32 record_bit;
-    u32 node_bit;
-    u8 parity_byte;
-    u32 selector_word;
-    u32 record_flags;
-    B *record;
-    Node *node;
-    u32 *selector_ptr;
+    s32 opposed;
+    s32 side_rule;
 
-    record = ((A *)D_80123FB0)->unk24;
-    if (record->u.h.unk6 & 0x4000)
+    if (D_80123FB0->target->meta.bytes.unk2 & 0x4000)
     {
         return 0;
     }
-    node = ((A *)D_80123FB0)->unk20;
-    record_flags = record->u.unk4;
-    selector_ptr = ((A *)D_80123FB0)->unk1C;
-    do
-    {
-        record_bit = (record_flags >> 9) & 1;
-        node_bit = ((u32)node->unk4 >> 9) & 1;
-        parity_byte = node_bit ^ record_bit;
-    } while (0);
-    selector_word = *selector_ptr;
-    parity = parity_byte;
-    case_one = 1;
-    selector = (selector_word >> 4) & 3;
-    if (selector == case_one)
-    {
-        goto common;
-    }
-    switch (selector)
+    /* The u8 truncation happens before the switch in the target. */
+    opposed = (u8)(D_80123FB0->attacker->meta.bits.ally ^ D_80123FB0->target->meta.bits.ally);
+    side_rule = (D_80123FB0->descriptor->info.word >> 4) & 3;
+    switch (side_rule)
     {
     case 0:
-        if (parity != 0)
+        if (opposed != 0)
         {
             return -1;
         }
         return 0;
     case 1:
-common:
-        if (parity != 0)
+        if (opposed != 0)
         {
             return -1;
         }
@@ -215,199 +170,162 @@ common:
     }
 }
 
-typedef struct
+/**
+ * @brief Report whether the side of a defeated record has no one left.
+ * @param record Record that was just defeated.
+ * @return FIELD_BATTLE_PARTY_DEFEATED, FIELD_BATTLE_ENEMIES_DEFEATED or
+ *         FIELD_BATTLE_ONGOING.
+ */
+s32 func_800B62D8(FieldStatusRecord* record)
 {
-    s32 unk0;
-    s32 unk4;
-} UnkStruct800B62D8;
-
-extern s32 func_800BD414(s32 arg0, s32 arg1);
-
-s32 func_800B62D8(UnkStruct800B62D8 *arg0)
-{
-    if (arg0->unk4 & 0x200)
+    if (record->meta.packed & FIELD_STATUS_META_ALLY)
     {
-        if (func_800BD414(0, 0x4280) == 0)
+        if (func_800BD414(0, FIELD_VAR_ALLY_COUNT) == 0)
         {
-            return 1;
+            return FIELD_BATTLE_PARTY_DEFEATED;
         }
     }
     else
     {
-        if (func_800BD414(0, 0x4284) == 0)
+        if (func_800BD414(0, FIELD_VAR_ENEMY_COUNT) == 0)
         {
-            return 2;
+            return FIELD_BATTLE_ENEMIES_DEFEATED;
         }
     }
 
-    return 0;
+    return FIELD_BATTLE_ONGOING;
 }
 
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-    s32 unkC;
-} FieldCounter6334;
-
-extern void func_80089BE8(s32, s32, s32, s32, s32);
-extern void func_8008AE14(s32, s32);
-extern void func_8008B500(s32, s32);
-extern s32 func_800C0A38(u8 *);
-extern void func_800C2848(s32, s32);
-extern void func_800B6744(ActorB4934 *);
-
 /**
- * @brief Update actor depletion state and return the remaining-side result.
- * @param arg0 Actor record to update.
- * @return Remaining-side result from func_800B62D8.
+ * @brief Handle a record whose HP reached zero.
+ * @param record Defeated record.
+ * @return The func_800B62D8 result for the record's side.
  */
-s32 func_800B6334(u8 *arg0)
+s32 func_800B6334(FieldStatusRecord* record)
 {
-    s32 *entry_word;
-    s32 remaining_count;
-    s32 effect_duration;
-    FieldCounter6334 *reset_counter;
-    FieldCounter6334 *clear_counter;
-    FieldCounter6334 *copy_counter;
-    FieldCounter6334 *set_counter;
-    FieldCounter6334 *flag_counter;
+    s32 remaining;
+    s32 duration;
+    FieldActionDescriptor* descriptor;
 
-    if ((u8)arg0[4] < 3U)
+    if (record->meta.bytes.id < FIELD_PARTY_RECORD_COUNT)
     {
-        if (func_800BD414(0, 0x428C) == arg0[4])
+        if (func_800BD414(0, FIELD_VAR_WATCHED_RECORD) == record->meta.bytes.id)
         {
-            func_800BD520(0, 0x428C, -1);
+            func_800BD520(0, FIELD_VAR_WATCHED_RECORD, -1);
         }
-        if (*(s32 *)(arg0 + 4) & 0x200)
+        if (record->meta.packed & FIELD_STATUS_META_ALLY)
         {
-            remaining_count = func_800BD414(0, 0x4280);
-        }
-        else
-        {
-            remaining_count = func_800BD414(0, 0x4284);
-        }
-        remaining_count--;
-        if ((remaining_count == 0) && (*(u16 *)(arg0 + 0xA) & 2))
-        {
-            func_8008B500(arg0[4], 0x2C);
-            copy_counter = *(FieldCounter6334 **)(arg0 + 0x10);
-            remaining_count = 1;
-            copy_counter->unk4 = (s32)copy_counter->unk0;
-            func_800B6744((ActorB4934 *)arg0);
+            remaining = func_800BD414(0, FIELD_VAR_ALLY_COUNT);
         }
         else
         {
-            reset_counter = *(FieldCounter6334 **)(arg0 + 0x10);
-            reset_counter->unkC = (s32)(reset_counter->unkC & ~0x7FF);
-            set_counter = *(FieldCounter6334 **)(arg0 + 0x10);
-            set_counter->unkC = (s32)(set_counter->unkC | 0x200);
-            func_8008AE14(arg0[4], -1);
-            effect_duration = 0x384;
-            if (*(u16 *)(arg0 + 0xA) & 0x20)
+            remaining = func_800BD414(0, FIELD_VAR_ENEMY_COUNT);
+        }
+        remaining--;
+        if (remaining == 0 && (record->status_flags & 2))
+        {
+            func_8008B500(record->meta.bytes.id, 0x2C);
+            remaining = 1;
+            record->state->current = record->state->maximum;
+            func_800B6744(record);
+        }
+        else
+        {
+            record->state->effect_flags &= ~0x7FF;
+            record->state->effect_flags |= 0x200;
+            func_8008AE14(record->meta.bytes.id, -1);
+            duration = 900;
+            if (record->status_flags & 0x20)
             {
-                effect_duration = 0x1C2;
+                duration = 450;
             }
-            if (func_800B4CE4((s32)arg0, 0xC) != 0)
+            if (func_800B4CE4(record, 0xC) != 0)
             {
-                entry_word = D_80123FB0->unk1C;
-                if ((entry_word != NULL) && ((u32)(*entry_word & 0xF) < 2U))
+                descriptor = D_80123FB0->descriptor;
+                if (descriptor != NULL && FIELD_DESCRIPTOR_KIND(descriptor) < 2)
                 {
-                    effect_duration = 0xF;
+                    duration = 15;
                 }
             }
-            if (!(*(u16 *)(arg0 + 0xA) & 0x40))
+            if (!(record->status_flags & 0x40))
             {
-                func_80089BE8(*(s32 *)(D_80123FB0->unk18 + 0xC), 0x1E, 0x2C, -1, effect_duration);
+                func_80089BE8(D_80123FB0->action->target_id, 0x1E, 0x2C, -1, duration);
             }
         }
-        if (*(s32 *)(arg0 + 4) & 0x200)
+        if (record->meta.packed & FIELD_STATUS_META_ALLY)
         {
-            func_800BD520(0, 0x4280, remaining_count);
+            func_800BD520(0, FIELD_VAR_ALLY_COUNT, remaining);
         }
         else
         {
-            func_800BD520(0, 0x4284, remaining_count);
+            func_800BD520(0, FIELD_VAR_ENEMY_COUNT, remaining);
         }
     }
     else
     {
-        clear_counter = *(FieldCounter6334 **)(arg0 + 0x10);
-        clear_counter->unkC = (s32)(clear_counter->unkC & ~0x7FF);
-        if ((*(u16 *)(arg0 + 6) & 1) || ((*(u8 **)(arg0 + 0x14))[0x3F] & 1))
+        record->state->effect_flags &= ~0x7FF;
+        if ((record->meta.bytes.unk2 & 1) || (record->template->flags & 1))
         {
-            flag_counter = *(FieldCounter6334 **)(arg0 + 0x10);
-            flag_counter->unkC = (s32)(flag_counter->unkC | 0x200);
+            record->state->effect_flags |= 0x200;
         }
-        func_800C2848(arg0[4], 0);
-        *(s32 *)(arg0 + 4) = (s32)(*(s32 *)(arg0 + 4) & ~0x100);
-        func_8008AE14(arg0[4], func_800C0A38(arg0));
-        remaining_count = func_800BD414(0, 0x4284) - 1;
-        func_800BD520(0, 0x4284, remaining_count);
+        func_800C2848(record->meta.bytes.id, 0);
+        record->meta.bits.active = 0;
+        func_8008AE14(record->meta.bytes.id, func_800C0A38(record));
+        remaining = func_800BD414(0, FIELD_VAR_ENEMY_COUNT) - 1;
+        func_800BD520(0, FIELD_VAR_ENEMY_COUNT, remaining);
     }
-    return func_800B62D8((UnkStruct800B62D8 *)arg0);
+    return func_800B62D8(record);
 }
 
 /**
- * @brief Write script variable 0x4288, set the block's 0x80000000 flag, and call func_800B28E0 with the block.
- *
- * func_800B28E0 is called with four arguments here and three elsewhere, so it
- * is declared without a prototype.
- *
- * @param arg0 Value written to script variable 0x4288. Callers pass func_800B6334's result.
+ * @brief End the battle with a result and run event 13 on the battle owner.
+ * @param result Battle result stored in FIELD_VAR_BATTLE_RESULT.
  */
-void func_800B65CC(s32 arg0)
+void func_800B65CC(s32 result)
 {
-    u32 *p;
-    func_800BD520(0, 0x4288, arg0);
-    p = (u32 *)D_80123FB0;
-    *p |= 0x80000000;
-    func_800B28E0(0x80, 0xD, 1, p);
+    func_800BD520(0, FIELD_VAR_BATTLE_RESULT, result);
+    D_80123FB0->state.flags |= 0x80000000;
+    func_800B28E0(0x80, 0xD, 1, D_80123FB0);
 }
 
 /**
- * @brief Resolve three entries of resource record 9 into D_801228F8, or clear them when the record is absent.
- *
- * When the layout buffer's 0x840 byte is set and the 0x858 word's low 7 bits
- * equal 2, D_80122698 is set and the entry base advances by (byte 0x859 + 1)
- * groups of three. func_800C31BC and script opcode 0x27 treat 0x840/0x858 as
- * one of two parallel slots (the other is 0xA90/0xAA8), and func_800C10F0 uses
- * byte 0x859 as a small per-member index.
+ * @brief Select the three resource 9 entries for the current party.
+ * @note The entry group moves by (character type byte + 1) when the second
+ *       party character is of type 2.
  */
 void func_800B661C(void)
 {
-    s32 off;
+    s32 first;
     s32 i;
-    u8 *base;
-    u8 *p;
+    u8* resource;
+    u16* offsets;
 
     D_80122698 = 0;
-    off = 0;
-    if (D_80122B74[0x840] != 0 && ((*(u32 *)(D_80122B74 + 0x858) & 0x7F) == 2))
+    first = 0;
+    if (D_80122B74->characters[1].name[0] != 0 && (D_80122B74->characters[1].info.word & 0x7F) == 2)
     {
         D_80122698 = 1;
-        off = (D_80122B74[0x859] + 1) * 3;
+        first = (D_80122B74->characters[1].info.bytes[1] + 1) * 3;
     }
 
-    base = func_800C1E40(9);
+    resource = func_800C1E40(9);
     i = 0;
-    if (base != NULL)
+    if (resource != NULL)
     {
-        u8 **out;
+        u8** out;
         out = D_801228F8;
-        p = (u8 *)((off * 2) + (s32)base);
+        offsets = (u16*)((first * 2) + (s32)resource);
         do
         {
-            *out = base + (*(u16 *)(p + 4) + 4);
-            p += 2;
+            *out = resource + (offsets[2] + 4);
+            offsets++;
             i++;
             out++;
         } while ((u32)i < 3);
     }
     else
     {
-        u8 **out;
+        u8** out;
         out = D_801228F8;
         do
         {
@@ -419,20 +337,21 @@ void func_800B661C(void)
 }
 
 /**
- * @brief Store func_800B2A9C's result in unk20 and unk24, clear unk1C, and forward a nonzero func_800B6334 result to func_800B65CC.
+ * @brief Make a record both the attacker and the target and settle its defeat.
+ * @param record_id Record to look up.
  */
-void func_800B66F0(void)
+void func_800B66F0(s32 record_id)
 {
-    s32 value;
+    FieldStatusRecord* record;
     s32 result;
 
-    value = func_800B2A9C();
-    ((FieldStateBlockView *)D_80123FB0)->unk20 = value;
-    ((FieldStateBlockView *)D_80123FB0)->unk24 = value;
-    ((FieldStateBlockView *)D_80123FB0)->unk1C = 0;
-    if (value != 0)
+    record = func_800B2A9C(record_id);
+    D_80123FB0->attacker = record;
+    D_80123FB0->target = record;
+    D_80123FB0->descriptor = NULL;
+    if (record != NULL)
     {
-        result = func_800B6334((u8 *)value);
+        result = func_800B6334(record);
         if (result != 0)
         {
             func_800B65CC(result);
@@ -441,35 +360,27 @@ void func_800B66F0(void)
 }
 
 /**
- * @brief Find the first of the actor's four 0x40-byte sub-entries holding id 0x58 with bit 1 of its 0x2E flags set, replace the id with 0xFF, clear the flags, and rebuild the status mask via func_800B4934.
- *
- * The four sub-entries start at layout offset 0x5F0 + unk4 * 0x250 + 0x50,
- * the same walk func_800B4934 in field293.c performs.
- *
- * @param arg0 Actor whose unk4 selects the 0x250-byte block.
+ * @brief Consume the first equipped revive item of a party record.
+ * @param record Party record that was revived.
  */
-void func_800B6744(ActorB4934 *arg0)
+void func_800B6744(FieldStatusRecord* record)
 {
     s32 i;
-    s32 off;
     s32 j;
-    u8 *rec;
-    u8 *p;
+    FieldItemRecord* item;
 
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < FIELD_EQUIPMENT_SLOT_COUNT; i++)
     {
-        off = 0x50 + i * 0x40;
-        rec = D_80122B74 + (arg0->unk4 * 0x250 + 0x5F0) + off;
-        if (rec[0] != 0 && (*(u16 *)(rec + 0x2E) & 2))
+        item = &D_80122B74->characters[record->meta.bytes.id].equipment[i];
+        if (item->kind != 0 && (item->effect_index & 2))
         {
             for (j = 0; j < 4; j++)
             {
-                p = rec + j;
-                if (p[0x20] == 0x58)
+                if (item->special_ids[j] == FIELD_ITEM_REVIVE)
                 {
-                    p[0x20] = 0xFF;
-                    *(u16 *)(rec + 0x2E) = 0;
-                    func_800B4934(arg0);
+                    item->special_ids[j] = FIELD_ITEM_ID_NONE;
+                    item->effect_index = 0;
+                    func_800B4934(record);
                     return;
                 }
             }
@@ -478,538 +389,341 @@ void func_800B6744(ActorB4934 *arg0)
 }
 
 /**
- * @brief Dispatch the active entry's byte 3 through the D_800F0B98 handler table.
- *
- * Values below 8 run the table entry and return its result; higher values are
- * reported to record_game_diagnostic with the sub-state's word at 0x4. Returns 0
- * when there is no entry or after the report.
- *
- * @return The dispatched handler's result, or 0.
+ * @brief Run the handler of the bound action descriptor.
+ * @return The handler's damage, or 0 without a descriptor or for an unknown handler.
  * @see decomp.me (100%) TODO
  */
 s32 func_800B6808(void)
 {
-    Entry *e;
+    FieldActionDescriptor* descriptor;
 
-    e = ((FieldStateBlockView *)D_80123FB0)->unk1C;
-    if (e != NULL)
+    descriptor = D_80123FB0->descriptor;
+    if (descriptor != NULL)
     {
-        if (e->unk3 < 8)
+        if (descriptor->info.bytes.handler < FIELD_ACTION_HANDLER_COUNT)
         {
-            return D_800F0B98[e->unk3]();
+            return D_800F0B98[descriptor->info.bytes.handler]();
         }
-        record_game_diagnostic(0x8001, 0x65, e->unk3, ((FieldStateBlockView *)D_80123FB0)->unk18->unk4);
+        record_game_diagnostic(0x8001, 0x65, descriptor->info.bytes.handler, D_80123FB0->action->action_id);
         return 0;
     }
     return 0;
 }
 
 /**
- * @brief Handler 0 of D_800F0B98: unpack the entry's packed word at +4 and run the func_800B70F4 .. func_800B742C chain.
- *
- * Nibble 0 goes to func_800B70F4, nibble 1 to func_800B7164, byte 1 to
- * func_800B729C, and the two results to func_800B742C. func_800B2B54 then runs
- * unless the entry's low nibble is 2 and byte 1 misses the mask at
- * (*unk24)[0x39]; func_800B78C0 applies the inverse guard. func_800B6B28 is a
- * near-clone of this function.
- *
- * @return func_800B742C's result.
+ * @brief Handler 0: damage, then a status effect on the target.
+ * @return Damage dealt.
  */
 s32 func_800B6890(void)
 {
-    s32 sp18;
-    s32 sp1C;
-    u32 packed;
-    u32 packed_tail;
-    s32 byte8;
-    s32 ret;
+    s32 attack;
+    s32 defense;
+    FieldActionParams params;
+    FieldActionParams status;
+    s32 element_mask;
+    s32 damage;
 
-    packed = *(u32 *)(*(u8 **)(FB0_BYTES + 0x1C) + 4);
-    packed_tail = packed;
-    func_800B70F4(packed & 0xF, &sp18);
-    func_800B7164((packed >> 4) & 0xF, &sp1C);
-    byte8 = (packed >> 8) & 0xFF;
-    func_800B729C(0, byte8, &sp18, &sp1C);
-    ret = func_800B742C(sp18, sp1C);
-    if ((*(u8 *)(*(u8 **)(FB0_BYTES + 0x24) + 0x39) & byte8) ||
-        ((**(u32 **)(FB0_BYTES + 0x1C) & 0xF) != 2))
+    params = D_80123FB0->descriptor->params;
+    /* The status fields are read from a second copy, as in func_800B6B28. */
+    status = params;
+    func_800B70F4(params.status.attack_stat, &attack);
+    func_800B7164(params.status.defense_stat, &defense);
+    /* Word shift, not the element_mask bitfield, which schedules the call setup differently. */
+    element_mask = (params.word >> 8) & 0xFF;
+    func_800B729C(0, element_mask, &attack, &defense);
+    damage = func_800B742C(attack, defense);
+    if ((D_80123FB0->target->unk39 & element_mask) || (FIELD_DESCRIPTOR_KIND(D_80123FB0->descriptor) != 2))
     {
-        func_800B2B54(
-            *(s32 *)(FB0_BYTES + 0x20),
-            *(s32 *)(FB0_BYTES + 0x24),
-            0,
-            (packed_tail >> 0x14) & 0xF,
-            (((packed_tail >> 0x10) & 0xF) + 1) * 0x10,
-            (packed_tail >> 0x18) * 0x10);
+        func_800B2B54(D_80123FB0->attacker, D_80123FB0->target, 0, status.status.effect, (status.status.chance + 1) * 16, status.status.duration * 16);
     }
     func_800B78C0();
-    return ret;
+    return damage;
 }
 
-
-
-
 /**
- * @brief Resolve the active packed field operation and update its saturating counter.
- * @return Result returned by func_800B742C, or zero when the active state block is unavailable.
+ * @brief Handler 1: damage, then drain part of it into the attacker's HP.
+ * @return Damage dealt, or 0 when the attacker has no HP left.
  */
 s32 func_800B69B0(void)
 {
-    s32 sp10;
-    s32 sp14;
-    u32 packed;
-    s32 byte8;
-    s32 ret;
-    s32 remainder;
-    s32 idx;
-    s32 product;
-    s32 *out1;
-    s32 *out2;
+    s32 attack;
+    s32 defense;
+    FieldActionParams params;
+    s32 damage;
 
-    packed = *(u32 *)(*(u8 **)(((u8 *)D_80123FB0) + 0x1C) + 4);
-    out1 = &sp10;
-    func_800B70F4(packed & 0xF, out1);
-    out2 = &sp14;
-    func_800B7164((packed >> 4) & 0xF, out2);
-    func_800B729C(0, 0, out1, out2);
-    ret = func_800B742C(sp10, sp14);
+    params = D_80123FB0->descriptor->params;
+    func_800B70F4(params.roll.attack_stat, &attack);
+    func_800B7164(params.roll.defense_stat, &defense);
+    func_800B729C(0, 0, &attack, &defense);
+    damage = func_800B742C(attack, defense);
 
-    if (*(s32 *)((u8 *)(*(void **)(*(u8 **)(((u8 *)D_80123FB0) + 0x20) + 0x10)) + 4) == 0)
+    if (D_80123FB0->attacker->state->current == 0)
     {
         return 0;
     }
 
-    byte8 = (packed >> 8) & 0xFF;
-    if ((*(u8 *)(*(u8 **)(((u8 *)D_80123FB0) + 0x24) + 0x39) & byte8) ||
-        ((*(u32 *)(*(u8 **)(((u8 *)D_80123FB0) + 0x1C)) & 0xF) != 2))
+    if ((D_80123FB0->target->unk39 & params.roll.element_mask) || (FIELD_DESCRIPTOR_KIND(D_80123FB0->descriptor) != 2))
     {
-        if ((packed >> 24) == 0)
+        if (params.roll.spread == 0)
         {
-            packed &= 0xFFFFFF;
-            packed |= 0x1000000;
+            params.roll.spread = 1;
         }
-
-        remainder = rand() % (s32)(packed >> 24);
-        idx = ((packed >> 16) & 0xFF) + remainder;
-        product = ret * idx;
-        saturating_counter_add(*(s32 *)(*(u8 **)(((u8 *)D_80123FB0) + 0x20) + 0x10), (u32)product >> 7);
+        saturating_counter_add(D_80123FB0->attacker->state, (u32)(damage * (params.roll.base + rand() % params.roll.spread)) >> 7);
     }
 
     func_800B78C0();
-    return ret;
+    return damage;
 }
 
-
-
-extern s32 func_800B2D64(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-
 /**
- * @brief Decode the current packed field command and dispatch its two effects.
- *
- * The source shape mirrors func_800B6890: the two stack outputs remain ordinary
- * locals while a copy of the packed command keeps the long-lived value web used
- * by the later command dispatches.
- *
- * @return The result produced by func_800B742C.
+ * @brief Handler 2: damage, then stat changes on the attacker and the target.
+ * @return Damage dealt.
  */
 s32 func_800B6B28(void)
 {
-    s32 sp10;
-    s32 sp14;
-    u32 packed;
-    u32 packed_tail;
-    s32 byte8;
-    s32 ret;
+    s32 attack;
+    s32 defense;
+    FieldActionParams params;
+    FieldActionParams changes;
+    s32 element_mask;
+    s32 damage;
 
-    packed = *(u32 *)(*(u8 **)(((u8 *)D_80123FB0) + 0x1C) + 4);
-    packed_tail = packed;
-    func_800B70F4(packed & 0xF, &sp10);
-    func_800B7164((packed >> 4) & 0xF, &sp14);
-    byte8 = (packed >> 8) & 0xFF;
-    func_800B729C(0, byte8, &sp10, &sp14);
-    ret = func_800B742C(sp10, sp14);
-    if ((*(u8 *)(*(u8 **)(((u8 *)D_80123FB0) + 0x24) + 0x39) & byte8) ||
-        ((**(u32 **)(((u8 *)D_80123FB0) + 0x1C) & 0xF) != 2))
+    params = D_80123FB0->descriptor->params;
+    /* Same copy and word-shift element mask as func_800B6890. */
+    changes = params;
+    func_800B70F4(params.stat_change.attack_stat, &attack);
+    func_800B7164(params.stat_change.defense_stat, &defense);
+    element_mask = (params.word >> 8) & 0xFF;
+    func_800B729C(0, element_mask, &attack, &defense);
+    damage = func_800B742C(attack, defense);
+    if ((D_80123FB0->target->unk39 & element_mask) || (FIELD_DESCRIPTOR_KIND(D_80123FB0->descriptor) != 2))
     {
-        func_800B2D64(
-            *(s32 *)(((u8 *)D_80123FB0) + 0x20),
-            (packed_tail >> 20) & 0xF,
-            (packed_tail >> 16) & 0xF,
-            -1);
-        func_800B2D64(
-            *(s32 *)(((u8 *)D_80123FB0) + 0x24),
-            packed_tail >> 28,
-            (packed_tail >> 24) & 0xF,
-            -1);
+        func_800B2D64(D_80123FB0->attacker, changes.stat_change.attacker_stat, changes.stat_change.attacker_scale, -1);
+        func_800B2D64(D_80123FB0->target, changes.stat_change.target_stat, changes.stat_change.target_scale, -1);
     }
     func_800B78C0();
-    return ret;
+    return damage;
 }
 
-
-
-
 /**
- * @brief Handler 3 of D_800F0B98: roll a random offset into the entry's byte-2
- *        index, scale it by a nested resource factor, and run the
- *        func_800B729C .. func_800B742C chain.
- *
- * Near-clone of func_800B6890 and func_800B6B28 (the other decoded handlers in
- * this table): the entry's packed word at +4 supplies byte 2 as a base index
- * and byte 3 as a modulus for rand(). When byte 3 is zero it is forced to 1
- * (with the packed word retagged into the 0x1000000 range) before the modulo,
- * avoiding a divide-by-zero.
- *
- * @return func_800B742C's result.
+ * @brief Handler 3: damage proportional to the attacker's current HP.
+ * @return Damage dealt.
  */
 s32 func_800B6C48(void)
 {
-    s32 sp10;
-    s32 sp14;
-    u32 packed;
-    s32 remainder;
-    s32 factor;
-    s32 idx;
-    s32 product;
-    s32 ret;
+    s32 attack;
+    s32 defense;
+    FieldActionParams params;
+    s32 roll;
+    s32 percent;
+    s32 damage;
 
-    packed = *(u32 *)(*(u8 **)(((u8 *)D_80123FB0) + 0x1C) + 4);
-    if ((packed >> 24) == 0)
+    params = D_80123FB0->descriptor->params;
+    if (params.roll.spread == 0)
     {
-        packed &= 0xFFFFFF;
-        packed |= 0x1000000;
+        params.roll.spread = 1;
     }
 
-    remainder = rand() % (s32)(packed >> 24);
-
-    factor = *(s32 *)(*(s32 *)(*(u8 **)(((u8 *)D_80123FB0) + 0x20) + 0x10) + 4);
-    idx = ((packed >> 16) & 0xFF) + remainder;
-    product = factor * idx;
-
-    sp14 = 0;
-    sp10 = (u32)product >> 4;
-    func_800B729C(0, 0, &sp10, &sp14);
-    ret = func_800B742C(sp10, sp14);
+    roll = rand() % params.roll.spread;
+    percent = params.roll.base + roll;
+    defense = 0;
+    attack = (u32)(D_80123FB0->attacker->state->current * percent) >> 4;
+    func_800B729C(0, 0, &attack, &defense);
+    damage = func_800B742C(attack, defense);
     func_800B78C0();
-    return ret;
+    return damage;
 }
 
-
-/** @brief Packed field command record consumed by func_800B6D3C. */
-typedef struct
-{
-    u8 pad0[3];
-    u8 selector;
-    u32 packed;
-} FieldCommandB6D3C;
-
-/** @brief Minimal view of the active FIELD state used by func_800B6D3C. */
-typedef struct
-{
-    u8 pad0[0x1C];
-    FieldCommandB6D3C *command;
-    s32 unk20;
-    u8 *target;
-} FieldStateB6D3C;
-
-
-
 /**
- * @brief Dispatch the active packed field command through its selected processing path.
- * @return Result produced by func_800B742C.
+ * @brief Handler 4: damage plus a status effect when the target matches.
+ * @return Damage dealt.
  */
 s32 func_800B6D3C(void)
 {
-    u32 packed;
-    s32 first_value;
-    s32 second_value;
-    s32 arg4_value;
-    s32 arg5_value;
-    s32 selector;
-    s32 packed_selector;
-    s32 result;
-    u32 packed_tail;
+    FieldActionParams params;
+    FieldActionParams unmatched;
+    s32 attack;
+    s32 defense;
+    s32 target_class;
+    s32 match;
+    s32 damage;
 
-    packed = ((FieldStateB6D3C *)D_80123FB0)->command->packed;
-    selector = ((FieldStateB6D3C *)D_80123FB0)->target[3];
-    packed_selector = (packed >> 8) & 0xF;
-    packed_tail = packed;
+    params = D_80123FB0->descriptor->params;
+    target_class = D_80123FB0->target->unk3;
+    match = (params.word >> 8) & 0xF; /* word shift, as in func_800B6890 */
+    unmatched = params;
 
-    if (selector == packed_selector)
+    if (target_class == match)
     {
-        record_game_diagnostic(0x8003, selector, selector, 1);
+        record_game_diagnostic(0x8003, target_class, target_class, 1);
 
-        packed++;
-        packed--;
-        packed_tail--;
-        packed_tail++;
-        func_800B70F4(packed & 0xF, &first_value);
-        if (((packed >> 12) & 0xF) == 1)
+        /* Net-zero pairs keep params and unmatched in separate registers. */
+        params.word++;
+        params.word--;
+        unmatched.word--;
+        unmatched.word++;
+        func_800B70F4(params.conditional.attack_stat, &attack);
+        if (params.conditional.doubled == 1)
         {
-            first_value <<= 1;
+            attack <<= 1;
         }
-        func_800B7164((packed >> 4) & 0xF, &second_value);
-        func_800B729C(0, 0, &first_value, &second_value);
-        result = func_800B742C(first_value, second_value);
+        func_800B7164(params.conditional.defense_stat, &defense);
+        func_800B729C(0, 0, &attack, &defense);
+        damage = func_800B742C(attack, defense);
 
-        arg4_value = (((packed >> 16) & 0xF) + 1) << 4;
-        arg5_value = (packed >> 24) << 4;
-        func_800B2B54(((FieldStateB6D3C *)D_80123FB0)->unk20, (s32)((FieldStateB6D3C *)D_80123FB0)->target, 0, (packed >> 20) & 0xF, arg4_value, arg5_value);
+        func_800B2B54(D_80123FB0->attacker, D_80123FB0->target, 0, params.conditional.effect, (params.conditional.chance + 1) << 4,
+                      params.conditional.duration << 4);
     }
     else
     {
-        packed_tail = ((FieldStateB6D3C *)D_80123FB0)->command->packed;
-        record_game_diagnostic(0x8003, packed_selector, selector, 0);
+        unmatched = D_80123FB0->descriptor->params;
+        record_game_diagnostic(0x8003, match, target_class, 0);
 
-        func_800B70F4(packed_tail & 0xF, &first_value);
-        func_800B7164((packed_tail >> 4) & 0xF, &second_value);
-        func_800B729C(0, 0, &first_value, &second_value);
-        result = func_800B742C(first_value, second_value);
+        func_800B70F4(unmatched.conditional.attack_stat, &attack);
+        func_800B7164(unmatched.conditional.defense_stat, &defense);
+        func_800B729C(0, 0, &attack, &defense);
+        damage = func_800B742C(attack, defense);
     }
 
     func_800B78C0();
-    return result;
+    return damage;
 }
 
-
-
-
-
 /**
- * @brief Apply the packed field-state operation selected by the active state block.
- * @return Result returned by func_800B742C.
+ * @brief Handler 5: damage, then modify the target's record.
+ * @return Damage dealt.
  */
 s32 func_800B6EC0(void)
 {
-    s32 sp10;
-    s32 sp14;
-    s32 *p10;
-    s32 *p14;
-    u32 packed;
-    u32 packed_tail;
-    s32 byte8;
-    s32 ret;
-    u8 *p;
+    s32 attack;
+    s32 defense;
+    FieldActionParams params;
+    s32 damage;
 
-    p10 = &sp10;
-    p14 = &sp14;
-    packed = *(u32 *)(*(u8 **)(FB0_BYTES + 0x1C) + 4);
-    packed_tail = packed;
-    func_800B70F4(packed & 0xF, p10);
-    func_800B7164((packed >> 4) & 0xF, p14);
-    func_800B729C(0, 0, p10, p14);
-    ret = func_800B742C(sp10, sp14);
+    params = D_80123FB0->descriptor->params;
+    func_800B70F4(params.modify.attack_stat, &attack);
+    func_800B7164(params.modify.defense_stat, &defense);
+    func_800B729C(0, 0, &attack, &defense);
+    damage = func_800B742C(attack, defense);
     func_800B78C0();
-    byte8 = (packed >> 8) & 0xFF;
-    switch (byte8)
+    switch (params.modify.operation)
     {
     case 0:
-        *(s16 *)(*(u8 **)(*(u8 **)(FB0_BYTES + 0x24) + 0x10) + 0x48) = 0;
+        D_80123FB0->target->state->status_intensity = 0;
         break;
     case 1:
-        p = *(u8 **)(FB0_BYTES + 0x24);
-        *(s32 *)(p + 0xC) |= (packed_tail >> 0x10) << 0x10;
+        D_80123FB0->target->unkC |= params.modify.value << 16;
         break;
     case 2:
-        p = *(u8 **)(FB0_BYTES + 0x24);
-        *(s32 *)(p + 0xC) |= packed_tail >> 0x10;
+        D_80123FB0->target->unkC |= params.modify.value;
         break;
     case 3:
-        p = *(u8 **)(FB0_BYTES + 0x24);
-        *(u8 *)(p + 0x39) |= packed_tail >> 0x10;
+        D_80123FB0->target->unk39 |= params.modify.value;
         break;
-    default:
-        return ret;
     }
-    return ret;
+    return damage;
 }
 
-
-
-
 /**
- * @brief Roll a randomized scaled value into the 4-byte slot of the active resource.
- * @note Reads the packed word at *(((u8 *)D_80123FB0)+0x1C)+4; if its top byte is zero it is
- *       forced to 1. A random roll modulo that byte is added to the middle byte, then
- *       multiplied by the slot's current value at *(((u8 *)D_80123FB0)+0x24)+0x10, shifted right
- *       by 4, floored to 1, and written back.
+ * @brief Handler 6: scale the target's current HP by a random percentage.
  * @see decomp.me (100.00%)
  */
 void func_800B7020(void)
 {
-    u32 packed;
-    u8 *slot;
-    u32 value;
+    FieldActionParams params;
+    FieldStatusState* state;
     s32 roll;
-    u32 scratch;
+    u32 hp;
 
-    packed = *(u32 *)(*(u8 **)(((u8 *)D_80123FB0) + 0x1C) + 4);
-    if ((packed >> 24) == 0)
+    params = D_80123FB0->descriptor->params;
+    if (params.roll.spread == 0)
     {
-        packed &= 0xFFFFFF;
-        packed |= 0x1000000;
+        params.roll.spread = 1;
     }
-    roll = rand();
-    scratch = packed >> 24;
-    roll %= (s32)scratch;
-    scratch = *(u32 *)(((u8 *)D_80123FB0) + 0x24);
-    slot = *(u8 **)(scratch + 0x10);
-    value = ((packed >> 16) & 0xFF) + roll;
+    roll = rand() % params.roll.spread;
+    state = D_80123FB0->target->state;
+    hp = params.roll.base + roll;
+    hp = (u32)(state->current * hp) >> 4;
+    if (hp == 0)
     {
-        s32 scale;
-        scale = *(s32 *)(slot + 4);
-        scale *= value;
-        value = (u32)scale >> 4;
+        hp = 1;
     }
-    if (value == 0)
-    {
-        value = 1;
-    }
-    *(s32 *)(slot + 4) = value;
+    state->current = hp;
 }
 
-
+/**
+ * @brief Handler 7: does nothing.
+ * @return 0.
+ */
 s32 func_800B70EC(void)
 {
     return 0;
 }
 
-
-
-extern s32 func_800B2D34(u8 *arg0, s32 arg1);
-
 /**
- * @brief Scales a per-field chance value into an output slot.
- *
- * Rolls func_800B2D34 with the field's 0x20 pointer, biases the result by 50,
- * multiplies by the field's 0x4A0 half-word, divides by 50, and stores the
- * quotient through @p out.
- *
- * 100% match with the FIELD GCC 2.8.0 G0 toolchain. The former 93.93%
- * result was a compiler-routing mismatch; GCC 2.8.0 reproduces the target
- * allocation and epilogue exactly.
+ * @brief Compute the attack value from an attacker stat and the action power.
+ * @param stat_index Attacker stat.
+ * @param attack Receives power * (stat + 50) / 50.
  */
-void func_800B70F4(s32 arg0, s32 *out)
+void func_800B70F4(s32 stat_index, s32* attack)
 {
-    s32 v;
-    u32 prod;
+    s32 stat;
 
-    v = func_800B2D34(*(u8 **)(((u8 *)D_80123FB0) + 0x20), arg0);
-    prod = *(u16 *)(((u8 *)D_80123FB0) + 0x4A0) * (v + 0x32);
-    *out = prod / 50;
+    stat = func_800B2D34(D_80123FB0->attacker, stat_index);
+    *attack = (u32)(D_80123FB0->power * (stat + 50)) / 50;
 }
 
-
-typedef struct
-{
-    u8 pad0[0xC];
-    s32 unkC;
-} Obj2;
-
-typedef struct
-{
-    u8 pad0[4];
-    u8 unk4;
-    u8 pad5[0x10 - 5];
-    Obj2 *unk10;
-    u8 pad14[0x1C - 0x14];
-    u16 arr1C[4];
-    u8 arr24[4];
-} Obj;
-
-typedef struct
-{
-    u8 pad0[0x14];
-    s32 unk14;
-    u8 pad18[0x1C - 0x18];
-    u8 *unk1C;
-    u8 pad20[0x24 - 0x20];
-    Obj *unk24;
-} FieldState;
-
-
-
-s32 func_8008ADB4(s32 arg0);
-s32 func_800B2D34(u8 *arg0, s32 arg1);
-
 /**
- * @brief Resolve and scale an actor state value selected by the caller.
- * @param arg0 Value selector passed to the actor-state lookup.
- * @param arg1 Output location that receives the resolved value.
+ * @brief Compute the defense value from a target stat and its equipment.
+ * @param stat_index Target stat.
+ * @param defense Receives the scaled defense, or 0 when the target cannot defend.
  */
-void func_800B7164(s32 arg0, s32 *arg1)
+void func_800B7164(s32 stat_index, s32* defense)
 {
-    Obj *obj;
-    Obj *obj3;
-    s32 status;
-    s32 mult_val;
-    u8 idx;
+    FieldStatusRecord* target;
+    FieldStatusRecord* guard;
+    s32 action_id;
+    s32 stat;
+    u8 slot;
 
-    status = func_8008ADB4(((FieldState *)D_80123FB0)->unk24->unk4);
-    mult_val = func_800B2D34((u8 *)((FieldState *)D_80123FB0)->unk24, arg0);
-    obj = ((FieldState *)D_80123FB0)->unk24;
-    if ((obj->unk10->unkC & 2) || status == 0x31)
+    action_id = func_8008ADB4(D_80123FB0->target->meta.bytes.id);
+    stat = func_800B2D34(D_80123FB0->target, stat_index);
+    target = D_80123FB0->target;
+    if ((target->state->effect_flags & 2) || action_id == 0x31)
     {
-        *arg1 = 0;
+        *defense = 0;
     }
-    else if ((u32)(status - 0xA) < 2)
+    else if (action_id == 10 || action_id == 11)
     {
-        ((FieldState *)D_80123FB0)->unk14 |= 1;
-        idx = *((FieldState *)D_80123FB0)->unk1C >> 6;
-        obj3 = ((FieldState *)D_80123FB0)->unk24;
-        *arg1 = obj3->arr1C[idx] + obj3->arr24[idx];
+        D_80123FB0->action_flags.bits.unk0 = 1;
+        slot = FIELD_DESCRIPTOR_DEFENSE_SLOT(D_80123FB0->descriptor);
+        guard = D_80123FB0->target;
+        *defense = guard->equipment_stats[slot] + guard->equipment_attributes[slot];
     }
     else
     {
-        idx = *((FieldState *)D_80123FB0)->unk1C >> 6;
-        *arg1 = obj->arr1C[idx];
+        slot = FIELD_DESCRIPTOR_DEFENSE_SLOT(D_80123FB0->descriptor);
+        *defense = target->equipment_stats[slot];
     }
-    *arg1 = (u32)(*arg1 * (mult_val + 0x32)) / 50;
+    *defense = (u32)(*defense * (stat + 50)) / 50;
 }
 
-typedef struct
-{
-    u8 pad0[4];
-    u8 unk4;
-    u8 pad5[0x39 - 5];
-    u8 unk39;
-    u8 unk3A;
-    u8 pad3B[0x44 - 0x3B];
-    u8 unk44;
-} SubStruct24;
-
-typedef struct
-{
-    u8 pad0[0x20];
-    u8 *unk20;
-    SubStruct24 *unk24;
-    u8 pad28[0x4A2 - 0x28];
-    u8 unk4A2;
-} FieldStateView729C;
-
-
-extern u8 D_800F0BB8[];
-
-
-void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
-
 /**
- * @brief Apply active field-state modifiers to the supplied value pair.
- * @param arg0 Unused operation selector.
- * @param arg1 Additional modifier mask.
- * @param arg2 Primary value adjusted by active modifiers.
- * @param arg3 Secondary value passed through unchanged.
+ * @brief Apply the target's element weaknesses and resistances to the attack.
+ * @param unused Not read.
+ * @param element_mask Elements added to the action's own element flags.
+ * @param attack Attack value, scaled by the weaknesses and resistances hit.
+ * @param defense Defense value, left unchanged.
  */
-void func_800B729C(s32 arg0, s32 arg1, s32 *arg2, s32 *arg3)
+void func_800B729C(s32 unused, s32 element_mask, s32* attack, s32* defense)
 {
-    s32 combined;
+    s32 elements;
     s32 mask;
     s32 sum;
     s32 i;
-    u8 *base24;
 
-    combined = arg1 | ((FieldStateView729C *)D_80123FB0)->unk4A2;
-    mask = combined & ((FieldStateView729C *)D_80123FB0)->unk24->unk39;
+    elements = element_mask | D_80123FB0->power_flags;
+    mask = elements & D_80123FB0->target->unk39;
 
     if (mask != 0)
     {
@@ -1019,21 +733,21 @@ void func_800B729C(s32 arg0, s32 arg1, s32 *arg2, s32 *arg3)
         {
             if (mask & 1)
             {
-                sum += *(((FieldStateView729C *)D_80123FB0)->unk20 + i + 0x3C);
+                sum += D_80123FB0->attacker->unk3C[i];
             }
             i++;
             mask >>= 1;
         } while (i < 8);
-        *arg2 = (u32)(*arg2 * (sum + 5)) >> 2;
+        *attack = (u32)(*attack * (sum + 5)) >> 2;
     }
 
-    if (func_800B4CE4((s32)((FieldStateView729C *)D_80123FB0)->unk24, 8) == 0)
+    if (func_800B4CE4(D_80123FB0->target, 8) == 0)
     {
-        mask = combined & ((FieldStateView729C *)D_80123FB0)->unk24->unk3A;
+        mask = elements & D_80123FB0->target->unk3A;
     }
     else
     {
-        mask = combined;
+        mask = elements;
     }
 
     i = 0;
@@ -1044,8 +758,7 @@ void func_800B729C(s32 arg0, s32 arg1, s32 *arg2, s32 *arg3)
         {
             if (mask & 1)
             {
-                base24 = (u8 *)((FieldStateView729C *)D_80123FB0)->unk24;
-                sum += *(base24 + D_800F0BB8[i] + 0x44);
+                sum += D_80123FB0->target->unk44[D_800F0BB8[i]];
             }
             i++;
             mask >>= 1;
@@ -1053,232 +766,211 @@ void func_800B729C(s32 arg0, s32 arg1, s32 *arg2, s32 *arg3)
 
         if (sum >= 9)
         {
-            *arg2 = (u32)*arg2 >> 2;
+            *attack = (u32)*attack >> 2;
         }
         else
         {
-            *arg2 = (u32)*arg2 >> 1;
+            *attack = (u32)*attack >> 1;
         }
     }
 
-    if (((FieldStateView729C *)D_80123FB0)->unk24->unk4 != 0)
+    if (D_80123FB0->target->meta.bytes.id != 0)
     {
-        func_800BD520(((FieldStateView729C *)D_80123FB0)->unk24->unk4, 0xD008, combined);
+        func_800BD520(D_80123FB0->target->meta.bytes.id, FIELD_VAR_RECORD_ELEMENTS, elements);
     }
 }
 
 /**
- * @brief Calculate and apply an action value to the current target.
- * @param arg0 Primary input value.
- * @param arg1 Secondary input value.
- * @return Calculated action value, or zero when processing is blocked.
+ * @brief Compute the damage of an attack and apply it to the target.
+ * @param attack Attack value.
+ * @param defense Defense value.
+ * @return Damage dealt, or 0 when the target is immune or the action has no power.
  */
-s32 func_800B742C(u32 arg0, u32 arg1)
+s32 func_800B742C(u32 attack, u32 defense)
 {
-    s32 adjusted;
-    u32 half_value;
+    s32 clamped;
+    u32 half_attack;
     s32 bonus;
-    s32 rounded;
-    s32 counter_record;
     u32 value;
+    FieldStatusRecord* attacker;
+    s32 quarter;
 
-    if (func_800B4CE4(D_80123FB0->unk24, 0xB) != 0)
+    if (func_800B4CE4(D_80123FB0->target, 0xB) != 0)
     {
         return 0;
     }
-    if (*((u8 *)D_80123FB0->unk1C + 2) == 0)
+    if (D_80123FB0->descriptor->info.bytes.power == 0)
     {
         return 0;
     }
 
-    if ((arg1 < arg0) || (D_80123FB0->unk14 & 1))
+    if ((defense < attack) || (D_80123FB0->action_flags.word & 1))
     {
-        arg0 -= arg1 >> 1;
-        adjusted = arg0;
-        if ((s32)arg0 < 0)
+        attack -= defense >> 1;
+        clamped = attack;
+        if ((s32)attack < 0)
         {
-            adjusted = 0;
+            clamped = 0;
         }
-        arg0 = adjusted;
+        attack = clamped;
     }
     else
     {
-        value = arg1 >> 1;
+        value = defense >> 1;
         if (value == 0)
         {
             value = 1;
         }
-        half_value = (arg0 >> 1) & 0xFFFF;
-        arg0 = (half_value * half_value) / value;
+        half_attack = (attack >> 1) & 0xFFFF;
+        attack = (half_attack * half_attack) / value;
     }
 
     bonus = 0;
-    if ((*(u32 *)((u8 *)D_80123FB0->unk20 + 4) & 0xFC00) == 0x1000)
+    if ((D_80123FB0->attacker->meta.packed & 0xFC00) == 0x1000)
     {
         bonus = func_800BD414(2, 0xD038) * 4;
     }
 
-    arg0 = (u32)((*((u8 *)D_80123FB0->unk1C + 2) + bonus) * arg0) >> 4;
-    arg0 = func_800B76F8(arg0 * *(s32 *)((u8 *)D_80123FB0->unk18 + 0x18));
+    attack = (u32)((D_80123FB0->descriptor->info.bytes.power + bonus) * attack) >> 4;
+    attack = func_800B76F8(attack * D_80123FB0->action->damage_scale);
 
-    if ((func_800B4CE4(D_80123FB0->unk20, 0xA) != 0) && ((*(u32 *)D_80123FB0->unk1C & 0xF) < 2U))
+    if ((func_800B4CE4(D_80123FB0->attacker, 0xA) != 0) && (FIELD_DESCRIPTOR_KIND(D_80123FB0->descriptor) < 2))
     {
-        counter_record = D_80123FB0->unk20;
-        if ((s32)arg0 < 0)
+        /* Open-coded attack / 4; value shares a register with the divisor above. */
+        attacker = D_80123FB0->attacker;
+        if ((s32)attack < 0)
         {
-            rounded = arg0 + 3;
-            value = *(s32 *)((u8 *)counter_record + 0x10);
+            quarter = attack + 3;
+            value = (u32)attacker->state;
         }
         else
         {
-            rounded = arg0;
-            value = *(s32 *)((u8 *)counter_record + 0x10);
+            quarter = attack;
+            value = (u32)attacker->state;
         }
-        saturating_counter_add((s32)value, rounded >> 2);
+        saturating_counter_add((FieldStatusState*)value, quarter >> 2);
     }
 
-    arg0 = func_800B788C(arg0);
-    if (!(D_80123FB0->unk14 & 1) && ((s32)arg0 <= 0))
+    attack = func_800B788C(attack);
+    if (!(D_80123FB0->action_flags.word & 1) && ((s32)attack <= 0))
     {
-        arg0 = 1;
+        attack = 1;
     }
 
-    if (func_800BD414(0, 0xFFC) != 0)
+    if (func_800BD414(0, FIELD_VAR_DEBUG_LOG_DAMAGE) != 0)
     {
-        record_game_diagnostic(0x8002, *(u8 *)((u8 *)D_80123FB0->unk20 + 4), *(u8 *)((u8 *)D_80123FB0->unk24 + 4), arg0);
+        record_game_diagnostic(0x8002, D_80123FB0->attacker->meta.bytes.id, D_80123FB0->target->meta.bytes.id, attack);
     }
 
-    if (((func_800BD414(0, 0xFFA) == 0) || (*(u8 *)((u8 *)D_80123FB0->unk24 + 4) < 3U)) &&
-        ((func_800BD414(0, 0xFFB) == 0) || (*(u8 *)((u8 *)D_80123FB0->unk24 + 4) >= 3U)))
+    if (((func_800BD414(0, FIELD_VAR_DEBUG_SPARE_PARTY) == 0) || (D_80123FB0->target->meta.bytes.id < FIELD_PARTY_RECORD_COUNT)) &&
+        ((func_800BD414(0, FIELD_VAR_DEBUG_SPARE_ENEMIES) == 0) || (D_80123FB0->target->meta.bytes.id >= FIELD_PARTY_RECORD_COUNT)))
     {
-        field_clear_record_state(D_80123FB0->unk24, 6);
-        func_800B30B8(*(s32 *)((u8 *)D_80123FB0->unk24 + 0x10), arg0);
+        field_clear_record_state(D_80123FB0->target, 6);
+        func_800B30B8(D_80123FB0->target->state, attack);
     }
 
-    return arg0;
+    return attack;
 }
 
 /**
- * @brief Apply field-state modifiers to an input value.
- * @param arg0 Base value to modify.
- * @return Value after applying the active field-state modifiers.
+ * @brief Apply the attacker's and the target's status multipliers to damage.
+ * @param damage Base damage.
+ * @return Damage after the multipliers.
  */
-s32 func_800B76F8(s32 arg0)
+s32 func_800B76F8(s32 damage)
 {
-    s32 s0;
     s32 count;
-    s32 value;
+    s32 kind;
 
-    s0 = arg0;
-
-    count = func_800B4CE4(D_80123FB0->unk20, (*(u8 *)D_80123FB0->unk1C >> 6) | 0x40);
+    count = func_800B4CE4(D_80123FB0->attacker, FIELD_DESCRIPTOR_DEFENSE_SLOT(D_80123FB0->descriptor) | 0x40);
     if (count != 0)
     {
         do
         {
-            s0 = (s0 * 3) / 2;
+            damage = (damage * 3) / 2;
         } while (--count != 0);
     }
 
-    value = *D_80123FB0->unk1C & 0xF;
-    count = func_800B4CE4(D_80123FB0->unk20, value + 0x38);
+    kind = FIELD_DESCRIPTOR_KIND(D_80123FB0->descriptor);
+    count = func_800B4CE4(D_80123FB0->attacker, kind + 0x38);
     if (count != 0)
     {
         do
         {
-            s0 = (s0 * 3) / 2;
+            damage = (damage * 3) / 2;
         } while (--count != 0);
     }
 
-    value = *D_80123FB0->unk1C & 0xF;
-    count = func_800B4CE4(D_80123FB0->unk24, value + 0x30);
+    kind = FIELD_DESCRIPTOR_KIND(D_80123FB0->descriptor);
+    count = func_800B4CE4(D_80123FB0->target, kind + 0x30);
     if (count != 0)
     {
         do
         {
-            s0 = s0 / 2;
+            damage = damage / 2;
         } while (--count != 0);
     }
 
-    count = func_800B4CE4(D_80123FB0->unk20, *(u8 *)(D_80123FB0->unk24 + 3) + 0x10);
+    count = func_800B4CE4(D_80123FB0->attacker, D_80123FB0->target->unk3 + 0x10);
     if (count != 0)
     {
         do
         {
-            s0 = (s0 * 3) / 2;
+            damage = (damage * 3) / 2;
         } while (--count != 0);
     }
 
-    count = func_800B4CE4(D_80123FB0->unk24, *(u8 *)(D_80123FB0->unk20 + 3) + 0x20);
+    count = func_800B4CE4(D_80123FB0->target, D_80123FB0->attacker->unk3 + 0x20);
     if (count != 0)
     {
         do
         {
-            s0 = s0 / 2;
+            damage = damage / 2;
         } while (--count != 0);
     }
 
-    return s0;
+    return damage;
 }
 
-typedef struct
-{
-    s8 pad[0xC];
-    s32 flags;
-} InnerStruct80123FB0;
-
-typedef struct
-{
-    s8 pad[0x20];
-    InnerStruct80123FB0* inner;
-} OuterStruct80123FB0;
-
-
-
-s32 func_800B788C(s32 arg0)
+/**
+ * @brief Double the damage while bit 0 of the attacker's unkC flags is set.
+ * @param damage Damage so far.
+ * @return The possibly doubled damage.
+ */
+s32 func_800B788C(s32 damage)
 {
     s32 result;
 
-    result = arg0;
-    if (((OuterStruct80123FB0 *)D_80123FB0)->inner->flags & 1)
+    result = damage;
+    if (D_80123FB0->attacker->unkC & 1)
     {
         result *= 2;
     }
     return result;
 }
 
-typedef struct
-{
-    u8 unk0;
-    u8 unk1;
-} FieldB78C0Rec;
-
-
-
-extern void func_800B2B54(s32 a, s32 b, s32 c, s32 d, s32 e, s32 f);
-extern s32 func_800B4CE4(s32 a, s32 b);
-extern FieldB78C0Rec D_800F0BC0;
-extern FieldB78C0State *D_80123FB0;
-
+/**
+ * @brief Pass the attacker's on-hit statuses to the target.
+ */
 void func_800B78C0(void)
 {
-    s32 var_s0;
-    FieldB78C0Rec *new_var;
-    FieldB78C0Rec *temp_v1;
+    s32 status;
+    FieldOnHitStatus* table;
+    FieldOnHitStatus* entry;
 
-    var_s0 = 0x50;
-    if ((*D_80123FB0->unk1C & 0xF) != 2)
+    status = FIELD_ON_HIT_STATUS_FIRST;
+    if (FIELD_DESCRIPTOR_KIND(D_80123FB0->descriptor) != 2)
     {
         do
         {
-            if (func_800B4CE4(D_80123FB0->unk20, var_s0) != 0)
+            if (func_800B4CE4(D_80123FB0->attacker, status) != 0)
             {
-                new_var = &D_800F0BC0;
-                temp_v1 = &new_var[var_s0 - 0x50];
-                func_800B2B54(D_80123FB0->unk20, D_80123FB0->unk24, 0, var_s0 - 0x50,
-                              (s32)temp_v1->unk0, temp_v1->unk1 * 0x10);
+                /* Indexing D_800F0BC0 directly folds the -0xA0 bias into the address. */
+                table = D_800F0BC0;
+                entry = &table[status - FIELD_ON_HIT_STATUS_FIRST];
+                func_800B2B54(D_80123FB0->attacker, D_80123FB0->target, 0, status - FIELD_ON_HIT_STATUS_FIRST, entry->chance, entry->duration * 16);
             }
-            var_s0 += 1;
-        } while (var_s0 < 0x60);
+            status += 1;
+        } while (status < FIELD_ON_HIT_STATUS_END);
     }
 }

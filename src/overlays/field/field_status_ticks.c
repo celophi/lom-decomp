@@ -1,51 +1,36 @@
 #include "game_audio.h"
 #include "common.h"
+#include "field_records.h"
 
-extern u8 *D_80123FB0;
-extern u8 *D_80122B78;
+extern FieldBattleContext *D_80123FB0;
+extern FieldRuntimeContext *D_80122B78;
 
-
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-} StructB2A9C;
-
-
-StructB2A9C *func_800B2A9C(void);
 s32 func_800BD414(s32 arg0, s32 arg1);
 void func_800BD520(s32 arg0, u32 arg1, s32 arg2);
 
 /**
+ * @brief Count one more battle for the ally or the enemy side in script variables 0x4280 / 0x4284.
  * @see decomp.me (100%)
  */
 void func_800B48B8(void)
 {
-    s32 var_v0;
+    s32 count;
 
-    if ((D_80123FB0 != NULL) && (*(s32 *)D_80123FB0 >= 0))
+    if ((D_80123FB0 != NULL) && (D_80123FB0->state.flags >= 0))
     {
-        if (func_800B2A9C()->unk4 & 0x200)
+        /* No argument: the original leaves $a0 as the caller set it. 0x200 is meta.bits.ally. */
+        if (((FieldStatusRecord *(*)(void))func_800B2A9C)()->meta.packed & 0x200)
         {
-            var_v0 = func_800BD414(0, 0x4280);
-            func_800BD520(0, 0x4280, var_v0 + 1);
+            count = func_800BD414(0, 0x4280);
+            func_800BD520(0, 0x4280, count + 1);
         }
         else
         {
-            var_v0 = func_800BD414(0, 0x4284);
-            func_800BD520(0, 0x4284, var_v0 + 1);
+            count = func_800BD414(0, 0x4284);
+            func_800BD520(0, 0x4284, count + 1);
         }
     }
 }
-
-
-typedef struct ActorB4934
-{
-    u8 pad0[4];
-    u8 unk4;
-    u8 pad5[5];
-    u16 unkA;
-} ActorB4934;
 
 extern u16 D_800F0B58[];
 extern u8 *D_80122B74;
@@ -58,10 +43,9 @@ extern u8 *D_80122B74;
  * pointed to by @c D_80122B74. For each active record (byte 0 non-zero) it ORs in
  * the 16-bit flag looked up in @c D_800F0B58 by the record's 0x2E field.
  *
- * @param arg0 Actor whose 0x4 index selects the block and whose 0xA mask is set.
- * @note gcc280_g0, 100% match.
+ * @param record Status record whose id selects the block and whose status_flags are rebuilt.
  */
-void func_800B4934(ActorB4934 *arg0)
+void func_800B4934(FieldStatusRecord *record)
 {
     s32 i;
     s32 off;
@@ -71,59 +55,27 @@ void func_800B4934(ActorB4934 *arg0)
 
     i = 0;
     tbl = D_800F0B58;
-    arg0->unkA = 0;
+    record->status_flags = 0;
     off = 0x50;
-    base = D_80122B74 + (arg0->unk4 * 0x250 + 0x5F0);
+    base = D_80122B74 + (record->meta.bytes.id * 0x250 + 0x5F0);
     do
     {
         rec = base + off;
         if (*rec != 0)
         {
-            arg0->unkA |= tbl[*(u16 *)(rec + 0x2E)];
+            record->status_flags |= tbl[*(u16 *)(rec + 0x2E)];
         }
         i += 1;
         off += 0x40;
     } while (i < 4);
 }
 
-
-/** @brief Partial FIELD state used by the frame/update dispatcher (see func_800B19FC.c). */
-typedef struct
-{
-    u8 pad0[0xBC];
-    s32 unkBC;
-    u8 padC0[0x400 - 0xC0];
-    s32 unk400;
-    u8 pad404[0x418 - 0x404];
-    s32 unk418;
-} FieldStateB19FC;
-
-typedef struct
-{
-    u8 pad0[4];
-    u32 flags;
-    u8 pad8[8];
-    u8 *state;
-    u8 pad14[0x68 - 0x14];
-} FieldStatusRecord;
-
-typedef struct
-{
-    s32 unk0;
-    u8 pad4[0x28 - 4];
-    FieldStatusRecord records[11];
-} FieldStatusContext;
-
-
-
-
 void func_800B4B44(void);
-void func_800B4D1C();
-void func_800B4DF0();
-void func_800B4E60();
-void func_800B4F38();
-void func_800B4F80();
-s32 func_800BD414(s32 arg0, s32 arg1);
+void func_800B4D1C(FieldStatusRecord *record);
+void func_800B4DF0(FieldStatusRecord *record);
+void func_800B4E60(FieldStatusRecord *record);
+void func_800B4F38(FieldStatusRecord *record);
+void func_800B4F80(FieldStatusRecord *record);
 
 /**
  * @brief Run two update passes over the active field status records.
@@ -133,13 +85,13 @@ void func_800B49C0(void)
     s32 i;
     s32 keep;
 
-    if ((D_80123FB0 != NULL) && (((FieldStatusContext *)D_80123FB0)->unk0 >= 0))
+    if ((D_80123FB0 != NULL) && (D_80123FB0->state.flags >= 0))
     {
         i = 0;
         func_800B4B44();
         do
         {
-            if ((((FieldStatusContext *)D_80123FB0)->records[i].flags >> 8) & 1)
+            if (D_80123FB0->records[i].meta.bits.active)
             {
                 if (func_800BD414(0, 0xFFD) == 0)
                 {
@@ -147,31 +99,31 @@ void func_800B49C0(void)
                 }
                 else
                 {
-                    if ((u8)((FieldStatusContext *)D_80123FB0)->records[i].flags < 2)
+                    if (D_80123FB0->records[i].meta.bytes.id < 2)
                     {
-                        *(u16 *)(((FieldStatusContext *)D_80123FB0)->records[i].state + 0x48) = 0xFF;
+                        D_80123FB0->records[i].state->status_intensity = 0xFF;
                     }
                     keep = i < 3;
                 }
                 if (keep)
                 {
-                    func_800B4D1C(&((FieldStatusContext *)D_80123FB0)->records[i]);
-                    func_800B4F80(&((FieldStatusContext *)D_80123FB0)->records[i]);
+                    func_800B4D1C(&D_80123FB0->records[i]);
+                    func_800B4F80(&D_80123FB0->records[i]);
                 }
-                func_800B4DF0(&((FieldStatusContext *)D_80123FB0)->records[i]);
+                func_800B4DF0(&D_80123FB0->records[i]);
             }
             i++;
         } while (i < 11);
 
         i = 0;
-        if ((((FieldStateB19FC *)D_80122B78)->unkBC & 0xF) == 0)
+        if ((D_80122B78->frame_count & 0xF) == 0)
         {
             do
             {
-                if ((((FieldStatusContext *)D_80123FB0)->records[i].flags >> 8) & 1)
+                if (D_80123FB0->records[i].meta.bits.active)
                 {
-                    func_800B4E60(&((FieldStatusContext *)D_80123FB0)->records[i]);
-                    func_800B4F38(&((FieldStatusContext *)D_80123FB0)->records[i]);
+                    func_800B4E60(&D_80123FB0->records[i]);
+                    func_800B4F38(&D_80123FB0->records[i]);
                 }
                 i++;
             } while (i < 11);
@@ -179,13 +131,9 @@ void func_800B49C0(void)
     }
 }
 
-
-
-
 u8 *func_800A2E34(void);
-u32 func_800B4CE4();
+u32 func_800B4CE4(FieldStatusRecord *record, s32 status);
 void func_800B28E0(s32 arg0, s32 arg1, s32 arg2);
-
 
 /**
  * @brief Rebuild indexed field-state byte mappings and trigger dependent handlers.
@@ -199,7 +147,6 @@ void func_800B4B44(void)
     s32 first;
     s32 second;
     s32 current;
-    s32 entry_index;
 
     i = 0;
     do
@@ -207,11 +154,8 @@ void func_800B4B44(void)
         j = 0;
         do
         {
-            u8 *entry;
-            entry_index = j + i * 0x68;
+            D_80123FB0->records[i].status_slots[j] = 0;
             j++;
-            entry = D_80123FB0 + entry_index;
-            entry[0x75] = 0;
         } while (j < 3);
         i++;
     } while (i < 3);
@@ -222,51 +166,21 @@ void func_800B4B44(void)
     {
         other = list + 1;
         current = *list;
-        {
-            s32 dst_offset;
-            s32 src_offset;
-            u8 *base;
-            u8 *src;
-            u8 *dst;
-            u8 value;
-
-            first = *other;
-            dst_offset = i + current * 0x68;
-            src_offset = first * 0x68;
-            base = D_80123FB0;
-            src = base + src_offset;
-            value = src[0x74];
-            dst = base + dst_offset;
-            dst[0x75] = value;
-        }
+        first = *other;
+        D_80123FB0->records[current].status_slots[i] = D_80123FB0->records[first].unk4C;
         second = *other;
         other += 2;
         first = *list;
         list += 2;
-        {
-            s32 dst_offset;
-            s32 src_offset;
-            u8 *base;
-            u8 *src;
-            u8 *dst;
-            u8 value;
-
-            dst_offset = i + second * 0x68;
-            src_offset = first * 0x68;
-            base = D_80123FB0;
-            src = base + src_offset;
-            value = src[0x74];
-            dst = base + dst_offset;
-            dst[0x75] = value;
-        }
+        D_80123FB0->records[second].status_slots[i] = D_80123FB0->records[first].unk4C;
         i++;
     }
 
-    if (func_800B4CE4(D_80123FB0 + 0x90, 0) < 3)
+    if (func_800B4CE4(&D_80123FB0->records[1], 0) < 3)
     {
         func_800B28E0(1, 0xC, 6);
     }
-    if (func_800B4CE4(D_80123FB0 + 0xF8, 0) < 3)
+    if (func_800B4CE4(&D_80123FB0->records[2], 0) < 3)
     {
         func_800B28E0(2, 0xC, 6);
     }
@@ -276,17 +190,13 @@ void func_800B4B44(void)
     }
 }
 
-
-extern void field_clear_record_state(void *, u32);
-
-
-typedef struct UnkStruct800B4CE4
-{
-    u8 pad0[0x4D];
-    u8 values[3];
-} UnkStruct800B4CE4;
-
-u32 func_800B4CE4(UnkStruct800B4CE4 *arg0, s32 arg1)
+/**
+ * @brief Count the status slots of a record that hold a given status.
+ * @param record Status record to scan.
+ * @param status Status id to count.
+ * @return Number of the FIELD_STATUS_SLOT_COUNT slots equal to @p status.
+ */
+u32 func_800B4CE4(FieldStatusRecord *record, s32 status)
 {
     u32 count;
     u32 i;
@@ -295,7 +205,7 @@ u32 func_800B4CE4(UnkStruct800B4CE4 *arg0, s32 arg1)
     count = i;
     for (; i < 3; i++)
     {
-        if (arg0->values[i] == arg1)
+        if (record->status_slots[i] == status)
         {
             count++;
         }
@@ -303,79 +213,48 @@ u32 func_800B4CE4(UnkStruct800B4CE4 *arg0, s32 arg1)
     return count;
 }
 
-
-typedef struct StateB4D1C
-{
-    u8 pad0[0x48];
-    u16 unk48;
-} StateB4D1C;
-
-typedef struct RecordB4D1C
-{
-    u8 pad0[4];
-    u8 unk4;
-    u8 pad5[0xB];
-    StateB4D1C *state;
-} RecordB4D1C;
-
-s32 func_800B2D64(RecordB4D1C *arg0, s32 arg1, s32 arg2, s32 arg3);
-
 /**
  * @brief Clear selected record state and apply active field record actions.
- * @param arg0 Record whose active entries are processed.
+ * @param record Status record whose active statuses are processed.
  */
-void func_800B4D1C(RecordB4D1C *arg0)
+void func_800B4D1C(FieldStatusRecord *record)
 {
     s32 i;
     s32 j;
 
-    if (func_800B4CE4((UnkStruct800B4CE4 *)arg0, 5) != 0)
+    if (func_800B4CE4(record, 5) != 0)
     {
-        field_clear_record_state(arg0, 0xFF);
+        field_clear_record_state(record, 0xFF);
     }
 
     i = 0x60;
     do
     {
-        if (func_800B4CE4((UnkStruct800B4CE4 *)arg0, i) != 0)
+        if (func_800B4CE4(record, i) != 0)
         {
-            field_clear_record_state(arg0, i - 0x60);
+            field_clear_record_state(record, i - 0x60);
         }
         i++;
     } while (i < 0x6C);
 
-    if (func_800B4CE4((UnkStruct800B4CE4 *)arg0, 6) != 0)
+    if (func_800B4CE4(record, 6) != 0)
     {
-        if (arg0->unk4 == 0)
+        if (record->meta.bytes.id == 0)
         {
-            arg0->state->unk48 = 0xFF;
+            record->state->status_intensity = 0xFF;
         }
     }
 
     j = 0x70;
     do
     {
-        if (func_800B4CE4((UnkStruct800B4CE4 *)arg0, j) != 0)
+        if (func_800B4CE4(record, j) != 0)
         {
-            func_800B2D64(arg0, j - 0x70, 0xA, 0);
+            func_800B2D64(record, j - 0x70, 0xA, 0);
         }
         j++;
     } while (j < 0x80);
 }
-
-
-typedef struct StateB3160
-{
-    u8 pad0[0xC];
-    u32 flags;
-} StateB3160;
-
-typedef struct RecordB3160
-{
-    u8 pad0[0x10];
-    StateB3160 *state;
-} RecordB3160;
-
 
 /**
  * @brief Ticks a record's twelve state timers and clears any that expire.
@@ -384,21 +263,19 @@ typedef struct RecordB3160
  * nonzero timer and, when it reaches zero or below, clears that state via
  * field_clear_record_state.
  *
- * 100% match with the FIELD GCC 2.8.0 G0 toolchain. The former 94.29%
- * result was caused by routing this standalone unit through GCC 2.7.2 CDK,
- * whose epilogue scheduling differs from the target.
+ * @param record Status record whose timers are ticked.
  */
-void func_800B4DF0(RecordB3160 *record)
+void func_800B4DF0(FieldStatusRecord *record)
 {
     s32 i;
 
     for (i = 0; i < 12; i++)
     {
-        if (*(s16 *)((u8 *)record + i * 2 + 0x50) != 0)
+        if ((s16)record->status_timers[i] != 0)
         {
-            s16 nv = *(u16 *)((u8 *)record + i * 2 + 0x50) - 1;
-            *(s16 *)((u8 *)record + i * 2 + 0x50) = nv;
-            if (nv <= 0)
+            s16 remaining = record->status_timers[i] - 1;
+            record->status_timers[i] = remaining;
+            if (remaining <= 0)
             {
                 field_clear_record_state(record, i);
             }
@@ -406,129 +283,116 @@ void func_800B4DF0(RecordB3160 *record)
     }
 }
 
-
-typedef struct Inner {
-    u32 unk0;
-    s32 unk4;
-    u8 pad8[4];
-    u32 unkC;
-} Inner;
-
-typedef struct Other {
-    u8 pad0[0x3F];
-    u8 unk3F;
-} Other;
-
-typedef struct Rec {
-    u8 pad0[4];
-    u8 unk4;
-    u8 pad5[0xB];
-    Inner *unk10;
-    Other *unk14;
-} Rec;
-
 /**
+ * @brief Drain a record's current value by its per-tick cost while a draining effect is active.
+ * @param record Status record to update; the cost is maximum >> 5, or >> 8 for party
+ *               members whose template shows the HP gauge.
+ * @note The current value never drops below 1.
  * @see decomp.me (100%)
  */
-void func_800B4E60(Rec *arg0)
+void func_800B4E60(FieldStatusRecord *record)
 {
-    s32 var_a2;
-    u32 var_v0;
-    s32 var_v1;
-    Inner *var_a0;
-    Inner *var_a1;
+    s32 current;
+    u32 value;
+    s32 cost;
+    FieldStatusState *state_again;
+    FieldStatusState *state;
 
-    var_v0 = arg0->unk4;
-    var_a1 = arg0->unk10;
-    var_v0 = var_v0 < 3U;
-    var_a2 = var_a1->unk4;
-    if (var_v0 != 0) {
-        var_v0 = var_a1->unkC;
-        var_v0 &= 0x190;
-        if (var_v0 != 0) {
-            var_v0 = var_a1->unk0;
-            var_v0 >>= 5;
+    value = record->meta.bytes.id;
+    state = record->state;
+    value = value < 3U;
+    current = state->current;
+    if (value != 0)
+{
+        value = state->effect_flags;
+        value &= 0x190;
+        if (value != 0)
+{
+            value = state->maximum;
+            value >>= 5;
             do {
-                var_v1 = 1;
-                if (var_v0 != 0) {
-                    var_v1 = var_v0;
+                cost = 1;
+                if (value != 0)
+{
+                    cost = value;
                 }
-                var_a2 -= var_v1;
+                current -= cost;
             } while (0);
-            var_v0 = 1;
-            if (var_a2 > 0) {
-                var_a1->unk4 = var_a2;
+            value = 1;
+            if (current > 0)
+{
+                state->current = current;
                 return;
             }
-            var_a1->unk4 = var_v0;
+            state->current = value;
         }
     } else {
-        var_v0 = var_a1->unkC;
-        var_v0 &= 0x191;
-        if (var_v0 != 0) {
-            var_v0 = arg0->unk14->unk3F;
-            var_v0 &= 0x80;
+        value = state->effect_flags;
+        value &= 0x191;
+        if (value != 0)
+{
+            value = record->template->flags;
+            value &= 0x80;
             do {
-                var_v1 = 1;
-                if (var_v0 != 0) {
-                    var_v0 = var_a1->unk0;
-                    var_v0 >>= 8;
+                cost = 1;
+                if (value != 0)
+{
+                    value = state->maximum;
+                    value >>= 8;
                 } else {
-                    var_v0 = var_a1->unk0;
-                    var_v0 >>= 5;
+                    value = state->maximum;
+                    value >>= 5;
                 }
-                if (var_v0 != 0) {
-                    var_v1 = var_v0;
+                if (value != 0)
+{
+                    cost = value;
                 }
-                var_a2 -= var_v1;
+                current -= cost;
             } while (0);
-            var_a0 = arg0->unk10;
-            var_v0 = 1;
-            if (var_a2 > 0) {
-                var_a0->unk4 = var_a2;
+            state_again = record->state;
+            value = 1;
+            if (current > 0)
+{
+                state_again->current = current;
                 return;
             }
-            var_a0->unk4 = var_v0;
+            state_again->current = value;
         }
     }
 }
 
-
-void func_800B4F38(u8 *arg0)
+/**
+ * @brief Step each current stat one point toward its base value.
+ * @param record Status record whose stats are updated.
+ */
+void func_800B4F38(FieldStatusRecord *record)
 {
     s32 i;
-    u8 *p;
     u8 current;
     u8 target;
 
-    for (i = 0; i < 8; i++)
+    for (i = 0; i < FIELD_STATUS_STAT_COUNT; i++)
     {
-        p = &arg0[i];
-        current = p[0x28];
-        target = p[0x30];
+        current = record->stats[i];
+        target = record->base_stats[i];
         if (target < current)
         {
-            p[0x28] = current - 1;
+            record->stats[i] = current - 1;
         }
         else if (current < target)
         {
-            p[0x28] = current + 1;
+            record->stats[i] = current + 1;
         }
     }
 }
 
-
 s32 func_8008ADB4(u8 arg0);
-s32 func_800B2D34(u8 *arg0, s32 arg1);
-void saturating_counter_add(void *counter, s32 delta);
-
-extern u8 *D_80122B78;
 
 /**
  * @brief Update the record's saturating counters when its growth interval elapses.
- * @param arg0 Record containing the growth state and linked counter.
+ * @param record Status record whose linked state counter grows.
  */
-void func_800B4F80(u8 *arg0)
+void func_800B4F80(FieldStatusRecord *record)
 {
     u16 flags;
     s32 multiplier;
@@ -536,22 +400,22 @@ void func_800B4F80(u8 *arg0)
     s32 divisor;
     s32 classification;
 
-    flags = *(u16 *)(arg0 + 0xA);
+    flags = record->status_flags;
     if (flags & 1)
     {
         return;
     }
-    if (*(s32 *)(*(u8 **)(arg0 + 0x10) + 0xC) & 0x391)
+    if (record->state->effect_flags & 0x391)
     {
         return;
     }
-    if ((flags & 8) || func_800B4CE4((UnkStruct800B4CE4 *)arg0, 2) != 0)
+    if ((flags & 8) || func_800B4CE4(record, 2) != 0)
     {
         multiplier = 8;
     }
     else
     {
-        classification = func_8008ADB4(arg0[4]);
+        classification = func_8008ADB4(record->meta.bytes.id);
         if (classification < 0)
         {
             return;
@@ -570,7 +434,7 @@ void func_800B4F80(u8 *arg0)
         }
     }
 
-    scaled_remaining = (0x64 - func_800B2D34(arg0, 4)) * multiplier;
+    scaled_remaining = (0x64 - func_800B2D34(record, 4)) * multiplier;
     if (scaled_remaining < 0)
     {
         scaled_remaining += 0xF;
@@ -580,12 +444,12 @@ void func_800B4F80(u8 *arg0)
     {
         divisor = 1;
     }
-    if ((u32)(*(s32 *)(D_80122B78 + 0xBC)) % (u32)divisor == 0)
+    if ((u32)D_80122B78->frame_count % (u32)divisor == 0)
     {
-        saturating_counter_add(*(u8 **)(arg0 + 0x10), 1);
-        if (arg0[4] < 3)
+        saturating_counter_add(record->state, 1);
+        if (record->meta.bytes.id < 3)
         {
-            saturating_counter_add(*(u8 **)(arg0 + 0x10), func_800B4CE4((UnkStruct800B4CE4 *)arg0, 1));
+            saturating_counter_add(record->state, func_800B4CE4(record, 1));
         }
     }
 }

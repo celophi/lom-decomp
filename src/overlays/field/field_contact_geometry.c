@@ -18,6 +18,9 @@
 /* These cursors point at a member inside each record, not at its base. */
 #define FIELD_CONTAINER(ptr, type, member) ((type*)((u8*)(ptr) - (s32) & ((type*)0)->member))
 
+/** @brief Object state @p index of @p base; the original adds the scaled index before the base. */
+#define FIELD_OBJECT_STATE_AT(base, index) ((FieldObjectRuntime*)((index) * sizeof(FieldObjectRuntime) + (s32)(base)))
+
 #define FIELD_CONTACT_RESOURCE_ID 0x5DD
 #define FIELD_CONTACT_RESOURCE_BLOCK_COUNT 11
 #define FIELD_CONTACT_RESOURCE_ROW_COUNT 24
@@ -262,19 +265,16 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* r
     s16 candidate_animation;
     s32 candidate_extent;
     s32 flags_or_extent;
-
     s32 intersection;
     s32 candidate_mode;
-    s32 centroid_layer;
     s32 eligible;
     s32 actor_index;
     s32 input_edge;
     s32 candidate_edge;
     s32 next_edge_offset;
-    s32 list_index_or_layer;
-    s32 edge_layer;
-    s32 request_offset;
-    s32 matched_request_offset;
+    s32 target_or_layer;
+    s32 binding_offset;
+    s32 owner_binding_offset;
     s32 center_x;
     s32 packed_center;
     s32 center_y;
@@ -282,86 +282,60 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* r
     u8 owner_index;
     u8 target_count;
     FieldContactPoint* candidate_quad;
-    FieldMotionRecord* initial_owner;
     FieldObjectRuntime* target_state;
-    FieldObjectRuntime* reaction_state_40;
-    FieldObjectRuntime* reaction_state_3f;
-    FieldObjectRuntime* reaction_base_3f;
-    FieldObjectRuntime* reaction_base_40;
-    FieldObjectRuntime* target_base;
-    FieldSequenceBinding* request_base;
-    FieldSequenceBinding* request;
-    FieldActorState* slot_base;
+    FieldObjectRuntime* object_states;
+    FieldSequenceBinding* bindings;
+    FieldSequenceBinding* binding;
+    FieldActorState* slots;
     FieldContactPoint* input_vertex;
-    u8* scan_facing_cursor;
-    u8* scan_diameter_cursor;
-    FieldObjectRuntime* target_list_base;
+    FieldObjectRuntime* target_list;
 
     owner_index = record->source_object_index;
-    initial_owner = &g_field_actors[owner_index];
-    owner_record = initial_owner;
-    if (initial_owner->motion_parameter == 0)
+    owner_record = &g_field_actors[owner_index];
+    if (owner_record->motion_parameter == 0)
     {
         return 0;
     }
-    goto initialize;
-special_3f:
-    scan_record->motion_parameter = 0x285;
-    field_prepare_actor_action(scan_record);
-    reaction_base_3f = g_field_object_states;
-    reaction_state_3f = &reaction_base_3f[scan_record->source_object_index];
-    reaction_state_3f->contact.flags =
-        (s32)((reaction_state_3f->contact.flags & ~(FIELD_CONTACT_REACTION_BIT_04 | FIELD_CONTACT_REACTION_BIT_08 | FIELD_CONTACT_REACTION_BIT_10)) |
-              FIELD_CONTACT_REACTION_BIT_08);
-    return 3;
-special_40:
-    scan_record->motion_parameter = 0x385;
-    field_prepare_actor_action(scan_record);
-    reaction_base_40 = g_field_object_states;
-    reaction_state_40 = &reaction_base_40[scan_record->source_object_index];
-    reaction_state_40->contact.flags =
-        (s32)((reaction_state_40->contact.flags & ~(FIELD_CONTACT_REACTION_BIT_04 | FIELD_CONTACT_REACTION_BIT_08 | FIELD_CONTACT_REACTION_BIT_10)) |
-              FIELD_CONTACT_REACTION_BIT_10);
-    return 3;
-initialize:
     scan_state = g_field_object_states;
     owner_state = &scan_state[owner_index];
     actor_index = 0;
     scan_record = g_field_actors;
-    scan_facing_cursor = (u8*)&g_field_actors[0].facing_or_reward_kind;
-    scan_diameter_cursor = (u8*)&scan_state->collision.half.diameter;
-    target_base = g_field_object_states;
-    request_base = g_field_actor_bindings;
-    slot_base = g_field_actor_slots;
-scan_actor:
-    if ((FIELD_CONTAINER(scan_facing_cursor, FieldMotionRecord, facing_or_reward_kind)->state != FIELD_ACTOR_STATE_UNUSED) &&
-        !(FIELD_CONTAINER(scan_diameter_cursor, FieldObjectRuntime, collision.half.diameter)->object_flags &
-          (FIELD_OBJECT_FLAG_CONTACT_FILTER_0080 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0200 | FIELD_OBJECT_FLAG_CONTACT_FILTER_2000)) &&
-        ((actor_index < FIELD_PARTY_ACTOR_COUNT) || ((FIELD_CONTAINER(scan_diameter_cursor, FieldObjectRuntime, collision.half.diameter)->group_flags &
-                                                      FIELD_OBJECT_GROUP_MASK) == g_field_active_group)) &&
-        (FIELD_CONTAINER(scan_diameter_cursor, FieldObjectRuntime, collision.half.diameter)->current_hp != 0) &&
-        ((FIELD_CONTAINER(scan_facing_cursor, FieldMotionRecord, facing_or_reward_kind)->facing_or_reward_kind & FIELD_FACING_INDEX_MASK) < 0x38 || (FIELD_CONTAINER(scan_facing_cursor, FieldMotionRecord, facing_or_reward_kind)->facing_or_reward_kind & FIELD_FACING_INDEX_MASK) > 0x39) &&
-        (FIELD_CONTAINER(scan_facing_cursor, FieldMotionRecord, facing_or_reward_kind)->source_object_index != record->source_object_index))
+    object_states = g_field_object_states;
+    bindings = g_field_actor_bindings;
+    slots = g_field_actor_slots;
+    for (; actor_index < FIELD_RUNTIME_ACTOR_COUNT; actor_index++, scan_record++, scan_state++)
     {
-        if (FIELD_CONTAINER(scan_diameter_cursor, FieldObjectRuntime, collision.half.diameter)->contact.flags & FIELD_CONTACT_FLAG_TARGETED)
+        if ((scan_record->state == FIELD_ACTOR_STATE_UNUSED) ||
+            (scan_state->object_flags &
+             (FIELD_OBJECT_FLAG_CONTACT_FILTER_0080 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0200 | FIELD_OBJECT_FLAG_CONTACT_FILTER_2000)) ||
+            ((actor_index >= FIELD_PARTY_ACTOR_COUNT) && ((scan_state->group_flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)) ||
+            (scan_state->current_hp == 0) ||
+            ((scan_record->facing_or_reward_kind & FIELD_FACING_INDEX_MASK) >= 0x38 &&
+             (scan_record->facing_or_reward_kind & FIELD_FACING_INDEX_MASK) <= 0x39) ||
+            (scan_record->source_object_index == record->source_object_index))
         {
+            continue;
+        }
+        if (scan_state->contact.flags & FIELD_CONTACT_FLAG_TARGETED)
+        {
+            /* A targeted candidate is only eligible for an owner locked onto it. */
             eligible = 0;
             if (owner_record->motion_parameter == 0x91)
             {
-                target_state = (FieldObjectRuntime*)(owner_record->source_object_index * sizeof(*target_base) + (s32)target_base);
+                target_state = FIELD_OBJECT_STATE_AT(object_states, owner_record->source_object_index);
                 target_count = target_state->contact.bytes.target_count;
-                list_index_or_layer = 0;
+                target_or_layer = 0;
                 if (target_count != 0)
                 {
-                    target_list_base = target_state;
+                    target_list = target_state;
                     do
                     {
-                        if (target_list_base->targets[list_index_or_layer] == actor_index)
+                        if (target_list->targets[target_or_layer] == actor_index)
                         {
                             goto eligible_candidate;
                         }
-                        list_index_or_layer++;
-                    } while (list_index_or_layer < target_count);
+                        target_or_layer++;
+                    } while (target_or_layer < target_count);
                 }
             }
         }
@@ -370,188 +344,179 @@ scan_actor:
         eligible_candidate:
             eligible = 1;
         }
-        if ((eligible != 0) &&
-            !(FIELD_CONTAINER(scan_diameter_cursor, FieldObjectRuntime, collision.half.diameter)->movement.word & FIELD_MOVEMENT_FLAG_NO_CONTACT))
+        if ((eligible == 0) || (scan_state->movement.word & FIELD_MOVEMENT_FLAG_NO_CONTACT))
         {
-            flags_or_extent = FIELD_CONTAINER(scan_diameter_cursor, FieldObjectRuntime, collision.half.diameter)->contact.flags;
-            if (!(flags_or_extent & FIELD_CONTACT_FLAG_NO_HIT_TEST) &&
-                (!(flags_or_extent & FIELD_CONTACT_FLAG_REQUIRE_CONTROLLER) ||
-                 (slot_base[FIELD_CONTAINER(scan_diameter_cursor, FieldObjectRuntime, collision.half.diameter)->contact.bytes.controller_index]
-                      .owner_object_index == record->source_object_index)) &&
-                !(flags_or_extent & FIELD_CONTACT_FLAG_DISABLED))
+            continue;
+        }
+        flags_or_extent = scan_state->contact.flags;
+        if ((flags_or_extent & FIELD_CONTACT_FLAG_NO_HIT_TEST) ||
+            ((flags_or_extent & FIELD_CONTACT_FLAG_REQUIRE_CONTROLLER) &&
+             (slots[scan_state->contact.bytes.controller_index].owner_object_index != record->source_object_index)) ||
+            (flags_or_extent & FIELD_CONTACT_FLAG_DISABLED))
+        {
+            continue;
+        }
+        if (!(flags_or_extent & FIELD_CONTACT_FLAG_IGNORE_BINDING))
+        {
+            /* Objects 2 and up share the last binding. */
+            if ((u8)scan_record->source_object_index < 2U)
             {
-                if (!(flags_or_extent & FIELD_CONTACT_FLAG_IGNORE_BINDING))
+                binding_offset = scan_record->source_object_index * sizeof(FieldSequenceBinding);
+            }
+            else
+            {
+                binding_offset = 2 * sizeof(FieldSequenceBinding);
+            }
+            binding = (FieldSequenceBinding*)((u8*)bindings + binding_offset);
+            if (binding->owner_object_index == scan_record->source_object_index)
+            {
+                if ((u32)(binding->owner_object_index & FIELD_ACTOR_INDEX_MASK) < 2U)
                 {
-                    if ((u8)FIELD_CONTAINER(scan_facing_cursor, FieldMotionRecord, facing_or_reward_kind)->source_object_index < 2U)
-                    {
-                        request_offset =
-                            FIELD_CONTAINER(scan_facing_cursor, FieldMotionRecord, facing_or_reward_kind)->source_object_index * sizeof(FieldSequenceBinding);
-                    }
-                    else
-                    {
-                        request_offset = 2 * sizeof(FieldSequenceBinding);
-                    }
-
-                    request = (FieldSequenceBinding*)((u8*)request_base + request_offset);
-                    if (request->owner_object_index == FIELD_CONTAINER(scan_facing_cursor, FieldMotionRecord, facing_or_reward_kind)->source_object_index)
-                    {
-                        if ((u32)(request->owner_object_index & FIELD_ACTOR_INDEX_MASK) < 2U)
-                        {
-                            matched_request_offset = request->owner_object_index * sizeof(FieldSequenceBinding);
-                        }
-                        else
-                        {
-                            matched_request_offset = 2 * sizeof(FieldSequenceBinding);
-                        }
-                        if (((FieldSequenceBinding*)((u8*)request_base + matched_request_offset))->state != 0)
-                        {
-                            goto next_actor;
-                        }
-                    }
+                    owner_binding_offset = binding->owner_object_index * sizeof(FieldSequenceBinding);
                 }
-                candidate_animation = FIELD_CONTAINER(scan_facing_cursor, FieldMotionRecord, facing_or_reward_kind)->motion_parameter;
-                if ((candidate_animation != 0x91) && (candidate_animation != 0x87) && (candidate_animation != 0xAE))
+                else
                 {
-                    if (D_8010D020 != 0 || ((u8)record->source_object_index < FIELD_PARTY_ACTOR_COUNT
-                                                ? (u8)FIELD_CONTAINER(scan_facing_cursor, FieldMotionRecord, facing_or_reward_kind)->source_object_index >= 3U
-                                                : (u8)FIELD_CONTAINER(scan_facing_cursor, FieldMotionRecord, facing_or_reward_kind)->source_object_index < 3U))
+                    owner_binding_offset = 2 * sizeof(FieldSequenceBinding);
+                }
+                if (((FieldSequenceBinding*)((u8*)bindings + owner_binding_offset))->state != 0)
+                {
+                    continue;
+                }
+            }
+        }
+        candidate_animation = scan_record->motion_parameter;
+        if ((candidate_animation == 0x91) || (candidate_animation == 0x87) || (candidate_animation == 0xAE))
+        {
+            continue;
+        }
+        /* Party actors only touch non-party actors and vice versa, unless filtering is bypassed. */
+        if (D_8010D020 == 0 && ((u8)record->source_object_index < FIELD_PARTY_ACTOR_COUNT ? (u8)scan_record->source_object_index < 3U
+                                                                                          : (u8)scan_record->source_object_index >= 3U))
+        {
+            continue;
+        }
+        vertical_distance = (scan_record->z - record->z) / FIELD_CONTACT_HEIGHT_SCALE;
+        if (vertical_distance < 0)
+        {
+            vertical_distance = -vertical_distance;
+        }
+        candidate_extent = scan_state->collision.signed_half.extent;
+        flags_or_extent = owner_state->collision.signed_half.extent;
+        if (candidate_extent < 0)
+        {
+            candidate_extent = -candidate_extent;
+        }
+        if (flags_or_extent < 0)
+        {
+            flags_or_extent = -flags_or_extent;
+        }
+        flags_or_extent += candidate_extent;
+        vertical_distance = vertical_distance < flags_or_extent;
+        if (!vertical_distance)
+        {
+            continue;
+        }
+        /* Test the candidate's two collision quads, upper layer (vertices 4-7) first. */
+        target_or_layer = 4;
+        input_quad = quad;
+        for (; target_or_layer >= 0; target_or_layer -= 4)
+        {
+            candidate_quad = (FieldContactPoint*)&scan_state->effect_vertices.points[target_or_layer];
+            for (candidate_edge = 0; candidate_edge < FIELD_QUAD_VERTEX_COUNT; candidate_edge++)
+            {
+                input_edge = 0;
+                next_edge_offset = ((candidate_edge + 1) & (FIELD_QUAD_VERTEX_COUNT - 1)) * sizeof(*candidate_quad);
+                input_vertex = input_quad;
+                for (; input_edge < FIELD_QUAD_VERTEX_COUNT; input_edge++, input_vertex++)
+                {
+                    if ((candidate_quad[0].packed != 0) || (candidate_quad[1].packed != 0))
                     {
-                        vertical_distance =
-                            (FIELD_CONTAINER(scan_facing_cursor, FieldMotionRecord, facing_or_reward_kind)->z - record->z) / FIELD_CONTACT_HEIGHT_SCALE;
-                        if (vertical_distance < 0)
+                        intersection = field_intersect_screen_segments(&input_vertex->coord, &input_quad[(input_edge + 1) & 3].coord,
+                                                                       &candidate_quad[candidate_edge].coord,
+                                                                       &((FieldContactPoint*)((u8*)candidate_quad + next_edge_offset))->coord);
+                        contact->point = intersection;
+                        if (intersection != FIELD_NO_SEGMENT_INTERSECTION)
                         {
-                            vertical_distance = -vertical_distance;
-                        }
-                        candidate_extent = FIELD_CONTAINER(scan_diameter_cursor, FieldObjectRuntime, collision.half.diameter)->collision.signed_half.extent;
-                        flags_or_extent = owner_state->collision.signed_half.extent;
-                        if (candidate_extent < 0)
-                        {
-                            candidate_extent = -candidate_extent;
-                        }
-                        if (flags_or_extent < 0)
-                        {
-                            flags_or_extent = -flags_or_extent;
-                        }
-                        flags_or_extent += candidate_extent;
-                        vertical_distance = vertical_distance < flags_or_extent;
-                        if (vertical_distance)
-                        {
-                            list_index_or_layer = 4;
-                            input_quad = quad;
-
-                        scan_layer:
-                            candidate_quad = (FieldContactPoint*)&scan_state->effect_vertices.points[list_index_or_layer];
-                            candidate_edge = 0;
-                            do
+                            if ((u8)scan_record->source_object_index < 2U)
                             {
-                                input_edge = 0;
-                                next_edge_offset = ((candidate_edge + 1) & (FIELD_QUAD_VERTEX_COUNT - 1)) * sizeof(*candidate_quad);
-                                input_vertex = input_quad;
-                                do
+                                candidate_mode = scan_record->facing_or_reward_kind & FIELD_FACING_INDEX_MASK;
+                                if (candidate_mode == 0x3F)
                                 {
-                                    if ((candidate_quad[0].packed != 0) || (candidate_quad[1].packed != 0))
-                                    {
-                                        intersection = field_intersect_screen_segments(&input_vertex->coord, &input_quad[(input_edge + 1) & 3].coord,
-                                                                                       &candidate_quad[candidate_edge].coord,
-                                                                                       &((FieldContactPoint*)((u8*)candidate_quad + next_edge_offset))->coord);
-                                        contact->point = intersection;
-                                        if (intersection != FIELD_NO_SEGMENT_INTERSECTION)
-                                        {
-                                            if ((u8)FIELD_CONTAINER(scan_facing_cursor, FieldMotionRecord, facing_or_reward_kind)->source_object_index < 2U)
-                                            {
-                                                candidate_mode =
-                                                    FIELD_CONTAINER(scan_facing_cursor, FieldMotionRecord, facing_or_reward_kind)->facing_or_reward_kind &
-                                                    FIELD_FACING_INDEX_MASK;
-                                                if (candidate_mode == 0x3F)
-                                                {
-                                                    goto special_3f;
-                                                }
-                                                if (candidate_mode == 0x40)
-                                                {
-                                                    goto special_40;
-                                                }
-                                            }
+                                    FieldObjectRuntime* states;
+                                    FieldObjectRuntime* reaction_state;
 
-                                            contact->actor = actor_index;
-                                            return list_index_or_layer / 4 + 1;
-                                        }
-                                    }
-                                    input_edge += 1;
-                                    input_vertex++;
-                                } while (input_edge < FIELD_QUAD_VERTEX_COUNT);
-                                candidate_edge += 1;
-                            } while (candidate_edge < FIELD_QUAD_VERTEX_COUNT);
-                            if ((candidate_quad[0].packed != 0) || (candidate_quad[1].packed != 0))
-                            {
-                                center_x = quad[0].coord.x + quad[1].coord.x + quad[2].coord.x + quad[3].coord.x;
-                                if (center_x < 0)
-                                {
-                                    center_x += 3;
+                                    scan_record->motion_parameter = 0x285;
+                                    field_prepare_actor_action(scan_record);
+                                    states = g_field_object_states;
+                                    reaction_state = &states[scan_record->source_object_index];
+                                    reaction_state->contact.flags =
+                                        (reaction_state->contact.flags &
+                                         ~(FIELD_CONTACT_REACTION_BIT_04 | FIELD_CONTACT_REACTION_BIT_08 | FIELD_CONTACT_REACTION_BIT_10)) |
+                                        FIELD_CONTACT_REACTION_BIT_08;
+                                    return 3;
                                 }
-                                scratch.center.coord.x = (u16)(center_x >> 2);
-                                center_y = quad[0].coord.y + quad[1].coord.y + quad[2].coord.y + quad[3].coord.y;
-                                if (center_y < 0)
+                                if (candidate_mode == 0x40)
                                 {
-                                    center_y += 3;
-                                }
-                                scratch.center.coord.y = (s16)(center_y >> 2);
-                                do
-                                {
-                                    if (NormalClip(scratch.center.packed, candidate_quad[0].packed, candidate_quad[1].packed) >= 0)
-                                    {
-                                        break;
-                                    }
-                                    if (NormalClip(scratch.center.packed, candidate_quad[1].packed, candidate_quad[2].packed) >= 0 ||
-                                        NormalClip(scratch.center.packed, candidate_quad[2].packed, candidate_quad[3].packed) >= 0 ||
-                                        NormalClip(scratch.center.packed, candidate_quad[3].packed, candidate_quad[0].packed) >= 0)
-                                    {
-                                        goto next_layer;
-                                    }
-                                    goto centroid_contact;
-                                } while (0);
-                                if ((NormalClip(scratch.center.packed, candidate_quad[1].packed, candidate_quad[2].packed) > 0) &&
-                                    (NormalClip(scratch.center.packed, candidate_quad[2].packed, candidate_quad[3].packed) > 0))
-                                {
-                                    if (NormalClip(scratch.center.packed, candidate_quad[3].packed, candidate_quad[0].packed) > 0)
-                                    {
-                                    centroid_contact:
-                                        centroid_layer = list_index_or_layer;
-                                        packed_center = (s32)((u16)scratch.center.coord.x | (scratch.center.coord.y << 16));
-                                        contact->actor = actor_index;
-                                        contact->point = packed_center;
-                                        if (list_index_or_layer < 0)
-                                        {
-                                            centroid_layer = list_index_or_layer + 3;
-                                        }
-                                        return (centroid_layer >> 2) + 1;
-                                    }
+                                    FieldObjectRuntime* states;
+                                    FieldObjectRuntime* reaction_state;
+
+                                    scan_record->motion_parameter = 0x385;
+                                    field_prepare_actor_action(scan_record);
+                                    states = g_field_object_states;
+                                    reaction_state = &states[scan_record->source_object_index];
+                                    reaction_state->contact.flags =
+                                        (reaction_state->contact.flags &
+                                         ~(FIELD_CONTACT_REACTION_BIT_04 | FIELD_CONTACT_REACTION_BIT_08 | FIELD_CONTACT_REACTION_BIT_10)) |
+                                        FIELD_CONTACT_REACTION_BIT_10;
+                                    return 3;
                                 }
                             }
-                        next_layer:
-                            list_index_or_layer -= 4;
-
-                            if (list_index_or_layer < 0)
-                            {
-                                goto next_actor;
-                            }
-                            goto scan_layer;
+                            contact->actor = actor_index;
+                            return target_or_layer / 4 + 1;
                         }
                     }
                 }
             }
+            if ((candidate_quad[0].packed != 0) || (candidate_quad[1].packed != 0))
+            {
+                /* No edge crossed: check whether the input centroid lies inside the quad. */
+                center_x = quad[0].coord.x + quad[1].coord.x + quad[2].coord.x + quad[3].coord.x;
+                if (center_x < 0)
+                {
+                    center_x += 3;
+                }
+                scratch.center.coord.x = (u16)(center_x >> 2);
+                center_y = quad[0].coord.y + quad[1].coord.y + quad[2].coord.y + quad[3].coord.y;
+                if (center_y < 0)
+                {
+                    center_y += 3;
+                }
+                scratch.center.coord.y = (s16)(center_y >> 2);
+                if (NormalClip(scratch.center.packed, candidate_quad[0].packed, candidate_quad[1].packed) < 0)
+                {
+                    if ((NormalClip(scratch.center.packed, candidate_quad[1].packed, candidate_quad[2].packed) < 0) &&
+                        (NormalClip(scratch.center.packed, candidate_quad[2].packed, candidate_quad[3].packed) < 0) &&
+                        (NormalClip(scratch.center.packed, candidate_quad[3].packed, candidate_quad[0].packed) < 0))
+                    {
+                        packed_center = (u16)scratch.center.coord.x | (scratch.center.coord.y << 16);
+                        contact->actor = actor_index;
+                        contact->point = packed_center;
+                        return target_or_layer / 4 + 1;
+                    }
+                }
+                else if ((NormalClip(scratch.center.packed, candidate_quad[1].packed, candidate_quad[2].packed) > 0) &&
+                         (NormalClip(scratch.center.packed, candidate_quad[2].packed, candidate_quad[3].packed) > 0) &&
+                         (NormalClip(scratch.center.packed, candidate_quad[3].packed, candidate_quad[0].packed) > 0))
+                {
+                    packed_center = (u16)scratch.center.coord.x | (scratch.center.coord.y << 16);
+                    contact->actor = actor_index;
+                    contact->point = packed_center;
+                    return target_or_layer / 4 + 1;
+                }
+            }
         }
     }
-next_actor:
-    actor_index += 1;
-    scan_facing_cursor += sizeof(FieldMotionRecord);
-    scan_diameter_cursor += sizeof(FieldObjectRuntime);
-    scan_record++;
-    scan_state++;
-    if (actor_index >= FIELD_RUNTIME_ACTOR_COUNT)
-    {
-        return 0;
-    }
-    goto scan_actor;
+    return 0;
 }
 
 /**
@@ -838,8 +803,6 @@ s32 field_intersect_screen_segments(Vec2s* first_start, Vec2s* first_end, Vec2s*
 s32 field_resolve_actor_movement(FieldMotionRecord* actor, s32* position, s32 mode)
 {
     Vec3i delta;
-    FieldObjectRuntime* height_state;
-    FieldObjectRuntime* states;
     s32 hit;
     FieldMoveBounds* bounds = (FieldMoveBounds*)FIELD_MAP_BOUNDS_ADDRESS;
     FieldMoveRequest* mover = (FieldMoveRequest*)FIELD_MOVE_REQUEST_ADDRESS;
@@ -848,22 +811,17 @@ s32 field_resolve_actor_movement(FieldMotionRecord* actor, s32* position, s32 mo
     s32 requested_x;
     s32 actor_x;
     s32 requested_z;
-    s32 height;
     s32 can_move;
+    s32 query_z;
+    s32 query_y;
     u16 actor_motion;
     u16 resolved_motion;
-    u16 collision_motion;
-    FieldObjectRuntime* movement_state;
-    FieldObjectRuntime* candidate_movement_state;
-    FieldObjectRuntime* collision_state;
-    FieldObjectRuntime* blocked_movement_state;
-    FieldObjectRuntime* resolved_collision_state;
-    FieldObjectRuntime* blocked_collision_state;
 
     if (((u32)g_field_object_parts[actor->source_object_index].flags >> FIELD_OBJECT_IGNORE_MAP_COLLISION_BIT) & 1)
     {
         actor->x += position[0];
-        actor->y = (s32)(actor->y + position[1]);
+        actor->y += position[1];
+        /* Stepping the pointer (not position[2]) is needed for the register allocation. */
         position += 2;
         actor->z += position[0];
         return 1;
@@ -871,119 +829,85 @@ s32 field_resolve_actor_movement(FieldMotionRecord* actor, s32* position, s32 mo
     if (g_field_active_group != 0)
     {
         actor_motion = actor->motion_parameter;
-        if (((u32)(actor_motion - 0xB0) >= 2U) && ((s16)actor_motion != 0xB5) && (func_80092988(actor, (Vec3i*)position) != 0))
+        if (((actor_motion < 0xB0) || (actor_motion > 0xB1)) && ((s16)actor_motion != 0xB5) && (func_80092988(actor, (Vec3i*)position) != 0))
         {
             position[0] = 0;
         }
     }
     actor_x = actor->x;
-    if ((actor_x >= 0) && (actor_x < (bounds->x << 8)))
+    if ((actor_x >= 0) && (actor_x < (bounds->x << 8)) && ((actor_z = actor->z) >= 0) && (actor_z < ((s32)(bounds->depth << 16) >> 7)))
     {
-        actor_z = actor->z;
-        if (actor_z >= 0)
+        mover->x = actor_x;
+        mover->y = actor->y;
+        mover->z = actor->z;
+        mover->delta_x = position[0];
+        requested_x = mover->delta_x;
+        mover->delta_y = position[1];
+        mover->delta_z = position[2];
+        requested_z = mover->delta_z;
+        mover->height_tolerance = 0x10;
+        query->extent_y = 0x10;
+        if (g_field_object_parts[actor->source_object_index].visual_kind == 0x40)
         {
-            if (actor_z < ((s32)(bounds->depth << 0x10) >> 7))
-            {
-                mover->x = actor_x;
-                mover->y = (s32)actor->y;
-                mover->z = (s32)actor->z;
-                mover->delta_x = position[0];
-                requested_x = mover->delta_x;
-                mover->delta_y = (s32)position[1];
-                mover->delta_z = position[2];
-                requested_z = mover->delta_z;
-                mover->height_tolerance = 0x10;
-                query->extent_y = 0x10;
-                if (g_field_object_parts[actor->source_object_index].visual_kind == 0x40)
-                {
-                    mover->width = 0xC;
-                    query->extent_x = 0xC;
-                    mover->packed.h.step = 8;
-                    query->extent_z = 8;
-                }
-                else
-                {
-                    mover->width = 9;
-                    query->extent_x = 9;
-                    mover->packed.h.step = 6;
-                    query->extent_z = 6;
-                }
-                mover->height_tolerance = 0x10;
-                mover->packed.bits.unknown_bit_17 = 0;
-                mover->packed.bits.unknown_bit_16 = 0;
-                mover->contact = (s32)g_field_object_states[actor->source_object_index].contact_index;
-                mover->surface = (s32)g_field_object_states[actor->source_object_index].surface;
-                func_8005B6AC(mover);
-                g_field_object_states[actor->source_object_index].contact_index = (s32)mover->contact;
-                g_field_object_states[actor->source_object_index].surface = (s32)mover->surface;
-                resolved_motion = actor->motion_parameter;
-                if (((u32)(resolved_motion - 0xB0) < 2U) || ((s16)resolved_motion == 0xB5))
-                {
-                    delta.x = requested_x - actor->x;
-                    delta.y = 0;
-                    delta.z = requested_z - actor->z;
-                }
-                else
-                {
-                    delta.x = mover->x - actor->x;
-                    delta.y = 0;
-                    delta.z = mover->z - actor->z;
-                }
-                query->x = mover->x;
-                {
-                    s32 z = mover->z;
-                    s32 y = position[1] + actor->y;
-                    query->z = z;
-                    query->y = y;
-                }
-                if (((g_field_active_group == 0) || (actor->flags & FIELD_MOTION_RADIUS_MASK) || (func_8005B368(query) == -1)) &&
-                    ((collision_motion = actor->motion_parameter, (((u32)(collision_motion - 0xB0) < 2U) != 0)) || ((s16)collision_motion == 0xB5) ||
-                     (g_field_active_group == 0) || (func_80092988(actor, &delta) == 0)))
-                {
-                    position[0] = mover->x;
-                    if (((actor->facing_or_reward_kind & FIELD_FACING_INDEX_MASK) == 0x3D) && ((u8)actor->source_object_index < 2U))
-                    {
-                        position[1] = position[1] + actor->y;
-                    }
-                    else
-                    {
-                        position[1] = mover->y;
-                    }
-                    states = g_field_object_states;
-                    position[2] = (s32)mover->z;
-                    height_state = &states[actor->source_object_index];
-                    height = mover->height_offset;
-                    if (height < 0)
-                    {
-                        height += 0xFF;
-                    }
-                    height_state->movement.half.height = (s16)(height >> 8);
-                }
-                else
-                {
-                    position[0] = actor->x;
-                    position[1] = (s32)actor->y;
-                    position[2] = (s32)actor->z;
-                }
-            }
-            else
-            {
-                g_field_object_states[actor->source_object_index].movement.half.height = 0;
-                g_field_object_states[actor->source_object_index].contact_index = -1;
-                g_field_object_states[actor->source_object_index].surface = 0;
-                position[0] = actor->x;
-                position[1] = (s32)actor->y;
-                position[2] = (s32)actor->z;
-            }
+            mover->width = 0xC;
+            query->extent_x = 0xC;
+            mover->packed.h.step = 8;
+            query->extent_z = 8;
         }
         else
         {
-            g_field_object_states[actor->source_object_index].movement.half.height = 0;
-            g_field_object_states[actor->source_object_index].contact_index = -1;
-            g_field_object_states[actor->source_object_index].surface = 0;
+            mover->width = 9;
+            query->extent_x = 9;
+            mover->packed.h.step = 6;
+            query->extent_z = 6;
+        }
+        mover->height_tolerance = 0x10;
+        mover->packed.bits.unknown_bit_17 = 0;
+        mover->packed.bits.unknown_bit_16 = 0;
+        mover->contact = g_field_object_states[actor->source_object_index].contact_index;
+        mover->surface = g_field_object_states[actor->source_object_index].surface;
+        func_8005B6AC(mover);
+        g_field_object_states[actor->source_object_index].contact_index = mover->contact;
+        g_field_object_states[actor->source_object_index].surface = mover->surface;
+        resolved_motion = actor->motion_parameter;
+        if (((resolved_motion >= 0xB0) && (resolved_motion <= 0xB1)) || ((s16)resolved_motion == 0xB5))
+        {
+            delta.x = requested_x - actor->x;
+            delta.y = 0;
+            delta.z = requested_z - actor->z;
+        }
+        else
+        {
+            delta.x = mover->x - actor->x;
+            delta.y = 0;
+            delta.z = mover->z - actor->z;
+        }
+        query->x = mover->x;
+        query_z = mover->z;
+        query_y = position[1] + actor->y;
+        query->z = query_z;
+        query->y = query_y;
+        if (((g_field_active_group == 0) || (actor->flags & FIELD_MOTION_RADIUS_MASK) || (func_8005B368(query) == -1)) &&
+            ((((u16)actor->motion_parameter >= 0xB0) && ((u16)actor->motion_parameter <= 0xB1)) || (actor->motion_parameter == 0xB5) ||
+             (g_field_active_group == 0) || (func_80092988(actor, &delta) == 0)))
+        {
+            position[0] = mover->x;
+            if (((actor->facing_or_reward_kind & FIELD_FACING_INDEX_MASK) == 0x3D) && ((u8)actor->source_object_index < 2U))
+            {
+                position[1] = position[1] + actor->y;
+            }
+            else
+            {
+                position[1] = mover->y;
+            }
+            position[2] = mover->z;
+            g_field_object_states[actor->source_object_index].movement.half.height = mover->height_offset / 256;
+        }
+        else
+        {
             position[0] = actor->x;
-            position[1] = (s32)actor->y;
-            position[2] = (s32)actor->z;
+            position[1] = actor->y;
+            position[2] = actor->z;
         }
     }
     else
@@ -992,24 +916,22 @@ s32 field_resolve_actor_movement(FieldMotionRecord* actor, s32* position, s32 mo
         g_field_object_states[actor->source_object_index].contact_index = -1;
         g_field_object_states[actor->source_object_index].surface = 0;
         position[0] = actor->x;
-        position[1] = (s32)actor->y;
-        position[2] = (s32)actor->z;
+        position[1] = actor->y;
+        position[2] = actor->z;
     }
     g_field_last_actor_contact = 0;
     if (((u32)g_field_object_states[actor->source_object_index].movement.word >> FIELD_MOVEMENT_THRESHOLD_BLOCKED_BIT) & 1)
     {
         if (field_is_outside_group_bounds(actor, &actor->x) == 0)
         {
-            movement_state = &g_field_object_states[actor->source_object_index];
-            movement_state->movement.word = (s32)(movement_state->movement.word & ~FIELD_MOVEMENT_FLAG_THRESHOLD_BLOCKED);
+            g_field_object_states[actor->source_object_index].movement.word &= ~FIELD_MOVEMENT_FLAG_THRESHOLD_BLOCKED;
         }
         can_move = 1;
     }
     else if (field_is_outside_group_bounds(actor, position) == 0)
     {
         can_move = 1;
-        candidate_movement_state = &g_field_object_states[actor->source_object_index];
-        candidate_movement_state->movement.word = (s32)(candidate_movement_state->movement.word & ~FIELD_MOVEMENT_FLAG_THRESHOLD_BLOCKED);
+        g_field_object_states[actor->source_object_index].movement.word &= ~FIELD_MOVEMENT_FLAG_THRESHOLD_BLOCKED;
     }
     else
     {
@@ -1017,8 +939,7 @@ s32 field_resolve_actor_movement(FieldMotionRecord* actor, s32* position, s32 mo
         can_move = 0;
         if (hit != 0)
         {
-            blocked_movement_state = &g_field_object_states[actor->source_object_index];
-            blocked_movement_state->movement.word = (s32)(blocked_movement_state->movement.word | FIELD_MOVEMENT_FLAG_THRESHOLD_BLOCKED);
+            g_field_object_states[actor->source_object_index].movement.word |= FIELD_MOVEMENT_FLAG_THRESHOLD_BLOCKED;
         }
     }
     if (can_move == 0)
@@ -1028,28 +949,25 @@ s32 field_resolve_actor_movement(FieldMotionRecord* actor, s32* position, s32 mo
     if (((u32)g_field_object_states[actor->source_object_index].movement.word >> FIELD_MOVEMENT_ACTOR_BLOCKED_BIT) & 1)
     {
         actor->x = position[0];
-        actor->y = (s32)position[1];
-        actor->z = (s32)position[2];
-        if (field_find_actor_overlap(actor, (s32*)actor, mode) == 0)
+        actor->y = position[1];
+        actor->z = position[2];
+        if (field_find_actor_overlap(actor, &actor->x, mode) == 0)
         {
-            collision_state = &g_field_object_states[actor->source_object_index];
-            collision_state->movement.word = (s32)(collision_state->movement.word & ~FIELD_MOVEMENT_FLAG_ACTOR_BLOCKED);
+            g_field_object_states[actor->source_object_index].movement.word &= ~FIELD_MOVEMENT_FLAG_ACTOR_BLOCKED;
         }
         return 1;
     }
     if (field_find_actor_overlap(actor, position, mode) == 0)
     {
         actor->x = position[0];
-        actor->y = (s32)position[1];
-        actor->z = (s32)position[2];
-        resolved_collision_state = &g_field_object_states[actor->source_object_index];
-        resolved_collision_state->movement.word = (s32)(resolved_collision_state->movement.word & ~FIELD_MOVEMENT_FLAG_ACTOR_BLOCKED);
+        actor->y = position[1];
+        actor->z = position[2];
+        g_field_object_states[actor->source_object_index].movement.word &= ~FIELD_MOVEMENT_FLAG_ACTOR_BLOCKED;
         return 1;
     }
-    if (field_find_actor_overlap(actor, (s32*)actor, mode) != 0)
+    if (field_find_actor_overlap(actor, &actor->x, mode) != 0)
     {
-        blocked_collision_state = &g_field_object_states[actor->source_object_index];
-        blocked_collision_state->movement.word = (s32)(blocked_collision_state->movement.word | FIELD_MOVEMENT_FLAG_ACTOR_BLOCKED);
+        g_field_object_states[actor->source_object_index].movement.word |= FIELD_MOVEMENT_FLAG_ACTOR_BLOCKED;
     }
     return 0;
 }
@@ -1483,7 +1401,7 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
                 eligible_for_contact = 0;
                 if (motion_records[source_object_index].motion_parameter == 0x91)
                 {
-                    source_state = (FieldObjectRuntime*)(source_object_index * sizeof(*object_states) + (s32)object_states);
+                    source_state = FIELD_OBJECT_STATE_AT(object_states, source_object_index);
                     prior_target_count = source_state->contact.bytes.target_count;
                     prior_target_index = 0;
                     if (prior_target_count != 0)
@@ -1505,189 +1423,205 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
                 eligible_for_contact = 1;
             }
             owner_index = actor->owner_object_index;
-            if ((candidate_index != owner_index) && ((candidate_state->effect_vertices.words[0] != 0) || (candidate_state->effect_vertices.words[2] != 0)) &&
-                ((candidate_state->bounds.words[0] != 0) || (candidate_state->bounds.words[1] != 0)) && (candidate_state->collision.word != 0) &&
-                (candidate_kind = candidate_record->motion_parameter, (candidate_kind != 0x91)) && (candidate_kind != 0xAE) && (candidate_kind != 0x87) &&
-                (candidate_record->state != FIELD_ACTOR_STATE_UNUSED) && (owner_index != candidate_index) && (candidate_state->current_hp != 0) &&
-                (candidate_flags = candidate_state->contact.flags, ((candidate_flags & FIELD_CONTACT_FLAG_REQUIRE_CONTROLLER) == 0)) &&
-                ((candidate_index < FIELD_PARTY_ACTOR_COUNT) || ((candidate_state->group_flags & FIELD_OBJECT_GROUP_MASK) == g_field_active_group)) &&
-                ((candidate_flags & FIELD_CONTACT_FLAG_NO_HIT_TEST) == 0) && (eligible_for_contact != 0) &&
-                !(candidate_state->movement.word & FIELD_MOVEMENT_FLAG_NO_CONTACT))
+            if ((candidate_index == owner_index) || ((candidate_state->effect_vertices.words[0] == 0) && (candidate_state->effect_vertices.words[2] == 0)) ||
+                ((candidate_state->bounds.words[0] == 0) && (candidate_state->bounds.words[1] == 0)) || (candidate_state->collision.word == 0))
             {
-                if (!(candidate_flags & FIELD_CONTACT_FLAG_IGNORE_BINDING))
+                continue;
+            }
+            candidate_kind = candidate_record->motion_parameter;
+            if ((candidate_kind == 0x91) || (candidate_kind == 0xAE) || (candidate_kind == 0x87) || (candidate_record->state == FIELD_ACTOR_STATE_UNUSED) ||
+                (owner_index == candidate_index) || (candidate_state->current_hp == 0))
+            {
+                continue;
+            }
+            candidate_flags = candidate_state->contact.flags;
+            if ((candidate_flags & FIELD_CONTACT_FLAG_REQUIRE_CONTROLLER) ||
+                ((candidate_index >= FIELD_PARTY_ACTOR_COUNT) && ((candidate_state->group_flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)) ||
+                (candidate_flags & FIELD_CONTACT_FLAG_NO_HIT_TEST) || (eligible_for_contact == 0) ||
+                (candidate_state->movement.word & FIELD_MOVEMENT_FLAG_NO_CONTACT))
+            {
+                continue;
+            }
+            if (!(candidate_flags & FIELD_CONTACT_FLAG_IGNORE_BINDING))
+            {
+                s32 binding_owner;
+                s32 controller_index;
+                if (candidate_record->source_object_index < 2U)
                 {
-                    s32 binding_owner;
-                    s32 controller_index;
-                    if (candidate_record->source_object_index < 2U)
+                    binding_offset = candidate_record->source_object_index * sizeof(FieldSequenceBinding);
+                }
+                else
+                {
+                    binding_offset = 2 * sizeof(FieldSequenceBinding);
+                }
+
+                controller = (FieldSequenceBinding*)((u8*)controller_slots + binding_offset);
+                controller_index = candidate_record->source_object_index;
+                binding_owner = controller->owner_object_index;
+                if (binding_owner == controller_index)
+                {
+                    if ((u32)(binding_owner & FIELD_ACTOR_INDEX_MASK) < 2U)
                     {
-                        binding_offset = candidate_record->source_object_index * sizeof(FieldSequenceBinding);
+                        active_binding_offset = binding_owner * sizeof(FieldSequenceBinding);
                     }
                     else
                     {
-                        binding_offset = 2 * sizeof(FieldSequenceBinding);
+                        active_binding_offset = 2 * sizeof(FieldSequenceBinding);
                     }
-
-                    controller = (FieldSequenceBinding*)((u8*)controller_slots + binding_offset);
-                    controller_index = candidate_record->source_object_index;
-                    binding_owner = controller->owner_object_index;
-                    if (binding_owner == controller_index)
+                    if (((FieldSequenceBinding*)((u8*)controller_slots + active_binding_offset))->state != 0)
                     {
-                        if ((u32)(binding_owner & FIELD_ACTOR_INDEX_MASK) < 2U)
-                        {
-                            active_binding_offset = binding_owner * sizeof(FieldSequenceBinding);
-                        }
-                        else
-                        {
-                            active_binding_offset = 2 * sizeof(FieldSequenceBinding);
-                        }
-                        if (((FieldSequenceBinding*)((u8*)controller_slots + active_binding_offset))->state != 0)
-                        {
-                            continue;
-                        }
+                        continue;
                     }
                 }
-                if (!(candidate_state->object_flags &
-                      (FIELD_OBJECT_FLAG_CONTACT_FILTER_0080 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0200 | FIELD_OBJECT_FLAG_CONTACT_FILTER_2000)))
+            }
+            if (candidate_state->object_flags &
+                (FIELD_OBJECT_FLAG_CONTACT_FILTER_0080 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0200 | FIELD_OBJECT_FLAG_CONTACT_FILTER_2000))
+            {
+                continue;
+            }
+            track_count = actor->track_count;
+            existing_track_index = 0;
+            while (existing_track_index < (s32)track_count && candidate_index != actor->track_object_indices[existing_track_index])
+            {
+                existing_track_index += 1;
+            }
+            if (existing_track_index != actor->track_count)
+            {
+                continue;
+            }
+            /* Depth gating precedes expanded projected X/Y bounds. */
+            candidate_z_value = candidate_record->z;
+            origin_z = effect->z;
+            delta_z = candidate_z_value - origin_z;
+            depth_distance = (candidate_z_value - origin_z) / FIELD_PROJECTED_DEPTH_SCALE;
+            depth_radius = candidate_state->collision.half.diameter;
+            if (depth_distance < 0)
+            {
+                depth_distance = -depth_distance;
+            }
+            depth_distance = depth_distance < (radius + ((s32)(depth_radius << 0x10) >> 0x11));
+            if (!depth_distance)
+            {
+                continue;
+            }
+            bound_x_a = candidate_state->bounds.half.left;
+            bound_x_b = candidate_state->bounds.half.right;
+            if (bound_x_a < bound_x_b)
+            {
+                min_x = bound_x_a;
+                max_x = bound_x_b;
+            }
+            else
+            {
+                min_x = bound_x_b;
+                max_x = bound_x_a;
+            }
+            bound_y_a = candidate_state->bounds.half.top;
+            bound_y_b = candidate_state->bounds.half.bottom;
+            if (bound_y_a < bound_y_b)
+            {
+                min_y = bound_y_a;
+                max_y = bound_y_b;
+            }
+            else
+            {
+                min_y = bound_y_b;
+                max_y = bound_y_a;
+            }
+            min_x -= radius;
+            max_x += radius;
+            min_y -= radius;
+            max_y += radius;
+            if (delta_z < 0)
+            {
+                rounded_delta_z = delta_z + 0x1FF;
+            }
+            else
+            {
+                rounded_delta_z = delta_z;
+            }
+            delta_z = rounded_delta_z >> 9;
+            depth_projection = (s32)(delta_z + ((u32)rounded_delta_z >> 0x1F)) >> 1;
+            min_y -= depth_projection;
+            max_y -= depth_projection;
+            candidate_x = candidate_record->x;
+            origin_x = effect->x;
+            if (((candidate_x + (min_x << 8)) >= origin_x) || (origin_x >= (candidate_x + (max_x << 8))))
+            {
+                continue;
+            }
+            candidate_x = candidate_record->y;
+            origin_x = effect->y;
+            if (((candidate_x + (min_y << 8)) >= origin_x) || (origin_x >= (candidate_x + (max_y << 8))) ||
+                (object_states[actor->owner_object_index].contact.bytes.target_count >= FIELD_MAX_CONTACT_TARGETS))
+            {
+                continue;
+            }
+            candidate_state->contact.flags = (s32)(candidate_state->contact.flags | FIELD_CONTACT_FLAG_TARGETED);
+            candidate_state->object_flags = (s32)(candidate_state->object_flags & ~FIELD_OBJECT_FLAG_CLEAR_ON_HIT);
+            owner_state_for_append = FIELD_OBJECT_STATE_AT(object_states, actor->owner_object_index);
+            owner_state_for_append->targets[owner_state_for_append->contact.bytes.target_count] = candidate_index;
+            owner_state_for_count = FIELD_OBJECT_STATE_AT(object_states, actor->owner_object_index);
+            owner_state_for_count->contact.bytes.target_count = (u8)(owner_state_for_count->contact.bytes.target_count + 1);
+            /* Each new contact becomes an active target track. */
+            actor->active_track_mask = (u8)(actor->active_track_mask | (1 << actor->track_count));
+            actor->track_object_indices[actor->track_count] = candidate_index;
+            if (candidate_record->facing_or_reward_kind & FIELD_FACING_HIGH_BIT)
+            {
+                actor->track_offsets[actor->track_count].x = (candidate_record->x - effect->x) >> 8;
+            }
+            else
+            {
+                actor->track_offsets[actor->track_count].x = (effect->x - candidate_record->x) >> 8;
+            }
+
+            actor->track_offsets[actor->track_count].y = ((effect->y - candidate_record->y) >> 8) - ((effect->z - candidate_record->z) >> 9);
+
+            /* Preserve the prior effect state when retiring on contact. */
+            if (effect->flags & FIELD_EFFECT_RETIRE_ON_HIT)
+            {
+                previous_state = effect->state;
+                effect->state = FIELD_EFFECT_RETIRED;
+                effect->height_or_retired_state = previous_state;
+            }
+            actor->track_count = (u8)(actor->track_count + 1);
+            func_8008BC5C(&group_records[group_index]);
+            if ((candidate_index < 2) && !(*(u16*)&group_records[group_index].flags & FIELD_MOTION_RADIUS_MASK))
+            {
+                func_800A2DD8(candidate_index);
+            }
+            if (((u8)actor->hit_reaction < 0xCU) || (motion_records[actor->owner_object_index].motion_parameter == 0xBC))
+            {
+                func_8008A9D8(actor->owner_object_index, candidate_index, actor->hit_reaction);
+            }
+            else
+            {
+                switch (actor->hit_reaction)
                 {
-                    track_count = actor->track_count;
-                    existing_track_index = 0;
-                    while (existing_track_index < (s32)track_count && candidate_index != actor->track_object_indices[existing_track_index])
-                    {
-                        existing_track_index += 1;
-                    }
-                    if (existing_track_index == actor->track_count)
-                    {
-                        /* Depth gating precedes expanded projected X/Y bounds. */
-                        candidate_z_value = candidate_record->z;
-                        origin_z = effect->z;
-                        delta_z = candidate_z_value - origin_z;
-                        depth_distance = (candidate_z_value - origin_z) / FIELD_PROJECTED_DEPTH_SCALE;
-                        depth_radius = candidate_state->collision.half.diameter;
-                        if (depth_distance < 0)
-                        {
-                            depth_distance = -depth_distance;
-                        }
-                        depth_distance = depth_distance < (radius + ((s32)(depth_radius << 0x10) >> 0x11));
-                        if (depth_distance)
-                        {
-                            bound_x_a = candidate_state->bounds.half.left;
-                            bound_x_b = candidate_state->bounds.half.right;
-                            if (bound_x_a < bound_x_b)
-                            {
-                                min_x = bound_x_a;
-                                max_x = bound_x_b;
-                            }
-                            else
-                            {
-                                min_x = bound_x_b;
-                                max_x = bound_x_a;
-                            }
-                            bound_y_a = candidate_state->bounds.half.top;
-                            bound_y_b = candidate_state->bounds.half.bottom;
-                            if (bound_y_a < bound_y_b)
-                            {
-                                min_y = bound_y_a;
-                                max_y = bound_y_b;
-                            }
-                            else
-                            {
-                                min_y = bound_y_b;
-                                max_y = bound_y_a;
-                            }
-                            min_x -= radius;
-                            max_x += radius;
-                            min_y -= radius;
-                            max_y += radius;
-                            if (delta_z < 0)
-                            {
-                                rounded_delta_z = delta_z + 0x1FF;
-                            }
-                            else
-                            {
-                                rounded_delta_z = delta_z;
-                            }
-                            delta_z = rounded_delta_z >> 9;
-                            depth_projection = (s32)(delta_z + ((u32)rounded_delta_z >> 0x1F)) >> 1;
-                            min_y -= depth_projection;
-                            max_y -= depth_projection;
-                            candidate_x = candidate_record->x;
-                            origin_x = effect->x;
-                            if (((candidate_x + (min_x << 8)) < origin_x) && (origin_x < (candidate_x + (max_x << 8))) &&
-                                (candidate_x = candidate_record->y, origin_x = effect->y, (((candidate_x + (min_y << 8)) < origin_x) != 0)) &&
-                                (origin_x < (candidate_x + (max_y << 8))) &&
-                                (object_states[actor->owner_object_index].contact.bytes.target_count < FIELD_MAX_CONTACT_TARGETS))
-                            {
-                                candidate_state->contact.flags = (s32)(candidate_state->contact.flags | FIELD_CONTACT_FLAG_TARGETED);
-                                candidate_state->object_flags = (s32)(candidate_state->object_flags & ~FIELD_OBJECT_FLAG_CLEAR_ON_HIT);
-                                owner_state_for_append = (FieldObjectRuntime*)(actor->owner_object_index * sizeof(*object_states) + (s32)object_states);
-                                owner_state_for_append->targets[owner_state_for_append->contact.bytes.target_count] = candidate_index;
-                                owner_state_for_count = (FieldObjectRuntime*)(actor->owner_object_index * sizeof(*object_states) + (s32)object_states);
-                                owner_state_for_count->contact.bytes.target_count = (u8)(owner_state_for_count->contact.bytes.target_count + 1);
-                                /* Each new contact becomes an active target track. */
-                                actor->active_track_mask = (u8)(actor->active_track_mask | (1 << actor->track_count));
-                                actor->track_object_indices[actor->track_count] = candidate_index;
-                                if (candidate_record->facing_or_reward_kind & FIELD_FACING_HIGH_BIT)
-                                {
-                                    actor->track_offsets[actor->track_count].x = (candidate_record->x - effect->x) >> 8;
-                                }
-                                else
-                                {
-                                    actor->track_offsets[actor->track_count].x = (effect->x - candidate_record->x) >> 8;
-                                }
-
-                                actor->track_offsets[actor->track_count].y =
-                                    ((effect->y - candidate_record->y) >> 8) - ((effect->z - candidate_record->z) >> 9);
-
-                                /* Preserve the prior effect state when retiring on contact. */
-                                if (effect->flags & FIELD_EFFECT_RETIRE_ON_HIT)
-                                {
-                                    previous_state = effect->state;
-                                    effect->state = FIELD_EFFECT_RETIRED;
-                                    effect->height_or_retired_state = previous_state;
-                                }
-                                actor->track_count = (u8)(actor->track_count + 1);
-                                func_8008BC5C(&group_records[group_index]);
-                                if ((candidate_index < 2) && !(*(u16*)&group_records[group_index].flags & FIELD_MOTION_RADIUS_MASK))
-                                {
-                                    func_800A2DD8(candidate_index);
-                                }
-                                if (((u8)actor->hit_reaction < 0xCU) || (motion_records[actor->owner_object_index].motion_parameter == 0xBC))
-                                {
-                                    func_8008A9D8(actor->owner_object_index, candidate_index, actor->hit_reaction);
-                                }
-                                else
-                                {
-                                    switch (actor->hit_reaction)
-                                    {
-                                    case 0x34:
-                                        func_8008A9D8(actor->owner_object_index, candidate_index, 0x16U);
-                                        break;
-                                    case 0x50:
-                                        func_8008A9D8(actor->owner_object_index, candidate_index, 0x12U);
-                                        break;
-                                    case 0x51:
-                                        func_8008A9D8(actor->owner_object_index, candidate_index, 0x13U);
-                                        break;
-                                    case 0x4E:
-                                        func_8008A9D8(actor->owner_object_index, candidate_index, 0x14U);
-                                        break;
-                                    case 0x4F:
-                                        func_8008A9D8(actor->owner_object_index, candidate_index, 0x15U);
-                                        break;
-                                    case 0x3E:
-                                        func_8008A9D8(actor->owner_object_index, candidate_index, 0x19U);
-                                        break;
-                                    case 0x45:
-                                        func_8008A9D8(actor->owner_object_index, candidate_index, 0x1AU);
-                                        break;
-                                    default:
-                                        func_8008A840(actor->owner_object_index, candidate_index);
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
+                case 0x34:
+                    func_8008A9D8(actor->owner_object_index, candidate_index, 0x16U);
+                    break;
+                case 0x50:
+                    func_8008A9D8(actor->owner_object_index, candidate_index, 0x12U);
+                    break;
+                case 0x51:
+                    func_8008A9D8(actor->owner_object_index, candidate_index, 0x13U);
+                    break;
+                case 0x4E:
+                    func_8008A9D8(actor->owner_object_index, candidate_index, 0x14U);
+                    break;
+                case 0x4F:
+                    func_8008A9D8(actor->owner_object_index, candidate_index, 0x15U);
+                    break;
+                case 0x3E:
+                    func_8008A9D8(actor->owner_object_index, candidate_index, 0x19U);
+                    break;
+                case 0x45:
+                    func_8008A9D8(actor->owner_object_index, candidate_index, 0x1AU);
+                    break;
+                default:
+                    func_8008A840(actor->owner_object_index, candidate_index);
+                    break;
                 }
             }
         }
@@ -1707,84 +1641,58 @@ s32 field_find_actor_in_range(s32* reference_position, s32 distance_limit, Field
     VECTOR* delta = (VECTOR*)FIELD_GTE_DELTA_ADDRESS;
     VECTOR* squared = (VECTOR*)FIELD_GTE_SQUARE_ADDRESS;
     FieldMotionRecord* candidate_record;
+    FieldObjectRuntime* candidate_object;
     s32 candidate_index;
     s32 candidate_end;
     u8 candidate_state;
-    u8* candidate_z_cursor;
-    u8* candidate_object_cursor;
-    FieldObjectRuntime* candidate_state_base;
-    if (opposing_group != 0)
+
+    if (opposing_group == 0)
     {
-        if (source_actor->animation->sync_flags & FIELD_ANIMATION_SAME_GROUP)
-        {
-            candidate_index = 0;
-            if (source_actor->owner_object_index >= FIELD_PARTY_ACTOR_COUNT)
-            {
-                candidate_index = FIELD_PARTY_ACTOR_COUNT;
-                goto search_extended_group;
-            }
-            goto finish_player_group;
-        }
-        candidate_index = FIELD_PARTY_ACTOR_COUNT;
+        candidate_index = 0;
+        candidate_end = FIELD_PARTY_ACTOR_COUNT;
+    }
+    else if (source_actor->animation->sync_flags & FIELD_ANIMATION_SAME_GROUP)
+    {
         if (source_actor->owner_object_index < FIELD_PARTY_ACTOR_COUNT)
         {
-        search_extended_group:
-            candidate_end = FIELD_RUNTIME_ACTOR_COUNT;
+            candidate_index = 0;
+            candidate_end = FIELD_PARTY_ACTOR_COUNT;
         }
         else
         {
-            goto search_player_group;
+            candidate_index = FIELD_PARTY_ACTOR_COUNT;
+            candidate_end = FIELD_RUNTIME_ACTOR_COUNT;
         }
+    }
+    else if (source_actor->owner_object_index < FIELD_PARTY_ACTOR_COUNT)
+    {
+        candidate_index = FIELD_PARTY_ACTOR_COUNT;
+        candidate_end = FIELD_RUNTIME_ACTOR_COUNT;
     }
     else
     {
-    search_player_group:
         candidate_index = 0;
-    finish_player_group:
         candidate_end = FIELD_PARTY_ACTOR_COUNT;
     }
     candidate_record = &g_field_actors[candidate_index];
-    candidate_state_base = &g_field_object_states[candidate_index];
-    if (candidate_index < candidate_end)
+    candidate_object = &g_field_object_states[candidate_index];
+    for (; candidate_index < candidate_end; candidate_index++, candidate_record++, candidate_object++)
     {
-        candidate_object_cursor = (u8*)&candidate_state_base->collision.half.diameter;
-        candidate_z_cursor = (u8*)&((FieldMotionRecord*)candidate_record)->z;
-    scan_candidates:
-        candidate_state = FIELD_CONTAINER(candidate_z_cursor, FieldMotionRecord, z)->state;
-        if (candidate_state == FIELD_ACTOR_STATE_UNUSED ||
-            FIELD_CONTAINER(candidate_object_cursor, FieldObjectRuntime, collision.half.diameter)->current_hp == 0 ||
-            candidate_state == FIELD_ACTOR_STATE_INACTIVE || (opposing_group != 0 && source_actor->owner_object_index == candidate_index))
+        candidate_state = candidate_record->state;
+        if (candidate_state == FIELD_ACTOR_STATE_UNUSED || candidate_object->current_hp == 0 || candidate_state == FIELD_ACTOR_STATE_INACTIVE ||
+            (opposing_group != 0 && source_actor->owner_object_index == candidate_index))
         {
-            goto next_candidate;
+            continue;
         }
-        {
-            s32 actor_x = candidate_record->x;
-            s32 reference_x;
-            do
-            {
-                reference_x = reference_position[0];
-            } while (0);
-            delta->vx = (actor_x - reference_x) >> 8;
-        }
-        delta->vy = (FIELD_CONTAINER(candidate_z_cursor, FieldMotionRecord, z)->y - reference_position[1]) >> 8;
-        delta->vz = (FIELD_CONTAINER(candidate_z_cursor, FieldMotionRecord, z)->z - reference_position[2]) >> 8;
+        delta->vx = (candidate_record->x - reference_position[0]) >> 8;
+        delta->vy = (candidate_record->y - reference_position[1]) >> 8;
+        delta->vz = (candidate_record->z - reference_position[2]) >> 8;
         gte_ldlvl(delta);
         gte_sqr0();
         gte_stlvnl(squared);
-        if (SquareRoot0(squared->vx + squared->vy + squared->vz) <
-            distance_limit +
-                ((s32)(FIELD_CONTAINER(candidate_object_cursor, FieldObjectRuntime, collision.half.diameter)->collision.half.diameter << 16) >> 17))
+        if (SquareRoot0(squared->vx + squared->vy + squared->vz) < distance_limit + ((s32)(candidate_object->collision.half.diameter << 16) >> 17))
         {
             return candidate_index;
-        }
-    next_candidate:
-        candidate_index++;
-        candidate_z_cursor += sizeof(FieldMotionRecord);
-        candidate_record++;
-        candidate_object_cursor += sizeof(FieldObjectRuntime);
-        if (candidate_index < candidate_end)
-        {
-            goto scan_candidates;
         }
     }
     return -1;
@@ -1895,7 +1803,7 @@ void field_collect_attack_sphere_hits(FieldActorState* actor, FieldActorPartDef*
             eligible_for_hit = 0;
             if (motion_records[source_index].motion_parameter == 0x91)
             {
-                source_state = (FieldObjectRuntime*)(source_index * sizeof(*object_states) + (s32)object_states);
+                source_state = FIELD_OBJECT_STATE_AT(object_states, source_index);
                 prior_target_count = source_state->contact.bytes.target_count;
                 prior_target_index = 0;
                 if (prior_target_count != 0)

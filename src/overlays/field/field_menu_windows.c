@@ -4,39 +4,13 @@
  *
  * Consolidated translation unit (gcc272_cdk) for the related menu-window family
  * at 0x800AD850-0x800AE8A8. See docs/decompilation/field-boundaries/map.md
- * (candidate field_menu_windows). The shared record @c D_80122828 is viewed with
- * a different layout by several routines; each keeps its own block-scope extern
- * of the original type, and @c g_menu_element_counter is likewise read as u16 or
- * s32 per its original use, so every function reproduces its standalone codegen.
+ * (candidate field_menu_windows). @c D_80122828 is the table of eight
+ * FieldMenuElement records; @c g_menu_element_counter is read as u16 or s32 per
+ * its original use.
  */
 
 #include "common.h"
 #include "sdk/libgpu.h"
-
-/** @brief Eight-element menu record as seen by the lifecycle reset. */
-typedef struct
-{
-    u32 word;
-    u8 pad[0x14 - 4];
-} UnkEntry80122828;
-
-/** @brief Eight-element menu record as seen by the state queries. */
-typedef struct
-{
-    s32 flags; /* 0x00 */
-    u8 pad4[0x10];
-} RecADEEC;
-
-/** @brief Eight-element menu record as seen by the allocation helper. */
-typedef struct
-{
-    u32 flags;
-    u32 state;
-    u16 unk8;
-    u16 unkA;
-    u16 unkC;
-    u8 padE[6];
-} FieldADF84Rec;
 
 typedef struct FieldMenuRenderContext FieldMenuRenderContext;
 typedef struct FieldMenuElement FieldMenuElement;
@@ -263,15 +237,15 @@ void func_800ADE2C(void)
 void func_800ADEB0(void)
 {
     extern s32 g_menu_element_counter;
-    extern UnkEntry80122828 D_80122828[];
-    UnkEntry80122828 *p;
+    extern FieldMenuElement D_80122828[];
+    FieldMenuElement *p;
     s32 i;
 
     g_menu_element_counter = 0;
     p = D_80122828;
     for (i = 0; i < 8; i++)
     {
-        p->word &= ~7;
+        p->attr &= ~7;
         p++;
     }
 }
@@ -282,15 +256,15 @@ void func_800ADEB0(void)
  */
 s32 func_800ADEEC(void)
 {
-    extern RecADEEC D_80122828[];
-    RecADEEC *p;
+    extern FieldMenuElement D_80122828[];
+    FieldMenuElement *p;
     s32 i;
     s32 x;
 
     p = D_80122828;
     for (i = 0; i < 8; i++, p++)
     {
-        x = p->flags & 0x7;
+        x = p->attr & 0x7;
         if (x != 0)
         {
             if (x != 2)
@@ -307,16 +281,18 @@ s32 func_800ADEEC(void)
  */
 void func_800ADF34(void)
 {
-    extern RecADEEC D_80122828[];
-    RecADEEC *p;
+    extern FieldMenuElement D_80122828[];
+    FieldMenuElement *p;
     s32 i;
     u32 x;
 
     p = D_80122828;
-    for (i = 0; i < 8; i++, p++) {
-        x = p->flags;
-        if (x & 7) {
-            p->flags = (((x & ~7) | 3) & ~0x78) | 0x40;
+    for (i = 0; i < 8; i++, p++)
+    {
+        x = p->attr;
+        if (x & 7)
+        {
+            p->attr = (((x & ~7) | 3) & ~0x78) | 0x40;
         }
     }
 }
@@ -325,24 +301,24 @@ void func_800ADF34(void)
  * @brief Allocate the first idle menu record and initialize it to the opening state.
  * @return The claimed record, or the first record when none are free.
  */
-FieldADF84Rec *func_800ADF84(void)
+FieldMenuElement *func_800ADF84(void)
 {
-    extern FieldADF84Rec D_80122828[];
-    FieldADF84Rec *rec;
+    extern FieldMenuElement D_80122828[];
+    FieldMenuElement *rec;
     s32 i;
 
     rec = D_80122828;
     for (i = 0; i < 8; i++, rec++)
     {
-        if ((rec->flags & 7) == 0)
+        if ((rec->attr & 7) == 0)
         {
-            rec->flags = (rec->flags & ~7) | 1;
-            rec->unk8 = 0;
-            rec->unkA = 0;
-            rec->state &= ~0x200;
-            rec->state &= ~0xC00;
-            ((u16 *)&rec->state)[1] = 0;
-            rec->unkC = 0;
+            rec->attr = (rec->attr & ~7) | 1;
+            rec->scroll = 0;
+            rec->scroll_target = 0;
+            rec->size.word &= ~0x200;
+            rec->size.word &= ~0xC00;
+            rec->size.fields.content_height = 0;
+            rec->scroll_ticks = 0;
             return rec;
         }
     }

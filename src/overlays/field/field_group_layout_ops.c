@@ -1,265 +1,190 @@
 #include "saved_game.h"
 #include "common.h"
+#include "field_golem_layout.h"
 
-typedef struct
-{
-    u8 pad0[0x29D4];
-    s32 unk29D4;
-} Rec29D4;
-
-typedef struct
-{
-    u8 pad0[0x29D7];
-    s8 unk29D7;
-} Rec29D7;
-
-typedef union
-{
-    u32 raw;
-    struct
-    {
-        unsigned mode : 2;
-        unsigned pad2 : 14;
-        unsigned enabled : 1;
-        unsigned rest : 15;
-    } bits;
-} MenuWord;
-
-/** @brief Byte-aligned shape record with count and signed coordinate access fields. */
-typedef struct
-{
-    u8 count;
-    u8 pad[11];
-    s8 x, y;
-    u8 tail[74];
-} Shape;
-
-/** @brief Eleven shape records copied locally before updating layout cells. */
-typedef struct
-{
-    Shape shapes[11];
-} ShapeTable;
-
-void func_800C3BD8(s32 arg0);
 extern s32 D_80122C00;
 extern s16 D_80122C06;
 extern s16 D_80122C1A;
 extern s8 D_800459AF;
-extern void func_800C3BB0(void);
-extern void func_800C3F18(s32 arg0, void* arg1);
+extern GolemShapeTable D_80051888;
+
+void func_800C3BB0(void);
+void func_800C3BD8(s32 type);
 void func_800C3CB4(void);
-void func_800C3D38(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-extern ShapeTable D_80051888;
+void func_800C3D38(s32 index, s32 rotation, s32 x, s32 y);
+extern void func_800C3F18(s32 group_index, void* destination);
 
 /**
- * @brief Update or remap the active menu-layout slot state.
- * @param arg0 Dispatch selector; 0x92BC selects the slot-swap path.
+ * @brief Swap the edited golem logic group into a new order slot, or save it.
+ * @param command 0x92BC moves the active group to the order slot in D_80122C00;
+ *        any other value stores the edit record and clears the active group.
  */
-void func_800C3A00(s32 arg0)
+void func_800C3A00(s32 command)
 {
     s32 i;
     s32 found;
-    s8 ref;
-    s32 idx;
-    u8* p;
-    u8* q;
-    u8* slot_found;
-    u8* slot_d;
-    u8 v;
-    s32 refv;
+    s32 target;
+    s8 active;
+    GolemLayoutView* layout;
+    s32 group;
 
     i = 0;
-    if (arg0 == 0x92BC)
+    if (command == 0x92BC)
     {
-        idx = D_80122C00;
-        if ((u32)idx < 3)
+        target = D_80122C00;
+        if ((u32)target < 3)
         {
-            p = g_saved_game.bytes;
-            ref = p[0x29D7];
+            layout = GOLEM_LAYOUT;
+            active = layout->header.fields.active_group;
             do
             {
-                if (p[i + 0x29D8] == ref)
+                /* Index-first sum: group_order[i] adds the base first. */
+                if (*(i + layout->group_order) == active)
                 {
                     found = i;
                 }
                 i++;
             } while (i < 3);
 
-            q = g_saved_game.bytes;
-            slot_d = idx + q;
-            v = slot_d[0x29D8];
-            slot_found = found + q;
-            slot_found[0x29D8] = v;
-            slot_d[0x29D8] = q[0x29D7];
-            if (slot_found[0x29D8] == ((Rec29D7*)q)->unk29D7)
+            GOLEM.group_order[found] = GOLEM.group_order[target];
+            GOLEM.group_order[target] = GOLEM.header.fields.active_group;
+            if (GOLEM.group_order[found] == GOLEM.header.fields.active_group)
             {
                 D_80122C06 = 3;
             }
             else
             {
-                D_80122C06 = slot_found[0x29D8];
+                D_80122C06 = GOLEM.group_order[found];
             }
-            D_80122C1A = (s8)D_800459AF;
+            D_80122C1A = D_800459AF;
         }
     }
     else
     {
         for (; i < 0x15; i++)
         {
-            g_saved_game.bytes[i + ((Rec29D7*)g_saved_game.bytes)->unk29D7 * 0x14C + 0x2B0C] = g_saved_game.bytes[i + 0xA90];
+            GOLEM.group_records[GOLEM.header.fields.active_group].name[i] = GOLEM.edit_record[i];
         }
-        refv = ((Rec29D7*)g_saved_game.bytes)->unk29D7;
-        if (refv != 3)
+        group = GOLEM.header.fields.active_group;
+        if (group != 3)
         {
-            ((Rec29D4*)g_saved_game.bytes)->unk29D4 = (((Rec29D4*)g_saved_game.bytes)->unk29D4 & ~0xF0) | ((refv & 0xF) * 0x10);
+            GOLEM.header.word = (GOLEM.header.word & ~0xF0) | ((group & 0xF) << 4);
         }
-        g_saved_game.bytes[0x29D7] = 3;
+        GOLEM.header.fields.active_group = 3;
     }
 }
 
-void func_800C3B50(s32 arg0)
+/**
+ * @brief Select the logic type to lay out, rebuild the grid and reload the edit record.
+ * @param type Logic type to show, or 3 to restore the saved active group.
+ */
+void func_800C3B50(s32 type)
 {
-    if (arg0 == 3)
+    if (type == 3)
     {
-        g_saved_game.bytes[0x29D7] = g_saved_game.bytes[0x29D4] >> 4;
+        GOLEM.header.fields.active_group = GOLEM.header.fields.saved_group >> 4;
     }
     else
     {
-        D_800459AF = arg0;
+        D_800459AF = type;
     }
 
     func_800C3BB0();
-    func_800C3F18((s8)g_saved_game.bytes[0x29D7], &g_saved_game.bytes[0xA90]);
+    func_800C3F18(GOLEM.header.fields.active_group, GOLEM.edit_record);
 }
 
+/** @brief Rebuild the placement grid for the current logic type in D_800459AF. */
 void func_800C3BB0(void)
 {
     func_800C3BD8(D_800459AF);
 }
 
 /**
- * @brief Clear menu layout state and process enabled entries for the requested mode.
- * @param arg0 Menu entry mode to process.
+ * @brief Clear the placement grid and place every block of one logic type on it.
+ * @param type Logic type whose placed blocks are drawn; 3 only clears the grid.
  */
-void func_800C3BD8(s32 arg0)
+void func_800C3BD8(s32 type)
 {
     s32 i;
-    u8* v1;
-    u8* s1;
-    u8* s2;
-    u32 a3;
-    MenuWord word;
+    LogicBlock block;
 
-    i = 0;
-    do
+    for (i = 0; i < 36; i++)
     {
-        v1 = g_saved_game.bytes + i * 4;
-        v1[0x2A7C] = 0;
-        v1[0x2A7D] = 0;
-        i += 1;
-    } while (i < 0x24);
+        GOLEM.grid[i].block_id = 0;
+        GOLEM.grid[i].detail = 0;
+    }
 
-    if (arg0 != 3)
+    if (type != 3)
     {
-        i = 0;
-        if (g_saved_game.bytes[0x29D6] != 0)
+        for (i = 0; i < GOLEM.header.fields.block_count; i++)
         {
-            s2 = g_saved_game.bytes;
-            s1 = s2;
-        loop:
-            a3 = *(u32*)(s1 + 0x29DC);
-            word.raw = a3;
-            if ((word.bits.enabled == 1) && (word.bits.mode == arg0))
+            block = GOLEM.logic_blocks[i];
+            if ((block.f.unknown_bit16 == 1) && (block.f.logic_type == type))
             {
-                func_800C3D38(i, (a3 >> 0x11) & 3, (s32)(a3 << 8) >> 0x1B, (s32)(a3 << 3) >> 0x1B);
-            }
-            s1 += 4;
-            i += 1;
-            if (i < s2[0x29D6])
-            {
-                goto loop;
+                func_800C3D38(i, block.f.rotation, block.f.grid_x, block.f.grid_y);
             }
         }
         func_800C3CB4();
     }
 }
 
-/** @brief Marks grid cells whose lower neighbor belongs to another block. */
-
+/** @brief Mark each grid cell whose lower neighbour belongs to a different block. */
 void func_800C3CB4(void)
 {
     s32 i;
-    s32 offset;
-    s8 value;
-    s32 sentinel;
-    u8* base;
-    u8* initial_base;
-    u8* p;
-    u8 a;
-    u8 b;
+    u8 owner;
+    u8 below;
+    u8 none;
 
-    value = 0x63;
-    i = 0x23;
-    initial_base = g_saved_game.bytes;
-
-    do
-
+    none = 99;
+    for (i = 35; i >= 0; i--)
     {
-        p = initial_base + i * 4;
-        p[0x2A7E] = value;
-        i--;
+        GOLEM.grid[i].edge = none;
+    }
 
-    } while (i >= 0);
-
-    i = 0;
-    sentinel = 0x63;
-    offset = 0x18;
-    base = g_saved_game.bytes;
-    do
+    for (i = 0; i < 30; i++)
     {
-        p = base + i * 4;
-        a = p[0x2A7F];
-        if (a != sentinel)
+        owner = GOLEM.grid[i].owner;
+        if (owner != 99)
         {
-            b = ((u8*)((u32)offset + (u32)base))[0x2A7F];
-            value = i + 6;
-            if (b != sentinel)
+            below = GOLEM.grid[i + 6].owner;
+            if ((below != 99) && (owner != below))
             {
-                if (a != b)
-                {
-                    p = base + i * 4;
-                    p[0x2A7E] = value;
-                }
+                GOLEM.grid[i].edge = i + 6;
             }
         }
-        offset += 4;
-        i++;
-    } while (i < 0x1E);
+    }
 }
 
 /**
- * @brief Populate layout cells for the selected shape and rotation.
- * @param index Menu entry whose packed flags select the shape and cell metadata.
- * @param rotation Orientation selecting a twenty-byte coordinate block.
- * @param x Horizontal cell origin.
- * @param y Vertical cell origin in the six-column grid.
+ * @brief Stamp one logic block's shape onto the placement grid.
+ * @param index Logic-block index written to each covered cell.
+ * @param rotation Orientation selecting a five-point row of the shape.
+ * @param x Grid column of the shape origin.
+ * @param y Grid row of the shape origin (six columns per row).
  */
 void func_800C3D38(s32 index, s32 rotation, s32 x, s32 y)
 {
-    ShapeTable table;
-    s32 offset, i, step;
-    u8 *layout, *entry, *cell, *loop_layout;
-    Shape* point;
+    GolemShapeTable table;
+    s32 offset;
+    s32 i;
+    s32 step;
+    GolemLayoutView* layout;
+    GolemLayoutView* entry;
+    GolemLayoutView* grid;
+    GolemShapePoint* point;
+    GolemLayoutView* cell;
 
+    /* The single-pass do/while wrappers set allocation priorities; the "- -" sum keeps the test out of CSE. */
     table = D_80051888;
-    offset = index * 4;
-    layout = g_saved_game.bytes;
+    offset = index * sizeof(LogicBlock);
+    layout = GOLEM_LAYOUT;
     do
     {
         i = 0;
     } while (0);
 
-    if (table.shapes[(*(u32*)(offset - -(s32)layout + 0x29DC) >> 12) & 0xF].count != 0)
+    if (table.shapes[((GolemLayoutView*)(offset - -(s32)layout))->logic_blocks[0].f.shape].count != 0)
     {
         do
         {
@@ -267,26 +192,27 @@ void func_800C3D38(s32 index, s32 rotation, s32 x, s32 y)
             {
                 do
                 {
-                    loop_layout = layout;
+                    grid = layout;
                 } while (0);
             } while (0);
         } while (0);
 
-        step = rotation * 20;
+        step = rotation * 5 * sizeof(GolemShapePoint);
+        /* entry and cell are layout views displaced by one element's byte offset. */
         do
         {
-            entry = loop_layout + offset;
+            entry = (GolemLayoutView*)((u8*)grid + offset);
         } while (0);
 
         do
         {
-            point = (Shape*)((u8*)&table + (step + ((*(u32*)(entry + 0x29DC) >> 12) & 0xF) * 88));
-            cell = (u8*)(((x + point->x + (y + point->y) * 6) * 4) + (s32)loop_layout);
-            cell[0x2A7F] = index;
-            cell[0x2A7C] = entry[0x29DC] >> 2;
-            cell[0x2A7D] = (*(u32*)(entry + 0x29DC) >> 8) & 0xF;
+            point = GOLEM_SHAPE_POINT(table, entry->logic_blocks[0].f.shape, step);
+            cell = (GolemLayoutView*)((x + point->x + (y + point->y) * 6) * sizeof(GolemGridCell) + (s32)grid);
+            cell->grid[0].owner = index;
+            cell->grid[0].block_id = entry->logic_blocks[0].f.id;
+            cell->grid[0].detail = entry->logic_blocks[0].f.quantity;
             i++;
-            step += 4;
-        } while (i < table.shapes[(*(u32*)(entry + 0x29DC) >> 12) & 0xF].count);
+            step += sizeof(GolemShapePoint);
+        } while (i < table.shapes[entry->logic_blocks[0].f.shape].count);
     }
 }

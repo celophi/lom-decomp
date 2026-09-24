@@ -1,201 +1,169 @@
 #include "game_audio.h"
 #include "common.h"
+#include "field_records.h"
 
-extern u8 *func_800C1E40(s32);
+extern void *func_800C1E40(s32);
 extern s32 rand(void);
-extern u8 *D_80122B74;
-/**
- * @brief Combine random table selections into a record effect and clear its payload.
- * @param arg0 Record index in the field context.
- * @param arg1 Effect destination index within the record.
- */
-void func_800C0260(s32 arg0, s32 arg1)
-{
-    s32 record_base_offset;
-    u8 *effect_table;
-    s32 random_value;
-    s32 value;
-    s32 index;
-    s32 effect_index;
-    u8 *record_base;
+extern FieldGameState *D_80122B74;
 
-    s32 selection;
-
-    effect_table = func_800C1E40(0xB);
-    record_base = D_80122B74;
-    record_base_offset = arg0 * 0x8C;
-    record_base += record_base_offset;
-    if ((((u32) * (u32 *)(record_base + 0x26E4) >> 0xC) & 0xF) == 1)
-    {
-        u8 *lookup;
-
-        index = 0;
-        random_value = rand();
-        lookup = D_80122B74;
-        lookup += record_base_offset;
-        effect_index = *(effect_table + ((random_value & 0xF) + ((lookup[0x26EC] - 0x58) << 4)) + 4);
-        random_value = rand();
-        lookup = D_80122B74;
-        lookup += record_base_offset;
-        value = *(effect_table + ((random_value & 0xF) + ((lookup[0x26EC] - 0x58) << 4)) + 4);
-        effect_index |= value;
-    }
-    else
-    {
-        index = 1;
-        random_value = rand();
-        record_base = D_80122B74;
-        record_base += record_base_offset;
-        effect_index = *(effect_table + ((random_value & 0xF) + ((record_base[0x26EC] - 0x58) << 4)) + 4);
-        if (index < (s32)(((u32) * (u32 *)(record_base + 0x26E4) >> 0xC) & 0xF))
-        {
-            do
-            {
-                random_value = rand();
-                value = index + record_base_offset;
-                index += 1;
-                record_base = D_80122B74;
-                selection = *(effect_table + ((random_value & 0xF) + ((*(record_base + value + 0x26EC) - 0x58) << 4)) + 4);
-                record_base += record_base_offset;
-                effect_index |= selection;
-            } while (index < (s32)(((u32) * (u32 *)(record_base + 0x26E4) >> 0xC) & 0xF));
-        }
-        index = 0;
-    }
-    {
-        s32 slot_offset;
-        s32 record_offset;
-        s32 destination_offset;
-        s32 clear_offset;
-        u8 *effect;
-        u8 *destination;
-        u8 *clear;
-
-        slot_offset = arg1 << 4;
-        record_offset = arg0 * 0x8C;
-        destination_offset = slot_offset + record_offset;
-        effect = effect_table + effect_index;
-        destination = D_80122B74;
-        destination += destination_offset;
-        destination[0x26F4] = (s8)((effect[0x84] & 0x3F) + 0x60);
-        {
-            u32 *word = (u32 *)(D_80122B74 + destination_offset + 0x26F4);
-            *word = (s32)((*word & ~0x300) | (((u8)effect[0x84] >> 6) << 8));
-        }
-        do
-        {
-            clear = D_80122B74;
-            clear_offset = index + (arg1 << 4);
-            index += 1;
-            clear += clear_offset + (arg0 * 0x8C);
-            clear[0x26F8] = 0;
-        } while (index < 8);
-    }
-}
-
-#define EFFECT_U8(p, o) (*(u8 *)((u8 *)(p) + (o)))
-#define EFFECT_U32(p, o) (*(u32 *)((u8 *)(p) + (o)))
-#define EFFECT_RECORD_COUNT 5
-#define EFFECT_RECORD_STRIDE 0x60
-#define EFFECT_RECORD_HALF_STRIDE (EFFECT_RECORD_STRIDE / 2)
-#define EFFECT_RECORD_BASE_OFFSET 0x2EF4
-#define EFFECT_STATUS_OFFSET 0x2F38
-#define EFFECT_SUBSLOT_COUNT 3
-#define EFFECT_EMPTY_ID 0xFF
-
-void func_800C0814(u8 *, s32, u8 *);
-
-/** @brief D_80122B74 record; per-slot data at 0x8C stride, sub-slots at 0x10. */
+/** @brief Resource 0xB: random effect picks per selector row, then the effect codes. */
 typedef struct
 {
-    u8 pad[0x26F0];
-    s32 unk26F0;
-    u8 unk26F4;
-} Rec;
+    u8 header[4];
+    /** @brief Sixteen candidate effects for each selector 0x58-0x5F. */
+    u8 picks[8][16];
+    /** @brief Low six bits: slot entry index minus 0x60; high two bits: result type. */
+    u8 codes[1];
+} FieldSlotEffectTable;
 
+/** @brief Resource 0x12 row applied to a region record (0x14 bytes). */
+typedef struct
+{
+    /** @brief High nibble subtracted, low nibble added to each stat growth accumulator. */
+    u8 stat_deltas[FIELD_CHARACTER_STAT_COUNT];
+    /** @brief Same for the four total growth accumulators. */
+    u8 total_deltas[4];
+    /** @brief Pairs of (kind, value): kinds 0-7 set, 8-15 clear a flag bit; 0xF0/0xF1 set equipment ids. */
+    u8 effects[4][2];
+} FieldRegionEffectRow;
+
+/** @brief Resource 0x12: a header, then one row per effect id 0x60-0x87. */
+typedef struct
+{
+    u8 header[4];
+    FieldRegionEffectRow rows[0x28];
+} FieldRegionEffectTable;
+
+/** @brief Low/high threshold pair of resource 0x10. */
 typedef struct
 {
     u8 low;
     u8 high;
 } EffectThreshold;
 
+/** @brief Resource 0x10: threshold pairs; the bytes from 0x14 on also index them per effect row. */
 typedef struct
 {
     u8 unk00[4];
     EffectThreshold thresholds[256];
 } EffectThresholdTable;
 
-extern u8 *D_80122B74;
+/** @brief Byte @p i of the eight threshold indexes for effect row @p row (the rows overlap thresholds[]). */
+#define EFFECT_THRESHOLD_INDEX(table, row, i) (*((u8 *)(table) + ((i) + (row)) + 0x14))
 
-extern s32 func_800C0560(s32 arg0, s32 arg1, u8 *arg2);
+/** @brief Offset of menu_slots[0].slots[0].entry in FieldGameState. */
+#define MENU_SLOT_ENTRY_OFFSET 0x26F4
+/** @brief Offset of menu_slots[0].slots[0].pad8 in FieldGameState. */
+#define MENU_SLOT_PAYLOAD_OFFSET 0x26F8
 
+void func_800C0814(FieldRegionRecord *record, s32 effect_id, FieldRegionEffectTable *table);
+s32 func_800C0560(s32 group_index, s32 slot_index, EffectThresholdTable *table);
 
 /**
- * @brief Populate the eight sub-slot handles for a field record, or report a lookup failure.
- *
- * If func_800C1E40 finds no matching record, records a diagnostic and
- * returns. Otherwise walks the eight 0x10-byte sub-slots of the @p arg0 record
- * (0x8C stride); each one still flagged 0xFF is resolved via func_800C0560 and
- * its handle stored into @c unk26F0.
- *
- * @param arg0 Field record index.
+ * @brief Combine random picks for a slot group's selectors into one slot effect and clear its payload.
+ * @param group_index Menu slot group index.
+ * @param slot_index Slot within the group that receives the effect.
+ */
+void func_800C0260(s32 group_index, s32 slot_index)
+{
+    FieldSlotEffectTable *table;
+    s32 random_value;
+    s32 index;
+    s32 effect_index;
+    s32 selection;
+
+    table = func_800C1E40(0xB);
+    if (((D_80122B74->menu_slots[group_index].flags >> 0xC) & 0xF) == 1)
+    {
+        index = 0;
+        random_value = rand();
+        effect_index = table->picks[D_80122B74->menu_slots[group_index].selectors[0] - 0x58][random_value & 0xF];
+        random_value = rand();
+        selection = table->picks[D_80122B74->menu_slots[group_index].selectors[0] - 0x58][random_value & 0xF];
+        effect_index |= selection;
+    }
+    else
+    {
+        index = 1;
+        random_value = rand();
+        effect_index = table->picks[D_80122B74->menu_slots[group_index].selectors[0] - 0x58][random_value & 0xF];
+        for (; index < (s32)((D_80122B74->menu_slots[group_index].flags >> 0xC) & 0xF); index++)
+        {
+            random_value = rand();
+            selection = table->picks[D_80122B74->menu_slots[group_index].selectors[index] - 0x58][random_value & 0xF];
+            effect_index |= selection;
+        }
+        index = 0;
+    }
+    D_80122B74->menu_slots[group_index].slots[slot_index].entry.index = (table->codes[effect_index] & 0x3F) + 0x60;
+    D_80122B74->menu_slots[group_index].slots[slot_index].entry.word =
+        (D_80122B74->menu_slots[group_index].slots[slot_index].entry.word & ~0x300) | ((table->codes[effect_index] >> 6) << 8);
+    do
+    {
+        D_80122B74->menu_slots[group_index].slots[slot_index].pad8[index] = 0;
+        index += 1;
+    } while (index < 8);
+}
+
+/**
+ * @brief Classify every set slot of a menu slot group against the effect thresholds.
+ * @param group_index Menu slot group index.
  * @see decomp.me (100%) TODO
  */
-void func_800C0490(s32 arg0)
+void func_800C0490(s32 group_index)
 {
-    s32 temp_v0;
-    s32 sentinel;
-    s32 var_s1;
-    Rec *rec;
+    EffectThresholdTable *table;
+    s32 slot_index;
 
-    temp_v0 = (s32)func_800C1E40(0x10);
-    if (temp_v0 == 0)
+    table = func_800C1E40(0x10);
+    if (table == NULL)
     {
         record_game_diagnostic(0x8001, 0x3E7, 0, 0);
         return;
     }
-    var_s1 = 0;
+    slot_index = 0;
     do
     {
-        rec = (Rec *)(D_80122B74 + (arg0 * 0x8C + var_s1 * 0x10));
-        if (rec->unk26F4 != (sentinel = 0xFF))
+        if (D_80122B74->menu_slots[group_index].slots[slot_index].entry.index != 0xFF)
         {
-            sentinel = temp_v0;
-            ((Rec *)(D_80122B74 + (arg0 * 0x8C + var_s1 * 0x10)))->unk26F0 = func_800C0560(arg0, var_s1, (u8 *)sentinel);
+            D_80122B74->menu_slots[group_index].slots[slot_index].handle = func_800C0560(group_index, slot_index, table);
         }
-        var_s1 += 1;
-    } while (var_s1 < 8);
+        slot_index += 1;
+    } while (slot_index < 8);
 }
 
 /**
- * @brief Classify an effect slot against the selected effect thresholds.
- * @param arg0 Field record index.
- * @param arg1 Effect slot index within the record.
- * @param arg2 Effect threshold table.
- * @return Classification value from 0 through 3.
+ * @brief Classify a slot's eight payload bytes against its effect thresholds.
+ * @param group_index Menu slot group index.
+ * @param slot_index Slot within the group.
+ * @param table Threshold table (resource 0x10).
+ * @return 3 when every byte reaches its high threshold, 2 when every byte reaches its low one,
+ *         1 when any byte is nonzero, 0 otherwise.
  */
-s32 func_800C0560(s32 arg0, s32 arg1, u8 *arg2)
+s32 func_800C0560(s32 group_index, s32 slot_index, EffectThresholdTable *table)
 {
     s32 flag;
     s32 i;
 
+    /* Byte view of D_80122B74: the loops index it with integer offset sums (typed menu_slots access: 86.52%). */
     {
-        s32 record_offset;
+        s32 group_offset;
         s32 slot_offset;
-        s32 table_offset;
+        s32 row;
         s32 scan_offset;
         u8 *base;
 
         i = 0;
-        base = D_80122B74;
-        slot_offset = arg1 * 0x10;
-        record_offset = arg0 * 0x8C;
-        table_offset = (*(base + (slot_offset + record_offset) + 0x26F4) - 0x60) * 8;
+        base = (u8 *)D_80122B74;
+        slot_offset = slot_index * sizeof(FieldMenuSlot);
+        group_offset = group_index * sizeof(FieldMenuSlotGroup);
+        row = (*(base + (slot_offset + group_offset) + MENU_SLOT_ENTRY_OFFSET) - 0x60) * 8;
         flag = -1;
         for (i = 0; i < 8; i++)
         {
             scan_offset = i + slot_offset;
-            if (*(base + (scan_offset + record_offset) + 0x26F8) < ((EffectThresholdTable *)arg2)->thresholds[*(arg2 + (i + table_offset) + 0x14)].high)
+            if (*(base + (scan_offset + group_offset) + MENU_SLOT_PAYLOAD_OFFSET) <
+                table->thresholds[EFFECT_THRESHOLD_INDEX(table, row, i)].high)
             {
                 flag = 0;
                 break;
@@ -208,22 +176,23 @@ s32 func_800C0560(s32 arg0, s32 arg1, u8 *arg2)
     }
 
     {
-        s32 record_offset;
+        s32 group_offset;
         s32 slot_offset;
-        s32 table_offset;
+        s32 row;
         s32 scan_offset;
         u8 *base;
 
         i = 0;
-        base = D_80122B74;
-        slot_offset = arg1 * 0x10;
-        record_offset = arg0 * 0x8C;
-        table_offset = (*(base + (slot_offset + record_offset) + 0x26F4) - 0x60) * 8;
+        base = (u8 *)D_80122B74;
+        slot_offset = slot_index * sizeof(FieldMenuSlot);
+        group_offset = group_index * sizeof(FieldMenuSlotGroup);
+        row = (*(base + (slot_offset + group_offset) + MENU_SLOT_ENTRY_OFFSET) - 0x60) * 8;
         flag = -1;
         for (i = 0; i < 8; i++)
         {
             scan_offset = i + slot_offset;
-            if (*(base + (scan_offset + record_offset) + 0x26F8) < ((EffectThresholdTable *)arg2)->thresholds[*(arg2 + (i + table_offset) + 0x14)].low)
+            if (*(base + (scan_offset + group_offset) + MENU_SLOT_PAYLOAD_OFFSET) <
+                table->thresholds[EFFECT_THRESHOLD_INDEX(table, row, i)].low)
             {
                 flag = 0;
                 break;
@@ -236,17 +205,17 @@ s32 func_800C0560(s32 arg0, s32 arg1, u8 *arg2)
     }
 
     {
-        s32 record_offset;
+        s32 group_offset;
         s32 slot_offset;
         u8 *base;
 
         i = 0;
-        base = D_80122B74;
-        slot_offset = arg1 * 0x10;
-        record_offset = arg0 * 0x8C;
+        base = (u8 *)D_80122B74;
+        slot_offset = slot_index * sizeof(FieldMenuSlot);
+        group_offset = group_index * sizeof(FieldMenuSlotGroup);
         for (i = 0; i < 8; i++)
         {
-            if (*(base + (i + slot_offset + record_offset) + 0x26F8) != 0)
+            if (*(base + (i + slot_offset + group_offset) + MENU_SLOT_PAYLOAD_OFFSET) != 0)
             {
                 flag = -1;
             }
@@ -256,178 +225,153 @@ s32 func_800C0560(s32 arg0, s32 arg1, u8 *arg2)
 }
 
 /**
- * @brief Apply each unprocessed effect in the five saved records.
+ * @brief Apply each pending, not yet applied effect of the stored region records.
  */
 void func_800C06E8(void)
 {
-    s32 processed_mask;
-    u8 *effect_table;
-    s32 effect_index;
-    s32 record_offset;
-    s32 record_base_offset;
+    FieldRegionEffectTable *table;
     s32 record_index;
-    s32 inner_record_offset;
-    s32 inner_record_base_offset;
-    u32 packed_status;
-    u8 *record_base;
-    u8 *effect_byte;
-    u8 *destination;
+    s32 effect_index;
+    u32 status;
     u32 value;
+    s32 applied;
+    FieldRegionRecord *record;
 
-    effect_table = func_800C1E40(0x12);
+    table = func_800C1E40(0x12);
     record_index = 0;
     do
     {
-        record_offset = (record_index << 1) * EFFECT_RECORD_HALF_STRIDE;
-        record_base_offset = record_offset + EFFECT_RECORD_BASE_OFFSET;
-        if (EFFECT_U8(D_80122B74 + record_offset, EFFECT_RECORD_BASE_OFFSET) != 0)
+        if (D_80122B74->regions[record_index].name[0] != 0)
         {
             effect_index = 0;
-            inner_record_offset = record_offset;
-            inner_record_base_offset = record_base_offset;
             do
             {
-                effect_byte = D_80122B74 + (effect_index + inner_record_offset);
-                record_base = D_80122B74 + inner_record_offset;
-                value = EFFECT_U8(effect_byte, EFFECT_STATUS_OFFSET);
-                if (value != EFFECT_EMPTY_ID)
+                value = D_80122B74->regions[record_index].status.effects[effect_index];
+                if (value != 0xFF)
                 {
-                    packed_status = EFFECT_U32(record_base, EFFECT_STATUS_OFFSET);
-                    processed_mask = (packed_status >> 24) & 7;
-                    if (!((processed_mask >> effect_index) & 1))
+                    status = D_80122B74->regions[record_index].status.word;
+                    applied = (status >> 24) & 7;
+                    if (!((applied >> effect_index) & 1))
                     {
-                        destination = D_80122B74 + inner_record_base_offset;
-                        value = (u32)((packed_status & 0xF8FFFFFF) | (((processed_mask | (1 << effect_index)) & 7) << 24));
-                        EFFECT_U32(record_base, EFFECT_STATUS_OFFSET) = value;
-                        func_800C0814(destination, EFFECT_U8(effect_byte, EFFECT_STATUS_OFFSET), effect_table);
+                        record = &D_80122B74->regions[record_index];
+                        value = (status & 0xF8FFFFFF) | (((applied | (1 << effect_index)) & 7) << 24);
+                        D_80122B74->regions[record_index].status.word = value;
+                        func_800C0814(record, D_80122B74->regions[record_index].status.effects[effect_index], table);
                     }
                 }
                 effect_index += 1;
-            } while (effect_index < EFFECT_SUBSLOT_COUNT);
+            } while (effect_index < 3);
         }
         record_index += 1;
-    } while (record_index < EFFECT_RECORD_COUNT);
+    } while (record_index < FIELD_REGION_COUNT);
 }
 
-s32 rand(void); /* extern */
-
 /**
- * @brief Apply packed stat adjustments and effect entries from a selected record.
- * @param arg0 Destination record containing stats and effect flags.
- * @param arg1 Record selector; values outside 0x60 through 0x87 are ignored.
- * @param arg2 Packed adjustment and effect table.
+ * @brief Apply one effect row to a stored region record: growth deltas, then flag and equipment changes.
+ * @param record Region record to update.
+ * @param effect_id Effect id; values outside 0x60 to 0x87 are ignored.
+ * @param table Effect table (resource 0x12).
  */
-void func_800C0814(u8 *arg0, s32 arg1, u8 *arg2)
+void func_800C0814(FieldRegionRecord *record, s32 effect_id, FieldRegionEffectTable *table)
 {
-    s32 temp_a0;
-    s32 offset;
-    s32 one;
-    s32 var_a0;
-    s32 var_s2;
-    s32 var_s4;
-    s32 var_v1;
-    s32 var_v1_2;
-    u32 temp_v1;
-    s32 index;
-    s32 temp_s0;
-    s32 temp_s1;
-    u8 temp_v1_2;
-    u8 temp_v1_3;
-    u8 *var_a1;
-    u8 *var_a1_2;
-    u8 *var_v0;
+    u32 offset;
+    s32 row;
+    s32 i;
+    s32 value;
+    s32 clamped;
+    u8 stat_delta;
+    u8 total_delta;
+    s32 kind;
+    s32 amount;
+    u8 *bytes;
 
-    temp_v1 = arg1 - 0x60;
-    if (temp_v1 < 0x28U)
+    offset = effect_id - 0x60;
+    if (offset < 0x28U)
     {
-        var_s2 = 0;
+        i = 0;
+        /* Allocation lever: without the wrapper row and the effect pointer swap s3/s4 (99.42%). */
         do
         {
-            index = temp_v1;
+            row = offset;
         } while (0);
-        offset = index * 0x14;
         do
         {
-            var_a1 = arg0 + var_s2;
-            temp_a0 = var_a1[0x4C];
-            temp_v1_2 = *(arg2 + (var_s2 + offset) + 4);
-            temp_a0 = (((u32)temp_a0 >> 4) + (temp_v1_2 & 0xF)) - (temp_v1_2 >> 4);
-            if (temp_a0 >= 0)
+            /* A byte view keeps record + i recomputed per pass, as in the original. */
+            bytes = (u8 *)record + i;
+            value = bytes[0x4C];
+            stat_delta = table->rows[row].stat_deltas[i];
+            value = ((u32)value >> 4) + (stat_delta & 0xF) - (stat_delta >> 4);
+            if (value >= 0)
             {
-                var_v1 = 0xF;
-                if (temp_a0 < 0x10)
+                clamped = 0xF;
+                if (value < 0x10)
                 {
-                    var_v1 = temp_a0;
+                    clamped = value;
                 }
             }
             else
             {
-                var_v1 = 0;
+                clamped = 0;
             }
-            var_s2 += 1;
-            var_a1[0x4C] = (u8)((var_a1[0x4C] & 0xF) | (var_v1 * 0x10));
-        } while (var_s2 < 8);
-        var_s2 = 0;
-        offset = index * 0x14;
+            i += 1;
+            bytes[0x4C] = (bytes[0x4C] & 0xF) | (clamped * 0x10);
+        } while (i < FIELD_CHARACTER_STAT_COUNT);
+        i = 0;
         do
         {
-            var_a1_2 = arg0 + var_s2;
-            var_a0 = var_a1_2[0x54];
-            temp_v1_3 = *(arg2 + (var_s2 + offset) + 0xC);
-            var_a0 = (((u32)var_a0 >> 4) + (temp_v1_3 & 0xF)) - (temp_v1_3 >> 4);
-            if (var_a0 >= 0)
+            bytes = (u8 *)record + i;
+            value = bytes[0x54];
+            total_delta = table->rows[row].total_deltas[i];
+            value = ((u32)value >> 4) + (total_delta & 0xF) - (total_delta >> 4);
+            if (value >= 0)
             {
-                var_v1_2 = 0xF;
-                if (var_a0 < 0x10)
+                clamped = 0xF;
+                if (value < 0x10)
                 {
-                    var_v1_2 = var_a0;
+                    clamped = value;
                 }
             }
             else
             {
-                var_v1_2 = 0;
+                clamped = 0;
             }
-            var_s2 += 1;
-            var_a1_2[0x54] = (u8)((var_a1_2[0x54] & 0xF) | (var_v1_2 * 0x10));
-        } while (var_s2 < 4);
-        var_s2 = 0;
-        one = 1;
-        var_s4 = index * 0x14;
+            i += 1;
+            bytes[0x54] = (bytes[0x54] & 0xF) | (clamped * 0x10);
+        } while (i < 4);
+        i = 0;
         do
         {
-            var_v0 = arg2 + var_s4;
-            temp_s1 = var_v0[0x10];
-            temp_s0 = var_v0[0x11];
-            if (index < 8)
+            kind = table->rows[row].effects[i][0];
+            amount = table->rows[row].effects[i][1];
+            if (row < 8)
             {
-                var_a0 = rand() & 0xFF;
-                if (var_a0 < (s32)temp_s0)
+                value = rand() & 0xFF;
+                if (value < amount)
                 {
-                    arg0[0x48] = (u8)(arg0[0x48] | (one << temp_s1));
+                    record->unk48.flags |= 1 << kind;
                 }
-                goto block_25;
             }
-            if (index < 0x10)
+            else if (row < 0x10)
             {
-                var_a0 = rand() & 0xFF;
-                if (var_a0 < (s32)temp_s0)
+                value = rand() & 0xFF;
+                if (value < amount)
                 {
-                    arg0[0x48] = (u8)(arg0[0x48] & ~(one << (temp_s1 - 8)));
+                    record->unk48.flags &= ~(1 << (kind - 8));
                 }
-                goto block_25;
             }
-            switch (temp_s1)
+            else
             {
-            case 0xF0:
-                arg0[0x3C] = temp_s0;
-                break;
-            case 0xF1:
-                arg0[0x3D] = temp_s0;
-                break;
+                switch (kind)
+                {
+                case 0xF0:
+                    record->weapon_id = amount;
+                    break;
+                case 0xF1:
+                    record->armor_ids[0] = amount;
+                    break;
+                }
             }
-        block_25:
-            var_s4 += 2;
-            var_s2 += 1;
-        } while (var_s2 < 4);
+            i += 1;
+        } while (i < 4);
     }
 }

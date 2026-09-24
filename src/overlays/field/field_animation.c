@@ -4,6 +4,7 @@
 #include "cd_resources.h"
 #include "cdrom.h"
 #include "controller.h"
+#include "scene_state.h"
 
 #define FIELD_MOVIE_STATE ((volatile FieldMovieState*)0x801ED500)
 #define FIELD_CD_FLAGS_ADDRESS 0x801ED800U
@@ -124,12 +125,14 @@ void field_update_scene_animations(void)
                             cdrom_stream(CD_RES_MOVIE_BIN, (void*)0x80140000);
                             cdrom_queue_seek(definition->unk1 * 2 + 0x16A6);
                             anim->flags.b.state = 1;
+                            /* The XOR hides the constant from loop.c; a plain address is hoisted into a saved register. */
                             (*(volatile s32*)((u32)anim ^ ((u32)anim ^ FIELD_CD_FLAGS_ADDRESS))) |= FIELD_CD_FLAG_MOVIE_STREAM;
                         }
                         /* fallthrough */
                     case 1:
                         if (cdrom_can_queue_resource(definition->unk1 * 2 + 0x16A6) != 0)
                         {
+                            /* Plain store: FIELD_MOVIE_STATE here schedules differently. */
                             ((FieldMovieState*)0x801ED500)->rects[0].x = frame_definition->unkC * 4 + FIELD_TILE_LOWER_BANK_VRAM_X;
                             FIELD_MOVIE_STATE->rects[0].y = frame_definition->unkD * 0x10 + FIELD_TILE_LOWER_BANK_VRAM_Y;
                             FIELD_MOVIE_STATE->rects[0].w = frame_definition->unkE * 4;
@@ -193,7 +196,6 @@ void field_update_scene_animations(void)
                                     }
                                     FIELD_MOVIE_STATE->end_state = 4;
                                 }
-                                anim->timer = 1;
                             }
                             else
                             {
@@ -203,7 +205,6 @@ void field_update_scene_animations(void)
                                 }
                                 anim->flags.word &= ~FIELD_ANIM_FLAG_ACTIVE;
                                 func_80084240();
-                                goto movie_timer;
                             }
                         }
                         else
@@ -237,9 +238,8 @@ void field_update_scene_animations(void)
                                 cdrom_queue_read(definition->unk1 * 2 + 0x16A7, (void*)0x80140000);
                                 FIELD_MOVIE_STATE->end_state = 3;
                             }
-                        movie_timer:
-                            anim->timer = 1;
                         }
+                        anim->timer = 1;
                         break;
                     }
                     break;
@@ -248,59 +248,59 @@ void field_update_scene_animations(void)
                     field_apply_animation_tween(definition, anim, 1);
                     break;
                 }
-            if (anim->timer == 0)
-            {
-                previous_frame = anim->flags.b.state;
-                field_advance_animation_keyframe(definition, anim);
-                switch (definition->flags & FIELD_ANIM_KIND_MASK)
+                if (anim->timer == 0)
                 {
-                case 0:
-                    if (previous_frame != anim->flags.b.state)
+                    previous_frame = anim->flags.b.state;
+                    field_advance_animation_keyframe(definition, anim);
+                    switch (definition->flags & FIELD_ANIM_KIND_MASK)
                     {
-                        field_blit_animation_frame(definition, anim, anim->flags.b.state);
-                    }
-                    break;
-                case 2:
-                    cel = anim->cels;
-                    index = previous_frame - 1;
-                    while (index != -1)
-                    {
-                        cel = cel->next;
+                    case 0:
+                        if (previous_frame != anim->flags.b.state)
+                        {
+                            field_blit_animation_frame(definition, anim, anim->flags.b.state);
+                        }
+                        break;
+                    case 2:
+                        cel = anim->cels;
+                        index = previous_frame - 1;
+                        while (index != -1)
+                        {
+                            cel = cel->next;
+                            index--;
+                        }
+                        cel->active = 0;
+                        cel = anim->cels;
+                        index = anim->flags.b.state;
                         index--;
+                        while (index != -1)
+                        {
+                            cel = cel->next;
+                            index--;
+                        }
+                        cel->active = 1;
+                        break;
+                    case 3:
+                        upload = &anim->upload;
+                        upload->rect.x = frame_definition->unkC * 4 + FIELD_TILE_LOWER_BANK_VRAM_X;
+                        upload->rect.y = frame_definition->unkD * 0x10 + FIELD_TILE_LOWER_BANK_VRAM_Y;
+                        upload->rect.w = frame_definition->unkE * 4;
+                        upload->rect.h = frame_definition->unkF * 0x10;
+                        upload->data = (u_long*)(frame_definition->data + ((anim->flags.b.state * frame_definition->unkE * frame_definition->unkF) << 7));
+                        field_queue_vram_upload(upload);
+                        break;
+                    case 5:
+                    case 6:
+                        while (anim->timer == 0)
+                        {
+                            field_apply_animation_tween(definition, anim, 1);
+                            field_advance_animation_keyframe(definition, anim);
+                        }
+                        break;
+                    case 7:
+                        field_update_animation_sfx(definition, anim);
+                        break;
                     }
-                    cel->active = 0;
-                    cel = anim->cels;
-                    index = anim->flags.b.state;
-                    index--;
-                    while (index != -1)
-                    {
-                        cel = cel->next;
-                        index--;
-                    }
-                    cel->active = 1;
-                    break;
-                case 3:
-                    upload = &anim->upload;
-                    upload->rect.x = frame_definition->unkC * 4 + FIELD_TILE_LOWER_BANK_VRAM_X;
-                    upload->rect.y = frame_definition->unkD * 0x10 + FIELD_TILE_LOWER_BANK_VRAM_Y;
-                    upload->rect.w = frame_definition->unkE * 4;
-                    upload->rect.h = frame_definition->unkF * 0x10;
-                    upload->data = (u_long*)(frame_definition->data + ((anim->flags.b.state * frame_definition->unkE * frame_definition->unkF) << 7));
-                    field_queue_vram_upload(upload);
-                    break;
-                case 5:
-                case 6:
-                    while (anim->timer == 0)
-                    {
-                        field_apply_animation_tween(definition, anim, 1);
-                        field_advance_animation_keyframe(definition, anim);
-                    }
-                    break;
-                case 7:
-                    field_update_animation_sfx(definition, anim);
-                    break;
                 }
-            }
             }
             anim = anim->next;
         } while (anim != NULL);
@@ -323,12 +323,15 @@ void field_update_scene_animations(void)
                 case 2:
                     if (control_flags & FIELD_ANIM_FLAG_SECOND_BUFFER)
                     {
-                        destination_pixels = anim->scratch_pixels + 256;
                         if (definition->unkC == 0)
                         {
                             destination_pixels = anim->scratch_pixels + 16;
                         }
-                        anim->flags.word = *(volatile s32*)&anim->flags.word & ~FIELD_ANIM_FLAG_SECOND_BUFFER;
+                        else
+                        {
+                            destination_pixels = anim->scratch_pixels + 256;
+                        }
+                        anim->flags.word &= ~FIELD_ANIM_FLAG_SECOND_BUFFER;
                     }
                     else
                     {
@@ -476,6 +479,7 @@ void field_update_scene_animations(void)
                     break;
                 case 5:
                     upload->data = field_blend_animation_frames(definition, anim);
+                    /* The do/while(0) loop notes decide the anim/upload register priority. */
                     do
                     {
                         if (definition->unkC == 0)
@@ -1071,9 +1075,9 @@ void field_update_animation_sfx(FieldAnimDef* def, FieldAnim* anim)
                 }
                 else
                 {
-                    x = ((FieldCamera*)0x801ED480)->x;
-                    camera_screen_y = ((FieldCamera*)0x801ED480)->y;
-                    y = ((FieldCamera*)0x801ED480)->z;
+                    x = SCENE_STATE->camera_x;
+                    camera_screen_y = SCENE_STATE->camera_y;
+                    y = SCENE_STATE->camera_z;
                 }
                 if (x >= 0)
                 {
@@ -1113,6 +1117,7 @@ void field_update_animation_sfx(FieldAnimDef* def, FieldAnim* anim)
                     columns = geometry_definition->u.b.cols;
                     position = object->x + part->x;
                     grid_x_offset = columns * 8;
+                    /* The loop notes and the forced reload keep the second part->def load. */
                     do
                     {
                         mid = x + position / 256;
@@ -1366,6 +1371,7 @@ u_long* field_blend_animation_frames(FieldAnimDef* def, FieldAnim* anim)
     header = g_field_scene.scene->header;
     duration = ((FieldTweenSpan*)field_find_count_table_span((u8*)definition_copy, anim->flags.b.keyframe, &range_start))->duration;
     keyframe_index = anim->flags.b.keyframe;
+    /* The do/while(0) loop notes decide the anim/remaining register priority. */
     do
     {
         remaining = anim->timer;

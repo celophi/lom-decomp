@@ -16,10 +16,10 @@
 /** @brief Actor record supplying base coordinates for generated entries. */
 typedef struct
 {
-    s32 unk0;
+    s32 x;
     u8 pad4[4];
-    s32 unk8;
-} ArgRec;
+    s32 z;
+} FieldPathSource;
 
 /** @brief Field position with the vertical component left unchanged here. */
 typedef struct
@@ -60,57 +60,57 @@ void func_800A2128(s32 (*)[2], s32 *);
 
 /**
  * @brief Advance an actor's animation index and drive one interpolation step.
- * @param arg0 Pointer to the actor's current index byte.
- * @param arg1 Field position that receives the interpolated components.
- * @param arg2 Effect-entry group index.
+ * @param index Pointer to the actor's current index byte.
+ * @param position Field position that receives the interpolated components.
+ * @param group Effect-entry group index.
  */
-void func_800A1D48(u8 *arg0, void *arg1, s32 arg2)
+void func_800A1D48(u8 *index, FieldPosition *position, s32 group)
 {
-    u8 value = *arg0;
+    u8 value = *index;
 
     if (value >= D_80117E6C)
     {
-        *arg0 = value - (u8)D_80117E6C;
+        *index = value - (u8)D_80117E6C;
     }
 
-    func_800A1F2C(*arg0, arg1, arg2);
+    func_800A1F2C(*index, position, group);
 }
 
 /**
  * @brief Initialize the field effect entries associated with an actor record.
- * @param arg0 Actor record that supplies the base coordinates.
- * @param arg1 Magnitude used to offset each generated entry.
- * @param arg2 Nonzero to randomize the generated magnitude.
- * @param arg3 Effect-entry group index.
+ * @param source Actor record that supplies the base coordinates.
+ * @param magnitude Magnitude used to offset each generated entry.
+ * @param randomize Nonzero to randomize the generated magnitude.
+ * @param group Effect-entry group index.
  */
-void func_800A1D98(ArgRec *arg0, s32 arg1, s32 arg2, s32 arg3)
+void func_800A1D98(FieldPathSource *source, s32 magnitude, s32 randomize, s32 group)
 {
     s32 i;
     s32 angle;
-    s32 mag;
+    s32 entry_magnitude;
     u8 *base;
     u8 *entry;
 
     i = 0;
     base = D_801178E8;
-    entry = base + arg3 * 0x2C;
+    entry = base + group * 0x2C;
     D_80117E80 = 3;
     D_801178E0 = 0x14;
     D_80117E84 = 0xA;
     do
     {
         angle = rand() >> 3;
-        if (arg2 != 0)
+        if (randomize != 0)
         {
-            mag = (s32)((rand() | 0x4000) * arg1) >> 0xF;
+            entry_magnitude = (s32)((rand() | 0x4000) * magnitude) >> 0xF;
         }
         else
         {
-            mag = arg1;
+            entry_magnitude = magnitude;
         }
-        *(s16 *)(entry + 0) = (s16)(((s32)(rcos(angle) * mag) >> 0xC) + ((s32)arg0->unk0 >> 8));
+        *(s16 *)(entry + 0) = (s16)(((s32)(rcos(angle) * entry_magnitude) >> 0xC) + ((s32)source->x >> 8));
         i += 1;
-        *(s16 *)(entry + 0x16) = (s16)(((s32)(rsin(angle) * mag) >> 0xC) + ((s32)arg0->unk8 >> 8));
+        *(s16 *)(entry + 0x16) = (s16)(((s32)(rsin(angle) * entry_magnitude) >> 0xC) + ((s32)source->z >> 8));
         entry += 2;
     } while (i < 0xA);
     D_80117E70 = D_80117E84;

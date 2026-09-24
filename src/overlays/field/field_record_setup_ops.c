@@ -1,603 +1,395 @@
-/* field_record_setup_ops */
+/**
+ * @file field_record_setup_ops.c
+ * @brief Stage an item record: fill the staging block for a new or existing
+ *        item, run the generation scripts and write the result back.
+ */
+
 #include "common.h"
-extern u8 *D_80123FC4;
-extern u8 *D_80123FC0;
-extern u8 *D_80122B78;
-extern u8 *g_field_script;
-void func_800BEF74(void);
-void func_800BF158(void);
-void func_800BF3D8(void);
-void func_800BF800(void);
-void func_800BF700(void);
-void func_800BFF90(s32);
-void func_800C015C(s32);
-#define SETUP_U8(p,o) (*(u8 *)((u8 *)(p)+(o)))
-#define SETUP_U16(p,o) (*(u16 *)((u8 *)(p)+(o)))
-#define SETUP_U32(p,o) (*(u32 *)((u8 *)(p)+(o)))
-#define SETUP_PTR(p,o) (*(u8 **)((u8 *)(p)+(o)))
+#include "field_records.h"
+#include "field_script.h"
 
-/** @brief Eight four-bit values packed into one record word. */
-typedef struct
-{
-    u32 n0 : 4;
-    u32 n1 : 4;
-    u32 n2 : 4;
-    u32 n3 : 4;
-    u32 n4 : 4;
-    u32 n5 : 4;
-    u32 n6 : 4;
-    u32 n7 : 4;
-} SetupNibbles;
+/** @brief func_800C1E40 id of the category 0/1 item table. */
+#define FIELD_ITEM_TABLE 4
 
-/** @brief Packed 0x40-byte record expanded into the shared sequence configuration. */
-typedef struct
-{
-    u8 pad0[0x14];
-    u32 : 8;
-    u32 mode : 2;
-    u32 primary_index : 6;
-    u32 secondary_index : 6;
-    u32 : 10;
-    SetupNibbles values18;
-    SetupNibbles values1c;
-    u8 values20[3];
-    u8 value23;
-    u8 pad24[2];
-    u8 values26[6];
-    u8 value2c;
-    u8 pad2d;
-    u8 value2e;
-    u8 pad2f[0x11];
-} SetupSourceRecord;
+/** @brief func_800C1E40 id of the category 2 item table. */
+#define FIELD_ITEM_GRID_TABLE 0xF
+
+/** @brief Script variable that receives the staged item's inventory index. */
+#define FIELD_ITEM_RESULT_VARIABLE 0x7100
+
+/** @brief Inventory index reported when the inventory is full. */
+#define FIELD_ITEM_RESULT_FULL 0xFE
+
+/** @brief Inventory index reported when no gosub result was queued. */
+#define FIELD_ITEM_RESULT_NONE 0xFF
+
+/** @brief Default stat modifier index written to every staged stat. */
+#define FIELD_DEFAULT_STAT_MODIFIER 4
+
+/** @brief Staged slot values below this set the staging slot class. */
+#define FIELD_SLOT_CLASS_LIMIT 0x10
+
+/** @brief Largest row or column of the category 2 grid. */
+#define FIELD_GRID_MAX 7
+
+/** @brief func_800BE710 kind that stages a new category 2 item. */
+#define FIELD_STAGE_NEW_GRID_ITEM 2
+
+/** @brief func_800BE710 kind that restages an existing inventory item. */
+#define FIELD_STAGE_EXISTING_ITEM 3
 
 extern s32 D_801227F0;
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
-extern u8 *D_80122B74;
+extern FieldGameState* D_80122B74;
+extern FieldRuntimeContext* D_80122B78;
+extern FieldItemStaging* D_80123FC4;
+extern FieldItemTables* D_80123FC0;
 
-extern u8 *field_find_free_inventory_record(void);
-extern void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
-extern void func_800BE888(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-extern void func_800BEA10(u8 *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4);
-extern void func_800BEC44(SetupSourceRecord *record, s32 resource_index);
-extern s32 *func_800C1EC8(s32 *src, s32 *dest, s32 n);
+FieldItemRecord* field_find_free_inventory_record(void);
+void func_800BD520(s32 owner, s32 variable, s32 value);
+s32* func_800C1EC8(s32* src, s32* dest, s32 size);
+void* func_800C1E40(s32 table_id);
+void func_800C21C0(s32 index);
+void func_800BF2F0(s32 offset);
+void func_800BF3D8(void);
+void func_800BF700(void);
+void func_800BF800(void);
+void func_800BFA34(void);
+void func_800BFF90(FieldItemRecord* record);
+void func_800C015C(FieldItemRecord* record);
+
+void func_800BE888(FieldItemRecord* record, s32 category, s32 item_type, s32 item_subtype);
+void func_800BEA10(FieldItemRecord* record, s32 category, s32 item_type, s32 row, s32 command_index);
+void func_800BEC44(FieldItemRecord* record, s32 command_index);
+void func_800BEF74(void);
+void func_800BF158(void);
 
 /**
- * @brief Dispatch a queued gosub result to the handler selected by its kind.
- * @param arg0 Gosub-result kind selector.
+ * @brief Stage an item from the queued gosub results and report its inventory index.
+ *
+ * Kind 2 creates a category 2 item, kind 3 restages the inventory item
+ * given by the first result, any other kind creates an item of that
+ * category. The inventory index, FIELD_ITEM_RESULT_FULL or
+ * FIELD_ITEM_RESULT_NONE is written to script variable
+ * FIELD_ITEM_RESULT_VARIABLE.
+ *
+ * @param kind Staging kind; also the category of a new category 0/1 item.
  */
-void func_800BE710(s32 arg0)
+void func_800BE710(s32 kind)
 {
-    u8 *handle;
+    FieldItemRecord* record;
 
     D_801227F0 = 0;
-    func_800C1EC8(NULL, (s32 *)D_80123FC4, 0x60);
+    func_800C1EC8(NULL, (s32*)D_80123FC4, sizeof(FieldItemStaging));
 
-    if (g_gosub_result_count == 0)
+    if (g_gosub_result_count != 0)
     {
-        goto count_zero;
-    }
-
-    switch (arg0)
-    {
-        case 2:
-            handle = field_find_free_inventory_record();
-            if (handle != NULL)
+        switch (kind)
+        {
+        case FIELD_STAGE_NEW_GRID_ITEM:
+            record = field_find_free_inventory_record();
+            if (record != NULL)
             {
-                func_800BEA10(handle, 2, g_gosub_result_values[0], g_gosub_result_values[1],
-                              g_gosub_result_values[2]);
-                {
-                    s32 offset = (s32)handle - 0xCE0;
-                    func_800BD520(0, 0x7100, (offset - (s32)D_80122B74) >> 6);
-                }
+                func_800BEA10(record, FIELD_STAGE_NEW_GRID_ITEM, g_gosub_result_values[0], g_gosub_result_values[1], g_gosub_result_values[2]);
+                func_800BD520(0, FIELD_ITEM_RESULT_VARIABLE, record - D_80122B74->items);
             }
             else
             {
-                func_800BD520(0, 0x7100, 0xFE);
+                func_800BD520(0, FIELD_ITEM_RESULT_VARIABLE, FIELD_ITEM_RESULT_FULL);
             }
             break;
-        case 3:
-        {
-            s32 offset = (g_gosub_result_values[0] << 6) + 0xCE0;
-            func_800BEC44((SetupSourceRecord *)(D_80122B74 + offset), g_gosub_result_values[1]);
-            func_800BD520(0, 0x7100, g_gosub_result_values[0]);
+        case FIELD_STAGE_EXISTING_ITEM:
+            func_800BEC44(&D_80122B74->items[g_gosub_result_values[0]], g_gosub_result_values[1]);
+            func_800BD520(0, FIELD_ITEM_RESULT_VARIABLE, g_gosub_result_values[0]);
+            break;
+        default:
+            record = field_find_free_inventory_record();
+            if (record != NULL)
+            {
+                func_800BE888(record, kind, g_gosub_result_values[0], g_gosub_result_values[1]);
+                func_800BD520(0, FIELD_ITEM_RESULT_VARIABLE, record - D_80122B74->items);
+            }
+            else
+            {
+                func_800BD520(0, FIELD_ITEM_RESULT_VARIABLE, FIELD_ITEM_RESULT_FULL);
+            }
             break;
         }
-        default:
-            handle = field_find_free_inventory_record();
-            if (handle != NULL)
-            {
-                func_800BE888((s32)handle, arg0, g_gosub_result_values[0], g_gosub_result_values[1]);
-                {
-                    s32 offset = (s32)handle - 0xCE0;
-                    func_800BD520(0, 0x7100, (offset - (s32)D_80122B74) >> 6);
-                }
-            }
-            else
-            {
-                func_800BD520(0, 0x7100, 0xFE);
-            }
-            break;
     }
-    return;
-
-count_zero:
-    func_800BD520(0, 0x7100, 0xFF);
+    else
+    {
+        func_800BD520(0, FIELD_ITEM_RESULT_VARIABLE, FIELD_ITEM_RESULT_NONE);
+    }
 }
 
-
-typedef struct
-{
-    s32 owner;
-    u8 mode;
-    u8 primary_record;
-    u8 secondary_record;
-    u8 tertiary_record;
-} FieldSequenceConfig;
-
-
-
-void func_800C21C0(s32 arg0);
-void func_800BEF74(void);
-
 /**
- * @brief Initialize and flush the shared field sequence configuration.
- * @param owner Owning object or handle stored in the sequence configuration.
- * @param mode Sequence mode selector.
- * @param primary_record Primary record index.
- * @param secondary_record Secondary record index.
+ * @brief Stage a new category 0/1 item and generate it.
+ * @param record Item record that receives the item.
+ * @param category Item category.
+ * @param item_type Item type.
+ * @param item_subtype Item subtype.
  */
-void func_800BE888(s32 owner, s32 mode, s32 primary_record, s32 secondary_record)
+void func_800BE888(FieldItemRecord* record, s32 category, s32 item_type, s32 item_subtype)
 {
-    FieldSequenceConfig *config;
+    FieldItemStaging* staging;
     s32 i;
 
-    func_800C21C0(secondary_record);
+    func_800C21C0(item_subtype);
 
-    config = (FieldSequenceConfig *)D_80123FC4;
-    config->mode = mode;
-    i = 0;
-    config->owner = owner;
-    ((FieldSequenceConfig *)D_80123FC4)->primary_record = primary_record;
-    ((FieldSequenceConfig *)D_80123FC4)->secondary_record = secondary_record;
-    ((FieldSequenceConfig *)D_80123FC4)->tertiary_record = 0xFF;
+    /* The first two stores go through a local copy of D_80123FC4. */
+    staging = D_80123FC4;
+    staging->category = category;
+    staging->record = record;
+    D_80123FC4->item_type = item_type;
+    D_80123FC4->item_subtype = item_subtype;
+    D_80123FC4->command_index = 0xFF;
 
-    for (; i < 8; i++)
+    for (i = 0; i < FIELD_STAGING_STAT_COUNT; i++)
     {
-        u8 *flag_entry;
-        u8 *value_entry;
-
-        flag_entry = (u8 *)D_80123FC4;
-        flag_entry += i;
-        flag_entry[0x20] = (flag_entry[0x20] & 0xF0) | 4;
-        value_entry = (u8 *)D_80123FC4;
-        value_entry += i;
-        value_entry[0x50] = 4;
+        D_80123FC4->stats.bytes[i] = (D_80123FC4->stats.bytes[i] & 0xF0) | FIELD_DEFAULT_STAT_MODIFIER;
+        D_80123FC4->base_stats[i] = FIELD_DEFAULT_STAT_MODIFIER;
     }
 
-    for (i = 0; i < 6; i++)
+    for (i = 0; i < FIELD_STAGING_SLOT_COUNT; i++)
     {
-        u8 *entry;
-
-        entry = (u8 *)D_80123FC4;
-        entry += i;
-        entry[0x28] = 0xFF;
+        D_80123FC4->slots[i] = FIELD_STAGING_SLOT_EMPTY;
     }
 
-    ((u8 *)D_80123FC4)[0x2E] = ((u8 *)D_80123FC4)[5] << 4;
-    ((u8 *)D_80123FC4)[0x2F] = (((u8 *)D_80123FC4)[5] << 4) + 0xC;
-    ((u8 *)D_80123FC4)[0x30] = (((u8 *)D_80123FC4)[5] << 4) + 0xD;
-    ((u8 *)D_80123FC4)[0x31] = (((u8 *)D_80123FC4)[5] << 4) + 0xE;
-    ((u8 *)D_80123FC4)[0x32] = (((u8 *)D_80123FC4)[5] << 4) + 0xF;
-    ((u8 *)D_80123FC4)[0x33] = 0xFF;
+    D_80123FC4->properties[0] = D_80123FC4->item_type << 4;
+    D_80123FC4->properties[1] = (D_80123FC4->item_type << 4) + 0xC;
+    D_80123FC4->properties[2] = (D_80123FC4->item_type << 4) + 0xD;
+    D_80123FC4->properties[3] = (D_80123FC4->item_type << 4) + 0xE;
+    D_80123FC4->properties[4] = (D_80123FC4->item_type << 4) + 0xF;
+    D_80123FC4->properties[5] = 0xFF;
 
     func_800BEF74();
 }
 
-extern void func_800BF2F0(s32);
-extern void func_800BFA34(void);
-extern u8 *func_800C1E40(s32);
-extern void func_800C21C0(s32);
-/** @brief Resource table view exposing the command halfword at offset 0x244. */
-typedef struct FieldResourceCommandEntry
-{
-    u8 padding[0x244];
-    u16 command;
-} FieldResourceCommandEntry;
-/** @brief Effect setup header followed by packed state bytes. */
-typedef struct FieldSequenceHeader
-{
-    u8 *owner;
-    u8 mode;
-    u8 rest[0x2D];
-} FieldSequenceHeader;
-extern u8 *D_80122B78, *D_80123FC0, *g_field_script;
-
 /**
- * @brief Initialize effect state, run its command, and copy the resulting parameters.
- * @param destination Destination record receiving bytes at offsets 0x24 through 0x26.
- * @param mode Effect setup mode.
- * @param subentry Resource subentry selector.
- * @param resource_index Primary resource selector.
- * @param command_selector Command selector relative to 0x40.
+ * @brief Stage a new category 2 item, run its command script and store its grid values.
+ * @param record Item record that receives the item.
+ * @param category Item category.
+ * @param item_type Item type.
+ * @param row Row of the grid table pair and item subtype.
+ * @param command_index Command selector, biased by FIELD_STAGING_COMMAND_BASE.
  */
-void func_800BEA10(u8 *destination, s32 mode, s32 subentry, s32 resource_index, s32 command_selector)
+void func_800BEA10(FieldItemRecord* record, s32 category, s32 item_type, s32 row, s32 command_index)
 {
-    FieldSequenceHeader **config_slot;
-    u8 **resource_slot;
-    s32 command;
-    u8 *command_entry;
-    s32 resource_offset;
-    u8 *saved_script;
-    u8 *loaded_resource;
-    s32 index;
-    s32 row;
+    FieldScriptContext* saved_script;
     s32 column;
-    u8 flags;
-    u8 *flag_entry;
-    u8 *reset_entry;
+    s32 grid_row;
+    s32 i;
 
-    func_800C21C0(resource_index);
-    func_800C21C0(command_selector);
-    ((FieldSequenceHeader *)D_80123FC4)->owner = destination;
-    ((FieldSequenceHeader *)D_80123FC4)->mode = mode;
-    ((u8 *)D_80123FC4)[0x5] = subentry;
-    ((u8 *)D_80123FC4)[0x6] = (s8)resource_index;
-    index = 0;
-    ((u8 *)D_80123FC4)[0x7] = (s8)command_selector;
-    do
+    func_800C21C0(row);
+    func_800C21C0(command_index);
+    D_80123FC4->record = record;
+    D_80123FC4->category = category;
+    D_80123FC4->item_type = item_type;
+    D_80123FC4->item_subtype = row;
+    D_80123FC4->command_index = command_index;
+
+    for (i = 0; i < FIELD_STAGING_STAT_COUNT; i++)
     {
-        flag_entry = (u8 *)D_80123FC4 + index;
-        flags = flag_entry[0x20];
-        index += 1;
-        flag_entry[0x20] = (s8)((flags & 0xF0) | 4);
-    } while (index < 8);
-    index = 0;
-    do
+        D_80123FC4->stats.bytes[i] = (D_80123FC4->stats.bytes[i] & 0xF0) | FIELD_DEFAULT_STAT_MODIFIER;
+    }
+    for (i = 0; i < FIELD_STAGING_SLOT_COUNT; i++)
     {
-        reset_entry = (u8 *)D_80123FC4 + index;
-        index += 1;
-        reset_entry[0x28] = 0xFF;
-    } while (index < 6);
-    resource_slot = &D_80123FC0;
-    loaded_resource = func_800C1E40(0xF);
-    config_slot = (FieldSequenceHeader **)&D_80123FC4;
-    resource_offset = (subentry * 2) + (resource_index * 8);
-    *resource_slot = loaded_resource;
-    ((u8 *)(*config_slot))[0x2F] = (s8)((loaded_resource + resource_offset)[0x44] & 7);
-    ((u8 *)(*config_slot))[0x30] = (s8)((u8)(*resource_slot + resource_offset)[0x44] >> 3);
-    ((u8 *)(*config_slot))[0x31] = (u8)(*resource_slot + resource_offset)[0x45];
-    command_entry = *resource_slot;
-    command_entry += (command_selector - 0x40) * 2;
-    command = ((FieldResourceCommandEntry *)command_entry)->command;
+        D_80123FC4->slots[i] = FIELD_STAGING_SLOT_EMPTY;
+    }
+
+    D_80123FC0 = func_800C1E40(FIELD_ITEM_GRID_TABLE);
+    D_80123FC4->properties[1] = D_80123FC0->grid.pairs[row][item_type][0] & 7;
+    D_80123FC4->properties[2] = D_80123FC0->grid.pairs[row][item_type][0] >> 3;
+    D_80123FC4->properties[3] = D_80123FC0->grid.pairs[row][item_type][1];
+
     saved_script = g_field_script;
-    g_field_script = D_80122B78 + 0xD98;
-    func_800BF2F0(command);
+    g_field_script = (FieldScriptContext*)&D_80122B78->events[0].script;
+    func_800BF2F0(D_80123FC0->grid.commands[command_index - FIELD_STAGING_COMMAND_BASE]);
     g_field_script = saved_script;
     func_800BFA34();
-    destination[0x24] = (u8)((u8 *)(*config_slot))[0x2E];
-    {
-        u8 *clamp_base = (u8 *)D_80123FC4;
 
-        if ((s8)clamp_base[0x2F] >= 0)
-        {
-            column = 7;
-            if (clamp_base[0x2F] < 8U)
-            {
-                column = clamp_base[0x2F] & 0xFF;
-            }
-        }
-        else
-        {
-            column = 0;
-        }
-    }
-    {
-        u8 *clamp_base = (u8 *)D_80123FC4;
+    record->derived.bytes[0] = D_80123FC4->properties[0];
 
-        if ((s8)clamp_base[0x30] >= 0)
-        {
-            row = 7;
-            if (clamp_base[0x30] < 8U)
-            {
-                row = clamp_base[0x30] & 0xFF;
-            }
-        }
-        else
-        {
-            row = 0;
-        }
-    }
+    if ((s8)D_80123FC4->properties[1] >= 0)
     {
-        u8 *resource_base = D_80123FC0;
-        destination[0x25] = (resource_base + (column + (row << 3)))[4];
+        column = FIELD_GRID_MAX;
+        if (D_80123FC4->properties[1] <= FIELD_GRID_MAX)
+        {
+            column = D_80123FC4->properties[1];
+        }
     }
-    destination[0x26] = (u8)((u8 *)D_80123FC4)[0x31];
+    else
+    {
+        column = 0;
+    }
+
+    if ((s8)D_80123FC4->properties[2] >= 0)
+    {
+        grid_row = FIELD_GRID_MAX;
+        if (D_80123FC4->properties[2] <= FIELD_GRID_MAX)
+        {
+            grid_row = D_80123FC4->properties[2];
+        }
+    }
+    else
+    {
+        grid_row = 0;
+    }
+
+    record->derived.bytes[1] = D_80123FC0->grid.grid[grid_row][column];
+    record->derived.bytes[2] = D_80123FC4->properties[3];
 }
 
 /**
- * @brief Expand packed record fields into the shared sequence configuration.
- * @param record Packed source record.
- * @param resource_index Resource-table selector stored in the staged configuration.
+ * @brief Stage an existing item record and regenerate it.
+ * @param record Item record to restage.
+ * @param command_index Command selector, biased by FIELD_STAGING_COMMAND_BASE.
  */
-void func_800BEC44(SetupSourceRecord *record, s32 resource_index)
+void func_800BEC44(FieldItemRecord* record, s32 command_index)
 {
-    u8 *config_ptr;
-    s32 config_word24;
-    s32 config_word24_2;
-    s32 config_word24_3;
-    s32 config_word20;
-    s32 config_word20_2;
-    s32 config_word20_3;
     s32 i;
-    u8 mode;
-    u8 *config_entry;
 
-    D_80123FC0 = func_800C1E40(4);
-    func_800C21C0(resource_index);
+    D_80123FC0 = func_800C1E40(FIELD_ITEM_TABLE);
+    func_800C21C0(command_index);
+
+    D_80123FC4->record = record;
+    D_80123FC4->category = record->info.bits.category;
+    D_80123FC4->item_type = record->info.bits.item_type;
+    D_80123FC4->item_subtype = record->info.bits.item_subtype;
+    D_80123FC4->command_index = command_index;
+    D_80123FC4->pool += D_80123FC0->item.commands[command_index - FIELD_STAGING_COMMAND_BASE].pool_bonus;
+
+    D_80123FC4->levels[0].level = record->bonus_nibbles.bits.n0;
+    D_80123FC4->levels[1].level = record->bonus_nibbles.bits.n1;
+    D_80123FC4->levels[2].level = record->bonus_nibbles.bits.n2;
+    D_80123FC4->levels[3].level = record->bonus_nibbles.bits.n3;
+    D_80123FC4->levels[4].level = record->bonus_nibbles.bits.n4;
+    D_80123FC4->levels[5].level = record->bonus_nibbles.bits.n5;
+    D_80123FC4->levels[6].level = record->bonus_nibbles.bits.n6;
+    D_80123FC4->levels[7].level = record->bonus_nibbles.bits.n7;
+    D_80123FC4->effect_index = record->effect_index;
+
+    D_80123FC4->stats.words[0].modifier0 = record->stat_nibbles.bits.n0;
+    D_80123FC4->stats.words[0].modifier1 = record->stat_nibbles.bits.n1;
+    D_80123FC4->stats.words[0].modifier2 = record->stat_nibbles.bits.n2;
+    D_80123FC4->stats.words[0].modifier3 = record->stat_nibbles.bits.n3;
+    D_80123FC4->stats.words[1].modifier0 = record->stat_nibbles.bits.n4;
+    D_80123FC4->stats.words[1].modifier1 = record->stat_nibbles.bits.n5;
+    D_80123FC4->stats.words[1].modifier2 = record->stat_nibbles.bits.n6;
+    D_80123FC4->stats.words[1].modifier3 = record->stat_nibbles.bits.n7;
+
+    for (i = 0; i < FIELD_STAGING_STAT_COUNT; i++)
     {
-        u8 *config = D_80123FC4;
-        SETUP_PTR(config, 0) = (u8 *)record;
-        SETUP_U8(config, 0x4) = (u8)record->mode;
+        D_80123FC4->base_stats[i] = FIELD_DEFAULT_STAT_MODIFIER;
     }
-    SETUP_U8(D_80123FC4, 0x5) = (s8)record->primary_index;
-    SETUP_U8(D_80123FC4, 0x6) = (s8)record->secondary_index;
-    SETUP_U8(D_80123FC4, 0x7) = resource_index;
-    resource_index -= 0x40;
-    resource_index *= 4;
-    SETUP_U32(D_80123FC4, 0x8) = (s32)(SETUP_U32(D_80123FC4, 0x8) + SETUP_U8(D_80123FC0 + resource_index, 0x684));
-    SETUP_U8(D_80123FC4, 0xD) = (s8)record->values18.n0;
-    SETUP_U8(D_80123FC4, 0xF) = (s8)record->values18.n1;
-    SETUP_U8(D_80123FC4, 0x11) = (s8)record->values18.n2;
-    SETUP_U8(D_80123FC4, 0x13) = (s8)record->values18.n3;
-    SETUP_U8(D_80123FC4, 0x15) = (s8)record->values18.n4;
-    SETUP_U8(D_80123FC4, 0x17) = (s8)record->values18.n5;
-    SETUP_U8(D_80123FC4, 0x19) = (s8)record->values18.n6;
-    SETUP_U8(D_80123FC4, 0x1B) = (s8)record->values18.n7;
-    SETUP_U8(D_80123FC4, 0x1C) = record->value2e;
-    config_word20 = (SETUP_U32(D_80123FC4, 0x20) & ~0xF) | record->values1c.n0;
-    SETUP_U32(D_80123FC4, 0x20) = config_word20;
-    config_word20_2 = (config_word20 & ~0xF00) | (record->values1c.n1 << 8);
-    SETUP_U32(D_80123FC4, 0x20) = config_word20_2;
-    config_word20_3 = (config_word20_2 & 0xFFF0FFFF) | (record->values1c.n2 << 0x10);
-    SETUP_U32(D_80123FC4, 0x20) = config_word20_3;
-    SETUP_U32(D_80123FC4, 0x20) = (s32)((config_word20_3 & 0xF0FFFFFF) | (record->values1c.n3 << 0x18));
-    i = 0;
-    config_word24 = (SETUP_U32(D_80123FC4, 0x24) & ~0xF) | record->values1c.n4;
-    SETUP_U32(D_80123FC4, 0x24) = config_word24;
-    config_word24_2 = (config_word24 & ~0xF00) | (record->values1c.n5 << 8);
-    SETUP_U32(D_80123FC4, 0x24) = config_word24_2;
-    config_word24_3 = (config_word24_2 & 0xFFF0FFFF) | (record->values1c.n6 << 0x10);
-    SETUP_U32(D_80123FC4, 0x24) = config_word24_3;
-    SETUP_U32(D_80123FC4, 0x24) = (s32)((config_word24_3 & 0xF0FFFFFF) | (record->values1c.n7 << 0x18));
-    do
+
+    D_80123FC4->slots[0] = FIELD_STAGING_SLOT_EMPTY;
+    D_80123FC4->slots[1] = record->special_ids[3];
+    for (i = 0; i < 3; i++)
     {
-        config_entry = D_80123FC4 + i;
-        i += 1;
-        SETUP_U8(config_entry, 0x50) = 4;
-    } while (i < 8);
-    i = 0;
-    SETUP_U8(D_80123FC4, 0x28) = 0xFF;
-    SETUP_U8(D_80123FC4, 0x29) = record->value23;
-    do
+        D_80123FC4->slots[i + 2] = record->special_ids[i];
+    }
+    D_80123FC4->slots[5] = FIELD_STAGING_SLOT_EMPTY;
+
+    switch (D_80123FC4->category)
     {
-        SETUP_U8((u8 *)((s32)i + (s32)D_80123FC4), 0x2A) = record->values20[i];
-        i += 1;
-    } while (i < 3);
-    SETUP_U8(D_80123FC4, 0x2D) = 0xFF;
-    config_ptr = D_80123FC4;
-    mode = SETUP_U8(config_ptr, 0x4);
-    switch (mode)
-    {
-    case 0:
-        i = 0;
-        do
+    case FIELD_ITEM_CATEGORY_WEAPON:
+        for (i = 0; i < FIELD_STAGING_PROPERTY_COUNT; i++)
         {
-            SETUP_U8(D_80123FC4 + i, 0x2E) = record->values26[i];
-            i += 1;
-        } while (i < 6);
-        SETUP_U8(D_80123FC4, 0x34) = 0;
+            D_80123FC4->properties[i] = record->derived.weapon.stats[i];
+        }
+        D_80123FC4->flags2C = 0;
         break;
-    case 1:
-        SETUP_U8(config_ptr, 0x35) = 0;
-        SETUP_U8(D_80123FC4, 0x36) = record->value2c;
+    case FIELD_ITEM_CATEGORY_ARMOR:
+        D_80123FC4->flags2D = 0;
+        D_80123FC4->alternate_flags2C = record->flags2C;
         break;
     }
+
     func_800BEF74();
 }
 
-
-/** @brief Compact per-frame config block populated before a sequence flush. */
-typedef struct
-{
-    s32 unk0;   /* 0x00 owning object pointer */
-    u8 unk4;    /* 0x04 mode selector */
-    u8 unk5;    /* 0x05 primary record index */
-    u8 unk6;    /* 0x06 secondary record index */
-    u8 unk7;    /* 0x07 tertiary record index (biased by 0x40) */
-} Cfg;
-
-/** @brief 0xC-stride record view into the D_80123FC0 table. */
-typedef struct
-{
-    u8 pad0[4];
-    u16 unk4;   /* 0x04 */
-    u16 unk6;   /* 0x06 */
-    u8 pad8[0xBC];
-    u16 unkC4;  /* 0xC4 */
-    u16 unkC6;  /* 0xC6 */
-} Rec0C;
-
-/** @brief 0x14-stride record view into the D_80123FC0 table. */
-typedef struct
-{
-    u8 pad0[0x184];
-    u16 unk184; /* 0x184 */
-} Rec14;
-
-/** @brief 4-stride record view into the D_80123FC0 table. */
-typedef struct
-{
-    u8 pad0[0x686];
-    u16 unk686; /* 0x686 */
-} Rec4;
-
-
-
-extern u8 *D_80123FC0;
-
-
 /**
- * @brief Flush the staged config block through the sequence emitter chain.
+ * @brief Run the generation scripts of the staged item and write it back.
  *
- * Redirects the active sequence buffer @c g_field_script to the scratch region at
- * @c D_80122B78 + 0xD98, emits the note/param records selected by the config
- * indices (using @c unk4 to pick the base vs. alternate field), restores the
- * buffer, and finally dispatches the mode-0/mode-1 finaliser.
+ * The type, subtype, command and slot scripts run on the event script
+ * context; pending levels, flags and stat clamping are applied, the item is
+ * written back and the category 0/1 derived values are computed.
  *
  * @see decomp.me (100%) TODO
  */
 void func_800BEF74(void)
 {
-    s32 temp_s2;
-    Rec0C *new_var;
-    Rec0C *new_var2;
-    u16 var_a0;
-    u16 var_a0_2;
+    FieldScriptContext* saved_script;
 
-    temp_s2 = (s32)g_field_script;
-    g_field_script = D_80122B78 + 0xD98;
+    saved_script = g_field_script;
+    g_field_script = (FieldScriptContext*)&D_80122B78->events[0].script;
     func_800BF158();
-    if (((Cfg *)D_80123FC4)->unk4 == 0)
+    if (D_80123FC4->category == FIELD_ITEM_CATEGORY_WEAPON)
     {
-        new_var = (Rec0C *)(D_80123FC0 + (((Cfg *)D_80123FC4)->unk5 * 3 << 2));
-        var_a0 = new_var->unk4;
+        func_800BF2F0(D_80123FC0->item.types[D_80123FC4->item_type].scripts[0]);
     }
     else
     {
-        var_a0 = (new_var2 = (Rec0C *)(D_80123FC0 + (((Cfg *)D_80123FC4)->unk5 * 3 << 2)))->unkC4;
+        func_800BF2F0(D_80123FC0->item.alternate_types[D_80123FC4->item_type].scripts[0]);
     }
-    func_800BF2F0(var_a0);
-    {
-        Rec14 *r14 = (Rec14 *)(D_80123FC0 + (((Cfg *)D_80123FC4)->unk6 * 5 << 2));
-        func_800BF2F0(r14->unk184);
-    }
-    func_800BF2F0(((Rec4 *)(D_80123FC0 + ((((Cfg *)D_80123FC4)->unk7 - 0x40) << 2)))->unk686);
+    func_800BF2F0(D_80123FC0->item.subtypes[D_80123FC4->item_subtype].script);
+    func_800BF2F0(D_80123FC0->item.commands[D_80123FC4->command_index - FIELD_STAGING_COMMAND_BASE].script);
     func_800BF3D8();
     func_800BF800();
-    if (((Cfg *)D_80123FC4)->unk4 == 0)
+    if (D_80123FC4->category == FIELD_ITEM_CATEGORY_WEAPON)
     {
-        var_a0_2 = ((Rec0C *)(D_80123FC0 + (((Cfg *)D_80123FC4)->unk5 * 3 << 2)))->unk6;
+        func_800BF2F0(D_80123FC0->item.types[D_80123FC4->item_type].scripts[1]);
     }
     else
     {
-        var_a0_2 = ((Rec0C *)(D_80123FC0 + (((Cfg *)D_80123FC4)->unk5 * 3 << 2)))->unkC6;
+        func_800BF2F0(D_80123FC0->item.alternate_types[D_80123FC4->item_type].scripts[1]);
     }
-    func_800BF2F0(var_a0_2);
     func_800BF700();
-    g_field_script = (u8 *)temp_s2;
+    g_field_script = saved_script;
     func_800BFA34();
-    switch (((Cfg *)D_80123FC4)->unk4)
+
+    switch (D_80123FC4->category)
     {
-    case 0:
-        func_800BFF90(((Cfg *)D_80123FC4)->unk0);
+    case FIELD_ITEM_CATEGORY_WEAPON:
+        func_800BFF90(D_80123FC4->record);
         return;
-    case 1:
-        func_800C015C(((Cfg *)D_80123FC4)->unk0);
+    case FIELD_ITEM_CATEGORY_ARMOR:
+        func_800C015C(D_80123FC4->record);
         return;
     }
 }
 
-
-/* func_800BF158 */
-#include "common.h"
-
-extern u8 *func_800C1E40(s32);
-extern u8 *D_80123FC0;
-
-typedef struct
-{
-    u8 bytes[0x58];
-    unsigned int flags : 4;
-    unsigned int other_flags : 28;
-} FieldRecordState;
-
-typedef struct
-{
-    u8 value;
-    u8 padding;
-} FieldBytePair;
-
-typedef struct
-{
-    u8 prefix[0xC];
-    FieldBytePair pairs[8];
-} FieldPairState;
-
-
-
 /**
- * @brief Copy the selected resource record into the shared field state.
+ * @brief Load the item table and copy the staged subtype's entry into the staging block.
  */
 void func_800BF158(void)
 {
     s32 i;
-    u8 *record;
-    FieldRecordState *state;
 
-    record = func_800C1E40(4);
-    do
+    D_80123FC0 = func_800C1E40(FIELD_ITEM_TABLE);
+    D_80123FC4->unk3A = D_80123FC0->item.subtypes[D_80123FC4->item_subtype].divisor;
+    for (i = 0; i < 4; i++)
     {
-        state = ((FieldRecordState *)D_80123FC4);
-    } while (0);
-    D_80123FC0 = record;
-    i = 0;
-    record += state->bytes[6] * 20;
-    *(u16 *)(state->bytes + 0x3A) = *(u16 *)(record + 0x186);
-    do
+        D_80123FC4->weights[i] = D_80123FC0->item.subtypes[D_80123FC4->item_subtype].weights[i];
+    }
+    for (i = 0; i < 4; i++)
     {
-        s32 source_offset;
-        u8 *dest;
+        D_80123FC4->multipliers[i] = D_80123FC0->item.subtypes[D_80123FC4->item_subtype].multipliers[i];
+    }
+    for (i = 0; i < FIELD_STAGING_LEVEL_COUNT; i++)
+    {
+        D_80123FC4->levels[i].cost = D_80123FC0->item.subtypes[D_80123FC4->item_subtype].costs[i];
+        D_80123FC4->pending_levels[i] = 0;
+    }
 
-        source_offset = i + ((FieldRecordState *)D_80123FC4)->bytes[6] * 20;
-        dest = ((FieldRecordState *)D_80123FC4)->bytes + i;
-        dest[0x3C] = *(D_80123FC0 + source_offset + 0x188);
-        i++;
-    } while (i < 4);
-    i = 0;
-    do
+    D_80123FC4->flags.bits.slot_class = 0xF;
+    for (i = 1; i < 5; i++)
     {
-        s32 source_offset;
-        u8 *dest;
-
-        source_offset = i + ((FieldRecordState *)D_80123FC4)->bytes[6] * 20;
-        dest = ((FieldRecordState *)D_80123FC4)->bytes + i;
-        dest[0x40] = *(D_80123FC0 + source_offset + 0x18C);
-        i++;
-    } while (i < 4);
-    i = 0;
-    do
-    {
-        s32 source_offset;
-        u8 *clear_dest;
-
-        source_offset = i + ((FieldRecordState *)D_80123FC4)->bytes[6] * 20;
-        ((FieldPairState *)((FieldRecordState *)D_80123FC4))->pairs[i].value = *(D_80123FC0 + source_offset + 0x190);
-        clear_dest = ((FieldRecordState *)D_80123FC4)->bytes + i;
-        clear_dest[0x44] = 0;
-        i++;
-    } while (i < 8);
-    i = 1;
-    ((FieldRecordState *)D_80123FC4)->flags = 0xF;
-    do
-    {
-        u8 *entry;
-
-        entry = ((FieldRecordState *)D_80123FC4)->bytes + i;
-        if (entry[0x28] < 0x10U)
+        if (D_80123FC4->slots[i] < FIELD_SLOT_CLASS_LIMIT)
         {
-            ((FieldRecordState *)D_80123FC4)->flags = entry[0x28];
+            D_80123FC4->flags.bits.slot_class = D_80123FC4->slots[i];
         }
-        i++;
-    } while (i < 5);
+    }
 }

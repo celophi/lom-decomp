@@ -9,16 +9,16 @@ typedef struct
 
 void field_script_op_00(void);
 u8* field_script_read_u16(u8* data, u16* value);
-s32 func_800BD3B0(s32 arg0, FieldScriptVariableRef arg1);
+s32 func_800BD3B0(s32 owner_id, FieldScriptVariableRef var_ref);
 extern s32 D_80122B74;
 extern s32 D_80122B78;
 StructC1B60* func_800C1B60(s32 arg0);
 extern u8 D_800F0E08[8];
-s32 func_800BD318(s32 arg0, FieldScriptVariableRef arg1, s32* arg2, s32* arg3);
-s32 func_800BD650(s32 arg0, u8* arg1, s32 arg2, s32 arg3, s32 arg4);
-void func_800BD55C(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5);
-void func_800BD434(s32 arg0, FieldScriptVariableRef arg1, s32 arg2);
-void func_800BD4A8(s32 arg0, FieldScriptVariableRef arg1, s32 arg2);
+s32 func_800BD318(s32 owner_id, FieldScriptVariableRef var_ref, s32* element_index, s32* bit_shift);
+s32 func_800BD650(s32 width, u8* base, s32 index, s32 shift, s32 bit_count);
+void func_800BD55C(s32 width, s32 base, s32 index, s32 shift, s32 bit_count, s32 value);
+void func_800BD434(s32 owner_id, FieldScriptVariableRef var_ref, s32 value);
+void func_800BD4A8(s32 owner_id, FieldScriptVariableRef var_ref, s32 value);
 
 /**
  * @brief Apply a signed 16-bit relative jump to the active record's program counter.
@@ -112,9 +112,9 @@ u8* field_script_read_operand(u32 operand_type, u8* data, s32* value)
 }
 
 /**
- * @param arg0 Byte stream to read a little-endian 16-bit value from.
- * @param arg1 Destination for the unpacked 16-bit value.
- * @return arg0 advanced past the two bytes read.
+ * @param data Byte stream to read a little-endian 16-bit value from.
+ * @param value Destination for the unpacked 16-bit value.
+ * @return @p data advanced past the two bytes read.
  * @see decomp.me (100%) N/A -- trivial 7-instruction leaf function, no scratch needed.
  */
 u8* field_script_read_u16(u8* data, u16* value)
@@ -125,30 +125,30 @@ u8* field_script_read_u16(u8* data, u16* value)
 
 /**
  * @brief Decode a packed field-script variable reference.
- * @param arg0 Owner or record identifier used when resolving adjusted references.
- * @param arg1 Packed variable reference to decode.
- * @param arg2 Receives the reference's primary bit-field value.
- * @param arg3 Receives the reference's low five-bit value.
+ * @param owner_id Owner or record identifier used when resolving adjusted references.
+ * @param var_ref Packed variable reference to decode.
+ * @param element_index Receives the element index (reference bits 5-11).
+ * @param bit_shift Receives the bit shift (reference bits 0-4).
  * @return Base value selected by the reference kind.
  */
-s32 func_800BD318(s32 arg0, FieldScriptVariableRef arg1, s32* arg2, s32* arg3)
+s32 func_800BD318(s32 owner_id, FieldScriptVariableRef var_ref, s32* element_index, s32* bit_shift)
 {
     u32 value;
     s32 result;
 
-    value = arg1.value & 0xFFF;
-    *arg2 = value >> 5;
-    *arg3 = value & 0x1F;
-    if (((arg1.value >> 12) & 7) < 3)
+    value = var_ref.value & 0xFFF;
+    *element_index = value >> 5;
+    *bit_shift = value & 0x1F;
+    if (((var_ref.value >> 12) & 7) < 3)
     {
         result = D_80122B74 + 0xE4;
     }
     else
     {
         result = D_80122B78;
-        if (arg1.value & 0x8000)
+        if (var_ref.value & 0x8000)
         {
-            *arg2 += (func_800C1B60(arg0)->unk28 >> 9) & 0x7F;
+            *element_index += (func_800C1B60(owner_id)->unk28 >> 9) & 0x7F;
         }
     }
     return result;
@@ -156,132 +156,141 @@ s32 func_800BD318(s32 arg0, FieldScriptVariableRef arg1, s32* arg2, s32* arg3)
 
 /**
  * @brief Resolve and read a packed field-script variable reference.
- * @param arg0 Owner or record identifier used while resolving the reference.
- * @param arg1 Packed variable reference to read.
+ * @param owner_id Owner or record identifier used while resolving the reference.
+ * @param var_ref Packed variable reference to read.
  * @return Value read from the resolved variable.
  */
-s32 func_800BD3B0(s32 arg0, FieldScriptVariableRef arg1)
+s32 func_800BD3B0(s32 owner_id, FieldScriptVariableRef var_ref)
 {
-    s32 sp18;
-    s32 sp1c;
-    s32 result;
+    s32 element_index;
+    s32 bit_shift;
+    s32 base;
 
-    result = func_800BD318(arg0, arg1, &sp18, &sp1c);
-    return func_800BD650(2, (u8*)result, sp18, sp1c, D_800F0E08[(arg1.value >> 12) & 7]);
+    base = func_800BD318(owner_id, var_ref, &element_index, &bit_shift);
+    return func_800BD650(2, (u8*)base, element_index, bit_shift, D_800F0E08[(var_ref.value >> 12) & 7]);
 }
 
 /**
  * @brief Resolve a 16-bit field-script variable reference and discard its value.
- * @param arg0 Owner or record identifier used while resolving the reference.
- * @param arg1 Packed 16-bit variable reference.
+ * @param owner_id Owner or record identifier used while resolving the reference.
+ * @param raw_ref Packed 16-bit variable reference.
  */
-void func_800BD414(s32 arg0, s32 arg1)
+void func_800BD414(s32 owner_id, s32 raw_ref)
 {
     FieldScriptVariableRef var_ref;
 
-    var_ref.value = arg1;
-    func_800BD3B0(arg0, var_ref);
+    var_ref.value = raw_ref;
+    func_800BD3B0(owner_id, var_ref);
 }
 
 /**
  * @brief Resolve a packed field-script variable reference and write a value.
- * @param arg0 Owner or record identifier used while resolving the reference.
- * @param arg1 Packed variable reference to write.
- * @param arg2 Value to write.
+ * @param owner_id Owner or record identifier used while resolving the reference.
+ * @param var_ref Packed variable reference to write.
+ * @param value Value to write.
  */
-void func_800BD434(s32 arg0, FieldScriptVariableRef arg1, s32 arg2)
+void func_800BD434(s32 owner_id, FieldScriptVariableRef var_ref, s32 value)
 {
-    s32 sp18;
-    s32 sp1c;
-    s32 result;
+    s32 element_index;
+    s32 bit_shift;
+    s32 base;
 
-    result = func_800BD318(arg0, arg1, &sp18, &sp1c);
-    func_800BD55C(2, result, sp18, sp1c, D_800F0E08[(arg1.value >> 12) & 7], arg2);
+    base = func_800BD318(owner_id, var_ref, &element_index, &bit_shift);
+    func_800BD55C(2, base, element_index, bit_shift, D_800F0E08[(var_ref.value >> 12) & 7], value);
 }
 
 /**
  * @brief Resolve a packed variable reference and write using decremented width metadata.
- * @param arg0 Owner or record identifier used while resolving the reference.
- * @param arg1 Packed variable reference to write.
- * @param arg2 Value to write.
+ * @param owner_id Owner or record identifier used while resolving the reference.
+ * @param var_ref Packed variable reference to write.
+ * @param value Value to write.
  */
-void func_800BD4A8(s32 arg0, FieldScriptVariableRef arg1, s32 arg2)
+void func_800BD4A8(s32 owner_id, FieldScriptVariableRef var_ref, s32 value)
 {
-    s32 sp18;
-    s32 sp1c;
-    s32 result;
+    s32 element_index;
+    s32 bit_shift;
+    s32 base;
 
-    result = func_800BD318(arg0, arg1, &sp18, &sp1c);
-    func_800BD55C(2, result, sp18, sp1c, D_800F0E08[(arg1.value >> 12) & 7] - 1, arg2);
+    base = func_800BD318(owner_id, var_ref, &element_index, &bit_shift);
+    func_800BD55C(2, base, element_index, bit_shift, D_800F0E08[(var_ref.value >> 12) & 7] - 1, value);
 }
 
 /**
  * @brief Dispatch a raw variable reference to the appropriate write helper.
- * @param arg0 Owner or record identifier used while resolving the reference.
- * @param arg1 Raw variable reference value.
- * @param arg2 Value to write.
+ * @param owner_id Owner or record identifier used while resolving the reference.
+ * @param raw_ref Raw variable reference value.
+ * @param value Value to write.
  */
-void func_800BD520(s32 arg0, u32 arg1, s32 arg2)
+void func_800BD520(s32 owner_id, u32 raw_ref, s32 value)
 {
     FieldScriptVariableRef var_ref;
 
-    var_ref.value = arg1;
-    if (arg1 <= 0xFFFFU)
+    var_ref.value = raw_ref;
+    if (raw_ref <= 0xFFFFU)
     {
-        func_800BD434(arg0, var_ref, arg2);
+        func_800BD434(owner_id, var_ref, value);
         return;
     }
-    func_800BD4A8(arg0, var_ref, arg2);
+    func_800BD4A8(owner_id, var_ref, value);
 }
 
-void func_800BD55C(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
+/**
+ * @brief Write a masked bitfield into an 8-, 16-, or 32-bit element.
+ * @param width Element width selector: 0 = byte, 1 = halfword, 2 = word.
+ * @param base Base address of the element array; 0 and -1 mean no target.
+ * @param index Element index.
+ * @param shift Left-shift amount of the field.
+ * @param bit_count Field width in bits; values >= 32 replace the whole element.
+ * @param value Value to store in the field.
+ */
+void func_800BD55C(s32 width, s32 base, s32 index, s32 shift, s32 bit_count, s32 value)
 {
-    s32 clearMask;
-    s32 valueMask;
+    s32 clear_mask;
+    s32 value_mask;
     u8* p8;
     u16* p16;
     s32* p32;
 
-    if (arg1 == 0)
+    if (base == 0)
     {
         return;
     }
-    if (arg1 == -1)
+    if (base == -1)
     {
         return;
     }
 
-    if (arg4 < 0x20)
+    if (bit_count < 0x20)
     {
-        clearMask = ~(((1 << arg4) - 1) << arg3);
+        clear_mask = ~(((1 << bit_count) - 1) << shift);
     }
     else
     {
-        clearMask = 0;
+        clear_mask = 0;
     }
 
-    if (arg4 < 0x20)
+    if (bit_count < 0x20)
     {
-        valueMask = ((1 << arg4) - 1) << arg3;
+        value_mask = ((1 << bit_count) - 1) << shift;
     }
     else
     {
-        valueMask = -1;
+        value_mask = -1;
     }
 
-    switch (arg0)
+    switch (width)
     {
     case 0:
-        p8 = (u8*)(arg1 + arg2);
-        *p8 = (*p8 & clearMask) | (valueMask & (arg5 << arg3));
+        p8 = (u8*)(base + index);
+        *p8 = (*p8 & clear_mask) | (value_mask & (value << shift));
         break;
     case 1:
-        p16 = (u16*)((arg2 * 2) + arg1);
-        *p16 = (*p16 & clearMask) | (valueMask & (arg5 << arg3));
+        p16 = (u16*)((index * 2) + base);
+        *p16 = (*p16 & clear_mask) | (value_mask & (value << shift));
         break;
     case 2:
-        p32 = (s32*)((arg2 * 4) + arg1);
-        *p32 = (*p32 & clearMask) | (valueMask & (arg5 << arg3));
+        p32 = (s32*)((index * 4) + base);
+        *p32 = (*p32 & clear_mask) | (value_mask & (value << shift));
         break;
     }
 }
@@ -289,37 +298,37 @@ void func_800BD55C(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
 /**
  * @brief Extract a masked bitfield from an 8-, 16-, or 32-bit element.
  *
- * @param arg0 Element width selector: 0 = byte, 1 = halfword, 2 = word.
- * @param arg1 Base address of the element array.
- * @param arg2 Element index.
- * @param arg3 Right-shift amount.
- * @param arg4 Number of low bits to retain; values >= 32 retain all bits.
- * @return The selected element shifted right by @p arg3 and masked to @p arg4 bits.
- * @note 100% match with the FIELD GCC 2.8.0 G0 toolchain.
+ * @param width Element width selector: 0 = byte, 1 = halfword, 2 = word.
+ * @param base Base address of the element array.
+ * @param index Element index.
+ * @param shift Right-shift amount.
+ * @param bit_count Number of low bits to retain; values >= 32 retain all bits.
+ * @return The selected element shifted right by @p shift and masked to @p bit_count bits.
+ * @note Other width values fall off the end without a return value, as in the original.
  */
-s32 func_800BD650(s32 arg0, u8* arg1, s32 arg2, s32 arg3, s32 arg4)
+s32 func_800BD650(s32 width, u8* base, s32 index, s32 shift, s32 bit_count)
 {
     s32 mask;
     s32 value;
 
-    if (arg4 < 0x20)
+    if (bit_count < 0x20)
     {
-        mask = (1 << arg4) - 1;
+        mask = (1 << bit_count) - 1;
     }
     else
     {
         mask = -1;
     }
 
-    switch (arg0)
+    switch (width)
     {
     case 0:
-        value = arg1[arg2] >> arg3;
+        value = base[index] >> shift;
         return value & mask;
     case 1:
-        value = (*(u16*)(arg1 + arg2 * 2)) >> arg3;
+        value = (*(u16*)(base + index * 2)) >> shift;
         return value & mask;
     case 2:
-        return (*(u32*)(arg1 + arg2 * 4) >> arg3) & mask;
+        return (*(u32*)(base + index * 4) >> shift) & mask;
     }
 }

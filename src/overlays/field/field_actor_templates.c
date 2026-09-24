@@ -1,92 +1,39 @@
 #include "game_audio.h"
 #include "common.h"
+#include "field_records.h"
 
-typedef struct
-{
-    u8 unk0;
-    u8 pad1[3];
-    u8 *unk4;
-    u8 *unk8;
-    u8 unkC[8];
-    s32 unk14;
-    s32 unk18;
-} StructB3580;
-
-extern StructB3580 *D_80123FB0;
+extern FieldBattleContext *D_80123FB0;
+extern FieldRuntimeContext *D_80122B78;
 
 s32 func_800B3670(s32 arg0);
-
-extern s32 func_800B42B4(u8 *);
-extern u8 *func_800B4844(u32 *, s32);
+s32 func_800B42B4(FieldActorTemplate *template);
+extern FieldActorTemplate *func_800B4844(u32 *, s32);
 extern u32 func_800BD414(s32, s32);
 extern s32 func_800C19D0(s32, u32, s32);
-
-
-/** @brief Actor template entry stored in the field actor table. */
-typedef struct
-{
-    u8 actor_id;
-    u8 pad1[0x90 - 1];
-    u32 flags;
-} FieldActorTemplateEntry;
-
-/** @brief Field actor table containing the active entry count and actor templates. */
-typedef struct
-{
-    u8 pad0[0x400];
-    u16 count;
-    u8 pad402[0x430 - 0x402];
-    FieldActorTemplateEntry entries[1];
-} FieldActorTemplateTable;
-
-/** @brief Packed actor state word split into the bit ranges updated during template initialization. */
-typedef union
-{
-    s32 w;
-    struct
-    {
-        u32 low24 : 24;
-        u32 mid7 : 7;
-        u32 top1 : 1;
-    } b;
-} FieldActorPackedWord;
-
-/** @brief Actor state fields updated while applying a resource template. */
-typedef struct
-{
-    FieldActorPackedWord unk0;
-    FieldActorPackedWord unk4;
-    FieldActorPackedWord unk8;
-    u8 padC[0x68 - 0xC];
-    u16 effect_footprint_strength;
-} FieldActorSlotState;
-
-extern u8 *D_80122B78;
-
-
 s32 func_80087F0C(s32 arg0);
-void func_800B3F1C(s32, u8 *, u8 *);
+void func_800B3F1C(s32 actor_id, FieldStatusRecord *record, FieldStatusState *state);
 
 /**
- * @brief Build field records for actor templates whose status nibble matches the requested key.
- * @param arg0 Status key to match.
+ * @brief Build status records for the field actors whose trigger group matches the requested key.
+ * @param group Trigger group to match.
  * @return Number of matching actor records processed.
  */
-s32 func_800B3DF4(s32 arg0)
+s32 func_800B3DF4(s32 group)
 {
     s32 i;
     s32 count;
     s32 result;
 
     count = 0;
-    for (i = 3; i < (s32)((FieldActorTemplateTable *)D_80122B78)->count; i++)
+    for (i = 3; i < (s32)D_80122B78->state.actor_count; i++)
     {
-        if ((((FieldActorTemplateTable *)D_80122B78)->entries[i].flags & 0xF) != arg0)
+        if ((D_80122B78->actors[i].flags.word & 0xF) != group)
         {
             continue;
         }
 
-        result = func_80087F0C(((FieldActorTemplateTable *)D_80122B78)->entries[i].actor_id);
+        result = func_80087F0C(D_80122B78->actors[i].id);
+        /* Kept gotos: if/else-if on result swaps two saved registers (99.30%). */
         if (result == 0)
         {
             goto report_error;
@@ -95,182 +42,137 @@ s32 func_800B3DF4(s32 arg0)
         {
             goto build_record;
         }
-
     report_error:
-        record_game_diagnostic(0x8001, 0x64, arg0, ((FieldActorTemplateTable *)D_80122B78)->entries[i].actor_id);
-
+        record_game_diagnostic(0x8001, 0x64, group, D_80122B78->actors[i].id);
     build_record:
-        func_800B3F1C(((FieldActorTemplateTable *)D_80122B78)->entries[i].actor_id, (u8 *)D_80123FB0 + 0x160 + count * 0x68, (u8 *)result);
+        func_800B3F1C(D_80122B78->actors[i].id, &D_80123FB0->records[3 + count], (FieldStatusState *)result);
         count++;
     }
     return count;
 }
 
 /**
- * @brief Initialize an actor and its counters from a resource template.
- * @param arg0 Actor identifier stored in the runtime record.
- * @param arg1 Runtime actor record to initialize.
- * @param arg2 Actor state record to initialize.
+ * @brief Initialize a monster's status record and runtime state from its template.
+ * @param actor_id Actor identifier stored in the record.
+ * @param record Status record to initialize.
+ * @param state Runtime status state to initialize.
  */
-void func_800B3F1C(s32 arg0, u8 *arg1, u8 *arg2)
+void func_800B3F1C(s32 actor_id, FieldStatusRecord *record, FieldStatusState *state)
 {
-    s32 temp_lo;
-    s32 temp_lo_2;
     s32 flags;
-    u16 temp_v1_3;
-    u32 temp_v0_5;
-    u32 temp_v0_6;
-    u32 var_s0;
-    u32 var_s2;
-    u32 var_v1;
-    u8 temp_v0_4;
-    u8 five;
-    u8 *temp_v0;
-    u8 *temp_v1;
-    u8 *temp_v1_2;
-    u8 *var_a0;
-    u8 *var_a0_2;
-    u8 *var_a1;
-    StructB3580 *ctx;
-    FieldActorSlotState *actor_slot;
+    s32 level;
+    u32 clamped;
+    u32 work;
+    u32 stat;
+    FieldActorTemplate *template;
+    FieldBattleContext *ctx;
 
-    arg1[4] = arg0;
-    *(u8 *)(arg1 + 0x0) = 0x40;
-    *(u8 * *)(arg1 + 0x10) = arg2;
-    flags = *(s32 *)(arg1 + 0x4);
+    record->meta.bytes.id = actor_id;
+    record->unk0 = 0x40;
+    record->state = state;
+    flags = record->meta.packed;
     flags |= 0x100;
     flags &= ~0x200;
     flags &= 0xFFFF03FF;
     ctx = D_80123FB0;
     flags |= 0x1400;
-    *(s32 *)(arg1 + 0x4) = flags;
-    *(u16 *)(arg1 + 0x6) = 0;
-    temp_v0 = func_800B4844((u32 *)ctx->unk4, *(u8 *)(arg2 + 0x11));
-    *(u8 * *)(arg1 + 0x14) = temp_v0;
-    *(u8 *)(arg1 + 0x3) = (u8) *(u8 *)(temp_v0 + 0x1A);
-    *(u8 *)(arg1 + 0x8) = (u8) *(u8 *)(temp_v0 + 0x1B);
-    *(u8 *)(arg1 + 0x9) = (u8) *(u8 *)(temp_v0 + 0x1B);
-    *(u16 *)(arg1 + 0xA) = 0;
-    *(s32 *)(arg1 + 0xC) = 0;
-    var_s2 = func_800B42B4(temp_v0);
-    var_v1 = 0x63;
-    if (var_s2 < 0x64U)
+    record->meta.packed = flags;
+    record->meta.bytes.unk2 = 0;
+    template = func_800B4844((u32 *)ctx->templates, state->template_index);
+    record->template = template;
+    record->unk3 = template->unk1A;
+    record->counter = template->counter_reset;
+    record->counter_reset = template->counter_reset;
+    record->status_flags = 0;
+    record->unkC = 0;
+    level = func_800B42B4(template);
+    clamped = 0x63;
+    if ((u32)level < 0x64U)
     {
-        var_v1 = var_s2;
+        clamped = level;
     }
-    var_s2 = var_v1;
-    var_s0 = func_800BD414(0, 0x2F78);
-    if (var_s0 != 0)
+    level = clamped;
+    work = func_800BD414(0, 0x2F78);
+    if (work != 0)
     {
-        var_s2 = var_s0;
+        level = work;
     }
-    var_s0 = 0;
-    var_a0 = temp_v0;
-    *(u16 *)(arg1 + 0x18) = (s16) ((u32) ((*(u16 *)(temp_v0 + 0x20) * 0x10) + (*(u16 *)(temp_v0 + 0x22) * var_s2)) >> 4);
-    var_a1 = arg1;
-    *(u8 *)(arg1 + 0x1A) = (u8) *(u8 *)(temp_v0 + 0x19);
-    do
+    record->unk18 = (u32)((template->unk20_base * 0x10) + (template->unk20_growth * level)) >> 4;
+    record->unk1A = template->unk19;
+    for (work = 0; work < 4; work++)
     {
-        temp_lo = *(u8 *)(var_a0 + 0x25) * var_s2;
-        temp_v1 = arg1 + var_s0;
-        var_s0 += 1;
-        temp_v0_4 = *(u8 *)(var_a0 + 0x24);
-        var_a0++;
-        var_a0++;
-        *(u16 *)(var_a1 + 0x1C) = (s16) ((u32) ((temp_v0_4 * 0x10) + temp_lo) >> 4);
-        var_a1 += 2;
-        *(u8 *)(temp_v1 + 0x24) = 0;
-    } while (var_s0 < 4U);
-    var_s0 = 0;
-    five = 5;
-    var_a0_2 = temp_v0;
-    do
+        record->equipment_stats[work] = (u32)((template->equipment_stats[work].base * 0x10) + (template->equipment_stats[work].growth * level)) >> 4;
+        record->equipment_attributes[work] = 0;
+    }
+    for (work = 0; work < FIELD_STATUS_STAT_COUNT; work++)
     {
-        temp_v1_2 = arg1 + var_s0;
-        var_s0 += 1;
-        temp_v0_5 = (u32) ((*(u8 *)(var_a0_2 + 0x2C) * 4) + (*(u8 *)(var_a0_2 + 0x2D) * var_s2)) >> 2;
-        *(u8 *)(temp_v1_2 + 0x3C) = five;
-        *(u8 *)(temp_v1_2 + 0x44) = five;
-        *(u8 *)(temp_v1_2 + 0x30) = (s8) temp_v0_5;
-        *(u8 *)(temp_v1_2 + 0x28) = (s8) temp_v0_5;
-        var_a0_2++;
-        var_a0_2++;
-    } while (var_s0 < 8U);
-    *(u8 *)(arg1 + 0x38) = (u8) *(u8 *)(temp_v0 + 0x3C);
-    *(u8 *)(arg1 + 0x39) = (u8) *(u8 *)(temp_v0 + 0x3D);
-    *(u8 *)(arg1 + 0x3A) = (u8) *(u8 *)(temp_v0 + 0x3E);
-    *(s32 *)(arg2 + 0x4C) = (s32) ((*(s32 *)(arg2 + 0x4C) & ~0xFE) | ((var_s2 & 0x7F) * 2));
-    if (*(u8 *)(temp_v0 + 0x3F) & 2)
+        stat = (u32)((template->stats[work].base * 4) + (template->stats[work].growth * level)) >> 2;
+        record->unk3C[work] = 5;
+        record->unk44[work] = 5;
+        record->base_stats[work] = stat;
+        record->stats[work] = stat;
+    }
+    record->immunity_flags = template->immunity_flags;
+    record->unk39 = template->unk3D;
+    record->unk3A = template->unk3E;
+    state->level.word = (state->level.word & ~0xFE) | ((level & 0x7F) * 2);
+    if (template->flags & 2)
     {
-        *(u8 * *)(arg2 + 0x64) = NULL;
+        state->template = NULL;
     }
     else
     {
-        *(u8 * *)(arg2 + 0x64) = temp_v0;
+        state->template = template;
     }
-    temp_v1_3 = *(u16 *)(temp_v0 + 0x1E);
-    if (temp_v1_3 != 0xFFFF)
+    if (template->hp_growth != 0xFFFF)
     {
-        *(s32 *)(arg2 + 0x0) = (s32) (*(u16 *)(temp_v0 + 0x1C) + (*(u16 *)(temp_v0 + 0x1E) * var_s2));
+        state->maximum = template->hp_base + (template->hp_growth * level);
     }
     else
     {
-        var_s0 = 1;
-        *(s32 *)(arg2 + 0x0) = (s32) *(u16 *)(temp_v0 + 0x1C);
-        if (var_s2 != 0)
+        work = 1;
+        state->maximum = template->hp_base;
+        if (level != 0)
         {
             do
             {
-                temp_lo_2 = *(u8 *)(temp_v0 + 0x35) * var_s0;
-                var_s0 += 1;
-                *(s32 *)(arg2 + 0x0) = func_800C19D0(*(s32 *)(arg2 + 0x0), (u32) ((*(u8 *)(temp_v0 + 0x34) * 4) + temp_lo_2) >> 2, 1);
-            } while (var_s2 >= var_s0);
+                state->maximum = func_800C19D0(state->maximum, (u32)((template->stats[4].base * 4) + (template->stats[4].growth * work)) >> 2, 1);
+                work++;
+            } while ((u32)level >= work);
         }
     }
-    temp_v0_6 = func_800BD414(0, 0x2938);
-    switch (temp_v0_6)
+    switch (func_800BD414(0, 0x2938))
     {
     case 1:
-        *(s32 *)(arg2 + 0x0) *= 2;
+        state->maximum *= 2;
         break;
     case 2:
-        *(s32 *)(arg2 + 0x0) *= 3;
+        state->maximum *= 3;
         break;
     }
-    if (func_800BD414(0, 0xFFE) == 0)
+    if ((func_800BD414(0, 0xFFE) != 0) || (state->maximum == 0))
     {
-        if (*(s32 *)(arg2 + 0x0) == 0)
-        {
-            goto block_24;
-        }
+        state->maximum = 1;
     }
-    else
+    state->current = state->maximum;
+    state->gauge.bits.value = state->maximum;
+    state->gauge.bits.hud_bits = 0;
+    state->gauge.bits.hud_flag = template->flags >> 7;
+    work = record->base_stats[3] * 2;
+    if (work < 0x100U)
     {
-block_24:
-        *(s32 *)(arg2 + 0x0) = 1;
-    }
-    actor_slot = (FieldActorSlotState *)arg2;
-    actor_slot->unk4 = actor_slot->unk0;
-    actor_slot->unk8.b.low24 = actor_slot->unk0.b.low24;
-    actor_slot->unk8.b.mid7 = 0;
-    actor_slot->unk8.b.top1 = (u8) *(u8 *)(temp_v0 + 0x3F) >> 7;
-    var_s0 = *(u8 *)(arg1 + 0x33) * 2;
-    if (var_s0 < 0x100U)
-    {
-        actor_slot->effect_footprint_strength = var_s0;
+        state->effect_footprint_strength = work;
         return;
     }
-    actor_slot->effect_footprint_strength = 0xFFU;
+    state->effect_footprint_strength = 0xFF;
 }
 
 /**
- * @brief Derive a track-tempo-scaled value from an 8-bit add/sub bitmask pair
- * against D_80123FB0's per-index byte table, clamped to a 4..10 range and
- * scaled by func_800B3670's result.
- * @param arg0 Record with add/sub bitmasks at 0x15/0x16 and a mode byte at 0x3F.
- * @return Value clamped to the range 1..99.
+ * @brief Compute a monster's level from the battle element levels its template reacts to.
+ * @param template Template with raise/lower masks and the flag byte.
+ * @return Level clamped to 1..99.
  */
-s32 func_800B42B4(u8 *arg0)
+s32 func_800B42B4(FieldActorTemplate *template)
 {
     u32 add_mask;
     u32 sub_mask;
@@ -281,18 +183,18 @@ s32 func_800B42B4(u8 *arg0)
 
     count = 0;
     value = 8;
-    add_mask = arg0[0x15];
-    sub_mask = arg0[0x16];
+    add_mask = template->raise_mask;
+    sub_mask = template->lower_mask;
 
     for (; count < 8; count++)
     {
         if (add_mask & 1)
         {
-            value += D_80123FB0->unkC[count];
+            value += D_80123FB0->element_levels[count];
         }
         if (sub_mask & 1)
         {
-            value -= D_80123FB0->unkC[count];
+            value -= D_80123FB0->element_levels[count];
         }
         add_mask >>= 1;
         sub_mask >>= 1;
@@ -312,7 +214,7 @@ s32 func_800B42B4(u8 *arg0)
     }
     value = clamped;
 
-    scaled = (u32)(func_800B3670(arg0[0x3F] & 4) * value) >> 3;
+    scaled = (u32)(func_800B3670(template->flags & 4) * value) >> 3;
 
     if (scaled >= 2)
     {
