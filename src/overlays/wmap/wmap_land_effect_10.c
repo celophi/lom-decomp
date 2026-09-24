@@ -1,3 +1,4 @@
+#include "wmap_frame_render.h"
 #include "wmap_main.h"
 #include "wmap_land_effect_10.h"
 #include "wmap_sprite_render.h"
@@ -68,14 +69,6 @@ typedef struct
     void *resource;
 } WmapSparkResource;
 
-/** @brief World-map ordering table and current primitive allocation cursor. */
-typedef struct
-{
-    u8 unknown_00[0x70];
-    u32 ordering_table[(0x33C - 0x70) / 4];
-    u8 *primitive_cursor;
-} WmapSparkRenderContext;
-
 /**
  * @brief Spawn, move, and draw a batch of falling sparks, then fade them out as sprites.
  * @param first First particle index to process.
@@ -88,11 +81,11 @@ typedef struct
  */
 void func_8008ECF8(s32 first, s32 end, WmapSparkParticle *particles, WmapSparkConfig *config)
 {
-extern s32 D_800D921C;
+
 extern s32 D_800D9230;
 extern WmapSparkActor D_800D9268[];
 extern s32 D_8011CF74;
-extern WmapSparkRenderContext *D_801398EC;
+
 extern WmapSparkResource D_80139988[];
 extern WmapSparkSlot D_801AFBD0[];
 
@@ -148,18 +141,18 @@ extern WmapSparkSlot D_801AFBD0[];
             gte_ldv0(&position);
             gte_rtps();
             gte_stsxy(&tail_xy);
-            line = (LINE_G2 *)D_801398EC->primitive_cursor;
+            line = (LINE_G2 *)g_wmap_current_frame->packet_cursor;
             *(s32 *)&line->r0 = 0x808080;
             *(s32 *)&line->r1 = 0;
             *(s32 *)&line->x0 = head_xy;
             *(s32 *)&line->x1 = tail_xy;
             setlen(line, 4);
             setcode(line, 0x52);
-            addPrim(&D_801398EC->ordering_table[config->ot_index], line);
-            if (D_800D921C < 0x7D00)
+            addPrim(&g_wmap_current_frame->ordering_table[config->ot_index], line);
+            if (g_wmap_packet_bytes < 0x7D00)
             {
-                D_800D921C += 0x14;
-                D_801398EC->primitive_cursor += 0x14;
+                g_wmap_packet_bytes += 0x14;
+                g_wmap_current_frame->packet_cursor += 0x14;
             }
             particles[i].position.vx += particles[i].velocity.vx;
             particles[i].position.vy += particles[i].velocity.vy;

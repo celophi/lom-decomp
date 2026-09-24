@@ -1,3 +1,4 @@
+#include "wmap_model_render.h"
 #include "wmap_main.h"
 #include "wmap_land_effect_00.h"
 #include "wmap_sequence_runtime.h"
@@ -117,7 +118,7 @@ extern s32 D_801B2B08;
 extern s32 D_801B2B0C;
 extern s32 D_80182DF4;
 extern s32 D_80139234;
-extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 
     s32 scale;
     s32 intensity;
@@ -125,7 +126,7 @@ extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
 
     PushMatrix();
     func_8006CFA8(&D_80182DC0, &D_8013B240);
-    func_800675F0(D_800DCF18, 0, 10, 183, 0x7A40, 0x1001, D_80182DF4, 0, 5, D_80139234 / 16);
+    wmap_draw_model(D_800DCF18, 0, 10, 183, 0x7A40, 0x1001, D_80182DF4, 0, 5, D_80139234 / 16);
     scale = D_80139234 - 128;
     D_80139234 = scale;
     intensity = D_80182DF4 + 2;
@@ -158,7 +159,7 @@ extern s32 D_801B2B08;
 extern s32 D_801B2B0C;
 extern s32 D_80182DF4;
 extern s32 D_80139234;
-extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 
     s32 intensity;
     s32 remaining;
@@ -167,7 +168,7 @@ extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
     {
         PushMatrix();
         func_8006CFA8(&D_80182DC0, &D_8013B240);
-        func_800675F0(D_800DCF18, 0, 10, 183, 0x7A40, 0x1001, D_80182DF4, 0, 5, D_80139234 / 16);
+        wmap_draw_model(D_800DCF18, 0, 10, 183, 0x7A40, 0x1001, D_80182DF4, 0, 5, D_80139234 / 16);
         intensity = D_80182DF4 - 4;
         D_80182DF4 = intensity;
         if (intensity < 0)

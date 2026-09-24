@@ -1,3 +1,4 @@
+#include "wmap_model_render.h"
 #include "wmap_main.h"
 #include "wmap_map_display.h"
 #include "wmap_land_event_17.h"
@@ -355,7 +356,7 @@ extern SVECTOR D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B2ED0;
 extern s32 D_801B2ED4;
-extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 
     MATRIX transform;
     s32 depth;
@@ -375,7 +376,7 @@ extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
     SetTransMatrix(&transform);
     if (D_80182DE8 != 0)
     {
-        func_800675F0(D_800DCF18, 0, 4, 53, 0x7800, 1, D_80182DE8, 50, -20, -1);
+        wmap_draw_model(D_800DCF18, 0, 4, 53, 0x7800, 1, D_80182DE8, 50, -20, -1);
         intensity = D_80182DE8 - 4;
         D_80182DE8 = intensity;
         if (intensity < 0)
@@ -397,7 +398,7 @@ extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
  */
 void func_800AB55C(void)
 {
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
 extern s32 D_801B2478[];
 extern SVECTOR D_801B24A8;
 extern VECTOR D_8011CF60;
@@ -425,7 +426,7 @@ extern s32 D_801B2EDC;
 
     if (D_80182DEC != 0)
     {
-        func_800675F0(D_8011CF1C, 0, 4, 0x35, 0x7800, 1, D_80182DEC, -0x19, -0x32, -1);
+        wmap_draw_model(D_8011CF1C, 0, 4, 0x35, 0x7800, 1, D_80182DEC, -0x19, -0x32, -1);
         D_80182DEC -= 8;
         if (D_80182DEC < 0)
         {
@@ -447,7 +448,7 @@ extern s32 D_801B2EDC;
  */
 void func_800AB674(void)
 {
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
 extern s32 D_80139870[];
 extern SVECTOR D_8013B238;
 extern VECTOR D_8011CF60;
@@ -475,7 +476,7 @@ extern s32 D_801B2EE4;
 
     if (D_80182DF0 != 0)
     {
-        func_800675F0(D_8011CF24, 0, 4, 0x35, 0x7800, 1, D_80182DF0, 0xF, -0x37, -1);
+        wmap_draw_model(D_8011CF24, 0, 4, 0x35, 0x7800, 1, D_80182DF0, 0xF, -0x37, -1);
         D_80182DF0 -= 8;
         if (D_80182DF0 < 0)
         {

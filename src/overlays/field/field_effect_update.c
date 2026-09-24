@@ -1,6 +1,6 @@
 /**
  * @file field_effect_update.c
- * @brief Spawn, update, position, and retire field actor effects.
+ * @brief Spawn, update, position, retire, and dispatch rendering of field actor effects.
  */
 
 #include "common.h"
@@ -3188,7 +3188,6 @@ void field_set_action_context(s32 recipient_id, s32 source_id, s32 action)
  * @param position Destination X/Y/Z; its pad word is untouched.
  * @note Sources 0 and values above 15 leave out unchanged. Source 9 can update
  * the record's facing bit. References at +0x30 use an unsigned halfword read.
- * The dispatch table retains its trailing null word at jtbl_80050144.
  */
 void field_resolve_effect_position(FieldMotionRecord *effect, FieldActorPartDef *part, VECTOR *position)
 {
@@ -3208,190 +3207,6347 @@ void field_resolve_effect_position(FieldMotionRecord *effect, FieldActorPartDef 
     s32 position_x;
     s32 source_x;
     s32 horizontal_offset;
-    s32 dispatch;
-    static void *const dispatch_table[] =
-    {
-        &&track_object, &&owner_object, &&saved, &&reference_effect,
-        &&owner_attachment, &&facing_offset, &&track_stored_xz, &&linked_effect,
-        &&relative_side_offset, &&owner_bounds_center, &&track_bounds_center,
-        &&reflect_track_x, &&reflect_track_x, &&extend_track_xz, &&extend_link_xz, 0
-    };
 
-    dispatch = effect->color_position.fields.position_source - FIELD_POSITION_TRACK_OBJECT;
-    if ((u32) dispatch >= FIELD_POSITION_EXTEND_LINK_XZ)
+    switch (effect->color_position.fields.position_source)
     {
-        return;
-    }
-    goto *dispatch_table[dispatch];
-
-track_object:
-    actors = g_field_actor_slots;
-    position->vx = g_field_actors[actors[effect->actor_index].track_object_indices[g_field_track_index]].x;
-    position->vy = g_field_actors[actors[effect->actor_index].track_object_indices[g_field_track_index]].y;
-    object_index = actors[effect->actor_index].track_object_indices[g_field_track_index];
-    do
-    {
-        track_record = &g_field_actors[object_index];
-    } while (0);
-    position->vz = track_record->z;
-    return;
-owner_object:
-    owner_actors = g_field_actor_slots;
-    position->vx = g_field_actors[owner_actors[effect->actor_index].owner_object_index].x;
-    position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].y;
-    owner_index = owner_actors[effect->actor_index].owner_object_index;
-    do
-    {
-        owner_record = &g_field_actors[owner_index];
-    } while (0);
-    position->vz = owner_record->z;
-    return;
-saved:
-    position->vx = effect->work_x - g_field_view_offset_x;
-    position->vy = effect->work_y - g_field_view_offset_y;
-    position->vz = effect->work_z - g_field_view_offset_z;
-    return;
-reference_effect:
-    if (g_field_effect_records[(u16) effect->reference_index].state != FIELD_EFFECT_RETIRED)
-    {
-        position->vx = g_field_effect_records[(u16) effect->reference_index].x;
-        position->vy = g_field_effect_records[(u16) effect->reference_index].y;
-        position->vz = g_field_effect_records[(u16) effect->reference_index].z;
-        return;
-    }
-    position->vx = effect->x;
-    position->vy = effect->y;
-    position->vz = effect->z;
-    return;
-owner_attachment:
-    source_record = &g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index];
-    source_object = &g_field_object_states[g_field_actor_slots[effect->actor_index].owner_object_index];
-    position->vx = source_record->x + (source_object->attachment_points[((u32) part->effect_flags >> 0x15) & 3].x << 8);
-    position->vy = source_record->y + (source_object->attachment_points[((u32) part->effect_flags >> 0x15) & 3].y << 8);
-    position->vz = source_record->z;
-    return;
-facing_offset:
-    placement = ((u32) part->placement_flags.word >> 0x12) & 0x3F;
-    if (placement >= 0xA)
-    {
-        if (placement < 0x26)
+    case FIELD_POSITION_TRACK_OBJECT:
+        actors = g_field_actor_slots;
+        position->vx = g_field_actors[actors[effect->actor_index].track_object_indices[g_field_track_index]].x;
+        position->vy = g_field_actors[actors[effect->actor_index].track_object_indices[g_field_track_index]].y;
+        object_index = actors[effect->actor_index].track_object_indices[g_field_track_index];
+        do
         {
-            source_index = g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index];
+            track_record = &g_field_actors[object_index];
+        } while (0);
+        position->vz = track_record->z;
+        return;
+    case FIELD_POSITION_OWNER_OBJECT:
+        owner_actors = g_field_actor_slots;
+        position->vx = g_field_actors[owner_actors[effect->actor_index].owner_object_index].x;
+        position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].y;
+        owner_index = owner_actors[effect->actor_index].owner_object_index;
+        do
+        {
+            owner_record = &g_field_actors[owner_index];
+        } while (0);
+        position->vz = owner_record->z;
+        return;
+    case FIELD_POSITION_SAVED:
+        position->vx = effect->work_x - g_field_view_offset_x;
+        position->vy = effect->work_y - g_field_view_offset_y;
+        position->vz = effect->work_z - g_field_view_offset_z;
+        return;
+    case FIELD_POSITION_REFERENCE_EFFECT:
+        if (g_field_effect_records[(u16) effect->reference_index].state != FIELD_EFFECT_RETIRED)
+        {
+            position->vx = g_field_effect_records[(u16) effect->reference_index].x;
+            position->vy = g_field_effect_records[(u16) effect->reference_index].y;
+            position->vz = g_field_effect_records[(u16) effect->reference_index].z;
+            return;
+        }
+        position->vx = effect->x;
+        position->vy = effect->y;
+        position->vz = effect->z;
+        return;
+    case FIELD_POSITION_OWNER_ATTACHMENT:
+        source_record = &g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index];
+        source_object = &g_field_object_states[g_field_actor_slots[effect->actor_index].owner_object_index];
+        position->vx = source_record->x + (source_object->attachment_points[((u32) part->effect_flags >> 0x15) & 3].x << 8);
+        position->vy = source_record->y + (source_object->attachment_points[((u32) part->effect_flags >> 0x15) & 3].y << 8);
+        position->vz = source_record->z;
+        return;
+    case FIELD_POSITION_FACING_OFFSET:
+        placement = ((u32) part->placement_flags.word >> 0x12) & 0x3F;
+        if (placement >= 0xA)
+        {
+            if (placement < 0x26)
+            {
+                source_index = g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index];
+            }
+            else
+            {
+                source_index = g_field_actor_slots[effect->actor_index].owner_object_index;
+            }
         }
         else
         {
             source_index = g_field_actor_slots[effect->actor_index].owner_object_index;
         }
-    }
-    else
-    {
-        source_index = g_field_actor_slots[effect->actor_index].owner_object_index;
-    }
-    source_record = &g_field_actors[source_index];
-    if (source_record->facing_or_reward_kind & 0x80)
-    {
-        position_x = effect->work_x;
-        source_x = source_record->x;
-        position_x = position_x + source_x;
-    }
-    else
-    {
-        source_x = effect->work_x;
-        position_x = -source_x;
-        position_x += source_record->x;
-    }
-    position->vx = position_x;
-    position->vy = effect->work_y + source_record->y;
-    position->vz = effect->work_z + source_record->z;
-    return;
-track_stored_xz:
-    position->vx = g_field_object_states[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].position_history[0].x << 8;
-    position->vz = g_field_object_states[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].position_history[0].z << 8;
-    position->vy = 0;
-    return;
-linked_effect:
-    position->vx = g_field_effect_records[effect->position_data.linked_effect_index].x;
-    position->vy = g_field_effect_records[effect->position_data.linked_effect_index].y;
-    linked_record = &g_field_effect_records[effect->position_data.linked_effect_index];
-    position->vz = linked_record->z;
-    return;
-relative_side_offset:
-    placement = ((u32) part->placement_flags.word >> 0x12) & 0x3F;
-    if (placement < 0xA)
-    {
-        source_record = &g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index];
-        opposite_record = &g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]];
-    }
-    else
-    {
-        if (placement < 0x26)
+        source_record = &g_field_actors[source_index];
+        if (source_record->facing_or_reward_kind & 0x80)
         {
-            object_index = g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index];
-            source_record = &g_field_actors[object_index];
+            position_x = effect->work_x;
+            source_x = source_record->x;
+            position_x = position_x + source_x;
         }
         else
         {
-            object_index = g_field_actor_slots[effect->actor_index].owner_object_index;
-            source_record = &g_field_actors[object_index];
+            source_x = effect->work_x;
+            position_x = -source_x;
+            position_x += source_record->x;
         }
-        opposite_record = &g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index];
-    }
-    if (source_record->x > opposite_record->x)
-    {
-        if (((part->placement_flags.word >> 0xA) & 1) || (part->spawn_flags.word & 0x08000000))
+        position->vx = position_x;
+        position->vy = effect->work_y + source_record->y;
+        position->vz = effect->work_z + source_record->z;
+        return;
+    case FIELD_POSITION_TRACK_STORED_XZ:
+        position->vx = g_field_object_states[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].position_history[0].x << 8;
+        position->vz = g_field_object_states[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].position_history[0].z << 8;
+        position->vy = 0;
+        return;
+    case FIELD_POSITION_LINKED_EFFECT:
+        position->vx = g_field_effect_records[effect->position_data.linked_effect_index].x;
+        position->vy = g_field_effect_records[effect->position_data.linked_effect_index].y;
+        linked_record = &g_field_effect_records[effect->position_data.linked_effect_index];
+        position->vz = linked_record->z;
+        return;
+    case FIELD_POSITION_RELATIVE_SIDE_OFFSET:
+        placement = ((u32) part->placement_flags.word >> 0x12) & 0x3F;
+        if (placement < 0xA)
         {
-            effect->facing_or_reward_kind = effect->facing_or_reward_kind & 0x7F;
+            source_record = &g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index];
+            opposite_record = &g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]];
         }
-        horizontal_offset = effect->work_x;
-        position_x = source_record->x - horizontal_offset;
+        else
+        {
+            if (placement < 0x26)
+            {
+                object_index = g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index];
+                source_record = &g_field_actors[object_index];
+            }
+            else
+            {
+                object_index = g_field_actor_slots[effect->actor_index].owner_object_index;
+                source_record = &g_field_actors[object_index];
+            }
+            opposite_record = &g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index];
+        }
+        if (source_record->x > opposite_record->x)
+        {
+            if (((part->placement_flags.word >> 0xA) & 1) || (part->spawn_flags.word & 0x08000000))
+            {
+                effect->facing_or_reward_kind = effect->facing_or_reward_kind & 0x7F;
+            }
+            horizontal_offset = effect->work_x;
+            position_x = source_record->x - horizontal_offset;
+        }
+        else
+        {
+            if (((part->placement_flags.word >> 0xA) & 1) || (part->spawn_flags.word & 0x08000000))
+            {
+                effect->facing_or_reward_kind = effect->facing_or_reward_kind | 0x80;
+            }
+            position_x = effect->work_x;
+            source_x = source_record->x;
+            position_x = position_x + source_x;
+        }
+        position->vx = position_x;
+        position->vy = effect->work_y + source_record->y;
+        position->vz = effect->work_z + source_record->z;
+        return;
+    case FIELD_POSITION_OWNER_BOUNDS_CENTER:
+        source_object = &g_field_object_states[g_field_actor_slots[effect->actor_index].owner_object_index];
+        position->vx = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].x + ((source_object->bounds.half.right + source_object->bounds.half.left) << 7);
+        position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].y + ((source_object->bounds.half.bottom + source_object->bounds.half.top) << 7);
+        position->vz = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].z;
+        return;
+    case FIELD_POSITION_TRACK_BOUNDS_CENTER:
+        source_object = &g_field_object_states[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]];
+        position->vx = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x + ((source_object->bounds.half.right + source_object->bounds.half.left) << 7);
+        position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].y + ((source_object->bounds.half.bottom + source_object->bounds.half.top) << 7);
+        position->vz = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].z;
+        return;
+    case FIELD_POSITION_REFLECT_TRACK_X:
+    case FIELD_POSITION_EXTEND_TRACK_X:
+        delta_x = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x - g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].x;
+        if (effect->color_position.fields.position_source == FIELD_POSITION_REFLECT_TRACK_X)
+        {
+            position->vx = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].x - delta_x;
+        }
+        else
+        {
+            position->vx = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x + delta_x;
+        }
+        position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].y;
+        position->vz = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].z;
+        return;
+    case FIELD_POSITION_EXTEND_TRACK_XZ:
+        position->vx = (g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x * 2) - g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].x;
+        position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].y;
+        position->vz = (g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].z * 2) - g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].z;
+        return;
+    case FIELD_POSITION_EXTEND_LINK_XZ:
+        position->vx = (g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x * 2) - g_field_effect_records[effect->position_data.linked_effect_index].x;
+        position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].y;
+        position->vz = (g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].z * 2) - g_field_effect_records[effect->position_data.linked_effect_index].z;
+        return;
+    }
+}
+
+
+#include "field_effect_transform.h"
+#include "field_effect_render_state.h"
+#include "field_types.h"
+#include "field_effect_types.h"
+#include "field_mesh_render.h"
+#include "field_effect_dispatch.h"
+#include "field_effect_primitives.h"
+#include "sdk/libgpu.h"
+#include "sdk/inline_c.h"
+
+#define FIELD_EFFECT_SCRATCH_MATRIX ((void *) 0x1F800000)
+#define FIELD_EFFECT_SCRATCH_SCREEN_ORIGIN ((Vec2s *) 0x1F800040)
+#define FIELD_EFFECT_SCRATCH_FOOTPRINT ((s16 *) 0x1F800064)
+#define FIELD_EFFECT_SCREEN_CENTER_X 160
+#define FIELD_EFFECT_SCREEN_CENTER_Y 112
+#define FIELD_EFFECT_OT_MAX_DEPTH 0xFFF
+
+#define FIELD_SPRITE_FRAME_FOOTPRINT 0x20
+#define FIELD_SPRITE_FRAME_FLIP_X 0x40
+#define FIELD_SPRITE_FRAME_FLIP_Y 0x80
+#define FIELD_SPRITE_TEXTURE_MODE_MASK 3
+#define FIELD_PART_EFFECT_FOOTPRINT 0x00100000
+
+typedef enum
+{
+    FIELD_EFFECT_RENDER_SPRITE = 0,
+    FIELD_EFFECT_RENDER_ACTOR_SPRITE = 1,
+    FIELD_EFFECT_RENDER_OWNER_SPRITE = 2,
+    FIELD_EFFECT_RENDER_TRACK_SPRITE = 3,
+    FIELD_EFFECT_RENDER_RADIAL_FAN = 4,
+    FIELD_EFFECT_RENDER_TRAIL = 5,
+    FIELD_EFFECT_RENDER_RIBBON = 6,
+    FIELD_EFFECT_RENDER_RADIAL_LINES = 0xF6,
+    FIELD_EFFECT_RENDER_MESH_2 = 0xF7,
+    FIELD_EFFECT_RENDER_MESH_1 = 0xF8,
+    FIELD_EFFECT_RENDER_MESH_0 = 0xF9,
+    FIELD_EFFECT_RENDER_RING = 0xFA,
+    FIELD_EFFECT_RENDER_FAN = 0xFB,
+    FIELD_EFFECT_RENDER_MARKER = 0xFC,
+    FIELD_EFFECT_RENDER_LINKED_SPRITE = 0xFD
+} FieldEffectRenderState;
+
+
+extern FieldActorState g_field_actor_slots[80];
+extern FieldMotionRecord g_field_actors[];
+extern FieldMotionRecord g_field_effect_records[256];
+extern FieldMotionRecord g_field_effect_records_end;
+extern s32 g_field_track_index;
+extern u8 *D_801058D4;
+
+extern u16 g_field_texture_slot_flags[];
+
+static s32 *field_render_effect_sprite_frames(FieldMotionRecord *effect, s32 *packet_cursor, s32 *ordering_table, u8 *frame_data);
+
+/**
+ * @brief Render each active field effect according to its render state.
+ * @param render_context Ordering table and primitive packet cursor.
+ * @see decomp.me (100%)
+ */
+void field_render_effects(FieldRenderContext *render_context)
+{
+    FieldMotionRecord *effect;
+    FieldObjectRuntime *object_state;
+    FieldActorPartDef *part;
+    u32 *ordering_table;
+    FieldResourceEntry *resources;
+    s32 *packet_cursor;
+    s32 frame_result;
+    s32 object_index;
+    s32 actor_or_object_index;
+    s32 actor_address;
+    FieldActorState *actor;
+    s32 part_offset;
+    s32 value;
+
+    effect = g_field_effect_records;
+    resources = g_field_resource_entries;
+    ordering_table = &render_context->ordering_table;
+    packet_cursor = render_context->packet_cursor;
+
+    if (effect != &g_field_effect_records[FIELD_EFFECT_ACTIVE_RECORD_COUNT])
+    {
+        do
+        {
+            g_field_track_index = effect->track_index;
+            if (effect->state != FIELD_EFFECT_DISABLED && effect->state != FIELD_EFFECT_RETIRED)
+            {
+                switch (effect->state)
+                {
+                case FIELD_EFFECT_RENDER_RADIAL_LINES:
+                    packet_cursor = (s32*)field_render_effect_radial_lines(effect, (u8*)packet_cursor, (s32*)ordering_table);
+                    break;
+
+                case FIELD_EFFECT_RENDER_MESH_2:
+                case FIELD_EFFECT_RENDER_MESH_1:
+                case FIELD_EFFECT_RENDER_MESH_0:
+                    if (g_field_actor_slots[effect->actor_index].parts[effect->part_index].rotation_extent.fields.unknown_0x23 < 8)
+                    {
+                        packet_cursor = field_render_lit_effect_mesh(effect, FIELD_EFFECT_RENDER_MESH_0 - effect->state, packet_cursor, ordering_table);
+                    }
+                    else
+                    {
+                        packet_cursor = field_render_effect_mesh(effect, FIELD_EFFECT_RENDER_MESH_0 - effect->state, packet_cursor, ordering_table);
+                    }
+                    break;
+
+                case FIELD_EFFECT_RENDER_RING:
+                    packet_cursor = (s32*)field_render_effect_ring(effect, (u8*)packet_cursor, (s32*)ordering_table);
+                    break;
+
+                case FIELD_EFFECT_RENDER_FAN:
+                    packet_cursor = (s32*)field_render_effect_fan(effect, (u8*)packet_cursor, (s32*)ordering_table);
+                    break;
+
+                case FIELD_EFFECT_RENDER_MARKER:
+                    packet_cursor = (s32*)field_render_effect_marker(effect, (u8*)packet_cursor, (s32*)ordering_table);
+                    break;
+
+                case FIELD_EFFECT_RENDER_LINKED_SPRITE:
+                    actor_or_object_index = (s32) &g_field_actor_slots[effect->actor_index];
+                    part = &((FieldActorState *) actor_or_object_index)->parts[effect->part_index];
+                    value = ((u32) part->placement_flags.word >> 0x12) & 0x3F;
+                    if (((u32) (value - 0xA) < 0xA) || value == 0x28)
+                    {
+                        actor_or_object_index = ((FieldActorState *) actor_or_object_index)->track_object_indices[effect->track_index];
+                        value = actor_or_object_index << 2;
+                        value += actor_or_object_index;
+                        value <<= 2;
+                        value += actor_or_object_index;
+                        value <<= 2;
+                        value += (s32) g_field_actors;
+                        object_state = &g_field_object_states[actor_or_object_index];
+                        value = *(u8 *) (value + 0x3B);
+                        frame_result = (s32) resources[value].start;
+                    }
+                    else
+                    {
+                        actor_or_object_index = ((FieldActorState *) actor_or_object_index)->owner_object_index;
+                        value = actor_or_object_index << 2;
+                        value += actor_or_object_index;
+                        value <<= 2;
+                        value += actor_or_object_index;
+                        value <<= 2;
+                        value += (s32) g_field_actors;
+                        object_state = &g_field_object_states[actor_or_object_index];
+                        value = *(u8 *) (value + 0x3B);
+                        frame_result = (s32) resources[value].start;
+                    }
+                    object_state->linked_effect_index = (s8) (effect - g_field_effect_records);
+                    if (frame_result != 0)
+                    {
+                        frame_result = field_advance_actor_part_animation_frame(effect, (u8 *) frame_result);
+                        if (frame_result != 0)
+                        {
+                            if (frame_result >= 0)
+                            {
+                                packet_cursor = func_80077FB4(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags_low & 1) ^ 1, part);
+                            }
+                            else
+                            {
+                                packet_cursor = func_80075C88(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags_low & 1) ^ 1, part);
+                            }
+                        }
+                    }
+                    break;
+
+                case FIELD_EFFECT_RENDER_SPRITE:
+                    frame_result = field_advance_actor_part_animation_frame(effect, D_801058D4);
+                    if (frame_result != 0)
+                    {
+                        packet_cursor = field_render_effect_sprite_frames(effect, packet_cursor, ordering_table, (u8 *) frame_result);
+                    }
+                    break;
+
+                case FIELD_EFFECT_RENDER_ACTOR_SPRITE:
+                    frame_result = (s32) g_field_actor_slots[effect->actor_index].track_data;
+                    if (frame_result != 0)
+                    {
+                        frame_result = field_advance_actor_part_animation_frame(effect, (u8 *) frame_result);
+                        if (frame_result != 0)
+                        {
+                            packet_cursor = field_render_effect_sprite_frames(effect, packet_cursor, ordering_table, (u8 *) frame_result);
+                        }
+                    }
+                    break;
+
+                case FIELD_EFFECT_RENDER_OWNER_SPRITE:
+                    actor = &g_field_actor_slots[effect->actor_index];
+                    actor_or_object_index = effect->part_index;
+                    part_offset = actor_or_object_index * sizeof(FieldActorPartDef);
+                    actor_or_object_index = (s32) actor->parts;
+                    object_index = actor->owner_object_index;
+                    part = (FieldActorPartDef *) (actor_or_object_index + part_offset);
+                    value = object_index << 2;
+                    value += object_index;
+                    value <<= 2;
+                    value += object_index;
+                    value <<= 2;
+                    value += (s32) g_field_actors;
+                    object_state = &g_field_object_states[object_index];
+                    value = *(u8 *) (value + 0x3B);
+                    frame_result = (s32) resources[value].start;
+                    object_state->linked_effect_index = (s8) (effect - g_field_effect_records);
+                    if (frame_result != 0)
+                    {
+                        frame_result = field_advance_actor_part_animation_frame(effect, (u8 *) frame_result);
+                        if (frame_result != 0)
+                        {
+                            if (frame_result >= 0)
+                            {
+                                packet_cursor = func_80077FB4(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags_low & 1) ^ 1, part);
+                            }
+                            else
+                            {
+                                packet_cursor = func_80075C88(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags_low & 1) ^ 1, part);
+                            }
+                        }
+                    }
+                    break;
+
+                case FIELD_EFFECT_RENDER_TRACK_SPRITE:
+                    value = effect->actor_index;
+                    actor_address = (s32) &g_field_actor_slots[value];
+                    value = effect->part_index;
+                    part = &((FieldActorState *) actor_address)->parts[value];
+                    value = effect->track_index;
+                    object_index = ((FieldActorState *) actor_address)->track_object_indices[value];
+                    value = object_index << 2;
+                    value += object_index;
+                    value <<= 2;
+                    value += object_index;
+                    value <<= 2;
+                    value += (s32) g_field_actors;
+                    object_state = &g_field_object_states[object_index];
+                    value = *(u8 *) (value + 0x3B);
+                    frame_result = (s32) resources[value].start;
+                    object_state->linked_effect_index = (s8) (effect - g_field_effect_records);
+                    if (frame_result != 0)
+                    {
+                        frame_result = field_advance_actor_part_animation_frame(effect, (u8 *) frame_result);
+                        if (frame_result != 0)
+                        {
+                            if (frame_result >= 0)
+                            {
+                                packet_cursor = func_80077FB4(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags_low & 1) ^ 1, part);
+                            }
+                            else
+                            {
+                                packet_cursor = func_80075C88(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags_low & 1) ^ 1, part);
+                            }
+                        }
+                    }
+                    break;
+
+                case FIELD_EFFECT_RENDER_RADIAL_FAN:
+                    packet_cursor = (s32*)field_render_effect_radial_fan(effect, (u8*)packet_cursor, (s32*)ordering_table);
+                    break;
+
+                case FIELD_EFFECT_RENDER_TRAIL:
+                    packet_cursor = (s32*)field_render_effect_trail(effect, (u8*)packet_cursor, (s32*)ordering_table);
+                    break;
+
+                case FIELD_EFFECT_RENDER_RIBBON:
+                    packet_cursor = field_render_effect_ribbon(effect, packet_cursor, ordering_table);
+                    break;
+                }
+            }
+            effect++;
+        } while (effect != &g_field_effect_records_end);
+    }
+
+    render_context->packet_cursor = packet_cursor;
+}
+
+/**
+ * @brief Render the sprite frames for one field effect.
+ * @param effect Effect state and world position.
+ * @param packet_cursor Current primitive packet cursor.
+ * @param ordering_table Depth ordering table.
+ * @param frame_data Encoded sprite-frame data.
+ * @return Updated primitive packet cursor.
+ * @see decomp.me (100%)
+ */
+static s32 *field_render_effect_sprite_frames(FieldMotionRecord *effect, s32 *packet_cursor, s32 *ordering_table, u8 *frame_data)
+{
+    Vec2s *screen_origin = FIELD_EFFECT_SCRATCH_SCREEN_ORIGIN;
+    s16 *shadow_footprint = FIELD_EFFECT_SCRATCH_FOOTPRINT;
+    MATRIX* matrix = FIELD_EFFECT_SCRATCH_MATRIX;
+    s32 frame_count;
+    s32 shadow_count;
+    s32 texture_slot;
+    FieldPrimitiveColor packed_color;
+    FieldActorState *actor;
+    FieldActorPartDef *part;
+    FieldActorState *actors;
+    s32 height_minus_one;
+    s32 width_or_mode;
+    s32 frame_x;
+    s32 frame_y_or_clut;
+    s32 value0;
+    s32 value1;
+    s32 clut_x;
+    s32 clut;
+    u16 *texture_slot_flags;
+
+    shadow_count = 0;
+    texture_slot = 2;
+    actors = g_field_actor_slots;
+    part = &actors[effect->actor_index].parts[effect->part_index];
+    actor = &actors[effect->actor_index];
+    if (actor->owner_object_index < 2)
+    {
+        texture_slot = actor->owner_object_index;
+    }
+    field_build_effect_part_matrix(effect, part, FIELD_EFFECT_SCRATCH_MATRIX, actor);
+    gte_SetRotMatrix(FIELD_EFFECT_SCRATCH_MATRIX);
+
+    screen_origin->x = FIELD_EFFECT_SCREEN_CENTER_X + g_field_view_offset_x / 256 + effect->x / 256;
+    screen_origin->y = FIELD_EFFECT_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512;
+
+    frame_count = *frame_data++;
+    field_resolve_effect_part_color(actor, effect, part, &packed_color);
+
+    if (frame_count != 0)
+    {
+        texture_slot_flags = g_field_texture_slot_flags;
+        do
+        {
+            u8 flags = frame_data[7];
+            if (!(flags & FIELD_SPRITE_FRAME_FOOTPRINT))
+            {
+                value1 = packed_color.signed_word;
+                setlen(packet_cursor, 9);
+                *(s32 *) &((POLY_FT4 *) packet_cursor)->r0 = value1;
+                setcode(packet_cursor, 0x2C);
+                setSemiTrans((POLY_FT4 *) packet_cursor, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
+                width_or_mode = frame_data[4];
+                height_minus_one = frame_data[5] - 1;
+                effect->sprite_height_minus_one = height_minus_one;
+                {
+                    s8 frame_y = frame_data[1];
+                    frame_y_or_clut = frame_y;
+                }
+                if (!(effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
+                {
+                    frame_x = *(s8 *) frame_data;
+                }
+                else
+                {
+                    frame_x = -*(s8 *) frame_data - width_or_mode;
+                }
+                width_or_mode -= 1;
+                if (((Vec2s *) part)->y & 1)
+                {
+                    frame_y_or_clut -= FIELD_EFFECT_SCREEN_CENTER_Y;
+                }
+                field_project_effect_sprite_quad(effect, screen_origin, (POLY_FT4*)packet_cursor, width_or_mode, height_minus_one, frame_x, frame_y_or_clut, (FieldSpriteFrame*)frame_data, matrix);
+
+                if ((frame_data[7] ^ (effect->facing_or_reward_kind >> 1)) & FIELD_SPRITE_FRAME_FLIP_X)
+                {
+                    value0 = frame_data[2];
+                    ((POLY_FT4 *) packet_cursor)->u3 = value0;
+                    ((POLY_FT4 *) packet_cursor)->u1 = value0;
+                    do { value0 += width_or_mode; } while (0);
+                    ((POLY_FT4 *) packet_cursor)->u2 = value0;
+                    ((POLY_FT4 *) packet_cursor)->u0 = value0;
+                }
+                else
+                {
+                    value0 = frame_data[2];
+                    ((POLY_FT4 *) packet_cursor)->u2 = value0;
+                    ((POLY_FT4 *) packet_cursor)->u0 = value0;
+                    do { value0 += width_or_mode; } while (0);
+                    ((POLY_FT4 *) packet_cursor)->u3 = value0;
+                    ((POLY_FT4 *) packet_cursor)->u1 = value0;
+                }
+                if (frame_data[7] & FIELD_SPRITE_FRAME_FLIP_Y)
+                {
+                    value0 = frame_data[3];
+                    ((POLY_FT4 *) packet_cursor)->v3 = value0;
+                    ((POLY_FT4 *) packet_cursor)->v2 = value0;
+                    do { value0 += height_minus_one; } while (0);
+                    ((POLY_FT4 *) packet_cursor)->v1 = value0;
+                    ((POLY_FT4 *) packet_cursor)->v0 = value0;
+                }
+                else
+                {
+                    value0 = frame_data[3];
+                    ((POLY_FT4 *) packet_cursor)->v1 = value0;
+                    ((POLY_FT4 *) packet_cursor)->v0 = value0;
+                    value0 += height_minus_one;
+                    ((POLY_FT4 *) packet_cursor)->v3 = value0;
+                    ((POLY_FT4 *) packet_cursor)->v2 = value0;
+                }
+                width_or_mode = frame_data[7] & FIELD_SPRITE_TEXTURE_MODE_MASK;
+                if (width_or_mode == 2)
+                {
+                    frame_y_or_clut = 0x1F2;
+                    if (actor->owner_object_index < 2)
+                    {
+                        *(s16 *) &((POLY_FT4 *) packet_cursor)->tpage = ((texture_slot_flags[texture_slot] & 3) << 7) | (((u32) part->behavior_flags.word >> 0x11) & 0x60) | 0x10 | ((((actor->owner_object_index << 6) + 0x340) & 0x3FF) >> 6);
+                        frame_y_or_clut = (actor->owner_object_index * 2) + 0x1EE;
+                        goto mode_done;
+                    }
+                    value0 = texture_slot;
+                    value0 <<= 1;
+                    value0 += (s32) texture_slot_flags;
+                    value1 = ((*(u16 *) value0 & 3) << 7) | (((u32) part->behavior_flags.word >> 0x11) & 0x60);
+                    value1 |= 5;
+                }
+                else
+                {
+                    frame_y_or_clut = (width_or_mode * 2) + 0x1EA;
+                    value0 = (((width_or_mode << 6) + 0x180) & 0x3FF) >> 6;
+                    value1 = ((u32) part->behavior_flags.word >> 0x11) & 0x60;
+                    value1 |= value0;
+                }
+                *(s16 *) &((POLY_FT4 *) packet_cursor)->tpage = value1;
+mode_done:
+
+                if (((u32) part->track_flags.word >> 0x15) & 1)
+                {
+                    *(s16 *) &((POLY_FT4 *) packet_cursor)->clut = (frame_y_or_clut + 1) << 6;
+                }
+                else
+                {
+                    value0 = part->placement_flags.word >> 0xC;
+                    switch (value0 & 3)
+                    {
+                    case 1:
+                    {
+                        u8 uv = part->appearance.fields.palette_selector;
+                        clut_x = uv & 0xF;
+                        if (uv >= 0x10)
+                        {
+                            value0 = (frame_y_or_clut + 1) << 6;
+                        }
+                        else
+                        {
+                            value0 = frame_y_or_clut << 6;
+                        }
+                        value0 |= clut_x;
+                        *(s16 *) &((POLY_FT4 *) packet_cursor)->clut = value0;
+                        break;
+                    }
+                    case 2:
+                        clut = frame_y_or_clut << 6;
+                        if (actor->owner_object_index >= 3)
+                        {
+                            value0 = part->appearance.fields.palette_selector & 0x3F;
+                        }
+                        else
+                        {
+                    case 0:
+                            clut = frame_y_or_clut << 6;
+                            value0 = frame_data[6] & 0x3F;
+                        }
+                        clut |= value0;
+                        *(s16 *) &((POLY_FT4 *) packet_cursor)->clut = clut;
+                        break;
+                    }
+                }
+
+                {
+                    if ((effect->flags & FIELD_EFFECT_SCREEN_SPACE) || ((value1 = effect->z >> 7), value1 < 0))
+                    {
+                        addPrim(&ordering_table[0], packet_cursor);
+                        packet_cursor = (s32 *) ((u8 *) packet_cursor + sizeof(POLY_FT4));
+                    }
+                    else if (value1 > FIELD_EFFECT_OT_MAX_DEPTH)
+                    {
+                        addPrim(&ordering_table[FIELD_EFFECT_OT_MAX_DEPTH], packet_cursor);
+                        packet_cursor = (s32 *) ((u8 *) packet_cursor + sizeof(POLY_FT4));
+                    }
+                    else
+                    {
+                        setaddr(packet_cursor, getaddr(&ordering_table[value1]));
+                        setaddr(&ordering_table[effect->z >> 7], packet_cursor);
+                        packet_cursor = (s32 *) ((u8 *) packet_cursor + sizeof(POLY_FT4));
+                    }
+                }
+            }
+            else if (((flags & 0xF) == 2) && (part->effect_flags & FIELD_PART_EFFECT_FOOTPRINT))
+            {
+                shadow_footprint[0] = (*(s8 *) frame_data * part->appearance.fields.footprint_scale_x) >> 6;
+                shadow_footprint[1] = ((s8) frame_data[1] * part->footprint_scale_y) >> 6;
+                shadow_footprint[2] = ((s8) frame_data[2] * part->appearance.fields.footprint_scale_x) >> 6;
+                shadow_footprint[3] = ((s8) frame_data[3] * part->footprint_scale_y) >> 6;
+                shadow_footprint[4] = ((s8) frame_data[4] * part->appearance.fields.footprint_scale_x) >> 6;
+                shadow_footprint[5] = ((s8) frame_data[5] * part->footprint_scale_y) >> 6;
+                shadow_footprint[6] = ((s8) frame_data[6] * part->appearance.fields.footprint_scale_x) >> 6;
+                shadow_count += 1;
+                shadow_footprint[7] = ((s8) frame_data[8] * part->footprint_scale_y) >> 6;
+            }
+            frame_data += 9;
+            frame_count -= 1;
+            value0 = *(s32 *) &((POLY_FT4 *) packet_cursor)[-1].r0;
+            *(s32 *) &((POLY_FT4 *) packet_cursor)->r0 = value0;
+        } while (frame_count != 0);
+    }
+
+    if (shadow_count != 0)
+    {
+        do { do { do { do { do { packet_cursor = field_render_actor_ground_shadow(effect, packet_cursor, ordering_table, shadow_footprint); } while (0); } while (0); } while (0); } while (0); } while (0);
+    }
+    return packet_cursor;
+}
+
+/** @file field_effect_frames.c
+ * @brief Process effect animation frames and build effect primitives, transforms, and projected geometry.
+ */
+
+/* field11 */
+/**
+ * @file field11.c
+ * @brief Field animation-frame audio/visual processor, carved from the top
+ *        of the unk2 segment (the single-function slot right after
+ *        field_effect_dispatch.c's field_render_effects).
+ */
+
+#include "common.h"
+#include "field_effect_transform.h"
+#include "field_effect_render_state.h"
+#include "field_types.h"
+#include "field_effect_geometry.h"
+#include "sdk/libgpu.h"
+
+
+
+
+
+typedef struct
+{
+    s16 unk0;
+    s16 unk2;
+    s16 unk4;
+    s16 unk6;
+} FrameSVector;
+
+typedef struct
+{
+    s32 unk0;  /* 0x00 */
+    s32 unk4;  /* 0x04 */
+    s32 unk8;  /* 0x08 */
+    u32 unkC;  /* 0x0C */
+    s16 unk10; /* 0x10 */
+    s16 unk12; /* 0x12 */
+    s16 unk14; /* 0x14 */
+    s16 unk16; /* 0x16 */
+    u8 unk18;  /* 0x18 */
+    u8 unk19;  /* 0x19 */
+    u8 unk1A;  /* 0x1A */
+    u8 unk1B;  /* 0x1B */
+    s32 unk1C; /* 0x1C (halfword view at 0x1E) */
+    u8 unk20;  /* 0x20 */
+    u8 unk21;  /* 0x21 */
+    u8 unk22;  /* 0x22 */
+    u8 unk23;  /* 0x23 */
+    u8 unk24;  /* 0x24 */
+    u8 unk25;  /* 0x25 */
+    s8 unk26;  /* 0x26 */
+    u8 unk27;  /* 0x27 */
+    u8 unk28;  /* 0x28 */
+    u8 unk29;  /* 0x29 */
+    s16 unk2A; /* 0x2A */
+    s16 unk2C; /* 0x2C */
+    u16 unk2E; /* 0x2E */
+    s16 unk30; /* 0x30 */
+    u8 unk32;  /* 0x32 */
+    u8 unk33;  /* 0x33 */
+    u8 unk34;  /* 0x34 */
+    u8 unk35;  /* 0x35 */
+    u8 unk36;  /* 0x36 */
+    u8 unk37;  /* 0x37 */
+    u8 unk38;  /* 0x38 */
+    u8 unk39;  /* 0x39 */
+    u8 unk3A;  /* 0x3A */
+    u8 unk3B;  /* 0x3B */
+    u32 unk3C; /* 0x3C */
+    s32 unk40; /* 0x40 */
+    u32 unk44; /* 0x44 */
+    u32 unk48; /* 0x48 */
+    u32 unk4C; /* 0x4C */
+    u8 pad50[0x54 - 0x50];
+} Struct_D800FDF58;
+
+/* This function needs the full 32-bit unk34 (masked against 0x100000), unlike
+ * the u16 view used by field8.c/field10.c's local copy of the same struct. */
+typedef struct
+{
+    u32 unk0;  /* 0x00 */
+    u32 unk4;  /* 0x04 */
+    u8 unk8;   /* 0x08 */
+    u8 unk9;   /* 0x09 */
+    u8 unkA;   /* 0x0A */
+    u8 unkB;   /* 0x0B */
+    u8 unkC;   /* 0x0C */
+    u8 unkD;   /* 0x0D */
+    u8 unkE;   /* 0x0E */
+    u8 unkF;   /* 0x0F */
+    u8 unk10;  /* 0x10 */
+    u8 unk11;  /* 0x11 */
+    u8 pad12[0x14 - 0x12];
+    u32 unk14; /* 0x14 (halfword view at 0x16) */
+    s16 unk18; /* 0x18 */
+    u8 unk1A;  /* 0x1A */
+    u8 pad1B;
+    u32 unk1C; /* 0x1C */
+    u8 unk20;
+    u8 unk21;
+    u8 unk22;
+    u8 unk23;
+    u32 unk24; /* 0x24 */
+    u32 unk28; /* 0x28 */
+    u8 unk2C;
+    u8 unk2D;
+    u8 unk2E;
+    u8 unk2F;
+    u8 pad30;
+    u8 unk31;
+    u8 pad32;
+    u8 unk33;
+    u32 unk34; /* 0x34 */
+    s16 unk38;
+    s16 unk3A;
+    s16 unk3C;
+    s16 pad3E;
+    s16 unk40;
+    s16 unk42;
+    s16 unk44;
+    s16 unk46;
+} FramePartDef;
+
+typedef struct
+{
+    u8 pad0[0x14];
+    u8 unk14; /* 0x14 */
+    u8 unk15; /* 0x15 */
+    u8 pad16;
+    u8 unk17; /* 0x17 */
+    u16 unk18;
+    u16 unk1A;
+} FrameAnimationDef;
+
+typedef struct
+{
+    FramePartDef *unk0;
+    u8 pad4[0xC - 4];
+    FrameAnimationDef *unkC;
+    u8 pad10[0x14 - 0x10];
+    u8 *unk14;
+    u8 pad18[0x24 - 0x18];
+    u8 unk24;
+    u8 unk25;
+    u8 unk26;
+    u8 unk27;
+    u8 unk28;
+    u8 unk29;
+    u8 unk2A;
+    u8 unk2B[16];
+    u8 unk3B[9][16];
+    u8 padCB;
+    u16 unkCC[9][16];
+    u16 unk1EC[9];
+    Vec2s unk1FE[9];
+    u16 unk222;
+    u32 unk224;
+    u8 unk228;
+    u8 unk229[9];
+    u8 unk232;
+    u8 unk233;
+    u16 unk234;
+    u16 unk236;
+    u8 pad238[2];
+    u8 unk23A;
+    u8 unk23B;
+    u8 pad23C[0x240 - 0x23C];
+    u16 *unk240;
+} FrameActorState;
+
+/* Local view of the shared per-track "slot" record; only the fields this
+ * function touches are named, matching the per-file minimal-view convention
+ * already used by field7.c/field8.c/field10.c for the same real struct. */
+typedef struct
+{
+    u8 pad0[0xC];
+    s32 unkC;   /* 0x0C */
+    u8 pad10[0x3C - 0x10];
+    s32 unk3C;  /* 0x3C */
+    u8 pad40[0x12C - 0x40];
+    s16 unk12C; /* 0x12C */
+    s16 unk12E; /* 0x12E */
+    s16 unk130; /* 0x130 */
+    s16 unk132; /* 0x132 */
+    s16 unk134; /* 0x134 */
+    s16 unk136; /* 0x136 */
+    s16 unk138; /* 0x138 */
+    s16 unk13A; /* 0x13A */
+    s16 unk13C; /* 0x13C */
+    s16 unk13E; /* 0x13E */
+    s16 unk140; /* 0x140 */
+    s16 unk142; /* 0x142 */
+    s16 unk144; /* 0x144 */
+    s16 unk146; /* 0x146 */
+    u8 pad148[0x170 - 0x148];
+    u8 unk170;  /* 0x170 */
+    u8 pad171[0x174 - 0x171];
+    s32 unk174; /* 0x174 */
+    s32 unk178; /* 0x178 (byte views at 0x179/0x17A/0x17B) */
+    u8 pad17C[0x180 - 0x17C];
+    u8 unk180;  /* 0x180 */
+    u8 pad181[0x18D - 0x181];
+    u8 unk18D;  /* 0x18D */
+    u8 unk18E;  /* 0x18E */
+    u8 pad18F[0x23C - 0x18F];
+} Struct_D80105AE0;
+
+typedef struct
+{
+    u8 pad0[0x258];
+    u8 unk258;
+    u8 pad259[0x268 - 0x259];
+} Struct_D800FD818;
+
+typedef struct
+{
+    s32 unk0;
+    u8 pad4[0xC - 4];
+    s32 unkC;
+    u8 pad10[0x1C - 0x10];
+} Struct_D80105880;
+
+typedef struct
+{
+    u8 *start;
+    u8 *end;
+    u8 unk8;
+    u8 slot_index;
+    u16 unkA;
+    u8 padC[2];
+    s16 unkE;
+    u32 flags;
+} FrameResourceEntry;
+
+/* Output of field_test_quad_actor_contacts: resolved track/actor index plus the screen-space
+ * x/y it computed for it. */
+typedef struct
+{
+    s32 index;
+    s16 x;
+    s16 y;
+} TrackPlacement;
+
+#include "sdk/inline_c.h"
+#include "sdk/gte_dmpsx_compat.h"
+
+/* Frame-processor views of shared field arrays (declared with their canonical types above). */
+#define FRAME_PLAYER_RECORDS ((Struct_D800FD818 *) g_field_player_records)
+#define FRAME_ACTORS ((Struct_D800FDF58 *) g_field_actors)
+#define FRAME_OBJECT_STATES ((Struct_D80105AE0 *) g_field_object_states)
+#define FRAME_ACTOR_BINDINGS ((Struct_D80105880 *) g_field_actor_bindings)
+#define FRAME_ACTOR_SLOTS ((FrameActorState *) g_field_actor_slots)
+#define FRAME_RESOURCE_ENTRIES ((FrameResourceEntry *) g_field_resource_entries)
+
+
+/**
+ * @brief Field animation-frame audio/visual processor for the "negative
+ *        item" resource variant, spawning per-frame billboard primitives and
+ *        panning any attached sound cue relative to the camera.
+ * @param rec Effect record.
+ * @param cursor Vertex-buffer cursor pointer, threaded and returned.
+ * @param base Ordering-table / primitive base array.
+ * @param item Animation data blob for this frame.
+ * @param flag Selects which of the actor's two audio channels to update.
+ * @param part Part definition supplying flags and placement selectors.
+ * @return Updated cursor pointer.
+ * @see decomp.me (100%)
+ * @note Matching requires maspsx to keep consecutive labels before an
+ *       inserted load-delay NOP, as original ASPSX 2.67 does. Fixed upstream
+ *       in maspsx #143 (tools/maspsx at 3629944 or later).
+ */
+s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 flag, FramePartDef* part)
+{
+    typedef struct
+    {
+        unsigned addr : 24;
+        unsigned len : 8;
+    } PrimitiveTag;
+    extern int abs(int);
+    MATRIX* mtx = (MATRIX*)0x1F800000;
+    Vec2s* sxy = (Vec2s*)0x1F800040;
+    s32 item_count;
+    VECTOR* gte_out = (VECTOR*)0x1F800044;
+    FrameSVector* dir = (FrameSVector*)0x1F800054;
+    s16* sp64 = (s16*)0x1F800064;
+    Vec2s* sp68;
+    Vec2s* sp6C;
+    FrameActorState* actor;
+    FrameActorState* actor_base;
+    s32 sp74;
+    s32 sp78;
+    TrackPlacement sp28;
+    struct
+    {
+        s32 sp30;
+        u8 pad34[0x24];
+    } scratch;
+
+    POLY_FT4* poly;
+    s32 var_a3;
+    u8* var_a1;
+    s16 temp_a0_4;
+    s16 var_v0_10;
+    s32 var_v0_27;
+    s32 temp_a0_2;
+    s32 placement_flags;
+    s32 temp_a1_2;
+    Struct_D80105880* clamp_base;
+    s32 temp_a3_2;
+    s32 temp_s7;
+    s32 temp_v0_12;
+    s32 temp_v0_18;
+    s32 temp_v0_6;
+    s32 temp_v0_7;
+    s32 temp_v0_8;
+    s32 temp_v0_9;
+    s32 temp_v1_13;
+    s32 temp_v1_17;
+    s32 temp_v1_19;
+    s32 temp_v1_20;
+    s32 temp_v1_23;
+    s32 temp_v1_26;
+    s32 temp_v1_27;
+    s32 temp_v1_28;
+    s32 temp_v1_2;
+    s32 temp_v1_34;
+    s32 var_s1;
+    s32 var_s2;
+    s32 var_v0_15;
+    s32 var_v0_5;
+    s32 var_v0_6;
+    s32 var_v0_8;
+    s32 var_v1_10;
+    s32 var_v1_11;
+    s32 var_v1_4;
+    s32 var_v1_6;
+    s32 var_s0;
+    u16 temp_a1;
+    u16 temp_v0_15;
+    u16 temp_v0_16;
+    u16 temp_v1_29;
+    u16 temp_v1_30;
+    u16 temp_v1_31;
+    u16 temp_v1_32;
+    u32 temp_a0_3;
+    u32 temp_v1_18;
+    u32 temp_v1_33;
+    u32 temp_v1_3;
+    u8 temp_a0;
+    u8 temp_v0_2;
+    u8 temp_v0_3;
+    u8 temp_v0_4;
+    u8 temp_v0_5;
+    u8 temp_v1;
+    u32 temp_v1_10;
+    u8 temp_v1_11;
+    u8 temp_v1_12;
+    u8 temp_v1_21;
+    u8 temp_v1_4;
+    s32 temp_v1_5;
+    s32 temp_v1_6;
+    s32 temp_v1_7;
+    s32 temp_v1_8;
+    u8 temp_v1_9;
+    u8 var_a0_3;
+    u8 var_a0_4;
+    u8 var_a0_5;
+    u8 var_a0_6;
+    Struct_D80105AE0* slot;
+    Struct_D80105AE0* temp_v0_13;
+    Struct_D80105AE0* temp_v0_14;
+    Struct_D80105AE0* temp_v0_17;
+    Struct_D80105AE0* temp_v0_20;
+    Struct_D800FDF58* temp_v0_19;
+    Struct_D80105AE0* temp_v1_24;
+    FrameActorState* temp_v1_25;
+
+    sp78 = 0;
+    sp68 = (Vec2s*)0x1F800080;
+    sp6C = (Vec2s*)0x1F800094;
+    slot = &FRAME_OBJECT_STATES[rec->unk3A];
+    *(s32*)&slot->unk12C = 0;
+    if (flag == 0)
+    {
+        s32* zero_ptr;
+        s32 zero_count = 7;
+        zero_ptr = (s32*)((u8*)slot + 0x1C);
+        do
+        {
+            *(s32*)((u8*)zero_ptr + 0x148) = 0;
+            zero_count -= 1;
+            zero_ptr -= 1;
+        } while (zero_count >= 0);
+        *(s32*)&slot->unk144 = 0;
+        *(s32*)&slot->unk140 = 0;
+    }
+    actor = &FRAME_ACTOR_SLOTS[rec->unk22];
+    field_build_effect_part_matrix(rec, part, mtx, actor);
+    gte_SetRotMatrix(mtx);
+
+    sxy->x = 0xA0 + g_field_view_offset_x / 256 + rec->unk0 / 256;
+    temp_a1 = 0x70 + g_field_view_offset_y / 256 + rec->unk4 / 256 - rec->unk8 / 512 - g_field_view_offset_z / 512;
+    sxy->y = temp_a1;
+    temp_v1 = rec->unk37;
+    temp_a0 = rec->unk38;
+    if ((temp_v1 | temp_a0) != 0)
+    {
+        temp_v1_2 = (s8)temp_v1 + ((s32)(((s8)temp_a0 - (s8)temp_v1) * rec->unk34) / (s32)rec->unk35);
+        sp74 = temp_v1_2;
+        sxy->y = (u16)(temp_a1 - temp_v1_2);
     }
     else
     {
-        if (((part->placement_flags.word >> 0xA) & 1) || (part->spawn_flags.word & 0x08000000))
-        {
-            effect->facing_or_reward_kind = effect->facing_or_reward_kind | 0x80;
-        }
-        position_x = effect->work_x;
-        source_x = source_record->x;
-        position_x = position_x + source_x;
+        sp74 = 0;
     }
-    position->vx = position_x;
-    position->vy = effect->work_y + source_record->y;
-    position->vz = effect->work_z + source_record->z;
-    return;
-owner_bounds_center:
-    source_object = &g_field_object_states[g_field_actor_slots[effect->actor_index].owner_object_index];
-    position->vx = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].x + ((source_object->bounds.half.right + source_object->bounds.half.left) << 7);
-    position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].y + ((source_object->bounds.half.bottom + source_object->bounds.half.top) << 7);
-    position->vz = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].z;
-    return;
-track_bounds_center:
-    source_object = &g_field_object_states[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]];
-    position->vx = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x + ((source_object->bounds.half.right + source_object->bounds.half.left) << 7);
-    position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].y + ((source_object->bounds.half.bottom + source_object->bounds.half.top) << 7);
-    position->vz = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].z;
-    return;
-reflect_track_x:
-    delta_x = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x - g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].x;
-    if (effect->color_position.fields.position_source == FIELD_POSITION_REFLECT_TRACK_X)
+    field_extract_effect_quad_corners8(rec, item, sp64);
+    temp_v1_3 = part->unk34;
+    if (temp_v1_3 & 0x100000)
     {
-        position->vx = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].x - delta_x;
+        field_apply_effect_quad_center_offset(rec, sxy, sp64, mtx, (temp_v1_3 >> 0x14) & 1);
+    }
+    slot->unk140 = (u16)sp64[0];
+    slot->unk142 = (u16)sp64[1];
+    slot->unk144 = (u16)sp64[4];
+    slot->unk146 = (u16)sp64[5];
+    item_count = *item++;
+    if (item_count != 0)
+    {
+        poly = (POLY_FT4*)cursor;
+        do
+        {
+            temp_v1_4 = item[7];
+            if (!(temp_v1_4 & 0x20))
+            {
+                if ((u8)rec->unk3A < 3U)
+                {
+                    if (((temp_v1_4 & 3) == 2) && (item[6] == 2))
+                    {
+                        if (FRAME_PLAYER_RECORDS[rec->unk3A].unk258 == 0)
+                        {
+                            goto block_28;
+                        }
+                    }
+                    else
+                    {
+                        goto block_29;
+                    }
+                }
+                else
+                {
+                block_28:
+                block_29:
+                    field_resolve_effect_part_color(actor, rec, part, (FieldPrimitiveColor*)&((P_TAG*)cursor)->r0);
+                    {
+                        ((u8*)&poly->tag)[3] = 9;
+                        poly->code = 0x2CU;
+                        if (rec->unk1C & 0x800000)
+                        {
+                            setSemiTrans(poly, 1);
+                        }
+                        else
+                        {
+                            setSemiTrans(poly, 0);
+                        }
+                    }
+                    var_s2 = item[4];
+                    var_s1 = (s8)item[1];
+                    temp_s7 = item[5] - 1;
+                    if (!(rec->unk21 & 0x80))
+                    {
+                        var_s0 = (s8)*item;
+                        var_s2 -= 1;
+                    }
+                    else
+                    {
+                        var_s0 = -(s8)*item - var_s2;
+                        var_s2 -= 1;
+                    }
+                    field_project_effect_sprite_quad(rec, sxy, (POLY_FT4*)cursor, var_s2, temp_s7, (s32)var_s0, var_s1, (FieldSpriteFrame*)item, mtx);
+
+                    {
+                        if ((item[7] ^ ((u8)rec->unk21 >> 1)) & 0x40)
+                        {
+                            temp_v0_2 = item[2];
+                            poly->u1 = temp_v0_2;
+                            poly->u3 = temp_v0_2;
+                            temp_v1_5 = poly->u1 + var_s2;
+                            var_a0_3 = 0xFF;
+                            if (temp_v1_5 != 0x100)
+                            {
+                                var_a0_3 = temp_v1_5;
+                            }
+                            poly->u2 = var_a0_3;
+                            poly->u0 = var_a0_3;
+                        }
+                        else
+                        {
+                            temp_v0_3 = item[2];
+                            poly->u0 = temp_v0_3;
+                            poly->u2 = temp_v0_3;
+                            temp_v1_6 = poly->u0 + var_s2;
+                            var_a0_4 = 0xFF;
+                            if (temp_v1_6 != 0x100)
+                            {
+                                var_a0_4 = temp_v1_6;
+                            }
+                            poly->u3 = var_a0_4;
+                            poly->u1 = var_a0_4;
+                        }
+                        if (item[7] & 0x80)
+                        {
+                            temp_v0_4 = item[3];
+                            poly->v2 = temp_v0_4;
+                            poly->v3 = temp_v0_4;
+                            temp_v1_7 = poly->v2 + temp_s7;
+                            var_a0_5 = 0xFF;
+                            if (temp_v1_7 != 0x100)
+                            {
+                                var_a0_5 = temp_v1_7;
+                            }
+                            poly->v1 = var_a0_5;
+                            poly->v0 = var_a0_5;
+                        }
+                        else
+                        {
+                            temp_v0_5 = item[3];
+                            poly->v0 = temp_v0_5;
+                            poly->v1 = temp_v0_5;
+                            temp_v1_8 = poly->v0 + temp_s7;
+                            var_a0_6 = 0xFF;
+                            if (temp_v1_8 != 0x100)
+                            {
+                                var_a0_6 = temp_v1_8;
+                            }
+                            poly->v3 = var_a0_6;
+                            poly->v2 = var_a0_6;
+                        }
+                        if ((item[7] & 3) == 2)
+                        {
+                            poly->v0 = (u8)(poly->v0 | 0x80);
+                            poly->v1 = (u8)(poly->v1 | 0x80);
+                            poly->v2 = (u8)(poly->v2 | 0x80);
+                            poly->v3 = (u8)(poly->v3 | 0x80);
+                        }
+                    }
+
+                    temp_a1_2 = rec->unkC;
+                    temp_a0_2 = temp_a1_2 << 7;
+                    if (temp_a1_2 >= 2)
+                    {
+                        temp_a0_2 = temp_a1_2 << 6;
+                        if (temp_a1_2 >= 9)
+
+                        {
+                            s32 v0;
+                            s32 v1;
+                            s32 a0;
+                            v0 = temp_a1_2 - 9;
+                            v0 <<= 6;
+                            v1 = item[7];
+                            v1 &= 3;
+                            v1 <<= 6;
+                            v1 += 0x3C0;
+                            v1 -= v0;
+                            v1 &= 0x3FF;
+                            a0 = part->unk4;
+                            v1 = (s32)v1 >> 6;
+                            a0 = (s32)((u32)a0 >> 0x11);
+                            a0 &= 0x60;
+                            a0 |= 0x10;
+                            a0 |= v1;
+                            poly->tpage = (s16)a0;
+                        }
+
+                        else
+                        {
+                            var_v1_4 = item[7];
+                            var_v1_4 &= 3;
+                            var_v1_4 <<= 6;
+                            var_v1_4 += 0x340;
+                            var_v1_4 -= temp_a0_2;
+                            var_v1_4 = (var_v1_4 & 0x3FF) >> 6;
+                            var_v0_5 = ((u32)part->unk4 >> 0x11) & 0x60;
+                            goto block_58;
+                        }
+                    }
+                    else
+                    {
+                        temp_a0_2 = 0x380 - temp_a0_2;
+                        var_v1_4 = ((u32)part->unk4 >> 0x11) & 0x60;
+                        if (item[7] & 3)
+                        {
+                            var_v0_6 = (temp_a0_2 + 0x40) & 0x3FF;
+                        }
+                        else
+                        {
+                            var_v0_6 = temp_a0_2 & 0x3FF;
+                        }
+                        var_v0_5 = var_v0_6 >> 6;
+                    block_58:
+                        poly->tpage = (s16)(var_v1_4 | var_v0_5);
+                    }
+                    temp_a0_3 = rec->unk1C;
+                    if ((temp_a0_3 & 0x7F0000) && (item[6] == 0) && ((item[7] & 3) != 2))
+                    {
+                        if (temp_a0_3 & 0x40000)
+                        {
+                            if (!(((u32)part->unk28 >> 0xC) & 3))
+                            {
+                                poly->clut = (s16)(((rec->unk3B + 0x1F4) << 6) | 9);
+                            }
+                            else
+                            {
+                                temp_v1_9 = part->unk2D;
+                                if (temp_v1_9 >= 0x40U)
+                                {
+                                    var_s1 = 0x1F2;
+                                }
+                                else
+                                {
+                                    var_s1 = (temp_v1_9 >> 4) + 0x1EA;
+                                }
+                                temp_v0_6 = ((u32)part->unk28 >> 0xC) & 3;
+                                switch (temp_v0_6)
+                                {
+                                case 1:
+                                    poly->clut = getClut((part->unk2D & 0xF) << 4, var_s1);
+                                    break;
+                                case 2:
+                                    poly->clut = (s16)(((rec->unk3B + 0x1F4) << 6) | 9);
+                                    break;
+                                }
+                            }
+                        }
+                        else if (temp_a0_3 & 0x780000)
+                        {
+                            if (!(((u32)part->unk28 >> 0xC) & 3))
+                            {
+                                poly->clut = ((rec->unk3B + 0x1F4) << 6) | ((temp_a0_3 >> 0x13) & 0xF);
+                                goto clut_done;
+                            }
+                            temp_v1_10 = part->unk2D;
+                            if (temp_v1_10 >= 0x40U)
+                            {
+                                var_s1 = 0x1F2;
+                            }
+                            else
+                            {
+                                var_s1 = (temp_v1_10 >> 4) + 0x1EA;
+                            }
+                            temp_v0_7 = ((u32)part->unk28 >> 0xC) & 3;
+                            switch (temp_v0_7)
+                            {
+                            case 1:
+                                poly->clut = getClut((part->unk2D & 0xF) << 4, var_s1);
+                                goto clut_done;
+                            case 2:
+                                poly->clut = ((rec->unk3B + 0x1F4) << 6) | (((u32)rec->unk1C >> 0x13) & 0xF);
+                                goto clut_done;
+                            }
+                        }
+                        else
+                        {
+                            if (!(((u32)part->unk28 >> 0xC) & 3))
+                            {
+                                poly->clut = (s16)(((((temp_a0_3 >> 16) & 3) + 0x1EF) << 6) | 0x10);
+                            }
+                            else
+                            {
+                                temp_v1_11 = part->unk2D;
+                                if (temp_v1_11 >= 0x40U)
+                                {
+                                    var_s1 = 0x1F2;
+                                }
+                                else
+                                {
+                                    var_s1 = (temp_v1_11 >> 4) + 0x1EA;
+                                }
+                                temp_v0_8 = ((u32)part->unk28 >> 0xC) & 3;
+                                switch (temp_v0_8)
+                                {
+                                case 1:
+                                    poly->clut = getClut((part->unk2D & 0xF) << 4, var_s1);
+                                    goto clut_done;
+                                case 2:
+                                    poly->clut = ((((*(u16*)((u8*)rec + 0x1E)) & 3) + 0x1EF) << 6) | 0x10;
+                                    goto clut_done;
+                                }
+                            }
+                        }
+                    }
+                    else if ((!(((u32)part->unk28 >> 0xC) & 3)))
+                    {
+                        do
+                        {
+                            if ((item[7] & 3) != 2)
+                            {
+                                if (rec->unk3B == 8)
+                                {
+                                    var_v0_10 = (item[6] & 0x3F) | 0x7A80;
+                                }
+                                else
+                                {
+                                    var_v0_10 = getClut(item[6] << 4, rec->unk3B + 0x1F4);
+                                }
+                                poly->clut = var_v0_10;
+                                if (item[6] == 0xB)
+                                {
+                                    setSemiTrans(poly, 1);
+                                }
+                            }
+                            else
+                            {
+                                if (item[6] == 1)
+                                {
+                                    setSemiTrans(poly, 1);
+                                }
+                                poly->clut = getClut((s32)((item[6] * 0x10) + 0xC0), rec->unk3B + 0x1F4);
+                                goto clut_done;
+                            }
+                        } while (0);
+                    }
+                    else
+                    {
+                        temp_v1_12 = part->unk2D;
+                        if (temp_v1_12 >= 0x40U)
+                        {
+                            var_s1 = 0x1F2;
+                            if ((u8)actor->unk228 < 2U)
+                            {
+                                var_s1 = (actor->unk228 * 2) + 0x1EE;
+                            }
+                        }
+                        else
+                        {
+                            var_s1 = (temp_v1_12 >> 4) + 0x1EA;
+                        }
+                        temp_v0_9 = ((u32)part->unk28 >> 0xC) & 3;
+                        switch (temp_v0_9)
+                        {
+                        case 1:
+                            poly->clut = getClut((part->unk2D & 0xF) << 4, var_s1);
+                            break;
+                        case 2:
+                            if ((u8)actor->unk228 >= 3U)
+                            {
+                                s32 clut_hi2;
+                                s32 clut_lo2;
+                                clut_hi2 = var_s1 << 6;
+                                clut_lo2 = part->unk2D;
+                                poly->clut = (clut_hi2) | (clut_lo2 & 0xF);
+                                goto clut_done;
+                            }
+                            if ((item[7] & 3) != 2)
+                            {
+                                var_v0_8 = (rec->unk3B + 0x1F4) << 6;
+                                var_v1_6 = item[6] & 0x3F;
+                                poly->clut = (s16)(var_v0_8 | var_v1_6);
+                            }
+                            else
+                            {
+                                if (item[6] == 1)
+                                {
+                                    setSemiTrans(poly, 1);
+                                }
+                                poly->clut = getClut((s32)((item[6] * 0x10) + 0xC0), rec->unk3B + 0x1F4);
+                                goto clut_done;
+                            }
+                            break;
+                        }
+                    }
+                clut_done:
+                    temp_v1_13 = (s32)rec->unk8 >> 7;
+                    if (temp_v1_13 < 0)
+                    {
+                        addPrim(base, cursor);
+                        poly++;
+                        cursor = (s32*)((u8*)cursor + 0x28);
+                    }
+                    else if (temp_v1_13 >= 0x1000)
+                    {
+                        addPrim(&base[0xFFF], cursor);
+                        poly++;
+                        cursor = (s32*)((u8*)cursor + 0x28);
+                    }
+                    else
+                    {
+                        poly++;
+                        setaddr(cursor, getaddr(&base[temp_v1_13])),
+                        setaddr(&base[(s32)rec->unk8 >> 7], cursor);
+                        cursor = (s32*)((u8*)cursor + 0x28);
+                    }
+                }
+                goto block_298;
+            }
+            temp_v1_17 = temp_v1_4 & 0xF;
+            if ((flag == 0) || (temp_v1_17 == 2) || ((slot->unk178 & 1) && (temp_v1_17 == 0)))
+            {
+                temp_v1_18 = item[7] & 0xF;
+                switch (temp_v1_18)
+                {
+                case 0:
+                    var_a3 = 0;
+                    field_transform_effect_quad_vertices8(rec, slot, item, var_a3, sxy, dir, gte_out);
+
+                    break;
+                case 3:
+                    field_transform_effect_quad_vertices8(rec, slot, item, 4, sxy, dir, gte_out);
+                    break;
+                case 6:
+                    temp_v1_19 = slot->unk3C;
+                    if (!(temp_v1_19 & 0x8000) && !(slot->unk174 & 0x1800) && (temp_v1_19 != 0xFFFF) &&
+                        (((temp_a0_4 = rec->unk2A, (temp_a0_4 == 0x91)) && ((rec->unk21 & 0x7F) == 0x2E)) || (temp_a0_4 == 0x85) || (temp_a0_4 == 0x98)) &&
+                        !(rec->unk3C & 0x01000000))
+                    {
+                        var_s0 = func_800839F8(rec->unk3A, 0);
+                        if (var_s0 != -1U)
+                        {
+                            if (func_80083EEC(rec->unk3A, var_s0, slot->unk3C) != 0)
+                            {
+                                ((u8*)&slot->unk178)[1] = var_s0;
+                                field_start_actor_animation(var_s0, 0, NULL);
+
+                                {
+                                    if (rec->unk21 & 0x80)
+                                    {
+                                        dir->unk0 = (s16)(s8)(u8)item[1];
+                                        dir->unk2 = 0;
+                                        dir->unk4 = (s16) - (s8)*item;
+                                    }
+                                    else
+                                    {
+                                        dir->unk0 = (s16)(s8)(u8)item[1];
+                                        dir->unk2 = 0;
+                                        dir->unk4 = (s16)(s8)*item;
+                                    }
+                                    gte_ldv0(dir);
+                                    gte_rtv0();
+                                    gte_stlvnl(gte_out);
+                                    slot->unk130 = (u16)gte_out->vx;
+                                    slot->unk132 = (u16)gte_out->vy;
+                                    if (rec->unk21 & 0x80)
+                                    {
+                                        dir->unk0 = (s16)(s8)item[3];
+                                        dir->unk2 = 0;
+                                        dir->unk4 = (s16) - (s8)item[2];
+                                    }
+                                    else
+                                    {
+                                        dir->unk0 = (s16)(s8)item[3];
+                                        dir->unk2 = 0;
+                                        dir->unk4 = (s16)(s8)item[2];
+                                    }
+                                    gte_ldv0(dir);
+                                    gte_rtv0();
+                                    gte_stlvnl(gte_out);
+                                    slot->unk134 = (u16)gte_out->vx;
+                                    slot->unk136 = (u16)gte_out->vy;
+                                    if (rec->unk21 & 0x80)
+                                    {
+                                        dir->unk0 = (s16)(s8)item[5];
+                                        dir->unk2 = 0;
+                                        dir->unk4 = (s16) - (s8)item[4];
+                                    }
+                                    else
+                                    {
+                                        dir->unk0 = (s16)(s8)item[5];
+                                        dir->unk2 = 0;
+                                        dir->unk4 = (s16)(s8)item[4];
+                                    }
+                                    gte_ldv0(dir);
+                                    gte_rtv0();
+                                    gte_stlvnl(gte_out);
+                                    slot->unk138 = (u16)gte_out->vx;
+                                    slot->unk13A = (u16)gte_out->vy;
+                                    if (rec->unk21 & 0x80)
+                                    {
+                                        dir->unk0 = (s16)(s8)item[8];
+                                        dir->unk2 = 0;
+                                        dir->unk4 = (s16) - (s8)item[6];
+                                    }
+                                    else
+                                    {
+                                        dir->unk0 = (s16)(s8)item[8];
+                                        dir->unk2 = 0;
+                                        dir->unk4 = (s16)(s8)item[6];
+                                    }
+                                    gte_ldv0(dir);
+                                    gte_rtv0();
+                                    gte_stlvnl(gte_out);
+                                    slot->unk13C = (u16)gte_out->vx;
+                                    slot->unk13E = (u16)gte_out->vy;
+                                }
+                            }
+                        }
+                        slot->unk3C = 0xFFFF;
+                        var_v0_15 = (slot->unk174 & ~0x1800) | 0x1000;
+                    block_297:
+                        slot->unk174 = var_v0_15;
+                    }
+                    goto block_298;
+                case 1:
+                    if ((part->unk24 & 0x100000) && !(slot->unk174 & 0x1800) && ((((u8*)&slot->unk178)[3] == 0) || (rec->unk2A == 0x91)) &&
+                        (((temp_v1_20 = slot->unk3C, (temp_v1_20 != 0xFFFF)) && (temp_v1_20 != 0)) || (actor->unkC->unk14 == 3)))
+                    {
+                        if (rec->unk21 & 0x80)
+                        {
+                            dir->unk0 = (s16)(s8)(u8)item[1];
+                            dir->unk2 = 0;
+                            dir->unk4 = (s16) - (s8)*item;
+                        }
+                        else
+                        {
+                            dir->unk0 = (s16)(s8)(u8)item[1];
+                            dir->unk2 = 0;
+                            dir->unk4 = (s16)(s8)*item;
+                        }
+                        gte_ldv0(dir);
+                        gte_rtv0();
+                        gte_stlvnl(gte_out);
+                        sp68[0].x = (s16)(sxy->x + gte_out->vx);
+                        sp68[0].y = (s16)(sxy->y + gte_out->vy);
+                        if (rec->unk21 & 0x80)
+                        {
+                            dir->unk0 = (s16)(s8)item[3];
+                            dir->unk2 = 0;
+                            dir->unk4 = (s16) - (s8)item[2];
+                        }
+                        else
+                        {
+                            dir->unk0 = (s16)(s8)item[3];
+                            dir->unk2 = 0;
+                            dir->unk4 = (s16)(s8)item[2];
+                        }
+                        gte_ldv0(dir);
+                        gte_rtv0();
+                        gte_stlvnl(gte_out);
+                        sp68[1].x = (s16)(sxy->x + gte_out->vx);
+                        sp68[1].y = (s16)(sxy->y + gte_out->vy);
+                        if (rec->unk21 & 0x80)
+                        {
+                            dir->unk0 = (s16)(s8)item[5];
+                            dir->unk2 = 0;
+                            dir->unk4 = (s16) - (s8)item[4];
+                        }
+                        else
+                        {
+                            dir->unk0 = (s16)(s8)item[5];
+                            dir->unk2 = 0;
+                            dir->unk4 = (s16)(s8)item[4];
+                        }
+                        gte_ldv0(dir);
+                        gte_rtv0();
+                        gte_stlvnl(gte_out);
+                        sp68[2].x = (s16)(sxy->x + gte_out->vx);
+                        sp68[2].y = (s16)(sxy->y + gte_out->vy);
+                        if (rec->unk21 & 0x80)
+                        {
+                            dir->unk0 = (s16)(s8)item[8];
+                            dir->unk2 = 0;
+                            dir->unk4 = (s16) - (s8)item[6];
+                        }
+                        else
+                        {
+                            dir->unk0 = (s16)(s8)item[8];
+                            dir->unk2 = 0;
+                            dir->unk4 = (s16)(s8)item[6];
+                        }
+                        gte_ldv0(dir);
+                        gte_rtv0();
+                        gte_stlvnl(gte_out);
+                        sp68[3].x = (s16)(sxy->x + gte_out->vx);
+                        sp68[3].y = (s16)(sxy->y + gte_out->vy);
+                        temp_v0_12 = field_test_quad_actor_contacts(sp68, rec, &sp28);
+                        if (temp_v0_12 == 1)
+                        {
+                            temp_v0_12 = sp28.index;
+                            temp_v0_13 = &FRAME_OBJECT_STATES[temp_v0_12];
+                            temp_v0_13->unkC = (s32)(temp_v0_13->unkC & ~0x400);
+                            *(((u8*)&slot->unk178)[3] + (u8*)slot + 0x180) = (u8)sp28.index;
+                            temp_v1_21 = ((u8*)&slot->unk178)[3];
+                            if (temp_v1_21 < 9U)
+                            {
+                                ((u8*)&slot->unk178)[3] = (u8)(temp_v1_21 + 1);
+                            }
+                            if (actor->unkC->unk14 == 3)
+                            {
+                                actor->unk23A = (u8)(actor->unk23A | (1 << actor->unk232));
+                                actor->unk229[actor->unk232] = (u8)sp28.index;
+                                {
+                                    s32 a1;
+                                    Struct_D800FDF58* entry;
+
+                                    temp_a0_2 = g_field_view_offset_x;
+                                    if (temp_a0_2 < 0)
+                                    {
+                                        temp_a0_2 += 0xFF;
+                                    }
+                                    temp_v0_12 = FRAME_ACTORS[sp28.index].unk0;
+                                    a1 = temp_a0_2 >> 8;
+                                    if (temp_v0_12 < 0)
+                                    {
+                                        temp_v0_12 += 0xFF;
+                                    }
+                                    temp_a0_2 = g_field_view_offset_y;
+                                    do
+                                    {
+                                        var_v0_27 = temp_v0_12 >> 8;
+                                        var_v0_27 += 0xA0;
+                                        sp6C->x = (u16)(a1 + var_v0_27);
+                                    } while (0);
+                                    if (temp_a0_2 < 0)
+                                    {
+                                        temp_a0_2 += 0xFF;
+                                    }
+                                    entry = &FRAME_ACTORS[sp28.index];
+                                    var_v0_27 = entry->unk4;
+                                    a1 = temp_a0_2 >> 8;
+                                    if (var_v0_27 < 0)
+                                    {
+                                        var_v0_27 += 0xFF;
+                                    }
+                                    temp_a0_2 = entry->unk8;
+                                    var_v0_27 >>= 8;
+                                    var_v0_27 += 0x70;
+                                    a1 += var_v0_27;
+                                    if (temp_a0_2 < 0)
+                                    {
+                                        temp_a0_2 += 0x1FF;
+                                    }
+                                    temp_v0_12 = g_field_view_offset_z;
+                                    var_v0_27 = temp_a0_2 >> 9;
+                                    temp_a0_2 = a1 - var_v0_27;
+                                    if (temp_v0_12 < 0)
+                                    {
+                                        temp_v0_12 += 0x1FF;
+                                    }
+                                    var_v0_27 = temp_v0_12 >> 9;
+                                    sp6C->y = (u16)(temp_a0_2 - var_v0_27);
+                                }
+                                if (FRAME_ACTORS[sp28.index].unk21 & 0x80)
+                                {
+                                    actor->unk1FE[actor->unk232].x = sp6C->x - sp28.x;
+                                }
+                                else
+                                {
+                                    actor->unk1FE[actor->unk232].x = sp28.x - sp6C->x;
+                                }
+                                actor->unk1FE[actor->unk232].y = (s16)(sp28.y - sp6C->y);
+                                actor->unk232 = (u8)(actor->unk232 + 1);
+                                temp_v0_14 = &FRAME_OBJECT_STATES[sp28.index];
+                                temp_v0_14->unk178 = (s32)(temp_v0_14->unk178 | 0x80);
+
+                                func_8008A840(actor->unk228, sp28.index);
+                                temp_v0_15 = sp28.x - sxy->x;
+                                temp_a1_2 = ~0x1800;
+                                placement_flags = (slot->unk174 & temp_a1_2);
+                                slot->unk13C = temp_v0_15;
+                                slot->unk138 = temp_v0_15;
+                                slot->unk134 = temp_v0_15;
+                                slot->unk130 = temp_v0_15;
+                                temp_v0_16 = sp28.y - sxy->y;
+                                placement_flags |= 0x1000;
+                                slot->unk174 = placement_flags;
+                                slot->unk13E = temp_v0_16;
+                                slot->unk13A = temp_v0_16;
+                                slot->unk136 = temp_v0_16;
+                                slot->unk132 = temp_v0_16;
+                            }
+                            else
+                            {
+                                temp_v1_23 = slot->unk3C;
+                                if (temp_v1_23 == 0x24)
+                                {
+                                    if (FRAME_ACTORS[sp28.index].unk25 == 0)
+                                    {
+                                        slot->unk178 = (u32)(slot->unk178 | 2);
+                                        slot->unk170 = (u8)sp28.index;
+                                        temp_v0_17 = &FRAME_OBJECT_STATES[sp28.index];
+                                        temp_v0_17->unkC = (s32)(temp_v0_17->unkC | 0x2000);
+                                        goto block_236;
+                                    }
+                                }
+                                else
+                                {
+                                    if ((temp_v1_23 == 0x59) || (temp_v1_23 == 0x66) || (temp_v1_23 == 0x2B))
+                                    {
+                                        if (!(((u32)FRAME_OBJECT_STATES[sp28.index].unk178 >> 6) & 1))
+                                        {
+                                            clamp_base = FRAME_ACTOR_BINDINGS;
+                                            var_v1_10 = sp28.index < 3 ? sp28.index : 2;
+                                            temp_v0_18 = clamp_base[var_v1_10].unkC;
+                                            if (temp_v0_18 == sp28.index)
+                                            {
+                                                var_v1_11 = temp_v0_18 < 3 ? temp_v0_18 : 2;
+                                                if (clamp_base[var_v1_11].unk0 == 0)
+                                                {
+                                                    goto block_208;
+                                                }
+                                                goto block_209;
+                                            }
+                                            goto block_208;
+                                        }
+                                    block_208:
+                                        if ((var_a1 = (u8*)&FRAME_OBJECT_STATES[sp28.index], var_a1[0x178] & 1))
+                                        {
+                                        block_209:
+                                            slot->unk3C = 0;
+                                        }
+                                        else
+                                        {
+                                            temp_v0_19 = &FRAME_ACTORS[sp28.index];
+                                            temp_v0_19->unk21 = (u8)(temp_v0_19->unk21 & 0x7F);
+                                            if (sp28.index < 2)
+                                            {
+                                                func_800A2DD8(sp28.index);
+                                                FRAME_OBJECT_STATES[sp28.index].unk18D = 0;
+                                                FRAME_ACTORS[sp28.index].unk30 = 0;
+                                            }
+                                        }
+                                        goto block_236;
+                                    }
+                                    temp_v1_24 = &FRAME_OBJECT_STATES[sp28.index];
+                                    var_s1 = 1;
+                                    if (!(*(u8*)&temp_v1_24->unk178 & 1) ||
+                                        ((actor_base = FRAME_ACTOR_SLOTS, temp_v1_25 = &actor_base[((u8*)&temp_v1_24->unk178)[2]],
+                                          (temp_v1_25->unk24 != 0)) &&
+                                         (temp_v1_25->unk228 == rec->unk3A)))
+                                    {
+                                        temp_v1_26 = rec->unk21 & 0x7F;
+                                        switch (temp_v1_26)
+                                        {
+                                        case 0x48:
+                                            var_s1 = func_8008A9D8(rec->unk3A, sp28.index, 0x10);
+                                            break;
+                                        case 0x49:
+                                            var_s1 = func_8008A9D8(rec->unk3A, sp28.index, 0x11);
+                                            break;
+                                        case 0x3E:
+                                            var_s1 = func_8008A9D8(rec->unk3A, sp28.index, 0x19);
+                                            break;
+                                        case 0x45:
+                                            var_s1 = func_8008A9D8(rec->unk3A, sp28.index, 0x1A);
+                                            break;
+                                        default:
+                                            var_s1 = func_8008A840(rec->unk3A, sp28.index);
+                                            break;
+                                        }
+                                    }
+                                    if (sp28.index < 2)
+                                    {
+                                        Struct_D800FDF58* entry;
+                                        entry = &FRAME_ACTORS[sp28.index];
+                                        if (!((*(u16*)&entry->unk1C) & 0x1FF))
+                                        {
+                                            func_800A2DD8(sp28.index);
+                                        }
+                                    }
+                                    if (var_s1 == 1)
+                                    {
+                                        temp_v1_27 = slot->unk3C;
+                                        if ((temp_v1_27 == 1) || (temp_v1_27 == 3) || (temp_v1_27 == 0x10))
+                                        {
+                                            slot->unk3C = 0x1E;
+                                        }
+                                    }
+                                block_236:
+                                    if (slot->unk3C & 0x8000)
+                                    {
+                                        scratch.sp30 = sp28.index;
+                                        if (rec->unk2A == 0x91)
+                                        {
+                                            if (((u8*)&slot->unk178)[1] != 0xFF)
+                                            {
+                                                temp_v0_20 = &FRAME_OBJECT_STATES[sp28.index];
+                                                temp_v0_20->unk178 = (s32)(temp_v0_20->unk178 | 0x80);
+                                                field_start_actor_animation(((u8*)&slot->unk178)[1], 1, &scratch.sp30);
+                                            }
+                                        }
+                                        else if (field_start_bound_action_animation(rec->unk3A, 1, &scratch.sp30, slot->unk3C) != 0)
+                                        {
+                                            slot->unk174 = (s32)((slot->unk174 & ~0x1800) | 0x1000);
+                                        }
+                                        temp_v1_29 = sp28.x - sxy->x;
+                                        slot->unk13C = temp_v1_29;
+                                        slot->unk138 = temp_v1_29;
+                                        slot->unk134 = temp_v1_29;
+                                        slot->unk130 = temp_v1_29;
+                                        temp_v1_30 = sp28.y - sxy->y;
+                                        slot->unk13E = temp_v1_30;
+                                        slot->unk13A = temp_v1_30;
+                                        slot->unk136 = temp_v1_30;
+                                        slot->unk132 = temp_v1_30;
+                                        goto coords_done;
+                                    }
+                                    if (slot->unk3C != 0)
+                                    {
+                                        var_s0 = func_800839F8(rec->unk3A, 0);
+                                        if (var_s0 != -1U)
+                                        {
+                                            temp_v1_28 = ((u32)slot->unk178 >> 2) & 7;
+                                            switch (temp_v1_28)
+                                            {
+                                            case 2:
+                                                slot->unk3C = 0x74;
+                                                break;
+                                            case 4:
+                                                slot->unk3C = 0x75;
+                                                break;
+                                            default:
+                                                slot->unk3C = slot->unk3C;
+                                                break;
+                                            }
+                                            if (func_80083EEC(rec->unk3A, var_s0, slot->unk3C) != 0)
+                                            {
+                                                ((u8*)&slot->unk178)[1] = var_s0;
+                                                scratch.sp30 = sp28.index;
+                                                field_start_actor_animation(var_s0, 1, &scratch.sp30);
+                                                temp_v1_29 = sp28.x - sxy->x;
+                                                slot->unk13C = temp_v1_29;
+                                                slot->unk138 = temp_v1_29;
+                                                slot->unk134 = temp_v1_29;
+                                                slot->unk130 = temp_v1_29;
+                                                temp_v1_30 = sp28.y - sxy->y;
+                                                slot->unk13E = temp_v1_30;
+                                                slot->unk13A = temp_v1_30;
+                                                slot->unk136 = temp_v1_30;
+                                                slot->unk132 = temp_v1_30;
+                                            }
+                                        }
+                                    }
+                                coords_done:
+
+                                {
+                                    slot->unk3C = 0xFFFF;
+                                    var_v0_15 = (slot->unk174 & ~0x1800) | 0x1000;
+                                }
+
+                                    goto block_297;
+                                }
+                                goto block_298;
+                            }
+                        }
+                        else
+                        {
+                            if (temp_v0_12 == 2)
+                            {
+                                slot->unk3C = 0x1E;
+                                var_s0 = func_800839F8(rec->unk3A, 0);
+                                if (var_s0 != -1U)
+                                {
+                                    if (func_80083EEC(rec->unk3A, var_s0, slot->unk3C) != 0)
+                                    {
+                                        ((u8*)&slot->unk178)[1] = var_s0;
+                                        scratch.sp30 = sp28.index;
+                                        field_start_actor_animation(var_s0, 1, &scratch.sp30);
+                                        {
+                                            temp_v1_31 = sp28.x - sxy->x;
+                                            slot->unk13C = temp_v1_31;
+                                            slot->unk138 = temp_v1_31;
+                                            slot->unk134 = temp_v1_31;
+                                            slot->unk130 = temp_v1_31;
+                                            temp_v1_32 = sp28.y - sxy->y;
+                                            slot->unk13E = temp_v1_32;
+                                            slot->unk13A = temp_v1_32;
+                                            slot->unk136 = temp_v1_32;
+                                            slot->unk132 = temp_v1_32;
+                                        }
+                                    }
+                                }
+                                slot->unk3C = 0xFFFF;
+                                var_v0_15 = (slot->unk174 & ~0x1800) | 0x1000;
+                                goto block_297;
+                            }
+                            if (temp_v0_12 == 3)
+                            {
+                                slot->unk3C = 0xFFFF;
+                                var_v0_15 = (slot->unk174 & ~0x1800) | 0x1000;
+                                goto block_297;
+                            }
+                            goto block_298;
+                        }
+                    }
+                    else
+                    {
+                        goto block_298;
+                    }
+                    break;
+                case 5:
+                    if ((rec->unk34 == 0) && !(rec->unk3C & 0x01000000))
+                    {
+                        temp_v1_33 = (u16)FRAME_RESOURCE_ENTRIES[rec->unk3B].unkA >> 0xC;
+                        if (temp_v1_33 != 1)
+                        {
+                            if ((s32)temp_v1_33 < 2)
+                            {
+                                if (temp_v1_33 == 0)
+                                {
+
+                                    func_800A3938(FRAME_RESOURCE_ENTRIES[rec->unk3B].unkA & 0xFFF, field_get_actor_sound_pan(rec->unk3A));
+                                }
+                            }
+                        }
+                        else
+                        {
+
+                            func_800A39A8(FRAME_RESOURCE_ENTRIES[rec->unk3B].unkA & 0xFFF, field_get_actor_sound_pan(rec->unk3A), rec->unk3B - 3, rec->unk3A);
+                        }
+                    }
+                    else
+                    {
+                        goto block_298;
+                    }
+                    break;
+                case 2:
+                    if (part->unk24 & 0x100000)
+                    {
+                        field_unpack_effect_quad_corners8(sp64, rec->unk21 & 0x80, (s8*)item);
+                        sp78 += 1;
+                    }
+                    else
+                    {
+                        goto block_298;
+                    }
+                    break;
+                case 4:
+                    if ((slot->unk174 & 0x1800) != 0x800)
+                    {
+                        temp_v1_34 = slot->unk3C;
+                        if ((temp_v1_34 != 0xFFFF) && (temp_v1_34 != 0))
+                        {
+                            if (rec->unk21 & 0x80)
+                            {
+                                dir->unk0 = (s16)(s8)(u8)item[1];
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16) - (s8)*item;
+                            }
+                            else
+                            {
+                                dir->unk0 = (s16)(s8)(u8)item[1];
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16)(s8)*item;
+                            }
+                            gte_ldv0(dir);
+                            gte_rtv0();
+                            gte_stlvnl(gte_out);
+                            slot->unk130 = (u16)gte_out->vx;
+                            slot->unk132 = (u16)(gte_out->vy - sp74);
+                            if (rec->unk21 & 0x80)
+                            {
+                                dir->unk0 = (s16)(s8)item[3];
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16) - (s8)item[2];
+                            }
+                            else
+                            {
+                                dir->unk0 = (s16)(s8)item[3];
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16)(s8)item[2];
+                            }
+                            gte_ldv0(dir);
+                            gte_rtv0();
+                            gte_stlvnl(gte_out);
+                            slot->unk134 = (u16)gte_out->vx;
+                            slot->unk136 = (u16)(gte_out->vy - sp74);
+                            if (rec->unk21 & 0x80)
+                            {
+                                dir->unk0 = (s16)(s8)item[5];
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16) - (s8)item[4];
+                            }
+                            else
+                            {
+                                dir->unk0 = (s16)(s8)item[5];
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16)(s8)item[4];
+                            }
+                            gte_ldv0(dir);
+                            gte_rtv0();
+                            gte_stlvnl(gte_out);
+                            slot->unk138 = (u16)gte_out->vx;
+                            slot->unk13A = (u16)(gte_out->vy - sp74);
+                            if (rec->unk21 & 0x80)
+                            {
+                                dir->unk0 = (s16)(s8)item[8];
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16) - (s8)item[6];
+                            }
+                            else
+                            {
+                                dir->unk0 = (s16)(s8)item[8];
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16)(s8)item[6];
+                            }
+                            gte_ldv0(dir);
+                            gte_rtv0();
+                            gte_stlvnl(gte_out);
+                            slot->unk13C = (u16)gte_out->vx;
+                            temp_a3_2 = slot->unk3C;
+                            slot->unk13E = (u16)(gte_out->vy - sp74);
+                            if (temp_a3_2 & 0x8000)
+                            {
+                                if (field_start_bound_action_animation(rec->unk3A, 0, NULL, temp_a3_2) != 0)
+                                {
+                                    slot->unk174 = (s32)((slot->unk174 & ~0x1800) | 0x1000);
+                                }
+                            }
+                            else
+                            {
+                                var_s0 = func_800839F8(rec->unk3A, 0);
+                                if (var_s0 != -1U)
+                                {
+                                    if (func_80083EEC(rec->unk3A, var_s0, slot->unk3C) != 0)
+                                    {
+                                        ((u8*)&slot->unk178)[1] = var_s0;
+                                        field_start_actor_animation(var_s0, 0, NULL);
+                                    }
+                                }
+                            }
+                            slot->unk3C = 0xFFFF;
+                            slot->unk174 = (slot->unk174 & ~0x1800) | 0x800;
+                        }
+                    }
+                    goto block_298;
+                default:
+                    goto block_298;
+                }
+            }
+            else
+            {
+            block_298:
+            }
+            item += 9;
+        } while (--item_count != 0);
+    }
+    if (sp78 != 0)
+    {
+        s16* p = sp64;
+        while (p != sp64 + 8)
+        {
+            p[0] = ((p[0] * part->unk2E >> 6) * g_field_effect_track_scale.x) >> 12;
+            p[1] = ((p[1] * part->unk33 >> 6) * g_field_effect_track_scale.z) >> 12;
+            p += 2;
+        }
+        slot->unk12C = (s16)((s32)(sp64[2] + sp64[0]) >> 1);
+        var_v0_27 = abs(sp64[2] - sp64[0]);
+        slot->unk12E = var_v0_27;
+        if (slot->unk12E == 0)
+        {
+            slot->unk12E = abs((s16)sp64[4] - sp64[0]);
+            slot->unk12C = (s16)((s32)((s16)sp64[4] + sp64[0]) >> 1);
+        }
+        cursor = field_render_actor_ground_shadow(rec, cursor, base, sp64);
+    }
+    return cursor;
+}
+
+
+/* field12 */
+/**
+ * @file field12.c
+ * @brief Field animation-frame audio/visual processor, carved from the top
+ *        of the unk2 segment (the single-function slot right after
+ *        field11.c's func_80075C88).
+ */
+
+#include "common.h"
+#include "field_types.h"
+typedef struct
+{
+    u32 addr : 24;
+    u32 len : 8;
+} PrimitiveTag;
+
+
+
+
+
+
+
+
+/* This function needs the full 32-bit unk34 (masked against 0x100000), unlike
+ * the u16 view used by field8.c/field10.c's local copy of the same struct. */
+
+
+
+
+
+
+/* Local view of the shared per-track "slot" record; only the fields this
+ * function touches are named, matching the per-file minimal-view convention
+ * already used by field7.c/field8.c/field10.c/field11.c for the same real
+ * struct. */
+
+
+
+
+
+
+/* Output of field_test_quad_actor_contacts: resolved track/actor index plus the screen-space
+ * x/y it computed for it. */
+
+
+#include "sdk/inline_c.h"
+#include "sdk/gte_dmpsx_compat.h"
+
+
+
+/**
+ * @brief Field animation-frame audio/visual processor for the "non-negative
+ *        item" resource variant, spawning per-frame billboard primitives and
+ *        panning any attached sound cue relative to the camera.
+ * @param rec Effect record.
+ * @param cursor Vertex-buffer cursor pointer, threaded and returned.
+ * @param base Ordering-table / primitive base array.
+ * @param item Animation data blob for this frame.
+ * @param flag Selects which of the actor's two audio channels to update.
+ * @param part Part definition supplying flags and placement selectors.
+ * @return Updated cursor pointer.
+ * @note Sibling of field11.c's func_80075C88 (called for the item < 0 case
+ *       there, this one for item >= 0); same struct types, GTE pan-vector
+ *       macros, and dual int-pointer/byte-pointer cursor idiom, but a simpler
+ *       placement-opcode dispatch (no 0x7F0000-flags branch tree) and a wider
+ *       11-byte (0xB) per-frame record with 16-bit byte-pair deltas instead of
+ *       func_80075C88's 8-bit signed deltas.
+ * @note gte_dmpsx_compat.h supplies the COP2 words used by the GTE macros.
+ * @see decomp.me (100%)
+ */
+s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 flag, FramePartDef *part)
+{
+    MATRIX *mtx = (MATRIX *) 0x1F800000;
+    Vec2s *sxy = (Vec2s *) 0x1F800040;
+    s32 sp5C;
+    VECTOR *gte_out = (VECTOR *) 0x1F800044;
+    FrameSVector *dir = (FrameSVector *) 0x1F800054;
+    s16 *sp60 = (s16 *) 0x1F800064;
+    Vec2s *sp64;
+    Vec2s *sp68;
+    FrameActorState *actor;
+    s32 sp70;
+    s32 sp74;
+    TrackPlacement sp28;
+    struct { s32 sp30; u8 pad34[0x24]; } scratch;
+    u8 *var_s1;
+    POLY_FT4 *poly;
+    s16 temp_v1_24;
+    s32 var_s0;
+    s32 *var_a2;
+    s32 temp_a0_3;
+    s32 temp_a1_2;
+    s32 temp_s6;
+    s32 temp_t0_call;
+    s32 temp_v0_5;
+    s32 temp_v1_10;
+    s32 temp_v1_11;
+    s32 temp_v1_15;
+    s32 temp_v1_17;
+    s32 temp_v1_20;
+    s32 temp_v1_23;
+    s32 temp_v1_2;
+    s32 var_a0;
+    s32 var_a0_2;
+    s32 var_a1_2;
+    s32 var_v0_2;
+    s32 var_v0_3;
+    s32 var_v0_5;
+    s32 var_v0_6;
+    s32 var_v0_9;
+    s32 var_v1;
+    s32 var_a1;
+    s32 var_v1_2;
+    s32 var_v1_3;
+    u16 temp_a1;
+    u16 temp_v0_7;
+    u16 temp_v0_8;
+    u16 temp_v1_21;
+    u16 temp_v1_22;
+    u16 var_v1_7;
+    u32 temp_v1_16;
+    u32 temp_v1_25;
+    u32 temp_v1_3;
+    u8 temp_a0;
+    s32 temp_s4;
+    s32 temp_t1;
+    u8 temp_v0;
+    u8 temp_v0_2;
+    u8 temp_v0_3;
+    u8 temp_v0_4;
+    u8 temp_v1;
+    u8 temp_v1_18;
+    u8 temp_v1_4;
+    s32 temp_v1_5;
+    s32 temp_v1_6;
+    s32 temp_v1_7;
+    s32 temp_v1_8;
+    u8 temp_v1_9;
+    u8 var_a0_3;
+    u8 var_a0_4;
+    u8 var_a0_5;
+    u8 var_a0_6;
+    Struct_D80105AE0 *slot;
+    Struct_D80105AE0 *temp_v0_6;
+
+    sp74 = 0;
+    sp64 = (Vec2s *) 0x1F800080;
+    sp68 = (Vec2s *) 0x1F800094;
+    slot = &FRAME_OBJECT_STATES[rec->unk3A];
+    actor = &FRAME_ACTOR_SLOTS[rec->unk22];
+    *(s32 *) &slot->unk12C = 0;
+    {
+        s32 *zero_ptr = (s32 *) ((u8 *) slot + 0x1C);
+        var_a1 = 7;
+        do
+        {
+            *(s32 *) ((u8 *) zero_ptr + 0x148) = 0;
+            var_a1 -= 1;
+            zero_ptr -= 1;
+        } while (var_a1 >= 0);
+    }
+    *(s32 *) &slot->unk144 = 0;
+    *(s32 *) &slot->unk140 = 0;
+    field_build_effect_part_matrix(rec, part, mtx, actor);
+    gte_SetRotMatrix(mtx);
+
+    var_v0_2 = g_field_view_offset_x;
+    if (var_v0_2 < 0)
+    {
+        var_v0_2 += 0xFF;
+    }
+    var_v1 = rec->unk0;
+    var_a1_2 = var_v0_2 >> 8;
+    if (var_v1 < 0)
+    {
+        var_v1 += 0xFF;
+    }
+    var_a0 = g_field_view_offset_y;
+    sxy->x = (u16) ((var_v0_2 >> 8) + ((var_v1 >> 8) + 0xA0));
+    if (var_a0 < 0)
+    {
+        var_a0 += 0xFF;
+    }
+    var_v0_3 = rec->unk4;
+    var_v1_2 = var_a0 >> 8;
+    if (var_v0_3 < 0)
+    {
+        var_v0_3 += 0xFF;
+    }
+    var_a0_2 = rec->unk8;
+    var_v0_5 = var_v0_3 >> 8;
+    var_v0_5 += 0x70;
+    var_a1_2 = var_v1_2 + var_v0_5;
+    if (var_a0_2 < 0)
+    {
+        var_a0_2 += 0x1FF;
+    }
+    var_v1_3 = g_field_view_offset_z;
+    var_v0_5 = var_a0_2 >> 9;
+    var_a0_2 = var_a1_2 - var_v0_5;
+    if (var_v1_3 < 0)
+    {
+        var_v1_3 += 0x1FF;
+    }
+    var_v0_5 = var_v1_3 >> 9;
+    temp_a1 = var_a0_2 - var_v0_5;
+    sxy->y = temp_a1;
+    temp_v1 = rec->unk37;
+    temp_a0 = rec->unk38;
+    if ((temp_v1 | temp_a0) != 0)
+    {
+        temp_v1_2 = (s8) temp_v1 + ((s32) (((s8) temp_a0 - (s8) temp_v1) * rec->unk34) / (s32) rec->unk35);
+        sp70 = temp_v1_2;
+        sxy->y = (u16) (temp_a1 - temp_v1_2);
     }
     else
     {
-        position->vx = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x + delta_x;
+        sp70 = 0;
     }
-    position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].y;
-    position->vz = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].z;
-    return;
-extend_track_xz:
-    position->vx = (g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x * 2) - g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].x;
-    position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].y;
-    position->vz = (g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].z * 2) - g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].z;
-    return;
-extend_link_xz:
-    position->vx = (g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x * 2) - g_field_effect_records[effect->position_data.linked_effect_index].x;
-    position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].y;
-    position->vz = (g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].z * 2) - g_field_effect_records[effect->position_data.linked_effect_index].z;
-    return;
+    field_extract_effect_quad_corners16(rec, item, sp60);
+    temp_v1_3 = part->unk34;
+    if (temp_v1_3 & 0x100000)
+    {
+        field_apply_effect_quad_center_offset(rec, sxy, sp60, mtx, (temp_v1_3 >> 0x14) & 1);
+    }
+    slot->unk140 = (u16) sp60[0];
+    slot->unk142 = (u16) sp60[1];
+    slot->unk144 = (u16) sp60[4];
+    slot->unk146 = (u16) sp60[5];
+    temp_t1 = *item;
+    sp5C = (s32) temp_t1;
+    item += 1;
+    if (temp_t1 != 0)
+    {
+        var_s1 = item + 0x11;
+        poly = (POLY_FT4 *) cursor;
+        do
+        {
+            temp_v1_4 = var_s1[-0xA];
+            if (!(temp_v1_4 & 0x20))
+            {
+                field_resolve_effect_part_color(actor, rec, part, (FieldPrimitiveColor*)&((P_TAG*)cursor)->r0);
+                do
+                {
+                    ((u8 *)&poly->tag)[3] = 9;
+                    poly->code = 0x2CU;
+                    if (rec->unk1C & 0x800000)
+                    {
+                        setSemiTrans(poly, 1);
+                        do {} while (0);
+                    }
+                    else
+                    {
+                        setSemiTrans(poly, 0);
+                    }
+                } while (0);
+                temp_s4 = var_s1[-0xD];
+                temp_s6 = var_s1[-0xC] - 1;
+                temp_t0_call = (s32) (s16) (var_s1[-0x10] + (var_s1[-0x7] << 8));
+                var_s0 = (s16) (*item + (var_s1[-0x8] << 8));
+                if (rec->unk21 & 0x80)
+                {
+                    var_s0 = -var_s0 - temp_s4;
+                }
+                temp_s4 -= 1;
+                field_project_effect_sprite_quad(rec, sxy, (POLY_FT4*)cursor, temp_s4, temp_s6, (s32) var_s0, temp_t0_call, (FieldSpriteFrame*)item, mtx);
+                if ((var_s1[-0xA] ^ ((u8) rec->unk21 >> 1)) & 0x40)
+                {
+                    temp_v0 = var_s1[-0xF];
+                    poly->u1 = temp_v0;
+                    poly->u3 = temp_v0;
+                    temp_v1_5 = poly->u1 + temp_s4;
+                    var_a0_3 = 0xFF;
+                    if (temp_v1_5 != 0x100)
+                    {
+                        var_a0_3 = temp_v1_5;
+                    }
+                    poly->u2 = var_a0_3;
+                    poly->u0 = var_a0_3;
+                }
+                else
+                {
+                    temp_v0_2 = var_s1[-0xF];
+                    poly->u0 = temp_v0_2;
+                    poly->u2 = temp_v0_2;
+                    temp_v1_6 = poly->u0 + temp_s4;
+                    var_a0_4 = 0xFF;
+                    if (temp_v1_6 != 0x100)
+                    {
+                        var_a0_4 = temp_v1_6;
+                    }
+                    poly->u3 = var_a0_4;
+                    poly->u1 = var_a0_4;
+                }
+                if (var_s1[-0xA] & 0x80)
+                {
+                    temp_v0_3 = var_s1[-0xE];
+                    poly->v2 = temp_v0_3;
+                    poly->v3 = temp_v0_3;
+                    temp_v1_7 = poly->v2 + temp_s6;
+                    var_a0_5 = 0xFF;
+                    if (temp_v1_7 != 0x100)
+                    {
+                        var_a0_5 = temp_v1_7;
+                    }
+                    poly->v1 = var_a0_5;
+                    poly->v0 = var_a0_5;
+                }
+                else
+                {
+                    temp_v0_4 = var_s1[-0xE];
+                    poly->v0 = temp_v0_4;
+                    poly->v1 = temp_v0_4;
+                    temp_v1_8 = poly->v0 + temp_s6;
+                    var_a0_6 = 0xFF;
+                    if (temp_v1_8 != 0x100)
+                    {
+                        var_a0_6 = temp_v1_8;
+                    }
+                    poly->v3 = var_a0_6;
+                    poly->v2 = var_a0_6;
+                }
+                var_a1 = rec->unkC;
+                temp_a0_3 = var_a1 << 7;
+                if (var_a1 >= 2)
+                {
+                    temp_a0_3 = var_a1 << 6;
+                    if (var_a1 >= 9)
+                    {
+                        {
+                            s32 v0;
+                            s32 v1;
+                            s32 a0;
+                            v0 = var_a1 - 9;
+                            v0 <<= 6;
+                            v1 = var_s1[-0xA];
+                            v1 &= 3;
+                            v1 <<= 6;
+                            v1 += 0x3C0;
+                            v1 -= v0;
+                            v1 &= 0x3FF;
+                            a0 = part->unk4;
+                            v1 = (s32) v1 >> 6;
+                            a0 = (s32) ((u32) a0 >> 0x11);
+                            a0 &= 0x60;
+                            a0 |= 0x10;
+                            a0 |= v1;
+                            poly->tpage = (s16) a0;
+                        }
+                    }
+                    else
+                    {
+                        var_v1_3 = var_s1[-0xA];
+                        var_v1_3 &= 3;
+                        var_v1_3 <<= 6;
+                        var_v1_3 += 0x340;
+                        var_v1_3 -= temp_a0_3;
+                        var_v1_3 = (var_v1_3 & 0x3FF) >> 6;
+                        var_v0_5 = ((u32) part->unk4 >> 0x11) & 0x60;
+                        goto block_48;
+                    }
+                }
+                else
+                {
+                    temp_a0_3 = 0x380 - temp_a0_3;
+                    var_v1_3 = ((u32) part->unk4 >> 0x11) & 0x60;
+                    if (var_s1[-0xA] & 3)
+                    {
+                        var_v0_6 = (temp_a0_3 + 0x40) & 0x3FF;
+                    }
+                    else
+                    {
+                        var_v0_6 = temp_a0_3 & 0x3FF;
+                    }
+                    var_v0_5 = var_v0_6 >> 6;
+block_48:
+                    poly->tpage = (s16) (var_v1_3 | var_v0_5);
+                }
+                if (!(((u32)part->unk28 >> 12) & 3))
+                {
+                    if (var_s1[-0xB] == 0xB)
+                    {
+                        setSemiTrans(poly, 1);
+                    }
+                    temp_v0_5 = rec->unk3B;
+                    temp_v1_10 = var_s1[-0xB];
+                    temp_v0_5 += 0x1F4;
+                    temp_v0_5 <<= 6;
+                    temp_v1_10 &= 0x3F;
+                    poly->clut = (s16)(temp_v0_5 | temp_v1_10);
+                }
+                else
+                {
+                    temp_v1_9 = part->unk2D;
+                    if (temp_v1_9 >= 0x40U)
+                    {
+                        temp_t0_call = 0x1F2;
+                        if ((u8)actor->unk228 < 2U)
+                        {
+                            temp_t0_call = (actor->unk228 * 2) + 0x1EE;
+                        }
+                    }
+                    else
+                    {
+                        temp_t0_call = (temp_v1_9 >> 4) + 0x1EA;
+                    }
+                    temp_v1_10 = ((u32)part->unk28 >> 0xC) & 3;
+                    switch (temp_v1_10)
+                    {
+                    case 1:
+                    {
+                        temp_v1_10 = temp_t0_call << 6;
+                        temp_v0_5 = part->unk2D & 0xF;
+                        temp_v1_10 |= temp_v0_5;
+                        poly->clut = (s16)temp_v1_10;
+                    }
+                    break;
+                    case 2:
+                        if (actor->unk228 >= 3)
+                        {
+                            temp_v1_10 = temp_t0_call << 6;
+                            temp_v0_5 = part->unk2D & 0xF;
+                            temp_v1_10 |= temp_v0_5;
+                            poly->clut = (s16)temp_v1_10;
+                        }
+                        else
+                        {
+                            if (var_s1[-0xB] == 0xB)
+                            {
+                                setSemiTrans(poly, 1);
+                            }
+                            temp_v0_5 = rec->unk3B;
+                            temp_v1_10 = var_s1[-0xB];
+                            temp_v0_5 += 0x1F4;
+                            temp_v0_5 <<= 6;
+                            temp_v1_10 &= 0x3F;
+                            poly->clut = (s16)(temp_v0_5 | temp_v1_10);
+                        }
+                        break;
+                    }
+                }
+                temp_v1_11 = (s32) rec->unk8 >> 7;
+                if (temp_v1_11 < 0)
+                {
+                    addPrim(base, cursor);
+                    poly++;
+                    cursor = (s32*)((u8*)cursor + 0x28);
+                }
+                else if (temp_v1_11 >= 0x1000)
+                {
+                    addPrim(&base[0xFFF], cursor);
+                    poly++;
+                    cursor = (s32*)((u8*)cursor + 0x28);
+                }
+                else
+                {
+                    poly++;
+                    setaddr(cursor, getaddr(&base[temp_v1_11])),
+                    setaddr(&base[(s32)rec->unk8 >> 7], cursor);
+                    cursor = (s32*)((u8*)cursor + 0x28);
+                }
+                var_s1 += 0xB;
+                item += 0xB;
+            }
+            else
+            {
+                temp_v1_15 = temp_v1_4 & 0xF;
+                if ((flag == 0) || (temp_v1_15 == 2) || ((slot->unk178 & 1) && (temp_v1_15 == 0)))
+                {
+                    temp_v1_16 = var_s1[-0xA] & 0xF;
+                    switch (temp_v1_16)
+                    {
+                    case 0:
+                        field_transform_effect_quad_vertices16(rec, slot, item, 0, sxy, dir, gte_out);
+                        break;
+                    case 3:
+                        field_transform_effect_quad_vertices16(rec, slot, item, 4, sxy, dir, gte_out);
+                        break;
+                    case 1:
+                        if (part->unk24 & 0x100000)
+                        {
+                            if (rec->unk21 & 0x80)
+                            {
+                                dir->unk0 = (s16) (var_s1[-0xF] + (var_s1[-0xE] << 8));
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16) -(*item + (var_s1[-0x10] << 8));
+                            }
+                            else
+                            {
+                                dir->unk0 = (s16) (var_s1[-0xF] + (var_s1[-0xE] << 8));
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16) (*item + (var_s1[-0x10] << 8));
+                            }
+                            gte_ldv0(dir);
+                            gte_rtv0();
+                            gte_stlvnl(gte_out);
+                            sp64[0].x = (s16) (sxy->x + gte_out->vx);
+                            sp64[0].y = (s16) (sxy->y + gte_out->vy);
+                            if (rec->unk21 & 0x80)
+                            {
+                                dir->unk0 = (s16) (var_s1[-0xB] + (var_s1[-0x9] << 8));
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16) -(var_s1[-0xD] + (var_s1[-0xC] << 8));
+                            }
+                            else
+                            {
+                                dir->unk0 = (s16) (var_s1[-0xB] + (var_s1[-0x9] << 8));
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16) (var_s1[-0xD] + (var_s1[-0xC] << 8));
+                            }
+                            gte_ldv0(dir);
+                            gte_rtv0();
+                            gte_stlvnl(gte_out);
+                            sp64[1].x = (s16) (sxy->x + gte_out->vx);
+                            sp64[1].y = (s16) (sxy->y + gte_out->vy);
+                            if (rec->unk21 & 0x80)
+                            {
+                                dir->unk0 = (s16) (var_s1[-0x6] + (var_s1[-0x5] << 8));
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16) -(var_s1[-0x8] + (var_s1[-0x7] << 8));
+                            }
+                            else
+                            {
+                                dir->unk0 = (s16) (var_s1[-0x6] + (var_s1[-0x5] << 8));
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16) (var_s1[-0x8] + (var_s1[-0x7] << 8));
+                            }
+                            gte_ldv0(dir);
+                            gte_rtv0();
+                            gte_stlvnl(gte_out);
+                            sp64[2].x = (s16) (sxy->x + gte_out->vx);
+                            sp64[2].y = (s16) (sxy->y + gte_out->vy);
+                            if (rec->unk21 & 0x80)
+                            {
+                                dir->unk0 = (s16) (var_s1[-0x2] + (var_s1[-0x1] << 8));
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16) -(var_s1[-0x4] + (var_s1[-0x3] << 8));
+                            }
+                            else
+                            {
+                                dir->unk0 = (s16) (var_s1[-0x2] + (var_s1[-0x1] << 8));
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16) (var_s1[-0x4] + (var_s1[-0x3] << 8));
+                            }
+                            gte_ldv0(dir);
+                            gte_rtv0();
+                            gte_stlvnl(gte_out);
+                            sp64[3].x = (s16) (sxy->x + gte_out->vx);
+                            sp64[3].y = (s16) (sxy->y + gte_out->vy);
+                            if (!(slot->unk174 & 0x1800) && (((temp_v1_17 = slot->unk3C, (temp_v1_17 != 0xFFFF)) && (temp_v1_17 != 0)) || (actor->unkC->unk14 == 3)))
+                            {
+                                var_s0 = field_test_quad_actor_contacts(sp64, rec, &sp28);
+                                if (var_s0 == 1)
+                                {
+                                    {
+                                        Struct_D80105AE0 *slots_base = FRAME_OBJECT_STATES;
+                                        temp_v0_6 = &slots_base[sp28.index];
+                                    }
+                                    temp_v0_6->unkC = (s32) (temp_v0_6->unkC & ~0x400);
+                                    {
+                                        u8 *targets = (u8 *)slot + 0x180;
+                                        targets[((u8 *)&slot->unk178)[3]] = sp28.index;
+                                    }
+                                    temp_v1_18 = ((u8 *) &slot->unk178)[3];
+                                    if (temp_v1_18 < 9U)
+                                    {
+                                        ((u8 *) &slot->unk178)[3] = (u8) (temp_v1_18 + 1);
+                                    }
+                                    if (actor->unkC->unk14 == 3)
+                                    {
+                                        actor->unk23A = (u8) (actor->unk23A | (var_s0 << actor->unk232));
+                                        actor->unk229[actor->unk232] = (u8) sp28.index;
+                                        {
+                                            s32 a0;
+                                            s32 a1;
+                                            Struct_D800FDF58 *entry;
+
+                                            a0 = g_field_view_offset_x;
+                                            if (a0 < 0)
+                                            {
+                                                a0 += 0xFF;
+                                            }
+                                            var_v1_3 = FRAME_ACTORS[sp28.index].unk0;
+                                            a1 = a0 >> 8;
+                                            if (var_v1_3 < 0)
+                                            {
+                                                var_v1_3 += 0xFF;
+                                            }
+                                            a0 = g_field_view_offset_y;
+                                            do
+                                            {
+                                                var_v0_5 = var_v1_3 >> 8;
+                                                var_v0_5 += 0xA0;
+                                                sp68->x = (u16)(a1 + var_v0_5);
+                                            } while (0);
+                                            if (a0 < 0)
+                                            {
+                                                a0 += 0xFF;
+                                            }
+                                            entry = &FRAME_ACTORS[sp28.index];
+                                            var_v0_5 = entry->unk4;
+                                            a1 = a0 >> 8;
+                                            if (var_v0_5 < 0)
+                                            {
+                                                var_v0_5 += 0xFF;
+                                            }
+                                            a0 = entry->unk8;
+                                            var_v0_5 >>= 8;
+                                            var_v0_5 += 0x70;
+                                            a1 += var_v0_5;
+                                            if (a0 < 0)
+                                            {
+                                                a0 += 0x1FF;
+                                            }
+                                            var_v1_3 = g_field_view_offset_z;
+                                            var_v0_5 = a0 >> 9;
+                                            a0 = a1 - var_v0_5;
+                                            if (var_v1_3 < 0)
+                                            {
+                                                var_v1_3 += 0x1FF;
+                                            }
+                                            var_v0_5 = var_v1_3 >> 9;
+                                            sp68->y = (u16) (a0 - var_v0_5);
+                                        }
+                                        if (FRAME_ACTORS[sp28.index].unk21 & 0x80)
+                                        {
+                                            actor->unk1FE[actor->unk232].x = sp68->x - sp28.x;
+                                        }
+                                        else
+                                        {
+                                            actor->unk1FE[actor->unk232].x = sp28.x - sp68->x;
+                                        }
+                                        actor->unk1FE[actor->unk232].y = (s16) (sp28.y - sp68->y);
+                                        actor->unk232 = (u8) (actor->unk232 + 1);
+                                        func_8008A840(actor->unk228, sp28.index);
+                                        do
+                                        {
+                                            do
+                                            {
+                                                {
+                                                    s32 placement_flags;
+                                                    temp_a1_2 = ~0x1800;
+                                                    temp_v0_7 = sp28.x - sxy->x;
+                                                    placement_flags = slot->unk174 & temp_a1_2;
+                                                    slot->unk13C = temp_v0_7;
+                                                    slot->unk138 = temp_v0_7;
+                                                    slot->unk134 = temp_v0_7;
+                                                    slot->unk130 = temp_v0_7;
+                                                    temp_v0_8 = sp28.y - sxy->y;
+                                                    placement_flags |= 0x1000;
+                                                    slot->unk174 = placement_flags;
+                                                    slot->unk13E = temp_v0_8;
+                                                    slot->unk13A = temp_v0_8;
+                                                    slot->unk136 = temp_v0_8;
+                                                    slot->unk132 = temp_v0_8;
+                                                }
+                                            } while (0);
+                                        } while (0);
+                                    }
+                                    else
+                                    {
+                                        if ((func_8008A840(rec->unk3A, sp28.index) == var_s0) && ((temp_v1_20 = slot->unk3C, (temp_v1_20 == var_s0)) || (temp_v1_20 == 3) || (temp_v1_20 == 0x10)))
+                                        {
+                                            slot->unk3C = 0x1E;
+                                        }
+                                        var_a1_2 = 1;
+                                        if (slot->unk3C & 0x8000)
+                                        {
+                                            scratch.sp30 = sp28.index;
+                                            var_a2 = &scratch.sp30;
+block_176:
+                                            if (field_start_bound_action_animation(rec->unk3A, var_a1_2, var_a2, slot->unk3C) != 0)
+                                            {
+                                                slot->unk174 = (s32) ((slot->unk174 & ~0x1800) | 0x1000);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            var_s0 = func_800839F8(rec->unk3A, 0);
+                                            if (var_s0 != -1)
+                                            {
+                                                if (func_80083EEC(rec->unk3A, var_s0, slot->unk3C) != 0)
+                                                {
+                                                    ((u8 *) &slot->unk178)[1] = var_s0;
+                                                    scratch.sp30 = sp28.index;
+                                                    field_start_actor_animation(var_s0, 1, &scratch.sp30);
+                                                    temp_v1_21 = sp28.x - sxy->x;
+                                                    slot->unk13C = temp_v1_21;
+                                                    slot->unk138 = temp_v1_21;
+                                                    slot->unk134 = temp_v1_21;
+                                                    slot->unk130 = temp_v1_21;
+                                                    var_v1_7 = sp28.y - sxy->y;
+                                                    goto block_126;
+                                                }
+                                            }
+                                        }
+                                        goto block_182;
+                                    }
+                                }
+                                else
+                                {
+                                    if (var_s0 == 2)
+                                    {
+                                        slot->unk3C = 0x1E;
+                                        var_s0 = func_800839F8(rec->unk3A, 0);
+                                        if (var_s0 != -1)
+                                        {
+                                            if (func_80083EEC(rec->unk3A, var_s0, slot->unk3C) != 0)
+                                            {
+                                                ((u8 *) &slot->unk178)[1] = var_s0;
+                                                scratch.sp30 = sp28.index;
+                                                field_start_actor_animation(var_s0, 1, &scratch.sp30);
+                                                temp_v1_22 = sp28.x - sxy->x;
+                                                slot->unk13C = temp_v1_22;
+                                                slot->unk138 = temp_v1_22;
+                                                slot->unk134 = temp_v1_22;
+                                                slot->unk130 = temp_v1_22;
+                                                var_v1_7 = sp28.y - sxy->y;
+block_126:
+                                                slot->unk13E = var_v1_7;
+                                                slot->unk13A = var_v1_7;
+                                                slot->unk136 = var_v1_7;
+                                                slot->unk132 = var_v1_7;
+                                            }
+                                        }
+block_182:
+                                        slot->unk3C = 0xFFFF;
+                                        goto block_183;
+                                    }
+                                    if (var_s0 == 3)
+                                    {
+                                        slot->unk3C = 0xFFFF;
+block_183:
+                                        slot->unk174 = (s32) ((slot->unk174 & ~0x1800) | 0x1000);
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    case 6:
+                        temp_v1_23 = slot->unk3C;
+                        if (!(temp_v1_23 & 0x8000) && (temp_v1_23 != 0xFFFF) && (((temp_v1_24 = rec->unk2A, (temp_v1_24 == 0x91)) || (temp_v1_24 == 0x85) || (temp_v1_24 == 0x86) || (temp_v1_24 == 0x98))) && !(rec->unk3C & 0x01000000))
+                        {
+                            var_s0 = func_800839F8(rec->unk3A, 0);
+                            if ((var_s0 != -1) && (func_80083EEC(rec->unk3A, var_s0, slot->unk3C) != 0))
+                            {
+                                ((u8 *) &slot->unk178)[1] = var_s0;
+                                field_start_actor_animation(var_s0, 0, NULL);
+                                if (rec->unk21 & 0x80)
+                                {
+                                    dir->unk0 = (s16) (var_s1[-0xF] + (var_s1[-0xE] << 8));
+                                    dir->unk2 = 0;
+                                    dir->unk4 = (s16) -(*item + (var_s1[-0x10] << 8));
+                                }
+                                else
+                                {
+                                    dir->unk0 = (s16) (var_s1[-0xF] + (var_s1[-0xE] << 8));
+                                    dir->unk2 = 0;
+                                    dir->unk4 = (s16) (*item + (var_s1[-0x10] << 8));
+                                }
+                                gte_ldv0(dir);
+                                gte_rtv0();
+                                gte_stlvnl(gte_out);
+                                slot->unk130 = (u16) gte_out->vx;
+                                slot->unk132 = (u16) gte_out->vy;
+                                if (rec->unk21 & 0x80)
+                                {
+                                    dir->unk0 = (s16) (var_s1[-0xB] + (var_s1[-0x9] << 8));
+                                    dir->unk2 = 0;
+                                    dir->unk4 = (s16) -(var_s1[-0xD] + (var_s1[-0xC] << 8));
+                                }
+                                else
+                                {
+                                    dir->unk0 = (s16) (var_s1[-0xB] + (var_s1[-0x9] << 8));
+                                    dir->unk2 = 0;
+                                    dir->unk4 = (s16) (var_s1[-0xD] + (var_s1[-0xC] << 8));
+                                }
+                                gte_ldv0(dir);
+                                gte_rtv0();
+                                gte_stlvnl(gte_out);
+                                slot->unk134 = (u16) gte_out->vx;
+                                slot->unk136 = (u16) gte_out->vy;
+                                if (rec->unk21 & 0x80)
+                                {
+                                    dir->unk0 = (s16) (var_s1[-0x6] + (var_s1[-0x5] << 8));
+                                    dir->unk2 = 0;
+                                    dir->unk4 = (s16) -(var_s1[-0x8] + (var_s1[-0x7] << 8));
+                                }
+                                else
+                                {
+                                    dir->unk0 = (s16) (var_s1[-0x6] + (var_s1[-0x5] << 8));
+                                    dir->unk2 = 0;
+                                    dir->unk4 = (s16) (var_s1[-0x8] + (var_s1[-0x7] << 8));
+                                }
+                                gte_ldv0(dir);
+                                gte_rtv0();
+                                gte_stlvnl(gte_out);
+                                slot->unk138 = (u16) gte_out->vx;
+                                slot->unk13A = (u16) gte_out->vy;
+                                if (rec->unk21 & 0x80)
+                                {
+                                    dir->unk0 = (s16) (var_s1[-0x2] + (var_s1[-0x1] << 8));
+                                    dir->unk2 = 0;
+                                    dir->unk4 = (s16) -(var_s1[-0x4] + (var_s1[-0x3] << 8));
+                                }
+                                else
+                                {
+                                    dir->unk0 = (s16) (var_s1[-0x2] + (var_s1[-0x1] << 8));
+                                    dir->unk2 = 0;
+                                    dir->unk4 = (s16) (var_s1[-0x4] + (var_s1[-0x3] << 8));
+                                }
+                                gte_ldv0(dir);
+                                gte_rtv0();
+                                gte_stlvnl(gte_out);
+                                slot->unk13C = (u16) gte_out->vx;
+                                slot->unk13E = (u16) gte_out->vy;
+                            }
+                            goto block_183;
+                        }
+                        break;
+                    case 5:
+                        if ((rec->unk34 == 0) && !(rec->unk3C & 0x01000000))
+                        {
+                            FrameResourceEntry *resources = FRAME_RESOURCE_ENTRIES;
+                            u8 idx = rec->unk3B;
+                            temp_v1_25 = (u16) resources[idx].unkA >> 0xC;
+                            if (temp_v1_25 != 1)
+                            {
+                                if ((s32) temp_v1_25 < 2)
+                                {
+                                    if (temp_v1_25 == 0)
+                                    {
+                                        func_800A3938(resources[rec->unk3B].unkA & 0xFFF, field_get_actor_sound_pan(rec->unk3A));
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                func_800A39A8(resources[rec->unk3B].unkA & 0xFFF, field_get_actor_sound_pan(rec->unk3A), rec->unk3B - 3, rec->unk3A);
+                            }
+                        }
+                        break;
+                    case 2:
+                        if (part->unk24 & 0x100000)
+                        {
+                            field_unpack_effect_quad_corners16(sp60, rec->unk21 & 0x80, item);
+                            sp74 += 1;
+                        }
+                        break;
+                    case 4:
+                        if ((slot->unk3C != 0xFFFF) && !(slot->unk174 & 0x1800))
+                        {
+                            if (rec->unk21 & 0x80)
+                            {
+                                dir->unk0 = (s16) (var_s1[-0xF] + (var_s1[-0xE] << 8));
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16) -(*item + (var_s1[-0x10] << 8));
+                            }
+                            else
+                            {
+                                dir->unk0 = (s16) (var_s1[-0xF] + (var_s1[-0xE] << 8));
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16) (*item + (var_s1[-0x10] << 8));
+                            }
+                            gte_ldv0(dir);
+                            gte_rtv0();
+                            gte_stlvnl(gte_out);
+                            slot->unk130 = (u16) gte_out->vx;
+                            slot->unk132 = (u16) (gte_out->vy - sp70);
+                            if (rec->unk21 & 0x80)
+                            {
+                                dir->unk0 = (s16) (var_s1[-0xB] + (var_s1[-0x9] << 8));
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16) -(var_s1[-0xD] + (var_s1[-0xC] << 8));
+                            }
+                            else
+                            {
+                                dir->unk0 = (s16) (var_s1[-0xB] + (var_s1[-0x9] << 8));
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16) (var_s1[-0xD] + (var_s1[-0xC] << 8));
+                            }
+                            gte_ldv0(dir);
+                            gte_rtv0();
+                            gte_stlvnl(gte_out);
+                            slot->unk134 = (u16) gte_out->vx;
+                            slot->unk136 = (u16) (gte_out->vy - sp70);
+                            if (rec->unk21 & 0x80)
+                            {
+                                dir->unk0 = (s16) (var_s1[-0x6] + (var_s1[-0x5] << 8));
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16) -(var_s1[-0x8] + (var_s1[-0x7] << 8));
+                            }
+                            else
+                            {
+                                dir->unk0 = (s16) (var_s1[-0x6] + (var_s1[-0x5] << 8));
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16) (var_s1[-0x8] + (var_s1[-0x7] << 8));
+                            }
+                            gte_ldv0(dir);
+                            gte_rtv0();
+                            gte_stlvnl(gte_out);
+                            slot->unk138 = (u16) gte_out->vx;
+                            slot->unk13A = (u16) (gte_out->vy - sp70);
+                            if (rec->unk21 & 0x80)
+                            {
+                                dir->unk0 = (s16) (var_s1[-0x2] + (var_s1[-0x1] << 8));
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16) -(var_s1[-0x4] + (var_s1[-0x3] << 8));
+                            }
+                            else
+                            {
+                                dir->unk0 = (s16) (var_s1[-0x2] + (var_s1[-0x1] << 8));
+                                dir->unk2 = 0;
+                                dir->unk4 = (s16) (var_s1[-0x4] + (var_s1[-0x3] << 8));
+                            }
+                            gte_ldv0(dir);
+                            gte_rtv0();
+                            gte_stlvnl(gte_out);
+                            slot->unk13C = (u16) gte_out->vx;
+                            slot->unk13E = (u16) (gte_out->vy - sp70);
+                            if (slot->unk3C & 0x8000)
+                            {
+                                if (field_start_bound_action_animation(rec->unk3A, 0, NULL, slot->unk3C) != 0)
+                                {
+                                    slot->unk174 = (s32) ((slot->unk174 & ~0x1800) | 0x1000);
+                                }
+                            }
+                            else
+                            {
+                                var_s0 = func_800839F8(rec->unk3A, 0);
+                                if (var_s0 != -1)
+                                {
+                                    if (func_80083EEC(rec->unk3A, var_s0, slot->unk3C) != 0)
+                                    {
+                                        ((u8 *) &slot->unk178)[1] = var_s0;
+                                        field_start_actor_animation(var_s0, 0, NULL);
+                                    }
+                                }
+                            }
+                            slot->unk3C = 0xFFFF;
+                            slot->unk174 = (s32) ((slot->unk174 & ~0x1800) | 0x1000);
+                        }
+                        break;
+                    }
+                }
+                var_s1 += 0x11;
+                item += 0x11;
+            }
+            sp5C -= 1;
+        } while (sp5C != 0);
+    }
+    if (sp74 != 0)
+    {
+        s16 *p = sp60;
+        while (p != sp60 + 8)
+        {
+            p[0] = ((p[0] * part->unk2E >> 6) * g_field_effect_track_scale.x) >> 12;
+            p[1] = ((p[1] * part->unk33 >> 6) * g_field_effect_track_scale.z) >> 12;
+            p += 2;
+        }
+        var_v0_9 = abs(sp60[2] - sp60[0]);
+        slot->unk12E = (s16) ((var_v0_9 * 7) / 10);
+        slot->unk12C = (s16) ((s32) (sp60[2] + sp60[0]) >> 1);
+        cursor = field_render_actor_ground_shadow(rec, cursor, base, sp60);
+    }
+    return cursor;
+}
+
+#include "field_effect_primitives.h"
+#include "field_effect_transform.h"
+#include "field_effect_render_state.h"
+#include "sdk/libgpu.h"
+#include "sdk/rand.h"
+#include "sdk/inline_c.h"
+#include "sdk/gte_dmpsx_compat.h"
+
+#define FIELD_EFFECT_OT_SIZE 4096
+#define FIELD_EFFECT_OT_DEPTH_SHIFT 7
+#define FIELD_EFFECT_CENTER_X 160
+#define FIELD_EFFECT_CENTER_Y 112
+#define FIELD_RING_SEGMENTS 32
+#define FIELD_RING_ANGLE_STEP (ONE / FIELD_RING_SEGMENTS)
+#define FIELD_RADIAL_MAX_SEGMENTS 20
+#define FIELD_PART_ORIENTED_MARKER_SHIFT 3
+#define FIELD_GPU_ADDRESS_MASK 0x00FFFFFF
+#define FIELD_GPU_LENGTH_MASK 0xFF000000
+#define FIELD_RADIAL_SCRATCH ((FieldRadialScratch*)0x1F800000)
+
+/** @brief GPU coordinates accessed individually or as a packed XY word. */
+typedef union
+{
+    s32 word;
+    struct
+    {
+        s16 x;
+        s16 y;
+    } signed_pair;
+    struct
+    {
+        u16 x;
+        u16 y;
+    } unsigned_pair;
+} FieldScreenPoint;
+
+/** @brief Unsigned projected origin used by ring geometry. */
+typedef struct
+{
+    u16 x;
+    u16 y;
+} FieldScreenPair;
+
+/** @brief Gouraud triangle packet with packed color and coordinate access. */
+typedef struct
+{
+    s32 tag;
+    FieldPrimitiveColor color0;
+    FieldScreenPoint xy0;
+    FieldPrimitiveColor color1;
+    FieldScreenPoint xy1;
+    FieldPrimitiveColor color2;
+    FieldScreenPoint xy2;
+} FieldGouraudTriangle;
+
+/** @brief Gouraud line packet with packed color and coordinate access. */
+typedef struct
+{
+    s32 tag;
+    FieldPrimitiveColor color0;
+    FieldScreenPoint xy0;
+    FieldPrimitiveColor color1;
+    FieldScreenPoint xy1;
+} FieldGouraudLine;
+
+/** @brief Flat quad packet with paired signed and unsigned coordinate views. */
+typedef struct
+{
+    s32 tag;
+    FieldPrimitiveColor color0;
+    FieldScreenPoint xy0;
+    FieldScreenPoint xy1;
+    FieldScreenPoint xy2;
+    FieldScreenPoint xy3;
+} FieldFlatQuad;
+
+/** @brief Flat line packet with packed color and coordinate access. */
+typedef struct
+{
+    s32 tag;
+    FieldPrimitiveColor color0;
+    FieldScreenPoint xy0;
+    FieldScreenPoint xy1;
+} FieldFlatLine;
+
+/** @brief Shared scratchpad workspace for radial projection and random rotations. */
+typedef struct
+{
+    VECTOR origin;
+    VECTOR transformed;
+    union
+    {
+        VECTOR vector;
+        Vec2s screen;
+    } center;
+    VECTOR delta;
+    VECTOR jitter;
+    SVECTOR direction;
+    MATRIX matrices[FIELD_RADIAL_MAX_SEGMENTS];
+} FieldRadialScratch;
+
+extern FieldActorState g_field_actor_slots[80];
+extern FieldMotionRecord g_field_effect_records[FIELD_EFFECT_ACTIVE_RECORD_COUNT];
+
+/**
+ * @brief Emit a 32-segment shaded ring, using three Gouraud triangles per segment.
+ * @param effect Effect position, rendering flags, and part selection.
+ * @param packet_cursor Destination GPU packet buffer.
+ * @param ordering_table Depth-indexed ordering table.
+ * @return Packet cursor after the geometry and texture-page command.
+ * @see decomp.me (100%)
+ */
+u8* field_render_effect_ring(FieldMotionRecord* effect, u8* packet_cursor, s32* ordering_table)
+{
+    FieldScreenPair screen_origin;
+    SVECTOR direction;
+    VECTOR transformed;
+    MATRIX matrix;
+    FieldActorPartDef* part;
+    SVECTOR* direction_ptr;
+    VECTOR* transformed_ptr;
+    s32 next_angle;
+    s16 rim_y;
+    s16 inner_start_x;
+    s16 inner_start_y;
+    s16 inner_end_x;
+    s16 outer_start_x;
+    s16 outer_y;
+    FieldGouraudTriangle* next_packet;
+    FieldActorState* actor;
+    s32 scaled_cosine;
+    s32 address_mask;
+    s32 length_mask;
+    s32 outer_next_angle;
+    s32 packed_color;
+    s32 second_depth;
+    s32 third_depth;
+    s32 packet_tag;
+    s32 first_depth;
+    s32 camera_x;
+    s32 inner_angle;
+    s32 outer_angle;
+    s32 segment;
+    s32 next_scaled_cosine;
+    s32 angle;
+    s32 outer_cosine;
+    s32 radius;
+    FieldGouraudTriangle* second_triangle;
+    FieldGouraudTriangle* packets;
+
+    packets = (FieldGouraudTriangle*)packet_cursor;
+    part = &g_field_actor_slots[effect->actor_index].parts[effect->part_index];
+    actor = &g_field_actor_slots[effect->actor_index];
+    field_build_effect_part_matrix(effect, part, &matrix, actor);
+    gte_SetRotMatrix(&matrix);
+
+    camera_x = g_field_view_offset_x / 256;
+    screen_origin.x = (u16)(camera_x + (effect->x / 256 + FIELD_EFFECT_CENTER_X));
+    screen_origin.y = (u16)(FIELD_EFFECT_CENTER_Y + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512);
+    field_resolve_effect_part_color(actor, effect, part, &packets->color0);
+    setPolyG3(packets);
+    setSemiTrans(packets, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
+    segment = 0;
+    /* This render mode reuses animation_active as the inner-radius scale. */
+    radius = effect->animation_active;
+    direction_ptr = &direction;
+    transformed_ptr = &transformed;
+    address_mask = FIELD_GPU_ADDRESS_MASK;
+    length_mask = FIELD_GPU_LENGTH_MASK;
+    angle = segment;
+    do
+    {
+        next_angle = (segment + 1) << 7;
+        packets[0].xy1.unsigned_pair.x = screen_origin.x;
+        packets[0].xy1.unsigned_pair.y = screen_origin.y;
+        scaled_cosine = (rcos(angle) >> 6) * radius;
+        direction.vy = 0;
+        direction.vx = (s16)(scaled_cosine >> 8);
+        direction.vz = (s16)((s32)((rsin(angle) >> 6) * radius) >> 8);
+        gte_ldv0(direction_ptr);
+        gte_rtv0();
+        gte_stlvnl(transformed_ptr);
+        inner_start_x = screen_origin.x + (u16)transformed.vx;
+        packets[0].xy0.signed_pair.x = inner_start_x;
+        packets[1].xy0.signed_pair.x = inner_start_x;
+        inner_start_y = screen_origin.y + (u16)transformed.vy;
+        packets[0].xy0.signed_pair.y = inner_start_y;
+        packets[1].xy0.signed_pair.y = inner_start_y;
+        if (segment == (FIELD_RING_SEGMENTS - 1))
+        {
+            next_scaled_cosine = (rcos(0) >> 6) * radius;
+            inner_angle = 0;
+            direction.vy = 0;
+            direction.vx = (s16)(next_scaled_cosine >> 8);
+            direction.vz = (s16)((s32)((rsin(inner_angle) >> 6) * radius) >> 8);
+        }
+        else
+        {
+            next_scaled_cosine = (rcos(next_angle) >> 6) * radius;
+            inner_angle = next_angle;
+            direction.vy = 0;
+            direction.vx = (s16)(next_scaled_cosine >> 8);
+            direction.vz = (s16)((s32)((rsin(inner_angle) >> 6) * radius) >> 8);
+        }
+        gte_ldv0(direction_ptr);
+        gte_rtv0();
+        gte_stlvnl(transformed_ptr);
+        second_triangle = &packets[1];
+        inner_end_x = screen_origin.x + (u16)transformed.vx;
+        packets[0].xy2.signed_pair.x = inner_end_x;
+        second_triangle[0].xy2.signed_pair.x = inner_end_x;
+        packets[2].xy0.signed_pair.x = inner_end_x;
+        rim_y = screen_origin.y + (u16)transformed.vy;
+        packets[0].xy2.signed_pair.y = rim_y;
+        second_triangle[0].xy2.signed_pair.y = rim_y;
+        packets[2].xy0.signed_pair.y = rim_y;
+        direction.vx = (s16)(rcos(angle) >> 6);
+        direction.vy = 0;
+        direction.vz = (s16)(rsin(angle) >> 6);
+        gte_ldv0(direction_ptr);
+        gte_rtv0();
+        gte_stlvnl(transformed_ptr);
+        outer_start_x = screen_origin.x + (u16)transformed.vx;
+        second_triangle[0].xy1.signed_pair.x = outer_start_x;
+        packets[2].xy1.signed_pair.x = outer_start_x;
+        outer_y = screen_origin.y + (u16)transformed.vy;
+        second_triangle[0].xy1.signed_pair.y = outer_y;
+        packets[2].xy1.signed_pair.y = outer_y;
+        if (segment == (FIELD_RING_SEGMENTS - 1))
+        {
+            outer_cosine = rcos(0);
+            outer_angle = 0;
+            direction.vx = (s16)(outer_cosine >> 6);
+            direction.vy = 0;
+            direction.vz = (s16)(rsin(outer_angle) >> 6);
+        }
+        else
+        {
+            outer_next_angle = angle + FIELD_RING_ANGLE_STEP;
+            outer_cosine = rcos(outer_next_angle);
+            outer_angle = outer_next_angle;
+            direction.vx = (s16)(outer_cosine >> 6);
+            direction.vy = 0;
+            direction.vz = (s16)(rsin(outer_angle) >> 6);
+        }
+        gte_ldv0(direction_ptr);
+        gte_rtv0();
+        gte_stlvnl(transformed_ptr);
+        outer_y = (s16)(screen_origin.x + (u16)transformed.vx);
+        packets[2].xy2.signed_pair.x = outer_y;
+        packed_color = packets[0].color0.signed_word;
+        rim_y = (s16)(screen_origin.y + (u16)transformed.vy);
+        packet_tag = packets[0].tag;
+        packets[0].color1.signed_word = 0;
+        packets[2].color2.signed_word = 0;
+        packets[2].color1.signed_word = 0;
+        packets[1].color1.signed_word = 0;
+        packets[2].color0.signed_word = packed_color;
+        packets[1].color2.signed_word = packed_color;
+        packets[1].color0.signed_word = packed_color;
+        packets[0].color2.signed_word = packed_color;
+        packets[1].tag = packet_tag;
+        packets[2].tag = packet_tag;
+        packets[3].tag = packet_tag;
+        packets[3].color0.signed_word = packets[0].color0.signed_word;
+        packets[2].xy2.signed_pair.y = rim_y;
+        first_depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+        next_packet = &packets[1];
+        if (first_depth < 0)
+        {
+            packets->tag = (packets->tag & length_mask) | (ordering_table[0] & address_mask);
+            ordering_table[0] = (ordering_table[0] & length_mask) | ((s32)packets & address_mask);
+            packets = next_packet;
+        }
+        else if (first_depth >= FIELD_EFFECT_OT_SIZE)
+        {
+            packets->tag = (packets->tag & length_mask) | (ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] & address_mask);
+            ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] = (ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] & length_mask) | ((s32)packets & address_mask);
+            packets = next_packet;
+        }
+        else
+        {
+            packets->tag = (packets->tag & length_mask) | (ordering_table[effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT] & address_mask);
+            ordering_table[effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT] =
+                (ordering_table[effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT] & length_mask) | ((s32)packets & address_mask);
+            packets = next_packet;
+        }
+        second_depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+        if (second_depth < 0)
+        {
+            packets->tag = (packets->tag & length_mask) | (ordering_table[0] & address_mask);
+            ordering_table[0] = (ordering_table[0] & length_mask) | ((s32)packets & address_mask);
+            packets++;
+        }
+        else if (second_depth >= FIELD_EFFECT_OT_SIZE)
+        {
+            packets->tag = (packets->tag & length_mask) | (ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] & address_mask);
+            ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] = (ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] & length_mask) | ((s32)packets & address_mask);
+            packets++;
+        }
+        else
+        {
+            packets->tag = (packets->tag & length_mask) | (ordering_table[effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT] & address_mask);
+            ordering_table[effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT] =
+                (ordering_table[effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT] & length_mask) | ((s32)packets & address_mask);
+            packets++;
+        }
+        third_depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+        if (third_depth < 0)
+        {
+            packets->tag = (packets->tag & length_mask) | (ordering_table[0] & address_mask);
+            ordering_table[0] = (ordering_table[0] & length_mask) | ((s32)packets & address_mask);
+            packets++;
+        }
+        else if (third_depth >= FIELD_EFFECT_OT_SIZE)
+        {
+            packets->tag = (packets->tag & length_mask) | (ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] & address_mask);
+            ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] = (ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] & length_mask) | ((s32)packets & address_mask);
+            packets++;
+        }
+        else
+        {
+            packets->tag = (packets->tag & length_mask) | (ordering_table[effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT] & address_mask);
+            ordering_table[effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT] =
+                (ordering_table[effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT] & length_mask) | ((s32)packets & address_mask);
+            packets++;
+        }
+        angle += FIELD_RING_ANGLE_STEP;
+        if (segment == (FIELD_RING_SEGMENTS - 1))
+        {
+            break;
+        }
+        segment += 1;
+    } while (1);
+    return field_emit_effect_texture_page(effect, part, (u8*)packets, ordering_table);
+}
+
+/**
+ * @brief Emit a shaded circular fan with two to 32 segments and four triangles per segment.
+ * @param effect Effect position, rendering flags, and part selection.
+ * @param packet_cursor Destination GPU packet buffer.
+ * @param ordering_table Depth-indexed ordering table.
+ * @return Packet cursor after the geometry and texture-page command.
+ * @see decomp.me (100%)
+ */
+u8* field_render_effect_fan(FieldMotionRecord* effect, u8* packet_cursor, s32* ordering_table)
+{
+    SVECTOR screen_origin;
+    SVECTOR direction;
+    VECTOR transformed;
+    MATRIX matrix;
+    FieldActorPartDef* part;
+    s32 first_half_angle;
+    SVECTOR* direction_ptr;
+    VECTOR* transformed_ptr;
+    s32 half_angle;
+    s32 angle;
+    s32 next_angle;
+    s16 inner_end_y;
+    s16 middle_end_x;
+    s16 inner_end_x;
+    FieldGouraudTriangle* next_packet;
+    FieldActorState* actor;
+    FieldActorState* slots;
+    s32* first_entry;
+    s32* second_entry;
+    s32* third_entry;
+    s32* fourth_entry;
+    s32 half_step;
+    s32 next_color;
+    s32 angle_quotient;
+    s16 angle_short;
+    s32 middle_angle;
+    s32 outer_next_angle;
+    s32 packed_color;
+    s32 ot_word;
+    s32 second_depth;
+    s32 third_depth;
+    s32 fourth_depth;
+    s32 packet_tag;
+    s32 depth_or_y;
+    s32 outer_angle;
+    s32 angle_step;
+    s32 segment;
+    s32 inner_cosine;
+    s32 middle_cosine;
+    s32 outer_cosine;
+    u16 center_y;
+    u16 offset_y;
+    s32 segment_count_delta;
+    s32 inner_last_segment;
+    s32 middle_last_segment;
+    s32 outer_last_segment;
+    s32 mask_low;
+    s32 mask_high;
+    u8 segment_count;
+    FieldGouraudTriangle* third_triangle;
+    FieldGouraudTriangle* fourth_triangle;
+    FieldGouraudTriangle* second_triangle;
+    FieldGouraudTriangle* packets;
+    FieldActorPartDef* selected_part;
+
+    packets = (FieldGouraudTriangle*)packet_cursor;
+    slots = g_field_actor_slots;
+    actor = &slots[effect->actor_index];
+    selected_part = &actor->parts[effect->part_index];
+    part = selected_part;
+    field_build_effect_part_matrix(effect, part, &matrix, actor);
+    gte_SetRotMatrix(&matrix);
+
+    screen_origin.vx = (u16)((g_field_view_offset_x / 256) + ((effect->x / 256) + FIELD_EFFECT_CENTER_X));
+    screen_origin.vy =
+        (u16)(((((g_field_view_offset_y / 256) + FIELD_EFFECT_CENTER_Y) + (effect->y / 256)) - (effect->z / 512)) - (g_field_view_offset_z / 512));
+    field_resolve_effect_part_color(actor, effect, part, &packets->color0);
+    setPolyG3(packets);
+    setSemiTrans(packets, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
+    segment_count = 2;
+    /* This part byte selects the fan segment count; other uses are unresolved. */
+    segment_count_delta = part->unknown_0x8 - 2;
+    if ((u32)segment_count_delta < (FIELD_RING_SEGMENTS - 1U))
+    {
+        segment_count = *(volatile u8*)&part->unknown_0x8;
+    }
+    angle_quotient = ONE / (s32)segment_count;
+    angle_short = angle_quotient;
+    angle_step = angle_short;
+    if ((ONE % (s32)segment_count) != 0)
+    {
+        angle_step += 1;
+    }
+    segment = 0;
+    direction_ptr = &direction;
+    transformed_ptr = &transformed;
+    mask_low = FIELD_GPU_ADDRESS_MASK;
+    mask_high = FIELD_GPU_LENGTH_MASK;
+    half_step = angle_quotient >> 1;
+    first_half_angle = half_step;
+    angle_short = half_step;
+    half_angle = angle_short;
+    angle = 0;
+    next_angle = angle_step;
+next_segment:
+{
+    /* Copy the two screen coordinates as one GPU word. */
+    packets[0].xy1.word = *(s32*)&screen_origin;
+    direction.vx = (s16)(rcos(angle) >> 8);
+    direction.vy = 0;
+    direction.vz = (s16)(rsin(angle) >> 8);
+    gte_ldv0(direction_ptr);
+    gte_rtv0();
+    gte_stlvnl(transformed_ptr);
+    {
+        u32 coordinate;
+        u16 offset;
+        coordinate = (u16)screen_origin.vx;
+        offset = (u16)transformed.vx;
+        coordinate += offset;
+        packets[0].xy0.signed_pair.x = coordinate;
+        packets[1].xy0.signed_pair.x = coordinate;
+        coordinate = (u16)screen_origin.vy;
+        offset = (u16)transformed.vy;
+        coordinate += offset;
+        inner_last_segment = segment_count - 1;
+        packets[0].xy0.signed_pair.y = coordinate;
+        packets[1].xy0.signed_pair.y = coordinate;
+    }
+    if (segment == inner_last_segment)
+    {
+        inner_cosine = rcos(0);
+        direction.vx = (s16)(inner_cosine >> 8);
+        direction.vy = 0;
+        direction.vz = (s16)(rsin(0) >> 8);
+    }
+    else
+    {
+        inner_cosine = rcos(next_angle);
+        direction.vx = (s16)(inner_cosine >> 8);
+        direction.vy = 0;
+        direction.vz = (s16)(rsin(next_angle) >> 8);
+    }
+    gte_ldv0(direction_ptr);
+    gte_rtv0();
+    gte_stlvnl(transformed_ptr);
+    second_triangle = &packets[1];
+    fourth_triangle = &packets[3];
+    inner_end_x = screen_origin.vx + (u16)transformed.vx;
+    packets[0].xy2.signed_pair.x = inner_end_x;
+    second_triangle[0].xy2.signed_pair.x = inner_end_x;
+    fourth_triangle[0].xy0.signed_pair.x = inner_end_x;
+    packets[2].xy0.signed_pair.x = inner_end_x;
+    inner_end_y = screen_origin.vy + (u16)transformed.vy;
+    packets[0].xy2.signed_pair.y = inner_end_y;
+    second_triangle[0].xy2.signed_pair.y = inner_end_y;
+    fourth_triangle[0].xy0.signed_pair.y = inner_end_y;
+    packets[2].xy0.signed_pair.y = inner_end_y;
+    direction.vx = (s16)(rcos(half_angle) >> 6);
+    direction.vy = 0;
+    direction.vz = (s16)(rsin(half_angle) >> 6);
+    gte_ldv0(direction_ptr);
+    gte_rtv0();
+    gte_stlvnl(transformed_ptr);
+    {
+        u32 coordinate;
+        u16 offset;
+        coordinate = (u16)screen_origin.vx;
+        offset = (u16)transformed.vx;
+        coordinate += offset;
+        second_triangle[0].xy1.signed_pair.x = coordinate;
+        packets[2].xy1.signed_pair.x = coordinate;
+        coordinate = (u16)screen_origin.vy;
+        offset = (u16)transformed.vy;
+        coordinate += offset;
+        middle_last_segment = segment_count - 1;
+        second_triangle[0].xy1.signed_pair.y = coordinate;
+        packets[2].xy1.signed_pair.y = coordinate;
+    }
+    if (segment == middle_last_segment)
+    {
+        middle_cosine = rcos(0);
+        direction.vx = (s16)(middle_cosine >> 7);
+        direction.vy = 0;
+        direction.vz = (s16)(rsin(0) >> FIELD_EFFECT_OT_DEPTH_SHIFT);
+    }
+    else
+    {
+        middle_angle = angle + angle_step;
+        middle_cosine = rcos(middle_angle);
+        direction.vx = (s16)(middle_cosine >> 7);
+        direction.vy = 0;
+        direction.vz = (s16)(rsin(middle_angle) >> 7);
+    }
+    gte_ldv0(direction_ptr);
+    gte_rtv0();
+    gte_stlvnl(transformed_ptr);
+    third_triangle = &packets[2];
+    middle_end_x = screen_origin.vx + (u16)transformed.vx;
+    third_triangle[0].xy2.signed_pair.x = middle_end_x;
+    packets[3].xy1.signed_pair.x = middle_end_x;
+    depth_or_y = (u16)screen_origin.vy + (u16)transformed.vy;
+    outer_last_segment = segment_count - 1;
+    third_triangle[0].xy2.signed_pair.y = depth_or_y;
+    packets[3].xy1.signed_pair.y = depth_or_y;
+    if (segment == outer_last_segment)
+    {
+        outer_cosine = rcos(first_half_angle);
+        outer_angle = first_half_angle;
+        direction.vx = (s16)(outer_cosine >> 6);
+        direction.vy = 0;
+        direction.vz = (s16)(rsin(outer_angle) >> 6);
+    }
+    else
+    {
+        outer_next_angle = half_angle + angle_step;
+        outer_cosine = rcos(outer_next_angle);
+        outer_angle = outer_next_angle;
+        direction.vx = (s16)(outer_cosine >> 6);
+        direction.vy = 0;
+        direction.vz = (s16)(rsin(outer_angle) >> 6);
+    }
+    gte_ldv0(direction_ptr);
+    gte_rtv0();
+    gte_stlvnl(transformed_ptr);
+    packets[3].xy2.signed_pair.x = (s16)(screen_origin.vx + (u16)transformed.vx);
+    packed_color = packets[0].color0.signed_word;
+    center_y = screen_origin.vy;
+    offset_y = (u16)transformed.vy;
+    packet_tag = packets[0].tag;
+    packets[3].color2.signed_word = 0;
+    packets[3].color1.signed_word = 0;
+    packets[2].color2.signed_word = 0;
+    packets[2].color1.signed_word = 0;
+    packets[1].color1.signed_word = 0;
+    next_color = packets[0].color0.signed_word;
+    packets[3].color0.signed_word = packed_color;
+    packets[2].color0.signed_word = packed_color;
+    packets[0].color1.signed_word = packed_color;
+    packets[1].color2.signed_word = packed_color;
+    packets[1].color0.signed_word = packed_color;
+    packets[0].color2.signed_word = packed_color;
+    packets[1].tag = packet_tag;
+    packets[2].tag = packet_tag;
+    packets[3].tag = packet_tag;
+    packets[4].tag = packet_tag;
+    packets[4].color0.signed_word = next_color;
+    packets[3].xy2.signed_pair.y = (s16)(center_y + offset_y);
+    depth_or_y = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+    next_packet = &packets[1];
+    if (depth_or_y < 0)
+    {
+        packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[0] & mask_low);
+        ordering_table[0] = (ordering_table[0] & mask_high) | ((s32)packets & mask_low);
+        packets = next_packet;
+    }
+    else if (depth_or_y >= FIELD_EFFECT_OT_SIZE)
+    {
+        packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] & mask_low);
+        ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] = (ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] & mask_high) | ((s32)packets & mask_low);
+        packets = next_packet;
+    }
+    else
+    {
+        packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[depth_or_y] & mask_low);
+        first_entry = (s32*)((effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (u32)ordering_table);
+        ot_word = *first_entry;
+        *first_entry = (ot_word & mask_high) | ((s32)packets & mask_low);
+        packets = next_packet;
+    }
+
+    second_depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+    if (second_depth < 0)
+    {
+        packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[0] & mask_low);
+        ordering_table[0] = (ordering_table[0] & mask_high) | ((s32)packets & mask_low);
+        packets++;
+    }
+    else if (second_depth >= FIELD_EFFECT_OT_SIZE)
+    {
+        packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] & mask_low);
+        ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] = (ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] & mask_high) | ((s32)packets & mask_low);
+        packets++;
+    }
+    else
+    {
+        packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[second_depth] & mask_low);
+        second_entry = (s32*)((effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (u32)ordering_table);
+        ot_word = *second_entry;
+        *second_entry = (ot_word & mask_high) | ((s32)packets & mask_low);
+        packets++;
+    }
+
+    third_depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+    if (third_depth < 0)
+    {
+        packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[0] & mask_low);
+        ordering_table[0] = (ordering_table[0] & mask_high) | ((s32)packets & mask_low);
+        packets++;
+    }
+    else if (third_depth >= FIELD_EFFECT_OT_SIZE)
+    {
+        packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] & mask_low);
+        ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] = (ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] & mask_high) | ((s32)packets & mask_low);
+        packets++;
+    }
+    else
+    {
+        packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[third_depth] & mask_low);
+        third_entry = (s32*)((effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (u32)ordering_table);
+        ot_word = *third_entry;
+        *third_entry = (ot_word & mask_high) | ((s32)packets & mask_low);
+        packets++;
+    }
+
+    fourth_depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+    if (fourth_depth < 0)
+    {
+        packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[0] & mask_low);
+        ordering_table[0] = (ordering_table[0] & mask_high) | ((s32)packets & mask_low);
+        packets++;
+    }
+    else if (fourth_depth >= FIELD_EFFECT_OT_SIZE)
+    {
+        packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] & mask_low);
+        ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] = (ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] & mask_high) | ((s32)packets & mask_low);
+        packets++;
+    }
+    else
+    {
+        packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[fourth_depth] & mask_low);
+        fourth_entry = (s32*)((effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (u32)ordering_table);
+        ot_word = *fourth_entry;
+        *fourth_entry = (ot_word & mask_high) | ((s32)packets & mask_low);
+        packets++;
+    }
+    if (segment == (segment_count - 1))
+    {
+        goto finished;
+    }
+    segment += 1;
+    half_angle += angle_step;
+    angle += angle_step;
+    next_angle += angle_step;
+    goto next_segment;
+}
+finished:
+    return field_emit_effect_texture_page(effect, part, (u8*)packets, ordering_table);
+}
+
+/**
+ * @brief Emit a fading line from an effect to its target or a rotated local offset.
+ * @param effect Effect position, rendering flags, and part selection.
+ * @param packet_cursor Destination GPU packet buffer.
+ * @param ordering_table Depth-indexed ordering table.
+ * @return Packet cursor after the geometry and texture-page command.
+ * @see decomp.me (100%)
+ */
+u8* field_render_effect_marker(FieldMotionRecord* effect, u8* packet_cursor, s32* ordering_table)
+{
+    SVECTOR screen_origin;
+    SVECTOR direction;
+    VECTOR transformed;
+    VECTOR target_position;
+    MATRIX matrix;
+    FieldActorState* actor;
+    FieldActorPartDef* part;
+
+    part = &g_field_actor_slots[effect->actor_index].parts[effect->part_index];
+    actor = &g_field_actor_slots[effect->actor_index];
+    field_build_effect_part_matrix(effect, part, &matrix, actor);
+    gte_SetRotMatrix(&matrix);
+
+    screen_origin.vx = (s16)(FIELD_EFFECT_CENTER_X + g_field_view_offset_x / 256 + effect->x / 256);
+    screen_origin.vy = (s16)(FIELD_EFFECT_CENTER_Y + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512);
+
+    field_resolve_effect_part_color(actor, effect, part, (FieldPrimitiveColor*)&((P_TAG*)packet_cursor)->r0);
+    setLineG2((LINE_G2*)packet_cursor);
+    setSemiTrans((LINE_G2*)packet_cursor, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
+    ((FieldGouraudLine*)packet_cursor)[0].color1.signed_word = 0;
+
+    if (effect->color_position.fields.position_source != 0)
+    {
+        ((FieldGouraudLine*)packet_cursor)[0].xy0.word = *(s32*)&screen_origin;
+        field_resolve_effect_position(effect, part, &target_position);
+        screen_origin.vx = (s16)(FIELD_EFFECT_CENTER_X + g_field_view_offset_x / 256 + target_position.vx / 256);
+        screen_origin.vy =
+            (s16)(FIELD_EFFECT_CENTER_Y + g_field_view_offset_y / 256 + target_position.vy / 256 - target_position.vz / 512 - g_field_view_offset_z / 512);
+        ((FieldGouraudLine*)packet_cursor)[0].xy1.word = *(s32*)&screen_origin;
+    }
+    else if ((part->behavior_flags.word >> FIELD_PART_ORIENTED_MARKER_SHIFT) & 1)
+    {
+        direction.vx = -30;
+        direction.vy = 0;
+        direction.vz = 0;
+        gte_ldv0(&direction);
+        gte_rtv0();
+        gte_stlvnl(&transformed);
+        ((FieldGouraudLine*)packet_cursor)[0].xy0.signed_pair.x = screen_origin.vx + (u16)transformed.vx;
+        {
+            s16 y = screen_origin.vy + (u16)transformed.vy;
+            ((FieldGouraudLine*)packet_cursor)[0].xy1.word = *(s32*)&screen_origin;
+            ((FieldGouraudLine*)packet_cursor)[0].xy0.signed_pair.y = y;
+        }
+    }
+    else
+    {
+        ((FieldGouraudLine*)packet_cursor)[0].xy1.word = *(s32*)&screen_origin;
+        ((FieldGouraudLine*)packet_cursor)[0].xy0.word = *(s32*)&screen_origin;
+    }
+
+    {
+        s32 index;
+        index = effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+        if (index < 0)
+        {
+            addPrim(&ordering_table[0], packet_cursor);
+            packet_cursor += sizeof(LINE_G2);
+        }
+        else if (index >= FIELD_EFFECT_OT_SIZE)
+        {
+            addPrim(&ordering_table[(FIELD_EFFECT_OT_SIZE - 1)], packet_cursor);
+            packet_cursor += sizeof(LINE_G2);
+        }
+        else
+        {
+            {
+                s32 ot_word = ordering_table[index];
+                setaddr(packet_cursor, ot_word);
+            }
+            setaddr(&ordering_table[effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT], packet_cursor);
+            packet_cursor += sizeof(LINE_G2);
+        }
+    }
+    return field_emit_effect_texture_page(effect, part, packet_cursor, ordering_table);
+}
+
+/**
+ * @brief Join an effect to its live predecessor with a flat-shaded quad.
+ * @param effect Effect position, rendering flags, and part selection.
+ * @param packet_cursor Destination GPU packet buffer.
+ * @param ordering_table Depth-indexed ordering table.
+ * @return Advanced packet cursor; unchanged for a trail without a live predecessor.
+ * @see decomp.me (100%)
+ */
+u8* field_render_effect_trail(FieldMotionRecord* effect, u8* packet_cursor, s32* ordering_table)
+{
+    FieldActorState* actor;
+    FieldActorPartDef* part;
+    s32 depth;
+    s32 camera_x;
+    s32 effect_x;
+    s32 camera_y;
+
+    part = &g_field_actor_slots[effect->actor_index].parts[effect->part_index];
+    actor = &g_field_actor_slots[effect->actor_index];
+
+    if (effect->previous_effect_index != FIELD_EFFECT_RETIRED && g_field_effect_records[effect->previous_effect_index].state != FIELD_EFFECT_RETIRED)
+    {
+        camera_x = g_field_view_offset_x / 256;
+        effect_x = effect->x / 256 + FIELD_EFFECT_CENTER_X;
+        camera_y = g_field_view_offset_y;
+        ((FieldFlatQuad*)packet_cursor)[0].xy0.unsigned_pair.x = (u16)(camera_x + effect_x);
+
+        ((FieldFlatQuad*)packet_cursor)[0].xy0.unsigned_pair.y =
+            (u16)(FIELD_EFFECT_CENTER_Y + camera_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512);
+
+        ((FieldFlatQuad*)packet_cursor)[0].xy2.word = ((FieldFlatQuad*)packet_cursor)[0].xy0.word;
+        ((FieldFlatQuad*)packet_cursor)[0].xy0.unsigned_pair.x = (u16)(((FieldFlatQuad*)packet_cursor)[0].xy0.unsigned_pair.x - (u16)effect->work_x);
+        ((FieldFlatQuad*)packet_cursor)[0].xy0.unsigned_pair.y = (u16)(((FieldFlatQuad*)packet_cursor)[0].xy0.unsigned_pair.y - (u16)effect->work_y);
+        ((FieldFlatQuad*)packet_cursor)[0].xy2.unsigned_pair.x = (u16)(((FieldFlatQuad*)packet_cursor)[0].xy2.unsigned_pair.x + (u16)effect->work_x);
+        ((FieldFlatQuad*)packet_cursor)[0].xy2.unsigned_pair.y = (u16)(((FieldFlatQuad*)packet_cursor)[0].xy2.unsigned_pair.y + (u16)effect->work_y);
+
+        ((FieldFlatQuad*)packet_cursor)[0].xy1.unsigned_pair.x =
+            (u16)(g_field_view_offset_x / 256 + (g_field_effect_records[effect->previous_effect_index].x / 256 + FIELD_EFFECT_CENTER_X));
+
+        ((FieldFlatQuad*)packet_cursor)[0].xy1.unsigned_pair.y =
+            (u16)(FIELD_EFFECT_CENTER_Y + camera_y / 256 + g_field_effect_records[effect->previous_effect_index].y / 256 -
+                  g_field_effect_records[effect->previous_effect_index].z / 512 - g_field_view_offset_z / 512);
+
+        ((FieldFlatQuad*)packet_cursor)[0].xy3.word = ((FieldFlatQuad*)packet_cursor)[0].xy1.word;
+        ((FieldFlatQuad*)packet_cursor)[0].xy1.unsigned_pair.x =
+            (u16)(((FieldFlatQuad*)packet_cursor)[0].xy1.unsigned_pair.x - (u16)g_field_effect_records[effect->previous_effect_index].work_x);
+        ((FieldFlatQuad*)packet_cursor)[0].xy1.unsigned_pair.y =
+            (u16)(((FieldFlatQuad*)packet_cursor)[0].xy1.unsigned_pair.y - (u16)g_field_effect_records[effect->previous_effect_index].work_y);
+        ((FieldFlatQuad*)packet_cursor)[0].xy3.unsigned_pair.x =
+            (u16)(((FieldFlatQuad*)packet_cursor)[0].xy3.unsigned_pair.x + (u16)g_field_effect_records[effect->previous_effect_index].work_x);
+        ((FieldFlatQuad*)packet_cursor)[0].xy3.unsigned_pair.y =
+            (u16)(((FieldFlatQuad*)packet_cursor)[0].xy3.unsigned_pair.y + (u16)g_field_effect_records[effect->previous_effect_index].work_y);
+
+        field_resolve_effect_part_color(actor, effect, part, (FieldPrimitiveColor*)&((P_TAG*)packet_cursor)->r0);
+
+        setPolyF4((POLY_F4*)packet_cursor);
+        setSemiTrans((POLY_F4*)packet_cursor, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
+
+        depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+        if (depth < 0)
+        {
+            addPrim(&ordering_table[0], (POLY_F4*)packet_cursor);
+            packet_cursor += sizeof(POLY_F4);
+        }
+        else if (depth >= FIELD_EFFECT_OT_SIZE)
+        {
+            addPrim(&ordering_table[(FIELD_EFFECT_OT_SIZE - 1)], (POLY_F4*)packet_cursor);
+            packet_cursor += sizeof(POLY_F4);
+        }
+        else
+        {
+            addPrim(&ordering_table[(s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT], (POLY_F4*)packet_cursor);
+            packet_cursor += sizeof(POLY_F4);
+        }
+
+        packet_cursor = field_emit_effect_texture_page(effect, part, packet_cursor, ordering_table);
+    }
+
+    return packet_cursor;
+}
+
+/**
+ * @brief Emit a closed line loop with alternating inner and outer radii.
+ * @param effect Effect position, rendering flags, and part selection.
+ * @param packet_cursor Destination GPU packet buffer.
+ * @param ordering_table Depth-indexed ordering table.
+ * @return Packet cursor after the geometry and texture-page command.
+ * @see decomp.me (100%)
+ */
+u8* field_render_effect_radial_fan(FieldMotionRecord* effect, u8* packet_cursor, s32* ordering_table)
+{
+    MATRIX* matrix;
+    SVECTOR* direction;
+    FieldActorPartDef* part;
+    VECTOR* transformed;
+    s32 radius;
+    Vec2s* screen_origin;
+    FieldActorState* actor;
+    FieldFlatLine* next_line;
+    s32 angle;
+    s32 segment_count;
+    s32 first_endpoint;
+    s32 segment;
+    s32 screen_x;
+    s32 camera_y;
+    s32 depth;
+
+    transformed = &FIELD_RADIAL_SCRATCH->transformed;
+    screen_origin = &FIELD_RADIAL_SCRATCH->center.screen;
+    direction = &FIELD_RADIAL_SCRATCH->direction;
+    matrix = FIELD_RADIAL_SCRATCH->matrices;
+
+    part = &g_field_actor_slots[effect->actor_index].parts[effect->part_index];
+    actor = &g_field_actor_slots[effect->actor_index];
+
+    screen_origin->x = (s16)(FIELD_EFFECT_CENTER_X + g_field_view_offset_x / 256 + effect->x / 256);
+    screen_origin->y = (s16)(FIELD_EFFECT_CENTER_Y + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512);
+
+    field_build_effect_part_matrix(effect, part, matrix, actor);
+    gte_SetRotMatrix(matrix);
+
+    screen_x = FIELD_EFFECT_CENTER_X + g_field_view_offset_x / 256 + effect->x / 256;
+    camera_y = g_field_view_offset_y;
+    ((FieldFlatLine*)packet_cursor)[0].xy0.signed_pair.x = (s16)screen_x;
+    if (camera_y < 0)
+    {
+        camera_y += 255;
+    }
+    ((FieldFlatLine*)packet_cursor)[0].xy0.signed_pair.y =
+        (s16)(FIELD_EFFECT_CENTER_Y + (camera_y >> 8) + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512);
+
+    field_resolve_effect_part_color(actor, effect, part, (FieldPrimitiveColor*)&((P_TAG*)packet_cursor)->r0);
+
+    /* Line effects reuse animation_active as their segment count. */
+    segment_count = 1;
+    if (effect->animation_active != 0)
+    {
+        segment_count = effect->animation_active;
+    }
+
+    /* This mode interprets the shared selector byte as an outer-radius scale. */
+    radius = (u32)((part->rotation_extent.fields.unknown_0x23 + 1) * 5) >> 4;
+
+    direction->vx = (s16)((u32)(rsin(0) * 5) >> 8);
+    direction->vy = 0;
+    direction->vz = (s16)((s32)(rcos(0) * 80) >> 12);
+
+    gte_ldv0(direction);
+    gte_rtv0();
+    gte_stlvnl(transformed);
+
+    ((FieldFlatLine*)packet_cursor)[0].xy0.signed_pair.x = (s16)(screen_origin->x + *(s16*)&transformed->vx);
+    ((FieldFlatLine*)packet_cursor)[0].xy0.signed_pair.y = (s16)(screen_origin->y + *(s16*)&transformed->vy);
+    first_endpoint = ((FieldFlatLine*)packet_cursor)[0].xy0.word;
+
+    segment = 1;
+    if (segment < segment_count)
+    {
+        do
+        {
+            next_line = &((FieldFlatLine*)packet_cursor)[1];
+            do
+            {
+                angle = segment << 12;
+            } while (0);
+            if (segment & 1)
+            {
+                angle /= segment_count;
+                direction->vx = (s16)((rsin(angle) * radius) >> 12);
+                direction->vy = 0;
+                direction->vz = (s16)((rcos(angle) * radius) >> 12);
+            }
+            else
+            {
+                angle /= segment_count;
+                direction->vx = (s16)((u32)(rsin(angle) * 5) >> 8);
+                direction->vy = 0;
+                direction->vz = (s16)((s32)(rcos(angle) * 80) >> 12);
+            }
+
+            setLineF2(next_line - 1);
+            setSemiTrans(next_line - 1, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
+
+            gte_ldv0(direction);
+            gte_rtv0();
+            gte_stlvnl(transformed);
+
+            next_line[-1].xy1.signed_pair.x = (s16)(screen_origin->x + *(s16*)&transformed->vx);
+            next_line[-1].xy1.signed_pair.y = (s16)(screen_origin->y + *(s16*)&transformed->vy);
+            ((FieldFlatLine*)packet_cursor)[1].xy0.word = ((FieldFlatLine*)packet_cursor)[0].xy1.word;
+            ((FieldFlatLine*)packet_cursor)[1].color0.signed_word = ((FieldFlatLine*)packet_cursor)[0].color0.signed_word;
+
+            depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+            if (depth < 0)
+            {
+                s32 packet_address;
+                packet_address = (s32)packet_cursor & FIELD_GPU_ADDRESS_MASK;
+                setaddr(packet_cursor, getaddr(&ordering_table[0]));
+                packet_cursor += sizeof(LINE_F2);
+                ordering_table[0] = (ordering_table[0] & FIELD_GPU_LENGTH_MASK) | packet_address;
+            }
+            else if (depth >= FIELD_EFFECT_OT_SIZE)
+            {
+                s32 packet_address;
+                packet_address = (s32)packet_cursor & FIELD_GPU_ADDRESS_MASK;
+                setaddr(packet_cursor, getaddr(&ordering_table[(FIELD_EFFECT_OT_SIZE - 1)]));
+                packet_cursor += sizeof(LINE_F2);
+                ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] = (ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] & FIELD_GPU_LENGTH_MASK) | packet_address;
+            }
+            else
+            {
+                s32 packet_address;
+                s32* entry;
+                packet_address = (s32)packet_cursor & FIELD_GPU_ADDRESS_MASK;
+                setaddr(packet_cursor, getaddr(&ordering_table[depth]));
+                entry = (s32*)((effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (u32)ordering_table);
+                packet_cursor += sizeof(LINE_F2);
+                *entry = (*entry & FIELD_GPU_LENGTH_MASK) | packet_address;
+            }
+            segment++;
+        } while (segment < segment_count);
+    }
+
+    setLineF2(packet_cursor);
+    setSemiTrans(packet_cursor, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
+    ((FieldFlatLine*)packet_cursor)[0].xy1.word = first_endpoint;
+
+    depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+    if (depth < 0)
+    {
+        s32 packet_address;
+        packet_address = (s32)packet_cursor & FIELD_GPU_ADDRESS_MASK;
+        setaddr(packet_cursor, getaddr(&ordering_table[0]));
+        packet_cursor += sizeof(LINE_F2);
+        ordering_table[0] = (ordering_table[0] & FIELD_GPU_LENGTH_MASK) | packet_address;
+    }
+    else if (depth >= FIELD_EFFECT_OT_SIZE)
+    {
+        s32 packet_address;
+        packet_address = (s32)packet_cursor & FIELD_GPU_ADDRESS_MASK;
+        setaddr(packet_cursor, getaddr(&ordering_table[(FIELD_EFFECT_OT_SIZE - 1)]));
+        packet_cursor += sizeof(LINE_F2);
+        ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] = (ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] & FIELD_GPU_LENGTH_MASK) | packet_address;
+    }
+    else
+    {
+        s32 packet_address;
+        s32* entry;
+        s32 ot_word;
+        packet_address = (s32)packet_cursor & FIELD_GPU_ADDRESS_MASK;
+        ot_word = ordering_table[depth];
+        setaddr(packet_cursor, ot_word);
+        entry = (s32*)((effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (u32)ordering_table);
+        packet_cursor += sizeof(LINE_F2);
+        *entry = (*entry & FIELD_GPU_LENGTH_MASK) | packet_address;
+    }
+
+    packet_cursor = field_emit_effect_texture_page(effect, part, packet_cursor, ordering_table);
+
+    return packet_cursor;
+}
+
+/**
+ * @brief Emit a jittered line chain between an effect and its resolved target.
+ * @param effect Effect position, rendering flags, and part selection.
+ * @param packet_cursor Destination GPU packet buffer.
+ * @param ordering_table Depth-indexed ordering table.
+ * @return Packet cursor after the geometry and texture-page command.
+ * @see decomp.me (100%)
+ * @see decomp.me (99.95%) Previous WIP
+ */
+u8* field_render_effect_radial_lines(FieldMotionRecord* effect, u8* packet_cursor, s32* ordering_table)
+{
+    FieldActorPartDef* part;
+    FieldActorState* actor;
+    VECTOR* position;
+    VECTOR* center;
+    VECTOR* delta;
+    VECTOR* jitter;
+    SVECTOR* direction;
+    MATRIX* matrix;
+    FieldFlatLine* next_line;
+    s32 segment_count;
+    s32 segment;
+    s32 arc_height;
+    s32 angle_step;
+    s32 depth;
+    VECTOR* origin;
+
+    origin = &FIELD_RADIAL_SCRATCH->origin;
+    position = &FIELD_RADIAL_SCRATCH->transformed;
+    center = &FIELD_RADIAL_SCRATCH->center.vector;
+    delta = &FIELD_RADIAL_SCRATCH->delta;
+    jitter = &FIELD_RADIAL_SCRATCH->jitter;
+    direction = &FIELD_RADIAL_SCRATCH->direction;
+
+    part = &g_field_actor_slots[effect->actor_index].parts[effect->part_index];
+    actor = &g_field_actor_slots[effect->actor_index];
+
+    matrix = FIELD_RADIAL_SCRATCH->matrices;
+    field_build_effect_part_matrix(effect, part, matrix, actor);
+    gte_SetRotMatrix(matrix);
+
+    {
+        s32 camera_x;
+        s32 position_x;
+        s32 camera_y;
+        camera_x = g_field_view_offset_x / 256;
+        position_x = effect->x / 256;
+        camera_y = g_field_view_offset_y;
+        ((FieldFlatLine*)packet_cursor)[0].xy0.signed_pair.x = camera_x + (s16)(position_x + FIELD_EFFECT_CENTER_X);
+        if (camera_y < 0)
+        {
+            camera_y += 255;
+        }
+        ((FieldFlatLine*)packet_cursor)[0].xy0.signed_pair.y =
+            FIELD_EFFECT_CENTER_Y + (camera_y >> 8) + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512;
+    }
+
+    field_resolve_effect_part_color(actor, effect, part, (FieldPrimitiveColor*)&((P_TAG*)packet_cursor)->r0);
+
+    setLineF2(packet_cursor);
+    setSemiTrans(packet_cursor, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
+
+    matrix = FIELD_RADIAL_SCRATCH->matrices;
+
+    /* Line effects reuse animation_active as their segment count. */
+    segment_count = FIELD_RADIAL_MAX_SEGMENTS;
+    if (effect->animation_active < FIELD_RADIAL_MAX_SEGMENTS)
+    {
+        segment_count = effect->animation_active;
+    }
+    if (segment_count <= 0)
+    {
+        segment_count = 1;
+    }
+    angle_step = (ONE / 2) / segment_count;
+
+    field_resolve_effect_position(effect, part, origin);
+
+    segment = segment_count - 1;
+
+    center->vx = (origin->vx + effect->x) >> 1;
+    center->vy = origin->vy;
+    center->vz = (origin->vz + effect->z) >> 1;
+    delta->vx = (origin->vx - effect->x) >> 1;
+    delta->vy = effect->y - origin->vy;
+    delta->vz = (origin->vz - effect->z) >> 1;
+
+    if (segment > 0)
+    {
+        do
+        {
+            direction->vx = 0;
+            direction->vy = (s16)((rand() << 12) >> 15);
+            direction->vz = (s16)((rand() << 12) >> 16);
+            RotMatrix_gte(direction, matrix);
+            segment--;
+            matrix++;
+        } while (segment > 0);
+    }
+
+    matrix = FIELD_RADIAL_SCRATCH->matrices;
+
+    if (part->behavior_flags.bytes.low >> 7)
+    {
+        direction->vx = 0;
+        direction->vy = (s16)((part->behavior_flags.word >> 28) << 8);
+        direction->vz = 0;
+    }
+    else
+    {
+        /* Clear both vector words, including the SDK padding halfword. */
+        *(s32*)&direction->vz = 0;
+        *(s32*)&direction->vx = 0;
+    }
+
+    if (((part->track_flags.word >> 6) & 3) != 0)
+    {
+        arc_height = (part->track_flags.word >> 26) << 9;
+    }
+    else
+    {
+        arc_height = 0;
+    }
+
+    segment = segment_count - 1;
+    if (segment > 0)
+    {
+        next_line = &((FieldFlatLine*)packet_cursor)[1];
+        do
+        {
+            next_line[0].color0.signed_word = next_line[-1].color0.signed_word;
+            setLineF2(next_line - 1);
+            setSemiTrans(next_line - 1, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
+
+            gte_SetRotMatrix(matrix);
+            gte_ldv0(direction);
+            gte_rtv0();
+            gte_stlvnl(jitter);
+
+            if (arc_height != 0)
+            {
+                position->vy = center->vy + (delta->vy * segment) / segment_count -
+                               ((s32)(((part->track_flags.word >> 26) << 9) * rsin(segment * angle_step)) >> 12) + jitter->vy;
+            }
+            else
+            {
+                position->vy = center->vy + (delta->vy * segment) / segment_count + jitter->vy;
+            }
+
+            position->vx = ((delta->vx * rcos(segment * angle_step)) >> 12) + center->vx + jitter->vx;
+            position->vz = ((delta->vz * rcos(segment * angle_step)) >> 12) + center->vz + jitter->vz;
+
+            {
+                s32 camera_x;
+                s32 position_x;
+                s32 camera_y;
+                camera_x = g_field_view_offset_x / 256;
+                position_x = position->vx / 256;
+                camera_y = g_field_view_offset_y;
+                next_line[-1].xy1.signed_pair.x = camera_x + (s16)(position_x + FIELD_EFFECT_CENTER_X);
+                if (camera_y < 0)
+                {
+                    camera_y += 255;
+                }
+                next_line[-1].xy1.signed_pair.y =
+                    FIELD_EFFECT_CENTER_Y + (camera_y >> 8) + position->vy / 256 - position->vz / 512 - g_field_view_offset_z / 512;
+            }
+            next_line[0].xy0.word = next_line[-1].xy1.word;
+
+            depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+            if (depth < 0)
+            {
+                s32 packet_address;
+                next_line++;
+                packet_address = (s32)packet_cursor & FIELD_GPU_ADDRESS_MASK;
+                setaddr(packet_cursor, getaddr(&ordering_table[0]));
+                packet_cursor += sizeof(LINE_F2);
+                ordering_table[0] = (ordering_table[0] & FIELD_GPU_LENGTH_MASK) | packet_address;
+            }
+            else if (depth >= FIELD_EFFECT_OT_SIZE)
+            {
+                s32 packet_address;
+                next_line++;
+                packet_address = (s32)packet_cursor & FIELD_GPU_ADDRESS_MASK;
+                setaddr(packet_cursor, getaddr(&ordering_table[(FIELD_EFFECT_OT_SIZE - 1)]));
+                packet_cursor += sizeof(LINE_F2);
+                ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] = (ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] & FIELD_GPU_LENGTH_MASK) | packet_address;
+            }
+            else
+            {
+                s32 packet_address;
+                s32* entry;
+                next_line++;
+                packet_address = (s32)packet_cursor & FIELD_GPU_ADDRESS_MASK;
+                setaddr(packet_cursor, getaddr(&ordering_table[depth]));
+                entry = (s32*)((effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (u32)ordering_table);
+                packet_cursor += sizeof(LINE_F2);
+                *entry = (*entry & FIELD_GPU_LENGTH_MASK) | packet_address;
+            }
+
+            segment--;
+            matrix++;
+        } while (segment > 0);
+    }
+
+    setLineF2(packet_cursor);
+    setSemiTrans(packet_cursor, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
+
+    {
+        s32 camera_x;
+        s32 position_x;
+        s32 camera_y;
+        camera_x = g_field_view_offset_x / 256;
+        position_x = origin->vx / 256;
+        camera_y = g_field_view_offset_y;
+        ((FieldFlatLine*)packet_cursor)[0].xy1.signed_pair.x = camera_x + (s16)(position_x + FIELD_EFFECT_CENTER_X);
+        if (camera_y < 0)
+        {
+            camera_y += 255;
+        }
+        camera_y = FIELD_EFFECT_CENTER_Y + (camera_y >> 8) + origin->vy / 256;
+        camera_y -= origin->vz / 512;
+        ((FieldFlatLine*)packet_cursor)[0].xy1.signed_pair.y = camera_y - g_field_view_offset_z / 512;
+    }
+
+    depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+    if (depth < 0)
+    {
+        s32 packet_address;
+        packet_address = (s32)packet_cursor & FIELD_GPU_ADDRESS_MASK;
+        setaddr(packet_cursor, getaddr(&ordering_table[0]));
+        packet_cursor += sizeof(LINE_F2);
+        ordering_table[0] = (ordering_table[0] & FIELD_GPU_LENGTH_MASK) | packet_address;
+    }
+    else if (depth >= FIELD_EFFECT_OT_SIZE)
+    {
+        s32 packet_address;
+        packet_address = (s32)packet_cursor & FIELD_GPU_ADDRESS_MASK;
+        setaddr(packet_cursor, getaddr(&ordering_table[(FIELD_EFFECT_OT_SIZE - 1)]));
+        packet_cursor += sizeof(LINE_F2);
+        ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] = (ordering_table[(FIELD_EFFECT_OT_SIZE - 1)] & FIELD_GPU_LENGTH_MASK) | packet_address;
+    }
+    else
+    {
+        s32 packet_address;
+        s32* entry;
+        packet_address = (s32)packet_cursor & FIELD_GPU_ADDRESS_MASK;
+        setaddr(packet_cursor, getaddr(&ordering_table[depth]));
+        entry = (s32*)((effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (u32)ordering_table);
+        packet_cursor += sizeof(LINE_F2);
+        *entry = (*entry & FIELD_GPU_LENGTH_MASK) | packet_address;
+    }
+
+    packet_cursor = field_emit_effect_texture_page(effect, part, packet_cursor, ordering_table);
+
+    return packet_cursor;
+}
+
+#include "common.h"
+#include "field_effect_transform.h"
+#include "field_effect_types.h"
+#include "field_effect_render_state.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
+#include "sdk/rand.h"
+#include "sdk/inline_c.h"
+#include "sdk/gte_dmpsx_compat.h"
+
+#define FIELD_RIBBON_MAX_SEGMENTS 20
+#define FIELD_RIBBON_FRAME_COUNT 12
+#define FIELD_RIBBON_UV_VARIANT 0x01
+#define FIELD_RIBBON_FLIP_U 0x80
+#define FIELD_RIBBON_FLIP_V 0x40
+#define FIELD_EFFECT_OT_SIZE 4096
+#define FIELD_EFFECT_OT_DEPTH_SHIFT 7
+#define FIELD_EFFECT_CENTER_X 160
+#define FIELD_EFFECT_CENTER_Y 112
+#define FIELD_ANGLE_QUARTER_TURN (ONE / 4)
+#define FIELD_ANGLE_HALF_TURN (ONE / 2)
+#define FIELD_ANGLE_MASK (ONE - 1)
+#define FIELD_TRACK_INDEX_MASK 0xF
+#define FIELD_EFFECT_TRACK_COLOR 0x00008000
+#define FIELD_EFFECT_LITERAL_COLOR 0x10000000
+#define FIELD_PART_REVERSE_ROTATION_WITH_FACING 0x00020000
+#define FIELD_PART_SCALE_DISTANCE_BY_TARGET 0x01000000
+#define FIELD_PART_SCALE_DISTANCE_BY_OWNER 0x01000000
+#define FIELD_PART_SCALE_Z_BY_OWNER 0x02000000
+#define FIELD_PART_SCALE_X_BY_OWNER 0x04000000
+#define FIELD_RIBBON_SCRATCH ((FieldRibbonScratch*)0x1F800000)
+#define FIELD_MATRIX_SCRATCH ((FieldMatrixScratch*)0x1F8000C0)
+#define FIELD_SPRITE_SCRATCH ((FieldSpriteScratch*)0x1F800100)
+
+#define FIELD_GPU_ADDRESS_MASK 0x00FFFFFF
+#define FIELD_GPU_LENGTH_MASK 0xFF000000
+#define FIELD_TRACK_COUNT 16
+#define FIELD_EFFECT_TARGET_PITCH (ONE / 12)
+#define FIELD_EFFECT_DEFAULT_PITCH (ONE / 16)
+#define FIELD_PART_SCALE_TRACK_SHIFT 7
+#define FIELD_PART_ROTATION_MODE_SHIFT 6
+#define FIELD_PART_ROTATION_TRACK_SHIFT 26
+#define FIELD_PART_ROTATE_QUARTER_X_SHIFT 17
+#define FIELD_PART_PROJECT_SCALE_SHIFT 23
+#define FIELD_PART_ORIENTED_SHIFT 3
+#define FIELD_PART_AIM_AT_TARGET_SHIFT 11
+#define FIELD_PART_STRETCH_TO_TARGET_SHIFT 2
+#define FIELD_PART_RGB_TRACKS_SHIFT 12
+#define FIELD_PART_RANDOM_EXTENT_SHIFT 15
+#define FIELD_PART_ADD_HALF_WIDTH_SHIFT 16
+#define FIELD_PART_ADD_HALF_HEIGHT_SHIFT 17
+#define FIELD_PART_ATTACHMENT_SHIFT 18
+#define FIELD_PART_COLOR_TRACK_SHIFT 5
+#define FIELD_PART_RED_TRACK 0x4
+#define FIELD_PART_GREEN_TRACK 0x2
+#define FIELD_PART_BLUE_TRACK 0x1
+#define FIELD_ATTACHMENT_MASK 0x3F
+#define FIELD_ATTACHMENT_GROUP_COUNT 8
+#define FIELD_ATTACHMENT_LINKED_BOUNDS_COUNT 28
+#define FIELD_PART_OWNER_BOUNDS 2
+
+/** @brief Attachment category boundaries encoded in part placement flags. */
+typedef enum
+{
+    FIELD_ATTACHMENT_LINKED_BOUNDS_FIRST = 10,
+    FIELD_ATTACHMENT_POINT_FIRST = 20,
+    FIELD_ATTACHMENT_POINT_SECOND_BIAS = 34,
+    FIELD_ATTACHMENT_POINT_SECOND = 42,
+    FIELD_ATTACHMENT_UNRESOLVED_FIRST = 55
+} FieldEffectAttachmentCategory;
+
+/** @brief SDK matrix with word access to its rotation coefficients and padding. */
+typedef union
+{
+    MATRIX matrix;
+    struct
+    {
+        u32 rotation[5];
+        s32 translation[3];
+    } packed;
+} FieldMatrixStorage;
+
+/** @brief SDK angle vector with word access to paired halfwords. */
+typedef union
+{
+    SVECTOR vector;
+    struct
+    {
+        s32 xy;
+        s32 z_pad;
+    } packed;
+} FieldRotationAngles;
+
+/** @brief A packed XY pair, UV pair, and texture-page or palette halfword. */
+typedef struct
+{
+    s32 xy;
+    u16 uv;
+    u16 page;
+} FieldPackedQuadVertex;
+
+/** @brief SDK quad with packed views for copying ribbon edges and color. */
+typedef union
+{
+    POLY_FT4 gpu;
+    struct
+    {
+        s32 tag;
+        FieldPrimitiveColor color;
+        FieldPackedQuadVertex vertices[4];
+    } packed;
+} FieldRibbonQuad;
+
+/** @brief Ribbon path vectors followed by one rotation matrix per segment. */
+typedef struct
+{
+    VECTOR endpoint;
+    VECTOR position;
+    VECTOR midpoint;
+    VECTOR half_delta;
+    VECTOR delta;
+    FieldRotationAngles direction;
+    MATRIX rotations[FIELD_RIBBON_MAX_SEGMENTS];
+} FieldRibbonScratch;
+
+/** @brief Temporary rotation and distance calculations for a part matrix. */
+typedef struct
+{
+    SVECTOR direction;
+    VECTOR scale;
+    VECTOR delta;
+    VECTOR squared_delta;
+} FieldMatrixScratch;
+
+/** @brief GTE output with unsigned low halfwords for GPU vertex additions. */
+typedef union
+{
+    VECTOR vector;
+    struct
+    {
+        u16 x;
+        u16 x_high;
+        u16 y;
+        u16 y_high;
+        u16 z;
+        u16 z_high;
+        u16 pad[2];
+    } low;
+} FieldSpriteProjection;
+
+/** @brief Scratchpad vectors and local tilt matrix for sprite projection. */
+typedef struct
+{
+    SVECTOR rotated_vertex;
+    SVECTOR vertex;
+    FieldSpriteProjection projected;
+    FieldMatrixStorage rotation;
+} FieldSpriteScratch;
+
+extern FieldMotionRecord g_field_actors[];
+extern FieldActorState g_field_actor_slots[80];
+extern s32 g_field_track_index;
+
+s32 field_evaluate_parameter_track(FieldActorState* actor, s32 track);
+s32 field_evaluate_parameter_track_at_time(FieldActorState* actor, u32 track, u16 time);
+
+/**
+ * @brief Render a textured ribbon from an effect to its resolved target.
+ * @param effect Position, facing, color, age, and segment count source.
+ * @param packet_cursor Receives consecutive POLY_FT4 packets.
+ * @param ordering_table Depth-indexed GPU ordering table.
+ * @return Cursor after the last emitted quad.
+ * @note animation_active supplies the segment count for this effect kind.
+ * @see decomp.me (99.94%) WIP
+ */
+u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32* ordering_table)
+{
+    FieldRibbonQuad* quad = (FieldRibbonQuad*)packet_cursor;
+    FieldActorPartDef* part;
+    FieldActorState* state;
+    VECTOR* position;
+    VECTOR* midpoint;
+    VECTOR* half_delta;
+    VECTOR* delta;
+    MATRIX* rotation;
+    VECTOR* endpoint;
+    s32 segment_count;
+    s32 i;
+    s32 arc_height;
+    s32 step;
+    s32 angle;
+    s32 edge_x;
+    FieldRotationAngles* direction;
+    s32 depth;
+    u8 uv_flags;
+
+    position = &FIELD_RIBBON_SCRATCH->position;
+    midpoint = &FIELD_RIBBON_SCRATCH->midpoint;
+    half_delta = &FIELD_RIBBON_SCRATCH->half_delta;
+    delta = &FIELD_RIBBON_SCRATCH->delta;
+    direction = &FIELD_RIBBON_SCRATCH->direction;
+
+    part = &g_field_actor_slots[effect->actor_index].parts[effect->part_index];
+    state = &g_field_actor_slots[effect->actor_index];
+    field_build_effect_part_matrix(effect, part, FIELD_RIBBON_SCRATCH->rotations, state);
+
+    rotation = FIELD_RIBBON_SCRATCH->rotations;
+    uv_flags = g_field_ribbon_frame_flags[((u16)effect->age) % FIELD_RIBBON_FRAME_COUNT];
+    quad->packed.vertices[0].uv = g_field_ribbon_uv_corners[(uv_flags & FIELD_RIBBON_UV_VARIANT) * 4 + 0];
+    quad->packed.vertices[1].uv = g_field_ribbon_uv_corners[(uv_flags & FIELD_RIBBON_UV_VARIANT) * 4 + 1];
+    quad->packed.vertices[2].uv = g_field_ribbon_uv_corners[(uv_flags & FIELD_RIBBON_UV_VARIANT) * 4 + 2];
+    quad->packed.vertices[3].uv = g_field_ribbon_uv_corners[(uv_flags & FIELD_RIBBON_UV_VARIANT) * 4 + 3];
+
+    if (uv_flags & FIELD_RIBBON_FLIP_U)
+    {
+        i = quad->gpu.u0;
+        quad->gpu.u0 = quad->gpu.u1;
+        quad->gpu.u1 = i;
+        i = quad->gpu.u2;
+        quad->gpu.u2 = quad->gpu.u3;
+        quad->gpu.u3 = i;
+    }
+    if (uv_flags & FIELD_RIBBON_FLIP_V)
+    {
+        i = quad->gpu.v0;
+        quad->gpu.v0 = quad->gpu.v2;
+        quad->gpu.v2 = i;
+        i = quad->gpu.v1;
+        quad->gpu.v1 = quad->gpu.v3;
+        quad->gpu.v3 = i;
+    }
+
+    {
+        u32 behavior_flags = part->behavior_flags.word;
+        quad->gpu.clut = getClut(80, 492);
+        quad->gpu.tpage = (u16)(((behavior_flags >> 17) & 0x60) | getTPage(0, 0, 448, 0));
+    }
+
+    gte_SetRotMatrix(rotation);
+
+    {
+        s32 view_x;
+        s32 screen_x;
+        s32 view_y;
+        view_x = g_field_view_offset_x / 256;
+        screen_x = effect->x / 256 + FIELD_EFFECT_CENTER_X;
+        view_y = g_field_view_offset_y;
+        quad->gpu.x0 = (s16)(view_x + screen_x);
+        if (view_y < 0)
+        {
+            view_y += 255;
+        }
+        quad->gpu.y0 = (s16)(FIELD_EFFECT_CENTER_Y + (view_y >> 8) + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512);
+    }
+
+    field_resolve_effect_part_color(state, effect, part, &quad->packed.color);
+    setPolyFT4(&quad->gpu);
+    setSemiTrans(&quad->gpu, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
+
+    rotation = FIELD_RIBBON_SCRATCH->rotations;
+    segment_count = FIELD_RIBBON_MAX_SEGMENTS;
+    if (effect->animation_active < FIELD_RIBBON_MAX_SEGMENTS)
+    {
+        segment_count = effect->animation_active;
+    }
+    endpoint = &FIELD_RIBBON_SCRATCH->endpoint;
+    if (segment_count <= 0)
+    {
+        segment_count = 1;
+    }
+    step = FIELD_ANGLE_HALF_TURN / segment_count;
+
+    field_resolve_effect_position(effect, part, &FIELD_RIBBON_SCRATCH->endpoint);
+    {
+        midpoint->vx = (FIELD_RIBBON_SCRATCH->endpoint.vx + effect->x) >> 1;
+        midpoint->vy = FIELD_RIBBON_SCRATCH->endpoint.vy;
+        midpoint->vz = (FIELD_RIBBON_SCRATCH->endpoint.vz + effect->z) >> 1;
+        delta->vx = endpoint->vx - effect->x;
+        half_delta->vx = delta->vx >> 1;
+        delta->vy = effect->y - FIELD_RIBBON_SCRATCH->endpoint.vy;
+        half_delta->vy = delta->vy;
+        i = segment_count - 1;
+        delta->vz = FIELD_RIBBON_SCRATCH->endpoint.vz - effect->z;
+        half_delta->vz = delta->vz >> 1;
+    }
+
+    for (; i > 0; i--, rotation++)
+    {
+        direction->vector.vx = 0;
+        direction->vector.vy = (s16)((rand() << 12) >> 15);
+        direction->vector.vz = (s16)((rand() << 12) >> 16);
+        RotMatrix_gte(&direction->vector, rotation);
+    }
+
+    rotation = FIELD_RIBBON_SCRATCH->rotations;
+
+    if ((part->behavior_flags.bytes.low) >> FIELD_PART_SCALE_TRACK_SHIFT)
+    {
+        direction->vector.vx = 0;
+        direction->vector.vy = (s16)((part->behavior_flags.word >> 28) << 8);
+        direction->vector.vz = 0;
+    }
+    else
+    {
+        direction->packed.z_pad = 0;
+        direction->packed.xy = 0;
+    }
+
+    if (((part->track_flags.word >> FIELD_PART_ROTATION_MODE_SHIFT) & 3) != 0)
+    {
+        arc_height = (part->track_flags.word >> FIELD_PART_ROTATION_TRACK_SHIFT) << 10;
+    }
+    else
+    {
+        arc_height = 0;
+    }
+    arc_height = (arc_height * rand()) >> 15;
+    if (rand() & 1)
+    {
+        arc_height = -arc_height;
+    }
+
+    angle = ratan2(delta->vx, delta->vy + (delta->vz >> 1));
+    edge_x = (rcos(angle) * part->footprint_scale_y) >> 12;
+    angle = (rsin(angle) * part->footprint_scale_y) >> 12;
+    if (uv_flags & FIELD_RIBBON_UV_VARIANT)
+    {
+        angle *= 2;
+        edge_x *= 2;
+    }
+
+    i = segment_count - 1;
+    quad->gpu.x2 = quad->gpu.x0 + edge_x;
+    quad->gpu.y2 = quad->gpu.y0 + angle;
+    quad->gpu.y0 -= angle;
+    quad->gpu.x0 -= edge_x;
+
+    if (i > 0)
+    {
+        s32 angle_step;
+        s32 addr_mask = FIELD_GPU_ADDRESS_MASK;
+        s32 tag_mask = FIELD_GPU_LENGTH_MASK;
+        for (angle_step = i * step; i > 0; angle_step -= step, i--, rotation++)
+        {
+            depth = quad->packed.color.signed_word;
+            quad[1].packed.color.signed_word = depth;
+            setPolyFT4(&quad->gpu);
+            setSemiTrans(&quad->gpu, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
+
+            gte_SetRotMatrix(rotation);
+            gte_ldv0(direction);
+            gte_rtv0();
+            gte_stlvnl(delta);
+
+            if (arc_height != 0)
+            {
+                position->vy = midpoint->vy + (half_delta->vy * i) / segment_count - ((arc_height * rsin(angle_step)) >> 12) + delta->vy;
+            }
+            else
+            {
+                position->vy = midpoint->vy + (half_delta->vy * i) / segment_count + delta->vy;
+            }
+            position->vx = ((half_delta->vx * rcos(angle_step)) >> 12) + midpoint->vx + delta->vx;
+            position->vz = ((half_delta->vz * rcos(angle_step)) >> 12) + midpoint->vz + delta->vz;
+
+            {
+                s32 view_x;
+                s32 screen_x;
+                s32 view_y;
+                view_x = g_field_view_offset_x / 256;
+                screen_x = position->vx / 256 + FIELD_EFFECT_CENTER_X;
+                view_y = g_field_view_offset_y;
+                quad->gpu.x1 = (s16)(view_x + screen_x);
+                if (view_y < 0)
+                {
+                    view_y += 255;
+                }
+                quad->gpu.y1 = (s16)(FIELD_EFFECT_CENTER_Y + (view_y >> 8) + position->vy / 256 - position->vz / 512 - g_field_view_offset_z / 512);
+            }
+            quad->gpu.x3 = quad->gpu.x1 + edge_x;
+            quad->gpu.y3 = quad->gpu.y1 + angle;
+            quad->gpu.y1 -= angle;
+            quad->gpu.x1 -= edge_x;
+
+            {
+                u16 first_uv;
+                u16 clut;
+                first_uv = quad->packed.vertices[0].uv;
+                quad[1].packed.vertices[3].uv = quad->packed.vertices[3].uv;
+                quad[1].packed.vertices[0].uv = first_uv;
+                quad[1].gpu.tpage = quad->gpu.tpage;
+                quad[1].packed.vertices[2].xy = quad->packed.vertices[3].xy;
+                quad[1].packed.vertices[0].xy = quad->packed.vertices[1].xy;
+                clut = quad->gpu.clut;
+                quad[1].packed.vertices[1].uv = quad->packed.vertices[1].uv;
+                quad[1].packed.vertices[2].uv = quad->packed.vertices[2].uv;
+                quad[1].gpu.clut = clut;
+            }
+
+            depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+            if (depth < 0)
+            {
+                s32 addr = (s32)quad & addr_mask;
+                quad->packed.tag = (quad->packed.tag & tag_mask) | (ordering_table[0] & addr_mask);
+                quad++;
+                ordering_table[0] = (ordering_table[0] & tag_mask) | addr;
+            }
+            else if (depth >= FIELD_EFFECT_OT_SIZE)
+            {
+                s32 addr = (s32)quad & addr_mask;
+                quad->packed.tag = (quad->packed.tag & tag_mask) | (ordering_table[FIELD_EFFECT_OT_SIZE - 1] & addr_mask);
+                quad++;
+                ordering_table[FIELD_EFFECT_OT_SIZE - 1] = (ordering_table[FIELD_EFFECT_OT_SIZE - 1] & tag_mask) | addr;
+            }
+            else
+            {
+                s32 addr;
+                s32* entry;
+                addr = (s32)quad & addr_mask;
+                quad->packed.tag = (quad->packed.tag & tag_mask) | (ordering_table[depth] & addr_mask);
+                entry = (s32*)(((s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (u32)ordering_table);
+                quad++;
+                *entry = (*entry & tag_mask) | addr;
+            }
+        }
+    }
+
+    setPolyFT4(&quad->gpu);
+    setSemiTrans(&quad->gpu, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
+
+    {
+        s32 view_x;
+        s32 screen_x;
+        s32 view_y;
+        view_x = g_field_view_offset_x / 256;
+        screen_x = endpoint->vx / 256 + FIELD_EFFECT_CENTER_X;
+        view_y = g_field_view_offset_y;
+        quad->gpu.x1 = (s16)(view_x + screen_x);
+        if (view_y < 0)
+        {
+            view_y += 255;
+        }
+        {
+            s32 depth;
+            view_y = FIELD_EFFECT_CENTER_Y + (view_y >> 8) + endpoint->vy / 256;
+            depth = endpoint->vz;
+            view_y -= depth / 512;
+            quad->gpu.y1 = view_y - g_field_view_offset_z / 512;
+        }
+    }
+    quad->gpu.x3 = quad->gpu.x1 + edge_x;
+    quad->gpu.y3 = quad->gpu.y1 + angle;
+    quad->gpu.y1 -= angle;
+    quad->gpu.x1 -= edge_x;
+
+    depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+    if (depth < 0)
+    {
+        s32 addr = (s32)quad & FIELD_GPU_ADDRESS_MASK;
+        setaddr(quad, getaddr(&ordering_table[0]));
+        quad++;
+        ordering_table[0] = (ordering_table[0] & FIELD_GPU_LENGTH_MASK) | addr;
+    }
+    else if (depth >= FIELD_EFFECT_OT_SIZE)
+    {
+        s32 addr = (s32)quad & FIELD_GPU_ADDRESS_MASK;
+        setaddr(quad, getaddr(&ordering_table[FIELD_EFFECT_OT_SIZE - 1]));
+        quad++;
+        ordering_table[FIELD_EFFECT_OT_SIZE - 1] = (ordering_table[FIELD_EFFECT_OT_SIZE - 1] & FIELD_GPU_LENGTH_MASK) | addr;
+    }
+    else
+    {
+        s32 addr;
+        s32* entry;
+        s32 srcval;
+        addr = (s32)quad & FIELD_GPU_ADDRESS_MASK;
+        srcval = ordering_table[depth];
+        setaddr(quad, srcval);
+        entry = (s32*)(((s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (u32)ordering_table);
+        quad++;
+        *entry = (*entry & FIELD_GPU_LENGTH_MASK) | addr;
+    }
+    return (u8*)quad;
+}
+
+/**
+ * @brief Build an effect part's rotation, target alignment, and animated scale.
+ * @param effect Position, orientation, and track sampling age.
+ * @param part Rotation, alignment, and scale selectors.
+ * @param matrix Receives the resulting transform.
+ * @param actor Owner supplying parameter tracks and object bindings.
+ * @return Unspecified; callers use only the matrix output.
+ * @see decomp.me (100%)
+ */
+s32 field_build_effect_part_matrix(FieldMotionRecord* effect, FieldActorPartDef* part, MATRIX* matrix, FieldActorState* actor)
+{
+    FieldMatrixStorage* storage = (FieldMatrixStorage*)matrix;
+    SVECTOR* direction = &FIELD_MATRIX_SCRATCH->direction;
+    VECTOR* scale = &FIELD_MATRIX_SCRATCH->scale;
+    VECTOR* delta = &FIELD_MATRIX_SCRATCH->delta;
+    VECTOR* squared_delta = &FIELD_MATRIX_SCRATCH->squared_delta;
+    s32 angle;
+    s32 final_angle;
+    s32 axis;
+    s32 scale_mode;
+    u32 distance;
+    s32 rotation_mode;
+    s32 target_component;
+    s32 next_scale_track;
+    u32 flags;
+
+    storage->packed.rotation[4] = ONE;
+    storage->packed.rotation[2] = ONE;
+    storage->packed.rotation[0] = ONE;
+    matrix->t[2] = 0;
+    matrix->t[1] = 0;
+    matrix->t[0] = 0;
+    storage->packed.rotation[3] = 0;
+    storage->packed.rotation[1] = 0;
+
+    flags = part->track_flags.word;
+    rotation_mode = (flags >> FIELD_PART_ROTATION_MODE_SHIFT) & 3;
+    if (rotation_mode != 0)
+    {
+        switch (rotation_mode)
+        {
+        case 1:
+            angle = field_evaluate_parameter_track_at_time(actor, flags >> 26, (u16)effect->age) << 4;
+            axis = part->track_flags.bytes.high;
+            axis &= 3;
+            break;
+        case 2:
+            angle = effect->heading;
+            axis = 1;
+            break;
+        case 3:
+            angle = (((flags >> FIELD_PART_ROTATION_TRACK_SHIFT) * (u16)effect->age) << 4) & FIELD_ANGLE_MASK;
+            axis = flags >> 24;
+            axis &= 3;
+            break;
+        default:
+            break;
+        }
+
+        if (part->spawn_flags.word & FIELD_PART_REVERSE_ROTATION_WITH_FACING)
+        {
+            if (!(g_field_actors[actor->owner_object_index].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
+            {
+                angle = -angle;
+            }
+        }
+
+        switch (axis)
+        {
+        case 0:
+            RotMatrixX(angle, matrix);
+            break;
+        case 1:
+            RotMatrixY(angle, matrix);
+            break;
+        case 2:
+            RotMatrixZ(angle, matrix);
+            break;
+        case 3:
+            RotMatrixZ(angle, matrix);
+            RotMatrixY(angle, matrix);
+            RotMatrixX(angle, matrix);
+            break;
+        }
+    }
+
+    if ((part->track_flags.word >> FIELD_PART_ROTATE_QUARTER_X_SHIFT) & 1)
+    {
+        RotMatrixX(FIELD_ANGLE_QUARTER_TURN, matrix);
+    }
+    if (part->rotation_y_16 != 0)
+    {
+        RotMatrixY(part->rotation_y_16 << 4, matrix);
+    }
+
+    if ((part->behavior_flags.word >> FIELD_PART_ORIENTED_SHIFT) & 1)
+    {
+        RotMatrixZ(FIELD_ANGLE_QUARTER_TURN, matrix);
+        RotMatrixY(FIELD_ANGLE_QUARTER_TURN, matrix);
+        if ((part->placement_flags.word >> FIELD_PART_AIM_AT_TARGET_SHIFT) & 1)
+        {
+            field_resolve_effect_position(effect, part, scale);
+            target_component = scale->vz;
+            angle = ratan2(effect->z - target_component, scale->vx - effect->x);
+            delta->vx = (scale->vx - effect->x) >> 8;
+            delta->vy = (scale->vy - effect->y) >> 8;
+            delta->vz = (scale->vz - effect->z) >> 8;
+            gte_ldlvl(delta);
+            gte_sqr0();
+            gte_stlvnl(squared_delta);
+            distance = SquareRoot0(squared_delta->vx + squared_delta->vz + squared_delta->vy);
+            target_component = scale->vy;
+            RotMatrixZ(ratan2(distance << 8, effect->y - target_component), matrix);
+            RotMatrixY(angle, matrix);
+            final_angle = FIELD_EFFECT_TARGET_PITCH;
+        }
+        else
+        {
+            RotMatrixZ(effect->pitch, matrix);
+            RotMatrixY(effect->heading, matrix);
+            RotMatrixZ(effect->rotation_z_16 << 4, matrix);
+            RotMatrixY(effect->rotation_y_16 << 4, matrix);
+            final_angle = FIELD_EFFECT_DEFAULT_PITCH;
+        }
+    }
+    else
+    {
+        RotMatrixY(FIELD_ANGLE_QUARTER_TURN, matrix);
+        final_angle = FIELD_ANGLE_QUARTER_TURN;
+    }
+    RotMatrixX(final_angle, matrix);
+
+    if ((part->placement_flags.word >> FIELD_PART_STRETCH_TO_TARGET_SHIFT) & 1)
+    {
+        field_resolve_effect_position(effect, part, scale);
+        delta->vx = (scale->vx - effect->x) >> 8;
+        delta->vy = (scale->vy - effect->y) >> 8;
+        delta->vz = (scale->vz - effect->z) >> 8;
+        gte_ldlvl(delta);
+        gte_sqr0();
+        gte_stlvnl(squared_delta);
+        distance = SquareRoot0(squared_delta->vx + squared_delta->vy + squared_delta->vz);
+        if (distance == 0)
+        {
+            distance = 1;
+        }
+        scale->vy = ONE;
+        scale->vz = ONE;
+        if (effect->sprite_height_minus_one != 0)
+        {
+            scale->vx = (distance << 12) / effect->sprite_height_minus_one;
+        }
+        else
+        {
+            scale->vx = (distance << 12) >> 6;
+        }
+        ScaleMatrix(matrix, scale);
+    }
+
+    if ((part->track_flags.word >> FIELD_PART_PROJECT_SCALE_SHIFT) & 1)
+    {
+        if ((part->behavior_flags.word >> FIELD_PART_ORIENTED_SHIFT) & 1)
+        {
+            direction->vx = -ONE;
+            direction->vy = 0;
+            direction->vz = 0;
+            gte_SetRotMatrix(matrix);
+            gte_ldv0(direction);
+            gte_rtv0();
+            gte_stlvnl(scale);
+            direction->vx = 0;
+            direction->vy = FIELD_ANGLE_QUARTER_TURN;
+            direction->vz = FIELD_ANGLE_QUARTER_TURN;
+            RotMatrix_gte(direction, matrix);
+            RotMatrixZ(ratan2(scale->vy, scale->vx) + FIELD_ANGLE_QUARTER_TURN, matrix);
+            gte_ldlvl(scale);
+            gte_sqr0();
+            gte_stlvnl(squared_delta);
+            scale->vx = SquareRoot0(squared_delta->vx + squared_delta->vy);
+            scale->vz = ONE;
+            scale->vy = ONE;
+            ScaleMatrix(matrix, scale);
+        }
+    }
+
+    scale->vy = ONE;
+    /* Stat-derived strength reduces the footprint in ten-percent steps. */
+    if (part->palette_extent.word & FIELD_PART_SCALE_Z_BY_OWNER)
+    {
+        scale->vz = (part->appearance.fields.footprint_scale_x -
+                     ((part->appearance.fields.footprint_scale_x *
+                       ((s32)(FIELD_OBJECT_FOOTPRINT_STRENGTH_RANGE - g_field_object_states[actor->owner_object_index].effect_footprint_strength) >> 6)) /
+                      10))
+                    << 6;
+    }
+    else
+    {
+        scale->vz = part->appearance.fields.footprint_scale_x << 6;
+    }
+    if (part->palette_extent.word & FIELD_PART_SCALE_X_BY_OWNER)
+    {
+        scale->vx = (part->footprint_scale_y -
+                     ((part->footprint_scale_y *
+                       ((s32)(FIELD_OBJECT_FOOTPRINT_STRENGTH_RANGE - g_field_object_states[actor->owner_object_index].effect_footprint_strength) >> 6)) /
+                      10))
+                    << 6;
+    }
+    else
+    {
+        scale->vx = part->footprint_scale_y << 6;
+    }
+    ScaleMatrix(matrix, scale);
+
+    g_field_effect_track_scale.x = ONE;
+    g_field_effect_track_scale.y = ONE;
+    g_field_effect_track_scale.z = ONE;
+
+    if ((part->behavior_flags.word >> FIELD_PART_SCALE_TRACK_SHIFT) & 1)
+    {
+        scale->vz = ONE;
+        scale->vy = ONE;
+        scale->vx = ONE;
+        flags = part->behavior_flags.word;
+        scale_mode = (flags >> 20) & 3;
+        switch (scale_mode)
+        {
+        case 0:
+            scale->vz = field_evaluate_parameter_track_at_time(actor, flags >> 28, (u16)effect->age) << 4;
+            break;
+        case 1:
+            scale->vx = field_evaluate_parameter_track_at_time(actor, flags >> 28, (u16)effect->age) << 4;
+            break;
+        case 2:
+        {
+            u32 value = field_evaluate_parameter_track_at_time(actor, flags >> 28, (u16)effect->age) << 4;
+            scale->vz = value;
+            scale->vy = value;
+            scale->vx = value;
+            break;
+        }
+        case 3:
+            scale->vz = field_evaluate_parameter_track_at_time(actor, flags >> 28, (u16)effect->age) << 4;
+            next_scale_track = (part->behavior_flags.word >> 28) + 1;
+            scale->vx = field_evaluate_parameter_track_at_time(actor, next_scale_track % FIELD_TRACK_COUNT, (u16)effect->age) << 4;
+            break;
+        }
+        g_field_effect_track_scale.x = (u16)scale->vx;
+        g_field_effect_track_scale.y = (u16)scale->vy;
+        g_field_effect_track_scale.z = (u16)scale->vz;
+        ScaleMatrix(matrix, scale);
+    }
+}
+
+/**
+ * @brief Resolve a part's literal or animated primitive color.
+ * @param actor Owner supplying parameter tracks.
+ * @param effect Color flags, packed literal color, and track sampling age.
+ * @param part Literal channel values and track selectors.
+ * @param out Four-byte color storage; the literal path also copies its fourth byte.
+ * @see decomp.me (100%)
+ */
+void field_resolve_effect_part_color(FieldActorState* actor, FieldMotionRecord* effect, FieldActorPartDef* part, FieldPrimitiveColor* out)
+{
+    s32 flags;
+    u8 value;
+
+    flags = effect->flags;
+    if (!(flags & FIELD_EFFECT_TRACK_COLOR))
+    {
+        out->channels.r = ((part->appearance.word >> FIELD_PART_COLOR_TRACK_SHIFT) & FIELD_PART_RED_TRACK)
+                              ? field_evaluate_parameter_track_at_time(actor, part->red_or_track & FIELD_TRACK_INDEX_MASK, (u16)effect->age)
+                              : part->red_or_track;
+        out->channels.g = ((part->appearance.word >> FIELD_PART_COLOR_TRACK_SHIFT) & FIELD_PART_GREEN_TRACK)
+                              ? field_evaluate_parameter_track_at_time(actor, part->green_or_track & FIELD_TRACK_INDEX_MASK, (u16)effect->age)
+                              : part->green_or_track;
+        out->channels.b = ((part->appearance.word >> FIELD_PART_COLOR_TRACK_SHIFT) & FIELD_PART_BLUE_TRACK)
+                              ? field_evaluate_parameter_track_at_time(actor, part->blue_or_track & FIELD_TRACK_INDEX_MASK, (u16)effect->age)
+                              : part->blue_or_track;
+        return;
+    }
+
+    if (flags & FIELD_EFFECT_LITERAL_COLOR)
+    {
+        /* The fourth byte travels with RGB and is overwritten by the packet builder. */
+        out->word = effect->color_position.word;
+        return;
+    }
+
+    {
+        u32 part_flags = part->behavior_flags.word;
+        if ((part_flags >> FIELD_PART_RGB_TRACKS_SHIFT) & 1)
+        {
+            out->channels.r =
+                field_evaluate_parameter_track_at_time(actor, (part_flags >> FIELD_PART_ADD_HALF_WIDTH_SHIFT) & FIELD_TRACK_INDEX_MASK, (u16)effect->age);
+            out->channels.g = field_evaluate_parameter_track_at_time(actor, (part->behavior_flags.halves.high & FIELD_TRACK_INDEX_MASK) + 1, (u16)effect->age);
+            out->channels.b = field_evaluate_parameter_track_at_time(actor, (part->behavior_flags.halves.high & FIELD_TRACK_INDEX_MASK) + 2, (u16)effect->age);
+            return;
+        }
+
+        value = field_evaluate_parameter_track_at_time(actor, (part_flags >> FIELD_PART_ADD_HALF_WIDTH_SHIFT) & FIELD_TRACK_INDEX_MASK, (u16)effect->age);
+        out->channels.r = out->channels.g = out->channels.b = value;
+    }
+}
+
+/**
+ * @brief Append the effect's texture-page command at its clamped depth.
+ * @param effect Supplies the ordering-table depth.
+ * @param part Supplies the semi-transparency blend mode.
+ * @param packet_cursor Receives one DR_TPAGE packet.
+ * @param ordering_table Depth-indexed GPU ordering table.
+ * @return Cursor immediately after the texture-page packet.
+ * @see decomp.me (100%)
+ */
+u8* field_emit_effect_texture_page(FieldMotionRecord* effect, FieldActorPartDef* part, u8* packet_cursor, s32* ordering_table)
+{
+    s32 index;
+    s32* entry;
+    s32 srcval;
+
+    setDrawTPage(packet_cursor, 0, 0, getTPage(0, (part->behavior_flags.word >> 22), 320, 0));
+
+    index = effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+    if (index < 0)
+    {
+        addPrim(&ordering_table[0], packet_cursor);
+        packet_cursor += sizeof(DR_TPAGE);
+    }
+    else if (index >= FIELD_EFFECT_OT_SIZE)
+    {
+        addPrim(&ordering_table[FIELD_EFFECT_OT_SIZE - 1], packet_cursor);
+        packet_cursor += sizeof(DR_TPAGE);
+    }
+    else
+    {
+        srcval = ordering_table[index];
+        setaddr(packet_cursor, srcval);
+        entry = (s32*)((effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (u32)ordering_table);
+        setaddr(entry, packet_cursor);
+        packet_cursor += sizeof(DR_TPAGE);
+    }
+    return packet_cursor;
+}
+
+/**
+ * @brief Project sprite corners, applying optional tilt and facing reversal.
+ * @param effect Supplies the horizontal facing flag.
+ * @param origin Screen-space origin, read as unsigned low halfwords.
+ * @param quad POLY_FT4 packet receiving projected coordinates.
+ * @param width Sprite width.
+ * @param height Sprite height.
+ * @param x Horizontal offset from the anchor.
+ * @param y Vertical offset from the anchor.
+ * @param frame Sprite record with tilt in 16 GTE angle units per step.
+ * @param matrix Caller rotation matrix, already loaded into the GTE on entry.
+ * @see decomp.me (100%)
+ */
+void field_project_effect_sprite_quad(FieldMotionRecord* effect, Vec2s* origin, POLY_FT4* quad, s32 width, s32 height, s32 x, s32 y, FieldSpriteFrame* frame,
+                                      MATRIX* matrix)
+{
+    SVECTOR* rotated_vertex = &FIELD_SPRITE_SCRATCH->rotated_vertex;
+    SVECTOR* vertex = &FIELD_SPRITE_SCRATCH->vertex;
+    FieldSpriteProjection* out = &FIELD_SPRITE_SCRATCH->projected;
+    FieldMatrixStorage* tilt_matrix = &FIELD_SPRITE_SCRATCH->rotation;
+
+    /* The output uses unsigned low halves, including wrapped negative coordinates. */
+    if (frame->tilt_16 == 0)
+    {
+        rotated_vertex->vx = y;
+        rotated_vertex->vy = 0;
+        rotated_vertex->vz = x;
+        gte_ldv0(rotated_vertex);
+        gte_rtv0();
+        gte_stlvnl(out);
+        quad->x0 = (u16)origin->x + out->low.x;
+        quad->y0 = (u16)origin->y + out->low.y;
+
+        rotated_vertex->vx = y;
+        rotated_vertex->vy = 0;
+        rotated_vertex->vz = x + width;
+        gte_ldv0(rotated_vertex);
+        gte_rtv0();
+        gte_stlvnl(out);
+        quad->x1 = (u16)origin->x + out->low.x;
+        quad->y1 = (u16)origin->y + out->low.y;
+
+        rotated_vertex->vx = y + height;
+        rotated_vertex->vy = 0;
+        rotated_vertex->vz = x;
+        gte_ldv0(rotated_vertex);
+        gte_rtv0();
+        gte_stlvnl(out);
+        quad->x2 = (u16)origin->x + out->low.x;
+        quad->y2 = (u16)origin->y + out->low.y;
+
+        rotated_vertex->vx = y + height;
+        rotated_vertex->vy = 0;
+        rotated_vertex->vz = x + width;
+        gte_ldv0(rotated_vertex);
+        gte_rtv0();
+        gte_stlvnl(out);
+        quad->x3 = (u16)origin->x + out->low.x;
+        quad->y3 = (u16)origin->y + out->low.y;
+        return;
+    }
+
+    if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
+    {
+        tilt_matrix->packed.rotation[4] = ONE;
+        tilt_matrix->packed.rotation[2] = ONE;
+        tilt_matrix->packed.rotation[0] = ONE;
+        tilt_matrix->matrix.t[2] = 0;
+        tilt_matrix->matrix.t[1] = 0;
+        tilt_matrix->matrix.t[0] = 0;
+        tilt_matrix->packed.rotation[3] = 0;
+        tilt_matrix->packed.rotation[1] = 0;
+
+        vertex->vx = y;
+        vertex->vy = 0;
+        vertex->vz = x + width;
+        gte_SetRotMatrix(&tilt_matrix->matrix);
+        gte_ldv0(vertex);
+        gte_rtv0();
+        gte_stsv(rotated_vertex);
+        gte_SetRotMatrix(matrix);
+        gte_ldv0(rotated_vertex);
+        gte_rtv0();
+        gte_stlvnl(out);
+        quad->x1 = (u16)origin->x + out->low.x;
+        quad->y1 = (u16)origin->y + out->low.y;
+
+        vertex->vx = 0;
+        vertex->vy = -(frame->tilt_16 << 4);
+        vertex->vz = 0;
+        RotMatrix_gte(vertex, &tilt_matrix->matrix);
+
+        vertex->vx = 0;
+        vertex->vy = 0;
+        vertex->vz = -width;
+        gte_SetRotMatrix(&tilt_matrix->matrix);
+        gte_ldv0(vertex);
+        gte_rtv0();
+        gte_stsv(rotated_vertex);
+        gte_SetRotMatrix(matrix);
+        gte_ldv0(rotated_vertex);
+        gte_rtv0();
+        gte_stlvnl(out);
+        quad->x0 = (u16)quad->x1 + out->low.x;
+        quad->y0 = (u16)quad->y1 + out->low.y;
+
+        vertex->vx = height;
+        vertex->vy = 0;
+        vertex->vz = 0;
+        gte_SetRotMatrix(&tilt_matrix->matrix);
+        gte_ldv0(vertex);
+        gte_rtv0();
+        gte_stsv(rotated_vertex);
+        gte_SetRotMatrix(matrix);
+        gte_ldv0(rotated_vertex);
+        gte_rtv0();
+        gte_stlvnl(out);
+        quad->x3 = (u16)quad->x1 + out->low.x;
+        quad->y3 = (u16)quad->y1 + out->low.y;
+
+        vertex->vx = height;
+        vertex->vy = 0;
+        vertex->vz = -width;
+        gte_SetRotMatrix(&tilt_matrix->matrix);
+        gte_ldv0(vertex);
+        gte_rtv0();
+        gte_stsv(rotated_vertex);
+        gte_SetRotMatrix(matrix);
+        gte_ldv0(rotated_vertex);
+        gte_rtv0();
+        gte_stlvnl(out);
+        quad->x2 = (u16)quad->x1 + out->low.x;
+        quad->y2 = (u16)quad->y1 + out->low.y;
+    }
+    else
+    {
+        tilt_matrix->packed.rotation[4] = ONE;
+        tilt_matrix->packed.rotation[2] = ONE;
+        tilt_matrix->packed.rotation[0] = ONE;
+        tilt_matrix->matrix.t[2] = 0;
+        tilt_matrix->matrix.t[1] = 0;
+        tilt_matrix->matrix.t[0] = 0;
+        tilt_matrix->packed.rotation[3] = 0;
+        tilt_matrix->packed.rotation[1] = 0;
+
+        vertex->vx = y;
+        vertex->vy = 0;
+        vertex->vz = x;
+        gte_SetRotMatrix(&tilt_matrix->matrix);
+        gte_ldv0(vertex);
+        gte_rtv0();
+        gte_stsv(rotated_vertex);
+        gte_SetRotMatrix(matrix);
+        gte_ldv0(rotated_vertex);
+        gte_rtv0();
+        gte_stlvnl(out);
+        quad->x0 = (u16)origin->x + out->low.x;
+        quad->y0 = (u16)origin->y + out->low.y;
+
+        vertex->vx = 0;
+        vertex->vy = frame->tilt_16 << 4;
+        vertex->vz = 0;
+        RotMatrix_gte(vertex, &tilt_matrix->matrix);
+
+        vertex->vx = 0;
+        vertex->vy = 0;
+        vertex->vz = width;
+        gte_SetRotMatrix(&tilt_matrix->matrix);
+        gte_ldv0(vertex);
+        gte_rtv0();
+        gte_stsv(rotated_vertex);
+        gte_SetRotMatrix(matrix);
+        gte_ldv0(rotated_vertex);
+        gte_rtv0();
+        gte_stlvnl(out);
+        quad->x1 = (u16)quad->x0 + out->low.x;
+        quad->y1 = (u16)quad->y0 + out->low.y;
+
+        vertex->vx = height;
+        vertex->vy = 0;
+        vertex->vz = 0;
+        gte_SetRotMatrix(&tilt_matrix->matrix);
+        gte_ldv0(vertex);
+        gte_rtv0();
+        gte_stsv(rotated_vertex);
+        gte_SetRotMatrix(matrix);
+        gte_ldv0(rotated_vertex);
+        gte_rtv0();
+        gte_stlvnl(out);
+        quad->x2 = (u16)quad->x0 + out->low.x;
+        quad->y2 = (u16)quad->y0 + out->low.y;
+
+        vertex->vx = height;
+        vertex->vy = 0;
+        vertex->vz = width;
+        gte_SetRotMatrix(&tilt_matrix->matrix);
+        gte_ldv0(vertex);
+        gte_rtv0();
+        gte_stsv(rotated_vertex);
+        gte_SetRotMatrix(matrix);
+        gte_ldv0(rotated_vertex);
+        gte_rtv0();
+        gte_stlvnl(out);
+        quad->x3 = (u16)quad->x0 + out->low.x;
+        quad->y3 = (u16)quad->y0 + out->low.y;
+    }
+}
+
+/**
+ * @brief Decode signed byte geometry corners and optionally mirror them.
+ * @param out Receives four interleaved x/y pairs.
+ * @param flip Nonzero to reverse corner order and negate x coordinates.
+ * @param item Packed corner record; byte 7 is not a coordinate.
+ * @see decomp.me (100%)
+ */
+void field_unpack_effect_quad_corners8(s16* out, s32 flip, s8* item)
+{
+    if (flip)
+    {
+        out[0] = -item[2];
+        out[1] = item[3];
+        out[2] = -item[0];
+        out[3] = item[1];
+        out[4] = -item[6];
+        out[5] = item[8];
+        out[6] = -item[4];
+        out[7] = item[5];
+    }
+    else
+    {
+        out[0] = item[0];
+        out[1] = item[1];
+        out[2] = item[2];
+        out[3] = item[3];
+        out[4] = item[4];
+        out[5] = item[5];
+        out[6] = item[6];
+        out[7] = item[8];
+    }
+}
+
+/**
+ * @brief Decode little-endian geometry corners and optionally mirror them.
+ * @param out Receives four interleaved x/y pairs.
+ * @param mirror Nonzero to reverse corner order and negate x coordinates.
+ * @param item Packed corner record; byte 7 interrupts the second y component.
+ * @see decomp.me (100%)
+ */
+void field_unpack_effect_quad_corners16(s16* out, s32 mirror, u8* item)
+{
+    if (mirror != 0)
+    {
+        out[0] = -(item[4] + (item[5] << 8));
+        out[1] = item[6] + (item[8] << 8);
+        out[2] = -(item[0] + (item[1] << 8));
+        out[3] = item[2] + (item[3] << 8);
+        out[4] = -(item[13] + (item[14] << 8));
+        out[5] = item[15] + (item[16] << 8);
+        out[6] = -(item[9] + (item[10] << 8));
+        out[7] = item[11] + (item[12] << 8);
+    }
+    else
+    {
+        out[0] = item[0] + (item[1] << 8);
+        out[1] = item[2] + (item[3] << 8);
+        out[2] = item[4] + (item[5] << 8);
+        out[3] = item[6] + (item[8] << 8);
+        out[4] = item[9] + (item[10] << 8);
+        out[5] = item[11] + (item[12] << 8);
+        out[6] = item[13] + (item[14] << 8);
+        out[7] = item[15] + (item[16] << 8);
+    }
+}
+
+/**
+ * @brief Resolve a part's extent from tracks, distance, randomness, and bounds.
+ * @param actor Owner supplying tracks and linked object indices.
+ * @param part Packed extent value, modifiers, and attachment category.
+ * @return Extent after scaling and optional bounding-box half-extents.
+ * @note TODO: categories 55-62 do not initialize the part index on this path.
+ * @see decomp.me (100%)
+ */
+s32 field_resolve_effect_extent(FieldActorState* actor, FieldActorPartDef* part)
+{
+    VECTOR delta;
+    VECTOR squared_delta;
+    s32 extent;
+    s32 part_index;
+    s32 half_extent;
+    u32 flags;
+    FieldActorState* owner;
+
+    {
+        u32 value_flags = part->rotation_extent.word;
+        s32 value_mode = (value_flags >> FIELD_PART_ROTATION_MODE_SHIFT) & 3;
+        owner = actor;
+        switch (value_mode)
+        {
+        case 0:
+        {
+            s32 value_low_bits = part->palette_extent.word >> 29;
+            extent = ((value_flags & 0x3F) << 3) | value_low_bits;
+            break;
+        }
+        case 1:
+        {
+            u32 value_low_bits = part->palette_extent.word >> 29;
+            extent = field_evaluate_parameter_track(owner, (((value_flags & 0x3F) << 3) | value_low_bits) & FIELD_TRACK_INDEX_MASK);
+            break;
+        }
+        case 2:
+        {
+            u32 value_low_bits = part->palette_extent.word;
+            extent = field_evaluate_parameter_track_at_time(owner, (((value_flags & 0x3F) << 3) | (value_low_bits >> 29)) & FIELD_TRACK_INDEX_MASK, 0);
+            break;
+        }
+        }
+    }
+
+    if (part->effect_flags & FIELD_PART_SCALE_DISTANCE_BY_TARGET)
+    {
+        delta.vx = (g_field_actors[owner->track_object_indices[g_field_track_index]].x - g_field_actors[owner->owner_object_index].x) >> 8;
+        delta.vy = (g_field_actors[owner->track_object_indices[g_field_track_index]].y - g_field_actors[owner->owner_object_index].y) >> 8;
+        delta.vz = (g_field_actors[owner->track_object_indices[g_field_track_index]].z - g_field_actors[owner->owner_object_index].z) >> 8;
+        gte_ldlvl(&delta);
+        gte_sqr0();
+        gte_stlvnl(&squared_delta);
+        extent = (SquareRoot0(squared_delta.vx + squared_delta.vy + squared_delta.vz) * extent) / 100;
+    }
+
+    if ((part->placement_flags.word >> FIELD_PART_RANDOM_EXTENT_SHIFT) & 1)
+    {
+        extent = (extent * rand()) >> 15;
+    }
+
+    if (part->palette_extent.word & FIELD_PART_SCALE_DISTANCE_BY_OWNER)
+    {
+        extent = ((g_field_object_states[owner->owner_object_index].movement.half.flags & FIELD_OBJECT_EFFECT_SCALE_MASK) * extent) / 100;
+    }
+
+    flags = part->placement_flags.word;
+    {
+        s32 category = (flags >> FIELD_PART_ATTACHMENT_SHIFT) & FIELD_ATTACHMENT_MASK;
+        if (category < FIELD_ATTACHMENT_POINT_FIRST)
+        {
+            if ((flags >> FIELD_PART_ADD_HALF_WIDTH_SHIFT) & 1)
+            {
+                if ((u32)(category - FIELD_ATTACHMENT_LINKED_BOUNDS_FIRST) >= FIELD_ATTACHMENT_LINKED_BOUNDS_COUNT)
+                {
+                    half_extent = (g_field_object_states[owner->owner_object_index].bounds.half.right -
+                                   g_field_object_states[owner->owner_object_index].bounds.half.left) >>
+                                  1;
+                }
+                else
+                {
+                    half_extent = (g_field_object_states[owner->track_object_indices[g_field_track_index]].bounds.half.right -
+                                   g_field_object_states[owner->track_object_indices[g_field_track_index]].bounds.half.left) >>
+                                  1;
+                }
+                if (half_extent < 0)
+                {
+                    half_extent = -half_extent;
+                }
+                extent += half_extent;
+            }
+            if ((part->placement_flags.word >> FIELD_PART_ADD_HALF_HEIGHT_SHIFT) & 1)
+            {
+                if ((u32)(((part->placement_flags.word >> FIELD_PART_ATTACHMENT_SHIFT) & FIELD_ATTACHMENT_MASK) - FIELD_ATTACHMENT_LINKED_BOUNDS_FIRST) >=
+                    FIELD_ATTACHMENT_LINKED_BOUNDS_COUNT)
+                {
+                    half_extent = (g_field_object_states[owner->owner_object_index].bounds.half.bottom -
+                                   g_field_object_states[owner->owner_object_index].bounds.half.top) >>
+                                  1;
+                }
+                else
+                {
+                    half_extent = (g_field_object_states[owner->track_object_indices[g_field_track_index]].bounds.half.bottom -
+                                   g_field_object_states[owner->track_object_indices[g_field_track_index]].bounds.half.top) >>
+                                  1;
+                }
+                if (half_extent < 0)
+                {
+                    half_extent = -half_extent;
+                }
+                extent += half_extent;
+            }
+        }
+    }
+
+    {
+        s32 category = (part->placement_flags.word >> FIELD_PART_ATTACHMENT_SHIFT) & FIELD_ATTACHMENT_MASK;
+        if ((u32)(category - FIELD_ATTACHMENT_POINT_SECOND) < FIELD_ATTACHMENT_GROUP_COUNT ||
+            (u32)(category - FIELD_ATTACHMENT_POINT_FIRST) < FIELD_ATTACHMENT_GROUP_COUNT ||
+            (u32)(category - FIELD_ATTACHMENT_UNRESOLVED_FIRST) < FIELD_ATTACHMENT_GROUP_COUNT)
+        {
+            s32 attachment_category = (part->placement_flags.word >> FIELD_PART_ATTACHMENT_SHIFT) & FIELD_ATTACHMENT_MASK;
+            if (attachment_category < FIELD_ATTACHMENT_UNRESOLVED_FIRST)
+            {
+                part_index = attachment_category - FIELD_ATTACHMENT_POINT_FIRST;
+                if (attachment_category >= FIELD_ATTACHMENT_POINT_SECOND)
+                {
+                    part_index = attachment_category - FIELD_ATTACHMENT_POINT_SECOND_BIAS;
+                }
+            }
+
+            if ((part->placement_flags.halves.high) & 1)
+            {
+                if (owner->parts[part_index].effect_kind == FIELD_PART_OWNER_BOUNDS)
+                {
+                    half_extent = (g_field_object_states[owner->owner_object_index].bounds.half.right -
+                                   g_field_object_states[owner->owner_object_index].bounds.half.left) >>
+                                  1;
+                }
+                else
+                {
+                    half_extent = (g_field_object_states[owner->track_object_indices[g_field_track_index]].bounds.half.right -
+                                   g_field_object_states[owner->track_object_indices[g_field_track_index]].bounds.half.left) >>
+                                  1;
+                }
+                if (half_extent < 0)
+                {
+                    half_extent = -half_extent;
+                }
+                extent += half_extent;
+            }
+
+            if ((part->placement_flags.word >> FIELD_PART_ADD_HALF_HEIGHT_SHIFT) & 1)
+            {
+                if (owner->parts[part_index].effect_kind == FIELD_PART_OWNER_BOUNDS)
+                {
+                    half_extent = (g_field_object_states[owner->owner_object_index].bounds.half.bottom -
+                                   g_field_object_states[owner->owner_object_index].bounds.half.top) >>
+                                  1;
+                }
+                else
+                {
+                    half_extent = (g_field_object_states[owner->track_object_indices[g_field_track_index]].bounds.half.bottom -
+                                   g_field_object_states[owner->track_object_indices[g_field_track_index]].bounds.half.top) >>
+                                  1;
+                }
+                if (half_extent < 0)
+                {
+                    half_extent = -half_extent;
+                }
+                extent += half_extent;
+            }
+        }
+    }
+
+    return extent;
+}
+
+/** @file field_effect_geometry.c
+ * @brief Project actor-attached effect geometry and update its per-slot screen-space caches.
+ */
+
+#include "common.h"
+#include "field_effect_transform.h"
+#include "field_effect_render_state.h"
+#include "field_types.h"
+#include "field_effect_types.h"
+#include "field_effect_geometry.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
+
+#define FIELD_PART_ANCHOR_MODE_SHIFT 18
+#define FIELD_PART_ANCHOR_MODE_MASK 0x3F
+#define FIELD_PART_SCALE_X_FROM_BOUNDS_SHIFT 9
+#define FIELD_PART_SCALE_Y_FROM_BOUNDS_SHIFT 1
+#define FIELD_PART_MIRROR_X_WITH_FACING_SHIFT 10
+#define FIELD_PART_ATTACHMENT_INDEX_SHIFT 21
+#define FIELD_PART_ATTACHMENT_INDEX_MASK 3
+#define FIELD_PART_MIRROR_X_WITH_OWNER 0x08000000
+
+extern FieldMotionRecord g_field_actors[];
+extern FieldMotionRecord g_field_effect_records[];
+extern s32 g_field_track_index;
+
+/**
+ * @brief Resolve the world-space anchor point for an actor part.
+ * @param actor Owning actor state.
+ * @param part Actor part definition selecting the anchor mode.
+ * @param out Receives the resolved x/y/z anchor.
+ * @param attachment_index Attachment point index used by ground-relative anchor modes.
+ * @see decomp.me (100.00%)
+ */
+void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *part, Vec3i *out, s32 attachment_index)
+{
+    s32 anchor_mode;
+    s32 object_index;
+    FieldMotionRecord *object_record;
+    FieldObjectRuntime *object;
+    s32 value;
+    s32 index;
+
+    anchor_mode = part->placement_flags.word >> FIELD_PART_ANCHOR_MODE_SHIFT;
+    anchor_mode &= FIELD_PART_ANCHOR_MODE_MASK;
+    switch (anchor_mode)
+    {
+    case 0x00: case 0x01: case 0x02: case 0x03: case 0x04:
+    case 0x05: case 0x06: case 0x07: case 0x08: case 0x09:
+    case 0x0A: case 0x0B: case 0x0C: case 0x0D: case 0x0E:
+    case 0x0F: case 0x10: case 0x11: case 0x12: case 0x13:
+    {
+        if (anchor_mode >= 0xA)
+        {
+            object_index = actor->track_object_indices[g_field_track_index];
+            anchor_mode -= 0xA;
+            object_record = &g_field_actors[object_index];
+            object = &g_field_object_states[object_index];
+        }
+        else
+        {
+            object_index = actor->owner_object_index;
+            object_record = &g_field_actors[object_index];
+            object = &g_field_object_states[object_index];
+        }
+        if ((part->placement_flags.word >> FIELD_PART_SCALE_X_FROM_BOUNDS_SHIFT) & 1)
+        {
+            part->appearance.fields.footprint_scale_x = (*(u8 *)&object->bounds.half.right - *(u8 *)&object->bounds.half.left) * 2;
+        }
+        if ((part->placement_flags.word >> FIELD_PART_SCALE_Y_FROM_BOUNDS_SHIFT) & 1)
+        {
+            index = 0;
+            part->footprint_scale_y = (*(u8 *)&object->bounds.half.bottom - *(u8 *)&object->bounds.half.top) * 2;
+        }
+        else
+        {
+            index = 0;
+        }
+        value = index;
+        switch (anchor_mode)
+        {
+        case 1:
+            value = (object->bounds.half.right + object->bounds.half.left) >> 1;
+            index = (object->bounds.half.bottom + object->bounds.half.top) >> 1;
+            break;
+        case 2:
+            value = (object->bounds.half.right + object->bounds.half.left) >> 1;
+            index = 0;
+            break;
+        case 3:
+            value = (object->bounds.half.right + object->bounds.half.left) >> 1;
+            index = object->bounds.half.top;
+            break;
+        case 4:
+            value = object->bounds.half.left;
+            index = (object->bounds.half.bottom + object->bounds.half.top) >> 1;
+            break;
+        case 5:
+            value = object->bounds.half.right;
+            index = (object->bounds.half.bottom + object->bounds.half.top) >> 1;
+            break;
+        case 6:
+            value = object->bounds.half.left;
+            index = object->bounds.half.top;
+            break;
+        case 7:
+            value = object->bounds.half.right;
+            index = object->bounds.half.top;
+            break;
+        case 8:
+            value = object->bounds.half.left;
+            index = object->bounds.half.bottom;
+            break;
+        case 9:
+            value = object->bounds.half.right;
+            index = object->bounds.half.bottom;
+            break;
+        }
+        value <<= 8;
+        out->x = object_record->x + value;
+        index <<= 8;
+        out->y = object_record->y + index;
+        out->z = object_record->z;
+        return;
+    }
+
+    case 0x14: case 0x15: case 0x16: case 0x17:
+    case 0x18: case 0x19: case 0x1A: case 0x1B:
+    case 0x2A: case 0x2B: case 0x2C: case 0x2D:
+    case 0x2E: case 0x2F: case 0x30: case 0x31:
+        value = anchor_mode - 0x14;
+        if (anchor_mode >= 0x2A)
+        {
+            value = anchor_mode - 0x22;
+        }
+        index = 0;
+        do
+        {
+            if (g_field_effect_records[index].state != FIELD_EFFECT_RETIRED && g_field_effect_records[index].part_index == value &&
+                g_field_effect_records[index].actor_index == actor->actor_index && g_field_effect_records[index].track_index == 0)
+            {
+                out->x = g_field_effect_records[index].x;
+                out->y = g_field_effect_records[index].y;
+                out->z = g_field_effect_records[index].z;
+                return;
+            }
+            index++;
+        } while (index < FIELD_EFFECT_ACTIVE_RECORD_COUNT);
+        return;
+
+    case 0x25:
+        out->x = (part->offset_x << 8) - g_field_view_offset_x;
+        out->y = (part->offset_y << 8) - g_field_view_offset_y;
+        out->z = (part->offset_z << 8) - g_field_view_offset_z;
+        return;
+    case 0x1C:
+        out->x = -g_field_view_offset_x;
+        out->y = -g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
+        return;
+    case 0x1D:
+        out->y = -0x7000;
+        out->x = -g_field_view_offset_x;
+        out->y -= g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
+        return;
+    case 0x1E:
+        out->y = 0x7000;
+        out->x = -g_field_view_offset_x;
+        out->y -= g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
+        return;
+    case 0x1F:
+        out->x = 0xFFFF6000;
+        out->x -= g_field_view_offset_x;
+        out->y = -g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
+        return;
+    case 0x20:
+        out->x = 0xA000;
+        out->x -= g_field_view_offset_x;
+        out->y = -g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
+        return;
+    case 0x21:
+        out->x = 0xFFFF6000;
+        out->y = -0x7000;
+        out->x -= g_field_view_offset_x;
+        out->y -= g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
+        return;
+    case 0x22:
+        out->x = 0xA000;
+        out->y = -0x7000;
+        out->x -= g_field_view_offset_x;
+        out->y -= g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
+        return;
+    case 0x23:
+        out->x = 0xFFFF6000;
+        out->y = 0x7000;
+        out->x -= g_field_view_offset_x;
+        out->y -= g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
+        return;
+    case 0x24:
+        out->x = 0xA000;
+        out->y = 0x7000;
+        out->x -= g_field_view_offset_x;
+        out->y -= g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
+        return;
+    case 0x26:
+        return;
+
+    case 0x27:
+        object_record = &g_field_actors[actor->owner_object_index];
+        if ((((part->placement_flags.word >> FIELD_PART_MIRROR_X_WITH_FACING_SHIFT) & 1) ||
+             (part->spawn_flags.word & FIELD_PART_MIRROR_X_WITH_OWNER)) &&
+            !(object_record->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
+        {
+            out->x = object_record->x - (part->offset_x << 8);
+        }
+        else
+        {
+            out->x = object_record->x + (part->offset_x << 8);
+        }
+        out->y = object_record->y + (part->offset_y << 8);
+        out->z = object_record->z + (part->offset_z << 8);
+        return;
+
+    case 0x28:
+        object_record = &g_field_actors[actor->track_object_indices[g_field_track_index]];
+        if ((part->spawn_flags.word & FIELD_PART_MIRROR_X_WITH_OWNER) &&
+            !(g_field_actors[actor->owner_object_index].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
+        {
+            out->x = object_record->x - (part->offset_x << 8);
+        }
+        else if (((part->placement_flags.word >> FIELD_PART_MIRROR_X_WITH_FACING_SHIFT) & 1) &&
+                 !(object_record->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
+        {
+            out->x = object_record->x - (part->offset_x << 8);
+        }
+        else
+        {
+            out->x = object_record->x + (part->offset_x << 8);
+        }
+        out->y = object_record->y + (part->offset_y << 8);
+        out->z = object_record->z + (part->offset_z << 8);
+        return;
+
+    case 0x29:
+        object_index = actor->owner_object_index;
+        object_record = &g_field_actors[object_index];
+        object = &g_field_object_states[object_index];
+        out->x = object_record->x +
+                 (object->attachment_points[((u32)part->effect_flags >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
+        out->y = object_record->y +
+                 (object->attachment_points[((u32)part->effect_flags >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].y << 8);
+        out->z = object_record->z;
+        return;
+
+    case 0x32:
+        object_index = actor->owner_object_index;
+        object_record = &g_field_actors[object_index];
+        object = &g_field_object_states[object_index];
+        out->x = object_record->x +
+                 (object->attachment_points[((u32)part->effect_flags >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
+        out->y = object_record->y;
+        out->z = object_record->z + (part->offset_z << 8);
+        if (((part->placement_flags.word >> FIELD_PART_MIRROR_X_WITH_FACING_SHIFT) & 1) && !(object_record->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
+        {
+            out->x -= part->offset_x << 8;
+        }
+        else
+        {
+            out->x += part->offset_x << 8;
+        }
+        return;
+
+    case 0x33:
+        object_index = actor->owner_object_index;
+        object_record = &g_field_actors[object_index];
+        object = &g_field_object_states[object_index];
+        out->x = object_record->x + (object->ground_attachment_points[attachment_index].x << 8);
+        out->y = object_record->y;
+        out->z = object_record->z + (object->ground_attachment_points[attachment_index].y << 8);
+        return;
+
+    case 0x36:
+        out->x = part->offset_x << 8;
+        out->y = part->offset_y << 8;
+        out->z = part->offset_z << 8;
+        return;
+
+    case 0x37: case 0x38: case 0x39: case 0x3A:
+    case 0x3B: case 0x3C: case 0x3D: case 0x3E:
+        value = anchor_mode - 0x37;
+        index = 0;
+        do
+        {
+            if (g_field_effect_records[index].state != FIELD_EFFECT_RETIRED && g_field_effect_records[index].part_index == value &&
+                g_field_effect_records[index].actor_index == actor->actor_index && g_field_effect_records[index].track_index == 0)
+            {
+                out->x = g_field_effect_records[index].x;
+                out->y = g_field_effect_records[index].y;
+                out->z = g_field_effect_records[index].z;
+            }
+            index++;
+        } while (index < FIELD_EFFECT_ACTIVE_RECORD_COUNT);
+        return;
+
+    default:
+        out->x = 0;
+        out->y = 0;
+        out->z = 0;
+        return;
+    }
+}
+
+/**
+ * @brief Extract four signed-byte quad corners from an effect frame.
+ * @param effect Effect record whose facing flag selects the mirrored layout.
+ * @param frame_data Encoded frame entry list; the first byte is the entry count.
+ * @param corners Receives four x/y corner pairs.
+ * @see decomp.me (100.00%)
+ */
+void field_extract_effect_quad_corners8(FieldMotionRecord *effect, u8 *frame_data, s16 *corners)
+{
+    s32 count;
+
+    corners[0] = corners[1] = 0;
+    corners[2] = corners[3] = 0;
+    corners[4] = corners[5] = 0;
+    corners[6] = corners[7] = 0;
+
+    count = *frame_data++;
+    if (count != 0)
+    {
+        do
+        {
+            if (frame_data[7] & 0x20)
+            {
+                if ((frame_data[7] & 0xF) == 2)
+                {
+                    if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
+                    {
+                        corners[0] = -(s8)frame_data[2];
+                        corners[1] = (s8)frame_data[3];
+                        corners[2] = -(s8)frame_data[0];
+                        corners[3] = (s8)frame_data[1];
+                        corners[4] = -(s8)frame_data[6];
+                        corners[5] = (s8)frame_data[8];
+                        corners[6] = -(s8)frame_data[4];
+                        corners[7] = (s8)frame_data[5];
+                    }
+                    else
+                    {
+                        corners[0] = (s8)frame_data[0];
+                        corners[1] = (s8)frame_data[1];
+                        corners[2] = (s8)frame_data[2];
+                        corners[3] = (s8)frame_data[3];
+                        corners[4] = (s8)frame_data[4];
+                        corners[5] = (s8)frame_data[5];
+                        corners[6] = (s8)frame_data[6];
+                        corners[7] = (s8)frame_data[8];
+                    }
+                }
+            }
+            frame_data += 9;
+            count--;
+        } while (count != 0);
+    }
+}
+
+/**
+ * @brief Extract four 16-bit quad corners from a variable-stride effect frame.
+ * @param effect Effect record whose facing flag selects the mirrored layout.
+ * @param frame_data Encoded frame entry list; the first byte is the entry count.
+ * @param corners Receives four x/y corner pairs.
+ * @see decomp.me (100.00%)
+ */
+void field_extract_effect_quad_corners16(FieldMotionRecord *effect, u8 *frame_data, s16 *corners)
+{
+    s32 count;
+
+    corners[0] = corners[1] = 0;
+    corners[2] = corners[3] = 0;
+    corners[4] = corners[5] = 0;
+    corners[6] = corners[7] = 0;
+
+    count = *frame_data++;
+    if (count != 0)
+    {
+        do
+        {
+            if (frame_data[7] & 0x20)
+            {
+                if ((frame_data[7] & 0xF) == 2)
+                {
+                    field_unpack_effect_quad_corners16(corners, effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED, frame_data);
+                }
+                frame_data += 0x11;
+            }
+            else
+            {
+                frame_data += 0xB;
+            }
+            count--;
+        } while (count != 0);
+    }
+}
+
+#include "sdk/inline_c.h"
+#include "sdk/gte_dmpsx_compat.h"
+
+/**
+ * @brief Apply the actor rotation to a bounding-box centre and accumulate it
+ *        into the screen-space position.
+ * @param effect Effect record whose facing flag mirrors the horizontal center offset.
+ * @param screen_origin Screen-space position accumulator.
+ * @param quad_bounds Bounding-box extents (indices 0/1/2/5 used in mode 1).
+ * @param fallback_depth Horizontal offset used when mode does not derive it from the quad.
+ * @param mode Zero skips adjustment; one derives the center from the quad; other values use fallback_depth.
+ * @see decomp.me (100.00%)
+ */
+void field_apply_effect_quad_center_offset(FieldMotionRecord *effect, DVECTOR *screen_origin, s16 *quad_bounds, s32 fallback_depth, s32 mode)
+{
+    SVECTOR offset;
+    VECTOR rotated;
+    s32 center_y;
+    s32 center_x = fallback_depth;
+
+    if (mode != 0)
+    {
+        if (mode == 1)
+        {
+            center_x = (quad_bounds[2] + quad_bounds[0]) / 2;
+            center_y = (quad_bounds[5] + quad_bounds[1]) / 2;
+        }
+
+        offset.vx = -center_y;
+        offset.vy = 0;
+        offset.vz = -center_x;
+        gte_ldv0(&offset);
+        gte_rtv0();
+        gte_stlvnl(&rotated);
+
+        if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
+        {
+            center_x = -center_x;
+        }
+        screen_origin->vx += (s16)rotated.vx + center_x;
+        screen_origin->vy += (s16)rotated.vy + center_y;
+    }
+}
+
+/**
+ * @brief Transform four signed-byte quad vertices into screen space.
+ * @param effect Effect record whose facing flag mirrors the horizontal component.
+ * @param object Object placement receiving the transformed vertices.
+ * @param quad_data Encoded signed-byte corner pairs.
+ * @param vertex_index Base vertex index into object->effect_vertices.
+ * @param screen_origin Screen-space origin added to every transformed vertex.
+ * @param direction Scratch direction vector fed to the GTE.
+ * @param gte_out Scratch GTE output vector.
+ * @see decomp.me (100.00%)
+ */
+void field_transform_effect_quad_vertices8(FieldMotionRecord *effect, FieldObjectRuntime *object, u8 *quad_data, s32 vertex_index,
+                                           Vec2s *screen_origin, SVECTOR *direction, VECTOR *gte_out)
+{
+    s16 depth_component;
+
+    if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
+    {
+        direction->vx = (s8)quad_data[1];
+        direction->vy = 0;
+        depth_component = -(s8)quad_data[0];
+    }
+    else
+    {
+        direction->vx = (s8)quad_data[1];
+        direction->vy = 0;
+        depth_component = (s8)quad_data[0];
+    }
+    direction->vz = depth_component;
+    gte_ldv0(direction);
+    gte_rtv0();
+    gte_stlvnl(gte_out);
+    if (vertex_index == 0)
+    {
+        object->bounds.half.left = (u16)gte_out->vx;
+        object->bounds.half.top = (u16)gte_out->vy - (s8)effect->vertical_offset;
+    }
+    object->effect_vertices.points[vertex_index].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices.points[vertex_index].y = (u16)gte_out->vy + (u16)screen_origin->y;
+
+    if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
+    {
+        direction->vx = (s8)quad_data[3];
+        direction->vy = 0;
+        depth_component = -(s8)quad_data[2];
+    }
+    else
+    {
+        direction->vx = (s8)quad_data[3];
+        direction->vy = 0;
+        depth_component = (s8)quad_data[2];
+    }
+    direction->vz = depth_component;
+    gte_ldv0(direction);
+    gte_rtv0();
+    gte_stlvnl(gte_out);
+    object->effect_vertices.points[vertex_index + 1].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices.points[vertex_index + 1].y = (u16)gte_out->vy + (u16)screen_origin->y;
+
+    if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
+    {
+        direction->vx = (s8)quad_data[5];
+        direction->vy = 0;
+        depth_component = -(s8)quad_data[4];
+    }
+    else
+    {
+        direction->vx = (s8)quad_data[5];
+        direction->vy = 0;
+        depth_component = (s8)quad_data[4];
+    }
+    direction->vz = depth_component;
+    gte_ldv0(direction);
+    gte_rtv0();
+    gte_stlvnl(gte_out);
+    if (vertex_index == 0)
+    {
+        object->bounds.half.right = (u16)gte_out->vx;
+        object->bounds.half.bottom = (u16)gte_out->vy - (s8)effect->vertical_offset;
+    }
+    object->effect_vertices.points[vertex_index + 2].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices.points[vertex_index + 2].y = (u16)gte_out->vy + (u16)screen_origin->y;
+
+    if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
+    {
+        direction->vx = (s8)quad_data[8];
+        direction->vy = 0;
+        depth_component = -(s8)quad_data[6];
+    }
+    else
+    {
+        direction->vx = (s8)quad_data[8];
+        direction->vy = 0;
+        depth_component = (s8)quad_data[6];
+    }
+    direction->vz = depth_component;
+    gte_ldv0(direction);
+    gte_rtv0();
+    gte_stlvnl(gte_out);
+    object->effect_vertices.points[vertex_index + 3].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices.points[vertex_index + 3].y = (u16)gte_out->vy + (u16)screen_origin->y;
+}
+
+/**
+ * @brief Transform four little-endian 16-bit quad vertices into screen space.
+ * @param effect Effect record whose facing flag mirrors the horizontal component.
+ * @param object Object placement receiving the transformed vertices.
+ * @param quad_data Encoded little-endian 16-bit corner pairs.
+ * @param vertex_index Base vertex index into object->effect_vertices.
+ * @param screen_origin Screen-space origin added to every transformed vertex.
+ * @param direction Scratch direction vector fed to the GTE.
+ * @param gte_out Scratch GTE output vector.
+ * @see decomp.me (100.00%)
+ */
+void field_transform_effect_quad_vertices16(FieldMotionRecord *effect, FieldObjectRuntime *object, u8 *quad_data, s32 vertex_index,
+                                            Vec2s *screen_origin, SVECTOR *direction, VECTOR *gte_out)
+{
+    if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
+    {
+        direction->vx = quad_data[2] + (quad_data[3] << 8);
+        direction->vy = 0;
+        direction->vz = -(quad_data[0] + (quad_data[1] << 8));
+    }
+    else
+    {
+        direction->vx = quad_data[2] + (quad_data[3] << 8);
+        direction->vy = 0;
+        direction->vz = quad_data[0] + (quad_data[1] << 8);
+    }
+    gte_ldv0(direction);
+    gte_rtv0();
+    gte_stlvnl(gte_out);
+    if (vertex_index == 0)
+    {
+        object->bounds.half.left = (u16)gte_out->vx;
+        object->bounds.half.top = (u16)gte_out->vy;
+    }
+    object->effect_vertices.points[vertex_index].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices.points[vertex_index].y = (u16)gte_out->vy + (u16)screen_origin->y;
+
+    if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
+    {
+        direction->vx = quad_data[6] + (quad_data[8] << 8);
+        direction->vy = 0;
+        direction->vz = -(quad_data[4] + (quad_data[5] << 8));
+    }
+    else
+    {
+        direction->vx = quad_data[6] + (quad_data[8] << 8);
+        direction->vy = 0;
+        direction->vz = quad_data[4] + (quad_data[5] << 8);
+    }
+    gte_ldv0(direction);
+    gte_rtv0();
+    gte_stlvnl(gte_out);
+    object->effect_vertices.points[vertex_index + 1].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices.points[vertex_index + 1].y = (u16)gte_out->vy + (u16)screen_origin->y;
+
+    if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
+    {
+        direction->vx = quad_data[0xB] + (quad_data[0xC] << 8);
+        direction->vy = 0;
+        direction->vz = -(quad_data[9] + (quad_data[0xA] << 8));
+    }
+    else
+    {
+        direction->vx = quad_data[0xB] + (quad_data[0xC] << 8);
+        direction->vy = 0;
+        direction->vz = quad_data[9] + (quad_data[0xA] << 8);
+    }
+    gte_ldv0(direction);
+    gte_rtv0();
+    gte_stlvnl(gte_out);
+    if (vertex_index == 0)
+    {
+        object->bounds.half.right = (u16)gte_out->vx;
+        object->bounds.half.bottom = (u16)gte_out->vy;
+    }
+    object->effect_vertices.points[vertex_index + 2].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices.points[vertex_index + 2].y = (u16)gte_out->vy + (u16)screen_origin->y;
+
+    if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
+    {
+        direction->vx = quad_data[0xF] + (quad_data[0x10] << 8);
+        direction->vy = 0;
+        direction->vz = -(quad_data[0xD] + (quad_data[0xE] << 8));
+    }
+    else
+    {
+        direction->vx = quad_data[0xF] + (quad_data[0x10] << 8);
+        direction->vy = 0;
+        direction->vz = quad_data[0xD] + (quad_data[0xE] << 8);
+    }
+    gte_ldv0(direction);
+    gte_rtv0();
+    gte_stlvnl(gte_out);
+    object->effect_vertices.points[vertex_index + 3].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices.points[vertex_index + 3].y = (u16)gte_out->vy + (u16)screen_origin->y;
 }

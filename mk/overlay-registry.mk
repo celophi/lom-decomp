@@ -75,35 +75,21 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field_fade.c \
 	src/overlays/field/field_actor_runtime.c \
 	src/overlays/field/field_effect_update.c \
-	src/overlays/field/field_effect_dispatch.c \
-	src/overlays/field/field_effect_frames.c \
-	src/overlays/field/field_effect_primitives.c \
-	src/overlays/field/field_effect_transform.c \
-	src/overlays/field/field_effect_geometry.c \
 	src/overlays/field/field_mesh_render.c \
 	src/overlays/field/field_mesh_transform.c \
 	src/overlays/field/field_mesh_part_animation.c \
 	src/overlays/field/field_actor_slot_resources.c \
-	src/overlays/field/field_actor_hud.c \
-	src/overlays/field/field_actor_control_effects.c \
+	src/overlays/field/field_actor_hud_effects.c \
 	src/overlays/field/field_actor_key_ops.c \
-	src/overlays/field/field_actor_script_dispatch.c \
-	src/overlays/field/field_actor_action_commands.c \
-	src/overlays/field/field_actor_animation_commands.c \
+	src/overlays/field/field_actor_script_ops.c \
 	src/overlays/field/field_actor_reactions.c \
-	src/overlays/field/field_actor_routes.c \
 	src/overlays/field/field_actor_behavior.c \
 	src/overlays/field/field_actor_input_map_init.c \
 	src/overlays/field/field_actor_input_actions.c \
 	src/overlays/field/field_actor_camera.c \
 	src/overlays/field/field_actor_idle_ops.c \
 	src/overlays/field/field_actor_motion.c \
-	src/overlays/field/field_actor_movement_states.c \
-	src/overlays/field/field_actor_action_runtime.c \
-	src/overlays/field/field_actor_displacement.c \
-	src/overlays/field/field_actor_resource_states.c \
-	src/overlays/field/field_actor_animation_resume.c \
-	src/overlays/field/field_actor_sequence_runtime.c \
+	src/overlays/field/field_actor_state_updates.c \
 	src/overlays/field/field_actor_transition_reset.c \
 	src/overlays/field/field_contact_geometry.c \
 	src/overlays/field/field_actor_resource_unpack.c \
@@ -111,19 +97,13 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field_text_window_api.c \
 	src/overlays/field/field_block_allocator.c \
 	src/overlays/field/field_actor_target_queries.c \
-	src/overlays/field/field_actor_movement_modes.c \
 	src/overlays/field/field_actor_effects.c \
 	src/overlays/field/field_path_interpolation.c \
 	src/overlays/field/field_command_history.c \
 	src/overlays/field/field_pair_indicators.c \
 	src/overlays/field/field_audio_runtime.c \
 	src/overlays/field/field_ring_selection.c \
-	src/overlays/field/field_timed_panel.c \
-	src/overlays/field/field_actor_text_queue.c \
-	src/overlays/field/field_ability_progression.c \
 	src/overlays/field/field_dialog_screens.c \
-	src/overlays/field/field_immediate_text.c \
-	src/overlays/field/field_input_text_session.c \
 	src/overlays/field/field_modal_runtime.c \
 	src/overlays/field/field_modal_stream_start.c \
 	src/overlays/field/field_numeric_sprites.c \
@@ -152,8 +132,7 @@ overlay_field_gcc_280_g0_builtin_srcs := \
 overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field_interaction_start.c \
 	src/overlays/field/field_event_dispatch.c \
-	src/overlays/field/field_state_ops.c \
-	src/overlays/field/field_party_setup.c \
+	src/overlays/field/field_party_state.c \
 	src/overlays/field/field_actor_templates.c \
 	src/overlays/field/field_actor_lifecycle.c \
 	src/overlays/field/field_status_ticks.c \
@@ -162,10 +141,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field_progression_ops.c \
 	src/overlays/field/field_action_modifiers.c \
 	src/overlays/field/field_record_stat_ops.c \
-	src/overlays/field/field_script_flow_ops.c \
-	src/overlays/field/field_script_primary_ops.c \
-	src/overlays/field/field_script_pair_ops.c \
-	src/overlays/field/field_script_extended_ops.c \
+	src/overlays/field/field_script_ops.c \
 	src/overlays/field/field_script_operands.c \
 	src/overlays/field/field_script_commands.c \
 	src/overlays/field/field_script_arith_ops.c \
@@ -187,17 +163,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field_group_layout_ops.c \
 	src/overlays/field/field_group_stat_transfer.c \
 	src/overlays/field/field_group_derived_stats.c \
-	src/overlays/field/field_menu_group_ops.c \
-	src/overlays/field/field_menu_object_ops.c \
-	src/overlays/field/field_menu_slot_ops.c \
-	src/overlays/field/field_gosub_history_ops.c \
-	src/overlays/field/field_menu_action_runtime.c \
-	src/overlays/field/field_menu_record_setup.c \
-	src/overlays/field/field_menu_record_transfer.c \
-	src/overlays/field/field_menu_record_audio_ops.c \
-	src/overlays/field/field_menu_record_state.c \
-	src/overlays/field/field_menu_attribute_ops.c \
-	src/overlays/field/field_menu_record_ops.c \
+	src/overlays/field/field_menu_ops.c \
 	src/overlays/field/field_layout_slot_state.c \
 	src/overlays/field/field_equipment_combination_rules.c \
 	src/overlays/field/field_golem_logic_blocks.c
@@ -207,7 +173,6 @@ overlay_field_gcc_280_g4_srcs :=
 overlay_field_gcc_280_g4_noexpand_srcs := \
 	src/overlays/field/field_scene_load.c \
 	src/overlays/field/field_scene_build.c \
-	src/overlays/field/field_render.c \
 	src/overlays/field/field_animation.c \
 	src/overlays/field/field_scene_control.c \
 	src/overlays/field/field_collision.c \

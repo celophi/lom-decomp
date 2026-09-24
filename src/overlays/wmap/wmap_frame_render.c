@@ -48,20 +48,9 @@ typedef struct
     u16 pad_1E;
 } WmapTexturedTriangle;
 
-/** @brief Draw state and reserved storage in each world-map frame buffer. */
-typedef struct
-{
-    DRAWENV draw_env;
-    DISPENV display_env;
-    u_long ordering_table[179];
-    u8* packet_cursor;
-    u8 unknown_340[0x7B00];
-} WmapFrame;
 
-extern WmapFrame D_80129560[2];
-extern WmapFrame* D_801398EC;
 extern WmapQuad D_800D043C;
-extern s32 D_800D921C;
+
 extern u32 D_800D9238;
 extern u8 D_80139870;
 extern u8 D_80139888;
@@ -88,33 +77,33 @@ void func_800641DC(void)
     WmapQuad* quad;
     WmapTexturedTriangle* triangle;
 
-    quad = (WmapQuad*)D_801398EC->packet_cursor;
+    quad = (WmapQuad*)g_wmap_current_frame->packet_cursor;
     *quad = D_800D043C;
     quad->b0 = 8;
     quad->g0 = 8;
     quad->r0 = 8;
     quad->header.packet.length = 5;
     quad->code = 0x2A;
-    quad->header.tag = ((quad->header.tag & 0xFF000000) | (D_801398EC->ordering_table[1] & 0xFFFFFF));
-    D_801398EC->ordering_table[1] = ((D_801398EC->ordering_table[1] & 0xFF000000) | ((u32)quad & 0xFFFFFF));
-    if (D_800D921C < 0x7D00)
+    quad->header.tag = ((quad->header.tag & 0xFF000000) | (g_wmap_current_frame->ordering_table[1] & 0xFFFFFF));
+    g_wmap_current_frame->ordering_table[1] = ((g_wmap_current_frame->ordering_table[1] & 0xFF000000) | ((u32)quad & 0xFFFFFF));
+    if (g_wmap_packet_bytes < 0x7D00)
     {
-        D_800D921C += 0x18;
-        D_801398EC->packet_cursor += sizeof(WmapQuad);
+        g_wmap_packet_bytes += 0x18;
+        g_wmap_current_frame->packet_cursor += sizeof(WmapQuad);
     }
-    triangle = (WmapTexturedTriangle*)D_801398EC->packet_cursor;
+    triangle = (WmapTexturedTriangle*)g_wmap_current_frame->packet_cursor;
     triangle->header.packet.length = 7;
     triangle->code = 0x24;
     *(s32*)&triangle->x2 = 0x190;
     *(s32*)&triangle->x1 = 0x190;
     *(s32*)&triangle->x0 = 0x190;
     triangle->tpage = 0x40;
-    triangle->header.tag = ((triangle->header.tag & 0xFF000000) | (D_801398EC->ordering_table[1] & 0xFFFFFF));
-    D_801398EC->ordering_table[1] = ((D_801398EC->ordering_table[1] & 0xFF000000) | ((u32)triangle & 0xFFFFFF));
-    if (D_800D921C < 0x7D00)
+    triangle->header.tag = ((triangle->header.tag & 0xFF000000) | (g_wmap_current_frame->ordering_table[1] & 0xFFFFFF));
+    g_wmap_current_frame->ordering_table[1] = ((g_wmap_current_frame->ordering_table[1] & 0xFF000000) | ((u32)triangle & 0xFFFFFF));
+    if (g_wmap_packet_bytes < 0x7D00)
     {
-        D_800D921C += 0x20;
-        D_801398EC->packet_cursor += sizeof(WmapTexturedTriangle);
+        g_wmap_packet_bytes += 0x20;
+        g_wmap_current_frame->packet_cursor += sizeof(WmapTexturedTriangle);
     }
 }
 
@@ -131,7 +120,7 @@ static void func_8006432C(VECTOR* left_top, VECTOR* center_top, VECTOR* left_bot
 {
     POLY_FT4* quad;
 
-    quad = (POLY_FT4*)D_801398EC->packet_cursor;
+    quad = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
     quad->x0 = left_top->vx;
     quad->y0 = left_top->vy;
     quad->x1 = center_top->vx;
@@ -152,14 +141,14 @@ static void func_8006432C(VECTOR* left_top, VECTOR* center_top, VECTOR* left_bot
     setPolyFT4(quad);
     setSemiTrans(quad, 1);
 
-    addPrim(&D_801398EC->ordering_table[1], quad);
-    if (D_800D921C < 0x7D00)
+    addPrim(&g_wmap_current_frame->ordering_table[1], quad);
+    if (g_wmap_packet_bytes < 0x7D00)
     {
-        D_800D921C += sizeof(POLY_FT4);
-        D_801398EC->packet_cursor = D_801398EC->packet_cursor + sizeof(POLY_FT4);
+        g_wmap_packet_bytes += sizeof(POLY_FT4);
+        g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(POLY_FT4);
     }
 
-    quad = (POLY_FT4*)D_801398EC->packet_cursor;
+    quad = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
     quad->x0 = center_top->vx;
     quad->y0 = center_top->vy;
     quad->x1 = right_top->vx;
@@ -180,11 +169,11 @@ static void func_8006432C(VECTOR* left_top, VECTOR* center_top, VECTOR* left_bot
     setPolyFT4(quad);
     setSemiTrans(quad, 1);
 
-    addPrim(&D_801398EC->ordering_table[1], quad);
-    if (D_800D921C < 0x7D00)
+    addPrim(&g_wmap_current_frame->ordering_table[1], quad);
+    if (g_wmap_packet_bytes < 0x7D00)
     {
-        D_800D921C += sizeof(POLY_FT4);
-        D_801398EC->packet_cursor = D_801398EC->packet_cursor + sizeof(POLY_FT4);
+        g_wmap_packet_bytes += sizeof(POLY_FT4);
+        g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(POLY_FT4);
     }
 }
 
@@ -295,7 +284,7 @@ void func_8006454C(void)
     gte_rtv0tr();
     gte_stlvnl(&sp88);
     func_8006432C(&sp38, &sp48, &sp58, &sp68, &sp78, &sp88);
-    temp_a0 = D_801398EC->packet_cursor;
+    temp_a0 = g_wmap_current_frame->packet_cursor;
     M2C_FIELD(temp_a0, s16*, 0x14) = 0x140;
     M2C_FIELD(temp_a0, s16*, 0xC) = 0x140;
     M2C_FIELD(temp_a0, s16*, 0x16) = 0xF0;
@@ -307,26 +296,26 @@ void func_8006454C(void)
     M2C_FIELD(temp_a0, s16*, 0xA) = 0;
     M2C_FIELD(temp_a0, s16*, 0x10) = 0;
     M2C_FIELD(temp_a0, s16*, 8) = 0;
-    M2C_FIELD(temp_a0, s32*, 0) = (s32)((M2C_FIELD(temp_a0, s32*, 0) & 0xFF000000) | (D_801398EC->ordering_table[1] & 0xFFFFFF));
-    D_801398EC->ordering_table[1] = (s32)((D_801398EC->ordering_table[1] & 0xFF000000) | ((s32)temp_a0 & 0xFFFFFF));
-    if (D_800D921C < 0x7D00)
+    M2C_FIELD(temp_a0, s32*, 0) = (s32)((M2C_FIELD(temp_a0, s32*, 0) & 0xFF000000) | (g_wmap_current_frame->ordering_table[1] & 0xFFFFFF));
+    g_wmap_current_frame->ordering_table[1] = (s32)((g_wmap_current_frame->ordering_table[1] & 0xFF000000) | ((s32)temp_a0 & 0xFFFFFF));
+    if (g_wmap_packet_bytes < 0x7D00)
     {
-        D_800D921C += 0x18;
-        D_801398EC->packet_cursor = D_801398EC->packet_cursor + 0x18;
+        g_wmap_packet_bytes += 0x18;
+        g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + 0x18;
     }
-    temp_a0_2 = D_801398EC->packet_cursor;
+    temp_a0_2 = g_wmap_current_frame->packet_cursor;
     M2C_FIELD(temp_a0_2, s8*, 3) = 7;
     M2C_FIELD(temp_a0_2, s8*, 7) = 0x24;
     M2C_FIELD(temp_a0_2, s32*, 0x18) = 0x190;
     M2C_FIELD(temp_a0_2, s32*, 0x10) = 0x190;
     M2C_FIELD(temp_a0_2, s32*, 8) = 0x190;
     M2C_FIELD(temp_a0_2, s16*, 0x16) = 0x140;
-    M2C_FIELD(temp_a0_2, s32*, 0) = (s32)((M2C_FIELD(temp_a0_2, s32*, 0) & 0xFF000000) | (D_801398EC->ordering_table[1] & 0xFFFFFF));
-    D_801398EC->ordering_table[1] = (s32)((D_801398EC->ordering_table[1] & 0xFF000000) | ((s32)temp_a0_2 & 0xFFFFFF));
-    if (D_800D921C < 0x7D00)
+    M2C_FIELD(temp_a0_2, s32*, 0) = (s32)((M2C_FIELD(temp_a0_2, s32*, 0) & 0xFF000000) | (g_wmap_current_frame->ordering_table[1] & 0xFFFFFF));
+    g_wmap_current_frame->ordering_table[1] = (s32)((g_wmap_current_frame->ordering_table[1] & 0xFF000000) | ((s32)temp_a0_2 & 0xFFFFFF));
+    if (g_wmap_packet_bytes < 0x7D00)
     {
-        D_800D921C += 0x20;
-        D_801398EC->packet_cursor = D_801398EC->packet_cursor + 0x20;
+        g_wmap_packet_bytes += 0x20;
+        g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + 0x20;
     }
 }
 
@@ -335,25 +324,25 @@ void func_80064AF8(void)
 {
     if (D_8011CF74 & 1)
     {
-        D_80129560[0].packet_cursor = D_8010CF18;
-        D_801398EC = &D_80129560[0];
+        g_wmap_frames[0].packet_cursor = D_8010CF18;
+        g_wmap_current_frame = &g_wmap_frames[0];
     }
     else
     {
-        D_80129560[1].packet_cursor = D_80114F18;
-        D_801398EC = &D_80129560[1];
+        g_wmap_frames[1].packet_cursor = D_80114F18;
+        g_wmap_current_frame = &g_wmap_frames[1];
     }
-    D_800D921C = 0;
-    ClearOTagR(D_801398EC->ordering_table, 179);
+    g_wmap_packet_bytes = 0;
+    ClearOTagR(g_wmap_current_frame->ordering_table, 179);
     D_800DBE7C = 0;
     D_8011CF74++;
     func_8006CB60();
     DrawSync(0);
     VSync(4);
-    PutDispEnv(&D_801398EC->display_env);
-    PutDrawEnv(&D_801398EC->draw_env);
+    PutDispEnv(&g_wmap_current_frame->disp_env);
+    PutDrawEnv(&g_wmap_current_frame->draw_env);
     SetGeomScreen(D_800DCEDC);
-    DrawOTag(&D_801398EC->ordering_table[178]);
+    DrawOTag(&g_wmap_current_frame->ordering_table[178]);
     cdrom_process_state();
     DrawSync(0);
 }
@@ -364,7 +353,7 @@ void func_80064BF8(void)
     WmapQuad* quad;
     WmapTexturedTriangle* triangle;
 
-    quad = (WmapQuad*)D_801398EC->packet_cursor;
+    quad = (WmapQuad*)g_wmap_current_frame->packet_cursor;
     if (D_80182E00 >= 4)
     {
         *quad = D_800D043C;
@@ -372,26 +361,26 @@ void func_80064BF8(void)
         D_80182E00 -= 8;
         quad->header.packet.length = 5;
         quad->code = 0x2A;
-        quad->header.tag = ((quad->header.tag & 0xFF000000) | (D_801398EC->ordering_table[1] & 0xFFFFFF));
-        D_801398EC->ordering_table[1] = ((D_801398EC->ordering_table[1] & 0xFF000000) | ((u32)quad & 0xFFFFFF));
-        if (D_800D921C < 0x7D00)
+        quad->header.tag = ((quad->header.tag & 0xFF000000) | (g_wmap_current_frame->ordering_table[1] & 0xFFFFFF));
+        g_wmap_current_frame->ordering_table[1] = ((g_wmap_current_frame->ordering_table[1] & 0xFF000000) | ((u32)quad & 0xFFFFFF));
+        if (g_wmap_packet_bytes < 0x7D00)
         {
-            D_800D921C += 0x18;
-            D_801398EC->packet_cursor += sizeof(WmapQuad);
+            g_wmap_packet_bytes += 0x18;
+            g_wmap_current_frame->packet_cursor += sizeof(WmapQuad);
         }
-        triangle = (WmapTexturedTriangle*)D_801398EC->packet_cursor;
+        triangle = (WmapTexturedTriangle*)g_wmap_current_frame->packet_cursor;
         triangle->header.packet.length = 7;
         triangle->code = 0x24;
         *(s32*)&triangle->x2 = 0x190;
         *(s32*)&triangle->x1 = 0x190;
         *(s32*)&triangle->x0 = 0x190;
         triangle->tpage = 0x40;
-        triangle->header.tag = ((triangle->header.tag & 0xFF000000) | (D_801398EC->ordering_table[1] & 0xFFFFFF));
-        D_801398EC->ordering_table[1] = ((D_801398EC->ordering_table[1] & 0xFF000000) | ((u32)triangle & 0xFFFFFF));
-        if (D_800D921C < 0x7D00)
+        triangle->header.tag = ((triangle->header.tag & 0xFF000000) | (g_wmap_current_frame->ordering_table[1] & 0xFFFFFF));
+        g_wmap_current_frame->ordering_table[1] = ((g_wmap_current_frame->ordering_table[1] & 0xFF000000) | ((u32)triangle & 0xFFFFFF));
+        if (g_wmap_packet_bytes < 0x7D00)
         {
-            D_800D921C += 0x20;
-            D_801398EC->packet_cursor += sizeof(WmapTexturedTriangle);
+            g_wmap_packet_bytes += 0x20;
+            g_wmap_current_frame->packet_cursor += sizeof(WmapTexturedTriangle);
         }
     }
 }
@@ -408,7 +397,7 @@ s32 func_80064D64(s32 initialize)
     WmapQuad* quad;
     WmapTexturedTriangle* triangle;
 
-    quad = (WmapQuad*)D_801398EC->packet_cursor;
+    quad = (WmapQuad*)g_wmap_current_frame->packet_cursor;
     if (D_800D9228 > D_8011D500)
     {
         D_800D9228 -= 2;
@@ -426,14 +415,14 @@ s32 func_80064D64(s32 initialize)
     quad->header.packet.length = 5;
     quad->code = 0x2A;
     quad->r0 = quad->g0 = quad->b0 = intensity;
-    quad->header.tag = ((quad->header.tag & 0xFF000000) | (D_80182E38[D_801398EC->ordering_table] & 0xFFFFFF));
-    D_80182E38[D_801398EC->ordering_table] = ((D_80182E38[D_801398EC->ordering_table] & 0xFF000000) | ((u32)quad & 0xFFFFFF));
-    if (D_800D921C < 0x7D00)
+    quad->header.tag = ((quad->header.tag & 0xFF000000) | (D_80182E38[g_wmap_current_frame->ordering_table] & 0xFFFFFF));
+    D_80182E38[g_wmap_current_frame->ordering_table] = ((D_80182E38[g_wmap_current_frame->ordering_table] & 0xFF000000) | ((u32)quad & 0xFFFFFF));
+    if (g_wmap_packet_bytes < 0x7D00)
     {
-        D_800D921C += 0x18;
-        D_801398EC->packet_cursor += sizeof(WmapQuad);
+        g_wmap_packet_bytes += 0x18;
+        g_wmap_current_frame->packet_cursor += sizeof(WmapQuad);
     }
-    triangle = (WmapTexturedTriangle*)D_801398EC->packet_cursor;
+    triangle = (WmapTexturedTriangle*)g_wmap_current_frame->packet_cursor;
     depth = D_80182E38;
     triangle->header.packet.length = 7;
     triangle->code = 0x24;
@@ -441,12 +430,12 @@ s32 func_80064D64(s32 initialize)
     *(s32*)&triangle->x1 = 0x190;
     *(s32*)&triangle->x0 = 0x190;
     triangle->tpage = 0x40;
-    triangle->header.tag = ((triangle->header.tag & 0xFF000000) | (depth[D_801398EC->ordering_table] & 0xFFFFFF));
-    depth[D_801398EC->ordering_table] = ((depth[D_801398EC->ordering_table] & 0xFF000000) | ((u32)triangle & 0xFFFFFF));
-    if (D_800D921C < 0x7D00)
+    triangle->header.tag = ((triangle->header.tag & 0xFF000000) | (depth[g_wmap_current_frame->ordering_table] & 0xFFFFFF));
+    depth[g_wmap_current_frame->ordering_table] = ((depth[g_wmap_current_frame->ordering_table] & 0xFF000000) | ((u32)triangle & 0xFFFFFF));
+    if (g_wmap_packet_bytes < 0x7D00)
     {
-        D_800D921C += 0x20;
-        D_801398EC->packet_cursor += sizeof(WmapTexturedTriangle);
+        g_wmap_packet_bytes += 0x20;
+        g_wmap_current_frame->packet_cursor += sizeof(WmapTexturedTriangle);
     }
     return 1;
 }

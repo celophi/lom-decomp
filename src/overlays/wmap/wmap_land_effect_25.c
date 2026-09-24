@@ -1,3 +1,4 @@
+#include "wmap_model_render.h"
 #include "wmap_main.h"
 #include "wmap_land_effect_25.h"
 #include "sdk/libgte.h"
@@ -13,7 +14,7 @@
  */
 void func_800ADAA4(void)
 {
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
 extern s32 D_801B2650[];
 extern SVECTOR D_801B24A0;
 extern VECTOR D_8011CF60;
@@ -38,7 +39,7 @@ extern s32 D_801B2F14;
     SetTransMatrix(&m);
     if (D_80182DE8 != 0)
     {
-        func_800675F0(D_800DCF18, 0, 0x4, 0x35, 0x7800, 1, D_80182DE8, 0, 0, -1);
+        wmap_draw_model(D_800DCF18, 0, 0x4, 0x35, 0x7800, 1, D_80182DE8, 0, 0, -1);
         D_80182DE8 -= 2;
         if (D_80182DE8 < 0)
         {
@@ -59,8 +60,7 @@ extern VECTOR D_801B2478;
 extern SVECTOR D_801B24A8;
 extern VECTOR D_8011CF60;
 extern s32 D_80182DEC;
-extern s32 D_8011CF1C;
-extern s32 func_800675F0(s32, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+extern u8* D_8011CF1C;
 extern s32 D_801B2F1C;
 extern s32 D_801B2F18;
 
@@ -78,7 +78,7 @@ extern s32 D_801B2F18;
     SetTransMatrix(&m);
     if (D_80182DEC != 0)
     {
-        func_800675F0(D_8011CF1C, 0, 4, 0x35, 0x7800, 1, D_80182DEC, 0, 0, -1);
+        wmap_draw_model(D_8011CF1C, 0, 4, 0x35, 0x7800, 1, D_80182DEC, 0, 0, -1);
         D_80182DEC -= 2;
         if (D_80182DEC < 0)
         {
@@ -99,8 +99,7 @@ extern VECTOR D_80139870;
 extern SVECTOR D_8013B238;
 extern VECTOR D_8011CF60;
 extern s32 D_80182DF0;
-extern s32 D_8011CF24;
-extern s32 func_800675F0(s32, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+extern u8* D_8011CF24;
 extern s32 D_801B2F24;
 extern s32 D_801B2F20;
 
@@ -118,7 +117,7 @@ extern s32 D_801B2F20;
     SetTransMatrix(&m);
     if (D_80182DF0 != 0)
     {
-        func_800675F0(D_8011CF24, 0, 4, 0x35, 0x7800, 1, D_80182DF0, 0, 0, -1);
+        wmap_draw_model(D_8011CF24, 0, 4, 0x35, 0x7800, 1, D_80182DF0, 0, 0, -1);
         D_80182DF0 -= 4;
         if (D_80182DF0 < 0)
         {
@@ -138,7 +137,7 @@ extern s32 D_801B2F20;
  */
 void func_800ADDD4(void)
 {
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
 extern u8 D_80182DC0[];
 extern u8 D_801B2498[];
 extern s32* D_8011CF28;
@@ -151,7 +150,7 @@ extern s32 D_801B2F28;
     s32 next_timer;
 
     func_8006CFA8(D_80182DC0, D_801B2498);
-    func_800675F0(D_8011CF28, 0, 0x7, 0x35, 0x7840, 0x1001, D_80182DE4, 0, 0x32, -1);
+    wmap_draw_model(D_8011CF28, 0, 0x7, 0x35, 0x7840, 0x1001, D_80182DE4, 0, 0x32, -1);
     value = D_80182DE4 + 2;
     D_80182DE4 = value;
     if (value >= 0x82)
@@ -174,7 +173,7 @@ extern s32 D_801B2F28;
  */
 void func_800ADEB0(void)
 {
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
 extern u8 D_80182DC0[];
 extern u8 D_801B2498[];
 extern s32* D_8011CF28;
@@ -187,7 +186,7 @@ extern s32 D_801B2F28;
     s32 next_timer;
 
     func_8006CFA8(D_80182DC0, D_801B2498);
-    func_800675F0(D_8011CF28, 0, 0x7, 0x35, 0x7840, 0x1001, D_80182DE4, 0, 0x32, -1);
+    wmap_draw_model(D_8011CF28, 0, 0x7, 0x35, 0x7840, 0x1001, D_80182DE4, 0, 0x32, -1);
     value = D_80182DE4 - 2;
     D_80182DE4 = value;
     if (value < 0)
@@ -210,7 +209,7 @@ extern s32 D_801B2F28;
  */
 void func_800ADF80(void)
 {
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
 extern u8 D_80182DC0[];
 extern u8 D_8013B240[];
 extern s32* D_8011CF2C;
@@ -223,7 +222,7 @@ extern s32 D_801B2F30;
     s32 next_timer;
 
     func_8006CFA8(D_80182DC0, D_8013B240);
-    func_800675F0(D_8011CF2C, 0, 0x7, 0x35, 0x7840, 0x1, D_80182DF4, 0, 0x1E, -1);
+    wmap_draw_model(D_8011CF2C, 0, 0x7, 0x35, 0x7840, 0x1, D_80182DF4, 0, 0x1E, -1);
     value = D_80182DF4 + 2;
     D_80182DF4 = value;
     if (value >= 0x82)
@@ -246,7 +245,7 @@ extern s32 D_801B2F30;
  */
 void func_800AE05C(void)
 {
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
 extern u8 D_80182DC0[];
 extern u8 D_8013B240[];
 extern s32* D_8011CF2C;
@@ -259,7 +258,7 @@ extern s32 D_801B2F30;
     s32 next_timer;
 
     func_8006CFA8(D_80182DC0, D_8013B240);
-    func_800675F0(D_8011CF2C, 0, 0x7, 0x35, 0x7840, 0x1, D_80182DF4, 0, 0x1E, -1);
+    wmap_draw_model(D_8011CF2C, 0, 0x7, 0x35, 0x7840, 0x1, D_80182DF4, 0, 0x1E, -1);
     value = D_80182DF4 - 2;
     D_80182DF4 = value;
     if (value < 0)
@@ -288,8 +287,7 @@ typedef struct
     s16 field_06;
 } WmapVector;
 
-extern void func_800675F0(s32, s32, s32, s32, s32, s32, s32, s32, s32, s32);
-extern s32 D_8011CF30;
+extern u8* D_8011CF30;
 extern s32 D_80139234;
 extern WmapVector D_801B2670;
 extern s32 D_80182DC0[];
@@ -301,7 +299,7 @@ extern s32 D_801B2F3C;
     s32 intensity;
 
     func_8006CFA8(D_80182DC0, &D_801B2670);
-    func_800675F0(D_8011CF30, (D_80139234 >> 4) & 3, 7, 0x36, 0x7980, 0x1001, D_801B25D8, 0, -10, -1);
+    wmap_draw_model(D_8011CF30, (D_80139234 >> 4) & 3, 7, 0x36, 0x7980, 0x1001, D_801B25D8, 0, -10, -1);
     D_80139234 += 16;
     intensity = D_801B25D8 + 2;
     D_801B25D8 = intensity;
@@ -330,8 +328,7 @@ typedef struct
     s16 field_06;
 } WmapVector;
 
-extern void func_800675F0(s32, s32, s32, s32, s32, s32, s32, s32, s32, s32);
-extern s32 D_8011CF30;
+extern u8* D_8011CF30;
 extern s32 D_80139234;
 extern WmapVector D_801B2670;
 extern s32 D_80182DC0[];
@@ -343,7 +340,7 @@ extern s32 D_801B2F3C;
     s32 intensity;
 
     func_8006CFA8(D_80182DC0, &D_801B2670);
-    func_800675F0(D_8011CF30, (D_80139234 >> 4) & 3, 7, 0x36, 0x7980, 0x1001, D_801B25D8, 0, -10, -1);
+    wmap_draw_model(D_8011CF30, (D_80139234 >> 4) & 3, 7, 0x36, 0x7980, 0x1001, D_801B25D8, 0, -10, -1);
     intensity = D_801B25D8 - 4;
     D_80139234 += 16;
     D_801B25D8 = intensity;
@@ -372,8 +369,7 @@ typedef struct
     s16 field_06;
 } WmapVector;
 
-extern void func_800675F0(s32, s32, s32, s32, s32, s32, s32, s32, s32, s32);
-extern s32 D_8011CF34;
+extern u8* D_8011CF34;
 extern s32 D_8013923C;
 extern WmapVector D_801B2678;
 extern s32 D_80182DC0[];
@@ -385,7 +381,7 @@ extern s32 D_801B2F44;
     s32 intensity;
 
     func_8006CFA8(D_80182DC0, &D_801B2678);
-    func_800675F0(D_8011CF34, (D_8013923C >> 4) & 7, 10, 0x35, 0x7800, 0x1001, D_801B25DC, -1, 7, -1);
+    wmap_draw_model(D_8011CF34, (D_8013923C >> 4) & 7, 10, 0x35, 0x7800, 0x1001, D_801B25DC, -1, 7, -1);
     D_8013923C += 16;
     intensity = D_801B25DC + 2;
     D_801B25DC = intensity;
@@ -414,8 +410,7 @@ typedef struct
     s16 field_06;
 } WmapVector;
 
-extern void func_800675F0(s32, s32, s32, s32, s32, s32, s32, s32, s32, s32);
-extern s32 D_8011CF34;
+extern u8* D_8011CF34;
 extern s32 D_8013923C;
 extern WmapVector D_801B2678;
 extern s32 D_80182DC0[];
@@ -427,7 +422,7 @@ extern s32 D_801B2F44;
     s32 intensity;
 
     func_8006CFA8(D_80182DC0, &D_801B2678);
-    func_800675F0(D_8011CF34, (D_8013923C >> 4) & 7, 10, 0x35, 0x7800, 0x1001, D_801B25DC, -1, 7, -1);
+    wmap_draw_model(D_8011CF34, (D_8013923C >> 4) & 7, 10, 0x35, 0x7800, 0x1001, D_801B25DC, -1, 7, -1);
     intensity = D_801B25DC - 2;
     D_8013923C += 16;
     D_801B25DC = intensity;

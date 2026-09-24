@@ -1,3 +1,4 @@
+#include "wmap_frame_render.h"
 #include "wmap_resource_support.h"
 #include "sdk/libgpu.h"
 #include "cdrom.h"
@@ -23,14 +24,6 @@ typedef struct
     u8 u2, v2;
     u16 pad;
 } WmapTexturedTriangle;
-
-/** @brief World-map ordering table and current primitive allocation cursor. */
-typedef struct
-{
-    u8 unknown_00[0x70];
-    u32 ordering_table[(0x33C - 0x70) / 4];
-    u8* primitive_cursor;
-} WmapRenderContext;
 
 /** @brief World-map resource record with its initialization field at offset 0x26. */
 typedef struct
@@ -59,8 +52,8 @@ extern s32 D_801ADAFC;
 extern void akao_play_sfx_from_buffer(s32, s32, s32, s32);
 extern s32 D_800CB1FC[];
 extern RECT D_80051A88;
-extern WmapRenderContext* D_801398EC;
-extern s32 D_800D921C;
+
+
 extern WmapInitResource D_800D9268[];
 extern WmapInitDisplay D_801AFBD0[];
 extern WmapValueHeader* D_800D0454;
@@ -264,22 +257,22 @@ void func_800652F8(void)
 void func_8006534C(s32 texture_page, s32 depth)
 {
     WmapTexturedTriangle* primitive;
-    WmapRenderContext* table_base;
+    WmapFrame* table_base;
 
-    primitive = (WmapTexturedTriangle*)D_801398EC->primitive_cursor;
+    primitive = (WmapTexturedTriangle*)g_wmap_current_frame->packet_cursor;
     ((u8*)&primitive->tag)[3] = 7;
     primitive->code = 0x24;
     primitive->tpage = texture_page;
     *(s32*)&primitive->x2 = 400;
     *(s32*)&primitive->x1 = 400;
     *(s32*)&primitive->x0 = 400;
-    table_base = (WmapRenderContext*)(depth * 4 + (s32)D_801398EC);
+    table_base = (WmapFrame*)(depth * 4 + (s32)g_wmap_current_frame);
     primitive->tag = (primitive->tag & 0xFF000000) | (table_base->ordering_table[0] & 0xFFFFFF);
     table_base->ordering_table[0] = (table_base->ordering_table[0] & 0xFF000000) | ((u32)primitive & 0xFFFFFF);
-    if (D_800D921C < 0x7D00)
+    if (g_wmap_packet_bytes < 0x7D00)
     {
-        D_800D921C += 32;
-        D_801398EC->primitive_cursor += 32;
+        g_wmap_packet_bytes += 32;
+        g_wmap_current_frame->packet_cursor += 32;
     }
 }
 

@@ -1,3 +1,4 @@
+#include "wmap_frame_render.h"
 #include "wmap_main.h"
 #include "wmap_land_transition.h"
 #include "wmap_land_preview.h"
@@ -34,14 +35,6 @@
 #define WMAP_PREVIEW_PROJECTED_MODE 2
 /* Seven slots ahead, with whole turns retained for signed remainder arithmetic. */
 #define WMAP_PREVIEW_SLOT_OFFSET 43
-
-/** @brief Ordering table and packet allocation cursor for the current map buffer. */
-typedef struct
-{
-    u8 pad_00[0x70];
-    u_long ordering_table[0xB3];
-    u8* packet_cursor;
-} WmapRenderContext;
 
 /** @brief Map translation, projection scale, and unreconstructed trailing state. */
 typedef struct
@@ -121,7 +114,7 @@ extern WmapArtifactTransferFrame g_wmap_artifact_pickup_frames[];
 extern s32 g_wmap_artifact_return_offsets[];
 extern WmapArtifactTransferFrame g_wmap_artifact_return_frames[];
 extern s32 g_wmap_preview_foreground;
-extern s32 D_800D921C;
+
 extern s32 D_800DCEC0;
 extern s32 D_800DCEEC;
 extern s32 D_800DCEF0;
@@ -137,7 +130,7 @@ extern WmapCell D_80139290[][6];
 extern s32 D_80139838[];
 extern s32 D_8013986C;
 extern s32 D_801398D0;
-extern WmapRenderContext* D_801398EC;
+
 extern WmapProjection D_80139950;
 extern s32 D_8013B208;
 extern s32 g_wmap_preview_projection_x;
@@ -408,7 +401,7 @@ void wmap_update_land_preview(void)
             s16 x3_offset;
             s16 y3_offset;
 
-            packet = (POLY_FT4*)D_801398EC->packet_cursor;
+            packet = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
             *packet = g_wmap_preview_quad_template;
 
             if (D_8011D4FC == WMAP_NO_ARTIFACT)
@@ -459,47 +452,47 @@ void wmap_update_land_preview(void)
             {
                 if (g_wmap_preview_foreground != 0)
                 {
-                    addPrim(&D_801398EC->ordering_table[WMAP_PREVIEW_FRONT_OT], packet);
+                    addPrim(&g_wmap_current_frame->ordering_table[WMAP_PREVIEW_FRONT_OT], packet);
                 }
                 else
                 {
-                    addPrim(&D_801398EC->ordering_table[WMAP_PREVIEW_BACK_OT + ot_shift], packet);
+                    addPrim(&g_wmap_current_frame->ordering_table[WMAP_PREVIEW_BACK_OT + ot_shift], packet);
                 }
 
                 g_wmap_preview_saved_quads[(D_8011CF74 & 1) * WMAP_PREVIEW_QUADS_PER_BUFFER] = *packet;
 
-                if (D_800D921C < WMAP_PACKET_LIMIT)
+                if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
                 {
-                    D_800D921C += sizeof(POLY_FT4);
-                    D_801398EC->packet_cursor += sizeof(POLY_FT4);
+                    g_wmap_packet_bytes += sizeof(POLY_FT4);
+                    g_wmap_current_frame->packet_cursor += sizeof(POLY_FT4);
                 }
 
                 /* The second marker layer uses the next texture row. */
-                second_layer = (POLY_FT4*)D_801398EC->packet_cursor;
+                second_layer = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
                 *second_layer = *packet;
                 second_layer->v0 += WMAP_PREVIEW_SECOND_LAYER_V;
                 second_layer->v1 += WMAP_PREVIEW_SECOND_LAYER_V;
                 second_layer->v2 += WMAP_PREVIEW_SECOND_LAYER_V;
                 second_layer->v3 += WMAP_PREVIEW_SECOND_LAYER_V;
-                addPrim(&D_801398EC->ordering_table[WMAP_PREVIEW_BASE_OT + ot_shift], second_layer);
+                addPrim(&g_wmap_current_frame->ordering_table[WMAP_PREVIEW_BASE_OT + ot_shift], second_layer);
                 g_wmap_preview_saved_quads[(D_8011CF74 & 1) * WMAP_PREVIEW_QUADS_PER_BUFFER + 1] = *second_layer;
 
-                if (D_800D921C < WMAP_PACKET_LIMIT)
+                if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
                 {
-                    D_800D921C += sizeof(POLY_FT4);
-                    D_801398EC->packet_cursor += sizeof(POLY_FT4);
+                    g_wmap_packet_bytes += sizeof(POLY_FT4);
+                    g_wmap_current_frame->packet_cursor += sizeof(POLY_FT4);
                 }
             }
             else
             {
-                addPrim(&D_801398EC->ordering_table[WMAP_PREVIEW_BASE_OT + ot_shift], packet);
+                addPrim(&g_wmap_current_frame->ordering_table[WMAP_PREVIEW_BASE_OT + ot_shift], packet);
                 g_wmap_preview_saved_quads[(D_8011CF74 & 1) * WMAP_PREVIEW_QUADS_PER_BUFFER] = *packet;
                 g_wmap_preview_saved_quads[(D_8011CF74 & 1) * WMAP_PREVIEW_QUADS_PER_BUFFER + 1] = *packet;
 
-                if (D_800D921C < WMAP_PACKET_LIMIT)
+                if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
                 {
-                    D_800D921C += sizeof(POLY_FT4);
-                    D_801398EC->packet_cursor += sizeof(POLY_FT4);
+                    g_wmap_packet_bytes += sizeof(POLY_FT4);
+                    g_wmap_current_frame->packet_cursor += sizeof(POLY_FT4);
                 }
             }
         }
@@ -510,7 +503,7 @@ void wmap_update_land_preview(void)
             {
                 SPRT* sprite;
 
-                sprite = (SPRT*)D_801398EC->packet_cursor;
+                sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
                 if ((D_8011D52C != 0) && (D_801398D0 != WMAP_PREVIEW_PROJECTED_MODE))
                 {
                     sprite->x0 = D_8011D504;
@@ -533,12 +526,12 @@ void wmap_update_land_preview(void)
                 sprite->clut = WMAP_ARTIFACT_CLUT;
                 setSprt(sprite);
                 setSemiTrans(sprite, 1);
-                addPrim(&D_801398EC->ordering_table[WMAP_PREVIEW_FRONT_OT], sprite);
+                addPrim(&g_wmap_current_frame->ordering_table[WMAP_PREVIEW_FRONT_OT], sprite);
 
-                if (D_800D921C < WMAP_PACKET_LIMIT)
+                if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
                 {
-                    D_800D921C += sizeof(SPRT);
-                    D_801398EC->packet_cursor += sizeof(SPRT);
+                    g_wmap_packet_bytes += sizeof(SPRT);
+                    g_wmap_current_frame->packet_cursor += sizeof(SPRT);
                 }
                 func_8006534C(WMAP_ARTIFACT_TPAGE, WMAP_PREVIEW_FRONT_OT);
             }
@@ -561,7 +554,7 @@ void wmap_update_land_preview(void)
                 POLY_FT4* packet;
                 s32 row;
                 s32 column;
-                packet = (POLY_FT4*)D_801398EC->packet_cursor;
+                packet = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
                 SET_BGR0_PACKED(packet, GPU_TINT_NEUTRAL);
                 row = D_800DCEF0;
                 column = D_800DCEEC;
@@ -585,12 +578,12 @@ void wmap_update_land_preview(void)
                 packet->y1 = packet->y0;
                 packet->y3 = packet->y1 + WMAP_EMPTY_MARKER_SIZE;
                 packet->y2 = packet->y3;
-                addPrim(&D_801398EC->ordering_table[WMAP_EMPTY_MARKER_OT], packet);
+                addPrim(&g_wmap_current_frame->ordering_table[WMAP_EMPTY_MARKER_OT], packet);
 
-                if (D_800D921C < WMAP_PACKET_LIMIT)
+                if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
                 {
-                    D_800D921C += sizeof(POLY_FT4);
-                    D_801398EC->packet_cursor += sizeof(POLY_FT4);
+                    g_wmap_packet_bytes += sizeof(POLY_FT4);
+                    g_wmap_current_frame->packet_cursor += sizeof(POLY_FT4);
                 }
             }
         }

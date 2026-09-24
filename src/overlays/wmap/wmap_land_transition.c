@@ -1,3 +1,4 @@
+#include "wmap_frame_render.h"
 #include "wmap_land_transition.h"
 #include "wmap_land_preview.h"
 #include "wmap_party_travel.h"
@@ -99,14 +100,6 @@ enum WmapCarouselTextureWord
     WMAP_TEXTURE_WORDS
 };
 
-/** @brief Ordering table and packet cursor in the active map drawing buffer. */
-typedef struct
-{
-    u8 pad_00[0x70];
-    u_long ordering_table[0xB3];
-    u8* packet_cursor;
-} WmapRenderContext;
-
 /** @brief GTE screen position available as a packed word or coordinate pair. */
 typedef union
 {
@@ -146,12 +139,12 @@ extern WmapCell D_80139290[6][6];
 extern s32 D_801398F4;
 extern WmapProjectionState D_80139950;
 extern s32 D_80182DE0;
-extern s32 D_800D921C;
+
 extern s32 D_801ADAFC;
 extern s32 D_80139838[WMAP_ARTIFACT_SLOTS];
 extern s32 g_wmap_carousel_turn_frames;
 extern s32 g_wmap_carousel_turn_step;
-extern WmapRenderContext* D_801398EC;
+
 extern const u16 g_wmap_carousel_textures[];
 extern const SVECTOR g_wmap_carousel_vertices[];
 extern const s16 g_wmap_carousel_faces[];
@@ -467,7 +460,7 @@ void wmap_draw_artifact_carousel(void)
     /* Cull the back of the carousel before committing each triangle packet. */
     for (index = 0; index < WMAP_CAROUSEL_TRIANGLES; index++)
     {
-        triangle = (POLY_FT3*)D_801398EC->packet_cursor;
+        triangle = (POLY_FT3*)g_wmap_current_frame->packet_cursor;
         gte_ldv3(&g_wmap_carousel_vertices[g_wmap_carousel_faces[index * WMAP_TRIANGLE_VERTICES]],
                  &g_wmap_carousel_vertices[g_wmap_carousel_faces[index * WMAP_TRIANGLE_VERTICES + 1]],
                  &g_wmap_carousel_vertices[g_wmap_carousel_faces[index * WMAP_TRIANGLE_VERTICES + 2]]);
@@ -487,11 +480,11 @@ void wmap_draw_artifact_carousel(void)
             triangle->tpage = WMAP_CAROUSEL_TPAGE;
             triangle->u2 = g_wmap_carousel_textures[index * WMAP_TEXTURE_WORDS + WMAP_TEXTURE_U2];
             triangle->v2 = g_wmap_carousel_textures[index * WMAP_TEXTURE_WORDS + WMAP_TEXTURE_V2];
-            addPrim(&D_801398EC->ordering_table[WMAP_CAROUSEL_OT], triangle);
-            if (D_800D921C < WMAP_PACKET_LIMIT)
+            addPrim(&g_wmap_current_frame->ordering_table[WMAP_CAROUSEL_OT], triangle);
+            if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
             {
-                D_800D921C += sizeof(POLY_FT3);
-                D_801398EC->packet_cursor += sizeof(POLY_FT3);
+                g_wmap_packet_bytes += sizeof(POLY_FT3);
+                g_wmap_current_frame->packet_cursor += sizeof(POLY_FT3);
             }
         }
     }
@@ -503,7 +496,7 @@ void wmap_draw_artifact_carousel(void)
         index = (draw_index + WMAP_ARTIFACT_SLOTS) % WMAP_ARTIFACT_SLOTS;
         if (D_80139838[index] != WMAP_NO_ARTIFACT)
         {
-            sprite = (SPRT*)D_801398EC->packet_cursor;
+            sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
             position.vx = g_wmap_artifact_positions[index].x;
             position.vy = 0;
             position.vz = g_wmap_artifact_positions[index].y;
@@ -521,15 +514,15 @@ void wmap_draw_artifact_carousel(void)
             sprite->clut = WMAP_ARTIFACT_CLUT;
             setlen(sprite, 4);
             setcode(sprite, 0x66);
-            addPrim(&D_801398EC->ordering_table[WMAP_ARTIFACT_OT], sprite);
-            packet_bytes = D_800D921C;
+            addPrim(&g_wmap_current_frame->ordering_table[WMAP_ARTIFACT_OT], sprite);
+            packet_bytes = g_wmap_packet_bytes;
             if (packet_bytes < WMAP_PACKET_LIMIT)
             {
-                D_800D921C = packet_bytes + sizeof(SPRT);
-                D_801398EC->packet_cursor += sizeof(SPRT);
+                g_wmap_packet_bytes = packet_bytes + sizeof(SPRT);
+                g_wmap_current_frame->packet_cursor += sizeof(SPRT);
             }
 
-            shadow = (POLY_FT4*)D_801398EC->packet_cursor;
+            shadow = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
             SET_BGR0_PACKED(shadow, 0x00404040);
             shadow->x0 = screen.packed + image->shadow_x + WMAP_ARTIFACT_SHADOW_SKEW;
             shadow->y0 = image->height + (screen.point.y + image->shadow_y);
@@ -553,11 +546,11 @@ void wmap_draw_artifact_carousel(void)
             shadow->tpage = WMAP_ARTIFACT_TPAGE;
             if (D_801ADAFC != 0)
             {
-                addPrim(&D_801398EC->ordering_table[WMAP_ARTIFACT_SHADOW_OT], shadow);
-                if (D_800D921C < WMAP_PACKET_LIMIT)
+                addPrim(&g_wmap_current_frame->ordering_table[WMAP_ARTIFACT_SHADOW_OT], shadow);
+                if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
                 {
-                    D_800D921C += sizeof(POLY_FT4);
-                    D_801398EC->packet_cursor += sizeof(POLY_FT4);
+                    g_wmap_packet_bytes += sizeof(POLY_FT4);
+                    g_wmap_current_frame->packet_cursor += sizeof(POLY_FT4);
                 }
             }
         }

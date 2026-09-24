@@ -1,3 +1,4 @@
+#include "wmap_frame_render.h"
 #include "wmap_map_display.h"
 #include "wmap_sprite_render.h"
 #include "wmap_resource_support.h"
@@ -12,8 +13,8 @@
 
 void* memset(void*, int, unsigned int);
 extern u8 D_800D0A6C;
-extern s32 D_800D921C;
-extern void* D_801398EC;
+
+
 
 /**
  * @brief Advance sprite-part shading and append transformed textured quads.
@@ -134,7 +135,7 @@ void func_80066F9C(void* actor, s32 screen_position, s32 texture_index, s32 ot_i
     sp78 = (u16*)&transformed;
     do
     {
-        temp_s1 = M2C_FIELD(D_801398EC, void**, 0x33C);
+        temp_s1 = M2C_FIELD(g_wmap_current_frame, void**, 0x33C);
         if (M2C_FIELD(var_s2, s8*, -1) != 0)
         {
             memset(sp64, 0, 0x10);
@@ -236,13 +237,13 @@ void func_80066F9C(void* actor, s32 screen_position, s32 texture_index, s32 ot_i
         {
             M2C_FIELD(temp_s1, s8*, 7) = 0x2E;
         }
-        var_a3 = D_801398EC;
+        var_a3 = g_wmap_current_frame;
         temp_a0_5 = (ot_index * 4) + var_a3;
         M2C_FIELD(temp_s1, s32*, 0) = (s32)((M2C_FIELD(temp_s1, s32*, 0) & 0xFF000000) | (M2C_FIELD(temp_a0_5, s32*, 0x70) & 0xFFFFFF));
         M2C_FIELD(temp_a0_5, s32*, 0x70) = (s32)((M2C_FIELD(temp_a0_5, s32*, 0x70) & 0xFF000000) | ((s32)temp_s1 & 0xFFFFFF));
-        if (D_800D921C < 0x7D00)
+        if (g_wmap_packet_bytes < 0x7D00)
         {
-            D_800D921C += 0x28;
+            g_wmap_packet_bytes += 0x28;
             M2C_FIELD(var_a3, void**, 0x33C) = (void*)(M2C_FIELD(var_a3, void**, 0x33C) + 0x28);
         }
         var_s2 += 0xC;
