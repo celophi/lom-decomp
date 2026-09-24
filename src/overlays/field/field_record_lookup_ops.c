@@ -68,7 +68,7 @@ void func_800C1A18(void* unused, s32 owner_id)
         s32 key;
 
         table = (FieldRewardEntry*)D_80123FB0->resources;
-        /* Kept: the do-while(0) blocks below are required by the original allocation. */
+        /* Kept: each do-while(0) below changes register allocation; all are required. */
         do
         {
             found = NULL;
@@ -99,7 +99,7 @@ void func_800C1A18(void* unused, s32 owner_id)
                     if (cursor->key == key)
                     {
                         found = (u8*)(old_offset + (s32)base + 8);
-                        goto found_match;
+                        break;
                     }
                     do
                     {
@@ -108,7 +108,6 @@ void func_800C1A18(void* unused, s32 owner_id)
                     offset = old_offset + sizeof(FieldRewardEntry);
                     index += 1;
                 } while (index < n);
-            found_match:;
             }
         } while (0);
         if (found == NULL)
@@ -191,6 +190,7 @@ FieldActorRecord* func_800C1B98(s32 id)
         return NULL;
     }
     return &D_80122B78->actors[id - 0x70];
+/* Kept: the found return is emitted last; returning inside the loop moves it. */
 found:
     return &D_80122B78->actors[i];
 }
@@ -247,7 +247,7 @@ void func_800C1D14(s32 actor_id, s32 flags)
 }
 
 /**
- * @brief Stop every actor whose flag bit 30 is clear and disable its event 8.
+ * @brief Stop every actor that is not script-only and disable its event 8.
  */
 void func_800C1D68(void)
 {

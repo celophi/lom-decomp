@@ -48,7 +48,7 @@ typedef struct
 } FieldTransitionQuad;
 
 extern UnkTable800EE6E8Entry D_800EE6E8[];
-extern u8 D_800EF124[];
+extern FieldTransitionQuad D_800EF124[][4];
 extern u8 D_800EF85C[];
 extern s32 D_800F2298;
 extern Vec2s D_801077FC;
@@ -64,7 +64,7 @@ void func_800A3938(s32 sound_id, s32 pan);
 void func_80086F48(const void *src, s16 value);
 s32 rcos(s32);
 s32 rsin(s32);
-s32 *func_800A5960(s32 *packet, s32 *ordering_table, s32 index);
+POLY_FT4 *func_800A5960(POLY_FT4 *prim, u_long *ordering_table, s32 index);
 POLY_FT4 *func_800A6060(POLY_FT4 *prim, u_long *ordering_table);
 
 /**
@@ -139,14 +139,12 @@ void func_800A5670(s32 index)
  * @brief Advance a timed FIELD panel, update its fade, and render its contents.
  * @param context FIELD context containing the primitive-chain handle.
  * @note Selected pad buttons shorten the middle portion of the countdown.
- * @note The volatile timer read preserves the reload in the original fade path.
- * @note GCC 2.7.2 CDK matches all 115 instructions (460 bytes).
  */
 void func_800A5794(FieldContext *context)
 {
     extern s16 D_8011F3D0;
     extern u16 D_80122904;
-    s32 timer_or_event;
+    s32 timer_value;
     s32 primitive;
     u16 decremented_timer;
     u32 timer;
@@ -161,8 +159,8 @@ void func_800A5794(FieldContext *context)
         {
             field_restore_fade_target_with_duration(0x14);
         }
-        timer_or_event = D_80122904;
-        timer = timer_or_event & 0xFFFF;
+        timer_value = D_80122904;
+        timer = timer_value & 0xFFFF;
         if (timer == 0)
         {
             D_800F2298 = 0;
@@ -178,30 +176,29 @@ void func_800A5794(FieldContext *context)
                     switch (event_selector & 0x7F)
                     {
                     case 0:
-                        timer_or_event = 0x11D;
-                        goto dispatch_event;
+                        func_800A3938(0x11D, 0x80);
+                        break;
                     case 1:
-                        timer_or_event = 0x11B;
-                        goto dispatch_event;
+                        func_800A3938(0x11B, 0x80);
+                        break;
                     case 2:
-                        timer_or_event = 0x11F;
-                        goto dispatch_event;
+                        func_800A3938(0x11F, 0x80);
+                        break;
                     }
                 }
                 else
                 {
-                    timer_or_event = 0x119;
-dispatch_event:
-                    func_800A3938(timer_or_event, 0x80);
+                    func_800A3938(0x119, 0x80);
                 }
             }
             D_8011F3D0 = D_80122904 * 4;
         }
         else if (timer >= 0x76U)
         {
+            /* Volatile: the reload keeps this store from cross-jumping with the one above. */
             D_8011F3D0 = (0x96 - *(volatile u16 *)&D_80122904) * 4;
         }
-        else if (((u32) (timer_or_event - 0x21) < 0x46U) && (g_pad_input & 0x220))
+        else if ((timer_value >= 0x21 && timer_value < 0x67) && (g_pad_input & 0x220))
         {
             D_80122904 = 0x20;
         }
@@ -222,371 +219,303 @@ dispatch_event:
 }
 
 /**
- * @see decomp.me (100%)
+ * @brief Recover a transition descriptor from a pointer to its flags field.
+ * @param flags_ptr Address of the descriptor's flags member.
+ * @note The loop walks descriptors through this flags pointer; addressing every
+ *       other field relative to it reproduces the original induction variables.
+ */
+#define QUAD_OF_FLAGS(flags_ptr) ((FieldTransitionQuad *)((u8 *)(flags_ptr) - 10))
+
+/**
  * @brief Append up to four textured quads for a field transition effect.
- * @param packet Next available primitive packet.
+ * @param prim Next available primitive packet.
  * @param ordering_table Ordering-table entry receiving each generated primitive.
  * @param index Selects a group of four transition descriptors.
  * @return First unused packet after the generated textured quads.
  * @note Effect flags select expansion, translation, rotation or brightness;
  *       disabled descriptors have X equal to 0xFFFF.
+ * @note The do/while(0) blocks around the two width products in the rotation
+ *       case raise their loop weight so width keeps its saved register.
+ * @see decomp.me (100%)
  */
-s32 *func_800A5960(s32 *packet, s32 *ordering_table, s32 index)
+POLY_FT4 *func_800A5960(POLY_FT4 *prim, u_long *ordering_table, s32 index)
 {
     extern u16 D_8011F3D0;
     extern u16 D_80122904;
     s32 quad_index;
     u32 half_width;
-    s16 temp_v0_2;
-    s16 temp_v0_5;
-    s16 temp_v0_8;
-    s32 var_v0_3;
-    s32 temp_a0;
-    s32 temp_a0_2;
-    s32 temp_a0_3;
-    s32 temp_a0_4;
-    s32 temp_a2;
-    s32 temp_lo;
-    s32 temp_lo_2;
-    s32 cosine_first, sine_first, cosine_second, sine_second;
-    s32 temp_s2;
+    s32 bottom_2;
+    s32 x_sine;
+    s32 y_cosine;
+    s32 x_sine_2;
+    s32 y_cosine_2;
+    s32 rotated_y;
+    s32 term;
+    s32 x_cosine, y_sine, x_cosine_2, y_sine_2;
+    s32 rotated_x;
+    u8 brightness;
     s32 expansion;
     s32 angle;
     s32 negative_width;
-    s32 temp_v1_3;
-    s32 temp_v1_4;
-    s32 var_a0;
-    s32 bottom_edge;
-    s32 fade_active;
-    s32 left_edge;
-    s32 var_a1;
-    s32 var_v0;
-    s32 var_v0_2;
-    s32 var_v0_4;
-    s32 var_v0_5;
-    s32 var_v0_6;
-    s32 var_v0_7;
-    s32 var_v0_8;
-    s32 var_v1_2;
-    s32 var_v1_4;
-    s32 mask;
-    s32 var_v1_5;
-    s32 var_v1_6;
-    s32 var_v1_7;
-    s32 var_v1_8;
-    s32 var_v1_9;
-    s8 temp_v0_11;
-    s8 temp_v0_13;
-    u16 *quad_x;
+    s32 offset_1;
+    s32 scaled;
+    s32 bottom_1;
+    s32 scaled_x_2;
+    s32 right_1;
+    s32 height_term;
+    s32 height_term_y;
+    s32 height_term_2;
+    s32 height_term_y_2;
+    s32 adjusted;
+    s32 width_term;
+    s32 palette_mask;
+    s32 width_term_y;
+    s32 scaled_y;
+    s32 width_term_2;
+    s32 width_term_y_2;
+    s32 scaled_y_2;
+    FieldTransitionQuad *quad;
     u8 *flags_base;
-    u16 temp_v0;
-    u16 temp_v0_3;
-    u16 temp_v0_4;
-    u16 temp_v0_6;
-    u16 temp_v0_7;
-    u16 temp_v0_9;
-    u16 temp_v1_5;
-    s32 var_v1;
-    u32 temp_a3_2;
-    u32 width;
-    u32 temp_v1;
-    u8 temp_v0_10;
-    u8 temp_v0_12;
-    u8 var_v0_9;
     u8 *quad_flags;
+    s32 raw_width;
+    u32 half;
+    u32 width;
 
-    quad_x = (u16 *)((index * 0x30) + D_800EF124);
-    flags_base = (u8 *)quad_x + 0xA;
-    for (quad_index = 0; quad_index < 4; quad_index++, quad_x += 6)
+    quad = D_800EF124[index];
+    flags_base = (u8 *)&quad->flags;
+    for (quad_index = 0; quad_index < 4; quad_index++, quad++)
     {
         quad_flags = flags_base + quad_index * 12;
-        if (*quad_x != 0xFFFF)
+        if (quad->x != 0xFFFF)
         {
-            var_v1 = *(u16 *)(quad_flags + (-4));
-            if (*(u16 *)(quad_flags + (0)) & 0xF)
+            raw_width = QUAD_OF_FLAGS(quad_flags)->width;
+            if (QUAD_OF_FLAGS(quad_flags)->flags & 0xF)
             {
-                var_v1 = (u16)(var_v1 >> 1);
+                raw_width = (u16)(raw_width >> 1);
             }
-            *(u8 *)((u8 *)packet + 3) = 9;
-            *(u8 *)((u8 *)packet + 7) = 0x2CU;
-            width = var_v1 & 0xFFFF;
-            *(u8 *)((u8 *)packet + 4) = *(u8 *)((u8 *)packet + 5) = *(u8 *)((u8 *)packet + 6) = *(u8 *)&D_8011F3D0;
-            var_v1 = D_8011F3D0;
-            if ((var_v1 != 0x80) || (*(u16 *)(quad_flags + (0)) & 0x100))
+            setPolyFT4(prim);
+            width = raw_width & 0xFFFF;
+            prim->r0 = prim->g0 = prim->b0 = D_8011F3D0;
+            if ((D_8011F3D0 != 0x80) || (QUAD_OF_FLAGS(quad_flags)->flags & 0x100))
             {
-                *(u8 *)((u8 *)packet + 7) = (u8)(*(u8 *)((u8 *)packet + 7) | 2);
+                setSemiTrans(prim, 1);
             }
             expansion = 0x80 - D_8011F3D0;
-            temp_v1 = ((u16) * (u16 *)(quad_flags + (0)) >> 0xB) & 0xF;
-            switch (temp_v1)
+            switch ((QUAD_OF_FLAGS(quad_flags)->flags >> 11) & 0xF)
             {
             case 0:
-                do
+                term = width * expansion;
+                scaled = term;
+                if (term < 0)
                 {
-                    temp_lo = width * expansion;
-                } while (0);
-                var_a0 = temp_lo;
-                if (temp_lo < 0)
-                {
-                    var_a0 = temp_lo + 0x7F;
+                    scaled = term + 0x7F;
                 }
-                left_edge = *quad_x;
-                var_a0 = var_a0 >> 7;
-                goto block_52;
+                scaled = scaled >> 7;
+                prim->x0 = prim->x2 = quad->x - scaled;
+                prim->x1 = prim->x3 = quad->x + width + scaled - 1;
+                prim->y0 = prim->y1 = QUAD_OF_FLAGS(quad_flags)->y - QUAD_OF_FLAGS(quad_flags)->height * expansion / 128;
+                scaled = *(volatile u16 *)&QUAD_OF_FLAGS(quad_flags)->height * expansion;
+                bottom_1 = QUAD_OF_FLAGS(quad_flags)->y + QUAD_OF_FLAGS(quad_flags)->height;
+                if (scaled < 0)
+                {
+                    scaled += 0x7F;
+                }
+                prim->y2 = prim->y3 = bottom_1 + (scaled >> 7) - 1;
+                break;
             case 1:
-                if ((u16)D_80122904 < 0x25U)
+                if (D_80122904 < 0x25)
                 {
-                    var_a0 = width * expansion;
-                    var_v1_2 = var_a0;
-                    if (var_a0 < 0)
+                    scaled = width * expansion;
+                    adjusted = scaled;
+                    if (scaled < 0)
                     {
-                        var_v1_2 = var_a0 + 0x7F;
+                        adjusted = scaled + 0x7F;
                     }
-                    temp_v1_3 = var_v1_2 >> 7;
-                    temp_v0_3 = *quad_x - temp_v1_3;
-                    *(s16 *)((u8 *)packet + 24) = temp_v0_3;
-                    *(s16 *)((u8 *)packet + 8) = temp_v0_3;
-                    var_v0_4 = (*quad_x + width) - temp_v1_3;
+                    offset_1 = adjusted >> 7;
+                    prim->x0 = prim->x2 = quad->x - offset_1;
+                    right_1 = (quad->x + width) - offset_1;
                 }
                 else
                 {
-                    var_a0 = width * expansion;
-                    var_v1_2 = var_a0;
-                    if (var_a0 < 0)
+                    scaled = width * expansion;
+                    adjusted = scaled;
+                    if (scaled < 0)
                     {
-                        var_v1_2 = var_a0 + 0x7F;
+                        adjusted = scaled + 0x7F;
                     }
-                    temp_v1_4 = var_v1_2 >> 7;
-                    temp_v0_4 = *quad_x + temp_v1_4;
-                    *(s16 *)((u8 *)packet + 24) = temp_v0_4;
-                    *(s16 *)((u8 *)packet + 8) = temp_v0_4;
-                    var_v0_4 = *quad_x + width + temp_v1_4;
+                    offset_1 = adjusted >> 7;
+                    prim->x0 = prim->x2 = quad->x + offset_1;
+                    right_1 = quad->x + width + offset_1;
                 }
-                temp_v0_5 = var_v0_4 - 1;
-                *(s16 *)((u8 *)packet + 32) = temp_v0_5;
-                *(s16 *)((u8 *)packet + 16) = temp_v0_5;
-                temp_v0_6 = *(u16 *)(quad_flags + (-8));
-                *(s16 *)((u8 *)packet + 18) = temp_v0_6;
-                *(s16 *)((u8 *)packet + 10) = temp_v0_6;
-                var_v0_2 = *(u16 *)(quad_flags + (-8));
-                var_v1_2 = *(u16 *)(quad_flags + (-2));
-                var_v0_2 += var_v1_2;
-                goto block_57;
+                prim->x1 = prim->x3 = right_1 - 1;
+                prim->y0 = prim->y1 = QUAD_OF_FLAGS(quad_flags)->y;
+                prim->y2 = prim->y3 = QUAD_OF_FLAGS(quad_flags)->y + QUAD_OF_FLAGS(quad_flags)->height - 1;
+                break;
             case 2:
+                angle = expansion * 50;
+                x_cosine = rcos(angle);
+                x_sine = rsin(angle);
                 do
                 {
-                    angle = expansion * 0x32;
-                    cosine_first = rcos(angle);
-                    temp_a0 = rsin(angle);
+                    width_term = width * x_cosine;
                 } while (0);
+                if (width_term < 0)
+                {
+                    width_term += 0x1FFF;
+                }
+                width_term >>= 13;
+                height_term = QUAD_OF_FLAGS(quad_flags)->height * x_sine;
+                if (height_term < 0)
+                {
+                    height_term += 0x1FFF;
+                }
+                rotated_x = width_term + (height_term >> 13);
+                y_sine = rsin(angle);
+                y_cosine = rcos(angle);
                 do
                 {
-                    var_v1_4 = width * cosine_first;
+                    width_term_y = width * y_sine;
                 } while (0);
-                if (var_v1_4 < 0)
+                if (width_term_y < 0)
                 {
-                    var_v1_4 += 0x1FFF;
+                    width_term_y += 0x1FFF;
                 }
-                var_v1_4 >>= 13;
-                var_v0_5 = *(u16 *)(quad_flags + (-2)) * temp_a0;
-                if (var_v0_5 < 0)
+                width_term_y >>= 13;
+                height_term_y = QUAD_OF_FLAGS(quad_flags)->height * y_cosine;
+                if (height_term_y < 0)
                 {
-                    var_v0_5 += 0x1FFF;
+                    height_term_y += 0x1FFF;
                 }
-                temp_s2 = (var_v1_4) + (var_v0_5 >> 0xD);
-                sine_first = rsin(angle);
-                temp_a0_2 = rcos(angle);
-                do
+                scaled = expansion * rotated_x;
+                rotated_y = width_term_y - (height_term_y >> 13);
+                if (scaled < 0)
                 {
-                    var_v1_5 = width * sine_first;
-                } while (0);
-                if (var_v1_5 < 0)
-                {
-                    var_v1_5 += 0x1FFF;
+                    scaled += 0x7F;
                 }
-                var_v1_5 >>= 13;
-                var_v0_6 = *(u16 *)(quad_flags + (-2)) * temp_a0_2;
-                if (var_v0_6 < 0)
+                scaled_y = expansion * rotated_y;
+                rotated_x = rotated_x + (scaled >> 7);
+                if (scaled_y < 0)
                 {
-                    var_v0_6 += 0x1FFF;
+                    scaled_y += 0x7F;
                 }
-                var_a0 = expansion * temp_s2;
-                temp_a2 = (var_v1_5) - (var_v0_6 >> 0xD);
-                if (var_a0 < 0)
-                {
-                    var_a0 += 0x7F;
-                }
-                var_v1_6 = expansion * temp_a2;
-                temp_s2 = temp_s2 + (var_a0 >> 7);
-                if (var_v1_6 < 0)
-                {
-                    var_v1_6 += 0x7F;
-                }
-                temp_a2 = temp_a2 + (var_v1_6 >> 7);
-                temp_a3_2 = width >> 1;
-                half_width = temp_a3_2;
-                *(s16 *)((u8 *)packet + 8) = (u16)((*quad_x + temp_a3_2) - temp_s2);
-                *(s16 *)((u8 *)packet + 32) = (s16)(*quad_x + temp_a3_2 + temp_s2);
-                *(s16 *)((u8 *)packet + 10) =
-                    (u16)(*(u16 *)(quad_flags + (-8)) + ((u16) * (u16 *)(quad_flags + (-2)) >> 1) + temp_a2);
-                *(s16 *)((u8 *)packet + 34) =
-                    (s16)((*(u16 *)(quad_flags + (-8)) + ((u16) * (u16 *)(quad_flags + (-2)) >> 1)) - temp_a2);
-                cosine_second = rcos(angle);
-                temp_a0_3 = rsin(angle);
+                rotated_y = rotated_y + (scaled_y >> 7);
+                half = width >> 1;
+                half_width = half;
+                prim->x0 = (u16)((quad->x + half) - rotated_x);
+                prim->x3 = (s16)(quad->x + half + rotated_x);
+                prim->y0 = (u16)(QUAD_OF_FLAGS(quad_flags)->y + (QUAD_OF_FLAGS(quad_flags)->height >> 1) + rotated_y);
+                prim->y3 = (s16)((QUAD_OF_FLAGS(quad_flags)->y + (QUAD_OF_FLAGS(quad_flags)->height >> 1)) - rotated_y);
+                x_cosine_2 = rcos(angle);
+                x_sine_2 = rsin(angle);
                 negative_width = -(s32)width;
-                var_v1_7 = negative_width * cosine_second;
-                if (var_v1_7 < 0)
+                width_term_2 = negative_width * x_cosine_2;
+                if (width_term_2 < 0)
                 {
-                    var_v1_7 += 0x1FFF;
+                    width_term_2 += 0x1FFF;
                 }
-                var_v1_7 >>= 13;
-                var_v0_7 = *(u16 *)(quad_flags + (-2)) * temp_a0_3;
-                if (var_v0_7 < 0)
+                width_term_2 >>= 13;
+                height_term_2 = QUAD_OF_FLAGS(quad_flags)->height * x_sine_2;
+                if (height_term_2 < 0)
                 {
-                    var_v0_7 += 0x1FFF;
+                    height_term_2 += 0x1FFF;
                 }
-                temp_s2 = (var_v1_7) + (var_v0_7 >> 0xD);
-                sine_second = rsin(angle);
-                temp_a0_4 = rcos(angle);
-                var_v1_8 = negative_width * sine_second;
-                if (var_v1_8 < 0)
+                rotated_x = width_term_2 + (height_term_2 >> 13);
+                y_sine_2 = rsin(angle);
+                y_cosine_2 = rcos(angle);
+                width_term_y_2 = negative_width * y_sine_2;
+                if (width_term_y_2 < 0)
                 {
-                    var_v1_8 += 0x1FFF;
+                    width_term_y_2 += 0x1FFF;
                 }
-                var_v1_8 >>= 13;
-                var_v0_8 = *(u16 *)(quad_flags + (-2)) * temp_a0_4;
-                if (var_v0_8 < 0)
+                width_term_y_2 >>= 13;
+                height_term_y_2 = QUAD_OF_FLAGS(quad_flags)->height * y_cosine_2;
+                if (height_term_y_2 < 0)
                 {
-                    var_v0_8 += 0x1FFF;
+                    height_term_y_2 += 0x1FFF;
                 }
-                var_a1 = expansion * temp_s2;
-                temp_a2 = (var_v1_8) - (var_v0_8 >> 0xD);
-                if (var_a1 < 0)
+                scaled_x_2 = expansion * rotated_x;
+                rotated_y = width_term_y_2 - (height_term_y_2 >> 13);
+                if (scaled_x_2 < 0)
                 {
-                    var_a1 += 0x7F;
+                    scaled_x_2 += 0x7F;
                 }
-                var_v1_9 = expansion * temp_a2;
-                temp_s2 = temp_s2 + (var_a1 >> 7);
-                if (var_v1_9 < 0)
+                scaled_y_2 = expansion * rotated_y;
+                rotated_x = rotated_x + (scaled_x_2 >> 7);
+                if (scaled_y_2 < 0)
                 {
-                    var_v1_9 += 0x7F;
+                    scaled_y_2 += 0x7F;
                 }
-                *(s16 *)((u8 *)packet + 16) = (s16)((*quad_x + half_width) - temp_s2);
-                temp_a2 = temp_a2 + (var_v1_9 >> 7);
-                *(s16 *)((u8 *)packet + 24) = (u16)(*quad_x + half_width + temp_s2);
-                *(s16 *)((u8 *)packet + 18) =
-                    (u16)(*(u16 *)(quad_flags + (-8)) + ((u16) * (u16 *)(quad_flags + (-2)) >> 1) + temp_a2);
-                var_v1_2 = *(u16 *)(quad_flags + (-2));
-                var_v1_2 = (u32)var_v1_2 >> 1;
-                var_v0_3 = *(u16 *)(quad_flags + (-8)) + var_v1_2 - temp_a2;
-                goto block_58;
+                prim->x1 = (s16)((quad->x + half_width) - rotated_x);
+                rotated_y = rotated_y + (scaled_y_2 >> 7);
+                prim->x2 = (u16)(quad->x + half_width + rotated_x);
+                prim->y1 = (u16)(QUAD_OF_FLAGS(quad_flags)->y + (QUAD_OF_FLAGS(quad_flags)->height >> 1) + rotated_y);
+                adjusted = QUAD_OF_FLAGS(quad_flags)->height;
+                adjusted = (u32)adjusted >> 1;
+                bottom_2 = QUAD_OF_FLAGS(quad_flags)->y + adjusted - rotated_y;
+                prim->y2 = bottom_2;
+                break;
             case 3:
-                if (D_8011F3D0 < 0x40U)
+                if (D_8011F3D0 < 0x40)
                 {
-                    var_v0_9 = D_8011F3D0 * 4;
+                    brightness = D_8011F3D0 * 4;
                 }
                 else
                 {
-                    var_v0_9 = ~((D_8011F3D0 - 0x40) * 2);
+                    brightness = ~((D_8011F3D0 - 0x40) * 2);
                 }
-                *(u8 *)((u8 *)packet + 6) = var_v0_9;
-                *(u8 *)((u8 *)packet + 5) = var_v0_9;
-                *(u8 *)((u8 *)packet + 4) = var_v0_9;
-                temp_v0_7 = *quad_x;
-                *(s16 *)((u8 *)packet + 24) = temp_v0_7;
-                *(s16 *)((u8 *)packet + 8) = temp_v0_7;
-                temp_v0_8 = (*quad_x + width) - 1;
-                *(s16 *)((u8 *)packet + 32) = temp_v0_8;
-                *(s16 *)((u8 *)packet + 16) = temp_v0_8;
-                temp_v0_9 = *(u16 *)(quad_flags + (-8));
-                *(s16 *)((u8 *)packet + 18) = temp_v0_9;
-                *(s16 *)((u8 *)packet + 10) = temp_v0_9;
-                var_v0_2 = *(u16 *)(quad_flags + (-8));
-                var_v1_2 = *(u16 *)(quad_flags + (-2));
-                var_v0_2 += var_v1_2;
-                goto block_57;
+                prim->r0 = prim->g0 = prim->b0 = brightness;
+                prim->x0 = prim->x2 = quad->x;
+                prim->x1 = prim->x3 = quad->x + width - 1;
+                prim->y0 = prim->y1 = QUAD_OF_FLAGS(quad_flags)->y;
+                prim->y2 = prim->y3 = QUAD_OF_FLAGS(quad_flags)->y + QUAD_OF_FLAGS(quad_flags)->height - 1;
+                break;
             case 4:
-                do
+                term = width * expansion;
+                scaled = term;
+                if (term < 0)
                 {
-                    temp_lo = width * expansion;
-                } while (0);
-                var_a0 = temp_lo;
-                if (temp_lo < 0)
-                {
-                    var_a0 = temp_lo + 0x3F;
+                    scaled = term + 0x3F;
                 }
-                left_edge = *quad_x;
-                var_a0 = var_a0 >> 6;
-            block_52:
-                temp_v0 = left_edge - var_a0;
-                *(s16 *)((u8 *)packet + 24) = temp_v0;
-                *(s16 *)((u8 *)packet + 8) = temp_v0;
-                temp_v0_2 = (*quad_x + width + var_a0) - 1;
-                *(s16 *)((u8 *)packet + 32) = temp_v0_2;
-                *(s16 *)((u8 *)packet + 16) = temp_v0_2;
-                var_v0 = *(u16 *)(quad_flags + (-2)) * expansion;
-                if (var_v0 < 0)
+                scaled = scaled >> 6;
+                prim->x0 = prim->x2 = quad->x - scaled;
+                prim->x1 = prim->x3 = quad->x + width + scaled - 1;
+                prim->y0 = prim->y1 = QUAD_OF_FLAGS(quad_flags)->y - QUAD_OF_FLAGS(quad_flags)->height * expansion / 128;
+                scaled = *(volatile u16 *)&QUAD_OF_FLAGS(quad_flags)->height * expansion;
+                bottom_1 = QUAD_OF_FLAGS(quad_flags)->y + QUAD_OF_FLAGS(quad_flags)->height;
+                if (scaled < 0)
                 {
-                    var_v0 += 0x7F;
+                    scaled += 0x7F;
                 }
-                var_v1_2 = *(u16 *)(quad_flags + (-8)) - (var_v0 >> 7);
-                *(s16 *)((u8 *)packet + 18) = var_v1_2;
-                *(s16 *)((u8 *)packet + 10) = var_v1_2;
-                var_a0 = *(volatile u16 *)(quad_flags - 2) * expansion;
-                bottom_edge = *(u16 *)(quad_flags - 8) + *(u16 *)(quad_flags - 2);
-                if (var_a0 < 0)
-                {
-                    var_a0 += 0x7F;
-                }
-                temp_lo_2 = var_a0 >> 7;
-                var_v0_2 = bottom_edge + temp_lo_2;
-            block_57:
-                var_v0_3 = var_v0_2 - 1;
-                *(s16 *)((u8 *)packet + 34) = var_v0_3;
-            block_58:
-                *(s16 *)((u8 *)packet + 26) = var_v0_3;
+                prim->y2 = prim->y3 = bottom_1 + (scaled >> 7) - 1;
                 break;
             }
-            temp_v0_10 = *(u8 *)(quad_flags + (-6));
-            *(u8 *)((u8 *)packet + 28) = temp_v0_10;
-            *(u8 *)((u8 *)packet + 12) = temp_v0_10;
-            temp_v0_11 = (*(u8 *)(quad_flags + (-6)) + width) - 1;
-            *(u8 *)((u8 *)packet + 36) = temp_v0_11;
-            *(u8 *)((u8 *)packet + 20) = temp_v0_11;
-            temp_v0_12 = *(u8 *)(quad_flags + (-5));
-            *(u8 *)((u8 *)packet + 21) = temp_v0_12;
-            *(u8 *)((u8 *)packet + 13) = temp_v0_12;
-            mask = 0xF0;
-            temp_v0_13 = (*(u8 *)(quad_flags + (-5)) + (u8) * (u16 *)(quad_flags + (-2))) - 1;
-            *(u8 *)((u8 *)packet + 37) = temp_v0_13;
-            *(u8 *)((u8 *)packet + 29) = temp_v0_13;
-            *(s16 *)((u8 *)packet + 14) = (s16)(((u32)(*(u16 *)(quad_flags + (0)) & mask) >> 4) | 0x7C80);
-            temp_v1_5 = *(u16 *)(quad_flags + (0));
-            *(s16 *)((u8 *)packet + 22) = (s16)(((temp_v1_5 & 3) << 7) | ((temp_v1_5 >> 4) & 0x60) | 5);
-            mask = 0xFFFFFF;
-            *packet = (*packet & 0xFF000000) | (*ordering_table & mask);
-            index = (*ordering_table & 0xFF000000) | ((s32)packet & mask);
-            fade_active = D_8011F3D0 < 0x7CU;
-            *ordering_table = index;
-            if (fade_active)
+            prim->u0 = prim->u2 = QUAD_OF_FLAGS(quad_flags)->u;
+            prim->u1 = prim->u3 = QUAD_OF_FLAGS(quad_flags)->u + width - 1;
+            prim->v0 = prim->v1 = QUAD_OF_FLAGS(quad_flags)->v;
+            palette_mask = 0xF0;
+            prim->v2 = prim->v3 = QUAD_OF_FLAGS(quad_flags)->v + QUAD_OF_FLAGS(quad_flags)->height - 1;
+            prim->clut = getClut(QUAD_OF_FLAGS(quad_flags)->flags & palette_mask, 0x1F2);
+            prim->tpage = getTPage(QUAD_OF_FLAGS(quad_flags)->flags & 3, (QUAD_OF_FLAGS(quad_flags)->flags >> 9) & 3, 320, 0);
+            addPrim(ordering_table, prim);
+            if (D_8011F3D0 < 0x7C)
             {
-                temp_lo = (*(u16 *)quad_flags >> 11) & 15;
-                switch (temp_lo)
+                term = (QUAD_OF_FLAGS(quad_flags)->flags >> 11) & 15;
+                switch (term)
                 {
                 case 0:
                     break;
                 case 1:
-                    func_80086F48(packet, 0);
+                    func_80086F48(prim, 0);
                     break;
                 case 2:
-                    func_80086F48(packet, 0);
+                    func_80086F48(prim, 0);
                     break;
                 }
             }
-            packet += 10;
+            prim++;
         }
     }
-    return packet;
+    return prim;
 }
 
 /**
@@ -631,6 +560,7 @@ POLY_FT4 *func_800A6060(POLY_FT4 *prim, u_long *ordering_table)
     prim->x0 = value0;
     value0 = value4 * 4;
     value0 += 0xA0;
+    /* Loop notes keep the scheduler from moving this subtract into the load delay slot. */
     do
     {
         value0 -= value1;
@@ -677,7 +607,7 @@ POLY_FT4 *func_800A6060(POLY_FT4 *prim, u_long *ordering_table)
     value0--;
     prim->v3 = value0;
     prim->v2 = value0;
-    prim->tag = (prim->tag & 0xFF000000) | (*ordering_table & address_mask);
+    setaddr(prim, *ordering_table & address_mask);
     setaddr(ordering_table, prim);
     if ((u16)D_8011F3D0 < 0x7C)
     {

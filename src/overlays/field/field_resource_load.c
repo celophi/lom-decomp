@@ -1,97 +1,7 @@
 #include "field_scene_transition.h"
 #include "cdrom.h"
 #include "common.h"
-typedef struct
-{
-    u8 flags;
-    u8 _pad01[0x253];
-    u16 resource_index;
-    u8 _pad256[0x12];
-} FieldResourceSlot;
-
-typedef struct
-{
-    u8* start;
-    u8* end;
-    u8 unk8;
-    u8 slot_index;
-    u8 padA[4];
-    s16 unkE;
-    u32 flags;
-} FieldResourceEntry;
-
-typedef struct
-{
-    u8 _pad00[0x34];
-    u32 unk34;
-    u8 _pad38[0x10];
-} FieldActorPartDef;
-
-typedef struct
-{
-    u8 _pad000[0x174];
-    s32 unk174;
-    u8 _pad178;
-    u8 unk179;
-    u8 _pad17A[0x31];
-    u8 unk1AB;
-    u8 _pad1AC[0x90];
-} FieldActorState;
-
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-    u32 unkC;
-    s16 unk10;
-    s16 unk12;
-    s16 unk14;
-    s16 unk16;
-    u8 unk18;
-    u8 unk19;
-    u8 unk1A;
-    u8 unk1B;
-    s32 unk1C;
-    u8 pad20[0x21 - 0x20];
-    u8 unk21;
-    u8 unk22;
-    u8 unk23;
-    u8 unk24;
-    u8 unk25;
-    u8 pad26[0x27 - 0x26];
-    u8 unk27;
-    u8 unk28;
-    u8 pad29[0x2A - 0x29];
-    s16 unk2A;
-    s16 unk2C;
-    u16 unk2E;
-    s16 unk30;
-    u8 unk32;
-    u8 unk33;
-    u8 unk34;
-    u8 unk35;
-    u8 unk36;
-    u8 unk37;
-    u8 unk38;
-    u8 pad39[0x3A - 0x39];
-    u8 unk3A;
-    u8 unk3B;
-    u32 unk3C;
-    s32 unk40;
-    u32 unk44;
-    u32 unk48;
-    u32 unk4C;
-    u8 pad50[0x54 - 0x50];
-} FieldActorRecord;
-
-/** @brief Temporary animation actor binding; only its state word is read here. */
-typedef struct
-{
-    s32 state;
-    u8 _pad04[0x18];
-} FieldActorBinding;
-
+#include "field_actor_tables.h"
 /** @brief Queued change to one actor: pose, animation track and sound; -1 leaves a field unchanged. */
 typedef struct
 {
@@ -101,7 +11,7 @@ typedef struct
     s16 sound;
 } FieldPendingActorChange;
 
-FieldActorRecord* func_80087C9C(s32 arg0);
+FieldActor* func_80087C9C(s32 arg0);
 
 extern s32 D_80122B10;
 extern FieldPendingActorChange D_80122B28[];
@@ -134,11 +44,6 @@ s32 func_800B0234(void)
     return D_80122B20 = 1;
 }
 
-extern FieldResourceSlot g_field_player_records[];
-extern FieldActorRecord g_field_actors[];
-extern FieldActorPartDef g_field_object_parts[];
-extern FieldActorBinding g_field_actor_bindings[];
-extern FieldActorState g_field_object_states[];
 extern s32 g_field_active_group;
 void func_800B0A08(s32);
 s32 func_800B0888(void);
@@ -182,7 +87,7 @@ void func_800B0244(void)
 
     case 3:
     {
-        FieldActorRecord* object;
+        FieldActor* object;
         s32 actor_track;
         u8 flags;
 
@@ -191,10 +96,10 @@ void func_800B0244(void)
             object = g_field_actors + D_80122B28[i].actor_index;
             if (D_80122B28[i].pose != -1)
             {
-                object->unk25 = 0;
-                object->unk2A = 0x8D;
-                flags = (u8)D_80122B28[i].pose | (object->unk21 & 0x80);
-                object->unk21 = flags;
+                object->presence = 0;
+                object->command = 0x8D;
+                flags = (u8)D_80122B28[i].pose | (object->animation & 0x80);
+                object->animation = flags;
                 if (flags & 0x80)
                 {
                     object->unk1B = 0;
@@ -205,17 +110,17 @@ void func_800B0244(void)
                 }
                 object->unk2E = 1;
                 object->unk24 = 1;
-                object->unk1C &= ~0x800;
-                object->unk2C += 3;
+                object->control.word &= ~0x800;
+                object->script_offset += 3;
                 field_restart_actor_animation((u8*)object);
             }
             if (D_80122B28[i].animation != -1)
             {
-                actor_track = func_800839F8(object->unk3A, 0);
-                if ((actor_track != -1) && (func_80083EEC(object->unk3A, actor_track, D_80122B28[i].animation) != 0))
+                actor_track = func_800839F8(object->object_index, 0);
+                if ((actor_track != -1) && (func_80083EEC(object->object_index, actor_track, D_80122B28[i].animation) != 0))
                 {
                     field_start_actor_animation(actor_track, 0, 0);
-                    g_field_object_states[object->unk3A].unk179 = (u8)actor_track;
+                    g_field_object_states[object->object_index].contact.bytes.animation_actor_index = (u8)actor_track;
                 }
             }
             if (D_80122B28[i].sound != -1)
@@ -245,7 +150,7 @@ void func_800B0244(void)
             {
                 for (i = 3; i < 0xD; i++)
                 {
-                    if (g_field_actors[i].unk25 != 0xFF && g_field_actors[i].unk2A == 0x8D)
+                    if (g_field_actors[i].presence != 0xFF && g_field_actors[i].command == 0x8D)
                     {
                         break;
                     }
@@ -256,7 +161,7 @@ void func_800B0244(void)
                     {
                         if (g_field_player_records[i].flags & 1)
                         {
-                            scan_object_type = g_field_actors[i].unk2A;
+                            scan_object_type = g_field_actors[i].command;
                             if ((scan_object_type == 0xAF) || (scan_object_type == 0xB1))
                             {
                                 break;
@@ -268,8 +173,8 @@ void func_800B0244(void)
                         i = 0;
                         do
                         {
-                            g_field_object_parts[i].unk34 &= ~0x800000;
-                            g_field_actors[i].unk2A = 0;
+                            g_field_object_parts[i].flags &= ~0x800000;
+                            g_field_actors[i].command = 0;
                             i += 1;
                         } while (i < 3);
                         func_800A3938(0x79, 0x80);
@@ -279,13 +184,13 @@ void func_800B0244(void)
                             if (D_80122B68[i] != 0)
                             {
                                 func_800B08FC(1, i);
-                                g_field_actors[i].unk2A = 0x99;
+                                g_field_actors[i].command = 0x99;
                                 g_field_actors[i].unk2E = 1;
                                 g_field_actors[i].unk27 = 0;
                                 g_field_actors[i].unk24 = 1;
-                                g_field_actors[i].unk21 = (g_field_actors[i].unk21 & 0x80) + 0x11;
-                                g_field_actors[i].unk1C &= ~0x800;
-                                g_field_object_states[i].unk174 &= ~0x1800;
+                                g_field_actors[i].animation = (g_field_actors[i].animation & 0x80) + 0x11;
+                                g_field_actors[i].control.word &= ~0x800;
+                                g_field_object_states[i].movement.word &= ~0x1800;
                                 field_restart_actor_animation((u8*)&g_field_actors[i]);
                             }
                             i += 1;
@@ -295,8 +200,8 @@ void func_800B0244(void)
                         {
                             if (g_field_player_records[i].flags & 1)
                             {
-                                g_field_object_states[i].unk1AB = 0x3C;
-                                g_field_object_states[i].unk174 |= 0x8000;
+                                g_field_object_states[i].tint_timer = 0x3C;
+                                g_field_object_states[i].movement.word |= 0x8000;
                             }
                             i += 1;
                         } while (i < 3);
@@ -324,7 +229,7 @@ void func_800B0244(void)
  */
 s32 func_800B0710(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 {
-    FieldActorRecord* rec;
+    FieldActor* rec;
     s32 i;
     FieldPendingActorChange* p;
 
@@ -333,20 +238,20 @@ s32 func_800B0710(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
         return -1;
     }
     rec = func_80087C9C(arg0);
-    if (rec == (FieldActorRecord*)-1)
+    if (rec == (FieldActor*)-1)
     {
         return -1;
     }
-    if (rec->unk25 == 0xFF)
+    if (rec->presence == 0xFF)
     {
         return -1;
     }
     for (i = 0; i < D_80122B10; i++)
     {
         p = &D_80122B28[i];
-        if (p->actor_index == rec->unk3A)
+        if (p->actor_index == rec->object_index)
         {
-            p->actor_index = (s16)rec->unk3A;
+            p->actor_index = (s16)rec->object_index;
             p->pose = arg1;
             p->animation = arg2;
             if (arg2 != -1)
@@ -363,7 +268,7 @@ s32 func_800B0710(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 
         p = &base[idx];
     }
-    p->actor_index = (s16)rec->unk3A;
+    p->actor_index = (s16)rec->object_index;
     p->pose = arg1;
     p->animation = arg2;
     if (arg2 != -1)
@@ -428,7 +333,6 @@ s32 func_800B0888(void)
 extern u8* D_8010D038;
 extern s32 D_80122B18[];
 extern s32 g_field_resource_cursor;
-extern FieldResourceEntry g_field_resource_entries[];
 void field_release_resource_entry(s32);
 void field_unpack_resource_package(u8*, s32, s32, s32);
 
@@ -464,12 +368,11 @@ void func_800B08FC(s32 arg0, s32 arg1)
     }
 }
 
-extern FieldResourceSlot g_field_player_records[];
 extern s32 D_80122B68[];
 extern s32 D_80122B18[];
 extern u8* D_8010D038;
 
-s32 field_get_actor_resource_id(s32 slot_index, FieldResourceSlot* slot, s32 mode);
+s32 field_get_actor_resource_id(s32 slot_index, FieldPlayerRecord* slot, s32 mode);
 
 /**
  * @brief Queue CD reads for each active field resource slot.
@@ -486,7 +389,7 @@ void func_800B0A08(s32 arg0)
         {
             D_80122B68[i] = field_get_actor_resource_id(i, &g_field_player_records[i], arg0);
             buffer = D_8010D038 + 0x8000 + i * 0x18000;
-            g_field_player_records[i].resource_index = (u16)D_80122B68[i];
+            g_field_player_records[i].unk254 = (u16)D_80122B68[i];
             D_80122B18[i] = cdrom_queue_read((u16)D_80122B68[i], buffer);
         }
         else

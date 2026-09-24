@@ -1,9 +1,8 @@
 #include "field_scene_transition.h"
 #include "common.h"
 #include "sdk/libgpu.h"
+#include "field_actor_tables.h"
 extern u8 g_field_direction_offsets[];
-extern u8 g_field_actors[];
-extern u8 g_field_object_states[];
 extern u8 D_80122738[];
 extern u8 *g_pad_ctx;
 extern s32 D_80122714, D_80122734, g_field_primary_held_buttons, g_field_primary_repeat_delay;
@@ -11,7 +10,7 @@ extern s32 g_field_secondary_held_buttons, g_field_secondary_repeat_delay, D_801
 extern s32 g_menu_element_counter, g_pad_input, g_pad_input_inject;
 void field_start_actor_animation(s32, s32, s32);
 void field_initialize_actor_record(s32, s32);
-void field_restart_actor_animation(u8 *);
+void field_restart_actor_animation(FieldActor *);
 s32 func_800839F8(s32, s32);
 s32 func_80083EEC(s32, s32, s32);
 
@@ -19,10 +18,18 @@ void func_800A3938(s32, s32);
 s32 field_read_controller_buttons(s32);
 void func_800C2640(s32, s32);
 
-struct Window;
-u8 *func_800AF0E8(u32 *, u8 *, s32, s32, s32, struct Window *);
+struct ItemWindowSlot;
+u8 *func_800AF0E8(u32 *, u8 *, s32, s32, s32, struct ItemWindowSlot *);
 void func_800AF0C4(void);
 
+
+/**
+ * @brief Address of the (dx, dz) offset pair for one of the eight facings.
+ * @param table Direction offset table, four bytes per facing.
+ * @param facing Facing index, 0 to 7.
+ * @note Written as an integer sum so the index stays the first addu operand.
+ */
+#define FIELD_DIRECTION_OFFSET(table, facing) ((s16 *)(((facing) * 4) + (s32)(table)))
 
 /** @brief Packed item-window flags controlling state, type, priority, and value. */
 typedef union
@@ -54,7 +61,7 @@ typedef union
 } ItemWindowState;
 
 /** @brief Item-selection window slot and its draw callback. */
-typedef struct
+typedef struct ItemWindowSlot
 {
     ItemWindowFlags flags;
     ItemWindowState state;
@@ -62,7 +69,7 @@ typedef struct
     s16 scroll_target;
     s16 scroll_ticks;
     u16 padding;
-    u8 *(*draw_callback)(u32 *, u8 *, s32, s32, s32, struct Window *);
+    u8 *(*draw_callback)(u32 *, u8 *, s32, s32, s32, struct ItemWindowSlot *);
 } ItemWindowSlot;
 
 /** @brief Build the available item list and open its selection window. */
@@ -110,6 +117,7 @@ void func_800AEE28(void)
         return;
     }
 
+    /* Open-coded func_800ADF84 allocator; as a loop or inline helper it is 98.59%. */
     goto start_window;
 
 initialize_slot:
@@ -187,10 +195,6 @@ setup_slot:
     g_field_buffered_input = 0;
 }
 
-
-
-void func_800A3938(s32, s32);
-
 /**
  * @brief Thin stack-frame wrapper around func_800A3938 with fixed args.
  */
@@ -199,12 +203,6 @@ void func_800AF0C4(void)
     func_800A3938(0x78, 0x80);
 }
 
-/** Window header containing the packed clipping height at offset four. */
-typedef struct Window
-{
-    u32 unused;
-    u32 size;
-} Window;
 /** Sixteen-byte GPU tile packet, including its ordering-table tag. */
 typedef struct Tile
 {
@@ -213,11 +211,9 @@ typedef struct Tile
     s16 x, y, w, h;
 } Tile;
 extern u8 D_800EE72C[];
-extern s32 D_80122714, D_80122734, D_80122A00;
-extern u8 D_80122738[];
 extern u8 *func_800A88A0(u8 *, u32 *, u8 *, s32, s32, s32, s32);
 extern void func_800A8B90(u8 *, s32, s32);
-extern s32 func_800AF350(u8 *);
+extern s32 func_800AF350(ItemWindowSlot *);
 /**
  * @brief Format and draw one numeric value using a temporary text buffer.
  * @param cursor Primitive buffer cursor.
@@ -245,10 +241,10 @@ static __inline__ u8 *draw_number(u8 *cursor, u32 *ot, s32 number, u16 *position
  * @param window Window used to prepare the list and determine its clipping height.
  * @return Cursor after the list, highlight tile, and draw-mode packet.
  */
-u8 *func_800AF0E8(u32 *ot, u8 *cursor, s32 scroll_x, s32 scroll_y, s32 unused, Window *window)
+u8 *func_800AF0E8(u32 *ot, u8 *cursor, s32 scroll_x, s32 scroll_y, s32 unused, ItemWindowSlot *window)
 {
     u16 point[4];
-    Window *draw_window;
+    ItemWindowSlot *draw_window;
     s32 number_x;
     u8 *entry;
     u8 *names;
@@ -258,7 +254,7 @@ u8 *func_800AF0E8(u32 *ot, u8 *cursor, s32 scroll_x, s32 scroll_y, s32 unused, W
     Tile *tile;
 
     draw_window = window;
-    func_800AF350((u8 *)draw_window);
+    func_800AF350(draw_window);
     if (D_80122714 == 0)
     {
         return cursor;
@@ -270,7 +266,7 @@ u8 *func_800AF0E8(u32 *ot, u8 *cursor, s32 scroll_x, s32 scroll_y, s32 unused, W
         number_x = 0xCA - scroll_x;
         entry = D_80122738 + index * 2;
         y = index * 16 - scroll_y;
-        if (y >= -15 && y < (s32)((draw_window->size >> 1) & 255))
+        if (y >= -15 && y < (s32)draw_window->state.bits.value)
         {
             cursor = func_800A88A0(cursor, ot, (u8 *)(((u16 *)names)[entry[0]] + (u32)names), 4,
                                     -scroll_x, y, 0);
@@ -297,10 +293,11 @@ u8 *func_800AF0E8(u32 *ot, u8 *cursor, s32 scroll_x, s32 scroll_y, s32 unused, W
 
 /**
  * @brief Process item selection, cancellation, scrolling, and actor creation.
- * @param arg0 Window state with packed flags, clipping height, and scroll state.
+ * @param window Item-selection window slot being updated.
+ * @return Nothing meaningful; the original declares an int return and never sets it.
  * @see decomp.me (100%)
  */
-s32 func_800AF350(u8 *arg0)
+s32 func_800AF350(ItemWindowSlot *window)
 {
     s32 offset[3];
     s32 scroll_target;
@@ -317,14 +314,14 @@ s32 func_800AF350(u8 *arg0)
     s32 scroll_step;
     s32 cancel_index;
     s32 actor_index;
-    s32 slot_offset;
-    u8 *direction_entry;
+    s16 *direction;
     u8 *entry;
-    u8 *record;
+    FieldActor *actor;
+    FieldObjectState *state;
     u8 *direction_table;
     u8 *items;
 
-    if ((((*(s32 *)(arg0 + 0x0)) & 7) == 2) && ((*(s16 *)(arg0 + 0xC)) == 0))
+    if (((window->flags.word & 7) == 2) && (window->scroll_ticks == 0))
     {
         if (g_field_buffered_input & 0x220)
         {
@@ -349,47 +346,43 @@ s32 func_800AF350(u8 *arg0)
             direction_table = g_field_direction_offsets;
             D_80122714 = 0;
             entry = g_pad_ctx + D_80122738[D_80122A00 * 2];
-            (*(u8 *)(entry + 0x25E0)) = (u8) ((*(u8 *)(entry + 0x25E0)) - 1);
+            entry[0x25E0]--;
             do
             {
-                entry = g_field_actors + actor_index * 0x54;
-                record = entry;
+                actor = &g_field_actors[actor_index];
                 items = D_80122738;
-                if ((*(u8 *)(record + 0x25)) == 0xFF)
+                if (actor->presence == 0xFF)
                 {
                     field_initialize_actor_record(actor_index, 4);
-                    (*(s32 *)(record + 0x0)) = (s32) (*(s32 *)(g_field_actors + 0x0));
-                    (*(s32 *)(record + 0x4)) = (s32) (*(s32 *)(g_field_actors + 0x4));
-                    (*(s32 *)(record + 0x8)) = (s32) (*(s32 *)(g_field_actors + 0x8));
-                    direction_entry = (u8 *)(s32)(((u8) (*(u8 *)(g_field_actors + 0x1B)) >> 5) * 4);
-                    direction_entry = (s32)direction_entry + direction_table;
-                    offset[0] = (s32) -(*(s16 *)(direction_entry + 0x0));
+                    actor->x = g_field_actors[0].x;
+                    actor->y = g_field_actors[0].y;
+                    actor->z = g_field_actors[0].z;
+                    direction = FIELD_DIRECTION_OFFSET(direction_table, g_field_actors[0].unk1B >> 5);
+                    offset[0] = -direction[0];
                     offset[1] = 0;
-                    offset[2] = (s32) -(*(s16 *)(direction_entry + 0x2));
-                    field_move_actor_position(record, offset);
-                    entry = record;
-                    actor_flags = *(s32 *)(entry + 0x1C);
-                    slot_offset = actor_index * 0x23C;
-                    record = g_field_object_states + slot_offset;
-                    entry[0x25] = 0xFE;
+                    offset[2] = -direction[1];
+                    field_move_actor_position(actor, offset);
+                    actor_flags = actor->control.word;
+                    state = &g_field_object_states[actor_index];
+                    actor->presence = 0xFE;
                     selected_item = items[D_80122A00 * 2];
-                    actor_direction = g_field_actors[0x21];
+                    actor_direction = g_field_actors[0].animation;
                     actor_flags &= ~0x1FF;
                     actor_flags |= 2;
-                    entry[0x27] = 0;
-                    entry[0x24] = 1;
-                    *(s16 *)(entry + 0x2A) = 0xBA;
-                    entry[0x3D] = 2;
-                    *(u16 *)(entry + 0x2E) = 0xFE;
-                    *(s32 *)(entry + 0x1C) = actor_flags;
-                    entry[0x28] = 0;
-                    *(s16 *)(entry + 0x10) = 1;
-                    entry[0x21] = (selected_item - 0x60) | (actor_direction & 0x80);
-                    *(s32 *)(record + 0x14) = actor_index + 0x14;
-                    record[0x18E] = 1;
-                    *(s16 *)(record + 0x18) = 0;
-                    field_restart_actor_animation(entry);
-                    func_800C2640((*(s32 *)(record + 0x14)), items[D_80122A00 * 2]);
+                    actor->unk27 = 0;
+                    actor->unk24 = 1;
+                    actor->command = 0xBA;
+                    actor->unk3D = 2;
+                    actor->unk2E = 0xFE;
+                    actor->control.word = actor_flags;
+                    actor->script_index = 0;
+                    actor->unk10 = 1;
+                    actor->animation = (selected_item - 0x60) | (actor_direction & 0x80);
+                    state->key = actor_index + 0x14;
+                    state->unk18E = 1;
+                    state->unk18 = 0;
+                    field_restart_actor_animation(actor);
+                    func_800C2640(state->key, items[D_80122A00 * 2]);
                     animation_actor = func_800839F8(actor_index, 0);
                     if ((animation_actor != -1) && (func_80083EEC(actor_index, animation_actor, 0xAF) != 0))
                     {
@@ -467,19 +460,19 @@ s32 func_800AF350(u8 *arg0)
                         scroll_step--;
                     } while (scroll_step != 0);
                 }
-                scroll_target = (*(s16 *)(arg0 + 0xA));
+                scroll_target = window->scroll_target;
                 scroll_step = D_80122A00 * 0x10;
                 if (scroll_step < scroll_target)
                 {
-                    (*(s16 *)(arg0 + 0xA)) = scroll_step;
-                    (*(s16 *)(arg0 + 0xC)) = 4;
+                    window->scroll_target = scroll_step;
+                    window->scroll_ticks = 4;
                     return;
                 }
-                window_height = ((u32) (*(s32 *)(arg0 + 0x4)) >> 1) & 0xFF;
+                window_height = window->state.bits.value;
                 if ((window_height - 0x10) < (scroll_step - scroll_target))
                 {
-                    (*(s16 *)(arg0 + 0xA)) = (s16) (scroll_step - (window_height - 0x10));
-                    (*(s16 *)(arg0 + 0xC)) = 4;
+                    window->scroll_target = (s16) (scroll_step - (window_height - 0x10));
+                    window->scroll_ticks = 4;
                 }
             }
         }
@@ -487,29 +480,29 @@ s32 func_800AF350(u8 *arg0)
 }
 
 /**
- * @brief Bump a pad-slot counter and clear an actor slot's animation bits.
+ * @brief Return an item actor's item to the inventory and free the actor.
  *
- * Uses the g_field_actors entry for @p arg0 (stride 0x54) to index into the pad
- * context and increment a per-controller counter, dispatches func_800C2640 for
- * the actor slot's @c unk14 handle, marks the pad entry served (0xFF), and
- * clears the actor slot's @c unk18E byte.
+ * Increments the inventory count of the item the actor shows (its animation
+ * index is the item id minus 0x60), passes 0xFF for the object's key to
+ * func_800C2640 (func_800AF350 passes the item id there), marks the actor
+ * absent (0xFF) and clears the object's unk18E byte.
  *
- * @param arg0 Actor/pad slot index.
+ * @param actor_index Field actor and object index.
  * @see decomp.me (100%) TODO
  */
-void func_800AF824(s32 arg0)
+void func_800AF824(s32 actor_index)
 {
-    u8 *s1;
-    u8 *v1;
-    u8 *s0;
-    u8 *pc = g_pad_ctx;
-    u8 *base = g_field_actors;
+    FieldActor *actor;
+    u8 *pad_entry;
+    FieldObjectState *state;
+    u8 *pad_ctx = g_pad_ctx;
+    FieldActor *actors = g_field_actors;
 
-    s1 = base + arg0 * 0x54;
-    v1 = pc + (s1[0x21] & 0x7F);
-    v1[0x2640] = v1[0x2640] + 1;
-    s0 = g_field_object_states + arg0 * 0x23C;
-    func_800C2640(*(s32 *)(s0 + 0x14), 0xFF);
-    s1[0x25] = 0xFF;
-    s0[0x18E] = 0;
+    actor = &actors[actor_index];
+    pad_entry = pad_ctx + (actor->animation & 0x7F);
+    pad_entry[0x2640] = pad_entry[0x2640] + 1;
+    state = &g_field_object_states[actor_index];
+    func_800C2640(state->key, 0xFF);
+    actor->presence = 0xFF;
+    state->unk18E = 0;
 }

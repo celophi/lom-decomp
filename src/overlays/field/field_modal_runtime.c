@@ -529,7 +529,7 @@ s32 field_name_byte_length(u8* name)
     {
         do
         {
-            if ((u32)(character - 0x19) < 7)
+            if (IS_DBCS_LEAD_BYTE(character))
             {
                 name += 2;
                 count += 2;
@@ -552,15 +552,15 @@ s32 field_name_byte_length(u8* name)
  */
 void field_copy_name(u8* destination, u8* source)
 {
-    volatile u8* cursor;
+    u8* cursor;
     s32 byte_count;
     s32 byte_index;
 
-    cursor = (volatile u8*)source;
+    cursor = source;
     byte_count = 0;
     while (*cursor != 0)
     {
-        if ((u32)(*cursor - 0x19) < 7)
+        if (IS_DBCS_LEAD_BYTE(*cursor))
         {
             cursor += 2;
             byte_count += 2;
@@ -1742,7 +1742,7 @@ extern u8 D_800FDF79;
 extern void func_80140004();
 
 /** @brief True for a DBCS lead byte (0x19-0x1F), which owns the following byte. */
-#define IS_DBCS(c) ((u32)((c) - 0x19) < 7)
+#define IS_DBCS(c) IS_DBCS_LEAD_BYTE(c)
 
 /** @brief Write a signed decimal into @p record_text (minus-sign glyph from the string table). */
 #define FORMAT_SIGNED(record_text, val)                                                                                                                        \
@@ -1815,9 +1815,9 @@ extern void func_80140004();
 /** @brief Shared strcat body: append @p s_ after the last glyph of @p d_. */
 #define STR_CAT_BODY(d_, s_, qsrc)                                                                                                                             \
     {                                                                                                                                                          \
-        volatile u8* p = d_;                                                                                                                                   \
+        u8* p = d_;                                                                                                                                            \
         s32 len_d = 0;                                                                                                                                         \
-        volatile u8* q;                                                                                                                                        \
+        u8* q;                                                                                                                                                 \
         s32 len_s;                                                                                                                                             \
         s32 append;                                                                                                                                            \
         s32 i;                                                                                                                                                 \
@@ -1909,7 +1909,7 @@ void field_run_menu(void* render_buffers, s32 input_source)
             field_rebuild_party_actions(1);
             cdrom_stream(CD_RES_GNAME_BIN, FIELD_SUBOVERLAY_ADDRESS);
             cdrom_wait_queue_empty();
-            if ((u32)(screen_id - 0xB) < 2U)
+            if ((screen_id == 0xB) || (screen_id == 0xC))
             {
                 func_80140004((void*)0x80160000, D_801226F0, D_801227D4, 1, D_801229F4, D_801226B8, 0);
             }
@@ -1919,7 +1919,7 @@ void field_run_menu(void* render_buffers, s32 input_source)
             }
             field_text_reset_windows();
             g_script_repeat_count = D_801229F4;
-            if ((u32)(screen_id - 0xB) < 2U)
+            if ((screen_id == 0xB) || (screen_id == 0xC))
             {
                 g_script_repeat_count = 0;
                 g_active_script = screen_id;

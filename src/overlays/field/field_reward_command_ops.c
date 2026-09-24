@@ -17,10 +17,10 @@ s32 rand(void);
 
 /**
  * @brief Select a bounded random entry and invoke its dispatch handler.
- * @param arg0 Actor record containing flags and selection tables.
+ * @param record Actor record containing flags and selection tables.
  * @return The handler result, or -1 for a null record or invalid dispatch entry.
  */
-s32 func_800C0A38(Rec *arg0)
+s32 func_800C0A38(Rec *record)
 {
     s32 result;
     s32 count;
@@ -29,14 +29,15 @@ s32 func_800C0A38(Rec *arg0)
     u8 *entry;
     u8 dispatch_idx;
 
+    /* Kept: without the do/while(0) (93.9%) or the volatile re-read below (95.0%) the match breaks. */
     do
     {
         result = -1;
     } while (0);
-    if (arg0 != NULL)
+    if (record != NULL)
     {
-        count = D_800F18C4[(u8)(arg0->unk10[0x4C]) >> 5];
-        if (arg0->unkC & 0x04000000)
+        count = D_800F18C4[(u8)(record->unk10[0x4C]) >> 5];
+        if (record->unkC & 0x04000000)
         {
             count += 2;
         }
@@ -46,7 +47,7 @@ s32 func_800C0A38(Rec *arg0)
         }
         shift_count = rand();
         mask = shift_count & 0xFFFF;
-        if (arg0->unkC & 0x08000000)
+        if (record->unkC & 0x08000000)
         {
             mask = shift_count & 0xFFFC;
         }
@@ -63,13 +64,13 @@ s32 func_800C0A38(Rec *arg0)
                 }
             }
         }
-        entry = arg0->unk14 + (shift_count * 2);
+        entry = record->unk14 + (shift_count * 2);
         if (*(volatile u8 *)(entry + 0x40) >= 4)
         {
             return -1;
         }
         dispatch_idx = entry[0x40];
-        result = D_800F18B4[dispatch_idx](dispatch_idx, entry[0x41], arg0);
+        result = D_800F18B4[dispatch_idx](dispatch_idx, entry[0x41], record);
     }
     return result;
 }
@@ -133,7 +134,6 @@ void func_800C0B40(s32 recipient, void *context, u32 selector)
     }
 }
 
-
 typedef struct Quad
 {
     u8 pad0[0x60];
@@ -159,58 +159,57 @@ typedef struct DirectionalRec
 
 /**
  * @brief Decode packed directional flags into the record output bytes.
- * @param arg0 Unused context pointer.
- * @param arg1 Packed directional value.
- * @param arg2 Record receiving the decoded values.
+ * @param command Dispatch command index (unused).
+ * @param value Packed value: high nibble and low nibble.
+ * @param record Record receiving the decoded values.
  * @return Constant command length value 0x1F.
  */
-s32 func_800C0C74(void *arg0, s32 arg1, DirectionalRec *arg2)
+s32 func_800C0C74(void *command, s32 value, DirectionalRec *record)
 {
-    s32 temp_a0;
-    s32 var_v1;
+    s32 flags;
+    s32 high;
 
-    var_v1 = arg1 >> 4;
-    temp_a0 = arg2->unkC;
-    arg1 = arg1 & 0xF;
-    if (temp_a0 < 0)
+    high = value >> 4;
+    flags = record->unkC;
+    value = value & 0xF;
+    if (flags < 0)
     {
-        arg1 += var_v1;
-        var_v1 = 0;
+        value += high;
+        high = 0;
     }
-    if (temp_a0 & 0x20000000)
+    if (flags & 0x20000000)
     {
-        arg1 += 2;
+        value += 2;
     }
-    if (temp_a0 & 0x10000000)
+    if (flags & 0x10000000)
     {
-        arg1 += 1;
+        value += 1;
     }
-    if (temp_a0 & 0x02000000)
+    if (flags & 0x02000000)
     {
-        var_v1 += 2;
+        high += 2;
     }
-    if (temp_a0 & 0x01000000)
+    if (flags & 0x01000000)
     {
-        var_v1 += 1;
+        high += 1;
     }
-    if (arg2->unk14->unk3F & 0x80)
+    if (record->unk14->unk3F & 0x80)
     {
-        arg2->unk10->unk60 = (s8) var_v1;
-        arg2->unk10->unk61 = 0;
-        arg2->unk10->unk62 = (s8) arg1;
-        arg2->unk10->unk63 = 0;
+        record->unk10->unk60 = (s8) high;
+        record->unk10->unk61 = 0;
+        record->unk10->unk62 = (s8) value;
+        record->unk10->unk63 = 0;
     }
     else
     {
-        arg2->unk10->unk60 = 0;
-        arg2->unk10->unk61 = (s8) var_v1;
-        arg2->unk10->unk62 = 0;
-        arg2->unk10->unk63 = (s8) arg1;
+        record->unk10->unk60 = 0;
+        record->unk10->unk61 = (s8) high;
+        record->unk10->unk62 = 0;
+        record->unk10->unk63 = (s8) value;
     }
 
     return 0x1F;
 }
-
 
 typedef struct
 {
@@ -238,9 +237,15 @@ typedef struct
     UnkStruct800C0DC4_Ptr *unk14;
 } UnkStruct800C0DC4_Arg2;
 
-s32 func_800C0D58(s32 arg0, s32 arg1)
+/**
+ * @brief Reward handler: pick command 0x22 with probability value / 256, else 0x21.
+ * @param command Dispatch command index (unused).
+ * @param value Chance out of 256.
+ * @return 0x22 on success, 0x21 otherwise.
+ */
+s32 func_800C0D58(s32 command, s32 value)
 {
-    if ((rand() & 0xFF) < arg1)
+    if ((rand() & 0xFF) < value)
     {
         return 0x22;
     }
@@ -250,16 +255,28 @@ s32 func_800C0D58(s32 arg0, s32 arg1)
 
 extern UnkStruct800C0D90_Ret *func_800C1B60(u8 arg0);
 
-s32 func_800C0D90(s32 arg0, s32 arg1, UnkStruct800C0D90_Arg2 *arg2)
+/**
+ * @brief Reward handler: store value with bit 15 set in the looked-up record.
+ * @param command Dispatch command index (unused).
+ * @param value Value to store.
+ * @param record Record whose unk4 byte selects the target through func_800C1B60.
+ * @return Always 0x20.
+ */
+s32 func_800C0D90(s32 command, s32 value, UnkStruct800C0D90_Arg2 *record)
 {
-    func_800C1B60(arg2->unk4)->unk2 = (s16) (arg1 | 0x8000);
+    func_800C1B60(record->unk4)->unk2 = (s16) (value | 0x8000);
     return 0x20;
 }
 
-
-
-s32 func_800C0DC4(s32 arg0, s32 arg1, UnkStruct800C0DC4_Arg2 *arg2)
+/**
+ * @brief Reward handler: store value plus 16 times a byte of the record's unk14 data.
+ * @param command Dispatch command index (unused).
+ * @param value Base value.
+ * @param record Record whose unk4 byte selects the target through func_800C1B60.
+ * @return Always 0x20.
+ */
+s32 func_800C0DC4(s32 command, s32 value, UnkStruct800C0DC4_Arg2 *record)
 {
-    func_800C1B60(arg2->unk4)->unk2 = (s16) (arg1 + (arg2->unk14->unk18 << 4));
+    func_800C1B60(record->unk4)->unk2 = (s16) (value + (record->unk14->unk18 << 4));
     return 0x20;
 }

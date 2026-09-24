@@ -1,105 +1,80 @@
 #include "cdrom.h"
 #include "common.h"
+#include "field_actor_tables.h"
 #include "field_mesh.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 
-/*
- * Consolidated FIELD actor-slot resource TU (vram 0x80083948 .. 0x80084700).
- *
- * Merged from the following per-function sources (ascending by address):
- *   field18.c, field_upload_initial_vram_resource.c, field_find_free_actor_slot.c,
- *   field_actor_slot_queries.c, field_stop_actor_animations_for_object.c,
- *   func_80083BC0.c, func_80083EEC.c, func_8008404C.c, func_80084240.c,
- *   func_800842E0.c, field22.c, func_80084630.c
- *
- * Several extern records (g_field_actor_slots, g_field_actor_bindings, g_field_object_states, D_801058D8)
- * are viewed through incompatible struct/pointer types by different functions, so
- * those externs (and the local record typedefs they use) are declared at BLOCK
- * scope inside each using function with that function's ORIGINAL type. GCC 2.7.2
- * accepts these conflicting block-scope declarations (warnings only) and emits
- * identical code. Only the func_80083BC0 record types and the two forward member
- * prototypes live at file scope.
- */
-
-/** @brief Animation channel selectors and control flags used during teardown. */
-typedef struct
-{
-    u8 unk0, unk1;
-    u8 pad2[10];
-    u16 unkC;
-    u8 padE[10];
-    u16 unk18;
-} Animation;
-/** @brief Teardown fields in a 0x244-byte FIELD animation actor slot. */
-typedef struct
-{
-    u8 pad0[12];
-    Animation *unkC;
-    u8 pad10[0x24 - 0x10];
-    u8 unk24;
-    u8 pad25[5];
-    u8 unk2A;
-    u8 pad2B[0x224 - 0x2B];
-    union
-    {
-        u32 word;
-        u16 halves[2];
-        u8 bytes[4];
-    } status;
-    u8 unk228;
-    u8 unk229[9];
-    u8 unk232;
-    u8 pad233[7];
-    u8 unk23A, unk23B;
-    u8 pad23C[8];
-} ActorState;
-/** @brief FIELD object record with its animation marker and state ID. */
-typedef struct
-{
-    u8 pad0[0x25];
-    u8 unk25;
-    u8 pad26[4];
-    s16 unk2A;
-    u8 pad2C[0x54 - 0x2C];
-} Object;
-/** @brief Object flags used to release ownership of animation state. */
-typedef struct
-{
-    u8 pad0[12];
-    s32 unkC;
-    u8 pad10[0x178 - 0x10];
-    s32 unk178;
-    u8 pad17C[0x23C - 0x17C];
-} ObjectState;
 /**
- * @brief FIELD actor record whose object index selects the owned actor slots.
- * @note At file scope because it is a parameter type of
- *       field_stop_actor_animations_for_object.
+ * @file field_actor_slot_resources.c
+ * @brief Field animation actor slots: slot allocation, resource binding,
+ *        teardown and the per-object animation state resets.
+ */
+
+/** @brief Binding index of an owner object: owners 2 and up share binding 2. */
+#define FIELD_BINDING_INDEX(owner) ((owner) < 3 ? (owner) : 2)
+
+/** @brief Resource entry in the field resource blob header (0x10 bytes). */
+typedef struct
+{
+    u16 offset0;
+    u16 offset2;
+    u16 offset4;
+    u16 fallback_value;
+    u8 enabled;
+    u8 unk9[7];
+} FieldBlobEntry;
+
+/**
+ * @brief Byte view of FieldObjectState.unk4C, whose second byte holds the
+ *        object's own index (0x23C bytes, overlays FieldObjectState).
  */
 typedef struct
 {
-    u8 pad0[0x3A];
-    u8 object_index;
-} FieldActorRecord;
+    u8 unk0[0x4D];
+    s8 object_index;
+    u8 unk4E[0x23C - 0x4E];
+} FieldObjectIndexView;
 
-/* Forward prototypes for member functions defined later in this TU. */
-void func_80083BC0(void *record, ActorState *actor, s32 force);
-void func_80084424(s32 arg0);
+extern u32 g_field_resource_blob[];
+extern u8 g_field_resource_buffer[];
+/** @brief End of the field resource blob payload. */
+extern u8* D_801058D4;
+/** @brief Base of the field resource blob. */
+extern u8* D_801058D8;
+extern s32 D_800F2278;
+extern s32 D_800F227C;
+extern s32 D_800F2280;
+extern s32 D_8010CFD4;
+extern s32 D_8010D034;
+extern s32 g_field_boss_hud_shake_frame;
+
+void func_80083BC0(FieldActor* actor, FieldActorSlot* slot, s32 force);
+void func_80084424(s32 owner);
+void field_set_global_color_scale(s32 red, s32 green, s32 blue);
+void field_clear_actor_effects(FieldActorSlot* slot);
+void field_load_vram_resource(s32 id, s16* rect, s32 arg2);
+void func_800A3B78(s32 object_index);
+void func_8008B724(void);
+s32 func_8009A364(s32 load_id);
+void func_8009A384(void);
+s32 func_8009A390(void);
+void func_8009A3E8(void);
+void func_8009A4A0(s32 binding_index);
+void func_8009A4CC(s32 owner, FieldActorSlot* slot);
+void func_8009CA08(s32 pool, s32 size);
+void* func_8009CA54(s32 pool, s32 size, s32 tag);
+s32 func_800B0850(void);
 
 /**
  * @brief Reset the field resource cursor pair to the base blob and its end.
- * @note D_801058D8 points at the blob base; D_801058D4 points one past the
- *       payload, using the length word stored at g_field_resource_blob[1].
+ * @note D_801058D4 points one past the payload, using the length word stored
+ *       at g_field_resource_blob[1].
  */
 void func_80083948(void)
 {
-    extern u32 g_field_resource_blob[];
-    extern u8 *D_801058D4;
-    extern u32 *D_801058D8;
-
-    D_801058D8 = g_field_resource_blob;
-    D_801058D4 = (u8 *)g_field_resource_blob + g_field_resource_blob[1];
+    D_801058D8 = (u8*)g_field_resource_blob;
+    D_801058D4 = (u8*)g_field_resource_blob + g_field_resource_blob[1];
 }
 
 /**
@@ -108,11 +83,10 @@ void func_80083948(void)
  */
 void func_8008396C(void)
 {
-    extern u8 g_field_resource_buffer[];
     RECT rect;
-    u8 *buf;
-    u8 *base;
-    u8 *data;
+    u8* buf;
+    u8* base;
+    u8* data;
     u32 off;
     s32 w;
     s32 h;
@@ -123,74 +97,52 @@ void func_8008396C(void)
     rect.y = 0x1EA;
     rect.w = 0x100;
     rect.h = 4;
-    off = *(u32 *)(buf + 8);
-    LoadImage(&rect, (u_long *)base);
+    off = *(u32*)(buf + 8);
+    LoadImage(&rect, (u_long*)base);
     data = base + off;
-    w = *(u16 *)(data - 4);
-    h = *(u16 *)(data - 2);
+    w = *(u16*)(data - 4);
+    h = *(u16*)(data - 2);
     rect.w = w;
     rect.h = h;
     rect.x = 0x180;
     rect.y = 0;
-    LoadImage(&rect, (u_long *)data);
+    LoadImage(&rect, (u_long*)data);
 }
 
 /**
- * @brief Find a free field actor slot not already claimed by one of the three
- *        active tracks.
- * @param arg0 Track index (clamped to 2 when >= 3).
- * @param arg1 When non-zero, require the (clamped) track's g_field_actor_bindings entry to
- *             be idle; otherwise fail early.
+ * @brief Find a free animation actor slot not already claimed by a binding.
+ * @param binding_index Binding index (clamped to 2 when >= 3).
+ * @param require_idle When non-zero, fail unless the binding is idle.
  * @return Index of the first free, unclaimed actor slot, or -1 if none.
+ * @note Declared inline; func_8008404C expands it in place.
  */
-s32 func_800839F8(s32 arg0, s32 arg1)
+inline s32 func_800839F8(s32 binding_index, s32 require_idle)
 {
-    typedef struct
-    {
-        u32 unk0;
-        u8 pad4[0x18 - 4];
-        s32 unk18;
-    } Struct_D80105880;
-
-    typedef struct
-    {
-        u8 pad0[0x24];
-        u8 unk24;
-        u8 pad25[0x244 - 0x25];
-    } FieldActorState;
-
-    extern Struct_D80105880 g_field_actor_bindings[];
-    extern FieldActorState g_field_actor_slots[];
-
     s32 i;
     s32 j;
-    Struct_D80105880 *entry;
+    FieldActorBinding* bindings;
 
-    if (arg1 != 0)
+    if (require_idle != 0)
     {
-        entry = g_field_actor_bindings;
-        if (arg0 >= 3)
-        {
-            arg0 = 2;
-        }
-        if (entry[arg0].unk0 != 0)
+        bindings = g_field_actor_bindings;
+        if (bindings[FIELD_BINDING_INDEX(binding_index)].state != 0)
         {
             return -1;
         }
     }
 
-    for (i = 0; i < 0x30; i++)
+    for (i = 0; i < FIELD_ACTOR_SLOT_COUNT; i++)
     {
-        if (g_field_actor_slots[i].unk24 == 0)
+        if (g_field_actor_slots[i].active == 0)
         {
-            for (j = 0; j < 3; j++)
+            for (j = 0; j < FIELD_ACTOR_BINDING_COUNT; j++)
             {
-                if (g_field_actor_bindings[j].unk0 != 0 && g_field_actor_bindings[j].unk18 == i)
+                if (g_field_actor_bindings[j].state != 0 && g_field_actor_bindings[j].slot == i)
                 {
                     break;
                 }
             }
-            if (j == 3)
+            if (j == FIELD_ACTOR_BINDING_COUNT)
             {
                 return i;
             }
@@ -206,59 +158,31 @@ s32 func_800839F8(s32 arg0, s32 arg1)
  */
 s32 field_object_has_active_actor_tracks(s32 object_index)
 {
-    typedef struct
-    {
-        u8 pad0[0x24];
-        u8 is_active;
-        u8 pad25[0x228 - 0x25];
-        u8 owner_object_index;
-        u8 pad229[0x23A - 0x229];
-        u8 active_track_mask;
-        u8 pad23B[0x244 - 0x23B];
-    } FieldActorState;
-
-    extern FieldActorState g_field_actor_slots[];
-
     s32 slot_index;
 
-    slot_index = 0;
-    do
+    for (slot_index = 0; slot_index < FIELD_ACTOR_SLOT_COUNT; slot_index++)
     {
-        if ((g_field_actor_slots[slot_index].owner_object_index == object_index) && (g_field_actor_slots[slot_index].active_track_mask != 0))
+        if (g_field_actor_slots[slot_index].owner_object_index == object_index && g_field_actor_slots[slot_index].track_mask != 0)
         {
             return 1;
         }
-        slot_index++;
-    } while (slot_index < 0x30);
+    }
     return 0;
 }
 
 /**
- * @brief Count free actor slots in the first 48-slot actor pool.
+ * @brief Count free actor slots in the general-purpose actor pool.
  * @return Number of actor slots whose active flag is clear.
  */
 s32 field_count_free_actor_slots(void)
 {
-    typedef struct
-    {
-        u8 pad0[0x24];
-        u8 is_active;
-        u8 pad25[0x228 - 0x25];
-        u8 owner_object_index;
-        u8 pad229[0x23A - 0x229];
-        u8 active_track_mask;
-        u8 pad23B[0x244 - 0x23B];
-    } FieldActorState;
-
-    extern FieldActorState g_field_actor_slots[];
-
     s32 free_count;
     s32 slot_index;
 
     free_count = 0;
-    for (slot_index = 0; slot_index < 0x30; slot_index++)
+    for (slot_index = 0; slot_index < FIELD_ACTOR_SLOT_COUNT; slot_index++)
     {
-        if (g_field_actor_slots[slot_index].is_active == 0)
+        if (g_field_actor_slots[slot_index].active == 0)
         {
             free_count++;
         }
@@ -269,430 +193,237 @@ s32 field_count_free_actor_slots(void)
 
 /**
  * @brief Stop actor animations and reserved SFX channels for a field object.
- * @param record Field actor record whose object index selects the owned actor slots.
+ * @param actor Field actor whose object index selects the owned actor slots.
  * @param force Non-zero to force teardown of matching actor animations.
  */
-void field_stop_actor_animations_for_object(FieldActorRecord *record, s32 force)
+void field_stop_actor_animations_for_object(FieldActor* actor, s32 force)
 {
-    typedef struct
+    FieldActorSlot* slot;
+    s32 slot_index;
+
+    slot = g_field_actor_slots;
+    for (slot_index = 0; slot_index < FIELD_ACTOR_SLOT_COUNT; slot_index++, slot++)
     {
-        u8 pad0[0x228];
-        u8 owner_object_index;
-        u8 pad229[0x244 - 0x229];
-    } FieldActorState;
-
-    extern FieldActorState g_field_actor_slots[];
-    void func_800A3B78(s32 object_index);
-
-    FieldActorState *actor;
-    s32 actor_index;
-
-    actor = g_field_actor_slots;
-    for (actor_index = 0; actor_index < 48; actor_index++, actor++)
-    {
-        if (actor->owner_object_index == record->object_index)
+        if (slot->owner_object_index == actor->object_index)
         {
-            func_80083BC0(record, actor, force);
+            func_80083BC0(actor, slot, force);
         }
     }
-    func_800A3B78(record->object_index);
+    func_800A3B78(actor->object_index);
 }
 
 /**
  * @brief Stop an actor animation and release its object and render state.
- * @param record Associated FIELD object record, unused by this routine.
- * @param actor Animation actor slot to stop.
+ * @param actor Associated field actor, unused by this routine.
+ * @param slot Animation actor slot to stop.
  * @param force Nonzero bypasses the normal animation status checks.
  */
-void func_80083BC0(void *record, ActorState *actor, s32 force)
+void func_80083BC0(FieldActor* actor, FieldActorSlot* slot, s32 force)
 {
-    extern Object g_field_actors[];
-    extern ObjectState g_field_object_states[];
-    extern s32 D_800F2278, D_800F227C, D_800F2280;
-    void field_set_global_color_scale(s32, s32, s32);
-    void field_clear_actor_effects(ActorState *);
-
-    s16 object_state;
+    s16 command;
     s32 target_index;
     u8 owner_index;
-    u8 target_slot;
-    ObjectState *owner_state;
-    ObjectState *target_state;
-    Animation *animation;
-    u8 *target_ptr;
-    u8 *render = (u8 *)0x801ED600;
+    FieldObjectState* target_state;
+    FieldAnimationDef* animation;
+    FieldRenderState* render = FIELD_RENDER_STATE;
 
     if (force == 0)
     {
-        if (actor->status.bytes[1] == 0)
+        if (slot->status.bytes[1] != 0)
         {
-            if (!(actor->status.word & 1))
+            return;
+        }
+        if (!(slot->status.word & 1))
+        {
+            if (slot->status.half[1] == 0x21)
             {
-                if (actor->status.halves[1] != 0x21)
-                {
-                    goto stop_animation;
-                }
+                return;
             }
-            else
+        }
+    }
+
+    slot->track_mask = 0;
+    slot->pending_track_mask = 0;
+    field_clear_actor_effects(slot);
+    if (slot->active == 0)
+    {
+        return;
+    }
+    if (slot->animation->flags & 0x1000)
+    {
+        D_800F2280 = 0;
+        D_800F227C = 0;
+        D_800F2278 = 0;
+    }
+    if (slot->animation->unk18 & 2)
+    {
+        owner_index = slot->owner_object_index;
+        command = g_field_actors[owner_index].command;
+        if ((command != 0x90 && command != 0x94) || (g_field_object_states[owner_index].flags & 0x200))
+        {
+            g_field_actors[slot->owner_object_index].presence = 0;
+        }
+        g_field_object_states[slot->owner_object_index].contact.word &= ~1;
+    }
+    if (slot->animation->unk18 & 4)
+    {
+        for (target_index = 0; target_index < slot->target_count; target_index++)
+        {
+            if (slot->targets[target_index] != 0xFF)
             {
-                goto clear_tracks;
+                g_field_actors[slot->targets[target_index]].presence = 0;
+                target_state = &g_field_object_states[slot->targets[target_index]];
+                target_state->contact.word &= ~1;
             }
+        }
+    }
+    animation = slot->animation;
+    if (*(u8*)&animation->flags < 0x10U && ((animation->flags >> 8) & 4))
+    {
+        field_set_global_color_scale(0x100, 0x100, 0x100);
+    }
+    if (slot->animation->unk1 != 0xFF)
+    {
+        render->unk140 = 0;
+        render->unk92 = 0;
+    }
+    if (slot->animation->unk0 != 0xFF)
+    {
+        render->unk13F = 0;
+        render->unk91 = 0;
+    }
+    if (!(slot->animation->flags & 0x800))
+    {
+        slot->active = 0;
+        if (slot->status.word & 1)
+        {
+            func_80084424(slot->owner_object_index);
         }
     }
     else
     {
-    stop_animation:
-    clear_tracks:
-        actor->unk23A = 0;
-        actor->unk23B = 0;
-        field_clear_actor_effects(actor);
-        if (actor->unk24 != 0)
-        {
-            if (actor->unkC->unkC & 0x1000)
-            {
-                D_800F2280 = 0;
-                D_800F227C = 0;
-                D_800F2278 = 0;
-            }
-            if (actor->unkC->unk18 & 2)
-            {
-                owner_index = actor->unk228;
-                object_state = g_field_actors[owner_index].unk2A;
-                if (((object_state != 0x90) && (object_state != 0x94)) ||
-                    (g_field_object_states[owner_index].unkC & 0x200))
-                {
-                    g_field_actors[actor->unk228].unk25 = 0;
-                }
-                g_field_object_states[actor->unk228].unk178 &= ~1;
-            }
-            if (actor->unkC->unk18 & 4)
-            {
-                for (target_index = 0; target_index < actor->unk232; target_index++)
-                {
-                    /* Keep this initial read and the subsequent direct array accesses. */
-                    target_slot = actor->unk229[target_index];
-                    if (actor->unk229[target_index] != 0xFF)
-                    {
-                        g_field_actors[actor->unk229[target_index]].unk25 = 0;
-                        target_state = &g_field_object_states[actor->unk229[target_index]];
-                        target_state->unk178 = (s32)(target_state->unk178 & ~1);
-                    }
-                }
-            }
-            animation = actor->unkC;
-            if ((*(u8 *)&animation->unkC < 0x10U) && (((u16)animation->unkC >> 8) & 4))
-            {
-                field_set_global_color_scale(0x100, 0x100, 0x100);
-            }
-            if (actor->unkC->unk1 != 0xFF)
-            {
-                render[0x140] = 0;
-                render[0x92] = 0;
-            }
-            if (actor->unkC->unk0 != 0xFF)
-            {
-                render[0x13F] = 0;
-                render[0x91] = 0;
-            }
-            if (!(actor->unkC->unkC & 0x800))
-            {
-                actor->unk24 = 0U;
-                if (actor->status.word & 1)
-                {
-                    func_80084424(actor->unk228);
-                }
-            }
-            else
-            {
-                actor->unk24 = 0U;
-                func_80084424(actor->unk228);
-                actor->unk2A = 0;
-            }
-        }
+        slot->active = 0;
+        func_80084424(slot->owner_object_index);
+        slot->unk2A = 0;
     }
 }
 
 /**
  * @brief Initialize a field actor slot from a resource entry.
- * @param object_index Actor metadata index stored in the slot.
+ * @param object_index Owner object index stored in the slot.
  * @param slot_index Field actor slot to initialize.
  * @param resource_index Resource entry index; zero disables the slot.
  * @return 1 when the resource entry is enabled and initialized, otherwise 0.
  */
 s32 func_80083EEC(s32 object_index, s32 slot_index, s32 resource_index)
 {
-    typedef struct
-    {
-        u16 offset0;
-        u16 offset2;
-        u16 offset4;
-        u16 fallback_value;
-        u8 enabled;
-        u8 pad9[7];
-    } FieldActorResourceEntry;
-
-    typedef struct
-    {
-        u8 pad0[0xC];
-        u16 flags;
-        u8 padE[4];
-        u16 value12;
-        u8 pad14[0x1C - 0x14];
-    } FieldActorAnimation;
-
-    typedef struct
-    {
-        u8 pad0[0x16F];
-        u8 actor_type;
-        u8 pad170[0x23C - 0x170];
-    } FieldActorMetadata;
-
-    typedef union
-    {
-        u32 value;
-        struct
-        {
-            u8 low;
-            u8 transient;
-            u16 resource_index;
-        } parts;
-    } FieldActorFlags;
-
-    typedef struct
-    {
-        void* resource0;
-        void* resource4;
-        void* resource8;
-        FieldActorAnimation* animation;
-        u8 pad10[0x24 - 0x10];
-        u8 active;
-        u8 enabled;
-        u8 actor_type;
-        u8 pad27[0x29 - 0x27];
-        u8 unk29;
-        u8 unk2A;
-        u8 pad2B[0x222 - 0x2B];
-        u16 value222;
-        FieldActorFlags flags;
-        u8 owner_object_index;
-        u8 pad229[0x238 - 0x229];
-        u16 timer238;
-        u8 pad23A[0x244 - 0x23A];
-    } FieldActorState;
-
-    extern u8* D_801058D8;
-    extern FieldActorMetadata g_field_object_states[];
-    extern FieldActorState g_field_actor_slots[];
-
     u8* header_base;
     u8* resource_base;
-    FieldActorResourceEntry* entry;
+    FieldBlobEntry* entry;
     u8* animation_table;
-    u8* animation_index_ptr;
-    FieldActorAnimation* animation;
-    FieldActorState* actor;
+    FieldAnimationDef* animation;
+    FieldActorSlot* slot;
     u8 animation_index;
     u8 enabled;
 
-    actor = &g_field_actor_slots[slot_index];
+    slot = &g_field_actor_slots[slot_index];
     if (resource_index == 0)
     {
-        actor->enabled = 0;
+        slot->enabled = 0;
         return 0;
     }
 
     header_base = D_801058D8;
-    entry = (FieldActorResourceEntry*)(header_base + resource_index * 0x10);
+    entry = &((FieldBlobEntry*)header_base)[resource_index];
     animation_table = header_base + *(s32*)(header_base + 8);
     enabled = entry->enabled;
-    actor->enabled = enabled;
+    slot->enabled = enabled;
     if (enabled == 0)
     {
         return 0;
     }
 
-    actor->flags.parts.transient = 0;
-    actor->active = 1;
+    slot->status.bytes[1] = 0;
+    slot->active = 1;
     resource_base = D_801058D8;
-    actor->flags.value |= 0x1E;
-    actor->resource0 = resource_base + entry->offset0;
-    actor->resource4 = resource_base + entry->offset2;
-    actor->resource8 = resource_base + entry->offset4;
-    actor->flags.value &= ~1;
-    actor->flags.parts.resource_index = resource_index;
+    slot->status.word |= 0x1E;
+    slot->resource0 = resource_base + entry->offset0;
+    slot->resource4 = resource_base + entry->offset2;
+    slot->resource8 = resource_base + entry->offset4;
+    slot->status.word &= ~1;
+    slot->status.half[1] = resource_index;
 
-    animation_index_ptr = animation_table;
-    animation_index_ptr += resource_index;
-    animation_index = animation_index_ptr[-2];
-    animation = (FieldActorAnimation*)(animation_table + animation_index * 0x1C + 0xFE);
-    actor->animation = animation;
+    animation_index = (animation_table + resource_index)[-2];
+    animation = (FieldAnimationDef*)(animation_table + animation_index * 0x1C + 0xFE);
+    slot->animation = animation;
     if (animation->flags & 0x8000)
     {
-        actor->value222 = animation->value12;
+        slot->unk222 = animation->unk12;
     }
     else
     {
-        actor->value222 = entry->fallback_value;
+        slot->unk222 = entry->fallback_value;
     }
 
-    actor->timer238 = 0;
-    actor->animation->flags &= 0xF7FF;
-    actor->unk29 = 0;
-    actor->unk2A = 0;
-    actor->owner_object_index = object_index;
-    actor->actor_type = g_field_object_states[object_index].actor_type;
+    slot->timer = 0;
+    slot->animation->flags &= 0xF7FF;
+    slot->unk29 = 0;
+    slot->unk2A = 0;
+    slot->owner_object_index = object_index;
+    slot->actor_type = g_field_object_states[object_index].action;
     return 1;
 }
 
 /**
- * @brief Reserve an unused actor slot and initialize its resource binding.
- * @param actor_id Owner actor identifier; binding indices above two use binding two.
+ * @brief Reserve an unused actor slot and start loading its resource.
+ * @param owner Owner object index; indices above two use binding two.
  * @param resource_id Resource identifier to load.
  * @return One on success, or zero if unavailable or loading fails.
  */
-s32 func_8008404C(s32 actor_id, s32 resource_id)
+s32 func_8008404C(s32 owner, s32 resource_id)
 {
-    typedef struct
-    {
-        s32 unk0, unk4, unk8, unkC;
-        u8 pad10[8];
-        s32 unk18;
-    } Binding;
-    typedef struct
-    {
-        u8 pad0[0x24];
-        u8 unk24;
-        u8 pad25;
-        u8 unk26;
-        u8 pad27[0x224 - 0x27];
-        union
-        {
-            s32 flags;
-            u8 bytes[4];
-        } state;
-        u8 pad228[10];
-        u8 unk232;
-        u8 pad233[7];
-        u8 unk23A, unk23B;
-        u8 pad23C[8];
-    } Slot;
-    typedef struct
-    {
-        u8 pad0[0x16F];
-        u8 unk16F;
-        u8 pad170[0x23C - 0x170];
-    } Actor;
-
-    extern Binding g_field_actor_bindings[];
-    extern Slot g_field_actor_slots[];
-    extern Actor g_field_object_states[];
-    extern s32 func_800B0850(void);
-    extern s32 func_8009A364(s32);
-
-    Binding *binding_base;
-    Binding *search_base;
-    Binding *binding_cursor;
-    s32 binding_index;
-    Slot *slot_cursor;
     s32 load_id;
     s32 free_slot;
-    s32 first_index;
-    s32 second_index;
-    s32 slot_index;
-    s32 owner_index;
-    Binding *binding;
-    Slot *slot;
-    Slot *slot_base;
+    FieldActorBinding* bindings;
+    FieldActorBinding* binding;
+    FieldActorSlot* slots;
+    FieldActorSlot* slot;
 
-    if (func_800B0850() == 0)
+    if (func_800B0850() != 0)
     {
-        first_index = actor_id;
-        binding_base = g_field_actor_bindings;
-
-        if (actor_id >= 3)
-        {
-            first_index = 2;
-        }
-        if (binding_base[first_index].unk0 == 0)
-        {
-            second_index = actor_id;
-            if (actor_id >= 3)
-            {
-                second_index = 2;
-            }
-            free_slot = -1;
-            if (binding_base[second_index].unk0 == 0)
-            {
-                slot_index = 0;
-                search_base = binding_base;
-                slot_cursor = g_field_actor_slots;
-            scan_slot:
-                binding_index = 0;
-                if (slot_cursor->unk24 == 0)
-                {
-                    binding_cursor = search_base;
-                    for (; binding_index < 3; binding_index++, binding_cursor++)
-                    {
-                        if ((binding_cursor->unk0 != 0) && (binding_cursor->unk18 == slot_index))
-                        {
-                            break;
-                        }
-                    }
-                    if (binding_index != 3)
-                    {
-                        goto next_slot;
-                    }
-                    free_slot = slot_index;
-                }
-                else
-                {
-                next_slot:
-                    slot_index += 1;
-                    slot_cursor++;
-                    if (slot_index >= 0x30)
-                    {
-                        free_slot = -1;
-                    }
-                    else
-                    {
-                        goto scan_slot;
-                    }
-                }
-            }
-            if (free_slot != -1)
-            {
-                owner_index = actor_id;
-                if (actor_id >= 3)
-                {
-                    owner_index = 2;
-                }
-                binding = &g_field_actor_bindings[owner_index];
-                load_id = resource_id + 0x2DC;
-                binding->unk4 = load_id;
-                if (func_8009A364(load_id) == 0)
-                {
-                    slot_base = g_field_actor_slots;
-                    slot = &slot_base[free_slot];
-                    slot->unk24 = 1;
-                    slot->state.bytes[1] = 0;
-                    slot->unk232 = 0;
-                    slot->unk23A = 0;
-                    slot->unk23B = 0;
-                    slot->state.flags = (s32)(slot->state.flags | 0x1E);
-                    slot->unk26 = (u8)g_field_object_states[actor_id].unk16F;
-                    binding->unk18 = free_slot;
-                    binding->unk0 = 1;
-                    binding->unk8 = resource_id;
-                    binding->unkC = actor_id;
-                    return 1;
-                }
-                return 0;
-            }
-            return 0;
-        }
         return 0;
     }
-    return 0;
+    bindings = g_field_actor_bindings;
+    if (bindings[FIELD_BINDING_INDEX(owner)].state != 0)
+    {
+        return 0;
+    }
+    free_slot = func_800839F8(owner, 1);
+    if (free_slot == -1)
+    {
+        return 0;
+    }
+    binding = &g_field_actor_bindings[FIELD_BINDING_INDEX(owner)];
+    load_id = resource_id + 0x2DC;
+    binding->unk4 = load_id;
+    if (func_8009A364(load_id) != 0)
+    {
+        return 0;
+    }
+    slots = g_field_actor_slots;
+    slot = &slots[free_slot];
+    slot->active = 1;
+    slot->status.bytes[1] = 0;
+    slot->target_count = 0;
+    slot->track_mask = 0;
+    slot->pending_track_mask = 0;
+    slot->status.word |= 0x1E;
+    slot->actor_type = g_field_object_states[owner].action;
+    binding->slot = free_slot;
+    binding->state = 1;
+    binding->unk8 = resource_id;
+    binding->owner = owner;
+    return 1;
 }
 
 /**
@@ -700,33 +431,13 @@ s32 func_8008404C(s32 actor_id, s32 resource_id)
  */
 void func_80084240(void)
 {
-    typedef struct
-    {
-        s32 unk0;
-        s32 unk4;
-        u8 pad8[0x14];
-        s32 unk1C;
-        s32 unk20;
-        u8 pad24[0x14];
-        s32 unk38;
-        s32 unk3C;
-    } FieldInitState;
-
-    extern FieldInitState g_field_actor_bindings;
-    extern s32 D_8010D034;
-
-    void func_8008B724(void);
-    void func_8009A384(void);
-    void func_8009CA08(s32 arg0, s32 arg1);
-    s32 func_8009CA54(s32 arg0, s32 arg1, s32 arg2);
-
     func_8008B724();
-    g_field_actor_bindings.unk38 = 0;
-    g_field_actor_bindings.unk1C = 0;
-    g_field_actor_bindings.unk0 = 0;
-    g_field_actor_bindings.unk3C = 0;
-    g_field_actor_bindings.unk20 = 0;
-    g_field_actor_bindings.unk4 = 0;
+    g_field_actor_bindings[2].state = 0;
+    g_field_actor_bindings[1].state = 0;
+    g_field_actor_bindings[0].state = 0;
+    g_field_actor_bindings[2].unk4 = 0;
+    g_field_actor_bindings[1].unk4 = 0;
+    g_field_actor_bindings[0].unk4 = 0;
     func_8009A384();
     func_8009CA08(D_8010D034, 0x20000);
     g_field_mesh_transformed_normals = func_8009CA54(D_8010D034, 0x1800, 4);
@@ -739,77 +450,42 @@ void func_80084240(void)
  */
 void func_800842E0(void)
 {
-    typedef struct
-    {
-        s32 unk0;
-        s32 unk4;
-        u8 pad8[0xC - 8];
-        s32 unkC;
-        u8 pad10[0x18 - 0x10];
-        s32 unk18;
-    } Struct_D80105880;
-
-    typedef struct
-    {
-        u8 pad0[0x24];
-        u8 unk24;
-        u8 unk25;
-        u8 pad26[0x224 - 0x26];
-        s32 unk224;
-        u8 unk228;
-        u8 pad229[0x244 - 0x229];
-    } FieldActorState;
-
-    extern Struct_D80105880 g_field_actor_bindings[];
-    extern FieldActorState g_field_actor_slots[];
-
-    s32 func_8009A390(void);
-    void func_8009A3E8(void);
-    void func_8009A4CC(s32 arg0, void *arg1);
-
     s32 i;
     s32 idle_count;
-    Struct_D80105880 *entry;
-    FieldActorState *actor;
+    FieldActorBinding* binding;
+    FieldActorSlot* slot;
 
-    entry = g_field_actor_bindings;
+    binding = g_field_actor_bindings;
     i = 0;
     idle_count = 0;
-    do
+    for (; i < FIELD_ACTOR_BINDING_COUNT; i++, binding++)
     {
-        if (entry->unk0 == 1 && entry->unk4 == func_8009A390())
+        if (binding->state == 1 && binding->unk4 == func_8009A390())
         {
-            if (cdrom_can_queue_resource((u16)entry->unk4) == 0)
+            if (cdrom_can_queue_resource((u16)binding->unk4) != 0)
             {
-                i++;
-                goto next;
+                binding->unk4 = 0;
+                slot = &g_field_actor_slots[binding->slot];
+                func_8009A4CC(binding->owner, slot);
+                if (slot->enabled != 0)
+                {
+                    slot->owner_object_index = binding->owner;
+                    slot->status.word |= 1;
+                    binding->state = 2;
+                }
+                else
+                {
+                    slot->active = 0;
+                    func_80084424(g_field_actor_bindings[0].owner);
+                }
+                break;
             }
-            i++;
-            entry->unk4 = 0;
-            actor = (FieldActorState *)((u8 *)g_field_actor_slots + entry->unk18 * 0x244);
-            func_8009A4CC(entry->unkC, actor);
-            if (actor->unk25 != 0)
-            {
-                actor->unk228 = (u8)entry->unkC;
-                actor->unk224 |= 1;
-                entry->unk0 = 2;
-            }
-            else
-            {
-                actor->unk24 = 0;
-                func_80084424(g_field_actor_bindings[0].unkC);
-            }
-            goto done;
         }
         else
         {
             idle_count++;
-            i++;
         }
-    next:
-        entry++;
-    } while (i < 3);
-done:
+    }
     if (idle_count == 3)
     {
         func_8009A3E8();
@@ -817,191 +493,61 @@ done:
 }
 
 /**
- * @brief Tear down the actor bound to a track once its slot has gone idle.
- * @param arg0 Track index (clamped to 2 when >= 3 for the g_field_actor_bindings lookup).
- * @note Only acts when the track's stored value matches arg0 and the bound
- *       actor slot is free; then it releases the actor, clears the track and
- *       D_8010CFD4, and notifies func_8009A4A0.
+ * @brief Tear down the actor bound to an owner once its slot has gone idle.
+ * @param owner Owner object index (clamped to 2 when >= 3 for the binding lookup).
+ * @note Only acts when the binding's owner matches and the bound actor slot
+ *       is free; then it releases the binding, clears D_8010CFD4 and
+ *       notifies func_8009A4A0.
  */
-void func_80084424(s32 arg0)
+void func_80084424(s32 owner)
 {
-    typedef struct
+    FieldActorBinding* bindings;
+    FieldActorSlot* slots;
+
+    bindings = g_field_actor_bindings;
+    if (bindings[FIELD_BINDING_INDEX(owner)].owner == owner)
     {
-        s32 unk0;
-        u8 pad4[0xC - 4];
-        s32 unkC;
-        u8 pad10[0x18 - 0x10];
-        s32 unk18;
-    } Struct_D80105880;
-
-    typedef struct
-    {
-        u8 pad0[0x24];
-        u8 unk24;
-        u8 pad25[0x244 - 0x25];
-    } FieldActorState;
-
-    extern Struct_D80105880 g_field_actor_bindings[];
-    extern FieldActorState g_field_actor_slots[];
-    extern s32 D_8010CFD4;
-
-    void func_800A3B78(s32 arg0);
-    void func_8009A4A0(s32 arg0);
-
-    s32 value;
-    s32 index;
-    s32 call_index;
-    s32 small;
-    Struct_D80105880 *base;
-    FieldActorState *actors;
-
-    value = arg0;
-    base = g_field_actor_bindings;
-    small = value < 3;
-    index = value;
-    if (small == 0)
-    {
-        index = 2;
-    }
-
-    if (base[index].unkC == value)
-    {
-        index = value;
-        actors = g_field_actor_slots;
-        if (value >= 3)
+        slots = g_field_actor_slots;
+        if (slots[bindings[FIELD_BINDING_INDEX(owner)].slot].active == 0)
         {
-            index = 2;
-        }
-
-        if (actors[base[index].unk18].unk24 == 0)
-        {
-            func_800A3B78(value);
-            index = value;
-            if (value >= 3)
-            {
-                index = 2;
-            }
-
-            call_index = value;
-            base[index].unk0 = 0;
+            func_800A3B78(owner);
+            bindings[FIELD_BINDING_INDEX(owner)].state = 0;
             D_8010CFD4 = 0;
-            if (value >= 3)
-            {
-                call_index = 2;
-            }
-            func_8009A4A0(call_index);
+            func_8009A4A0(FIELD_BINDING_INDEX(owner));
         }
     }
 }
 
 /**
- * @brief Reset all 13 field animation slots to their idle defaults and reload
- *        the shared VRAM resource block.
- * @note Each slot's animation cursor, timers and flag bits are cleared; the
- *       run-position field unk8 is reseeded from unk4's low 24 bits.
+ * @brief Reset the field object animation state and reload the shared VRAM
+ *        resource block.
+ * @note Each object's animation cursor, timers and flag bits are cleared; the
+ *       value in unk8 is reseeded from unk4.
  */
 void func_80084524(void)
 {
-    typedef union
-    {
-        s32 w;
-        struct
-        {
-            u32 low24 : 24;
-            u32 mid7 : 7;
-            u32 top1 : 1;
-        } b;
-    } Word8;
-
-    typedef union
-    {
-        s32 w;
-        struct
-        {
-            u8 b0;
-            s8 b1;
-            u8 b2;
-            u8 b3;
-        } b;
-    } Word4C;
-
-    typedef union
-    {
-        s32 w;
-        struct
-        {
-            u32 low10 : 10;
-            u32 rest6 : 6;
-            u32 hi16 : 16;
-        } b;
-        struct
-        {
-            s16 lo;
-            s16 hi;
-        } h;
-    } Word174;
-
-    typedef union
-    {
-        s32 w;
-        struct
-        {
-            u32 b0 : 1;
-            u32 p1 : 4;
-            u32 b5 : 1;
-            u32 b6 : 1;
-            u32 rest : 25;
-        } b;
-    } Word178;
-
-    typedef struct
-    {
-        u8 pad0[4];
-        Word8 unk4;
-        Word8 unk8;
-        s32 unkC;
-        u8 pad10[4];
-        s32 unk14;
-        s16 unk18;
-        u8 pad1A[0x48 - 0x1A];
-        s16 unk48;
-        s16 unk4A;
-        Word4C unk4C;
-        u8 pad50[0x174 - 0x50];
-        Word174 unk174;
-        Word178 unk178;
-        u8 pad17C[0x18E - 0x17C];
-        u8 unk18E;
-        u8 pad18F[0x23C - 0x18F];
-    } Slot;
-
-    extern Slot g_field_object_states[];
-    void field_load_vram_resource(s32 id, s16 *rect, s32 arg2);
-
     s16 rect[4];
     s32 i;
 
-    i = 0;
-    do
+    for (i = 0; i < FIELD_ACTOR_COUNT; i++)
     {
         g_field_object_states[i].unk4A = 0;
         g_field_object_states[i].unk48 = 0;
-        g_field_object_states[i].unk14 = i;
+        g_field_object_states[i].key = i;
         g_field_object_states[i].unk18 = 0;
-        g_field_object_states[i].unkC = 0;
+        g_field_object_states[i].flags = 0;
         g_field_object_states[i].unk18E = 0;
-        g_field_object_states[i].unk8.b.low24 = g_field_object_states[i].unk4.b.low24;
-        g_field_object_states[i].unk8.b.mid7 = 0;
-        g_field_object_states[i].unk8.b.top1 = 0;
-        g_field_object_states[i].unk4C.w |= 1;
-        g_field_object_states[i].unk174.b.low10 = 0x32;
-        g_field_object_states[i].unk174.h.hi = 0;
-        g_field_object_states[i].unk178.b.b0 = 0;
-        g_field_object_states[i].unk4C.b.b1 = (s8)i;
-        g_field_object_states[i].unk178.b.b5 = 0;
-        g_field_object_states[i].unk178.b.b6 = 0;
-        i++;
-    } while (i < 13);
+        g_field_object_states[i].unk8.bits.value = g_field_object_states[i].unk4.bits.value;
+        g_field_object_states[i].unk8.bits.unk24 = 0;
+        g_field_object_states[i].unk8.bits.flag31 = 0;
+        g_field_object_states[i].unk4C |= 1;
+        g_field_object_states[i].movement.bits.scale = 0x32;
+        g_field_object_states[i].movement.half.hi = 0;
+        g_field_object_states[i].contact.bits.flag0 = 0;
+        ((FieldObjectIndexView*)g_field_object_states)[i].object_index = i;
+        g_field_object_states[i].contact.bits.flag5 = 0;
+        g_field_object_states[i].contact.bits.flag6 = 0;
+    }
 
     rect[0] = 0x3C0;
     rect[1] = 0x100;
@@ -1012,46 +558,38 @@ void func_80084524(void)
 }
 
 /**
- * @brief Reset the 13 field animation slots and the reserved SFX handles to
+ * @brief Reset the field object tints and flags and the party hit states to
  *        their power-on defaults.
  */
 void func_80084630(void)
 {
-    typedef union { s32 w; struct { u32 low15:15; u32 b15:1; u32 hi16:16; } b; } W174;
-    typedef union { s32 w; struct { u32 b0:1; u32 p1:4; u32 b5:1; u32 b6:1; u32 b7:1; u32 rest:24; } b; } W178;
-    typedef struct {
-     u8 pad0[0xC]; s32 unkC; u8 pad10[0x3C - 0x10]; s32 unk3C; u8 pad40[0x64 - 0x40]; s32 unk64;
-     u8 pad68[0x16F - 0x68]; u8 unk16F; u8 pad170[0x174 - 0x170]; W174 unk174; W178 unk178; s32 unk17C;
-     u8 pad180[0x18E - 0x180]; u8 unk18E; u8 pad18F[0x1A8 - 0x18F]; u8 tint_red,tint_green,tint_blue,unk1AB;
-     u8 pad1AC[0x23C - 0x1AC];
-    } Slot;
-    typedef struct {u8 pad0[0xE]; u8 unkE,unkF,unk10; u8 pad11[0x48 - 0x11];} Part;
-    typedef struct {u8 pad0[0x259]; u8 unk259; u8 pad25A[0x268 - 0x25A];} FD;
-    extern Slot g_field_object_states[]; extern Part g_field_object_parts[]; extern FD g_field_player_records[]; extern s32 g_field_boss_hud_shake_frame;
+    s32 i;
+    u8 tint_blue;
+    u8 hit_state;
 
-    s32 i; u8 v; u8 ff;
-    i=0;
-    do {
-      g_field_object_states[i].tint_red = g_field_object_parts[i].unkE;
-      g_field_object_states[i].tint_green = g_field_object_parts[i].unkF;
-      v = g_field_object_parts[i].unk10;
-      g_field_object_states[i].unk1AB = 0;
-      g_field_object_states[i].unkC = 0;
-      g_field_object_states[i].unk17C = 0;
-      g_field_object_states[i].unk3C = 0;
-      g_field_object_states[i].unk64 = 0;
-      g_field_object_states[i].unk16F = 0;
-      g_field_object_states[i].unk18E = 0;
-      g_field_object_states[i].unk174.b.b15 = 0;
-      g_field_object_states[i].unk178.b.b7 = 0;
-      g_field_object_states[i].unk178.b.b0 = 0;
-      g_field_object_states[i].tint_blue = v;
-      g_field_object_states[i].unk178.b.b5 = 0;
-      g_field_object_states[i].unk178.b.b6 = 0;
-      i++;
-    } while (i<13);
-    ff=0xFF;
-    i=2;
-    do { g_field_player_records[i].unk259=ff; i--; } while(i>=0);
-    g_field_boss_hud_shake_frame=0xFF;
+    for (i = 0; i < FIELD_ACTOR_COUNT; i++)
+    {
+        g_field_object_states[i].tint_red = g_field_object_parts[i].tint_red;
+        g_field_object_states[i].tint_green = g_field_object_parts[i].tint_green;
+        tint_blue = g_field_object_parts[i].tint_blue;
+        g_field_object_states[i].tint_timer = 0;
+        g_field_object_states[i].flags = 0;
+        g_field_object_states[i].unk17C = 0;
+        g_field_object_states[i].unk3C = 0;
+        g_field_object_states[i].unk64 = 0;
+        g_field_object_states[i].action = 0;
+        g_field_object_states[i].unk18E = 0;
+        g_field_object_states[i].movement.bits.flag15 = 0;
+        g_field_object_states[i].contact.bits.flag7 = 0;
+        g_field_object_states[i].contact.bits.flag0 = 0;
+        g_field_object_states[i].tint_blue = tint_blue;
+        g_field_object_states[i].contact.bits.flag5 = 0;
+        g_field_object_states[i].contact.bits.flag6 = 0;
+    }
+    hit_state = 0xFF;
+    for (i = 2; i >= 0; i--)
+    {
+        g_field_player_records[i].hit_state = hit_state;
+    }
+    g_field_boss_hud_shake_frame = 0xFF;
 }

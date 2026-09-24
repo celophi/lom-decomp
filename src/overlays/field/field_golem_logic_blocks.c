@@ -1,499 +1,395 @@
 #include "saved_game.h"
 #include "common.h"
+#include "field_golem_layout.h"
 
 /*
- * Golem logic-block records kept in the shared menu-layout buffer.
- *
- * Each record is one packed word. Bits 0-1 hold the logic type the block is
- * assigned to, with 3 meaning unassigned; bits 2-7 the block id; bits 8-11
- * a detail value; bits 12-15 the shape index; bits 17-18 the rotation; and
- * bits 19-23 and 24-28 the grid position once placed. The golem overlay reads
- * these fields with the same layout.
+ * Golem logic-block placement: appending blocks, stamping their shapes on the
+ * six-by-six grid, and validating a placement against the grid bound and the
+ * edited group's logic class. The GOLEM overlay calls these functions.
  */
 
-#define LOGIC_BLOCK_TYPE_UNASSIGNED 0x3
-#define LOGIC_BLOCK_ID_SHIFT 2
-#define LOGIC_BLOCK_ID_MASK 0xFC
-#define LOGIC_BLOCK_DETAIL_SHIFT 8
-#define LOGIC_BLOCK_DETAIL_MASK 0xF00
-#define LOGIC_BLOCK_SHAPE_SHIFT 12
-#define LOGIC_BLOCK_SHAPE_MASK 0xF000
-/* Cleared on append and by func_800CBE64; its meaning is not yet established. */
-#define LOGIC_BLOCK_FLAG_UNK16 0x10000
-
-/** @brief Logic-block table inside the menu-layout buffer. */
+/** @brief Placement status of one logic block, filled by func_800CBD70. */
 typedef struct
 {
-    u8 pad_0000[0x29D6];
-    u8 logic_block_count;
-    u8 pad_29D7[5];
-    u32 logic_blocks[40];
-} GolemLogicBlockTable;
+    u16 is_unavailable; /**< Non-zero when the block cannot join the edited group. */
+    u16 clut;           /**< CLUT row used to draw the block's icon. */
+} GolemLogicBlockStatus;
 
-/** @brief Validation result for one golem logic-block entry. */
-typedef struct
-{
-    u16 flag;
-    u16 value;
-} GolemLogicBlockValidationResult;
+/**
+ * @brief Shape record @p shape of the table at @p base, scaled through a shift by @p one.
+ * @note @p one is a variable that holds 1; the shift by it and the integer sum
+ *       (index before base) reproduce the original multiply by sizeof(GolemShape).
+ */
+#define GOLEM_SHAPE_SCALED_AT(base, shape, one) \
+    ((GolemShape*)(((((shape) << (one)) + (shape)) * 4 - (shape)) * 8 + (u32)(base)))
 
-/** @brief Packed layout entry, including its active bit at bit sixteen. */
-typedef union
-{
-    u32 word;
-    struct
-    {
-        unsigned low : 16;
-        unsigned active : 1;
-        unsigned high : 15;
-    } bits;
-} Packed;
-
-typedef struct
-{
-    u8 pad[0x2A7F];
-    u8 unk2A7F;
-} FieldCBEC4MenuScan;
-
-extern u8 D_800F1CD0[];
+extern GolemShapeTable D_800F1CD0;
 extern s32 D_80122C00;
-extern u8 D_800F2098[];
+extern s32 D_800F2098[];
 extern u8 D_800459AE;
-extern u8 D_800F2180[];
+extern u16 D_800F2180[];
 
 /**
  * @brief Append a new, unassigned logic block to the golem logic-block table.
- * @param block_id Six-bit block id stored in bits 2-7.
- * @param detail Four-bit detail value stored in bits 8-11.
- * @param shape Four-bit shape index stored in bits 12-15.
+ * @param block_id Six-bit block id.
+ * @param detail Four-bit detail (quantity) value.
+ * @param shape Four-bit shape index into D_800F1CD0.
  */
 void golem_logic_block_append(u32 block_id, u32 detail, u32 shape)
 {
-    ((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable*)g_saved_game.bytes)->logic_block_count] =
-        (((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable*)g_saved_game.bytes)->logic_block_count] & ~LOGIC_BLOCK_ID_MASK) |
-        ((block_id & 0x3F) << LOGIC_BLOCK_ID_SHIFT);
-    ((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable*)g_saved_game.bytes)->logic_block_count] =
-        (((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable*)g_saved_game.bytes)->logic_block_count] & ~LOGIC_BLOCK_DETAIL_MASK) |
-        ((detail & 0xF) << LOGIC_BLOCK_DETAIL_SHIFT);
-    ((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable*)g_saved_game.bytes)->logic_block_count] =
-        (((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable*)g_saved_game.bytes)->logic_block_count] & ~LOGIC_BLOCK_SHAPE_MASK) |
-        ((shape & 0xF) << LOGIC_BLOCK_SHAPE_SHIFT);
-    ((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable*)g_saved_game.bytes)->logic_block_count] |= LOGIC_BLOCK_TYPE_UNASSIGNED;
-    ((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable*)g_saved_game.bytes)->logic_block_count] &= ~LOGIC_BLOCK_FLAG_UNK16;
-    ((GolemLogicBlockTable*)g_saved_game.bytes)->logic_block_count++;
+    GOLEM.logic_blocks[GOLEM.header.fields.block_count].f.id = block_id;
+    GOLEM.logic_blocks[GOLEM.header.fields.block_count].f.quantity = detail;
+    GOLEM.logic_blocks[GOLEM.header.fields.block_count].f.shape = shape;
+    GOLEM.logic_blocks[GOLEM.header.fields.block_count].f.logic_type = LOGIC_BLOCK_UNASSIGNED;
+    GOLEM.logic_blocks[GOLEM.header.fields.block_count].f.unknown_bit16 = 0;
+    GOLEM.header.fields.block_count++;
 }
 
 /**
- * @brief Rebuild the menu grid's entry indices from the active composite layouts.
- * @return Grid bound stored in the selected layout's high nibble.
- * @note Empty cells receive 99; each layout part writes its owning entry index.
- * @note 100% match with GCC 2.7.2 CDK: 112 instructions, 448 bytes.
+ * @brief Rebuild the grid owners from the placed blocks of the edited group.
+ * @return Grid bound of the edited group (high nibble of its record byte 0x44).
+ * @note Empty cells get 99; every cell a placed block covers gets that block's index.
  */
 u32 func_800CB758(void)
 {
-    s32 empty = 99;
-    s32 index, part, count, base, table, x, z, clear_base, return_base;
-    u32 packed, value;
-    Packed bits;
-    u8 *entry, *shape;
-    index = 35;
-    clear_base = (s32)g_saved_game.bytes;
-    do
+    s32 empty;
+    s32 i;
+    s32 part;
+    s32 count;
+    s32 x;
+    s32 y;
+    LogicBlock block;
+    LogicBlock placed;
+    GolemShapeTable* shapes;
+    GolemShapePoint* point;
+
+    empty = GOLEM_GRID_EMPTY;
+    for (i = GOLEM_GRID_CELL_COUNT - 1; i >= 0; i--)
     {
-        ((u8*)(index * 4 + clear_base))[0x2A7F] = empty;
-        index--;
-    } while (index >= 0);
-    index = 0;
-    count = g_saved_game.bytes[0x29D6];
-    if (count != 0)
-    {
-        table = (s32)D_800F1CD0;
-        base = (s32)g_saved_game.bytes;
-        do
-        {
-            entry = (u8*)((s32)g_saved_game.bytes + index * 4);
-            packed = *(u32*)(entry + 0x29DC);
-            bits.word = packed;
-            if (bits.bits.active == 1 && (packed & 3) == ((u8*)(D_80122C00 + base))[0x29D8])
-            {
-                part = 0;
-                if (*(u8*)((((packed >> 12) & 15) * 0x58) + table) != 0)
-                {
-                    do
-                    {
-                        value = *(u32*)(entry + 0x29DC);
-                        shape = (u8*)(((((value >> 17) & 3) * 5 + part) * 4) + (((value >> 12) & 15) * 0x58) + table);
-                        x = ((s32)(value << 8) >> 27) + (s8)shape[12];
-                        z = ((s32)(value << 3) >> 27) + (s8)shape[13];
-                        x += z * 6;
-                        ((u8*)(x * 4 + base))[0x2A7F] = index;
-                        part++;
-                    } while (part < *(u8*)((((*(u32*)(entry + 0x29DC) >> 12) & 15) * 0x58) + table));
-                }
-            }
-            index++;
-        } while (index < count);
+        GOLEM.grid[i].owner = empty;
     }
-    return_base = (s32)g_saved_game.bytes;
-    return ((u8*)(((u8*)(D_80122C00 + return_base))[0x29D8] * 0x14C + return_base))[0x2B50] >> 4;
+
+    count = GOLEM.header.fields.block_count;
+    for (i = 0; i < count; i++)
+    {
+        block = GOLEM.logic_blocks[i];
+        shapes = &D_800F1CD0;
+        if (block.f.unknown_bit16 == 1 && block.f.logic_type == GOLEM.group_order[D_80122C00])
+        {
+            for (part = 0; part < GOLEM_SHAPE_AT(shapes, GOLEM.logic_blocks[i].f.shape)->count; part++)
+            {
+                placed = GOLEM.logic_blocks[i];
+                point = GOLEM_SHAPE_POINT_AT(shapes, placed.f.shape,
+                                             (placed.f.rotation * GOLEM_SHAPE_ROTATION_POINTS + part) * sizeof(GolemShapePoint));
+                x = placed.f.grid_x + point->x;
+                y = placed.f.grid_y + point->y;
+                GOLEM.grid[x + y * GOLEM_GRID_WIDTH].owner = i;
+            }
+        }
+    }
+    return GOLEM.group_records[GOLEM.group_order[D_80122C00]].unknown_0x44 >> 4;
 }
 
 /**
- * @brief Update a composite layout record and mark each occupied part in the menu grid.
- * @param arg0 Layout record index to update.
- * @param arg1 Part-group index within the selected layout.
- * @param arg2 Horizontal grid offset applied to each part.
- * @param arg3 Vertical grid offset applied to each part.
+ * @brief Place a logic block in the edited group and mark its cells on the grid.
+ * @param index Logic-block index to place.
+ * @param rotation Placed rotation, 0-3.
+ * @param x Grid column of the shape origin.
+ * @param y Grid row of the shape origin.
  */
-void func_800CB918(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+void func_800CB918(s32 index, s32 rotation, s32 x, s32 y)
 {
-    s32 cell_offset;
-    s32 count;
-    s32 base;
-    s32 cursor;
-    s32 x;
-    s32 y;
-    u32 packed;
-    u32 mask1;
-    u32 mask2;
-    u32 mask3;
-    s32 layout_index;
-    u8* table;
-    u8* part;
+    s32 step;
+    s32 part;
+    s32 offset;
+    s32 slot;
+    u32 rotation_mask;
+    u32 x_mask;
+    u32 y_mask;
+    s32 cell;
+    s32 row;
+    LogicBlock block;
+    LogicBlock next;
+    GolemShapeTable* shapes;
+    GolemShapeTable* loop_shapes;
+    GolemShapePoint* point;
+    GolemLayoutView* layout;
+    GolemLayoutView* grid;
 
+    /* The single-pass do/while wrappers and the equal-branch if set allocation priorities. */
     do
     {
-        cell_offset = arg0 * 4;
+        offset = index * sizeof(LogicBlock);
     } while (0);
-    mask1 = 0xFFF9FFFF;
-    mask2 = 0xFF07FFFF;
-    mask3 = 0xE0FFFFFF;
-    base = (s32)g_saved_game.bytes;
-    layout_index = D_80122C00;
-    packed = (((((((*(u32*)(cell_offset + base + 0x29DC) & ~3) | (((u8*)base)[layout_index + 0x29D8] & 3) | 0x10000) & mask1) | ((arg1 & 3) << 17)) & mask2) |
-               ((arg2 & 0x1F) << 19)) &
-              mask3) |
-             ((arg3 & 0x1F) << 24);
-    table = D_800F1CD0;
-    *(u32*)(cell_offset + base + 0x29DC) = packed;
-    count = 0;
-    if (table[((packed >> 12) & 0xF) * 0x58] != 0)
+    rotation_mask = ~LOGIC_BLOCK_ROTATION_MASK;
+    x_mask = ~LOGIC_BLOCK_GRID_X_MASK;
+    y_mask = ~LOGIC_BLOCK_GRID_Y_MASK;
+    layout = GOLEM_LAYOUT;
+    slot = D_80122C00;
+    block.word = (((((((GOLEM_BLOCK_AT(layout, offset)->word & ~LOGIC_BLOCK_TYPE_MASK) |
+                      (layout->group_order[slot] & LOGIC_BLOCK_TYPE_MASK) | LOGIC_BLOCK_FLAG_PLACED) &
+                     rotation_mask) |
+                    ((rotation & 3) << LOGIC_BLOCK_ROTATION_SHIFT)) &
+                   x_mask) |
+                  ((x & 0x1F) << LOGIC_BLOCK_GRID_X_SHIFT)) &
+                 y_mask) |
+                ((y & 0x1F) << LOGIC_BLOCK_GRID_Y_SHIFT);
+    shapes = &D_800F1CD0;
+    *GOLEM_BLOCK_AT(layout, offset) = block;
+    part = 0;
+    if (GOLEM_SHAPE_AT(shapes, block.f.shape)->count != 0)
     {
-        u8* loop_table;
-        u8* grid;
-        u32 shape;
-        u32 limit_shape;
-
         do
         {
-            loop_table = table;
+            loop_shapes = shapes;
         } while (0);
-        if (cell_offset != 0)
+        if (offset != 0)
         {
-            grid = (u8*)base;
+            grid = layout;
         }
         else
         {
-            grid = g_saved_game.bytes;
+            grid = GOLEM_LAYOUT;
         }
-        cursor = arg1 * 0x14;
+        step = rotation * GOLEM_SHAPE_ROTATION_POINTS * sizeof(GolemShapePoint);
         do
         {
-            shape = *(u32*)(cell_offset + (s32)grid + 0x29DC);
-            shape >>= 12;
-            shape &= 0xF;
-            part = (u8*)(cursor + shape * 0x58 + (s32)loop_table);
-            x = arg2 + *(s8*)(part + 0xC);
-            y = arg3 + *(s8*)(part + 0xD);
-            x += y * 6;
-            grid[x * 4 + 0x2A7F] = arg0;
-            limit_shape = *(u32*)(cell_offset + (s32)grid + 0x29DC);
+            point = GOLEM_SHAPE_POINT_AT(loop_shapes, GOLEM_BLOCK_AT(grid, offset)->f.shape, step);
+            cell = x + point->x;
+            row = y + point->y;
+            cell += row * GOLEM_GRID_WIDTH;
+            GOLEM_GRID_CELL_AT(grid, cell)->owner = index;
+            next = *GOLEM_BLOCK_AT(grid, offset);
             do
             {
-                count++;
+                part++;
             } while (0);
-            limit_shape >>= 12;
-            limit_shape &= 0xF;
-            cursor += 4;
-        } while (count < loop_table[limit_shape * 0x58]);
+            step += sizeof(GolemShapePoint);
+        } while (part < GOLEM_SHAPE_AT(loop_shapes, next.f.shape)->count);
     }
 }
 
 /**
- * @brief Check shape occupancy and the selected logic class before placement.
- * @param arg0 Logic-block record index.
- * @param arg1 Shape rotation index.
- * @param arg2 Horizontal grid offset.
- * @param arg3 Vertical grid offset.
- * @return One when the occupied cells are empty and the class is compatible.
+ * @brief Check that a block's cells are free and that it fits the edited group's class.
+ * @param index Logic-block index to test.
+ * @param rotation Rotation to test, 0-3.
+ * @param x Grid column of the shape origin.
+ * @param y Grid row of the shape origin.
+ * @return 1 when every covered cell is empty and the class is compatible, otherwise 0.
  */
-s32 func_800CBA9C(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+s32 func_800CBA9C(s32 index, s32 rotation, s32 x, s32 y)
 {
-    s32 part_y;
-    s32 grid_index;
-    s32 logic_block_offset;
+    s32 row;
+    s32 cell;
+    s32 offset;
     s32 valid;
-    u8* shape_part;
-    s32 part_offset;
-    s32 part_index;
+    u8* point;
+    s32 step;
+    s32 part;
     s32 shape_offset;
-    s32 shape_index;
+    s32 shape;
+    s32 logic_class;
 
     valid = 1;
-    logic_block_offset = arg0 * 4;
-    part_index = 0;
-    if (D_800F1CD0[((((((((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[arg0] >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF) << valid) +
-                      ((((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[arg0] >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF)) *
-                         4 -
-                     ((((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[arg0] >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF)) *
-                    8)] != 0)
+    offset = index * sizeof(LogicBlock);
+    part = 0;
+    if (D_800F1CD0.shapes[GOLEM.logic_blocks[index].f.shape].count != 0)
     {
-        u8* shape_table;
-        u8* layout;
+        u8* shapes;
+        GolemLayoutView* layout;
 
-        shape_table = D_800F1CD0;
-        layout = g_saved_game.bytes;
-        part_offset = arg1 * 0x14;
-    loop:
-        part_index++;
-        part_index--;
-        part_index++;
-        part_index--;
-        logic_block_offset++;
-        logic_block_offset--;
-        logic_block_offset++;
-        logic_block_offset--;
-        logic_block_offset++;
-        logic_block_offset--;
+        shapes = (u8*)&D_800F1CD0;
+        layout = GOLEM_LAYOUT;
+        step = rotation * GOLEM_SHAPE_ROTATION_POINTS * sizeof(GolemShapePoint);
+        /* A label loop, so loop.c cannot hoist the block reload. The net-zero pairs and
+         * the shared point temp set allocation priorities. */
+    next_part:
+        part++;
+        part--;
+        part++;
+        part--;
+        offset++;
+        offset--;
+        offset++;
+        offset--;
+        offset++;
+        offset--;
         layout++;
         layout--;
-        shape_table++;
-        shape_table--;
-        part_offset++;
-        part_offset--;
-        shape_index = ((*(u32*)(logic_block_offset + (s32)layout + 0x29DC) >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF);
-        shape_part = (u8*)(shape_index * 11);
-        shape_offset = (s32)shape_part * 8;
-        shape_part = (u8*)(part_offset + shape_offset + (s32)shape_table);
-        part_y = arg3 + *(s8*)(shape_part + 0xD);
-        grid_index = arg2 + *(s8*)(shape_part + 0xC);
-        grid_index += part_y * 6;
-        if (layout[grid_index * 4 + 0x2A7F] != 0x63)
+        shapes++;
+        shapes--;
+        step++;
+        step--;
+        shape = GOLEM_BLOCK_AT(layout, offset)->f.shape;
+        point = (u8*)(shape * 11);
+        shape_offset = (s32)point * 8;
+        point = (u8*)(step + shape_offset + (s32)shapes);
+        row = y + ((GolemShape*)point)->points[0].y;
+        cell = x + ((GolemShape*)point)->points[0].x;
+        cell += row * GOLEM_GRID_WIDTH;
+        if (GOLEM_GRID_CELL_AT(layout, cell)->owner != GOLEM_GRID_EMPTY)
         {
             valid = 0;
         }
-        part_offset += 4;
-        if (++part_index < *(u8*)(shape_offset + (s32)shape_table))
+        step += sizeof(GolemShapePoint);
+        if (++part < ((GolemShape*)(shape_offset + (s32)shapes))->count)
         {
-            goto loop;
+            goto next_part;
         }
     }
 
+    logic_class = D_800F2098[GOLEM.logic_blocks[index].f.id];
+    if (logic_class != 0)
     {
-        u8* class_lookup_table;
-        u8* layout_base;
-        s32 logic_class;
-
-        class_lookup_table = D_800F2098;
-        layout_base = g_saved_game.bytes;
-        logic_class = *(s32*)(class_lookup_table + (layout_base[arg0 * 4 + 0x29DC] & LOGIC_BLOCK_ID_MASK));
-        if (logic_class != 0)
+        if (logic_class != (GOLEM.group_records[GOLEM.group_order[D_80122C00]].unknown_0x44 & 0xF))
         {
-            if (logic_class != (layout_base[layout_base[D_80122C00 + 0x29D8] * 332 + 0x2B50] & 0xF))
-            {
-                valid = 0;
-            }
+            valid = 0;
         }
     }
     return valid;
 }
 
 /**
- * @brief Check whether all parts of a selected composite layout fit within the active menu grid.
- * @param arg0 Packed menu-record index used to select the layout variant.
- * @param arg1 Part-group index within the selected layout.
- * @param arg2 Horizontal offset added to each part.
- * @param arg3 Vertical offset added to each part.
- * @return 1 when every examined part is within the clamped grid bound, otherwise 0.
+ * @brief Check that every cell of a block lies inside the edited group's grid bound.
+ * @param index Logic-block index to test; reused as the part counter.
+ * @param rotation Rotation to test, 0-3.
+ * @param x Horizontal offset added to each part.
+ * @param y Vertical offset added to each part.
+ * @return 1 when every part is within the bound (clamped to 6), otherwise 0.
  */
-s32 func_800CBC0C(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+s32 func_800CBC0C(s32 index, s32 rotation, s32 x, s32 y)
 {
-    s32 temp_a1;
-    s32 temp_v1;
-    s32 cell_offset;
+    s32 cell_x;
+    s32 cell_y;
+    s32 offset;
     s32 valid;
     u32 limit;
-    s32 saved_arg0;
-    u8* temp_v0;
+    s32 block_index;
+    GolemShapePoint* point;
     s32 cursor;
-    u8* table;
+    GolemShapeTable* shapes;
 
-    cursor = (s32)g_saved_game.bytes;
-    limit = ((u8*)cursor)[((u8*)cursor)[D_80122C00 + 0x29D8] * 0x14C + 0x2B50] & 0xF0;
+    /* index and cursor are shared temps and valid is set in both branches: allocation levers. */
+    cursor = (s32)GOLEM_LAYOUT;
+    limit = ((GolemLayoutView*)cursor)->group_records[((GolemLayoutView*)cursor)->group_order[D_80122C00]].unknown_0x44 & 0xF0;
     limit >>= 4;
-    saved_arg0 = arg0;
-    if ((s32)limit >= 6)
+    block_index = index;
+    if ((s32)limit >= GOLEM_GRID_WIDTH)
     {
-        limit = 6;
+        limit = GOLEM_GRID_WIDTH;
         valid = 1;
     }
     else
     {
         valid = 1;
     }
-    cell_offset = saved_arg0 * 4;
-    table = D_800F1CD0;
-    arg0 = 0;
-    if (table[((((((*(u32*)(cell_offset + cursor + 0x29DC) >> 12) & 0xF) << valid) + ((*(u32*)(cell_offset + cursor + 0x29DC) >> 12) & 0xF)) * 4 -
-                ((*(u32*)(cell_offset + cursor + 0x29DC) >> 12) & 0xF)) *
-               8)] != 0)
+    offset = block_index * sizeof(LogicBlock);
+    shapes = &D_800F1CD0;
+    index = 0;
+    if (GOLEM_SHAPE_SCALED_AT(shapes, GOLEM_BLOCK_AT(cursor, offset)->f.shape, valid)->count != 0)
     {
-        u8* grid;
-        grid = (u8*)cursor;
-        cursor = arg1 * 0x14;
+        GolemLayoutView* grid;
+
+        grid = (GolemLayoutView*)cursor;
+        cursor = rotation * GOLEM_SHAPE_ROTATION_POINTS * sizeof(GolemShapePoint);
         do
         {
-            temp_v0 = (u8*)(cursor + ((((u32) * (u32*)(cell_offset + (s32)grid + 0x29DC) >> 12) & 0xF) * 0x58) + (s32)table);
-            temp_v1 = *(s8*)(temp_v0 + 0xC) + arg2;
-            temp_a1 = *(s8*)(temp_v0 + 0xD) + arg3;
-            if ((temp_v1 < 0) || (temp_v1 >= (s32)limit))
+            point = GOLEM_SHAPE_POINT_AT(shapes, GOLEM_BLOCK_AT(grid, offset)->f.shape, cursor);
+            cell_x = point->x + x;
+            cell_y = point->y + y;
+            if ((cell_x < 0) || (cell_x >= (s32)limit))
             {
                 valid = 0;
             }
-            if ((temp_a1 < 0) || (cell_offset = saved_arg0 * 4, temp_a1 >= (s32)limit))
+            if ((cell_y < 0) || (cell_y >= (s32)limit))
             {
                 valid = 0;
-                cell_offset = saved_arg0 * 4;
             }
-            cursor += 4;
-        } while (++arg0 < (s32)table[(((*(u32*)(cell_offset + (s32)grid + 0x29DC) >> 12) & 0xF) * 0x58)]);
+            offset = block_index * sizeof(LogicBlock);
+            cursor += sizeof(GolemShapePoint);
+        } while (++index < GOLEM_SHAPE_AT(shapes, GOLEM_BLOCK_AT(grid, offset)->f.shape)->count);
     }
     return valid;
 }
 
 /**
- * @brief Validate menu entries against their reference classes and fill result pairs.
- * @param arg0 Output array of flag/value pairs, one per menu-layout entry.
+ * @brief Fill the placement status of every logic block for the edited group.
+ * @param results Output status per logic block.
  * @return The global status byte D_800459AE.
+ * @note The CLUT table is read at byte offset id * 2 while its entries are four bytes apart.
  */
-u8 func_800CBD70(void* arg0)
+u8 func_800CBD70(GolemLogicBlockStatus* results)
 {
-    GolemLogicBlockValidationResult* out;
-    u8* buf;
     s32 i;
-    s32 word;
-    s32 type;
-    u8 ref_class;
-    s32 table_val;
+    LogicBlock block;
+    u8 group;
+    s32 logic_class;
 
-    out = (GolemLogicBlockValidationResult*)arg0;
-    i = 0;
-    if (g_saved_game.bytes[0x29D6] != 0)
+    for (i = 0; i < GOLEM.header.fields.block_count; i++)
     {
-        buf = g_saved_game.bytes;
-        do
+        block = GOLEM.logic_blocks[i];
+        group = GOLEM.group_order[D_80122C00];
+        /* u16 pointer stores: struct-member stores would let D_80122C00 be hoisted. */
+        if (((block.f.logic_type != group) && (block.f.logic_type != LOGIC_BLOCK_UNASSIGNED)) ||
+            (((logic_class = D_800F2098[block.f.id]) != 0) && ((GOLEM.group_records[group].unknown_0x44 & 0xF) != logic_class)))
         {
-            word = *(s32*)(buf + 0x29DC + i * 4);
-            ref_class = buf[D_80122C00 + 0x29D8];
-            ref_class++;
-            ref_class--;
-            type = word & 3;
-            if ((type != ref_class && type != 3) ||
-                (((table_val = *(s32*)(D_800F2098 + (word & 0xFC))) != 0) && ((buf[ref_class * 332 + 0x2B50] & 0xF) != table_val)))
-            {
-                *(u16*)(out + i) = 1;
-                *((u16*)(out + i) + 1) = 0xF;
-            }
-            else
-            {
-                *(u16*)(out + i) = 0;
-                *((u16*)(out + i) + 1) = ((u16*)D_800F2180)[(*(u8*)(buf + 0x29DC + i * 4) & 0xFC) >> 1];
-            }
-            i++;
-        } while (i < buf[0x29D6]);
+            *(u16*)&results[i] = 1;
+            *((u16*)&results[i] + 1) = 0xF;
+        }
+        else
+        {
+            *(u16*)&results[i] = 0;
+            *((u16*)&results[i] + 1) = D_800F2180[(GOLEM_BLOCK_BYTES->logic_block_bytes[i][0] & LOGIC_BLOCK_ID_MASK) >> 1];
+        }
     }
     return D_800459AE;
 }
 
 /**
- * @brief Clears a record's logic-block flag and reactivates matching entries.
- *
- * Clears bit 0x10000 of the packed 32-bit logic-block word at
- * @c g_saved_game.bytes[arg0*4 + 0x29DC], then scans all 0x24 records (stride
- * 4) and sets the byte flag at +0x2A7F to 0x63 for every record whose flag
- * currently equals @p arg0.
- *
- * @param arg0 Record index whose logic-block bit is cleared and whose value is
- *             matched against each record's +0x2A7F flag.
+ * @brief Take a logic block off the grid.
+ * @param index Logic-block index to remove; its cells become empty.
  */
-void func_800CBE64(s32 arg0)
+void func_800CBE64(s32 index)
 {
     s32 i;
-    u8* p;
-    u8* base = g_saved_game.bytes;
-    u8* rec = base + arg0 * 4;
-    /* Reserves the target's unused 8-byte stack frame slot (FRAME-03). */
-    volatile s32 pad;
+    s32 unused[2];
 
-    *(u32*)(rec + 0x29DC) &= ~0x10000;
-
-    for (i = 0; i < 0x24; i++)
+    GOLEM.logic_blocks[index].f.unknown_bit16 = 0;
+    for (i = 0; i < GOLEM_GRID_CELL_COUNT; i++)
     {
-        p = base + i * 4;
-        if (p[0x2A7F] == arg0)
+        if (GOLEM.grid[i].owner == index)
         {
-            p[0x2A7F] = 0x63;
+            GOLEM.grid[i].owner = GOLEM_GRID_EMPTY;
         }
     }
 }
 
 /**
- * @brief Clear boundary markers and mark differing occupied vertical neighbors.
- * @param arg0 Output buffer containing 60 word-sized markers.
+ * @brief Build the grid divider markers between cells owned by different blocks.
+ * @param markers Output: 60 marker words; entry 30 + i is set for cell i when the
+ *        cell below belongs to another block.
  */
-void func_800CBEC4(void* arg0)
+void func_800CBEC4(s32* markers)
 {
-    u8* scan;
-    u8* base;
-    s32* clear;
-    s32 count;
-    s32 offset;
-    s32 sentinel;
-    s32 marker;
-    u8 first;
-    u8 second;
-    void* out;
+    s32 i;
+    u8 owner;
+    u8 below;
 
-    out = arg0;
-    count = 0x3B;
-    clear = (s32*)((u8*)out + 0xEC);
-    do
+    for (i = 59; i >= 0; i--)
     {
-        *clear = 0;
-        count--;
-        clear--;
-    } while (count >= 0);
+        markers[i] = 0;
+    }
 
-    count = 0;
-    base = g_saved_game.bytes;
-    sentinel = 0x63;
-    marker = 0x4F;
-    offset = 0x18;
-    scan = base;
-    do
+    for (i = 0; i < GOLEM_GRID_CELL_COUNT - GOLEM_GRID_WIDTH; i++)
     {
-        first = ((FieldCBEC4MenuScan*)scan)->unk2A7F;
-        if (first != sentinel)
+        owner = GOLEM.grid[i].owner;
+        if (owner != GOLEM_GRID_EMPTY)
         {
-            second = ((FieldCBEC4MenuScan*)((u32)offset + (u32)base))->unk2A7F;
-            if ((second != sentinel) && (first != second))
+            below = GOLEM.grid[i + GOLEM_GRID_WIDTH].owner;
+            if ((below != GOLEM_GRID_EMPTY) && (owner != below))
             {
-                *(s32*)((u8*)out + 0x78) = marker;
+                markers[i + 30] = 0x4F;
             }
         }
-        out = (u8*)out + 4;
-        offset += 4;
-        count++;
-        scan += 4;
-    } while (count < 0x1E);
+    }
 }

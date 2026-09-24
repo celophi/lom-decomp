@@ -1,61 +1,160 @@
+/**
+ * @file field_record_growth_ops.c
+ * @brief Money, experience and level-up growth for party characters and
+ *        stored companion records.
+ */
+
 #include "game_audio.h"
 #include "common.h"
+#include "field_records.h"
 
+/** @brief Money saturates at this amount. */
+#define FIELD_MONEY_MAX 10000000
+
+/** @brief Largest experience value of a progress word. */
+#define FIELD_EXPERIENCE_MAX 9999999
+
+/** @brief Progress word with the maximum experience and a zero level byte. */
+#define FIELD_EXPERIENCE_MAX_WORD ((u32)FIELD_EXPERIENCE_MAX << 8)
+
+/** @brief Highest level a record can reach. */
+#define FIELD_LEVEL_MAX 99
+
+/** @brief Largest counter value in FieldGameState::words. */
+#define FIELD_COUNTER_MAX 9999999
+
+/** @brief First FieldGameState::words entry of the per-character counters. */
+#define FIELD_CHARACTER_COUNTER_BASE 0x68
+
+/** @brief Largest base stat value (bits 0-8 of a stat halfword). */
+#define FIELD_STAT_MAX 0x18C
+
+/** @brief Character type (low seven bits of FieldCharacterRecord info byte 0) of a companion. */
+#define FIELD_CHARACTER_TYPE_COMPANION 3
+
+/** @brief Value of an empty pending-effect slot in FieldRegionRecord::status. */
+#define FIELD_NO_EFFECT 0xFF
+
+/** @brief Signal passed to func_8008B500 after a level-up. */
+#define FIELD_SIGNAL_LEVEL_UP 0x23
+
+/**
+ * @brief Experience needed to advance from @p level.
+ * @note Equal to 10 * level * (2 * level - 1), written the way the original
+ *       code computes it.
+ */
+#define FIELD_LEVEL_THRESHOLD(level) (((level) - 1) * (((level) * 5) << 2) + (((level) * 5) << 1))
+
+/**
+ * @brief View of the game state shifted by @p bytes bytes.
+ * @note characters[0] or regions[0] of the view is the record @p bytes past
+ *       the real first one. The original code addresses a record's fields
+ *       from the shifted state base like this (offsets such as 0x610 relative
+ *       to state + index * 0x250); indexing the array directly does not
+ *       produce the same code.
+ */
+#define FIELD_STATE_AT(state, bytes) ((FieldGameState *)((u8 *)(state) + (bytes)))
+
+/** @brief View of a companion record shifted by @p bytes bytes (see FIELD_STATE_AT). */
+#define FIELD_REGION_AT(region, bytes) ((FieldRegionRecord *)((u8 *)(region) + (bytes)))
+
+/**
+ * @brief Growth byte: low nibble the per-level rate, high nibble an
+ *        accumulator whose bit 3 (bit 7 of the byte) carries into a total.
+ */
+typedef struct FieldGrowthByte
+{
+    u8 rate : 4;
+    u8 accumulator : 4;
+} FieldGrowthByte;
+
+/**
+ * @brief FieldRegionRecord::extra_growth as a growth byte inside a word.
+ * @note The rate is read as a byte and the accumulator is written as part of
+ *       the word, which is what the mixed field types reproduce.
+ */
+typedef struct FieldGrowthWord
+{
+    u8 rate : 4;
+    unsigned accumulator : 4;
+    unsigned unk8 : 24;
+} FieldGrowthWord;
+
+/** @brief Growth-byte view of a u8 growth field. */
+#define GROWTH_BYTE(field) (*(FieldGrowthByte *)&(field))
+
+/** @brief Growth-word view of FieldRegionRecord::extra_growth. */
+#define GROWTH_WORD(field) (*(FieldGrowthWord *)&(field))
+
+/** @brief Byte access at offset @p o from @p p (func_800C1658 only). */
 #define GROW_U8(p, o) (*(u8 *)((u8 *)(p) + (o)))
+
+/** @brief Halfword access at offset @p o from @p p (func_800C1658 only). */
 #define GROW_U16(p, o) (*(u16 *)((u8 *)(p) + (o)))
+
+/** @brief Word access at offset @p o from @p p (func_800C1658 only). */
 #define GROW_U32(p, o) (*(u32 *)((u8 *)(p) + (o)))
 
-extern u8 *D_80122B74;
-extern u8 *func_800B2A9C(s32);
-extern void *func_80087F0C(s32);
-void func_800C10F0(s32);
-void func_800C1154(u32);
-void func_800C11F0(s32, s32);
+/** @brief Game state as a byte pointer (func_800C1658 only). */
+#define FIELD_STATE_BYTES ((u8 *)D_80122B74)
 
-typedef struct
+extern FieldGameState *D_80122B74;
+
+/** @brief Per item type: eight four-bit stat increases applied on a level-up. */
+extern u32 D_800F18CC[];
+
+FieldStatusState *func_80087F0C(s32 actor_id);
+void func_800C10F0(s32 amount);
+void func_800C1154(u32 amount);
+void func_800C11F0(s32 index, s32 notify);
+s32 func_800C14A4(s32 index, s32 notify);
+s32 func_800C19D0(s32 value, s32 increase, s32 flags);
+void func_800C1658(u8 *character, FieldGameState *state, FieldGameState *view, s32 offset);
+void func_800C15AC(FieldCharacterRecord *character, FieldGameState *state, FieldGameState *view, s32 offset);
+void func_800B7C58(s32 index);
+s32 func_8008B500(s32 index, s32 value);
+
+/**
+ * @brief Add money, saturating at FIELD_MONEY_MAX.
+ * @param recipient Reward recipient; only recipients below 3 are credited.
+ * @param amount Money to add.
+ */
+void func_800C0E18(s32 recipient, s32 amount)
 {
-    s8 pad[0x2C];
-    s32 unk2C;
-} UnkStruct80122B74;
-
-
-
-void func_800C0E18(s32 type, s32 amount)
-{
-    if (type < 3)
+    if (recipient < 3)
     {
-        ((UnkStruct80122B74 *)D_80122B74)->unk2C += amount;
-        if ((u32)((UnkStruct80122B74 *)D_80122B74)->unk2C > 0x989680)
+        D_80122B74->money += amount;
+        if (D_80122B74->money > FIELD_MONEY_MAX)
         {
-            ((UnkStruct80122B74 *)D_80122B74)->unk2C = 0x989680;
+            D_80122B74->money = FIELD_MONEY_MAX;
         }
     }
 }
 
 /**
- * @brief Apply a progression increment, distributing it across eligible records when flagged.
- * @param record_index Record index that selects the update descriptor and direct target.
- * @param amount Increment to apply.
+ * @brief Award experience, optionally shared among the living party members.
+ * @param record_index Status record id of the recipient (0 to 2).
+ * @param amount Experience to award.
+ * @note When the recipient's status flags have bit 2 set, the amount is split
+ *       evenly (at least 1) among the party members that are present and
+ *       alive. On overflow the shared path clamps the recipient's record, not
+ *       the member that overflowed.
  */
 void func_800C0E54(s32 record_index, s32 amount)
 {
     s32 eligible_count;
-    s32 record_offset;
     s32 index;
-    s32 scan_offset;
     u32 packed_value;
-    u32 clamped_value;
-    u32 distributed_value;
     u32 updated_value;
-    u8 mode;
-    u8 *record;
-    u8 *entry;
-    u8 *target_record;
+    FieldStatusRecord *entry;
+    u32 distributed_value;
+    u32 clamped_value;
+    FieldGameState *record_view;
+    FieldGameState *target_view;
 
     if ((record_index < 3) && (entry = func_800B2A9C(record_index), (entry != NULL)))
     {
-        mode = GROW_U8(entry, 0x4);
-        switch (mode)
+        switch (entry->meta.bytes.id)
         {
         case 0:
             func_800C1154(amount);
@@ -65,426 +164,303 @@ void func_800C0E54(s32 record_index, s32 amount)
             break;
         }
         index = 0;
-        if (GROW_U16(entry, 0xA) & 4)
+        if (entry->status_flags & 4)
         {
             eligible_count = 0;
-            do
+            for (; index < FIELD_PARTY_SIZE; index++)
             {
-                scan_offset = index * 0x250;
-                if ((GROW_U8(D_80122B74 + scan_offset, 0x5F0) != 0) && (GROW_U32(func_80087F0C(index), 4) != 0))
+                if ((D_80122B74->characters[index].name[0] != 0) && (func_80087F0C(index)->current != 0))
                 {
                     eligible_count += 1;
                 }
-                index += 1;
-            } while (index < 3);
+            }
             if (eligible_count <= 0)
             {
                 eligible_count = 1;
             }
             amount /= eligible_count;
             amount = amount == 0 ? 1 : amount;
-            index = 0;
-            do
+            for (index = 0; index < FIELD_PARTY_SIZE; index++)
             {
-                record_offset = index * 0x250;
-                if ((GROW_U8(D_80122B74 + record_offset, 0x5F0) != 0) && (GROW_U32(func_80087F0C(index), 4) != 0))
+                if ((D_80122B74->characters[index].name[0] != 0) && (func_80087F0C(index)->current != 0))
                 {
                     if (index == 1)
                     {
                         func_800C10F0(amount);
                     }
-                    record = D_80122B74 + record_offset;
-                    packed_value = GROW_U32(record, 0x610);
+                    record_view = FIELD_STATE_AT(D_80122B74, index * sizeof(FieldCharacterRecord));
+                    packed_value = record_view->characters[0].progress.word;
                     distributed_value = (packed_value & 0xFF) | (((packed_value >> 8) + amount) << 8);
-                    GROW_U32(record, 0x610) = distributed_value;
-                    if ((s32) (distributed_value >> 8) > 0x98967F)
+                    record_view->characters[0].progress.word = distributed_value;
+                    if ((s32)(distributed_value >> 8) > FIELD_EXPERIENCE_MAX)
                     {
-                        target_record = D_80122B74 + (record_index * 0x250);
-                        GROW_U32(target_record, 0x610) = (s32) (GROW_U8(target_record, 0x610) | 0x98967F00);
+                        target_view = FIELD_STATE_AT(D_80122B74, record_index * sizeof(FieldCharacterRecord));
+                        target_view->characters[0].progress.word = target_view->characters[0].progress.level | FIELD_EXPERIENCE_MAX_WORD;
                     }
                     func_800C11F0(index, 1);
                 }
-                index += 1;
-            } while (index < 3);
+            }
             return;
         }
-        record = D_80122B74 + (record_index * 0x250);
-        packed_value = GROW_U32(record, 0x610);
+        record_view = FIELD_STATE_AT(D_80122B74, record_index * sizeof(FieldCharacterRecord));
+        packed_value = record_view->characters[0].progress.word;
         updated_value = (packed_value & 0xFF) | (((packed_value >> 8) + amount) << 8);
-        GROW_U32(record, 0x610) = updated_value;
-        if ((s32) (updated_value >> 8) > 0x98967F)
+        record_view->characters[0].progress.word = updated_value;
+        if ((s32)(updated_value >> 8) > FIELD_EXPERIENCE_MAX)
         {
             clamped_value = updated_value & 0xFF;
-            clamped_value |= 0x98967F00;
-            GROW_U32(record, 0x610) = clamped_value;
+            clamped_value |= FIELD_EXPERIENCE_MAX_WORD;
+            record_view->characters[0].progress.word = clamped_value;
         }
         func_800C11F0(record_index, 1);
     }
 }
 
-
-extern u8 *D_80122B74;
-
 /**
- * @brief Adds to a party record's counter field and clamps it to 0x98967F.
- *
- * Selects the record at @c D_80122B74 offset (base[0x859] + 0x68) * 4 + 0xE4
- * (a 32-bit counter), adds @p arg0 to it, then re-reads the same record and
- * clamps the counter to a maximum of 0x98967F (9,999,999).
- *
- * @param arg0 Amount to add to the counter.
+ * @brief Add to the counter word selected by party member 1, saturating at FIELD_COUNTER_MAX.
+ * @param amount Amount to add.
+ * @note The counter is words[FIELD_CHARACTER_COUNTER_BASE + byte 1 of characters[1].info].
  */
-void func_800C10F0(s32 arg0)
+void func_800C10F0(s32 amount)
 {
-    u8 *base;
-    s32 *rec;
-    s32 idx;
-    s32 idx2;
+    FieldGameState *state;
 
-    base = D_80122B74;
-
-    idx = base[0x859] + 0x68;
-    rec = (s32 *)(base + idx * 4 + 0xE4);
-    *rec += arg0;
-
-    idx2 = base[0x859] + 0x68;
-    rec = (s32 *)(base + idx2 * 4 + 0xE4);
-    if ((u32)*rec > 0x98967F)
+    state = D_80122B74;
+    state->words[state->characters[1].info.bytes[1] + FIELD_CHARACTER_COUNTER_BASE] += amount;
+    if ((u32)state->words[state->characters[1].info.bytes[1] + FIELD_CHARACTER_COUNTER_BASE] > FIELD_COUNTER_MAX)
     {
-        *rec = 0x98967F;
+        state->words[state->characters[1].info.bytes[1] + FIELD_CHARACTER_COUNTER_BASE] = FIELD_COUNTER_MAX;
     }
 }
 
-
-extern u8 *D_80122B74;
-
-void func_800C1154(u32 arg0)
+/**
+ * @brief Give an eighth of @p amount as experience to every stored companion that gains experience.
+ * @param amount Experience awarded to the party.
+ */
+void func_800C1154(u32 amount)
 {
-    u32 temp_v0;
-    u32 temp_v1;
-    u32 var_a2;
-    u8 *base;
+    u32 region_index;
+    u32 packed_value;
+    u32 updated_value;
+    FieldGameState *state;
 
-    arg0 = arg0 >> 3;
-    var_a2 = 0;
-    base = D_80122B74;
-    do
+    amount >>= 3;
+    state = D_80122B74;
+    for (region_index = 0; region_index < FIELD_REGION_COUNT; region_index++)
     {
-        if ((base[(var_a2 * 0x60) + 0x2EF4] != 0) &&
-            (((u32) *(u32 *) (base + (var_a2 * 0x60) + 0x2F38) >> 0x1E) & 1))
+        if ((state->regions[region_index].name[0] != 0) && ((state->regions[region_index].status.word >> 30) & 1))
         {
-            temp_v0 = *(u32 *) (base + (var_a2 * 0x60) + 0x2F0C);
-            temp_v1 = (temp_v0 & 0xFF) | (((temp_v0 >> 8) + arg0) << 8);
-            *(u32 *) (base + (var_a2 * 0x60) + 0x2F0C) = temp_v1;
-            if ((s32) (temp_v1 >> 8) > 0x98967F)
+            packed_value = state->regions[region_index].progress.word;
+            updated_value = (packed_value & 0xFF) | (((packed_value >> 8) + amount) << 8);
+            state->regions[region_index].progress.word = updated_value;
+            if ((s32)(updated_value >> 8) > FIELD_EXPERIENCE_MAX)
             {
-                *(u32 *) (base + (var_a2 * 0x60) + 0x2F0C) =
-                    (temp_v1 & 0xFF) | 0x98967F00;
+                state->regions[region_index].progress.word = (updated_value & 0xFF) | FIELD_EXPERIENCE_MAX_WORD;
             }
         }
-        var_a2 += 1;
-    } while (var_a2 < 5U);
+    }
 }
-
-
-s32 func_800C14A4(s32 arg0, s32 arg1);
-
-void func_800C11F0(s32 arg0, s32 arg1)
-{
-    do
-    {
-    } while (func_800C14A4(arg0, arg1) != 0);
-}
-
-s32 func_800C19D0(s32, s32, s32);              /* extern */
-/** Packed state accessed at byte, halfword, and word widths by the game. */
-typedef union PackedWord
-{
-    u32 word;
-    u8 bytes[4];
-    u16 halves[2];
-} PackedWord;
-/** One 0x60-byte character record containing level and stat-growth state. */
-typedef struct Record
-{
-    u8 active;
-    u8 pad01[0x17];
-    PackedWord progress;
-    u16 hp, mp;
-    u16 values[4];
-    u16 stats[8];
-    u8 pad38[12];
-    PackedWord status;
-    u8 pad48[4];
-    u8 growth[8];
-    u8 value_growth[4];
-    PackedWord extra;
-    u8 pad5c[4];
-} Record;
-extern u8 *D_80122B74;
 
 /**
- * @brief Apply each pending level increase for an active character slot.
- * @param slot Character slot to update.
+ * @brief Apply every level-up a party member's experience allows.
+ * @param index Party member index.
+ * @param notify Nonzero to signal each level-up (see func_800C14A4).
+ */
+void func_800C11F0(s32 index, s32 notify)
+{
+    while (func_800C14A4(index, notify) != 0)
+    {
+    }
+}
+
+/**
+ * @brief Apply every level-up a stored companion record's experience allows.
+ * @param slot Companion record index (below FIELD_REGION_COUNT).
+ * @note Each level adds the stat growth nibbles, rebuilds the effective stat
+ *       bits, carries the total accumulators, recomputes hp and clears the
+ *       pending effects.
  */
 void func_800C1230(s32 slot)
 {
-    s32 previous_level;
-    s32 scaled_level;
-    s32 mask;
-    s32 threshold;
-    s32 updated_extra;
-    s32 growth_nibble;
-    s32 growth_high;
-    s32 stat_index;
-    s32 index;
-    s32 clear_index;
+    s32 level;
+    s32 i;
     s32 pending;
     u16 stat;
     u32 low;
-    u32 extra_word;
-    u32 experience;
-    u32 growth_value;
-    u32 carry;
     u32 base_stat;
-    s32 level;
+    s32 rate;
+    u32 carry;
+    u32 threshold;
     u32 next_level;
-    u8 *value_growth_cursor;
-    u8 *growth_cursor;
-    u8 *record;
-    u8 *stat_cursor;
-    u8 *value_cursor;
-    u8 *status_cursor;
+    u32 experience;
+    FieldRegionRecord *record;
+    FieldRegionRecord *effect_view;
+    u32 empty;
 
-    if (slot >= 5)
+    if (slot >= FIELD_REGION_COUNT)
     {
         record_game_diagnostic(0x8001, 0x1F3, slot, 0);
         return;
     }
-    record = D_80122B74 + ((slot * 0x60) + 0x2EF4);
+    record = &D_80122B74->regions[slot];
     pending = -1;
-    if (((Record *)record)->active != 0)
+    if (record->name[0] != 0)
     {
-        mask = -0xF1;
         do
         {
-            level = ((Record *)record)->progress.bytes[0];
-            previous_level = level - 1;
-            scaled_level = level * 5;
-            threshold = previous_level * (scaled_level << 2) + (scaled_level << 1);
-            experience = ((Record *)record)->progress.word >> 8;
-            if ((experience != 0) && (experience >= (u32)threshold))
+            level = record->progress.level;
+            threshold = FIELD_LEVEL_THRESHOLD(level);
+            experience = record->progress.word >> 8;
+            if ((experience != 0) && (experience >= threshold))
             {
                 next_level = level + 1;
-                ((Record *)record)->progress.bytes[0] = next_level;
-                stat_index = 0;
-                if ((u32)(next_level & 0xFF) >= 0x64U)
+                record->progress.level = next_level;
+                if ((next_level & 0xFF) > FIELD_LEVEL_MAX)
                 {
-                    ((Record *)record)->progress.bytes[0] = 0x63U;
-                    goto block_17;
+                    record->progress.level = FIELD_LEVEL_MAX;
+                    pending = 0;
+                    continue;
                 }
-                stat_cursor = record;
-            stat_loop:
-            {
-                growth_cursor = record + stat_index;
-                stat = ((Record *)stat_cursor)->stats[0];
-                low = ((u8)((Record *)growth_cursor)->growth[0] >> 4) + (stat & 0x1FF);
-                low &= 0x1FF;
-                stat = (stat & 0xFE00) | low;
-                ((Record *)stat_cursor)->stats[0] = stat;
-                if ((u32)(stat & 0x1FF) >= 0x18DU)
+                for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
                 {
-                    ((Record *)stat_cursor)->stats[0] = (u16)((stat & 0xFE00) | 0x18C);
-                }
-                stat_index += 1;
-                base_stat = ((Record *)stat_cursor)->stats[0] & 0x1FF;
-                ((Record *)stat_cursor)->stats[0] = (u16)(base_stat | ((base_stat >> 2) << 9));
-                growth_nibble = ((Record *)growth_cursor)->growth[0] & 0xF;
-                ((Record *)growth_cursor)->growth[0] = (u8)(growth_nibble | (growth_nibble * 0x10));
-                stat_cursor += 2;
-            }
-                if (stat_index < 8)
-                {
-                    goto stat_loop;
-                }
-                index = 0;
-                value_cursor = record;
-            value_loop:
-            {
-                value_growth_cursor = record + index;
-                index += 1;
-                ((Record *)value_cursor)->values[0] =
-                    (u16)(((Record *)value_cursor)->values[0] +
-                          ((u8)((Record *)value_growth_cursor)->value_growth[0] >> 7));
-                growth_value = ((Record *)value_growth_cursor)->value_growth[0] & 0x7F;
-                growth_high = growth_value >> 4;
-                growth_value &= 15;
-                ((Record *)value_growth_cursor)->value_growth[0] =
-                    growth_value | ((growth_high + growth_value) << 4);
-                value_cursor += 2;
-            }
-                if (index < 4)
-                {
-                    goto value_loop;
-                }
-                do
-                {
-                    pending++;
-                    pending--;
-                } while (0);
-                carry = ((Record *)record)->extra.bytes[0];
-                carry >>= 7;
-                extra_word = mask | 0x70;
-                extra_word &= (s32)((Record *)record)->extra.word;
-                ((Record *)record)->extra.word = extra_word;
-                ((Record *)record)->mp = (u16)(((Record *)record)->mp + carry);
-                updated_extra = extra_word & mask;
-                updated_extra |=
-                    (((((extra_word >> 4) & 0xF) + (((Record *)record)->extra.bytes[0] & 0xF)) &
-                      0xF) *
-                     0x10);
-                ((Record *)record)->extra.word = updated_extra;
-                ((Record *)record)->hp = func_800C19D0(
-                    ((Record *)record)->hp, (u32)(((Record *)record)->stats[4] & 0x1FF) >> 2, 3);
-                ((Record *)record)->extra.halves[1] =
-                    (u16)(((Record *)record)->extra.halves[1] + ((Record *)record)->extra.bytes[1]);
-                ((Record *)record)->status.word =
-                    (s32)(((Record *)record)->status.word & 0xF8FFFFFF);
-                extra_word = 0xFF;
-                clear_index = 2;
-                status_cursor = record + clear_index;
-                do
-                {
-                    ((Record *)status_cursor)->status.bytes[0] = extra_word;
-                    do
+                    stat = record->stats[i];
+                    low = ((u8)record->stat_growth[i] >> 4) + (stat & 0x1FF);
+                    low &= 0x1FF;
+                    stat = (stat & 0xFE00) | low;
+                    record->stats[i] = stat;
+                    if ((stat & 0x1FF) > FIELD_STAT_MAX)
                     {
-                        clear_index -= 1;
-                    } while (0);
-                    status_cursor -= 1;
-                } while (clear_index >= 0);
+                        record->stats[i] = (stat & 0xFE00) | FIELD_STAT_MAX;
+                    }
+                    base_stat = record->stats[i] & 0x1FF;
+                    record->stats[i] = base_stat | ((base_stat >> 2) << 9);
+                    rate = record->stat_growth[i] & 0xF;
+                    record->stat_growth[i] = rate | (rate * 0x10);
+                }
+                for (i = 0; i < 4; i++)
+                {
+                    record->equipment_totals[i] += (u8)record->total_growth[i] >> 7;
+                    GROWTH_BYTE(record->total_growth[i]).accumulator &= 7;
+                    GROWTH_BYTE(record->total_growth[i]).accumulator += GROWTH_BYTE(record->total_growth[i]).rate;
+                }
+                /* Two statements: a single `>> 7` expression swaps two scheduled insns. */
+                carry = record->extra_growth.bytes[0];
+                carry >>= 7;
+                GROWTH_WORD(record->extra_growth).accumulator &= 7;
+                GROWTH_WORD(record->extra_growth).accumulator += GROWTH_WORD(record->extra_growth).rate;
+                record->unk1E += carry;
+                record->hp = func_800C19D0(record->hp, (u32)(record->stats[4] & 0x1FF) >> 2, 3);
+                record->extra_growth.halves[1] += record->extra_growth.bytes[1];
+                record->status.word &= 0xF8FFFFFF;
+                empty = FIELD_NO_EFFECT;
+                i = 2;
+                effect_view = FIELD_REGION_AT(record, i);
+                do
+                {
+                    effect_view->status.effects[0] = empty;
+                    i--;
+                    effect_view = FIELD_REGION_AT(effect_view, -1);
+                } while (i >= 0);
             }
             else
             {
-            block_17:
                 pending = 0;
             }
         } while (pending != 0);
     }
 }
 
-
-extern u8 *D_80122B74;
-void func_800C1658(u8 *record, u8 *base, u8 *current, s32 offset);
-void func_800C15AC(u8 *record, u8 *base, u8 *current, s32 offset);
-void func_800B7C58(s32 index);
-s32 func_8008B500(s32 index, s32 value);
-
 /**
- * @brief Advance the indexed field record when its packed progression reaches the next threshold.
- * @param index Index of the 0x250-byte field record to update.
- * @param notify Nonzero to emit update code 0x23 after advancing the record.
- * @return -1 when the record advances, otherwise 0.
+ * @brief Advance a party member one level when its experience reaches the threshold.
+ * @param index Party member index.
+ * @param notify Nonzero to send FIELD_SIGNAL_LEVEL_UP after advancing.
+ * @return -1 when the member advanced a level, otherwise 0.
+ * @note Companions (character type 3) grow through func_800C1658, the others
+ *       through func_800C15AC.
  */
 s32 func_800C14A4(s32 index, s32 notify)
 {
-    u8 *initial_base;
-    u8 *record;
-    u8 *current;
-    u_long level_or_base;
-    u32 packed;
-    s32 previous_level;
-    s32 scaled_level;
-    s32 call_offset;
+    FieldGameState *record_view;
+    FieldGameState *current_view;
+    u32 level_or_state;
 
-    initial_base = D_80122B74;
-    record = initial_base + index * 0x250;
-    level_or_base = record[0x610];
-    packed = *(u32 *)(record + 0x610);
-    previous_level = level_or_base - 1;
-    scaled_level = (level_or_base << 2) + level_or_base;
-    if ((s32)(packed >> 8) >= previous_level * (scaled_level << 2) + (scaled_level << 1))
+    record_view = FIELD_STATE_AT(D_80122B74, index * sizeof(FieldCharacterRecord));
+    level_or_state = record_view->characters[0].progress.level;
+    if ((s32)(record_view->characters[0].progress.word >> 8) >= FIELD_LEVEL_THRESHOLD((s32)level_or_state))
     {
-        record[0x610] = (u8)(level_or_base + 1);
-        level_or_base = (u_long)D_80122B74;
-        current = (u8 *)level_or_base + index * 0x250;
-        if (current[0x610] >= 0x64)
+        record_view->characters[0].progress.level = level_or_state + 1;
+        /* One variable for the level and the reloaded state pointer: separate ones allocate differently. */
+        level_or_state = (u32)D_80122B74;
+        current_view = FIELD_STATE_AT(level_or_state, index * sizeof(FieldCharacterRecord));
+        if (current_view->characters[0].progress.level > FIELD_LEVEL_MAX)
         {
-            current[0x610] = 0x63;
+            current_view->characters[0].progress.level = FIELD_LEVEL_MAX;
             return 0;
         }
-
-        call_offset = index * 0x250 + 0x5F0;
-        if ((current[0x608] & 0x7F) == 3)
+        if ((current_view->characters[0].info.bytes[0] & 0x7F) == FIELD_CHARACTER_TYPE_COMPANION)
         {
-            func_800C1658((u8 *)level_or_base + call_offset, (u8 *)level_or_base, record, index * 0x250);
+            func_800C1658((u8 *)&((FieldGameState *)level_or_state)->characters[index], (FieldGameState *)level_or_state, record_view, index * sizeof(FieldCharacterRecord));
         }
         else
         {
-            func_800C15AC((u8 *)level_or_base + call_offset, (u8 *)level_or_base, record, index * 0x250);
+            func_800C15AC(&((FieldGameState *)level_or_state)->characters[index], (FieldGameState *)level_or_state, record_view, index * sizeof(FieldCharacterRecord));
         }
-
         func_800B7C58(index);
         if (notify != 0)
         {
-            func_8008B500(index, 0x23);
+            func_8008B500(index, FIELD_SIGNAL_LEVEL_UP);
         }
         return -1;
     }
     return 0;
 }
 
-
-extern u8 D_800F18CC[];
-extern s32 func_800C19D0(s32 arg0, s32 arg1, s32 arg2);
-
 /**
- * @brief Advance eight packed 9-bit counters by a per-slot nibble delta, clamped.
- *
- * Looks up a 32-bit table word in @c D_800F18CC indexed by
- * @c ((*(u32 *)(arg0 + 0x64) >> 8) & 0xFC), treating its low 32 bits as eight
- * 4-bit deltas. For each of the eight u16 values at @c arg0+0x30, adds the next
- * nibble to the low 9 bits (mod 0x200), preserving the upper 7 bits, and clamps
- * the result to 0x18C when it reaches or exceeds 0x18D. Finally updates the u16
- * at @c arg0+0x24 from the fifth counter (at @c arg0+0x38) via @c func_800C19D0.
- *
- * @param arg0 Pointer to the record holding the packed counters and control fields.
+ * @brief Level-up growth of a non-companion party member.
+ * @param character Party member record.
+ * @param unused_state Unused (the game state).
+ * @param unused_view Unused (the shifted state view of the member).
+ * @param unused_offset Unused (the member's byte offset in the character array).
+ * @note Adds the eight four-bit increases of the weapon's item type to the
+ *       base stats, clamped to FIELD_STAT_MAX, then recomputes hp.
  */
-void func_800C15AC(u8 *arg0, u8 *unused_base, u8 *unused_current, s32 unused_offset)
+void func_800C15AC(FieldCharacterRecord *character, FieldGameState *unused_state, FieldGameState *unused_view, s32 unused_offset)
 {
     s32 i;
-    u32 bits;
-    u16 x;
+    u32 deltas;
+    u16 stat;
     u32 low;
-    u8 *table;
 
-    i = 0;
-    table = D_800F18CC;
-    bits = *(u32 *)(table + ((*(u32 *)(arg0 + 0x64) >> 8) & 0xFC));
-    do
+    deltas = D_800F18CC[character->equipment[0].info.bits.item_type];
+    for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
     {
-        x = *(u16 *)(arg0 + 0x30 + i * 2);
-        low = (x & 0x1FF) + (bits & 0xF);
+        stat = character->stats[i];
+        low = (stat & 0x1FF) + (deltas & 0xF);
         low &= 0x1FF;
-        x = (x & 0xFE00) | low;
-        *(u16 *)(arg0 + 0x30 + i * 2) = x;
-        if ((u32)(x & 0x1FF) >= 0x18D)
+        stat = (stat & 0xFE00) | low;
+        character->stats[i] = stat;
+        if ((stat & 0x1FF) > FIELD_STAT_MAX)
         {
-            *(u16 *)(arg0 + 0x30 + i * 2) = (x & 0xFE00) | 0x18C;
+            character->stats[i] = (stat & 0xFE00) | FIELD_STAT_MAX;
         }
-        bits >>= 4;
-        i++;
-    } while (i < 8);
-    *(u16 *)(arg0 + 0x24) = func_800C19D0(*(u16 *)(arg0 + 0x24), ((u32)(*(u16 *)(arg0 + 0x38) & 0x1FF)) >> 2, 3);
+        deltas >>= 4;
+    }
+    character->hp = func_800C19D0(character->hp, (u32)(character->stats[4] & 0x1FF) >> 2, 3);
 }
 
 /**
- * @brief Apply saved-slot growth deltas and persist the resulting record values.
- * @param arg0 Record whose growth and derived fields are updated.
- * @param unused_base Unused caller context pointer.
- * @param unused_current Unused caller record pointer.
- * @param unused_offset Unused caller record offset.
+ * @brief Level-up growth of the companion party member, written back to its stored record.
+ * @param arg0 Party member record (characters[2]) as bytes.
+ * @param unused_state Unused (the game state).
+ * @param unused_view Unused (the shifted state view of the member).
+ * @param unused_offset Unused (the member's byte offset in the character array).
+ * @note Same algorithm as func_800C1230, applied to the party record and its
+ *       stored record regions[region_index]. Kept in its byte-offset form: a
+ *       typed version (FieldCharacterRecord and regions[] access, growth
+ *       views) reached 98.83% at best; the remaining register choice needs the
+ *       shared work_value walker and the net-zero pairs below.
  */
-void func_800C1658(u8 *arg0, u8 *unused_base, u8 *unused_current, s32 unused_offset)
+void func_800C1658(u8 *arg0, FieldGameState *unused_state, FieldGameState *unused_view, s32 unused_offset)
 {
     s32 value_offset;
     s32 extra_mask;
@@ -511,7 +487,7 @@ void func_800C1658(u8 *arg0, u8 *unused_base, u8 *unused_current, s32 unused_off
     u8 *saved_value_cursor;
     u32 work_value;
 
-    slot = GROW_U32(D_80122B74, 0x2EF0);
+    slot = GROW_U32(FIELD_STATE_BYTES, 0x2EF0);
     if (slot >= 5U)
     {
         record_game_diagnostic(0x8001, 0x79, slot, 0);
@@ -520,7 +496,7 @@ void func_800C1658(u8 *arg0, u8 *unused_base, u8 *unused_current, s32 unused_off
     do
     {
         packed_value = GROW_U16(arg0 + index * 2, 0x30);
-        low_value = ((u8) GROW_U8((D_80122B74 + (index - -(s32)(GROW_U32(D_80122B74, 0x2EF0) * 0x60))), 0x2F40) >> 4) + (packed_value & 0x1FF);
+        low_value = ((u8) GROW_U8((FIELD_STATE_BYTES + (index - -(s32)(GROW_U32(FIELD_STATE_BYTES, 0x2EF0) * 0x60))), 0x2F40) >> 4) + (packed_value & 0x1FF);
         low_value &= 0x1FF;
         packed_value &= 0xFE00;
         packed_value |= low_value;
@@ -529,24 +505,24 @@ void func_800C1658(u8 *arg0, u8 *unused_base, u8 *unused_current, s32 unused_off
         {
             GROW_U16(arg0 + index * 2, 0x30) = (u16) ((packed_value & 0xFE00) | 0x18C);
         }
-        stat_growth_record = D_80122B74 + (index + (GROW_U32(D_80122B74, 0x2EF0) * 0x60));
+        stat_growth_record = FIELD_STATE_BYTES + (index + (GROW_U32(FIELD_STATE_BYTES, 0x2EF0) * 0x60));
         stat_growth_byte = GROW_U8(stat_growth_record, 0x2F40);
         index += 1;
         stat_growth_nibble = stat_growth_byte & 0xF;
         GROW_U8(stat_growth_record, 0x2F40) = (s8) (stat_growth_nibble | (stat_growth_nibble * 0x10));
     } while (index < 8);
-    carried_value = GROW_U16(arg0, 0x26) + (GROW_U8((u8 *)((s32)D_80122B74 - -(s32)(GROW_U32(D_80122B74, 0x2EF0) * 0x60)), 0x2F4C) >> 7);
+    carried_value = GROW_U16(arg0, 0x26) + (GROW_U8((u8 *)((s32)FIELD_STATE_BYTES - -(s32)(GROW_U32(FIELD_STATE_BYTES, 0x2EF0) * 0x60)), 0x2F4C) >> 7);
     GROW_U16(arg0, 0x26) = carried_value;
     index = 0;
-    GROW_U16((u8 *)((s32)D_80122B74 - -(s32)(GROW_U32(D_80122B74, 0x2EF0) * 0x60)), 0x2F12) = carried_value;
+    GROW_U16((u8 *)((s32)FIELD_STATE_BYTES - -(s32)(GROW_U32(FIELD_STATE_BYTES, 0x2EF0) * 0x60)), 0x2F12) = carried_value;
     GROW_U16(arg0, 0x74) = (u16) GROW_U16(arg0, 0x26);
-    slot_record = D_80122B74 + (GROW_U32(D_80122B74, 0x2EF0) * 0x60);
+    slot_record = FIELD_STATE_BYTES + (GROW_U32(FIELD_STATE_BYTES, 0x2EF0) * 0x60);
     extra_mask = -0xF1 + (((s32)slot_record) & ~((s32)slot_record));
     work_value = (u32) extra_mask | 0x70;
     work_value &= GROW_U32(slot_record, 0x2F4C);
     GROW_U32(slot_record, 0x2F4C) = work_value;
     work_value = (u32) arg0;
-    active_record = D_80122B74 + (GROW_U32(D_80122B74, 0x2EF0) * 0x60);
+    active_record = FIELD_STATE_BYTES + (GROW_U32(FIELD_STATE_BYTES, 0x2EF0) * 0x60);
     extra_word = GROW_U32(active_record, 0x2F4C);
     GROW_U32(active_record, 0x2F4C) = (u32) ((extra_word & extra_mask) | (((((extra_word >> 4) & 0xF) + (GROW_U8(active_record, 0x2F4C) & 0xF)) & 0xF) * 0x10));
     do
@@ -555,16 +531,16 @@ void func_800C1658(u8 *arg0, u8 *unused_base, u8 *unused_current, s32 unused_off
         work_value--;
         index++;
         index--;
-        saved_value = GROW_U16((u8 *)work_value, 0x28) + ((u8) GROW_U8((D_80122B74 + (index - -(s32)(GROW_U32(D_80122B74, 0x2EF0) * 0x60))), 0x2F48) >> 7);
+        saved_value = GROW_U16((u8 *)work_value, 0x28) + ((u8) GROW_U8((FIELD_STATE_BYTES + (index - -(s32)(GROW_U32(FIELD_STATE_BYTES, 0x2EF0) * 0x60))), 0x2F48) >> 7);
         GROW_U16((u8 *)work_value, 0x28) = saved_value;
         value_offset = index * 2;
-        GROW_U16((D_80122B74 + (value_offset - -(s32)(GROW_U32(D_80122B74, 0x2EF0) * 0x60))), 0x2F14) = saved_value;
+        GROW_U16((FIELD_STATE_BYTES + (value_offset - -(s32)(GROW_U32(FIELD_STATE_BYTES, 0x2EF0) * 0x60))), 0x2F14) = saved_value;
         saved_value_cursor = arg0;
         saved_value_cursor += value_offset;
         GROW_U16(saved_value_cursor, 0xB4) = (u16) GROW_U16((u8 *)work_value, 0x28);
-        growth_flags_record = D_80122B74 + (index + (GROW_U32(D_80122B74, 0x2EF0) * 0x60));
+        growth_flags_record = FIELD_STATE_BYTES + (index + (GROW_U32(FIELD_STATE_BYTES, 0x2EF0) * 0x60));
         GROW_U8(growth_flags_record, 0x2F48) = (u8) (GROW_U8(growth_flags_record, 0x2F48) & 0x7F);
-        value_growth_record = D_80122B74 + (index + (GROW_U32(D_80122B74, 0x2EF0) * 0x60));
+        value_growth_record = FIELD_STATE_BYTES + (index + (GROW_U32(FIELD_STATE_BYTES, 0x2EF0) * 0x60));
         value_growth_byte = GROW_U8(value_growth_record, 0x2F48);
         index += 1;
         growth_sum = value_growth_byte >> 4;
@@ -576,11 +552,11 @@ void func_800C1658(u8 *arg0, u8 *unused_base, u8 *unused_current, s32 unused_off
         work_value += 2;
     } while (index < 4);
     post_result = func_800C19D0(GROW_U16(arg0, 0x24), (u32) (GROW_U16(arg0, 0x38) & 0x1FF) >> 2, 3);
-    post_base = D_80122B74;
+    post_base = FIELD_STATE_BYTES;
     GROW_U16(arg0, 0x24) = post_result;
     post_base += GROW_U32(post_base, 0x2EF0) * 0x60;
     GROW_U8(post_base, 0x2F0C) = (u8) GROW_U8(arg0, 0x20);
-    state_record = D_80122B74;
+    state_record = FIELD_STATE_BYTES;
     GROW_U16((u8 *)((s32)state_record - -(s32)(GROW_U32(state_record, 0x2EF0) * 0x60)), 0x2F10) = (u16) GROW_U16(arg0, 0x24);
     state_record = (u8 *)((s32)state_record - -(s32)(GROW_U32(state_record, 0x2EF0) * 0x60));
     GROW_U32(state_record, 0x2F38) = (s32) (GROW_U32(state_record, 0x2F38) & 0xF8FFFFFF);
@@ -588,26 +564,33 @@ void func_800C1658(u8 *arg0, u8 *unused_base, u8 *unused_current, s32 unused_off
     work_value = 0xFF;
     do
     {
-        clear_offset = index + (GROW_U32(D_80122B74, 0x2EF0) * 0x60);
+        clear_offset = index + (GROW_U32(FIELD_STATE_BYTES, 0x2EF0) * 0x60);
         index += 1;
-        GROW_U8((D_80122B74 + clear_offset), 0x2F38) = (u8)work_value;
+        GROW_U8((FIELD_STATE_BYTES + clear_offset), 0x2F38) = (u8)work_value;
     } while (index < 3);
 }
 
-
-s32 func_800C19D0(s32 arg0, s32 arg1, s32 arg2)
+/**
+ * @brief Add a stat-derived increase to a value, with optional damping and cap.
+ * @param value Starting value.
+ * @param increase Amount to add.
+ * @param flags Bit 0: increases of 6 or more add 5 plus half of the excess;
+ *        bit 1: cap the result at 999.
+ * @return The increased value.
+ */
+s32 func_800C19D0(s32 value, s32 increase, s32 flags)
 {
     s32 result;
 
-    if ((u32) arg1 >= 6 && (arg2 & 1))
+    if ((u32) increase >= 6 && (flags & 1))
     {
-        result = arg0 + ((u32) (arg1 - 5) >> 1) + 5;
+        result = value + ((u32) (increase - 5) >> 1) + 5;
     }
     else
     {
-        result = arg0 + arg1;
+        result = value + increase;
     }
-    if ((arg2 & 2) && (u32) result >= 0x3E8)
+    if ((flags & 2) && (u32) result >= 0x3E8)
     {
         result = 0x3E7;
     }

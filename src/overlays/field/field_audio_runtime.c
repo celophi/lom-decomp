@@ -98,7 +98,7 @@ void func_80022ED8(void *p, s32 index, s32 one);
 
 /* Forward references to callees defined later in this TU. */
 void func_800A39A8(s32 sfx_index, s32 pan, s32 unused, s32 channel_group);
-void *func_800A4348(s32 arg0, void *arg1);
+void *func_800A4348(s32 request, void *size);
 
 /**
  * @brief Restore the shared effect bank when entering FIELD from a state that did not preserve it.
@@ -126,14 +126,14 @@ void field_restore_entry_music(void)
 
 /**
  * @brief Load an AKAO instrument bank from a fixed CD resource and register it.
- * @param arg0 Base resource index; the read uses arg0 + 0x8E.
+ * @param resource_base Base resource index; the read uses resource_base + 0x8E.
  * @return The bank handle returned by akao_register_bank.
  */
-s32 func_800A35F4(s32 arg0)
+s32 func_800A35F4(s32 resource_base)
 {
     akao_cmd_f1();
     D_8011F304 = (AkaoHeader *) 0x8013C000;
-    cdrom_queue_read((arg0 + 0x8E) & 0xFFFF, (void *) 0x8013C000);
+    cdrom_queue_read((resource_base + 0x8E) & 0xFFFF, (void *) 0x8013C000);
     cdrom_wait_queue_empty();
     return akao_register_bank(D_8011F304);
 }
@@ -282,15 +282,15 @@ void func_800A380C(void)
 
 /**
  * @brief Start a staged AKAO sequence selected by table index.
- * @param arg0 Index into the D_8003ECA4 byte-offset table.
+ * @param song_index Index into the D_8003ECA4 byte-offset table.
  * @see decomp.me (100%) TODO
  */
-void func_800A3858(s32 arg0)
+void func_800A3858(s32 song_index)
 {
     s32 play_result;
     s32 dummy;
 
-    play_result = akao_cmd_14((u8*)&D_8003ECA4 - 4 + D_8003ECA4[arg0], dummy, 0);
+    play_result = akao_cmd_14((u8*)&D_8003ECA4 - 4 + D_8003ECA4[song_index], dummy, 0);
     D_8011F310 = play_result;
     if (play_result == -1)
     {
@@ -321,11 +321,11 @@ void func_800A38D4(void)
 
 /**
  * @brief Issue AKAO command 0xC1 for the stop modifier at the given index.
- * @param arg0 Index into the D_8011F310 stop-modifier pair.
+ * @param slot Index into the D_8011F310 stop-modifier pair.
  */
-void func_800A3904(s32 arg0)
+void func_800A3904(s32 slot)
 {
-    akao_cmd_c1((&D_8011F310)[arg0]);
+    akao_cmd_c1((&D_8011F310)[slot]);
 }
 
 /**
@@ -340,12 +340,12 @@ void func_800A3938(s32 sound_id, s32 pan)
 
 /**
  * @brief Play a FIELD sound effect with the pan value doubled.
- * @param arg0 Sound id forwarded to akao_play_sfx's arg0.
- * @param arg1 Pan value; passed as arg1 * 2 to akao_play_sfx's arg2.
+ * @param sound_id Sound id forwarded to akao_play_sfx's arg0.
+ * @param pan Pan value; passed as pan * 2 to akao_play_sfx's arg2.
  */
-void func_800A3960(s32 arg0, s32 arg1)
+void func_800A3960(s32 sound_id, s32 pan)
 {
-    akao_play_sfx(arg0, 0, arg1 * 2, 0x7F);
+    akao_play_sfx(sound_id, 0, pan * 2, 0x7F);
 }
 
 /**
@@ -406,10 +406,10 @@ void func_800A39A8(s32 sfx_index, s32 pan, s32 arg2, s32 channel_group)
  * @brief Play a sound effect in the first available channel of a channel group.
  * @param sfx_index Sound-effect table index.
  * @param pan Pan value passed to the sound-effect player.
- * @param arg2 Sound-effect table selector.
+ * @param table_index Sound-effect table selector.
  * @param channel_group Three-channel group selector.
  */
-void func_800A3A90(s32 sfx_index, s32 pan, s32 arg2, s32 channel_group)
+void func_800A3A90(s32 sfx_index, s32 pan, s32 table_index, s32 channel_group)
 {
     extern s32 D_8011BF00;
     s32 *table;
@@ -419,16 +419,16 @@ void func_800A3A90(s32 sfx_index, s32 pan, s32 arg2, s32 channel_group)
     s32 buf;
     u8 *p;
 
-    if (arg2 < 2)
+    if (table_index < 2)
     {
         p = (u8 *)&D_8011BF00;
-        table = (s32 *)(p + arg2 * 0x1A00);
+        table = (s32 *)(p + table_index * 0x1A00);
         if (table[0] != 0)
         {
             if ((u32)sfx_index < (u32)table[0])
             {
                 i = 0;
-                base = arg2 * 3;
+                base = table_index * 3;
                 buf = (s32)table + table[sfx_index + 1];
                 for (; i < 3; i++)
                 {
@@ -566,10 +566,10 @@ void func_800A3BE8(s32 bank_id)
 
 /**
  * @brief Load a single sound-bank table and hand it to the streaming uploader.
- * @param arg0 Destination table slot (0 or 1); selects a 0x1A00-byte region.
- * @param arg1 Resource index; -2 preserves state and -1 clears only the header.
+ * @param slot Destination table slot (0 or 1); selects a 0x1A00-byte region.
+ * @param bank_id Resource index; -2 preserves state and -1 clears only the header.
  */
-void func_800A3D44(s32 arg0, s32 arg1)
+void func_800A3D44(s32 slot, s32 bank_id)
 {
     extern u8 D_8011BF00[];
     u8 *dst;
@@ -578,16 +578,16 @@ void func_800A3D44(s32 arg0, s32 arg1)
     u8 *end;
     u8 *dst_cursor;
 
-    if (arg1 != -2)
+    if (bank_id != -2)
     {
         base = D_8011BF00;
-        dst = base + arg0 * 0x1A00;
+        dst = base + slot * 0x1A00;
         *(s32 *)dst = 0;
-        if (arg1 != -1)
+        if (bank_id != -1)
         {
-            arg1 += 0x83;
+            bank_id += 0x83;
             src = D_8010D038;
-            cdrom_queue_read(arg1 & 0xFFFF, src);
+            cdrom_queue_read(bank_id & 0xFFFF, src);
             cdrom_wait_queue_empty();
             end = src + *(s32 *)(src + (*(s32 *)src * 4));
             dst_cursor = dst;
@@ -598,7 +598,7 @@ void func_800A3D44(s32 arg0, s32 arg1)
                     *dst_cursor++ = *src++;
                 } while (src != end);
             }
-            func_80022ED8(end, arg0, 1);
+            func_80022ED8(end, slot, 1);
         }
     }
 }
@@ -606,29 +606,28 @@ void func_800A3D44(s32 arg0, s32 arg1)
 /**
  * @brief Finds an available SFX slot in the selected three-bit group.
  *
- * @param arg0 Buffer address forwarded to akao_play_sfx_from_buffer.
- * @param arg1 Pan value forwarded to akao_play_sfx_from_buffer.
- * @param arg2 Channel-group selector; group base is arg2 * 3.
+ * @param buffer Buffer address forwarded to akao_play_sfx_from_buffer.
+ * @param pan Pan value forwarded to akao_play_sfx_from_buffer.
+ * @param channel_group Channel-group selector; group base is channel_group * 3.
  *
- * @note 100% match. The function intentionally has no explicit return: the
- *       original codegen preserves the last status/call result in v0.
+ * @return Undefined; the original declares an int return and never sets it.
  */
-s32 func_800A3E10(s32 arg0, s32 arg1, s32 arg2)
+s32 func_800A3E10(s32 buffer, s32 pan, s32 channel_group)
 {
     s32 base;
     s32 i;
     s32 mask;
 
-    if (arg2 * 3 < 0x18)
+    if (channel_group * 3 < 0x18)
     {
         i = 0;
-        base = arg2 * 3;
+        base = channel_group * 3;
         for (; i < 3; i++)
         {
             mask = 1 << (base + i);
             if (!akao_is_sfx_playing(mask))
             {
-                akao_play_sfx_from_buffer(arg0, mask, arg1, 0x7F);
+                akao_play_sfx_from_buffer(buffer, mask, pan, 0x7F);
                 break;
             }
         }
@@ -661,14 +660,14 @@ void func_800A3EBC(void)
  * @brief Kick off a guarded CD streaming read when the channel is idle.
  *
  * When the busy flag @c D_80117EE4 is clear, resets the streaming state block
- * and issues a queued CD read for resource index @p arg0 + 0x17, latching the
+ * and issues a queued CD read for resource index @p resource_base + 0x17, latching the
  * completion callback func_800A4348 and its queue handle in @c D_80117EF0.
  *
- * @param arg0 Base resource index; the read uses arg0 + 0x17.
+ * @param resource_base Base resource index; the read uses resource_base + 0x17.
  *
  * @see decomp.me (100%) TODO
  */
-void func_800A3F18(s32 arg0)
+void func_800A3F18(s32 resource_base)
 {
     extern s32 D_80117EEC;
     extern s32 D_8011F308;
@@ -686,16 +685,27 @@ void func_800A3F18(s32 arg0)
         D_80117EE8 = 0;
         D_8011F320 = 0;
         D_8011F300 = 0;
-        D_80117EE4 = arg0 + 0x17;
+        D_80117EE4 = resource_base + 0x17;
         D_80117EF0 = cdrom_queue_read_with_callback((u16)D_80117EE4, &func_800A4348);
     }
 }
 
+/** @brief Header at the start of the first streamed music sector. */
+typedef struct
+{
+    s32 unk0;
+    /** @brief Offset of the song data in the sector; the CD DMA buffer is re-read on every access. */
+    volatile s32 data_offset;
+    /** @brief End offset of the song data. */
+    s32 data_end;
+} FieldMusicStreamHeader;
+
+/** @brief The music stream header in the current CD sector buffer (D_80117EEC). */
+#define FIELD_MUSIC_STREAM_HEADER ((FieldMusicStreamHeader *)D_80117EEC)
+
 /**
  * @brief Advance the field music block copy, upload and playback state machine.
  * @note The resident song is assembled at D_8003ECA0; bank data uses 0x801DD000.
- * @note Volatile header reads preserve the original repeated offset loads.
- * @note GCC 2.7.2 CDK matches all 220 instructions (880 bytes).
  */
 void func_800A3FB0(void)
 {
@@ -746,7 +756,8 @@ void func_800A3FB0(void)
                         D_8011F300 = 1;
                     }
                 }
-                goto release_block;
+                D_80117EE0 = 0;
+                break;
             }
             if (D_8011F300 != 0)
             {
@@ -783,17 +794,16 @@ void func_800A3FB0(void)
             D_8011F300 = 0;
             return;
         case 2:
-            data_offset = *(volatile s32 *)(D_80117EEC + 4);
-            D_80119EF8 = *(s32 *)(D_80117EEC + 8) - *(volatile s32 *)(D_80117EEC + 4);
+            data_offset = FIELD_MUSIC_STREAM_HEADER->data_offset;
+            D_80119EF8 = FIELD_MUSIC_STREAM_HEADER->data_end - FIELD_MUSIC_STREAM_HEADER->data_offset;
             bcopy(D_80117EEC + data_offset, D_8003ECA0, 0x800 - data_offset);
             D_80117EE0 = 0;
-            D_80117EE8 = 0x800 - *(volatile s32 *)(D_80117EEC + 4);
-            D_80119EF8 -= 0x800 - *(volatile s32 *)(D_80117EEC + 4);
+            D_80117EE8 = 0x800 - FIELD_MUSIC_STREAM_HEADER->data_offset;
+            D_80119EF8 -= 0x800 - FIELD_MUSIC_STREAM_HEADER->data_offset;
             return;
         case 3:
             if (akao_get_xfer_state() == 0)
             {
-            release_block:
                 D_80117EE0 = 0;
             }
             break;
@@ -840,37 +850,37 @@ void func_800A4320(u8 *dst, u8 *src, s32 count)
 }
 
 /**
- * @brief Claim the fixed buffer at 0x801DC000 (or 0x801DC800 when bit 11 of arg0 is set) if it is free.
+ * @brief Claim the fixed buffer at 0x801DC000 (or 0x801DC800 when bit 11 of request is set) if it is free.
  *
- * Records arg0 and arg1 in D_8011F328 and D_8011F324, sets D_8011F308 to 2
- * when arg0 is 0 and to 1 otherwise, and marks the buffer busy via D_80117EE0.
+ * Records request and size in D_8011F328 and D_8011F324, sets D_8011F308 to 2
+ * when request is 0 and to 1 otherwise, and marks the buffer busy via D_80117EE0.
  *
- * @param arg0 Request word; bit 11 selects the upper buffer half.
- * @param arg1 Stored to D_8011F324.
+ * @param request Request word; bit 11 selects the upper buffer half.
+ * @param size Stored to D_8011F324.
  * @return The claimed buffer, or NULL when it is already busy.
  * @see decomp.me (100%)
  */
-void *func_800A4348(s32 arg0, void *arg1)
+void *func_800A4348(s32 request, void *size)
 {
     extern void *D_80117EEC;
     extern s32 D_8011F308;
     extern void *D_8011F324;
-    void *new_var;
+    void *shared;
     void *ptr;
 
     if (D_80117EE0 == 0)
     {
-        if (arg0 & 0x800)
+        if (request & 0x800)
         {
-            new_var = (void *)0x801DC800;
-            ptr = new_var;
+            shared = (void *)0x801DC800;
+            ptr = shared;
         }
         else
         {
             ptr = (void *)0x801DC000;
         }
         D_80117EEC = ptr;
-        if (arg0 == 0)
+        if (request == 0)
         {
             D_8011F308 = 2;
         }
@@ -878,9 +888,10 @@ void *func_800A4348(s32 arg0, void *arg1)
         {
             D_8011F308 = 1;
         }
-        D_8011F328 = arg0;
-        new_var = arg1;
-        D_8011F324 = new_var;
+        D_8011F328 = request;
+        /* One temporary for both the upper buffer and size keeps the original register choice. */
+        shared = size;
+        D_8011F324 = shared;
         D_80117EE0 = 1;
         return ptr;
     }
