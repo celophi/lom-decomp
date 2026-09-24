@@ -63,7 +63,6 @@ void func_800832F0(MATRIX *dst, MATRIX *src)
  * @param actor Actor that owns the parts and their frame counters.
  * @param parts Part definitions of @p actor.
  * @param part_count Number of entries in @p parts.
- * @see decomp.me (100%) local match - no scratch link created.
  */
 void func_8008332C(FieldActorState *actor, FieldActorPartDef *parts, s32 part_count)
 {
@@ -269,7 +268,6 @@ s32 func_8008343C(s32 mesh_index, s32 direction, FieldActorState *actor, s32 shi
  * @param frame Frame counter; the frame shown is @p frame modulo the part count.
  * @param actor Actor that owns the mesh; its owner slot selects the VRAM page.
  * @note Every frame is uploaded into the rectangle of the first texture part.
- * @see decomp.me (100%) local match - no scratch link created.
  */
 void func_80083868(s32 mesh_index, s32 frame, FieldActorState *actor)
 {

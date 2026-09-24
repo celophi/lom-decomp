@@ -15,7 +15,6 @@
  * @brief Select the animation and resource bank from the current rotation.
  * @param advance Nonzero to advance the rotation by 32 units.
  * @return Actor animation state.
- * @see decomp.me (100%)
  */
 WmapAnimation *func_80099754(s32 advance)
 {
@@ -1119,7 +1118,6 @@ extern void func_8009AA6C__for_func_8009AA2C(void) __asm__("func_8009AA6C");
 
 /**
  * @brief World-map step: build a sprite, decrement a shared budget, expire the timer.
- * @see decomp.me (100%)
  */
 void func_8009AA6C(void)
 {
@@ -1341,7 +1339,6 @@ extern void func_8009AE08__for_func_8009ADC8(void) __asm__("func_8009AE08");
 
 /**
  * @brief World-map step: build a sprite, decrement a shared budget, expire the timer.
- * @see decomp.me (100%)
  */
 void func_8009AE08(void)
 {

@@ -29,7 +29,6 @@ void func_800BD4A8(s32 owner_id, FieldScriptVariableRef var_ref, s32 value);
  * field_script_op_00 to step the cursor.
  *
  * @param delta_offset Byte offset from the program counter holding the delta.
- * @see decomp.me (100%) TODO
  */
 void field_script_branch(s32 delta_offset)
 {
@@ -115,7 +114,6 @@ u8* field_script_read_operand(u32 operand_type, u8* data, s32* value)
  * @param data Byte stream to read a little-endian 16-bit value from.
  * @param value Destination for the unpacked 16-bit value.
  * @return @p data advanced past the two bytes read.
- * @see decomp.me (100%) N/A -- trivial 7-instruction leaf function, no scratch needed.
  */
 u8* field_script_read_u16(u8* data, u16* value)
 {

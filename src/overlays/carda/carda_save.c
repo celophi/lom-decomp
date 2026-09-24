@@ -142,7 +142,6 @@ static inline CardaElement *carda_save_alloc_element(void)
  *       it holds the directory entry count while the card is searched for an existing
  *       save; above it, the dialog currently shown. Dialog states also read the pad,
  *       move to the next state and start card sequences through g_carda_save_step.
- * @see decomp.me (100%)
  */
 s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {

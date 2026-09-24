@@ -100,6 +100,12 @@ typedef struct
     s16 x, y;
 } WmapPoint;
 
+/** @brief Fade-alpha field within a world-map actor configuration. */
+typedef struct
+{
+    s16 alpha;
+} WmapFadeAlpha;
+
 /** @brief Map translation and projection scale. */
 typedef struct
 {
@@ -117,7 +123,7 @@ extern CVECTOR D_8011D50C;
 extern WmapColor D_80129548;
 extern s32 D_801398B0;
 extern u8 D_8013B24C;
-extern u8 D_80054934;
+extern s32 D_80054934[];
 extern s32 D_800DCEEC;
 extern s32 D_800DCEF0;
 extern s32 D_800DCF04;
@@ -149,7 +155,7 @@ extern s32 D_801B0FD0;
 extern u32 rand(void);
 extern u8 D_8011D538[];
 extern u8 D_80139988[];
-extern WmapPoint D_80054944[];
+extern WmapPoint D_80054944[][3];
 extern SVECTOR D_80139278;
 extern VECTOR D_80182DC0;
 extern s32 D_8013B20C;
@@ -341,26 +347,16 @@ static s32 func_80065620(s32 initialize)
  */
 s32 func_8006579C(s32 initialize)
 {
-    s32* temp_a0;
-    s32 temp_a1;
-    s32 temp_a1_2;
-    s32 temp_v0;
-    s32 temp_v0_2;
-    s32 temp_v0_3;
-    s32 temp_v0_4;
-    s32 temp_v0_5;
-    s32 temp_v1;
-    s32 temp_v1_2;
-    s32 temp_v1_3;
-    s32 var_a0;
-    s32 var_a0_2;
-    s32 var_a2;
-    s32 var_a3;
-    s32 var_a3_2;
-    s32 var_t1;
-    s32 var_t3;
-    s32 var_v0;
-    void* temp_a1_3;
+    s32 left_sound_position;
+    s32 right_sound_position;
+    s32 previous_row;
+    s32 previous_slot;
+    s32 next_y;
+    s32 next_x;
+    s32 y_step;
+    s32 x_step;
+    s32 column;
+    s32 row;
 
     if (D_8013986C == -1)
     {
@@ -371,13 +367,13 @@ s32 func_8006579C(s32 initialize)
     {
         if (g_wmap_buttons_repeat & 0x8000)
         {
-            temp_a1 = ((D_800DCEEC - 2) * 0x18) + 0x80;
+            left_sound_position = ((D_800DCEEC - 2) * 0x18) + 0x80;
             D_800DCEEC -= 1;
-            func_800652A8(3, temp_a1);
+            func_800652A8(3, left_sound_position);
             if (D_800DCEEC < 0)
             {
                 D_800DCEEC = 0;
-                if (M2C_FIELD(&D_80139950, s32*, 0) > 0)
+                if (D_80139950.x > 0)
                 {
                     D_80182D68 = -0x30;
                     if (D_8011CF7C != 0)
@@ -389,14 +385,13 @@ s32 func_8006579C(s32 initialize)
         }
         if (g_wmap_buttons_repeat & 0x2000)
         {
-            temp_a1_2 = (D_800DCEEC * 0x18) + 0x80;
+            right_sound_position = (D_800DCEEC * 0x18) + 0x80;
             D_800DCEEC += 1;
-            func_800652A8(3, temp_a1_2);
-            temp_v1 = *((D_8013986C * 4) + (u8*)&D_80054934);
-            if (temp_v1 < D_800DCEEC)
+            func_800652A8(3, right_sound_position);
+            if (D_800DCEEC > D_80054934[D_8013986C])
             {
-                D_800DCEEC = temp_v1;
-                if (M2C_FIELD(&D_80139950, s32*, 0) < 0x90)
+                D_800DCEEC = D_80054934[D_8013986C];
+                if (D_80139950.x < 0x90)
                 {
                     D_80182D68 = 0x30;
                     if (D_8011CF7C != 0)
@@ -409,9 +404,9 @@ s32 func_8006579C(s32 initialize)
         if (g_wmap_buttons_repeat & 0x1000)
         {
             func_800652A8(3, ((D_800DCEEC - 1) * 0x18) + 0x80);
-            temp_v0 = D_800DCEF0 - 1;
-            D_800DCEF0 = temp_v0;
-            if (temp_v0 < 0)
+            previous_row = D_800DCEF0 - 1;
+            D_800DCEF0 = previous_row;
+            if (previous_row < 0)
             {
                 D_800DCEF0 = 0;
                 if (D_80139954 > 0)
@@ -427,12 +422,10 @@ s32 func_8006579C(s32 initialize)
         if (g_wmap_buttons_repeat & 0x4000)
         {
             func_800652A8(3, ((D_800DCEEC - 1) * 0x18) + 0x80);
-            temp_v1_2 = *((D_8013986C * 4) + (u8*)&D_80054934);
-            temp_v0_2 = D_800DCEF0 + 1;
-            D_800DCEF0 = temp_v0_2;
-            if (temp_v1_2 < temp_v0_2)
+            D_800DCEF0 += 1;
+            if (D_800DCEF0 > D_80054934[D_8013986C])
             {
-                D_800DCEF0 = temp_v1_2;
+                D_800DCEF0 = D_80054934[D_8013986C];
                 if (D_80139954 < 0x90)
                 {
                     D_80182D78 = 0x30;
@@ -448,9 +441,9 @@ s32 func_8006579C(s32 initialize)
     {
         if (g_wmap_buttons_repeat & 0x8000)
         {
-            temp_v0_3 = D_800DCF04 - 1;
-            D_800DCF04 = temp_v0_3;
-            if (temp_v0_3 < 0)
+            previous_slot = D_800DCF04 - 1;
+            D_800DCF04 = previous_slot;
+            if (previous_slot < 0)
             {
                 D_800DCF04 = 8;
             }
@@ -481,7 +474,7 @@ s32 func_8006579C(s32 initialize)
             }
             if (D_80182D78 != 0)
             {
-                var_a0 = -4;
+                y_step = -4;
                 if (D_8011CF7C != 0)
                 {
                     g_wmap_input_locked = 1;
@@ -489,23 +482,23 @@ s32 func_8006579C(s32 initialize)
                     g_wmap_buttons_repeat = 0;
                     if (D_80182D78 > 0)
                     {
-                        var_a0 = 4;
+                        y_step = 4;
                     }
-                    D_80182D78 -= var_a0;
-                    temp_v0_4 = M2C_FIELD(&D_80139950, s32*, 4) + var_a0;
-                    M2C_FIELD(&D_80139950, s32*, 4) = temp_v0_4;
+                    D_80182D78 -= y_step;
+                    next_y = D_80139950.y + y_step;
+                    D_80139950.y = next_y;
                     if (D_801398D0 == 1)
                     {
-                        if (temp_v0_4 < 0)
+                        if (next_y < 0)
                         {
-                            M2C_FIELD(&D_80139950, s32*, 4) = 0;
+                            D_80139950.y = 0;
                             D_80182D78 = 0;
                             g_wmap_buttons_repeat = 0;
                             D_801398D0 = 0;
                         }
-                        if (M2C_FIELD(&D_80139950, s32*, 4) >= 0x91)
+                        if (D_80139950.y >= 0x91)
                         {
-                            M2C_FIELD(&D_80139950, s32*, 4) = 0x90;
+                            D_80139950.y = 0x90;
                             D_80182D78 = 0;
                             D_801398D0 = 0;
                             g_wmap_buttons_repeat &= ~0x5000;
@@ -515,7 +508,7 @@ s32 func_8006579C(s32 initialize)
             }
             if (D_80182D68 != 0)
             {
-                var_a0_2 = -4;
+                x_step = -4;
                 if (D_8011CF7C != 0)
                 {
                     g_wmap_input_locked = 1;
@@ -523,23 +516,23 @@ s32 func_8006579C(s32 initialize)
                     g_wmap_buttons_repeat = 0;
                     if (D_80182D68 > 0)
                     {
-                        var_a0_2 = 4;
+                        x_step = 4;
                     }
-                    D_80182D68 -= var_a0_2;
-                    temp_v0_5 = M2C_FIELD(&D_80139950, s32*, 0) + var_a0_2;
-                    M2C_FIELD(&D_80139950, s32*, 0) = temp_v0_5;
+                    D_80182D68 -= x_step;
+                    next_x = D_80139950.x + x_step;
+                    D_80139950.x = next_x;
                     if (D_801398D0 == 1)
                     {
-                        if (temp_v0_5 < 0)
+                        if (next_x < 0)
                         {
-                            M2C_FIELD(&D_80139950, s32*, 0) = 0;
+                            D_80139950.x = 0;
                             D_80182D68 = 0;
                             g_wmap_buttons_repeat = 0;
                             D_801398D0 = 0;
                         }
-                        if (M2C_FIELD(&D_80139950, s32*, 0) >= 0x91)
+                        if (D_80139950.x >= 0x91)
                         {
-                            M2C_FIELD(&D_80139950, s32*, 0) = 0x90;
+                            D_80139950.x = 0x90;
                             D_80182D68 = 0;
                             D_801398D0 = 0;
                             g_wmap_buttons_repeat &= 0xFFFF5FFF;
@@ -551,47 +544,24 @@ s32 func_8006579C(s32 initialize)
     }
     func_800660BC();
     func_80065E20();
-    var_t3 = 1;
-    var_t1 = 0x1A;
-    do
+    for (row = 1; row < 25; row++)
     {
-        var_a3 = 1;
-        var_v0 = var_t1 + 1;
-    loop_60:
-        temp_v1_3 = var_v0 * 0x28;
-        temp_a1_3 = temp_v1_3 + ((u8*)g_wmap_current_frame);
-        var_a3 += 1;
-        M2C_FIELD(temp_a1_3, s32*, 0x340) = (s32)((M2C_FIELD(temp_a1_3, s32*, 0x340) & 0xFF000000) | (M2C_FIELD(((u8*)g_wmap_current_frame), s32*, 0x32C) & 0xFFFFFF));
-        M2C_FIELD(((u8*)g_wmap_current_frame), s32*, 0x32C) =
-            (s32)((M2C_FIELD(((u8*)g_wmap_current_frame), s32*, 0x32C) & 0xFF000000) | ((s32)(((u8*)g_wmap_current_frame) + (temp_v1_3 + 0x340)) & 0xFFFFFF));
-        var_v0 = var_t1 + var_a3;
-        if (var_a3 < 0x19)
+        for (column = 1; column < 25; column++)
         {
-            goto loop_60;
+            addPrim(&g_wmap_current_frame->ordering_table[175], &g_wmap_current_frame->tiles.flat[row * 26 + column]);
         }
-        var_t3 += 1;
-        var_t1 += 0x1A;
-    } while (var_t3 < 0x19);
-    var_a3_2 = 0;
-    var_a2 = 0x6CE0;
-    do
+    }
+    for (column = 0; column < 184; column++)
     {
-        temp_a0 = ((u8*)g_wmap_current_frame) + var_a2;
-        var_a3_2 += 1;
-        *temp_a0 = (*temp_a0 & 0xFF000000) | (M2C_FIELD(((u8*)g_wmap_current_frame), s32*, 0x32C) & 0xFFFFFF);
-        M2C_FIELD(((u8*)g_wmap_current_frame), s32*, 0x32C) = (s32)((M2C_FIELD(((u8*)g_wmap_current_frame), s32*, 0x32C) & 0xFF000000) | ((s32)temp_a0 & 0xFFFFFF));
-        var_a2 += 0x18;
-    } while (var_a3_2 < 0xB8);
-    M2C_FIELD(((u8*)g_wmap_current_frame), s32*, 0x7E20) =
-        (s32)((M2C_FIELD(((u8*)g_wmap_current_frame), s32*, 0x7E20) & 0xFF000000) | (M2C_FIELD(((u8*)g_wmap_current_frame), s32*, 0x32C) & 0xFFFFFF));
-    M2C_FIELD(((u8*)g_wmap_current_frame), s32*, 0x32C) =
-        (s32)((M2C_FIELD(((u8*)g_wmap_current_frame), s32*, 0x32C) & 0xFF000000) | ((s32)(((u8*)g_wmap_current_frame) + 0x7E20) & 0xFFFFFF));
+        POLY_F4* fade = &g_wmap_current_frame->fade[column];
+        addPrim(&g_wmap_current_frame->ordering_table[175], fade);
+    }
+    addPrim(&g_wmap_current_frame->ordering_table[175], g_wmap_current_frame->tail);
     return 1;
 }
 
 /**
  * @brief Project grid vertices into the four adjacent textured quads.
- * @see decomp.me (100%)
  */
 void func_80065E20(void)
 {
@@ -636,7 +606,6 @@ void func_80065E20(void)
 
 /**
  * @brief Copy map edge coordinates into the fade polygons with a vertical offset.
- * @see decomp.me (100%)
  */
 void func_80065F54(void)
 {
@@ -685,323 +654,192 @@ void func_80065F54(void)
 /** @brief Update texture coordinates across the map grid. */
 void func_800660BC(void)
 {
-    s32 temp_v0;
-    s32 temp_v0_10;
-    s32 temp_v0_2;
-    s32 temp_v0_5;
-    s32 temp_v0_7;
-    s32 var_a0;
-    s32 var_a0_2;
-    s32 var_a1;
-    s32 var_a1_2;
-    s32 var_a2;
-    s32 var_a2_2;
-    s32 var_a2_3;
-    s32 var_a3;
-    s32 var_a3_2;
-    s32 var_a3_3;
-    s32 var_t0;
-    s32 var_t0_2;
-    s32 var_t0_3;
-    s32 var_t1;
-    s32 var_t1_2;
-    s32 var_t2;
-    s32 var_t3;
-    s32 var_t3_2;
-    s32 var_t5;
-    s32 var_t6;
-    s8 temp_v0_11;
-    s8 temp_v0_3;
-    s8 temp_v0_4;
-    s8 temp_v0_6;
-    s8 temp_v0_8;
-    s8 temp_v0_9;
-    s8 temp_v1;
-    s32 temp_v1_2;
-    s32 temp_v1_3;
-    s8 temp_v1_4;
-    s32 temp_v1_5;
-    s32 temp_v1_6;
-    u16 temp_a0_5;
-    void* temp_a0;
-    void* temp_a0_2;
-    void* temp_a0_3;
-    void* temp_a0_4;
-    void* temp_a1;
-    void* temp_a1_2;
-    void* temp_a1_3;
-    void* temp_a1_4;
-    void* temp_a1_5;
+    s32 row, column;
+    s32 wrapped;
+    s32 coordinate, edge;
+    POLY_FT4 *tile, *next;
 
-    var_t3 = 0;
-    var_t0 = 0;
-    var_t1 = 0;
-    var_t5 = 0x340;
-    do
+    wrapped = 0;
+    for (row = 0; row < 25; row++)
     {
-        var_a1 = M2C_FIELD(&D_80139950, s32*, 8);
-        temp_a0 = ((s32)g_wmap_current_frame) + var_t5;
-        if (var_a1 < 0)
+        next = &g_wmap_current_frame->tiles.flat[row * 26];
+        next->u0 = next->u2 = D_80139950.x + D_80139950.scale / 4096;
+        for (column = 0; column < 25; column++)
         {
-            var_a1 += 0xFFF;
-        }
-        var_a3 = 0;
-        temp_v1 = M2C_FIELD(&D_80139950, u8*, 0) + (var_a1 >> 0xC);
-        M2C_FIELD(temp_a0, s8*, 0x1C) = temp_v1;
-        M2C_FIELD(temp_a0, s8*, 0xC) = temp_v1;
-    loop_4:
-        temp_v0 = (var_t1 + var_a3) * 0x28;
-        temp_a1 = ((s32)g_wmap_current_frame) + (temp_v0 + 0x340);
-        var_a2 = var_a3 * M2C_FIELD(&D_80139950, s32*, 8);
-        temp_a0_2 = ((s32)g_wmap_current_frame) + (temp_v0 + 0x368);
-        if (var_a2 < 0)
-        {
-            var_a2 += 0xFFF;
-        }
-        temp_v0_2 = (var_a2 >> 0xC) + (s32)M2C_FIELD(&D_80139950, u8*, 0);
-        temp_v1_2 = temp_v0_2 + 0x30;
-        if (var_t3 != 0)
-        {
-            var_t3 = 0;
-            temp_v0_3 = temp_v0_2 + 0x10;
-            M2C_FIELD(temp_a1, s8*, 0x24) = temp_v0_3;
-            M2C_FIELD(temp_a1, s8*, 0x14) = temp_v0_3;
-            M2C_FIELD(temp_a1, s16*, 0x26) = 0x280;
-        }
-        else
-        {
-            if (temp_v1_2 < 0x100)
+            tile = &g_wmap_current_frame->tiles.flat[row * 26 + column];
+            next = &g_wmap_current_frame->tiles.flat[row * 26 + column + 1];
+            coordinate = column * D_80139950.scale / 4096 + D_80139950.x;
+            edge = coordinate + 48;
+            if (wrapped != 0)
             {
-                M2C_FIELD(temp_a1, s16*, 0x26) = 0x240;
+                wrapped = 0;
+                tile->u1 = tile->u3 = coordinate + 16;
+                tile->pad2 = 0x280;
             }
             else
             {
-                M2C_FIELD(temp_a1, s16*, 0x26) = 0x280;
+                if (edge < 256)
+                {
+                    tile->pad2 = 0x240;
+                }
+                else
+                {
+                    tile->pad2 = 0x280;
+                }
+                tile->u1 = tile->u3 = edge;
             }
-            M2C_FIELD(temp_a1, s8*, 0x24) = temp_v1_2;
-            M2C_FIELD(temp_a1, s8*, 0x14) = temp_v1_2;
-        }
-        if (temp_v1_2 < 0xF0)
-        {
-            M2C_FIELD(temp_a0_2, s16*, 0x26) = 0x240;
-            goto block_15;
-        }
-        M2C_FIELD(temp_a0_2, s16*, 0x26) = 0x280;
-        if (temp_v1_2 >= 0x100)
-        {
-        block_15:
-            M2C_FIELD(temp_a0_2, s8*, 0x1C) = temp_v1_2;
-            M2C_FIELD(temp_a0_2, s8*, 0xC) = temp_v1_2;
-        }
-        else
-        {
-            var_t3 = 1;
-            temp_v0_4 = temp_v1_2 - 0x20;
-            M2C_FIELD(temp_a0_2, s8*, 0x1C) = temp_v0_4;
-            M2C_FIELD(temp_a0_2, s8*, 0xC) = temp_v0_4;
-        }
-        var_a3 += 1;
-        if (var_a3 < 0x19)
-        {
-            goto loop_4;
-        }
-        var_a0 = var_a3 * M2C_FIELD(&D_80139950, s32*, 8);
-        temp_a1_2 = ((s32)g_wmap_current_frame) + (((var_t1 + var_a3) * 0x28) + 0x340);
-        if (var_a0 < 0)
-        {
-            var_a0 += 0xFFF;
-        }
-        temp_v0_5 = (var_a0 >> 0xC) + (s32)M2C_FIELD(&D_80139950, u8*, 0);
-        temp_v1_3 = temp_v0_5 + 0x30;
-        if (var_t3 != 0)
-        {
-            var_t3 = 0;
-            temp_v0_6 = temp_v0_5 + 0x10;
-            M2C_FIELD(temp_a1_2, s8*, 0x24) = temp_v0_6;
-            M2C_FIELD(temp_a1_2, s8*, 0x14) = temp_v0_6;
-        }
-        else
-        {
-            if (temp_v1_3 < 0x100)
+            if (edge < 240)
             {
-                M2C_FIELD(temp_a1_2, s16*, 0x26) = 0x240;
+                next->pad2 = 0x240;
+                next->u0 = next->u2 = edge;
             }
             else
             {
-                M2C_FIELD(temp_a1_2, s16*, 0x26) = 0x280;
+                next->pad2 = 0x280;
+                if (edge >= 256)
+                {
+                    next->u0 = next->u2 = edge;
+                }
+                else
+                {
+                    wrapped = 1;
+                    next->u0 = next->u2 = edge - 32;
+                }
             }
-            M2C_FIELD(temp_a1_2, s8*, 0x24) = temp_v1_3;
-            M2C_FIELD(temp_a1_2, s8*, 0x14) = temp_v1_3;
         }
-        var_t1 += 0x1A;
-        var_t0 += 1;
-        var_t5 += 0x410;
-    } while (var_t0 < 0x19);
-    var_t3_2 = 0;
-    var_a3_2 = 0;
-    var_t6 = 0x340;
-    do
+        tile = &g_wmap_current_frame->tiles.flat[row * 26 + column];
+        coordinate = column * D_80139950.scale / 4096 + D_80139950.x;
+        edge = coordinate + 48;
+        if (wrapped != 0)
+        {
+            wrapped = 0;
+            tile->u1 = tile->u3 = coordinate + 16;
+        }
+        else
+        {
+            if (edge < 256)
+            {
+                tile->pad2 = 0x240;
+            }
+            else
+            {
+                tile->pad2 = 0x280;
+            }
+            tile->u1 = tile->u3 = edge;
+        }
+    }
+    wrapped = 0;
+    for (column = 0; column < 25; column++)
     {
-        var_a1_2 = M2C_FIELD(&D_80139950, s32*, 8);
-        temp_a0_3 = ((s32)g_wmap_current_frame) + var_t6;
-        if (var_a1_2 < 0)
+        next = &g_wmap_current_frame->tiles.flat[column * 26];
+        next->v0 = next->v1 = D_80139950.y + D_80139950.scale / 4096;
+        for (row = 0; row < 25; row++)
         {
-            var_a1_2 += 0xFFF;
-        }
-        var_t0_2 = 0;
-        var_t2 = 0x1A;
-        var_t1_2 = var_a3_2;
-        temp_v1_4 = M2C_FIELD(&D_80139950, u8*, 4) + (var_a1_2 >> 0xC);
-        M2C_FIELD(temp_a0_3, s8*, 0x15) = temp_v1_4;
-        M2C_FIELD(temp_a0_3, s8*, 0xD) = temp_v1_4;
-    loop_31:
-        temp_a1_3 = ((s32)g_wmap_current_frame) + ((var_t1_2 * 0x28) + 0x340);
-        var_a2_2 = var_t0_2 * M2C_FIELD(&D_80139950, s32*, 8);
-        temp_a0_4 = ((s32)g_wmap_current_frame) + (((var_t2 + var_a3_2) * 0x28) + 0x340);
-        if (var_a2_2 < 0)
-        {
-            var_a2_2 += 0xFFF;
-        }
-        temp_v0_7 = (var_a2_2 >> 0xC) + (s32)M2C_FIELD(&D_80139950, u8*, 4);
-        temp_v1_5 = temp_v0_7 + 0x30;
-        if (var_t3_2 != 0)
-        {
-            var_t3_2 = 0;
-            temp_v0_8 = temp_v0_7 + 0x10;
-            M2C_FIELD(temp_a1_3, s8*, 0x25) = temp_v0_8;
-            M2C_FIELD(temp_a1_3, s8*, 0x1D) = temp_v0_8;
-            M2C_FIELD(temp_a1_3, s16*, 0x1E) = 0x100;
-        }
-        else
-        {
-            if (temp_v1_5 < 0x100)
+            tile = &g_wmap_current_frame->tiles.flat[row * 26 + column];
+            next = &g_wmap_current_frame->tiles.flat[(row + 1) * 26 + column];
+            coordinate = row * D_80139950.scale / 4096 + D_80139950.y;
+            edge = coordinate + 48;
+            if (wrapped != 0)
             {
-                M2C_FIELD(temp_a1_3, s16*, 0x1E) = 0;
+                wrapped = 0;
+                tile->v2 = tile->v3 = coordinate + 16;
+                tile->pad1 = 0x100;
             }
             else
             {
-                M2C_FIELD(temp_a1_3, s16*, 0x1E) = 0x100;
+                if (edge < 256)
+                {
+                    tile->pad1 = 0;
+                }
+                else
+                {
+                    tile->pad1 = 0x100;
+                }
+                tile->v2 = tile->v3 = edge;
             }
-            M2C_FIELD(temp_a1_3, s8*, 0x25) = temp_v1_5;
-            M2C_FIELD(temp_a1_3, s8*, 0x1D) = temp_v1_5;
-        }
-        if (temp_v1_5 < 0xF0)
-        {
-            M2C_FIELD(temp_a0_4, s16*, 0x1E) = 0x100;
-            goto block_42;
-        }
-        M2C_FIELD(temp_a0_4, s16*, 0x1E) = 0x100;
-        if (temp_v1_5 >= 0x100)
-        {
-        block_42:
-            M2C_FIELD(temp_a0_4, s8*, 0x15) = temp_v1_5;
-            M2C_FIELD(temp_a0_4, s8*, 0xD) = temp_v1_5;
-        }
-        else
-        {
-            var_t3_2 = 1;
-            temp_v0_9 = temp_v1_5 - 0x20;
-            M2C_FIELD(temp_a0_4, s8*, 0x15) = temp_v0_9;
-            M2C_FIELD(temp_a0_4, s8*, 0xD) = temp_v0_9;
-        }
-        var_t2 += 0x1A;
-        var_t0_2 += 1;
-        var_t1_2 += 0x1A;
-        if (var_t0_2 < 0x19)
-        {
-            goto loop_31;
-        }
-        var_a0_2 = var_t0_2 * M2C_FIELD(&D_80139950, s32*, 8);
-        temp_a1_4 = ((s32)g_wmap_current_frame) + ((((var_t0_2 * 0x1A) + var_a3_2) * 0x28) + 0x340);
-        if (var_a0_2 < 0)
-        {
-            var_a0_2 += 0xFFF;
-        }
-        temp_v0_10 = (var_a0_2 >> 0xC) + (s32)M2C_FIELD(&D_80139950, u8*, 4);
-        temp_v1_6 = temp_v0_10 + 0x30;
-        if (var_t3_2 != 0)
-        {
-            var_t3_2 = 0;
-            temp_v0_11 = temp_v0_10 + 0x10;
-            M2C_FIELD(temp_a1_4, s8*, 0x25) = temp_v0_11;
-            M2C_FIELD(temp_a1_4, s8*, 0x1D) = temp_v0_11;
-        }
-        else
-        {
-            if (temp_v1_6 < 0x100)
+            if (edge < 240)
             {
-                M2C_FIELD(temp_a1_4, s16*, 0x1E) = 0;
+                next->pad1 = 0x100;
+                next->v0 = next->v1 = edge;
             }
             else
             {
-                M2C_FIELD(temp_a1_4, s16*, 0x1E) = 0x100;
+                next->pad1 = 0x100;
+                if (edge >= 256)
+                {
+                    next->v0 = next->v1 = edge;
+                }
+                else
+                {
+                    wrapped = 1;
+                    next->v0 = next->v1 = edge - 32;
+                }
             }
-            M2C_FIELD(temp_a1_4, s8*, 0x25) = temp_v1_6;
-            M2C_FIELD(temp_a1_4, s8*, 0x1D) = temp_v1_6;
         }
-        var_a3_2 += 1;
-        var_t6 += 0x410;
-    } while (var_a3_2 < 0x19);
-    var_t0_3 = 1;
-    var_a2_3 = 0x1A;
-    do
+        tile = &g_wmap_current_frame->tiles.flat[row * 26 + column];
+        coordinate = row * D_80139950.scale / 4096 + D_80139950.y;
+        edge = coordinate + 48;
+        if (wrapped != 0)
+        {
+            wrapped = 0;
+            tile->v2 = tile->v3 = coordinate + 16;
+        }
+        else
+        {
+            if (edge < 256)
+            {
+                tile->pad1 = 0;
+            }
+            else
+            {
+                tile->pad1 = 0x100;
+            }
+            tile->v2 = tile->v3 = edge;
+        }
+    }
+    for (row = 1; row < 25; row++)
     {
-        var_a3_3 = 1;
-    loop_56:
-        temp_a1_5 = ((s32)g_wmap_current_frame) + ((var_a2_3 + var_a3_3) * 0x28);
-        var_a3_3 += 1;
-        temp_a0_5 = M2C_FIELD(temp_a1_5, u16*, 0x35E);
-        M2C_FIELD(temp_a1_5, s16*, 0x356) =
-            (s16)(((u32)(temp_a0_5 & 0x100) >> 4) | ((u32)(M2C_FIELD(temp_a1_5, u16*, 0x366) & 0x3FF) >> 6) | ((temp_a0_5 & 0x200) * 4));
-        if (var_a3_3 < 0x19)
+        for (column = 1; column < 25; column++)
         {
-            goto loop_56;
+            g_wmap_current_frame->tiles.flat[row * 26 + column].tpage = ((g_wmap_current_frame->tiles.flat[row * 26 + column].pad1 & 0x100) >> 4)
+                | ((g_wmap_current_frame->tiles.flat[row * 26 + column].pad2 & 0x3FF) >> 6)
+                | ((g_wmap_current_frame->tiles.flat[row * 26 + column].pad1 & 0x200) * 4);
         }
-        var_t0_3 += 1;
-        var_a2_3 += 0x1A;
-    } while (var_t0_3 < 0x19);
+    }
 }
 
-/** @brief Advance the map selection transition and its view state. */
+/**
+ * @brief Advance the map selection transition and its view state.
+ */
 void func_800664B8(void)
 {
-    s32 temp_a2;
-    s32 temp_a2_2;
-    s32 temp_a3;
-    s32 temp_a3_2;
-    s32 temp_a3_3;
-    s32 temp_t1;
-    s32 var_t0;
-    s32 var_t0_2;
-    s32 var_v0;
-    s32 var_v0_2;
-    s32 var_v0_3;
-    s32 var_v0_4;
-    s32 var_v0_5;
+    s32 map_y;
+    s32 zoom_y;
+    s32 delta_y;
+    s32 map_scale;
+    s32 zoomed_scale;
+    s32 state;
+    s32 map_x;
+    s32 zoom_x;
 
-    temp_t1 = D_8013986C;
-    switch (temp_t1) /* irregular */
+    state = D_8013986C;
+    switch (state)
     {
     case 0:
         if ((g_wmap_buttons_repeat & 0x10) && (D_8011CF18 == 0) && (D_8011D4FC == -1))
         {
             D_8013986C = 3;
             func_8005FF88(-1);
-            M2C_FIELD(&D_800DCEC8, s32*, 0) = (s32)M2C_FIELD(&D_80139950, s32*, 0);
-            M2C_FIELD(&D_800DCEC8, s32*, 4) = (s32)M2C_FIELD(&D_80139950, s32*, 4);
-            M2C_FIELD(&D_800DCEC8, s32*, 8) = (s32)M2C_FIELD(&D_80139950, s32*, 8);
-            M2C_FIELD(&D_800DCEC8, s32*, 0xC) = (s32)M2C_FIELD(&D_80139950, s32*, 0xC);
-            M2C_FIELD(&D_801AFBB8, s32*, 0) = (s32)(M2C_FIELD(&D_80139950, s32*, 0) << 8);
-            M2C_FIELD(&D_801AFBB8, s32*, 4) = (s32)(M2C_FIELD(&D_80139950, s32*, 4) << 8);
-            M2C_FIELD(&D_801AFBB8, s32*, 8) = (s32)(M2C_FIELD(&D_80139950, s32*, 8) << 8);
-            M2C_FIELD(&D_801AFBA8, s32*, 0) = (s32) - (M2C_FIELD(&D_80139950, s32*, 0) * 0x10);
-            temp_a3 = -(M2C_FIELD(&D_80139950, s32*, 4) * 0x10);
-            M2C_FIELD(&D_801AFBA8, s32*, 4) = temp_a3;
-            M2C_FIELD(&D_801AFBA8, s32*, 8) = (s32)(0xC0000 - (M2C_FIELD(&D_80139950, s32*, 8) * 0x10));
+            *(WmapTransform*)&D_800DCEC8 = D_80139950;
+            ((WmapTransform*)&D_801AFBB8)->x = (s32) (D_80139950.x << 8);
+            ((WmapTransform*)&D_801AFBB8)->y = (s32) (D_80139950.y << 8);
+            ((WmapTransform*)&D_801AFBB8)->scale = (s32) (D_80139950.scale << 8);
+            ((WmapTransform*)&D_801AFBA8)->x = (s32) -(D_80139950.x * 0x10);
+            delta_y = -(D_80139950.y * 0x10);
+            ((WmapTransform*)&D_801AFBA8)->y = delta_y;
+            ((WmapTransform*)&D_801AFBA8)->scale = (s32) (0xC0000 - (D_80139950.scale * 0x10));
             func_800652A8(1, 0x80);
-            var_v0 = 0xA130;
-        block_13:
-            g_wmap_map_button_mask = var_v0;
+            g_wmap_map_button_mask = 0xA130;
             g_wmap_buttons_held = 0;
             g_wmap_buttons_repeat = 0;
             return;
@@ -1013,82 +851,56 @@ void func_800664B8(void)
             D_8013986C = 2;
             D_800D928A = 0x80;
             func_800652A8(2, 0x80);
-            var_v0 = -1;
-            goto block_13;
+            g_wmap_map_button_mask = -1;
+            g_wmap_buttons_held = 0;
+            g_wmap_buttons_repeat = 0;
+            return;
         }
         break;
     case 2:
         g_wmap_buttons_repeat = 0;
-        var_t0 = M2C_FIELD(&D_801AFBB8, s32*, 0) - M2C_FIELD(&D_801AFBA8, s32*, 0);
-        M2C_FIELD(&D_801AFBB8, s32*, 0) = var_t0;
-        temp_a2 = M2C_FIELD(&D_801AFBB8, s32*, 4) - M2C_FIELD(&D_801AFBA8, s32*, 4);
-        temp_a3_2 = M2C_FIELD(&D_801AFBB8, s32*, 8) - M2C_FIELD(&D_801AFBA8, s32*, 8);
-        M2C_FIELD(&D_801AFBB8, s32*, 4) = temp_a2;
-        M2C_FIELD(&D_801AFBB8, s32*, 8) = temp_a3_2;
-        if (var_t0 < 0)
+        map_x = ((WmapTransform*)&D_801AFBB8)->x - ((WmapTransform*)&D_801AFBA8)->x;
+        ((WmapTransform*)&D_801AFBB8)->x = map_x;
+        map_y = ((WmapTransform*)&D_801AFBB8)->y - ((WmapTransform*)&D_801AFBA8)->y;
+        map_scale = ((WmapTransform*)&D_801AFBB8)->scale - ((WmapTransform*)&D_801AFBA8)->scale;
+        ((WmapTransform*)&D_801AFBB8)->y = map_y;
+        ((WmapTransform*)&D_801AFBB8)->scale = map_scale;
+        D_80139950.x = map_x / 256;
+        D_80139950.y = map_y / 256;
+        D_80139950.scale = map_scale / 256;
+        if (map_scale == 0x600000)
         {
-            var_t0 += 0xFF;
-        }
-        M2C_FIELD(&D_80139950, s32*, 0) = (s32)(var_t0 >> 8);
-        var_v0_2 = temp_a2;
-        if (var_v0_2 < 0)
-        {
-            var_v0_2 += 0xFF;
-        }
-        M2C_FIELD(&D_80139950, s32*, 4) = (s32)(var_v0_2 >> 8);
-        var_v0_3 = temp_a3_2;
-        if (temp_a3_2 < 0)
-        {
-            var_v0_3 = temp_a3_2 + 0xFF;
-        }
-        M2C_FIELD(&D_80139950, s32*, 8) = (s32)(var_v0_3 >> 8);
-        if (temp_a3_2 == 0x600000)
-        {
-            M2C_FIELD(&D_80139950, s32*, 0) = (s32)M2C_FIELD(&D_800DCEC8, s32*, 0);
-            M2C_FIELD(&D_80139950, s32*, 4) = (s32)M2C_FIELD(&D_800DCEC8, s32*, 4);
-            M2C_FIELD(&D_80139950, s32*, 8) = (s32)M2C_FIELD(&D_800DCEC8, s32*, 8);
-            M2C_FIELD(&D_80139950, s32*, 0xC) = (s32)M2C_FIELD(&D_800DCEC8, s32*, 0xC);
+            D_80139950 = *(WmapTransform*)&D_800DCEC8;
             D_800DBE78 = 0;
             D_8013986C = 0;
-            D_800DBE70 = temp_t1;
+            D_800DBE70 = state;
             return;
         }
         break;
     case 3:
+    {
+        s32 zoom_scale = 0xC000;
         g_wmap_buttons_repeat = 0;
-        var_t0_2 = M2C_FIELD(&D_801AFBB8, s32*, 0) + M2C_FIELD(&D_801AFBA8, s32*, 0);
-        M2C_FIELD(&D_801AFBB8, s32*, 0) = var_t0_2;
-        temp_a2_2 = M2C_FIELD(&D_801AFBB8, s32*, 4) + M2C_FIELD(&D_801AFBA8, s32*, 4);
-        temp_a3_3 = M2C_FIELD(&D_801AFBB8, s32*, 8) + M2C_FIELD(&D_801AFBA8, s32*, 8);
-        M2C_FIELD(&D_801AFBB8, s32*, 4) = temp_a2_2;
-        M2C_FIELD(&D_801AFBB8, s32*, 8) = temp_a3_3;
-        if (var_t0_2 < 0)
+        zoom_x = ((WmapTransform*)&D_801AFBB8)->x + ((WmapTransform*)&D_801AFBA8)->x;
+        ((WmapTransform*)&D_801AFBB8)->x = zoom_x;
+        zoom_y = ((WmapTransform*)&D_801AFBB8)->y + ((WmapTransform*)&D_801AFBA8)->y;
+        zoomed_scale = ((WmapTransform*)&D_801AFBB8)->scale + ((WmapTransform*)&D_801AFBA8)->scale;
+        ((WmapTransform*)&D_801AFBB8)->y = zoom_y;
+        ((WmapTransform*)&D_801AFBB8)->scale = zoomed_scale;
+        D_80139950.x = zoom_x / 256;
+        D_80139950.y = zoom_y / 256;
+        D_80139950.scale = zoomed_scale / 256;
+        if (zoomed_scale == zoom_scale * 256)
         {
-            var_t0_2 += 0xFF;
-        }
-        M2C_FIELD(&D_80139950, s32*, 0) = (s32)(var_t0_2 >> 8);
-        var_v0_4 = temp_a2_2;
-        if (var_v0_4 < 0)
-        {
-            var_v0_4 += 0xFF;
-        }
-        M2C_FIELD(&D_80139950, s32*, 4) = (s32)(var_v0_4 >> 8);
-        var_v0_5 = temp_a3_3;
-        if (temp_a3_3 < 0)
-        {
-            var_v0_5 = temp_a3_3 + 0xFF;
-        }
-        M2C_FIELD(&D_80139950, s32*, 8) = (s32)(var_v0_5 >> 8);
-        if (temp_a3_3 == 0xC00000)
-        {
-            M2C_FIELD(&D_80139950, s32*, 0) = 0;
-            M2C_FIELD(&D_80139950, s32*, 8) = 0xC000;
+            D_80139950.x = 0;
+            D_80139950.scale = zoom_scale;
             D_800DBE78 = 0;
             D_8013986C = 1;
-            M2C_FIELD(&D_80139950, s32*, 4) = 0;
+            D_80139950.y = 0;
             D_800DBE70 = 1;
         }
         break;
+    }
     }
 }
 
@@ -1147,8 +959,9 @@ s32 func_8006688C(void)
 
     active = 0;
     remaining = D_801B0FD0 * 3;
-    for (i = 0, actor_offset = 264; i < D_801B0FD0 * 70; i++, actor_offset += 44)
+    for (i = 0; i < D_801B0FD0 * 70; i++)
     {
+        actor_offset = (i + 6) * 44;
         motion = &D_801AFBD0[i];
         if (motion->state == 0)
         {
@@ -1166,7 +979,7 @@ s32 func_8006688C(void)
                 motion->z = 0;
                 motion->x = rand() * D_801B0FD0;
                 random_value = rand();
-                motion->scale = ((s32)(random_value * (D_801B0FD0 * 20)) >> 15) + 5;
+                motion->scale = ((s32)(random_value * ((D_801B0FD0 * 5) << 2)) >> 15) + 5;
                 if (--remaining == 0)
                 {
                     break;
@@ -1174,11 +987,12 @@ s32 func_8006688C(void)
             }
         }
     }
-    actor_base = D_800D9370 - 6;
-    for (i = 0, actor_offset = 264; i < 110; i++, actor_offset += 44)
+    for (i = 0; i < 110; i++)
     {
         motion = &D_801AFBD0[i];
         actor = &D_800D9370[i];
+        actor_base = D_800D9370 - 6;
+        actor_offset = i * 44 + 264;
         if (motion->state != 0)
         {
             motion->z += motion->x;
@@ -1224,19 +1038,26 @@ void func_80066B4C(void)
     D_801AFBC8 = 1;
 }
 
-/** @brief Initialize the map effect and project its initial screen position. */
+/**
+ * @brief Initialize the map effect and project its initial screen position.
+ */
 void func_80066BA4(void)
 {
+    s16 screen_y;
     SVECTOR position;
     MATRIX matrix;
-    u32 screen;
+    union
+    {
+        u32 packed;
+        WmapPoint point;
+    } screen;
 
     D_8013B20C = 1;
     func_8006D8F0(1);
     func_8006D870(1);
     D_801398D0 = 2;
-    D_80182D68 = D_80054944[D_800DCEF0 * 3 + D_800DCEEC].x;
-    D_80182D78 = D_80054944[D_800DCEF0 * 3 + D_800DCEEC].y;
+    D_80182D68 = D_80054944[D_800DCEF0][D_800DCEEC].x;
+    D_80182D78 = D_80054944[D_800DCEF0][D_800DCEEC].y;
     RotMatrix(&D_80139278, &matrix);
     TransMatrix(&matrix, &D_80182DC0);
     SetRotMatrix(&matrix);
@@ -1247,11 +1068,12 @@ void func_80066BA4(void)
     gte_ldv0(&position);
     gte_rtps();
     gte_stsxy(&screen);
+    screen_y = screen.point.y;
     D_800DBE70 = 1;
-    D_800D928A = 0;
+    ((WmapFadeAlpha*)&D_800D928A)->alpha = 0;
     D_801B109C = 4;
-    D_80182234 = (s16)screen;
-    D_8018223C = (s16)(screen >> 16);
+    D_80182234 = screen.point.x;
+    D_8018223C = screen_y;
     D_801B1098++;
 }
 

@@ -9,7 +9,6 @@
 /**
  * @brief Initialize and run the CLOAD save/continue menu.
  * @return CLOAD result code set by the menu loop.
- * @see decomp.me (100.00%)
  */
 s32 cload_main(void)
 {
@@ -40,7 +39,6 @@ s32 cload_main(void)
 
 /**
  * @brief Run the double-buffered CLOAD menu loop until it exits.
- * @see decomp.me (100.00%)
  */
 void cload_run_menu_loop(void)
 {
@@ -103,7 +101,6 @@ void cload_run_menu_loop(void)
 
 /**
  * @brief Initialize the CLOAD display and draw buffers.
- * @see decomp.me (100.00%)
  */
 void cload_init_display(void)
 {
@@ -140,7 +137,6 @@ void cload_init_display(void)
  * @brief Advance one CLOAD menu frame and report whether it should exit.
  * @param frame Render buffer being built this frame.
  * @return 1 when the overlay should exit, otherwise 0.
- * @see decomp.me (100.00%)
  */
 s32 cload_update_frame(CloadRenderBuffer *frame)
 {
@@ -162,7 +158,6 @@ s32 cload_update_frame(CloadRenderBuffer *frame)
 
 /**
  * @brief Allocate and lay out the five fixed windows of the load screen.
- * @see decomp.me (100.00%)
  */
 void cload_build_ui_elements(void)
 {
@@ -238,7 +233,6 @@ void cload_build_ui_elements(void)
 /**
  * @brief Update input, loading state, scrolling, and UI elements for one frame.
  * @param frame Render buffer being built this frame.
- * @see decomp.me (100.00%)
  */
 void cload_update_menu(CloadRenderBuffer *frame)
 {
@@ -270,7 +264,6 @@ void cload_update_menu(CloadRenderBuffer *frame)
 
 /**
  * @brief Advance the active load sequence and react to its phase result.
- * @see decomp.me (100.00%)
  */
 void cload_update_load_sequence(void)
 {
@@ -308,7 +301,6 @@ void cload_update_load_sequence(void)
  * @note The up/down navigation reads g_pad_input directly inside the count
  *       loop, so the selected-row arithmetic materializes in the target's
  *       registers.
- * @see decomp.me (100.00%)
  */
 s32 cload_handle_input(void)
 {
@@ -449,7 +441,6 @@ s32 cload_handle_input(void)
 
 /**
  * @brief Put every live UI element into its closing state.
- * @see decomp.me (100.00%)
  */
 void cload_close_all_elements(void)
 {
@@ -470,7 +461,6 @@ void cload_close_all_elements(void)
 
 /**
  * @brief Move the list scroll target to keep the selected row visible.
- * @see decomp.me (100.00%)
  */
 void cload_scroll_to_selection(void)
 {
@@ -494,7 +484,6 @@ void cload_scroll_to_selection(void)
 /**
  * @brief Run the UI element update/draw pass.
  * @param frame Render buffer being built this frame.
- * @see decomp.me (100.00%)
  */
 void cload_update_elements(CloadRenderBuffer *frame)
 {
@@ -514,7 +503,6 @@ void cload_update_elements(CloadRenderBuffer *frame)
  *       block, the rank-marker glyph offsets are materialized through a `u16
  *       misc_glyph` intermediate, and entry comparisons use strncmp - the
  *       shapes the target's register assignment requires.
- * @see decomp.me (100.00%)
  */
 void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
 {
@@ -653,7 +641,6 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
  *        'a'-'f', 'A'-'F').
  * @param text Pointer to the first character to test.
  * @return Pointer to the first character that is not a hex digit.
- * @see decomp.me (100%)
  */
 u8 *cload_skip_hex_digits(u8 *text)
 {
@@ -671,7 +658,6 @@ u8 *cload_skip_hex_digits(u8 *text)
  * @param x_offset Horizontal transition offset.
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
- * @see decomp.me (100.00%)
  */
 void *cload_draw_header_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
 {
@@ -687,7 +673,6 @@ void *cload_draw_header_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset
  * @param x_offset Horizontal transition offset.
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
- * @see decomp.me (100.00%)
  */
 void *cload_draw_card_slot0_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
 {
@@ -711,7 +696,6 @@ void *cload_draw_card_slot0_label(u_long *ot, void *prim, s32 x_offset, s32 y_of
  * @param x_offset Horizontal transition offset.
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
- * @see decomp.me (100.00%)
  */
 void *cload_draw_card_slot1_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
 {
@@ -742,7 +726,6 @@ void *cload_draw_card_slot1_label(u_long *ot, void *prim, s32 x_offset, s32 y_of
  *       count (i) and the raw slot index (j) as two separate locals, and the
  *       fallback-text branch wraps its two copy loops in the target's nested
  *       do/while(0) cross-jump shells.
- * @see decomp.me (100.00%)
  */
 void *cload_draw_selected_entry_details(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
 {
@@ -924,7 +907,6 @@ void *cload_draw_selected_entry_details(u_long *ot, void *prim, s32 x_offset, s3
 /**
  * @brief Zero-fill a 64-byte text buffer after its encoded terminator.
  * @param text Encoded text buffer.
- * @see decomp.me (100.00%)
  */
 void cload_terminate_multibyte_text(void *text)
 {
@@ -964,7 +946,6 @@ void cload_terminate_multibyte_text(void *text)
 
 /**
  * @brief Mark all eight UI elements as inactive.
- * @see decomp.me (100.00%)
  */
 void cload_clear_elements(void)
 {
@@ -982,7 +963,6 @@ void cload_clear_elements(void)
 /**
  * @brief Activate and return the first free UI element.
  * @return First free element, or the pool head if all slots are busy.
- * @see decomp.me (100.00%)
  */
 CloadElement *cload_alloc_element(void)
 {
@@ -1011,7 +991,6 @@ CloadElement *cload_alloc_element(void)
  * holds, a closing window shrinks, and a closed window counts down to free.
  *
  * @param frame Render buffer being built; prim_cursor is read on entry and written back on exit.
- * @see decomp.me (100.00%)
  */
 void cload_update_and_draw_elements(CloadRenderBuffer *frame)
 {
@@ -1145,7 +1124,6 @@ void cload_update_and_draw_elements(CloadRenderBuffer *frame)
  * @brief Append one encoded CLOAD string to another.
  * @param dest Destination text buffer.
  * @param src Source text buffer.
- * @see decomp.me (100.00%)
  */
 void cload_text_append(u8 *dest, u8 *src)
 {
@@ -1166,7 +1144,6 @@ void cload_text_append(u8 *dest, u8 *src)
  * @brief Measure an encoded CLOAD string in bytes.
  * @param text Encoded text buffer.
  * @return Encoded byte length excluding the terminator.
- * @see decomp.me (100.00%)
  */
 s32 cload_text_byte_length(u8 *text)
 {
@@ -1198,7 +1175,6 @@ s32 cload_text_byte_length(u8 *text)
  * @brief Copy one encoded CLOAD string including its terminator.
  * @param dest Destination text buffer.
  * @param src Source text buffer.
- * @see decomp.me (100.00%)
  */
 void cload_text_copy(u8 *dest, u8 *src)
 {

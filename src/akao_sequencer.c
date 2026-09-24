@@ -1917,7 +1917,6 @@ void akao_seq_op_set_articulation(AkaoChannelState* channel)
 /**
  * @brief Select a key-to-articulation map from the current sequence bank.
  * @param channel Channel state whose bytecode cursor is advanced by one byte.
- * @see decomp.me (100%)
  */
 void akao_seq_op_select_articulation_map(AkaoChannelState* channel)
 {
@@ -1948,7 +1947,6 @@ void akao_seq_op_select_articulation_map(AkaoChannelState* channel)
 /**
  * @brief Reloads articulation fields for the channel's current articulation.
  * @param channel Channel state to update.
- * @see decomp.me (100%)
  */
 void akao_seq_op_refresh_envelope(AkaoChannelState* channel)
 {
@@ -1973,7 +1971,6 @@ void akao_seq_op_refresh_envelope(AkaoChannelState* channel)
  * @brief Reads a signed byte from the channel bytecode stream and stores it
  *        as the channel transpose.
  * @param channel Channel state whose bytecode cursor is advanced by one byte.
- * @see decomp.me (100%)
  */
 void akao_seq_op_set_transpose(AkaoChannelState* channel)
 {
@@ -1990,7 +1987,6 @@ void akao_seq_op_set_transpose(AkaoChannelState* channel)
  * @brief Reads a signed byte from the channel bytecode stream and adds it to
  *        the channel transpose.
  * @param channel Channel state whose bytecode cursor is advanced by one byte.
- * @see decomp.me (100%)
  */
 void akao_seq_op_add_transpose(AkaoChannelState* channel)
 {
@@ -2006,7 +2002,6 @@ void akao_seq_op_add_transpose(AkaoChannelState* channel)
 /**
  * @brief Configure a one-shot pitch slide duration and semitone delta.
  * @param channel Channel state whose bytecode cursor is advanced by two bytes.
- * @see decomp.me (100%)
  */
 void akao_seq_op_set_pitch_slide(AkaoChannelState* channel)
 {
@@ -2029,7 +2024,6 @@ void akao_seq_op_set_pitch_slide(AkaoChannelState* channel)
 /**
  * @brief Enable automatic portamento between successive notes.
  * @param channel Channel state whose bytecode cursor is advanced by one byte.
- * @see decomp.me (100%)
  */
 void akao_seq_op_enable_portamento(AkaoChannelState* channel)
 {
@@ -2052,7 +2046,6 @@ void akao_seq_op_enable_portamento(AkaoChannelState* channel)
 /**
  * @brief Disable automatic portamento between notes.
  * @param channel Channel state.
- * @see decomp.me (100%)
  */
 void akao_seq_op_disable_portamento(AkaoChannelState* channel)
 {
@@ -2062,7 +2055,6 @@ void akao_seq_op_disable_portamento(AkaoChannelState* channel)
 /**
  * @brief Set fine pitch detune and recompute its pitch-register delta.
  * @param channel Channel state whose bytecode cursor is advanced by one byte.
- * @see decomp.me (100%)
  */
 void akao_seq_op_set_detune(AkaoChannelState* channel)
 {
@@ -2094,7 +2086,6 @@ void akao_seq_op_set_detune(AkaoChannelState* channel)
 /**
  * @brief Add to fine pitch detune and recompute its pitch-register delta.
  * @param channel Channel state whose bytecode cursor is advanced by one byte.
- * @see decomp.me (100%)
  */
 void akao_seq_op_add_detune(AkaoChannelState* channel)
 {
@@ -2125,7 +2116,6 @@ void akao_seq_op_add_detune(AkaoChannelState* channel)
  * @brief Start the channel pitch LFO, selecting its delay, period, waveform,
  *        and scaled depth.
  * @param channel Channel state whose bytecode cursor is advanced.
- * @see decomp.me (100%)
  */
 void akao_seq_op_start_pitch_lfo(AkaoChannelState* channel)
 {
@@ -2190,7 +2180,6 @@ void akao_seq_op_start_pitch_lfo(AkaoChannelState* channel)
  * @param channel Channel state whose bytecode cursor is advanced by one byte.
  * @note The depth is re-read through a pointer to @c pitch_lfo_depth_scaled;
  *       reading @c pitch_lfo_depth directly changes the register allocation.
- * @see decomp.me (100%)
  */
 void akao_seq_op_set_pitch_lfo_depth(AkaoChannelState* channel)
 {
@@ -2224,7 +2213,6 @@ void akao_seq_op_set_pitch_lfo_depth(AkaoChannelState* channel)
 /**
  * @brief Slide the pitch-LFO depth to a target over a tick count.
  * @param channel Channel state whose bytecode cursor is advanced by two bytes.
- * @see decomp.me (100%)
  */
 void akao_seq_op_slide_pitch_lfo_depth(AkaoChannelState* channel)
 {
@@ -2250,7 +2238,6 @@ void akao_seq_op_slide_pitch_lfo_depth(AkaoChannelState* channel)
  * @brief Stop the pitch LFO: clear its output and enable flag, and flag a
  *        pitch register update.
  * @param channel Channel state.
- * @see decomp.me (100%)
  */
 void akao_seq_op_stop_pitch_lfo(AkaoChannelState* channel)
 {
@@ -2263,7 +2250,6 @@ void akao_seq_op_stop_pitch_lfo(AkaoChannelState* channel)
  * @brief Start the channel volume LFO, selecting its delay, period, waveform,
  *        and depth.
  * @param channel Channel state whose bytecode cursor is advanced by three bytes.
- * @see decomp.me (100%)
  */
 void akao_seq_op_start_volume_lfo(AkaoChannelState* channel)
 {
@@ -2304,7 +2290,6 @@ void akao_seq_op_start_volume_lfo(AkaoChannelState* channel)
 /**
  * @brief Set the active volume-LFO depth.
  * @param channel Channel state whose bytecode cursor is advanced by one byte.
- * @see decomp.me (100%)
  */
 void akao_seq_op_set_volume_lfo_depth(AkaoChannelState* channel)
 {
@@ -2320,7 +2305,6 @@ void akao_seq_op_set_volume_lfo_depth(AkaoChannelState* channel)
 /**
  * @brief Slide the volume-LFO depth to a target over a tick count.
  * @param channel Channel state whose bytecode cursor is advanced by two bytes.
- * @see decomp.me (100%)
  */
 void akao_seq_op_slide_volume_lfo_depth(AkaoChannelState* channel)
 {
@@ -2346,7 +2330,6 @@ void akao_seq_op_slide_volume_lfo_depth(AkaoChannelState* channel)
  * @brief Stop the volume LFO: clear its output and enable flag, and flag a
  *        volume register update.
  * @param channel Channel state.
- * @see decomp.me (100%)
  */
 void akao_seq_op_stop_volume_lfo(AkaoChannelState* channel)
 {
@@ -2358,7 +2341,6 @@ void akao_seq_op_stop_volume_lfo(AkaoChannelState* channel)
 /**
  * @brief Start the channel pan LFO, selecting its period and waveform.
  * @param channel Channel state whose bytecode cursor is advanced by two bytes.
- * @see decomp.me (100%)
  */
 void akao_seq_op_start_pan_lfo(AkaoChannelState* channel)
 {
@@ -2381,7 +2363,6 @@ void akao_seq_op_start_pan_lfo(AkaoChannelState* channel)
 /**
  * @brief Set the active pan-LFO depth.
  * @param channel Channel state whose bytecode cursor is advanced by one byte.
- * @see decomp.me (100%)
  */
 void akao_seq_op_set_pan_lfo_depth(AkaoChannelState* channel)
 {
@@ -2397,7 +2378,6 @@ void akao_seq_op_set_pan_lfo_depth(AkaoChannelState* channel)
 /**
  * @brief Slide the pan-LFO depth to a target over a tick count.
  * @param channel Channel state whose bytecode cursor is advanced by two bytes.
- * @see decomp.me (100%)
  */
 void akao_seq_op_slide_pan_lfo_depth(AkaoChannelState* channel)
 {
@@ -2423,7 +2403,6 @@ void akao_seq_op_slide_pan_lfo_depth(AkaoChannelState* channel)
  * @brief Stop the pan LFO: clear its output and enable flag, and flag a
  *        volume register update.
  * @param channel Channel state.
- * @see decomp.me (100%)
  */
 void akao_seq_op_stop_pan_lfo(AkaoChannelState* channel)
 {
@@ -2440,7 +2419,6 @@ void akao_seq_op_stop_pan_lfo(AkaoChannelState* channel)
  * @param channel_mask Flag bitmask to OR in.
  * @note Residual: the g_akao_seq_channel0 %hi colors to v0 not v1 (one lui
  *       register), a gcc 2.8 coloring tie-break the permuter cannot move.
- * @see decomp.me (99.58%)
  */
 void akao_seq_op_enable_reverb(AkaoChannelState* channel, s32 channel_mask)
 {
@@ -2461,7 +2439,6 @@ void akao_seq_op_enable_reverb(AkaoChannelState* channel, s32 channel_mask)
  *        flags 0x110, and clears the pending reverb toggle countdown.
  * @param channel Channel state; @c is_sfx_channel selects SFX vs sequence routing.
  * @param channel_mask Flag bitmask to clear (applied as @c &= ~channel_mask).
- * @see decomp.me (100%)
  */
 void akao_seq_op_disable_reverb(AkaoChannelState* channel, s32 channel_mask)
 {
@@ -2486,7 +2463,6 @@ void akao_seq_op_disable_reverb(AkaoChannelState* channel, s32 channel_mask)
  * @param channel_mask Flag bitmask to OR in.
  * @note Residual: the g_akao_seq_channel0 %hi colors to v0 not v1 (one lui
  *       register), a gcc 2.8 coloring tie-break shared with akao_seq_op_enable_reverb.
- * @see decomp.me (99.66%)
  */
 void akao_seq_op_enable_pitch_modulation(AkaoChannelState* channel, s32 channel_mask)
 {
@@ -2507,7 +2483,6 @@ void akao_seq_op_enable_pitch_modulation(AkaoChannelState* channel, s32 channel_
  *        clears the pending pitch-modulation toggle countdown.
  * @param channel Channel state; @c is_sfx_channel selects SFX vs sequence routing.
  * @param channel_mask Flag bitmask to clear (applied as @c &= ~channel_mask).
- * @see decomp.me (100%)
  */
 void akao_seq_op_disable_pitch_modulation(AkaoChannelState* channel, s32 channel_mask)
 {
@@ -2531,7 +2506,6 @@ void akao_seq_op_disable_pitch_modulation(AkaoChannelState* channel, s32 channel
  * @param channel_mask Flag bitmask to OR in.
  * @note Residual: the g_akao_seq_channel0 %hi coloring tie-break shared with
  *       akao_seq_op_enable_reverb.
- * @see decomp.me (99.58%)
  */
 void akao_seq_op_enable_noise(AkaoChannelState* channel, s32 channel_mask)
 {
@@ -2554,7 +2528,6 @@ void akao_seq_op_enable_noise(AkaoChannelState* channel, s32 channel_mask)
  * @param channel_mask Flag bitmask to clear (applied as @c &= ~channel_mask).
  * @note Residual: the seq-channel path register coloring differs (5 rows), a
  *       gcc 2.8 coloring tie-break shared with the reverb handlers.
- * @see decomp.me (98.13%)
  */
 void akao_seq_op_disable_noise(AkaoChannelState* channel, s32 channel_mask)
 {
@@ -2572,7 +2545,6 @@ void akao_seq_op_disable_noise(AkaoChannelState* channel, s32 channel_mask)
 /**
  * @brief Enable tied notes; subsequent notes change pitch without retriggering.
  * @param channel Channel state.
- * @see decomp.me (100%)
  */
 void akao_seq_op_enable_note_tie(AkaoChannelState* channel)
 {
@@ -2581,7 +2553,6 @@ void akao_seq_op_enable_note_tie(AkaoChannelState* channel)
 
 /**
  * @brief No-op handler for primary opcode 0xCD.
- * @see decomp.me (100%)
  */
 void akao_seq_op_nop_cd(void)
 {
@@ -2590,7 +2561,6 @@ void akao_seq_op_nop_cd(void)
 /**
  * @brief Give SFX notes their full duration instead of an early key-off.
  * @param channel Channel state; @c is_sfx_channel selects whether the store happens.
- * @see decomp.me (100%)
  */
 void akao_seq_op_enable_sfx_full_gate(AkaoChannelState* channel)
 {
@@ -2602,7 +2572,6 @@ void akao_seq_op_enable_sfx_full_gate(AkaoChannelState* channel)
 
 /**
  * @brief No-op handler for primary opcode 0xD1.
- * @see decomp.me (100%)
  */
 void akao_seq_op_nop_d1(void)
 {

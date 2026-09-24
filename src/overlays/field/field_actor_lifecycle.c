@@ -22,7 +22,6 @@ extern void akao_cmd_c1(s32 arg0, s32 arg1, s32 arg2);
 
 /**
  * @brief Refresh the actor objects of every non-party actor record.
- * @see decomp.me (100%) TODO
  */
 void func_800B4390(void)
 {

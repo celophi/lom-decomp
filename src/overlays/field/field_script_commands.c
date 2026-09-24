@@ -411,7 +411,6 @@ void func_800BD97C(void)
  * dispatching func_800B286C for each element's id, then clears the 0x60000 bits
  * of the flag word at 0x400 and resets @c D_8010AE78.
  *
- * @see decomp.me (100%) TODO
  */
 void func_800BD99C(void)
 {
@@ -856,7 +855,6 @@ void func_800BE324(s32 arg0, UnkStruct800BE324* arg1)
  *
  * @param arg0 Unused.
  * @param arg1 CameraCommand record.
- * @see decomp.me (100%) TODO
  */
 void func_800BE37C(s32 arg0, SomeStruct* arg1)
 {

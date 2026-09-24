@@ -213,7 +213,6 @@ void addhero_format_hex(s8* out, s32 value, s32 max_chars)
  *        out-of-range values.
  * @param out   Destination byte.
  * @param value Nibble value to convert.
- * @see decomp.me (100%)
  */
 void addhero_hex_nibble_to_ascii(s8* out, s32 value)
 {
@@ -236,7 +235,6 @@ void addhero_hex_nibble_to_ascii(s8* out, s32 value)
  * @param s   Text to parse.
  * @param len Maximum number of hex digits to consume.
  * @return The parsed value; 0 when no hex digits are present.
- * @see decomp.me (100%)
  */
 u32 addhero_parse_hex(u8* s, s32 len)
 {
@@ -282,7 +280,6 @@ u32 addhero_parse_hex(u8* s, s32 len)
  *        digits (the suffix byte) that follow it.
  * @param text Field text to scan.
  * @return The parsed two-digit suffix byte value.
- * @see decomp.me (100%)
  */
 s32 addhero_parse_hex_suffix_byte(u8* text)
 {
@@ -406,7 +403,6 @@ s32 addhero_parse_entry_fields(void)
  * @brief Rank the current card's entries by parsed field value, tag "full"
  *        entries, and pick the highest-valued entry to select.
  * @return Index of the highest-valued entry.
- * @see decomp.me (100%)
  */
 s32 addhero_rank_entries(void)
 {
@@ -476,7 +472,6 @@ s32 addhero_rank_entries(void)
 
 /**
  * @brief Reset the 15 per-entry rank slots to -1 and the rank count to 0x28.
- * @see decomp.me (100%)
  */
 void addhero_reset_entry_ranks(void)
 {
@@ -495,7 +490,6 @@ void addhero_reset_entry_ranks(void)
  * @brief Test whether the active card holds at least one entry matching a known
  *        save-name prefix.
  * @return 1 if a known-type entry exists, 0 otherwise.
- * @see decomp.me (100%)
  */
 s32 addhero_has_known_entry_type(void)
 {
@@ -517,7 +511,6 @@ s32 addhero_has_known_entry_type(void)
  *        has reached the card's capacity.
  * @return 1 when total used blocks are >= 0xE, 0 otherwise.
  * @note Inlined into addhero_scan_next_entry.
- * @see decomp.me (100%)
  */
 inline s32 addhero_entry_blocks_reach_limit(void)
 {
@@ -535,7 +528,6 @@ inline s32 addhero_entry_blocks_reach_limit(void)
 /**
  * @brief Remove both placeholder save filenames from the active card.
  * @note Inlined into addhero_advance_load_sequence.
- * @see decomp.me (100%)
  */
 inline void addhero_erase_placeholder_files(void)
 {
@@ -1029,7 +1021,6 @@ s32 addhero_advance_load_sequence(void)
 /**
  * @brief Rewind the active card and restart the load sequence from its first
  *        step.
- * @see decomp.me (100.00%)
  */
 void addhero_restart_load_sequence(void)
 {
@@ -1043,7 +1034,6 @@ void addhero_restart_load_sequence(void)
  * @brief Poll software card events and request card information again when an
  *        event has arrived.
  * @return The event index (0-3), or -1 when no event has arrived.
- * @see decomp.me (100.00%)
  */
 s32 addhero_poll_and_retry_card_info(void)
 {
@@ -1061,7 +1051,6 @@ s32 addhero_poll_and_retry_card_info(void)
 /**
  * @brief Register and enable software and hardware memory-card events, then
  *        clear the progress and scan flags.
- * @see decomp.me (100.00%)
  */
 void addhero_init_card_events(void)
 {
@@ -1090,7 +1079,6 @@ void addhero_init_card_events(void)
 
 /**
  * @brief Close the software and hardware memory-card events.
- * @see decomp.me (100.00%)
  */
 void addhero_shutdown_card_events(void)
 {
@@ -1112,7 +1100,6 @@ void addhero_shutdown_card_events(void)
  *        card page, priming the scan.
  * @param page Card page index to begin scanning.
  * @return 1 if a first entry was read, 0 if the page is empty.
- * @see decomp.me (100.00%)
  */
 s32 addhero_begin_entry_scan(s32 page)
 {
@@ -1138,7 +1125,6 @@ s32 addhero_begin_entry_scan(s32 page)
  * @brief Advance one step of the add-hero entry load scan for the given page.
  * @param page Page index whose entry block is being scanned.
  * @return 1 if an entry was consumed this step, 0 otherwise.
- * @see decomp.me (100.00%)
  */
 s32 addhero_scan_next_entry(s32 page)
 {
@@ -1204,7 +1190,6 @@ s32 addhero_scan_next_entry(s32 page)
 /**
  * @brief Prepare the currently selected directory entry for loading: set the
  *        selection status, build its file spec, and arm the read step.
- * @see decomp.me (100.00%)
  */
 void addhero_commit_selected_entry(void)
 {
@@ -1239,7 +1224,6 @@ void addhero_commit_selected_entry(void)
 
 /**
  * @brief Consume pending software memory-card events.
- * @see decomp.me (100.00%)
  */
 void addhero_clear_software_card_events(void)
 {
@@ -1251,7 +1235,6 @@ void addhero_clear_software_card_events(void)
 
 /**
  * @brief Consume pending hardware memory-card events.
- * @see decomp.me (100.00%)
  */
 void addhero_clear_hardware_card_events(void)
 {
@@ -1264,7 +1247,6 @@ void addhero_clear_hardware_card_events(void)
 /**
  * @brief Consume the first pending software memory-card event.
  * @return An ADDHERO_CARD_EVENT_* result; NONE when no event is pending.
- * @see decomp.me (100.00%)
  */
 s32 addhero_poll_software_card_events(void)
 {
@@ -1290,7 +1272,6 @@ s32 addhero_poll_software_card_events(void)
 /**
  * @brief Consume the first pending hardware memory-card event.
  * @return An ADDHERO_CARD_EVENT_* result; NONE when no event is pending.
- * @see decomp.me (100.00%)
  */
 s32 addhero_poll_hardware_card_events(void)
 {
@@ -1317,7 +1298,6 @@ s32 addhero_poll_hardware_card_events(void)
  * @brief Reorder the active card's directory entries into a stable grouping:
  *        by suffix value within each known name prefix, then a third prefix,
  *        then any remaining entries, writing the result back in place.
- * @see decomp.me (100%)
  */
 void addhero_sort_entries_by_type(void)
 {

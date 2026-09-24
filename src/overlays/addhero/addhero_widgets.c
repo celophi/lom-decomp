@@ -24,7 +24,6 @@ typedef struct
  * @param x_offset Horizontal offset; screen X = 0x90 - x_offset.
  * @param y_offset Vertical offset applied to the prompt rows.
  * @return The updated primitive pointer after linking the prompt.
- * @see decomp.me (100%)
  */
 void* addhero_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
@@ -93,7 +92,6 @@ void* addhero_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
  * @param x_offset Horizontal offset used to place the prompt (screen X = 0x90 - x_offset).
  * @param y_offset Vertical offset used to place the prompt rows.
  * @return The updated primitive pointer / index after linking the prompt.
- * @see decomp.me (100%)
  */
 void* addhero_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
@@ -154,7 +152,6 @@ void* addhero_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_off
  * @param prim Current primitive pointer/index the POLY_G4 is written to.
  * @param ot   Ordering table the primitive is linked into.
  * @return The advanced primitive pointer, unchanged when the bar is inactive.
- * @see decomp.me (100%)
  */
 void* addhero_draw_progress_bar(POLY_G4* quad, u_long* ot)
 {
@@ -192,7 +189,6 @@ void* addhero_draw_progress_bar(POLY_G4* quad, u_long* ot)
  * @brief Reconfigure the primary element as a modal status dialog and reset the
  *        browser/IO state, storing the dialog message id.
  * @param message_id Dialog message id stored in g_addhero_dialog_state.
- * @see decomp.me (100%)
  */
 void addhero_open_status_dialog(s32 message_id)
 {
@@ -220,7 +216,6 @@ void addhero_open_status_dialog(s32 message_id)
  * @brief Reconfigure the primary element as a modal exit dialog and reset the
  *        browser/IO state, storing the dialog message id.
  * @param message_id Dialog message id stored in g_addhero_dialog_state.
- * @see decomp.me (100%)
  */
 void addhero_open_exit_dialog(s32 message_id)
 {
@@ -251,7 +246,6 @@ void addhero_open_exit_dialog(s32 message_id)
  * @param x_offset Horizontal offset; screen X is derived from it.
  * @param y_offset Vertical offset.
  * @return The updated primitive pointer.
- * @see decomp.me (100%)
  */
 void* addhero_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
@@ -289,7 +283,6 @@ void* addhero_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_off
  * @param x_offset Horizontal offset; screen X is derived from it.
  * @param y_offset Vertical offset.
  * @return The updated primitive pointer.
- * @see decomp.me (100%)
  */
 void* addhero_draw_exit_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
@@ -735,7 +728,6 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
  * @param index VRAM icon slot: index among the present (non-empty) icons.
  * @param row   Index among all three party slots.
  * @return The primitive cursor after the quad, or @p quad when the slot is empty.
- * @see decomp.me (100%)
  */
 void* addhero_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 width, s32 icon, s32 index, s32 row)
 {
@@ -799,7 +791,6 @@ void* addhero_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 
 
 /**
  * @brief Select the second (cancel) option as the default choice.
- * @see decomp.me (100%)
  */
 void addhero_enable_choice_toggle(void)
 {
@@ -814,7 +805,6 @@ void addhero_enable_choice_toggle(void)
  * @param x    Center X the two options are placed around.
  * @param y    Baseline Y for both options.
  * @return The updated primitive pointer.
- * @see decomp.me (100%)
  */
 void* addhero_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y)
 {

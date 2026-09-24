@@ -222,7 +222,6 @@ s32 carda_parse_hex_suffix_byte(u8 *text)
  * by carda_parse_hex_suffix_byte into g_carda_entry_suffix_values. Other entries store -1 / 0 instead.
  *
  * @return Largest suffix byte among the recognized entries (0 if none).
- * @see decomp.me (100%)
  */
 s32 carda_parse_entry_fields(void)
 {
@@ -298,7 +297,6 @@ s32 carda_parse_entry_fields(void)
  * the lowest suffix byte (1-8) that no recognized save uses.
  *
  * @return Index of the entry holding the greatest field value.
- * @see decomp.me (100%)
  */
 s32 carda_rank_entries(void)
 {
@@ -636,7 +634,6 @@ typedef enum CardaSaveResult
  *       save file, or scans the card directory, and updates g_carda_entry_state /
  *       g_carda_selection_status. New saves are written under a dummy filename first and then
  *       renamed. Opcodes with no case are no-ops.
- * @see decomp.me (100%)
  */
 s32 carda_advance_save_sequence(void)
 {
@@ -1504,7 +1501,6 @@ void carda_reset_to_new_save_entry(void)
 
 /**
  * @brief Clear the software card events, request card info and restart the sequence at g_carda_steps_idle.
- * @see decomp.me (100.00%)
  */
 void carda_restart_card_sequence(void)
 {
@@ -1517,7 +1513,6 @@ void carda_restart_card_sequence(void)
 /**
  * @brief Poll the software card events and request fresh card info after one fires.
  * @return Event index (0 done, 1 error, 2 timeout, 3 new card), or -1 if none is pending.
- * @see decomp.me (100.00%)
  */
 s32 carda_poll_and_rewind_primary_handles(void)
 {
@@ -1534,7 +1529,6 @@ s32 carda_poll_and_rewind_primary_handles(void)
 
 /**
  * @brief Open and enable the software and hardware memory-card events.
- * @see decomp.me (100.00%)
  */
 void carda_init_stream_handles(void)
 {
@@ -1564,7 +1558,6 @@ void carda_init_stream_handles(void)
 
 /**
  * @brief Close all software and hardware memory-card events.
- * @see decomp.me (100.00%)
  */
 void carda_shutdown_stream_handles(void)
 {
@@ -1748,7 +1741,6 @@ void carda_commit_selected_entry(void)
 
 /**
  * @brief Consume pending software memory-card events.
- * @see decomp.me (100.00%)
  */
 void carda_release_primary_handles(void)
 {
@@ -1760,7 +1752,6 @@ void carda_release_primary_handles(void)
 
 /**
  * @brief Consume pending hardware memory-card events.
- * @see decomp.me (100.00%)
  */
 void carda_release_secondary_handles(void)
 {
@@ -1773,7 +1764,6 @@ void carda_release_secondary_handles(void)
 /**
  * @brief Consume the first pending software card event in priority order.
  * @return Event index (0 done, 1 error, 2 timeout, 3 new card), or -1 if none is pending.
- * @see decomp.me (100.00%)
  */
 s32 carda_poll_primary_handle_group(void)
 {
@@ -1799,7 +1789,6 @@ s32 carda_poll_primary_handle_group(void)
 /**
  * @brief Consume the first pending hardware card event in priority order.
  * @return Event index (0 done, 1 error, 2 timeout, 3 new card), or -1 if none is pending.
- * @see decomp.me (100.00%)
  */
 s32 carda_poll_secondary_handle_group(void)
 {

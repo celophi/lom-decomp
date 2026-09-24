@@ -339,7 +339,6 @@ void func_800A4838(void)
  * the step counter and phase are reset and the routine returns early; otherwise
  * it decrements @c D_8011F3BC and advances the step counter.
  *
- * @see decomp.me (100%) TODO
  */
 void func_800A496C(void)
 {
@@ -694,7 +693,6 @@ void func_800A5224(RenderContext *context, s32 layout)
 
 /**
  * @brief Upload palettes for the three active runtime slots.
- * @see decomp.me (100%)
  */
 void func_800A54D0(void)
 {

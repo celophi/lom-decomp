@@ -317,7 +317,6 @@ void func_800BEC44(FieldItemRecord* record, s32 command_index)
  * context; pending levels, flags and stat clamping are applied, the item is
  * written back and the category 0/1 derived values are computed.
  *
- * @see decomp.me (100%) TODO
  */
 void func_800BEF74(void)
 {

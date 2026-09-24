@@ -334,8 +334,6 @@ void field_refresh_party_routes(void)
  * @param unused_limit Unused sixth argument retained to agree with the caller.
  * @note Coordinates are fixed point with eight fractional bits; interpolated
  *       normalized directions use twelve fractional bits.
- * @see decomp.me (99.754906%) with the pinned assembler.
- * @see decomp.me (100%) with the experimental maspsx operand fix, now removed.
  * @note The pinned assembler inserts one extra nop; see
  *       docs/decompilation/maspsx-division-register-hazard.md.
  */
@@ -673,7 +671,6 @@ void field_record_actor_position(FieldRouteActor* record)
  *
  * @param actor Follower actor whose position and state are updated.
  * @param follower_index Follower order controlling the permitted path separation.
- * @see decomp.me (100%)
  */
 void field_follow_leader_route(FieldRouteActor* actor, s32 follower_index)
 {
@@ -1272,7 +1269,6 @@ typedef struct
  * @param pad_index Controller bank index.
  * @return The actor's two-bit movement state, or zero when input processing is blocked.
  * @note The collision request occupies scratchpad 0x1F800000; the secondary probe uses 0x1F800040.
- * @see decomp.me (100%)
  */
 s32 field_update_actor_input(FieldBehaviorActor* actor, s32 pad_index)
 {
@@ -2006,7 +2002,6 @@ void field_update_actor_movement_animation(FieldMotionRecord* record, s32 delta_
  *
  * @param arg0 Pointer to the field actor state record (0x54-byte layout).
  * @return Unspecified; callers use the updated actor state.
- * @see decomp.me (100%)
  */
 s32 field_update_actor_command(FieldBehaviorActor* actor)
 {

@@ -58,7 +58,6 @@ void field_rotate_palette_row(u16 *row, s32 count, s32 rotate_right);
  * @brief Advance an actor's palette animation and upload the changed CLUT row to VRAM.
  * @param actor Owning actor state selecting the animation definition and slot.
  * @return Return value is unused by callers.
- * @see decomp.me (100.00%)
  */
 s32 field_update_actor_palette_animation(FieldActorState *actor)
 {

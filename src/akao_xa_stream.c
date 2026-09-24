@@ -193,7 +193,6 @@ void func_8002E72C(void);
  *        (akao_seq_op_ignore_voice_reserve).
  * @param channel Unused; present to match the opcode-handler signature.
  * @param channel_mask Bit of the channel being stepped.
- * @see decomp.me (100%)
  */
 void akao_seq_op_obey_voice_reserve(AkaoChannelState* channel, s32 channel_mask)
 {
@@ -207,7 +206,6 @@ void akao_seq_op_obey_voice_reserve(AkaoChannelState* channel, s32 channel_mask)
  *        256-entry jitter table D_8003D27C by the free-running modulation tick).
  * @param channel Channel whose bytecode cursor is advanced past the depth byte.
  * @note Named by mechanism; the authoring-tool term is unconfirmed.
- * @see decomp.me (100%)
  */
 void akao_seq_op_set_pitch_jitter_depth(AkaoChannelState* channel)
 {
@@ -217,7 +215,6 @@ void akao_seq_op_set_pitch_jitter_depth(AkaoChannelState* channel)
 /**
  * @brief Opcode 0xE2: disable pitch jitter by clearing pitch_scale (0xDA).
  * @param channel Channel whose pitch jitter is disabled.
- * @see decomp.me (100%)
  */
 void akao_seq_op_disable_pitch_jitter(AkaoChannelState* channel)
 {
@@ -229,7 +226,6 @@ void akao_seq_op_disable_pitch_jitter(AkaoChannelState* channel)
  *        end the channel by releasing it. Thin wrapper over akao_release_channels.
  * @param channel Channel to release.
  * @param channel_mask Channel bit-mask to release.
- * @see decomp.me (100%)
  */
 void akao_seq_op_finish_channel(AkaoChannelState* channel, u32 channel_mask)
 {
@@ -242,7 +238,6 @@ void akao_seq_op_finish_channel(AkaoChannelState* channel, u32 channel_mask)
  * Disables the SPU IRQ, keys the pair off, drops it from the noise mask and
  * marks the stream idle.
  *
- * @see decomp.me (100%)
  */
 void func_8002D140(void)
 {
@@ -265,7 +260,6 @@ void func_8002D140(void)
  * retries until stopping frees nothing more.
  *
  * @return First voice of the free pair, or -1 when none could be freed.
- * @see decomp.me (100%)
  */
 s32 func_8002D1C4(void)
 {
@@ -305,7 +299,6 @@ s32 func_8002D1C4(void)
 
 /**
  * @brief SPU transfer callback: upload the second mono block of a RAM buffer.
- * @see decomp.me (100%)
  */
 void func_8002D254(void)
 {
@@ -325,7 +318,6 @@ void func_8002D254(void)
  * @param buffer XA program header; the ADPCM data follows it.
  * @param pan Q8 pan.
  * @param use_noise Non-zero to route the voices through the noise generator.
- * @see decomp.me (100%)
  */
 void func_8002D29C(void* buffer, s32 pan, s32 use_noise)
 {
@@ -435,7 +427,6 @@ void func_8002D29C(void* buffer, s32 pan, s32 use_noise)
  * @param mode 1 = left channel, 2 = right channel, 3 = mono centre, other = panned mono.
  * @param start SPU start address.
  * @param end SPU repeat address.
- * @see decomp.me (100%)
  */
 void func_8002D4D8(s32 voice, s32 mode, u32 start, u32 end)
 {
@@ -489,7 +480,6 @@ void func_8002D4D8(s32 voice, s32 mode, u32 start, u32 end)
  * @param uploaded Bytes consumed by the initial upload.
  * @param irq_addr SPU address whose playback raises the next IRQ.
  * @param next_cb SPU IRQ callback that uploads the next block.
- * @see decomp.me (100%)
  */
 void func_8002D694(s32 uploaded, s32 irq_addr, SpuIRQCallbackProc next_cb)
 {
@@ -517,7 +507,6 @@ void func_8002D694(s32 uploaded, s32 irq_addr, SpuIRQCallbackProc next_cb)
 
 /**
  * @brief SPU transfer callback: start a mono RAM-buffer stream.
- * @see decomp.me (100%)
  */
 void func_8002D764(void)
 {
@@ -528,7 +517,6 @@ void func_8002D764(void)
 
 /**
  * @brief SPU transfer callback: start a stereo RAM-buffer stream.
- * @see decomp.me (100%)
  */
 void func_8002D7C8(void)
 {
@@ -543,7 +531,6 @@ void func_8002D7C8(void)
  * @param end SPU address of the right half.
  * @param size Bytes to upload.
  * @param cb SPU IRQ callback for the following block.
- * @see decomp.me (100%)
  */
 void func_8002D82C(u32 start, u32 end, u32 size, SpuIRQCallbackProc cb)
 {
@@ -589,7 +576,6 @@ void func_8002D82C(u32 start, u32 end, u32 size, SpuIRQCallbackProc cb)
 
 /**
  * @brief SPU IRQ callback: refill mono block A.
- * @see decomp.me (100%)
  */
 void func_8002D978(void)
 {
@@ -598,7 +584,6 @@ void func_8002D978(void)
 
 /**
  * @brief SPU IRQ callback: refill mono block B.
- * @see decomp.me (100%)
  */
 void func_8002D9A8(void)
 {
@@ -607,7 +592,6 @@ void func_8002D9A8(void)
 
 /**
  * @brief SPU IRQ callback: refill stereo block A.
- * @see decomp.me (100%)
  */
 void func_8002D9D8(void)
 {
@@ -616,7 +600,6 @@ void func_8002D9D8(void)
 
 /**
  * @brief SPU IRQ callback: refill stereo block B.
- * @see decomp.me (100%)
  */
 void func_8002DA08(void)
 {
@@ -626,7 +609,6 @@ void func_8002DA08(void)
 /**
  * @brief Command 0xE0: play an XA program from a RAM buffer.
  * @param params Queued command parameters: buffer, Q8 pan, noise flag.
- * @see decomp.me (100%)
  */
 void func_8002DA38(s32* params)
 {
@@ -636,7 +618,6 @@ void func_8002DA38(s32* params)
 
 /**
  * @brief Command 0xE2: stop the streamed voice pair.
- * @see decomp.me (100%)
  */
 void func_8002DA80(void)
 {
@@ -646,7 +627,6 @@ void func_8002DA80(void)
 /**
  * @brief Command 0xE4: set the streamed voice volume immediately.
  * @param params Queued command parameters: Q8 volume.
- * @see decomp.me (100%)
  */
 void func_8002DAA0(s32* params)
 {
@@ -665,7 +645,6 @@ void func_8002DAA0(s32* params)
 /**
  * @brief Command 0xE5: fade the streamed voice volume.
  * @param params Queued command parameters: fade ticks (0 means 1), Q8 target volume.
- * @see decomp.me (100%)
  */
 void func_8002DB10(s32* params)
 {
@@ -685,7 +664,6 @@ void func_8002DB10(s32* params)
 /**
  * @brief Command 0xE6: set the streamed voice pan.
  * @param params Queued command parameters: Q8 pan.
- * @see decomp.me (100%)
  */
 void func_8002DB90(s32* params)
 {
@@ -729,7 +707,6 @@ void func_8002DB90(s32* params)
 
 /**
  * @brief SPU IRQ callback: a one-shot program reached its end; stop at the silence block.
- * @see decomp.me (100%)
  */
 void func_8002DCDC(void)
 {
@@ -739,7 +716,6 @@ void func_8002DCDC(void)
 
 /**
  * @brief SPU transfer callback: finish a one-shot upload and key the voices on.
- * @see decomp.me (100%)
  */
 void func_8002DD08(void)
 {
@@ -770,7 +746,6 @@ void func_8002DD08(void)
  * @param pan Q8 pan.
  * @param spu_addr SPU destination address.
  * @param use_noise Non-zero to route the voices through the noise generator.
- * @see decomp.me (100%)
  */
 void func_8002DDDC(AkaoXaProgramHeader* program, s32 pan, s32 spu_addr, s32 use_noise)
 {
@@ -831,7 +806,6 @@ void func_8002DDDC(AkaoXaProgramHeader* program, s32 pan, s32 spu_addr, s32 use_
  * @brief Play the XA program staged in SPU RAM by akao_upload_xa_program.
  * @param pan Q8 pan; not used.
  * @param use_noise Non-zero to route the voices through the noise generator.
- * @see decomp.me (100%)
  */
 void func_8002DFA4(s32 pan, s32 use_noise)
 {
@@ -901,7 +875,6 @@ void func_8002DFA4(s32 pan, s32 use_noise)
 /**
  * @brief Command 0xEC: upload an XA program to SPU RAM and play it once.
  * @param params Queued command parameters: buffer, Q8 pan, SPU address, noise flag.
- * @see decomp.me (100%)
  */
 void func_8002E204(s32* params)
 {
@@ -912,7 +885,6 @@ void func_8002E204(s32* params)
 /**
  * @brief Command 0xED: play the program staged in SPU RAM.
  * @param params Queued command parameters: Q8 pan, noise flag.
- * @see decomp.me (100%)
  */
 void func_8002E250(s32* params)
 {
@@ -924,7 +896,6 @@ void func_8002E250(s32* params)
  * @brief Advance a ring block index, wrapping at the ring length.
  * @param block_index Block index to advance.
  * @return The new block index.
- * @see decomp.me (100%)
  */
 s32 func_8002E294(u32* block_index)
 {
@@ -939,7 +910,6 @@ s32 func_8002E294(u32* block_index)
 
 /**
  * @brief Start playing a CD ring stream from its first block.
- * @see decomp.me (100%)
  */
 void func_8002E2E8(void)
 {
@@ -995,7 +965,6 @@ void func_8002E2E8(void)
  * @param uploaded Bytes to advance the ring cursor by.
  * @param irq_addr SPU address whose playback raises the next IRQ.
  * @param next_cb SPU IRQ callback that uploads the next block.
- * @see decomp.me (100%)
  */
 void func_8002E478(s32 uploaded, s32 irq_addr, SpuIRQCallbackProc next_cb)
 {
@@ -1021,7 +990,6 @@ void func_8002E478(s32 uploaded, s32 irq_addr, SpuIRQCallbackProc next_cb)
 
 /**
  * @brief SPU transfer callback: start a CD ring stream.
- * @see decomp.me (100%)
  */
 void func_8002E540(void)
 {
@@ -1036,7 +1004,6 @@ void func_8002E540(void)
  * @param end SPU address of the right half.
  * @param block_size Ring block size in bytes.
  * @param cb SPU IRQ callback for the following block.
- * @see decomp.me (100%)
  */
 void func_8002E5A4(s32 start, s32 end, s32 block_size, SpuIRQCallbackProc cb)
 {
@@ -1081,7 +1048,6 @@ void func_8002E5A4(s32 start, s32 end, s32 block_size, SpuIRQCallbackProc cb)
 
 /**
  * @brief SPU IRQ callback: refill ring block A.
- * @see decomp.me (100%)
  */
 void func_8002E6FC(void)
 {
@@ -1090,7 +1056,6 @@ void func_8002E6FC(void)
 
 /**
  * @brief SPU IRQ callback: refill ring block B.
- * @see decomp.me (100%)
  */
 void func_8002E72C(void)
 {
@@ -1100,7 +1065,6 @@ void func_8002E72C(void)
 /**
  * @brief Command 0xE8: prepare a CD ring stream.
  * @param params Queued command parameters: first ring block, ring size.
- * @see decomp.me (100%)
  */
 void func_8002E75C(s32* params)
 {

@@ -61,7 +61,6 @@ extern void func_800B2110__for_func_800B1744(void) __asm__("func_800B2110");
 
 /**
  * @brief World-map step handler: seed a 100-entry table, init an actor, advance.
- * @see decomp.me (97.92%)
  * @note One extra address calculation remains for the second setting store.
  *       Indexed table starts and the explicit state snapshot preserve the other rows.
  */

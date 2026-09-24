@@ -299,7 +299,6 @@ static void field_prepare_transition_tiles(void);
 /**
  * @brief Queue a seek to the scene selected by the low fifteen selector bits.
  * @param scene_selector Scene resource selector, optionally carrying the high-bit mode flag.
- * @see decomp.me (100.00%)
  */
 void field_seek_scene_resource(s32 scene_selector)
 {
@@ -338,7 +337,6 @@ void field_set_scene_parameters(s32 scene_id, s32 object_id, u32 spawn_id, s32 m
  * @brief Complete a pending scene change and initialize its runtime resources.
  * @note Coordinates disc reads, audio transitions, resource installation, map state, and actor placement.
  * @note The scene-file header at 0x80190000 stores byte offsets relative to that buffer.
- * @see decomp.me (100%)
  */
 void field_update_scene(void)
 {
@@ -1234,7 +1232,6 @@ void field_move_actor_position(void* actor, void* motion)
 
 /**
  * @brief Assign per-slot palette values for the two persistent field entries.
- * @see decomp.me (100%) TODO
  */
 void field_set_party_palettes(void)
 {

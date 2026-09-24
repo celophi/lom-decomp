@@ -535,7 +535,6 @@ static inline u32 get_save_layout_base_tpage(SaveLayoutTex* tex, u32 flags)
  * @param ot Pointer to the ordering-table entry receiving each primitive.
  * @return Pointer to the byte just past the last primitive emitted.
  *
- * @see decomp.me (100%)
  */
 void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
 {

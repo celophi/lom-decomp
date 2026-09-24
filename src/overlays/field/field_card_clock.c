@@ -70,7 +70,6 @@ s32 func_800AFE14(u8* clock)
  * Reads the card clock only when card 0 is present and idle, then records the
  * vertical-sync counter so func_800AFE14 can advance the time later.
  *
- * @see decomp.me (100%)
  */
 void func_800B0094(void)
 {

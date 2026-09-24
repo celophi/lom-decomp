@@ -250,7 +250,6 @@ s32 zukan_initialize_state(s32 work_buffer, s32 category)
 /**
  * @brief Upload the two UI image blocks used by the encyclopedia screen.
  * @param work_buffer Overlay work-buffer address retained by the caller.
- * @see decomp.me (100%)
  */
 void zukan_upload_ui_images(s32 work_buffer)
 {
@@ -275,7 +274,6 @@ void zukan_upload_ui_images(s32 work_buffer)
  * @param destinations VRAM destinations for pixels and CLUT data.
  * @param tim TIM image data.
  * @return The TIM pixel-mode bits from the flags word.
- * @see decomp.me (100%)
  */
 s32 zukan_upload_tim(ZukanImageDestination* destinations, u8* tim)
 {
@@ -308,7 +306,6 @@ s32 zukan_upload_tim(ZukanImageDestination* destinations, u8* tim)
 /**
  * @brief Build the current frame and advance the encyclopedia transition state.
  * @param frame_context Render context for the current frame.
- * @see decomp.me (100%)
  */
 void zukan_update_frame(s32 frame_context)
 {
@@ -783,7 +780,6 @@ void zukan_update_transition(u8* frame_context)
 /**
  * @brief Draw the encyclopedia entry-list or detail view.
  * @param ctx Encyclopedia draw state whose primitive cursor is advanced in place.
- * @see decomp.me (100%)
  */
 void zukan_render_content(ZukanDrawState* ctx)
 {

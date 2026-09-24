@@ -57,7 +57,6 @@ extern FieldFadeColor g_field_fade_restore_color;
 
 /**
  * @brief Reset the current and target field fade colors.
- * @see decomp.me (100%) TODO
  */
 void field_reset_fade_state(void)
 {
@@ -73,7 +72,6 @@ void field_reset_fade_state(void)
 /**
  * @brief Advance the screen fade one step and emit its blend tile + draw mode.
  * @param ctx Render half whose ordering-table entry FIELD_FADE_OT_INDEX receives the packets.
- * @see decomp.me (100%) TODO
  */
 void field_update_and_render_fade(FieldRenderHalf* ctx)
 {
@@ -162,7 +160,6 @@ void field_update_and_render_fade(FieldRenderHalf* ctx)
  * @param green Target green intensity.
  * @param blue Target blue intensity.
  * @param duration Transition duration in frames.
- * @see decomp.me (100%) TODO
  */
 void field_set_fade_target(s16 red, s16 green, s16 blue, s16 duration)
 {
@@ -177,7 +174,6 @@ void field_set_fade_target(s16 red, s16 green, s16 blue, s16 duration)
 
 /**
  * @brief Set the field fade target used by the CD error overlay.
- * @see decomp.me (100%) TODO
  */
 void field_set_cd_error_fade_target(void)
 {
@@ -193,7 +189,6 @@ void field_set_cd_error_fade_target(void)
  * @param green Target green intensity.
  * @param blue Target blue intensity.
  * @param duration Transition duration in frames.
- * @see decomp.me (100%) TODO
  */
 void field_set_fade_target_only(s16 red, s16 green, s16 blue, s16 duration)
 {
@@ -205,7 +200,6 @@ void field_set_fade_target_only(s16 red, s16 green, s16 blue, s16 duration)
 
 /**
  * @brief Restore the saved field fade color over five frames.
- * @see decomp.me (100%) TODO
  */
 void field_restore_fade_target(void)
 {
@@ -218,7 +212,6 @@ void field_restore_fade_target(void)
 /**
  * @brief Restore the saved field fade color over the requested duration.
  * @param duration Transition duration in frames.
- * @see decomp.me (100%) TODO
  */
 void field_restore_fade_target_with_duration(s16 duration)
 {
@@ -230,7 +223,6 @@ void field_restore_fade_target_with_duration(s16 duration)
 
 /**
  * @brief Set the default modal-overlay fade target.
- * @see decomp.me (100%) TODO
  */
 void field_set_default_fade_target(void)
 {

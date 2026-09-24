@@ -70,7 +70,6 @@ void func_80064F14(void)
  * @param source Source words.
  * @param destination Destination words.
  * @param byte_count Nonnegative byte count; trailing partial words are ignored.
- * @see decomp.me (100%)
  */
 void func_80064F1C(s32* source, s32* destination, s32 byte_count)
 {
@@ -101,7 +100,6 @@ void func_80064F5C(void)
 /**
  * @brief Queue a TIM read from CD and upload the decoded image(s) to VRAM.
  * @param resource_index CD resource id to queue.
- * @see decomp.me (94.12%)
  * @note Remaining mismatch swaps the data and rectangle pointer registers;
  *       the branch layout and instruction count match.
  */
@@ -145,7 +143,6 @@ void func_80064F64(s32 resource_index)
 /**
  * @brief Stream a TIM read from CD and upload the decoded image(s) to VRAM.
  * @param resource_index CD resource id to stream.
- * @see decomp.me (94.12%)
  * @note Remaining mismatch swaps the data and rectangle pointer registers;
  *       the branch layout and instruction count match.
  */

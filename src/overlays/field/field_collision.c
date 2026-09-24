@@ -2553,7 +2553,6 @@ typedef union FieldCollisionRasterSpanFlags
  *       the target uses (resolving the a0/t0 allocation tie), and the span
  *       address is formed by explicit byte arithmetic rather than @c sp_row +
  *       @c n - 1 to reproduce the target's addressing.
- * @see decomp.me (100%) TODO
  */
 void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
 {
@@ -3188,7 +3187,6 @@ void func_8005F5BC();
  *       The empty-scene path leaves @c unk41 = 0 instead, which is how callers
  *       tell "no nodes" from "too many groups".
  *
- * @see decomp.me (100%) TODO
  */
 void func_8005F158(s32* alloc)
 {
@@ -3484,7 +3482,6 @@ typedef struct
  *             emitted; otherwise only the rows the node covers are, and its
  *             definition is tested against the group id first.
  *
- * @see decomp.me (100%) TODO
  */
 void func_8005F5BC(s32 unused, FieldNode* clip)
 {
@@ -4239,7 +4236,6 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
  *        stencil buffer, dilated by the group's edge width.
  * @param footprint_width Footprint width in collision-map columns.
  * @param footprint_depth Footprint depth in collision-map rows.
- * @see decomp.me (100%) TODO
  */
 void func_80060364(s32 footprint_width, s32 footprint_depth)
 {
@@ -5089,7 +5085,6 @@ typedef struct
  * @param mode Trace mode forwarded to the footprint walker.
  * @return Number of path points, 1 for a direct result, or a negative failure code.
  *
- * @see decomp.me (95.88%, 1457/1586 exact) TODO
  */
 s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_query, FieldCollisionPathPoint* output_path, s32 mode)
 {

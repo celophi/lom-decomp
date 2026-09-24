@@ -29,7 +29,6 @@ s32 func_80087F44(s32 actor_id, FieldLivePosition* out);
  * @param first First position.
  * @param second Second position.
  * @return |dx| + |dz|.
- * @see decomp.me (100%) TODO
  */
 s32 func_800C1FBC(FieldPosition* first, FieldPosition* second)
 {

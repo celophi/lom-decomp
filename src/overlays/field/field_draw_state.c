@@ -26,7 +26,6 @@ typedef struct
 
 /**
  * @brief Clear the three field draw-state globals and reset the color scale.
- * @see decomp.me (100%) TODO
  */
 void func_80067AA4(void)
 {
@@ -45,7 +44,6 @@ void func_80067AA4(void)
  *
  * @param ctx Render half whose first ordering-table entry receives the line.
  * @param load Value the bar represents.
- * @see decomp.me (100%) TODO
  */
 void func_80067AE0(FieldRenderHalf* ctx, s32 load)
 {

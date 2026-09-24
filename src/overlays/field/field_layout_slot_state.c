@@ -24,7 +24,6 @@ void func_800CA1A0(s32 arg0)
  * bit 2 of every record's flag byte, and finally clears bit 2 of the word at
  * 0x410.
  *
- * @see decomp.me (100%) TODO
  */
 void func_800CA1E0(void)
 {

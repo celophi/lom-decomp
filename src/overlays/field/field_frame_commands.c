@@ -56,7 +56,6 @@ extern s32 g_frame_counter;
  *
  * @param render_half Render half being drawn.
  * @param alternate Non-zero when drawing the alternate half.
- * @see decomp.me (100%) TODO
  */
 void field_build_frame_commands(s32 render_half, s32 alternate)
 {

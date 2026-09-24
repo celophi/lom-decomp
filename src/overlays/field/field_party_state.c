@@ -533,7 +533,6 @@ void func_800B3420(s32 amount)
  * D_8010D020 set both are written as 1.
  *
  * @param group Monster group to build; 0 selects func_800B4390 instead.
- * @see decomp.me (100%)
  */
 void func_800B34D0(s32 group)
 {
@@ -569,7 +568,6 @@ void func_800B34D0(s32 group)
 
 /**
  * @brief Clear the battle context, then fill its header from the current land and resource 1.
- * @see decomp.me (100%)
  */
 void func_800B3580(void)
 {
@@ -604,7 +602,6 @@ void func_800B3580(void)
  *
  * @param use_hero_level Nonzero to base the level on the hero's level.
  * @return Level in 0..99.
- * @see decomp.me (100%)
  */
 s32 func_800B3670(s32 use_hero_level)
 {
@@ -679,7 +676,6 @@ s32 func_800B3670(s32 use_hero_level)
 /**
  * @brief Build the status records of the party characters.
  * @return Number of party slots in use.
- * @see decomp.me (100%)
  */
 s32 func_800B37D4(void)
 {

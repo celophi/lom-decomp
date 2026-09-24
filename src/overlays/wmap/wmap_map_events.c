@@ -589,7 +589,6 @@ typedef struct
 /**
  * @brief World-map step handler: seed a pathfinding move for the actor, populate its
  *        motion record, and advance the step counter.
- * @see decomp.me (100%)
  */
 void func_800A6B34(void)
 {
@@ -658,7 +657,6 @@ extern s32 D_801B2E50;
 /**
  * @brief World-map step handler: seed a pathfinding move for the actor, populate its
  *        motion record, and advance the step counter.
- * @see decomp.me (100%)
  */
 void func_800A6D38(void)
 {
@@ -726,7 +724,6 @@ extern s32 D_801B2E58;
 
 /**
  * @brief Build the effect route, initialize its position, and advance the sequence.
- * @see decomp.me (100%)
  */
 void func_800A6F3C(void)
 {

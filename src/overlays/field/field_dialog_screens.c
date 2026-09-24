@@ -236,7 +236,6 @@ void func_800A5794(FieldContext *context)
  *       disabled descriptors have X equal to 0xFFFF.
  * @note The do/while(0) blocks around the two width products in the rotation
  *       case raise their loop weight so width keeps its saved register.
- * @see decomp.me (100%)
  */
 POLY_FT4 *func_800A5960(POLY_FT4 *prim, u_long *ordering_table, s32 index)
 {
@@ -900,7 +899,6 @@ void func_800A64D0(ArgA *arg0)
  * @brief Schedule the next text draw for an active entry and store its handle.
  * @param arg0 FIELD context holding the scratch base and current draw handle.
  * @param arg1 Pending text entry supplying the packed position and text pointer.
- * @see decomp.me (100%) TODO
  */
 void func_800A6634(ArgA *arg0, ArgB *arg1)
 {
@@ -1080,7 +1078,6 @@ extern s32 D_80115890;
  * @brief Advance active player proficiency and queue newly learned abilities and techniques.
  * @note Proficiency saturates at 100, advancing by four when D_80115890 is set, or one otherwise.
  * @note A technique rule can unlock silently, without adding a dialog entry.
- * @see decomp.me (100%) TODO
  */
 void field_advance_ability_progression(void)
 {
@@ -1618,7 +1615,6 @@ void func_800A6F1C(void)
  * @c D_801227EC); mode 3 backs out via func_800A764C when @c g_field_dialog_item_count is set,
  * else falls through to the mode-2 handler func_800A7724.
  *
- * @see decomp.me (100%) TODO
  */
 void func_800A710C(void)
 {
@@ -1768,7 +1764,6 @@ void func_800A7384(void)
  * @c g_field_progression_unlock_count is set, else func_800A764C when @c g_field_dialog_item_count is set, else
  * func_800A7724. Finishes with func_800B0A08(0).
  *
- * @see decomp.me (100%) TODO
  */
 void func_800A7434(void)
 {

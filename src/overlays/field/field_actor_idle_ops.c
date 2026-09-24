@@ -79,7 +79,6 @@ void func_800924D8(FieldMotionRecord* actor)
  * Also sets the facing state to 2 while keeping its high bit.
  *
  * @param actor Actor motion record.
- * @see decomp.me (100%) TODO
  */
 void func_80092550(FieldMotionRecord* actor)
 {

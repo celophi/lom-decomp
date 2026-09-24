@@ -375,7 +375,6 @@ void field_draw_actor_hud(u8* render_context)
  * @param slot Actor index (0..2 use the extended blink/shake path).
  * @param render_context Draw context whose primitive cursor is advanced on return.
  * @param value_per_bar Gauge full-scale denominator used for value-to-width scaling.
- * @see decomp.me (100%)
  */
 void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8* render_context, u32 value_per_bar)
 {
@@ -1017,7 +1016,6 @@ void* field_emit_hud_percentage(void* packet, void* context, s32 value, u16* pos
  * @param value Glyph index: 0 through 9 for digits, 10 for percent.
  * @param position Packed screen X/Y coordinates.
  * @return Cursor immediately after the sprite.
- * @see decomp.me (100%) TODO
  */
 void* field_emit_hud_glyph(void* packet, void* context, s32 value, s32* position)
 {
@@ -1171,7 +1169,6 @@ void field_load_vram_resource(s32 id, s16* rect, s32 mode)
  *             width*height entries; when zero, upload it with its natural
  *             width and height.
  * @return Packed palette entries 240 and 241 (the word at byte offset 0x1F4).
- * @see decomp.me (100.00%)
  */
 s32 field_upload_image_resource(RECT* rect, Tim* resource, s32 mode)
 {
@@ -1731,7 +1728,6 @@ void func_80086494(s32 index)
  * @brief Enter an actor control state and play animation 7 on its +0x40 object.
  * @param arg0 Actor object record.
  * @param arg1 Nonzero to run the transition; zero does nothing.
- * @see decomp.me (100%) TODO
  */
 void func_80086850(Actor* arg0, s32 arg1)
 {
@@ -1755,7 +1751,6 @@ void func_80086850(Actor* arg0, s32 arg1)
  * @brief Enter an actor control state and play animation 0xA on its +0x40 object.
  * @param arg0 Actor object record.
  * @param arg1 Nonzero to run the transition; zero does nothing.
- * @see decomp.me (100%) TODO
  */
 void func_800868FC(Actor* arg0, s32 arg1)
 {
@@ -1958,7 +1953,6 @@ void func_80086D5C(u8* p)
  * @brief Play animation 0xE on the actor's +0x40 object, or clear its slot bytes 0x24 and 0x23A.
  * @param arg0 Actor state record.
  * @param arg1 Nonzero plays the animation, zero clears the slot bytes.
- * @see decomp.me (100%) TODO
  */
 void func_80086DD0(FieldActorState* arg0, s32 arg1)
 {
@@ -1981,7 +1975,6 @@ void func_80086DD0(FieldActorState* arg0, s32 arg1)
  * @brief Play animation 0x19 on the actor's +0x40 object, or clear its slot bytes 0x24 and 0x23A.
  * @param arg0 Actor state record.
  * @param arg1 Nonzero plays the animation, zero clears the slot bytes.
- * @see decomp.me (100%) TODO
  */
 void func_80086E78(FieldActorState* arg0, s32 arg1)
 {
@@ -2112,7 +2105,6 @@ void func_80086FB8(u8* buffer)
  * @param ordering_table Depth ordering table with 4096 entries.
  * @param footprint First two footprint corners supplying the horizontal bounds.
  * @return Next free primitive, unchanged if the shadow has collapsed.
- * @see decomp.me (100%)
  */
 POLY_FT4* field_render_actor_ground_shadow(ShadowActor* actor, POLY_FT4* primitives, s32* ordering_table, ShadowFootprint* footprint)
 {
@@ -2359,7 +2351,6 @@ void func_80087564(Rec87564* arg0)
 /**
  * @brief Return the current scene record table.
  * @return Value of g_field_scene_record_table.
- * @see decomp.me (100%) N/A -- trivial 4-instruction leaf function, no scratch needed.
  */
 s32 func_800875B4(void)
 {

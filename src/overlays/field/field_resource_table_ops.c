@@ -110,7 +110,6 @@ void func_800C299C(s32 bit_index)
  * @brief Run an item template's script and copy it into a free inventory record.
  * @param index Template index; validated against the table's count.
  * @return 0 on success, -1 on any failure.
- * @see decomp.me (100%)
  */
 s32 func_800C29CC(s32 index)
 {

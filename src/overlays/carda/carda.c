@@ -546,7 +546,6 @@ void carda_update_elements(CardaRenderBuffer* frame)
  * @param x_offset Horizontal scroll offset subtracted from each glyph x.
  * @param y_offset Vertical scroll offset subtracted from each row y.
  * @return The advanced packet cursor past the last emitted primitive.
- * @see decomp.me (100%)
  */
 void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {

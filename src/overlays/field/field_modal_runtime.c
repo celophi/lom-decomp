@@ -49,7 +49,6 @@ void field_copy_name(u8 *dest, u8 *src);
  * @param y Starting y coordinate.
  * @param flags Alignment bits (0x7F) plus 0x80 post-processing flag.
  * @return Pointer just past the trailing DR_TPAGE primitive.
- * @see decomp.me (100%) TODO
  */
 void* func_800A88A0(SPRT* sprite_cursor, s32* ot, u8* text, s32 text_color, s32 x, s32 y, s32 flags)
 {
@@ -651,7 +650,6 @@ void field_copy_inventory_record(u8* destination, u8* source)
 /**
  * @brief Close gaps in the saved inventory and mark the remaining slots free.
  * @note Record data beyond the occupancy byte is retained in free slots.
- * @see decomp.me (100%) TODO
  */
 void field_compact_inventory(void)
 {
@@ -1496,7 +1494,6 @@ void field_process_input(s32 context)
 /**
  * @brief Play a staggered warning for living players below one-quarter HP.
  * @return Unspecified; callers ignore the return value.
- * @see decomp.me (100%) TODO
  */
 s32 field_play_low_hp_warning(void)
 {
@@ -1935,7 +1932,6 @@ void field_run_menu(void* render_buffers, s32 input_source)
 
 /**
  * @brief Open the field text session and reset both controller repeat timers.
- * @see decomp.me (100%) TODO
  */
 void field_begin_text_session(void)
 {
@@ -1967,7 +1963,6 @@ void field_reset_text_session(void)
 /**
  * @brief Update the active text session, draw its contents, and handle closing.
  * @param context Render context forwarded to the text renderer.
- * @see decomp.me (100%) TODO
  */
 void field_update_modal_text_session(s32 context)
 {
@@ -2280,7 +2275,6 @@ void field_rebuild_party_actions(s32 refresh_only)
  * @param source_mode Random-name source selector.
  * @param history_index History-list entry selector.
  * @param custom_name Custom random-name source.
- * @see decomp.me (100%) TODO
  */
 void field_run_name_entry(s32 initial_name, s32 active_name, s32 source_mode, s32 history_index, s32 custom_name)
 {
@@ -2311,7 +2305,6 @@ void field_run_zukan(s32 context)
  * Sets g_field_modal_state to 2 for the duration and clears the gosub result count.
  *
  * @param screen_sequence Terminated s32 array passed to gosub_open_screen_sequence.
- * @see decomp.me (100%) TODO
  */
 void field_open_gosub_screen_sequence(void* screen_sequence)
 {
@@ -2332,7 +2325,6 @@ void field_open_gosub_screen_sequence(void* screen_sequence)
  * @brief Open the selling screen when inventory is present, otherwise show a notice.
  * @param shop_options Value forwarded to the shop; meaning not yet established.
  * @note The equipment loop repeatedly checks the first record, as in the original.
- * @see decomp.me (100%) TODO
  */
 void field_open_shop_mode_0(s32 shop_options)
 {
@@ -2380,7 +2372,6 @@ void field_open_shop_mode_0(s32 shop_options)
  * @param entries Address of the eight-byte shop entry array.
  * @param list_options Additional list data forwarded to the shop; meaning unresolved.
  * @param shop_options Value forwarded as the final shop argument.
- * @see decomp.me (100%) TODO
  */
 void field_open_shop_mode_1(s32 entry_count, s32 entries, s32 list_options, s32 shop_options)
 {

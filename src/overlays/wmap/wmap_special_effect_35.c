@@ -21893,9 +21893,6 @@ void func_800C23CC__for_func_800C3314(void) __asm__("func_800C23CC");
     func_800C3360__for_func_800C3314();
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C3360(void)
 {
 typedef struct
@@ -22167,9 +22164,6 @@ void func_800C23CC__for_func_800C3360(void) __asm__("func_800C23CC");
     }
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C33DC(void)
 {
 typedef struct
@@ -22436,9 +22430,6 @@ void func_800C23CC__for_func_800C33DC(void) __asm__("func_800C23CC");
     D_801B3270++;
 }
 
-/**
- * @see decomp.me (100%)
- */
 s32 func_800C33F4(s32 reset)
 {
 typedef struct
@@ -22718,9 +22709,6 @@ void func_800C23CC__for_func_800C33F4(void) __asm__("func_800C23CC");
     return 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C346C(void)
 {
 typedef struct
@@ -22988,9 +22976,6 @@ void func_800C23CC__for_func_800C346C(void) __asm__("func_800C23CC");
     D_801B327C = 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C3484(void)
 {
 typedef struct
@@ -23267,9 +23252,6 @@ void func_800C23CC__for_func_800C3484(void) __asm__("func_800C23CC");
     func_800C3504__for_func_800C3484();
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C3504(void)
 {
 typedef struct
@@ -23541,9 +23523,6 @@ void func_800C23CC__for_func_800C3504(void) __asm__("func_800C23CC");
     }
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C3580(void)
 {
 typedef struct
@@ -23814,9 +23793,6 @@ void func_800C23CC__for_func_800C3580(void) __asm__("func_800C23CC");
     func_800C35CC__for_func_800C3580();
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C35CC(void)
 {
 typedef struct
@@ -24088,9 +24064,6 @@ void func_800C23CC__for_func_800C35CC(void) __asm__("func_800C23CC");
     }
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C3648(void)
 {
 typedef struct
@@ -24357,9 +24330,6 @@ void func_800C23CC__for_func_800C3648(void) __asm__("func_800C23CC");
     D_801B3278++;
 }
 
-/**
- * @see decomp.me (100%)
- */
 s32 func_800C3660(s32 reset)
 {
 typedef struct
@@ -24639,9 +24609,6 @@ void func_800C23CC__for_func_800C3660(void) __asm__("func_800C23CC");
     return 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C36D8(void)
 {
 typedef struct
@@ -24909,9 +24876,6 @@ void func_800C23CC__for_func_800C36D8(void) __asm__("func_800C23CC");
     D_801B3284 = 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C36F0(void)
 {
 typedef struct
@@ -25183,9 +25147,6 @@ void func_800C23CC__for_func_800C36F0(void) __asm__("func_800C23CC");
     func_800C1290__for_func_800C36F0();
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C376C(void)
 {
 typedef struct
@@ -25454,9 +25415,6 @@ void func_800C23CC__for_func_800C376C(void) __asm__("func_800C23CC");
     func_800C1390__for_func_800C376C();
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C37A4(void)
 {
 typedef struct
@@ -25723,9 +25681,6 @@ void func_800C23CC__for_func_800C37A4(void) __asm__("func_800C23CC");
     D_801B3280++;
 }
 
-/**
- * @see decomp.me (100%)
- */
 s32 func_800C37BC(s32 reset)
 {
 typedef struct
@@ -26005,9 +25960,6 @@ void func_800C23CC__for_func_800C37BC(void) __asm__("func_800C23CC");
     return 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C3834(void)
 {
 typedef struct
@@ -26275,9 +26227,6 @@ void func_800C23CC__for_func_800C3834(void) __asm__("func_800C23CC");
     D_801B328C = 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C384C(void)
 {
 typedef struct
@@ -26549,9 +26498,6 @@ void func_800C23CC__for_func_800C384C(void) __asm__("func_800C23CC");
     func_800C1488__for_func_800C384C();
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C38C8(void)
 {
 typedef struct
@@ -26820,9 +26766,6 @@ void func_800C23CC__for_func_800C38C8(void) __asm__("func_800C23CC");
     func_800C1588__for_func_800C38C8();
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C3900(void)
 {
 typedef struct
@@ -27089,9 +27032,6 @@ void func_800C23CC__for_func_800C3900(void) __asm__("func_800C23CC");
     D_801B3288++;
 }
 
-/**
- * @see decomp.me (100%)
- */
 s32 func_800C3918(s32 reset)
 {
 typedef struct
@@ -27371,9 +27311,6 @@ void func_800C23CC__for_func_800C3918(void) __asm__("func_800C23CC");
     return 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C3990(void)
 {
 typedef struct
@@ -27641,9 +27578,6 @@ void func_800C23CC__for_func_800C3990(void) __asm__("func_800C23CC");
     D_801B3294 = 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C39A8(void)
 {
 typedef struct
@@ -27925,9 +27859,6 @@ void func_800C23CC__for_func_800C39A8(void) __asm__("func_800C23CC");
     func_800C1680__for_func_800C39A8();
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C3A50(void)
 {
 typedef struct
@@ -28194,9 +28125,6 @@ void func_800C23CC__for_func_800C3A50(void) __asm__("func_800C23CC");
     D_801B3290++;
 }
 
-/**
- * @see decomp.me (100%)
- */
 s32 func_800C3A68(s32 reset)
 {
 typedef struct
@@ -28476,9 +28404,6 @@ void func_800C23CC__for_func_800C3A68(void) __asm__("func_800C23CC");
     return 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C3AE0(void)
 {
 typedef struct
@@ -28746,9 +28671,6 @@ void func_800C23CC__for_func_800C3AE0(void) __asm__("func_800C23CC");
     D_801B329C = 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C3AF8(void)
 {
 typedef struct
@@ -29030,9 +28952,6 @@ void func_800C23CC__for_func_800C3AF8(void) __asm__("func_800C23CC");
     func_800C17E0__for_func_800C3AF8();
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C3BA4(void)
 {
 typedef struct
@@ -29299,9 +29218,6 @@ void func_800C23CC__for_func_800C3BA4(void) __asm__("func_800C23CC");
     D_801B3298++;
 }
 
-/**
- * @see decomp.me (100%)
- */
 s32 func_800C3BBC(s32 reset)
 {
 typedef struct
@@ -29581,9 +29497,6 @@ void func_800C23CC__for_func_800C3BBC(void) __asm__("func_800C23CC");
     return 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C3C34(void)
 {
 typedef struct
@@ -29851,9 +29764,6 @@ void func_800C23CC__for_func_800C3C34(void) __asm__("func_800C23CC");
     D_801B32A4 = 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C3C4C(void)
 {
 typedef struct
@@ -30135,9 +30045,6 @@ void func_800C23CC__for_func_800C3C4C(void) __asm__("func_800C23CC");
     func_800C1940__for_func_800C3C4C();
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C3CF8(void)
 {
 typedef struct
@@ -30404,9 +30311,6 @@ void func_800C23CC__for_func_800C3CF8(void) __asm__("func_800C23CC");
     D_801B32A0++;
 }
 
-/**
- * @see decomp.me (100%)
- */
 s32 func_800C3D10(s32 reset)
 {
 typedef struct
@@ -30686,9 +30590,6 @@ void func_800C23CC__for_func_800C3D10(void) __asm__("func_800C23CC");
     return 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C3D88(void)
 {
 typedef struct
@@ -30956,9 +30857,6 @@ void func_800C23CC__for_func_800C3D88(void) __asm__("func_800C23CC");
     D_801B32AC = 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C3DA0(void)
 {
 typedef struct
@@ -31240,9 +31138,6 @@ void func_800C23CC__for_func_800C3DA0(void) __asm__("func_800C23CC");
     func_800C1AA0__for_func_800C3DA0();
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C3E4C(void)
 {
 typedef struct
@@ -31509,9 +31404,6 @@ void func_800C23CC__for_func_800C3E4C(void) __asm__("func_800C23CC");
     D_801B32A8++;
 }
 
-/**
- * @see decomp.me (100%)
- */
 s32 func_800C3E64(s32 reset)
 {
 typedef struct
@@ -31791,9 +31683,6 @@ void func_800C23CC__for_func_800C3E64(void) __asm__("func_800C23CC");
     return 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C3EDC(void)
 {
 typedef struct
@@ -32061,9 +31950,6 @@ void func_800C23CC__for_func_800C3EDC(void) __asm__("func_800C23CC");
     D_801B32B4 = 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C3EF4(void)
 {
 typedef struct
@@ -32345,9 +32231,6 @@ void func_800C23CC__for_func_800C3EF4(void) __asm__("func_800C23CC");
     func_800C1C00__for_func_800C3EF4();
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C3FA0(void)
 {
 typedef struct
@@ -32614,9 +32497,6 @@ void func_800C23CC__for_func_800C3FA0(void) __asm__("func_800C23CC");
     D_801B32B0++;
 }
 
-/**
- * @see decomp.me (100%)
- */
 s32 func_800C3FB8(s32 reset)
 {
 typedef struct
@@ -32896,9 +32776,6 @@ void func_800C23CC__for_func_800C3FB8(void) __asm__("func_800C23CC");
     return 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C4030(void)
 {
 typedef struct
@@ -33166,9 +33043,6 @@ void func_800C23CC__for_func_800C4030(void) __asm__("func_800C23CC");
     D_801B32BC = 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C4048(void)
 {
 typedef struct
@@ -33450,9 +33324,6 @@ void func_800C23CC__for_func_800C4048(void) __asm__("func_800C23CC");
     func_800C1D60__for_func_800C4048();
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C40F4(void)
 {
 typedef struct
@@ -33719,9 +33590,6 @@ void func_800C23CC__for_func_800C40F4(void) __asm__("func_800C23CC");
     D_801B32B8++;
 }
 
-/**
- * @see decomp.me (100%)
- */
 s32 func_800C410C(s32 reset)
 {
 typedef struct
@@ -34001,9 +33869,6 @@ void func_800C23CC__for_func_800C410C(void) __asm__("func_800C23CC");
     return 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C4184(void)
 {
 typedef struct
@@ -34271,9 +34136,6 @@ void func_800C23CC__for_func_800C4184(void) __asm__("func_800C23CC");
     D_801B32C4 = 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C419C(void)
 {
 typedef struct
@@ -34555,9 +34417,6 @@ void func_800C23CC__for_func_800C419C(void) __asm__("func_800C23CC");
     func_800C1EC0();
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C4248(void)
 {
 typedef struct
@@ -34824,9 +34683,6 @@ void func_800C23CC__for_func_800C4248(void) __asm__("func_800C23CC");
     D_801B32C0++;
 }
 
-/**
- * @see decomp.me (100%)
- */
 s32 func_800C4260(s32 reset)
 {
 typedef struct
@@ -35106,9 +34962,6 @@ void func_800C23CC__for_func_800C4260(void) __asm__("func_800C23CC");
     return 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C42D8(void)
 {
 typedef struct
@@ -35376,9 +35229,6 @@ void func_800C23CC__for_func_800C42D8(void) __asm__("func_800C23CC");
     D_801B32CC = 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C42F0(void)
 {
 typedef struct
@@ -35649,9 +35499,6 @@ void func_800C23CC__for_func_800C42F0(void) __asm__("func_800C23CC");
     }
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C4344(void)
 {
 typedef struct
@@ -35921,9 +35768,6 @@ void func_800C23CC__for_func_800C4344(void) __asm__("func_800C23CC");
     func_800C4388__for_func_800C4344();
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C4388(void)
 {
 typedef struct
@@ -36194,9 +36038,6 @@ void func_800C23CC__for_func_800C4388(void) __asm__("func_800C23CC");
     }
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C43DC(void)
 {
 typedef struct
@@ -36463,9 +36304,6 @@ void func_800C23CC__for_func_800C43DC(void) __asm__("func_800C23CC");
     D_801B32C8++;
 }
 
-/**
- * @see decomp.me (100%)
- */
 s32 func_800C43F4(s32 reset)
 {
 typedef struct
@@ -36745,9 +36583,6 @@ void func_800C23CC__for_func_800C43F4(void) __asm__("func_800C23CC");
     return 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C446C(void)
 {
 typedef struct
@@ -37015,9 +36850,6 @@ void func_800C23CC__for_func_800C446C(void) __asm__("func_800C23CC");
     D_801B32D4 = 1;
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C4484(void)
 {
 typedef struct
@@ -37288,9 +37120,6 @@ void func_800C23CC__for_func_800C4484(void) __asm__("func_800C23CC");
     }
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C44D8(void)
 {
 typedef struct
@@ -37560,9 +37389,6 @@ void func_800C23CC__for_func_800C44D8(void) __asm__("func_800C23CC");
     func_800C451C__for_func_800C44D8();
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C451C(void)
 {
 typedef struct
@@ -37833,9 +37659,6 @@ void func_800C23CC__for_func_800C451C(void) __asm__("func_800C23CC");
     }
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C4570(void)
 {
 typedef struct

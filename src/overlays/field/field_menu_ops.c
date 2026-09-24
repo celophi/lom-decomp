@@ -1181,7 +1181,6 @@ void func_800C66DC(void)
 
 /**
  * @brief Make the golem shown in slot status 0 the active golem.
- * @see decomp.me (100%) N/A -- trivial 7-instruction leaf function, no scratch needed.
  */
 void func_800C6834(void)
 {
@@ -1447,7 +1446,6 @@ void func_800C6E08(void)
  * The row is the record's category (bits 10-15 of its attribute word) offset by
  * its kind: +0 for kind 0, +0xB for kind 1 and +0x17 otherwise. A row of 0xFF
  * records a diagnostic and yields 0.
- * @see decomp.me (100%) TODO
  */
 void func_800C6E28(void)
 {
@@ -1542,7 +1540,6 @@ void func_800C6F60(void)
  *
  * Each object has two halfwords after the resource header; the variant selects
  * the second one. Object id 0xFF yields 0xFFFF.
- * @see decomp.me (100%)
  */
 void func_800C6F9C(void)
 {
@@ -1579,7 +1576,6 @@ void func_800C6F9C(void)
  *
  * The resource starts with a four-byte header followed by a table of
  * little-endian text offsets, one per object.
- * @see decomp.me (100%) TODO
  */
 void func_800C7014(void)
 {
@@ -1601,7 +1597,6 @@ void func_800C7014(void)
  * A blocked record shows id 0x53 + its byte at 0x16 in mode 0; otherwise it
  * shows 0x12 + its byte at 0x15, in mode 1 when selection is restricted. The
  * record at the small-history index shows 0xFE. Also stores the result count.
- * @see decomp.me (100%)
  */
 void func_800C7090(void)
 {
@@ -2535,7 +2530,6 @@ void func_800C8938(void)
  * @brief List the occupied small history records whose selection is restricted.
  * @note Stores each listed record's entry id from D_80122C00 and its index from
  *       D_80122C1D, and publishes its name to macro 0, 1, ... in order.
- * @see decomp.me (100.00%)
  */
 void func_800C8964(void)
 {
@@ -2896,7 +2890,6 @@ void field_reset_music_track_index(void)
  *
  * The record index comes from the cursor slot table at D_80122C19; an index
  * of five or more is reported as a diagnostic.
- * @see decomp.me (100%)
  */
 void func_800C92B8(void)
 {
@@ -2918,7 +2911,6 @@ void func_800C92B8(void)
  *
  * An unnamed record gets the name 'A' (0x41). An index of five or more is
  * reported as a diagnostic.
- * @see decomp.me (100%)
  */
 void func_800C9330(void)
 {
@@ -3418,7 +3410,6 @@ void func_800C9960(void)
 
 /**
  * @brief Dispatch the current menu record for the active cursor slot.
- * @see decomp.me (100%)
  */
 void func_800C9BC4(void)
 {
@@ -3443,7 +3434,6 @@ void func_800C9BC4(void)
  * pending-result globals, sets the record's 0x40000000 flag, and dispatches
  * func_800B2844 for it.
  *
- * @see decomp.me (100%) TODO
  */
 void func_800C9C3C(void)
 {

@@ -45,7 +45,6 @@
  * @param mode Movement mode 0-6; mode 4 generates three separated random points.
  * @note Mode 4 accepts a new random point only when it is at least 0x40 units
  *       from every earlier point, using the GTE square and SquareRoot0.
- * @see decomp.me (100%)
  */
 void func_8009D4D8(FieldMotionRecord* actor, u32 mode)
 {
@@ -217,7 +216,6 @@ void func_8009D4D8(FieldMotionRecord* actor, u32 mode)
  * @param min_radius Receives the radius at which the effect intensity is zero.
  * @param max_radius Receives the radius at which the effect stops growing.
  * @note Declared inline: func_8009D9E0 expands it in place.
- * @see decomp.me (100%) TODO
  */
 inline void func_8009D95C(s32 kind, s32* min_radius, s32* max_radius)
 {
@@ -917,7 +915,6 @@ typedef struct
      ordering_table[depth] = (ordering_table[depth] & tag_mask) | ((s32)(packet) & addr_mask))
 
 /**
- * @see decomp.me (100%)
  * @brief Draw animated curved quad strips extending from a fixed-point position.
  * @param ordering_table Ordering table with 0x1000 depth entries.
  * @param primitive_buffer Destination for the generated GPU packets.
@@ -1171,7 +1168,6 @@ u8* func_800A0B0C(s32* ordering_table, u8* primitive_buffer, VECTOR* position, s
  * @return First free packet following all quads and the draw-page command.
  * @note Full word copies carry packed X/Y pairs into the next segment and
  *       close the strip. The strip cursor points at the primitive code byte.
- * @see decomp.me (100%)
  */
 u8* func_800A1344(s32* ordering_table, u8* packet, VECTOR* position, s32 slope, s32 facing)
 {

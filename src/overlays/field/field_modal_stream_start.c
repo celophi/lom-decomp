@@ -30,7 +30,6 @@ void func_800C3BB0(void);
 /**
  * @brief Load CARDA and start it, unless another modal is already running.
  * @param mode Card-screen mode; stored plus one and passed to the CARDA entry point.
- * @see decomp.me (100%) TODO
  */
 void func_800AD030(s32 mode)
 {

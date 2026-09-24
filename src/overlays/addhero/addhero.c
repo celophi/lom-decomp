@@ -11,7 +11,6 @@
  * @brief Reset overlay state and build the initial UI elements.
  * @param work_base Work-RAM base (always 0x80170000); stored in g_addhero_work_ram_base, unused so far.
  * @param mode Mode selector, stored in g_addhero_mode.
- * @see decomp.me (100%)
  */
 void addhero_init(s32 work_base, s32 mode)
 {
@@ -49,7 +48,6 @@ void addhero_init(s32 work_base, s32 mode)
  * @brief Run one frame: tear down and exit if requested, else update and render.
  * @param draw_state Frame drawing context passed through to the element renderer.
  * @return Non-zero exit code when exiting, 0 while running.
- * @see decomp.me (100%)
  */
 s32 addhero_state_step(AddheroDrawState* draw_state)
 {
@@ -74,7 +72,6 @@ s32 addhero_state_step(AddheroDrawState* draw_state)
  * @brief Reset scroll/selection state and populate the UI element pool for the current mode.
  * @note mode != 0: transfer layout (status + two card-slot labels). mode == 0: full browser
  *       (entry list, mode glyph, two slot labels, entry details).
- * @see decomp.me (100%)
  */
 void addhero_build_ui_elements(void)
 {
@@ -175,7 +172,6 @@ void addhero_build_ui_elements(void)
  * @brief Run one frame of overlay logic: update elements, advance the load
  *        sequence when armed, sample pad input, and step the scroll animation.
  * @param draw_state Frame drawing context passed to the element renderer.
- * @see decomp.me (100%)
  */
 void addhero_update_state(AddheroDrawState* draw_state)
 {
@@ -204,7 +200,6 @@ void addhero_update_state(AddheroDrawState* draw_state)
  * @brief Drive the card load/scan state machine one frame, mapping its result
  *        code onto the next load step and any error entry-state sentinel.
  * @return Unspecified; callers ignore the return value.
- * @see decomp.me (100%)
  */
 s32 addhero_update_load_sequence(void)
 {
@@ -403,7 +398,6 @@ s32 addhero_handle_input(void)
 /**
  * @brief Reset scroll/selection state and flip to the other card slot, then
  *        clear ranks and pad input to restart browsing.
- * @see decomp.me (100%)
  */
 void addhero_reset_state(void)
 {
@@ -424,7 +418,6 @@ void addhero_reset_state(void)
 /**
  * @brief Put every active pool element into the closing transition (state 3,
  *        phase 0x40) so they animate out.
- * @see decomp.me (100%)
  */
 void addhero_close_all_elements(void)
 {
@@ -446,7 +439,6 @@ void addhero_close_all_elements(void)
 /**
  * @brief Retarget the list scroll so the selected row stays on screen,
  *        animating over four frames when it falls above or below the window.
- * @see decomp.me (100%)
  */
 void addhero_scroll_to_selection(void)
 {
@@ -472,7 +464,6 @@ void addhero_scroll_to_selection(void)
  * @brief Thin wrapper that runs the element update/draw pass on the active
  *        draw state.
  * @param draw_state Frame drawing context to update.
- * @see decomp.me (100%)
  */
 void addhero_update_elements(AddheroDrawState* draw_state)
 {
@@ -630,7 +621,6 @@ void* addhero_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset
  * @param x_offset Horizontal offset; screen X is derived from it.
  * @param y_offset Vertical offset.
  * @return The updated primitive pointer.
- * @see decomp.me (100%)
  */
 void* addhero_draw_mode_glyph(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
@@ -655,7 +645,6 @@ void* addhero_draw_mode_glyph(u_long* ot, void* prim, s32 x_offset, s32 y_offset
  * @param x_offset Horizontal offset; screen X is derived from it.
  * @param y_offset Vertical offset.
  * @return The updated primitive pointer.
- * @see decomp.me (100%)
  */
 void* addhero_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
@@ -684,7 +673,6 @@ void* addhero_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_
  * @param x_offset Horizontal offset; screen X is derived from it.
  * @param y_offset Vertical offset.
  * @return The updated primitive pointer.
- * @see decomp.me (100%)
  */
 void* addhero_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
@@ -714,7 +702,6 @@ void* addhero_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_
  * @param x_offset Horizontal offset; screen X is derived from it.
  * @param y_offset Vertical offset.
  * @return The updated primitive pointer.
- * @see decomp.me (100%)
  */
 void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
@@ -904,7 +891,6 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
  *        the pointer to the first non-hex byte.
  * @param text Start of the text to scan.
  * @return Pointer to the first byte that is not a hex digit.
- * @see decomp.me (100%)
  */
 u8* addhero_skip_hex_digits(u8* text)
 {
@@ -921,7 +907,6 @@ u8* addhero_skip_hex_digits(u8* text)
  * @brief Zero-fill a 0x40-byte text field from the first null byte onward,
  *        walking multibyte (>= 0x80 lead) characters two bytes at a time.
  * @param buffer Start of the 0x40-byte text buffer to terminate/clear.
- * @see decomp.me (100%)
  */
 void addhero_terminate_multibyte_text(void* buffer)
 {
@@ -962,7 +947,6 @@ void addhero_terminate_multibyte_text(void* buffer)
 /**
  * @brief Clear the eight-element pool: drop the ADDHERO flag and free (state 0)
  *        every element, and reset the shared draw scale to 0x20.
- * @see decomp.me (100%)
  */
 void addhero_clear_elements(void)
 {
@@ -982,7 +966,6 @@ void addhero_clear_elements(void)
 /**
  * @brief Claim the first free pool element, marking it state 1 (opening).
  * @return The claimed element, or the pool base element when none are free.
- * @see decomp.me (100%)
  */
 AddheroElement* addhero_alloc_element(void)
 {
@@ -1004,7 +987,6 @@ AddheroElement* addhero_alloc_element(void)
 /**
  * @brief Update and render the active ADDHERO UI elements.
  * @param draw_state Draw state holding the primitive cursor and frame flag.
- * @see decomp.me (100%)
  */
 void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
 {
@@ -1135,7 +1117,6 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
 
 /**
  * @brief Free the primary pool element by clearing its state bits.
- * @see decomp.me (100%)
  */
 void addhero_deactivate_primary_element(void)
 {
@@ -1147,7 +1128,6 @@ void addhero_deactivate_primary_element(void)
  *        null-terminate the result.
  * @param dst Destination string; appended to in place.
  * @param src Source string copied onto the end of @p dst.
- * @see decomp.me (100%)
  */
 void addhero_text_append(u8* dst, u8* src)
 {
@@ -1169,7 +1149,6 @@ void addhero_text_append(u8* dst, u8* src)
  *        0x19-0x1F lead range as two bytes.
  * @param str Null-terminated string to measure.
  * @return Length in bytes, excluding the terminator.
- * @see decomp.me (100%)
  */
 s32 addhero_text_byte_length(u8* str)
 {
@@ -1202,7 +1181,6 @@ s32 addhero_text_byte_length(u8* str)
  *        characters when computing its length, and null-terminate the result.
  * @param dst Destination buffer.
  * @param src Source string to copy.
- * @see decomp.me (100%)
  */
 void addhero_text_copy(u8* dst, u8* src)
 {

@@ -550,7 +550,6 @@ void akao_cmd_a9(s32, s32);
 /**
  * @brief Advance the active field dialog runtime and finish any pending text work.
  * @param update_mode Mode forwarded to the active dialog update helper.
- * @see decomp.me (100%) TODO
  */
 void field_update_dialog_runtime(s32 update_mode)
 {
@@ -571,7 +570,6 @@ void field_update_dialog_runtime(s32 update_mode)
 
 /**
  * @brief Restore the standard field fade and refresh the active dialog/menu state.
- * @see decomp.me (100%) TODO
  */
 void func_80068028(void)
 {
@@ -594,7 +592,6 @@ void func_80068028(void)
 
 /**
  * @brief Close the active dialog state and restore the first two actor slots.
- * @see decomp.me (100%) TODO
  */
 void func_8006809C(void)
 {
@@ -631,7 +628,6 @@ void func_8006809C(void)
 /**
  * @brief Open the return-to-title confirmation prompt when the command value is zero.
  * @param command_value Command value; nonzero values leave the prompt unchanged.
- * @see decomp.me (100%) TODO
  */
 void func_800681C0(s32 command_value)
 {
@@ -646,7 +642,6 @@ void func_800681C0(s32 command_value)
  * @param image_resource_index Image resource passed to the game-over overlay.
  * @param music_resource_index Music resource passed to the game-over overlay.
  * @param audio_clip_index Audio clip passed to the game-over overlay.
- * @see decomp.me (100%) TODO
  */
 void field_begin_gover_transition(s32 image_resource_index, s32 music_resource_index, s32 audio_clip_index)
 {
@@ -2156,7 +2151,6 @@ void field_restore_default_action_animation_mappings(void)
  * @param entry Actor resource slot to inspect.
  * @param alternate_set Selects the alternate resource-id table when nonzero.
  * @return CD resource id for the selected actor resource.
- * @see decomp.me (100%) TODO
  */
 s32 field_get_actor_resource_id(s32 unused_slot_index, FieldActorResourceSlot* entry, s32 alternate_set)
 {
@@ -2199,7 +2193,6 @@ s32 field_get_actor_resource_id(s32 unused_slot_index, FieldActorResourceSlot* e
 /**
  * @brief Reset all actor-part runtime records.
  * @param timer_mode Selects the default timer values used for each part.
- * @see decomp.me (100%) TODO
  */
 void field_initialize_actor_parts(s32 timer_mode)
 {
@@ -2217,7 +2210,6 @@ void field_initialize_actor_parts(s32 timer_mode)
  * @param slot_index Actor slot associated with the resource.
  * @param resource_id CD resource id to load.
  * @param alternate_layout Low bit selects the alternate texture layout.
- * @see decomp.me (100%) TODO
  */
 void field_load_actor_resource_slot(s32 resource_index, s32 slot_index, s32 resource_id, s32 alternate_layout)
 {
@@ -2237,7 +2229,6 @@ void field_load_actor_resource_slot(s32 resource_index, s32 slot_index, s32 reso
 /**
  * @brief Refresh controller-derived actor flags after the selected slot changes.
  * @param actor_slot Actor slot selector; values two and above are ignored.
- * @see decomp.me (100%) TODO
  */
 void func_8006AA7C(s32 actor_slot)
 {
@@ -2277,7 +2268,6 @@ void func_8006AA7C(s32 actor_slot)
 /**
  * @brief Release an auxiliary actor slot and compact its resource data.
  * @param slot_index_minus_one Auxiliary slot number minus one.
- * @see decomp.me (100%)
  */
 
 void field_release_actor_resource_slot(s32 slot_index_minus_one)
@@ -2506,7 +2496,6 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
  * @brief Reuse the matching resource entry, or select the first free entry, then load it.
  * @param resource_slot_id Resource slot identifier to find.
  * @param resource_base Resource base forwarded to the entry loader.
- * @see decomp.me (100%) TODO
  */
 void field_find_or_load_resource_entry(s32 resource_slot_id, s32 resource_base)
 {
@@ -2540,7 +2529,6 @@ void field_find_or_load_resource_entry(s32 resource_slot_id, s32 resource_base)
  * @param resource_slot_id Resource slot identifier stored in the entry.
  * @param resource_base Base used to derive the package resource id.
  * @param entry_index Resource entry to replace.
- * @see decomp.me (100%) TODO
  */
 void field_load_resource_entry(s32 resource_slot_id, u8 *resource_base, s32 entry_index)
 {
@@ -2585,7 +2573,6 @@ void field_load_resource_entry(s32 resource_slot_id, u8 *resource_base, s32 entr
 /**
  * @brief Release a resource entry and compact the shared resource arena.
  * @param entry_index Resource entry to release.
- * @see decomp.me (100%) TODO
  */
 void field_release_resource_entry(s32 entry_index)
 {
@@ -2638,7 +2625,6 @@ void field_release_resource_entry(s32 entry_index)
  * @brief Reset an actor object record and bind it to a resource entry.
  * @param actor_index Actor object record to initialize.
  * @param resource_entry_index Resource entry used by the actor.
- * @see decomp.me (100%) TODO
  */
 void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index)
 {
@@ -2793,7 +2779,6 @@ void field_initialize_actor_part(s32 part_index, s32 timer_mode)
  * @param blue Blue component.
  * @param color_flag Low bit copied into the actor color-control flag.
  * @param render_mode Two-bit render mode copied into each actor part.
- * @see decomp.me (100%) TODO
  */
 void field_set_all_actor_render_state(s32 red, s32 green, s32 blue, s32 color_flag, s32 render_mode)
 {
@@ -2830,7 +2815,6 @@ void field_set_all_actor_render_state(s32 red, s32 green, s32 blue, s32 color_fl
  * @param render_mode Two-bit render mode copied into the actor part.
  * @param actor_selector Selector passed to the actor lookup.
  * @return 0 on success, or -1 when no actor matches the selector.
- * @see decomp.me (100%) TODO
  */
 s32 field_set_actor_render_state(s32 red, s32 green, s32 blue, s32 color_flag, s32 render_mode, s32 actor_selector)
 {
@@ -2861,7 +2845,6 @@ s32 field_set_actor_render_state(s32 red, s32 green, s32 blue, s32 color_flag, s
  * @param texture_column Texture column within the VRAM actor area.
  * @param narrow_layout Selects the narrow half-height layout when nonzero.
  * @param palette_row Palette row offset.
- * @see decomp.me (100%) TODO
  */
 static void field_load_actor_texture_set(s32 resource_id, s32 slot_index, s32 texture_column, s32 narrow_layout, s32 palette_row)
 {
@@ -2923,7 +2906,6 @@ static void field_load_actor_texture_set(s32 resource_id, s32 slot_index, s32 te
 
 /**
  * @brief Advance and dispatch the per-frame runtime state for all field actor objects.
- * @see decomp.me (100%) TODO
  */
 void field_update_actor_objects(void)
 {
@@ -3052,7 +3034,6 @@ void field_update_actor_objects(void)
 /**
  * @brief Move a negative actor Y offset toward zero by one fixed step.
  * @param record Actor object record to update.
- * @see decomp.me (100%) TODO
  */
 void field_settle_actor_vertical_offset(FieldActorObjectRecord *record)
 {
@@ -3070,7 +3051,6 @@ void field_settle_actor_vertical_offset(FieldActorObjectRecord *record)
 /**
  * @brief Emit render packets for every active field actor object.
  * @param render_context Field render context and packet cursor.
- * @see decomp.me (100%) TODO
  */
 void field_render_actor_objects(FieldRenderContext *render_context)
 {
@@ -3124,7 +3104,6 @@ void field_render_actor_objects(FieldRenderContext *render_context)
  * @brief Stream one CD resource into the current field resource cursor.
  * @param resource_id CD resource id to queue.
  * @param destination Buffer receiving the queued data.
- * @see decomp.me (100%) TODO
  */
 static void field_stream_resource_to_buffer(u16 resource_id, void* destination)
 {
@@ -3139,7 +3118,6 @@ static void field_stream_resource_to_buffer(u16 resource_id, void* destination)
  * @brief Advance the current forward actor animation and resolve its frame data.
  * @param record Actor object record whose animation is advanced.
  * @return Pointer to the current decoded frame data.
- * @see decomp.me (100%) TODO
  */
 u8 *field_advance_actor_animation_frame(FieldActorObjectRecord *record)
 {
@@ -3260,7 +3238,6 @@ u8 *field_advance_actor_animation_frame(FieldActorObjectRecord *record)
 /**
  * @brief Restart an actor animation from its first frame in forward playback.
  * @param record Actor object record to restart.
- * @see decomp.me (100%) TODO
  */
 void field_restart_actor_animation(FieldActorObjectRecord *record)
 {
@@ -3274,7 +3251,6 @@ void field_restart_actor_animation(FieldActorObjectRecord *record)
  * @param record Actor object record to initialize.
  * @param resource_base Animation resource base.
  * @return Pointer to the first decoded frame data.
- * @see decomp.me (100%) TODO
  */
 u8 *field_begin_actor_animation_forward(FieldActorObjectRecord *record, u8 *resource_base)
 {
@@ -3363,7 +3339,6 @@ u8 *field_begin_actor_animation_forward(FieldActorObjectRecord *record, u8 *reso
 /**
  * @brief Restart an actor animation from its final frame in reverse playback.
  * @param record Actor object record to restart.
- * @see decomp.me (100%) TODO
  */
 void field_restart_actor_animation_reverse(FieldActorObjectRecord *record)
 {
@@ -3376,7 +3351,6 @@ void field_restart_actor_animation_reverse(FieldActorObjectRecord *record)
  * @param record Actor object record to initialize.
  * @param resource_base Animation resource base.
  * @return Pointer to the final decoded frame data.
- * @see decomp.me (100%) TODO
  */
 u8 *field_begin_actor_animation_reverse(FieldActorObjectRecord *record, u8 *resource_base)
 {
@@ -3482,7 +3456,6 @@ u8 field_get_next_animation_frame_count(FieldActorObjectRecord* record)
  * @param record Actor object record whose part animation is advanced.
  * @param resource_base Animation resource base.
  * @return Pointer to the current decoded frame data.
- * @see decomp.me (100%) TODO
  */
 u8 *field_advance_actor_part_animation_frame(FieldActorObjectRecord *record, u8 *resource_base)
 {
@@ -3591,7 +3564,6 @@ u8 *field_advance_actor_part_animation_frame(FieldActorObjectRecord *record, u8 
  * @param resource_id CD resource id to read.
  * @param slot_index Actor slot associated with the package.
  * @param resource_entry_index Resource entry receiving the package.
- * @see decomp.me (100%) TODO
  */
 void field_load_resource_package(u16 resource_id, s32 slot_index, s32 resource_entry_index)
 {
@@ -3610,7 +3582,6 @@ void field_load_resource_package(u16 resource_id, s32 slot_index, s32 resource_e
  * @param size Total package size in bytes.
  * @param slot_index Actor slot receiving the package.
  * @param palette_row Palette row used for texture upload.
- * @see decomp.me (100%) TODO
  */
 void field_unpack_resource_package(FieldCdBuffer *buf, s32 size, s32 slot_index, s32 palette_row)
 {
@@ -3640,7 +3611,6 @@ void field_unpack_resource_package(FieldCdBuffer *buf, s32 size, s32 slot_index,
  * @param slot_index Actor texture slot.
  * @param texture_index Texture section index.
  * @param palette_row Palette row used by the upload.
- * @see decomp.me (100%) TODO
  */
 void field_upload_resource_texture(FieldCdBuffer *buf, s32 slot_index, s32 texture_index, s32 palette_row)
 {
@@ -3708,7 +3678,6 @@ void field_upload_resource_texture(FieldCdBuffer *buf, s32 slot_index, s32 textu
  * @param src Source words.
  * @param length Number of source bytes.
  * @param slot_index Resource entry that receives the copied data.
- * @see decomp.me (100%) TODO
  */
 void field_append_resource_data(u32 *src, s32 length, s32 slot_index)
 {
@@ -3733,7 +3702,6 @@ void field_append_resource_data(u32 *src, s32 length, s32 slot_index)
  * @brief Convert an actor screen X position to the field audio pan range.
  * @param actor_index Actor object index.
  * @return Pan value clamped to 0x60 through 0x9F.
- * @see decomp.me (100%) TODO
  */
 s32 field_get_actor_sound_pan(s32 actor_index)
 {
@@ -3758,7 +3726,6 @@ s32 field_get_actor_sound_pan(s32 actor_index)
 
 /**
  * @brief Rebuild cached portrait images when any of the three actor portrait selections change.
- * @see decomp.me (100%) TODO
  */
 void field_refresh_actor_portraits(void)
 {
@@ -3833,7 +3800,6 @@ void field_refresh_actor_portraits(void)
 
 /**
  * @brief Mark every field effect record free and reset the effect allocator.
- * @see decomp.me (100%) TODO
  */
 void field_reset_effect_pool(void)
 {
@@ -3852,7 +3818,6 @@ void field_reset_effect_pool(void)
 /**
  * @brief Retire every active field effect owned by an actor.
  * @param actor Actor whose owned effects are retired.
- * @see decomp.me (100%) TODO
  */
 void field_clear_actor_effects(FieldActorState *actor)
 {
@@ -3881,7 +3846,6 @@ void field_clear_actor_effects(FieldActorState *actor)
 /**
  * @brief Update effect-emitting parts for each active animation track of an actor.
  * @param actor Actor animation state to process.
- * @see decomp.me (100%) TODO
  */
 void field_update_actor_effects(FieldActorState *actor)
 {
@@ -3908,7 +3872,6 @@ void field_update_actor_effects(FieldActorState *actor)
 /**
  * @brief Evaluate one animation track and emit its actor-part effects.
  * @param actor Actor animation state to process.
- * @see decomp.me (100%) TODO
  */
 void field_update_actor_part_effects(FieldActorState *actor)
 {
@@ -4022,7 +3985,6 @@ void field_update_actor_part_effects(FieldActorState *actor)
  * @param effect Spawned effect record.
  * @param part Actor-part definition controlling the effect.
  * @param actor_record Actor object record that owns the part color.
- * @see decomp.me (100%) TODO
  */
 static void field_apply_actor_part_color(FieldActorObjectRecord *effect, FieldActorPartDef *part, FieldActorObjectRecord *actor_record)
 {

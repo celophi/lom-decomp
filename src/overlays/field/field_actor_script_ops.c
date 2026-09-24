@@ -137,7 +137,6 @@ void func_80088198(FieldActor* actor);
 /**
  * @brief Run the next script command of an actor that has a script and no active command.
  * @param actor Actor to step.
- * @see decomp.me (100%) TODO
  */
 void func_800880EC(FieldActor* actor)
 {
@@ -180,7 +179,6 @@ u8* field_get_object_script_command(FieldActor* actor)
  * skips itself; 0x01-0x7F and the unused codes above 0x80 do nothing.
  *
  * @param actor Actor whose current script command runs.
- * @see decomp.me (100%)
  */
 void func_80088198(FieldActor* actor)
 {
@@ -1151,7 +1149,6 @@ s32 func_80089980(s32 key)
  * @brief Toggle the hidden state of the actor with @p key.
  * @param key Object key to look up.
  * @return 0 when the actor was updated, -1 when no actor has @p key.
- * @see decomp.me (100%)
  */
 s32 func_80089A68(s32 key)
 {
@@ -1449,7 +1446,6 @@ void func_8008A4D0(FieldActor* actor, RECT* rect, s32 x, s32 y)
  * @param key Object key to look up.
  * @param resource_id Resource to bind.
  * @return -1 when no actor has @p key, 1 when the binding failed, 0 on success.
- * @see decomp.me (100%) TODO
  */
 s32 func_8008A580(s32 key, s32 resource_id)
 {
@@ -2165,7 +2161,6 @@ void func_8008B724(void)
 
 /**
  * @brief Restart the loaded animation actors whose restart is pending.
- * @see decomp.me (100%)
  */
 void func_8008B73C(void)
 {

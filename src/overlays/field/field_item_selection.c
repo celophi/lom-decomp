@@ -295,7 +295,6 @@ u8 *func_800AF0E8(u32 *ot, u8 *cursor, s32 scroll_x, s32 scroll_y, s32 unused, I
  * @brief Process item selection, cancellation, scrolling, and actor creation.
  * @param window Item-selection window slot being updated.
  * @return Nothing meaningful; the original declares an int return and never sets it.
- * @see decomp.me (100%)
  */
 s32 func_800AF350(ItemWindowSlot *window)
 {
@@ -488,7 +487,6 @@ s32 func_800AF350(ItemWindowSlot *window)
  * absent (0xFF) and clears the object's unk18E byte.
  *
  * @param actor_index Field actor and object index.
- * @see decomp.me (100%) TODO
  */
 void func_800AF824(s32 actor_index)
 {

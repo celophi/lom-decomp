@@ -31,7 +31,6 @@
  * @param palette Glyph palette index.
  * @param alignment Alignment mode passed to cload_draw_cached_text.
  * @return Advanced primitive-buffer cursor.
- * @see decomp.me (100.00%)
  */
 void *cload_draw_signed_decimal(void *prim, u_long *ot, s32 value, s32 x, s32 y, s32 palette, s32 alignment)
 {
@@ -81,7 +80,6 @@ void *cload_draw_signed_decimal(void *prim, u_long *ot, s32 value, s32 x, s32 y,
  * @param x Text x position, interpreted per @p alignment.
  * @param y Text top edge.
  * @param alignment Alignment mode passed to cload_draw_cached_text.
- * @see decomp.me (100%)
  */
 void cload_draw_hex_byte(void *prim, u_long *ot, s32 value, s32 x, s32 y, s32 alignment)
 {
@@ -106,7 +104,6 @@ void cload_draw_hex_byte(void *prim, u_long *ot, s32 value, s32 x, s32 y, s32 al
  * @param palette Glyph palette index.
  * @param alignment 0 left-aligned at @p x, 1 ends at @p x, 2 centered on @p x.
  * @return Advanced primitive-buffer cursor.
- * @see decomp.me (100.00%)
  */
 void *cload_draw_cached_text(void *prim, u_long *ot, u8 *text, s32 x, s32 y, s32 palette, s32 alignment)
 {
@@ -197,7 +194,6 @@ void *cload_draw_cached_text(void *prim, u_long *ot, u8 *text, s32 x, s32 y, s32
  * @param palette Glyph palette index; sets the 4-bit pixel value (palette + 1) * 2.
  * @return Advanced primitive-buffer cursor, or @p prim when the glyph is missing
  *         from the ROM or the cache is full.
- * @see decomp.me (100.00%)
  */
 void *cload_render_cached_glyph(void *prim, u_long *ot, u16 code, s32 palette)
 {
@@ -283,7 +279,6 @@ void *cload_render_cached_glyph(void *prim, u_long *ot, u16 code, s32 palette)
  * @param cache_slot Glyph-cache slot whose VRAM tile is sampled.
  * @param palette Unused; the CLUT is fixed.
  * @return Primitive-buffer cursor after the sprite.
- * @see decomp.me (100.00%)
  */
 void *cload_emit_glyph_sprite(CloadGlyphSprite *sprite, u_long *ot, s32 cache_slot, s32 palette)
 {
@@ -311,7 +306,6 @@ void *cload_emit_glyph_sprite(CloadGlyphSprite *sprite, u_long *ot, s32 cache_sl
 
 /**
  * @brief Clear per-frame glyph-use flags and reset raster allocation.
- * @see decomp.me (100.00%)
  */
 void cload_begin_glyph_cache_frame(void)
 {
@@ -326,7 +320,6 @@ void cload_begin_glyph_cache_frame(void)
 
 /**
  * @brief Evict glyph-cache entries not used this frame.
- * @see decomp.me (100.00%)
  */
 void cload_evict_unused_glyphs(void)
 {
@@ -343,7 +336,6 @@ void cload_evict_unused_glyphs(void)
 
 /**
  * @brief Clear the glyph cache and raster scratch buffer.
- * @see decomp.me (100.00%)
  */
 void cload_reset_glyph_cache(void)
 {
@@ -369,7 +361,6 @@ void cload_reset_glyph_cache(void)
  *       pick the row and column of one 16-row page of the double-byte table;
  *       bytes from 0x21 index the single-byte table by (c - 0x20); any other
  *       byte becomes the table's first (blank) glyph.
- * @see decomp.me (100.00%)
  */
 void cload_expand_text_glyph_codes(u8 *out, u8 *in)
 {

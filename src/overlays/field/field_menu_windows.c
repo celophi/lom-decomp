@@ -219,7 +219,6 @@ void *func_800ADCD0(void *packet_cursor, u32 *ordering_table, RECT *destination,
  * Transfers a 0x10x2 block to VRAM (0x100, 0x1F3) from the base image data and
  * a 0x10x0x20 block to (0x110, 0x1E0) from the data 0x40 bytes further in.
  *
- * @see decomp.me (100%) TODO
  */
 void func_800ADE2C(void)
 {
@@ -333,7 +332,6 @@ FieldMenuElement *func_800ADF84(void)
  * blinking, or closing border. The updated packet cursor returns to the context.
  *
  * @param context Ordering-table and primitive-buffer state for the current frame.
- * @see decomp.me (100%)
  */
 void func_800AE008(FieldMenuRenderContext *context)
 {
