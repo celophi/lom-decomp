@@ -15,13 +15,10 @@
  * @brief Select the animation and resource bank from the current rotation.
  * @param advance Nonzero to advance the rotation by 32 units.
  * @return Actor animation state.
+ * @see decomp.me (100%)
  */
 WmapAnimation *func_80099754(s32 advance)
 {
-/* Partial WMAP decompilation: 97.459015% (gcc280_g0). */
-
-/** @brief Actor animation state; only sequence and previous-sequence fields are changed. */
-
 extern WmapAnimation D_800DBE3C;
 typedef struct
 {
@@ -37,26 +34,26 @@ extern u8 D_8011F538[];
 extern u8 *D_8013A184;
 extern s32 D_801B2C48;
 
-    s32 angle;
     s32 rotated_angle;
+    s32 value;
     WmapAnimation *actor;
-    s16 position;
-    WmapRotation *rotation;
 
     actor = &D_800DBE3C;
     if (advance != 0)
     {
-        rotation = &D_801AFBD0;
-        angle = rotation->angle + 32;
+        WmapRotation* rotation = &D_801AFBD0;
+        s32 angle = rotation->angle + 32;
+        angle &= 0xFFF;
+        value = rotation->angle = angle;
     }
     else
     {
-        rotation = &D_801AFBD0;
-        angle = rotation->angle;
+        WmapRotation* rotation = &D_801AFBD0;
+        s32 angle = rotation->angle;
+        angle &= 0xFFF;
+        value = rotation->angle = angle;
     }
-    angle &= 0xFFF;
-    rotation->angle = angle;
-    rotated_angle = angle + 0x200;
+    rotated_angle = value + 0x200;
     actor->sequence = (rotated_angle >> 9) & 3;
     if (rotated_angle & 0x800)
     {
@@ -76,12 +73,15 @@ extern s32 D_801B2C48;
         D_8013A184 = D_8011D538;
         D_801B2C48 = 0;
     }
-    position = 50;
-    if ((u32)(angle - 0x401) < 0x7FFU && D_801AFBDE < 40)
+    if ((u32)(value - 0x401) < 0x7FFU && D_801AFBDE < 40)
     {
-        position = 61;
+        value = 61;
     }
-    D_801AFBE0 = position;
+    else
+    {
+        value = 50;
+    }
+    D_801AFBE0 = value;
     return actor;
 }
 
@@ -1119,13 +1119,10 @@ extern void func_8009AA6C__for_func_8009AA2C(void) __asm__("func_8009AA6C");
 
 /**
  * @brief World-map step: build a sprite, decrement a shared budget, expire the timer.
- * @note Best match ~89.03% (gcc280_g0); residual is prologue scheduling of the
- *       s0 save versus the first call (permuter territory).
+ * @see decomp.me (100%)
  */
 void func_8009AA6C(void)
 {
-/* Partial WMAP decompilation: 89.027020% (gcc280_g0). */
-
 extern u8 D_800DBE3C[];
 extern s32 D_8013A180;
 extern s32 D_8011CF54;
@@ -1134,9 +1131,11 @@ extern s32 D_801B2C4C;
 extern s32 D_801B2C50;
 extern void func_80099754__for_func_8009AA6C(s32 arg) __asm__("func_80099754");
 
+    u8* actor = D_800DBE3C;
+
     func_80099754__for_func_8009AA6C(0);
-    func_8006CC4C(D_800DBE3C, &D_8013A180);
-    func_80066F9C(D_800DBE3C, D_8011CF54, 0x28, D_801AFBE0, 2);
+    func_8006CC4C(actor, &D_8013A180);
+    func_80066F9C(actor, D_8011CF54, 0x28, D_801AFBE0, 2);
     *(s16 *)&D_8011CF54 = *(u16 *)&D_8011CF54 - 6;
     if (--D_801B2C50 == 0)
     {
@@ -1342,13 +1341,10 @@ extern void func_8009AE08__for_func_8009ADC8(void) __asm__("func_8009AE08");
 
 /**
  * @brief World-map step: build a sprite, decrement a shared budget, expire the timer.
- * @note Best match ~89.03% (gcc280_g0); residual is prologue scheduling of the
- *       s0 save versus the first call (permuter territory).
+ * @see decomp.me (100%)
  */
 void func_8009AE08(void)
 {
-/* Partial WMAP decompilation: 89.027020% (gcc280_g0). */
-
 extern u8 D_800DBE3C[];
 extern s32 D_8013A180;
 extern s32 D_8011CF54;
@@ -1357,9 +1353,11 @@ extern s32 D_801B2C54;
 extern s32 D_801B2C58;
 extern void func_80099754__for_func_8009AE08(s32 arg) __asm__("func_80099754");
 
+    u8* actor = D_800DBE3C;
+
     func_80099754__for_func_8009AE08(0);
-    func_8006CC4C(D_800DBE3C, &D_8013A180);
-    func_80066F9C(D_800DBE3C, D_8011CF54, 0x28, D_801AFBE0, 2);
+    func_8006CC4C(actor, &D_8013A180);
+    func_80066F9C(actor, D_8011CF54, 0x28, D_801AFBE0, 2);
     *(s16 *)&D_8011CF54 = *(u16 *)&D_8011CF54 - 4;
     if (--D_801B2C58 == 0)
     {

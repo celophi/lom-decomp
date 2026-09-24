@@ -77,13 +77,24 @@ void func_80064F14(void)
  * @param source Source words.
  * @param destination Destination words.
  * @param byte_count Nonnegative byte count; trailing partial words are ignored.
+ * @see decomp.me (100%)
  */
 void func_80064F1C(s32* source, s32* destination, s32 byte_count)
 {
-    byte_count /= 4;
-    while (--byte_count != -1)
+    s32 limit = byte_count;
+    if (byte_count < 0)
     {
-        *destination++ = *source++;
+        limit = byte_count + 3;
+    }
+    byte_count = limit >> 2;
+    if (--byte_count != -1)
+    {
+        do
+        {
+            limit = -1;
+            *destination++ = *source++;
+            byte_count--;
+        } while (byte_count != limit);
     }
 }
 
@@ -97,12 +108,13 @@ void func_80064F5C(void)
 /**
  * @brief Queue a TIM read from CD and upload the decoded image(s) to VRAM.
  * @param resource_index CD resource id to queue.
- * @note Best match ~73% (gcc280_g0); residual is a cross-jump/reg-alloc tie
- *       (target keeps both pointer regs live; the identical branch tails merge).
+ * @see decomp.me (94.12%)
+ * @note Remaining mismatch swaps the data and rectangle pointer registers;
+ *       the branch layout and instruction count match.
  */
 void func_80064F64(s32 resource_index)
 {
-    RECT rect;
+    WmapTextureRect rectangle;
     u8* data;
     u8* header;
 
@@ -113,36 +125,40 @@ void func_80064F64(s32 resource_index)
     data += 8;
     if (header[4] & 8)
     {
-        rect = *(RECT*)((u8*)data + 4);
-        LoadImage(&rect, (u_long*)(data + 0xC));
+        header = (u8*)&rectangle;
+        rectangle = *(WmapTextureRect*)(data + 4);
+        LoadImage((RECT*)header, (u_long*)(data + 12));
         data += *(s32*)data;
-        rect = *(RECT*)((u8*)data + 4);
-        if (rect.x == -1)
+        rectangle = *(WmapTextureRect*)(data + 4);
+        if (((RECT*)header)->x != -1)
         {
-            return;
+            LoadImage((RECT*)header, (u_long*)(data + 12));
+            DrawSync(0);
+            D_801ADAFC = 1;
         }
-        goto draw;
     }
-    rect = *(RECT*)((u8*)data + 4);
-    if (rect.x == -1)
+    else
     {
-        return;
+        rectangle = *(WmapTextureRect*)(data + 4);
+        if (((RECT*)&rectangle)->x != -1)
+        {
+            LoadImage((RECT*)&rectangle, (u_long*)(data + 12));
+            DrawSync(0);
+            D_801ADAFC = 1;
+        }
     }
-draw:
-    LoadImage(&rect, (u_long*)(data + 0xC));
-    DrawSync(0);
-    D_801ADAFC = 1;
 }
 
 /**
  * @brief Stream a TIM read from CD and upload the decoded image(s) to VRAM.
  * @param resource_index CD resource id to stream.
- * @note Best match ~73% (gcc280_g0); residual is a cross-jump/reg-alloc tie
- *       (target keeps both pointer regs live; the identical branch tails merge).
+ * @see decomp.me (94.12%)
+ * @note Remaining mismatch swaps the data and rectangle pointer registers;
+ *       the branch layout and instruction count match.
  */
 void func_80065078(s32 resource_index)
 {
-    RECT rect;
+    WmapTextureRect rectangle;
     u8* data;
     u8* header;
 
@@ -153,26 +169,28 @@ void func_80065078(s32 resource_index)
     data += 8;
     if (header[4] & 8)
     {
-        rect = *(RECT*)((u8*)data + 4);
-        LoadImage(&rect, (u_long*)(data + 0xC));
+        header = (u8*)&rectangle;
+        rectangle = *(WmapTextureRect*)(data + 4);
+        LoadImage((RECT*)header, (u_long*)(data + 12));
         data += *(s32*)data;
-        rect = *(RECT*)((u8*)data + 4);
-        if (rect.x == -1)
+        rectangle = *(WmapTextureRect*)(data + 4);
+        if (((RECT*)header)->x != -1)
         {
-            return;
+            LoadImage((RECT*)header, (u_long*)(data + 12));
+            DrawSync(0);
+            D_801ADAFC = 1;
         }
     }
     else
     {
-        rect = *(RECT*)((u8*)data + 4);
-        if (rect.x == -1)
+        rectangle = *(WmapTextureRect*)(data + 4);
+        if (((RECT*)&rectangle)->x != -1)
         {
-            return;
+            LoadImage((RECT*)&rectangle, (u_long*)(data + 12));
+            DrawSync(0);
+            D_801ADAFC = 1;
         }
     }
-    LoadImage(&rect, (u_long*)(data + 0xC));
-    DrawSync(0);
-    D_801ADAFC = 1;
 }
 
 /**

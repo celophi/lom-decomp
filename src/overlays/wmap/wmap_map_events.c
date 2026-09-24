@@ -589,12 +589,10 @@ typedef struct
 /**
  * @brief World-map step handler: seed a pathfinding move for the actor, populate its
  *        motion record, and advance the step counter.
- * @note Best match ~93% (gcc280_g0); residual is post-call store scheduling.
+ * @see decomp.me (100%)
  */
 void func_800A6B34(void)
 {
-/* Partial WMAP decompilation: 93.333336% (gcc280_g0). */
-
 extern void func_800A7D40__for_func_800A6B34(void) __asm__("func_800A7D40");
 extern s32 D_800DCEF8;
 extern s32 D_800DCF00;
@@ -611,8 +609,8 @@ extern s32 D_801B2E48;
     *(s32*)(base + 0x384) = D_800DCEF8;
     *(s32*)(base + 0x388) = D_800DCF00;
     a = *(u16*)(base + 0x394);
-    *(s32*)(base + 0x380) = 1;
-    *(s32*)(base + 0x38C) = 1;
+    g_wmap_travelers[3].moving = 1;
+    g_wmap_travelers[3].path_index = 1;
     g_wmap_scripted_travel_active = 1;
     *(u16*)(base + 0x374) = a;
     *(u16*)(base + 0x37C) = ((s16)a - 1) * 0xA0;
@@ -660,12 +658,10 @@ extern s32 D_801B2E50;
 /**
  * @brief World-map step handler: seed a pathfinding move for the actor, populate its
  *        motion record, and advance the step counter.
- * @note Best match ~93% (gcc280_g0); residual is post-call store scheduling.
+ * @see decomp.me (100%)
  */
 void func_800A6D38(void)
 {
-/* Partial WMAP decompilation: 93.333336% (gcc280_g0). */
-
 extern void func_800A8128__for_func_800A6D38(void) __asm__("func_800A8128");
 extern s32 D_800DCEF8;
 extern s32 D_800DCF00;
@@ -682,8 +678,8 @@ extern s32 D_801B2E50;
     *(s32*)(base + 0x384) = D_800DCEF8;
     *(s32*)(base + 0x388) = D_800DCF00;
     a = *(u16*)(base + 0x394);
-    *(s32*)(base + 0x380) = 1;
-    *(s32*)(base + 0x38C) = 1;
+    g_wmap_travelers[3].moving = 1;
+    g_wmap_travelers[3].path_index = 1;
     g_wmap_scripted_travel_active = 1;
     *(u16*)(base + 0x374) = a;
     *(u16*)(base + 0x37C) = ((s16)a - 1) * 0xA0;
@@ -728,32 +724,43 @@ extern s32 D_801B2E58;
     func_800A8448__for_func_800A6E28();
 }
 
-/** @brief Build the effect route, initialize its position, and advance the sequence. */
+/**
+ * @brief Build the effect route, initialize its position, and advance the sequence.
+ * @see decomp.me (100%)
+ */
 void func_800A6F3C(void)
 {
-/* Partial WMAP decompilation: 87.906250% (gcc280_g0). */
-
 extern s32 D_800DCEF8;
 extern s32 D_800DCF00;
 extern s32 D_801B2E58;
 extern void func_800A8510__for_func_800A6F3C(void) __asm__("func_800A8510");
 
-    s16 screen_x;
+    u8* base;
+    u16 cell_x;
+    u16 cell_y;
+    s32 state;
+    s32 coordinate;
 
-    func_8006D0F0(18, &D_800DCEF8, &D_800DCF00);
-    func_8005EB68(g_wmap_travelers[3].cell_x, g_wmap_travelers[3].cell_y, D_800DCEF8, D_800DCF00, g_wmap_travelers[3].path_x.cells, g_wmap_travelers[3].path_y.cells);
-    g_wmap_travelers[3].destination_x = D_800DCEF8;
-    g_wmap_travelers[3].destination_y = D_800DCF00;
-    g_wmap_scripted_travel_active = 1;
-    g_wmap_travelers[3].moving = 1;
-    g_wmap_travelers[3].path_index = 1;
-    g_wmap_travelers[3].next_cell_x = (u16)g_wmap_travelers[3].path_x.steps[1].cell;
-    screen_x = (g_wmap_travelers[3].path_x.steps[1].cell - 1) * 160;
-    g_wmap_travelers[3].next_cell_y = (u16)g_wmap_travelers[3].path_y.steps[1].cell;
-    g_wmap_travelers[3].target_x = screen_x;
-    g_wmap_travelers[3].target_y = (g_wmap_travelers[3].path_y.steps[1].cell - 1) * 160;
+    func_8006D0F0(0x12, &D_800DCEF8, &D_800DCF00);
+    base = (u8*)g_wmap_travelers;
+    func_8005EB68(*(s32*)(base + 0x36C), *(s32*)(base + 0x370), D_800DCEF8, D_800DCF00,
+                  (s32*)(base + 0x390), (s32*)(base + 0x410));
+    *(s32*)(base + 0x384) = D_800DCEF8;
+    *(s32*)(base + 0x388) = D_800DCF00;
+    state = 1;
+    cell_x = *(u16*)(base + 0x394);
+    g_wmap_scripted_travel_active = state;
+    g_wmap_travelers[3].moving = state;
+    g_wmap_travelers[3].path_index = state;
+    *(u16*)(base + 0x374) = cell_x;
+    coordinate = (s16)cell_x - 1;
+    *(u16*)(base + 0x37C) = coordinate * 0xA0;
+    cell_y = *(u16*)(base + 0x414);
+    coordinate = cell_y;
+    *(u16*)(base + 0x376) = cell_y;
+    *(u16*)(base + 0x37E) = ((s16)coordinate - 1) * 0xA0;
     func_800652A8(50, 128);
-    D_801B2E58++;
+    D_801B2E58 += 1;
     func_800A8510__for_func_800A6F3C();
 }
 

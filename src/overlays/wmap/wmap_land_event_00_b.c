@@ -9900,55 +9900,57 @@ void func_800B7420(void);
     }
 }
 
+/**
+ * @see decomp.me (97.92%)
+ * @note One extra address calculation remains for the second setting store.
+ */
 void func_800B44EC(void)
 {
-/* Partial WMAP decompilation: 95.784320% (gcc280_g0). */
-extern u8 D_80121538;
-extern void* D_80139280;
-extern u8 D_80139988;
-extern u8 D_801AFBD0;
+extern u8 D_80139988[];
+extern void *D_80121538;
+extern s16 D_801AFBD0;
+extern u8 *D_80139280;
 extern s32 D_801B3040;
 extern s32 D_801B3044;
-extern void func_800B5BBC__for_func_800B44EC(void) __asm__("func_800B5BBC");
+extern void func_800B5BBC(void);
 
-    s16* value;
+    s16 *slot;
+    u8 *resource_cursor;
+    u8 *actor;
+    void *resource;
     s32 index;
-    s32 current;
     s32 setting;
-    s32* entry;
-    u8* base;
-    u8* resource;
-    void* state;
+    s32 current;
+    s32 field_offset = 0x8C;
+
     index = 0x14;
     resource = &D_80121538;
-    base = &D_80139988;
-    entry = (s32*)(base + 0xA0);
-    base = &D_801AFBD0;
-    value = (s16*)(base + 0x190);
+    resource_cursor = (u8 *)&D_80139988 + index * 8;
+    slot = (s16 *)((u8 *)&D_801AFBD0 + index * 20);
     do
     {
-        *value = 0;
-        entry[1] = (s32)resource;
-        entry += 2;
-        index++;
-        value += 0xA;
+        *slot = 0;
+        *(void **)(resource_cursor + 4) = resource;
+        resource_cursor += 8;
+        index += 1;
+        slot += 0xA;
     } while (index < 0x78);
     D_801B3044 = 0xB4;
-    *(s32*)((u8*)D_80139280 + 0x7C) = setting = 5;
-    *(s32*)((u8*)D_80139280 + 0x8C) = setting;
-    state = D_80139280;
+    actor = D_80139280;
+    *(s32 *)(actor + 0x7C) = setting = 5;
+    *(s32 *)(actor + field_offset) = setting;
     current = D_801B3040;
-    *(s32*)((u8*)state + 0x78) = 1;
-    *(s32*)((u8*)state + 0x80) = -0x3E8;
-    *(s32*)((u8*)state + 0x84) = 0x1770;
-    *(s32*)((u8*)state + 0x88) = 0x1388;
-    *(s32*)((u8*)state + 0x90) = -0x64;
-    *(s32*)((u8*)state + 0x98) = -0x12C;
-    *(s32*)((u8*)state + 0x94) = 0;
-    *(s32*)((u8*)state + 0xA0) = -1;
-    *(s32*)((u8*)state + 0xA4) = 0;
+    *(s32 *)(actor + 0x78) = 1;
+    *(s32 *)(actor + 0x80) = -0x3E8;
+    *(s32 *)(actor + 0x84) = 0x1770;
+    *(s32 *)(actor + 0x88) = 0x1388;
+    *(s32 *)(actor + 0x90) = -0x64;
+    *(s32 *)(actor + 0x98) = -0x12C;
+    *(s32 *)(actor + 0x94) = 0;
+    *(s32 *)(actor + 0xA0) = -1;
+    *(s32 *)(actor + 0xA4) = 0;
     D_801B3040 = current + 1;
-    func_800B5BBC__for_func_800B44EC();
+    func_800B5BBC();
 }
 
 s32 func_800B45B8(s32 reset)
