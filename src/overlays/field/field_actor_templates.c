@@ -1,5 +1,6 @@
 #include "game_audio.h"
 #include "common.h"
+#include "field_calls.h"
 #include "field_records.h"
 
 extern FieldBattleContext *D_80123FB0;
@@ -9,9 +10,7 @@ s32 func_800B3670(s32 arg0);
 s32 func_800B42B4(FieldActorTemplate *template);
 extern FieldActorTemplate *func_800B4844(u32 *, s32);
 extern u32 func_800BD414(s32, s32);
-extern s32 func_800C19D0(s32, u32, s32);
 s32 func_80087F0C(s32 arg0);
-void func_800B3F1C(s32 actor_id, FieldStatusRecord *record, FieldStatusState *state);
 
 /**
  * @brief Build status records for the field actors whose trigger group matches the requested key.

@@ -5,6 +5,7 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 #define U8(p, o) (*(u8*)((u8*)(p) + (o)))
 #define U16(p, o) (*(u16*)((u8*)(p) + (o)))
 #define U32(p, o) (*(u32*)((u8*)(p) + (o)))

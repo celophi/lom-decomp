@@ -4,6 +4,7 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 
 /** @brief Number of player records that own an action table. */
 #define FIELD_ACTION_RECORD_COUNT 3

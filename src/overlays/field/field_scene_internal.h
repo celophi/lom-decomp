@@ -204,26 +204,33 @@ typedef struct
 } FieldObjDef;
 
 /**
- * @brief Definition record hanging off a part.
+ * @brief Definition record hanging off a part: the part's tile grid.
  *
- * The word at 0x08 is read whole (its bits 12-15 select field_emit_rotated_sprite_grid's
- * placement mode) while bytes 0x0A and 0x0B are read separately as the cell
- * grid dimensions, so the two views have to share storage - same arrangement
- * as FieldObjFlags below.
+ * The word at 0x08 is read whole for its mode bits while bytes 0x0A and 0x0B
+ * are read separately as the cell grid dimensions, so the two views have to
+ * share storage - same arrangement as FieldObjFlags below. The animation code
+ * reaches the same record through FieldAnimDef::u (tile or tint view).
  */
 struct FieldPartDef
 {
-    /** 0x00 identity key; field_find_shareable_part matches parts on it. */
-    s32 key;
+    /**
+     * 0x00 packed tile descriptors, one 4-byte entry per grid cell; also the
+     * identity key field_find_shareable_part matches parts on.
+     */
+    FieldTileDesc* tiles;
     u8 _pad0[8 - 4];
     union
     {
-        /** 0x08 whole word; bit 7 marks the part unshareable, bits 12-15
-            select field_emit_rotated_sprite_grid's placement mode. */
+        /** 0x08 whole word; bit 0 is the initial visibility, bits 4-5 select
+            the CLUT packing mode, bit 7 marks the part unshareable, bits 8-11
+            equal to 1 mean a single cell, bits 12-15 select
+            field_emit_rotated_sprite_grid's placement mode. */
         u32 word;
         struct
         {
-            u8 _pad1[2];
+            /** 0x08 low byte of the word, read alone for the visibility bit. */
+            u8 flags;
+            u8 _pad1;
             /** 0x0A grid width, in cells. */
             u8 cols;
             /** 0x0B grid height, in cells. */
@@ -253,13 +260,17 @@ struct FieldPart
 {
     FieldPart* next;   /* 0x00 */
     FieldPartDef* def; /* 0x04 */
-    /** 0x08 when zero the part still needs its tint records rebuilt; see func_8005A0D0. */
-    s32 unk8;
+    /**
+     * 0x08 part whose bit plane and records this one reuses, or NULL when it
+     * owns them (func_8005A0D0 then rebuilds its tint records).
+     */
+    FieldPart* shared;
     /** 0x0C bit plane: one bit per grid cell, row-major, LSB first. */
-    s32* bits;
+    u32* bits;
     /** 0x10 packed stream of FieldCellRec, one per set bit. */
     u8* records;
-    u8 _pad1[0x18 - 0x14];
+    /** 0x14 byte size of the bit plane at 0x0C. */
+    s32 bits_size;
     /**
      * 0x18 texture-page word shared by every cell; when non-zero it is emitted
      * once as its own primitive instead of per record, shortening the stride.
@@ -267,9 +278,12 @@ struct FieldPart
     s32 tpage_word;
     /** 0x1C rgb/code word shared by every cell; same stride effect as tpage. */
     s32 code_word;
-    /** 0x20 zero means the part is not drawn. */
+    /** 0x20 zero means the part is not drawn (for an animation cel: not the current one). */
     u8 visible;
-    /** 0x21 selects the per-part byte cost: 0x18, 0x1C, 0x28 or 0x34 units. */
+    /**
+     * 0x21 record format, 0-6: selects the per-part byte cost (0x18, 0x1C,
+     * 0x28 or 0x34 units) and the tile record layout (see field_blit_animation_frame).
+     */
     u8 kind;
     /** 0x22 number of attached FieldNode instances field_update_part_sweep updates. */
     u8 node_count;
@@ -279,7 +293,7 @@ struct FieldPart
     s32 x; /* 0x28 x offset within the object */
     s32 y; /* 0x2C y offset within the object */
     s32 z; /* 0x30 z offset within the object */
-    u8 _pad3[0x36 - 0x34];
+    s16 unk34; /* 0x34 */
     /** 0x36 reload period for the sweep phase at 0x38. */
     u16 sweep_period;
     /** 0x38 sweep phase; counts down each frame, reloads from 0x36 at zero. */
@@ -438,78 +452,105 @@ struct FieldMarker
 
 
 
-/** @brief Definition record shared by the animation and sequence lists. */
-struct FieldAnimDef
-{
-    u8 unk0; /* 0x00 */
-    u8 unk1; /* 0x01 */
-    u8 unk2; /* 0x02 */
-    u8 unk3; /* 0x03 */
-    u8 flags; /* 0x04 low three bits select the handler */
-    u8 unk5;  /* 0x05 */
-    u8 unk6;  /* 0x06 */
-    /** 0x07 handler sub-kind; the high byte of the word read at 0x04. */
-    u8 handler_group;
-    /** 0x08 next definition in the same scene list. */
-    FieldAnimDef* next;
-    u8 unkC;  /* 0x0C */
-    u8 unkD;  /* 0x0D */
-    u8 unkE;  /* 0x0E */
-    u8 unkF;  /* 0x0F */
-    u8 unk10; /* 0x10 */
-    u8 _pad2;
-    u16 unk12; /* 0x12 */
-    u8* data;  /* 0x14 handler-specific data */
-};
+
 
 /**
- * @brief Tile grid referenced by a tile-blit animation definition.
+ * @brief Handler word at FieldAnimDef 0x04.
  *
- * Reached two ways: through FieldTileAnimDef::grid (field_blit_animation_frame) and through
- * FieldAnimCel::grid (field_retarget_cel_cluts). The word at 0x08 is read whole for its
- * packing-mode bits while bytes 0x0A and 0x0B are read separately as the grid
- * dimensions, so the two views have to share storage - same arrangement as
- * FieldPartDef.
- *
- * @note The dimensions line up with the low and high halves of some other
- *       record's `unk0A` halfword, so this may well be a view of a second
- *       FieldAnimDef rather than a struct of its own.
+ * The word is tested whole (the handler kind and the list group in one
+ * compare, e.g. `& 0xFF000007`) while its bytes are also read and written on
+ * their own, so the two views share storage.
  */
-typedef struct
+typedef union
 {
-    /** 0x00 packed tile descriptors, one 4-byte entry per grid cell. */
-    FieldTileDesc* tiles;
-    u8 _pad0[8 - 4];
+    u32 word;
+    struct
+    {
+        /** 0x04 low three bits select the handler; bits 3-7 are FIELD_ANIM_DEF_* flags. */
+        u8 kind_flags;
+        /** 0x05 last keyframe index; the cel ring wraps after it. */
+        u8 last_frame;
+        /** 0x06 number of frames in the definition's frame data. */
+        u8 frame_count;
+        /** 0x07 scene animation list (0-3) the definition belongs to. */
+        u8 handler_group;
+    } b;
+} FieldAnimDefFlags;
+
+/**
+ * @brief Definition record shared by the animation and sequence lists.
+ *
+ * Bytes 0x0C..0x13 are handler-specific; FieldAnimDef::flags (the list group
+ * and the handler kind) decides which view of @c u applies.
+ */
+struct FieldAnimDef
+{
+    /**
+     * 0x00 first count-table record (see field_find_count_table_span, which
+     * walks the definition from here). field_build_animation_list tests the
+     * span count through the whole word.
+     */
     union
     {
-        /** 0x08 whole word; bits 4-5 select the CLUT packing mode. */
         u32 word;
         struct
         {
-            u8 _pad1[2];
-            /** 0x0A grid width in tiles. */
-            u8 cols;
-            /** 0x0B grid height in tiles. */
-            u8 rows;
+            /** 0x00 low seven bits: keyframes covered by the first span. */
+            u8 span_count;
+            /** 0x01 starting frame; the movie handler (list 0 kind 4) reads it as a file pair index. */
+            u8 unk1;
+            /** 0x02 duration of the first keyframe span, in frames. */
+            u16 duration;
         } b;
+    } head;
+    FieldAnimDefFlags flags; /* 0x04 */
+    /** 0x08 next definition in the same scene list. */
+    FieldAnimDef* next;
+    union
+    {
+        /** Tile and image handlers (lists 0 and 3). */
+        struct
+        {
+            u8 rect_x;      /* 0x0C left edge of the source rectangle */
+            u8 rect_y;      /* 0x0D top edge of the source rectangle */
+            u8 rect_width;  /* 0x0E rectangle width */
+            u8 rect_height; /* 0x0F rectangle height */
+            /** 0x10 tile grid whose runtime cel list the handler drives. */
+            FieldPartDef* grid;
+        } tile;
+        /** Palette handlers (list 1). */
+        struct
+        {
+            /**
+             * 0x0C CLUT packing mode, matched against FieldPartDef word bits 4-5:
+             * zero packs 16-entry CLUTs 16 to a row, non-zero uses 256-entry rows.
+             */
+            u8 clut_mode;
+            /** 0x0D non-zero reverses the strip rotation direction (kind 2). */
+            u8 reverse;
+            /** 0x0E CLUT slot: row and column nibbles for 16-entry CLUTs, the row otherwise. */
+            u8 clut_slot;
+            /** 0x0F entry offset of the first uploaded colour within the row. */
+            u8 clut_offset;
+            /** 0x10 CLUTs (or colour entries) uploaded per frame. */
+            u8 length;
+            u8 _pad0;
+            /** 0x12 halfword offset of the frame colours past the header pixel stride. */
+            u16 pixel_offset;
+        } clut;
+        /** Tint handlers (list 2). */
+        struct
+        {
+            u8 first_slot; /* 0x0C first scratchpad colour slot rewritten */
+            u8 slot_count; /* 0x0D number of colour slots rewritten */
+            u8 _pad1[2];
+            /** 0x10 tile grid whose runtime cel list is tinted (kind 0). */
+            FieldPartDef* grid;
+        } tint;
     } u;
-} FieldTileGrid;
+    u8* data; /* 0x14 handler-specific data */
+};
 
-/**
- * @brief Tile-blit view of FieldAnimDef.
- *
- * The `unk4 & 7` handler kind decides what lives at offset 0x10: the image-DMA
- * handlers read it as the byte `FieldAnimDef::unk10`, while the tile-blit
- * handler reads the whole word as a pointer to the grid dimensions. The two
- * uses never overlap, so they are kept as separate types rather than a union.
- */
-typedef struct
-{
-    u8 _pad0[0x10];
-    FieldTileGrid* grid; /* 0x10 */
-} FieldTileAnimDef;
-
-/** @brief Element of an animation node's cel ring. */
 /**
  * @brief One 4-byte entry of the scratchpad colour table at 0x1F800000.
  *
@@ -549,10 +590,8 @@ typedef struct
     u16* data;
 } FieldTintPal;
 
-typedef struct FieldAnimCel FieldAnimCel;
-
 /**
- * @brief Colour source for the tile tint pass, hung off FieldAnim::unk10.
+ * @brief Colour source for the tile tint pass, hung off FieldAnim::owner.
  *
  * The two halfword triples multiply component-wise into the three-word colour
  * func_8005AC50 expands into the scratchpad table at 0x1F800000.
@@ -570,7 +609,7 @@ struct FieldTintSrc
     /** 0x04 record holding the palette this tint is built from. */
     FieldTintPal* palette;
     /** 0x08 head of the cel list this source tints (field_tint_animation_cel_list only). */
-    FieldAnimCel* cels;
+    FieldPart* cels;
     u8 _pad1[0x10 - 0xC];
     u16 red;         /* 0x10 */
     u16 green;       /* 0x12 */
@@ -578,27 +617,6 @@ struct FieldTintSrc
     u16 red_scale;   /* 0x16 */
     u16 green_scale; /* 0x18 */
     u16 blue_scale;  /* 0x1A */
-};
-
-struct FieldAnimCel
-{
-    FieldAnimCel* next; /* 0x00 */
-    /** 0x04 grid this cel's bit plane and tile records are laid out on. */
-    FieldTileGrid* grid;
-    /** 0x08 cel whose records this one shares, when the part is a duplicate. */
-    FieldAnimCel* shared;
-    /** 0x0C tile-presence bitmap, one bit per grid cell, LSB first. */
-    u32* mask;
-    /** 0x10 packed destination tile records, advanced past every present tile. */
-    u8* tiles;
-    u8 _pad1[0x18 - 0x14];
-    /** 0x18 when set, the tile record is 4 bytes shorter. */
-    s32 tpage_word;
-    /** 0x1C when set, the tile record is 4 bytes shorter. */
-    s32 code_word;
-    u8 active; /* 0x20 */
-    /** 0x21 record-format selector, 0-6; see field_blit_animation_frame. */
-    u8 format;
 };
 
 /**
@@ -639,8 +657,18 @@ struct FieldAnim
     FieldAnim* next;   /* 0x00 */
     FieldAnimDef* def; /* 0x04 */
     u8 _pad0[0xC - 8];
-    FieldAnimCel* cels; /* 0x0C */
-    s32 unk10;          /* 0x10 */
+    FieldPart* cels; /* 0x0C */
+    /**
+     * 0x10 owner of the cel list: the object (read as its tint source by the
+     * tint handlers) that func_8005ABD8 found the grid in; list 0 kind 1
+     * stores the first cel's tile records here instead.
+     */
+    union
+    {
+        FieldTintSrc* tint_src;
+        FieldObj* object;
+        u8* tiles;
+    } owner;
     /** 0x14 last horizontal tween offset pushed to the target (see field_apply_animation_tween). */
     s32 tween_x;
     /** 0x18 last vertical tween offset pushed to the target. */
@@ -975,23 +1003,13 @@ typedef struct
     s32 fade_level;
 } FieldMemState;
 
-/**
- * @brief Camera / scroll state block at 0x801ED480.
- *
- * The individual words are also referenced as the standalone symbols
- * g_field_camera_x / g_field_camera_y / g_field_camera_z; field_draw_scene_objects uses BOTH forms and the
- * distinction is required to match, because it selects the addressing mode.
- */
-typedef struct
-{
-    u8 _pad[4];
-    s32 x; /* 0x04 == g_field_camera_x */
-    s32 y; /* 0x08 == g_field_camera_y */
-    s32 z; /* 0x0C == g_field_camera_z */
-} FieldCamera;
-
 extern FieldSceneGlobals g_field_scene;
 extern s32 g_field_marker_overlay_enabled[2];
+/*
+ * Standalone symbols for SCENE_STATE->camera_x/y/z (scene_state.h, 0x801ED484..0x801ED48C).
+ * field_draw_scene_objects uses both forms; the choice selects the addressing mode and is
+ * required to match.
+ */
 extern s32 g_field_camera_x;
 extern s32 g_field_camera_y;
 extern s32 g_field_camera_z;
@@ -1000,6 +1018,36 @@ extern s16* g_field_node_angle_table;
 s32 rcos(s32);
 s32 rsin(s32);
 void field_draw_marker_overlay(u8** cursor, u_long* ot);
+
+/**
+ * @brief Screen-space placement of the grid being drawn.
+ *
+ * field_emit_sprite_grid only needs the origin; field_emit_rotated_sprite_grid also reads the
+ * width and camera position to derive the rotation centre for its non-default placement modes.
+ */
+typedef struct
+{
+    /** Screen-space origin of the grid. */
+    s32 x;
+    s32 y;
+    /** Scene width in pixels, from FieldSceneHeader::unk30. */
+    s32 width;
+    /** Camera position in screen pixels. */
+    s32 camera_x;
+    s32 camera_y;
+} FieldViewport;
+
+/* Scene object/part/sequence helpers shared across the FIELD scene TUs.
+   Defined in field_scene_control.c except field_draw_part
+   (field_scene_build.c); documented at their definitions. */
+void func_8005A744(FieldSeq* seq, u8 index);
+FieldObj* func_8005AB4C(s32 index);
+FieldPart* func_8005AB80(s32 obj_index, s32 part_index);
+FieldPart* func_8005ABD8(FieldPartDef* grid, FieldTintSrc** out_src);
+void func_8005AC50(u8* colors, s32 count, s32* rgb_scale);
+void func_8005AD20(u8 format, s32 count, u8* primitive_code);
+FieldObj* field_find_object_by_definition(void* definition);
+void field_draw_part(FieldPart* part, u8** cursor, FieldViewport* origin, u_long* ot);
 
 
 

@@ -10,6 +10,7 @@
  * before the second table.
  */
 #include "common.h"
+#include "field_calls.h"
 #include "vector.h"
 #include "field_types.h"
 #include "sdk/inline_c.h"
@@ -101,23 +102,15 @@ extern FieldResourceEntry g_field_resource_entries[];
 extern s32 g_field_active_group;
 extern s32 g_frame_counter;
 
-s32 func_800839F8(s32 owner_index, s32 require_idle_binding);
-s32 func_80083EEC(s32 owner_index, s32 actor_index, s32 resource_index);
-void func_80084424(s32 owner_index);
-void func_80086494(s32 object_index);
 void field_restart_actor_animation(FieldMotionRecord* object);
 void func_8008A9D8(s32 arg0, s32 arg1, s32 arg2);
 s32 func_8008AABC(s32 a, s32 b);
 void func_8008BC5C(FieldMotionRecord* object);
 void field_prepare_actor_action(FieldMotionRecord* object);
-s32 func_80091728(u8 index, s32 kind, FieldMotionRecord* object);
-s32 func_80091914(FieldMotionRecord* object, u8 index);
-void func_800A2DD8();
 void func_8008A678();
-s32 func_800A29F8(s32 object_index, s32 facing, s32 mode);
-s32 field_object_has_active_actor_tracks(u8 object_index);
 void field_stop_actor_animations_for_object(FieldMotionRecord* object, s32 force);
 void field_restart_actor_animation_reverse(FieldMotionRecord* object);
+/* Defined as returning u8; the original caller tests the unmasked int result. */
 s32 field_get_next_animation_frame_count(FieldMotionRecord* object);
 void field_update_actor_movement_animation();
 void func_80095074(FieldMotionRecord* object);
@@ -321,7 +314,8 @@ s32 func_80092C98(FieldMotionRecord* object)
         tmp = object->facing_or_reward_kind & 0x7F;
         if (tmp == 0x3D)
         {
-            anim = func_80091914(object, object->source_object_index);
+            /* Called as returning int: the original uses the u16 result unmasked. */
+            anim = ((s32 (*)(FieldMotionRecord*, s32))func_80091914)(object, object->source_object_index);
             if (g_field_resource_actions[object->source_object_index].tracks[1].command == tmp && anim == 0x185)
             {
                 object->motion_parameter = anim;
@@ -1179,8 +1173,6 @@ typedef struct
     u16 height;
 } FieldActorCollisionBounds;
 
-s32 func_8005B6AC(FieldActorCollisionMover* mover);
-
 /**
  * @brief Move an object by its speed and refresh its collision contact and height.
  * @param object Object whose position, speed and runtime state are updated.
@@ -1224,7 +1216,7 @@ void func_80094C00(FieldMotionRecord* object, s32 dx, s32 dz)
         mover->mode.bits.bit16 = 0;
         mover->contact = g_field_object_states[object->source_object_index].contact_index;
         mover->surface = g_field_object_states[object->source_object_index].surface;
-        func_8005B6AC(mover);
+        func_8005B6AC((struct FieldCollisionMover*)mover);
         g_field_object_states[object->source_object_index].contact_index = mover->contact;
         g_field_object_states[object->source_object_index].surface = mover->surface;
         g_field_object_states[object->source_object_index].movement.half.height = mover->height / 256;

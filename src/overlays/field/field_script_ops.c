@@ -3,15 +3,31 @@
 #include "field_text.h"
 #include "main.h"
 #include "common.h"
+#include "field_actor_runtime.h"
+#include "field_calls.h"
 
 #include "field_script.h"
 #include "field_records.h"
+#include "shop.h"
 
 /** @brief D_80122B74 viewed as the game state it points at. */
 #define FIELD_GAME ((FieldGameState*)D_80122B74)
 
+/** @brief D_80122B74 viewed as the saved game workspace it points at (g_saved_game). */
+#define FIELD_SAVED ((SavedGame*)D_80122B74)
+
 /** @brief D_80122B78 viewed as the field runtime context it points at. */
 #define FIELD_RUNTIME ((FieldRuntimeContext*)D_80122B78)
+
+/** @brief A FieldLandRecord whose first four bytes are also read as one word. */
+typedef union
+{
+    FieldLandRecord record;
+    u32 word;
+} FieldLandWords;
+
+/** @brief FieldGameState.lands viewed as FieldLandWords. */
+#define FIELD_LAND_WORDS ((FieldLandWords*)FIELD_GAME->lands)
 
 typedef void (*FieldDispatchFn)(s32, s32);
 
@@ -31,27 +47,42 @@ typedef union
     u8 bytes[4];
 } FieldScriptFieldSpec;
 
-typedef struct
+/** @brief One packed shop list entry. */
+typedef union
 {
-    u8 pad0[0x402];
-    u16 unk402;
-} StructB78Local;
+    u32 word;
+    u8 item;
+    struct
+    {
+        /** @brief Item type, or the item record index when @c generated is set. */
+        unsigned item : 8;
+        /** @brief Set when the entry names a record of FieldItemResource whose price is computed. */
+        unsigned generated : 1;
+        /** @brief Base price of a plain item. */
+        unsigned price : 23;
+    } bits;
+} FieldShopListEntry;
 
-/** @brief One entry of the shop item list built on the stack. */
+/** @brief One shop list: a count and that many packed entries. */
 typedef struct
 {
-    s16 price;
-    s16 pad2;
-    s32 scaled;
-} ShopItemEntry;
+    u32 count;
+    FieldShopListEntry entries[1];
+} FieldShopList;
 
-/** @brief One eight-byte shop entry built from a packed resource word. */
+/** @brief Resource 0xA (func_800C1E40): byte offsets of each FieldShopList from the resource start. */
 typedef struct
 {
-    u16 item;
-    u16 unused;
-    u32 price;
-} ScriptShopEntry;
+    u32 header;
+    u32 offsets[1];
+} FieldShopListTable;
+
+/** @brief Resource 5 (func_800C1E40): the item records a shop can generate. */
+typedef struct
+{
+    u32 header;
+    FieldItemRecord records[1];
+} FieldItemResource;
 
 /*
  * Helpers reached from field script handlers. Most take an actor id where
@@ -68,24 +99,6 @@ typedef struct
  * actor-id slot means the script owner.
  */
 
-/** @brief Pending layout transition state with overlapping control fields at 0x418. */
-typedef struct
-{
-    u8 pad[0x404];
-    s32 layout, option, third_selector;
-    u8 pad410[8];
-    union
-    {
-        s32 word;
-        struct
-        {
-            s16 id;
-            s8 mode;
-            u8 flags;
-        } fields;
-    } control;
-} State;
-
 void func_800B820C();
 void func_800B8308();
 void func_800BD520(s32, s32, s32);
@@ -93,156 +106,51 @@ u8* func_800C1B60(s32);
 extern void (*g_field_script_op_table[])();
 extern FieldDispatchFn D_800F0D48[];
 u8* func_800B84B4(s32 arg0, u8* arg1, s32* arg2);
-extern u8* func_800B84B4(s32, u8*, s32*);
 s32 func_800BD414(s32 arg0, s32 arg1);
-/* Field script opcode handlers 0x03 through 0x08 (see field_script.h). */
-
 extern u8* D_80122B78;
-void func_800BD6F4(s32 value, u8* params);
-u8* field_script_read_operand(u32 mode, u8* pc, s32* out);
 s32 func_80087F0C(s32);
 s32 func_800BD650(s32, s32, s32, s32, s32);
 void func_800BD55C(s32, s32, s32, s32, s32, s32);
 extern u8* D_80122B74;
 extern s32 D_80123FB0, D_80123FC4;
 extern u8* func_80087EF0(s32);
-extern u8* func_800C1B60(s32);
-extern void func_8009C620(s32, s32, s32, s32);
-extern void func_8009C77C(s32, s32, s32);
-s32 func_8005A84C(s32 arg0, s32 arg1);
 s32 func_8008B398(s32 key);
-extern s32 func_800BD414(s32 arg0, s32 arg1);
-extern s32 func_8008B398(s32 key);
-void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
 extern s32 D_8011F428;
 extern s32 D_801227F0;
-extern FieldScriptContext* g_field_script;
 s32 func_800875C4(s32 actor);
 extern s32 D_8010AE78;
-/* Field script opcode handlers 0x17 through 0x1C (see field_script.h). */
-
-void func_800A3938(s32 sound_id, s32 pan);
 s32 func_80087FC0(s32 key, s32 mode);
-s32 func_800BE5C8(s32 arg0, s32 arg1, s32 arg2);
 s32 func_80087F44(s32, s32*);
-void func_800B4410(s32 arg0);
-void func_800B4584(void);
-void field_release_actor_resource_slot(s32 arg0);
-void func_800A43E8(s32 arg0, s32 arg1, u16 arg2, s32 arg3);
-void func_800B286C(s32 arg0, s32 arg1, s32 arg2);
-s32 func_800A4744(void);
-u8 func_800A4778(void);
+/* Int parameters on purpose: with the (s32, u8, s8) definition the calls would narrow their arguments. */
+s32 func_800B286C(s32 owner_id, s32 event_id, s32 argument);
 void func_8008AFD8(s32 arg0, s32 arg1, FieldScriptRecord* record, s32 record_index);
-void func_80087614(s32 arg0, s32 arg1);
 s32 func_80087D8C(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-void func_800B2654(s32* arg0, s32* arg1, s32* arg2, s32* arg3);
-void func_8009C620(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-void func_8009C77C(s32 arg0, s32 arg1, s32 arg2);
-void func_800A3988(s32 arg0, s32 arg1, s32 arg2, FieldScriptRecord* record);
 void func_8008B5D0(s32 arg0, s32 arg1, s32 arg2, s32* arg3);
-u8* field_script_read_operand(u32 type, u8* data, s32* value);
 u8* func_800C1E40(s32 arg0);
-void field_open_shop_mode_1();
 extern void func_800B34D0(s32);
-extern void func_800C1230(s32);
-extern u8* func_800C1E40(s32);
-extern s32* func_800C1EC8(s32*, s32*, s32);
+extern extern s32* func_800C1EC8(s32*, s32*, s32);
 void akao_cmd_f1(void);
 void akao_stop_song(s32);
-void field_control_animation(s32, s32, s32, s32);
-void field_open_gosub_screen_sequence(void*);
-void field_open_shop_mode_0(s32);
-void field_run_zukan(s32);
-void func_8005A67C(s32, s32);
 void func_8005B0F4(s32, s32);
-void func_8005B1EC(void);
-void func_8005B228(s32, s32);
-void func_8005B288(s32);
-void func_800681C0(s32);
 void func_80089980(s32);
 void func_80089A68(s32);
-void func_8008BD88(s32);
-void func_8009C974(s32);
-void func_800A37E4(void);
-void func_800A38D4(void);
-void func_800A5670(s32);
-void func_800AD030(s32);
-void func_800B22F0(s32, s32);
-void func_800B31CC(s32);
-void func_800B32FC(s32);
-void func_800B3420(s32);
-void func_800B60DC(s32);
-void func_800B66F0(s32);
+/* Local: field_contact_geometry.c calls it with a third argument, so it stays out of field_calls.h. */
+s32 func_800B22F0(s32 actor_id, s32 script);
 void func_800BCCE0();
-void func_800BE710(s32);
-void func_800C06E8(void);
-void func_800C1230(s32);
 void func_800C1D14(s32, s32);
 void func_800C1D68(void);
 void func_800C1E08(void);
-void func_800C2094(s32);
-s32 func_800C20D8(s32);
-void func_800C2138(s32);
-void func_800C21C0(s32);
-s32 func_800C2264(s32);
-s32 func_800C23F4(void);
-s32 func_800C24BC(s32);
-void func_800C25A0(s32);
-s32 func_800C2724(s32);
-void func_800C2848(s32, s32);
-void func_800C28B8(s32);
 void func_800C299C(s32);
 s32 func_800C29CC(s32);
 void func_800C2A88(s32);
-void func_800C31BC(s32);
-void func_800C35AC(s32);
-s32 func_800C35E4(s32);
-s32 func_800C3860(s32);
-s32 func_800C3894(s32);
-void func_800C396C(void);
-void func_800C5704(s32);
-extern u8 *D_80122B74, *D_80122B78;
 extern s32 g_field_hide_actor_panels, D_8010D020, D_80117EC4, D_80122980;
 extern s32 g_gosub_result_count, g_gosub_result_values;
-void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op);
-extern void field_find_or_load_resource_entry(s32 arg0, s32 arg1);
-extern s32 func_800C1FFC(s32 arg0, s32 arg1, s32 arg2);
-/*
- * Helpers reached from field script handlers that act on an actor id, where
- * 0xFF means the script owner (byte 0 of g_field_script).
- */
-
-s32 func_8008C2EC(s32 arg0, s32 arg1);
-void field_activate_actor_resource_slot(s32 arg0, s32 arg1, s32 arg2);
-s32 func_800C2DC0(void);
-s32 func_800C2D08(void);
-s32 func_800C318C(s32 arg0);
-s32 func_80087F44(s32 arg0, s32* out);
 void func_8008A580(s32 arg0, s32 arg1);
 void func_8008B500(s32 arg0, s32 arg1);
-u8* func_800C1E40(s32);
-s32 func_800C38C8(u8*);
 void func_80089AE4(s32 arg0, s32 arg1);
-s32 func_80087770(s32 arg0, s32 arg1);
-void func_800A3904(s32 arg0, s32 arg1, s32 arg2);
-void func_800A3938();
-s32 func_800878B4(s32 arg0);
-void field_set_all_actor_render_state(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4);
-void func_800C28B8(s32 arg0);
-void func_80087A9C(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7, s32 arg8, s32 arg9);
-void func_800B0710(s32, s32, s32, s32);
-void func_800B2844(s32 arg0, void* arg1, s32 arg2);
-void func_800B28E0(s32, s32, s32);
-void func_800B286C(s32, s32, s32);
-void field_begin_gover_transition(s32 arg0, s32 arg1, s32 arg2);
 void akao_cmd_a9(s32 arg0, s32 arg1);
 void func_80089D44(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 void field_script_op_00(void);
-extern s32 g_layout_option;
-extern s32 g_layout_sub_mode;
-void field_set_all_actor_render_state(s32, s32, s32, s32, s32);
-void func_80087A9C(s32, s32, s32, s32, s32, s32, s32, s32, s32, s32);
-extern s32 g_layout_flag;
 
 /**
  * @brief Run a field script until it yields, preserving any enclosing script context.
@@ -972,7 +880,8 @@ void func_800B9868(void)
     switch (selector)
     {
     case 1:
-        wait = ((StructB78Local*)D_80122B78)->unk402 & 1;
+        /* The redundant & 1 keeps the lhu result in its own register (99.88% without). */
+        wait = FIELD_RUNTIME->state.bits.group_active & 1;
         break;
     case 2:
         wait = D_801227F0 != 2;
@@ -1683,7 +1592,7 @@ void field_script_op_34(void)
     next = field_script_read_operand(OPERAND_TYPE_1(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc, &unused);
     rec = FIELD_SCRIPT_ACTIVE_RECORD();
     rec->pc = next;
-    func_800A3988(sound_id, pan, unused, rec);
+    func_800A3988(sound_id, pan, unused);
 }
 
 /**
@@ -1719,48 +1628,44 @@ s32 field_script_op_36(void)
 
 /**
  * @brief Build the current shop item list from field-script operands and open the shop interface.
+ * @note Operands: shop list index in resource 0xA, then the price scale (in sixteenths).
  */
 void func_800BB3D8(void)
 {
     u8* operands;
     u8 descriptor;
-    s32 shop_id;
-    s32 scale;
-    u8* list_base;
-    u8* header;
-    ShopItemEntry local_buf[32];
-    u8* resource;
-    s32 i;
-    s32 kind;
-    u32 lo;
+    s32 list_index;
+    s32 price_scale;
+    FieldShopListTable* lists;
+    FieldShopList* list;
+    ShopEntry entries[32];
+    FieldItemResource* items;
+    s32 index;
+    s32 item;
+    u32 scaled;
     u32 word;
 
     operands = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
     descriptor = operands[1];
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_0(descriptor), operands + 2, &shop_id);
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_1(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc, &scale);
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_0(descriptor), operands + 2, &list_index);
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_1(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc, &price_scale);
 
-    list_base = func_800C1E40(0xA);
-    header = list_base + *(s32*)(list_base + shop_id * 4 + 4);
+    lists = (FieldShopListTable*)func_800C1E40(0xA);
+    list = (FieldShopList*)((u8*)lists + (&lists->header)[list_index + 1]);
 
-    resource = func_800C1E40(5);
-    i = 0;
-
-    if (*(s32*)header != 0)
+    items = (FieldItemResource*)func_800C1E40(5);
+    for (index = 0; (u32)index < list->count; index++)
     {
-        do
-        {
-            kind = *(header + i * 4 + 4);
-            word = *(u32*)(header + i * 4 + 4);
-            local_buf[i].pad2 = 0;
-            local_buf[i].price = (s16)(kind + ((word << 7) & 0x8000));
-            lo = (*(u32*)(header + i * 4 + 4) >> 9) * scale;
-            local_buf[i].scaled = (s32)(lo >> 4);
-            i++;
-        } while ((u32)i < *(s32*)header);
+        item = list->entries[index].item;
+        word = list->entries[index].word;
+        entries[index].count = 0;
+        /* Bit 8 (generated) becomes the record flag, bit 15 of the id. */
+        entries[index].id = item + ((word << 7) & 0x8000);
+        scaled = list->entries[index].bits.price * price_scale;
+        entries[index].price = scaled >> 4;
     }
 
-    field_open_shop_mode_1(*(s32*)header, (s32)local_buf, (s32)(resource + 4), 2);
+    field_open_shop_mode_1(list->count, (s32)entries, (s32)items->records, 2);
 }
 
 /* Field script opcode handlers 0x38 through 0x3F (see field_script.h). */
@@ -1855,28 +1760,24 @@ s32 field_script_op_3f(void)
  */
 void func_800BB7B4(void)
 {
-    s32 value;
+    s32 all_categories;
     s32 flag_mask;
     s32 i;
     FieldScriptRecord* record;
-    u8* word_ptr;
 
     switch (FIELD_SCRIPT_ACTIVE_RECORD()->pc[1])
     {
     case 0:
-        value = 0xFFFFFF;
-        i = 0xA;
-        word_ptr = D_80122B74 + 0x28;
-        do
+        all_categories = 0xFFFFFF;
+        for (i = 10; i >= 0; i--)
         {
-            *(s32*)(word_ptr + 0x34) = value;
-            i -= 1;
-            word_ptr -= 4;
-        } while (i >= 0);
-        *(s32*)(D_80122B74 + 0x60) = 0x500;
-        *(s32*)(D_80122B74 + 0x64) = -0x8000;
+            FIELD_SAVED->layout.weapon_category_masks[i] = all_categories;
+        }
+        /* Plain word stores (not struct fields) keep g_field_script loaded after them. */
+        *(u32*)&FIELD_SAVED->words[0x60 / 4] = 0x500;
+        *(u32*)&FIELD_SAVED->words[0x64 / 4] = -0x8000;
         record = (FieldScriptRecord*)g_field_script;
-        *(s32*)(D_80122B74 + 0x68) = 0x803F;
+        *(u32*)&FIELD_SAVED->words[0x68 / 4] = 0x803F;
         record += record->unk4;
         record->pc += 2;
         return;
@@ -1942,12 +1843,12 @@ void func_800BB9F4(s32 index, s32 keyframe)
 
 /**
  * @brief Opcode 0x42: find or load a scene resource entry.
- * @param arg0 Passed through to field_find_or_load_resource_entry.
- * @param arg1 Passed through to field_find_or_load_resource_entry.
+ * @param resource_slot_id Passed through to field_find_or_load_resource_entry.
+ * @param resource_base Passed through to field_find_or_load_resource_entry.
  */
-void func_800BBA24(s32 arg0, s32 arg1)
+void func_800BBA24(s32 resource_slot_id, s32 resource_base)
 {
-    field_find_or_load_resource_entry(arg0, arg1);
+    field_find_or_load_resource_entry(resource_slot_id, resource_base);
 }
 
 /**
@@ -2053,7 +1954,8 @@ void func_800BBAC8(u32 command, s32 operand)
         func_800C1D14((s32)actor_index, 0);
         return;
     case 0x12:
-        func_800BD520(0, 0x7100, func_800C20D8((s32)operand));
+        /* Called as returning int: the original does not mask the u8 result. */
+        func_800BD520(0, 0x7100, ((s32 (*)(s32))func_800C20D8)((s32)operand));
         return;
     case 0x13:
         func_800C2138((s32)operand);
@@ -2131,7 +2033,8 @@ void func_800BBAC8(u32 command, s32 operand)
         func_800BD520(0, (s32)operand, 1);
         return;
     case 0x2C:
-        func_800C28B8((s32)actor_index);
+        /* func_800C28B8 takes no parameters; the original still passes the actor in $a0. */
+        ((void (*)(s32))func_800C28B8)((s32)actor_index);
         return;
     case 0x2D:
         func_800BD520(0, 0x7100, func_800C24BC((s32)operand));
@@ -2146,7 +2049,8 @@ void func_800BBAC8(u32 command, s32 operand)
         D_80117EC4 = (s32)operand;
         return;
     case 0x34:
-        func_800BD520(0, 0x7100, func_800C2724((s32)operand));
+        /* func_800C2724 takes no parameters; the original still passes the operand in $a0. */
+        func_800BD520(0, 0x7100, ((s32 (*)(s32))func_800C2724)((s32)operand));
         return;
     case 0x35:
         func_8005A67C((s32)operand, 0);
@@ -2182,7 +2086,7 @@ void func_800BBAC8(u32 command, s32 operand)
             unsigned phase : 7;
             unsigned high : 9;
         } PhaseWord;
-        PhaseWord* state = (PhaseWord*)(D_80122B74 + 0x2E4);
+        PhaseWord* state = (PhaseWord*)&FIELD_GAME->control;
         state->phase++;
         state->phase %= 6U;
         return;
@@ -2245,7 +2149,7 @@ void func_800BBAC8(u32 command, s32 operand)
         func_800BCCE0(0xFFFE, 0, 0, 0);
         return;
     case 0x4E:
-        (*(s32*)(D_80122B74 + 0x28)) = (s32)((*(s32*)(D_80122B74 + 0x28)) | 0xC);
+        FIELD_SAVED->layout.option_flags |= SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3;
         func_800C1EC8(0, FIELD_GAME->words, 0x200);
         func_800C1EC8(0, (s32*)&FIELD_GAME->control, 0x30C);
         FIELD_GAME->control.fields.unk2E4 = 1;
@@ -2256,29 +2160,29 @@ void func_800BBAC8(u32 command, s32 operand)
             FIELD_GAME->lands[actor_index].position |= 0xF;
             FIELD_GAME->lands[actor_index].position |= 0xF0;
         }
-        (*(s32*)(D_80122B74 + 0x2F0)) = (s32)((*(s32*)(D_80122B74 + 0x2F0)) | 1);
-        D_80122B74[0x2F3] = 1;
-        (*(s32*)(D_80122B74 + 0x2F0)) = (s32)((*(s32*)(D_80122B74 + 0x2F0)) | 4);
-        (*(s32*)(D_80122B74 + 0x2FC)) = (s32)((*(s32*)(D_80122B74 + 0x2FC)) | 4);
-        (*(s32*)(D_80122B74 + 0x308)) = (s32)((*(s32*)(D_80122B74 + 0x308)) | 4);
-        (*(s32*)(D_80122B74 + 0x314)) = (s32)((*(s32*)(D_80122B74 + 0x314)) | 4);
-        (*(s32*)(D_80122B74 + 0x320)) = (s32)((*(s32*)(D_80122B74 + 0x320)) | 4);
-        (*(s32*)(D_80122B74 + 0x32C)) = (s32)((*(s32*)(D_80122B74 + 0x32C)) | 4);
-        (*(s32*)(D_80122B74 + 0x338)) = (s32)((*(s32*)(D_80122B74 + 0x338)) | 4);
-        (*(s32*)(D_80122B74 + 0x470)) = (s32)((*(s32*)(D_80122B74 + 0x470)) | 4);
+        FIELD_LAND_WORDS[0].word |= 1;
+        FIELD_GAME->lands[0].count = 1;
+        FIELD_LAND_WORDS[0].word |= 4;
+        FIELD_LAND_WORDS[1].word |= 4;
+        FIELD_LAND_WORDS[2].word |= 4;
+        FIELD_LAND_WORDS[3].word |= 4;
+        FIELD_LAND_WORDS[4].word |= 4;
+        FIELD_LAND_WORDS[5].word |= 4;
+        FIELD_LAND_WORDS[6].word |= 4;
+        FIELD_LAND_WORDS[32].word |= 4;
         break;
     }
 }
 
 /**
  * @brief Forward an actor id to func_8008B1C8.
- * @param arg0 Actor id, or 0xFF for the script owner.
+ * @param actor_id Actor id, or 0xFF for the script owner.
  */
-void func_800BC268(s32 arg0)
+void func_800BC268(s32 actor_id)
 {
     s32 actor;
 
-    actor = arg0;
+    actor = actor_id;
     if (actor == 0xFF)
     {
         actor = g_field_script->status.owner_id;
@@ -2289,35 +2193,35 @@ void func_800BC268(s32 arg0)
 /**
  * @brief Update the condition bit of the active script record from a pair query.
  *
- * Resolves @p arg0 and @p arg1 (each the script owner when 0xFF), runs
+ * Resolves @p first_id and @p second_id (each the script owner when 0xFF), runs
  * func_8008C2EC for the pair, and stores the result's low bit into bit 0 of
  * the active record's flags word.
  *
- * @param arg0 First actor id, or 0xFF for the script owner.
- * @param arg1 Second actor id, or 0xFF for the script owner.
+ * @param first_id First actor id, or 0xFF for the script owner.
+ * @param second_id Second actor id, or 0xFF for the script owner.
  */
-void func_800BC2A0(s32 arg0, s32 arg1)
+void func_800BC2A0(s32 first_id, s32 second_id)
 {
     FieldScriptRecordState* rec;
     s32 result;
     s32 first;
     s32 second;
 
-    if (arg0 == 0xFF)
+    if (first_id == 0xFF)
     {
         first = g_field_script->status.owner_id;
     }
     else
     {
-        first = arg0;
+        first = first_id;
     }
-    if (arg1 == 0xFF)
+    if (second_id == 0xFF)
     {
         second = g_field_script->status.owner_id;
     }
     else
     {
-        second = arg1;
+        second = second_id;
     }
     result = func_8008C2EC(first, second);
     rec = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
@@ -2327,55 +2231,55 @@ void func_800BC2A0(s32 arg0, s32 arg1)
 /**
  * @brief Dispatch a resolved sequence action and latch a scene-state flag.
  *
- * Runs func_800C2B14 for @p arg1, resolves @p arg0 (0xFF is the script
+ * Runs func_800C2B14 for @p record_id, resolves @p actor_id (0xFF is the script
  * owner), and forwards the pair to field_activate_actor_resource_slot. When @c D_8010AE78 is set
- * it triggers func_80087FC0 and sets the runtime party_mode bits (17-18) to 1. Always finishes by writing @p arg1 to
+ * it triggers func_80087FC0 and sets the runtime party_mode bits (17-18) to 1. Always finishes by writing @p record_id to
  * script variable 0x2F08.
  *
- * @param arg0 Actor id, or 0xFF for the script owner.
- * @param arg1 Secondary parameter forwarded to the dispatched calls.
+ * @param actor_id Actor id, or 0xFF for the script owner.
+ * @param record_id Secondary parameter forwarded to the dispatched calls.
  */
-void func_800BC328(s32 arg0, s32 arg1)
+void func_800BC328(s32 actor_id, s32 record_id)
 {
     s32 actor;
 
-    func_800C2B14(arg1);
-    if (arg0 == 0xFF)
+    func_800C2B14(record_id);
+    if (actor_id == 0xFF)
     {
         actor = g_field_script->status.owner_id;
     }
     else
     {
-        actor = arg0;
+        actor = actor_id;
     }
-    field_activate_actor_resource_slot(actor, arg1, 0);
+    field_activate_actor_resource_slot(actor, record_id, 0);
     if (D_8010AE78 != 0)
     {
         func_80087FC0(1, 2);
         FIELD_RUNTIME->state.flags = (FIELD_RUNTIME->state.flags & 0xFFF9FFFF) | 0x20000;
     }
-    func_800BD520(0, 0x2F08, arg1);
+    func_800BD520(0, 0x2F08, record_id);
 }
 
 /**
  * @brief Pick a value from func_800C2DC0 or func_800C2D08, apply it to the actor when valid, and write it to script variable 0x2F00.
- * @param arg0 Actor id, or 0xFF for the script owner.
- * @param arg1 1 selects func_800C2DC0, anything else func_800C2D08.
+ * @param actor_id Actor id, or 0xFF for the script owner.
+ * @param source 1 selects func_800C2DC0, anything else func_800C2D08.
  */
-void func_800BC3DC(s32 arg0, s32 arg1)
+void func_800BC3DC(s32 actor_id, s32 source)
 {
     s32 actor;
     s32 slot_value;
 
-    if (arg0 == 0xFF)
+    if (actor_id == 0xFF)
     {
         actor = g_field_script->status.owner_id;
     }
     else
     {
-        actor = arg0;
+        actor = actor_id;
     }
-    if (arg1 == 1)
+    if (source == 1)
     {
         slot_value = func_800C2DC0();
     }
@@ -2392,22 +2296,23 @@ void func_800BC3DC(s32 arg0, s32 arg1)
 
 /**
  * @brief Apply func_800C318C's value to the actor through field_activate_actor_resource_slot and write it to script variable 0x2F00.
- * @param arg0 Actor id, or 0xFF for the script owner.
- * @param arg1 Value passed to func_800C318C.
+ * @param actor_id Actor id, or 0xFF for the script owner.
+ * @param argument Passed in $a0 to func_800C318C, whose definition takes no parameters.
  */
-void func_800BC474(s32 arg0, s32 arg1)
+void func_800BC474(s32 actor_id, s32 argument)
 {
     s32 value;
 
-    value = func_800C318C(arg1);
-    if (arg0 == 0xFF)
+    /* func_800C318C takes no parameters; the original still passes the argument in $a0. */
+    value = ((s32 (*)(s32))func_800C318C)(argument);
+    if (actor_id == 0xFF)
     {
-        arg0 = g_field_script->status.owner_id;
-        field_activate_actor_resource_slot(arg0, value, 1);
+        actor_id = g_field_script->status.owner_id;
+        field_activate_actor_resource_slot(actor_id, value, 1);
     }
     else
     {
-        field_activate_actor_resource_slot(arg0, value, 1);
+        field_activate_actor_resource_slot(actor_id, value, 1);
     }
     func_800BD520(0, 0x2F00, value);
 }
@@ -2419,23 +2324,23 @@ void func_800BC474(s32 arg0, s32 arg1)
  * is below 3, calls func_80087E00 with func_800C2928's record; otherwise calls
  * func_80087CE0 with the index.
  *
- * @param arg0 Actor index, or 0xFF for the script owner.
- * @param arg1 Forwarded (low 16 bits) to func_800C2928.
+ * @param actor_index Actor index, or 0xFF for the script owner.
+ * @param entry Forwarded (low 16 bits) to func_800C2928.
  */
-void func_800BC4E8(s32 arg0, s32 arg1)
+void func_800BC4E8(s32 actor_index, s32 entry)
 {
     s32 actor;
     u32 actor_id;
 
-    actor = arg0;
-    if (arg0 == 0xFF)
+    actor = actor_index;
+    if (actor_index == 0xFF)
     {
         actor = g_field_script->status.owner_id;
     }
     actor_id = actor & 0xFF;
     if ((FIELD_RUNTIME->state.flags & 0x10000) && actor_id < 3)
     {
-        func_80087E00(actor_id, func_800C2928(actor_id, arg1 & 0xFFFF));
+        func_80087E00(actor_id, func_800C2928(actor_id, entry & 0xFFFF));
     }
     else
     {
@@ -2446,16 +2351,16 @@ void func_800BC4E8(s32 arg0, s32 arg1)
 
 /**
  * @brief Call func_8005AF04 in mode 1 with 0xFF mapped to -1.
- * @param arg0 Object index.
- * @param arg1 Part index; 0xFF becomes -1.
+ * @param obj_index Object index.
+ * @param part_index Part index; 0xFF becomes -1.
  */
-void func_800BC58C(s32 arg0, s32 arg1)
+void func_800BC58C(s32 obj_index, s32 part_index)
 {
-    if (arg1 == 0xFF)
+    if (part_index == 0xFF)
     {
-        arg1 = -1;
+        part_index = -1;
     }
-    func_8005AF04(arg0, arg1, 1);
+    func_8005AF04(obj_index, part_index, 1);
 }
 
 /**
@@ -2474,47 +2379,47 @@ void func_800BC5B8(s32 obj_index, s32 part_index)
 }
 
 /**
- * @brief Re-emit an actor's position with its Y replaced by -arg1 and X and Z scaled down by 256.
- * @param arg0 Actor id, or 0xFF for the script owner.
- * @param arg1 Negated and used as the new Y.
+ * @brief Re-emit an actor's position with its Y replaced by -height and X and Z scaled down by 256.
+ * @param actor_id Actor id, or 0xFF for the script owner.
+ * @param height Negated and used as the new Y.
  */
-void func_800BC5E4(s32 arg0, s32 arg1)
+void func_800BC5E4(s32 actor_id, s32 height)
 {
     s32 actor;
     s32 position[4];
 
-    if (arg0 == 0xFF)
+    if (actor_id == 0xFF)
     {
         actor = g_field_script->status.owner_id;
     }
     else
     {
-        actor = arg0;
+        actor = actor_id;
     }
     func_80087F44(actor, position);
-    position[1] = -arg1;
+    position[1] = -height;
     func_80087D8C(actor, position[0] >> 8, position[1], position[2] >> 8);
 }
 
 /**
- * @brief Route an actor to func_8008A580 or func_8008B500 depending on bit 15 of arg1.
- * @param arg0 Actor id, or 0xFF for the script owner.
- * @param arg1 Bit 15 selects func_8008A580 with the low 15 bits; otherwise func_8008B500 gets it whole.
+ * @brief Route an actor to func_8008A580 or func_8008B500 depending on bit 15 of resource.
+ * @param actor_id Actor id, or 0xFF for the script owner.
+ * @param resource Bit 15 selects func_8008A580 with the low 15 bits; otherwise func_8008B500 gets it whole.
  */
-void func_800BC65C(s32 arg0, s32 arg1)
+void func_800BC65C(s32 actor_id, s32 resource)
 {
-    if (arg0 == 0xFF)
+    if (actor_id == 0xFF)
     {
-        arg0 = g_field_script->status.owner_id;
+        actor_id = g_field_script->status.owner_id;
     }
 
-    if (arg1 & 0x8000)
+    if (resource & 0x8000)
     {
-        func_8008A580(arg0, arg1 & 0x7FFF);
+        func_8008A580(actor_id, resource & 0x7FFF);
     }
     else
     {
-        func_8008B500(arg0, arg1);
+        func_8008B500(actor_id, resource);
     }
 }
 
@@ -2525,114 +2430,109 @@ void func_800BC65C(s32 arg0, s32 arg1)
  */
 void func_800BC6B0(s32 list_index, s32 price_scale)
 {
-    u8* lists;
-    u8* list;
-    u8* items;
-    ScriptShopEntry entries[32];
+    FieldShopListTable* lists;
+    FieldShopList* list;
+    FieldItemResource* items;
+    ShopEntry entries[32];
     s32 index;
     s32 price;
     u32 scaled;
-    u8* item;
+    FieldItemRecord* item;
 
-    lists = func_800C1E40(0xA);
-    list = lists + *(u32*)(lists + list_index * 4 + 4);
-    items = func_800C1E40(5);
-    index = 0;
-
-    if (*(u32*)list != 0)
+    lists = (FieldShopListTable*)func_800C1E40(0xA);
+    /* offsets[list_index] written from the header word; the direct index swaps the addu operands. */
+    list = (FieldShopList*)((u8*)lists + (&lists->header)[list_index + 1]);
+    items = (FieldItemResource*)func_800C1E40(5);
+    for (index = 0; (u32)index < list->count; index++)
     {
-        do
+        if (list->entries[index].bits.generated)
         {
-            if ((*(u32*)(list + index * 4 + 4) >> 8) & 1)
-            {
-                entries[index].item = *(u8*)(list + index * 4 + 4) | 0x8000;
-                item = items + ((*(u8*)(list + index * 4 + 4) << 6) + 4);
-                entries[index].unused = 0;
-                price = func_800C38C8(item);
-                *(s32*)(item + 0x34) = price;
-                scaled = (u32)(price * price_scale) >> 3;
-                entries[index].price = scaled;
-            }
-            else
-            {
-                entries[index].item = *(u8*)(list + index * 4 + 4);
-                entries[index].unused = 0;
-                scaled = (s32)((*(u32*)(list + index * 4 + 4) >> 9) * price_scale) >> 3;
-                entries[index].price = scaled;
-            }
-            index++;
-        } while ((u32)index < *(u32*)list);
+            entries[index].id = list->entries[index].item | 0x8000;
+            item = &items->records[list->entries[index].item];
+            entries[index].count = 0;
+            price = func_800C38C8(item);
+            item->handle = price;
+            scaled = (u32)(price * price_scale) >> 3;
+            entries[index].price = scaled;
+        }
+        else
+        {
+            entries[index].id = list->entries[index].item;
+            entries[index].count = 0;
+            scaled = (s32)(list->entries[index].bits.price * price_scale) >> 3;
+            entries[index].price = scaled;
+        }
     }
 
-    field_open_shop_mode_1(*(u32*)list, entries, items + 4, 2);
+    field_open_shop_mode_1(list->count, (s32)entries, (s32)items->records, 2);
 }
 
 /**
  * @brief Resolve a target index and clear two flag bits on its state record.
  *
- * When @p arg0 is the sentinel 0xFF the index is the script owner; otherwise
- * it is @p arg0 itself. The resolved index selects a state record via
+ * When @p actor_id is the sentinel 0xFF the index is the script owner; otherwise
+ * it is @p actor_id itself. The resolved index selects a state record via
  * func_800C1B60, whose flags word has bits 31 and 29 cleared, then the
- * index and @p arg1 are dispatched to func_80089AE4.
+ * index and @p resource_index are dispatched to func_80089AE4.
  *
- * @param arg0 Target index, or 0xFF for the script owner.
- * @param arg1 Forwarded to func_80089AE4.
+ * @param actor_id Target index, or 0xFF for the script owner.
+ * @param resource_index Forwarded to func_80089AE4.
  */
-void func_800BC7EC(s32 arg0, s32 arg1)
+void func_800BC7EC(s32 actor_id, s32 resource_index)
 {
     s32 actor;
     FieldActorRecord* record;
 
-    if (arg0 == 0xFF)
+    if (actor_id == 0xFF)
     {
         actor = g_field_script->status.owner_id;
     }
     else
     {
-        actor = arg0;
+        actor = actor_id;
     }
     record = (FieldActorRecord*)func_800C1B60(actor);
     record->flags.word &= 0x7FFFFFFF;
     record->flags.word &= 0xDFFFFFFF;
-    func_80089AE4(actor, arg1);
+    func_80089AE4(actor, resource_index);
 }
 
 /**
  * @brief Write func_80087770's result for two actors to script variable 0x7100.
- * @param arg0 First actor id, or 0xFF for the script owner.
- * @param arg1 Second actor id, or 0xFF for the script owner.
+ * @param first_key First actor id, or 0xFF for the script owner.
+ * @param second_key Second actor id, or 0xFF for the script owner.
  */
-void func_800BC86C(s32 arg0, s32 arg1)
+void func_800BC86C(s32 first_key, s32 second_key)
 {
-    arg0 = (arg0 == 0xFF) ? g_field_script->status.owner_id : arg0;
-    arg1 = (arg1 == 0xFF) ? g_field_script->status.owner_id : arg1;
+    first_key = (first_key == 0xFF) ? g_field_script->status.owner_id : first_key;
+    second_key = (second_key == 0xFF) ? g_field_script->status.owner_id : second_key;
 
-    func_800BD520(0, 0x7100, func_80087770(arg0, arg1));
+    func_800BD520(0, 0x7100, func_80087770(first_key, second_key));
 }
 
 /**
- * @brief Copy script variable arg1 to script variable arg0 in the owner's slot.
- * @param arg0 Destination variable id.
- * @param arg1 Source variable id (low 16 bits).
+ * @brief Copy script variable source_variable to script variable dest_variable in the owner's slot.
+ * @param dest_variable Destination variable id.
+ * @param source_variable Source variable id (low 16 bits).
  */
-void func_800BC8CC(s32 arg0, s32 arg1)
+void func_800BC8CC(s32 dest_variable, s32 source_variable)
 {
-    func_800BD520(g_field_script->status.owner_id, arg0, func_800BD414(g_field_script->status.owner_id, arg1 & 0xFFFF));
+    func_800BD520(g_field_script->status.owner_id, dest_variable, func_800BD414(g_field_script->status.owner_id, source_variable & 0xFFFF));
 }
 
 /**
- * @brief Call func_800A3904 in mode 1 with arg0 clamped to 0x7F and arg1 defaulting to 1.
- * @param arg0 Value clamped to 0x7F.
- * @param arg1 Count; 0 becomes 1.
+ * @brief Call func_800A3904 in mode 1 with value clamped to 0x7F and count defaulting to 1.
+ * @param value Value clamped to 0x7F.
+ * @param count Count; 0 becomes 1.
  */
-void func_800BC91C(s32 arg0, s32 arg1)
+void func_800BC91C(s32 value, s32 count)
 {
-    arg1 = (arg1 != 0) ? arg1 : 1;
-    if (arg0 >= 0x80)
+    count = (count != 0) ? count : 1;
+    if (value >= 0x80)
     {
-        arg0 = 0x7F;
+        value = 0x7F;
     }
-    func_800A3904(1, arg1, arg0);
+    func_800A3904(1, count, value);
 }
 
 /**
@@ -2644,18 +2544,18 @@ void func_800BC960(void)
 }
 
 /**
- * @brief Call func_800A3904 in mode 0 with arg0 clamped to 0x7F and arg1 defaulting to 1.
- * @param arg0 Value clamped to 0x7F.
- * @param arg1 Count; 0 becomes 1.
+ * @brief Call func_800A3904 in mode 0 with value clamped to 0x7F and count defaulting to 1.
+ * @param value Value clamped to 0x7F.
+ * @param count Count; 0 becomes 1.
  */
-void func_800BC980(s32 arg0, s32 arg1)
+void func_800BC980(s32 value, s32 count)
 {
-    arg1 = (arg1 != 0) ? arg1 : 1;
-    if (arg0 >= 0x80)
+    count = (count != 0) ? count : 1;
+    if (value >= 0x80)
     {
-        arg0 = 0x7F;
+        value = 0x7F;
     }
-    func_800A3904(0, arg1, arg0);
+    func_800A3904(0, count, value);
 }
 
 /**
@@ -2670,68 +2570,68 @@ void func_800BC9C4(s32 land, s32 value)
 
 /**
  * @brief Fetch an actor's position, scale it down by 256, and forward it to func_80087680.
- * @param arg0 Actor id, or 0xFF for the script owner.
- * @param arg1 Forwarded to func_80087680.
+ * @param actor_id Actor id, or 0xFF for the script owner.
+ * @param resource_entry_index Forwarded to func_80087680.
  */
-void func_800BC9F8(s32 arg0, s32 arg1)
+void func_800BC9F8(s32 actor_id, s32 resource_entry_index)
 {
     s32 position[3];
     s32 actor;
 
-    if (arg0 == 0xFF)
+    if (actor_id == 0xFF)
     {
         actor = g_field_script->status.owner_id;
     }
     else
     {
-        actor = arg0;
+        actor = actor_id;
     }
     func_80087F44(actor, position);
     {
         s32 x = position[0] >> 8;
         s32 y = position[1] >> 8;
         s32 z = position[2] >> 8;
-        func_80087680(actor, arg1, FIELD_RUNTIME->state.bytes.trigger_group, x, y, z);
+        func_80087680(actor, resource_entry_index, FIELD_RUNTIME->state.bytes.trigger_group, x, y, z);
     }
 }
 
 /**
  * @brief Forward two values to func_800A3938.
- * @param arg0 Forwarded unchanged.
- * @param arg1 Forwarded unchanged.
+ * @param sound_id Forwarded unchanged.
+ * @param pan Forwarded unchanged.
  */
-void func_800BCA88(s32 arg0, s32 arg1)
+void func_800BCA88(s32 sound_id, s32 pan)
 {
-    func_800A3938(arg0, arg1);
+    func_800A3938(sound_id, pan);
 }
 
 /**
- * @brief Write the party's money to script variable @p arg0.
- * @param arg0 Script variable id.
+ * @brief Write the party's money to script variable @p variable_id.
+ * @param variable_id Script variable id.
  */
-void func_800BCAA8(s32 arg0)
+void func_800BCAA8(s32 variable_id)
 {
-    func_800BD520(0, arg0, FIELD_GAME->money);
+    func_800BD520(0, variable_id, FIELD_GAME->money);
 }
 
 /**
- * @brief Write func_800878B4's result for an actor to script variable arg0 in that actor's slot.
- * @param arg0 Script variable id.
- * @param arg1 Actor id, or 0xFF for the script owner.
+ * @brief Write func_800878B4's result for an actor to script variable @p variable_id in that actor's slot.
+ * @param variable_id Script variable id.
+ * @param actor_id Actor id, or 0xFF for the script owner.
  */
-void func_800BCAD8(s32 arg0, s32 arg1)
+void func_800BCAD8(s32 variable_id, s32 actor_id)
 {
     s32 actor;
 
-    if (arg1 == 0xFF)
+    if (actor_id == 0xFF)
     {
         actor = g_field_script->status.owner_id;
     }
     else
     {
-        actor = arg1;
+        actor = actor_id;
     }
-    func_800BD520(actor, arg0, func_800878B4(actor));
+    func_800BD520(actor, variable_id, func_800878B4(actor));
 }
 
 /**
@@ -2773,61 +2673,62 @@ void func_800BCB60(void)
  * @brief Record a diagnostic supplied by a field script.
  * @param status Diagnostic status.
  * @param code Diagnostic code.
- * @param arg0 First diagnostic value.
- * @param arg1 Second diagnostic value.
+ * @param value0 First diagnostic value.
+ * @param value1 Second diagnostic value.
  */
-void func_800BCB68(s32 status, s32 code, s32 arg0, s32 arg1)
+void func_800BCB68(s32 status, s32 code, s32 value0, s32 value1)
 {
-    record_game_diagnostic(status, code, arg0, arg1);
+    record_game_diagnostic(status, code, value0, value1);
 }
 
 /**
- * @brief Split bit 7 of arg0 into a flag and forward the rest to field_set_all_actor_render_state.
- * @param arg0 Id with an optional 0x80 flag bit.
- * @param arg1 Forwarded as the first argument.
- * @param arg2 Forwarded as the second argument.
- * @param arg3 Forwarded as the third argument.
+ * @brief Split bit 7 of mode into a flag and forward the rest to field_set_all_actor_render_state.
+ * @param mode Id with an optional 0x80 flag bit.
+ * @param red Forwarded as the first argument.
+ * @param green Forwarded as the second argument.
+ * @param blue Forwarded as the third argument.
  */
-void func_800BCB88(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+void func_800BCB88(s32 mode, s32 red, s32 green, s32 blue)
 {
     s32 flag;
 
-    if (arg0 & 0x80)
+    if (mode & 0x80)
     {
         flag = 1;
-        arg0 &= 0x7F;
+        mode &= 0x7F;
     }
     else
     {
         flag = 0;
     }
-    field_set_all_actor_render_state(arg1, arg2, arg3, flag, arg0);
+    field_set_all_actor_render_state(red, green, blue, flag, mode);
 }
 
 /**
- * @brief Split bit 7 of arg0 into a flag, run func_800C28B8 on the id, then forward everything to func_80087A9C.
- * @param arg0 Actor id with an optional 0x80 flag bit.
- * @param arg1 Forwarded to func_80087A9C.
- * @param arg2 Forwarded to func_80087A9C.
- * @param arg3 Forwarded to func_80087A9C.
+ * @brief Split bit 7 of key into a flag, run func_800C28B8 on the id, then forward everything to func_80087A9C.
+ * @param key Actor id with an optional 0x80 flag bit.
+ * @param resource_entry_index Forwarded to func_80087A9C.
+ * @param resource_slot_id Forwarded to func_80087A9C.
+ * @param resource_base Forwarded to func_80087A9C.
  */
-void func_800BCBD0(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+void func_800BCBD0(s32 key, s32 resource_entry_index, s32 resource_slot_id, s32 resource_base)
 {
     s32 actor;
     s32 flag;
 
-    if (arg0 & 0x80)
+    if (key & 0x80)
     {
         flag = 1;
-        actor = arg0 & 0x7F;
+        actor = key & 0x7F;
     }
     else
     {
         flag = 0;
-        actor = arg0;
+        actor = key;
     }
-    func_800C28B8(actor);
-    func_80087A9C(actor, arg1, arg2, arg3, 0, -1, -1, -1, 0, flag);
+    /* func_800C28B8 takes no parameters; the original still passes the actor in $a0. */
+    ((void (*)(s32))func_800C28B8)(actor);
+    func_80087A9C(actor, resource_entry_index, resource_slot_id, (u8*)resource_base, 0, -1, -1, -1, 0, flag);
 }
 
 /**
@@ -2839,32 +2740,32 @@ void func_800BCC6C(void)
 
 /**
  * @brief Forward four values to func_800B0710, mapping 0xFF to the script owner in the first and to -1 in the rest.
- * @param arg0 Actor id, or 0xFF for the script owner.
- * @param arg1 0xFF becomes -1.
- * @param arg2 0xFF becomes -1.
- * @param arg3 0xFF becomes -1.
+ * @param actor_id Actor id, or 0xFF for the script owner.
+ * @param value1 0xFF becomes -1.
+ * @param value2 0xFF becomes -1.
+ * @param value3 0xFF becomes -1.
  */
-void func_800BCC74(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+void func_800BCC74(s32 actor_id, s32 value1, s32 value2, s32 value3)
 {
     s32 actor;
 
-    if (arg0 == 0xFF)
+    if (actor_id == 0xFF)
     {
         actor = g_field_script->status.owner_id;
     }
     else
     {
-        actor = arg0;
+        actor = actor_id;
     }
-    func_800B0710(actor, (arg1 == 0xFF) ? -1 : arg1, (arg2 == 0xFF) ? -1 : arg2, (arg3 == 0xFF) ? -1 : arg3);
+    func_800B0710(actor, (value1 == 0xFF) ? -1 : value1, (value2 == 0xFF) ? -1 : value2, (value3 == 0xFF) ? -1 : value3);
 }
 
 /**
  * @brief Set pending layout selectors and reset execution to script record zero.
- * @param transition_id Transition identifier stored in the control word's low halfword.
- * @param mode Mode byte stored at offset 0x41A.
- * @param selectors Three packed selector bytes; 0xFE and 0xFF select sentinel behavior.
- * @param flags Five-bit transition flags stored at control bits 24 through 28.
+ * @param transition_id Stored in FieldRuntimeContext.transition.fields.scene_id.
+ * @param mode Stored in FieldRuntimeContext.transition.fields.unk41A.
+ * @param selectors Packed bytes for scene_argument1, scene_entry and scene_argument2; 0xFE and 0xFF select sentinel behavior.
+ * @param flags Five-bit flags stored at transition bits 24 through 28.
  */
 void func_800BCCE0(transition_id, mode, selectors, flags) s16 transition_id;
 
@@ -2879,68 +2780,68 @@ s32 flags;
     s32 third_selector;
     s32 option;
 
-    State* state = (State*)D_80122B78;
+    FieldRuntimeContext* runtime = FIELD_RUNTIME;
     option = selectors & 0xFF;
-    state->control.word = (s32)(state->control.word | 0x40000000);
-    state->control.fields.mode = mode;
+    runtime->transition.flags |= 0x40000000;
+    runtime->transition.fields.unk41A = mode;
     layout = (selectors >> 8) & 0xFF;
     third_selector = (selectors >> 0x10) & 0xFF;
-    state->control.fields.id = transition_id;
+    runtime->transition.fields.scene_id = transition_id;
     switch (option)
     {
     case 0xFE:
-        ((State*)D_80122B78)->option = -2;
+        FIELD_RUNTIME->scene_argument1 = -2;
         break;
     case 0xFF:
         g_layout_option = -1;
-        ((State*)D_80122B78)->option = -1;
+        FIELD_RUNTIME->scene_argument1 = -1;
         break;
     default:
         if (option == g_layout_option)
         {
-            ((State*)D_80122B78)->option = -2;
+            FIELD_RUNTIME->scene_argument1 = -2;
         }
         else
         {
-            ((State*)D_80122B78)->option = option;
+            FIELD_RUNTIME->scene_argument1 = option;
         }
         break;
     }
     switch (layout)
     {
     case 0xFE:
-        ((State*)D_80122B78)->layout = -2;
+        FIELD_RUNTIME->scene_entry = -2;
         break;
     case 0xFF:
-        ((State*)D_80122B78)->layout = -1;
+        FIELD_RUNTIME->scene_entry = -1;
         break;
     default:
         if (layout == g_layout_flag)
         {
-            ((State*)D_80122B78)->layout = -1;
+            FIELD_RUNTIME->scene_entry = -1;
         }
         else
         {
-            ((State*)D_80122B78)->layout = layout;
+            FIELD_RUNTIME->scene_entry = layout;
         }
         break;
     }
     switch (third_selector)
     {
     case 0xFE:
-        ((State*)D_80122B78)->third_selector = -2;
+        FIELD_RUNTIME->scene_argument2 = -2;
         break;
     case 0xFF:
-        ((State*)D_80122B78)->third_selector = -1;
+        FIELD_RUNTIME->scene_argument2 = -1;
         break;
     default:
-        ((State*)D_80122B78)->third_selector = third_selector;
+        FIELD_RUNTIME->scene_argument2 = third_selector;
         break;
     }
-    ((State*)D_80122B78)->control.word = (s32)((((State*)D_80122B78)->control.word & 0xE0FFFFFF) | ((flags & 0x1F) << 0x18));
+    FIELD_RUNTIME->transition.flags = (FIELD_RUNTIME->transition.flags & 0xE0FFFFFF) | ((flags & 0x1F) << 24);
     g_field_script->active_record = 0;
-    g_field_script->status.word = (s32)(g_field_script->status.word & 0x7FFFFFFF);
-    ((FieldScriptRecord*)((u8*)g_field_script + ((g_field_script->active_record * 3) << 2)))->pc = 0;
+    g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc = 0;
 }
 
 /**
@@ -2962,7 +2863,8 @@ void field_script_op_86(s32 operand_0, s32 resource_id, s32 entry_index, s32 ope
     if (p != NULL)
     {
         u16 h = *(u16*)(p + (entry_index << 1) + 4);
-        func_800B2844(operand_0, p + (h + 4), operand_3);
+        /* Int limit on purpose: the original passes operand_3 without narrowing it to u8. */
+        ((void (*)(s32, u8 *, s32))func_800B2844)(operand_0, p + (h + 4), operand_3);
     }
 }
 

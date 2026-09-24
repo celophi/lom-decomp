@@ -11,6 +11,8 @@
  */
 
 #include "common.h"
+#include "field_actor_runtime.h"
+#include "field_calls.h"
 #include "vector.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
@@ -21,6 +23,9 @@
 #include "field_modal_runtime.h"
 #include "field_scene_transition.h"
 #include "cdrom.h"
+#include "field_records.h"
+#include "controller_internal.h"
+#include "field_menu_element.h"
 
 /* ---- Timed panels (0x800A5638 .. 0x800A6204) ---- */
 
@@ -58,10 +63,6 @@ extern s32 D_801229F0;
 extern s32 g_pad_input;
 
 void field_load_vram_resource(s32 id, s16 *rect, s32 arg2);
-void field_set_fade_target_only(s16 red, s16 green, s16 blue, s16 duration);
-void field_restore_fade_target_with_duration(s16 duration);
-void func_800A3938(s32 sound_id, s32 pan);
-void func_80086F48(const void *src, s16 value);
 s32 rcos(s32);
 s32 rsin(s32);
 POLY_FT4 *func_800A5960(POLY_FT4 *prim, u_long *ordering_table, s32 index);
@@ -139,34 +140,31 @@ void func_800A5670(s32 index)
  * @brief Advance a timed FIELD panel, update its fade, and render its contents.
  * @param context FIELD context containing the primitive-chain handle.
  * @note Selected pad buttons shorten the middle portion of the countdown.
+ * @note timer is a u16 (a halfword pseudo), so CSE does not match it against
+ *       the zero-extended timer read in the fade-in arm, which reloads it.
  */
 void func_800A5794(FieldContext *context)
 {
     extern s16 D_8011F3D0;
     extern u16 D_80122904;
-    s32 timer_value;
     s32 primitive;
-    u16 decremented_timer;
-    u32 timer;
+    u16 timer;
     u8 event_selector;
     u8 render_selector;
 
     if (D_800F2298 != 0)
     {
-        decremented_timer = D_80122904 - 1;
-        D_80122904 = decremented_timer;
-        if ((decremented_timer & 0xFFFF) == 0x14)
+        if (--D_80122904 == 0x14)
         {
             field_restore_fade_target_with_duration(0x14);
         }
-        timer_value = D_80122904;
-        timer = timer_value & 0xFFFF;
+        timer = D_80122904;
         if (timer == 0)
         {
             D_800F2298 = 0;
             return;
         }
-        if (timer < 0x20U)
+        if (timer < 0x20)
         {
             if (timer == 0x1F)
             {
@@ -193,12 +191,11 @@ void func_800A5794(FieldContext *context)
             }
             D_8011F3D0 = D_80122904 * 4;
         }
-        else if (timer >= 0x76U)
+        else if (timer >= 0x76)
         {
-            /* Volatile: the reload keeps this store from cross-jumping with the one above. */
-            D_8011F3D0 = (0x96 - *(volatile u16 *)&D_80122904) * 4;
+            D_8011F3D0 = (0x96 - D_80122904) * 4;
         }
-        else if ((timer_value >= 0x21 && timer_value < 0x67) && (g_pad_input & 0x220))
+        else if (timer >= 0x21 && timer < 0x67 && (g_pad_input & 0x220))
         {
             D_80122904 = 0x20;
         }
@@ -236,6 +233,9 @@ void func_800A5794(FieldContext *context)
  *       disabled descriptors have X equal to 0xFFFF.
  * @note The do/while(0) blocks around the two width products in the rotation
  *       case raise their loop weight so width keeps its saved register.
+ * @note bottom_1 is a u16 screen coordinate: its sum is done on halfword reads,
+ *       which CSE does not share with the zero-extended height read of the
+ *       following product, so height is read twice as in the original.
  */
 POLY_FT4 *func_800A5960(POLY_FT4 *prim, u_long *ordering_table, s32 index)
 {
@@ -258,7 +258,7 @@ POLY_FT4 *func_800A5960(POLY_FT4 *prim, u_long *ordering_table, s32 index)
     s32 negative_width;
     s32 offset_1;
     s32 scaled;
-    s32 bottom_1;
+    u16 bottom_1;
     s32 scaled_x_2;
     s32 right_1;
     s32 height_term;
@@ -313,8 +313,8 @@ POLY_FT4 *func_800A5960(POLY_FT4 *prim, u_long *ordering_table, s32 index)
                 prim->x0 = prim->x2 = quad->x - scaled;
                 prim->x1 = prim->x3 = quad->x + width + scaled - 1;
                 prim->y0 = prim->y1 = QUAD_OF_FLAGS(quad_flags)->y - QUAD_OF_FLAGS(quad_flags)->height * expansion / 128;
-                scaled = *(volatile u16 *)&QUAD_OF_FLAGS(quad_flags)->height * expansion;
                 bottom_1 = QUAD_OF_FLAGS(quad_flags)->y + QUAD_OF_FLAGS(quad_flags)->height;
+                scaled = QUAD_OF_FLAGS(quad_flags)->height * expansion;
                 if (scaled < 0)
                 {
                     scaled += 0x7F;
@@ -479,8 +479,8 @@ POLY_FT4 *func_800A5960(POLY_FT4 *prim, u_long *ordering_table, s32 index)
                 prim->x0 = prim->x2 = quad->x - scaled;
                 prim->x1 = prim->x3 = quad->x + width + scaled - 1;
                 prim->y0 = prim->y1 = QUAD_OF_FLAGS(quad_flags)->y - QUAD_OF_FLAGS(quad_flags)->height * expansion / 128;
-                scaled = *(volatile u16 *)&QUAD_OF_FLAGS(quad_flags)->height * expansion;
                 bottom_1 = QUAD_OF_FLAGS(quad_flags)->y + QUAD_OF_FLAGS(quad_flags)->height;
+                scaled = QUAD_OF_FLAGS(quad_flags)->height * expansion;
                 if (scaled < 0)
                 {
                     scaled += 0x7F;
@@ -621,7 +621,10 @@ POLY_FT4 *func_800A6060(POLY_FT4 *prim, u_long *ordering_table)
 typedef struct Slot
 {
     u8 *text;
-    u32 flags;
+    u32 x : 9;         /**< Screen X of the text. */
+    u32 y : 8;         /**< Screen Y of the text. */
+    u32 countdown : 6; /**< Frames left to show the text; 0 when the slot is free. */
+    u32 unused : 9;
 } Slot;
 
 /** @brief Fixed-point position at the start of a 0x54-byte actor entry. */
@@ -652,7 +655,6 @@ extern u8 D_800ED064[];
 extern s32 g_field_text_session_active;
 extern s32 D_801227DC;
 
-extern s32 func_800AE864(u8 *);
 
 
 
@@ -674,113 +676,37 @@ void func_800A6204(void)
 
 /**
  * @brief Start an inactive text slot near its actor and clamp its screen position.
- * @param arg0 Actor/text slot index; indices at least two are ignored.
- * @param arg1 Text table index, or a negative packed selector into the pad context.
+ * @param index Actor/text slot index; indices at least two are ignored.
+ * @param text_id Text table index, or a negative packed selector into the pad context.
+ * @note The actor terms are (s16) screen coordinates; the casts also keep fold
+ *       from moving the 160/112 screen-centre constants onto the view offsets.
  */
-void func_800A623C(s32 arg0, s32 arg1)
+void func_800A623C(s32 index, s32 text_id)
 {
     extern u8 *g_pad_ctx;
     extern Position g_field_actors[];
     extern Slot D_801226A0[];
 
     s16 point[2];
-    Slot *slot;
-    Slot *initial;
-    u8 *initial_base;
-    u8 *actor_base;
-    Slot *output;
-    Slot *base;
-    Position *actor;
-    s32 offset;
-    s32 xoff, x, y, width;
-    s32 screen_y;
-    s32 actor_screen_x;
-    s32 actor_screen_y;
+    s32 width;
 
-    s32 first;
-    if (arg0 < 2)
+    if (index < 2)
     {
-        initial_base = (u8 *)D_801226A0;
-        initial = (Slot *)(arg0 * 8 + initial_base);
-        if (!((initial->flags >> 17) & 0x3F))
+        if (D_801226A0[index].countdown == 0)
         {
-            do
+            if (text_id < 0)
             {
-                first = arg1 * 2;
-                if (arg1 < 0)
-                {
-                    s32 second;
-                    s32 selector;
-                    u8 **pad_context_ptr;
-                    do
-                    {
-                        pad_context_ptr = &g_pad_ctx;
-                    } while (0);
-                    selector = (u32)arg1 >> 16;
-                    selector &= 0xFF;
-                    second = selector * 0x250 + 0x5F0;
-                    first = (s32)*pad_context_ptr + second;
-                    second = ((arg1 & 0xFF) << 6) + 0x150;
-                    first += second;
-                    initial->text = (u8 *)first;
-                }
-                else
-                {
-                    s32 second;
-                    second = (u32)D_800ED064;
-                    first = *(u16 *)(first + second);
-                    do
-                    {
-                        first += second;
-                        initial->text = (u8 *)first;
-                    } while (0);
-                }
-            } while (0);
-            xoff = g_field_view_offset_x;
-            base = D_801226A0;
-            offset = arg0 * 8;
-            slot = (Slot *)(offset + (u8 *)base);
-            slot->flags |= 0x7E0000;
-            if (xoff < 0)
-            {
-                xoff += 255;
+                /* Bits 16-23 pick a party character, bits 0-7 one of its 64-byte records. */
+                D_801226A0[index].text = &g_pad_ctx[(((u32)text_id >> 16) & 0xFF) * 0x250 + 0x5F0] + (((text_id & 0xFF) << 6) + 0x150);
             }
-            actor_base = (u8 *)g_field_actors;
-            actor = (Position *)(arg0 * 0x54 + actor_base);
-            x = actor->x;
-            if (x < 0)
+            else
             {
-                x += 255;
+                D_801226A0[index].text = (u8 *)(((u16 *)D_800ED064)[text_id] + (s32)D_800ED064);
             }
-            arg0 = xoff >> 8;
-            xoff = g_field_view_offset_y;
-            actor_screen_x = (x >> 8) + 160;
-            point[0] = arg0 + actor_screen_x;
-            if (xoff < 0)
-            {
-                xoff += 255;
-            }
-            x = xoff >> 8;
-            y = actor->y;
-            if (y < 0)
-            {
-                y += 255;
-            }
-            xoff = actor->z;
-            actor_screen_y = (y >> 8) + 112;
-            screen_y = x + actor_screen_y;
-            if (xoff < 0)
-            {
-                xoff += 511;
-            }
-            x = g_field_view_offset_z;
-            xoff = screen_y - (xoff >> 9);
-            if (x < 0)
-            {
-                x += 511;
-            }
-            point[1] = xoff - (x >> 9);
-            width = func_800AE864(slot->text) * 6;
+            D_801226A0[index].countdown = 0x3F;
+            point[0] = g_field_view_offset_x / 256 + (s16)(g_field_actors[index].x / 256 + 160);
+            point[1] = g_field_view_offset_y / 256 + (s16)(g_field_actors[index].y / 256 + 112) - g_field_actors[index].z / 512 - g_field_view_offset_z / 512;
+            width = func_800AE864(D_801226A0[index].text) * 6;
             if (point[0] + width >= 321)
             {
                 point[0] = 320 - width;
@@ -797,13 +723,8 @@ void func_800A623C(s32 arg0, s32 arg1)
             {
                 point[1] = 50;
             }
-            output = (Slot *)((s32)offset + (s32)base);
-            {
-                s32 point_x;
-                point_x = point[0];
-                output->flags = (output->flags & ~0x1FF) | (point_x & 0x1FF);
-            }
-            output->flags = (output->flags & 0xFFFE01FF) | (((point[1] + 4) & 0xFF) << 9);
+            D_801226A0[index].x = point[0];
+            D_801226A0[index].y = point[1] + 4;
         }
     }
 }
@@ -1288,35 +1209,6 @@ typedef struct
     s32 unk315C;
 } Pad;
 
-/** @brief Menu display record with packed flags, state, offsets, and update callback. */
-typedef struct
-{
-    union
-    {
-        u32 word;
-        struct
-        {
-            u16 low;
-            s8 priority;
-            u8 high;
-        } fields;
-    } flags;
-    union
-    {
-        u32 word;
-        struct
-        {
-            u16 low;
-            s16 height;
-        } fields;
-    } state;
-    s16 scroll_offset;
-    s16 scroll_target;
-    s16 scroll_tick;
-    s16 pad_e;
-    void (*update)(void);
-} FieldMenuRecord;
-
 /** @brief 0x268-byte entry whose first halfword carries per-slot flag bits. */
 typedef struct {
     union { u16 h; struct { u8 unk0; u8 unk1; } b; } u0;
@@ -1338,41 +1230,6 @@ typedef struct {
     s32 unk178;
     u8 pad17C[0x23C - 0x17C];
 } State23C;
-
-/** @brief Packed prompt flags accessed as both a word and individual fields. */
-typedef union
-{
-    u32 word;
-    struct
-    {
-        u32 low : 3;
-        u32 type : 4;
-        u32 priority : 9;
-        u32 value : 8;
-        u32 high : 8;
-    } bits;
-} FieldPromptFlags;
-
-/** @brief Packed prompt state with an enable bit and an eight-bit value. */
-typedef union
-{
-    u32 word;
-    struct
-    {
-        u32 enabled : 1;
-        u32 value : 8;
-        u32 high : 23;
-    } bits;
-} FieldPromptState;
-
-/** @brief Callback record returned by func_800ADF84. */
-typedef struct
-{
-    FieldPromptFlags flags;
-    FieldPromptState state;
-    u8 pad8[8];
-    void (*callback)(void);
-} FieldADF84Rec;
 
 /** @brief Partial slot record exposing the halfword cleared by func_800A74E8. */
 typedef struct
@@ -1398,15 +1255,6 @@ typedef struct
     u8 pad25E[0x268 - 0x25E];
 } FieldEntry268;
 
-/** @brief Active byte and fixed-point score accessed at offsets 0x5F0 and 0x610. */
-typedef struct
-{
-    u8 pad0[0x5F0];
-    u8 active;
-    u8 pad5f1[0x1F];
-    u32 score;
-} FieldRankStats;
-
 /** @brief Displayed numeric fields in a 0x268-byte player record. */
 typedef struct
 {
@@ -1421,8 +1269,17 @@ typedef struct
 {
     Vec2s position;
     s32 unused;
-    s32 indices[3];
+    s32 order[3];
 } FieldRankWork;
+
+/**
+ * @brief Address of a string in a text bank that starts with little-endian u16 offsets.
+ * @note The integer sum keeps the low byte as the first addu operand.
+ */
+#define FIELD_TEXT_AT(bank, low, high) ((u8 *)((low) + (((high) << 8) + (s32)(bank))))
+
+/** @brief Experience a party member gained since D_801229A0 was sampled. */
+#define FIELD_EXPERIENCE_GAIN(index) ((s32)((g_pad_ctx->characters[index].progress.word >> 8) - D_801229A0[index]))
 
 /** @brief Two-byte relative offset into the shared FIELD string table. */
 typedef struct
@@ -1470,7 +1327,6 @@ extern s32 g_field_text_session_active;
 extern s32 g_field_dialog_item_count;
 extern s32 D_800F229C;
 extern s32 D_801226D8;
-extern s32 D_80122828;
 extern s32 D_8011F420;
 extern s32 g_pad_input;
 extern s32 g_pending_game_state;
@@ -1480,20 +1336,11 @@ extern s32 g_frame_counter;
 extern s32 g_field_pending_spawn_id, g_field_pending_music_id, g_field_pending_secondary_music_id, g_field_pending_scene_id, g_field_pending_object_id, g_field_pending_sound_bank_id;
 
 /* --- Shared (non-conflicting) extern function prototypes --- */
-extern void func_800ADEB0(void);
 extern void field_reset_input_repeat(void);
-extern s32 func_800ADEEC(void);
-extern void func_800ADF34(void);
-extern void func_800A3938(s32 sound_id, s32 pan);
-
-
-extern void field_begin_return_to_title_prompt_close(void);
-extern void func_8006809C(void);
-extern void func_800AE8A8(void);
-extern void func_800AED20(void);
-extern void func_800B661C(s32 arg0, FieldADF84Rec *arg1);
+/* Takes no arguments (field_action_modifiers.c); the -2 and record left in $a0/$a1 at the call are allocation leftovers. */
+void func_800B661C(void);
 extern void akao_cmd_f1(void);
-extern void func_800AE9E0(void);
+/* Defined as (void) in field_resource_load.c; the original call still passes the cursor in $a0. */
 extern s32 func_800B0888(void *arg0);
 extern s32 field_emit_actor_portrait(s32, s32, s32, Vec2s *);
 
@@ -1502,7 +1349,7 @@ void func_800A7384(void);
 void func_800A764C(void);
 void func_800A7724(void);
 void func_800A788C(void *ot, void *cursor, s32 x_offset, s32 y_offset);
-s32 func_800A7B54(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
+s32 func_800A7B54(s32 ordering_table, s32 cursor, s32 x_offset, s32 y_offset);
 s32 func_800A7FB4(s32 *ot, s32 prim, s32 arg2, s32 arg3);
 s32 func_800A8128(s32 ordering_table, s32 cursor, s32 scroll_x, s32 scroll_y, s32 viewport_height);
 void *func_800A8524(s32 *ordering_table, POLY_FT4 *prim, s32 x, s32 y);
@@ -1529,18 +1376,17 @@ void func_800A6F1C(void)
     extern u8 g_field_player_records[];
     extern Actor g_field_object_states[];
 
-    volatile Actor *actor;
+    Actor *actor;
     s32 prompt_state;
     s32 resume_count;
     s32 actor_index;
-    s32 packed, source, copied;
-    unsigned low_mask, high_mask;
+    u32 low_mask, high_mask;
     s16 sentinel;
-    u8 *actor_flags;
+    u8 *player_record;
 
-    u8 *state = (u8 *)0x801ED600;
+    ControllerState *controller = CONTROLLER_STATE;
 
-    if (!(D_80122828 & 7))
+    if (!(D_80122828[0].attr.word & 7))
     {
         prompt_state = g_field_return_to_title_prompt_state - 1;
         g_field_return_to_title_prompt_state = prompt_state;
@@ -1558,35 +1404,30 @@ void func_800A6F1C(void)
             {
                 g_pad_ctx->unk315C = (s32)(resume_count + 1);
             }
-            state[0x13F] = 0;
-            state[0x91] = 0;
-            state[0x140] = 0;
-            state[0x92] = 0;
+            controller->ports[1].small_motor_command = 0;
+            controller->ports[0].small_motor_command = 0;
+            controller->ports[1].actuator_control.fields.large_motor_command = 0;
+            controller->ports[0].actuator_control.fields.large_motor_command = 0;
             field_rebuild_party_actions(0);
             field_set_scene_parameters(g_field_pending_scene_id, g_field_pending_object_id, g_field_pending_spawn_id, g_field_pending_music_id, g_field_pending_sound_bank_id,
                                        g_field_pending_secondary_music_id);
             actor_index = 0;
+            /* Mask locals set the order of the hoisted loop constants. */
             low_mask = 0xFFFFFF;
             high_mask = 0xFF000000;
             sentinel = 0xFF;
-            actor_flags = g_field_player_records;
-            actor = g_field_object_states;
-            do
+            player_record = g_field_player_records;
+            for (; actor_index < 3; actor_index++)
             {
-                /* Preserve both address reads before updating the packed fields. */
-                packed = actor->unk8;
-                source = *(volatile s32 *)&actor->unk0;
-                copied = *(volatile s32 *)&actor->unk0;
-                actor->unk8 = (packed & high_mask) | (source & low_mask);
-                actor->unk4 = copied & low_mask;
-                if (*actor_flags & 1)
+                actor = &g_field_object_states[actor_index];
+                actor->unk8 = (actor->unk8 & high_mask) | (actor->unk0 & low_mask);
+                actor->unk4 = actor->unk0 & low_mask;
+                if (*player_record & 1)
                 {
                     actor->unk48 = sentinel;
                 }
-                actor_flags += 0x268;
-                actor_index += 1;
-                actor++;
-            } while (actor_index < 3);
+                player_record += 0x268;
+            }
         }
     }
     else if (func_800ADEEC() == 0)
@@ -1648,7 +1489,6 @@ void func_800A710C(void)
  */
 void func_800A71CC(void)
 {
-    FieldMenuRecord *func_800ADF84(void);
     extern s32 D_8010D038;
 
     s16 raw_height;
@@ -1663,7 +1503,7 @@ void func_800A71CC(void)
     u32 large_state;
     u32 state;
     u32 small_state;
-    FieldMenuRecord *record;
+    FieldMenuElement *record;
 
     cdrom_queue_read(0x5DF, D_8010D038);
     cdrom_wait_queue_empty();
@@ -1671,7 +1511,7 @@ void func_800A71CC(void)
     D_800F229C = 3;
     func_800ADF34();
     record = func_800ADF84();
-    record->flags.word = (s32)((((record->flags.word & ~0x78) | 8) & 0xFFFF007F) | 0x1000);
+    record->attr.word = (s32)((((record->attr.word & ~0x78) | 8) & 0xFFFF007F) | 0x1000);
     saw_normal = 0;
     saw_special = 0;
     index = 0;
@@ -1701,29 +1541,30 @@ void func_800A71CC(void)
         } while (index < entry_limit);
     }
 
-    record->update = &func_800A8128;
-    record->flags.word = (s32)(record->flags.word & 0xFFFFFF);
-    state = record->state.word;
+    /* The callback has its own prototype; cast to the element draw type. */
+    record->draw = (FieldMenuDrawFn)func_800A8128;
+    record->attr.word = (s32)(record->attr.word & 0xFFFFFF);
+    state = record->size.word;
     state |= 1;
-    record->state.word = state;
+    record->size.word = state;
     raw_height = (g_field_progression_unlock_count * 0x10) + padding;
-    record->state.word = state | 0x200;
-    record->state.fields.height = raw_height;
+    record->size.word = state | 0x200;
+    record->size.fields.content_height = raw_height;
     height = raw_height;
     if (height < 0xA1)
     {
-        small_state = (record->state.word & ~0x1FE) | ((height & 0xFF) * 2);
-        record->state.word = small_state;
-        record->flags.fields.priority = (s8)(0x70 - ((small_state >> 2) & 0x7F));
+        small_state = (record->size.word & ~0x1FE) | ((height & 0xFF) * 2);
+        record->size.word = small_state;
+        record->attr.bytes.y = 0x70 - ((small_state >> 2) & 0x7F);
         return;
     }
 
-    record->scroll_offset = 0;
+    record->scroll = 0;
     record->scroll_target = 0;
-    record->scroll_tick = 0;
-    large_state = (((record->state.word & ~0xC00) | 0x400) & ~0x1FE) | 0x140;
-    record->state.word = large_state;
-    record->flags.fields.priority = (s8)(0x70 - ((large_state >> 2) & 0x50));
+    record->scroll_ticks = 0;
+    large_state = (((record->size.word & ~0xC00) | 0x400) & ~0x1FE) | 0x140;
+    record->size.word = large_state;
+    record->attr.bytes.y = 0x70 - ((large_state >> 2) & 0x50);
 }
 
 /**
@@ -1767,7 +1608,6 @@ void func_800A7384(void)
  */
 void func_800A7434(void)
 {
-    extern void func_800B0A08(s32 arg0);
 
     func_800ADEB0();
     D_801227EC = 4;
@@ -1803,10 +1643,9 @@ void func_800A74B8(void)
  */
 void func_800A74E8(void)
 {
-    extern FieldADF84Rec *func_800ADF84(void);
     extern RecFD818 g_field_player_records[];
 
-    FieldADF84Rec *rec;
+    FieldMenuElement *rec;
     u32 state;
     s32 i;
 
@@ -1814,30 +1653,27 @@ void func_800A74E8(void)
     func_800A3938(0xB9, 0x80);
 
     rec = func_800ADF84();
-    rec->callback = func_800AE8A8;
-    rec->flags.bits.type = 1;
-    rec->flags.bits.priority = 0x20;
-    state = (rec->state.word | 1) & ~0x1FE;
-    rec->flags.bits.value = 0x30;
+    /* The callback has its own prototype; cast to the element draw type. */
+    rec->draw = (FieldMenuDrawFn)func_800AE8A8;
+    rec->attr.bits.step = 1;
+    rec->attr.bits.x = 0x20;
+    state = (rec->size.word | 1) & ~0x1FE;
+    rec->attr.bits.y = 0x30;
     state |= 0x60;
-    rec->state.word = state;
-    rec->flags.word &= 0xFFFFFF;
+    rec->size.word = state;
+    rec->attr.word &= 0xFFFFFF;
 
     rec = func_800ADF84();
-    rec->callback = func_800AED20;
-    rec->flags.bits.type = 1;
-    rec->flags.bits.priority = 0x50;
-    rec->state.bits.enabled = 0;
-    rec->state.bits.value = 0x22;
-    rec->flags.bits.value = 0x80;
+    rec->draw = (FieldMenuDrawFn)func_800AED20;
+    rec->attr.bits.step = 1;
+    rec->attr.bits.x = 0x50;
+    rec->size.bits.width_high = 0;
+    rec->size.bits.height = 0x22;
+    rec->attr.bits.y = 0x80;
 
-    rec->flags.word = (rec->flags.word & 0xFFFFFF) | 0xA0000000;
+    rec->attr.word = (rec->attr.word & 0xFFFFFF) | 0xA0000000;
 
-    /* Keep the shared -2 value in the target's argument register. */
-    do
-    {
-        func_800B661C(-2, rec);
-    } while (0);
+    func_800B661C();
     akao_cmd_f1();
 
     g_field_return_to_title_prompt_delay = 0x3C;
@@ -1856,9 +1692,8 @@ void func_800A74E8(void)
  */
 void func_800A764C(void)
 {
-    extern FieldADF84Rec *func_800ADF84(void);
 
-    FieldADF84Rec *rec;
+    FieldMenuElement *rec;
     u32 state;
 
     D_800F229C = 2;
@@ -1866,17 +1701,18 @@ void func_800A764C(void)
     func_800ADF34();
 
     rec = func_800ADF84();
-    rec->flags.bits.type = 1;
-    rec->flags.bits.priority = 0x40;
+    rec->attr.bits.step = 1;
+    rec->attr.bits.x = 0x40;
 
-    state = rec->state.word & ~0x1FE;
+    state = rec->size.word & ~0x1FE;
     state |= (((g_field_dialog_item_count << 4) + 0x10) & 0xFF) << 1;
-    rec->flags.bits.value = 0x70 - ((state >> 2) & 0x78);
+    rec->attr.bits.y = 0x70 - ((state >> 2) & 0x78);
 
-    rec->callback = func_800A7FB4;
-    rec->state.word = state;
-    rec->flags.word = (rec->flags.word & 0xFFFFFF) | 0xC0000000;
-    rec->state.bits.enabled = 0;
+    /* The callback has its own prototype; cast to the element draw type. */
+    rec->draw = (FieldMenuDrawFn)func_800A7FB4;
+    rec->size.word = state;
+    rec->attr.word = (rec->attr.word & 0xFFFFFF) | 0xC0000000;
+    rec->size.bits.width_high = 0;
 }
 
 /**
@@ -1884,10 +1720,9 @@ void func_800A764C(void)
  */
 void func_800A7724(void)
 {
-    extern FieldADF84Rec *func_800ADF84(void);
     extern FieldActorEntry g_field_player_records[];
 
-    FieldADF84Rec *record;
+    FieldMenuElement *record;
     s32 actor_index;
     s32 active_count;
 
@@ -1898,13 +1733,14 @@ void func_800A7724(void)
     active_count = 0;
     record = func_800ADF84();
     actor_index = active_count;
-    record->callback = func_800A788C;
-    record->flags.bits.type = 1;
-    record->flags.bits.priority = 0x20;
-    record->flags.bits.value = 0x30;
-    record->state.bits.enabled = 1;
-    record->state.bits.value = 0x20;
-    record->flags.word &= 0xFFFFFF;
+    /* The callback has its own prototype; cast to the element draw type. */
+    record->draw = (FieldMenuDrawFn)func_800A788C;
+    record->attr.bits.step = 1;
+    record->attr.bits.x = 0x20;
+    record->attr.bits.y = 0x30;
+    record->size.bits.width_high = 1;
+    record->size.bits.height = 0x20;
+    record->attr.word &= 0xFFFFFF;
 
     for (actor_index = 0; actor_index < 3; actor_index++)
     {
@@ -1915,13 +1751,13 @@ void func_800A7724(void)
     }
 
     record = func_800ADF84();
-    record->callback = func_800A7B54;
-    record->flags.bits.type = 1;
-    record->flags.bits.priority = 0x20;
-    record->flags.bits.value = 0x58;
-    record->state.bits.enabled = 1;
-    record->state.bits.value = ((active_count * 28) + 16) & 0xFF;
-    record->flags.word &= 0xFFFFFF;
+    record->draw = (FieldMenuDrawFn)func_800A7B54;
+    record->attr.bits.step = 1;
+    record->attr.bits.x = 0x20;
+    record->attr.bits.y = 0x58;
+    record->size.bits.width_high = 1;
+    record->size.bits.height = ((active_count * 28) + 16) & 0xFF;
+    record->attr.word &= 0xFFFFFF;
 }
 
 /**
@@ -1941,9 +1777,7 @@ void func_800A788C(void *ot, void *cursor, s32 x_offset, s32 y_offset)
     s32 i;
     s32 total_x;
     s32 total_y;
-    u8 *entry;
-    u8 *pad;
-    volatile u8 *text_base;
+    u8 *text_base;
     void *handle;
     void *first_cursor;
     s16 position[2];
@@ -1967,27 +1801,24 @@ void func_800A788C(void *ot, void *cursor, s32 x_offset, s32 y_offset)
         }
     }
 
+    /*
+     * The gotos skip this reassignment. Structured forms: one join assignment
+     * after the if reaches 99.97% (reorg does not retarget the --D branch past
+     * it); a copy inside the call arm is deleted by CSE as a no-op (95.6%).
+     */
     first_cursor = cursor;
 loop_setup:
     i = 0;
     total_x = i;
     total_y = i;
-    entry = (u8 *)g_field_player_records;
-    pad = g_pad_ctx;
-    do
+    for (; i < 3; i++)
     {
-        if (pad[0x5F0] != 0)
+        if (g_pad_ctx[i * SAVED_CHARACTER_SIZE + 0x5F0] != 0)
         {
-            FieldEntry268 *record = (FieldEntry268 *)entry;
-
-            total_x += record->unk25C;
-            total_y += record->unk25D;
+            total_x += g_field_player_records[i].unk25C;
+            total_y += g_field_player_records[i].unk25D;
         }
-        entry += sizeof(FieldEntry268) - sizeof(((FieldEntry268 *)0)->pad25E);
-        entry += sizeof(((FieldEntry268 *)0)->pad25E);
-        i++;
-        pad += 0x250;
-    } while (i < 3);
+    }
 
     handle = func_800A88A0(first_cursor, ot,
         D_800EC3D6[0] + (D_800EC3D6 - 0x12) + (D_800EC3D6[1] << 8),
@@ -2001,153 +1832,113 @@ loop_setup:
     position[0] = 0x28 - x_offset;
     handle = func_800A8A78(ot, handle, total_x, 4, position, 0);
     handle = func_800A88A0(handle, ot,
-        text_base[0x16] + ((text_base[0x17] << 8) + text_base),
+        FIELD_TEXT_AT(text_base, text_base[0x16], text_base[0x17]),
         4, 0x40 - x_offset, position[1], 0);
     handle = func_800A8524(ot, handle, 0x50 - x_offset, position[1] + 2);
 
     position[0] = 0x60 - x_offset;
     handle = func_800A8A78(ot, handle, total_y, 4, position, 0);
     handle = func_800A88A0(handle, ot,
-        text_base[0x1A] + ((text_base[0x1B] << 8) + text_base),
+        FIELD_TEXT_AT(text_base, text_base[0x1A], text_base[0x1B]),
         4, 0x80 - x_offset, position[1], 0);
 
     position[0] = 0xD0 - x_offset;
     handle = func_800A8A78(ot, handle, *(s32 *)(g_pad_ctx + 0x2C) - D_8011F420, 4, position, 1);
     func_800A88A0(handle, ot,
-        text_base[0] + ((text_base[1] << 8) + text_base),
+        FIELD_TEXT_AT(text_base, text_base[0], text_base[1]),
         4, 0xF0 - x_offset, position[1], 1);
 }
 
 /**
- * @brief Draw up to three active players in descending adjusted-score order.
- * @param arg0 Ordering table address passed to the drawing helpers.
- * @param arg1 Initial primitive-buffer address.
- * @param arg2 Horizontal drawing origin subtracted from each column position.
- * @param arg3 Vertical drawing origin subtracted from each row position.
+ * @brief Draw up to three party members sorted by experience gained, highest first.
+ * @param ordering_table Ordering table address passed to the drawing helpers.
+ * @param cursor Initial primitive-buffer address.
+ * @param x_offset Horizontal drawing origin subtracted from each column position.
+ * @param y_offset Vertical drawing origin subtracted from each row position.
  * @return Primitive-buffer address after the final emitted element.
- * @note Equal adjusted scores retain player order during insertion sorting.
+ * @note Equal gains keep party order during the insertion sort.
+ * @note The split `pos += 2; pos--` step stays: with one increment loop.c
+ *       strength-reduces the order[] address (plain `pos++` 93.5%, for/break 98.6%).
+ * @note The draw guard repeats the loop test `i < count` so CSE folds the
+ *       rotated loop entry test away; `count > 0` keeps it (98.6%).
  */
-s32 func_800A7B54(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+s32 func_800A7B54(s32 ordering_table, s32 cursor, s32 x_offset, s32 y_offset)
 {
-    extern PadContext *g_pad_ctx;
+    extern FieldGameState *g_pad_ctx;
     extern FieldRankPlayer g_field_player_records[];
     extern s32 func_800A88A0(s32, s32, u8 *, s32, s32, s32, s32);
     extern s32 func_800A838C(s32, s32, s32, s32, s32);
     extern s32 func_800A8A78(s32, s32, s32, s32, Vec2s *, s32);
 
     FieldRankWork work;
-    Vec2s *position;
     s32 count;
     s32 i;
-    s32 result;
-    s32 *score;
-    s32 *end;
-    s32 *work_base;
-    FieldRankStats *stats;
-    FieldRankStats *active_stats;
-    FieldRankStats *base;
-    s32 *scores;
     s32 pos;
-    s32 byte_offset;
-    s32 stats_addr;
     s32 j;
-    s32 id;
-    s32 *dst;
-    s32 *src;
     s32 row;
+    s32 result;
     s16 y;
     u8 *text;
     u8 *text_base;
 
-    result = func_800A88A0(arg1, arg0, (D_800EC3C6[1] << 8) + ((D_800EC3C6 - 2) + D_800EC3C6[0]), 4, 0x10 - arg2, -arg3, 0);
+    result = func_800A88A0(cursor, ordering_table, (D_800EC3C6[1] << 8) + ((D_800EC3C6 - 2) + D_800EC3C6[0]), 4, 0x10 - x_offset, -y_offset, 0);
     count = 0;
-    i = count;
-    scores = D_801229A0;
-    base = (FieldRankStats *)g_pad_ctx;
-    work_base = (s32 *)((u8 *)&work + ((u8 *)scores - (u8 *)D_801229A0));
-    score = scores;
-    end = work_base;
-    do
+    for (i = 0; i < 3; i++)
     {
-        stats = (FieldRankStats *)((u8 *)base + i * 0x250);
-        if (stats->active != 0)
+        if (g_pad_ctx->characters[i].name[0] != 0)
         {
             pos = 0;
-            while (pos < count && (s32)((((FieldRankStats *)(stats_addr = (s32)base + work_base[pos + 2] * 0x250, (u8 *)stats_addr))->score >> 8) - scores[work_base[pos + 2]]) >= (s32)((stats->score >> 8) - *score))
+            while (pos < count && FIELD_EXPERIENCE_GAIN(work.order[pos]) >= FIELD_EXPERIENCE_GAIN(i))
             {
                 pos += 2;
                 pos--;
             }
             if (pos == count)
             {
-                end[2] = i;
+                work.order[count] = i;
             }
             else
             {
-                j = count - 1;
-                if (j >= pos)
+                for (j = count - 1; j >= pos; j--)
                 {
-src = &work.indices[1];
-                    dst = (s32 *)(j * 4 + (s32)src);
-                    src = (s32 *)(j * 4 + (s32)work_base);
-                    do
-                    {
-                        *dst = src[2];
-                        src--;
-                        j--;
-                        dst--;
-                    } while (j >= pos);
+                    work.order[j + 1] = work.order[j];
                 }
-                work_base[pos + 2] = i;
+                work.order[pos] = i;
             }
-            end++;
             count++;
         }
-        score++;
-        i++;
-
-    } while (i < 3);
-    do
-        {
-            i = 0;
-        } while (0);
-    if (count > 0)
+    }
+    i = 0;
+    if (i < count)
     {
         text_base = D_800EC3DA;
         text = text_base - 0x16;
-        row = i;
-        position = &work.position;
-        do
+        for (row = 0; i < count; i++)
         {
-            active_stats = (FieldRankStats *)((u8 *)g_pad_ctx + ((FieldRankWork *)((u8 *)position + i * 4))->indices[0] * 0x250);
-            if (active_stats->active != 0)
+            if (g_pad_ctx->characters[work.order[i]].name[0] != 0)
             {
-                work.position.x = 0x18 - arg2;
-                y = arg3 - 0x10;
+                work.position.x = 0x18 - x_offset;
+                y = y_offset - 0x10;
                 y = row - y;
                 work.position.y = y;
-                result = field_emit_actor_portrait(result, arg0, ((FieldRankWork *)((u8 *)position + i * 4))->indices[0], position);
+                result = field_emit_actor_portrait(result, ordering_table, work.order[i], &work.position);
                 y += 8;
                 work.position.y = y;
-                result = func_800A838C(arg0, result, 0x38 - arg2, y - 8, 1);
-                work.position.x = 0x48 - arg2;
-                result = func_800A8A78(arg0, result, g_field_player_records[((FieldRankWork *)((u8 *)position + i * 4))->indices[0]].first, 4, position, 0);
-                result = func_800A88A0(result, arg0, D_800EC3DA[0] + ((text_base[1] << 8) + (s32)text), 4, 0x68 - arg2, work.position.y, 0);
-                result = func_800A838C(arg0, result, 0x78 - arg2, work.position.y, 0);
-                work.position.x = 0x88 - arg2;
+                result = func_800A838C(ordering_table, result, 0x38 - x_offset, y - 8, 1);
+                work.position.x = 0x48 - x_offset;
+                result = func_800A8A78(ordering_table, result, g_field_player_records[work.order[i]].first, 4, &work.position, 0);
+                result = func_800A88A0(result, ordering_table, FIELD_TEXT_AT(text, D_800EC3DA[0], text_base[1]), 4, 0x68 - x_offset, work.position.y, 0);
+                result = func_800A838C(ordering_table, result, 0x78 - x_offset, work.position.y, 0);
+                work.position.x = 0x88 - x_offset;
                 work.position.y = y;
-                result = func_800A8A78(arg0, result, g_field_player_records[((FieldRankWork *)((u8 *)position + i * 4))->indices[0]].second, 4, position, 0);
-                result = func_800A88A0(result, arg0, text[0x1A] + ((text[0x1B] << 8) + (s32)text), 4, 0xA8 - arg2, work.position.y, 0);
-                work.position.x = 0xE0 - arg2;
+                result = func_800A8A78(ordering_table, result, g_field_player_records[work.order[i]].second, 4, &work.position, 0);
+                result = func_800A88A0(result, ordering_table, FIELD_TEXT_AT(text, text[0x1A], text[0x1B]), 4, 0xA8 - x_offset, work.position.y, 0);
+                work.position.x = 0xE0 - x_offset;
                 work.position.y = y;
-                id = ((FieldRankWork *)((u8 *)position + i * 4))->indices[0];
-                stats = (FieldRankStats *)((u8 *)g_pad_ctx + id * 0x250);
-                result = func_800A8A78(arg0, result, (stats->score >> 8) - D_801229A0[id], 4, position, 1);
+                result = func_800A8A78(ordering_table, result, FIELD_EXPERIENCE_GAIN(work.order[i]), 4, &work.position, 1);
             }
             row += 0x1C;
-            i++;
-
-        } while (i < count);
+        }
     }
     return result;
 }
@@ -2205,6 +1996,8 @@ s32 func_800A7FB4(s32 *ot, s32 prim, s32 arg2, s32 arg3)
  * @param scroll_y Vertical scroll offset.
  * @param viewport_height Bottom clipping boundary.
  * @return Primitive buffer cursor after drawing the visible text.
+ * @note The guard repeats the loop test so CSE folds the rotated entry test;
+ *       the count is re-read on every pass because the loop calls out.
  */
 s32 func_800A8128(s32 ordering_table, s32 cursor, s32 scroll_x, s32 scroll_y, s32 viewport_height)
 {
@@ -2228,7 +2021,6 @@ s32 func_800A8128(s32 ordering_table, s32 cursor, s32 scroll_x, s32 scroll_y, s3
     s32 item_y;
     u16 *entry;
     u16 name_index;
-    s32 entry_count;
 
     next_cursor = cursor;
     special_header_drawn = 0;
@@ -2237,12 +2029,12 @@ s32 func_800A8128(s32 ordering_table, s32 cursor, s32 scroll_x, s32 scroll_y, s3
     index = 0;
     normal_names = (unsigned char *)D_8010D038 + D_8010D038->normal;
     special_names = (unsigned char *)D_8010D038 + D_8010D038->special;
-    if (g_field_progression_unlock_count != 0)
+    if (index < g_field_progression_unlock_count)
     {
         header_x = 0x20 - scroll_x;
         item_x = 0x80 - scroll_x;
         entry = g_field_progression_unlocks;
-        do
+        for (; index < g_field_progression_unlock_count; index++)
         {
             if (*entry & 0x8000)
             {
@@ -2310,12 +2102,7 @@ s32 func_800A8128(s32 ordering_table, s32 cursor, s32 scroll_x, s32 scroll_y, s3
             }
             row += 1;
             entry += 1;
-            do
-            {
-                entry_count = g_field_progression_unlock_count;
-                index += 1;
-            } while (0);
-        } while (index < entry_count);
+        }
     }
     return next_cursor;
 }

@@ -3,36 +3,20 @@
  */
 
 #include "common.h"
+#include "field_actor_runtime.h"
+#include "field_calls.h"
 #include "field_modal_runtime.h"
+#include "field_runtime.h"
 #include "field_text.h"
 
-void field_prepare_actor_render_commands(s32, s32);
-void field_update_actor_animations(void);
-void field_update_audio_timer(void);
-void field_update_gover_load(void);
-void field_update_return_to_title_prompt(s32);
-void field_update_and_render_fade(s32);
-void field_update_dialog_runtime(s32);
-void field_update_actor_objects(void);
-void field_render_actor_objects(s32);
-void func_800842E0(void);
-void field_draw_actor_hud(s32);
-void func_80086FB8(s32);
 void func_8008B73C(void);
-void func_80096B54(void);
-void func_80096E60(void);
-void func_800A2E34(void);
-void func_800A2E40(s32);
-void func_800A3FB0(void);
-void func_800A4798(s32);
+/* Private render-context views: their types live in field_dialog_screens.c. */
 void func_800A5794(s32);
 void func_800A64D0(s32);
 void field_update_input_repeat(void);
 void field_process_input(s32);
+/* Defined as (void); the call passes render_half, which the original loads into $a0. */
 void func_800AD118(s32);
-void func_800AF8E8(s32);
-void func_800B0244(void);
-void func_800B19FC(void);
 extern s32 g_field_action_context;
 extern s32 D_800F2288;
 extern s32 D_800F2298;
@@ -64,13 +48,13 @@ void field_build_frame_commands(s32 render_half, s32 alternate)
     g_field_action_context &= 0xFF;
     field_update_input_repeat();
     field_process_input(render_half);
-    field_update_and_render_fade(render_half);
+    field_update_and_render_fade((FieldRenderHalf*)render_half);
     func_800B0244();
     if (g_field_active_group != 0)
     {
         if (g_field_hide_actor_panels == 0)
         {
-            field_draw_actor_hud(render_half);
+            field_draw_actor_hud((u8*)render_half);
         }
     }
     if ((D_800F2298 == 0) && (g_field_gover_load_countdown == 0) && (g_field_modal_state == 0) && (g_field_text_session_active == 0))
@@ -85,16 +69,16 @@ void field_build_frame_commands(s32 render_half, s32 alternate)
             field_update_actor_objects();
         }
     }
-    func_800A4798(render_half);
+    func_800A4798((u8*)render_half);
     func_80096B54();
     if ((D_800F2298 == 0) && (g_field_gover_load_countdown == 0) && (g_field_modal_state == 0) && (D_8011F3AC == 0) && (g_field_text_session_active == 0))
     {
         field_update_actor_animations();
     }
     field_prepare_actor_render_commands(render_half, alternate);
-    field_render_actor_objects(render_half);
-    func_80086FB8(render_half);
-    func_800A2E40(render_half);
+    field_render_actor_objects((FieldRenderContext*)render_half);
+    func_80086FB8((u8*)render_half);
+    func_800A2E40((u8*)render_half);
     func_800A2E34();
     func_800842E0();
     g_frame_counter += 1;

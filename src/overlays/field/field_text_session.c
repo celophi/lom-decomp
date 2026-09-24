@@ -4,13 +4,17 @@
 
 #include "field_text.h"
 #include "common.h"
+#include "field_calls.h"
+
+struct FieldMenuRenderContext;
+
+/* Local: field_dialog_screens.c calls it with no arguments, so it stays out of field_calls.h. */
+void func_800AE008(struct FieldMenuRenderContext *context);
 
 extern s32 D_80122714;
 extern s32 D_80122734;
 extern s32 D_80122980;
 extern s32 D_80122A00;
-
-void func_800AE008(s32 context);
 
 /** @brief Clear active text-session state and associated counters. */
 void func_800AF8C4(void)
@@ -35,7 +39,7 @@ void func_800AF8E8(s32 context)
     if (D_80122714 != 0)
     {
         field_text_reset_scratch();
-        func_800AE008(context);
+        func_800AE008((struct FieldMenuRenderContext*)context);
         field_text_upload_immediate_cache();
         if (D_80122714 == 0)
         {

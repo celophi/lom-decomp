@@ -5,6 +5,7 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 #include "field_records.h"
 #include "field_script.h"
 
@@ -50,14 +51,6 @@ FieldItemRecord* field_find_free_inventory_record(void);
 void func_800BD520(s32 owner, s32 variable, s32 value);
 s32* func_800C1EC8(s32* src, s32* dest, s32 size);
 void* func_800C1E40(s32 table_id);
-void func_800C21C0(s32 index);
-void func_800BF2F0(s32 offset);
-void func_800BF3D8(void);
-void func_800BF700(void);
-void func_800BF800(void);
-void func_800BFA34(void);
-void func_800BFF90(FieldItemRecord* record);
-void func_800C015C(FieldItemRecord* record);
 
 void func_800BE888(FieldItemRecord* record, s32 category, s32 item_type, s32 item_subtype);
 void func_800BEA10(FieldItemRecord* record, s32 category, s32 item_type, s32 row, s32 command_index);

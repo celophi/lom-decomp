@@ -110,7 +110,7 @@ void func_800966F0(s32 mode, void* actor_data)
             state->movement.bits.flag15 = 0;
             state->contact.bits.flag7 = 0;
             g_field_actor_slots[64 + index].status.bytes[1] = 0;
-            func_80083BC0(&g_field_actors[index], &D_800FB3C8[index], 1);
+            func_80083BC0(&g_field_actors[index], &g_field_actor_slots[64 + index], 1);
             state->retry_count = 0;
             g_field_actors[index].unk30 = 0;
             func_800A2DD8(index);

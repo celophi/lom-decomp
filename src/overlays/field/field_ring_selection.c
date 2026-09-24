@@ -1,6 +1,7 @@
 #include "cdrom.h"
 #include "field_effect_render_state.h"
 #include "common.h"
+#include "field_calls.h"
 #include "sdk/libgpu.h"
 #include "sdk/libgte.h"
 #include "sdk/memory.h"
@@ -113,7 +114,6 @@ extern s32 g_frame_counter;
 /* External callees (not members of this TU). */
 u32 field_load_vram_resource(s32, s16 *, s32);
 void field_reset_input_repeat(void);
-void func_80086F48(POLY_FT4 *, s32);
 
 /* Forward declarations for members called before their definition. */
 void func_800A4838(void);
@@ -533,7 +533,8 @@ void func_800A4D1C(u8 *render_context)
                 {
                     final_depth = final_cosine - 0xFC1;
                 }
-                func_80086F48(prim, -(final_depth >> 6) + 0x10);
+                /* Int depth on purpose: the original passes it without narrowing to s16. */
+                ((void (*)(const void *, s32))func_80086F48)(prim, -(final_depth >> 6) + 0x10);
                 prim++;
             }
             entry += 1;

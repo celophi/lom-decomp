@@ -3,11 +3,10 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
+#include "field_actor_runtime.h"
 #include "field_runtime.h"
 #include "sdk/libgpu.h"
-
-void field_reset_effect_pool(void);
-void field_reset_global_color_scale(void);
 
 extern s32 D_800F2278;
 extern s32 D_800F227C;

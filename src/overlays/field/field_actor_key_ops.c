@@ -8,6 +8,8 @@
  */
 
 #include "common.h"
+#include "field_actor_routes.h"
+#include "field_calls.h"
 #include "field_actor_tables.h"
 #include "main.h"
 
@@ -27,10 +29,6 @@ extern u8* g_field_event_scripts;
 FieldActor* func_80087C9C(s32 key);
 long ratan2(long y, long x);
 int abs(int value);
-void field_load_resource_entry(s32 resource_slot_id, u8* resource_base, s32 entry_index);
-void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index);
-void field_initialize_actor_part(s32 part_index, s32 timer_mode);
-void field_refresh_party_routes(void);
 void field_restart_actor_animation(FieldActor* actor);
 
 /**

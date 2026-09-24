@@ -4,6 +4,7 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 #include "controller_internal.h"
 #include "field_contact_geometry.h"
 #include "field_object_state.h"
@@ -62,9 +63,6 @@ extern FieldActionMap g_field_action_animation_maps[];
 extern s32 g_field_action_context;
 extern s32 D_8010AE54;
 extern FieldInputResource g_field_resource_entries[];
-
-s32 func_800A29F8(s32 player, s32 unused, s32 peek);
-void func_800A3938(s32 sound_id, s32 pan);
 
 /**
  * @brief Build the held-button mask of the buttons bound to an action.

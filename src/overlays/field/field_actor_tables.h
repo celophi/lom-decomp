@@ -383,8 +383,6 @@ extern FieldActor g_field_actors[];
 extern FieldObjectState g_field_object_states[];
 extern FieldActorBinding g_field_actor_bindings[];
 extern FieldActorSlot g_field_actor_slots[];
-/** @brief Reserved animation slots of the field objects (g_field_actor_slots[64] onwards). */
-extern FieldActorSlot D_800FB3C8[];
 extern FieldResourceEntry g_field_resource_entries[];
 extern FieldObjectPart g_field_object_parts[];
 extern FieldPlayerRecord g_field_player_records[];

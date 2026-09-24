@@ -1,4 +1,5 @@
 #include "common.h"
+#include "field_calls.h"
 #include "sdk/strings.h"
 
 /** @brief Controller sample with button bits and signed directional axes. */
@@ -34,10 +35,9 @@ extern s32 D_80117EC4;
 extern u8 D_80117EC8[];
 
 /*
- * D_80117E90 is read as s16 by func_800A255C and u16 by func_800A2594; D_80117E98
- * is viewed as u8[][0x10] by func_800A2958/func_800A2990 and as flat u8[] by
- * func_800A2594/func_800A29F8. Those conflicting views stay block scope inside
- * each user with that function's original type.
+ * D_80117E90 is read as s16 by func_800A255C and u16 by func_800A2594, so it
+ * stays block scope inside each user. D_80117E98 is a u8[][0x10] byte history
+ * (one 16-entry row per player); its users declare it block scope as well.
  */
 
 /* Forward prototypes for members defined later in the file. */
@@ -71,172 +71,112 @@ void func_800A255C(void)
 void func_800A2594(s32 player, s32 age_sequence)
 {
     extern u16 D_80117E90[];
-    extern u8 D_80117E98[];
-    s16 axis_x;
-    s16 axis_y;
-    s32 work_value;
-    s32 *direction_count;
-    s32 *button_count;
-    s32 *idle_counter;
-    s32 idle_frames;
-    s32 player_word_offset;
-    s32 address_or_index;
-    s32 pressed_bit;
-    s32 button_length;
+    extern u8 D_80117E98[][0x10];
+    s16 axis;
+    /* Holds the remapped buttons, then the idle counter; the shared life keeps the copy into buttons. */
+    s32 value;
     s32 buttons;
-    s32 button_mask;
     u16 raw_buttons;
     u32 previous_direction;
-    u32 current_buttons;
     u32 button_index;
-    u32 direction_nibble;
-    u8 *mapping;
-    u8 *history;
-    u16 *previous_buttons;
+    s32 button_mask;
+    u32 pressed_bit;
+    u8 *binding;
+    s32 *count;
     ControllerState *pads = (ControllerState *)0x801ED600;
-    ControllerState *horizontal_pad;
-    ControllerState *vertical_pad;
+    ControllerState *pad_x;
+    ControllerState *pad_y;
 
     if (player < 2)
     {
-        address_or_index = player;
-        if (pads[address_or_index].status >= 0xFEU)
+        if (pads[player].status >= 0xFEU)
         {
             buttons = 0;
         }
         else
         {
-            raw_buttons = pads[address_or_index].buttons;
+            raw_buttons = pads[player].buttons;
             buttons = (raw_buttons << 8) | (raw_buttons >> 8);
         }
-        work_value = ((u32) (buttons & 0x40) >> 1) | ((buttons & 0x20) * 2) | ((u32) (buttons & 0x80) >> 3) | ((buttons & 0x10) * 8) | (buttons & 0xFF0F);
-        buttons = work_value;
-        horizontal_pad = pads + player;
-        if (horizontal_pad->status != 0)
+        value = ((u32) (buttons & 0x40) >> 1) | ((buttons & 0x20) * 2) | ((u32) (buttons & 0x80) >> 3) | ((buttons & 0x10) * 8) | (buttons & 0xFF0F);
+        buttons = value;
+        pad_x = pads + player;
+        if (pad_x->status != 0)
         {
-            axis_x = horizontal_pad->axis_x;
-            if (axis_x < 0)
+            axis = pad_x->axis_x;
+            if (axis < 0)
             {
-                buttons = work_value | 0x8000;
+                buttons = value | 0x8000;
             }
-            else if (axis_x > 0)
+            else if (axis > 0)
             {
-                buttons = work_value | 0x2000;
+                buttons = value | 0x2000;
             }
-            vertical_pad = pads + player;
-            axis_y = vertical_pad->axis_y;
-            if (axis_y < 0)
+            pad_y = pads + player;
+            axis = pad_y->axis_y;
+            if (axis < 0)
             {
                 buttons |= 0x1000;
             }
-            else if (axis_y > 0)
+            else if (axis > 0)
             {
                 buttons |= 0x4000;
             }
         }
         previous_direction = D_80117E90[player] & 0xF000;
-        button_index = 0;
         if ((previous_direction != (buttons & 0xF000)) && (previous_direction != 0))
         {
-            u8 *history_row;
-            s32 history_row_offset;
-            s32 count_table_address;
-            s32 count_entry_offset;
-            s32 *history_count;
-            s32 history_length;
-            s32 history_table_address;
-            history_table_address = (s32)D_80117E98;
-            history_row = (u8 *)history_table_address;
-            history_row_offset = player * 0x10;
-            count_table_address = (s32)D_80117E88;
-            count_entry_offset = player * 4;
-            history_count = (s32 *)(count_entry_offset + count_table_address);
-            history_row += history_row_offset;
-            history_row[*history_count] = (s8)(previous_direction >> 0xC);
-            history_length = *history_count;
-            if (history_length < 0xF)
+            D_80117E98[player][D_80117E88[player]] = previous_direction >> 12;
+            if (D_80117E88[player] < 0xF)
             {
-                *history_count = history_length + 1;
+                D_80117E88[player]++;
             }
             else
             {
                 func_800A2958(player);
             }
             D_80117EB8[player] = 0;
-            button_index = 0;
         }
-        button_mask = 1;
-        address_or_index = (s32)D_80117E90;
-        work_value = player * 2;
-        previous_buttons = (u16 *)(work_value + address_or_index);
-        address_or_index = (s32)D_80117E98;
-        work_value = player * 0x10;
-        history = (u8 *)(work_value + address_or_index);
-        player_word_offset = player * 4;
-        current_buttons = buttons & 0xFFFF;
-        direction_nibble = current_buttons >> 12;
-        /* Goto loop: as a real loop, loop.c hoists D_80117E88 and spills (88.6%). */
-button_loop:
+        for (button_index = 0, button_mask = 1; button_index < 8; button_index++, button_mask <<= 1)
         {
-            pressed_bit = current_buttons & button_mask;
-            if ((pressed_bit != 0) && ((*previous_buttons & button_mask) != pressed_bit))
+            pressed_bit = (u16)buttons & button_mask;
+            if ((pressed_bit != 0) && ((D_80117E90[player] & button_mask) != pressed_bit))
             {
                 if (buttons & 0xF000)
                 {
-                    direction_count = (s32 *)((s32)D_80117E88 + player_word_offset);
-                    history[*direction_count] = (s8)direction_nibble;
-                    work_value = *direction_count;
-                    if (work_value < 0xF)
+                    D_80117E98[player][D_80117E88[player]] = (u16)buttons >> 12;
+                    if (D_80117E88[player] < 0xF)
                     {
-                        *direction_count = work_value + 1;
+                        D_80117E88[player]++;
                     }
                     else
                     {
                         func_800A2958(player);
                     }
                 }
-                do
+                count = &D_80117E88[player];
+                binding = g_pad_ctx + player * 0x250 + g_field_hint_button_map[button_index];
+                D_80117E98[player][*count] = D_800EC2F4[binding[0x638]];
+                if (*count < 0xF)
                 {
-                    button_count = (s32 *)((s32)D_80117E88 + player_word_offset);
-                    mapping = (u8 *)((s32)g_pad_ctx + player * 0x250 + g_field_hint_button_map[button_index]);
-                    history[*button_count] = D_800EC2F4[mapping[0x638]];
-                    button_length = *button_count;
-                    if (button_length < 0xF)
-                    {
-                        *button_count = button_length + 1;
-                    }
-                    else
-                    {
-                        func_800A2958(player);
-                    }
-                    *(s32 *)((s32)D_80117EB8 + player_word_offset) = 0;
-                } while (0);
+                    (*count)++;
+                }
+                else
+                {
+                    func_800A2958(player);
+                }
+                D_80117EB8[player] = 0;
             }
-            do
-            {
-                button_index += 1;
-            } while (0);
-            do
-            {
-                do { button_mask *= 2; } while (0);
-            } while (0);
-        }
-        if (button_index < 8U)
-        {
-            goto button_loop;
         }
         D_80117E90[player] = buttons;
         if (age_sequence != 0)
         {
-            address_or_index = (s32)D_80117EB8;
-            work_value = player * 4;
-            idle_counter = (s32 *)(work_value + address_or_index);
-            idle_frames = *idle_counter;
-            if (idle_frames < 0x10)
+            if (D_80117EB8[player] < 0x10)
             {
-                *idle_counter = idle_frames + 1;
+                D_80117EB8[player]++;
             }
-            if (*idle_counter == 0xF)
+            value = D_80117EB8[player];
+            if (value == 0xF)
             {
                 func_800A2DD8(player);
             }
@@ -366,7 +306,7 @@ s32 func_800A29F8(s32 player, s32 unused, s32 peek)
                     {
                         if (direction_end == direction_count)
                         {
-                            goto block_48;
+                            return 0xFF;
                         }
                     } while (direction_row[direction_end++] < 0x10);
                     direction_end--;
@@ -547,14 +487,8 @@ s32 func_800A29F8(s32 player, s32 unused, s32 peek)
             {
                 goto scan_loop;
             }
-        goto block_48;
     }
-    else
-    {
-    block_48:
-        command_id = 0xFF;
-        return command_id;
-    }
+    return 0xFF;
 }
 
 /**

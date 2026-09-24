@@ -1,5 +1,6 @@
 #include "saved_game.h"
 #include "common.h"
+#include "field_calls.h"
 #include "sdk/rand.h"
 
 extern int abs(int);

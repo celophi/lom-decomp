@@ -6,6 +6,7 @@
 
 #include "game_audio.h"
 #include "common.h"
+#include "field_calls.h"
 #include "field_records.h"
 
 /** @brief Event slot run on the attacker and the target when an action resolves. */
@@ -29,15 +30,10 @@
 extern FieldBattleContext* D_80123FB0;
 extern FieldGameState* D_80122B74;
 
-s32 func_800B4CE4(FieldStatusRecord* record, s32 status_id);
 FieldActionDescriptor* func_800B50B8(void);
-s32 func_800B28E0(s32 owner_id, s32 event_id, s32 mode);
 s32 func_8008ADB4(s32 record_id);
 void func_8008AB2C(s32 actor_id, s32 value);
 void func_8008B500(s32 actor_id, s32 signal_id);
-s32 func_800B6334(FieldStatusRecord* target);
-void func_800B65CC(s32 effect);
-s32 func_800B6808(void);
 s32 rand(void);
 
 void func_800B5948(FieldBattleAction* action, s32 resolve_descriptor);

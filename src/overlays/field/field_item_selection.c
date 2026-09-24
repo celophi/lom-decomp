@@ -1,25 +1,21 @@
 #include "field_scene_transition.h"
 #include "common.h"
+#include "field_actor_runtime.h"
+#include "field_calls.h"
 #include "sdk/libgpu.h"
 #include "field_actor_tables.h"
+#include "field_menu_element.h"
 extern u8 g_field_direction_offsets[];
 extern u8 D_80122738[];
 extern u8 *g_pad_ctx;
 extern s32 D_80122714, D_80122734, g_field_primary_held_buttons, g_field_primary_repeat_delay;
-extern s32 g_field_secondary_held_buttons, g_field_secondary_repeat_delay, D_80122828, g_field_buffered_input, D_80122A00;
+extern s32 g_field_secondary_held_buttons, g_field_secondary_repeat_delay, g_field_buffered_input, D_80122A00;
 extern s32 g_menu_element_counter, g_pad_input, g_pad_input_inject;
-void field_start_actor_animation(s32, s32, s32);
-void field_initialize_actor_record(s32, s32);
 void field_restart_actor_animation(FieldActor *);
-s32 func_800839F8(s32, s32);
-s32 func_80083EEC(s32, s32, s32);
 
-void func_800A3938(s32, s32);
 s32 field_read_controller_buttons(s32);
-void func_800C2640(s32, s32);
 
-struct ItemWindowSlot;
-u8 *func_800AF0E8(u32 *, u8 *, s32, s32, s32, struct ItemWindowSlot *);
+u8 *func_800AF0E8(u32 *, u8 *, s32, s32, s32, FieldMenuElement *);
 void func_800AF0C4(void);
 
 
@@ -31,55 +27,14 @@ void func_800AF0C4(void);
  */
 #define FIELD_DIRECTION_OFFSET(table, facing) ((s16 *)(((facing) * 4) + (s32)(table)))
 
-/** @brief Packed item-window flags controlling state, type, priority, and value. */
-typedef union
-{
-    u32 word;
-    struct
-    {
-        u32 low : 3;
-        u32 type : 4;
-        u32 priority : 9;
-        u32 value : 8;
-        u32 high : 8;
-    } bits;
-} ItemWindowFlags;
-
-/** @brief Packed item-window state controlling visibility, height, and display mode. */
-typedef union
-{
-    u32 word;
-    struct
-    {
-        u32 enabled : 1;
-        u32 value : 8;
-        u32 bit9 : 1;
-        u32 mode : 2;
-        u32 high : 20;
-    } bits;
-    s16 half[2];
-} ItemWindowState;
-
-/** @brief Item-selection window slot and its draw callback. */
-typedef struct ItemWindowSlot
-{
-    ItemWindowFlags flags;
-    ItemWindowState state;
-    s16 scroll;
-    s16 scroll_target;
-    s16 scroll_ticks;
-    u16 padding;
-    u8 *(*draw_callback)(u32 *, u8 *, s32, s32, s32, struct ItemWindowSlot *);
-} ItemWindowSlot;
-
 /** @brief Build the available item list and open its selection window. */
 void func_800AEE28(void)
 {
     u8 *item_entry;
     s32 scroll_offset;
-    ItemWindowSlot *slot_cursor;
-    ItemWindowSlot *slot;
-    s32 *reset_flags;
+    FieldMenuElement *slot_cursor;
+    FieldMenuElement *slot;
+    FieldMenuElement *reset_element;
     s32 packed_flags;
     s32 slot_flags;
     s32 reset_index;
@@ -89,13 +44,13 @@ void func_800AEE28(void)
     u32 claimed_flags;
 
     g_menu_element_counter = 0;
-    reset_flags = &D_80122828;
+    reset_element = D_80122828;
     reset_index = 0;
     do
     {
         reset_index += 1;
-        *reset_flags &= ~7;
-        reset_flags += 5;
+        reset_element->attr.word &= ~7;
+        reset_element++;
     } while (reset_index < 8);
     item_count = 0;
     item_id = 0x60;
@@ -126,22 +81,22 @@ initialize_slot:
     {
         slot = slot_cursor;
     } while (0);
-    slot->flags.word = claimed_flags;
+    slot->attr.word = claimed_flags;
     slot->scroll = 0;
     slot->scroll_target = 0;
     slot->scroll_ticks = 0;
-    slot->state.word &= ~0x200;
-    slot->state.word &= ~0xC00;
-    slot->state.half[1] = 0;
+    slot->size.word &= ~0x200;
+    slot->size.word &= ~0xC00;
+    slot->size.fields.content_height = 0;
     goto setup_slot;
 
 start_window:
     D_80122714 = 1;
     func_800A3938(0xB9, 0x80);
-    slot_cursor = (ItemWindowSlot *)&D_80122828;
+    slot_cursor = D_80122828;
     slot_index = 0;
 scan_slot:
-    do { slot_flags = slot_cursor->flags.word; } while (0);
+    do { slot_flags = slot_cursor->attr.word; } while (0);
     slot_index += 1;
     if ((slot_flags & 7) == 0)
     {
@@ -152,22 +107,23 @@ scan_slot:
         slot_cursor += 1;
         goto scan_slot;
     }
-    slot = (ItemWindowSlot *)&D_80122828;
+    slot = D_80122828;
 
 setup_slot:
-    slot->draw_callback = func_800AF0E8;
+    /* func_800AF0E8 is defined with u32 * / u8 * ordering table and cursor. */
+    slot->draw = (FieldMenuDrawFn)func_800AF0E8;
     slot->scroll = 0;
-    slot->flags.bits.type = 1;
-    slot->flags.bits.priority = 0x2C;
-    slot->flags.bits.value = 0x20;
-    slot->state.bits.enabled = 0;
-    slot->state.bits.value = 0xA0;
-    packed_flags = slot->flags.word;
+    slot->attr.bits.step = 1;
+    slot->attr.bits.x = 0x2C;
+    slot->attr.bits.y = 0x20;
+    slot->size.bits.width_high = 0;
+    slot->size.bits.height = 0xA0;
+    packed_flags = slot->attr.word;
     packed_flags &= 0xFFFFFF;
     packed_flags |= 0xE8000000;
-    slot->flags.word = packed_flags;
-    slot->state.bits.mode = 2;
-    slot->state.half[1] = D_80122734 * 0x10;
+    slot->attr.word = packed_flags;
+    slot->size.bits.scroll_mode = 2;
+    slot->size.fields.content_height = D_80122734 * 0x10;
     if (D_80122A00 >= D_80122734)
     {
         D_80122A00 = D_80122734 - 1;
@@ -180,9 +136,9 @@ setup_slot:
     }
     else
     {
-        if ((slot->state.bits.value - 0x10) < scroll_offset)
+        if ((slot->size.bits.height - 0x10) < scroll_offset)
         {
-            slot->scroll_target = scroll_offset - (slot->state.bits.value - 0x10);
+            slot->scroll_target = scroll_offset - (slot->size.bits.height - 0x10);
         }
     }
     slot->scroll_ticks = 0;
@@ -213,7 +169,7 @@ typedef struct Tile
 extern u8 D_800EE72C[];
 extern u8 *func_800A88A0(u8 *, u32 *, u8 *, s32, s32, s32, s32);
 extern void func_800A8B90(u8 *, s32, s32);
-extern s32 func_800AF350(ItemWindowSlot *);
+extern s32 func_800AF350(FieldMenuElement *);
 /**
  * @brief Format and draw one numeric value using a temporary text buffer.
  * @param cursor Primitive buffer cursor.
@@ -241,10 +197,10 @@ static __inline__ u8 *draw_number(u8 *cursor, u32 *ot, s32 number, u16 *position
  * @param window Window used to prepare the list and determine its clipping height.
  * @return Cursor after the list, highlight tile, and draw-mode packet.
  */
-u8 *func_800AF0E8(u32 *ot, u8 *cursor, s32 scroll_x, s32 scroll_y, s32 unused, ItemWindowSlot *window)
+u8 *func_800AF0E8(u32 *ot, u8 *cursor, s32 scroll_x, s32 scroll_y, s32 unused, FieldMenuElement *window)
 {
     u16 point[4];
-    ItemWindowSlot *draw_window;
+    FieldMenuElement *draw_window;
     s32 number_x;
     u8 *entry;
     u8 *names;
@@ -266,7 +222,7 @@ u8 *func_800AF0E8(u32 *ot, u8 *cursor, s32 scroll_x, s32 scroll_y, s32 unused, I
         number_x = 0xCA - scroll_x;
         entry = D_80122738 + index * 2;
         y = index * 16 - scroll_y;
-        if (y >= -15 && y < (s32)draw_window->state.bits.value)
+        if (y >= -15 && y < (s32)draw_window->size.bits.height)
         {
             cursor = func_800A88A0(cursor, ot, (u8 *)(((u16 *)names)[entry[0]] + (u32)names), 4,
                                     -scroll_x, y, 0);
@@ -296,12 +252,12 @@ u8 *func_800AF0E8(u32 *ot, u8 *cursor, s32 scroll_x, s32 scroll_y, s32 unused, I
  * @param window Item-selection window slot being updated.
  * @return Nothing meaningful; the original declares an int return and never sets it.
  */
-s32 func_800AF350(ItemWindowSlot *window)
+s32 func_800AF350(FieldMenuElement *window)
 {
     s32 offset[3];
     s32 scroll_target;
-    s32 *cancel_flags;
-    s32 *window_flags;
+    FieldMenuElement *cancel_element;
+    FieldMenuElement *close_element;
     s32 actor_flags;
     u16 window_height;
     s32 actor_direction;
@@ -320,7 +276,7 @@ s32 func_800AF350(ItemWindowSlot *window)
     u8 *direction_table;
     u8 *items;
 
-    if (((window->flags.word & 7) == 2) && (window->scroll_ticks == 0))
+    if (((window->attr.word & 7) == 2) && (window->scroll_ticks == 0))
     {
         if (g_field_buffered_input & 0x220)
         {
@@ -332,14 +288,14 @@ s32 func_800AF350(ItemWindowSlot *window)
             g_field_secondary_repeat_delay = 0xF;
             g_field_buffered_input = 0;
             func_800A3938(0x7E, 0x80);
-            window_flags = &D_80122828;
+            close_element = D_80122828;
             window_index = 0;
             g_menu_element_counter = 0;
             do
             {
                 window_index += 1;
-                *window_flags &= ~7;
-                window_flags += 5;
+                close_element->attr.word &= ~7;
+                close_element++;
             } while (window_index < 8);
             actor_index = 0xC;
             direction_table = g_field_direction_offsets;
@@ -401,7 +357,7 @@ s32 func_800AF350(ItemWindowSlot *window)
                 g_field_primary_repeat_delay = 0xF;
                 g_pad_input_inject = 0;
                 g_field_secondary_held_buttons = field_read_controller_buttons(1);
-                cancel_flags = &D_80122828;
+                cancel_element = D_80122828;
                 cancel_index = 0;
                 g_field_secondary_repeat_delay = 0xF;
                 g_field_buffered_input = 0;
@@ -409,8 +365,8 @@ s32 func_800AF350(ItemWindowSlot *window)
                 do
                 {
                     cancel_index += 1;
-                    *cancel_flags &= ~7;
-                    cancel_flags += 5;
+                    cancel_element->attr.word &= ~7;
+                    cancel_element++;
                 } while (cancel_index < 8);
                 func_800A3938(0x7F, 0x80);
                 D_80122714 = 0;
@@ -467,7 +423,7 @@ s32 func_800AF350(ItemWindowSlot *window)
                     window->scroll_ticks = 4;
                     return;
                 }
-                window_height = window->state.bits.value;
+                window_height = window->size.bits.height;
                 if ((window_height - 0x10) < (scroll_step - scroll_target))
                 {
                     window->scroll_target = (s16) (scroll_step - (window_height - 0x10));

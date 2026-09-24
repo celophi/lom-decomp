@@ -1,5 +1,6 @@
 #include "cdrom.h"
 #include "common.h"
+#include "field_calls.h"
 #include "field_actor_tables.h"
 #include "field_mesh.h"
 #include "sdk/libgte.h"
@@ -51,20 +52,12 @@ extern s32 g_field_boss_hud_shake_frame;
 
 void func_80083BC0(FieldActor* actor, FieldActorSlot* slot, s32 force);
 void func_80084424(s32 owner);
-void field_set_global_color_scale(s32 red, s32 green, s32 blue);
 void field_clear_actor_effects(FieldActorSlot* slot);
 void field_load_vram_resource(s32 id, s16* rect, s32 arg2);
-void func_800A3B78(s32 object_index);
 void func_8008B724(void);
+/* Defined as void (void) in field_actor_resource_unpack.c; the original passes load_id and tests the leftover $v0. */
 s32 func_8009A364(s32 load_id);
-void func_8009A384(void);
-s32 func_8009A390(void);
-void func_8009A3E8(void);
-void func_8009A4A0(s32 binding_index);
-void func_8009A4CC(s32 owner, FieldActorSlot* slot);
-void func_8009CA08(s32 pool, s32 size);
 void* func_8009CA54(s32 pool, s32 size, s32 tag);
-s32 func_800B0850(void);
 
 /**
  * @brief Reset the field resource cursor pair to the base blob and its end.
@@ -439,7 +432,7 @@ void func_80084240(void)
     g_field_actor_bindings[1].unk4 = 0;
     g_field_actor_bindings[0].unk4 = 0;
     func_8009A384();
-    func_8009CA08(D_8010D034, 0x20000);
+    func_8009CA08((u32*)D_8010D034, 0x20000);
     g_field_mesh_transformed_normals = func_8009CA54(D_8010D034, 0x1800, 4);
     g_field_mesh_screen_vertices = func_8009CA54(D_8010D034, 0xC00, 4);
     g_field_mesh_depth_offsets = func_8009CA54(D_8010D034, 0xC00, 4);
@@ -466,7 +459,7 @@ void func_800842E0(void)
             {
                 binding->unk4 = 0;
                 slot = &g_field_actor_slots[binding->slot];
-                func_8009A4CC(binding->owner, slot);
+                func_8009A4CC(binding->owner, (struct FieldActorState*)slot);
                 if (slot->enabled != 0)
                 {
                     slot->owner_object_index = binding->owner;

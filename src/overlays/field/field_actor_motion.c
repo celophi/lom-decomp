@@ -4,9 +4,15 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 #include "field_effect_render_state.h"
 #include "vector.h"
 #include "field_types.h"
+
+/* Local copies of include/field_actor_sequence_runtime.h prototypes: that header
+ * brings field_effect_types.h, whose g_field_object_states conflicts with this file. */
+void field_update_sequence_actor_binding(struct FieldMotionRecord *object, s32 release_actor);
+void field_restart_sequence_animation(struct FieldMotionRecord *object);
 
 /** @brief Scratchpad vector that receives the actor displacement. */
 #define FIELD_MOTION_SCRATCH ((Vec3i*)0x1F800000)
@@ -68,13 +74,6 @@ typedef struct
 extern FieldMotionSlot g_field_object_states[];
 extern FieldMotionVisual g_field_object_parts[];
 extern FieldMotionResource g_field_resource_entries[];
-extern void func_80092C98(FieldMotionActor*);
-extern s32 func_80091728(s32, s32, FieldMotionActor*);
-extern s32 field_object_has_active_actor_tracks(s32);
-extern void field_update_sequence_actor_binding(FieldMotionActor*, s32);
-extern s32 func_80093AB8(FieldMotionActor*);
-extern s32 func_80092AD8(FieldMotionActor*);
-extern void field_restart_sequence_animation(FieldMotionActor*);
 extern void func_8008BC5C(FieldMotionActor*);
 extern s32 field_resolve_actor_movement(FieldMotionActor*, Vec3i*, s32);
 
@@ -96,7 +95,7 @@ s32 func_800925EC(FieldMotionActor* actor, s32 update)
 
     if (update != 0 && (actor->timer != 0 || (actor->state & 0x7F) == 0x35))
     {
-        func_80092C98(actor);
+        func_80092C98((struct FieldMotionRecord*)actor);
     }
     if (actor->timer == 0)
     {
@@ -105,7 +104,7 @@ s32 func_800925EC(FieldMotionActor* actor, s32 update)
         {
             if (g_field_object_states[actor->slot].track < 12U)
             {
-                if (func_80091728(actor->slot, g_field_object_states[actor->slot].track, actor) != 0)
+                if (func_80091728(actor->slot, g_field_object_states[actor->slot].track, (struct FieldMotionRecord*)actor) != 0)
                 {
                     return;
                 }
@@ -120,22 +119,22 @@ s32 func_800925EC(FieldMotionActor* actor, s32 update)
             g_field_object_states[g_field_object_states[actor->slot].parent].flags &= ~0x2000;
         }
         g_field_object_states[actor->slot].flags &= ~0x4000;
-        field_update_sequence_actor_binding(actor, 1);
+        field_update_sequence_actor_binding((struct FieldMotionRecord*)actor, 1);
         g_field_object_states[actor->slot].options &= ~0x1800;
         state = actor->state & 0x7F;
         if (state == 0x37 || state == 0x3B)
         {
             actor->state ^= 0x80;
         }
-        if (actor->slot < 2U && func_80093AB8(actor) != 0)
+        if (actor->slot < 2U && func_80093AB8((struct FieldMotionRecord*)actor) != 0)
         {
             return;
         }
-        if (func_80092AD8(actor) != 0)
+        if (func_80092AD8((struct FieldMotionRecord*)actor) != 0)
         {
             actor->value = 0;
             actor->state &= 0x80;
-            field_restart_sequence_animation(actor);
+            field_restart_sequence_animation((struct FieldMotionRecord*)actor);
         }
         if (actor->value == 0)
         {

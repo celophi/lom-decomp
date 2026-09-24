@@ -4,6 +4,7 @@
 
 #include "game_audio.h"
 #include "common.h"
+#include "field_calls.h"
 #include "field_records.h"
 
 extern FieldGameState* D_80122B74;
@@ -13,10 +14,7 @@ extern s32 D_8010D020;
 extern s32 g_layout_flag;
 
 extern FieldStatusState* func_80087F0C(s32 actor_id);
-extern void func_80087614(s32 actor_id, s32 group);
 extern s32 func_80087FC0(s32 party_index, s32 mode);
-extern void func_800966F0(s32 group, void* context);
-extern void func_800B28E0(s32 owner_id, s32 event_id, s32 mode);
 extern void func_800C1D14(s32 party_index, s32 mode);
 extern void akao_cmd_c1(s32 arg0, s32 arg1, s32 arg2);
 

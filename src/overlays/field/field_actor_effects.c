@@ -12,6 +12,7 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 #include "controller_internal.h"
 #include "field_effect_dispatch.h"
 #include "field_effect_render_state.h"
@@ -32,12 +33,8 @@
 /** @brief Scratchpad words receiving the squared distance components. */
 #define DISTANCE_SQUARES ((s32*)0x1F800010)
 
-/**
- * @brief Object state whose byte offset from the table start is @p offset.
- * @note The movement-mode points are addressed as byte sums (slot stride plus
- *       point offset); indexing the typed arrays swaps two registers.
- */
-#define OBJECT_STATE_AT(offset) ((FieldObjectRuntime*)((offset) + (s32)base))
+/** @brief Runtime state of @p actor's object. */
+#define OBJECT_STATE(actor) g_field_object_states[(actor)->source_object_index]
 
 /**
  * @brief Set an object's movement mode and initialize its per-mode state.
@@ -45,121 +42,52 @@
  * @param mode Movement mode 0-6; mode 4 generates three separated random points.
  * @note Mode 4 accepts a new random point only when it is at least 0x40 units
  *       from every earlier point, using the GTE square and SquareRoot0.
+ * @note Modes 0 and 3 have separate, identical bodies; jump2 merges them into
+ *       one jump-table target, but the extra copy is what makes the actor
+ *       pointer outrank the table address in register allocation.
  */
 void func_8009D4D8(FieldMotionRecord* actor, u32 mode)
 {
     s32* delta = DISTANCE_DELTA;
     s32* squares = DISTANCE_SQUARES;
-    s32 compare_offset;
-    s32 point_offset;
-    s32 slot_stride;
-    s32 slot_stride_y;
-    s32 view_x;
-    s32 view_z;
-    s32 compare_index;
     s32 point_index;
+    s32 compare_index;
     s32 needs_retry;
-    s32 compare_addr;
-    u8 object_index;
-    FieldObjectRuntime* point;
-    FieldObjectRuntime* point_y;
-    FieldObjectRuntime* table;
-    FieldObjectRuntime* state;
 
-    g_field_object_states[actor->source_object_index].effect_angle = 0;
+    OBJECT_STATE(actor).effect_angle = 0;
     switch (mode)
     {
     case 1:
-        g_field_object_states[actor->source_object_index].movement.word = (g_field_object_states[actor->source_object_index].movement.word & ~0x3FF) | 0x40;
+        OBJECT_STATE(actor).movement.word = (OBJECT_STATE(actor).movement.word & ~0x3FF) | 0x40;
         return;
     case 2:
-        g_field_object_states[actor->source_object_index].movement.word = (g_field_object_states[actor->source_object_index].movement.word & ~0x3FF) | 0x10;
+        OBJECT_STATE(actor).movement.word = (OBJECT_STATE(actor).movement.word & ~0x3FF) | 0x10;
         return;
     case 0:
+        OBJECT_STATE(actor).movement.word = (OBJECT_STATE(actor).movement.word & ~0x3FF) | 0x1E;
+        return;
     case 3:
-        g_field_object_states[actor->source_object_index].movement.word = (g_field_object_states[actor->source_object_index].movement.word & ~0x3FF) | 0x1E;
+        OBJECT_STATE(actor).movement.word = (OBJECT_STATE(actor).movement.word & ~0x3FF) | 0x1E;
         return;
     case 4:
-    {
-        FieldObjectRuntime* base;
-
-        point_index = 0;
-        table = g_field_object_states;
-        base = table;
-        state = &base[actor->source_object_index];
-        state->movement.word = (state->movement.word & ~0x3FF) | 0x1E;
-        do
+        OBJECT_STATE(actor).movement.word = (OBJECT_STATE(actor).movement.word & ~0x3FF) | 0x1E;
+        for (point_index = 0; point_index < 3; point_index++)
         {
             needs_retry = 1;
-            point_offset = point_index * 4;
             do
             {
-                {
-                    s32 random_value;
-                    s32 offset;
-                    FieldObjectRuntime* point;
-
-                    random_value = (rand() >> 7) - 0x80;
-                    offset = point_offset + (actor->source_object_index * 0x23C);
-                    point = OBJECT_STATE_AT(offset);
-                    point->ground_attachment_points[0].x = (s16)random_value;
-                }
-                {
-                    s32 random_value;
-                    s32 offset;
-                    FieldObjectRuntime* point;
-
-                    random_value = (rand() >> 7) - 0x80;
-                    offset = point_offset + (actor->source_object_index * 0x23C);
-                    point = OBJECT_STATE_AT(offset);
-                    point->ground_attachment_points[0].y = (s16)random_value;
-                }
-                view_x = g_field_view_offset_x;
-                {
-                    s32 offset;
-
-                    offset = point_offset + (actor->source_object_index * 0x23C);
-                    point = OBJECT_STATE_AT(offset);
-                }
-                point->ground_attachment_points[0].x = (u16)(((u16)point->ground_attachment_points[0].x - (view_x / 256)) - (actor->x / 256));
-                view_z = g_field_view_offset_z;
-                {
-                    s32 offset;
-
-                    offset = point_offset + (actor->source_object_index * 0x23C);
-                    point_y = OBJECT_STATE_AT(offset);
-                }
-                point_y->ground_attachment_points[0].y = (u16)(((u16)point_y->ground_attachment_points[0].y - (view_z / 256)) - (actor->z / 256));
+                OBJECT_STATE(actor).ground_attachment_points[point_index].x = (rand() >> 7) - 0x80;
+                OBJECT_STATE(actor).ground_attachment_points[point_index].y = (rand() >> 7) - 0x80;
+                OBJECT_STATE(actor).ground_attachment_points[point_index].x =
+                    OBJECT_STATE(actor).ground_attachment_points[point_index].x - g_field_view_offset_x / 256 - actor->x / 256;
+                OBJECT_STATE(actor).ground_attachment_points[point_index].y =
+                    OBJECT_STATE(actor).ground_attachment_points[point_index].y - g_field_view_offset_z / 256 - actor->z / 256;
                 for (compare_index = 0; compare_index < point_index; compare_index++)
                 {
-                    /* Re-read in its own block; without it 30 rows change. */
-                    do
-                    {
-                        object_index = actor->source_object_index;
-                    } while (0);
-                    compare_offset = compare_index * 4;
-                    slot_stride = object_index * 0x23C;
-                    compare_addr = compare_offset + slot_stride;
-                    compare_addr += (s32)base;
-                    {
-                        s32 current_offset;
-
-                        current_offset = point_offset + (object_index * 0x23C);
-                        current_offset += (s32)base;
-                        delta[0] = ((FieldObjectRuntime*)compare_addr)->ground_attachment_points[0].x -
-                                   ((FieldObjectRuntime*)current_offset)->ground_attachment_points[0].x;
-                    }
-                    slot_stride_y = actor->source_object_index * 0x23C;
-                    compare_offset += slot_stride_y;
-                    compare_offset += (s32)base;
-                    {
-                        s32 current_offset;
-
-                        current_offset = point_offset + (actor->source_object_index * 0x23C);
-                        current_offset += (s32)base;
-                        delta[1] = ((FieldObjectRuntime*)compare_offset)->ground_attachment_points[0].y -
-                                   ((FieldObjectRuntime*)current_offset)->ground_attachment_points[0].y;
-                    }
+                    delta[0] = OBJECT_STATE(actor).ground_attachment_points[compare_index].x -
+                               OBJECT_STATE(actor).ground_attachment_points[point_index].x;
+                    delta[1] = OBJECT_STATE(actor).ground_attachment_points[compare_index].y -
+                               OBJECT_STATE(actor).ground_attachment_points[point_index].y;
                     delta[2] = 0;
                     gte_ldlvl(delta);
                     gte_sqr0();
@@ -174,41 +102,20 @@ void func_8009D4D8(FieldMotionRecord* actor, u32 mode)
                     needs_retry = 0;
                 }
             } while (needs_retry != 0);
-            point_index += 1;
-        } while (point_index < 3);
+        }
         return;
-    }
     case 5:
-    {
-        FieldObjectRuntime* clear_base = g_field_object_states;
-        s32 clear_flags = clear_base[actor->source_object_index].movement.word;
-        s32 clear_mask = ~0x3FF;
-
-        clear_flags &= clear_mask;
-        table = &clear_base[actor->source_object_index];
-        table->movement.word = clear_flags;
-        clear_base[actor->source_object_index].ground_attachment_points[0].x = 0;
-        clear_base[actor->source_object_index].ground_attachment_points[0].y = 0;
+        OBJECT_STATE(actor).movement.word &= ~0x3FF;
+        OBJECT_STATE(actor).ground_attachment_points[0].x = 0;
+        OBJECT_STATE(actor).ground_attachment_points[0].y = 0;
         return;
-    }
     case 6:
-    {
-        FieldObjectRuntime* clear_base = g_field_object_states;
-        FieldObjectRuntime* clear_slot = &clear_base[actor->source_object_index];
-        s32 clear_flags = clear_slot->movement.word;
-        s32 clear_mask = ~0x3FF;
-
-        clear_flags &= clear_mask;
-        clear_flags |= 0x1E;
-        clear_slot->movement.word = clear_flags;
-        clear_base[actor->source_object_index].ground_attachment_points[0].x = 0;
-        clear_base[actor->source_object_index].ground_attachment_points[0].y = 0;
+        OBJECT_STATE(actor).movement.word = (OBJECT_STATE(actor).movement.word & ~0x3FF) | 0x1E;
+        OBJECT_STATE(actor).ground_attachment_points[0].x = 0;
+        OBJECT_STATE(actor).ground_attachment_points[0].y = 0;
         return;
-    }
     }
 }
-
-#undef OBJECT_STATE_AT
 
 /**
  * @brief Look up the radius range of a ground effect kind.
@@ -251,9 +158,6 @@ inline void func_8009D95C(s32 kind, s32* min_radius, s32* max_radius)
         break;
     }
 }
-
-/** @brief Runtime state of @p actor's object. */
-#define OBJECT_STATE(actor) g_field_object_states[(actor)->source_object_index]
 
 /** @brief Current effect radius of @p actor's object (low ten movement bits). */
 #define EFFECT_RADIUS(actor) (OBJECT_STATE(actor).movement.half.flags & FIELD_OBJECT_EFFECT_SCALE_MASK)
@@ -878,10 +782,6 @@ u8* func_8009FE54(s32* ordering_table, u8* packet, VECTOR* position, s32 radius)
     return cursor;
 }
 
-#undef PROJECT_POINT
-#undef POLY_AT
-#undef ADD_DEPTH_ADVANCE
-
 /** @brief Stack workspace of the strip builders (func_800A0B0C uses only the world vector). */
 typedef struct
 {
@@ -893,270 +793,154 @@ typedef struct
 } FieldStripWorkspace;
 
 /**
- * @brief Store the three components of @p v as one statement block.
- * @note The block (not a comma expression) keeps the stores ahead of the
- *       following projection in the schedule.
- */
-#define SET_VECTOR(v, x, y, z)                                                                                                                                 \
-    do                                                                                                                                                         \
-    {                                                                                                                                                          \
-        (v)->vx = (x);                                                                                                                                         \
-        (v)->vy = (y);                                                                                                                                         \
-        (v)->vz = (z);                                                                                                                                         \
-    } while (0)
-
-/**
- * @brief Link @p packet into ordering table bucket @p depth.
- * @note Open-coded addPrim through the caller's tag_mask/addr_mask locals;
- *       addPrim itself allocates the masks differently (97.4% in func_800A0B0C).
- */
-#define LINK_PACKET(packet, depth)                                                                                                                             \
-    (*(s32*)(packet) = (*(s32*)(packet) & tag_mask) | (ordering_table[depth] & addr_mask),                                                                     \
-     ordering_table[depth] = (ordering_table[depth] & tag_mask) | ((s32)(packet) & addr_mask))
-
-/**
  * @brief Draw animated curved quad strips extending from a fixed-point position.
  * @param ordering_table Ordering table with 0x1000 depth entries.
- * @param primitive_buffer Destination for the generated GPU packets.
+ * @param packet Destination for the generated GPU packets.
  * @param position World position in signed fixed-point coordinates.
  * @param extent Maximum horizontal extent, tested after each completed strip.
  * @param forward Nonzero extends toward positive X; zero extends toward negative X.
  * @return First byte after the emitted primitives and draw-page command.
  * @note Emits at least one strip and at most four, with nine quads per strip.
  * @note Adjacent strips are separated by twice their 0x1400 fixed-point width.
+ * @note Each arm of the forward test sets the whole world vector; jump2
+ *       cross-jumps the shared stores back together after scheduling, so the
+ *       projection that follows stays in its own scheduling block.
  */
-u8* func_800A0B0C(s32* ordering_table, u8* primitive_buffer, VECTOR* position, s32 extent, s32 forward)
+u8* func_800A0B0C(s32* ordering_table, u8* packet, VECTOR* position, s32 extent, s32 forward)
 {
     extern s32 D_801178D8;
-    s32 trig_angle;
-    s32 screen_x;
-    s32 camera_y;
+    FieldStripWorkspace work;
     s32 step;
     s32 strip_index;
-    s32 first_xy;
-    s32 second_xy;
-    FieldStripWorkspace work;
-    u8* primitive;
-    s32 segment_depth;
-    s32 closing_depth;
-    s32 drawpage_depth;
     s32 angle;
     s32 offset;
-    u8* strip_code;
-    u8* outer_code;
+    s32 first_xy;
+    s32 second_xy;
+    s32 depth;
+    u8* cursor;
 
-    s32 addr_mask;
-    s32 tag_mask;
-
-    primitive = primitive_buffer;
-    addr_mask = 0xFFFFFF;
+    cursor = packet;
     strip_index = 0;
-
-    outer_code = primitive;
     offset = (D_801178D8 % 40) << 8;
     do
     {
-        tag_mask = 0xFF000000;
-        /* Save both initial packed XY values to close the strip after eight steps. */
         if (forward != 0)
         {
             work.world.vx = position->vx + offset;
+            work.world.vy = position->vy;
+            work.world.vz = position->vz + 0x2000;
         }
         else
         {
             work.world.vx = position->vx - offset;
-        }
-        do
-        {
             work.world.vy = position->vy;
             work.world.vz = position->vz + 0x2000;
-        } while (0);
-        screen_x = 160 + g_field_view_offset_x / 256 + work.world.vx / 256;
-        camera_y = g_field_view_offset_y;
-        *(s16*)(outer_code + 8) = screen_x;
-        if (camera_y < 0)
-        {
-            camera_y += 255;
         }
-        *(s16*)(outer_code + 10) = 112 + (camera_y >> 8) + work.world.vy / 256 - work.world.vz / 512 - g_field_view_offset_z / 512;
-        first_xy = *(s32*)(outer_code + 8);
+        PROJECT_POINT(POLY_AT(0), 0, work.world);
+        /* Keep both starting vertices to close the strip after eight steps. */
+        first_xy = *(s32*)&POLY_AT(0)->x0;
         if (forward != 0)
         {
             work.world.vx = position->vx + offset + 0x1400;
+            work.world.vy = position->vy;
+            work.world.vz = position->vz + 0x2000;
         }
         else
         {
-            work.world.vx = (position->vx - offset) - 0x1400;
-        }
-        do
-        {
+            work.world.vx = position->vx - offset - 0x1400;
             work.world.vy = position->vy;
             work.world.vz = position->vz + 0x2000;
-        } while (0);
-        screen_x = 160 + g_field_view_offset_x / 256 + work.world.vx / 256;
-        camera_y = g_field_view_offset_y;
-        *(s16*)(outer_code + 16) = screen_x;
-        if (camera_y < 0)
-        {
-            camera_y += 255;
         }
-        *(s16*)(outer_code + 18) = 112 + (camera_y >> 8) + work.world.vy / 256 - work.world.vz / 512 - g_field_view_offset_z / 512;
+        PROJECT_POINT(POLY_AT(0), 1, work.world);
+        second_xy = *(s32*)&POLY_AT(0)->x1;
         step = 1;
         angle = 0x100;
-        strip_code = primitive;
-        second_xy = *(s32*)(outer_code + 16);
-        /* Every do/while(0) in this function is load-bearing (91.4% with all removed). */
         do
         {
-            do
+            if (forward != 0)
             {
-                do
-                {
-                    do
-                    {
-                        trig_angle = angle;
-                        if (forward != 0)
-                        {
-                            work.world.vx = position->vx + offset + angle;
-                        }
-                        else
-                        {
-                            work.world.vx = (position->vx - offset) - angle;
-                        }
-                        work.world.vy = position->vy - (rsin(trig_angle) * 2);
-                        work.world.vz = position->vz + (rcos(angle) * 2);
-                    } while (0);
-                    screen_x = 160 + g_field_view_offset_x / 256 + work.world.vx / 256;
-                    camera_y = g_field_view_offset_y;
-                    *(s16*)(strip_code + 24) = screen_x;
-                    if (camera_y < 0)
-                    {
-                        camera_y += 255;
-                    }
-                    *(s16*)(strip_code + 26) = 112 + (camera_y >> 8) + work.world.vy / 256 - work.world.vz / 512 - g_field_view_offset_z / 512;
-                    do
-                    {
-                        *(s32*)(strip_code + 44) = *(s32*)(strip_code + 24);
-                        do
-                        {
-                            trig_angle = angle;
-                            if (forward != 0)
-                            {
-                                work.world.vx = position->vx + offset + angle + 0x1400;
-                            }
-                            else
-                            {
-                                work.world.vx = ((position->vx - offset) - angle) - 0x1400;
-                            }
-                            work.world.vy = position->vy - (rsin(trig_angle) * 2);
-                            work.world.vz = position->vz + (rcos(angle) * 2);
-                        } while (0);
-                        screen_x = 160 + g_field_view_offset_x / 256 + work.world.vx / 256;
-                        camera_y = g_field_view_offset_y;
-                        *(s16*)(strip_code + 32) = screen_x;
-                        if (camera_y < 0)
-                        {
-                            camera_y += 255;
-                        }
-                        *(s16*)(strip_code + 34) = 112 + (camera_y >> 8) + work.world.vy / 256 - work.world.vz / 512 - g_field_view_offset_z / 512;
-                        /* Fade the curved strip from black to blue. */
-                        *(s32*)(strip_code + 4) = 0;
-                        *(s32*)(strip_code + 12) = 0xA00000;
-                        *(s32*)(strip_code + 20) = 0;
-                        *(s32*)(strip_code + 28) = 0xA00000;
-                        *(s32*)(strip_code + 52) = *(s32*)(strip_code + 32);
-                        SetPolyG4((POLY_G4*)primitive);
-                        *(strip_code + 7) |= 2;
-                        segment_depth = position->vz >> 7;
-                        if (segment_depth < 0)
-                        {
-                            LINK_PACKET(primitive, 0);
-                            primitive += 0x24;
-                            strip_code += 0x24;
-                            outer_code += 0x24;
-                        }
-                        else if (segment_depth >= 0x1000)
-                        {
-                            LINK_PACKET(primitive, 0xFFF);
-                            primitive += 0x24;
-                            strip_code += 0x24;
-                            outer_code += 0x24;
-                        }
-                        else
-                        {
-                            LINK_PACKET(primitive, position->vz >> 7);
-                            primitive += 0x24;
-                            strip_code += 0x24;
-                            outer_code += 0x24;
-                        }
-                        angle += 0x100;
-                        step++;
-                    } while (0);
-                } while (0);
-            } while (0);
-        } while (step < 9);
-        *(s32*)(outer_code + 24) = first_xy;
-        *(s32*)(outer_code + 32) = second_xy;
-        *(s32*)(outer_code + 4) = 0;
-        *(s32*)(outer_code + 12) = 0xA000;
-        *(s32*)(outer_code + 20) = 0;
-        *(s32*)(outer_code + 28) = 0xA000;
-        SetPolyG4((POLY_G4*)primitive);
-        *(outer_code + 7) |= 2;
-        do
-        {
-            closing_depth = position->vz >> 7;
-            if (closing_depth < 0)
-            {
-                do
-                {
-                    LINK_PACKET(primitive, 0);
-                    primitive += 0x24;
-                    outer_code += 0x24;
-                } while (0);
-            }
-            else if (closing_depth >= 0x1000)
-            {
-                do
-                {
-                    LINK_PACKET(primitive, 0xFFF);
-                    primitive += 0x24;
-                    outer_code += 0x24;
-                } while (0);
+                work.world.vx = position->vx + offset + angle;
+                work.world.vy = position->vy - rsin(angle) * 2;
+                work.world.vz = position->vz + rcos(angle) * 2;
             }
             else
             {
-                do
-                {
-                    LINK_PACKET(primitive, position->vz >> 7);
-                    primitive += 0x24;
-                    outer_code += 0x24;
-                } while (0);
+                work.world.vx = position->vx - offset - angle;
+                work.world.vy = position->vy - rsin(angle) * 2;
+                work.world.vz = position->vz + rcos(angle) * 2;
             }
-        } while (0);
-        offset += 0x1400;
-        offset += 0x1400;
+            PROJECT_POINT(POLY_AT(0), 2, work.world);
+            *(s32*)&POLY_AT(0x24)->x0 = *(s32*)&POLY_AT(0)->x2;
+            if (forward != 0)
+            {
+                work.world.vx = position->vx + offset + angle + 0x1400;
+                work.world.vy = position->vy - rsin(angle) * 2;
+                work.world.vz = position->vz + rcos(angle) * 2;
+            }
+            else
+            {
+                work.world.vx = position->vx - offset - angle - 0x1400;
+                work.world.vy = position->vy - rsin(angle) * 2;
+                work.world.vz = position->vz + rcos(angle) * 2;
+            }
+            PROJECT_POINT(POLY_AT(0), 3, work.world);
+            /* Fade the curved strip from black to blue. */
+            *(u32*)&POLY_AT(0)->r0 = 0;
+            *(u32*)&POLY_AT(0)->r1 = 0xA00000;
+            *(u32*)&POLY_AT(0)->r2 = 0;
+            *(u32*)&POLY_AT(0)->r3 = 0xA00000;
+            *(s32*)&POLY_AT(0x24)->x1 = *(s32*)&POLY_AT(0)->x3;
+            SetPolyG4(POLY_AT(0));
+            setSemiTrans(POLY_AT(0), 1);
+            depth = position->vz >> 7;
+            ADD_DEPTH_ADVANCE(depth, position->vz >> 7, POLY_G4);
+            angle += 0x100;
+            step++;
+        } while (step < 9);
+        *(s32*)&POLY_AT(0)->x2 = first_xy;
+        *(s32*)&POLY_AT(0)->x3 = second_xy;
+        *(u32*)&POLY_AT(0)->r0 = 0;
+        *(u32*)&POLY_AT(0)->r1 = 0xA000;
+        *(u32*)&POLY_AT(0)->r2 = 0;
+        *(u32*)&POLY_AT(0)->r3 = 0xA000;
+        SetPolyG4(POLY_AT(0));
+        setSemiTrans(POLY_AT(0), 1);
+        depth = position->vz >> 7;
+        ADD_DEPTH_ADVANCE(depth, position->vz >> 7, POLY_G4);
+        offset += 0x2800;
     } while (offset < (extent << 8) && ++strip_index < 4);
-    *(u8*)(primitive + 3) = 1;
-    *(s32*)(primitive + 4) = 0xE1000025;
-    drawpage_depth = position->vz >> 7;
-    if (drawpage_depth < 0)
-    {
-        addPrim(&ordering_table[0], primitive);
-        primitive += 8;
-    }
-    else if (drawpage_depth >= 0x1000)
-    {
-        addPrim(&ordering_table[0xFFF], primitive);
-        primitive += 8;
-    }
-    else
-    {
-        addPrim(&ordering_table[position->vz >> 7], primitive);
-        primitive += 8;
-    }
-    return primitive;
+    setDrawTPage((DR_TPAGE*)cursor, 0, 0, 0x25);
+    depth = position->vz >> 7;
+    ADD_DEPTH_ADVANCE(depth, position->vz >> 7, DR_TPAGE);
+    return cursor;
 }
+
+/**
+ * @brief Rotate (@p _radius, 0, 0) by @p matrix and store position +/- the result in work.world.
+ * @note Each arm of the facing test sets the whole world vector; jump2
+ *       cross-jumps the shared stores back together after scheduling, which
+ *       is why the projection re-reads work.world.vx from the stack.
+ */
+#define STRIP_POINT(_radius)                                                                                                                                   \
+    work.input.vx = (_radius);                                                                                                                                 \
+    work.input.vy = 0;                                                                                                                                         \
+    work.input.vz = 0;                                                                                                                                         \
+    gte_SetRotMatrix(matrix);                                                                                                                                  \
+    gte_ldv0(&work.input);                                                                                                                                     \
+    gte_rtv0();                                                                                                                                                \
+    gte_stlvnl(&work.rotated);                                                                                                                                 \
+    if (facing != 0)                                                                                                                                           \
+    {                                                                                                                                                          \
+        work.world.vx = position->vx + (work.rotated.vx << 8);                                                                                                 \
+        work.world.vy = position->vy + (work.rotated.vy << 8);                                                                                                 \
+        work.world.vz = position->vz + (work.rotated.vz << 8);                                                                                                 \
+    }                                                                                                                                                          \
+    else                                                                                                                                                       \
+    {                                                                                                                                                          \
+        work.world.vx = position->vx - (work.rotated.vx << 8);                                                                                                 \
+        work.world.vy = position->vy + (work.rotated.vy << 8);                                                                                                 \
+        work.world.vz = position->vz + (work.rotated.vz << 8);                                                                                                 \
+    }
 
 /**
  * @brief Draw four rotating strips of Gouraud-shaded quads around a position.
@@ -1167,265 +951,92 @@ u8* func_800A0B0C(s32* ordering_table, u8* primitive_buffer, VECTOR* position, s
  * @param facing Selects addition or subtraction of the rotated X offset.
  * @return First free packet following all quads and the draw-page command.
  * @note Full word copies carry packed X/Y pairs into the next segment and
- *       close the strip. The strip cursor points at the primitive code byte.
+ *       close the strip.
  */
 u8* func_800A1344(s32* ordering_table, u8* packet, VECTOR* position, s32 slope, s32 facing)
 {
     extern s32 D_801178D8;
-    s32 screen_x;
-    s32 packet_addr;
     FieldStripWorkspace work;
     s32 strip_index;
     s32 angle;
     s32 first_xy;
     s32 second_xy;
     MATRIX* matrix;
-    u8* current_packet;
-    s32 segment_depth;
-    s32 closing_depth;
-    s32 drawpage_depth;
-    s32 camera_y;
-    s32 addr_mask;
-    s32 tag_mask;
+    s32 depth;
     s32 segment_index;
     s32 radius;
     s32 radius_sum;
-    s32 first_x;
-    s32 segment_outer_x;
-    s32 second_x;
-    s32 segment_inner_x;
-    u8* segment_packet;
-    u8* strip_code;
+    u8* cursor;
 
-    current_packet = packet;
+    cursor = packet;
     angle = ratan2(slope, 0x64);
     strip_index = 0;
     matrix = &work.matrices[2];
-    addr_mask = 0xFFFFFF;
-    tag_mask = 0xFF000000;
     radius = D_801178D8;
-    strip_code = current_packet + 7;
-    /* A do/while here lets loop.c split strip_code into two biased givs (95.9% at best). */
-next_strip:
-{
-    /* Identity rotation with zero translation, written as words. */
-    ((s32*)&work.matrices[2])[4] = 0x1000;
-    ((s32*)&work.matrices[2])[2] = 0x1000;
-    ((s32*)&work.matrices[2])[0] = 0x1000;
-    ((s32*)&work.matrices[2])[7] = 0;
-    ((s32*)&work.matrices[2])[6] = 0;
-    ((s32*)&work.matrices[2])[5] = 0;
-    ((s32*)&work.matrices[2])[3] = 0;
-    ((s32*)&work.matrices[2])[1] = 0;
-    RotMatrixY(angle, matrix);
-    work.input.vx = (s16)radius;
-    work.input.vy = 0;
-    work.input.vz = 0;
-    gte_SetRotMatrix(matrix);
-    gte_ldv0(&work.input);
-    gte_rtv0();
-    gte_stlvnl(&work.rotated);
-    if (facing != 0)
-    {
-        first_x = position->vx + (work.rotated.vx << 8);
-    }
-    else
-    {
-        first_x = position->vx - (work.rotated.vx << 8);
-    }
-    SET_VECTOR(&work.world, first_x, position->vy + (work.rotated.vy << 8), position->vz + (work.rotated.vz << 8));
-    /* The X store follows the facing branch, so only a volatile read reloads it (98.3% plain). */
-    screen_x = 160 + g_field_view_offset_x / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-    camera_y = g_field_view_offset_y;
-    *(s16*)(strip_code + 1) = screen_x;
-    if (camera_y < 0)
-    {
-        camera_y += 255;
-    }
-    *(s16*)(strip_code + 3) = 112 + (camera_y >> 8) + work.world.vy / 256 - work.world.vz / 512 - g_field_view_offset_z / 512;
-    first_xy = *(s32*)(strip_code + 1);
-    work.input.vx = radius + 0x14;
-    work.input.vy = 0;
-    work.input.vz = 0;
-    gte_SetRotMatrix(matrix);
-    gte_ldv0(&work.input);
-    gte_rtv0();
-    gte_stlvnl(&work.rotated);
-    if (facing != 0)
-    {
-        second_x = position->vx + (work.rotated.vx << 8);
-    }
-    else
-    {
-        second_x = position->vx - (work.rotated.vx << 8);
-    }
-    SET_VECTOR(&work.world, second_x, position->vy + (work.rotated.vy << 8), position->vz + (work.rotated.vz << 8));
-    screen_x = 160 + g_field_view_offset_x / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-    camera_y = g_field_view_offset_y;
-    *(s16*)(strip_code + 9) = screen_x;
-    if (camera_y < 0)
-    {
-        camera_y += 255;
-    }
-    *(s16*)(strip_code + 11) = 112 + (camera_y >> 8) + work.world.vy / 256 - work.world.vz / 512 - g_field_view_offset_z / 512;
-    segment_index = 1;
-    radius_sum = radius;
-    segment_packet = current_packet;
-    second_xy = *(s32*)(strip_code + 9);
     do
     {
-        RotMatrixX(-0x100, matrix);
-        work.input.vx = radius + (radius_sum >> 5);
-        work.input.vy = 0;
-        work.input.vz = 0;
-        gte_SetRotMatrix(matrix);
-        gte_ldv0(&work.input);
-        gte_rtv0();
-        gte_stlvnl(&work.rotated);
-        if (facing != 0)
-        {
-            segment_inner_x = position->vx + (work.rotated.vx << 8);
-        }
-        else
-        {
-            segment_inner_x = position->vx - (work.rotated.vx << 8);
-        }
-        SET_VECTOR(&work.world, segment_inner_x, position->vy + (work.rotated.vy << 8), position->vz + (work.rotated.vz << 8));
-        screen_x = 160 + g_field_view_offset_x / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-        camera_y = g_field_view_offset_y;
-        *(s16*)(segment_packet + 24) = screen_x;
-        if (camera_y < 0)
-        {
-            camera_y += 255;
-        }
-        *(s16*)(segment_packet + 26) = 112 + (camera_y >> 8) + work.world.vy / 256 - work.world.vz / 512 - g_field_view_offset_z / 512;
-        *(s32*)(segment_packet + 44) = *(s32*)(segment_packet + 24);
-        work.input.vx = radius + (radius_sum >> 5) + 0x14;
-        work.input.vy = 0;
-        work.input.vz = 0;
-        gte_SetRotMatrix(matrix);
-        gte_ldv0(&work.input);
-        gte_rtv0();
-        gte_stlvnl(&work.rotated);
-        if (facing != 0)
-        {
-            segment_outer_x = position->vx + (work.rotated.vx << 8);
-        }
-        else
-        {
-            segment_outer_x = position->vx - (work.rotated.vx << 8);
-        }
-        SET_VECTOR(&work.world, segment_outer_x, position->vy + (work.rotated.vy << 8), position->vz + (work.rotated.vz << 8));
-        screen_x = 160 + g_field_view_offset_x / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-        camera_y = g_field_view_offset_y;
-        *(s16*)(segment_packet + 32) = screen_x;
-        if (camera_y < 0)
-        {
-            camera_y += 255;
-        }
-        *(s16*)(segment_packet + 34) = 112 + (camera_y >> 8) + work.world.vy / 256 - work.world.vz / 512 - g_field_view_offset_z / 512;
-        *(s32*)(segment_packet + 4) = 0;
-        *(s32*)(segment_packet + 12) = 0xA00000;
-        *(s32*)(segment_packet + 20) = 0;
-        *(s32*)(segment_packet + 28) = 0xA00000;
-        *(s32*)(segment_packet + 52) = *(s32*)(segment_packet + 32);
-        SetPolyG4((POLY_G4*)current_packet);
+        /* Identity rotation with zero translation, written as words. */
+        ((s32*)&work.matrices[2])[4] = 0x1000;
+        ((s32*)&work.matrices[2])[2] = 0x1000;
+        ((s32*)&work.matrices[2])[0] = 0x1000;
+        ((s32*)&work.matrices[2])[7] = 0;
+        ((s32*)&work.matrices[2])[6] = 0;
+        ((s32*)&work.matrices[2])[5] = 0;
+        ((s32*)&work.matrices[2])[3] = 0;
+        ((s32*)&work.matrices[2])[1] = 0;
+        RotMatrixY(angle, matrix);
+        STRIP_POINT(radius);
+        PROJECT_POINT(POLY_AT(0), 0, work.world);
+        first_xy = *(s32*)&POLY_AT(0)->x0;
+        STRIP_POINT(radius + 0x14);
+        PROJECT_POINT(POLY_AT(0), 1, work.world);
+        second_xy = *(s32*)&POLY_AT(0)->x1;
+        segment_index = 1;
+        radius_sum = radius;
         do
         {
-            *(segment_packet + 7) |= 2;
-            segment_depth = position->vz >> 7;
-            if (segment_depth < 0)
-            {
-                LINK_PACKET(current_packet, 0);
-                current_packet += 0x24;
-                segment_packet += 0x24;
-                strip_code += 0x24;
-            }
-            else if (segment_depth >= 0x1000)
-            {
-                LINK_PACKET(current_packet, 0xFFF);
-                current_packet += 0x24;
-                segment_packet += 0x24;
-                strip_code += 0x24;
-            }
-            else
-            {
-                LINK_PACKET(current_packet, position->vz >> 7);
-                current_packet += 0x24;
-                segment_packet += 0x24;
-                strip_code += 0x24;
-            }
-            segment_index += 1;
+            RotMatrixX(-0x100, matrix);
+            STRIP_POINT(radius + (radius_sum >> 5));
+            PROJECT_POINT(POLY_AT(0), 2, work.world);
+            *(s32*)&POLY_AT(0x24)->x0 = *(s32*)&POLY_AT(0)->x2;
+            STRIP_POINT(radius + (radius_sum >> 5) + 0x14);
+            PROJECT_POINT(POLY_AT(0), 3, work.world);
+            *(u32*)&POLY_AT(0)->r0 = 0;
+            *(u32*)&POLY_AT(0)->r1 = 0xA00000;
+            *(u32*)&POLY_AT(0)->r2 = 0;
+            *(u32*)&POLY_AT(0)->r3 = 0xA00000;
+            *(s32*)&POLY_AT(0x24)->x1 = *(s32*)&POLY_AT(0)->x3;
+            SetPolyG4(POLY_AT(0));
+            setSemiTrans(POLY_AT(0), 1);
+            depth = position->vz >> 7;
+            ADD_DEPTH_ADVANCE(depth, position->vz >> 7, POLY_G4);
+            segment_index++;
             radius_sum += radius;
-        } while (0);
-    } while (segment_index < 9);
-    *(s32*)(strip_code + 17) = first_xy;
-    *(s32*)(strip_code + 25) = second_xy;
-    *(s32*)(strip_code + -3) = 0;
-    *(s32*)(strip_code + 5) = 0xA000;
-    *(s32*)(strip_code + 13) = 0;
-    *(s32*)(strip_code + 21) = 0xA000;
-    SetPolyG4((POLY_G4*)current_packet);
-    *strip_code |= 2;
-    closing_depth = position->vz >> 7;
-    if (closing_depth < 0)
-    {
-        strip_code += 0x24;
-        do
-        {
-            *(s32*)current_packet = (*(s32*)current_packet & tag_mask) | (ordering_table[0] & addr_mask);
-            packet_addr = (s32)current_packet & addr_mask;
-        } while (0);
-        ordering_table[0] = (ordering_table[0] & tag_mask) | packet_addr;
-        current_packet += 0x24;
-    }
-    else if (closing_depth >= 0x1000)
-    {
-        LINK_PACKET(current_packet, 0xFFF);
-        current_packet += 0x24;
-        strip_code += 0x24;
-    }
-    else
-    {
-        LINK_PACKET(current_packet, position->vz >> 7);
-        current_packet += 0x24;
-        strip_code += 0x24;
-    }
-    radius += 0x50;
-    /* Every do/while(0) in this function is load-bearing (91.6% with all removed). */
-    do
-    {
+        } while (segment_index < 9);
+        *(s32*)&POLY_AT(0)->x2 = first_xy;
+        *(s32*)&POLY_AT(0)->x3 = second_xy;
+        *(u32*)&POLY_AT(0)->r0 = 0;
+        *(u32*)&POLY_AT(0)->r1 = 0xA000;
+        *(u32*)&POLY_AT(0)->r2 = 0;
+        *(u32*)&POLY_AT(0)->r3 = 0xA000;
+        SetPolyG4(POLY_AT(0));
+        setSemiTrans(POLY_AT(0), 1);
+        depth = position->vz >> 7;
+        ADD_DEPTH_ADVANCE(depth, position->vz >> 7, POLY_G4);
+        radius += 0x50;
         if (radius >= 0x140)
         {
             radius -= 0x140;
         }
-    } while (0);
-    strip_index++;
-}
-    if (strip_index < 4)
-    {
-        goto next_strip;
-    }
-    *(u8*)(current_packet + 3) = 1;
-    *(s32*)(current_packet + 4) = 0xE1000025;
-    drawpage_depth = position->vz >> 7;
-    if (drawpage_depth < 0)
-    {
-        addPrim(&ordering_table[0], current_packet);
-        current_packet += 8;
-    }
-    else if (drawpage_depth >= 0x1000)
-    {
-        addPrim(&ordering_table[0xFFF], current_packet);
-        current_packet += 8;
-    }
-    else
-    {
-        addPrim(&ordering_table[position->vz >> 7], current_packet);
-        current_packet += 8;
-    }
-    return current_packet;
+        strip_index++;
+    } while (strip_index < 4);
+    setDrawTPage((DR_TPAGE*)cursor, 0, 0, 0x25);
+    depth = position->vz >> 7;
+    ADD_DEPTH_ADVANCE(depth, position->vz >> 7, DR_TPAGE);
+    return cursor;
 }
 
-#undef LINK_PACKET
-#undef SET_VECTOR
+#undef STRIP_POINT
+#undef PROJECT_POINT
+#undef POLY_AT
+#undef ADD_DEPTH_ADVANCE

@@ -5,6 +5,7 @@
 
 #include "game_audio.h"
 #include "common.h"
+#include "field_calls.h"
 #include "field_records.h"
 
 /** @brief Resource id of the companion template table. */
@@ -26,9 +27,6 @@ typedef struct
     u16 count;
     FieldRegionRecord templates[1];
 } FieldCompanionTemplateTable;
-
-void func_800B2844(s32 arg0, void* script, s32 arg2);
-void field_run_name_entry(FieldRegionRecord* initial_name, FieldRegionRecord* active_name, s32 source_mode, s32 history_index, s32 custom_name);
 
 extern FieldGameState* D_80122B74;
 extern u16 g_scene_mode;
@@ -63,7 +61,7 @@ s32 func_800C2264(s32 template_index)
     }
 
     companion_template = &table->templates[template_index];
-    func_800B2844(1, companion_template, 0x15);
+    func_800B2844(1, (u8*)companion_template, 0x15);
 
     for (slot = 0; slot < FIELD_REGION_COUNT; slot++)
     {
@@ -109,7 +107,7 @@ s32 func_800C23F4(void)
         index = g_gosub_result_values[0];
         if (index < FIELD_REGION_COUNT)
         {
-            func_800B2844(0, &D_80122B74->regions[index], 0x15);
+            func_800B2844(0, (u8*)&D_80122B74->regions[index], 0x15);
             index = g_gosub_result_values[0];
             if (index != D_80122B74->region_index)
             {
@@ -141,7 +139,7 @@ s32 func_800C24BC(s32 index)
     {
         if (D_80122B74->regions[index].name[0] != 0)
         {
-            func_800B2844(0, &D_80122B74->regions[index], 0x15);
+            func_800B2844(0, (u8*)&D_80122B74->regions[index], 0x15);
             status = D_80122B74->regions[index].status.word;
             if (status < 0)
             {
@@ -175,7 +173,7 @@ void func_800C25A0(s32 index)
         record_game_diagnostic(0x8001, 0x77, index, 0);
         return;
     }
-    func_800B2844(0, &D_80122B74->regions[index], 0x15);
+    func_800B2844(0, (u8*)&D_80122B74->regions[index], 0x15);
     companion = &D_80122B74->regions[index];
-    field_run_name_entry(companion, companion, 3, D_80122B74->regions[index].unk15, 0);
+    field_run_name_entry((s32)companion, (s32)companion, 3, D_80122B74->regions[index].unk15, 0);
 }

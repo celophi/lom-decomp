@@ -5,6 +5,7 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 #include "field_records.h"
 
 /** @brief Staged levels at or above this are written as FIELD_STAGING_LEVEL_MAX. */
@@ -44,7 +45,6 @@ extern FieldItemStaging* D_80123FC4;
 extern FieldItemTables* D_80123FC0;
 
 void* func_800C1E40(s32 table_id);
-void func_800C37A8(u32 seed, void* serial);
 
 void func_800BFE70(s32 type_entry, s32 subtype_entry, u8* dest);
 
@@ -63,12 +63,12 @@ void func_800BFA34(void)
     record = D_80123FC4->record;
     if (record->kind == 0)
     {
-        func_800C37A8(D_80122B74->unkD8, &record->unk38);
+        func_800C37A8(D_80122B74->unkD8, (struct FieldItemKey*)&record->unk38);
         func_800BFE70(D_80123FC4->category * 16 + D_80123FC4->item_type, D_80123FC4->item_subtype + FIELD_SUBTYPE_NAME_BASE, (u8*)D_80123FC4->record);
     }
     else if (record->unk38 == 0 && record->unk3C == 0)
     {
-        func_800C37A8(D_80122B74->unkD8, &record->unk38);
+        func_800C37A8(D_80122B74->unkD8, (struct FieldItemKey*)&record->unk38);
     }
 
     D_80123FC4->record->info.bits.category = D_80123FC4->category;

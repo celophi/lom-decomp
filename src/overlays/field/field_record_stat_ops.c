@@ -4,6 +4,7 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 #include "field_records.h"
 
 /** @brief Character type that gets no equipment totals from its armor slots. */

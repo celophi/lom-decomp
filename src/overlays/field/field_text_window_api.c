@@ -3,6 +3,7 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 #include "field_text.h"
 
 /** @brief Pending text-window configuration block consumed by field_text_apply_config. */

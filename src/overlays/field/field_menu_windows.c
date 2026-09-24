@@ -10,10 +10,9 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 #include "sdk/libgpu.h"
-
-typedef struct FieldMenuRenderContext FieldMenuRenderContext;
-typedef struct FieldMenuElement FieldMenuElement;
+#include "field_menu_element.h"
 
 /** @brief Render context with ordering-table head, buffer selector, and packet cursor. */
 struct FieldMenuRenderContext
@@ -25,28 +24,9 @@ struct FieldMenuRenderContext
     s32 *cursor;
 };
 
-/** @brief Twenty-byte menu element with packed geometry, scrolling, and draw callback. */
-struct FieldMenuElement
-{
-    u32 attr;
-    union
-    {
-        u32 word;
-        struct
-        {
-            u16 bits;
-            s16 content_height;
-        } fields;
-    } size;
-    s16 scroll, scroll_target, scroll_ticks;
-    u16 padE;
-    s32 *(*draw)(FieldMenuRenderContext *, s32 *, s32, s32, s32, FieldMenuElement *);
-};
-
 extern u8 D_800EF1BC[];
 extern s32 g_pad_input, g_frame_counter;
 
-void func_800A3938(s32, s32);
 void *func_800ADCD0(void *, u32 *, RECT *, RECT *);
 u_long *func_800AE76C(u_long *, u_long *, s32, s32, s32);
 
@@ -236,7 +216,6 @@ void func_800ADE2C(void)
 void func_800ADEB0(void)
 {
     extern s32 g_menu_element_counter;
-    extern FieldMenuElement D_80122828[];
     FieldMenuElement *p;
     s32 i;
 
@@ -244,7 +223,7 @@ void func_800ADEB0(void)
     p = D_80122828;
     for (i = 0; i < 8; i++)
     {
-        p->attr &= ~7;
+        p->attr.word &= ~7;
         p++;
     }
 }
@@ -255,7 +234,6 @@ void func_800ADEB0(void)
  */
 s32 func_800ADEEC(void)
 {
-    extern FieldMenuElement D_80122828[];
     FieldMenuElement *p;
     s32 i;
     s32 x;
@@ -263,7 +241,7 @@ s32 func_800ADEEC(void)
     p = D_80122828;
     for (i = 0; i < 8; i++, p++)
     {
-        x = p->attr & 0x7;
+        x = p->attr.word & 0x7;
         if (x != 0)
         {
             if (x != 2)
@@ -280,7 +258,6 @@ s32 func_800ADEEC(void)
  */
 void func_800ADF34(void)
 {
-    extern FieldMenuElement D_80122828[];
     FieldMenuElement *p;
     s32 i;
     u32 x;
@@ -288,10 +265,10 @@ void func_800ADF34(void)
     p = D_80122828;
     for (i = 0; i < 8; i++, p++)
     {
-        x = p->attr;
+        x = p->attr.word;
         if (x & 7)
         {
-            p->attr = (((x & ~7) | 3) & ~0x78) | 0x40;
+            p->attr.word = (((x & ~7) | 3) & ~0x78) | 0x40;
         }
     }
 }
@@ -302,16 +279,15 @@ void func_800ADF34(void)
  */
 FieldMenuElement *func_800ADF84(void)
 {
-    extern FieldMenuElement D_80122828[];
     FieldMenuElement *rec;
     s32 i;
 
     rec = D_80122828;
     for (i = 0; i < 8; i++, rec++)
     {
-        if ((rec->attr & 7) == 0)
+        if ((rec->attr.word & 7) == 0)
         {
-            rec->attr = (rec->attr & ~7) | 1;
+            rec->attr.word = (rec->attr.word & ~7) | 1;
             rec->scroll = 0;
             rec->scroll_target = 0;
             rec->size.word &= ~0x200;
@@ -335,7 +311,6 @@ FieldMenuElement *func_800ADF84(void)
  */
 void func_800AE008(FieldMenuRenderContext *context)
 {
-    extern FieldMenuElement D_80122828[];
     DRAWENV env;
     u32 marker_x, marker_width_low, opening_x, opening_width_low, active_width_low, closing_x,
         closing_width_low;
@@ -392,7 +367,7 @@ void func_800AE008(FieldMenuRenderContext *context)
     element_index = 0;
     for (; element_index < 8; element_index++, element++)
     {
-        entry_attr = element->attr;
+        entry_attr = element->attr.word;
         if (entry_attr & 7)
         {
             scroll_size = element->size.word;
@@ -405,18 +380,18 @@ void func_800AE008(FieldMenuRenderContext *context)
                     cursor =
                         func_800AE76C(cursor, ordering,
                                       marker_x + (((scroll_size & 1) << 8) | marker_width_low) - 16,
-                                      ((u8 *)element)[2] + 8, 1);
+                                      element->attr.bytes.y + 8, 1);
                 }
                 marker_size = element->size.word;
                 visible_height = (marker_size >> 1) & 255;
                 if (element->scroll + visible_height < element->size.fields.content_height)
                 {
-                    marker_attr = element->attr;
+                    marker_attr = element->attr.word;
                     cursor =
                         func_800AE76C(cursor, ordering,
                                       ((marker_attr >> 7) & 0x1ff) +
                                           (((marker_size & 1) << 8) | (marker_attr >> 24)) - 16,
-                                      ((u8 *)element)[2] + visible_height - 8, 0);
+                                      element->attr.bytes.y + visible_height - 8, 0);
                 }
                 scroll_ticks = element->scroll_ticks;
                 if (scroll_ticks != 0)
@@ -464,7 +439,7 @@ void func_800AE008(FieldMenuRenderContext *context)
             }
             SetDrawEnv((DR_ENV *)cursor, &env);
             addPrim(&ordering->tag, cursor);
-            state_attr = element->attr;
+            state_attr = element->attr.word;
             mode = state_attr & 7;
             cursor = (s32 *)((u8 *)cursor + 0x40);
             switch (mode)
@@ -489,7 +464,7 @@ void func_800AE008(FieldMenuRenderContext *context)
                 cursor = element->draw(ordering, cursor, (opening_width - animated_width) / 2,
                                        (opening_height - animated_height) / 2 + element->scroll,
                                        opening_height, element);
-                opening_draw_attr = element->attr;
+                opening_draw_attr = element->attr.word;
                 opening_draw_geometry = element->size.word;
                 opening_x = (opening_draw_attr >> 7) & 0x1ff;
                 opening_width_low = opening_draw_attr >> 24;
@@ -498,16 +473,16 @@ void func_800AE008(FieldMenuRenderContext *context)
                     opening_x + (s32)((((opening_draw_geometry & 1) << 8) | opening_width_low) -
                                       animated_width) /
                                     2,
-                    ((u8 *)element)[2] +
+                    element->attr.bytes.y +
                         (s32)(((opening_draw_geometry >> 1) & 255) - animated_height) / 2,
                     animated_width, animated_height, context->buffer, 0);
-                opening_previous_attr = element->attr;
+                opening_previous_attr = element->attr.word;
                 opening_updated_attr = opening_previous_attr & ~0x78;
                 opening_updated_attr |= (((((opening_previous_attr >> 3) & 15) + 1) & 15) * 8);
-                element->attr = opening_updated_attr;
+                element->attr.word = opening_updated_attr;
                 if (((opening_updated_attr >> 3) & 15) == 8)
                 {
-                    element->attr = (opening_updated_attr & ~7) | 2;
+                    element->attr.word = (opening_updated_attr & ~7) | 2;
                 }
                 break;
             case 2:
@@ -522,11 +497,11 @@ void func_800AE008(FieldMenuRenderContext *context)
                     cursor = element->draw(ordering, cursor, animated_width,
                                            animated_width + element->scroll,
                                            (active_geometry >> 1) & 255, element);
-                    active_blink_attr = element->attr;
+                    active_blink_attr = element->attr.word;
                     active_width_low = active_blink_attr >> 24;
                     cursor = func_800AD850(
                         cursor, ordering, ((active_blink_attr >> 7) & 0x1ff) + animated_width,
-                        ((u8 *)element)[2] + animated_width,
+                        element->attr.bytes.y + animated_width,
                         (((element->size.word & 1) << 8) | active_width_low) - animated_width * 2,
                         ((element->size.word >> 1) & 255) - animated_width * 2, context->buffer, 0);
                 }
@@ -534,10 +509,10 @@ void func_800AE008(FieldMenuRenderContext *context)
                 {
                     cursor = element->draw(ordering, cursor, 0, element->scroll,
                                            (active_geometry >> 1) & 255, element);
-                    active_attr = element->attr;
+                    active_attr = element->attr.word;
                     active_width_low = active_attr >> 24;
                     cursor = func_800AD850(cursor, ordering, (active_attr >> 7) & 0x1ff,
-                                           ((u8 *)element)[2],
+                                           element->attr.bytes.y,
                                            ((element->size.word & 1) << 8) | active_width_low,
                                            (element->size.word >> 1) & 255, context->buffer, 0);
                 }
@@ -562,7 +537,7 @@ void func_800AE008(FieldMenuRenderContext *context)
                 cursor = element->draw(ordering, cursor, (closing_width - animated_width) / 2,
                                        (closing_height - animated_height) / 2 + element->scroll,
                                        closing_height, element);
-                closing_draw_attr = element->attr;
+                closing_draw_attr = element->attr.word;
                 closing_draw_geometry = element->size.word;
                 closing_x = (closing_draw_attr >> 7) & 0x1ff;
                 closing_width_low = closing_draw_attr >> 24;
@@ -571,16 +546,16 @@ void func_800AE008(FieldMenuRenderContext *context)
                     closing_x + (s32)((((closing_draw_geometry & 1) << 8) | closing_width_low) -
                                       animated_width) /
                                     2,
-                    ((u8 *)element)[2] +
+                    element->attr.bytes.y +
                         (s32)(((closing_draw_geometry >> 1) & 255) - animated_height) / 2,
                     animated_width, animated_height, context->buffer, 0);
-                closing_previous_attr = element->attr;
+                closing_previous_attr = element->attr.word;
                 closing_updated_attr = (closing_previous_attr & ~0x78) |
                                        (((((closing_previous_attr >> 3) & 15) - 1) & 15) * 8);
-                element->attr = closing_updated_attr;
+                element->attr.word = closing_updated_attr;
                 if (((closing_updated_attr >> 3) & 15) == 0)
                 {
-                    element->attr = closing_updated_attr & ~7;
+                    element->attr.word = closing_updated_attr & ~7;
                 }
                 break;
             }

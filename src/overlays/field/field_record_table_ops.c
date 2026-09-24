@@ -5,6 +5,7 @@
 
 #include "game_audio.h"
 #include "common.h"
+#include "field_calls.h"
 #include "field_records.h"
 
 /** @brief Land flag: the land has been placed on the map. */
@@ -38,7 +39,7 @@
 #define FIELD_NO_SPECIAL 0xFF
 
 /** @brief Pair of words that identifies one item record. */
-typedef struct
+typedef struct FieldItemKey
 {
     s32 first;
     s32 second;
@@ -56,7 +57,6 @@ typedef struct
     u16 special_values[1];
 } FieldItemValueTables;
 
-void func_800C2138(s32 counter_index);
 void* func_800C1E40(s32 resource_id);
 s32 func_800C3518(s32 land_index);
 s32 func_800C3688(s32 land_index);

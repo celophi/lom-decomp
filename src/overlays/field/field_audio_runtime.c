@@ -17,6 +17,7 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 #include "cd_resources.h"
 #include "akao.h"
 #include "game_state.h"
@@ -315,8 +316,10 @@ void func_800A38D4(void)
 /**
  * @brief Issue AKAO command 0xC1 for the stop modifier at the given index.
  * @param slot Index into the D_8011F310 stop-modifier pair.
+ * @param count Unused; every caller passes a frame count (1 or 0x3C).
+ * @param value Unused; every caller passes a volume (0 to 0x7F).
  */
-void func_800A3904(s32 slot)
+void func_800A3904(s32 slot, s32 count, s32 value)
 {
     akao_cmd_c1((&D_8011F310)[slot]);
 }

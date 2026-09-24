@@ -5,8 +5,14 @@
 #include "cdrom.h"
 #include "controller.h"
 #include "scene_state.h"
+#include "field_calls.h"
 
+/* The status bytes (chunk_idx, frame_ready, end_state) are written by the movie
+   decoder callbacks and are re-read back to back, so FIELD_MOVIE_STATE is the
+   interrupt-shared view; the upload rectangles are only touched by the field
+   code and use the plain FIELD_MOVIE_RECTS view. */
 #define FIELD_MOVIE_STATE ((volatile FieldMovieState*)0x801ED500)
+#define FIELD_MOVIE_RECTS (((FieldMovieState*)0x801ED500)->rects)
 #define FIELD_CD_FLAGS_ADDRESS 0x801ED800U
 #define FIELD_CD_FLAG_MOVIE_STREAM 0x40
 
@@ -18,9 +24,6 @@ typedef struct
 extern u16 g_field_movie_frame_width;
 extern u16 g_field_movie_frame_height;
 
-void func_8005A744(FieldSeq*, u8);
-s32 func_8005A84C(s32, s32);
-void func_80084240(void);
 void func_80140358(s32, s32, s32, s32);
 void func_801406E4(void);
 void func_8005A984(FieldPart*, s32, s32);
@@ -43,7 +46,7 @@ void field_update_scene_animations(void)
     FieldAnimDef* definition;
     FieldAnimDef* frame_definition;
     FieldAnimDef* strip_definition;
-    FieldAnimCel* cel;
+    FieldPart* cel;
     FieldImageReq* upload;
     FieldSeq* sequence;
     FieldSeq* target_sequence;
@@ -100,13 +103,13 @@ void field_update_scene_animations(void)
             if (anim->flags.word & FIELD_ANIM_FLAG_UPLOAD_PENDING)
             {
                 upload = &anim->upload;
-                if ((*(s32*)&definition->flags & FIELD_ANIM_KIND_MASK) == 3)
+                if ((definition->flags.word & FIELD_ANIM_KIND_MASK) == 3)
                 {
-                    upload->rect.x = definition->unkC * 4 + FIELD_TILE_LOWER_BANK_VRAM_X;
-                    upload->rect.y = definition->unkD * 0x10 + FIELD_TILE_LOWER_BANK_VRAM_Y;
-                    upload->rect.w = definition->unkE * 4;
-                    upload->rect.h = definition->unkF * 0x10;
-                    upload->data = (u_long*)(definition->data + ((anim->flags.b.state * definition->unkE * definition->unkF) << 7));
+                    upload->rect.x = definition->u.tile.rect_x * 4 + FIELD_TILE_LOWER_BANK_VRAM_X;
+                    upload->rect.y = definition->u.tile.rect_y * 0x10 + FIELD_TILE_LOWER_BANK_VRAM_Y;
+                    upload->rect.w = definition->u.tile.rect_width * 4;
+                    upload->rect.h = definition->u.tile.rect_height * 0x10;
+                    upload->data = (u_long*)(definition->data + ((anim->flags.b.state * definition->u.tile.rect_width * definition->u.tile.rect_height) << 7));
                     field_queue_vram_upload(upload);
                 }
                 anim->flags.word &= ~FIELD_ANIM_FLAG_UPLOAD_PENDING;
@@ -114,7 +117,7 @@ void field_update_scene_animations(void)
             if (anim->flags.word & FIELD_ANIM_FLAG_ACTIVE)
             {
                 anim->timer--;
-                switch (definition->flags & FIELD_ANIM_KIND_MASK)
+                switch (definition->flags.b.kind_flags & FIELD_ANIM_KIND_MASK)
                 {
                 case 4:
                     switch (anim->flags.b.state)
@@ -123,29 +126,28 @@ void field_update_scene_animations(void)
                         if (cdrom_process_state() == 0)
                         {
                             cdrom_stream(CD_RES_MOVIE_BIN, (void*)0x80140000);
-                            cdrom_queue_seek(definition->unk1 * 2 + 0x16A6);
+                            cdrom_queue_seek(definition->head.b.unk1 * 2 + 0x16A6);
                             anim->flags.b.state = 1;
                             /* The XOR hides the constant from loop.c; a plain address is hoisted into a saved register. */
                             (*(volatile s32*)((u32)anim ^ ((u32)anim ^ FIELD_CD_FLAGS_ADDRESS))) |= FIELD_CD_FLAG_MOVIE_STREAM;
                         }
                         /* fallthrough */
                     case 1:
-                        if (cdrom_can_queue_resource(definition->unk1 * 2 + 0x16A6) != 0)
+                        if (cdrom_can_queue_resource(definition->head.b.unk1 * 2 + 0x16A6) != 0)
                         {
-                            /* Plain store: FIELD_MOVIE_STATE here schedules differently. */
-                            ((FieldMovieState*)0x801ED500)->rects[0].x = frame_definition->unkC * 4 + FIELD_TILE_LOWER_BANK_VRAM_X;
-                            FIELD_MOVIE_STATE->rects[0].y = frame_definition->unkD * 0x10 + FIELD_TILE_LOWER_BANK_VRAM_Y;
-                            FIELD_MOVIE_STATE->rects[0].w = frame_definition->unkE * 4;
-                            FIELD_MOVIE_STATE->rects[0].h = frame_definition->unkF * 0x10;
+                            FIELD_MOVIE_RECTS[0].x = frame_definition->u.tile.rect_x * 4 + FIELD_TILE_LOWER_BANK_VRAM_X;
+                            FIELD_MOVIE_RECTS[0].y = frame_definition->u.tile.rect_y * 0x10 + FIELD_TILE_LOWER_BANK_VRAM_Y;
+                            FIELD_MOVIE_RECTS[0].w = frame_definition->u.tile.rect_width * 4;
+                            FIELD_MOVIE_RECTS[0].h = frame_definition->u.tile.rect_height * 0x10;
                             cel = anim->cels;
-                            ((volatile FieldCdFlags*)FIELD_CD_FLAGS_ADDRESS)->word &= ~FIELD_CD_FLAG_MOVIE_STREAM;
-                            if (definition->unk1 < 2)
+                            ((FieldCdFlags*)FIELD_CD_FLAGS_ADDRESS)->word &= ~FIELD_CD_FLAG_MOVIE_STREAM;
+                            if (definition->head.b.unk1 < 2)
                             {
-                                func_80140358(definition->unk1 * 2 + 0x16A6, 1, definition->unk5 - 2, cel->active);
+                                func_80140358(definition->head.b.unk1 * 2 + 0x16A6, 1, definition->flags.b.last_frame - 2, cel->visible);
                             }
                             else
                             {
-                                func_80140358(definition->unk1 * 2 + 0x16A6, 1, 0x12E, 0);
+                                func_80140358(definition->head.b.unk1 * 2 + 0x16A6, 1, 0x12E, 0);
                             }
                             anim->flags.b.state = 2;
                         }
@@ -156,29 +158,29 @@ void field_update_scene_animations(void)
                         {
                             if (FIELD_MOVIE_STATE->end_state == 3)
                             {
-                                if (cdrom_can_queue_resource(definition->unk1 * 2 + 0x16A7) != 0)
+                                if (cdrom_can_queue_resource(definition->head.b.unk1 * 2 + 0x16A7) != 0)
                                 {
                                     upload = &anim->upload;
-                                    if (definition->unk1 < 2)
+                                    if (definition->head.b.unk1 < 2)
                                     {
                                         cel = anim->cels;
-                                        upload->rect.x = FIELD_MOVIE_STATE->rects[cel->active].x;
-                                        upload->rect.y = FIELD_MOVIE_STATE->rects[cel->active].y;
-                                        upload->rect.w = FIELD_MOVIE_STATE->rects[cel->active].w;
-                                        upload->rect.h = FIELD_MOVIE_STATE->rects[cel->active].h;
+                                        upload->rect.x = FIELD_MOVIE_RECTS[cel->visible].x;
+                                        upload->rect.y = FIELD_MOVIE_RECTS[cel->visible].y;
+                                        upload->rect.w = FIELD_MOVIE_RECTS[cel->visible].w;
+                                        upload->rect.h = FIELD_MOVIE_RECTS[cel->visible].h;
                                         upload->data = (u_long*)0x80140000;
                                         field_queue_vram_upload(upload);
-                                        if (cel->active == 1)
+                                        if (cel->visible == 1)
                                         {
-                                            cel->active = 0;
+                                            cel->visible = 0;
                                             cel = cel->next;
-                                            cel->active = 1;
+                                            cel->visible = 1;
                                         }
                                         else
                                         {
-                                            cel->active = 1;
+                                            cel->visible = 1;
                                             cel = cel->next;
-                                            cel->active = 0;
+                                            cel->visible = 0;
                                         }
                                     }
                                     else
@@ -190,16 +192,16 @@ void field_update_scene_animations(void)
                                         upload->rect.w = g_field_movie_frame_width;
                                         upload->rect.h = g_field_movie_frame_height;
                                         field_queue_vram_upload(upload);
-                                        cel->active = 0;
+                                        cel->visible = 0;
                                         cel = cel->next;
-                                        cel->active = 0;
+                                        cel->visible = 0;
                                     }
                                     FIELD_MOVIE_STATE->end_state = 4;
                                 }
                             }
                             else
                             {
-                                if (definition->unk1 >= 2)
+                                if (definition->head.b.unk1 >= 2)
                                 {
                                     field_begin_scene_fade_in();
                                 }
@@ -209,7 +211,7 @@ void field_update_scene_animations(void)
                         }
                         else
                         {
-                            if (definition->unk1 < 2)
+                            if (definition->head.b.unk1 < 2)
                             {
                                 set_controller_vsync_interval(2);
                             }
@@ -220,22 +222,22 @@ void field_update_scene_animations(void)
                                 cel = anim->cels;
                                 if (FIELD_MOVIE_STATE->chunk_idx == 1)
                                 {
-                                    cel->active = 1;
+                                    cel->visible = 1;
                                     cel = cel->next;
-                                    cel->active = 0;
+                                    cel->visible = 0;
                                 }
                                 else
                                 {
-                                    cel->active = 0;
+                                    cel->visible = 0;
                                     cel = cel->next;
-                                    cel->active = 1;
+                                    cel->visible = 1;
                                 }
                                 FIELD_MOVIE_STATE->frame_ready = 0;
                             }
                             if (FIELD_MOVIE_STATE->end_state == 2)
                             {
                                 cdrom_reset();
-                                cdrom_queue_read(definition->unk1 * 2 + 0x16A7, (void*)0x80140000);
+                                cdrom_queue_read(definition->head.b.unk1 * 2 + 0x16A7, (void*)0x80140000);
                                 FIELD_MOVIE_STATE->end_state = 3;
                             }
                         }
@@ -252,7 +254,7 @@ void field_update_scene_animations(void)
                 {
                     previous_frame = anim->flags.b.state;
                     field_advance_animation_keyframe(definition, anim);
-                    switch (definition->flags & FIELD_ANIM_KIND_MASK)
+                    switch (definition->flags.b.kind_flags & FIELD_ANIM_KIND_MASK)
                     {
                     case 0:
                         if (previous_frame != anim->flags.b.state)
@@ -268,7 +270,7 @@ void field_update_scene_animations(void)
                             cel = cel->next;
                             index--;
                         }
-                        cel->active = 0;
+                        cel->visible = 0;
                         cel = anim->cels;
                         index = anim->flags.b.state;
                         index--;
@@ -277,15 +279,15 @@ void field_update_scene_animations(void)
                             cel = cel->next;
                             index--;
                         }
-                        cel->active = 1;
+                        cel->visible = 1;
                         break;
                     case 3:
                         upload = &anim->upload;
-                        upload->rect.x = frame_definition->unkC * 4 + FIELD_TILE_LOWER_BANK_VRAM_X;
-                        upload->rect.y = frame_definition->unkD * 0x10 + FIELD_TILE_LOWER_BANK_VRAM_Y;
-                        upload->rect.w = frame_definition->unkE * 4;
-                        upload->rect.h = frame_definition->unkF * 0x10;
-                        upload->data = (u_long*)(frame_definition->data + ((anim->flags.b.state * frame_definition->unkE * frame_definition->unkF) << 7));
+                        upload->rect.x = frame_definition->u.tile.rect_x * 4 + FIELD_TILE_LOWER_BANK_VRAM_X;
+                        upload->rect.y = frame_definition->u.tile.rect_y * 0x10 + FIELD_TILE_LOWER_BANK_VRAM_Y;
+                        upload->rect.w = frame_definition->u.tile.rect_width * 4;
+                        upload->rect.h = frame_definition->u.tile.rect_height * 0x10;
+                        upload->data = (u_long*)(frame_definition->data + ((anim->flags.b.state * frame_definition->u.tile.rect_width * frame_definition->u.tile.rect_height) << 7));
                         field_queue_vram_upload(upload);
                         break;
                     case 5:
@@ -318,12 +320,12 @@ void field_update_scene_animations(void)
             if (control_flags & FIELD_ANIM_FLAG_UPLOAD_PENDING)
             {
                 upload = &anim->upload;
-                switch (definition->flags & FIELD_ANIM_KIND_MASK)
+                switch (definition->flags.b.kind_flags & FIELD_ANIM_KIND_MASK)
                 {
                 case 2:
                     if (control_flags & FIELD_ANIM_FLAG_SECOND_BUFFER)
                     {
-                        if (definition->unkC == 0)
+                        if (definition->u.clut.clut_mode == 0)
                         {
                             destination_pixels = anim->scratch_pixels + 16;
                         }
@@ -342,29 +344,29 @@ void field_update_scene_animations(void)
                     wrap_count = 0;
                     if (anim->flags.b.state != 0)
                     {
-                        if (strip_definition->unkD != 0)
+                        if (strip_definition->u.clut.reverse != 0)
                         {
                             previous_frame_index = anim->flags.b.state - 1;
-                            wrap_count = (definition->unk5 - previous_frame_index) * strip_definition->unk10;
-                            copy_count = anim->flags.b.state * strip_definition->unk10;
+                            wrap_count = (definition->flags.b.last_frame - previous_frame_index) * strip_definition->u.clut.length;
+                            copy_count = anim->flags.b.state * strip_definition->u.clut.length;
                         }
                         else
                         {
-                            wrap_count = anim->flags.b.state * strip_definition->unk10;
-                            copy_count = (definition->unk5 + 1 - anim->flags.b.state) * strip_definition->unk10;
+                            wrap_count = anim->flags.b.state * strip_definition->u.clut.length;
+                            copy_count = (definition->flags.b.last_frame + 1 - anim->flags.b.state) * strip_definition->u.clut.length;
                         }
                     }
                     else
                     {
-                        copy_count = (definition->unk5 + 1) * strip_definition->unk10;
+                        copy_count = (definition->flags.b.last_frame + 1) * strip_definition->u.clut.length;
                     }
-                    if (strip_definition->unkC == 0)
+                    if (strip_definition->u.clut.clut_mode == 0)
                     {
-                        source_pixels = (u16*)((u8*)header->pixel_data + (strip_definition->unkE << 5) + strip_definition->unkF * 2 + wrap_count * 2);
+                        source_pixels = (u16*)((u8*)header->pixel_data + (strip_definition->u.clut.clut_slot << 5) + strip_definition->u.clut.clut_offset * 2 + wrap_count * 2);
                     }
                     else
                     {
-                        source_pixels = (u16*)((u8*)header->pixel_data + (strip_definition->unkE << 9) + strip_definition->unkF * 2 + wrap_count * 2);
+                        source_pixels = (u16*)((u8*)header->pixel_data + (strip_definition->u.clut.clut_slot << 9) + strip_definition->u.clut.clut_offset * 2 + wrap_count * 2);
                     }
                     copy_count--;
                     while (copy_count != -1)
@@ -374,13 +376,13 @@ void field_update_scene_animations(void)
                     }
                     if (wrap_count != 0)
                     {
-                        if (strip_definition->unkC == 0)
+                        if (strip_definition->u.clut.clut_mode == 0)
                         {
-                            source_pixels = (u16*)((u8*)header->pixel_data + (strip_definition->unkE << 5) + strip_definition->unkF * 2);
+                            source_pixels = (u16*)((u8*)header->pixel_data + (strip_definition->u.clut.clut_slot << 5) + strip_definition->u.clut.clut_offset * 2);
                         }
                         else
                         {
-                            source_pixels = (u16*)((u8*)header->pixel_data + (strip_definition->unkE << 9) + strip_definition->unkF * 2);
+                            source_pixels = (u16*)((u8*)header->pixel_data + (strip_definition->u.clut.clut_slot << 9) + strip_definition->u.clut.clut_offset * 2);
                         }
                         copy_count = wrap_count - 1;
                         while (copy_count != -1)
@@ -389,90 +391,90 @@ void field_update_scene_animations(void)
                             copy_count--;
                         }
                     }
-                    if (strip_definition->unkC == 0)
+                    if (strip_definition->u.clut.clut_mode == 0)
                     {
-                        upload->rect.x = strip_definition->unkF + ((strip_definition->unkE & 0xF) * 0x10);
-                        rect_extent = strip_definition->unkE >> 4;
+                        upload->rect.x = strip_definition->u.clut.clut_offset + ((strip_definition->u.clut.clut_slot & 0xF) * 0x10);
+                        rect_extent = strip_definition->u.clut.clut_slot >> 4;
                     }
                     else
                     {
-                        upload->rect.x = strip_definition->unkF;
-                        rect_extent = strip_definition->unkE;
+                        upload->rect.x = strip_definition->u.clut.clut_offset;
+                        rect_extent = strip_definition->u.clut.clut_slot;
                     }
                     upload->rect.y = rect_extent + FIELD_TILE_CLUT_VRAM_Y;
-                    upload->rect.w = definition->unk5 + 1;
+                    upload->rect.w = definition->flags.b.last_frame + 1;
                     upload->rect.h = single_row_height;
                     goto strip_upload;
                 case 3:
-                    if (definition->unkC == 0)
+                    if (definition->u.clut.clut_mode == 0)
                     {
-                        upload->rect.x = definition->unkF + ((definition->unkE & 0xF) * 0x10);
-                        upload->rect.y = (definition->unkE >> 4) + FIELD_TILE_CLUT_VRAM_Y;
-                        upload->rect.w = definition->unk10;
+                        upload->rect.x = definition->u.clut.clut_offset + ((definition->u.clut.clut_slot & 0xF) * 0x10);
+                        upload->rect.y = (definition->u.clut.clut_slot >> 4) + FIELD_TILE_CLUT_VRAM_Y;
+                        upload->rect.w = definition->u.clut.length;
                         upload->rect.h = single_row_height;
                         if (anim->flags.b.state == 0)
                         {
-                            upload->data = (u_long*)((u8*)header->pixel_data + (definition->unkE << 5) + (definition->unkF & 0xE) * 2);
+                            upload->data = (u_long*)((u8*)header->pixel_data + (definition->u.clut.clut_slot << 5) + (definition->u.clut.clut_offset & 0xE) * 2);
                         }
                         else
                         {
-                            upload->data = (u_long*)((u8*)header->pixel_data + header->pixel_stride * 2 + definition->unk12 * 2 + ((anim->flags.b.state - 1) * definition->unk10) * 2);
+                            upload->data = (u_long*)((u8*)header->pixel_data + header->pixel_stride * 2 + definition->u.clut.pixel_offset * 2 + ((anim->flags.b.state - 1) * definition->u.clut.length) * 2);
                         }
                     }
                     else
                     {
-                        upload->rect.x = definition->unkF;
-                        upload->rect.y = definition->unkE + FIELD_TILE_CLUT_VRAM_Y;
-                        upload->rect.w = definition->unk10;
+                        upload->rect.x = definition->u.clut.clut_offset;
+                        upload->rect.y = definition->u.clut.clut_slot + FIELD_TILE_CLUT_VRAM_Y;
+                        upload->rect.w = definition->u.clut.length;
                         upload->rect.h = single_row_height;
                         if (anim->flags.b.state == 0)
                         {
-                            upload->data = (u_long*)((u8*)header->pixel_data + (definition->unkE << 9) + definition->unkF * 2);
+                            upload->data = (u_long*)((u8*)header->pixel_data + (definition->u.clut.clut_slot << 9) + definition->u.clut.clut_offset * 2);
                         }
                         else
                         {
-                            upload->data = (u_long*)((u8*)header->pixel_data + header->pixel_stride * 2 + definition->unk12 * 2 + ((anim->flags.b.state - 1) * definition->unk10) * 2);
+                            upload->data = (u_long*)((u8*)header->pixel_data + header->pixel_stride * 2 + definition->u.clut.pixel_offset * 2 + ((anim->flags.b.state - 1) * definition->u.clut.length) * 2);
                         }
                     }
                     field_queue_vram_upload(upload);
                     break;
                 case 4:
-                    if (definition->unkC == 0)
+                    if (definition->u.clut.clut_mode == 0)
                     {
-                        upload->rect.x = (definition->unkE & 0xF) * 0x10;
-                        upload->rect.y = (definition->unkE >> 4) + FIELD_TILE_CLUT_VRAM_Y;
-                        upload_extent = definition->unk10 * 0x10;
+                        upload->rect.x = (definition->u.clut.clut_slot & 0xF) * 0x10;
+                        upload->rect.y = (definition->u.clut.clut_slot >> 4) + FIELD_TILE_CLUT_VRAM_Y;
+                        upload_extent = definition->u.clut.length * 0x10;
                         upload_width = 0x100;
                         if (upload_extent < 0x101)
                         {
                             upload_width = upload_extent;
                         }
                         upload->rect.w = upload_width;
-                        upload->rect.h = (definition->unk10 + 0xF) / 0x10;
+                        upload->rect.h = (definition->u.clut.length + 0xF) / 0x10;
                         if (anim->flags.b.state == 0)
                         {
-                            upload->data = (u_long*)((u8*)header->pixel_data + (definition->unkE << 5));
+                            upload->data = (u_long*)((u8*)header->pixel_data + (definition->u.clut.clut_slot << 5));
                         }
                         else
                         {
                             upload->data =
-                                (u_long*)((u8*)header->pixel_data + header->pixel_stride * 2 + definition->unk12 * 2 + (((anim->flags.b.state - 1) * definition->unk10) << 5));
+                                (u_long*)((u8*)header->pixel_data + header->pixel_stride * 2 + definition->u.clut.pixel_offset * 2 + (((anim->flags.b.state - 1) * definition->u.clut.length) << 5));
                         }
                     }
                     else
                     {
                         upload->rect.x = 0;
-                        upload->rect.y = definition->unkE + FIELD_TILE_CLUT_VRAM_Y;
+                        upload->rect.y = definition->u.clut.clut_slot + FIELD_TILE_CLUT_VRAM_Y;
                         upload->rect.w = 0x100;
-                        upload->rect.h = definition->unk10;
+                        upload->rect.h = definition->u.clut.length;
                         if (anim->flags.b.state == 0)
                         {
-                            upload->data = (u_long*)((u8*)header->pixel_data + (definition->unkE << 9));
+                            upload->data = (u_long*)((u8*)header->pixel_data + (definition->u.clut.clut_slot << 9));
                         }
                         else
                         {
                             upload->data =
-                                (u_long*)((u8*)header->pixel_data + header->pixel_stride * 2 + definition->unk12 * 2 + (((anim->flags.b.state - 1) * definition->unk10) << 9));
+                                (u_long*)((u8*)header->pixel_data + header->pixel_stride * 2 + definition->u.clut.pixel_offset * 2 + (((anim->flags.b.state - 1) * definition->u.clut.length) << 9));
                         }
                     }
                     field_queue_vram_upload(upload);
@@ -482,26 +484,26 @@ void field_update_scene_animations(void)
                     /* The do/while(0) loop notes decide the anim/upload register priority. */
                     do
                     {
-                        if (definition->unkC == 0)
+                        if (definition->u.clut.clut_mode == 0)
                         {
-                            upload->rect.x = (definition->unkE & 0xF) * 0x10;
-                            upload->rect.y = (definition->unkE >> 4) + FIELD_TILE_CLUT_VRAM_Y;
-                            upload_extent = definition->unk10 * 0x10;
+                            upload->rect.x = (definition->u.clut.clut_slot & 0xF) * 0x10;
+                            upload->rect.y = (definition->u.clut.clut_slot >> 4) + FIELD_TILE_CLUT_VRAM_Y;
+                            upload_extent = definition->u.clut.length * 0x10;
                             upload_width = 0x100;
                             if (upload_extent < 0x101)
                             {
                                 upload_width = upload_extent;
                             }
                             upload->rect.w = upload_width;
-                            rect_extent = (definition->unk10 + 0xF) / 0x10;
+                            rect_extent = (definition->u.clut.length + 0xF) / 0x10;
                         }
                         else
                         {
                             upload_extent = 0x100;
                             upload->rect.x = 0;
-                            upload->rect.y = definition->unkE + FIELD_TILE_CLUT_VRAM_Y;
+                            upload->rect.y = definition->u.clut.clut_slot + FIELD_TILE_CLUT_VRAM_Y;
                             upload->rect.w = upload_extent;
-                            rect_extent = definition->unk10;
+                            rect_extent = definition->u.clut.length;
                         }
                         upload->rect.h = rect_extent;
                     strip_upload:
@@ -514,14 +516,14 @@ void field_update_scene_animations(void)
             if (anim->flags.word & FIELD_ANIM_FLAG_ACTIVE)
             {
                 anim->timer--;
-                if ((*(s32*)&definition->flags & FIELD_ANIM_KIND_MASK) == 5)
+                if ((definition->flags.word & FIELD_ANIM_KIND_MASK) == 5)
                 {
                     anim->flags.word |= FIELD_ANIM_FLAG_UPLOAD_PENDING;
                 }
                 if (anim->timer == 0)
                 {
                     field_advance_animation_keyframe(definition, anim);
-                    switch (definition->flags & FIELD_ANIM_KIND_MASK)
+                    switch (definition->flags.b.kind_flags & FIELD_ANIM_KIND_MASK)
                     {
                     case 0:
                         field_retarget_cel_cluts(definition, anim->cels, anim->flags.b.state);
@@ -550,10 +552,10 @@ void field_update_scene_animations(void)
                 if (--anim->timer == 0)
                 {
                     field_advance_animation_keyframe(definition, anim);
-                    switch (definition->flags & FIELD_ANIM_KIND_MASK)
+                    switch (definition->flags.b.kind_flags & FIELD_ANIM_KIND_MASK)
                     {
                     case 0:
-                        field_tint_animation_cel(definition, anim->cels, (FieldTintSrc*)anim->unk10, anim->flags.b.state);
+                        field_tint_animation_cel(definition, anim->cels, anim->owner.tint_src, anim->flags.b.state);
                         break;
                     case 1:
                         field_tint_animation_cel_list(definition, (FieldTintSrc*)anim->cels, anim->flags.b.state);
@@ -773,8 +775,8 @@ void field_update_part_sweep(FieldPart* part)
  */
 void field_blit_animation_frame(FieldAnimDef* def, FieldAnim* anim, s32 frame)
 {
-    FieldAnimCel* cel;
-    FieldTileGrid* grid;
+    FieldPart* cel;
+    FieldPartDef* grid;
     u8* record_cursor;
     u32* frame_words;
     u32* mask_cursor;
@@ -786,10 +788,10 @@ void field_blit_animation_frame(FieldAnimDef* def, FieldAnim* anim, s32 frame)
     s32 word_count;
 
     cel = anim->cels;
-    grid = ((FieldTileAnimDef*)def)->grid;
-    record_cursor = cel->tiles;
+    grid = def->u.tile.grid;
+    record_cursor = cel->records;
     stride = 0;
-    switch (cel->format)
+    switch (cel->kind)
     {
     case 0:
     case 2:
@@ -812,11 +814,11 @@ void field_blit_animation_frame(FieldAnimDef* def, FieldAnim* anim, s32 frame)
     }
     frame_words = (u32*)(anim->frame_data + anim->frame_tile_count * stride * frame);
     mask_bit = 1;
-    mask_cursor = cel->mask;
+    mask_cursor = cel->bits;
     mask_word = *mask_cursor++;
     for (row = 0; row != grid->u.b.rows; row++)
     {
-        if (row < def->unkD)
+        if (row < def->u.tile.rect_y)
         {
             /* Above the sub-rectangle: step the cursor over the whole row. */
             col = grid->u.b.cols;
@@ -838,7 +840,7 @@ void field_blit_animation_frame(FieldAnimDef* def, FieldAnim* anim, s32 frame)
         }
         else
         {
-            if (row >= def->unkD + def->unkF)
+            if (row >= def->u.tile.rect_y + def->u.tile.rect_height)
             {
                 return;
             }
@@ -846,7 +848,7 @@ void field_blit_animation_frame(FieldAnimDef* def, FieldAnim* anim, s32 frame)
             {
                 if (mask_word & mask_bit)
                 {
-                    if ((col >= def->unkC) && (col < def->unkC + def->unkE))
+                    if ((col >= def->u.tile.rect_x) && (col < def->u.tile.rect_x + def->u.tile.rect_width))
                     {
                         word_count = stride >> 2;
                         word_count--;
@@ -895,9 +897,9 @@ void field_apply_animation_tween(FieldAnimDef* def, FieldAnim* anim, s32 apply_t
     definition_copy = def;
     object = NULL;
     part = NULL;
-    if ((*(s32*)&def->flags & FIELD_ANIM_KIND_MASK) == 5)
+    if ((def->flags.word & FIELD_ANIM_KIND_MASK) == 5)
     {
-        part = (FieldPart*)anim->cels;
+        part = anim->cels;
     }
     else
     {
@@ -910,7 +912,7 @@ void field_apply_animation_tween(FieldAnimDef* def, FieldAnim* anim, s32 apply_t
         duration = 1;
     }
     elapsed = duration - anim->timer;
-    if ((*(s32*)&def->flags & FIELD_ANIM_KIND_MASK) == 5)
+    if ((def->flags.word & FIELD_ANIM_KIND_MASK) == 5)
     {
         part->visible = keyframe->visibility >> 15;
     }
@@ -923,7 +925,7 @@ void field_apply_animation_tween(FieldAnimDef* def, FieldAnim* anim, s32 apply_t
     if (apply_to_target != 0)
     {
         delta = value - anim->tween_x;
-        if ((*(s32*)&def->flags & FIELD_ANIM_KIND_MASK) == 5)
+        if ((def->flags.word & FIELD_ANIM_KIND_MASK) == 5)
         {
             part->x += delta;
             func_8005A984(part, delta, 0);
@@ -951,7 +953,7 @@ void field_apply_animation_tween(FieldAnimDef* def, FieldAnim* anim, s32 apply_t
     if (apply_to_target != 0)
     {
         delta = value - anim->tween_y;
-        if ((*(s32*)&def->flags & FIELD_ANIM_KIND_MASK) == 5)
+        if ((def->flags.word & FIELD_ANIM_KIND_MASK) == 5)
         {
             part->y += delta;
             func_8005A984(part, delta, 1);
@@ -979,7 +981,7 @@ void field_apply_animation_tween(FieldAnimDef* def, FieldAnim* anim, s32 apply_t
     if (apply_to_target != 0)
     {
         delta = value - anim->tween_z;
-        if ((*(s32*)&def->flags & FIELD_ANIM_KIND_MASK) == 5)
+        if ((def->flags.word & FIELD_ANIM_KIND_MASK) == 5)
         {
             part->z += delta;
             func_8005A984(part, delta, 2);
@@ -1031,8 +1033,8 @@ void field_update_animation_sfx(FieldAnimDef* def, FieldAnim* anim)
     s32 keyframe_offset;
     FieldPartDef* part_definition;
 
-    part = (FieldPart*)anim->cels;
-    object = (FieldObj*)anim->unk10;
+    part = anim->cels;
+    object = anim->owner.object;
     keyframe_offset = anim->flags.b.state * 8;
     key_type = def->data[keyframe_offset] & 7;
     if (key_type == 1)
@@ -1236,10 +1238,10 @@ void field_update_animation_sfx(FieldAnimDef* def, FieldAnim* anim)
  * @param cel Cel whose tile records are updated.
  * @param frame Frame index selecting the CLUT band.
  */
-void field_retarget_cel_cluts(FieldAnimDef* anim_def, FieldAnimCel* cel, s32 frame)
+void field_retarget_cel_cluts(FieldAnimDef* anim_def, FieldPart* cel, s32 frame)
 {
     FieldAnimDef* definition;
-    FieldTileGrid* grid;
+    FieldPartDef* grid;
     FieldTileDesc* tile;
     u8* record_cursor;
     s16* clut_cursor;
@@ -1257,13 +1259,13 @@ void field_retarget_cel_cluts(FieldAnimDef* anim_def, FieldAnimCel* cel, s32 fra
     s16 clut;
 
     definition = anim_def;
-    grid = cel->grid;
+    grid = cel->def;
     stride = 0;
-    if (definition->unkC == ((grid->u.word >> 4) & 3))
+    if (definition->u.clut.clut_mode == ((grid->u.word >> 4) & 3))
     {
         tile = grid->tiles;
-        record_cursor = cel->tiles;
-        switch (cel->format)
+        record_cursor = cel->records;
+        switch (cel->kind)
         {
         case 0:
         case 2:
@@ -1286,10 +1288,10 @@ void field_retarget_cel_cluts(FieldAnimDef* anim_def, FieldAnimCel* cel, s32 fra
             stride -= 4;
         }
         row = 0;
-        mask_cursor = cel->mask;
-        first_slot = definition->unkE;
-        last_slot = first_slot + definition->unk10;
-        packing_mode = definition->unkC;
+        mask_cursor = cel->bits;
+        first_slot = definition->u.clut.clut_slot;
+        last_slot = first_slot + definition->u.clut.length;
+        packing_mode = definition->u.clut.clut_mode;
         mask_word = *mask_cursor++;
         if (grid->u.b.rows != 0)
         {
@@ -1310,7 +1312,7 @@ void field_retarget_cel_cluts(FieldAnimDef* anim_def, FieldAnimCel* cel, s32 fra
                                 clut_slot = packed & 0x1F;
                                 if ((clut_slot >= first_slot) && (clut_slot < last_slot))
                                 {
-                                    y = clut_slot + (frame * definition->unk10);
+                                    y = clut_slot + (frame * definition->u.clut.length);
                                     if (packing_mode == 0)
                                     {
                                         clut = (((y >> 4) + 0x1D8) << 6) | (y & 0xF);
@@ -1362,7 +1364,6 @@ u_long* field_blend_animation_frames(FieldAnimDef* def, FieldAnim* anim)
     s32 other_frame;
     s32 pixel_count;
     s32 control_flags;
-    s32 new_flags;
     u16 current_pixel;
     u16 other_pixel;
     u8 range_start;
@@ -1371,7 +1372,8 @@ u_long* field_blend_animation_frames(FieldAnimDef* def, FieldAnim* anim)
     header = g_field_scene.scene->header;
     duration = ((FieldTweenSpan*)field_find_count_table_span((u8*)definition_copy, anim->flags.b.keyframe, &range_start))->duration;
     keyframe_index = anim->flags.b.keyframe;
-    /* The do/while(0) loop notes decide the anim/remaining register priority. */
+    /* The do/while(0) loop notes add the two reads' refs at loop depth 2, which
+       lifts anim (s4) above elapsed (s5); plain reads leave anim one ref short. */
     do
     {
         remaining = anim->timer;
@@ -1391,7 +1393,7 @@ u_long* field_blend_animation_frames(FieldAnimDef* def, FieldAnim* anim)
                 keyframe_index = keyframe_index - 1;
             }
         }
-        else if (keyframe_index == definition_copy->unk5)
+        else if (keyframe_index == definition_copy->flags.b.last_frame)
         {
             keyframe_index = keyframe_index - 1;
         }
@@ -1402,7 +1404,7 @@ u_long* field_blend_animation_frames(FieldAnimDef* def, FieldAnim* anim)
     }
     else
     {
-        if (keyframe_index == definition_copy->unk5)
+        if (keyframe_index == definition_copy->flags.b.last_frame)
         {
             keyframe_index = 0;
         }
@@ -1411,7 +1413,7 @@ u_long* field_blend_animation_frames(FieldAnimDef* def, FieldAnim* anim)
             keyframe_index = keyframe_index + 1;
         }
     }
-    if (*(s32*)&def->flags & FIELD_ANIM_DEF_SPAN_INDEXED)
+    if (def->flags.word & FIELD_ANIM_DEF_SPAN_INDEXED)
     {
         other_frame = (((FieldTweenSpan*)field_find_count_table_span((u8*)def, keyframe_index, &range_start))->range_start + keyframe_index) - range_start;
     }
@@ -1419,58 +1421,57 @@ u_long* field_blend_animation_frames(FieldAnimDef* def, FieldAnim* anim)
     {
         other_frame = keyframe_index;
     }
-    if (definition_copy->unkC == 0)
+    if (definition_copy->u.clut.clut_mode == 0)
     {
-        pixel_count = definition_copy->unk10 * 0x10;
+        pixel_count = definition_copy->u.clut.length * 0x10;
         if (anim->flags.b.state == 0)
         {
-            current_pixels = (u16*)((u8*)header->pixel_data + (definition_copy->unkE << 5));
+            current_pixels = (u16*)((u8*)header->pixel_data + (definition_copy->u.clut.clut_slot << 5));
         }
         else
         {
-            current_pixels = (u16*)((u8*)header->pixel_data + header->pixel_stride * 2 + definition_copy->unk12 * 2 + ((anim->flags.b.state - 1) * pixel_count) * 2);
+            current_pixels = (u16*)((u8*)header->pixel_data + header->pixel_stride * 2 + definition_copy->u.clut.pixel_offset * 2 + ((anim->flags.b.state - 1) * pixel_count) * 2);
         }
         if (other_frame == 0)
         {
-            other_pixels = (u16*)((u8*)header->pixel_data + (definition_copy->unkE << 5));
+            other_pixels = (u16*)((u8*)header->pixel_data + (definition_copy->u.clut.clut_slot << 5));
         }
         else
         {
-            other_pixels = (u16*)((u8*)header->pixel_data + header->pixel_stride * 2 + definition_copy->unk12 * 2 + ((other_frame - 1) * pixel_count) * 2);
+            other_pixels = (u16*)((u8*)header->pixel_data + header->pixel_stride * 2 + definition_copy->u.clut.pixel_offset * 2 + ((other_frame - 1) * pixel_count) * 2);
         }
     }
     else
     {
-        pixel_count = definition_copy->unk10 << 8;
+        pixel_count = definition_copy->u.clut.length << 8;
         if (anim->flags.b.state == 0)
         {
-            current_pixels = (u16*)((u8*)header->pixel_data + (definition_copy->unkE << 9));
+            current_pixels = (u16*)((u8*)header->pixel_data + (definition_copy->u.clut.clut_slot << 9));
         }
         else
         {
-            current_pixels = (u16*)((u8*)header->pixel_data + header->pixel_stride * 2 + definition_copy->unk12 * 2 + ((anim->flags.b.state - 1) * pixel_count) * 2);
+            current_pixels = (u16*)((u8*)header->pixel_data + header->pixel_stride * 2 + definition_copy->u.clut.pixel_offset * 2 + ((anim->flags.b.state - 1) * pixel_count) * 2);
         }
         if (other_frame == 0)
         {
-            other_pixels = (u16*)((u8*)header->pixel_data + (definition_copy->unkE << 9));
+            other_pixels = (u16*)((u8*)header->pixel_data + (definition_copy->u.clut.clut_slot << 9));
         }
         else
         {
-            other_pixels = (u16*)((u8*)header->pixel_data + header->pixel_stride * 2 + definition_copy->unk12 * 2 + ((other_frame - 1) * pixel_count) * 2);
+            other_pixels = (u16*)((u8*)header->pixel_data + header->pixel_stride * 2 + definition_copy->u.clut.pixel_offset * 2 + ((other_frame - 1) * pixel_count) * 2);
         }
     }
     control_flags = anim->flags.word;
     if (control_flags & FIELD_ANIM_FLAG_SECOND_BUFFER)
     {
         destination = &anim->scratch_pixels[pixel_count];
-        new_flags = control_flags & ~FIELD_ANIM_FLAG_SECOND_BUFFER;
+        anim->flags.word = control_flags & ~FIELD_ANIM_FLAG_SECOND_BUFFER;
     }
     else
     {
         destination = anim->scratch_pixels;
-        new_flags = control_flags | FIELD_ANIM_FLAG_SECOND_BUFFER;
+        anim->flags.word = control_flags | FIELD_ANIM_FLAG_SECOND_BUFFER;
     }
-    anim->flags.word = new_flags;
     pixel_count--;
     output = destination;
     while (pixel_count != -1)
@@ -1500,9 +1501,9 @@ u_long* field_blend_animation_frames(FieldAnimDef* def, FieldAnim* anim)
  * @param src Tint source and palette.
  * @param shade Tint-table shade offset.
  */
-void field_tint_animation_cel(FieldAnimDef* def, FieldAnimCel* cel, FieldTintSrc* src, s32 shade)
+void field_tint_animation_cel(FieldAnimDef* def, FieldPart* cel, FieldTintSrc* src, s32 shade)
 {
-    FieldTileGrid* grid;
+    FieldPartDef* grid;
     FieldTileDesc* tile;
     FieldTintColor* palette;
     FieldTintColor* color_entry;
@@ -1526,11 +1527,11 @@ void field_tint_animation_cel(FieldAnimDef* def, FieldAnimCel* cel, FieldTintSrc
     stride = 0;
     palette = FIELD_TINT_COLORS;
     palette_data = src->palette->data;
-    func_8005AC50(palette_data + 2, palette_data[0], rgb);
-    grid = cel->grid;
-    record_cursor = cel->tiles;
+    func_8005AC50((u8*)(palette_data + 2), palette_data[0], rgb);
+    grid = cel->def;
+    record_cursor = cel->records;
     tile = grid->tiles;
-    switch (cel->format)
+    switch (cel->kind)
     {
     case 0:
     case 2:
@@ -1554,9 +1555,9 @@ void field_tint_animation_cel(FieldAnimDef* def, FieldAnimCel* cel, FieldTintSrc
     }
     mask_bit = 1;
     row = 0;
-    mask_cursor = cel->mask;
-    first_slot = def->unkC;
-    last_slot = first_slot + def->unkD;
+    mask_cursor = cel->bits;
+    first_slot = def->u.tint.first_slot;
+    last_slot = first_slot + def->u.tint.slot_count;
     mask_word = *mask_cursor++;
     if (grid->u.b.rows != 0)
     {
@@ -1617,8 +1618,8 @@ void field_tint_animation_cel(FieldAnimDef* def, FieldAnimCel* cel, FieldTintSrc
  */
 void field_tint_animation_cel_list(FieldAnimDef* def, FieldTintSrc* src, s32 shade)
 {
-    FieldAnimCel* cel;
-    FieldTileGrid* grid;
+    FieldPart* cel;
+    FieldPartDef* grid;
     FieldTileDesc* tile;
     FieldTintColor* palette;
     FieldTintColor* color_entry;
@@ -1642,15 +1643,15 @@ void field_tint_animation_cel_list(FieldAnimDef* def, FieldTintSrc* src, s32 sha
     stride = 0;
     palette = FIELD_TINT_COLORS;
     palette_data = src->palette->data;
-    func_8005AC50(palette_data + 2, palette_data[0], rgb);
-    first_slot = def->unkC;
-    last_slot = first_slot + def->unkD;
+    func_8005AC50((u8*)(palette_data + 2), palette_data[0], rgb);
+    first_slot = def->u.tint.first_slot;
+    last_slot = first_slot + def->u.tint.slot_count;
     for (cel = src->cels; cel != NULL; cel = cel->next)
     {
-        record_cursor = cel->tiles;
-        grid = cel->grid;
+        record_cursor = cel->records;
+        grid = cel->def;
         tile = grid->tiles;
-        switch (cel->format)
+        switch (cel->kind)
         {
         case 0:
         case 2:
@@ -1674,7 +1675,7 @@ void field_tint_animation_cel_list(FieldAnimDef* def, FieldTintSrc* src, s32 sha
         }
         mask_bit = 1;
         row = 0;
-        mask_cursor = cel->mask;
+        mask_cursor = cel->bits;
         mask_word = *mask_cursor++;
         if (grid->u.b.rows != 0)
         {
@@ -1750,11 +1751,11 @@ void field_advance_animation_keyframe(FieldAnimDef* def, FieldAnim* anim)
             {
                 if (anim->flags.b.keyframe == 0)
                 {
-                    if (*(s32*)&def->flags & FIELD_ANIM_DEF_IGNORE_REPEAT_COUNT)
+                    if (def->flags.word & FIELD_ANIM_DEF_IGNORE_REPEAT_COUNT)
                     {
                         anim->flags.b.keyframe = anim->flags.b.keyframe + 1;
                     }
-                    else if (((def->handler_group == 0) && ((u32)((*(s32*)&def->flags & FIELD_ANIM_KIND_MASK) - 5) < 2)) || ((*(s32*)&def->flags & 0xFF000007) == 0x01000005))
+                    else if (((def->flags.b.handler_group == 0) && ((u32)((def->flags.word & FIELD_ANIM_KIND_MASK) - 5) < 2)) || ((def->flags.word & 0xFF000007) == 0x01000005))
                     {
                         if (anim->repeat_count == 0)
                         {
@@ -1771,9 +1772,9 @@ void field_advance_animation_keyframe(FieldAnimDef* def, FieldAnim* anim)
                 else
                 {
                     anim->flags.b.keyframe = anim->flags.b.keyframe - 1;
-                    if (!(*(s32*)&def->flags & FIELD_ANIM_DEF_IGNORE_REPEAT_COUNT) && (anim->flags.b.keyframe == 0) &&
-                        (((def->handler_group == 0) && ((u32)((*(s32*)&def->flags & FIELD_ANIM_KIND_MASK) - 5) >= 2)) ||
-                         ((def->handler_group == 1) && ((*(s32*)&def->flags & FIELD_ANIM_KIND_MASK) != 5)) || (def->handler_group >= 2)))
+                    if (!(def->flags.word & FIELD_ANIM_DEF_IGNORE_REPEAT_COUNT) && (anim->flags.b.keyframe == 0) &&
+                        (((def->flags.b.handler_group == 0) && ((u32)((def->flags.word & FIELD_ANIM_KIND_MASK) - 5) >= 2)) ||
+                         ((def->flags.b.handler_group == 1) && ((def->flags.word & FIELD_ANIM_KIND_MASK) != 5)) || (def->flags.b.handler_group >= 2)))
                     {
                         if (anim->repeat_count == 0)
                         {
@@ -1789,9 +1790,9 @@ void field_advance_animation_keyframe(FieldAnimDef* def, FieldAnim* anim)
             else
             {
                 keyframe = anim->flags.b.keyframe;
-                if (keyframe == def->unk5)
+                if (keyframe == def->flags.b.last_frame)
                 {
-                    if (!(*(s32*)&def->flags & FIELD_ANIM_DEF_IGNORE_REPEAT_COUNT) && (keyframe == 0))
+                    if (!(def->flags.word & FIELD_ANIM_DEF_IGNORE_REPEAT_COUNT) && (keyframe == 0))
                     {
                         anim->flags.word &= ~FIELD_ANIM_FLAG_ACTIVE;
                     }
@@ -1810,10 +1811,10 @@ void field_advance_animation_keyframe(FieldAnimDef* def, FieldAnim* anim)
         else
         {
             current_keyframe = anim->flags.b.keyframe;
-            if (current_keyframe == def->unk5)
+            if (current_keyframe == def->flags.b.last_frame)
             {
-                if (!(*(s32*)&def->flags & FIELD_ANIM_DEF_IGNORE_REPEAT_COUNT) &&
-                    (((def->handler_group == 0) && ((u32)((*(s32*)&def->flags & FIELD_ANIM_KIND_MASK) - 5) < 2)) || ((*(s32*)&def->flags & 0xFF000007) == 0x01000005)))
+                if (!(def->flags.word & FIELD_ANIM_DEF_IGNORE_REPEAT_COUNT) &&
+                    (((def->flags.b.handler_group == 0) && ((u32)((def->flags.word & FIELD_ANIM_KIND_MASK) - 5) < 2)) || ((def->flags.word & 0xFF000007) == 0x01000005)))
                 {
                     if (anim->repeat_count == 0)
                     {
@@ -1830,9 +1831,9 @@ void field_advance_animation_keyframe(FieldAnimDef* def, FieldAnim* anim)
             {
                 next_keyframe = current_keyframe + 1;
                 anim->flags.b.keyframe = next_keyframe;
-                if (!(*(s32*)&def->flags & FIELD_ANIM_DEF_IGNORE_REPEAT_COUNT) && ((u8)next_keyframe == def->unk5) &&
-                    (((def->handler_group == 0) && ((u32)((*(s32*)&def->flags & FIELD_ANIM_KIND_MASK) - 5) >= 2)) ||
-                     ((def->handler_group == 1) && ((*(s32*)&def->flags & FIELD_ANIM_KIND_MASK) != 5)) || (def->handler_group >= 2)))
+                if (!(def->flags.word & FIELD_ANIM_DEF_IGNORE_REPEAT_COUNT) && ((u8)next_keyframe == def->flags.b.last_frame) &&
+                    (((def->flags.b.handler_group == 0) && ((u32)((def->flags.word & FIELD_ANIM_KIND_MASK) - 5) >= 2)) ||
+                     ((def->flags.b.handler_group == 1) && ((def->flags.word & FIELD_ANIM_KIND_MASK) != 5)) || (def->flags.b.handler_group >= 2)))
                 {
                     if (anim->repeat_count == 0)
                     {
@@ -1856,7 +1857,7 @@ void field_advance_animation_keyframe(FieldAnimDef* def, FieldAnim* anim)
     }
     keyframe_span = (FieldTweenSpan*)field_find_count_table_span((u8*)def, anim->flags.b.keyframe, &range_start);
     anim->timer = keyframe_span->duration;
-    if (*(s32*)&def->flags & FIELD_ANIM_DEF_SPAN_INDEXED)
+    if (def->flags.word & FIELD_ANIM_DEF_SPAN_INDEXED)
     {
         anim->flags.b.state = (keyframe_span->range_start + anim->flags.b.keyframe) - range_start;
     }
@@ -1874,7 +1875,7 @@ void field_advance_animation_keyframe(FieldAnimDef* def, FieldAnim* anim)
  */
 void field_retarget_cel_list_cluts(FieldAnimDef* def, FieldTintSrc* src, s32 frame)
 {
-    FieldAnimCel* cel;
+    FieldPart* cel;
 
     cel = src->cels;
     if (cel != NULL)
@@ -1889,46 +1890,52 @@ void field_retarget_cel_list_cluts(FieldAnimDef* def, FieldTintSrc* src, s32 fra
 
 /**
  * @brief Find the count-table record containing a linear animation index.
- * @param table Pointer to the animation count table.
+ * @param table Pointer to the animation definition; its head word is the first count-table record.
  * @param linear_index Linear animation index to resolve.
  * @param range_start_out Receives the cumulative count before the returned record.
  * @return Pointer to the count-table record containing @p linear_index.
+ * @note The later records follow the definition, whose size is chosen per
+ *       handler group (all four groups use a 0x18-byte definition); the
+ *       switch reads FieldAnimDef::flags.b.handler_group for that.
  */
 u8* field_find_count_table_span(u8* table, s32 linear_index, u8* range_start_out)
 {
     u8 header_count;
     u8 count;
     u8 range_start;
-    u8 range_end;
+    s32 range_end;
 
     *range_start_out = 0;
     header_count = *table & 0x7F;
-    /* A single-pass loop: the original's loop notes decide the register allocation. */
-    while (linear_index >= header_count)
+    if (linear_index >= header_count)
     {
         *range_start_out = header_count;
-        header_count = table[7];
-        *(volatile u8*)(table + 7); /* the original reads this byte and discards it */
-        if (header_count)
+        switch (((FieldAnimDef*)table)->flags.b.handler_group)
         {
-            table += sizeof(FieldTweenKey) * 3;
-        }
-        else
-        {
-            table += sizeof(FieldTweenKey) * 3;
+        case 0:
+            table += sizeof(FieldAnimDef);
+            break;
+        case 1:
+            table += sizeof(FieldAnimDef);
+            break;
+        case 2:
+            table += sizeof(FieldAnimDef);
+            break;
+        default:
+            table += sizeof(FieldAnimDef);
+            break;
         }
         count = *table;
         range_start = *range_start_out;
-        range_end = range_start + (count & 0x7F);
+        range_end = (u8)(range_start + (count & 0x7F));
         while (linear_index >= range_end)
         {
             table += sizeof(FieldTweenSpan);
             range_start += count & 0x7F;
             *range_start_out = range_start;
             count = *table;
-            range_end = range_start + (count & 0x7F);
+            range_end = (u8)(range_start + (count & 0x7F));
         }
-        break;
     }
     return table;
 }

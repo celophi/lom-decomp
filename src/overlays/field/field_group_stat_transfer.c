@@ -1,5 +1,6 @@
 #include "saved_game.h"
 #include "common.h"
+#include "field_calls.h"
 
 #define U8(p, o) (*(u8*)((u8*)(p) + (o)))
 #define U16(p, o) (*(u16*)((u8*)(p) + (o)))

@@ -6,6 +6,7 @@
 #include "movie.h"
 #include "cdrom.h"
 #include "common.h"
+#include "field_calls.h"
 #include "field_animation.h"
 #include "cd_resources.h"
 #include "scene_state.h"
@@ -102,11 +103,7 @@ void func_80140018(s32 mode);
 void func_8006312C(void);
 void field_select_object(u16 object_index, FieldRenderBuffer* buffers);
 void field_build_render_records(FieldMapObject* object, u16 object_index);
-void field_size_work_buffer(void);
-void field_draw_scene_objects(u8** cursor, u_long* ot, s32 update_mode);
-void field_update_scene_fade(void);
 void field_load_map(s32 map_id);
-void field_apply_pixel_lookup(u16* pixels, s32 pixel_count, s32 table_index, void* unused);
 
 /**
  * @brief Initialize a field render context for a scene (no-FMV variant).

@@ -4,6 +4,9 @@
 #include "cd_resources.h"
 #include "game_audio.h"
 #include "common.h"
+#include "field_actor_routes.h"
+#include "field_actor_runtime.h"
+#include "field_calls.h"
 #include "field_interaction_start.h"
 #include "sdk/libgpu.h"
 #include "sdk/libetc.h"
@@ -343,39 +346,13 @@ void field_update_scene(void)
     void akao_cmd_c1();
     void akao_cmd_f1();
 
-    void field_clear_actor_slots();
     void field_init_ctx();
-    void field_initialize_actor_slots();
-    void field_initialize_actor_system();
-    void field_load_map();
-    void field_stop_song();
 
     u8* func_800630BC(u16);
-    void func_80067AA4();
-    void field_initialize_actor_parts();
     void field_restart_actor_animation();
-    void func_80084240();
-    void func_80084630();
-    void func_80086F20();
-    void field_reset_leader_position_history();
-    void field_refresh_party_routes();
-    void func_80091BC8();
-    void func_80092394();
-    void func_800A255C();
-    void func_800A2DFC();
-    void func_800A35F4();
-    void func_800A3654();
-    void func_800A368C();
-    void func_800A3728();
-    void func_800A380C();
-    void func_800A3BE8();
-    void func_800A54D0();
-    void func_800A6204();
-    void func_800A6EEC();
+    /* Unprototyped on purpose: the (s16, s8, s8, ...) definition would narrow the arguments here. */
     void field_store_entry_settings();
-    void func_800AF8C4();
-    void func_800B0094(void);
-    void func_800B01FC();
+    void func_800B01FC(void);
     void func_800B34D0();
     extern s32 g_field_scene_data_size;
     extern u8 g_field_direction_animation_modes[];
@@ -1039,7 +1016,6 @@ static void field_load_scene_actors(s32* data)
     extern FieldLoadedActorVisual g_field_object_parts[];
     extern s32 D_800FE774;
     extern s32 g_field_pending_scene_id;
-    extern void field_initialize_actor_record(s32, s32);
     extern void field_restart_actor_animation(FieldLoadedActor*);
 
     FieldLoadedActor* actor = g_field_scene_actors;
@@ -1117,7 +1093,6 @@ static void field_refresh_actor_collisions(void)
 {
     extern FieldCollisionActor g_field_actors[];
     extern FieldCollisionSlot g_field_object_states[];
-    extern s32 func_8005B6AC(FieldCollisionRequest*);
 
     FieldCollisionActor* actor;
     FieldCollisionSlot* slot;
@@ -1146,7 +1121,7 @@ static void field_refresh_actor_collisions(void)
                 mover->surface = 0;
                 mover->mode.bits.bit17 = 0;
                 mover->mode.bits.bit16 = 0;
-                func_8005B6AC(mover);
+                func_8005B6AC((struct FieldCollisionMover*)mover);
                 slot->contact = mover->contact;
                 slot->surface = mover->surface;
                 slot->height = mover->height >> 8;
@@ -1172,7 +1147,6 @@ static void field_refresh_actor_collisions(void)
 void field_move_actor_position(void* actor, void* motion)
 {
     extern u8 D_800FE3CE;
-    extern s32 func_8005B6AC(FieldCollisionRequest*);
 
     FieldCollisionBounds* bounds = (FieldCollisionBounds*)0x801ED400;
     FieldCollisionRequest* mover = (FieldCollisionRequest*)0x1F800000;
@@ -1223,7 +1197,7 @@ void field_move_actor_position(void* actor, void* motion)
     mover->mode.bits.bit17 = 0;
     mover->mode.bits.bit16 = 0;
 
-    func_8005B6AC(mover);
+    func_8005B6AC((struct FieldCollisionMover*)mover);
 
     ((MoverPosition*)actor)->x = mover->x;
     ((MoverPosition*)actor)->z = mover->z;

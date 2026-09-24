@@ -6,6 +6,7 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 
 /** @brief Tag of the terminal block that ends a pool. */
 #define FIELD_BLOCK_TAG_END 0x7FF

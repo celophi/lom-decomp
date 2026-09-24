@@ -3,6 +3,7 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 #include "field_ui_text.h"
 
 /** @brief UI string index of the first return-to-title choice. */

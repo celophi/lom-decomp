@@ -1,5 +1,6 @@
 #include "saved_game.h"
 #include "common.h"
+#include "field_calls.h"
 #include "field_golem_layout.h"
 
 extern s32 D_80122C00;
@@ -12,7 +13,6 @@ void func_800C3BB0(void);
 void func_800C3BD8(s32 type);
 void func_800C3CB4(void);
 void func_800C3D38(s32 index, s32 rotation, s32 x, s32 y);
-extern void func_800C3F18(s32 group_index, void* destination);
 
 /**
  * @brief Swap the edited golem logic group into a new order slot, or save it.

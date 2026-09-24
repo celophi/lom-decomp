@@ -1,6 +1,8 @@
 #include "field_scene_transition.h"
 #include "cdrom.h"
 #include "common.h"
+#include "field_actor_runtime.h"
+#include "field_calls.h"
 #include "field_actor_tables.h"
 /** @brief Queued change to one actor: pose, animation track and sound; -1 leaves a field unchanged. */
 typedef struct
@@ -49,16 +51,11 @@ void func_800B0A08(s32);
 s32 func_800B0888(void);
 void func_800B08FC(s32, s32);
 void field_restart_actor_animation(u8*);
-s32 func_800839F8(s32, s32);
-s32 func_80083EEC(s32, s32, s32);
-void field_start_actor_animation(s32, s32, s32);
-void func_800A3938(s32, s32);
 s32 VSync(s32);
 s32 DrawSync(s32);
-s32 field_object_has_active_actor_tracks(s32);
-void func_80084240(void);
-void field_restore_default_action_animation_mappings(s32);
 void func_800B34D0(s32);
+/* Defined as (void) in field_actor_runtime.c; the original call still loads 1 into $a0. */
+void field_restore_default_action_animation_mappings(s32);
 
 /** @brief Advance pending actor changes through resource loading and installation. */
 void func_800B0244(void)
@@ -333,8 +330,6 @@ s32 func_800B0888(void)
 extern u8* D_8010D038;
 extern s32 D_80122B18[];
 extern s32 g_field_resource_cursor;
-void field_release_resource_entry(s32);
-void field_unpack_resource_package(u8*, s32, s32, s32);
 
 /**
  * @brief Install a queued resource and record its allocated memory range.
@@ -361,7 +356,7 @@ void func_800B08FC(s32 arg0, s32 arg1)
         flags |= arg0 & 1;
         entry->flags = flags;
         entry->start = (u8*)g_field_resource_cursor;
-        field_unpack_resource_package(D_8010D038 + (0x8000 + arg1 * 0x18000), D_80122B18[arg1], arg1, arg1);
+        field_unpack_resource_package((struct FieldCdBuffer*)(D_8010D038 + (0x8000 + arg1 * 0x18000)), D_80122B18[arg1], arg1, arg1);
         entry->end = (u8*)g_field_resource_cursor;
         entry->flags |= 2;
         D_80122B68[arg1] = 0;
@@ -371,8 +366,6 @@ void func_800B08FC(s32 arg0, s32 arg1)
 extern s32 D_80122B68[];
 extern s32 D_80122B18[];
 extern u8* D_8010D038;
-
-s32 field_get_actor_resource_id(s32 slot_index, FieldPlayerRecord* slot, s32 mode);
 
 /**
  * @brief Queue CD reads for each active field resource slot.
@@ -387,7 +380,7 @@ void func_800B0A08(s32 arg0)
     {
         if (g_field_player_records[i].flags & 1)
         {
-            D_80122B68[i] = field_get_actor_resource_id(i, &g_field_player_records[i], arg0);
+            D_80122B68[i] = field_get_actor_resource_id(i, (struct FieldActorResourceSlot*)&g_field_player_records[i], arg0);
             buffer = D_8010D038 + 0x8000 + i * 0x18000;
             g_field_player_records[i].unk254 = (u16)D_80122B68[i];
             D_80122B18[i] = cdrom_queue_read((u16)D_80122B68[i], buffer);

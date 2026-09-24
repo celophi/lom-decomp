@@ -6,6 +6,7 @@
 
 #include "game_audio.h"
 #include "common.h"
+#include "field_calls.h"
 #include "field_records.h"
 
 /** @brief Money saturates at this amount. */
@@ -111,7 +112,6 @@ s32 func_800C14A4(s32 index, s32 notify);
 s32 func_800C19D0(s32 value, s32 increase, s32 flags);
 void func_800C1658(u8 *character, FieldGameState *state, FieldGameState *view, s32 offset);
 void func_800C15AC(FieldCharacterRecord *character, FieldGameState *state, FieldGameState *view, s32 offset);
-void func_800B7C58(s32 index);
 s32 func_8008B500(s32 index, s32 value);
 
 /**

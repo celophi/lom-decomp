@@ -6,6 +6,7 @@
 
 #include "game_audio.h"
 #include "common.h"
+#include "field_calls.h"
 #include "field_records.h"
 
 /** @brief Script variable: number of party records still standing. */
@@ -85,15 +86,10 @@ extern u8 D_800F0BB8[];
 
 extern FieldOnHitStatus D_800F0BC0[];
 
-/* Unprototyped: called with three arguments here and four in func_800B65CC. */
-void func_800B28E0();
-s32 func_800B4CE4(FieldStatusRecord* record, s32 status_id);
-void func_800B4934(FieldStatusRecord* record);
 s32 func_800BD414(s32 owner, s32 variable);
 void func_800BD520(s32 owner, s32 variable, s32 value);
 u8* func_800C1E40(s32 resource_id);
 s32 func_800C0A38(FieldStatusRecord* record);
-void func_800C2848(s32 actor_id, s32 value);
 s32 func_8008ADB4(s32 record_id);
 s32 func_8008AE14(s32 actor_id, s32 animation_id);
 s32 func_8008B500(s32 actor_id, s32 signal_id);
@@ -285,7 +281,7 @@ void func_800B65CC(s32 result)
 {
     func_800BD520(0, FIELD_VAR_BATTLE_RESULT, result);
     D_80123FB0->state.flags |= 0x80000000;
-    func_800B28E0(0x80, 0xD, 1, D_80123FB0);
+    func_800B28E0(0x80, 0xD, 1);
 }
 
 /**

@@ -8,7 +8,7 @@
 
 FieldStatusState* func_80087F0C(s32 actor_id);
 void saturating_counter_add(FieldStatusState* state, s32 delta);
-void func_8008BD88(s32 actor_id);
+s32 func_8008BD88(s32 actor_id);
 u32* func_800875B4(void);
 
 /*
@@ -34,10 +34,11 @@ typedef struct
     u8 item[0x3C];
 } FieldRewardEntry;
 
+/* Unprototyped on purpose: the call below passes a second argument the (s32) definition ignores. */
 void func_800C2138();
 u8* field_find_free_inventory_record(void);
 void field_copy_inventory_record(u8* dst, u8* src);
-void field_append_dialog_item(u8* arg0, u8 arg1);
+void field_append_dialog_item(s32 text, u8 quantity);
 
 extern FieldBattleContext* D_80123FB0;
 extern u16 D_800F0E98[];
@@ -120,12 +121,12 @@ void func_800C1A18(void* unused, s32 owner_id)
             return;
         }
         field_copy_inventory_record(handle, found);
-        field_append_dialog_item(handle, 0);
+        field_append_dialog_item((s32)handle, 0);
         return;
     }
     /* Kept: passing actor keeps it in a1 as in the original. */
     func_800C2138(index, actor);
-    field_append_dialog_item((u8*)D_800F0E98 + D_800F0E98[index], 1);
+    field_append_dialog_item((s32)((u8*)D_800F0E98 + D_800F0E98[index]), 1);
 }
 
 /**
