@@ -13,43 +13,36 @@
  */
 #define FIELD_SMALL_HISTORY_RECORD(index) (((PadContext*)(g_saved_game.bytes + (index) * sizeof(SmallHistoryRecord)))->small_history_records[0])
 #define FIELD_INVENTORY_RECORD(index) (((PadContext*)(g_saved_game.bytes + (index) * sizeof(InventoryRecord)))->inventory[0])
+
+/*
+ * Pad-context bytes that main.h does not map yet (inside _pad26E0 and
+ * _pad29DB, and byte 1 of unkAA8). They are indexed through
+ * g_saved_game.bytes because the original code mixes byte and word accesses.
+ */
+/** @brief Offset of the packed golem counts word; its low nibble is the golem count. */
+#define FIELD_GOLEM_COUNTS 0x29D4
+/** @brief Offset of the golem creation counter, byte 1 of the golem counts word. */
+#define FIELD_GOLEM_CREATED 0x29D5
+/** @brief Offset of the packed golem display order, three 2-bit slot indices. */
+#define FIELD_GOLEM_DISPLAY_ORDER 0x29DB
+/** @brief Offset of the active golem's class, byte 1 of unkAA8. */
+#define FIELD_ACTIVE_GOLEM_CLASS 0xAA9
+/**
+ * @brief The script variables at D_80122C00, addressed from D_80122C0B.
+ * @note The action item menus reach these variables through the D_80122C0B
+ *       address, which the original code keeps as the base register.
+ */
+#define FIELD_MENU_ACTION_VARS ((FieldMenuVars*)(D_80122C0B - 0xB))
 /** @brief The object-menu variables, which start at D_80122C0C. */
+#define FIELD_MENU_OBJECT ((FieldMenuObjectVars*)&D_80122C0C)
 /** @brief The record display variables, which start at D_80122C10. */
 #define FIELD_MENU_RECORD ((FieldMenuRecordVars*)&D_80122C10)
 /** @brief The gosub result variables, which start at D_80122C12. */
 #define FIELD_MENU_RESULT ((FieldMenuResultVars*)&D_80122C12)
 /** @brief The named-selection variables, which start at D_80122C02. */
 #define FIELD_MENU_NAMED ((FieldMenuNamedVars*)&D_80122C02)
-#define FIELD_MENU_OBJECT ((FieldMenuObjectVars*)&D_80122C0C)
 /** @brief The golem swap variables, which start at D_80122C0A. */
 #define FIELD_MENU_SWAP ((FieldMenuSwapVars*)&D_80122C0A)
-
-typedef struct
-{
-    s32 unk0;
-    s16 unk4;
-} GroupStateView;
-
-typedef struct
-{
-    s32 unk0;
-    u8 pad4[2];
-    s16 unk6;
-    u8 pad8[0x16];
-    s16 unk1E;
-} GroupClassView;
-
-typedef struct
-{
-    u8 pad[0x29D8];
-    u8 unk29D8;
-} Rec29D8;
-
-typedef struct
-{
-    u8 pad[0x2B50];
-    u8 unk2B50;
-} Rec2B50;
 
 /** @brief Script variables from D_80122C0C used by the menus that move a field object. */
 typedef struct
@@ -94,8 +87,6 @@ typedef struct
     u8 slots[0x25];
 } FieldPaletteSlotTable;
 
-
-
 /** @brief Script variables from D_80122C0A that receive a golem slot swap. */
 typedef struct
 {
@@ -116,194 +107,177 @@ typedef struct
     s32 words[3];
 } FieldGosubSequence;
 
-typedef struct
-{
-    u8 pad[0xCF4];
-    s32 unkCF4;
-} MenuRec;
-
-typedef struct
-{
-    s16 mystic_card_ids[3];
-} FieldMysticCardSlots;
-
-typedef struct
-{
-    s16 unk0;
-    s16 unk2;
-} FieldObjState;
-
 /**
- * @brief Placeholder layout for the record returned by func_800C1E40; only the
- *        byte at offset 4 is read here.
+ * @brief Small history record (main.h SmallHistoryRecord) with its 0x44 word split into bytes.
+ * @note The low three bytes of the selection word hold extra slot ids (0xFE/0xFF are empty).
  */
 typedef struct
 {
-    u8 unk0;
-    u8 unk1;
-    u8 unk2;
-    u8 unk3;
-    u8 unk4;
-} Rec;
-
-typedef struct
-{
-    s16 unk0;
-    s16 unk2;
-} FieldC7494State;
-
-typedef struct
-{
-    u8 _pad00[0x5A];
-    u16 unk5A;
-    u8 _pad5C[4];
+    u8 name[0x15];
+    u8 entry_id; /**< 0x15: id stored for the record's menu entry. */
+    u8 unknown_0x16[0x44 - 0x16];
+    u8 extra_slots[3]; /**< 0x44: extra slot ids; 0xFE and 0xFF mark an unused slot. */
+    u8 selection_bits; /**< 0x47: bits 30-31 of the selection word. */
+    u8 unknown_0x48[0x5A - 0x48];
+    u16 unknown_0x5A;
+    u8 unknown_0x5C[4];
 } FieldSmallHistoryRecord;
 
+/** @brief Pad context view whose small history records use FieldSmallHistoryRecord. */
 typedef struct
 {
     u8 _pad0000[0x2EF4];
-    FieldSmallHistoryRecord small_history_records[5];
+    FieldSmallHistoryRecord small_history_records[SMALL_HISTORY_RECORD_COUNT];
 } FieldMenuHistoryData;
 
-/** @brief Enabled-choice mask and count stored for the menu. */
+/** @brief The game-state workspace viewed as FieldMenuHistoryData. */
+#define FIELD_MENU_HISTORY ((FieldMenuHistoryData*)g_saved_game.bytes)
+
+/**
+ * @brief Text @p id of the menu text table at D_800F0E98.
+ * @note The table starts with little-endian 16-bit offsets relative to itself.
+ */
+#define FIELD_MENU_TEXT(id) (D_800F0E98[(id) * 2] + (D_800F0E98[(id) * 2 + 1] << 8) + D_800F0E98)
+
+/**
+ * @brief Byte @p index of the byte table at @p table.
+ * @note Written as an integer sum so the index stays the first addu operand.
+ */
+#define FIELD_TABLE_BYTE(table, index) (*(u8*)((index) + (s32)(table)))
+
+/** @brief Item id of the first of the eight menu action items. */
+#define FIELD_ACTION_ITEM_BASE 0x58
+
+/** @brief One 0x10-byte action slot of a menu action group. */
 typedef struct
 {
-    u16 mask;
+    s32 handle;
+    u8 item_index; /**< 0x04: action item (index into item_counts); 0xFF when the slot is free. */
+    u8 unknown_0x05[3];
+    u8 counters[8]; /**< 0x08: per-slot counters advanced by func_800C83DC. */
+} FieldMenuActionSlot;
+
+/**
+ * @brief One 0x8C-byte menu action group of the pad context, starting at 0x26E4.
+ * @note flags bits 0-3 hold the slot capacity, bits 8-11 the item slot count
+ *       and bits 12-15 the number of item slots in use.
+ */
+typedef struct
+{
+    u32 flags;
+    u32 unknown_0x04;
+    u8 item_slots[4]; /**< 0x08: item ids of the group; 0xFF marks an empty entry. */
+    FieldMenuActionSlot slots[8];
+} FieldMenuActionGroup;
+
+/** @brief Pad context view exposing the four menu action groups. */
+typedef struct
+{
+    u8 _pad0000[0x26E4];
+    FieldMenuActionGroup groups[4];
+} FieldMenuActionData;
+
+/** @brief The game-state workspace viewed as FieldMenuActionData. */
+#define FIELD_MENU_ACTIONS ((FieldMenuActionData*)g_saved_game.bytes)
+
+/**
+ * @brief The action data at @p base shifted by @p slot slots and @p group groups.
+ * @note groups[0].slots[0] of the result is slot @p slot of group @p group.
+ *       The slot and group offsets are summed as integers and the base is
+ *       added last, which is the address order the original code uses.
+ */
+#define FIELD_MENU_ACTIONS_SHIFTED(base, group, slot) ((FieldMenuActionData*)((slot) * 0x10 + (group) * 0x8C + (s32)(base)))
+
+/** @brief Script variables from D_80122C08: the action item choice mask and count. */
+typedef struct
+{
+    u16 mask; /**< Bit set for each choice that is disabled. */
     u8 count;
-} Selection;
+} FieldMenuChoiceVars;
 
-/** @brief FieldActionGroupView view exposing group flags and menu entry bytes. */
+/** @brief The action item choice variables, which start at D_80122C08. */
+#define FIELD_MENU_CHOICES ((FieldMenuChoiceVars*)&D_80122C08)
+
+/** @brief Script variables from D_80122C0D that select one menu action slot. */
 typedef struct
 {
-    u8 pad0[0x26E4];
-    u32 unk26E4;
-    u8 pad26E8[4];
-    u8 unk26EC;
-    u8 pad26ED[7];
-    u8 unk26F4;
-} FieldActionGroupView;
+    u8 action_slot; /**< Action slot number plus 4. */
+    u8 unk01[0xE];
+    u8 item_index; /**< 0x0F (D_80122C1C): item of the slot, read by func_800C8014. */
+    u8 handle;     /**< 0x10 (D_80122C1D): low byte of the slot handle. */
+    u8 unk11;
+    u8 group; /**< 0x12 (D_80122C1F): action group index. */
+} FieldMenuActionSlotVars;
 
-/** @brief Remaining menu item mask and nonzero item count. */
+/** @brief Script variables from D_80122C02 that select a record and report the result. */
 typedef struct
 {
-    s16 mask;
-    s8 count;
-} Availability;
+    u8 index;  /**< Selected record index. */
+    u8 status; /**< 0 when the record is shown, 1 when it is empty, 2 when it is a duplicate. */
+} FieldMenuRecordSelectVars;
 
-/** @brief Layout buffer view exposing record metadata, entry slots, and shared counters. */
-typedef struct Layout
-{
-    u8 pad[0x25E0];
-    u8 counters[0x104];
-    u32 packed;
-    u8 gap[4];
-    u8 slots[8];
-    u8 entry;
-} Layout;
+/** @brief The record selection variables, which start at D_80122C02. */
+#define FIELD_MENU_RECORD_SELECT ((FieldMenuRecordSelectVars*)&D_80122C02)
 
+/** @brief Script variables from D_80122C04 that describe the selected item. */
 typedef struct
 {
-    u8 unk0;
-    u8 pad[0x11];
-    u8 unk12;
-} FieldActionViewC7F44;
+    u8 kind;     /**< Item kind, bits 9:8 of the attributes. */
+    u8 category; /**< Category with the kind's table offset added. */
+    u16 value;   /**< Displayed stat value; bit 15 marks a special item. */
+    u32 amount;  /**< Item value. */
+} FieldMenuItemInfoVars;
 
+/** @brief The item description variables, which start at D_80122C04. */
+#define FIELD_MENU_ITEM_INFO ((FieldMenuItemInfoVars*)&D_80122C04)
+
+/** @brief The action slot variables, which start at D_80122C0D. */
+#define FIELD_MENU_ACTION_SLOT ((FieldMenuActionSlotVars*)&D_80122C0D)
+
+/** @brief 0x40-byte item record (main.h InventoryRecord) with its identity words. */
 typedef struct
 {
-    u8 unk0;
-    u8 pad1[0xE];
-    u8 unkF;
-    u8 unk10;
-    u8 pad11;
-    u8 unk12;
-} FieldActionViewC8014;
+    u8 active; /**< Zero marks an empty record. */
+    u8 unknown_0x01[0x13];
+    InventoryAttributes attributes; /**< 0x14: item kind, category and name index. */
+    u32 nibbles[2];                 /**< 0x18: sixteen 4-bit values. */
+    u8 saved_active;                /**< 0x20: active byte kept while the record is set aside. */
+    u8 unknown_0x21[3];
+    union
+    {
+        u16 values[4];
+        u8 bytes[8];
+    } stats;              /**< 0x24: stats, read as halfwords or bytes by kind. */
+    u8 unknown_0x2C[8];
+    s32 unknown_0x34;     /**< 0x34: item value; for a pending record, its pending result. */
+    u32 identity[2];      /**< 0x38: words that identify the item; both zero for no item. */
+} FieldMenuItemRecord;
 
+/**
+ * @brief Pad context view of the item records.
+ * @note The equipment block at 0x640 is scanned as eight records, twice
+ *       main.h's PLAYER_EQUIPMENT_SLOT_COUNT.
+ */
+typedef struct
+{
+    u8 _pad0000[0x640];
+    FieldMenuItemRecord equipment[8];
+    u8 _pad0840[0xCE0 - 0x840];
+    FieldMenuItemRecord inventory[INVENTORY_RECORD_COUNT];
+    u8 _pad25E0[0x3160 - 0x25E0];
+    FieldMenuItemRecord pending[4];
+} FieldMenuItemData;
+
+/** @brief The game-state workspace viewed as FieldMenuItemData. */
+#define FIELD_MENU_ITEMS ((FieldMenuItemData*)g_saved_game.bytes)
+
+/** @brief Actor position as func_80087F44 returns it. */
 typedef struct
 {
     s32 x;
     s32 y;
     s32 z;
 } FieldPosition;
-
-typedef struct
-{
-    u8 action_slot_id;
-    u8 pad1[0x11];
-    u8 record_index;
-} FieldMenuCommandState;
-
-typedef struct
-{
-    u8 pad0[0x26F0];
-    s32 handle;
-    u8 entry_index;
-    u8 entry_state[3];
-    u8 counters[8];
-} FieldMenuActionSlotView;
-
-/** @brief Layout buffer view for active records, identity words, and packed metadata. */
-typedef struct FieldMenuRecordLayout
-{
-    u8 pad0[0x640];
-    u8 unk640;
-    u8 pad641[0x37];
-    u32 unk678, unk67C;
-    u8 pad680[0x660];
-    u8 unkCE0;
-    u8 padCE1[0x37];
-    u32 unkD18, unkD1C;
-    u8 padD20[0x2440];
-    u8 unk3160;
-    u8 pad3161[0x13];
-    union
-    {
-        u32 word;
-        u16 halves[2];
-    } packed;
-    u8 pad3178[0x20];
-    u32 unk3198, unk319C;
-} FieldMenuRecordLayout;
-
-/** @brief Shared 64-byte record used by the menu record transfer path. */
-typedef struct FieldSharedRecord
-{
-    u8 unk0;
-    u8 pad1[0x13];
-    union
-    {
-        u32 word;
-        u16 halves[2];
-    } packed_metadata;
-    u32 unk18;
-    u32 unk1C;
-    u8 pad20[4];
-    u16 unk24;
-    u16 unk26;
-    u16 unk28;
-    u16 unk2A;
-    u8 pad2C[8];
-    u32 unk34;
-    u32 unk38;
-    u32 unk3C;
-} FieldSharedRecord;
-
-typedef struct
-{
-    u8 pad0[0x3160];
-    u8 unk3160; /* 0x3160 */
-    u8 pad3161[0x3194 - 0x3161];
-    s32 unk3194; /* 0x3194 */
-} BigStruct;
-
-typedef struct
-{
-    u8 unk0;
-    u8 pad1[0x1F];
-    u8 unk20;
-    u8 pad21[0x13];
-    u32 unk34;
-    u8 pad38[8];
-} Rec800C9684;
 
 /** @brief Eight selection-index adjustments copied to the stack. */
 typedef struct
@@ -392,6 +366,17 @@ typedef union
     {
         s16 card_ids[3];
     } cards;
+    /** @brief Menu action item menus. */
+    struct
+    {
+        u8 item_counts[8]; /**< Owned count of each action item. */
+        u16 item_mask;     /**< Bit set for each action item that is not owned. */
+        u8 owned_count;
+        u8 used_slots; /**< Item slots in use in the active group. */
+        u8 group_full; /**< Set when fewer than three item slots stay free. */
+        u8 unk0D[7];
+        s16 selected_item; /**< Chosen action item, 0-7. */
+    } actions;
 } FieldMenuVars;
 
 u8* field_find_free_inventory_record();
@@ -409,8 +394,6 @@ extern u8 D_80122C05;
 extern s16 D_80122C06;
 extern s16 D_80122C08;
 extern s16 D_80122C0A;
-extern s16 D_80122C08;
-extern s16 D_80122C0A;
 extern u8 D_80122C0B[];
 extern u8 D_80122C0C;
 extern u8 D_80122C0D;
@@ -425,7 +408,18 @@ extern u8 D_80122C19;
 extern s16 D_80122C1C;
 extern u8 D_80122C1E;
 extern u8 D_80122C1F;
-extern u8 D_80122A08[];
+extern FieldMenuItemRecord D_80122A08[4];
+/**
+ * @brief Point @p record at shared item record @p index of D_80122A08.
+ * @note Each use loads the table base into a local of its own.
+ */
+#define FIELD_SET_SHARED_RECORD(record, index)       \
+    {                                                \
+        FieldMenuItemRecord* shared_records;         \
+                                                     \
+        shared_records = D_80122A08;                 \
+        (record) = &shared_records[index];           \
+    }
 extern u8 D_80043CB8[];
 extern FieldGosubSequence D_80051EB4;
 extern s32 g_gosub_result_count;
@@ -442,7 +436,6 @@ extern FieldGosubSequence D_800F19B8;
 extern FieldGosubSequence D_800F19C4;
 extern u8 D_800459AE;
 extern FieldPaletteSlotTable D_80051CBC;
-void func_800A54D0(void);
 extern s32 func_800A4744(void);
 extern s32 func_800A4778(void);
 extern FieldGosubSequence D_800F19CC;
@@ -466,10 +459,7 @@ void func_800CA1E0(void);
 void func_800CA1A0(s32 arg0);
 extern s32 D_8011F428;
 extern u8 D_80046138[];
-extern /** @brief Remove spent records and compact the four-entry pending table. */
-    void
-    func_800C8E2C(void);
-extern u8 D_80046138[], D_800F0E98[];
+extern void func_800C8E2C(void);
 extern s32 func_800BD414(s32 arg0, s32 arg1);
 extern void func_800AD194(s32 arg0);
 extern u8 D_80043818;
@@ -479,13 +469,6 @@ extern u16 g_music_track_index;
 extern FieldGosubSequence D_80051EF8;
 extern Lookup D_80051F04;
 void func_800C57D4(void);
-/*
- * Deliberately declared without a prototype: func_800C9C3C passes a fourth
- * argument to keep its cursor byte live in a3, while the other callers pass
- * three. A fixed-arity prototype would change codegen for one side or the
- * other.
- */
-
 extern u8 D_800459AC;
 
 /**
@@ -512,11 +495,9 @@ void func_800C5704(s32 op)
 void func_800C5760(void)
 {
     PadContext* ctx;
-    u8* order;
 
     ctx = FIELD_PAD_CTX;
-    order = (u8*)ctx + D_80122C00.golem.slot;
-    if (order[0x29D8] == 3)
+    if (ctx->large_history_order[D_80122C00.golem.slot] == 3)
     {
         if ((u8)ctx->large_history_index >= 3U)
         {
@@ -526,7 +507,7 @@ void func_800C5760(void)
         D_80122C00.golem.state = 2;
         return;
     }
-    if (order[0x29D8] == ctx->large_history_index)
+    if (ctx->large_history_order[D_80122C00.golem.slot] == ctx->large_history_index)
     {
         D_80122C00.golem.state = 3;
         return;
@@ -569,33 +550,29 @@ void func_800C5804(void)
     u8 previous;
 
     free_record = 3;
-    i = 0;
-    do
+    for (i = 0; i < 3; i++)
     {
         candidate = i;
-        slot = 0;
-        do
+        for (slot = 0; slot < 3; slot++)
         {
             if (FIELD_PAD_CTX->large_history_order[slot] == i)
             {
                 candidate = 3;
             }
-            slot += 1;
-        } while (slot < 3);
+        }
         if (candidate != 3)
         {
             free_record = candidate;
         }
-        i += 1;
-    } while (i < 3);
+    }
     if (free_record != 3)
     {
         func_800C4364(free_record);
-        count = g_saved_game.bytes[0x29D5] + 1;
-        g_saved_game.bytes[0x29D5] = count;
+        count = g_saved_game.bytes[FIELD_GOLEM_CREATED] + 1;
+        g_saved_game.bytes[FIELD_GOLEM_CREATED] = count;
         if (count >= 201)
         {
-            g_saved_game.bytes[0x29D5] = 200;
+            g_saved_game.bytes[FIELD_GOLEM_CREATED] = 200;
         }
         previous = FIELD_PAD_CTX->large_history_order[D_80122C00.golem.slot];
         if (previous != 3)
@@ -614,11 +591,11 @@ void func_800C5804(void)
             }
         }
         FIELD_PAD_CTX->large_history_order[D_80122C00.golem.slot] = free_record;
-        packed_counts = (*(s32*)&g_saved_game.bytes[0x29D4] & ~0xF) | (((g_saved_game.bytes[0x29D4] & 0xF) + 1) & 0xF);
-        *(s32*)&g_saved_game.bytes[0x29D4] = packed_counts;
-        if ((g_saved_game.bytes[0x29D4] & 0xF) >= 4)
+        packed_counts = (*(s32*)&g_saved_game.bytes[FIELD_GOLEM_COUNTS] & ~0xF) | (((g_saved_game.bytes[FIELD_GOLEM_COUNTS] & 0xF) + 1) & 0xF);
+        *(s32*)&g_saved_game.bytes[FIELD_GOLEM_COUNTS] = packed_counts;
+        if ((g_saved_game.bytes[FIELD_GOLEM_COUNTS] & 0xF) >= 4)
         {
-            *(s32*)&g_saved_game.bytes[0x29D4] = (packed_counts & ~0xF) | 3;
+            *(s32*)&g_saved_game.bytes[FIELD_GOLEM_COUNTS] = (packed_counts & ~0xF) | 3;
         }
         for (i = 0; i < g_gosub_result_count; i++)
         {
@@ -636,18 +613,24 @@ void func_800C5804(void)
 }
 
 /**
- * @brief Thin stack-frame wrapper around field_open_gosub_screen_sequence passing &D_800F19B8.
+ * @brief Open the gosub screen sequence described by D_800F19B8.
  */
 void func_800C5AA8(void)
 {
     field_open_gosub_screen_sequence(&D_800F19B8);
 }
 
+/**
+ * @brief Open the gosub screen sequence described by D_800F19C4.
+ */
 void func_800C5ACC(void)
 {
     field_open_gosub_screen_sequence(&D_800F19C4);
 }
 
+/**
+ * @brief Run func_800AD0C8 as a menu operation.
+ */
 void func_800C5AF0(void)
 {
     func_800AD0C8();
@@ -706,18 +689,13 @@ void func_800C5BCC(void)
     s32 i;
     u32 word;
 
-    i = 0;
-    if (FIELD_PAD_CTX->logic_block_count != 0)
+    for (i = 0; i < FIELD_PAD_CTX->logic_block_count; i++)
     {
-        do
+        word = FIELD_PAD_CTX->logic_blocks[i].word;
+        if ((word & 3) == FIELD_PAD_CTX->large_history_order[D_80122C00.golem.slot])
         {
-            word = FIELD_PAD_CTX->logic_blocks[i].word;
-            if ((word & 3) == FIELD_PAD_CTX->large_history_order[D_80122C00.golem.slot])
-            {
-                FIELD_PAD_CTX->logic_blocks[i].word = (word | 3) & 0xFFFEFFFF;
-            }
-            i++;
-        } while (i < FIELD_PAD_CTX->logic_block_count);
+            FIELD_PAD_CTX->logic_blocks[i].word = (word | 3) & 0xFFFEFFFF;
+        }
     }
     for (i = 0; i < 4; i++)
     {
@@ -732,10 +710,10 @@ void func_800C5BCC(void)
     }
     FIELD_PAD_CTX->large_history_records[FIELD_PAD_CTX->large_history_order[D_80122C00.golem.slot]].name[0] = 0;
     FIELD_PAD_CTX->large_history_order[D_80122C00.golem.slot] = 3;
-    word = *(u32*)&g_saved_game.bytes[0x29D4];
+    word = *(u32*)&g_saved_game.bytes[FIELD_GOLEM_COUNTS];
     if ((word & 0xF) != 0)
     {
-        *(u32*)&g_saved_game.bytes[0x29D4] = (word & ~0xF) | (((g_saved_game.bytes[0x29D4] & 0xF) - 1) & 0xF);
+        *(u32*)&g_saved_game.bytes[FIELD_GOLEM_COUNTS] = (word & ~0xF) | (((g_saved_game.bytes[FIELD_GOLEM_COUNTS] & 0xF) - 1) & 0xF);
     }
 }
 
@@ -794,7 +772,7 @@ void func_800C5E28(void)
     {
         slot_status[2] = FIELD_PAD_CTX->large_history_order[2];
     }
-    packed_order = g_saved_game.bytes[0x29DB];
+    packed_order = g_saved_game.bytes[FIELD_GOLEM_DISPLAY_ORDER];
     i = packed_order & 3;
     order[1] = (packed_order >> 2) & 3;
     order[0] = i;
@@ -841,11 +819,9 @@ void func_800C5E28(void)
     inverse[0] = 3;
     inverse[1] = 3;
     inverse[2] = 3;
-    i = 0;
-    do
+    for (i = 0; i < 3; i++)
     {
-        j = 0;
-        do
+        for (j = 0; j < 3; j++)
         {
             if (order[i] == j)
             {
@@ -858,17 +834,13 @@ void func_800C5E28(void)
                     order[i] = 3;
                 }
             }
-            j += 1;
-        } while (j < 3);
-        i += 1;
-    } while (i < 3);
-    i = 0;
-    do
+        }
+    }
+    for (i = 0; i < 3; i++)
     {
         if (order[i] == 3)
         {
-            j = 0;
-            do
+            for (j = 0; j < 3; j++)
             {
                 inverse_entry = &inverse[j];
                 if (*inverse_entry == 3)
@@ -877,13 +849,11 @@ void func_800C5E28(void)
                     j = 3;
                     *inverse_entry = i;
                 }
-                j += 1;
-            } while (j < 3);
+            }
         }
-        i += 1;
-    } while (i < 3);
+    }
     packed_order = order[0] + (order[1] * 4) + (order[2] * 0x10);
-    g_saved_game.bytes[0x29DB] = packed_order;
+    g_saved_game.bytes[FIELD_GOLEM_DISPLAY_ORDER] = packed_order;
     if (D_80122C06 == 3)
     {
         if (order[0] == 0)
@@ -946,15 +916,13 @@ void func_800C5E28(void)
         }
     }
     active_index = D_80122C00.golem.slot;
-    i = 0;
-    do
+    for (i = 0; i < 3; i++)
     {
         if (order[i] == active_index)
         {
             D_80122C1C = i;
         }
-        i += 1;
-    } while (i < 3);
+    }
     *(s16*)&D_80122C1E = FIELD_PAD_CTX->large_history_index;
 }
 
@@ -988,29 +956,15 @@ void func_800C6228(void)
 {
     s32 count;
     s32 i;
-    s32 record_offset;
-    s32 item_offset;
-    u8* menu;
-    u8* items;
 
     count = 0;
-    i = 0;
-    menu = g_saved_game.bytes;
-    items = FIELD_PAD_CTX->large_history_records[0].unknown_0x4C;
-    /* A goto loop: as a loop statement, loop.c hoists the D_80122C00 address. */
-next_item:
-    item_offset = i << 6;
-    record_offset = menu[D_80122C00.golem.slot + 0x29D8] * sizeof(LargeHistoryRecord);
-    if (menu[item_offset + record_offset + 0x2B58] != 0)
+    for (i = 0; i < 4; i++)
     {
-        record_offset += (s32)items;
-        func_800B2844(count, (u8*)(record_offset + item_offset), 0xFF);
-        count += 1;
-    }
-    i += 1;
-    if (i < 4)
-    {
-        goto next_item;
+        if (FIELD_PAD_CTX->large_history_records[FIELD_PAD_CTX->large_history_order[D_80122C00.golem.slot]].unknown_0x4C[i << 6] != 0)
+        {
+            func_800B2844(count, &FIELD_PAD_CTX->large_history_records[FIELD_PAD_CTX->large_history_order[D_80122C00.golem.slot]].unknown_0x4C[i << 6], 0xFF);
+            count += 1;
+        }
     }
     D_80122C10 = count;
 }
@@ -1280,7 +1234,7 @@ void func_800C68C8(void)
     s32 selected_slot;
     s8 active_record;
 
-    packed_order = g_saved_game.bytes[0x29DB];
+    packed_order = g_saved_game.bytes[FIELD_GOLEM_DISPLAY_ORDER];
     selected_position = 3;
     active_slot = 3;
     order[0] = packed_order & 3;
@@ -1366,7 +1320,7 @@ void func_800C6A90(void)
     {
         field_copy_inventory_record(field_find_free_inventory_record(), FIELD_PAD_CTX->inventory);
     }
-    g_saved_game.bytes[0x29D5] += 9;
+    g_saved_game.bytes[FIELD_GOLEM_CREATED] += 9;
 }
 
 /**
@@ -1386,7 +1340,7 @@ void func_800C6AF0(void)
     s32 golem_class;
     u32 word;
     s32 block_class;
-    u8* record;
+    PadContext* shifted;
     s32 placed;
     u8* classes;
     u32 unplaced_mask;
@@ -1399,9 +1353,10 @@ void func_800C6AF0(void)
     golem_class = D_80122C1C;
     if (active_record < 3)
     {
-        record = (u8*)ctx + active_record * sizeof(LargeHistoryRecord);
-        g_saved_game.bytes[0xAA9] = (u8)D_80122C1C;
-        *(s32*)(record + 0x2B50) = (*(s32*)(record + 0x2B50) & ~0xF) | ((u8)D_80122C1C & 0xF);
+        /* The pad context shifted by active_record records: record 0 is the active golem. */
+        shifted = (PadContext*)((u8*)ctx + active_record * sizeof(LargeHistoryRecord));
+        g_saved_game.bytes[FIELD_ACTIVE_GOLEM_CLASS] = (u8)D_80122C1C;
+        *(s32*)&shifted->large_history_records[0].unknown_0x44 = (*(s32*)&shifted->large_history_records[0].unknown_0x44 & ~0xF) | ((u8)D_80122C1C & 0xF);
         i = 0;
         if (ctx->logic_block_count != 0)
         {
@@ -1419,7 +1374,7 @@ void func_800C6AF0(void)
                         ctx->logic_blocks[i].word = (word & unplaced_mask) | 3;
                     }
                 }
-                i = i + 1;
+                i++;
             } while (i < ctx->logic_block_count);
         }
         func_800C3BB0();
@@ -1545,7 +1500,7 @@ void func_800C6EBC(void)
     first = FIELD_INVENTORY_RECORD(D_80122C10).unknown_0x18[8];
     second = FIELD_INVENTORY_RECORD(D_80122C10).unknown_0x18[9];
     third = FIELD_INVENTORY_RECORD(D_80122C10).unknown_0x18[10];
-    do
+    for (; i < 3; i++, card++)
     {
         value = *card;
         if (value != empty)
@@ -1566,12 +1521,10 @@ void func_800C6EBC(void)
                 third = 0xFF;
             }
         }
-        i++;
-        card++;
-    } while (i < 3);
-    ((s16*)&D_80122C06)[0] = first;
-    ((s16*)&D_80122C06)[1] = second;
-    ((s16*)&D_80122C06)[2] = third;
+    }
+    (&D_80122C06)[0] = first;
+    (&D_80122C06)[1] = second;
+    (&D_80122C06)[2] = third;
 }
 
 /**
@@ -1638,7 +1591,7 @@ void func_800C7014(void)
     object_id = FIELD_MENU_OBJECT->object_id;
     resource = func_800C1E40(0x101);
     index = object_id * 2;
-    offset = ((FieldResourceOffsetByte*)(resource + index))->value + (((FieldResourceOffsetByte*)(func_800C1E40(0x101) + (index += 1)))->value << 8);
+    offset = (resource + index)[4] + ((func_800C1E40(0x101) + (index += 1))[4] << 8);
     func_800B2844(0, func_800C1E40(0x101) + (offset + 4), 0xFF);
 }
 
@@ -1652,41 +1605,42 @@ void func_800C7014(void)
  */
 void func_800C7090(void)
 {
-    s32 idx;
+    s32 index;
     u8* base;
-    u8* rec;
+    PadContext* shifted;
     s32 flags;
 
-    if (*(s32*)&(*(u16*)&g_gosub_result_count) != 0)
+    if (g_gosub_result_count != 0)
     {
-        idx = g_gosub_result_values[0];
-        if (idx < 5)
+        index = g_gosub_result_values[0];
+        if (index < SMALL_HISTORY_RECORD_COUNT)
         {
             base = g_saved_game.bytes;
-            rec = base + idx * 0x60;
-            flags = *(s32*)(rec + 0x2F38);
+            /* The pad context shifted by index records: record 0 is record index. */
+            shifted = (PadContext*)(base + index * sizeof(SmallHistoryRecord));
+            flags = *(s32*)&shifted->small_history_records[0].selection_flags;
             if (flags < 0)
             {
-                FIELD_MENU_RECORD->display_id = rec[0x2F0A] + 0x53;
+                FIELD_MENU_RECORD->display_id = shifted->small_history_records[0].unknown_0x16 + 0x53;
                 FIELD_MENU_RECORD->mode = 0;
             }
             else
             {
-                s16 masked = (s16)(((u32)flags >> 30) & 1);
-                FIELD_MENU_RECORD->display_id = rec[0x2F09] + 0x12;
-                FIELD_MENU_RECORD->mode = masked;
+                s16 restricted = (s16)(((u32)flags >> 30) & 1);
+                FIELD_MENU_RECORD->display_id = shifted->small_history_records[0].unknown_0x15 + 0x12;
+                FIELD_MENU_RECORD->mode = restricted;
             }
-            if (idx == D_80045EC8)
+            if (index == D_80045EC8)
             {
                 FIELD_MENU_RECORD->display_id = 0xFE;
             }
         }
         else
         {
-            record_game_diagnostic(0x8002, 0x27, idx, 0);
+            record_game_diagnostic(0x8002, 0x27, index, 0);
         }
     }
-    D_80122C16 = (u16) * (s32*)&(*(u16*)&g_gosub_result_count);
+    D_80122C16 = g_gosub_result_count;
 }
 
 /**
@@ -1696,16 +1650,17 @@ void func_800C7168(void)
 {
     s32 count;
     s32 i;
-    s32 one = 1;
-    u8* p;
+    s32 one = 1; /* compared in a register, as the original does */
+    PadContext* shifted;
 
     if (g_gosub_result_count != 0)
     {
         count = 0;
-        for (i = 0; i < 5; i++)
+        for (i = 0; i < SMALL_HISTORY_RECORD_COUNT; i++)
         {
-            p = &g_saved_game.bytes[i * 0x60];
-            if (p[0x2EF4] != 0 && (((*(u32*)(p + 0x2F38) >> 30) & 1) == one))
+            /* The pad context shifted by i records: record 0 is record i. */
+            shifted = (PadContext*)&g_saved_game.bytes[i * sizeof(SmallHistoryRecord)];
+            if (shifted->small_history_records[0].name[0] != 0 && shifted->small_history_records[0].selection_flags.selection_restricted == one)
             {
                 count++;
             }
@@ -1782,117 +1737,100 @@ void func_800C72E4(void)
 }
 
 /**
- * @brief Dispatch the selected menu record's extra slots and fixed trailing slot.
- * @note Skip 0xFE/0xFF entries and record the count of dispatched extra slots.
+ * @brief Publish the selected small history record's extra slot texts and its name.
+ * @note Unused slots (0xFE/0xFF) are skipped; the number published goes to D_80122C16.
  * @note Selections of five or greater record a diagnostic instead.
- * @note WIP: instruction ordering and temporary-register differences remain.
  */
 void func_800C7340(void)
 {
     s32 selection;
-    s32 slot_index;
-    s32 dispatch_count;
-    s32 record_offset;
-    u8* menu_base;
-    u8 slot_flag;
-    s32 table_offset;
-    u8* table_base;
+    s32 slot;
+    s32 count;
+    u8 entry;
 
     selection = D_80122C10;
-    if (selection < 5)
+    if (selection < SMALL_HISTORY_RECORD_COUNT)
     {
-        dispatch_count = 0;
-        slot_index = 0;
-        menu_base = g_saved_game.bytes;
-        record_offset = selection * 0x60;
-        do
+        count = 0;
+        for (slot = 0; slot < 3; slot++)
         {
-            table_base = D_800F0E98;
-            slot_flag = menu_base[slot_index + record_offset + 0x2F38];
-            if (slot_flag != 0xFF)
+            entry = FIELD_MENU_HISTORY->small_history_records[selection].extra_slots[slot];
+            /* Two separate tests; && folds them into one range check. */
+            if (entry != 0xFF)
             {
-                if (slot_flag != 0xFE)
+                if (entry != 0xFE)
                 {
-                    table_offset = slot_flag * 2;
-                    func_800B2844(dispatch_count, D_800F0E98[table_offset] + (D_800F0E98[table_offset + 1] << 8) + table_base, 0xFF);
-                    dispatch_count++;
+                    func_800B2844(count, FIELD_MENU_TEXT(entry), 0xFF);
+                    count++;
                 }
             }
-            slot_index++;
-        } while (slot_index < 3);
-        func_800B2844(3, (selection * 0x60) + D_80045ECC, 0xFF);
-        D_80122C16 = (u16)dispatch_count;
+        }
+        func_800B2844(3, D_80045ECC + selection * 0x60, 0xFF);
+        D_80122C16 = count;
         return;
     }
     record_game_diagnostic(0x8002, 0x2E, selection, 0);
 }
 
-/** @brief Clear the selected large-history record status. */
+/** @brief Clear pad-context byte 0xC06 and the active large history record's 0x46 byte. */
 void func_800C745C(void)
 {
-    PadContext* ctx = (PadContext*)g_saved_game.bytes;
-    s32 idx = ctx->large_history_index;
-    ((u8*)ctx)[0xC06] = 0;
-    ctx->large_history_records[idx].unknown_0x46 = 0;
-}
+    PadContext* ctx;
+    s32 index;
 
-/** @brief Write an available extra history slot or report an invalid history index. */
-void func_800C7494(void)
-{
-    s32 idx;
-    s32 val;
-    s32 count;
-    s32 row;
-    u8* base;
-    u8* slot;
-
-    idx = ((FieldC7494State*)&D_80122C10)->unk0;
-    val = ((FieldC7494State*)&D_80122C10)->unk2;
-    if (idx < 5)
-    {
-        count = 0;
-        base = g_saved_game.bytes;
-        row = idx * 0x60;
-        do
-        {
-            slot = (u8*)((count + row) + (s32)base);
-            count++;
-            if ((u32)((slot[0x2F38] + 2) & 0xFF) < 2)
-            {
-                slot[0x2F38] = val;
-                return;
-            }
-        } while (count < 3);
-        return;
-    }
-    record_game_diagnostic(0x8002, 0x30, idx, 0);
-}
-
-/** @brief Replace the selected history index with its entry id. */
-void func_800C752C(void)
-{
-    D_80122C10 = g_saved_game.bytes[(D_80122C10 * 0x60) + 0x2F09];
+    ctx = FIELD_PAD_CTX;
+    index = ctx->large_history_index;
+    g_saved_game.bytes[0xC06] = 0;
+    ctx->large_history_records[index].unknown_0x46 = 0;
 }
 
 /**
- * @brief Clears the active flag for the selected small history slot.
- *
- * Uses the small-history index at offset 0x2EF0 to select a 0x60-byte record
- * and clears bit 30 of its word at offset 0x2F38. Out-of-range indices record a diagnostic.
- *
+ * @brief Store D_80122C12 in the first unused extra slot of small history record D_80122C10.
+ * @note Selections of five or greater record a diagnostic instead.
+ */
+void func_800C7494(void)
+{
+    s32 selection;
+    s32 value;
+    s32 slot;
+    u8 entry;
+
+    selection = FIELD_MENU_RECORD->display_id;
+    value = FIELD_MENU_RECORD->mode;
+    if (selection < SMALL_HISTORY_RECORD_COUNT)
+    {
+        for (slot = 0; slot < 3; slot++)
+        {
+            entry = FIELD_MENU_HISTORY->small_history_records[selection].extra_slots[slot];
+            if (entry == 0xFE || entry == 0xFF)
+            {
+                FIELD_MENU_HISTORY->small_history_records[selection].extra_slots[slot] = value;
+                return;
+            }
+        }
+        return;
+    }
+    record_game_diagnostic(0x8002, 0x30, selection, 0);
+}
+
+/** @brief Replace the small history index in D_80122C10 with that record's entry id. */
+void func_800C752C(void)
+{
+    D_80122C10 = FIELD_PAD_CTX->small_history_records[D_80122C10].unknown_0x15;
+}
+
+/**
+ * @brief Lift the selection restriction of the current small history record.
+ * @note Indices of five or greater record a diagnostic instead.
  */
 void func_800C7558(void)
 {
     s32 index;
-    u8* base;
-    u8* record;
 
-    base = g_saved_game.bytes;
-    index = *(s32*)(base + 0x2EF0);
-    if (index < 5)
+    index = FIELD_PAD_CTX->small_history_index;
+    if (index < SMALL_HISTORY_RECORD_COUNT)
     {
-        record = base + index * 0x60;
-        *(u32*)(record + 0x2F38) &= 0xBFFFFFFF;
+        FIELD_PAD_CTX->small_history_records[index].selection_flags.selection_restricted = 0;
     }
     else
     {
@@ -1901,24 +1839,17 @@ void func_800C7558(void)
 }
 
 /**
- * @brief Clears the active flag for the gosub-selected small history slot.
- *
- * Uses the first gosub result to select a 0x60-byte record and clears bit 30
- * of its word at offset 0x2F38. Out-of-range indices record a diagnostic.
- *
+ * @brief Lift the selection restriction of the gosub-selected small history record.
+ * @note Indices of five or greater record a diagnostic instead.
  */
 void func_800C75C0(void)
 {
     s32 index;
-    u8* base;
-    u8* record;
 
     index = g_gosub_result_values[0];
-    if (index < 5)
+    if (index < SMALL_HISTORY_RECORD_COUNT)
     {
-        base = g_saved_game.bytes;
-        record = base + index * 0x60;
-        *(u32*)(record + 0x2F38) &= 0xBFFFFFFF;
+        FIELD_PAD_CTX->small_history_records[index].selection_flags.selection_restricted = 0;
     }
     else
     {
@@ -1927,612 +1858,453 @@ void func_800C75C0(void)
 }
 
 /**
- * @brief Load a value from the gosub-selected compact history record.
- *
- * If the gosub returned a selection, copies the selected record's unk5A
- * halfword into D_80122C00.
+ * @brief Load the gosub-selected small history record's 0x5A halfword into D_80122C00.
+ * @note Does nothing when the gosub returned no selection.
  */
 void func_800C7628(void)
 {
-    FieldMenuHistoryData* history_data;
-    s32 history_index;
+    s32 index;
 
-    if (*(s32*)&(*(u16*)&g_gosub_result_count) != 0)
+    if (g_gosub_result_count != 0)
     {
-        history_index = g_gosub_result_values[0];
-        history_data = (FieldMenuHistoryData*)g_saved_game.bytes;
-        D_80122C00.words[0] = history_data->small_history_records[history_index].unk5A;
+        index = g_gosub_result_values[0];
+        D_80122C00.words[0] = FIELD_MENU_HISTORY->small_history_records[index].unknown_0x5A;
     }
 }
 
 /**
- * @brief Prepare menu choice availability and display the first enabled entry.
+ * @brief Prepare the action item choices for group D_80122C1F and show the first owned item.
+ *
+ * Copies the eight action item counts to D_80122C00, stores the mask of items
+ * not owned and the owned count plus one at D_80122C08, sets D_80122C0F to the
+ * group's item slot count (0xFF when the group has no free action slot) and
+ * publishes the first owned item's text to macro 4.
  */
 void func_800C766C(void)
 {
-    s32 values[8];
-    s32 count, i, mask, limit, kind, record, record_offset, bit;
-    s32 text_id;
-    s32 *cursor, *mask_cursor;
-    u8 *layout, *record_base, *output, *strings, *scan_base, *scan_ptr, *low, *high;
+    s32 counts[8];
+    s32 group;
+    s32 count; /* owned items, then used action slots */
+    s32 i;
+    s32 mask;
+    s32 capacity;
+    s32 item_slot_count;
+    s32 item;
     u32 flags;
 
-    record = D_80122C1F;
+    group = D_80122C1F;
     count = 0;
-    i = count;
-    layout = g_saved_game.bytes;
-    cursor = values;
-    do
+    for (i = 0; i < 8; i++)
     {
-        *cursor = layout[i + 0x2638];
-        if (*cursor != 0)
+        counts[i] = FIELD_PAD_CTX->item_counts[FIELD_ACTION_ITEM_BASE + i];
+        if (counts[i] != 0)
         {
             count++;
         }
-        i++;
-        cursor++;
-    } while (i < 8);
+    }
 
-    i = 0;
-    output = D_80122C00.bytes;
-    do
+    for (i = 0; i < 8; i++)
     {
-        *(u8*)(i + (s32)output) = *((u8*)values + i * 4);
-        i++;
-    } while (i < 8);
+        D_80122C00.bytes[i] = counts[i];
+    }
 
     mask = 0x1FFF;
-    i = 0;
-    bit = 1;
-    mask_cursor = values;
-    do
+    for (i = 0; i < 8; i++)
     {
-        if (*mask_cursor != 0)
+        if (counts[i] != 0)
         {
-            mask &= ~(bit << i);
+            mask &= ~(1 << i);
         }
-        i++;
-        mask_cursor++;
-    } while (i < 8);
+    }
 
-    limit = count + 1;
+    capacity = count + 1;
     count = 0;
-    i = count;
-    ((Selection*)((u8*)&D_80122C08))->mask = mask;
-    ((Selection*)((u8*)&D_80122C08))->count = limit;
-    record_offset = record * 0x8C;
-    record_base = g_saved_game.bytes;
-    flags = ((FieldActionGroupView*)(record_base + record_offset))->unk26E4;
-    kind = flags >> 8;
-    kind &= 0xF;
-    limit = flags & 0xF;
-    do
+    FIELD_MENU_CHOICES->mask = mask;
+    FIELD_MENU_CHOICES->count = capacity;
+    flags = FIELD_MENU_ACTIONS->groups[group].flags;
+    item_slot_count = flags >> 8;
+    item_slot_count &= 0xF;
+    capacity = flags & 0xF;
+    for (i = 0; i < 8; i++)
     {
-        if ((u32)((FieldActionGroupView*)(g_saved_game.bytes + record_offset + i * 0x10))->unk26F4 < 0xFF)
+        if (FIELD_MENU_ACTIONS->groups[group].slots[i].item_index < 0xFF)
         {
             count++;
         }
-        i++;
-    } while (i < 8);
+    }
 
-    if (count >= limit)
+    if (count >= capacity)
     {
         D_80122C0F = 0xFF;
     }
     else
     {
-        D_80122C0F = kind;
+        D_80122C0F = item_slot_count;
     }
 
-    i = 0;
-    scan_base = D_80122C00.bytes;
-scan:
-    scan_ptr = (u8*)(i + (s32)scan_base);
-    if (*scan_ptr == 0)
+    for (i = 0; i < 8; i++)
     {
-        i++;
-        if (i < 8)
+        if (D_80122C00.bytes[i] != 0)
         {
-            goto scan;
+            break;
         }
     }
-
-    text_id = i + 0x58;
-    strings = D_800F0E98;
-    text_id *= 2;
-    low = text_id + strings;
-    {
-        s32 offset2 = text_id + 1;
-        high = offset2 + strings;
-    }
-    func_800B2844(4, (*low + (*high << 8)) + strings, 0xFF);
+    item = FIELD_ACTION_ITEM_BASE + i;
+    func_800B2844(4, FIELD_MENU_TEXT(item), 0xFF);
     func_800C7C88();
 }
 
 /**
- * @brief Add the selected menu item to its group and refresh availability.
+ * @brief Put the chosen action item into the first free item slot of group D_80122C1F.
+ *
+ * Records the new used-slot count in the group flags and at D_80122C0B, sets
+ * D_80122C0C when fewer than three slots stay free, takes one of the item
+ * (D_80122C14) from the counts copied to D_80122C00, publishes its text to
+ * macro 0 and refreshes the item mask and owned count at D_80122C08.
  */
 void func_800C7840(void)
 {
-    s32 available_mask;
-    s32 slot_limit;
     s32 group;
+    s32 count;
+    s32 owned;
+    s32 slot;
     s32 capacity;
-    s32 layout_base;
-    s32 post_layout_base;
-    s32 second_base;
-    s32 second_offset;
-    u8* text_base;
-    s32 flag_mask;
-    s32 initial_offset;
-    s32 text_offset;
-    s32 group_offset;
-    s32 occupied_count;
-    s32 slot_index;
-    s32 empty_slot;
-    s32 new_count;
-    s32 item_id;
-    s32 available_count;
-    u32 group_flags;
-    u8* selected_count;
-    u8* text_low;
-    u8* text_high;
-    s32 item_counts_base;
-    FieldActionGroupView* group_view;
+    s32 item_slot_count;
+    s32 used;
+    s32 item;
+    s32 mask;
+    u32 flags;
+    s32 selected;
 
-    occupied_count = 0;
-    slot_index = occupied_count;
+    count = 0;
     group = D_80122C1F;
-    initial_offset = group * 0x8C;
-    group_flags = ((FieldActionGroupView*)(g_saved_game.bytes + initial_offset))->unk26E4;
-    layout_base = (s32)g_saved_game.bytes;
-    group_offset = initial_offset;
-    slot_limit = group_flags >> 8;
-    slot_limit &= 0xF;
-    capacity = group_flags & 0xF;
-    do
+    flags = FIELD_MENU_ACTIONS->groups[group].flags;
+    item_slot_count = flags >> 8;
+    item_slot_count &= 0xF;
+    capacity = flags & 0xF;
+    for (slot = 0; slot < 8; slot++)
     {
-        if (((FieldActionGroupView*)(initial_offset + slot_index * 0x10 + layout_base))->unk26F4 != 0xFF)
+        if (FIELD_MENU_ACTIONS->groups[group].slots[slot].item_index != 0xFF)
         {
-            occupied_count += 1;
-        }
-        slot_index += 1;
-
-    } while (slot_index < 8);
-    capacity -= occupied_count;
-    slot_index = 0;
-    if (slot_limit != 0)
-    {
-        second_base = (s32)g_saved_game.bytes;
-        second_offset = group * 0x8C;
-        empty_slot = 0xFF;
-    loop_6:
-        if (((FieldActionGroupView*)(slot_index + second_offset + second_base))->unk26EC != empty_slot)
-        {
-            slot_index += 1;
-            if (slot_index < slot_limit)
-            {
-                goto loop_6;
-            }
+            count++;
         }
     }
-    flag_mask = 0xFFFF0FFF;
-    new_count = slot_index + 1;
-    post_layout_base = (s32)g_saved_game.bytes;
-    group_offset = group * 0x8C;
-    group_view = (FieldActionGroupView*)(post_layout_base + group_offset);
-    D_80122C0B[0] = new_count;
-    group_view->unk26E4 = (s32)((group_view->unk26E4 & flag_mask) | ((new_count & 0xF) << 0xC));
-    if (capacity < (slot_index + 3))
+    capacity -= count;
+
+    for (slot = 0; slot < item_slot_count; slot++)
+    {
+        if (FIELD_MENU_ACTIONS->groups[group].item_slots[slot] == 0xFF)
+        {
+            break;
+        }
+    }
+
+    used = slot + 1;
+    /* D_80122C0B, D_80122C0C and the selected item are reached from D_80122C0B. */
+    D_80122C0B[0] = used;
+    FIELD_MENU_ACTIONS->groups[group].flags = (FIELD_MENU_ACTIONS->groups[group].flags & 0xFFFF0FFF) | ((used & 0xF) << 12);
+    if (capacity < slot + 3)
     {
         D_80122C0B[1] = 1;
     }
-    item_counts_base = (s32)(D_80122C0B - 0xB);
-    text_base = D_800F0E98;
-    selected_count = (u8*)((*(s16*)(D_80122C0B + 9)) + item_counts_base);
-    item_id = (*(s16*)(D_80122C0B + 9)) + 0x58;
-    *selected_count -= 1;
-    ((FieldActionGroupView*)(slot_index + group_offset + post_layout_base))->unk26EC = item_id;
-    text_offset = item_id * 2;
-    text_low = text_offset + text_base;
-    {
-        s32 text_offset2 = text_offset + 1;
-        text_high = text_offset2 + text_base;
-    }
-    func_800B2844(0, *text_low + (*text_high << 8) + text_base, 0xFF);
-    available_mask = 0x1FFF;
-    available_count = 0;
-    slot_index = available_count;
+    selected = *(s16*)&D_80122C0B[9];
+    FIELD_MENU_ACTION_VARS->actions.item_counts[selected]--;
+    item = selected + FIELD_ACTION_ITEM_BASE;
+    FIELD_MENU_ACTIONS->groups[group].item_slots[slot] = item;
+    func_800B2844(0, FIELD_MENU_TEXT(item), 0xFF);
 
-    do
+    mask = 0x1FFF;
+    owned = 0;
+    for (slot = 0; slot < 8; slot++)
     {
-        if (*(u8*)(slot_index + item_counts_base) != 0)
+        if (FIELD_MENU_ACTION_VARS->actions.item_counts[slot] != 0)
         {
-            available_mask &= ~(1 << slot_index);
-            available_count += 1;
+            mask &= ~(1 << slot);
+            owned++;
         }
-        slot_index += 1;
-    } while (slot_index < 8);
-    ((Availability*)((u8*)&D_80122C08))->mask = available_mask;
-    ((Availability*)((u8*)&D_80122C08))->count = available_count;
+    }
+    FIELD_MENU_CHOICES->mask = mask;
+    FIELD_MENU_CHOICES->count = owned;
 }
 
 /**
- * @brief Fill free record entries up to the clamped capacity and update linked counters.
- * @note Random slot selection retries at most 1000 times before scanning for a free slot.
+ * @brief Fill free action slots of group D_80122C1F and take back its item slots' items.
+ *
+ * Fills up to (flags bits 12-15) + 2 free action slots, clamped to the free
+ * slot count, through func_800C0260. Each fill picks a random slot (at most
+ * 1000 tries) and falls back to the first free slot. Then gives back one of
+ * each item in the group's item slots and clears them through func_800C7C88.
  */
 void func_800C7A3C(void)
 {
-    s32 temp_a0;
-    s32 temp_s4;
-    s32 temp_s6;
-    s32 temp_s7;
-    s32 temp_v0;
-    s32 temp_v0_2;
-    s32 temp_v1_2;
-    s32 var_a0;
-    s32 var_a1;
-    s32 var_s0;
-    s32 var_s1;
-    s32 var_v0;
-    s32 var_v1;
-    s32 var_v1_2;
-    u32 temp_v1;
-    s32 temp_s2;
+    s32 group;
+    s32 i;
+    s32 j; /* used-slot count, then pick attempts and the free-slot scan */
+    s32 free_slots;
+    s32 item_slot_count;
+    s32 fill;
+    s32 limit;
+    s32 pick;
+    s32 item;
+    u32 flags;
 
-    u8* temp_v1_4;
-
-    var_s0 = 0;
-    var_s1 = var_s0;
-    temp_s2 = D_80122C1F;
-    temp_v0 = temp_s2 * 0x8C;
-    temp_v1 = ((Layout*)((u8*)g_saved_game.bytes + temp_v0))->packed;
-    var_a1 = temp_v1 & 0xF;
-    var_a0 = var_s1 * 16 + temp_v0;
-    temp_s7 = temp_v1 >> 8;
-    temp_s7 &= 0xF;
-    temp_s4 = temp_v1 >> 12;
-    temp_s4 &= 0xF;
-    temp_s4 += 2;
-    do
-
+    i = j = 0;
+    group = D_80122C1F;
+    flags = FIELD_MENU_ACTIONS->groups[group].flags;
+    free_slots = flags & 0xF;
+    item_slot_count = flags >> 8;
+    item_slot_count &= 0xF;
+    fill = flags >> 12;
+    fill &= 0xF;
+    fill += 2;
+    for (; i < 8; i++)
     {
-        if (((Layout*)((u8*)g_saved_game.bytes + (var_a0)))->entry != 0xFF)
-
+        if (FIELD_MENU_ACTIONS->groups[group].slots[i].item_index != 0xFF)
         {
-            var_s0 += 1;
+            j++;
         }
-        var_s1 += 1;
-        var_a0 = var_s1 * 16 + temp_v0;
-    } while (var_s1 < 8);
-    var_a1 -= var_s0;
-    if (temp_s4 >= 0)
-
+    }
+    free_slots -= j;
+    if (fill >= 0)
     {
-        var_v1 = var_a1;
-        if (var_v1 >= temp_s4)
-
+        limit = free_slots;
+        if (limit >= fill)
         {
-            var_v1 = temp_s4;
+            limit = fill;
         }
     }
     else
-
     {
-        var_v1 = 0;
+        limit = 0;
     }
-    temp_s4 = var_v1;
-    var_v1 = 0;
-    var_s1 = var_v1;
-    if (temp_s4 > 0)
+    fill = limit;
 
+    for (i = 0; i < fill; i++)
     {
-        temp_s6 = temp_s2 * 0x24;
-        do
-
+        for (j = 0; j < 1000; j++)
         {
-            for (var_s0 = 0; var_s0 < 1000; var_s0++)
-
+            pick = rand() / 4096;
+            if (FIELD_MENU_ACTIONS->groups[group].slots[pick].item_index == 0xFF)
             {
-                var_a1 = rand() / 4096;
-                if (((Layout*)((u8*)g_saved_game.bytes + var_a1 * 16 + temp_s2 * 0x8C))->entry == 0xFF)
-
+                break;
+            }
+        }
+        if (FIELD_MENU_ACTIONS->groups[group].slots[pick].item_index == 0xFF)
+        {
+            func_800C0260(group, pick);
+        }
+        else
+        {
+            for (j = 0; j < 8; j++)
+            {
+                if (FIELD_MENU_ACTIONS->groups[group].slots[j].item_index == 0xFF)
                 {
+                    func_800C0260(group, j);
                     break;
                 }
             }
-            if (((Layout*)((u8*)g_saved_game.bytes + var_a1 * 16 + temp_s2 * 0x8C))->entry == 0xFF)
-
-            {
-                func_800C0260(temp_s2, var_a1);
-            }
-            else
-
-            {
-                for (var_s0 = 0; var_s0 < 8; var_s0++)
-
-                {
-                    if (((Layout*)((u8*)g_saved_game.bytes + var_s0 * 16 + temp_s2 * 0x8C))->entry == 0xFF)
-
-                    {
-                        func_800C0260(temp_s2, var_s0);
-                        break;
-                    }
-                }
-            }
-            var_s1++;
-        } while (var_s1 < temp_s4);
+        }
     }
-    var_s1 = 0;
-    if (temp_s7 != 0)
 
+    for (i = 0; i < item_slot_count; i++)
     {
-        temp_v1_4 = (u8*)g_saved_game.bytes;
-        var_a1 = temp_s2 * 0x8C;
-        do
-
+        item = FIELD_MENU_ACTIONS->groups[group].item_slots[i];
+        if (item < 0xFF)
         {
-            var_v1 = ((Layout*)((var_s1 + var_a1) + (u32)temp_v1_4))->slots[0];
-            if ((s32)var_v1 < 0xFF)
-
-            {
-                temp_v1_4[var_v1 + 0x25E0]--;
-            }
-            var_s1 += 1;
-
-        } while (var_s1 < temp_s7);
+            FIELD_PAD_CTX->item_counts[item]--;
+        }
     }
     func_800C7C88();
 }
 
-/**
- * @brief Clears the active menu entry's high flag nibble and status bytes.
- *
- * For the entry selected by D_80122C1F (stride 0x8C in g_saved_game.bytes),
- * masks off bits 12-15 of its 0x26E4 word and writes 0xFF to the four status
- * bytes at 0x26EC.
- */
+/** @brief Clear the used item-slot count of group D_80122C1F and empty its item slots. */
 void func_800C7C88(void)
 {
-    u8* base = g_saved_game.bytes;
-    u8* base2;
-    s32 offset = D_80122C1F * 0x8C;
-    s32 offset2;
+    s32 group;
     s32 i;
 
-    *(u32*)(base + offset + 0x26E4) &= 0xFFFF0FFF;
-    i = 0;
-    base2 = base;
-    offset2 = offset;
-    for (; i < 4; i++)
-
+    group = D_80122C1F;
+    FIELD_MENU_ACTIONS->groups[group].flags &= 0xFFFF0FFF;
+    for (i = 0; i < 4; i++)
     {
-        base2[i + offset2 + 0x26EC] = 0xFF;
+        FIELD_MENU_ACTIONS->groups[group].item_slots[i] = 0xFF;
     }
 }
 
-/**
- * @brief Resets the eight menu action slots and clears a nibble of the flags.
- *
- * Reads the flags word at @c g_saved_game.bytes + 0x26E4, zeroes the eight
- * slots at stride 0x10 from +0x26F0 (each slot's word set to 0 and its status
- * byte at +4 set to 0xFF), then clears bits 12-15 of the flags word.
- */
+/** @brief Free the eight action slots of group 0 and clear its used item-slot count. */
 void func_800C7CF8(void)
 {
-    u8* base = g_saved_game.bytes;
-    s32 flags = *(s32*)(base + 0x26E4);
+    FieldMenuActionData* data;
+    u32 flags;
 
-    *(s32*)(base + 0x26F0) = 0;
-    *(base + 0x26F4) = 0xFF;
-    *(s32*)(base + 0x2700) = 0;
-    *(base + 0x2704) = 0xFF;
-    *(s32*)(base + 0x2710) = 0;
-    *(base + 0x2714) = 0xFF;
-    *(s32*)(base + 0x2720) = 0;
-    *(base + 0x2724) = 0xFF;
-    *(s32*)(base + 0x2730) = 0;
-    *(base + 0x2734) = 0xFF;
-    *(s32*)(base + 0x2740) = 0;
-    *(base + 0x2744) = 0xFF;
-    *(s32*)(base + 0x2750) = 0;
-    *(base + 0x2754) = 0xFF;
-    *(s32*)(base + 0x2760) = 0;
-    *(base + 0x2764) = 0xFF;
-
-    *(s32*)(base + 0x26E4) = flags & 0xFFFF0FFF;
+    data = FIELD_MENU_ACTIONS;
+    flags = data->groups[0].flags;
+    data->groups[0].slots[0].handle = 0;
+    data->groups[0].slots[0].item_index = 0xFF;
+    data->groups[0].slots[1].handle = 0;
+    data->groups[0].slots[1].item_index = 0xFF;
+    data->groups[0].slots[2].handle = 0;
+    data->groups[0].slots[2].item_index = 0xFF;
+    data->groups[0].slots[3].handle = 0;
+    data->groups[0].slots[3].item_index = 0xFF;
+    data->groups[0].slots[4].handle = 0;
+    data->groups[0].slots[4].item_index = 0xFF;
+    data->groups[0].slots[5].handle = 0;
+    data->groups[0].slots[5].item_index = 0xFF;
+    data->groups[0].slots[6].handle = 0;
+    data->groups[0].slots[6].item_index = 0xFF;
+    data->groups[0].slots[7].handle = 0;
+    data->groups[0].slots[7].item_index = 0xFF;
+    data->groups[0].flags = flags & 0xFFFF0FFF;
 }
 
-/**
- * @brief Decodes a little-endian offset from the field table and dispatches
- *        the referenced entry.
- */
+/** @brief Publish the text of the chosen action item (D_80122C14) to macro 4. */
 void func_800C7D5C(void)
 {
-    s32 offset = (D_80122C14 + 0x58) * 2;
+    s32 item;
 
-    func_800B2844(4, D_800F0E98[offset] + (D_800F0E98[offset + 1] << 8) + D_800F0E98, 0xFF);
+    item = D_80122C14 + FIELD_ACTION_ITEM_BASE;
+    func_800B2844(4, FIELD_MENU_TEXT(item), 0xFF);
 }
 
 /**
- * @brief Move the active field actor one step in its current heading.
+ * @brief Place actor D_80122C0D next to actor 0, on the side it faces.
+ *
+ * Takes actor 0's position (8.8 fixed point) and heading (0x00-0xFF), steps
+ * 0x14 along x or 0xC along z for the four main headings and 0xA along both
+ * axes in between, and moves the actor there, 0xC higher.
  */
 void func_800C7DB8(void)
 {
     s32 pos[3];
-    s32 x;
-    s32 y;
-    s32 z;
     s32 heading;
-    s32 owner;
+    s32 actor;
 
-    owner = D_80122C0D;
+    actor = D_80122C0D;
     func_80087F44(0, pos);
-
-    x = pos[0];
-    if (x < 0)
-
-    {
-        x += 0xFF;
-    }
-    pos[0] = x >> 8;
-
-    y = pos[1];
-    if (y < 0)
-
-    {
-        y += 0xFF;
-    }
-    pos[1] = y >> 8;
-
-    z = pos[2];
-    if (z < 0)
-
-    {
-        z += 0xFF;
-    }
-    pos[2] = z >> 8;
+    pos[0] /= 256;
+    pos[1] /= 256;
+    pos[2] /= 256;
 
     heading = func_8008B288(0);
     if (heading == 0)
-
     {
         pos[0] += 0x14;
     }
-    else if ((u32)(heading - 1) < 0x3F)
-
+    else if (heading >= 0x01 && heading < 0x40)
     {
-        pos[0] = pos[0] + 0xA;
-        pos[2] = pos[2] - 0xA;
+        pos[0] += 0xA;
+        pos[2] -= 0xA;
     }
     else if (heading == 0x40)
-
     {
         pos[2] -= 0xC;
     }
-    else if ((u32)(heading - 0x41) < 0x3F)
-
+    else if (heading >= 0x41 && heading < 0x80)
     {
-        pos[0] = pos[0] - 0xA;
-        pos[2] = pos[2] - 0xA;
+        pos[0] -= 0xA;
+        pos[2] -= 0xA;
     }
     else if (heading == 0x80)
-
     {
         pos[0] -= 0x14;
     }
-    else if ((u32)(heading - 0x81) < 0x3F)
-
+    else if (heading >= 0x81 && heading < 0xC0)
     {
-        pos[0] = pos[0] - 0xA;
-        pos[2] = pos[2] + 0xA;
+        pos[0] -= 0xA;
+        pos[2] += 0xA;
     }
     else if (heading == 0xC0)
-
     {
         pos[2] += 0xC;
     }
-    else if ((u32)(heading - 0xC1) < 0x3F)
-
+    else if (heading >= 0xC1 && heading < 0x100)
     {
-        pos[0] = pos[0] + 0xA;
-        pos[2] = pos[2] + 0xA;
+        pos[0] += 0xA;
+        pos[2] += 0xA;
     }
 
-    func_80087D8C(owner, pos[0], pos[1] - 0xC, pos[2]);
+    func_80087D8C(actor, pos[0], pos[1] - 0xC, pos[2]);
 }
 
-/** @brief Release the selected action slot and replenish its entry count. */
+/**
+ * @brief Free the action slot selected by D_80122C0D and give its item back.
+ * @note The item count is clamped to 0-99.
+ */
 void func_800C7F44(void)
 {
-    s32 va;
-    s32 vb;
-    s32 value;
-    s32 out;
-    u8 idx;
+    s32 slot;
+    s32 group;
+    s32 count;
+    s32 clamped;
+    u8 item;
 
-    va = ((FieldActionViewC7F44*)&D_80122C0D)->unk0;
-    va -= 4;
-    vb = ((FieldActionViewC7F44*)&D_80122C0D)->unk12;
-
+    slot = FIELD_MENU_ACTION_SLOT->action_slot;
+    slot -= 4;
+    group = FIELD_MENU_ACTION_SLOT->group;
+    item = FIELD_MENU_ACTIONS->groups[group].slots[slot].item_index;
+    count = FIELD_PAD_CTX->item_counts[item];
+    count += 1;
+    if (count >= 0)
     {
-        u8* buf = g_saved_game.bytes;
-        u8* base = buf + (va * 0x10 + vb * 0x8C);
-        idx = base[0x26F4];
-    }
-    value = g_saved_game.bytes[idx + 0x25E0];
-    value += 1;
-    if (value >= 0)
-    {
-        out = 0x63;
-        if (value < 0x64)
+        clamped = 99;
+        if (count < 100)
         {
-            out = value;
+            clamped = count;
         }
     }
     else
     {
-        out = 0;
+        clamped = 0;
     }
 
-    {
-        u8* buf = g_saved_game.bytes;
-        u8* base;
-        buf[idx + 0x25E0] = out;
-        base = buf + (va * 0x10 + vb * 0x8C);
-        *(s32*)(base + 0x26F0) = 0;
-        base[0x26F4] = 0xFF;
-        base[0x26F8] = 0;
-        base[0x26F9] = 0;
-        base[0x26FA] = 0;
-        base[0x26FB] = 0;
-        base[0x26FC] = 0;
-        base[0x26FD] = 0;
-        base[0x26FE] = 0;
-        base[0x26FF] = 0;
-    }
-}
-
-/** @brief Read the selected action slot and dispatch its entry description. */
-void func_800C8014(void)
-{
-    u8* base;
-    u8* menu;
-    u8* table;
-    u8* lo;
-    u8* hi;
-    s32 va;
-    s32 offset;
-    s32 offset2;
-    s32 value;
-    u8 idx;
-
-    va = ((FieldActionViewC8014*)&D_80122C0D)->unk0 - 4;
-    menu = g_saved_game.bytes;
-    table = D_800F0E98;
-    base = menu + (va * 0x10 + ((FieldActionViewC8014*)&D_80122C0D)->unk12 * 0x8C);
-    value = *(volatile s32*)(base + 0x26F0);
-    ((FieldActionViewC8014*)&D_80122C0D)->unk10 = value;
-    idx = base[0x26F4];
-    offset = idx * 2;
-    lo = table + offset;
-    offset2 = offset + 1;
-    hi = table + offset2;
-    func_800B2844(0, *lo + (*hi << 8) + table, 0xFF);
-    ((FieldActionViewC8014*)&D_80122C0D)->unkF = idx;
+    FIELD_PAD_CTX->item_counts[item] = clamped;
+    FIELD_MENU_ACTIONS->groups[group].slots[slot].handle = 0;
+    FIELD_MENU_ACTIONS->groups[group].slots[slot].item_index = 0xFF;
+    FIELD_MENU_ACTIONS->groups[group].slots[slot].counters[0] = 0;
+    FIELD_MENU_ACTIONS->groups[group].slots[slot].counters[1] = 0;
+    FIELD_MENU_ACTIONS->groups[group].slots[slot].counters[2] = 0;
+    FIELD_MENU_ACTIONS->groups[group].slots[slot].counters[3] = 0;
+    FIELD_MENU_ACTIONS->groups[group].slots[slot].counters[4] = 0;
+    FIELD_MENU_ACTIONS->groups[group].slots[slot].counters[5] = 0;
+    FIELD_MENU_ACTIONS->groups[group].slots[slot].counters[6] = 0;
+    FIELD_MENU_ACTIONS->groups[group].slots[slot].counters[7] = 0;
 }
 
 /**
- * @brief Copy the gosub-selected menu record into the first free slot.
+ * @brief Load the action slot selected by D_80122C0D into its script variables.
+ * @note Publishes the slot item's text to macro 0 and stores the item in D_80122C1C.
+ */
+void func_800C8014(void)
+{
+    FieldMenuActionData* shifted;
+    u8* base;
+    s32 slot;
+    s32 handle;
+    u8 item;
+
+    slot = FIELD_MENU_ACTION_SLOT->action_slot - 4;
+    base = g_saved_game.bytes;
+    shifted = FIELD_MENU_ACTIONS_SHIFTED(base, FIELD_MENU_ACTION_SLOT->group, slot);
+    handle = shifted->groups[0].slots[0].handle;
+    FIELD_MENU_ACTION_SLOT->handle = handle;
+    item = shifted->groups[0].slots[0].item_index;
+    func_800B2844(0, FIELD_MENU_TEXT(item), 0xFF);
+    FIELD_MENU_ACTION_SLOT->item_index = item;
+}
+
+/**
+ * @brief Copy the gosub-selected inventory record into the first free pending record.
+ *
+ * Sets D_80122C1F to 0 when the gosub returned nothing, 2 when the record
+ * holds no item, 3 when a pending record already holds the same item and 1
+ * when the record was copied (its 0x34 word is then at least 1).
  */
 void func_800C80BC(void)
 {
-    s32 selected_index;
-    u8* selected_record;
-    u8* initial_base;
-    u8* scan_base;
-    s32 record_index;
-    s32 count;
+    s32 selected;
+    s32 i;
+    s32 value;
 
     D_80122C1F = 0;
     if (g_gosub_result_count == 0)
@@ -2540,53 +2312,35 @@ void func_800C80BC(void)
         return;
     }
 
-    selected_index = g_gosub_result_values[0];
-    initial_base = g_saved_game.bytes;
+    selected = g_gosub_result_values[0];
+    if (FIELD_MENU_ITEMS->inventory[selected].identity[0] == 0 && FIELD_MENU_ITEMS->inventory[selected].identity[1] == 0)
     {
-        u8* check_record = initial_base + selected_index * 0x40;
-        if (*(s32*)(check_record + 0xD18) == 0)
+        D_80122C1F = 2;
+        return;
+    }
+
+    for (i = 0; i < 4; i++)
+    {
+        if (FIELD_MENU_ITEMS->pending[i].active != 0 && FIELD_MENU_ITEMS->inventory[selected].identity[0] == FIELD_MENU_ITEMS->pending[i].identity[0] &&
+            FIELD_MENU_ITEMS->inventory[selected].identity[1] == FIELD_MENU_ITEMS->pending[i].identity[1])
         {
-            if (*(s32*)(check_record + 0xD1C) == 0)
-            {
-                D_80122C1F = 2;
-                return;
-            }
+            D_80122C1F = 3;
+            return;
         }
     }
 
-    record_index = 0;
-    scan_base = g_saved_game.bytes;
-    selected_record = scan_base + selected_index * 0x40;
-    while (record_index < 4)
+    for (i = 0; i < 4; i++)
     {
-        u8* record = (u8*)((s32)g_saved_game.bytes + record_index * 0x40);
-        if (record[0x3160] != 0)
+        if (FIELD_MENU_ITEMS->pending[i].active == 0)
         {
-            if (*(s32*)(selected_record + 0xD18) == *(s32*)(record + 0x3198))
+            field_copy_inventory_record(&FIELD_MENU_ITEMS->pending[i], &FIELD_MENU_ITEMS->inventory[selected]);
+            func_800C2A88(selected);
+            value = FIELD_MENU_ITEMS->pending[i].unknown_0x34;
+            if (value == 0)
             {
-                if (*(s32*)(selected_record + 0xD1C) == *(s32*)(record + 0x319C))
-                {
-                    D_80122C1F = 3;
-                    return;
-                }
+                value = 1;
             }
-        }
-        record_index++;
-    }
-
-    for (record_index = 0; record_index < 4; record_index++)
-    {
-        u8* record = (u8*)((s32)g_saved_game.bytes + record_index * 0x40);
-        if (record[0x3160] == 0)
-        {
-            field_copy_inventory_record(g_saved_game.bytes + record_index * 0x40 + 0x3160, g_saved_game.bytes + 0xCE0 + selected_index * 0x40);
-            func_800C2A88(selected_index);
-            count = *(s32*)(record + 0x3194);
-            if (count == 0)
-            {
-                count = 1;
-            }
-            *(s32*)(record + 0x3194) = count;
+            FIELD_MENU_ITEMS->pending[i].unknown_0x34 = value;
             D_80122C1F = 1;
             return;
         }
@@ -2596,244 +2350,143 @@ void func_800C80BC(void)
 /** @brief Open the pending-record selection screen sequence. */
 void func_800C8220(void)
 {
-    FieldGosubSequence local;
+    FieldGosubSequence sequence;
 
-    local = D_80051EB4;
-    field_open_gosub_screen_sequence(&local);
+    sequence = D_80051EB4;
+    field_open_gosub_screen_sequence(&sequence);
 }
 
 /**
- * @brief Offset the current field position according to its heading and submit the result.
+ * @brief Place actor 0xC next to actor 0, on the side it faces.
+ *
+ * Like func_800C7DB8, with steps of 0xA along one axis for the four main
+ * headings and 8 along both axes in between, at the same height.
  */
 void func_800C8260(void)
 {
     FieldPosition pos;
-    s32 dir;
-    s32 x;
-    s32 y;
-    s32 z;
+    s32 heading;
 
     func_80087F44(0, (s32*)&pos);
+    pos.x /= 256;
+    pos.y /= 256;
+    pos.z /= 256;
 
-    x = pos.x;
-    if (x < 0)
-
-    {
-        x += 0xFF;
-    }
-    pos.x = x >> 8;
-
-    y = pos.y;
-    if (y < 0)
-
-    {
-        y += 0xFF;
-    }
-    pos.y = y >> 8;
-
-    z = pos.z;
-    if (z < 0)
-
-    {
-        z += 0xFF;
-    }
-    pos.z = z >> 8;
-
-    dir = func_8008B288(0);
-    if (dir == 0)
-
+    heading = func_8008B288(0);
+    if (heading == 0)
     {
         pos.x += 0xA;
     }
-    else
-
+    else if (heading >= 0x01 && heading < 0x40)
     {
-        if ((u32)(dir - 1) < 0x3F)
-
-        {
-            pos.x += 8;
-            pos.z -= 8;
-        }
-        else if (dir == 0x40)
-
-        {
-            pos.z -= 0xA;
-        }
-        else if ((u32)(dir - 0x41) < 0x3F)
-
-        {
-            pos.x -= 8;
-            pos.z -= 8;
-        }
-        else if (dir == 0x80)
-
-        {
-            pos.x -= 0xA;
-        }
-        else if ((u32)(dir - 0x81) < 0x3F)
-
-        {
-            pos.x -= 8;
-            pos.z += 8;
-        }
-        else if (dir == 0xC0)
-
-        {
-            pos.z += 0xA;
-        }
-        else if ((u32)(dir - 0xC1) < 0x3F)
-
-        {
-            pos.x += 8;
-            pos.z += 8;
-        }
+        pos.x += 8;
+        pos.z -= 8;
+    }
+    else if (heading == 0x40)
+    {
+        pos.z -= 0xA;
+    }
+    else if (heading >= 0x41 && heading < 0x80)
+    {
+        pos.x -= 8;
+        pos.z -= 8;
+    }
+    else if (heading == 0x80)
+    {
+        pos.x -= 0xA;
+    }
+    else if (heading >= 0x81 && heading < 0xC0)
+    {
+        pos.x -= 8;
+        pos.z += 8;
+    }
+    else if (heading == 0xC0)
+    {
+        pos.z += 0xA;
+    }
+    else if (heading >= 0xC1 && heading < 0x100)
+    {
+        pos.x += 8;
+        pos.z += 8;
     }
 
     func_80087D8C(0xC, pos.x, pos.y, pos.z);
 }
 
 /**
- * @brief Advance the eight byte counters in active menu action slots.
+ * @brief Increment each of the eight counters of action slot @p slot once.
+ * @param slot An action slot lvalue (FieldMenuActionSlot).
+ */
+#define FIELD_STEP_ACTION_COUNTERS(slot)                                                                                                                       \
+    ((slot).counters[0]++, (slot).counters[1]++, (slot).counters[2]++, (slot).counters[3]++, (slot).counters[4]++, (slot).counters[5]++, (slot).counters[6]++, \
+     (slot).counters[7]++)
+
+/**
+ * @brief Advance the counters of every used action slot of the four groups.
+ * @note A first counter of zero only becomes 1; below 0xF0 all eight counters
+ *       advance by 9; from 0xF0 on they stay.
  */
 void func_800C83DC(void)
 {
-    s32 slot_index;
-    s32 record_offset;
-    s32 record_index;
-    s32 slot_offset;
-    u32 counter_value;
-    u8 first_counter;
-    u8* slot;
-    u8* menu_base;
+    FieldMenuActionData* shifted;
+    u8* base;
+    s32 group;
+    s32 slot;
+    u8 counter;
 
-    record_index = 0;
-    menu_base = g_saved_game.bytes;
-    record_offset = record_index;
-    do
+    group = 0;
+    base = g_saved_game.bytes;
+    for (; group < 4; group++)
     {
-        slot_index = 0;
-        do
+        for (slot = 0; slot < 8; slot++)
         {
-            slot_offset = slot_index * 0x10;
-            slot = (u8*)(slot_offset + record_offset + (s32)menu_base);
-            if (slot[0x26F4] != 0xFF)
+            shifted = FIELD_MENU_ACTIONS_SHIFTED(base, group, slot);
+            if (shifted->groups[0].slots[0].item_index != 0xFF)
             {
-                first_counter = slot[0x26F8];
-                counter_value = first_counter & 0xFF;
-                if (counter_value == 0)
+                counter = shifted->groups[0].slots[0].counters[0];
+                if (counter == 0)
                 {
-                    slot[0x26F8] = (u8)(first_counter + 1);
+                    shifted->groups[0].slots[0].counters[0] = counter + 1;
                 }
-                else if (counter_value < 0xF0U)
+                else if (counter < 0xF0)
                 {
-                    slot[0x26F8] = (u8)(first_counter + 1);
-                    slot[0x26F9] = (u8)(slot[0x26F9] + 1);
-                    slot[0x26FA] = (u8)(slot[0x26FA] + 1);
-                    slot[0x26FB] = (u8)(slot[0x26FB] + 1);
-                    slot[0x26FC] = (u8)(slot[0x26FC] + 1);
-                    slot[0x26FD] = (u8)(slot[0x26FD] + 1);
-                    slot[0x26FE] = (u8)(slot[0x26FE] + 1);
-                    slot[0x26FF] = (u8)(slot[0x26FF] + 1);
-                    slot[0x26F8] = (u8)(slot[0x26F8] + 1);
-                    slot[0x26F9] = (u8)(slot[0x26F9] + 1);
-                    slot[0x26FA] = (u8)(slot[0x26FA] + 1);
-                    slot[0x26FB] = (u8)(slot[0x26FB] + 1);
-                    slot[0x26FC] = (u8)(slot[0x26FC] + 1);
-                    slot[0x26FD] = (u8)(slot[0x26FD] + 1);
-                    slot[0x26FE] = (u8)(slot[0x26FE] + 1);
-                    slot[0x26FF] = (u8)(slot[0x26FF] + 1);
-                    slot[0x26F8] = (u8)(slot[0x26F8] + 1);
-                    slot[0x26F9] = (u8)(slot[0x26F9] + 1);
-                    slot[0x26FA] = (u8)(slot[0x26FA] + 1);
-                    slot[0x26FB] = (u8)(slot[0x26FB] + 1);
-                    slot[0x26FC] = (u8)(slot[0x26FC] + 1);
-                    slot[0x26FD] = (u8)(slot[0x26FD] + 1);
-                    slot[0x26FE] = (u8)(slot[0x26FE] + 1);
-                    slot[0x26FF] = (u8)(slot[0x26FF] + 1);
-                    slot[0x26F8] = (u8)(slot[0x26F8] + 1);
-                    slot[0x26F9] = (u8)(slot[0x26F9] + 1);
-                    slot[0x26FA] = (u8)(slot[0x26FA] + 1);
-                    slot[0x26FB] = (u8)(slot[0x26FB] + 1);
-                    slot[0x26FC] = (u8)(slot[0x26FC] + 1);
-                    slot[0x26FD] = (u8)(slot[0x26FD] + 1);
-                    slot[0x26FE] = (u8)(slot[0x26FE] + 1);
-                    slot[0x26FF] = (u8)(slot[0x26FF] + 1);
-                    slot[0x26F8] = (u8)(slot[0x26F8] + 1);
-                    slot[0x26F9] = (u8)(slot[0x26F9] + 1);
-                    slot[0x26FA] = (u8)(slot[0x26FA] + 1);
-                    slot[0x26FB] = (u8)(slot[0x26FB] + 1);
-                    slot[0x26FC] = (u8)(slot[0x26FC] + 1);
-                    slot[0x26FD] = (u8)(slot[0x26FD] + 1);
-                    slot[0x26FE] = (u8)(slot[0x26FE] + 1);
-                    slot[0x26FF] = (u8)(slot[0x26FF] + 1);
-                    slot[0x26F8] = (u8)(slot[0x26F8] + 1);
-                    slot[0x26F9] = (u8)(slot[0x26F9] + 1);
-                    slot[0x26FA] = (u8)(slot[0x26FA] + 1);
-                    slot[0x26FB] = (u8)(slot[0x26FB] + 1);
-                    slot[0x26FC] = (u8)(slot[0x26FC] + 1);
-                    slot[0x26FD] = (u8)(slot[0x26FD] + 1);
-                    slot[0x26FE] = (u8)(slot[0x26FE] + 1);
-                    slot[0x26FF] = (u8)(slot[0x26FF] + 1);
-                    slot[0x26F8] = (u8)(slot[0x26F8] + 1);
-                    slot[0x26F9] = (u8)(slot[0x26F9] + 1);
-                    slot[0x26FA] = (u8)(slot[0x26FA] + 1);
-                    slot[0x26FB] = (u8)(slot[0x26FB] + 1);
-                    slot[0x26FC] = (u8)(slot[0x26FC] + 1);
-                    slot[0x26FD] = (u8)(slot[0x26FD] + 1);
-                    slot[0x26FE] = (u8)(slot[0x26FE] + 1);
-                    slot[0x26FF] = (u8)(slot[0x26FF] + 1);
-                    slot[0x26F8] = (u8)(slot[0x26F8] + 1);
-                    slot[0x26F9] = (u8)(slot[0x26F9] + 1);
-                    slot[0x26FA] = (u8)(slot[0x26FA] + 1);
-                    slot[0x26FB] = (u8)(slot[0x26FB] + 1);
-                    slot[0x26FC] = (u8)(slot[0x26FC] + 1);
-                    slot[0x26FD] = (u8)(slot[0x26FD] + 1);
-                    slot[0x26FE] = (u8)(slot[0x26FE] + 1);
-                    slot[0x26FF] = (u8)(slot[0x26FF] + 1);
-                    slot[0x26F8] = (u8)(slot[0x26F8] + 1);
-                    slot[0x26F9] = (u8)(slot[0x26F9] + 1);
-                    slot[0x26FA] = (u8)(slot[0x26FA] + 1);
-                    slot[0x26FB] = (u8)(slot[0x26FB] + 1);
-                    slot[0x26FC] = (u8)(slot[0x26FC] + 1);
-                    slot[0x26FD] = (u8)(slot[0x26FD] + 1);
-                    slot[0x26FE] = (u8)(slot[0x26FE] + 1);
-                    slot[0x26FF] = (u8)(slot[0x26FF] + 1);
+                    FIELD_STEP_ACTION_COUNTERS(shifted->groups[0].slots[0]);
+                    FIELD_STEP_ACTION_COUNTERS(shifted->groups[0].slots[0]);
+                    FIELD_STEP_ACTION_COUNTERS(shifted->groups[0].slots[0]);
+                    FIELD_STEP_ACTION_COUNTERS(shifted->groups[0].slots[0]);
+                    FIELD_STEP_ACTION_COUNTERS(shifted->groups[0].slots[0]);
+                    FIELD_STEP_ACTION_COUNTERS(shifted->groups[0].slots[0]);
+                    FIELD_STEP_ACTION_COUNTERS(shifted->groups[0].slots[0]);
+                    FIELD_STEP_ACTION_COUNTERS(shifted->groups[0].slots[0]);
+                    FIELD_STEP_ACTION_COUNTERS(shifted->groups[0].slots[0]);
                 }
             }
-            slot_index += 1;
-        } while (slot_index < 8);
-        record_index += 1;
-        record_offset += 0x8C;
-    } while (record_index < 4);
+        }
+    }
 }
 
-/**
- * @brief Reset the selected menu action slot to its inactive state.
- * @note Matched under GCC 2.7.2 CDK. Folding the -4 adjustment into
- *       slot_index before constructing the record address makes GCC load
- *       action_slot_id before materializing the global base, matching the
- *       target schedule exactly.
- */
+/** @brief Free the action slot selected by D_80122C0D without giving its item back. */
 void field_reset_menu_action_slot(void)
 {
-    FieldMenuActionSlotView* slot;
-    u8* menu;
-    s32 slot_index;
+    FieldMenuActionData* shifted;
+    u8* base;
+    s32 slot;
 
-    slot_index = ((FieldMenuCommandState*)&D_80122C0D)->action_slot_id - 4;
-    menu = g_saved_game.bytes;
-    slot = (FieldMenuActionSlotView*)(menu + (slot_index * 0x10 + ((FieldMenuCommandState*)&D_80122C0D)->record_index * 0x8C));
-    slot->entry_index = 0xFF;
-    slot->handle = 0;
-    slot->counters[0] = 0;
-    slot->counters[1] = 0;
-    slot->counters[2] = 0;
-    slot->counters[3] = 0;
-    slot->counters[4] = 0;
-    slot->counters[5] = 0;
-    slot->counters[6] = 0;
-    slot->counters[7] = 0;
-    *(s32*)&slot->entry_index |= ~0xFF;
+    slot = FIELD_MENU_ACTION_SLOT->action_slot - 4;
+    base = g_saved_game.bytes;
+    shifted = FIELD_MENU_ACTIONS_SHIFTED(base, FIELD_MENU_ACTION_SLOT->group, slot);
+    shifted->groups[0].slots[0].item_index = 0xFF;
+    shifted->groups[0].slots[0].handle = 0;
+    shifted->groups[0].slots[0].counters[0] = 0;
+    shifted->groups[0].slots[0].counters[1] = 0;
+    shifted->groups[0].slots[0].counters[2] = 0;
+    shifted->groups[0].slots[0].counters[3] = 0;
+    shifted->groups[0].slots[0].counters[4] = 0;
+    shifted->groups[0].slots[0].counters[5] = 0;
+    shifted->groups[0].slots[0].counters[6] = 0;
+    shifted->groups[0].slots[0].counters[7] = 0;
+    /* Bytes 5-7 of the slot are set to 0xFF as part of their word. */
+    *(u32*)&shifted->groups[0].slots[0].item_index |= ~0xFF;
 }
 
 /** @brief Reset layout slots and activate the default set in order. */
@@ -2879,11 +2532,9 @@ void func_800C8938(void)
 }
 
 /**
- * @brief Scan the five menu layout records and build a compacted index of the
- *        active entries whose flag bit 30 is set.
- * @note For each active record (offset 0x2EF4 non-zero) with bit 30 of the word
- *       at 0x2F38 set, appends its 0x2F09 id and slot index to the D_80122C00.golem.slot
- *       tables and clears the record's 0x2EF4 marker via func_800B2844.
+ * @brief List the occupied small history records whose selection is restricted.
+ * @note Stores each listed record's entry id from D_80122C00 and its index from
+ *       D_80122C1D, and publishes its name to macro 0, 1, ... in order.
  * @see decomp.me (100.00%)
  */
 void func_800C8964(void)
@@ -2891,122 +2542,95 @@ void func_800C8964(void)
     s32 count;
     s32 i;
     u8* ids;
-    u8* slots;
-    u8* record;
-    u8* arg;
-    u32 bit;
+    u8* indices;
 
-    count = 0;
-    i = count;
+    i = count = 0;
     ids = D_80122C00.bytes;
-    slots = ids + 0x1D;
-    record = g_saved_game.bytes;
-    arg = record + 0x2EF4;
-    do
+    indices = ids + 0x1D;
+    for (; i < SMALL_HISTORY_RECORD_COUNT; i++)
     {
-        record = &g_saved_game.bytes[i * 0x60];
-        if (record[0x2EF4] != 0)
+        if (FIELD_PAD_CTX->small_history_records[i].name[0] != 0 && FIELD_PAD_CTX->small_history_records[i].selection_flags.selection_restricted == 1)
         {
-            bit = (*(u32*)(record + 0x2F38) >> 30) & 1;
-            if (bit == 1)
-            {
-                *(u8*)((u32)count + (u32)ids) = record[0x2F09];
-                *(u8*)((u32)count + (u32)slots) = i;
-                func_800B2844(count, arg, 0xFF);
-                count++;
-            }
+            FIELD_TABLE_BYTE(ids, count) = FIELD_PAD_CTX->small_history_records[i].unknown_0x15;
+            FIELD_TABLE_BYTE(indices, count) = i;
+            func_800B2844(count, FIELD_PAD_CTX->small_history_records[i].name, 0xFF);
+            count++;
         }
-        arg += 0x60;
-        i++;
-    } while (i < 5);
+    }
 }
 
 /**
- * @brief Validate the selected shared record and prepare its menu display state.
+ * @brief Check the selected shared item record and publish its description.
+ *
+ * An empty record sets status 1. A record whose identity words match an
+ * inventory, equipment or pending record sets status 2. Otherwise the name,
+ * name text, kind, category, stat value and item value go to the script
+ * variables, with the value's digit count at D_80122C0C.
  */
 void func_800C8A2C(void)
 {
-    s32 work_index;
+    s32 i;
     s32 duplicate_found;
-    s32 selected_index;
-    u8* initial_record;
-    u8* selected_record;
-    u8* detail_record;
-    u8* search_record;
-    u8* scan;
-    u32 packed_metadata;
-    s32 record_type;
-    s32 lookup_row;
-    s32 metadata_index;
-    s32 display_value;
+    s32 selected;
+    FieldMenuItemRecord* record;
+    FieldMenuItemRecord* search;
+    FieldMenuItemRecord* detail;
+    FieldMenuItemRecord* shown;
+    u32 attributes;
+    s32 kind;
+    s32 category;
+    s32 name_index;
+    s32 value;
     u32 low_word;
     u32 high_word;
     s32 nibble_sum;
-    s32 special_flag;
+    s32 special;
     u32 amount;
     s32 digits;
-    u8* lookup_base;
-    s32 lookup_offset;
-    u8* display;
-    u8* status;
-    u8* initial_base;
+    FieldMenuItemInfoVars* info;
+    FieldMenuRecordSelectVars* selection;
 
-    status = &D_80122C02;
-    status[1] = 0;
-    selected_index = D_80122C02;
-    initial_base = D_80122A08;
-    initial_record = (selected_index << 6) + initial_base;
-    if (initial_record[0] == 0)
+    selection = FIELD_MENU_RECORD_SELECT;
+    selection->status = 0;
+    selected = selection->index;
+    FIELD_SET_SHARED_RECORD(record, selected);
+    if (record->active == 0)
     {
-        status[1] = 1;
+        selection->status = 1;
         return;
     }
 
     duplicate_found = 0;
-    work_index = duplicate_found;
-    search_record = initial_record;
-    scan = g_saved_game.bytes;
-    for (; work_index < 100; work_index++)
+    i = 0;
+    search = record;
+    for (; i < INVENTORY_RECORD_COUNT; i++)
     {
-        if (((FieldMenuRecordLayout*)(scan + work_index * 0x40))->unkCE0 != 0 &&
-            ((FieldMenuRecordLayout*)(scan + work_index * 0x40))->unkD18 == *(u32*)(search_record + 0x38) &&
-            ((FieldMenuRecordLayout*)(scan + work_index * 0x40))->unkD1C == *(u32*)(search_record + 0x3C))
+        if (FIELD_MENU_ITEMS->inventory[i].active != 0 && FIELD_MENU_ITEMS->inventory[i].identity[0] == search->identity[0] &&
+            FIELD_MENU_ITEMS->inventory[i].identity[1] == search->identity[1])
         {
             duplicate_found = 1;
             break;
         }
     }
 
-    work_index = 0;
+    i = 0;
+    FIELD_SET_SHARED_RECORD(search, selected);
+    for (; i < 8; i++)
     {
-        u8* record_base;
-        record_base = D_80122A08;
-        search_record = record_base + (selected_index << 6);
-    }
-    scan = g_saved_game.bytes;
-    for (; work_index < 8; work_index++)
-    {
-        if (((FieldMenuRecordLayout*)(scan + work_index * 0x40))->unk640 != 0 &&
-            ((FieldMenuRecordLayout*)(scan + work_index * 0x40))->unk678 == *(u32*)(search_record + 0x38) &&
-            ((FieldMenuRecordLayout*)(scan + work_index * 0x40))->unk67C == *(u32*)(search_record + 0x3C))
+        if (FIELD_MENU_ITEMS->equipment[i].active != 0 && FIELD_MENU_ITEMS->equipment[i].identity[0] == search->identity[0] &&
+            FIELD_MENU_ITEMS->equipment[i].identity[1] == search->identity[1])
         {
             duplicate_found = 1;
             break;
         }
     }
 
-    work_index = 0;
+    i = 0;
+    FIELD_SET_SHARED_RECORD(search, selected);
+    for (; i < 4; i++)
     {
-        u8* record_base;
-        record_base = D_80122A08;
-        search_record = record_base + (selected_index << 6);
-    }
-    scan = g_saved_game.bytes;
-    for (; work_index < 4; work_index++)
-    {
-        if (((FieldMenuRecordLayout*)(scan + work_index * 0x40))->unk3160 != 0 &&
-            ((FieldMenuRecordLayout*)(scan + work_index * 0x40))->unk3198 == *(u32*)(search_record + 0x38) &&
-            ((FieldMenuRecordLayout*)(scan + work_index * 0x40))->unk319C == *(u32*)(search_record + 0x3C))
+        if (FIELD_MENU_ITEMS->pending[i].active != 0 && FIELD_MENU_ITEMS->pending[i].identity[0] == search->identity[0] &&
+            FIELD_MENU_ITEMS->pending[i].identity[1] == search->identity[1])
         {
             duplicate_found = 1;
             break;
@@ -3015,87 +2639,65 @@ void func_800C8A2C(void)
 
     if (duplicate_found == 0)
     {
-        packed_metadata = ((FieldSharedRecord*)D_80122A08)[selected_index].packed_metadata.word;
-        record_type = (packed_metadata >> 8) & 3;
-        lookup_row = (packed_metadata >> 10) & 0x3F;
-        if (record_type == 1)
+        attributes = D_80122A08[selected].attributes.packed;
+        kind = (attributes >> 8) & 3;
+        category = (attributes >> 10) & 0x3F;
+        if (kind == 1)
         {
-            lookup_row += 0xB;
+            category += 0xB;
         }
-        else if (record_type == 2)
+        else if (kind == 2)
         {
-            lookup_row += 0x17;
+            category += 0x17;
         }
 
+        FIELD_SET_SHARED_RECORD(detail, selected);
+        name_index = detail->attributes.halves.high & 0x3F;
+        if (kind == 0)
         {
-            u8* detail_base;
-            detail_base = D_80122A08;
-            detail_record = (selected_index << 6) + detail_base;
+            value = detail->stats.values[0];
         }
-        metadata_index = *(u16*)(detail_record + 0x16) & 0x3F;
-        if (record_type == 0)
+        else if (kind == 1)
         {
-            do
-            {
-                display_value = *(u16*)(detail_record + 0x24);
-            } while (0);
-        }
-        else if (record_type == 1)
-        {
-            do
-            {
-                display_value = *(u16*)(detail_record + 0x24);
-                display_value += *(u16*)(detail_record + 0x26);
-                display_value += *(u16*)(detail_record + 0x28);
-                display_value += *(u16*)(detail_record + 0x2A);
-            } while (0);
+            value = detail->stats.values[0];
+            value += detail->stats.values[1];
+            value += detail->stats.values[2];
+            value += detail->stats.values[3];
         }
         else
         {
-            do
-            {
-                display_value = detail_record[0x26];
-            } while (0);
+            value = detail->stats.bytes[2];
         }
 
-        {
-            u8* final_base;
-            final_base = D_80122A08;
-            selected_record = (selected_index << 6) + final_base;
-        }
-        low_word = *(u32*)(selected_record + 0x18);
-        high_word = *(u32*)(selected_record + 0x1C);
+        FIELD_SET_SHARED_RECORD(shown, selected);
+        low_word = shown->nibbles[0];
+        high_word = shown->nibbles[1];
         nibble_sum = (low_word & 0xF) + ((low_word >> 4) & 0xF) + ((low_word >> 8) & 0xF) + ((low_word >> 12) & 0xF) + ((low_word >> 16) & 0xF) +
                      ((low_word >> 20) & 0xF) + ((low_word >> 24) & 0xF) + (low_word >> 28) + (high_word & 0xF) + ((high_word >> 4) & 0xF) +
                      ((high_word >> 8) & 0xF) + ((high_word >> 12) & 0xF) + ((high_word >> 16) & 0xF) + ((high_word >> 20) & 0xF) + ((high_word >> 24) & 0xF) +
                      (high_word >> 28);
-        special_flag = nibble_sum >= 0x29;
-        if (record_type == 2)
+        special = nibble_sum >= 0x29;
+        if (kind == 2)
         {
-            special_flag = selected_record[0x24];
+            special = shown->stats.bytes[0];
         }
 
-        amount = *(u32*)(selected_record + 0x34);
-        func_800B2844(0, selected_record, 0xFF);
-        D_80122C04 = record_type;
-        display = &D_80122C04;
-        lookup_base = D_800F0E98;
-        lookup_offset = metadata_index * 2;
-        display[1] = lookup_row;
-        func_800B2844(1, lookup_base[lookup_offset] + (D_800F0E98[lookup_offset + 1] << 8) + D_800F0E98, 0xFF);
-        *(u16*)(display + 2) = display_value;
-        if (special_flag != 0)
+        amount = shown->unknown_0x34;
+        func_800B2844(0, &shown->active, 0xFF);
+        info = FIELD_MENU_ITEM_INFO;
+        info->kind = kind;
+        info->category = category;
+        func_800B2844(1, FIELD_MENU_TEXT(name_index), 0xFF);
+        info->value = value;
+        if (special != 0)
         {
-            *(u16*)(display + 2) = display_value - 0x8000;
+            info->value = value - 0x8000;
         }
-        *(u32*)(display + 4) = amount;
+        info->amount = amount;
         digits = 0;
         do
         {
-            do
-            {
-                amount /= 10;
-            } while (0);
+            amount /= 10;
             digits++;
         } while (amount != 0);
         D_80122C0C = digits;
@@ -3103,143 +2705,89 @@ void func_800C8A2C(void)
     }
 
     D_80122C03 = 2;
-    func_800B2844(0, (selected_index << 6) + D_80122A08, 0xFF);
+    func_800B2844(0, &D_80122A08[selected].active, 0xFF);
 }
 
-/** @brief Remove spent records and compact the four-entry pending table. */
+/**
+ * @brief Drop spent pending item records and compact the four-entry pending table.
+ *
+ * An active pending record with no pending result is cleared. Each free slot
+ * without a result then takes the next active record after it.
+ */
 void func_800C8E2C(void)
 {
-    u8* rec;
-    s32 outer_i;
-    s32 src_off;
-    u8* scan;
-    u8* base;
-    u8* dest_base;
-    s32 inner_i;
-    s32 off;
-    u8* a1;
-    u8* s0;
-    s32 dest_off;
+    s32 i;
+    s32 j;
 
-    outer_i = 0;
-    rec = g_saved_game.bytes;
-clear_records:
-{
-    if (rec[0x3160] != 0 && *(s32*)(rec + 0x3194) == 0)
+    for (i = 0; i < 4; i++)
     {
-        rec[0x3160] = 0;
-    }
-    outer_i += 1;
-    rec += 0x40;
-}
-    if (outer_i < 4)
-    {
-        goto clear_records;
-    }
-
-    outer_i = 0;
-    base = g_saved_game.bytes;
-    dest_base = base + 0x3160;
-    src_off = outer_i;
-    scan = base;
-compact_records:
-{
-    if (scan[0x3160] == 0 && *(s32*)(scan + 0x3194) == 0)
-    {
-        inner_i = outer_i + 1;
-        if (inner_i < 4)
+        if (FIELD_MENU_ITEMS->pending[i].active != 0 && FIELD_MENU_ITEMS->pending[i].unknown_0x34 == 0)
         {
-            off = inner_i << 6;
-            dest_off = src_off;
-            a1 = (u8*)((u32)off + (u32)dest_base);
-            s0 = (u8*)((u32)off + (u32)base);
-        loop_10:
-            inner_i += 1;
-            if (s0[0x3160] != 0)
+            FIELD_MENU_ITEMS->pending[i].active = 0;
+        }
+    }
+
+    for (i = 0; i < 4; i++)
+    {
+        if (FIELD_MENU_ITEMS->pending[i].active == 0 && FIELD_MENU_ITEMS->pending[i].unknown_0x34 == 0)
+        {
+            for (j = i + 1; j < 4; j++)
             {
-                do
+                if (FIELD_MENU_ITEMS->pending[j].active != 0)
                 {
-                    field_copy_inventory_record((void*)((u32)dest_off + (u32)dest_base), a1);
-                } while (0);
-                s0[0x3160] = 0;
-                *(s32*)(s0 + 0x3194) = 0;
-            }
-            else
-            {
-                a1 += 0x40;
-                s0 += 0x40;
-                if (inner_i < 4)
-                {
-                    goto loop_10;
+                    field_copy_inventory_record(&FIELD_MENU_ITEMS->pending[i], &FIELD_MENU_ITEMS->pending[j]);
+                    FIELD_MENU_ITEMS->pending[j].active = 0;
+                    FIELD_MENU_ITEMS->pending[j].unknown_0x34 = 0;
+                    break;
                 }
             }
         }
     }
-    src_off += 0x40;
-    outer_i += 1;
-    scan += 0x40;
-}
-    if (outer_i < 4)
-    {
-        goto compact_records;
-    }
 }
 
-/** @brief Copy the selected pending record out and compact the table. */
+/**
+ * @brief Move the selected pending item record into a free inventory record and compact the table.
+ */
 void func_800C8F4C(void)
 {
-    s32 idx;
-    s32 offset;
-    u8* handle;
-    BigStruct* rec;
+    s32 selected;
+    u8* free_record;
 
-    idx = D_80122C02;
-    handle = field_find_free_inventory_record();
-    offset = idx << 6;
-    field_copy_inventory_record(handle, &D_80046138[offset]);
-    rec = (BigStruct*)(D_80046138 - 0x3160 + offset);
-    rec->unk3160 = 0;
-    rec->unk3194 = 0;
+    selected = D_80122C02;
+    free_record = field_find_free_inventory_record();
+    field_copy_inventory_record(free_record, &FIELD_MENU_ITEMS->pending[selected]);
+    FIELD_MENU_ITEMS->pending[selected].active = 0;
+    FIELD_MENU_ITEMS->pending[selected].unknown_0x34 = 0;
     func_800C8E2C();
 }
 
-/** @brief Restore the first pending result record and expose its result. */
+/**
+ * @brief Restore the first set-aside pending item record and publish its pending result.
+ *
+ * The record's index goes to D_80122C02 (0xFF when there is none) and its
+ * result to the word at D_80122C08. Without a result the table is compacted.
+ */
 void func_800C8FA8(void)
 {
     s32 i;
     s32 result;
-    u8* base;
-    u8* arg;
-    u8* p;
 
     result = 0;
     D_80122C02 = 0xFF;
-    i = 0;
-    p = g_saved_game.bytes;
-    arg = p + 0x3160;
-    base = p;
-
-loop:
-    if (base[0x3160] == 0 && *(s32*)&base[0x3194] != 0)
+    for (i = 0; i < 4; i++)
     {
-        base[0x3160] = base[0x3180];
-        func_800B2844(0, arg, 0xFF);
-        result = *(s32*)&base[0x3194];
-        *(s32*)&base[0x3194] = 0;
-        D_80122C02 = i;
-    }
-    else
-    {
-        arg += 0x40;
-        i++;
-        base += 0x40;
-        if (i < 4)
+        if (FIELD_MENU_ITEMS->pending[i].active == 0 && FIELD_MENU_ITEMS->pending[i].unknown_0x34 != 0)
         {
-            goto loop;
+            FIELD_MENU_ITEMS->pending[i].active = FIELD_MENU_ITEMS->pending[i].saved_active;
+            func_800B2844(0, &FIELD_MENU_ITEMS->pending[i].active, 0xFF);
+            result = FIELD_MENU_ITEMS->pending[i].unknown_0x34;
+            FIELD_MENU_ITEMS->pending[i].unknown_0x34 = 0;
+            D_80122C02 = i;
+            break;
         }
     }
 
-    (*(s32*)&D_80122C08) = result;
+    D_80122C00.words[2] = result;
     if (result == 0)
     {
         func_800C8E2C();
@@ -3247,136 +2795,91 @@ loop:
 }
 
 /**
- * @brief Count available records, detect duplicate identities, and prepare the selected record display.
+ * @brief Count the pending item records and publish the selected one's description.
+ *
+ * The number of active pending records goes to D_80122C06. An empty selected
+ * record sets status 1, one whose identity words match an inventory or
+ * equipment record sets status 2; otherwise its name, name text, kind and
+ * category go to the script variables.
  */
 void func_800C905C(void)
 {
-    s32 layout_base;
-    s32 second_search_base;
-    s32 display_base;
-    s32 metadata_index;
-    s32 lookup_offset;
-    s32 selected_offset;
-    s32 work_index;
+    s32 i;
+    s32 count;
+    s32 selected;
     s32 duplicate_found;
-    s32 record_type;
-    s32 work_value;
-    s32 lookup_row;
-    u32 packed_metadata;
-    u8* search_record;
-    u8* selected_record;
-    u8* lookup_base;
-    u8* record_base;
-    s32 selected_index;
+    u32 attributes;
+    s32 kind;
+    s32 category;
+    s32 name_index;
+    FieldMenuItemInfoVars* info;
+    u8* count_var;
 
-    selected_index = D_80122C02;
-    work_value = 0;
-    work_index = work_value;
-    layout_base = (s32)g_saved_game.bytes + work_index * 0x40;
-    do
+    selected = D_80122C02;
+    count = 0;
+    for (i = 0; i < 4; i++)
     {
-        if (((FieldMenuRecordLayout*)layout_base)->unk3160 != 0)
+        if (FIELD_MENU_ITEMS->pending[i].active != 0)
         {
-            work_value += 1;
+            count++;
         }
-        work_index += 1;
-        layout_base = (s32)g_saved_game.bytes + work_index * 0x40;
-    } while (work_index < 4);
+    }
 
-    work_index = (s32) & (*(u8*)&D_80122C06);
-    *(u8*)work_index = work_value;
-    work_value = (s32)g_saved_game.bytes;
-    selected_record = (selected_index << 6) + g_saved_game.bytes;
-    ((u8*)work_index)[-3] = 0;
-    if (((FieldMenuRecordLayout*)selected_record)->unk3160 == 0)
+    /* The status byte D_80122C03 is reached from D_80122C06, as the original code does. */
+    count_var = (u8*)&D_80122C06;
+    count_var[0] = count;
+    count_var[-3] = 0;
+    if (FIELD_MENU_ITEMS->pending[selected].active == 0)
     {
-        ((u8*)work_index)[-3] = 1;
+        count_var[-3] = 1;
         return;
     }
 
     duplicate_found = 0;
-    goto search_first;
-
-found_first:
-    duplicate_found = 1;
-    goto search_second;
-
-found_second:
-    duplicate_found = 1;
-    goto searches_done;
-
-search_first:
-    work_index = duplicate_found;
-    search_record = selected_record;
-first_loop:
-    if (((FieldMenuRecordLayout*)work_value)->unkCE0 != 0 && ((FieldMenuRecordLayout*)work_value)->unkD18 == ((FieldMenuRecordLayout*)search_record)->unk3198 &&
-        ((FieldMenuRecordLayout*)work_value)->unkD1C == ((FieldMenuRecordLayout*)search_record)->unk319C)
+    for (i = 0; i < INVENTORY_RECORD_COUNT; i++)
     {
-        goto found_first;
-    }
-    work_index++;
-    work_value += 0x40;
-    if (work_index < 100)
-    {
-        goto first_loop;
+        if (FIELD_MENU_ITEMS->inventory[i].active != 0 && FIELD_MENU_ITEMS->inventory[i].identity[0] == FIELD_MENU_ITEMS->pending[selected].identity[0] &&
+            FIELD_MENU_ITEMS->inventory[i].identity[1] == FIELD_MENU_ITEMS->pending[selected].identity[1])
+        {
+            duplicate_found = 1;
+            break;
+        }
     }
 
-search_second:
-    work_index = 0;
-    second_search_base = (s32)g_saved_game.bytes;
-    search_record = (u8*)((selected_index << 6) + second_search_base);
-    work_value = second_search_base;
-second_loop:
-    if (((FieldMenuRecordLayout*)work_value)->unk640 != 0 && ((FieldMenuRecordLayout*)work_value)->unk678 == ((FieldMenuRecordLayout*)search_record)->unk3198 &&
-        ((FieldMenuRecordLayout*)work_value)->unk67C == ((FieldMenuRecordLayout*)search_record)->unk319C)
+    for (i = 0; i < 8; i++)
     {
-        goto found_second;
-    }
-    work_index++;
-    work_value += 0x40;
-    if (work_index < 8)
-    {
-        goto second_loop;
+        if (FIELD_MENU_ITEMS->equipment[i].active != 0 && FIELD_MENU_ITEMS->equipment[i].identity[0] == FIELD_MENU_ITEMS->pending[selected].identity[0] &&
+            FIELD_MENU_ITEMS->equipment[i].identity[1] == FIELD_MENU_ITEMS->pending[selected].identity[1])
+        {
+            duplicate_found = 1;
+            break;
+        }
     }
 
-searches_done:
     if (duplicate_found == 0)
     {
-        s32 row_offset = selected_index << 6;
-
-        layout_base = (s32)g_saved_game.bytes;
-        packed_metadata = ((FieldMenuRecordLayout*)(row_offset + layout_base))->packed.word;
-        record_type = (packed_metadata >> 8) & 3;
-        lookup_row = (packed_metadata >> 0xA) & 0x3F;
-        if (record_type == 1)
+        attributes = FIELD_MENU_ITEMS->pending[selected].attributes.packed;
+        kind = (attributes >> 8) & 3;
+        category = (attributes >> 10) & 0x3F;
+        if (kind == 1)
         {
-            lookup_row += 0xB;
-            work_value = 0;
+            category += 0xB;
         }
-        else if (record_type == 2)
+        else if (kind == 2)
         {
-            lookup_row += 0x17;
-            work_value = 0;
-        }
-        else
-        {
-            work_value = 0;
+            category += 0x17;
         }
 
-        display_base = (s32)g_saved_game.bytes;
-        selected_offset = selected_index << 6;
-        metadata_index = ((FieldMenuRecordLayout*)(selected_offset + display_base))->packed.halves[1] & 0x3F;
-        record_base = (u8*)display_base + 0x3160;
-        func_800B2844(work_value, selected_offset + record_base, 0xFF);
-        D_80122C04 = record_type;
-        lookup_base = D_800F0E98;
-        lookup_offset = metadata_index * 2;
-        (&D_80122C04)[1] = lookup_row;
-        func_800B2844(1, lookup_base[lookup_offset] + (D_800F0E98[lookup_offset + 1] << 8) + D_800F0E98, 0xFF);
+        name_index = FIELD_MENU_ITEMS->pending[selected].attributes.halves.high & 0x3F;
+        func_800B2844(0, &FIELD_MENU_ITEMS->pending[selected].active, 0xFF);
+        info = FIELD_MENU_ITEM_INFO;
+        info->kind = kind;
+        info->category = category;
+        func_800B2844(1, FIELD_MENU_TEXT(name_index), 0xFF);
         return;
     }
 
-    func_800B2844(0, (selected_index << 6) + D_80046138, 0xFF);
+    func_800B2844(0, (selected << 6) + D_80046138, 0xFF);
     D_80122C03 = 2;
 }
 
@@ -3389,21 +2892,20 @@ void field_reset_music_track_index(void)
 }
 
 /**
- * @brief Clear the selected record flag or report an invalid index.
+ * @brief Clear the restriction flag of the small history record picked by the cursor slot.
+ *
+ * The record index comes from the cursor slot table at D_80122C19; an index
+ * of five or more is reported as a diagnostic.
  * @see decomp.me (100%)
  */
 void func_800C92B8(void)
 {
     s32 index;
-    u8* base;
-    u8* record;
 
     index = (&D_80122C19)[D_80122C19 + 4];
-    if (index < 5)
+    if (index < SMALL_HISTORY_RECORD_COUNT)
     {
-        base = g_saved_game.bytes;
-        record = base + index * 0x60;
-        *(u32*)(record + 0x2F38) &= 0xBFFFFFFF;
+        FIELD_PAD_CTX->small_history_records[index].selection_flags.selection_restricted = 0;
     }
     else
     {
@@ -3412,27 +2914,26 @@ void func_800C92B8(void)
 }
 
 /**
- * @brief Update the selected record value or report an invalid index.
+ * @brief Store an entry id in the selected small history record and lift its restriction.
+ *
+ * An unnamed record gets the name 'A' (0x41). An index of five or more is
+ * reported as a diagnostic.
  * @see decomp.me (100%)
  */
 void func_800C9330(void)
 {
     s32 index;
-    u8 val;
-    u8* base;
-    u8* record;
+    u8 entry_id;
 
-    val = D_80122C11;
+    entry_id = D_80122C11;
     index = (&D_80122C11)[1];
-    if (index < 5)
+    if (index < SMALL_HISTORY_RECORD_COUNT)
     {
-        base = g_saved_game.bytes;
-        record = base + index * 0x60;
-        record[0x2F09] = val;
-        *(u32*)(record + 0x2F38) &= 0x7FFFFFFF;
-        if (record[0x2EF4] == 0)
+        FIELD_MENU_HISTORY->small_history_records[index].entry_id = entry_id;
+        FIELD_PAD_CTX->small_history_records[index].selection_flags.selection_blocked = 0;
+        if (FIELD_PAD_CTX->small_history_records[index].name[0] == 0)
         {
-            record[0x2EF4] = 0x41;
+            FIELD_PAD_CTX->small_history_records[index].name[0] = 0x41;
         }
     }
     else
@@ -3466,55 +2967,51 @@ void func_800C9404(void)
     }
 }
 
-/** @brief Count empty entries in the four-record menu table. */
+/** @brief Count the free pending item records into D_80122C1F. */
 void func_800C9448(void)
 {
     s32 i;
     s32 count;
-    u8* p;
 
     count = 0;
     for (i = 0; i < 4; i++)
     {
-        p = &g_saved_game.bytes[i * 0x40];
-        if (p[0x3160] == 0)
+        if (FIELD_MENU_ITEMS->pending[i].active == 0)
         {
             count++;
         }
     }
-    D_80122C1F = (u8)count;
+    D_80122C1F = count;
 }
 
-/** @brief Count empty entries in the hundred-record equipment table. */
+/** @brief Count the free inventory records into D_80122C1F. */
 void func_800C9488(void)
 {
     s32 i;
     s32 count;
-    u8* p;
 
     count = 0;
-    for (i = 0; i < 0x64; i++)
+    for (i = 0; i < INVENTORY_RECORD_COUNT; i++)
     {
-        p = &g_saved_game.bytes[i * 0x40];
-        if (p[0xCE0] == 0)
+        if (FIELD_MENU_ITEMS->inventory[i].active == 0)
         {
             count++;
         }
     }
-    D_80122C1F = (u8)count;
+    D_80122C1F = count;
 }
 
-/** @brief Clear the four shared records and their saved result words. */
+/** @brief Clear the four shared item records and their values. */
 void func_800C94C8(void)
 {
-    ((u8*)((Rec800C9684*)&D_80122A08))[0] = 0;
-    ((u8*)((Rec800C9684*)&D_80122A08))[0x40] = 0;
-    ((u8*)((Rec800C9684*)&D_80122A08))[0x80] = 0;
-    ((u8*)((Rec800C9684*)&D_80122A08))[0xC0] = 0;
-    *(s32*)&((u8*)((Rec800C9684*)&D_80122A08))[0x34] = 0;
-    *(s32*)&((u8*)((Rec800C9684*)&D_80122A08))[0x74] = 0;
-    *(s32*)&((u8*)((Rec800C9684*)&D_80122A08))[0xB4] = 0;
-    *(s32*)&((u8*)((Rec800C9684*)&D_80122A08))[0xF4] = 0;
+    D_80122A08[0].active = 0;
+    D_80122A08[1].active = 0;
+    D_80122A08[2].active = 0;
+    D_80122A08[3].active = 0;
+    D_80122A08[0].unknown_0x34 = 0;
+    D_80122A08[1].unknown_0x34 = 0;
+    D_80122A08[2].unknown_0x34 = 0;
+    D_80122A08[3].unknown_0x34 = 0;
 }
 
 /**
@@ -3532,16 +3029,16 @@ void func_800C94F4(void)
     {
         for (i = 0; i < 4; i++)
         {
-            if (((Rec800C9684*)&D_80122A08)[i].unk0 == 0)
+            if (D_80122A08[i].active == 0)
             {
-                entry = &((u8*)&D_80122C19)[i];
-                if (((Rec800C9684*)&D_80122A08)[i].unk34 != 0 && *entry != 0xFA)
+                entry = &(&D_80122C19)[i];
+                if (D_80122A08[i].unknown_0x34 != 0 && *entry != 0xFA)
                 {
-                    ((Rec800C9684*)&D_80122A08)[i].unk0 = ((Rec800C9684*)&D_80122A08)[i].unk20;
-                    ((Rec800C9684*)&D_80122A08)[i].unk20 = *entry;
-                    if (field_find_free_inventory_record(entry) != 0)
+                    D_80122A08[i].active = D_80122A08[i].saved_active;
+                    D_80122A08[i].saved_active = *entry;
+                    if (field_find_free_inventory_record() != 0)
                     {
-                        field_copy_inventory_record(field_find_free_inventory_record(), &((Rec800C9684*)&D_80122A08)[i]);
+                        field_copy_inventory_record(field_find_free_inventory_record(), &D_80122A08[i]);
                     }
                 }
             }
@@ -3551,14 +3048,14 @@ void func_800C94F4(void)
     {
         for (i = 0; i < 4; i++)
         {
-            if (((Rec800C9684*)&D_80122A08)[i].unk0 != 0)
+            if (D_80122A08[i].active != 0)
             {
-                result = ((Rec800C9684*)&D_80122A08)[i].unk34;
+                result = D_80122A08[i].unknown_0x34;
                 if (result == 0)
                 {
                     result = 1;
                 }
-                ((Rec800C9684*)&D_80122A08)[i].unk34 = result;
+                D_80122A08[i].unknown_0x34 = result;
             }
         }
     }
@@ -3578,22 +3075,29 @@ void func_800C963C(void)
     }
 }
 
-/** @brief Save the selected shared record and install its pending result. */
+/**
+ * @brief Set the selected shared item record aside and give it the pending result.
+ *
+ * Its saved active byte goes to the cursor slot table at D_80122C19, the
+ * active byte is kept in saved_active, and the word at D_80122C08 becomes
+ * the record's value.
+ */
 void func_800C9684(void)
 {
     s32 index;
-    Rec800C9684* rec;
-    u8 tmp;
-    u8 tmp2;
+    FieldMenuItemRecord* record;
+    u8 saved;
+    u8 active;
 
     index = D_80122C02;
-    tmp = ((Rec800C9684*)&D_80122A08)[index].unk20;
-    rec = &((Rec800C9684*)&D_80122A08)[index];
-    (&D_80122C02)[index + 0x17] = tmp;
-    tmp2 = rec->unk0;
-    rec->unk0 = 0;
-    rec->unk20 = tmp2;
-    rec->unk34 = *(u32*)((u8*)&D_80122C02 + 6);
+    saved = D_80122A08[index].saved_active;
+    record = &D_80122A08[index];
+    /* D_80122C19[index] and the D_80122C08 word, both reached from D_80122C02 as the original does. */
+    (&D_80122C02)[index + 0x17] = saved;
+    active = record->active;
+    record->active = 0;
+    record->saved_active = active;
+    record->unknown_0x34 = *(u32*)((u8*)&D_80122C02 + 6);
 }
 
 /** @brief Choose one of eight entries using fourth-power weights and the current mode. */

@@ -920,6 +920,7 @@ void field_follow_leader_route(FieldRouteActor* actor, s32 follower_index)
         {
             if ((animation_kind != 0) && (g_field_resource_entries[actor->resource_index].flags & FIELD_ROUTE_RESOURCE_ANIMATION_FLAG))
             {
+                /* The restart tail must be its own block (written out: 97.79%). */
                 actor->animation = (u8)(old_animation & FIELD_ROUTE_ANIMATION_FLIP);
                 goto restart_animation;
             }
@@ -1713,113 +1714,107 @@ void field_prepare_actor_action(FieldActionActor* actor)
     Slot* slot;
     Action* action;
 
-    if (actor->state.bytes[0] == 0x85)
+    if (actor->state.bytes[0] != 0x85)
     {
-        g_field_object_states[actor->object_index].flags.word = (s32)(g_field_object_states[actor->object_index].flags.word & ~0x1C);
-        if (g_field_resource_entries[actor->resource_index].flags & 1)
+        return;
+    }
+    g_field_object_states[actor->object_index].flags.word = (s32)(g_field_object_states[actor->object_index].flags.word & ~0x1C);
+    if (!(g_field_resource_entries[actor->resource_index].flags & 1))
+    {
+        actor->state.word = 0;
+        return;
+    }
+    g_field_object_states[actor->object_index].action_index = (s8)(actor->state.word >> 8);
+    resource_offset = actor->resource_index * FIELD_RESOURCE_ACTION_BYTES;
+    actor->state.word = actor->state.bytes[0];
+    slot = &g_field_object_states[actor->object_index];
+    mode = slot->action_index;
+    {
+        s32 descriptor_address = (s32)&g_field_resource_actions[mode];
+        action = (Action*)(resource_offset + descriptor_address);
+    }
+    if (mode == 0xB)
+    {
+        slot->action_index = *(u8*)&action->command;
+    }
+    if (!(action->flags & FIELD_ACTION_INSTRUMENT) && (action->command == 0) && (action->animation == 0))
+    {
+        func_800A3938(0x78, 0x80);
+        actor->state.word = 0;
+        return;
+    }
+    if ((action->flags & FIELD_ACTION_INSTRUMENT) &&
+        ((field_object_has_active_actor_tracks(actor->object_index) != 0) || (field_count_free_actor_slots(actor->object_index) < 3) ||
+         (actor->variant != 0)))
+    {
+        actor->state.word = 0;
+        return;
+    }
+    g_field_object_states[actor->object_index].flags.word = (s32)(g_field_object_states[actor->object_index].flags.word & ~2);
+    if ((action->command & FIELD_ACTION_TECHNIQUE) && !(action->flags & FIELD_ACTION_INSTRUMENT))
+    {
+        if ((field_object_has_active_actor_tracks(actor->object_index) != 0) || (D_8010AE58 != 0) ||
+            (field_count_free_actor_slots(actor->object_index) < 3))
         {
-            g_field_object_states[actor->object_index].action_index = (s8)(actor->state.word >> 8);
-            /* Each resource owns 50 eight-byte descriptors. */
-            resource_offset = actor->resource_index * FIELD_RESOURCE_ACTION_BYTES;
-            actor->state.word = actor->state.bytes[0];
-            slot = &g_field_object_states[actor->object_index];
-            mode = slot->action_index;
-            {
-                s32 descriptor_address = (s32)&g_field_resource_actions[mode];
-                action = (Action*)(resource_offset + descriptor_address);
-            }
-            if (mode == 0xB)
-            {
-                slot->action_index = *(u8*)&action->command;
-            }
-            if (!(action->flags & FIELD_ACTION_INSTRUMENT))
-            {
-                if (action->command == 0 && action->animation == 0)
-                {
-                    func_800A3938(0x78, 0x80);
-                    actor->state.word = 0;
-                    return;
-                }
-            }
-            if (!(action->flags & FIELD_ACTION_INSTRUMENT) || ((field_object_has_active_actor_tracks(actor->object_index) == 0) &&
-                                                               (field_count_free_actor_slots(actor->object_index) >= 3) && (actor->variant == 0)))
-            {
-                g_field_object_states[actor->object_index].flags.word = (s32)(g_field_object_states[actor->object_index].flags.word & ~2);
-                if (((u16)action->command & FIELD_ACTION_TECHNIQUE) && !(action->flags & FIELD_ACTION_INSTRUMENT))
-                {
-                    if ((field_object_has_active_actor_tracks(actor->object_index) == 0) && (D_8010AE58 == 0) &&
-                        (field_count_free_actor_slots(actor->object_index) >= 3))
-                    {
-                        actor_index = actor->object_index;
-                        if (g_field_object_states[actor_index].technique_gauge != FIELD_TECHNIQUE_GAUGE_FULL)
-                        {
-                            func_800A3938(0x78, 0x80);
-                        cancel_action:
-                            actor->state.word = 0;
-                            return;
-                        }
-                        action_index = action->command & 0x7fff;
-                        party_offset = (g_field_player_records[actor_index].weapon_type * 0x18) + 0x88;
-                        if (func_8008404C(actor_index, action_index + party_offset) != 0)
-                        {
-                            g_field_object_states[actor->object_index].sequence_flags =
-                                (s32)(g_field_object_states[actor->object_index].sequence_flags | 0x8000);
-                            goto start_action;
-                        }
-                        goto cancel_action;
-                    }
-                    goto cancel_action;
-                }
-                requirement = action->requirement;
-                if (!(requirement & 0x8000) || (func_8008404C(actor->object_index, requirement & 0x3FF) != 0))
-                {
-                start_action:
-                    if (action->flags & FIELD_ACTION_INSTRUMENT)
-                    {
-                        g_field_object_states[actor->object_index].action_status = (s32)(g_field_object_states[actor->object_index].action_status & ~1);
-                        g_field_object_states[actor->object_index].flags.word = (s32)(g_field_object_states[actor->object_index].flags.word | 0x40);
-                        actor->animation_state = 1;
-                        actor->active = 1;
-                        actor->animation_frame = 0;
-                        actor->animation = (u8)((actor->animation & FIELD_ANIMATION_FACING) + 0x10);
-                        g_field_object_states[actor->object_index].sequence_flags = (s32)(g_field_object_states[actor->object_index].sequence_flags & ~0x1800);
-                        field_restart_actor_animation(actor);
-                        if (action->animation != 0)
-                        {
-                            g_field_object_states[actor->object_index].action_parameter = (s32)action->animation;
-                        }
-                        g_field_object_states[actor->object_index].sequence_flags = (s32)(g_field_object_states[actor->object_index].sequence_flags & ~0x400);
-                    }
-                    else if (!((u16)action->command & FIELD_ACTION_TECHNIQUE))
-                    {
-                        animation = action->animation;
-                        if ((animation != 0xFFFF) && (animation != 0))
-                        {
-                            animation_slot = func_800839F8(actor->object_index, 0);
-                            if ((animation_slot != -1) && (func_80083EEC(actor->object_index, animation_slot, action->animation) != 0))
-                            {
-                                field_start_actor_animation(animation_slot, 0, 0);
-                                g_field_object_states[actor->object_index].flags.bytes[1] = animation_slot;
-                            }
-                        }
-                    }
-                    func_8009D4D8(actor, *(u8*)&action->flags);
-                }
-                else
-                {
-                    goto cancel_action;
-                }
-            }
-            else
-            {
-                goto cancel_action;
-            }
+            actor->state.word = 0;
+            return;
         }
-        else
+        actor_index = actor->object_index;
+        if (g_field_object_states[actor_index].technique_gauge != FIELD_TECHNIQUE_GAUGE_FULL)
         {
-            goto cancel_action;
+            func_800A3938(0x78, 0x80);
+            actor->state.word = 0;
+            return;
+        }
+        action_index = action->command & 0x7fff;
+        party_offset = (g_field_player_records[actor_index].weapon_type * 0x18) + 0x88;
+        if (func_8008404C(actor_index, action_index + party_offset) == 0)
+        {
+            actor->state.word = 0;
+            return;
+        }
+        g_field_object_states[actor->object_index].sequence_flags =
+            (s32)(g_field_object_states[actor->object_index].sequence_flags | 0x8000);
+    }
+    else
+    {
+        requirement = action->requirement;
+        if ((requirement & 0x8000) && (func_8008404C(actor->object_index, requirement & 0x3FF) == 0))
+        {
+            actor->state.word = 0;
+            return;
         }
     }
+    if (action->flags & FIELD_ACTION_INSTRUMENT)
+    {
+        g_field_object_states[actor->object_index].action_status = (s32)(g_field_object_states[actor->object_index].action_status & ~1);
+        g_field_object_states[actor->object_index].flags.word = (s32)(g_field_object_states[actor->object_index].flags.word | 0x40);
+        actor->animation_state = 1;
+        actor->active = 1;
+        actor->animation_frame = 0;
+        actor->animation = (u8)((actor->animation & FIELD_ANIMATION_FACING) + 0x10);
+        g_field_object_states[actor->object_index].sequence_flags = (s32)(g_field_object_states[actor->object_index].sequence_flags & ~0x1800);
+        field_restart_actor_animation(actor);
+        if (action->animation != 0)
+        {
+            g_field_object_states[actor->object_index].action_parameter = (s32)action->animation;
+        }
+        g_field_object_states[actor->object_index].sequence_flags = (s32)(g_field_object_states[actor->object_index].sequence_flags & ~0x400);
+    }
+    else if (!(action->command & FIELD_ACTION_TECHNIQUE))
+    {
+        animation = action->animation;
+        if ((animation != 0xFFFF) && (animation != 0))
+        {
+            animation_slot = func_800839F8(actor->object_index, 0);
+            if ((animation_slot != -1) && (func_80083EEC(actor->object_index, animation_slot, action->animation) != 0))
+            {
+                field_start_actor_animation(animation_slot, 0, 0);
+                g_field_object_states[actor->object_index].flags.bytes[1] = animation_slot;
+            }
+        }
+    }
+    func_8009D4D8(actor, *(u8*)&action->flags);
 }
 
 /**
@@ -2322,6 +2317,7 @@ s32 field_update_actor_command(FieldBehaviorActor* actor)
     case 0x31:
         if (!(ACTOR_COMMAND_RESOURCE(actor->resource_index).flags & 1))
         {
+            /* command_timer is loaded twice back to back; plain reads fold into one load. */
             turn_animation = *(((volatile FieldBehaviorActor*)actor)->command_timer + &g_field_actor_turn_animations);
             actor->command_timer = (u8)(((volatile FieldBehaviorActor*)actor)->command_timer + 1);
             actor->animation = turn_animation;

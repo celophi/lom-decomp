@@ -73,6 +73,15 @@ typedef struct
 /** @brief g_field_object_states addressed through D_80105B30. */
 #define FIELD_OBJECT_STATES_AT_TARGET ((FieldObjectState*)((u8*)D_80105B30 - 0x50))
 
+/**
+ * @brief &states[index] with index * 8 passed in precomputed (the 0x23C multiply spelled out).
+ * @param states Object state table.
+ * @param index8 @p index multiplied by 8.
+ * @param index Object index.
+ */
+#define FIELD_OBJECT_STATE_BY_INDEX8(states, index8, index) \
+    ((FieldObjectState*)((((index8) + (index)) * 16 - (index)) * 4 + (u32)(states)))
+
 /** @brief Fixed address of the field camera block. */
 #define FIELD_CAMERA ((FieldCamera*)0x801ED480)
 
@@ -162,113 +171,104 @@ u8* field_get_object_script_command(FieldActor* actor)
 }
 
 /**
- * @brief Field actor primary opcode dispatch (opcodes 0x00, 0x80..0xBC).
+ * @brief Run the actor's current script command (opcodes 0x00, 0x81-0xBC and 0xFF).
  *
- * Reads the current command byte from the actor's active command stream and
- * dispatches to the matching handler: animation/motion setup, spawn of child
- * actors (0xB9), path/target queries (0xB0/0xB1), resource loads, and the many
- * one-shot state transitions. Advances the actor's stream offset (unk2C) before
- * returning.
+ * Reads the command byte at the actor's script offset and dispatches to its
+ * handler: animation and motion setup, spawn of child actors (0xB9), path
+ * queries (0xB0/0xB1), resource bindings, and one-shot state changes. Most
+ * handlers advance the script offset past their operands. Opcode 0x00 only
+ * skips itself; 0x01-0x7F and the unused codes above 0x80 do nothing.
  *
- * @param arg0 Pointer to the field actor record (Struct_D800FDF58 layout).
+ * @param actor Actor whose current script command runs.
  * @see decomp.me (100%)
  */
 void func_80088198(FieldActor* actor)
 {
-    RECT sp10;
-    FieldCollisionQuery sp18;
-    FieldCollisionQuery sp30;
-    FieldObjectPart* temp_v0_19;
+    RECT rect;
+    FieldCollisionQuery query_from;
+    FieldCollisionQuery query_to;
+    FieldObjectPart* casea5_part;
     FieldObjectPart* casea5_base;
-    FieldObjectPart* temp_v0_20;
+    FieldObjectPart* casea6_part;
     FieldObjectPart* casea6_base;
     s32 casea6_mask;
-    FieldActorSlot* temp_v1_11;
-    FieldActorSlot* temp_v1_9;
-    FieldActor* var_s0;
+    FieldActorSlot* bc_slot;
+    FieldActor* spawn_actor;
     FieldActor* b9_actor_base;
-    FieldObjectState* temp_v0_13;
+    FieldObjectState* direct_path_state;
     FieldObjectState* case83_base;
     FieldObjectState* case9e_states;
     u8* case9e_entries;
     FieldObjectState* casea9_states;
     FieldObjectState* casea9_state;
     FieldActorSlot* casea9_slots;
-    FieldActorSlot* track_slots;
     u8* casea9_entries;
     u8* casea9_check_entries;
-    s32 shared_s1;
+    s32 key_or_index; /* action key (0x9E/0xA1/0xA9), binding index (0x9F/0xBC), animation slot (0x83) */
     FieldObjectState* b9_state_base;
-    FieldObjectState* temp_v0_14;
-    FieldObjectState* temp_v0_16;
-    FieldObjectState* temp_v0_17;
-    FieldObjectState* temp_v0_3;
-    FieldObjectState* temp_v0_4;
-    FieldObjectState* temp_v0_5;
-    FieldObjectState* temp_v0_6;
-    FieldObjectState* temp_v0_7;
-    FieldObjectState* temp_v0_8;
-    FieldObjectState* temp_v1_2;
-    FieldObjectState* temp_v1_6;
-    FieldObjectState* var_s1;
-    s16 var_v0;
-    s16 var_v0_2;
+    FieldObjectState* direct_path_state_z;
+    FieldObjectState* fallback_path_state;
+    FieldObjectState* fallback_path_state_z;
+    FieldObjectState* case83_state;
+    FieldObjectState* retry_state;
+    FieldObjectState* hold_state;
+    FieldObjectState* contact_state;
+    FieldObjectState* movement_state;
+    FieldObjectState* unk4c_state;
+    FieldObjectState* precheck_state;
+    FieldObjectState* query_state;
+    FieldObjectState* spawn_state;
+    s16 next_offset; /* new script offset in 0x9F and 0xB2 */
+    s16 case83_offset;
     s32 offset_8d;
-    s32 offset_query;
-    s32 queryoff2;
-    s32 queryoff3;
-    s16 var_v1;
+    s32 direct_offset;
+    s32 fallback_offset;
+    s32 path_offset;
+    s16 a7_offset;
     u16 offset_88;
-    s32* var_v1_4;
-    s32 temp_a0_3;
-    s32 temp_a0_4;
-    s32 temp_a1_2;
-    s32 temp_a1_5;
-    s32 temp_a1_7;
-    s32 temp_a2;
-    s32 temp_a3_3;
-    s32 temp_v0;
+    s32* a1_flag;
+    s32 bc_state;
+    s32 spawn_control;
+    s32 query_x;
+    s32 bounds_word; /* map bounds address, then the depth limit and the command byte in 0xB0/0xB1 */
+    s32 width_limit;
+    s32 spawn_slot;
     s32 track_result;
-    s32 temp_v0_11;
-    s32 temp_v0_12;
-    s32 temp_v1_5;
-    s32 var_s2;
-    s32 var_s6;
-    s32 var_v0_3;
-    s32 var_v0_5;
-    s32 var_v0_6;
-    s32 var_v0_7;
-    u16* var_v1_3;
-    u16 temp_a1_3;
-    u16 temp_v1_3;
-    u16 temp_v1_4;
-    u8 temp_a0;
-    u8 temp_a0_2;
-    s32 temp_a1;
-    u8 temp_a1_4;
-    s32 temp_a1_6;
-    s32 temp_a3;
-    u8 temp_a3_2;
-    s32 temp_s0_2;
-    u8 temp_s5;
-    u8 temp_v0_10;
-    u8 temp_v0_2;
-    s32 temp_v1;
-    u8 temp_v1_8;
-    u8 var_a1;
+    s32 query_target_x;
+    s32 query_target_z;
+    s32 contact_or_z; /* contact word in 0xB9, actor z in 0xB0/0xB1 */
+    s32 index_or_count; /* spawn slot (0xB9), track count (0x9F), path length (0xB0/0xB1) */
+    s32 one; /* the constant 1 kept in a register (0xB9, 0xBC) */
+    s32 case83_binding_offset;
+    s32 case9e_binding_offset;
+    s32 casea9_check_offset;
+    s32 casea9_binding_offset;
+    u16 bind_word;
+    u16 unk3c_value;
+    u16 slot_action_value;
+    u8 retry_object;
+    u8 party_object;
+    s32 opcode; /* command byte; 0xA4 reuses it for the constant 1 */
+    u8 direction;
+    s32 case9e_object;
+    u8 slot_object;
+    s32 action_or_index; /* action byte (0xA9), track index (0x9F) */
+    u8 old_presence;
+    u8 animation_8d;
+    u8 wait_frames;
+    s32 a7_command;
+    u8 casea9_object;
+    u8 byte_arg; /* command operand byte, or the constant 1 in 0xB0/0xB1 */
     u16* row;
-    void* temp_s2;
+    void* bc_binding;
     u8* script;
-    void* temp_v1_10;
     FieldActor* call_actor;
     FieldActorSlot* case83_slots;
     u8* case83_entries;
     u8* bc_entries;
-    u8* track_entries;
     FieldObjectState* update_states;
     s32 spawn_command;
     s32 parent_index;
-    s32 advance_0;
     FieldObjectState* query_base;
     FieldObjectState* precheck_states;
     FieldActorSlot* bc_slots;
@@ -282,8 +282,14 @@ void func_80088198(FieldActor* actor)
     s32 track_owner;
     s32 slot_offset_83;
     s32 slot_offset_a9;
+    FieldActorBinding* bindings;
+    FieldActorBinding* binding;
+    s32 binding_state;
+    s32 binding_owner;
+    FieldActorSlot* slots;
+    FieldActorSlot* slot;
 
-    temp_a2 = 0x801ED400;
+    bounds_word = 0x801ED400;
 
     if (actor->script_index == FIELD_SCRIPT_OBJECT)
     {
@@ -295,9 +301,9 @@ void func_80088198(FieldActor* actor)
     }
     script += actor->script_offset;
 
-    temp_a1 = script[0];
+    opcode = script[0];
 
-    switch (temp_a1)
+    switch (opcode)
     {
     case 0xFF:
         actor->script_index = 0xFF;
@@ -328,67 +334,67 @@ void func_80088198(FieldActor* actor)
         actor->script_offset += 2;
         return;
     case 0xB9:
-
+        /* Spawn into the highest free actor slot from 12 down to 3. A for or while loop lets loop.c hoist the spawn constants (+4 insns, frame +8). */
         do
         {
             do
             {
-                var_s2 = 0xC;
-                var_s6 = 1;
+                index_or_count = 0xC;
+                one = 1;
                 b9_state_base = g_field_object_states;
-                var_s1 = b9_state_base + 12;
+                spawn_state = b9_state_base + 12;
                 b9_actor_base = g_field_actors;
-                var_s0 = b9_actor_base + 12;
+                spawn_actor = b9_actor_base + 12;
             loop_15:
-                temp_s5 = var_s0->presence;
-                if (temp_s5 == 0xFF)
+                old_presence = spawn_actor->presence;
+                if (old_presence == 0xFF)
                 {
-                    field_initialize_actor_record(var_s2, 3);
-                    temp_a1_2 = var_s0->control.word & ~0x1FF;
-                    var_s0->x = actor->x;
-                    var_s0->y = actor->y;
-                    temp_a1_2 |= 2;
-                    var_s0->z = actor->z;
-                    var_s0->presence = 0xFE;
+                    field_initialize_actor_record(index_or_count, 3);
+                    spawn_control = spawn_actor->control.word & ~0x1FF;
+                    spawn_actor->x = actor->x;
+                    spawn_actor->y = actor->y;
+                    spawn_control |= 2;
+                    spawn_actor->z = actor->z;
+                    spawn_actor->presence = 0xFE;
                     spawn_command = script[1];
-                    var_s0->unk27 = 0;
-                    var_s0->unk24 = var_s6;
-                    var_s0->command = 0xB8;
-                    var_s0->animation = spawn_command;
+                    spawn_actor->unk27 = 0;
+                    spawn_actor->unk24 = one;
+                    spawn_actor->command = 0xB8;
+                    spawn_actor->animation = spawn_command;
                     parent_index = actor->object_index;
-                    var_s0->unk3D = 3;
-                    var_s0->control.word = temp_a1_2;
-                    var_s0->script_index = 0;
-                    var_s0->unk10 = var_s6;
-                    var_s0->unk20 = parent_index;
-                    var_s1->group_flags = 0;
-                    var_s1->flags = 0;
-                    var_s1->key = var_s2;
-                    var_s1->unk18 = 0;
-                    temp_v1_5 = var_s1->contact.word;
-                    temp_v1_5 &= ~0x80;
-                    temp_v1_5 &= ~1;
-                    var_s1->contact.word = temp_v1_5;
-                    field_restart_actor_animation(var_s0, temp_a1_2);
-                    temp_v0 = func_800839F8(var_s2, 0);
-                    if (temp_v0 != -1)
+                    spawn_actor->unk3D = 3;
+                    spawn_actor->control.word = spawn_control;
+                    spawn_actor->script_index = 0;
+                    spawn_actor->unk10 = one;
+                    spawn_actor->unk20 = parent_index;
+                    spawn_state->group_flags = 0;
+                    spawn_state->flags = 0;
+                    spawn_state->key = index_or_count;
+                    spawn_state->unk18 = 0;
+                    contact_or_z = spawn_state->contact.word;
+                    contact_or_z &= ~0x80;
+                    contact_or_z &= ~1;
+                    spawn_state->contact.word = contact_or_z;
+                    field_restart_actor_animation(spawn_actor, spawn_control);
+                    spawn_slot = func_800839F8(index_or_count, 0);
+                    if (spawn_slot != -1)
                     {
-                        if (func_80083EEC(var_s2, temp_v0, 0xB0U) != 0)
+                        if (func_80083EEC(index_or_count, spawn_slot, 0xB0U) != 0)
                         {
-                            field_start_actor_animation(temp_v0, 0, 0);
+                            field_start_actor_animation(spawn_slot, 0, 0);
                         }
                     }
                     else
                     {
-                        var_s0->presence = temp_s5;
+                        spawn_actor->presence = old_presence;
                     }
                 }
                 else
                 {
-                    var_s1 -= 1;
-                    var_s2 -= 1;
-                    var_s0 -= 1;
-                    if (var_s2 >= 3)
+                    spawn_state -= 1;
+                    index_or_count -= 1;
+                    spawn_actor -= 1;
+                    if (index_or_count >= 3)
                     {
                         goto loop_15;
                     }
@@ -400,9 +406,9 @@ void func_80088198(FieldActor* actor)
         return;
     case 0x81:
         actor->command = (s16)script[0];
-        temp_v0_2 = script[1];
-        actor->unk2E = (u16)temp_v0_2;
-        if (temp_v0_2 == 0)
+        wait_frames = script[1];
+        actor->unk2E = (u16)wait_frames;
+        if (wait_frames == 0)
         {
             actor->unk2E = 1;
         }
@@ -414,31 +420,31 @@ void func_80088198(FieldActor* actor)
     case 0x84:
     case 0x85:
         case83_base = g_field_object_states;
-        temp_v0_3 = &case83_base[actor->object_index];
-        temp_v0_3->contact.word &= ~0x1C;
+        case83_state = &case83_base[actor->object_index];
+        case83_state->contact.word &= ~0x1C;
         actor->command = (s16)script[0];
-        if ((u32)(temp_a1 - 0x83) < 2U)
+        if ((opcode == 0x83) || (opcode == 0x84))
         {
             actor->command = 0x85;
-            case83_base[actor->object_index].action = temp_a1 + 0x7D;
-            var_v0_2 = (u16)actor->script_offset + 1;
+            case83_base[actor->object_index].action = opcode + 0x7D;
+            case83_offset = (u16)actor->script_offset + 1;
         }
         else
         {
             case83_base[actor->object_index].action = script[1];
-            var_v0_2 = (u16)actor->script_offset + 2;
+            case83_offset = (u16)actor->script_offset + 2;
         }
-        actor->script_offset = var_v0_2;
-        temp_a0 = actor->object_index;
-        if ((g_field_object_states[temp_a0].action == 2) && (actor->unk30 != 0) && (temp_a0 < 2U))
+        actor->script_offset = case83_offset;
+        retry_object = actor->object_index;
+        if ((g_field_object_states[retry_object].action == 2) && (actor->unk30 != 0) && (retry_object < 2U))
         {
             actor->animation = (actor->animation & 0x80) + (u16)((u8)actor->unk30 + 0x1F);
             if ((field_get_next_animation_frame_count(actor) == 0) || (actor->unk30 >= 5U))
             {
                 g_field_object_states[actor->object_index].retry_count = 0;
                 actor->unk30 = 0;
-                temp_v0_4 = &g_field_object_states[actor->object_index];
-                temp_v0_4->flags &= 0xFFFF7FFF;
+                retry_state = &g_field_object_states[actor->object_index];
+                retry_state->flags &= 0xFFFF7FFF;
                 actor->animation &= 0x80;
                 field_restart_actor_animation_reverse(actor);
                 actor->command = 0x95;
@@ -446,166 +452,155 @@ void func_80088198(FieldActor* actor)
                 return;
             }
             actor->animation = (actor->animation & 0x80) + 0x1F;
-            temp_v0_5 = &g_field_object_states[actor->object_index];
-            temp_v0_5->flags |= 0x8000;
-            goto block_36;
+            hold_state = &g_field_object_states[actor->object_index];
+            hold_state->flags |= 0x8000;
         }
-        g_field_object_states[actor->object_index].retry_count = 0;
-        actor->unk30 = 0;
-    block_36:
+        else
+        {
+            g_field_object_states[actor->object_index].retry_count = 0;
+            actor->unk30 = 0;
+        }
         precheck_states = g_field_object_states;
-        temp_v1_2 = &precheck_states[actor->object_index];
-        if (temp_v1_2->flags & 0x400)
+        precheck_state = &precheck_states[actor->object_index];
+        if (precheck_state->flags & 0x400)
         {
             actor->command = 0;
             return;
         }
-        if (D_8010AE54 != 0 && (u32)(temp_v1_2->action - 4) < 4U)
+        /* action 4-7; the plain range test does not fold on the u8 field (+2 insns) */
+        if (D_8010AE54 != 0 && (u32)(precheck_state->action - 4) < 4U)
         {
             actor->command = 0;
             return;
         }
+        resource_offset = actor->resource_index * 0x190;
+        action_row = g_field_resource_actions + g_field_object_states[actor->object_index].action * 8;
+        row = (u16*)(resource_offset + (s32)action_row);
+        if (!(row[1] & 0x400) && (row[0] == 0) && (row[2] == 0))
         {
-
-            do
+            actor->command = 0;
+            return;
+        }
+        if ((row[1] & 0x400) &&
+            ((field_object_has_active_actor_tracks(actor->object_index) != 0) || (field_count_free_actor_slots(actor->object_index) < 3)))
+        {
+            actor->command = 0;
+            return;
+        }
+        if ((row[0] & 0x8000) && !(row[1] & 0x400))
+        {
+            if (!(((u8)actor->object_index < 3U) && (field_object_has_active_actor_tracks(actor->object_index) == 0) && (D_8010AE58 == 0) &&
+                  (field_count_free_actor_slots(actor->object_index) >= 3)))
             {
-                resource_offset = actor->resource_index * 0x190;
-                action_row = g_field_resource_actions + g_field_object_states[actor->object_index].action * 8;
-                row = (u16*)(resource_offset + (s32)action_row);
-                if (!(row[1] & 0x400))
+                actor->command = 0;
+                return;
+            }
+            party_object = actor->object_index;
+            if (!((g_field_object_states[party_object].unk48 == 0xFF) &&
+                  (func_8008404C(party_object, (row[0] & 0x7FFF) + (u16)((g_field_player_records[party_object].type * 0x18) + 0x88)) != 0)))
+            {
+                actor->command = 0;
+                return;
+            }
+            case83_slots = g_field_actor_slots;
+            case83_entries = (u8*)g_field_actor_bindings;
+            if ((u8)actor->object_index < 2U)
+            {
+                case83_binding_offset = actor->object_index * 0x1C;
+            }
+            else
+            {
+                case83_binding_offset = 0x38;
+            }
+            ((FieldActorSlot*)((s32)case83_slots + (((FieldActorBinding*)&case83_entries[case83_binding_offset])->slot) * (s32)sizeof(FieldActorSlot)))->actor_type = g_field_object_states[actor->object_index].action;
+        }
+        else
+        {
+            bind_word = row[3];
+            if (bind_word & 0x8000)
+            {
+                if (func_8008404C(actor->object_index, bind_word & 0x3FF) == 0)
                 {
-                    if ((row[0] != 0) || (row[2] != 0))
-                    {
-                        if (*(volatile u16*)&row[1] & 0x400)
-                        {
-                            goto block_43;
-                        }
-                        goto block_45;
-                    }
-                    goto block_57;
-                }
-            block_43:
-                if ((field_object_has_active_actor_tracks(actor->object_index) == 0) && (field_count_free_actor_slots(actor->object_index) >= 3))
-                {
-                block_45:
-                    if ((row[0] & 0x8000) && !(row[1] & 0x400))
-                    {
-                        if (((u8)actor->object_index < 3U) && (field_object_has_active_actor_tracks(actor->object_index) == 0) && (D_8010AE58 == 0) &&
-                            (field_count_free_actor_slots(actor->object_index) >= 3))
-                        {
-                            temp_a0_2 = actor->object_index;
-                            if ((g_field_object_states[temp_a0_2].unk48 == 0xFF) &&
-                                (func_8008404C(temp_a0_2, (row[0] & 0x7FFF) + (u16)((g_field_player_records[temp_a0_2].type * 0x18) + 0x88)) != 0))
-                            {
-                                case83_slots = g_field_actor_slots;
-                                case83_entries = g_field_actor_bindings;
-                                if ((u8)actor->object_index >= 2U)
-                                {
-                                    var_v0_3 = 0x38;
-                                }
-                                else
-                                {
-                                    goto block_59;
-                                }
-                                goto block_61;
-                            }
-                        }
-                        goto block_57;
-                    }
-                    temp_a1_3 = row[3];
-                    if (temp_a1_3 & 0x8000)
-                    {
-                        if (func_8008404C(actor->object_index, temp_a1_3 & 0x3FF) == 0)
-                        {
-                        block_57:
-                            actor->command = 0;
-                            return;
-                        }
-                        case83_slots = g_field_actor_slots;
-                        case83_entries = g_field_actor_bindings;
-                        if ((u8)actor->object_index < 2U)
-                        {
-                        block_59:
-                            var_v0_3 = actor->object_index * 0x1C;
-                        }
-                        else
-                        {
-                            var_v0_3 = 0x38;
-                        }
-                    block_61:
-                        slot_offset_83 = (((FieldActorBinding*)&case83_entries[var_v0_3])->slot) * (s32)sizeof(FieldActorSlot);
-                        ((FieldActorSlot*)((s32)case83_slots + slot_offset_83))->actor_type = g_field_object_states[actor->object_index].action;
-                        goto block_62;
-                    }
-                block_62:
-                    if (row[1] & 0x400)
-                    {
-                        update_states = g_field_object_states;
-                        temp_v0_6 = &update_states[actor->object_index];
-                        temp_v0_6->contact.word |= 0x40;
-                        temp_v0_7 = &g_field_object_states[actor->object_index];
-                        action_mask = ~0x400;
-                        temp_v0_7->movement.word = temp_v0_7->movement.word & action_mask;
-                        g_field_object_states[actor->object_index].unk4A = 0;
-                        temp_v0_8 = &g_field_object_states[actor->object_index];
-                        action_mask = ~1;
-                        temp_v0_8->unk4C = temp_v0_8->unk4C & action_mask;
-                        temp_v1_3 = row[2];
-                        if ((temp_v1_3 != 0xFFFF) && (temp_v1_3 != 0))
-                        {
-                            g_field_object_states[actor->object_index].unk3C = (s32)row[2];
-                        }
-                    }
-                    else if (!(row[0] & 0x8000))
-                    {
-                        temp_v1_4 = row[2];
-                        if ((temp_v1_4 != 0xFFFF) && (temp_v1_4 != 0))
-                        {
-                            shared_s1 = func_800839F8((s32)actor->object_index, 0);
-                            if ((shared_s1 != -1) && (func_80083EEC((s32)actor->object_index, shared_s1, row[2]) != 0))
-                            {
-                                temp_a3_2 = actor->object_index;
-                                g_field_actor_slots[shared_s1].actor_type = g_field_object_states[temp_a3_2].action;
-                                field_start_actor_animation(shared_s1, 0, 0);
-                            }
-                        }
-                    }
-                    func_8009D4D8(actor, (u8)row[1]);
+                    actor->command = 0;
                     return;
                 }
-                goto block_57;
-            } while (0);
+                case83_slots = g_field_actor_slots;
+                case83_entries = (u8*)g_field_actor_bindings;
+                if ((u8)actor->object_index < 2U)
+                {
+                    case83_binding_offset = actor->object_index * 0x1C;
+                }
+                else
+                {
+                    case83_binding_offset = 0x38;
+                }
+                slot_offset_83 = (((FieldActorBinding*)&case83_entries[case83_binding_offset])->slot) * (s32)sizeof(FieldActorSlot);
+                ((FieldActorSlot*)((s32)case83_slots + slot_offset_83))->actor_type = g_field_object_states[actor->object_index].action;
+            }
         }
-        goto block_57;
+        if (row[1] & 0x400)
+        {
+            update_states = g_field_object_states;
+            contact_state = &update_states[actor->object_index];
+            contact_state->contact.word |= 0x40;
+            movement_state = &g_field_object_states[actor->object_index];
+            action_mask = ~0x400;
+            movement_state->movement.word = movement_state->movement.word & action_mask;
+            g_field_object_states[actor->object_index].unk4A = 0;
+            unk4c_state = &g_field_object_states[actor->object_index];
+            action_mask = ~1;
+            unk4c_state->unk4C = unk4c_state->unk4C & action_mask;
+            unk3c_value = row[2];
+            if ((unk3c_value != 0xFFFF) && (unk3c_value != 0))
+            {
+                g_field_object_states[actor->object_index].unk3C = (s32)row[2];
+            }
+        }
+        else if (!(row[0] & 0x8000))
+        {
+            slot_action_value = row[2];
+            if ((slot_action_value != 0xFFFF) && (slot_action_value != 0))
+            {
+                key_or_index = func_800839F8((s32)actor->object_index, 0);
+                if ((key_or_index != -1) && (func_80083EEC((s32)actor->object_index, key_or_index, row[2]) != 0))
+                {
+                    slot_object = actor->object_index;
+                    g_field_actor_slots[key_or_index].actor_type = g_field_object_states[slot_object].action;
+                    field_start_actor_animation(key_or_index, 0, 0);
+                }
+            }
+        }
+        func_8009D4D8(actor, (u8)row[1]);
+        return;
     case 0xAD:
         actor->unk33 = 1;
         /* fallthrough */
     case 0x88:
         actor->command = (s16)script[0];
-        temp_a1_4 = script[1];
-        actor->unk1B = temp_a1_4;
+        direction = script[1];
+        actor->unk1B = direction;
         if (g_field_resource_entries[actor->resource_index].flags & 1)
         {
-            actor->animation = g_field_actor_walk_animations[temp_a1_4 >> 5];
+            actor->animation = g_field_actor_walk_animations[direction >> 5];
         }
         else
         {
-            actor->animation = g_field_direction_animation_modes[temp_a1_4 >> 5] + ((actor->unk33 & 1) * 5) + 5;
+            actor->animation = g_field_direction_animation_modes[direction >> 5] + ((actor->unk33 & 1) * 5) + 5;
         }
         call_actor = actor;
-        var_a1 = script[2];
+        byte_arg = script[2];
         actor->unk24 = 1;
         offset_88 = actor->script_offset;
         offset_88 += 3;
-        actor->unk2E = (u16)var_a1;
+        actor->unk2E = (u16)byte_arg;
         call_actor->script_offset = offset_88;
         field_restart_actor_animation(call_actor);
         return;
     case 0x8D:
         actor->command = (s16)script[0];
-        temp_v0_10 = script[1] | (actor->animation & 0x80);
-        actor->animation = temp_v0_10;
-        if (temp_v0_10 & 0x80)
+        animation_8d = script[1] | (actor->animation & 0x80);
+        actor->animation = animation_8d;
+        if (animation_8d & 0x80)
         {
             actor->unk1B = 0;
         }
@@ -614,11 +609,11 @@ void func_80088198(FieldActor* actor)
             actor->unk1B = 0x80;
         }
         call_actor = actor;
-        var_a1 = script[2];
+        byte_arg = script[2];
         actor->unk24 = 1;
         offset_8d = actor->script_offset;
         offset_8d += 3;
-        actor->unk2E = (u16)var_a1;
+        actor->unk2E = (u16)byte_arg;
         call_actor->script_offset = offset_8d;
         field_restart_actor_animation(call_actor);
         return;
@@ -628,86 +623,86 @@ void func_80088198(FieldActor* actor)
         return;
     case 0xB0:
     case 0xB1:
-        temp_a1_5 = actor->x;
-        if ((temp_a1_5 < 0) || (temp_a3_3 = ((FieldMapBounds*)temp_a2)->width << 8, ((temp_a1_5 < temp_a3_3) == 0)) ||
-            (temp_v1_5 = actor->z, (temp_v1_5 < 0)) || (temp_a2 = (s32)(((FieldMapBounds*)temp_a2)->depth << 0x10) >> 7, ((temp_v1_5 < temp_a2) == 0)) ||
-            (query_base = g_field_object_states, temp_v1_6 = &query_base[actor->object_index], temp_v0_11 = temp_v1_6->target_x, (temp_v0_11 < 0)) ||
-            (temp_v0_11 >= temp_a3_3) || (temp_v0_12 = temp_v1_6->target_z, (temp_v0_12 < 0)) || (temp_v0_12 >= temp_a2))
+        query_x = actor->x;
+        if ((query_x < 0) || (width_limit = ((FieldMapBounds*)bounds_word)->width << 8, ((query_x < width_limit) == 0)) ||
+            (contact_or_z = actor->z, (contact_or_z < 0)) || (bounds_word = (s32)(((FieldMapBounds*)bounds_word)->depth << 0x10) >> 7, ((contact_or_z < bounds_word) == 0)) ||
+            (query_base = g_field_object_states, query_state = &query_base[actor->object_index], query_target_x = query_state->target_x, (query_target_x < 0)) ||
+            (query_target_x >= width_limit) || (query_target_z = query_state->target_z, (query_target_z < 0)) || (query_target_z >= bounds_word))
         {
             call_actor = actor;
             g_field_object_states[actor->object_index].path_index = 0;
-            temp_v0_13 = &g_field_object_states[actor->object_index];
-            temp_v0_13->path_x = temp_v0_13->target_x;
-            temp_v0_14 = &g_field_object_states[actor->object_index];
-            temp_v0_14->path_z = (s32)temp_v0_14->target_z;
-            var_a1 = 1;
+            direct_path_state = &g_field_object_states[actor->object_index];
+            direct_path_state->path_x = direct_path_state->target_x;
+            direct_path_state_z = &g_field_object_states[actor->object_index];
+            direct_path_state_z->path_z = (s32)direct_path_state_z->target_z;
+            byte_arg = 1;
             g_field_object_states[actor->object_index].path_length = 1;
-            temp_a2 = script[0];
+            bounds_word = script[0];
             call_actor->unk2E = 0xFF;
             call_actor->unk24 = 1;
-            offset_query = (u16)call_actor->script_offset + 1;
-            call_actor->command = temp_a2;
-            call_actor->script_offset = offset_query;
+            direct_offset = (u16)call_actor->script_offset + 1;
+            call_actor->command = bounds_word;
+            call_actor->script_offset = direct_offset;
             field_restart_actor_animation(call_actor);
             return;
         }
         else
         {
-            sp18.x = temp_a1_5;
-            sp18.y = actor->y;
-            sp18.z = actor->z;
+            query_from.x = query_x;
+            query_from.y = actor->y;
+            query_from.z = actor->z;
             if (g_field_object_parts[actor->object_index].footprint == 0x40)
             {
-                sp18.width = 0xC;
-                sp18.depth = 8;
-                sp30.width = 0xC;
-                sp30.depth = 8;
+                query_from.width = 0xC;
+                query_from.depth = 8;
+                query_to.width = 0xC;
+                query_to.depth = 8;
             }
             else
             {
-                sp18.width = 9;
-                sp18.depth = 6;
-                sp30.width = 9;
-                sp30.depth = 6;
+                query_from.width = 9;
+                query_from.depth = 6;
+                query_to.width = 9;
+                query_to.depth = 6;
             }
-            sp18.height = 0x10;
-            sp30.height = 0x10;
-            func_8006304C(&sp18);
-            sp30.x = g_field_object_states[actor->object_index].target_x;
-            sp30.y = g_field_object_states[actor->object_index].target_y;
-            sp30.z = g_field_object_states[actor->object_index].target_z;
-            var_s2 = func_80060F58(&sp18, &sp30, &g_field_object_states[actor->object_index].path_x, 0);
+            query_from.height = 0x10;
+            query_to.height = 0x10;
+            func_8006304C(&query_from);
+            query_to.x = g_field_object_states[actor->object_index].target_x;
+            query_to.y = g_field_object_states[actor->object_index].target_y;
+            query_to.z = g_field_object_states[actor->object_index].target_z;
+            index_or_count = func_80060F58(&query_from, &query_to, &g_field_object_states[actor->object_index].path_x, 0);
             call_actor = actor;
-            if (var_s2 <= 0)
+            if (index_or_count <= 0)
             {
                 g_field_object_states[actor->object_index].path_index = 0;
-                temp_v0_16 = &g_field_object_states[actor->object_index];
-                temp_v0_16->path_x = (s32)temp_v0_16->target_x;
-                temp_v0_17 = &g_field_object_states[actor->object_index];
-                temp_v0_17->path_z = (s32)temp_v0_17->target_z;
-                var_a1 = 1;
+                fallback_path_state = &g_field_object_states[actor->object_index];
+                fallback_path_state->path_x = (s32)fallback_path_state->target_x;
+                fallback_path_state_z = &g_field_object_states[actor->object_index];
+                fallback_path_state_z->path_z = (s32)fallback_path_state_z->target_z;
+                byte_arg = 1;
                 g_field_object_states[actor->object_index].path_length = 1;
-                temp_a2 = script[0];
+                bounds_word = script[0];
                 call_actor->unk2E = 0xFF;
                 call_actor->unk24 = 1;
-                queryoff2 = call_actor->script_offset;
-                queryoff2 += 1;
-                call_actor->command = temp_a2;
-                call_actor->script_offset = queryoff2;
+                fallback_offset = call_actor->script_offset;
+                fallback_offset += 1;
+                call_actor->command = bounds_word;
+                call_actor->script_offset = fallback_offset;
                 field_restart_actor_animation(call_actor);
                 return;
             }
             else
             {
-                g_field_object_states[actor->object_index].path_length = var_s2;
+                g_field_object_states[actor->object_index].path_length = index_or_count;
                 g_field_object_states[actor->object_index].path_index = 0;
-                var_a1 = script[0];
-                temp_a2 = script[0];
+                byte_arg = script[0];
+                bounds_word = script[0];
                 call_actor->unk2E = 0xFF;
                 call_actor->unk24 = 1;
-                queryoff3 = (u16)call_actor->script_offset + 1;
-                call_actor->command = (s16)var_a1;
-                call_actor->script_offset = queryoff3;
+                path_offset = (u16)call_actor->script_offset + 1;
+                call_actor->command = (s16)byte_arg;
+                call_actor->script_offset = path_offset;
                 field_restart_actor_animation(call_actor);
                 return;
             }
@@ -736,172 +731,171 @@ void func_80088198(FieldActor* actor)
         field_restart_actor_animation(actor);
         return;
     case 0x9E:
-        case9e_entries = g_field_actor_bindings;
+        case9e_entries = (u8*)g_field_actor_bindings;
         if ((u8)actor->object_index < 2U)
         {
-            var_v0_5 = actor->object_index * 0x1C;
+            case9e_binding_offset = actor->object_index * 0x1C;
         }
         else
         {
-            var_v0_5 = 0x38;
+            case9e_binding_offset = 0x38;
         }
-        if (((FieldActorBinding*)(case9e_entries + var_v0_5))->state == 0)
+        if (((FieldActorBinding*)(case9e_entries + case9e_binding_offset))->state == 0)
         {
-            shared_s1 = script[1] + (script[2] << 8);
-            temp_a1_6 = actor->object_index;
+            key_or_index = script[1] + (script[2] << 8);
+            case9e_object = actor->object_index;
             actor->script_offset = (u16)actor->script_offset + 3;
             case9e_states = g_field_object_states;
-            if (case9e_states[temp_a1_6].flags & 0x400)
+            if (case9e_states[case9e_object].flags & 0x400)
             {
-                goto block_154;
+                actor->script_index = 0xFF;
+                actor->unk10 = 0;
+                return;
             }
             if (D_8010AE54 != 0)
             {
-                goto block_155;
+                actor->script_index = 0xFF;
+                actor->unk10 = 0;
+                return;
             }
-            if (func_8008404C(temp_a1_6, shared_s1) == 0)
+            if (func_8008404C(case9e_object, key_or_index) == 0)
             {
-                goto block_155;
+                actor->script_index = 0xFF;
+                actor->unk10 = 0;
+                return;
             }
             case9e_states[actor->object_index].movement.word |= 0x8000;
             return;
         }
         break;
     case 0xA9:
-        casea9_check_entries = g_field_actor_bindings;
+        casea9_check_entries = (u8*)g_field_actor_bindings;
         if ((u8)actor->object_index < 2U)
         {
-            var_v0_6 = actor->object_index * 0x1C;
+            casea9_check_offset = actor->object_index * 0x1C;
         }
         else
         {
-            var_v0_6 = 0x38;
+            casea9_check_offset = 0x38;
         }
-        if (((FieldActorBinding*)(casea9_check_entries + var_v0_6))->state == 0)
+        if (((FieldActorBinding*)(casea9_check_entries + casea9_check_offset))->state == 0)
         {
-            temp_s0_2 = script[3];
-            shared_s1 = script[1] + (script[2] << 8);
+            action_or_index = script[3];
+            key_or_index = script[1] + (script[2] << 8);
             actor->script_offset = (u16)actor->script_offset + 4;
             casea9_states = g_field_object_states;
             casea9_states[actor->object_index].unk3C = 0xFFFF;
             if (D_8010AE54 != 0)
             {
-                goto block_154;
+                actor->script_index = 0xFF;
+                actor->unk10 = 0;
+                return;
             }
-            if (func_8008404C(actor->object_index, shared_s1) == 0)
+            if (func_8008404C(actor->object_index, key_or_index) == 0)
             {
-                goto block_155;
+                actor->script_index = 0xFF;
+                actor->unk10 = 0;
+                return;
             }
-            temp_v1_8 = actor->object_index;
-            casea9_state = &casea9_states[temp_v1_8];
+            casea9_object = actor->object_index;
+            casea9_state = &casea9_states[casea9_object];
             casea9_slots = g_field_actor_slots;
-            casea9_entries = g_field_actor_bindings;
-            if (temp_v1_8 < 2U)
+            casea9_entries = (u8*)g_field_actor_bindings;
+            if (casea9_object < 2U)
             {
-                var_v0_7 = temp_v1_8 * 0x1C;
+                casea9_binding_offset = casea9_object * 0x1C;
             }
             else
             {
-                var_v0_7 = 0x38;
+                casea9_binding_offset = 0x38;
             }
-            slot_offset_a9 = (((FieldActorBinding*)&casea9_entries[var_v0_7])->slot) * (s32)sizeof(FieldActorSlot);
-            ((FieldActorSlot*)((s32)casea9_slots + slot_offset_a9))->actor_type = temp_s0_2;
-            casea9_state->action = temp_s0_2;
+            slot_offset_a9 = (((FieldActorBinding*)&casea9_entries[casea9_binding_offset])->slot) * (s32)sizeof(FieldActorSlot);
+            ((FieldActorSlot*)((s32)casea9_slots + slot_offset_a9))->actor_type = action_or_index;
+            casea9_state->action = action_or_index;
             g_field_object_states[actor->object_index].movement.word |= 0x8000;
             return;
         }
         break;
     case 0xBC:
-        shared_s1 = 2;
+        key_or_index = 2;
         if ((u8)actor->object_index < 2U)
         {
-            shared_s1 = actor->object_index;
+            key_or_index = actor->object_index;
         }
-        bc_entries = g_field_actor_bindings;
-        temp_s2 = (shared_s1 * 0x1C) + bc_entries;
-        temp_a0_3 = ((FieldActorBinding*)temp_s2)->state;
-        if (((u32)(temp_a0_3 - 1) < 2U) && (((FieldActorBinding*)temp_s2)->owner == actor->object_index))
+        bc_entries = (u8*)g_field_actor_bindings;
+        bc_binding = (key_or_index * 0x1C) + bc_entries;
+        bc_state = ((FieldActorBinding*)bc_binding)->state;
+        if (((bc_state >= 1) && (bc_state <= 2)) && (((FieldActorBinding*)bc_binding)->owner == actor->object_index))
         {
-            var_s6 = 1;
-            if (temp_a0_3 != var_s6)
+            one = 1;
+            if (bc_state != one)
             {
                 bc_slots = g_field_actor_slots;
-                temp_v1_9 = &bc_slots[((FieldActorBinding*)temp_s2)->slot];
-                if (temp_v1_9->track_mask == 0)
+                bc_slot = &bc_slots[((FieldActorBinding*)bc_binding)->slot];
+                if (bc_slot->track_mask == 0)
                 {
-                    temp_v1_9->animation = temp_v1_9->default_animation;
+                    bc_slot->animation = bc_slot->default_animation;
                     g_field_object_states[actor->object_index].contact.bytes.target_count = 0;
-                    field_start_actor_animation(((FieldActorBinding*)temp_s2)->slot, 0, 0);
-                    g_field_object_states[shared_s1].contact.bytes.animation_actor_index = (u8)((FieldActorBinding*)temp_s2)->slot;
-                    g_field_actor_slots[((FieldActorBinding*)temp_s2)->slot].unk2A = var_s6;
+                    field_start_actor_animation(((FieldActorBinding*)bc_binding)->slot, 0, 0);
+                    g_field_object_states[key_or_index].contact.bytes.animation_actor_index = (u8)((FieldActorBinding*)bc_binding)->slot;
+                    g_field_actor_slots[((FieldActorBinding*)bc_binding)->slot].unk2A = one;
                     actor->command = 0xBC;
                 }
-                goto block_167;
+                actor->script_offset++;
+                return;
             }
         }
         else
         {
-            goto block_167;
-        }
-        break;
-    case 0x9F:
-        shared_s1 = 2;
-        if ((u8)actor->object_index < 2U)
-        {
-            shared_s1 = actor->object_index;
-        }
-        track_entries = g_field_actor_bindings;
-        temp_v1_10 = (shared_s1 * 0x1C) + track_entries;
-        temp_a0_4 = ((FieldActorBinding*)temp_v1_10)->state;
-        if (((u32)(temp_a0_4 - 1) < 2U) && (track_owner = actor->object_index, temp_a1_7 = ((FieldActorBinding*)temp_v1_10)->owner, (temp_a1_7 == track_owner)))
-        {
-            if (temp_a0_4 != 1)
-            {
-                track_slots = g_field_actor_slots;
-                temp_v1_11 = &track_slots[((FieldActorBinding*)temp_v1_10)->slot];
-                if (temp_v1_11->track_mask == 0)
-                {
-                    var_s2 = 0;
-                    if (temp_v1_11->default_animation->flags & 0x800)
-                    {
-                        temp_s0_2 = 0;
-                        var_v1_3 = temp_v1_11->tracks;
-                    loop_count_tracks:
-                    {
-                        if (*var_v1_3 != 0)
-                        {
-                            var_s2 += 1;
-                        }
-                        temp_s0_2 += 1;
-                        var_v1_3 += 1;
-                        if (temp_s0_2 < 3)
-                        {
-                            goto loop_count_tracks;
-                        }
-                    }
-                        track_result = field_start_bound_action_animation(actor->object_index, 0, 0, ((var_s2 - 1) << 0xC) | 0x4400);
-                    }
-                    else
-                    {
-                        track_result = field_start_bound_action_animation(temp_a1_7, 0, 0, 0);
-                    }
-                    if (track_result != 0)
-                    {
-                        actor->command = 0xBC;
-                        g_field_object_states[actor->object_index].contact.bytes.target_count = 0;
-                    }
-                }
-                goto block_140;
-            }
-        }
-        else
-        {
-        block_140:
-            var_v0 = (u16)actor->script_offset + 2;
-            actor->script_offset = var_v0;
+            actor->script_offset++;
             return;
         }
         break;
+    case 0x9F:
+        key_or_index = 2;
+        if ((u8)actor->object_index < 2U)
+        {
+            key_or_index = actor->object_index;
+        }
+        bindings = g_field_actor_bindings;
+        binding = &bindings[key_or_index];
+        binding_state = binding->state;
+        if (((binding_state >= 1) && (binding_state <= 2)) && (track_owner = actor->object_index, binding_owner = binding->owner, (binding_owner == track_owner)))
+        {
+            if (binding_state == 1)
+            {
+                return;
+            }
+            slots = g_field_actor_slots;
+            slot = &slots[binding->slot];
+            if (slot->track_mask == 0)
+            {
+                index_or_count = 0;
+                if (slot->default_animation->flags & 0x800)
+                {
+                    for (action_or_index = 0; action_or_index < 3; action_or_index++)
+                    {
+                        if (slot->tracks[action_or_index] != 0)
+                        {
+                            index_or_count += 1;
+                        }
+                    }
+                    track_result = field_start_bound_action_animation(actor->object_index, 0, 0, ((index_or_count - 1) << 0xC) | 0x4400);
+                }
+                else
+                {
+                    track_result = field_start_bound_action_animation(binding_owner, 0, 0, 0);
+                }
+                if (track_result != 0)
+                {
+                    actor->command = 0xBC;
+                    g_field_object_states[actor->object_index].contact.bytes.target_count = 0;
+                }
+            }
+        }
+        next_offset = (u16)actor->script_offset + 2;
+        actor->script_offset = next_offset;
+        return;
     case 0xA0:
     {
         FieldActor* alias;
@@ -927,9 +921,9 @@ void func_80088198(FieldActor* actor)
         FieldObjectState* states;
         u8 value;
         alias = actor;
-        temp_v1 = script[0];
+        a7_command = script[0];
         alias->unk2E = 0xFA;
-        value = temp_v1;
+        value = a7_command;
         alias->command = value;
         value = script[1];
         alias->unk1B = value;
@@ -937,14 +931,14 @@ void func_80088198(FieldActor* actor)
         value = script[2];
         alias->unk20 = value;
         states[alias->object_index].unk171 = script[3];
-        var_a1 = script[4];
-        var_v1 = alias->script_offset;
+        byte_arg = script[4];
+        a7_offset = alias->script_offset;
         alias->unk2E = 0xF0;
         alias->unk24 = 1;
-        var_v1 += 5;
-        alias->animation = var_a1;
+        a7_offset += 5;
+        alias->animation = byte_arg;
         call_actor = alias;
-        call_actor->script_offset = var_v1;
+        call_actor->script_offset = a7_offset;
         field_restart_actor_animation(call_actor);
         return;
     }
@@ -963,49 +957,42 @@ void func_80088198(FieldActor* actor)
     case 0x97:
         script += 1;
         actor->script_offset = (u16)actor->script_offset + 9;
-        sp10.x = script[0] + (script[1] << 8);
-        sp10.y = (s16)script[2];
-        sp10.w = (s16)script[3];
-        sp10.h = (s16)script[4];
-        func_8008A4D0(actor, &sp10, script[5] | (script[6] << 8), script[7]);
+        rect.x = script[0] + (script[1] << 8);
+        rect.y = (s16)script[2];
+        rect.w = (s16)script[3];
+        rect.h = (s16)script[4];
+        func_8008A4D0(actor, &rect, script[5] | (script[6] << 8), script[7]);
         return;
     case 0xA1:
-        shared_s1 = script[1] + (script[2] << 8);
+        key_or_index = script[1] + (script[2] << 8);
         actor->script_offset = (u16)actor->script_offset + 3;
-        if (D_8010AE54 != 0)
+        if (D_8010AE54 == 0 && func_8008404C(actor->object_index, key_or_index) != 0)
         {
-            goto block_154;
+            a1_flag = D_8010A020;
+            if ((u8)actor->object_index < 2U)
+            {
+                a1_flag += actor->object_index;
+            }
+            else
+            {
+                a1_flag += 2;
+            }
+            *a1_flag = 1;
+            return;
         }
-        if (func_8008404C(actor->object_index, shared_s1) == 0)
-        {
-            goto block_155;
-        }
-        var_v1_4 = D_8010A020;
-        if ((u8)actor->object_index < 2U)
-        {
-            var_v1_4 += actor->object_index;
-        }
-        else
-        {
-            var_v1_4 += 2;
-        }
-        *var_v1_4 = 1;
-        return;
-    block_154:
-    block_155:
         actor->script_index = 0xFF;
         actor->unk10 = 0;
         return;
     case 0xA4:
-        temp_a1 = 1;
+        opcode = 1;
         if ((u8)actor->object_index < 2U)
         {
             decoded_a4 = script[0];
-            actor->unk2E = temp_a1;
+            actor->unk2E = opcode;
             actor->command = decoded_a4;
             a4_old_flags = actor->animation;
             a4_command_flags = script[1];
-            actor->unk24 = temp_a1;
+            actor->unk24 = opcode;
             actor->animation = a4_command_flags | (a4_old_flags & 0x80);
             field_restart_actor_animation(actor);
         }
@@ -1013,15 +1000,17 @@ void func_80088198(FieldActor* actor)
         return;
     case 0xA5:
         casea5_base = g_field_object_parts;
-        temp_v0_19 = &casea5_base[actor->object_index];
-        temp_v0_19->flags |= 0x800000;
-        goto block_167;
+        casea5_part = &casea5_base[actor->object_index];
+        casea5_part->flags |= 0x800000;
+        actor->script_offset++;
+        return;
     case 0xA6:
         casea6_mask = 0xFF7FFFFF;
         casea6_base = g_field_object_parts;
-        temp_v0_20 = &casea6_base[actor->object_index];
-        temp_v0_20->flags &= casea6_mask;
-        goto block_167;
+        casea6_part = &casea6_base[actor->object_index];
+        casea6_part->flags &= casea6_mask;
+        actor->script_offset++;
+        return;
     case 0xA8:
     {
         FieldActor* alias;
@@ -1064,9 +1053,9 @@ void func_80088198(FieldActor* actor)
     case 0xB2:
         decoded_b2 = script[0];
         actor->unk20 = 0;
-        var_v0 = (u16)actor->script_offset + 1;
+        next_offset = (u16)actor->script_offset + 1;
         actor->command = decoded_b2;
-        actor->script_offset = var_v0;
+        actor->script_offset = next_offset;
         return;
     case 0xB4:
         if (actor->presence == 0xFE)
@@ -1077,10 +1066,11 @@ void func_80088198(FieldActor* actor)
         {
             actor->presence = 0xFE;
         }
-        goto block_167;
-    case 0x0:
-    block_167:
         actor->script_offset++;
+        return;
+    case 0x00:
+        actor->script_offset++;
+        return;
     default:
         return;
     }
@@ -1271,7 +1261,7 @@ s32 func_80089D44(s32 key, s32 animation, s32 resource_index, s32 sound)
     actor = field_find_actor(key);
     if (actor == FIELD_ACTOR_NONE)
     {
-        return (s32)actor;
+        return -1;
     }
     actor->presence = 0;
     actor->command = 0;
@@ -1301,13 +1291,13 @@ s32 func_80089D44(s32 key, s32 animation, s32 resource_index, s32 sound)
     func_800B48B8(g_field_object_states[actor->object_index].key);
     g_field_object_states[actor->object_index].flags = 0;
     contact_state = &g_field_object_states[actor->object_index];
-    contact_state->contact.word = contact_state->contact.word & ~0x20;
+    contact_state->contact.bits.flag5 = 0;
     hp_state = &g_field_object_states[actor->object_index];
     hp_state->unk8.word = (hp_state->unk8.word & 0xFF000000) | (hp_state->unk0 & 0xFFFFFF);
     hp_state->unk4.word = hp_state->unk0 & 0xFFFFFF;
     g_field_object_states[actor->object_index].tint_timer = 60;
     movement_state = &g_field_object_states[actor->object_index];
-    movement_state->movement.word = movement_state->movement.word | 0x8000;
+    movement_state->movement.bits.flag15 = 1;
     if (actor->object_index < 3U &&
         (actor->x <= -camera->x + 0xA00 || actor->x >= -camera->x + 0x13600 || actor->z <= -camera->z + 0xA00 || actor->z >= -camera->z + 0x1B600))
     {
@@ -1352,14 +1342,14 @@ void func_8008A0B0(FieldActor* actor, s32 target_index, s32 restart)
 
     bounds = FIELD_MAP_BOUNDS;
     x = actor->x;
-    if ((x < 0) || (map_width = bounds->width << 8, ((x < map_width) == 0)) || (z = actor->z, (z < 0)) ||
-        (map_depth = (s32)(bounds->depth << 0x10) >> 7, ((z < map_depth) == 0)) ||
-        (state_x = g_field_object_states[actor->object_index].target_x, (state_x < 0)) || (state_x >= map_width) ||
-        (state_z = g_field_object_states[actor->object_index].target_z, (state_z < 0)) || (state_z >= map_depth))
+    if (x < 0 || x >= (map_width = bounds->width << 8) || (z = actor->z) < 0 ||
+        z >= (map_depth = (s32)(bounds->depth << 0x10) >> 7) ||
+        (state_x = g_field_object_states[actor->object_index].target_x) < 0 || state_x >= map_width ||
+        (state_z = g_field_object_states[actor->object_index].target_z) < 0 || state_z >= map_depth)
     {
-        (&g_field_object_states[actor->object_index])->path_index = 0;
-        (&g_field_object_states[actor->object_index])->path_x = g_field_actors[target_index].x;
-        (&g_field_object_states[actor->object_index])->path_z = g_field_actors[target_index].z;
+        g_field_object_states[actor->object_index].path_index = 0;
+        g_field_object_states[actor->object_index].path_x = g_field_actors[target_index].x;
+        g_field_object_states[actor->object_index].path_z = g_field_actors[target_index].z;
         g_field_object_states[actor->object_index].path_length = 1;
     }
     else
@@ -1367,7 +1357,7 @@ void func_8008A0B0(FieldActor* actor, s32 target_index, s32 restart)
         start.x = x;
         start.y = actor->y;
         start.z = actor->z;
-        if ((&g_field_object_parts[actor->object_index])->footprint == 0x40)
+        if (g_field_object_parts[actor->object_index].footprint == 0x40)
         {
             start.width = 12;
             start.depth = 8;
@@ -1386,23 +1376,23 @@ void func_8008A0B0(FieldActor* actor, s32 target_index, s32 restart)
         func_8006304C(&start);
         D_80105B30[actor->object_index].target_x = g_field_actors[target_index].x;
         target = &g_field_actors[target_index];
-        (&D_80105B30[actor->object_index])->target_y = target->y;
-        (&D_80105B30[actor->object_index])->target_z = target->z;
+        D_80105B30[actor->object_index].target_y = target->y;
+        D_80105B30[actor->object_index].target_z = target->z;
         goal.x = target->x;
         goal.y = target->y;
         goal.z = target->z;
         path_length = func_80060F58(&start, &goal, &D_80105B30[actor->object_index].path_x, 0);
         if (path_length <= 0)
         {
-            (&FIELD_OBJECT_STATES_AT_TARGET[actor->object_index])->path_index = 0;
-            (&FIELD_OBJECT_STATES_AT_TARGET[actor->object_index])->path_x = target->x;
-            (&FIELD_OBJECT_STATES_AT_TARGET[actor->object_index])->path_z = target->z;
+            FIELD_OBJECT_STATES_AT_TARGET[actor->object_index].path_index = 0;
+            FIELD_OBJECT_STATES_AT_TARGET[actor->object_index].path_x = target->x;
+            FIELD_OBJECT_STATES_AT_TARGET[actor->object_index].path_z = target->z;
             FIELD_OBJECT_STATES_AT_TARGET[actor->object_index].path_length = 1;
         }
         else
         {
-            (&FIELD_OBJECT_STATES_AT_TARGET[actor->object_index])->path_length = path_length;
-            (&FIELD_OBJECT_STATES_AT_TARGET[actor->object_index])->path_index = 0;
+            FIELD_OBJECT_STATES_AT_TARGET[actor->object_index].path_length = path_length;
+            FIELD_OBJECT_STATES_AT_TARGET[actor->object_index].path_index = 0;
         }
     }
     if (restart != 0)
@@ -1470,7 +1460,7 @@ s32 func_8008A580(s32 key, s32 resource_id)
     actor = field_find_actor(key);
     if (actor == FIELD_ACTOR_NONE)
     {
-        return (s32)actor;
+        return -1;
     }
     if (func_8008404C(actor->object_index, resource_id) != 0)
     {
@@ -1505,56 +1495,44 @@ void func_8008A678(s32 object_index)
     FieldObjectState* source;
     FieldObjectState* saved_source;
     FieldObjectState* current;
-    FieldObjectState* target;
-    FieldObjectState* first_target;
     s32 i;
     s32 index8;
 
     states = g_field_object_states;
     index8 = object_index * 8;
-    source = (FieldObjectState*)((u8*)states + ((index8 + object_index) * 16 - object_index) * 4);
+    source = FIELD_OBJECT_STATE_BY_INDEX8(states, index8, object_index);
     i = 0;
     if (source->contact.bytes.target_count != 0)
     {
+        /* Copies and a per-pass index8 keep the source address inside the loop, as in the original. */
         loop_states = states;
         saved_source = source;
         index8 = object_index * 8;
         do
         {
-            current = (FieldObjectState*)((((index8 + object_index) * 16 - object_index) * 4) + (u32)loop_states);
-            first_target = (FieldObjectState*)(current->targets[i] * 0x23C + (u32)loop_states);
-            first_target->contact.word &= ~0x80;
-            target = (FieldObjectState*)(current->targets[i] * 0x23C + (u32)loop_states);
-            if (!((target->contact.word >> 5) & 1))
+            current = FIELD_OBJECT_STATE_BY_INDEX8(loop_states, index8, object_index);
+            loop_states[current->targets[i]].contact.bits.flag7 = 0;
+            if (!loop_states[current->targets[i]].contact.bits.flag5 && loop_states[current->targets[i]].unk4.word != 0)
             {
-                index8 = object_index * 8;
-                if (target->unk4.word != 0)
+                request.source_key = current->key;
+                if (current->action < 0xB)
                 {
-                    request.source_key = current->key;
-                    if ((u8)current->action < 0xB)
-                    {
-                        request.action = current->action;
-                    }
-                    else
-                    {
-                        request.action = 0xA;
-                    }
-                    request.target_key = loop_states[saved_source->targets[i]].key;
-                    request.param = 0;
-                    request.unk10 = 0;
-                    request.unk14 = 0;
-                    request.mode = 1;
-                    func_800B5534(&request);
-                    goto stride_update;
+                    request.action = current->action;
                 }
+                else
+                {
+                    request.action = 0xA;
+                }
+                request.target_key = loop_states[saved_source->targets[i]].key;
+                request.param = 0;
+                request.unk10 = 0;
+                request.unk14 = 0;
+                request.mode = 1;
+                func_800B5534(&request);
             }
-            else
-            {
-            stride_update:
-                index8 = object_index * 8;
-            }
+            index8 = object_index * 8;
             i++;
-        } while (i < ((FieldObjectState*)((u8*)loop_states + (((index8 + object_index) * 16 - object_index) * 4)))->contact.bytes.target_count);
+        } while (i < FIELD_OBJECT_STATE_BY_INDEX8(loop_states, index8, object_index)->contact.bytes.target_count);
     }
     g_field_object_states[object_index].contact.bytes.target_count = 0;
 }
@@ -1579,14 +1557,14 @@ s32 func_8008A840(s32 source_index, s32 target_index)
     }
     states = g_field_object_states;
     target = &states[target_index];
-    target->contact.word = target->contact.word & ~0x80;
+    target->contact.bits.flag7 = 0;
     if (target->unk4.word == 0)
     {
         return 0;
     }
     source = &states[source_index];
     request.source_key = source->key;
-    if ((u8)source->action < 0xB)
+    if (source->action < 0xB)
     {
         request.action = source->action;
     }
@@ -1632,7 +1610,7 @@ s32 func_8008A9D8(s32 source_index, s32 target_index, s32 action)
     {
         states = g_field_object_states;
         target = &states[target_index];
-        target->contact.word = target->contact.word & ~0x80;
+        target->contact.bits.flag7 = 0;
         if (target->unk4.word != 0)
         {
             request.source_key = states[source_index].key;
@@ -1675,8 +1653,7 @@ s32 func_8008AB2C(s32 key, s32 alternate)
     FieldActor* actor;
     s16 command;
     s32 hit_count;
-    FieldObjectState* state;
-    u8* states;
+    FieldObjectState* states;
 
     actor = field_find_actor(key);
     if (actor == FIELD_ACTOR_NONE)
@@ -1691,14 +1668,13 @@ s32 func_8008AB2C(s32 key, s32 alternate)
             ((FieldPadCounters*)g_pad_ctx)->unk3154 = hit_count + 1;
         }
     }
-    states = (u8*)g_field_object_states;
-    state = (FieldObjectState*)(states + actor->object_index * 0x23C);
-    state->flags = state->flags | 0x10000000;
-    if ((u8)actor->object_index < 3U)
+    states = g_field_object_states;
+    states[actor->object_index].flags |= 0x10000000;
+    if (actor->object_index < 3)
     {
         g_field_player_records[actor->object_index].hit_state = 5;
     }
-    else if (((FieldObjectState*)(states + actor->object_index * 0x23C))->unk8.word < 0)
+    else if (states[actor->object_index].unk8.word < 0)
     {
         g_field_boss_hud_shake_frame = 5;
     }
@@ -1717,7 +1693,7 @@ s32 func_8008AB2C(s32 key, s32 alternate)
     }
     if (command >= 0x85)
     {
-        switch (((FieldObjectState*)((u8*)g_field_object_states + actor->object_index * 0x23C))->action)
+        switch (g_field_object_states[actor->object_index].action)
         {
         case 0:
         case 1:
@@ -1728,7 +1704,7 @@ s32 func_8008AB2C(s32 key, s32 alternate)
         case 10:
             break;
         default:
-            if (!((((FieldObjectState*)((u8*)g_field_object_states + actor->object_index * 0x23C))->contact.word >> 6) & 1))
+            if (!g_field_object_states[actor->object_index].contact.bits.flag6)
             {
                 return 0;
             }
@@ -2152,9 +2128,8 @@ s32 func_8008B5D0(s32 key, s32 resource_index, s32 target_keys, s32* unused)
     s32 slot_index;
     s32 targets[16];
 
-    i = 0;
-    target_count = i;
-    for (; i < target_keys; i++)
+    target_count = 0;
+    for (i = 0; i < target_keys; i++)
     {
         actor = field_find_actor(key);
         if (actor != FIELD_ACTOR_NONE)
@@ -2195,44 +2170,22 @@ void func_8008B724(void)
 void func_8008B73C(void)
 {
     s32 i;
-    s32* flag;
-    u8* binding;
-    s32 index8;
-    s32 index;
-    u8* slot;
-    s32 slot_offset;
-    u8* slots;
-    u8* states;
+    s32 owner;
 
-    i = 0;
-    slots = (u8*)g_field_actor_slots;
-    states = (u8*)g_field_object_states;
-    flag = D_8010A020;
-    binding = (u8*)g_field_actor_bindings;
-restart_slots:
-{
-    if (*flag != 0 && *(s32*)(binding + 0x0) == 2)
+    for (i = 0; i < FIELD_ACTOR_BINDING_COUNT; i++)
     {
-        slot_offset = *(s32*)(binding + 0x18) * 0x244;
-        *(s32*)(slot_offset + (u32)slots + 0xC) = *(s32*)(slot_offset + (u32)slots + 0x10);
-        field_start_actor_animation(*(s32*)(binding + 0x18), 0, 0);
-        index = *(s32*)(binding + 0xC);
-        if (index >= 3)
+        if (D_8010A020[i] != 0 && g_field_actor_bindings[i].state == 2)
         {
-            index = 2;
+            g_field_actor_slots[g_field_actor_bindings[i].slot].animation = g_field_actor_slots[g_field_actor_bindings[i].slot].default_animation;
+            field_start_actor_animation(g_field_actor_bindings[i].slot, 0, 0);
+            owner = g_field_actor_bindings[i].owner;
+            if (owner >= 3)
+            {
+                owner = 2;
+            }
+            g_field_object_states[owner].contact.bytes.animation_actor_index = g_field_actor_bindings[i].slot;
+            D_8010A020[i] = 0;
+            g_field_actor_slots[g_field_actor_bindings[i].slot].unk2A = 1;
         }
-        index8 = index * 8;
-        (states + (((index8 + index) * 0x10) - index) * 4)[0x179] = *(u8*)(binding + 0x18);
-        *flag = 0;
-        slot = (u8*)(*(s32*)(binding + 0x18) * 0x244 + (u32)slots);
-        slot[0x2A] = 1;
-    }
-    flag += 1;
-    i += 1;
-    binding += 0x1C;
-}
-    if (i < 3)
-    {
-        goto restart_slots;
     }
 }

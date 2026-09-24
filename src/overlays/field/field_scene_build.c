@@ -140,6 +140,95 @@ typedef union
  */
 FieldAnimCel *func_8005ABD8(FieldTileGrid *grid, FieldTintSrc **owner_out);
 
+/**
+ * @brief FieldObj as field_build_render_records fills it in.
+ *
+ * Same layout as FieldObj, but with the 0x10..0x1B block named as the tint
+ * halfwords FieldTintSrc reads (FieldObj declares it as the two words
+ * field_find_shareable_part compares).
+ */
+typedef struct FieldObjBuild FieldObjBuild;
+typedef struct FieldPartBuild FieldPartBuild;
+struct FieldObjBuild
+{
+    FieldObjBuild* next;   /* 0x00 */
+    FieldObjDef* def;      /* 0x04 */
+    FieldPartBuild* parts; /* 0x08 */
+    FieldObjFlags flags;   /* 0x0C */
+    /** 0x10 tint, 8.8 fixed point, from the definition's percentages. */
+    u16 red;
+    u16 green; /* 0x12 */
+    u16 blue;  /* 0x14 */
+    /** 0x16 second tint multiplier, 0x100 = unscaled. */
+    u16 red_scale;
+    u16 green_scale; /* 0x18 */
+    u16 blue_scale;  /* 0x1A */
+    s32 x;       /* 0x1C */
+    s32 y;       /* 0x20 */
+    s32 z;       /* 0x24 */
+    s32 drift_x; /* 0x28 */
+    s32 drift_y; /* 0x2C */
+};
+
+/**
+ * @brief FieldPart as field_build_render_records fills it in.
+ *
+ * Same layout as FieldPart, plus the two members FieldPart leaves unnamed:
+ * the bit-plane byte size at 0x14 and the halfword at 0x34.
+ */
+struct FieldPartBuild
+{
+    FieldPartBuild* next;   /* 0x00 */
+    FieldPartDef* def;      /* 0x04 */
+    /** 0x08 part whose records this one reuses, or NULL. */
+    FieldPartBuild* shared;
+    u32* bits;              /* 0x0C */
+    u8* records;            /* 0x10 */
+    /** 0x14 byte size of the bit plane at 0x0C. */
+    s32 bits_size;
+    s32 tpage_word;         /* 0x18 */
+    s32 code_word;          /* 0x1C */
+    u8 visible;             /* 0x20 */
+    u8 kind;                /* 0x21 */
+    u8 node_count;          /* 0x22 */
+    u8 _pad2[0x26 - 0x23];
+    u16 instance_count;     /* 0x26 */
+    s32 x;                  /* 0x28 */
+    s32 y;                  /* 0x2C */
+    s32 z;                  /* 0x30 */
+    s16 unk34;              /* 0x34 */
+    u16 sweep_period;       /* 0x36 */
+    u16 sweep_phase;        /* 0x38 */
+    u16 row_angle;          /* 0x3A */
+    u16 column_angle;       /* 0x3C */
+    u16 rotation_angle;     /* 0x3E */
+    u16 scale_x;            /* 0x40 */
+    u16 scale_y;            /* 0x42 */
+    s16 clut_bl;            /* 0x44 */
+    s16 clut_tl;            /* 0x46 */
+    s16 clut_br;            /* 0x48 */
+    s16 clut_tr;            /* 0x4A */
+};
+
+/**
+ * @brief Clamp a depth-biased CLUT row to 0..0x7FF.
+ *
+ * @param v Signed CLUT row.
+ * @return @p v clamped to the CLUT range.
+ */
+#define CLAMP_CLUT(v) (((v) > 0) ? (((v) >= 0x800) ? 0x7FF : (v)) : 0)
+
+/**
+ * @brief Generic view of a scene list element: every list links through offset 0.
+ *
+ * The build passes append through one tail pointer of this type, starting from
+ * the list head inside FieldScene.
+ */
+typedef struct FieldLink
+{
+    struct FieldLink* next; /* 0x00 */
+} FieldLink;
+
 typedef struct Records_Unk Records_Unk;
 struct Records_Unk
 {
@@ -398,21 +487,14 @@ extern u16 D_80180008;
  * @see working/field_build_render_records/STATUS.md - measurements, the per-site
  *      wrapper costs, and the list of ruled-out source shapes.
  */
-void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
+void field_build_render_records(FieldMapObject *map, u16 object_index)
 {
-  s32 nodev;
-  union
-  {
-    s32 sp10[3];
-    volatile s32 sp74;
-    volatile int new_var6;
-  } scratch;
-  s8 sp20;
-  Records_Unk *sp24;
-  u16 sp28;
-  Records_Unk **sp30;
+  s32 rgb[3];
+  s8 code;
+  struct { Records_Unk *cur; } arena;
+  FieldMemState *mem;
   FieldScene *sp34;
-  volatile Records_Node30 *sp38;
+  FieldObjBuild *prev_obj;
   s32 sp3C;
   s32 sp50;
   s32 sp58;
@@ -426,7 +508,6 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   s32 axle_s1;
   FieldNode *node;
   Records_Unk *temp_s1_2;
-  Records_Unk *temp_s2;
   Records_Unk *var_s3;
   int new_var7;
   Records_Unk *var_s7_2;
@@ -435,11 +516,12 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   Records_Unk *var_s7_3;
   char new_var3;
   Records_Node30 *var_t0_2;
-  Records_Node30 *var_t0_3;
-  Records_Node44 *var_t1;
-  FieldNode *node_tail;
+  FieldObjBuild *var_t0_3;
+  FieldLink *tail;
+  FieldNode *node_prev;
   Records_Unk *var_t1_5;
-  Records_Unk *var_t5;
+  FieldPartBuild *prev_part;
+  FieldPartDef **part_defs;
   s16 *var_t5_2;
   s16 *points;
   s16 temp_a1;
@@ -456,14 +538,12 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   s32 temp_v0_4;
   s32 var_a1_2;
   u8 *new_var2;
-  s32 var_a1_3;
   s16 var_t1_3;
   s16 var_v0_2;
   s16 var_v0_3;
   s16 var_v0_4;
   s16 var_v0_5;
   s32 var_v1;
-  s32 var_v1_2;
   s16 *var_a2;
   s32 temp_a0;
   s32 temp_a2_3;
@@ -515,15 +595,27 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   u16 temp_v1_6;
   u32 new_var19;
   u16 var_a0;
+  s16 hi;
+  s16 lo;
   u16 var_t2;
   Records_Node38 *new_var16;
   u8 *new_var17;
   u16 var_t2_2;
-  u16 *temp_a0_2;
-  u16 *var_t0;
+  u16 *palette;
+  union
+  {
+    FieldNodeRun *run;
+    FieldMarker *marker;
+    FieldObjBuild *obj;
+  } rec;
   FieldNodeRun *run;
   u32 temp_a0_3;
-  int clamp7ff;
+  s32 clut;
+  s32 stride;
+  s32 words;
+  FieldSeq *seq;
+  FieldSeqDef *seq_def;
+  s32 clamped;
   s32 clamp_arm1;
   s32 clamp_arm2;
   s32 clamp_arm3;
@@ -541,345 +633,252 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   int new_var8;
   u8 *var_fp;
   Records_Unk *temp_a3;
-  Records_Unk *temp_s4;
+  FieldPartDef *part_def;
   Records_Unk *temp_v0_8;
   Records_Unk *temp_v0_9;
   Records_Unk *temp_v1_10;
-  Records_InnerNode *temp_v1_11;
+  FieldPartBuild *shared;
   Records_SrcObj *var_a3;
   FieldNodeDef *node_def;
-  Records_SrcObj2 *var_a3_2;
+  union
+  {
+    FieldMarkerDef *marker;
+    FieldNodeDef *node;
+  } def;
   Records_Unk *var_s1_2;
   unsigned char new_var20;
-  Records_InnerNode *var_s2;
+  FieldPartBuild *part;
   s32 var_s2_2;
-  s32 t2_product_reuse;
+  FieldObjDef *obj_def;
   u8 *new_var15;
   Records_Unk **var_s7;
   Records_SrcObj3 **var_t6;
-  u8 *global_page;
   s32 carriage_quad_cursor;
-  new_var22 = 3;
-  sp30 = (Records_Unk **) 0x801ED000;
+  mem = FIELD_MEM_STATE;
   var_t3 = 0;
   var_t4 = 0;
   var_t8 = 0;
-  global_page = (u8 *) 0x80180000;
   sp80 = 0;
-  sp34 = *((Records_Unk **) (global_page + 0x14));
+  sp34 = FIELD_RESOURCE->scene;
   sp3C = 0;
-  sp24 = 0;
-  sp34->header = (FieldSceneHeader *) arg0;
+  arena.cur = 0;
+  sp34->header = (FieldSceneHeader *) map;
   *((s32 *) (((u8 *) sp34) + 0xC)) = 0;
-  var_a3 = arg0->unk8;
-  sp24 = (Records_Unk *) (((u8 *) sp34) + 0x74);
-  sp28 = arg1;
-  var_t1 = (Records_Node44 *) (((u8 *) sp34) + 8);
-  var_t5_2 = *((s16 **) (global_page + 0x1C));
-  if (var_a3 != 0)
+  node_def = map->node_defs;
+  arena.cur = (Records_Unk *) (((u8 *) sp34) + 0x74);
+  tail = (FieldLink *) &sp34->nodes;
+  var_t5_2 = FIELD_RESOURCE->points;
+  if (node_def != 0)
   {
     do
     {
-      var_t6 = (Records_SrcObj3 **) 0x7FFF;
-      nodev = (s32) sp24;
-      sp24 = (Records_Unk *) (((u8 *) (Records_Node44 *) nodev) + 0x44);
-      do
+      node = (FieldNode *) arena.cur;
+      arena.cur = (Records_Unk *) (node + 1);
+      tail->next = (FieldLink *) node;
+      tail = (FieldLink *) node;
+      node->def = node_def;
+      node->spans = 0;
+      node->unk14 = 0;
+      node->unk18 = *(u8 *) &(node_def)->flags >> FIELD_NODE_DEF_ENABLE_SHIFT;
+      node->x_min = 0x7FFF;
+      node->x_max = 0;
+      node->row_end = 0;
+      node->row_start = 0x7FFF;
+      node->unk24 = 0;
+      node->delta_x = 0;
+      node->delta_y = 0;
+      node->unk30 = 0;
+      node->unk34 = 0;
+      node->x = 0;
+      node->y = 0;
+      node->unk40 = 0;
+      rec.run = node_def->runs;
+      var_s0 = rec.run->count & FIELD_NODE_RUN_COUNT_MASK;
+      while (var_s0 != 0)
       {
-      }
-      while (0);
-      var_t1->unk0 = (Records_Node44 *) nodev;
-      var_t1 = (Records_Node44 *) nodev;
-      var_t1->unk4 = var_a3;
-      var_t1->unk10 = 0;
-      var_t1->unk14 = 0;
-      temp_v0_early = var_a3->unk4;
-      var_t1->unk1C = 0x7FFF;
-      var_t1->unk1E = 0;
-      var_t1->unk20 = 0;
-      var_t1->unk22 = 0x7FFF;
-      var_t1->unk24 = 0;
-      var_t1->unk28 = 0;
-      var_t1->unk2C = 0;
-      var_t1->unk30 = 0;
-      var_t1->unk34 = 0;
-      var_t1->unk38 = 0;
-      var_t1->unk3C = 0;
-      var_t1->unk40 = 0;
-      var_t1->unk18 = (s8) (temp_v0_early >> 7);
-      var_s0 = var_a3->unk18 & 0x7FFF;
-      var_t0 = (u16 *) (((u8 *) var_a3) + 0x18);
-      if (var_s0 != 0)
-      {
-        do
+        temp_a1_5 = var_t5_2 + rec.run->first * 2;
+        while (--var_s0 != -1)
         {
-          var_s0 = var_s0 - 1;
-          temp_a1_5 = var_t5_2 + (var_t0[1] * 2);
-
-            if (var_s0 != -1)
-            {
-              early_inner_end = -1;
-
-                              var_a2 = temp_a1_5 + 1;
-
-              do
-              {
-                var_a0 = (u16) (*temp_a1_5);
-                if ((*temp_a1_5) > ((Records_Node44 *) nodev)->unk1C)
-                {
-                  var_a0 = (u16) ((Records_Node44 *) nodev)->unk1C;
-                }
-                ((Records_Node44 *) nodev)->unk1C = (s16) var_a0;
-                var_a0 = (u16) (*temp_a1_5);
-                if ((*temp_a1_5) < ((Records_Node44 *) nodev)->unk1E)
-                {
-                  var_a0 = (u16) ((Records_Node44 *) nodev)->unk1E;
-                }
-                ((Records_Node44 *) nodev)->unk1E = (s16) var_a0;
-                var_a0 = (u16) (*var_a2);
-                if ((*var_a2) < ((Records_Node44 *) nodev)->unk20)
-                {
-                  var_a0 = (u16) ((Records_Node44 *) nodev)->unk20;
-                }
-                ((Records_Node44 *) nodev)->unk20 = (s16) var_a0;
-                var_a0 = (u16) (*var_a2);
-                if ((*var_a2) > ((Records_Node44 *) nodev)->unk22)
-                {
-                  var_a0 = (u16) (*(Records_Node44 *) nodev).unk22;
-                }
-                ((Records_Node44 *) nodev)->unk22 = (s16) var_a0;
-                var_a2 += 2;
-                var_s0 -= 1;
-                temp_a1_5 += 2;
-              }
-              while (var_s0 != early_inner_end);
-            }
-            var_t0 = var_t0 + 2;
-            var_s0 = (*var_t0) & 0x7FFF;
-
+          node->x_min = (*temp_a1_5 > node->x_min) ? node->x_min : *temp_a1_5;
+          node->x_max = (*temp_a1_5 < node->x_max) ? node->x_max : *temp_a1_5;
+          node->row_end = (temp_a1_5[1] < node->row_end) ? node->row_end : temp_a1_5[1];
+          node->row_start = (temp_a1_5[1] > node->row_start) ? node->row_start : temp_a1_5[1];
+          temp_a1_5 += 2;
         }
-        while (var_s0 != 0);
+        rec.run++;
+        var_s0 = rec.run->count & FIELD_NODE_RUN_COUNT_MASK;
       }
-      var_a3 = var_a3->unk0;
+      node_def = node_def->next;
     }
-    while (var_a3 != 0);
+    while (node_def != 0);
   }
-  var_t1->unk0 = 0;
-  var_a3_2 = arg0->unkC;
-  var_t1 = (Records_Node44 *) (((u8 *) sp34) + 0x10);
-  if (var_a3_2 != 0)
+  tail->next = 0;
+  def.marker = map->edge_defs;
+  tail = (FieldLink *) &sp34->markers;
+  if (def.marker != 0)
   {
     do
     {
-      do {
-        var_t0 = (u16 *) sp24;
-        sp24 = (Records_Unk *) (((u8 *) var_t0) + 0x38);
-      } while (0);
-      ((Records_Node38 *) var_t1)->unk0 = (Records_Node38 *) var_t0;
-      var_t1 = (Records_Node44 *) var_t0;
-      ((Records_Node38 *) var_t1)->unk4 = var_a3_2;
-      ((Records_Node38 *) var_t1)->unk8 = (s16) (var_a3_2->unk4 + var_a3_2->unkC);
-      ((Records_Node38 *) var_t1)->unkA = (s16) (var_a3_2->unk6 + var_a3_2->unkE);
-      ((Records_Node38 *) var_t1)->unkC = (s16) (((u16) var_a3_2->unk8) + var_a3_2->unkC);
-      ((Records_Node38 *) var_t1)->unkE = (s16) (var_a3_2->unkA + var_a3_2->unkE);
-      var_a0 = var_a3_2->unk4;
-      temp_v1 = (u16) var_a3_2->unk8;
-      goto dummy_label_805487;
-      dummy_label_805487:
-      ;
-
-      ;
-      ;
-      ;
-      ;
-      ;
-      ;
-      ;
-      ;
-      ;
-      ;
-      ;
-      ;
-      ;
-      ;
-      ;
-      ;
-      ;
-      var_t2 = var_a0;
-      if (((s16) var_a0) < var_a3_2->unk8)
+      rec.marker = (FieldMarker *) arena.cur;
+      arena.cur = (Records_Unk *) (rec.marker + 1);
+      tail->next = (FieldLink *) rec.marker;
+      tail = (FieldLink *) rec.marker;
+      rec.marker->def = def.marker;
+      rec.marker->x2 = def.marker->x0 + def.marker->offset_x;
+      rec.marker->y2 = def.marker->y0 + def.marker->offset_y;
+      rec.marker->x3 = def.marker->x1 + def.marker->offset_x;
+      rec.marker->y3 = def.marker->y1 + def.marker->offset_y;
+      hi = lo = def.marker->x0;
+      if (hi < (s16) def.marker->x1)
       {
-        var_t2 = temp_v1;
+        hi = def.marker->x1;
       }
-      if (var_a3_2->unk8 < ((s16) var_a0))
+      if ((s16) def.marker->x1 < lo)
       {
-        var_a0 = temp_v1;
+        lo = def.marker->x1;
       }
-      temp_a1 = ((Records_Node38 *) var_t1)->unk8;
-      temp_v1_2 = (u16) ((Records_Node38 *) var_t1)->unk8;
-      if (((s16) var_t2) < temp_a1)
+      if (hi < (s16) rec.marker->x2)
       {
-        var_t2 = temp_v1_2;
+        hi = rec.marker->x2;
       }
-      if (temp_a1 < ((s16) var_a0))
+      if ((s16) rec.marker->x2 < lo)
       {
-        var_a0 = temp_v1_2;
+        lo = rec.marker->x2;
       }
-      temp_a1_2 = ((Records_Node38 *) var_t1)->unkC;
-      temp_v1_3 = (u16) ((Records_Node38 *) var_t1)->unkC;
-      if (((s16) var_t2) < temp_a1_2)
+      if (hi < (s16) rec.marker->x3)
       {
-        var_t2 = temp_v1_3;
+        hi = rec.marker->x3;
       }
-      if (temp_a1_2 < ((s16) var_a0))
+      if ((s16) rec.marker->x3 < lo)
       {
-        var_a0 = temp_v1_3;
+        lo = rec.marker->x3;
       }
-      ((Records_Node38 *) var_t1)->unk10 = var_t2;
-      ((Records_Node38 *) var_t1)->unk12 = var_a0;
-      var_a0 = var_a3_2->unk6;
-      temp_v1_4 = var_a3_2->unkA;
-      var_t2_2 = var_a0;
-      if (((s16) var_a0) < ((s16) var_a3_2->unkA))
+      rec.marker->x_max = hi;
+      rec.marker->x_min = lo;
+      hi = lo = def.marker->y0;
+      if (hi < (s16) def.marker->y1)
       {
-        var_t2_2 = temp_v1_4;
+        hi = def.marker->y1;
       }
-      if (((s16) var_a3_2->unkA) < ((s16) var_a0))
+      if ((s16) def.marker->y1 < lo)
       {
-        var_a0 = temp_v1_4;
+        lo = def.marker->y1;
       }
-      temp_a1_3 = ((Records_Node38 *) var_t1)->unkA;
-      temp_v1_5 = (u16) ((Records_Node38 *) var_t1)->unkA;
-      if (((s16) var_t2_2) < (var_s0_6 = temp_a1_3))
+      if (hi < (s16) rec.marker->y2)
       {
-        var_t2_2 = temp_v1_5;
-        if (1)
-        {
-        }
+        hi = rec.marker->y2;
       }
-      if (temp_a1_3 < ((s16) var_a0))
+      if ((s16) rec.marker->y2 < lo)
       {
-        var_a0 = temp_v1_5;
+        lo = rec.marker->y2;
       }
-      temp_a1_4 = ((Records_Node38 *) var_t0)->unkE;
-      temp_v1_6 = (u16) ((Records_Node38 *) var_t0)->unkE;
-      if (((s16) var_t2_2) < temp_a1_4)
+      if (hi < (s16) rec.marker->y3)
       {
-        var_t2_2 = temp_v1_6;
+        hi = rec.marker->y3;
       }
-      if (temp_a1_4 < ((s16) var_a0))
+      if ((s16) rec.marker->y3 < lo)
       {
-        var_a0 = temp_v1_6;
+        lo = rec.marker->y3;
       }
-      ((Records_Node38 *) var_t0)->unk14 = var_t2_2;
-      ((Records_Node38 *) var_t0)->unk16 = var_a0;
-      ((Records_Node38 *) var_t0)->unk18 = (s32) (((Records_Node38 *) var_t0)->unk8 - ((s16) var_a3_2->unk4));
-      temp_v1_7 = ((Records_Node38 *) var_t0)->unkA - ((s16) var_a3_2->unk6);
-      ((Records_Node38 *) var_t0)->unk1C = temp_v1_7;
-      temp_a2_3 = ((Records_Node38 *) var_t0)->unk18;
-      if (temp_a2_3 != 0)
+      rec.marker->y_max = hi;
+      rec.marker->y_min = lo;
+      rec.marker->side_dx = (s16) rec.marker->x2 - (s16) def.marker->x0;
+      rec.marker->side_dy = (s16) rec.marker->y2 - (s16) def.marker->y0;
+      if (rec.marker->side_dx != 0)
       {
-        var_a1_2 = ((s16) var_a3_2->unk6) - (((s32) (temp_v1_7 * ((s16) var_a3_2->unk4))) / temp_a2_3);
-        var_v1 = ((s16) var_a3_2->unkA) - (((s32) (temp_v1_7 * ((s16) var_a3_2->unk8))) / temp_a2_3);
+        var_a1_2 = (s16) def.marker->y0 - rec.marker->side_dy * (s16) def.marker->x0 / rec.marker->side_dx;
+        var_v1 = (s16) def.marker->y1 - rec.marker->side_dy * (s16) def.marker->x1 / rec.marker->side_dx;
       }
       else
       {
-        var_a1_2 = (s16) var_a3_2->unk4;
-        var_v1 = (s16) var_a3_2->unk8;
+        var_a1_2 = (s16) def.marker->x0;
+        var_v1 = (s16) def.marker->x1;
       }
       if (var_v1 < var_a1_2)
       {
-        ((Records_Node38 *) var_t0)->unk2C = (s32) var_a1_2;
-        ((Records_Node38 *) var_t0)->unk28 = (s32) var_v1;
+        rec.marker->side_hi = var_a1_2;
+        rec.marker->side_lo = var_v1;
       }
       else
       {
-        ((Records_Node38 *) var_t0)->unk28 = (s32) var_a1_2;
-        ((Records_Node38 *) var_t0)->unk2C = (s32) var_v1;
+        rec.marker->side_lo = var_a1_2;
+        rec.marker->side_hi = var_v1;
       }
-      ((Records_Node38 *) var_t0)->unk20 = (s32) (((s16) var_a3_2->unk8) - ((s16) var_a3_2->unk4));
-      temp_v1_8 = ((s16) var_a3_2->unkA) - ((s16) var_a3_2->unk6);
-      ((Records_Node38 *) var_t0)->unk24 = temp_v1_8;
-      temp_a2_4 = ((Records_Node38 *) var_t0)->unk20;
-      if (temp_a2_4 != 0)
+      rec.marker->edge_dx = (s16) def.marker->x1 - (s16) def.marker->x0;
+      rec.marker->edge_dy = (s16) def.marker->y1 - (s16) def.marker->y0;
+      if (rec.marker->edge_dx != 0)
       {
-        t2_product_reuse = (s32) (temp_v1_8 * ((s16) var_a3_2->unk4));
-        var_a1_3 = ((s16) var_a3_2->unk6) - (t2_product_reuse / temp_a2_4);
-        var_v1_2 = ((s16) ((Records_Node38 *) var_t0)->unkA) - (((s32) (temp_v1_8 * ((s16) ((Records_Node38 *) var_t0)->unk8))) / temp_a2_4);
+        var_a1_2 = (s16) def.marker->y0 - rec.marker->edge_dy * (s16) def.marker->x0 / rec.marker->edge_dx;
+        var_v1 = (s16) rec.marker->y2 - rec.marker->edge_dy * (s16) rec.marker->x2 / rec.marker->edge_dx;
       }
       else
       {
-        var_a1_3 = (s16) var_a3_2->unk4;
-        var_v1_2 = (s16) ((Records_Node38 *) var_t0)->unk8;
+        var_a1_2 = (s16) def.marker->x0;
+        var_v1 = (s16) rec.marker->x2;
       }
-      if (var_v1_2 < var_a1_3)
+      if (var_v1 < var_a1_2)
       {
-        ((Records_Node38 *) var_t0)->unk34 = (s32) var_a1_3;
-        ((Records_Node38 *) var_t0)->unk30 = (s32) var_v1_2;
+        rec.marker->edge_hi = var_a1_2;
+        rec.marker->edge_lo = var_v1;
       }
       else
       {
-        ((Records_Node38 *) var_t0)->unk30 = (s32) var_a1_3;
-        ((Records_Node38 *) var_t0)->unk34 = (s32) var_v1_2;
+        rec.marker->edge_lo = var_a1_2;
+        rec.marker->edge_hi = var_v1;
       }
-      var_a3_2 = var_a3_2->unk0;
+      def.marker = def.marker->next;
     }
-    while (var_a3_2 != 0);
+    while (def.marker != 0);
   }
-  new_var16 = (Records_Node38 *) var_t1;
-  new_var16->unk0 = 0;
-  var_t6 = arg0->unk0;
-  sp38 = (Records_Node30 *) (((u8 *) sp34) + 4);
+  tail->next = 0;
+  var_t6 = map->object_defs;
+  prev_obj = (FieldObjBuild *) &sp34->objects;
   if ((*var_t6) != 0)
   {
     do
     {
-      var_t0 = (u16 *) sp24;
-      t2_product_reuse = (s32) *var_t6;
-      sp24 = (Records_Unk *) (((u8 *) var_t0) + 0x30);
-      sp38->unk0 = (Records_Node30 *) var_t0;
-      ((Records_Node30 *) var_t0)->unk4 = (Records_SrcObj3 *) t2_product_reuse;
-      new_var9 = &((Records_SrcObj3 *) t2_product_reuse)->unk10;
-      ((Records_Node30 *) var_t0)->unk10 = (s16) (((*new_var9) << 8) / 100);
+      rec.obj = (FieldObjBuild *) arena.cur;
+      obj_def = (FieldObjDef *) *var_t6;
+      arena.cur = (Records_Unk *) (rec.obj + 1);
+      prev_obj->next = rec.obj;
+      rec.obj->def = obj_def;
+      rec.obj->red = (obj_def->scale_x << 8) / 100;
       var_t1_4 = 1;
-      ((Records_Node30 *) var_t0)->unk12 = (s16) ((((Records_SrcObj3 *) t2_product_reuse)->unk12 << 8) / 100);
-      scale14 = ((0, (Records_SrcObj3 *) t2_product_reuse))->unk14 << 8;
-      ((Records_Node30 *) var_t0)->unk1A = 0x100;
-      ((Records_Node30 *) var_t0)->unk18 = 0x100;
-      ((Records_Node30 *) var_t0)->unk16 = 0x100;
-      ((Records_Node30 *) var_t0)->unk14 = (s16) (scale14 / 100);
-      new_var13 = &((Records_Node30 *) var_t0)->unkC;
-      *((s32 *) new_var13) = (s32) (((*((s32 *) new_var13)) & (~1)) | (((Records_SrcObj3 *) t2_product_reuse)->unkC & 1));
-      ((Records_Node30 *) var_t0)->unkD = 0;
-      ((Records_Node30 *) var_t0)->unk1C = (s32) (((Records_SrcObj3 *) t2_product_reuse)->unk16 << 8);
-      ((Records_Node30 *) var_t0)->unk20 = (s32) (((Records_SrcObj3 *) t2_product_reuse)->unk18 << 8);
-      sp38 = (Records_Node30 *) var_t0;
-      var_s7_2 = (Records_Unk *) var_t0;
-      ((Records_Node30 *) var_t0)->unk24 = (s32) (((Records_SrcObj3 *) t2_product_reuse)->unk1A << 8);
-      if (((*((s32 *) (&((Records_SrcObj3 *) t2_product_reuse)->unk1C))) & 0xFFFF0000) == 0x100000)
+      rec.obj->green = (obj_def->scale_y << 8) / 100;
+      rec.obj->blue = (obj_def->scale_z << 8) / 100;
+      rec.obj->red_scale = rec.obj->green_scale = rec.obj->blue_scale = 0x100;
+      rec.obj->flags.word = (rec.obj->flags.word & ~1) | (*(u8 *) &obj_def->flags & 1);
+      rec.obj->flags.b.node_count = 0;
+      rec.obj->x = obj_def->x << 8;
+      rec.obj->y = obj_def->y << 8;
+      prev_obj = rec.obj;
+      var_s7_2 = (Records_Unk *) rec.obj;
+      rec.obj->z = obj_def->z << 8;
+      if ((*(s32 *) &obj_def->scroll_scale_x & 0xFFFF0000) == 0x100000)
       {
-        ((Records_Node30 *) var_t0)->unkE = 0U;
+        rec.obj->flags.b.drift_speed = 0;
       }
       else
       {
-        ((Records_Node30 *) var_t0)->unkE = (u8) ((Records_SrcObj3 *) t2_product_reuse)->unk1E;
+        rec.obj->flags.b.drift_speed = obj_def->drift_speed;
       }
-      sp60 = (u8) ((Records_SrcObj3 *) t2_product_reuse)->unk1F;
-      ((Records_Node30 *) var_s7_2)->unk28 = 0;
-      ((Records_Node30 *) var_s7_2)->unk2C = 0;
-      ((Records_Node30 *) var_s7_2)->unkF = sp60;
-      var_s7 = ((Records_SrcObj3 *) t2_product_reuse)->unk0;
-      var_t5 = (Records_Unk *) (((u8 *) var_s7_2) + 8);
-      if ((*var_s7) != 0)
+      ((FieldObjBuild *) var_s7_2)->flags.b.drift_angle = obj_def->drift_angle;
+      ((FieldObjBuild *) var_s7_2)->drift_x = 0;
+      ((FieldObjBuild *) var_s7_2)->drift_y = 0;
+      part_defs = obj_def->part_defs;
+      prev_part = (FieldPartBuild *) &((FieldObjBuild *) var_s7_2)->parts;
+      if (*part_defs != 0)
       {
         do
         {
-          temp_s2 = sp24;
-          temp_s4 = *var_s7;
-          sp24 = (Records_Unk *) (((u8 *) temp_s2) + 0x4C);
-          var_t5->unk0 = temp_s2;
-          *((Records_Unk **) (((u8 *) temp_s2) + 4)) = temp_s4;
-          *(((u8 *) temp_s2) + 0x20) = (u8) ((*(((u8 *) temp_s4) + 8)) & 1);
-          temp_a0 = *((s32 *) (((u8 *) temp_s4) + 8));
-          var_t5 = temp_s2;
+          part = (FieldPartBuild *) arena.cur;
+          part_def = *part_defs;
+          arena.cur = (Records_Unk *) (part + 1);
+          prev_part->next = part;
+          part->def = part_def;
+          part->visible = *(u8 *) &part_def->u.word & 1;
+          temp_a0 = part_def->u.word;
+          prev_part = part;
           if ((temp_a0 & 0xF00) == 0x100)
           {
             var_v0 = (temp_a0 & 0xE) + 1;
@@ -888,562 +887,456 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
           {
             var_v0 = temp_a0 & 0xE;
           }
-          *(((u8 *) temp_s2) + (new_var18 = 0x21)) = var_v0 & 0xFFFFu;
-          *(((u8 *) temp_s2) + 0x22) = 0;
-          *((s32 *) (((u8 *) temp_s2) + 0x28)) = (s32) ((*((s16 *) (((u8 *) temp_s4) + 0xC))) << 8);
-          if (var_s2)
+          part->kind = var_v0;
+          part->node_count = 0;
+          part->x = part_def->x << 8;
+          part->y = part_def->y << 8;
+          part->z = part_def->z << 8;
+          part->unk34 = 0;
+          part->sweep_period = part_def->sweep_period;
+          part->sweep_phase = var_t1_4;
+          part->row_angle = 0;
+          part->column_angle = 0;
+          part->rotation_angle = 0;
+          part->scale_x = 0x1000;
+          part->scale_y = 0x1000;
+          if (part_def->u.word & 0x40)
           {
-          }
-          *((s32 *) (((u8 *) temp_s2) + 0x2C)) = (s32) ((*((s16 *) (((u8 *) temp_s4) + 0xE))) << 8);
-          *((s32 *) (((u8 *) temp_s2) + 0x30)) = (s32) ((*((s16 *) (((u8 *) temp_s4) + 0x10))) << 8);
-          *((s16 *) (((u8 *) temp_s2) + 0x34)) = 0;
-          new_var5 = *((u16 *) (((u8 *) temp_s4) + 0x12));
-          *((s16 *) (((u8 *) temp_s2) + 0x38)) = (s16) var_t1_4;
-          *((s16 *) (((u8 *) temp_s2) + 0x3A)) = 0;
-          *((s16 *) (((u8 *) temp_s2) + 0x3C)) = 0;
-          *((s16 *) (((u8 *) temp_s2) + 0x3E)) = 0;
-          *((s16 *) (((u8 *) temp_s2) + 0x40)) = 0x1000;
-          *((s16 *) (((u8 *) temp_s2) + 0x42)) = 0x1000;
-          *((s16 *) (((u8 *) temp_s2) + 0x36)) = (u16) new_var5;
-          clamp7ff = 0x7FF;
-          if ((*((s32 *) (((u8 *) temp_s4) + 8))) & 0x40)
-          {
-            temp_v0 = (((Records_SrcObj3 *) t2_product_reuse)->unk1A + (*((s16 *) (((u8 *) temp_s4) + 0x10)))) + (*((s16 *) (((u8 *) temp_s4) + 0x18)));
-            if (temp_v0 > 0)
+            clut = obj_def->z + part_def->z + part_def->clut_bl;
+            if (clut > 0)
             {
-              clamp_arm1 = temp_v0;
-              if (temp_v0 >= 0x800)
+              clamped = clut;
+              if (clut >= 0x800)
               {
-                clamp_arm1 = 0x7FF;
+                clamped = 0x7FF;
               }
-              var_v0_2 = clamp_arm1;
-            }
-            else
-            {
-              var_v0_2 = 0;
-            }
-            *((s16 *) (((u8 *) temp_s2) + 0x44)) = var_v0_2;
-            temp_v0_2 = (((Records_SrcObj3 *) t2_product_reuse)->unk1A + (*((s16 *) (((u8 *) temp_s4) + 0x10)))) + (*((s16 *) (((u8 *) temp_s4) + 0x1A)));
-            if (temp_v0_2 > 0)
-            {
-              clamp_arm2 = temp_v0_2;
-              if (temp_v0_2 >= 0x800)
-              {
-                clamp_arm2 = 0x7FF;
-              }
-              var_v0_3 = clamp_arm2;
-            }
-            else
-            {
-              var_v0_3 = 0;
-            }
-            *((s16 *) (((u8 *) temp_s2) + 0x46)) = var_v0_3;
-            temp_v0_3 = (((Records_SrcObj3 *) t2_product_reuse)->unk1A + (*((s16 *) (((u8 *) temp_s4) + 0x10)))) + (*((s16 *) (((u8 *) temp_s4) + 0x1C)));
-            if (temp_v0_3 > 0)
-            {
-              clamp_arm3 = temp_v0_3;
-              if (temp_v0_3 >= 0x800)
-              {
-                clamp_arm3 = 0x7FF;
-              }
-              var_v0_4 = clamp_arm3;
-            }
-            else
-            {
-              var_v0_4 = 0;
-            }
-            *((s16 *) (((u8 *) temp_s2) + 0x48)) = var_v0_4;
-            temp_v0_4 = (new_var8 = (((Records_SrcObj3 *) t2_product_reuse)->unk1A + (*((s16 *) (((u8 *) temp_s4) + 0x10)))) + (*((s16 *) (((u8 *) temp_s4) + 0x1E))));
-            if (temp_v0_4 > 0)
-            {
-              clamp_arm4 = temp_v0_4;
-              if (temp_v0_4 >= 0x800)
-              {
-                clamp_arm4 = 0x7FF;
-                if (1)
-                {
-                }
-                if (1)
-                {
-                }
-                if (1)
-                {
-                }
-              }
-              var_v0_5 = clamp_arm4;
+              var_v0_5 = clamped;
             }
             else
             {
               var_v0_5 = 0;
             }
+            part->clut_bl = var_v0_5;
+            clut = obj_def->z + part_def->z + part_def->clut_tl;
+            if (clut > 0)
+            {
+              clamped = clut;
+              if (clut >= 0x800)
+              {
+                clamped = 0x7FF;
+              }
+              var_v0_5 = clamped;
+            }
+            else
+            {
+              var_v0_5 = 0;
+            }
+            part->clut_tl = var_v0_5;
+            clut = obj_def->z + part_def->z + part_def->clut_br;
+            if (clut > 0)
+            {
+              clamped = clut;
+              if (clut >= 0x800)
+              {
+                clamped = 0x7FF;
+              }
+              var_v0_5 = clamped;
+            }
+            else
+            {
+              var_v0_5 = 0;
+            }
+            part->clut_br = var_v0_5;
+            clut = obj_def->z + part_def->z + part_def->clut_tr;
+            if (clut > 0)
+            {
+              clamped = clut;
+              if (clut >= 0x800)
+              {
+                clamped = 0x7FF;
+              }
+              var_v0_5 = clamped;
+            }
+            else
+            {
+              var_v0_5 = 0;
+            }
+            part->clut_tr = var_v0_5;
           }
           else
           {
-            *((s16 *) (((u8 *) temp_s2) + 0x44)) = (s16) (*((u16 *) (((u8 *) temp_s4) + 0x18)));
-            *((s16 *) (((u8 *) temp_s2) + 0x46)) = (s16) (*((u16 *) (((u8 *) temp_s4) + 0x1A)));
-            *((s16 *) (((u8 *) temp_s2) + 0x48)) = (s16) (*((u16 *) (((u8 *) temp_s4) + 0x1C)));
-                          var_v0_5 = (s16) (*((u16 *) (((u8 *) temp_s4) + 0x1E)));
+            part->clut_bl = part_def->clut_bl;
+            part->clut_tl = part_def->clut_tl;
+            part->clut_br = part_def->clut_br;
+            part->clut_tr = part_def->clut_tr;
           }
-          do { *((s16 *) (((u8 *) temp_s2) + 0x4A)) = var_v0_5; } while (0);
           var_s6 = 0;
-          var_fp = (u8 *) temp_s4->unk0;
-          var_t1_5 = temp_s1_2;
-          var_s5 = ((*(((u8 *) temp_s2) + 0x21)) > 0U) * 2;
+          var_fp = (u8 *) part_def->key;
+          var_s5 = (part->kind > 0U) * 2;
           if (var_fp != 0)
           {
-            sp58 = (s32) var_t1_3;
-            sp60 = var_t3;
-            sp64 = var_t4;
-            sp68 = var_t5;
-            sp6C = var_t6;
-            temp_v0_5 = field_find_shareable_part(sp34, (Records_Node30 *) var_s7_2, temp_s2, var_fp);
-            *((Records_Unk **) (((u8 *) temp_s2) + 8)) = temp_v0_5;
-            if (temp_v0_5 == 0)
+            part->shared = (FieldPartBuild *) field_find_shareable_part(sp34, (FieldObj *) var_s7_2, (FieldPart *) part, (s32) var_fp);
+            if (part->shared == 0)
             {
-              var_s0 = 1;
-              probe_const = 0x100;
-            if (((*((s32 *) (((u8 *) temp_s4) + 8))) & 0xF00) != probe_const)
+              if ((part_def->u.word & 0xF00) == 0x100)
               {
-                new_var15 = (u8 *) temp_s4;
-                var_s0 = (*(((u8 *) temp_s4) + 0xA)) * (*(new_var15 + 0xB));
-              }
-              var_v1_3 = var_s0 + 0x1F;
-              var_s3 = (*((Records_Unk **) (((u8 *) temp_s2) + 0xC)) = sp24);
-              if (var_v1_3 < 0)
-              {
-                var_v1_3 = var_s0 + 0x3E;
-              }
-              var_s0 = var_s0 - 1;
-              temp_v1_14 = 0;
-              temp_v0_6 = var_v1_3 >> 5;
-              sp3C = temp_v1_14;
-              *((s32 *) (((u8 *) temp_s2) + 0x14)) = (s32) (temp_v0_6 * 4);
-              sp24 = (Records_Unk *) (((u8 *) var_s3) + (temp_v0_6 * 4));
-
-              var_s1_4 = 1;
-              if (var_s0 != (-1))
-              {
-                do
-                {
-                  if ((*var_fp) & 0x80)
-                  {
-                    sp3C |= var_s1_4;
-                    if (var_s5 == 0)
-                    {
-                      temp_v0_7 = var_fp[1];
-                      var_s5 = 1;
-                      var_t3 = temp_v0_7 & 0xF;
-                      do { sp80 = (temp_v0_7 >> 4) & new_var22; } while (0);
-                    }
-                    else
-                      if ((var_s5 == 1) && (((temp_v1_9 = var_fp[1], var_t3 != (temp_v1_9 & 0xF))) || (sp80 != ((temp_v1_9 >> 4) & new_var22))))
-                    {
-                      var_s5 = 2;
-                    }
-                    if (var_s6 == 0)
-                    {
-                      do
-                      {
-                        var_s6 = 1;
-                        var_t4 = var_fp[3];
-                        var_t8 = (var_fp[1] >> 6) & 1;
-                      }
-                      while (0);
-                    }
-                    else
-                      if ((var_s6 == 1) && ((var_t4 != var_fp[3]) || (var_t8 != ((var_fp[1] >> 6) & 1))))
-                    {
-                      var_s6 = 2;
-                    }
-                  }
-                  var_s1_4 *= 2;
-                  if (var_s1_4 == 0)
-                  {
-                    var_s3->unk0 = (Records_Unk *) sp3C;
-                    var_s3 = (Records_Unk *) (((u8 *) var_s3) + 4);
-                    var_s1_4 = 1;
-                    sp3C = 0;
-                  }
-                  var_fp += 4;
-                  var_s0 -= 1;
-                }
-                while (var_s0 != (-1));
-              }
-              if (var_s1_4 != 1)
-              {
-                if (1)
-                {
-                }
-                var_s3->unk0 = (Records_Unk *) sp3C;
-              }
-              if (var_s5 == 1)
-              {
-                *((s32 *) (((u8 *) temp_s2) + 0x18)) = (s32) ((var_t3 + (sp80 * 0x10)) + 1);
+                var_s0 = 1;
               }
               else
               {
-                *((s32 *) (((u8 *) temp_s2) + 0x18)) = 0;
+                var_s0 = part_def->u.b.cols * part_def->u.b.rows;
+              }
+              var_s3 = (Records_Unk *) (part->bits = (u32 *) arena.cur);
+              words = (var_s0 + 31) / 32;
+              part->bits_size = words * 4;
+              arena.cur = (Records_Unk *) ((u32 *) var_s3 + words);
+              sp3C = 0;
+              var_s1_4 = 1;
+              while (--var_s0 != -1)
+              {
+                if (var_fp[0] & 0x80)
+                {
+                  sp3C |= var_s1_4;
+                  if (var_s5 == 0)
+                  {
+                    temp_v0_7 = var_fp[1];
+                    var_s5 = 1;
+                    var_t3 = temp_v0_7 & 0xF;
+                    sp80 = (temp_v0_7 >> 4) & 3;
+                  }
+                  else if ((var_s5 == 1) && ((var_t3 != (var_fp[1] & 0xF)) || (sp80 != ((var_fp[1] >> 4) & 3))))
+                  {
+                    var_s5 = 2;
+                  }
+                  if (var_s6 == 0)
+                  {
+                    var_s6 = 1;
+                    var_t4 = var_fp[3];
+                    var_t8 = (var_fp[1] >> 6) & 1;
+                  }
+                  else if ((var_s6 == 1) && ((var_t4 != var_fp[3]) || (var_t8 != ((var_fp[1] >> 6) & 1))))
+                  {
+                    var_s6 = 2;
+                  }
+                }
+                var_s1_4 <<= 1;
+                if (var_s1_4 == 0)
+                {
+                  *(u32 *) var_s3 = sp3C;
+                  var_s3 = (Records_Unk *) ((u32 *) var_s3 + 1);
+                  var_s1_4 = 1;
+                  sp3C = 0;
+                }
+                var_fp += 4;
+              }
+              if (var_s1_4 != 1)
+              {
+                *(u32 *) var_s3 = sp3C;
+              }
+              if (var_s5 == 1)
+              {
+                part->tpage_word = (s32) ((var_t3 + (sp80 * 0x10)) + 1);
+              }
+              else
+              {
+                part->tpage_word = 0;
               }
               if (var_s6 == 1)
               {
 
-                *((s32 *) (((u8 *) temp_s2) + 0x1C)) = (s32) ((var_t4 + (var_t8 << 9)) + 1);
+                part->code_word = (s32) ((var_t4 + (var_t8 << 9)) + 1);
               }
               else
               {
-                *((s32 *) (((u8 *) temp_s2) + 0x1C)) = 0;
+                part->code_word = 0;
               }
             }
           }
-          do { do { do { do { do { do { do { do { do { var_s7++; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
+          do { do { part_defs++; } while (0); } while (0);
         }
-        while ((*var_s7) != 0);
+        while (*part_defs != 0);
       }
       var_t6 += 1;
-      var_t5->unk0 = 0;
+      prev_part->next = 0;
     }
     while ((*var_t6) != 0);
   }
-  sp38->unk0 = 0;
-  nodev = (s32) *((Records_Unk **) (((u8 *) sp34) + 8));
-  if (nodev != 0)
+  prev_obj->next = 0;
+  node = sp34->nodes;
+  if (node != 0)
   {
     do
     {
-      var_a3_2 = (Records_SrcObj2 *) *((Records_Unk **) (((u8 *) (Records_Unk *) nodev) + 4));
-      if ((((u16) D_80180008) >= 0x12U) && ((*(((u8 *) var_a3_2) + 8)) != 0xFF))
+      def.node = node->def;
+      if ((D_80180008 >= 0x12) && (def.node->obj_index != 0xFF))
       {
-        if ((*(((u8 *) var_a3_2) + 9)) != 0xFF)
+        if (def.node->part_index != 0xFF)
         {
-          *((Records_Unk **) (((u8 *) (Records_Unk *) nodev) + 8)) = 0;
-          temp_v0_8 = func_8005AB80(*(((u8 *) var_a3_2) + 8), *(((u8 *) var_a3_2) + 9));
-          *((Records_Unk **) (((u8 *) (Records_Unk *) nodev) + 0xC)) = temp_v0_8;
-          if ((*((s32 *) (((u8 *) (*((Records_Unk **) (((u8 *) temp_v0_8) + 4)))) + 8))) & 0xF000)
+          node->obj = 0;
+          node->part = func_8005AB80(def.node->obj_index, def.node->part_index);
+          if (node->part->def->u.word & 0xF000)
           {
-            *((Records_Unk **) (((u8 *) sp34) + 0xC)) = (Records_Unk *) nodev;
+            sp34->secondary_nodes = node;
           }
-          temp_v1_10 = *((Records_Unk **) (((u8 *) (Records_Unk *) nodev) + 0xC));
-          *(((u8 *) temp_v1_10) + 0x22) = (u8) ((*(((u8 *) temp_v1_10) + 0x22)) + 1);
+          node->part->node_count++;
         }
         else
         {
-          temp_v0_9 = func_8005AB4C(*(((u8 *) var_a3_2) + 8));
-          *((Records_Unk **) (((u8 *) (Records_Unk *) nodev) + 8)) = temp_v0_9;
-          *(((u8 *) temp_v0_9) + 0xD) = (u8) ((*(((u8 *) temp_v0_9) + 0xD)) + 1);
-          goto block_125;
+          node->obj = func_8005AB4C(def.node->obj_index);
+          node->obj->flags.b.node_count++;
+          node->part = 0;
         }
       }
       else
       {
-        *((Records_Unk **) (((u8 *) (Records_Unk *) nodev) + 8)) = 0;
-        block_125:
-        *((Records_Unk **) (((u8 *) (Records_Unk *) nodev) + 0xC)) = 0;
-
+        node->obj = 0;
+        node->part = 0;
       }
-      nodev = (s32) ((Records_Unk *) nodev)->unk0;
+      node = node->next;
     }
-    while (nodev != 0);
+    while (node != 0);
   }
-  field_prepare_animation_definitions((0, arg0->unk14), 0);
-  field_prepare_animation_definitions(arg0->unk18, 1);
-  field_prepare_animation_definitions(arg0->unk1C, 2);
-  field_prepare_animation_definitions(arg0->unk20, new_var22);
-  var_t0_3 = *((Records_Node30 **) (((u8 *) sp34) + 4));
+  field_prepare_animation_definitions(map->anim_defs[0], 0);
+  field_prepare_animation_definitions(map->anim_defs[1], 1);
+  field_prepare_animation_definitions(map->anim_defs[2], 2);
+  field_prepare_animation_definitions(map->anim_defs[3], 3);
+  var_t0_3 = (FieldObjBuild *) sp34->objects;
   if (var_t0_3 != 0)
   {
     do
     {
-      t2_product_reuse = (s32) var_t0_3->unk4;
-      scratch.sp10[0] = var_t0_3->unk10 << 8;
-      scratch.sp10[1] = var_t0_3->unk12 << 8;
-      new_var23 = t2_product_reuse;
-      scratch.sp10[2] = var_t0_3->unk14 << 8;
-      temp_a0_2 = *((u16 **) (((u8 *) new_var23) + 4));
-      func_8005AC50(temp_a0_2 + 2, *temp_a0_2, scratch.sp10);
-      var_s2 = var_t0_3->unk8;
-      sp20 = 0;
-      if (var_s2 != 0)
+      obj_def = var_t0_3->def;
+      rgb[0] = var_t0_3->red << 8;
+      rgb[1] = var_t0_3->green << 8;
+      rgb[2] = var_t0_3->blue << 8;
+      palette = (u16 *) obj_def->shared_source;
+      func_8005AC50(palette + 2, *palette, rgb);
+      part = var_t0_3->parts;
+      code = 0;
+      if (part != 0)
       {
         do
         {
-          func_8005AD20((0, var_s2->unk21), *((u16 *) (*((void **) (((u8 *) t2_product_reuse) + 4)))), &sp20);
-          temp_s4 = (Records_Src4 *) var_s2->unk4;
-          var_fp = (u8 *) temp_s4->unk0;
+          func_8005AD20(part->kind, *(u16 *) obj_def->shared_source, &code);
+          part_def = part->def;
+          var_fp = (u8 *) part_def->key;
           if (var_fp != 0)
           {
-            temp_v1_11 = var_s2->unk8;
-            if (temp_v1_11 != 0)
+            shared = part->shared;
+            if (shared != 0)
             {
-              var_s2->unkC = (s32 *) temp_v1_11->unkC;
-              var_s2->unk14 = (s32) temp_v1_11->unk14;
-              var_s2->unk18 = (s32) temp_v1_11->unk18;
-              var_s2->unk1C = (s32) temp_v1_11->unk1C;
-              var_s2->unk10 = (Records_Unk *) temp_v1_11->unk10;
-              var_s2->unk26 = (u16) temp_v1_11->unk26;
+              part->bits = (s32 *) shared->bits;
+              part->bits_size = (s32) shared->bits_size;
+              part->tpage_word = (s32) shared->tpage_word;
+              part->code_word = (s32) shared->code_word;
+              part->records = (Records_Unk *) shared->records;
+              part->instance_count = (u16) shared->instance_count;
             }
             else
             {
-                         temp_v1_12 = var_s2->unk21;
               var_t1_4 = 0;
-              if (temp_v1_12 == 1)
+              switch (part->kind)
               {
-                goto block_175;
-              }
-              if (((s32) temp_v1_12) >= 2)
-              {
-                goto quad_test;
-              }
-              if (!var_t0)
-              {
-              }
-              var_s5 = 0xC;
-              if (temp_v1_12 == 0)
-              {
-                goto sprite_entry;
-              }
-              goto block_175;
-              quad_test:
-
-              if (((s32) temp_v1_12) >= 6)
-              {
-                goto block_175;
-              }
-              goto quad_entry;
-              sprite_entry:
-              temp_v1_14 = var_s2->unk1C;
-
-              var_v0_7 = (s32) sp24;
-              var_s7 = (Records_Unk **) var_v0_7;
-              var_s2->unk10 = (Records_Unk *) var_s7;
-              if (temp_v1_14 != 0)
-              {
-                var_v0_6 = temp_v1_14 - 1;
-
-                  var_t4 = var_v0_6;
-                  var_s2->unk1C = *((s32 *) (((var_t4 & 0xFF) * 4) + 0x1F800000));
-                  var_s6 = 1;
-                  if (var_t4 & 0x200)
+                case 0:
+                  stride = 0xC;
+                  temp_v1_14 = part->code_word;
+                  part->records = (u8 *) arena.cur;
+                  var_s7 = (Records_Unk **) part->records;
+                  if (temp_v1_14 != 0)
                   {
-                    *(((u8 *) var_s2) + 0x1F) = (u8) ((*(((u8 *) var_s2) + 0x1F)) | 2);
+                    var_t4 = temp_v1_14 - 1;
+                    part->code_word = FIELD_TILE_COLOR_WORDS[var_t4 & 0xFF];
+                    var_s6 = FIELD_TILE_REC_SHARED_RGB_CODE;
+                    if (var_t4 & 0x200)
+                    {
+                      ((u8 *) &part->code_word)[3] |= 2;
+                    }
+                    stride = 8;
                   }
-
-                var_s5 = 8;
-              }
-              else
-              {
-                var_s6 = 0;
-              }
-              new_var21 = 6;
-              temp_v0_10 = var_s2->unk18;
-              var_t3 = temp_v0_10 - 1;
-              if (temp_v0_10 != 0)
-              {
-                temp_a0_3 = var_t3 & 0xF;
-                if (temp_a0_3 >= 0xAU)
-                {
-                  var_t3 = ((((*((s32 *) (((u8 *) temp_s4) + 8))) * 8) & 0x180) | ((var_t3 * 2) & 0x60)) | (((u32) (((temp_a0_3 << 6) - 0x80) & 0x3FF)) >> 6);
-                }
-                else
-                {
-                  new_var4 = 0x10;
-                  var_t3 = ((((*((s32 *) (((u8 *) temp_s4) + 8))) * 8) & 0x180) | ((var_t3 * 2) & 0x60)) | ((((u32) ((temp_a0_3 << 6) + 0x140)) >> 6) | new_var4);
-                }
-                var_s2->unk18 = (s32) ((var_t3 & 0x9FF) | 0xE1000400);
-                var_s6 |= 2;
-                var_s5 -= 4;
-              }
-              var_s3 = (Records_Unk *) var_s2->unkC;
-              var_s0 = ((*(((u8 *) temp_s4) + 0xA)) * (*(((u8 *) temp_s4) + 0xB)));
-              var_s0 -= 1;
-              var_s1_4 = 0;
-              if (var_s0 != -1)
-              {
-                var_v1_5 = -1;
-                do
-                {
-                  if (var_s1_4 == 0)
+                  else
                   {
-                    sp3C = *((s32 *) var_s3);
-                    var_s3 = (Records_Unk *) (((u8 *) var_s3) + 4);
-                    var_s1_4 = 1;
+                    var_s6 = 0;
                   }
-                  if (sp3C & var_s1_4)
+                  temp_v0_10 = part->tpage_word;
+                  var_t3 = temp_v0_10 - 1;
+                  if (temp_v0_10 != 0)
                   {
-                    sp50 = var_v1_5;
-                    new_var3 = new_var3;
-                    field_build_sprite_tile_record((FieldTileDesc *) var_fp, (Records_Unk *) var_s7, (((u32) (*((s32 *) (((u8 *) temp_s4) + 8)))) >> 4) & new_var22, var_s6);
-                    var_s7 = (Records_Unk **) (((u8 *) var_s7) + var_s5);
-                    var_t1_4 += 1;
+                    temp_a0_3 = var_t3 & 0xF;
+                    if (temp_a0_3 >= 10)
+                    {
+                      var_t3 = ((part_def->u.word * 8) & 0x180) | ((var_t3 * 2) & 0x60) | ((u32) (((temp_a0_3 << 6) - 0x80) & 0x3FF) >> 6);
+                    }
+                    else
+                    {
+                      new_var4 = 0x10;
+                      var_t3 = ((part_def->u.word * 8) & 0x180) | ((var_t3 * 2) & 0x60) | (((u32) ((temp_a0_3 << 6) + 0x140) >> 6) | new_var4);
+                    }
+                    part->tpage_word = (var_t3 & 0x9FF) | 0xE1000400;
+                    var_s6 |= FIELD_TILE_REC_SHARED_TPAGE;
+                    stride -= 4;
                   }
-                  var_s1_4 *= 2;
-                  var_s0 -= 1;
-                  var_fp += 4;
-                }
-                while (var_s0 != var_v1_5);
-                var_v1_8 = var_t1_4 & 0xFFFF;
-              }
-              else
-              {
-                goto block_173;
-              }
-              goto block_174;
-              quad_entry:
-              temp_v1_14 = var_s2->unk1C;
-
-              carriage_quad_cursor = (s32) sp24;
-              var_s7_2 = (Records_Unk *) carriage_quad_cursor;
-              var_s7 = (Records_Unk **) var_s7_2;
-              var_s5 = 0xC;
-              var_s2->unk10 = var_s7_2;
-              if (temp_v1_14 != 0)
-              {
-                var_t4 = temp_v1_14 - 1;
-                var_s2->unk1C = *((s32 *) (((var_t4 & 0xFF) * 4) + 0x1F800000));
-                var_s6 = 1;
-                if (var_t4 & 0x200)
-                {
-                  *(((u8 *) var_s2) + 0x1F) = (u8) ((*(((u8 *) var_s2) + 0x1F)) | 2);
-                }
-                var_s5 = 8;
-              }
-              else
-              {
-                var_s6 = 0;
-              }
-              temp_v0_12 = var_s2->unk18;
-              var_t3 = 1;
-              var_t3 = temp_v0_12 - var_t3;
-              if (temp_v0_12 != 0)
-              {
-                temp_a0_3 = var_t3 & 0xF;
-                if (temp_a0_3 >= 0xAU)
-                {
-                  var_t3 = ((((*((s32 *) (((u8 *) temp_s4) + 8))) * 8) & 0x180) | ((var_t3 * 2) & 0x60)) | (((u32) (((temp_a0_3 << 6) - 0x80) & 0x3FF)) >> 6);
-                }
-                else
-                {
-                  var_t3 = ((((*((s32 *) (((u8 *) temp_s4) + 8))) * 8) & 0x180) | ((var_t3 * 2) & 0x60)) | ((((u32) ((temp_a0_3 << 6) + 0x140)) >> (6 ^ 0)) | new_var4);
-                }
-                var_s2->unk18 = (s32) var_t3;
-                var_s6 |= 2;
-                var_s5 -= 4;
-              }
-              var_s3 = (Records_Unk *) var_s2->unkC;
-              var_s0 = (*(((u8 *) temp_s4) + 0xA)) * (*(((u8 *) temp_s4) + 0xB));
-              var_s0 -= 1;
-              var_s1_4 = 0;
-              if (var_s0 != -1)
-              {
-                var_v1_7 = -1;
-                do
-                {
-                  if (var_s1_4 == 0)
+                  var_s3 = (Records_Unk *) part->bits;
+                  var_s0 = part_def->u.b.cols * part_def->u.b.rows;
+                  var_s0--;
+                  var_s1_4 = 0;
+                  if (var_s0 != -1)
                   {
-                    do { sp3C = *((s32 *) var_s3);
-                    var_s3 = (Records_Unk *) (((u8 *) var_s3) + 4);
-                    var_s1_4 = 1; } while (0);
+                    var_v1_5 = -1;
+                    do
+                    {
+                      if (var_s1_4 == 0)
+                      {
+                        sp3C = *(u32 *) var_s3;
+                        var_s3 = (Records_Unk *) ((u32 *) var_s3 + 1);
+                        var_s1_4 = 1;
+                      }
+                      if (sp3C & var_s1_4)
+                      {
+                        field_build_sprite_tile_record((FieldTileDesc *) var_fp, (FieldTileRec *) var_s7, (part_def->u.word >> 4) & 3, var_s6);
+                        var_s7 = (Records_Unk **) ((u8 *) var_s7 + stride);
+                        var_t1_4++;
+                      }
+                      var_s1_4 <<= 1;
+                      var_s0--;
+                      var_fp += 4;
+                    }
+                    while (var_s0 != var_v1_5);
                   }
-                  if (sp3C & var_s1_4)
+                  arena.cur = (Records_Unk *) ((u8 *) arena.cur + (u16) var_t1_4 * stride);
+                  break;
+                case 1:
+                  break;
+                case 2:
+                case 3:
+                case 4:
+                case 5:
+                  temp_v1_14 = part->code_word;
+                  part->records = (u8 *) arena.cur;
+                  var_s7_2 = (Records_Unk *) part->records;
+                  var_s7 = (Records_Unk **) var_s7_2;
+                  stride = 0xC;
+                  if (temp_v1_14 != 0)
                   {
-                    sp50 = var_v1_7;
-                    new_var8 = (((u32) (*((s32 *) (((u8 *) temp_s4) + 8)))) >> 4) & new_var22;
-                    field_build_quad_tile_record((FieldTileDesc *) var_fp, (Records_Unk *) var_s7, new_var8, var_s6);
-                    var_s7 = (Records_Unk **) (((u8 *) var_s7) + var_s5);
-                    var_t1_4 += 1;
+                    var_t4 = temp_v1_14 - 1;
+                    part->code_word = FIELD_TILE_COLOR_WORDS[var_t4 & 0xFF];
+                    var_s6 = FIELD_TILE_REC_SHARED_RGB_CODE;
+                    if (var_t4 & 0x200)
+                    {
+                      ((u8 *) &part->code_word)[3] |= 2;
+                    }
+                    stride = 8;
                   }
-                  var_s1_4 *= 2;
-                  var_s0 -= 1;
-                  var_fp += 4;
-                }
-                while (var_s0 != var_v1_7);
+                  else
+                  {
+                    var_s6 = 0;
+                  }
+                  temp_v0_12 = part->tpage_word;
+                  var_t3 = temp_v0_12 - 1;
+                  if (temp_v0_12 != 0)
+                  {
+                    temp_a0_3 = var_t3 & 0xF;
+                    if (temp_a0_3 >= 10)
+                    {
+                      var_t3 = ((part_def->u.word * 8) & 0x180) | ((var_t3 * 2) & 0x60) | ((u32) (((temp_a0_3 << 6) - 0x80) & 0x3FF) >> 6);
+                    }
+                    else
+                    {
+                      var_t3 = ((part_def->u.word * 8) & 0x180) | ((var_t3 * 2) & 0x60) | (((u32) ((temp_a0_3 << 6) + 0x140) >> 6) | new_var4);
+                    }
+                    part->tpage_word = var_t3;
+                    var_s6 |= FIELD_TILE_REC_SHARED_TPAGE;
+                    stride -= 4;
+                  }
+                  var_s3 = (Records_Unk *) part->bits;
+                  var_s0 = part_def->u.b.cols * part_def->u.b.rows;
+                  var_s0--;
+                  var_s1_4 = 0;
+                  if (var_s0 != -1)
+                  {
+                    var_v1_7 = -1;
+                    do
+                    {
+                      if (var_s1_4 == 0)
+                      {
+                        sp3C = *(u32 *) var_s3;
+                        var_s3 = (Records_Unk *) ((u32 *) var_s3 + 1);
+                        var_s1_4 = 1;
+                      }
+                      if (sp3C & var_s1_4)
+                      {
+                        field_build_quad_tile_record((FieldTileDesc *) var_fp, (FieldTileRec *) var_s7, (part_def->u.word >> 4) & 3, var_s6);
+                        var_s7 = (Records_Unk **) ((u8 *) var_s7 + stride);
+                        var_t1_4++;
+                      }
+                      var_s1_4 <<= 1;
+                      var_s0--;
+                      var_fp += 4;
+                    }
+                    while (var_s0 != var_v1_7);
+                  }
+                  arena.cur = (Records_Unk *) ((u8 *) arena.cur + (u16) var_t1_4 * stride);
+                  break;
               }
-              block_173:
-              var_v1_8 = var_t1_4 & 0xFFFF;
-
-              block_174:
-              sp24 = (Records_Unk *) (((u8 *) sp24) + (var_v1_8 * var_s5));
-
-              goto block_175;
-              block_175:
-              var_s2->unk26 = (u16) var_t1_4;
-
-              part_dispatch_done:
-              ;
+              part->instance_count = (u16) var_t1_4;
 
             }
           }
           else
           {
-            var_s2->unk10 = 0;
-            var_s2->unk26 = 0U;
+            part->records = 0;
+            part->instance_count = 0U;
           }
-          var_s2 = var_s2->unk0;
+          part = part->next;
         }
-        while (var_s2 != 0);
+        while (part != 0);
       }
-      var_t0_3 = var_t0_3->unk0;
+      var_t0_3 = var_t0_3->next;
     }
     while (var_t0_3 != 0);
   }
   *((void **) (((u8 *) sp34) + 0x38)) = 0;
   *((s32 *) (((u8 *) sp34) + 0x3C)) = 0;
-  field_build_animation_list(arg0->unk14, &sp24, ((u8 *) sp34) + 0x18);
-  field_build_animation_list(arg0->unk18, &sp24, ((u8 *) sp34) + 0x1C);
-  field_build_animation_list(arg0->unk1C, &sp24, ((u8 *) sp34) + 0x20);
-  field_build_animation_list(arg0->unk20, &sp24, ((u8 *) sp34) + 0x24);
+  field_build_animation_list(map->anim_defs[0], &arena.cur, ((u8 *) sp34) + 0x18);
+  field_build_animation_list(map->anim_defs[1], &arena.cur, ((u8 *) sp34) + 0x1C);
+  field_build_animation_list(map->anim_defs[2], &arena.cur, ((u8 *) sp34) + 0x20);
+  field_build_animation_list(map->anim_defs[3], &arena.cur, ((u8 *) sp34) + 0x24);
+  var_s0 = FIELD_RESOURCE->seq_count;
+  seq_def = FIELD_RESOURCE->seq_defs;
+  tail = (FieldLink *) &sp34->seqs;
+
+  while (--var_s0 != -1)
   {
-    var_s0 = FIELD_RESOURCE->seq_count;
-    temp_v1_14 = (s32) FIELD_RESOURCE->seq_defs;
+    seq = (FieldSeq *) arena.cur;
+    arena.cur = (Records_Unk *) (seq + 1);
+    tail->next = (FieldLink *) seq;
+    tail = (FieldLink *) seq;
+    seq->def = seq_def++;
+    seq->flags &= ~3;
   }
-  var_s0 -= 1;
-  new_var3 = -1;
-  var_t1 = (Records_Node44 *) (((u8 *) sp34) + 0x14);
+  do { var_s2_2 = 1 << object_index; } while (0);
+  tail->next = 0;
+  seq = sp34->seqs;
+  var_s0 = 0;
+  while (seq != 0)
   {
-    Records_Unk *tail_node;
-    if (var_s0 == -1) goto bridge_common;
-    var_v0_7 = -4;
-    carriage_quad_cursor = -4;
-    var_a1_2 = -4;
-    do
+    if (seq->def->unk1 & var_s2_2)
     {
-      nodev = (s32) sp24;
-      sp24 = (Records_Unk *) (((u8 *) nodev) + sizeof(FieldSeq));
-      do
-      {
-        ((Records_Unk *) var_t1)->unk0 = (Records_Unk *) nodev;
-        var_t1 = (Records_Node44 *) nodev;
-        var_s0 = var_s0 - 1;
-        *((s32 *) (((u8 *) var_t1) + 4)) = temp_v1_14;
-        temp_v1_14 += 0xC;
-        *((s32 *) (((u8 *) var_t1) + 8)) = (s32) ((*((s32 *) (((u8 *) var_t1) + 8))) & var_a1_2);
-      } while (0);
-    } while (var_s0 != -1);
-bridge_common:
-    do { var_s2_2 = 1 << sp28; } while (0);
-    ((Records_Unk *) var_t1)->unk0 = 0;
-    tail_node = *((Records_Unk **) (((u8 *) sp34) + 0x14));
-    var_s0 = 0;
-    if (tail_node != 0)
-    {
-      do
-      {
-        if ((*((u8 *) (((u8 *) (*((Records_Unk **) (((u8 *) tail_node) + 4)))) + 1))) & var_s2_2)
-          func_8005A744(tail_node, var_s0 & 0xFF);
-        tail_node = tail_node->unk0;
-        var_s0 += 1;
-      } while (tail_node != 0);
+      func_8005A744(seq, var_s0 & 0xFF);
     }
+    seq = seq->next;
+    var_s0++;
   }
   *((s32 *) (((u8 *) sp34) + 0x34)) = 0;
   if (sp34->unk38 != 0)
   {
-    sp34->unk38 = (s32) sp24;
-    sp24 = (Records_Unk *) (((u8 *) sp24) + 0x14C00);
+    new_var2 = (u8 *) arena.cur;
+    sp34->unk38 = (s32) new_var2;
+    arena.cur = (Records_Unk *) (new_var2 + 0x14C00);
     DecDCTReset(0);
     DecDCTvlcBuild((u_short *) sp34->unk38);
   }
-  *sp30 = sp24;
-  *((volatile u16 *) (((u8 *) arg0) + 0x26)) = 1;
+  mem->top = (u32) arena.cur;
+  map->built = 1;
 }
 
 /**
