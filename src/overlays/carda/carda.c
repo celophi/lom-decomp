@@ -1,492 +1,543 @@
 #include "carda_internal.h"
 
-s32 func_80140370(s32 arg0)
+/**
+ * @brief Address of the CARDA text whose table offset is @p offset.
+ * @note Summed as integers, offset first, like the original list drawing code.
+ */
+#define CARDA_TEXT_BY_OFFSET(table, offset) ((u8*)((s32)(offset) + (s32)(table)))
+
+/**
+ * @brief Advance one CARDA frame and report whether the overlay should exit.
+ * @param frame Render buffer being built this frame.
+ * @return 1 when the overlay should exit, otherwise 0.
+ */
+s32 carda_update_frame(CardaRenderBuffer* frame)
 {
-    if (D_80165FE0 != 0)
+    if (g_carda_exit_requested != 0)
     {
-        func_8014986C();
+        carda_shutdown_stream_handles();
         field_text_reset_windows();
-        func_80019788(0);
+        DrawSync(0);
         return 1;
     }
     field_text_reset_scratch();
-    func_8014ADF8();
-    func_80140830(arg0);
-    func_8014AE34();
+    carda_begin_glyph_cache_frame();
+    carda_update_menu(frame);
+    carda_evict_unused_glyphs();
     field_text_upload_immediate_cache();
-    D_80166004 ^= 1;
+    g_carda_frame_parity ^= 1;
     return 0;
 }
 
-void func_801403FC(void)
+/**
+ * @brief Allocate and lay out the fixed windows of the save screen.
+ *
+ * Modes 2 and 3 get a four-window layout, every other mode the five-window
+ * save-file browser.
+ */
+void carda_build_ui_elements(void)
 {
-    CardaElement *p;
+    CardaElement* element;
+    s32 unused[2]; /* never used, but the compiled code only matches the original with it */
 
-    D_80165FFC = 0;
-    D_80165F38 = 0;
-    D_80166104 = 0;
-    D_80165FF4 = 0;
-    D_801660FC = 0;
-    D_80166100 = (s32)D_8012271C + 0xCE0;
-    if (0)
-    {
-        func_801425D4(0, 0, 0, 0, 0);
-    }
-    func_801425D4();
+    g_carda_scroll_frames = 0;
+    g_carda_scroll_target_y = 0;
+    g_carda_scroll_y = 0;
+    g_carda_selected_row = 0;
+    g_carda_selection_status = 0;
+    D_80166100 = g_pad_ctx + 0xCE0;
+    carda_clear_elements();
     D_801660F8 = 0;
 
-    D_80165F80[0].attr.f.state = 1;
-    if ((u32)(D_80166078 - 2) < 2U)
+    /* Hold slot 0 so the fixed elements below are allocated from slot 1 on. */
+    g_carda_element_pool[0].attr.f.state = CARDA_ELEMENT_OPENING;
+    if (g_carda_mode >= 2 && g_carda_mode <= 3)
     {
-        p = func_80142614();
-        p->draw_handler = (void *)func_80145050;
-        p->attr.f.unk0_3 = 1;
-        p->attr.f.x = 0x10;
-        p->attr.f.unk0_16 = 0x4C;
-        p->attr4.f.unk4_0 = 1;
-        p->attr4.f.y = 0x48;
-        SET_ELEM_CODE(p, 0x20);
+        element = carda_alloc_element();
+        element->draw = carda_draw_save_flow;
+        element->attr.f.phase = 1;
+        element->attr.f.x = 16;
+        element->attr.f.y = 76;
+        element->size.f.width_high = 1;
+        element->size.f.height = 72;
+        CARDA_SET_ELEMENT_WIDTH_LOW(element, 0x20);
 
-        p = func_80142614();
-        p->draw_handler = (void *)func_80141C3C;
-        p->attr.f.unk0_3 = 1;
-        p->attr.f.x = 0x1C;
-        p->attr.f.unk0_16 = 0x3A;
-        p->attr4.f.unk4_0 = 0;
-        p->attr4.f.y = 0x10;
-        SET_ELEM_CODE(p, 0x80);
+        element = carda_alloc_element();
+        element->draw = carda_draw_card_slot0_label;
+        element->attr.f.phase = 1;
+        element->attr.f.x = 28;
+        element->attr.f.y = 58;
+        element->size.f.width_high = 0;
+        element->size.f.height = 16;
+        CARDA_SET_ELEMENT_WIDTH_LOW(element, 0x80);
 
-        p = func_80142614();
-        p->draw_handler = (void *)func_80141D18;
-        p->attr.f.unk0_3 = 1;
-        p->attr.f.x = 0xA4;
-        p->attr.f.unk0_16 = 0x3A;
-        p->attr4.f.unk4_0 = 0;
-        p->attr4.f.y = 0x10;
-        SET_ELEM_CODE(p, 0x80);
+        element = carda_alloc_element();
+        element->draw = carda_draw_card_slot1_label;
+        element->attr.f.phase = 1;
+        element->attr.f.x = 164;
+        element->attr.f.y = 58;
+        element->size.f.width_high = 0;
+        element->size.f.height = 16;
+        CARDA_SET_ELEMENT_WIDTH_LOW(element, 0x80);
 
-        p = func_80142614();
-        p->draw_handler = (void *)func_80141B50;
-        p->attr.f.unk0_3 = 1;
-        p->attr.f.x = 0x20;
-        p->attr.f.unk0_16 = 0x22;
-        p->attr4.f.unk4_0 = 1;
-        p->attr4.f.y = 0x10;
-        SET_ELEM_CODE(p, 0);
+        element = carda_alloc_element();
+        element->draw = carda_draw_header_label;
+        element->attr.f.phase = 1;
+        element->attr.f.x = 32;
+        element->attr.f.y = 34;
+        element->size.f.width_high = 1;
+        element->size.f.height = 16;
+        CARDA_SET_ELEMENT_WIDTH_LOW(element, 0);
     }
     else
     {
-        p = func_80142614();
-        p->draw_handler = (void *)func_80141250;
-        p->attr.f.unk0_3 = 1;
-        p->attr.f.x = 0x0A;
-        p->attr.f.unk0_16 = 0x32;
-        p->attr4.f.unk4_0 = 1;
-        p->attr4.f.y = 0x58;
-        SET_ELEM_CODE(p, 0x2C);
+        element = carda_alloc_element();
+        element->draw = carda_draw_entry_list;
+        element->attr.f.phase = 1;
+        element->attr.f.x = 10;
+        element->attr.f.y = 50;
+        element->size.f.width_high = 1;
+        element->size.f.height = 88;
+        CARDA_SET_ELEMENT_WIDTH_LOW(element, 0x2C);
 
-        p = func_80142614();
-        p->draw_handler = (void *)func_80141B50;
-        p->attr.f.unk0_3 = 1;
-        p->attr.f.x = 0x68;
-        p->attr.f.unk0_16 = 0x0A;
-        p->attr4.f.unk4_0 = 0;
-        p->attr4.f.y = 0x10;
-        SET_ELEM_CODE(p, 0x70);
+        element = carda_alloc_element();
+        element->draw = carda_draw_header_label;
+        element->attr.f.phase = 1;
+        element->attr.f.x = 104;
+        element->attr.f.y = 10;
+        element->size.f.width_high = 0;
+        element->size.f.height = 16;
+        CARDA_SET_ELEMENT_WIDTH_LOW(element, 0x70);
 
-        p = func_80142614();
-        p->draw_handler = (void *)func_80141C3C;
-        p->attr.f.unk0_3 = 1;
-        p->attr.f.x = 0x1C;
-        p->attr.f.unk0_16 = 0x1E;
-        p->attr4.f.unk4_0 = 0;
-        p->attr4.f.y = 0x10;
-        SET_ELEM_CODE(p, 0x80);
+        element = carda_alloc_element();
+        element->draw = carda_draw_card_slot0_label;
+        element->attr.f.phase = 1;
+        element->attr.f.x = 28;
+        element->attr.f.y = 30;
+        element->size.f.width_high = 0;
+        element->size.f.height = 16;
+        CARDA_SET_ELEMENT_WIDTH_LOW(element, 0x80);
 
-        p = func_80142614();
-        p->draw_handler = (void *)func_80141D18;
-        p->attr.f.unk0_3 = 1;
-        p->attr.f.x = 0xA4;
-        p->attr.f.unk0_16 = 0x1E;
-        p->attr4.f.unk4_0 = 0;
-        p->attr4.f.y = 0x10;
-        SET_ELEM_CODE(p, 0x80);
+        element = carda_alloc_element();
+        element->draw = carda_draw_card_slot1_label;
+        element->attr.f.phase = 1;
+        element->attr.f.x = 164;
+        element->attr.f.y = 30;
+        element->size.f.width_high = 0;
+        element->size.f.height = 16;
+        CARDA_SET_ELEMENT_WIDTH_LOW(element, 0x80);
 
-        p = func_80142614();
-        p->draw_handler = (void *)func_80141DF4;
-        p->attr.f.unk0_3 = 1;
-        p->attr.f.x = 0x1E;
-        p->attr.f.unk0_16 = 0x8E;
-        p->attr4.f.unk4_0 = 1;
-        p->attr4.f.y = 0x34;
-        SET_ELEM_CODE(p, 4);
+        element = carda_alloc_element();
+        element->draw = carda_draw_selected_entry_details;
+        element->attr.f.phase = 1;
+        element->attr.f.x = 30;
+        element->attr.f.y = 142;
+        element->size.f.width_high = 1;
+        element->size.f.height = 52;
+        CARDA_SET_ELEMENT_WIDTH_LOW(element, 4);
     }
-    D_80165F80[0].attr.f.state = 0;
+    g_carda_element_pool[0].attr.f.state = CARDA_ELEMENT_FREE;
 }
 
-void func_80140830(void)
+/**
+ * @brief Update elements, the card sequence, input and scrolling for one frame.
+ * @param frame Render buffer being built this frame.
+ */
+void carda_update_menu(CardaRenderBuffer* frame)
 {
     s32 delta;
 
-    func_80141230();
-    D_80166068 += 2;
-    if ((D_80165F8C.attr.word & 0x7F) == 2)
+    carda_update_elements(frame);
+    g_carda_icon_phase += 2;
+    if ((g_carda_element1_state.attr.word & 0x7F) == 2)
     {
-        func_80140918();
+        carda_update_save_sequence();
     }
-    if ((u16)D_80122988 == 0xFFFF)
+    if ((u16)g_pad_input == 0xFFFF)
     {
-        D_80122988 = 0;
+        g_pad_input = 0;
     }
-    func_80140BAC();
-    if (D_80165FFC != 0)
+    carda_handle_input();
+    if (g_carda_scroll_frames != 0)
     {
-        s32 base = D_80166104;
-        delta = (D_80165F38 - D_80166104) / D_80165FFC;
-        D_80165FFC -= 1;
-        D_80166104 += delta;
+        s32 base = g_carda_scroll_y; /* never used, but the compiled code only matches the original with it */
+        delta = (g_carda_scroll_target_y - g_carda_scroll_y) / g_carda_scroll_frames;
+        g_carda_scroll_frames -= 1;
+        g_carda_scroll_y += delta;
     }
     else
     {
-        D_80166104 = D_80165F38;
+        g_carda_scroll_y = g_carda_scroll_target_y;
     }
 }
 
-s32 func_80140918(void)
+/**
+ * @brief Advance the active card sequence and react to its phase result.
+ *
+ * Starts the initial scan when no sequence is running, runs the sequence until
+ * it stops asking to repeat, then handles a confirm press while a save is
+ * pending and the sequence's result code.
+ *
+ * @return No value is returned; the s32 return type is historical.
+ */
+s32 carda_update_save_sequence(void)
 {
-    s32 result;
-    s32 repeat;
-    CardaElement *p;
+    s32 phase;
+    CardaElement* element;
 
-    if ((u32)(D_80166078 - 2) < 2) {
-        repeat = 3;
-        if (D_801663A0 != 0) {
-            goto load_loop;
+    if (g_carda_mode >= 2 && g_carda_mode <= 3)
+    {
+        if (g_carda_save_step == NULL)
+        {
+            switch (g_carda_entry_state)
+            {
+            case 0xE9:
+            case 0xEB:
+            case 0xEC:
+            case 0xED:
+            case 0xEE:
+            case 0xEF:
+            case 0xF0:
+            case 0xF1:
+            case 0xF6:
+            case 0xF8:
+            case 0xF9:
+            case 0xFA:
+            case 0xFB:
+            case 0xFC:
+            case 0xFD:
+            case 0xFF:
+                return;
+            default:
+                g_carda_save_step = g_carda_steps_initial_scan;
+                break;
+            }
         }
-        switch (D_80165FEC) {
-        case 0xE9:
-        case 0xEB:
-        case 0xEC:
-        case 0xED:
-        case 0xEE:
-        case 0xEF:
-        case 0xF0:
-        case 0xF1:
-        case 0xF6:
-        case 0xF8:
-        case 0xF9:
-        case 0xFA:
-        case 0xFB:
-        case 0xFC:
-        case 0xFD:
-        case 0xFF:
-            return;
-        default:
-            D_801663A0 = D_80165B70;
-            goto set_repeat;
-        }
-    } else {
-        repeat = 3;
-        if (D_80165FEC < 0x12) {
-            goto load_loop;
-        }
-        if (D_801663A0 != 0) {
-            goto load_loop;
-        }
-        if (D_80165FEC == 0xF1) {
-            goto load_loop;
-        }
-        D_801663A0 = D_80165B70;
     }
-set_repeat:
-    repeat = 3;
-load_loop:
-    do {
-        result = func_80147F4C();
-    } while (result == repeat);
+    else if (g_carda_entry_state >= 0x12 && g_carda_save_step == NULL && g_carda_entry_state != 0xF1)
+    {
+        g_carda_save_step = g_carda_steps_initial_scan;
+    }
 
-    if (D_801660F8 != 0 && (D_80122988 & 0x220)) {
-        D_80165FEC = 0xF9;
+    do
+    {
+        phase = carda_advance_save_sequence();
+    } while (phase == 3);
+
+    if (D_801660F8 != 0 && (g_pad_input & 0x220))
+    {
+        g_carda_entry_state = 0xF9;
         D_801660F8 = 0;
 
-        p = D_80165F80;
-        D_80165F80[0].attr.word = (((((D_80165F80[0].attr.word & ~7U) | 1U) & ~0x78U) | 8U) & 0xFFFF007FU) | 0x800U;
-        ((u8 *)p)[2] = 0x4C;
-        D_80165F80[0].attr.word = (D_80165F80[0].attr.word & 0x00FFFFFFU) | 0x20000000U;
-        p->attr4.word = ((p->attr4.word | 1U) & ~0x1FEU) | 0x90U;
-        func_80144F18();
-        D_80165F80[0].draw_handler = (void *)func_80144050;
-        func_801495E4();
+        element = g_carda_element_pool;
+        element->attr.f.state = CARDA_ELEMENT_OPENING;
+        element->attr.f.phase = 1;
+        element->attr.f.x = 16;
+        element->attr.f.y = 76;
+        CARDA_SET_ELEMENT_WIDTH_LOW(element, 0x20);
+        element->size.f.width_high = 1;
+        element->size.f.height = 72;
+        carda_enable_choice_toggle();
+        element->draw = carda_draw_format_prompt;
+        carda_restart_card_sequence();
         return;
     }
 
-    switch (result) {
+    switch (phase)
+    {
     case 0:
         break;
     case 2:
-        D_801663A0 = D_80165B84;
+        g_carda_save_step = g_carda_steps_card_reset;
         break;
     case 4:
-        if ((u32)(D_80166078 - 2) < 2) {
-            D_801663A0 = 0;
-        } else {
-            D_801663A0 = D_80165B7C;
+        if (g_carda_mode >= 2 && g_carda_mode <= 3)
+        {
+            g_carda_save_step = NULL;
+        }
+        else
+        {
+            g_carda_save_step = g_carda_steps_refresh_entries;
         }
         D_801660F8 = 0;
         break;
     case 5:
-        if (D_80166078 == 1 || D_80166078 == 3) {
-            D_80165FEC = 0xF9;
-            if (D_80166078 == 1) {
-                D_801663A0 = D_80165B70;
+        if (g_carda_mode == 1 || g_carda_mode == 3)
+        {
+            g_carda_entry_state = 0xF9;
+            if (g_carda_mode == 1)
+            {
+                g_carda_save_step = g_carda_steps_initial_scan;
             }
-        } else {
-            D_80165FEC = 0xF9;
+        }
+        else
+        {
+            g_carda_entry_state = 0xF9;
             D_801660F8 = 0;
-            p = D_80165F80;
-            D_80165F80[0].attr.word = (((((D_80165F80[0].attr.word & ~7U) | 1U) & ~0x78U) | 8U) & 0xFFFF007FU) | 0x800U;
-            ((u8 *)p)[2] = 0x4C;
-            D_80165F80[0].attr.word = (D_80165F80[0].attr.word & 0x00FFFFFFU) | 0x20000000U;
-            p->attr4.word = ((p->attr4.word | 1U) & ~0x1FEU) | 0x90U;
-            func_80144F18();
-            D_80165F80[0].draw_handler = (void *)func_80144050;
-            func_801495E4();
+
+            element = g_carda_element_pool;
+            element->attr.f.state = CARDA_ELEMENT_OPENING;
+            element->attr.f.phase = 1;
+            element->attr.f.x = 16;
+            element->attr.f.y = 76;
+            CARDA_SET_ELEMENT_WIDTH_LOW(element, 0x20);
+            element->size.f.width_high = 1;
+            element->size.f.height = 72;
+            carda_enable_choice_toggle();
+            element->draw = carda_draw_format_prompt;
+            carda_restart_card_sequence();
         }
         break;
     }
 }
 
-s32 func_80140BAC(void)
+/**
+ * @brief Handle CARDA browser navigation, confirm, and cancel input.
+ * @return No value is returned; the s32 return type is historical.
+ */
+s32 carda_handle_input(void)
 {
     s32 pending;
     s32 status;
     s32 count;
-    CardaElement *p;
+    CardaElement* element;
 
-    if (((s32)D_80165F80[1].attr.word & 7) == 0) {
-        D_80165FE0 = 1;
+    if (g_carda_element_pool[1].attr.f.state == CARDA_ELEMENT_FREE)
+    {
+        g_carda_exit_requested = 1;
         return;
     }
-    if (D_80165FE0 != 0) {
+    if (g_carda_exit_requested != 0)
+    {
         return;
     }
-    if (((s32)D_80165F80[1].attr.word & 7) >= 3) {
+    if (g_carda_element_pool[1].attr.f.state >= CARDA_ELEMENT_CLOSING)
+    {
         return;
     }
-    if ((D_80165F80[0].attr.word & 7) != 0) {
+    if (g_carda_element_pool[0].attr.f.state != CARDA_ELEMENT_FREE)
+    {
         return;
     }
-    if ((u32)(D_80166078 - 2) < 2U) {
+    if (g_carda_mode >= 2 && g_carda_mode <= 3)
+    {
         return;
     }
-    pending = D_80165FEC;
-    if (pending == 0xFF) {
+    pending = g_carda_entry_state;
+    if (pending == 0xFF)
+    {
         return;
     }
-    if (D_80166AE0 != 0) {
+    if (g_carda_entry_scan_active != 0)
+    {
         return;
     }
-    if (D_80166000 != 0) {
+    if (g_carda_io_busy != 0)
+    {
         return;
     }
-    if ((u32)(*D_801663A0 - 6) < 2U) {
+    if (*g_carda_save_step >= 6 && *g_carda_save_step <= 7)
+    {
         return;
     }
 
-    status = D_80122988;
-    if (status & 0x40) {
+    status = g_pad_input;
+    if (status & 0x40)
+    {
         g_field_card_overlay_mode = 3;
-        func_800A3938(0x78, 0x80);
-        func_80141164();
+        play_menu_sfx(0x78, 0x80);
+        carda_close_all_elements();
         return;
     }
-    if (status & 0xA100) {
-        func_800A3938(0x7D, 0x80);
-        func_801410E4();
+    if (status & 0xA100)
+    {
+        play_menu_sfx(0x7D, 0x80);
+        carda_switch_card();
         return;
     }
-    if (pending >= 0x12) {
+    if (pending >= 0x12)
+    {
         return;
     }
 
     count = 1;
-    if (status & 8) {
-        D_80122988 = 0x4000;
+    if (status & 8)
+    {
+        g_pad_input = 0x4000;
         count = 1;
     }
-    if (D_80122988 & 4) {
-        D_80122988 = 0x1000;
+    if (g_pad_input & 4)
+    {
+        g_pad_input = 0x1000;
         count = 1;
     }
 
-    while (count != 0) {
-        if (D_80122988 & 0x1000) {
-            D_80165FF4 -= 1;
-            if (D_80165FF4 < 0) {
-                D_80165FF4 = D_80165FEC - 1;
+    while (count != 0)
+    {
+        if (g_pad_input & 0x1000)
+        {
+            g_carda_selected_row -= 1;
+            if (g_carda_selected_row < 0)
+            {
+                g_carda_selected_row = g_carda_entry_state - 1;
             }
         }
-        if (D_80122988 & 0x4000) {
-            D_80165FF4 += 1;
-            if (D_80165FF4 >= D_80165FEC) {
-                D_80165FF4 = 0;
+        if (g_pad_input & 0x4000)
+        {
+            g_carda_selected_row += 1;
+            if (g_carda_selected_row >= g_carda_entry_state)
+            {
+                g_carda_selected_row = 0;
             }
         }
         count -= 1;
     }
 
-    if (D_80122988 & 0x5000) {
-        func_80149DF4();
-        func_800A3938(0x7D, 0x80);
-        func_801411CC();
+    if (g_pad_input & 0x5000)
+    {
+        carda_commit_selected_entry();
+        play_menu_sfx(0x7D, 0x80);
+        carda_scroll_to_selection();
         return;
     }
 
-    if (D_80122988 & 0x220) {
-        if (D_80166078 == 1) {
-            s32 term1;
-            s32 term2;
-            term1 = D_801660A0 * 0x320;
-            term2 = (D_80165FF4 * 0x28) + (s32)D_80166440;
-            if (func_8001714C(D_800ECF7C, (void *)(term1 + term2), 0xC) == 0) {
-                if (D_8003EC9C == 0xFF || D_8016636F == D_8003EC9C) {
-                    p = func_80142614();
-                    p->attr.f.unk0_3 = 1;
-                    p->attr.f.x = 0x10;
-                    p->attr.f.unk0_16 = 0x5A;
-                    p->attr4.f.unk4_0 = 1;
-                    p->attr4.f.y = 0x2C;
-                    SET_ELEM_CODE(p, 0x20);
-                    func_80142E10();
-                    func_80144F18();
-                    p->draw_handler = (void *)func_8014344C;
-                    func_801495E4();
-                    func_800A3938(0x7E, 0x80);
-                    return;
-                }
-            }
-        } else {
+    if (g_pad_input & 0x220)
+    {
+        if (g_carda_mode == 1)
+        {
+            if (strncmp(g_lom_save_filename_prefix, g_carda_entries[g_carda_card_slot][g_carda_selected_row].name, 0xC) == 0)
             {
-                s32 term1;
-                s32 term2;
-                term1 = D_801660A0 * 0x320;
-                term2 = (D_80165FF4 * 0x28) + (s32)D_80166440;
-                if (func_8001714C(D_800ECFC4, (void *)(term1 + term2), 8) == 0) {
-                    p = func_80142614();
-                    p->attr.f.unk0_3 = 1;
-                    p->attr.f.x = 0x10;
-                    p->attr.f.unk0_16 = 0x5A;
-                    p->attr4.f.unk4_0 = 1;
-                    p->attr4.f.y = 0x2C;
-                    SET_ELEM_CODE(p, 0x20);
-                    func_80142E10();
-                    func_80144F18();
-                    p->draw_handler = (void *)func_801439B4;
-                    func_801495E4();
-                    func_800A3938(0x7E, 0x80);
-                    return;
-                }
-            }
-            {
-                s32 term1;
-                s32 term2;
-                term1 = D_801660A0 * 0x320;
-                term2 = (D_80165FF4 * 0x28) + (s32)D_80166440;
-                if (func_8001714C(D_800ECF7C, (void *)(term1 + term2), 0xC) == 0) {
-                    p = func_80142614();
-                    p->attr.f.unk0_3 = 1;
-                    p->attr.f.x = 0x10;
-                    p->attr.f.unk0_16 = 0x5A;
-                    p->attr4.f.unk4_0 = 1;
-                    p->attr4.f.y = 0x2C;
-                    SET_ELEM_CODE(p, 0x20);
-                    func_80142E10();
-                    func_80144F18();
-                    p->draw_handler = (void *)func_80143BD4;
-                    func_801495E4();
-                    func_800A3938(0x7E, 0x80);
+                if (g_save_slot_index == 0xFF || g_carda_selected_save_slot_id == g_save_slot_index)
+                {
+                    element = carda_alloc_element();
+                    element->attr.f.phase = 1;
+                    element->attr.f.x = 16;
+                    element->attr.f.y = 90;
+                    element->size.f.width_high = 1;
+                    element->size.f.height = 44;
+                    CARDA_SET_ELEMENT_WIDTH_LOW(element, 0x20);
+                    carda_build_save_file();
+                    carda_enable_choice_toggle();
+                    element->draw = carda_draw_load_prompt;
+                    carda_restart_card_sequence();
+                    play_menu_sfx(0x7E, 0x80);
                     return;
                 }
             }
         }
-        func_800A3938(0x78, 0x80);
+        else
+        {
+            if (strncmp(g_new_save_entry_prefix, g_carda_entries[g_carda_card_slot][g_carda_selected_row].name, 8) == 0)
+            {
+                element = carda_alloc_element();
+                element->attr.f.phase = 1;
+                element->attr.f.x = 16;
+                element->attr.f.y = 90;
+                element->size.f.width_high = 1;
+                element->size.f.height = 44;
+                CARDA_SET_ELEMENT_WIDTH_LOW(element, 0x20);
+                carda_build_save_file();
+                carda_enable_choice_toggle();
+                element->draw = carda_draw_save_prompt;
+                carda_restart_card_sequence();
+                play_menu_sfx(0x7E, 0x80);
+                return;
+            }
+            if (strncmp(g_lom_save_filename_prefix, g_carda_entries[g_carda_card_slot][g_carda_selected_row].name, 0xC) == 0)
+            {
+                element = carda_alloc_element();
+                element->attr.f.phase = 1;
+                element->attr.f.x = 16;
+                element->attr.f.y = 90;
+                element->size.f.width_high = 1;
+                element->size.f.height = 44;
+                CARDA_SET_ELEMENT_WIDTH_LOW(element, 0x20);
+                carda_build_save_file();
+                carda_enable_choice_toggle();
+                element->draw = carda_draw_overwrite_prompt;
+                carda_restart_card_sequence();
+                play_menu_sfx(0x7E, 0x80);
+                return;
+            }
+        }
+        play_menu_sfx(0x78, 0x80);
     }
 }
 
-void func_801410E4(void)
+/**
+ * @brief Switch to the other memory card and restart its directory scan.
+ */
+void carda_switch_card(void)
 {
     D_801660F8 = 0;
-    D_801663A0 = 0;
-    D_80165FEC = 0xFF;
-    D_80165FFC = 0;
-    D_80165F38 = 0;
-    D_80166104 = 0;
-    D_80165FF4 = 0;
-    D_801660FC = 0;
-    D_801660A0 ^= 1;
-    func_80147C5C();
-    func_8014A044();
-    func_80149FEC();
+    g_carda_save_step = NULL;
+    g_carda_entry_state = 0xFF;
+    g_carda_scroll_frames = 0;
+    g_carda_scroll_target_y = 0;
+    g_carda_scroll_y = 0;
+    g_carda_selected_row = 0;
+    g_carda_selection_status = 0;
+    g_carda_card_slot ^= 1;
+    carda_reset_entry_ranks();
+    carda_release_secondary_handles();
+    carda_release_primary_handles();
 }
 
-void func_80141164(void)
+/**
+ * @brief Restore the field fade target and put every live UI element into its closing state.
+ */
+void carda_close_all_elements(void)
 {
-    s32 temp_v1;
-    s32 var_a1;
-    s32 *var_a0;
-    s32 temp;
+    CardaElement* element;
+    s32 i;
 
-    func_80067F28();
-    var_a0 = (s32 *)D_80165F80;
-    var_a1 = 0;
-    do
+    field_restore_fade_target();
+    element = g_carda_element_pool;
+    for (i = 0; i < CARDA_ELEMENT_COUNT; i++, element++)
     {
-        temp_v1 = *var_a0;
-        if (temp_v1 & 7)
+        if (element->attr.f.state != CARDA_ELEMENT_FREE)
         {
-            temp = (temp_v1 & ~7) | 3;
-            *var_a0 = (temp & ~0x78) | 0x40;
+            element->attr.f.state = CARDA_ELEMENT_CLOSING;
+            element->attr.f.phase = CARDA_ELEMENT_PHASE_STEPS;
         }
-        var_a1 += 1;
-        var_a0 += 3;
-    } while (var_a1 < 8);
+    }
 }
 
-void func_801411CC(void)
+/**
+ * @brief Move the list scroll target to keep the selected row visible.
+ */
+void carda_scroll_to_selection(void)
 {
-    s32 index;
-    s32 temp;
     s32 base;
-    s32 pos;
-    s32 diff;
+    s32 delta;
 
-    index = D_80165FF4;
-    temp = (index << 3) - index;
-    base = D_80166104;
-    pos = temp << 1;
-    diff = pos - base;
-
-    if (diff >= 0x4B)
+    base = g_carda_selected_row * CARDA_ENTRY_ROW_HEIGHT;
+    delta = base - g_carda_scroll_y;
+    if (delta >= 0x4B)
     {
-        D_80165F38 = pos - 0x46;
-        D_80165FFC = 4;
+        g_carda_scroll_target_y = base - 0x46;
+        g_carda_scroll_frames = 4;
     }
-    if (diff < 0)
+    if (delta < 0)
     {
-        D_80165F38 = pos;
-        D_80165FFC = 4;
+        g_carda_scroll_target_y = g_carda_selected_row * CARDA_ENTRY_ROW_HEIGHT;
+        g_carda_scroll_frames = 4;
     }
 }
 
-void func_80141230(void)
+/**
+ * @brief Run the UI element update/draw pass.
+ * @param frame Render buffer being built this frame.
+ */
+void carda_update_elements(CardaRenderBuffer* frame)
 {
-    func_80142668();
+    carda_update_and_draw_elements(frame);
 }
 
 /**
  * @brief Build the primitive list for the memory-card entry browser body.
  *
- * Dispatches on the current status code @c D_80165FEC to draw a status/prompt
+ * Dispatches on the current status code @c g_carda_entry_state to draw a status/prompt
  * glyph, or, in the default case, renders one row per card entry (rank digits,
  * icons, protect/copy state) plus the highlight bar for the selected row.
  *
@@ -497,70 +548,73 @@ void func_80141230(void)
  * @return The advanced packet cursor past the last emitted primitive.
  * @see decomp.me (100%)
  */
-s32 func_80141250(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
+void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    if ((D_80165F80[0].attr.word & 7) != 0)
+    if (g_carda_element_pool[0].attr.f.state != CARDA_ELEMENT_FREE)
     {
-        if (D_80165FEC >= 0xF8)
+        if (g_carda_entry_state >= 0xF8)
         {
-            if (D_80165FEC < 0xFE)
+            if (g_carda_entry_state < 0xFE)
             {
                 return prim;
             }
-            if (D_80165FEC == 0xFF)
+            if (g_carda_entry_state == 0xFF)
             {
                 return prim;
             }
         }
     }
 
-    switch (D_80165FEC)
+    switch (g_carda_entry_state)
     {
     case 0xF8:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014B06C, 0x34), 4, -x_offset + 0x96, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_no_lom_save_data, 26), 4, -x_offset + 0x96, -y_offset, 2);
         break;
     case 0xF9:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014B0EC, 0xB4), 4, -x_offset + 0x96, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_card_unformatted, 90), 4, -x_offset + 0x96, -y_offset, 2);
         break;
     case 0xF6:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014B07A, 0x42), 4, -x_offset + 0x96, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CARDA_TEXT_AT(D_8014B07A, 33), 4, -x_offset + 0x96, -y_offset, 2);
         break;
     case 0xFF:
     {
         s32 x = -x_offset + 0x96;
-        u8* base = (u8*)&D_8014B038;
-        prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0), 4, x, -y_offset, 2);
-        prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
-        prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
+        u16* text_table = &g_carda_text_check_memory_card;
+
+        prim = func_800A88A0(prim, ot, CARDA_TEXT(text_table, 0), 4, x, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CARDA_TEXT(text_table, 15), 4, x, 0xE - y_offset, 2);
+        prim = func_800A88A0(prim, ot, CARDA_TEXT(text_table, 89), 4, x, 0x1C - y_offset, 2);
         break;
     }
     case 0xFA:
     {
         s32 x = -x_offset + 0x96;
-        u8* base = (u8*)&D_8014B03A;
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014B03A, 2), 4, x, -y_offset, 2);
-        base -= 2;
-        prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x5A), 4, x, 0x10 - y_offset, 2);
+        u16* text_table;
+
+        prim = func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_not_enough_blocks, 1), 4, x, -y_offset, 2);
+        text_table = CARDA_TEXT_TABLE(g_carda_text_not_enough_blocks, 1);
+        prim = func_800A88A0(prim, ot, CARDA_TEXT(text_table, 45), 4, x, 0x10 - y_offset, 2);
         break;
     }
     case 0xF7:
     {
         s32 x = -x_offset + 0x96;
-        u8* base = (u8*)&D_8014B03A;
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014B03A, 2), 4, x, -y_offset, 2);
-        base -= 2;
-        prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x60), 4, x, 0x10 - y_offset, 2);
-        prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x62), 4, x, 0x20 - y_offset, 2);
+        u16* text_table;
+
+        prim = func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_not_enough_blocks, 1), 4, x, -y_offset, 2);
+        text_table = CARDA_TEXT_TABLE(g_carda_text_not_enough_blocks, 1);
+        prim = func_800A88A0(prim, ot, CARDA_TEXT(text_table, 48), 4, x, 0x10 - y_offset, 2);
+        prim = func_800A88A0(prim, ot, CARDA_TEXT(text_table, 49), 4, x, 0x20 - y_offset, 2);
         break;
     }
     case 0xFD:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014B03C, 4), 4, -x_offset + 0x96, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_no_memory_card, 2), 4, -x_offset + 0x96, -y_offset, 2);
         break;
     case 0xFB:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014B048, 0x10), 4, -x_offset + 0x96, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_card_access_failed, 8), 4, -x_offset + 0x96, -y_offset, 2);
         break;
     case 0xFC:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014B04A, 0x12), 4, -x_offset + 0x96, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_no_save_data, 9), 4, -x_offset + 0x96, -y_offset, 2);
         break;
     case 0xFE:
         break;
@@ -569,105 +623,94 @@ s32 func_80141250(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         s32 row_y;
         s32 i;
 
-        if (D_80166AE0 != 0)
+        if (g_carda_entry_scan_active != 0)
         {
             s32 x = -x_offset + 0x96;
-            u8* base = (u8*)&D_8014B038;
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0), 4, x, -y_offset, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
+            u16* text_table = &g_carda_text_check_memory_card;
+
+            prim = func_800A88A0(prim, ot, CARDA_TEXT(text_table, 0), 4, x, -y_offset, 2);
+            prim = func_800A88A0(prim, ot, CARDA_TEXT(text_table, 15), 4, x, 0xE - y_offset, 2);
+            prim = func_800A88A0(prim, ot, CARDA_TEXT(text_table, 89), 4, x, 0x1C - y_offset, 2);
             break;
         }
 
-        do
-        {
-            i = 0;
-        } while (0);
-        if (D_80165FEC > 0)
+        i = 0;
+        if (i < g_carda_entry_state)
         {
             s32 base_x;
-            s32* flag_ptr;
-            u16 misc_glyph;
-            Vec2s pos;
-            s32 row;
-            u8* base;
-            s32 misc_x;
-            s32 entry_offset;
-            s32 rank_offset;
-            s32 rank_x;
-            s32 draw_style;
+            u16 marker_offset;
+            DVECTOR pos;
+            u16* text_table;
+            s32 marker_x;
+            s32 marker_x_bits;
+            s32 color;
             s32 label_x;
 
-            base = (u8*)&D_8014B038;
+            text_table = &g_carda_text_check_memory_card;
             base_x = -x_offset;
-            entry_offset = 0;
-            rank_offset = 0;
             do
             {
-                draw_style = 4;
-                misc_x = base_x + 0xD6;
+                color = 4;
+                marker_x = base_x + 0xD6;
                 label_x = 1 - x_offset;
-                row = ((i * 14) - y_offset) - D_80166104;
-                row_y = row + 1;
-                if ((u32)(row + 0xE) < 0x65U)
+                row_y = ((i * CARDA_ENTRY_ROW_HEIGHT) - y_offset) - g_carda_scroll_y + 1;
+                if (row_y >= -13 && row_y <= 87)
                 {
-                    flag_ptr = (s32*)((u8*)D_801663A8 + rank_offset);
-                    if (*flag_ptr >= 0)
+                    if (g_carda_entry_ranks[i] >= 0)
                     {
-                        pos.x = base_x + 0x86;
-                        pos.y = row_y;
-                        prim = func_800A8A78(ot, prim, *(s32*)((u8*)D_80166A80 + rank_offset), draw_style, &pos, 0);
-                        prim = func_800A88A0(prim, ot, (void*)((s32)D_8014B066 + (s32)base), draw_style, base_x + 0x70, row_y, 0);
-                        pos.y = row_y;
-                        pos.x = misc_x;
-                        if ((D_80166438 - 1) == *flag_ptr)
+                        pos.vx = base_x + 0x86;
+                        pos.vy = row_y;
+                        prim = func_800A8A78(ot, prim, g_carda_entry_suffix_values[i], color, &pos, 0);
+                        prim = func_800A88A0(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, g_carda_text_number_prefix), color, base_x + 0x70, row_y, 0);
+                        pos.vy = row_y;
+                        pos.vx = marker_x;
+                        if ((g_carda_rank_count - 1) == g_carda_entry_ranks[i])
                         {
-                            misc_glyph = *(u16*)(base + 0x36);
-                            rank_x = misc_x << 16;
-                            prim = func_800A88A0(prim, ot, (void*)((s32)misc_glyph + (s32)base), draw_style, rank_x >> 16, row_y, 0);
+                            marker_offset = text_table[27];
+                            marker_x_bits = marker_x << 16;
+                            prim = func_800A88A0(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, marker_offset), color, marker_x_bits >> 16, row_y, 0);
                         }
-                        else if (*flag_ptr < 2)
+                        else if (g_carda_entry_ranks[i] < 2)
                         {
-                            misc_glyph = *(u16*)(base + 0x38);
-                            rank_x = misc_x << 16;
-                            prim = func_800A88A0(prim, ot, (void*)((s32)misc_glyph + (s32)base), draw_style, rank_x >> 16, row_y, 0);
+                            marker_offset = text_table[28];
+                            marker_x_bits = marker_x << 16;
+                            prim = func_800A88A0(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, marker_offset), color, marker_x_bits >> 16, row_y, 0);
                         }
-                        if (*func_80143334((void*)(&((u8(*)[0x320])D_80166440)[D_801660A0][entry_offset] + 12)) == 0x2B)
+                        if (*carda_skip_hex_digits(g_carda_entries[g_carda_card_slot][i].name + 12) == 0x2B)
                         {
-                            prim = func_800A88A0(prim, ot, (void*)((s32)D_8014B0E8 + (s32)base), draw_style, 0x10C - x_offset, row_y, 1);
+                            prim = func_800A88A0(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, g_carda_text_plus_marker), color, 0x10C - x_offset, row_y, 1);
                         }
                     }
-                    if (func_8001714C(D_800ECF7C, (void*)&((u8(*)[0x320])D_80166440)[D_801660A0][entry_offset], 0xC) == 0)
+                    if (strncmp(g_lom_save_filename_prefix, g_carda_entries[g_carda_card_slot][i].name, 0xC) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, (void*)((s32)D_8014B03E + (s32)base), draw_style, label_x, row_y, 0);
+                        prim = func_800A88A0(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, g_carda_text_mana), color, label_x, row_y, 0);
                     }
-                    else if (func_8001714C(D_800ECF8C, (void*)&((u8(*)[0x320])D_80166440)[D_801660A0][entry_offset], 0xC) == 0)
+                    else if (strncmp(g_lom_alt_save_filename_prefix, g_carda_entries[g_carda_card_slot][i].name, 0xC) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, (void*)((s32)D_8014B072 + (s32)base), draw_style, label_x, row_y, 0);
+                        prim = func_800A88A0(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, g_carda_text_alt_save), color, label_x, row_y, 0);
                     }
-                    else if (func_8001714C(D_800ECFC4, (void*)&((u8(*)[0x320])D_80166440)[D_801660A0][entry_offset], 8) == 0)
+                    else if (strncmp(g_new_save_entry_prefix, g_carda_entries[g_carda_card_slot][i].name, 8) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, (void*)((s32)D_8014B04C + (s32)base), draw_style, label_x, row_y, 0);
+                        prim = func_800A88A0(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, g_carda_text_new_save), color, label_x, row_y, 0);
                     }
-                    else if (func_8001714C(D_800ECFD0, (void*)&((u8(*)[0x320])D_80166440)[D_801660A0][entry_offset], 9) == 0)
+                    else if (strncmp(D_800ECFD0, g_carda_entries[g_carda_card_slot][i].name, 9) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, (void*)((s32)D_8014B09E + (s32)base), draw_style, label_x, row_y, 0);
+                        prim = func_800A88A0(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, D_8014B09E), color, label_x, row_y, 0);
                     }
                     else
                     {
-                        prim = func_800A88A0(prim, ot, (void*)((s32)D_8014B040 + (s32)base), draw_style, label_x, row_y, 0);
+                        prim = func_800A88A0(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, g_carda_text_other_game), color, label_x, row_y, 0);
                     }
                 }
-                entry_offset += 0x28;
-                rank_offset += 4;
                 i++;
-            } while (i < D_80165FEC);
+            } while (i < g_carda_entry_state);
         }
 
-        row_y = ((D_80165FF4 * 14) - y_offset) - D_80166104;
-        if (D_80166AE0 == 0)
+        row_y = ((g_carda_selected_row * CARDA_ENTRY_ROW_HEIGHT) - y_offset) - g_carda_scroll_y;
+        if (g_carda_entry_scan_active == 0)
         {
             TILE* tile = (TILE*)prim;
+
             *(u32*)&tile->r0 = 0xF080F0;
             setlen(tile, 3);
             setcode(tile, 0x62);
@@ -675,7 +718,7 @@ s32 func_80141250(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             setXY0(tile, 0, row_y);
             tile->h = 0xE;
             addPrim(ot, tile);
-            prim += sizeof(TILE);
+            prim = tile + 1;
         }
         break;
     }
@@ -684,146 +727,141 @@ s32 func_80141250(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 }
 
 /**
- * @brief Draw the mode-dependent memory-card status glyph.
- *
- * The small frame scratch preserves the original GCC 2.7.2 stack-frame
- * bucket used by this seven-argument draw call.
+ * @brief Draw the mode-dependent CARDA header label.
+ * @param ot Ordering-table head.
+ * @param prim Primitive-buffer cursor.
+ * @param x_offset Horizontal transition offset.
+ * @param y_offset Vertical transition offset.
+ * @return Advanced primitive-buffer cursor.
  * @see matching: 100.00%
  */
-s32 func_80141B50(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
+void* carda_draw_header_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    s32 frame_scratch[2];
+    RECT unused; /* never used, but the original stack frame reserves it */
 
-    if ((u32)(D_80166078 - 2) < 2)
+    if (g_carda_mode >= 2 && g_carda_mode <= 3)
     {
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014B0D4, 0x9C),
-                             4, -x_offset + 0x80, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CARDA_TEXT_AT(D_8014B0D4, 78), 4, -x_offset + 0x80, -y_offset, 2);
     }
-    else if (D_80166078 == 1)
+    else if (g_carda_mode == 1)
     {
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014B064, 0x2C),
-                             4, -x_offset + 0x38, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_save, 22), 4, -x_offset + 0x38, -y_offset, 2);
     }
     else
     {
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014B042, 0xA),
-                             4, -x_offset + 0x38, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CARDA_TEXT_AT(D_8014B042, 5), 4, -x_offset + 0x38, -y_offset, 2);
     }
 
     return prim;
 }
 
-typedef struct
+/**
+ * @brief Draw the first memory-card slot label, highlighted while slot 1 is selected.
+ * @param ot Ordering-table head.
+ * @param prim Primitive-buffer cursor.
+ * @param x_offset Horizontal transition offset.
+ * @param y_offset Vertical transition offset.
+ * @return Advanced primitive-buffer cursor.
+ */
+void* carda_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    s16 x;
-    s16 y;
-    s16 w;
-    s16 h;
-} CardaRect;
-typedef struct
-{
-    u32 tag;
-    u8 r0;
-    u8 g0;
-    u8 b0;
-    u8 code;
-    s16 x0;
-    s16 y0;
-    s16 w;
-    s16 h;
-} CardaTile;
+    RECT unused; /* never used, but the original stack frame reserves it */
+    TILE* tile;
 
-s32 func_80141C3C(s32 *ot, s32 prim, s32 arg2, s32 arg3)
-{
-    CardaRect pos;
-    CardaTile *tile;
-
-    if (D_801660A0 != 0)
+    if (g_carda_card_slot != 0)
     {
-        tile = (CardaTile *)prim;
-        *(u32 *)&tile->r0 = 0x101010;
+        tile = (TILE*)prim;
+        *(u32*)&tile->r0 = 0x101010;
         setlen(tile, 3);
         setcode(tile, 0x62);
         setXY0(tile, 0, 0);
         setWH(tile, 0x80, 0x10);
         addPrim(ot, tile);
-        prim += 0x10;
+        prim = tile + 1;
     }
-    return func_800A88A0(prim, ot, GLYPH_SYM(D_8014B044, 0xC), 4, -arg2 + 0x40, -arg3, 2);
+    return func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_card_slot_1, 6), 4, -x_offset + 0x40, -y_offset, 2);
 }
 
-s32 func_80141D18(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+/**
+ * @brief Draw the second memory-card slot label, highlighted while slot 0 is selected.
+ * @param ot Ordering-table head.
+ * @param prim Primitive-buffer cursor.
+ * @param x_offset Horizontal transition offset.
+ * @param y_offset Vertical transition offset.
+ * @return Advanced primitive-buffer cursor.
+ */
+void* carda_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    CardaRect pos;
-    CardaTile *tile;
+    RECT unused; /* never used, but the original stack frame reserves it */
+    TILE* tile;
 
-    if (D_801660A0 == 0)
+    if (g_carda_card_slot == 0)
     {
-        tile = (CardaTile *)prim;
-        *(u32 *)&tile->r0 = 0x101010;
+        tile = (TILE*)prim;
+        *(u32*)&tile->r0 = 0x101010;
         setlen(tile, 3);
         setcode(tile, 0x62);
         setXY0(tile, 0, 0);
         setWH(tile, 0x80, 0x10);
         addPrim(ot, tile);
-        prim += 0x10;
+        prim = tile + 1;
     }
-    return func_800A88A0(prim, ot, GLYPH_SYM(D_8014B046, 0xE), 4, -arg2 + 0x40, -arg3, 2);
+    return func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_card_slot_2, 7), 4, -x_offset + 0x40, -y_offset, 2);
 }
-
-typedef struct CardaFallbackTextMatch { u8 pad[0x24]; u8 text[0x20]; } CardaFallbackTextMatch;
 
 /**
  * @brief Draw the selected memory-card entry's details.
  *
- * This is the CARDA counterpart of CLOAD's selected-entry renderer.  The
- * unused vector is retained because it is part of the original function's
- * stack layout under GCC 2.7.2 CDK.
+ * Shows the new-save prompt, a notice, the selected LOM save's party icons,
+ * play time, title and location, or the raw two-line file title of any other
+ * game's save.
+ *
+ * @param ot Ordering-table head.
+ * @param prim Primitive-buffer cursor.
+ * @param x_offset Horizontal transition offset.
+ * @param y_offset Vertical transition offset.
+ * @return Advanced primitive-buffer cursor.
  * @see matching: 100.00%
  */
-s32 func_80141DF4(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
+void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    s32 result;
+    void* result;
     DVECTOR pos;
-    u8 name[0x21];
-    char unused_pad[212];
-    s32 slot[3];
-    DVECTOR unused_pos;
+    u8 name[0x100];
+    s32 party_icon[3];
+    DVECTOR unused; /* never used, but the original stack frame reserves it */
 
     result = prim;
-    if (D_801660FC == 0)
+    if (g_carda_selection_status == 0)
     {
         return result;
     }
-    if (D_80166AE0 != 0)
+    if (g_carda_entry_scan_active != 0)
     {
         return result;
     }
-    if (D_801660FC != 3 && D_80165FEC != 0xFA && D_80165FEC < 0x10)
+    if (g_carda_selection_status != 3 && g_carda_entry_state != 0xFA && g_carda_entry_state < 0x10)
     {
-        if (D_801660FC == 2)
+        if (g_carda_selection_status == 2)
         {
             s32 x = -x_offset;
-            u8 *base;
+            u16* text_table;
 
-            result = func_800A88A0(prim, ot, GLYPH_SYM(D_8014B060, 0x28), 4, x, -y_offset, 0);
-            base = (u8 *)&D_8014B060 - 0x28;
-            return func_800A88A0(result, ot, GLYPH_OFF(base, 0x2A), 4, x, 0x10 - y_offset, 0);
+            result = func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_new_save_prompt, 20), 4, x, -y_offset, 0);
+            text_table = CARDA_TEXT_TABLE(g_carda_text_new_save_prompt, 20);
+            return func_800A88A0(result, ot, CARDA_TEXT(text_table, 21), 4, x, 0x10 - y_offset, 0);
         }
-        else if (D_801660FC == 4)
+        else if (g_carda_selection_status == 4)
         {
-            return func_800A88A0(prim, ot, GLYPH_SYM(D_8014B092, 0x5A), 4, -x_offset, -y_offset, 0);
+            return func_800A88A0(prim, ot, CARDA_TEXT_AT(D_8014B092, 45), 4, -x_offset, -y_offset, 0);
         }
         else
         {
-            s32 term1 = D_801660A0 * CARDA_CARD_DIRECTORY_BYTES;
-            s32 term2 = (D_80165FF4 * CARDA_DIRECTORY_ENTRY_BYTES) + (s32)D_80166440;
-
-            if (func_8001714C(D_800ECF7C, (void *)(term1 + term2), 0xC) == 0)
+            if (strncmp(g_lom_save_filename_prefix, g_carda_entries[g_carda_card_slot][g_carda_selected_row].name, 0xC) == 0)
             {
-                if (D_8003EC9C == 0xFF || D_8016636F == D_8003EC9C || D_8016636F == 0xFF)
+                if (g_save_slot_index == 0xFF || g_carda_selected_save_slot_id == g_save_slot_index || g_carda_selected_save_slot_id == 0xFF)
                 {
-                    u8 *base90 = D_801662A0;
+                    CardaSaveMetadata* save = &g_carda_selected_save_metadata;
                     s32 present_count;
                     s32 i;
                     s32 j;
@@ -836,15 +874,15 @@ s32 func_80141DF4(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
                     s32 time_val;
 
                     total = 0;
-                    slot[0] = (u32)(*(s32 *)(base90 + 0x18)) >> 0x19;
-                    slot[1] = ((u32)(*(s32 *)(base90 + 0x20)) >> 0x12) & 0x7F;
-                    slot[2] = (u32)(*(s32 *)(base90 + 0x20)) >> 0x19;
-                    D_8016606C = (s32)base90[0x1F];
+                    party_icon[0] = save->party_icon_0;
+                    party_icon[1] = save->party_icon_1;
+                    party_icon[2] = save->party_icon_2;
+                    g_carda_icon_palette = save->icon_palette;
 
                     present_count = 0;
                     for (i = 0; i < 3; i++)
                     {
-                        if (slot[i] != 0x7F)
+                        if (party_icon[i] != CARDA_NO_ICON)
                         {
                             present_count += 1;
                         }
@@ -855,22 +893,22 @@ s32 func_80141DF4(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
                     case 2:
                         step = 0x20;
                         half_step = 0x10;
-                        time_val = D_80166068;
-                        if (D_80166068 < 0)
+                        time_val = g_carda_icon_phase;
+                        if (g_carda_icon_phase < 0)
                         {
-                            time_val = D_80166068 + 0x1F;
+                            time_val = g_carda_icon_phase + 0x1F;
                         }
-                        D_80166068 -= (time_val >> 5) << 5;
+                        g_carda_icon_phase -= (time_val >> 5) << 5;
                         break;
                     case 3:
                         step = 0x10;
                         half_step = 0x20;
-                        D_80166068 %= 0x60;
+                        g_carda_icon_phase %= 0x60;
                         break;
                     default:
                         step = 0x10;
                         half_step = 0x20;
-                        D_80166068 = 0x1F;
+                        g_carda_icon_phase = 0x1F;
                         break;
                     }
 
@@ -880,36 +918,37 @@ s32 func_80141DF4(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
                     {
                         base_y = i * half_step;
                         base_x = base_y + half_step;
-                        if (slot[j] != 0x7F)
+                        if (party_icon[j] != CARDA_NO_ICON)
                         {
                             s32 adjust = step;
                             s32 rem;
                             s32 hi;
                             s32 delta;
 
-                            if ((D_80166068 >= base_y && D_80166068 < base_x && (delta = D_80166068 - base_y, 1))
-                                || (rem = base_x % (half_step * present_count), D_80166068 >= rem && D_80166068 < (hi = rem + half_step) && (delta = hi - D_80166068, 1)))
+                            if ((g_carda_icon_phase >= base_y && g_carda_icon_phase < base_x && (delta = g_carda_icon_phase - base_y, 1)) ||
+                                (rem = base_x % (half_step * present_count),
+                                 g_carda_icon_phase >= rem && g_carda_icon_phase < (hi = rem + half_step) && (delta = hi - g_carda_icon_phase, 1)))
                             {
                                 adjust += delta;
                             }
-                            result = func_80144CD0(result, ot, total - x_offset, -y_offset, adjust, slot[j], i, j);
+                            result = carda_draw_icon_highlight(result, ot, total - x_offset, -y_offset, adjust, party_icon[j], i, j);
                             total += adjust;
                             i += 1;
                         }
                     }
 
                     {
-                        u8 *base90_2 = D_801662A0;
+                        CardaSaveMetadata* shown_save = &g_carda_selected_save_metadata;
                         s32 x = -x_offset;
                         s32 y = -y_offset;
 
-                        base_y = *(s32 *)(base90_2 + 0x30);
+                        base_y = shown_save->playtime;
 
                         pos.vx = (s16)(x + 0x70);
                         pos.vy = (s16)y;
                         hours = base_y / 216000;
                         result = func_800A8A78(ot, result, hours, 4, &pos, 1);
-                        result = func_800A88A0(result, ot, D_800EC3F6[0] + ((s32)&D_800EC3F6 - 0x32) + (D_800EC3F6[1] << 8), 4, x + 0x6F, y, 0);
+                        result = func_800A88A0(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, 25), 4, x + 0x6F, y, 0);
                         base_y = (base_y / 3600) - (hours * 0x3C);
                         if (base_y < 0xA)
                         {
@@ -919,12 +958,13 @@ s32 func_80141DF4(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
                         }
                         pos.vx = (s16)(x + 0x85);
                         pos.vy = (s16)y;
-                        result = func_800A88A0(func_800A88A0(func_800A8A78(ot, result, base_y, 4, &pos, 1), ot, base90_2, 4, x + 0x54, y + 0x10, 0), ot, GLYPH_OFF((u8 *)D_8014CA6C, (*(s32 *)(base90_2 + 0x20) & 0x3FFFF) * 2), 4, x + 0x54, y + 0x20, 0);
+                        result = func_800A88A0(func_800A88A0(func_800A8A78(ot, result, base_y, 4, &pos, 1), ot, shown_save->title, 4, x + 0x54, y + 0x10, 0),
+                                               ot, CARDA_TEXT(g_carda_location_names, shown_save->location), 4, x + 0x54, y + 0x20, 0);
                     }
                 }
                 else
                 {
-                    result = func_800A88A0(result, ot, GLYPH_SYM(D_8014B08C, 0x54), 4, -x_offset, -y_offset, 0);
+                    result = func_800A88A0(result, ot, CARDA_TEXT_AT(g_carda_text_version_error, 42), 4, -x_offset, -y_offset, 0);
                 }
             }
             else
@@ -932,29 +972,31 @@ s32 func_80141DF4(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
                 s32 j;
 
                 {
-                    u8 *text_base;
-                    func_80142508(&D_80166124);
-                    text_base = (u8 *)&D_80166124;
+                    u8* text_base;
+                    carda_terminate_multibyte_text(D_80166124);
+                    text_base = D_80166124;
                     text_base -= 4;
-                    if ((u32)(text_base[0x24] - 1) >= 0x7FU)
+                    if (text_base[0x24] == 0 || text_base[0x24] >= 0x80)
                     {
-                        do {
-do {
-                        for (j = 0; j < 0x20; j++)
+                        do
                         {
-                            name[j] = text_base[j + 4];
-                        }
-                        name[j] = 0;
-                        result = func_8014A900(result, ot, name, -x_offset, -y_offset, 4, 0);
+                            do
+                            {
+                                for (j = 0; j < 0x20; j++)
+                                {
+                                    name[j] = text_base[j + 4];
+                                }
+                                name[j] = 0;
+                                result = carda_draw_cached_text(result, ot, name, -x_offset, -y_offset, 4, 0);
 
-                        for (j = 0; j < 0x20; j++)
-                        {
-                            name[j] = ((CardaFallbackTextMatch *)&D_80166120)->text[j];
-                        }
-                        name[j] = 0;
-                        result = func_8014A900(result, ot, name, -x_offset, -y_offset + 0x10, 4, 0);
+                                for (j = 0; j < 0x20; j++)
+                                {
+                                    name[j] = g_carda_selected_file_header.title_line_2[j];
+                                }
+                                name[j] = 0;
+                                result = carda_draw_cached_text(result, ot, name, -x_offset, -y_offset + 0x10, 4, 0);
+                            } while (0);
                         } while (0);
-} while (0);
                     }
                 }
             }
@@ -963,12 +1005,16 @@ do {
     return result;
 }
 
-void func_80142508(void *arg0)
+/**
+ * @brief Zero-fill a 64-byte text buffer after its encoded terminator.
+ * @param text Encoded text buffer.
+ */
+void carda_terminate_multibyte_text(void* text)
 {
-    u8 *p;
+    u8* p;
     s32 i;
 
-    p = (u8 *)arg0;
+    p = (u8*)text;
     i = 0;
     for (;;)
     {
@@ -999,316 +1045,254 @@ void func_80142508(void *arg0)
     }
 }
 
-s32 func_8014256C(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+/**
+ * @brief Draw a centred FIELD UI string.
+ * @param ot Ordering-table head.
+ * @param prim Primitive-buffer cursor.
+ * @param x_offset Horizontal transition offset.
+ * @param y_offset Vertical transition offset.
+ * @return Advanced primitive-buffer cursor.
+ */
+void* carda_draw_field_notice(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    RECT pos;
+    RECT unused; /* never used, but the original stack frame reserves it */
 
-    return func_800A88A0(prim, ot,
-        (void *)((u8 *)D_800EC3D0 - 0xC + D_800EC3D0[0] + (D_800EC3D0[1] << 8)),
-        5, 0x80 - arg2, -arg3, 2);
+    return func_800A88A0(prim, ot, FIELD_UI_TEXT_AT(D_800EC3D0, 6), 5, 0x80 - x_offset, -y_offset, 2);
 }
 
-void func_801425D4(void)
+/**
+ * @brief Mark all eight UI elements as inactive and reset the element counter.
+ */
+void carda_clear_elements(void)
 {
-    CardaElement *p;
+    CardaElement* p;
     s32 i;
 
     g_menu_element_counter = 0x20;
-    p = D_80165F80;
-    for (i = 0; i < 8; i++)
+    p = g_carda_element_pool;
+    for (i = 0; i < CARDA_ELEMENT_COUNT; i++)
     {
-        p->attr.word &= ~7;
+        p->attr.f.state = CARDA_ELEMENT_FREE;
         p++;
     }
 }
 
-CardaElement *func_80142614(void)
+/**
+ * @brief Activate and return the first free UI element.
+ * @return First free element, or the pool head if all slots are busy.
+ */
+CardaElement* carda_alloc_element(void)
 {
-    CardaElement *p;
+    CardaElement* p;
     s32 i;
 
-    p = D_80165F80;
-    for (i = 0; i < 8; i++, p++)
+    p = g_carda_element_pool;
+    for (i = 0; i < CARDA_ELEMENT_COUNT; i++, p++)
     {
-        if ((p->attr.word & 7) == 0)
+        if (p->attr.f.state == CARDA_ELEMENT_FREE)
         {
-            p->attr.word = (p->attr.word & ~7) | 1;
+            p->attr.f.state = CARDA_ELEMENT_OPENING;
             return p;
         }
     }
-    return D_80165F80;
+    return g_carda_element_pool;
 }
 
-typedef struct { s32 unk0; s32 unk4; s16 unk8; s16 unkA; s16 unkC; u16 unkE; } CardaGpuPacket;
-typedef struct { s32 unk0; u8 pad4[0x40AE]; s16 unk40B2; u8 pad40B4[4]; CardaGpuPacket *unk40B8; } CardaDrawState;
-typedef CardaGpuPacket *(*CardaElemDrawFunc)();
-typedef struct { union { u32 word; } attr; u32 size_flags; CardaElemDrawFunc draw_handler; } CardaElementSlot;
-
-void func_80142668(CardaDrawState *arg0)
+/**
+ * @brief Advance and draw the eight pool elements for one frame.
+ *
+ * Emits the list scroll arrows, then links a draw-environment packet for each
+ * live element into the ordering table and animates it by state: an opening
+ * window grows, an open window holds, a closing window shrinks, and a closed
+ * window counts down to free.
+ *
+ * @param frame Render buffer being built; prim_cursor is read on entry and written back on exit.
+ */
+void carda_update_and_draw_elements(CardaRenderBuffer* frame)
 {
-    CardaGpuPacket *var_s0;
-    CardaDrawState *var_s5;
-    volatile u32 *var_s3;
-    s32 temp_s1;
-    s32 temp_s2;
-    s32 var_s6;
-    s32 sp20[24];
-    u32 temp_a0_2;
-    s32 temp_v1_2;
-    u32 temp_a1;
-    u32 temp_a2;
-    s32 temp_a0_3;
-    s32 var_v1;
-    s32 temp_a3_2;
-    s32 var_v0;
-    s32 temp_a3_3;
-    u32 temp_v0_3;
-    u32 temp_a0_4;
-    s32 temp_a0_5;
-    s32 var_v1_2;
-    s32 temp_a3_5;
-    s32 var_v0_2;
-    s32 temp_a3_6;
-    u32 temp_v0_5;
-    u32 temp_v1_3;
-    s32 count;
+    void* prim;
+    u_long* ot;
+    CardaElement* element;
+    s32 i;
+    DRAWENV draw_env;
+    s32 scaled_width;
+    s32 scaled_height;
 
-    var_s0 = arg0->unk40B8;
-    var_s5 = arg0;
+    prim = frame->prim_cursor;
+    ot = frame->overlay_ot;
 
+    if (g_carda_element_pool[1].draw == carda_draw_entry_list)
     {
-        CardaElementSlot *pool;
-        CardaElemDrawFunc handler;
-
-        pool = (CardaElementSlot *)D_80165F80;
-        handler = pool[1].draw_handler;
-        if (handler == (CardaElemDrawFunc)func_80141250)
+        if ((g_carda_entry_state < 0x10) && (g_carda_element_pool[1].attr.f.state == CARDA_ELEMENT_OPEN))
         {
-            count = D_80165FEC;
-            if ((count < 0x10) && ((pool[1].attr.word & 7) == 2))
+            if ((g_carda_entry_state * CARDA_ENTRY_ROW_HEIGHT) > (g_carda_scroll_y + 0x58))
             {
-                count *= 0xE;
-                if ((D_80166104 + 0x58) < count)
-                {
-                    var_s0 = (CardaGpuPacket *)func_800AE76C(var_s0, var_s5, 0x12E, 0x82, 0);
-                }
-                if (D_80166104 != 0)
-                {
-                    var_s0 = (CardaGpuPacket *)func_800AE76C(var_s0, var_s5, 0x12E, 0x3A, 1);
-                }
+                prim = func_800AE76C(prim, ot, 0x12E, 0x82, 0);
             }
-        }
-        else if ((handler == (CardaElemDrawFunc)func_80146EDC) && ((pool[1].attr.word & 7) == 2))
-        {
-            if (((D_80165FE8 * 0xE) - D_80166104) >= 0x8D)
+            if (g_carda_scroll_y != 0)
             {
-                var_s0 = (CardaGpuPacket *)func_800AE76C(var_s0, var_s5, 0x118, 0xBE, 0);
-            }
-            if (D_80166104 != 0)
-            {
-                var_s0 = (CardaGpuPacket *)func_800AE76C(var_s0, var_s5, 0x118, 0x3E, 1);
+                prim = func_800AE76C(prim, ot, 0x12E, 0x3A, 1);
             }
         }
     }
-
-    if (arg0->unk40B2 != 0)
+    else if ((g_carda_element_pool[1].draw == carda_draw_item_list) && (g_carda_element_pool[1].attr.f.state == CARDA_ELEMENT_OPEN))
     {
-        func_8001C56C(sp20, 0, 0xF0, 0x140, 0xE0);
+        if (((g_carda_received_item_count * CARDA_ENTRY_ROW_HEIGHT) - g_carda_scroll_y) >= 0x8D)
+        {
+            prim = func_800AE76C(prim, ot, 0x118, 0xBE, 0);
+        }
+        if (g_carda_scroll_y != 0)
+        {
+            prim = func_800AE76C(prim, ot, 0x118, 0x3E, 1);
+        }
+    }
+
+    if (frame->clear_rect.y != 0)
+    {
+        SetDefDrawEnv(&draw_env, 0, 0xF0, 0x140, 0xE0);
     }
     else
     {
-        func_8001C56C(sp20, 0, 8, 0x140, 0xE0);
+        SetDefDrawEnv(&draw_env, 0, 8, 0x140, 0xE0);
     }
 
-    var_s3 = (volatile u32 *)D_80165F80;
-    var_s6 = 0;
-
-    for (; var_s6 < 8; var_s6++, var_s3 += 3)
+    element = g_carda_element_pool;
+    for (i = 0; i < CARDA_ELEMENT_COUNT; i++, element++)
     {
-        if (*var_s3 & 7)
+        if (element->attr.f.state != CARDA_ELEMENT_FREE)
         {
-            func_8001A5D4((s32)var_s0, sp20);
+            SetDrawEnv((DR_ENV*)prim, &draw_env);
+            addPrim(ot, prim);
+            prim = (DR_ENV*)prim + 1;
 
-            addPrim(var_s5, var_s0);
-
-            temp_a0_2 = *var_s3;
-            temp_v1_2 = temp_a0_2 & 7;
-
-            var_s0 = (CardaGpuPacket *)((u8 *)var_s0 + 0x40);
-
-            switch (temp_v1_2)
+            switch (element->attr.f.state)
             {
-            case 1:
-                temp_v0_3 = *var_s3;
-                temp_a1 = *(u32 *)((u8 *)var_s3 + 4);
-                temp_a0_4 = temp_v0_3 >> 24;
-                temp_a2 = ((temp_a1 & 1) << 8) | temp_a0_4;
-                temp_a0_3 = (temp_v0_3 >> 3) & 0xF;
-                var_v1 = temp_a2 * temp_a0_3;
-                D_80122988 = 0;
-                if (var_v1 < 0)
+            case CARDA_ELEMENT_OPENING:
+                g_pad_input = 0;
                 {
-                    var_v1 += 7;
-                }
-                temp_a3_2 = (temp_a1 >> 1) & 0xFF;
-                var_v0 = temp_a3_2 * temp_a0_3;
-                temp_s1 = var_v1 >> 3;
-                if (var_v0 < 0)
-                {
-                    var_v0 += 7;
-                }
-                temp_s2 = var_v0 >> 3;
-                temp_a3_3 = (s32)(temp_a3_2 - temp_s2);
+                    u32 width_low = CARDA_ELEMENT_WIDTH_LOW(element);
+                    s32 width = CARDA_ELEMENT_WIDTH(element, width_low);
 
-                var_s0 = (*(CardaElemDrawFunc *)((u8 *)var_s3 + 8))(var_s5, var_s0, (s32)(temp_a2 - temp_s1) / 2, temp_a3_3 / 2);
-                {
-                    u32 post_word;
-                    u32 field;
-                    u32 high;
-                    post_word = *var_s3;
-                    field = (post_word >> 7) & 0x1FF;
-                    high = post_word >> 24;
-                    var_s0 = (CardaGpuPacket *)func_800AD850(var_s0, var_s5,
-                                           field + (s32)((((*(u32 *)((u8 *)var_s3 + 4) & 1) << 8) | high) - temp_s1) / 2,
-                                           (*((u8 *)var_s3 + 2)) + ((s32)((*(u32 *)((u8 *)var_s3 + 4) >> 1) & 0xFF) - temp_s2) / 2,
-                                           temp_s1, temp_s2, arg0->unk40B2, var_s6 == 0);
+                    scaled_width = (width * element->attr.f.phase) / 8;
+                    scaled_height = (element->size.f.height * element->attr.f.phase) / 8;
+                    prim = element->draw(ot, prim, (width - scaled_width) / 2, (element->size.f.height - scaled_height) / 2);
                 }
                 {
-                    u32 old_word;
-                    u32 new_word;
-                    old_word = *var_s3;
-                    new_word = (old_word & ~0x78) | (((((old_word >> 3) & 0xF) + 1) & 0xF) * 8);
-                    *(u32 *)var_s3 = new_word;
-                    if (((new_word >> 3) & 0xF) == 8)
-                    {
-                        field_reset_input_repeat();
-                        *(u32 *)var_s3 = (*var_s3 & ~7) | 2;
-                    }
+                    s32 x = element->attr.f.x;
+                    u32 width_low = CARDA_ELEMENT_WIDTH_LOW(element);
+
+                    prim = func_800AD850(prim, ot, x + (CARDA_ELEMENT_WIDTH(element, width_low) - scaled_width) / 2,
+                                         element->attr.f.y + (element->size.f.height - scaled_height) / 2, scaled_width, scaled_height, frame->clear_rect.y,
+                                         i == 0);
+                }
+                element->attr.f.phase++;
+                if (element->attr.f.phase == CARDA_ELEMENT_PHASE_STEPS)
+                {
+                    field_reset_input_repeat();
+                    element->attr.f.state = CARDA_ELEMENT_OPEN;
                 }
                 break;
 
-            case 2:
-                var_s0 = (*(CardaElemDrawFunc *)((u8 *)var_s3 + 8))(var_s5, var_s0, 0, 0);
+            case CARDA_ELEMENT_OPEN:
+                prim = element->draw(ot, prim, 0, 0);
                 {
-                    u32 case_word;
-                    u32 high;
-                    case_word = *var_s3;
-                    high = case_word >> 24;
-                    var_s0 = (CardaGpuPacket *)func_800AD850(var_s0, var_s5,
-                                           (case_word >> 7) & 0x1FF, *((u8 *)var_s3 + 2),
-                                           ((*(u32 *)((u8 *)var_s3 + 4) & 1) << 8) | high,
-                                           (*(u32 *)((u8 *)var_s3 + 4) >> 1) & 0xFF, arg0->unk40B2, var_s6 == 0);
+                    u32 width_low = CARDA_ELEMENT_WIDTH_LOW(element);
+
+                    prim = func_800AD850(prim, ot, element->attr.f.x, element->attr.f.y, CARDA_ELEMENT_WIDTH(element, width_low), element->size.f.height,
+                                         frame->clear_rect.y, i == 0);
                 }
-                temp_v1_3 = *var_s3;
-                if (((temp_v1_3 >> 3) & 0xF) != 0)
+                if (element->attr.f.phase != 0)
                 {
-                    *(u32 *)var_s3 = (temp_v1_3 & ~0x78) | (((((temp_v1_3 >> 3) & 0xF) - 1) & 0xF) * 8);
+                    element->attr.f.phase--;
                 }
                 break;
 
-            case 3:
-                temp_a0_5 = *var_s3;
-                temp_a1 = *(u32 *)((u8 *)var_s3 + 4);
-                var_v1_2 = (u32)temp_a0_5 >> 24;
-                temp_a2 = ((temp_a1 & 1) << 8) | var_v1_2;
-                temp_a0_5 = (u32)temp_a0_5 >> 3;
-                temp_a0_5 &= 0xF;
-                var_v1_2 = temp_a2 * temp_a0_5;
-                D_80122988 = 0;
-                if (var_v1_2 < 0)
+            case CARDA_ELEMENT_CLOSING:
+                g_pad_input = 0;
                 {
-                    var_v1_2 += 7;
-                }
-                temp_a3_5 = (temp_a1 >> 1) & 0xFF;
-                var_v0_2 = temp_a3_5 * temp_a0_5;
-                temp_s1 = var_v1_2 >> 3;
-                if (var_v0_2 < 0)
-                {
-                    var_v0_2 += 7;
-                }
-                temp_s2 = var_v0_2 >> 3;
-                temp_a3_6 = (s32)(temp_a3_5 - temp_s2);
+                    u32 width_low = CARDA_ELEMENT_WIDTH_LOW(element);
+                    s32 width = CARDA_ELEMENT_WIDTH(element, width_low);
 
-                var_s0 = (*(CardaElemDrawFunc *)((u8 *)var_s3 + 8))(var_s5, var_s0, (s32)(temp_a2 - temp_s1) / 2, temp_a3_6 / 2);
-                {
-                    u32 post_word;
-                    u32 field;
-                    u32 high;
-                    post_word = *var_s3;
-                    field = (post_word >> 7) & 0x1FF;
-                    high = post_word >> 24;
-                    var_s0 = (CardaGpuPacket *)func_800AD850(var_s0, var_s5,
-                                           field + (s32)((((*(u32 *)((u8 *)var_s3 + 4) & 1) << 8) | high) - temp_s1) / 2,
-                                           (*((u8 *)var_s3 + 2)) + ((s32)((*(u32 *)((u8 *)var_s3 + 4) >> 1) & 0xFF) - temp_s2) / 2,
-                                           temp_s1, temp_s2, arg0->unk40B2, var_s6 == 0);
+                    scaled_width = (width * element->attr.f.phase) / 8;
+                    scaled_height = (element->size.f.height * element->attr.f.phase) / 8;
+                    prim = element->draw(ot, prim, (width - scaled_width) / 2, (element->size.f.height - scaled_height) / 2);
                 }
                 {
-                    u32 old_word;
-                    old_word = *var_s3;
-                    var_v1_2 = old_word & ~0x78;
-                    old_word >>= 3;
-                    old_word &= 0xF;
-                    old_word--;
-                    old_word &= 0xF;
-                    old_word <<= 3;
-                    var_v1_2 |= old_word;
-                    *(u32 *)var_s3 = var_v1_2;
-                    if (!(((u32)var_v1_2 >> 3) & 0xF))
-                    {
-                        *(u32 *)var_s3 = ((((u32)var_v1_2 & ~0x78) | 0x18) & ~7) | 4;
-                    }
+                    s32 x = element->attr.f.x;
+                    u32 width_low = CARDA_ELEMENT_WIDTH_LOW(element);
+
+                    prim = func_800AD850(prim, ot, x + (CARDA_ELEMENT_WIDTH(element, width_low) - scaled_width) / 2,
+                                         element->attr.f.y + (element->size.f.height - scaled_height) / 2, scaled_width, scaled_height, frame->clear_rect.y,
+                                         i == 0);
+                }
+                element->attr.f.phase--;
+                if (element->attr.f.phase == 0)
+                {
+                    element->attr.f.phase = 3;
+                    element->attr.f.state = CARDA_ELEMENT_CLOSED;
                 }
                 break;
 
-            case 4:
-                temp_v0_5 = *(u32 *)var_s3;
-                D_80122988 = 0;
-                temp_v1_3 = (temp_v0_5 & ~0x78) | (((((temp_v0_5 >> 3) & 0xF) - 1) & 0xF) * 8);
-                *(u32 *)var_s3 = temp_v1_3;
-                if (!((temp_v1_3 >> 3) & 0xF))
+            case CARDA_ELEMENT_CLOSED:
+                g_pad_input = 0;
+                element->attr.f.phase--;
+                if (element->attr.f.phase == 0)
                 {
-                    *(u32 *)var_s3 = temp_v1_3 & ~7;
+                    element->attr.f.state = CARDA_ELEMENT_FREE;
                 }
                 break;
             }
         }
     }
 
-    arg0->unk40B8 = var_s0;
+    frame->prim_cursor = prim;
 }
 
-void func_80142CA4(void)
+/**
+ * @brief Free the element in pool slot 0.
+ */
+void carda_deactivate_primary_element(void)
 {
-    D_80165F80[0].attr.word &= ~7;
+    g_carda_element_pool[0].attr.f.state = CARDA_ELEMENT_FREE;
 }
 
-void func_80142CBC(u8 *arg0, u8 *arg1)
+/**
+ * @brief Append one encoded CARDA string to another.
+ * @param dest Destination text buffer.
+ * @param src Source text buffer.
+ */
+void carda_text_append(u8* dest, u8* src)
 {
-    s32 temp_s0;
-    s32 temp_v0;
+    s32 dst_len;
+    s32 src_len;
     s32 i;
 
-    temp_s0 = func_80142D40(arg0);
-    temp_v0 = func_80142D40(arg1);
-    for (i = 0; i < temp_v0; i++)
+    dst_len = carda_text_byte_length(dest);
+    src_len = carda_text_byte_length(src);
+    for (i = 0; i < src_len; i++)
     {
-        arg0[temp_s0 + i] = arg1[i];
+        dest[dst_len + i] = src[i];
     }
-    arg0[temp_s0 + i] = 0;
+    dest[dst_len + i] = 0;
 }
 
-s32 func_80142D40(u8 *arg0)
+/**
+ * @brief Measure an encoded CARDA string in bytes.
+ * @param text Encoded text buffer.
+ * @return Encoded byte length excluding the terminator.
+ */
+s32 carda_text_byte_length(u8* text)
 {
-    u8 *p;
+    u8* p;
     u8 c;
     s32 len;
 
-    p = arg0;
+    p = text;
     c = *p;
     len = 0;
     while (c != 0)
     {
-        if ((u32)(c - 0x19) < 7)
+        if (c >= 0x19 && c <= 0x1F)
         {
             p += 2;
             len += 2;
@@ -1323,19 +1307,22 @@ s32 func_80142D40(u8 *arg0)
     return len;
 }
 
-void func_80142D8C(u8 *arg0, u8 *arg1)
+/**
+ * @brief Copy one encoded CARDA string including its terminator.
+ * @param dest Destination text buffer.
+ * @param src Source text buffer.
+ */
+void carda_text_copy(u8* dest, u8* src)
 {
-    u8 *p;
-    u8 c;
+    u8* p;
     s32 len;
     s32 i;
 
-    p = arg1;
+    p = src;
     len = 0;
     while (*p != 0)
     {
-        c = *(volatile u8 *)p;
-        if ((u32)(c - 0x19) < 7)
+        if (*p >= 0x19 && *p <= 0x1F)
         {
             p += 2;
             len += 2;
@@ -1348,7 +1335,7 @@ void func_80142D8C(u8 *arg0, u8 *arg1)
     }
     for (i = 0; i < len; i++)
     {
-        arg0[i] = arg1[i];
+        dest[i] = src[i];
     }
-    arg0[i] = 0;
+    dest[i] = 0;
 }

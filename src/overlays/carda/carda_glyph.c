@@ -1,6 +1,40 @@
 #include "carda_internal.h"
 
-s32 func_8014A65C(s32 prim, s32 *ot, s32 value, s32 x, s32 y, s32 palette, s32 alignment)
+/* Glyph cache layout: 256 slots of 16x15 4-bit glyphs, 16 per VRAM row. */
+#define CARDA_GLYPH_CACHE_SLOTS 0x100
+#define CARDA_GLYPH_CACHE_COLUMNS 16
+#define CARDA_GLYPH_CACHE_ROW_MASK 0xF0
+#define CARDA_GLYPH_RASTER_BYTES 0x80
+#define CARDA_GLYPH_RASTER_BUFFER_BYTES 0x8000
+
+/* CardaGlyphCacheEntry.raw flag: the slot was drawn this frame. */
+#define CARDA_GLYPH_CACHE_USED 0x10000
+
+/* Shift-JIS glyph pairs as stored in the little-endian u16 digit tables. */
+#define CARDA_GLYPH_PAIR_ZERO 0x4F82
+#define CARDA_GLYPH_PAIR_MINUS 0x5B81
+
+/* Added to an ASCII byte to get its Shift-JIS glyph code. */
+#define CARDA_SJIS_ALNUM_OFFSET 0x821F
+#define CARDA_SJIS_SYMBOL_OFFSET 0x851F
+
+/* Glyph code tables: 33-byte rows of 16 two-byte glyphs plus a terminator. */
+#define CARDA_CHAR_TABLE_ROW_BYTES 33
+#define CARDA_CHAR_TABLE_PAGE_BYTES (16 * CARDA_CHAR_TABLE_ROW_BYTES)
+
+/**
+ * @brief Draw @p value as up to five full-width decimal digits through the
+ *        glyph cache, suppressing leading zeros and prefixing a minus sign.
+ * @param prim Primitive-buffer cursor.
+ * @param ot Ordering-table entry the glyphs are linked into.
+ * @param value Signed value to draw.
+ * @param x Text x position, interpreted per @p alignment.
+ * @param y Text top edge.
+ * @param palette Glyph palette index.
+ * @param alignment Alignment mode passed to carda_draw_cached_text.
+ * @return Advanced primitive-buffer cursor.
+ */
+void* carda_draw_signed_decimal(void* prim, u_long* ot, s32 value, s32 x, s32 y, s32 palette, s32 alignment)
 {
     u16 buf[7];
     s32 first_digit;
@@ -17,16 +51,16 @@ s32 func_8014A65C(s32 prim, s32 *ot, s32 value, s32 x, s32 y, s32 palette, s32 a
     {
         negative = 0;
     }
-    buf[1] = D_80165EFC[magnitude / 10000];
-    buf[2] = D_80165EFC[(magnitude % 10000) / 1000];
-    buf[3] = D_80165EFC[(magnitude % 1000) / 100];
-    buf[4] = D_80165EFC[(magnitude % 100) / 10];
-    buf[5] = D_80165EFC[magnitude % 10];
+    buf[1] = g_carda_decimal_glyphs[magnitude / 10000];
+    buf[2] = g_carda_decimal_glyphs[(magnitude % 10000) / 1000];
+    buf[3] = g_carda_decimal_glyphs[(magnitude % 1000) / 100];
+    buf[4] = g_carda_decimal_glyphs[(magnitude % 100) / 10];
+    buf[5] = g_carda_decimal_glyphs[magnitude % 10];
 
     first_digit = 1;
     buf[6] = 0;
 
-    while (first_digit < 5 && buf[first_digit] == 0x4F82)
+    while (first_digit < 5 && buf[first_digit] == CARDA_GLYPH_PAIR_ZERO)
     {
         first_digit++;
     }
@@ -34,57 +68,52 @@ s32 func_8014A65C(s32 prim, s32 *ot, s32 value, s32 x, s32 y, s32 palette, s32 a
     if (negative != 0)
     {
         first_digit--;
-        buf[first_digit] = 0x5B81;
+        buf[first_digit] = CARDA_GLYPH_PAIR_MINUS;
     }
-    prim = func_8014A900(prim, ot, (u8 *)&buf[first_digit], x, y, palette, alignment);
+    prim = carda_draw_cached_text(prim, ot, (u8*)&buf[first_digit], x, y, palette, alignment);
     return prim;
 }
 
-void func_8014A87C(s32 arg0,s32 arg1,s32 arg2,s32 arg3,s32 arg4,s32 arg5)
+/**
+ * @brief Draw a byte as two full-width hex digits through the glyph cache, using palette 0.
+ * @param prim Primitive-buffer cursor.
+ * @param ot Ordering-table entry the glyphs are linked into.
+ * @param value Byte value to draw.
+ * @param x Text x position, interpreted per @p alignment.
+ * @param y Text top edge.
+ * @param alignment Alignment mode passed to carda_draw_cached_text.
+ */
+void carda_draw_hex_byte(void* prim, u_long* ot, s32 value, s32 x, s32 y, s32 alignment)
 {
-    u16 pair[3];
-    s32 row;
-    s32 adjusted;
-    s32 off;
-    u16 *base;
+    u16 buf[3];
+    u16* high_glyph;
 
-    adjusted = arg2;
-    if (arg2 < 0)
-    {
-        adjusted = arg2 + 15;
-    }
-    row = adjusted >> 4;
-    off = row * 2;
-    base = D_80165F14;
-    pair[0] = *(u16 *)((u8 *)base + off);
-    off = (arg2 - row * 16) * 2;
-    pair[1] = *(u16 *)((u8 *)base + off);
-    pair[2] = 0;
-    func_8014A900(arg0, arg1, pair, arg3, arg4, 0, arg5);
+    high_glyph = &g_carda_hex_glyphs[value / 16];
+    buf[0] = *high_glyph;
+    buf[1] = g_carda_hex_glyphs[value % 16];
+    buf[2] = 0;
+    carda_draw_cached_text(prim, ot, (u8*)buf, x, y, 0, alignment);
 }
 
-#define GLYPH_CACHE_SLOTS 0x100
-#define GLYPH_CACHE_COLUMNS 16
-#define GLYPH_CACHE_ROW_MASK 0xF0
-#define GLYPH_RASTER_BYTES 0x80
-#define GPU_ADDR_MASK 0xFFFFFF
-#define GPU_TAG_HIGH_MASK 0xFF000000
-typedef struct
+/**
+ * @brief Draw a Shift-JIS / ASCII string through the glyph cache, then emit a
+ *        texture-page packet restoring the default page.
+ * @param prim Primitive-buffer cursor.
+ * @param ot Ordering-table entry the glyphs are linked into.
+ * @param text String ending at the first byte below 0x20 other than a space.
+ * @param x Text x position, interpreted per @p alignment.
+ * @param y Text top edge.
+ * @param palette Glyph palette index.
+ * @param alignment 0 left-aligned at @p x, 1 ends at @p x, 2 centered on @p x.
+ * @return Advanced primitive-buffer cursor.
+ */
+void* carda_draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s32 palette, s32 alignment)
 {
-    s32 tag;
-    s32 word4;
-    s16 x0;
-    s16 y0;
-    s16 unkC;
-    u16 unkE;
-} GenericGpuPacket;
-
-s32 func_8014A900(s32 prim, s32 *ot, u8 *text, s32 x, s32 y, s32 palette, s32 alignment)
-{
-    u8 *cursor;
+    u8* cursor;
     s32 count;
     u16 code;
-    u8 *scan;
+    u8* scan;
+    DR_TPAGE* draw_mode;
 
     cursor = text;
     count = 0;
@@ -93,8 +122,7 @@ s32 func_8014A900(s32 prim, s32 *ot, u8 *text, s32 x, s32 y, s32 palette, s32 al
         scan = cursor;
         do
         {
-            code = *scan;
-            if (code >= 0x80)
+            if (*scan >= 0x80)
             {
                 scan++;
             }
@@ -106,7 +134,7 @@ s32 func_8014A900(s32 prim, s32 *ot, u8 *text, s32 x, s32 y, s32 palette, s32 al
     switch (alignment)
     {
     case 1:
-        x -= count * 0x10;
+        x -= count * 16;
         break;
     case 2:
         x -= count * 8;
@@ -115,21 +143,19 @@ s32 func_8014A900(s32 prim, s32 *ot, u8 *text, s32 x, s32 y, s32 palette, s32 al
     default:
         break;
     }
-    D_80166FF0 = x;
-    D_80166FE8 = x;
-    D_80166FEC = y;
+    g_carda_text_line_start_x = x;
+    g_carda_glyph_cursor_x = x;
+    g_carda_glyph_cursor_y = y;
 
     while (1)
     {
-        u32 lead = *cursor;
-
-        if ((u8)lead == 0x20)
+        if (*cursor == ' ')
         {
             cursor++;
-            D_80166FE8 += 0x10;
+            g_carda_glyph_cursor_x += 16;
             continue;
         }
-        if ((u8)lead >= 0x80)
+        if (*cursor >= 0x80)
         {
             code = cursor[0];
             code = (code << 8) | cursor[1];
@@ -137,74 +163,67 @@ s32 func_8014A900(s32 prim, s32 *ot, u8 *text, s32 x, s32 y, s32 palette, s32 al
         }
         else
         {
-            if ((u8)lead < 0x20)
+            if (*cursor < 0x20)
             {
                 break;
             }
-            if ((u32)(lead - 0x30) < 0x50)
+            if (*cursor >= '0' && *cursor < 0x80)
             {
-                code = *cursor - 0x7DE1;
+                code = *cursor + CARDA_SJIS_ALNUM_OFFSET;
                 cursor++;
             }
             else
             {
-                code = *cursor - 0x7AE1;
+                code = *cursor + CARDA_SJIS_SYMBOL_OFFSET;
                 cursor++;
             }
         }
-        prim = func_8014AAD0(prim, ot, code, palette);
+        prim = carda_render_cached_glyph(prim, ot, code, palette);
     }
 
-    setlen(prim, 1);
-    ((GenericGpuPacket *)prim)->word4 = 0xE1000005;
-    addPrim(ot, prim);
-    return prim + 8;
+    draw_mode = prim;
+    setDrawTPage(draw_mode, 0, 0, getTPage(0, 0, 320, 0));
+    addPrim(ot, draw_mode);
+    return draw_mode + 1;
 }
 
-s32 func_8014AAD0(s32 prim, s32 *ot, s32 character_code, s32 palette)
+/**
+ * @brief Draw one glyph from the cache; on a miss, rasterize it from the kanji
+ *        ROM into a free cache slot and upload it to VRAM first.
+ * @param prim Primitive-buffer cursor.
+ * @param ot Ordering-table entry the sprite is linked into.
+ * @param code Shift-JIS glyph code.
+ * @param palette Glyph palette index; sets the 4-bit pixel value (palette + 1) * 2.
+ * @return Advanced primitive-buffer cursor, or @p prim when the glyph is missing
+ *         from the ROM or the cache is full.
+ */
+void* carda_render_cached_glyph(void* prim, u_long* ot, u16 code, s32 palette)
 {
-    GlyphCacheEntry *entry;
-    u8 *font_data;
-    s32 font_address;
-    u32 requested_code;
-    s32 slot;
-    s32 high_pixel_set;
-    s32 code;
-    RECT rect;
-
-    u8 *raster;
-    s32 color_index;
-    s32 high_nibble_color;
+    u8* font_data;
+    u8* raster;
+    s32 i;
     s32 row;
     s32 source_byte;
-
+    s32 color_index;
+    s32 high_nibble_color;
     u16 mask;
-    volatile u8 *raster_byte;
-    u8 packed_pixels;
+    RECT rect;
 
-    code = character_code;
-    slot = 0;
-    requested_code = code & 0xFFFF;
-    entry = D_80166BE8;
-
-    while (slot < GLYPH_CACHE_SLOTS)
+    for (i = 0; i < CARDA_GLYPH_CACHE_SLOTS; i++)
     {
-        if (requested_code == entry->data.code)
+        if (code == g_carda_glyph_cache[i].data.code)
         {
-            return func_8014ACF0((GlyphSprite *)prim, ot, slot, palette);
+            return carda_emit_glyph_sprite(prim, ot, i, palette);
         }
-        slot++;
-        entry++;
     }
 
-    font_address = func_8001687C(code & 0xFFFF);
-    font_data = (u8 *)font_address;
-    if (font_address == -1)
+    font_data = Krom2RawAdd(code);
+    if (font_data == (u8*)-1)
     {
         return prim;
     }
 
-    raster = D_80166FFC;
+    raster = g_carda_glyph_raster_cursor;
     row = 0;
     color_index = (palette + 1) * 2;
     high_nibble_color = color_index * 16;
@@ -213,231 +232,203 @@ s32 func_8014AAD0(s32 prim, s32 *ot, s32 character_code, s32 palette)
         for (source_byte = 0; source_byte < 2; source_byte++)
         {
             mask = 0x80;
-
-            for (slot = 0; slot < 4; slot++)
+            for (i = 0; i < 4; i++)
             {
-                *raster = ((*font_data) & mask) ? color_index : 0;
-
+                *raster = (*font_data & mask) ? color_index : 0;
                 mask >>= 1;
-                high_pixel_set = (*font_data) & mask;
-
-                raster_byte = raster;
-                packed_pixels = *raster_byte;
-                if (high_pixel_set)
-                {
-                    packed_pixels += high_nibble_color;
-                }
-
-                *raster_byte = packed_pixels;
-
+                *raster += (*font_data & mask) ? high_nibble_color : 0;
                 mask >>= 1;
                 raster++;
             }
-
             font_data++;
         }
     }
 
-    slot = 0;
-    while ((slot < GLYPH_CACHE_SLOTS) && (D_80166BE8[slot].raw != 0))
+    for (i = 0; i < CARDA_GLYPH_CACHE_SLOTS; i++)
     {
-        slot++;
+        if (g_carda_glyph_cache[i].raw == 0)
+        {
+            break;
+        }
     }
 
-    if (slot == GLYPH_CACHE_SLOTS)
+    if (i == CARDA_GLYPH_CACHE_SLOTS)
     {
         return prim;
     }
-    D_80166BE8[slot].raw = code & 0xFFFF;
-    prim = func_8014ACF0((GlyphSprite *)prim, ot, slot, palette);
+    g_carda_glyph_cache[i].raw = code;
+    prim = carda_emit_glyph_sprite(prim, ot, i, palette);
 
-    D_80166FF4 = (slot % GLYPH_CACHE_COLUMNS) * 4;
-    D_80166FF8 = slot & GLYPH_CACHE_ROW_MASK;
+    g_carda_glyph_upload_x = (i % CARDA_GLYPH_CACHE_COLUMNS) * 4;
+    g_carda_glyph_upload_y = i & CARDA_GLYPH_CACHE_ROW_MASK;
 
-    rect.w = 4;
-    rect.h = 15;
-    rect.x = D_80166FF4 + 0x140;
-    rect.y = D_80166FF8;
+    setWH(&rect, 4, 15);
+    rect.x = g_carda_glyph_upload_x + 320;
+    rect.y = g_carda_glyph_upload_y;
 
-    func_80019A34(&rect, D_80166FFC);
-    func_80019788(0);
+    LoadImage(&rect, g_carda_glyph_raster_cursor);
+    DrawSync(0);
 
-    D_80166FFC += GLYPH_RASTER_BYTES;
+    g_carda_glyph_raster_cursor += CARDA_GLYPH_RASTER_BYTES;
     return prim;
 }
 
-s32 func_8014ACF0(GlyphSprite *sprite, s32 *ot, s32 cache_slot, s32 palette)
+/**
+ * @brief Emit one cached glyph as a 16x16 sprite at the text cursor, mark the
+ *        slot used this frame and advance the cursor, wrapping at x = 640.
+ * @param sprite Sprite packet to fill.
+ * @param ot Ordering-table entry the sprite is linked into.
+ * @param cache_slot Glyph-cache slot whose VRAM tile is sampled.
+ * @param palette Unused; the CLUT is fixed.
+ * @return Primitive-buffer cursor after the sprite.
+ */
+void* carda_emit_glyph_sprite(CardaGlyphSprite* sprite, u_long* ot, s32 cache_slot, s32 palette)
 {
-    u32 ot_tag_high_byte;
-    s32 normalized_slot;
-    u32 packet_address;
-    s32 old_x;
-    s32 new_x;
-    s32 fits_line;
+    g_carda_glyph_cache[cache_slot].raw |= CARDA_GLYPH_CACHE_USED;
 
-    D_80166BE8[cache_slot].raw |= 0x10000;
-
-    setSprt16(sprite);
+    setSprt16(&sprite->packet);
     sprite->packet.g0 = 0x80;
     sprite->packet.b0 = 0x80;
     sprite->packet.r0 = 0x80;
-    normalized_slot = cache_slot;
-    setXY0(&sprite->packet, D_80166FE8, D_80166FEC);
-
-    if (cache_slot < 0)
-    {
-        normalized_slot = cache_slot + 15;
-    }
-
-    setUV0(&sprite->packet, (cache_slot - ((normalized_slot >> 4) * 16)) * 16, cache_slot & GLYPH_CACHE_ROW_MASK);
-    sprite->packet.clut = 0x7FD3;
-    sprite->packet.tag = (sprite->packet.tag & GPU_TAG_HIGH_MASK) | (*ot & GPU_ADDR_MASK);
-
-    packet_address = ((u32)sprite) & GPU_ADDR_MASK;
-    ot_tag_high_byte = *ot & GPU_TAG_HIGH_MASK;
-
+    setXY0(&sprite->packet, g_carda_glyph_cursor_x, g_carda_glyph_cursor_y);
+    setUV0(&sprite->packet, (cache_slot % CARDA_GLYPH_CACHE_COLUMNS) * 16, cache_slot & CARDA_GLYPH_CACHE_ROW_MASK);
+    sprite->packet.clut = getClut(304, 511);
+    addPrim(ot, &sprite->packet);
     sprite++;
-    old_x = D_80166FE8;
-    new_x = old_x + 16;
-    fits_line = (old_x + 32) < 0x280;
-    D_80166FE8 = new_x;
 
-    *ot = ot_tag_high_byte | packet_address;
-
-    if (!fits_line)
+    g_carda_glyph_cursor_x += 16;
+    if (g_carda_glyph_cursor_x + 16 >= 640)
     {
-        D_80166FE8 = D_80166FF0;
-        D_80166FEC += 16;
+        g_carda_glyph_cursor_x = g_carda_text_line_start_x;
+        g_carda_glyph_cursor_y += 16;
     }
 
-    return (s32)sprite;
+    return sprite;
 }
 
-/** @see decomp.me (100.00%) */
-void func_8014ADF8(void)
+/**
+ * @brief Clear per-frame glyph-use flags and reset raster allocation.
+ * @see decomp.me (100.00%)
+ */
+void carda_begin_glyph_cache_frame(void)
 {
     s32 i;
-    s32 *p;
 
-    D_80166FFC = D_80167000;
-    i = 0;
-    p = (s32 *)D_80166BE8;
-    do
+    g_carda_glyph_raster_cursor = g_carda_glyph_raster_buffer;
+    for (i = 0; i < CARDA_GLYPH_CACHE_SLOTS; i++)
     {
-        *p = (u16)*p;
-        i++;
-        p++;
-    } while (i < 0x100);
+        g_carda_glyph_cache[i].raw &= 0xFFFF;
+    }
 }
 
-/** @see decomp.me (100.00%) */
-void func_8014AE34(void)
+/**
+ * @brief Evict glyph-cache entries not used this frame.
+ * @see decomp.me (100.00%)
+ */
+void carda_evict_unused_glyphs(void)
 {
     s32 i;
-    s32 *p;
-    s32 flag;
 
-    i = 0;
-    flag = 0x10000;
-    p = (s32 *)D_80166BE8;
-    do
+    for (i = 0; i < CARDA_GLYPH_CACHE_SLOTS; i++)
     {
-        if (!(*p & flag))
+        if (!(g_carda_glyph_cache[i].raw & CARDA_GLYPH_CACHE_USED))
         {
-            *p = 0;
+            g_carda_glyph_cache[i].raw = 0;
         }
-        i++;
-        p++;
-    } while (i < 0x100);
+    }
 }
 
-/** @see decomp.me (100.00%) */
-void func_8014AE74(void)
+/**
+ * @brief Clear the glyph cache and raster scratch buffer.
+ * @see decomp.me (100.00%)
+ */
+void carda_reset_glyph_cache(void)
 {
     s32 i;
-    s32 *p;
-    u8 *q;
 
-    i = 0xFF;
-    p = (s32 *)D_80166BE8;
-    p += 0xFF;
-    do
+    for (i = CARDA_GLYPH_CACHE_SLOTS - 1; i >= 0; i--)
     {
-        *p = 0;
-        i--;
-        p--;
-    } while (i >= 0);
+        g_carda_glyph_cache[i].raw = 0;
+    }
 
-    i = 0;
-    q = D_80167000;
-    do
+    for (i = 0; i < CARDA_GLYPH_RASTER_BUFFER_BYTES; i++)
     {
-        *(u8 *)(i + (s32)q) = 0;
-        i++;
-    } while (i <= 0x7FFF);
+        g_carda_glyph_raster_buffer[i] = 0;
+    }
 }
 
-void func_8014AEC4(u8 *out, u8 *in)
+/**
+ * @brief Expand a game-encoded string into Shift-JIS, two bytes per source
+ *        character, and NUL-terminate it.
+ * @param out Destination buffer.
+ * @param in Source string, terminated by a 0 byte.
+ * @note Lead bytes 0x19..0x1F start a two-byte code whose second byte's nibbles
+ *       pick the row and column of one 16-row page of the double-byte table;
+ *       bytes from 0x21 index the single-byte table by (c - 0x20); any other
+ *       byte becomes the table's first (blank) glyph.
+ * @note D_801629D0 is the double-byte table indexed by the raw lead byte: the
+ *       table start minus 0x19 * CARDA_CHAR_TABLE_PAGE_BYTES.
+ */
+void carda_expand_text_glyph_codes(u8* out, u8* in)
 {
-    u32 c;
     s32 index;
     s16 lead;
 
-    for (;;)
+    while (1)
     {
-        c = *in;
-        if ((u8)c == 0)
-        {
-            goto done;
-        }
-        if ((u32)(c - 0x19) < 7)
-        {
-            u32 b1;
-            s32 off;
-            u8 *pa;
-            u8 *pb;
+        u8 c = *in;
 
-            b1 = in[1];
-            off = b1 >> 4;
-            b1 &= 0xF;
-            pa = D_801629D0 + b1 * 2;
-            pa += off * 33;
-            lead = *(volatile u8 *)in;
-            pa += lead * 528;
-            *out = *pa;
+        if (c == 0)
+        {
+            break;
+        }
+        if (c >= 0x19 && c <= 0x1F)
+        {
+            u32 column;
+            s32 row;
+            u8* first_byte;
+            u8* second_byte;
+
+            column = in[1];
+            row = column >> 4;
+            column &= 0xF;
+            first_byte = D_801629D0 + column * 2;
+            first_byte += row * CARDA_CHAR_TABLE_ROW_BYTES;
+            lead = *in;
+            first_byte += lead * CARDA_CHAR_TABLE_PAGE_BYTES;
+            *out = *first_byte;
             out++;
-            b1 = in[1];
-            off = b1 >> 4;
-            b1 &= 0xF;
-            pb = D_801629D0 + 1 + b1 * 2;
-            pb += off * 33;
-            lead = *(volatile u8 *)in;
-            pb += lead * 528;
-            *out = *pb;
+            column = in[1];
+            row = column >> 4;
+            column &= 0xF;
+            second_byte = D_801629D0 + 1 + column * 2;
+            second_byte += row * CARDA_CHAR_TABLE_ROW_BYTES;
+            lead = *in;
+            second_byte += lead * CARDA_CHAR_TABLE_PAGE_BYTES;
+            *out = *second_byte;
             out++;
             in += 2;
         }
-        else if ((u8)c >= 0x21)
+        else if (c >= 0x21)
         {
-            lead = *(volatile u8 *)in;
+            lead = *in;
             index = lead - 0x20;
-            *out = D_80165BC4[(index / 16) * 33 + (index & 0xF) * 2];
+            *out = g_carda_single_byte_char_table[(index / 16) * CARDA_CHAR_TABLE_ROW_BYTES + (index & 0xF) * 2];
             out++;
-            lead = *(volatile u8 *)in;
+            lead = *in;
             index = lead - 0x20;
-            *out = D_80165BC4[(index / 16) * 33 + (index & 0xF) * 2 + 1];
+            *out = g_carda_single_byte_char_table[(index / 16) * CARDA_CHAR_TABLE_ROW_BYTES + (index & 0xF) * 2 + 1];
             out++;
             in += 1;
         }
         else
         {
-            *out = D_80165BC4[0];
+            *out = g_carda_single_byte_char_table[0];
             out++;
-            *out = D_80165BC4[1];
+            *out = g_carda_single_byte_char_table[1];
             out++;
             in += 1;
         }
     }
-done:
     *out = 0;
 }
