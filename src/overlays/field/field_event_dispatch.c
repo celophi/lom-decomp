@@ -4,6 +4,7 @@
 
 #include "game_audio.h"
 #include "common.h"
+#include "field_calls.h"
 #include "field_records.h"
 
 extern FieldRuntimeContext* D_80122B78;

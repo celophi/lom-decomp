@@ -1,4 +1,5 @@
 #include "common.h"
+#include "field_calls.h"
 #include "game_audio.h"
 #include "field_records.h"
 #include "field_types.h"
@@ -69,14 +70,8 @@ FieldStatusState* func_80087F0C(s32 actor_id);
 s32 func_8008B500(s32 record_id, s32 signal_id);
 u32 func_800BD414(s32 owner_id, s32 variable_id);
 void func_800BD520(s32 owner_id, u32 variable_id, s32 value);
-u32 func_800C9ED4(s32 actor_id);
 void func_800C1EC8(s32 value, void* buffer, s32 size);
 u8* func_800C1E40(s32 resource_id);
-s32 func_800C3688(s32 land_index);
-s32 func_800B7EE8(FieldCharacterRecord* character, s32 stat_index);
-void func_800B4934(FieldStatusRecord* record);
-void func_800B4390(void);
-s32 func_800B3DF4(s32 group);
 void func_800B3580(void);
 s32 func_800B3670(s32 use_hero_level);
 s32 func_800B37D4(void);

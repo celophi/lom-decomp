@@ -1,5 +1,7 @@
 #include "game_audio.h"
 #include "common.h"
+#include "field_calls.h"
+#include "field_actor_runtime.h"
 #include "field_records.h"
 
 /** @brief Number of guest characters with a template in resource 3. */
@@ -90,8 +92,6 @@ extern void func_800C1EC8(void* source, void* destination, s32 size);
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
 extern s32 D_801227F0;
-extern void func_800C11F0(s32, s32);
-extern void func_800B7C58(s32);
 extern void func_800BD520(s32, s32, s32);
 
 /**
@@ -184,10 +184,7 @@ s32 func_800C2B14(s32 record_id)
     }
     return 0;
 }
-void func_800C3B50(void);
-void func_800C3A00(s32);
 void func_800C32C8(void);
-void field_release_actor_resource_slot(s32 slot);
 void func_800BD520(s32 arg0, s32 variable, s32 value);
 s32 func_800BD414(s32 arg0, s32 variable);
 void func_800C2E30(s32 companion_index);
@@ -316,7 +313,8 @@ void func_800C2E30(s32 companion_index)
  */
 s32 func_800C318C(void)
 {
-    func_800C3B50();
+    /* func_800C3B50 takes a type; the original call leaves $a0 as it is. */
+    ((void (*)(void))func_800C3B50)();
     return D_80122B74->characters[2].info.bytes[1] + 'A';
 }
 

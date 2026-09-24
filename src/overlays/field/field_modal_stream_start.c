@@ -5,6 +5,7 @@
 #include "cd_resources.h"
 #include "cdrom.h"
 #include "common.h"
+#include "field_calls.h"
 #include "field_modal_runtime.h"
 
 /** @brief Load address of the modal sub-overlays. */
@@ -21,11 +22,9 @@ extern s32 D_801227F0;
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
 
-void func_80084240(void);
 void func_8014024C(void* work, s32 mode);
 void func_80140024(void* work, s32 mode);
 void func_8014011C(s32 work, s32 mode);
-void func_800C3BB0(void);
 
 /**
  * @brief Load CARDA and start it, unless another modal is already running.

@@ -4,14 +4,12 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 #include "field_actor_sequence_runtime.h"
 #include "field_object_state.h"
 
 /** @brief Movement flag bits cleared when an actor goes idle. */
 #define FIELD_IDLE_CLEARED_MOVEMENT_FLAGS 0x1800
-
-void func_8006AA7C(s32 actor_slot);
-void func_800A2DD8(s32 player_index);
 
 /**
  * @brief Let a falling actor settle, then idle it when its motion scale is zero.

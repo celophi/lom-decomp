@@ -1,6 +1,7 @@
 #include "game_audio.h"
 #include "saved_game.h"
 #include "common.h"
+#include "field_calls.h"
 #include "main.h"
 
 /** @brief The game-state workspace viewed as the pad context that main.h maps. */
@@ -380,11 +381,8 @@ typedef union
 } FieldMenuVars;
 
 u8* field_find_free_inventory_record();
-void field_copy_inventory_record();
-void field_open_gosub_screen_sequence();
 void func_80087F44();
 s32 func_80087D8C();
-void func_800B2844(s32 macro_index, u8* text, u8 limit);
 extern FieldMenuVars D_80122C00;
 extern u8 D_80122C01;
 extern u8 D_80122C02;
@@ -426,9 +424,6 @@ extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
 extern u8 D_800459AF;
 extern s8 D_800459B3;
-extern void func_800C4364(s32);
-extern void func_800A54D0(void);
-extern void field_compact_inventory(void);
 extern void (*D_800F19D8[])(s32 arg0);
 extern s32 D_801227F0;
 extern FieldGosubSequence D_800F19AC;
@@ -436,14 +431,9 @@ extern FieldGosubSequence D_800F19B8;
 extern FieldGosubSequence D_800F19C4;
 extern u8 D_800459AE;
 extern FieldPaletteSlotTable D_80051CBC;
-extern s32 func_800A4744(void);
-extern s32 func_800A4778(void);
 extern FieldGosubSequence D_800F19CC;
 extern FieldLogicClassTable D_80051CE4;
 extern FieldLogicClassTable D_80051DCC;
-void func_800C3BB0(void);
-void func_800C9ED4();
-void func_800AD030(s32 arg0);
 u8* func_800C1E40(s32 arg0);
 extern s32 D_80045EC8;
 extern FieldGosubSequence D_80051EC0;
@@ -451,17 +441,13 @@ extern FieldGosubSequence D_80051ECC;
 extern u8 D_80045ECC[];
 extern u8 D_800F0E98[];
 extern void func_800C7C88(void);
-extern void func_800C0260(s32, s32);
 extern s32 rand(void);
 s32 func_8008B288(s32 arg0);
 void func_800C2A88(s32 arg0);
-void func_800CA1E0(void);
-void func_800CA1A0(s32 arg0);
 extern s32 D_8011F428;
 extern u8 D_80046138[];
 extern void func_800C8E2C(void);
 extern s32 func_800BD414(s32 arg0, s32 arg1);
-extern void func_800AD194(s32 arg0);
 extern u8 D_80043818;
 extern void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
 extern Choices D_80051ED8;
@@ -600,7 +586,7 @@ void func_800C5804(void)
         for (i = 0; i < g_gosub_result_count; i++)
         {
             field_copy_inventory_record(&FIELD_PAD_CTX->large_history_records[FIELD_PAD_CTX->large_history_order[D_80122C00.golem.slot]].unknown_0x4C[i << 6],
-                                        &FIELD_PAD_CTX->inventory[g_gosub_result_values[i]]);
+                                        (u8*)&FIELD_PAD_CTX->inventory[g_gosub_result_values[i]]);
             FIELD_PAD_CTX->inventory[g_gosub_result_values[i]].active = 0;
         }
         field_compact_inventory();
@@ -1200,8 +1186,9 @@ void func_800C6850(void)
     if (result < 0)
     {
         D_80122C16 = 1;
-        /* The value variable sits just below the failure flag. */
-        *(&D_80122C16 - 1) = func_800A4778();
+        /* The value variable sits just below the failure flag. The original
+         * stores func_800A4778's u8 result without masking it, as an int. */
+        *(&D_80122C16 - 1) = ((s32 (*)(void))func_800A4778)();
     }
     else
     {
@@ -1317,7 +1304,7 @@ void func_800C6A90(void)
 {
     while (field_find_free_inventory_record() != 0)
     {
-        field_copy_inventory_record(field_find_free_inventory_record(), FIELD_PAD_CTX->inventory);
+        field_copy_inventory_record(field_find_free_inventory_record(), (u8*)FIELD_PAD_CTX->inventory);
     }
     g_saved_game.bytes[FIELD_GOLEM_CREATED] += 9;
 }
@@ -2328,7 +2315,7 @@ void func_800C80BC(void)
     {
         if (FIELD_MENU_ITEMS->pending[i].active == 0)
         {
-            field_copy_inventory_record(&FIELD_MENU_ITEMS->pending[i], &FIELD_MENU_ITEMS->inventory[selected]);
+            field_copy_inventory_record((u8*)&FIELD_MENU_ITEMS->pending[i], (u8*)&FIELD_MENU_ITEMS->inventory[selected]);
             func_800C2A88(selected);
             value = FIELD_MENU_ITEMS->pending[i].unknown_0x34;
             if (value == 0)
@@ -2729,7 +2716,7 @@ void func_800C8E2C(void)
             {
                 if (FIELD_MENU_ITEMS->pending[j].active != 0)
                 {
-                    field_copy_inventory_record(&FIELD_MENU_ITEMS->pending[i], &FIELD_MENU_ITEMS->pending[j]);
+                    field_copy_inventory_record((u8*)&FIELD_MENU_ITEMS->pending[i], (u8*)&FIELD_MENU_ITEMS->pending[j]);
                     FIELD_MENU_ITEMS->pending[j].active = 0;
                     FIELD_MENU_ITEMS->pending[j].unknown_0x34 = 0;
                     break;
@@ -2749,7 +2736,7 @@ void func_800C8F4C(void)
 
     selected = D_80122C02;
     free_record = field_find_free_inventory_record();
-    field_copy_inventory_record(free_record, &FIELD_MENU_ITEMS->pending[selected]);
+    field_copy_inventory_record(free_record, (u8*)&FIELD_MENU_ITEMS->pending[selected]);
     FIELD_MENU_ITEMS->pending[selected].active = 0;
     FIELD_MENU_ITEMS->pending[selected].unknown_0x34 = 0;
     func_800C8E2C();
@@ -3030,7 +3017,7 @@ void func_800C94F4(void)
                     D_80122A08[i].saved_active = *entry;
                     if (field_find_free_inventory_record() != 0)
                     {
-                        field_copy_inventory_record(field_find_free_inventory_record(), &D_80122A08[i]);
+                        field_copy_inventory_record(field_find_free_inventory_record(), (u8*)&D_80122A08[i]);
                     }
                 }
             }
@@ -3421,7 +3408,7 @@ void func_800C9BC4(void)
     if (field_find_free_inventory_record() != 0)
     {
         temp_s0 = field_find_free_inventory_record();
-        field_copy_inventory_record(temp_s0, func_800C1E40(5) + (off = (temp_s1 << 6) + 4));
+        field_copy_inventory_record((u8*)temp_s0, func_800C1E40(5) + (off = (temp_s1 << 6) + 4));
         func_800B2844(0, func_800C1E40(5) + off, 0xFF);
     }
 }

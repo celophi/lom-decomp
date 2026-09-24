@@ -4,6 +4,7 @@
  */
 #include "cdrom.h"
 #include "common.h"
+#include "field_calls.h"
 #include "field_actor_palette.h"
 #include "field_effect_types.h"
 #include "field_mesh.h"
@@ -96,8 +97,8 @@ extern FieldMeshTexturePart D_80105798[3][9];
 extern u8 D_8011BF00[];
 extern s16 g_field_texture_slot_flags[];
 
-s32 func_8005B368(FieldSceneProbe *probe);
-void func_800B22F0(s32 value, s32 entry);
+/* Local: field_contact_geometry.c calls it with a third argument, so it stays out of field_calls.h. */
+s32 func_800B22F0(s32 actor_id, s32 script);
 void *func_8009CA54(u8 *pool, s32 size, s32 tag);
 void func_8009AE38(u8 *resource, s32 slot);
 
@@ -118,7 +119,8 @@ void func_8009A2A4(Vec3i *position)
         probe.unkC = 8;
         probe.unkE = 0x10;
         probe.unk10 = 5;
-        hit = func_8005B368(&probe);
+        /* Called as returning int: the original uses the s16 result without extending it. */
+        hit = ((s32 (*)(struct FieldCollisionQuery*))func_8005B368)((struct FieldCollisionQuery*)&probe);
         if (hit != -1)
         {
             if (g_field_scene_request_pending == 0)

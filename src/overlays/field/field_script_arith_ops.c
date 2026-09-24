@@ -1,4 +1,5 @@
 #include "common.h"
+#include "field_calls.h"
 #include "sdk/rand.h"
 
 /*
@@ -7,7 +8,7 @@
  * arithmetic, logic, min/max and random helpers below share that signature.
  */
 
-typedef void (*UnkFunc800F0E58)(s32, s32);
+typedef s32 (*UnkFunc800F0E58)(s32, s32);
 
 extern UnkFunc800F0E58 D_800F0E58[];
 
@@ -16,10 +17,11 @@ extern UnkFunc800F0E58 D_800F0E58[];
  * @param idx Table index.
  * @param arg1 First handler argument.
  * @param arg2 Second handler argument.
+ * @return The handler's result.
  */
-void func_800BE5C8(s32 idx, s32 arg1, s32 arg2)
+s32 func_800BE5C8(s32 idx, s32 arg1, s32 arg2)
 {
-    D_800F0E58[idx](arg1, arg2);
+    return D_800F0E58[idx](arg1, arg2);
 }
 
 /**

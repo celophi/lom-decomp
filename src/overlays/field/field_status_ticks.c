@@ -1,5 +1,6 @@
 #include "game_audio.h"
 #include "common.h"
+#include "field_calls.h"
 #include "field_records.h"
 
 extern FieldBattleContext *D_80123FB0;
@@ -130,9 +131,7 @@ void func_800B49C0(void)
     }
 }
 
-u8 *func_800A2E34(void);
 u32 func_800B4CE4(FieldStatusRecord *record, s32 status);
-void func_800B28E0(s32 arg0, s32 arg1, s32 arg2);
 
 /**
  * @brief Rebuild indexed field-state byte mappings and trigger dependent handlers.

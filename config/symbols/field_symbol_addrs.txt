@@ -551,3 +551,8 @@ g_field_actor_walk_animations = 0x800EB0C4;
 g_field_actor_diagonal_walk_animations = 0x800EB0E4;
 g_field_action_animation_parameters = 0x800EB114;
 g_field_action_sound_ids = 0x800EB1B8;
+
+// Interior addresses of arrays, reached through base + addend relocations in
+// config/relocations/field_reloc_addrs.txt; not symbols of their own.
+D_800FB3C8 = 0x800FB3C8; // ignore:true
+D_80105B30 = 0x80105B30; // ignore:true

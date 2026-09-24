@@ -4,6 +4,7 @@
 
 #include "game_audio.h"
 #include "common.h"
+#include "field_calls.h"
 #include "field_records.h"
 
 /** @brief Three-dimensional field position. */
@@ -31,8 +32,6 @@ typedef struct
 FieldActorRecord* func_800C1C50(s32 id);
 /* Declared without a prototype: callers forward their own a0. */
 FieldActorRecord* func_800C1B60();
-void func_800B28E0(s32, s32, s32);
-s32 func_80087770(s32 arg0, s32 arg1);
 void func_80087F44(s32 index, FieldPosition* position);
 void func_800C1F28(u32* arg0);
 s32 func_800C1FBC(FieldPosition* arg0, FieldPosition* arg1);

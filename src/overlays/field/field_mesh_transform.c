@@ -13,7 +13,7 @@
 
 extern s32 g_field_track_index;
 
-s32 field_evaluate_parameter_track_at_time(FieldActorState *actor, u32 track, u16 time);
+u32 field_evaluate_parameter_track_at_time(FieldActorState *actor, s32 track, s32 time);
 
 /**
  * @brief Transform an actor part's triangle vertices into screen-coordinate buffers.
@@ -45,7 +45,7 @@ void func_800822A4(FieldActorState *actor, FieldMotionRecord *record, FieldActor
     if ((part_flags >> 18) & 1)
     {
         amount =
-            field_evaluate_parameter_track_at_time(actor, (part_flags >> 2) & 15, record->age);
+            field_evaluate_parameter_track_at_time(actor, (part_flags >> 2) & 15, (u16)record->age);
         mode = (part->track_flags.word >> 19) & 3;
         if (mode < 3)
         {
@@ -190,7 +190,7 @@ void func_800829A0(FieldActorState *actor, FieldMotionRecord *record, FieldActor
     source = FIELD_ACTOR_MESH(actor, index)->normals;
     if ((part->track_flags.word >> 18) & 1)
     {
-        factor = field_evaluate_parameter_track_at_time(actor, (part->track_flags.word >> 2) & 15, record->age);
+        factor = field_evaluate_parameter_track_at_time(actor, (part->track_flags.word >> 2) & 15, (u16)record->age);
         selected = (part->track_flags.word >> 19) & 3;
         if (selected < 3)
         {
@@ -302,7 +302,7 @@ s32 func_80082C90(FieldActorState *actor, FieldMotionRecord *record, FieldActorP
         {
         case 1:
             rotation =
-                field_evaluate_parameter_track_at_time(actor, rotation_flags >> 26, record->age)
+                field_evaluate_parameter_track_at_time(actor, rotation_flags >> 26, (u16)record->age)
                 << 4;
             axis = part->track_flags.bytes.high;
             axis &= 3;
@@ -432,7 +432,7 @@ s32 func_80082C90(FieldActorState *actor, FieldMotionRecord *record, FieldActorP
         {
         case 0:
             track_scale_xz =
-                field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, record->age) *
+                field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, (u16)record->age) *
                 0x10;
             scale->vz = track_scale_xz;
             scale->vx = track_scale_xz;
@@ -440,11 +440,11 @@ s32 func_80082C90(FieldActorState *actor, FieldMotionRecord *record, FieldActorP
         case 1:
             track_index = scale_flags >> 0x1C;
             scale->vy =
-                field_evaluate_parameter_track_at_time(actor, track_index, record->age) * 0x10;
+                field_evaluate_parameter_track_at_time(actor, track_index, (u16)record->age) * 0x10;
             break;
         case 2:
             track_scale_xyz =
-                field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, record->age) *
+                field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, (u16)record->age) *
                 0x10;
             scale->vz = track_scale_xyz;
             scale->vy = track_scale_xyz;
@@ -452,13 +452,13 @@ s32 func_80082C90(FieldActorState *actor, FieldMotionRecord *record, FieldActorP
             break;
         case 3:
             track_scale_pair =
-                field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, record->age) *
+                field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, (u16)record->age) *
                 0x10;
             scale->vz = track_scale_pair;
             scale->vx = track_scale_pair;
             track_index = (part->behavior_flags.word >> 0x1C) + 1;
             scale->vy =
-                field_evaluate_parameter_track_at_time(actor, track_index, record->age) * 0x10;
+                field_evaluate_parameter_track_at_time(actor, track_index, (u16)record->age) * 0x10;
             break;
         }
         ScaleMatrix(matrix, scale);

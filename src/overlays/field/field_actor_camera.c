@@ -11,6 +11,7 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 #include "field_effect_render_state.h"
 #include "display.h"
 #include "scene_state.h"

@@ -2,7 +2,9 @@
 #include "field_text.h"
 #include "game_audio.h"
 #include "saved_game.h"
+#include "scene_state.h"
 #include "common.h"
+#include "field_calls.h"
 #include "field_interaction_start.h"
 #include "field_records.h"
 #include "field_scene_internal.h"
@@ -129,7 +131,7 @@ typedef struct
 
 extern FieldGameState* D_80122B74;
 extern FieldRuntimeContext* D_80122B78;
-extern FieldCamera* D_80122B70;
+extern SceneState* D_80122B70;
 extern FieldRuntimeContext D_80122C00;
 extern s16 D_800EF600[];
 extern u8 D_800F0B48[];
@@ -144,7 +146,6 @@ void func_800B0E80(void);
 void func_800B0EFC(void);
 s32 func_800BD414(s32 owner_id, s32 variable_id);
 void func_800BD520(s32 owner_id, u32 variable_id, s32 value);
-s32 func_800C3688(s32 track);
 s32 rand(void);
 
 /**
@@ -183,7 +184,7 @@ void func_800B0BDC(void)
 {
     D_80122B74 = (FieldGameState*)&g_saved_game;
     D_80122B78 = &D_80122C00;
-    D_80122B70 = (FieldCamera*)0x801ED480;
+    D_80122B70 = SCENE_STATE;
 }
 
 /** @brief Reset the pending scene entry and the fade parameters. */
@@ -326,8 +327,6 @@ u8* func_80087EF0(s32 script_id);
 s32 func_80087F44(s32 actor_id, s32* position);
 void func_80087FC0(s32 party_index, s32 mode);
 s32 func_8008B288(s32 actor_id);
-void func_8009C620(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-void func_8009C77C(s32 arg0, s32 arg1, s32 arg2);
 void func_800B168C(s32 mode);
 void func_800B177C(void);
 s32 func_800B1894(FieldActionRequest* request, FieldActionEntry** entry_out, s32 request_index, s32* action_index);
@@ -338,12 +337,9 @@ void func_800B1F10(void);
 void func_800B20B4(void);
 s32 func_800B22F0(s32 actor_id, s32 script);
 void func_800B2654(s32* actor_id, s32* plane, s32* effect, s32* selector);
+/* Int parameters on purpose: with the (s32, u8, s8) definition the calls would narrow their arguments. */
 s32 func_800B286C(s32 owner_id, s32 event_id, s32 argument);
-void func_800B28E0(s32 owner_id, s32 event_id, s32 mode);
-void func_800B4410(u16 group);
-void func_800B49C0(void);
 s32 func_800BD3B0(s32 owner_id, s32 variable);
-void func_800C0490(s32 group_index);
 /* Declared without a prototype: func_800B2198 forwards its own a0. */
 FieldActorRecord* func_800C1B98();
 FieldActorRecord* func_800C1B60(u32 actor_id, FieldRuntimeContext* context);
@@ -351,7 +347,6 @@ void func_800C1D14(s32 actor_id, s32 flags);
 void func_800C299C(s32 source);
 void field_script_run(FieldScriptState* state);
 s32 akao_cmd_c1(s32 arg0, s32 arg1, s32 arg2);
-void field_set_fade_target(s32 red, s32 green, s32 blue, s32 frames);
 
 /**
  * @brief Install a conditional actor action and initialize its event scripts.
@@ -759,7 +754,8 @@ void func_800B1BBC(void)
                 field_seek_scene_resource(scene_id & 0x7FFF);
             }
 
-            field_set_fade_target(D_80122B78->fade_color.bits.red, D_80122B78->fade_color.bits.green, D_80122B78->fade_color.bits.blue, D_80122B78->fade_timer);
+            /* Int arguments on purpose: the original loads the whole fade_timer word. */
+            ((void (*)(s32, s32, s32, s32))field_set_fade_target)(D_80122B78->fade_color.bits.red, D_80122B78->fade_color.bits.green, D_80122B78->fade_color.bits.blue, D_80122B78->fade_timer);
 
             if (D_80122B78->transition.fields.scene_id == 0xFFFF)
             {
@@ -802,9 +798,9 @@ void func_800B1D10(void)
     index = 0;
     sentinel = -1;
     position = positions;
-    D_80122B78->view_x = -D_80122B70->x;
+    D_80122B78->view_x = -D_80122B70->camera_x;
     packed_position = D_80122B78->actor_positions;
-    D_80122B78->view_z = -(D_80122B70->y + D_80122B70->z);
+    D_80122B78->view_z = -(D_80122B70->camera_y + D_80122B70->camera_z);
 next_actor:
     packed = func_80087F44(index, (s32*)position);
     if (packed != sentinel)

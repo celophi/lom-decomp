@@ -5,6 +5,7 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 #include "field_records.h"
 #include "field_script.h"
 

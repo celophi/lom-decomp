@@ -1539,7 +1539,6 @@ typedef struct
 /* ---- non-conflicting file-scope extern data ------------------------------- */
 
 extern u32 D_800EB00C[];
-extern FieldControlActor D_800FB3C8[];
 extern FieldControlRecord g_field_actors[];
 extern ActorSlot g_field_actor_slots[];
 extern FieldEffectMotion D_801077FC;
@@ -1583,7 +1582,7 @@ void func_80086494(s32 index)
     record = (FieldControlRecord*)(record_offset + (u8*)g_field_actors);
     runtime = &g_field_object_states[index];
     flags_before = runtime->unkc;
-    actor = &D_800FB3C8[index];
+    actor = (FieldControlActor*)&g_field_actor_slots[64 + index];
     if (flags_before & 0x23E4)
     {
         runtime->unkc &= ~0x4000;

@@ -3,6 +3,7 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 #include "gpu_packet.h"
 #include "main.h"
 #include "sdk/libgpu.h"

@@ -3,6 +3,7 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 
 /** @brief Frames per second of the field clock. */
 #define FRAMES_PER_SECOND 60

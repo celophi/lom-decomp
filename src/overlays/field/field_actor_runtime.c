@@ -10,15 +10,14 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 #include "field_types.h"
 #include "field_actor_runtime.h"
 #include "field_effect_dispatch.h"
 #include "cd_resources.h"
 #include "sdk/libgpu.h"
 
-extern void func_80084240(void);
 void func_80140004(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResourceIndex, s32 audioClipIndex);
-void func_800A74E8();
 void field_reset_input_repeat();
 
 typedef struct
@@ -412,7 +411,7 @@ typedef union
 } FieldColorScale;
 
 /** @brief Runtime descriptor for one of the three actor resource slots. */
-typedef struct
+typedef struct FieldActorResourceSlot
 {
     union
     {
@@ -459,7 +458,7 @@ typedef struct
 } Struct_D800EB254;
 
 /** @brief Staging buffer that field CD reads land in. */
-typedef struct
+typedef struct FieldCdBuffer
 {
     u32 unk0;
     u32 unk4;
@@ -529,20 +528,14 @@ s32 field_get_actor_resource_id(s32, FieldActorResourceSlot*, s32);
 void field_load_actor_resource_slot(s32, s32, s32, s32);
 void field_initialize_actor_record(s32, s32);
 void field_initialize_actor_part(s32, s32);
-void func_80091438(s32);
-void func_800A3D44(s32, u8);
 
 extern s32 D_800F229C;
 extern s32 D_8010D020[];
-void func_800A710C(void);
 
 void func_800A8880(s32);
 
 void field_merge_dialog_items(void);
-void func_800A7434(void);
-void func_800A74B8(void);
 
-void func_80092124(void);
 void field_build_actor_render_commands(FieldRenderContext* render_ctx, s32 unused);
 void akao_cmd_c1(s32, s32, s32);
 void akao_cmd_a9(s32, s32);
@@ -2520,7 +2513,7 @@ void field_find_or_load_resource_entry(s32 resource_slot_id, s32 resource_base)
         }
     }
 
-    field_load_resource_entry(resource_slot_id, resource_base, i);
+    field_load_resource_entry(resource_slot_id, (u8*)resource_base, i);
 }
 
 

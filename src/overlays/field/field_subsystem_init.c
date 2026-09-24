@@ -3,32 +3,14 @@
  */
 
 #include "common.h"
+#include "field_contact_geometry.h"
+#include "field_actor_runtime.h"
+#include "field_calls.h"
 #include "field_modal_runtime.h"
 #include "game_audio.h"
 
-void field_clear_actor_slots(void);
-void field_initialize_actor_slots(void);
-void field_reset_fade_state(void);
-void func_80067AA4(void);
-void field_reset_actor_resource_slots(void);
-void func_80083948(void);
-void func_8008396C(void);
-void func_80084240(void);
-void func_80084524(void);
-void func_80086F20(void);
-void func_80091410(void);
-void field_load_actor_sequence_data(void);
-void func_800A255C(void);
-void func_800A2DFC(void);
-void func_800A3EBC(void);
-void func_800A43C0(void);
-void func_800A6204(void);
-void field_bind_saved_game_context(void);
 void field_reset_input_repeat(void);
-void field_reset_text_session(void);
-void field_rebuild_party_actions(s32);
-void func_800ADE2C(void);
-void func_800B0094(void);
+/* Defined as (void) in field_resource_load.c; the original call still passes prev in $a0. */
 void func_800B01FC(s32);
 
 extern s32 D_800F229C;

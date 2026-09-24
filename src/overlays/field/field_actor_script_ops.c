@@ -8,6 +8,7 @@
 #include "common.h"
 #include "field_actor_tables.h"
 #include "main.h"
+#include "scene_state.h"
 #include "sdk/libgpu.h"
 #include "sdk/libgte.h"
 
@@ -56,22 +57,22 @@ typedef struct
 } FieldPadCounters;
 
 /**
- * @brief Object state from its target position onwards (0x23C stride).
- * @note D_80105B30 is &g_field_object_states[0].target_x, an address splat named on its own.
+ * @brief Object state viewed from its target position onwards (0x23C stride).
+ * @note Only the target stores in func_8008A0B0 go through this view: the original
+ *       code loads &g_field_object_states[0].target_x as one constant and gcc then
+ *       derives the plain table base from it for the later path stores.
  */
 typedef struct
 {
     s32 target_x;
     s32 target_y;
     s32 target_z;
-    u8 unk5C[0x1AC - 0x5C];
-    s32 path_x;
-    u8 unk1B0[0x23C - 0x1B0];
+    u8 unk5C[0x23C - 0x5C];
     u8 unk23C[0x50];
 } FieldObjectTarget;
 
-/** @brief g_field_object_states addressed through D_80105B30. */
-#define FIELD_OBJECT_STATES_AT_TARGET ((FieldObjectState*)((u8*)D_80105B30 - 0x50))
+/** @brief g_field_object_states addressed from element 0's target_x. */
+#define FIELD_OBJECT_TARGETS ((FieldObjectTarget*)&g_field_object_states[0].target_x)
 
 /**
  * @brief &states[index] with index * 8 passed in precomputed (the 0x23C multiply spelled out).
@@ -82,19 +83,6 @@ typedef struct
 #define FIELD_OBJECT_STATE_BY_INDEX8(states, index8, index) \
     ((FieldObjectState*)((((index8) + (index)) * 16 - (index)) * 4 + (u32)(states)))
 
-/** @brief Fixed address of the field camera block. */
-#define FIELD_CAMERA ((FieldCamera*)0x801ED480)
-
-/** @brief Camera block at 0x801ED480 (the X and Z scroll words are mapped). */
-typedef struct
-{
-    s32 unk0;
-    s32 x;
-    s32 y;
-    s32 z;
-} FieldCamera;
-
-extern FieldObjectTarget D_80105B30[];
 extern s32 g_field_direction_animation_modes[];
 extern s32 g_field_actor_walk_animations[];
 extern s32 D_8010A020[];
@@ -1249,12 +1237,12 @@ s32 func_80089D44(s32 key, s32 animation, s32 resource_index, s32 sound)
     s32 slot;
     s32 unused_presence;
     s32 slot_index;
-    FieldCamera* camera;
+    SceneState* camera;
     FieldObjectState* contact_state;
     FieldObjectState* hp_state;
     FieldObjectState* movement_state;
 
-    camera = FIELD_CAMERA;
+    camera = SCENE_STATE;
     actor = field_find_actor(key);
     if (actor == FIELD_ACTOR_NONE)
     {
@@ -1296,7 +1284,7 @@ s32 func_80089D44(s32 key, s32 animation, s32 resource_index, s32 sound)
     movement_state = &g_field_object_states[actor->object_index];
     movement_state->movement.bits.flag15 = 1;
     if (actor->object_index < 3U &&
-        (actor->x <= -camera->x + 0xA00 || actor->x >= -camera->x + 0x13600 || actor->z <= -camera->z + 0xA00 || actor->z >= -camera->z + 0x1B600))
+        (actor->x <= -camera->camera_x + 0xA00 || actor->x >= -camera->camera_x + 0x13600 || actor->z <= -camera->camera_z + 0xA00 || actor->z >= -camera->camera_z + 0x1B600))
     {
         slot = 0;
         unused_presence = FIELD_ACTOR_UNUSED;
@@ -1371,25 +1359,25 @@ void func_8008A0B0(FieldActor* actor, s32 target_index, s32 restart)
         start.height = 16;
         goal.height = 16;
         func_8006304C(&start);
-        D_80105B30[actor->object_index].target_x = g_field_actors[target_index].x;
+        FIELD_OBJECT_TARGETS[actor->object_index].target_x = g_field_actors[target_index].x;
         target = &g_field_actors[target_index];
-        D_80105B30[actor->object_index].target_y = target->y;
-        D_80105B30[actor->object_index].target_z = target->z;
+        FIELD_OBJECT_TARGETS[actor->object_index].target_y = target->y;
+        FIELD_OBJECT_TARGETS[actor->object_index].target_z = target->z;
         goal.x = target->x;
         goal.y = target->y;
         goal.z = target->z;
-        path_length = func_80060F58(&start, &goal, &D_80105B30[actor->object_index].path_x, 0);
+        path_length = func_80060F58(&start, &goal, &g_field_object_states[actor->object_index].path_x, 0);
         if (path_length <= 0)
         {
-            FIELD_OBJECT_STATES_AT_TARGET[actor->object_index].path_index = 0;
-            FIELD_OBJECT_STATES_AT_TARGET[actor->object_index].path_x = target->x;
-            FIELD_OBJECT_STATES_AT_TARGET[actor->object_index].path_z = target->z;
-            FIELD_OBJECT_STATES_AT_TARGET[actor->object_index].path_length = 1;
+            g_field_object_states[actor->object_index].path_index = 0;
+            g_field_object_states[actor->object_index].path_x = target->x;
+            g_field_object_states[actor->object_index].path_z = target->z;
+            g_field_object_states[actor->object_index].path_length = 1;
         }
         else
         {
-            FIELD_OBJECT_STATES_AT_TARGET[actor->object_index].path_length = path_length;
-            FIELD_OBJECT_STATES_AT_TARGET[actor->object_index].path_index = 0;
+            g_field_object_states[actor->object_index].path_length = path_length;
+            g_field_object_states[actor->object_index].path_index = 0;
         }
     }
     if (restart != 0)

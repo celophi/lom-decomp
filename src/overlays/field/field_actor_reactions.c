@@ -216,7 +216,7 @@ void func_8008BE38(FieldActor* actor, s32 clear_record)
     field_restart_actor_animation(actor);
 
     field_stop_actor_animations_for_object(actor, 1);
-    func_80083BC0(actor, &D_800FB3C8[actor->object_index], 1);
+    func_80083BC0(actor, &g_field_actor_slots[64 + actor->object_index], 1);
     actor->control.word |= 0x800;
     field_update_sequence_actor_binding(actor, 0);
     func_80084424(actor->object_index);
@@ -293,7 +293,7 @@ s32 func_8008C104(FieldActor* actor)
     state->movement.word &= ~0x1800;
     field_restart_actor_animation(actor);
     field_stop_actor_animations_for_object(actor, 1);
-    func_80083BC0(actor, &D_800FB3C8[actor->object_index], 1);
+    func_80083BC0(actor, &g_field_actor_slots[64 + actor->object_index], 1);
     actor->control.word |= 0x800;
     field_update_sequence_actor_binding(actor, 0);
     func_80084424(actor->object_index);

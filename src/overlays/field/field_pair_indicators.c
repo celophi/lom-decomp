@@ -3,6 +3,7 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 #include "field_effect_render_state.h"
 #include "field_runtime.h"
 #include "gpu_packet.h"

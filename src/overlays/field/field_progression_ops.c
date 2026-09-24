@@ -1,4 +1,5 @@
 #include "common.h"
+#include "field_calls.h"
 #include "field_records.h"
 
 /** @brief Level at and above which the experience threshold is the stored experience. */
@@ -11,8 +12,6 @@
 #define FIELD_RESET_STAT 20
 
 extern FieldGameState* D_80122B74;
-
-s32 func_800C14A4(s32 index, s32 notify);
 
 /**
  * @brief Return the experience needed to advance from @p level.

@@ -86,3 +86,24 @@ rom:0x33B0D reloc:MIPS_NONE symbol:D_1F800002
 // these two relocations so objdiff compares the same symbolic expression.
 rom:0x21741 reloc:MIPS_HI16 symbol:g_field_effect_records addend:0x5400
 rom:0x21745 reloc:MIPS_LO16 symbol:g_field_effect_records addend:0x5400
+
+// The field objects' reserved animation slots start at g_field_actor_slots[64]
+// (base + 64 * 0x244). Splat otherwise names that address D_800FB3C8; keep the
+// array addend so objdiff compares the same symbolic expression as the C.
+// func_80086494
+rom:0x36881 reloc:MIPS_HI16 symbol:g_field_actor_slots addend:0x9100
+rom:0x36885 reloc:MIPS_LO16 symbol:g_field_actor_slots addend:0x9100
+// func_8008BE38
+rom:0x3C2CD reloc:MIPS_HI16 symbol:g_field_actor_slots addend:0x9100
+rom:0x3C2D1 reloc:MIPS_LO16 symbol:g_field_actor_slots addend:0x9100
+// func_8008C104
+rom:0x3C551 reloc:MIPS_HI16 symbol:g_field_actor_slots addend:0x9100
+rom:0x3C555 reloc:MIPS_LO16 symbol:g_field_actor_slots addend:0x9100
+// func_800966F0
+rom:0x46B01 reloc:MIPS_HI16 symbol:g_field_actor_slots addend:0x9100
+rom:0x46B05 reloc:MIPS_LO16 symbol:g_field_actor_slots addend:0x9100
+
+// func_8008A0B0: the target stores load &g_field_object_states[0].target_x
+// (base + 0x50) as one constant. Splat otherwise names it D_80105B30.
+rom:0x3A641 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x50
+rom:0x3A645 reloc:MIPS_LO16 symbol:g_field_object_states addend:0x50

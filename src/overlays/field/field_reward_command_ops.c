@@ -1,5 +1,6 @@
 #include "game_audio.h"
 #include "common.h"
+#include "field_calls.h"
 
 /** @brief Partial Rec layout used by func_800C0A38. */
 typedef struct Rec
@@ -76,10 +77,6 @@ s32 func_800C0A38(Rec *record)
 }
 
 extern u8 *D_80123FB0;
-void func_800C0E54(s32, s32);
-void func_800C0E18(s32, s32);
-void func_800C1A18(void *, void *);
-void field_restore_actor_capacity_fraction(s32, s32);
 /**
  * @brief Dispatch an experience, currency, item, or counter reward.
  * @param recipient Recipient identifier passed to reward handlers.
@@ -119,7 +116,7 @@ void func_800C0B40(s32 recipient, void *context, u32 selector)
         func_800C0E18(recipient, 10);
         return;
     case 4:
-        func_800C1A18((void *)recipient, context);
+        func_800C1A18((void *)recipient, (s32)context);
         return;
     case 5:
         field_restore_actor_capacity_fraction(recipient, 64);

@@ -5,6 +5,7 @@
 
 #include "game_audio.h"
 #include "common.h"
+#include "field_calls.h"
 #include "field_records.h"
 
 /** @brief Largest value a game-state counter can hold. */
@@ -13,7 +14,6 @@
 /** @brief Counter indexes at or above this value are rejected with a diagnostic. */
 #define FIELD_COUNTER_LIMIT 0xFF
 
-void func_800B2844(s32, void*, s32);
 void func_800C2228(s32 index);
 
 extern FieldGameState* D_80122B74;

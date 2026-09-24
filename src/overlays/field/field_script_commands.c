@@ -1,5 +1,7 @@
 #include "game_audio.h"
 #include "common.h"
+#include "field_calls.h"
+#include "field_actor_runtime.h"
 
 #define FIELD_STATE_RECORD_COUNT 11
 #define FIELD_STATE_RECORD_SIZE 0x68
@@ -258,19 +260,13 @@ extern u8* g_field_script;
 extern Actor* func_80087F0C(s32);
 extern u8* D_80122B78;
 extern s32 D_8010AE78;
-void func_800B177C(void);
-void func_800B286C(u8 arg0, s32 arg1, s32 arg2);
+/* Int parameters on purpose: with the (s32, u8, s8) definition the calls would narrow their arguments. */
+s32 func_800B286C(s32 owner_id, s32 event_id, s32 argument);
 s32 func_80087F44(s32, s32*);
 extern u8* func_800C1E40(s32 arg0);
 extern void func_8005AF5C(s32 obj_index, s32 part_index, FieldPos* out);
 extern u8* field_find_free_inventory_record(void);
 extern void func_800BD520(s32, s32, s32);
-extern void func_800BE888(u8*, s32, s32, u32);
-extern void func_800BEC44(u8*, s32);
-extern s32 func_800BF68C(s32, s32, u32);
-extern void func_800BF880(s32);
-extern void func_800BF9A0(s32);
-extern s32 func_800BF9F0(s32);
 extern void func_800C1EC8(s32, void*, s32);
 extern u8 *D_80122B74, *D_80122B78, *D_80123FC4, *g_field_script;
 extern u8* func_800B2A9C(s32 value);
@@ -283,12 +279,9 @@ extern s32 func_80087F44(s32, s32*);
 extern s32 D_8010AE74, D_8010CFD8, D_8010CFDC;
 extern Camera* D_80122B70;
 extern s32 func_80087D8C(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-extern void field_set_actor_render_state(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5);
-void func_80087614(s32 arg0, s32 arg1);
 s32 func_80087D8C(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 void func_80089D44(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 void* func_800B2B08(void);
-void func_800B3F1C(s32 arg0, s32 arg1, s32 arg2);
 CmdB800BE404* func_800C1B60(s32 arg0);
 void func_800C1EC8(s32 arg0, void* arg1, s32 arg2);
 
@@ -427,7 +420,8 @@ void func_800BD99C(void)
 
 void func_800BDA48(s32 unused, u8* params)
 {
-    field_set_fade_target(*(s32*)(params + 0x4), *(s32*)(params + 0x8), *(s32*)(params + 0xC), *(u16*)(params + 0x0));
+    /* Int arguments on purpose: the original passes the words without narrowing them to s16. */
+    ((void (*)(s32, s32, s32, s32))field_set_fade_target)(*(s32*)(params + 0x4), *(s32*)(params + 0x8), *(s32*)(params + 0xC), *(u16*)(params + 0x0));
 }
 
 /**
@@ -573,7 +567,7 @@ void func_800BDCA4(s32 arg0, Command* arg1)
                 if (count != 0)
                 {
                     inventory[0x25E0] = (u8)(count - 1);
-                    func_800BE888(record, arg1->arg4, arg1->arg8, arg1->argC);
+                    func_800BE888((struct FieldItemRecord*)record, arg1->arg4, arg1->arg8, arg1->argC);
                     allocation_offset = (u32)record - 0xCE0;
                     arg1->result = (u16)((allocation_offset - (u32)*context) >> 12);
                     return;
@@ -601,7 +595,7 @@ void func_800BDCA4(s32 arg0, Command* arg1)
             if (stock != 0)
             {
                 counts[0x25E0] = (u8)(stock - 1);
-                func_800BEC44(record, arg1->arg8);
+                func_800BEC44((struct FieldItemRecord*)record, arg1->arg8);
                 arg1->result = (u16)arg1->arg4;
                 return;
             }
@@ -929,7 +923,7 @@ void func_800BE404(s32 arg0, ArgB800BE404* arg1)
                 override_2 = arg1->unk18;
             }
             func_800C1EC8(0, (void*)handle, 0x68);
-            func_800B3F1C(id, handle, (s32)func_80087F0C(id));
+            func_800B3F1C(id, (struct FieldStatusRecord*)handle, (struct FieldStatusState*)func_80087F0C(id));
             func_80089D44(id, override_0, override_1, override_2);
         }
     }

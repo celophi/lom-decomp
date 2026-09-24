@@ -4,6 +4,7 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 #include "field_state_ops.h"
 
 /** @brief Three-dimensional field position. */

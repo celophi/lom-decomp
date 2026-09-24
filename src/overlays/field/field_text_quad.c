@@ -3,6 +3,7 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 #include "display.h"
 #include "field_text.h"
 #include "gpu_packet.h"
@@ -19,7 +20,6 @@
 
 extern void bcopy(void*, void*, s32);
 
-void func_80086F48(POLY_FT4*, s32);
 POLY_FT4* func_800AFC50(u32*, POLY_FT4*);
 
 /**

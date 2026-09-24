@@ -9,6 +9,9 @@
 
 #include "field_text.h"
 #include "common.h"
+#include "field_actor_routes.h"
+#include "field_actor_runtime.h"
+#include "field_calls.h"
 #include "gpu_packet.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
@@ -440,21 +443,13 @@ extern s32 g_pad_input_inject;
 void akao_stop_sfx_by_id(s32 id);
 void akao_cmd_99_9b_9d_9f(s32 arg0);
 void akao_cmd_98_9a_9c_9e(s32 arg0);
-void func_800A3904(s32 arg0, s32 arg1, s32 arg2);
-void func_800A3938(s32 arg0, s32 arg1);
-void field_restore_fade_target(void);
-void field_refresh_party_routes(void);
 
 
-s32 func_800B0850(void);
 
-s32 func_8005B218(void);
-void func_800AEE28(void);
 void* func_800A88A0(SPRT* cursor, s32* ordering_table, u8* text, s32 color, s32 x, s32 y, s32 flags);
 void* field_emit_actor_portrait(SPRT*, u32*, s32, u32*);
 void* func_800AD208(s32*, void*, s32, s32, u16*, s32);
 void* func_800AD524(u8*, s32*, s32, s32*, s32);
-s32 func_800AE864(u8*);
 
 /* Forward declarations for members called before their definition. */
 void field_draw_cd_error_text(FieldLabelRenderContext* arg0);
@@ -1651,12 +1646,8 @@ typedef struct
 s32 field_read_controller_buttons(s32);
 void akao_cmd_98_9a_9c_9e(s32 context);
 
-void func_800A3904(s32 context, s32 arg1, s32 arg2);
 void field_update_text_session(void);
 
-void field_set_fade_target_only(s16 red, s16 green, s16 blue, s16 duration);
-void func_800A3938(s32 sound_id, s32 pan);
-void func_800AE9E0(void);
 void* func_800A88A0(SPRT* cursor, s32* ot, u8* text, s32 color, s32 x, s32 y, s32 flags);
 s32 field_name_byte_length(u8* context);
 void field_copy_name(u8* dest, u8* src);
@@ -1703,11 +1694,6 @@ extern s32 g_field_actor_bindings[];
 extern u8 D_801226B8[], D_801226F0[];
 extern s32 D_8011F424, D_801227D4, D_801229F4, g_active_script, g_script_repeat_count;
 extern void akao_set_paused(s32);
-extern void field_refresh_party_routes(void);
-extern void func_80091438(s32);
-extern void func_800A3D44(s32, u8);
-extern void func_800A5174(s32, s32);
-extern void func_800A54D0(void);
 extern u8 g_field_action_animation_parameters[];
 extern u8 D_800EB24C[];
 extern FieldModalPartySlot g_field_player_records[];
@@ -1717,12 +1703,6 @@ extern FieldModalAction g_field_resource_actions[];
 extern s32 g_field_scene_mode_bit;
 extern u8* g_pad_ctx;
 extern u32 g_field_modal_state;
-extern void field_restore_fade_target(void);
-extern void field_release_actor_resource_slot(s32);
-extern s32 field_activate_actor_resource_slot(s32, s32, s32);
-extern void func_80084240(void);
-extern void func_800A39A8(s32, s32, s32, s32);
-extern void func_800A7384(void);
 
 extern s32 func_800B0888(void);
 extern s32 func_801400C4(s32);

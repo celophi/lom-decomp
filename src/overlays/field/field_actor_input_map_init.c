@@ -4,6 +4,7 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 
 /** @brief Number of action slots rewritten from a weapon-specific table. */
 #define FIELD_INPUT_MAP_ACTION_COUNT 5
@@ -22,8 +23,6 @@ typedef struct
     u8 pad0[0x6];
     u16 unk6;
 } FieldInputMapSlot;
-
-void func_80091518(s32 map_index);
 
 extern u8 D_800EB21C[];
 extern u8 D_800EB224[];

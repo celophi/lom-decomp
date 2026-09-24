@@ -1,5 +1,6 @@
 #include "game_audio.h"
 #include "common.h"
+#include "field_calls.h"
 #include "field_records.h"
 
 extern void *func_800C1E40(s32);

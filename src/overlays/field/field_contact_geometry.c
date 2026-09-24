@@ -2,6 +2,7 @@
  * @brief Resolve field actor contacts, movement, interactions, and attack hits.
  */
 #include "common.h"
+#include "field_calls.h"
 #include "field_effect_transform.h"
 #include "cdrom.h"
 #include "field_types.h"
@@ -191,14 +192,7 @@ extern s32 D_8010D020;
 extern s32 g_field_last_actor_contact;
 
 void field_prepare_actor_action(FieldMotionRecord*);
-s32 func_8005B368(FieldMoveQuery*);
-s32 func_8005B6AC(FieldMoveRequest*);
-s32 func_80092988(FieldMotionRecord*, Vec3i*);
-s32 func_800839F8(s32, s32);
-s32 func_80083EEC(s32, s32, s32);
-void func_800A2DD8(s32);
-void func_800A3938(s32, s32);
-void func_800AF824(s32);
+/* Defined as (s32, s32) in field_interaction_start.c; the original call also loads the state table into $a2. */
 void func_800B22F0(s32 value, u16 entry, FieldObjectRuntime* states);
 void func_8008A840(s32, s32);
 void func_8008A9D8(s32, s32, s32);
@@ -829,7 +823,7 @@ s32 field_resolve_actor_movement(FieldMotionRecord* actor, s32* position, s32 mo
     if (g_field_active_group != 0)
     {
         actor_motion = actor->motion_parameter;
-        if (((actor_motion < 0xB0) || (actor_motion > 0xB1)) && ((s16)actor_motion != 0xB5) && (func_80092988(actor, (Vec3i*)position) != 0))
+        if (((actor_motion < 0xB0) || (actor_motion > 0xB1)) && ((s16)actor_motion != 0xB5) && (func_80092988((Vec3i*)actor, (Vec3i*)position) != 0))
         {
             position[0] = 0;
         }
@@ -866,7 +860,7 @@ s32 field_resolve_actor_movement(FieldMotionRecord* actor, s32* position, s32 mo
         mover->packed.bits.unknown_bit_16 = 0;
         mover->contact = g_field_object_states[actor->source_object_index].contact_index;
         mover->surface = g_field_object_states[actor->source_object_index].surface;
-        func_8005B6AC(mover);
+        func_8005B6AC((struct FieldCollisionMover*)mover);
         g_field_object_states[actor->source_object_index].contact_index = mover->contact;
         g_field_object_states[actor->source_object_index].surface = mover->surface;
         resolved_motion = actor->motion_parameter;
@@ -887,9 +881,10 @@ s32 field_resolve_actor_movement(FieldMotionRecord* actor, s32* position, s32 mo
         query_y = position[1] + actor->y;
         query->z = query_z;
         query->y = query_y;
-        if (((g_field_active_group == 0) || (actor->flags & FIELD_MOTION_RADIUS_MASK) || (func_8005B368(query) == -1)) &&
+        /* func_8005B368 is called as returning int: the original compares the s16 result unextended. */
+        if (((g_field_active_group == 0) || (actor->flags & FIELD_MOTION_RADIUS_MASK) || (((s32 (*)(struct FieldCollisionQuery*))func_8005B368)((struct FieldCollisionQuery*)query) == -1)) &&
             ((((u16)actor->motion_parameter >= 0xB0) && ((u16)actor->motion_parameter <= 0xB1)) || (actor->motion_parameter == 0xB5) ||
-             (g_field_active_group == 0) || (func_80092988(actor, &delta) == 0)))
+             (g_field_active_group == 0) || (func_80092988((Vec3i*)actor, &delta) == 0)))
         {
             position[0] = mover->x;
             if (((actor->facing_or_reward_kind & FIELD_FACING_INDEX_MASK) == 0x3D) && ((u8)actor->source_object_index < 2U))

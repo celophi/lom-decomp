@@ -5,6 +5,7 @@
 
 #include "game_audio.h"
 #include "common.h"
+#include "field_calls.h"
 #include "field_records.h"
 
 /** @brief Size of one resource page in D_801148B0. */
@@ -39,9 +40,6 @@ typedef struct
 
 void* func_800C1E40(s32 resource_id);
 FieldItemRecord* field_find_free_inventory_record(void);
-void func_800B2844(s32 arg0, void* script, s32 arg2);
-void field_copy_inventory_record(FieldItemRecord* destination, FieldItemRecord* source);
-void field_compact_inventory(void);
 s32 func_800C2AD0(void);
 
 extern u8 D_801148B0[];
@@ -131,10 +129,10 @@ s32 func_800C29CC(s32 index)
 
     record = field_find_free_inventory_record();
     item_template = &table->templates[index];
-    func_800B2844(0, item_template, 0x15);
+    func_800B2844(0, (u8*)item_template, 0x15);
     if (record != NULL)
     {
-        field_copy_inventory_record(record, item_template);
+        field_copy_inventory_record((u8*)record, (u8*)item_template);
         return 0;
     }
     return -1;

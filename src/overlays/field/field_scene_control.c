@@ -6,6 +6,7 @@
 
 #include "field_scene_internal.h"
 #include "field_animation.h"
+#include "field_calls.h"
 
 /** @brief Movie/streaming control block at 0x801ED500. */
 #define FIELD_MOVIE_STATE ((volatile FieldMovieState*)0x801ED500)
@@ -28,9 +29,12 @@ extern u16 g_field_movie_frame_height;
 void func_800157B0(s32);
 
 void func_80059F18(void);
-void func_8005A744(FieldSeq*, u8);
+/* func_8005A0D0 is left implicit on purpose: with its (s16, u16, u16, u16)
+   prototype in scope, field_update_scene_fade converts the arguments and
+   the image changes. */
 s32 func_8005A84C(s32, s32);
-void func_80084240(void);
+void func_8005A984(FieldPart*, s32, s32);
+void func_8005AA68(FieldObj*, s32, s32);
 void func_80140358(s32, s32, s32, s32);
 void func_801406E4(void);
 
@@ -70,8 +74,6 @@ typedef struct
     u16 rotation_angle;
 } FieldPartTransform;
 
-FieldObj* func_8005AB4C(s32);
-FieldPart* func_8005AB80(s32, s32);
 
 /**
  * @brief Move a scene object - or a single one of its parts - to a new
@@ -249,11 +251,10 @@ void field_set_object_position(s32 obj_index, s32 part_index, FieldPos* pos, s32
  *
  * @param seq Sequence node whose definition carries the command.
  *
- * @note The handler kind is the word at FieldAnimDef::flags masked with
- *       0xFF000007 - the low three bits of byte 0x04 plus the sub-kind byte at
- *       0x07 - so it is read as @c *(s32 *) &def->flags, the same spelling
- *       field_apply_animation_tween uses. Kind 4 skips the whole reset; kinds 5
- *       and 6 additionally get a tween pass.
+ * @note The handler kind is FieldAnimDef::flags.word masked with 0xFF000007 -
+ *       the low three bits of byte 0x04 plus the list group byte at 0x07.
+ *       Kind 4 skips the whole reset; kinds 5 and 6 additionally get a tween
+ *       pass.
  * @note FieldAnimDef::unk1 is read into @p frame before either store, because
  *       the stores are through FieldAnim and gcc cannot rule out an alias.
  *
@@ -291,23 +292,23 @@ void field_start_animation(FieldSeq* seq)
         i--;
     }
     def = anim->def;
-    if ((*(s32*)&def->flags & 0xFF000007) != 4)
+    if ((def->flags.word & 0xFF000007) != 4)
     {
         anim->flags.word &= ~4;
-        if (*(s32*)&def->flags & 0x40)
+        if (def->flags.word & 0x40)
         {
-            frame = def->unk1;
+            frame = def->head.b.unk1;
             anim->flags.b.keyframe = 0;
             anim->flags.b.state = frame;
         }
         else
         {
-            frame = def->unk1;
+            frame = def->head.b.unk1;
             anim->flags.b.state = frame;
             anim->flags.b.keyframe = frame;
         }
         span = (FieldTweenSpan*)field_find_count_table_span((u8*)def, anim->flags.b.keyframe, &base);
-        if (*(s32*)&def->flags & 0x20)
+        if (def->flags.word & 0x20)
         {
             anim->timer = span->duration;
         }
@@ -315,11 +316,11 @@ void field_start_animation(FieldSeq* seq)
         {
             anim->timer = 1;
         }
-        if (((*(s32*)&def->flags & 0xFF000007) == 3) || ((def->handler_group == 1) && ((def->flags & 7) >= 2)))
+        if (((def->flags.word & 0xFF000007) == 3) || ((def->flags.b.handler_group == 1) && ((def->flags.b.kind_flags & 7) >= 2)))
         {
             anim->flags.word |= 0x20;
         }
-        if ((u32)((*(s32*)&def->flags & 0xFF000007) - 5) < 2)
+        if ((u32)((def->flags.word & 0xFF000007) - 5) < 2)
         {
             field_apply_animation_tween(def, anim, 0);
         }
@@ -334,7 +335,7 @@ void field_start_animation(FieldSeq* seq)
         anim->flags.b.stop_keyframe = cmd->stop_keyframe;
         anim->flags.word |= 2;
     }
-    anim->flags.word = (anim->flags.word & ~1) | ((*(u32*)&def->flags >> 3) & 1) | 0x40;
+    anim->flags.word = (anim->flags.word & ~1) | ((def->flags.word >> 3) & 1) | 0x40;
 }
 
 /**
@@ -449,23 +450,23 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
     {
     case 2:
         def = anim->def;
-        if ((*(s32*)&def->flags & 0xFF000007) != 4)
+        if ((def->flags.word & 0xFF000007) != 4)
         {
             anim->flags.word &= ~4;
-            if (*(s32*)&def->flags & 0x40)
+            if (def->flags.word & 0x40)
             {
-                frame = def->unk1;
+                frame = def->head.b.unk1;
                 anim->flags.b.keyframe = 0;
                 anim->flags.b.state = frame;
             }
             else
             {
-                frame = def->unk1;
+                frame = def->head.b.unk1;
                 anim->flags.b.state = frame;
                 anim->flags.b.keyframe = frame;
             }
             span = (FieldTweenSpan*)field_find_count_table_span((u8*)def, anim->flags.b.keyframe, &base);
-            if (*(s32*)&def->flags & 0x20)
+            if (def->flags.word & 0x20)
             {
                 anim->timer = span->duration;
             }
@@ -473,11 +474,11 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
             {
                 anim->timer = 1;
             }
-            if (((*(s32*)&def->flags & 0xFF000007) == 3) || ((def->handler_group == 1) && ((def->flags & 7) >= 2)))
+            if (((def->flags.word & 0xFF000007) == 3) || ((def->flags.b.handler_group == 1) && ((def->flags.b.kind_flags & 7) >= 2)))
             {
                 anim->flags.word |= 0x20;
             }
-            if ((u32)((*(s32*)&def->flags & 0xFF000007) - 5) < 2)
+            if ((u32)((def->flags.word & 0xFF000007) - 5) < 2)
             {
                 field_apply_animation_tween(def, anim, 0);
             }
@@ -488,9 +489,9 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
         anim->flags.word &= ~2;
         anim->repeat_count = 0;
         flags = anim->flags.word & repeat_mask;
-        flags |= (*(u32*)&def->flags >> 3) & 1;
+        flags |= (def->flags.word >> 3) & 1;
         anim->flags.word = flags;
-        if ((list_kind == 0) && ((*(s32*)&def->flags & 7) == 4))
+        if ((list_kind == 0) && ((def->flags.word & 7) == 4))
         {
             if ((anim->flags.word & 0x40) == 0)
             {
@@ -509,7 +510,7 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
             if ((list_kind == 0) && (anim->flags.word & 0x40))
             {
                 sfx_def = anim->def;
-                if ((*(s32*)&sfx_def->flags & 7) == 7)
+                if ((sfx_def->flags.word & 7) == 7)
                 {
                     key = (FieldSfxKey*)sfx_def->data;
                     if (key->sound.word & 0x8000)
@@ -539,15 +540,15 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
         break;
     case 4:
         def = anim->def;
-        if (*(s32*)&def->flags & 0x10)
+        if (def->flags.word & 0x10)
         {
-            if (*(s32*)&def->flags & 8)
+            if (def->flags.word & 8)
             {
                 anim->flags.b.stop_keyframe = 0;
             }
             else
             {
-                anim->flags.b.stop_keyframe = def->unk5;
+                anim->flags.b.stop_keyframe = def->flags.b.last_frame;
             }
             anim->repeat_count = 0;
             anim->flags.word |= 2;
@@ -609,7 +610,7 @@ extern s32 D_801ED02C;
  *       standalone symbol @c D_801ED02C (costs 2 rows written through
  *       @c state), while the mode-0 store at the end of the fade-in goes
  *       through @c state (costs 1 row written as @c D_801ED02C). Same address,
- *       different addressing mode - the same split FieldCamera has.
+ *       different addressing mode - the same split as SCENE_STATE->camera_x vs g_field_camera_x.
  * @note @c state and @c scene are both locals, and @c scene has to be read at
  *       the very top, before the switch: reading it where it is first used
  *       instead costs 36 rows.
@@ -790,8 +791,7 @@ void field_begin_scene_fade_in(void)
 }
 
 void func_8005A428(FieldPart*);
-FieldAnimCel* func_8005ABD8(FieldTileGrid*, FieldTintSrc**);
-void func_8005ADA8(FieldAnimCel*, FieldAnim*);
+void func_8005ADA8(FieldPart*, FieldAnim*);
 
 /**
  * @brief Push a new colour scale onto the scene's tint sources and rebuild the
@@ -824,6 +824,9 @@ void func_8005ADA8(FieldAnimCel*, FieldAnim*);
  *       @c s32 costs 52 and 84 rows respectively. The scales arrive
  *       sign-extended, so every use masks them, while the three writebacks
  *       store the raw parameter.
+ * @note field_actor_transition_reset.c declares this with four @c s32
+ *       parameters; this file's own fade caller calls it undeclared (see the
+ *       comment at the prototypes).
  * @note @c tint must be a separate local assigned BEFORE the three @c rgb
  *       products. Assigning it after them, or reading @c owner->palette->data
  *       in one go where @c pal is set, leaves the palette load stuck below the
@@ -844,7 +847,7 @@ void func_8005A0D0(s16 index, u16 red_scale, u16 green_scale, u16 blue_scale)
     FieldTintPal* tint;
     FieldPart* part;
     FieldAnim* anim;
-    FieldAnimCel* cel;
+    FieldPart* cel;
     u16* pal;
     u16 i;
     s32 rgb[3];
@@ -864,11 +867,11 @@ void func_8005A0D0(s16 index, u16 red_scale, u16 green_scale, u16 blue_scale)
             owner->green_scale = green_scale;
             owner->blue_scale = blue_scale;
             pal = tint->data;
-            func_8005AC50(pal + 2, pal[0], rgb);
+            func_8005AC50((u8*)(pal + 2), pal[0], rgb);
             part = (FieldPart*)owner->cels;
             while (part != NULL)
             {
-                if (part->instance_count != 0 && (part->code_word != 0 || part->unk8 == 0))
+                if (part->instance_count != 0 && (part->code_word != 0 || part->shared == NULL))
                 {
                     func_8005A428(part);
                 }
@@ -883,15 +886,15 @@ void func_8005A0D0(s16 index, u16 red_scale, u16 green_scale, u16 blue_scale)
         anim = scene->anims;
         while (anim != NULL)
         {
-            if ((*(u32*)&anim->def->flags & 7) < 2)
+            if ((anim->def->flags.word & 7) < 2)
             {
-                cel = func_8005ABD8(((FieldTileAnimDef*)anim->def)->grid, &owner);
+                cel = func_8005ABD8(anim->def->u.tile.grid, &owner);
                 tint = owner->palette;
                 rgb[0] = owner->red * red_scale;
                 rgb[1] = owner->green * green_scale;
                 rgb[2] = owner->blue * blue_scale;
                 pal = tint->data;
-                func_8005AC50(pal + 2, pal[0], rgb);
+                func_8005AC50((u8*)(pal + 2), pal[0], rgb);
                 if (cel->code_word == 0)
                 {
                     func_8005ADA8(cel, anim);
@@ -902,13 +905,13 @@ void func_8005A0D0(s16 index, u16 red_scale, u16 green_scale, u16 blue_scale)
         anim = scene->effects;
         while (anim != NULL)
         {
-            cel = func_8005ABD8(((FieldTileAnimDef*)anim->def)->grid, &owner);
+            cel = func_8005ABD8(anim->def->u.tile.grid, &owner);
             tint = owner->palette;
             rgb[0] = owner->red * red_scale;
             rgb[1] = owner->green * green_scale;
             rgb[2] = owner->blue * blue_scale;
             pal = tint->data;
-            func_8005AC50(pal + 2, pal[0], rgb);
+            func_8005AC50((u8*)(pal + 2), pal[0], rgb);
             if (cel->code_word == 0)
             {
                 func_8005ADA8(cel, anim);
@@ -938,9 +941,9 @@ void func_8005A0D0(s16 index, u16 red_scale, u16 green_scale, u16 blue_scale)
  *
  * @param part Runtime part to re-tint.
  *
- * @note @c part->def is addressed as a FieldTileGrid: its identity key at 0x00
- *       doubles as the tile-descriptor array, which is exactly why two parts
- *       sharing that word are interchangeable.
+ * @note FieldPartDef::tiles is both the tile-descriptor array and the
+ *       identity key, which is exactly why two parts sharing that word are
+ *       interchangeable.
  * @note The two case arms are the SAME block written out twice, which is what
  *       the original did: giving @c case @c 0 and @c case @c 2..5 one shared
  *       body compiles to a single loop, 63 insns short of the target (57.31%).
@@ -965,7 +968,7 @@ void func_8005A0D0(s16 index, u16 red_scale, u16 green_scale, u16 blue_scale)
  */
 void func_8005A428(FieldPart* part)
 {
-    FieldTileGrid* grid;
+    FieldPartDef* grid;
     FieldTileDesc* tile;
     FieldTintColor* pal;
     FieldTintColor* entry;
@@ -977,7 +980,7 @@ void func_8005A428(FieldPart* part)
     s32 count;
 
     word = 0;
-    grid = (FieldTileGrid*)part->def;
+    grid = part->def;
     tile = grid->tiles;
     pal = (FieldTintColor*)0x1F800000;
     switch (part->kind)
@@ -993,7 +996,7 @@ void func_8005A428(FieldPart* part)
         {
             stride -= 4;
         }
-        mask = (u32*)part->bits;
+        mask = part->bits;
         count = grid->u.b.rows * grid->u.b.cols;
         bit = 0;
         while (--count != -1)
@@ -1040,7 +1043,7 @@ void func_8005A428(FieldPart* part)
         {
             stride -= 4;
         }
-        mask = (u32*)part->bits;
+        mask = part->bits;
         count = grid->u.b.rows * grid->u.b.cols;
         bit = 0;
         while (--count != -1)
@@ -1146,8 +1149,8 @@ void func_8005A67C(s32 index, s32 op)
  * Sets the sequence's countdown to 1, replaces its low two state bits with 1,
  * records @p index in byte 1 of FieldSeq::flags, and hands the node to
  * field_start_animation. If the definition names a follow-on sequence
- * (FieldAnimDef::unk5 is not 0xFF) and carries no delay (FieldAnimDef::unk8 is
- * zero), that sequence is located by walking the scene list to its index and
+ * (FieldSeqDef::start_link is not 0xFF) and carries no delay
+ * (FieldSeqDef::start_delay is zero), that sequence is located by walking the scene list to its index and
  * armed the same way, recursively.
  *
  * @param seq Sequence node to arm.
@@ -1161,10 +1164,10 @@ void func_8005A67C(s32 index, s32 op)
  *       the parameter's allocation priority above the scene pointer's. An
  *       explicit @c (u8) cast on the argument is NOT equivalent.
  * @note The follow-on index must count DOWN in place -
- *       @c i @c = @c def->unk5 then @c while @c (--i @c != @c -1). Reading
- *       @c unk5 twice and initialising @c i @c = @c def->unk5 @c - @c 1 leaves
+ *       @c i @c = @c def->start_link then @c while @c (--i @c != @c -1). Reading
+ *       @c start_link twice and initialising @c i @c = @c start_link @c - @c 1 leaves
  *       the pre-decrement value live, so combine folds the entry guard into
- *       @c unk5 @c != @c 0 and 3 rows go (see [EXPAND-22] in idioms.md).
+ *       @c start_link @c != @c 0 and 3 rows go (see [EXPAND-22] in idioms.md).
  * @note @c scene must be read at the top, before the field_start_animation
  *       call, even though it is not used until after it. Reading it later
  *       costs 9 rows, and it cannot be sunk into the @c if because the call
@@ -1342,7 +1345,7 @@ s32 func_8005A84C(s32 list_kind, s32 index)
         if (list_kind == 0)
         {
             def = anim->def;
-            if ((*(s32*)&def->flags & 7) == 4)
+            if ((def->flags.word & 7) == 4)
             {
                 if (anim->flags.b.state < 2)
                 {
@@ -1531,6 +1534,8 @@ void func_8005AA68(FieldObj* obj, s32 delta, s32 axis)
  *
  * @param index Number of @c next hops to take. 0 returns the list head.
  * @return The object @p index steps into the list.
+ * @note Callers pass FieldNodeDef::obj_index bytes; the parameter is still an
+ *       @c s32 (field_build_render_records matches with either width).
  */
 FieldObj* func_8005AB4C(s32 index)
 {
@@ -1605,10 +1610,10 @@ FieldPart* func_8005AB80(s32 obj_index, s32 part_index)
  *                match. Pass NULL when only the cel is needed.
  * @return The matching cel, or NULL when no record in the scene holds one.
  */
-FieldAnimCel* func_8005ABD8(FieldTileGrid* grid, FieldTintSrc** out_src)
+FieldPart* func_8005ABD8(FieldPartDef* grid, FieldTintSrc** out_src)
 {
     FieldTintSrc* src;
-    FieldAnimCel* cel;
+    FieldPart* cel;
 
     src = (FieldTintSrc*)g_field_scene.scene->objects;
     while (src != NULL)
@@ -1616,7 +1621,7 @@ FieldAnimCel* func_8005ABD8(FieldTileGrid* grid, FieldTintSrc** out_src)
         cel = src->cels;
         while (cel != NULL)
         {
-            if (grid == cel->grid)
+            if (grid == cel->def)
             {
                 if (out_src != NULL)
                 {
@@ -1650,9 +1655,9 @@ FieldAnimCel* func_8005ABD8(FieldTileGrid* grid, FieldTintSrc** out_src)
  *       the parameter to the cursor read at +1/+2 and a copy to the one read at
  *       +0, which is the entry @c addu @c t1, @c a0, @c zero. Folding them into
  *       one cursor costs 12 rows.
- * @note @c count is an @c s32 even though the two scene-builder views declare
- *       this function with a @c u16 second parameter. As a @c u16 the entry
- *       needs an @c andi mask and the function grows two instructions.
+ * @note @c count is an @c s32 even though every caller passes a @c u16
+ *       palette count. As a @c u16 the entry needs an @c andi mask and the
+ *       function grows two instructions.
  * @note @c v must be unsigned: the compare is @c sltu and the shift @c srl,
  *       and a signed @c v turns both into their signed forms (6 rows).
  */
@@ -1724,16 +1729,16 @@ void func_8005AC50(u8* colors, s32 count, s32* rgb_scale)
  * The codes are the standard GPU primitive tags: 0x7C SPRT_16, 0x64 SPRT,
  * 0x2C POLY_FT4 and 0x3C POLY_GT4 for anything else.
  *
- * @param format Texture format selector taken from FieldAnimCel.
+ * @param format Texture format selector taken from FieldPart.
  * @param count Number of table entries to stamp.
  * @param primitive_code In/out cache of the code already in the table; updated
  *                       once the table has been rewritten.
  * @note @c format is a @c u8 (it needs the entry @c andi) but @c count is an
- *       @c s32, even though the two scene-builder views declare the second parameter
- *       @c u16; as a @c u16 the in-place decrement needs masking and the
- *       function loses five instructions (16 rows).
- * @note @p primitive_code is @c u8*, not the @c s8* those two files declare -
- *       the target reads it with @c lbu (1 row).
+ *       @c s32, even though the callers pass @c u16 counts; as a @c u16 the
+ *       in-place decrement needs masking and the function loses five
+ *       instructions (16 rows).
+ * @note @p primitive_code is @c u8*, not @c s8* - the target reads it with
+ *       @c lbu (1 row).
  * @note Cases 2-5 must share ONE arm. Giving each its own arm with a duplicate
  *       body takes gcc's case list from three nodes to six, which rebuilds the
  *       whole comparison tree (15 rows); see idiom [EXPAND-13]. An equivalent
@@ -1801,7 +1806,7 @@ void func_8005AD20(u8 format, s32 count, u8* primitive_code)
  *       @c dst itself rather than @c dst @c + @c 4 - the same pairing
  *       field_tint_animation_cel documents.
  */
-void func_8005ADA8(FieldAnimCel* cel, FieldAnim* anim)
+void func_8005ADA8(FieldPart* cel, FieldAnim* anim)
 {
     FieldAnimDef* def;
     FieldTintColor* pal;
@@ -1813,7 +1818,7 @@ void func_8005ADA8(FieldAnimCel* cel, FieldAnim* anim)
 
     pal = (FieldTintColor*)0x1F800000;
     def = anim->def;
-    switch (cel->format)
+    switch (cel->kind)
     {
     case 0:
         stride = 12;
@@ -1827,7 +1832,7 @@ void func_8005ADA8(FieldAnimCel* cel, FieldAnim* anim)
             stride -= 4;
         }
         src = def->data;
-        n = anim->frame_tile_count * def->unk6;
+        n = anim->frame_tile_count * def->flags.b.frame_count;
         while (--n != -1)
         {
             entry = &pal[src[3]];
@@ -1854,7 +1859,7 @@ void func_8005ADA8(FieldAnimCel* cel, FieldAnim* anim)
             stride -= 4;
         }
         src = def->data;
-        n = anim->frame_tile_count * def->unk6;
+        n = anim->frame_tile_count * def->flags.b.frame_count;
         while (--n != -1)
         {
             entry = &pal[src[3]];
@@ -2017,9 +2022,8 @@ void func_8005B094(s32 obj_index, s32 part_index, FieldPartTransform* xf)
  *       @c &= @c ~5 they fold into one @c and and the function loses two
  *       instructions - neither constant fits @c andi, so each needs its own
  *       register load.
- * @note The definition flags are read as a WORD through the byte field's
- *       address, the same spelling field_rescale_scene_tints uses; a plain
- *       @c def->flags byte read costs a row at each of the two sites.
+ * @note The definition flags are read as the whole word (flags.word); a
+ *       @c flags.b.kind_flags byte read costs a row at each of the two sites.
  */
 void func_8005B0F4(s32 index, s32 from_keyframe)
 {
@@ -2038,7 +2042,7 @@ void func_8005B0F4(s32 index, s32 from_keyframe)
             }
         }
         def = anim->def;
-        if (((*(u32*)&def->flags & 0x20) != 0) && (from_keyframe == 0))
+        if (((def->flags.word & 0x20) != 0) && (from_keyframe == 0))
         {
             if (anim->flags.b.keyframe != 0)
             {
@@ -2046,13 +2050,13 @@ void func_8005B0F4(s32 index, s32 from_keyframe)
                 anim->flags.word |= 0x45;
             }
         }
-        else if (anim->flags.b.keyframe != def->unk5)
+        else if (anim->flags.b.keyframe != def->flags.b.last_frame)
         {
             anim->flags.word |= 0x40;
             anim->flags.word &= ~4;
             anim->flags.word &= ~1;
             anim->timer = 1;
-            if (((*(u32*)&def->flags & 0x20) == 0) && (anim->flags.b.keyframe == 0))
+            if (((def->flags.word & 0x20) == 0) && (anim->flags.b.keyframe == 0))
             {
                 anim->flags.word |= 8;
             }
@@ -2061,56 +2065,23 @@ void func_8005B0F4(s32 index, s32 from_keyframe)
 }
 
 
-typedef struct
-{
-    u8 _pad[0x2C];
-    s32 unk2C;
-    s32 unk30;
-} ApiFieldState;
-
-typedef struct ApiNode
-{
-    struct ApiNode* unk0; /* 0x00 next pointer */
-    s32 definition;       /* 0x04 compared by field_find_object_by_definition */
-    u8 _pad[0x10];        /* 0x08-0x17 */
-    s8 unk18;             /* 0x18 byte written by func_8005B228 */
-} ApiNode;
-
-struct CollNode;
-
-typedef struct
-{
-    u8 _pad0[4];                /* 0x00-0x03 */
-    ApiNode* objects;           /* 0x04 head of the scene object list */
-    ApiNode* unk8;              /* 0x08 head of the node list */
-    u8 _pad1[0x10 - 0xC];       /* 0x0C-0x0F */
-    struct CollNode* coll_list; /* 0x10 collision-node list traversed by func_8005B368 */
-    u8 _pad2[0x28 - 0x14];      /* 0x14-0x27 */
-    s32 unk28;                  /* 0x28 flag gating the func_8005F5BC call */
-} ApiFieldScene;
-
-typedef struct
-{
-    ApiFieldScene* scene;
-} ApiFieldSceneGlobals;
-
 extern s32 D_801ED02C;
 
 extern u8 D_800CBF44[];
-extern volatile s32 D_801ED490;
-
-void func_8005F5BC(s32, ApiNode*, ApiFieldScene*, s32);
+extern s32 D_801ED490;
 
 /**
- * @brief If D_801ED02C is zero, set it to 1 and write 0x100 to D_801ED030.
+ * @brief Arm the scene-transition fade-out unless a fade is already running.
+ *
+ * Sets FieldMemState::fade_mode to 1 (fading out) and fade_level to 0x100
+ * (fully lit); field_update_scene_fade steps it from there.
  */
 void func_8005B1EC(void)
 {
-    volatile ApiFieldState* s = (volatile ApiFieldState*)0x801ED000;
-    if (s->unk2C == 0)
+    if (FIELD_MEM_STATE->fade_mode == 0)
     {
-        s->unk2C = 1;
-        s->unk30 = 0x100;
+        FIELD_MEM_STATE->fade_mode = 1;
+        FIELD_MEM_STATE->fade_level = 0x100;
     }
 }
 
@@ -2124,48 +2095,43 @@ s32 func_8005B218(void)
 }
 
 /**
- * @brief Walk the field scene's node list @p arg0 steps and store @p arg1 at
- *        node->unk18, then poke func_8005F5BC if the scene flag is set.
- * @param arg0 Number of ->unk0 links to follow from the list head.
- * @param arg1 Byte value stored at the reached node's unk18.
- * @note WIP - NOT byte-perfect yet. Structure and types are exact (a single
- *       `register ApiNode *node asm("$5")` pin matches all but one schedule slot).
- *       The remaining gap is register coloring: the target colors `node` into
- *       $a1 (evacuating arg1 to $a3) with the loop sentinel -1 in $v1; natural C
- *       colors node into $v1 and the sentinel into $a0. Per GCC 2.8 global.c
- *       allocno_compare, node and the sentinel have near-equal priority and the
- *       tie breaks by allocno (creation) order, so node (born at scene->unk8,
- *       before the loop) wins $v1. No pin-free shape found yet that flips this
- *       without changing another instruction.
+ * @brief Set the group-scan enable byte of the scene node at @p index and
+ *        re-rasterise the groups when the collision work area exists.
+ * @param index Number of @c next hops along the scene's node list (0 = head).
+ * @param enabled Stored in FieldNode::unk18; zero drops the node from the
+ *                group scan in func_8005F158.
+ * @note Called by the script ops with 1 / 0 to switch a node on or off.
  * @see decomp.me (100%) https://decomp.me/scratch/lN7ye
  */
-void func_8005B228(s32 arg0, s32 arg1)
+void func_8005B228(s32 index, s32 enabled)
 {
-    ApiNode* var_a1;
-    s32 var_v0;
-    ApiFieldScene* scene = ((ApiFieldScene*)g_field_scene.scene);
+    FieldNode* node;
+    s32 remaining;
+    FieldScene* scene = g_field_scene.scene;
 
-    var_a1 = scene->unk8;
-    var_v0 = arg0 - 1;
-    while (var_v0 != -1)
+    node = scene->nodes;
+    remaining = index - 1;
+    while (remaining != -1)
     {
-        var_a1 = var_a1->unk0;
-        var_v0 -= 1;
+        node = node->next;
+        remaining -= 1;
     }
-    var_a1->unk18 = arg1;
+    node->unk18 = enabled;
     if (scene->unk28 != 0)
     {
-        func_8005F5BC(0, var_a1, scene, arg1);
+        /* func_8005F5BC takes two parameters; the original also passes the scene and flag in $a2 and $a3. */
+        ((void (*)(s32, FieldNode*, FieldScene*, s32))func_8005F5BC)(0, node, scene, enabled);
     }
 }
 
 /**
- * @brief Set D_801ED490 to the given value.
- * @param arg0 Value to store.
+ * @brief Select the pixel lookup table applied at the next map load.
+ * @param selector Stored in D_801ED490; field_load_map uses table
+ *                 @c selector @c - @c 1 with field_apply_pixel_lookup, 0 = none.
  */
-void func_8005B288(s32 arg0)
+void func_8005B288(s32 selector)
 {
-    D_801ED490 = arg0;
+    D_801ED490 = selector;
 }
 
 /**
@@ -2229,27 +2195,29 @@ void field_apply_pixel_lookup(u16* pixels, s32 pixel_count, s32 table_index, voi
  * Walks the scene object list and returns the first object whose definition
  * pointer matches @p definition.
  *
- * @param definition Definition pointer to compare at object offset 0x04.
+ * @param definition Definition pointer to compare with FieldObj::def.
  * @return Pointer to the matching field object, or NULL if not found.
  *
+ * @note field_scene_build.c casts the result to FieldTintSrc*, its view of
+ *       the same object-list records.
  * @note Matches 100% with gcc280_g4 and gcc272_cdk.
  * @see decomp.me (100%) https://decomp.me/scratch/FThyS
  */
-void* field_find_object_by_definition(s32 definition)
+FieldObj* field_find_object_by_definition(void* definition)
 {
-    ApiNode* node;
+    FieldObj* obj;
 
-    node = ((ApiFieldScene*)g_field_scene.scene)->objects;
-    if (node != 0)
+    obj = g_field_scene.scene->objects;
+    if (obj != NULL)
     {
         do
         {
-            if (definition == node->definition)
+            if (definition == obj->def)
             {
-                return node;
+                return obj;
             }
-            node = node->unk0;
-        } while (node != 0);
+            obj = obj->next;
+        } while (obj != NULL);
     }
-    return 0;
+    return NULL;
 }
