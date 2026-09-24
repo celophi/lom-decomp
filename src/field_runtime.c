@@ -115,12 +115,8 @@ void field_run_frame_loop(FieldRenderHalf* render_buffers)
     ControllerState* controllers;
     FieldWorkspace* field_heap;
     s32 is_alt_half;
-    FieldRenderHalf* next_half;
     u8* primitive_cursor;
-    vram_rect.x = 0;
-    vram_rect.y = 0;
-    vram_rect.w = SCREEN_WIDTH;
-    vram_rect.h = VRAM_BACK_DISP_Y + SCREEN_HEIGHT;
+    setRECT(&vram_rect, 0, 0, SCREEN_WIDTH, VRAM_BACK_DISP_Y + SCREEN_HEIGHT);
     field_heap = FIELD_WORKSPACE;
     controllers = CONTROLLER_STATE;
     ClearImage(&vram_rect, 0, 0, 0);
@@ -158,12 +154,7 @@ void field_run_frame_loop(FieldRenderHalf* render_buffers)
             DrawSync(0);
             set_controller_vsync_interval(2);
             VSync(2);
-            next_half = render_buffers;
-            if (draw_half == render_buffers)
-            {
-                next_half = &draw_half[1];
-            }
-            draw_half = next_half;
+            draw_half = (draw_half == render_buffers) ? &draw_half[1] : render_buffers;
             PutDispEnv(&draw_half->disp_env);
             PutDrawEnv(&draw_half->draw_env);
             field_flush_vram_uploads();
@@ -195,19 +186,10 @@ void field_init_display(FieldRenderHalf* render_buffers)
     SetGeomScreen(FIELD_PROJECTION_DISTANCE);
     SetGeomOffset(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 
-    render_buffers[0].display_rect.x = 0;
-    render_buffers[0].display_rect.y = 0;
-    render_buffers[0].display_rect.w = SCREEN_WIDTH;
-    render_buffers[0].display_rect.h = SCREEN_HEIGHT;
-    render_buffers[1].display_rect.y = VRAM_BACK_DISP_Y;
-    render_buffers[1].display_rect.x = 0;
-    render_buffers[1].display_rect.w = SCREEN_WIDTH;
-    render_buffers[1].display_rect.h = SCREEN_HEIGHT;
+    setRECT(&render_buffers[0].display_rect, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    setRECT(&render_buffers[1].display_rect, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    vram_rect.x = 0;
-    vram_rect.y = 0;
-    vram_rect.w = VRAM_WIDTH;
-    vram_rect.h = VRAM_HEIGHT;
+    setRECT(&vram_rect, 0, 0, VRAM_WIDTH, VRAM_HEIGHT);
     ClearImage(&vram_rect, 0, 0, 0);
 
     SetDefDispEnv(&render_buffers[0].disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);

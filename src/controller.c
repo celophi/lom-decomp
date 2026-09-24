@@ -26,11 +26,11 @@ void initialize_controllers(s8 enable_actuators)
     ControllerPortState* status_port;
     u16 actuator_control;
     u16 actuator_status;
-    s32 port_countdown;
+    s32 port_index;
     u32 disconnected_device_type;
     s32 legacy_vibration_device_id;
     s32 all_ports_ready;
-    s32 status_port_countdown;
+    s32 status_index;
 
     PadInitDirect(CONTROLLER_STATE->receive_buffers[0].bytes, CONTROLLER_STATE->receive_buffers[1].bytes);
     g_previous_controller_vsync_callback.address = VSyncCallback(NULL);
@@ -42,13 +42,13 @@ void initialize_controllers(s8 enable_actuators)
     clear_controller_sample(&controller_state->ports[1].published_sample);
     clear_controller_sample(&controller_state->ports[0].current_sample);
     clear_controller_sample(&controller_state->ports[1].current_sample);
-    port_countdown = 1;
+    port_index = CONTROLLER_PORT_COUNT - 1;
     legacy_vibration_device_id = CONTROLLER_LEGACY_VIBRATION_DEVICE_ID;
     disconnected_device_type = CONTROLLER_DEVICE_DISCONNECTED;
 
-    for (; port_countdown != -1; port_countdown--)
+    for (; port_index != -1; port_index--)
     {
-        current_port = &controller_state->ports[port_countdown];
+        current_port = &controller_state->ports[port_index];
         actuator_control = current_port->actuator_control.value;
         current_port->legacy_vibration_device_id = legacy_vibration_device_id;
         current_port->actuator_values[2] = 0;
@@ -72,16 +72,16 @@ void initialize_controllers(s8 enable_actuators)
     controller_state->pending_sample_count = 0;
     controller_state->sample_unavailable = 0;
 
+    /* PadStartCom takes no arguments; the original call site leaves the device type in $a0. */
     PadStartCom(disconnected_device_type);
     do
     {
         VSync(0);
         controller_poll();
         all_ports_ready = 1;
-        status_port_countdown = all_ports_ready;
-        for (; status_port_countdown != -1; status_port_countdown--)
+        for (status_index = CONTROLLER_PORT_COUNT - 1; status_index != -1; status_index--)
         {
-            status_port = &controller_state->ports[status_port_countdown];
+            status_port = &controller_state->ports[status_index];
             actuator_status = status_port->actuator_control.value;
             if ((!CONTROLLER_IS_DISCONNECTED(actuator_status)) && (CONTROLLER_ACTUATOR_SETUP_STATE(actuator_status) != CONTROLLER_ACTUATOR_SETUP_READY))
             {
@@ -111,11 +111,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_current_total
     s32 mode_index;
     u32 unsigned_value;
     s32 remaining_actuators;
-    s32 mode_loop_end;
     s32 multitap_slot;
-    u8 disabled_actuator_index;
-    s32 dualshock_controller_id;
-    s32 fill_loop_end;
     u8 device_type;
     s32 decoded_state;
     u8 initial_repeat_delay;
@@ -124,7 +120,6 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_current_total
     s32 delta;
     s32 new_analog_directions;
     u32 analog_directions;
-    s32 detected_actuator_count;
     ControllerPacketView packet;
     controller_state = CONTROLLER_STATE;
 
@@ -229,11 +224,9 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_current_total
             if (unsigned_value != 0)
             {
                 counter--;
-                dualshock_controller_id = CONTROLLER_PACKET_DUALSHOCK;
-                mode_loop_end = -1;
                 do
                 {
-                    if (PadInfoMode(port->port_id, InfoModeIdTable, mode_index) != dualshock_controller_id)
+                    if (PadInfoMode(port->port_id, InfoModeIdTable, mode_index) != CONTROLLER_PACKET_DUALSHOCK)
                     {
                         mode_index++;
                         counter--;
@@ -248,7 +241,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_current_total
                     }
                     mode_index++;
                     counter--;
-                } while (counter != mode_loop_end);
+                } while (counter != -1);
             }
             /* Fall through to discover and align the controller's actuators. */
 
@@ -256,18 +249,15 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_current_total
             port->actuator_control.value =
                 (port->actuator_control.value & ~CONTROLLER_ACTUATOR_SETUP_MASK) | CONTROLLER_ACTUATOR_SETUP_ACTIVE | CONTROLLER_USE_DEFAULT_ANALOG_CENTER;
             counter = CONTROLLER_ACTUATOR_ALIGNMENT_COUNT - 1;
-            disabled_actuator_index = CONTROLLER_ACTUATOR_UNMAPPED;
-            fill_loop_end = -1;
-            while (counter != fill_loop_end)
+            while (counter != -1)
             {
-                port->actuator_alignment[counter] = disabled_actuator_index;
+                port->actuator_alignment[counter] = CONTROLLER_ACTUATOR_UNMAPPED;
                 counter--;
             }
 
             mode_index = 0;
             remaining_actuators = PadInfoAct(port->port_id, -1, mode_index);
-            detected_actuator_count = remaining_actuators;
-            port->actuator_count = detected_actuator_count;
+            port->actuator_count = remaining_actuators;
             PadSetAct(port->port_id, &port->actuator_values[0], remaining_actuators);
             counter = mode_index;
             remaining_actuators--;

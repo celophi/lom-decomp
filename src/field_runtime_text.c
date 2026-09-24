@@ -2,29 +2,13 @@
 #include "sdk/strings.h"
 #include "sdk/memory.h"
 
-#define DIGIT_TO_ASCII(d) ((d) + 0x30)
-
-typedef struct FieldGlyphPrimitive
-{
-    u32 tag;
-    u32 color_code;
-    u32 position;
-    u32 texcoord_clut;
-    u32 size;
-} FieldGlyphPrimitive;
-
-typedef struct FieldOrderingTableEntry
-{
-    u8 pad[0x10];
-    u32 tag;
-} FieldOrderingTableEntry;
+#define DIGIT_TO_ASCII(d) ((d) + '0')
+#define HEX_DIGIT_TABLE_SIZE 17
+#define FIELD_GLYPH_ADVANCE 8
 
 extern s32 g_text_cursor_x;
 extern s32 g_text_cursor_y;
-extern u8 g_hex_digit_table[17];
-extern FieldGlyphPrimitive *g_field_primitive_cursor;
-extern FieldOrderingTableEntry *g_field_current_render_half;
-extern s32 g_text_clut_base;
+extern u8 g_hex_digit_table[HEX_DIGIT_TABLE_SIZE];
 
 void field_draw_glyph(s32 character, s32 ot_depth, s32 clut_offset);
 
@@ -39,24 +23,15 @@ void field_draw_glyph(s32 character, s32 ot_depth, s32 clut_offset);
  */
 void field_draw_string(u8* str, s32 x, s32 y, s32 ot_depth, s32 clut_offset)
 {
-    u8* cursor;
-    u8* end;
     s32 length;
-    s32 depth;
+    s32 i;
 
     g_text_cursor_x = x;
     g_text_cursor_y = y;
-    depth = ot_depth;
     length = strlen((const char*)str);
-    if (length > 0)
+    for (i = 0; i < length; i++)
     {
-        cursor = str;
-        end = (u8*)(length + (s32)cursor);
-        do
-        {
-            u8 character = *cursor++;
-            field_draw_glyph(character, depth, clut_offset);
-        } while ((s32)cursor < (s32)end);
+        field_draw_glyph(str[i], ot_depth, clut_offset);
     }
 }
 
@@ -73,13 +48,14 @@ void field_draw_string(u8* str, s32 x, s32 y, s32 ot_depth, s32 clut_offset)
 void field_draw_uint2(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut_offset)
 {
     s32 digit;
-    int tens_base;
+    s32 tens_value;
+
     g_text_cursor_x = x;
     g_text_cursor_y = y;
     digit = value / 10;
-    tens_base = digit * 10;
+    tens_value = digit * 10;
     field_draw_glyph(DIGIT_TO_ASCII(digit), ot_depth, clut_offset);
-    digit = value - tens_base;
+    digit = value - tens_value;
     field_draw_glyph(DIGIT_TO_ASCII(digit), ot_depth, clut_offset);
 }
 
@@ -96,50 +72,44 @@ void field_draw_uint2(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut_offset)
  */
 void field_draw_uint3(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut_offset)
 {
-    s32 remaining = value;
-    s32 still_blanking = 1;
-    s32 unused_codegen_temp;
-    s32 quotient;
-    s32 digit_base;
+    s32 blanking;
     s32 digit;
-    s32 sign_copy = remaining >> 31;
-    digit = remaining / 100;
+    s32 digit_value;
+
+    blanking = 1;
+    digit = value / 100;
     g_text_cursor_x = x;
     g_text_cursor_y = y;
-    quotient = digit;
-    digit_base = quotient * 100;
-    digit = DIGIT_TO_ASCII(quotient);
+    digit_value = digit * 100;
+    digit = DIGIT_TO_ASCII(digit);
     if (digit == DIGIT_TO_ASCII(0))
     {
-        g_text_cursor_x = x + 8;
+        g_text_cursor_x = x + FIELD_GLYPH_ADVANCE;
     }
     else
     {
         field_draw_glyph(digit, ot_depth, clut_offset);
-        still_blanking = 0;
+        blanking = 0;
     }
 
-    remaining -= digit_base;
-    quotient = remaining >> 31;
-    sign_copy = quotient;
-    quotient = (digit = remaining / 10);
-    digit_base = quotient * 10;
-    digit = DIGIT_TO_ASCII(quotient);
-
-    if (still_blanking == 0)
+    value -= digit_value;
+    digit = value / 10;
+    digit_value = digit * 10;
+    digit = DIGIT_TO_ASCII(digit);
+    if (blanking == 0)
     {
         field_draw_glyph(digit, ot_depth, clut_offset);
     }
     else if (digit == DIGIT_TO_ASCII(0))
     {
-        g_text_cursor_x += 8;
+        g_text_cursor_x += FIELD_GLYPH_ADVANCE;
     }
     else
     {
         field_draw_glyph(digit, ot_depth, clut_offset);
     }
 
-    field_draw_glyph(DIGIT_TO_ASCII(remaining - digit_base), ot_depth, clut_offset);
+    field_draw_glyph(DIGIT_TO_ASCII(value - digit_value), ot_depth, clut_offset);
 }
 
 /**
@@ -153,24 +123,23 @@ void field_draw_uint3(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut_offset)
  */
 void field_draw_hex_byte_clamped(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut_offset)
 {
-    u8 digit_table[17];
-    s32 clamped_value;
-    u32 masked_value;
-    u32 high_nibble_base;
+    u8 digit_table[HEX_DIGIT_TABLE_SIZE];
+    s32 clamped;
     u32 high_nibble;
-    clamped_value = value;
-    memcpy(digit_table, g_hex_digit_table, 17);
+    u32 high_value;
+
+    clamped = value;
+    memcpy(digit_table, g_hex_digit_table, sizeof(digit_table));
     g_text_cursor_x = x;
     g_text_cursor_y = y;
-    if (((u32)(clamped_value & 0xFFFF)) >= 0x100)
+    if ((clamped & 0xFFFFU) > 0xFF)
     {
-        clamped_value = 0xFF;
+        clamped = 0xFF;
     }
-    masked_value = (u32)(clamped_value & 0xFFFF);
-    high_nibble = masked_value >> 4;
-    high_nibble_base = high_nibble << 4;
+    high_nibble = (clamped & 0xFFFFU) >> 4;
+    high_value = high_nibble << 4;
     field_draw_glyph(digit_table[high_nibble], ot_depth, clut_offset);
-    field_draw_glyph(digit_table[(unsigned short)((u32)((clamped_value - ((s32)high_nibble_base)) & 0xFFFF))], ot_depth, clut_offset);
+    field_draw_glyph(digit_table[(u16)(clamped - high_value)], ot_depth, clut_offset);
 }
 
 /**
@@ -184,21 +153,15 @@ void field_draw_hex_byte_clamped(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut
  */
 void field_draw_hex_word(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut_offset)
 {
-    /* local copy (stack area sp+0x10 to sp+0x20) */
-    u8 digit_table[17];
-    u32 masked_value;
+    u8 digit_table[HEX_DIGIT_TABLE_SIZE];
+    u32 word;
 
-    /* Copy the unaligned data using memcpy (compiles to efficient byte loop) */
-    memcpy(digit_table, g_hex_digit_table, 17);
-
-    /* match assembly order */
+    memcpy(digit_table, g_hex_digit_table, sizeof(digit_table));
     g_text_cursor_x = x;
-    masked_value = (u32)(value & 0xFFFF);
     g_text_cursor_y = y;
-
-    /* Four calls using the four nibbles of the 16-bit value */
-    field_draw_glyph(digit_table[(masked_value >> 12) & 0xF], ot_depth, clut_offset);
-    field_draw_glyph(digit_table[(masked_value >> 8) & 0xF], ot_depth, clut_offset);
-    field_draw_glyph(digit_table[(masked_value >> 4) & 0xF], ot_depth, clut_offset);
-    field_draw_glyph(digit_table[masked_value & 0xF], ot_depth, clut_offset);
+    word = value & 0xFFFF;
+    field_draw_glyph(digit_table[(word >> 12) & 0xF], ot_depth, clut_offset);
+    field_draw_glyph(digit_table[(word >> 8) & 0xF], ot_depth, clut_offset);
+    field_draw_glyph(digit_table[(word >> 4) & 0xF], ot_depth, clut_offset);
+    field_draw_glyph(digit_table[word & 0xF], ot_depth, clut_offset);
 }

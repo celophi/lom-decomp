@@ -42,51 +42,35 @@ static TransitionFrame g_transition_frames[2];
  */
 void screen_transition(s32 skip_fade)
 {
-    TransitionFrame* frames;
     TransitionFrame* current;
-    TransitionFrame* next;
     RECT rect;
-    RECT* front_rect;
-    RECT* back_rect;
     s32 frame;
     TILE* tile;
     void* packet;
-    DISPENV* display;
-    u_long* ot;
 
     DrawSync(0);
     VSync(0);
 
     if (skip_fade == 0)
     {
-        rect.y = SCREEN_HEIGHT;
-        rect.w = SCREEN_WIDTH;
-        rect.x = 0;
-        rect.h = VRAM_DRAW_HEIGHT;
+        setRECT(&rect, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
         MoveImage(&rect, 0, VRAM_BACK_DRAW_Y);
         DrawSync(0);
     }
 
-    front_rect = &g_transition_frames[0].display_rect;
-    display = &g_transition_frames[0].display;
-    front_rect->x = 0;
-    back_rect = &g_transition_frames[1].display_rect;
-    front_rect->y = 0;
-    setWH(front_rect, SCREEN_WIDTH, SCREEN_HEIGHT);
-    setRECT(back_rect, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    setRECT(&g_transition_frames[0].display_rect, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    setRECT(&g_transition_frames[1].display_rect, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    SetDefDispEnv(display, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&g_transition_frames[0].display, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     SetDefDispEnv(&g_transition_frames[1].display, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
     SetDefDrawEnv(&g_transition_frames[0].draw, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
     SetDefDrawEnv(&g_transition_frames[1].draw, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
 
-    ot = g_transition_frames[1].ot;
-    frames = g_transition_frames;
-    frames[1].draw.dtd = 0;
-    frames[0].draw.dtd = 0;
-    ClearOTagR(ot, TRANSITION_OT_SIZE);
-    PutDispEnv(display);
-    current = frames;
+    g_transition_frames[1].draw.dtd = 0;
+    g_transition_frames[0].draw.dtd = 0;
+    ClearOTagR(g_transition_frames[1].ot, TRANSITION_OT_SIZE);
+    PutDispEnv(&g_transition_frames[0].display);
+    current = g_transition_frames;
 
     for (frame = 0; frame < TRANSITION_FRAME_COUNT; frame++)
     {
@@ -113,12 +97,7 @@ void screen_transition(s32 skip_fade)
 
         DrawSync(0);
         VSync(0);
-        next = &g_transition_frames[0];
-        if (current == &g_transition_frames[0])
-        {
-            next = &current[1];
-        }
-        current = next;
+        current = (current == &g_transition_frames[0]) ? &g_transition_frames[1] : &g_transition_frames[0];
 
         PutDispEnv(&current->display);
         PutDrawEnv(&current->draw);

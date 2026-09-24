@@ -39,7 +39,7 @@
 #define CD_SECTOR_HEADER_WORDS 3
 #define CD_SECTOR_POSITION_MASK 0x00FFFFFF
 #define CD_DISC_VALIDATION_WORDS 8
-#define CD_IS_MULTIBYTE_ID_CHAR(character) (((u8)((character) + 0x80) < 0x20U) || ((u8)((character) + 0x20) < 0x10U))
+#define CD_IS_MULTIBYTE_ID_CHAR(character) (((character) >= 0x80 && (character) <= 0x9F) || ((character) >= 0xE0 && (character) <= 0xEF))
 #define CD_DATA_SECTOR_WORDS 0x200
 #define CD_BYTES_TO_WORDS(size) (((size) + (CD_BYTES_PER_WORD - 1)) >> CD_BYTES_PER_WORD_SHIFT)
 #define CD_RECOVERY_SECTOR_RETRY_LIMIT 17
@@ -47,6 +47,13 @@
 #define CD_IDLE_STATUS_RETRY_LIMIT 11
 #define CD_INIT_COMMAND_RETRY_FLAG 0x80
 #define CD_INIT_COMMAND_MASK 0x7F
+
+#define CD_SYSTEM_ADDRESS 0x801ED800
+#define CD_SYSTEM (*(struct CdSystem*)CD_SYSTEM_ADDRESS)
+/* Volatile view for the two sites that publish an intermediate status word before the final one. */
+#define CD_SYSTEM_V (*(volatile struct CdSystem*)CD_SYSTEM_ADDRESS)
+#define CD_RESOURCE_ENTRIES ((CdResourceEntry*)0x801ED998)
+#define CD_SCRATCHPAD_BUFFER ((CdResourceEntry*)0x1F800000)
 
 /** @brief A CD position as MSF fields, a packed word, or command bytes. */
 typedef union
@@ -67,7 +74,7 @@ typedef struct CdResourceEntry
 typedef struct CdCommandQueueItem
 {
     u8 command;
-    u8 padding;
+    u8 _pad01;
     u16 resource_index;
     CdResourceEntry* entry;
     void* dst_buffer;
@@ -204,28 +211,32 @@ typedef enum CdControllerCommand
     CD_COMMAND_GET_ID = 0x1A,
 } CdControllerCommand;
 
-/** @brief CD command queue, transfer state, and recovery state. */
+/**
+ * @brief CD command queue, transfer state, and recovery state.
+ * @note sync_complete, current_command and init_command are shared with the libcd
+ *       sync/ready callbacks, which run in interrupt context.
+ */
 typedef struct CdSystem
 {
     CdStatusFlags status_flags;
     u8 audio_enabled;
     u8 playback_state;
     u8 pending_queue_count;
-    u8 padding_0x7;
+    u8 _pad07;
     u16 current_resource_index;
-    u16 padding_0x0a;
+    u16 _pad0A;
     s32 current_data_size;
     s32 target_data_size;
-    u8 sync_complete;
+    volatile u8 sync_complete;
     u8 init_state;
-    u8 current_command;
-    u8 init_command;
+    volatile u8 current_command;
+    volatile u8 init_command;
     u8 retry_count;
     u8 retry_counter;
     u8 last_command;
-    u8 padding_0x1b;
+    u8 _pad1B;
     u16 resource_index;
-    u16 padding_0x1e;
+    u16 _pad1E;
     void* dst_buffer;
     CdCommandCallback callback;
     u32 read_remaining_bytes;
@@ -243,7 +254,7 @@ typedef struct CdSystem
     CdlLOCRaw recovery_read_position;
     u8 status_byte;
     u8 mode_flags;
-    u8 unknown_0x162[6];
+    u8 unk162[6];
     CdlCB previous_sync_callback;
     CdlCB previous_ready_callback;
     u8 disc_validation_id[32];
@@ -264,12 +275,6 @@ extern u8 g_cd_pending_queue_count;
 extern CdSystem g_cd_system;
 extern const u8 g_disc_validation_id[21];
 
-#define CD_SYSTEM_ADDRESS 0x801ED800
-#define CD_SYSTEM (*(struct CdSystem*)CD_SYSTEM_ADDRESS)
-#define CD_SYSTEM_V (*(volatile CdSystem*)CD_SYSTEM_ADDRESS)
-#define g_default_cd_resource CD_SYSTEM.default_cd_resource
-#define CD_RESOURCE_ENTRIES ((CdResourceEntry*)0x801ED998)
-#define CD_SCRATCHPAD_BUFFER ((CdResourceEntry*)0x1F800000)
 s32 cdrom_recover(void);
 void cdrom_complete_command(u8 intr, u8* result);
 void cdrom_handle_recovery_sync(u8 intr, u8* result);
@@ -292,8 +297,6 @@ s32 cdrom_enter_recovery_mode(void);
 void cdrom_init(void)
 {
     s32 queue_count;
-    CdSystem* queue_system;
-    CdResourceEntry* scratchpad_addr;
     CdStatusFlags* status_flags;
     s32 cd_result;
 
@@ -306,11 +309,8 @@ void cdrom_init(void)
     g_cd_sync_callback_result = CdSyncCallback(NULL);
     g_cd_ready_callback_result = CdReadyCallback(NULL);
 
-    queue_system = &CD_SYSTEM;
-    status_flags = &queue_system->status_flags;
+    status_flags = &CD_SYSTEM.status_flags;
 
-    queue_count = CD_COMMAND_QUEUE_SIZE - 1;
-    scratchpad_addr = CD_SCRATCHPAD_BUFFER;
 
     CD_SYSTEM.resource_index = CD_RESOURCE_INDEX_INVALID;
 
@@ -346,13 +346,13 @@ void cdrom_init(void)
     status_flags->bytes.data_ready_pending = 0;
     status_flags->bytes.retry_exhausted = 0;
 
-    for (; queue_count != -1; queue_count--)
+    for (queue_count = CD_COMMAND_QUEUE_SIZE - 1; queue_count != -1; queue_count--)
     {
-        queue_system->command_queue.items[queue_count].command = 0;
-        queue_system->command_queue.items[queue_count].resource_index = 0;
-        queue_system->command_queue.items[queue_count].dst_buffer = scratchpad_addr;
-        queue_system->command_queue.items[queue_count].entry = scratchpad_addr;
-        queue_system->command_queue.items[queue_count].callback = 0;
+        CD_SYSTEM.command_queue.items[queue_count].command = 0;
+        CD_SYSTEM.command_queue.items[queue_count].resource_index = 0;
+        CD_SYSTEM.command_queue.items[queue_count].dst_buffer = CD_SCRATCHPAD_BUFFER;
+        CD_SYSTEM.command_queue.items[queue_count].entry = CD_SCRATCHPAD_BUFFER;
+        CD_SYSTEM.command_queue.items[queue_count].callback = 0;
     }
 
     CD_SYSTEM.set_mode_param_blocking[0] = (CdlModeSpeed | CdlModeSize1);
@@ -457,13 +457,10 @@ s32 cdrom_stream(s32 resource_index, u8* destination)
     s32 overflow_size;
     s32 timestamp;
     s32 remaining_size;
-    s32* relocation_src;
+    CdStreamCopyCursor relocation_src;
     u8* decompress_end;
-    CdStreamState* stream_state;
-    CdStreamState* active_stream;
     u8* destination_start;
     s32 alignment;
-    s32 sentinel;
 
     while (cdrom_process_state() != 0)
     {
@@ -471,39 +468,36 @@ s32 cdrom_stream(s32 resource_index, u8* destination)
     }
 
     destination_start = destination;
-    stream_state = &CD_STREAM_STATE;
 
-    stream_state->deferred_sectors = 0;
-    stream_state->data_ready = 0U;
-    stream_state->input_complete = 0U;
-    stream_state->bytes_consumed = 0;
+    CD_STREAM_STATE.deferred_sectors = 0;
+    CD_STREAM_STATE.data_ready = FALSE;
+    CD_STREAM_STATE.input_complete = FALSE;
+    CD_STREAM_STATE.bytes_consumed = 0;
 
     remaining_size = cdrom_queue_command(CdlReadN, resource_index, NULL, &cdrom_handle_stream_data) - 1;
     timestamp = VSync(-1);
-
-    active_stream = &CD_STREAM_STATE;
 
     while (TRUE)
     {
         if (VSync(-1) < (timestamp + CD_STREAM_TIMEOUT_FRAMES))
         {
-            if (active_stream->data_ready != 1)
+            if (CD_STREAM_STATE.data_ready != 1)
             {
                 continue;
             }
 
             do
             {
-                bytes_buffered = active_stream->bytes_buffered;
+                bytes_buffered = CD_STREAM_STATE.bytes_buffered;
 
                 // Retain a guard region until the final input chunk is buffered.
                 if (bytes_buffered < remaining_size)
                 {
-                    decompress_end = (active_stream->read_ptr + bytes_buffered) - CD_STREAM_DECOMPRESS_GUARD_SIZE;
+                    decompress_end = (CD_STREAM_STATE.read_ptr + bytes_buffered) - CD_STREAM_DECOMPRESS_GUARD_SIZE;
                 }
                 else
                 {
-                    decompress_end = active_stream->read_ptr + remaining_size;
+                    decompress_end = CD_STREAM_STATE.read_ptr + remaining_size;
                 }
 
                 if (cdrom_decompress_data(&CD_STREAM_STATE.write_ptr, &destination, decompress_end, CD_DECOMPRESS_UNBOUNDED_END) == 0)
@@ -512,56 +506,50 @@ s32 cdrom_stream(s32 resource_index, u8* destination)
                 }
             } while (bytes_buffered != CD_STREAM_STATE.bytes_buffered);
 
-            bytes_consumed = active_stream->write_ptr - active_stream->read_ptr;
-            active_stream->bytes_consumed = bytes_consumed;
+            bytes_consumed = CD_STREAM_STATE.write_ptr - CD_STREAM_STATE.read_ptr;
+            CD_STREAM_STATE.bytes_consumed = bytes_consumed;
             cdrom_clear_data_ready(&CD_STREAM_STATE.data_ready);
             remaining_size -= bytes_consumed;
 
-            if (active_stream->input_complete != 1)
+            if (CD_STREAM_STATE.input_complete != 1)
             {
                 timestamp = VSync(-1);
                 continue;
             }
 
-            if (active_stream->wrap_overflow != 0)
+            if (CD_STREAM_STATE.wrap_overflow != 0)
             {
-                overflow_size = active_stream->wrap_overflow;
-                unprocessed_bytes = active_stream->bytes_buffered - bytes_consumed;
+                overflow_size = CD_STREAM_STATE.wrap_overflow;
+                unprocessed_bytes = CD_STREAM_STATE.bytes_buffered - bytes_consumed;
                 alignment = unprocessed_bytes & CD_STREAM_COPY_WORD_MASK;
                 relocation_dst.bytes = CD_STREAM_WRAP_START - unprocessed_bytes;
-                previous_read_ptr = active_stream->read_ptr;
+                previous_read_ptr = CD_STREAM_STATE.read_ptr;
 
                 copy_size = CD_STREAM_COPY_WORD_SIZE - alignment;
-                active_stream->write_ptr = relocation_dst.bytes;
-                active_stream->read_ptr = relocation_dst.bytes;
+                CD_STREAM_STATE.write_ptr = relocation_dst.bytes;
+                CD_STREAM_STATE.read_ptr = relocation_dst.bytes;
                 copy_size &= CD_STREAM_COPY_WORD_MASK;
                 alignment = unprocessed_bytes + CD_STREAM_COPY_WORD_MASK;
 
                 relocation_dst.bytes -= copy_size;
-                relocation_src = (s32*)((previous_read_ptr + bytes_consumed) - copy_size);
+                relocation_src.bytes = (previous_read_ptr + bytes_consumed) - copy_size;
 
-                active_stream->bytes_buffered = overflow_size + unprocessed_bytes;
+                CD_STREAM_STATE.bytes_buffered = overflow_size + unprocessed_bytes;
                 unprocessed_bytes = alignment / CD_STREAM_COPY_WORD_SIZE;
-                unprocessed_bytes--;
-
-                if (unprocessed_bytes != -1)
+                for (unprocessed_bytes--; unprocessed_bytes != -1; unprocessed_bytes--)
                 {
-                    sentinel = -1;
-                    while (unprocessed_bytes != sentinel)
-                    {
-                        *relocation_dst.words = *relocation_src++;
-                        relocation_dst.bytes += 4;
-                        unprocessed_bytes--;
-                    }
+                    *relocation_dst.words = *relocation_src.words;
+                    relocation_src.bytes += CD_STREAM_COPY_WORD_SIZE;
+                    relocation_dst.bytes += CD_STREAM_COPY_WORD_SIZE;
                 }
             }
             else
             {
-                active_stream->read_ptr += bytes_consumed;
-                active_stream->bytes_buffered -= bytes_consumed;
+                CD_STREAM_STATE.read_ptr += bytes_consumed;
+                CD_STREAM_STATE.bytes_buffered -= bytes_consumed;
             }
 
-            active_stream->data_ready = TRUE;
+            CD_STREAM_STATE.data_ready = TRUE;
 
             timestamp = VSync(-1);
             continue;
@@ -610,16 +598,14 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
     CdStreamCopyCursor relocation_dst;
     u8* previous_read_ptr;
     u32 overflow_size;
-    volatile CdStreamState* scratchpad;
     CdStreamState* stream_state;
     s32 guard_sentinel;
     u8** destination_ref;
     u8** staging_write_ref;
 
-    scratchpad = &CD_STREAM_STATE;
-    scratchpad->deferred_sectors = 0;
-    scratchpad->data_ready = FALSE;
-    scratchpad->input_complete = FALSE;
+    CD_STREAM_STATE.deferred_sectors = 0;
+    CD_STREAM_STATE.data_ready = FALSE;
+    CD_STREAM_STATE.input_complete = FALSE;
 
     remaining_size = cdrom_queue_command(CdlReadN, resource_index, NULL, cdrom_handle_stream_data) - 1;
 
@@ -769,8 +755,7 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
 
                     if (staging_bytes_produced > 0 || decompress_result != 0)
                     {
-                        loop_sentinel = chunk_index++;
-                        chunk_done(loop_sentinel);
+                        chunk_done(chunk_index++);
                         destination = get_buffer(total_bytes_delivered, &chunk_bytes_remaining);
                     }
                 }
@@ -838,14 +823,13 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
 
                 if (staging_bytes_produced != guard_sentinel)
                 {
-                    s32 relocation_sentinel = -1;
                     do
                     {
-                        *relocation_dst.words = *(s32*)previous_read_ptr;
+                        *relocation_dst.words = *(u32*)previous_read_ptr;
                         previous_read_ptr += CD_STREAM_COPY_WORD_SIZE;
                         relocation_dst.bytes += CD_STREAM_COPY_WORD_SIZE;
                         staging_bytes_produced--;
-                    } while (staging_bytes_produced != relocation_sentinel);
+                    } while (staging_bytes_produced != -1);
                 }
             }
             else
@@ -892,7 +876,7 @@ s32 cdrom_queue_command(u8 command, u16 resource_index, void* dst_buffer, CdComm
 
     if (resource_index == CD_RESOURCE_INDEX_DEFAULT)
     {
-        resource_entry = &g_default_cd_resource;
+        resource_entry = &CD_SYSTEM.default_cd_resource;
     }
     else
     {
@@ -900,7 +884,7 @@ s32 cdrom_queue_command(u8 command, u16 resource_index, void* dst_buffer, CdComm
     }
 
     // Suppress only consecutive duplicate commands while the drive is busy.
-    if ((CD_SYSTEM_V.current_command == 0 && CD_SYSTEM_V.init_command == 0) || (CD_SYSTEM.last_command != command) ||
+    if ((CD_SYSTEM.current_command == 0 && CD_SYSTEM.init_command == 0) || (CD_SYSTEM.last_command != command) ||
         (CD_SYSTEM.resource_index != resource_index) || (CD_SYSTEM.dst_buffer != dst_buffer) || (CD_SYSTEM.callback != callback))
     {
         if ((resource_entry->location.raw == 0) || (resource_entry->data_size == 0))
@@ -1119,7 +1103,7 @@ u32 cdrom_process_state(void)
                     CD_SYSTEM.set_mode_param_async[3] = 0;
                     CdSyncCallback(cdrom_handle_recovery_sync);
                     CdReadyCallback(NULL);
-                    CD_SYSTEM_V.init_command = CD_RECOVERY_COMMAND_SET_MODE;
+                    CD_SYSTEM.init_command = CD_RECOVERY_COMMAND_SET_MODE;
                     CdControlF(CdlSetmode, CD_SYSTEM.set_mode_param_async);
                     CD_SYSTEM.vsync_timestamp -= CD_STATUS_POLL_FRAMES - CD_SET_MODE_DELAY_FRAMES;
                     break;
@@ -1136,14 +1120,14 @@ u32 cdrom_process_state(void)
                     break;
 
                 case CD_RECOVERY_STATE_WAIT_FOR_READ:
-                    if (CD_SYSTEM_V.sync_complete == 1)
+                    if (CD_SYSTEM.sync_complete == 1)
                     {
                         CD_SYSTEM.vsync_timestamp = VSync(-1);
-                        CD_SYSTEM_V.sync_complete = 0;
+                        CD_SYSTEM.sync_complete = 0;
                     }
                     else if (VSync(-1) >= (CD_SYSTEM.vsync_timestamp + CD_RECOVERY_READ_TIMEOUT_FRAMES))
                     {
-                        recovery_command = CD_SYSTEM_V.init_command;
+                        recovery_command = CD_SYSTEM.init_command;
 
                         switch (recovery_command)
                         {
@@ -1191,7 +1175,7 @@ u32 cdrom_process_state(void)
                     while (CdControlB(CdlPause, NULL, NULL) == 0)
                     {
                     }
-                    CD_SYSTEM_V.init_command = 0;
+                    CD_SYSTEM.init_command = 0;
                 }
                 CD_SYSTEM.init_state = CD_RECOVERY_STATE_POLL_STATUS;
                 status_flags = (CD_SYSTEM.status_flags.word | CD_STATUS_SYNC_ERROR) & ~CD_STATUS_INVALID_DISC;
@@ -1209,7 +1193,7 @@ u32 cdrom_process_state(void)
             // Resample until no completion arrives while the queue state is read.
             while (TRUE)
             {
-                if (CD_SYSTEM_V.sync_complete == 1)
+                if (CD_SYSTEM.sync_complete == 1)
                 {
                     saw_sync_completion = 1;
                     CD_SYSTEM.sync_complete = 0;
@@ -1237,7 +1221,7 @@ u32 cdrom_process_state(void)
                 {
                     if (CD_SYSTEM.init_command == 0)
                     {
-                        CD_SYSTEM_V.current_command = CdlNop;
+                        CD_SYSTEM.current_command = CdlNop;
 
                         if (CD_SYSTEM.transfer_callback != NULL)
                         {
@@ -1372,7 +1356,7 @@ s32 cdrom_recover(void)
             CdSyncCallback(cdrom_handle_recovery_sync);
 
             CdReadyCallback(NULL);
-            CD_SYSTEM_V.init_command = CD_RECONFIGURE_STEP_SET_FILTER;
+            CD_SYSTEM.init_command = CD_RECONFIGURE_STEP_SET_FILTER;
             CdControlF(CdlSetmode, CD_SYSTEM.set_mode_param_async);
             timestamp = VSync(-1);
             CD_SYSTEM.vsync_timestamp = timestamp + CD_SET_MODE_DELAY_FRAMES;
@@ -1394,7 +1378,7 @@ s32 cdrom_recover(void)
         if (CD_SYSTEM.sync_complete == 1)
         {
             CD_SYSTEM.vsync_timestamp = VSync(-1);
-            CD_SYSTEM_V.sync_complete = 0;
+            CD_SYSTEM.sync_complete = 0;
             break;
         }
 
@@ -1415,7 +1399,7 @@ s32 cdrom_recover(void)
             filter_params[0] = CD_RECOVERY_FILTER_FILE;
             filter_params[1] = CD_RECOVERY_FILTER_CHANNEL;
             CdControlF(CdlSetfilter, filter_params);
-            CD_SYSTEM_V.init_command = CD_RECONFIGURE_STEP_SET_FILTER;
+            CD_SYSTEM.init_command = CD_RECONFIGURE_STEP_SET_FILTER;
             break;
 
         case CD_RECONFIGURE_STEP_DEMUTE:
@@ -1441,7 +1425,7 @@ s32 cdrom_recover(void)
  */
 void cdrom_verify_recovery(void)
 {
-    volatile CdSystem* cd_system = &CD_SYSTEM;
+    CdSystem* cd_system = &CD_SYSTEM;
 
     if (g_cd_data_ready_pending != CD_READY_CALLBACK_PENDING)
     {
@@ -1476,7 +1460,7 @@ void cdrom_verify_recovery(void)
             {
                 CD_SYSTEM.playback_state = FALSE;
             }
-            CD_SYSTEM_V.current_command = CdlNop;
+            CD_SYSTEM.current_command = CdlNop;
             CdControlF(CdlNop, NULL);
         }
     }
@@ -1501,7 +1485,7 @@ void cdrom_complete_command(u8 intr, u8* result)
     u8 next_command;
     u32 write_index;
     u32 read_index;
-    volatile CdSystem* cd_system;
+    CdSystem* cd_system;
     CdSystem* queue_system;
 
     CD_SYSTEM.sync_complete = TRUE;
@@ -1514,7 +1498,7 @@ void cdrom_complete_command(u8 intr, u8* result)
 
     if (intr == CdlComplete)
     {
-        switch (CD_SYSTEM_V.current_command)
+        switch (CD_SYSTEM.current_command)
         {
         default:
         case CdlNop:
@@ -1541,7 +1525,7 @@ void cdrom_complete_command(u8 intr, u8* result)
         case CD_COMMAND_UNUSED_18:
         case CD_COMMAND_TEST:
         case CD_COMMAND_GET_ID:
-            next_command = CD_SYSTEM_V.command_queue.items[CD_SYSTEM_V.queue_read_index].command;
+            next_command = CD_SYSTEM.command_queue.items[CD_SYSTEM.queue_read_index].command;
 
             if (next_command == CdlNop)
             {
@@ -1578,8 +1562,8 @@ void cdrom_complete_command(u8 intr, u8* result)
             if (read_index == queue_system->queue_write_index)
             {
                 CdSyncCallback(NULL);
-                CD_SYSTEM_V.current_command = 0;
-                CD_SYSTEM_V.init_command = 0;
+                CD_SYSTEM.current_command = 0;
+                CD_SYSTEM.init_command = 0;
                 queue_system->retry_counter = 0;
                 queue_system->status_flags.word &= ~CD_STATUS_COMMAND_ACTIVE;
                 queue_system->vsync_timestamp = VSync(-1);
@@ -1635,34 +1619,25 @@ void cdrom_handle_recovery_sync(u8 intr, u8* result)
     u8 filter_params[2];
     u8 next_command;
     MovieState* movie_state;
-    CdSystem* cd_system;
 
-    CD_SYSTEM_V.sync_complete = TRUE;
+    CD_SYSTEM.sync_complete = TRUE;
 
-    if (((s8)CD_SYSTEM_V.init_command < 0) && !(CD_SYSTEM.status_flags.word & CD_STATUS_RECOVERY_PENDING))
+    if (((s8)CD_SYSTEM.init_command < 0) && !(CD_SYSTEM.status_flags.word & CD_STATUS_RECOVERY_PENDING) && (*result & CdlStatShellOpen))
     {
-        cd_system = &CD_SYSTEM;
-        if (*result & CdlStatShellOpen)
-        {
-            cdrom_handle_sync_error();
-            return;
-        }
-    }
-    else
-    {
-        cd_system = &CD_SYSTEM;
+        cdrom_handle_sync_error();
+        return;
     }
 
-    if (((cd_system->init_command & CD_INIT_COMMAND_MASK) == CD_RECOVERY_COMMAND_READ_DISC_ID) && (cd_system->status_byte & CdlStatError))
+    if (((CD_SYSTEM.init_command & CD_INIT_COMMAND_MASK) == CD_RECOVERY_COMMAND_READ_DISC_ID) && (CD_SYSTEM.status_byte & CdlStatError))
     {
-        if (cd_system->mode_flags & CdlModeRT)
+        if (CD_SYSTEM.mode_flags & CdlModeRT)
         {
             CdSyncCallback(NULL);
             CdReadyCallback(NULL);
-            cd_system->init_state = CD_INIT_STATE_ERROR_PAUSE;
-            cd_system->init_command = 0;
-            cd_system->status_flags.word &= ~CD_STATUS_COMMAND_ACTIVE;
-            cd_system->status_flags.word &= ~CD_STATUS_NO_DISC;
+            CD_SYSTEM.init_state = CD_INIT_STATE_ERROR_PAUSE;
+            CD_SYSTEM.init_command = 0;
+            CD_SYSTEM.status_flags.word &= ~CD_STATUS_COMMAND_ACTIVE;
+            CD_SYSTEM.status_flags.word &= ~CD_STATUS_NO_DISC;
         }
     }
 
@@ -1670,11 +1645,11 @@ void cdrom_handle_recovery_sync(u8 intr, u8* result)
     {
         CD_SYSTEM.init_command &= CD_INIT_COMMAND_MASK;
 
-        switch (CD_SYSTEM_V.init_command)
+        switch (CD_SYSTEM.init_command)
         {
         case CD_SYNC_COMMAND_PAUSE:
         case CD_SYNC_COMMAND_RESTORE_MODE:
-            CD_SYSTEM_V.init_command = 0;
+            CD_SYSTEM.init_command = 0;
             if (CD_SYSTEM.queue_read_index != CD_SYSTEM.queue_write_index)
             {
                 CdSyncCallback(cdrom_complete_command);
@@ -1693,40 +1668,40 @@ void cdrom_handle_recovery_sync(u8 intr, u8* result)
             }
             break;
         case CD_SYNC_COMMAND_AUDIO_PAUSE:
-            CD_SYSTEM_V.init_command = CD_SYSTEM.init_command + 1;
+            CD_SYSTEM.init_command++;
             CdControlF(CdlSetmode, CD_SYSTEM.set_mode_param_blocking);
             break;
         case CD_RECONFIGURE_STEP_SET_FILTER:
             CD_SYSTEM.init_state = CD_RECOVERY_STATE_CHECK_DISC;
             CdSyncCallback(NULL);
-            CD_SYSTEM_V.init_command = 0;
+            CD_SYSTEM.init_command = 0;
             break;
         case CD_RECONFIGURE_STEP_DEMUTE:
-            CD_SYSTEM_V.init_command = CD_SYSTEM.init_command + 1;
+            CD_SYSTEM.init_command++;
             CdControlF(CdlDemute, NULL);
             break;
         case CD_RECONFIGURE_STEP_PAUSE:
-            CD_SYSTEM_V.init_command = CD_SYSTEM.init_command + 1;
+            CD_SYSTEM.init_command++;
             CdControlF(CdlPause, NULL);
             break;
         case CD_RECONFIGURE_STEP_COMPLETE:
             CdSyncCallback(NULL);
             CD_SYSTEM.init_state = 0;
-            CD_SYSTEM_V.init_command = 0;
+            CD_SYSTEM.init_command = 0;
             CD_SYSTEM.status_flags.word &= ~CD_STATUS_RECOVERY_PENDING;
             break;
         case CD_RECOVERY_COMMAND_READ_DISC_ID:
             CdSyncCallback(NULL);
-            CD_SYSTEM_V.init_command = 0;
+            CD_SYSTEM.init_command = 0;
             break;
         case CD_RECOVERY_COMMAND_SET_MODE:
         case CD_RECOVERY_COMMAND_RETRY_READ:
             CD_SYSTEM.init_state = CD_RECOVERY_STATE_READ_DISC_ID;
             CdSyncCallback(NULL);
-            CD_SYSTEM_V.init_command = 0;
+            CD_SYSTEM.init_command = 0;
             break;
         case CD_RECOVERY_COMMAND_COMPLETE:
-            CD_SYSTEM_V.init_command = 0;
+            CD_SYSTEM.init_command = 0;
             CD_SYSTEM.init_state = 0;
             CD_SYSTEM.retry_counter = 0;
 
@@ -1767,16 +1742,16 @@ void cdrom_handle_recovery_sync(u8 intr, u8* result)
         g_cd_vsync_timestamp = VSync(-1);
         return;
     }
-    if ((s8)CD_SYSTEM_V.init_command >= 0)
+    if ((s8)CD_SYSTEM.init_command >= 0)
     {
-        CD_SYSTEM_V.init_command |= CD_INIT_COMMAND_RETRY_FLAG;
+        CD_SYSTEM.init_command |= CD_INIT_COMMAND_RETRY_FLAG;
         CdControlF(CdlNop, NULL);
         return;
     }
 
-    CD_SYSTEM_V.init_command &= CD_INIT_COMMAND_MASK;
+    CD_SYSTEM.init_command &= CD_INIT_COMMAND_MASK;
 
-    switch (CD_SYSTEM_V.init_command)
+    switch (CD_SYSTEM.init_command)
     {
     case CD_SYNC_COMMAND_RESTORE_MODE:
         CdControlF(CdlSetmode, CD_SYSTEM.set_mode_param_blocking);
@@ -1784,7 +1759,7 @@ void cdrom_handle_recovery_sync(u8 intr, u8* result)
     case CD_RECONFIGURE_STEP_SET_FILTER:
         CD_SYSTEM.init_state = CD_RECOVERY_STATE_POLL_STATUS;
         CdSyncCallback(NULL);
-        CD_SYSTEM_V.init_command = 0;
+        CD_SYSTEM.init_command = 0;
         return;
     case CD_RECONFIGURE_STEP_DEMUTE:
         filter_params[0] = CD_RECOVERY_FILTER_FILE;
@@ -1804,13 +1779,13 @@ void cdrom_handle_recovery_sync(u8 intr, u8* result)
         return;
     case CD_RECOVERY_COMMAND_RETRY_READ:
         CD_SYSTEM.init_state = CD_RECOVERY_STATE_READ_DISC_ID;
-        CD_SYSTEM_V.init_command = 0;
+        CD_SYSTEM.init_command = 0;
         CdSyncCallback(NULL);
         return;
     case CD_RECOVERY_COMMAND_SET_MODE:
     case CD_RECOVERY_COMMAND_COMPLETE:
         CD_SYSTEM.init_state = CD_RECOVERY_STATE_SET_MODE;
-        CD_SYSTEM_V.init_command = 0;
+        CD_SYSTEM.init_command = 0;
         CdSyncCallback(NULL);
         return;
     default:
@@ -1831,10 +1806,7 @@ void cdrom_handle_ready_intr(u8 intr, u8* result)
     u8 audio_enabled;
     u8 defer_data_ready;
     s32 ready_state;
-    u8 retry_count;
-    u8 audio_retry_count;
     MovieState* movie_state;
-    volatile CdSystem* cd_system;
 
     CD_SYSTEM.sync_complete = TRUE;
     audio_enabled = CD_SYSTEM.audio_enabled;
@@ -1863,9 +1835,7 @@ void cdrom_handle_ready_intr(u8 intr, u8* result)
             }
         }
 
-        retry_count = CD_SYSTEM.retry_count;
-        CD_SYSTEM.retry_count = (u8)(retry_count + 1);
-        if (retry_count < CD_RECOVERY_SECTOR_RETRY_LIMIT)
+        if (CD_SYSTEM.retry_count++ < CD_RECOVERY_SECTOR_RETRY_LIMIT)
         {
             CdControlF(CD_SYSTEM.current_command, CD_SYSTEM.current_location.bytes);
             return;
@@ -1885,8 +1855,7 @@ void cdrom_handle_ready_intr(u8 intr, u8* result)
 
         CdReadyCallback(NULL);
 
-        cd_system = &CD_SYSTEM;
-        cd_system->current_command = CdlNop;
+        CD_SYSTEM.current_command = CdlNop;
         CdControlF(CdlNop, NULL);
         return;
     }
@@ -1905,9 +1874,7 @@ void cdrom_handle_ready_intr(u8 intr, u8* result)
         return;
     }
 
-    audio_retry_count = CD_SYSTEM.retry_count;
-    CD_SYSTEM.retry_count = (u8)(audio_retry_count + 1);
-    if (audio_retry_count >= CD_RECOVERY_SECTOR_RETRY_LIMIT)
+    if (CD_SYSTEM.retry_count++ >= CD_RECOVERY_SECTOR_RETRY_LIMIT)
     {
         CD_SYSTEM.status_flags.bytes.retry_exhausted = TRUE;
         CD_SYSTEM.retry_count = 0;
@@ -1928,9 +1895,7 @@ void cdrom_handle_ready_intr(u8 intr, u8* result)
 void cdrom_process_sector(s32 execution_mode)
 {
     u8* buffer;
-    volatile CdSystem* cd_system;
 
-    cd_system = &CD_SYSTEM;
     CD_SYSTEM.retry_count = 0;
     CD_SYSTEM.status_flags.bytes.retry_exhausted = FALSE;
     CD_SYSTEM.status_flags.bytes.data_ready_pending = FALSE;
@@ -1942,7 +1907,7 @@ void cdrom_process_sector(s32 execution_mode)
             buffer = CD_SYSTEM.transfer_callback(CD_SYSTEM.total_data_size - CD_SYSTEM.read_remaining_bytes, CD_SYSTEM.read_remaining_bytes);
             if (buffer == NULL)
             {
-                CdControlF(cd_system->current_command, CD_SYSTEM.current_location.bytes);
+                CdControlF(CD_SYSTEM.current_command, CD_SYSTEM.current_location.bytes);
                 return;
             }
         }
@@ -1986,10 +1951,9 @@ void cdrom_process_sector(s32 execution_mode)
             {
             }
 
-            cd_system = &CD_SYSTEM;
             CD_SYSTEM.status_flags.word &= ~CD_STATUS_COMMAND_ACTIVE;
-            cd_system->current_command = 0;
-            cd_system->retry_counter = 0;
+            CD_SYSTEM.current_command = 0;
+            CD_SYSTEM.retry_counter = 0;
             if (execution_mode != CD_EXECUTION_MODE_ASYNC)
             {
                 CdControlF(CdlPause, NULL);
@@ -2004,7 +1968,6 @@ void cdrom_process_sector(s32 execution_mode)
     {
     }
 
-    cd_system = &CD_SYSTEM;
     if ((CD_SYSTEM.sector_header_buffer[0] & CD_SECTOR_POSITION_MASK) == (CD_SYSTEM.current_location.raw & CD_SECTOR_POSITION_MASK))
     {
         if (CD_SYSTEM.transfer_callback(CD_SYSTEM.total_data_size - CD_SYSTEM.read_remaining_bytes, CD_SYSTEM.read_remaining_bytes) == NULL)
@@ -2012,13 +1975,13 @@ void cdrom_process_sector(s32 execution_mode)
             CD_SYSTEM.queue_read_index = (CD_SYSTEM.queue_read_index + 1) & CD_COMMAND_QUEUE_MASK;
             CdSyncCallback(cdrom_handle_recovery_sync);
             CdReadyCallback(NULL);
-            cd_system->set_mode_param_blocking[0] = CdlModeSpeed | CdlModeSize1;
-            cd_system->current_command = 0;
-            cd_system->init_command = CD_SYNC_COMMAND_AUDIO_PAUSE;
-            cd_system->audio_enabled = FALSE;
-            cd_system->playback_state = FALSE;
-            cd_system->transfer_callback = NULL;
-            cd_system->retry_counter = 0;
+            CD_SYSTEM.set_mode_param_blocking[0] = CdlModeSpeed | CdlModeSize1;
+            CD_SYSTEM.current_command = 0;
+            CD_SYSTEM.init_command = CD_SYNC_COMMAND_AUDIO_PAUSE;
+            CD_SYSTEM.audio_enabled = FALSE;
+            CD_SYSTEM.playback_state = FALSE;
+            CD_SYSTEM.transfer_callback = NULL;
+            CD_SYSTEM.retry_counter = 0;
             CD_SYSTEM.status_flags.word &= ~CD_STATUS_COMMAND_ACTIVE;
             CdControlF(CdlPause, NULL);
             CD_SYSTEM.vsync_timestamp = VSync(-1);
@@ -2031,7 +1994,7 @@ void cdrom_process_sector(s32 execution_mode)
         return;
     }
 
-    CdControlF(cd_system->current_command, CD_SYSTEM.current_location.bytes);
+    CdControlF(CD_SYSTEM.current_command, CD_SYSTEM.current_location.bytes);
 }
 
 /**
@@ -2052,38 +2015,38 @@ void cdrom_run_command(u8 command, u8* sector_buffer, s32 execution_mode)
     CdResourceEntry* queued_resource;
     s32 entry_index;
     s32 buffer_index;
-    volatile CdSystem* cd_system;
+    CdSystem* cd_system;
 
     queued_resource = NULL;
 
     // Skip seeks that are superseded by another pending command.
     while (command == CdlSeekL)
     {
-        next_read_index = (CD_SYSTEM_V.queue_read_index + 1) & CD_COMMAND_QUEUE_MASK;
+        next_read_index = (CD_SYSTEM.queue_read_index + 1) & CD_COMMAND_QUEUE_MASK;
 
         if (CD_SYSTEM.queue_write_index == next_read_index)
         {
             break;
         }
 
-        CD_SYSTEM_V.queue_read_index = next_read_index;
-        command = CD_SYSTEM_V.command_queue.items[next_read_index].command;
+        CD_SYSTEM.queue_read_index = next_read_index;
+        command = CD_SYSTEM.command_queue.items[next_read_index].command;
     }
 
     if ((command == CdlSeekL) || (command == CdlReadN) || (command == CdlReadS))
     {
         if ((command == CdlSeekL) || (g_cd_playback_state == FALSE))
         {
-            CD_SYSTEM_V.transfer_callback = NULL;
-            CD_SYSTEM_V.playback_state = FALSE;
-            queued_resource = CD_SYSTEM_V.command_queue.items[CD_SYSTEM.queue_read_index].entry;
+            CD_SYSTEM.transfer_callback = NULL;
+            CD_SYSTEM.playback_state = FALSE;
+            queued_resource = CD_SYSTEM.command_queue.items[CD_SYSTEM.queue_read_index].entry;
             CD_SYSTEM.current_location = queued_resource->location;
         }
 
         switch (execution_mode)
         {
         case CD_EXECUTION_MODE_COMMAND_THEN_READ:
-            CD_SYSTEM_V.current_command = command;
+            CD_SYSTEM.current_command = command;
             CdControlF(command, CD_SYSTEM.current_location.bytes);
             while (CdGetSector(sector_buffer, CD_BYTES_TO_WORDS(g_cd_read_remaining_bytes)) == 0)
             {
@@ -2100,26 +2063,27 @@ void cdrom_run_command(u8 command, u8* sector_buffer, s32 execution_mode)
 
         if ((command == CdlReadN) || (command == CdlReadS))
         {
-            entry_index = CD_SYSTEM_V.queue_read_index;
-            if ((CD_SYSTEM.command_queue.items[entry_index].callback == NULL) && (CD_SYSTEM_V.current_write_ptr == CD_SYSTEM.command_queue.items[entry_index].dst_buffer))
+            entry_index = CD_SYSTEM.queue_read_index;
+            if ((CD_SYSTEM.command_queue.items[entry_index].callback == NULL) &&
+                (CD_SYSTEM.current_write_ptr == CD_SYSTEM.command_queue.items[entry_index].dst_buffer))
             {
-                CD_SYSTEM_V.playback_state = FALSE;
+                CD_SYSTEM.playback_state = FALSE;
             }
 
-            cd_system = &CD_SYSTEM_V;
+            cd_system = &CD_SYSTEM;
             if (g_cd_playback_state == FALSE)
             {
                 data_size = queued_resource->data_size;
                 buffer_index = cd_system->queue_read_index;
-                CD_SYSTEM_V.total_data_size = data_size;
-                CD_SYSTEM_V.read_remaining_bytes = data_size;
-                CD_SYSTEM_V.current_write_ptr = CD_SYSTEM.command_queue.items[buffer_index].dst_buffer;
-                CD_SYSTEM_V.transfer_callback = CD_SYSTEM.command_queue.items[buffer_index].callback;
+                CD_SYSTEM.total_data_size = data_size;
+                CD_SYSTEM.read_remaining_bytes = data_size;
+                CD_SYSTEM.current_write_ptr = CD_SYSTEM.command_queue.items[buffer_index].dst_buffer;
+                CD_SYSTEM.transfer_callback = CD_SYSTEM.command_queue.items[buffer_index].callback;
             }
 
             if (execution_mode == CD_EXECUTION_MODE_ASYNC)
             {
-                CD_SYSTEM_V.status_flags.bytes.data_ready_pending = FALSE;
+                CD_SYSTEM.status_flags.bytes.data_ready_pending = FALSE;
                 CdReadyCallback(cdrom_handle_ready_intr);
             }
         }
@@ -2130,7 +2094,7 @@ void cdrom_run_command(u8 command, u8* sector_buffer, s32 execution_mode)
 
         if (execution_mode != CD_EXECUTION_MODE_COMMAND_THEN_READ)
         {
-            CD_SYSTEM_V.current_command = command;
+            CD_SYSTEM.current_command = command;
             CdControlF(command, CD_SYSTEM.current_location.bytes);
         }
 
@@ -2141,7 +2105,7 @@ void cdrom_run_command(u8 command, u8* sector_buffer, s32 execution_mode)
     switch (execution_mode)
     {
     case CD_EXECUTION_MODE_ASYNC:
-        CD_SYSTEM_V.current_command = command;
+        CD_SYSTEM.current_command = command;
 
         if (command == CdlSetmode)
         {
@@ -2157,7 +2121,7 @@ void cdrom_run_command(u8 command, u8* sector_buffer, s32 execution_mode)
 
     case CD_EXECUTION_MODE_COMMAND_THEN_READ:
         CdReadyCallback(NULL);
-        CD_SYSTEM_V.current_command = command;
+        CD_SYSTEM.current_command = command;
         control_command = CdlNop;
         CdControlF(command, NULL);
         while (CdGetSector(sector_buffer, CD_BYTES_TO_WORDS(g_cd_read_remaining_bytes)) == 0)
@@ -2169,7 +2133,7 @@ void cdrom_run_command(u8 command, u8* sector_buffer, s32 execution_mode)
         while (CdGetSector(sector_buffer, CD_BYTES_TO_WORDS(g_cd_read_remaining_bytes)) == 0)
         {
         }
-        CD_SYSTEM_V.current_command = command;
+        CD_SYSTEM.current_command = command;
         control_command = command;
         command_params = NULL;
         break;
@@ -2197,7 +2161,7 @@ void cdrom_verify_disc(u8 interrupt, u8* result)
     const u8* expected_id;
     u8* disc_id;
 
-    CD_SYSTEM_V.sync_complete = TRUE;
+    CD_SYSTEM.sync_complete = TRUE;
 
     if (interrupt == CdlDataReady)
     {
@@ -2220,13 +2184,12 @@ void cdrom_verify_disc(u8 interrupt, u8* result)
                 // Multibyte ID characters must match both encoded bytes.
                 if (CD_IS_MULTIBYTE_ID_CHAR(expected_character))
                 {
-                    if (expected_character != *disc_id++)
+                    disc_character = *disc_id++;
+                    if (expected_character == disc_character)
                     {
-                        goto disc_invalid;
+                        expected_character = *disc_id++;
+                        disc_character = *expected_id++;
                     }
-
-                    expected_character = *disc_id++;
-                    disc_character = *expected_id++;
                 }
                 else
                 {
@@ -2235,9 +2198,8 @@ void cdrom_verify_disc(u8 interrupt, u8* result)
 
                 if (expected_character != disc_character)
                 {
-                disc_invalid:
                     status_flags = CD_SYSTEM.status_flags.word & ~CD_STATUS_NO_DISC;
-                    CD_SYSTEM_V.init_state = CD_INIT_STATE_ERROR_PAUSE;
+                    CD_SYSTEM.init_state = CD_INIT_STATE_ERROR_PAUSE;
                     CD_SYSTEM_V.status_flags.word = status_flags;
                     CD_SYSTEM.status_flags.word = status_flags & ~CD_STATUS_COMMAND_ACTIVE;
                     CdReadyCallback(NULL);
@@ -2248,7 +2210,7 @@ void cdrom_verify_disc(u8 interrupt, u8* result)
             }
 
             CdReadyCallback(NULL);
-            CD_SYSTEM_V.init_command = CD_RECOVERY_COMMAND_COMPLETE;
+            CD_SYSTEM.init_command = CD_RECOVERY_COMMAND_COMPLETE;
             CdSyncCallback(cdrom_handle_recovery_sync);
             CdControlF(CdlSetmode, CD_SYSTEM.set_mode_param_blocking);
             return;
@@ -2256,7 +2218,7 @@ void cdrom_verify_disc(u8 interrupt, u8* result)
     }
 
     CdReadyCallback(NULL);
-    CD_SYSTEM_V.init_command = CD_RECOVERY_COMMAND_RETRY_READ;
+    CD_SYSTEM.init_command = CD_RECOVERY_COMMAND_RETRY_READ;
     CdSyncCallback(cdrom_handle_recovery_sync);
     CdControlF(CdlPause, NULL);
 }
@@ -2407,10 +2369,8 @@ s32 cdrom_can_queue_resource(s32 resource_index)
  */
 void cdrom_load_resource_table(s32 lba, s32 data_size_bytes)
 {
-    CdlLOCRaw* location;
     s32 vsync_offset;
     s32 vsync_delta;
-    CdSystem* cd_system;
 
     vsync_offset = CD_RESOURCE_LOAD_VSYNC_OFFSET;
     vsync_delta = g_cd_vsync_timestamp - (VSync(-1) + vsync_offset);
@@ -2425,12 +2385,10 @@ void cdrom_load_resource_table(s32 lba, s32 data_size_bytes)
         VSync(vsync_delta);
     }
 
-    cd_system = &CD_SYSTEM;
-    location = &cd_system->default_cd_resource.location;
-    cd_system->default_cd_resource.location.raw = 0;
-    cd_system->default_cd_resource.data_size = data_size_bytes;
+    CD_SYSTEM.default_cd_resource.location.raw = 0;
+    CD_SYSTEM.default_cd_resource.data_size = data_size_bytes;
 
-    CdIntToPos(lba, &location->pos);
+    CdIntToPos(lba, &CD_SYSTEM.default_cd_resource.location.pos);
     cdrom_queue_command(CdlReadN, CD_RESOURCE_INDEX_DEFAULT, CD_RESOURCE_ENTRIES, NULL);
     cdrom_wait_queue_empty();
     cdrom_set_audio_volume(CD_DEFAULT_AUDIO_VOLUME, CD_AUDIO_MIX_BOTH_TO_LEFT);
@@ -2463,10 +2421,7 @@ s32 cdrom_queue_read(s32 resource_index, void* dst_buffer)
  */
 s32 cdrom_queue_read_with_callback(s32 resource_index, CdCommandCallback callback)
 {
-    u16 queued_resource_index;
-
-    queued_resource_index = resource_index;
-    return cdrom_queue_command(CdlReadN, queued_resource_index, NULL, callback);
+    return cdrom_queue_command(CdlReadN, resource_index, NULL, callback);
 }
 
 /**

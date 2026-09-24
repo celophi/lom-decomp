@@ -58,8 +58,6 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
     u8* copy_source;
     u8 count_byte;
 
-    u8 packed_offset;
-
     u8 pattern_second;
     u8 pattern_first;
     u8 value_low;
@@ -287,12 +285,12 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
 
         case CD_DECOMPRESS_COPY_12_BIT:
             pattern_first = source[1];
-            packed_offset = (opcode = source[2]);
+            opcode = source[2];
 
             source += 3;
-            iterations = (packed_offset >> 4) + 4;
+            iterations = (opcode >> 4) + 4;
 
-            distance = pattern_first | ((packed_offset & CD_DECOMPRESS_LOW_NIBBLE_MASK) << 8);
+            distance = pattern_first | ((opcode & CD_DECOMPRESS_LOW_NIBBLE_MASK) << 8);
             copy_source = destination - distance;
 
             do
@@ -304,8 +302,7 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
             break;
 
         case CD_DECOMPRESS_COPY_8_BIT:
-            pattern_first = source[1];
-            value_low = pattern_first;
+            value_low = source[1];
             count_byte = source[2];
 
             source += 3;
@@ -325,13 +322,12 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
 
             source += 2;
             iterations = (pattern_first & 0xF) + 3;
-            copy_source = destination - ((u32)(pattern_first & CD_DECOMPRESS_HIGH_NIBBLE_MASK) >> 1);
+            copy_source = destination - ((pattern_first & CD_DECOMPRESS_HIGH_NIBBLE_MASK) >> 1);
 
             do
             {
-                packed_offset = copy_source[-8];
+                *destination++ = copy_source[-8];
                 copy_source++;
-                *destination++ = packed_offset;
             } while (--iterations != 0);
 
             break;
@@ -379,7 +375,6 @@ u8* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
     s32 alignment_padding;
     s32 wrapped_word_count;
     s32 linear_word_count;
-    CdStreamState* stream_state;
     CdStreamCopyCursor destination;
     CdStreamCopyCursor wrapped_source;
     CdStreamCopyCursor linear_source;
@@ -394,7 +389,6 @@ u8* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
     u8* aligned_buffer_start;
     u32 transfer_size;
     u8* next_sector_dst;
-    volatile CdStreamState* published_state;
 
     transfer_size = bytes_remaining;
     if (bytes_remaining > CD_DATA_SECTOR_SIZE)
@@ -413,25 +407,23 @@ u8* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
         return CD_STREAM_BUFFER_START;
     }
 
-    stream_state = &CD_STREAM_STATE;
-    if (!stream_state->data_ready)
+    if (!CD_STREAM_STATE.data_ready)
     {
-        unconsumed_bytes = stream_state->bytes_buffered - CD_STREAM_STATE.bytes_consumed;
+        unconsumed_bytes = CD_STREAM_STATE.bytes_buffered - CD_STREAM_STATE.bytes_consumed;
         bytes_consumed = CD_STREAM_STATE.bytes_consumed;
-        wrap_overflow = stream_state->wrap_overflow;
+        wrap_overflow = CD_STREAM_STATE.wrap_overflow;
         alignment_padding = (CD_STREAM_COPY_WORD_SIZE - (unconsumed_bytes & CD_STREAM_COPY_WORD_MASK)) & CD_STREAM_COPY_WORD_MASK;
         if (wrap_overflow != 0)
         {
-            wrapped_read_ptr = stream_state->read_ptr;
+            wrapped_read_ptr = CD_STREAM_STATE.read_ptr;
             destination.bytes = CD_STREAM_WRAP_START - unconsumed_bytes;
-            stream_state->write_ptr = destination.bytes;
-            stream_state->read_ptr = destination.bytes;
+            CD_STREAM_STATE.write_ptr = destination.bytes;
+            CD_STREAM_STATE.read_ptr = destination.bytes;
             destination.bytes -= alignment_padding;
             CD_STREAM_STATE.bytes_buffered = (wrap_overflow + unconsumed_bytes) + transfer_size;
             wrapped_source.bytes = (wrapped_read_ptr + bytes_consumed) - alignment_padding;
             wrapped_word_count = (unconsumed_bytes + CD_STREAM_COPY_WORD_MASK) / CD_STREAM_COPY_WORD_SIZE;
-            wrapped_word_count--;
-            for (; wrapped_word_count != -1; wrapped_word_count--)
+            for (wrapped_word_count--; wrapped_word_count != -1; wrapped_word_count--)
             {
                 *destination.words = *wrapped_source.words;
                 wrapped_source.bytes += CD_STREAM_COPY_WORD_SIZE;
@@ -445,54 +437,51 @@ u8* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
         {
             destination.bytes = CD_STREAM_BUFFER_START;
             CD_STREAM_STATE.bytes_buffered = unconsumed_bytes + transfer_size;
-            linear_read_ptr = stream_state->read_ptr;
+            linear_read_ptr = CD_STREAM_STATE.read_ptr;
             aligned_buffer_start = CD_STREAM_BUFFER_START + alignment_padding;
-            stream_state->write_ptr = aligned_buffer_start;
-            stream_state->read_ptr = aligned_buffer_start;
+            CD_STREAM_STATE.write_ptr = aligned_buffer_start;
+            CD_STREAM_STATE.read_ptr = aligned_buffer_start;
             linear_source.bytes = (linear_read_ptr + bytes_consumed) - alignment_padding;
             linear_word_count = (unconsumed_bytes + CD_STREAM_COPY_WORD_MASK) / CD_STREAM_COPY_WORD_SIZE;
-            linear_word_count--;
-            for (; linear_word_count != -1; linear_word_count--)
+            for (linear_word_count--; linear_word_count != -1; linear_word_count--)
             {
                 *destination.words = *linear_source.words;
                 linear_source.bytes += CD_STREAM_COPY_WORD_SIZE;
                 destination.bytes += CD_STREAM_COPY_WORD_SIZE;
             }
         }
-        published_state = &CD_STREAM_STATE;
-        published_state->data_ready = TRUE;
+        CD_STREAM_STATE.data_ready = TRUE;
         return destination.bytes;
     }
 
-    current_read_ptr = stream_state->read_ptr;
-    bytes_buffered = stream_state->bytes_buffered;
+    current_read_ptr = CD_STREAM_STATE.read_ptr;
+    bytes_buffered = CD_STREAM_STATE.bytes_buffered;
     wrap_write_offset = CD_STREAM_STATE.wrap_overflow;
     destination.bytes = current_read_ptr + bytes_buffered;
 
     if ((wrap_write_offset != 0) || ((destination.bytes + transfer_size) > CD_STREAM_BUFFER_LIMIT))
     {
         destination.bytes = CD_STREAM_WRAP_START + wrap_write_offset;
-        if (stream_state->write_ptr >= (destination.bytes + transfer_size))
+        if (CD_STREAM_STATE.write_ptr >= (destination.bytes + transfer_size))
         {
             CD_STREAM_STATE.wrap_overflow = wrap_write_offset + transfer_size;
         }
         else
         {
-            CD_STREAM_STATE.deferred_sectors += 1;
+            CD_STREAM_STATE.deferred_sectors++;
             return NULL;
         }
     }
     else
     {
         unconsumed_bytes = bytes_buffered;
-        stream_state->bytes_buffered = unconsumed_bytes + transfer_size;
+        CD_STREAM_STATE.bytes_buffered = unconsumed_bytes + transfer_size;
     }
 
     next_sector_dst = destination.bytes;
     if (bytes_remaining == transfer_size)
     {
-        published_state = &CD_STREAM_STATE;
-        published_state->input_complete = TRUE;
+        CD_STREAM_STATE.input_complete = TRUE;
         next_sector_dst = destination.bytes;
         return next_sector_dst;
     }

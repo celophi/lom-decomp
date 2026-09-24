@@ -198,7 +198,7 @@ s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_b
     AkaoBankHeader* header;
     AkaoArticulation* articulations;
     s32 result;
-    s32 header_address;
+    s32 header_address; /* magic check result, then the bank address; one variable in the original */
 
     akao_spu_wait();
     if ((header_address = akao_check_magic(bank)) == 0)

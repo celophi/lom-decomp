@@ -40,33 +40,27 @@ void fade_out_current_song(void)
 void load_and_play_song(s32 song_index)
 {
     AkaoContainerHeader* container;
-    u8* container_data;
-    u32 resource_index;
+    u16 resource_index;
+    AkaoBankHeader* bank;
     u32* section_offsets;
-    SongSequence* sequence;
-    void* bank_data;
-    s32 song_handle;
 
     if (song_index == SONG_INDEX_NONE)
     {
         return;
     }
 
-    resource_index = (song_index + CD_RES_SND_SOTO_SET) & 0xFFFF;
+    resource_index = song_index + CD_RES_SND_SOTO_SET;
     container = SONG_LOAD_BUFFER;
     cdrom_queue_read(resource_index, container);
     cdrom_wait_queue_empty();
-    container_data = SONG_LOAD_BUFFER;
     section_offsets = container->section_offsets;
-    sequence = &g_music_sequence;
 
-    bcopy(&container_data[section_offsets[0]], sequence->bytes, section_offsets[1] - section_offsets[0]);
-    bank_data = &container_data[section_offsets[1]];
-    akao_upload_bank_blocking(bank_data, TRUE);
+    bcopy(AKAO_CONTAINER_DATA_AT(container, section_offsets[0]), g_music_sequence.bytes, section_offsets[1] - section_offsets[0]);
+    bank = (AkaoBankHeader*)AKAO_CONTAINER_DATA_AT(container, section_offsets[1]);
+    akao_upload_bank_blocking(bank, TRUE);
 
-    song_handle = akao_play_song(&sequence->header);
-    g_current_song_handle = song_handle;
-    akao_set_song_volume(song_handle, AKAO_VOLUME_MAX);
+    g_current_song_handle = akao_play_song(&g_music_sequence.header);
+    akao_set_song_volume(g_current_song_handle, AKAO_VOLUME_MAX);
 }
 
 /**
