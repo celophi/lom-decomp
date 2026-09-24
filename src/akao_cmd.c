@@ -52,6 +52,17 @@ extern s32 D_8004F828;
 extern AkaoStreamingState g_akao_streaming_state;
 extern AkaoBankHeader g_akao_bank_staging;
 
+/* Number of SPU bank slots (entries of g_akao_bank_slot_keys). */
+#define AKAO_BANK_SLOT_COUNT 6
+
+/* AKAO XA tracker flag: the program is fed from a CD ring of blocks. */
+#define AKAO_XA_FLAG_RING_STREAM 0x01000000
+
+/*
+ * g_akao_seq_channel0, read through its fixed address. This file is built with
+ * -G0, where the symbol form loads the %hi part into a different register than
+ * the original code; the constant address reproduces the original load pair.
+ */
 #define AKAO_CHANNEL_STATE (*(AkaoChannelState**)0x8003EC5C)
 
 /**
@@ -69,6 +80,7 @@ extern AkaoBankHeader g_akao_bank_staging;
  *         most callers otherwise.
  */
 s32 akao_send_command(u32 opcode);
+void func_8002E2E8(void);
 
 /**
  * @brief Public init entry - wraps akao_driver_init and returns 0.
@@ -707,11 +719,8 @@ s32 akao_cmd_a5(s32 value0, s32 value1, s32 value2, s32 value3)
  */
 s32 akao_set_song_volume(s32 song_handle, s32 volume)
 {
-    s32 masked_volume;
-
     g_akao_cmd_params[0].value = song_handle;
-    masked_volume = volume & AKAO_VOLUME_MAX;
-    g_akao_cmd_params[1].value = masked_volume;
+    g_akao_cmd_params[1].value = volume & AKAO_VOLUME_MAX;
     return akao_send_command(AKAO_CMD_SET_SONG_VOLUME);
 }
 
@@ -1000,7 +1009,10 @@ s32 akao_get_xfer_state(void)
 }
 
 /**
- * @brief Clears the streaming-upload state (D_8004F824) and asserts the transfer-pending flag.
+ * @brief Restart the streaming bank upload and mark it pending.
+ *
+ * Clears the next SPU address (D_8004F824, g_akao_streaming_state.spu_addr),
+ * so the next akao_streaming_upload_tick treats its input as a new bank.
  *
  * @return 0 after the operation completes.
  *
@@ -1056,7 +1068,8 @@ s32 akao_reset_xfer_state(void)
  * @param wait_for_spu Non-zero means block on @c akao_spu_wait after the SPU
  *                     write completes.
  *
- * @return @c D_8004F828 (the streaming-status latch read by callers).
+ * @return Sample bytes still to upload (@c D_8004F828, the address of
+ *         g_akao_streaming_state.sample_remaining).
  *
  * @see decomp.me (100%) https://decomp.me/scratch/0IPqT
  */
@@ -1170,16 +1183,15 @@ s32 akao_upload_bank_slot(void* bank, s32 slot, s32 wait_for_completion)
 {
     s32 articulation_index;
     s32* slot_key;
-    u32 spu_base;
+    u32 spu_base; /* also the slot counter of the eviction loop, as in the original */
     AkaoBankIdentity* identity = bank;
 
-    for (spu_base = 0, slot_key = g_akao_bank_slot_keys; spu_base < 6; spu_base++, slot_key++)
+    for (spu_base = 0, slot_key = g_akao_bank_slot_keys; spu_base < AKAO_BANK_SLOT_COUNT; spu_base++, slot_key++)
     {
         if (*slot_key == identity->key)
         {
             *slot_key = 0;
         }
-
     }
 
     switch (slot)
@@ -1297,17 +1309,17 @@ s32 akao_xa_setup_panning(s32 volume, void* reserved)
 /**
  * @brief AKAO command 0xE0 - magic-checks @p value0 (AKAO buffer) then dispatches with (buf*, 16-bit packed, c).
  *
- * @param value0 Value for command slot 0; semantics unknown.
+ * @param buffer AKAO-tagged XA program in main RAM.
  * @param value1 Value for command slot 1; only the low 8 bits are used.
  * @param value2 Value for command slot 2; semantics unknown.
  *
  * @see https://decomp.me/scratch/vw9QX (100%)
  */
-void akao_cmd_e0(s32 value0, s32 value1, s32 value2)
+void akao_cmd_e0(AkaoHeader* buffer, s32 value1, s32 value2)
 {
-    if (akao_check_magic((AkaoHeader*)value0) == 0)
+    if (akao_check_magic(buffer) == 0)
     {
-        g_akao_cmd_params[0].value = value0;
+        g_akao_cmd_params[0].buffer = buffer;
         g_akao_cmd_params[1].value = ((value1 & 0xFF) << 8);
         g_akao_cmd_params[2].value = value2;
         akao_send_command(AKAO_CMD_E0);
@@ -1512,7 +1524,7 @@ s32 akao_cmd_e8_start_xa_stream(s32 stream_id, u32 byte_count)
     g_akao_xa_tracker.unk24 = 0;
     g_akao_xa_tracker.unk28 = 0;
     g_akao_xa_tracker.unk38 = 0;
-    g_akao_xa_tracker.unk3C = (s32)(byte_count >> 12);
+    g_akao_xa_tracker.unk3C = byte_count >> 12;
     akao_send_command(AKAO_CMD_E8_START_XA_STREAM);
     return 0;
 }
@@ -1525,7 +1537,8 @@ s32 akao_cmd_e8_start_xa_stream(s32 stream_id, u32 byte_count)
  * bit 0x01000000 of @c .unk8 is set, calls @c func_8002E2E8 to refill the
  * SPU ring buffer.
  *
- * @return @c D_8004F794 (the streaming-status latch read by callers).
+ * @return Current ring block index (@c D_8004F794, the address of
+ *         g_akao_xa_tracker.unk34).
  *
  * @see https://decomp.me/scratch/gKZ5G (100%)
  */
@@ -1536,21 +1549,21 @@ s32 akao_xa_advance_frame(void)
     g_akao_xa_tracker.unk24 = g_akao_xa_tracker.unk24 + 1;
     next_frame = g_akao_xa_tracker.unk38 + 1;
     g_akao_xa_tracker.unk38 = next_frame;
-    if ((u32)(g_akao_xa_tracker.unk3C - 1) < next_frame)
+    if (next_frame > g_akao_xa_tracker.unk3C - 1)
     {
         g_akao_xa_tracker.unk38 = 0;
     }
-    if ((g_akao_xa_tracker.unk8 & 0x01000000) && ((u32)g_akao_xa_tracker.unk38 >= 2U))
+    if ((g_akao_xa_tracker.unk8 & AKAO_XA_FLAG_RING_STREAM) && ((u32)g_akao_xa_tracker.unk38 >= 2))
     {
-        func_8002E2E8(&g_akao_xa_tracker);
+        func_8002E2E8();
     }
     return D_8004F794;
 }
 
 /**
- * @brief Returns the current XA-stream position latch (@c D_8004F794).
+ * @brief Returns the current XA ring block index.
  *
- * @return Current transfer or position latch.
+ * @return @c D_8004F794, the address of g_akao_xa_tracker.unk34.
  *
  * @see https://decomp.me/scratch/2DiS3 (100%)
  */

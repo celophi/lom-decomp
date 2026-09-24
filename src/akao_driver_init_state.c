@@ -1,5 +1,9 @@
-/* The two entry symbols use scalar address declarations here. Their aggregate
- * declarations in akao_driver.h require this translation unit to stay separate. */
+/*
+ * g_akao_seq_master_state and g_akao_seq_channels are declared here as scalar
+ * u8 objects, which the original code generation needs; akao_driver.h declares
+ * them as aggregates, so this file cannot include it. The *View types below
+ * mirror the akao_driver.h structures for the fields this file writes.
+ */
 
 #include "akao.h"
 #include "sdk/libspu.h"
@@ -22,14 +26,46 @@
 #define SPU_MAX_MASTER_VOLUME 0x3FFF
 #define SPU_MAX_CD_VOLUME 0x7FFF
 
+/** @brief SFX channel control block (mirrors SfxControl in akao_driver.h). */
+typedef struct
+{
+    u32 unk0;
+    s32 unk4;
+    u32 unk8;
+    u32 unkC;
+    u32 unk10;
+    u32 unk14; /* whole word; its high half is the SFX tick step */
+    u32 unk18;
+    u32 reverb_mask;
+    u32 noise_mask;
+    u32 pitch_mod_mask;
+} SfxControlView;
+
+/** @brief AKAO driver state flags (mirrors AkaoDriverFlags in akao_driver.h). */
+typedef struct
+{
+    u32 unk0;
+    u32 unk4;
+    u32 unk8;
+} AkaoDriverFlagsView;
+
+/** @brief Streamed-voice volume fields of g_akao_xa_tracker. */
+typedef struct
+{
+    u8 _pad00[0x40];
+    s32 volume;
+    s32 volume_step;
+    s32 volume_fade_ticks;
+} AkaoXaTrackerView;
+
 void akao_apply_reverb_type(s32 reverb_type);
 extern u32 D_8003EC30[2];
 extern s32 g_akao_bank_slot_keys[6];
-extern u8 g_akao_driver_flags[];
-extern u8 g_akao_sfx_control[];
+extern AkaoDriverFlagsView g_akao_driver_flags;
+extern SfxControlView g_akao_sfx_control;
 extern u8 g_akao_seq_master_state;
-extern u8 D_8004C2D0[];
-extern u8 g_akao_xa_tracker[];
+extern AkaoChannelState D_8004C2D0;
+extern AkaoXaTrackerView g_akao_xa_tracker;
 extern u32 D_8004F830[3];
 extern u8 g_akao_seq_channels;
 extern u8 g_sfx_channels[];
@@ -49,17 +85,6 @@ extern void* D_8003EC58;
 extern AkaoChannelState* g_akao_seq_channel0;
 
 /**
- * @brief Returns a byte address within a driver state block.
- * @param base Start of the state block.
- * @param offset Byte offset within the block.
- * @return Address of the selected field.
- */
-static inline u8* akao_state_offset(u8* base, s32 offset)
-{
-    return base + offset;
-}
-
-/**
  * @brief Initializes song, sequence-channel, SFX and SPU mixer state.
  *
  * Resets 32 sequence slots to the unassigned SPU voice and assigns the 12 SFX
@@ -74,7 +99,7 @@ void akao_driver_init_state(void)
     u32 unassigned_voice = AKAO_SPU_VOICE_COUNT;
     AkaoChannelState* song;
     u8* sequence_tick;
-    u32 master_volume;
+    AkaoChannelState* sfx_channel;
     u32 value;
 
     song = (AkaoChannelState*)&g_akao_seq_master_state;
@@ -91,17 +116,17 @@ void akao_driver_init_state(void)
     g_akao_bank_slot_keys[2] = 0;
     g_akao_bank_slot_keys[1] = 0;
     g_akao_bank_slot_keys[0] = 0;
-    *((u32*)akao_state_offset(g_akao_driver_flags, 0x00)) = 0;
-    *((u32*)akao_state_offset(g_akao_driver_flags, 0x04)) = 1;
+    g_akao_driver_flags.unk0 = 0;
+    g_akao_driver_flags.unk4 = 1;
 
-    *((u32*)akao_state_offset(g_akao_sfx_control, 0x00)) = 0;
+    g_akao_sfx_control.unk0 = 0;
     song->w04.song.active_mask = 0;
     song->w04.song.voice_alloc_low_mask = 0;
     song->unk5E = 0;
-    *((u32*)akao_state_offset(g_akao_sfx_control, 0x10)) = 0;
+    g_akao_sfx_control.unk10 = 0;
     song->unk1C = 0;
-    ((AkaoChannelState*)D_8004C2D0)->unk5E = 0;
-    ((AkaoChannelState*)D_8004C2D0)->w04.song.active_mask = 0;
+    D_8004C2D0.unk5E = 0;
+    D_8004C2D0.w04.song.active_mask = 0;
     song->pitch_slide_step = (AKAO_VOLUME_MAX << 16);
 
     D_8003EC58 = sequence_tick;
@@ -119,9 +144,9 @@ void akao_driver_init_state(void)
     g_akao_masterpan_fade_ticks = 0;
     g_akao_masterpan_acc = 0;
     g_akao_cdvol_fade_ticks = 0;
-    *((u32*)akao_state_offset(g_akao_sfx_control, 0x1C)) = 0;
+    g_akao_sfx_control.reverb_mask = 0;
     song->reverb_mask = 0;
-    *((u32*)akao_state_offset(g_akao_sfx_control, 0x20)) = 0;
+    g_akao_sfx_control.noise_mask = 0;
 
     value = *spu_control;
     song->noise_mask = 0;
@@ -129,14 +154,14 @@ void akao_driver_init_state(void)
     SPU_MASTER_VOLUME_RIGHT = SPU_MAX_MASTER_VOLUME;
     SPU_CD_VOLUME_LEFT = SPU_MAX_CD_VOLUME;
     SPU_CD_VOLUME_RIGHT = SPU_MAX_CD_VOLUME;
-    *((u32*)akao_state_offset(g_akao_sfx_control, 0x24)) = 0;
+    g_akao_sfx_control.pitch_mod_mask = 0;
     song->pitch_mod_mask = 0;
     song->unk68 = 0;
     song->unk66 = 0;
     song->is_sfx_channel = 0;
     song->measure = 0;
-    *((u32*)akao_state_offset(g_akao_xa_tracker, 0x40)) = AKAO_FULL_VOLUME;
-    *((u32*)akao_state_offset(g_akao_xa_tracker, 0x48)) = 0;
+    g_akao_xa_tracker.volume = AKAO_FULL_VOLUME;
+    g_akao_xa_tracker.volume_fade_ticks = 0;
     g_akao_seq_pending_ticks = 0;
     D_8003EC6C = 0;
     g_akao_driver_mode_flags = 0;
@@ -148,50 +173,42 @@ void akao_driver_init_state(void)
     do
     {
         value++;
-        *((volatile u32*)(sequence_tick - 0x24)) = 0;
-        *((volatile u32*)(sequence_tick + 0xA4)) = unassigned_voice;
-        *((volatile u16*)(sequence_tick + 0x0C)) = 0;
-        *((volatile u32*)sequence_tick) = 0;
+        *((u32*)(sequence_tick - 0x24)) = 0;
+        *((u32*)(sequence_tick + 0xA4)) = unassigned_voice;
+        *((u16*)(sequence_tick + 0x0C)) = 0;
+        *((u32*)sequence_tick) = 0;
         sequence_tick += 0x100;
         sequence_tick += 0x10;
         sequence_tick += 0x8;
     } while ((value & 0xFFFF) < AKAO_SEQUENCE_CHANNEL_COUNT);
 
+    sfx_channel = (AkaoChannelState*)g_sfx_channels;
+    for (value = AKAO_SFX_FIRST_VOICE; (u16)value < AKAO_SPU_VOICE_COUNT; value++, sfx_channel++)
     {
-        AkaoChannelState* sfx_channel = (AkaoChannelState*)g_sfx_channels;
-        for (value = AKAO_SFX_FIRST_VOICE; (u16)value < AKAO_SPU_VOICE_COUNT; value++, sfx_channel++)
-        {
-            sfx_channel->flags = 0;
-            sfx_channel->voice = (u16)value;
-            sfx_channel->is_sfx_channel = 1;
-            /* The channel tick counter spans both halfwords at 0x58. */
-            *(u32*)&sfx_channel->unk58 = 0;
-            sfx_channel->volume_scale = AKAO_FULL_VOLUME;
-            sfx_channel->unk8E = 0;
-            sfx_channel->unk88 = 0;
-            sfx_channel->noise_mask = 0;
-            sfx_channel->note_expression_ticks = 0;
-        }
+        sfx_channel->flags = 0;
+        sfx_channel->voice = (u16)value;
+        sfx_channel->is_sfx_channel = 1;
+        /* The channel tick counter spans both halfwords at 0x58. */
+        *(u32*)&sfx_channel->unk58 = 0;
+        sfx_channel->volume_scale = AKAO_FULL_VOLUME;
+        sfx_channel->unk8E = 0;
+        sfx_channel->unk88 = 0;
+        sfx_channel->noise_mask = 0;
+        sfx_channel->note_expression_ticks = 0;
     }
 
-    {
-        u8* active_song = (u8*)g_akao_seq_channel0;
-        u8* sfx_control = g_akao_sfx_control;
-        u8* driver_flags = g_akao_driver_flags;
-        *((u32*)akao_state_offset(active_song, 0x18)) = 0;
-        *((u32*)akao_state_offset(active_song, 0x14)) = 0;
-        *((u32*)akao_state_offset(active_song, 0x10)) = 0;
-        *((u32*)akao_state_offset(sfx_control, 0x18)) = 1;
-        *((u32*)akao_state_offset(sfx_control, 0x14)) = AKAO_INITIAL_SFX_TEMPO;
-        *((u32*)akao_state_offset(sfx_control, 0x0C)) = 0;
-        *((u32*)akao_state_offset(sfx_control, 0x08)) = 0;
-        *((u32*)akao_state_offset(sfx_control, 0x04)) = 0;
-        master_volume = AKAO_INITIAL_MASTER_VOLUME;
-        *((u32*)akao_state_offset(active_song, 0x48)) = master_volume;
-        *((u32*)akao_state_offset(active_song, 0x4C)) = 0;
-        *((u16*)akao_state_offset(active_song, 0x5A)) = 0;
-        *((u32*)akao_state_offset(driver_flags, 0x08)) = (*((u32*)akao_state_offset(driver_flags, 0x08))) | AKAO_REVERB_UPDATE_PENDING;
-    }
+    g_akao_seq_channel0->key_off_mask = 0;
+    g_akao_seq_channel0->note_on_mask = 0;
+    g_akao_seq_channel0->w04.song.key_on_mask = 0;
+    g_akao_sfx_control.unk18 = 1;
+    g_akao_sfx_control.unk14 = AKAO_INITIAL_SFX_TEMPO;
+    g_akao_sfx_control.unkC = 0;
+    g_akao_sfx_control.unk8 = 0;
+    g_akao_sfx_control.unk4 = 0;
+    g_akao_seq_channel0->unk48 = AKAO_INITIAL_MASTER_VOLUME;
+    g_akao_seq_channel0->unk4C = 0;
+    g_akao_seq_channel0->master_vol_fade_ticks = 0;
+    g_akao_driver_flags.unk8 |= AKAO_REVERB_UPDATE_PENDING;
 
     akao_apply_reverb_type(AKAO_DEFAULT_REVERB_TYPE);
     SpuSetReverb(1);

@@ -16,11 +16,14 @@ typedef union
     u32* words;
 } CdStreamCopyCursor;
 
-/** @brief Scratchpad handoff between CD sector delivery and decompression. */
+/**
+ * @brief Scratchpad handoff between CD sector delivery and decompression.
+ * @note data_ready and input_complete are written by the sector callback in interrupt context.
+ */
 typedef struct
 {
     volatile u8 data_ready;
-    u8 input_complete;
+    volatile u8 input_complete;
     u8 pad[2];
     u8* read_ptr;
     u8* write_ptr;

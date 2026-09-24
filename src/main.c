@@ -52,13 +52,11 @@ SavedGame g_saved_game;
 void main_game_loop(void)
 {
     RECT rect;
-    SavedGameLayout* saved_layout;
     u32* entry_config;
     u8* player_name;
     u32 field_config;
     u32 music_track;
     TitleMenuContext* title_menu_buffers;
-    u32 state;
 
     __main();
     SetMem(2);
@@ -102,8 +100,7 @@ void main_game_loop(void)
     g_previous_game_state = GAME_STATE_NONE;
     while (1)
     {
-        state = g_game_state;
-        switch (state)
+        switch (g_game_state)
         {
         case GAME_STATE_FIELD:
         case GAME_STATE_ATTRACT_1:
@@ -145,10 +142,7 @@ void main_game_loop(void)
             get_world_map_overlay_end();
             cdrom_stream(CD_RES_WMAP_BIN, g_overlay_load_address);
             screen_transition(0);
-            rect.x = 0;
-            rect.y = 0;
-            rect.w = SCREEN_WIDTH;
-            rect.h = SCREEN_HEIGHT + VRAM_DRAW_HEIGHT;
+            setRECT(&rect, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT + VRAM_DRAW_HEIGHT);
             ClearImage(&rect, 0, 0, 0);
             DrawSync(0);
             VSync(0);
@@ -158,7 +152,7 @@ void main_game_loop(void)
             g_game_state = run_world_map();
             akao_cmd_f0();
             akao_cmd_f1();
-            if (((g_game_state != GAME_STATE_TITLE) && (g_game_state != GAME_STATE_ATTRACT_1)) && (g_game_state != GAME_STATE_ATTRACT_2))
+            if ((g_game_state != GAME_STATE_TITLE) && (g_game_state != GAME_STATE_ATTRACT_1) && (g_game_state != GAME_STATE_ATTRACT_2))
             {
                 load_and_play_song(g_music_track_table[g_music_track_index]);
             }
@@ -167,7 +161,6 @@ void main_game_loop(void)
             break;
 
         case GAME_STATE_TITLE:
-        {
             title_menu_buffers = get_title_menu_buffers();
             cdrom_stop();
             cdrom_stream(CD_RES_TITLE_BIN, g_overlay_load_address);
@@ -178,7 +171,6 @@ void main_game_loop(void)
             VSync(0);
             g_previous_game_state = GAME_STATE_TITLE;
             break;
-        }
 
         case GAME_STATE_GNAME:
             get_field_render_buffers();
@@ -190,9 +182,8 @@ void main_game_loop(void)
             field_scene_reset(0);
             g_field_audio_timer = 0;
             player_name = g_saved_game.layout.player.name;
-            saved_layout = &g_saved_game.layout;
             g_game_state = gname_run((RenderContext*)GNAME_RENDER_ADDRESS, player_name, player_name,
-                                     (saved_layout->player.name_source_flags & NAME_SOURCE_MASK) + 4, 0, player_name, 1);
+                                     (g_saved_game.layout.player.name_source_flags & NAME_SOURCE_MASK) + 4, 0, player_name, 1);
             DrawSync(0);
             VSync(0);
             g_previous_game_state = GAME_STATE_GNAME;
