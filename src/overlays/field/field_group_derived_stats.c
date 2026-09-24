@@ -93,7 +93,6 @@ extern s32 g_gosub_result_values[];
  * record at @c arg0 * 0x14C inside the global menu layout buffer.
  *
  * @param arg0 Party member / layout record index.
- * @see decomp.me (100%)
  */
 void func_800C4364(s32 arg0)
 {

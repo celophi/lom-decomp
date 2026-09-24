@@ -344,7 +344,6 @@ static s32 func_80065620(s32 initialize)
 /** @brief Update the map view and submit the grid and fade packets.
  * @param initialize Sequence event selector, unused by this callback.
  * @return Always one.
- * @see decomp.me (100%)
  */
 s32 func_8006579C(s32 initialize)
 {
@@ -563,7 +562,6 @@ s32 func_8006579C(s32 initialize)
 
 /**
  * @brief Project grid vertices into the four adjacent textured quads.
- * @see decomp.me (100%)
  */
 void func_80065E20(void)
 {
@@ -608,7 +606,6 @@ void func_80065E20(void)
 
 /**
  * @brief Copy map edge coordinates into the fade polygons with a vertical offset.
- * @see decomp.me (100%)
  */
 void func_80065F54(void)
 {
@@ -813,7 +810,6 @@ void func_800660BC(void)
 
 /**
  * @brief Advance the map selection transition and its view state.
- * @see decomp.me (100%)
  */
 void func_800664B8(void)
 {
@@ -941,7 +937,6 @@ s32 func_8006683C(s32 color)
 /**
  * @brief Spawn radial particles, advance their animation, and count active slots.
  * @return Number of active particle slots.
- * @see decomp.me (100%)
  */
 s32 func_8006688C(void)
 {
@@ -1045,7 +1040,6 @@ void func_80066B4C(void)
 
 /**
  * @brief Initialize the map effect and project its initial screen position.
- * @see decomp.me (100%)
  */
 void func_80066BA4(void)
 {

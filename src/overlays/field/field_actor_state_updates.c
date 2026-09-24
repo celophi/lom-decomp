@@ -196,7 +196,6 @@ void func_80092C24(FieldMotionRecord* object, s32 animation_id);
  * @param object Object whose height and state byte are advanced.
  * @return Zero while the state is being advanced, or one when it is complete.
  * @note The high state bit selects horizontal displacement direction.
- * @see decomp.me WIP
  */
 s32 func_80092AD8(FieldMotionRecord* object)
 {
@@ -304,7 +303,6 @@ void func_80092C24(FieldMotionRecord* object, s32 animation_id)
  *
  * @param object Field actor record.
  * @return Never set; callers ignore it.
- * @see decomp.me (100%) TODO
  */
 s32 func_80092C98(FieldMotionRecord* object)
 {
@@ -1323,7 +1321,6 @@ s32 func_80094FDC(FieldMotionRecord* object)
 /**
  * @brief Restart the object's idle animation, or its first idle track for idle kind 0x1F.
  * @param object Object whose runtime state holds the idle animation.
- * @see decomp.me (100%) TODO
  */
 void func_80095074(FieldMotionRecord* object)
 {

@@ -165,7 +165,6 @@ s32 func_800C24BC(s32 index)
 /**
  * @brief Open name entry for a stored companion, or report an invalid index.
  * @param index Stored companion index; >= FIELD_REGION_COUNT records a diagnostic.
- * @see decomp.me (100%) TODO
  */
 void func_800C25A0(s32 index)
 {

@@ -252,7 +252,6 @@ void func_8009C954(s32 window_slot)
  * scene string @p string_index.
  *
  * @param string_index Scene string index.
- * @see decomp.me (100%) TODO
  */
 void func_8009C974(s32 string_index)
 {

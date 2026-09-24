@@ -65,9 +65,6 @@ extern void func_800B4648__for_func_800B3434(void) __asm__("func_800B4648");
     func_800B4648__for_func_800B3434();
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800B35F0(void)
 {
 typedef struct
@@ -9902,7 +9899,6 @@ void func_800B7420(void);
 }
 
 /**
- * @see decomp.me (97.92%)
  * @note One extra address calculation remains for the second setting store.
  */
 void func_800B44EC(void)

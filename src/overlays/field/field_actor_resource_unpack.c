@@ -228,7 +228,6 @@ void func_8009A4A0(s32 group)
  * @param group Allocation group; values at least three use allocation tag two.
  * @param actor Actor slot receiving resource pointers, counts, and header state.
  * @note Resource offsets, alignment, optional sections, and record remapping follow the packed format.
- * @see decomp.me (100%)
  */
 void func_8009A4CC(s32 group, FieldActorState *actor)
 {

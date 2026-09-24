@@ -134,7 +134,6 @@ void gosub_load_screen_sequence(s32* screen_sequence)
 /**
  * @brief Initialize a gosub sub-screen and install its selection callbacks.
  * @param screen_id Screen id, 0..19; anything else returns without touching state.
- * @see decomp.me (100%)
  */
 void gosub_enter_screen(s32 screen_id)
 {

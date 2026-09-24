@@ -1001,7 +1001,6 @@ void func_800B9868(void)
 /**
  * @brief Handle a script mode query, advancing the PC or clearing the run flag.
  * @note A 0xFF operand selects the mode from the shared field state.
- * @see decomp.me (100%)
  */
 void func_800B99A8(void)
 {
@@ -1945,7 +1944,6 @@ void func_800BB9F4(s32 index, s32 keyframe)
  * @brief Opcode 0x42: find or load a scene resource entry.
  * @param arg0 Passed through to field_find_or_load_resource_entry.
  * @param arg1 Passed through to field_find_or_load_resource_entry.
- * @see decomp.me (100%) N/A -- trivial 8-instruction wrapper function, no scratch needed.
  */
 void func_800BBA24(s32 arg0, s32 arg1)
 {
@@ -1956,7 +1954,6 @@ void func_800BBA24(s32 arg0, s32 arg1)
  * @brief Opcode 0x43: set the active record's condition flag from func_800C1FFC for an actor.
  * @param mode Guard; the update runs only when zero.
  * @param actor Actor id, or 0xFF for the script owner.
- * @see decomp.me (100%) TODO
  */
 void func_800BBA44(s32 mode, s32 actor)
 {
@@ -1984,7 +1981,6 @@ void func_800BBA44(s32 mode, s32 actor)
  * @brief Opcode 0x44: run one of the miscellaneous field commands selected by @p command.
  * @param command Command number, 0x00 to 0x4E.
  * @param operand Command argument; commands that take an actor treat 0xFF as the script owner.
- * @see decomp.me (100%)
  */
 void func_800BBAC8(u32 command, s32 operand)
 {
@@ -2299,7 +2295,6 @@ void func_800BC268(s32 arg0)
  *
  * @param arg0 First actor id, or 0xFF for the script owner.
  * @param arg1 Second actor id, or 0xFF for the script owner.
- * @see decomp.me (100%) TODO
  */
 void func_800BC2A0(s32 arg0, s32 arg1)
 {
@@ -2339,7 +2334,6 @@ void func_800BC2A0(s32 arg0, s32 arg1)
  *
  * @param arg0 Actor id, or 0xFF for the script owner.
  * @param arg1 Secondary parameter forwarded to the dispatched calls.
- * @see decomp.me (100%) TODO
  */
 void func_800BC328(s32 arg0, s32 arg1)
 {
@@ -2427,7 +2421,6 @@ void func_800BC474(s32 arg0, s32 arg1)
  *
  * @param arg0 Actor index, or 0xFF for the script owner.
  * @param arg1 Forwarded (low 16 bits) to func_800C2928.
- * @see decomp.me (100%) TODO
  */
 void func_800BC4E8(s32 arg0, s32 arg1)
 {
@@ -2584,7 +2577,6 @@ void func_800BC6B0(s32 list_index, s32 price_scale)
  *
  * @param arg0 Target index, or 0xFF for the script owner.
  * @param arg1 Forwarded to func_80089AE4.
- * @see decomp.me (100%) TODO
  */
 void func_800BC7EC(s32 arg0, s32 arg1)
 {

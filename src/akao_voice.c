@@ -1517,7 +1517,6 @@ void akao_collect_channel_voice_mask(AkaoChannelState* channels, u32* voice_mask
  * remain, keyed off in one @ref spu_set_key_off call. Each processed
  * @c key_off_mask is cleared.
  *
- * @see decomp.me (100%)
  */
 void akao_flush_voice_key_offs(void)
 {
@@ -1593,7 +1592,6 @@ void akao_flush_voice_key_offs(void)
  * @param secondary_effect_mask Secondary song's per-channel effect-enable mask.
  * @param primary_effect_mask Primary song's per-channel effect-enable mask.
  * @param sfx_effect_voices SFX voices already enabled for this effect.
- * @see decomp.me (100%)
  */
 void akao_build_effect_voice_mask(s32* effect_voices, s32 secondary_effect_mask, s32 primary_effect_mask, s32 sfx_effect_voices)
 {
@@ -1652,7 +1650,6 @@ void akao_build_effect_voice_mask(s32* effect_voices, s32 secondary_effect_mask,
  *
  * @param noise_freq Requested noise frequency; negative clamps to 0, values >= 0x40 clamp to 0x3F.
  * @return The clamped noise frequency actually written (0..0x3F).
- * @see decomp.me (100%)
  */
 s32 akao_set_noise_frequency(s32 noise_freq)
 {
@@ -1686,7 +1683,6 @@ s32 akao_set_noise_frequency(s32 noise_freq)
  *
  * @param voice_index  SPU voice number (0-23).
  * @param envelope_out Destination for the voice's current envelope volume.
- * @see decomp.me (100%)
  */
 void akao_read_voice_envelope(s32 voice_index, s16* envelope_out)
 {
@@ -1702,7 +1698,6 @@ void akao_read_voice_envelope(s32 voice_index, s16* envelope_out)
  *
  * @param reverb_left  Reverb output volume for the left channel.
  * @param reverb_right Reverb output volume for the right channel.
- * @see decomp.me (100%)
  */
 void akao_set_reverb_volume(s32 reverb_left, s32 reverb_right)
 {
@@ -1719,7 +1714,6 @@ void akao_set_reverb_volume(s32 reverb_left, s32 reverb_right)
  * @brief Reset a channel's playback state and point it at new sequence bytecode.
  * @param channel Channel to reset.
  * @param seq_data Sequence bytecode the channel starts executing.
- * @see decomp.me (100%)
  */
 void akao_channel_init_state(AkaoChannelState* channel, u8* seq_data)
 {
@@ -1759,7 +1753,6 @@ void akao_channel_init_state(AkaoChannelState* channel, u8* seq_data)
  * @param channels First channel corresponding to channel_mask bit zero.
  * @param channel_mask Channels to scan.
  * @return Bitmap of the SPU voices held by the selected channels.
- * @see decomp.me (100%)
  */
 u32 akao_collect_voice_mask(AkaoChannelState* channels, s32 channel_mask)
 {
@@ -1802,7 +1795,6 @@ u32 akao_collect_voice_mask(AkaoChannelState* channels, s32 channel_mask)
  *        self-relative offsets (+0x30/+0x34), and a per-channel note-pointer
  *        table (+0x40). No named struct yet.
  * @param start_mask Channels to actually start now.
- * @see decomp.me (100%)
  */
 void akao_seq_start_song(u8* song_data, s32 start_mask)
 {
@@ -1986,7 +1978,6 @@ void akao_seq_start_song(u8* song_data, s32 start_mask)
  * @param song Song state to stop.
  * @param channels Channel table owned by @p song.
  * @param song_key Song key that must match @p song, or 0 to stop unconditionally.
- * @see decomp.me (100%)
  */
 void akao_seq_stop_song(AkaoChannelState* song, AkaoChannelState* channels, s32 song_key)
 {
@@ -2033,7 +2024,6 @@ void akao_seq_stop_song(AkaoChannelState* song, AkaoChannelState* channels, s32 
  * @brief Stop SFX channels selected by id, by flag mask or by priority.
  * @param sfx_id SFX id to stop (-1 selects every tagged SFX), or the first channel index when @p mode is negative.
  * @param mode Channel flag mask to match; negative stops the channel pair at @p sfx_id; 0x40000000 stops the highest-priority channels.
- * @see decomp.me (100%)
  */
 void akao_sfx_stop_channels(s32 sfx_id, s32 mode)
 {
@@ -2179,7 +2169,6 @@ void akao_sfx_stop_channels(s32 sfx_id, s32 mode)
  * @param params Play parameters: id, flags, pan bias, volume scale and articulation bank.
  * @param channel_mask Channel-mask bit of @p channel.
  * @param seq_data Sequence bytecode the channel plays.
- * @see decomp.me (100%)
  */
 void akao_sfx_start_channel(AkaoChannelState* channel, AkaoCommandParam* params, s32 channel_mask, u8* seq_data)
 {
@@ -2236,7 +2225,6 @@ void akao_sfx_start_channel(AkaoChannelState* channel, AkaoCommandParam* params,
  * @brief Detach an SPU voice from every sequence channel that owns it.
  * @param channels Sequence channel table to scan.
  * @param voice_index SPU voice being taken over.
- * @see decomp.me (100%)
  */
 void akao_unassign_voice(AkaoChannelState* channels, u32 voice_index)
 {
@@ -2270,7 +2258,6 @@ void akao_unassign_voice(AkaoChannelState* channels, u32 voice_index)
  * @param seq_data0 Sequence for the first channel, or NULL.
  * @param seq_data1 Sequence for the second channel, or NULL.
  * @param skip_stop Nonzero to skip stopping the channels selected by params word 1.
- * @see decomp.me (100%)
  */
 void akao_sfx_play(AkaoCommandParam* params, u8* seq_data0, u8* seq_data1, s32 skip_stop)
 {
@@ -2382,7 +2369,6 @@ void akao_sfx_play(AkaoCommandParam* params, u8* seq_data0, u8* seq_data1, s32 s
  * @param out1 Receives the resolved pointer for the second entry (2*n + 1).
  * @param program_index Program id; masked to 0..0x3FF.
  *
- * @see decomp.me (100%)
  */
 void akao_resolve_program_data(s32* out0, s32* out1, s32 program_index)
 {
@@ -2417,7 +2403,6 @@ void akao_resolve_program_data(s32* out0, s32* out1, s32 program_index)
  * @brief Flag every active channel of a song for a pending SPU volume re-apply.
  * @param song Song whose active_mask selects the channels.
  * @param channels Channel table owned by @p song.
- * @see decomp.me (100%)
  */
 void akao_seq_flag_volume_update(AkaoChannelState* song, AkaoChannelState* channels)
 {
@@ -2446,7 +2431,6 @@ void akao_seq_flag_volume_update(AkaoChannelState* song, AkaoChannelState* chann
 /**
  * @brief Flag every SFX channel active in @c g_akao_sfx_control for a pending
  *        SPU volume re-apply.
- * @see decomp.me (100%)
  */
 void akao_sfx_flag_volume_update(void)
 {
@@ -2488,7 +2472,6 @@ void akao_sfx_flag_volume_update(void)
  * @param descriptor Newly (re)loaded song descriptor; same shape consumed by
  *        akao_seq_start_song.
  *
- * @see decomp.me (100%)
  */
 void akao_seq_resume_song(u8* descriptor)
 {
@@ -2583,7 +2566,6 @@ void akao_seq_resume_song(u8* descriptor)
  * @param key Bank program key to search for; 0 means "no bank".
  * @return Slot index 0-4 if found among @c g_akao_bank_slot_keys, 5 if
  *         @p key matches the @c D_8004D39C sentinel, otherwise 0.
- * @see decomp.me (100%)
  */
 s32 akao_bank_find_slot(s32 key)
 {
@@ -2629,7 +2611,6 @@ s32 akao_bank_find_slot(s32 key)
  *
  * @param params Descriptor load result: u8* descriptor at +0x0, s32 id
  *        at +0x8.
- * @see decomp.me (100%)
  */
 void akao_seq_reload_song(AkaoCommandParam* params)
 {
@@ -2653,7 +2634,6 @@ void akao_seq_reload_song(AkaoCommandParam* params)
  *
  * @param params Descriptor load result: u8* descriptor at +0x0, id at
  *        +0x8, channel mask at +0xC, initial tick count at +0x10.
- * @see decomp.me (100%)
  */
 void akao_seq_start_loaded_song(AkaoCommandParam* params)
 {
@@ -2677,7 +2657,6 @@ void akao_seq_start_loaded_song(AkaoCommandParam* params)
  * Counterpart to akao_seq_resume_song: saves @c g_akao_seq_channel0 (0x70
  * bytes) and the full @c g_akao_seq_channels array into the @c D_8004C2D0 /
  * @c D_8004D450 backup slots.
- * @see decomp.me (100%)
  */
 void akao_seq_suspend_song(void)
 {
@@ -2702,7 +2681,6 @@ void akao_seq_suspend_song(void)
  *
  * @param params Descriptor load result: u8* descriptor at +0x0, id at
  *        +0x8.
- * @see decomp.me (100%)
  */
 void akao_seq_switch_song(AkaoCommandParam* params)
 {
@@ -2726,7 +2704,6 @@ void akao_seq_switch_song(AkaoCommandParam* params)
  *
  * @param params Descriptor load result: passed through to
  *        akao_seq_reload_song; initial tick count at +0x10.
- * @see decomp.me (100%)
  */
 void akao_seq_reload_song_with_ticks(AkaoCommandParam* params)
 {
@@ -2755,7 +2732,6 @@ void akao_seq_reload_song_with_ticks(AkaoCommandParam* params)
  *
  * @param params Buffer holding the two seq_data pointers on entry; rebuilt
  *        in place into an akao_sfx_play parameter block.
- * @see decomp.me (100%)
  */
 void akao_sfx_play_default(AkaoCommandParam* params)
 {
@@ -2784,7 +2760,6 @@ void akao_sfx_play_default(AkaoCommandParam* params)
  *
  * @param params Buffer holding the program index on entry; rebuilt in
  *        place into an akao_sfx_play parameter block.
- * @see decomp.me (100%)
  */
 void akao_sfx_play_program(AkaoCommandParam* params)
 {
@@ -2810,7 +2785,6 @@ void akao_sfx_play_program(AkaoCommandParam* params)
  *
  * @param params Buffer holding the program index at +0x0 on entry; its
  *        voice_alloc_base (+0x10) is filled in before the call.
- * @see decomp.me (100%)
  */
 void akao_sfx_play_program_raw(AkaoCommandParam* params)
 {
@@ -2841,7 +2815,6 @@ void akao_sfx_play_program_raw(AkaoCommandParam* params)
  * @param params Buffer holding the list pointer on entry; voice_alloc_base
  *        (+0x10) is filled in before the calls.
  *
- * @see decomp.me (100%)
  */
 void akao_sfx_play_list(AkaoCommandParam* params)
 {
@@ -2919,7 +2892,6 @@ void akao_sfx_play_list(AkaoCommandParam* params)
 /**
  * @brief Stop SFX channels using a (sfx_id, mode) pair read from a buffer.
  * @param params sfx_id at +0x0, mode at +0x4; see akao_sfx_stop_channels.
- * @see decomp.me (100%)
  */
 void akao_sfx_stop_channels_from_params(AkaoCommandParam* params)
 {
@@ -2936,7 +2908,6 @@ void akao_sfx_stop_channels_from_params(AkaoCommandParam* params)
  *
  * @param params Song id at +0x0, new volume at +0x4.
  *
- * @see decomp.me (100%)
  */
 void akao_seq_set_master_volume(AkaoCommandParam* params)
 {
@@ -2976,7 +2947,6 @@ void akao_seq_set_master_volume(AkaoCommandParam* params)
  * per-tick fade in akao_tick_channel_effects picks it up.
  *
  * @param params Song id at +0x0, tick count at +0x4, target volume at +0x8.
- * @see decomp.me (100%)
  */
 void akao_seq_fade_master_volume(AkaoCommandParam* params)
 {
@@ -3028,7 +2998,6 @@ void akao_seq_fade_master_volume(AkaoCommandParam* params)
  *
  * @param params Song id at +0x0, tick count at +0x4, start volume at +0x8,
  *        target volume at +0xC.
- * @see decomp.me (100%)
  */
 void akao_seq_fade_master_volume_from(AkaoCommandParam* params)
 {
@@ -3076,7 +3045,6 @@ void akao_seq_fade_master_volume_from(AkaoCommandParam* params)
  * @brief Set the CD-audio volume accumulator directly, canceling any
  *        in-progress fade, and push it to the SPU immediately.
  * @param params Target volume (u16, shifted into the high half) at +0x0.
- * @see decomp.me (100%)
  */
 void akao_set_cd_volume(AkaoCommandParam* params)
 {
@@ -3096,7 +3064,6 @@ void akao_set_cd_volume(AkaoCommandParam* params)
  * @param params Tick count at +0x0 (0 is treated as 1), target volume
  *        (u16, shifted into the high half like the master-volume fades)
  *        at +0x4.
- * @see decomp.me (100%)
  */
 void akao_fade_cd_volume(AkaoCommandParam* params)
 {
@@ -3124,7 +3091,6 @@ void akao_fade_cd_volume(AkaoCommandParam* params)
  *        then fade it to a target level over a given tick count.
  * @param params Tick count at +0x0, start volume (u16) at +0x4, target
  *        volume (u16) at +0x8.
- * @see decomp.me (100%)
  */
 void akao_fade_cd_volume_from(AkaoCommandParam* params)
 {
@@ -3162,7 +3128,6 @@ void akao_fade_cd_volume_from(AkaoCommandParam* params)
  *
  * @param params sfx id at +0x0, tempo_acc mode mask at +0x4 (0 selects the
  *        id-match mode instead), new volume scale (7 bits) at +0x8.
- * @see decomp.me (100%)
  */
 void akao_sfx_set_volume_scale(AkaoCommandParam* params)
 {
@@ -3213,7 +3178,6 @@ void akao_sfx_set_volume_scale(AkaoCommandParam* params)
  *        id-match mode instead), tick count at +0x8 (0 is treated as 1),
  *        target volume scale (7 bits) at +0xC.
  *
- * @see decomp.me (100%)
  */
 void akao_sfx_fade_volume_scale(AkaoCommandParam* params)
 {
@@ -3281,7 +3245,6 @@ void akao_sfx_fade_volume_scale(AkaoCommandParam* params)
  *        tempo_acc does not have the pan/volume-suppress bit (0x02000000)
  *        set.
  * @param params New volume scale (7 bits, u16) to apply.
- * @see decomp.me (100%)
  */
 void akao_sfx_set_volume_scale_unsuppressed(AkaoCommandParam* params)
 {
@@ -3312,7 +3275,6 @@ void akao_sfx_set_volume_scale_unsuppressed(AkaoCommandParam* params)
  * @param params Tick count at +0x0 (0 is treated as 1), target volume
  *        scale (7 bits, u16) at +0x4.
  *
- * @see decomp.me (100%)
  */
 void akao_sfx_fade_volume_scale_unsuppressed(AkaoCommandParam* params)
 {
@@ -3355,7 +3317,6 @@ void akao_sfx_fade_volume_scale_unsuppressed(AkaoCommandParam* params)
  *        rule as akao_sfx_set_volume_scale), and cancel any pan-bias fade.
  * @param params sfx id at +0x0, tempo_acc mode mask at +0x4 (0 selects the
  *        id-match mode instead), new pan bias (u8) at +0x8.
- * @see decomp.me (100%)
  */
 void akao_sfx_set_pan_bias(AkaoCommandParam* params)
 {
@@ -3404,7 +3365,6 @@ void akao_sfx_set_pan_bias(AkaoCommandParam* params)
  * @param params sfx id at +0x0, tempo_acc mode mask at +0x4 (0 selects the
  *        id-match mode instead), tick count at +0x8 (0 is treated as 1),
  *        target pan bias (u8) at +0xC.
- * @see decomp.me (100%)
  */
 void akao_sfx_fade_pan_bias(AkaoCommandParam* params)
 {
@@ -3471,7 +3431,6 @@ void akao_sfx_fade_pan_bias(AkaoCommandParam* params)
  *        not have the suppress bit (0x02000000) set, and cancel any
  *        pan-bias fade.
  * @param params New pan bias (u8) to apply.
- * @see decomp.me (100%)
  */
 void akao_sfx_set_pan_bias_unsuppressed(AkaoCommandParam* params)
 {
@@ -3501,7 +3460,6 @@ void akao_sfx_set_pan_bias_unsuppressed(AkaoCommandParam* params)
  *        tempo_acc does not have the suppress bit (0x02000000) set.
  * @param params Tick count at +0x0 (0 is treated as 1), target pan bias
  *        (u8) at +0x4.
- * @see decomp.me (100%)
  */
 void akao_sfx_fade_pan_bias_unsuppressed(AkaoCommandParam* params)
 {
@@ -3548,7 +3506,6 @@ void akao_sfx_fade_pan_bias_unsuppressed(AkaoCommandParam* params)
  * @param params sfx id at +0x0, tempo_acc mode mask at +0x4 (0 selects the
  *        id-match mode instead), new value (u8, shifted into the high
  *        byte) at +0x8.
- * @see decomp.me (100%)
  */
 void akao_sfx_set_pitch_bend(AkaoCommandParam* params)
 {
@@ -3598,7 +3555,6 @@ void akao_sfx_set_pitch_bend(AkaoCommandParam* params)
  *        id-match mode instead), tick count at +0x8 (0 is treated as 1),
  *        target value (u8) at +0xC.
  *
- * @see decomp.me (100%)
  */
 void akao_sfx_fade_pitch_bend(AkaoCommandParam* params)
 {
@@ -3669,7 +3625,6 @@ void akao_sfx_fade_pitch_bend(AkaoCommandParam* params)
  *        sets, on every SFX channel whose tempo_acc does not have the
  *        suppress bit (0x02000000) set (no active-channel filter here).
  * @param params New value (u8, shifted into the high byte) to apply.
- * @see decomp.me (100%)
  */
 void akao_sfx_set_pitch_bend_unsuppressed(AkaoCommandParam* params)
 {
@@ -3697,7 +3652,6 @@ void akao_sfx_set_pitch_bend_unsuppressed(AkaoCommandParam* params)
  * @param params Tick count at +0x0 (0 is treated as 1), target value (u8)
  *        at +0x4.
  *
- * @see decomp.me (100%)
  */
 void akao_sfx_fade_pitch_bend_unsuppressed(AkaoCommandParam* params)
 {
@@ -3740,7 +3694,6 @@ void akao_sfx_fade_pitch_bend_unsuppressed(AkaoCommandParam* params)
  * @brief Set the master pan accumulator directly, canceling any
  *        in-progress fade.
  * @param params Signed target pan value (byte, shifted into the high half).
- * @see decomp.me (100%)
  */
 void akao_set_master_pan(AkaoCommandParam* params)
 {
@@ -3757,7 +3710,6 @@ void akao_set_master_pan(AkaoCommandParam* params)
  *        level over a given tick count.
  * @param params Tick count at +0x0 (0 is treated as 1), signed target pan
  *        (byte) at +0x4.
- * @see decomp.me (100%)
  */
 void akao_fade_master_pan(AkaoCommandParam* params)
 {
@@ -3791,7 +3743,6 @@ void akao_fade_master_pan(AkaoCommandParam* params)
  *
  * @param params Tick count at +0x0, signed start pan (byte) at +0x4,
  *        signed target pan (byte) at +0x8.
- * @see decomp.me (100%)
  */
 void akao_fade_master_pan_from(AkaoCommandParam* params)
 {
@@ -3822,7 +3773,6 @@ void akao_fade_master_pan_from(AkaoCommandParam* params)
  * @brief Set the driver-wide master volume accumulator directly,
  *        canceling any in-progress fade.
  * @param params Signed target volume (byte, shifted into the high half).
- * @see decomp.me (100%)
  */
 void akao_set_driver_master_volume(AkaoCommandParam* params)
 {
@@ -3839,7 +3789,6 @@ void akao_set_driver_master_volume(AkaoCommandParam* params)
  *        to a target level over a given tick count.
  * @param params Tick count at +0x0 (0 is treated as 1), signed target
  *        volume (byte) at +0x4.
- * @see decomp.me (100%)
  */
 void akao_fade_driver_master_volume(AkaoCommandParam* params)
 {
@@ -3873,7 +3822,6 @@ void akao_fade_driver_master_volume(AkaoCommandParam* params)
  *
  * @param params Tick count at +0x0, signed start volume (byte) at +0x4,
  *        signed target volume (byte) at +0x8.
- * @see decomp.me (100%)
  */
 void akao_fade_driver_master_volume_from(AkaoCommandParam* params)
 {
@@ -3903,7 +3851,6 @@ void akao_fade_driver_master_volume_from(AkaoCommandParam* params)
 /**
  * @brief Unconditionally stop the primary song, and the secondary song
  *        too if one is loaded.
- * @see decomp.me (100%)
  */
 void akao_seq_stop_all_songs(void)
 {
@@ -3918,7 +3865,6 @@ void akao_seq_stop_all_songs(void)
  * @brief Stop the primary song by key, and the secondary song too if one
  *        is loaded and the key is nonzero.
  * @param params Song key at +0x0; see akao_seq_stop_song.
- * @see decomp.me (100%)
  */
 void akao_seq_stop_song_by_key(AkaoCommandParam* params)
 {
@@ -3938,7 +3884,6 @@ void akao_seq_stop_song_by_key(AkaoCommandParam* params)
 /**
  * @brief Release every active, non-suppressed SFX channel and clear its
  *        flags word.
- * @see decomp.me (100%)
  */
 void akao_sfx_release_all_channels(void)
 {
@@ -3963,7 +3908,6 @@ void akao_sfx_release_all_channels(void)
 /**
  * @brief Flag every channel of every active song and every active SFX
  *        channel for a pending SPU volume re-apply.
- * @see decomp.me (100%)
  */
 void akao_flag_all_volume_updates(void)
 {
@@ -3980,7 +3924,6 @@ void akao_flag_all_volume_updates(void)
  * @brief Flag every channel of every active song and every active SFX
  *        channel for a pending SPU update, tagged mode 2 (see
  *        akao_flag_all_volume_updates, tagged mode 1).
- * @see decomp.me (100%)
  */
 void akao_flag_all_pan_updates(void)
 {
@@ -3997,7 +3940,6 @@ void akao_flag_all_pan_updates(void)
  * @brief Store a new value into D_8003EC6C, then flag every primary song
  *        channel for a pending SPU update.
  * @param params New value for D_8003EC6C.
- * @see decomp.me (100%)
  */
 void akao_set_mode_flag_and_flag_all_channels(AkaoCommandParam* params)
 {
@@ -4018,7 +3960,6 @@ void akao_set_mode_flag_and_flag_all_channels(AkaoCommandParam* params)
 /**
  * @brief Set the primary song's conditional-jump variable (unk60).
  * @param params New value in word 0.
- * @see decomp.me (100%)
  */
 void akao_seq_set_unk60(AkaoCommandParam* params)
 {
@@ -4030,7 +3971,6 @@ void akao_seq_set_unk60(AkaoCommandParam* params)
  *        or the XA/streaming reservation, park the primary song's
  *        active_mask into unk1C (pausing it without releasing voices),
  *        and set the driver "paused" mode bit.
- * @see decomp.me (100%)
  */
 void akao_seq_silence_unused_voices_and_pause(void)
 {
@@ -4075,7 +4015,6 @@ void akao_seq_silence_unused_voices_and_pause(void)
  *        akao_seq_silence_unused_voices_and_pause: restore active_mask
  *        from unk1C, flag every channel that was parked for a full SPU
  *        re-apply, and clear the driver "paused" mode bit.
- * @see decomp.me (100%)
  */
 void akao_seq_resume_and_apply_pending_voices(void)
 {
@@ -4119,7 +4058,6 @@ void akao_seq_resume_and_apply_pending_voices(void)
  *        channels, parks it in g_akao_sfx_control.unk10, clears those bits
  *        from unk0, silences their SPU voices, and sets the driver
  *        "SFX paused" mode bit (0x2).
- * @see decomp.me (100%)
  */
 void akao_sfx_silence_unused_voices_and_pause(void)
 {
@@ -4176,7 +4114,6 @@ void akao_sfx_silence_unused_voices_and_pause(void)
  *        channel for a full SPU re-apply, restore the active mask from
  *        the parked D_8004D410 value, and clear the driver "SFX paused"
  *        mode bit.
- * @see decomp.me (100%)
  */
 void akao_sfx_resume_and_apply_pending_voices(void)
 {
@@ -4288,7 +4225,6 @@ void akao_apply_reverb_type(s32 reverb_type)
  *         the header failed the AKAO magic check. Ignored by most other
  *         callers (see the doc comment on the forward declaration in
  *         akao_cmd.c).
- * @see decomp.me (100%)
  */
 s32 akao_send_command(u32 opcode)
 {

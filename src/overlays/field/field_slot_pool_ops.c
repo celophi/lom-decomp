@@ -41,7 +41,6 @@ s32 func_800BF9F0(s32 cost);
  * @p offset inside the loaded table, clears its wait word and runs the script.
  *
  * @param offset Byte offset of the script inside the loaded table; only the low 16 bits are used.
- * @see decomp.me (100%) TODO
  */
 void func_800BF2F0(s32 offset)
 {
@@ -253,7 +252,6 @@ void func_800BF730(void)
 
 /**
  * @brief Apply every pending level increase of the staged level entries.
- * @see decomp.me (100%) TODO
  */
 void func_800BF800(void)
 {

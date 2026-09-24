@@ -1556,7 +1556,6 @@ void field_build_quad_tile_record(FieldTileDesc *, FieldTileRec *, s32, s32);
  * @param tail  Where to store the next node pointer; walked along the list and
  *              finally cleared.
  *
- * @see decomp.me (100%) TODO
  */
 void field_build_animation_list(FieldAnimDef *def, u8 **arena, FieldAnim **tail)
 {
@@ -1961,7 +1960,6 @@ void field_build_animation_list(FieldAnimDef *def, u8 **arena, FieldAnim **tail)
  * @param record_flags Combination of FIELD_TILE_REC_SHARED_RGB_CODE and
  *                     FIELD_TILE_REC_SHARED_TPAGE.
  *
- * @see decomp.me (100%) TODO
  */
 void field_build_sprite_tile_record(FieldTileDesc* desc, FieldTileRec* record, s32 texture_depth, s32 record_flags)
 {
@@ -2049,7 +2047,6 @@ void field_build_sprite_tile_record(FieldTileDesc* desc, FieldTileRec* record, s
  *              scratchpad word and shortens the record by four bytes;
  *              FIELD_TILE_REC_SHARED_TPAGE omits the second UV/TPage tuple.
  *
- * @see decomp.me (100%) TODO
  */
 void field_build_quad_tile_record(FieldTileDesc* desc, FieldTileRec* record, s32 texture_depth, s32 record_flags)
 {
@@ -2142,7 +2139,6 @@ void field_build_quad_tile_record(FieldTileDesc* desc, FieldTileRec* record, s32
  * minimum, and is written back to the allocator state at 0x801ED000 as a
  * base / midpoint / top triple (the region is sized to twice the total).
  *
- * @see decomp.me (100%) TODO
  */
 void field_size_work_buffer(void)
 {
@@ -2243,7 +2239,6 @@ void field_size_work_buffer(void)
  * @param update_mode Mode selector: 0 advances the per-frame drift; 2 forces the
  *             unscaled camera offsets.
  *
- * @see decomp.me (100%) 
  */
 void field_draw_scene_objects(u8** cursor, u_long* ot, s32 update_mode)
 {
@@ -2556,7 +2551,6 @@ void field_draw_scene_objects(u8** cursor, u_long* ot, s32 update_mode)
  *               written back with the address one past the last primitive.
  * @param ot     Ordering table pointer; the run is linked into @p ot[-1].
  *
- * @see decomp.me (100%) TODO
  */
 void field_draw_marker_overlay(u8** cursor, u_long* ot)
 {
@@ -2662,7 +2656,6 @@ void field_draw_marker_overlay(u8** cursor, u_long* ot)
  * @note `step` is the record stride: 0xC, less 4 when a global code word makes
  *       the per-record copy unnecessary, less another 4 for a global page word.
  *
- * @see decomp.me (100%) TODO
  */
 void field_emit_sprite_grid(FieldPart* part, u8** cursor_ptr, FieldViewport* origin, u_long* ot)
 {
@@ -2971,7 +2964,6 @@ void field_emit_sprite_grid(FieldPart* part, u8** cursor_ptr, FieldViewport* ori
  * @param ot_base Base of the 8-byte-per-entry ordering-table head array,
  *                indexed by CLUT id.
  *
- * @see decomp.me (100%) TODO
  */
 void field_emit_rotated_sprite_grid(FieldPart *part, u8 **cursor_ptr, FieldViewport *origin, u_long *ot)
 {
@@ -3283,7 +3275,6 @@ void field_emit_rotated_sprite_grid(FieldPart *part, u8 **cursor_ptr, FieldViewp
  * @return The matching FieldPart, or NULL if none qualifies - including when
  *         the only candidate found is @p part itself on @p obj.
  *
- * @see decomp.me (100%) TODO
  */
 FieldPart* field_find_shareable_part(FieldScene* scene, FieldObj* obj, FieldPart* part, s32 key)
 {
@@ -3332,7 +3323,6 @@ FieldPart* field_find_shareable_part(FieldScene* scene, FieldObj* obj, FieldPart
  * @param origin Screen-space placement, forwarded as the 3rd param.
  * @param ot_base Ordering-table head array base, forwarded as the 4th param.
  *
- * @see decomp.me (100%) TODO
  */
 void field_draw_part(FieldPart* part, u8** cursor, FieldViewport* origin, u_long* ot)
 {
@@ -3358,7 +3348,6 @@ void field_draw_part(FieldPart* part, u8** cursor, FieldViewport* origin, u_long
  * Walks the scene's upload list, issues each node's LoadImage, then empties the
  * list. Nodes are not freed - the list head is simply cleared.
  *
- * @see decomp.me (100%) TODO
  */
 void field_flush_vram_uploads(void)
 {
@@ -3376,7 +3365,6 @@ void field_flush_vram_uploads(void)
 /**
  * @brief Empty stub; nothing references it.
  *
- * @see decomp.me (100%) TODO
  */
 void func_800569F4(void)
 {
@@ -3385,7 +3373,6 @@ void func_800569F4(void)
 /**
  * @brief Empty stub, identical to func_800569F4; nothing references it.
  *
- * @see decomp.me (100%) TODO
  */
 void func_800569FC(void)
 {

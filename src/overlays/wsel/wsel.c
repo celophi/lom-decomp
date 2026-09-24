@@ -822,7 +822,6 @@ static void* wsel_draw_zoom_quad(POLY_FT4* poly, u_long* ot, WselQuadCoords* coo
  *       the selection square by a pair of draw-environment packets, and with button
  *       bit 0x10 held the sub-cells without an edge (plus the neighbouring cells'
  *       shared border sub-cells) are brightened.
- * @see decomp.me (100%) TODO: no scratch link yet
  */
 static void* wsel_draw_cell_shading(void* prim, u_long* ot)
 {

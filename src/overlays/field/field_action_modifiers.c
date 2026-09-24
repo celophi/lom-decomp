@@ -391,7 +391,6 @@ void func_800B6744(FieldStatusRecord* record)
 /**
  * @brief Run the handler of the bound action descriptor.
  * @return The handler's damage, or 0 without a descriptor or for an unknown handler.
- * @see decomp.me (100%) TODO
  */
 s32 func_800B6808(void)
 {
@@ -626,7 +625,6 @@ s32 func_800B6EC0(void)
 
 /**
  * @brief Handler 6: scale the target's current HP by a random percentage.
- * @see decomp.me (100.00%)
  */
 void func_800B7020(void)
 {

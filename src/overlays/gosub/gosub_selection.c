@@ -4,7 +4,6 @@
  * @brief Confirm the currently highlighted row of the gosub list.
  * @return 0 if the row was rejected by a flag, 1 otherwise. Note that 1 is also
  *         returned when g_gosub_selection_count is clear and nothing was appended.
- * @see decomp.me (100%)
  */
 s32 gosub_select_row_with_validation(void)
 {
@@ -41,7 +40,6 @@ s32 gosub_select_row_with_validation(void)
 /**
  * @brief Append the highlighted row to the selection, with no flag checks.
  * @return Always 1. Nothing is appended while g_gosub_selection_count is clear.
- * @see decomp.me (100%)
  */
 s32 gosub_select_row(void)
 {
@@ -60,7 +58,6 @@ s32 gosub_select_row(void)
 /**
  * @brief Validate a pending two-row selection before publishing it.
  * @return gosub_publish_two_row_selection's result while g_gosub_combination_result_id is set, 0 on every other path.
- * @see decomp.me (100%)
  */
 s32 gosub_validate_pending_pair_selection(void)
 {
@@ -82,7 +79,6 @@ s32 gosub_validate_pending_pair_selection(void)
 /**
  * @brief Commit a pending row move by swapping the two marked rows.
  * @return Always 0.
- * @see decomp.me (100%)
  */
 s32 gosub_commit_row_reorder(void)
 {
@@ -123,7 +119,6 @@ s32 gosub_commit_row_reorder(void)
 /**
  * @brief Update row colors for the current group selection.
  * @return 1 after publishing a complete mixed-group selection, otherwise 0.
- * @see decomp.me (100%)
  */
 s32 gosub_update_group_selection(void)
 {
@@ -183,7 +178,6 @@ s32 gosub_update_group_selection(void)
 /**
  * @brief Publish the picked rows' indices as the screen's result.
  * @return 1 if the result was published, 0 if the picker was not in state 2.
- * @see decomp.me (100%)
  */
 s32 gosub_publish_two_row_selection(void)
 {
@@ -461,7 +455,6 @@ void gosub_build_equipment_list(u32 item_kind)
  * @brief Build one of the three grouped option lists from the text archive.
  *
  * @param group Option group index, from 0 through 2.
- * @see decomp.me (100%)
  */
 void gosub_build_grouped_option_list(s32 group)
 {

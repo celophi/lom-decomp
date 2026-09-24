@@ -10,7 +10,6 @@ void func_800BD520(s32 arg0, u32 arg1, s32 arg2);
 
 /**
  * @brief Count one more battle for the ally or the enemy side in script variables 0x4280 / 0x4284.
- * @see decomp.me (100%)
  */
 void func_800B48B8(void)
 {
@@ -288,7 +287,6 @@ void func_800B4DF0(FieldStatusRecord *record)
  * @param record Status record to update; the cost is maximum >> 5, or >> 8 for party
  *               members whose template shows the HP gauge.
  * @note The current value never drops below 1.
- * @see decomp.me (100%)
  */
 void func_800B4E60(FieldStatusRecord *record)
 {

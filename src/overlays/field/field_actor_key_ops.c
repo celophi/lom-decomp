@@ -356,7 +356,6 @@ FieldObjectState* func_80087F0C(s32 key)
  * @param key Object key to look up.
  * @param position Receives the actor's X, Y and Z position.
  * @return 0 on success, or -1 when no actor has @p key.
- * @see decomp.me (100%)
  */
 s32 func_80087F44(s32 key, FieldActorPosition* position)
 {

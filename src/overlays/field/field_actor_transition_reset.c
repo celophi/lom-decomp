@@ -235,7 +235,6 @@ s32 func_80096A90(void)
 
 /**
  * @brief Process pending actor binding cleanups and reset their rendering state.
- * @see decomp.me (100%)
  */
 void func_80096B54(void)
 {

@@ -483,7 +483,6 @@ static inline s32 niki_draw_scan_message(s32* ot, s32 prim, s32 x_offset, s32 y_
  * @param x_offset Horizontal scroll offset (subtracted from every x).
  * @param y_offset Vertical scroll offset (subtracted from every row y).
  * @return Advanced primitive-buffer write cursor.
- * @see decomp.me (100%)
  */
 s32 niki_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
@@ -614,7 +613,6 @@ s32 niki_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
  * @param x_offset Horizontal scroll offset (subtracted from the banner x).
  * @param y_offset Vertical scroll offset (subtracted from the banner y).
  * @return Advanced primitive-buffer write cursor.
- * @see decomp.me (100%)
  */
 s32 niki_draw_header_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
@@ -638,7 +636,6 @@ s32 niki_draw_header_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
  * @param x_offset Horizontal scroll offset (subtracted from the caption x).
  * @param y_offset Vertical scroll offset (subtracted from the caption y).
  * @return Advanced primitive-buffer write cursor.
- * @see decomp.me (100%)
  */
 s32 niki_draw_card_slot0_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
@@ -669,7 +666,6 @@ s32 niki_draw_card_slot0_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
  * @param x_offset Horizontal scroll offset (subtracted from the caption x).
  * @param y_offset Vertical scroll offset (subtracted from the caption y).
  * @return Advanced primitive-buffer write cursor.
- * @see decomp.me (100%)
  */
 s32 niki_draw_card_slot1_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
@@ -710,7 +706,6 @@ s32 niki_draw_card_slot1_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
  * @param x_offset Horizontal scroll offset (subtracted from every x).
  * @param y_offset Vertical scroll offset (subtracted from every row y).
  * @return Advanced primitive-buffer write cursor.
- * @see decomp.me (100%)
  */
 s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
@@ -909,7 +904,6 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
 /**
  * @brief Zero-fill a 64-byte text field from its first character-boundary terminator.
  * @param text Text field to scan; bytes with the high bit set begin two-byte characters.
- * @see decomp.me (100%)
  */
 void niki_terminate_multibyte_text(void* text)
 {
@@ -958,7 +952,6 @@ void niki_terminate_multibyte_text(void* text)
  * @param x_offset Horizontal scroll offset (subtracted from the anchor x).
  * @param y_offset Vertical scroll offset (subtracted from the anchor y).
  * @return Advanced primitive-buffer write cursor.
- * @see decomp.me (100%)
  */
 s32 niki_draw_footer_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
@@ -971,7 +964,6 @@ s32 niki_draw_footer_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
  * @brief Reset the niki element array: clear the low 3 state bits of each of
  *        the eight g_niki_element_pool entries and reload the g_menu_element_counter counter.
  *
- * @see decomp.me (100%)
  */
 void niki_clear_elements(void)
 {
@@ -994,7 +986,6 @@ void niki_clear_elements(void)
  * sets them to 1, and returns it. Falls back to the first entry if none free.
  *
  * @return Pointer to the claimed (or fallback) element.
- * @see decomp.me (100%)
  */
 NikiElement* niki_alloc_element(void)
 {
@@ -1027,7 +1018,6 @@ NikiElement* niki_alloc_element(void)
  * @note Each case reads the width low byte into its own local before the inset
  *       product, and the x position and low byte again before each
  *       func_800AD850 call; the compiled evaluation order needs both.
- * @see decomp.me (100%)
  */
 void niki_update_and_draw_elements(NikiFrameState* frame_arg)
 {
@@ -1155,7 +1145,6 @@ void niki_update_and_draw_elements(NikiFrameState* frame_arg)
 
 /**
  * @brief Clear the low 3 state bits of the first niki element slot.
- * @see decomp.me (100%)
  */
 void niki_deactivate_primary_element(void)
 {
@@ -1166,7 +1155,6 @@ void niki_deactivate_primary_element(void)
  * @brief Append an encoded NIKI string and terminate the result.
  * @param dst Destination string with room for the appended bytes and terminator.
  * @param src Encoded string to append.
- * @see decomp.me (100%)
  */
 void niki_text_append(u8* dst, u8* src)
 {
@@ -1187,7 +1175,6 @@ void niki_text_append(u8* dst, u8* src)
  * @brief Measure an encoded NIKI string, skipping trail bytes of extended characters.
  * @param text Encoded string to measure.
  * @return Length in bytes, excluding the terminator.
- * @see decomp.me (100%)
  */
 s32 niki_text_byte_length(u8* text)
 {
@@ -1219,7 +1206,6 @@ s32 niki_text_byte_length(u8* text)
  * @brief Copy an encoded NIKI string and append its terminator.
  * @param dst Destination buffer with room for the string and terminator.
  * @param src Encoded string to copy.
- * @see decomp.me (100%)
  */
 void niki_text_copy(u8* dst, u8* src)
 {
@@ -1260,7 +1246,6 @@ void niki_text_copy(u8* dst, u8* src)
  * @param x_offset Horizontal scroll offset (subtracted from the caption x).
  * @param y_offset Vertical scroll offset (subtracted from the caption y).
  * @return Advanced primitive-buffer write cursor.
- * @see decomp.me (100%)
  */
 s32 niki_draw_confirm_prompt(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
@@ -1333,7 +1318,6 @@ s32 niki_draw_confirm_prompt(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
  * @param x_offset Horizontal scroll offset (subtracted from every caption x).
  * @param y_offset Vertical scroll offset (subtracted from every caption y).
  * @return Advanced primitive-buffer write cursor.
- * @see decomp.me (100%)
  */
 s32 niki_draw_save_confirm_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
@@ -1393,7 +1377,6 @@ s32 niki_draw_save_confirm_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
  * @param prim GPU packet write cursor.
  * @param ot Ordering-table entry receiving the bar.
  * @return Advanced packet cursor, or the original cursor when the timer is inactive.
- * @see decomp.me (100%)
  */
 s32 niki_draw_progress_bar(s32 prim, s32* ot)
 {
@@ -1440,7 +1423,6 @@ s32 niki_draw_progress_bar(s32 prim, s32* ot)
 /**
  * @brief Open the primary status window and reset the active card operation.
  * @param dialog_state Message selector consumed by the status draw callback.
- * @see decomp.me (100%)
  */
 void niki_open_status_dialog(s32 dialog_state)
 {
@@ -1467,7 +1449,6 @@ void niki_open_status_dialog(s32 dialog_state)
 /**
  * @brief Open the secondary status window and reset the active card operation.
  * @param dialog_state Message selector consumed by the status draw callback.
- * @see decomp.me (100%)
  */
 void niki_open_secondary_status_dialog(s32 dialog_state)
 {
@@ -1501,7 +1482,6 @@ void niki_open_secondary_status_dialog(s32 dialog_state)
  * @param x_offset Horizontal displacement subtracted from the caption position.
  * @param y_offset Vertical displacement subtracted from the caption position.
  * @return Advanced primitive-buffer write cursor.
- * @see decomp.me (100%)
  */
 s32 niki_draw_status_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
@@ -1538,7 +1518,6 @@ s32 niki_draw_status_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
  * @param x_offset Horizontal displacement subtracted from the caption position.
  * @param y_offset Vertical displacement subtracted from the caption position.
  * @return Advanced primitive-buffer write cursor.
- * @see decomp.me (100%)
  */
 s32 niki_draw_secondary_status_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
@@ -1588,7 +1567,6 @@ s32 niki_draw_secondary_status_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_off
  * @param texture_slot VRAM slot for the icon texture and palette.
  * @param palette_mode Selects the special palette path when one and the icon index is below two.
  * @return Advanced packet cursor, or the original cursor when drawing is skipped.
- * @see decomp.me (100%)
  */
 s32 niki_draw_icon_highlight(s32 prim, s32* ot, s32 x, s32 y, s32 width, s32 icon_index, s32 texture_slot, s32 palette_mode)
 {
@@ -1659,7 +1637,6 @@ s32 niki_draw_icon_highlight(s32 prim, s32* ot, s32 x, s32 y, s32 width, s32 ico
 
 /**
  * @brief Select the cancellation choice when opening a confirmation prompt.
- * @see decomp.me (100%)
  */
 void niki_enable_choice_toggle(void)
 {
@@ -1673,7 +1650,6 @@ void niki_enable_choice_toggle(void)
  * @param x Horizontal anchor between the choices.
  * @param y Caption baseline.
  * @return Advanced GPU packet cursor.
- * @see decomp.me (100%)
  */
 s32 niki_draw_choice_prompt(s32 prim, s32* ot, s32 x, s32 y)
 {
@@ -2213,7 +2189,6 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
  * @param text Pointer to the start of the scan.
  * @return Pointer to the first byte that is not a hex digit
  *         (@c '0'-'9', @c 'a'-'f' or @c 'A'-'F').
- * @see decomp.me (100.00%)
  */
 u8* niki_skip_hex_digits(void* text)
 {
@@ -2233,7 +2208,6 @@ const NikiDecimalOverflow g_niki_decimal_overflow_text __attribute__((aligned(4)
  * @brief Validate the save payload checksum and format marker.
  * @param blob Serialized save data to validate.
  * @return One when both checks pass, otherwise zero.
- * @see decomp.me (100.00%)
  */
 s32 niki_validate_save_blob(NikiSaveBlob* blob)
 {
@@ -2251,7 +2225,6 @@ s32 niki_validate_save_blob(NikiSaveBlob* blob)
  * @brief Sum the save payload bytes and apply the checksum scale and bias.
  * @param data Start of the fixed-size save payload.
  * @return Twice the byte sum plus NIKI_SAVE_CHECKSUM_BIAS.
- * @see decomp.me (100.00%)
  */
 s32 niki_compute_save_checksum(u8* data)
 {
@@ -2277,7 +2250,6 @@ s32 niki_compute_save_checksum(u8* data)
  * @param value Number to format.
  * @return Pointer to the terminator, or six bytes past the start for the overflow string.
  * @note Values at least 1000000 use the fixed overflow string; leading zeroes are suppressed.
- * @see decomp.me (100.00%)
  */
 s8* niki_format_decimal(s8* out, s32 value)
 {
@@ -2324,7 +2296,6 @@ s8* niki_format_decimal(s8* out, s32 value)
  * @param out Destination character buffer.
  * @param value Number to format.
  * @param max_chars Maximum number of digits to emit, excluding the terminator.
- * @see decomp.me (100.00%)
  */
 void niki_format_hex(s8* out, s32 value, s32 max_chars)
 {
@@ -2366,7 +2337,6 @@ void niki_format_hex(s8* out, s32 value, s32 max_chars)
  * @param out Destination byte.
  * @param value Nibble value; 0-9 -> '0'-'9', 10-15 -> 'A'-'F', else '_'.
  * @return None.
- * @see decomp.me (100.00%)
  */
 void niki_hex_nibble_to_ascii(s8* out, s32 value)
 {
@@ -2389,7 +2359,6 @@ void niki_hex_nibble_to_ascii(s8* out, s32 value)
  * @param text First digit to parse.
  * @param digits_left Maximum number of digits to consume.
  * @return Accumulated value; parsing stops at the digit limit or first non-hex byte.
- * @see decomp.me (100.00%)
  */
 u32 niki_parse_hex(u8* text, s32 digits_left)
 {
@@ -2434,7 +2403,6 @@ u32 niki_parse_hex(u8* text, s32 digits_left)
  * @brief Skip a hexadecimal run and its separator, then parse up to two hex digits.
  * @param text Start of the leading hexadecimal run.
  * @return Parsed suffix byte.
- * @see decomp.me (100.00%)
  */
 s32 niki_parse_hex_suffix_byte(u8* text)
 {
@@ -2486,7 +2454,6 @@ s32 niki_parse_hex_suffix_byte(u8* text)
 /**
  * @brief Parse field values and suffix bytes from recognized save-file names.
  * @return Largest suffix byte among the recognized entries.
- * @see decomp.me (100%)
  */
 s32 niki_parse_entry_fields(void)
 {

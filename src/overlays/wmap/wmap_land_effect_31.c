@@ -11939,9 +11939,6 @@ void func_800B7420__for_func_800B6EF4(void) __asm__("func_800B7420");
     }
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800B6FEC(void)
 {
     typedef struct
@@ -11980,9 +11977,6 @@ void func_800B6FEC(void)
     }
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800B70CC(void)
 {
     typedef struct

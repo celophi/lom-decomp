@@ -172,7 +172,6 @@ void func_800C35AC(s32 land_index)
  * @param land_index Land index; >= FIELD_LAND_COUNT records a diagnostic.
  * @return 0 when unavailable or out of range; for an available land 1 when not
  *         placed, 2 without flag 0x02, 3 without flag 0x04, otherwise 4.
- * @see decomp.me (100%) TODO
  */
 s32 func_800C35E4(s32 land_index)
 {
@@ -270,7 +269,6 @@ s32 func_800C3688(s32 land_index)
  * @brief Check whether a key is already used by an inventory item or one of the hero's item records.
  * @param key Key to look up.
  * @return 1 when the key is in use, 0 otherwise.
- * @see decomp.me (100%)
  */
 s32 func_800C36F0(FieldItemKey* key)
 {
@@ -306,7 +304,6 @@ s32 func_800C36F0(FieldItemKey* key)
  * @brief Generate a random item key, seeded by nibble masks, that no item uses yet.
  * @param seed Nibble pattern mixed into both halves of the key.
  * @param out Receives the unique key.
- * @see decomp.me (100%)
  */
 void func_800C37A8(u32 seed, FieldItemKey* out)
 {
@@ -401,7 +398,6 @@ s32 func_800C38C8(FieldItemRecord* item)
 
 /**
  * @brief Compute the cached value of every inventory item that does not have one yet.
- * @see decomp.me (100%) TODO
  */
 void func_800C396C(void)
 {

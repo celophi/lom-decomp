@@ -257,7 +257,6 @@ void field_set_object_position(s32 obj_index, s32 part_index, FieldPos* pos, s32
  * @note FieldAnimDef::unk1 is read into @p frame before either store, because
  *       the stores are through FieldAnim and gcc cannot rule out an alias.
  *
- * @see decomp.me (100%) TODO
  */
 void field_start_animation(FieldSeq* seq)
 {
@@ -372,7 +371,6 @@ void field_start_animation(FieldSeq* seq)
  * @param keyframe  Stop/seek keyframe, or -1 to mean "no keyframe" for op 1.
  * @param op        Operation selector; see above.
  *
- * @see decomp.me (100%)
  */
 void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
 {
@@ -623,7 +621,6 @@ extern s32 D_801ED02C;
  *       @c u16 union member instead of @c (u16) on the word, and using an early
  *       @c return for the already-done object instead of the nested @c if.
  *
- * @see decomp.me (100%) TODO
  */
 void field_update_scene_fade(void)
 {
@@ -735,7 +732,6 @@ void field_update_scene_fade(void)
  * @note Measured non-factor, still 100%: writing @c D_801ED02C before rather
  *       than after the @c scene read.
  *
- * @see decomp.me (100%) TODO
  */
 void field_begin_scene_fade_in(void)
 {
@@ -840,7 +836,6 @@ void func_8005ADA8(FieldAnimCel*, FieldAnim*);
  *       @c 2, and prototyping the four callees instead of leaving them
  *       implicit.
  *
- * @see decomp.me (100%) TODO
  */
 void func_8005A0D0(s16 index, u16 red_scale, u16 green_scale, u16 blue_scale)
 {
@@ -967,7 +962,6 @@ void func_8005A0D0(s16 index, u16 red_scale, u16 green_scale, u16 blue_scale)
  *       of @c stride @c -= @c 4 for the shared rgb/code word, nesting the
  *       present test instead of joining it with @c &&, and @c bit as @c s32.
  *
- * @see decomp.me (100%) TODO
  */
 void func_8005A428(FieldPart* part)
 {
@@ -1108,7 +1102,6 @@ void func_8005A428(FieldPart* part)
  *       cast, dropping the @c cmd temp, and a guarded @c do/while for the
  *       outer walk.
  *
- * @see decomp.me (100%) TODO
  */
 void func_8005A67C(s32 index, s32 op)
 {
@@ -1180,7 +1173,6 @@ void func_8005A67C(s32 index, s32 op)
  *       instead of joining them with @c &&, ordering @c def @c = @c seq->def
  *       before the @c scene read, and moving the byte store above it.
  *
- * @see decomp.me (100%) TODO
  */
 void func_8005A744(FieldSeq* seq, u8 index)
 {
@@ -1227,7 +1219,6 @@ void func_8005A744(FieldSeq* seq, u8 index)
  *       @c && instead of nesting them, a guarded @c do/while for the walk,
  *       and a union byte member instead of the @c ((u8*)&flags)[1] cast.
  *
- * @see decomp.me (100%) TODO
  */
 s32 func_8005A7EC(s32 index)
 {
@@ -1287,7 +1278,6 @@ s32 func_8005A7EC(s32 index)
  *       dropping the @c def temp, an explicit @c (s32) on the state compare,
  *       and joining the last two tests with @c && instead of nesting them.
  *
- * @see decomp.me (100%) TODO
  */
 s32 func_8005A84C(s32 list_kind, s32 index)
 {
@@ -1398,7 +1388,6 @@ s32 func_8005A84C(s32 list_kind, s32 index)
  *       @c &&, a plain @c while instead of the guarded @c do/while, and
  *       @c if @c (--count @c == @c 0) instead of a separate decrement.
  *
- * @see decomp.me (100%) TODO
  */
 void func_8005A984(FieldPart* part, s32 delta, s32 axis)
 {
@@ -1482,7 +1471,6 @@ void func_8005A984(FieldPart* part, s32 delta, s32 axis)
  *       @c &&, a plain @c while instead of the guarded @c do/while, and
  *       @c if @c (--count @c == @c 0) instead of a separate decrement.
  *
- * @see decomp.me (100%) TODO
  */
 void func_8005AA68(FieldObj* obj, s32 delta, s32 axis)
 {
@@ -1543,7 +1531,6 @@ void func_8005AA68(FieldObj* obj, s32 delta, s32 axis)
  *
  * @param index Number of @c next hops to take. 0 returns the list head.
  * @return The object @p index steps into the list.
- * @see decomp.me (100%) TODO
  */
 FieldObj* func_8005AB4C(s32 index)
 {
@@ -1575,7 +1562,6 @@ FieldObj* func_8005AB4C(s32 index)
  * @param part_index Number of @c next hops along the chosen object's part list.
  *                   0 selects that object's first part.
  * @return The selected part.
- * @see decomp.me (100%) TODO
  */
 FieldPart* func_8005AB80(s32 obj_index, s32 part_index)
 {
@@ -1618,7 +1604,6 @@ FieldPart* func_8005AB80(s32 obj_index, s32 part_index)
  * @param out_src Optional out-parameter receiving the tint source owning the
  *                match. Pass NULL when only the cel is needed.
  * @return The matching cel, or NULL when no record in the scene holds one.
- * @see decomp.me (100%) TODO
  */
 FieldAnimCel* func_8005ABD8(FieldTileGrid* grid, FieldTintSrc** out_src)
 {
@@ -1670,7 +1655,6 @@ FieldAnimCel* func_8005ABD8(FieldTileGrid* grid, FieldTintSrc** out_src)
  *       needs an @c andi mask and the function grows two instructions.
  * @note @c v must be unsigned: the compare is @c sltu and the shift @c srl,
  *       and a signed @c v turns both into their signed forms (6 rows).
- * @see decomp.me (100%) TODO
  */
 void func_8005AC50(u8* colors, s32 count, s32* rgb_scale)
 {
@@ -1754,7 +1738,6 @@ void func_8005AC50(u8* colors, s32 count, s32* rgb_scale)
  *       body takes gcc's case list from three nodes to six, which rebuilds the
  *       whole comparison tree (15 rows); see idiom [EXPAND-13]. An equivalent
  *       if/else-if chain costs 21 rows.
- * @see decomp.me (100%) TODO
  */
 void func_8005AD20(u8 format, s32 count, u8* primitive_code)
 {
@@ -1817,7 +1800,6 @@ void func_8005AD20(u8 format, s32 count, u8* primitive_code)
  *       first block, and the FieldCellTint cursor must be initialised from
  *       @c dst itself rather than @c dst @c + @c 4 - the same pairing
  *       field_tint_animation_cel documents.
- * @see decomp.me (100%) TODO
  */
 void func_8005ADA8(FieldAnimCel* cel, FieldAnim* anim)
 {
@@ -1902,7 +1884,6 @@ void func_8005ADA8(FieldAnimCel* cel, FieldAnim* anim)
  *       word is or-ed with the whole value.
  * @note The @c -1 case has to be the @c if and the part case the @c else;
  *       swapping them inverts the branch and reorders both blocks.
- * @see decomp.me (100%) TODO
  */
 void func_8005AF04(s32 obj_index, s32 part_index, s32 visible)
 {
@@ -1941,7 +1922,6 @@ void func_8005AF04(s32 obj_index, s32 part_index, s32 visible)
  * @note The shift must go through SHIFT_TOWARD_ZERO rather than `/ 256`: gcc
  *       does emit the branchy expansion for this divisor, but finishes it with
  *       `sra` where the target has `srl`. See idiom [EXPAND-23].
- * @see decomp.me (100%) TODO
  */
 void func_8005AF5C(s32 obj_index, s32 part_index, FieldPos* out)
 {
@@ -1977,7 +1957,6 @@ void func_8005AF5C(s32 obj_index, s32 part_index, FieldPos* out)
  * @note The two scales must be stored before the three angles. Writing them in
  *       FieldPart's own field order instead costs ten rows - the source order
  *       is the record's, not the destination's.
- * @see decomp.me (100%) TODO
  */
 void func_8005B034(s32 obj_index, s32 part_index, FieldPartTransform* xf)
 {
@@ -2002,7 +1981,6 @@ void func_8005B034(s32 obj_index, s32 part_index, FieldPartTransform* xf)
  * @note The two scales must be copied before the three angles, as in
  *       func_8005B034. A whole-struct copy does not match either - the fields
  *       move one at a time.
- * @see decomp.me (100%) TODO
  */
 void func_8005B094(s32 obj_index, s32 part_index, FieldPartTransform* xf)
 {
@@ -2042,7 +2020,6 @@ void func_8005B094(s32 obj_index, s32 part_index, FieldPartTransform* xf)
  * @note The definition flags are read as a WORD through the byte field's
  *       address, the same spelling field_rescale_scene_tints uses; a plain
  *       @c def->flags byte read costs a row at each of the two sites.
- * @see decomp.me (100%) TODO
  */
 void func_8005B0F4(s32 index, s32 from_keyframe)
 {
@@ -2126,7 +2103,6 @@ void func_8005F5BC(s32, ApiNode*, ApiFieldScene*, s32);
 
 /**
  * @brief If D_801ED02C is zero, set it to 1 and write 0x100 to D_801ED030.
- * @see decomp.me (100%) TODO
  */
 void func_8005B1EC(void)
 {
@@ -2141,7 +2117,6 @@ void func_8005B1EC(void)
 /**
  * @brief Return non-zero if D_801ED02C is set.
  * @return 1 if D_801ED02C != 0, 0 otherwise.
- * @see decomp.me (100%) TODO
  */
 s32 func_8005B218(void)
 {
@@ -2187,7 +2162,6 @@ void func_8005B228(s32 arg0, s32 arg1)
 /**
  * @brief Set D_801ED490 to the given value.
  * @param arg0 Value to store.
- * @see decomp.me (100%) TODO
  */
 void func_8005B288(s32 arg0)
 {
@@ -2211,7 +2185,6 @@ void func_8005B288(s32 arg0)
  * @note Called by field_load_map with pixel_count = object->unk2A and
  *       table_index = D_801ED490 - 1.
  * @note Matches 100% with gcc280_g4 and gcc272_cdk.
- * @see decomp.me (100%) TODO
  */
 void field_apply_pixel_lookup(u16* pixels, s32 pixel_count, s32 table_index, void* unused)
 {

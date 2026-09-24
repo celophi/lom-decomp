@@ -68,7 +68,6 @@ u8* Krom2RawAdd(u16 sjis_code);
  * @param palette   Glyph palette index.
  * @param alignment Text alignment mode passed to addhero_draw_cached_text.
  * @return The updated primitive cursor.
- * @see decomp.me (100%)
  */
 void* addhero_draw_signed_decimal(void* prim, u_long* ot, s32 value, s32 x, s32 y, s32 palette, s32 alignment)
 {
@@ -118,7 +117,6 @@ void* addhero_draw_signed_decimal(void* prim, u_long* ot, s32 value, s32 x, s32 
  * @param x         X position.
  * @param y         Y baseline.
  * @param alignment Text alignment mode.
- * @see decomp.me (100%)
  */
 void addhero_draw_hex_byte(void* prim, u_long* ot, s32 value, s32 x, s32 y, s32 alignment)
 {
@@ -144,7 +142,6 @@ void addhero_draw_hex_byte(void* prim, u_long* ot, s32 value, s32 x, s32 y, s32 
  * @param palette   Glyph palette index.
  * @param alignment 0 left, 1 right (16px/char), 2 right (8px/char).
  * @return The updated primitive cursor past the terminator.
- * @see decomp.me (100%)
  */
 void* addhero_draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s32 palette, s32 alignment)
 {
@@ -235,7 +232,6 @@ void* addhero_draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s
  * @param palette Glyph palette index; sets the 4-bit pixel value (palette + 1) * 2.
  * @return The updated primitive cursor, unchanged when the glyph is missing or
  *         the cache is full.
- * @see decomp.me (100%)
  */
 void* addhero_render_cached_glyph(void* prim, u_long* ot, u16 code, s32 palette)
 {
@@ -321,7 +317,6 @@ void* addhero_render_cached_glyph(void* prim, u_long* ot, u16 code, s32 palette)
  * @param cache_slot Glyph cache slot whose VRAM tile to sample.
  * @param palette    Unused here; the CLUT is fixed.
  * @return The primitive cursor advanced past the emitted sprite.
- * @see decomp.me (100%)
  */
 void* addhero_emit_glyph_sprite(AddheroGlyphSprite* sprite, u_long* ot, s32 cache_slot, s32 palette)
 {
@@ -350,7 +345,6 @@ void* addhero_emit_glyph_sprite(AddheroGlyphSprite* sprite, u_long* ot, s32 cach
 /**
  * @brief Start a new glyph cache frame: rewind the raster cursor and clear each
  *        cache entry's per-frame "used" flag (the high half-word).
- * @see decomp.me (100.00%)
  */
 void addhero_begin_glyph_cache_frame(void)
 {
@@ -366,7 +360,6 @@ void addhero_begin_glyph_cache_frame(void)
 /**
  * @brief Evict cache entries not touched this frame by zeroing any slot whose
  *        "used" flag (ADDHERO_GLYPH_CACHE_USED) is clear.
- * @see decomp.me (100.00%)
  */
 void addhero_evict_unused_glyphs(void)
 {
@@ -384,7 +377,6 @@ void addhero_evict_unused_glyphs(void)
 /**
  * @brief Fully reset the glyph cache: zero all cache entries and clear the
  *        entire glyph raster buffer.
- * @see decomp.me (100.00%)
  */
 void addhero_reset_glyph_cache(void)
 {
@@ -411,7 +403,6 @@ void addhero_reset_glyph_cache(void)
  *       pick the row and column of one 16-row page of the double-byte table;
  *       bytes from 0x21 index the single-byte table by (c - 0x20); any other
  *       byte becomes the table's first (blank) glyph.
- * @see decomp.me (100%)
  */
 void addhero_expand_text_glyph_codes(u8* out, u8* in)
 {

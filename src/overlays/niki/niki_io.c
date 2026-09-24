@@ -539,7 +539,6 @@ const char g_niki_entry_header_template[7] __attribute__((aligned(4))) = "bu00:*
 
 /**
  * @brief Request fresh card information and restart the load sequence.
- * @see decomp.me (100.00%)
  */
 void niki_restart_load_sequence(void)
 {
@@ -552,7 +551,6 @@ void niki_restart_load_sequence(void)
 /**
  * @brief Poll software card events and request fresh card information after an event.
  * @return Event index: 0 completion, 1 error, 2 timeout, 3 new card; -1 if none is pending.
- * @see decomp.me (100.00%)
  */
 s32 niki_poll_and_rewind_primary_handles(void)
 {
@@ -569,7 +567,6 @@ s32 niki_poll_and_rewind_primary_handles(void)
 
 /**
  * @brief Open and enable software and hardware memory-card events for polling.
- * @see decomp.me (100.00%)
  */
 void niki_init_stream_handles(void)
 {
@@ -598,7 +595,6 @@ void niki_init_stream_handles(void)
 
 /**
  * @brief Close all software and hardware memory-card event handles.
- * @see decomp.me (100.00%)
  */
 void niki_shutdown_stream_handles(void)
 {
@@ -619,7 +615,6 @@ void niki_shutdown_stream_handles(void)
  * @brief Reset the browser and read the selected card's first directory entry.
  * @param card_slot Memory-card slot to scan.
  * @return One if the first entry was read, otherwise zero.
- * @see decomp.me (100.00%)
  */
 s32 niki_begin_entry_scan(s32 card_slot)
 {
@@ -645,7 +640,6 @@ s32 niki_begin_entry_scan(s32 card_slot)
  * @brief Read the next directory entry, or rank the completed directory.
  * @param page Memory-card slot being scanned.
  * @return One if another directory entry was read, otherwise zero.
- * @see decomp.me (100.00%)
  */
 s32 niki_scan_next_entry(s32 page)
 {
@@ -711,7 +705,6 @@ s32 niki_scan_next_entry(s32 page)
 
 /**
  * @brief Prepare the selected save-file path and begin its load sequence.
- * @see decomp.me (100.00%)
  */
 void niki_commit_selected_entry(void)
 {
@@ -761,7 +754,6 @@ void niki_commit_selected_entry(void)
 
 /**
  * @brief Consume pending software memory-card events.
- * @see decomp.me (100.00%)
  */
 void niki_release_primary_handles(void)
 {
@@ -773,7 +765,6 @@ void niki_release_primary_handles(void)
 
 /**
  * @brief Consume pending hardware memory-card events.
- * @see decomp.me (100.00%)
  */
 void niki_release_secondary_handles(void)
 {
@@ -786,7 +777,6 @@ void niki_release_secondary_handles(void)
 /**
  * @brief Consume the first pending software card event in priority order.
  * @return Event index: 0 completion, 1 error, 2 timeout, 3 new card; -1 if none is pending.
- * @see decomp.me (100.00%)
  */
 s32 niki_poll_primary_handle_group(void)
 {
@@ -812,7 +802,6 @@ s32 niki_poll_primary_handle_group(void)
 /**
  * @brief Consume the first pending hardware card event in priority order.
  * @return Event index: 0 completion, 1 error, 2 timeout, 3 new card; -1 if none is pending.
- * @see decomp.me (100.00%)
  */
 s32 niki_poll_secondary_handle_group(void)
 {
@@ -1218,7 +1207,6 @@ s32 niki_emit_glyph_sprite(NikiGlyphSprite* sprite, s32* ot, s32 cache_slot, s32
 
 /**
  * @brief Start a frame with all cached glyphs marked unused and reset raster allocation.
- * @see decomp.me (100.00%)
  */
 void niki_begin_glyph_cache_frame(void)
 {
@@ -1236,7 +1224,6 @@ void niki_begin_glyph_cache_frame(void)
 
 /**
  * @brief Free cache slots whose glyphs were not drawn this frame.
- * @see decomp.me (100.00%)
  */
 void niki_evict_unused_glyphs(void)
 {
@@ -1258,7 +1245,6 @@ void niki_evict_unused_glyphs(void)
 
 /**
  * @brief Clear cached character codes and the glyph raster buffer.
- * @see decomp.me (100.00%)
  */
 void niki_reset_glyph_cache(void)
 {
@@ -1296,7 +1282,6 @@ void niki_reset_glyph_cache(void)
  * @note Each lookup row contains 16 two-byte Shift-JIS codes followed by a
  *       newline byte, so sizeof(NikiSjisRow) is 33 and sizeof(NikiSjisPage) is
  *       528.
- * @see decomp.me (100.00%)
  */
 void niki_expand_text_glyph_codes(u8* dst_sjis, const u8* src_text)
 {

@@ -108,7 +108,6 @@ void func_800C0260(s32 group_index, s32 slot_index)
 /**
  * @brief Classify every set slot of a menu slot group against the effect thresholds.
  * @param group_index Menu slot group index.
- * @see decomp.me (100%) TODO
  */
 void func_800C0490(s32 group_index)
 {

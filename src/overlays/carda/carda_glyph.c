@@ -308,7 +308,6 @@ void* carda_emit_glyph_sprite(CardaGlyphSprite* sprite, u_long* ot, s32 cache_sl
 
 /**
  * @brief Clear per-frame glyph-use flags and reset raster allocation.
- * @see decomp.me (100.00%)
  */
 void carda_begin_glyph_cache_frame(void)
 {
@@ -323,7 +322,6 @@ void carda_begin_glyph_cache_frame(void)
 
 /**
  * @brief Evict glyph-cache entries not used this frame.
- * @see decomp.me (100.00%)
  */
 void carda_evict_unused_glyphs(void)
 {
@@ -340,7 +338,6 @@ void carda_evict_unused_glyphs(void)
 
 /**
  * @brief Clear the glyph cache and raster scratch buffer.
- * @see decomp.me (100.00%)
  */
 void carda_reset_glyph_cache(void)
 {

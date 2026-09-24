@@ -86,7 +86,6 @@ const CloadCardPathTemplate g_cload_card_path_prefix = {"bu00:"};
  * @brief Validate a loaded save blob against its trailing checksum and magic.
  * @param blob Loaded save blob; its payload is summed by cload_compute_save_checksum.
  * @return 1 if the stored checksum matches and the magic equals CLOAD_SAVE_MAGIC, otherwise 0.
- * @see decomp.me (100.00%)
  */
 s32 cload_validate_save_blob(CloadSaveBlob *blob)
 {
@@ -105,7 +104,6 @@ s32 cload_validate_save_blob(CloadSaveBlob *blob)
  * @brief Compute the additive checksum used to validate a loaded save payload.
  * @param data Start of the CLOAD_SAVE_PAYLOAD_BYTES-byte save payload.
  * @return Twice the byte sum plus CLOAD_SAVE_CHECKSUM_BIAS.
- * @see decomp.me (100.00%)
  */
 s32 cload_compute_save_checksum(u8 *data)
 {
@@ -133,7 +131,6 @@ s32 cload_compute_save_checksum(u8 *data)
  * @param max_chars Maximum number of characters to emit.
  * @note Each nibble is converted by cload_hex_nibble_to_ascii; a leading run of zero nibbles
  *       is skipped until the first non-zero digit is seen.
- * @see decomp.me (100.00%)
  */
 void cload_format_hex(s8 *out, s32 value, s32 max_chars)
 {
@@ -179,7 +176,6 @@ void cload_format_hex(s8 *out, s32 value, s32 max_chars)
  *
  * @param out Destination byte written with the ASCII character.
  * @param nibble Value to convert; expected range 0-15.
- * @see decomp.me (100.00%)
  */
 void cload_hex_nibble_to_ascii(s8 *out, s32 nibble)
 {
@@ -202,7 +198,6 @@ void cload_hex_nibble_to_ascii(s8 *out, s32 nibble)
  * @param text Pointer to the hex text (0-9, A-F, a-f).
  * @param digits_left Maximum number of characters to consume.
  * @return The accumulated big-endian value of the hex digits read.
- * @see decomp.me (100.00%)
  */
 u32 cload_parse_hex(u8 *text, s32 digits_left)
 {
@@ -249,7 +244,6 @@ u32 cload_parse_hex(u8 *text, s32 digits_left)
  *        to two hex digits into an integer value.
  * @param text Pointer to the ASCII text to scan.
  * @return The value of the (at most two) hex digits found after the separator.
- * @see decomp.me (100.00%)
  */
 s32 cload_parse_hex_suffix_byte(u8 *text)
 {
@@ -308,7 +302,6 @@ s32 cload_parse_hex_suffix_byte(u8 *text)
  * g_cload_entry_suffix_values. Unrecognized entries store -1 / 0 instead.
  *
  * @return The largest suffix byte among the recognized entries (0 if none).
- * @see decomp.me (100%)
  */
 s32 cload_parse_entry_fields(void)
 {
@@ -380,7 +373,6 @@ s32 cload_parse_entry_fields(void)
 /**
  * @brief Rank the current page's entries and select the highest-scoring slot.
  * @return Index of the entry holding the maximum value.
- * @see decomp.me (100.00%)
  */
 s32 cload_rank_entries(void)
 {
@@ -451,7 +443,6 @@ s32 cload_rank_entries(void)
 /**
  * @brief Reset the cload menu state: set the row-count/pitch field to 0x28 and
  *        clear all 15 slot entries of g_cload_entry_ranks to -1 (empty).
- * @see decomp.me (100.00%)
  */
 void cload_reset_entry_ranks(void)
 {
@@ -473,7 +464,6 @@ void cload_reset_entry_ranks(void)
  *        matches one of the two known-type patterns g_lom_save_filename_prefix / g_lom_alt_save_filename_prefix.
  * @return 1 on the first entry that matches either pattern (strncmp returns 0
  *         on a match), 0 if no entry matches.
- * @see decomp.me (100.00%)
  */
 s32 cload_has_known_entry_type(void)
 {
@@ -495,7 +485,6 @@ s32 cload_has_known_entry_type(void)
  * @brief Check whether the current card's directory entries use at least 14 blocks.
  * @return 1 if the summed block count is >= 14, otherwise 0.
  * @note Inlined into cload_scan_next_entry.
- * @see decomp.me (100.00%)
  */
 inline s32 cload_entry_blocks_reach_limit(void)
 {
@@ -516,7 +505,6 @@ inline s32 cload_entry_blocks_reach_limit(void)
  * @note Each erase starts from the six-byte "bu00:" device path, adjusts the
  *       slot digit, appends one fixed filename suffix, and calls Psy-Q erase().
  * @note Inlined into cload_advance_load_sequence.
- * @see decomp.me (100.00%)
  */
 inline void cload_erase_fixed_card_files(void)
 {
@@ -541,7 +529,6 @@ inline void cload_erase_fixed_card_files(void)
  *       CloadLoadStep opcode issues or polls a card command, reads the selected
  *       save, or scans the card directory, and updates g_cload_entry_state /
  *       g_cload_selection_status. Opcodes with no case are no-ops.
- * @see decomp.me (100%)
  */
 s32 cload_advance_load_sequence(void)
 {
@@ -844,7 +831,6 @@ const CloadCardPathTemplate g_cload_card_search_path = {"bu00:*"};
  * @brief Reset the cached resource handles and arm the first load step.
  * @note Releases the handles (cload_release_primary_handles), rewinds the CD channel, and points
  *       g_cload_load_step at the g_cload_steps_idle step table.
- * @see decomp.me (100.00%)
  */
 void cload_restart_load_sequence(void)
 {
@@ -858,7 +844,6 @@ void cload_restart_load_sequence(void)
 /**
  * @brief Poll the four cached handles; on completion, rewind the CD channel.
  * @return The busy-slot index from cload_poll_primary_handle_group (-1 when none are busy).
- * @see decomp.me (100.00%)
  */
 s32 cload_poll_and_rewind_primary_handles(void)
 {
@@ -879,7 +864,6 @@ s32 cload_poll_and_rewind_primary_handles(void)
  * @note Brackets the eight OpenEvent allocations (handles stored in
  *       g_cload_primary_handle0..g_cload_secondary_handle3) with EnterCriticalSection / ExitCriticalSection and resets the
  *       stream bookkeeping (g_cload_entry_scan_active, g_cload_progress_start_tick, g_cload_progress_bar_active).
- * @see decomp.me (100.00%)
  */
 void cload_init_stream_handles(void)
 {
@@ -912,7 +896,6 @@ void cload_init_stream_handles(void)
  * @brief Tear down / release the eight g_cload_primary_handle0..g_cload_secondary_handle3 handles.
  * @note Wrapped by reset_controller_vsync_state and EnterCriticalSection/ExitCriticalSection bracket calls;
  *       each handle is passed to CloseEvent in turn (g_cload_entry_scan_active is skipped).
- * @see decomp.me (100.00%)
  */
 void cload_shutdown_stream_handles(void)
 {
@@ -934,7 +917,6 @@ void cload_shutdown_stream_handles(void)
  * @brief Begin streaming the page's first g_cload_entries record.
  * @param page Page index (each page is 0x320 bytes in g_cload_entries).
  * @return 1 if firstfile accepted the record (count bumped), else 0.
- * @see decomp.me (100%)
  */
 s32 cload_begin_entry_scan(s32 page)
 {
@@ -964,7 +946,6 @@ s32 cload_begin_entry_scan(s32 page)
  * @note When the directory is complete, cload_entry_blocks_reach_limit decides
  *       whether a full card clamps the state (0xFA) or the selection
  *       (g_cload_selected_row) is set from cload_rank_entries's result.
- * @see decomp.me (100.00%)
  */
 s32 cload_scan_next_entry(s32 page)
 {
@@ -1021,7 +1002,6 @@ s32 cload_scan_next_entry(s32 page)
  * @note Rejects the new-save placeholder entry, builds "buX0:<name>" for the
  *       selected entry, copies it to g_cload_selected_card_path, and flags
  *       whether the entry is an extended (g_lom_save_filename_prefix) save.
- * @see decomp.me (100%)
  */
 void cload_commit_selected_entry(void)
 {
@@ -1057,7 +1037,6 @@ void cload_commit_selected_entry(void)
  *
  * Passes the values held in g_cload_primary_handle0, g_cload_primary_handle1, g_cload_primary_handle2, and g_cload_primary_handle3
  * (in that order) to @ref TestEvent.
- * @see decomp.me (100.00%)
  */
 void cload_release_primary_handles(void)
 {
@@ -1073,7 +1052,6 @@ void cload_release_primary_handles(void)
  *
  * Passes the values held in g_cload_secondary_handle0, g_cload_secondary_handle1, g_cload_secondary_handle2, and g_cload_secondary_handle3
  * (in that order) to @ref TestEvent.
- * @see decomp.me (100.00%)
  */
 void cload_release_secondary_handles(void)
 {
@@ -1092,7 +1070,6 @@ void cload_release_secondary_handles(void)
  * and yields that slot's index (0-3). Returns -1 if none report busy.
  *
  * @return Index 0-3 of the first handle whose release returned 1, else -1.
- * @see decomp.me (100.00%)
  */
 s32 cload_poll_primary_handle_group(void)
 {
@@ -1124,7 +1101,6 @@ s32 cload_poll_primary_handle_group(void)
  * and yields that slot's index (0-3). Returns -1 if none report busy.
  *
  * @return Index 0-3 of the first handle whose release returned 1, else -1.
- * @see decomp.me (100.00%)
  */
 s32 cload_poll_secondary_handle_group(void)
 {
@@ -1153,7 +1129,6 @@ s32 cload_poll_secondary_handle_group(void)
  * @note Five passes bucket records matching g_lom_save_filename_prefix, then g_lom_alt_save_filename_prefix, then
  *       g_new_save_entry_prefix, then the remainder, copying each 0x28-byte record with
  *       bcopy before writing the ordered set back to the page.
- * @see decomp.me (100.00%)
  */
 void cload_sort_entries_by_type(void)
 {

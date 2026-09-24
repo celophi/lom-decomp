@@ -168,7 +168,6 @@ FieldActorRecord* func_800C1B60()
  * @brief Find the record for an actor id.
  * @param id Ids below 3 index directly, 3..0x7F search active records, 0x80+ map to event records.
  * @return The record, or NULL when a searched id is not present.
- * @see decomp.me (100%)
  */
 FieldActorRecord* func_800C1B98(s32 id)
 {
@@ -199,7 +198,6 @@ found:
  * @brief Claim the first free actor record for an actor id and reset it.
  * @param id Actor id to store in the record.
  * @return The claimed record, or NULL when all 16 records are active.
- * @see decomp.me (100%)
  */
 FieldActorRecord* func_800C1C50(s32 id)
 {

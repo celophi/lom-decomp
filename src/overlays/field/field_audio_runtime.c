@@ -102,7 +102,6 @@ void *func_800A4348(s32 request, void *size);
 
 /**
  * @brief Restore the shared effect bank when entering FIELD from a state that did not preserve it.
- * @see decomp.me (100.00%)
  */
 void field_restore_entry_music(void)
 {
@@ -162,7 +161,6 @@ void func_800A3654(void)
  * @param destination_index Selects the staging area for the copied sub-block:
  *        0 picks D_8003ECA0, non-zero picks D_80117EF8.
  *
- * @see decomp.me (100%) TODO
  */
 void func_800A368C(s32 music_index, s32 destination_index)
 {
@@ -226,7 +224,6 @@ void func_800A3728(void)
  *
  * @details Counterpart of TITLE's stop_title_music and CHECKPS's func_800501AC.
  *
- * @see decomp.me (100%) TODO
  */
 void field_stop_song(void)
 {
@@ -239,7 +236,6 @@ void field_stop_song(void)
  * @details Same AKAO command as field_stop_song, but passes the current value
  * of D_8011F310 instead of a hardcoded 0.
  *
- * @see decomp.me (100%) TODO
  */
 void func_800A37BC(void)
 {
@@ -251,7 +247,6 @@ void func_800A37BC(void)
  *
  * @details Identical to func_800A37BC except that it passes D_8011F314.
  *
- * @see decomp.me (100%) TODO
  */
 void func_800A37E4(void)
 {
@@ -266,7 +261,6 @@ void func_800A37E4(void)
  * applies the current music volume, then issues AKAO commands 0xD4 and 0xD0
  * with 0. Called cross-overlay by GOVER after it stages its own sequence.
  *
- * @see decomp.me (100%) TODO
  */
 void func_800A380C(void)
 {
@@ -283,7 +277,6 @@ void func_800A380C(void)
 /**
  * @brief Start a staged AKAO sequence selected by table index.
  * @param song_index Index into the D_8003ECA4 byte-offset table.
- * @see decomp.me (100%) TODO
  */
 void func_800A3858(s32 song_index)
 {
@@ -365,7 +358,6 @@ void func_800A3988(s32 sfx_index, s32 pan, s32 unused)
  * @param pan Pan value passed to the sound-effect player.
  * @param arg2 Unused in the body (kept for the shared dispatch signature).
  * @param channel_group Three-channel group selector; clamped to 7.
- * @see decomp.me (100%) TODO
  */
 void func_800A39A8(s32 sfx_index, s32 pan, s32 arg2, s32 channel_group)
 {
@@ -665,7 +657,6 @@ void func_800A3EBC(void)
  *
  * @param resource_base Base resource index; the read uses resource_base + 0x17.
  *
- * @see decomp.me (100%) TODO
  */
 void func_800A3F18(s32 resource_base)
 {
@@ -858,7 +849,6 @@ void func_800A4320(u8 *dst, u8 *src, s32 count)
  * @param request Request word; bit 11 selects the upper buffer half.
  * @param size Stored to D_8011F324.
  * @return The claimed buffer, or NULL when it is already busy.
- * @see decomp.me (100%)
  */
 void *func_800A4348(s32 request, void *size)
 {

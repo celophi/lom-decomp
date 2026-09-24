@@ -3457,7 +3457,6 @@ static s32 *field_render_effect_sprite_frames(FieldMotionRecord *effect, s32 *pa
 /**
  * @brief Render each active field effect according to its render state.
  * @param render_context Ordering table and primitive packet cursor.
- * @see decomp.me (100%)
  */
 void field_render_effects(FieldRenderContext *render_context)
 {
@@ -3652,7 +3651,6 @@ void field_render_effects(FieldRenderContext *render_context)
  * @param ordering_table Depth ordering table.
  * @param frame_data Encoded sprite-frame data.
  * @return Updated primitive packet cursor.
- * @see decomp.me (100%)
  */
 static s32 *field_render_effect_sprite_frames(FieldMotionRecord *effect, s32 *packet_cursor, s32 *ordering_table, u8 *frame_data)
 {
@@ -4162,7 +4160,6 @@ static inline Struct_D80105880 *field_get_object_binding(s32 object_index)
  * @param flag Selects which of the actor's two audio channels to update.
  * @param part Part definition supplying flags and placement selectors.
  * @return Updated cursor pointer.
- * @see decomp.me (100%)
  * @note Matching requires maspsx to keep consecutive labels before an
  *       inserted load-delay NOP, as original ASPSX 2.67 does. Fixed upstream
  *       in maspsx #143 (tools/maspsx at 3629944 or later).
@@ -5297,7 +5294,6 @@ typedef struct
  *       11-byte (0xB) per-frame record with 16-bit byte-pair deltas instead of
  *       func_80075C88's 8-bit signed deltas.
  * @note gte_dmpsx_compat.h supplies the COP2 words used by the GTE macros.
- * @see decomp.me (100%)
  */
 s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 flag, FramePartDef *part)
 {
@@ -6257,7 +6253,6 @@ extern FieldMotionRecord g_field_effect_records[FIELD_EFFECT_ACTIVE_RECORD_COUNT
  * @param packet_cursor Destination GPU packet buffer.
  * @param ordering_table Depth-indexed ordering table.
  * @return Packet cursor after the geometry and texture-page command.
- * @see decomp.me (100%)
  */
 u8* field_render_effect_ring(FieldMotionRecord* effect, u8* packet_cursor, s32* ordering_table)
 {
@@ -6490,7 +6485,6 @@ u8* field_render_effect_ring(FieldMotionRecord* effect, u8* packet_cursor, s32* 
  * @param packet_cursor Destination GPU packet buffer.
  * @param ordering_table Depth-indexed ordering table.
  * @return Packet cursor after the geometry and texture-page command.
- * @see decomp.me (100%)
  */
 u8* field_render_effect_fan(FieldMotionRecord* effect, u8* packet_cursor, s32* ordering_table)
 {
@@ -6840,7 +6834,6 @@ finished:
  * @param packet_cursor Destination GPU packet buffer.
  * @param ordering_table Depth-indexed ordering table.
  * @return Packet cursor after the geometry and texture-page command.
- * @see decomp.me (100%)
  */
 u8* field_render_effect_marker(FieldMotionRecord* effect, u8* packet_cursor, s32* ordering_table)
 {
@@ -6927,7 +6920,6 @@ u8* field_render_effect_marker(FieldMotionRecord* effect, u8* packet_cursor, s32
  * @param packet_cursor Destination GPU packet buffer.
  * @param ordering_table Depth-indexed ordering table.
  * @return Advanced packet cursor; unchanged for a trail without a live predecessor.
- * @see decomp.me (100%)
  */
 u8* field_render_effect_trail(FieldMotionRecord* effect, u8* packet_cursor, s32* ordering_table)
 {
@@ -7008,7 +7000,6 @@ u8* field_render_effect_trail(FieldMotionRecord* effect, u8* packet_cursor, s32*
  * @param packet_cursor Destination GPU packet buffer.
  * @param ordering_table Depth-indexed ordering table.
  * @return Packet cursor after the geometry and texture-page command.
- * @see decomp.me (100%)
  */
 u8* field_render_effect_radial_fan(FieldMotionRecord* effect, u8* packet_cursor, s32* ordering_table)
 {
@@ -7189,8 +7180,6 @@ u8* field_render_effect_radial_fan(FieldMotionRecord* effect, u8* packet_cursor,
  * @param packet_cursor Destination GPU packet buffer.
  * @param ordering_table Depth-indexed ordering table.
  * @return Packet cursor after the geometry and texture-page command.
- * @see decomp.me (100%)
- * @see decomp.me (99.95%) Previous WIP
  */
 u8* field_render_effect_radial_lines(FieldMotionRecord* effect, u8* packet_cursor, s32* ordering_table)
 {
@@ -7614,7 +7603,6 @@ s32 field_evaluate_parameter_track_at_time(FieldActorState* actor, u32 track, u1
  * @param ordering_table Depth-indexed GPU ordering table.
  * @return Cursor after the last emitted quad.
  * @note animation_active supplies the segment count for this effect kind.
- * @see decomp.me (99.94%) WIP
  */
 u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32* ordering_table)
 {
@@ -7933,7 +7921,6 @@ u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32
  * @param matrix Receives the resulting transform.
  * @param actor Owner supplying parameter tracks and object bindings.
  * @return Unspecified; callers use only the matrix output.
- * @see decomp.me (100%)
  */
 s32 field_build_effect_part_matrix(FieldMotionRecord* effect, FieldActorPartDef* part, MATRIX* matrix, FieldActorState* actor)
 {
@@ -8185,7 +8172,6 @@ s32 field_build_effect_part_matrix(FieldMotionRecord* effect, FieldActorPartDef*
  * @param effect Color flags, packed literal color, and track sampling age.
  * @param part Literal channel values and track selectors.
  * @param out Four-byte color storage; the literal path also copies its fourth byte.
- * @see decomp.me (100%)
  */
 void field_resolve_effect_part_color(FieldActorState* actor, FieldMotionRecord* effect, FieldActorPartDef* part, FieldPrimitiveColor* out)
 {
@@ -8237,7 +8223,6 @@ void field_resolve_effect_part_color(FieldActorState* actor, FieldMotionRecord* 
  * @param packet_cursor Receives one DR_TPAGE packet.
  * @param ordering_table Depth-indexed GPU ordering table.
  * @return Cursor immediately after the texture-page packet.
- * @see decomp.me (100%)
  */
 u8* field_emit_effect_texture_page(FieldMotionRecord* effect, FieldActorPartDef* part, u8* packet_cursor, s32* ordering_table)
 {
@@ -8280,7 +8265,6 @@ u8* field_emit_effect_texture_page(FieldMotionRecord* effect, FieldActorPartDef*
  * @param y Vertical offset from the anchor.
  * @param frame Sprite record with tilt in 16 GTE angle units per step.
  * @param matrix Caller rotation matrix, already loaded into the GTE on entry.
- * @see decomp.me (100%)
  */
 void field_project_effect_sprite_quad(FieldMotionRecord* effect, Vec2s* origin, POLY_FT4* quad, s32 width, s32 height, s32 x, s32 y, FieldSpriteFrame* frame,
                                       MATRIX* matrix)
@@ -8482,7 +8466,6 @@ void field_project_effect_sprite_quad(FieldMotionRecord* effect, Vec2s* origin, 
  * @param out Receives four interleaved x/y pairs.
  * @param flip Nonzero to reverse corner order and negate x coordinates.
  * @param item Packed corner record; byte 7 is not a coordinate.
- * @see decomp.me (100%)
  */
 void field_unpack_effect_quad_corners8(s16* out, s32 flip, s8* item)
 {
@@ -8515,7 +8498,6 @@ void field_unpack_effect_quad_corners8(s16* out, s32 flip, s8* item)
  * @param out Receives four interleaved x/y pairs.
  * @param mirror Nonzero to reverse corner order and negate x coordinates.
  * @param item Packed corner record; byte 7 interrupts the second y component.
- * @see decomp.me (100%)
  */
 void field_unpack_effect_quad_corners16(s16* out, s32 mirror, u8* item)
 {
@@ -8549,7 +8531,6 @@ void field_unpack_effect_quad_corners16(s16* out, s32 mirror, u8* item)
  * @param part Packed extent value, modifiers, and attachment category.
  * @return Extent after scaling and optional bounding-box half-extents.
  * @note TODO: categories 55-62 do not initialize the part index on this path.
- * @see decomp.me (100%)
  */
 s32 field_resolve_effect_extent(FieldActorState* actor, FieldActorPartDef* part)
 {
@@ -8753,7 +8734,6 @@ extern s32 g_field_track_index;
  * @param part Actor part definition selecting the anchor mode.
  * @param out Receives the resolved x/y/z anchor.
  * @param attachment_index Attachment point index used by ground-relative anchor modes.
- * @see decomp.me (100.00%)
  */
 void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *part, Vec3i *out, s32 attachment_index)
 {
@@ -9046,7 +9026,6 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
  * @param effect Effect record whose facing flag selects the mirrored layout.
  * @param frame_data Encoded frame entry list; the first byte is the entry count.
  * @param corners Receives four x/y corner pairs.
- * @see decomp.me (100.00%)
  */
 void field_extract_effect_quad_corners8(FieldMotionRecord *effect, u8 *frame_data, s16 *corners)
 {
@@ -9101,7 +9080,6 @@ void field_extract_effect_quad_corners8(FieldMotionRecord *effect, u8 *frame_dat
  * @param effect Effect record whose facing flag selects the mirrored layout.
  * @param frame_data Encoded frame entry list; the first byte is the entry count.
  * @param corners Receives four x/y corner pairs.
- * @see decomp.me (100.00%)
  */
 void field_extract_effect_quad_corners16(FieldMotionRecord *effect, u8 *frame_data, s16 *corners)
 {
@@ -9145,7 +9123,6 @@ void field_extract_effect_quad_corners16(FieldMotionRecord *effect, u8 *frame_da
  * @param quad_bounds Bounding-box extents (indices 0/1/2/5 used in mode 1).
  * @param fallback_depth Horizontal offset used when mode does not derive it from the quad.
  * @param mode Zero skips adjustment; one derives the center from the quad; other values use fallback_depth.
- * @see decomp.me (100.00%)
  */
 void field_apply_effect_quad_center_offset(FieldMotionRecord *effect, DVECTOR *screen_origin, s16 *quad_bounds, s32 fallback_depth, s32 mode)
 {
@@ -9187,7 +9164,6 @@ void field_apply_effect_quad_center_offset(FieldMotionRecord *effect, DVECTOR *s
  * @param screen_origin Screen-space origin added to every transformed vertex.
  * @param direction Scratch direction vector fed to the GTE.
  * @param gte_out Scratch GTE output vector.
- * @see decomp.me (100.00%)
  */
 void field_transform_effect_quad_vertices8(FieldMotionRecord *effect, FieldObjectRuntime *object, u8 *quad_data, s32 vertex_index,
                                            Vec2s *screen_origin, SVECTOR *direction, VECTOR *gte_out)
@@ -9290,7 +9266,6 @@ void field_transform_effect_quad_vertices8(FieldMotionRecord *effect, FieldObjec
  * @param screen_origin Screen-space origin added to every transformed vertex.
  * @param direction Scratch direction vector fed to the GTE.
  * @param gte_out Scratch GTE output vector.
- * @see decomp.me (100.00%)
  */
 void field_transform_effect_quad_vertices16(FieldMotionRecord *effect, FieldObjectRuntime *object, u8 *quad_data, s32 vertex_index,
                                             Vec2s *screen_origin, SVECTOR *direction, VECTOR *gte_out)

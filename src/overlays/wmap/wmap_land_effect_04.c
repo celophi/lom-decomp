@@ -360,7 +360,6 @@ extern void func_80070FF8__for_func_80070E60(void) __asm__("func_80070FF8");
 
 /**
  * @brief Project and draw the world-map star field, spinning each entry each frame.
- * @see decomp.me (100%)
  */
 void func_80070FF8(void)
 {
@@ -425,7 +424,6 @@ extern s32 D_801B250C;
 
 /**
  * @brief Project and draw the world-map star field, spinning each entry each frame.
- * @see decomp.me (100%)
  */
 void func_8007115C(void)
 {

@@ -263,7 +263,6 @@ void func_800B0D3C(void)
 
 /**
  * @brief Initialize the two event records.
- * @see decomp.me (100%) TODO
  */
 void func_800B0E80(void)
 {
@@ -361,7 +360,6 @@ void field_set_fade_target(s32 red, s32 green, s32 blue, s32 frames);
  * @note Action kind 3 uses the previous, uninitialized entry pointer before selecting
  * actor 1. This unresolved behavior is present in the original code.
  * @note Packed-word accesses and shared switch tails preserve the current reconstruction.
- * @see decomp.me (99.765625%) TODO: no scratch link yet
  */
 void field_install_actor_action(FieldActionRequest* request, s32 request_index)
 {

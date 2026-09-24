@@ -37,7 +37,6 @@ typedef struct
  * @param flag Nonzero when drawing into the front buffer (draw area at y = SCREEN_HEIGHT).
  * @param draw_fill Nonzero to emit the outline and fill packets.
  * @return Advanced primitive-buffer cursor.
- * @see decomp.me (100.00%)
  */
 CloadGpuPacket *cload_emit_window_frame(CloadGpuPacket *prim, u_long *ot, s32 x, s32 y, s32 w, s32 h, s32 flag, s32 draw_fill)
 {
@@ -92,7 +91,6 @@ CloadGpuPacket *cload_emit_window_frame(CloadGpuPacket *prim, u_long *ot, s32 x,
  * @param h Rectangle height.
  * @param color Packed 0x00BBGGRR line color.
  * @return Primitive-buffer cursor after the fourth line.
- * @see decomp.me (100.00%)
  */
 CloadGpuPacket *cload_emit_rect_outline(LINE_F2 *line, u_long *ot, s32 x, s32 y, s32 w, s32 h, s32 color)
 {
@@ -137,7 +135,6 @@ CloadGpuPacket *cload_emit_rect_outline(LINE_F2 *line, u_long *ot, s32 x, s32 y,
  * @param y Sprite top edge.
  * @param flag Nonzero for the upper arrow (texture row 0), zero for the lower arrow (row 16).
  * @return Primitive-buffer cursor after the texture-page packet.
- * @see decomp.me (100.00%)
  */
 CloadGpuPacket *cload_emit_scroll_arrow(SPRT *sprite, u_long *ot, s32 x, s32 y, s32 flag)
 {
@@ -175,7 +172,6 @@ CloadGpuPacket *cload_emit_scroll_arrow(SPRT *sprite, u_long *ot, s32 x, s32 y, 
  * @param x_offset Horizontal transition offset.
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
- * @see decomp.me (100.00%)
  */
 void *cload_draw_load_prompt(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
 {
@@ -244,7 +240,6 @@ void *cload_draw_load_prompt(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
  * @param x_offset Horizontal transition offset.
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
- * @see decomp.me (100.00%)
  */
 void *cload_draw_load_progress(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
 {
@@ -286,7 +281,6 @@ void *cload_draw_load_progress(u_long *ot, void *prim, s32 x_offset, s32 y_offse
  * @return Primitive-buffer cursor after the quad, or @p quad unchanged while
  *         g_cload_progress_bar_active is 0.
  * @note The bar is 288 pixels wide after 256 frames since g_cload_progress_start_tick.
- * @see decomp.me (100.00%)
  */
 CloadGpuPacket *cload_draw_progress_bar(POLY_G4 *quad, u_long *ot)
 {
@@ -324,7 +318,6 @@ CloadGpuPacket *cload_draw_progress_bar(POLY_G4 *quad, u_long *ot)
  * @brief Open the status dialog in the first element slot and abandon any
  *        load in progress.
  * @param dialog_state Message to show (0 save failed, 1 and 4 load failed, 2 insert card, 3 TODO: unknown).
- * @see decomp.me (100.00%)
  */
 void cload_open_status_dialog(s32 dialog_state)
 {
@@ -368,7 +361,6 @@ void cload_open_status_dialog(s32 dialog_state)
  * @param x_offset Horizontal transition offset.
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
- * @see decomp.me (100%)
  */
 void *cload_draw_status_dialog(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
 {
@@ -422,7 +414,6 @@ void *cload_draw_status_dialog(u_long *ot, void *prim, s32 x_offset, s32 y_offse
  * @param index VRAM icon slot; selects the CLUT row entry and the texture column.
  * @param row Entry row; row 1 uses the generated CLUT for icons 0 and 1.
  * @return Primitive-buffer cursor after the quad, or @p quad unchanged for CLOAD_NO_ICON.
- * @see decomp.me (100.00%)
  */
 void *cload_draw_icon_highlight(POLY_FT4 *quad, u_long *ot, s32 x, s32 y, s32 width, s32 icon, s32 index, s32 row)
 {
@@ -486,7 +477,6 @@ void *cload_draw_icon_highlight(POLY_FT4 *quad, u_long *ot, s32 x, s32 y, s32 wi
 
 /**
  * @brief Deactivate the first UI element.
- * @see decomp.me (100.00%)
  */
 void cload_deactivate_primary_element(void)
 {
@@ -499,7 +489,6 @@ void cload_deactivate_primary_element(void)
  *        g_cload_icon_resource at its icon table.
  * @note D_80180004/8/C/10 are marked `ignore:true` in cload_symbol_addrs.txt;
  *       the header fields are only reached through CLOAD_ICON_SET_BUFFER.
- * @see decomp.me (100.00%)
  */
 void cload_load_icon_resources(void)
 {
@@ -529,7 +518,6 @@ void cload_load_icon_resources(void)
  * @param sprite First sprite packet to fill.
  * @param ot Ordering-table entry the packets are linked into.
  * @return Primitive-buffer cursor after the last texture-page packet.
- * @see decomp.me (100.00%)
  */
 CloadGpuPacket *cload_emit_icon_highlight_strip(SPRT *sprite, u_long *ot)
 {
@@ -566,7 +554,6 @@ CloadGpuPacket *cload_emit_icon_highlight_strip(SPRT *sprite, u_long *ot)
 /**
  * @brief Initialize the two-choice prompt selection state.
  * @return Always 1.
- * @see decomp.me (100.00%)
  */
 s32 cload_enable_choice_toggle(void)
 {
@@ -582,7 +569,6 @@ s32 cload_enable_choice_toggle(void)
  * @param x Prompt center; the choices are drawn at x - 16 and x + 8.
  * @param y Prompt baseline.
  * @return Advanced primitive-buffer cursor.
- * @see decomp.me (100.00%)
  */
 void *cload_draw_choice_prompt(void *prim, u_long *ot, s32 x, s32 y)
 {

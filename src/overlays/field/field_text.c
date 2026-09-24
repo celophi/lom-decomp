@@ -374,7 +374,6 @@ void field_text_upload_immediate_cache(void)
  * @brief Decode text commands and draw glyphs until the character budget or a prompt stops the step.
  * @param state Window and nested text cursors to advance.
  * @param budget Character budget; zero draws without a limit.
- * @see decomp.me (100%)
  */
 void field_text_typeset(FieldTextState* state, s32 budget)
 {
@@ -924,7 +923,6 @@ store_and_return:
  * @param state Destination window and text style.
  * @param code Character code; the font starts at the space character.
  * @param width Glyph advance in pixels.
- * @see decomp.me (100%) scratch not yet published
  */
 void field_text_blit_glyph(FieldTextState* state, s32 code, u16 width)
 {
@@ -1320,7 +1318,6 @@ s32 field_text_advance_line(FieldTextState* state)
 /**
  * @brief Clear the window and return its cursor to the first line.
  * @param state Window to clear.
- * @see decomp.me (100%)
  */
 void field_text_clear_window(FieldTextState* state)
 {
@@ -1337,7 +1334,6 @@ void field_text_clear_window(FieldTextState* state)
 
 /**
  * @brief Initialize field text textures, CLUT state, and window slots.
- * @see decomp.me (100%)
  */
 void field_text_init(void)
 {
@@ -1378,7 +1374,6 @@ void field_text_init(void)
 
 /**
  * @brief Deactivate all field text windows and release portrait slots.
- * @see decomp.me (100%)
  */
 void field_text_reset_windows(void)
 {
@@ -1396,7 +1391,6 @@ void field_text_reset_windows(void)
 
 /**
  * @brief Reset the scratch state used for immediate string rendering.
- * @see decomp.me (100%)
  */
 void field_text_reset_scratch(void)
 {
@@ -1445,7 +1439,6 @@ void field_text_reset_scratch(void)
  * @param text Text to typeset.
  * @param text_style Text palette/style selector; only the low 16 bits are used.
  * @return Number of sprite spans written.
- * @see decomp.me (100%)
  */
 s32 field_text_build_sprites(SPRT* prim, u8* text, s32 text_style)
 {
@@ -1525,7 +1518,6 @@ s32 field_text_build_sprites(SPRT* prim, u8* text, s32 text_style)
 /**
  * @brief Open a text window after the cache region used by earlier active slots.
  * @param slot Window slot index; only the low 16 bits are used.
- * @see decomp.me (100%)
  * @note Old-style definition: callers pass a word and the body works on a u16.
  */
 void field_text_open_packed_window(slot) u16 slot;
@@ -1619,7 +1611,6 @@ void field_text_open_packed_window(slot) u16 slot;
 /**
  * @brief Open a text window in its fixed cache region.
  * @param slot Window slot index; only the low 16 bits are used.
- * @see decomp.me (100%)
  * @note Old-style definition: callers pass a word and the body works on a u16.
  */
 void field_text_open_fixed_window(slot) u16 slot;
@@ -1709,7 +1700,6 @@ void field_text_open_fixed_window(slot) u16 slot;
 /**
  * @brief Apply the pending text configuration to a runtime window state.
  * @param state Window state to initialize.
- * @see decomp.me (100%)
  */
 void field_text_apply_config(FieldTextState* state)
 {
@@ -1794,7 +1784,6 @@ void field_text_apply_config(FieldTextState* state)
  * @param packet_cursor Address of the render-packet cursor.
  * @param ot Ordering-table base address.
  * @param draw_count Current field draw count; 1 selects the render-only path.
- * @see decomp.me (100%)
  */
 void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count)
 {
@@ -2090,7 +2079,6 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
  * @param state Text-window state.
  * @param out Output screen-space quad.
  * @param frame Transition frame in the range 0..4.
- * @see decomp.me (100%)
  */
 void field_text_build_transition_quad(FieldTextState* state, FieldTextQuad* out, s32 frame)
 {
@@ -2177,7 +2165,6 @@ static inline s32 field_text_portrait_y_word(s32 y, s32 h)
  * @param state Text-window state.
  * @param cursor In/out render-packet cursor.
  * @param ot Ordering-table slot.
- * @see decomp.me (100%)
  */
 void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOrderingTags* ot)
 {
@@ -3144,7 +3131,6 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
 /**
  * @brief Scroll the text cache up one row and clear the vacated row.
  * @param state Text-window state.
- * @see decomp.me (100%)
  */
 void field_text_scroll_cache(FieldTextState* state)
 {
@@ -3275,7 +3261,6 @@ void field_text_scroll_cache(FieldTextState* state)
  * @brief Queue dirty text-cache rows for VRAM upload.
  * @param state Text-window state.
  * @param cursor In/out packet cursor used for upload requests and staging data.
- * @see decomp.me (100%)
  */
 void field_text_queue_uploads(FieldTextState* state, u8** cursor)
 {
@@ -3389,7 +3374,6 @@ void field_text_queue_uploads(FieldTextState* state, u8** cursor)
  * @param window_index Window slot; only the low 16 bits are used.
  * @param text Text pointer.
  * @param text_options Text options; bit 0 enables automatic close.
- * @see decomp.me (100%)
  */
 void field_text_set_string(s32 window_index, u8* text, s32 text_options)
 {
@@ -3418,7 +3402,6 @@ void field_text_set_string(s32 window_index, u8* text, s32 text_options)
 /**
  * @brief Save the pending text configuration for a window slot.
  * @param slot Window slot index.
- * @see decomp.me (100%)
  */
 void field_text_save_config(u16 slot)
 {
@@ -3442,7 +3425,6 @@ void field_text_save_config(u16 slot)
  * @brief Close a text window and release its portrait slot.
  * @param state Text-window state.
  * @param animate Non-zero starts the closing animation when supported.
- * @see decomp.me (100%)
  */
 void field_text_close(FieldTextState* state, s32 animate)
 {
@@ -3473,7 +3455,6 @@ void field_text_close(FieldTextState* state, s32 animate)
  * @param state Text-window state.
  * @param cursor In/out render-packet cursor.
  * @param ot Ordering-table slot.
- * @see decomp.me (100%)
  */
 void field_text_render_window(FieldTextState* state, u8** cursor, FieldOrderingTags* ot)
 {
@@ -3513,7 +3494,6 @@ void field_text_render_window(FieldTextState* state, u8** cursor, FieldOrderingT
  * @param cursor In/out packet cursor.
  * @param slot Portrait VRAM slot.
  * @param mirror Non-zero mirrors the portrait horizontally before upload.
- * @see decomp.me (100%)
  */
 void field_text_queue_portrait_upload(FieldTextPortrait* image, u8** cursor, s32 slot, s32 mirror)
 {
@@ -3576,7 +3556,6 @@ void field_text_queue_portrait_upload(FieldTextPortrait* image, u8** cursor, s32
 /**
  * @brief Start timed text-window mode and precompute its cache extent.
  * @param text Text to display.
- * @see decomp.me (100%)
  */
 void field_text_start_timed_window(u8* text)
 {
@@ -3637,7 +3616,6 @@ void field_text_start_timed_window(u8* text)
  * @brief Restore a saved window configuration and reopen the slot.
  * @param slot Window slot index.
  * @param placement_mode 1 uses packed placement; other values use fixed placement.
- * @see decomp.me (100%)
  */
 void field_text_restore_window(u16 slot, s32 placement_mode)
 {
@@ -3673,7 +3651,6 @@ void field_text_restore_window(u16 slot, s32 placement_mode)
  * @param slot Window slot; only the low 16 bits are used.
  * @param x Left screen coordinate.
  * @param y Top screen coordinate.
- * @see decomp.me (100%) TODO
  */
 void field_text_set_position(s32 slot, s16 x, s16 y)
 {
@@ -3685,7 +3662,6 @@ void field_text_set_position(s32 slot, s16 x, s16 y)
 /**
  * @brief Start closing a text window.
  * @param slot Window slot; only the low 16 bits are used.
- * @see decomp.me (100%) TODO
  */
 void field_text_close_window(s32 slot)
 {
@@ -3697,7 +3673,6 @@ void field_text_close_window(s32 slot)
  * @brief Read the progress of an active dialogue window.
  * @param slot Window slot; only the low 16 bits are used.
  * @return -1 outside dialogue mode, 2 at a prompt, 1 while text remains, or 0 when finished.
- * @see decomp.me (100%) TODO
  */
 s32 field_text_get_status(s32 slot)
 {
@@ -3718,7 +3693,6 @@ s32 field_text_get_status(s32 slot)
  * @brief Read the last selected choice in a text window.
  * @param slot Window slot; only the low 16 bits are used.
  * @return Zero-based choice index.
- * @see decomp.me (100%) TODO
  */
 s32 field_text_get_choice(s32 slot)
 {

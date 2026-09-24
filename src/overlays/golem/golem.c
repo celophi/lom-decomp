@@ -298,7 +298,6 @@ void golem_copy_encoded_string(u8* dst, u8* src);
  * @brief Run the golem logic-grid editor until the user exits.
  * @param render_buffers Storage for the two render contexts and packet heap.
  * @param restore_slot_on_cancel Restore the prior logic-type slot on cancel.
- * @see decomp.me (100%)
  */
 void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel)
 {
@@ -375,7 +374,6 @@ void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel)
  * @param work_buffer First byte after the double-buffered render contexts.
  * @param restore_slot_on_cancel Restore the prior logic-type slot on cancel.
  * @return The unchanged work-buffer pointer.
- * @see decomp.me (100%)
  */
 u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel)
 {
@@ -430,7 +428,6 @@ u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel)
 
 /**
  * @brief Upload the golem editor image and CLUT to their VRAM locations.
- * @see decomp.me (100%)
  */
 void golem_upload_ui_image(void)
 {
@@ -448,7 +445,6 @@ void golem_upload_ui_image(void)
  * @param destinations VRAM destinations for the image and CLUT blocks.
  * @param tim TIM resource containing 256 palette entries.
  * @note Requires a CLUT block; CLUT-less TIM files are not supported.
- * @see decomp.me (100%)
  */
 void golem_upload_image_archive(GolemImageClutPos* destinations, TimPrefix* tim)
 {
@@ -478,7 +474,6 @@ void golem_upload_image_archive(GolemImageClutPos* destinations, TimPrefix* tim)
 /**
  * @brief Render and update one editor frame.
  * @param render_context Frame ordering table and packet storage.
- * @see decomp.me (100%)
  */
 void golem_update_frame(GolemRenderContext* render_context)
 {
@@ -496,7 +491,6 @@ void golem_update_frame(GolemRenderContext* render_context)
 
 /**
  * @brief Handle logic-block selection, placement, rotation, and cancellation.
- * @see decomp.me (100%)
  */
 void golem_handle_input(void)
 {
@@ -747,7 +741,6 @@ void golem_handle_input(void)
 
 /**
  * @brief Reset the active block to its layout-defined grid origin.
- * @see decomp.me (100%)
  */
 void golem_reset_block_position(void)
 {
@@ -773,7 +766,6 @@ void golem_reset_block_position(void)
  * @param packet_cursor Packet cursor, threaded through the marker emitters.
  * @param ordering_table Ordering-table tag for the marker packets.
  * @return Packet cursor after the marker run.
- * @see decomp.me (100.00%)
  * @see working/func_80140DEC/
  */
 u8* golem_draw_grid_markers(u8* packet_cursor, u_long* ordering_table)
@@ -827,7 +819,6 @@ u8* golem_draw_grid_markers(u8* packet_cursor, u_long* ordering_table)
  * @param y Sprite y coordinate.
  * @param glyph Marker glyph index.
  * @return Packet cursor past the sprite.
- * @see decomp.me (100%)
  */
 u8* golem_emit_grid_marker(u8* packet_cursor, u_long* ordering_table, s32 x, s32 y, s32 glyph)
 {
@@ -845,7 +836,6 @@ u8* golem_emit_grid_marker(u8* packet_cursor, u_long* ordering_table, s32 x, s32
 
 /**
  * @brief Return the animated cursor to its resting target.
- * @see decomp.me (100%)
  */
 void golem_reset_cursor_motion(void)
 {
@@ -859,7 +849,6 @@ void golem_reset_cursor_motion(void)
  * @param packet_cursor Next free GPU packet.
  * @param ordering_table Ordering-table tag to receive the packet.
  * @return Packet cursor past the draw-mode packet.
- * @see decomp.me (100%)
  */
 u8* golem_finish_grid_marker_run(u8* packet_cursor, u_long* ordering_table)
 {
@@ -875,7 +864,6 @@ u8* golem_finish_grid_marker_run(u8* packet_cursor, u_long* ordering_table)
  * @param packet_cursor Next free GPU packet.
  * @param render_context Render context containing the cursor ordering-table tag.
  * @return Packet cursor past the sprite and draw-mode packet.
- * @see decomp.me (100%)
  */
 u8* golem_draw_cursor(u8* packet_cursor, GolemRenderContext* render_context)
 {
@@ -924,7 +912,6 @@ u8* golem_draw_cursor(u8* packet_cursor, GolemRenderContext* render_context)
  * @brief Emit the golem panel grid, the cursor, and the selected item's name
  *        and detail text into the render context's packet buffer.
  * @param render_context Render context with the packet cursor and ordering table.
- * @see decomp.me (100.00%)
  */
 void golem_render(GolemRenderContext* render_context)
 {
@@ -989,7 +976,6 @@ void golem_render(GolemRenderContext* render_context)
  * @param packet_buffer Next free GPU packet.
  * @param render_context Frame buffer and block-list ordering table.
  * @return Packet cursor after the icons and viewport commands.
- * @see decomp.me (100.00%)
  * @see working/func_80141478/code.c
  */
 u8* golem_draw_block_list(u8* packet_buffer, GolemRenderContext* render_context)
@@ -1049,7 +1035,6 @@ u8* golem_draw_block_list(u8* packet_buffer, GolemRenderContext* render_context)
  * @param packet_cursor Next free GPU packet.
  * @param render_context Frame buffer and grid ordering table.
  * @return Packet cursor after the icons, dividers, and viewport commands.
- * @see decomp.me (100.00%)
  * @see working/func_801416C8/code.c
  */
 u8* golem_draw_logic_grid(u8* packet_cursor, GolemRenderContext* render_context)
@@ -1149,7 +1134,6 @@ u8* golem_draw_logic_grid(u8* packet_cursor, GolemRenderContext* render_context)
  * @param width Total panel width in pixels.
  * @param height Total panel height in pixels.
  * @return Packet cursor after the panel packets.
- * @see decomp.me (100.00%)
  * @see working/func_80141AD0_golem/
  */
 u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index, s32 x, s32 y, s32 width, s32 height)
@@ -1293,7 +1277,6 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
  * @param use_origin When 1, offset x/y by the layout row's origin fields.
  * @param style      Style flags forwarded to golem_emit_glyph for each part.
  * @return Packet cursor past the trailing draw-mode packet.
- * @see decomp.me (100.00%)
  * @see working/func_80141EB4_golem/
  */
 u8* golem_draw_composite_icon(u8* packet_cursor, u_long* ordering_table, s32 block_index, s32 rotation, s32 x, s32 y, s32 clut, s32 use_origin, s32 style)
@@ -1338,7 +1321,6 @@ u8* golem_draw_composite_icon(u8* packet_cursor, u_long* ordering_table, s32 blo
  * @param clut CLUT selector; 0xF and 9 also gate brightness overrides.
  * @param style Bit 7 dims the sprite; low bits 1-3 select a backing color.
  * @return Packet cursor past the glyph packets.
- * @see decomp.me (100%)
  */
 u8* golem_emit_glyph(u8* packet_cursor, u_long* ordering_table, s32 glyph_id, s32 x, s32 y, s32 clut, s32 style)
 {
@@ -1412,7 +1394,6 @@ u8* golem_emit_glyph(u8* packet_cursor, u_long* ordering_table, s32 glyph_id, s3
  * @param height Rectangle height.
  * @param color Packed BGR line color.
  * @return Packet cursor after four line packets.
- * @see decomp.me (100%)
  */
 LINE_F2* golem_emit_panel_outline(LINE_F2* packet, u_long* ordering_table, s32 x, s32 y, s32 width, s32 height, s32 color)
 {
@@ -1455,7 +1436,6 @@ LINE_F2* golem_emit_panel_outline(LINE_F2* packet, u_long* ordering_table, s32 x
  * @param green Target green component.
  * @param blue Target blue component.
  * @param steps Number of frames to reach the target.
- * @see decomp.me (100%)
  */
 void golem_set_fade_target(s16 red, s16 green, s16 blue, s16 steps)
 {
@@ -1472,7 +1452,6 @@ void golem_set_fade_target(s16 red, s16 green, s16 blue, s16 steps)
  * @param packet_cursor Next free byte in the GPU packet buffer.
  * @param ordering_table_tag  Ordering-table tag the packets are linked into.
  * @return The advanced packet cursor.
- * @see decomp.me (100%)
  */
 u8* golem_render_fade(u8* packet_cursor, u_long* ordering_table_tag)
 {
@@ -1559,7 +1538,6 @@ u8* golem_render_fade(u8* packet_cursor, u_long* ordering_table_tag)
  * @brief Append the encoded string @p src to the end of @p dest.
  * @param dest Destination encoded-text buffer (null-terminated).
  * @param src  Source encoded-text buffer (null-terminated).
- * @see decomp.me (100%)
  */
 void golem_append_encoded_string(u8* dest, u8* src)
 {
@@ -1581,7 +1559,6 @@ void golem_append_encoded_string(u8* dest, u8* src)
  *        start a two-byte character, everything else is one byte.
  * @param text Null-terminated encoded-text buffer.
  * @return Length in bytes, excluding the terminator.
- * @see decomp.me (100%)
  */
 s32 golem_encoded_string_length(u8* text)
 {
@@ -1611,7 +1588,6 @@ s32 golem_encoded_string_length(u8* text)
  *        characters, and null-terminate the destination.
  * @param dst Destination buffer.
  * @param src Source encoded-text buffer (null-terminated).
- * @see decomp.me (100%)
  */
 void golem_copy_encoded_string(u8* dst, u8* src)
 {
