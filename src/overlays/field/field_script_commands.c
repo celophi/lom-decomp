@@ -5,7 +5,7 @@
 
 #define FIELD_STATE_RECORD_COUNT 11
 #define FIELD_STATE_RECORD_SIZE 0x68
-#define FIELD_STATE_RECORD(offset) ((FieldStateRecord*)(D_80123FB0 + (offset)))
+#define FIELD_STATE_RECORD(offset) ((FieldStateRecord*)(g_field_battle + (offset)))
 
 typedef void (*FieldCommandHandler)(s32 value, u8* params);
 
@@ -32,14 +32,14 @@ typedef struct
     u8 channels[4];
 } Actor;
 
-/** @brief One 0x94-byte element in the D_80122B78 table; unk0 is its id. */
+/** @brief One 0x94-byte element in the g_field_runtime table; unk0 is its id. */
 typedef struct Elem
 {
     u8 unk0; /* 0x00 */
     u8 pad[0x93];
 } Elem;
 
-/** @brief D_80122B78 table: count at 0x400 (u16/u32 union), elements at 0x430. */
+/** @brief g_field_runtime table: count at 0x400 (u16/u32 union), elements at 0x430. */
 typedef struct Foo
 {
     u8 pad0[0x400];
@@ -237,7 +237,7 @@ typedef struct
     u32 unk90;
 } CmdB800BE404;
 
-/** @brief View of D_80122B78 exposing the byte consumed at offset 0x403. */
+/** @brief View of g_field_runtime exposing the byte consumed at offset 0x403. */
 typedef struct
 {
     u8 pad0[0x403];
@@ -257,30 +257,30 @@ typedef struct
 void func_800C1EC8(s32, void*, s32);
 extern FieldCommandHandler D_800F0E10[];
 extern u8* g_field_script;
-extern Actor* func_80087F0C(s32);
-extern u8* D_80122B78;
-extern s32 D_8010AE78;
+extern Actor* field_find_object_state(s32);
+extern u8* g_field_runtime;
+extern s32 g_field_interaction_active;
 /* Int parameters on purpose: with the (s32, u8, s8) definition the calls would narrow their arguments. */
 s32 func_800B286C(s32 owner_id, s32 event_id, s32 argument);
-s32 func_80087F44(s32, s32*);
+s32 field_get_actor_position(s32, s32*);
 extern u8* func_800C1E40(s32 arg0);
 extern void func_8005AF5C(s32 obj_index, s32 part_index, FieldPos* out);
 extern u8* field_find_free_inventory_record(void);
 extern void func_800BD520(s32, s32, s32);
 extern void func_800C1EC8(s32, void*, s32);
-extern u8 *D_80122B74, *D_80122B78, *D_80123FC4, *g_field_script;
+extern u8 *g_field_game_state, *g_field_runtime, *D_80123FC4, *g_field_script;
 extern u8* func_800B2A9C(s32 value);
 extern void func_800C1F28(u32* arg0);
 extern void (*D_800F0E54[])(s32* arg0, void* arg1, void* arg2);
 s32 func_800C1FBC(FieldPosition* first, FieldPosition* second);
-extern u8* D_80123FB0;
-s32 func_80087D8C(s32, s32, s32, s32);
-extern s32 func_80087F44(s32, s32*);
-extern s32 D_8010AE74, D_8010CFD8, D_8010CFDC;
-extern Camera* D_80122B70;
-extern s32 func_80087D8C(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-s32 func_80087D8C(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-void func_80089D44(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
+extern u8* g_field_battle;
+s32 field_set_actor_position(s32, s32, s32, s32);
+extern s32 field_get_actor_position(s32, s32*);
+extern s32 g_field_scripted_scroll_frames, g_field_scripted_scroll_target_x, g_field_scripted_scroll_target_z;
+extern Camera* g_field_scene_state;
+extern s32 field_set_actor_position(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
+s32 field_set_actor_position(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
+void field_revive_actor(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 void* func_800B2B08(void);
 CmdB800BE404* func_800C1B60(s32 arg0);
 void func_800C1EC8(s32 arg0, void* arg1, s32 arg2);
@@ -331,7 +331,7 @@ void func_800BD778(s32 unused, Request* request)
     {
         index = request->index;
     }
-    actor = func_80087F0C(index);
+    actor = field_find_object_state(index);
     if (actor != (Actor*)-1)
     {
         switch (request->operation)
@@ -400,9 +400,9 @@ void func_800BD97C(void)
 /**
  * @brief Re-issue every active table element and clear the batch-dirty flags.
  *
- * After func_800B177C, walks the @c count live elements of @c D_80122B78,
+ * After func_800B177C, walks the @c count live elements of @c g_field_runtime,
  * dispatching func_800B286C for each element's id, then clears the 0x60000 bits
- * of the flag word at 0x400 and resets @c D_8010AE78.
+ * of the flag word at 0x400 and resets @c g_field_interaction_active.
  *
  */
 void func_800BD99C(void)
@@ -410,12 +410,12 @@ void func_800BD99C(void)
     s32 i;
 
     func_800B177C();
-    for (i = 0; i < (s32)((Foo*)D_80122B78)->f400.count; i++)
+    for (i = 0; i < (s32)((Foo*)g_field_runtime)->f400.count; i++)
     {
-        func_800B286C(((Foo*)D_80122B78)->elem[i].unk0, 0xD, 0x82);
+        func_800B286C(((Foo*)g_field_runtime)->elem[i].unk0, 0xD, 0x82);
     }
-    ((Foo*)D_80122B78)->f400.flags &= 0xFFF9FFFF;
-    D_8010AE78 = 0;
+    ((Foo*)g_field_runtime)->f400.flags &= 0xFFF9FFFF;
+    g_field_interaction_active = 0;
 }
 
 void func_800BDA48(s32 unused, u8* params)
@@ -469,7 +469,7 @@ void func_800BDA7C(u32 arg0, BoundsCommand* command, u32 arg2, u32 arg3)
         {
             x = *g_field_script;
         }
-        func_80087F44(x, position);
+        field_get_actor_position(x, position);
         left = command->left;
         top = command->top;
         right = command->width;
@@ -550,7 +550,7 @@ void func_800BDCA4(s32 arg0, Command* arg1)
     switch (opcode)
     {
     case 0:
-        buffer = D_80122B78 + 0x104;
+        buffer = g_field_runtime + 0x104;
         D_80123FC4 = buffer;
         func_800C1EC8(0, buffer, 0x60);
         return;
@@ -558,7 +558,7 @@ void func_800BDCA4(s32 arg0, Command* arg1)
         record = field_find_free_inventory_record();
         if (record != 0)
         {
-            context = &D_80122B74;
+            context = &g_field_game_state;
             item_id = arg1->argC;
             if (item_id < 0x40U)
             {
@@ -587,10 +587,10 @@ void func_800BDCA4(s32 arg0, Command* arg1)
         arg1->result = 0xFA;
         return;
     case 2:
-        record = D_80122B74 + ((arg1->arg4 << 6) + 0xCE0);
+        record = g_field_game_state + ((arg1->arg4 << 6) + 0xCE0);
         if (*record != 0)
         {
-            counts = D_80122B74 + arg1->arg8;
+            counts = g_field_game_state + arg1->arg8;
             stock = counts[0x25E0];
             if (stock != 0)
             {
@@ -700,7 +700,7 @@ void func_800BDFD4(FieldDistanceList* output, FieldDistanceSource* source, Field
     s32 i;
     s32 offset;
 
-    func_80087F44(source->reference_id, (s32*)&reference_position);
+    field_get_actor_position(source->reference_id, (s32*)&reference_position);
     i = 0;
     output->count = 0;
     do
@@ -708,7 +708,7 @@ void func_800BDFD4(FieldDistanceList* output, FieldDistanceSource* source, Field
         offset = i * FIELD_STATE_RECORD_SIZE;
         if ((FIELD_STATE_RECORD(offset)->flags & filter->flag_mask) && FIELD_STATE_RECORD(offset)->state->active != 0)
         {
-            func_80087F44(FIELD_STATE_RECORD(offset)->object_id, (s32*)&record_position);
+            field_get_actor_position(FIELD_STATE_RECORD(offset)->object_id, (s32*)&record_position);
             output->entries[output->count].object_id = FIELD_STATE_RECORD(offset)->object_id;
             output->entries[output->count].distance = func_800C1FBC(&record_position, &reference_position);
             output->count += 1;
@@ -742,22 +742,22 @@ void func_800BE0E0(s32 arg0, CameraCommand* arg1)
     switch (mode)
     { /* irregular */
     case 0:
-        view_x = (s32)-D_80122B70->unk4 >> 8;
-        ((State*)D_80122B78)->unk424 = view_x;
-        D_8010CFD8 = view_x;
-        view_y = (s32)-D_80122B70->unkC >> 9;
-        ((State*)D_80122B78)->unk428 = view_y;
-        D_8010CFDC = view_y;
+        view_x = (s32)-g_field_scene_state->unk4 >> 8;
+        ((State*)g_field_runtime)->unk424 = view_x;
+        g_field_scripted_scroll_target_x = view_x;
+        view_y = (s32)-g_field_scene_state->unkC >> 9;
+        ((State*)g_field_runtime)->unk428 = view_y;
+        g_field_scripted_scroll_target_z = view_y;
         if ((view_x | view_y) == 0)
         {
-            D_8010CFDC = 1;
+            g_field_scripted_scroll_target_z = 1;
         }
-        D_8010AE74 = 0;
+        g_field_scripted_scroll_frames = 0;
         return;
     case 1:
-        D_8010CFD8 = arg1->unk4;
-        D_8010CFDC = arg1->unk8;
-        D_8010AE74 = arg1->unkC;
+        g_field_scripted_scroll_target_x = arg1->unk4;
+        g_field_scripted_scroll_target_z = arg1->unk8;
+        g_field_scripted_scroll_frames = arg1->unkC;
         return;
     case 2:
         bounds = (Bounds*)0x801ED400;
@@ -769,9 +769,9 @@ void func_800BE0E0(s32 arg0, CameraCommand* arg1)
         {
             actor = arg1->unk0;
         }
-        func_80087F44(actor, position);
+        field_get_actor_position(actor, position);
         offset_x = (position[0] >> 8) - 0xA0;
-        destination = &D_8010CFD8;
+        destination = &g_field_scripted_scroll_target_x;
         if (offset_x > 0)
         {
             limit_x = bounds->width - 0x140;
@@ -786,7 +786,7 @@ void func_800BE0E0(s32 arg0, CameraCommand* arg1)
             *destination = 0;
         }
         offset_y = ((s32)(position[2] - position[1]) >> 8) - 0xE0;
-        destination = &D_8010CFDC;
+        destination = &g_field_scripted_scroll_target_z;
         if (offset_y > 0)
         {
             limit_y = (s16)bounds->height - 0x1C0;
@@ -800,19 +800,19 @@ void func_800BE0E0(s32 arg0, CameraCommand* arg1)
         {
             *destination = 0;
         }
-        half_y = D_8010CFDC / 2;
-        D_8010CFDC = half_y;
-        if ((D_8010CFD8 | half_y) == 0)
+        half_y = g_field_scripted_scroll_target_z / 2;
+        g_field_scripted_scroll_target_z = half_y;
+        if ((g_field_scripted_scroll_target_x | half_y) == 0)
         {
-            D_8010CFDC = 1;
+            g_field_scripted_scroll_target_z = 1;
         }
-        D_8010AE74 = arg1->unkC;
+        g_field_scripted_scroll_frames = arg1->unkC;
         return;
     case 3:
-        state = (State*)D_80122B78;
-        D_8010AE74 = arg1->unkC;
-        D_8010CFD8 = state->unk424;
-        D_8010CFDC = state->unk428;
+        state = (State*)g_field_runtime;
+        g_field_scripted_scroll_frames = arg1->unkC;
+        g_field_scripted_scroll_target_x = state->unk424;
+        g_field_scripted_scroll_target_z = state->unk428;
         return;
     }
 }
@@ -835,7 +835,7 @@ void func_800BE324(s32 arg0, UnkStruct800BE324* arg1)
         actor = arg1->unk0;
     }
 
-    func_80087D8C(actor, arg1->unk4, -arg1->unk8, arg1->unkC);
+    field_set_actor_position(actor, arg1->unk4, -arg1->unk8, arg1->unkC);
 }
 
 /**
@@ -905,9 +905,9 @@ void func_800BE404(s32 arg0, ArgB800BE404* arg1)
         handle = (s32)func_800B2B08();
         if (handle != 0)
         {
-            func_80087D8C(id, arg1->unk4, arg1->unk8, arg1->unkC);
+            field_set_actor_position(id, arg1->unk4, arg1->unk8, arg1->unkC);
             override_0 = -1;
-            func_80087614(id, ((StructB78B800BE404*)D_80122B78)->unk403);
+            field_set_actor_group(id, ((StructB78B800BE404*)g_field_runtime)->unk403);
             if (arg1->unk10 != 0xFF)
             {
                 override_0 = arg1->unk10;
@@ -923,8 +923,8 @@ void func_800BE404(s32 arg0, ArgB800BE404* arg1)
                 override_2 = arg1->unk18;
             }
             func_800C1EC8(0, (void*)handle, 0x68);
-            func_800B3F1C(id, (struct FieldStatusRecord*)handle, (struct FieldStatusState*)func_80087F0C(id));
-            func_80089D44(id, override_0, override_1, override_2);
+            func_800B3F1C(id, (struct FieldStatusRecord*)handle, (struct FieldStatusState*)field_find_object_state(id));
+            field_revive_actor(id, override_0, override_1, override_2);
         }
     }
 }
@@ -949,7 +949,7 @@ void func_800BE550(s32 arg0, FieldPositionCommand* command)
         index = command->unk0;
     }
 
-    func_80087F44(index, (s32*)&position);
+    field_get_actor_position(index, (s32*)&position);
     command->unk4 = position.x;
     command->unk8 = -position.y;
     command->unkC = position.z;

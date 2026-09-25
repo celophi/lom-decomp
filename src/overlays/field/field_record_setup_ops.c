@@ -42,8 +42,8 @@
 extern s32 D_801227F0;
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
-extern FieldGameState* D_80122B74;
-extern FieldRuntimeContext* D_80122B78;
+extern FieldGameState* g_field_game_state;
+extern FieldRuntimeContext* g_field_runtime;
 extern FieldItemStaging* D_80123FC4;
 extern FieldItemTables* D_80123FC0;
 
@@ -85,7 +85,7 @@ void func_800BE710(s32 kind)
             if (record != NULL)
             {
                 func_800BEA10(record, FIELD_STAGE_NEW_GRID_ITEM, g_gosub_result_values[0], g_gosub_result_values[1], g_gosub_result_values[2]);
-                func_800BD520(0, FIELD_ITEM_RESULT_VARIABLE, record - D_80122B74->items);
+                func_800BD520(0, FIELD_ITEM_RESULT_VARIABLE, record - g_field_game_state->items);
             }
             else
             {
@@ -93,7 +93,7 @@ void func_800BE710(s32 kind)
             }
             break;
         case FIELD_STAGE_EXISTING_ITEM:
-            func_800BEC44(&D_80122B74->items[g_gosub_result_values[0]], g_gosub_result_values[1]);
+            func_800BEC44(&g_field_game_state->items[g_gosub_result_values[0]], g_gosub_result_values[1]);
             func_800BD520(0, FIELD_ITEM_RESULT_VARIABLE, g_gosub_result_values[0]);
             break;
         default:
@@ -101,7 +101,7 @@ void func_800BE710(s32 kind)
             if (record != NULL)
             {
                 func_800BE888(record, kind, g_gosub_result_values[0], g_gosub_result_values[1]);
-                func_800BD520(0, FIELD_ITEM_RESULT_VARIABLE, record - D_80122B74->items);
+                func_800BD520(0, FIELD_ITEM_RESULT_VARIABLE, record - g_field_game_state->items);
             }
             else
             {
@@ -197,7 +197,7 @@ void func_800BEA10(FieldItemRecord* record, s32 category, s32 item_type, s32 row
     D_80123FC4->properties[3] = D_80123FC0->grid.pairs[row][item_type][1];
 
     saved_script = g_field_script;
-    g_field_script = (FieldScriptContext*)&D_80122B78->events[0].script;
+    g_field_script = (FieldScriptContext*)&g_field_runtime->events[0].script;
     func_800BF2F0(D_80123FC0->grid.commands[command_index - FIELD_STAGING_COMMAND_BASE]);
     g_field_script = saved_script;
     func_800BFA34();
@@ -316,7 +316,7 @@ void func_800BEF74(void)
     FieldScriptContext* saved_script;
 
     saved_script = g_field_script;
-    g_field_script = (FieldScriptContext*)&D_80122B78->events[0].script;
+    g_field_script = (FieldScriptContext*)&g_field_runtime->events[0].script;
     func_800BF158();
     if (D_80123FC4->category == FIELD_ITEM_CATEGORY_WEAPON)
     {

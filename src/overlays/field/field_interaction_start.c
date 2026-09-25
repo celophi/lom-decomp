@@ -106,7 +106,7 @@ typedef struct
     u16 min_z;
     u16 max_x;
     u16 max_z;
-    /** @brief Bit 15 set: script id for func_800B22F0; otherwise a func_800B4410 argument. */
+    /** @brief Bit 15 set: script id for func_800B22F0; otherwise the monster group for field_battle_start. */
     u16 command;
     u16 unk0A;
 } FieldTriggerRegion;
@@ -120,7 +120,7 @@ typedef struct
 } FieldTriggerTable;
 
 /** @brief The current scene's trigger table, read through the context pointer on every use. */
-#define FIELD_TRIGGERS ((FieldTriggerTable*)D_80122B78->trigger_table)
+#define FIELD_TRIGGERS ((FieldTriggerTable*)g_field_runtime->trigger_table)
 
 /** @brief Player map position in whole units. */
 typedef struct
@@ -129,9 +129,9 @@ typedef struct
     u16 z;
 } FieldMapPoint;
 
-extern FieldGameState* D_80122B74;
-extern FieldRuntimeContext* D_80122B78;
-extern SceneState* D_80122B70;
+extern FieldGameState* g_field_game_state;
+extern FieldRuntimeContext* g_field_runtime;
+extern SceneState* g_field_scene_state;
 extern FieldRuntimeContext D_80122C00;
 extern s16 D_800EF600[];
 extern u8 D_800F0B48[];
@@ -155,14 +155,14 @@ s32 rand(void);
 void func_800B0AF8(void)
 {
     func_800B0BDC();
-    func_800C1EC8(NULL, (s32*)&D_80122B78->state, 0xB04);
+    func_800C1EC8(NULL, (s32*)&g_field_runtime->state, 0xB04);
     func_800B0C10();
     func_800B0C54();
     func_800B0D3C();
     func_800B0E80();
     func_800B0EFC();
 
-    if (D_80122B74->characters[1].name[0] != 0)
+    if (g_field_game_state->characters[1].name[0] != 0)
     {
         if (func_800BD414(0, 0x2F08) == 0xFF)
         {
@@ -170,7 +170,7 @@ void func_800B0AF8(void)
         }
     }
 
-    if (D_80122B74->characters[2].name[0] != 0)
+    if (g_field_game_state->characters[2].name[0] != 0)
     {
         if (func_800BD414(0, 0x2F00) == 0xFF)
         {
@@ -182,9 +182,9 @@ void func_800B0AF8(void)
 /** @brief Bind the game-state, runtime-context and camera pointers. */
 void func_800B0BDC(void)
 {
-    D_80122B74 = (FieldGameState*)&g_saved_game;
-    D_80122B78 = &D_80122C00;
-    D_80122B70 = SCENE_STATE;
+    g_field_game_state = (FieldGameState*)&g_saved_game;
+    g_field_runtime = &D_80122C00;
+    g_field_scene_state = SCENE_STATE;
 }
 
 /** @brief Reset the pending scene entry and the fade parameters. */
@@ -192,7 +192,7 @@ void func_800B0C10(void)
 {
     FieldRuntimeContext* context;
 
-    context = D_80122B78;
+    context = g_field_runtime;
     context->fade_timer = 0x10;
     context->scene_entry = -1;
     context->fade_color.bits.red = 0;
@@ -210,13 +210,13 @@ void func_800B0C54(void)
     for (slot = 0; slot < FIELD_PARTY_SIZE; slot++)
     {
         g_field_text_macros[15 - slot].character_limit = 0x15;
-        g_field_text_macros[15 - slot].text = D_80122B74->characters[slot].name;
+        g_field_text_macros[15 - slot].text = g_field_game_state->characters[slot].name;
     }
 
     g_field_text_macros[12].character_limit = 0xFF;
-    g_field_text_macros[12].text = FIELD_OFFSET_TABLE_TEXT(D_800EF600, D_80122B74->control.fields.unk2E6 & 0x7F);
+    g_field_text_macros[12].text = FIELD_OFFSET_TABLE_TEXT(D_800EF600, g_field_game_state->control.fields.unk2E6 & 0x7F);
 
-    if ((func_800BD414(0, 0xA02) != 0) || ((D_80122B74->characters[1].info.word & 0x80) != 0))
+    if ((func_800BD414(0, 0xA02) != 0) || ((g_field_game_state->characters[1].info.word & 0x80) != 0))
     {
         func_800BD520(0, 0xA03, 1);
     }
@@ -237,29 +237,29 @@ void func_800B0D3C(void)
 
     for (i = 0; i < FIELD_PARTY_SIZE; i++)
     {
-        D_80122B78->actors[i].flags.bits.active = 1;
-        D_80122B78->actors[i].flags.bits.script_only = 0;
-        D_80122B78->actors[i].flags.bits.spawned = 0;
-        D_80122B78->actors[i].id = i;
-        D_80122B78->actors[i].selector = i - 0x80;
-        D_80122B78->actors[i].event = FIELD_NO_EVENT;
+        g_field_runtime->actors[i].flags.bits.active = 1;
+        g_field_runtime->actors[i].flags.bits.script_only = 0;
+        g_field_runtime->actors[i].flags.bits.spawned = 0;
+        g_field_runtime->actors[i].id = i;
+        g_field_runtime->actors[i].selector = i - 0x80;
+        g_field_runtime->actors[i].event = FIELD_NO_EVENT;
         for (j = 0; j < FIELD_ACTOR_SCRIPT_COUNT; j++)
         {
-            D_80122B78->actors[i].scripts[j] = FIELD_NO_SCRIPT;
+            g_field_runtime->actors[i].scripts[j] = FIELD_NO_SCRIPT;
         }
-        D_80122B78->state.actor_count++;
+        g_field_runtime->state.actor_count++;
     }
 
-    D_80122B78->actors[0].script.status.bits.local_base = 0x30;
-    D_80122B78->actors[1].script.status.bits.local_base = 0x31;
-    D_80122B78->actors[2].script.status.bits.local_base = 0x38;
+    g_field_runtime->actors[0].script.status.bits.local_base = 0x30;
+    g_field_runtime->actors[1].script.status.bits.local_base = 0x31;
+    g_field_runtime->actors[2].script.status.bits.local_base = 0x38;
 
     /* j is reused as the descending local base (the 7-bit field keeps 0x7F, 0x7E, ...). */
     for (i = FIELD_PARTY_SIZE, j = 0xFF; i < FIELD_ACTOR_RECORD_COUNT; i++, j--)
     {
-        D_80122B78->actors[i].script.status.bits.local_base = j;
+        g_field_runtime->actors[i].script.status.bits.local_base = j;
     }
-    D_80122B78->local_variable_base = 0x40;
+    g_field_runtime->local_variable_base = 0x40;
 }
 
 /**
@@ -272,12 +272,12 @@ void func_800B0E80(void)
 
     for (i = 0; i < FIELD_EVENT_RECORD_COUNT; i++)
     {
-        D_80122B78->events[i].id = i - 0x80;
-        D_80122B78->events[i].selector = 0xFF;
-        D_80122B78->actors[i].event = FIELD_NO_EVENT;
+        g_field_runtime->events[i].id = i - 0x80;
+        g_field_runtime->events[i].selector = 0xFF;
+        g_field_runtime->actors[i].event = FIELD_NO_EVENT;
         for (j = 0; j < FIELD_ACTOR_SCRIPT_COUNT; j++)
         {
-            D_80122B78->events[i].scripts[j] = FIELD_NO_SCRIPT;
+            g_field_runtime->events[i].scripts[j] = FIELD_NO_SCRIPT;
         }
     }
 }
@@ -289,44 +289,44 @@ void func_800B0EFC(void)
 {
     s32 flags;
 
-    flags = D_80122B74->control.word;
+    flags = g_field_game_state->control.word;
     if (flags & 0x800000)
     {
-        D_80122B74->control.word = flags & 0xFF7FFFFF;
-        func_800C1EC8(NULL, D_80122B74->words, 0x20);
+        g_field_game_state->control.word = flags & 0xFF7FFFFF;
+        func_800C1EC8(NULL, g_field_game_state->words, 0x20);
         func_800BD520(0, 0xFA, rand() & 0xFF);
     }
 
-    if (D_80122B74->control.fields.hero_level >= 0x12)
+    if (g_field_game_state->control.fields.hero_level >= 0x12)
     {
         func_800BD520(0, 0xA00, 1);
     }
 
-    func_800BD520(0, 0x429C, D_80122B74->control.fields.unk2E6 & 0x7F);
-    func_800BD520(0, 0x4300, D_800F0B48[D_80122B74->lands[g_music_track_index].levels[0]]);
-    func_800BD520(0, 0x4304, D_800F0B48[D_80122B74->lands[g_music_track_index].levels[1]]);
-    func_800BD520(0, 0x4308, D_800F0B48[D_80122B74->lands[g_music_track_index].levels[2]]);
-    func_800BD520(0, 0x430C, D_800F0B48[D_80122B74->lands[g_music_track_index].levels[3]]);
-    func_800BD520(0, 0x4310, D_800F0B48[D_80122B74->lands[g_music_track_index].levels[4]]);
-    func_800BD520(0, 0x4314, D_800F0B48[D_80122B74->lands[g_music_track_index].levels[5]]);
-    func_800BD520(0, 0x4318, D_800F0B48[D_80122B74->lands[g_music_track_index].levels[6]]);
-    func_800BD520(0, 0x431C, D_800F0B48[D_80122B74->lands[g_music_track_index].levels[7]]);
+    func_800BD520(0, 0x429C, g_field_game_state->control.fields.unk2E6 & 0x7F);
+    func_800BD520(0, 0x4300, D_800F0B48[g_field_game_state->lands[g_music_track_index].levels[0]]);
+    func_800BD520(0, 0x4304, D_800F0B48[g_field_game_state->lands[g_music_track_index].levels[1]]);
+    func_800BD520(0, 0x4308, D_800F0B48[g_field_game_state->lands[g_music_track_index].levels[2]]);
+    func_800BD520(0, 0x430C, D_800F0B48[g_field_game_state->lands[g_music_track_index].levels[3]]);
+    func_800BD520(0, 0x4310, D_800F0B48[g_field_game_state->lands[g_music_track_index].levels[4]]);
+    func_800BD520(0, 0x4314, D_800F0B48[g_field_game_state->lands[g_music_track_index].levels[5]]);
+    func_800BD520(0, 0x4318, D_800F0B48[g_field_game_state->lands[g_music_track_index].levels[6]]);
+    func_800BD520(0, 0x431C, D_800F0B48[g_field_game_state->lands[g_music_track_index].levels[7]]);
     func_800BD520(0, 0x5320, func_800C3688(g_music_track_index));
     func_800BD520(0, 0x5328, g_music_track_index);
 }
 
 extern u8 D_800EF84C[];
-extern s32 D_8010AE78;
+extern s32 g_field_interaction_active;
 extern s32 g_pending_game_state;
 extern s32 g_layout_sub_mode;
 extern s32 g_layout_option;
 extern FieldMapPoint D_80042FC8;
 
-void func_80087CE0(s32 actor_id, s32 mode);
-u8* func_80087EF0(s32 script_id);
-s32 func_80087F44(s32 actor_id, s32* position);
-void func_80087FC0(s32 party_index, s32 mode);
-s32 func_8008B288(s32 actor_id);
+void field_start_actor_script(s32 actor_id, s32 mode);
+u8* field_get_event_script(s32 script_id);
+s32 field_get_actor_position(s32 actor_id, s32* position);
+void field_set_actor_control_mode(s32 party_index, s32 mode);
+s32 field_get_actor_facing(s32 actor_id);
 void func_800B168C(s32 mode);
 void func_800B177C(void);
 s32 func_800B1894(FieldActionRequest* request, FieldActionEntry** entry_out, s32 request_index, s32* action_index);
@@ -393,9 +393,9 @@ void field_install_actor_action(FieldActionRequest* request, s32 request_index)
         {
         case FIELD_ACTION_ACTOR:
             request->control.flags = request->control.flags | FIELD_ACTION_ACTIVE;
-            actor_count = ((FieldActionTable*)D_80122B78)->actors.count;
-            ((FieldActionTable*)D_80122B78)->actors.count = (u16)(actor_count + 1);
-            actor_entry = &((FieldActionTable*)D_80122B78)->entries[actor_count & 0xFFFF];
+            actor_count = ((FieldActionTable*)g_field_runtime)->actors.count;
+            ((FieldActionTable*)g_field_runtime)->actors.count = (u16)(actor_count + 1);
+            actor_entry = &((FieldActionTable*)g_field_runtime)->entries[actor_count & 0xFFFF];
             entry = actor_entry;
             actor_entry->id = (s8)(request_index + FIELD_ACTION_DYNAMIC_ID_BASE);
             *(s32*)&actor_entry->flags = *(s32*)&actor_entry->flags | FIELD_ACTION_ACTIVE;
@@ -408,9 +408,9 @@ void field_install_actor_action(FieldActionRequest* request, s32 request_index)
             break;
         case FIELD_ACTION_GROUP_ACTOR:
             request->control.flags = request->control.flags | FIELD_ACTION_ACTIVE;
-            group_actor_count = ((FieldActionTable*)D_80122B78)->actors.count;
-            ((FieldActionTable*)D_80122B78)->actors.count = (u16)(group_actor_count + 1);
-            group_entry = &((FieldActionTable*)D_80122B78)->entries[group_actor_count & 0xFFFF];
+            group_actor_count = ((FieldActionTable*)g_field_runtime)->actors.count;
+            ((FieldActionTable*)g_field_runtime)->actors.count = (u16)(group_actor_count + 1);
+            group_entry = &((FieldActionTable*)g_field_runtime)->entries[group_actor_count & 0xFFFF];
             entry = group_entry;
             group_entry->id = (s8)(request_index + FIELD_ACTION_DYNAMIC_ID_BASE);
             *(s32*)&group_entry->flags = *(s32*)&group_entry->flags | FIELD_ACTION_ACTIVE;
@@ -423,16 +423,16 @@ void field_install_actor_action(FieldActionRequest* request, s32 request_index)
             if (!(((u32)value >> FIELD_ACTION_GROUP_SHIFT) & FIELD_ACTION_GROUP_MASK))
             {
                 request->control.flags = (value & FIELD_ACTION_GROUP_CLEAR_MASK) |
-                                         ((((((FieldActionLayout*)D_80122B74)->default_group >> 4) + 1) & FIELD_ACTION_GROUP_MASK) << FIELD_ACTION_GROUP_SHIFT);
+                                         ((((((FieldActionLayout*)g_field_game_state)->default_group >> 4) + 1) & FIELD_ACTION_GROUP_MASK) << FIELD_ACTION_GROUP_SHIFT);
             }
             source_actor = request->source.actor;
             request->source.actor = source_actor & FIELD_ACTION_SOURCE_ACTOR_MASK;
             break;
         case FIELD_ACTION_SCRIPT:
             request->control.flags = request->control.flags & FIELD_ACTION_INACTIVE_MASK;
-            script_actor_count = ((FieldActionTable*)D_80122B78)->actors.count;
-            ((FieldActionTable*)D_80122B78)->actors.count = (u16)(script_actor_count + 1);
-            script_entry = &((FieldActionTable*)D_80122B78)->entries[script_actor_count & 0xFFFF];
+            script_actor_count = ((FieldActionTable*)g_field_runtime)->actors.count;
+            ((FieldActionTable*)g_field_runtime)->actors.count = (u16)(script_actor_count + 1);
+            script_entry = &((FieldActionTable*)g_field_runtime)->entries[script_actor_count & 0xFFFF];
             entry = script_entry;
             script_entry->id = (s8)(request_index + FIELD_ACTION_DYNAMIC_ID_BASE);
             action_index = 0;
@@ -451,7 +451,7 @@ void field_install_actor_action(FieldActionRequest* request, s32 request_index)
             action_index = 0;
             flags_mask = FIELD_ACTION_INACTIVE_MASK;
             masked_request_flags = request->control.flags & flags_mask;
-            flag_entry = &((FieldActionTable*)D_80122B78)->entries[0];
+            flag_entry = &((FieldActionTable*)g_field_runtime)->entries[0];
             request->control.flags = masked_request_flags;
             entry = flag_entry;
             flags = *(s32*)&flag_entry->flags;
@@ -464,13 +464,13 @@ void field_install_actor_action(FieldActionRequest* request, s32 request_index)
             action_index = 0;
             *(s32*)&request->control = request_flags & FIELD_ACTION_INACTIVE_MASK;
             flag_entry = entry;
-            entry = &((FieldActionTable*)D_80122B78)->entries[1];
+            entry = &((FieldActionTable*)g_field_runtime)->entries[1];
             goto activate_entry;
         case FIELD_ACTION_ACTOR_2:
             action_index = 0;
             flags_mask = FIELD_ACTION_INACTIVE_MASK;
             masked_request_flags = request->control.flags & flags_mask;
-            flag_entry = &((FieldActionTable*)D_80122B78)->entries[2];
+            flag_entry = &((FieldActionTable*)g_field_runtime)->entries[2];
             request->control.flags = masked_request_flags;
             entry = flag_entry;
         activate_entry:
@@ -485,9 +485,9 @@ void field_install_actor_action(FieldActionRequest* request, s32 request_index)
             {
                 func_800C0490(request->control.bytes.selector);
             }
-            event_entry = &((FieldActionTable*)D_80122B78)->event_entries[0];
+            event_entry = &((FieldActionTable*)g_field_runtime)->event_entries[0];
             *(s32*)&event_entry->flags = *(s32*)&event_entry->flags | FIELD_ACTION_ACTIVE;
-            ((FieldActionTable*)D_80122B78)->actors.flags = ((FieldActionTable*)D_80122B78)->actors.flags | FIELD_ACTION_EVENT_MODE;
+            ((FieldActionTable*)g_field_runtime)->actors.flags = ((FieldActionTable*)g_field_runtime)->actors.flags | FIELD_ACTION_EVENT_MODE;
             interaction_id = request->scripts[FIELD_ACTION_START_EVENT];
             action_index = 0;
             entry = event_entry;
@@ -511,8 +511,8 @@ void field_install_actor_action(FieldActionRequest* request, s32 request_index)
                 entry->scripts[script_index] = request->scripts[script_index];
             }
             entry->script_state = (entry->script_state & FIELD_SCRIPT_LOCAL_BASE_CLEAR_MASK) |
-                                  ((((FieldActionTable*)D_80122B78)->local_variable_base & FIELD_SCRIPT_LOCAL_BASE_MASK) << FIELD_SCRIPT_LOCAL_BASE_SHIFT);
-            ((FieldActionTable*)D_80122B78)->local_variable_base += request->control.bytes.local_variable_count;
+                                  ((((FieldActionTable*)g_field_runtime)->local_variable_base & FIELD_SCRIPT_LOCAL_BASE_MASK) << FIELD_SCRIPT_LOCAL_BASE_SHIFT);
+            ((FieldActionTable*)g_field_runtime)->local_variable_base += request->control.bytes.local_variable_count;
             func_800B286C((u8)entry->id, FIELD_ACTION_START_EVENT, (u8)action_index);
         }
     }
@@ -532,26 +532,26 @@ void func_800B168C(s32 mode)
 
     for (i = 0; i < FIELD_PARTY_SIZE; i++)
     {
-        if (D_80122B74->characters[i].name[0] != 0)
+        if (g_field_game_state->characters[i].name[0] != 0)
         {
             switch (mode)
             {
             case 1:
             case 3:
-                func_80087FC0(i, 2);
+                field_set_actor_control_mode(i, 2);
                 break;
             case 2:
-                if ((D_80122B74->characters[i].info.bytes[0] >> 7) != 0)
+                if ((g_field_game_state->characters[i].info.bytes[0] >> 7) != 0)
                 {
-                    func_80087FC0(i, 2);
+                    field_set_actor_control_mode(i, 2);
                 }
                 break;
             }
         }
     }
 
-    D_8010AE78 = 1;
-    D_80122B78->state.bits.party_mode = mode;
+    g_field_interaction_active = 1;
+    g_field_runtime->state.bits.party_mode = mode;
 }
 
 /**
@@ -564,34 +564,34 @@ void func_800B177C(void)
 
     for (i = 0; i < FIELD_PARTY_SIZE; i++)
     {
-        mode = (D_80122B78->state.flags >> 17) & 3;
+        mode = (g_field_runtime->state.flags >> 17) & 3;
         switch (mode)
         {
         case 1:
         case 3:
-            if ((D_80122B74->characters[i].info.bytes[0] >> 7) != 0)
+            if ((g_field_game_state->characters[i].info.bytes[0] >> 7) != 0)
             {
-                func_80087FC0(i, 0);
+                field_set_actor_control_mode(i, 0);
                 func_800C1D14(i, 0);
             }
             else
             {
-                func_80087FC0(i, 1);
+                field_set_actor_control_mode(i, 1);
                 func_800C1D14(i, 0);
             }
             break;
         case 2:
-            if ((D_80122B74->characters[i].info.bytes[0] >> 7) != 0)
+            if ((g_field_game_state->characters[i].info.bytes[0] >> 7) != 0)
             {
-                func_80087FC0(i, 0);
+                field_set_actor_control_mode(i, 0);
                 func_800C1D14(i, 0);
             }
             break;
         }
     }
 
-    D_80122B78->state.bits.party_mode = 0;
-    D_8010AE78 = 0;
+    g_field_runtime->state.bits.party_mode = 0;
+    g_field_interaction_active = 0;
 }
 
 /**
@@ -615,9 +615,9 @@ s32 func_800B1894(FieldActionRequest* request, FieldActionEntry** entry_out, s32
     group = slot >> 7;
     slot &= 7;
 
-    if (D_80122B74->menu_slots[group].slots[slot].entry.index < 0xFF)
+    if (g_field_game_state->menu_slots[group].slots[slot].entry.index < 0xFF)
     {
-        handle = D_80122B74->menu_slots[group].slots[slot].handle;
+        handle = g_field_game_state->menu_slots[group].slots[slot].handle;
         switch (handle)
         {
         case 0:
@@ -630,14 +630,14 @@ s32 func_800B1894(FieldActionRequest* request, FieldActionEntry** entry_out, s32
             break;
 
         case 2:
-            *action_index = D_80122B74->menu_slots[group].slots[slot].entry.index - 0x30;
-            result_type = (D_80122B74->menu_slots[group].slots[slot].entry.word >> 8) & 3;
+            *action_index = g_field_game_state->menu_slots[group].slots[slot].entry.index - 0x30;
+            result_type = (g_field_game_state->menu_slots[group].slots[slot].entry.word >> 8) & 3;
             request->source.result_type = result_type;
             break;
 
         case 3:
-            *action_index = D_80122B74->menu_slots[group].slots[slot].entry.index;
-            result_type = (D_80122B74->menu_slots[group].slots[slot].entry.word >> 8) & 3;
+            *action_index = g_field_game_state->menu_slots[group].slots[slot].entry.index;
+            result_type = (g_field_game_state->menu_slots[group].slots[slot].entry.word >> 8) & 3;
             request->source.result_type = result_type;
             break;
 
@@ -645,9 +645,9 @@ s32 func_800B1894(FieldActionRequest* request, FieldActionEntry** entry_out, s32
             break;
         }
 
-        count = D_80122B78->state.actor_count;
-        D_80122B78->state.actor_count = count + 1;
-        entry = (FieldActionEntry*)&D_80122B78->actors[count & 0xFFFF];
+        count = g_field_runtime->state.actor_count;
+        g_field_runtime->state.actor_count = count + 1;
+        entry = (FieldActionEntry*)&g_field_runtime->actors[count & 0xFFFF];
         *entry_out = entry;
         entry->flags.word |= 0x80000000;
         (*entry_out)->id = request_index + 3;
@@ -667,7 +667,7 @@ void func_800B19FC(void)
 {
     s32 transition;
 
-    transition = D_80122B78->transition.flags;
+    transition = g_field_runtime->transition.flags;
     if (transition < 0)
     {
         func_800B1AA8();
@@ -680,11 +680,11 @@ void func_800B19FC(void)
     func_800B1D10();
     func_800B1F10();
     func_800B20B4();
-    if (D_80122B78->state.flags & 0x10000)
+    if (g_field_runtime->state.flags & 0x10000)
     {
         func_800B49C0();
     }
-    D_80122B78->frame_count++;
+    g_field_runtime->frame_count++;
 }
 
 /**
@@ -695,30 +695,30 @@ void func_800B1AA8(void)
     u16 scene_id;
 
     func_800BD520(0, 0xFE2, 0);
-    scene_id = D_80122B78->transition.fields.scene_id;
+    scene_id = g_field_runtime->transition.fields.scene_id;
     switch (scene_id)
     {
     case 0xFFFE:
         g_pending_game_state = 4;
-        D_80122B78->scene_entry = 0xFFFF;
+        g_field_runtime->scene_entry = 0xFFFF;
         g_layout_sub_mode = -1;
         g_layout_option = -1;
         return;
     case 0xFFFF:
-        D_80122B78->scene_entry = scene_id;
+        g_field_runtime->scene_entry = scene_id;
         g_pending_game_state = 1;
         g_layout_sub_mode = -1;
         g_layout_option = -1;
         if (func_800BD414(0, 0xFFF) != 0)
         {
             g_pending_game_state = 0;
-            D_80122B78->transition.fields.scene_id = 1;
-            D_80122B78->scene_entry = 0;
+            g_field_runtime->transition.fields.scene_id = 1;
+            g_field_runtime->scene_entry = 0;
         }
         return;
     default:
-        field_set_scene_parameters(D_80122B78->transition.fields.scene_id, D_80122B78->transition.fields.unk41A, D_80122B78->transition.fields.unk41B & 0x1F,
-                                   D_80122B78->scene_entry, D_80122B78->scene_argument1, D_80122B78->scene_argument2);
+        field_set_scene_parameters(g_field_runtime->transition.fields.scene_id, g_field_runtime->transition.fields.unk41A, g_field_runtime->transition.fields.unk41B & 0x1F,
+                                   g_field_runtime->scene_entry, g_field_runtime->scene_argument1, g_field_runtime->scene_argument2);
         break;
     }
 }
@@ -735,39 +735,39 @@ void func_800B1BBC(void)
     u16 scene_id;
     s32 timer;
 
-    context = D_80122B78;
+    context = g_field_runtime;
     transition = context->transition.flags;
     if (!((transition >> 29) & 1))
     {
         for (i = 0; i < FIELD_PARTY_SIZE; i++)
         {
-            func_80087FC0(i, 2);
+            field_set_actor_control_mode(i, 2);
         }
 
-        flags = D_80122B78->transition.flags | 0x20000000;
-        D_80122B78->transition.flags = flags;
-        if (D_80122B78->fade_timer != 0xFF)
+        flags = g_field_runtime->transition.flags | 0x20000000;
+        g_field_runtime->transition.flags = flags;
+        if (g_field_runtime->fade_timer != 0xFF)
         {
-            scene_id = D_80122B78->transition.fields.scene_id;
+            scene_id = g_field_runtime->transition.fields.scene_id;
             if ((scene_id != 0xFFFE) && (scene_id != 0xFFFF))
             {
                 field_seek_scene_resource(scene_id & 0x7FFF);
             }
 
             /* Int arguments on purpose: the original loads the whole fade_timer word. */
-            ((void (*)(s32, s32, s32, s32))field_set_fade_target)(D_80122B78->fade_color.bits.red, D_80122B78->fade_color.bits.green, D_80122B78->fade_color.bits.blue, D_80122B78->fade_timer);
+            ((void (*)(s32, s32, s32, s32))field_set_fade_target)(g_field_runtime->fade_color.bits.red, g_field_runtime->fade_color.bits.green, g_field_runtime->fade_color.bits.blue, g_field_runtime->fade_timer);
 
-            if (D_80122B78->transition.fields.scene_id == 0xFFFF)
+            if (g_field_runtime->transition.fields.scene_id == 0xFFFF)
             {
-                timer = D_80122B78->fade_timer << 2;
+                timer = g_field_runtime->fade_timer << 2;
                 g_layout_option = -1;
                 akao_cmd_c1(0, timer, 0);
             }
 
-            D_80122B78->fade_timer++;
+            g_field_runtime->fade_timer++;
             return;
         }
-        D_80122B78->transition.flags = flags | 0x80000000;
+        g_field_runtime->transition.flags = flags | 0x80000000;
         return;
     }
 
@@ -775,7 +775,7 @@ void func_800B1BBC(void)
     {
         context->transition.flags = transition | 0x80000000;
     }
-    D_80122B78->fade_timer--;
+    g_field_runtime->fade_timer--;
 }
 
 /**
@@ -798,11 +798,11 @@ void func_800B1D10(void)
     index = 0;
     sentinel = -1;
     position = positions;
-    D_80122B78->view_x = -D_80122B70->camera_x;
-    packed_position = D_80122B78->actor_positions;
-    D_80122B78->view_z = -(D_80122B70->camera_y + D_80122B70->camera_z);
+    g_field_runtime->view_x = -g_field_scene_state->camera_x;
+    packed_position = g_field_runtime->actor_positions;
+    g_field_runtime->view_z = -(g_field_scene_state->camera_y + g_field_scene_state->camera_z);
 next_actor:
-    packed = func_80087F44(index, (s32*)position);
+    packed = field_get_actor_position(index, (s32*)position);
     if (packed != sentinel)
     {
         packed = ((position->vx << 8) & 0xFFFF0000) | ((position->vz >> 8) & 0xFFFF);
@@ -825,7 +825,7 @@ next_actor:
     {
         goto next_actor;
     }
-    context = D_80122B78;
+    context = g_field_runtime;
     point = &D_80042FC8;
     point->x = positions[0].vx >> 8;
     point->z = positions[0].vz >> 8;
@@ -841,13 +841,13 @@ next_actor:
                 if ((D_80042FC8.x >= FIELD_TRIGGERS->regions[index].min_x) && (FIELD_TRIGGERS->regions[index].max_x >= D_80042FC8.x) &&
                     (D_80042FC8.z >= FIELD_TRIGGERS->regions[index].min_z) && (FIELD_TRIGGERS->regions[index].max_z >= D_80042FC8.z))
                 {
-                    D_80122B78->triggered_regions |= region_bit;
+                    g_field_runtime->triggered_regions |= region_bit;
                     if (FIELD_TRIGGERS->regions[index].command & 0x8000)
                     {
                         func_800B22F0(0, FIELD_TRIGGERS->regions[index].command);
                         return;
                     }
-                    func_800B4410(FIELD_TRIGGERS->regions[index].command);
+                    field_battle_start(FIELD_TRIGGERS->regions[index].command);
                     return;
                 }
             }
@@ -863,30 +863,30 @@ void func_800B1F10(void)
 {
     s32 i;
 
-    if (D_80122B78->script.frames[D_80122B78->script.depth].pc != NULL)
+    if (g_field_runtime->script.frames[g_field_runtime->script.depth].pc != NULL)
     {
-        field_script_run(&D_80122B78->script);
+        field_script_run(&g_field_runtime->script);
         return;
     }
 
-    if (D_8010AE78 != 0)
+    if (g_field_interaction_active != 0)
     {
-        for (i = 0; i < (s32)D_80122B78->state.actor_count; i++)
+        for (i = 0; i < (s32)g_field_runtime->state.actor_count; i++)
         {
-            func_800B286C(D_80122B78->actors[i].id, 0xD, 0x82);
+            func_800B286C(g_field_runtime->actors[i].id, 0xD, 0x82);
         }
-        if (((((u32)D_80122B78->transition.flags >> 30) & 1) == 0) && (func_800BD414(0, 0xFE2) == 0))
+        if (((((u32)g_field_runtime->transition.flags >> 30) & 1) == 0) && (func_800BD414(0, 0xFE2) == 0))
         {
             func_800B177C();
         }
     }
-    else if ((D_80122B78->state.flags & 0x80000) && (field_text_get_status(0) == -1))
+    else if ((g_field_runtime->state.flags & 0x80000) && (field_text_get_status(0) == -1))
     {
-        for (i = 0; i < (s32)D_80122B78->state.actor_count; i++)
+        for (i = 0; i < (s32)g_field_runtime->state.actor_count; i++)
         {
-            func_800B286C(D_80122B78->actors[i].id, 0xD, 0x85);
+            func_800B286C(g_field_runtime->actors[i].id, 0xD, 0x85);
         }
-        D_80122B78->state.flags &= 0xFFF7FFFF;
+        g_field_runtime->state.flags &= 0xFFF7FFFF;
     }
 }
 
@@ -899,14 +899,14 @@ void func_800B20B4(void)
 
     for (i = 0; i < FIELD_EVENT_RECORD_COUNT; i++)
     {
-        if (D_80122B78->events[i].script.frames[D_80122B78->events[i].script.depth].pc != NULL)
+        if (g_field_runtime->events[i].script.frames[g_field_runtime->events[i].script.depth].pc != NULL)
         {
-            field_script_run(&D_80122B78->events[i].script);
+            field_script_run(&g_field_runtime->events[i].script);
         }
-        func_800B28E0(i + 0x80, D_80122B78->events[i].event, D_80122B78->events[i].event_argument);
-        D_80122B78->events[i].event = FIELD_NO_EVENT;
+        func_800B28E0(i + 0x80, g_field_runtime->events[i].event, g_field_runtime->events[i].event_argument);
+        g_field_runtime->events[i].event = FIELD_NO_EVENT;
         func_800B28E0(0x80, 0xE, 0);
-        D_80122B78->events[i].event = FIELD_NO_EVENT;
+        g_field_runtime->events[i].event = FIELD_NO_EVENT;
     }
 }
 
@@ -930,9 +930,9 @@ void func_800B2198(s32 actor_id, void* unused)
         }
         if (!(((u32)actor->flags.word >> 30) & 1))
         {
-            func_80087F44(actor_id, (s32*)&position);
-            if (((u32)position.vx > (u32)D_80122B78->view_x) && ((u32)position.vz > (u32)D_80122B78->view_z) &&
-                ((u32)position.vx < (u32)D_80122B78->view_x + 0x140) && ((u32)position.vz < (u32)D_80122B78->view_z + 0x1C0))
+            field_get_actor_position(actor_id, (s32*)&position);
+            if (((u32)position.vx > (u32)g_field_runtime->view_x) && ((u32)position.vz > (u32)g_field_runtime->view_z) &&
+                ((u32)position.vx < (u32)g_field_runtime->view_x + 0x140) && ((u32)position.vz < (u32)g_field_runtime->view_z + 0x1C0))
             {
                 func_800B28E0(actor->id, 2, 0);
             }
@@ -976,7 +976,7 @@ s32 func_800B22F0(s32 actor_id, s32 script)
         return 0;
     }
 
-    if (((D_80122B78->transition.flags >> 30) & 1) != 0)
+    if (((g_field_runtime->transition.flags >> 30) & 1) != 0)
     {
         return 0;
     }
@@ -1009,20 +1009,20 @@ s32 func_800B22F0(s32 actor_id, s32 script)
 
     if ((script & 0x8000) != 0)
     {
-        if (D_80122B78->script.frames[D_80122B78->script.depth].pc != NULL)
+        if (g_field_runtime->script.frames[g_field_runtime->script.depth].pc != NULL)
         {
             return 0;
         }
 
-        for (i = 0; i < (s32)D_80122B78->state.actor_count; i++)
+        for (i = 0; i < (s32)g_field_runtime->state.actor_count; i++)
         {
             if (i < FIELD_PARTY_SIZE)
             {
-                func_80087CE0(i, 0);
+                field_start_actor_script(i, 0);
             }
             else
             {
-                other_id = D_80122B78->actors[i].id;
+                other_id = g_field_runtime->actors[i].id;
                 if (other_id == actor_id)
                 {
                     func_800B286C(actor_id, 0xD, 0x80);
@@ -1034,24 +1034,24 @@ s32 func_800B22F0(s32 actor_id, s32 script)
             }
         }
 
-        D_8010AE78 = 1;
-        D_80122B78->script.status.owner_id = actor_id;
-        D_80122B78->script.status.word = (D_80122B78->script.status.word & 0xFFFF01FF) | (actor->script.status.word & 0xFE00);
-        D_80122B78->script.frames[D_80122B78->script.depth].pc = func_80087EF0(script_id & 0x7FFF);
-        D_80122B78->script.frames[D_80122B78->script.depth].wait.bits.resume = 0;
-        D_80122B78->script.frames[D_80122B78->script.depth].wait.bits.frames = 0;
+        g_field_interaction_active = 1;
+        g_field_runtime->script.status.owner_id = actor_id;
+        g_field_runtime->script.status.word = (g_field_runtime->script.status.word & 0xFFFF01FF) | (actor->script.status.word & 0xFE00);
+        g_field_runtime->script.frames[g_field_runtime->script.depth].pc = field_get_event_script(script_id & 0x7FFF);
+        g_field_runtime->script.frames[g_field_runtime->script.depth].wait.bits.resume = 0;
+        g_field_runtime->script.frames[g_field_runtime->script.depth].wait.bits.frames = 0;
         return -1;
     }
 
-    for (i = 0; i < (s32)D_80122B78->state.actor_count; i++)
+    for (i = 0; i < (s32)g_field_runtime->state.actor_count; i++)
     {
         if (i < FIELD_PARTY_SIZE)
         {
-            func_80087CE0(i, 0);
+            field_start_actor_script(i, 0);
         }
         else
         {
-            other_id = D_80122B78->actors[i].id;
+            other_id = g_field_runtime->actors[i].id;
             if (other_id == actor_id)
             {
                 func_800B286C(actor_id, 0xD, 0x83);
@@ -1067,7 +1067,7 @@ s32 func_800B22F0(s32 actor_id, s32 script)
     plane = 0xFF;
     effect = 0xFE;
     selector = 0xFF;
-    D_80122B78->state.flags |= 0x80000;
+    g_field_runtime->state.flags |= 0x80000;
     func_800B2654(&speaker, &plane, &effect, &selector);
     func_8009C620(plane, selector, speaker, effect);
     func_8009C77C(plane, script_id & 0xFFFF, 1);
@@ -1110,7 +1110,7 @@ void func_800B2654(s32* actor_id, s32* plane, s32* effect, s32* selector)
     original_actor_id = *actor_id;
     if (original_actor_id < 0x80U)
     {
-        func_80087F44(original_actor_id, position);
+        field_get_actor_position(original_actor_id, position);
     }
     else
     {
@@ -1129,14 +1129,14 @@ void func_800B2654(s32* actor_id, s32* plane, s32* effect, s32* selector)
         }
         else
         {
-            facing_angle = func_8008B288(*actor_id);
+            facing_angle = field_get_actor_facing(*actor_id);
             facing_flag = ((facing_angle >= 0x41) && (facing_angle < 0xC1)) << 6;
         }
         *plane &= 3;
     }
     else
     {
-        if ((position[2] - D_80122B78->view_z) <= 0xBFFF)
+        if ((position[2] - g_field_runtime->view_z) <= 0xBFFF)
         {
             *plane = 0;
         }
@@ -1144,15 +1144,15 @@ void func_800B2654(s32* actor_id, s32* plane, s32* effect, s32* selector)
         {
             *plane = 1;
         }
-        facing_angle = func_8008B288(*actor_id);
+        facing_angle = field_get_actor_facing(*actor_id);
         facing_flag = ((facing_angle >= 0x41) && (facing_angle < 0xC1)) << 6;
     }
-    D_80122B78->unk41C = (D_80122B78->unk41C & ~0x300) | ((*plane & 3) << 8);
+    g_field_runtime->unk41C = (g_field_runtime->unk41C & ~0x300) | ((*plane & 3) << 8);
     effect_value = *effect;
     switch (effect_value)
     {
     case 0xFE:
-        *effect = actor_selector(func_800C1B60(original_actor_id, D_80122B78));
+        *effect = actor_selector(func_800C1B60(original_actor_id, g_field_runtime));
         break;
     case 0xFF:
         *effect = -1;
@@ -1162,7 +1162,7 @@ void func_800B2654(s32* actor_id, s32* plane, s32* effect, s32* selector)
     selector_value = *selector;
     if (selector_value == 0xFF)
     {
-        selector_value = (u8)D_80122B78->unk41C;
+        selector_value = (u8)g_field_runtime->unk41C;
     }
     *selector = selector_value;
     if (!(((s32)D_800EF84C[selector_value] >> *plane) & 1))

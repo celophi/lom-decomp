@@ -22,11 +22,29 @@
 /** @brief Number of general-purpose animation actor slots. */
 #define FIELD_ACTOR_SLOT_COUNT 48
 
+/** @brief First animation actor slot owned by an object (one per object, in object order). */
+#define FIELD_OBJECT_SLOT_BASE FIELD_ACTOR_SLOT_COUNT
+
+/** @brief Total number of animation actor slots (general, per-object and per-object effect slots). */
+#define FIELD_ACTOR_SLOT_TOTAL 80
+
+/** @brief Number of animation tracks (one per target) an animation actor slot can run. */
+#define FIELD_ACTOR_TRACK_COUNT 9
+
+/** @brief Number of model parts an animation actor slot can drive. */
+#define FIELD_ACTOR_PART_COUNT 16
+
+/** @brief Target entry of an animation track without a target object. */
+#define FIELD_TARGET_NONE 0xFF
+
 /** @brief Number of animation actor bindings (party members 0, 1 and everyone else). */
 #define FIELD_ACTOR_BINDING_COUNT 3
 
 /** @brief Sentinel returned by the actor lookups when no object matches. */
 #define FIELD_ACTOR_NONE ((FieldActor*)-1)
+
+/** @brief Number of action slots in one resource's action row. */
+#define FIELD_RESOURCE_ACTION_COUNT 50
 
 /** @brief Script index of an actor without a running script. */
 #define FIELD_SCRIPT_NONE 0xFF
@@ -39,6 +57,76 @@
 
 /** @brief Presence value of a hidden actor record. */
 #define FIELD_ACTOR_HIDDEN 0xFE
+
+/** @brief Low nine bits of FieldActor::control holding the control mode. */
+#define FIELD_CONTROL_MODE_MASK 0x1FF
+
+/** @brief Low seven bits of FieldActor::animation select the animation. */
+#define FIELD_ANIMATION_INDEX_MASK 0x7F
+/** @brief FieldActor::animation bit that mirrors the animation. */
+#define FIELD_ANIMATION_FACING 0x80
+/** @brief Directional animations come in groups of five (stand, then walk, then run). */
+#define FIELD_ANIMATION_DIRECTIONS 5
+
+/** @brief FieldObjectState::group_flags bits holding the object's group. */
+#define FIELD_OBJECT_GROUP_MASK 0x0F
+
+/** @brief FieldActorBinding::state values. */
+#define FIELD_BINDING_IDLE 0
+#define FIELD_BINDING_LOADING 1
+#define FIELD_BINDING_READY 2
+
+/** @brief Actor commands (FieldActor::command). */
+enum
+{
+    FIELD_ACTOR_COMMAND_NONE = 0,
+    FIELD_ACTOR_COMMAND_BASE = 0x81,
+    FIELD_ACTOR_COMMAND_STEP = 0x81,
+    FIELD_ACTOR_COMMAND_HIT = 0x82,
+    FIELD_ACTOR_COMMAND_ACTION = 0x85,
+    FIELD_ACTOR_COMMAND_RECOVER = 0x86,
+    FIELD_ACTOR_COMMAND_INSTRUMENT = 0x87,
+    FIELD_ACTOR_COMMAND_WALK = 0x88,
+    FIELD_ACTOR_COMMAND_RISE = 0x89,
+    FIELD_ACTOR_COMMAND_SINK = 0x8A,
+    FIELD_ACTOR_COMMAND_WALK_TO_TARGET = 0x8B,
+    FIELD_ACTOR_COMMAND_WALK_FROM_TARGET = 0x8C,
+    FIELD_ACTOR_COMMAND_SEQUENCE_STEP = 0x8D,
+    FIELD_ACTOR_COMMAND_TRANSITION = 0x8E,
+    FIELD_ACTOR_COMMAND_JUMP = 0x8F,
+    FIELD_ACTOR_COMMAND_90 = 0x90,
+    FIELD_ACTOR_COMMAND_TECHNIQUE = 0x91,
+    FIELD_ACTOR_COMMAND_92 = 0x92,
+    FIELD_ACTOR_COMMAND_93 = 0x93,
+    FIELD_ACTOR_COMMAND_94 = 0x94,
+    FIELD_ACTOR_COMMAND_SEQUENCE_WAIT = 0x95,
+    FIELD_ACTOR_COMMAND_96 = 0x96,
+    FIELD_ACTOR_COMMAND_98 = 0x98,
+    FIELD_ACTOR_COMMAND_99 = 0x99,
+    FIELD_ACTOR_COMMAND_9A = 0x9A,
+    FIELD_ACTOR_COMMAND_9B = 0x9B,
+    FIELD_ACTOR_COMMAND_9C = 0x9C,
+    FIELD_ACTOR_COMMAND_9D = 0x9D,
+    FIELD_ACTOR_COMMAND_APPROACH_TARGET = 0xA0,
+    FIELD_ACTOR_COMMAND_ACTION_END = 0xA4,
+    FIELD_ACTOR_COMMAND_TIMED_WALK = 0xA7,
+    FIELD_ACTOR_COMMAND_WAIT_ANIMATION = 0xA8,
+    FIELD_ACTOR_COMMAND_RUN_TO_TARGET = 0xAC,
+    FIELD_ACTOR_COMMAND_RUN = 0xAD,
+    FIELD_ACTOR_COMMAND_AE = 0xAE,
+    FIELD_ACTOR_COMMAND_AF = 0xAF,
+    FIELD_ACTOR_COMMAND_WALK_PATH = 0xB0,
+    FIELD_ACTOR_COMMAND_RUN_PATH = 0xB1,
+    FIELD_ACTOR_COMMAND_TURN = 0xB2,
+    FIELD_ACTOR_COMMAND_STOP = 0xB3,
+    FIELD_ACTOR_COMMAND_LEAVE_PATH = 0xB5,
+    FIELD_ACTOR_COMMAND_TIMED_SLIDE = 0xB6,
+    FIELD_ACTOR_COMMAND_WAIT = 0xB7,
+    FIELD_ACTOR_COMMAND_ATTACHED = 0xB8,
+    FIELD_ACTOR_COMMAND_RETIRE = 0xBB,
+    FIELD_ACTOR_COMMAND_WAIT_BOUND_ACTOR = 0xBC,
+    FIELD_ACTOR_COMMAND_INSTRUMENT_END = 0xBD
+};
 
 /** @brief Map size words of the fixed field map header block at 0x801ED400. */
 typedef struct
@@ -73,7 +161,7 @@ typedef union
 } FieldActorControl;
 
 /** @brief Script, motion and animation state of one field object (0x54 bytes). */
-typedef struct
+typedef struct FieldActor
 {
     s32 x;
     s32 y;
@@ -82,48 +170,68 @@ typedef struct
     s16 unk10;
     s16 unk12;
     s16 unk14;
-    s16 unk16;
-    u8 unk18;
-    u8 unk19;
-    u8 unk1A;
-    u8 unk1B;
+    /** @brief Ticks left on the current animation frame; speed_accumulator is spread over them. */
+    s16 frame_timer;
+    /** @brief Actor tint, refreshed from the object part every frame. */
+    u8 tint_red;
+    u8 tint_green;
+    u8 tint_blue;
+    /** @brief Facing angle in 256 steps. */
+    u8 direction;
     /** @brief Low nine bits hold the control mode; higher bits are flags. */
     FieldActorControl control;
-    u8 unk20;
+    /** @brief Argument of the running command (a timer, step or actor index). */
+    u8 command_param;
     /** @brief Low seven bits select the animation; bit 7 mirrors it. */
     u8 animation;
-    u8 unk22;
-    u8 unk23;
-    u8 unk24;
+    /** @brief Animation actor slot and part that own the record (effect records point at their emitter). */
+    u8 owner_slot;
+    u8 owner_part;
+    u8 animation_active;
     u8 presence;
     u8 unk26;
-    u8 unk27;
+    u8 animation_frame;
     u8 script_index;
     u8 unk29;
     s16 command;
     u16 script_offset;
-    u16 unk2E;
-    u16 unk30;
+    /** @brief Non-zero while the current animation is still playing. */
+    u16 animation_state;
+    u16 variant;
     u8 unk32;
-    u8 unk33;
-    u8 unk34;
-    u8 unk35;
-    u8 unk36;
+    /** @brief Bit 0 selects the running animations. */
+    u8 running;
+    /** @brief Ticks spent on the current animation frame and the frame's length in ticks. */
+    u8 frame_ticks;
+    u8 frame_length;
+    s8 speed_accumulator;
     s8 height;
-    u8 unk38;
-    u8 unk39;
+    /** @brief Height of the next animation frame. */
+    u8 next_height;
+    /** @brief Frames left before a stopped actor settles into its idle animation. */
+    u8 stop_delay;
     u8 object_index;
     u8 resource_index;
     u8 unk3C;
-    u8 unk3D;
+    /** @brief Frames left before a retiring actor is removed. */
+    u8 removal_delay;
     u8 unk3E;
     u8 unk3F;
-    s32 unk40;
+    /** @brief Decoded data of the displayed frame; negative values use the alternate renderer. */
+    s32 frame_data;
     u32 unk44;
     u32 unk48;
     u32 unk4C;
     u8 unk50[4];
 } FieldActor;
+
+/** @brief FieldPlayerRecord::flags bit: the party member is present. */
+#define FIELD_PLAYER_ACTIVE 0x1
+
+/** @brief FieldPlayerRecord::character_kind values. */
+#define FIELD_PLAYER_KIND_HERO 0
+#define FIELD_PLAYER_KIND_PARTNER 1
+#define FIELD_PLAYER_KIND_COMPANION 2
 
 /** @brief A 24-bit value word whose top byte holds flags. */
 typedef union
@@ -135,6 +243,7 @@ typedef union
         u32 unk24 : 7;
         u32 flag31 : 1;
     } bits;
+    u8 bytes[4];
 } FieldValueWord;
 
 /** @brief Packed movement word: low ten bits are the effect scale, bit 15 a flag, the top half a height. */
@@ -150,7 +259,7 @@ typedef union
     } bits;
     struct
     {
-        s16 lo;
+        u16 lo;
         s16 hi;
     } half;
 } FieldMovementWord;
@@ -162,7 +271,10 @@ typedef union
     struct
     {
         u32 flag0 : 1;
-        u32 unk1 : 4;
+        /** @brief The object is linked to linked_object_index, which carries a link flag meanwhile. */
+        u32 linked : 1;
+        /** @brief Damage scale of the object's hits (0 counts as 1); cleared when an action starts. */
+        u32 damage_scale : 3;
         u32 flag5 : 1;
         u32 flag6 : 1;
         u32 flag7 : 1;
@@ -176,6 +288,26 @@ typedef union
         u8 target_count;
     } bytes;
 } FieldContactWord;
+
+/** @brief Number of recorded positions in an object's route history. */
+#define FIELD_ROUTE_HISTORY_LENGTH 48
+
+/** @brief Number of waypoints the path finder can store for an object. */
+#define FIELD_PATH_MAX_POINTS 18
+
+/** @brief One recorded X/Z position (whole units) of an object's route history. */
+typedef struct FieldRoutePoint
+{
+    s16 x;
+    s16 z;
+} FieldRoutePoint;
+
+/** @brief One fixed-point X/Z waypoint written by the path finder. */
+typedef struct
+{
+    s32 x;
+    s32 z;
+} FieldPathPoint;
 
 /** @brief Collision footprint word with a halfword view of the extent. */
 typedef union
@@ -199,18 +331,31 @@ typedef struct
     s32 key;
     s16 unk18;
     u8 unk1A[0x3C - 0x1A];
-    s32 unk3C;
-    s32 unk40;
-    s32 unk44;
-    u16 unk48;
-    s16 unk4A;
-    s32 unk4C;
+    s32 action_parameter;
+    s32 sequence_id;
+    s32 sequence_position;
+    /** @brief Special attack gauge, 0xFF when full. */
+    u16 technique_gauge;
+    u16 action_charge;
+    /** @brief Bit 0 selects the special attack gauge on the HUD; the second byte is the object's own index. */
+    union
+    {
+        s32 word;
+        struct
+        {
+            u8 flags;
+            u8 object_index;
+            u8 unk4E;
+            u8 unk4F;
+        } bytes;
+    } hud;
     s32 target_x;
     s32 target_y;
     s32 target_z;
     u8 unk5C[0x64 - 0x5C];
     s32 unk64;
-    u8 unk68[0x12C - 0x68];
+    s32 unk68;
+    FieldRoutePoint route_history[FIELD_ROUTE_HISTORY_LENGTH];
     FieldCollisionWord collision;
     u8 unk130[0x140 - 0x130];
     s16 unk140;
@@ -220,37 +365,60 @@ typedef struct
     u8 unk148[0x168 - 0x148];
     u8* script;
     s8 unk16C;
-    u8 unk16D;
-    u8 unk16E;
+    /** @brief Effect record the object's HUD panel follows while it is bound to an animation actor. */
+    u8 linked_effect_index;
+    /** @brief Entry of the leader's route history this follower walks towards. */
+    u8 route_index;
     u8 action;
     u8 linked_object_index;
-    u8 unk171;
-    u8 unk172[2];
+    u8 command_timer;
+    u16 sequence;
     FieldMovementWord movement;
     FieldContactWord contact;
-    s32 unk17C;
+    /** @brief Flags as of the last handler run, compared with flags to find changes. */
+    s32 previous_flags;
     u8 targets[13];
     u8 retry_count;
     u8 unk18E;
     u8 unk18F[0x19C - 0x18F];
-    s32 unk19C;
-    s32 unk1A0;
-    s16 path_length;
-    s16 path_index;
+    /** @brief Floor node cached between collision passes (-1 asks for a fresh search). */
+    s32 collision_node;
+    s32 collision_flags;
+    u16 path_length;
+    u16 path_index;
     u8 tint_red;
     u8 tint_green;
     u8 tint_blue;
     u8 tint_timer;
-    s32 path_x;
-    s32 path_z;
-    u8 unk1B4[0x23C - 0x1B4];
+    FieldPathPoint path[FIELD_PATH_MAX_POINTS];
 } FieldObjectState;
 
-/** @brief Model part data of one field object (0x48 bytes). */
+/** @brief Model part data of one field object or animation actor part (0x48 bytes). */
 typedef struct
 {
-    u32 unk0;
-    u32 unk4;
+    union
+    {
+        u32 word;
+        struct
+        {
+            u32 unk0 : 24;
+            u32 mode : 2;
+            u32 unk26 : 6;
+        } bits;
+    } unk0;
+    union
+    {
+        u32 word;
+        struct
+        {
+            u32 unk0 : 11;
+            u32 flag11 : 1;
+            u32 unk12 : 10;
+            u32 render_mode : 2;
+            u32 unk24 : 8;
+        } bits;
+        u8 bytes[4];
+    } unk4;
     u8 unk8;
     u8 unk9;
     u8 unkA;
@@ -262,61 +430,143 @@ typedef struct
     u8 tint_blue;
     u8 unk11;
     u8 unk12[2];
-    u32 unk14;
+    union
+    {
+        u32 word;
+        struct
+        {
+            u32 unk0 : 4;
+            u32 mode : 4;
+            u32 unk8 : 24;
+        } bits;
+        struct
+        {
+            u16 lo;
+            s16 hi;
+        } half;
+    } unk14;
     s16 unk18;
     u8 unk1A[0x23 - 0x1A];
     u8 unk23;
-    u32 unk24;
-    u32 unk28;
+    union
+    {
+        u32 word;
+        u8 bytes[4];
+    } unk24;
+    union
+    {
+        u32 word;
+        u8 bytes[4];
+    } unk28;
     u8 unk2C;
     u8 unk2D;
-    u8 footprint;
+    /** @brief Z and X model scale, 0x40 for full size. */
+    u8 scale_z;
     u8 unk2F[2];
     u8 unk31;
     u8 unk32;
-    u8 unk33;
+    u8 scale_x;
     u32 flags;
     u8 unk38[0x48 - 0x38];
 } FieldObjectPart;
 
 /** @brief Per-party-member record (0x268 bytes). */
-typedef struct
+typedef struct FieldPlayerRecord
 {
     u8 flags;
-    u8 type;
-    u8 unk2;
-    u8 unk3;
+    /** @brief Weapon type (item type) of the equipped weapon. */
+    u8 weapon_type;
+    /** @brief Character within character_kind (partner or companion id). */
+    u8 character_id;
+    /** @brief FIELD_PLAYER_KIND_* value selecting the resource set. */
+    u8 character_kind;
     u8 unk4[0x254 - 4];
-    u16 unk254;
-    u8 unk256;
-    u8 unk257[2];
+    /** @brief CD resource id of the loaded sprite package. */
+    u16 resource_id;
+    /** @brief Portrait currently cached for this member, 0xFF for none. */
+    u8 portrait_index;
+    /** @brief Frames left to chain a combo action. */
+    u8 combo_timer;
+    u8 unk258;
     u8 hit_state;
     u8 unk25A;
     u8 unk25B;
     u8 unk25C;
     u8 unk25D;
-    s16 unk25E;
-    s16 unk260;
-    s16 unk262;
-    s16 unk264;
-    s16 unk266;
+    /** @brief Frames spent in the timed transition, up to transition_limit; the HUD shows it as the recovery gauge while knocked down. */
+    s16 transition_time;
+    s16 transition_limit;
+    /** @brief Animation, effect resource and sound (-1 for none) used when the revive timer runs out. */
+    s16 revive_animation;
+    s16 revive_effect;
+    s16 revive_sound;
 } FieldPlayerRecord;
+
+/** @brief Flag halfword of an action slot. */
+typedef struct
+{
+    u16 target_filter : 8; /**< Target predicate index, FIELD_ACTION_TARGET_NONE for none. */
+    u16 target_group : 2;  /**< Target group mode (opposite / same group). */
+    u16 instrument : 1;    /**< Action plays an instrument (charge) animation. */
+    u16 unkB : 5;
+} FieldActionFlags;
+
+/** @brief One eight-byte action slot of a resource's action row. */
+typedef struct
+{
+    u16 command;            /**< Action command; bit 15 marks a technique. */
+    FieldActionFlags flags;
+    u16 animation;          /**< Animation started by the action, 0 for none. */
+    u16 parameter;          /**< Sequence id or effect flags, depending on the command. */
+} FieldActionSlot;
+
+/** @brief Action row of one resource (g_field_resource_actions). */
+typedef struct
+{
+    FieldActionSlot slots[FIELD_RESOURCE_ACTION_COUNT];
+} FieldActionRow;
 
 /** @brief Animation definition referenced by an animation actor slot. */
 typedef struct
 {
-    u8 unk0;
-    u8 unk1;
-    u8 unk2[0xC - 2];
+    /** @brief Parameter curves driving the render-state tracks, 0xFF for none. */
+    u8 curve_selectors[2];
+    /** @brief Two sound events: value compared by non-start events, event type, sound command. */
+    u8 sound_subtypes[2];
+    u16 sound_events[2];
+    u16 sound_commands[2];
     u16 flags;
-    u16 unkE;
+    /** @brief Bit 15 plays sound bits 8-14 when track 0 reaches the frame in the low byte. */
+    union
+    {
+        u16 word;
+        u8 bytes[2];
+    } frame_sound;
     u16 unk10;
     u16 unk12;
     u8 unk14;
     u8 unk15;
-    u8 unk16[2];
+    u8 unk16;
+    u8 unk17;
     u16 unk18;
+    u8 unk1A[2];
 } FieldAnimationDef;
+
+/** @brief Parameter curve of an animation: segment count, random flag and first segment, then the value range. */
+typedef struct
+{
+    union
+    {
+        u16 word;
+        struct
+        {
+            u8 segment_count;
+            u8 segment_offset;
+        } bytes;
+    } head;
+    s16 end_value;
+    s16 start_value;
+} FieldParameterCurve;
 
 /** @brief Status word of an animation actor slot. */
 typedef union
@@ -339,32 +589,51 @@ typedef struct
 } FieldActorBinding;
 
 /** @brief Animation actor slot (0x244 bytes). */
-typedef struct
+typedef struct FieldActorSlot
 {
-    void* resource0;
-    void* resource4;
-    void* resource8;
+    FieldObjectPart* parts;
+    FieldParameterCurve* curves;
+    /** @brief Curve segments: ten-bit length in frames, six-bit value. */
+    u16* curve_segments;
     FieldAnimationDef* animation;
     FieldAnimationDef* default_animation;
-    u8 unk14[0x24 - 0x14];
+    u8 unk14[0x1C - 0x14];
+    /** @brief Values played by kind 2 sound commands. */
+    s32 sound_params[2];
     u8 active;
-    u8 enabled;
+    /** @brief Number of entries in parts[]. */
+    u8 part_count;
     u8 actor_type;
-    u8 unk27[2];
-    u8 unk29;
+    /** @brief Per sound event: bit 0 once it has played, bit 7 for a type 5 event. */
+    u8 sound_flags[2];
+    /** @brief Entry of default_animation[] that is playing. */
+    u8 animation_index;
     u8 unk2A;
-    u8 unk2B[0x222 - 0x2B];
-    u16 unk222;
+    u8 unk2B[FIELD_ACTOR_PART_COUNT];
+    /** @brief Effects spawned per track and part (the spawner increments it). */
+    u8 effect_counts[FIELD_ACTOR_TRACK_COUNT][FIELD_ACTOR_PART_COUNT];
+    u8 unkCB;
+    u16 effect_totals[FIELD_ACTOR_TRACK_COUNT][FIELD_ACTOR_PART_COUNT];
+    /** @brief Frame counter of each track. */
+    u16 track_frames[FIELD_ACTOR_TRACK_COUNT];
+    u8 unk1FE[0x222 - 0x1FE];
+    /** @brief Length of the animation in frames. */
+    u16 duration;
     FieldActorSlotStatus status;
     u8 owner_object_index;
-    u8 targets[9];
+    u8 targets[FIELD_ACTOR_TRACK_COUNT];
     u8 target_count;
-    u8 unk233[0x238 - 0x233];
-    u16 timer;
+    u8 slot_index;
+    u16 unk234;
+    /** @brief Frames since the animation started. */
+    u16 frame_counter;
+    /** @brief Frames between the starts of consecutive tracks, 0 to start them all at once. */
+    u16 track_interval;
     u8 track_mask;
     u8 pending_track_mask;
     u8 unk23C[4];
-    u16* tracks;
+    /** @brief Per animation, the mask of parts it drives. */
+    u16* part_masks;
 } FieldActorSlot;
 
 /** @brief Resource table entry selected by an actor's resource index (0x14 bytes). */
@@ -378,6 +647,9 @@ typedef struct
     u16 unkE;
     u32 flags;
 } FieldResourceEntry;
+
+/** @brief FieldResourceEntry::flags bit: the resource has an action table and eight-direction animations. */
+#define FIELD_RESOURCE_HAS_ACTIONS 1
 
 extern FieldActor g_field_actors[];
 extern FieldObjectState g_field_object_states[];

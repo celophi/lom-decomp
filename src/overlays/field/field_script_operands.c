@@ -10,8 +10,8 @@ typedef struct
 void field_script_op_00(void);
 u8* field_script_read_u16(u8* data, u16* value);
 s32 func_800BD3B0(s32 owner_id, FieldScriptVariableRef var_ref);
-extern s32 D_80122B74;
-extern s32 D_80122B78;
+extern s32 g_field_game_state;
+extern s32 g_field_runtime;
 StructC1B60* func_800C1B60(s32 arg0);
 extern u8 D_800F0E08[8];
 s32 func_800BD318(s32 owner_id, FieldScriptVariableRef var_ref, s32* element_index, s32* bit_shift);
@@ -139,11 +139,11 @@ s32 func_800BD318(s32 owner_id, FieldScriptVariableRef var_ref, s32* element_ind
     *bit_shift = value & 0x1F;
     if (((var_ref.value >> 12) & 7) < 3)
     {
-        result = D_80122B74 + 0xE4;
+        result = g_field_game_state + 0xE4;
     }
     else
     {
-        result = D_80122B78;
+        result = g_field_runtime;
         if (var_ref.value & 0x8000)
         {
             *element_index += (func_800C1B60(owner_id)->unk28 >> 9) & 0x7F;

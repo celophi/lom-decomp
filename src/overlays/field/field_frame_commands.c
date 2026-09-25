@@ -9,7 +9,7 @@
 #include "field_runtime.h"
 #include "field_text.h"
 
-void func_8008B73C(void);
+void field_restart_pending_bindings(void);
 /* Private render-context views: their types live in field_dialog_screens.c. */
 void func_800A5794(s32);
 void func_800A64D0(s32);
@@ -18,7 +18,6 @@ void field_process_input(s32);
 /* Defined as (void); the call passes render_half, which the original loads into $a0. */
 void func_800AD118(s32);
 extern s32 g_field_action_context;
-extern s32 D_800F2288;
 extern s32 D_800F2298;
 extern s32 g_field_gover_load_countdown;
 extern s32 g_field_active_group;
@@ -43,7 +42,7 @@ extern s32 g_frame_counter;
  */
 void field_build_frame_commands(s32 render_half, s32 alternate)
 {
-    D_800F2288 = render_half;
+    g_field_render_half = (FieldRenderHalf*)render_half;
     g_field_pickup_sound_played = 0;
     g_field_action_context &= 0xFF;
     field_update_input_repeat();
@@ -54,7 +53,7 @@ void field_build_frame_commands(s32 render_half, s32 alternate)
     {
         if (g_field_hide_actor_panels == 0)
         {
-            field_draw_actor_hud((u8*)render_half);
+            field_draw_actor_hud((FieldRenderHalf*)render_half);
         }
     }
     if ((D_800F2298 == 0) && (g_field_gover_load_countdown == 0) && (g_field_modal_state == 0) && (g_field_text_session_active == 0))
@@ -77,12 +76,12 @@ void field_build_frame_commands(s32 render_half, s32 alternate)
     }
     field_prepare_actor_render_commands(render_half, alternate);
     field_render_actor_objects((FieldRenderContext*)render_half);
-    func_80086FB8((u8*)render_half);
+    field_draw_fade_prims((FieldRenderHalf*)render_half);
     func_800A2E40((u8*)render_half);
     func_800A2E34();
     func_800842E0();
     g_frame_counter += 1;
-    func_8008B73C();
+    field_restart_pending_bindings();
     field_update_dialog_runtime(render_half);
     field_update_return_to_title_prompt(render_half);
     func_80096E60();

@@ -1,58 +1,119 @@
 /**
  * @file field_actor_reactions.c
- * @brief Field actor reactions: hit and knockback states, pending link clears,
- *        animation re-arming and depth-overlap tests between two objects.
+ * @brief Field actor reactions: hit reactions, knockdowns, defeat, action
+ *        chain limits, object links and the depth-overlap test between two objects.
  */
 
 #include "common.h"
 #include "field_actor_tables.h"
+#include "field_actor_runtime.h"
+#include "field_calls.h"
+#include "sdk/rand.h"
 
-/** @brief Command of an actor reacting to a hit. */
-#define FIELD_COMMAND_HIT_REACTION 0x82
+/** @brief Objects 0 and 1 are the two players. */
+#define FIELD_PLAYER_COUNT 2
 
-extern u8 D_800EB068[];
+/** @brief Objects 0 to 2 are the party (two players and a companion). */
+#define FIELD_PARTY_COUNT 3
+
+/** @brief Each object's effect animations play in animation actor slot 64 + object index. */
+#define FIELD_OBJECT_EFFECT_SLOT_BASE 64
+
+/** @brief First frame of the HUD panel shake started by a hit (counts down to 0). */
+#define FIELD_HUD_SHAKE_START 5
+
+/** @brief FieldObjectState.flags bits; the numbered ones have unknown meanings. */
+#define FIELD_OBJECT_FLAG_0004 0x0004
+#define FIELD_OBJECT_FLAG_0020 0x0020
+#define FIELD_OBJECT_FLAG_0040 0x0040
+#define FIELD_OBJECT_FLAG_0080 0x0080
+#define FIELD_OBJECT_FLAG_0100 0x0100
+#define FIELD_OBJECT_FLAG_KNOCKED_OUT 0x0200
+/** @brief Another object holds a link to this object (FieldContactWord linked bit). */
+#define FIELD_OBJECT_FLAG_LINK_TARGET 0x2000
+#define FIELD_OBJECT_FLAG_4000 0x4000
+/** @brief An action chain is running; its hits are counted in retry_count. */
+#define FIELD_OBJECT_CHAINING 0x8000
+
+/** @brief Flags that keep an object in place: it takes no knockback from a hit. */
+#define FIELD_OBJECT_IMMOBILE_FLAGS                                                                                                                            \
+    (FIELD_OBJECT_FLAG_0004 | FIELD_OBJECT_FLAG_0020 | FIELD_OBJECT_FLAG_0040 | FIELD_OBJECT_FLAG_0080 | FIELD_OBJECT_FLAG_0100 |                              \
+     FIELD_OBJECT_FLAG_KNOCKED_OUT | FIELD_OBJECT_FLAG_LINK_TARGET)
+
+/** @brief FieldObjectState.contact bits. */
+#define FIELD_CONTACT_UNTARGETABLE 0x01
+#define FIELD_CONTACT_NO_HIT_TEST 0x20
+/** @brief Hits land even while the object's own bound animation actor is running. */
+#define FIELD_CONTACT_IGNORE_BINDING 0x40
+
+/** @brief FieldObjectState.movement bits of the running animation sequence. */
+#define FIELD_MOVEMENT_SEQUENCE_0800 0x0800
+#define FIELD_MOVEMENT_SEQUENCE_1000 0x1000
+#define FIELD_MOVEMENT_SEQUENCE_MASK (FIELD_MOVEMENT_SEQUENCE_0800 | FIELD_MOVEMENT_SEQUENCE_1000)
+
+/** @brief FieldActor.control flag set while an action is running. */
+#define FIELD_CONTROL_IN_ACTION 0x800
+
+/** @brief FieldResourceEntry.unkE flag: the defeat animation plays on the bound animation actor. */
+#define FIELD_REQUEST_BOUND 0x8000
+
+/** @brief Actor animations started by the reactions. */
+#define FIELD_ANIMATION_GUARD_ALT 11
+#define FIELD_ANIMATION_13 0x13
+/** @brief First of the two hit animations; one is picked at random. */
+#define FIELD_ANIMATION_HIT 20
+#define FIELD_ANIMATION_KNOCKED_DOWN 29
+/** @brief An actor playing this animation ignores hits. */
+#define FIELD_ANIMATION_44 0x44
+
+/** @brief Effect resource played when an action chain reaches the weapon's limit. */
+#define FIELD_CHAIN_LIMIT_EFFECT 0x21
+
+/** @brief Frames between the start of a defeat and the collapse. */
+#define FIELD_DEFEAT_DELAY 10
+
+/** @brief Frames an actor waits after its action chain ended. */
+#define FIELD_CHAIN_END_WAIT 30
+
+/** @brief Number of hits an action chain may land, indexed by weapon type. */
+extern u8 g_field_weapon_chain_limits[];
 extern s32 g_field_boss_hud_shake_frame;
 extern s32 g_field_active_group;
-extern s32 D_8010D020;
+extern s32 g_field_duel_mode;
 
-void func_8008BC5C(FieldActor* actor);
-void func_8008C620(FieldActor* actor);
+void field_release_object_link(FieldActor* actor);
+static void field_release_links_to_actor(FieldActor* actor);
+static void field_end_actor_chain(FieldActor* actor);
 
 void field_restart_actor_animation(FieldActor* actor);
 void field_restart_actor_animation_reverse(FieldActor* actor);
 void field_update_sequence_actor_binding(FieldActor* actor, s32 release_actor);
 void field_stop_actor_animations_for_object(FieldActor* actor, s32 force);
-void func_800A2DD8(s32 object_index);
-void func_80084424(s32 object_index);
 void func_80083BC0(FieldActor* actor, FieldActorSlot* slot, s32 force);
-void field_start_actor_animation(s32 slot_index, s32 target_count, u8* targets);
-s32 func_80083EEC(s32 object_index, s32 slot_index, s32 resource_index);
-s32 func_800839F8(s32 object_index, s32 require_idle);
-extern s32 rand(void);
 
 /**
  * @brief Put an actor into its hit reaction and reset its motion and animation flags.
  * @param actor Actor receiving the hit.
- * @param alternate Nonzero selects animation 0x0B; zero randomly selects 0x14 or 0x15.
+ * @param guard Nonzero plays the guard animation; zero picks one of the two hit animations.
  */
-void func_8008B870(FieldActor* actor, s32 alternate)
+void field_start_actor_hit_reaction(FieldActor* actor, s32 guard)
 {
     s16 command;
     s32 flags;
     FieldObjectState* state;
     FieldObjectState* states;
 
-    if (actor->object_index < 3U)
+    if (actor->object_index < FIELD_PARTY_COUNT)
     {
-        g_field_player_records[actor->object_index].hit_state = 5;
+        g_field_player_records[actor->object_index].hit_state = FIELD_HUD_SHAKE_START;
     }
     else if (g_field_object_states[actor->object_index].unk8.word < 0)
     {
-        g_field_boss_hud_shake_frame = 5;
+        g_field_boss_hud_shake_frame = FIELD_HUD_SHAKE_START;
     }
-    if (!((g_field_object_states[actor->object_index].contact.word >> 6) & 1))
+    if (!g_field_object_states[actor->object_index].contact.bits.flag6)
     {
-        if (field_actor_binding(actor)->state != 0)
+        if (field_actor_binding(actor)->state != FIELD_BINDING_IDLE)
         {
             if (field_actor_binding(actor)->owner == actor->object_index)
             {
@@ -61,59 +122,59 @@ void func_8008B870(FieldActor* actor, s32 alternate)
         }
     }
     command = actor->command;
-    if (command != 0x93 && command != 0x94 && command != 0x90)
+    if (command != FIELD_ACTOR_COMMAND_93 && command != FIELD_ACTOR_COMMAND_94 && command != FIELD_ACTOR_COMMAND_90)
     {
         states = g_field_object_states;
         state = &states[actor->object_index];
         flags = state->flags;
-        if (!(flags & 0x200))
+        if (!(flags & FIELD_OBJECT_FLAG_KNOCKED_OUT))
         {
-            if ((state->contact.bytes.flags & 1) || (flags & 0x23E4))
+            if ((state->contact.bytes.flags & FIELD_CONTACT_UNTARGETABLE) || (flags & FIELD_OBJECT_IMMOBILE_FLAGS))
             {
-                actor->unk2E = 1;
-                actor->unk27 = 0;
-                actor->unk24 = 1;
-                actor->animation &= 0x80;
+                actor->animation_state = 1;
+                actor->animation_frame = 0;
+                actor->animation_active = 1;
+                actor->animation &= FIELD_ANIMATION_FACING;
                 field_restart_actor_animation(actor);
-                actor->command = FIELD_COMMAND_HIT_REACTION;
+                actor->command = FIELD_ACTOR_COMMAND_HIT;
                 return;
             }
-            if ((actor->animation & 0x7F) != 0x44)
+            if ((actor->animation & FIELD_ANIMATION_INDEX_MASK) != FIELD_ANIMATION_44)
             {
-                state->contact.word &= ~0x40;
+                state->contact.word &= ~FIELD_CONTACT_IGNORE_BINDING;
                 field_update_sequence_actor_binding(actor, 0);
-                actor->command = FIELD_COMMAND_HIT_REACTION;
+                actor->command = FIELD_ACTOR_COMMAND_HIT;
                 actor->y -= actor->height << 8;
                 g_field_object_states[actor->object_index].retry_count = 0;
-                actor->unk30 = 0;
-                if (alternate != 0)
+                actor->variant = 0;
+                if (guard != 0)
                 {
-                    actor->animation = (actor->animation & 0x80) + 0xB;
+                    actor->animation = (actor->animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_GUARD_ALT;
                 }
                 else
                 {
-                    actor->animation = (actor->animation & 0x80) + 0x14;
+                    actor->animation = (actor->animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_HIT;
                     actor->animation += rand() & 1;
                 }
-                func_8008BC5C(actor);
-                actor->unk2E = 1;
-                actor->unk24 = 1;
-                actor->unk27 = 0;
-                g_field_object_states[actor->object_index].movement.word &= ~0x1800;
+                field_release_object_link(actor);
+                actor->animation_state = 1;
+                actor->animation_active = 1;
+                actor->animation_frame = 0;
+                g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
                 field_restart_actor_animation(actor);
                 actor->y += actor->height << 8;
                 if (actor->y > 0)
                 {
                     actor->y = 0;
                 }
-                g_field_object_states[actor->object_index].flags &= ~0x4000;
-                g_field_object_states[actor->object_index].flags &= 0xFFFF7FFF;
+                g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_FLAG_4000;
+                g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_CHAINING;
                 field_stop_actor_animations_for_object(actor, 0);
-                if (actor->object_index < 2U)
+                if (actor->object_index < FIELD_PLAYER_COUNT)
                 {
-                    func_800A2DD8(actor->object_index);
+                    field_command_history_clear(actor->object_index);
                     g_field_object_states[actor->object_index].retry_count = 0;
-                    actor->unk30 = 0;
+                    actor->variant = 0;
                 }
             }
         }
@@ -121,42 +182,40 @@ void func_8008B870(FieldActor* actor, s32 alternate)
 }
 
 /**
- * @brief Clear the actor's pending link flag and the linked object's draw bit.
- * @param actor Actor whose object state is updated.
+ * @brief Release the actor's link and clear the link-target flag of the linked object.
+ * @param actor Actor whose object may hold a link.
  */
-void func_8008BC5C(FieldActor* actor)
+void field_release_object_link(FieldActor* actor)
 {
     FieldObjectState* states = g_field_object_states;
     FieldObjectState* state;
-    u32 contact;
     FieldObjectState* linked;
 
     state = &states[actor->object_index];
-    contact = state->contact.word;
-    if ((contact >> 1) & 1)
+    if (state->contact.bits.linked)
     {
-        state->contact.word = contact & ~2;
+        state->contact.bits.linked = 0;
         linked = &states[states[actor->object_index].linked_object_index];
-        linked->flags = linked->flags & ~0x2000;
+        linked->flags &= ~FIELD_OBJECT_FLAG_LINK_TARGET;
     }
 }
 
 /**
- * @brief Clear the pending link flag of every object linked to the actor.
+ * @brief Release every link that points at the actor's object.
  * @param actor Actor whose object is the link target.
  */
-void func_8008BCF8(FieldActor* actor)
+static void field_release_links_to_actor(FieldActor* actor)
 {
     s32 i;
 
     for (i = 0; i < FIELD_ACTOR_COUNT; i++)
     {
-        if ((g_field_object_states[i].contact.word >> 1) & 1)
+        if (g_field_object_states[i].contact.bits.linked)
         {
             if (g_field_object_states[i].linked_object_index == actor->object_index)
             {
-                g_field_object_states[i].contact.word = g_field_object_states[i].contact.word & ~2;
-                g_field_object_states[actor->object_index].flags &= ~0x2000;
+                g_field_object_states[i].contact.bits.linked = 0;
+                g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_FLAG_LINK_TARGET;
             }
         }
     }
@@ -167,7 +226,7 @@ void func_8008BCF8(FieldActor* actor)
  * @param key Object key to look up.
  * @return 0 when the actor was stopped, -1 when no actor has @p key.
  */
-s32 func_8008BD88(s32 key)
+s32 field_stop_actor(s32 key)
 {
     FieldActor* actor;
 
@@ -186,92 +245,92 @@ s32 func_8008BD88(s32 key)
 }
 
 /**
- * @brief Knock an actor down and release its animation actors.
- * @param actor Actor to reset.
- * @param clear_record Nonzero clears the party record's field 0x260 for party members.
+ * @brief Knock an actor down, release its links and stop its animation actors.
+ * @param actor Actor to knock down.
+ * @param clear_recovery Nonzero clears a party member's recovery time limit.
  */
-void func_8008BE38(FieldActor* actor, s32 clear_record)
+void field_knock_down_actor(FieldActor* actor, s32 clear_recovery)
 {
     FieldObjectState* states;
     FieldObjectState* state;
 
-    func_8008BC5C(actor);
-    func_8008BCF8(actor);
-    actor->command = 0x8E;
-    if (clear_record != 0 && actor->object_index < 3)
+    field_release_object_link(actor);
+    field_release_links_to_actor(actor);
+    actor->command = FIELD_ACTOR_COMMAND_TRANSITION;
+    if (clear_recovery != 0 && actor->object_index < FIELD_PARTY_COUNT)
     {
-        g_field_player_records[actor->object_index].unk260 = 0;
+        g_field_player_records[actor->object_index].transition_limit = 0;
     }
 
     actor->script_index = FIELD_SCRIPT_NONE;
     states = g_field_object_states;
-    actor->unk2E = 1;
-    actor->unk24 = 1;
+    actor->animation_state = 1;
+    actor->animation_active = 1;
     actor->y = 0;
-    actor->unk27 = 0;
-    actor->animation = (actor->animation & 0x80) + 0x1D;
+    actor->animation_frame = 0;
+    actor->animation = (actor->animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_KNOCKED_DOWN;
 
     state = &states[actor->object_index];
-    state->movement.word &= ~0x1800;
+    state->movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
     field_restart_actor_animation(actor);
 
     field_stop_actor_animations_for_object(actor, 1);
-    func_80083BC0(actor, &g_field_actor_slots[64 + actor->object_index], 1);
-    actor->control.word |= 0x800;
+    func_80083BC0(actor, &g_field_actor_slots[FIELD_OBJECT_EFFECT_SLOT_BASE + actor->object_index], 1);
+    actor->control.word |= FIELD_CONTROL_IN_ACTION;
     field_update_sequence_actor_binding(actor, 0);
     func_80084424(actor->object_index);
 }
 
 /**
- * @brief Start command 0x8F on an actor with a heading, animation and wait count.
+ * @brief Start the jump command on an actor.
  * @param actor Actor to update.
- * @param heading Value stored as the actor's heading byte.
- * @param animation Animation added to the actor's mirror bit.
- * @param wait Value stored in the actor's wait counter.
+ * @param direction Facing angle (256 steps) the actor jumps towards.
+ * @param animation Animation to play, added to the actor's mirror bit.
+ * @param command_param Parameter of the jump command.
  */
-void func_8008BF88(FieldActor* actor, s8 heading, s32 animation, s8 wait)
+void field_start_actor_jump(FieldActor* actor, s8 direction, s32 animation, s8 command_param)
 {
     FieldObjectState* states = g_field_object_states;
     FieldObjectState* state;
 
-    actor->command = 0x8F;
-    actor->unk2E = 1;
-    actor->unk24 = 1;
-    actor->unk1B = heading;
-    actor->unk27 = 0;
-    actor->animation = (actor->animation & 0x80) + animation;
+    actor->command = FIELD_ACTOR_COMMAND_JUMP;
+    actor->animation_state = 1;
+    actor->animation_active = 1;
+    actor->direction = direction;
+    actor->animation_frame = 0;
+    actor->animation = (actor->animation & FIELD_ANIMATION_FACING) + animation;
     state = &states[actor->object_index];
-    state->movement.word = state->movement.word & ~0x1800;
+    state->movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
     field_restart_actor_animation(actor);
-    actor->unk20 = wait;
+    actor->command_param = command_param;
 }
 
 /**
- * @brief Start command 0xAE on an actor and re-arm its object state.
- * @param actor Actor to update.
- * @param value Value stored in the object state's field 0x16C.
+ * @brief Start an actor's defeat: drop its flags and collapse it after a short delay.
+ * @param actor Actor that was defeated.
+ * @param value Value stored in the object state's unk16C.
  */
-void func_8008C024(FieldActor* actor, s8 value)
+void field_start_actor_defeat(FieldActor* actor, s8 value)
 {
-    if (actor->object_index < 3)
+    if (actor->object_index < FIELD_PARTY_COUNT)
     {
-        g_field_player_records[actor->object_index].unk260 = 0;
+        g_field_player_records[actor->object_index].transition_limit = 0;
     }
 
-    g_field_object_states[actor->object_index].flags &= 0x200;
-    g_field_object_states[actor->object_index].contact.word |= 0x20;
+    g_field_object_states[actor->object_index].flags &= FIELD_OBJECT_FLAG_KNOCKED_OUT;
+    g_field_object_states[actor->object_index].contact.word |= FIELD_CONTACT_NO_HIT_TEST;
     g_field_object_states[actor->object_index].unk16C = value;
-    actor->command = 0xAE;
-    actor->unk20 = 10;
+    actor->command = FIELD_ACTOR_COMMAND_AE;
+    actor->command_param = FIELD_DEFEAT_DELAY;
 }
 
 /**
- * @brief Knock an actor down and select its recovery command and animation.
+ * @brief Knock a defeated actor down and start its defeat animation.
  * @param actor Actor to update.
  * @return Unspecified; callers do not use the value.
- * @note Declared s32 without a return statement: the int return type keeps the final store out of the return delay slot.
+ * @note Declared s32 without a return statement: a void function fills the final branch delay slot differently.
  */
-s32 func_8008C104(FieldActor* actor)
+s32 field_collapse_defeated_actor(FieldActor* actor)
 {
     FieldObjectState* states;
     FieldObjectState* state;
@@ -279,59 +338,59 @@ s32 func_8008C104(FieldActor* actor)
     FieldResourceEntry* resources;
     s32 object_index;
 
-    func_8008BC5C(actor);
-    func_8008BCF8(actor);
-    actor->command = 0x8E;
+    field_release_object_link(actor);
+    field_release_links_to_actor(actor);
+    actor->command = FIELD_ACTOR_COMMAND_TRANSITION;
     actor->script_index = FIELD_SCRIPT_NONE;
-    actor->unk2E = 1;
-    actor->unk24 = 1;
+    actor->animation_state = 1;
+    actor->animation_active = 1;
     actor->y = 0;
-    actor->unk27 = 0;
-    actor->animation = (actor->animation & 0x80) + 0x1D;
+    actor->animation_frame = 0;
+    actor->animation = (actor->animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_KNOCKED_DOWN;
     states = g_field_object_states;
     state = &states[actor->object_index];
-    state->movement.word &= ~0x1800;
+    state->movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
     field_restart_actor_animation(actor);
     field_stop_actor_animations_for_object(actor, 1);
-    func_80083BC0(actor, &g_field_actor_slots[64 + actor->object_index], 1);
-    actor->control.word |= 0x800;
+    func_80083BC0(actor, &g_field_actor_slots[FIELD_OBJECT_EFFECT_SLOT_BASE + actor->object_index], 1);
+    actor->control.word |= FIELD_CONTROL_IN_ACTION;
     field_update_sequence_actor_binding(actor, 0);
     func_80084424(actor->object_index);
     object_index = actor->object_index;
-    if (!(states[object_index].contact.bytes.flags & 1))
+    if (!(states[object_index].contact.bytes.flags & FIELD_CONTACT_UNTARGETABLE))
     {
         resources = g_field_resource_entries;
         resource = &resources[actor->resource_index];
-        if (resource->unkE & 0x8000)
+        if (resource->unkE & FIELD_REQUEST_BOUND)
         {
-            actor->command = 0x92;
+            actor->command = FIELD_ACTOR_COMMAND_92;
         }
         else
         {
-            func_80083EEC(object_index, object_index + 0x40, resource->unkE);
-            field_start_actor_animation(actor->object_index + 0x40, 0, 0);
+            func_80083EEC(object_index, object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, resource->unkE);
+            field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
         }
     }
-    if (!(g_field_object_states[actor->object_index].flags & 0x200))
+    if (!(g_field_object_states[actor->object_index].flags & FIELD_OBJECT_FLAG_KNOCKED_OUT))
     {
-        if (actor->command == 0x92)
+        if (actor->command == FIELD_ACTOR_COMMAND_92)
         {
-            actor->command = 0x93;
+            actor->command = FIELD_ACTOR_COMMAND_93;
         }
         else
         {
-            actor->command = 0x90;
+            actor->command = FIELD_ACTOR_COMMAND_90;
         }
     }
 }
 
 /**
- * @brief Test whether two objects can interact and overlap in depth.
+ * @brief Test whether two objects are opponents that overlap in depth.
  * @param first_key Key of the object whose position is the centre of the test.
  * @param second_key Key of the object whose eligibility and position are tested.
  * @return -1 when either object is absent or the second is unused, 1 for an eligible overlap, 0 otherwise.
  */
-s32 func_8008C2EC(s32 first_key, s32 second_key)
+s32 field_test_actor_depth_overlap(s32 first_key, s32 second_key)
 {
     FieldActor* first;
     FieldActor* second;
@@ -360,7 +419,7 @@ s32 func_8008C2EC(s32 first_key, s32 second_key)
     {
         return -1;
     }
-    if (second_object >= 3U && (second_state->group_flags & 15) != g_field_active_group)
+    if (second_object >= FIELD_PARTY_COUNT && (second_state->group_flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)
     {
         return 0;
     }
@@ -374,20 +433,22 @@ s32 func_8008C2EC(s32 first_key, s32 second_key)
     {
         return 0;
     }
-    if (D_8010D020 == 0)
+    if (g_field_duel_mode == 0)
     {
-        if (first_index < 3U)
+        /* Outside a duel, party members never overlap each other, nor enemies each other. */
+        if (first_index < FIELD_PARTY_COUNT)
         {
-            if (second_index < 3U)
+            if (second_index < FIELD_PARTY_COUNT)
             {
                 return 0;
             }
         }
-        else if (second_index >= 3U)
+        else if (second_index >= FIELD_PARTY_COUNT)
         {
             return 0;
         }
     }
+    /* The extents are whole units; half of each, in 24.8 fixed point, is added to the range. */
     first_z = first->z;
     second_z = second->z;
     first_extent = ((s16)g_field_object_states[first->object_index].collision.half.extent >> 1) << 8;
@@ -400,56 +461,56 @@ s32 func_8008C2EC(s32 first_key, s32 second_key)
 }
 
 /**
- * @brief Count a retry for an object and, at the party member's limit, restart its recovery.
- * @param object_index Object whose retry counter advances.
+ * @brief Count a hit of an object's action chain and end the chain at the weapon's limit.
+ * @param object_index Object that landed the hit.
  */
-void func_8008C4A8(s32 object_index)
+void field_count_chain_hit(s32 object_index)
 {
     FieldObjectState* states;
     FieldObjectState* state;
-    s32 retry_count;
+    s32 hit_count;
     FieldActor* actor;
-    s32 animation_slot;
+    s32 effect_slot;
 
     states = g_field_object_states;
     state = &states[object_index];
-    if (state->flags & 0x8000)
+    if (state->flags & FIELD_OBJECT_CHAINING)
     {
-        retry_count = state->retry_count + 1;
-        state->retry_count = retry_count;
-        if ((object_index < 2) && ((u8)retry_count >= D_800EB068[g_field_player_records[object_index].type]))
+        hit_count = state->retry_count + 1;
+        state->retry_count = hit_count;
+        if ((object_index < FIELD_PLAYER_COUNT) && ((u8)hit_count >= g_field_weapon_chain_limits[g_field_player_records[object_index].weapon_type]))
         {
             actor = field_find_actor(state->key);
             if (actor != FIELD_ACTOR_NONE)
             {
-                animation_slot = func_800839F8(0, 0);
-                if ((animation_slot != -1) && (func_80083EEC(actor->object_index, animation_slot, 0x21) != 0))
+                effect_slot = func_800839F8(0, 0);
+                if ((effect_slot != -1) && (func_80083EEC(actor->object_index, effect_slot, FIELD_CHAIN_LIMIT_EFFECT) != 0))
                 {
-                    field_start_actor_animation(animation_slot, 0, 0);
+                    field_start_actor_animation(effect_slot, 0, 0);
                 }
             }
-            func_8008C620(&g_field_actors[object_index]);
+            field_end_actor_chain(&g_field_actors[object_index]);
         }
     }
 }
 
 /**
- * @brief Start the recovery command 0xB7 on an actor and clear its hit flags.
+ * @brief End an actor's action chain and make it wait in the chain-end pose.
  * @param actor Actor to update.
  */
-void func_8008C620(FieldActor* actor)
+static void field_end_actor_chain(FieldActor* actor)
 {
     g_field_object_states[actor->object_index].retry_count = 0;
-    g_field_object_states[actor->object_index].flags &= ~0x8000;
-    g_field_object_states[actor->object_index].flags &= ~0x4000;
-    actor->command = 0xB7;
-    actor->unk20 = 0x1E;
-    actor->unk2E = 1;
-    actor->unk30 = 0;
+    g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_CHAINING;
+    g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_FLAG_4000;
+    actor->command = FIELD_ACTOR_COMMAND_WAIT;
+    actor->command_param = FIELD_CHAIN_END_WAIT;
+    actor->animation_state = 1;
+    actor->variant = 0;
     actor->y = 0;
-    actor->unk27 = 0;
-    actor->animation = (actor->animation & 0x80) + 0x13;
-    actor->unk24 = 1;
-    g_field_object_states[actor->object_index].movement.word &= ~0x1800;
+    actor->animation_frame = 0;
+    actor->animation = (actor->animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_13;
+    actor->animation_active = 1;
+    g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
     field_restart_actor_animation_reverse(actor);
 }

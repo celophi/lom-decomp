@@ -13,7 +13,7 @@ typedef struct
     s16 sound;
 } FieldPendingActorChange;
 
-FieldActor* func_80087C9C(s32 arg0);
+FieldActor* field_lookup_actor(s32 arg0);
 
 extern s32 D_80122B10;
 extern FieldPendingActorChange D_80122B28[];
@@ -99,14 +99,14 @@ void func_800B0244(void)
                 object->animation = flags;
                 if (flags & 0x80)
                 {
-                    object->unk1B = 0;
+                    object->direction = 0;
                 }
                 else
                 {
-                    object->unk1B = 0x80;
+                    object->direction = 0x80;
                 }
-                object->unk2E = 1;
-                object->unk24 = 1;
+                object->animation_state = 1;
+                object->animation_active = 1;
                 object->control.word &= ~0x800;
                 object->script_offset += 3;
                 field_restart_actor_animation((u8*)object);
@@ -182,9 +182,9 @@ void func_800B0244(void)
                             {
                                 func_800B08FC(1, i);
                                 g_field_actors[i].command = 0x99;
-                                g_field_actors[i].unk2E = 1;
-                                g_field_actors[i].unk27 = 0;
-                                g_field_actors[i].unk24 = 1;
+                                g_field_actors[i].animation_state = 1;
+                                g_field_actors[i].animation_frame = 0;
+                                g_field_actors[i].animation_active = 1;
                                 g_field_actors[i].animation = (g_field_actors[i].animation & 0x80) + 0x11;
                                 g_field_actors[i].control.word &= ~0x800;
                                 g_field_object_states[i].movement.word &= ~0x1800;
@@ -234,7 +234,7 @@ s32 func_800B0710(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     {
         return -1;
     }
-    rec = func_80087C9C(arg0);
+    rec = field_lookup_actor(arg0);
     if (rec == (FieldActor*)-1)
     {
         return -1;
@@ -327,7 +327,7 @@ s32 func_800B0888(void)
     return 0;
 }
 
-extern u8* D_8010D038;
+extern u8* g_field_cd_buffer;
 extern s32 D_80122B18[];
 extern s32 g_field_resource_cursor;
 
@@ -356,7 +356,7 @@ void func_800B08FC(s32 arg0, s32 arg1)
         flags |= arg0 & 1;
         entry->flags = flags;
         entry->start = (u8*)g_field_resource_cursor;
-        field_unpack_resource_package((struct FieldCdBuffer*)(D_8010D038 + (0x8000 + arg1 * 0x18000)), D_80122B18[arg1], arg1, arg1);
+        field_unpack_resource_package((struct FieldCdBuffer*)(g_field_cd_buffer + (0x8000 + arg1 * 0x18000)), D_80122B18[arg1], arg1, arg1);
         entry->end = (u8*)g_field_resource_cursor;
         entry->flags |= 2;
         D_80122B68[arg1] = 0;
@@ -365,7 +365,7 @@ void func_800B08FC(s32 arg0, s32 arg1)
 
 extern s32 D_80122B68[];
 extern s32 D_80122B18[];
-extern u8* D_8010D038;
+extern u8* g_field_cd_buffer;
 
 /**
  * @brief Queue CD reads for each active field resource slot.
@@ -380,9 +380,9 @@ void func_800B0A08(s32 arg0)
     {
         if (g_field_player_records[i].flags & 1)
         {
-            D_80122B68[i] = field_get_actor_resource_id(i, (struct FieldActorResourceSlot*)&g_field_player_records[i], arg0);
-            buffer = D_8010D038 + 0x8000 + i * 0x18000;
-            g_field_player_records[i].unk254 = (u16)D_80122B68[i];
+            D_80122B68[i] = field_get_actor_resource_id(i, &g_field_player_records[i], arg0);
+            buffer = g_field_cd_buffer + 0x8000 + i * 0x18000;
+            g_field_player_records[i].resource_id = (u16)D_80122B68[i];
             D_80122B18[i] = cdrom_queue_read((u16)D_80122B68[i], buffer);
         }
         else

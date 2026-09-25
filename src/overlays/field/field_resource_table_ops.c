@@ -43,7 +43,7 @@ FieldItemRecord* field_find_free_inventory_record(void);
 s32 func_800C2AD0(void);
 
 extern u8 D_801148B0[];
-extern FieldGameState* D_80122B74;
+extern FieldGameState* g_field_game_state;
 
 /**
  * @brief Resolve an entry of the first offset table in a resource page.
@@ -101,7 +101,7 @@ void* func_800C2958(s32 page, u16 index)
  */
 void func_800C299C(s32 bit_index)
 {
-    D_80122B74->resource_bits[(u32)bit_index / 32] |= 1 << (bit_index & 0x1F);
+    g_field_game_state->resource_bits[(u32)bit_index / 32] |= 1 << (bit_index & 0x1F);
 }
 
 /**
@@ -146,7 +146,7 @@ void func_800C2A88(s32 index)
 {
     if (index < FIELD_ITEM_COUNT)
     {
-        D_80122B74->items[index].kind = 0;
+        g_field_game_state->items[index].kind = 0;
         field_compact_inventory();
     }
     else
@@ -165,7 +165,7 @@ s32 func_800C2AD0(void)
 
     for (i = 0; i < FIELD_ITEM_COUNT; i++)
     {
-        D_80122B74->items[i].kind = 0;
+        g_field_game_state->items[i].kind = 0;
     }
     field_compact_inventory();
     return -1;

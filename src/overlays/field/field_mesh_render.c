@@ -42,9 +42,6 @@ extern SVECTOR D_800FF668;
  */
 #define FIELD_PART_LIGHT_SOURCE(part, i) ((&(part)->rotation_extent.fields.unknown_0x23)[i])
 
-/** @brief Bytes of CLUT data owned by each of the two actor palette owners. */
-#define FIELD_ACTOR_CLUT_BUFFER_SIZE 0x400
-
 /**
  * @brief CLUT buffer of actor palette owner @p owner (0 or 1).
  * @note g_field_actor_clut_buffers is declared as a flat byte array; the

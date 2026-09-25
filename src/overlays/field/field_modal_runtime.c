@@ -422,11 +422,11 @@ extern s32 g_field_buffered_input;
 extern s32 g_field_text_session_cd_error;
 
 /* Menu-open guards / miscellaneous field state. */
-extern s32 D_8010AE78;
+extern s32 g_field_interaction_active;
 extern s32 D_80122710;
 extern s32 D_80122714;
 extern s32 D_800F2298;
-extern s32 D_800F229C;
+extern s32 g_field_dialog_screen_mode;
 extern s32 g_field_return_to_title_prompt_state;
 extern s32 D_8012291C;
 extern s32 D_80122980;
@@ -1383,7 +1383,7 @@ void field_process_input(s32 context)
         func_800A3904(0, 0x3C, 0x7F);
         return;
     }
-    if (D_8010AE78 != 0)
+    if (g_field_interaction_active != 0)
     {
         D_80122710 = 1;
         return;
@@ -1411,7 +1411,7 @@ void field_process_input(s32 context)
             actor_count++;
             actor++;
         } while (actor_count < 3);
-        if (field_text_get_status(0) == -1 && D_800F2298 == 0 && D_800F229C == 0 && g_field_return_to_title_prompt_state == 0 && D_80122714 == 0 &&
+        if (field_text_get_status(0) == -1 && D_800F2298 == 0 && g_field_dialog_screen_mode == 0 && g_field_return_to_title_prompt_state == 0 && D_80122714 == 0 &&
             func_800B0850() == 0)
         {
             if (g_field_menu_controller_types[0] != 0xFF && pad[0].device_type == 0xFF)
@@ -2114,7 +2114,7 @@ void field_rebuild_party_actions(s32 refresh_only)
                 party->head.bytes.weapon_type = weapon_type;
                 if (controller_or_player_test != 0)
                 {
-                    func_80091438(player_index);
+                    field_apply_weapon_action_params(player_index);
                 }
                 if (refresh_only == 0)
                 {

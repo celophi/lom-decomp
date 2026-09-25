@@ -76,7 +76,7 @@ s32 func_800C0A38(Rec *record)
     return result;
 }
 
-extern u8 *D_80123FB0;
+extern u8 *g_field_battle;
 /**
  * @brief Dispatch an experience, currency, item, or counter reward.
  * @param recipient Recipient identifier passed to reward handlers.
@@ -91,7 +91,7 @@ void func_800C0B40(s32 recipient, void *context, u32 selector)
     switch (selector)
     {
     case 0:
-        reward_value = *D_80123FB0;
+        reward_value = *g_field_battle;
         argument_value = reward_value * 4;
         if (reward_value >= 11)
         {
@@ -101,7 +101,7 @@ void func_800C0B40(s32 recipient, void *context, u32 selector)
         func_800C0E54(recipient, (argument_value + reward_value) * 2);
         return;
     case 1:
-        reward_value = *D_80123FB0;
+        reward_value = *g_field_battle;
         if (reward_value >= 11)
         {
             reward_value = ((reward_value - 10) / 2) + 10;

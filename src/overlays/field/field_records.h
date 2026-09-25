@@ -7,11 +7,11 @@
  *        context and the field battle context.
  *
  * Three FIELD pointers reach these blocks:
- * - D_80122B74 points at g_saved_game (bound by func_800B0BDC) and is read
+ * - g_field_game_state points at g_saved_game (bound by func_800B0BDC) and is read
  *   through FieldGameState.
- * - D_80122B78 points at the field runtime context (D_80122C00):
+ * - g_field_runtime points at the field runtime context (D_80122C00):
  *   FieldRuntimeContext, with its actor and event records.
- * - D_80123FB0 points at the field battle context (D_80123B08):
+ * - g_field_battle points at the field battle context (D_80123B08):
  *   FieldBattleContext, with its FieldStatusRecord array.
  */
 
@@ -22,8 +22,23 @@
 #define FIELD_LAND_COUNT 64
 #define FIELD_ITEM_COUNT 100
 #define FIELD_EQUIPMENT_SLOT_COUNT 4
+/** @brief Equipment slot holding the character's weapon. */
+#define FIELD_WEAPON_SLOT 0
+#define FIELD_ITEM_SPECIAL_COUNT 4
 #define FIELD_CHARACTER_STAT_COUNT 8
 #define FIELD_REGION_COUNT 5
+
+/** @brief Character info bits 0-6: character type. */
+#define FIELD_CHARACTER_TYPE_MASK 0x7F
+
+/** @brief Character type of a guest in party slot 1. */
+#define FIELD_CHARACTER_GUEST 2
+
+/** @brief Character type of a stored companion in party slot 2. */
+#define FIELD_CHARACTER_COMPANION 3
+
+/** @brief Character info bit 7: the character is AI-controlled. */
+#define FIELD_CHARACTER_AI 0x80
 
 #define FIELD_ACTOR_RECORD_COUNT 16
 #define FIELD_EVENT_RECORD_COUNT 2
@@ -39,7 +54,7 @@
 #define FIELD_NO_SCRIPT 0xFFFF
 
 /* ------------------------------------------------------------------------ */
-/* Game state (D_80122B74)                                                  */
+/* Game state (g_field_game_state)                                                  */
 /* ------------------------------------------------------------------------ */
 
 /** @brief Item category: bits 8-9 of FieldItemRecord.info. */
@@ -119,7 +134,7 @@ typedef struct FieldItemRecord
         u32 word;
         FieldNibbles bits;
     } stat_nibbles;
-    u8 special_ids[4];
+    u8 special_ids[FIELD_ITEM_SPECIAL_COUNT];
     /** @brief Category-dependent derived values of an equipped item. */
     union
     {
@@ -153,6 +168,21 @@ typedef struct FieldCharacterRecord
     {
         u32 word;
         u8 bytes[8];
+        struct
+        {
+            u8 type : 7;
+            /** @brief Same bit as FIELD_CHARACTER_AI; set members get pad control (mode 0) in battle. */
+            u8 pad_controlled : 1;
+        } bits;
+        struct
+        {
+            u8 type;
+            u8 unk19;
+            /** @brief Commands of battle actions 0 and 1. */
+            u8 commands[2];
+            /** @brief Battle actions 4 to 7: a weapon-type skill, or 0x80 plus an item slot. */
+            u8 skills[4];
+        } actions;
     } info;
     /** @brief Low byte: level; bits 8-31: experience. */
     union
@@ -286,7 +316,7 @@ typedef struct FieldRegionRecord
 } FieldRegionRecord;
 
 /**
- * @brief Layout of g_saved_game as FIELD reads it through D_80122B74.
+ * @brief Layout of g_saved_game as FIELD reads it through g_field_game_state.
  */
 typedef struct FieldGameState
 {
@@ -505,7 +535,7 @@ typedef union FieldItemTables
 } FieldItemTables;
 
 /* ------------------------------------------------------------------------ */
-/* Field runtime context (D_80122B78)                                       */
+/* Field runtime context (g_field_runtime)                                       */
 /* ------------------------------------------------------------------------ */
 
 /** @brief One nested script frame (0xC bytes). */
@@ -581,7 +611,7 @@ typedef struct FieldActorRecord
 } FieldActorRecord;
 
 /**
- * @brief Field runtime context (D_80122C00, reached through D_80122B78).
+ * @brief Field runtime context (D_80122C00, reached through g_field_runtime).
  */
 typedef struct FieldRuntimeContext
 {
@@ -648,7 +678,7 @@ typedef struct FieldRuntimeContext
 } FieldRuntimeContext;
 
 /* ------------------------------------------------------------------------ */
-/* Field battle context (D_80123FB0)                                        */
+/* Field battle context (g_field_battle)                                        */
 /* ------------------------------------------------------------------------ */
 
 /**
@@ -664,14 +694,14 @@ typedef struct FieldBattleAction
     s32 target_id;
     s32 unk10;
     s32 unk14;
-    /** @brief Multiplier applied to the damage by func_800B742C. */
+    /** @brief Multiplier applied to the damage by field_apply_damage. */
     s32 damage_scale;
 } FieldBattleAction;
 
 /**
  * @brief Handler parameters of an action descriptor, one view per handler.
- * @note Every view starts with the attacker stat (for func_800B70F4) and the
- *       target stat (for func_800B7164).
+ * @note Every view starts with the attacker stat (for field_compute_attack) and the
+ *       target stat (for field_compute_defense).
  */
 typedef union FieldActionParams
 {
@@ -728,7 +758,7 @@ typedef union FieldActionParams
 } FieldActionParams;
 
 /**
- * @brief Action descriptor selected by func_800B50B8.
+ * @brief Action descriptor selected by field_select_action_descriptor.
  */
 typedef struct FieldActionDescriptor
 {
@@ -751,7 +781,16 @@ typedef struct FieldActionDescriptor
 } FieldActionDescriptor;
 
 /**
- * @brief Field battle context (D_80123B08, reached through D_80123FB0).
+ * @brief Action descriptor bank (D_800EF8C0, reached through g_field_action_bank).
+ * @note Holds four descriptor tables, located by byte offsets from the bank start.
+ */
+typedef struct FieldActionBank
+{
+    s32 table_offsets[4];
+} FieldActionBank;
+
+/**
+ * @brief Field battle context (D_80123B08, reached through g_field_battle).
  * @note func_800B3580 clears 0x4A4 bytes and rebuilds the header.
  */
 typedef struct FieldBattleContext
@@ -762,19 +801,20 @@ typedef struct FieldBattleContext
         s32 flags;
         u8 level;
     } state;
-    u8* templates;
+    FieldActorTemplateTable* templates;
     u8* resources;
     u8 element_levels[8];
-    /** @brief Flags of the action being resolved; cleared by func_800B5948. */
+    /** @brief Flags of the action being resolved; cleared by field_battle_bind_action. */
     union
     {
         u32 word;
         struct
         {
-            u32 unk0 : 1;
+            /** @brief Set when the target guards; the damage then has no minimum of 1. */
+            u32 guarded : 1;
             /** @brief func_800B302C result for the attacker and the target. */
             u32 side : 1;
-            /** @brief Set when func_800B5A88 marks a follow-up action. */
+            /** @brief Set when field_battle_check_target_stance marks a follow-up action. */
             u32 follow_up : 1;
             u32 unk3 : 29;
         } bits;

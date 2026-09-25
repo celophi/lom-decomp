@@ -1,103 +1,133 @@
 /** @file field_actor_lifecycle.c
- * @brief Refresh, trigger and reset the field actor records and party slots.
+ * @brief Start, suspend and end a field battle, and look up monster templates.
  */
 
 #include "game_audio.h"
 #include "common.h"
 #include "field_calls.h"
 #include "field_records.h"
+#include "main.h"
 
-extern FieldGameState* D_80122B74;
-extern FieldRuntimeContext* D_80122B78;
-extern FieldBattleContext* D_80123FB0;
-extern s32 D_8010D020;
-extern s32 g_layout_flag;
+/** @brief Owner id of the first event record (the field's own event scripts). */
+#define FIELD_EVENT_OWNER 0x80
 
-extern FieldStatusState* func_80087F0C(s32 actor_id);
-extern s32 func_80087FC0(s32 party_index, s32 mode);
-extern void func_800C1D14(s32 party_index, s32 mode);
-extern void akao_cmd_c1(s32 arg0, s32 arg1, s32 arg2);
+/** @brief Actor event run at each battle phase; its argument is a FIELD_BATTLE_PHASE_* value. */
+#define FIELD_BATTLE_EVENT 13
+#define FIELD_BATTLE_PHASE_START 0
+#define FIELD_BATTLE_PHASE_END 1
+#define FIELD_BATTLE_PHASE_SUSPEND 3
+
+/** @brief Actor event a script-controlled party member runs when a battle starts. */
+#define FIELD_PARTY_BATTLE_EVENT 15
+
+/** @brief Every event of an actor record enabled. */
+#define FIELD_ALL_EVENTS 0xFFFF
+
+/** @brief FieldBattleContext::state flag: the battle is over or suspended. */
+#define FIELD_BATTLE_FINISHED 0x80000000
+
+/** @brief Party control modes set with field_set_actor_control_mode: pad input, following the leader, or scripts. */
+#define FIELD_CONTROL_PAD 0
+#define FIELD_CONTROL_FOLLOW 1
+#define FIELD_CONTROL_SCRIPTED 2
+
+/** @brief Music fade-out length (ticks) when a battle ends on a battle-music layout. */
+#define FIELD_BATTLE_MUSIC_FADE_TICKS 64
+
+/** @brief record_game_diagnostic arguments for a missing monster template. */
+#define FIELD_DIAGNOSTIC_ERROR 0x8001
+#define FIELD_DIAGNOSTIC_NO_TEMPLATE 0x67
+
+extern FieldGameState* g_field_game_state;
+extern FieldRuntimeContext* g_field_runtime;
+extern FieldBattleContext* g_field_battle;
+extern s32 g_field_duel_mode;
+
+extern FieldStatusState* field_find_object_state(s32 actor_id);
+extern s32 field_set_actor_control_mode(s32 party_index, s32 mode);
+extern void func_800C1D14(s32 actor_id, s32 flags);
+extern s32 akao_cmd_c1(s32 song, s32 fade_ticks, s32 volume);
 
 /**
- * @brief Refresh the actor objects of every non-party actor record.
+ * @brief Look up the object state of every non-party actor record.
+ * @note The results are discarded; called instead of building a battle for group 0.
  */
-void func_800B4390(void)
+void field_battle_scan_actor_objects(void)
 {
     s32 i;
 
-    for (i = FIELD_PARTY_SIZE; i < D_80122B78->state.actor_count; i++)
+    for (i = FIELD_PARTY_SIZE; i < g_field_runtime->state.actor_count; i++)
     {
-        func_80087F0C(D_80122B78->actors[i].id);
+        field_find_object_state(g_field_runtime->actors[i].id);
     }
 }
 
 /**
- * @brief Start a trigger group: notify its actors and reset the party actor scripts.
- * @param group Trigger group matched against each actor's option bits.
+ * @brief Start a battle: bind the group's actors, run their battle event and hand the party to battle control.
+ * @param group Trigger group (monster group) matched against each actor record.
  */
-void func_800B4410(s32 group)
+void field_battle_start(s32 group)
 {
-    s32 index;
+    s32 i;
+    FieldRuntimeContext* context;
 
-    for (index = FIELD_PARTY_SIZE; index < D_80122B78->state.actor_count; index++)
+    for (i = FIELD_PARTY_SIZE; i < g_field_runtime->state.actor_count; i++)
     {
-        if (D_80122B78->actors[index].flags.bits.trigger_group == group)
+        if (g_field_runtime->actors[i].flags.bits.trigger_group == group)
         {
-            func_80087614(D_80122B78->actors[index].id, group);
-            func_800B28E0(D_80122B78->actors[index].id, 0xD, 0);
+            field_set_actor_group(g_field_runtime->actors[i].id, group);
+            func_800B28E0(g_field_runtime->actors[i].id, FIELD_BATTLE_EVENT, FIELD_BATTLE_PHASE_START);
         }
     }
 
-    {
-        FieldRuntimeContext* context = D_80122B78;
+    /* One load of g_field_runtime for the three uses; naming it directly each time reloads it. */
+    context = g_field_runtime;
+    context->state.bits.group_active = 1;
+    context->state.bits.trigger_group = group;
+    func_800966F0(group, context);
 
-        context->state.flags |= 0x10000;
-        context->state.bytes.trigger_group = group;
-        func_800966F0(group, context);
-    }
-
-    for (index = 0; index < FIELD_PARTY_SIZE; index++)
+    for (i = 0; i < FIELD_PARTY_SIZE; i++)
     {
-        if ((D_80122B74->characters[index].info.bytes[0] >> 7) != 0)
+        if (g_field_game_state->characters[i].info.bits.pad_controlled)
         {
-            func_80087FC0(index, 0);
+            field_set_actor_control_mode(i, FIELD_CONTROL_PAD);
         }
         else
         {
-            D_80122B78->actors[index].enabled_events = 0xFFFF;
-            func_80087FC0(index, 2);
-            func_800B28E0(D_80122B78->actors[index].id, 0xF, 0);
+            g_field_runtime->actors[i].enabled_events = FIELD_ALL_EVENTS;
+            field_set_actor_control_mode(i, FIELD_CONTROL_SCRIPTED);
+            func_800B28E0(g_field_runtime->actors[i].id, FIELD_PARTY_BATTLE_EVENT, 0);
         }
     }
 
-    func_800B28E0(0x80, 0xD, 0);
+    func_800B28E0(FIELD_EVENT_OWNER, FIELD_BATTLE_EVENT, FIELD_BATTLE_PHASE_START);
 }
 
 /**
- * @brief Suspend the battle and notify the actors of the active trigger group.
+ * @brief Suspend the battle, run the suspend event for the active group and refill the party's HP.
  */
-void func_800B4584(void)
+void field_battle_suspend(void)
 {
     s32 i;
     FieldStatusState* state;
     FieldBattleContext* battle;
 
-    battle = D_80123FB0;
-    battle->state.flags |= 0x80000000;
+    battle = g_field_battle;
+    battle->state.flags |= FIELD_BATTLE_FINISHED;
     func_800966F0(0, battle);
-    func_800B28E0(0x80, 0xD, 3);
+    func_800B28E0(FIELD_EVENT_OWNER, FIELD_BATTLE_EVENT, FIELD_BATTLE_PHASE_SUSPEND);
 
-    for (i = FIELD_PARTY_SIZE; i < D_80122B78->state.actor_count; i++)
+    for (i = FIELD_PARTY_SIZE; i < g_field_runtime->state.actor_count; i++)
     {
-        if (D_80122B78->actors[i].flags.bits.trigger_group == D_80122B78->state.bytes.trigger_group)
+        if (g_field_runtime->actors[i].flags.bits.trigger_group == g_field_runtime->state.bits.trigger_group)
         {
-            func_800B28E0(D_80122B78->actors[i].id, 0xD, 3);
+            func_800B28E0(g_field_runtime->actors[i].id, FIELD_BATTLE_EVENT, FIELD_BATTLE_PHASE_SUSPEND);
         }
     }
 
     for (i = 0; i < FIELD_PARTY_SIZE; i++)
     {
-        state = func_80087F0C(i);
+        state = field_find_object_state(i);
         if (state != (FieldStatusState*)-1)
         {
             state->current = state->maximum;
@@ -106,51 +136,44 @@ void func_800B4584(void)
 }
 
 /**
- * @brief End the trigger group, reset the party actors' event tables and restart every actor.
- * @note Sends audio command C1 for layouts 3, 34, 35, 37, 43, 45, 46, and 47.
+ * @brief End the battle: return the party to field control, run the end event and fade the battle music.
+ * @note The music fades only on the listed layouts, and not after a duel (g_field_duel_mode).
  */
-void func_800B4684(void)
+void field_battle_end(void)
 {
     s32 i;
     s32 j;
 
-    D_80123FB0 = NULL;
-    D_80122B78->state.flags &= ~0x10000;
-    D_80122B78->state.bytes.trigger_group = 0;
-    i = 0;
+    g_field_battle = NULL;
+    g_field_runtime->state.bits.group_active = 0;
+    g_field_runtime->state.bits.trigger_group = 0;
 
-    do
+    for (i = 0; i < FIELD_PARTY_SIZE; i++)
     {
-        if (D_80122B74->characters[i].info.bytes[0] >> 7)
+        if (g_field_game_state->characters[i].info.bits.pad_controlled)
         {
-            func_80087FC0(i, 0);
+            field_set_actor_control_mode(i, FIELD_CONTROL_PAD);
         }
         else
         {
-            D_80122B78->actors[i].enabled_events = 0;
+            g_field_runtime->actors[i].enabled_events = 0;
             for (j = 0; j < FIELD_ACTOR_SCRIPT_COUNT; j++)
             {
-                D_80122B78->actors[i].scripts[j] = FIELD_NO_SCRIPT;
+                g_field_runtime->actors[i].scripts[j] = FIELD_NO_SCRIPT;
             }
-            func_80087FC0(i, 1);
+            field_set_actor_control_mode(i, FIELD_CONTROL_FOLLOW);
             func_800C1D14(i, 0);
         }
-        i++;
-    } while (i < FIELD_PARTY_SIZE);
-
-    i = 0;
-    if (D_80122B78->state.actor_count != 0)
-    {
-        do
-        {
-            func_800B28E0(D_80122B78->actors[i].id, 13, 1);
-            i++;
-        } while (i < D_80122B78->state.actor_count);
     }
 
-    if (D_8010D020 != 0)
+    for (i = 0; i < g_field_runtime->state.actor_count; i++)
     {
-        D_8010D020 = 0;
+        func_800B28E0(g_field_runtime->actors[i].id, FIELD_BATTLE_EVENT, FIELD_BATTLE_PHASE_END);
+    }
+
+    if (g_field_duel_mode != 0)
+    {
+        g_field_duel_mode = 0;
     }
     else
     {
@@ -164,53 +187,33 @@ void func_800B4684(void)
         case 45:
         case 46:
         case 47:
-            akao_cmd_c1(0, 0x40, 0);
+            akao_cmd_c1(0, FIELD_BATTLE_MUSIC_FADE_TICKS, 0);
             break;
         }
     }
 }
 
 /**
- * @brief Find an offset-table record with the requested byte identifier.
- *
- * The table starts with a record count followed by one byte offset per
- * record, relative to the table base. A failed search records a diagnostic.
- *
- * @param base Base of the count and record-offset table.
- * @param value Byte identifier to find at record offset 0x18.
- * @return Pointer to the matching record, or NULL when absent.
+ * @brief Find a monster template by id.
+ * @param table Template table of the battle resource.
+ * @param id Template id; only the low byte is compared.
+ * @return The matching template, or NULL (after a diagnostic) when absent.
  */
-u8* func_800B4844(u32* base, s32 value)
+FieldActorTemplate* field_find_actor_template(FieldActorTemplateTable* table, s32 id)
 {
-    u32 index;
-    u32 count;
-    u32 loaded_count;
-    u32* offset;
-    u8* record;
-    s32 target;
+    u32 i;
+    FieldActorTemplate* template;
 
-    index = 0;
-    loaded_count = *base;
-    target = value & 0xFF;
-    if (loaded_count != 0)
+    id &= 0xFF;
+    for (i = 0; i < table->count; i++)
     {
-        count = loaded_count;
-        offset = base;
-        do
+        template = (FieldActorTemplate*)((u8*)table + table->offsets[i]);
+        if (template->id == id)
         {
-            record = (u8*)base + offset[1];
-            if (record[0x18] != target)
-            {
-                index++;
-                offset++;
-            }
-            else
-            {
-                return record;
-            }
-        } while (index < count);
+            return template;
+        }
     }
 
-    record_game_diagnostic(0x8001, 0x67, target, -1);
+    record_game_diagnostic(FIELD_DIAGNOSTIC_ERROR, FIELD_DIAGNOSTIC_NO_TEMPLATE, id, -1);
     return NULL;
 }

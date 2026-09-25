@@ -3,14 +3,13 @@
 #include "field_calls.h"
 #include "field_records.h"
 
-extern FieldBattleContext *D_80123FB0;
-extern FieldRuntimeContext *D_80122B78;
+extern FieldBattleContext *g_field_battle;
+extern FieldRuntimeContext *g_field_runtime;
 
 s32 func_800B3670(s32 arg0);
 s32 func_800B42B4(FieldActorTemplate *template);
-extern FieldActorTemplate *func_800B4844(u32 *, s32);
 extern u32 func_800BD414(s32, s32);
-s32 func_80087F0C(s32 arg0);
+s32 field_find_object_state(s32 arg0);
 
 /**
  * @brief Build status records for the field actors whose trigger group matches the requested key.
@@ -24,14 +23,14 @@ s32 func_800B3DF4(s32 group)
     s32 result;
 
     count = 0;
-    for (i = 3; i < (s32)D_80122B78->state.actor_count; i++)
+    for (i = 3; i < (s32)g_field_runtime->state.actor_count; i++)
     {
-        if ((D_80122B78->actors[i].flags.word & 0xF) != group)
+        if ((g_field_runtime->actors[i].flags.word & 0xF) != group)
         {
             continue;
         }
 
-        result = func_80087F0C(D_80122B78->actors[i].id);
+        result = field_find_object_state(g_field_runtime->actors[i].id);
         /* Kept gotos: if/else-if on result swaps two saved registers (99.30%). */
         if (result == 0)
         {
@@ -42,9 +41,9 @@ s32 func_800B3DF4(s32 group)
             goto build_record;
         }
     report_error:
-        record_game_diagnostic(0x8001, 0x64, group, D_80122B78->actors[i].id);
+        record_game_diagnostic(0x8001, 0x64, group, g_field_runtime->actors[i].id);
     build_record:
-        func_800B3F1C(D_80122B78->actors[i].id, &D_80123FB0->records[3 + count], (FieldStatusState *)result);
+        func_800B3F1C(g_field_runtime->actors[i].id, &g_field_battle->records[3 + count], (FieldStatusState *)result);
         count++;
     }
     return count;
@@ -73,13 +72,13 @@ void func_800B3F1C(s32 actor_id, FieldStatusRecord *record, FieldStatusState *st
     flags |= 0x100;
     flags &= ~0x200;
     flags &= 0xFFFF03FF;
-    ctx = D_80123FB0;
+    ctx = g_field_battle;
     flags |= 0x1400;
     record->meta.packed = flags;
     record->meta.bytes.unk2 = 0;
-    template = func_800B4844((u32 *)ctx->templates, state->template_index);
+    template = field_find_actor_template(ctx->templates, state->template_index);
     record->template = template;
-    record->unk3 = template->unk1A;
+    record->race = template->unk1A;
     record->counter = template->counter_reset;
     record->counter_reset = template->counter_reset;
     record->status_flags = 0;
@@ -106,14 +105,14 @@ void func_800B3F1C(s32 actor_id, FieldStatusRecord *record, FieldStatusState *st
     for (work = 0; work < FIELD_STATUS_STAT_COUNT; work++)
     {
         stat = (u32)((template->stats[work].base * 4) + (template->stats[work].growth * level)) >> 2;
-        record->unk3C[work] = 5;
-        record->unk44[work] = 5;
+        record->element_attack[work] = 5;
+        record->element_defense[work] = 5;
         record->base_stats[work] = stat;
         record->stats[work] = stat;
     }
     record->immunity_flags = template->immunity_flags;
-    record->unk39 = template->unk3D;
-    record->unk3A = template->unk3E;
+    record->weak_elements = template->weak_elements;
+    record->resist_elements = template->resist_elements;
     state->level.word = (state->level.word & ~0xFE) | ((level & 0x7F) * 2);
     if (template->flags & 2)
     {
@@ -189,11 +188,11 @@ s32 func_800B42B4(FieldActorTemplate *template)
     {
         if (add_mask & 1)
         {
-            value += D_80123FB0->element_levels[count];
+            value += g_field_battle->element_levels[count];
         }
         if (sub_mask & 1)
         {
-            value -= D_80123FB0->element_levels[count];
+            value -= g_field_battle->element_levels[count];
         }
         add_mask >>= 1;
         sub_mask >>= 1;

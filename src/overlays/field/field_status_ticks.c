@@ -3,8 +3,8 @@
 #include "field_calls.h"
 #include "field_records.h"
 
-extern FieldBattleContext *D_80123FB0;
-extern FieldRuntimeContext *D_80122B78;
+extern FieldBattleContext *g_field_battle;
+extern FieldRuntimeContext *g_field_runtime;
 
 s32 func_800BD414(s32 arg0, s32 arg1);
 void func_800BD520(s32 arg0, u32 arg1, s32 arg2);
@@ -16,7 +16,7 @@ void func_800B48B8(void)
 {
     s32 count;
 
-    if ((D_80123FB0 != NULL) && (D_80123FB0->state.flags >= 0))
+    if ((g_field_battle != NULL) && (g_field_battle->state.flags >= 0))
     {
         /* No argument: the original leaves $a0 as the caller set it. 0x200 is meta.bits.ally. */
         if (((FieldStatusRecord *(*)(void))func_800B2A9C)()->meta.packed & 0x200)
@@ -33,14 +33,14 @@ void func_800B48B8(void)
 }
 
 extern u16 D_800F0B58[];
-extern u8 *D_80122B74;
+extern u8 *g_field_game_state;
 
 /**
  * @brief Rebuild an actor's 16-bit status mask from its four sub-entries.
  *
  * Clears the actor's 0xA mask, then walks the four 0x40-byte records that begin
  * at offset 0x5F0 of the actor's per-index block (stride 0x250) inside the table
- * pointed to by @c D_80122B74. For each active record (byte 0 non-zero) it ORs in
+ * pointed to by @c g_field_game_state. For each active record (byte 0 non-zero) it ORs in
  * the 16-bit flag looked up in @c D_800F0B58 by the record's 0x2E field.
  *
  * @param record Status record whose id selects the block and whose status_flags are rebuilt.
@@ -57,7 +57,7 @@ void func_800B4934(FieldStatusRecord *record)
     tbl = D_800F0B58;
     record->status_flags = 0;
     off = 0x50;
-    base = D_80122B74 + (record->meta.bytes.id * 0x250 + 0x5F0);
+    base = g_field_game_state + (record->meta.bytes.id * 0x250 + 0x5F0);
     do
     {
         rec = base + off;
@@ -85,13 +85,13 @@ void func_800B49C0(void)
     s32 i;
     s32 keep;
 
-    if ((D_80123FB0 != NULL) && (D_80123FB0->state.flags >= 0))
+    if ((g_field_battle != NULL) && (g_field_battle->state.flags >= 0))
     {
         i = 0;
         func_800B4B44();
         do
         {
-            if (D_80123FB0->records[i].meta.bits.active)
+            if (g_field_battle->records[i].meta.bits.active)
             {
                 if (func_800BD414(0, 0xFFD) == 0)
                 {
@@ -99,31 +99,31 @@ void func_800B49C0(void)
                 }
                 else
                 {
-                    if (D_80123FB0->records[i].meta.bytes.id < 2)
+                    if (g_field_battle->records[i].meta.bytes.id < 2)
                     {
-                        D_80123FB0->records[i].state->status_intensity = 0xFF;
+                        g_field_battle->records[i].state->status_intensity = 0xFF;
                     }
                     keep = i < 3;
                 }
                 if (keep)
                 {
-                    func_800B4D1C(&D_80123FB0->records[i]);
-                    func_800B4F80(&D_80123FB0->records[i]);
+                    func_800B4D1C(&g_field_battle->records[i]);
+                    func_800B4F80(&g_field_battle->records[i]);
                 }
-                func_800B4DF0(&D_80123FB0->records[i]);
+                func_800B4DF0(&g_field_battle->records[i]);
             }
             i++;
         } while (i < 11);
 
         i = 0;
-        if ((D_80122B78->frame_count & 0xF) == 0)
+        if ((g_field_runtime->frame_count & 0xF) == 0)
         {
             do
             {
-                if (D_80123FB0->records[i].meta.bits.active)
+                if (g_field_battle->records[i].meta.bits.active)
                 {
-                    func_800B4E60(&D_80123FB0->records[i]);
-                    func_800B4F38(&D_80123FB0->records[i]);
+                    func_800B4E60(&g_field_battle->records[i]);
+                    func_800B4F38(&g_field_battle->records[i]);
                 }
                 i++;
             } while (i < 11);
@@ -152,7 +152,7 @@ void func_800B4B44(void)
         j = 0;
         do
         {
-            D_80123FB0->records[i].status_slots[j] = 0;
+            g_field_battle->records[i].status_slots[j] = 0;
             j++;
         } while (j < 3);
         i++;
@@ -165,20 +165,20 @@ void func_800B4B44(void)
         other = list + 1;
         current = *list;
         first = *other;
-        D_80123FB0->records[current].status_slots[i] = D_80123FB0->records[first].unk4C;
+        g_field_battle->records[current].status_slots[i] = g_field_battle->records[first].unk4C;
         second = *other;
         other += 2;
         first = *list;
         list += 2;
-        D_80123FB0->records[second].status_slots[i] = D_80123FB0->records[first].unk4C;
+        g_field_battle->records[second].status_slots[i] = g_field_battle->records[first].unk4C;
         i++;
     }
 
-    if (func_800B4CE4(&D_80123FB0->records[1], 0) < 3)
+    if (func_800B4CE4(&g_field_battle->records[1], 0) < 3)
     {
         func_800B28E0(1, 0xC, 6);
     }
-    if (func_800B4CE4(&D_80123FB0->records[2], 0) < 3)
+    if (func_800B4CE4(&g_field_battle->records[2], 0) < 3)
     {
         func_800B28E0(2, 0xC, 6);
     }
@@ -383,7 +383,7 @@ void func_800B4F38(FieldStatusRecord *record)
     }
 }
 
-s32 func_8008ADB4(u8 arg0);
+s32 field_get_actor_animation(u8 arg0);
 
 /**
  * @brief Update the record's saturating counters when its growth interval elapses.
@@ -412,7 +412,7 @@ void func_800B4F80(FieldStatusRecord *record)
     }
     else
     {
-        classification = func_8008ADB4(record->meta.bytes.id);
+        classification = field_get_actor_animation(record->meta.bytes.id);
         if (classification < 0)
         {
             return;
@@ -441,7 +441,7 @@ void func_800B4F80(FieldStatusRecord *record)
     {
         divisor = 1;
     }
-    if ((u32)D_80122B78->frame_count % (u32)divisor == 0)
+    if ((u32)g_field_runtime->frame_count % (u32)divisor == 0)
     {
         saturating_counter_add(record->state, 1);
         if (record->meta.bytes.id < 3)

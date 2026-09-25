@@ -7,7 +7,8 @@ enum
 {
     FIELD_STATUS_STAT_COUNT = 8,
     FIELD_STATUS_TIMER_COUNT = 12,
-    FIELD_STATUS_SLOT_COUNT = 3
+    FIELD_STATUS_SLOT_COUNT = 3,
+    FIELD_ELEMENT_COUNT = 8
 };
 
 /** @brief Record kind stored in FieldStatusRecordMeta::bits.kind for a template-built monster. */
@@ -43,7 +44,7 @@ typedef struct FieldGrowthPair
     u8 growth;
 } FieldGrowthPair;
 
-/** @brief Monster template returned by func_800B4844 and linked from its status record. */
+/** @brief Monster template returned by field_find_actor_template and linked from its status record. */
 typedef struct FieldActorTemplate
 {
     u8 pad0[0x15];
@@ -51,7 +52,9 @@ typedef struct FieldActorTemplate
     u8 raise_mask;
     /** @brief Bit n set: element level n lowers the monster level. */
     u8 lower_mask;
-    u8 pad17[2];
+    u8 pad17;
+    /** @brief Identifier matched against FieldStatusState::template_index. */
+    u8 id;
     u8 unk19;
     u8 unk1A;
     u8 counter_reset;
@@ -63,14 +66,21 @@ typedef struct FieldActorTemplate
     FieldGrowthPair equipment_stats[4];
     FieldGrowthPair stats[FIELD_STATUS_STAT_COUNT];
     u8 immunity_flags;
-    u8 unk3D;
-    u8 unk3E;
+    u8 weak_elements;
+    u8 resist_elements;
     /** @brief Bit 1: not linked from the actor; bit 2: level from the land; bit 7: see the HP gauge. */
     u8 flags;
     u8 pad40[0x50 - 0x40];
     s32 action_count;
     u8 actions[1][8];
 } FieldActorTemplate;
+
+/** @brief Monster template table: a count, then one offset per template from the table base. */
+typedef struct FieldActorTemplateTable
+{
+    u32 count;
+    u32 offsets[1];
+} FieldActorTemplateTable;
 
 /** @brief Displayed HP gauge (low 24 bits) and HUD bits. */
 typedef union
@@ -92,7 +102,7 @@ typedef struct FieldStatusState
     FieldStatusGauge gauge;
     u32 effect_flags;
     u8 unk10;
-    /** @brief Template index passed to func_800B4844. */
+    /** @brief Template id passed to field_find_actor_template. */
     u8 template_index;
     u8 pad12[2];
     s32 actor_id;
@@ -127,7 +137,8 @@ typedef struct FieldStatusRecord
     /** @brief Bit 6 set for monsters and the versus-mode leader, bit 7 for other party members. */
     u8 unk0;
     u8 pad1[2];
-    u8 unk3;
+    /** @brief Monster race, matched by the race-dependent statuses and action handler 4. */
+    u8 race;
     FieldStatusRecordMeta meta;
     s8 counter;
     u8 counter_reset;
@@ -143,15 +154,26 @@ typedef struct FieldStatusRecord
     u8 stats[FIELD_STATUS_STAT_COUNT];
     u8 base_stats[FIELD_STATUS_STAT_COUNT];
     u8 immunity_flags;
-    u8 unk39;
-    u8 unk3A;
+    /** @brief Element bits the record is weak to. */
+    u8 weak_elements;
+    /** @brief Element bits the record resists. */
+    u8 resist_elements;
     u8 pad3B;
-    u8 unk3C[8];
-    u8 unk44[8];
+    /** @brief Attack level per element bit, 5 by default. */
+    u8 element_attack[FIELD_ELEMENT_COUNT];
+    /** @brief Defense level per element, 5 by default. */
+    u8 element_defense[FIELD_ELEMENT_COUNT];
     u8 unk4C;
     u8 status_slots[FIELD_STATUS_SLOT_COUNT];
     u16 status_timers[FIELD_STATUS_TIMER_COUNT];
 } FieldStatusRecord;
+
+/** @brief apply_flags bits of func_800B2B54. */
+enum
+{
+    FIELD_STATUS_APPLY_IGNORE_IMMUNITY = 1 << 0,
+    FIELD_STATUS_APPLY_ALLOW_ACTIVE = 1 << 1
+};
 
 FieldStatusRecord *func_800B2A9C(s32 record_id);
 FieldStatusRecord *func_800B2B08(void);

@@ -42,7 +42,7 @@ extern u8 D_80117EC8[];
 
 /* Forward prototypes for members defined later in the file. */
 void func_800A2958(s32);
-void func_800A2DD8(s32);
+void field_command_history_clear(s32);
 
 /**
  * @brief Reset a player's direction/button history counters and idle timers.
@@ -178,7 +178,7 @@ void func_800A2594(s32 player, s32 age_sequence)
             value = D_80117EB8[player];
             if (value == 0xF)
             {
-                func_800A2DD8(player);
+                field_command_history_clear(player);
             }
         }
     }
@@ -425,7 +425,7 @@ s32 func_800A29F8(s32 player, s32 unused, s32 peek)
                 {
                     if (peek == 0)
                     {
-                        func_800A2DD8(player);
+                        field_command_history_clear(player);
                         return 1U;
                     }
                 } while (0);
@@ -436,7 +436,7 @@ s32 func_800A29F8(s32 player, s32 unused, s32 peek)
                 {
                     if (peek == 0)
                     {
-                        func_800A2DD8(player);
+                        field_command_history_clear(player);
                         return 0U;
                     }
                 } while (0);
@@ -447,7 +447,7 @@ s32 func_800A29F8(s32 player, s32 unused, s32 peek)
                 {
                     if (peek == 0)
                     {
-                        func_800A2DD8(player);
+                        field_command_history_clear(player);
                         return 4U;
                     }
                 } while (0);
@@ -458,7 +458,7 @@ s32 func_800A29F8(s32 player, s32 unused, s32 peek)
                 {
                     if (peek == 0)
                     {
-                        func_800A2DD8(player);
+                        field_command_history_clear(player);
                         return 6U;
                     }
                 } while (0);
@@ -467,7 +467,7 @@ s32 func_800A29F8(s32 player, s32 unused, s32 peek)
                 command_id = 5;
                 if (peek == 0)
                 {
-                    func_800A2DD8(player);
+                    field_command_history_clear(player);
                     return 5U;
                 }
                 return command_id;
@@ -475,7 +475,7 @@ s32 func_800A29F8(s32 player, s32 unused, s32 peek)
                 command_id = 7;
                 if (peek == 0)
                 {
-                    func_800A2DD8(player);
+                    field_command_history_clear(player);
                     return 7U;
                 }
                 return command_id;
@@ -495,7 +495,7 @@ s32 func_800A29F8(s32 player, s32 unused, s32 peek)
  * @brief Clear a player's history count if the index is in range.
  * @param player Player index; only indices below two are cleared.
  */
-void func_800A2DD8(s32 player)
+void field_command_history_clear(s32 player)
 {
     if (player < 2)
     {

@@ -4,14 +4,42 @@
 #include "field_actor_runtime.h"
 #include "field_records.h"
 
+/** @brief Error status passed to record_game_diagnostic. */
+#define DIAG_ERROR 0x8001
+
+/** @brief Diagnostic code: no guest template for the requested guest. */
+#define DIAG_BAD_GUEST 0x6D
+
+/** @brief Diagnostic code: the requested stored companion does not exist. */
+#define DIAG_BAD_COMPANION 0x6E
+
+/** @brief Party slot of the guest character. */
+#define FIELD_PARTY_GUEST 1
+
+/** @brief Party slot of the companion (a stored companion or a golem). */
+#define FIELD_PARTY_COMPANION 2
+
 /** @brief Number of guest characters with a template in resource 3. */
 #define FIELD_GUEST_COUNT 12
+
+/** @brief Hero levels covered by one guest template bank. */
+#define FIELD_GUEST_BANK_LEVELS 6
+
+/** @brief Number of level banks in one guest template. */
+#define FIELD_GUEST_BANK_COUNT 4
 
 /** @brief Resource id of the guest template table. */
 #define FIELD_RESOURCE_GUEST_TEMPLATES 3
 
+/** @brief Resource ids of the companion equipment templates. */
+#define FIELD_RESOURCE_WEAPON_TEMPLATES 0xD
+#define FIELD_RESOURCE_ARMOR_TEMPLATES 0xE
+
 /** @brief First game-state word of the per-guest experience bonuses. */
 #define FIELD_GUEST_EXPERIENCE_WORD 0x68
+
+/** @brief Number of entries in g_field_level_experience. */
+#define FIELD_LEVEL_EXPERIENCE_COUNT 32
 
 /** @brief Script variable that holds the active companion index. */
 #define FIELD_VARIABLE_COMPANION 0x1F10
@@ -19,24 +47,36 @@
 /** @brief Script variable of guest 0; guest n uses FIELD_VARIABLE_GUEST_BASE + n * 8. */
 #define FIELD_VARIABLE_GUEST_BASE 0xF87
 
-/** @brief Resource ids of the companion equipment templates. */
-#define FIELD_RESOURCE_WEAPON_TEMPLATES 0xD
-#define FIELD_RESOURCE_ARMOR_TEMPLATES 0xE
+/** @brief Script variables holding the resource variant of the guest and companion actors. */
+#define FIELD_VARIABLE_GUEST_VARIANT 0x2F08
+#define FIELD_VARIABLE_COMPANION_VARIANT 0x2F00
+
+/** @brief Resource variant written when a slot is emptied, or returned when a join fails. */
+#define FIELD_NO_VARIANT 0xFF
+
+/**
+ * @brief Offset added to a golem's info byte 1 to form its resource variant.
+ * @note Guess: golem variants follow the 65 character variants.
+ */
+#define FIELD_GOLEM_VARIANT_BASE 65
 
 /** @brief Bytes of a stored companion name copied into the party record. */
-#define FIELD_COMPANION_NAME_LENGTH 0x15
+#define FIELD_COMPANION_NAME_LENGTH 21
 
-/** @brief Character info bits 0-6: character type. */
-#define FIELD_CHARACTER_TYPE_MASK 0x7F
+/** @brief Bit position of FIELD_CHARACTER_AI. */
+#define FIELD_CHARACTER_AI_SHIFT 7
 
-/** @brief Character type of a guest in party slot 1. */
-#define FIELD_CHARACTER_GUEST 2
+/** @brief Number of equipment_totals values in a character or stored companion record. */
+#define FIELD_EQUIPMENT_TOTAL_COUNT 4
 
-/** @brief Character type of a stored companion in party slot 2. */
-#define FIELD_CHARACTER_COMPANION 3
+/** @brief Number of entries in FieldCharacterRecord.unk48. */
+#define FIELD_CHARACTER_ORDER_COUNT 8
 
-/** @brief Character info bit 7: the character is AI-controlled. */
-#define FIELD_CHARACTER_AI 0x80
+/** @brief First armor slot; the armor slots follow the weapon slot. */
+#define FIELD_ARMOR_SLOT (FIELD_WEAPON_SLOT + 1)
+
+/** @brief Number of armor slots. */
+#define FIELD_ARMOR_SLOT_COUNT (FIELD_EQUIPMENT_SLOT_COUNT - 1)
 
 /** @brief Stat bits 0-8: the stat times four. */
 #define FIELD_STAT_SCALED_MASK 0x1FF
@@ -48,7 +88,7 @@
 typedef struct
 {
     s32 id;
-    FieldCharacterRecord banks[4];
+    FieldCharacterRecord banks[FIELD_GUEST_BANK_COUNT];
 } FieldGuestTemplate;
 
 /** @brief Guest template table (resource 3). */
@@ -67,133 +107,100 @@ typedef struct
     FieldItemRecord templates[1];
 } FieldItemTemplateTable;
 
-/** @brief Context level, preserved flag byte, and packed value updated by the record load. */
-typedef struct
-{
-    u8 pad0[0x2E5];
-    u8 level;
-    u8 pad2E6[0x858 - 0x2E6];
-    union
-    {
-        u32 word;
-        u8 byte[4];
-    } flags;
-    u8 pad85C[4];
-    union
-    {
-        u32 word;
-        u8 byte[4];
-    } packed;
-} Context;
-extern FieldGameState* D_80122B74;
-extern s32 D_800F190C[];
+extern FieldGameState* g_field_game_state;
+/** @brief Experience needed to reach each level; entry n is for level n + 1. */
+extern s32 g_field_level_experience[FIELD_LEVEL_EXPERIENCE_COUNT];
 extern void* func_800C1E40(s32 resource_id);
 extern void func_800C1EC8(void* source, void* destination, s32 size);
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
 extern s32 D_801227F0;
-extern void func_800BD520(s32, s32, s32);
+extern void func_800BD520(s32 owner_id, s32 variable, s32 value);
+extern s32 func_800BD414(s32 owner_id, s32 variable);
+
+static void field_load_companion(s32 companion_index);
+static void field_store_companion(void);
 
 /**
- * @brief Load a matching level-dependent record or report a lookup failure.
- * @param record_id Record identifier to find.
- * @return -1 after applying a matching record, or zero after the fallback.
+ * @brief Put a guest into party slot 1, using the template bank for the hero's level.
+ * @param guest_id Guest index, below FIELD_GUEST_COUNT.
+ * @return -1 when the guest joined, 0 when it has no template.
  */
-s32 func_800C2B14(s32 record_id)
+s32 field_join_guest(s32 guest_id)
 {
+    FieldGuestTemplateTable* table;
+    FieldCharacterRecord* bank;
+    u32 progress;
+    u32 ai_flag;
     s32 level_index;
-    s32 record_index;
-    s32 record_offset;
-    u32 packed_value;
-    u32 saved_flag;
-    u8 level;
-    u8* table;
-    u8* bank;
+    s32 i;
+    u8 hero_level;
 
-    if (record_id < 0xC)
+    if (guest_id < FIELD_GUEST_COUNT)
     {
-        table = func_800C1E40(3);
-        do
+        table = func_800C1E40(FIELD_RESOURCE_GUEST_TEMPLATES);
+        for (i = 0; i < table->count; i++)
         {
-            do
+            if (table->guests[i].id == guest_id)
             {
-                record_index = 0;
-            } while (0);
-        } while (0);
-        if (*(u16*)(table + 2) != 0)
-        {
-            do
-            {
-                if ((*(s32*)(table + record_index * 0x944 + 4)) == record_id)
+                hero_level = g_field_game_state->control.fields.hero_level;
+                ai_flag = g_field_game_state->characters[FIELD_PARTY_GUEST].info.bytes[0] >> FIELD_CHARACTER_AI_SHIFT;
+                if (hero_level < FIELD_GUEST_BANK_LEVELS)
                 {
-                    record_offset = record_index * 0x944 + 4;
-                    level = ((Context*)D_80122B74)->level;
-                    saved_flag = ((Context*)D_80122B74)->flags.byte[0] >> 7;
-                    if (level < 6U)
-                    {
-                        bank = table + record_offset + 4;
-                    }
-                    else if (level < 0xCU)
-                    {
-                        bank = table + record_offset + 0x254;
-                    }
-                    else if (level < 0x12U)
-                    {
-                        bank = table + record_offset + 0x4A4;
-                    }
-                    else
-                    {
-                        bank = table + record_offset + 0x6F4;
-                    }
-                    func_800C1EC8(bank, (u8*)D_80122B74 + 0x840, 0x250);
-                    ((Context*)D_80122B74)->flags.word = (((Context*)D_80122B74)->flags.word & ~0x80) | (saved_flag << 7);
-                    if (((Context*)D_80122B74)->level < 0x20U)
-                    {
-                        level_index = ((Context*)D_80122B74)->level - 1;
-                    }
-                    else
-                    {
-                        level_index = 0x1F;
-                    }
-                    packed_value = ((Context*)D_80122B74)->packed.byte[0];
-                    packed_value =
-                        packed_value |
-                        ((*(s32*)((u8*)((s32)D_80122B74 - -((record_id + 0x68 + level_index - level_index) * 4)) + 0xE4) + D_800F190C[level_index]) << 8);
-                    ((Context*)D_80122B74)->packed.word = packed_value;
-                    if ((s32)(packed_value >> 8) > 0x98967F)
-                    {
-                        u32 clamped_value;
-
-                        clamped_value = packed_value & 0xFF;
-                        clamped_value |= 0x98967F00;
-                        ((Context*)D_80122B74)->packed.word = clamped_value;
-                    }
-                    func_800C11F0(1, 0);
-                    func_800B7C58(1);
-                    func_800BD520(0, record_id * 8 + 0xF87, 1);
-                    return -1;
+                    bank = &table->guests[i].banks[0];
                 }
-                record_index++;
-            } while (record_index < (s32) * (u16*)(table + 2));
+                else if (hero_level < 2 * FIELD_GUEST_BANK_LEVELS)
+                {
+                    bank = &table->guests[i].banks[1];
+                }
+                else if (hero_level < 3 * FIELD_GUEST_BANK_LEVELS)
+                {
+                    bank = &table->guests[i].banks[2];
+                }
+                else
+                {
+                    bank = &table->guests[i].banks[3];
+                }
+                func_800C1EC8(bank, &g_field_game_state->characters[FIELD_PARTY_GUEST], sizeof(FieldCharacterRecord));
+                g_field_game_state->characters[FIELD_PARTY_GUEST].info.word =
+                    (g_field_game_state->characters[FIELD_PARTY_GUEST].info.word & ~FIELD_CHARACTER_AI) | (ai_flag << FIELD_CHARACTER_AI_SHIFT);
+                if (g_field_game_state->control.fields.hero_level < FIELD_LEVEL_EXPERIENCE_COUNT)
+                {
+                    level_index = g_field_game_state->control.fields.hero_level - 1;
+                }
+                else
+                {
+                    level_index = FIELD_LEVEL_EXPERIENCE_COUNT - 1;
+                }
+                progress = g_field_game_state->characters[FIELD_PARTY_GUEST].progress.level;
+                /* Without the net-zero level_index terms, loop.c hoists the word index out of the search loop. */
+                progress |= (g_field_game_state->words[FIELD_GUEST_EXPERIENCE_WORD + guest_id + level_index - level_index] + g_field_level_experience[level_index])
+                            << 8;
+                g_field_game_state->characters[FIELD_PARTY_GUEST].progress.word = progress;
+                if ((s32)(progress >> 8) > FIELD_EXPERIENCE_MAX)
+                {
+                    g_field_game_state->characters[FIELD_PARTY_GUEST].progress.bits.experience = FIELD_EXPERIENCE_MAX;
+                }
+                func_800C11F0(FIELD_PARTY_GUEST, 0);
+                func_800B7C58(FIELD_PARTY_GUEST);
+                func_800BD520(0, guest_id * 8 + FIELD_VARIABLE_GUEST_BASE, 1);
+                return -1;
+            }
         }
-        record_game_diagnostic(0x8001, 0x6D, record_id, 0);
+        record_game_diagnostic(DIAG_ERROR, DIAG_BAD_GUEST, guest_id, 0);
     }
     else
     {
-        record_game_diagnostic(0x8001, 0x6D, record_id, 1);
+        record_game_diagnostic(DIAG_ERROR, DIAG_BAD_GUEST, guest_id, 1);
     }
     return 0;
 }
-void func_800C32C8(void);
-void func_800BD520(s32 arg0, s32 variable, s32 value);
-s32 func_800BD414(s32 arg0, s32 variable);
-void func_800C2E30(s32 companion_index);
 
 /**
  * @brief Make the stored companion named by the first gosub result the active companion.
- * @return The companion's info byte 1 on success, else 0xFF.
+ * @return The companion's resource variant (info byte 1), or FIELD_NO_VARIANT on failure.
  */
-s32 func_800C2D08(void)
+s32 field_join_companion(void)
 {
     s32 index;
 
@@ -203,38 +210,38 @@ s32 func_800C2D08(void)
         index = g_gosub_result_values[0];
         if (index < FIELD_REGION_COUNT)
         {
-            if (D_80122B74->regions[index].name[0] != 0)
+            if (g_field_game_state->regions[index].name[0] != 0)
             {
-                D_80122B74->region_index = index;
+                g_field_game_state->region_index = index;
                 func_800BD520(0, FIELD_VARIABLE_COMPANION, g_gosub_result_values[0]);
-                func_800C2E30(g_gosub_result_values[0]);
-                return D_80122B74->characters[2].info.bytes[1];
+                field_load_companion(g_gosub_result_values[0]);
+                return g_field_game_state->characters[FIELD_PARTY_COMPANION].info.bytes[1];
             }
         }
-        record_game_diagnostic(0x8001, 0x6E, index, 0);
+        record_game_diagnostic(DIAG_ERROR, DIAG_BAD_COMPANION, index, 0);
     }
-    return 0xFF;
+    return FIELD_NO_VARIANT;
 }
 
 /**
  * @brief Make the stored companion named by the companion variable the active companion.
- * @return The companion's info byte 1 on success, else 0xFF.
+ * @return The companion's resource variant (info byte 1), or FIELD_NO_VARIANT on failure.
  */
-s32 func_800C2DC0(void)
+s32 field_rejoin_companion(void)
 {
     s32 index = func_800BD414(0, FIELD_VARIABLE_COMPANION);
     s32 result;
 
     if ((u32)index < FIELD_REGION_COUNT)
     {
-        D_80122B74->region_index = index;
-        func_800C2E30(index);
-        result = D_80122B74->characters[2].info.bytes[1];
+        g_field_game_state->region_index = index;
+        field_load_companion(index);
+        result = g_field_game_state->characters[FIELD_PARTY_COMPANION].info.bytes[1];
     }
     else
     {
-        record_game_diagnostic(0x8001, 0x6E, index, 1);
-        result = 0xFF;
+        record_game_diagnostic(DIAG_ERROR, DIAG_BAD_COMPANION, index, 1);
+        result = FIELD_NO_VARIANT;
     }
     return result;
 }
@@ -243,7 +250,7 @@ s32 func_800C2DC0(void)
  * @brief Copy a stored companion into party slot 2 and rebuild its equipment records.
  * @param companion_index Stored companion index.
  */
-void func_800C2E30(s32 companion_index)
+static void field_load_companion(s32 companion_index)
 {
     FieldItemTemplateTable* table;
     FieldGameState* state;
@@ -253,101 +260,103 @@ void func_800C2E30(s32 companion_index)
 
     for (i = 0; i < FIELD_COMPANION_NAME_LENGTH; i++)
     {
-        D_80122B74->characters[2].name[i] = D_80122B74->regions[companion_index].name[i];
+        g_field_game_state->characters[FIELD_PARTY_COMPANION].name[i] = g_field_game_state->regions[companion_index].name[i];
     }
-    D_80122B74->characters[2].info.word =
-        ((D_80122B74->characters[2].info.word & ~FIELD_CHARACTER_TYPE_MASK) | FIELD_CHARACTER_COMPANION) & ~FIELD_CHARACTER_AI;
-    D_80122B74->characters[2].info.bytes[1] = D_80122B74->regions[companion_index].unk15;
-    D_80122B74->characters[2].progress.bits.level = D_80122B74->regions[companion_index].progress.bits.level;
-    D_80122B74->characters[2].progress.bits.experience = D_80122B74->regions[companion_index].progress.bits.experience;
-    D_80122B74->characters[2].hp = D_80122B74->regions[companion_index].hp;
-    D_80122B74->characters[2].unk26 = D_80122B74->regions[companion_index].unk1E;
-    for (i = 0; i < 4; i++)
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].info.word =
+        ((g_field_game_state->characters[FIELD_PARTY_COMPANION].info.word & ~FIELD_CHARACTER_TYPE_MASK) | FIELD_CHARACTER_COMPANION) & ~FIELD_CHARACTER_AI;
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].info.bytes[1] = g_field_game_state->regions[companion_index].unk15;
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].progress.bits.level = g_field_game_state->regions[companion_index].progress.bits.level;
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].progress.bits.experience = g_field_game_state->regions[companion_index].progress.bits.experience;
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].hp = g_field_game_state->regions[companion_index].hp;
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].unk26 = g_field_game_state->regions[companion_index].unk1E;
+    for (i = 0; i < FIELD_EQUIPMENT_TOTAL_COUNT; i++)
     {
-        D_80122B74->characters[2].equipment_totals[i] = D_80122B74->regions[companion_index].equipment_totals[i];
+        g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment_totals[i] = g_field_game_state->regions[companion_index].equipment_totals[i];
     }
     for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
     {
-        scaled = D_80122B74->regions[companion_index].stats[i] & FIELD_STAT_SCALED_MASK;
-        D_80122B74->characters[2].stats[i] = (D_80122B74->characters[2].stats[i] & ~FIELD_STAT_SCALED_MASK) | scaled;
-        D_80122B74->characters[2].stats[i] =
-            (D_80122B74->characters[2].stats[i] & FIELD_STAT_SCALED_MASK) | (D_80122B74->regions[companion_index].stats[i] & ~FIELD_STAT_SCALED_MASK);
+        scaled = g_field_game_state->regions[companion_index].stats[i] & FIELD_STAT_SCALED_MASK;
+        g_field_game_state->characters[FIELD_PARTY_COMPANION].stats[i] = (g_field_game_state->characters[FIELD_PARTY_COMPANION].stats[i] & ~FIELD_STAT_SCALED_MASK) | scaled;
+        g_field_game_state->characters[FIELD_PARTY_COMPANION].stats[i] = (g_field_game_state->characters[FIELD_PARTY_COMPANION].stats[i] & FIELD_STAT_SCALED_MASK) |
+                                                                 (g_field_game_state->regions[companion_index].stats[i] & ~FIELD_STAT_SCALED_MASK);
     }
-    D_80122B74->characters[2].unk40 = D_80122B74->regions[companion_index].unk38[0];
-    D_80122B74->characters[2].unk41 = D_80122B74->regions[companion_index].unk38[1];
-    D_80122B74->characters[2].unk42 = D_80122B74->regions[companion_index].unk38[2];
-    D_80122B74->characters[2].unk43 = D_80122B74->regions[companion_index].unk38[3];
-    for (i = 0; i < 8; i++)
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].unk40 = g_field_game_state->regions[companion_index].unk38[0];
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].unk41 = g_field_game_state->regions[companion_index].unk38[1];
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].unk42 = g_field_game_state->regions[companion_index].unk38[2];
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].unk43 = g_field_game_state->regions[companion_index].unk38[3];
+    for (i = 0; i < FIELD_CHARACTER_ORDER_COUNT; i++)
     {
-        D_80122B74->characters[2].unk48[i] = i;
+        g_field_game_state->characters[FIELD_PARTY_COMPANION].unk48[i] = i;
     }
     table = func_800C1E40(FIELD_RESOURCE_WEAPON_TEMPLATES);
     if (table != NULL)
     {
-        func_800C1EC8(&table->templates[D_80122B74->regions[companion_index].weapon_id], &D_80122B74->characters[2].equipment[0], sizeof(FieldItemRecord));
+        func_800C1EC8(&table->templates[g_field_game_state->regions[companion_index].weapon_id],
+                      &g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_WEAPON_SLOT], sizeof(FieldItemRecord));
     }
-    D_80122B74->characters[2].equipment[0].derived.values[0] = D_80122B74->regions[companion_index].unk1E;
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_WEAPON_SLOT].derived.values[0] = g_field_game_state->regions[companion_index].unk1E;
     table = func_800C1E40(FIELD_RESOURCE_ARMOR_TEMPLATES);
     if (table != NULL)
     {
-        for (i = 0; i < 3; i++)
+        for (i = 0; i < FIELD_ARMOR_SLOT_COUNT; i++)
         {
-            func_800C1EC8(&table->templates[D_80122B74->regions[companion_index].armor_ids[i]], &D_80122B74->characters[2].equipment[1 + i],
-                          sizeof(FieldItemRecord));
+            func_800C1EC8(&table->templates[g_field_game_state->regions[companion_index].armor_ids[i]],
+                          &g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT + i], sizeof(FieldItemRecord));
         }
     }
-    state = D_80122B74;
-    item = &state->characters[2].equipment[1];
-    for (i = 0; i < 4; i++)
+    state = g_field_game_state;
+    item = &state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT];
+    for (i = 0; i < FIELD_EQUIPMENT_TOTAL_COUNT; i++)
     {
         item->derived.values[i] = state->regions[companion_index].equipment_totals[i];
     }
-    D_80122B74->characters[2].equipment[1].flags2C = D_80122B74->regions[companion_index].unk38[0];
-    D_80122B74->characters[2].equipment[1].flags2D = D_80122B74->regions[companion_index].unk38[2];
-    func_800B7C58(2);
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT].flags2C = g_field_game_state->regions[companion_index].unk38[0];
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT].flags2D = g_field_game_state->regions[companion_index].unk38[2];
+    func_800B7C58(FIELD_PARTY_COMPANION);
 }
 
 /**
- * @brief Refresh the active companion and return its letter code.
- * @return The companion's info byte 1 plus 'A'.
+ * @brief Rebuild the golem in party slot 2 and return its resource variant.
+ * @return The golem's info byte 1 plus FIELD_GOLEM_VARIANT_BASE.
+ * @note Guess: slot 2 holds a golem when this is called (func_800C3B50 is the golem layout code).
  */
-s32 func_800C318C(void)
+s32 field_join_golem(void)
 {
     /* func_800C3B50 takes a type; the original call leaves $a0 as it is. */
     ((void (*)(void))func_800C3B50)();
-    return D_80122B74->characters[2].info.bytes[1] + 'A';
+    return g_field_game_state->characters[FIELD_PARTY_COMPANION].info.bytes[1] + FIELD_GOLEM_VARIANT_BASE;
 }
 
 /**
  * @brief Remove the guest (slot 1) or the companion (slot 2) from the party.
- * @param companion Zero removes the guest in slot 1, nonzero the companion in slot 2.
+ * @param companion Zero removes the guest in slot 1, nonzero the companion or golem in slot 2.
  */
-void func_800C31BC(s32 companion)
+void field_leave_party(s32 companion)
 {
     if (companion == 0)
     {
-        if ((D_80122B74->characters[1].info.word & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GUEST)
+        if ((g_field_game_state->characters[FIELD_PARTY_GUEST].info.word & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GUEST)
         {
-            func_800BD520(0, (D_80122B74->characters[1].info.bytes[1] << 3) + FIELD_VARIABLE_GUEST_BASE, 0);
+            func_800BD520(0, (g_field_game_state->characters[FIELD_PARTY_GUEST].info.bytes[1] << 3) + FIELD_VARIABLE_GUEST_BASE, 0);
         }
-        func_800BD520(0, 0x2F08, 0xFF);
-        D_80122B74->characters[1].name[0] = 0;
-        D_80122B74->characters[1].info.word |= FIELD_CHARACTER_TYPE_MASK;
+        func_800BD520(0, FIELD_VARIABLE_GUEST_VARIANT, FIELD_NO_VARIANT);
+        g_field_game_state->characters[FIELD_PARTY_GUEST].name[0] = 0;
+        g_field_game_state->characters[FIELD_PARTY_GUEST].info.word |= FIELD_CHARACTER_TYPE_MASK;
     }
     else
     {
-        if ((D_80122B74->characters[2].info.word & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_COMPANION)
+        if ((g_field_game_state->characters[FIELD_PARTY_COMPANION].info.word & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_COMPANION)
         {
-            func_800C32C8();
-            D_80122B74->region_index = FIELD_REGION_COUNT;
+            field_store_companion();
+            g_field_game_state->region_index = FIELD_REGION_COUNT;
         }
         else
         {
             func_800C3A00(0);
         }
-        D_80122B74->characters[2].name[0] = 0;
-        D_80122B74->characters[2].info.word |= FIELD_CHARACTER_TYPE_MASK;
-        func_800BD520(0, 0x2F00, 0xFF);
+        g_field_game_state->characters[FIELD_PARTY_COMPANION].name[0] = 0;
+        g_field_game_state->characters[FIELD_PARTY_COMPANION].info.word |= FIELD_CHARACTER_TYPE_MASK;
+        func_800BD520(0, FIELD_VARIABLE_COMPANION_VARIANT, FIELD_NO_VARIANT);
     }
     field_release_actor_resource_slot(companion);
 }
@@ -355,19 +364,20 @@ void func_800C31BC(s32 companion)
 /**
  * @brief Write the companion in party slot 2 back to its stored record.
  */
-void func_800C32C8(void)
+static void field_store_companion(void)
 {
     s32 i;
 
-    if ((u32)D_80122B74->region_index < FIELD_REGION_COUNT)
+    if ((u32)g_field_game_state->region_index < FIELD_REGION_COUNT)
     {
         for (i = 0; i < FIELD_COMPANION_NAME_LENGTH; i++)
         {
-            D_80122B74->regions[D_80122B74->region_index].name[i] = D_80122B74->characters[2].name[i];
+            g_field_game_state->regions[g_field_game_state->region_index].name[i] = g_field_game_state->characters[FIELD_PARTY_COMPANION].name[i];
         }
-        D_80122B74->regions[D_80122B74->region_index].progress.bits.level = D_80122B74->characters[2].progress.bits.level;
-        D_80122B74->regions[D_80122B74->region_index].progress.bits.experience = D_80122B74->characters[2].progress.bits.experience;
-        D_80122B74->regions[D_80122B74->region_index].hp = D_80122B74->characters[2].hp;
-        func_800C1EC8(D_80122B74->characters[2].stats, D_80122B74->regions[D_80122B74->region_index].stats, sizeof(D_80122B74->characters[2].stats));
+        g_field_game_state->regions[g_field_game_state->region_index].progress.bits.level = g_field_game_state->characters[FIELD_PARTY_COMPANION].progress.bits.level;
+        g_field_game_state->regions[g_field_game_state->region_index].progress.bits.experience = g_field_game_state->characters[FIELD_PARTY_COMPANION].progress.bits.experience;
+        g_field_game_state->regions[g_field_game_state->region_index].hp = g_field_game_state->characters[FIELD_PARTY_COMPANION].hp;
+        func_800C1EC8(g_field_game_state->characters[FIELD_PARTY_COMPANION].stats, g_field_game_state->regions[g_field_game_state->region_index].stats,
+                      sizeof(g_field_game_state->characters[FIELD_PARTY_COMPANION].stats));
     }
 }

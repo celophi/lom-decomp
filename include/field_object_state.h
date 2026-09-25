@@ -6,6 +6,8 @@
 #define FIELD_OBJECT_COUNT 13
 #define FIELD_OBJECT_HISTORY_COUNT 48
 #define FIELD_OBJECT_EFFECT_SCALE_MASK 0x3FF
+/** @brief Two-bit movement mode in FieldMovementStatus (0, 0x800 or 0x1000). */
+#define FIELD_OBJECT_MOVEMENT_MODE_MASK 0x1800
 #define FIELD_OBJECT_FOOTPRINT_STRENGTH_RANGE 256
 
 /** @brief Whole-unit X/Z sample in an object's movement history. */
@@ -114,7 +116,9 @@ typedef struct FieldObjectRuntime
     FieldMovementStatus movement;
     FieldContactStatus contact;
     u8 pad_0x17c[4];
-    u8 targets[14];
+    u8 targets[FIELD_OBJECT_COUNT];
+    /** @brief Counted while object flag 0x8000 is set; a party member recovers at its type's limit. */
+    u8 retry_count;
     u8 interaction_kind;
     u8 pad_0x18f;
     Vec2s ground_attachment_points[3];

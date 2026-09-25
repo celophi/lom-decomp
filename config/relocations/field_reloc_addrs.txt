@@ -34,10 +34,10 @@ rom:0x16A65 reloc:MIPS_NONE symbol:D_1F800008
 rom:0x16BA1 reloc:MIPS_NONE symbol:D_1F800008
 rom:0x16C95 reloc:MIPS_NONE symbol:D_1F800010
 
-// func_80091438: the branch-delay-slot page load at 0x800914A8 is the
-// high half of D_800EB22C. Splat loses the relocation on this control-flow
+// field_apply_weapon_action_params: the branch-delay-slot page load at 0x800914A8 is the
+// high half of g_field_weapon_action_blunt_params. Splat loses the relocation on this control-flow
 // path even though GCC emits the same instruction with an R_MIPS_HI16 reloc.
-rom:0x41839 reloc:MIPS_HI16 symbol:D_800EB22C
+rom:0x41839 reloc:MIPS_HI16 symbol:g_field_weapon_action_blunt_params
 
 // func_800920FC: 0x801ED400 is a fixed field-work-area address. Splat
 // auto-symbolizes the literal load as D_801ED400; preserve the retail literal.
@@ -93,10 +93,10 @@ rom:0x21745 reloc:MIPS_LO16 symbol:g_field_effect_records addend:0x5400
 // func_80086494
 rom:0x36881 reloc:MIPS_HI16 symbol:g_field_actor_slots addend:0x9100
 rom:0x36885 reloc:MIPS_LO16 symbol:g_field_actor_slots addend:0x9100
-// func_8008BE38
+// field_knock_down_actor
 rom:0x3C2CD reloc:MIPS_HI16 symbol:g_field_actor_slots addend:0x9100
 rom:0x3C2D1 reloc:MIPS_LO16 symbol:g_field_actor_slots addend:0x9100
-// func_8008C104
+// field_collapse_defeated_actor
 rom:0x3C551 reloc:MIPS_HI16 symbol:g_field_actor_slots addend:0x9100
 rom:0x3C555 reloc:MIPS_LO16 symbol:g_field_actor_slots addend:0x9100
 // func_800966F0
@@ -107,3 +107,29 @@ rom:0x46B05 reloc:MIPS_LO16 symbol:g_field_actor_slots addend:0x9100
 // (base + 0x50) as one constant. Splat otherwise names it D_80105B30.
 rom:0x3A641 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x50
 rom:0x3A645 reloc:MIPS_LO16 symbol:g_field_object_states addend:0x50
+
+// field_actor_behavior.c: route histories, the first two followers and the
+// redirect action of resource 0 are interior addresses of their tables.
+rom:0x3CAC1 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x6C
+rom:0x3CBBD reloc:MIPS_HI16 symbol:g_field_object_states addend:0x6C
+rom:0x3CBE1 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x6C
+rom:0x3CC15 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x6C
+rom:0x3CC39 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x6C
+rom:0x3CCE5 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x6C
+rom:0x3CD09 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x6C
+rom:0x3CDA5 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x6C
+rom:0x3CDC9 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x6C
+rom:0x3D58D reloc:MIPS_HI16 symbol:g_field_object_states addend:0x6C
+rom:0x3CAC5 reloc:MIPS_LO16 symbol:g_field_object_states addend:0x6C
+rom:0x3CC3D reloc:MIPS_LO16 symbol:g_field_object_states addend:0x6C
+rom:0x3CD0D reloc:MIPS_LO16 symbol:g_field_object_states addend:0x6C
+rom:0x3CDCD reloc:MIPS_LO16 symbol:g_field_object_states addend:0x6C
+rom:0x3D591 reloc:MIPS_LO16 symbol:g_field_object_states addend:0x6C
+rom:0x3CC49 reloc:MIPS_HI16 symbol:g_field_actors addend:0x54
+rom:0x3CC4D reloc:MIPS_LO16 symbol:g_field_actors addend:0x54
+rom:0x3CD19 reloc:MIPS_HI16 symbol:g_field_actors addend:0x54
+rom:0x3CD1D reloc:MIPS_LO16 symbol:g_field_actors addend:0x54
+rom:0x3CDD9 reloc:MIPS_HI16 symbol:g_field_actors addend:0xA8
+rom:0x3CDDD reloc:MIPS_LO16 symbol:g_field_actors addend:0xA8
+rom:0x405D9 reloc:MIPS_HI16 symbol:g_field_resource_actions addend:0x58
+rom:0x405DD reloc:MIPS_LO16 symbol:g_field_resource_actions addend:0x58

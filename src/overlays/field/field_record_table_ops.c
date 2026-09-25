@@ -62,7 +62,7 @@ s32 func_800C3518(s32 land_index);
 s32 func_800C3688(s32 land_index);
 s32 rand(void);
 
-extern FieldGameState* D_80122B74;
+extern FieldGameState* g_field_game_state;
 extern u8 D_800F198C[];
 extern u16 g_music_track_index;
 
@@ -86,7 +86,7 @@ s32 func_800C33E4(s32 first_land, s32 second_land, s32* placed)
     active_count = 0;
     for (i = 0; i < FIELD_LAND_COUNT; i++)
     {
-        flags = D_80122B74->lands[i].flags;
+        flags = g_field_game_state->lands[i].flags;
         if ((flags & FIELD_LAND_PLACED) && !((flags >> 1) & 1))
         {
             active_count += 1;
@@ -142,14 +142,14 @@ s32 func_800C3518(s32 land_index)
 
     if (land_index < FIELD_LAND_COUNT)
     {
-        flags = D_80122B74->lands[land_index].flags;
+        flags = g_field_game_state->lands[land_index].flags;
         if ((flags & FIELD_LAND_PLACED) != 0 || !((flags >> 3) & 1))
         {
             return -1;
         }
-        D_80122B74->control.fields.unk2E4 += 1;
-        D_80122B74->lands[land_index].flags |= FIELD_LAND_PLACED;
-        D_80122B74->lands[land_index].count = D_80122B74->control.fields.unk2E4;
+        g_field_game_state->control.fields.unk2E4 += 1;
+        g_field_game_state->lands[land_index].flags |= FIELD_LAND_PLACED;
+        g_field_game_state->lands[land_index].count = g_field_game_state->control.fields.unk2E4;
         return land_index;
     }
     return -1;
@@ -163,7 +163,7 @@ void func_800C35AC(s32 land_index)
 {
     if (land_index < FIELD_LAND_COUNT)
     {
-        D_80122B74->lands[land_index].flags |= FIELD_LAND_AVAILABLE;
+        g_field_game_state->lands[land_index].flags |= FIELD_LAND_AVAILABLE;
     }
 }
 
@@ -180,7 +180,7 @@ s32 func_800C35E4(s32 land_index)
 
     if (land_index < FIELD_LAND_COUNT)
     {
-        flags = D_80122B74->lands[land_index].flags;
+        flags = g_field_game_state->lands[land_index].flags;
         bits = flags;
         if ((bits >> 3) & 1)
         {
@@ -225,7 +225,7 @@ s32 func_800C3688(s32 land_index)
 
     do
     {
-        state_ptr = &D_80122B74;
+        state_ptr = &g_field_game_state;
     } while (0);
     land = (u8*)(land_index << 1);
     land = (u8*)((s32)land + land_index);
@@ -281,7 +281,7 @@ s32 func_800C36F0(FieldItemKey* key)
 
     for (i = 0; i < FIELD_ITEM_COUNT; i++)
     {
-        if ((D_80122B74->items[i].kind != 0) && (D_80122B74->items[i].unk38 == first) && (D_80122B74->items[i].unk3C == second))
+        if ((g_field_game_state->items[i].kind != 0) && (g_field_game_state->items[i].unk38 == first) && (g_field_game_state->items[i].unk3C == second))
         {
             return 1;
         }
@@ -290,8 +290,8 @@ s32 func_800C36F0(FieldItemKey* key)
     /* The hero's equipment[] runs on into unk150[]: eight item records. */
     for (i = 0; i < 8; i++)
     {
-        if ((D_80122B74->characters[0].equipment[i].kind != 0) && (D_80122B74->characters[0].equipment[i].unk38 == first) &&
-            (D_80122B74->characters[0].equipment[i].unk3C == second))
+        if ((g_field_game_state->characters[0].equipment[i].kind != 0) && (g_field_game_state->characters[0].equipment[i].unk38 == first) &&
+            (g_field_game_state->characters[0].equipment[i].unk3C == second))
         {
             return 1;
         }
@@ -340,11 +340,11 @@ s32 func_800C3860(s32 amount)
 {
     u32 money;
 
-    money = D_80122B74->money + amount;
-    D_80122B74->money = money;
+    money = g_field_game_state->money + amount;
+    g_field_game_state->money = money;
     if (money > FIELD_MONEY_MAX)
     {
-        D_80122B74->money = FIELD_MONEY_MAX;
+        g_field_game_state->money = FIELD_MONEY_MAX;
     }
     return 1;
 }
@@ -358,10 +358,10 @@ s32 func_800C3894(u32 amount)
 {
     u32 money;
 
-    money = D_80122B74->money;
+    money = g_field_game_state->money;
     if (amount < money)
     {
-        D_80122B74->money = money - amount;
+        g_field_game_state->money = money - amount;
         return 1;
     }
     return 0;
@@ -405,9 +405,9 @@ void func_800C396C(void)
 
     for (i = 0; i < FIELD_ITEM_COUNT; i++)
     {
-        if (D_80122B74->items[i].kind != 0 && D_80122B74->items[i].handle == 0)
+        if (g_field_game_state->items[i].kind != 0 && g_field_game_state->items[i].handle == 0)
         {
-            D_80122B74->items[i].handle = func_800C38C8(&D_80122B74->items[i]);
+            g_field_game_state->items[i].handle = func_800C38C8(&g_field_game_state->items[i]);
         }
     }
 }

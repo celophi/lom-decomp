@@ -1,127 +1,118 @@
 /**
  * @file field_actor_action_defaults.c
- * @brief Reset action-animation maps and restore animation command defaults.
+ * @brief Restore the default action command maps and player action slots.
  */
 
 #include "common.h"
 #include "field_calls.h"
+#include "field_actor_tables.h"
 
-/** @brief Number of player records that own an action table. */
-#define FIELD_ACTION_RECORD_COUNT 3
+/** @brief Number of player resources whose action row gets default slots. */
+#define FIELD_PLAYER_RESOURCE_COUNT 3
 
-/** @brief Number of action-animation maps. */
+/** @brief Number of action command maps (one per controller). */
 #define FIELD_ACTION_MAP_COUNT 2
+
+/** @brief Number of actions with a command map entry. */
+#define FIELD_ACTION_MAP_ENTRY_COUNT 11
 
 /** @brief Number of map entries cleared by a map reset. */
 #define FIELD_ACTION_MAP_RESET_COUNT 8
 
-/** @brief Control halfword of one action slot; the reset sets @c value to 0xFF and clears both flag fields. */
-typedef struct
-{
-    u16 value : 8;
-    u16 unk8 : 2;
-    u16 unkA : 1;
-    u16 unkB : 5;
-} FieldActionControl;
+/** @brief Actor command that performs the action given in the command's high byte. */
+#define FIELD_COMMAND_PERFORM_ACTION 0x85
 
-/** @brief One eight-byte action slot of a player's action table. */
-typedef struct
-{
-    u16 animation;
-    FieldActionControl control;
-    u16 unk4;
-    u16 unk6;
-} FieldActionSlot;
+/** @brief Actor command word that performs action @p action. */
+#define FIELD_ACTION_COMMAND(action) (((action) << 8) | FIELD_COMMAND_PERFORM_ACTION)
 
-/** @brief Per-player table of fifty action slots. */
-typedef struct
-{
-    FieldActionSlot slots[50];
-} FieldActionRecord;
+/** @brief Target filter value of an action that does not look for targets. */
+#define FIELD_ACTION_TARGET_NONE 0xFF
 
-/** @brief One action-animation map: eleven animation ids and their disable flags. */
+/** @brief Action command map of one controller: command words and disable flags. */
 typedef struct
 {
-    u16 animation_ids[11];
-    u8 disabled[11];
+    u16 commands[FIELD_ACTION_MAP_ENTRY_COUNT];
+    u8 disabled[FIELD_ACTION_MAP_ENTRY_COUNT];
     u8 pad;
-} FieldActionMap;
+} FieldActionCommandMap;
 
-extern FieldActionRecord g_field_resource_actions[];
-extern FieldActionMap g_field_action_animation_maps[];
+extern FieldActionRow g_field_resource_actions[];
+extern FieldActionCommandMap g_field_action_command_maps[];
 
 /**
- * @brief Reset the selected action map and restore shared animation command defaults.
- * @param map_index Action map index to clear before restoring defaults.
+ * @brief Clear one action command map and restore the default commands and player action slots.
+ * @param map_index Action command map to clear before restoring the defaults.
+ * @note The commands (0x1F..0x29) and parameters (1, 16) given to actions 2, 3 and 8..10
+ *       have no known names yet; the weapon input map later overrides the parameters.
  */
-void func_80091518(s32 map_index)
+void field_reset_action_command_map(s32 map_index)
 {
-    FieldActionRecord* record;
+    FieldActionRow* row;
     s32 i;
 
     for (i = 0; i < FIELD_ACTION_MAP_RESET_COUNT; i++)
     {
-        g_field_action_animation_maps[map_index].animation_ids[i] = 0;
-        g_field_action_animation_maps[map_index].disabled[i] = 0;
+        g_field_action_command_maps[map_index].commands[i] = 0;
+        g_field_action_command_maps[map_index].disabled[i] = 0;
     }
 
     for (i = 0; i < FIELD_ACTION_MAP_COUNT; i++)
     {
-        g_field_action_animation_maps[i].animation_ids[2] = 0x285;
-        g_field_action_animation_maps[i].animation_ids[3] = 0x385;
-        g_field_action_animation_maps[i].animation_ids[1] = 0x185;
-        g_field_action_animation_maps[i].animation_ids[0] = 0x85;
-        g_field_action_animation_maps[i].animation_ids[8] = 0x885;
-        g_field_action_animation_maps[i].animation_ids[9] = 0x985;
-        g_field_action_animation_maps[i].animation_ids[10] = 0xA85;
+        g_field_action_command_maps[i].commands[2] = FIELD_ACTION_COMMAND(2);
+        g_field_action_command_maps[i].commands[3] = FIELD_ACTION_COMMAND(3);
+        g_field_action_command_maps[i].commands[1] = FIELD_ACTION_COMMAND(1);
+        g_field_action_command_maps[i].commands[0] = FIELD_ACTION_COMMAND(0);
+        g_field_action_command_maps[i].commands[8] = FIELD_ACTION_COMMAND(8);
+        g_field_action_command_maps[i].commands[9] = FIELD_ACTION_COMMAND(9);
+        g_field_action_command_maps[i].commands[10] = FIELD_ACTION_COMMAND(10);
     }
 
-    for (i = 0; i < FIELD_ACTION_RECORD_COUNT; i++)
+    for (i = 0; i < FIELD_PLAYER_RESOURCE_COUNT; i++)
     {
-        record = &g_field_resource_actions[i];
-        record->slots[2].animation = 0x1F;
-        record->slots[3].animation = 0x25;
-        record->slots[8].animation = 0x27;
-        record->slots[2].control.unkA = 0;
-        record->slots[3].control.unkA = 0;
-        record->slots[2].control.value = 0xFF;
-        record->slots[1].control.unkA = 0;
-        record->slots[0].control.unkA = 0;
-        record->slots[3].control.value = 0xFF;
-        record->slots[1].control.value = 0xFF;
-        record->slots[8].control.unkA = 0;
-        record->slots[2].control.unk8 = 0;
-        record->slots[2].unk4 = 0;
-        record->slots[2].unk6 = 1;
-        record->slots[3].unk4 = 0;
-        record->slots[3].unk6 = 1;
-        record->slots[8].unk4 = 0;
-        record->slots[8].unk6 = 16;
-        record->slots[0].control.value = 0xFF;
-        record->slots[8].control.value = 0xFF;
-        record->slots[3].control.unk8 = 0;
-        record->slots[1].control.unk8 = 0;
-        record->slots[0].control.unk8 = 0;
-        record->slots[8].control.unk8 = 0;
-        record->slots[9].animation = 0x28;
-        record->slots[10].animation = 0x29;
-        record->slots[9].unk4 = 0;
-        record->slots[9].unk6 = 16;
-        record->slots[10].unk4 = 0;
-        record->slots[10].unk6 = 16;
-        record->slots[9].control.unkA = 0;
-        record->slots[9].control.value = 0xFF;
-        record->slots[10].control.unkA = 0;
-        record->slots[10].control.value = 0xFF;
-        record->slots[9].control.unk8 = 0;
-        record->slots[10].control.unk8 = 0;
+        row = &g_field_resource_actions[i];
+        row->slots[2].command = 0x1F;
+        row->slots[3].command = 0x25;
+        row->slots[8].command = 0x27;
+        row->slots[2].flags.instrument = 0;
+        row->slots[3].flags.instrument = 0;
+        row->slots[2].flags.target_filter = FIELD_ACTION_TARGET_NONE;
+        row->slots[1].flags.instrument = 0;
+        row->slots[0].flags.instrument = 0;
+        row->slots[3].flags.target_filter = FIELD_ACTION_TARGET_NONE;
+        row->slots[1].flags.target_filter = FIELD_ACTION_TARGET_NONE;
+        row->slots[8].flags.instrument = 0;
+        row->slots[2].flags.target_group = 0;
+        row->slots[2].animation = 0;
+        row->slots[2].parameter = 1;
+        row->slots[3].animation = 0;
+        row->slots[3].parameter = 1;
+        row->slots[8].animation = 0;
+        row->slots[8].parameter = 16;
+        row->slots[0].flags.target_filter = FIELD_ACTION_TARGET_NONE;
+        row->slots[8].flags.target_filter = FIELD_ACTION_TARGET_NONE;
+        row->slots[3].flags.target_group = 0;
+        row->slots[1].flags.target_group = 0;
+        row->slots[0].flags.target_group = 0;
+        row->slots[8].flags.target_group = 0;
+        row->slots[9].command = 0x28;
+        row->slots[10].command = 0x29;
+        row->slots[9].animation = 0;
+        row->slots[9].parameter = 16;
+        row->slots[10].animation = 0;
+        row->slots[10].parameter = 16;
+        row->slots[9].flags.instrument = 0;
+        row->slots[9].flags.target_filter = FIELD_ACTION_TARGET_NONE;
+        row->slots[10].flags.instrument = 0;
+        row->slots[10].flags.target_filter = FIELD_ACTION_TARGET_NONE;
+        row->slots[9].flags.target_group = 0;
+        row->slots[10].flags.target_group = 0;
     }
 
     for (i = 0; i < FIELD_ACTION_MAP_COUNT; i++)
     {
-        g_field_action_animation_maps[i].animation_ids[5] = 0x585;
-        g_field_action_animation_maps[i].animation_ids[7] = 0x785;
-        g_field_action_animation_maps[i].animation_ids[4] = 0x485;
-        g_field_action_animation_maps[i].animation_ids[6] = 0x685;
+        g_field_action_command_maps[i].commands[5] = FIELD_ACTION_COMMAND(5);
+        g_field_action_command_maps[i].commands[7] = FIELD_ACTION_COMMAND(7);
+        g_field_action_command_maps[i].commands[4] = FIELD_ACTION_COMMAND(4);
+        g_field_action_command_maps[i].commands[6] = FIELD_ACTION_COMMAND(6);
     }
 }

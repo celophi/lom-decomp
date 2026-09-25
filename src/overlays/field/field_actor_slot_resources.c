@@ -27,7 +27,7 @@ typedef struct
 } FieldBlobEntry;
 
 /**
- * @brief Byte view of FieldObjectState.unk4C, whose second byte holds the
+ * @brief Byte view of FieldObjectState.hud, whose second byte holds the
  *        object's own index (0x23C bytes, overlays FieldObjectState).
  */
 typedef struct
@@ -43,9 +43,9 @@ extern u8 g_field_resource_buffer[];
 extern u8* D_801058D4;
 /** @brief Base of the field resource blob. */
 extern u8* D_801058D8;
-extern s32 D_800F2278;
-extern s32 D_800F227C;
-extern s32 D_800F2280;
+extern s32 g_field_camera_offset_x;
+extern s32 g_field_camera_offset_y;
+extern s32 g_field_camera_offset_z;
 extern s32 D_8010CFD4;
 extern s32 D_8010D034;
 extern s32 g_field_boss_hud_shake_frame;
@@ -54,9 +54,7 @@ void func_80083BC0(FieldActor* actor, FieldActorSlot* slot, s32 force);
 void func_80084424(s32 owner);
 void field_clear_actor_effects(FieldActorSlot* slot);
 void field_load_vram_resource(s32 id, s16* rect, s32 arg2);
-void func_8008B724(void);
-/* Defined as void (void) in field_actor_resource_unpack.c; the original passes load_id and tests the leftover $v0. */
-s32 func_8009A364(s32 load_id);
+void field_clear_pending_binding_restarts(void);
 void* func_8009CA54(s32 pool, s32 size, s32 tag);
 
 /**
@@ -244,9 +242,9 @@ void func_80083BC0(FieldActor* actor, FieldActorSlot* slot, s32 force)
     }
     if (slot->animation->flags & 0x1000)
     {
-        D_800F2280 = 0;
-        D_800F227C = 0;
-        D_800F2278 = 0;
+        g_field_camera_offset_z = 0;
+        g_field_camera_offset_y = 0;
+        g_field_camera_offset_x = 0;
     }
     if (slot->animation->unk18 & 2)
     {
@@ -275,12 +273,12 @@ void func_80083BC0(FieldActor* actor, FieldActorSlot* slot, s32 force)
     {
         field_set_global_color_scale(0x100, 0x100, 0x100);
     }
-    if (slot->animation->unk1 != 0xFF)
+    if (slot->animation->curve_selectors[1] != 0xFF)
     {
         render->unk140 = 0;
         render->unk92 = 0;
     }
-    if (slot->animation->unk0 != 0xFF)
+    if (slot->animation->curve_selectors[0] != 0xFF)
     {
         render->unk13F = 0;
         render->unk91 = 0;
@@ -322,7 +320,7 @@ s32 func_80083EEC(s32 object_index, s32 slot_index, s32 resource_index)
     slot = &g_field_actor_slots[slot_index];
     if (resource_index == 0)
     {
-        slot->enabled = 0;
+        slot->part_count = 0;
         return 0;
     }
 
@@ -330,7 +328,7 @@ s32 func_80083EEC(s32 object_index, s32 slot_index, s32 resource_index)
     entry = &((FieldBlobEntry*)header_base)[resource_index];
     animation_table = header_base + *(s32*)(header_base + 8);
     enabled = entry->enabled;
-    slot->enabled = enabled;
+    slot->part_count = enabled;
     if (enabled == 0)
     {
         return 0;
@@ -340,9 +338,9 @@ s32 func_80083EEC(s32 object_index, s32 slot_index, s32 resource_index)
     slot->active = 1;
     resource_base = D_801058D8;
     slot->status.word |= 0x1E;
-    slot->resource0 = resource_base + entry->offset0;
-    slot->resource4 = resource_base + entry->offset2;
-    slot->resource8 = resource_base + entry->offset4;
+    slot->parts = (FieldObjectPart*)(resource_base + entry->offset0);
+    slot->curves = (FieldParameterCurve*)(resource_base + entry->offset2);
+    slot->curve_segments = (u16*)(resource_base + entry->offset4);
     slot->status.word &= ~1;
     slot->status.half[1] = resource_index;
 
@@ -351,16 +349,16 @@ s32 func_80083EEC(s32 object_index, s32 slot_index, s32 resource_index)
     slot->animation = animation;
     if (animation->flags & 0x8000)
     {
-        slot->unk222 = animation->unk12;
+        slot->duration = animation->unk12;
     }
     else
     {
-        slot->unk222 = entry->fallback_value;
+        slot->duration = entry->fallback_value;
     }
 
-    slot->timer = 0;
+    slot->track_interval = 0;
     slot->animation->flags &= 0xF7FF;
-    slot->unk29 = 0;
+    slot->animation_index = 0;
     slot->unk2A = 0;
     slot->owner_object_index = object_index;
     slot->actor_type = g_field_object_states[object_index].action;
@@ -399,7 +397,7 @@ s32 func_8008404C(s32 owner, s32 resource_id)
     binding = &g_field_actor_bindings[FIELD_BINDING_INDEX(owner)];
     load_id = resource_id + 0x2DC;
     binding->unk4 = load_id;
-    if (func_8009A364(load_id) != 0)
+    if (field_request_resource_read(load_id) != 0)
     {
         return 0;
     }
@@ -424,14 +422,14 @@ s32 func_8008404C(s32 owner, s32 resource_id)
  */
 void func_80084240(void)
 {
-    func_8008B724();
+    field_clear_pending_binding_restarts();
     g_field_actor_bindings[2].state = 0;
     g_field_actor_bindings[1].state = 0;
     g_field_actor_bindings[0].state = 0;
     g_field_actor_bindings[2].unk4 = 0;
     g_field_actor_bindings[1].unk4 = 0;
     g_field_actor_bindings[0].unk4 = 0;
-    func_8009A384();
+    field_clear_resource_queue();
     func_8009CA08((u32*)D_8010D034, 0x20000);
     g_field_mesh_transformed_normals = func_8009CA54(D_8010D034, 0x1800, 4);
     g_field_mesh_screen_vertices = func_8009CA54(D_8010D034, 0xC00, 4);
@@ -453,14 +451,14 @@ void func_800842E0(void)
     idle_count = 0;
     for (; i < FIELD_ACTOR_BINDING_COUNT; i++, binding++)
     {
-        if (binding->state == 1 && binding->unk4 == func_8009A390())
+        if (binding->state == 1 && binding->unk4 == field_get_loading_resource())
         {
             if (cdrom_can_queue_resource((u16)binding->unk4) != 0)
             {
                 binding->unk4 = 0;
                 slot = &g_field_actor_slots[binding->slot];
-                func_8009A4CC(binding->owner, (struct FieldActorState*)slot);
-                if (slot->enabled != 0)
+                field_unpack_actor_resource(binding->owner, (struct FieldActorState*)slot);
+                if (slot->part_count != 0)
                 {
                     slot->owner_object_index = binding->owner;
                     slot->status.word |= 1;
@@ -481,7 +479,7 @@ void func_800842E0(void)
     }
     if (idle_count == 3)
     {
-        func_8009A3E8();
+        field_issue_next_resource_read();
     }
 }
 
@@ -490,7 +488,7 @@ void func_800842E0(void)
  * @param owner Owner object index (clamped to 2 when >= 3 for the binding lookup).
  * @note Only acts when the binding's owner matches and the bound actor slot
  *       is free; then it releases the binding, clears D_8010CFD4 and
- *       notifies func_8009A4A0.
+ *       notifies field_free_owner_resources.
  */
 void func_80084424(s32 owner)
 {
@@ -506,7 +504,7 @@ void func_80084424(s32 owner)
             func_800A3B78(owner);
             bindings[FIELD_BINDING_INDEX(owner)].state = 0;
             D_8010CFD4 = 0;
-            func_8009A4A0(FIELD_BINDING_INDEX(owner));
+            field_free_owner_resources(FIELD_BINDING_INDEX(owner));
         }
     }
 }
@@ -524,8 +522,8 @@ void func_80084524(void)
 
     for (i = 0; i < FIELD_ACTOR_COUNT; i++)
     {
-        g_field_object_states[i].unk4A = 0;
-        g_field_object_states[i].unk48 = 0;
+        g_field_object_states[i].action_charge = 0;
+        g_field_object_states[i].technique_gauge = 0;
         g_field_object_states[i].key = i;
         g_field_object_states[i].unk18 = 0;
         g_field_object_states[i].flags = 0;
@@ -533,7 +531,7 @@ void func_80084524(void)
         g_field_object_states[i].unk8.bits.value = g_field_object_states[i].unk4.bits.value;
         g_field_object_states[i].unk8.bits.unk24 = 0;
         g_field_object_states[i].unk8.bits.flag31 = 0;
-        g_field_object_states[i].unk4C |= 1;
+        g_field_object_states[i].hud.word |= 1;
         g_field_object_states[i].movement.bits.scale = 0x32;
         g_field_object_states[i].movement.half.hi = 0;
         g_field_object_states[i].contact.bits.flag0 = 0;
@@ -567,8 +565,8 @@ void func_80084630(void)
         tint_blue = g_field_object_parts[i].tint_blue;
         g_field_object_states[i].tint_timer = 0;
         g_field_object_states[i].flags = 0;
-        g_field_object_states[i].unk17C = 0;
-        g_field_object_states[i].unk3C = 0;
+        g_field_object_states[i].previous_flags = 0;
+        g_field_object_states[i].action_parameter = 0;
         g_field_object_states[i].unk64 = 0;
         g_field_object_states[i].action = 0;
         g_field_object_states[i].unk18E = 0;

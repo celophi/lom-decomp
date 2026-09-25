@@ -1,6 +1,12 @@
 /**
  * @file field_actor_resource_unpack.c
- * @brief Actor resource request queue and the unpacker for loaded actor resources.
+ * @brief Actor resource read queue, the unpacker for loaded actor resources and the
+ *        actor texture upload.
+ *
+ * An actor resource is read from CD into g_field_cd_buffer and unpacked into blocks of
+ * the actor heap (D_8010D034) tagged with the owner, so that all blocks of an owner can
+ * be freed together. Owners 0 and 1 are the two party players; every other owner shares
+ * FIELD_SHARED_OWNER.
  */
 #include "cdrom.h"
 #include "common.h"
@@ -10,62 +16,95 @@
 #include "field_mesh.h"
 #include "sdk/memory.h"
 #include "sdk/libgpu.h"
+#include "tim.h"
 
-/**
- * @brief memcpy with a signed byte count.
- * @note sdk/memory.h leaves memcpy unprototyped; this prototype matches the original calls.
- * @param dst Destination buffer.
- * @param src Source buffer.
- * @param size Byte count.
- * @return @p dst.
- */
-void *memcpy(void *dst, const void *src, s32 size);
+/** @brief Capacity of the pending resource read queue. */
+#define FIELD_RESOURCE_QUEUE_CAPACITY 16
+/** @brief Loading resource id while no read is in flight. */
+#define FIELD_NO_RESOURCE -1
 
-/** @brief Proximity probe submitted to func_8005B368. */
-typedef struct
+/** @brief Owner index shared by every actor that is not one of the two party players. */
+#define FIELD_SHARED_OWNER 2
+/** @brief Number of distinct owners (two players plus the shared one). */
+#define FIELD_OWNER_COUNT 3
+/** @brief Texture parts reserved per owner in g_field_mesh_texture_parts. */
+#define FIELD_OWNER_TEXTURE_PARTS 9
+/** @brief Most meshes an actor resource can hold. */
+#define FIELD_ACTOR_MAX_MESHES 3
+
+/** @brief SVECTORs stored per face: three vertices, the normal and the offset. */
+#define FIELD_MESH_VECTORS_PER_FACE 5
+/** @brief Bytes of one packed mesh face. */
+#define FIELD_MESH_FACE_SIZE 16
+
+/** @brief Width in bytes of an actor texture (64 VRAM columns of 16 bits). */
+#define FIELD_ACTOR_TEXTURE_ROW_BYTES 128
+/** @brief Pixel data of an actor TIM: 8bpp with a 256-entry CLUT, then the image block header. */
+#define FIELD_ACTOR_TIM_PIXELS (sizeof(Tim) + sizeof(TimBlock))
+/** @brief Header bytes in front of a TIM block's payload (signed, so size arithmetic stays signed). */
+#define FIELD_TIM_BLOCK_HEADER ((s32)sizeof(TimBlock))
+/** @brief Bytes of a 256-entry CLUT. */
+#define FIELD_CLUT_BYTES (CLUT_ENTRY_COUNT * 2)
+
+/** @brief Section sizes from this value on mean "use the shared sound table" instead of inline data. */
+#define FIELD_SOUND_SHARED_SIZE 0x1000
+/** @brief Number of sound sections is stored in the top two bits of the part count byte. */
+#define FIELD_SOUND_COUNT_SHIFT 6
+/** @brief Part count bits of the part count byte. */
+#define FIELD_PART_COUNT_MASK 0x3F
+
+/** @brief Probe footprint used for marker contact (cells). */
+#define FIELD_CONTACT_PROBE_WIDTH 8
+#define FIELD_CONTACT_PROBE_HEIGHT 16
+#define FIELD_CONTACT_PROBE_DEPTH 5
+/** @brief Interaction id flag: run the id as a field script instead of a talk message. */
+#define FIELD_INTERACTION_SCRIPT 0x8000
+
+/** @brief Footprint query handed to func_8005B368 (same layout as in field_collision.c). */
+struct FieldCollisionQuery
 {
-    s32 x;      /**< World X of the probe origin. */
-    s32 y;      /**< World Y of the probe origin. */
-    s32 z;      /**< World Z of the probe origin. */
-    u16 unkC;   /**< TODO: meaning unknown (always 8 here). */
-    s16 unkE;   /**< TODO: meaning unknown (always 0x10 here). */
-    u16 unk10;  /**< TODO: meaning unknown (always 5 here). */
-} FieldSceneProbe;
+    s32 x;
+    s32 y;
+    s32 z;
+    u16 width;
+    s16 height_tolerance;
+    u16 depth;
+};
 
-/** @brief Byte-aligned 18-byte section copied from the packed resource stream. */
+/*
+ * Byte-aligned images of the animation sections. The resource stream is not
+ * aligned, so these are copied as unaligned structs.
+ */
+
+/** @brief First 18 bytes of an animation definition (up to unknown_0x12). */
 typedef struct
 {
     s8 bytes[18];
-} Copy18;
+} FieldAnimationBaseBytes;
 
-/** @brief Byte-aligned 10-byte section copied from the packed resource stream. */
+/** @brief Extension fields of an animation definition (unknown_0x12 onward). */
 typedef struct
 {
     s8 bytes[10];
-} Copy10;
+} FieldAnimationExtensionBytes;
 
-/** @brief Byte-aligned 28-byte section copied from the packed resource stream. */
+/** @brief A whole alternate animation definition. */
 typedef struct
 {
-    s8 bytes[28];
-} Copy28;
+    s8 bytes[sizeof(FieldActorAnimationDef)];
+} FieldAnimationDefBytes;
 
-/** @brief Byte-aligned 6-byte section copied from the packed resource stream. */
+/** @brief Three-halfword tail after the alternate definitions (FieldActorState::unknown_0x240). */
 typedef struct
 {
     s8 bytes[6];
-} Copy6;
+} FieldAnimationTailBytes;
 
-/** @brief Six-byte link records unpacked into the actor (offset 0x4). */
-#define FIELD_ACTOR_RECORDS(actor) (*(u8 **)&(actor)->pad4[0])
-/** @brief Halfword record index table unpacked into the actor (offset 0x8). */
-#define FIELD_ACTOR_RECORD_INDICES(actor) (*(u8 **)&(actor)->pad4[4])
-/** @brief Optional resource sections @p i (0 or 1) of the actor (offset 0x1C). */
-#define FIELD_ACTOR_OPTIONAL_DATA(actor, i) (((u8 **)(actor)->pad1C)[i])
-/** @brief Section flags halfword at offset 0xC of an animation header. */
-#define FIELD_ANIMATION_FLAGS(anim) (*(u16 *)&(anim)->pad0[0xC])
+/** @brief Heap block holding an actor's animation definitions with every optional section. */
+#define FIELD_ANIMATION_BLOCK_SIZE \
+    (sizeof(FieldAnimationBaseBytes) + sizeof(FieldAnimationExtensionBytes) + 2 * sizeof(FieldAnimationDefBytes) + sizeof(FieldAnimationTailBytes))
 
-/** @brief Six-byte link record in the actor's record table. */
+/** @brief Six-byte link record in FieldActorState::link_records. */
 typedef union
 {
     /** @brief Byte and halfword fields of the record. */
@@ -80,54 +119,84 @@ typedef union
 } FieldActorLinkRecord;
 
 /**
- * @brief Link record at byte offset @p off of the actor's record table.
+ * @brief Link record at byte offset @p offset of @p actor's link records.
  * @note The sum is written offset-first so the addu emits the offset operand first.
  */
-#define FIELD_ACTOR_LINK_RECORD(a, off) ((FieldActorLinkRecord *)((off) + (u32)FIELD_ACTOR_RECORDS(a)))
+#define FIELD_ACTOR_LINK_RECORD(actor, offset) ((FieldActorLinkRecord*)((offset) + (u32)(actor)->link_records))
 
-extern s16 D_800FDF82;
+/**
+ * @brief memcpy with a signed byte count.
+ * @note sdk/memory.h leaves memcpy unprototyped.
+ * @param dst Destination buffer.
+ * @param src Source buffer.
+ * @param size Byte count.
+ * @return @p dst.
+ */
+void* memcpy(void* dst, const void* src, s32 size);
+
+/** @brief Command of the player actor (g_field_actors[0].command); 0 while idle. */
+extern s16 g_field_player_command;
 extern s32 g_field_scene_contact_latched;
 extern s32 g_field_scene_request_pending;
-extern u8 *D_8010D034;
-extern u8 *D_8010D038;
-extern s32 D_8010D030;
-extern s32 D_8010D040[];
-extern s32 D_8010D080;
-extern FieldMeshTexturePart D_80105798[3][9];
-extern u8 D_8011BF00[];
-extern s16 g_field_texture_slot_flags[];
+extern u8* D_8010D034;
+extern u8* g_field_cd_buffer;
+extern s32 g_field_resource_queue_count;
+extern s32 g_field_resource_queue[FIELD_RESOURCE_QUEUE_CAPACITY];
+extern s32 g_field_loading_resource;
+extern FieldMeshTexturePart g_field_mesh_texture_parts[FIELD_OWNER_COUNT][FIELD_OWNER_TEXTURE_PARTS];
+extern u8 g_field_sound_tables[];
+extern s16 g_field_texture_slot_flags[FIELD_OWNER_COUNT];
 
 /* Local: field_contact_geometry.c calls it with a third argument, so it stays out of field_calls.h. */
 s32 func_800B22F0(s32 actor_id, s32 script);
-void *func_8009CA54(u8 *pool, s32 size, s32 tag);
-void func_8009AE38(u8 *resource, s32 slot);
+void* func_8009CA54(u8* pool, s32 size, s32 tag);
+void func_8009CB64(u8* pool, s32 tag);
+
+static s32 field_enqueue_resource_read(s32 resource_id);
+static void field_upload_actor_texture(u8* tim, s32 owner);
 
 /**
- * @brief Probe for a nearby scene actor and raise a pending scene request.
- * @param position World-space position used as the probe origin.
+ * @brief Heap tag and table index of an owner.
+ * @param owner Owner object index.
+ * @return @p owner, with every owner past FIELD_SHARED_OWNER folded onto it.
  */
-void func_8009A2A4(Vec3i *position)
+static inline s32 field_owner_tag(s32 owner)
 {
-    FieldSceneProbe probe;
-    s32 hit;
+    if (owner > FIELD_SHARED_OWNER)
+    {
+        owner = FIELD_SHARED_OWNER;
+    }
+    return owner;
+}
 
-    if (D_800FDF82 == 0)
+/**
+ * @brief Start the interaction of a marker the player walks into.
+ * @param position Player position to probe around.
+ * @note The interaction starts once per contact; the latch clears when the
+ *       player leaves the marker or a scene request is pending.
+ */
+void field_check_marker_contact(Vec3i* position)
+{
+    struct FieldCollisionQuery probe;
+    s32 label;
+
+    if (g_field_player_command == 0)
     {
         probe.x = position->x;
         probe.y = position->y;
         probe.z = position->z;
-        probe.unkC = 8;
-        probe.unkE = 0x10;
-        probe.unk10 = 5;
+        probe.width = FIELD_CONTACT_PROBE_WIDTH;
+        probe.height_tolerance = FIELD_CONTACT_PROBE_HEIGHT;
+        probe.depth = FIELD_CONTACT_PROBE_DEPTH;
         /* Called as returning int: the original uses the s16 result without extending it. */
-        hit = ((s32 (*)(struct FieldCollisionQuery*))func_8005B368)((struct FieldCollisionQuery*)&probe);
-        if (hit != -1)
+        label = ((s32(*)(struct FieldCollisionQuery*))func_8005B368)(&probe);
+        if (label != -1)
         {
             if (g_field_scene_request_pending == 0)
             {
                 if (g_field_scene_contact_latched == 0)
                 {
-                    func_800B22F0(0, hit | 0x8000);
+                    func_800B22F0(0, label | FIELD_INTERACTION_SCRIPT);
                 }
                 g_field_scene_contact_latched = 1;
                 return;
@@ -140,115 +209,110 @@ void func_8009A2A4(Vec3i *position)
 }
 
 /**
- * @brief Enqueue the default resource request via func_8009A3A0.
- * @note The call is unprototyped and passes whatever is left in $a0.
+ * @brief Queue the read of an actor resource.
+ * @param resource_id CD resource index to read.
+ * @return 0 when queued, 1 when the queue is full.
  */
-void func_8009A364(void)
+s32 field_request_resource_read(s32 resource_id)
 {
-    func_8009A3A0();
+    return field_enqueue_resource_read(resource_id);
 }
 
 /**
- * @brief Clear the pending resource queue count.
+ * @brief Drop every pending resource read.
  */
-void func_8009A384(void)
+void field_clear_resource_queue(void)
 {
-    D_8010D030 = 0;
+    g_field_resource_queue_count = 0;
 }
 
 /**
- * @brief Read the id of the resource read issued last.
- * @return Request id from D_8010D080, or -1 when the queue was empty.
+ * @brief Get the resource whose read was issued last.
+ * @return Resource id, or FIELD_NO_RESOURCE when the queue ran empty.
  */
-s32 func_8009A390(void)
+s32 field_get_loading_resource(void)
 {
-    return D_8010D080;
+    return g_field_loading_resource;
 }
 
 /**
- * @brief Append a request id to the pending resource queue.
- * @param request_id Request id to enqueue.
- * @return 0 when queued, 1 when the 16-entry queue is full.
+ * @brief Append a resource read to the pending queue.
+ * @param resource_id CD resource index to read.
+ * @return 0 when queued, 1 when the queue is full.
  */
-s32 func_8009A3A0(s32 request_id)
+static s32 field_enqueue_resource_read(s32 resource_id)
 {
     s32 count;
 
-    count = D_8010D030;
-    if (count < 0x10)
+    count = g_field_resource_queue_count;
+    if (count < FIELD_RESOURCE_QUEUE_CAPACITY)
     {
-        D_8010D040[count] = request_id;
-        D_8010D030 = count + 1;
+        g_field_resource_queue[count] = resource_id;
+        g_field_resource_queue_count = count + 1;
         return 0;
     }
     return 1;
 }
 
 /**
- * @brief Issue the next queued resource read and shift the queue down.
+ * @brief Issue the read at the head of the queue into g_field_cd_buffer.
+ * @note The head is removed only when the CD queue accepted the read.
  */
-void func_8009A3E8(void)
+void field_issue_next_resource_read(void)
 {
     s32 count;
     s32 i;
 
-    if (D_8010D030 == 0)
+    if (g_field_resource_queue_count == 0)
     {
-        D_8010D080 = -1;
+        g_field_loading_resource = FIELD_NO_RESOURCE;
         return;
     }
 
-    if (cdrom_queue_read((u16)D_8010D040[0], D_8010D038) >= 0)
+    if (cdrom_queue_read((u16)g_field_resource_queue[0], g_field_cd_buffer) >= 0)
     {
         i = 0;
-        D_8010D080 = D_8010D040[0];
-        count = D_8010D030 - 1;
-        if (count > 0)
+        g_field_loading_resource = g_field_resource_queue[0];
+        count = g_field_resource_queue_count - 1;
+        for (; i < count; i++)
         {
-            do
-            {
-                D_8010D040[i] = D_8010D040[i + 1];
-                i++;
-            } while (i < count);
+            g_field_resource_queue[i] = g_field_resource_queue[i + 1];
         }
-        D_8010D030 -= 1;
+        g_field_resource_queue_count -= 1;
     }
 }
 
 /**
- * @brief Kick off unpacking of the head resource buffer for the given group.
- * @param group Allocation group passed through to func_8009CB64.
- * @note func_8009CB64 is called unprototyped.
+ * @brief Free every actor heap block of an owner.
+ * @param tag Owner tag of the blocks to free.
  */
-void func_8009A4A0(s32 group)
+void field_free_owner_resources(s32 tag)
 {
-    func_8009CB64(D_8010D034, group);
+    func_8009CB64(D_8010D034, tag);
 }
 
 /**
- * @brief Unpack a loaded actor resource into allocated runtime sections.
- * @param group Allocation group; values at least three use allocation tag two.
- * @param actor Actor slot receiving resource pointers, counts, and header state.
- * @note Resource offsets, alignment, optional sections, and record remapping follow the packed format.
+ * @brief Unpack the actor resource in g_field_cd_buffer into heap blocks of an actor.
+ * @param owner Owner object index; selects the heap tag, texture slot and texture part table.
+ * @param actor Actor receiving the unpacked tracks, meshes, records, parts and animations.
  */
-void func_8009A4CC(s32 group, FieldActorState *actor)
+void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
 {
-    s32 part_count;
-    u8 *resource_base;
+    s32 mesh_count;
+    u8* resource;
     s32 texture_total;
-    s32 direct_group;
-    /** @brief Six-byte remapping record with word-sized bitfield writes. */
+    /** @brief Link record rewritten to the current layout. */
     union
     {
         u32 word;
-        /** @brief Low-byte remapping coordinate and flag. */
+        /** @brief Low byte: record x and flag. */
         struct
         {
             u32 x : 7;
             u32 flag : 1;
             u32 unused : 24;
         } bits;
-        /** @brief Byte and halfword view of the remapped record. */
+        /** @brief Byte and halfword view of the record. */
         struct
         {
             u8 b0;
@@ -258,235 +322,213 @@ void func_8009A4CC(s32 group, FieldActorState *actor)
         } h;
     } packed;
     s32 allocation_size;
-    s32 has_payload;
-    s32 payload_size;
+    s32 has_tracks;
+    s32 track_size;
     s32 record_bytes;
     s32 index_bytes;
-    s32 entry_bytes;
-    s32 optional_bytes;
-    s32 payload_tag;
-    s32 header_tag;
-    s32 optional_tag;
-    s32 part_tag;
+    s32 part_bytes;
+    s32 sound_bytes;
+    s32 track_tag;
+    s32 animation_tag;
+    s32 mesh_tag;
     s32 vector_tag;
-    s32 byte_tag;
-    s32 texture_tag;
+    s32 face_tag;
+    s32 pixel_tag;
     s32 record_tag;
     s32 index_tag;
-    s32 entry_tag;
+    s32 part_tag;
     s32 row;
     s32 texture_height;
-    s32 item_index;
+    s32 item;
     s32 record_offset;
-    s32 optional_count;
-    s32 has_optional;
-    u8 *cursor;
-    s32 part_index;
-    s32 table_group;
+    s32 sound_count;
+    u8* cursor;
+    s32 i;
+    s32 texture_owner;
     s32 column;
-    u8 *indices;
-    u8 *entries;
-    FieldActorAnimationDef *header;
-    u8 *records;
+    u8* indices;
+    u8* parts;
+    FieldActorAnimationDef* animation;
+    u8* records;
     /** @brief Output cursor shared by the vector tables and the face bytes. */
     union
     {
-        u16 *half;
-        u8 *byte;
+        u16* half;
+        u8* byte;
     } output;
-    u16 *pixel_input;
-    u8 *row_input;
-    u16 *pixel_output;
-    u8 *header_cursor;
-    FieldMeshResource *part;
-    FieldMeshResource *part_fields;
-    s32 payload_offset;
+    u16* pixel_input;
+    u8* row_input;
+    u16* pixel_output;
+    u8* block;
+    FieldMeshResource* mesh;
+    FieldMeshResource* mesh_fields;
+    s32 track_offset;
     u16 component;
     u16 pixel;
-    s32 byte_index;
-    FieldMeshTexturePart *texture_record;
+    s32 j;
+    FieldMeshTexturePart* texture;
     s32 record_count;
-    u8 byte_value;
+    s32 fallback_value;
+    u8 face_byte;
     u8 texture_count;
-    u8 *payload_source;
-    u8 **header_pool;
-    u8 **optional_pool;
-    u8 *shared_base;
+    u8* track_source;
+    u8** heap;
+    u8** sound_heap;
+    u8* sound_tables;
 
-    header_cursor = D_8010D038;
-    cursor = header_cursor;
-    resource_base = cursor;
-    if (*(u16 *)cursor != 0)
+    block = g_field_cd_buffer;
+    cursor = block;
+    resource = cursor;
+    if (*(u16*)cursor != 0)
     {
-        func_8009AE38(cursor + *(u16 *)cursor, group);
+        field_upload_actor_texture(cursor + *(u16*)cursor, owner);
     }
-    cursor = header_cursor + 2;
-    has_payload = *(u16 *)cursor;
-    cursor = (u8 *)((u32)(cursor + 5) & ~3);
-    if (has_payload != 0)
+    cursor = block + 2;
+    has_tracks = *(u16*)cursor;
+    cursor = (u8*)((u32)(cursor + 5) & ~3);
+    if (has_tracks != 0)
     {
-        /* The block boundary keeps the group reload after this halfword load. */
+        /* The block boundary keeps the owner reload after this halfword load. */
         do
         {
-            payload_offset = *(u16 *)cursor;
+            track_offset = *(u16*)cursor;
         } while (0);
-        payload_tag = group;
-        payload_source = header_cursor + payload_offset;
-        payload_size = *(u16 *)(cursor + 2) - payload_offset;
-        if (payload_tag >= 3)
+        track_tag = owner;
+        track_source = block + track_offset;
+        track_size = *(u16*)(cursor + 2) - track_offset;
+        if (track_tag > FIELD_SHARED_OWNER)
         {
-            payload_tag = 2;
+            track_tag = FIELD_SHARED_OWNER;
         }
-        header_cursor = func_8009CA54(D_8010D034, payload_size, payload_tag);
+        block = func_8009CA54(D_8010D034, track_size, track_tag);
         cursor += 2;
-        memcpy(header_cursor, payload_source, payload_size);
-        actor->track_data = header_cursor;
+        memcpy(block, track_source, track_size);
+        actor->track_data = block;
     }
     cursor += 2;
-    part_count = *(u16 *)cursor;
+    mesh_count = *(u16*)cursor;
     cursor += 2;
-    if (part_count != 0)
+    if (mesh_count != 0)
     {
-        part_tag = group;
-        if (part_tag >= 3)
-        {
-            part_tag = 2;
-        }
-        part = func_8009CA54(D_8010D034, 0x48, part_tag);
-        actor->mesh_data = (u8 *)part;
+        mesh_tag = field_owner_tag(owner);
+        mesh = func_8009CA54(D_8010D034, FIELD_ACTOR_MAX_MESHES * sizeof(FieldMeshResource), mesh_tag);
+        actor->mesh_data = (u8*)mesh;
     }
-    part_index = 0;
+    i = 0;
     texture_total = 0;
-    if (part_count != 0)
+    if (mesh_count != 0)
     {
-        part_fields = part; /* A second cursor over the same mesh record. */
-        direct_group = group < 3;
+        mesh_fields = mesh; /* A second cursor over the same mesh record. */
         do
         {
-            header_cursor = resource_base + *(u16 *)cursor;
-            part->face_count = *(u16 *)header_cursor;
-            header_cursor += 4;
-            part_fields->texture_part_count = *header_cursor;
-            header_cursor += 4;
-            allocation_size = part->face_count * 0x28;
-            vector_tag = group;
-            if (direct_group == 0)
-            {
-                vector_tag = 2;
-            }
-            item_index = 0;
+            block = resource + *(u16*)cursor;
+            mesh->face_count = *(u16*)block;
+            block += 4;
+            mesh_fields->texture_part_count = *block;
+            block += 4;
+            allocation_size = mesh->face_count * (FIELD_MESH_VECTORS_PER_FACE * sizeof(SVECTOR));
+            vector_tag = field_owner_tag(owner);
+            item = 0;
             output.half = func_8009CA54(D_8010D034, allocation_size, vector_tag);
-            part_fields->vertices = (SVECTOR *)output.half;
-            if ((part->face_count * 3) != 0)
+            mesh_fields->vertices = (SVECTOR*)output.half;
+            if ((mesh->face_count * 3) != 0)
             {
                 do
                 {
-                    component = *(u16 *)header_cursor;
-                    header_cursor += 2;
-                    item_index++;
+                    component = *(u16*)block;
+                    block += 2;
+                    item++;
                     *output.half++ = component;
-                    *output.half++ = *(u16 *)header_cursor;
-                    header_cursor += 2;
-                    *output.half = *(u16 *)header_cursor;
-                    header_cursor += 2;
+                    *output.half++ = *(u16*)block;
+                    block += 2;
+                    *output.half = *(u16*)block;
+                    block += 2;
                     output.half += 2;
-                } while (item_index < (part->face_count * 3));
+                } while (item < (mesh->face_count * 3));
             }
-            part_fields->normals = (SVECTOR *)output.half;
-            item_index = 0;
-            if (part->face_count != 0)
+            mesh_fields->normals = (SVECTOR*)output.half;
+            item = 0;
+            if (mesh->face_count != 0)
             {
                 do
                 {
-                    component = *(u16 *)header_cursor;
-                    header_cursor += 2;
-                    item_index++;
+                    component = *(u16*)block;
+                    block += 2;
+                    item++;
                     *output.half++ = component;
-                    *output.half++ = *(u16 *)header_cursor;
-                    header_cursor += 2;
-                    *output.half = *(u16 *)header_cursor;
-                    header_cursor += 2;
+                    *output.half++ = *(u16*)block;
+                    block += 2;
+                    *output.half = *(u16*)block;
+                    block += 2;
                     output.half += 2;
-                } while (item_index < (s32)part->face_count);
+                } while (item < (s32)mesh->face_count);
             }
-            part_fields->offsets = (SVECTOR *)output.half;
-            item_index = 0;
-            if (part->face_count != 0)
+            mesh_fields->offsets = (SVECTOR*)output.half;
+            item = 0;
+            if (mesh->face_count != 0)
             {
                 do
                 {
-                    component = *(u16 *)header_cursor;
-                    header_cursor += 2;
-                    item_index++;
+                    component = *(u16*)block;
+                    block += 2;
+                    item++;
                     *output.half++ = component;
-                    *output.half++ = *(u16 *)header_cursor;
-                    header_cursor += 2;
-                    *output.half = *(u16 *)header_cursor;
-                    header_cursor += 2;
+                    *output.half++ = *(u16*)block;
+                    block += 2;
+                    *output.half = *(u16*)block;
+                    block += 2;
                     output.half += 2;
-                } while (item_index < (s32)part->face_count);
+                } while (item < (s32)mesh->face_count);
             }
-            allocation_size = part->face_count * 0x10;
-            byte_tag = group;
-            if (direct_group == 0)
-            {
-                byte_tag = 2;
-            }
-            item_index = 0;
-            output.byte = func_8009CA54(D_8010D034, allocation_size, byte_tag);
-            part_fields->faces = output.byte;
-            if (part->face_count != 0)
+            allocation_size = mesh->face_count * FIELD_MESH_FACE_SIZE;
+            face_tag = field_owner_tag(owner);
+            item = 0;
+            output.byte = func_8009CA54(D_8010D034, allocation_size, face_tag);
+            mesh_fields->faces = output.byte;
+            if (mesh->face_count != 0)
             {
                 do
                 {
-                    byte_index = 0;
+                    j = 0;
                     do
                     {
-                        byte_index += 1;
-                        byte_value = *header_cursor;
-                        header_cursor += 1;
-                        *output.byte = byte_value;
+                        j += 1;
+                        face_byte = *block;
+                        block += 1;
+                        *output.byte = face_byte;
                         output.byte += 1;
-                    } while ((u32)byte_index < 0x10U);
-                    item_index += 1;
-                } while (item_index < (s32)part->face_count);
+                    } while ((u32)j < FIELD_MESH_FACE_SIZE);
+                    item += 1;
+                } while (item < (s32)mesh->face_count);
             }
-            table_group = group;
-            if (direct_group == 0)
-            {
-                table_group = 2;
-            }
-            texture_record = part_fields->texture_parts = &D_80105798[table_group][texture_total];
-            byte_index = 0;
-            if (part_fields->texture_part_count != 0)
+            texture_owner = field_owner_tag(owner);
+            texture = mesh_fields->texture_parts = &g_field_mesh_texture_parts[texture_owner][texture_total];
+            j = 0;
+            if (mesh_fields->texture_part_count != 0)
             {
                 do
                 {
-                    texture_record->x = *header_cursor++;
-                    texture_record->y = *header_cursor++;
-                    texture_record->width = *header_cursor++;
-                    texture_record->height = *header_cursor++;
-                    allocation_size = texture_record->width * texture_record->height * 2;
-                    texture_tag = group;
-                    if (direct_group == 0)
-                    {
-                        texture_tag = 2;
-                    }
-                    pixel_output = func_8009CA54(D_8010D034, allocation_size, texture_tag);
+                    texture->x = *block++;
+                    texture->y = *block++;
+                    texture->width = *block++;
+                    texture->height = *block++;
+                    allocation_size = texture->width * texture->height * 2;
+                    pixel_tag = field_owner_tag(owner);
+                    pixel_output = func_8009CA54(D_8010D034, allocation_size, pixel_tag);
                     row = 0;
-                    texture_record->pixels = pixel_output;
-                    texture_height = texture_record->height;
-                    row_input = resource_base + *(u16 *)resource_base + 0x220;
-                    row_input = row_input + texture_record->x * 2 + (texture_record->y << 7);
+                    texture->pixels = pixel_output;
+                    texture_height = texture->height;
+                    row_input = resource + *(u16*)resource + FIELD_ACTOR_TIM_PIXELS;
+                    row_input = row_input + texture->x * 2 + texture->y * FIELD_ACTOR_TEXTURE_ROW_BYTES;
                     do
                     {
                         if (texture_height != 0)
                         {
                             do
                             {
-                                pixel_input = (u16 *)row_input;
+                                pixel_input = (u16*)row_input;
                                 column = 0;
-                                if (texture_record->width != 0)
+                                if (texture->width != 0)
                                 {
                                     do
                                     {
@@ -495,92 +537,77 @@ void func_8009A4CC(s32 group, FieldActorState *actor)
                                         pixel_input++;
                                         *pixel_output = pixel;
                                         pixel_output++;
-                                    } while (column < (s32)texture_record->width);
+                                    } while (column < (s32)texture->width);
                                 }
                                 row += 1;
-                                row_input += 0x80;
-                            } while (row < (s32)texture_record->height);
+                                row_input += FIELD_ACTOR_TEXTURE_ROW_BYTES;
+                            } while (row < (s32)texture->height);
                         }
-                        byte_index += 1;
-                            texture_record++;
-                    } while (0); /* Its loop note sets the s0/s1 allocation. */
-                } while (byte_index < (s32)part_fields->texture_part_count);
+                        j += 1;
+                        texture++;
+                    } while (0); /* Its loop depth sets the s0/s1 allocation. */
+                } while (j < (s32)mesh_fields->texture_part_count);
             }
-            part_index += 1;
+            i += 1;
             cursor += 2;
-            texture_count = part_fields->texture_part_count;
+            texture_count = mesh_fields->texture_part_count;
             texture_total += texture_count;
-            part_fields++;
-            part++;
-        } while (part_index < part_count);
+            mesh_fields++;
+            mesh++;
+        } while (i < mesh_count);
     }
-    header_pool = &D_8010D034;
-    part_index = *(u16 *)cursor;
+    heap = &D_8010D034;
+    fallback_value = *(u16*)cursor; /* unknown_0x12 unless the extension overrides it */
     cursor += 2;
     record_count = *cursor++;
-    record_tag = group;
-    record_bytes = record_count * 6;
-    if (record_tag >= 3)
-    {
-        record_tag = 2;
-    }
-    records = func_8009CA54(*header_pool, record_bytes, record_tag);
-    FIELD_ACTOR_RECORDS(actor) = records;
+    record_bytes = record_count * sizeof(FieldActorLinkRecord);
+    record_tag = field_owner_tag(owner);
+    records = func_8009CA54(*heap, record_bytes, record_tag);
+    actor->link_records = records;
     memcpy(records, cursor, record_bytes);
     cursor += record_bytes;
-    byte_index = *cursor++;
-    index_bytes = byte_index * 2;
-    index_tag = group;
-    if (group >= 3)
-    {
-        index_tag = 2;
-    }
-    indices = func_8009CA54(*header_pool, index_bytes, index_tag);
-    FIELD_ACTOR_RECORD_INDICES(actor) = indices;
+    j = *cursor++;
+    index_bytes = j * sizeof(u16);
+    index_tag = field_owner_tag(owner);
+    indices = func_8009CA54(*heap, index_bytes, index_tag);
+    actor->link_record_indices = indices;
     memcpy(indices, cursor, index_bytes);
     cursor += index_bytes;
-    byte_index = *cursor;
-    optional_count = byte_index >> 6;
-    if (optional_count >= 3)
+    j = *cursor;
+    sound_count = j >> FIELD_SOUND_COUNT_SHIFT;
+    if (sound_count >= 3)
     {
-        optional_count = 0;
+        sound_count = 0;
     }
-    byte_index = byte_index & 0x3F;
+    j = j & FIELD_PART_COUNT_MASK;
     cursor++;
-    actor->part_count = byte_index;
-    entry_bytes = byte_index * 0x48;
-    entry_tag = group;
-    if (group >= 3)
-    {
-        entry_tag = 2;
-    }
-    entries = func_8009CA54(*header_pool, entry_bytes, entry_tag);
-    actor->parts = (FieldActorPartDef *)entries;
-    memcpy(entries, cursor, entry_bytes);
-    cursor += entry_bytes;
+    actor->part_count = j;
+    part_bytes = j * sizeof(FieldActorPartDef);
+    part_tag = field_owner_tag(owner);
+    parts = func_8009CA54(*heap, part_bytes, part_tag);
+    actor->parts = (FieldActorPartDef*)parts;
+    memcpy(parts, cursor, part_bytes);
+    cursor += part_bytes;
     actor->animation_index = 0;
-    header_tag = group;
-    if (group >= 3)
+    animation_tag = field_owner_tag(owner);
+    animation = func_8009CA54(*heap, FIELD_ANIMATION_BLOCK_SIZE, animation_tag);
+    actor->animation = animation;
+    animation->unknown_0x12 = fallback_value;
+    block = (u8*)actor->animation;
+    actor->animations = (FieldActorAnimationDef*)block;
+    *(FieldAnimationBaseBytes*)block = *(FieldAnimationBaseBytes*)cursor;
+    block += sizeof(FieldAnimationBaseBytes);
+    cursor += sizeof(FieldAnimationBaseBytes);
+    if (actor->animation->flags & FIELD_ANIMATION_HAS_EXTENSION)
     {
-        header_tag = 2;
+        *(FieldAnimationExtensionBytes*)block = *(FieldAnimationExtensionBytes*)cursor;
+        block += sizeof(FieldAnimationExtensionBytes);
+        cursor += sizeof(FieldAnimationExtensionBytes);
     }
-    header = func_8009CA54(*header_pool, 0x5A, header_tag);
-    actor->animation = header;
-    header->unknown_0x12 = part_index;
-    header_cursor = (u8 *)actor->animation;
-    actor->animations = (FieldActorAnimationDef *)header_cursor;
-    *(Copy18 *)header_cursor = *(Copy18 *)cursor;
-    header_cursor += 0x12;
-    cursor += 0x12;
-    if (FIELD_ANIMATION_FLAGS(actor->animation) & 0x8000)
-    {
-        *(Copy10 *)header_cursor = *(Copy10 *)cursor;
-        header_cursor += 0xA;
-        cursor += 0xA;
-    }
+    /* Older resources keep the record flag in bit 7 of the second byte; move it to the first. */
     if ((actor->parts->orientation_flags.bytes.low >> 4) < 2)
     {
-        part_index = 0;
+        i = 0;
         if (record_count != 0)
         {
             record_offset = 0;
@@ -591,170 +618,104 @@ void func_8009A4CC(s32 group, FieldActorState *actor)
                 packed.h.b1 = (FIELD_ACTOR_LINK_RECORD(actor, record_offset)->head >> 8) & 0x7F;
                 packed.h.h4 = FIELD_ACTOR_LINK_RECORD(actor, record_offset)->bytes.h4;
                 packed.h.h2 = FIELD_ACTOR_LINK_RECORD(actor, record_offset)->bytes.h2;
-                bcopy((u8 *)&packed, FIELD_ACTOR_RECORDS(actor) + record_offset, 6);
-                part_index += 1;
-                record_offset += 6;
-            } while (part_index < (s32)record_count);
+                bcopy((u8*)&packed, actor->link_records + record_offset, sizeof(FieldActorLinkRecord));
+                i += 1;
+                record_offset += sizeof(FieldActorLinkRecord);
+            } while (i < (s32)record_count);
         }
     }
     actor->unknown_0x222 = actor->animation->unknown_0x12;
-    if (FIELD_ANIMATION_FLAGS(actor->animations) & 0x800)
+    if (actor->animations->flags & FIELD_ANIMATION_HAS_ALTERNATES)
     {
-        *(Copy28 *)header_cursor = *(Copy28 *)cursor;
-        header_cursor += 0x1C;
-        cursor += 0x1C;
-        *(Copy28 *)header_cursor = *(Copy28 *)cursor;
-        cursor += 0x1C;
-        header_cursor = (u8 *)((u32)(header_cursor + 0x1D) & ~1);
-        actor->unknown_0x240 = (u16 *)header_cursor;
+        *(FieldAnimationDefBytes*)block = *(FieldAnimationDefBytes*)cursor;
+        block += sizeof(FieldAnimationDefBytes);
+        cursor += sizeof(FieldAnimationDefBytes);
+        *(FieldAnimationDefBytes*)block = *(FieldAnimationDefBytes*)cursor;
+        cursor += sizeof(FieldAnimationDefBytes);
+        block = (u8*)((u32)(block + sizeof(FieldAnimationDefBytes) + 1) & ~1);
+        actor->unknown_0x240 = (u16*)block;
         actor->animation_index = 0;
         actor->sequence_active = 0;
-        *(Copy6 *)header_cursor = *(Copy6 *)cursor;
+        *(FieldAnimationTailBytes*)block = *(FieldAnimationTailBytes*)cursor;
     }
-    if (optional_count != 0)
+    if (sound_count != 0)
     {
-        part_index = 0;
-        has_optional = optional_count != 0;
-        if (has_optional)
+        for (i = 0; i < sound_count; i++)
         {
-            do
+            cursor = (u8*)((u32)(cursor + 3) & ~3);
+            sound_heap = &D_8010D034;
+            sound_tables = g_field_sound_tables;
+            sound_bytes = *(s32*)cursor;
+            if (sound_bytes < FIELD_SOUND_SHARED_SIZE)
             {
-                cursor = (u8 *)((u32)(cursor + 3) & ~3);
-                optional_pool = &D_8010D034;
-                shared_base = D_8011BF00;
-                optional_bytes = *(s32 *)cursor;
-                if (optional_bytes < 0x1000)
-                {
-                    optional_tag = group;
-                    if (optional_tag >= 3)
-                    {
-                        optional_tag = 2;
-                    }
-                    FIELD_ACTOR_OPTIONAL_DATA(actor, part_index) = func_8009CA54(*optional_pool, optional_bytes, optional_tag);
-                }
-                else
-                {
-                    FIELD_ACTOR_OPTIONAL_DATA(actor, part_index) = shared_base + *(s32 *)(shared_base + 4);
-                }
-                cursor += 4;
-                if (optional_bytes < 0x1000)
-                {
-                    memcpy(FIELD_ACTOR_OPTIONAL_DATA(actor, part_index), cursor, optional_bytes);
-                }
-                cursor += optional_bytes;
-                part_index += 1;
-            } while (part_index < optional_count);
+                actor->sound_data[i] = func_8009CA54(*sound_heap, sound_bytes, field_owner_tag(owner));
+            }
+            else
+            {
+                /* The first sound of shared table 0. */
+                actor->sound_data[i] = sound_tables + ((s32*)sound_tables)[1];
+            }
+            cursor += 4;
+            if (sound_bytes < FIELD_SOUND_SHARED_SIZE)
+            {
+                memcpy(actor->sound_data[i], cursor, sound_bytes);
+            }
+            cursor += sound_bytes;
         }
     }
 }
 
 /**
- * @brief Upload a field texture and its optional palette to the selected slot.
- * @param resource Pointer to the image resource header and payload blocks.
- * @param slot Upload slot; values of three or more share the third flags entry.
+ * @brief Upload an owner's actor TIM (and its CLUT) to the owner's VRAM slot.
+ * @param tim Actor TIM image: 8bpp, optionally with a 256-entry CLUT.
+ * @param owner Owner object index; owners from FIELD_SHARED_OWNER on share one slot.
+ * @note The CLUT is also kept in the owner's palette buffer for palette animation.
  */
-void func_8009AE38(u8 *resource, s32 slot)
+static void field_upload_actor_texture(u8* tim, s32 owner)
 {
-    s32 original_slot;
-    s32 flags_slot;
-    u8 *cursor;
-    s32 block_size;
-    s32 copy_size;
-    u8 *palette_dst;
-    u8 *palette_base;
+    u8* cursor;
+    s32 clut_block_size;
+    u8* clut_buffer;
     RECT rect;
     s32 width;
     s32 height;
 
-    /* The do/while(0) blocks and palette_base keep the CLUT arms from cross-jumping. */
-    original_slot = slot;
-    resource += 4;
-    cursor = resource;
-    if (original_slot >= 3)
+    tim += sizeof(u32); /* skip the TIM id word */
+    cursor = tim;
+    g_field_texture_slot_flags[field_owner_tag(owner)] = *cursor;
+    cursor += sizeof(u32);
+    if (g_field_texture_slot_flags[field_owner_tag(owner)] & TIM_FLAG_HAS_CLUT)
     {
-        slot = 2;
-    }
-    g_field_texture_slot_flags[slot] = *cursor;
-    cursor += 4;
-    flags_slot = original_slot;
-    if (original_slot >= 3)
-    {
-        flags_slot = 2;
-    }
-    if (g_field_texture_slot_flags[flags_slot] & 8)
-    {
-        block_size = *(s32 *)cursor;
-        cursor += 0xC;
-        if (original_slot < 2)
+        clut_block_size = ((TimBlock*)cursor)->bnum;
+        cursor += FIELD_TIM_BLOCK_HEADER;
+        if (owner < FIELD_SHARED_OWNER)
         {
-            copy_size = 0x200;
-            do
-            {
-                rect.y = (original_slot * 2) + 0x1EE;
-                rect.w = 0x100;
-                rect.h = 1;
-            } while (0);
-            palette_base = g_field_actor_clut_buffers;
-            palette_dst = palette_base + (original_slot << 10);
-
-            slot = block_size - 0xC;
-            rect.x = 0;
-            if (slot < 0x201)
-            {
-                copy_size = slot;
-            }
+            setRECT(&rect, 0, FIELD_ACTOR_CLUT_VRAM_Y + owner * 2, CLUT_ENTRY_COUNT, 1);
+            clut_buffer = g_field_actor_clut_buffers;
+            memcpy(clut_buffer + owner * FIELD_ACTOR_CLUT_BUFFER_SIZE, cursor,
+                   clut_block_size - FIELD_TIM_BLOCK_HEADER > FIELD_CLUT_BYTES ? FIELD_CLUT_BYTES : clut_block_size - FIELD_TIM_BLOCK_HEADER);
         }
         else
         {
-            copy_size = 0x200;
-            do
-            {
-                rect.y = 0x1F2;
-                rect.w = 0x100;
-                rect.h = 1;
-            } while (0);
-            palette_dst = g_field_shared_clut_buffer;
-            rect.x = 0;
-            if (block_size - 0xC < 0x201)
-            {
-                copy_size = block_size - 0xC;
-            }
+            setRECT(&rect, 0, FIELD_SHARED_CLUT_VRAM_Y, CLUT_ENTRY_COUNT, 1);
+            memcpy(g_field_shared_clut_buffer, cursor,
+                   clut_block_size - FIELD_TIM_BLOCK_HEADER > FIELD_CLUT_BYTES ? FIELD_CLUT_BYTES : clut_block_size - FIELD_TIM_BLOCK_HEADER);
         }
-        do
-        {
-            do
-            {
-                do
-                {
-                    memcpy(palette_dst, cursor, copy_size);
-                } while (0);
-            } while (0);
-        } while (0);
-        LoadImage(&rect, (u_long *)cursor);
-        cursor = cursor + block_size - 0xC;
+        LoadImage(&rect, (u_long*)cursor);
+        cursor = cursor + clut_block_size - FIELD_TIM_BLOCK_HEADER;
     }
-    cursor += 8;
-    do
-    {
-        width = *(u16 *)cursor;
-    } while (0);
+    cursor += FIELD_TIM_BLOCK_HEADER - sizeof(TimDimensions);
+    width = *(u16*)cursor;
     cursor += 2;
-    height = *(u16 *)cursor;
+    height = *(u16*)cursor;
     cursor += 2;
-    if (original_slot < 2)
+    if (owner < FIELD_SHARED_OWNER)
     {
-        rect.x = (original_slot << 6) + 0x340;
-        rect.y = 0x100;
+        setRECT(&rect, FIELD_ACTOR_TEXTURE_VRAM_X + owner * FIELD_ACTOR_TEXTURE_VRAM_WIDTH, FIELD_ACTOR_TEXTURE_VRAM_Y, width, height);
     }
     else
     {
-        rect.x = 0x140;
-        rect.y = 0;
+        setRECT(&rect, FIELD_SHARED_TEXTURE_VRAM_X, FIELD_SHARED_TEXTURE_VRAM_Y, width, height);
     }
-    do
-    {
-        rect.w = width;
-        rect.h = height;
-    } while (0);
-    LoadImage(&rect, (u_long *)cursor);
+    LoadImage(&rect, (u_long*)cursor);
 }

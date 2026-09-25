@@ -5,7 +5,7 @@
 
 extern void *func_800C1E40(s32);
 extern s32 rand(void);
-extern FieldGameState *D_80122B74;
+extern FieldGameState *g_field_game_state;
 
 /** @brief Resource 0xB: random effect picks per selector row, then the effect codes. */
 typedef struct
@@ -74,34 +74,34 @@ void func_800C0260(s32 group_index, s32 slot_index)
     s32 selection;
 
     table = func_800C1E40(0xB);
-    if (((D_80122B74->menu_slots[group_index].flags >> 0xC) & 0xF) == 1)
+    if (((g_field_game_state->menu_slots[group_index].flags >> 0xC) & 0xF) == 1)
     {
         index = 0;
         random_value = rand();
-        effect_index = table->picks[D_80122B74->menu_slots[group_index].selectors[0] - 0x58][random_value & 0xF];
+        effect_index = table->picks[g_field_game_state->menu_slots[group_index].selectors[0] - 0x58][random_value & 0xF];
         random_value = rand();
-        selection = table->picks[D_80122B74->menu_slots[group_index].selectors[0] - 0x58][random_value & 0xF];
+        selection = table->picks[g_field_game_state->menu_slots[group_index].selectors[0] - 0x58][random_value & 0xF];
         effect_index |= selection;
     }
     else
     {
         index = 1;
         random_value = rand();
-        effect_index = table->picks[D_80122B74->menu_slots[group_index].selectors[0] - 0x58][random_value & 0xF];
-        for (; index < (s32)((D_80122B74->menu_slots[group_index].flags >> 0xC) & 0xF); index++)
+        effect_index = table->picks[g_field_game_state->menu_slots[group_index].selectors[0] - 0x58][random_value & 0xF];
+        for (; index < (s32)((g_field_game_state->menu_slots[group_index].flags >> 0xC) & 0xF); index++)
         {
             random_value = rand();
-            selection = table->picks[D_80122B74->menu_slots[group_index].selectors[index] - 0x58][random_value & 0xF];
+            selection = table->picks[g_field_game_state->menu_slots[group_index].selectors[index] - 0x58][random_value & 0xF];
             effect_index |= selection;
         }
         index = 0;
     }
-    D_80122B74->menu_slots[group_index].slots[slot_index].entry.index = (table->codes[effect_index] & 0x3F) + 0x60;
-    D_80122B74->menu_slots[group_index].slots[slot_index].entry.word =
-        (D_80122B74->menu_slots[group_index].slots[slot_index].entry.word & ~0x300) | ((table->codes[effect_index] >> 6) << 8);
+    g_field_game_state->menu_slots[group_index].slots[slot_index].entry.index = (table->codes[effect_index] & 0x3F) + 0x60;
+    g_field_game_state->menu_slots[group_index].slots[slot_index].entry.word =
+        (g_field_game_state->menu_slots[group_index].slots[slot_index].entry.word & ~0x300) | ((table->codes[effect_index] >> 6) << 8);
     do
     {
-        D_80122B74->menu_slots[group_index].slots[slot_index].pad8[index] = 0;
+        g_field_game_state->menu_slots[group_index].slots[slot_index].pad8[index] = 0;
         index += 1;
     } while (index < 8);
 }
@@ -124,9 +124,9 @@ void func_800C0490(s32 group_index)
     slot_index = 0;
     do
     {
-        if (D_80122B74->menu_slots[group_index].slots[slot_index].entry.index != 0xFF)
+        if (g_field_game_state->menu_slots[group_index].slots[slot_index].entry.index != 0xFF)
         {
-            D_80122B74->menu_slots[group_index].slots[slot_index].handle = func_800C0560(group_index, slot_index, table);
+            g_field_game_state->menu_slots[group_index].slots[slot_index].handle = func_800C0560(group_index, slot_index, table);
         }
         slot_index += 1;
     } while (slot_index < 8);
@@ -145,7 +145,7 @@ s32 func_800C0560(s32 group_index, s32 slot_index, EffectThresholdTable *table)
     s32 flag;
     s32 i;
 
-    /* Byte view of D_80122B74: the loops index it with integer offset sums (typed menu_slots access: 86.52%). */
+    /* Byte view of g_field_game_state: the loops index it with integer offset sums (typed menu_slots access: 86.52%). */
     {
         s32 group_offset;
         s32 slot_offset;
@@ -154,7 +154,7 @@ s32 func_800C0560(s32 group_index, s32 slot_index, EffectThresholdTable *table)
         u8 *base;
 
         i = 0;
-        base = (u8 *)D_80122B74;
+        base = (u8 *)g_field_game_state;
         slot_offset = slot_index * sizeof(FieldMenuSlot);
         group_offset = group_index * sizeof(FieldMenuSlotGroup);
         row = (*(base + (slot_offset + group_offset) + MENU_SLOT_ENTRY_OFFSET) - 0x60) * 8;
@@ -183,7 +183,7 @@ s32 func_800C0560(s32 group_index, s32 slot_index, EffectThresholdTable *table)
         u8 *base;
 
         i = 0;
-        base = (u8 *)D_80122B74;
+        base = (u8 *)g_field_game_state;
         slot_offset = slot_index * sizeof(FieldMenuSlot);
         group_offset = group_index * sizeof(FieldMenuSlotGroup);
         row = (*(base + (slot_offset + group_offset) + MENU_SLOT_ENTRY_OFFSET) - 0x60) * 8;
@@ -210,7 +210,7 @@ s32 func_800C0560(s32 group_index, s32 slot_index, EffectThresholdTable *table)
         u8 *base;
 
         i = 0;
-        base = (u8 *)D_80122B74;
+        base = (u8 *)g_field_game_state;
         slot_offset = slot_index * sizeof(FieldMenuSlot);
         group_offset = group_index * sizeof(FieldMenuSlotGroup);
         for (i = 0; i < 8; i++)
@@ -241,22 +241,22 @@ void func_800C06E8(void)
     record_index = 0;
     do
     {
-        if (D_80122B74->regions[record_index].name[0] != 0)
+        if (g_field_game_state->regions[record_index].name[0] != 0)
         {
             effect_index = 0;
             do
             {
-                value = D_80122B74->regions[record_index].status.effects[effect_index];
+                value = g_field_game_state->regions[record_index].status.effects[effect_index];
                 if (value != 0xFF)
                 {
-                    status = D_80122B74->regions[record_index].status.word;
+                    status = g_field_game_state->regions[record_index].status.word;
                     applied = (status >> 24) & 7;
                     if (!((applied >> effect_index) & 1))
                     {
-                        record = &D_80122B74->regions[record_index];
+                        record = &g_field_game_state->regions[record_index];
                         value = (status & 0xF8FFFFFF) | (((applied | (1 << effect_index)) & 7) << 24);
-                        D_80122B74->regions[record_index].status.word = value;
-                        func_800C0814(record, D_80122B74->regions[record_index].status.effects[effect_index], table);
+                        g_field_game_state->regions[record_index].status.word = value;
+                        func_800C0814(record, g_field_game_state->regions[record_index].status.effects[effect_index], table);
                     }
                 }
                 effect_index += 1;

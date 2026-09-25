@@ -272,7 +272,7 @@ typedef struct
 /** @brief The game-state workspace viewed as FieldMenuItemData. */
 #define FIELD_MENU_ITEMS ((FieldMenuItemData*)g_saved_game.bytes)
 
-/** @brief Actor position as func_80087F44 returns it. */
+/** @brief Actor position as field_get_actor_position returns it. */
 typedef struct
 {
     s32 x;
@@ -381,8 +381,8 @@ typedef union
 } FieldMenuVars;
 
 u8* field_find_free_inventory_record();
-void func_80087F44();
-s32 func_80087D8C();
+void field_get_actor_position();
+s32 field_set_actor_position();
 extern FieldMenuVars D_80122C00;
 extern u8 D_80122C01;
 extern u8 D_80122C02;
@@ -442,7 +442,7 @@ extern u8 D_80045ECC[];
 extern u8 D_800F0E98[];
 extern void func_800C7C88(void);
 extern s32 rand(void);
-s32 func_8008B288(s32 arg0);
+s32 field_get_actor_facing(s32 arg0);
 void func_800C2A88(s32 arg0);
 extern s32 D_8011F428;
 extern u8 D_80046138[];
@@ -994,11 +994,11 @@ void func_800C6344(void)
 }
 
 /**
- * @brief Pass the menu object's id and variant to func_80087680.
+ * @brief Pass the menu object's id and variant to field_reset_actor_at.
  */
 void func_800C6364(void)
 {
-    func_80087680(FIELD_MENU_OBJECT->object_id, FIELD_MENU_OBJECT->variant, FIELD_MENU_OBJECT->variant, 0, 0, 0);
+    field_reset_actor_at(FIELD_MENU_OBJECT->object_id, FIELD_MENU_OBJECT->variant, FIELD_MENU_OBJECT->variant, 0, 0, 0);
 }
 
 /**
@@ -1008,12 +1008,12 @@ void func_800C63A0(void)
 {
     s32 position[3];
 
-    func_80087F44(FIELD_MENU_OBJECT->object_id, position);
+    field_get_actor_position(FIELD_MENU_OBJECT->object_id, position);
     position[0] /= 256;
     position[1] /= 256;
     position[2] /= 256;
     position[1] -= FIELD_MENU_OBJECT->height_offset;
-    func_80087D8C(FIELD_MENU_OBJECT->object_id, position[0], position[1], position[2]);
+    field_set_actor_position(FIELD_MENU_OBJECT->object_id, position[0], position[1], position[2]);
 }
 
 /**
@@ -1035,7 +1035,7 @@ void func_800C642C(void)
     s32 distance;
     s32 x;
 
-    func_80087F44(FIELD_MENU_OBJECT->object_id, position);
+    field_get_actor_position(FIELD_MENU_OBJECT->object_id, position);
     x = position[0] / 256;
     position[0] = x;
     y = position[1] / 256;
@@ -1121,7 +1121,7 @@ void func_800C642C(void)
         }
     }
 
-    func_80087D8C(FIELD_MENU_OBJECT->object_id, position[0], position[1], position[2]);
+    field_set_actor_position(FIELD_MENU_OBJECT->object_id, position[0], position[1], position[2]);
 }
 
 /**
@@ -2163,12 +2163,12 @@ void func_800C7DB8(void)
     s32 actor;
 
     actor = D_80122C0D;
-    func_80087F44(0, pos);
+    field_get_actor_position(0, pos);
     pos[0] /= 256;
     pos[1] /= 256;
     pos[2] /= 256;
 
-    heading = func_8008B288(0);
+    heading = field_get_actor_facing(0);
     if (heading == 0)
     {
         pos[0] += 0x14;
@@ -2206,7 +2206,7 @@ void func_800C7DB8(void)
         pos[2] += 0xA;
     }
 
-    func_80087D8C(actor, pos[0], pos[1] - 0xC, pos[2]);
+    field_set_actor_position(actor, pos[0], pos[1] - 0xC, pos[2]);
 }
 
 /**
@@ -2349,12 +2349,12 @@ void func_800C8260(void)
     FieldPosition pos;
     s32 heading;
 
-    func_80087F44(0, (s32*)&pos);
+    field_get_actor_position(0, (s32*)&pos);
     pos.x /= 256;
     pos.y /= 256;
     pos.z /= 256;
 
-    heading = func_8008B288(0);
+    heading = field_get_actor_facing(0);
     if (heading == 0)
     {
         pos.x += 0xA;
@@ -2392,7 +2392,7 @@ void func_800C8260(void)
         pos.z += 8;
     }
 
-    func_80087D8C(0xC, pos.x, pos.y, pos.z);
+    field_set_actor_position(0xC, pos.x, pos.y, pos.z);
 }
 
 /**

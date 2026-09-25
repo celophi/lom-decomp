@@ -36,7 +36,7 @@
 /** @brief Value of an empty pending-effect slot in FieldRegionRecord::status. */
 #define FIELD_NO_EFFECT 0xFF
 
-/** @brief Signal passed to func_8008B500 after a level-up. */
+/** @brief Signal passed to field_spawn_shared_animation_actor after a level-up. */
 #define FIELD_SIGNAL_LEVEL_UP 0x23
 
 /**
@@ -97,14 +97,14 @@ typedef struct FieldGrowthWord
 #define GROW_U32(p, o) (*(u32 *)((u8 *)(p) + (o)))
 
 /** @brief Game state as a byte pointer (func_800C1658 only). */
-#define FIELD_STATE_BYTES ((u8 *)D_80122B74)
+#define FIELD_STATE_BYTES ((u8 *)g_field_game_state)
 
-extern FieldGameState *D_80122B74;
+extern FieldGameState *g_field_game_state;
 
 /** @brief Per item type: eight four-bit stat increases applied on a level-up. */
 extern u32 D_800F18CC[];
 
-FieldStatusState *func_80087F0C(s32 actor_id);
+FieldStatusState *field_find_object_state(s32 actor_id);
 void func_800C10F0(s32 amount);
 void func_800C1154(u32 amount);
 void func_800C11F0(s32 index, s32 notify);
@@ -112,7 +112,7 @@ s32 func_800C14A4(s32 index, s32 notify);
 s32 func_800C19D0(s32 value, s32 increase, s32 flags);
 void func_800C1658(u8 *character, FieldGameState *state, FieldGameState *view, s32 offset);
 void func_800C15AC(FieldCharacterRecord *character, FieldGameState *state, FieldGameState *view, s32 offset);
-s32 func_8008B500(s32 index, s32 value);
+s32 field_spawn_shared_animation_actor(s32 index, s32 value);
 
 /**
  * @brief Add money, saturating at FIELD_MONEY_MAX.
@@ -123,10 +123,10 @@ void func_800C0E18(s32 recipient, s32 amount)
 {
     if (recipient < 3)
     {
-        D_80122B74->money += amount;
-        if (D_80122B74->money > FIELD_MONEY_MAX)
+        g_field_game_state->money += amount;
+        if (g_field_game_state->money > FIELD_MONEY_MAX)
         {
-            D_80122B74->money = FIELD_MONEY_MAX;
+            g_field_game_state->money = FIELD_MONEY_MAX;
         }
     }
 }
@@ -169,7 +169,7 @@ void func_800C0E54(s32 record_index, s32 amount)
             eligible_count = 0;
             for (; index < FIELD_PARTY_SIZE; index++)
             {
-                if ((D_80122B74->characters[index].name[0] != 0) && (func_80087F0C(index)->current != 0))
+                if ((g_field_game_state->characters[index].name[0] != 0) && (field_find_object_state(index)->current != 0))
                 {
                     eligible_count += 1;
                 }
@@ -182,19 +182,19 @@ void func_800C0E54(s32 record_index, s32 amount)
             amount = amount == 0 ? 1 : amount;
             for (index = 0; index < FIELD_PARTY_SIZE; index++)
             {
-                if ((D_80122B74->characters[index].name[0] != 0) && (func_80087F0C(index)->current != 0))
+                if ((g_field_game_state->characters[index].name[0] != 0) && (field_find_object_state(index)->current != 0))
                 {
                     if (index == 1)
                     {
                         func_800C10F0(amount);
                     }
-                    record_view = FIELD_STATE_AT(D_80122B74, index * sizeof(FieldCharacterRecord));
+                    record_view = FIELD_STATE_AT(g_field_game_state, index * sizeof(FieldCharacterRecord));
                     packed_value = record_view->characters[0].progress.word;
                     distributed_value = (packed_value & 0xFF) | (((packed_value >> 8) + amount) << 8);
                     record_view->characters[0].progress.word = distributed_value;
                     if ((s32)(distributed_value >> 8) > FIELD_EXPERIENCE_MAX)
                     {
-                        target_view = FIELD_STATE_AT(D_80122B74, record_index * sizeof(FieldCharacterRecord));
+                        target_view = FIELD_STATE_AT(g_field_game_state, record_index * sizeof(FieldCharacterRecord));
                         target_view->characters[0].progress.word = target_view->characters[0].progress.level | FIELD_EXPERIENCE_MAX_WORD;
                     }
                     func_800C11F0(index, 1);
@@ -202,7 +202,7 @@ void func_800C0E54(s32 record_index, s32 amount)
             }
             return;
         }
-        record_view = FIELD_STATE_AT(D_80122B74, record_index * sizeof(FieldCharacterRecord));
+        record_view = FIELD_STATE_AT(g_field_game_state, record_index * sizeof(FieldCharacterRecord));
         packed_value = record_view->characters[0].progress.word;
         updated_value = (packed_value & 0xFF) | (((packed_value >> 8) + amount) << 8);
         record_view->characters[0].progress.word = updated_value;
@@ -225,7 +225,7 @@ void func_800C10F0(s32 amount)
 {
     FieldGameState *state;
 
-    state = D_80122B74;
+    state = g_field_game_state;
     state->words[state->characters[1].info.bytes[1] + FIELD_CHARACTER_COUNTER_BASE] += amount;
     if ((u32)state->words[state->characters[1].info.bytes[1] + FIELD_CHARACTER_COUNTER_BASE] > FIELD_COUNTER_MAX)
     {
@@ -245,7 +245,7 @@ void func_800C1154(u32 amount)
     FieldGameState *state;
 
     amount >>= 3;
-    state = D_80122B74;
+    state = g_field_game_state;
     for (region_index = 0; region_index < FIELD_REGION_COUNT; region_index++)
     {
         if ((state->regions[region_index].name[0] != 0) && ((state->regions[region_index].status.word >> 30) & 1))
@@ -302,7 +302,7 @@ void func_800C1230(s32 slot)
         record_game_diagnostic(0x8001, 0x1F3, slot, 0);
         return;
     }
-    record = &D_80122B74->regions[slot];
+    record = &g_field_game_state->regions[slot];
     pending = -1;
     if (record->name[0] != 0)
     {
@@ -384,13 +384,13 @@ s32 func_800C14A4(s32 index, s32 notify)
     FieldGameState *current_view;
     u32 level_or_state;
 
-    record_view = FIELD_STATE_AT(D_80122B74, index * sizeof(FieldCharacterRecord));
+    record_view = FIELD_STATE_AT(g_field_game_state, index * sizeof(FieldCharacterRecord));
     level_or_state = record_view->characters[0].progress.level;
     if ((s32)(record_view->characters[0].progress.word >> 8) >= FIELD_LEVEL_THRESHOLD((s32)level_or_state))
     {
         record_view->characters[0].progress.level = level_or_state + 1;
         /* One variable for the level and the reloaded state pointer: separate ones allocate differently. */
-        level_or_state = (u32)D_80122B74;
+        level_or_state = (u32)g_field_game_state;
         current_view = FIELD_STATE_AT(level_or_state, index * sizeof(FieldCharacterRecord));
         if (current_view->characters[0].progress.level > FIELD_LEVEL_MAX)
         {
@@ -408,7 +408,7 @@ s32 func_800C14A4(s32 index, s32 notify)
         func_800B7C58(index);
         if (notify != 0)
         {
-            func_8008B500(index, FIELD_SIGNAL_LEVEL_UP);
+            field_spawn_shared_animation_actor(index, FIELD_SIGNAL_LEVEL_UP);
         }
         return -1;
     }

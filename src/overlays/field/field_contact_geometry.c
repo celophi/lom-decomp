@@ -178,7 +178,7 @@ typedef struct
 extern FieldMotionRecord g_field_actors[];
 extern u8 g_field_actor_sequence_data[];
 /** @brief Shared CD resource scratch buffer, also used by audio and dialog loaders. */
-extern u8* D_8010D038;
+extern u8* g_field_cd_buffer;
 extern FieldMotionRecord g_field_scene_actors[];
 extern FieldMoveObject g_field_object_parts[];
 extern s32 g_field_active_group;
@@ -187,16 +187,16 @@ extern FieldActorState g_field_actor_slots[];
 extern FieldObjectRuntime g_field_scene_object_states[];
 extern FieldResourceEntry g_field_resource_entries[];
 /** @brief Nonzero bypasses party/opponent contact filtering; broader mode semantics are unresolved. */
-extern s32 D_8010D020;
+extern s32 g_field_duel_mode;
 /** @brief Last overlap result: zero, or actor index with FIELD_CONTACT_RESULT_PRESENT. */
 extern s32 g_field_last_actor_contact;
 
 void field_prepare_actor_action(FieldMotionRecord*);
 /* Defined as (s32, s32) in field_interaction_start.c; the original call also loads the state table into $a2. */
 void func_800B22F0(s32 value, u16 entry, FieldObjectRuntime* states);
-void func_8008A840(s32, s32);
-void func_8008A9D8(s32, s32, s32);
-void func_8008BC5C(FieldMotionRecord*);
+void field_resolve_contact_hit(s32, s32);
+void field_resolve_object_hit(s32, s32, s32);
+void field_release_object_link(FieldMotionRecord*);
 
 s32 field_is_outside_group_bounds(FieldMotionRecord* actor, s32* position);
 void field_dispatch_object_state_entry(FieldMotionRecord* object, s32 entry_index);
@@ -204,7 +204,7 @@ void field_dispatch_object_state_entry(FieldMotionRecord* object, s32 entry_inde
 /**
  * @brief Load the field actor sequence bytecode banks from resource 0x5DD.
  *
- * The resource data begins one byte into D_8010D038. It contains 11 blocks
+ * The resource data begins one byte into g_field_cd_buffer. It contains 11 blocks
  * of 24 rows, with 32 bytes copied into each destination row.
  */
 void field_load_actor_sequence_data(void)
@@ -213,9 +213,9 @@ void field_load_actor_sequence_data(void)
     u8 *source, *row, *destination;
     u8 value;
 
-    cdrom_queue_read(FIELD_CONTACT_RESOURCE_ID, D_8010D038);
+    cdrom_queue_read(FIELD_CONTACT_RESOURCE_ID, g_field_cd_buffer);
     cdrom_wait_queue_empty();
-    source = D_8010D038 + 1;
+    source = g_field_cd_buffer + 1;
     for (bank_index = 0; bank_index < FIELD_CONTACT_RESOURCE_BLOCK_COUNT; bank_index++)
     {
         for (row_index = 0; row_index < FIELD_CONTACT_RESOURCE_ROW_COUNT; row_index++)
@@ -384,7 +384,7 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* r
             continue;
         }
         /* Party actors only touch non-party actors and vice versa, unless filtering is bypassed. */
-        if (D_8010D020 == 0 && ((u8)record->source_object_index < FIELD_PARTY_ACTOR_COUNT ? (u8)scan_record->source_object_index < 3U
+        if (g_field_duel_mode == 0 && ((u8)record->source_object_index < FIELD_PARTY_ACTOR_COUNT ? (u8)scan_record->source_object_index < 3U
                                                                                           : (u8)scan_record->source_object_index >= 3U))
         {
             continue;
@@ -823,7 +823,7 @@ s32 field_resolve_actor_movement(FieldMotionRecord* actor, s32* position, s32 mo
     if (g_field_active_group != 0)
     {
         actor_motion = actor->motion_parameter;
-        if (((actor_motion < 0xB0) || (actor_motion > 0xB1)) && ((s16)actor_motion != 0xB5) && (func_80092988((Vec3i*)actor, (Vec3i*)position) != 0))
+        if (((actor_motion < 0xB0) || (actor_motion > 0xB1)) && ((s16)actor_motion != 0xB5) && (field_move_leaves_screen((struct FieldActor*)actor, (Vec3i*)position) != 0))
         {
             position[0] = 0;
         }
@@ -884,7 +884,7 @@ s32 field_resolve_actor_movement(FieldMotionRecord* actor, s32* position, s32 mo
         /* func_8005B368 is called as returning int: the original compares the s16 result unextended. */
         if (((g_field_active_group == 0) || (actor->flags & FIELD_MOTION_RADIUS_MASK) || (((s32 (*)(struct FieldCollisionQuery*))func_8005B368)((struct FieldCollisionQuery*)query) == -1)) &&
             ((((u16)actor->motion_parameter >= 0xB0) && ((u16)actor->motion_parameter <= 0xB1)) || (actor->motion_parameter == 0xB5) ||
-             (g_field_active_group == 0) || (func_80092988((Vec3i*)actor, &delta) == 0)))
+             (g_field_active_group == 0) || (field_move_leaves_screen((struct FieldActor*)actor, &delta) == 0)))
         {
             position[0] = mover->x;
             if (((actor->facing_or_reward_kind & FIELD_FACING_INDEX_MASK) == 0x3D) && ((u8)actor->source_object_index < 2U))
@@ -1032,7 +1032,7 @@ s32 field_find_actor_overlap(FieldMotionRecord* record, s32* position, s32 filte
     s8 candidate_vertical_offset;
     FieldObjectRuntime* record_state;
 
-    if (filter_group != 0 && D_8010D020 == 0)
+    if (filter_group != 0 && g_field_duel_mode == 0)
     {
         if ((u8)record->source_object_index < FIELD_PARTY_ACTOR_COUNT)
         {
@@ -1158,7 +1158,7 @@ s32 field_find_actor_overlap(FieldMotionRecord* record, s32* position, s32 filte
                                 {
                                     if ((u8)scan_record->source_object_index < 2U)
                                     {
-                                        func_800A2DD8(scan_record->source_object_index);
+                                        field_command_history_clear(scan_record->source_object_index);
                                     }
                                     field_start_actor_animation(animation_slot, 1, scratch.targets.actor_indices);
                                 }
@@ -1351,7 +1351,7 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
     FieldObjectRuntime* candidate_state;
     FieldObjectRuntime* prior_target_base;
 
-    if (D_8010D020 != 0)
+    if (g_field_duel_mode != 0)
     {
         candidate_index = 0;
         candidate_end = FIELD_RUNTIME_ACTOR_COUNT;
@@ -1580,42 +1580,42 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
                 effect->height_or_retired_state = previous_state;
             }
             actor->track_count = (u8)(actor->track_count + 1);
-            func_8008BC5C(&group_records[group_index]);
+            field_release_object_link(&group_records[group_index]);
             if ((candidate_index < 2) && !(*(u16*)&group_records[group_index].flags & FIELD_MOTION_RADIUS_MASK))
             {
-                func_800A2DD8(candidate_index);
+                field_command_history_clear(candidate_index);
             }
             if (((u8)actor->hit_reaction < 0xCU) || (motion_records[actor->owner_object_index].motion_parameter == 0xBC))
             {
-                func_8008A9D8(actor->owner_object_index, candidate_index, actor->hit_reaction);
+                field_resolve_object_hit(actor->owner_object_index, candidate_index, actor->hit_reaction);
             }
             else
             {
                 switch (actor->hit_reaction)
                 {
                 case 0x34:
-                    func_8008A9D8(actor->owner_object_index, candidate_index, 0x16U);
+                    field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x16U);
                     break;
                 case 0x50:
-                    func_8008A9D8(actor->owner_object_index, candidate_index, 0x12U);
+                    field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x12U);
                     break;
                 case 0x51:
-                    func_8008A9D8(actor->owner_object_index, candidate_index, 0x13U);
+                    field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x13U);
                     break;
                 case 0x4E:
-                    func_8008A9D8(actor->owner_object_index, candidate_index, 0x14U);
+                    field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x14U);
                     break;
                 case 0x4F:
-                    func_8008A9D8(actor->owner_object_index, candidate_index, 0x15U);
+                    field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x15U);
                     break;
                 case 0x3E:
-                    func_8008A9D8(actor->owner_object_index, candidate_index, 0x19U);
+                    field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x19U);
                     break;
                 case 0x45:
-                    func_8008A9D8(actor->owner_object_index, candidate_index, 0x1AU);
+                    field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x1AU);
                     break;
                 default:
-                    func_8008A840(actor->owner_object_index, candidate_index);
+                    field_resolve_contact_hit(actor->owner_object_index, candidate_index);
                     break;
                 }
             }
@@ -1751,7 +1751,7 @@ void field_collect_attack_sphere_hits(FieldActorState* actor, FieldActorPartDef*
     {
         sphere_count = 1;
     }
-    if (D_8010D020 != 0)
+    if (g_field_duel_mode != 0)
     {
         target_index = 0;
         target_end = FIELD_RUNTIME_ACTOR_COUNT;
@@ -1912,37 +1912,37 @@ void field_collect_attack_sphere_hits(FieldActorState* actor, FieldActorPartDef*
                                         actor->track_count = (u8)(actor->track_count + 1);
                                         if ((target_index < 2) && !(*(u16*)&checked_record->flags & FIELD_MOTION_RADIUS_MASK))
                                         {
-                                            func_800A2DD8(target_index);
+                                            field_command_history_clear(target_index);
                                         }
-                                        func_8008BC5C((FieldMotionRecord*)(checked_record_offset + (s32)g_field_actors));
+                                        field_release_object_link((FieldMotionRecord*)(checked_record_offset + (s32)g_field_actors));
                                         if (((u8)actor->hit_reaction < 0xCU) || (g_field_actors[actor->owner_object_index].motion_parameter == 0xBC))
                                         {
-                                            func_8008A9D8(actor->owner_object_index, target_index, actor->hit_reaction);
+                                            field_resolve_object_hit(actor->owner_object_index, target_index, actor->hit_reaction);
                                         }
                                         else
                                         {
                                             switch (actor->hit_reaction)
                                             {
                                             case 0x50:
-                                                func_8008A9D8(actor->owner_object_index, target_index, 0x12U);
+                                                field_resolve_object_hit(actor->owner_object_index, target_index, 0x12U);
                                                 break;
                                             case 0x51:
-                                                func_8008A9D8(actor->owner_object_index, target_index, 0x13U);
+                                                field_resolve_object_hit(actor->owner_object_index, target_index, 0x13U);
                                                 break;
                                             case 0x4E:
-                                                func_8008A9D8(actor->owner_object_index, target_index, 0x14U);
+                                                field_resolve_object_hit(actor->owner_object_index, target_index, 0x14U);
                                                 break;
                                             case 0x4F:
-                                                func_8008A9D8(actor->owner_object_index, target_index, 0x15U);
+                                                field_resolve_object_hit(actor->owner_object_index, target_index, 0x15U);
                                                 break;
                                             case 0x3E:
-                                                func_8008A9D8(actor->owner_object_index, target_index, 0x19U);
+                                                field_resolve_object_hit(actor->owner_object_index, target_index, 0x19U);
                                                 break;
                                             case 0x45:
-                                                func_8008A9D8(actor->owner_object_index, target_index, 0x1AU);
+                                                field_resolve_object_hit(actor->owner_object_index, target_index, 0x1AU);
                                                 break;
                                             default:
-                                                func_8008A840(actor->owner_object_index, target_index);
+                                                field_resolve_contact_hit(actor->owner_object_index, target_index);
                                                 break;
                                             }
                                         }

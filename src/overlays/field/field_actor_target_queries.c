@@ -56,7 +56,7 @@ extern FieldTargetFilter D_800EC2D8[];
 extern FieldMotionRecord g_field_actors[];
 extern s32 g_field_active_group;
 extern FieldTargetBinding g_field_actor_bindings[];
-extern s32 D_8010D020;
+extern s32 g_field_duel_mode;
 
 /**
  * @brief Test whether a candidate actor is within a distance of the source actor.
@@ -303,7 +303,7 @@ s32 func_8009D1E4(s32 source_index, FieldTargetSpec* spec, s32 group_mode, s32 f
     FieldMotionRecord* actor;
     FieldObjectRuntime* state;
 
-    if (D_8010D020 != 0)
+    if (g_field_duel_mode != 0)
     {
         start = 0;
         end = FIELD_TARGET_ACTOR_COUNT;
