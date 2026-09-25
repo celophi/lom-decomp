@@ -144,3 +144,10 @@ rom:0x4D37D reloc:MIPS_LO16 symbol:g_field_object_states addend:0x190
 // field_actor_near_first_ground_point
 rom:0x4D4A1 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x190
 rom:0x4D4A5 reloc:MIPS_LO16 symbol:g_field_object_states addend:0x190
+
+// field_text_start_timed_window: fixed FieldTextSystem.timed_text access at
+// 0x801ED008. The literal-address C matches all 236 retail instruction bytes
+// after resolving its two code jumps. Keep the literal store address instead
+// of Splat's inferred standalone g_field_timed_text relocation.
+rom:0x176D5 reloc:MIPS_NONE symbol:g_field_timed_text
+rom:0x176D9 reloc:MIPS_NONE symbol:g_field_timed_text
