@@ -6,55 +6,36 @@
 [Progress]: https://decomp.dev/celophi/lom-decomp.svg?mode=shield&measure=code&category=all&label=Progress
 [progress site]: https://decomp.dev/celophi/lom-decomp
 
-A work-in-progress **matching decompilation** of the North American PlayStation release of **Legend of Mana**.
+A complete **100% matching decompilation** of the North American PlayStation release of **Legend of Mana**.
 
-The current target is `SLUS_010.13` (disc serial **SLUS-01013**). The goal is to reconstruct readable C source that reproduces the original MIPS machine code and, where supported, rebuilds the original game binaries byte-for-byte.
+The current target is `SLUS_010.13` (disc serial **SLUS-01013**). The project reconstructs readable C source code that compiles down to the original MIPS machine code that exists on the disc for all 18 binaries byte-for-byte.
 
 This is a decompilation project, **not a PC port**. The repository does not include the game executable, overlay binaries, artwork, audio, or other copyrighted game data. You must provide the required files from your own copy of the game.
 
 The primary motivation for this project is to preserve the original game's logic and behavior for educational research and potential modding capabilities.
 
-## Progress
+## Fully linked
 
-The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each module moves through roughly these states:
+Every module - the main executable and all 17 overlays - is **fully linked**. A module is fully linked when two conditions hold:
 
-- 💤 **Not started** - splat config may exist, but no meaningful C has been written; the module is still almost entirely assembly stubs.
+1. The build produces an **ELF whose bytes match the original decompressed file**, and
+2. Running the project's compressor on that ELF (stripped to a raw binary) **reproduces an exact replica of the `.BIN` file as it appears on the disc**.
 
-- 🌱 **In progress** - some functions have been examined and have written C, but the module does not yet build as a byte-identical replacement.
+In other words, the round-trip `original .BIN -> decompress -> C source -> compile -> ELF -> compress -> .BIN` is bit-identical.
+The main executable is not compressed, so for `SLUS_010.13` condition 1 is the whole check: the linked ELF, converted to a raw binary, equals the disc file.
+*(Check out the compressor! It's honestly really amazing that it is **bit identical** and kind of extraneous, but cool nonetheless!)*
 
-- 🪲 **Non-matching** - every function has a C implementation, but is not yet matching the target.
+Run `make verify-bins` to check every module.
 
-- ☑️ **Matching** - every function has a C implementation that matches the target byte-for-byte.
+## Roadmap
 
-- 🔒 **Fully linked** - two conditions hold:
+1. ✅ **100% matching** - *done.* The main executable (`SLUS_010.13`) and all 17 overlays are fully linked (see above). The Psy-Q SDK libraries are still linked from the original assembly.
 
-  1. The build produces an **ELF whose bytes match the original decompressed file**, and
-  2. Running the project's compressor on that ELF (stripped to a raw binary) **reproduces an exact replica of the `.BIN` file as it appears on the disc**.
+2. 🚧 **Cleanup and documentation** - *in progress.* Remove decompilation artifacts and document functionality.
 
-  In other words, the round-trip `original .BIN -> decompress -> C source -> compile -> ELF -> compress -> .BIN` is bit-identical.
-  The main executable is not compressed, so for `SLUS_010.13` condition 1 is the whole check: the linked ELF, converted to a raw binary, equals the disc file (`make verify-slus`).
-  *(Check out the compressor! It's honestly really amazing that it is **bit identical** and kind of extraneous, but cool nonetheless!)*
+3. 💤 **NTSC-J version** - support the original Japanese release (`SLPS-02170`) alongside the North American one.
 
-| Module | | Status |
-|---|:---:|---|
-| SLUS_010.13 | 🔒 | Fully linked |
-| ADDHERO.BIN | 🔒 | Fully linked |
-| CARDA.BIN | 🔒 | Fully linked |
-| CHECKPS.BIN | 🔒 | Fully linked |
-| CLOAD.BIN | 🔒 | Fully linked |
-| FIELD.BIN | 🔒 | Fully linked |
-| GNAME.BIN | 🔒 | Fully linked |
-| GOLEM.BIN | 🔒 | Fully linked |
-| GOSUB.BIN | 🔒 | Fully linked |
-| GOVER.BIN | 🔒 | Fully linked |
-| MENU.BIN | 🔒 | Fully linked |
-| MOVIE.BIN | 🔒 | Fully linked |
-| NIKI.BIN | 🔒 | Fully linked |
-| SHOP.BIN | 🔒 | Fully linked |
-| TITLE.BIN | 🔒 | Fully linked |
-| WMAP.BIN | 🔒 | Fully linked |
-| WSEL.BIN | 🔒 | Fully linked |
-| ZUKAN.BIN | 🔒 | Fully linked |
+4. 💤 **Modding and source port** - build on the reconstructed source to make modding practical and to enable ports to other platforms.
 
 ## Supported game version
 
