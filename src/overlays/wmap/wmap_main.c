@@ -1250,7 +1250,6 @@ s32 wmap_run_loop(void)
     s32 cd_error;
     s32 exit_frame;
     s32 backdrop_choice;
-    s32 sound_bank;
     s32 color_index;
     s32 show_loading_image;
 
@@ -1515,12 +1514,14 @@ s32 wmap_run_loop(void)
         DrawPrim(D_800D0A08);
     }
     /* Load the sound banks before starting the world-map song. */
-    sound_bank = 0x145E;
     if (D_8011D4F8 != 0)
     {
-        sound_bank = 0x145F;
+        cdrom_queue_read(0x145F, D_800DCF18);
     }
-    cdrom_queue_read(sound_bank, D_800DCF18);
+    else
+    {
+        cdrom_queue_read(0x145E, D_800DCF18);
+    }
     cdrom_wait_queue_empty();
     akao_upload_bank_blocking(D_800DCF18, 1);
     cdrom_queue_read(0x1460, D_800DCF18);
@@ -1556,10 +1557,10 @@ s32 wmap_run_loop(void)
         header = D_800DCF18;
         if (header[4] & 8)
         {
-            wmap_copy_rectangle(&rects[0], data);
-            LoadImage(&rects[0], header + 20);
-            data += *(s32*)(header + 8);
-            wmap_copy_rectangle(&rects[0], data);
+            rects[0] = *(RECT*)(data + 4);
+            LoadImage(&rects[0], data + 12);
+            data += *(s32*)data;
+            rects[0] = *(RECT*)(data + 4);
             if (rects[0].x != -1)
             {
                 LoadImage(&rects[0], data + 12);
@@ -1569,10 +1570,10 @@ s32 wmap_run_loop(void)
         }
         else
         {
-            rects[0] = *(RECT*)(header + 12);
+            rects[0] = *(RECT*)(data + 4);
             if (rects[0].x != -1)
             {
-                LoadImage(&rects[0], header + 20);
+                LoadImage(&rects[0], data + 12);
                 DrawSync(0);
                 D_801ADAFC = 1;
             }
@@ -1606,7 +1607,7 @@ s32 wmap_run_loop(void)
         u8* data;
         u8* header;
         data = D_800DCF18;
-        cdrom_stream((0x10C4) & 0xFFFF, data);
+        cdrom_stream(0x10C4, data);
         cdrom_wait_queue_empty();
         data += 8;
         header = D_800DCF18;
@@ -1647,31 +1648,29 @@ s32 wmap_run_loop(void)
         u8* data;
         u8* header;
         data = D_800DCF18;
-        cdrom_stream((0x10C6) & 0xFFFF, data);
+        cdrom_stream(0x10C6, data);
         cdrom_wait_queue_empty();
         data += 8;
         header = D_800DCF18;
         if (header[4] & 8)
         {
-            wmap_copy_rectangle(&rects[1], data);
-            LoadImage(&rects[1], header + 20);
-            data += *(s32*)(header + 8);
-            wmap_copy_rectangle(&rects[1], data);
+            rects[1] = *(RECT*)(data + 4);
+            LoadImage(&rects[1], data + 12);
+            data += *(s32*)data;
+            rects[1] = *(RECT*)(data + 4);
             if (rects[1].x != -1)
             {
                 LoadImage(&rects[1], data + 12);
                 DrawSync(0);
-                
             }
         }
         else
         {
-            rects[1] = *(RECT*)(header + 12);
+            rects[1] = *(RECT*)(data + 4);
             if (rects[1].x != -1)
             {
-                LoadImage(&rects[1], header + 20);
+                LoadImage(&rects[1], data + 12);
                 DrawSync(0);
-                
             }
         }
     }
@@ -1685,7 +1684,7 @@ s32 wmap_run_loop(void)
         u8* data;
         u8* header;
         data = D_800DCF18;
-        cdrom_queue_read((0x10C8) & 0xFFFF, data);
+        cdrom_queue_read(0x10C8, data);
         cdrom_wait_queue_empty();
         data += 8;
         header = D_800DCF18;
@@ -1772,10 +1771,10 @@ s32 wmap_run_loop(void)
         header = D_800DCF18;
         if (header[4] & 8)
         {
-            wmap_copy_rectangle(&rects[2], data);
-            LoadImage(&rects[2], header + 20);
-            data += *(s32*)(header + 8);
-            wmap_copy_rectangle(&rects[2], data);
+            rects[2] = *(RECT*)(data + 4);
+            LoadImage(&rects[2], data + 12);
+            data += *(s32*)data;
+            rects[2] = *(RECT*)(data + 4);
             if (rects[2].x != -1)
             {
                 LoadImage(&rects[2], data + 12);
@@ -1785,10 +1784,10 @@ s32 wmap_run_loop(void)
         }
         else
         {
-            rects[2] = *(RECT*)(header + 12);
+            rects[2] = *(RECT*)(data + 4);
             if (rects[2].x != -1)
             {
-                LoadImage(&rects[2], header + 20);
+                LoadImage(&rects[2], data + 12);
                 DrawSync(0);
                 D_801ADAFC = 1;
             }
