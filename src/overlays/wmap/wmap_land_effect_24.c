@@ -3413,8 +3413,6 @@ void func_800B7420(void);
 
 void func_800BA844(void)
 {
-/* Partial WMAP decompilation: 96.078430% (gcc280_g0). */
-
 typedef struct
 {
     s32 field_00; s32 field_04; s32 field_08; s32 field_0C; s32 field_10;
@@ -3431,7 +3429,7 @@ extern u8 D_801AFBD0[];
 extern s32 D_801B3180;
 extern s32 D_801B3184;
 
-extern void func_800BC7F4__for_func_800BA844(void) __asm__("func_800BC7F4");
+extern void func_800BC7F4(void);
 
     s32 index;
     s32 screen_offset;
@@ -3446,6 +3444,7 @@ extern void func_800BC7F4__for_func_800BA844(void) __asm__("func_800BC7F4");
     config_base = D_801AFBD0;
     screen_base = D_80139988;
     resource = &D_80121538;
+    D_80139280 += 0;
     screen_offset = 0xA0;
     config_offset = 0x190;
     D_80139280->field_0C = 0x80;
@@ -3470,7 +3469,7 @@ extern void func_800BC7F4__for_func_800BA844(void) __asm__("func_800BC7F4");
     } while (index < 0x3C);
     D_801B3184 = 0xB4;
     D_801B3180++;
-    func_800BC7F4__for_func_800BA844();
+    func_800BC7F4();
 }
 
 void func_800BA910(void)

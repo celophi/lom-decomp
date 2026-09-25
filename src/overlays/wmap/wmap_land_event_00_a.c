@@ -61,11 +61,16 @@ extern void func_800B2110__for_func_800B1744(void) __asm__("func_800B2110");
 
 /**
  * @brief World-map step handler: seed a 100-entry table, init an actor, advance.
- * @note One extra address calculation remains for the second setting store.
- *       Indexed table starts and the explicit state snapshot preserve the other rows.
  */
 void func_800B1898(void)
 {
+/** @brief Event actor state at the start of its parameter block. */
+typedef struct
+{
+    u8 pad[0x78];
+    s32 state;
+} WmapEventActorState;
+
 extern u8 D_80139988[];
 extern void *D_80121538;
 extern s16 D_801AFBD0;
@@ -81,7 +86,6 @@ extern void func_800B2D78(void);
     s32 index;
     s32 setting;
     s32 current;
-    s32 field_offset = 0x8C;
 
     index = 0x14;
     resource = &D_80121538;
@@ -98,9 +102,10 @@ extern void func_800B2D78(void);
     D_801B2FBC = 0xE1;
     actor = D_80139280;
     *(s32 *)(actor + 0x7C) = setting = 5;
-    *(s32 *)(actor + field_offset) = setting;
+    *(s32 *)(actor + 0x8C) = setting;
+    ((WmapEventActorState*)actor)->state = 1;
+    *(s32 *)(actor + 0x7C) = setting;
     current = D_801B2FB8;
-    *(s32 *)(actor + 0x78) = 1;
     *(s32 *)(actor + 0x80) = -0x3E8;
     *(s32 *)(actor + 0x84) = 0x1770;
     *(s32 *)(actor + 0x88) = 0x1388;
