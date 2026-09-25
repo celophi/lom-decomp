@@ -1253,6 +1253,20 @@ static inline void wmap_upload_image_rect(RECT* rect, u8* pixels)
     }
 }
 
+/** @brief Upload and synchronize a TIM pixel block with a valid destination. */
+static inline void wmap_load_pixel_block(TimBlock* block)
+{
+    RECT rect;
+
+    rect = *(RECT*)&block->dx;
+    if (rect.x != -1)
+    {
+        LoadImage(&rect, (u_long*)(block + 1));
+        DrawSync(0);
+        D_801ADAFC = 1;
+    }
+}
+
 /**
  * @brief Load world-map resources and run frames until the map exits.
  * @return Two for the controller reset chord, or zero after the exit effect.
@@ -1515,17 +1529,7 @@ s32 wmap_run_loop(void)
                 wmap_load_image_block((TimBlock*)data);
                 data += *(s32*)data;
             }
-            {
-                RECT rect;
-
-                wmap_copy_rectangle(&rect, data);
-                if (rect.x != -1)
-                {
-                    LoadImage(&rect, data + 12);
-                    DrawSync(0);
-                    D_801ADAFC = 1;
-                }
-            }
+            wmap_load_pixel_block((TimBlock*)data);
         }
         D_800D0A08[6] = 0x20;
         D_800D0A08[5] = 0x20;
