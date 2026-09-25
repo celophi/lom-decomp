@@ -808,10 +808,6 @@ void field_draw_cd_error_text(FieldLabelRenderContext* context)
  * @brief Draw controller action hints and labels for the selectable field actors.
  * @param context Render context receiving the labels.
  * @note Each controller displays the first active button among eight mapped controls.
- * @note TODO: 98.47% (419/432 exact). Remaining: button_index/g_pad_ctx a1-a2 swap,
- *       D_800ED064 high half in t3, and label y +0x40 scheduling; the resource-path
- *       (index << 4) * 25 spelling is a loop-invariant lever. See
- *       working/field_draw_actor_labels/status.md.
  */
 void field_draw_actor_labels(void* context)
 {
@@ -837,7 +833,6 @@ void field_draw_actor_labels(void* context)
     s32 local_text_offset;
     s32 screen_y;
     s32 projected_y;
-    s32 camera_x_pixels;
     s32 actor_screen_x;
     s32 label_ot;
     s32 label_half_width;
@@ -850,11 +845,12 @@ void field_draw_actor_labels(void* context)
     s32 text_ot;
     s32 left_glyph_ot;
     s32 right_glyph_ot;
-    s32 button_index;
+    s32 button_or_x; /* Hint button index in the first loop, label x in the second. */
     s32 index;
     s32 primitive;
     s32 action_offset;
     s32 actor_y;
+    s32 label_y;
     s32 actor_height;
     u16 raw_buttons;
     u8* default_label_offset;
@@ -877,10 +873,12 @@ void field_draw_actor_labels(void* context)
     pad_base = 0x801ED600;
     do
     {
+        action_offset = index * 0x190;
         if ((g_field_player_records[index].flags & 1) && ((pad_sample = (FieldControllerSample*)(pad_base + index * 0xAE))->device_type < 0xFEU))
         {
             actor_id = 1;
-            button_index = 0;
+            button_or_x = 0;
+            text_base = (s32)D_800EC3C4;
             local_pad_offset = index * 0x250;
             raw_buttons = pad_sample->buttons;
             name_offset = index * 0x250 + 0x5F0;
@@ -892,12 +890,12 @@ void field_draw_actor_labels(void* context)
                 if (swapped_buttons & actor_id)
                 {
                     swapped_buttons = (s32)g_pad_ctx + local_pad_offset;
-                    action_slot = ((FieldSavedInputMap*)swapped_buttons)->button_actions[g_field_hint_button_map[button_index]];
+                    action_slot = ((FieldSavedInputMap*)swapped_buttons)->button_actions[g_field_hint_button_map[button_or_x]];
                     switch (action_slot)
                     {
                     case 2:
                     case 3:
-                        text_high_or_offset = (s32)D_8010A028 + index * 0x190;
+                        text_high_or_offset = (s32)D_8010A028 + action_offset;
                         action_slot *= sizeof(FieldLabelAction);
                         swapped_buttons = ((FieldLabelAction*)(text_high_or_offset + action_slot))->text_index & 0x7FFF;
                         label_value = (s32)D_800EDBE4;
@@ -910,7 +908,7 @@ void field_draw_actor_labels(void* context)
                             ((secondary_action = ((FieldSavedInputMap*)swapped_buttons)->actions[1], (secondary_action == 5)) || (secondary_action == 8)))
                         {
                             text_offset = D_800EC3E0[1] << 8;
-                            text_high_or_offset = text_offset + (s32)D_800EC3C4;
+                            text_high_or_offset = text_offset + text_base;
                             label_value = D_800EC3E0[0];
                             text_address = text_high_or_offset + label_value;
                         }
@@ -920,7 +918,7 @@ void field_draw_actor_labels(void* context)
                             text_high_or_offset = label_descriptor[1];
                             label_value = D_800EC3E6[0];
                             text_high_or_offset <<= 8;
-                            text_high_or_offset += (s32)D_800EC3C4;
+                            text_high_or_offset += text_base;
                             text_address = text_high_or_offset + label_value;
                         }
 
@@ -931,7 +929,7 @@ void field_draw_actor_labels(void* context)
                              (secondary_action_alt == 8)))
                         {
                             text_offset = D_800EC3E0[1] << 8;
-                            text_high_or_offset = text_offset + (s32)D_800EC3C4;
+                            text_high_or_offset = text_offset + text_base;
                             label_value = D_800EC3E0[0];
                             text_address = text_high_or_offset + label_value;
                         }
@@ -939,17 +937,19 @@ void field_draw_actor_labels(void* context)
                         {
                             text_high_or_offset = D_800EC3E8[1];
                             text_high_or_offset <<= 8;
-                            text_high_or_offset += (s32)D_800EC3C4;
+                            text_high_or_offset += text_base;
                             label_value = D_800EC3E8[0];
                             text_address = text_high_or_offset + label_value;
                         }
                         break;
                     default:
+                        /* The original also loads the technique text bank here; it is overwritten before use. */
+                        label_value = (s32)D_800ED064;
                         swapped_buttons = ((FieldSavedInputMap*)((u8*)g_pad_ctx + local_pad_offset))->actions[action_slot];
                         if (swapped_buttons == 0xFF)
                         {
                             text_offset = D_800EC3E0[1] << 8;
-                            text_high_or_offset = text_offset + (s32)D_800EC3C4;
+                            text_high_or_offset = text_offset + text_base;
                             label_value = D_800EC3E0[0];
                             text_address = text_high_or_offset + label_value;
                         }
@@ -958,14 +958,12 @@ void field_draw_actor_labels(void* context)
                             if (swapped_buttons & 0x80)
                             {
                                 text_offset = swapped_buttons & 0xFF7F;
-                                label_value = (s32)g_pad_ctx + name_offset;
-                                text_high_or_offset = (text_offset << 6) + 0x150;
-                                text_address = text_high_or_offset + label_value;
+                                text_address = (s32)(&((u8*)g_pad_ctx)[name_offset] + ((text_offset << 6) + 0x150));
                             }
                             else
                             {
                                 action_slot = (s32)&((FieldLabelAction*)g_field_resource_actions)[action_slot];
-                                swapped_buttons = ((FieldLabelAction*)(((index << 4) * 25) + action_slot))->text_index;
+                                swapped_buttons = ((FieldLabelAction*)(index * 0x190 + action_slot))->text_index;
                                 swapped_buttons &= 0x7FFF;
                                 label_value = g_field_player_records[index].kind;
                                 swapped_buttons += label_value * 0x18;
@@ -978,21 +976,20 @@ void field_draw_actor_labels(void* context)
 
                         break;
                     }
-                    actor_id = index << 5;
+                    label_y = index;
                     point.vx = 0x60;
-                    point.vy = actor_id + 0x3C;
-
+                    label_y <<= 5;
+                    point.vy = label_y + 0x3C;
                     primitive = (s32)field_emit_actor_portrait((SPRT*)primitive, (u32*)label_ot, index, (u32*)&point);
-                    actor_id += 0x40;
-                    primitive = (s32)func_800A88A0((SPRT*)primitive, (s32*)label_ot, (u8*)text_address, 4, 0x80, actor_id, 0x80);
+                    primitive = (s32)func_800A88A0((SPRT*)primitive, (s32*)label_ot, (u8*)text_address, 4, 0x80, label_y + 0x40, 0x80);
                     break;
                 }
                 else
                 {
-                    button_index += 1;
+                    button_or_x += 1;
                     actor_id *= 2;
                 }
-            } while (button_index < 8);
+            } while (button_or_x < 8);
         }
         index += 1;
     } while (index < 2);
@@ -1010,14 +1007,14 @@ void field_draw_actor_labels(void* context)
                 camera_x += 0xFF;
             }
             actor_x = actor_position->x;
-            camera_x_pixels = camera_x >> 8;
+            button_or_x = camera_x >> 8;
             if (actor_x < 0)
             {
                 actor_x += 0xFF;
             }
             camera_y = g_field_view_offset_y;
             actor_screen_x = (actor_x >> 8) + 0xA0;
-            point.vx = camera_x_pixels + actor_screen_x;
+            point.vx = button_or_x + actor_screen_x;
             if (camera_y < 0)
             {
                 camera_y += 0xFF;
@@ -1059,7 +1056,7 @@ void field_draw_actor_labels(void* context)
             {
                 point.vy = FIELD_LABEL_MIN_Y;
             }
-            camera_x_pixels = point.vx;
+            button_or_x = point.vx;
             text_ot = label_ot;
             if (g_field_selected_actor_label == index)
             {
@@ -1070,7 +1067,7 @@ void field_draw_actor_labels(void* context)
             {
                 text_style = FIELD_LABEL_SELECTED_STYLE;
             }
-            primitive = (s32)func_800A88A0((SPRT*)primitive, (s32*)text_ot, ((FieldLabelActorState*)text_address)->name, text_style, camera_x_pixels,
+            primitive = (s32)func_800A88A0((SPRT*)primitive, (s32*)text_ot, ((FieldLabelActorState*)text_address)->name, text_style, button_or_x,
                                            (s32)point.vy, 0x82);
             left_glyph_ot = label_ot;
             point.vy = (u16)point.vy - 8;
