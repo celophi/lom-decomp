@@ -6,9 +6,9 @@
 [Progress]: https://decomp.dev/celophi/lom-decomp.svg?mode=shield&measure=code&category=all&label=Progress
 [progress site]: https://decomp.dev/celophi/lom-decomp
 
-A work-in-progress **matching decompilation** of the North American PlayStation release of **Legend of Mana**.
+A complete **100% matching decompilation** of the North American PlayStation release of **Legend of Mana**.
 
-The current target is `SLUS_010.13` (disc serial **SLUS-01013**). The goal is to reconstruct readable C source that reproduces the original MIPS machine code and, where supported, rebuilds the original game binaries byte-for-byte.
+The current target is `SLUS_010.13` (disc serial **SLUS-01013**). The project reconstructs readable C source code that compiles down to the original MIPS machine code that exists on the disc for all 18 binaries byte-for-byte.
 
 This is a decompilation project, **not a PC port**. The repository does not include the game executable, overlay binaries, artwork, audio, or other copyrighted game data. You must provide the required files from your own copy of the game.
 
