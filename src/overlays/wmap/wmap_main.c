@@ -1230,6 +1230,17 @@ static inline void wmap_set_error_uv(POLY_FT4* quad, s32 error)
 }
 
 /**
+ * @brief Copy a TIM block's destination rectangle and upload the block's pixels.
+ * @param rect Receives the block's destination rectangle.
+ * @param block TIM block header (length word, rectangle, then pixel data).
+ */
+static inline void wmap_upload_tim_block(RECT* rect, u8* block)
+{
+    *rect = *(RECT*)(block + 4);
+    LoadImage(rect, block + 12);
+}
+
+/**
  * @brief Load world-map resources and run frames until the map exits.
  * @return Two for the controller reset chord, or zero after the exit effect.
  */
@@ -1483,8 +1494,9 @@ s32 wmap_run_loop(void)
         {
             u8* data;
             u8* header;
+            s32 resource = wmap_get_land_count_tier() + 0x1453;
             data = D_800DCF18;
-            cdrom_queue_read((wmap_get_land_count_tier() + 0x1453) & 0xFFFF, data);
+            cdrom_queue_read(resource & 0xFFFF, data);
             cdrom_wait_queue_empty();
             data += 8;
             header = D_800DCF18;
@@ -1654,8 +1666,7 @@ s32 wmap_run_loop(void)
         header = D_800DCF18;
         if (header[4] & 8)
         {
-            rects[1] = *(RECT*)(data + 4);
-            LoadImage(&rects[1], data + 12);
+            wmap_upload_tim_block(&rects[1], data);
             data += *(s32*)data;
             rects[1] = *(RECT*)(data + 4);
             if (rects[1].x != -1)
@@ -1675,9 +1686,9 @@ s32 wmap_run_loop(void)
         }
     }
     cdrom_queue_read(0x10C7, &D_801ADBA0);
+    g_wmap_land_image_cache[16].slot_index = 0x10;
     g_wmap_land_image_cache[16].resource_id = 0x1F;
     g_wmap_land_image_cache[16].animation_data = (u8*)&D_801ADBA0;
-    g_wmap_land_image_cache[16].slot_index = 0x10;
     g_wmap_land_image_cache[16].loaded_frame = 0xFFFF;
     g_wmap_land_image_cache[16].busy = 0;
     {
@@ -1747,8 +1758,9 @@ s32 wmap_run_loop(void)
     StoreImage(&rects[1], D_800DCF18);
     DrawSync(0);
     {
-    s32 opaque_mask = ~0x7FFF;
+    s32 opaque_mask;
     palette_index = 1;
+    opaque_mask = ~0x7FFF;
     palette_entry = (u16*)(D_800DCF18 + 2);
     do
     {
@@ -1771,10 +1783,9 @@ s32 wmap_run_loop(void)
         header = D_800DCF18;
         if (header[4] & 8)
         {
-            rects[2] = *(RECT*)(data + 4);
-            LoadImage(&rects[2], data + 12);
+            wmap_upload_tim_block(&rects[2], data);
             data += *(s32*)data;
-            rects[2] = *(RECT*)(data + 4);
+            wmap_copy_rectangle(&rects[2], data);
             if (rects[2].x != -1)
             {
                 LoadImage(&rects[2], data + 12);
@@ -1784,7 +1795,7 @@ s32 wmap_run_loop(void)
         }
         else
         {
-            rects[2] = *(RECT*)(data + 4);
+            wmap_copy_rectangle(&rects[2], data);
             if (rects[2].x != -1)
             {
                 LoadImage(&rects[2], data + 12);
