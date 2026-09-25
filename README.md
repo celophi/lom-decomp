@@ -32,11 +32,12 @@ The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each mod
   2. Running the project's compressor on that ELF (stripped to a raw binary) **reproduces an exact replica of the `.BIN` file as it appears on the disc**.
 
   In other words, the round-trip `original .BIN -> decompress -> C source -> compile -> ELF -> compress -> .BIN` is bit-identical.
+  The main executable is not compressed, so for `SLUS_010.13` condition 1 is the whole check: the linked ELF, converted to a raw binary, equals the disc file (`make verify-slus`).
   *(Check out the compressor! It's honestly really amazing that it is **bit identical** and kind of extraneous, but cool nonetheless!)*
 
 | Module | | Status |
 |---|:---:|---|
-| SLUS_010.13 | 🪲 | Non-matching |
+| SLUS_010.13 | 🔒 | Fully linked |
 | ADDHERO.BIN | 🔒 | Fully linked |
 | CARDA.BIN | 🔒 | Fully linked |
 | CHECKPS.BIN | 🔒 | Fully linked |
@@ -284,7 +285,8 @@ For that reason, do not bypass the build system and invoke the old compiler dire
 | `make diff-text` | Generate compact text reports under `build/diffs/`. |
 | `make dump-objs` | Disassemble built objects for code-generation analysis. |
 | `make validate-assets` | Round-trip and validate format-aware assets. |
-| `make verify-bins` | Run all registered whole-overlay SHA-1 checks. |
+| `make verify-slus` | Check that the linked main executable equals `disc/SLUS_010.13`. |
+| `make verify-bins` | Run `verify-slus` and all registered whole-overlay SHA-1 checks. |
 | `make verify-compressor` | Verify the compressor against all 17 original overlay files. |
 | `make recopy` | Force source/config files to be copied to `/staging` again. |
 | `make clean` | Remove build output and `/staging`. |

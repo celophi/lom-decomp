@@ -123,6 +123,9 @@ SRCS_G0 := \
 	src/psyq/libspu/S_SR.c \
 	src/psyq/libspu/S_M_UTIL.c \
 	src/psyq/libspu/S_SIC.c \
+	src/psyq/libspu/S_SNC.c \
+	src/psyq/libspu/S_GVEX.c \
+	src/psyq/libspu/S_SRMD.c \
 	src/psyq/libspu/S_CB.c \
 	src/psyq/libspu/S_R.c \
 	src/psyq/libspu/S_W.c \
@@ -176,6 +179,7 @@ SRCS_G4 := \
 	src/akao_driver_boot.c \
 	src/controller.c \
 	src/akao_voice.c \
+	src/akao_control.c \
 	src/akao_xa_stream.c
 
 # Subset of SRCS_G4 (or any G4 object) whose original code uses bare
