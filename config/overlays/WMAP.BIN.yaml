@@ -32,7 +32,6 @@ options:
   use_legacy_include_asm: False
   o_as_suffix: True
   subalign: 2
-  # Retail section boundaries are four-byte aligned, not 16-byte padded.
   ld_align_section_vram_end: False
   ld_align_segment_vram_end: False
 
@@ -47,18 +46,20 @@ segments:
     start: 0x1
     vram: 0x8004FC70
     subsegments:
-      - [0x1, rodata, wmap] # header and pre-code tables
-      - [0x15E9, .rodata, wmap_land_effect_loader] # compiler-generated switch table
+      - [0x1, rodata, wmap]
+      - [0x15E9, .rodata, wmap_land_effect_loader]
       - [0x1671, rodata, wmap_1671]
-      - [0x1839, .rodata, wmap_land_preview] # compiler-generated switch table
+      - [0x1839, .rodata, wmap_land_preview]
+      - [0x184D, rodatabin, wmap_land_preview_rodata_alignment]
       - [0x1851, rodata, wmap_1851]
-      - [0x186D, .rodata, wmap_land_layout] # compiler-generated switch table
+      - [0x186D, .rodata, wmap_land_layout]
       - [0x1885, rodata, wmap_1885]
-      - [0x1E21, .rodata, wmap_main] # switch tables and display-transfer rectangle
+      - [0x1E21, .rodata, wmap_main]
       - [0x1EDD, rodata, wmap_1EDD]
-      - [0x4CFD, .rodata, wmap_model_render] # compiler-generated switch table
-      - [0x4D75, .rodata, wmap_effect_primitives] # compiler-generated switch table
-      - [0x4D95, .rodata, wmap_map_events] # compiler-generated switch table
+      - [0x4CFD, .rodata, wmap_model_render]
+      - [0x4D71, rodatabin, wmap_model_render_rodata_alignment]
+      - [0x4D75, .rodata, wmap_effect_primitives]
+      - [0x4D95, .rodata, wmap_map_events]
       - [0x4DA9, rodata, wmap_4DA9]
       - [0x4DBD, c, wmap_map_display]
       - [0x8845, c, wmap_party_travel]
@@ -116,5 +117,5 @@ segments:
       - [0x6D7AD, c, wmap_land_effect_33]
       - [0x6F851, c, wmap_special_effect_34]
       - [0x71035, c, wmap_special_effect_35]
-      - [0x74919, data, data] # post-code packets/assets
+      - [0x74919, data, data]
   - [0x163669]

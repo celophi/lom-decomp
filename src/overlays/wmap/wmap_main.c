@@ -49,13 +49,6 @@ typedef struct
     short x2, y2;
 } WmapMenuTriangle;
 
-/** @brief A transfer rectangle with the trailing words present in the image table. */
-typedef struct
-{
-    RECT rect;
-    s16 reserved[2];
-} WmapTransferRect;
-
 /** @brief Script words: duration/button pairs, or a command preceded by -2. */
 typedef enum
 {
@@ -255,7 +248,7 @@ extern u16 D_800DCF2C[];
 extern s32 D_8011D0E0;
 extern s32 D_8011D0E4;
 extern s32 D_8011D500;
-extern s32 D_80129538;
+extern s8 D_80129538[5];
 extern u8 D_801295BC[];
 extern s32 D_80139238;
 extern s32 D_80139834;
@@ -1207,8 +1200,6 @@ void wmap_step_input_script(void)
     g_wmap_script_delay = 1;
 }
 
-/** @brief Rectangle template and trailing zero used during display transfers. */
-const WmapTransferRect g_wmap_exit_capture_rect = {{SCREEN_WIDTH, 0, SCREEN_WIDTH, SCREEN_HEIGHT}, {0, 0}};
 
 /** @brief Copy the destination rectangle from a TIM block header. */
 static inline void wmap_copy_rectangle(RECT* rectangle, u8* block)
@@ -1216,17 +1207,72 @@ static inline void wmap_copy_rectangle(RECT* rectangle, u8* block)
     *rectangle = *(RECT*)(block + 4);
 }
 
+static inline void wmap_set_error_uv(POLY_FT4* quad, s32 error)
+{
+    s32 top;
+    setlen(quad, 9);
+    setcode(quad, 0x2E);
+    top = (error - 1) << 5;
+    quad->v1 = top;
+    quad->v0 = top;
+    top += 0x20;
+    quad->v3 = top;
+    quad->v2 = top;
+}
+
+/**
+ * @brief Copy a TIM block's destination rectangle and upload the block's pixels.
+ * @param rect Receives the block's destination rectangle.
+ * @param block TIM block header (length word, rectangle, then pixel data).
+ */
+static inline void wmap_upload_tim_block(RECT* rect, u8* block)
+{
+    *rect = *(RECT*)(block + 4);
+    LoadImage(rect, block + 12);
+}
+
+/** @brief Clear the map image destination to black. */
+static inline void wmap_clear_map_surface(RECT* rectangle)
+{
+    *rectangle = D_80051A88;
+    ClearImage(rectangle, 0, 0, 0);
+}
+
+/**
+ * @brief Upload a TIM image block unless its destination rectangle is unused.
+ * @param rect Destination rectangle copied from the block header.
+ * @param pixels Pixel data following the block header.
+ */
+static inline void wmap_upload_image_rect(RECT* rect, u8* pixels)
+{
+    if (rect->x != -1)
+    {
+        LoadImage(rect, pixels);
+        DrawSync(0);
+        D_801ADAFC = 1;
+    }
+}
+
+/** @brief Upload and synchronize a TIM pixel block with a valid destination. */
+static inline void wmap_load_pixel_block(TimBlock* block)
+{
+    RECT rect;
+
+    rect = *(RECT*)&block->dx;
+    if (rect.x != -1)
+    {
+        LoadImage(&rect, (u_long*)(block + 1));
+        DrawSync(0);
+        D_801ADAFC = 1;
+    }
+}
+
 /**
  * @brief Load world-map resources and run frames until the map exits.
  * @return Two for the controller reset chord, or zero after the exit effect.
- * @note TODO: Recover the remaining event-state address aliases.
  */
 s32 wmap_run_loop(void)
 {
-    RECT rects[4];
-    u8* event_count;
-    WmapFrame* render_base;
-    WmapFrame* render_alt;
     u8* palette_color;
     s16 traveler_x;
     s16 traveler_y;
@@ -1239,18 +1285,8 @@ s32 wmap_run_loop(void)
     s32 cd_error;
     s32 exit_frame;
     s32 backdrop_choice;
-    s32 sound_bank;
     s32 color_index;
     s32 show_loading_image;
-    s32 one;
-    s32 three;
-    s8* event_flags;
-    u8* base_800e_late;
-    u8* base_8014_late;
-    u8* base_8012;
-    u8* base_8014a;
-    u8* base_801b;
-    u8* base_8014b;
 
     s32 scroll_cell_x;
     s32 scroll_cell_y;
@@ -1286,124 +1322,115 @@ s32 wmap_run_loop(void)
     wmap_init_state();
     func_8006D520();
     /* Pending land events may replace the normal map entry sequence. */
-    event_count = (u8*)0x800E0000;
-    one = show_loading_image;
-    base_8012 = (u8*)0x80120000;
-    base_8014a = (u8*)0x80140000;
-    three = 3;
-    event_flags = (s8*)&D_80129538;
-    base_801b = (u8*)0x801B0000;
-    base_8014b = (u8*)0x80140000;
-next_event:
+    while (1)
     {
         event = wmap_next_land_event();
         D_801398F8 = event;
         if (event != -1U)
         {
-            *(s32*)(event_count - 0x6DDC) += 1;
+            D_800D9224 += 1;
             if ((u32)(event - 4) < 5U)
             {
                 D_80182DD8 = event;
-                g_wmap_input_locked = one;
+                g_wmap_input_locked = 1;
                 g_wmap_buttons_held = 0;
                 g_wmap_buttons_repeat = 0;
-                *(s32*)(event_count - 0x6DDC) = one;
+                D_800D9224 = 1;
                 {
                     s32 drain_event;
 
-                drain_events:
-                    drain_event = wmap_next_land_event();
-                    if (drain_event != -1)
+                    do
                     {
-                        goto drain_events;
-                    }
+                        drain_event = wmap_next_land_event();
+                    } while (drain_event != -1);
                 }
                 func_8006CBD8(&func_800BFD18);
+                break;
             }
             else
             {
                 switch (event)
                 {
                 case 0:
-                    *(s32*)(base_8012 - 0x2F24) = one;
-                    *(s32*)(base_8014a - 0x4D84) = 0;
-                    D_80182228 = one;
+                    g_wmap_input_script = 1;
+                    g_wmap_party_visible = 0;
+                    D_80182228 = 1;
                     break;
                 case 1:
-                    *(s32*)(base_8012 - 0x2F24) = 2;
+                    g_wmap_input_script = 2;
                     break;
                 case 28:
-                    *(s32*)(base_8012 - 0x2F24) = three;
-                    *(s32*)(base_8014a - 0x4D84) = 0;
-                    D_80182228 = one;
+                    g_wmap_input_script = 3;
+                    g_wmap_party_visible = 0;
+                    D_80182228 = 1;
                     break;
                 case 25:
-                    event_flags[0] = one;
+                    D_80129538[0] = 1;
                     break;
                 case 17:
-                    event_flags[1] = one;
+                    D_80129538[1] = 1;
                     break;
                 case 18:
-                    event_flags[2] = one;
+                    D_80129538[2] = 1;
                     break;
                 case 19:
-                    event_flags[3] = one;
+                    D_80129538[3] = 1;
                     break;
                 case 20:
-                    event_flags[4] = one;
+                    D_80129538[4] = 1;
                     break;
                 case 22:
-                    D_80182E1C = one;
+                    D_80182E1C = 1;
                     break;
                 case 23:
-                    D_801398B8 = one;
+                    D_801398B8 = 1;
                     break;
                 case 21:
-                    D_80129540 = one;
+                    D_80129540 = 1;
                     break;
                 case 16:
-                    D_80139248 = one;
+                    D_80139248 = 1;
                     break;
                 case 11:
                     show_loading_image = 0;
-                    *(s32*)(base_801b - 0x2470) = 0;
-                    D_8011D4F8 = one;
+                    D_801ADB90 = 0;
+                    D_8011D4F8 = 1;
                     break;
                 case 15:
-                    D_80139900 = one;
+                    D_80139900 = 1;
                     break;
                 case 12:
                     show_loading_image = 0;
                     func_8006D8F0(1);
                     func_8006D870(1);
-                    D_80182E34 = three;
-                    D_800DBE78 = three;
-                    g_wmap_screen_fade_mode = three;
+                    D_80182E34 = 3;
+                    D_800DBE78 = 3;
+                    g_wmap_screen_fade_mode = 3;
                     g_wmap_spirit_target_brightness = 0;
-                    *(s32*)(base_801b - 0x2470) = 0;
-                    *(s32*)(base_8014a - 0x4D84) = 0;
+                    D_801ADB90 = 0;
+                    g_wmap_party_visible = 0;
                     g_wmap_spirit_brightness = 0;
-                    *(s32*)(base_8014b - 0x4DF8) = one;
-                    *(s32*)(base_801b - 0x2470) = 0;
+                    D_8013B208 = 1;
+                    D_801ADB90 = 0;
                     D_80182D5C = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
-                    D_80139834 = one;
-                    *(s32*)(base_8014b - 0x4DF8) = one;
+                    D_80139834 = 1;
+                    D_8013B208 = 1;
                     break;
                 case 13:
                     show_loading_image = 0;
                     func_8006D8F0(1);
                     func_8006D870(1);
-                    D_80182E34 = three;
-                    D_800DBE78 = three;
-                    g_wmap_screen_fade_mode = three;
+                    D_80182E34 = 3;
+                    D_800DBE78 = 3;
+                    g_wmap_screen_fade_mode = 3;
                     g_wmap_spirit_target_brightness = 0;
-                    *(s32*)(base_801b - 0x2470) = 0;
-                    *(s32*)(base_8014a - 0x4D84) = 0;
+                    D_801ADB90 = 0;
+                    g_wmap_party_visible = 0;
                     g_wmap_spirit_brightness = 0;
-                    *(s32*)(base_8014b - 0x4DF8) = one;
+                    D_8013B208 = 1;
                     D_80182D5C = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
-                    D_80139238 = one;
-                    *(s32*)(base_8014b - 0x4DF8) = one;
+                    D_80139238 = 1;
+                    D_8013B208 = 1;
                     break;
                 case 9:
                     show_loading_image = 0;
@@ -1411,19 +1438,19 @@ next_event:
                     func_8006D870(1);
                     D_8011D500 = 0xFF;
                     D_800D9228 = 0xFF;
-                    D_80182E38 = one;
-                    *(s32*)(base_801b - 0x2470) = 0;
+                    D_80182E38 = 1;
+                    D_801ADB90 = 0;
                     D_80182E00 = 0;
                     func_8006CBD8(&func_80064D64);
-                    D_80139244 = one;
-                    D_800DBE78 = three;
-                    D_80182E34 = three;
+                    D_80139244 = 1;
+                    D_800DBE78 = 3;
+                    D_80182E34 = 3;
                     g_wmap_spirit_target_brightness = 0;
                     g_wmap_spirit_brightness = 0;
-                    g_wmap_screen_fade_mode = three;
-                    *(s32*)(base_8014b - 0x4DF8) = one;
-                    *(s32*)(base_8014a - 0x4D84) = 0;
-                    D_8012954C = one;
+                    g_wmap_screen_fade_mode = 3;
+                    D_8013B208 = 1;
+                    g_wmap_party_visible = 0;
+                    D_8012954C = 1;
                     break;
                 case 10:
                     show_loading_image = 0;
@@ -1431,33 +1458,33 @@ next_event:
                     func_8006D870(1);
                     D_8011D500 = 0xFF;
                     D_800D9228 = 0xFF;
-                    D_80182E38 = one;
-                    *(s32*)(base_801b - 0x2470) = 0;
-                    *(s32*)(base_8014a - 0x4D84) = 0;
-                    *(s32*)(base_8014b - 0x4DF8) = one;
+                    D_80182E38 = 1;
+                    D_801ADB90 = 0;
+                    g_wmap_party_visible = 0;
+                    D_8013B208 = 1;
                     D_80182E00 = 0;
                     func_8006CBD8(&func_80064D64);
-                    D_80139244 = one;
-                    D_80182E34 = three;
-                    D_800DBE78 = three;
+                    D_80139244 = 1;
+                    D_80182E34 = 3;
+                    D_800DBE78 = 3;
                     g_wmap_spirit_target_brightness = 0;
                     g_wmap_spirit_brightness = 0;
-                    g_wmap_screen_fade_mode = three;
-                    D_801ADAF0 = one;
+                    g_wmap_screen_fade_mode = 3;
+                    D_801ADAF0 = 1;
                     break;
                 case 24:
                     show_loading_image = 0;
                     func_8006D8F0(1);
                     func_8006D870(1);
-                    D_80182E34 = three;
-                    D_800DBE78 = three;
-                    g_wmap_screen_fade_mode = three;
+                    D_80182E34 = 3;
+                    D_800DBE78 = 3;
+                    g_wmap_screen_fade_mode = 3;
                     g_wmap_spirit_target_brightness = 0;
                     g_wmap_spirit_brightness = 0;
-                    *(s32*)(base_801b - 0x2470) = 0;
-                    *(s32*)(base_8014a - 0x4D84) = 0;
-                    *(s32*)(base_8014b - 0x4DF8) = one;
-                    D_8013997C = one;
+                    D_801ADB90 = 0;
+                    g_wmap_party_visible = 0;
+                    D_8013B208 = 1;
+                    D_8013997C = 1;
                     break;
                 case 27:
                     show_loading_image = 0;
@@ -1466,41 +1493,43 @@ next_event:
                     D_8011D500 = 0;
                     D_800D9228 = 0;
                     func_8006CBD8(&func_80064D64);
-                    D_80182DD4 = one;
-                    D_80182E34 = three;
-                    D_800DBE78 = three;
-                    g_wmap_screen_fade_mode = three;
+                    D_80182DD4 = 1;
+                    D_80182E34 = 3;
+                    D_800DBE78 = 3;
+                    g_wmap_screen_fade_mode = 3;
                     g_wmap_spirit_target_brightness = 0;
                     g_wmap_spirit_brightness = 0;
-                    *(s32*)(base_801b - 0x2470) = 0;
-                    *(s32*)(base_8014a - 0x4D84) = 0;
-                    *(s32*)(base_8014b - 0x4DF8) = one;
-                    D_80182240 = one;
+                    D_801ADB90 = 0;
+                    g_wmap_party_visible = 0;
+                    D_8013B208 = 1;
+                    D_80182240 = 1;
                     break;
                 }
-                goto next_event;
+                continue;
             }
+        }
+        else
+        {
+            break;
         }
     }
     if (show_loading_image != 0)
     {
-        image_data = D_800DCF18;
-        cdrom_queue_read((wmap_get_land_count_tier() + 0x1453) & 0xFFFF, image_data);
-        cdrom_wait_queue_empty();
-        image_header = image_data;
-        image_data += 8;
-        if (M2C_FIELD(image_header, u8*, 4) & 8)
         {
-            wmap_copy_rectangle(&rects[0], image_data);
-            LoadImage(&rects[0], image_data + 0xC);
-            image_data += M2C_FIELD(image_header, s32*, 8);
-        }
-        wmap_copy_rectangle(&rects[0], image_data);
-        if (rects[0].x != -1)
-        {
-            LoadImage(&rects[0], image_data + 0xC);
-            DrawSync(0);
-            D_801ADAFC = 1;
+            u8* data;
+            u8* header;
+            s32 resource = wmap_get_land_count_tier() + 0x1453;
+            data = D_800DCF18;
+            cdrom_queue_read(resource & 0xFFFF, data);
+            cdrom_wait_queue_empty();
+            data += 8;
+            header = D_800DCF18;
+            if (header[4] & 8)
+            {
+                wmap_load_image_block((TimBlock*)data);
+                data += *(s32*)data;
+            }
+            wmap_load_pixel_block((TimBlock*)data);
         }
         D_800D0A08[6] = 0x20;
         D_800D0A08[5] = 0x20;
@@ -1514,12 +1543,14 @@ next_event:
         DrawPrim(D_800D0A08);
     }
     /* Load the sound banks before starting the world-map song. */
-    sound_bank = 0x145E;
     if (D_8011D4F8 != 0)
     {
-        sound_bank = 0x145F;
+        cdrom_queue_read(0x145F, D_800DCF18);
     }
-    cdrom_queue_read(sound_bank, D_800DCF18);
+    else
+    {
+        cdrom_queue_read(0x145E, D_800DCF18);
+    }
     cdrom_wait_queue_empty();
     akao_upload_bank_blocking(D_800DCF18, 1);
     cdrom_queue_read(0x1460, D_800DCF18);
@@ -1545,31 +1576,36 @@ next_event:
         akao_cmd_d0(0);
         akao_cmd_c2(0, 0x1E, 1, 0x7F);
     }
-    cdrom_stream((D_800DBE68 + 0x14DE) & 0xFFFF, D_800DCF18);
-    image_header = D_800DCF18 + 8;
-    cdrom_wait_queue_empty();
-    if (M2C_FIELD(D_800DCF18, u8*, 4) & 8)
     {
-        wmap_copy_rectangle(&rects[0], image_header);
-        LoadImage(&rects[0], D_800DCF18 + 0x14);
-        pixel_block = M2C_FIELD(D_800DCF18, s32*, 8) + image_header;
-        wmap_copy_rectangle(&rects[0], pixel_block);
-        if (rects[0].x != -1)
+        u8* data;
+        u8* header;
+        data = D_800DCF18;
+        cdrom_stream((D_800DBE68 + 0x14DE) & 0xFFFF, data);
+        cdrom_wait_queue_empty();
+        data += 8;
+        header = D_800DCF18;
+        if (header[4] & 8)
         {
-            pixels = pixel_block + 0xC;
-            goto upload_pixels;
+            wmap_load_image_block((TimBlock*)data);
+            data += *(s32*)data;
+            {
+                RECT rect;
+
+                rect = *(RECT*)(data + 4);
+                if (rect.x != -1)
+                {
+                    LoadImage(&rect, data + 12);
+                    DrawSync(0);
+                    D_801ADAFC = 1;
+                }
+            }
         }
-    }
-    else
-    {
-        rects[0] = *(RECT*)((u8*)D_800DCF18 + 0xC);
-        pixels = D_800DCF18 + 0x14;
-        if (rects[0].x != -1)
+        else
         {
-        upload_pixels:
-            LoadImage(&rects[0], pixels);
-            DrawSync(0);
-            D_801ADAFC = 1;
+            RECT rect;
+
+            rect = *(RECT*)(data + 4);
+            wmap_upload_image_rect(&rect, data + 12);
         }
     }
     /* Keep the source palette in five-bit channels for later color effects. */
@@ -1581,441 +1617,492 @@ next_event:
         packed_color = D_800DCF2C[color_index];
         ((CVECTOR*)D_80139908)[color_index].b = (packed_color >> 10) & 0x1F;
     }
-    rects[0].x = 0x278;
-    rects[0].y = 0;
-    rects[0].w = 0x10;
-    rects[0].h = 0x180;
-    MoveImage(&rects[0], 0x2B0, 0);
-    rects[0].x = 0x240;
-    rects[0].y = 0xE0;
-    rects[0].w = 0x60;
-    rects[0].h = 0x40;
-    MoveImage(&rects[0], 0x240, 0x1C0);
-    rects[0].x = 0x278;
-    rects[0].y = 0xE0;
-    rects[0].w = 0x10;
-    rects[0].h = 0x40;
-    MoveImage(&rects[0], 0x2B0, 0x1C0);
-    cdrom_stream(0x10C4, D_800DCF18);
-    cdrom_wait_queue_empty();
-    map_block = D_800DCF18 + 8;
-    if (M2C_FIELD(D_800DCF18, u8*, 4) & 8)
     {
-        wmap_copy_rectangle(&rects[1], map_block);
-        LoadImage(&rects[1], map_block + 0xC);
-        map_block += M2C_FIELD(D_800DCF18, s32*, 8);
+        RECT rect;
+
+        rect.x = 0x278;
+        rect.y = 0;
+        rect.w = 0x10;
+        rect.h = 0x180;
+        MoveImage(&rect, 0x2B0, 0);
+        rect.x = 0x240;
+        rect.y = 0xE0;
+        rect.w = 0x60;
+        rect.h = 0x40;
+        MoveImage(&rect, 0x240, 0x1C0);
+        rect.x = 0x278;
+        rect.y = 0xE0;
+        rect.w = 0x10;
+        rect.h = 0x40;
+        MoveImage(&rect, 0x2B0, 0x1C0);
     }
-    wmap_copy_rectangle(&rects[1], map_block);
-    if (rects[1].x != -1)
     {
-        LoadImage(&rects[1], map_block + 0xC);
-        DrawSync(0);
-        D_801ADAFC = 1;
-    }
-    g_wmap_backdrop_target_level = 8;
-    func_8006CBD8(&wmap_draw_backdrop);
-    cdrom_stream(0x10C5, &D_8013C628);
-    if (show_loading_image != 0)
-    {
-        D_800D0A08[6] = 0x80;
-        D_800D0A08[5] = 0x80;
-        D_800D0A08[4] = 0x80;
-        PutDispEnv(D_801295BC);
-        PutDrawEnv(D_801295BC - 0x5C);
-        DrawPrim(D_800D0A08);
-        PutDispEnv(D_801295BC + 0x7E40);
-        PutDrawEnv(D_801295BC + 0x7DE4);
-        DrawPrim(D_800D0A08);
-    }
-    func_8006CBD8(&func_8006579C);
-    D_801398B0 = 1;
-    D_8013B24C = 0x10;
-    func_8006683C(0x808080);
-    cdrom_stream(0x10C6, D_800DCF18);
-    cdrom_wait_queue_empty();
-    interface_block = D_800DCF18 + 8;
-    if (M2C_FIELD(D_800DCF18, u8*, 4) & 8)
-    {
-        wmap_copy_rectangle(&rects[1], interface_block);
-        LoadImage(&rects[1], D_800DCF18 + 0x14);
-        interface_block += M2C_FIELD(D_800DCF18, s32*, 8);
-        wmap_copy_rectangle(&rects[1], interface_block);
-        if (rects[1].x != -1)
+        RECT rects[3];
+
         {
-            LoadImage(&rects[1], interface_block + 0xC);
-            DrawSync(0);
-        }
-    }
-    else
-    {
-        rects[1] = *(RECT*)((u8*)D_800DCF18 + 0xC);
-        if (rects[1].x != -1)
-        {
-            LoadImage(&rects[1], D_800DCF18 + 0x14);
-            DrawSync(0);
-        }
-    }
-    cdrom_queue_read(0x10C7, &D_801ADBA0);
-    g_wmap_land_image_cache[16].resource_id = 0x1F;
-    g_wmap_land_image_cache[16].animation_data = (u8*)&D_801ADBA0;
-    g_wmap_land_image_cache[16].slot_index = 0x10;
-    g_wmap_land_image_cache[16].loaded_frame = 0xFFFF;
-    g_wmap_land_image_cache[16].busy = 0;
-    marker_block = D_800DCF18;
-    cdrom_queue_read(0x10C8, marker_block);
-    cdrom_wait_queue_empty();
-    marker_header = marker_block;
-    marker_block += 8;
-    if (M2C_FIELD(marker_header, u8*, 4) & 8)
-    {
-        wmap_copy_rectangle(&rects[1], marker_block);
-        LoadImage(&rects[1], marker_block + 0xC);
-        marker_block += M2C_FIELD(marker_header, s32*, 8);
-    }
-    wmap_copy_rectangle(&rects[1], marker_block);
-    if (rects[1].x != -1)
-    {
-        LoadImage(&rects[1], marker_block + 0xC);
-        DrawSync(0);
-        D_801ADAFC = 1;
-    }
-    g_wmap_land_display[31].previous_animation_index = -1;
-    g_wmap_land_display[31].animation_index = 0;
-    /* Clamp the map origin so the party stays within the scrolling area. */
-    wmap_init_party_travel();
-    scroll_cell_x = g_wmap_travelers[0].cell_x - 1;
-    scroll_cell_y = g_wmap_travelers[0].cell_y - 1;
-    if (scroll_cell_x < 0)
-    {
-        scroll_cell_x = 0;
-        D_800DCEEC = 0;
-    }
-    else if (scroll_cell_x >= 4)
-    {
-        scroll_cell_x = 3;
-        D_800DCEEC = 2;
-    }
-    if (scroll_cell_y < 0)
-    {
-        scroll_cell_y = 0;
-        D_800DCEF0 = 0;
-    }
-    else if (scroll_cell_y >= 4)
-    {
-        scroll_cell_y = 3;
-        D_800DCEF0 = 2;
-    }
-    D_80139950.vx = (s32)(scroll_cell_x * WMAP_MAP_CELL_SIZE);
-    D_80139950.vy = (s32)(scroll_cell_y * WMAP_MAP_CELL_SIZE);
-    rects[1] = D_80051A88;
-    traveler_x = (g_wmap_travelers[0].cell_x - 1) * WMAP_TRAVEL_CELL_SIZE;
-    g_wmap_travelers[0].next_cell_x = (u16)g_wmap_travelers[0].cell_x;
-    g_wmap_travelers[0].next_cell_y = (u16)g_wmap_travelers[0].cell_y;
-    g_wmap_travelers[0].position_x = traveler_x;
-    g_wmap_travelers[0].target_x = traveler_x;
-    traveler_y = (g_wmap_travelers[0].cell_y - 1) * WMAP_TRAVEL_CELL_SIZE;
-    g_wmap_travelers[0].position_y = traveler_y;
-    g_wmap_travelers[0].target_y = traveler_y;
-    ClearImage(&rects[1], 0, 0, 0);
-    rects[1].x = 0x2C0;
-    rects[1].y = 0x1FF;
-    rects[1].w = 0x100;
-    rects[1].h = 1;
-    StoreImage(&rects[1], D_800DCF18);
-    DrawSync(0);
-    palette_index = 1;
-    palette_entry = (u16*)(D_800DCF18 + 2);
-    do
-    {
-        palette_index += 1;
-        *palette_entry |= ~0x7FFF;
-        palette_entry++;
-    } while (palette_index < 0x100);
-    rects[1].x = 0;
-    rects[1].y = 0x1FF;
-    LoadImage(&rects[1], D_800DCF18);
-    DrawSync(0);
-    backdrop_block = D_800DCF18 + 8;
-    cdrom_queue_read((wmap_get_land_count_tier() + 0x10CE) & 0xFFFF, D_800DCF18);
-    cdrom_wait_queue_empty();
-    if (M2C_FIELD(D_800DCF18, u8*, 4) & 8)
-    {
-        wmap_copy_rectangle(&rects[2], backdrop_block);
-        LoadImage(&rects[2], D_800DCF18 + 0x14);
-        backdrop_block += M2C_FIELD(D_800DCF18, s32*, 8);
-        wmap_copy_rectangle(&rects[2], backdrop_block);
-        if (rects[2].x != -1)
-        {
-            LoadImage(&rects[2], backdrop_block + 0xC);
-            DrawSync(0);
-            D_801ADAFC = 1;
-        }
-    }
-    else
-    {
-        rects[2] = *(RECT*)((u8*)D_800DCF18 + 0xC);
-        if (rects[2].x != -1)
-        {
-            LoadImage(&rects[2], D_800DCF18 + 0x14);
-            DrawSync(0);
-            D_801ADAFC = 1;
-        }
-    }
-    func_8006CBD8(&wmap_update_screen_fade);
-    g_wmap_backdrop_target_level = 0x10;
-    D_801ADAE8 = 1;
-    if (D_800D9224 == 0)
-    {
-        g_wmap_input_locked = 0;
-    }
-    update_controllers();
-    D_8011CF74 = 0;
-    render_base = &g_wmap_frames[0];
-    render_alt = &g_wmap_frames[1];
-    base_800e_late = (u8*)0x800E0000;
-    base_8014_late = (u8*)0x80140000;
-    /* Build one display list per frame, alternating the two packet buffers. */
-    while (1)
-    {
-        if (D_8011CF74 & 1)
-        {
-            render_base->packet_cursor = (u8*)D_8010CF18;
-            g_wmap_current_frame = render_base;
-        }
-        else
-        {
-            render_base[1].packet_cursor = (u8*)D_80114F18;
-            g_wmap_current_frame = render_alt;
-        }
-        g_wmap_packet_bytes = 0;
-        ClearOTagR(g_wmap_current_frame->ordering_table, WMAP_OT_COUNT);
-        D_800DBE7C = 0;
-        D_8011CF74 = (s32)(D_8011CF74 + 1);
-        if ((g_wmap_input_locked != 0) || (D_8011CF18 >= 3) ||
-            (D_80139960 != 0) || (D_801398D0 != 0) || (D_8011CF44 != 0))
-        {
-            g_wmap_buttons_repeat = 0;
-            g_wmap_buttons_held = 0;
-        }
-        else
-        {
-            wmap_read_controller();
-        }
-        if (D_8011CF74 < 0x28)
-        {
-            g_wmap_buttons_repeat &= 0xF000;
-            g_wmap_buttons_held &= 0xF000;
-        }
-        if (g_wmap_input_script != 0)
-        {
-            if (g_wmap_script_wait != 0)
+            u8* data;
+            u8* header;
+            data = D_800DCF18;
+            cdrom_stream(0x10C4, data);
+            cdrom_wait_queue_empty();
+            data += 8;
+            header = D_800DCF18;
+            if (header[4] & 8)
             {
-                wmap_wait_for_script_event();
+                wmap_upload_tim_block(&rects[0], data);
+                data += *(s32*)data;
+                wmap_copy_rectangle(&rects[0], data);
+                if (rects[0].x != -1)
+                {
+                    LoadImage(&rects[0], data + 12);
+                    DrawSync(0);
+                    D_801ADAFC = 1;
+                }
             }
             else
             {
-                script_delay = g_wmap_script_delay - 1;
-                g_wmap_script_delay = script_delay;
-                if (script_delay != 0)
+                wmap_copy_rectangle(&rects[0], data);
+                if (rects[0].x != -1)
                 {
-                    g_wmap_buttons_held = 0;
-                    g_wmap_buttons_repeat = 0;
-                }
-                else
-                {
-                    wmap_step_input_script();
+                    LoadImage(&rects[0], data + 12);
+                    DrawSync(0);
+                    D_801ADAFC = 1;
                 }
             }
         }
-        controller_buttons = M2C_FIELD(D_800D0454, u16*, 0xB4);
-        if ((controller_buttons >> 8) & 1)
+        g_wmap_backdrop_target_level = 8;
+        func_8006CBD8(&wmap_draw_backdrop);
+        cdrom_stream(0x10C5, &D_8013C628);
+        if (show_loading_image != 0)
         {
-            D_8011D0E4 = 1;
+            D_800D0A08[6] = 0x80;
+            D_800D0A08[5] = 0x80;
+            D_800D0A08[4] = 0x80;
+            PutDispEnv(D_801295BC);
+            PutDrawEnv(D_801295BC - 0x5C);
+            DrawPrim(D_800D0A08);
+            PutDispEnv(D_801295BC + 0x7E40);
+            PutDrawEnv(D_801295BC + 0x7DE4);
+            DrawPrim(D_800D0A08);
         }
-        else
+        func_8006CBD8(&func_8006579C);
+        D_801398B0 = 1;
+        D_8013B24C = 0x10;
+        func_8006683C(0x808080);
         {
-            D_8011D0E4 = 0;
-        }
-        raw_buttons = D_800D0454->published_sample.held_buttons;
-        raw_buttons = (raw_buttons >> 8) | (raw_buttons << 8);
-        if ((raw_buttons & 0x90F) == 0x90F)
-        {
-            return 2;
-        }
-        if (raw_buttons & 4)
-        {
-            D_8011D0E0 = 1;
-        }
-        else
-        {
-            D_8011D0E0 = 0;
-        }
-        exit_frame = D_8013B294;
-        if (exit_frame != 0)
-        {
-            g_wmap_input_locked = 1;
-            g_wmap_buttons_held = 0;
-            g_wmap_buttons_repeat = 0;
-            if ((exit_frame == 1) && (D_8011CF74 & 1))
+            u8* data;
+            u8* header;
+            cdrom_stream(0x10C6, D_800DCF18);
+            cdrom_wait_queue_empty();
+            data = D_800DCF18;
+            header = D_800DCF18;
+            if (header[4] & 8)
             {
-                D_8013B294 = 2;
+                data += 8;
+                wmap_upload_tim_block(&rects[0], data);
+                data += *(s32*)data;
+                rects[0] = *(RECT*)(data + 4);
+                if (rects[0].x != -1)
+                {
+                    LoadImage(&rects[0], data + 12);
+                    DrawSync(0);
+                }
             }
             else
             {
-                D_8013B294 += 1;
+                data += 8;
+                rects[0] = *(RECT*)(data + 4);
+                if (rects[0].x != -1)
+                {
+                    LoadImage(&rects[0], data + 12);
+                    DrawSync(0);
+                }
             }
         }
-        if (D_8013B294 >= 0xB)
+        cdrom_queue_read(0x10C7, &D_801ADBA0);
+        /* Slot 16 holds the resident land 31 image read above. */
+        g_wmap_land_image_cache[16].animation_data = (u8*)&D_801ADBA0;
+        g_wmap_land_image_cache[16].slot_index = 0x10;
+        g_wmap_land_image_cache[16].resource_id = 0x1F;
+        g_wmap_land_image_cache[16].loaded_frame = 0xFFFF;
+        g_wmap_land_image_cache[16].busy = 0;
+        /*
+         * Redundant in the original source: CSE makes this store reuse the
+         * first store's constant register and jump2 deletes it after reload,
+         * but the second use is what schedules `li a2, 16` ahead of the other
+         * stores. Removing it breaks the match.
+         */
+        g_wmap_land_image_cache[16].slot_index = 0x10;
         {
-            if (D_8013B294 == 0xB)
+            u8* data;
+            u8* header;
+            data = D_800DCF18;
+            cdrom_queue_read(0x10C8, data);
+            cdrom_wait_queue_empty();
+            data += 8;
+            header = D_800DCF18;
+            if (header[4] & 8)
             {
-                akao_cmd_c2(0, 0x5A, 0x7F, 0);
-                if (D_80139228 == 0)
+                wmap_upload_tim_block(&rects[0], data);
+                data += *(s32*)data;
+                wmap_copy_rectangle(&rects[0], data);
+                if (rects[0].x != -1)
                 {
-                    akao_play_sfx_from_buffer(D_800CB248, 0, 0x80, 0x7F);
+                    LoadImage(&rects[0], data + 12);
+                    DrawSync(0);
+                    D_801ADAFC = 1;
                 }
-                func_8005DF50(g_wmap_travelers[0].cell_x, g_wmap_travelers[0].cell_y);
-                DrawSync(0);
-                /* Save the displayed frame for the exit transition. */
-                screen_pixel = (u16*)D_800DCF18;
-                StoreImage(&g_wmap_current_frame->disp_env.disp, D_800DCF18);
-                MoveImage(&g_wmap_current_frame->disp_env.disp, g_wmap_current_frame->draw_env.tw.x, g_wmap_current_frame->draw_env.tw.y);
-                DrawSync(0);
-                pixel_index = 0;
-                do
+            }
+            else
+            {
+                wmap_copy_rectangle(&rects[0], data);
+                if (rects[0].x != -1)
                 {
-                    pixel_index += 1;
-                    *screen_pixel |= 0x8000;
-                    screen_pixel++;
-                } while (pixel_index <= 0x12BFF);
-                rects[2] = g_wmap_exit_capture_rect.rect;
-                LoadImage(&rects[2], D_800DCF18);
-                D_8013B238.vx = 0;
-                D_8013B238.vy = 0;
-                D_8013B238.vz = 0;
-                D_80139870.vx = 0xA0;
-                D_80139870.vy = 0x78;
-                D_80139870.vz = 0;
-                D_8013B240.vx = 0;
-                D_8013B240.vy = 0;
-                D_8013B240.vz = 0;
-                D_80139888.vx = 0xA0;
-                D_80139888.vy = 0x78;
-                D_80139888.vz = 0;
-                render_base[1].draw_env.dtd = 0;
-                render_base->draw_env.dtd = 0;
-                D_801B2478.vx = 3;
-                D_801B2478.vy = 0;
-                D_801B2478.vz = 0;
-                D_801B24A8.vx = 8;
-                D_801B24A8.vy = 0xC;
-                D_801B24A8.vz = 0;
-                backdrop_choice = rand() & 3;
-                switch (backdrop_choice)
-                {
-                case 0:
-                    D_800D9238 = 0x201010;
-                    break;
-                case 1:
-                    D_800D9238 = 0x101810;
-                    break;
-                case 2:
-                    D_800D9238 = 0x201020;
-                    break;
-                case 3:
-                    D_800D9238 = 0x202010;
-                    break;
+                    LoadImage(&rects[0], data + 12);
+                    DrawSync(0);
+                    D_801ADAFC = 1;
                 }
-                DrawSync(0);
-            }
-            if (D_8013B294 == 0x78)
-            {
-                break;
-            }
-            switch (D_80139228)
-            {
-            case 1:
-                func_800641DC();
-                goto present_frame;
-            case 0:
-                func_8006454C();
-                goto present_frame;
-            case 2:
-                return 0;
-            default:
-                goto present_frame;
             }
         }
-        else
+        g_wmap_land_display[31].previous_animation_index = -1;
+        g_wmap_land_display[31].animation_index = 0;
+        /* Clamp the map origin so the party stays within the scrolling area. */
+        wmap_init_party_travel();
+        scroll_cell_x = g_wmap_travelers[0].cell_x - 1;
+        scroll_cell_y = g_wmap_travelers[0].cell_y - 1;
+        if (scroll_cell_x < 0)
         {
-            wmap_update_menu(raw_buttons);
-            if (g_wmap_script_prompt_visible != 0)
+            scroll_cell_x = 0;
+            D_800DCEEC = 0;
+        }
+        else if (scroll_cell_x >= 4)
+        {
+            scroll_cell_x = 3;
+            D_800DCEEC = 2;
+        }
+        if (scroll_cell_y < 0)
+        {
+            scroll_cell_y = 0;
+            D_800DCEF0 = 0;
+        }
+        else if (scroll_cell_y >= 4)
+        {
+            scroll_cell_y = 3;
+            D_800DCEF0 = 2;
+        }
+        D_80139950.vx = (s32)(scroll_cell_x * WMAP_MAP_CELL_SIZE);
+        D_80139950.vy = (s32)(scroll_cell_y * WMAP_MAP_CELL_SIZE);
+        g_wmap_travelers[0].next_cell_x = (u16)g_wmap_travelers[0].cell_x;
+        g_wmap_travelers[0].next_cell_y = (u16)g_wmap_travelers[0].cell_y;
+        traveler_x = (g_wmap_travelers[0].cell_x - 1) * WMAP_TRAVEL_CELL_SIZE;
+        g_wmap_travelers[0].position_x = traveler_x;
+        g_wmap_travelers[0].target_x = traveler_x;
+        traveler_y = (g_wmap_travelers[0].cell_y - 1) * WMAP_TRAVEL_CELL_SIZE;
+        g_wmap_travelers[0].position_y = traveler_y;
+        g_wmap_travelers[0].target_y = traveler_y;
+        wmap_clear_map_surface(&rects[0]);
+        rects[0].x = 0x2C0;
+        rects[0].y = 0x1FF;
+        rects[0].w = 0x100;
+        rects[0].h = 1;
+        StoreImage(&rects[0], D_800DCF18);
+        DrawSync(0);
+        {
+        s32 opaque_mask;
+        palette_index = 1;
+        opaque_mask = ~0x7FFF;
+        palette_entry = (u16*)(D_800DCF18 + 2);
+        do
+        {
+            palette_index += 1;
+            *palette_entry |= opaque_mask;
+            palette_entry++;
+        } while (palette_index < 0x100);
+        }
+        rects[0].x = 0;
+        rects[0].y = 0x1FF;
+        LoadImage(&rects[0], D_800DCF18);
+        DrawSync(0);
+        {
+            u8* data;
+            u8* header;
+            data = D_800DCF18;
+            cdrom_queue_read((wmap_get_land_count_tier() + 0x10CE) & 0xFFFF, data);
+            cdrom_wait_queue_empty();
+            data += 8;
+            header = D_800DCF18;
+            if (header[4] & 8)
             {
-                prompt_sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
-                *prompt_sprite = D_800D06E4;
-                addPrim(&g_wmap_current_frame->ordering_table[1], prompt_sprite);
-                packet_bytes = g_wmap_packet_bytes;
-                if (packet_bytes < WMAP_PACKET_LIMIT)
+                wmap_upload_tim_block(&rects[1], data);
+                data += *(s32*)data;
+                wmap_copy_rectangle(&rects[1], data);
+                if (rects[1].x != -1)
                 {
-                    g_wmap_packet_bytes = packet_bytes + sizeof(SPRT);
-                    g_wmap_current_frame->packet_cursor += sizeof(SPRT);
+                    LoadImage(&rects[1], data + 12);
+                    DrawSync(0);
+                    D_801ADAFC = 1;
                 }
-                func_8006534C(0xD5, 1);
             }
-            if (D_8013986C == 0)
+            else
             {
-                if (D_8011D4FC != -1)
+                wmap_copy_rectangle(&rects[1], data);
+                if (rects[1].x != -1)
                 {
-                    D_801398BC = 3;
+                    LoadImage(&rects[1], data + 12);
+                    DrawSync(0);
+                    D_801ADAFC = 1;
                 }
-                else if (D_8011CF18 == 2)
+            }
+        }
+        func_8006CBD8(&wmap_update_screen_fade);
+        g_wmap_backdrop_target_level = 0x10;
+        D_801ADAE8 = 1;
+        if (D_800D9224 == 0)
+        {
+            g_wmap_input_locked = 0;
+        }
+        update_controllers();
+        D_8011CF74 = 0;
+        /* Build one display list per frame, alternating the two packet buffers. */
+        while (1)
+        {
+            if (D_8011CF74 & 1)
+            {
+                g_wmap_frames[0].packet_cursor = (u8*)D_8010CF18;
+                g_wmap_current_frame = &g_wmap_frames[0];
+            }
+            else
+            {
+                g_wmap_frames[1].packet_cursor = (u8*)D_80114F18;
+                g_wmap_current_frame = &g_wmap_frames[1];
+            }
+            g_wmap_packet_bytes = 0;
+            ClearOTagR(g_wmap_current_frame->ordering_table, WMAP_OT_COUNT);
+            D_800DBE7C = 0;
+            D_8011CF74 = (s32)(D_8011CF74 + 1);
+            if ((g_wmap_input_locked != 0) || (D_8011CF18 >= 3) ||
+                (D_80139960 != 0) || (D_801398D0 != 0) || (D_8011CF44 != 0))
+            {
+                g_wmap_buttons_repeat = 0;
+                g_wmap_buttons_held = 0;
+            }
+            else
+            {
+                wmap_read_controller();
+            }
+            if (D_8011CF74 < 0x28)
+            {
+                g_wmap_buttons_repeat &= 0xF000;
+                g_wmap_buttons_held &= 0xF000;
+            }
+            if (g_wmap_input_script != 0)
+            {
+                if (g_wmap_script_wait != 0)
                 {
-                    D_801398BC = D_8011CF18;
+                    wmap_wait_for_script_event();
                 }
                 else
                 {
-                    D_801398BC = 0;
+                    script_delay = g_wmap_script_delay - 1;
+                    g_wmap_script_delay = script_delay;
+                    if (script_delay != 0)
+                    {
+                        g_wmap_buttons_held = 0;
+                        g_wmap_buttons_repeat = 0;
+                    }
+                    else
+                    {
+                        wmap_step_input_script();
+                    }
                 }
             }
-            else if (D_8013986C == 1)
+            controller_buttons = M2C_FIELD(D_800D0454, u16*, 0xB4);
+            if ((controller_buttons >> 8) & 1)
             {
-                D_801398BC = 1;
+                D_8011D0E4 = 1;
             }
-            if ((D_8013986C == 0) && (g_wmap_game_start_delay != 0))
+            else
             {
-                wmap_update_artifact_selection();
+                D_8011D0E4 = 0;
             }
-            func_800664B8();
-            SetSpadStack(WMAP_SCRATCH_STACK_SAVE_SLOT);
-            func_8006CB60();
-            func_8006CA28();
-            ResetSpadStack();
-            wmap_update_map_game();
-            if (g_wmap_game_start_delay != 0)
+            raw_buttons = D_800D0454->published_sample.held_buttons;
+            raw_buttons = (raw_buttons >> 8) | (raw_buttons << 8);
+            if ((raw_buttons & 0x90F) == 0x90F)
             {
-                wmap_draw_lands();
+                return 2;
             }
-            if (D_800D9224 != 0)
+            if (raw_buttons & 4)
+            {
+                D_8011D0E0 = 1;
+            }
+            else
+            {
+                D_8011D0E0 = 0;
+            }
+            exit_frame = D_8013B294;
+            if (exit_frame != 0)
             {
                 g_wmap_input_locked = 1;
-                if (D_8011CF74 >= 0x33)
+                g_wmap_buttons_held = 0;
+                g_wmap_buttons_repeat = 0;
+                if ((exit_frame == 1) && (D_8011CF74 & 1))
                 {
-                    func_800A5DFC();
+                    D_8013B294 = 2;
+                }
+                else
+                {
+                    D_8013B294 += 1;
                 }
             }
-            if (D_8013986C != 0)
+            if (D_8013B294 >= 0xB)
             {
-                func_8005FF88(-1);
+                if (D_8013B294 == 0xB)
+                {
+                    akao_cmd_c2(0, 0x5A, 0x7F, 0);
+                    if (D_80139228 == 0)
+                    {
+                        akao_play_sfx_from_buffer(D_800CB248, 0, 0x80, 0x7F);
+                    }
+                    func_8005DF50(g_wmap_travelers[0].cell_x, g_wmap_travelers[0].cell_y);
+                    DrawSync(0);
+                    /* Save the displayed frame for the exit transition. */
+                    screen_pixel = (u16*)D_800DCF18;
+                    StoreImage(&g_wmap_current_frame->disp_env.disp, D_800DCF18);
+                    MoveImage(&g_wmap_current_frame->disp_env.disp, g_wmap_current_frame->draw_env.tw.x, g_wmap_current_frame->draw_env.tw.y);
+                    DrawSync(0);
+                    for (pixel_index = 0; pixel_index < 0x12C00; pixel_index++)
+                    {
+                        screen_pixel[pixel_index] |= 0x8000;
+                    }
+                    /* Reload the captured frame into the 320x240 buffer at x = 320. */
+                    rects[1] = (RECT){SCREEN_WIDTH, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
+                    LoadImage(&rects[1], D_800DCF18);
+                    D_8013B238.vx = 0;
+                    D_8013B238.vy = 0;
+                    D_8013B238.vz = 0;
+                    D_80139870.vx = 0xA0;
+                    D_80139870.vy = 0x78;
+                    D_80139870.vz = 0;
+                    D_8013B240.vx = 0;
+                    D_8013B240.vy = 0;
+                    D_8013B240.vz = 0;
+                    D_80139888.vx = 0xA0;
+                    D_80139888.vy = 0x78;
+                    D_80139888.vz = 0;
+                    g_wmap_frames[1].draw_env.dtd = 0;
+                    g_wmap_frames[0].draw_env.dtd = 0;
+                    D_801B2478.vx = 3;
+                    D_801B2478.vy = 0;
+                    D_801B2478.vz = 0;
+                    D_801B24A8.vx = 8;
+                    D_801B24A8.vy = 0xC;
+                    D_801B24A8.vz = 0;
+                    backdrop_choice = rand() & 3;
+                    switch (backdrop_choice)
+                    {
+                    case 0:
+                        D_800D9238 = 0x201010;
+                        break;
+                    case 1:
+                        D_800D9238 = 0x101810;
+                        break;
+                    case 2:
+                        D_800D9238 = 0x201020;
+                        break;
+                    case 3:
+                        D_800D9238 = 0x202010;
+                        break;
+                    }
+                    DrawSync(0);
+                }
+                if (D_8013B294 == 0x78)
+                {
+                    break;
+                }
+                switch (D_80139228)
+                {
+                case 1:
+                    func_800641DC();
+                    break;
+                case 0:
+                    func_8006454C();
+                    break;
+                case 2:
+                    return 0;
+                default:
+                    break;
+                }
             }
-            func_8005F9BC();
-            SetSpadStack(WMAP_SCRATCH_STACK_SAVE_SLOT);
-            wmap_update_party_travel();
-            wmap_update_map_display();
-            wmap_update_land_preview();
-            wmap_draw_artifact_carousel();
-            func_8006D674();
-            ResetSpadStack();
-        present_frame:
+            else
+            {
+                wmap_update_menu(raw_buttons);
+                if (g_wmap_script_prompt_visible != 0)
+                {
+                    prompt_sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+                    *prompt_sprite = D_800D06E4;
+                    addPrim(&g_wmap_current_frame->ordering_table[1], prompt_sprite);
+                    packet_bytes = g_wmap_packet_bytes;
+                    if (packet_bytes < WMAP_PACKET_LIMIT)
+                    {
+                        g_wmap_packet_bytes = packet_bytes + sizeof(SPRT);
+                        g_wmap_current_frame->packet_cursor += sizeof(SPRT);
+                    }
+                    func_8006534C(0xD5, 1);
+                }
+                if (D_8013986C == 0)
+                {
+                    if (D_8011D4FC != -1)
+                    {
+                        D_801398BC = 3;
+                    }
+                    else if (D_8011CF18 == 2)
+                    {
+                        D_801398BC = D_8011CF18;
+                    }
+                    else
+                    {
+                        D_801398BC = 0;
+                    }
+                }
+                else if (D_8013986C == 1)
+                {
+                    D_801398BC = 1;
+                }
+                if ((D_8013986C == 0) && (g_wmap_game_start_delay != 0))
+                {
+                    wmap_update_artifact_selection();
+                }
+                func_800664B8();
+                SetSpadStack(WMAP_SCRATCH_STACK_SAVE_SLOT);
+                func_8006CB60();
+                func_8006CA28();
+                ResetSpadStack();
+                wmap_update_map_game();
+                if (g_wmap_game_start_delay != 0)
+                {
+                    wmap_draw_lands();
+                }
+                if (D_800D9224 != 0)
+                {
+                    g_wmap_input_locked = 1;
+                    if (D_8011CF74 >= 0x33)
+                    {
+                        func_800A5DFC();
+                    }
+                }
+                if (D_8013986C != 0)
+                {
+                    func_8005FF88(-1);
+                }
+                func_8005F9BC();
+                SetSpadStack(WMAP_SCRATCH_STACK_SAVE_SLOT);
+                wmap_update_party_travel();
+                wmap_update_map_display();
+                wmap_update_land_preview();
+                wmap_draw_artifact_carousel();
+                func_8006D674();
+                ResetSpadStack();
+            }
             func_8005D46C();
             D_801ADAF8 = 0;
             vsync_count = VSync(1);
@@ -2034,12 +2121,12 @@ next_event:
             PutDrawEnv(&g_wmap_current_frame->draw_env);
             if (D_8013B210 != 0)
             {
-                rects[2].x = 0x240;
-                rects[2].y = 0x151;
+                rects[1].x = 0x240;
+                rects[1].y = 0x151;
                 D_8013B210 = 0;
-                rects[2].w = 0x10;
-                rects[2].h = 1;
-                LoadImage(&rects[2], &D_8013B210);
+                rects[1].w = 0x10;
+                rects[1].h = 1;
+                LoadImage(&rects[1], &D_8013B210);
             }
             func_80064BF8();
             DrawOTag(&g_wmap_current_frame->ordering_table[0xB2]);
@@ -2073,14 +2160,7 @@ next_event:
                 error_quad->u1 = 0xFF;
                 error_quad->tpage = 0x5E;
                 error_quad->clut = 0x7F70;
-                setlen(error_quad, 9);
-                setcode(error_quad, 0x2E);
-                error_texture_top = (g_wmap_cd_error - 1) << 5;
-                error_quad->v1 = error_texture_top;
-                error_quad->v0 = error_texture_top;
-                error_texture_bottom = error_texture_top + 0x20;
-                error_quad->v3 = error_texture_bottom;
-                error_quad->v2 = error_texture_bottom;
+                wmap_set_error_uv(error_quad, g_wmap_cd_error);
                 setaddr(error_quad, getaddr(&g_wmap_current_frame->ordering_table[1]));
                 error_packet_bytes = g_wmap_packet_bytes;
                 setaddr(&g_wmap_current_frame->ordering_table[1], error_quad);
@@ -2090,10 +2170,9 @@ next_event:
                     g_wmap_current_frame->packet_cursor += sizeof(POLY_FT4);
                 }
             }
-            continue;
         }
+        return 0;
     }
-    return 0;
 }
 
 /**

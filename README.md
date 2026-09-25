@@ -51,7 +51,7 @@ The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each mod
 | NIKI.BIN | 🔒 | Fully linked |
 | SHOP.BIN | 🔒 | Fully linked |
 | TITLE.BIN | 🔒 | Fully linked |
-| WMAP.BIN | 🪲 | Non-matching |
+| WMAP.BIN | 🔒 | Fully linked |
 | WSEL.BIN | 🔒 | Fully linked |
 | ZUKAN.BIN | 🔒 | Fully linked |
 
@@ -432,7 +432,7 @@ Check its routing in `mk/main.mk` or `mk/overlay-registry.mk`. The configured hi
 
 **objdiff reports 100%, but whole-overlay verification fails**
 
-Check data/rodata (including jump-table case targets), relocation addends, linker section order, the overlay segment's `align:` key, and generated assets. Function-level matching does not prove whole-file identity.
+Check data/rodata jump table or case targets, relocation addends, linker section order, the overlay segment's `align:` key, and generated assets. 
 
 ## Reverse-engineering provenance
 
