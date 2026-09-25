@@ -206,7 +206,7 @@ void field_update_scene_animations(void)
                                     field_begin_scene_fade_in();
                                 }
                                 anim->flags.word &= ~FIELD_ANIM_FLAG_ACTIVE;
-                                func_80084240();
+                                field_reset_actor_resources();
                             }
                         }
                         else

@@ -15,9 +15,6 @@
 /** @brief Scratchpad vector that receives the actor displacement. */
 #define FIELD_SCRATCH_DISPLACEMENT ((Vec3i*)0x1F800000)
 
-/** @brief Action animations that continue while the action's buttons are held (10 is the guard). */
-#define FIELD_ANIMATION_GUARD 10
-#define FIELD_ANIMATION_HELD_31 0x31
 /** @brief Action animation whose handler also runs after the animation has finished. */
 #define FIELD_ANIMATION_35 0x35
 /** @brief Action animations that leave the actor facing the other way. */
@@ -26,8 +23,6 @@
 
 /** @brief Number of per-object actions that can be bound to buttons. */
 #define FIELD_BOUND_ACTION_COUNT 12
-/** @brief Objects below this index are the two players. */
-#define FIELD_PLAYER_COUNT 2
 /** @brief FieldObjectState::action_parameter value of an object without an action. */
 #define FIELD_ACTION_PARAMETER_NONE 0xFFFF
 
@@ -87,12 +82,12 @@ s32 field_update_actor_action(FieldActor* actor, s32 update_action)
     if (update_action != 0 &&
         (actor->animation_state != 0 || (actor->animation & FIELD_ANIMATION_INDEX_MASK) == FIELD_ANIMATION_35))
     {
-        func_80092C98((struct FieldMotionRecord*)actor);
+        field_update_actor_action_chain(actor);
     }
     if (actor->animation_state == 0)
     {
         animation = actor->animation & FIELD_ANIMATION_INDEX_MASK;
-        if (animation == FIELD_ANIMATION_GUARD || animation == FIELD_ANIMATION_HELD_31)
+        if (animation == FIELD_ANIMATION_GUARD || animation == FIELD_ANIMATION_DEFENSELESS)
         {
             if (g_field_object_states[actor->object_index].action < FIELD_BOUND_ACTION_COUNT)
             {
@@ -118,11 +113,11 @@ s32 field_update_actor_action(FieldActor* actor, s32 update_action)
         {
             actor->animation ^= FIELD_ANIMATION_FACING;
         }
-        if (actor->object_index < FIELD_PLAYER_COUNT && func_80093AB8((struct FieldMotionRecord*)actor) != 0)
+        if (actor->object_index < FIELD_PLAYER_COUNT && field_update_pending_action(actor) != 0)
         {
             return;
         }
-        if (func_80092AD8((struct FieldMotionRecord*)actor) != 0)
+        if (field_update_actor_landing(actor) != 0)
         {
             actor->command = FIELD_ACTOR_COMMAND_NONE;
             actor->animation &= FIELD_ANIMATION_FACING;

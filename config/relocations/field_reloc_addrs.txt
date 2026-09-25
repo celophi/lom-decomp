@@ -133,3 +133,14 @@ rom:0x3CDD9 reloc:MIPS_HI16 symbol:g_field_actors addend:0xA8
 rom:0x3CDDD reloc:MIPS_LO16 symbol:g_field_actors addend:0xA8
 rom:0x405D9 reloc:MIPS_HI16 symbol:g_field_resource_actions addend:0x58
 rom:0x405DD reloc:MIPS_LO16 symbol:g_field_resource_actions addend:0x58
+
+// The ground attachment points of the field objects are
+// g_field_object_states[i].ground_attachment_points (base + 0x190). Splat
+// otherwise names that address D_80105C70; keep the field addend so objdiff
+// compares the same symbolic expression as the C.
+// field_actor_near_ground_points
+rom:0x4D379 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x190
+rom:0x4D37D reloc:MIPS_LO16 symbol:g_field_object_states addend:0x190
+// field_actor_near_first_ground_point
+rom:0x4D4A1 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x190
+rom:0x4D4A5 reloc:MIPS_LO16 symbol:g_field_object_states addend:0x190

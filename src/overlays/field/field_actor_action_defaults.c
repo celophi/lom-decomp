@@ -19,11 +19,7 @@
 /** @brief Number of map entries cleared by a map reset. */
 #define FIELD_ACTION_MAP_RESET_COUNT 8
 
-/** @brief Actor command that performs the action given in the command's high byte. */
-#define FIELD_COMMAND_PERFORM_ACTION 0x85
 
-/** @brief Actor command word that performs action @p action. */
-#define FIELD_ACTION_COMMAND(action) (((action) << 8) | FIELD_COMMAND_PERFORM_ACTION)
 
 /** @brief Target filter value of an action that does not look for targets. */
 #define FIELD_ACTION_TARGET_NONE 0xFF

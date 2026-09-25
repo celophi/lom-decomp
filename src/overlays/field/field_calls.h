@@ -24,6 +24,7 @@
 #include "vector.h"
 
 struct FieldActor;
+struct FieldActorSlot;
 struct FieldPlayerRecord;
 struct FieldActorState;
 struct FieldCdBuffer;
@@ -132,30 +133,46 @@ void field_finish_party_slot_reload(s32 actor_slot);
 
 /* field_actor_slot_resources.c */
 s32 field_object_has_active_actor_tracks(s32 object_index);
-void func_80083948(void);
-void func_8008396C(void);
-s32 func_800839F8(s32 binding_index, s32 require_idle);
-s32 func_80083EEC(s32 object_index, s32 slot_index, s32 resource_index);
-s32 func_8008404C(s32 owner, s32 resource_id);
-void func_80084240(void);
-void func_800842E0(void);
-void func_80084424(s32 owner);
-void func_80084524(void);
-void func_80084630(void);
+void field_bind_builtin_animations(void);
+void field_upload_common_texture(void);
+s32 field_find_free_actor_slot(s32 binding_index, s32 require_idle);
+s32 field_start_builtin_animation(s32 object_index, s32 slot_index, s32 animation_id);
+void field_stop_actor_slot(struct FieldActor* actor, struct FieldActorSlot* slot, s32 force);
+s32 field_start_streamed_animation(s32 owner, s32 resource_id);
+void field_reset_actor_resources(void);
+void field_poll_streamed_animations(void);
+void field_release_actor_binding(s32 owner);
+void field_reset_object_states(void);
+void field_reset_object_tints(void);
 
 /* field_actor_state_updates.c */
-s32 func_80092AD8(struct FieldMotionRecord *object);
-s32 func_80092C98(struct FieldMotionRecord *object);
-s32 func_80093AB8(struct FieldMotionRecord *object);
+s32 field_update_actor_landing(struct FieldActor* actor);
+void field_play_object_animation(struct FieldActor* actor, s32 animation_id);
+s32 field_update_actor_action_chain(struct FieldActor* actor);
+s32 field_update_pending_action(struct FieldActor* actor);
+void field_update_instrument_command(struct FieldActor* actor);
+void field_update_technique_command(struct FieldActor* actor, s32 sequence_index);
+s32 field_move_actor_step(struct FieldActor* actor, s32 direction_x, s32 vertical_step, s32 direction_z);
+void field_update_timed_slide(struct FieldActor* actor, s32 x, s32 z);
+void field_follow_leader(struct FieldActor* actor);
+void field_update_actor_jump(struct FieldActor* actor, s32 x, s32 y, s32 z);
+void field_update_actor_lift(struct FieldActor* actor, s32 rising);
+void field_slide_actor(struct FieldActor* actor, s32 dx, s32 dz);
+void field_update_timed_walk(struct FieldActor* actor, s32 dx, s32 dz);
+s32 field_start_defeat_bound_animation(struct FieldActor* actor);
+s32 field_start_defeat_wait_animation(struct FieldActor* actor);
+s32 field_update_defeat_end(struct FieldActor* actor);
+void field_restart_idle_animation(struct FieldActor* actor);
+s32 field_update_defeated(struct FieldActor* actor);
 
 /* field_actor_templates.c */
-s32 func_800B3DF4(s32 group);
-void func_800B3F1C(s32 actor_id, struct FieldStatusRecord *record, struct FieldStatusState *state);
+s32 field_build_group_monster_records(s32 group);
+void field_init_monster_record(s32 actor_id, struct FieldStatusRecord *record, struct FieldStatusState *state);
 
 /* field_actor_transition_reset.c */
-void func_800966F0(s32 mode, void *actor_data);
-void func_80096B54(void);
-void func_80096E60(void);
+void field_set_battle_group(s32 mode, void *actor_data);
+void field_cancel_animation_bindings(void);
+void field_update_battle_end(void);
 
 /* field_audio_runtime.c */
 void field_stop_song(void);

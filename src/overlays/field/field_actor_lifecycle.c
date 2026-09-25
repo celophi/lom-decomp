@@ -84,7 +84,7 @@ void field_battle_start(s32 group)
     context = g_field_runtime;
     context->state.bits.group_active = 1;
     context->state.bits.trigger_group = group;
-    func_800966F0(group, context);
+    field_set_battle_group(group, context);
 
     for (i = 0; i < FIELD_PARTY_SIZE; i++)
     {
@@ -114,7 +114,7 @@ void field_battle_suspend(void)
 
     battle = g_field_battle;
     battle->state.flags |= FIELD_BATTLE_FINISHED;
-    func_800966F0(0, battle);
+    field_set_battle_group(0, battle);
     func_800B28E0(FIELD_EVENT_OWNER, FIELD_BATTLE_EVENT, FIELD_BATTLE_PHASE_SUSPEND);
 
     for (i = FIELD_PARTY_SIZE; i < g_field_runtime->state.actor_count; i++)

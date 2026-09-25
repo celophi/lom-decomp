@@ -4,15 +4,6 @@
 #include "field_actor_runtime.h"
 #include "field_records.h"
 
-/** @brief Error status passed to record_game_diagnostic. */
-#define DIAG_ERROR 0x8001
-
-/** @brief Diagnostic code: no guest template for the requested guest. */
-#define DIAG_BAD_GUEST 0x6D
-
-/** @brief Diagnostic code: the requested stored companion does not exist. */
-#define DIAG_BAD_COMPANION 0x6E
-
 /** @brief Party slot of the guest character. */
 #define FIELD_PARTY_GUEST 1
 

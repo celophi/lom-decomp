@@ -18,8 +18,6 @@
 /** @brief Progress word with the maximum experience and a zero level byte. */
 #define FIELD_EXPERIENCE_MAX_WORD ((u32)FIELD_EXPERIENCE_MAX << 8)
 
-/** @brief Highest level a record can reach. */
-#define FIELD_LEVEL_MAX 99
 
 /** @brief Largest counter value in FieldGameState::words. */
 #define FIELD_COUNTER_MAX 9999999

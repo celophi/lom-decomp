@@ -415,8 +415,7 @@ s32 func_80064D64(s32 initialize)
     quad->header.packet.length = 5;
     quad->code = 0x2A;
     quad->r0 = quad->g0 = quad->b0 = intensity;
-    quad->header.tag = ((quad->header.tag & 0xFF000000) | (D_80182E38[g_wmap_current_frame->ordering_table] & 0xFFFFFF));
-    D_80182E38[g_wmap_current_frame->ordering_table] = ((D_80182E38[g_wmap_current_frame->ordering_table] & 0xFF000000) | ((u32)quad & 0xFFFFFF));
+    addPrim(&D_80182E38[g_wmap_current_frame->ordering_table], quad);
     if (g_wmap_packet_bytes < 0x7D00)
     {
         g_wmap_packet_bytes += 0x18;
@@ -430,8 +429,7 @@ s32 func_80064D64(s32 initialize)
     *(s32*)&triangle->x1 = 0x190;
     *(s32*)&triangle->x0 = 0x190;
     triangle->tpage = 0x40;
-    triangle->header.tag = ((triangle->header.tag & 0xFF000000) | (depth[g_wmap_current_frame->ordering_table] & 0xFFFFFF));
-    depth[g_wmap_current_frame->ordering_table] = ((depth[g_wmap_current_frame->ordering_table] & 0xFF000000) | ((u32)triangle & 0xFFFFFF));
+    addPrim(&depth[g_wmap_current_frame->ordering_table], triangle);
     if (g_wmap_packet_bytes < 0x7D00)
     {
         g_wmap_packet_bytes += 0x20;

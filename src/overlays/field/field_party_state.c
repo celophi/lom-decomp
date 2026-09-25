@@ -35,8 +35,6 @@ enum
 /** @brief Character type (low seven bits of the info byte) that publishes its region. */
 #define FIELD_CHARACTER_TYPE_COMPANION 3
 
-/** @brief Highest level func_800B3670 returns. */
-#define FIELD_LEVEL_MAX 99
 
 /** @brief Size of the battle context cleared by func_800B3580. */
 #define FIELD_BATTLE_CONTEXT_SIZE 0x4A4
@@ -539,7 +537,7 @@ void func_800B34D0(s32 group)
         {
             func_800BD520(0, 0x4280, count);
         }
-        count = func_800B3DF4(group);
+        count = field_build_group_monster_records(group);
         if (g_field_duel_mode != 0)
         {
             func_800BD520(0, 0x4284, 1);
@@ -584,10 +582,10 @@ void func_800B3580(void)
  * @brief Compute the monster level from the hero's level or the land, clamped by script variables.
  *
  * The base comes from the hero's level when @p use_hero_level or bit 7 of
- * script variable 0x52F0 is set, otherwise from func_800C3688 for the
- * current land. Script variable 0x2938 adds 20 (mode 1) or forces 63
- * (mode 2). The result indexes D_800F0AE8 and is clamped to script
- * variables 0x52E0..0x52E8 and to FIELD_LEVEL_MAX.
+ * FIELD_VAR_LEVEL_FLAGS says so, otherwise from func_800C3688 for the
+ * current land. FIELD_VAR_DIFFICULTY adds 20 (mode 1) or forces 63
+ * (mode 2). The result indexes D_800F0AE8 and is clamped to
+ * FIELD_VAR_MONSTER_LEVEL_MIN..MAX and to FIELD_LEVEL_MAX.
  *
  * @param use_hero_level Nonzero to base the level on the hero's level.
  * @return Level in 0..99.
@@ -602,11 +600,11 @@ s32 func_800B3670(s32 use_hero_level)
     u32 hi;
 
     flag = use_hero_level;
-    if (func_800BD414(0, 0x52F0) & 0x80)
+    if (func_800BD414(0, FIELD_VAR_LEVEL_FLAGS) & FIELD_LEVEL_FLAG_HERO)
     {
         flag = 1;
     }
-    mode = func_800BD414(0, 0x2938);
+    mode = func_800BD414(0, FIELD_VAR_DIFFICULTY);
 
     if (flag != 0)
     {
@@ -644,8 +642,8 @@ s32 func_800B3670(s32 use_hero_level)
     }
 
     value = D_800F0AE8[index];
-    lo = func_800BD414(0, 0x52E0);
-    hi = func_800BD414(0, 0x52E8);
+    lo = func_800BD414(0, FIELD_VAR_MONSTER_LEVEL_MIN);
+    hi = func_800BD414(0, FIELD_VAR_MONSTER_LEVEL_MAX);
     if (value < lo)
     {
         value = lo;

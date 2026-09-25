@@ -53,8 +53,6 @@
 #define FIELD_CONTROL_MOVEMENT_UNK400 0x400
 /** @brief FieldActor::control movement bits. */
 #define FIELD_CONTROL_MOVEMENT_MASK (FIELD_CONTROL_MOVING | FIELD_CONTROL_MOVEMENT_UNK400)
-/** @brief FieldActor::control bit set while an action animation plays. */
-#define FIELD_CONTROL_IN_ACTION 0x800
 /** @brief Shift of the two FieldActor::control movement bits. */
 #define FIELD_CONTROL_MOVEMENT_SHIFT 9
 
@@ -68,8 +66,6 @@
 #define FIELD_ANIMATION_INSTRUMENT 0x0F
 /** @brief Animation of an instrument action waiting for its target. */
 #define FIELD_ANIMATION_INSTRUMENT_READY 0x10
-/** @brief Animation that closes an instrument action. */
-#define FIELD_ANIMATION_INSTRUMENT_END 0x31
 /** @brief Terminator of g_field_actor_turn_animations. */
 #define FIELD_TURN_ANIMATION_END 0xFF
 
@@ -82,13 +78,9 @@
 #define FIELD_MOVEMENT_TECHNIQUE 0x8000
 /** @brief FieldObjectState::movement bit: the charge animation was started. */
 #define FIELD_MOVEMENT_CHARGED 0x400
-/** @brief FieldObjectState::movement sequence bits cleared when an animation restarts. */
-#define FIELD_MOVEMENT_SEQUENCE_MASK 0x1800
 /** @brief FieldObjectState::movement low bits holding the effect scale. */
 #define FIELD_MOVEMENT_SCALE_MASK 0x3FF
 
-/** @brief FieldObjectState::contact bit: the object cannot be targeted. */
-#define FIELD_CONTACT_UNTARGETABLE 0x01
 /** @brief FieldObjectState::contact bit that keeps an object out of the target list (placeholder name). */
 #define FIELD_CONTACT_UNK20 0x20
 /** @brief FieldObjectState::contact bit: the object is charging or waiting for an action. */
@@ -99,8 +91,6 @@
 #define FIELD_CONTACT_ACTION_BITS 0x1C
 /** @brief FieldObjectState::contact bit cleared when an action is accepted (placeholder name). */
 #define FIELD_CONTACT_UNK02 0x02
-/** @brief FieldObjectState::flags bits that make an object an invalid target. */
-#define FIELD_OBJECT_UNTARGETABLE_FLAGS 0x2280
 
 /** @brief Value of FieldObjectState::contact.bytes.animation_actor_index without an actor. */
 #define FIELD_ANIMATION_ACTOR_NONE 0xFF
@@ -152,16 +142,10 @@
 /** @brief Animation request bits holding the animation resource. */
 #define FIELD_REQUEST_ANIMATION_MASK 0x3FF
 
-/** @brief FieldActorSlot::status bits holding the action element (stored shifted by one). */
-#define FIELD_SLOT_ELEMENT_BITS 0x1E
 /** @brief Maximum number of targets handed to an action animation. */
 #define FIELD_ACTION_MAX_TARGETS 9
 /** @brief Free actor slots an action needs before it may start. */
 #define FIELD_ACTION_MIN_FREE_SLOTS 3
-/** @brief Player-controlled party objects (two-player mode); each has its own binding. */
-#define FIELD_PLAYER_COUNT 2
-/** @brief Party objects: the two players and the partner. */
-#define FIELD_PARTY_COUNT 3
 /** @brief Frames the combo timer runs after a combo action. */
 #define FIELD_COMBO_WINDOW 10
 /** @brief Weapon type without a variant animation for command 0x1F. */
@@ -1325,7 +1309,7 @@ void field_prepare_actor_action(FieldActor* actor)
         }
         technique = action->command & FIELD_ACTION_TECHNIQUE_MASK;
         technique_base = (g_field_player_records[object_index].weapon_type * FIELD_TECHNIQUES_PER_WEAPON) + FIELD_TECHNIQUE_SEQUENCE_BASE;
-        if (func_8008404C(object_index, technique + technique_base) == 0)
+        if (field_start_streamed_animation(object_index, technique + technique_base) == 0)
         {
             actor->command = FIELD_ACTOR_COMMAND_NONE;
             return;
@@ -1335,7 +1319,7 @@ void field_prepare_actor_action(FieldActor* actor)
     else
     {
         request = action->request;
-        if ((request & FIELD_REQUEST_BOUND) && (func_8008404C(actor->object_index, request & FIELD_REQUEST_ANIMATION_MASK) == 0))
+        if ((request & FIELD_REQUEST_BOUND) && (field_start_streamed_animation(actor->object_index, request & FIELD_REQUEST_ANIMATION_MASK) == 0))
         {
             actor->command = FIELD_ACTOR_COMMAND_NONE;
             return;
@@ -1362,8 +1346,8 @@ void field_prepare_actor_action(FieldActor* actor)
         animation = action->animation;
         if ((animation != FIELD_ACTION_NO_ANIMATION) && (animation != 0))
         {
-            animation_slot = func_800839F8(actor->object_index, 0);
-            if ((animation_slot != -1) && (func_80083EEC(actor->object_index, animation_slot, action->animation) != 0))
+            animation_slot = field_find_free_actor_slot(actor->object_index, 0);
+            if ((animation_slot != -1) && (field_start_builtin_animation(actor->object_index, animation_slot, action->animation) != 0))
             {
                 field_start_actor_animation(animation_slot, 0, 0);
                 g_field_object_states[actor->object_index].contact.bytes.animation_actor_index = animation_slot;
@@ -1598,7 +1582,7 @@ s32 field_update_actor_command(FieldActor* actor)
     u8 charge_object_index;
     s32 technique_object_index;
     s32 combo_object_index;
-    u8 transition_object_index;
+    u8 revive_object_index;
     u8 animation;
     u8 release_object_index;
     s32 combo_target_index;
@@ -1618,11 +1602,11 @@ s32 field_update_actor_command(FieldActor* actor)
     FieldObjectState* charge_states;
     FieldPlayerRecord* combo_players;
     FieldPlayerRecord* timer_players;
-    FieldPlayerRecord* transition_players;
+    FieldPlayerRecord* revive_players;
     FieldPlayerRecord* reset_players;
     FieldPlayerRecord* combo_player;
     FieldPlayerRecord* timer_player;
-    FieldPlayerRecord* transition_player;
+    FieldPlayerRecord* revive_player;
     FieldPlayerRecord* completed_player;
     FieldPlayerRecord* destination_player;
     FieldObjectState* finished_state;
@@ -1722,10 +1706,10 @@ s32 field_update_actor_command(FieldActor* actor)
                         {
                             if (scratch.combo_action.animation != 0)
                             {
-                                combo_or_slot = func_800839F8(actor->object_index, 0);
+                                combo_or_slot = field_find_free_actor_slot(actor->object_index, 0);
                                 if (combo_or_slot != -1)
                                 {
-                                    if (func_80083EEC(actor->object_index, combo_or_slot, scratch.combo_action.animation) != 0)
+                                    if (field_start_builtin_animation(actor->object_index, combo_or_slot, scratch.combo_action.animation) != 0)
                                     {
                                         field_start_actor_animation(combo_or_slot, 0, 0);
                                         g_field_object_states[actor->object_index].contact.bytes.animation_actor_index = combo_or_slot;
@@ -1768,10 +1752,10 @@ s32 field_update_actor_command(FieldActor* actor)
         field_update_actor_action(actor, 1);
         return;
     case FIELD_ACTOR_COMMAND_INSTRUMENT:
-        func_80093EB4(actor);
+        field_update_instrument_command(actor);
         return;
     case FIELD_ACTOR_COMMAND_TECHNIQUE:
-        func_8009403C(actor, state->sequence);
+        field_update_technique_command(actor, state->sequence);
         return;
     case FIELD_ACTOR_COMMAND_TURN:
         if (!(g_field_resource_entries[actor->resource_index].flags & FIELD_RESOURCE_HAS_ACTIONS))
@@ -1797,84 +1781,84 @@ s32 field_update_actor_command(FieldActor* actor)
         actor->animation_active = 1;
         field_restart_actor_animation(actor);
         return;
-    case FIELD_ACTOR_COMMAND_9A:
+    case FIELD_ACTOR_COMMAND_IDLE_AFTER_RELOAD:
         field_idle_actor_after_reload(actor);
         return;
-    case FIELD_ACTOR_COMMAND_99:
+    case FIELD_ACTOR_COMMAND_IDLE_AFTER_ANIMATION:
         field_idle_actor_after_animation(actor);
         return;
     case FIELD_ACTOR_COMMAND_HIT:
         field_update_hit_reaction(actor);
         return;
-    case FIELD_ACTOR_COMMAND_TRANSITION:
+    case FIELD_ACTOR_COMMAND_KNOCKED_DOWN:
     {
-        u8 transition_index;
+        u8 revive_index;
         FieldPlayerRecord* timed_player;
-        s16 transition_limit;
-        transition_players = g_field_player_records;
-        transition_index = actor->object_index;
-        timed_player = &transition_players[transition_index];
-        transition_limit = timed_player->transition_limit;
-        if (transition_limit != 0)
+        s16 revive_delay;
+        revive_players = g_field_player_records;
+        revive_index = actor->object_index;
+        timed_player = &revive_players[revive_index];
+        revive_delay = timed_player->revive_delay;
+        if (revive_delay != 0)
         {
-            if (transition_index < FIELD_PARTY_COUNT)
+            if (revive_index < FIELD_PARTY_COUNT)
             {
-                if ((timed_player->transition_time >= transition_limit) ||
-                    (timed_player->transition_time++, transition_player = &g_field_player_records[actor->object_index],
-                     (transition_player->transition_time >= transition_player->transition_limit)))
+                if ((timed_player->revive_time >= revive_delay) ||
+                    (timed_player->revive_time++, revive_player = &g_field_player_records[actor->object_index],
+                     (revive_player->revive_time >= revive_player->revive_delay)))
                 {
                     completed_player = &g_field_player_records[actor->object_index];
-                    completed_player->transition_limit = 0;
-                    completed_player->transition_time = 0;
-                    transition_object_index = actor->object_index;
-                    destination_player = &g_field_player_records[transition_object_index];
-                    field_revive_actor(transition_object_index, destination_player->revive_animation, destination_player->revive_effect, destination_player->revive_sound);
+                    completed_player->revive_delay = 0;
+                    completed_player->revive_time = 0;
+                    revive_object_index = actor->object_index;
+                    destination_player = &g_field_player_records[revive_object_index];
+                    field_revive_actor(revive_object_index, destination_player->revive_animation, destination_player->revive_effect, destination_player->revive_sound);
                     return;
                 }
             }
         }
         break;
     }
-    case FIELD_ACTOR_COMMAND_90:
-        func_80095168(actor);
+    case FIELD_ACTOR_COMMAND_DEFEATED:
+        field_update_defeated(actor);
         return;
-    case FIELD_ACTOR_COMMAND_92:
+    case FIELD_ACTOR_COMMAND_DEFEAT_BOUND:
         if ((g_field_actor_bindings[FIELD_OBJECT_BINDING(actor->object_index)].state != 0) &&
             (g_field_actor_bindings[FIELD_OBJECT_BINDING(actor->object_index)].owner == actor->object_index))
         {
-            func_80094EA4(actor);
+            field_start_defeat_bound_animation(actor);
             return;
         }
-        func_8008404C(actor->object_index, g_field_resource_entries[actor->resource_index].unkE & FIELD_REQUEST_ANIMATION_MASK);
+        field_start_streamed_animation(actor->object_index, g_field_resource_entries[actor->resource_index].unkE & FIELD_REQUEST_ANIMATION_MASK);
         return;
-    case FIELD_ACTOR_COMMAND_93:
+    case FIELD_ACTOR_COMMAND_DEFEAT_WAIT:
         if ((g_field_actor_bindings[FIELD_OBJECT_BINDING(actor->object_index)].state != 0) &&
             (g_field_actor_bindings[FIELD_OBJECT_BINDING(actor->object_index)].owner == actor->object_index))
         {
-            func_80094F40(actor);
+            field_start_defeat_wait_animation(actor);
             return;
         }
 
-        func_8008404C(actor->object_index, g_field_resource_entries[actor->resource_index].unkE & FIELD_REQUEST_ANIMATION_MASK);
+        field_start_streamed_animation(actor->object_index, g_field_resource_entries[actor->resource_index].unkE & FIELD_REQUEST_ANIMATION_MASK);
         return;
-    case FIELD_ACTOR_COMMAND_94:
-        func_80094FDC(actor);
+    case FIELD_ACTOR_COMMAND_DEFEAT_END:
+        field_update_defeat_end(actor);
         return;
-    case FIELD_ACTOR_COMMAND_AE:
+    case FIELD_ACTOR_COMMAND_DEFEAT_DELAY:
         command_timer = actor->command_param;
         if (command_timer != 0)
         {
             actor->command_param = command_timer - 1;
             return;
         }
-        if (!(state->contact.word & FIELD_CONTACT_UNTARGETABLE))
+        if (!(state->contact.word & FIELD_CONTACT_ANIMATION_HIDDEN))
         {
             field_collapse_defeated_actor(actor);
             return;
         }
         break;
     case FIELD_ACTOR_COMMAND_STEP:
-        func_80094508(actor, 0, 0, 0);
+        field_move_actor_step(actor, 0, 0, 0);
         return;
     case FIELD_ACTOR_COMMAND_SEQUENCE_STEP:
         sequence_dx = rcos(actor->direction * 16) >> 4;
@@ -1882,10 +1866,10 @@ s32 field_update_actor_command(FieldActor* actor)
         return;
     case FIELD_ACTOR_COMMAND_JUMP:
         jump_dx = rcos(actor->direction * 16) >> 4;
-        func_800949CC(actor, jump_dx, 0, -rsin(actor->direction * 16) >> 4);
+        field_update_actor_jump(actor, jump_dx, 0, -rsin(actor->direction * 16) >> 4);
         return;
-    case FIELD_ACTOR_COMMAND_AF:
-        func_800946FC(actor);
+    case FIELD_ACTOR_COMMAND_FOLLOW_LEADER:
+        field_follow_leader(actor);
         return;
     case FIELD_ACTOR_COMMAND_WALK_PATH:
         route_delta_x = state->path[state->path_index].x - actor->x;
@@ -1913,11 +1897,11 @@ s32 field_update_actor_command(FieldActor* actor)
         heading = ratan2(-state->path[state->path_index].z + actor->z, state->path[state->path_index].x - actor->x) >> FIELD_HEADING_ANGLE_SHIFT;
         actor->direction = heading;
         movement_dx = rcos(actor->direction * 16) >> 4;
-        func_80094508(actor, movement_dx, 0, -rsin(actor->direction * 16) >> 4);
+        field_move_actor_step(actor, movement_dx, 0, -rsin(actor->direction * 16) >> 4);
         return;
     case FIELD_ACTOR_COMMAND_WALK:
         walk_dx = rcos(actor->direction * 16) >> 4;
-        func_80094508(actor, walk_dx, 0, -rsin(actor->direction * 16) >> 4);
+        field_move_actor_step(actor, walk_dx, 0, -rsin(actor->direction * 16) >> 4);
         return;
     case FIELD_ACTOR_COMMAND_RUN_PATH:
         route_distance_z = state->path[state->path_index].z - actor->z;
@@ -1942,7 +1926,7 @@ s32 field_update_actor_command(FieldActor* actor)
         actor->running = 1;
         actor->direction = ratan2(-state->path[state->path_index].z + actor->z, state->path[state->path_index].x - actor->x) >> FIELD_HEADING_ANGLE_SHIFT;
         movement_dx = rcos(actor->direction * 16) >> 4;
-        func_80094508(actor, movement_dx, 0, -rsin(actor->direction * 16) >> 4);
+        field_move_actor_step(actor, movement_dx, 0, -rsin(actor->direction * 16) >> 4);
         if (actor->command == FIELD_ACTOR_COMMAND_NONE)
         {
             actor->running = 0;
@@ -1951,7 +1935,7 @@ s32 field_update_actor_command(FieldActor* actor)
         break;
     case FIELD_ACTOR_COMMAND_RUN:
         run_dx = rcos(actor->direction * 16) >> 4;
-        func_80094508(actor, run_dx, 0, -rsin(actor->direction * 16) >> 4);
+        field_move_actor_step(actor, run_dx, 0, -rsin(actor->direction * 16) >> 4);
         if (actor->command == FIELD_ACTOR_COMMAND_NONE)
         {
             actor->running = 0;
@@ -1984,7 +1968,7 @@ s32 field_update_actor_command(FieldActor* actor)
         {
             actor->direction = ratan2(-state->path[state->path_index].z + actor->z, state->path[state->path_index].x - actor->x) >> FIELD_HEADING_ANGLE_SHIFT;
             screen_route_dx = rcos(actor->direction * 16) >> 4;
-            func_80094508(actor, screen_route_dx, 0, -rsin(actor->direction * 16) >> 4);
+            field_move_actor_step(actor, screen_route_dx, 0, -rsin(actor->direction * 16) >> 4);
         }
         {
             s32 negative_view_offset;
@@ -2022,7 +2006,7 @@ s32 field_update_actor_command(FieldActor* actor)
             heading = ratan2(actor->z - state->target_z, target_delta_x) >> FIELD_HEADING_ANGLE_SHIFT;
             actor->direction = heading;
             movement_dx = rcos(actor->direction * 16) >> 4;
-            func_80094508(actor, movement_dx, 0, -rsin(actor->direction * 16) >> 4);
+            field_move_actor_step(actor, movement_dx, 0, -rsin(actor->direction * 16) >> 4);
             return;
         }
         actor->command = FIELD_ACTOR_COMMAND_NONE;
@@ -2047,7 +2031,7 @@ s32 field_update_actor_command(FieldActor* actor)
             actor->direction = ratan2(current_z - target_z, target_x - current_x) >> FIELD_HEADING_ANGLE_SHIFT;
         }
         movement_dx = rcos(actor->direction * 16) >> 4;
-        func_80094508(actor, movement_dx, 0, -rsin(actor->direction * 16) >> 4);
+        field_move_actor_step(actor, movement_dx, 0, -rsin(actor->direction * 16) >> 4);
         if (actor->command == FIELD_ACTOR_COMMAND_NONE)
         {
             actor->running = 0;
@@ -2067,20 +2051,20 @@ s32 field_update_actor_command(FieldActor* actor)
         heading = (ratan2(current_z - target_z, target_x - current_x) >> FIELD_HEADING_ANGLE_SHIFT) - FIELD_HEADING_STEPS / 2;
         actor->direction = heading;
         movement_dx = rcos(actor->direction * 16) >> 4;
-        func_80094508(actor, movement_dx, 0, -rsin(actor->direction * 16) >> 4);
+        field_move_actor_step(actor, movement_dx, 0, -rsin(actor->direction * 16) >> 4);
         return;
     }
     case FIELD_ACTOR_COMMAND_RISE:
-        func_80094508(actor, 0, -FIELD_VERTICAL_STEP, 0);
+        field_move_actor_step(actor, 0, -FIELD_VERTICAL_STEP, 0);
         return;
     case FIELD_ACTOR_COMMAND_SINK:
-        func_80094508(actor, 0, FIELD_VERTICAL_STEP, 0);
+        field_move_actor_step(actor, 0, FIELD_VERTICAL_STEP, 0);
         return;
     case FIELD_ACTOR_COMMAND_9C:
-        func_80094B5C(actor, 1);
+        field_update_actor_lift(actor, 1);
         return;
     case FIELD_ACTOR_COMMAND_9D:
-        func_80094B5C(actor, 0);
+        field_update_actor_lift(actor, 0);
         return;
     case FIELD_ACTOR_COMMAND_APPROACH_TARGET:
         approach_distance_z = state->target_z - actor->z;
@@ -2091,14 +2075,14 @@ s32 field_update_actor_command(FieldActor* actor)
         {
             actor->direction = ratan2(actor->z - state->target_z, approach_delta_x) >> FIELD_HEADING_ANGLE_SHIFT;
             approach_dx = rcos(actor->direction * 16) >> 4;
-            func_80094BC4(actor, approach_dx, -rsin(actor->direction * 16) >> 4);
+            field_slide_actor(actor, approach_dx, -rsin(actor->direction * 16) >> 4);
             return;
         }
         actor->command = FIELD_ACTOR_COMMAND_NONE;
         return;
     case FIELD_ACTOR_COMMAND_TIMED_WALK:
         timed_dx = rcos(actor->direction * 16) >> 4;
-        func_80094C00(actor, timed_dx, -rsin(actor->direction * 16) >> 4);
+        field_update_timed_walk(actor, timed_dx, -rsin(actor->direction * 16) >> 4);
         if ((state->command_timer == 0) || (--state->command_timer == 0))
         {
             actor->command = FIELD_ACTOR_COMMAND_NONE;
@@ -2106,7 +2090,7 @@ s32 field_update_actor_command(FieldActor* actor)
         return;
     case FIELD_ACTOR_COMMAND_TIMED_SLIDE:
         movement_dx = rcos(actor->direction * 16) >> 4;
-        func_80094690(actor, movement_dx, -rsin(actor->direction * 16) >> 4);
+        field_update_timed_slide(actor, movement_dx, -rsin(actor->direction * 16) >> 4);
         if ((state->command_timer == 0) || (--state->command_timer == 0))
         {
             actor->command = FIELD_ACTOR_COMMAND_NONE;
@@ -2126,7 +2110,7 @@ s32 field_update_actor_command(FieldActor* actor)
             if ((animation & FIELD_ANIMATION_INDEX_MASK) == FIELD_ANIMATION_INSTRUMENT)
             {
                 finish_states = g_field_object_states;
-                actor->animation = (animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_INSTRUMENT_END;
+                actor->animation = (animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_DEFENSELESS;
                 actor->animation_state = 1;
                 actor->animation_frame = 0;
                 actor->animation_active = 1;
@@ -2191,7 +2175,7 @@ s32 field_update_actor_command(FieldActor* actor)
         if ((u8)action->flags != FIELD_ACTION_NO_HANDLER)
         {
             s32 action_pending;
-            target_count_or_slot = func_8009D1E4(actor->object_index, action, (action->flags >> FIELD_ACTION_TARGET_MODE_SHIFT) & FIELD_ACTION_TARGET_MODE_MASK,
+            target_count_or_slot = field_collect_action_targets(actor->object_index, action, (action->flags >> FIELD_ACTION_TARGET_MODE_SHIFT) & FIELD_ACTION_TARGET_MODE_MASK,
                                                  state->movement.half.lo & FIELD_MOVEMENT_SCALE_MASK, scratch.targets);
             action_pending = 0;
             if (g_field_actions_limited == 0)
@@ -2236,9 +2220,9 @@ s32 field_update_actor_command(FieldActor* actor)
                     if ((charge_animation != FIELD_ACTION_NO_ANIMATION) && (charge_animation != 0))
                     {
                         charge_state->movement.word = sequence_flags | FIELD_MOVEMENT_CHARGED;
-                        target_count_or_slot = func_800839F8(actor->object_index, 0);
+                        target_count_or_slot = field_find_free_actor_slot(actor->object_index, 0);
                         if ((target_count_or_slot != -1) &&
-                            (func_80083EEC(actor->object_index, target_count_or_slot, action->animation) != 0))
+                            (field_start_builtin_animation(actor->object_index, target_count_or_slot, action->animation) != 0))
                         {
                             field_start_actor_animation(target_count_or_slot, 0, 0);
                             charge_states[actor->object_index].contact.bytes.animation_actor_index = target_count_or_slot;
@@ -2260,7 +2244,7 @@ s32 field_update_actor_command(FieldActor* actor)
                 if (!((g_field_object_states[release_object_index].movement.word >> 10) & 1))
                 {
                     g_field_actor_slots[g_field_actor_bindings[FIELD_OBJECT_BINDING(release_object_index)].slot].active = 0;
-                    func_80084424(actor->object_index);
+                    field_release_actor_binding(actor->object_index);
                     cancel_states = g_field_object_states;
                     actor->animation_state = 1;
                     actor->animation_active = 1;
@@ -2321,7 +2305,7 @@ s32 field_update_actor_command(FieldActor* actor)
                 else
                 {
                     g_field_actor_slots[g_field_actor_bindings[FIELD_OBJECT_BINDING(actor->object_index)].slot].active = 0;
-                    func_80084424(actor->object_index);
+                    field_release_actor_binding(actor->object_index);
                     g_field_object_states[actor->object_index].contact.bytes.animation_actor_index = FIELD_ANIMATION_ACTOR_NONE;
                 }
             }
@@ -2338,7 +2322,7 @@ s32 field_update_actor_command(FieldActor* actor)
                 instrument_start_state = &instrument_states[actor->object_index];
                 instrument_start_state->movement.word = instrument_start_state->movement.word & ~FIELD_MOVEMENT_SEQUENCE_MASK;
                 field_restart_actor_animation(actor);
-                actor->control.word |= FIELD_CONTROL_IN_ACTION;
+                actor->control.word |= FIELD_CONTROL_PLAY_ONCE;
                 return;
             }
             if (action->command & FIELD_ACTION_TECHNIQUE)
@@ -2360,7 +2344,7 @@ s32 field_update_actor_command(FieldActor* actor)
                 state->sequence = action->command & FIELD_ACTION_TECHNIQUE_MASK;
                 actor->command = FIELD_ACTOR_COMMAND_TECHNIQUE;
                 field_restart_actor_animation(actor);
-                actor->control.word = actor->control.word | FIELD_CONTROL_IN_ACTION;
+                actor->control.word = actor->control.word | FIELD_CONTROL_PLAY_ONCE;
                 return;
             }
             if (actor->object_index < FIELD_PARTY_COUNT)
@@ -2440,10 +2424,10 @@ static s32 field_filter_action_targets(s32 count, s32* indices)
                 if ((actor->presence != sentinel) && (state->unk4.word != 0))
                 {
                     contact = state->contact.word;
-                    if (!(contact & FIELD_CONTACT_UNTARGETABLE) && ((i < FIELD_PARTY_COUNT) || ((state->group_flags & FIELD_OBJECT_GROUP_MASK) == group)))
+                    if (!(contact & FIELD_CONTACT_ANIMATION_HIDDEN) && ((i < FIELD_PARTY_COUNT) || ((state->group_flags & FIELD_OBJECT_GROUP_MASK) == group)))
                     {
                         command = actor->command;
-                        if ((command != FIELD_ACTOR_COMMAND_TECHNIQUE) && (command != FIELD_ACTOR_COMMAND_AE) && (command != FIELD_ACTOR_COMMAND_INSTRUMENT))
+                        if ((command != FIELD_ACTOR_COMMAND_TECHNIQUE) && (command != FIELD_ACTOR_COMMAND_DEFEAT_DELAY) && (command != FIELD_ACTOR_COMMAND_INSTRUMENT))
                         {
                             if (!(contact & FIELD_CONTACT_ACTION_PENDING))
                             {
@@ -2565,7 +2549,7 @@ static s32 field_apply_action_animation(FieldActor* actor, FieldObjectState* sta
     case 0x31:
     case 0x3D:
         actor->command = FIELD_ACTOR_COMMAND_RECOVER;
-        actor->control.word = actor->control.word | FIELD_CONTROL_IN_ACTION;
+        actor->control.word = actor->control.word | FIELD_CONTROL_PLAY_ONCE;
         break;
     default:
         actor->command = FIELD_ACTOR_COMMAND_RECOVER;
@@ -2604,8 +2588,8 @@ static s32 field_start_action_animation(s32 object_index, s32 target_count, u8* 
         return field_start_bound_action_animation(object_index, target_count, targets, request);
     }
 
-    animation_slot = func_800839F8(object_index, 0);
-    if ((animation_slot != -1) && (func_80083EEC(object_index, animation_slot, request & FIELD_REQUEST_ANIMATION_MASK) != 0))
+    animation_slot = field_find_free_actor_slot(object_index, 0);
+    if ((animation_slot != -1) && (field_start_builtin_animation(object_index, animation_slot, request & FIELD_REQUEST_ANIMATION_MASK) != 0))
     {
         field_start_actor_animation(animation_slot, target_count, targets);
         g_field_object_states[object_index].contact.bytes.animation_actor_index = animation_slot;
@@ -2663,21 +2647,21 @@ s32 field_start_bound_action_animation(s32 object_index, s32 target_count, u8* t
         {
             g_field_actor_slots[binding->slot].animation_index = (request >> FIELD_REQUEST_LAYER_SHIFT) & FIELD_REQUEST_LAYER_MASK;
             layer_slot = &g_field_actor_slots[binding->slot];
-            layer_slot->duration = layer_slot->default_animation[layer_slot->animation_index].unk12;
+            layer_slot->duration = layer_slot->default_animation[layer_slot->animation_index].duration;
         }
         else
         {
             g_field_actor_slots[binding->slot].animation_index = 0;
             base_slot = &g_field_actor_slots[binding->slot];
             remaining_layers = (request >> FIELD_REQUEST_LAYER_SHIFT) & FIELD_REQUEST_LAYER_MASK;
-            base_slot->duration = base_slot->default_animation->unk12;
+            base_slot->duration = base_slot->default_animation->duration;
             layer_index = 1;
             g_field_actor_slots[binding->slot].unk2A = 1;
             if (remaining_layers != 0)
             {
                 do
                 {
-                    new_slot = func_800839F8(object_index, 0);
+                    new_slot = field_find_free_actor_slot(object_index, 0);
                     if (new_slot != -1)
                     {
                         slot = &g_field_actor_slots[new_slot];
@@ -2685,7 +2669,7 @@ s32 field_start_bound_action_animation(s32 object_index, s32 target_count, u8* t
                         animations = slot->default_animation;
                         slot->slot_index = new_slot;
                         slot->animation_index = layer_index;
-                        layer_value = animations->unk12;
+                        layer_value = animations->duration;
                         slot->track_interval = 0;
                         slot->animation = &animations[layer_index];
                         result = 1;
@@ -2703,7 +2687,7 @@ s32 field_start_bound_action_animation(s32 object_index, s32 target_count, u8* t
     else
     {
         default_slot = &g_field_actor_slots[binding->slot];
-        default_slot->duration = default_slot->default_animation->unk12;
+        default_slot->duration = default_slot->default_animation->duration;
         g_field_actor_slots[binding->slot].animation_index = 0;
     }
     initialized_slot = &g_field_actor_slots[binding->slot];

@@ -784,3 +784,65 @@ field_restart_pending_bindings        = 0x8008B73C;
 g_field_binding_restart_pending       = 0x8010A020;
 // field_actor_runtime.c
 g_field_object_default_animation = 0x800FE758;
+
+// Animation actor slots and streamed animation bindings (field_actor_slot_resources.c).
+field_bind_builtin_animations         = 0x80083948;
+field_upload_common_texture           = 0x8008396C;
+field_find_free_actor_slot            = 0x800839F8;
+field_stop_actor_slot                 = 0x80083BC0;
+field_start_builtin_animation         = 0x80083EEC;
+field_start_streamed_animation        = 0x8008404C;
+field_reset_actor_resources           = 0x80084240;
+field_poll_streamed_animations        = 0x800842E0;
+field_release_actor_binding           = 0x80084424;
+field_reset_object_states             = 0x80084524;
+field_reset_object_tints              = 0x80084630;
+g_field_builtin_animations            = 0x801058D8;
+g_field_builtin_track_data            = 0x801058D4;
+g_field_actor_heap                    = 0x8010D034;
+
+// Actor command handlers and the object sequence interpreter (field_actor_state_updates.c).
+field_update_actor_landing            = 0x80092AD8;
+field_play_object_animation           = 0x80092C24;
+field_update_actor_action_chain       = 0x80092C98;
+field_update_pending_action           = 0x80093AB8;
+field_update_instrument_command       = 0x80093EB4;
+field_update_technique_command        = 0x8009403C;
+field_move_actor_step                 = 0x80094508;
+field_update_timed_slide              = 0x80094690;
+field_follow_leader                   = 0x800946FC;
+field_update_actor_jump               = 0x800949CC;
+field_update_actor_lift               = 0x80094B5C;
+field_slide_actor                     = 0x80094BC4;
+field_update_timed_walk               = 0x80094C00;
+field_start_defeat_bound_animation    = 0x80094EA4;
+field_start_defeat_wait_animation     = 0x80094F40;
+field_update_defeat_end               = 0x80094FDC;
+field_restart_idle_animation          = 0x80095074;
+field_update_defeated                 = 0x80095168;
+D_80105C70                            = 0x80105C70; // ignore:true
+
+// Target predicates and the action target collector (field_actor_target_queries.c).
+field_actor_within_distance           = 0x8009CC60;
+field_actor_within_ring               = 0x8009CD30;
+field_actor_faces_target              = 0x8009CE10;
+field_actor_within_box                = 0x8009CF1C;
+field_actor_near_ground_points        = 0x8009CF84;
+field_actor_near_first_ground_point   = 0x8009D0D8;
+field_collect_action_targets          = 0x8009D1E4;
+g_field_target_filters                = 0x800EC2D8;
+
+// Monster status records built from templates (field_actor_templates.c).
+field_build_group_monster_records     = 0x800B3DF4;
+field_init_monster_record             = 0x800B3F1C;
+field_compute_monster_level           = 0x800B42B4;
+
+// Battle start and end (field_actor_transition_reset.c).
+field_set_battle_group                = 0x800966F0;
+field_find_defeating_actor            = 0x80096A00;
+field_defeat_animation_playing        = 0x80096A90;
+field_cancel_animation_bindings       = 0x80096B54;
+field_update_battle_end               = 0x80096E60;
+g_field_restore_group                 = 0x8010AE5C;
+g_field_battle_idle_checks            = 0x8010CFD0;
+g_field_experience_snapshot           = 0x801229A0;

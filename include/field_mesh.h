@@ -34,6 +34,9 @@ typedef struct FieldMeshResource
 /** @brief Mesh record @p index of @p actor's mesh table. */
 #define FIELD_ACTOR_MESH(actor, index) (&((FieldMeshResource *)(actor)->mesh_data)[index])
 
+/** @brief Vertices a mesh can transform at once (size of the shared mesh work buffers). */
+#define FIELD_MESH_VERTEX_MAX 768
+
 extern s16 *g_field_mesh_screen_vertices;
 extern SVECTOR *g_field_mesh_transformed_normals;
 extern s32 *g_field_mesh_depth_offsets;

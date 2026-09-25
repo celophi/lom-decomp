@@ -7,9 +7,6 @@
 #include "field_calls.h"
 #include "field_records.h"
 
-/** @brief record_game_diagnostic status for a field error. */
-#define DIAG_ERROR 0x8001
-
 /** @brief Item argument that releases the item actor's record instead of spawning it. */
 #define FIELD_ITEM_RELEASE 0xFF
 

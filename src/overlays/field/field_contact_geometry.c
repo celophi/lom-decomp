@@ -1149,12 +1149,12 @@ s32 field_find_actor_overlap(FieldMotionRecord* record, s32* position, s32 filte
 
                         if (scan_record->motion_parameter == 0)
                         {
-                            animation_slot = func_800839F8(scan_record->source_object_index, 0);
+                            animation_slot = field_find_free_actor_slot(scan_record->source_object_index, 0);
                             if (animation_slot != -1)
                             {
                                 scratch.targets.words[0] = (s32)record->source_object_index;
 
-                                if (func_80083EEC(scan_record->source_object_index, animation_slot, 0x2A) != 0)
+                                if (field_start_builtin_animation(scan_record->source_object_index, animation_slot, 0x2A) != 0)
                                 {
                                     if ((u8)scan_record->source_object_index < 2U)
                                     {

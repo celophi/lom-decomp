@@ -107,7 +107,7 @@ extern s32 g_field_action_context;
 
 extern s32 D_80105760;
 extern s32 D_80105770;
-extern u8 *D_801058D4;
+extern u8 *g_field_builtin_track_data;
 extern s32 g_field_track_index;
 
 s32 field_evaluate_parameter_track(FieldActorState* actor, s32 track);
@@ -424,7 +424,7 @@ s32 func_8006D79C(FieldActorState* actor, s32 part_index, s32 start)
     effect->source_object_index = actor->owner_object_index;
     if (effect->state == 0)
     {
-        field_begin_actor_animation_forward(effect, D_801058D4);
+        field_begin_actor_animation_forward(effect, g_field_builtin_track_data);
     }
     else if (effect->state == 1 && (resource = g_field_actor_slots[effect->actor_index].track_data) != 0)
     {
@@ -1496,11 +1496,6 @@ typedef enum
 #define FIELD_EFFECT_DISTANCE_MASK 0x1FF
 #define FIELD_EFFECT_ORIENTATION_LOCK 8
 
-/** @brief Angle units used by the field rotation helpers. */
-#define FIELD_ANGLE_TURN 0x1000
-#define FIELD_ANGLE_HALF_TURN 0x800
-#define FIELD_ANGLE_QUARTER_TURN 0x400
-#define FIELD_ANGLE_MASK 0xFFF
 #define FIELD_EFFECT_TURN_THRESHOLD 0x200
 #define FIELD_EFFECT_TURN_STEP 0x80
 #define FIELD_EFFECT_COLLISION_WIDTH 0xC
@@ -2868,7 +2863,7 @@ void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *pa
                         recipient_object = &object_base[recipient_index];
                         field_set_action_context(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 5);
                         func_800C0B40(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 5);
-                        func_80092C24(&g_field_actors[recipient_index], 0x2C);
+                        field_play_object_animation(&g_field_actors[recipient_index], 0x2C);
                         field_release_actor_if_no_effects(record);
                         return;
                     }
@@ -2894,7 +2889,7 @@ void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *pa
                         recipient_object = &object_base[recipient_index];
                         field_set_action_context(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 6);
                         func_800C0B40(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 6);
-                        func_80092C24(&g_field_actors[recipient_index], 0x2D);
+                        field_play_object_animation(&g_field_actors[recipient_index], 0x2D);
                         field_release_actor_if_no_effects(record);
                         return;
                     }
@@ -3228,7 +3223,7 @@ typedef enum
 } FieldEffectRenderState;
 
 extern FieldMotionRecord g_field_effect_records_end;
-extern u8 *D_801058D4;
+extern u8 *g_field_builtin_track_data;
 
 extern u16 g_field_texture_slot_flags[];
 
@@ -3331,7 +3326,7 @@ void field_render_effects(FieldRenderContext *render_context)
                     break;
 
                 case FIELD_EFFECT_RENDER_SPRITE:
-                    frame_result = field_advance_actor_part_animation_frame(effect, D_801058D4);
+                    frame_result = field_advance_actor_part_animation_frame(effect, g_field_builtin_track_data);
                     if (frame_result != 0)
                     {
                         packet_cursor = field_render_effect_sprite_frames(effect, packet_cursor, ordering_table, (u8 *) frame_result);
@@ -4169,10 +4164,10 @@ s32 *func_80075C88(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32
                             (((rec->motion_parameter == 0x91) && ((rec->facing_or_reward_kind & 0x7F) == 0x2E)) || (rec->motion_parameter == 0x85) || (rec->motion_parameter == 0x98)) &&
                             !(FIELD_MOTION_WORD_3C(rec) & 0x01000000))
                         {
-                            x_offset = func_800839F8(rec->source_object_index, 0);
+                            x_offset = field_find_free_actor_slot(rec->source_object_index, 0);
                             if (x_offset != -1)
                             {
-                                if (func_80083EEC(rec->source_object_index, x_offset, slot->sequence_command) != 0)
+                                if (field_start_builtin_animation(rec->source_object_index, x_offset, slot->sequence_command) != 0)
                                 {
                                     slot->contact.bytes.animation_actor_index = x_offset;
                                     field_start_actor_animation(x_offset, 0, NULL);
@@ -4472,7 +4467,7 @@ s32 *func_80075C88(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32
                                     }
                                     else if (slot->sequence_command != 0)
                                     {
-                                        x_offset = func_800839F8(rec->source_object_index, 0);
+                                        x_offset = field_find_free_actor_slot(rec->source_object_index, 0);
                                         if (x_offset != -1)
                                         {
                                             switch ((slot->contact.flags >> 2) & 7)
@@ -4488,7 +4483,7 @@ s32 *func_80075C88(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32
                                                 slot->sequence_command = slot->sequence_command;
                                                 break;
                                             }
-                                            if (func_80083EEC(rec->source_object_index, x_offset, slot->sequence_command) != 0)
+                                            if (field_start_builtin_animation(rec->source_object_index, x_offset, slot->sequence_command) != 0)
                                             {
                                                 slot->contact.bytes.animation_actor_index = x_offset;
                                                 scratch.target_index = contact.index;
@@ -4514,10 +4509,10 @@ s32 *func_80075C88(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32
                             else if (contact_result == 2)
                             {
                                 slot->sequence_command = 0x1E;
-                                x_offset = func_800839F8(rec->source_object_index, 0);
+                                x_offset = field_find_free_actor_slot(rec->source_object_index, 0);
                                 if (x_offset != -1)
                                 {
-                                    if (func_80083EEC(rec->source_object_index, x_offset, slot->sequence_command) != 0)
+                                    if (field_start_builtin_animation(rec->source_object_index, x_offset, slot->sequence_command) != 0)
                                     {
                                         slot->contact.bytes.animation_actor_index = x_offset;
                                         scratch.target_index = contact.index;
@@ -4655,10 +4650,10 @@ s32 *func_80075C88(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32
                                 }
                                 else
                                 {
-                                    x_offset = func_800839F8(rec->source_object_index, 0);
+                                    x_offset = field_find_free_actor_slot(rec->source_object_index, 0);
                                     if (x_offset != -1)
                                     {
-                                        if (func_80083EEC(rec->source_object_index, x_offset, slot->sequence_command) != 0)
+                                        if (field_start_builtin_animation(rec->source_object_index, x_offset, slot->sequence_command) != 0)
                                         {
                                             slot->contact.bytes.animation_actor_index = x_offset;
                                             field_start_actor_animation(x_offset, 0, NULL);
@@ -5201,10 +5196,10 @@ s32 *func_80077FB4(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32
                                         }
                                         else
                                         {
-                                            offset_x = func_800839F8(rec->source_object_index, 0);
+                                            offset_x = field_find_free_actor_slot(rec->source_object_index, 0);
                                             if (offset_x != -1)
                                             {
-                                                if (func_80083EEC(rec->source_object_index, offset_x, slot->sequence_command) != 0)
+                                                if (field_start_builtin_animation(rec->source_object_index, offset_x, slot->sequence_command) != 0)
                                                 {
                                                     slot->contact.bytes.animation_actor_index = offset_x;
                                                     scratch.target_index = contact.index;
@@ -5227,10 +5222,10 @@ s32 *func_80077FB4(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32
                                 else if (contact_result == 2)
                                 {
                                     slot->sequence_command = 0x1E;
-                                    offset_x = func_800839F8(rec->source_object_index, 0);
+                                    offset_x = field_find_free_actor_slot(rec->source_object_index, 0);
                                     if (offset_x != -1)
                                     {
-                                        if (func_80083EEC(rec->source_object_index, offset_x, slot->sequence_command) != 0)
+                                        if (field_start_builtin_animation(rec->source_object_index, offset_x, slot->sequence_command) != 0)
                                         {
                                             slot->contact.bytes.animation_actor_index = offset_x;
                                             scratch.target_index = contact.index;
@@ -5260,8 +5255,8 @@ s32 *func_80077FB4(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32
                     case 6:
                         if (!(slot->sequence_command & 0x8000) && (slot->sequence_command != 0xFFFF) && ((rec->motion_parameter == 0x91) || (rec->motion_parameter == 0x85) || (rec->motion_parameter == 0x86) || (rec->motion_parameter == 0x98)) && !(FIELD_MOTION_WORD_3C(rec) & 0x01000000))
                         {
-                            offset_x = func_800839F8(rec->source_object_index, 0);
-                            if ((offset_x != -1) && (func_80083EEC(rec->source_object_index, offset_x, slot->sequence_command) != 0))
+                            offset_x = field_find_free_actor_slot(rec->source_object_index, 0);
+                            if ((offset_x != -1) && (field_start_builtin_animation(rec->source_object_index, offset_x, slot->sequence_command) != 0))
                             {
                                 slot->contact.bytes.animation_actor_index = offset_x;
                                 field_start_actor_animation(offset_x, 0, NULL);
@@ -5446,10 +5441,10 @@ s32 *func_80077FB4(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32
                             }
                             else
                             {
-                                offset_x = func_800839F8(rec->source_object_index, 0);
+                                offset_x = field_find_free_actor_slot(rec->source_object_index, 0);
                                 if (offset_x != -1)
                                 {
-                                    if (func_80083EEC(rec->source_object_index, offset_x, slot->sequence_command) != 0)
+                                    if (field_start_builtin_animation(rec->source_object_index, offset_x, slot->sequence_command) != 0)
                                     {
                                         slot->contact.bytes.animation_actor_index = offset_x;
                                         field_start_actor_animation(offset_x, 0, NULL);

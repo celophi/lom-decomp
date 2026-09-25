@@ -69,7 +69,7 @@ void field_build_frame_commands(s32 render_half, s32 alternate)
         }
     }
     func_800A4798((u8*)render_half);
-    func_80096B54();
+    field_cancel_animation_bindings();
     if ((D_800F2298 == 0) && (g_field_gover_load_countdown == 0) && (g_field_modal_state == 0) && (D_8011F3AC == 0) && (g_field_text_session_active == 0))
     {
         field_update_actor_animations();
@@ -79,12 +79,12 @@ void field_build_frame_commands(s32 render_half, s32 alternate)
     field_draw_fade_prims((FieldRenderHalf*)render_half);
     func_800A2E40((u8*)render_half);
     func_800A2E34();
-    func_800842E0();
+    field_poll_streamed_animations();
     g_frame_counter += 1;
     field_restart_pending_bindings();
     field_update_dialog_runtime(render_half);
     field_update_return_to_title_prompt(render_half);
-    func_80096E60();
+    field_update_battle_end();
     func_800A64D0(render_half);
     field_update_modal(render_half);
     func_800AD118(render_half);

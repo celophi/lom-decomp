@@ -6,56 +6,65 @@
 extern FieldBattleContext *g_field_battle;
 extern FieldRuntimeContext *g_field_runtime;
 
-s32 func_800B3670(s32 arg0);
-s32 func_800B42B4(FieldActorTemplate *template);
-extern u32 func_800BD414(s32, s32);
-s32 field_find_object_state(s32 arg0);
+/** @brief Runtime actor flag bits holding the trigger group. */
+#define FIELD_TRIGGER_GROUP_MASK 0xF
+/** @brief FieldStatusRecord::unk0 value of a record on the monsters' side. */
+#define FIELD_RECORD_MONSTER_SIDE 0x40
+/** @brief FieldActorTemplate::flags bits. */
+#define FIELD_TEMPLATE_UNLINKED 0x2   /**< The object state keeps no link to the template. */
+#define FIELD_TEMPLATE_HERO_LEVEL 0x4 /**< The level follows the hero's level instead of the land's. */
+
+s32 func_800B3670(s32 use_hero_level);
+s32 field_compute_monster_level(FieldActorTemplate *template);
+/* Defined without a result; the value is the one it leaves in the return register. */
+u32 func_800BD414(s32 owner_id, s32 variable_id);
+FieldStatusState *field_find_object_state(s32 key);
 
 /**
- * @brief Build status records for the field actors whose trigger group matches the requested key.
- * @param group Trigger group to match.
- * @return Number of matching actor records processed.
+ * @brief Build the battle status records of the monsters in a trigger group.
+ * @param group Trigger group whose actors join the battle.
+ * @return Number of monster records built (they follow the party records).
  */
-s32 func_800B3DF4(s32 group)
+s32 field_build_group_monster_records(s32 group)
 {
     s32 i;
     s32 count;
-    s32 result;
+    FieldStatusState *state;
 
     count = 0;
-    for (i = 3; i < (s32)g_field_runtime->state.actor_count; i++)
+    for (i = FIELD_PARTY_SIZE; i < (s32)g_field_runtime->state.actor_count; i++)
     {
-        if ((g_field_runtime->actors[i].flags.word & 0xF) != group)
+        if ((g_field_runtime->actors[i].flags.word & FIELD_TRIGGER_GROUP_MASK) != group)
         {
             continue;
         }
 
-        result = field_find_object_state(g_field_runtime->actors[i].id);
-        /* Kept gotos: if/else-if on result swaps two saved registers (99.30%). */
-        if (result == 0)
+        state = field_find_object_state(g_field_runtime->actors[i].id);
+        /* The gotos keep the two saved registers in the original's order; if/else swaps them. */
+        if (state == NULL)
         {
             goto report_error;
         }
-        if (result != -1)
+        if (state != (FieldStatusState *)-1)
         {
             goto build_record;
         }
     report_error:
-        record_game_diagnostic(0x8001, 0x64, group, g_field_runtime->actors[i].id);
+        record_game_diagnostic(DIAG_ERROR, DIAG_BAD_MONSTER_OBJECT, group, g_field_runtime->actors[i].id);
     build_record:
-        func_800B3F1C(g_field_runtime->actors[i].id, &g_field_battle->records[3 + count], (FieldStatusState *)result);
+        field_init_monster_record(g_field_runtime->actors[i].id, &g_field_battle->records[FIELD_PARTY_SIZE + count], state);
         count++;
     }
     return count;
 }
 
 /**
- * @brief Initialize a monster's status record and runtime state from its template.
+ * @brief Initialize a monster's status record and object state from its template.
  * @param actor_id Actor identifier stored in the record.
  * @param record Status record to initialize.
- * @param state Runtime status state to initialize.
+ * @param state Object state of the monster.
  */
-void func_800B3F1C(s32 actor_id, FieldStatusRecord *record, FieldStatusState *state)
+void field_init_monster_record(s32 actor_id, FieldStatusRecord *record, FieldStatusState *state)
 {
     s32 flags;
     s32 level;
@@ -66,14 +75,14 @@ void func_800B3F1C(s32 actor_id, FieldStatusRecord *record, FieldStatusState *st
     FieldBattleContext *ctx;
 
     record->meta.bytes.id = actor_id;
-    record->unk0 = 0x40;
+    record->unk0 = FIELD_RECORD_MONSTER_SIDE;
     record->state = state;
     flags = record->meta.packed;
-    flags |= 0x100;
-    flags &= ~0x200;
-    flags &= 0xFFFF03FF;
+    flags |= FIELD_STATUS_META_ACTIVE;
+    flags &= ~FIELD_STATUS_META_ALLY;
+    flags &= ~FIELD_STATUS_META_KIND_MASK;
     ctx = g_field_battle;
-    flags |= 0x1400;
+    flags |= FIELD_STATUS_KIND_MONSTER << FIELD_STATUS_META_KIND_SHIFT;
     record->meta.packed = flags;
     record->meta.bytes.unk2 = 0;
     template = field_find_actor_template(ctx->templates, state->template_index);
@@ -83,14 +92,14 @@ void func_800B3F1C(s32 actor_id, FieldStatusRecord *record, FieldStatusState *st
     record->counter_reset = template->counter_reset;
     record->status_flags = 0;
     record->unkC = 0;
-    level = func_800B42B4(template);
-    clamped = 0x63;
-    if ((u32)level < 0x64U)
+    level = field_compute_monster_level(template);
+    clamped = FIELD_LEVEL_MAX;
+    if ((u32)level < FIELD_LEVEL_MAX + 1U)
     {
         clamped = level;
     }
     level = clamped;
-    work = func_800BD414(0, 0x2F78);
+    work = func_800BD414(0, FIELD_VAR_MONSTER_LEVEL);
     if (work != 0)
     {
         level = work;
@@ -105,8 +114,8 @@ void func_800B3F1C(s32 actor_id, FieldStatusRecord *record, FieldStatusState *st
     for (work = 0; work < FIELD_STATUS_STAT_COUNT; work++)
     {
         stat = (u32)((template->stats[work].base * 4) + (template->stats[work].growth * level)) >> 2;
-        record->element_attack[work] = 5;
-        record->element_defense[work] = 5;
+        record->element_attack[work] = FIELD_ELEMENT_LEVEL_NEUTRAL;
+        record->element_defense[work] = FIELD_ELEMENT_LEVEL_NEUTRAL;
         record->base_stats[work] = stat;
         record->stats[work] = stat;
     }
@@ -114,7 +123,7 @@ void func_800B3F1C(s32 actor_id, FieldStatusRecord *record, FieldStatusState *st
     record->weak_elements = template->weak_elements;
     record->resist_elements = template->resist_elements;
     state->level.word = (state->level.word & ~0xFE) | ((level & 0x7F) * 2);
-    if (template->flags & 2)
+    if (template->flags & FIELD_TEMPLATE_UNLINKED)
     {
         state->template = NULL;
     }
@@ -139,7 +148,7 @@ void func_800B3F1C(s32 actor_id, FieldStatusRecord *record, FieldStatusState *st
             } while ((u32)level >= work);
         }
     }
-    switch (func_800BD414(0, 0x2938))
+    switch (func_800BD414(0, FIELD_VAR_DIFFICULTY))
     {
     case 1:
         state->maximum *= 2;
@@ -148,7 +157,7 @@ void func_800B3F1C(s32 actor_id, FieldStatusRecord *record, FieldStatusState *st
         state->maximum *= 3;
         break;
     }
-    if ((func_800BD414(0, 0xFFE) != 0) || (state->maximum == 0))
+    if ((func_800BD414(0, FIELD_VAR_DEBUG_ONE_HP_MONSTERS) != 0) || (state->maximum == 0))
     {
         state->maximum = 1;
     }
@@ -166,11 +175,11 @@ void func_800B3F1C(s32 actor_id, FieldStatusRecord *record, FieldStatusState *st
 }
 
 /**
- * @brief Compute a monster's level from the battle element levels its template reacts to.
- * @param template Template with raise/lower masks and the flag byte.
- * @return Level clamped to 1..99.
+ * @brief Compute a monster's level from the land's element levels its template reacts to.
+ * @param template Template with the raise and lower element masks.
+ * @return Level from 1 to FIELD_LEVEL_MAX.
  */
-s32 func_800B42B4(FieldActorTemplate *template)
+s32 field_compute_monster_level(FieldActorTemplate *template)
 {
     u32 add_mask;
     u32 sub_mask;
@@ -212,13 +221,13 @@ s32 func_800B42B4(FieldActorTemplate *template)
     }
     value = clamped;
 
-    scaled = (u32)(func_800B3670(template->flags & 4) * value) >> 3;
+    scaled = (u32)(func_800B3670(template->flags & FIELD_TEMPLATE_HERO_LEVEL) * value) >> 3;
 
     if (scaled >= 2)
     {
-        if (scaled >= 0x64)
+        if (scaled > FIELD_LEVEL_MAX)
         {
-            scaled = 0x63;
+            scaled = FIELD_LEVEL_MAX;
         }
     }
     else

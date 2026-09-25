@@ -923,7 +923,7 @@ void func_800BE404(s32 arg0, ArgB800BE404* arg1)
                 override_2 = arg1->unk18;
             }
             func_800C1EC8(0, (void*)handle, 0x68);
-            func_800B3F1C(id, (struct FieldStatusRecord*)handle, (struct FieldStatusState*)field_find_object_state(id));
+            field_init_monster_record(id, (struct FieldStatusRecord*)handle, (struct FieldStatusState*)field_find_object_state(id));
             field_revive_actor(id, override_0, override_1, override_2);
         }
     }

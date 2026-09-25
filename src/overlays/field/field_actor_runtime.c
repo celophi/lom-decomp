@@ -5,6 +5,7 @@
  */
 
 #include "common.h"
+#include "controller_internal.h"
 #include "main.h"
 #include "cdrom.h"
 #include "cd_resources.h"
@@ -57,10 +58,6 @@
 /** @brief Animation targets are passed as the low byte of one word each. */
 #define FIELD_TARGET_STRIDE 4
 
-/** @brief Number of party member records (both players and the companion). */
-#define FIELD_PARTY_COUNT 3
-/** @brief Number of player-controlled party members. */
-#define FIELD_PLAYER_COUNT 2
 /** @brief Party record used for the companion. */
 #define FIELD_COMPANION_INDEX 2
 
@@ -104,8 +101,6 @@
 #define FIELD_CONTROL_PAD 0
 #define FIELD_CONTROL_FOLLOW 1
 #define FIELD_CONTROL_SCRIPTED 2
-/** @brief FieldActor::control bit: the animation stops on its last frame instead of looping. */
-#define FIELD_CONTROL_PLAY_ONCE 0x800
 /** @brief FieldActor::control bits 16-17: colour variant of a companion. */
 #define FIELD_CONTROL_VARIANT_SHIFT 16
 #define FIELD_CONTROL_VARIANT_MASK 0x30000
@@ -132,25 +127,17 @@
 #define FIELD_TINT_NEUTRAL 0x80
 
 /** @brief Object state flag bits used here (FieldObjectState::flags). */
-#define FIELD_OBJECT_KNOCKED_OUT 0x0200
 #define FIELD_OBJECT_ANIMATION_FROZEN 0x2000
 /** @brief Object state flags that suspend an object's input, following and commands. */
 #define FIELD_OBJECT_CONTROL_BLOCKED 0x21E4
 
-/** @brief FieldObjectState::contact bits: the object is hidden by an animation actor, the object is being targeted. */
-#define FIELD_CONTACT_ANIMATION_HIDDEN 0x01
-#define FIELD_CONTACT_TARGETED 0x80
 /** @brief FieldObjectState::contact bits 6 and 7 cleared when an actor is initialized. */
 #define FIELD_CONTACT_UNK40 0x40
 
-/** @brief FieldObjectState::movement bits holding the action sequence. */
-#define FIELD_MOVEMENT_SEQUENCE_MASK 0x1800
 
 /** @brief FieldActor::presence value of an object hidden by an animation actor. */
 #define FIELD_ANIMATION_HIDDEN FIELD_ACTOR_HIDDEN
 
-/** @brief Animation-slot status word bits (FieldActorSlot::status). */
-#define FIELD_SLOT_OWNER_LINKED 0x1
 /** @brief Status value of an owner-linked-less slot playing animation 0xC. */
 #define FIELD_SLOT_STATUS_KEEP_EFFECTS_MASK 0xFFFF0001
 #define FIELD_SLOT_STATUS_KEEP_EFFECTS 0xC0000
@@ -160,39 +147,8 @@
 /** @brief Flag ORed into the object index returned for a special attack. */
 #define FIELD_SPECIAL_ATTACK_RESULT 0x200
 
-/** @brief FieldAnimationDef::flags bits. */
-#define FIELD_ANIM_COLOR_CURVE_MASK 0xFF
-#define FIELD_ANIM_COLOR_RGB 0x100
-#define FIELD_ANIM_BLEND_SHIFT 9
-#define FIELD_ANIM_GLOBAL_COLOR 0x400
-#define FIELD_ANIM_KEEP_ALIVE 0x800
-#define FIELD_ANIM_CAMERA_OFFSET 0x1000
-#define FIELD_ANIM_CAMERA_MODE_SHIFT 13
-/** @brief FieldAnimationDef::unkE: bit 15 fires a sound at a frame; bits 8-14 are the sound, the low byte the frame. */
-#define FIELD_ANIM_FRAME_SOUND 0x8000
-/** @brief FieldAnimationDef::unk10 bits 12-15: curve of the camera offset track. */
-#define FIELD_ANIM_CAMERA_CURVE_SHIFT 12
-/** @brief FieldAnimationDef::unk14 values and bits. */
-#define FIELD_ANIM_ATTACK 2
-#define FIELD_ANIM_STARTED 0x80
-/** @brief FieldAnimationDef::unk18 bits. */
-#define FIELD_ANIM_OWNER_VISIBILITY 0x2
-#define FIELD_ANIM_TARGET_VISIBILITY 0x4
-#define FIELD_ANIM_OWNER_TRACK_OFF 0x8
-#define FIELD_ANIM_TARGET_TRACK_OFF 0x10
-#define FIELD_ANIM_RESTART_AT_END 0x20
-#define FIELD_ANIM_OWNER_CURVE_SHIFT 8
-#define FIELD_ANIM_TARGET_CURVE_SHIFT 12
 
-/** @brief Parameter curve count of an animation (curve selectors are four bits). */
-#define FIELD_CURVE_COUNT 16
-/** @brief Curve selector of an unused render-state track. */
-#define FIELD_CURVE_NONE 0xFF
-/** @brief Number of render-state tracks (FieldAnimationDef::curve_selectors). */
-#define FIELD_RENDER_TRACK_COUNT 2
 
-/** @brief Neutral global colour scale. */
-#define FIELD_COLOR_SCALE_NEUTRAL 0x100
 /** @brief Packed red and green halves of a neutral colour scale. */
 #define FIELD_COLOR_SCALE_NEUTRAL_RG 0x1000100UL
 
@@ -335,7 +291,6 @@ typedef struct
 } FieldActionCommandMap;
 
 /** @brief Action 1 and 5 commands restored by field_restore_default_action_animation_mappings(). */
-#define FIELD_ACTION_COMMAND(action) (((action) << 8) | FIELD_ACTOR_COMMAND_ACTION)
 
 void func_80140004(s32 work_address, s32 image_resource_index, s32 music_resource_index, s32 audio_clip_index);
 void field_reset_input_repeat();
@@ -483,7 +438,7 @@ void field_close_dialog_screen(void)
     {
         if (g_field_player_records[i].flags & FIELD_PLAYER_ACTIVE)
         {
-            g_field_actors[i].command = FIELD_ACTOR_COMMAND_9A;
+            g_field_actors[i].command = FIELD_ACTOR_COMMAND_IDLE_AFTER_RELOAD;
             g_field_actors[i].animation_state = 1;
             g_field_actors[i].animation_frame = 0;
             g_field_actors[i].animation_active = 1;
@@ -527,7 +482,7 @@ void field_begin_gover_transition(s32 image_resource_index, s32 music_resource_i
         g_field_gover_image_resource_id = image_resource_index;
         g_field_gover_music_resource_id = music_resource_index;
         g_field_gover_audio_clip_id = audio_clip_index;
-        func_80084240();
+        field_reset_actor_resources();
         g_field_fade_target.red = 0;
         g_field_fade_restore_color.red = 0;
         g_field_fade_target.green = 0;
@@ -549,7 +504,7 @@ void field_begin_gover_transition(s32 image_resource_index, s32 music_resource_i
  */
 void field_update_gover_load(void)
 {
-    FieldRenderState* render_state = FIELD_RENDER_STATE;
+    ControllerState* controller = CONTROLLER_STATE;
 
     if (g_field_gover_load_countdown == 0)
     {
@@ -558,14 +513,14 @@ void field_update_gover_load(void)
 
     if (--g_field_gover_load_countdown == 0)
     {
-        render_state->unk140 = 0;
-        render_state->unk92 = 0;
-        render_state->unk13F = 0;
-        render_state->unk91 = 0;
+        controller->ports[1].actuator_control.fields.large_motor_command = 0;
+        controller->ports[0].actuator_control.fields.large_motor_command = 0;
+        controller->ports[1].small_motor_command = 0;
+        controller->ports[0].small_motor_command = 0;
         cdrom_stream(CD_RES_GOVER_BIN, FIELD_SUBOVERLAY_ADDRESS);
         cdrom_wait_queue_empty();
         func_80140004(FIELD_GOVER_WORK_ADDRESS, g_field_gover_image_resource_id, g_field_gover_music_resource_id, g_field_gover_audio_clip_id);
-        func_80084240();
+        field_reset_actor_resources();
     }
 }
 
@@ -855,8 +810,8 @@ static s32 field_finalize_actor_animation(FieldActorSlot* slot)
             if (g_field_object_states[slot->owner_object_index].contact.bytes.controller_index == slot->slot_index)
             {
                 owner_command = g_field_actors[slot->owner_object_index].command;
-                if (((owner_command != FIELD_ACTOR_COMMAND_90) && (owner_command != FIELD_ACTOR_COMMAND_94)) ||
-                    (g_field_object_states[slot->owner_object_index].flags & FIELD_OBJECT_KNOCKED_OUT))
+                if (((owner_command != FIELD_ACTOR_COMMAND_DEFEATED) && (owner_command != FIELD_ACTOR_COMMAND_DEFEAT_END)) ||
+                    (g_field_object_states[slot->owner_object_index].flags & FIELD_OBJECT_FLAG_KNOCKED_OUT))
                 {
                     g_field_actors[slot->owner_object_index].presence = 0;
                 }
@@ -915,7 +870,7 @@ static s32 field_finalize_actor_animation(FieldActorSlot* slot)
             slot->active = 0;
             if (slot->status.word & FIELD_SLOT_OWNER_LINKED)
             {
-                func_80084424(slot->owner_object_index);
+                field_release_actor_binding(slot->owner_object_index);
             }
             return 1;
         }
@@ -924,7 +879,7 @@ static s32 field_finalize_actor_animation(FieldActorSlot* slot)
         {
             slot->duration = 0;
             slot->active = 0;
-            func_80084424(slot->owner_object_index);
+            field_release_actor_binding(slot->owner_object_index);
             for (i = 0; i < FIELD_ACTOR_SLOT_TOTAL; i++)
             {
                 if (((g_field_actor_slots[i].active != 0) && (g_field_actor_slots[i].owner_object_index == slot->owner_object_index)) &&
@@ -1167,7 +1122,7 @@ void field_start_actor_animation(s32 slot_index, s32 target_count, u8* targets)
     slot->pending_track_mask = 1;
     slot->targets[0] = 0;
     slot->target_count = target_count;
-    slot->status.bytes[1] = 0;
+    slot->status.parts.hiding_objects = 0;
     if (target_count != 0)
     {
         target_cursor = targets;
@@ -1339,7 +1294,7 @@ s32 field_find_active_special_attack_actor(void)
         if ((slot->active != 0) && (!(slot->status.word & FIELD_SLOT_OWNER_LINKED)))
         {
             animation_id_limit = FIELD_SPECIAL_ATTACK_END;
-            animation_id = slot->status.half[1];
+            animation_id = slot->status.parts.animation_id;
             if ((animation_id < animation_id_limit) && (animation_id >= first_animation_id))
             {
                 return slot->owner_object_index | FIELD_SPECIAL_ATTACK_RESULT;
@@ -1361,12 +1316,12 @@ s32 field_find_active_special_attack_actor(void)
  */
 void field_update_actor_animations(void)
 {
-    FieldRenderState* render_state = FIELD_RENDER_STATE;
+    ControllerState* controller = CONTROLLER_STATE;
     FieldActorSlot* slot;
     FieldAnimationDef* animation;
     s32 track_index;
     s32 slot_index;
-    u8* curve_selectors;
+    u8* vibration_curves;
     s32 i;
     s32 curve_index;
     u16 frame_sound;
@@ -1375,8 +1330,8 @@ void field_update_actor_animations(void)
 
     slot = g_field_actor_slots;
     slot_index = 0;
-    render_state->unk140 = 0U;
-    render_state->unk92 = 0U;
+    controller->ports[1].actuator_control.fields.large_motor_command = 0U;
+    controller->ports[0].actuator_control.fields.large_motor_command = 0U;
     do
     {
         if (slot->duration != 0)
@@ -1456,24 +1411,24 @@ void field_update_actor_animations(void)
                     }
                 }
                 g_field_track_index = 0;
-                for (track_index = 0; track_index < FIELD_RENDER_TRACK_COUNT; track_index++)
+                for (track_index = 0; track_index < FIELD_VIBRATION_TRACK_COUNT; track_index++)
                 {
-                    u8 curve_selector = (curve_selectors = slot->animation->curve_selectors)[track_index];
+                    u8 curve_selector = (vibration_curves = slot->animation->vibration_curves)[track_index];
 
-                    if ((curve_selectors[track_index] != FIELD_CURVE_NONE) && (curve_selector < (u32)FIELD_CURVE_COUNT))
+                    if ((vibration_curves[track_index] != FIELD_CURVE_NONE) && (curve_selector < (u32)FIELD_CURVE_COUNT))
                     {
                         if (track_index != 0)
                         {
-                            u8 combined_value = field_evaluate_parameter_track(slot, curve_selector & 0xF) | render_state->unk92;
+                            u8 combined_value = field_evaluate_parameter_track(slot, curve_selector & 0xF) | controller->ports[0].actuator_control.fields.large_motor_command;
 
-                            render_state->unk92 = combined_value;
-                            render_state->unk140 = combined_value;
+                            controller->ports[0].actuator_control.fields.large_motor_command = combined_value;
+                            controller->ports[1].actuator_control.fields.large_motor_command = combined_value;
                         }
                         else
                         {
-                            u8 base_value = field_evaluate_parameter_track(slot, (curve_index = curve_selectors[0]) & 0xF);
+                            u8 base_value = field_evaluate_parameter_track(slot, (curve_index = vibration_curves[0]) & 0xF);
 
-                            render_state->unk91 = (render_state->unk13F = base_value);
+                            controller->ports[0].small_motor_command = (controller->ports[1].small_motor_command = base_value);
                         }
                     }
                 }
@@ -1576,8 +1531,8 @@ static void field_build_actor_render_commands(FieldRenderContext* render_ctx, s3
                     u8 owner_index = slot->owner_object_index;
                     s16 owner_command = g_field_actors[owner_index].command;
 
-                    if (((owner_command != FIELD_ACTOR_COMMAND_90) && (owner_command != FIELD_ACTOR_COMMAND_94)) ||
-                        (g_field_object_states[owner_index].flags & FIELD_OBJECT_KNOCKED_OUT))
+                    if (((owner_command != FIELD_ACTOR_COMMAND_DEFEATED) && (owner_command != FIELD_ACTOR_COMMAND_DEFEAT_END)) ||
+                        (g_field_object_states[owner_index].flags & FIELD_OBJECT_FLAG_KNOCKED_OUT))
                     {
                         g_field_actors[slot->owner_object_index].presence = visibility;
                     }
@@ -1607,7 +1562,7 @@ static void field_build_actor_render_commands(FieldRenderContext* render_ctx, s3
                             g_field_actors[slot->targets[target_index]].presence = visibility;
                             g_field_object_states[slot->targets[target_index]].contact.word |= FIELD_CONTACT_ANIMATION_HIDDEN;
                             g_field_object_states[slot->targets[target_index]].contact.bytes.controller_index = slot->slot_index;
-                            slot->status.bytes[1] = 1;
+                            slot->status.parts.hiding_objects = 1;
                         }
                         else
                         {
@@ -2144,7 +2099,7 @@ void field_finish_party_slot_reload(s32 actor_slot)
 
             field_refresh_party_routes();
             field_battle_end();
-            func_80084240();
+            field_reset_actor_resources();
             func_800B01FC();
         }
     }
@@ -2872,8 +2827,8 @@ void field_update_actor_objects(void)
                     {
                         if (g_field_return_to_title_prompt_state == 0 && g_field_dialog_screen_mode == 0 && D_80122B20 == 0)
                         {
-                            if (actor->command != FIELD_ACTOR_COMMAND_93 && actor->command != FIELD_ACTOR_COMMAND_94 && actor->command != FIELD_ACTOR_COMMAND_90 &&
-                                actor->command != FIELD_ACTOR_COMMAND_AE && actor->command != FIELD_ACTOR_COMMAND_TRANSITION &&
+                            if (actor->command != FIELD_ACTOR_COMMAND_DEFEAT_WAIT && actor->command != FIELD_ACTOR_COMMAND_DEFEAT_END && actor->command != FIELD_ACTOR_COMMAND_DEFEATED &&
+                                actor->command != FIELD_ACTOR_COMMAND_DEFEAT_DELAY && actor->command != FIELD_ACTOR_COMMAND_KNOCKED_DOWN &&
                                 actor->command != FIELD_ACTOR_COMMAND_ATTACHED)
                             {
                                 field_update_spawned_actor(actor);
@@ -3677,7 +3632,7 @@ static void field_refresh_actor_portraits(void)
         }
     }
 
-    func_80084240();
+    field_reset_actor_resources();
 }
 
 /**

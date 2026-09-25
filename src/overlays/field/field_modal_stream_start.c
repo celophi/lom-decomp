@@ -34,7 +34,7 @@ void func_800AD030(s32 mode)
 {
     if (g_field_modal_state == FIELD_MODAL_NONE)
     {
-        func_80084240();
+        field_reset_actor_resources();
         cdrom_stream(CD_RES_CARDA_BIN, FIELD_SUBOVERLAY_ADDRESS);
         cdrom_wait_queue_empty();
         g_field_card_overlay_mode = mode + 1;
@@ -51,12 +51,12 @@ void func_800AD030(s32 mode)
  */
 void func_800AD0C8(void)
 {
-    func_80084240();
+    field_reset_actor_resources();
     cdrom_stream(CD_RES_GOLEM_BIN, FIELD_SUBOVERLAY_ADDRESS);
     cdrom_wait_queue_empty();
     func_80140024((void*)0x80150000, 0);
     func_800C3BB0();
-    func_80084240();
+    field_reset_actor_resources();
 }
 
 /** @brief Empty per-frame hook, called with the render half each frame. */
@@ -72,7 +72,7 @@ void func_800AD120(s32 mode)
 {
     if (g_field_modal_state == FIELD_MODAL_NONE)
     {
-        func_80084240();
+        field_reset_actor_resources();
         cdrom_stream(CD_RES_NIKI_BIN, FIELD_SUBOVERLAY_ADDRESS);
         cdrom_wait_queue_empty();
         g_field_niki_addhero_state = 1;
@@ -89,7 +89,7 @@ void func_800AD194(s32 mode)
 {
     if (g_field_modal_state == FIELD_MODAL_NONE)
     {
-        func_80084240();
+        field_reset_actor_resources();
         cdrom_stream(CD_RES_ADDHERO_BIN, FIELD_SUBOVERLAY_ADDRESS);
         cdrom_wait_queue_empty();
         g_field_niki_addhero_state = 1;
