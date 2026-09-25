@@ -1,6 +1,7 @@
 #include "wmap_frame_render.h"
 #include "wmap_resource_support.h"
 #include "wmap_effect_backdrop.h"
+#include "sdk/libgpu.h"
 
 /** @brief Gouraud triangle packet with three packed screen coordinates. */
 typedef struct
@@ -92,7 +93,7 @@ void func_8006D520(void)
 /** @brief Update the transition mesh and append its triangles for rendering. */
 void func_8006D674(void)
 {
-    WmapTriangle* triangles;
+    WmapTriangle *triangles;
     s32 i;
     s32 remaining;
 
@@ -118,12 +119,13 @@ void func_8006D674(void)
             }
             for (i = 0; i < 176; i++)
             {
-                triangles[i].x0 = D_8013A188[i * 3].x.parts.whole;
-                triangles[i].y0 = D_8013A188[i * 3].y.parts.whole;
-                triangles[i].x1 = D_8013A188[i * 3 + 1].x.parts.whole;
-                triangles[i].y1 = D_8013A188[i * 3 + 1].y.parts.whole;
-                triangles[i].x2 = D_8013A188[i * 3 + 2].x.parts.whole;
-                triangles[i].y2 = D_8013A188[i * 3 + 2].y.parts.whole;
+                triangles->x0 = D_8013A188[i * 3].x.parts.whole;
+                triangles->y0 = D_8013A188[i * 3].y.parts.whole;
+                triangles->x1 = D_8013A188[i * 3 + 1].x.parts.whole;
+                triangles->y1 = D_8013A188[i * 3 + 1].y.parts.whole;
+                triangles->x2 = D_8013A188[i * 3 + 2].x.parts.whole;
+                triangles->y2 = D_8013A188[i * 3 + 2].y.parts.whole;
+                triangles++;
             }
             remaining = D_8011CF70 - 1;
             D_8011CF70 = remaining;
@@ -142,8 +144,7 @@ void func_8006D674(void)
         }
         for (i = 0; i < 176; i++)
         {
-            triangles->header.tag = (triangles->header.tag & 0xFF000000) | (g_wmap_current_frame->ordering_table[9] & 0xFFFFFF);
-            g_wmap_current_frame->ordering_table[9] = (g_wmap_current_frame->ordering_table[9] & 0xFF000000) | ((u32)triangles & 0xFFFFFF);
+            addPrim(&g_wmap_current_frame->ordering_table[9], triangles);
             triangles++;
         }
         func_8006534C(0x7B54, 9);
