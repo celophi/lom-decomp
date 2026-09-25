@@ -1974,9 +1974,6 @@ void field_update_modal_text_session(s32 context)
  * @param refresh_only Nonzero preserves the current party membership and health values.
  * @note Zero also reloads active-party data and palettes before refreshing actions.
  * @note Packed descriptor byte writes preserve the other flag byte.
- * @note TODO: 99.304% (369/381 exact). first_absent is a matching scaffold: an early 0xFF copied into absent
- *       fixes the ability-loop register rotation; its original source is unknown. Remaining: g_pad_ctx/record_base
- *       s5-s6 swap. See working/field_rebuild_party_actions/status.md.
  */
 void field_rebuild_party_actions(s32 refresh_only)
 {
@@ -1986,12 +1983,11 @@ void field_rebuild_party_actions(s32 refresh_only)
     s32 texture_value;
     s16 technique_action_id;
     u8* item_context;
+    u8* icon_base;
     s32 context_offset;
     s32 record_offset;
     s32 absent;
     s32 ability_empty;
-    s32 first_absent;
-    FieldModalAction* record_base;
     u8* pair_first;
     u8* pair_second;
     FieldModalSaveView* input_base;
@@ -2091,21 +2087,19 @@ void field_rebuild_party_actions(s32 refresh_only)
         func_800A54D0();
     }
     player_index = 0;
-    record_base = g_field_resource_actions;
     do
     {
-        party = &g_field_player_records[player_index];
-        actor_stride_words = player_index * 0x14;
-        record_stride = player_index * 0x190;
-        context_stride = player_index * FIELD_SAVED_CHARACTER_STRIDE;
+        party = (FieldModalPartySlot*)((u8*)g_field_player_records + (player_index << 9) + player_index * 0x68);
         state_stride = player_index * 0x23C;
+        context_stride = player_index * FIELD_SAVED_CHARACTER_STRIDE;
+        record_stride = player_index * 0x190;
+        actor_stride_words = player_index * 0x14;
 
         if (party->head.bytes.flags & 1)
         {
             actor_base = g_field_actors;
             actor = (FieldModalActor*)((actor_stride_words + player_index) * 4 + (u8*)actor_base);
             saved_player = (FieldModalSaveView*)(g_pad_ctx + context_stride);
-            first_absent = 0xFF;
             actor->flags = (s32)((actor->flags & ~0x1FF) | (((u8)saved_player->character_kind >> 7) ^ 1));
             weapon_type = ((u32)saved_player->equipment_flags >> 0xA) & 0x3F;
             controller_or_player_test = player_index < 2;
@@ -2165,7 +2159,7 @@ void field_rebuild_party_actions(s32 refresh_only)
                 do
                 {
                     button = (FieldModalSaveView*)((u8*)input_base + button_index);
-                    button_action = (FieldModalAction*)(action_offset + (u32)record_base);
+                    button_action = (FieldModalAction*)(action_offset + (u32)g_field_resource_actions);
                     button_action->action_id = (s16)button->bound_actions[0];
                     button_action->icon_id = (s16) * ((button->bound_actions[0] * 2) + pair_first);
                     button_action->texture_id = (s16) * ((button->bound_actions[0] * 2) + pair_second);
@@ -2173,69 +2167,85 @@ void field_rebuild_party_actions(s32 refresh_only)
                     button_index += 1;
                 } while (button_index < 2);
                 context_offset = context_stride;
-                absent = first_absent;
+                absent = 0xFF;
                 record_offset = record_stride;
                 item_context = g_pad_ctx;
                 ability_start = (FieldModalSaveView*)(item_context + context_offset);
                 item_record_offset = 0x20;
                 item_cursor = ability_start;
-            rebuild_equipped_ability:
-
-                ability_empty = item_cursor->equipped_abilities[0] == absent;
-                if (ability_empty)
+                do
                 {
-                    empty_action = (FieldModalAction*)(item_record_offset + record_offset + (u32)record_base);
-                    empty_action->bits.word = (u16)(empty_action->bits.word & 0xFBFF);
-                    empty_action->bits.byte.low = absent;
-                    empty_action->action_id = 0;
-                    empty_action->icon_id = 0;
-                    empty_action->texture_id = 0;
-                    empty_action->bits.word = (u16)(empty_action->bits.word & 0xFCFF);
-                }
-                else
-                {
-                    ability_id = item_cursor->equipped_abilities[0];
-                    if (ability_id & 0x80)
+                    context_offset = ~context_offset;
+                    context_offset = ~context_offset;
+                    record_offset = (u32)record_offset + (u32)item_record_offset;
+                    record_offset = (u32)record_offset - (u32)item_record_offset;
+                    item_record_offset = (~(u32)item_record_offset);
+                    item_record_offset = (~(u32)item_record_offset);
+                    record_offset = (~(u32)record_offset);
+                    record_offset = (~(u32)record_offset);
+                    absent = (~(u32)absent);
+                    absent = (~(u32)absent);
+                    ability_start = (FieldModalSaveView*)(~(u32)ability_start);
+                    ability_start = (FieldModalSaveView*)(~(u32)ability_start);
+                    item_context = (u8*)(~(u32)item_context);
+                    item_context = (u8*)(~(u32)item_context);
+                    item_cursor = (FieldModalSaveView*)(~(u32)item_cursor);
+                    item_cursor = (FieldModalSaveView*)(~(u32)item_cursor);
+                    ability_empty = item_cursor->equipped_abilities[0] == absent;
+                    if (ability_empty)
                     {
-                        instrument_action = (FieldModalAction*)(item_record_offset + record_offset + (u32)record_base);
-                        instrument_action->action_id = 0;
-                        instrument_action->bits.word = (u16)(instrument_action->bits.word | 0x400);
-                        instrument = (FieldModalInstrument*)(item_context + (context_offset + 0x5F0) + (((ability_id & 0x7F) << 6) + 0x150));
-                        instrument_action->bits.byte.low = (s8)((u8)instrument->spell >> 1);
-                        instrument_action->icon_id = (s16) * (instrument->instrument_type + D_800EB24C);
-                        spell = instrument->spell;
-                        texture_value = 0x8018;
-                        texture_value += spell;
-                        texture_value += instrument->instrument_type * 0xE;
-                        if (!(spell & 1))
-                        {
-                            texture_value += 0x800;
-                        }
-                        instrument_action->texture_id = texture_value;
-                        instrument_action->bits.word = (u16)(instrument_action->bits.word & 0xFCFF);
+                        empty_action = (FieldModalAction*)(item_record_offset + record_offset + (u32)g_field_resource_actions);
+                        empty_action->bits.word = (u16)(empty_action->bits.word & 0xFBFF);
+                        empty_action->bits.byte.low = absent;
+                        empty_action->action_id = 0;
+                        empty_action->icon_id = 0;
+                        empty_action->texture_id = 0;
+                        empty_action->bits.word = (u16)(empty_action->bits.word & 0xFCFF);
                     }
                     else
                     {
-                        technique_action = (FieldModalAction*)(item_record_offset + record_offset + (u32)record_base);
-                        technique_action->bits.word = (u16)(technique_action->bits.word & 0xFBFF);
                         ability_id = item_cursor->equipped_abilities[0];
-                        technique_action_id = (s16)(ability_id | 0x8000);
-                        technique_action->bits.byte.low = absent;
-                        technique_action->icon_id = 2;
-                        technique_action->action_id = technique_action_id;
-                        ability_id = item_cursor->equipped_abilities[0];
-                        weapon_type = g_field_player_records[player_index].head.bytes.weapon_type;
-                        technique_action->bits.word = (u16)(technique_action->bits.word & 0xFCFF);
-                        technique_action->texture_id = (s16)(((ability_id + 0x88) | ~0x7FFF) + (weapon_type * 0x18));
+                        if (ability_id & 0x80)
+                        {
+                            instrument_action = (FieldModalAction*)(item_record_offset + record_offset + (u32)g_field_resource_actions);
+                            instrument_action->action_id = 0;
+                            instrument_action->bits.word = (u16)(instrument_action->bits.word | 0x400);
+                            instrument = (FieldModalInstrument*)(item_context + (context_offset + 0x5F0) + (((ability_id & 0x7F) << 6) + 0x150));
+                            instrument_action->bits.byte.low = (s8)((u8)instrument->spell >> 1);
+                            icon_base = D_800EB24C;
+                            instrument_action->icon_id = (s16) * (instrument->instrument_type + icon_base);
+                            icon_base = 0;
+                            spell = instrument->spell;
+                            texture_value = 0x8018;
+                            texture_value += spell;
+                            texture_value += instrument->instrument_type * 0xE;
+                            if (!(spell & 1))
+                            {
+                                texture_value += 0x800;
+                            }
+                            instrument_action->texture_id = texture_value;
+                            instrument_action->bits.word = (u16)(instrument_action->bits.word & 0xFCFF);
+                        }
+                        else
+                        {
+                            technique_action = (FieldModalAction*)(item_record_offset + record_offset + (u32)g_field_resource_actions);
+                            technique_action->bits.word = (u16)(technique_action->bits.word & 0xFBFF);
+                            ability_id = item_cursor->equipped_abilities[0];
+                            technique_action_id = (s16)(ability_id | 0x8000);
+                            technique_action->bits.byte.low = absent;
+                            technique_action->icon_id = 2;
+                            technique_action->action_id = technique_action_id;
+                            ability_id = item_cursor->equipped_abilities[0];
+                            absent++;
+                            absent--;
+                            weapon_type = party->head.bytes.weapon_type;
+                            technique_action->bits.word = (u16)(technique_action->bits.word & 0xFCFF);
+                            technique_action->texture_id = (s16)(((ability_id + 0x88) | ~0x7FFF) + (weapon_type * 0x18));
+                        }
                     }
-                }
-                item_cursor = (FieldModalSaveView*)((u8*)item_cursor + 1);
-                item_record_offset += 8;
-
-                if ((s32)item_cursor < (s32)((u8*)ability_start + 4))
-                {
-                    goto rebuild_equipped_ability;
-                }
+                    item_cursor = (FieldModalSaveView*)((u8*)item_cursor + 1);
+                    item_record_offset += 8;
+                } while ((s32)item_cursor < (s32)((u8*)ability_start + 4));
             }
         }
         player_index += 1;
