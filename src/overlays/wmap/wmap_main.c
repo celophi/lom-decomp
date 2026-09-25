@@ -49,13 +49,6 @@ typedef struct
     short x2, y2;
 } WmapMenuTriangle;
 
-/** @brief A transfer rectangle with the trailing words present in the image table. */
-typedef struct
-{
-    RECT rect;
-    s16 reserved[2];
-} WmapTransferRect;
-
 /** @brief Script words: duration/button pairs, or a command preceded by -2. */
 typedef enum
 {
@@ -1207,8 +1200,6 @@ void wmap_step_input_script(void)
     g_wmap_script_delay = 1;
 }
 
-/** @brief Rectangle template and trailing zero used during display transfers. */
-const WmapTransferRect g_wmap_exit_capture_rect = {{SCREEN_WIDTH, 0, SCREEN_WIDTH, SCREEN_HEIGHT}, {0, 0}};
 
 /** @brief Copy the destination rectangle from a TIM block header. */
 static inline void wmap_copy_rectangle(RECT* rectangle, u8* block)
@@ -1254,8 +1245,6 @@ static inline void wmap_clear_map_surface(RECT* rectangle)
 s32 wmap_run_loop(void)
 {
     RECT rects[4];
-    WmapFrame* render_base;
-    WmapFrame* render_alt;
     u8* palette_color;
     s16 traveler_x;
     s16 traveler_y;
@@ -1678,10 +1667,10 @@ s32 wmap_run_loop(void)
         cdrom_stream(0x10C6, D_800DCF18);
         cdrom_wait_queue_empty();
         data = D_800DCF18;
-        data += 8;
         header = D_800DCF18;
         if (header[4] & 8)
         {
+            data += 8;
             wmap_upload_tim_block(&rects[1], data);
             data += *(s32*)data;
             rects[1] = *(RECT*)(data + 4);
@@ -1693,6 +1682,7 @@ s32 wmap_run_loop(void)
         }
         else
         {
+            data += 8;
             rects[1] = *(RECT*)(data + 4);
             if (rects[1].x != -1)
             {
@@ -1766,9 +1756,9 @@ s32 wmap_run_loop(void)
     }
     D_80139950.vx = (s32)(scroll_cell_x * WMAP_MAP_CELL_SIZE);
     D_80139950.vy = (s32)(scroll_cell_y * WMAP_MAP_CELL_SIZE);
-    traveler_x = (g_wmap_travelers[0].cell_x - 1) * WMAP_TRAVEL_CELL_SIZE;
     g_wmap_travelers[0].next_cell_x = (u16)g_wmap_travelers[0].cell_x;
     g_wmap_travelers[0].next_cell_y = (u16)g_wmap_travelers[0].cell_y;
+    traveler_x = (g_wmap_travelers[0].cell_x - 1) * WMAP_TRAVEL_CELL_SIZE;
     g_wmap_travelers[0].position_x = traveler_x;
     g_wmap_travelers[0].target_x = traveler_x;
     traveler_y = (g_wmap_travelers[0].cell_y - 1) * WMAP_TRAVEL_CELL_SIZE;
@@ -1837,20 +1827,18 @@ s32 wmap_run_loop(void)
     }
     update_controllers();
     D_8011CF74 = 0;
-    render_base = &g_wmap_frames[0];
-    render_alt = &g_wmap_frames[1];
     /* Build one display list per frame, alternating the two packet buffers. */
     while (1)
     {
         if (D_8011CF74 & 1)
         {
-            render_base->packet_cursor = (u8*)D_8010CF18;
-            g_wmap_current_frame = render_base;
+            g_wmap_frames[0].packet_cursor = (u8*)D_8010CF18;
+            g_wmap_current_frame = &g_wmap_frames[0];
         }
         else
         {
-            render_base[1].packet_cursor = (u8*)D_80114F18;
-            g_wmap_current_frame = render_alt;
+            g_wmap_frames[1].packet_cursor = (u8*)D_80114F18;
+            g_wmap_current_frame = &g_wmap_frames[1];
         }
         g_wmap_packet_bytes = 0;
         ClearOTagR(g_wmap_current_frame->ordering_table, WMAP_OT_COUNT);
@@ -1946,14 +1934,12 @@ s32 wmap_run_loop(void)
                 StoreImage(&g_wmap_current_frame->disp_env.disp, D_800DCF18);
                 MoveImage(&g_wmap_current_frame->disp_env.disp, g_wmap_current_frame->draw_env.tw.x, g_wmap_current_frame->draw_env.tw.y);
                 DrawSync(0);
-                pixel_index = 0;
-                do
+                for (pixel_index = 0; pixel_index < 0x12C00; pixel_index++)
                 {
-                    pixel_index += 1;
-                    *screen_pixel |= 0x8000;
-                    screen_pixel++;
-                } while (pixel_index <= 0x12BFF);
-                rects[2] = g_wmap_exit_capture_rect.rect;
+                    screen_pixel[pixel_index] |= 0x8000;
+                }
+                /* Reload the captured frame into the 320x240 buffer at x = 320. */
+                rects[2] = (RECT){SCREEN_WIDTH, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
                 LoadImage(&rects[2], D_800DCF18);
                 D_8013B238.vx = 0;
                 D_8013B238.vy = 0;
@@ -1967,8 +1953,8 @@ s32 wmap_run_loop(void)
                 D_80139888.vx = 0xA0;
                 D_80139888.vy = 0x78;
                 D_80139888.vz = 0;
-                render_base[1].draw_env.dtd = 0;
-                render_base->draw_env.dtd = 0;
+                g_wmap_frames[1].draw_env.dtd = 0;
+                g_wmap_frames[0].draw_env.dtd = 0;
                 D_801B2478.vx = 3;
                 D_801B2478.vy = 0;
                 D_801B2478.vz = 0;
