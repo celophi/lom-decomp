@@ -125,14 +125,15 @@ void* func_800A88A0(SPRT* sprite_cursor, s32* ot, u8* text, s32 text_color, s32 
  * @param arg3 Text color/style selector.
  * @param arg4 Pointer to a two-element x/y coordinate pair.
  * @param arg5 Alignment/post-processing flags.
+ * @return Primitive cursor after the text.
  */
-void func_800A8A78(void *arg0, void *arg1, s32 arg2, s32 arg3, s16 *arg4, s32 arg5)
+void* func_800A8A78(void *arg0, void *arg1, s32 arg2, s32 arg3, s16 *arg4, s32 arg5)
 {
     extern void func_800A8B90(void *out, s32 arg1, s32 arg2);
     u8 local[0x40];
 
     func_800A8B90(local, arg2, 0);
-    func_800A88A0(arg1, arg0, local, arg3, arg4[0], arg4[1], arg5);
+    return func_800A88A0(arg1, arg0, local, arg3, arg4[0], arg4[1], arg5);
 }
 
 /**
@@ -143,14 +144,15 @@ void func_800A8A78(void *arg0, void *arg1, s32 arg2, s32 arg3, s16 *arg4, s32 ar
  * @param arg3 Text color/style selector.
  * @param arg4 Pointer to a two-element x/y coordinate pair.
  * @param arg5 Alignment/post-processing flags.
+ * @return Primitive cursor after the text.
  */
-void func_800A8B04(void *arg0, void *arg1, s32 arg2, s32 arg3, s16 *arg4, s32 arg5)
+void* func_800A8B04(void *arg0, void *arg1, s32 arg2, s32 arg3, s16 *arg4, s32 arg5)
 {
     extern void func_800A8B90(void *out, s32 arg1, s32 arg2);
     u8 local[0x40];
 
     func_800A8B90(local, arg2, 1);
-    func_800A88A0(arg1, arg0, local, arg3, arg4[0], arg4[1], arg5);
+    return func_800A88A0(arg1, arg0, local, arg3, arg4[0], arg4[1], arg5);
 }
 
 /**
@@ -404,7 +406,7 @@ extern u8 D_800EC3C4[];
 extern u8 D_800EC3E0[];
 extern u8 D_800EC3E6[];
 extern u8 D_800EC3E8[];
-extern u8 D_800ED064[];
+extern u8 g_field_technique_names[];
 extern u8 D_800EDBE4[];
 extern u8 D_8010A028[];
 
@@ -747,7 +749,7 @@ void field_init_actor_labels(void)
 
     field_reset_input_repeat();
     akao_cmd_99_9b_9d_9f(2);
-    func_800A3904(0, 0x3C, 0);
+    field_fade_song(0, 0x3C, 0);
     akao_stop_sfx_by_id(0x7E);
     actor = g_field_scene_actors;
     actor_index = FIELD_LABEL_FIRST_ACTOR;
@@ -944,7 +946,7 @@ void field_draw_actor_labels(void* context)
                         break;
                     default:
                         /* The original also loads the technique text bank here; it is overwritten before use. */
-                        label_value = (s32)D_800ED064;
+                        label_value = (s32)g_field_technique_names;
                         swapped_buttons = ((FieldSavedInputMap*)((u8*)g_pad_ctx + local_pad_offset))->actions[action_slot];
                         if (swapped_buttons == 0xFF)
                         {
@@ -968,7 +970,7 @@ void field_draw_actor_labels(void* context)
                                 label_value = g_field_player_records[index].kind;
                                 swapped_buttons += label_value * 0x18;
 
-                                label_value = (s32)D_800ED064;
+                                label_value = (s32)g_field_technique_names;
                                 text_high_or_offset = ((u16*)label_value)[swapped_buttons];
                                 text_address = text_high_or_offset + label_value;
                             }
@@ -1377,7 +1379,7 @@ void field_process_input(s32 context)
         pad[1].feedback[0] = 0;
         pad[1].feedback[1] = 0;
         akao_cmd_98_9a_9c_9e(0);
-        func_800A3904(0, 0x3C, 0x7F);
+        field_fade_song(0, 0x3C, 0x7F);
         return;
     }
     if (g_field_interaction_active != 0)
@@ -1476,7 +1478,7 @@ void field_process_input(s32 context)
                         func_800AEE28();
                         return;
                     }
-                    func_800A3938(0x78, 0x80);
+                    field_play_sound(0x78, 0x80);
                 }
             }
         }
@@ -1496,14 +1498,14 @@ s32 field_play_low_hp_warning(void)
         {
             if ((g_field_object_states[0].current_hp != 0) && ((u32)(g_field_object_states[0].current_hp * 4) < (u32)g_field_object_states[0].maximum_hp))
             {
-                func_800A3938(FIELD_LOW_HP_SOUND, 0x80);
+                field_play_sound(FIELD_LOW_HP_SOUND, 0x80);
             }
         }
 
         if (!((g_frame_counter + 0x10) & 0x1F) && !(D_800FDFC8 & 0x1FF) && (g_field_object_states[1].current_hp != 0) &&
             ((u32)(g_field_object_states[1].current_hp * 4) < (u32)g_field_object_states[1].maximum_hp))
         {
-            func_800A3938(FIELD_LOW_HP_SOUND, 0x80);
+            field_play_sound(FIELD_LOW_HP_SOUND, 0x80);
         }
     }
 }
@@ -1648,7 +1650,7 @@ void field_update_text_session(void);
 void* func_800A88A0(SPRT* cursor, s32* ot, u8* text, s32 color, s32 x, s32 y, s32 flags);
 s32 field_name_byte_length(u8* context);
 void field_copy_name(u8* dest, u8* src);
-s32 func_800AEAC0(s32 packet_cursor, void* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5);
+s32 field_draw_player_icon(s32 packet_cursor, void* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5);
 s32 func_800AF950(s32 packet_cursor, void* arg1, u8* str, s32 arg3, s32 x, s32 y, s32 arg6, s32 arg7, s32 arg8, s32 arg9, s32 arg10, s32 arg11);
 
 void field_draw_empty_shop_notice(FieldModalDrawContext* context);
@@ -1851,7 +1853,7 @@ void field_run_menu(void* render_buffers, s32 input_source)
         field_begin_text_session();
         return;
     }
-    func_800A3938(0x80, 0x80);
+    field_play_sound(0x80, 0x80);
     field_reset_actor_resources();
 
     g_active_script = 0;
@@ -1962,7 +1964,7 @@ void field_update_modal_text_session(s32 context)
         }
         field_text_reset_windows();
         akao_cmd_98_9a_9c_9e(2);
-        func_800A3904(0, 0x3C, 0x7F);
+        field_fade_song(0, 0x3C, 0x7F);
     }
 }
 
@@ -2117,7 +2119,7 @@ void field_rebuild_party_actions(s32 refresh_only)
                 }
                 if ((g_field_scene_mode_bit != 0) && (refresh_only != 0) && (controller_or_player_test != 0))
                 {
-                    func_800A3D44(player_index, party->head.bytes.weapon_type);
+                    field_load_weapon_sfx_table(player_index, party->head.bytes.weapon_type);
                 }
             }
             party->weapon_flag = 0;
@@ -2511,7 +2513,7 @@ void field_update_modal(s32 context_or_delay)
         {
             return;
         }
-        func_800A39A8(0, 0x80, 0, 3);
+        field_play_set_sfx(0, 0x80, 0, 3);
         field_text_reset_windows();
         index_or_zero = 0;
         g_field_modal_state = FIELD_MODAL_NONE;
@@ -2522,7 +2524,7 @@ void field_update_modal(s32 context_or_delay)
         {
             return;
         }
-        func_800A7384();
+        field_close_battle_results();
         field_text_reset_windows();
         index_or_zero = 0;
         g_field_modal_state = FIELD_MODAL_NONE;
@@ -2549,7 +2551,7 @@ void field_begin_empty_shop_notice(s32 hidden)
 {
     g_field_modal_state = FIELD_MODAL_EMPTY_SHOP;
     field_set_fade_target_only(0xC0, 0x80, 0x80, 8);
-    func_800A3938(0xC7, 0x80);
+    field_play_sound(0xC7, 0x80);
     g_field_shop_notice_hidden = hidden;
 }
 
@@ -2581,8 +2583,8 @@ void field_begin_duel_intro(void)
 {
     g_field_modal_state = FIELD_MODAL_DUEL_INTRO;
     field_set_fade_target_only(0xC0, 0xC0, 0xC0, 8);
-    func_800AE9E0();
-    func_800A3938(0x125, 0x80);
+    field_upload_player_icons();
+    field_play_sound(0x125, 0x80);
     g_field_duel_panel_phase = FIELD_DUEL_SLIDE_IN;
     g_field_duel_panel_hold_frames = 0;
     g_field_duel_panel_offset = FIELD_DUEL_PANEL_START_OFFSET;
@@ -2595,8 +2597,8 @@ void field_begin_duel_result(void)
 {
     g_field_modal_state = FIELD_MODAL_DUEL_RESULT;
     field_set_fade_target_only(0xC0, 0xC0, 0xC0, 8);
-    func_800AE9E0();
-    func_800A3938(0x126, 0x80);
+    field_upload_player_icons();
+    field_play_sound(0x126, 0x80);
     g_field_duel_panel_phase = FIELD_DUEL_SLIDE_IN;
     g_field_duel_panel_hold_frames = 0;
     g_field_duel_panel_offset = FIELD_DUEL_PANEL_START_OFFSET;
@@ -2649,7 +2651,7 @@ s32 field_draw_duel_intro(FieldModalDrawContext* context)
         g_field_duel_panel_hold_frames--;
         if (g_field_duel_panel_hold_frames == 0)
         {
-            func_800A3938(0x127, 0x80);
+            field_play_sound(0x127, 0x80);
             g_field_duel_panel_phase = FIELD_DUEL_SLIDE_OUT;
             g_field_duel_panel_offset = -1;
         }
@@ -2665,7 +2667,7 @@ s32 field_draw_duel_intro(FieldModalDrawContext* context)
         return 1;
     }
 
-    packet_cursor = func_800AEAC0(packet_cursor, draw_context, 0, g_field_duel_panel_offset + 0x32, 0x22, 1);
+    packet_cursor = field_draw_player_icon(packet_cursor, draw_context, 0, g_field_duel_panel_offset + 0x32, 0x22, 1);
     packet_cursor = func_800AF950(packet_cursor, draw_context, &((FieldModalSaveView*)g_pad_ctx)->name[0], 4, g_field_duel_panel_offset + 0x6C, 0x32, 0, 5,
                                   0x180, 0x180, -4, DRAW_FLAG);
 
@@ -2681,7 +2683,7 @@ s32 field_draw_duel_intro(FieldModalDrawContext* context)
         s32 offset = (D_800EC406.high << 8) + (s32)((u8*)&D_800EC406 - 0x42);
         packet_cursor = func_800AF950(packet_cursor, draw_context, (u8*)(low + offset), 4, 0xA0, 0x64, 2, 7, 0x180, 0x180, -4, DRAW_FLAG);
     }
-    packet_cursor = func_800AEAC0(packet_cursor, draw_context, 1, 0xDE - g_field_duel_panel_offset, 0x86, 0);
+    packet_cursor = field_draw_player_icon(packet_cursor, draw_context, 1, 0xDE - g_field_duel_panel_offset, 0x86, 0);
     packet_cursor = func_800AF950(packet_cursor, draw_context, &((FieldModalSaveView*)g_pad_ctx)->second_name[0], 4, 0xD4 - g_field_duel_panel_offset, 0x96, 1,
                                   8, 0x180, 0x180, -4, DRAW_FLAG);
 
@@ -2728,7 +2730,7 @@ s32 field_draw_duel_result(FieldModalDrawContext* context)
         g_field_duel_panel_hold_frames--;
         if (g_field_duel_panel_hold_frames == 0)
         {
-            func_800A3938(0x127, 0x80);
+            field_play_sound(0x127, 0x80);
             g_field_duel_panel_phase = FIELD_DUEL_SLIDE_OUT;
             g_field_duel_panel_offset = -1;
         }
@@ -2749,7 +2751,7 @@ s32 field_draw_duel_result(FieldModalDrawContext* context)
         s32 offset = (D_800EC40C.high << 8) + (s32)((u8*)&D_800EC40C - 0x48);
         packet_cursor = func_800AF950(packet_cursor, draw_context, (u8*)(low + offset), 4, 0xA0, 0x34, 2, 5, 0x200, 0x200, -4, DRAW_FLAG);
     }
-    packet_cursor = func_800AEAC0(packet_cursor, draw_context, g_field_duel_winner, g_field_duel_panel_offset + 0x32, 0x54, 1);
+    packet_cursor = field_draw_player_icon(packet_cursor, draw_context, g_field_duel_winner, g_field_duel_panel_offset + 0x32, 0x54, 1);
     packet_cursor = func_800AF950(packet_cursor, draw_context, g_pad_ctx + (g_field_duel_winner * FIELD_SAVED_CHARACTER_STRIDE + 0x5F0), 4,
                                   g_field_duel_panel_offset + 0x6C, 0x64, 0, 6, 0x1C0, 0x1C0, -4, DRAW_FLAG);
 

@@ -92,7 +92,7 @@ initialize_slot:
 
 start_window:
     D_80122714 = 1;
-    func_800A3938(0xB9, 0x80);
+    field_play_sound(0xB9, 0x80);
     slot_cursor = D_80122828;
     slot_index = 0;
 scan_slot:
@@ -152,11 +152,11 @@ setup_slot:
 }
 
 /**
- * @brief Thin stack-frame wrapper around func_800A3938 with fixed args.
+ * @brief Thin stack-frame wrapper around field_play_sound with fixed args.
  */
 void func_800AF0C4(void)
 {
-    func_800A3938(0x78, 0x80);
+    field_play_sound(0x78, 0x80);
 }
 
 /** Sixteen-byte GPU tile packet, including its ordering-table tag. */
@@ -287,7 +287,7 @@ s32 func_800AF350(FieldMenuElement *window)
             g_field_secondary_held_buttons = field_read_controller_buttons(1);
             g_field_secondary_repeat_delay = 0xF;
             g_field_buffered_input = 0;
-            func_800A3938(0x7E, 0x80);
+            field_play_sound(0x7E, 0x80);
             close_element = D_80122828;
             window_index = 0;
             g_menu_element_counter = 0;
@@ -368,13 +368,13 @@ s32 func_800AF350(FieldMenuElement *window)
                     cancel_element->attr.word &= ~7;
                     cancel_element++;
                 } while (cancel_index < 8);
-                func_800A3938(0x7F, 0x80);
+                field_play_sound(0x7F, 0x80);
                 D_80122714 = 0;
                 return;
             }
             if (g_field_buffered_input & 0xF00C)
             {
-                func_800A3938(0x7D, 0x80);
+                field_play_sound(0x7D, 0x80);
                 scroll_step = 1;
                 if (g_field_buffered_input & 8)
                 {

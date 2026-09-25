@@ -1,11 +1,11 @@
 #include "field_scene_internal.h"
 #include "field_calls.h"
 
-/** func_80062820 mode: stop with success when the stamped tile is goal_tile. */
+/** field_collision_trace_line mode: stop with success when the stamped tile is goal_tile. */
 #define FIELD_COLLISION_TRACE_STOP_AT_GOAL 2
 
 /**
- * @brief Test one tile of a func_80062820 footprint and stamp it.
+ * @brief Test one tile of a field_collision_trace_line footprint and stamp it.
  * @param ptr Tile pointer.
  * @note Uses tile_value, stamp, mode and goal_tile of the caller and returns
  *       from it: 0 on a blocked tile, 1 when the goal tile is stamped.
@@ -28,7 +28,7 @@
     }
 
 /**
- * @brief Test and stamp the footprint tiles func_80062820 newly covers.
+ * @brief Test and stamp the footprint tiles field_collision_trace_line newly covers.
  * @note edge_state 1 tests the leading column, 2 the leading row and 3 the
  *       whole rectangle; then the stamp advances. Returns from the caller
  *       through FIELD_COLLISION_TRACE_TILE.
@@ -101,7 +101,7 @@
 /** PSX scratchpad RAM, used as row work buffers by the rasterisers. */
 #define FIELD_COLLISION_SCRATCH 0x1F800000
 
-/** Fixed RAM list of the nodes that block a probe, filled by func_8005DA7C. */
+/** Fixed RAM list of the nodes that block a probe, filled by field_collision_classify_nodes. */
 #define FIELD_COLLISION_HIT_LIST ((FieldCollisionNode**)0x801E1000)
 
 /** Fixed RAM list of the nodes a probe touches without being blocked. */
@@ -117,7 +117,7 @@
 #define FIELD_COLLISION_KIND_MASK 0x3
 /** Surface kind: flat floor at FieldCollisionSurfaceDef::height0. */
 #define FIELD_COLLISION_KIND_FLAT 0
-/** Surface kind: slope sampled with func_8005DFAC. */
+/** Surface kind: slope sampled with field_collision_slope_height. */
 #define FIELD_COLLISION_KIND_SLOPE 1
 /** Surface flag: the per-span edge bytes carry FIELD_COLLISION_EDGE_OPEN bits. */
 #define FIELD_COLLISION_SURFACE_EDGE_FLAGS 0x8
@@ -133,14 +133,14 @@
 
 /** Span edge byte: the edge is open (no wall) on this side. */
 #define FIELD_COLLISION_EDGE_OPEN 0x80
-/** Span edge byte: mask of the node edge index passed to func_8005E1A8. */
+/** Span edge byte: mask of the node edge index passed to field_collision_slide_angle. */
 #define FIELD_COLLISION_EDGE_INDEX 0x7F
-/** func_8005E1A8 edge index for a wall running along the x axis. */
+/** field_collision_slide_angle edge index for a wall running along the x axis. */
 #define FIELD_COLLISION_EDGE_WALL_X 0x7F
-/** func_8005E1A8 edge index for a wall running along the z axis. */
+/** field_collision_slide_angle edge index for a wall running along the z axis. */
 #define FIELD_COLLISION_EDGE_WALL_Z 0x7E
 
-/** func_8005E1A8 slide angle: no wall seen yet. */
+/** field_collision_slide_angle slide angle: no wall seen yet. */
 #define FIELD_COLLISION_SLIDE_NONE -2
 
 /** FieldCollisionMover::collision_node value asking for a fresh floor search. */
@@ -159,24 +159,24 @@
 /** Push-out accumulator value meaning pushes in both directions cancelled out. */
 #define FIELD_COLLISION_PUSH_BLOCKED 0x8000
 
-/** func_8005B6AC result: the horizontal move was blocked. */
+/** field_collision_move_mover result: the horizontal move was blocked. */
 #define FIELD_COLLISION_RESULT_BLOCKED 0x1
-/** func_8005B6AC result: the mover slid along a wall or was pushed out of it. */
+/** field_collision_move_mover result: the mover slid along a wall or was pushed out of it. */
 #define FIELD_COLLISION_RESULT_SLID 0x2
-/** func_8005B6AC result: the floor surface scaled the move (slope or slow surface). */
+/** field_collision_move_mover result: the floor surface scaled the move (slope or slow surface). */
 #define FIELD_COLLISION_RESULT_SLOWED 0x4
-/** func_8005B6AC result: the floor surface moved or carried the mover. */
+/** field_collision_move_mover result: the floor surface moved or carried the mover. */
 #define FIELD_COLLISION_RESULT_CARRIED 0x10
-/** func_8005B6AC result: the mover's height was changed by its floor. */
+/** field_collision_move_mover result: the mover's height was changed by its floor. */
 #define FIELD_COLLISION_RESULT_HEIGHT 0x20
-/** func_8005B6AC result: an airborne mover hit a ceiling. */
+/** field_collision_move_mover result: an airborne mover hit a ceiling. */
 #define FIELD_COLLISION_RESULT_CEILING 0x40
-/** func_8005B6AC result: an airborne mover landed on a floor. */
+/** field_collision_move_mover result: an airborne mover landed on a floor. */
 #define FIELD_COLLISION_RESULT_LANDED 0x80
 
-/** func_8005DA7C class bit: the footprint overlaps the node and may stand on it. */
+/** field_collision_classify_nodes class bit: the footprint overlaps the node and may stand on it. */
 #define FIELD_COLLISION_CLASS_TOUCH 0x1
-/** func_8005DA7C class bit: the node blocks the footprint (wall or too-high floor). */
+/** field_collision_classify_nodes class bit: the node blocks the footprint (wall or too-high floor). */
 #define FIELD_COLLISION_CLASS_BLOCK 0x2
 
 /** Surface flag: the node blocks any mover whose step limit is below its top. */
@@ -185,7 +185,7 @@
 /** A grounded mover can step onto floors up to this much above its feet. */
 #define FIELD_COLLISION_STEP_UP 0x10
 
-/** func_8005E1A8: a slide turning this far (about 100 degrees) from the move is blocked. */
+/** field_collision_slide_angle: a slide turning this far (about 100 degrees) from the move is blocked. */
 #define FIELD_COLLISION_SLIDE_MAX_TURN 0x472
 
 /** Surface edge-run count bit: the run's edges are open (see FIELD_COLLISION_EDGE_OPEN). */
@@ -202,14 +202,14 @@
  */
 #define FIELD_COLLISION_RASTER_LAST_SPAN(row, n) ((FieldCollisionRasterSpan*)((n) * sizeof(*(row)) + (s32)(row) - sizeof(*(row))))
 
-/** Most distinct group ids func_8005F158 collects while scanning. */
+/** Most distinct group ids field_collision_collect_groups collects while scanning. */
 #define FIELD_COLLISION_GROUP_SCAN_MAX 20
-/** Most groups a scene can keep (FieldScene::unk4A capacity). */
+/** Most groups a scene can keep (FieldScene::group_ids capacity). */
 #define FIELD_COLLISION_GROUP_MAX 10
 /** Estimated 4-pixel tile total above which 8-pixel tiles are used. */
 #define FIELD_COLLISION_GROUP_TILE_BUDGET 0x4000
 
-/* FieldScene::unk41 error codes, stored with unk28 cleared. */
+/* FieldScene::group_count error codes, stored with group_work cleared. */
 /** Too many group ids (scan or pair filter). */
 #define FIELD_COLLISION_GROUP_ERROR_GROUPS 1
 /** More than FIELD_COLLISION_RASTER_NODE_MAX active nodes. */
@@ -221,9 +221,9 @@
 /** Span list overflow while building the union. */
 #define FIELD_COLLISION_GROUP_ERROR_UNION 5
 
-/** Most active nodes func_8005F5BC can rasterise. */
+/** Most active nodes field_collision_rasterize_groups can rasterise. */
 #define FIELD_COLLISION_RASTER_NODE_MAX 50
-/** Capacity of each func_8005F5BC span list. */
+/** Capacity of each field_collision_rasterize_groups span list. */
 #define FIELD_COLLISION_RASTER_SPAN_MAX 128
 /** Bytes of one scratchpad span list; the two halves ping-pong between sub-rows. */
 #define FIELD_COLLISION_RASTER_ROW_BYTES 0x200
@@ -271,8 +271,8 @@
     }
 
 /*
- * Group tile-map byte values seen by the path search (func_80060F58). 0 and 1
- * come from func_80060364 (free / near a wall), 0xFE from func_80060CB0 and
+ * Group tile-map byte values seen by the path search (field_collision_find_path). 0 and 1
+ * come from field_collision_dilate_tiles (free / near a wall), 0xFE from field_collision_mark_footprint and
  * 0xFF from the dilation. The search writes wave stamps counting down from
  * FIELD_COLLISION_TILE_STAMP_FIRST, so a larger stamp is closer to the start.
  */
@@ -290,7 +290,7 @@
 #define FIELD_COLLISION_TILE_IS_STEP(v) ((u8)((v) - FIELD_COLLISION_TILE_STAMP_MIN) < FIELD_COLLISION_TILE_GOAL - FIELD_COLLISION_TILE_STAMP_MIN)
 /** Touched tile already queued in the deferred ring. */
 #define FIELD_COLLISION_TILE_DEFERRED 0xFD
-/** Footprint tile marked by func_80060CB0. */
+/** Footprint tile marked by field_collision_mark_footprint. */
 #define FIELD_COLLISION_TILE_MARKED 0xFE
 
 /*
@@ -392,49 +392,16 @@
 /** Most path points written to the caller. */
 #define FIELD_COLLISION_PATH_OUT_MAX 16
 
-/** func_80060F58 failure: the group tile maps failed to build. */
+/** field_collision_find_path failure: the group tile maps failed to build. */
 #define FIELD_COLLISION_PATH_ERROR_GROUPS -1
-/** func_80060F58 failure: start or goal lies outside the tile map. */
+/** field_collision_find_path failure: start or goal lies outside the tile map. */
 #define FIELD_COLLISION_PATH_ERROR_BOUNDS -2
-/** func_80060F58 failure: the search ran out of waves or queue entries. */
+/** field_collision_find_path failure: the search ran out of waves or queue entries. */
 #define FIELD_COLLISION_PATH_ERROR_NO_ROUTE -3
-/** func_80060F58 failure: a queue or the path buffer overflowed. */
+/** field_collision_find_path failure: a queue or the path buffer overflowed. */
 #define FIELD_COLLISION_PATH_ERROR_OVERFLOW -4
-/** func_80060F58 failure: the walk back from the goal found no higher stamp. */
+/** field_collision_find_path failure: the walk back from the goal found no higher stamp. */
 #define FIELD_COLLISION_PATH_ERROR_DEAD_END -5
-
-/**
- * @brief Probe position and footprint passed to func_8005B368.
- *
- * Carries the world-space probe position (x, y, z) plus the footprint
- * extents (width along x and depth along z) plus a vertical height
- * tolerance.
- */
-typedef struct FieldCollisionQuery
-{
-    s32 x;
-    s32 y;
-    s32 z;
-    u16 width;
-    s16 height_tolerance;
-    u16 depth;
-} FieldCollisionQuery;
-
-/**
- * @brief Collision view of the FieldMarkerDef a FieldMarker points at.
- * @note FieldMarkerDef leaves 0x12 as padding and declares 0x14 unsigned; this
- *       view needs both as s16.
- */
-typedef struct
-{
-    u8 pad[0x10];
-    /** 0x10 bottom of the vertical band the marker blocks (FieldMarkerDef::depth_bias). */
-    s16 band_bottom;
-    /** 0x12 height of the band; 1 means the band has no top. */
-    s16 band_height;
-    /** 0x14 value returned on a hit (FieldMarkerDef::label). */
-    s16 value;
-} FieldCollisionMarkerDef;
 
 /** @brief One solid run of a collision row, in cells relative to the node origin. */
 typedef struct FieldCollisionSpan
@@ -519,7 +486,7 @@ typedef struct FieldCollisionNode
 } FieldCollisionNode;
 
 /**
- * @brief Actor/mover state resolved by func_8005B6AC.
+ * @brief Actor/mover state resolved by field_collision_move_mover.
  * @note Positions are 24.8 fixed point; heights grow downwards (a floor at
  *       height h puts the mover at -(h << 8)). Callers see this record as
  *       FieldMoveRequest (field_contact_geometry.c).
@@ -552,7 +519,7 @@ typedef struct FieldCollisionMover
     s32 mode_flags;
 } FieldCollisionMover;
 
-/** @brief Footprint probe handed to func_8005DA7C (cell position plus height window). */
+/** @brief Footprint probe handed to field_collision_classify_nodes (cell position plus height window). */
 typedef struct FieldCollisionMoveProbe
 {
     /** Mover whose footprint and height bias are tested. */
@@ -570,7 +537,7 @@ typedef struct FieldCollisionMoveProbe
 /**
  * @brief One boundary point of a collision node, as stored in
  *        g_field_node_angle_table.
- * @note Both fields are read unsigned by func_8005E3B0, unlike the signed
+ * @note Both fields are read unsigned by field_collision_rasterize_node, unlike the signed
  *       FieldCollisionSpan pairs at FieldCollisionNode::spans.
  */
 typedef struct FieldCollisionEdgePoint
@@ -616,7 +583,7 @@ typedef union FieldCollisionRasterSpanFlags
 } FieldCollisionRasterSpanFlags;
 
 /**
- * @brief One entry of func_8005F158's group-collection scratch list.
+ * @brief One entry of field_collision_collect_groups's group-collection scratch list.
  *
  * @note @c seen accumulates which surface kinds referenced the id: bit 0 from
  *       a flat node, bit 1 from a slope node. A scene with slopes keeps only
@@ -631,7 +598,7 @@ typedef struct
 } FieldGroupEntry;
 
 /**
- * @brief One entry of func_8005F5BC's scratch list of active nodes.
+ * @brief One entry of field_collision_rasterize_groups's scratch list of active nodes.
  */
 typedef struct
 {
@@ -664,14 +631,14 @@ typedef struct
     s16 pad;
 } FieldCollisionSpanRun;
 
-/** One route point in world units, written by func_80060F58. */
+/** One route point in world units, written by field_collision_find_path. */
 typedef struct
 {
     s32 x;
     s32 z;
 } FieldCollisionPathPoint;
 
-/** Outgoing parameter block for func_80062820, built at sp+0x4020. */
+/** Outgoing parameter block for field_collision_trace_line, built at sp+0x4020. */
 typedef struct
 {
     s32 tile_base;
@@ -683,19 +650,21 @@ typedef struct
     s32 footprint_width;
     s32 footprint_depth;
     s32 tile_size;
-    /** Tile column shift (log2 of the tile size); func_80062820 does not read it. */
+    /** Tile column shift (log2 of the tile size); field_collision_trace_line does not read it. */
     s32 col_shift;
     s32 mode;
     u8 stamp;
 } FieldCollisionTraceRequest;
 
-/** Field allocator cursor at 0x801ED000, i.e. FieldMemState::top. */
-extern s32 D_801ED000;
 
-s32 func_8005E1A8(FieldCollisionSurfaceDef* surface, s32 edge_index, s32 move_angle, s32 best_angle);
-s16 func_8005DFAC();
-void func_80062F48(FieldCollisionSurfaceDef* surface, s32* movement);
-void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32* out_hit, s32* out_touch);
+static void field_collision_classify_nodes(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32* out_hit, s32* out_touch);
+static s16 field_collision_slope_height(FieldCollisionNode* node, s32* position);
+static s32 field_collision_slide_angle(FieldCollisionSurfaceDef* surface, s32 edge_index, s32 move_angle, s32 best_angle);
+static void field_collision_rasterize_node(FieldCollisionNode* node, s32* alloc);
+static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_depth);
+static s32 field_collision_mark_footprint(FieldCollisionQuery* margins, FieldCollisionQuery* query);
+static s32 field_collision_trace_line(FieldCollisionTraceRequest* request);
+static void field_collision_slope_scale_move(FieldCollisionSurfaceDef* surface, s32* movement);
 
 /**
  * @brief Hit-test a probe footprint against the scene's marker volumes.
@@ -707,7 +676,7 @@ void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32
  * @param query Probe position, footprint dimensions, and vertical tolerance.
  * @return The first overlapping marker's value, or -1 when none overlaps.
  */
-s16 func_8005B368(FieldCollisionQuery* query)
+s16 field_collision_hit_markers(FieldCollisionQuery* query)
 {
     FieldScene* scene;
     s32 half_x;
@@ -758,17 +727,17 @@ s16 func_8005B368(FieldCollisionQuery* query)
 
     for (node = scene->markers; node != NULL; node = node->next)
     {
-        FieldCollisionMarkerDef* obj;
+        FieldMarkerDef* def;
         s16 band_bottom;
 
-        obj = (FieldCollisionMarkerDef*)node->def;
-        band_bottom = obj->band_bottom;
+        def = node->def;
+        band_bottom = def->depth_bias;
 
         if ((probe_y - query->height_tolerance) >= band_bottom)
         {
             continue;
         }
-        if ((obj->band_height != 1) && ((band_bottom + obj->band_height) >= probe_y))
+        if ((def->band_height != 1) && ((band_bottom + def->band_height) >= probe_y))
         {
             continue;
         }
@@ -820,7 +789,7 @@ s16 func_8005B368(FieldCollisionQuery* query)
                 {
                     if (!((((node->edge_hi < (start_z - edge_start)) && (node->edge_hi < (end_z - edge_start))) && (node->edge_hi < (start_z - edge_end))) && (node->edge_hi < (end_z - edge_end))))
                     {
-                        return obj->value;
+                        return def->label;
                     }
                 }
             }
@@ -828,7 +797,7 @@ s16 func_8005B368(FieldCollisionQuery* query)
             {
                 if (node->edge_hi >= start_x)
                 {
-                    return obj->value;
+                    return def->label;
                 }
             }
         }
@@ -852,7 +821,7 @@ s16 func_8005B368(FieldCollisionQuery* query)
  *
  * @see decomp.me (100%) https://decomp.me/scratch/N2GNJ
  */
-s32 func_8005B6AC(FieldCollisionMover* mover)
+s32 field_collision_move_mover(FieldCollisionMover* mover)
 {
     FieldCollisionMoveProbe probe;
     s32 hit_count;
@@ -1117,7 +1086,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover)
                             case FIELD_COLLISION_KIND_SLOPE:
                                 if ((surface->top + (s16)node_height16) < (s16)step_height)
                                 {
-                                    scratch = func_8005DFAC(node, &probe.x);
+                                    scratch = field_collision_slope_height(node, &probe.x);
                                     if (on_slope != 0)
                                     {
                                         if (floor_height < scratch)
@@ -1155,7 +1124,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover)
                 {
                     probe.x = mover->move_x;
                     probe.z = mover->move_z;
-                    func_80062F48(surface, &probe.x);
+                    field_collision_slope_scale_move(surface, &probe.x);
                     mover->move_x = probe.x;
                     result |= FIELD_COLLISION_RESULT_SLOWED;
                     mover->move_z = probe.z;
@@ -1183,7 +1152,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover)
                     {
                         probe.x = FIELD_COLLISION_CELL(mover->x);
                         probe.z = FIELD_COLLISION_CELL(mover->z);
-                        mover->move_height = -((s32)(func_8005DFAC(node, &probe.x) << 0x10) >> 8) - mover->height;
+                        mover->move_height = -((s32)(field_collision_slope_height(node, &probe.x) << 0x10) >> 8) - mover->height;
                     }
                     else
                     {
@@ -1218,10 +1187,10 @@ s32 func_8005B6AC(FieldCollisionMover* mover)
                         }
                         probe.x = secondary_cell_x;
                         probe.z = FIELD_COLLISION_CELL(mover->z);
-                        sample = func_8005DFAC(secondary, &probe.x) - secondary->surface->height0;
+                        sample = field_collision_slope_height(secondary, &probe.x) - secondary->surface->height0;
                         if ((surface->flags & FIELD_COLLISION_KIND_MASK) == FIELD_COLLISION_KIND_SLOPE)
                         {
-                            sample += func_8005DFAC(node, &probe.x);
+                            sample += field_collision_slope_height(node, &probe.x);
                             mover->move_height = -(sample << 8) - mover->height;
                         }
                         else
@@ -1262,11 +1231,11 @@ s32 func_8005B6AC(FieldCollisionMover* mover)
                         case FIELD_COLLISION_KIND_SLOPE:
                             probe.x = FIELD_COLLISION_CELL(mover->x);
                             probe.z = FIELD_COLLISION_CELL(mover->z);
-                            slope_height = func_8005DFAC(node, &probe.x);
+                            slope_height = field_collision_slope_height(node, &probe.x);
                             secondary = (FieldCollisionNode*)scene->secondary_nodes;
                             if ((secondary != NULL) && (secondary != node))
                             {
-                                slope_height += func_8005DFAC(secondary, &probe.x) - secondary->surface->height0;
+                                slope_height += field_collision_slope_height(secondary, &probe.x) - secondary->surface->height0;
                             }
                             mover->resolved_height = -(slope_height << 8);
                             break;
@@ -1318,7 +1287,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover)
     {
         probe.x = FIELD_COLLISION_CELL(mover->x + mover->move_x);
         probe.z = (mover->z + mover->move_z) / 256;
-        func_8005DA7C(&probe, nodes, &hit_count, &touch_count);
+        field_collision_classify_nodes(&probe, nodes, &hit_count, &touch_count);
     }
     else
     {
@@ -1337,7 +1306,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover)
             }
             probe.x = cell;
             probe.z = (mover->z + (mover->move_z * step / step_count)) / 256;
-            func_8005DA7C(&probe, nodes, &hit_count, &touch_count);
+            field_collision_classify_nodes(&probe, nodes, &hit_count, &touch_count);
         } while ((step_count != step) && (hit_count == 0));
     }
     hit = 0;
@@ -1413,11 +1382,11 @@ s32 func_8005B6AC(FieldCollisionMover* mover)
                 {
                     if (((s16)scratch < 0) || (z_end >= header->unk32))
                     {
-                        slide_angle = func_8005E1A8(NULL, FIELD_COLLISION_EDGE_WALL_X, move_angle, slide_angle);
+                        slide_angle = field_collision_slide_angle(NULL, FIELD_COLLISION_EDGE_WALL_X, move_angle, slide_angle);
                     }
                     if (((s16)x_start < 0) || (x_end >= scene->header->unk30))
                     {
-                        slide_angle = func_8005E1A8(NULL, FIELD_COLLISION_EDGE_WALL_Z, move_angle, slide_angle);
+                        slide_angle = field_collision_slide_angle(NULL, FIELD_COLLISION_EDGE_WALL_Z, move_angle, slide_angle);
                     }
                 }
                 hit_iter = FIELD_COLLISION_HIT_LIST;
@@ -1482,12 +1451,12 @@ s32 func_8005B6AC(FieldCollisionMover* mover)
                                                 {
                                                     if ((box_x_start < flagged_min_x) && (*(s8*)left_flags >= 0))
                                                     {
-                                                        slide_angle = func_8005E1A8(surface, (u8)*left_flags & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
+                                                        slide_angle = field_collision_slide_angle(surface, (u8)*left_flags & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
                                                         hit = 2;
                                                     }
                                                     if ((span->max_x < box_x_last) && (*right_flags >= 0))
                                                     {
-                                                        slide_angle = func_8005E1A8(surface, (u8)*right_flags & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
+                                                        slide_angle = field_collision_slide_angle(surface, (u8)*right_flags & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
                                                         hit = 2;
                                                     }
                                                     {
@@ -1501,7 +1470,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover)
                                                                 if (((left_flag == span_flag) || (right_flag == span_flag)) && (span->min_x < box_x_start) &&
                                                                     (span->max_x >= box_x_end))
                                                                 {
-                                                                    slide_angle = func_8005E1A8(surface, FIELD_COLLISION_EDGE_WALL_X, move_angle, slide_angle);
+                                                                    slide_angle = field_collision_slide_angle(surface, FIELD_COLLISION_EDGE_WALL_X, move_angle, slide_angle);
                                                                     hit = 2;
                                                                 }
                                                             }
@@ -1530,15 +1499,15 @@ s32 func_8005B6AC(FieldCollisionMover* mover)
                                                     hit = 1;
                                                     if (box_x_start < offset_min_x)
                                                     {
-                                                        slide_angle = func_8005E1A8(surface, left_flags[0] & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
+                                                        slide_angle = field_collision_slide_angle(surface, left_flags[0] & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
                                                     }
                                                     if ((span->max_x + scan_bias) < box_x_last)
                                                     {
-                                                        slide_angle = func_8005E1A8(surface, left_flags[1] & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
+                                                        slide_angle = field_collision_slide_angle(surface, left_flags[1] & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
                                                     }
                                                     if (((span->min_x + scan_bias) < box_x_start) && ((span->max_x + scan_bias) >= box_x_end))
                                                     {
-                                                        slide_angle = func_8005E1A8(surface, FIELD_COLLISION_EDGE_WALL_X, move_angle, slide_angle);
+                                                        slide_angle = field_collision_slide_angle(surface, FIELD_COLLISION_EDGE_WALL_X, move_angle, slide_angle);
                                                     }
                                                 }
                                                 span++;
@@ -1560,15 +1529,15 @@ s32 func_8005B6AC(FieldCollisionMover* mover)
                                                     hit = 1;
                                                     if (box_x_start < plain_min_x)
                                                     {
-                                                        slide_angle = func_8005E1A8(surface, left_flags[0] & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
+                                                        slide_angle = field_collision_slide_angle(surface, left_flags[0] & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
                                                     }
                                                     if (span->max_x < box_x_last)
                                                     {
-                                                        slide_angle = func_8005E1A8(surface, left_flags[1] & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
+                                                        slide_angle = field_collision_slide_angle(surface, left_flags[1] & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
                                                     }
                                                     if ((span->min_x < box_x_start) && (span->max_x >= box_x_end))
                                                     {
-                                                        slide_angle = func_8005E1A8(surface, FIELD_COLLISION_EDGE_WALL_X, move_angle, slide_angle);
+                                                        slide_angle = field_collision_slide_angle(surface, FIELD_COLLISION_EDGE_WALL_X, move_angle, slide_angle);
                                                     }
                                                 }
                                                 span++;
@@ -1936,7 +1905,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover)
         {
             probe.x = FIELD_COLLISION_CELL(mover->x + delta_x);
             probe.z = FIELD_COLLISION_CELL(mover->z + delta_z);
-            func_8005DA7C(&probe, nodes, &hit_count, &touch_count);
+            field_collision_classify_nodes(&probe, nodes, &hit_count, &touch_count);
             hit = 0;
             if (hit_count == 0)
             {
@@ -1962,7 +1931,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover)
             {
                 probe.x = FIELD_COLLISION_CELL(mover->x);
                 probe.z = FIELD_COLLISION_CELL(mover->z);
-                func_8005DA7C(&probe, nodes, &hit_count, &touch_count);
+                field_collision_classify_nodes(&probe, nodes, &hit_count, &touch_count);
                 result |= FIELD_COLLISION_RESULT_BLOCKED | FIELD_COLLISION_RESULT_SLID;
             }
             else
@@ -1975,7 +1944,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover)
         {
             probe.x = FIELD_COLLISION_CELL(mover->x);
             probe.z = FIELD_COLLISION_CELL(mover->z);
-            func_8005DA7C(&probe, nodes, &hit_count, &touch_count);
+            field_collision_classify_nodes(&probe, nodes, &hit_count, &touch_count);
             result |= FIELD_COLLISION_RESULT_BLOCKED | FIELD_COLLISION_RESULT_SLID;
         }
     }
@@ -2120,7 +2089,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover)
                 node_top = surface->top + (s16)touch_height;
                 if (node_top < step_limit)
                 {
-                    scratch = func_8005DFAC(nodes, &probe.x);
+                    scratch = field_collision_slope_height(nodes, &probe.x);
                     if (hit != 0)
                     {
                         slope_floor_fixed = -(scratch << 8);
@@ -2243,7 +2212,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover)
  * @param out_hit Receives the number of blocking nodes written to FIELD_COLLISION_HIT_LIST.
  * @param out_touch Receives the number of touching nodes written to FIELD_COLLISION_TOUCH_LIST.
  */
-void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32* out_hit, s32* out_touch)
+static void field_collision_classify_nodes(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32* out_hit, s32* out_touch)
 {
     FieldCollisionNode** hit_list;
     FieldCollisionNode** touch_list;
@@ -2302,7 +2271,7 @@ void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32
                     shift_x = (s32)(node->offset_x << 8) >> 16;
                     if (((node->min_x + shift_x) < x_end) && ((node->max_x + shift_x) >= x_start))
                     {
-                        /* Widened copies of the s16 bounds; using z_end/z_start directly reallocates (97.8%/99.2%). */
+                        /* Widened copies of the s16 bounds; using z_end/z_start directly changes the register allocation. */
                         z_limit = z_end;
                         row_first = node->min_z + (s16)shift_z;
                         if (row_first < z_limit)
@@ -2369,7 +2338,7 @@ void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32
                                 {
                                     while (--count != -1)
                                     {
-                                        /* value doubles as the shift copy; shift_x directly is 99.76%. */
+                                        /* value doubles as the shift copy; using shift_x changes the register allocation. */
                                         value = shift_x;
                                         if (((span->min_x + value) < x_end) && ((span->max_x + value) >= x_start))
                                         {
@@ -2436,7 +2405,7 @@ void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32
                                     case FIELD_COLLISION_KIND_SLOPE:
                                         if ((surface->top + shift_height) < step_limit)
                                         {
-                                            ground = func_8005DFAC(node, &probe->x);
+                                            ground = field_collision_slope_height(node, &probe->x);
                                             if (mover->mode_flags & FIELD_COLLISION_MOVER_AIRBORNE)
                                             {
                                                 if (feet < ground)
@@ -2517,7 +2486,7 @@ void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32
  * @note Both endpoints are clamped up to zero before use, so a node whose
  *       endpoint resolves below the origin behaves as if it sat on it.
  */
-s16 func_8005DFAC(FieldCollisionNode* node, s32* position)
+static s16 field_collision_slope_height(FieldCollisionNode* node, s32* position)
 {
     FieldCollisionSurfaceDef* surface;
     s16* vertices;
@@ -2643,7 +2612,7 @@ s16 func_8005DFAC(FieldCollisionNode* node, s32* position)
  * @return The resolved slide direction, @p best_angle when the earlier one still
  *         wins, or -1 when the movement is blocked.
  */
-s32 func_8005E1A8(FieldCollisionSurfaceDef* surface, s32 edge_index, s32 move_angle, s32 best_angle)
+static s32 field_collision_slide_angle(FieldCollisionSurfaceDef* surface, s32 edge_index, s32 move_angle, s32 best_angle)
 {
     s16* vertices;
     s16* previous_point;
@@ -2655,7 +2624,7 @@ s32 func_8005E1A8(FieldCollisionSurfaceDef* surface, s32 edge_index, s32 move_an
     s32 dx;
     s32 dy;
     s32 opposite_delta;
-    /* "Have a previous point" flag in the walk, then the opposite wall angle; split, the walk is 97.08%. */
+    /* "Have a previous point" flag in the walk, then the opposite wall angle; two locals change the walk's registers. */
     s32 work;
     s32 wrapped_angle;
 
@@ -2677,7 +2646,7 @@ s32 func_8005E1A8(FieldCollisionSurfaceDef* surface, s32 edge_index, s32 move_an
                 {
                     if (edge_index == 0)
                     {
-                        /* Nested-loop exit past the closing-edge default; a flag and break is 93.45%. */
+                        /* Leaves both loops past the closing-edge default; a flag and break adds a test. */
                         goto found;
                     }
                     edge_index--;
@@ -2813,7 +2782,7 @@ s32 func_8005E1A8(FieldCollisionSurfaceDef* surface, s32 edge_index, s32 move_an
  * @param node Collision node being prepared; rows run from @c min_z to
  *             @c max_z, and @c spans / @c span_flags receive the tables.
  * @param alloc In/out field allocator cursor (a byte address, the same cursor
- *              func_8005F158 takes). On entry it points at the free block
+ *              field_collision_collect_groups takes). On entry it points at the free block
  *              used for both tables; on exit it is advanced past them,
  *              rounded up to a multiple of 4.
  *
@@ -2823,7 +2792,7 @@ s32 func_8005E1A8(FieldCollisionSurfaceDef* surface, s32 edge_index, s32 move_an
  * @note @c last_dir / @c first_dir hold 0 (none yet), 2 (horizontal edge) or
  *       2 + ystep * sgn for a sloped edge.
  */
-void func_8005E3B0(FieldCollisionNode* node, s32* alloc)
+static void field_collision_rasterize_node(FieldCollisionNode* node, s32* alloc)
 {
     FieldCollisionSurfaceDef* def;
     s16* table;
@@ -3101,7 +3070,7 @@ void func_8005E3B0(FieldCollisionNode* node, s32* alloc)
     /* Closing edge: back to the first run's first point. */
     closing_open = 0;
     run = def->runs;
-    /* y0 briefly holds the open bit; testing run->count directly is 99.92%. */
+    /* y0 briefly holds the open bit; testing run->count directly changes the register allocation. */
     y0 = run->count & FIELD_COLLISION_RUN_OPEN;
     if (y0)
     {
@@ -3228,7 +3197,7 @@ void func_8005E3B0(FieldCollisionNode* node, s32* alloc)
             err = -(s16)dy;
             for (j = (s16)dy; j != -1; j--)
             {
-                /* Net-zero pairs: they weight dy onto $a0 (none 99.43%, one pair 99.52%, two 99.84%, s16 dy 99.84%). */
+                /* Net-zero pairs: without them dy loses $a0 to a closing-edge temp. */
                 dy++;
                 dy--;
                 dy++;
@@ -3417,25 +3386,25 @@ void func_8005E3B0(FieldCollisionNode* node, s32* alloc)
  * is recorded with @c seen = 3 so it survives the slope filter.
  *
  * If any slope was seen, the list is compacted down to the entries whose
- * @c seen is 3. The surviving ids are sorted into @c scene->unk4A and the
- * matching @c scene->unk5E counters are cleared.
+ * @c seen is 3. The surviving ids are sorted into @c scene->group_ids and the
+ * matching @c scene->group_counters counters are cleared.
  *
  * Finally the per-group tile budget is computed from the scene's pixel extent:
  * 4-pixel tiles normally, 8-pixel tiles once the estimated tile count exceeds
  * FIELD_COLLISION_GROUP_TILE_BUDGET. Two blocks are carved off @p alloc - the
- * tile area (@c unk2C) and the work area (@c unk28 .. @c unk30) - and
- * func_8005F5BC rasterises the groups into the work area.
+ * tile area (@c group_tiles) and the work area (@c group_work .. @c group_work_end) - and
+ * field_collision_rasterize_groups rasterises the groups into the work area.
  *
  * @param alloc In/out bump allocator; advanced past both blocks on success.
  *
- * @note Fails with @c unk28 = 0 and @c unk41 = FIELD_COLLISION_GROUP_ERROR_GROUPS
+ * @note Fails with @c group_work = 0 and @c group_count = FIELD_COLLISION_GROUP_ERROR_GROUPS
  *       when the scan overflows or more than FIELD_COLLISION_GROUP_MAX ids
- *       survive. The empty-scene path leaves @c unk41 = 0 instead, which is
+ *       survive. The empty-scene path leaves @c group_count = 0 instead, which is
  *       how callers tell "no nodes" from "too many groups".
- * @note func_8005F5BC is called through its unprototyped declaration with the
+ * @note field_collision_rasterize_groups is called through its unprototyped declaration with the
  *       three arguments the original passes; it reads only the second.
  */
-void func_8005F158(s32* alloc)
+void field_collision_collect_groups(s32* alloc)
 {
     FieldGroupEntry list[FIELD_COLLISION_GROUP_SCAN_MAX];
     FieldScene* scene;
@@ -3448,7 +3417,7 @@ void func_8005F158(s32* alloc)
     s32 seen;
     s32 seen2;
     s32 k;
-    /* "Id not listed yet" flag during the scan, then the scene width; split, 99.61%. */
+    /* "Id not listed yet" flag during the scan, then the scene width; two locals change the register allocation. */
     s32 width;
     s32 height;
     s32 shift;
@@ -3465,8 +3434,8 @@ void func_8005F158(s32* alloc)
     node = scene->nodes;
     if (node == NULL)
     {
-        scene->unk28 = 0;
-        scene->unk41 = 0;
+        scene->group_work = 0;
+        scene->group_count = 0;
         return;
     }
 
@@ -3619,18 +3588,18 @@ void func_8005F158(s32* alloc)
                     list[k].id = tmp;
                 }
             }
-            scene->unk4A[k] = key;
+            scene->group_ids[k] = key;
             k--;
         } while (k != 0);
     }
 
     i = count - 1;
-    scene->unk4A[0] = list[0].id;
+    scene->group_ids[0] = list[0].id;
     if (count != 0)
     {
         do
         {
-            scene->unk5E[i] = 0;
+            scene->group_counters[i] = 0;
             i--;
         } while (i != -1);
     }
@@ -3652,36 +3621,36 @@ void func_8005F158(s32* alloc)
     rows = th + 4;
     i = width;
     i *= rows;
-    scene->unk44 = i;
+    scene->group_tile_count = i;
     i = i * count;
-    scene->unk40 = j;
-    scene->unk41 = count;
-    scene->unk46 = width;
-    scene->unk48 = rows;
-    scene->unk2C = *alloc;
+    scene->tile_size = j;
+    scene->group_count = count;
+    scene->tile_cols = width;
+    scene->tile_rows = rows;
+    scene->group_tiles = *alloc;
     i = (i + 3) & ~3;
     *alloc += i;
     i = (((u32)(tw + 0x23) >> 5) * th) * 2;
-    scene->unk42 = i;
-    scene->unk28 = *alloc;
+    scene->group_stride = i;
+    scene->group_work = *alloc;
     count4 = count * 4;
     j = i * count4;
     *alloc += j;
-    scene->unk30 = *alloc;
-    /* func_8005F5BC takes (s32, FieldNode *); the original passes the allocator, a null clip and the size. */
-    ((void (*)(s32 *, s32, s32))func_8005F5BC)(alloc, 0, i);
+    scene->group_work_end = *alloc;
+    /* field_collision_rasterize_groups takes (s32, FieldNode *); the original passes the allocator, a null clip and the size. */
+    ((void (*)(s32 *, s32, s32))field_collision_rasterize_groups)(alloc, 0, i);
     return;
 
 overflow:
-    /* Shared failure exit; each site storing and returning is 91.7%. */
-    scene->unk28 = 0;
-    scene->unk41 = FIELD_COLLISION_GROUP_ERROR_GROUPS;
+    /* Shared failure exit; per-site stores do not merge into this one block. */
+    scene->group_work = 0;
+    scene->group_count = FIELD_COLLISION_GROUP_ERROR_GROUPS;
 }
 
 /**
  * @brief Rasterise the active nodes of every group into the scene work area.
  *
- * For each group id in @c scene->unk4A, walks the scene's attached-node list
+ * For each group id in @c scene->group_ids, walks the scene's attached-node list
  * (pre-sorted by @c row_start) and converts each node's span table into a
  * bitmask of covered tile columns, written as two interleaved planes of
  * @c words 32-bit words per tile row.
@@ -3702,24 +3671,16 @@ overflow:
  *             emitted; otherwise only the rows the node covers are, and its
  *             definition is tested against the group id first.
  *
- * @note Fails with @c unk28 = 0 and a FIELD_COLLISION_GROUP_ERROR_* code in
- *       @c unk41 when a node or span list overflows.
- * @note The many @c -1 locals (countdown_end, collect_end, ...) keep loop.c
- *       from hoisting the end mark of each countdown loop; every one was
- *       measured (literal -1: 94.9% all, 99.2-99.3% each; one shared local:
- *       95.3%).
- * @note The three remaining do/while(0) wrappers (run fetch, compaction x0
- *       load, intersection work/dst step) each add exactly one weighted
- *       flow ref (one extra loop level) to one pseudo. Unwrapped, the
- *       global-alloc priority ties flip: src 34 refs/57 live vs x1 86/173
- *       (src loses t6), x0 80/173 vs the collect loop's hoisted x1 + 1
- *       13/14 (x0 loses t8), dst 37/90 vs the union loop's hoisted x1 + 1
- *       11/16 (dst loses t6). The competitors' live lengths are fixed by the
- *       target layout and every statement reorder only swaps two loads, so
- *       each wrapper stands for one phantom reference; no natural source
- *       shape supplying it has been found (see the h5bc lever report).
+ * @note Fails with @c group_work = 0 and a FIELD_COLLISION_GROUP_ERROR_* code in
+ *       @c group_count when a node or span list overflows.
+ * @note The @c -1 locals (countdown_end, collect_end, ...) keep loop.c from
+ *       hoisting the end mark of each countdown loop the way a literal does.
+ * @note The three do/while(0) wrappers (run fetch, compaction x0 load,
+ *       intersection work/dst step) each add one loop level of weight to one
+ *       pseudo; without them src, x0 and dst lose t6/t8/t6 in a global-alloc
+ *       priority tie. No natural shape supplying that weight is known yet.
  */
-void func_8005F5BC(s32 unused, FieldNode* clip)
+void field_collision_rasterize_groups(s32 unused, FieldNode* clip)
 {
     FieldCollisionTileSpan cur[FIELD_COLLISION_RASTER_SPAN_MAX];
     FieldCollisionTileSpan acc[FIELD_COLLISION_RASTER_SPAN_MAX];
@@ -3786,7 +3747,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
     prev_count = 0;
     acc_count = 0;
     scene = g_field_scene.scene;
-    out = (u32*)scene->unk28;
+    out = (u32*)scene->group_work;
     if (out == NULL)
     {
         return;
@@ -3803,8 +3764,8 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
             {
                 if (node_count >= FIELD_COLLISION_RASTER_NODE_MAX)
                 {
-                    scene->unk28 = 0;
-                    scene->unk41 = FIELD_COLLISION_GROUP_ERROR_NODES;
+                    scene->group_work = 0;
+                    scene->group_count = FIELD_COLLISION_GROUP_ERROR_NODES;
                     return;
                 }
                 p->node = node;
@@ -3842,7 +3803,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
         }
     }
 
-    tile = scene->unk40;
+    tile = scene->tile_size;
     if (tile == 4)
     {
         shift0 = 2;
@@ -3855,28 +3816,28 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
     }
     group = 0;
     tile2 = tile * 2;
-    words = ((u16)scene->unk46 + 0x1F) >> 5;
-    if (scene->unk41 == 0)
+    words = (scene->tile_cols + 0x1F) >> 5;
+    if (scene->group_count == 0)
     {
         return;
     }
 
-    /* -1 end mark of the countdown loops and all-ones mask; a literal -1 is 99.75%. */
+    /* -1 end mark of the countdown loops and all-ones mask; a literal -1 is hoisted differently by loop.c. */
     countdown_end = -1;
-    /* Indexing runs directly is 99.99% (s7 spill slots swap). */
+    /* Indexing runs directly swaps two spill slots. */
     runs_base = runs;
     do
     {
-        id = scene->unk4A[group];
+        id = scene->group_ids[group];
         if (clip == NULL)
         {
             base = 0;
-            rows = (u16)scene->unk48 - 4;
+            rows = scene->tile_rows - 4;
         }
         else
         {
             def = clip->def;
-            saved = out + ((words * 2) * ((u16)scene->unk48 - 4));
+            saved = out + ((words * 2) * (scene->tile_rows - 4));
             fresh = 0;
             if (def->flags & FIELD_COLLISION_SURFACE_SOLID)
             {
@@ -3923,7 +3884,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                 if (clip->row_start >= 0)
                 {
                     base = (u16)clip->row_start & -tile2;
-                    clip_rows = (u16)scene->unk48;
+                    clip_rows = scene->tile_rows;
                     i = clip->row_end >> shift1;
                     if (i >= (clip_rows - 4))
                     {
@@ -3938,7 +3899,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                 else
                 {
                     i = clip->row_end >> shift1;
-                    rows = (u16)scene->unk48 - 4;
+                    rows = scene->tile_rows - 4;
                     if (i < rows)
                     {
                         rows = i + 1;
@@ -3960,7 +3921,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
         if (rows != countdown_end)
         {
             signed_id = (s16)id;
-            /* Byte offset into list, read through def; list[j] is 97.55%, list + list_offset 97.44%. */
+            /* Byte offset into list, read through def; list[j] changes the loop's induction variables. */
             list_offset = 0;
             do
             {
@@ -4052,7 +4013,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                     } while (i != -1);
                 }
 
-                node_start = ((u16)scene->unk46 - 1) & 0x1F;
+                node_start = (scene->tile_cols - 1) & 0x1F;
                 if (node_start == 0)
                 {
                     scratch = wp[-2] | 0x80000000;
@@ -4133,8 +4094,8 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                                     {
                                                         if (cur_count >= FIELD_COLLISION_RASTER_SPAN_MAX)
                                                         {
-                                                            scene->unk28 = 0;
-                                                            scene->unk41 = FIELD_COLLISION_GROUP_ERROR_COLLECT;
+                                                            scene->group_work = 0;
+                                                            scene->group_count = FIELD_COLLISION_GROUP_ERROR_COLLECT;
                                                             return;
                                                         }
                                                         cur_count++;
@@ -4282,8 +4243,8 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                                 {
                                                     if (work >= FIELD_COLLISION_RASTER_SPAN_MAX)
                                                     {
-                                                        scene->unk28 = 0;
-                                                        scene->unk41 = FIELD_COLLISION_GROUP_ERROR_INTERSECT;
+                                                        scene->group_work = 0;
+                                                        scene->group_count = FIELD_COLLISION_GROUP_ERROR_INTERSECT;
                                                         return;
                                                     }
                                                     if (x0 < prev_span->x0)
@@ -4343,8 +4304,8 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                         {
                                             if (acc_count >= FIELD_COLLISION_RASTER_SPAN_MAX)
                                             {
-                                                scene->unk28 = 0;
-                                                scene->unk41 = FIELD_COLLISION_GROUP_ERROR_UNION;
+                                                scene->group_work = 0;
+                                                scene->group_count = FIELD_COLLISION_GROUP_ERROR_UNION;
                                                 return;
                                             }
                                             acc_count++;
@@ -4456,15 +4417,15 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
             out = saved;
         }
         group++;
-    } while (group != scene->unk41);
+    } while (group != scene->group_count);
 }
 
 /**
  * @brief Dilate every group's tile bitmasks by a footprint into the byte tile maps.
  *
- * Reads the per-group bitmask rows written by func_8005F5BC (scene->unk28,
+ * Reads the per-group bitmask rows written by field_collision_rasterize_groups (scene->group_work,
  * two words per 32 columns: solid bits, then touch bits) and writes one byte
- * per tile to scene->unk2C: 0 = free, 1 = touched, 0xFF = blocked. Each row is
+ * per tile to scene->group_tiles: 0 = free, 1 = touched, 0xFF = blocked. Each row is
  * spread right by the footprint width (the edge columns keep touch, the
  * interior columns become inner touch) and down by the footprint depth through
  * a ring of {solid, touch, inner} word triples in the scratchpad; inner touch
@@ -4475,7 +4436,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
  * @param footprint_width Footprint width in collision-map columns.
  * @param footprint_depth Footprint depth in collision-map rows.
  */
-void func_80060364(s32 footprint_width, s32 footprint_depth)
+static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_depth)
 {
     FieldScene* scene;
     u32* src_row;
@@ -4526,12 +4487,12 @@ void func_80060364(s32 footprint_width, s32 footprint_depth)
     u32 spread4;
 
     scene = g_field_scene.scene;
-    cols = (u16)scene->unk46;
+    cols = scene->tile_cols;
     row_words = ((s32)(cols + 0x1F) >> 5) * 2;
     ring_row_words = (((s32)(cols - 3) >> 5) + 1) * 3;
     reach = footprint_width - 1;
     /*
-     * Unsolved levers (see ul01-report.md). loop_38 is not a C loop: any real loop
+     * The word loop at loop_38 is a label and a jump back: any real loop
      * (do/while, while, for) makes loop.c hoist the second switch's
      * jump-table base out of it (threshold 55 * savings 2 * life 3 = 330
      * >= the loop's 291 insns). The do/while(0) blocks lift footprint_depth
@@ -4553,10 +4514,10 @@ void func_80060364(s32 footprint_width, s32 footprint_depth)
             ring_end = 0;
         }
     } while (0);
-    src_row = (u32*)scene->unk28;
-    group_count = scene->unk41;
+    src_row = (u32*)scene->group_work;
+    group_count = scene->group_count;
     groups_left = (s32)group_count; /* dead, but the spilled counter's store is real */
-    out = (u8*)scene->unk2C;
+    out = (u8*)scene->group_tiles;
     last_group = group_count - 1;
     groups_left = last_group;
     if (last_group != -1)
@@ -4564,12 +4525,12 @@ void func_80060364(s32 footprint_width, s32 footprint_depth)
         word_bits = 0x20;
         do
         {
-            remaining = (u16)scene->unk46 * 2;
+            remaining = scene->tile_cols * 2;
             FIELD_COLLISION_FILL_BLOCKED(out, count, remaining);
             do
             {
                 row = 0;
-                value = ((u16)scene->unk48 - footprint_depth) - 4;
+                value = (scene->tile_rows - footprint_depth) - 4;
             } while (0);
             rows_left = value;
             if (value != -1)
@@ -4580,7 +4541,7 @@ void func_80060364(s32 footprint_width, s32 footprint_depth)
                 do
                 {
                     src_word = src_row;
-                    remaining = (u16)scene->unk46;
+                    remaining = scene->tile_cols;
                     src_row = src_word + row_words;
                     in_solid = src_word[0];
                     in_touch = src_word[1];
@@ -5003,7 +4964,7 @@ void func_80060364(s32 footprint_width, s32 footprint_depth)
                     rows_left--;
                 } while (rows_left != -1);
             }
-            remaining = (u16)scene->unk46 * (footprint_depth + 1);
+            remaining = scene->tile_cols * (footprint_depth + 1);
             FIELD_COLLISION_FILL_BLOCKED(out, count, remaining);
             groups_left--;
         } while (groups_left != -1);
@@ -5020,7 +4981,7 @@ void func_80060364(s32 footprint_width, s32 footprint_depth)
  * @note When the row start is clipped the original adjusts the column run
  *       (ncol/col_start), not the row run; kept as in the binary.
  */
-s32 func_80060CB0(FieldCollisionQuery* margins, FieldCollisionQuery* query)
+static s32 field_collision_mark_footprint(FieldCollisionQuery* margins, FieldCollisionQuery* query)
 {
     FieldScene* scene;
     s32 count;
@@ -5051,9 +5012,9 @@ s32 func_80060CB0(FieldCollisionQuery* margins, FieldCollisionQuery* query)
     u8* p;
 
     scene = g_field_scene.scene;
-    if (scene->unk28 == 0)
+    if (scene->group_work == 0)
     {
-        if (scene->unk41 == 0)
+        if (scene->group_count == 0)
         {
             return 0;
         }
@@ -5067,7 +5028,7 @@ s32 func_80060CB0(FieldCollisionQuery* margins, FieldCollisionQuery* query)
         floor_cell = (height + 0xFF) >> 8;
     }
 
-    count = scene->unk41;
+    count = scene->group_count;
     group = count - 1;
     i = 0;
     if (count != 0)
@@ -5076,7 +5037,7 @@ s32 func_80060CB0(FieldCollisionQuery* margins, FieldCollisionQuery* query)
         group_count = count;
         for (; i != group_count; i++)
         {
-            s32 group_floor = scene->unk4A[i];
+            s32 group_floor = scene->group_ids[i];
 
             if (floor_cell < group_floor)
             {
@@ -5095,7 +5056,7 @@ s32 func_80060CB0(FieldCollisionQuery* margins, FieldCollisionQuery* query)
         }
     }
 
-    tile = scene->unk40;
+    tile = scene->tile_size;
     col_shift = 3;
     if (tile == 4)
     {
@@ -5141,9 +5102,9 @@ s32 func_80060CB0(FieldCollisionQuery* margins, FieldCollisionQuery* query)
     /* Loop-depth weight on cols: it must take $v1 before the cols - 1 / rows - 1 temps do. */
     do
     {
-        cols = (u16)scene->unk46;
+        cols = scene->tile_cols;
     } while (0);
-    rows = (u16)scene->unk48;
+    rows = scene->tile_rows;
 
     if (col_start <= 0)
     {
@@ -5171,8 +5132,8 @@ s32 func_80060CB0(FieldCollisionQuery* margins, FieldCollisionQuery* query)
     }
 
     /* top doubles as the group's tile-map offset (a separate local reallocates). */
-    top = (u16)scene->unk44 * group;
-    row_base = (u8*)(scene->unk2C + top + (cols * row_start) + col_start);
+    top = scene->group_tile_count * group;
+    row_base = (u8*)(scene->group_tiles + top + (cols * row_start) + col_start);
     for (nrow -= 1; nrow != -1; nrow--)
     {
         p = row_base;
@@ -5206,7 +5167,7 @@ s32 func_80060CB0(FieldCollisionQuery* margins, FieldCollisionQuery* query)
  * tile map of the floor group that matches each query's height. The goal tile
  * is marked FIELD_COLLISION_TILE_GOAL and the start tile
  * FIELD_COLLISION_TILE_START. When the scene has no group maps, or the straight
- * footprint walk from the goal to the start is clear (func_80062820), the goal
+ * footprint walk from the goal to the start is clear (field_collision_trace_line), the goal
  * position itself is written as the single point.
  *
  * Otherwise a bucketed breadth-first search runs from the start tile. path[0..3]
@@ -5231,13 +5192,13 @@ s32 func_80060CB0(FieldCollisionQuery* margins, FieldCollisionQuery* query)
  *                    for both ends).
  * @param goal_query Destination position; only x, y and z are read.
  * @param output_path Receives the route points.
- * @param mode Trace mode passed to func_80062820 for the direct walk.
+ * @param mode Trace mode passed to field_collision_trace_line for the direct walk.
  * @return Number of points written (1 for a direct route), or one of the
  *         FIELD_COLLISION_PATH_ERROR_* codes.
  */
-s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_query, FieldCollisionPathPoint* output_path, s32 mode)
+s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_query, FieldCollisionPathPoint* output_path, s32 mode)
 {
-    /* Separate pseudo for &path[0][0]; `read = &path[0][0]` directly: 99.90%. */
+    /* Separate local for &path[0][0]; assigning read directly changes the register allocation. */
     s32* path_base;
     s32 via_x;
     s32 raw_depth;
@@ -5246,14 +5207,14 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
     s32 path[4][FIELD_COLLISION_PATH_BUCKET_LEN];
     /* sp+0x4010: entries queued in each ring. */
     s32 bucket_len[4];
-    /* sp+0x4020: request block for func_80062820. */
+    /* sp+0x4020: request block for field_collision_trace_line. */
     FieldCollisionTraceRequest rec;
     s32 start_group;
     s32 goal_group;
     s32 col_shift;
     /*
      * Start/goal cells. The smoothing reuses these four stack slots for its
-     * first and third point; separate locals grow the frame (99.70%).
+     * first and third point; separate locals grow the frame.
      */
     s32 start_col;
     s32 start_row;
@@ -5266,7 +5227,7 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
     s32 goal_z;
     u8 try_quarter;
     u32 quarter_x;
-    /* quarter_x - dx + dx keeps dx live; `via_x = quarter_x`: 99.80%. */
+    /* quarter_x - dx + dx keeps dx live; `via_x = quarter_x` changes the register allocation. */
     u32 restored_x_offset;
     s32* buckets;
     u32* bucket_lens;
@@ -5288,7 +5249,7 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
     s16 goal_group_id;
     /*
      * Goal tile, BFS neighbour, walk step and the smoothing's third tile: one
-     * local (a split of any role reallocates, 94.5-99.5%).
+     * local (splitting any role changes the register allocation).
      */
     u8* near_tile;
     s32 start_height;
@@ -5388,9 +5349,9 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
     s32 count;
 
     scene = g_field_scene.scene;
-    if (scene->unk28 == 0)
+    if (scene->group_work == 0)
     {
-        if (scene->unk41 != 0)
+        if (scene->group_count != 0)
         {
             return FIELD_COLLISION_PATH_ERROR_GROUPS;
         }
@@ -5398,7 +5359,7 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
     else
     {
         col_shift = 3;
-        tile_size = scene->unk40;
+        tile_size = scene->tile_size;
         if (tile_size == 4)
         {
             col_shift = 2;
@@ -5420,19 +5381,19 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
         goal_row = (goal_z >> row_shift) + 2;
         start_col = (start_x >> col_shift) + 2;
         start_row = (start_z >> row_shift) + 2;
-        columns = (u16)scene->unk46;
-        rows = (u16)scene->unk48;
+        columns = scene->tile_cols;
+        rows = scene->tile_rows;
         if ((start_col <= 0) || (start_row <= 0) || (goal_col <= 0) || (goal_row <= 0) || (start_col >= (s32)columns - 1) ||
             (start_row >= rows - 1) || (goal_col >= (s32)columns - 1) || (goal_row >= rows - 1))
         {
             return FIELD_COLLISION_PATH_ERROR_BOUNDS;
         }
         goal_height = FIELD_COLLISION_CELL(goal_query->y);
-        goal_groups = scene->unk41;
+        goal_groups = scene->group_count;
         goal_group = goal_groups - 1;
         for (count = 0; count != goal_groups; count++)
         {
-            goal_group_id = scene->unk4A[count];
+            goal_group_id = scene->group_ids[count];
             if (goal_height < goal_group_id)
             {
                 if (count != 0)
@@ -5448,14 +5409,14 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
                 break;
             }
         }
-        near_tile = (u8*)(scene->unk2C + ((u16)scene->unk44 * goal_group) + (columns * goal_row) + goal_col);
+        near_tile = (u8*)(scene->group_tiles + (scene->group_tile_count * goal_group) + (columns * goal_row) + goal_col);
         *near_tile = FIELD_COLLISION_TILE_GOAL;
         start_height = FIELD_COLLISION_CELL(start_query->y);
-        start_groups = scene->unk41;
+        start_groups = scene->group_count;
         start_group = start_groups - 1;
         for (count = 0; count != start_groups; count++)
         {
-            start_group_id = scene->unk4A[count];
+            start_group_id = scene->group_ids[count];
             if (start_height < start_group_id)
             {
                 if (count != 0)
@@ -5471,7 +5432,7 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
                 break;
             }
         }
-        tile = (u8*)(scene->unk2C + ((u16)scene->unk44 * start_group) + (columns * start_row) + start_col);
+        tile = (u8*)(scene->group_tiles + (scene->group_tile_count * start_group) + (columns * start_row) + start_col);
         if (*tile != FIELD_COLLISION_TILE_GOAL)
         {
             *tile = FIELD_COLLISION_TILE_START;
@@ -5488,7 +5449,7 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
             rec.stamp = FIELD_COLLISION_TILE_GOAL;
             rec.mode = mode;
             /* Straight walk blocked: search. */
-            if (func_80062820(&rec) == 0)
+            if (field_collision_trace_line(&rec) == 0)
             {
                 /* Bucketed BFS from the start tile, one ring per wave. */
                 ring = 0;
@@ -5912,8 +5873,8 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
                 } while (step != -1);
                 /* Link the goal to the route tile, then walk the stamps back to the start. */
                 path_base = &path[0][0];
-                plane_size = (u16)scene->unk44;
-                tile_map = scene->unk2C;
+                plane_size = scene->group_tile_count;
+                tile_map = scene->group_tiles;
                 tile = (u8*)(tile_map + (plane_size * goal_group) + (columns * goal_row) + goal_col);
                 read = path_base;
                 if (tile != (u8*)route_value)
@@ -5929,7 +5890,7 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
                     rec.start_z = goal_z;
                     rec.end_x = ((route_offset % columns) - 2) << col_shift;
                     rec.end_z = ((route_offset / columns) - 2) << (col_shift + 1);
-                    if (func_80062820(&rec) != 0)
+                    if (field_collision_trace_line(&rec) != 0)
                     {
                         queue_len = 1;
                         *read = (s32)tile;
@@ -5944,7 +5905,7 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
                         rec.mode = FIELD_COLLISION_TRACE_STOP_AT_GOAL;
                         rec.end_x = start_x;
                         rec.end_z = start_z;
-                        if (func_80062820(&rec) != 0)
+                        if (field_collision_trace_line(&rec) != 0)
                         {
                             queue_len = 1;
                             *read = (s32)tile;
@@ -6107,7 +6068,7 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
                 next_out = &path[1][1];
                 deferred_out = &path[2][1];
                 step = count - 2;
-                tile = (u8*)(scene->unk2C + ((u16)scene->unk44 * start_group) + (columns * start_row) + start_col);
+                tile = (u8*)(scene->group_tiles + (scene->group_tile_count * start_group) + (columns * start_row) + start_col);
                 *read = (s32)tile;
                 read = &path[0][0];
                 rec.stamp = 0;
@@ -6118,9 +6079,9 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
                     do
                     {
                         read += 1;
-                        plane_len = (u16)scene->unk44;
+                        plane_len = scene->group_tile_count;
                         tile = (u8*)*read;
-                        cell_offset = (s32)tile - scene->unk2C;
+                        cell_offset = (s32)tile - scene->group_tiles;
                         while (cell_offset >= plane_len)
                         {
                             cell_offset -= plane_len;
@@ -6166,7 +6127,7 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
                                 far_z = FIELD_COLLISION_PATH_AHEAD(deferred_out, step);
                                 rec.end_x = *far_x;
                                 rec.end_z = *far_z;
-                                if (func_80062820(&rec) != 0)
+                                if (field_collision_trace_line(&rec) != 0)
                                 {
                                     read += step;
                                     next_out = far_x;
@@ -6212,12 +6173,12 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
                     rec.end_x = mid_x;
                     mid_z = (count + goal_row) / 2;
                     rec.end_z = mid_z;
-                    if (func_80062820(&rec) != 0)
+                    if (field_collision_trace_line(&rec) != 0)
                     {
                         rec.tile_base = (s32)near_tile;
                         rec.start_x = goal_col;
                         rec.start_z = goal_row;
-                        if (func_80062820(&rec) != 0)
+                        if (field_collision_trace_line(&rec) != 0)
                         {
                             ok = 1;
                             via_x = mid_x;
@@ -6230,12 +6191,12 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
                             mid2_z = (count + goal_row) / 2;
                             rec.end_x = mid2_x;
                             rec.end_z = mid2_z;
-                            if (func_80062820(&rec) != 0)
+                            if (field_collision_trace_line(&rec) != 0)
                             {
                                 rec.tile_base = (s32)near_tile;
                                 rec.start_x = goal_col;
                                 rec.start_z = goal_row;
-                                if (func_80062820(&rec) != 0)
+                                if (field_collision_trace_line(&rec) != 0)
                                 {
                                     via_x = mid2_x;
                                     count = mid2_z;
@@ -6264,12 +6225,12 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
                         }
                         next_out = (s32*)(count + (quarter_dz >> 2));
                         rec.end_z = ((s32)next_out);
-                        if (func_80062820(&rec) != 0)
+                        if (field_collision_trace_line(&rec) != 0)
                         {
                             rec.tile_base = (s32)near_tile;
                             rec.start_x = goal_col;
                             rec.start_z = goal_row;
-                            if (func_80062820(&rec) != 0)
+                            if (field_collision_trace_line(&rec) != 0)
                             {
                                 ok = 1;
                                 restored_x_offset = quarter_x - (u32)deferred_out;
@@ -6286,12 +6247,12 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
                     back_mid_z = (count + start_row) / 2;
                     rec.end_x = back_mid_x;
                     rec.end_z = back_mid_z;
-                    if (func_80062820(&rec) != 0)
+                    if (field_collision_trace_line(&rec) != 0)
                     {
                         rec.tile_base = (s32)tile;
                         rec.start_x = start_col;
                         rec.start_z = start_row;
-                        if (func_80062820(&rec) != 0)
+                        if (field_collision_trace_line(&rec) != 0)
                         {
                             ok = 1;
                             via_x = back_mid_x;
@@ -6304,12 +6265,12 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
                             back_mid2_z = (count + start_row) / 2;
                             rec.end_x = back_mid2_x;
                             rec.end_z = back_mid2_z;
-                            if (func_80062820(&rec) != 0)
+                            if (field_collision_trace_line(&rec) != 0)
                             {
                                 rec.tile_base = (s32)tile;
                                 rec.start_x = start_col;
                                 rec.start_z = start_row;
-                                if (func_80062820(&rec) != 0)
+                                if (field_collision_trace_line(&rec) != 0)
                                 {
                                     via_x = back_mid2_x;
                                     count = back_mid2_z;
@@ -6338,12 +6299,12 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
                         }
                         deferred_out = (s32*)(count + (back_quarter_dz >> 2));
                         rec.end_z = ((s32)deferred_out);
-                        if (func_80062820(&rec) != 0)
+                        if (field_collision_trace_line(&rec) != 0)
                         {
                             rec.tile_base = (s32)tile;
                             rec.start_x = start_col;
                             rec.start_z = start_row;
-                            if (func_80062820(&rec) != 0)
+                            if (field_collision_trace_line(&rec) != 0)
                             {
                                 ok = 1;
                                 via_x = ((s32)next_out);
@@ -6378,7 +6339,7 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
                         step += 1;
                         count -= 1;
                         out->x = (point_x + ((s16)start_query->width >> 1)) << 8;
-                        /* Shift through route_value: a literal << 8 gives 99.76-99.89%. */
+                        /* Shift through route_value; a literal << 8 changes the register allocation. */
                         route_value = 8;
                         raw_depth = start_query->depth;
                         point_z = *deferred_out;
@@ -6422,7 +6383,7 @@ s32 func_80060F58(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_qu
  * @return 1 when the walk ran to completion or reached goal_tile, 0 when a
  *         blocked tile stopped it.
  */
-s32 func_80062820(FieldCollisionTraceRequest* request)
+static s32 field_collision_trace_line(FieldCollisionTraceRequest* request)
 {
     FieldScene* scene;
     u8* tile_base;
@@ -6479,7 +6440,7 @@ s32 func_80062820(FieldCollisionTraceRequest* request)
     z_end = z_cell + depth_minus_one;
     row_hi = z_end & mask_z;
     scene = g_field_scene.scene;
-    stride = (u16)scene->unk46;
+    stride = scene->tile_cols;
     row_span = 0;
     if (z_end >= ((footprint_depth + mask_z) & ~mask_z))
     {
@@ -6744,9 +6705,9 @@ s32 func_80062820(FieldCollisionTraceRequest* request)
  * @param surface Collision surface definition supplying the edge and its heights.
  * @param movement Movement vector rescaled in place; movement[0] is x and movement[1] is z.
  *
- * @note dx and dz are reused for their squares (separate locals 96.66%).
+ * @note dx and dz are reused for their squares; separate locals change the register allocation.
  */
-void func_80062F48(FieldCollisionSurfaceDef* surface, s32* movement)
+static void field_collision_slope_scale_move(FieldCollisionSurfaceDef* surface, s32* movement)
 {
     s16* vertices;
     s16* vertex_c;
@@ -6775,7 +6736,7 @@ void func_80062F48(FieldCollisionSurfaceDef* surface, s32* movement)
 /**
  * @brief Convert a probe's footprint to whole tiles and stencil it.
  *
- * scene->unk40 is the tile edge in pixels, either 4 or 8, and tile_shift is its
+ * scene->tile_size is the tile edge in pixels, either 4 or 8, and tile_shift is its
  * base-2 log. The footprint width is rounded up to a whole number of
  * tiles and the depth to a whole number of double-height tiles, since
  * the depth axis is stored at half the horizontal resolution. The rounding is
@@ -6787,22 +6748,22 @@ void func_80062F48(FieldCollisionSurfaceDef* surface, s32* movement)
  *
  * @note The extents are read as signed even though FieldCollisionQuery declares them u16.
  */
-void func_8006304C(FieldCollisionQuery* query)
+void field_collision_dilate_query(FieldCollisionQuery* query)
 {
     FieldScene* scene;
     s32 tile_shift;
     s32 tile_size;
 
     scene = g_field_scene.scene;
-    if (scene->unk28 != 0)
+    if (scene->group_work != 0)
     {
-        tile_size = scene->unk40;
+        tile_size = scene->tile_size;
         tile_shift = 3;
         if (tile_size == 4)
         {
             tile_shift = 2;
         }
-        func_80060364(((s16)query->width + tile_size - 1) >> tile_shift, ((s16)query->depth + tile_size * 2 - 1) >> (tile_shift + 1));
+        field_collision_dilate_tiles(((s16)query->width + tile_size - 1) >> tile_shift, ((s16)query->depth + tile_size * 2 - 1) >> (tile_shift + 1));
     }
 }
 
@@ -6818,7 +6779,7 @@ void func_8006304C(FieldCollisionQuery* query)
  * @return Pointer to the selected record's body, or NULL if the scene carries
  *         no records at all.
  */
-void* func_800630BC(s32 index)
+void* field_header_record_at(s32 index)
 {
     FieldHeaderRec* record;
     u16 remaining;
@@ -6847,18 +6808,18 @@ void* func_800630BC(s32 index)
  * to the group scan. Whatever the two callees leave in the local is written
  * back to the global cursor, so the scratch they allocated stays reserved.
  */
-void func_8006312C(void)
+void field_collision_rebuild_spans(void)
 {
     FieldNode* node;
     s32 allocator_cursor;
 
     node = g_field_scene.scene->nodes;
-    allocator_cursor = D_801ED000;
+    allocator_cursor = FIELD_MEM_STATE->top;
     while (node != NULL)
     {
-        func_8005E3B0((FieldCollisionNode*)node, &allocator_cursor);
+        field_collision_rasterize_node((FieldCollisionNode*)node, &allocator_cursor);
         node = node->next;
     }
-    func_8005F158(&allocator_cursor);
-    D_801ED000 = allocator_cursor;
+    field_collision_collect_groups(&allocator_cursor);
+    FIELD_MEM_STATE->top = allocator_cursor;
 }

@@ -1,112 +1,117 @@
-#include "saved_game.h"
 #include "common.h"
+#include "saved_game.h"
+#include "field_records.h"
 
 /*
  * Equipment combination rules.
  *
- * equipment_combination_variant scores a selected pair; every other function
- * here is one entry of the 64-entry g_equipment_combination_rule_table. equipment_combination_find walks that
- * table with the pair of equipment records the player selected and stops at
- * the first rule that returns nonzero; the rule's index is the id of the
- * item the pair combines into.
+ * equipment_combination_find walks the 64-entry
+ * g_equipment_combination_rule_table with the two inventory records the
+ * player selected and stops at the first rule that returns nonzero; the
+ * rule's index is the id of the item the pair combines into. The other
+ * helpers here derive that item's variant and quantity from the pair.
  *
  * A rule asks equipment_pair_has_classes whether the two records hold one
- * item of class A and one item of class B. A class folds an equipment kind
- * (weapon, armor, instrument) and its category into a single id so a rule
+ * item of class A and one item of class B. A class folds an item category
+ * (weapon, armor, instrument) and its item type into a single id so a rule
  * can name any item type with one number.
  */
 
 /* Equipment class ids: weapons 0-10, armor 11-22, instruments 23 and up. */
 #define EQUIP_CLASS_ARMOR_BASE 11
 #define EQUIP_CLASS_INSTRUMENT_BASE 23
-#define EQUIP_CLASS_WEAPON(category) (category)
-#define EQUIP_CLASS_ARMOR(category) ((category) + EQUIP_CLASS_ARMOR_BASE)
-#define EQUIP_CLASS_INSTRUMENT(category) ((category) + EQUIP_CLASS_INSTRUMENT_BASE)
+#define EQUIP_CLASS_WEAPON(item_type) (item_type)
+#define EQUIP_CLASS_ARMOR(item_type) ((item_type) + EQUIP_CLASS_ARMOR_BASE)
+#define EQUIP_CLASS_INSTRUMENT(item_type) ((item_type) + EQUIP_CLASS_INSTRUMENT_BASE)
 
-/** @brief Equipment record view exposing the packed class word. */
-typedef struct
-{
-    u8 pad[0xCF4];
-    u32 flags;
-} EquipmentView;
+/** @brief Number of inventory records a combination takes. */
+#define EQUIPMENT_PAIR_SIZE 2
+/** @brief Number of entries in g_equipment_combination_rule_table. */
+#define EQUIPMENT_COMBINATION_RULE_COUNT 64
+/** @brief Number of combined-item variants. */
+#define EQUIPMENT_COMBINATION_VARIANT_COUNT 11
+/** @brief Largest quantity step a pair can reach. */
+#define EQUIPMENT_COMBINATION_QUANTITY_MAX 9
+/** @brief Mask of the item subtype bits in the upper half of the item info word. */
+#define EQUIPMENT_SUBTYPE_MASK 0x3F
 
-/** @brief View of one save-data equipment record exposing its material halfword. */
-typedef struct
-{
-    u8 pad[0xCF6];
-    u16 material;
-} EquipmentMaterialView;
-
-extern s32 equipment_combination_variant(s32*);
-extern s32 equipment_combination_quantity(s32*);
+/** @brief Per-rule multiplier applied to the pair's quantity step. */
 extern u8 g_equipment_combination_quantity_scale[];
+/** @brief One test per combined item; index = combined item id. */
 extern s32 (*g_equipment_combination_rule_table[])(s32*);
-/**
- * @brief Test whether a pair of equipment records holds one item of each class.
- * @param class_a Equipment class required of one record.
- * @param class_b Equipment class required of the other record.
- * @param record_indices Two indices into the save-data equipment table.
- * @return 1 when one record is class_a and the other is class_b, otherwise 0.
- */
+
 s32 equipment_pair_has_classes(s32 class_a, s32 class_b, s32* record_indices);
+s32 equipment_combination_variant(s32* record_indices);
+s32 equipment_combination_quantity(s32* record_indices);
 
 /**
- * @brief Calculate the quantity contribution for a pair of equipment records.
- * @param record_indices Two indices into the equipment record table.
- * @return Combined quantity divided by 17 and clamped to the range 0 through 9.
+ * @brief Calculate the quantity step of the item a pair combines into.
+ *
+ * Adds up the derived values of both records (a weapon's power, all four
+ * armor values, or byte 2 of an instrument's derived block), divides by 17
+ * and clamps the result to 0 through EQUIPMENT_COMBINATION_QUANTITY_MAX.
+ *
+ * @param record_indices Two indices into the inventory.
+ * @return Quantity step in the range 0 through 9.
  */
 s32 equipment_combination_quantity(s32* record_indices)
 {
-    s32 record_cursor;
+    s32 entry;
     s32 total_quantity;
-    s32 menu_base;
-    s32 quantity_base;
-    s32 record_end;
-    s32 record_offset;
-    s16 record_class;
-    s32 scratch;
-    s32 quantity_index;
+    s32 saved_base;
+    s32 items_base;
+    s32 end;
+    s32 item_offset;
+    s16 category;
+    s32 value;
+    s32 j;
     s32 result;
-    s32 class_one;
+    s32 armor;
 
-    record_cursor = (s32)record_indices;
+    /*
+     * Integer walk over the inventory (items at 0xCE0, 0x40 bytes each; info
+     * word at +0x14, derived values at +0x24). The natural indexed for loop
+     * with an if/else-if chain differs only in that loop.c hoists the
+     * constant 2 of the instrument test, which the target keeps in the loop.
+     */
+    entry = (s32)record_indices;
     total_quantity = 0;
-    menu_base = (s32)g_saved_game.bytes;
-    quantity_base = menu_base + 0xCE0;
-    class_one = 1;
-    record_end = record_cursor + 8;
+    saved_base = (s32)g_saved_game.bytes;
+    items_base = saved_base + 0xCE0;
+    armor = FIELD_ITEM_CATEGORY_ARMOR;
+    end = entry + EQUIPMENT_PAIR_SIZE * sizeof(s32);
     do
     {
-        record_offset = *(s32*)record_cursor << 6;
-        scratch = *(u32*)(record_offset + menu_base + 0xCF4);
-        scratch = (u32)scratch >> 8;
-        record_class = scratch & 3;
-        if (record_class == 0)
+        item_offset = *(s32*)entry << 6;
+        value = *(u32*)(item_offset + saved_base + 0xCF4);
+        value = (u32)value >> 8;
+        category = value & 3;
+        if (category == FIELD_ITEM_CATEGORY_WEAPON)
         {
-            total_quantity += *(u16*)(record_offset + quantity_base + 0x24);
+            total_quantity += *(u16*)(item_offset + items_base + 0x24);
             goto next_record;
         }
-        if (record_class == class_one)
+        if (category == armor)
         {
-            quantity_index = 0;
+            j = 0;
             do
             {
-                total_quantity += *(u16*)(record_offset + quantity_base + 0x24 + quantity_index * 2);
-                quantity_index += 1;
-            } while (quantity_index < 4);
-            record_cursor += 4;
+                total_quantity += *(u16*)(item_offset + items_base + 0x24 + j * 2);
+                j += 1;
+            } while (j < 4);
+            entry += sizeof(s32);
         }
         else
         {
-            scratch = 2;
-            if (record_class == scratch)
+            value = FIELD_ITEM_CATEGORY_INSTRUMENT;
+            if (category == value)
             {
-                total_quantity += *(u8*)(record_offset + quantity_base + 0x26);
+                total_quantity += *(u8*)(item_offset + items_base + 0x26);
             }
         next_record:
-            record_cursor += 4;
+            entry += sizeof(s32);
         }
-    } while (record_cursor < record_end);
+    } while (entry < end);
 
     total_quantity /= 17;
     if (total_quantity >= 0)
@@ -126,65 +131,56 @@ s32 equipment_combination_quantity(s32* record_indices)
 }
 
 /**
- * @brief Test whether two equipment records supply one item of each requested class.
+ * @brief Test whether two inventory records supply one item of each requested class.
  * @param class_a Class required of one record.
  * @param class_b Class required of the other record.
- * @param record_indices Two equipment-record indices.
- * @return 1 when distinct records satisfy the pair, otherwise 0.
- * @note Reuse j for the decoded class and the later inner-loop index; this
- * reproduces the target's temporary allocation without forcing registers.
- * @note GCC 2.8.0 G0: 100% match, 71 instructions (284 bytes).
+ * @param record_indices Two indices into the inventory.
+ * @return 1 when two distinct records satisfy the pair, otherwise 0.
  */
 s32 equipment_pair_has_classes(s32 class_a, s32 class_b, s32* record_indices)
 {
-    s32 classes[2];
+    FieldGameState* state;
+    s32 classes[EQUIPMENT_PAIR_SIZE];
+    s32 item_type;
     s32 i;
     s32 j;
 
-    i = 0;
-    do
+    for (i = 0; i < EQUIPMENT_PAIR_SIZE; i++)
     {
-        j = (((EquipmentView*)(g_saved_game.bytes + (*record_indices << 6)))->flags >> 10) & 0x3F;
-        classes[i] = j;
-        if (((((EquipmentView*)(g_saved_game.bytes + (*record_indices << 6)))->flags >> 8) & 3) == 1)
+        state = (FieldGameState*)&g_saved_game;
+        item_type = FIELD_ITEM_TYPE((state->items + record_indices[i])->info.word);
+        classes[i] = item_type;
+        if (FIELD_ITEM_CATEGORY((state->items + record_indices[i])->info.word) == FIELD_ITEM_CATEGORY_ARMOR)
         {
-            classes[i] = j + 11;
+            classes[i] = EQUIP_CLASS_ARMOR(item_type);
         }
-        if (((((EquipmentView*)(g_saved_game.bytes + (*record_indices << 6)))->flags >> 8) & 3) == 2)
+        if (FIELD_ITEM_CATEGORY((state->items + record_indices[i])->info.word) == FIELD_ITEM_CATEGORY_INSTRUMENT)
         {
-            classes[i] += 23;
+            classes[i] += EQUIP_CLASS_INSTRUMENT_BASE;
         }
-        i++;
-        record_indices++;
-    } while (i < 2);
-    i = 0;
-    do
+    }
+    for (i = 0; i < EQUIPMENT_PAIR_SIZE; i++)
     {
         if (classes[i] == class_a)
         {
-            j = 0;
-            do
+            for (j = 0; j < EQUIPMENT_PAIR_SIZE; j++)
             {
                 if (classes[j] == class_b && j != i)
                 {
                     return 1;
                 }
-                j++;
-            } while (j < 2);
+            }
         }
-        i++;
-    } while (i < 2);
+    }
     return 0;
 }
 
 /**
- * @brief Find the first equipment rule matching the supplied record pair.
- * @param record_indices Two equipment-record indices tested by each rule.
- * @param quantity Receives the scaled quantity when a rule matches.
- * @param variant Receives the matching variant clamped to the range 0 through 10.
- * @return Matching rule index, or 0 if no rule matched.
- * @note Preserve both variant stores and the indexed rule-table call.
- * @note GCC 2.8.0 G0: 100% match, 58 instructions (232 bytes).
+ * @brief Find the first combination rule the supplied record pair satisfies.
+ * @param record_indices Two indices into the inventory, tested by each rule.
+ * @param quantity Receives the combined item's quantity when a rule matches.
+ * @param variant Receives the combined item's variant, clamped to 0 through 10.
+ * @return Matching rule index (the combined item id), or 0 if no rule matched.
  */
 s32 equipment_combination_find(s32* record_indices, s32* quantity, s32* variant)
 {
@@ -192,8 +188,7 @@ s32 equipment_combination_find(s32* record_indices, s32* quantity, s32* variant)
     s32 value;
     s32 clamped;
 
-    index = 0;
-    do
+    for (index = 0; index < EQUIPMENT_COMBINATION_RULE_COUNT; index++)
     {
         if (g_equipment_combination_rule_table[index](record_indices) != 0)
         {
@@ -201,8 +196,8 @@ s32 equipment_combination_find(s32* record_indices, s32* quantity, s32* variant)
             *variant = value;
             if (value >= 0)
             {
-                clamped = 10;
-                if (value < 11)
+                clamped = EQUIPMENT_COMBINATION_VARIANT_COUNT - 1;
+                if (value < EQUIPMENT_COMBINATION_VARIANT_COUNT)
                 {
                     clamped = value;
                 }
@@ -215,30 +210,26 @@ s32 equipment_combination_find(s32* record_indices, s32* quantity, s32* variant)
             *quantity = equipment_combination_quantity(record_indices) * g_equipment_combination_quantity_scale[index];
             return index;
         }
-        index++;
-    } while (index < 64);
+    }
     return 0;
 }
 
 /**
- * @brief Derive the variant of the item two equipment records combine into.
- *
- * Sums the low six bits of each record's material field and reduces the
- * total modulo 11.
- *
- * @param record_indices Two indices into the save-data equipment table.
- * @return Variant index in the range 0 through 10.
+ * @brief Derive the variant of the item two inventory records combine into.
+ * @param record_indices Two indices into the inventory.
+ * @return Sum of both records' item subtypes modulo 11 (0 through 10).
  */
 s32 equipment_combination_variant(s32* record_indices)
 {
-    u8* base;
-    EquipmentMaterialView* first;
-    EquipmentMaterialView* second;
+    FieldGameState* state;
+    FieldItemRecord* first;
+    FieldItemRecord* second;
 
-    base = g_saved_game.bytes;
-    first = (EquipmentMaterialView*)&base[record_indices[0] << 6];
-    second = (EquipmentMaterialView*)&base[record_indices[1] << 6];
-    return ((first->material & 0x3F) + (second->material & 0x3F)) % 11;
+    state = (FieldGameState*)&g_saved_game;
+    first = &state->items[record_indices[0]];
+    second = &state->items[record_indices[1]];
+    return ((first->info.halves[1] & EQUIPMENT_SUBTYPE_MASK) + (second->info.halves[1] & EQUIPMENT_SUBTYPE_MASK)) %
+           EQUIPMENT_COMBINATION_VARIANT_COUNT;
 }
 
 /**
@@ -303,9 +294,7 @@ s32 equipment_combination_rule_05(void)
  */
 s32 equipment_combination_rule_06(s32* record_indices)
 {
-    s32 equip_class = EQUIP_CLASS_ARMOR(2);
-
-    return equipment_pair_has_classes(equip_class, equip_class, record_indices) > 0;
+    return equipment_pair_has_classes(EQUIP_CLASS_ARMOR(2), EQUIP_CLASS_ARMOR(2), record_indices) > 0;
 }
 
 /**
@@ -336,13 +325,13 @@ s32 equipment_combination_rule_08(s32* record_indices)
  */
 s32 equipment_combination_rule_09(s32* record_indices)
 {
-    s32 result;
-    s32 first;
+    s32 sum;
 
-    first = equipment_pair_has_classes(EQUIP_CLASS_ARMOR(4), EQUIP_CLASS_ARMOR(4), record_indices);
-    result = first + equipment_pair_has_classes(EQUIP_CLASS_ARMOR(10), EQUIP_CLASS_ARMOR(4), record_indices);
-    result += equipment_pair_has_classes(EQUIP_CLASS_ARMOR(10), EQUIP_CLASS_ARMOR(10), record_indices);
-    return result > 0;
+    sum = 0;
+    sum += equipment_pair_has_classes(EQUIP_CLASS_ARMOR(4), EQUIP_CLASS_ARMOR(4), record_indices);
+    sum += equipment_pair_has_classes(EQUIP_CLASS_ARMOR(10), EQUIP_CLASS_ARMOR(4), record_indices);
+    sum += equipment_pair_has_classes(EQUIP_CLASS_ARMOR(10), EQUIP_CLASS_ARMOR(10), record_indices);
+    return sum > 0;
 }
 
 /**
@@ -369,13 +358,13 @@ s32 equipment_combination_rule_10(s32* record_indices)
  */
 s32 equipment_combination_rule_11(s32* record_indices)
 {
-    s32 result;
-    s32 first;
+    s32 sum;
 
-    first = equipment_pair_has_classes(EQUIP_CLASS_WEAPON(1), EQUIP_CLASS_WEAPON(1), record_indices);
-    result = first + equipment_pair_has_classes(EQUIP_CLASS_WEAPON(2), EQUIP_CLASS_WEAPON(1), record_indices);
-    result += equipment_pair_has_classes(EQUIP_CLASS_WEAPON(2), EQUIP_CLASS_WEAPON(2), record_indices);
-    return result > 0;
+    sum = 0;
+    sum += equipment_pair_has_classes(EQUIP_CLASS_WEAPON(1), EQUIP_CLASS_WEAPON(1), record_indices);
+    sum += equipment_pair_has_classes(EQUIP_CLASS_WEAPON(2), EQUIP_CLASS_WEAPON(1), record_indices);
+    sum += equipment_pair_has_classes(EQUIP_CLASS_WEAPON(2), EQUIP_CLASS_WEAPON(2), record_indices);
+    return sum > 0;
 }
 
 /**
@@ -416,13 +405,13 @@ s32 equipment_combination_rule_13(s32* record_indices)
  */
 s32 equipment_combination_rule_14(s32* record_indices)
 {
-    s32 result;
-    s32 first;
+    s32 sum;
 
-    first = equipment_pair_has_classes(EQUIP_CLASS_WEAPON(3), EQUIP_CLASS_WEAPON(3), record_indices);
-    result = first + equipment_pair_has_classes(EQUIP_CLASS_WEAPON(4), EQUIP_CLASS_WEAPON(3), record_indices);
-    result += equipment_pair_has_classes(EQUIP_CLASS_WEAPON(4), EQUIP_CLASS_WEAPON(4), record_indices);
-    return result > 0;
+    sum = 0;
+    sum += equipment_pair_has_classes(EQUIP_CLASS_WEAPON(3), EQUIP_CLASS_WEAPON(3), record_indices);
+    sum += equipment_pair_has_classes(EQUIP_CLASS_WEAPON(4), EQUIP_CLASS_WEAPON(3), record_indices);
+    sum += equipment_pair_has_classes(EQUIP_CLASS_WEAPON(4), EQUIP_CLASS_WEAPON(4), record_indices);
+    return sum > 0;
 }
 
 /**
@@ -466,13 +455,13 @@ s32 equipment_combination_rule_16(s32* record_indices)
  */
 s32 equipment_combination_rule_17(s32* record_indices)
 {
-    s32 result;
-    s32 first;
+    s32 sum;
 
-    first = equipment_pair_has_classes(EQUIP_CLASS_WEAPON(5), EQUIP_CLASS_WEAPON(5), record_indices);
-    result = first + equipment_pair_has_classes(EQUIP_CLASS_WEAPON(9), EQUIP_CLASS_WEAPON(5), record_indices);
-    result += equipment_pair_has_classes(EQUIP_CLASS_WEAPON(9), EQUIP_CLASS_WEAPON(9), record_indices);
-    return result > 0;
+    sum = 0;
+    sum += equipment_pair_has_classes(EQUIP_CLASS_WEAPON(5), EQUIP_CLASS_WEAPON(5), record_indices);
+    sum += equipment_pair_has_classes(EQUIP_CLASS_WEAPON(9), EQUIP_CLASS_WEAPON(5), record_indices);
+    sum += equipment_pair_has_classes(EQUIP_CLASS_WEAPON(9), EQUIP_CLASS_WEAPON(9), record_indices);
+    return sum > 0;
 }
 
 /**
@@ -544,13 +533,13 @@ s32 equipment_combination_rule_21(s32* record_indices)
  */
 s32 equipment_combination_rule_22(s32* record_indices)
 {
-    s32 result;
-    s32 first;
+    s32 sum;
 
-    first = equipment_pair_has_classes(EQUIP_CLASS_WEAPON(8), EQUIP_CLASS_WEAPON(0), record_indices);
-    result = first + equipment_pair_has_classes(EQUIP_CLASS_WEAPON(8), EQUIP_CLASS_WEAPON(6), record_indices);
-    result += equipment_pair_has_classes(EQUIP_CLASS_WEAPON(8), EQUIP_CLASS_WEAPON(7), record_indices);
-    return result > 0;
+    sum = 0;
+    sum += equipment_pair_has_classes(EQUIP_CLASS_WEAPON(8), EQUIP_CLASS_WEAPON(0), record_indices);
+    sum += equipment_pair_has_classes(EQUIP_CLASS_WEAPON(8), EQUIP_CLASS_WEAPON(6), record_indices);
+    sum += equipment_pair_has_classes(EQUIP_CLASS_WEAPON(8), EQUIP_CLASS_WEAPON(7), record_indices);
+    return sum > 0;
 }
 
 /**
@@ -560,13 +549,13 @@ s32 equipment_combination_rule_22(s32* record_indices)
  */
 s32 equipment_combination_rule_23(s32* record_indices)
 {
-    s32 result;
-    s32 first;
+    s32 sum;
 
-    first = equipment_pair_has_classes(EQUIP_CLASS_INSTRUMENT(0), EQUIP_CLASS_WEAPON(0), record_indices);
-    result = first + equipment_pair_has_classes(EQUIP_CLASS_INSTRUMENT(0), EQUIP_CLASS_WEAPON(6), record_indices);
-    result += equipment_pair_has_classes(EQUIP_CLASS_INSTRUMENT(0), EQUIP_CLASS_WEAPON(7), record_indices);
-    return result > 0;
+    sum = 0;
+    sum += equipment_pair_has_classes(EQUIP_CLASS_INSTRUMENT(0), EQUIP_CLASS_WEAPON(0), record_indices);
+    sum += equipment_pair_has_classes(EQUIP_CLASS_INSTRUMENT(0), EQUIP_CLASS_WEAPON(6), record_indices);
+    sum += equipment_pair_has_classes(EQUIP_CLASS_INSTRUMENT(0), EQUIP_CLASS_WEAPON(7), record_indices);
+    return sum > 0;
 }
 
 /**
@@ -607,9 +596,7 @@ s32 equipment_combination_rule_26(s32* record_indices)
  */
 s32 equipment_combination_rule_27(s32* record_indices)
 {
-    s32 equip_class = EQUIP_CLASS_WEAPON(10);
-
-    return equipment_pair_has_classes(equip_class, equip_class, record_indices) > 0;
+    return equipment_pair_has_classes(EQUIP_CLASS_WEAPON(10), EQUIP_CLASS_WEAPON(10), record_indices) > 0;
 }
 
 /**
@@ -640,13 +627,13 @@ s32 equipment_combination_rule_29(s32* record_indices)
  */
 s32 equipment_combination_rule_30(s32* record_indices)
 {
-    s32 result;
-    s32 first;
+    s32 sum;
 
-    first = equipment_pair_has_classes(EQUIP_CLASS_ARMOR(3), EQUIP_CLASS_ARMOR(3), record_indices);
-    result = first + equipment_pair_has_classes(EQUIP_CLASS_ARMOR(9), EQUIP_CLASS_ARMOR(3), record_indices);
-    result += equipment_pair_has_classes(EQUIP_CLASS_ARMOR(9), EQUIP_CLASS_ARMOR(9), record_indices);
-    return result > 0;
+    sum = 0;
+    sum += equipment_pair_has_classes(EQUIP_CLASS_ARMOR(3), EQUIP_CLASS_ARMOR(3), record_indices);
+    sum += equipment_pair_has_classes(EQUIP_CLASS_ARMOR(9), EQUIP_CLASS_ARMOR(3), record_indices);
+    sum += equipment_pair_has_classes(EQUIP_CLASS_ARMOR(9), EQUIP_CLASS_ARMOR(9), record_indices);
+    return sum > 0;
 }
 
 /**
@@ -741,9 +728,7 @@ s32 equipment_combination_rule_37(s32* record_indices)
  */
 s32 equipment_combination_rule_38(s32* record_indices)
 {
-    s32 equip_class = EQUIP_CLASS_INSTRUMENT(2);
-
-    return equipment_pair_has_classes(equip_class, equip_class, record_indices) > 0;
+    return equipment_pair_has_classes(EQUIP_CLASS_INSTRUMENT(2), EQUIP_CLASS_INSTRUMENT(2), record_indices) > 0;
 }
 
 /**
@@ -812,9 +797,7 @@ s32 equipment_combination_rule_43(s32* record_indices)
  */
 s32 equipment_combination_rule_44(s32* record_indices)
 {
-    s32 equip_class = EQUIP_CLASS_INSTRUMENT(3);
-
-    return equipment_pair_has_classes(equip_class, equip_class, record_indices) > 0;
+    return equipment_pair_has_classes(EQUIP_CLASS_INSTRUMENT(3), EQUIP_CLASS_INSTRUMENT(3), record_indices) > 0;
 }
 
 /**
@@ -887,8 +870,9 @@ s32 equipment_combination_rule_51(s32* record_indices)
 {
     s32 sum;
 
-    sum = equipment_pair_has_classes(EQUIP_CLASS_ARMOR(1), EQUIP_CLASS_ARMOR(0), record_indices) +
-          equipment_pair_has_classes(EQUIP_CLASS_ARMOR(2), EQUIP_CLASS_ARMOR(0), record_indices);
+    sum = 0;
+    sum += equipment_pair_has_classes(EQUIP_CLASS_ARMOR(1), EQUIP_CLASS_ARMOR(0), record_indices);
+    sum += equipment_pair_has_classes(EQUIP_CLASS_ARMOR(2), EQUIP_CLASS_ARMOR(0), record_indices);
     sum += equipment_pair_has_classes(EQUIP_CLASS_ARMOR(5), EQUIP_CLASS_ARMOR(0), record_indices);
     sum += equipment_pair_has_classes(EQUIP_CLASS_ARMOR(5), EQUIP_CLASS_ARMOR(1), record_indices);
     sum += equipment_pair_has_classes(EQUIP_CLASS_ARMOR(5), EQUIP_CLASS_ARMOR(2), record_indices);
@@ -940,13 +924,13 @@ s32 equipment_combination_rule_54(s32* record_indices)
  */
 s32 equipment_combination_rule_55(s32* record_indices)
 {
-    s32 result;
-    s32 first;
+    s32 sum;
 
-    first = equipment_pair_has_classes(EQUIP_CLASS_ARMOR(6), EQUIP_CLASS_ARMOR(6), record_indices);
-    result = first + equipment_pair_has_classes(EQUIP_CLASS_ARMOR(11), EQUIP_CLASS_ARMOR(6), record_indices);
-    result += equipment_pair_has_classes(EQUIP_CLASS_ARMOR(11), EQUIP_CLASS_ARMOR(11), record_indices);
-    return result > 0;
+    sum = 0;
+    sum += equipment_pair_has_classes(EQUIP_CLASS_ARMOR(6), EQUIP_CLASS_ARMOR(6), record_indices);
+    sum += equipment_pair_has_classes(EQUIP_CLASS_ARMOR(11), EQUIP_CLASS_ARMOR(6), record_indices);
+    sum += equipment_pair_has_classes(EQUIP_CLASS_ARMOR(11), EQUIP_CLASS_ARMOR(11), record_indices);
+    return sum > 0;
 }
 
 /**

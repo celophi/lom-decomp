@@ -1,32 +1,52 @@
 /** @file field_choice_labels.c
- * @brief Draw the two return-to-title choice labels.
+ * @brief Draw the two choices of the return-to-title prompt.
  */
 
 #include "common.h"
+#include "sdk/libgpu.h"
 #include "field_calls.h"
 #include "field_ui_text.h"
 
-/** @brief UI string index of the first return-to-title choice. */
+/** @brief UI string index of the first return-to-title choice; the second follows it. */
 #define FIELD_TITLE_CHOICE_FIRST_TEXT 19
 
-/** @brief Text color of a highlighted choice. */
+/** @brief g_field_return_to_title_choice value: continue from the saved state. */
+#define FIELD_TITLE_CHOICE_CONTINUE 0
+
+/** @brief g_field_return_to_title_choice value: return to the title screen. */
+#define FIELD_TITLE_CHOICE_QUIT 1
+
+/** @brief Text color of the highlighted choice. */
 #define FIELD_CHOICE_COLOR_ACTIVE 4
 
-/** @brief Text color of an inactive choice. */
+/** @brief Text color of the other choice. */
 #define FIELD_CHOICE_COLOR_INACTIVE 5
 
-s32 func_800A88A0(void* prim, void* ot, void* text, s32 color, s32 x, s32 y, s32 align);
-extern u8 D_800EC3EA[];
-extern s32 D_801226D8;
+/** @brief func_800A88A0() flag that centers the text on x. */
+#define FIELD_TEXT_ALIGN_CENTER 2
+
+/** @brief Horizontal center of the choices inside the prompt window. */
+#define FIELD_CHOICE_CENTER_X 80
+
+/** @brief Top of the first choice inside the prompt window. */
+#define FIELD_CHOICE_FIRST_Y 1
+
+/** @brief Top of the second choice inside the prompt window. */
+#define FIELD_CHOICE_SECOND_Y 17
+
+void* func_800A88A0(SPRT* sprite_cursor, s32* ot, u8* text, s32 color, s32 x, s32 y, s32 flags);
+
+/** @brief Offset entry of UI string FIELD_TITLE_CHOICE_FIRST_TEXT (each entry is its own symbol). */
+extern u8 g_field_title_choice_text_entry[];
 
 /**
- * @brief Draw the two return-to-title choice labels with the active choice highlighted.
- * @param ot Ordering-table context passed to the label renderer.
- * @param prim Primitive-buffer cursor the labels are written from.
- * @param x_offset Horizontal offset subtracted from the label position.
- * @param y_offset Vertical offset subtracted from the label position.
+ * @brief Draw both return-to-title choices, highlighting the selected one.
+ * @param ot Ordering table the text is added to.
+ * @param prim Primitive buffer the text sprites are written to.
+ * @param scroll_x Horizontal scroll of the prompt window, subtracted from the text position.
+ * @param scroll_y Vertical scroll of the prompt window, subtracted from the text position.
  */
-void func_800AED20(void* ot, void* prim, s32 x_offset, s32 y_offset)
+void field_draw_return_to_title_choices(s32* ot, void* prim, s32 scroll_x, s32 scroll_y)
 {
     u8* text_table;
     u8* first_text;
@@ -35,24 +55,16 @@ void func_800AED20(void* ot, void* prim, s32 x_offset, s32 y_offset)
     s32 second_color;
     s32 x;
     void* cursor;
-    s32 unused[2]; /* never used; the original stack frame reserves it */
+    s32 unused[2]; /* never used, but the stack frame only matches the original with it */
 
     cursor = prim;
-    first_text = FIELD_UI_TEXT_AT(D_800EC3EA, FIELD_TITLE_CHOICE_FIRST_TEXT);
-    text_table = D_800EC3EA - FIELD_TITLE_CHOICE_FIRST_TEXT * 2;
-    first_color = FIELD_CHOICE_COLOR_INACTIVE;
-    if (D_801226D8 == 0)
-    {
-        first_color = FIELD_CHOICE_COLOR_ACTIVE;
-    }
-    x = 0x50 - x_offset;
-    cursor = (void*)func_800A88A0(cursor, ot, first_text, first_color, x, 1 - y_offset, 2);
+    first_text = FIELD_UI_TEXT_AT(g_field_title_choice_text_entry, FIELD_TITLE_CHOICE_FIRST_TEXT);
+    text_table = g_field_title_choice_text_entry - FIELD_TITLE_CHOICE_FIRST_TEXT * 2;
+    first_color = (g_field_return_to_title_choice == FIELD_TITLE_CHOICE_CONTINUE) ? FIELD_CHOICE_COLOR_ACTIVE : FIELD_CHOICE_COLOR_INACTIVE;
+    x = FIELD_CHOICE_CENTER_X - scroll_x;
+    cursor = func_800A88A0(cursor, ot, first_text, first_color, x, FIELD_CHOICE_FIRST_Y - scroll_y, FIELD_TEXT_ALIGN_CENTER);
 
     second_text = FIELD_UI_TEXT(text_table, FIELD_TITLE_CHOICE_FIRST_TEXT + 1);
-    second_color = FIELD_CHOICE_COLOR_INACTIVE;
-    if (D_801226D8 == 1)
-    {
-        second_color = FIELD_CHOICE_COLOR_ACTIVE;
-    }
-    func_800A88A0(cursor, ot, second_text, second_color, x, 0x11 - y_offset, 2);
+    second_color = (g_field_return_to_title_choice == FIELD_TITLE_CHOICE_QUIT) ? FIELD_CHOICE_COLOR_ACTIVE : FIELD_CHOICE_COLOR_INACTIVE;
+    func_800A88A0(cursor, ot, second_text, second_color, x, FIELD_CHOICE_SECOND_Y - scroll_y, FIELD_TEXT_ALIGN_CENTER);
 }

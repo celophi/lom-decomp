@@ -1,230 +1,307 @@
-#include "cdrom.h"
 /**
  * @file field_audio_runtime.c
- * @brief FIELD overlay CD-audio / music / SFX runtime subsystem.
+ * @brief FIELD music, instrument-bank and sound-effect helpers.
  *
- * Consolidated translation unit covering the FIELD AKAO audio helpers: loading
- * SEQ and sound-bank resources from CD-ROM, starting/stopping field music, the
- * SFX-slot dispatchers, and the streaming block-copy/upload state machine.
+ * Loads AKAO song containers and instrument banks from CD-ROM, starts, stops
+ * and fades the field songs, plays sound effects from the loaded effect
+ * tables, and runs the sector-by-sector music stream (song data into the
+ * resident song area, instrument bank data into the SPU).
  *
- * @note Several of these are called cross-overlay (GOVER calls func_800A368C
- *       and func_800A380C while FIELD is resident).
- * @note This file was merged from many per-function sources; shared globals are
- *       viewed with conflicting types across functions, so any symbol with a
- *       type conflict is declared at BLOCK scope inside each user with that
- *       function's original type (GCC 2.7.2 accepts incompatible block-scope
- *       externs and emits identical code).
+ * @note GOVER calls field_load_song and field_play_song while FIELD is
+ *       resident.
  */
 
 #include "common.h"
 #include "field_calls.h"
-#include "cd_resources.h"
 #include "akao.h"
+#include "akao_cmd.h"
+#include "cd_resources.h"
+#include "cdrom.h"
 #include "game_state.h"
 #include "sdk/memory.h"
 
-/* Scratch buffer the CD-ROM layer decompresses a SEQ resource into. The blob
- * begins with a self-referential offset table; see SEQ_BLOB_OFFSETS. */
-#define SEQ_BLOB_BASE 0x80180000
+/*
+ * AKAO driver entry points in the main executable without a shared header
+ * (include/akao_cmd.h is used by every overlay, some with other local
+ * declarations of these commands).
+ */
+s32 akao_cmd_14(u8 *sequence, s32 param1, s32 param2);
+s32 akao_cmd_19_c0(s32 value0, s32 value1);
+void akao_cmd_21(s32 value0, s32 value1);
+s32 akao_cmd_c1(s32 song_handle, s32 frames, s32 volume);
+s32 akao_cmd_d0(s32 value0);
+s32 akao_cmd_d4(s32 value0);
+s32 akao_is_sfx_playing(s32 voice_mask);
+s32 akao_play_sfx_from_buffer(s32 buffer_address, s32 voice_mask, s32 pan, s32 volume);
+s32 akao_get_xfer_state(void);
+s32 akao_reset_xfer_state(void);
+s32 func_80022ED8(void *bank, s32 slot, s32 wait_for_completion);
+s32 func_80022EF8(void *bank, s32 slot, s32 wait_for_completion);
 
-/* Offset table at the head of the SEQ blob. off[0] is the byte offset of the
- * song sequence sub-block, off[1] the byte offset of the instrument bank that
- * follows it. */
-#define SEQ_BLOB_OFFSETS 0x80180004
+/** @brief Scratch buffer the CD layer loads song containers into. */
+#define FIELD_AUDIO_LOAD_BUFFER 0x80180000
 
-/* Largest music_index this loader accepts; anything above is ignored. */
-#define FIELD_SEQ_MAX_INDEX 0x100
+/** @brief Section offset table of the container in FIELD_AUDIO_LOAD_BUFFER. */
+#define FIELD_AUDIO_LOAD_OFFSETS 0x80180004
 
-/* Fixed CD resource loaded by func_800A3728. TODO: which SEQ this is has not
- * been confirmed; it is not selected through CD_RES_MUSIC_FILE. */
-#define FIELD_FIXED_SEQ_RESOURCE 0x92
+/** @brief Resident address of the registered AKAO instrument bank. */
+#define FIELD_INSTRUMENT_BANK_ADDRESS 0x8013C000
 
-/* Same scratch blob as SEQ_BLOB_BASE / SEQ_BLOB_OFFSETS, used by the effect
- * bank restore path. */
-#define EFFECT_BLOB_BASE 0x80180000
-#define EFFECT_BLOB_OFFSETS 0x80180004
+/** @brief Largest music-file index field_load_song accepts. */
+#define FIELD_SONG_INDEX_MAX 256
 
-/** @brief Header preceding the copied field sound-bank tables. */
+/** @brief First CD resource of the instrument banks loaded by field_load_instrument_bank. */
+#define FIELD_INSTRUMENT_BANK_RESOURCE_BASE 142
+
+/** @brief CD resource of the instrument bank uploaded by field_upload_resource_22_bank. */
+#define FIELD_UPLOAD_BANK_RESOURCE 22
+
+/** @brief CD resource of the song container loaded by field_load_fixed_song. */
+#define FIELD_FIXED_SONG_RESOURCE 146
+
+/** @brief First CD resource of the effect-table sets loaded by field_load_sfx_tables. */
+#define FIELD_SFX_SET_RESOURCE_BASE 81
+
+/** @brief First CD resource of the weapon effect tables loaded by field_load_weapon_sfx_table. */
+#define FIELD_WEAPON_SFX_RESOURCE_BASE 131
+
+/** @brief Effect-set argument that keeps the loaded tables. */
+#define FIELD_SFX_SET_KEEP (-2)
+
+/** @brief Effect-set argument that only clears the loaded tables. */
+#define FIELD_SFX_SET_NONE (-1)
+
+/** @brief Size of one weapon effect table in g_field_sound_tables. */
+#define FIELD_WEAPON_SFX_TABLE_SIZE 0x1A00
+
+/** @brief Number of weapon effect tables in g_field_sound_tables. */
+#define FIELD_WEAPON_SFX_TABLE_COUNT 2
+
+/** @brief Number of three-voice sound-effect channel groups. */
+#define FIELD_SFX_GROUP_COUNT 8
+
+/** @brief Voices per sound-effect channel group. */
+#define FIELD_SFX_GROUP_VOICES 3
+
+/** @brief Previous game state 6 (no GAME_STATE_ name yet); CHECKPS also treats the bank as resident after it. */
+#define FIELD_AUDIO_BANK_RESIDENT_STATE 6
+
+/** @brief Size of one streamed CD sector. */
+#define FIELD_STREAM_SECTOR_SIZE 0x800
+
+/** @brief The two alternating sector buffers of the music stream. */
+#define FIELD_STREAM_SECTOR_BUFFER 0x801DC000
+#define FIELD_STREAM_SECTOR_BUFFER_UPPER 0x801DC800
+
+/** @brief Staging buffer for the streamed instrument bank data. */
+#define FIELD_STREAM_BANK_BUFFER 0x801DD000
+
+/** @brief Bank data past this point is moved back to the buffer start after an upload tick. */
+#define FIELD_STREAM_BANK_OVERFLOW 0x801DD800
+
+/** @brief Number of saved ring selections cleared by field_reset_ring_selections. */
+#define FIELD_RING_SELECTION_COUNT 30
+
+/** @brief Indices into g_field_song_handles. */
+#define FIELD_SONG_MAIN 0
+#define FIELD_SONG_SECOND 1
+
+/** @brief States of the music stream (g_field_stream_state). */
+enum
+{
+    FIELD_STREAM_IDLE = 0,
+    FIELD_STREAM_SECTOR = 1,
+    FIELD_STREAM_FIRST_SECTOR = 2,
+    FIELD_STREAM_WAIT_UPLOAD = 3,
+    FIELD_STREAM_WAIT_LAST_UPLOAD = 4
+};
+
+/**
+ * @brief Effect tables copied out of an effect-set resource.
+ *
+ * The tables are copied one after another into table_data; active_table_offset
+ * is the byte offset (from the start of this buffer) of the one sounds play from.
+ */
 typedef struct
 {
-    /** @brief Byte offset from this header to the current copied table. */
-    s32 table_offset;
-    /** @brief Unknown field cleared when loading a new bank list. */
-    s32 unk_04;
-    /** @brief Unknown field cleared when loading a new bank list. */
-    s32 unk_08;
-} FieldBankCopyHeader;
+    /** @brief Byte offset of the active table, or 0 when no set is loaded. */
+    s32 active_table_offset;
+    /** @brief Cleared with the set; not read in FIELD. */
+    s32 reserved_0;
+    /** @brief Cleared with the set; not read in FIELD. */
+    s32 reserved_1;
+    /** @brief Copied effect tables. */
+    u8 table_data[0x2000 - 12];
+} FieldSfxTableBuffer;
+
+/** @brief Header of the first sector of a streamed music container. */
+typedef struct
+{
+    /** @brief Section count of the container. */
+    s32 section_count;
+    /** @brief Offset of the song data in the sector. */
+    s32 song_offset;
+    /** @brief Offset of the instrument bank (the end of the song data). */
+    s32 bank_offset;
+} FieldMusicStreamHeader;
 
 /*
- * D_8003ECA0 (the AKAO sequence staging area shared with the TITLE overlay) is
- * viewed as `unsigned char` by the field_audio helpers and as `u8[]` by
- * func_800A3FB0, so it is declared at BLOCK scope inside every user with that
- * user's original type; no file-scope copy exists.
+ * D_8003ECA0 is the main executable's resident song area (also used by TITLE).
+ * It holds an AKAO container: the section count at D_8003ECA0 and the section
+ * offsets at D_8003ECA4.
  */
-
-/**
- * @brief Per-entry byte-offset table into the D_8003ECA0 staging area.
- * @note Sits 4 bytes past D_8003ECA0 (0x8003ECA4). func_800A3858 forms a
- *       pointer as @c (u8*)&D_8003ECA4 - 4 + D_8003ECA4[index], i.e.
- *       &D_8003ECA0 + D_8003ECA4[index].
- */
+extern u8 D_8003ECA0[];
 extern s32 D_8003ECA4[];
 
-/** @brief Alternate AKAO sequence staging area inside the FIELD overlay. */
-extern unsigned char D_80117EF8;
-
-/* Consistent-type shared globals (same declared type in every user). */
-extern s32 D_80117EE0;
-extern s32 D_80117EE4;
-extern s32 D_80117EE8;
-extern s32 D_80117EF0;
-extern s32 D_80119EF8;
-extern s32 D_8011F300;
-extern s32 D_8011F320;
-extern s32 D_8011F328;
-extern u8 D_8011F358[];
-extern s32 g_field_song_volume;
-extern s32 D_8011F310;
-extern s32 D_8011F314;
-extern AkaoHeader *D_8011F304;
 extern u8 *g_field_cd_buffer;
-extern u8 D_800EC398[];
+extern s32 g_field_song_volume;
 
-/* External callees (declared here with the signature every user shares). */
-void akao_cmd_f1(void);
-void akao_play_sfx(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-void akao_cmd_21(s32, s32);
-s32 func_80022EF8(void *bank_id, s32 arg1, s32 arg2);
-void func_80022ED8(void *p, s32 index, s32 one);
+/** @brief Second song area (FIELD-resident), played through AKAO command 0x19. */
+extern u8 g_field_second_song[];
 
-/* Forward references to callees defined later in this TU. */
-void func_800A39A8(s32 sfx_index, s32 pan, s32 unused, s32 channel_group);
-void *func_800A4348(s32 request, void *size);
+/** @brief Per effect set: non-zero to upload each table's bank into its own slot. */
+extern u8 g_field_sfx_set_uses_slots[];
+
+extern FieldSfxTableBuffer g_field_sfx_tables;
+extern u8 g_field_sound_tables[];
+
+/** @brief Registered AKAO instrument bank. */
+extern AkaoHeader *g_field_instrument_bank;
+
+/** @brief Song handles, indexed by FIELD_SONG_MAIN / FIELD_SONG_SECOND. */
+extern s32 g_field_song_handles[2];
+
+extern u8 D_8011F358[];
+
+/* Music stream state (field_start_music_stream .. field_stream_sector_callback). */
+extern s32 g_field_stream_sector_ready;
+extern s32 g_field_stream_resource;
+extern s32 g_field_stream_song_bytes;
+extern u8 *g_field_stream_sector;
+extern s32 g_field_stream_read_handle;
+extern s32 g_field_stream_song_remaining;
+extern s32 g_field_stream_bank_pending;
+extern u32 g_field_stream_state;
+extern s32 g_field_stream_bank_bytes;
+extern u32 g_field_stream_bytes_left;
+extern s32 g_field_stream_bytes_done;
+
+static void field_stream_copy_bytes(u8 *dst, u8 *src, s32 count);
+static u8 *field_stream_sector_callback(s32 bytes_transferred, u32 bytes_remaining);
 
 /**
- * @brief Restore the shared effect bank when entering FIELD from a state that did not preserve it.
+ * @brief Reload the instrument bank from EFFECT.SET unless the previous state kept it resident.
  */
 void field_restore_entry_music(void)
 {
-    u8 *base;
+    AkaoContainerHeader *container;
     u32 *off;
 
-    if (((u32)(g_previous_game_state - 2) >= 2U) && (g_previous_game_state != 0) &&
-        (g_previous_game_state != 6) && (g_previous_game_state != 7) && (g_previous_game_state != 5))
+    if ((g_previous_game_state != GAME_STATE_TITLE) && (g_previous_game_state != GAME_STATE_GNAME) &&
+        (g_previous_game_state != GAME_STATE_FIELD) &&
+        (g_previous_game_state != FIELD_AUDIO_BANK_RESIDENT_STATE) && (g_previous_game_state != GAME_STATE_MENU_LOAD) &&
+        (g_previous_game_state != GAME_STATE_WORLD_SELECT))
     {
-        D_8011F304 = (AkaoHeader *)0x8013C000;
-        cdrom_queue_read(CD_RES_SOUND_EFFECT_SET, (void *)EFFECT_BLOB_BASE);
+        g_field_instrument_bank = (AkaoHeader *)FIELD_INSTRUMENT_BANK_ADDRESS;
+        cdrom_queue_read(CD_RES_SOUND_EFFECT_SET, (void *)FIELD_AUDIO_LOAD_BUFFER);
         cdrom_wait_queue_empty();
 
-        base = (u8 *)EFFECT_BLOB_BASE;
-        off = (u32 *)EFFECT_BLOB_OFFSETS;
-        bcopy(base + off[0], (u8 *)D_8011F304, (s32)(off[1] - off[0]));
-        akao_register_bank(D_8011F304);
-        akao_upload_bank_blocking((AkaoBankHeader *)(base + off[1]), 1);
+        container = (AkaoContainerHeader *)FIELD_AUDIO_LOAD_BUFFER;
+        off = container->section_offsets;
+        bcopy(AKAO_CONTAINER_DATA_AT(container, off[0]), (u8 *)g_field_instrument_bank, (s32)(off[1] - off[0]));
+        akao_register_bank(g_field_instrument_bank);
+        akao_upload_bank_blocking((AkaoBankHeader *)AKAO_CONTAINER_DATA_AT(container, off[1]), 1);
     }
 }
 
 /**
- * @brief Load an AKAO instrument bank from a fixed CD resource and register it.
- * @param resource_base Base resource index; the read uses resource_base + 0x8E.
- * @return The bank handle returned by akao_register_bank.
+ * @brief Load an instrument bank to its resident address and register it.
+ * @param bank_index Bank index, relative to FIELD_INSTRUMENT_BANK_RESOURCE_BASE.
+ * @return The result of akao_register_bank.
  */
-s32 func_800A35F4(s32 resource_base)
+s32 field_load_instrument_bank(s32 bank_index)
 {
     akao_cmd_f1();
-    D_8011F304 = (AkaoHeader *) 0x8013C000;
-    cdrom_queue_read((resource_base + 0x8E) & 0xFFFF, (void *) 0x8013C000);
+    g_field_instrument_bank = (AkaoHeader *)FIELD_INSTRUMENT_BANK_ADDRESS;
+    cdrom_queue_read((bank_index + FIELD_INSTRUMENT_BANK_RESOURCE_BASE) & 0xFFFF, (void *)FIELD_INSTRUMENT_BANK_ADDRESS);
     cdrom_wait_queue_empty();
-    return akao_register_bank(D_8011F304);
+    return akao_register_bank(g_field_instrument_bank);
 }
 
 /**
- * @brief Load the shared SEQ blob at index 0x16 and upload its bank.
+ * @brief Load CD resource 22 and upload it as an instrument bank.
  */
-void func_800A3654(void)
+void field_upload_resource_22_bank(void)
 {
-    cdrom_queue_read(0x16, (void *)SEQ_BLOB_BASE);
+    cdrom_queue_read(FIELD_UPLOAD_BANK_RESOURCE, (void *)FIELD_AUDIO_LOAD_BUFFER);
     cdrom_wait_queue_empty();
-    akao_upload_bank_blocking((AkaoBankHeader *)SEQ_BLOB_BASE, 1);
+    akao_upload_bank_blocking((AkaoBankHeader *)FIELD_AUDIO_LOAD_BUFFER, 1);
 }
 
 /**
- * @brief Load a field SEQ resource from CD-ROM and submit it for playback.
- *
- * @details Counterpart of TITLE's load_title_seq. Reads resource
- * @c CD_RES_MUSIC_FILE(music_index) into the SEQ_BLOB_BASE scratch
- * buffer, splits the blob via its leading offset table, copies the song
- * sequence to one of two staging areas, then uploads the trailing instrument
- * bank through akao_upload_bank_blocking.
- *
- * @param music_index Music-file index; 0 selects MSC_DATA.DAT. Indices above
- *        FIELD_SEQ_MAX_INDEX are ignored.
- * @param destination_index Selects the staging area for the copied sub-block:
- *        0 picks D_8003ECA0, non-zero picks D_80117EF8.
- *
+ * @brief Load a song container, copy its song to a song area and upload its bank.
+ * @details Counterpart of TITLE's load_title_seq.
+ * @param music_index Music-file index (0 selects MSC_DATA.DAT); indices above
+ *        FIELD_SONG_INDEX_MAX are ignored.
+ * @param second_song Non-zero to copy the song to g_field_second_song instead of D_8003ECA0.
  */
-void func_800A368C(s32 music_index, s32 destination_index)
+void field_load_song(s32 music_index, s32 second_song)
 {
-    extern unsigned char D_8003ECA0;
-    u32* off;
-    u8* src;
+    u32 *off;
+    u8 *src;
     s32 count;
 
-    if (music_index < FIELD_SEQ_MAX_INDEX + 1)
+    if (music_index < FIELD_SONG_INDEX_MAX + 1)
     {
-        cdrom_queue_read(CD_RES_MUSIC_FILE(music_index), (void*)SEQ_BLOB_BASE);
+        cdrom_queue_read(CD_RES_MUSIC_FILE(music_index), (void *)FIELD_AUDIO_LOAD_BUFFER);
         cdrom_wait_queue_empty();
 
-        off = (u32*)SEQ_BLOB_OFFSETS;
+        off = (u32 *)FIELD_AUDIO_LOAD_OFFSETS;
 
         count = off[1] - off[0];
-        src = (u8*)(off[0] + SEQ_BLOB_BASE);
+        /* The offset is the first addu operand here, so the sum is written int first. */
+        src = (u8 *)(off[0] + FIELD_AUDIO_LOAD_BUFFER);
 
-        if (destination_index != 0)
+        if (second_song != 0)
         {
-            bcopy(src, &D_80117EF8, count);
+            bcopy(src, g_field_second_song, count);
         }
         else
         {
-            bcopy(src, &D_8003ECA0, count);
+            bcopy(src, D_8003ECA0, count);
         }
 
-        akao_upload_bank_blocking((AkaoBankHeader*)(off[1] + SEQ_BLOB_BASE), 1);
+        akao_upload_bank_blocking((AkaoBankHeader *)(off[1] + FIELD_AUDIO_LOAD_BUFFER), 1);
     }
 }
 
 /**
- * @brief Load the fixed field SEQ resource from CD-ROM and play it.
- *
- * @details Variant of func_800A368C with no parameters: the resource index is
- * hardcoded and the destination is always D_8003ECA0. The scratch blob begins
- * with the number of offset entries, and the last entry supplies both the copy
- * length and the byte offset of the AKAO instrument-bank sub-block.
+ * @brief Load the fixed song container (CD resource 146) and upload its bank.
+ * @details Unlike field_load_song, the whole container up to its last section
+ *          is copied to D_8003ECA0, and the last section is the bank.
  */
-void func_800A3728(void)
+void field_load_fixed_song(void)
 {
-    extern unsigned char D_8003ECA0;
-    u8* dst;
-    u32* off_end;
+    u8 *dst;
+    u32 *off_end;
     u32 count;
 
-    cdrom_queue_read(FIELD_FIXED_SEQ_RESOURCE, (void*)SEQ_BLOB_BASE);
+    cdrom_queue_read(FIELD_FIXED_SONG_RESOURCE, (void *)FIELD_AUDIO_LOAD_BUFFER);
     cdrom_wait_queue_empty();
 
-    dst = &D_8003ECA0;
-    count = SEQ_BLOB_BASE;
-    count = *(u32*)count;
-    off_end = (u32*)SEQ_BLOB_OFFSETS + count;
+    dst = D_8003ECA0;
+    /* count holds the container address before its section count; reading the count directly changes the code. */
+    count = FIELD_AUDIO_LOAD_BUFFER;
+    count = *(u32 *)count;
+    off_end = (u32 *)FIELD_AUDIO_LOAD_OFFSETS + count;
 
-    bcopy((u8*)SEQ_BLOB_BASE, dst, off_end[-1]);
-    akao_upload_bank_blocking((AkaoBankHeader*)(off_end[-1] + SEQ_BLOB_BASE), 1);
+    bcopy((u8 *)FIELD_AUDIO_LOAD_BUFFER, dst, off_end[-1]);
+    akao_upload_bank_blocking((AkaoBankHeader *)(off_end[-1] + FIELD_AUDIO_LOAD_BUFFER), 1);
 }
 
 /**
- * @brief Stop the field background music.
- *
- * @details Counterpart of TITLE's stop_title_music and CHECKPS's func_800501AC.
- *
+ * @brief Stop the field song.
+ * @details Counterpart of TITLE's stop_title_music.
  */
 void field_stop_song(void)
 {
@@ -232,67 +309,56 @@ void field_stop_song(void)
 }
 
 /**
- * @brief Stop the field background music using the pending stop modifier.
- *
- * @details Same AKAO command as field_stop_song, but passes the current value
- * of D_8011F310 instead of a hardcoded 0.
- *
+ * @brief Stop the field song by its handle.
  */
-void func_800A37BC(void)
+void field_stop_field_song(void)
 {
-    akao_stop_song(D_8011F310);
+    akao_stop_song(g_field_song_handles[FIELD_SONG_MAIN]);
 }
 
 /**
- * @brief Stop the field background music using the second stop modifier.
- *
- * @details Identical to func_800A37BC except that it passes D_8011F314.
- *
+ * @brief Stop the second song by its handle.
  */
-void func_800A37E4(void)
+void field_stop_second_song(void)
 {
-    akao_stop_song(D_8011F314);
+    akao_stop_song(g_field_song_handles[FIELD_SONG_SECOND]);
 }
 
 /**
- * @brief Start the field background music staged at D_8003ECA0.
- *
- * @details Submits the staged sequence with akao_play_song, records its song
- * handle as the stop modifier for func_800A37BC,
- * applies the current music volume, then issues AKAO commands 0xD4 and 0xD0
- * with 0. Called cross-overlay by GOVER after it stages its own sequence.
- *
+ * @brief Play the song in D_8003ECA0 at the field song volume.
+ * @note GOVER calls this after staging its own song with field_load_song.
+ * @note Declared inline so field_update_music_stream gets its own copy, as in the original.
  */
-void func_800A380C(void)
+inline void field_play_song(void)
 {
-    extern unsigned char D_8003ECA0;
-    s32 play_result;
+    s32 song_handle;
 
-    play_result = akao_play_song((AkaoHeader*)&D_8003ECA0);
-    D_8011F310 = play_result;
-    akao_set_song_volume(play_result, g_field_song_volume);
+    song_handle = akao_play_song((AkaoHeader *)D_8003ECA0);
+    g_field_song_handles[FIELD_SONG_MAIN] = song_handle;
+    akao_set_song_volume(song_handle, g_field_song_volume);
     akao_cmd_d4(0);
     akao_cmd_d0(0);
 }
 
 /**
- * @brief Start a staged AKAO sequence selected by table index.
- * @param song_index Index into the D_8003ECA4 byte-offset table.
+ * @brief Play one section of the container in D_8003ECA0 through AKAO command 0x14.
+ * @param section_index Section of the resident container.
+ * @param param1 TODO: forwarded to AKAO command 0x14 as its second value.
  */
-void func_800A3858(s32 song_index)
+void field_play_song_section(s32 section_index, s32 param1)
 {
-    s32 play_result;
-    s32 dummy;
+    s32 song_handle;
 
-    play_result = akao_cmd_14((u8*)&D_8003ECA4 - 4 + D_8003ECA4[song_index], dummy, 0);
-    D_8011F310 = play_result;
-    if (play_result == -1)
+    /* D_8003ECA0 + offsets[section_index], with the base formed from the offset table address. */
+    song_handle = akao_cmd_14((u8 *)&D_8003ECA4 - 4 + D_8003ECA4[section_index], param1, 0);
+    g_field_song_handles[FIELD_SONG_MAIN] = song_handle;
+    if (song_handle == -1)
     {
-        D_8011F310 = 0;
+        g_field_song_handles[FIELD_SONG_MAIN] = 0;
     }
-    else if (play_result == 0)
+    else if (song_handle == 0)
     {
-        D_8011F310 = 0;
+        g_field_song_handles[FIELD_SONG_MAIN] = 0;
     }
     else
     {
@@ -303,93 +369,89 @@ void func_800A3858(s32 song_index)
 }
 
 /**
- * @brief Latch the current SFX-group stop modifier from the AKAO driver.
+ * @brief Play the song in g_field_second_song at the field song volume.
  */
-void func_800A38D4(void)
+void field_play_second_song(void)
 {
-    s32 temp_v0;
-
-    temp_v0 = akao_cmd_19_c0((s32) &D_80117EF8, g_field_song_volume);
-    D_8011F314 = temp_v0;
+    g_field_song_handles[FIELD_SONG_SECOND] = akao_cmd_19_c0((s32)g_field_second_song, g_field_song_volume);
 }
 
 /**
- * @brief Issue AKAO command 0xC1 for the stop modifier at the given index.
- * @param slot Index into the D_8011F310 stop-modifier pair.
- * @param count Unused; every caller passes a frame count (1 or 0x3C).
- * @param value Unused; every caller passes a volume (0 to 0x7F).
+ * @brief Fade a song to a volume.
+ * @param song FIELD_SONG_MAIN or FIELD_SONG_SECOND.
+ * @param frames Length of the fade.
+ * @param volume Target volume (0 to AKAO_VOLUME_MAX).
  */
-void func_800A3904(s32 slot, s32 count, s32 value)
+void field_fade_song(s32 song, s32 frames, s32 volume)
 {
-    akao_cmd_c1((&D_8011F310)[slot]);
+    akao_cmd_c1(g_field_song_handles[song], frames, volume);
 }
 
 /**
- * @brief Play a FIELD sound effect at maximum volume.
- * @param sound_id Sound id forwarded to akao_play_sfx's arg0.
- * @param pan Forwarded to akao_play_sfx's arg2.
+ * @brief Play a sound effect at full volume.
+ * @param sound_id Sound id.
+ * @param pan Pan position.
  */
-void func_800A3938(s32 sound_id, s32 pan)
+void field_play_sound(s32 sound_id, s32 pan)
 {
-    akao_play_sfx(sound_id, 0, pan, 0x7F);
+    akao_play_sfx(sound_id, 0, pan, AKAO_VOLUME_MAX);
 }
 
 /**
- * @brief Play a FIELD sound effect with the pan value doubled.
- * @param sound_id Sound id forwarded to akao_play_sfx's arg0.
- * @param pan Pan value; passed as pan * 2 to akao_play_sfx's arg2.
+ * @brief Play a sound effect at full volume with the pan scaled from 0-127 to 0-254.
+ * @param sound_id Sound id.
+ * @param pan Pan position in half steps.
  */
-void func_800A3960(s32 sound_id, s32 pan)
+void field_play_sound_half_pan(s32 sound_id, s32 pan)
 {
-    akao_play_sfx(sound_id, 0, pan * 2, 0x7F);
+    akao_play_sfx(sound_id, 0, pan * 2, AKAO_VOLUME_MAX);
 }
 
 /**
- * @brief Play a FIELD sound effect in channel group 0.
- * @param sfx_index Sound-effect table index forwarded to func_800A39A8.
- * @param pan Pan value forwarded to func_800A39A8.
- * @param unused Forwarded to func_800A39A8's third argument.
+ * @brief Play an effect of the active effect table in channel group 0.
+ * @param sfx_index Effect index.
+ * @param pan Pan position.
+ * @param unused Forwarded to field_play_set_sfx, which ignores it.
  */
-void func_800A3988(s32 sfx_index, s32 pan, s32 unused)
+void field_play_set_sfx_group0(s32 sfx_index, s32 pan, s32 unused)
 {
-    func_800A39A8(sfx_index, pan, unused, 0);
+    field_play_set_sfx(sfx_index, pan, unused, 0);
 }
 
 /**
- * @brief Play a sound effect from the primary SFX table in a channel group.
- * @param sfx_index Sound-effect table index.
- * @param pan Pan value passed to the sound-effect player.
- * @param arg2 Unused in the body (kept for the shared dispatch signature).
- * @param channel_group Three-channel group selector; clamped to 7.
+ * @brief Play an effect of the active effect table on a free voice of a channel group.
+ * @param sfx_index Effect index.
+ * @param pan Pan position.
+ * @param unused Not used.
+ * @param channel_group Channel group; clamped to the last group.
  */
-void func_800A39A8(s32 sfx_index, s32 pan, s32 arg2, s32 channel_group)
+void field_play_set_sfx(s32 sfx_index, s32 pan, s32 unused, s32 channel_group)
 {
-    extern s32 D_80119F00;
     s32 *table;
     s32 base;
     s32 i;
     s32 mask;
     s32 buf;
 
-    if (D_80119F00 != 0)
+    if (g_field_sfx_tables.active_table_offset != 0)
     {
-        if (channel_group >= 8)
+        if (channel_group >= FIELD_SFX_GROUP_COUNT)
         {
-            channel_group = 7;
+            channel_group = FIELD_SFX_GROUP_COUNT - 1;
         }
-        table = (s32 *)((s32)&D_80119F00 + D_80119F00);
+        table = (s32 *)((u8 *)&g_field_sfx_tables + g_field_sfx_tables.active_table_offset);
         if ((u32)sfx_index < (u32)(table[0] - 1))
         {
             buf = (s32)table;
             i = 0;
-            base = channel_group * 3;
-            buf += ((s32 *)buf)[sfx_index + 1];
-            for (; i < 3; i++)
+            base = channel_group * FIELD_SFX_GROUP_VOICES;
+            buf += table[sfx_index + 1];
+            for (; i < FIELD_SFX_GROUP_VOICES; i++)
             {
                 mask = 1 << (base + i);
                 if (!akao_is_sfx_playing(mask))
                 {
-                    akao_play_sfx_from_buffer(buf, mask, pan, 0x7F);
+                    akao_play_sfx_from_buffer(buf, mask, pan, AKAO_VOLUME_MAX);
                     break;
                 }
             }
@@ -398,15 +460,13 @@ void func_800A39A8(s32 sfx_index, s32 pan, s32 arg2, s32 channel_group)
 }
 
 /**
- * @brief Play a sound effect in the first available channel of a channel group.
- * @param sfx_index Sound-effect table index.
- * @param pan Pan value passed to the sound-effect player.
- * @param table_index Sound-effect table selector.
- * @param channel_group Three-channel group selector.
+ * @brief Play an effect of a weapon effect table on a free voice of that table's channel group.
+ * @param sfx_index Effect index.
+ * @param pan Pan position.
+ * @param table_index Weapon table (and channel group) index.
  */
-void func_800A3A90(s32 sfx_index, s32 pan, s32 table_index, s32 channel_group)
+void field_play_weapon_sfx(s32 sfx_index, s32 pan, s32 table_index)
 {
-    extern s32 g_field_sound_tables;
     s32 *table;
     s32 base;
     s32 i;
@@ -414,23 +474,24 @@ void func_800A3A90(s32 sfx_index, s32 pan, s32 table_index, s32 channel_group)
     s32 buf;
     u8 *p;
 
-    if (table_index < 2)
+    if (table_index < FIELD_WEAPON_SFX_TABLE_COUNT)
     {
-        p = (u8 *)&g_field_sound_tables;
-        table = (s32 *)(p + table_index * 0x1A00);
+        /* Taking the table base into a local first keeps the original instruction order. */
+        p = g_field_sound_tables;
+        table = (s32 *)(p + table_index * FIELD_WEAPON_SFX_TABLE_SIZE);
         if (table[0] != 0)
         {
             if ((u32)sfx_index < (u32)table[0])
             {
                 i = 0;
-                base = table_index * 3;
+                base = table_index * FIELD_SFX_GROUP_VOICES;
                 buf = (s32)table + table[sfx_index + 1];
-                for (; i < 3; i++)
+                for (; i < FIELD_SFX_GROUP_VOICES; i++)
                 {
                     mask = 1 << (base + i);
                     if (!akao_is_sfx_playing(mask))
                     {
-                        akao_play_sfx_from_buffer(buf, mask, pan, 0x7F);
+                        akao_play_sfx_from_buffer(buf, mask, pan, AKAO_VOLUME_MAX);
                         break;
                     }
                 }
@@ -440,158 +501,122 @@ void func_800A3A90(s32 sfx_index, s32 pan, s32 table_index, s32 channel_group)
 }
 
 /**
- * @brief Issues three AKAO command-21 voice masks for a clamped channel index.
- *
- * Clamps @p idx to a maximum of 7, then emits akao_cmd_21(0, 1 << bit) for the
- * three consecutive bits starting at idx * 3.
- *
- * @param idx Channel-group index; clamped to a maximum of 7.
+ * @brief Send AKAO command 0x21 for each voice of a channel group.
+ * @param channel_group Channel group; clamped to the last group.
  */
-void func_800A3B78(s32 idx)
+void field_release_sfx_group(s32 channel_group)
 {
     s32 bit;
 
-    if (idx >= 8)
+    if (channel_group >= FIELD_SFX_GROUP_COUNT)
     {
-        idx = 7;
+        channel_group = FIELD_SFX_GROUP_COUNT - 1;
     }
-    bit = idx * 3;
+    bit = channel_group * FIELD_SFX_GROUP_VOICES;
     akao_cmd_21(0, 1 << bit);
     akao_cmd_21(0, 1 << (bit + 1));
     akao_cmd_21(0, 1 << (bit + 2));
 }
 
 /**
- * @brief Load field sound-bank tables and upload their associated audio banks.
- * @param bank_id Resource index; -2 preserves state and -1 clears only the header.
+ * @brief Load an effect-table set, copy its tables and upload their banks.
+ * @param set_id Effect set; FIELD_SFX_SET_KEEP keeps the loaded set and
+ *        FIELD_SFX_SET_NONE only clears it.
+ * @note The resource holds a section count and offsets; each section is an
+ *       effect table (its last offset entry marks its end) followed by its bank.
  */
-void func_800A3BE8(s32 bank_id)
+void field_load_sfx_tables(s32 set_id)
 {
-    extern FieldBankCopyHeader D_80119F00;
-    FieldBankCopyHeader *header;
-    u8 *src;
+    /* A separate copy of the set id for the slot-flag lookup; using set_id there changes register allocation. */
+    s32 set_index = set_id;
+    FieldSfxTableBuffer *tables;
+    u8 *base;
     u8 *cursor;
-    u8 *copy_cursor;
-    u8 *sub_block;
-    u8 *sub_block_end;
-    u8 *flag;
-    u8 *header_base;
-    s32 *offsets;
-    s32 resource_id;
+    u8 *table;
+    u8 *table_end;
+    u8 *buffer;
+    s32 *blob;
+    s32 *entry;
     s32 count;
     s32 i;
 
-    if (bank_id == -2)
+    if (set_id == FIELD_SFX_SET_KEEP)
     {
         return;
     }
-
-    offsets = (s32 *)&D_80119F00;
-    offsets[2] = 0;
-    offsets[1] = 0;
-    D_80119F00.table_offset = 0;
-
-    resource_id = bank_id + 0x51;
-    if (bank_id == -1)
+    g_field_sfx_tables.reserved_1 = 0;
+    g_field_sfx_tables.reserved_0 = 0;
+    g_field_sfx_tables.active_table_offset = 0;
+    if (set_id == FIELD_SFX_SET_NONE)
     {
         return;
     }
-
-    resource_id = (u16)resource_id;
-    header = (FieldBankCopyHeader *)offsets;
-    if (bank_id != 0)
-    {
-        header = (FieldBankCopyHeader *)offsets;
-    }
-    cursor = (u8 *)header + sizeof(*header);
-    offsets = (s32 *)g_field_cd_buffer;
-
-    cdrom_queue_read(resource_id, offsets);
-    src = (u8 *)offsets;
-    offsets = NULL;
+    buffer = g_field_cd_buffer;
+    cdrom_queue_read((u16)(set_id + FIELD_SFX_SET_RESOURCE_BASE), buffer);
     cdrom_wait_queue_empty();
-
-    i = 0;
-    offsets = (s32 *)(src + 4);
-    do
+    blob = (s32 *)buffer;
+    base = (u8 *)&g_field_sfx_tables;
+    tables = (FieldSfxTableBuffer *)base;
+    cursor = tables->table_data;
+    entry = blob + 1;
+    count = blob[0];
+    for (i = 0; i < count; i++)
     {
-        count = *(volatile s32 *)src;
-    } while (0);
-
-    if (count <= 0)
-    {
-        return;
-    }
-
-    header_base = (u8 *)header;
-
-    flag = (u8 *)bank_id;
-    flag += (s32)D_800EC398;
-
-    do
-    {
-        header->table_offset = (s32)(((cursor - header_base) >> 2) * 4);
-
-        sub_block = src + (s32)(sub_block = (u8 *)*offsets);
-        sub_block_end = sub_block + *(s32 *)(sub_block + (*(s32 *)sub_block) * 4);
-
-        copy_cursor = cursor;
-        if (sub_block != sub_block_end)
+        /* Word-aligned offset of the table about to be copied. */
+        tables->active_table_offset = ((cursor - base) >> 2) * 4;
+        /* The offset is loaded into table first; adding blob + table directly swaps the addu operands. */
+        table = (u8 *)blob + (s32)(table = (u8 *)*entry);
+        table_end = table + ((s32 *)table)[*(s32 *)table];
         {
-            do
+            u8 *dst = cursor;
+
+            while (table != table_end)
             {
-                *copy_cursor = *sub_block;
-                sub_block++;
-                copy_cursor++;
-            } while (sub_block != sub_block_end);
+                *dst++ = *table++;
+            }
+            cursor = dst;
         }
-
-        cursor = copy_cursor;
-        if (*flag == 0)
+        if (g_field_sfx_set_uses_slots[set_index] == 0)
         {
-            akao_upload_bank_blocking((AkaoBankHeader *)sub_block_end, 1);
+            akao_upload_bank_blocking((AkaoBankHeader *)table_end, 1);
             return;
         }
-
-        func_80022EF8(sub_block_end, i, 1);
-        i++;
-        offsets++;
-    } while (i < count);
+        func_80022EF8(table_end, i, 1);
+        entry++;
+    }
 }
 
 /**
- * @brief Load a single sound-bank table and hand it to the streaming uploader.
- * @param slot Destination table slot (0 or 1); selects a 0x1A00-byte region.
- * @param bank_id Resource index; -2 preserves state and -1 clears only the header.
+ * @brief Load a weapon effect table and upload its bank into the weapon's slot.
+ * @param slot Weapon table slot (0 or 1).
+ * @param weapon_type Weapon type; FIELD_SFX_SET_KEEP keeps the table and
+ *        FIELD_SFX_SET_NONE only clears it.
  */
-void func_800A3D44(s32 slot, s32 bank_id)
+void field_load_weapon_sfx_table(s32 slot, s32 weapon_type)
 {
-    extern u8 g_field_sound_tables[];
     u8 *dst;
     u8 *base;
     u8 *src;
     u8 *end;
     u8 *dst_cursor;
 
-    if (bank_id != -2)
+    if (weapon_type != FIELD_SFX_SET_KEEP)
     {
+        /* Taking the table base into a local first keeps the original instruction order. */
         base = g_field_sound_tables;
-        dst = base + slot * 0x1A00;
+        dst = base + slot * FIELD_WEAPON_SFX_TABLE_SIZE;
         *(s32 *)dst = 0;
-        if (bank_id != -1)
+        if (weapon_type != FIELD_SFX_SET_NONE)
         {
-            bank_id += 0x83;
+            weapon_type += FIELD_WEAPON_SFX_RESOURCE_BASE;
             src = g_field_cd_buffer;
-            cdrom_queue_read(bank_id & 0xFFFF, src);
+            cdrom_queue_read(weapon_type & 0xFFFF, src);
             cdrom_wait_queue_empty();
-            end = src + *(s32 *)(src + (*(s32 *)src * 4));
+            end = src + ((s32 *)src)[*(s32 *)src];
             dst_cursor = dst;
-            if (src != end)
+            while (src != end)
             {
-                do
-                {
-                    *dst_cursor++ = *src++;
-                } while (src != end);
+                *dst_cursor++ = *src++;
             }
             func_80022ED8(end, slot, 1);
         }
@@ -599,30 +624,28 @@ void func_800A3D44(s32 slot, s32 bank_id)
 }
 
 /**
- * @brief Finds an available SFX slot in the selected three-bit group.
- *
- * @param buffer Buffer address forwarded to akao_play_sfx_from_buffer.
- * @param pan Pan value forwarded to akao_play_sfx_from_buffer.
- * @param channel_group Channel-group selector; group base is channel_group * 3.
- *
- * @return Undefined; the original declares an int return and never sets it.
+ * @brief Play an effect buffer on a free voice of a channel group.
+ * @param buffer Effect buffer address.
+ * @param pan Pan position.
+ * @param channel_group Channel group; groups past the last one are ignored.
+ * @return Nothing meaningful; the original declares an int return and never sets it.
  */
-s32 func_800A3E10(s32 buffer, s32 pan, s32 channel_group)
+s32 field_play_sfx_buffer(s32 buffer, s32 pan, s32 channel_group)
 {
     s32 base;
     s32 i;
     s32 mask;
 
-    if (channel_group * 3 < 0x18)
+    if (channel_group * FIELD_SFX_GROUP_VOICES < FIELD_SFX_GROUP_COUNT * FIELD_SFX_GROUP_VOICES)
     {
         i = 0;
-        base = channel_group * 3;
-        for (; i < 3; i++)
+        base = channel_group * FIELD_SFX_GROUP_VOICES;
+        for (; i < FIELD_SFX_GROUP_VOICES; i++)
         {
             mask = 1 << (base + i);
             if (!akao_is_sfx_playing(mask))
             {
-                akao_play_sfx_from_buffer(buffer, mask, pan, 0x7F);
+                akao_play_sfx_from_buffer(buffer, mask, pan, AKAO_VOLUME_MAX);
                 break;
             }
         }
@@ -630,190 +653,144 @@ s32 func_800A3E10(s32 buffer, s32 pan, s32 channel_group)
 }
 
 /**
- * @brief Reset the CD streaming state block to idle.
+ * @brief Reset the music stream state.
+ * @note Declared inline so field_start_music_stream gets its own copy, as in the original.
  */
-void func_800A3EBC(void)
+inline void field_reset_music_stream(void)
 {
-    extern s32 D_80117EEC;
-    extern s32 D_8011F308;
-    extern s32 D_8011F324;
-
-    D_80117EE0 = 0;
-    D_80117EEC = 0;
-    D_8011F324 = 0;
-    D_8011F328 = 0;
-    D_8011F308 = 0;
-    D_80117EF0 = 0;
-    D_80119EF8 = 0;
-    D_80117EE8 = 0;
-    D_8011F320 = 0;
-    D_8011F300 = 0;
-    D_80117EE4 = 0;
+    g_field_stream_sector_ready = 0;
+    g_field_stream_sector = 0;
+    g_field_stream_bytes_left = 0;
+    g_field_stream_bytes_done = 0;
+    g_field_stream_state = FIELD_STREAM_IDLE;
+    g_field_stream_read_handle = 0;
+    g_field_stream_song_remaining = 0;
+    g_field_stream_song_bytes = 0;
+    g_field_stream_bank_bytes = 0;
+    g_field_stream_bank_pending = 0;
+    g_field_stream_resource = 0;
 }
 
 /**
- * @brief Kick off a guarded CD streaming read when the channel is idle.
- *
- * When the busy flag @c D_80117EE4 is clear, resets the streaming state block
- * and issues a queued CD read for resource index @p resource_base + 0x17, latching the
- * completion callback func_800A4348 and its queue handle in @c D_80117EF0.
- *
- * @param resource_base Base resource index; the read uses resource_base + 0x17.
- *
+ * @brief Start streaming a music file unless a stream is already running.
+ * @param music_index Music-file index (0 selects MSC_DATA.DAT).
  */
-void func_800A3F18(s32 resource_base)
+void field_start_music_stream(s32 music_index)
 {
-    extern s32 D_80117EEC;
-    extern s32 D_8011F308;
-    extern s32 D_8011F324;
-
-    if (D_80117EE4 == 0)
+    if (g_field_stream_resource == 0)
     {
-        D_80117EE0 = 0;
-        D_80117EEC = 0;
-        D_8011F324 = 0;
-        D_8011F328 = 0;
-        D_8011F308 = 0;
-        D_80117EF0 = 0;
-        D_80119EF8 = 0;
-        D_80117EE8 = 0;
-        D_8011F320 = 0;
-        D_8011F300 = 0;
-        D_80117EE4 = resource_base + 0x17;
-        D_80117EF0 = cdrom_queue_read_with_callback((u16)D_80117EE4, &func_800A4348);
+        field_reset_music_stream();
+        g_field_stream_resource = music_index + CD_RES_MSC_DATA;
+        g_field_stream_read_handle =
+            cdrom_queue_read_with_callback((u16)g_field_stream_resource, field_stream_sector_callback);
     }
 }
 
-/** @brief Header at the start of the first streamed music sector. */
-typedef struct
-{
-    s32 unk0;
-    /** @brief Offset of the song data in the sector; the CD DMA buffer is re-read on every access. */
-    volatile s32 data_offset;
-    /** @brief End offset of the song data. */
-    s32 data_end;
-} FieldMusicStreamHeader;
-
-/** @brief The music stream header in the current CD sector buffer (D_80117EEC). */
-#define FIELD_MUSIC_STREAM_HEADER ((FieldMusicStreamHeader *)D_80117EEC)
+/** @brief The stream header in the current sector. */
+#define FIELD_MUSIC_STREAM_HEADER ((FieldMusicStreamHeader *)g_field_stream_sector)
 
 /**
- * @brief Advance the field music block copy, upload and playback state machine.
- * @note The resident song is assembled at D_8003ECA0; bank data uses 0x801DD000.
+ * @brief Process the last streamed sector: copy song data, stage and upload bank data, then play.
+ * @note The song is assembled in D_8003ECA0 and the bank data is staged at
+ *       FIELD_STREAM_BANK_BUFFER.
  */
-void func_800A3FB0(void)
+void field_update_music_stream(void)
 {
-    s32 akao_cmd_d0(s32);
-    s32 akao_cmd_d4(s32);
-    s32 akao_get_xfer_state(void);
-    s32 akao_reset_xfer_state(void);
-    s32 akao_streaming_upload_tick(u8 *source, u32 avail, s32 wait_for_spu);
-    void func_800A4320(u8 *, u8 *, s32);
-    extern u8 D_8003ECA0[];
-    extern u8 *D_80117EEC;
-    extern u32 D_8011F308;
-    extern u32 D_8011F324;
-    s32 resident_bytes;
-    s32 upload_bytes;
-    s32 remaining_bytes;
-    s32 remaining_bytes_second;
-    s32 data_offset;
-    s32 song_handle;
-    s32 resident_remaining;
+    s32 song_tail;
 
-    if (D_80117EE0 != 0)
+    if (g_field_stream_sector_ready != 0)
     {
-        switch (D_8011F308)
+        switch (g_field_stream_state)
         {
-        case 1:
-            if (D_80119EF8 != 0)
+        case FIELD_STREAM_SECTOR:
+            if (g_field_stream_song_remaining != 0)
             {
-                if (D_80119EF8 < 0x800)
+                if (g_field_stream_song_remaining < FIELD_STREAM_SECTOR_SIZE)
                 {
-                    bcopy(D_80117EEC, D_80117EE8 + D_8003ECA0, D_80119EF8);
-                    bcopy(D_80117EEC + D_80119EF8, (void *)0x801DD000, 0x800 - D_80119EF8);
-                    resident_bytes = D_80119EF8;
-                    D_8011F300 = 1;
-                    D_80119EF8 = 0;
-                    D_8011F320 = 0x800 - resident_bytes;
-                    D_80117EE8 += resident_bytes;
+                    /* The song ends in this sector; the rest is bank data. */
+                    bcopy(g_field_stream_sector, g_field_stream_song_bytes + D_8003ECA0, g_field_stream_song_remaining);
+                    bcopy(g_field_stream_sector + g_field_stream_song_remaining, (void *)FIELD_STREAM_BANK_BUFFER,
+                          FIELD_STREAM_SECTOR_SIZE - g_field_stream_song_remaining);
+                    song_tail = g_field_stream_song_remaining;
+                    g_field_stream_bank_pending = 1;
+                    g_field_stream_song_remaining = 0;
+                    g_field_stream_bank_bytes = FIELD_STREAM_SECTOR_SIZE - song_tail;
+                    g_field_stream_song_bytes += song_tail;
                 }
                 else
                 {
-                    bcopy(D_80117EEC, D_80117EE8 + D_8003ECA0, 0x800);
-                    resident_remaining = D_80119EF8 - 0x800;
-                    D_80117EE8 += 0x800;
-                    D_80119EF8 = resident_remaining;
-                    if (resident_remaining == 0)
+                    bcopy(g_field_stream_sector, g_field_stream_song_bytes + D_8003ECA0, FIELD_STREAM_SECTOR_SIZE);
+                    g_field_stream_song_bytes += FIELD_STREAM_SECTOR_SIZE;
+                    g_field_stream_song_remaining -= FIELD_STREAM_SECTOR_SIZE;
+                    if (g_field_stream_song_remaining == 0)
                     {
-                        D_8011F320 = 0;
-                        D_8011F300 = 1;
+                        g_field_stream_bank_bytes = 0;
+                        g_field_stream_bank_pending = 1;
                     }
                 }
-                D_80117EE0 = 0;
+                g_field_stream_sector_ready = 0;
                 break;
             }
-            if (D_8011F300 != 0)
+            if (g_field_stream_bank_pending != 0)
             {
-                bcopy(D_80117EEC, (void *)(D_8011F320 + 0x801DD000), 0x800);
-                D_8011F320 += 0x800;
+                /* First bank sector: restart the upload. */
+                bcopy(g_field_stream_sector, (void *)(g_field_stream_bank_bytes + FIELD_STREAM_BANK_BUFFER),
+                      FIELD_STREAM_SECTOR_SIZE);
+                g_field_stream_bank_bytes += FIELD_STREAM_SECTOR_SIZE;
                 akao_reset_xfer_state();
-                akao_streaming_upload_tick((u8*)0x801DD000, 0x800, 1);
-                remaining_bytes = D_8011F320 - 0x800;
-                D_8011F320 = remaining_bytes;
-                func_800A4320((void *)0x801DD000, (void *)0x801DD800, remaining_bytes);
-                D_8011F308 = 3;
+                akao_streaming_upload_tick((u8 *)FIELD_STREAM_BANK_BUFFER, FIELD_STREAM_SECTOR_SIZE, 1);
+                g_field_stream_bank_bytes -= FIELD_STREAM_SECTOR_SIZE;
+                field_stream_copy_bytes((u8 *)FIELD_STREAM_BANK_BUFFER, (u8 *)FIELD_STREAM_BANK_OVERFLOW,
+                                        g_field_stream_bank_bytes);
+                g_field_stream_state = FIELD_STREAM_WAIT_UPLOAD;
             }
             else
             {
-                bcopy(D_80117EEC, (void *)(D_8011F320 + 0x801DD000), 0x800);
-                if ((u32)D_8011F324 < 0x800U)
+                bcopy(g_field_stream_sector, (void *)(g_field_stream_bank_bytes + FIELD_STREAM_BANK_BUFFER),
+                      FIELD_STREAM_SECTOR_SIZE);
+                if (g_field_stream_bytes_left < (u32)FIELD_STREAM_SECTOR_SIZE)
                 {
-                    upload_bytes = D_8011F320 + D_8011F324;
-                    D_8011F320 = upload_bytes;
-                    akao_streaming_upload_tick((u8*)0x801DD000, upload_bytes, 1);
-                    D_8011F308 = 4;
-                    D_8011F320 = 0;
+                    /* Last sector: upload what is left, then play once the transfer is done. */
+                    g_field_stream_bank_bytes += g_field_stream_bytes_left;
+                    akao_streaming_upload_tick((u8 *)FIELD_STREAM_BANK_BUFFER, g_field_stream_bank_bytes, 1);
+                    g_field_stream_state = FIELD_STREAM_WAIT_LAST_UPLOAD;
+                    g_field_stream_bank_bytes = 0;
                 }
                 else
                 {
-                    D_8011F320 += 0x800;
-                    akao_streaming_upload_tick((u8*)0x801DD000, 0x800, 1);
-                    D_8011F308 = 3;
-                    remaining_bytes_second = D_8011F320 - 0x800;
-                    D_8011F320 = remaining_bytes_second;
-                    func_800A4320((void *)0x801DD000, (void *)0x801DD800, remaining_bytes_second);
+                    g_field_stream_bank_bytes += FIELD_STREAM_SECTOR_SIZE;
+                    akao_streaming_upload_tick((u8 *)FIELD_STREAM_BANK_BUFFER, FIELD_STREAM_SECTOR_SIZE, 1);
+                    g_field_stream_state = FIELD_STREAM_WAIT_UPLOAD;
+                    g_field_stream_bank_bytes -= FIELD_STREAM_SECTOR_SIZE;
+                    field_stream_copy_bytes((u8 *)FIELD_STREAM_BANK_BUFFER, (u8 *)FIELD_STREAM_BANK_OVERFLOW,
+                                            g_field_stream_bank_bytes);
                 }
             }
-            D_8011F300 = 0;
+            g_field_stream_bank_pending = 0;
             return;
-        case 2:
-            data_offset = FIELD_MUSIC_STREAM_HEADER->data_offset;
-            D_80119EF8 = FIELD_MUSIC_STREAM_HEADER->data_end - FIELD_MUSIC_STREAM_HEADER->data_offset;
-            bcopy(D_80117EEC + data_offset, D_8003ECA0, 0x800 - data_offset);
-            D_80117EE0 = 0;
-            D_80117EE8 = 0x800 - FIELD_MUSIC_STREAM_HEADER->data_offset;
-            D_80119EF8 -= 0x800 - FIELD_MUSIC_STREAM_HEADER->data_offset;
+        case FIELD_STREAM_FIRST_SECTOR:
+            g_field_stream_song_remaining = FIELD_MUSIC_STREAM_HEADER->bank_offset - FIELD_MUSIC_STREAM_HEADER->song_offset;
+            bcopy(g_field_stream_sector + FIELD_MUSIC_STREAM_HEADER->song_offset, D_8003ECA0,
+                  FIELD_STREAM_SECTOR_SIZE - FIELD_MUSIC_STREAM_HEADER->song_offset);
+            g_field_stream_sector_ready = 0;
+            g_field_stream_song_bytes = FIELD_STREAM_SECTOR_SIZE - FIELD_MUSIC_STREAM_HEADER->song_offset;
+            g_field_stream_song_remaining -= FIELD_STREAM_SECTOR_SIZE - FIELD_MUSIC_STREAM_HEADER->song_offset;
             return;
-        case 3:
+        case FIELD_STREAM_WAIT_UPLOAD:
             if (akao_get_xfer_state() == 0)
             {
-                D_80117EE0 = 0;
+                g_field_stream_sector_ready = 0;
             }
             break;
-        case 4:
+        case FIELD_STREAM_WAIT_LAST_UPLOAD:
             if (akao_get_xfer_state() == 0)
             {
-                D_80117EE0 = 0;
-                song_handle = akao_play_song((AkaoHeader *)D_8003ECA0);
-                D_8011F310 = song_handle;
-                akao_set_song_volume(song_handle, g_field_song_volume);
-                akao_cmd_d4(0);
-                akao_cmd_d0(0);
-                D_80117EE4 = 0;
+                g_field_stream_sector_ready = 0;
+                field_play_song();
+                g_field_stream_resource = 0;
             }
             break;
-        case 0:
+        case FIELD_STREAM_IDLE:
         default:
             break;
         }
@@ -821,82 +798,64 @@ void func_800A3FB0(void)
 }
 
 /**
- * @brief Copy a run of bytes from one buffer to another.
- * @param dst Destination buffer.
- * @param src Source buffer.
- * @param count Number of bytes to copy.
+ * @brief Copy bytes forward.
+ * @param dst Destination.
+ * @param src Source.
+ * @param count Number of bytes; nothing is copied when it is not positive.
  */
-void func_800A4320(u8 *dst, u8 *src, s32 count)
+static void field_stream_copy_bytes(u8 *dst, u8 *src, s32 count)
 {
-    u8 temp;
-
     if (count > 0)
     {
         do
         {
-            temp = *src;
-            src += 1;
-            count -= 1;
-            *dst = temp;
-            dst += 1;
-        } while (count != 0);
+            *dst++ = *src++;
+        } while (--count != 0);
     }
 }
 
 /**
- * @brief Claim the fixed buffer at 0x801DC000 (or 0x801DC800 when bit 11 of request is set) if it is free.
- *
- * Records request and size in D_8011F328 and D_8011F324, sets D_8011F308 to 2
- * when request is 0 and to 1 otherwise, and marks the buffer busy via D_80117EE0.
- *
- * @param request Request word; bit 11 selects the upper buffer half.
- * @param size Stored to D_8011F324.
- * @return The claimed buffer, or NULL when it is already busy.
+ * @brief CD read callback of the music stream: hand out the next sector buffer.
+ * @param bytes_transferred Bytes read so far; bit 11 selects the upper sector buffer.
+ * @param bytes_remaining Bytes still to read.
+ * @return The sector buffer to read into, or NULL while the last sector is unprocessed.
  */
-void *func_800A4348(s32 request, void *size)
+static u8 *field_stream_sector_callback(s32 bytes_transferred, u32 bytes_remaining)
 {
-    extern void *D_80117EEC;
-    extern s32 D_8011F308;
-    extern void *D_8011F324;
-    void *shared;
-    void *ptr;
+    u8 *buffer;
 
-    if (D_80117EE0 == 0)
+    if (g_field_stream_sector_ready == 0)
     {
-        if (request & 0x800)
+        if (bytes_transferred & FIELD_STREAM_SECTOR_SIZE)
         {
-            shared = (void *)0x801DC800;
-            ptr = shared;
+            g_field_stream_sector = buffer = (u8 *)FIELD_STREAM_SECTOR_BUFFER_UPPER;
         }
         else
         {
-            ptr = (void *)0x801DC000;
+            g_field_stream_sector = buffer = (u8 *)FIELD_STREAM_SECTOR_BUFFER;
         }
-        D_80117EEC = ptr;
-        if (request == 0)
+        if (bytes_transferred == 0)
         {
-            D_8011F308 = 2;
+            g_field_stream_state = FIELD_STREAM_FIRST_SECTOR;
         }
         else
         {
-            D_8011F308 = 1;
+            g_field_stream_state = FIELD_STREAM_SECTOR;
         }
-        D_8011F328 = request;
-        /* One temporary for both the upper buffer and size keeps the original register choice. */
-        shared = size;
-        D_8011F324 = shared;
-        D_80117EE0 = 1;
-        return ptr;
+        g_field_stream_bytes_done = bytes_transferred;
+        g_field_stream_bytes_left = bytes_remaining;
+        g_field_stream_sector_ready = 1;
+        return buffer;
     }
-    return (void *)0;
+    return NULL;
 }
 
 /**
- * @brief Zero the 30 bytes of D_8011F358, last byte first.
+ * @brief Clear the saved ring selections (D_8011F358), last entry first.
  */
-void func_800A43C0(void)
+void field_reset_ring_selections(void)
 {
-    s32 i = 0x1D;
+    s32 i = FIELD_RING_SELECTION_COUNT - 1;
     u8 *p = &D_8011F358[i];
 
     for (; i >= 0; i--)

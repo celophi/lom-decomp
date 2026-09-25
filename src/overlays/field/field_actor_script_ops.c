@@ -207,17 +207,6 @@ enum
     FIELD_SCRIPT_OP_END = 0xFF
 };
 
-/** @brief Collision probe: position, horizontal footprint and height tolerance (see field_collision.c). */
-typedef struct FieldCollisionQuery
-{
-    s32 x;
-    s32 y;
-    s32 z;
-    u16 width;
-    s16 height_tolerance;
-    u16 depth;
-} FieldCollisionQuery;
-
 /** @brief Evasion request: a battle action block with one more word. */
 typedef struct
 {
@@ -271,8 +260,8 @@ extern s32 g_field_actions_limited;
 extern s32 D_8010AE58;
 extern s32 g_field_boss_hud_shake_frame;
 
-s32 func_80060F58(FieldCollisionQuery* start, FieldCollisionQuery* goal, FieldPathPoint* path, s32 mode);
-void func_8006304C(FieldCollisionQuery* query);
+s32 field_collision_find_path(FieldCollisionQuery* start, FieldCollisionQuery* goal, FieldPathPoint* path, s32 mode);
+void field_collision_dilate_query(FieldCollisionQuery* query);
 /* Declared without parameters: the 0xB9 spawn passes the control word as an extra argument. */
 void field_restart_actor_animation();
 void field_restart_actor_animation_reverse(FieldActor* actor);
@@ -285,8 +274,6 @@ void field_knock_down_actor(FieldActor* actor, s32 clear_recovery);
 void field_start_actor_jump();
 void field_start_actor_defeat();
 void field_count_chain_hit(s32 object_index);
-/* Declared without parameters: opcode 0xAB passes three of its four arguments. */
-void func_800A3A90();
 /* Defined (void); the call passes the object key. */
 void func_800B48B8();
 s32 field_battle_resolve_action(FieldBattleAction* action);
@@ -460,17 +447,17 @@ static void field_run_actor_script_command(FieldActor* actor)
         actor->script_offset++;
         return;
     case FIELD_SCRIPT_OP_PLAY_SOUND:
-        func_800A3938(script[1], FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(script[1], FIELD_SOUND_PAN_CENTRE);
         actor->script_offset += 2;
         return;
     case FIELD_SCRIPT_OP_PLAY_OBJECT_SOUND:
         if (actor->object_index < (u32)FIELD_PARTY_COUNT)
         {
-            func_800A3A90(script[1], FIELD_SOUND_PAN_CENTRE, actor->object_index);
+            field_play_weapon_sfx(script[1], FIELD_SOUND_PAN_CENTRE, actor->object_index);
         }
         else if (actor->object_index < (u32)(FIELD_PARTY_COUNT * 2))
         {
-            func_800A39A8(script[1], FIELD_SOUND_PAN_CENTRE, actor->object_index - FIELD_PARTY_COUNT, actor->object_index);
+            field_play_set_sfx(script[1], FIELD_SOUND_PAN_CENTRE, actor->object_index - FIELD_PARTY_COUNT, actor->object_index);
         }
         actor->script_offset += 2;
         return;
@@ -792,11 +779,11 @@ static void field_run_actor_script_command(FieldActor* actor)
             }
             query_start.height_tolerance = FIELD_FOOTPRINT_HEIGHT;
             query_goal.height_tolerance = FIELD_FOOTPRINT_HEIGHT;
-            func_8006304C(&query_start);
+            field_collision_dilate_query(&query_start);
             query_goal.x = g_field_object_states[actor->object_index].target_x;
             query_goal.y = g_field_object_states[actor->object_index].target_y;
             query_goal.z = g_field_object_states[actor->object_index].target_z;
-            index_or_count = func_80060F58(&query_start, &query_goal, g_field_object_states[actor->object_index].path, 0);
+            index_or_count = field_collision_find_path(&query_start, &query_goal, g_field_object_states[actor->object_index].path, 0);
             if (index_or_count <= 0)
             {
                 g_field_object_states[actor->object_index].path_index = 0;
@@ -1384,7 +1371,7 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound)
     }
     if (sound != -1)
     {
-        func_800A3938(sound, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(sound, FIELD_SOUND_PAN_CENTRE);
     }
     func_800B48B8(g_field_object_states[actor->object_index].key);
     g_field_object_states[actor->object_index].flags = 0;
@@ -1469,7 +1456,7 @@ void field_route_actor_to_object(FieldActor* actor, s32 target_index, s32 restar
         }
         start.height_tolerance = FIELD_FOOTPRINT_HEIGHT;
         goal.height_tolerance = FIELD_FOOTPRINT_HEIGHT;
-        func_8006304C(&start);
+        field_collision_dilate_query(&start);
         FIELD_OBJECT_TARGETS[actor->object_index].target_x = g_field_actors[target_index].x;
         target = &g_field_actors[target_index];
         FIELD_OBJECT_TARGETS[actor->object_index].target_y = target->y;
@@ -1477,7 +1464,7 @@ void field_route_actor_to_object(FieldActor* actor, s32 target_index, s32 restar
         goal.x = target->x;
         goal.y = target->y;
         goal.z = target->z;
-        path_length = func_80060F58(&start, &goal, g_field_object_states[actor->object_index].path, 0);
+        path_length = field_collision_find_path(&start, &goal, g_field_object_states[actor->object_index].path, 0);
         if (path_length <= 0)
         {
             g_field_object_states[actor->object_index].path_index = 0;

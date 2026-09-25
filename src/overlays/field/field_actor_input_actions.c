@@ -95,7 +95,7 @@ extern s32 g_field_action_context;
 extern s32 g_field_actions_limited;
 
 /* field_contact_geometry.h cannot be included next to field_actor_tables.h (two g_field_object_states types). */
-void field_probe_actor_interaction(struct FieldMotionRecord* entry);
+void field_probe_actor_interaction(FieldActor* actor);
 
 /**
  * @brief Collect the held buttons that are bound to an action.
@@ -152,7 +152,7 @@ void field_poll_leader_interaction(void)
         second_status = field_text_get_status(1);
         if ((g_field_active_group == 0) && (first_status == FIELD_TEXT_CLOSED) && (second_status == first_status))
         {
-            field_probe_actor_interaction((struct FieldMotionRecord*)g_field_actors);
+            field_probe_actor_interaction(g_field_actors);
         }
     }
 }
@@ -167,7 +167,7 @@ u16 field_resolve_action_command(FieldActor* actor, s32 player)
 {
     s32 action;
 
-    action = func_800A29F8(player, (actor->animation >> FIELD_ANIMATION_FACING_SHIFT) ^ 1, 0);
+    action = field_command_history_match(player, (actor->animation >> FIELD_ANIMATION_FACING_SHIFT) ^ 1, 0);
     if (action != FIELD_ACTION_NONE)
     {
         g_field_action_context = (g_field_action_context & ~0xFF) | action;
@@ -184,7 +184,7 @@ u16 field_resolve_action_command(FieldActor* actor, s32 player)
         {
             if (action != FIELD_ACTION_NONE)
             {
-                func_800A3938(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
             }
             return 0;
         }

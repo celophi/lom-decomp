@@ -1,79 +1,112 @@
+/**
+ * @file field_command_history.c
+ * @brief Per-player history of pad directions and buttons, and the command
+ *        recognizer that reads special moves out of it.
+ *
+ * Each frame field_command_history_record() appends direction changes and
+ * newly pressed buttons (as button codes of the bound actions) to a 16-entry
+ * byte history per player. field_command_history_match() scans that history
+ * for a button or a direction run followed by the finishing button and
+ * returns the command it stands for.
+ */
+
 #include "common.h"
-#include "field_calls.h"
+#include "main.h"
+#include "controller_internal.h"
+#include "sdk/libetc.h"
 #include "sdk/strings.h"
+#include "field_actor.h"
+#include "field_calls.h"
+#include "field_records.h"
 
-/** @brief Controller sample with button bits and signed directional axes. */
-typedef struct
-{
-    u8 status;
-    u8 pad01;
-    u16 buttons;
-    u8 pad04[8];
-    s16 axis_x;
-    s16 axis_y;
-    u8 pad10[0xAE - 0x10];
-} ControllerState;
+/** @brief Entries in one player's history row. */
+#define FIELD_HISTORY_LENGTH 16
 
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-} UnkStruct80117ED0;
+/** @brief History codes below this are direction nibbles (1 up, 2 right, 4 down, 8 left). */
+#define FIELD_HISTORY_BUTTON_CODE_MIN 0x10
 
-/* Shared extern data declared with a consistent type by every member. */
-extern s32 D_80117E88[];
-extern s32 D_80117EB8[];
-extern u8 D_800EC2F4[];
+/** @brief Button code that ends a direction pattern. */
+#define FIELD_HISTORY_PATTERN_FINISH 0x50
+
+/** @brief Idle counter value at which the history is dropped. */
+#define FIELD_HISTORY_IDLE_EXPIRE 15
+
+/** @brief Largest value of the idle counter (it stops counting there). */
+#define FIELD_HISTORY_IDLE_MAX 16
+
+/** @brief Direction patterns in g_field_command_patterns. */
+#define FIELD_COMMAND_PATTERN_COUNT 6
+
+/** @brief Bytes per pattern string, including the terminator and padding. */
+#define FIELD_COMMAND_PATTERN_SIZE 8
+
+/** @brief Returned by field_command_history_match() when no command was found. */
+#define FIELD_COMMAND_NONE 0xFF
+
+/** @brief Pad direction bits (after the byte swap). */
+#define FIELD_PAD_DIRECTIONS (PADLup | PADLright | PADLdown | PADLleft)
+
+/** @brief Shift from a pad direction bit to its history nibble. */
+#define FIELD_PAD_DIRECTION_SHIFT 12
+
+/** @brief Number of face and shoulder buttons that can start a history entry. */
+#define FIELD_PAD_ACTION_BUTTON_COUNT 8
+
+/** @brief Entry count per player (s32[2]). */
+extern s32 g_field_command_history_count[FIELD_PLAYER_COUNT];
+
+/** @brief Buttons seen in the previous frame, per player (u16[4]). */
+extern u16 g_field_command_prev_buttons[];
+
+/** @brief History rows: direction nibbles and button codes, oldest first. */
+extern u8 g_field_command_history[FIELD_PLAYER_COUNT][FIELD_HISTORY_LENGTH];
+
+/** @brief Frames since the last new entry, per player (capped at 16). */
+extern s32 g_field_command_idle_frames[FIELD_PLAYER_COUNT];
+
+/** @brief Button code for each bound action slot (0x10 to 0x80). */
+extern u8 g_field_action_command_codes[];
+
+/** @brief Physical button index to action slot binding index. */
 extern u8 g_field_hint_button_map[];
-extern u8 D_800EC304[];
-extern u8 D_800EC334[];
-extern u8 *g_pad_ctx;
-extern UnkStruct80117ED0 D_80117ED0;
+
+/** @brief Direction patterns (NUL-terminated nibble strings) that end with the finish button. */
+extern char g_field_command_patterns[FIELD_COMMAND_PATTERN_COUNT][FIELD_COMMAND_PATTERN_SIZE];
+
+/** @brief Command returned for each entry of g_field_command_patterns. */
+extern u8 g_field_command_pattern_ids[FIELD_COMMAND_PATTERN_COUNT];
+
+extern s32 D_80117ED0[];
 extern s32 D_80117EC0;
 extern s32 D_80117EC4;
 extern u8 D_80117EC8[];
 
-/*
- * D_80117E90 is read as s16 by func_800A255C and u16 by func_800A2594, so it
- * stays block scope inside each user. D_80117E98 is a u8[][0x10] byte history
- * (one 16-entry row per player); its users declare it block scope as well.
- */
-
-/* Forward prototypes for members defined later in the file. */
-void func_800A2958(s32);
-void field_command_history_clear(s32);
+static void field_command_history_shift(s32 player);
+static void field_command_history_consume(s32 player, s32 count);
 
 /**
- * @brief Reset a player's direction/button history counters and idle timers.
- * @note Clears the two-entry count, resets the idle counters to 0x10, and zeroes
- * the direction snapshots for both tracked players.
+ * @brief Reset both players' histories and idle counters.
  */
-void func_800A255C(void)
+void field_command_history_reset(void)
 {
-    extern s16 D_80117E90[];
-
-    D_80117E88[1] = 0;
-    D_80117E88[0] = 0;
-    D_80117EB8[1] = 0x10;
-    D_80117EB8[0] = 0x10;
-    D_80117E90[1] = 0;
-    D_80117E90[0] = 0;
+    g_field_command_history_count[1] = 0;
+    g_field_command_history_count[0] = 0;
+    g_field_command_idle_frames[1] = FIELD_HISTORY_IDLE_MAX;
+    g_field_command_idle_frames[0] = FIELD_HISTORY_IDLE_MAX;
+    g_field_command_prev_buttons[1] = 0;
+    g_field_command_prev_buttons[0] = 0;
 }
 
 /**
- * @brief Append direction and newly pressed button transitions to a player's input history.
- * @param player Controller index; indices at or above two are ignored.
- * @param age_sequence Nonzero to advance the inactivity counter and expire an idle sequence.
- * @note Button mappings come from the shared player context. Full histories are shifted by
- * func_800A2958; a sequence expires when its inactivity counter reaches fifteen.
+ * @brief Append direction changes and newly pressed buttons to a player's history.
+ * @param player Controller port; ports at or above two are ignored.
+ * @param age_sequence Nonzero to advance the idle counter and drop an idle history.
+ * @note A new button also records the direction held with it first.
  */
-void func_800A2594(s32 player, s32 age_sequence)
+void field_command_history_record(s32 player, s32 age_sequence)
 {
-    extern u16 D_80117E90[];
-    extern u8 D_80117E98[][0x10];
     s16 axis;
-    /* Holds the remapped buttons, then the idle counter; the shared life keeps the copy into buttons. */
+    /* Remapped buttons, later the idle counter: with a separate idle local, cse folds the copy into buttons. */
     s32 value;
     s32 buttons;
     u16 raw_buttons;
@@ -81,102 +114,106 @@ void func_800A2594(s32 player, s32 age_sequence)
     u32 button_index;
     s32 button_mask;
     u32 pressed_bit;
-    u8 *binding;
+    u8 slot;
     s32 *count;
-    ControllerState *pads = (ControllerState *)0x801ED600;
-    ControllerState *pad_x;
-    ControllerState *pad_y;
+    ControllerPortState *ports = CONTROLLER_STATE->ports;
+    /* Two port pointers: sharing one moves the reloaded port base out of v0. */
+    ControllerPortState *stick_x_port;
+    ControllerPortState *stick_y_port;
 
-    if (player < 2)
+    if (player < FIELD_PLAYER_COUNT)
     {
-        if (pads[player].status >= 0xFEU)
+        if (ports[player].published_sample.device_type >= CONTROLLER_DEVICE_CONFIGURING)
         {
             buttons = 0;
         }
         else
         {
-            raw_buttons = pads[player].buttons;
+            raw_buttons = ports[player].published_sample.held_buttons;
             buttons = (raw_buttons << 8) | (raw_buttons >> 8);
         }
-        value = ((u32) (buttons & 0x40) >> 1) | ((buttons & 0x20) * 2) | ((u32) (buttons & 0x80) >> 3) | ((buttons & 0x10) * 8) | (buttons & 0xFF0F);
+        /* Swap the up/left and right/down face buttons. */
+        value = ((u32)(buttons & PADRdown) >> 1) | ((buttons & PADRright) * 2) | ((u32)(buttons & PADRleft) >> 3) |
+                ((buttons & PADRup) * 8) | (buttons & (u16)~(PADRup | PADRright | PADRdown | PADRleft));
         buttons = value;
-        pad_x = pads + player;
-        if (pad_x->status != 0)
+        stick_x_port = ports + player;
+        if (stick_x_port->published_sample.device_type != CONTROLLER_DEVICE_DIGITAL)
         {
-            axis = pad_x->axis_x;
+            axis = stick_x_port->published_sample.left_stick_x;
             if (axis < 0)
             {
-                buttons = value | 0x8000;
+                buttons = value | PADLleft;
             }
             else if (axis > 0)
             {
-                buttons = value | 0x2000;
+                buttons = value | PADLright;
             }
-            pad_y = pads + player;
-            axis = pad_y->axis_y;
+            stick_y_port = ports + player;
+            axis = stick_y_port->published_sample.left_stick_y;
             if (axis < 0)
             {
-                buttons |= 0x1000;
+                buttons |= PADLup;
             }
             else if (axis > 0)
             {
-                buttons |= 0x4000;
+                buttons |= PADLdown;
             }
         }
-        previous_direction = D_80117E90[player] & 0xF000;
-        if ((previous_direction != (buttons & 0xF000)) && (previous_direction != 0))
+        previous_direction = g_field_command_prev_buttons[player] & FIELD_PAD_DIRECTIONS;
+        if ((previous_direction != (buttons & FIELD_PAD_DIRECTIONS)) && (previous_direction != 0))
         {
-            D_80117E98[player][D_80117E88[player]] = previous_direction >> 12;
-            if (D_80117E88[player] < 0xF)
+            g_field_command_history[player][g_field_command_history_count[player]] = previous_direction >> FIELD_PAD_DIRECTION_SHIFT;
+            if (g_field_command_history_count[player] < FIELD_HISTORY_LENGTH - 1)
             {
-                D_80117E88[player]++;
+                g_field_command_history_count[player]++;
             }
             else
             {
-                func_800A2958(player);
+                field_command_history_shift(player);
             }
-            D_80117EB8[player] = 0;
+            g_field_command_idle_frames[player] = 0;
         }
-        for (button_index = 0, button_mask = 1; button_index < 8; button_index++, button_mask <<= 1)
+        for (button_index = 0, button_mask = 1; button_index < FIELD_PAD_ACTION_BUTTON_COUNT; button_index++, button_mask <<= 1)
         {
             pressed_bit = (u16)buttons & button_mask;
-            if ((pressed_bit != 0) && ((D_80117E90[player] & button_mask) != pressed_bit))
+            if ((pressed_bit != 0) && ((g_field_command_prev_buttons[player] & button_mask) != pressed_bit))
             {
-                if (buttons & 0xF000)
+                if (buttons & FIELD_PAD_DIRECTIONS)
                 {
-                    D_80117E98[player][D_80117E88[player]] = (u16)buttons >> 12;
-                    if (D_80117E88[player] < 0xF)
+                    g_field_command_history[player][g_field_command_history_count[player]] = (u16)buttons >> FIELD_PAD_DIRECTION_SHIFT;
+                    if (g_field_command_history_count[player] < FIELD_HISTORY_LENGTH - 1)
                     {
-                        D_80117E88[player]++;
+                        g_field_command_history_count[player]++;
                     }
                     else
                     {
-                        func_800A2958(player);
+                        field_command_history_shift(player);
                     }
                 }
-                count = &D_80117E88[player];
-                binding = g_pad_ctx + player * 0x250 + g_field_hint_button_map[button_index];
-                D_80117E98[player][*count] = D_800EC2F4[binding[0x638]];
-                if (*count < 0xF)
+                count = &g_field_command_history_count[player];
+                /* g_pad_ctx points at the saved game, the block FieldGameState describes. */
+                slot = ((FieldGameState *)g_pad_ctx)->characters[player].button_actions[g_field_hint_button_map[button_index]];
+                g_field_command_history[player][*count] = g_field_action_command_codes[slot];
+                if (*count < FIELD_HISTORY_LENGTH - 1)
                 {
                     (*count)++;
                 }
                 else
                 {
-                    func_800A2958(player);
+                    field_command_history_shift(player);
                 }
-                D_80117EB8[player] = 0;
+                g_field_command_idle_frames[player] = 0;
             }
         }
-        D_80117E90[player] = buttons;
+        g_field_command_prev_buttons[player] = buttons;
         if (age_sequence != 0)
         {
-            if (D_80117EB8[player] < 0x10)
+            if (g_field_command_idle_frames[player] < FIELD_HISTORY_IDLE_MAX)
             {
-                D_80117EB8[player]++;
+                g_field_command_idle_frames[player]++;
             }
-            value = D_80117EB8[player];
-            if (value == 0xF)
+            value = g_field_command_idle_frames[player];
+            if (value == FIELD_HISTORY_IDLE_EXPIRE)
             {
                 field_command_history_clear(player);
             }
@@ -185,342 +222,241 @@ void func_800A2594(s32 player, s32 age_sequence)
 }
 
 /**
- * @brief Shift a player's row of the byte history table down by one entry.
- * @param player Row index into D_80117E98.
+ * @brief Drop the oldest entry of a player's full history row.
+ * @param player Player index.
  */
-void func_800A2958(s32 player)
+static void field_command_history_shift(s32 player)
 {
-    extern u8 D_80117E98[][0x10];
     s32 i;
 
-    for (i = 0; i < 0xF; i++)
+    for (i = 0; i < FIELD_HISTORY_LENGTH - 1; i++)
     {
-        D_80117E98[player][i] = D_80117E98[player][i + 1];
+        g_field_command_history[player][i] = g_field_command_history[player][i + 1];
     }
 }
 
 /**
- * @brief Compacts a row's byte table, dropping the first @p start entries.
- *
- * When @p start is below 0x10, shifts @c D_80117E98[row] entries [start, 0x10)
- * down to the front of the row, then decrements the row's count in
- * @c D_80117E88 by @p start.
- *
- * @param row Row index into @c D_80117E98 / @c D_80117E88.
- * @param start Number of leading entries to drop (also subtracted from the
- *              count).
+ * @brief Drop the first entries of a player's history.
+ * @param player Player index.
+ * @param count Number of leading entries to drop; also subtracted from the entry count.
  */
-void func_800A2990(s32 row, s32 start)
+static void field_command_history_consume(s32 player, s32 count)
 {
-    extern u8 D_80117E98[][0x10];
-    u8 (*table)[0x10];
-    u8 *base;
-    s32 i;
-    s32 j;
+    u8 (*history)[FIELD_HISTORY_LENGTH];
+    u8 *row;
+    s32 src;
+    s32 dst;
 
-    j = 0;
-    if (start < 0x10)
+    dst = 0;
+    if (count < FIELD_HISTORY_LENGTH)
     {
-        table = D_80117E98;
-        base = table[row];
-        i = start;
+        history = g_field_command_history;
+        row = history[player];
+        src = count;
         do
         {
-            base[j++] = base[i++];
-        } while (i < 0x10);
+            row[dst++] = row[src++];
+        } while (src < FIELD_HISTORY_LENGTH);
     }
 
-    D_80117E88[row] -= start;
+    g_field_command_history_count[player] -= count;
 }
 
 /**
- * @brief Find a command in a player's buffered direction and button history.
- * @param player Input history index; indices at or above two yield no command.
- * @param unused Unused caller argument.
- * @param peek Nonzero to inspect the history without consuming it.
- * @return Command identifier, or 0xFF when no complete command was found.
+ * @brief Find a command at the start of a player's history.
+ * @param player Player index; indices at or above two yield no command.
+ * @param unused Not read (callers pass the facing direction).
+ * @param peek Nonzero to look at the history without consuming the command.
+ * @return Command for a button code, g_field_command_pattern_ids entry for a direction
+ *         pattern ended by the finish button, or FIELD_COMMAND_NONE.
+ * @note Entries scanned past without a match stay in the history.
  */
-s32 func_800A29F8(s32 player, s32 unused, s32 peek)
+s32 field_command_history_match(s32 player, s32 unused, s32 peek)
 {
-    extern u8 D_80117E98[][0x10];
-    s32 saved_history_offset;
-    s32 counts_address;
-    s32 consume_count;
-    s32 consume_count_50;
-    s32 consume_count_60;
-    s32 history_offset;
-    s32 pattern_length;
-    s32 match_value;
-    s32 source_index;
-    s32 source_index_50;
-    s32 source_index_60;
-    s32 dest_index;
-    s32 dest_index_50;
-    s32 dest_index_60;
-    s32 match_start;
-    s32 direction_end;
-    s32 pattern_offset;
-    s32 pattern_retry_offset;
+    s32 command;
     s32 scan_index;
+    s32 direction_end;
     s32 pattern_index;
-    s32 count_offset;
-    u8 *history_row;
-    u8 *history_table_base;
-    u8 *source_ptr;
-    u8 *source_ptr_50;
-    u8 *source_ptr_60;
-    u8 command_byte;
-    u8 command_id;
-    u8 *pattern_table;
+    s32 pattern_length;
+    s32 match_start;
+    s32 consume_count;
+    s32 src;
+    s32 dst;
+    u8 *history;
 
+    command = FIELD_COMMAND_NONE;
     scan_index = 0;
-    if ((player < 2) && (D_80117E88[player] != 0))
+    if ((player < FIELD_PLAYER_COUNT) && (g_field_command_history_count[player] != 0))
     {
-        history_offset = player * 0x10;
-        saved_history_offset = history_offset;
-        history_table_base = (u8 *)D_80117E98;
-        history_row = history_offset + history_table_base;
-        counts_address = (s32)D_80117E88;
-        count_offset = player * 4;
-    scan_loop:
-        command_byte = *(history_row + scan_index);
-        switch (command_byte)
+        do
         {
-            case 0x1:
-            case 0x2:
-            case 0x3:
-            case 0x4:
-            case 0x6:
-            case 0x8:
-            case 0x9:
-            case 0xC:
-                direction_end = (scan_index + scan_index) - scan_index;
-                if ((u8) * (history_row + scan_index) < 0x10U)
-                {
-                    s32 direction_count = *(s32 *)(count_offset + counts_address);
-                    u8 *direction_base = (u8 *)D_80117E98;
-                    u8 *direction_row = direction_base + player * 0x10;
-
-                    direction_end++;
-                    do
+            history = g_field_command_history[player];
+            switch (history[scan_index])
+            {
+                /* Direction nibbles: 1 up, 2 right, 4 down, 8 left, and the diagonals. */
+                case 0x1:
+                case 0x2:
+                case 0x3:
+                case 0x4:
+                case 0x6:
+                case 0x8:
+                case 0x9:
+                case 0xC:
+                    direction_end = scan_index;
+                    while (g_field_command_history[player][direction_end] < FIELD_HISTORY_BUTTON_CODE_MIN)
                     {
-                        if (direction_end == direction_count)
+                        direction_end++;
+                        if (direction_end == g_field_command_history_count[player])
                         {
-                            return 0xFF;
+                            return command;
                         }
-                    } while (direction_row[direction_end++] < 0x10);
-                    direction_end--;
-                }
-                pattern_index = 0;
-                if (*(history_row + direction_end) == 0x50)
-                {
-                    do { do { do { do { pattern_table = D_800EC304; } while (0); } while (0); } while (0); } while (0);
-                    pattern_offset = pattern_index;
-                    do
+                    }
+                    if (history[direction_end] == FIELD_HISTORY_PATTERN_FINISH)
                     {
-                        pattern_length = strlen((char *)(pattern_offset + (s32)pattern_table));
-                        if ((direction_end - scan_index) >= pattern_length)
+                        for (pattern_index = 0; pattern_index < FIELD_COMMAND_PATTERN_COUNT; pattern_index++)
                         {
-                            match_start = direction_end - pattern_length;
-                            if (match_start >= scan_index)
+                            pattern_length = strlen(g_field_command_patterns[pattern_index]);
+                            if ((direction_end - scan_index) >= pattern_length)
                             {
-                                u8 *match_ptr;
-
-                                pattern_retry_offset = pattern_offset;
-                            retry_loop:
-                                match_ptr = (u8 *)match_start;
-                                match_ptr += (s32)history_table_base;
+                                /* Try the pattern against every tail of the run, longest first. */
+                                for (match_start = direction_end - pattern_length; match_start >= scan_index; match_start--)
                                 {
-                                    s32 pattern_address = pattern_retry_offset + (s32)pattern_table;
-                                    s32 match_address = saved_history_offset + (s32)match_ptr;
-                                    match_value = strncmp((char *)pattern_address, (char *)match_address, pattern_length);
-                                }
-                                if (match_value == 0)
-                                {
+                                    if (strncmp(g_field_command_patterns[pattern_index], (char *)&g_field_command_history[player][match_start], pattern_length) == 0)
+                                    {
                                         if (peek == 0)
                                         {
-                                            consume_count = direction_end + 1;
-                                            dest_index = 0;
-                                            if (consume_count < 0x10)
+                                            /* Step past the finish button first: with the increment
+                                             * below the count, direction_end and pattern_length
+                                             * swap registers. */
+                                            direction_end++;
+                                            dst = 0;
+                                            consume_count = direction_end;
+                                            if (consume_count < FIELD_HISTORY_LENGTH)
                                             {
-                                                source_index = consume_count;
+                                                src = consume_count;
                                                 do
                                                 {
-                                                    source_ptr = history_row + source_index;
-                                                    source_index += 1;
-                                                    *(history_row + dest_index) = *source_ptr;
-                                                    dest_index += 1;
-                                                } while (source_index < 0x10);
+                                                    history[dst++] = history[src++];
+                                                } while (src < FIELD_HISTORY_LENGTH);
                                             }
-                                            *(s32 *)((count_offset + pattern_offset) + counts_address - pattern_offset) -= consume_count;
+                                            g_field_command_history_count[player] -= consume_count;
                                         }
-                                        match_value = (s32)D_800EC334;
-                                        return *((u8 *)match_value + pattern_index);
+                                        return g_field_command_pattern_ids[pattern_index];
                                     }
-                                match_start -= 1;
-                                if (match_start >= scan_index)
-                                {
-                                    goto retry_loop;
                                 }
                             }
                         }
-                                do { pattern_index += 1; } while (0);
-                        pattern_offset += 8;
-                    } while (pattern_index < 6);
-                }
-                scan_index = direction_end - 1;
-                break;
-            case 0x50:
-                command_id = 3;
-                if (peek == 0)
-                {
-                    consume_count_50 = scan_index + 1;
-                    dest_index_50 = 0;
-                    if (consume_count_50 < 0x10)
+                    }
+                    scan_index = direction_end - 1;
+                    break;
+                /* Button codes, see g_field_action_command_codes. */
+                case 0x50:
+                    if (peek == 0)
                     {
-                        source_index_50 = consume_count_50;
-                        do
+                        consume_count = scan_index + 1;
+                        dst = 0;
+                        if (consume_count < FIELD_HISTORY_LENGTH)
                         {
-                            source_ptr_50 = history_row + source_index_50;
-                            source_index_50 += 1;
-                            *(history_row + dest_index_50) = *source_ptr_50;
-                            dest_index_50 += 1;
-                        } while (source_index_50 < 0x10);
+                            src = consume_count;
+                            do
+                            {
+                                history[dst++] = history[src++];
+                            } while (src < FIELD_HISTORY_LENGTH);
+                        }
+                        g_field_command_history_count[player] -= consume_count;
                     }
-                    do
+                    return 3;
+                case 0x60:
+                    if (peek == 0)
                     {
-                        *(s32 *)(count_offset + counts_address) -= consume_count_50;
-                    } while (0);
-                    return 3U;
-                }
-                return command_id;
-            case 0x60:
-                command_id = 2;
-                if (peek == 0)
-                {
-                    consume_count_60 = scan_index + 1;
-                    dest_index_60 = 0;
-                    if (consume_count_60 < 0x10)
-                    {
-                        source_index_60 = consume_count_60;
-                        do
+                        consume_count = scan_index + 1;
+                        dst = 0;
+                        if (consume_count < FIELD_HISTORY_LENGTH)
                         {
-                            source_ptr_60 = history_row + source_index_60;
-                            source_index_60 += 1;
-                            *(history_row + dest_index_60) = *source_ptr_60;
-                            dest_index_60 += 1;
-                        } while (source_index_60 < 0x10);
+                            src = consume_count;
+                            do
+                            {
+                                history[dst++] = history[src++];
+                            } while (src < FIELD_HISTORY_LENGTH);
+                        }
+                        g_field_command_history_count[player] -= consume_count;
                     }
-                    do
-                    {
-                        *(s32 *)(count_offset + counts_address) -= consume_count_60;
-                    } while (0);
-                    return 2U;
-                }
-                return command_id;
-            case 0x70:
-                /* 0x70/0x80/0x40/0x20 keep a do/while(0); it sets the player/peek registers (99.46% without). */
-                command_id = 1;
-                do
-                {
+                    return 2;
+                case 0x70:
                     if (peek == 0)
                     {
                         field_command_history_clear(player);
-                        return 1U;
                     }
-                } while (0);
-                return command_id;
-            case 0x80:
-                command_id = 0;
-                do
-                {
+                    return 1;
+                case 0x80:
                     if (peek == 0)
                     {
                         field_command_history_clear(player);
-                        return 0U;
                     }
-                } while (0);
-                return command_id;
-            case 0x40:
-                command_id = 4;
-                do
-                {
+                    return 0;
+                case 0x40:
                     if (peek == 0)
                     {
                         field_command_history_clear(player);
-                        return 4U;
                     }
-                } while (0);
-                return command_id;
-            case 0x20:
-                command_id = 6;
-                do
-                {
+                    return 4;
+                case 0x20:
                     if (peek == 0)
                     {
                         field_command_history_clear(player);
-                        return 6U;
                     }
-                } while (0);
-                return command_id;
-            case 0x30:
-                command_id = 5;
-                if (peek == 0)
-                {
-                    field_command_history_clear(player);
-                    return 5U;
-                }
-                return command_id;
-            case 0x10:
-                command_id = 7;
-                if (peek == 0)
-                {
-                    field_command_history_clear(player);
-                    return 7U;
-                }
-                return command_id;
-            default:
-                break;
+                    return 6;
+                case 0x30:
+                    if (peek == 0)
+                    {
+                        field_command_history_clear(player);
+                    }
+                    return 5;
+                case 0x10:
+                    if (peek == 0)
+                    {
+                        field_command_history_clear(player);
+                    }
+                    return 7;
+                default:
+                    break;
             }
             scan_index++;
-            if (scan_index != *(s32 *)(count_offset + counts_address))
-            {
-                goto scan_loop;
-            }
+        } while (scan_index != g_field_command_history_count[player]);
     }
-    return 0xFF;
+    return command;
 }
 
 /**
- * @brief Clear a player's history count if the index is in range.
+ * @brief Clear a player's history.
  * @param player Player index; only indices below two are cleared.
  */
 void field_command_history_clear(s32 player)
 {
-    if (player < 2)
+    if (player < FIELD_PLAYER_COUNT)
     {
-        D_80117E88[player] = 0;
+        g_field_command_history_count[player] = 0;
     }
 }
 
 /**
- * @brief Reset the command-recognizer scratch state to its idle defaults.
+ * @brief Reset the pair indicator state to idle.
  */
-void func_800A2DFC(void)
+void field_pair_indicators_reset(void)
 {
-    D_80117ED0.unk8 = -2;
-    D_80117ED0.unk4 = -2;
-    D_80117ED0.unk0 = -2;
+    D_80117ED0[2] = -2;
+    D_80117ED0[1] = -2;
+    D_80117ED0[0] = -2;
     D_80117EC0 = 0;
     D_80117EC8[0] = 0xFF;
     D_80117EC4 = 0;
 }
 
 /**
- * @brief Return a pointer to the D_80117EC8 byte table.
+ * @brief Return the pair indicator list.
  * @return Address of D_80117EC8.
  */
-u8 *func_800A2E34(void)
+u8 *field_pair_indicators_get_list(void)
 {
     return D_80117EC8;
 }

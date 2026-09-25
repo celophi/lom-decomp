@@ -338,7 +338,7 @@ void func_800B20B4(void);
 s32 func_800B22F0(s32 actor_id, s32 script);
 void func_800B2654(s32* actor_id, s32* plane, s32* effect, s32* selector);
 /* Int parameters on purpose: with the (s32, u8, s8) definition the calls would narrow their arguments. */
-s32 func_800B286C(s32 owner_id, s32 event_id, s32 argument);
+s32 field_queue_actor_event(s32 owner_id, s32 event_id, s32 argument);
 s32 func_800BD3B0(s32 owner_id, s32 variable);
 /* Declared without a prototype: func_800B2198 forwards its own a0. */
 FieldActorRecord* func_800C1B98();
@@ -502,7 +502,7 @@ void field_install_actor_action(FieldActionRequest* request, s32 request_index)
             entry->script_state = (entry->script_state & FIELD_SCRIPT_LOCAL_BASE_CLEAR_MASK) |
                                   ((((FieldActionTable*)g_field_runtime)->local_variable_base & FIELD_SCRIPT_LOCAL_BASE_MASK) << FIELD_SCRIPT_LOCAL_BASE_SHIFT);
             ((FieldActionTable*)g_field_runtime)->local_variable_base += request->control.bytes.local_variable_count;
-            func_800B286C((u8)entry->id, FIELD_ACTION_START_EVENT, (u8)action_index);
+            field_queue_actor_event((u8)entry->id, FIELD_ACTION_START_EVENT, (u8)action_index);
         }
     }
     else
@@ -862,7 +862,7 @@ void func_800B1F10(void)
     {
         for (i = 0; i < (s32)g_field_runtime->state.actor_count; i++)
         {
-            func_800B286C(g_field_runtime->actors[i].id, 0xD, 0x82);
+            field_queue_actor_event(g_field_runtime->actors[i].id, 0xD, 0x82);
         }
         if (((((u32)g_field_runtime->transition.flags >> 30) & 1) == 0) && (func_800BD414(0, 0xFE2) == 0))
         {
@@ -873,7 +873,7 @@ void func_800B1F10(void)
     {
         for (i = 0; i < (s32)g_field_runtime->state.actor_count; i++)
         {
-            func_800B286C(g_field_runtime->actors[i].id, 0xD, 0x85);
+            field_queue_actor_event(g_field_runtime->actors[i].id, 0xD, 0x85);
         }
         g_field_runtime->state.flags &= 0xFFF7FFFF;
     }
@@ -892,9 +892,9 @@ void func_800B20B4(void)
         {
             field_script_run(&g_field_runtime->events[i].script);
         }
-        func_800B28E0(i + 0x80, g_field_runtime->events[i].event, g_field_runtime->events[i].event_argument);
+        field_run_actor_event(i + 0x80, g_field_runtime->events[i].event, g_field_runtime->events[i].event_argument);
         g_field_runtime->events[i].event = FIELD_NO_EVENT;
-        func_800B28E0(0x80, 0xE, 0);
+        field_run_actor_event(0x80, 0xE, 0);
         g_field_runtime->events[i].event = FIELD_NO_EVENT;
     }
 }
@@ -914,7 +914,7 @@ void func_800B2198(s32 actor_id, void* unused)
     {
         if (actor->event != FIELD_NO_EVENT)
         {
-            func_800B28E0(actor->id, actor->event, actor->event_argument);
+            field_run_actor_event(actor->id, actor->event, actor->event_argument);
             actor->event = FIELD_NO_EVENT;
         }
         if (!(((u32)actor->flags.word >> 30) & 1))
@@ -923,16 +923,16 @@ void func_800B2198(s32 actor_id, void* unused)
             if (((u32)position.vx > (u32)g_field_runtime->view_x) && ((u32)position.vz > (u32)g_field_runtime->view_z) &&
                 ((u32)position.vx < (u32)g_field_runtime->view_x + 0x140) && ((u32)position.vz < (u32)g_field_runtime->view_z + 0x1C0))
             {
-                func_800B28E0(actor->id, 2, 0);
+                field_run_actor_event(actor->id, 2, 0);
             }
             else
             {
-                func_800B28E0(actor->id, 3, 0);
+                field_run_actor_event(actor->id, 3, 0);
             }
-            func_800B28E0(actor->id, 0xE, 0);
+            field_run_actor_event(actor->id, 0xE, 0);
             if (actor->script.frames[actor->script.depth].pc == NULL)
             {
-                func_800B28E0(actor->id, 8, 0);
+                field_run_actor_event(actor->id, 8, 0);
                 return;
             }
             field_script_run(&actor->script);
@@ -1014,11 +1014,11 @@ s32 func_800B22F0(s32 actor_id, s32 script)
                 other_id = g_field_runtime->actors[i].id;
                 if (other_id == actor_id)
                 {
-                    func_800B286C(actor_id, 0xD, 0x80);
+                    field_queue_actor_event(actor_id, 0xD, 0x80);
                 }
                 else
                 {
-                    func_800B286C(other_id, 0xD, 0x81);
+                    field_queue_actor_event(other_id, 0xD, 0x81);
                 }
             }
         }
@@ -1043,11 +1043,11 @@ s32 func_800B22F0(s32 actor_id, s32 script)
             other_id = g_field_runtime->actors[i].id;
             if (other_id == actor_id)
             {
-                func_800B286C(actor_id, 0xD, 0x83);
+                field_queue_actor_event(actor_id, 0xD, 0x83);
             }
             else
             {
-                func_800B286C(other_id, 0xD, 0x84);
+                field_queue_actor_event(other_id, 0xD, 0x84);
             }
         }
     }

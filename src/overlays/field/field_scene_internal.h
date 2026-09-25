@@ -343,7 +343,7 @@ struct FieldObj
 /**
  * @brief Singly-linked record hanging off FieldSceneHeader::records.
  *
- * @note Only the link is identified. func_800630BC hands the caller @c body,
+ * @note Only the link is identified. field_header_record_at hands the caller @c body,
  *       which is read there as four halfwords.
  */
 typedef struct FieldHeaderRec FieldHeaderRec;
@@ -365,7 +365,7 @@ typedef struct
     u8 _pad0[4];
     u16* pixel_data; /* 0x04 strip pixel-source base */
     u8 _pad1[0x10 - 8];
-    /** 0x10 head of the record list indexed by func_800630BC; null when the
+    /** 0x10 head of the record list indexed by field_header_record_at; null when the
         scene carries no records. */
     FieldHeaderRec* records;
     u8 _pad2[0x28 - 0x14];
@@ -374,7 +374,7 @@ typedef struct
     /** 0x2C scene flags; see FIELD_SCENE_HEADER_BOUNDED. */
     s32 flags;
     s16 unk30; /* 0x30 */
-    /** 0x32 counterpart of unk30; func_8005F158 uses the pair as the scene's
+    /** 0x32 counterpart of unk30; field_collision_collect_groups uses the pair as the scene's
         pixel extent when sizing its tile budget. */
     s16 unk32;
 } FieldSceneHeader;
@@ -404,10 +404,13 @@ struct FieldMarkerDef
     u16 offset_x;
     /** 0x0E vertical offset from the first edge to the opposite one. */
     u16 offset_y;
-    /** 0x10 depth bias added to the fixed 0xE0 vertical origin. */
+    /** 0x10 depth bias added to the fixed 0xE0 vertical origin; also the
+        bottom of the vertical band the marker blocks for collision. */
     s16 depth_bias;
-    u8 _pad2[0x14 - 0x12];
-    /** 0x14 value rendered as the marker's numeric label. */
+    /** 0x12 height of the collision band; 1 means the band has no top. */
+    s16 band_height;
+    /** 0x14 value rendered as the marker's numeric label; also the value
+        field_collision_hit_markers returns on a hit. */
     u16 label;
 };
 
@@ -724,8 +727,20 @@ struct FieldSeq
 {
     FieldSeq* next;   /* 0x00 */
     FieldSeqDef* def; /* 0x04 */
-    s32 flags;         /* 0x08 */
-    u16 unkC;          /* 0x0C */
+    /** 0x08 bits 0-1 phase (0 idle, 1 running, 2 finished), bits 2-3 saved phase. */
+    union
+    {
+        s32 word;
+        struct
+        {
+            u8 state;
+            /** 0x09 index handed on to the sequences this one starts. */
+            u8 index;
+            u8 _pad[2];
+        } b;
+    } flags;
+    /** 0x0C frames since the current phase began. */
+    u16 phase_frames;
 };
 
 /** @brief View of the movie/streaming control block at 0x801ED500. */
@@ -774,7 +789,7 @@ struct FieldNodeDef
 {
     FieldNodeDef* next; /* 0x00 next definition in the scene resource */
     /** 0x04 flag word. Bit 2 excludes the node from the group scan; the low
-        two bits select the group mode (0 = single, 1 = pair). func_8005F158
+        two bits select the group mode (0 = single, 1 = pair). field_collision_collect_groups
         reads the whole word for the bit-2 test and only the low byte for the
         mode, which is why both a word and a byte access appear. */
     s32 flags;
@@ -788,7 +803,7 @@ struct FieldNodeDef
     u8 _pad1[0x10 - 0xE];
     s16 base_x; /* 0x10 horizontal base offset (<< 8) */
     s16 base_y; /* 0x12 vertical base offset (<< 8) */
-    /** 0x14 lowest group id this definition applies to; func_8005F5BC skips
+    /** 0x14 lowest group id this definition applies to; field_collision_rasterize_groups skips
         the node when the group id being rasterised is below it. */
     s16 id_min;
     u8 _pad2[0x18 - 0x16];
@@ -800,7 +815,7 @@ struct FieldNodeDef
  * @brief Span-pair count per row, stored in byte 2 of FieldNodeDef::flags.
  *
  * @c flags is read as a whole word for the bit-2 / mode tests, but
- * func_8005F5BC also reads offset 0x06 as an @c lbu - the two accesses
+ * field_collision_rasterize_groups also reads offset 0x06 as an @c lbu - the two accesses
  * genuinely overlap in the original. Mirrors the @c *(s32*)&def->flags idiom
  * field_animation.c uses for the same struct.
  */
@@ -825,10 +840,10 @@ struct FieldNode
     FieldPart* part; /* 0x0C owning part */
     /** 0x10 base of the node's span table: for each row, @c
         FIELD_NODE_DEF_ROWS(def) pairs of (x0, x1) shorts. Walked by
-        func_8005F5BC. */
+        field_collision_rasterize_groups. */
     u16* spans;
     s32 unk14; /* 0x14 */
-    /** 0x18 when zero the node is skipped by the group scan in func_8005F158. */
+    /** 0x18 when zero the node is skipped by the group scan in field_collision_collect_groups. */
     u8 unk18;
     u8 _pad2[0x1C - 0x19];
     /** 0x1C smallest point x of the definition's runs. */
@@ -838,7 +853,7 @@ struct FieldNode
     /** 0x20 last tile row this node covers (inclusive). */
     s16 row_end;
     /** 0x22 first tile row this node covers; also the sort key
-        func_8005F5BC orders the scratch node list by. */
+        field_collision_rasterize_groups orders the scratch node list by. */
     s16 row_start;
     /** 0x24 horizontal offset accumulator; the axis-0 half of the pair the two
         node shift helpers move. */
@@ -868,32 +883,33 @@ typedef struct
     FieldAnim* strips;    /* 0x1C head of the strip list */
     FieldAnim* sprites;   /* 0x20 head of the sprite list */
     FieldAnim* effects;   /* 0x24 head of the effect list */
-    /** 0x28 base of the per-group work area, or 0 when no groups are active;
-        func_8005B228 gates its func_8005F5BC call on this. */
-    s32 unk28;
-    /** 0x2C base of the per-group tile area. */
-    s32 unk2C;
+    /** 0x28 base of the per-group tile bitmask rows, or 0 when no groups
+        are active (then group_count holds a FIELD_COLLISION_GROUP_ERROR_*
+        code); func_8005B228 gates its field_collision_rasterize_groups call on this. */
+    s32 group_work;
+    /** 0x2C base of the per-group byte tile maps. */
+    s32 group_tiles;
     /** 0x30 end of the per-group work area. */
-    s32 unk30;
+    s32 group_work_end;
     FieldImageReq* uploads; /* 0x34 head of the pending upload list */
     s32 unk38; /* 0x38 scene-build state */
     u8 _pad2[0x40 - 0x3C];
     /** 0x40 tile edge in pixels, 4 or 8. */
-    u8 unk40;
+    u8 tile_size;
     /** 0x41 number of active groups; 0 or 1 when the scan found nothing. */
-    u8 unk41;
-    /** 0x42 per-group stride of the work area. */
-    s16 unk42;
-    /** 0x44 tiles per group (unk46 * unk48). */
-    s16 unk44;
+    u8 group_count;
+    /** 0x42 bitmask words per group in the work area. */
+    s16 group_stride;
+    /** 0x44 tiles per group (tile_cols * tile_rows). */
+    u16 group_tile_count;
     /** 0x46 tile columns. */
-    s16 unk46;
+    u16 tile_cols;
     /** 0x48 tile rows. */
-    s16 unk48;
-    /** 0x4A group ids, sorted descending by func_8005F158. */
-    s16 unk4A[10];
-    /** 0x5E per-group counters, zeroed alongside unk4A. */
-    s16 unk5E[10];
+    u16 tile_rows;
+    /** 0x4A group ids (floor heights), sorted ascending by field_collision_collect_groups. */
+    s16 group_ids[10];
+    /** 0x5E per-group counters, zeroed alongside group_ids. */
+    s16 group_counters[10];
 } FieldScene;
 
 typedef struct
@@ -1041,6 +1057,8 @@ typedef struct
    Defined in field_scene_control.c except field_draw_part
    (field_scene_build.c); documented at their definitions. */
 void func_8005A744(FieldSeq* seq, u8 index);
+void func_8005A984(FieldPart* part, s32 delta, s32 axis);
+void func_8005AA68(FieldObj* obj, s32 delta, s32 axis);
 FieldObj* func_8005AB4C(s32 index);
 FieldPart* func_8005AB80(s32 obj_index, s32 part_index);
 FieldPart* func_8005ABD8(FieldPartDef* grid, FieldTintSrc** out_src);
@@ -1048,6 +1066,14 @@ void func_8005AC50(u8* colors, s32 count, s32* rgb_scale);
 void func_8005AD20(u8 format, s32 count, u8* primitive_code);
 FieldObj* field_find_object_by_definition(void* definition);
 void field_draw_part(FieldPart* part, u8** cursor, FieldViewport* origin, u_long* ot);
+
+/* MOVIE.BIN entry points, called in place after FIELD streams MOVIE.BIN to 0x80140000. */
+void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer_idx);
+void movie_update(void);
+
+/** Size of the full-screen movie still image, in pixels. */
+extern u16 g_field_movie_frame_width;
+extern u16 g_field_movie_frame_height;
 
 
 
@@ -1077,14 +1103,18 @@ typedef struct
  * Only the duration is read here; field_blit_animation_frame's caller uses the same halfword
  * to reload FieldAnim::timer.
  */
-typedef struct
+typedef struct FieldTweenSpan
 {
-    u8 _pad0;
+    /** 0x00 low seven bits: keyframes covered by this span. */
+    u8 count;
     /** 0x01 running total of the spans before this one, in frames. */
     u8 range_start;
     /** 0x02 length of the keyframe this record covers, in frames. */
     u16 duration;
 } FieldTweenSpan;
+
+/** FieldTweenSpan::count bits holding the keyframe count. */
+#define FIELD_SPAN_COUNT_MASK 0x7F
 
 /**
  * @brief 16-bit field of a FieldSfxKey, addressed as a whole or by byte.

@@ -8,26 +8,27 @@
 #include "field_modal_runtime.h"
 #include "field_runtime.h"
 #include "field_text.h"
+#include "main.h"
 
 void field_restart_pending_bindings(void);
-/* Private render-context views: their types live in field_dialog_screens.c. */
-void func_800A5794(s32);
-void func_800A64D0(s32);
+void field_update_timed_panel(FieldRenderHalf* render);
+void field_update_actor_texts(FieldRenderHalf* render);
 void field_update_input_repeat(void);
 void field_process_input(s32);
 /* Defined as (void); the call passes render_half, which the original loads into $a0. */
 void func_800AD118(s32);
 extern s32 g_field_action_context;
+/** @brief Nonzero while a picture screen is shown (set by func_800A5670). */
 extern s32 D_800F2298;
 extern s32 g_field_gover_load_countdown;
 extern s32 g_field_active_group;
 extern s32 g_field_pickup_sound_played;
 extern s32 g_field_hide_actor_panels;
+/** @brief Ring menu state; nonzero while the ring menu is open. */
 extern s32 D_8011F3AC;
 extern s32 g_field_modal_state;
 extern s32 g_field_text_session_active;
 extern s32 g_field_scene_request_pending;
-extern s32 g_frame_counter;
 
 /**
  * @brief Run one frame of field logic and build its draw commands.
@@ -78,19 +79,19 @@ void field_build_frame_commands(s32 render_half, s32 alternate)
     field_render_actor_objects((FieldRenderContext*)render_half);
     field_draw_fade_prims((FieldRenderHalf*)render_half);
     func_800A2E40((u8*)render_half);
-    func_800A2E34();
+    field_pair_indicators_get_list();
     field_poll_streamed_animations();
-    g_frame_counter += 1;
+    g_frame_counter++;
     field_restart_pending_bindings();
     field_update_dialog_runtime(render_half);
     field_update_return_to_title_prompt(render_half);
     field_update_battle_end();
-    func_800A64D0(render_half);
+    field_update_actor_texts((FieldRenderHalf*)render_half);
     field_update_modal(render_half);
     func_800AD118(render_half);
-    func_800A5794(render_half);
+    field_update_timed_panel((FieldRenderHalf*)render_half);
     func_800AF8E8(render_half);
-    func_800A3FB0();
+    field_update_music_stream();
     field_update_audio_timer();
     field_update_gover_load();
 }

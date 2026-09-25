@@ -27,6 +27,12 @@
 #define FIELD_ITEM_SPECIAL_COUNT 4
 #define FIELD_CHARACTER_STAT_COUNT 8
 #define FIELD_REGION_COUNT 5
+/** @brief Weapon categories (technique masks and weapon proficiency slots). */
+#define FIELD_WEAPON_CATEGORY_COUNT 11
+/** @brief Abilities with a proficiency counter. */
+#define FIELD_ABILITY_COUNT 88
+/** @brief Words of the learned-ability bit set. */
+#define FIELD_ABILITY_WORD_COUNT 3
 
 /** @brief Character info bits 0-6: character type. */
 #define FIELD_CHARACTER_TYPE_MASK 0x7F
@@ -68,7 +74,7 @@ enum
 {
     FIELD_ITEM_CATEGORY_WEAPON = 0,
     FIELD_ITEM_CATEGORY_ARMOR = 1,
-    FIELD_ITEM_CATEGORY_ACCESSORY = 2
+    FIELD_ITEM_CATEGORY_INSTRUMENT = 2
 };
 
 /** @brief Eight four-bit stat modifiers, one per character stat; indexes into D_800F0C38. */
@@ -121,6 +127,8 @@ typedef struct FieldItemRecord
     {
         u32 word;
         FieldItemInfo bits;
+        /** @brief Halfword view; halves[1] holds the item subtype in bits 0-5. */
+        u16 halves[2];
     } info;
     /** @brief Eight four-bit bonus values. */
     union
@@ -207,8 +215,8 @@ typedef struct FieldCharacterRecord
     u8 unk42;
     u8 unk43;
     u8 pad44[4];
-    /** @brief Identity permutation (0 to 7) rebuilt when a companion joins. */
-    u8 unk48[8];
+    /** @brief Action slot bound to each pad button (see g_field_hint_button_map); reset to identity when a companion joins. */
+    u8 button_actions[8];
     FieldItemRecord equipment[FIELD_EQUIPMENT_SLOT_COUNT];
     /** @brief Four further item records; the hero's are scanned with the equipment as one run of eight. */
     FieldItemRecord unk150[4];
@@ -323,7 +331,16 @@ typedef struct FieldGameState
     u8 pad000[0x2C];
     /** @brief Money, saturated at 10,000,000. */
     u32 money;
-    u8 pad030[0xD4 - 0x30];
+    u8 pad030[0x34 - 0x30];
+    /** @brief Learned techniques: one bit mask per weapon category (bit = technique index). */
+    u32 technique_bits[FIELD_WEAPON_CATEGORY_COUNT];
+    /** @brief Learned abilities, one bit per ability. */
+    u32 ability_bits[FIELD_ABILITY_WORD_COUNT];
+    /** @brief Training level of each ability, 0 to 100. */
+    u8 ability_proficiency[FIELD_ABILITY_COUNT];
+    /** @brief Training level of each weapon category, 0 to 100. */
+    u8 weapon_proficiency[FIELD_WEAPON_CATEGORY_COUNT];
+    u8 padCF[0xD4 - 0xCF];
     u16 unkD4;
     u16 unkD6;
     u16 unkD8;
@@ -354,6 +371,9 @@ typedef struct FieldGameState
     s32 region_index;
     FieldRegionRecord regions[FIELD_REGION_COUNT];
     u32 resource_bits[1];
+    u8 pad30D8[0x315C - 0x30D8];
+    /** @brief Times the battle was retried from g_field_retry_snapshot; -1 stops counting. */
+    s32 retry_count;
 } FieldGameState;
 
 /* ------------------------------------------------------------------------ */
@@ -830,6 +850,7 @@ typedef struct FieldBattleContext
 } FieldBattleContext;
 
 /** @brief FIELD diagnostic codes passed to record_game_diagnostic. */
+#define DIAG_SCRIPT_FRAME_OVERFLOW 2 /**< A script pushed past its last frame. */
 #define DIAG_BAD_MONSTER_OBJECT 0x64 /**< A monster group member has no object state. */
 #define DIAG_BAD_COMMAND 0x66        /**< Unknown command in a character's command slot. */
 #define DIAG_BAD_MONSTER_ACTION 0x69 /**< Monster action id past the end of its template's list. */

@@ -40,18 +40,10 @@ s32 field_build_group_monster_records(s32 group)
         }
 
         state = field_find_object_state(g_field_runtime->actors[i].id);
-        /* The gotos keep the two saved registers in the original's order; if/else swaps them. */
-        if (state == NULL)
+        if (state == NULL || state == (FieldStatusState *)-1)
         {
-            goto report_error;
+            record_game_diagnostic(DIAG_ERROR, DIAG_BAD_MONSTER_OBJECT, group, g_field_runtime->actors[i].id);
         }
-        if (state != (FieldStatusState *)-1)
-        {
-            goto build_record;
-        }
-    report_error:
-        record_game_diagnostic(DIAG_ERROR, DIAG_BAD_MONSTER_OBJECT, group, g_field_runtime->actors[i].id);
-    build_record:
         field_init_monster_record(g_field_runtime->actors[i].id, &g_field_battle->records[FIELD_PARTY_SIZE + count], state);
         count++;
     }

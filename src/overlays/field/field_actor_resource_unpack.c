@@ -60,17 +60,6 @@
 /** @brief Interaction id flag: run the id as a field script instead of a talk message. */
 #define FIELD_INTERACTION_SCRIPT 0x8000
 
-/** @brief Footprint query handed to func_8005B368 (same layout as in field_collision.c). */
-struct FieldCollisionQuery
-{
-    s32 x;
-    s32 y;
-    s32 z;
-    u16 width;
-    s16 height_tolerance;
-    u16 depth;
-};
-
 /*
  * Byte-aligned images of the animation sections. The resource stream is not
  * aligned, so these are copied as unaligned structs.
@@ -149,8 +138,6 @@ extern s16 g_field_texture_slot_flags[FIELD_OWNER_COUNT];
 
 /* Local: field_contact_geometry.c calls it with a third argument, so it stays out of field_calls.h. */
 s32 func_800B22F0(s32 actor_id, s32 script);
-void* func_8009CA54(u8* pool, s32 size, s32 tag);
-void func_8009CB64(u8* pool, s32 tag);
 
 static s32 field_enqueue_resource_read(s32 resource_id);
 static void field_upload_actor_texture(u8* tim, s32 owner);
@@ -189,7 +176,7 @@ void field_check_marker_contact(Vec3i* position)
         probe.height_tolerance = FIELD_CONTACT_PROBE_HEIGHT;
         probe.depth = FIELD_CONTACT_PROBE_DEPTH;
         /* Called as returning int: the original uses the s16 result without extending it. */
-        label = ((s32(*)(struct FieldCollisionQuery*))func_8005B368)(&probe);
+        label = ((s32(*)(struct FieldCollisionQuery*))field_collision_hit_markers)(&probe);
         if (label != -1)
         {
             if (g_field_scene_request_pending == 0)
@@ -288,7 +275,7 @@ void field_issue_next_resource_read(void)
  */
 void field_free_owner_resources(s32 tag)
 {
-    func_8009CB64(g_field_actor_heap, tag);
+    field_block_free_tag(g_field_actor_heap, tag);
 }
 
 /**
@@ -400,7 +387,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
         {
             track_tag = FIELD_SHARED_OWNER;
         }
-        block = func_8009CA54(g_field_actor_heap, track_size, track_tag);
+        block = field_block_alloc(g_field_actor_heap, track_size, track_tag);
         cursor += 2;
         memcpy(block, track_source, track_size);
         actor->track_data = block;
@@ -411,7 +398,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
     if (mesh_count != 0)
     {
         mesh_tag = field_owner_tag(owner);
-        mesh = func_8009CA54(g_field_actor_heap, FIELD_ACTOR_MAX_MESHES * sizeof(FieldMeshResource), mesh_tag);
+        mesh = field_block_alloc(g_field_actor_heap, FIELD_ACTOR_MAX_MESHES * sizeof(FieldMeshResource), mesh_tag);
         actor->mesh_data = (u8*)mesh;
     }
     i = 0;
@@ -429,7 +416,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
             allocation_size = mesh->face_count * (FIELD_MESH_VECTORS_PER_FACE * sizeof(SVECTOR));
             vector_tag = field_owner_tag(owner);
             item = 0;
-            output.half = func_8009CA54(g_field_actor_heap, allocation_size, vector_tag);
+            output.half = field_block_alloc(g_field_actor_heap, allocation_size, vector_tag);
             mesh_fields->vertices = (SVECTOR*)output.half;
             if ((mesh->face_count * 3) != 0)
             {
@@ -483,7 +470,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
             allocation_size = mesh->face_count * FIELD_MESH_FACE_SIZE;
             face_tag = field_owner_tag(owner);
             item = 0;
-            output.byte = func_8009CA54(g_field_actor_heap, allocation_size, face_tag);
+            output.byte = field_block_alloc(g_field_actor_heap, allocation_size, face_tag);
             mesh_fields->faces = output.byte;
             if (mesh->face_count != 0)
             {
@@ -514,7 +501,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
                     texture->height = *block++;
                     allocation_size = texture->width * texture->height * 2;
                     pixel_tag = field_owner_tag(owner);
-                    pixel_output = func_8009CA54(g_field_actor_heap, allocation_size, pixel_tag);
+                    pixel_output = field_block_alloc(g_field_actor_heap, allocation_size, pixel_tag);
                     row = 0;
                     texture->pixels = pixel_output;
                     texture_height = texture->height;
@@ -562,14 +549,14 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
     record_count = *cursor++;
     record_bytes = record_count * sizeof(FieldActorLinkRecord);
     record_tag = field_owner_tag(owner);
-    records = func_8009CA54(*heap, record_bytes, record_tag);
+    records = field_block_alloc(*heap, record_bytes, record_tag);
     actor->link_records = records;
     memcpy(records, cursor, record_bytes);
     cursor += record_bytes;
     j = *cursor++;
     index_bytes = j * sizeof(u16);
     index_tag = field_owner_tag(owner);
-    indices = func_8009CA54(*heap, index_bytes, index_tag);
+    indices = field_block_alloc(*heap, index_bytes, index_tag);
     actor->link_record_indices = indices;
     memcpy(indices, cursor, index_bytes);
     cursor += index_bytes;
@@ -584,13 +571,13 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
     actor->part_count = j;
     part_bytes = j * sizeof(FieldActorPartDef);
     part_tag = field_owner_tag(owner);
-    parts = func_8009CA54(*heap, part_bytes, part_tag);
+    parts = field_block_alloc(*heap, part_bytes, part_tag);
     actor->parts = (FieldActorPartDef*)parts;
     memcpy(parts, cursor, part_bytes);
     cursor += part_bytes;
     actor->animation_index = 0;
     animation_tag = field_owner_tag(owner);
-    animation = func_8009CA54(*heap, FIELD_ANIMATION_BLOCK_SIZE, animation_tag);
+    animation = field_block_alloc(*heap, FIELD_ANIMATION_BLOCK_SIZE, animation_tag);
     actor->animation = animation;
     animation->unknown_0x12 = fallback_value;
     block = (u8*)actor->animation;
@@ -648,7 +635,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
             sound_bytes = *(s32*)cursor;
             if (sound_bytes < FIELD_SOUND_SHARED_SIZE)
             {
-                actor->sound_data[i] = func_8009CA54(*sound_heap, sound_bytes, field_owner_tag(owner));
+                actor->sound_data[i] = field_block_alloc(*sound_heap, sound_bytes, field_owner_tag(owner));
             }
             else
             {

@@ -27,10 +27,10 @@ struct FieldActor;
 struct FieldActorSlot;
 struct FieldPlayerRecord;
 struct FieldActorState;
+struct FieldCardClock;
 struct FieldCdBuffer;
 struct FieldCharacterRecord;
 struct FieldCollisionMover;
-struct FieldCollisionQuery;
 struct FieldItemKey;
 struct FieldItemRecord;
 struct FieldMotionRecord;
@@ -38,6 +38,25 @@ struct FieldNode;
 struct FieldRenderHalf;
 struct FieldStatusRecord;
 struct FieldStatusState;
+
+/**
+ * @brief Collision probe: world position (24.8 fixed point), footprint and
+ *        vertical tolerance, passed to field_collision_hit_markers and the
+ *        path functions.
+ * @note width and depth are read signed by the collision code.
+ */
+typedef struct FieldCollisionQuery
+{
+    s32 x;
+    s32 y;
+    s32 z;
+    /** Footprint width along x, in cells. */
+    u16 width;
+    /** How far below y the probe still reaches a marker band. */
+    s16 height_tolerance;
+    /** Footprint depth along z, in cells. */
+    u16 depth;
+} FieldCollisionQuery;
 
 /* field_action_modifiers.c */
 void field_battle_set_watched_record(s32 record_id);
@@ -175,67 +194,82 @@ void field_cancel_animation_bindings(void);
 void field_update_battle_end(void);
 
 /* field_audio_runtime.c */
+s32 field_load_instrument_bank(s32 bank_index);
+void field_upload_resource_22_bank(void);
+void field_load_song(s32 music_index, s32 second_song);
+void field_load_fixed_song(void);
 void field_stop_song(void);
-s32 func_800A35F4(s32 resource_base);
-void func_800A3654(void);
-void func_800A368C(s32 music_index, s32 destination_index);
-void func_800A3728(void);
-void func_800A37E4(void);
-void func_800A380C(void);
-void func_800A38D4(void);
-void func_800A3904(s32 slot, s32 count, s32 value);
-void func_800A3938(s32 sound_id, s32 pan);
-void func_800A3988(s32 sfx_index, s32 pan, s32 unused);
-void func_800A39A8(s32 sfx_index, s32 pan, s32 arg2, s32 channel_group);
-void func_800A3B78(s32 idx);
-void func_800A3BE8(s32 bank_id);
-void func_800A3D44(s32 slot, s32 bank_id);
-void func_800A3EBC(void);
-void func_800A3FB0(void);
-void func_800A43C0(void);
+void field_stop_field_song(void);
+void field_stop_second_song(void);
+void field_play_song(void);
+void field_play_second_song(void);
+void field_fade_song(s32 song, s32 frames, s32 volume);
+void field_play_sound(s32 sound_id, s32 pan);
+void field_play_sound_half_pan(s32 sound_id, s32 pan);
+void field_play_set_sfx_group0(s32 sfx_index, s32 pan, s32 unused);
+void field_play_set_sfx(s32 sfx_index, s32 pan, s32 unused, s32 channel_group);
+void field_play_weapon_sfx(s32 sfx_index, s32 pan, s32 table_index);
+void field_release_sfx_group(s32 channel_group);
+void field_load_sfx_tables(s32 set_id);
+void field_load_weapon_sfx_table(s32 slot, s32 weapon_type);
+s32 field_play_sfx_buffer(s32 buffer, s32 pan, s32 channel_group);
+void field_reset_music_stream(void);
+void field_start_music_stream(s32 music_index);
+void field_update_music_stream(void);
+void field_reset_ring_selections(void);
 
 /* field_block_allocator.c */
-void func_8009CA08(u32 *pool, u32 size);
+void field_block_pool_init(void* pool, u32 size);
+void* field_block_alloc(void* pool, s32 size, s32 tag);
+void field_block_free_tag(void* pool, s32 tag);
 
 /* field_card_clock.c */
-void func_800B0094(void);
+/** @brief Non-zero once the PocketStation clock was read. */
+extern s32 g_field_card_clock_valid;
+s32 field_get_card_clock(struct FieldCardClock *clock);
+void field_capture_card_clock(void);
+
+/* field_character_name_flags.c */
+void field_flag_known_save(char *file_name);
 
 /* field_choice_labels.c */
-void func_800AED20(void *ot, void *prim, s32 x_offset, s32 y_offset);
+/** @brief Selected return-to-title choice: 0 continues (restores the saved state), 1 returns to the title. */
+extern s32 g_field_return_to_title_choice;
+void field_draw_return_to_title_choices(s32 *ot, void *prim, s32 scroll_x, s32 scroll_y);
 
 /* field_collision.c */
-s16 func_8005B368(struct FieldCollisionQuery *query);
-s32 func_8005B6AC(struct FieldCollisionMover *mover);
-void func_8005F5BC(s32 unused, struct FieldNode *clip);
+s16 field_collision_hit_markers(struct FieldCollisionQuery *query);
+s32 field_collision_move_mover(struct FieldCollisionMover *mover);
+void field_collision_rasterize_groups(s32 unused, struct FieldNode *clip);
 
 /* field_command_history.c */
-void func_800A255C(void);
-void func_800A2594(s32 player, s32 age_sequence);
-s32 func_800A29F8(s32 player, s32 unused, s32 peek);
+void field_command_history_reset(void);
+void field_command_history_record(s32 player, s32 age_sequence);
+s32 field_command_history_match(s32 player, s32 unused, s32 peek);
 void field_command_history_clear(s32 player);
-void func_800A2DFC(void);
-u8 *func_800A2E34(void);
+void field_pair_indicators_reset(void);
+u8 *field_pair_indicators_get_list(void);
 
 /* field_coordinate_icon.c */
-s32 func_800AE8A8(void *ot, s32 prim, s32 x_offset, s32 y_offset);
-void func_800AE9E0(void);
+s32 field_draw_coordinate_panel(void *ot, s32 prim, s32 x_offset, s32 y_offset);
+void field_upload_player_icons(void);
 
 /* field_dialog_screens.c */
-void func_800A5670(s32 index);
-void func_800A6204(void);
-s32 func_800A6490(void);
-void func_800A6EEC(void);
-void func_800A710C(void);
-void func_800A7384(void);
-void func_800A7434(void);
-void func_800A74B8(void);
-void func_800A74E8(void);
+void field_start_timed_panel(s32 index);
+void field_clear_actor_texts(void);
+s32 field_actor_text_pending(void);
+void field_save_retry_snapshot(void);
+void field_update_battle_results_input(void);
+void field_close_battle_results(void);
+void field_open_battle_results(void);
+void field_open_duel_results(void);
+void field_setup_return_to_title_prompt(void);
 
 /* field_draw_state.c */
-void func_80067AA4(void);
+void field_reset_draw_state(void);
 
 /* field_event_dispatch.c */
-s32 func_800B28E0(s32 owner_id, s32 event_id, s32 mode);
+s32 field_run_actor_event(s32 owner_id, s32 event_id, s32 mode);
 
 /* field_fade.c */
 void field_reset_fade_state(void);

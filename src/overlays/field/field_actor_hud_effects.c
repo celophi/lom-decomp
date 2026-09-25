@@ -266,6 +266,9 @@ typedef struct
 #define SHADOW_OT_SIZE 4096
 #define SHADOW_DEPTH_SHIFT 7
 
+/** @brief How far @p actor stands above ground height @p height; grows the shadow and pulls its edges in. */
+#define SHADOW_ELEVATION(actor, height) (((actor)->y - ((height) << 8)) >> 11)
+
 /** @brief Screen translation applied to the fading primitives. */
 typedef struct
 {
@@ -1415,11 +1418,13 @@ void field_update_object_effects(s32 index)
                     scan_flags = (s32)changed_flags;
                     highest_bit = FIELD_OBJECT_HANDLER_COUNT - 1;
                     animation_bit = 1;
-                find_highest:
-                    if ((scan_flags & (animation_bit << highest_bit)) == 0)
+                    while (1)
                     {
-                        highest_bit -= 1;
-                        goto find_highest;
+                        if (scan_flags & (animation_bit << highest_bit))
+                        {
+                            break;
+                        }
+                        highest_bit--;
                     }
                     /* Flag bit whose handler plays the slot's current animation resource. */
                     animation_kind = slot->status.parts.animation_id;
@@ -1776,237 +1781,90 @@ void field_draw_fade_prims(FieldRenderHalf* render_half)
 /**
  * @brief Project an actor's ground shadow and append its textured quad.
  * @param actor Actor casting the shadow.
- * @param primitives Next free POLY_FT4 in the primitive buffer.
+ * @param prim Next free POLY_FT4 in the primitive buffer.
  * @param ordering_table Depth ordering table with 4096 entries.
  * @param footprint First two footprint corners supplying the horizontal bounds.
  * @return Next free primitive, unchanged if the shadow has collapsed.
  */
-POLY_FT4* field_render_actor_ground_shadow(FieldActor* actor, POLY_FT4* primitives, s32* ordering_table, ShadowFootprint* footprint)
+POLY_FT4* field_render_actor_ground_shadow(FieldActor* actor, POLY_FT4* prim, s32* ordering_table, ShadowFootprint* footprint)
 {
-    s16 edge_y;
-    s32 shadow_height;
-    s16 right_x;
-    s32 ground_y;
-    s32 ground_height_fixed;
-    s32 world_z;
-    s32 height_bits;
-    s32 world_x;
-    s32 depth;
-    s32 projection_value;
-    s32 camera_offset;
-    s32 horizontal_offset;
-    s32 left_inset;
-    s32 right_inset;
-    s32 diameter;
-    s32 camera_z;
-    s32 screen_x;
-    u8 object_index;
-    s32 camera_x;
-    s32 actor_screen_x;
-    s32 camera_y;
-    s32 actor_depth_y;
-    s32 camera_screen_y;
-    s32 edge_work;
-    s32 scale_work;
-    s32 actor_height;
     ShadowScreenPosition* screen;
-    ShadowWorldPosition* scratch;
+    ShadowWorldPosition* world;
+    s32 size;
+    s32 height;
+    s32 diameter;
+    s32 depth;
 
-    /* Project the ground point; negative fixed-point values round toward zero. */
     screen = SHADOW_SCREEN_POSITION;
-    scratch = SHADOW_WORLD_POSITION;
-    camera_offset = g_field_view_offset_x;
-    world_x = actor->x;
-    scratch->y = 0;
-    scratch->x = world_x;
-    world_z = actor->z;
-    ground_height_fixed = world_z;
-    scratch->z = ground_height_fixed;
-    if (camera_offset < 0)
-    {
-        camera_offset += 0xFF;
-    }
-    projection_value = world_x;
-    camera_x = camera_offset >> 8;
-    if (projection_value < 0)
-    {
-        projection_value += 0xFF;
-    }
-    camera_offset = g_field_view_offset_y;
-    actor_screen_x = (projection_value >> 8) + FIELD_SCREEN_CENTER_X;
-    screen_x = camera_x + actor_screen_x;
-    screen->x = screen_x;
-    if (camera_offset < 0)
-    {
-        camera_offset += 0xFF;
-    }
-    projection_value = world_z;
-    camera_y = camera_offset >> 8;
-    camera_screen_y = camera_y + FIELD_SCREEN_CENTER_Y;
-    if (projection_value < 0)
-    {
-        projection_value += 0x1FF;
-    }
-    camera_z = g_field_view_offset_z;
-    actor_depth_y = projection_value >> 9;
-    ground_y = camera_screen_y - actor_depth_y;
-    if (camera_z < 0)
-    {
-        camera_z += 0x1FF;
-    }
-    screen->y = (u16)(ground_y - (camera_z >> 9));
+    world = SHADOW_WORLD_POSITION;
+    world->x = actor->x;
+    world->y = 0;
+    world->z = actor->z;
+    screen->x = g_field_view_offset_x / 256 + (world->x / 256 + FIELD_SCREEN_CENTER_X);
+    screen->y = g_field_view_offset_y / 256 + (world->y / 256 + FIELD_SCREEN_CENTER_Y) - world->z / 512 - g_field_view_offset_z / 512;
 
-    /* The resource profile widens the height-dependent inset by 5/4. */
-    object_index = actor->object_index;
-    height_bits = (u8)actor->height << 24; /* the cast keeps the lbu the code was built with */
-    shadow_height = g_field_object_states[object_index].movement.half.hi;
-    actor_height = height_bits >> 24;
-    if (g_field_resource_entries[object_index].unk8 != 0)
+    size = actor->height;
+    height = g_field_object_states[actor->object_index].movement.half.hi;
+    if (g_field_resource_entries[actor->object_index].unk8 != 0)
     {
-        ground_height_fixed = shadow_height << 8;
-        horizontal_offset = height_bits >> 26;
-        left_inset = actor->y;
-        scale_work = (u16)footprint->left_x;
-        left_inset = (left_inset - ground_height_fixed) >> 11;
-        left_inset += horizontal_offset;
-        edge_work = left_inset << 2;
-        left_inset = edge_work - -left_inset;
-        edge_work = screen_x + scale_work;
-        if (left_inset < 0)
-        {
-            left_inset += 3;
-        }
-        left_inset >>= 2;
-        left_inset = edge_work - left_inset;
-        primitives->x0 = left_inset;
-        primitives->x2 = left_inset;
-
-        right_inset = actor->y;
-        edge_work = (u16)footprint->right_x;
-        right_inset = (right_inset - ground_height_fixed) >> 11;
-        right_inset -= horizontal_offset;
-        scale_work = right_inset << 2;
-        horizontal_offset = screen->x;
-        right_inset = scale_work - -right_inset;
-        horizontal_offset += edge_work;
-        if (right_inset < 0)
-        {
-            right_inset += 3;
-        }
-        right_inset >>= 2;
-        right_x = horizontal_offset + right_inset;
+        /* The resource profile widens the height-dependent inset by 5/4. */
+        prim->x2 = prim->x0 = screen->x + footprint->left_x - (SHADOW_ELEVATION(actor, height) + (size >> 2)) * 5 / 4;
+        prim->x3 = prim->x1 = screen->x + footprint->right_x + (SHADOW_ELEVATION(actor, height) - (size >> 2)) * 5 / 4;
     }
     else
     {
-        s32 height_delta;
-        s32 ground_height_fixed_local;
-        s32 horizontal_offset_local;
-        s32 left_inset_local;
-        s32 right_inset_local;
-        s32 scale_work_local;
-
-        ground_height_fixed_local = shadow_height << 8;
-        horizontal_offset_local = height_bits >> 26;
-        edge_work = (u16)footprint->left_x;
-        left_inset_local = actor->y;
-        edge_work = screen_x - -edge_work;
-        left_inset_local = (left_inset_local - ground_height_fixed_local) >> 11;
-        edge_work -= left_inset_local;
-        edge_work += horizontal_offset_local;
-        primitives->x0 = edge_work;
-        primitives->x2 = edge_work;
-
-        do /* without these blocks the loads of this branch are scheduled differently */
-        {
-            right_inset_local = screen->x;
-        } while (0);
-        scale_work_local = (u16)footprint->right_x;
-        do
-        {
-            height_delta = actor->y;
-            right_inset_local += scale_work_local;
-        } while (0);
-        height_delta -= ground_height_fixed_local;
-        height_delta >>= 11;
-        right_inset_local += height_delta;
-        right_x = right_inset_local - horizontal_offset_local;
+        prim->x2 = prim->x0 = screen->x + footprint->left_x - SHADOW_ELEVATION(actor, height) + (size >> 2);
+        prim->x3 = prim->x1 = screen->x + footprint->right_x + SHADOW_ELEVATION(actor, height) - (size >> 2);
     }
-    do
-    {
-        primitives->x1 = right_x;
-        primitives->x3 = right_x;
-    } while (0);
 
     /* Reject inverted horizontal bounds or a vertical diameter below two pixels. */
-    projection_value = shadow_height << 8;
-    diameter = (s16)footprint->left_x;
-    left_inset = (s16)footprint->right_x;
-    camera_offset = primitives->x0;
-    diameter -= left_inset;
-    diameter >>= 1;
-    left_inset = actor->y;
-    diameter = abs(diameter);
-    left_inset -= projection_value;
-    left_inset >>= 11;
-    diameter += left_inset;
-    projection_value = actor_height >> 2;
-    diameter -= projection_value;
-    if (primitives->x1 >= camera_offset && diameter >= 2)
+    diameter = abs((footprint->left_x - footprint->right_x) >> 1) + SHADOW_ELEVATION(actor, height) - (size >> 2);
+    if (prim->x0 <= prim->x1 && diameter >= 2)
     {
-        if (shadow_height != 0)
+        if (height != 0)
         {
-            diameter >>= 1;
-            edge_y = screen->y - diameter + shadow_height;
-            primitives->y1 = edge_y;
-            primitives->y0 = edge_y;
-            edge_y = screen->y + diameter + shadow_height;
-            primitives->y3 = edge_y;
-            primitives->y2 = edge_y;
+            prim->y0 = prim->y1 = screen->y - (diameter >> 1) + height;
+            prim->y2 = prim->y3 = screen->y + (diameter >> 1) + height;
         }
         else
         {
-            diameter >>= 1;
-            edge_y = screen->y - diameter;
-            primitives->y1 = edge_y;
-            primitives->y0 = edge_y;
-            edge_y = screen->y + diameter;
-            primitives->y3 = edge_y;
-            primitives->y2 = edge_y;
+            prim->y0 = prim->y1 = screen->y - (diameter >> 1);
+            prim->y2 = prim->y3 = screen->y + (diameter >> 1);
         }
 
         /* Neutral modulation with subtractive blending for the shadow texture. */
-        SET_BGR0_PACKED(primitives, GPU_TINT_NEUTRAL);
-        setPolyFT4(primitives);
-        setSemiTrans(primitives, 1);
-        primitives->u3 = 0x40;
-        primitives->u1 = 0x40;
-        primitives->v1 = 0x50;
-        primitives->v0 = 0x50;
-        primitives->v3 = 0x70;
-        primitives->v2 = 0x70;
-        setTPage(primitives, 0, 2, 960, 256);
-        primitives->u2 = 0;
-        primitives->u0 = 0;
-        setClut(primitives, 256, 481);
+        SET_BGR0_PACKED(prim, GPU_TINT_NEUTRAL);
+        setPolyFT4(prim);
+        setSemiTrans(prim, 1);
+        prim->u3 = 0x40;
+        prim->u1 = 0x40;
+        prim->v1 = 0x50;
+        prim->v0 = 0x50;
+        prim->v3 = 0x70;
+        prim->v2 = 0x70;
+        setTPage(prim, 0, 2, 960, 256);
+        prim->u2 = 0;
+        prim->u0 = 0;
+        setClut(prim, 256, 481);
 
         depth = actor->z >> SHADOW_DEPTH_SHIFT;
         if (depth < 0)
         {
-            addPrim(&ordering_table[0], primitives);
-            primitives++;
+            addPrim(&ordering_table[0], prim);
+            prim++;
         }
         else if (depth >= SHADOW_OT_SIZE)
         {
-            addPrim(&ordering_table[SHADOW_OT_SIZE - 1], primitives);
-            primitives++;
+            addPrim(&ordering_table[SHADOW_OT_SIZE - 1], prim);
+            prim++;
         }
         else
         {
-            addPrim(&ordering_table[actor->z >> SHADOW_DEPTH_SHIFT], primitives);
-            primitives++;
+            addPrim(&ordering_table[actor->z >> SHADOW_DEPTH_SHIFT], prim);
+            prim++;
         }
     }
-    return primitives;
+    return prim;
 }
 
 /**

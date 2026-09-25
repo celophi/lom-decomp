@@ -100,7 +100,7 @@ extern u16 D_801ED482;
 extern s32 D_801ED490;
 
 void func_80140018(s32 mode);
-void func_8006312C(void);
+void field_collision_rebuild_spans(void);
 void field_select_object(u16 object_index, FieldRenderBuffer* buffers);
 void field_build_render_records(FieldMapObject* object, u16 object_index);
 void field_load_map(s32 map_id);
@@ -456,5 +456,5 @@ void field_select_object(u16 object_index, FieldRenderBuffer* buffers)
         LoadImage(&rect, image);
     }
     field_build_render_records(object, object_index & 0xFFFF);
-    func_8006312C();
+    field_collision_rebuild_spans();
 }

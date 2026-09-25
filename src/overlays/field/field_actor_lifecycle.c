@@ -76,7 +76,7 @@ void field_battle_start(s32 group)
         if (g_field_runtime->actors[i].flags.bits.trigger_group == group)
         {
             field_set_actor_group(g_field_runtime->actors[i].id, group);
-            func_800B28E0(g_field_runtime->actors[i].id, FIELD_BATTLE_EVENT, FIELD_BATTLE_PHASE_START);
+            field_run_actor_event(g_field_runtime->actors[i].id, FIELD_BATTLE_EVENT, FIELD_BATTLE_PHASE_START);
         }
     }
 
@@ -96,11 +96,11 @@ void field_battle_start(s32 group)
         {
             g_field_runtime->actors[i].enabled_events = FIELD_ALL_EVENTS;
             field_set_actor_control_mode(i, FIELD_CONTROL_SCRIPTED);
-            func_800B28E0(g_field_runtime->actors[i].id, FIELD_PARTY_BATTLE_EVENT, 0);
+            field_run_actor_event(g_field_runtime->actors[i].id, FIELD_PARTY_BATTLE_EVENT, 0);
         }
     }
 
-    func_800B28E0(FIELD_EVENT_OWNER, FIELD_BATTLE_EVENT, FIELD_BATTLE_PHASE_START);
+    field_run_actor_event(FIELD_EVENT_OWNER, FIELD_BATTLE_EVENT, FIELD_BATTLE_PHASE_START);
 }
 
 /**
@@ -115,13 +115,13 @@ void field_battle_suspend(void)
     battle = g_field_battle;
     battle->state.flags |= FIELD_BATTLE_FINISHED;
     field_set_battle_group(0, battle);
-    func_800B28E0(FIELD_EVENT_OWNER, FIELD_BATTLE_EVENT, FIELD_BATTLE_PHASE_SUSPEND);
+    field_run_actor_event(FIELD_EVENT_OWNER, FIELD_BATTLE_EVENT, FIELD_BATTLE_PHASE_SUSPEND);
 
     for (i = FIELD_PARTY_SIZE; i < g_field_runtime->state.actor_count; i++)
     {
         if (g_field_runtime->actors[i].flags.bits.trigger_group == g_field_runtime->state.bits.trigger_group)
         {
-            func_800B28E0(g_field_runtime->actors[i].id, FIELD_BATTLE_EVENT, FIELD_BATTLE_PHASE_SUSPEND);
+            field_run_actor_event(g_field_runtime->actors[i].id, FIELD_BATTLE_EVENT, FIELD_BATTLE_PHASE_SUSPEND);
         }
     }
 
@@ -168,7 +168,7 @@ void field_battle_end(void)
 
     for (i = 0; i < g_field_runtime->state.actor_count; i++)
     {
-        func_800B28E0(g_field_runtime->actors[i].id, FIELD_BATTLE_EVENT, FIELD_BATTLE_PHASE_END);
+        field_run_actor_event(g_field_runtime->actors[i].id, FIELD_BATTLE_EVENT, FIELD_BATTLE_PHASE_END);
     }
 
     if (g_field_duel_mode != 0)

@@ -261,7 +261,7 @@ extern Actor* field_find_object_state(s32);
 extern u8* g_field_runtime;
 extern s32 g_field_interaction_active;
 /* Int parameters on purpose: with the (s32, u8, s8) definition the calls would narrow their arguments. */
-s32 func_800B286C(s32 owner_id, s32 event_id, s32 argument);
+s32 field_queue_actor_event(s32 owner_id, s32 event_id, s32 argument);
 s32 field_get_actor_position(s32, s32*);
 extern u8* func_800C1E40(s32 arg0);
 extern void func_8005AF5C(s32 obj_index, s32 part_index, FieldPos* out);
@@ -401,7 +401,7 @@ void func_800BD97C(void)
  * @brief Re-issue every active table element and clear the batch-dirty flags.
  *
  * After func_800B177C, walks the @c count live elements of @c g_field_runtime,
- * dispatching func_800B286C for each element's id, then clears the 0x60000 bits
+ * dispatching field_queue_actor_event for each element's id, then clears the 0x60000 bits
  * of the flag word at 0x400 and resets @c g_field_interaction_active.
  *
  */
@@ -412,7 +412,7 @@ void func_800BD99C(void)
     func_800B177C();
     for (i = 0; i < (s32)((Foo*)g_field_runtime)->f400.count; i++)
     {
-        func_800B286C(((Foo*)g_field_runtime)->elem[i].unk0, 0xD, 0x82);
+        field_queue_actor_event(((Foo*)g_field_runtime)->elem[i].unk0, 0xD, 0x82);
     }
     ((Foo*)g_field_runtime)->f400.flags &= 0xFFF9FFFF;
     g_field_interaction_active = 0;

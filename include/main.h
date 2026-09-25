@@ -158,7 +158,9 @@ typedef struct
     u8  _pad000[0x28];          /**< 0x000: not yet mapped. */
     u32 menu_option_flags;      /**< 0x028: menu audio/vibration option bits. */
     u32 money;
-    u8  _pad030[0x640 - 0x30];
+    u8  _pad030[0x204 - 0x30];
+    u32 known_save_flags;       /**< One bit per product code of a known game save found on a memory card. */
+    u8  _pad208[0x640 - 0x208];
     InventoryRecord player_equipment[PLAYER_EQUIPMENT_SLOT_COUNT];
     u8  _pad740[0x840 - 0x740];
     u8  inject_enable;          /**< 0x840: non-zero allows input injection. */

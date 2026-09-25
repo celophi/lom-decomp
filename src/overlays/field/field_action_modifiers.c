@@ -184,7 +184,7 @@ void field_battle_run_party_event(void)
 
     for (i = 0; i < FIELD_PARTY_RECORD_COUNT; i++)
     {
-        func_800B28E0(i, FIELD_ACTION_EVENT, 3);
+        field_run_actor_event(i, FIELD_ACTION_EVENT, 3);
     }
 }
 
@@ -339,7 +339,7 @@ void field_battle_finish(s32 result)
 {
     func_800BD520(0, FIELD_VAR_BATTLE_RESULT, result);
     g_field_battle->state.flags |= FIELD_BATTLE_FINISHED;
-    func_800B28E0(FIELD_EVENT_OWNER, FIELD_BATTLE_END_EVENT, 1);
+    field_run_actor_event(FIELD_EVENT_OWNER, FIELD_BATTLE_END_EVENT, 1);
 }
 
 /**
