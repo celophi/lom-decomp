@@ -1,170 +1,375 @@
 /**
  * @file field_actor_hud_effects.c
- * @brief Field actor HUD renderer and actor control effects: participant panels,
- *        HP and status-bar primitives, the HUD image loader, control-flag
- *        handlers, horizontal scaling and the ground-shadow renderer.
+ * @brief Field actor HUD (party, enemy and boss panels with HP and special
+ *        attack gauges), the HUD image loader, the object flag handlers, the
+ *        fading primitive pool and the ground-shadow renderer.
  *
- * One translation unit: the control-effect handler table D_800EB00C (used by
- * func_80086494) sits inside the HUD's initialized data, between
+ * One translation unit: the flag handler table g_field_object_flag_handlers
+ * sits inside the HUD's initialized data, between
  * g_field_hud_companion_status_colors and g_field_party_hud_order.
  */
 
-/* ---- Field actor HUD ----------------------------------------------------- */
-
 #include "common.h"
 #include "cdrom.h"
+#include "display.h"
+#include "field_actor_tables.h"
+#include "field_calls.h"
 #include "field_effect_render_state.h"
+#include "field_runtime.h"
+#include "gpu_packet.h"
 #include "tim.h"
 #include "vector.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
+#include "sdk/rand.h"
 
+/** @brief Screen center, added to camera-relative positions. */
+#define FIELD_SCREEN_CENTER_X (SCREEN_WIDTH / 2)
+#define FIELD_SCREEN_CENTER_Y (VRAM_DRAW_HEIGHT / 2)
+
+/* ---- HUD ------------------------------------------------------------------ */
+
+/** @brief Party records with a HUD panel. */
+#define FIELD_HUD_PARTY_COUNT 3
+
+/** @brief Actor commands that keep the special attack gauge hidden. */
+#define FIELD_COMMAND_PERFORM_ACTION 0x85
+#define FIELD_COMMAND_87 0x87
+
+/** @brief Actor command of a knocked-down party member (the HUD shows the recovery gauge). */
+#define FIELD_COMMAND_KNOCKED_DOWN 0x8E
+
+/** @brief FieldObjectState.hud.word bit: show the special attack gauge. */
+#define FIELD_HUD_SPECIAL_GAUGE 0x1
+
+/** @brief FieldObjectState.unk8 layout: displayed HP, panel timer and boss flag. */
 #define FIELD_HUD_HP_MASK 0xFFFFFF
 #define FIELD_HUD_DISPLAY_FLAGS_MASK 0xFF000000
+#define FIELD_HUD_TIMER_SHIFT 24
+#define FIELD_HUD_TIMER_MASK 0x7F
+#define FIELD_HUD_BOSS_SHIFT 31
+
+/** @brief Frames an enemy panel stays up after its HP changes. */
+#define FIELD_HUD_PANEL_FRAMES 20
+
+/** @brief HP per gauge bar for party members and enemies, and for the boss. */
+#define FIELD_HUD_HP_PER_BAR 100
+#define FIELD_HUD_BOSS_HP_PER_BAR 400
+
+/** @brief Panel positions. */
+#define FIELD_HUD_SINGLE_X 112
+#define FIELD_HUD_PAIR_X 56
+#define FIELD_HUD_PAIR_STEP 108
+#define FIELD_HUD_TRIO_X 8
+#define FIELD_HUD_TRIO_STEP 104
+#define FIELD_HUD_TRIO_LOW_Y 28
+#define FIELD_HUD_TRIO_HIGH_Y 4
+#define FIELD_HUD_PARTY_Y 16
+#define FIELD_HUD_BOSS_X 32
+#define FIELD_HUD_BOSS_Y 192
+#define FIELD_HUD_ENEMY_OFFSET_X 28
+
+/** @brief Screen bounds an enemy panel is clamped to. */
+#define FIELD_HUD_MARGIN_X 32
+#define FIELD_HUD_MIN_Y 16
+#define FIELD_HUD_MAX_Y 208
+
+/** @brief Animation of an anchor effect record that the panel does not follow. */
+#define FIELD_HUD_ANCHOR_IGNORED_ANIMATION 0x2F
+
+/** @brief Frames of the panel shake; the shake counters rest at 0xFF. */
+#define FIELD_HUD_SHAKE_FRAMES 6
+#define FIELD_HUD_SHAKE_IDLE 0xFF
+
+/** @brief Portrait blink: frames per animation, idle chance mask and the table of blinking objects. */
 #define FIELD_HUD_BLINK_FRAMES 6
+#define FIELD_HUD_BLINK_CHANCE_MASK 0x3F
+#define FIELD_HUD_BLINK_LIST_COUNT 8
+#define FIELD_HUD_BLINK_LIST_END 0xFF
+
+/** @brief Glyph indices and spacing of the HP percentage. */
 #define FIELD_HUD_GLYPH_PERCENT 10
 #define FIELD_HUD_GLYPH_ADVANCE 7
+
+/** @brief Companion kinds (player record 2) at or above this value use the companion panel. */
+#define FIELD_HUD_COMPANION_KIND_MIN 0x41
+
+/** @brief Ordering-table entries of the HUD and of the HP change quads. */
+#define FIELD_HUD_OT_INDEX 3
+#define FIELD_HUD_DELTA_OT_INDEX 2
+
+/** @brief Scratchpad word holding the screen position passed to the portrait and percentage emitters. */
+#define FIELD_HUD_SCRATCH_POSITION ((Vec2s*)0x1F800000)
+
+/** @brief Texture page coordinates packed as a u0/v0 halfword. */
+#define FIELD_HUD_UV(u, v) (((v) << 8) | (u))
+
 #define FIELD_HUD_CLUT getClut(256, 480)
 #define FIELD_HUD_BLINK_CLUT getClut(256, 481)
 
-/** @brief Position, state, and presence fields in a 0x54-byte actor record. */
-typedef struct
-{
-    s32 x, y, z;
-    u8 pad_0x0c[0x15];
-    u8 state;
-    u8 pad_0x22[3];
-    u8 presence;
-    u8 pad_0x26[4];
-    s16 action_id;
-    u8 tail[0x28];
-} FieldPanelActor;
-/** @brief Display values, countdown, group, and linked actor in a 0x23C-byte slot. */
-typedef struct
-{
-    u32 maximum_hp;
-    u32 current_hp;
-    union
-    {
-        s32 word;
-        u8 bytes[4];
-    } hp_display;
-    u32 flags;
-    u32 group;
-    u8 pad_0x14[0x38];
-    u32 hud_options;
-    u8 pad_0x50[0x11D];
-    u8 linked_effect_index;
-    u8 pad_0x16e[0xA];
-    union
-    {
-        u32 word;
-        u8 bytes[4];
-    } contact;
-    u8 tail[0xC0];
-} FieldPanelSlot;
-/** @brief Participation flag in a 0x268-byte player record. */
-typedef struct
-{
-    u8 flags;
-    u8 tail[0x267];
-} FieldPanelPlayer;
+/** @brief Gauge width in pixels for the portrait, boss and enemy panels. */
+#define FIELD_HUD_BAR_WIDTH 54
+#define FIELD_HUD_BOSS_BAR_WIDTH 227
+#define FIELD_HUD_BAR_HEIGHT 3
 
-/** @brief HP and status gauges in a 0x23C-byte object state. */
+/** @brief Horizontal slant of the gauge quads. */
+#define FIELD_HUD_BAR_SLANT 3
+
+/** @brief Gauge colors: the dim, mid and full intensity masks of a bar color. */
+#define FIELD_HUD_COLOR_DIM 0x3F3F3F
+#define FIELD_HUD_COLOR_MID 0x7F7F7F
+
+/** @brief HP bar change steps: the displayed HP moves a third of the way per frame. */
+#define FIELD_HUD_RISE_MIN_STEP 3
+#define FIELD_HUD_FALL_MIN_STEP 4
+
+/** @brief Length of the special attack gauge line at full intensity. */
+#define FIELD_HUD_LINE_LENGTH 35
+
+/** @brief POLY_G4 length and code, written separately from the colors. */
+#define FIELD_POLY_G4_LENGTH 8
+#define FIELD_POLY_G4_CODE 0x38
+
+/** @brief Gray used for the recovery gauge's dark edge. */
+#define FIELD_HUD_RECOVERY_DARK GPU_COLOR_WORD(0x20, 0x20, 0x20)
+#define FIELD_HUD_WHITE GPU_COLOR_WORD(0xFF, 0xFF, 0xFF)
+#define FIELD_HUD_RED GPU_COLOR_WORD(0xFF, 0, 0)
+
+/**
+ * @brief HP and gauge words at the start of FieldObjectState, as the panel reads them.
+ * @note The panel re-reads the HP words after every primitive store; without volatile the
+ *       compiler keeps them in registers and the code no longer matches.
+ */
 typedef struct
 {
     u32 maximum_hp;
     volatile u32 current_hp;
-    volatile u32 hp_display_flags;
-    u8 pad_0c[0x48 - 0x0C];
-    u16 status_intensity;
-    u16 effect_intensity;
+    /** @brief Displayed HP in the low 24 bits, the panel timer above it and the boss flag in bit 31. */
+    volatile u32 displayed_hp;
+    u8 unkC[0x48 - 0xC];
+    u16 technique_gauge;
+    s16 action_charge;
     union
     {
         u32 word;
         struct
         {
             u8 flags;
-            u8 panel_type;
-            u8 unknown_0x4e;
-            u8 unknown_0x4f;
+            u8 object_index;
+            u8 unk4E;
+            u8 unk4F;
         } bytes;
     } hud;
-    u8 pad_50[0x23C - 0x50];
-} FieldHudGaugeState;
+} FieldHudGauge;
 
-/** @brief Panel shake and special-gauge values in a 0x268-byte player record. */
+extern u32 g_field_hud_hp_colors[];
+extern CVECTOR g_field_hud_status_colors[2];
+extern CVECTOR g_field_hud_effect_colors[2];
+extern CVECTOR g_field_hud_full_status_colors[2];
+extern CVECTOR g_field_hud_companion_status_colors[2];
+extern s32 g_field_party_hud_order[FIELD_HUD_PARTY_COUNT];
+extern s16 g_field_hud_shake_offsets[];
+extern s32 g_field_hud_blink_frames[FIELD_HUD_PARTY_COUNT];
+extern s32 g_field_boss_hud_shake_frame;
+extern s32 g_field_hud_bar_height;
+extern s32 g_field_hud_bar_width;
+extern s32 g_field_hud_bar_offset_x;
+extern s32 g_field_hud_bar_offset_y;
+extern s32 g_field_active_group;
+extern s32 g_field_scene_mode_bit;
+extern s32 g_frame_counter;
+extern s32 D_80122B20;
+extern u8 D_80117EC8[];
+extern u8 D_800FDCEA;
+extern u16 D_800FE01E;
+extern u8* g_field_cd_buffer;
+
+/* ---- Object flag handlers and fading primitives ---------------------------- */
+
+/** @brief Each object's effect animations play in animation actor slot 64 + object index. */
+#define FIELD_OBJECT_EFFECT_SLOT_BASE 64
+
+/** @brief Number of bits in FieldObjectState.flags that have a handler entry. */
+#define FIELD_OBJECT_HANDLER_COUNT 16
+
+/** @brief Handler entry of a flag bit without a handler. */
+#define FIELD_OBJECT_HANDLER_NONE 0xFF
+
+/** @brief Handler entries below this value are animation resources, larger ones functions. */
+#define FIELD_OBJECT_HANDLER_FUNCTION_MIN 0x100
+
+/** @brief FieldObjectState.flags bits with a handler in g_field_object_flag_handlers; meanings mostly unknown. */
+#define FIELD_OBJECT_FLAG_0004 0x0004
+#define FIELD_OBJECT_FLAG_0020 0x0020
+#define FIELD_OBJECT_FLAG_0040 0x0040
+#define FIELD_OBJECT_FLAG_0080 0x0080
+#define FIELD_OBJECT_FLAG_0100 0x0100
+#define FIELD_OBJECT_FLAG_KNOCKED_OUT 0x0200
+#define FIELD_OBJECT_FLAG_2000 0x2000
+#define FIELD_OBJECT_FLAG_4000 0x4000
+#define FIELD_OBJECT_FLAG_8000 0x8000
+
+/** @brief Set for one frame when the object is hit; tints the actor red. */
+#define FIELD_OBJECT_FLAG_HIT_FLASH 0x10000000
+
+/** @brief Flags that stop the looping 0x4000/0x8000 effects (also skip knockback and camera tracking). */
+#define FIELD_OBJECT_IMMOBILE_FLAGS                                                                                                                            \
+    (FIELD_OBJECT_FLAG_0004 | FIELD_OBJECT_FLAG_0020 | FIELD_OBJECT_FLAG_0040 | FIELD_OBJECT_FLAG_0080 | FIELD_OBJECT_FLAG_0100 |                              \
+     FIELD_OBJECT_FLAG_KNOCKED_OUT | FIELD_OBJECT_FLAG_2000)
+
+/** @brief FieldObjectState.contact bit: the object is linked to linked_object_index. */
+#define FIELD_CONTACT_LINKED_SHIFT 1
+
+/** @brief FieldObjectState.movement bits cleared whenever an actor animation restarts. */
+#define FIELD_MOVEMENT_ANIMATION_BITS 0x1800
+
+/** @brief Low seven bits of FieldActor.animation select the animation, bit 7 mirrors it. */
+#define FIELD_ANIMATION_SEQUENCE_MASK 0x7F
+#define FIELD_ANIMATION_MIRROR_FLAG 0x80
+
+/** @brief FieldActor.control bits set by the flag handlers. */
+#define FIELD_ANIMATION_HOLD_LAST_FRAME 0x800
+#define FIELD_ACTOR_CONTROL_40000 0x40000
+
+/** @brief Animation held while flag 0x80 is set. */
+#define FIELD_ANIMATION_FLAG_0080_POSE 0x14
+
+/** @brief Animation held while flag 0x40 is set. */
+#define FIELD_ANIMATION_FLAG_0040_POSE 0x1B
+
+/** @brief Tint component kept by the hit flash (full intensity is 0x80). */
+#define FIELD_HIT_FLASH_TINT 0x20
+
+/** @brief FieldObjectPart scale values: 0x40 is full size. */
+#define FIELD_PART_SCALE_FULL 0x40
+#define FIELD_PART_SCALE_HALF 0x20
+
+/** @brief Number of primitives in the fading primitive pool. */
+#define FIELD_FADE_PRIM_COUNT 256
+
+/** @brief Brightness lost by a fading primitive per frame. */
+#define FIELD_FADE_PRIM_STEP 0x10
+
+/* ---- Ground shadow ---------------------------------------------------------- */
+
+/** @brief First two footprint corners; only their horizontal coordinates are used. */
 typedef struct
 {
-    u8 pad_0[0x259];
-    u8 shake_frame;
-    u8 pad_25a[0x25E - 0x25A];
-    s16 special_gauge_value;
-    s16 special_gauge_maximum;
-    u8 pad_262[0x268 - 0x262];
-} FieldHudPlayer;
+    s16 left_x;
+    s16 first_y;
+    s16 right_x;
+} ShadowFootprint;
 
-/** @brief Current action in a 0x54-byte actor record. */
+/** @brief Projected ground position in the field renderer scratchpad. */
 typedef struct
 {
-    u8 pad_0[0x2A];
-    s16 action_id;
-    u8 pad_2c[0x54 - 0x2C];
-} FieldHudActorAction;
+    u16 x;
+    u16 y;
+} ShadowScreenPosition;
 
-/** @brief Portrait palette selection in a 0x54-byte actor record. */
+/** @brief World position copied to the field renderer scratchpad. */
 typedef struct
 {
-    u8 pad_0[0x1C];
-    u32 texture_flags;
-    u8 pad_0x20[0x54 - 0x20];
-} FieldHudActorTexture;
+    s32 x;
+    s32 y;
+    s32 z;
+} ShadowWorldPosition;
 
-/** @brief Draw context carrying an ordering-table tag at 0xC. */
+#define SHADOW_SCREEN_POSITION ((ShadowScreenPosition*)0x1F8000C0)
+#define SHADOW_WORLD_POSITION ((ShadowWorldPosition*)0x1F8000C4)
+#define SHADOW_OT_SIZE 4096
+#define SHADOW_DEPTH_SHIFT 7
+
+/** @brief Screen translation applied to the fading primitives. */
 typedef struct
 {
-    u8 pad[0xC];
-    u32 tag;
-} FieldPrimitiveContext;
+    u16 x;
+    u16 y;
+} FieldScreenMotion;
 
-/** @brief Primitive lists and allocation cursor in the field draw context. */
-typedef struct
-{
-    u8 pad_0[8];
-    u32 delta_tag;
-    u32 hud_tag;
-    u8 pad_10[0x40B8 - 0x10];
-    u8* primitive_cursor;
-} FieldHudDrawContext;
+extern u32 g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_COUNT];
+extern FieldScreenMotion g_field_screen_scroll;
+extern POLY_FT4 g_field_fade_prims[FIELD_FADE_PRIM_COUNT];
+extern u16 g_field_fade_prim_depths[FIELD_FADE_PRIM_COUNT];
+extern FieldActor* g_field_updating_actor;
+extern u32* g_field_scene_record_table;
+
+static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* render_half, u32 hp_per_bar);
+static u8* field_emit_hud_status_line(u8* packet, FieldRenderHalf* render_half, CVECTOR* colors, s32 intensity, s32 x, s32 y);
+static void* field_emit_hud_percentage(void* packet, FieldRenderHalf* render_half, s32 value, Vec2s* position);
+static void* field_emit_hud_glyph(void* packet, FieldRenderHalf* render_half, s32 value, Vec2s* position);
+static POLY_F4* field_emit_hud_damage_quad(POLY_F4* prim, s32 y, u_long* ot);
+static POLY_F4* field_emit_hud_healing_quad(POLY_F4* prim, s32 y, u_long* ot);
+void* field_emit_actor_portrait(SPRT* sprt, u_long* ot, s32 index, Vec2s* position);
+static s32 field_upload_image_resource(RECT* rect, Tim* resource, s32 mode);
+int abs(int value);
+void bcopy(const void* src, void* dst, int size);
+void field_restart_actor_animation(FieldActor* actor);
+void field_clear_actor_effects(FieldActorSlot* slot);
+static inline void field_clear_link_target_flag(s32 object_index);
+FieldActor* field_lookup_actor(s32 key);
+void func_800B2198(s32 actor_id, void* unused);
 
 /**
- * @brief Draw participant panels and temporary indicators for eligible actors.
- * @param render_context Rendering context forwarded to the panel drawing helper.
- * @note Actor positions use signed fixed-point division, followed by screen clamps.
- * @note Display-value bits 24 through 30 count down after a temporary panel draw.
+ * @brief Set the corners of a slanted gauge bar.
+ * @param bar Gauge quad.
+ * @param x Panel screen x.
+ * @param y Panel screen y.
+ * @param width Filled width in pixels.
  */
-void field_draw_actor_hud(u8* render_context)
+static inline void field_hud_set_bar_geometry(POLY_G4* bar, s32 x, s32 y, s32 width)
 {
-    extern FieldPanelActor g_field_actors[], g_field_effect_records[];
-    extern FieldPanelSlot g_field_object_states[];
-    extern FieldPanelPlayer g_field_player_records[];
-    extern s32 g_field_party_hud_order[];
+    bar->x0 = (u16)g_field_hud_bar_offset_x + x;
+    bar->y1 = ((u16)g_field_hud_bar_offset_y + y);
+    bar->x1 = ((u16)g_field_hud_bar_offset_x + x) + width;
+    bar->x2 = ((u16)g_field_hud_bar_offset_x + x) - FIELD_HUD_BAR_SLANT;
+    bar->y0 = ((u16)g_field_hud_bar_offset_y + y);
+    bar->y3 = bar->y1 + (u16)g_field_hud_bar_height;
+    bar->y2 = bar->y3;
+    bar->x3 = ((u16)g_field_hud_bar_offset_x + x) + width - FIELD_HUD_BAR_SLANT;
+}
 
-    extern s32 g_field_active_group, g_field_scene_mode_bit, D_80122B20;
-    extern void field_draw_actor_hud_panel(s32, s32, s32, u8*, u32);
+/**
+ * @brief Set the slanted corners of an HP change quad from its x0/x1 and link it.
+ * @param prim Quad whose x0, x1 and color are already set.
+ * @param y Panel screen y, added to g_field_hud_bar_offset_y.
+ * @param ot Ordering-table entry to link into.
+ * @return Pointer just past the quad.
+ */
+static inline POLY_F4* field_hud_link_change_quad(POLY_F4* prim, s32 y, u_long* ot)
+{
+    prim->x3 = prim->x1 - FIELD_HUD_BAR_SLANT;
+    prim->y1 = ((u16)g_field_hud_bar_offset_y) + y;
+    prim->x2 = prim->x0 - FIELD_HUD_BAR_SLANT;
+    prim->y0 = ((u16)g_field_hud_bar_offset_y) + y;
+    prim->y3 = prim->y1 + ((u16)g_field_hud_bar_height);
+    prim->y2 = prim->y3;
+    addPrim(ot, prim);
+    return prim + 1;
+}
+
+/**
+ * @brief Draw the party panels and the panels of recently hit enemies.
+ * @param render_half Render half that receives the primitives.
+ * @note Party members not performing an action get their special attack gauge shown.
+ */
+void field_draw_actor_hud(FieldRenderHalf* render_half)
+{
+    /* Effect records share the actor record layout (position and animation). */
+    extern FieldActor g_field_effect_records[];
 
     Vec2s position;
     s32 i = 0;
     s32 panel_count = i;
-    s32 absent_actor = 0xFF;
-    s32 excluded_action;
-    FieldPanelActor* single_actor;
-    FieldPanelPlayer* single_player;
-    FieldPanelActor* paired_actor;
-    FieldPanelPlayer* paired_player;
+    s32 unused_presence = FIELD_ACTOR_UNUSED;
+    s32 command;
+    FieldActor* single_actor;
+    FieldPlayerRecord* single_player;
+    FieldActor* paired_actor;
+    FieldPlayerRecord* paired_player;
     s16 panel_y;
     s32 boss_drawn;
-    FieldPanelActor* anchor_actor;
+    FieldActor* anchor;
     s32 group;
     s32 hp_display;
     u32 current_hp;
@@ -173,240 +378,213 @@ void field_draw_actor_hud(u8* render_context)
     s32 projected_y;
     s32 coordinate;
     s32 camera_y;
-    s32 hud_ticks;
+    s32 timer;
     u32 updated_hp_display;
 
     do
     {
-        if (g_field_actors[i].presence != absent_actor && (g_field_player_records[i].flags & 1))
+        if (g_field_actors[i].presence != unused_presence && (g_field_player_records[i].flags & FIELD_PLAYER_ACTIVE))
         {
-            excluded_action = 0x85;
-            if (g_field_actors[i].action_id != excluded_action)
+            /* each command goes through the local; comparing the constants directly changes the code */
+            command = FIELD_COMMAND_PERFORM_ACTION;
+            if (g_field_actors[i].command != command)
             {
-                excluded_action = 0x87;
-                if (g_field_actors[i].action_id != excluded_action)
+                command = FIELD_COMMAND_87;
+                if (g_field_actors[i].command != command)
                 {
-                    g_field_object_states[i].hud_options |= 1;
+                    g_field_object_states[i].hud.word |= FIELD_HUD_SPECIAL_GAUGE;
                 }
             }
             panel_count++;
         }
         i++;
-    } while (i < 3);
+    } while (i < FIELD_HUD_PARTY_COUNT);
     switch (panel_count)
     {
     case 1:
-        i = 0;
-        do
+        for (i = 0; i < FIELD_HUD_PARTY_COUNT; i++)
         {
             single_actor = &g_field_actors[i];
             single_player = &g_field_player_records[i];
-            if (single_actor->presence != 0xFF && (single_player->flags & 1))
+            if (single_actor->presence != FIELD_ACTOR_UNUSED && (single_player->flags & FIELD_PLAYER_ACTIVE))
             {
-                field_draw_actor_hud_panel(0x70, 0x10, i, render_context, 0x64);
+                field_draw_actor_hud_panel(FIELD_HUD_SINGLE_X, FIELD_HUD_PARTY_Y, i, render_half, FIELD_HUD_HP_PER_BAR);
             }
-            i++;
-        } while (i < 3);
+        }
         break;
     case 2:
-        i = 0;
         panel_count = 0;
-        do
+        for (i = 0; i < FIELD_HUD_PARTY_COUNT; i++)
         {
             paired_actor = &g_field_actors[i];
             paired_player = &g_field_player_records[i];
-            if (paired_actor->presence != 0xFF && (paired_player->flags & 1))
+            if (paired_actor->presence != FIELD_ACTOR_UNUSED && (paired_player->flags & FIELD_PLAYER_ACTIVE))
             {
-                field_draw_actor_hud_panel(0x38 + panel_count * 0x6C, 0x10, i, render_context, 0x64);
+                field_draw_actor_hud_panel(FIELD_HUD_PAIR_X + panel_count * FIELD_HUD_PAIR_STEP, FIELD_HUD_PARTY_Y, i, render_half, FIELD_HUD_HP_PER_BAR);
                 panel_count++;
             }
-            i++;
-        } while (i < 3);
+        }
         break;
     case 3:
-        i = 0;
         panel_count = 0;
-        do
+        for (i = 0; i < FIELD_HUD_PARTY_COUNT; i++)
         {
-            if (g_field_actors[g_field_party_hud_order[i]].presence != 0xFF && (g_field_player_records[g_field_party_hud_order[i]].flags & 1))
+            if (g_field_actors[g_field_party_hud_order[i]].presence != FIELD_ACTOR_UNUSED &&
+                (g_field_player_records[g_field_party_hud_order[i]].flags & FIELD_PLAYER_ACTIVE))
             {
-                panel_y = 0x1C;
+                panel_y = FIELD_HUD_TRIO_LOW_Y;
                 if (i & 1)
                 {
-                    panel_y = 4;
+                    panel_y = FIELD_HUD_TRIO_HIGH_Y;
                 }
-                field_draw_actor_hud_panel(8 + panel_count * 0x68, panel_y, g_field_party_hud_order[i], render_context, 0x64);
+                field_draw_actor_hud_panel(FIELD_HUD_TRIO_X + panel_count * FIELD_HUD_TRIO_STEP, panel_y, g_field_party_hud_order[i], render_half,
+                                           FIELD_HUD_HP_PER_BAR);
                 panel_count++;
             }
-            i++;
-        } while (i < 3);
+        }
         break;
     }
     boss_drawn = 0;
     /* Enemy panels are transient; the boss uses a fixed panel at the bottom. */
     if (g_field_scene_mode_bit != 0)
     {
-        i = 3;
         if (D_80122B20 == 0)
         {
-            do
+            for (i = FIELD_HUD_PARTY_COUNT; i < FIELD_ACTOR_COUNT; i++)
             {
-                group = g_field_object_states[i].group & 0xF;
+                group = g_field_object_states[i].group_flags & 0xF;
                 if (group == g_field_active_group && group != 0)
                 {
-                    hp_display = g_field_object_states[i].hp_display.word;
+                    hp_display = g_field_object_states[i].unk8.word;
                     if (hp_display < 0)
                     {
-                        if (g_field_actors[i].presence != 0xFF && (hp_display & FIELD_HUD_HP_MASK) && boss_drawn == 0)
+                        if (g_field_actors[i].presence != FIELD_ACTOR_UNUSED && (hp_display & FIELD_HUD_HP_MASK) && boss_drawn == 0)
                         {
-                            field_draw_actor_hud_panel(0x20, 0xC0, i, render_context, 0x190);
+                            field_draw_actor_hud_panel(FIELD_HUD_BOSS_X, FIELD_HUD_BOSS_Y, i, render_half, FIELD_HUD_BOSS_HP_PER_BAR);
                             boss_drawn = 1;
                         }
                     }
-                    else if (g_field_actors[i].presence != 0xFF)
+                    else if (g_field_actors[i].presence != FIELD_ACTOR_UNUSED)
                     {
-                        current_hp = g_field_object_states[i].current_hp;
+                        current_hp = g_field_object_states[i].unk4.word;
                         displayed_hp = hp_display & FIELD_HUD_HP_MASK;
                         if (current_hp < displayed_hp)
                         {
-                            g_field_object_states[i].hp_display.word = (hp_display & 0x80FFFFFF) | 0x14000000;
+                            g_field_object_states[i].unk8.word =
+                                (hp_display & ~(FIELD_HUD_TIMER_MASK << FIELD_HUD_TIMER_SHIFT)) | (FIELD_HUD_PANEL_FRAMES << FIELD_HUD_TIMER_SHIFT);
                         }
                         else if (displayed_hp != current_hp)
                         {
-                            g_field_object_states[i].hp_display.word = (hp_display & 0x80FFFFFF) | 0x14000000;
+                            g_field_object_states[i].unk8.word =
+                                (hp_display & ~(FIELD_HUD_TIMER_MASK << FIELD_HUD_TIMER_SHIFT)) | (FIELD_HUD_PANEL_FRAMES << FIELD_HUD_TIMER_SHIFT);
                         }
-                        if (g_field_object_states[i].hp_display.bytes[3] & 0x7F)
+                        if (g_field_object_states[i].unk8.bytes[3] & FIELD_HUD_TIMER_MASK)
                         {
-                            if (!(g_field_object_states[i].flags & 0x100) && (g_field_object_states[i].contact.bytes[0] & 1) &&
-                                (g_field_effect_records[g_field_object_states[i].linked_effect_index].state & 0x7F) != 0x2F)
+                            if (!(g_field_object_states[i].flags & FIELD_OBJECT_FLAG_0100) && (g_field_object_states[i].contact.bytes.flags & 1) &&
+                                (g_field_effect_records[g_field_object_states[i].linked_effect_index].animation & 0x7F) != FIELD_HUD_ANCHOR_IGNORED_ANIMATION)
                             {
-                                anchor_actor = &g_field_effect_records[g_field_object_states[i].linked_effect_index];
+                                anchor = &g_field_effect_records[g_field_object_states[i].linked_effect_index];
                                 {
                                     s32 camera_x = g_field_view_offset_x / 256;
-                                    s32 world_x = anchor_actor->x / 256 + 0xA0;
+                                    s32 world_x = anchor->x / 256 + FIELD_SCREEN_CENTER_X;
                                     coordinate = camera_x + world_x;
                                     position.x = coordinate;
                                 }
                                 projected_y = g_field_view_offset_y / 256;
-                                world_y = g_field_effect_records[g_field_object_states[i].linked_effect_index].y / 256 + 0x70;
+                                world_y = g_field_effect_records[g_field_object_states[i].linked_effect_index].y / 256 + FIELD_SCREEN_CENTER_Y;
                                 projected_y = projected_y + world_y;
                                 coordinate =
                                     projected_y - g_field_effect_records[g_field_object_states[i].linked_effect_index].z / 512 - g_field_view_offset_z / 512;
                                 position.y = coordinate;
 
                                 coordinate = position.x;
-                                if (coordinate + 0x20 >= 0x141)
+                                if (coordinate + FIELD_HUD_MARGIN_X > SCREEN_WIDTH)
                                 {
-                                    position.x = 0x120;
+                                    position.x = SCREEN_WIDTH - FIELD_HUD_MARGIN_X;
                                 }
                                 coordinate = position.x;
-                                if (coordinate < 0x20)
+                                if (coordinate < FIELD_HUD_MARGIN_X)
                                 {
-                                    position.x = 0x20;
+                                    position.x = FIELD_HUD_MARGIN_X;
                                 }
                                 coordinate = position.y;
-                                if (coordinate >= 0xD1)
+                                if (coordinate > FIELD_HUD_MAX_Y)
                                 {
-                                    position.y = 0xD0;
+                                    position.y = FIELD_HUD_MAX_Y;
                                 }
                                 coordinate = position.y;
-                                if (coordinate < 0x10)
+                                if (coordinate < FIELD_HUD_MIN_Y)
                                 {
-                                    position.y = 0x10;
+                                    position.y = FIELD_HUD_MIN_Y;
                                 }
                             }
                             else
                             {
                                 {
                                     s32 camera_x = g_field_view_offset_x / 256;
-                                    s32 world_x = g_field_actors[i].x / 256 + 0xA0;
+                                    s32 world_x = g_field_actors[i].x / 256 + FIELD_SCREEN_CENTER_X;
                                     coordinate = camera_x + world_x;
                                     position.x = coordinate;
                                 }
                                 camera_y = g_field_view_offset_y / 256;
                                 {
-                                    s32 actor_y = g_field_actors[i].y / 256 + 0x70;
+                                    s32 actor_y = g_field_actors[i].y / 256 + FIELD_SCREEN_CENTER_Y;
                                     projected_y = camera_y + actor_y;
                                 }
                                 coordinate = projected_y - g_field_actors[i].z / 512 - g_field_view_offset_z / 512;
                                 position.y = coordinate;
 
                                 coordinate = position.x;
-                                if (coordinate + 0x20 >= 0x141)
+                                if (coordinate + FIELD_HUD_MARGIN_X > SCREEN_WIDTH)
                                 {
-                                    position.x = 0x120;
+                                    position.x = SCREEN_WIDTH - FIELD_HUD_MARGIN_X;
                                 }
                                 coordinate = position.x;
-                                if (coordinate < 0x20)
+                                if (coordinate < FIELD_HUD_MARGIN_X)
                                 {
-                                    position.x = 0x20;
+                                    position.x = FIELD_HUD_MARGIN_X;
                                 }
                                 coordinate = position.y;
-                                if (coordinate >= 0xD1)
+                                if (coordinate > FIELD_HUD_MAX_Y)
                                 {
-                                    position.y = 0xD0;
+                                    position.y = FIELD_HUD_MAX_Y;
                                 }
                                 coordinate = position.y;
-                                if (coordinate < 0x10)
+                                if (coordinate < FIELD_HUD_MIN_Y)
                                 {
-                                    position.y = 0x10;
+                                    position.y = FIELD_HUD_MIN_Y;
                                 }
                             }
-                            field_draw_actor_hud_panel(position.x - 0x1C, position.y, i, render_context, 0x64);
-                            updated_hp_display = g_field_object_states[i].hp_display.word;
-                            hud_ticks = ((u32)updated_hp_display >> 24) & 0x7F;
-                            if (hud_ticks != 0)
+                            field_draw_actor_hud_panel(position.x - FIELD_HUD_ENEMY_OFFSET_X, position.y, i, render_half, FIELD_HUD_HP_PER_BAR);
+                            updated_hp_display = g_field_object_states[i].unk8.word;
+                            timer = ((u32)updated_hp_display >> FIELD_HUD_TIMER_SHIFT) & FIELD_HUD_TIMER_MASK;
+                            if (timer != 0)
                             {
-                                g_field_object_states[i].hp_display.word = (updated_hp_display & 0x80FFFFFF) | (((hud_ticks - 1) & 0x7F) << 24);
+                                g_field_object_states[i].unk8.word = (updated_hp_display & ~(FIELD_HUD_TIMER_MASK << FIELD_HUD_TIMER_SHIFT)) |
+                                                                     (((timer - 1) & FIELD_HUD_TIMER_MASK) << FIELD_HUD_TIMER_SHIFT);
                             }
                         }
                     }
                 }
-                i++;
-            } while (i < 13);
+            }
         }
     }
 }
 
 /**
- * @brief Draw an actor panel and animate its displayed HP toward the current HP.
- * @param x Base screen x for the gauge group.
- * @param y Base screen y (adjusted by the per-slot shake table).
- * @param slot Actor index (0..2 use the extended blink/shake path).
- * @param render_context Draw context whose primitive cursor is advanced on return.
- * @param value_per_bar Gauge full-scale denominator used for value-to-width scaling.
+ * @brief Draw one HUD panel and move its displayed HP toward the current HP.
+ * @param x Screen x of the panel.
+ * @param y Screen y of the panel, before the shake offset.
+ * @param slot Object index; party members (0 to 2) also get the blinking portrait and the HP percentage.
+ * @param render_half Render half whose primitive cursor is advanced.
+ * @param hp_per_bar HP of one gauge bar; each full bar is drawn in the next color.
  */
-void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8* render_context, u32 value_per_bar)
+static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* render_half, u32 hp_per_bar)
 {
-    u8* field_emit_hud_status_line(u8*, FieldPrimitiveContext*, u32*, s32, s32, s32);
-    void* field_emit_hud_percentage(void*, void*, s32, u16*);
-    POLY_F4* field_emit_hud_damage_quad(POLY_F4*, s32, u32*);
-    POLY_F4* field_emit_hud_healing_quad(POLY_F4*, s32, u32*);
-    void* field_emit_actor_portrait(SPRT*, u32*, s32, u32*);
-    s32 rand(void);
-    extern u32 g_field_hud_hp_colors[];
-    extern u32 g_field_hud_status_colors[];
-    extern u32 g_field_hud_effect_colors[];
-    extern u32 g_field_hud_full_status_colors[];
-    extern u32 g_field_hud_companion_status_colors[];
-    extern s16 g_field_hud_shake_offsets[];
-    extern FieldHudPlayer g_field_player_records[];
-    extern u8 D_800FDCEA;
-    extern FieldHudActorAction g_field_actors[];
-    extern FieldHudGaugeState g_field_object_states[];
-    extern s32 g_field_hud_blink_frames[];
-    extern s32 g_field_boss_hud_shake_frame;
-    extern s32 g_field_hud_bar_height;
-    extern s32 g_field_hud_bar_width;
-    extern s32 g_field_hud_bar_offset_x;
-    extern s32 g_field_hud_bar_offset_y;
-    extern u8 D_80117EC8[];
-    extern s32 g_frame_counter;
-
-    s16* scratch = (s16*)0x1F800000;
-    u8* ctx;
-    u8* call_ctx;
-    u32 special_width;
+    Vec2s* scratch = FIELD_HUD_SCRATCH_POSITION;
+    FieldRenderHalf* ctx;
+    FieldRenderHalf* call_ctx;
+    u32 recovery_width;
     s32 scan_slot;
     u32* partial_palette;
     u32* full_palette;
@@ -424,71 +602,69 @@ void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8* render_context, u32 
     s32* blink_counter;
     s32* blink_counters;
     s32* partial_color_entry;
-    s32 special_prim_addr;
     s32 rising_x;
     s32 falling_x;
     s32 full_color;
-    s32 partial_prim_addr;
-    s32 full_prim_addr;
     s32 partial_color;
     s32 palette_index;
-    s32 gauge_ot_tag;
     s32 rising_value;
     s32 falling_value;
     s32 rising_packed_value;
     s32 falling_packed_value;
-    u16 status_intensity;
-    u32 number_current;
+    u16 intensity;
+    u32 current_hp;
     u32 displayed_value;
     u32 packed_display_value;
     u32 partial_bar_count;
     u32 boss_flag;
     u32 full_palette_level;
-    u32 value_or_bar_count;
+    u32 hp_or_bar_count; /* full bar count, later the current HP; two locals change the register allocation */
     u32 rising_current;
     u32 rising_wrapped_current;
     u32 falling_current;
     u32 falling_wrapped_current;
     u32 rising_displayed;
     u32 falling_displayed;
-    u32 number_maximum;
+    u32 maximum_hp;
     u32 current_value;
-    u32 draw_arg;
+    u32 hp_percent;
+    CVECTOR* colors;
     u32 mask24;
     u32 fill_mask;
     s32 background_type;
     u8 gauge_type;
-    FieldHudPlayer* actor_entry;
-    FieldHudPlayer* entry_base;
-    FieldHudGaugeState* state;
+    FieldPlayerRecord* player;
+    FieldPlayerRecord* players;
+    FieldHudGauge* state;
     u8* label_cursor;
-    u8* rising_cursor;
+    POLY_F4* rising_cursor;
     u8* helper_cursor;
-    u8* falling_cursor;
-    u8* rising_ot;
-    u8* falling_ot;
+    POLY_F4* falling_cursor;
+    u_long* rising_ot;
+    u_long* falling_ot;
     u8* sprite_cursor;
     u8* gauge_cursor;
+    POLY_G4* bar;
 
-    if (slot < 3)
+    if (slot < FIELD_HUD_PARTY_COUNT)
     {
-        if (g_field_player_records[slot].shake_frame < 6U)
+        if (g_field_player_records[slot].hit_state < FIELD_HUD_SHAKE_FRAMES)
         {
-            y += g_field_hud_shake_offsets[g_field_player_records[slot].shake_frame];
-            if (g_field_player_records[slot].shake_frame != 0)
+            y += g_field_hud_shake_offsets[g_field_player_records[slot].hit_state];
+            if (g_field_player_records[slot].hit_state != 0)
             {
-                g_field_player_records[slot].shake_frame--;
+                g_field_player_records[slot].hit_state--;
             }
             else
             {
-                g_field_player_records[slot].shake_frame = 0xFF;
+                g_field_player_records[slot].hit_state = FIELD_HUD_SHAKE_IDLE;
             }
         }
     }
-    state = &g_field_object_states[slot];
-    boss_flag = (u32)state->hp_display_flags >> 0x1F;
+    state = (FieldHudGauge*)&g_field_object_states[slot];
+    boss_flag = (u32)state->displayed_hp >> FIELD_HUD_BOSS_SHIFT;
     boss_panel = boss_flag;
-    if ((boss_flag != 0) && (g_field_boss_hud_shake_frame < 6))
+    if ((boss_flag != 0) && (g_field_boss_hud_shake_frame < FIELD_HUD_SHAKE_FRAMES))
     {
         y += g_field_hud_shake_offsets[g_field_boss_hud_shake_frame];
         if (g_field_boss_hud_shake_frame != 0)
@@ -497,43 +673,43 @@ void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8* render_context, u32 
         }
         else
         {
-            g_field_boss_hud_shake_frame = 0xFF;
+            g_field_boss_hud_shake_frame = FIELD_HUD_SHAKE_IDLE;
         }
     }
-    ctx = render_context;
-    label_cursor = ((FieldHudDrawContext*)ctx)->primitive_cursor;
-    if (state->hud.bytes.panel_type < 3U)
+    ctx = render_half;
+    label_cursor = ctx->primitive_cursor;
+    if (state->hud.bytes.object_index < FIELD_HUD_PARTY_COUNT)
     {
-        g_field_hud_bar_offset_x = 0x1D;
+        g_field_hud_bar_offset_x = 29;
         g_field_hud_bar_offset_y = 9;
-        scratch[0] = x;
-        scratch[1] = y;
-        label_cursor = field_emit_actor_portrait((SPRT*)label_cursor, &((FieldHudDrawContext*)ctx)->hud_tag, state->hud.bytes.panel_type, (u32*)scratch);
-        g_field_hud_bar_width = 0x36;
-        g_field_hud_bar_height = 3;
+        scratch->x = x;
+        scratch->y = y;
+        label_cursor = field_emit_actor_portrait((SPRT*)label_cursor, &ctx->ordering_table[FIELD_HUD_OT_INDEX], state->hud.bytes.object_index, scratch);
+        g_field_hud_bar_width = FIELD_HUD_BAR_WIDTH;
+        g_field_hud_bar_height = FIELD_HUD_BAR_HEIGHT;
     }
     else if (boss_panel != 0)
     {
-        g_field_hud_bar_offset_x = 0xF;
+        g_field_hud_bar_offset_x = 15;
         g_field_hud_bar_offset_y = 6;
-        g_field_hud_bar_width = 0xE3;
-        g_field_hud_bar_height = 3;
+        g_field_hud_bar_width = FIELD_HUD_BOSS_BAR_WIDTH;
+        g_field_hud_bar_height = FIELD_HUD_BAR_HEIGHT;
     }
     else
     {
         g_field_hud_bar_offset_x = 4;
         g_field_hud_bar_offset_y = 6;
-        g_field_hud_bar_width = 0x36;
-        g_field_hud_bar_height = 3;
+        g_field_hud_bar_width = FIELD_HUD_BAR_WIDTH;
+        g_field_hud_bar_height = FIELD_HUD_BAR_HEIGHT;
     }
     sprite_cursor = label_cursor;
-    if (slot < 3)
+    if (slot < FIELD_HUD_PARTY_COUNT)
     {
         if (g_field_hud_blink_frames[slot] >= FIELD_HUD_BLINK_FRAMES || ++g_field_hud_blink_frames[slot] >= FIELD_HUD_BLINK_FRAMES)
         {
-            for (scan_slot = 0; scan_slot < 8; scan_slot++)
+            for (scan_slot = 0; scan_slot < FIELD_HUD_BLINK_LIST_COUNT; scan_slot++)
             {
-                if (D_80117EC8[scan_slot] == 0xFF)
+                if (D_80117EC8[scan_slot] == FIELD_HUD_BLINK_LIST_END)
                 {
                     break;
                 }
@@ -545,201 +721,180 @@ void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8* render_context, u32 
             }
             blink_counters = g_field_hud_blink_frames;
             blink_counter = blink_counters + slot;
-            if ((*blink_counter != 0) && !(rand() & 0x3F))
+            if ((*blink_counter != 0) && !(rand() & FIELD_HUD_BLINK_CHANCE_MASK))
             {
                 *blink_counter = 0;
             }
         }
-        *(u32*)&((SPRT*)sprite_cursor)->r0 = 0x808080;
+        SET_BGR0_PACKED(sprite_cursor, GPU_TINT_NEUTRAL);
         setSprt((SPRT*)sprite_cursor);
-        ((SPRT*)sprite_cursor)->x0 = (s16)(x + 0x22);
+        ((SPRT*)sprite_cursor)->x0 = (s16)(x + 34);
         ((SPRT*)sprite_cursor)->y0 = (s16)(y - 6);
-        if (g_field_hud_blink_frames[slot] < 6)
+        if (g_field_hud_blink_frames[slot] < FIELD_HUD_BLINK_FRAMES)
         {
-            blink_uv = ((u16)g_field_hud_blink_frames[slot] * 0x10) + 0x2058;
+            blink_uv = ((u16)g_field_hud_blink_frames[slot] * 16) + FIELD_HUD_UV(0x58, 0x20);
         }
         else
         {
-            blink_uv = 0x2058;
+            blink_uv = FIELD_HUD_UV(0x58, 0x20);
         }
-        *(u32*)&((SPRT*)sprite_cursor)->w = 0x100010;
-        *(s16*)&((SPRT*)sprite_cursor)->u0 = blink_uv;
+        SET_SPRT_WH_PACKED(sprite_cursor, 16, 16);
+        SET_SPRT_UV0_PACKED(sprite_cursor, blink_uv);
         ((SPRT*)sprite_cursor)->clut = FIELD_HUD_BLINK_CLUT;
-        addPrim(&((FieldHudDrawContext*)ctx)->hud_tag, sprite_cursor);
+        addPrim(&ctx->ordering_table[FIELD_HUD_OT_INDEX], sprite_cursor);
         sprite_cursor += sizeof(SPRT);
-        ((Vec2s*)scratch)->x = x + 0x30;
-        scratch[1] = y;
-        number_current = state->current_hp;
-        number_maximum = state->maximum_hp;
-        draw_arg = number_current * 0x64;
-        if (number_maximum != 0)
+        scratch->x = x + 48;
+        scratch->y = y;
+        current_hp = state->current_hp;
+        maximum_hp = state->maximum_hp;
+        hp_percent = current_hp * 100;
+        if (maximum_hp != 0)
         {
-            draw_arg = draw_arg / number_maximum;
+            hp_percent = hp_percent / maximum_hp;
         }
-        if ((draw_arg == 0) && (number_current != 0))
+        if ((hp_percent == 0) && (current_hp != 0))
         {
-            draw_arg = 1;
+            hp_percent = 1;
         }
-        sprite_cursor = field_emit_hud_percentage(sprite_cursor, ctx, draw_arg, (u16*)scratch);
+        sprite_cursor = field_emit_hud_percentage(sprite_cursor, ctx, hp_percent, scratch);
     }
-    gauge_type = state->hud.bytes.panel_type;
+    gauge_type = state->hud.bytes.object_index;
     helper_cursor = sprite_cursor;
-    if (gauge_type < 2U)
+    if (gauge_type < 2)
     {
-        if (state->hud.word & 1)
+        if (state->hud.word & FIELD_HUD_SPECIAL_GAUGE)
         {
-            if (state->status_intensity == 0xFF)
+            if (state->technique_gauge == 0xFF)
             {
                 if (g_frame_counter & 8)
                 {
-                    draw_arg = (u32)g_field_hud_full_status_colors;
+                    colors = g_field_hud_full_status_colors;
                 }
                 else
                 {
-                    draw_arg = (u32)g_field_hud_status_colors;
+                    colors = g_field_hud_status_colors;
                 }
             }
             else
             {
-                draw_arg = (u32)g_field_hud_status_colors;
+                colors = g_field_hud_status_colors;
             }
-            status_intensity = state->status_intensity;
+            intensity = state->technique_gauge;
             call_ctx = ctx;
-            helper_cursor = field_emit_hud_status_line(helper_cursor, (FieldPrimitiveContext*)call_ctx, (u32*)draw_arg, status_intensity, x, y);
+            helper_cursor = field_emit_hud_status_line(helper_cursor, call_ctx, colors, intensity, x, y);
         }
         else
         {
             call_ctx = ctx;
-            draw_arg = (u32)g_field_hud_effect_colors;
-            status_intensity = state->effect_intensity;
-            helper_cursor = field_emit_hud_status_line(helper_cursor, (FieldPrimitiveContext*)call_ctx, (u32*)draw_arg, status_intensity, x, y);
+            colors = g_field_hud_effect_colors;
+            intensity = state->action_charge;
+            helper_cursor = field_emit_hud_status_line(helper_cursor, call_ctx, colors, intensity, x, y);
         }
     }
-    else if ((gauge_type == 2) && ((u8)D_800FDCEA >= 0x41U))
+    else if ((gauge_type == 2) && (D_800FDCEA >= FIELD_HUD_COMPANION_KIND_MIN))
     {
-        draw_arg = (u32)g_field_hud_companion_status_colors;
-        helper_cursor = field_emit_hud_status_line(helper_cursor, (FieldPrimitiveContext*)ctx, (u32*)draw_arg, state->status_intensity, x, y);
+        colors = g_field_hud_companion_status_colors;
+        helper_cursor = field_emit_hud_status_line(helper_cursor, ctx, colors, state->technique_gauge, x, y);
     }
-    /* A special action gauge replaces the HP fill while its maximum is set. */
+    /* A knocked-down member shows the recovery gauge instead of the HP bars. */
     gauge_cursor = helper_cursor;
-    if (slot < 3 && (entry_base = g_field_player_records, actor_entry = &entry_base[slot], actor_entry->special_gauge_maximum != 0) &&
-        g_field_actors[slot].action_id == 0x8E)
+    if (slot < FIELD_HUD_PARTY_COUNT && (players = g_field_player_records, player = &players[slot], player->transition_limit != 0) &&
+        g_field_actors[slot].command == FIELD_COMMAND_KNOCKED_DOWN)
     {
-        *(u32*)&((POLY_G4*)gauge_cursor)->r0 = 0x202020;
-        *(u32*)&((POLY_G4*)gauge_cursor)->r2 = 0x202020;
-        setlen((POLY_G4*)gauge_cursor, 8);
-        setcode((POLY_G4*)gauge_cursor, 0x38);
-        *(u32*)&((POLY_G4*)gauge_cursor)->r1 = 0xFFFFFF;
-        *(u32*)&((POLY_G4*)gauge_cursor)->r3 = 0xFFFFFF;
-        special_width = (s16)actor_entry->special_gauge_maximum;
-        special_width = (s32)(g_field_hud_bar_width * actor_entry->special_gauge_value) / (s32)special_width;
-        ((POLY_G4*)gauge_cursor)->x0 = (u16)g_field_hud_bar_offset_x + x;
-        ((POLY_G4*)gauge_cursor)->y1 = ((u16)g_field_hud_bar_offset_y + y);
-        ((POLY_G4*)gauge_cursor)->x1 = ((u16)g_field_hud_bar_offset_x + x) + special_width;
-        ((POLY_G4*)gauge_cursor)->x2 = ((u16)g_field_hud_bar_offset_x + x) - 3;
-        ((POLY_G4*)gauge_cursor)->y0 = ((u16)g_field_hud_bar_offset_y + y);
-        ((POLY_G4*)gauge_cursor)->y3 = ((POLY_G4*)gauge_cursor)->y1 + (u16)g_field_hud_bar_height;
-        ((POLY_G4*)gauge_cursor)->y2 = ((POLY_G4*)gauge_cursor)->y3;
-        ((POLY_G4*)gauge_cursor)->x3 = ((u16)g_field_hud_bar_offset_x + x) + special_width - 3;
-        special_prim_addr = (s32)gauge_cursor & 0xFFFFFF;
-        setaddr(gauge_cursor, getaddr((u8*)&((FieldHudDrawContext*)ctx)->hud_tag));
+        bar = (POLY_G4*)gauge_cursor;
+        SET_BGR0_PACKED(bar, FIELD_HUD_RECOVERY_DARK);
+        SET_POLY_G4_BGR2_PACKED(bar, FIELD_HUD_RECOVERY_DARK);
+        setlen(bar, FIELD_POLY_G4_LENGTH);
+        setcode(bar, FIELD_POLY_G4_CODE);
+        SET_POLY_G4_BGR1_PACKED(bar, FIELD_HUD_WHITE);
+        SET_POLY_G4_BGR3_PACKED(bar, FIELD_HUD_WHITE);
+        recovery_width = (s16)player->transition_limit;
+        recovery_width = (s32)(g_field_hud_bar_width * player->transition_time) / (s32)recovery_width;
+        field_hud_set_bar_geometry(bar, x, y, recovery_width);
+        addPrim(&ctx->ordering_table[FIELD_HUD_OT_INDEX], bar);
         gauge_cursor += sizeof(POLY_G4);
-        gauge_ot_tag = (((FieldHudDrawContext*)ctx)->hud_tag & 0xFF000000) | special_prim_addr;
-        ((FieldHudDrawContext*)ctx)->hud_tag = gauge_ot_tag;
     }
     else
     {
         current_value = state->current_hp;
         if (current_value != 0)
         {
-            partial_bar_count = current_value / value_per_bar;
+            partial_bar_count = current_value / hp_per_bar;
             palette_index = partial_bar_count & 3;
-            if (partial_bar_count >= 3U)
+            if (partial_bar_count >= 3)
             {
                 palette_index |= 2;
             }
             fill_mask = FIELD_HUD_HP_MASK;
-            if ((s32)((state->hp_display_flags & fill_mask) - current_value) < (s32)value_per_bar)
+            if ((s32)((state->displayed_hp & fill_mask) - current_value) < (s32)hp_per_bar)
             {
                 partial_palette = g_field_hud_hp_colors;
                 partial_color_entry = &partial_palette[palette_index];
-                *(u32*)&((POLY_G4*)gauge_cursor)->r0 = (s32)(*partial_color_entry & 0x3F3F3F);
-                *(u32*)&((POLY_G4*)gauge_cursor)->r1 = (s32)(*partial_color_entry & 0x7F7F7F);
+                bar = (POLY_G4*)gauge_cursor;
+                SET_BGR0_PACKED(bar, (s32)(*partial_color_entry & FIELD_HUD_COLOR_DIM));
+                SET_POLY_G4_BGR1_PACKED(bar, (s32)(*partial_color_entry & FIELD_HUD_COLOR_MID));
                 partial_color = *partial_color_entry;
-                setlen((POLY_G4*)gauge_cursor, 8);
-                setcode((POLY_G4*)gauge_cursor, 0x38);
-                *(u32*)&((POLY_G4*)gauge_cursor)->r3 = partial_color;
-                *(u32*)&((POLY_G4*)gauge_cursor)->r2 = partial_color;
-                partial_width = (s32)(g_field_hud_bar_width * (current_value % value_per_bar)) / (s32)value_per_bar;
-                ((POLY_G4*)gauge_cursor)->x0 = (u16)g_field_hud_bar_offset_x + x;
-                ((POLY_G4*)gauge_cursor)->y1 = ((u16)g_field_hud_bar_offset_y + y);
-                ((POLY_G4*)gauge_cursor)->x1 = ((u16)g_field_hud_bar_offset_x + x) + partial_width;
-                ((POLY_G4*)gauge_cursor)->x2 = ((u16)g_field_hud_bar_offset_x + x) - 3;
-                ((POLY_G4*)gauge_cursor)->y0 = ((u16)g_field_hud_bar_offset_y + y);
-                ((POLY_G4*)gauge_cursor)->y3 = ((POLY_G4*)gauge_cursor)->y1 + (u16)g_field_hud_bar_height;
-                ((POLY_G4*)gauge_cursor)->y2 = ((POLY_G4*)gauge_cursor)->y3;
-                ((POLY_G4*)gauge_cursor)->x3 = ((u16)g_field_hud_bar_offset_x + x) + partial_width - 3;
-                *(u32*)&((POLY_G4*)gauge_cursor)->tag =
-                    (s32)((*(u32*)&((POLY_G4*)gauge_cursor)->tag & 0xFF000000) | (((FieldHudDrawContext*)ctx)->hud_tag & fill_mask));
-                partial_prim_addr = (s32)gauge_cursor & fill_mask;
+                setlen(bar, FIELD_POLY_G4_LENGTH);
+                setcode(bar, FIELD_POLY_G4_CODE);
+                SET_POLY_G4_BGR3_PACKED(bar, partial_color);
+                SET_POLY_G4_BGR2_PACKED(bar, partial_color);
+                partial_width = (s32)(g_field_hud_bar_width * (current_value % hp_per_bar)) / (s32)hp_per_bar;
+                field_hud_set_bar_geometry(bar, x, y, partial_width);
+                addPrim(&ctx->ordering_table[FIELD_HUD_OT_INDEX], bar);
                 gauge_cursor += sizeof(POLY_G4);
-                ((FieldHudDrawContext*)ctx)->hud_tag = (s32)((((FieldHudDrawContext*)ctx)->hud_tag & 0xFF000000) | partial_prim_addr);
             }
-            value_or_bar_count = (u32)state->current_hp / value_per_bar;
-            full_palette_level = value_or_bar_count - 1;
-            if (value_or_bar_count != 0)
+            hp_or_bar_count = (u32)state->current_hp / hp_per_bar;
+            full_palette_level = hp_or_bar_count - 1;
+            if (hp_or_bar_count != 0)
             {
                 palette_index = full_palette_level & 3;
-                if (full_palette_level >= 3U)
+                if (full_palette_level >= 3)
                 {
                     palette_index |= 2;
                 }
                 full_palette = g_field_hud_hp_colors;
                 full_color_entry = &full_palette[palette_index];
-                *(u32*)&((POLY_G4*)gauge_cursor)->r0 = (s32)(*full_color_entry & 0x3F3F3F);
-                *(u32*)&((POLY_G4*)gauge_cursor)->r2 = (s32)(*full_color_entry & 0x7F7F7F);
-                setlen((POLY_G4*)gauge_cursor, 8);
-                setcode((POLY_G4*)gauge_cursor, 0x38);
+                bar = (POLY_G4*)gauge_cursor;
+                SET_BGR0_PACKED(bar, (s32)(*full_color_entry & FIELD_HUD_COLOR_DIM));
+                SET_POLY_G4_BGR2_PACKED(bar, (s32)(*full_color_entry & FIELD_HUD_COLOR_MID));
+                setlen(bar, FIELD_POLY_G4_LENGTH);
+                setcode(bar, FIELD_POLY_G4_CODE);
                 full_color = *full_color_entry;
-                *(u32*)&((POLY_G4*)gauge_cursor)->r3 = full_color;
-                *(u32*)&((POLY_G4*)gauge_cursor)->r1 = full_color;
+                SET_POLY_G4_BGR3_PACKED(bar, full_color);
+                SET_POLY_G4_BGR1_PACKED(bar, full_color);
                 full_x = (u16)g_field_hud_bar_offset_x;
                 full_right = (u16)g_field_hud_bar_width;
                 full_y = (u16)g_field_hud_bar_offset_y;
                 full_x += x;
                 full_right += full_x;
-                ((POLY_G4*)gauge_cursor)->x1 = full_right;
-                full_right -= 3;
+                bar->x1 = full_right;
+                full_right -= FIELD_HUD_BAR_SLANT;
                 full_y += y;
-                ((POLY_G4*)gauge_cursor)->x3 = full_right;
-                ((POLY_G4*)gauge_cursor)->y1 = full_y;
-                ((POLY_G4*)gauge_cursor)->x0 = full_x;
-                full_x -= 3;
-                ((POLY_G4*)gauge_cursor)->x2 = full_x;
-                ((POLY_G4*)gauge_cursor)->y0 = full_y;
-                ((POLY_G4*)gauge_cursor)->y3 = ((POLY_G4*)gauge_cursor)->y1 + (u16)g_field_hud_bar_height;
-                ((POLY_G4*)gauge_cursor)->y2 = ((POLY_G4*)gauge_cursor)->y3;
-                *(u32*)&((POLY_G4*)gauge_cursor)->tag =
-                    (s32)((*(u32*)&((POLY_G4*)gauge_cursor)->tag & 0xFF000000) | (((FieldHudDrawContext*)ctx)->hud_tag & 0xFFFFFF));
-                full_prim_addr = (s32)gauge_cursor & 0xFFFFFF;
+                bar->x3 = full_right;
+                bar->y1 = full_y;
+                bar->x0 = full_x;
+                full_x -= FIELD_HUD_BAR_SLANT;
+                bar->x2 = full_x;
+                bar->y0 = full_y;
+                bar->y3 = bar->y1 + (u16)g_field_hud_bar_height;
+                bar->y2 = bar->y3;
+                addPrim(&ctx->ordering_table[FIELD_HUD_OT_INDEX], bar);
                 gauge_cursor += sizeof(POLY_G4);
-                gauge_ot_tag = (((FieldHudDrawContext*)ctx)->hud_tag & 0xFF000000) | full_prim_addr;
-                ((FieldHudDrawContext*)ctx)->hud_tag = gauge_ot_tag;
             }
         }
     }
-    /* Animate the low 24 bits; retain the boss flag and temporary-panel timer. */
+    /* Animate the displayed HP (low 24 bits); keep the boss flag and the panel timer. */
     mask24 = FIELD_HUD_HP_MASK;
-    packed_display_value = state->hp_display_flags;
-    value_or_bar_count = state->current_hp;
+    packed_display_value = state->displayed_hp;
+    hp_or_bar_count = state->current_hp;
     displayed_value = packed_display_value & mask24;
-    if (displayed_value < value_or_bar_count)
+    if (displayed_value < hp_or_bar_count)
     {
-        if ((u32)(value_or_bar_count - displayed_value) >= 3U)
+        if (hp_or_bar_count - displayed_value >= FIELD_HUD_RISE_MIN_STEP)
         {
             rising_packed_value = FIELD_HUD_DISPLAY_FLAGS_MASK;
             rising_packed_value &= packed_display_value;
-            rising_value = displayed_value + ((value_or_bar_count - displayed_value) / 3);
+            rising_value = displayed_value + ((hp_or_bar_count - displayed_value) / 3);
         }
         else
         {
@@ -748,52 +903,51 @@ void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8* render_context, u32 
             rising_value = displayed_value + 1;
         }
         rising_packed_value |= rising_value & mask24;
-        state->hp_display_flags = rising_packed_value;
+        state->displayed_hp = rising_packed_value;
         rising_current = state->current_hp;
-        if ((rising_current / value_per_bar) == ((s32)(state->hp_display_flags & FIELD_HUD_HP_MASK) / (s32)value_per_bar))
+        if ((rising_current / hp_per_bar) == ((s32)(state->displayed_hp & FIELD_HUD_HP_MASK) / (s32)hp_per_bar))
         {
             rising_x = (u16)g_field_hud_bar_offset_x;
             rising_x += x;
-            ((POLY_F4*)gauge_cursor)->x1 = (s16)(rising_x + ((u32)(g_field_hud_bar_width * (rising_current % value_per_bar)) / value_per_bar));
-            rising_ot = (u8*)&((FieldHudDrawContext*)ctx)->delta_tag;
-            rising_cursor = gauge_cursor;
-            rising_x += ((s32)(g_field_hud_bar_width * ((s32)(state->hp_display_flags & FIELD_HUD_HP_MASK) % (s32)value_per_bar)) / (s32)value_per_bar);
-            ((POLY_F4*)rising_cursor)->x0 = rising_x;
-            helper_cursor = (u8*)field_emit_hud_healing_quad((POLY_F4*)rising_cursor, y, (u32*)rising_ot);
+            ((POLY_F4*)gauge_cursor)->x1 = (s16)(rising_x + ((u32)(g_field_hud_bar_width * (rising_current % hp_per_bar)) / hp_per_bar));
+            rising_ot = &ctx->ordering_table[FIELD_HUD_DELTA_OT_INDEX];
+            rising_cursor = (POLY_F4*)gauge_cursor;
+            rising_x += ((s32)(g_field_hud_bar_width * ((s32)(state->displayed_hp & FIELD_HUD_HP_MASK) % (s32)hp_per_bar)) / (s32)hp_per_bar);
+            rising_cursor->x0 = rising_x;
+            helper_cursor = (u8*)field_emit_hud_healing_quad(rising_cursor, y, rising_ot);
         }
         else
         {
             rising_base_x = (u16)g_field_hud_bar_offset_x + x;
             ((POLY_F4*)gauge_cursor)->x1 = rising_base_x;
             ((POLY_F4*)gauge_cursor)->x0 =
-                (s16)(rising_base_x +
-                      ((s32)(g_field_hud_bar_width * ((s32)(state->hp_display_flags & FIELD_HUD_HP_MASK) % (s32)value_per_bar)) / (s32)value_per_bar));
-            rising_cursor = (u8*)field_emit_hud_healing_quad((POLY_F4*)gauge_cursor, y, (u32*)(u8*)&((FieldHudDrawContext*)ctx)->delta_tag);
-            rising_displayed = state->hp_display_flags & FIELD_HUD_HP_MASK;
+                (s16)(rising_base_x + ((s32)(g_field_hud_bar_width * ((s32)(state->displayed_hp & FIELD_HUD_HP_MASK) % (s32)hp_per_bar)) / (s32)hp_per_bar));
+            rising_cursor = field_emit_hud_healing_quad((POLY_F4*)gauge_cursor, y, &ctx->ordering_table[FIELD_HUD_DELTA_OT_INDEX]);
+            rising_displayed = state->displayed_hp & FIELD_HUD_HP_MASK;
             rising_wrapped_current = state->current_hp;
-            if (rising_displayed - rising_wrapped_current < value_per_bar)
+            if (rising_displayed - rising_wrapped_current < hp_per_bar)
             {
-                rising_right = (u16)g_field_hud_bar_offset_x + x + ((u32)(g_field_hud_bar_width * (rising_wrapped_current % value_per_bar)) / value_per_bar);
-                ((POLY_F4*)rising_cursor)->x1 = rising_right;
+                rising_right = (u16)g_field_hud_bar_offset_x + x + ((u32)(g_field_hud_bar_width * (rising_wrapped_current % hp_per_bar)) / hp_per_bar);
+                rising_cursor->x1 = rising_right;
             }
             else
             {
                 rising_right = (u16)g_field_hud_bar_offset_x + x;
-                ((POLY_F4*)rising_cursor)->x1 = rising_right;
+                rising_cursor->x1 = rising_right;
             }
-            rising_ot = (u8*)&((FieldHudDrawContext*)ctx)->delta_tag;
-            ((POLY_F4*)rising_cursor)->x0 = (s16)(((u16)g_field_hud_bar_offset_x + x) + (u16)g_field_hud_bar_width);
-            helper_cursor = (u8*)field_emit_hud_healing_quad((POLY_F4*)rising_cursor, y, (u32*)rising_ot);
+            rising_ot = &ctx->ordering_table[FIELD_HUD_DELTA_OT_INDEX];
+            rising_cursor->x0 = (s16)(((u16)g_field_hud_bar_offset_x + x) + (u16)g_field_hud_bar_width);
+            helper_cursor = (u8*)field_emit_hud_healing_quad(rising_cursor, y, rising_ot);
         }
         gauge_cursor = helper_cursor;
     }
-    else if (value_or_bar_count < displayed_value)
+    else if (hp_or_bar_count < displayed_value)
     {
-        if ((u32)(displayed_value - value_or_bar_count) >= 4U)
+        if (displayed_value - hp_or_bar_count >= FIELD_HUD_FALL_MIN_STEP)
         {
             falling_packed_value = FIELD_HUD_DISPLAY_FLAGS_MASK;
             falling_packed_value &= packed_display_value;
-            falling_value = displayed_value - ((displayed_value - value_or_bar_count) / 3);
+            falling_value = displayed_value - ((displayed_value - hp_or_bar_count) / 3);
         }
         else
         {
@@ -802,102 +956,101 @@ void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8* render_context, u32 
             falling_value = displayed_value - 1;
         }
         falling_packed_value |= falling_value & mask24;
-        state->hp_display_flags = falling_packed_value;
+        state->displayed_hp = falling_packed_value;
         falling_current = state->current_hp;
-        if ((falling_current / value_per_bar) == ((s32)(state->hp_display_flags & FIELD_HUD_HP_MASK) / (s32)value_per_bar))
+        if ((falling_current / hp_per_bar) == ((s32)(state->displayed_hp & FIELD_HUD_HP_MASK) / (s32)hp_per_bar))
         {
             falling_x = (u16)g_field_hud_bar_offset_x;
             falling_x += x;
-            ((POLY_F4*)gauge_cursor)->x1 = (s16)(falling_x + ((u32)(g_field_hud_bar_width * (falling_current % value_per_bar)) / value_per_bar));
-            falling_ot = (u8*)&((FieldHudDrawContext*)ctx)->delta_tag;
-            falling_cursor = gauge_cursor;
-            falling_x += ((s32)(g_field_hud_bar_width * ((s32)(state->hp_display_flags & FIELD_HUD_HP_MASK) % (s32)value_per_bar)) / (s32)value_per_bar);
-            ((POLY_F4*)falling_cursor)->x0 = falling_x;
-            helper_cursor = (u8*)field_emit_hud_damage_quad((POLY_F4*)falling_cursor, y, (u32*)falling_ot);
+            ((POLY_F4*)gauge_cursor)->x1 = (s16)(falling_x + ((u32)(g_field_hud_bar_width * (falling_current % hp_per_bar)) / hp_per_bar));
+            falling_ot = &ctx->ordering_table[FIELD_HUD_DELTA_OT_INDEX];
+            falling_cursor = (POLY_F4*)gauge_cursor;
+            falling_x += ((s32)(g_field_hud_bar_width * ((s32)(state->displayed_hp & FIELD_HUD_HP_MASK) % (s32)hp_per_bar)) / (s32)hp_per_bar);
+            falling_cursor->x0 = falling_x;
+            helper_cursor = (u8*)field_emit_hud_damage_quad(falling_cursor, y, falling_ot);
         }
         else
         {
             falling_base_x = (u16)g_field_hud_bar_offset_x + x;
             ((POLY_F4*)gauge_cursor)->x1 = falling_base_x;
             ((POLY_F4*)gauge_cursor)->x0 =
-                (s16)(falling_base_x +
-                      ((s32)(g_field_hud_bar_width * ((s32)(state->hp_display_flags & FIELD_HUD_HP_MASK) % (s32)value_per_bar)) / (s32)value_per_bar));
-            falling_cursor = (u8*)field_emit_hud_damage_quad((POLY_F4*)gauge_cursor, y, (u32*)(u8*)&((FieldHudDrawContext*)ctx)->delta_tag);
-            falling_displayed = state->hp_display_flags & FIELD_HUD_HP_MASK;
+                (s16)(falling_base_x + ((s32)(g_field_hud_bar_width * ((s32)(state->displayed_hp & FIELD_HUD_HP_MASK) % (s32)hp_per_bar)) / (s32)hp_per_bar));
+            falling_cursor = field_emit_hud_damage_quad((POLY_F4*)gauge_cursor, y, &ctx->ordering_table[FIELD_HUD_DELTA_OT_INDEX]);
+            falling_displayed = state->displayed_hp & FIELD_HUD_HP_MASK;
             falling_wrapped_current = state->current_hp;
-            if (falling_displayed - falling_wrapped_current < value_per_bar)
+            if (falling_displayed - falling_wrapped_current < hp_per_bar)
             {
-                falling_right = (u16)g_field_hud_bar_offset_x + x + ((u32)(g_field_hud_bar_width * (falling_wrapped_current % value_per_bar)) / value_per_bar);
-                ((POLY_F4*)falling_cursor)->x1 = falling_right;
+                falling_right = (u16)g_field_hud_bar_offset_x + x + ((u32)(g_field_hud_bar_width * (falling_wrapped_current % hp_per_bar)) / hp_per_bar);
+                falling_cursor->x1 = falling_right;
             }
             else
             {
                 falling_right = (u16)g_field_hud_bar_offset_x + x;
-                ((POLY_F4*)falling_cursor)->x1 = falling_right;
+                falling_cursor->x1 = falling_right;
             }
-            falling_ot = (u8*)&((FieldHudDrawContext*)ctx)->delta_tag;
-            ((POLY_F4*)falling_cursor)->x0 = (s16)(((u16)g_field_hud_bar_offset_x + x) + (u16)g_field_hud_bar_width);
-            helper_cursor = (u8*)field_emit_hud_damage_quad((POLY_F4*)falling_cursor, y, (u32*)falling_ot);
+            falling_ot = &ctx->ordering_table[FIELD_HUD_DELTA_OT_INDEX];
+            falling_cursor->x0 = (s16)(((u16)g_field_hud_bar_offset_x + x) + (u16)g_field_hud_bar_width);
+            helper_cursor = (u8*)field_emit_hud_damage_quad(falling_cursor, y, falling_ot);
         }
         gauge_cursor = helper_cursor;
     }
     sprite_cursor = gauge_cursor;
-    *(u32*)&((SPRT*)sprite_cursor)->r0 = 0x808080;
+    SET_BGR0_PACKED(sprite_cursor, GPU_TINT_NEUTRAL);
     setSprt((SPRT*)sprite_cursor);
     setSemiTrans((SPRT*)sprite_cursor, 1);
-    *(u32*)&((SPRT*)sprite_cursor)->x0 = (s32)((y << 0x10) + x);
-    background_type = state->hud.bytes.panel_type;
+    SET_SPRT_XY0_WORD(sprite_cursor, (s32)((y << 16) + x));
+    background_type = state->hud.bytes.object_index;
     switch (background_type)
     {
     case 0:
     case 1:
-        *(u32*)&((SPRT*)sprite_cursor)->w = 0x180058;
-        *(s16*)&((SPRT*)sprite_cursor)->u0 = 0x1000;
+        SET_SPRT_WH_PACKED(sprite_cursor, 88, 24);
+        SET_SPRT_UV0_PACKED(sprite_cursor, FIELD_HUD_UV(0, 0x10));
         break;
     case 2:
-        if ((u8)D_800FDCEA >= 0x41U)
+        if (D_800FDCEA >= FIELD_HUD_COMPANION_KIND_MIN)
         {
-            *(u32*)&((SPRT*)sprite_cursor)->w = 0x180058;
-            *(s16*)&((SPRT*)sprite_cursor)->u0 = 0x1000;
+            SET_SPRT_WH_PACKED(sprite_cursor, 88, 24);
+            SET_SPRT_UV0_PACKED(sprite_cursor, FIELD_HUD_UV(0, 0x10));
         }
         else
         {
-            *(u32*)&((SPRT*)sprite_cursor)->w = 0x180058;
-            *(s16*)&((SPRT*)sprite_cursor)->u0 = 0x2800;
+            SET_SPRT_WH_PACKED(sprite_cursor, 88, 24);
+            SET_SPRT_UV0_PACKED(sprite_cursor, FIELD_HUD_UV(0, 0x28));
         }
         break;
     default:
         if (boss_panel != 0)
         {
-            *(u32*)&((SPRT*)sprite_cursor)->w = 0x100100;
-            *(s16*)&((SPRT*)sprite_cursor)->u0 = 0;
+            SET_SPRT_WH_PACKED(sprite_cursor, 256, 16);
+            SET_SPRT_UV0_PACKED(sprite_cursor, FIELD_HUD_UV(0, 0));
         }
         else
         {
-            *(u32*)&((SPRT*)sprite_cursor)->w = 0x100040;
-            *(s16*)&((SPRT*)sprite_cursor)->u0 = 0x4000;
+            SET_SPRT_WH_PACKED(sprite_cursor, 64, 16);
+            SET_SPRT_UV0_PACKED(sprite_cursor, FIELD_HUD_UV(0, 0x40));
         }
         break;
     }
     ((SPRT*)sprite_cursor)->clut = FIELD_HUD_CLUT;
-    addPrim(&((FieldHudDrawContext*)ctx)->hud_tag, sprite_cursor);
+    addPrim(&ctx->ordering_table[FIELD_HUD_OT_INDEX], sprite_cursor);
     sprite_cursor += sizeof(SPRT);
-    setDrawTPage((DR_TPAGE*)sprite_cursor, 0, 0, 0x1F);
-    addPrim(&((FieldHudDrawContext*)ctx)->hud_tag, sprite_cursor);
-    ((FieldHudDrawContext*)render_context)->primitive_cursor = sprite_cursor + sizeof(DR_TPAGE);
+    setDrawTPage((DR_TPAGE*)sprite_cursor, 0, 0, getTPage(0, 0, 960, 256));
+    addPrim(&ctx->ordering_table[FIELD_HUD_OT_INDEX], sprite_cursor);
+    render_half->primitive_cursor = sprite_cursor + sizeof(DR_TPAGE);
 }
 
 /**
- * @brief Builds and links a shaded two-point line primitive.
+ * @brief Emit the shaded line of a special attack or companion gauge.
  * @param packet Primitive-buffer cursor where the line is written.
- * @param context Draw context containing the ordering-table tag.
- * @param colors Two packed endpoint colors used to derive the line shading.
- * @param intensity Fallback endpoint intensity and horizontal length scale.
- * @param x Base horizontal position.
- * @param y Base vertical position.
- * @return Pointer immediately after the emitted primitive, or @p packet when intensity is zero.
+ * @param render_half Render half whose HUD ordering-table entry receives the line.
+ * @param colors Empty and full end colors; channels that differ fade with @p intensity.
+ * @param intensity Gauge value, 0 to 255; sets the line length.
+ * @param x Panel screen x.
+ * @param y Panel screen y.
+ * @return Pointer just past the line, or @p packet when @p intensity is zero.
  */
-u8* field_emit_hud_status_line(u8* packet, FieldPrimitiveContext* context, u32* colors, s32 intensity, s32 x, s32 y)
+static u8* field_emit_hud_status_line(u8* packet, FieldRenderHalf* render_half, CVECTOR* colors, s32 intensity, s32 x, s32 y)
 {
     u8 first_component;
     u8 second_component;
@@ -910,13 +1063,13 @@ u8* field_emit_hud_status_line(u8* packet, FieldPrimitiveContext* context, u32* 
         return packet;
     }
 
-    first_color = colors[0];
+    first_color = *(u32*)&colors[0];
     setlen((LINE_G2*)packet, 4);
-    *(u32*)&((LINE_G2*)packet)->r0 = first_color;
+    SET_BGR0_PACKED(packet, first_color);
     setcode((LINE_G2*)packet, 0x50);
 
-    first_component = ((CVECTOR*)colors)[0].r;
-    second_component = ((CVECTOR*)colors)[1].r;
+    first_component = colors[0].r;
+    second_component = colors[1].r;
     if (first_component == second_component)
     {
         ((LINE_G2*)packet)->r1 = first_component;
@@ -930,8 +1083,8 @@ u8* field_emit_hud_status_line(u8* packet, FieldPrimitiveContext* context, u32* 
         ((LINE_G2*)packet)->r1 = ~intensity;
     }
 
-    first_component = ((CVECTOR*)colors)[0].g;
-    second_component = ((CVECTOR*)colors)[1].g;
+    first_component = colors[0].g;
+    second_component = colors[1].g;
     if (first_component == second_component)
     {
         ((LINE_G2*)packet)->g1 = first_component;
@@ -945,8 +1098,8 @@ u8* field_emit_hud_status_line(u8* packet, FieldPrimitiveContext* context, u32* 
         ((LINE_G2*)packet)->g1 = ~intensity;
     }
 
-    first_component = ((CVECTOR*)colors)[0].b;
-    second_component = ((CVECTOR*)colors)[1].b;
+    first_component = colors[0].b;
+    second_component = colors[1].b;
     if (first_component == second_component)
     {
         ((LINE_G2*)packet)->b1 = first_component;
@@ -960,164 +1113,134 @@ u8* field_emit_hud_status_line(u8* packet, FieldPrimitiveContext* context, u32* 
         ((LINE_G2*)packet)->b1 = ~intensity;
     }
 
-    line_x = x + 0x18;
+    line_x = x + 24;
     ((LINE_G2*)packet)->x0 = line_x;
-    line_y = y + 0x10;
+    line_y = y + 16;
     ((LINE_G2*)packet)->y1 = line_y;
     ((LINE_G2*)packet)->y0 = line_y;
-    ((LINE_G2*)packet)->x1 = line_x + ((intensity * 0x23) / 255);
+    ((LINE_G2*)packet)->x1 = line_x + ((intensity * FIELD_HUD_LINE_LENGTH) / 255);
 
-    addPrim(&context->tag, (LINE_G2*)packet);
+    addPrim(&render_half->ordering_table[FIELD_HUD_OT_INDEX], (LINE_G2*)packet);
     return packet + sizeof(LINE_G2);
 }
 
 /**
- * @brief Emit a right-aligned HP percentage followed by the percent
- *        glyph, advancing the horizontal cursor 7 units per column.
- * @param packet Primitive-buffer cursor passed through the digit emitter.
- * @param context Opaque draw context forwarded to field_emit_hud_glyph.
- * @param value HP percentage from 0 through 100.
- * @param position Pointer to the current X cursor, bumped by 7 after each column.
- * @return Cursor immediately after the percent glyph.
- * @note Leading zeros in the hundreds/tens columns are suppressed until the
- *       first non-zero digit is emitted.
+ * @brief Emit a right-aligned HP percentage followed by the percent glyph.
+ * @param packet Primitive-buffer cursor.
+ * @param render_half Render half forwarded to field_emit_hud_glyph.
+ * @param value HP percentage, 0 to 100.
+ * @param position Screen position; x advances 7 pixels per column.
+ * @return Pointer just past the percent glyph.
+ * @note Leading zeros in the hundreds and tens columns are left blank.
  */
-void* field_emit_hud_percentage(void* packet, void* context, s32 value, u16* position)
+static void* field_emit_hud_percentage(void* packet, FieldRenderHalf* render_half, s32 value, Vec2s* position)
 {
-    void* field_emit_hud_glyph(void*, void*, s32, s32*);
-
     s32 emitted;
 
     emitted = 0;
     if (value / 100 != 0)
     {
         emitted = 1;
-        packet = field_emit_hud_glyph(packet, context, value / 100, (s32*)position);
+        packet = field_emit_hud_glyph(packet, render_half, value / 100, position);
         value -= 100;
     }
-    *position += FIELD_HUD_GLYPH_ADVANCE;
+    position->x += FIELD_HUD_GLYPH_ADVANCE;
     if (emitted || value / 10 != 0)
     {
         s32 digit;
         digit = value / 10;
-        packet = field_emit_hud_glyph(packet, context, digit, (s32*)position);
+        packet = field_emit_hud_glyph(packet, render_half, digit, position);
         value -= digit * 10;
     }
-    *position += FIELD_HUD_GLYPH_ADVANCE;
-    packet = field_emit_hud_glyph(packet, context, value, (s32*)position);
-    *position += FIELD_HUD_GLYPH_ADVANCE;
-    return field_emit_hud_glyph(packet, context, FIELD_HUD_GLYPH_PERCENT, (s32*)position);
+    position->x += FIELD_HUD_GLYPH_ADVANCE;
+    packet = field_emit_hud_glyph(packet, render_half, value, position);
+    position->x += FIELD_HUD_GLYPH_ADVANCE;
+    return field_emit_hud_glyph(packet, render_half, FIELD_HUD_GLYPH_PERCENT, position);
 }
 
 /**
  * @brief Emit a digit or percent glyph from the HUD texture strip.
  * @param packet Primitive-buffer cursor.
- * @param context Draw context containing the HUD ordering-table tag.
- * @param value Glyph index: 0 through 9 for digits, 10 for percent.
- * @param position Packed screen X/Y coordinates.
- * @return Cursor immediately after the sprite.
+ * @param render_half Render half whose HUD ordering-table entry receives the sprite.
+ * @param value Glyph index: 0 to 9 for digits, 10 for percent.
+ * @param position Packed screen x/y.
+ * @return Pointer just past the sprite.
  */
-void* field_emit_hud_glyph(void* packet, void* context, s32 value, s32* position)
+static void* field_emit_hud_glyph(void* packet, FieldRenderHalf* render_half, s32 value, Vec2s* position)
 {
     SPRT* sprite;
-    FieldPrimitiveContext* ot;
     s32 packed_xy;
 
     sprite = (SPRT*)packet;
-    ot = (FieldPrimitiveContext*)context;
 
-    *(u32*)&sprite->r0 = 0x808080;
+    SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
     setSprt(sprite);
-    packed_xy = *position;
-    *(s16*)&sprite->u0 = (s16)((value * 8) + 0x1558);
-    *(u32*)&sprite->w = 0xB0008;
+    packed_xy = *(s32*)position;
+    SET_SPRT_UV0_PACKED(sprite, (s16)((value * 8) + FIELD_HUD_UV(0x58, 0x15)));
+    SET_SPRT_WH_PACKED(sprite, 8, 11);
     sprite->clut = FIELD_HUD_CLUT;
-    *(u32*)&sprite->x0 = packed_xy;
-    addPrim(&ot->tag, sprite);
-    return (u8*)packet + sizeof(SPRT);
+    SET_SPRT_XY0_WORD(sprite, packed_xy);
+    addPrim(&render_half->ordering_table[FIELD_HUD_OT_INDEX], sprite);
+    return sprite + 1;
 }
 
 /**
- * @brief Build a red damage quad from the caller's x0/x1, bordered 3 pixels inward at the bottom, and link it into the OT.
- * @param prim Quad whose x0 and x1 are already set.
- * @param y Top edge, added to g_field_hud_bar_offset_y.
- * @param ot Ordering-table tag to link into.
+ * @brief Finish and link a red damage quad whose x0 and x1 are already set.
+ * @param prim Quad; the lower edge is slanted 3 pixels to the left.
+ * @param y Panel screen y, added to g_field_hud_bar_offset_y.
+ * @param ot Ordering-table entry to link into.
  * @return Pointer just past the quad.
  */
-POLY_F4* field_emit_hud_damage_quad(POLY_F4* prim, s32 y, u32* ot)
+static POLY_F4* field_emit_hud_damage_quad(POLY_F4* prim, s32 y, u_long* ot)
 {
-    extern s32 g_field_hud_bar_height;
-    extern s32 g_field_hud_bar_offset_y;
-
-    *((u32*)&prim->r0) = 0xFF;
+    SET_BGR0_PACKED(prim, FIELD_HUD_RED);
     setPolyF4(prim);
-    prim->x3 = prim->x1 - 3;
-    prim->y1 = ((u16)g_field_hud_bar_offset_y) + y;
-    prim->x2 = prim->x0 - 3;
-    prim->y0 = ((u16)g_field_hud_bar_offset_y) + y;
-    prim->y3 = prim->y1 + ((u16)g_field_hud_bar_height);
-    prim->y2 = prim->y3;
-    addPrim(ot, prim);
-    return prim + 1;
+    return field_hud_link_change_quad(prim, y, ot);
 }
 
 /**
- * @brief Build a white healing quad like field_emit_hud_damage_quad, widening a zero-width x0/x1 pair to one pixel first.
+ * @brief Finish and link a white healing quad, widening a zero-width quad to one pixel.
  * @param prim Quad whose x0 and x1 are already set.
- * @param y Top edge, added to g_field_hud_bar_offset_y.
- * @param ot Ordering-table tag to link into.
+ * @param y Panel screen y, added to g_field_hud_bar_offset_y.
+ * @param ot Ordering-table entry to link into.
  * @return Pointer just past the quad.
  */
-POLY_F4* field_emit_hud_healing_quad(POLY_F4* prim, s32 y, u32* ot)
+static POLY_F4* field_emit_hud_healing_quad(POLY_F4* prim, s32 y, u_long* ot)
 {
-    extern s32 g_field_hud_bar_height;
-    extern s32 g_field_hud_bar_offset_y;
-
     if (prim->x1 == prim->x0)
     {
         prim->x1 = prim->x0 + 1;
     }
-    *((u32*)&prim->r0) = 0xFFFFFF;
+    SET_BGR0_PACKED(prim, FIELD_HUD_WHITE);
     setPolyF4(prim);
-    prim->x3 = prim->x1 - 3;
-    prim->y1 = ((u16)g_field_hud_bar_offset_y) + y;
-    prim->x2 = prim->x0 - 3;
-    prim->y0 = ((u16)g_field_hud_bar_offset_y) + y;
-    prim->y3 = prim->y1 + ((u16)g_field_hud_bar_height);
-    prim->y2 = prim->y3;
-    addPrim(ot, prim);
-    return prim + 1;
+    return field_hud_link_change_quad(prim, y, ot);
 }
 
 /**
- * @brief Emit an actor portrait and its texture-page selection.
- * @param sprt Sprite primitive to populate.
- * @param ot Ordering table the primitive (and its tpage) are linked into.
- * @param index Party slot; slot 2 selects the companion palette when applicable.
- * @param xy Packed screen position copied into the sprite's x0/y0.
- * @return Pointer just past the appended DR_TPAGE primitive.
+ * @brief Emit a party member's portrait and its texture page.
+ * @param sprt Sprite primitive to fill.
+ * @param ot Ordering-table entry the sprite and its DR_TPAGE are linked into.
+ * @param index Party slot; slot 2 uses the companion palette for companion kinds 0x41 and up.
+ * @param position Screen position of the portrait.
+ * @return Pointer just past the DR_TPAGE.
  */
-void* field_emit_actor_portrait(SPRT* sprt, u32* ot, s32 index, u32* xy)
+void* field_emit_actor_portrait(SPRT* sprt, u_long* ot, s32 index, Vec2s* position)
 {
-    extern u8 D_800FDCEA;
-    extern u16 D_800FE01E;
-    extern FieldHudActorTexture g_field_actors[];
-
     DR_TPAGE* mode;
 
-    *(u32*)&sprt->r0 = 0x808080;
+    SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
     setSprt(sprt);
-    *(u32*)&sprt->x0 = *xy;
-    *(u16*)&sprt->u0 = 0xE800;
-    *(u32*)&sprt->w = 0x180018;
+    SET_SPRT_XY0_WORD(sprt, *(u32*)position);
+    SET_SPRT_UV0_PACKED(sprt, FIELD_HUD_UV(0, 0xE8));
+    SET_SPRT_WH_PACKED(sprt, 24, 24);
 
-    if (index == 2 && D_800FDCEA >= 0x41)
+    if (index == 2 && D_800FDCEA >= FIELD_HUD_COMPANION_KIND_MIN)
     {
         sprt->clut = (((D_800FE01E & 3) + 0x1EF) << 6) | 0x10;
     }
     else
     {
-        sprt->clut = ((index + 0x1F4) << 6) | ((g_field_actors[index].texture_flags >> 19) & 0xF);
+        sprt->clut = ((index + 0x1F4) << 6) | ((g_field_actors[index].control.word >> 19) & 0xF);
     }
 
     addPrim(ot, sprt);
@@ -1136,41 +1259,29 @@ void* field_emit_actor_portrait(SPRT* sprt, u32* ot, s32 index, u32* xy)
 }
 
 /**
- * @brief Loads a VRAM resource from disc and uploads it via field_upload_image_resource.
- *
- * Queues a CD read of resource @p id (masked to 16 bits) into the shared field
- * CD buffer @c D_8010D038, waits for the queue to drain, then hands the loaded
- * blob to field_upload_image_resource to upload into VRAM using @p rect and @p mode.
- *
- * @param id Resource index; masked to 16 bits for the CD queue.
- * @param rect Destination rectangle forwarded to field_upload_image_resource.
- * @param mode Upload mode forwarded to field_upload_image_resource.
+ * @brief Read an image resource from disc into the field CD buffer and upload it to VRAM.
+ * @param id Resource index; only the low 16 bits are used.
+ * @param rect Pixel and CLUT destinations, see field_upload_image_resource.
+ * @param mode CLUT upload mode, see field_upload_image_resource.
+ * @return Result of field_upload_image_resource.
  */
-void field_load_vram_resource(s32 id, s16* rect, s32 mode)
+s32 field_load_vram_resource(s32 id, RECT* rect, s32 mode)
 {
-    extern u8* D_8010D038;
-    s32 field_upload_image_resource(RECT * rect, Tim * resource, s32 mode);
-
-    u8* buf = D_8010D038;
+    u8* buf = g_field_cd_buffer;
 
     cdrom_queue_read(id & 0xFFFF, buf);
     cdrom_wait_queue_empty();
-    field_upload_image_resource((RECT*)rect, (Tim*)buf, mode);
+    return field_upload_image_resource(rect, (Tim*)buf, mode);
 }
 
 /**
- * @brief Upload a two-part image resource (palette/CLUT block followed by the
- *        pixel block) into VRAM and report the word at byte offset 0x1F4.
- * @param rect Destination framebuffer rectangle; supplies the upload x/y
- *             (from @c rect->x / @c rect->y) and the CLUT destination x/y (from
- *             @c rect->w / @c rect->h), and returns the pixel width/height in x/y.
- * @param resource TIM file containing a palette block followed by a pixel block.
- * @param mode When non-zero, upload the CLUT as a single 1-tall run of
- *             width*height entries; when zero, upload it with its natural
- *             width and height.
- * @return Packed palette entries 240 and 241 (the word at byte offset 0x1F4).
+ * @brief Upload a TIM's CLUT block and pixel block into VRAM.
+ * @param rect x/y: pixel destination, w/h: CLUT destination; returns the pixel width and height in x/y.
+ * @param resource TIM file with a CLUT block followed by a pixel block.
+ * @param mode Nonzero uploads the CLUT as one row of width * height entries; zero keeps its shape.
+ * @return CLUT entries 240 and 241 as one packed word.
  */
-s32 field_upload_image_resource(RECT* rect, Tim* resource, s32 mode)
+static s32 field_upload_image_resource(RECT* rect, Tim* resource, s32 mode)
 {
     RECT load_rect;
     s32 offset;
@@ -1179,7 +1290,6 @@ s32 field_upload_image_resource(RECT* rect, Tim* resource, s32 mode)
     TimDimensions* dimensions;
     u16 x;
 
-    /* The caller supplies separate pixel and palette destinations. */
     dimensions = &resource->clut_block.dimensions;
     offset = resource->clut_block.bnum;
     if (mode != 0)
@@ -1208,354 +1318,14 @@ s32 field_upload_image_resource(RECT* rect, Tim* resource, s32 mode)
     rect->y = dimensions->height;
     return palette_word;
 }
-#include "common.h"
-#include "field_effect_render_state.h"
-#include "gpu_packet.h"
-#include "sdk/libgpu.h"
 
 /**
- * @brief Former field_actor_control_effects.c: consolidated FIELD actor control, animation-flag, scaling and
- *        ground-shadow/effect-primitive translation unit (vram
- *        0x80086494 .. 0x80087614).
- *
- * Merges the former per-function files func_80086494.c, field337.c,
- * field_set_actor_horizontal_scale.c, field_handle_actor_control_flag_40.c,
- * field_actor_flag_ops.c, func_80086FB8.c and field29.c into a single TU.
- *
- * @note g_field_object_states, g_field_object_parts, D_80107800 and D_801058E0 are each viewed as a
- *       different record type (or element width) by different members, so their
- *       extern declarations are kept at BLOCK scope inside each user with that
- *       user's original type. bcopy has two different prototypes across members
- *       and is likewise declared per-function. Callees left implicitly declared
- *       in their original files (func_80083EEC, field_start_actor_animation,
- *       field_restart_actor_animation, func_80086C00 in field337 / func_80086494) are kept
- *       implicit here to preserve the original codegen.
+ * @brief Run the handlers of an object's changed flags and refresh its actor tint.
+ * @param index Object index.
+ * @note A handler entry below 0x100 is an animation resource played on the object's effect slot.
  */
-
-/* ---- Ground-shadow renderer types --------------------------------------- */
-
-/** @brief Actor position and shadow parameters used by the ground-shadow renderer. */
-typedef struct
+void field_update_object_effects(s32 index)
 {
-    s32 x;
-    s32 y;
-    s32 z;
-    u8 pad_0x0c[0x37 - 0xC];
-    u8 shadow_bias;
-    u8 pad_0x38[0x3A - 0x38];
-    u8 resource_index;
-} ShadowActor;
-
-/** @brief First two footprint corners; only their horizontal coordinates are used. */
-typedef struct
-{
-    s16 left_x;
-    s16 first_y;
-    s16 right_x;
-} ShadowFootprint;
-
-/** @brief Projected ground position in the field renderer scratchpad. */
-typedef struct
-{
-    u16 x;
-    u16 y;
-} ShadowScreenPosition;
-
-/** @brief World position copied to the field renderer scratchpad. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 z;
-} ShadowWorldPosition;
-
-/** @brief Ground-shadow height in the 0x23C-byte actor slot. */
-typedef struct
-{
-    u8 pad_0x000[0x176];
-    s16 shadow_height;
-    u8 pad_0x178[0x23C - 0x178];
-} ShadowActorSlot;
-
-/** @brief Resource entry view used to select the shadow inset scale. */
-typedef struct
-{
-    u8* start;
-    u8* end;
-    u8 shadow_scale_mode;
-    u8 slot_index;
-    u8 pad_0x0a[4];
-    s16 unknown_0x0e;
-    u32 flags;
-} ShadowResourceEntry;
-
-#define SHADOW_SCREEN_POSITION ((ShadowScreenPosition*)0x1F8000C0)
-#define SHADOW_WORLD_POSITION ((ShadowWorldPosition*)0x1F8000C4)
-#define SHADOW_SCREEN_CENTER_X 160
-#define SHADOW_SCREEN_CENTER_Y 112
-#define SHADOW_OT_SIZE 4096
-#define SHADOW_DEPTH_SHIFT 7
-
-typedef struct
-{
-    u8 pad0[0x3A];
-    u8 unk3A;
-} Rec87564;
-
-typedef struct
-{
-    u8 pad0[0x14];
-    s32 unk14;
-    u8 pad18[0x23C - 0x18];
-} State87564;
-
-typedef struct
-{
-    u8 pad0[0x10];
-    s16 unk10;
-    u8 pad12[0x2A - 0x12];
-    s16 unk2A;
-} Rec875C4;
-
-/* ---- field337.c types ----------------------------------------------------- */
-
-typedef struct
-{
-    u8 pad0[0x21];
-    u8 unk21; /* 0x21 */
-    u8 pad22[0x24 - 0x22];
-    u8 unk24; /* 0x24 */
-    u8 pad25[0x27 - 0x25];
-    u8 unk27; /* 0x27 */
-    u8 pad28[0x2E - 0x28];
-    s16 unk2E; /* 0x2E */
-    u8 pad30[0x3A - 0x30];
-    u8 unk3A; /* 0x3A */
-} Actor;
-
-typedef struct
-{
-    u8 pad0[0x174];
-    s32 unk174; /* 0x174 */
-    u8 pad178[0x23C - 0x178];
-} ActorRec;
-
-/* ---- field_actor_flag_ops.c types ----------------------------------------- */
-
-/**
- * @brief Field actor state record. Only the fields read here are known; the
- *        object index at 0x3A selects the actor's g_field_object_states slot.
- */
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-    u32 unkC;
-    s16 unk10;
-    s16 unk12;
-    s16 unk14;
-    s16 unk16;
-    u8 unk18;
-    u8 unk19;
-    u8 unk1A;
-    u8 pad1B[1];
-    s32 unk1C;
-    u8 pad20[1];
-    u8 unk21;
-    u8 unk22;
-    u8 unk23;
-    u8 unk24;
-    u8 unk25;
-    u8 pad26[1];
-    u8 unk27;
-    u8 unk28;
-    u8 pad29[1];
-    s16 unk2A;
-    s16 unk2C;
-    u16 unk2E;
-    s16 unk30;
-    u8 unk32;
-    u8 unk33;
-    u8 unk34;
-    u8 unk35;
-    u8 unk36;
-    u8 unk37;
-    u8 unk38;
-    u8 pad39[1];
-    u8 unk3A;
-    u8 unk3B;
-    u32 unk3C;
-    s32 unk40;
-    u32 unk44;
-    u32 unk48;
-    u32 unk4C;
-    u8 pad50[4];
-} FieldActorState;
-
-/**
- * @brief Per-actor animation/geometry slot in g_field_object_states; stride 0x23C.
- */
-typedef struct
-{
-    u8 pad0[0xC];
-    s32 unkC; /* 0xC flags; bit 0x2000 cleared by the linked-actor helpers */
-    u8 pad10[0x170 - 0x10];
-    u8 unk170; /* 0x170 index of the linked actor */
-    u8 pad171[0x174 - 0x171];
-    u32 unk174; /* 0x174 */
-    u32 unk178; /* 0x178 bit 1 marks a link to unk170 */
-    u8 pad17C[0x23C - 0x17C];
-} ActorSlotData;
-
-/** @brief Entry of g_field_actor_slots; stride 0x244. */
-typedef struct
-{
-    u8 pad0[0x24];
-    u8 unk24; /* 0x24 */
-    u8 pad25[0x23A - 0x25];
-    u8 unk23A; /* 0x23A */
-    u8 pad23B[0x244 - 0x23B];
-} ActorSlot;
-
-/** @brief 0x28-byte record of the D_80107800 table; unk4 is the in-use flag. */
-typedef struct
-{
-    u8 unk0[4];
-    u8 unk4;
-    u8 unk5[0x23];
-} FieldUnkRecord_80086F20;
-
-/* ---- field_handle_actor_control_flag_40.c types --------------------------- */
-
-#define FIELD_ANIMATION_SEQUENCE_MASK 0x7F
-#define FIELD_ANIMATION_MIRROR_FLAG 0x80
-#define FIELD_ANIMATION_HOLD_LAST_FRAME 0x800
-
-/** @brief Field object state used by the actor-control animation handlers. */
-typedef struct
-{
-    u8 pad00[0x1C];
-    s32 state_flags;
-    u8 pad20[1];
-    u8 animation_sequence;
-    u8 pad22[0x24 - 0x22];
-    u8 frame_duration_scale;
-    u8 pad25[0x27 - 0x25];
-    u8 frame_index;
-    u8 pad28[0x2E - 0x28];
-    u16 animation_repeat_count;
-    u8 pad30[0x3A - 0x30];
-    u8 object_index;
-    u8 pad3B[0x54 - 0x3B];
-} FieldObjectRecord;
-
-/** @brief Per-actor runtime slot in g_field_object_states. */
-typedef struct
-{
-    u8 pad000[0x174];
-    u32 state;
-    u8 pad178[0x23C - 0x178];
-} FieldActorSlot;
-
-/* ---- field_set_actor_horizontal_scale.c types ----------------------------- */
-
-typedef struct
-{
-    u8 pad0[0x3A];
-    u8 object_index;
-    u8 pad3B[0x54 - 0x3B];
-} FieldObjectState;
-
-typedef struct
-{
-    u8 pad0[0x2E];
-    u8 scale_z;
-    u8 pad2F[0x33 - 0x2F];
-    u8 scale_x;
-    u8 pad34[0x48 - 0x34];
-} FieldActorPartDef;
-
-/* ---- func_80086494.c types ------------------------------------------------ */
-
-/** @brief Color and animation selector bytes in a 0x54-byte object record. */
-typedef struct
-{
-    u8 pad0[0x18];
-    u8 unk18, unk19, unk1a;
-    u8 pad1b[10];
-    u8 unk25;
-    u8 pad26[0x14];
-    u8 unk3a;
-    u8 tail[0x19];
-} FieldControlRecord;
-/** @brief Current and previous control flags in a 0x23C-byte runtime state. */
-typedef struct
-{
-    u8 pad0[0xC];
-    s32 unkc;
-    u8 pad10[0x168];
-    union
-    {
-        s32 word;
-        struct
-        {
-            u8 low[2];
-            u8 owner;
-            u8 high;
-        } bytes;
-    } status;
-    s32 unk17c;
-    u8 tail[0xBC];
-} FieldControlState;
-/** @brief Animation activity and kind in a 0x244-byte animation actor. */
-typedef struct
-{
-    u8 pad0[0x24];
-    u8 unk24;
-    u8 pad25[0x201];
-    u16 unk226;
-    u8 pad228[0x12];
-    u8 unk23a;
-    u8 tail[9];
-} FieldControlActor;
-/** @brief Color bytes in a 0x48-byte visual record. */
-typedef struct
-{
-    u8 pad0[0xE];
-    u8 unke, unkf, unk10;
-    u8 tail[0x37];
-} FieldControlVisual;
-
-/* ---- func_80086FB8.c types ------------------------------------------------ */
-
-/** @brief Screen translation applied to active effect primitives. */
-typedef struct
-{
-    u16 x;
-    u16 y;
-} FieldEffectMotion;
-
-/* ---- non-conflicting file-scope extern data ------------------------------- */
-
-extern u32 D_800EB00C[];
-extern FieldControlRecord g_field_actors[];
-extern ActorSlot g_field_actor_slots[];
-extern FieldEffectMotion D_801077FC;
-
-extern ShadowResourceEntry g_field_resource_entries[];
-extern Rec87564* D_8010A01C;
-extern s32 g_field_scene_record_table;
-
-/**
- * @brief Dispatch one changed actor control flag and refresh its displayed colors.
- * @param index Object, runtime-state and animation-actor slot index.
- * @note Action values below 0x100 name animations; larger values are callbacks.
- */
-void func_80086494(s32 index)
-{
-    extern FieldControlState g_field_object_states[];
-    extern FieldControlVisual g_field_object_parts[];
     s32 flags_before;
     s32 changed_or_current;
     s32 previous_flags;
@@ -1571,93 +1341,93 @@ void func_80086494(s32 index)
     s32 highest_bit;
     s32 bit_mask;
     u16 animation_kind;
-    u32* action;
-    u32* action_base;
-    u32 action_value;
-    FieldControlActor* actor;
-    FieldControlRecord* record;
-    FieldControlState* runtime;
+    u32* handler;
+    u32* handlers;
+    u32 handler_value;
+    FieldActorSlot* slot;
+    FieldActor* actor;
+    FieldObjectState* state;
 
-    record_offset = index * 0x54;
-    record = (FieldControlRecord*)(record_offset + (u8*)g_field_actors);
-    runtime = &g_field_object_states[index];
-    flags_before = runtime->unkc;
-    actor = (FieldControlActor*)&g_field_actor_slots[64 + index];
-    if (flags_before & 0x23E4)
+    /* offset first: &g_field_actors[index] adds the base first and loses the shared offset */
+    record_offset = index * sizeof(FieldActor);
+    actor = (FieldActor*)(record_offset + (u8*)g_field_actors);
+    state = &g_field_object_states[index];
+    flags_before = state->flags;
+    slot = &g_field_actor_slots[FIELD_OBJECT_EFFECT_SLOT_BASE + index];
+    if (flags_before & FIELD_OBJECT_IMMOBILE_FLAGS)
     {
-        runtime->unkc &= ~0x4000;
-        runtime->unkc &= 0xFFFF7FFF;
+        state->flags &= ~FIELD_OBJECT_FLAG_4000;
+        state->flags &= 0xFFFF7FFF;
     }
-    flags_current = runtime->unkc;
-    previous_flags = runtime->unk17c;
+    flags_current = state->flags;
+    previous_flags = state->previous_flags;
     changed_or_current = (flags_current ^ previous_flags) | flags_current;
     if (changed_or_current != 0)
     {
-        if (actor->unk24 == 0)
+        if (slot->active == 0)
         {
-            do /* a loop form lets loop.c hoist the callback argument; the original searches with a label */
+            do /* a loop statement here lets loop.c hoist the callback argument out of the search */
             {
                 bit_mask = 0x8000;
-                bit_index = 0xF;
-                animation_slot = index + 0x40;
-                action_base = D_800EB00C;
-                action = action_base + bit_index;
-            find_action:
-                if ((changed_or_current & bit_mask) && (action_value = *action, (action_value != 0xFF)))
+                bit_index = FIELD_OBJECT_HANDLER_COUNT - 1;
+                animation_slot = index + FIELD_OBJECT_EFFECT_SLOT_BASE;
+                handlers = g_field_object_flag_handlers;
+                handler = handlers + bit_index;
+            find_handler:
+                if ((changed_or_current & bit_mask) && (handler_value = *handler, (handler_value != FIELD_OBJECT_HANDLER_NONE)))
                 {
-                    if (action_value < 0x100U)
+                    if (handler_value < FIELD_OBJECT_HANDLER_FUNCTION_MIN)
                     {
-                        if (runtime->unkc & bit_mask)
+                        if (state->flags & bit_mask)
                         {
-                            func_80083EEC(index, animation_slot, action_value);
+                            func_80083EEC(index, animation_slot, handler_value);
                             field_start_actor_animation(animation_slot, 0, 0);
                         }
                     }
                     else
                     {
-                        ((void (*)(FieldControlRecord*, s32))action_value)((FieldControlRecord*)(record_offset + (u8*)g_field_actors),
-                                                                           runtime->unkc & bit_mask);
+                        ((void (*)(FieldActor*, s32))handler_value)((FieldActor*)(record_offset + (u8*)g_field_actors), state->flags & bit_mask);
                     }
                     clear_mask = ~bit_mask;
-                    runtime->unk17c = (s32)((runtime->unk17c & clear_mask) | (runtime->unkc & bit_mask));
+                    state->previous_flags = (s32)((state->previous_flags & clear_mask) | (state->flags & bit_mask));
                 }
                 else
                 {
-                    action--;
+                    handler--;
                     bit_index--;
                     bit_mask >>= 1;
                     if (bit_index >= 0)
                     {
-                        goto find_action;
+                        goto find_handler;
                     }
                 }
             } while (0);
         }
         else
         {
-            if (!(flags_current & 0x8000) && (previous_flags & 0x8000))
+            if (!(flags_current & FIELD_OBJECT_FLAG_8000) && (previous_flags & FIELD_OBJECT_FLAG_8000))
             {
-                actor->unk24 = 0U;
-                actor->unk23a = 0;
-                field_clear_actor_effects(actor);
-                runtime->unk17c &= 0xFFFF7FFF;
+                slot->active = 0U;
+                slot->track_mask = 0;
+                field_clear_actor_effects(slot);
+                state->previous_flags &= 0xFFFF7FFF;
             }
-            else if (!(runtime->unkc & 0x4000) && (runtime->unk17c & 0x4000))
+            else if (!(state->flags & FIELD_OBJECT_FLAG_4000) && (state->previous_flags & FIELD_OBJECT_FLAG_4000))
             {
-                actor->unk24 = 0U;
-                actor->unk23a = 0;
-                field_clear_actor_effects(actor);
-                runtime->unk17c &= -0x4001;
+                slot->active = 0U;
+                slot->track_mask = 0;
+                field_clear_actor_effects(slot);
+                state->previous_flags &= ~FIELD_OBJECT_FLAG_4000;
             }
             else
             {
-                changed_flags = runtime->unkc;
-                old_flags = runtime->unk17c;
+                changed_flags = state->flags;
+                old_flags = state->previous_flags;
                 changed_flags = (changed_flags ^ old_flags) & old_flags;
                 if (changed_flags != 0)
                 {
                     scan_flags = (s32)changed_flags;
-                    highest_bit = 0xF;
+                    highest_bit = FIELD_OBJECT_HANDLER_COUNT - 1;
                     animation_bit = 1;
                 find_highest:
                     if ((scan_flags & (animation_bit << highest_bit)) == 0)
@@ -1665,7 +1435,8 @@ void func_80086494(s32 index)
                         highest_bit -= 1;
                         goto find_highest;
                     }
-                    animation_kind = actor->unk226;
+                    /* Flag bit whose handler plays the slot's current animation resource. */
+                    animation_kind = slot->status.half[1];
                     animation_bit = 0x20;
                     switch (animation_kind)
                     {
@@ -1696,397 +1467,316 @@ void func_80086494(s32 index)
                     }
                     if (highest_bit == animation_bit)
                     {
-                        actor->unk24 = 0U;
-                        actor->unk23a = 0;
-                        field_clear_actor_effects(actor);
-                        if ((runtime->status.word & 1) && (runtime->status.bytes.owner == (record->unk3a + 0x40)))
+                        slot->active = 0U;
+                        slot->track_mask = 0;
+                        field_clear_actor_effects(slot);
+                        if ((state->contact.word & 1) && (state->contact.bytes.controller_index == (actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE)))
                         {
-                            record->unk25 = 0;
-                            runtime->status.word = (s32)(runtime->status.word & ~1);
+                            actor->presence = 0;
+                            state->contact.word = (s32)(state->contact.word & ~1);
                         }
                     }
                 }
             }
         }
     }
-    if (runtime->unkc & 0x10000000)
+    if (state->flags & FIELD_OBJECT_FLAG_HIT_FLASH)
     {
-        g_field_actors[index].unk1a = 0x20;
-        g_field_actors[index].unk19 = 0x20;
-        runtime->unkc = (s32)(runtime->unkc & 0xEFFFFFFF);
+        g_field_actors[index].tint_blue = FIELD_HIT_FLASH_TINT;
+        g_field_actors[index].tint_green = FIELD_HIT_FLASH_TINT;
+        state->flags = (s32)(state->flags & ~FIELD_OBJECT_FLAG_HIT_FLASH);
     }
     else
     {
-        g_field_actors[index].unk18 = g_field_object_parts[index].unke;
-        g_field_actors[index].unk19 = g_field_object_parts[index].unkf;
-        g_field_actors[index].unk1a = g_field_object_parts[index].unk10;
+        g_field_actors[index].tint_red = g_field_object_parts[index].tint_red;
+        g_field_actors[index].tint_green = g_field_object_parts[index].tint_green;
+        g_field_actors[index].tint_blue = g_field_object_parts[index].tint_blue;
     }
 }
 
 /**
- * @brief Enter an actor control state and play animation 7 on its +0x40 object.
- * @param arg0 Actor object record.
- * @param arg1 Nonzero to run the transition; zero does nothing.
+ * @brief Flag 0x0004 handler: restart the actor's animation and play effect resource 7.
+ * @param actor Actor of the object.
+ * @param is_set Nonzero when the flag became set; zero does nothing.
  */
-void func_80086850(Actor* arg0, s32 arg1)
+void field_handle_object_flag_0004(FieldActor* actor, s32 is_set)
 {
-    extern ActorRec g_field_object_states[];
-
-    if (arg1 != 0)
+    if (is_set != 0)
     {
-        arg0->unk2E = 1;
-        arg0->unk27 = 0;
-        arg0->unk21 &= 0x80;
-        arg0->unk24 = 1;
-        g_field_object_states[arg0->unk3A].unk174 &= ~0x1800;
-        field_restart_actor_animation(arg0);
-        func_80083EEC(arg0->unk3A, arg0->unk3A + 0x40, 0x7);
-        field_start_actor_animation(arg0->unk3A + 0x40, 0, 0);
-        func_80086C00(arg0->unk3A);
+        actor->animation_state = 1;
+        actor->animation_frame = 0;
+        actor->animation &= FIELD_ANIMATION_MIRROR_FLAG;
+        actor->animation_active = 1;
+        g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
+        field_restart_actor_animation(actor);
+        func_80083EEC(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 7);
+        field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
+        field_clear_link_target_flag(actor->object_index);
     }
 }
 
 /**
- * @brief Enter an actor control state and play animation 0xA on its +0x40 object.
- * @param arg0 Actor object record.
- * @param arg1 Nonzero to run the transition; zero does nothing.
+ * @brief Flag 0x0020 handler: restart the actor's animation and play effect resource 10.
+ * @param actor Actor of the object.
+ * @param is_set Nonzero when the flag became set; zero does nothing.
  */
-void func_800868FC(Actor* arg0, s32 arg1)
+void field_handle_object_flag_0020(FieldActor* actor, s32 is_set)
 {
-    extern ActorRec g_field_object_states[];
-
-    if (arg1 != 0)
+    if (is_set != 0)
     {
-        arg0->unk2E = 1;
-        arg0->unk27 = 0;
-        arg0->unk21 &= 0x80;
-        arg0->unk24 = 1;
-        g_field_object_states[arg0->unk3A].unk174 &= ~0x1800;
-        field_restart_actor_animation(arg0);
-        func_80083EEC(arg0->unk3A, arg0->unk3A + 0x40, 0xA);
-        field_start_actor_animation(arg0->unk3A + 0x40, 0, 0);
+        actor->animation_state = 1;
+        actor->animation_frame = 0;
+        actor->animation &= FIELD_ANIMATION_MIRROR_FLAG;
+        actor->animation_active = 1;
+        g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
+        field_restart_actor_animation(actor);
+        func_80083EEC(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 10);
+        field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
     }
 }
 
 /**
- * @brief Set a field actor's horizontal model scale to half-size or full-size.
- * @param object Field object whose actor-part definition is updated.
- * @param half_scale Non-zero for half-size X/Z scale, zero for full-size scale.
+ * @brief Flag 0x0400 handler: set the actor's horizontal model scale to half or full size.
+ * @param actor Actor whose object part is updated.
+ * @param half_scale Nonzero for half-size X/Z scale, zero for full size.
  */
-void field_set_actor_horizontal_scale(FieldObjectState* object, s32 half_scale)
+void field_set_actor_horizontal_scale(FieldActor* actor, s32 half_scale)
 {
-    extern FieldActorPartDef g_field_object_parts[];
-
     if (half_scale != 0)
     {
-        g_field_object_parts[object->object_index].scale_z = 0x20;
-        g_field_object_parts[object->object_index].scale_x = 0x20;
+        g_field_object_parts[actor->object_index].scale_z = FIELD_PART_SCALE_HALF;
+        g_field_object_parts[actor->object_index].scale_x = FIELD_PART_SCALE_HALF;
     }
     else
     {
-        g_field_object_parts[object->object_index].scale_z = 0x40;
-        g_field_object_parts[object->object_index].scale_x = 0x40;
+        g_field_object_parts[actor->object_index].scale_z = FIELD_PART_SCALE_FULL;
+        g_field_object_parts[actor->object_index].scale_x = FIELD_PART_SCALE_FULL;
     }
 }
 
 /**
- * @brief Handle actor control flag 0x40 becoming active for a field object.
- * @param object Field object whose actor slot and animation state are updated.
- * @param is_set Non-zero when actor control flag 0x40 is currently set.
+ * @brief Flag 0x0040 handler: play effect resource 9 and hold the actor in animation 0x1B.
+ * @param actor Actor of the object.
+ * @param is_set Nonzero when the flag became set; zero does nothing.
  */
-void func_800869FC(FieldObjectRecord* object, s32 is_set)
+void field_handle_object_flag_0040(FieldActor* actor, s32 is_set)
 {
-    s32 func_80083EEC(u8 object_index, s32 actor_index, s32 animation_id);
-    void field_start_actor_animation(s32 actor_index, s32 arg1, s32 arg2);
-    void field_restart_actor_animation(FieldObjectRecord * object);
-    void func_80086C00(u8 object_index);
-    extern FieldActorSlot g_field_object_states[];
-    u8 animation_sequence;
+    u8 animation;
 
     if (is_set != 0)
     {
-        func_80083EEC(object->object_index, object->object_index + 0x40, 9);
-        field_start_actor_animation(object->object_index + 0x40, 0, 0);
-        animation_sequence = object->animation_sequence;
-        if ((animation_sequence & FIELD_ANIMATION_SEQUENCE_MASK) != 0x1B)
+        func_80083EEC(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 9);
+        field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
+        animation = actor->animation;
+        if ((animation & FIELD_ANIMATION_SEQUENCE_MASK) != FIELD_ANIMATION_FLAG_0040_POSE)
         {
-            object->animation_sequence = (animation_sequence & FIELD_ANIMATION_MIRROR_FLAG) + 0x1B;
-            object->animation_repeat_count = 1;
-            object->frame_index = 0;
-            object->frame_duration_scale = 1;
-            g_field_object_states[object->object_index].state &= ~0x1800;
-            field_restart_actor_animation(object);
-            object->state_flags |= FIELD_ANIMATION_HOLD_LAST_FRAME;
+            actor->animation = (animation & FIELD_ANIMATION_MIRROR_FLAG) + FIELD_ANIMATION_FLAG_0040_POSE;
+            actor->animation_state = 1;
+            actor->animation_frame = 0;
+            actor->animation_active = 1;
+            g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
+            field_restart_actor_animation(actor);
+            actor->control.word |= FIELD_ANIMATION_HOLD_LAST_FRAME;
         }
-        func_80086C00(object->object_index);
+        field_clear_link_target_flag(actor->object_index);
     }
 }
 
 /**
- * @brief Enter or leave the actor's 0x14 control state.
- *
- * With @p flag set, puts the actor into control state 0x14, keeps its slot
- * flags 0x1800 clear, sets bits 0x40800 of unk1C, and runs func_80086C00 on
- * it. With @p flag clear, resets the control state, plays animation 0x91 on
- * the actor's +0x40 object, and clears bit 0x40000 of unk1C.
- *
- * @param rec Actor state record.
- * @param flag Nonzero to enter the state, zero to leave it.
+ * @brief Flag 0x0080 handler: hold the actor in animation 0x14, or release it and play effect resource 0x91.
+ * @param actor Actor of the object.
+ * @param is_set Nonzero when the flag became set, zero when it was cleared.
  */
-void func_80086ACC(FieldActorState* rec, s32 flag)
+void field_handle_object_flag_0080(FieldActor* actor, s32 is_set)
 {
-    void field_restart_actor_animation(FieldActorState*);
-    s32 func_80083EEC(u8, s32, s32);
-    void field_start_actor_animation(s32, s32, s32);
-    void func_80086C00(s32 idx);
-    extern ActorSlotData g_field_object_states[];
-
-    if (flag != 0)
+    if (is_set != 0)
     {
-        rec->unk2E = 1;
-        rec->unk24 = 1;
-        rec->unk27 = 0;
-        rec->unk21 = (rec->unk21 & 0x80) + 0x14;
-        g_field_object_states[rec->unk3A].unk174 &= ~0x1800;
-        field_restart_actor_animation(rec);
-        rec->unk1C |= 0x40800;
-        func_80086C00(rec->unk3A);
+        actor->animation_state = 1;
+        actor->animation_active = 1;
+        actor->animation_frame = 0;
+        actor->animation = (actor->animation & FIELD_ANIMATION_MIRROR_FLAG) + FIELD_ANIMATION_FLAG_0080_POSE;
+        g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
+        field_restart_actor_animation(actor);
+        actor->control.word |= FIELD_ACTOR_CONTROL_40000 | FIELD_ANIMATION_HOLD_LAST_FRAME;
+        field_clear_link_target_flag(actor->object_index);
     }
     else
     {
-        rec->unk27 = 0;
-        rec->unk2E = 1;
-        rec->unk24 = 1;
-        rec->unk21 &= 0x80;
-        g_field_object_states[rec->unk3A].unk174 &= ~0x1800;
-        field_restart_actor_animation(rec);
-        func_80083EEC(rec->unk3A, rec->unk3A + 0x40, 0x91);
-        field_start_actor_animation(rec->unk3A + 0x40, 0, 0);
-        rec->unk1C &= 0xFFFBFFFF;
+        actor->animation_frame = 0;
+        actor->animation_state = 1;
+        actor->animation_active = 1;
+        actor->animation &= FIELD_ANIMATION_MIRROR_FLAG;
+        g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
+        field_restart_actor_animation(actor);
+        func_80083EEC(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0x91);
+        field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
+        actor->control.word &= ~FIELD_ACTOR_CONTROL_40000;
     }
 }
 
 /**
- * @brief Clears a linked actor's 0x2000 flag when this actor's bit 1 is set.
- *
- * For actor @p idx, if bit 1 of its 0x178 word is set, clears bit 13 (0x2000)
- * of the 0xC flags word belonging to the actor referenced by its 0x170 byte.
- *
- * @param idx Actor slot index.
+ * @brief Clear flag 0x2000 of the object that @p object_index is linked to, if it is linked.
+ * @param object_index Object index.
  */
-void func_80086C00(s32 idx)
+static inline void field_clear_link_target_flag(s32 object_index)
 {
-    extern ActorSlotData g_field_object_states[];
-    ActorSlotData* base = g_field_object_states;
-    ActorSlotData* e = &base[idx];
+    FieldObjectState* states = g_field_object_states;
+    FieldObjectState* state = &states[object_index];
 
-    if ((e->unk178 >> 1) & 1)
+    if ((state->contact.word >> FIELD_CONTACT_LINKED_SHIFT) & 1)
     {
-        ActorSlotData* e2 = &base[e->unk170];
-        e2->unkC &= ~0x2000;
+        FieldObjectState* target = &states[state->linked_object_index];
+        target->flags &= ~FIELD_OBJECT_FLAG_2000;
     }
 }
 
 /**
- * @brief Play animation 0xC or 0xD on the actor's +0x40 object and set unk25.
- *
- * With @p arg1 set, plays 0xC, marks unk25 = 0xFE, and clears the linked
- * actor's 0x2000 flag as func_80086C00 does. With @p arg1 clear, plays 0xD
- * and zeroes unk25.
- *
- * @param arg0 Actor state record.
- * @param arg1 Selects the 0xC (nonzero) or 0xD (zero) path.
+ * @brief Flag 0x0100 handler: play effect resource 12 and hide the actor, or play 13 and show it.
+ * @param actor Actor of the object.
+ * @param is_set Nonzero when the flag became set, zero when it was cleared.
  */
-void func_80086C70(FieldActorState* arg0, s32 arg1)
+void field_handle_object_flag_0100(FieldActor* actor, s32 is_set)
 {
-    s32 func_80083EEC(u8, s32, s32);
-    void field_start_actor_animation(s32, s32, s32);
-    extern ActorSlotData g_field_object_states[];
-
-    if (arg1 != 0)
+    if (is_set != 0)
     {
-        func_80083EEC(arg0->unk3A, arg0->unk3A + 0x40, 0xC);
-        field_start_actor_animation(arg0->unk3A + 0x40, 0, 0);
-        arg0->unk25 = 0xFE;
-        {
-            ActorSlotData* base = g_field_object_states;
-            ActorSlotData* e = &base[arg0->unk3A];
-            if ((e->unk178 >> 1) & 1)
-            {
-                ActorSlotData* e2 = &base[e->unk170];
-                e2->unkC &= ~0x2000;
-            }
-        }
+        func_80083EEC(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 12);
+        field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
+        actor->presence = FIELD_ACTOR_HIDDEN;
+        field_clear_link_target_flag(actor->object_index);
     }
     else
     {
-        func_80083EEC(arg0->unk3A, arg0->unk3A + 0x40, 0xD);
-        field_start_actor_animation(arg0->unk3A + 0x40, 0, 0);
-        arg0->unk25 = 0;
+        func_80083EEC(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 13);
+        field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
+        actor->presence = 0;
     }
 }
 
 /**
- * @brief Clears a linked actor's 0x2000 flag from a record's actor index.
- *
- * Uses the 0x3A index byte of @p p to select an actor; if bit 1 of its 0x178
- * word is set, clears bit 13 (0x2000) of the 0xC flags word belonging to the
- * actor referenced by its 0x170 byte.
- *
- * @param p Actor state record viewed as bytes.
+ * @brief Knocked-out flag handler: clear flag 0x2000 of the object the actor is linked to.
+ * @param actor Actor of the object.
  */
-void func_80086D5C(u8* p)
+void field_handle_object_knocked_out(FieldActor* actor)
 {
-    extern ActorSlotData g_field_object_states[];
-    ActorSlotData* base = g_field_object_states;
-    ActorSlotData* e = &base[p[0x3A]];
-
-    if ((e->unk178 >> 1) & 1)
-    {
-        ActorSlotData* e2 = &base[e->unk170];
-        e2->unkC &= ~0x2000;
-    }
+    field_clear_link_target_flag(actor->object_index);
 }
 
 /**
- * @brief Play animation 0xE on the actor's +0x40 object, or clear its slot bytes 0x24 and 0x23A.
- * @param arg0 Actor state record.
- * @param arg1 Nonzero plays the animation, zero clears the slot bytes.
+ * @brief Flag 0x8000 handler: play effect resource 14, or stop the object's effect slot.
+ * @param actor Actor of the object.
+ * @param is_set Nonzero when the flag became set, zero when it was cleared.
  */
-void func_80086DD0(FieldActorState* arg0, s32 arg1)
+void field_handle_object_flag_8000(FieldActor* actor, s32 is_set)
 {
-    s32 func_80083EEC(u8, s32, s32);
-    void field_start_actor_animation(s32, s32, s32);
-
-    if (arg1 != 0)
+    if (is_set != 0)
     {
-        func_80083EEC(arg0->unk3A, arg0->unk3A + 0x40, 0xE);
-        field_start_actor_animation(arg0->unk3A + 0x40, 0, 0);
+        func_80083EEC(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 14);
+        field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
     }
     else
     {
-        g_field_actor_slots[arg0->unk3A + 0x40].unk24 = 0;
-        g_field_actor_slots[arg0->unk3A + 0x40].unk23A = 0;
+        g_field_actor_slots[actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE].active = 0;
+        g_field_actor_slots[actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE].track_mask = 0;
     }
 }
 
 /**
- * @brief Play animation 0x19 on the actor's +0x40 object, or clear its slot bytes 0x24 and 0x23A.
- * @param arg0 Actor state record.
- * @param arg1 Nonzero plays the animation, zero clears the slot bytes.
+ * @brief Flag 0x4000 handler: play effect resource 25, or stop the object's effect slot.
+ * @param actor Actor of the object.
+ * @param is_set Nonzero when the flag became set, zero when it was cleared.
  */
-void func_80086E78(FieldActorState* arg0, s32 arg1)
+void field_handle_object_flag_4000(FieldActor* actor, s32 is_set)
 {
-    s32 func_80083EEC(u8, s32, s32);
-    void field_start_actor_animation(s32, s32, s32);
-
-    if (arg1 != 0)
+    if (is_set != 0)
     {
-        func_80083EEC(arg0->unk3A, arg0->unk3A + 0x40, 0x19);
-        field_start_actor_animation(arg0->unk3A + 0x40, 0, 0);
+        func_80083EEC(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 25);
+        field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
     }
     else
     {
-        g_field_actor_slots[arg0->unk3A + 0x40].unk24 = 0;
-        g_field_actor_slots[arg0->unk3A + 0x40].unk23A = 0;
+        g_field_actor_slots[actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE].active = 0;
+        g_field_actor_slots[actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE].track_mask = 0;
     }
 }
 
 /**
- * @brief Clear the unk4 flag byte across all 256 records of the D_80107800
- *        table.
+ * @brief Free every primitive of the fading primitive pool.
  */
-void func_80086F20(void)
+void field_clear_fade_prims(void)
 {
-    extern FieldUnkRecord_80086F20 D_80107800[];
     s32 i;
 
-    for (i = 0xFF; i >= 0; i--)
+    for (i = FIELD_FADE_PRIM_COUNT - 1; i >= 0; i--)
     {
-        D_80107800[i].unk4 = 0;
+        g_field_fade_prims[i].r0 = 0;
     }
 }
 
 /**
- * @brief Stores a record into the first free slot of the D_80107800 table.
- *
- * Scans up to 256 records for one whose unk4 flag byte is clear, copies 0x28
- * bytes from @p src into it, and writes @p value to the parallel D_801058E0
- * half-word slot.
- *
- * @param src Source record, 0x28 bytes.
- * @param value Halfword stored in the parallel D_801058E0 slot.
+ * @brief Copy a primitive into the first free entry of the fading primitive pool.
+ * @param prim POLY_FT4-sized primitive to copy; a zero red component marks a free entry.
+ * @param depth Ordering-table index the primitive is drawn at.
  */
-void func_80086F48(const void* src, s16 value)
+void field_add_fade_prim(const void* prim, s16 depth)
 {
-    void* bcopy(const void*, void*, int);
-    extern FieldUnkRecord_80086F20 D_80107800[];
-    extern s16 D_801058E0[];
-    s32 i = 0;
-    s16* slot = D_801058E0;
-    FieldUnkRecord_80086F20* entry = D_80107800;
+    s32 i;
 
-    for (; i < 0x100; i++)
+    for (i = 0; i < FIELD_FADE_PRIM_COUNT; i++)
     {
-        if (entry->unk4 == 0)
+        if (g_field_fade_prims[i].r0 == 0)
         {
-            bcopy(src, entry, 0x28);
-            *slot = value;
+            bcopy(prim, &g_field_fade_prims[i], sizeof(POLY_FT4));
+            g_field_fade_prim_depths[i] = depth;
             return;
         }
-        slot++;
-        entry++;
     }
 }
 
 /**
- * @brief Fade, translate, and enqueue active primitives from the 256-entry effect pool.
- * @param buffer Ordering table and packet-buffer state, with the write cursor at offset 0x40B8.
+ * @brief Fade, scroll and draw the active primitives of the fading primitive pool.
+ * @param render_half Render half whose ordering table and primitive cursor receive the copies.
  */
-void func_80086FB8(u8* buffer)
+void field_draw_fade_prims(FieldRenderHalf* render_half)
 {
-    extern POLY_FT4 D_80107800[];
-    extern u16 D_801058E0[];
-    extern void bcopy(void*, void*, s32);
     POLY_FT4* source;
     POLY_FT4* output;
-    u32* ordering;
+    u_long* ordering_table;
     s32 i;
     u8 color;
 
-    output = *(POLY_FT4**)(buffer + 0x40B8);
-    ordering = (u32*)buffer;
-    source = D_80107800;
+    output = (POLY_FT4*)render_half->primitive_cursor;
+    ordering_table = render_half->ordering_table;
+    source = g_field_fade_prims;
 
-    for (i = 0; i < 256;)
+    for (i = 0; i < FIELD_FADE_PRIM_COUNT;)
     {
         color = source->r0;
         if (color != 0)
         {
-            if (color < 0x10)
+            if (color < FIELD_FADE_PRIM_STEP)
             {
                 color = 0;
             }
             else
             {
-                color -= 0x10;
+                color -= FIELD_FADE_PRIM_STEP;
             }
 
             source->b0 = color;
             source->g0 = color;
             source->r0 = color;
             setSemiTrans(source, 1);
-            source->x0 += D_801077FC.x;
-            source->x1 += D_801077FC.x;
-            source->x2 += D_801077FC.x;
-            source->x3 += D_801077FC.x;
-            source->y0 += D_801077FC.y;
-            source->y1 += D_801077FC.y;
-            source->y2 += D_801077FC.y;
-            source->y3 += D_801077FC.y;
+            source->x0 += g_field_screen_scroll.x;
+            source->x1 += g_field_screen_scroll.x;
+            source->x2 += g_field_screen_scroll.x;
+            source->x3 += g_field_screen_scroll.x;
+            source->y0 += g_field_screen_scroll.y;
+            source->y1 += g_field_screen_scroll.y;
+            source->y2 += g_field_screen_scroll.y;
+            source->y3 += g_field_screen_scroll.y;
 
             bcopy(source, output, sizeof(POLY_FT4));
-            addPrim(&ordering[D_801058E0[i]], output);
+            addPrim(&ordering_table[g_field_fade_prim_depths[i]], output);
             output++;
         }
 
@@ -2094,28 +1784,26 @@ void func_80086FB8(u8* buffer)
         source++;
     }
 
-    *(POLY_FT4**)(buffer + 0x40B8) = output;
+    render_half->primitive_cursor = (u8*)output;
 }
 
 /**
  * @brief Project an actor's ground shadow and append its textured quad.
- * @param actor World position, shadow bias and resource slot.
+ * @param actor Actor casting the shadow.
  * @param primitives Next free POLY_FT4 in the primitive buffer.
  * @param ordering_table Depth ordering table with 4096 entries.
  * @param footprint First two footprint corners supplying the horizontal bounds.
  * @return Next free primitive, unchanged if the shadow has collapsed.
  */
-POLY_FT4* field_render_actor_ground_shadow(ShadowActor* actor, POLY_FT4* primitives, s32* ordering_table, ShadowFootprint* footprint)
+POLY_FT4* field_render_actor_ground_shadow(FieldActor* actor, POLY_FT4* primitives, s32* ordering_table, ShadowFootprint* footprint)
 {
-    extern ShadowActorSlot g_field_object_states[];
-    extern ShadowResourceEntry g_field_resource_entries[];
     s16 edge_y;
     s32 shadow_height;
     s16 right_x;
     s32 ground_y;
     s32 ground_height_fixed;
     s32 world_z;
-    s32 bias_bits;
+    s32 height_bits;
     s32 world_x;
     s32 depth;
     s32 projection_value;
@@ -2126,7 +1814,7 @@ POLY_FT4* field_render_actor_ground_shadow(ShadowActor* actor, POLY_FT4* primiti
     s32 diameter;
     s32 camera_z;
     s32 screen_x;
-    u8 resource_index;
+    u8 object_index;
     s32 camera_x;
     s32 actor_screen_x;
     s32 camera_y;
@@ -2134,7 +1822,7 @@ POLY_FT4* field_render_actor_ground_shadow(ShadowActor* actor, POLY_FT4* primiti
     s32 camera_screen_y;
     s32 edge_work;
     s32 scale_work;
-    s32 shadow_bias;
+    s32 actor_height;
     ShadowScreenPosition* screen;
     ShadowWorldPosition* scratch;
 
@@ -2159,7 +1847,7 @@ POLY_FT4* field_render_actor_ground_shadow(ShadowActor* actor, POLY_FT4* primiti
         projection_value += 0xFF;
     }
     camera_offset = g_field_view_offset_y;
-    actor_screen_x = (projection_value >> 8) + SHADOW_SCREEN_CENTER_X;
+    actor_screen_x = (projection_value >> 8) + FIELD_SCREEN_CENTER_X;
     screen_x = camera_x + actor_screen_x;
     screen->x = screen_x;
     if (camera_offset < 0)
@@ -2168,7 +1856,7 @@ POLY_FT4* field_render_actor_ground_shadow(ShadowActor* actor, POLY_FT4* primiti
     }
     projection_value = world_z;
     camera_y = camera_offset >> 8;
-    camera_screen_y = camera_y + SHADOW_SCREEN_CENTER_Y;
+    camera_screen_y = camera_y + FIELD_SCREEN_CENTER_Y;
     if (projection_value < 0)
     {
         projection_value += 0x1FF;
@@ -2183,14 +1871,14 @@ POLY_FT4* field_render_actor_ground_shadow(ShadowActor* actor, POLY_FT4* primiti
     screen->y = (u16)(ground_y - (camera_z >> 9));
 
     /* The resource profile widens the height-dependent inset by 5/4. */
-    resource_index = actor->resource_index;
-    bias_bits = actor->shadow_bias << 24;
-    shadow_height = g_field_object_states[resource_index].shadow_height;
-    shadow_bias = bias_bits >> 24;
-    if (g_field_resource_entries[resource_index].shadow_scale_mode != 0)
+    object_index = actor->object_index;
+    height_bits = (u8)actor->height << 24; /* the cast keeps the lbu the code was built with */
+    shadow_height = g_field_object_states[object_index].movement.half.hi;
+    actor_height = height_bits >> 24;
+    if (g_field_resource_entries[object_index].unk8 != 0)
     {
         ground_height_fixed = shadow_height << 8;
-        horizontal_offset = bias_bits >> 26;
+        horizontal_offset = height_bits >> 26;
         left_inset = actor->y;
         scale_work = (u16)footprint->left_x;
         left_inset = (left_inset - ground_height_fixed) >> 11;
@@ -2232,7 +1920,7 @@ POLY_FT4* field_render_actor_ground_shadow(ShadowActor* actor, POLY_FT4* primiti
         s32 scale_work_local;
 
         ground_height_fixed_local = shadow_height << 8;
-        horizontal_offset_local = bias_bits >> 26;
+        horizontal_offset_local = height_bits >> 26;
         edge_work = (u16)footprint->left_x;
         left_inset_local = actor->y;
         edge_work = screen_x - -edge_work;
@@ -2242,7 +1930,7 @@ POLY_FT4* field_render_actor_ground_shadow(ShadowActor* actor, POLY_FT4* primiti
         primitives->x0 = edge_work;
         primitives->x2 = edge_work;
 
-        do /* scope blocks reproduce the original scheduling of this branch */
+        do /* without these blocks the loads of this branch are scheduled differently */
         {
             right_inset_local = screen->x;
         } while (0);
@@ -2275,7 +1963,7 @@ POLY_FT4* field_render_actor_ground_shadow(ShadowActor* actor, POLY_FT4* primiti
     left_inset -= projection_value;
     left_inset >>= 11;
     diameter += left_inset;
-    projection_value = shadow_bias >> 2;
+    projection_value = actor_height >> 2;
     diameter -= projection_value;
     if (primitives->x1 >= camera_offset && diameter >= 2)
     {
@@ -2336,45 +2024,43 @@ POLY_FT4* field_render_actor_ground_shadow(ShadowActor* actor, POLY_FT4* primiti
 }
 
 /**
- * @brief Hand the actor's animation record to func_800B2198 and cache the record.
- * @param arg0 Actor record whose 0x3A index selects the g_field_object_states slot.
+ * @brief Remember the updating actor and run the update of its spawned actor.
+ * @param actor Actor being updated.
  */
-void func_80087564(Rec87564* arg0)
+void field_update_spawned_actor(FieldActor* actor)
 {
-    extern State87564 g_field_object_states[];
-
-    D_8010A01C = arg0;
-    func_800B2198(g_field_object_states[arg0->unk3A].unk14, g_field_object_states);
+    g_field_updating_actor = actor;
+    func_800B2198(g_field_object_states[actor->object_index].key, g_field_object_states);
 }
 
 /**
- * @brief Return the current scene record table.
- * @return Value of g_field_scene_record_table.
+ * @brief Return the scene record table.
+ * @return Base of the scene record table.
  */
-s32 func_800875B4(void)
+u32* field_get_scene_record_table(void)
 {
     return g_field_scene_record_table;
 }
 
 /**
- * @brief Report whether the current record's 0x10 and 0x2A halfwords are both zero.
- * @return 1 when both are zero, 0 when only 0x2A is nonzero, -1 when the record
- *         lookup fails.
+ * @brief Report whether the actor with @p key is idle (no script wait and no command).
+ * @param key Object key to look up.
+ * @return 1 when idle, 0 when busy, -1 when no actor has @p key.
  */
-s32 func_800875C4(void)
+s32 field_is_actor_idle(s32 key)
 {
-    Rec875C4* rec = func_80087C9C();
+    FieldActor* actor = field_lookup_actor(key);
     s32 result;
 
-    if (rec == (Rec875C4*)-1)
+    if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
 
     result = 0;
-    if (rec->unk10 == 0)
+    if (actor->unk10 == 0)
     {
-        result = rec->unk2A == 0;
+        result = actor->command == 0;
     }
 
     return result;

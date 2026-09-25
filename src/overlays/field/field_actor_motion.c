@@ -1,210 +1,203 @@
 /**
  * @file field_actor_motion.c
- * @brief Advance timed actor motion and test proposed movement against screen bounds.
+ * @brief Per-frame update of a field actor's action animation and the
+ *        screen-edge test for proposed movement.
  */
 
 #include "common.h"
+#include "display.h"
+#include "field_actor_tables.h"
 #include "field_calls.h"
 #include "field_effect_render_state.h"
-#include "vector.h"
 #include "field_types.h"
-
-/* Local copies of include/field_actor_sequence_runtime.h prototypes: that header
- * brings field_effect_types.h, whose g_field_object_states conflicts with this file. */
-void field_update_sequence_actor_binding(struct FieldMotionRecord *object, s32 release_actor);
-void field_restart_sequence_animation(struct FieldMotionRecord *object);
+#include "vector.h"
 
 /** @brief Scratchpad vector that receives the actor displacement. */
-#define FIELD_MOTION_SCRATCH ((Vec3i*)0x1F800000)
+#define FIELD_SCRATCH_DISPLACEMENT ((Vec3i*)0x1F800000)
 
-/** @brief State, timing, and movement fields in a 0x54-byte actor record. */
-typedef struct
-{
-    u8 pad0[0x16];
-    s16 divisor;
-    u8 pad18[9];
-    u8 state;
-    u8 pad22[8];
-    s16 value;
-    u8 pad2c[2];
-    u16 timer;
-    u8 pad30[6];
-    s8 movement;
-    u8 pad37[3];
-    u8 slot;
-    u8 resource;
-    u8 tail[0x18];
-} FieldMotionActor;
-/** @brief Track links, flags, and state in a 0x23C-byte actor slot. */
-typedef struct
-{
-    u8 pad0[0xC];
-    u32 flags;
-    u8 pad10[0x2C];
-    u32 value;
-    u8 pad40[0x12F];
-    u8 track;
-    u8 parent;
-    u8 pad171[3];
-    u32 options;
-    u32 state;
-    u8 tail[0xC0];
-} FieldMotionSlot;
-/** @brief Movement scale in a 0x48-byte visual record. */
-typedef struct
-{
-    u8 pad0[0x2E];
-    u8 scale;
-    u8 tail[0x19];
-} FieldMotionVisual;
-/** @brief Resource state byte in a 0x14-byte resource entry. */
-typedef struct
-{
-    u8 pad0[8];
-    u8 state;
-    u8 tail[0xB];
-} FieldMotionResource;
-/** @brief Proposed field position and its signed screen projection. */
+/** @brief Action animations that continue while the action's buttons are held (10 is the guard). */
+#define FIELD_ANIMATION_GUARD 10
+#define FIELD_ANIMATION_HELD_31 0x31
+/** @brief Action animation whose handler also runs after the animation has finished. */
+#define FIELD_ANIMATION_35 0x35
+/** @brief Action animations that leave the actor facing the other way. */
+#define FIELD_ANIMATION_TURN_37 0x37
+#define FIELD_ANIMATION_TURN_3B 0x3B
+
+/** @brief Number of per-object actions that can be bound to buttons. */
+#define FIELD_BOUND_ACTION_COUNT 12
+/** @brief Objects below this index are the two players. */
+#define FIELD_PLAYER_COUNT 2
+/** @brief FieldObjectState::action_parameter value of an object without an action. */
+#define FIELD_ACTION_PARAMETER_NONE 0xFFFF
+
+/** @brief FieldObjectState::flags bit set on an object while another object is linked to it. */
+#define FIELD_OBJECT_FLAG_LINK_TARGET 0x2000
+/** @brief FieldObjectState::flags bit cleared when an action ends (placeholder name). */
+#define FIELD_OBJECT_FLAG_4000 0x4000
+/** @brief FieldObjectState::movement sequence bits cleared when an action ends. */
+#define FIELD_MOVEMENT_SEQUENCE_0800 0x0800
+#define FIELD_MOVEMENT_SEQUENCE_1000 0x1000
+/** @brief FieldObjectState::movement bit: the object overlaps another one. */
+#define FIELD_MOVEMENT_OVERLAPPING 0x4000
+
+/** @brief The slide displacement is scaled by FieldObjectPart::scale_z / 64 (0x40 = full size). */
+#define FIELD_PART_SCALE_SHIFT 6
+
+/** @brief Screen margins a moving actor may not cross. */
+#define FIELD_SCREEN_EDGE_LEFT 6
+#define FIELD_SCREEN_EDGE_RIGHT (SCREEN_WIDTH - 6)
+#define FIELD_SCREEN_EDGE_TOP 9
+#define FIELD_SCREEN_EDGE_BOTTOM VRAM_DRAW_HEIGHT
+
+/** @brief Proposed field position and its screen projection. */
 typedef struct
 {
     FieldVector position;
     Vec2s screen;
-} FieldBoundsProjection;
+} FieldScreenProbe;
 
-extern FieldMotionSlot g_field_object_states[];
-extern FieldMotionVisual g_field_object_parts[];
-extern FieldMotionResource g_field_resource_entries[];
-extern void func_8008BC5C(FieldMotionActor*);
-extern s32 field_resolve_actor_movement(FieldMotionActor*, Vec3i*, s32);
+/* The owner header include/field_actor_sequence_runtime.h declares its own
+ * g_field_actor_bindings type, which conflicts with field_actor_tables.h. */
+void field_update_sequence_actor_binding(FieldActor* actor, s32 release_actor);
+void field_restart_sequence_animation(FieldActor* actor);
+
+/* include/field_contact_geometry.h pulls in the FieldMotionRecord view of the
+ * actor tables, which conflicts with field_actor_tables.h. */
+s32 field_resolve_actor_movement(FieldActor* actor, Vec3i* delta, s32 mode);
+
+void field_release_object_link(FieldActor* actor);
 
 /**
- * @brief Advance actor motion state or apply its remaining scaled displacement.
- * @param actor Actor supplying movement, state, visual slot, and resource index.
- * @param update Nonzero permits the initial timed/state-specific update.
- * @return Nothing meaningful; the original declares an int return but never sets it.
- * @note Displacement is written to the three-component scratchpad vector.
+ * @brief Run one frame of an actor's action command.
+ * @param actor Actor running the action.
+ * @param update_action Non-zero runs the action state handler first.
+ * @return Never set; the function is declared int but callers ignore the value.
+ * @note While the animation plays, the remaining slide speed moves the actor
+ *       along its facing; once it has finished, the action is wound down.
  */
-s32 func_800925EC(FieldMotionActor* actor, s32 update)
+s32 field_update_actor_action(FieldActor* actor, s32 update_action)
 {
-    Vec3i* scratch = FIELD_MOTION_SCRATCH;
-    s32 unused[2]; /* never used; the original stack frame reserves it */
-    s32 state;
+    Vec3i* displacement = FIELD_SCRATCH_DISPLACEMENT;
+    s32 unused[2]; /* never used, but the original stack frame reserves it */
+    s32 animation;
     s32 step;
-    s32 delta;
-    FieldMotionVisual* visual;
+    FieldObjectPart* part;
 
-    if (update != 0 && (actor->timer != 0 || (actor->state & 0x7F) == 0x35))
+    if (update_action != 0 &&
+        (actor->animation_state != 0 || (actor->animation & FIELD_ANIMATION_INDEX_MASK) == FIELD_ANIMATION_35))
     {
         func_80092C98((struct FieldMotionRecord*)actor);
     }
-    if (actor->timer == 0)
+    if (actor->animation_state == 0)
     {
-        state = actor->state & 0x7F;
-        if (state == 0xA || state == 0x31)
+        animation = actor->animation & FIELD_ANIMATION_INDEX_MASK;
+        if (animation == FIELD_ANIMATION_GUARD || animation == FIELD_ANIMATION_HELD_31)
         {
-            if (g_field_object_states[actor->slot].track < 12U)
+            if (g_field_object_states[actor->object_index].action < FIELD_BOUND_ACTION_COUNT)
             {
-                if (func_80091728(actor->slot, g_field_object_states[actor->slot].track, (struct FieldMotionRecord*)actor) != 0)
+                if (field_get_held_action_buttons(actor->object_index, g_field_object_states[actor->object_index].action, actor) != 0)
                 {
                     return;
                 }
             }
         }
-        if ((g_field_object_states[actor->slot].state >> 1) & 1)
+        if (g_field_object_states[actor->object_index].contact.bits.linked)
         {
-            if (field_object_has_active_actor_tracks(actor->slot) != 0)
+            if (field_object_has_active_actor_tracks(actor->object_index) != 0)
             {
                 return;
             }
-            g_field_object_states[g_field_object_states[actor->slot].parent].flags &= ~0x2000;
+            g_field_object_states[g_field_object_states[actor->object_index].linked_object_index].flags &= ~FIELD_OBJECT_FLAG_LINK_TARGET;
         }
-        g_field_object_states[actor->slot].flags &= ~0x4000;
-        field_update_sequence_actor_binding((struct FieldMotionRecord*)actor, 1);
-        g_field_object_states[actor->slot].options &= ~0x1800;
-        state = actor->state & 0x7F;
-        if (state == 0x37 || state == 0x3B)
+        g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_FLAG_4000;
+        field_update_sequence_actor_binding(actor, 1);
+        g_field_object_states[actor->object_index].movement.word &= ~(FIELD_MOVEMENT_SEQUENCE_0800 | FIELD_MOVEMENT_SEQUENCE_1000);
+        animation = actor->animation & FIELD_ANIMATION_INDEX_MASK;
+        if (animation == FIELD_ANIMATION_TURN_37 || animation == FIELD_ANIMATION_TURN_3B)
         {
-            actor->state ^= 0x80;
+            actor->animation ^= FIELD_ANIMATION_FACING;
         }
-        if (actor->slot < 2U && func_80093AB8((struct FieldMotionRecord*)actor) != 0)
+        if (actor->object_index < FIELD_PLAYER_COUNT && func_80093AB8((struct FieldMotionRecord*)actor) != 0)
         {
             return;
         }
         if (func_80092AD8((struct FieldMotionRecord*)actor) != 0)
         {
-            actor->value = 0;
-            actor->state &= 0x80;
-            field_restart_sequence_animation((struct FieldMotionRecord*)actor);
+            actor->command = FIELD_ACTOR_COMMAND_NONE;
+            actor->animation &= FIELD_ANIMATION_FACING;
+            field_restart_sequence_animation(actor);
         }
-        if (actor->value == 0)
+        if (actor->command == FIELD_ACTOR_COMMAND_NONE)
         {
-            g_field_object_states[actor->slot].value = 0xFFFF;
-            func_8008BC5C(actor);
+            g_field_object_states[actor->object_index].action_parameter = FIELD_ACTION_PARAMETER_NONE;
+            field_release_object_link(actor);
         }
     }
     else
     {
-        step = actor->movement / actor->divisor;
-        actor->movement = (u8)actor->movement - step;
-        visual = &g_field_object_parts[actor->slot];
-        if (actor->state & 0x80)
+        step = actor->speed_accumulator / actor->frame_timer;
+        actor->speed_accumulator -= step;
+        part = &g_field_object_parts[actor->object_index];
+        if (actor->animation & FIELD_ANIMATION_FACING)
         {
-            scratch->x = ((step << 8) * visual->scale) >> 6;
+            displacement->x = ((step << 8) * part->scale_z) >> FIELD_PART_SCALE_SHIFT;
         }
         else
         {
-            scratch->x = (-(step << 8) * visual->scale) >> 6;
+            displacement->x = (-(step << 8) * part->scale_z) >> FIELD_PART_SCALE_SHIFT;
         }
-        scratch->y = 0;
-        scratch->z = 0;
-        field_resolve_actor_movement(actor, scratch, 1);
-        if (g_field_resource_entries[actor->resource].state == 0)
+        displacement->y = 0;
+        displacement->z = 0;
+        field_resolve_actor_movement(actor, displacement, 1);
+        if (g_field_resource_entries[actor->resource_index].unk8 == 0)
         {
-            g_field_object_states[actor->slot].options &= ~0x4000;
+            g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_OVERLAPPING;
         }
     }
 }
 
 /**
- * @brief Test whether a proposed displacement crosses a screen boundary.
- * @param position Current fixed-point field position.
- * @param delta Proposed displacement; only the X and Z components are tested.
- * @return One when the displacement crosses its corresponding screen edge.
- * @note The projected coordinates are truncated to 16 bits before the offsets are added.
+ * @brief Test whether a proposed move takes an actor past the edge of the screen.
+ * @param actor Actor whose fixed-point position is tested.
+ * @param delta Proposed displacement; only X and Z are tested.
+ * @return 1 when the move crosses the screen edge it heads for, otherwise 0.
+ * @note The projected coordinates are truncated to 16 bits before the view offsets are added.
  */
-s32 func_80092988(Vec3i* position, Vec3i* delta)
+s32 field_move_leaves_screen(FieldActor* actor, Vec3i* delta)
 {
-    FieldBoundsProjection local;
+    FieldScreenProbe probe;
 
-    local.position.vx = position->x + delta->x;
-    local.position.vy = position->y;
-    local.position.vz = position->z + delta->z;
-    local.screen.x = g_field_view_offset_x / 256 + (s16)(local.position.vx / 256 + 160);
-    local.screen.y = g_field_view_offset_y / 256 + (s16)(local.position.vy / 256 + 112) - local.position.vz / 512 - g_field_view_offset_z / 512;
+    probe.position.vx = actor->x + delta->x;
+    probe.position.vy = actor->y;
+    probe.position.vz = actor->z + delta->z;
+    probe.screen.x = g_field_view_offset_x / 256 + (s16)(probe.position.vx / 256 + SCREEN_WIDTH / 2);
+    probe.screen.y = g_field_view_offset_y / 256 + (s16)(probe.position.vy / 256 + VRAM_DRAW_HEIGHT / 2) - probe.position.vz / 512 -
+                     g_field_view_offset_z / 512;
     if (delta->x < 0)
     {
-        if (local.screen.x < 6)
+        if (probe.screen.x < FIELD_SCREEN_EDGE_LEFT)
         {
             return 1;
         }
     }
     else if (delta->x > 0)
     {
-        if (local.screen.x >= 314)
+        if (probe.screen.x >= FIELD_SCREEN_EDGE_RIGHT)
         {
             return 1;
         }
     }
     if (delta->z > 0)
     {
-        if (local.screen.y < 9)
+        if (probe.screen.y < FIELD_SCREEN_EDGE_TOP)
         {
             return 1;
         }
     }
     else if (delta->z < 0)
     {
-        if (local.screen.y >= 224)
+        if (probe.screen.y >= FIELD_SCREEN_EDGE_BOTTOM)
         {
             return 1;
         }

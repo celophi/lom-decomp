@@ -4,7 +4,7 @@
 #include "sdk/rand.h"
 
 extern int abs(int);
-s32 func_80087F44(s32 arg0, void* arg1);
+s32 field_get_actor_position(s32 arg0, void* arg1);
 
 /**
  * @brief Select a distance-weighted index within the active layout bound.
@@ -50,8 +50,8 @@ s32 func_800C9ED4(s32 actor_id)
         bounded_count = 4;
     }
     slot_count = bounded_count;
-    func_80087F44(2, reference_position);
-    func_80087F44(actor_id, actor_position);
+    field_get_actor_position(2, reference_position);
+    field_get_actor_position(actor_id, actor_position);
     distance = abs(reference_position[0] - actor_position[0]);
     center_index = distance / 0x100;
     if (center_index >= 0)

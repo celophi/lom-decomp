@@ -16,7 +16,7 @@
 
 void func_800C2228(s32 index);
 
-extern FieldGameState* D_80122B74;
+extern FieldGameState* g_field_game_state;
 extern u16 D_800F0E98[];
 
 /**
@@ -31,7 +31,7 @@ s32 func_800C2094(s32 bit_index)
 
     word = bit_index / 32;
     bit = bit_index % 32;
-    D_80122B74->flag_bits[word] |= 1 << bit;
+    g_field_game_state->flag_bits[word] |= 1 << bit;
     return -1;
 }
 
@@ -45,7 +45,7 @@ u8 func_800C20D8(s32 index)
     if (index < FIELD_COUNTER_LIMIT)
     {
         func_800C2228(index);
-        return D_80122B74->counters[index];
+        return g_field_game_state->counters[index];
     }
     record_game_diagnostic(0x8001, 0x70, index, 0);
     return 0;
@@ -59,10 +59,10 @@ void func_800C2138(s32 index)
 {
     if (index < FIELD_COUNTER_LIMIT)
     {
-        D_80122B74->counters[index]++;
-        if (D_80122B74->counters[index] > FIELD_COUNTER_MAX)
+        g_field_game_state->counters[index]++;
+        if (g_field_game_state->counters[index] > FIELD_COUNTER_MAX)
         {
-            D_80122B74->counters[index] = FIELD_COUNTER_MAX;
+            g_field_game_state->counters[index] = FIELD_COUNTER_MAX;
         }
         func_800C2228(index);
     }
@@ -82,10 +82,10 @@ void func_800C21C0(s32 index)
 
     if (index < FIELD_COUNTER_LIMIT)
     {
-        value = D_80122B74->counters[index];
+        value = g_field_game_state->counters[index];
         if (value != 0)
         {
-            D_80122B74->counters[index] = value - 1;
+            g_field_game_state->counters[index] = value - 1;
         }
         func_800C2228(index);
     }

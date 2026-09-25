@@ -13,12 +13,6 @@ enum
     FIELD_STATUS_MAX_DURATION = 240
 };
 
-enum
-{
-    FIELD_STATUS_APPLY_IGNORE_IMMUNITY = 1 << 0,
-    FIELD_STATUS_APPLY_ALLOW_ACTIVE = 1 << 1
-};
-
 /** @brief Stat selectors of func_800B2D64 beyond the eight single stats. */
 enum
 {
@@ -47,11 +41,11 @@ enum
 /** @brief Size of the battle context cleared by func_800B3580. */
 #define FIELD_BATTLE_CONTEXT_SIZE 0x4A4
 
-extern FieldGameState* D_80122B74;
-extern FieldBattleContext* D_80123FB0;
+extern FieldGameState* g_field_game_state;
+extern FieldBattleContext* g_field_battle;
 extern FieldBattleContext D_80123B08;
-extern u8* D_80123FAC;
-extern s32 D_8010D020;
+extern FieldActionBank* g_field_action_bank;
+extern s32 g_field_duel_mode;
 extern u16 g_music_track_index;
 
 /** @brief Per-effect immunity masks; also indexed by status slot id - FIELD_STATUS_SLOT_ID_BASE. */
@@ -60,14 +54,14 @@ extern u8 D_800F0B28[];
 extern u8 D_800F0B38[];
 extern u8 D_800F0B48[];
 extern u8 D_800F0B50[];
-extern u8 D_800EF8C0[];
+extern FieldActionBank D_800EF8C0;
 extern u8 D_800F0AE8[];
 
-s32 func_8008B288(s32 actor_id);
-s32 func_80087F44(s32 actor_id, VECTOR* out);
-s32 func_80089D44();
-FieldStatusState* func_80087F0C(s32 actor_id);
-s32 func_8008B500(s32 record_id, s32 signal_id);
+s32 field_get_actor_facing(s32 actor_id);
+s32 field_get_actor_position(s32 actor_id, VECTOR* out);
+s32 field_revive_actor();
+FieldStatusState* field_find_object_state(s32 actor_id);
+s32 field_spawn_shared_animation_actor(s32 record_id, s32 signal_id);
 u32 func_800BD414(s32 owner_id, s32 variable_id);
 void func_800BD520(s32 owner_id, u32 variable_id, s32 value);
 void func_800C1EC8(s32 value, void* buffer, s32 size);
@@ -88,9 +82,9 @@ FieldStatusRecord* func_800B2A9C(s32 record_id)
 
     for (i = 0; i < FIELD_BATTLE_RECORD_COUNT; i++)
     {
-        if (record_id == D_80123FB0->records[i].meta.bytes.id)
+        if (record_id == g_field_battle->records[i].meta.bytes.id)
         {
-            return &D_80123FB0->records[i];
+            return &g_field_battle->records[i];
         }
     }
     record_game_diagnostic(0x8001, 0x68, record_id, -1);
@@ -107,9 +101,9 @@ FieldStatusRecord* func_800B2B08(void)
 
     for (i = FIELD_STATUS_PRIMARY_RECORD_COUNT; i < FIELD_BATTLE_RECORD_COUNT; i++)
     {
-        if (!D_80123FB0->records[i].meta.bits.active)
+        if (!g_field_battle->records[i].meta.bits.active)
         {
-            return &D_80123FB0->records[i];
+            return &g_field_battle->records[i];
         }
     }
     return NULL;
@@ -241,7 +235,7 @@ s32 func_800B2D64(FieldStatusRecord* record, u32 stat_selector, u32 scale, s32 e
                 record->state->status_signal = D_800F0B50[scale - 8];
                 if (record->state->status_signal != 0)
                 {
-                    func_8008B500(record->meta.bytes.id, stat_selector + 0x9E);
+                    field_spawn_shared_animation_actor(record->meta.bytes.id, stat_selector + 0x9E);
                 }
             }
         }
@@ -257,7 +251,7 @@ s32 func_800B2D64(FieldStatusRecord* record, u32 stat_selector, u32 scale, s32 e
                 record->state->status_signal = D_800F0B50[8 - scale];
                 if (record->state->status_signal != 0)
                 {
-                    func_8008B500(record->meta.bytes.id, stat_selector + 0xA7);
+                    field_spawn_shared_animation_actor(record->meta.bytes.id, stat_selector + 0xA7);
                 }
             }
         }
@@ -276,12 +270,12 @@ s32 func_800B2D64(FieldStatusRecord* record, u32 stat_selector, u32 scale, s32 e
                 if (scale > 8)
                 {
                     record->state->status_signal = D_800F0B50[scale - 8];
-                    func_8008B500(record->meta.bytes.id, 0x9D);
+                    field_spawn_shared_animation_actor(record->meta.bytes.id, 0x9D);
                 }
                 else
                 {
                     record->state->status_signal = D_800F0B50[8 - scale];
-                    func_8008B500(record->meta.bytes.id, 0xA6);
+                    field_spawn_shared_animation_actor(record->meta.bytes.id, 0xA6);
                 }
             }
             break;
@@ -324,9 +318,9 @@ s32 func_800B302C(s32 first_actor_id, s32 second_actor_id)
     VECTOR first_position;
     VECTOR second_position;
 
-    direction = func_8008B288(second_actor_id);
-    func_80087F44(first_actor_id, &first_position);
-    func_80087F44(second_actor_id, &second_position);
+    direction = field_get_actor_facing(second_actor_id);
+    field_get_actor_position(first_actor_id, &first_position);
+    field_get_actor_position(second_actor_id, &second_position);
     if (first_position.vx - second_position.vx < 0)
     {
         if (direction < 0x40 || direction > 0xC0)
@@ -397,7 +391,7 @@ void saturating_counter_add(FieldStatusState* state, s32 delta)
  */
 void func_800B313C(FieldStatusRecord* record)
 {
-    func_80089D44(record->meta.bytes.id);
+    field_revive_actor(record->meta.bytes.id);
 }
 
 /**
@@ -433,14 +427,14 @@ void func_800B31CC(s32 actor_id)
     u32 count;
     u32 index;
 
-    chance = D_80122B74->characters[2].unk150[0].derived.bytes[2];
+    chance = g_field_game_state->characters[2].unk150[0].derived.bytes[2];
     if (rand() % 100 < chance)
     {
         func_800BD520(2, 0xD028, 100);
     }
     else
     {
-        count = D_80122B74->characters[2].unk150[0].derived.bytes[0] >> 4;
+        count = g_field_game_state->characters[2].unk150[0].derived.bytes[0] >> 4;
         if (count < 4 || count >= 8)
         {
             record_game_diagnostic(0x74, count, 0, 0);
@@ -463,7 +457,7 @@ void func_800B32FC(s32 row_index)
 {
     s32 chance;
 
-    chance = D_80122B74->characters[2].unk150[0].derived.bytes[2];
+    chance = g_field_game_state->characters[2].unk150[0].derived.bytes[2];
     if (rand() * 100 / (RAND_MAX + 1) < chance)
     {
         func_800BD520(2, 0xD030, 129);
@@ -472,9 +466,9 @@ void func_800B32FC(s32 row_index)
     }
     else if (row_index < FIELD_STATUS_RESULT_ROW_COUNT)
     {
-        func_800BD520(2, 0xD030, D_80122B74->result_rows[row_index][0]);
-        func_800BD520(2, 0xD038, D_80122B74->result_rows[row_index][1]);
-        func_800BD520(2, 0xD040, D_80122B74->result_rows[row_index][2]);
+        func_800BD520(2, 0xD030, g_field_game_state->result_rows[row_index][0]);
+        func_800BD520(2, 0xD038, g_field_game_state->result_rows[row_index][1]);
+        func_800BD520(2, 0xD040, g_field_game_state->result_rows[row_index][2]);
     }
     else
     {
@@ -521,13 +515,13 @@ void func_800B3420(s32 amount)
 }
 
 /**
- * @brief Rebuild the battle context and publish the party and monster counts, or call func_800B4390 when @p group is 0.
+ * @brief Rebuild the battle context and publish the party and monster counts, or call field_battle_scan_actor_objects when @p group is 0.
  *
  * Script variables 0x4280 and 0x4284 hold the party and monster counts
- * that func_800B48B8 updates and func_800B62D8 tests for zero. With
- * D_8010D020 set both are written as 1.
+ * that func_800B48B8 updates and field_battle_side_defeated tests for zero. With
+ * g_field_duel_mode set both are written as 1.
  *
- * @param group Monster group to build; 0 selects func_800B4390 instead.
+ * @param group Monster group to build; 0 selects field_battle_scan_actor_objects instead.
  */
 void func_800B34D0(s32 group)
 {
@@ -537,7 +531,7 @@ void func_800B34D0(s32 group)
     {
         func_800B3580();
         count = func_800B37D4();
-        if (D_8010D020 != 0)
+        if (g_field_duel_mode != 0)
         {
             func_800BD520(0, 0x4280, 1);
         }
@@ -546,7 +540,7 @@ void func_800B34D0(s32 group)
             func_800BD520(0, 0x4280, count);
         }
         count = func_800B3DF4(group);
-        if (D_8010D020 != 0)
+        if (g_field_duel_mode != 0)
         {
             func_800BD520(0, 0x4284, 1);
         }
@@ -557,7 +551,7 @@ void func_800B34D0(s32 group)
     }
     else
     {
-        func_800B4390();
+        field_battle_scan_actor_objects();
     }
 }
 
@@ -569,20 +563,20 @@ void func_800B3580(void)
     s32 i;
     u8* resource;
 
-    D_80123FAC = D_800EF8C0;
-    D_80123FB0 = &D_80123B08;
+    g_field_action_bank = &D_800EF8C0;
+    g_field_battle = &D_80123B08;
     func_800C1EC8(0, &D_80123B08, FIELD_BATTLE_CONTEXT_SIZE);
-    D_80123FB0->action = NULL;
-    D_80123FB0->state.level = func_800B3670(0);
+    g_field_battle->action = NULL;
+    g_field_battle->state.level = func_800B3670(0);
 
     for (i = 0; i < 8; i++)
     {
-        D_80123FB0->element_levels[i] = D_800F0B48[D_80122B74->lands[g_music_track_index].levels[i]];
+        g_field_battle->element_levels[i] = D_800F0B48[g_field_game_state->lands[g_music_track_index].levels[i]];
     }
 
     resource = func_800C1E40(1);
-    D_80123FB0->templates = resource + *(s32*)(resource + 4);
-    D_80123FB0->resources = resource + *(s32*)(resource + 8);
+    g_field_battle->templates = (FieldActorTemplateTable*)(resource + *(s32*)(resource + 4));
+    g_field_battle->resources = resource + *(s32*)(resource + 8);
     func_800BD520(0, 0x428C, -1);
 }
 
@@ -619,13 +613,13 @@ s32 func_800B3670(s32 use_hero_level)
         switch (mode)
         {
         case 1:
-            index = D_80122B74->control.fields.hero_level + 20;
+            index = g_field_game_state->control.fields.hero_level + 20;
             break;
         case 2:
             index = 63;
             break;
         default:
-            index = D_80122B74->control.fields.hero_level;
+            index = g_field_game_state->control.fields.hero_level;
             break;
         }
         index = (index * 3) / 2;
@@ -688,121 +682,121 @@ s32 func_800B37D4(void)
     active_count = 0;
     do
     {
-        if (D_80122B74->characters[party_index].name[0] != 0)
+        if (g_field_game_state->characters[party_index].name[0] != 0)
         {
-            if (D_8010D020 != 0 && party_index == 0)
+            if (g_field_duel_mode != 0 && party_index == 0)
             {
-                D_80123FB0->records[0].unk0 |= 0x40;
+                g_field_battle->records[0].unk0 |= 0x40;
             }
             else
             {
-                D_80123FB0->records[party_index].unk0 |= 0x80;
+                g_field_battle->records[party_index].unk0 |= 0x80;
             }
-            D_80123FB0->records[party_index].unk3 = 0xF;
-            D_80123FB0->records[party_index].meta.bytes.id = party_index;
-            D_80123FB0->records[party_index].meta.bits.active = 1;
-            if (D_8010D020 != 0)
+            g_field_battle->records[party_index].race = 0xF;
+            g_field_battle->records[party_index].meta.bytes.id = party_index;
+            g_field_battle->records[party_index].meta.bits.active = 1;
+            if (g_field_duel_mode != 0)
             {
-                D_80123FB0->records[party_index].meta.bits.ally = (party_index == 0) ? 0xFF : 0;
+                g_field_battle->records[party_index].meta.bits.ally = (party_index == 0) ? 0xFF : 0;
             }
             else
             {
-                D_80123FB0->records[party_index].meta.bits.ally = 1;
+                g_field_battle->records[party_index].meta.bits.ally = 1;
             }
             {
-                FieldBattleContext* context = D_80123FB0;
+                FieldBattleContext* context = g_field_battle;
 
-                context->records[party_index].meta.bits.kind = D_80122B74->characters[party_index].info.bytes[0];
+                context->records[party_index].meta.bits.kind = g_field_game_state->characters[party_index].info.bytes[0];
                 context->records[party_index].counter = 5;
                 context->records[party_index].meta.bytes.unk2 = 0;
             }
-            D_80123FB0->records[party_index].counter_reset = 5;
-            D_80123FB0->records[party_index].status_flags = 0;
-            D_80123FB0->records[party_index].unkC = 0;
-            D_80123FB0->records[party_index].state = func_80087F0C(party_index);
+            g_field_battle->records[party_index].counter_reset = 5;
+            g_field_battle->records[party_index].status_flags = 0;
+            g_field_battle->records[party_index].unkC = 0;
+            g_field_battle->records[party_index].state = field_find_object_state(party_index);
             stat_index = 0;
-            D_80123FB0->records[party_index].unk18 = D_80122B74->characters[party_index].equipment->derived.values[0];
-            D_80123FB0->records[party_index].unk1A = 25;
+            g_field_battle->records[party_index].unk18 = g_field_game_state->characters[party_index].equipment->derived.values[0];
+            g_field_battle->records[party_index].unk1A = 25;
             do
             {
                 index = 1;
-                D_80123FB0->records[party_index].equipment_stats[stat_index] = 0;
-                D_80123FB0->records[party_index].equipment_attributes[stat_index] = D_80122B74->characters[party_index].equipment->attributes[stat_index];
+                g_field_battle->records[party_index].equipment_stats[stat_index] = 0;
+                g_field_battle->records[party_index].equipment_attributes[stat_index] = g_field_game_state->characters[party_index].equipment->attributes[stat_index];
                 do
                 {
-                    if (D_80122B74->characters[party_index].equipment[index].kind != 0)
+                    if (g_field_game_state->characters[party_index].equipment[index].kind != 0)
                     {
-                        FieldBattleContext* context = D_80123FB0;
+                        FieldBattleContext* context = g_field_battle;
 
                         context->records[party_index].equipment_stats[stat_index] +=
-                            (D_80122B74->characters[party_index].equipment + index)->derived.values[stat_index];
+                            (g_field_game_state->characters[party_index].equipment + index)->derived.values[stat_index];
                         context->records[party_index].equipment_attributes[stat_index] +=
-                            (D_80122B74->characters[party_index].equipment + index)->attributes[stat_index];
+                            (g_field_game_state->characters[party_index].equipment + index)->attributes[stat_index];
                     }
                     index += 1;
                 } while (index < FIELD_EQUIPMENT_SLOT_COUNT);
                 stat_index += 1;
             } while (stat_index < 4);
             index = 0;
-            func_800B4934(&D_80123FB0->records[party_index]);
-            nibbles = D_80122B74->characters[party_index].equipment->bonus_nibbles.word;
+            func_800B4934(&g_field_battle->records[party_index]);
+            nibbles = g_field_game_state->characters[party_index].equipment->bonus_nibbles.word;
             do
             {
-                stat = func_800B7EE8(&D_80122B74->characters[party_index], index);
+                stat = func_800B7EE8(&g_field_game_state->characters[party_index], index);
                 {
-                    FieldBattleContext* context = D_80123FB0;
+                    FieldBattleContext* context = g_field_battle;
 
                     context->records[party_index].base_stats[index] = stat;
                     context->records[party_index].stats[index] = stat;
                 }
-                D_80123FB0->records[party_index].unk3C[index] = nibbles & 0xF;
+                g_field_battle->records[party_index].element_attack[index] = nibbles & 0xF;
                 nibbles >>= 4;
-                D_80123FB0->records[party_index].unk3C[index] += D_80123FB0->element_levels[index];
+                g_field_battle->records[party_index].element_attack[index] += g_field_battle->element_levels[index];
                 index += 1;
             } while (index < FIELD_STATUS_STAT_COUNT);
             equipment_index = 1;
             /* index is 8 here, so this clears unk4C (rewritten below). */
-            D_80123FB0->records[party_index].unk44[index] = 0;
-            D_80123FB0->records[party_index].immunity_flags = 0;
-            D_80123FB0->records[party_index].unk39 = 0;
-            D_80123FB0->records[party_index].unk3A = 0;
+            g_field_battle->records[party_index].element_defense[index] = 0;
+            g_field_battle->records[party_index].immunity_flags = 0;
+            g_field_battle->records[party_index].weak_elements = 0;
+            g_field_battle->records[party_index].resist_elements = 0;
             do
             {
-                if (D_80122B74->characters[party_index].equipment[equipment_index].kind != 0)
+                if (g_field_game_state->characters[party_index].equipment[equipment_index].kind != 0)
                 {
-                    nibbles = (D_80122B74->characters[party_index].equipment + equipment_index)->bonus_nibbles.word;
+                    nibbles = (g_field_game_state->characters[party_index].equipment + equipment_index)->bonus_nibbles.word;
                     for (index = 0; index < FIELD_STATUS_STAT_COUNT; index++)
                     {
-                        D_80123FB0->records[party_index].unk44[index] += nibbles & 0xF;
+                        g_field_battle->records[party_index].element_defense[index] += nibbles & 0xF;
                         nibbles >>= 4;
                     }
-                    D_80123FB0->records[party_index].immunity_flags |= (D_80122B74->characters[party_index].equipment + equipment_index)->flags2C;
-                    D_80123FB0->records[party_index].unk3A |= (D_80122B74->characters[party_index].equipment + equipment_index)->flags2D;
+                    g_field_battle->records[party_index].immunity_flags |= (g_field_game_state->characters[party_index].equipment + equipment_index)->flags2C;
+                    g_field_battle->records[party_index].resist_elements |= (g_field_game_state->characters[party_index].equipment + equipment_index)->flags2D;
                 }
                 equipment_index += 1;
             } while (equipment_index < FIELD_EQUIPMENT_SLOT_COUNT);
-            D_80123FB0->records[party_index].template = NULL;
-            D_80123FB0->records[party_index].unk4C = D_80122B74->characters[party_index].unk43;
-            if (D_8010D020 != 0)
+            g_field_battle->records[party_index].template = NULL;
+            g_field_battle->records[party_index].unk4C = g_field_game_state->characters[party_index].unk43;
+            if (g_field_duel_mode != 0)
             {
-                D_80123FB0->records[party_index].state->maximum = D_80122B74->characters[party_index].hp * 3;
-                D_80123FB0->records[party_index].state->current = D_80122B74->characters[party_index].hp * 3;
-                D_80123FB0->records[party_index].state->gauge.bits.value = D_80122B74->characters[party_index].hp * 3;
-                D_80123FB0->records[party_index].state->gauge.bits.hud_bits = 0;
+                g_field_battle->records[party_index].state->maximum = g_field_game_state->characters[party_index].hp * 3;
+                g_field_battle->records[party_index].state->current = g_field_game_state->characters[party_index].hp * 3;
+                g_field_battle->records[party_index].state->gauge.bits.value = g_field_game_state->characters[party_index].hp * 3;
+                g_field_battle->records[party_index].state->gauge.bits.hud_bits = 0;
             }
             else
             {
-                D_80123FB0->records[party_index].state->maximum = D_80122B74->characters[party_index].hp;
+                g_field_battle->records[party_index].state->maximum = g_field_game_state->characters[party_index].hp;
             }
             {
                 FieldStatusState* state;
 
-                strength = D_80123FB0->records[party_index].stats[3] * 2;
-                if (((D_80122B74->characters[party_index].equipment[0].info.word >> 10) & 0x3F) == FIELD_ITEM_TYPE_FOOTPRINT_BONUS)
+                strength = g_field_battle->records[party_index].stats[3] * 2;
+                if (((g_field_game_state->characters[party_index].equipment[0].info.word >> 10) & 0x3F) == FIELD_ITEM_TYPE_FOOTPRINT_BONUS)
                 {
                     strength += 0x80;
                 }
-                state = D_80123FB0->records[party_index].state;
+                state = g_field_battle->records[party_index].state;
                 if (strength < 0x100)
                 {
                     state->effect_footprint_strength = strength;
@@ -812,7 +806,7 @@ s32 func_800B37D4(void)
                     state->effect_footprint_strength = 0xFF;
                 }
             }
-            if ((D_80122B74->characters[party_index].info.bytes[0] & 0x7F) == FIELD_CHARACTER_TYPE_COMPANION)
+            if ((g_field_game_state->characters[party_index].info.bytes[0] & 0x7F) == FIELD_CHARACTER_TYPE_COMPANION)
             {
                 func_800B3D84();
             }
@@ -828,9 +822,9 @@ s32 func_800B37D4(void)
  */
 void func_800B3D84(void)
 {
-    if (D_80122B74->region_index < 0 || D_80122B74->region_index >= FIELD_REGION_COUNT)
+    if (g_field_game_state->region_index < 0 || g_field_game_state->region_index >= FIELD_REGION_COUNT)
     {
-        record_game_diagnostic(0x8001, 0x75, D_80122B74->region_index, 0);
+        record_game_diagnostic(0x8001, 0x75, g_field_game_state->region_index, 0);
     }
-    func_800BD520(2, 0xF020, D_80122B74->regions[D_80122B74->region_index].unk48.word);
+    func_800BD520(2, 0xF020, g_field_game_state->regions[g_field_game_state->region_index].unk48.word);
 }

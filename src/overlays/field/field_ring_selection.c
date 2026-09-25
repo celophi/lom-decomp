@@ -78,12 +78,12 @@ typedef struct
  */
 
 extern FieldSelectionPosition g_field_actors;
-extern FieldSelectionState D_801077FC;
+extern FieldSelectionState g_field_screen_scroll;
 extern u8 D_800EDED8[];
 extern u8 D_800EE2D8;
 extern u8 D_800EE4D8;
 extern u8 g_field_resource_actions[];
-extern u8 *D_8010D038;
+extern u8 *g_field_cd_buffer;
 extern u8 D_801148B0[];
 extern s16 D_8011F330;
 extern s32 D_8011F334;
@@ -219,8 +219,8 @@ void func_800A43E8(s32 position_mode, s32 resource_index, u16 excluded_mask, s32
         D_8011F3BC = 0;
         D_8011F3B4 = 1;
         D_8011F3A8 = 0;
-        D_801077FC.second = 0;
-        D_801077FC.first = 0;
+        g_field_screen_scroll.second = 0;
+        g_field_screen_scroll.first = 0;
     }
 }
 
@@ -534,7 +534,7 @@ void func_800A4D1C(u8 *render_context)
                     final_depth = final_cosine - 0xFC1;
                 }
                 /* Int depth on purpose: the original passes it without narrowing to s16. */
-                ((void (*)(const void *, s32))func_80086F48)(prim, -(final_depth >> 6) + 0x10);
+                ((void (*)(const void *, s32))field_add_fade_prim)(prim, -(final_depth >> 6) + 0x10);
                 prim++;
             }
             entry += 1;
@@ -556,10 +556,10 @@ void func_800A5174(s32 bank, s32 queue_id)
     u8 *action_entries;
     s32 count;
 
-    header = (BufHdr *)D_8010D038;
+    header = (BufHdr *)g_field_cd_buffer;
     cdrom_queue_read(queue_id & 0xFFFF, header);
     cdrom_wait_queue_empty();
-    action_section = (s32 *)(D_8010D038 + header->unk0);
+    action_section = (s32 *)(g_field_cd_buffer + header->unk0);
     action_entries = (u8 *)action_section + 4;
     count = *action_section;
     if (bank == 2)
@@ -570,7 +570,7 @@ void func_800A5174(s32 bank, s32 queue_id)
     }
     header = (BufHdr *)((u8 *)header + 4);
     {
-        u8 *src = D_8010D038;
+        u8 *src = g_field_cd_buffer;
         s32 end;
         section_start = header->unk0;
         end = header->unk4;

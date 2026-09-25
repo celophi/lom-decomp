@@ -373,7 +373,7 @@ void field_update_scene(void)
     extern s32 g_field_camera_follow_x;
     extern s32 g_field_camera_follow_z;
     /* TODO: Script command 0x44 selects alternate party control and triple HP. */
-    extern s32 D_8010D020;
+    extern s32 g_field_duel_mode;
     extern s32 g_field_scene_contact_latched;
     extern u8 g_field_scene_data_buffer[];
     extern s32 g_field_pending_spawn_id;
@@ -514,7 +514,7 @@ void field_update_scene(void)
         field_upload_transition_tiles();
         g_scene_mode = scene_id;
         g_field_active_group = 0;
-        D_8010D020 = 0;
+        g_field_duel_mode = 0;
         func_800B01FC();
         func_800A6204();
         akao_cmd_f1();
@@ -848,7 +848,7 @@ void field_update_scene(void)
         field_init_ctx(g_field_render_context, (u16)object_id);
         field_upload_transition_tiles();
         field_text_reset_windows();
-        func_80092394();
+        field_camera_reset();
         if (g_field_scene_mode_bit != 0)
         {
             func_800B34D0(0);
@@ -892,7 +892,7 @@ void field_update_scene(void)
         } while (actor_index < 3);
         field_refresh_actor_collisions();
         field_reset_leader_position_history();
-        func_80091BC8();
+        field_camera_track_party();
         g_field_camera_follow_x = g_field_camera_target_x;
         g_field_camera_follow_z = g_field_camera_target_z;
         func_800A3BE8(sound_bank_id);
@@ -904,7 +904,7 @@ void field_update_scene(void)
         func_80067AA4();
         func_80084240();
         func_800A255C();
-        func_80086F20();
+        field_clear_fade_prims();
         saved_scene_id = g_scene_mode;
         if (g_field_scene_mode_bit != 0)
         {

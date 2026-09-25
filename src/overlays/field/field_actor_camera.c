@@ -1,128 +1,175 @@
 /**
  * @file field_actor_camera.c
- * @brief Field camera target tracking, map clamping, and horizontal
- *        interpolation-bound setup.
+ * @brief Field camera: party tracking, scroll limits, scripted scrolling and
+ *        the per-frame camera update.
  *
- * Groups the four camera-control routines that share the D_8010AExx
- * interpolation-bound globals and the D_8010D01x smoothed target:
- * func_80091BC8 (target derive + approach), func_80091D7C (update + clamp +
- * screen motion), func_800920FC (reset lower bound), and func_80092124
- * (horizontal bound select).
+ * Positions keep eight fractional bits on x and y and nine on z (the map is
+ * drawn at half depth). The view scrolls between a left and a right scroll
+ * limit that ease toward the bounds of the active actor group; a script can
+ * take over the scroll position instead.
  */
 
 #include "common.h"
+#include "sdk/libgte.h"
 #include "field_calls.h"
+#include "field_actor_tables.h"
 #include "field_effect_render_state.h"
 #include "display.h"
 #include "scene_state.h"
 
-/** @brief Map bounds block at a fixed RAM address shared by the field code. */
-#define FIELD_MAP_BOUNDS ((FieldMapBounds*)0x801ED400)
+/** @brief Width of the field view in pixels. */
+#define FIELD_VIEW_WIDTH SCREEN_WIDTH
 
-/** @brief Actor position and presence fields in a 0x54-byte record. */
+/** @brief Height of the field view in pixels. */
+#define FIELD_VIEW_HEIGHT VRAM_DRAW_HEIGHT
+
+/** @brief Horizontal centre of the field view in pixels. */
+#define FIELD_VIEW_CENTER_X (FIELD_VIEW_WIDTH / 2)
+
+/** @brief Vertical centre of the field view in pixels. */
+#define FIELD_VIEW_CENTER_Y (FIELD_VIEW_HEIGHT / 2)
+
+/** @brief Number of party objects the camera follows (objects 0 and 1). */
+#define FIELD_CAMERA_TRACKED_COUNT 2
+
+/* Object state flag bits with unknown meaning; together they keep an object out of the camera average. */
+#define FIELD_OBJECT_FLAG_0004 0x0004
+#define FIELD_OBJECT_FLAG_0020 0x0020
+#define FIELD_OBJECT_FLAG_0040 0x0040
+#define FIELD_OBJECT_FLAG_0080 0x0080
+#define FIELD_OBJECT_FLAG_0100 0x0100
+#define FIELD_OBJECT_FLAG_0200 0x0200
+#define FIELD_OBJECT_FLAG_2000 0x2000
+#define FIELD_CAMERA_IGNORE_FLAGS                                                                                                     \
+    (FIELD_OBJECT_FLAG_0004 | FIELD_OBJECT_FLAG_0020 | FIELD_OBJECT_FLAG_0040 | FIELD_OBJECT_FLAG_0080 | FIELD_OBJECT_FLAG_0100 |     \
+     FIELD_OBJECT_FLAG_0200 | FIELD_OBJECT_FLAG_2000)
+
+/** @brief Largest per-frame step of the camera follow point, in position units. */
+#define FIELD_CAMERA_MAX_STEP 0x800
+
+/** @brief Distance the follow point may lead the view before the view scrolls, in position units. */
+#define FIELD_CAMERA_DEAD_ZONE 0x2000
+
+/** @brief Frames to ease the scroll limits to a group's bounds. */
+#define FIELD_SCROLL_EASE_FRAMES 32
+
+/** @brief Frames to ease the scroll limits onto the current screen. */
+#define FIELD_SCROLL_LOCK_FRAMES 16
+
+/** @brief Screen position, in pixels (only x and y are written). */
 typedef struct
 {
-    s32 x;
-    s32 pad4;
-    s32 z;
-    u8 pad_c[0x19];
-    u8 presence;
-    u8 pad26[0x2E];
-} Actor;
+    u16 x;
+    u16 y;
+    u16 z;
+    u16 pad;
+} FieldScreenPoint;
 
-/** @brief Actor slot flags and vertical offset in a 0x23C-byte record. */
+/** @brief On-screen movement of the field view during the last update. */
 typedef struct
 {
-    u8 pad0[12];
-    s32 flags;
-    u8 pad10[0x166];
-    s16 height;
-    u8 pad178[0xC4];
-} Slot;
+    s16 x;
+    s16 y;
+} FieldScreenDelta;
 
-/** @brief Screen coordinate scratch record retaining 16-bit components. */
+/** @brief Horizontal scroll range of an actor group, in pixels. */
 typedef struct
 {
-    u16 x, y, z, pad;
-} Point;
-
-/** @brief Fixed-point offset used when projecting camera motion. */
-typedef struct
-{
-    s32 x, y, z, pad;
-} Vector;
-
-/** @brief Map dimensions in pixels, kept in the fixed field block at 0x801ED400. */
-typedef struct
-{
-    s16 width;
-    u16 height;
-} FieldMapBounds;
-
-/** @brief Interpolation bound thresholds for a camera mode (min, span). */
-typedef struct
-{
-    u16 min;
-    u16 span;
-} FieldThreshold;
+    u16 left;
+    u16 width;
+} FieldGroupBounds;
 
 extern int abs(int);
 
-extern void func_80092200(void);
-extern void func_800922B8(void);
+static void field_camera_step_scroll_limits(void);
+static void field_camera_step_scripted_scroll(void);
 
-extern Actor g_field_actors[];
-extern Slot g_field_object_states[];
-extern Point D_801077FC;
-extern FieldThreshold g_field_group_bounds[];
-
-extern s32 D_800F2278;
-extern s32 D_800F227C;
-extern s32 D_800F2280;
-
-extern s32 g_field_active_group;
+extern FieldScreenDelta g_field_screen_scroll;
+extern FieldGroupBounds g_field_group_bounds[];
 extern s32 g_field_group_bounds_count;
+extern s32 g_field_active_group;
+
+extern s32 g_field_camera_offset_x;
+extern s32 g_field_camera_offset_y;
+extern s32 g_field_camera_offset_z;
+
 extern s32 g_field_camera_target_x;
 extern s32 g_field_camera_target_z;
-extern s32 D_8010AE58;
-extern s32 D_8010AE60;
-extern s32 D_8010AE68;
-extern s32 D_8010AE6C;
-extern s32 D_8010AE70;
-extern s32 D_8010AE7C;
-extern s32 D_8010AE80;
-extern s32 D_8010AE74;
-extern s32 D_8010CFD8;
-extern s32 D_8010CFDC;
 extern s32 g_field_camera_follow_x;
 extern s32 g_field_camera_follow_z;
 
+extern s32 D_8010AE58;
+extern s32 g_field_scroll_limit_left;
+extern s32 g_field_scroll_limit_right;
+extern s32 g_field_scroll_limit_left_target;
+extern s32 g_field_scroll_limit_right_target;
+
+extern s32 g_field_scripted_scroll_frames;
+extern s32 g_field_scripted_scroll_x;
+extern s32 g_field_scripted_scroll_z;
+extern s32 g_field_scripted_scroll_target_x;
+extern s32 g_field_scripted_scroll_target_z;
+
 /**
- * @brief Update the actor-derived target and approach each coordinate by at most 0x800.
+ * @brief Screen x of a view-relative position.
+ * @param position View-relative position.
+ * @return Screen x in pixels.
  */
-void func_80091BC8(void)
+static inline s32 field_camera_screen_x(VECTOR* position)
+{
+    s32 view_x = g_field_view_offset_x / 256;
+    s32 offset_x = position->vx / 256 + FIELD_VIEW_CENTER_X;
+
+    return view_x + offset_x;
+}
+
+/**
+ * @brief Screen y of a view-relative position.
+ * @param position View-relative position.
+ * @return Screen y in pixels.
+ */
+static inline s32 field_camera_screen_y(VECTOR* position)
+{
+    s32 view_y = g_field_view_offset_y / 256;
+    s32 offset_y = position->vy / 256 + FIELD_VIEW_CENTER_Y;
+
+    return view_y + offset_y - position->vz / 512 - g_field_view_offset_z / 512;
+}
+
+/**
+ * @brief Ease the scroll limits onto the current screen.
+ * @param camera Scene camera.
+ */
+static inline void field_camera_lock_scroll(SceneState* camera)
+{
+    s32 left;
+
+    D_8010AE58 = FIELD_SCROLL_LOCK_FRAMES;
+    left = g_field_scroll_limit_left_target = -(camera->camera_x >> 8);
+    g_field_scroll_limit_right_target = left + FIELD_VIEW_WIDTH;
+}
+
+/**
+ * @brief Aim the camera at the average party position and move the follow point toward it.
+ */
+void field_camera_track_party(void)
 {
     s32 divisor;
     s32 target_z;
     s32 target_x;
     s32 count;
     s32 index;
-    Actor* actor;
-    Slot* slot;
 
     count = 0;
     target_z = 0;
     target_x = 0;
-    index = 1;
-    do
+    for (index = FIELD_CAMERA_TRACKED_COUNT - 1; index >= 0; index--)
     {
-        actor = &g_field_actors[index];
-        slot = &g_field_object_states[index];
-        if ((actor->presence != 0xFF) && !(slot->flags & 0x23E4))
+        if ((g_field_actors[index].presence != FIELD_ACTOR_UNUSED) && !(g_field_object_states[index].flags & FIELD_CAMERA_IGNORE_FLAGS))
         {
-            target_x -= actor->x;
-            target_z -= actor->z;
-            target_z += slot->height << 9;
+            target_x -= g_field_actors[index].x;
+            target_z -= g_field_actors[index].z;
+            target_z += g_field_object_states[index].movement.half.hi << 9;
             if (count != 0)
             {
                 divisor = count + 1;
@@ -131,8 +178,7 @@ void func_80091BC8(void)
             }
             count += 1;
         }
-        index -= 1;
-    } while (index >= 0);
+    }
     if (count != 0)
     {
         g_field_camera_target_x = target_x;
@@ -146,26 +192,25 @@ void func_80091BC8(void)
         if (target != current)
         {
             s32 delta = target - current;
-            s32 magnitude = abs(delta);
 
-            if (magnitude < 0x800)
+            if (abs(delta) < FIELD_CAMERA_MAX_STEP)
             {
                 g_field_camera_follow_x = target;
             }
             else
             {
                 s32 value;
-                s32* write_position = &g_field_camera_follow_x; /* the original stores the step through a pointer */
+                s32* follow = &g_field_camera_follow_x; /* storing through the global directly changes the codegen */
 
                 if (delta < 0)
                 {
-                    value = current - 0x800;
+                    value = current - FIELD_CAMERA_MAX_STEP;
                 }
                 else
                 {
-                    value = current + 0x800;
+                    value = current + FIELD_CAMERA_MAX_STEP;
                 }
-                *write_position = value;
+                *follow = value;
             }
         }
     }
@@ -177,229 +222,210 @@ void func_80091BC8(void)
         if (target != current)
         {
             s32 delta = target - current;
-            s32 magnitude = abs(delta);
 
-            if (magnitude < 0x800)
+            if (abs(delta) < FIELD_CAMERA_MAX_STEP)
             {
                 g_field_camera_follow_z = target;
             }
             else
             {
                 s32 value;
-                s32* write_position = &g_field_camera_follow_z; /* the original stores the step through a pointer */
+                s32* follow = &g_field_camera_follow_z; /* storing through the global directly changes the codegen */
 
                 if (delta < 0)
                 {
-                    value = current - 0x800;
+                    value = current - FIELD_CAMERA_MAX_STEP;
                 }
                 else
                 {
-                    value = current + 0x800;
+                    value = current + FIELD_CAMERA_MAX_STEP;
                 }
-                *write_position = value;
+                *follow = value;
             }
         }
     }
 }
 
 /**
- * @brief Update the camera, clamp it to map bounds, and record screen motion.
- *
- * Camera coordinates use eight fractional bits; projecting depth divides by
- * 512. The screen-motion delta is the difference between the projected view
- * position before and after the update, relative to a zero offset.
+ * @brief Scroll the view after the follow point, clamp it to the scroll limits and record the screen motion.
  */
-void func_80091D7C(void)
+void field_camera_update(void)
 {
-    Point before;
-    Point after;
-    Vector offset;
+    FieldScreenPoint before;
+    FieldScreenPoint after;
+    VECTOR origin;
     SceneState* camera = SCENE_STATE;
     FieldMapBounds* bounds = FIELD_MAP_BOUNDS;
-    s32 screen_x;
-    s32 camera_screen_x, camera_screen_y, offset_screen_x, offset_screen_y;
-    s32 screen_y;
     s32 follow_x;
     s32 follow_z;
     s32 clamp_x;
     s32 clamp_z;
 
-    func_80091BC8();
+    field_camera_track_party();
     follow_x = g_field_camera_follow_x;
     follow_z = g_field_camera_follow_z;
-    func_800922B8();
-    func_80092200();
-    offset.x = 0;
-    offset.y = 0;
-    offset.z = 0;
-    before.x = g_field_view_offset_x / 256 + 160;
-    before.y = g_field_view_offset_y / 256 + 112 - g_field_view_offset_z / 512;
-    if (follow_x < (g_field_view_offset_x - 0x2000))
+    field_camera_step_scripted_scroll();
+    field_camera_step_scroll_limits();
+    origin.vx = 0;
+    origin.vy = 0;
+    origin.vz = 0;
+    before.x = field_camera_screen_x(&origin);
+    before.y = field_camera_screen_y(&origin);
+    if (follow_x < (g_field_view_offset_x - FIELD_CAMERA_DEAD_ZONE))
     {
-        g_field_view_offset_x = follow_x + 0x2000;
+        g_field_view_offset_x = follow_x + FIELD_CAMERA_DEAD_ZONE;
     }
-    if ((g_field_view_offset_x + 0x2000) < follow_x)
+    if ((g_field_view_offset_x + FIELD_CAMERA_DEAD_ZONE) < follow_x)
     {
-        g_field_view_offset_x = follow_x - 0x2000;
+        g_field_view_offset_x = follow_x - FIELD_CAMERA_DEAD_ZONE;
     }
-    if (follow_z < (g_field_view_offset_z - 0x2000))
+    if (follow_z < (g_field_view_offset_z - FIELD_CAMERA_DEAD_ZONE))
     {
-        g_field_view_offset_z = follow_z + 0x2000;
+        g_field_view_offset_z = follow_z + FIELD_CAMERA_DEAD_ZONE;
     }
-    if ((g_field_view_offset_z + 0x2000) < follow_z)
+    if ((g_field_view_offset_z + FIELD_CAMERA_DEAD_ZONE) < follow_z)
     {
-        g_field_view_offset_z = follow_z - 0x2000;
+        g_field_view_offset_z = follow_z - FIELD_CAMERA_DEAD_ZONE;
     }
-    camera->camera_x = g_field_view_offset_x + (D_800F2278 << 8) + 0xA000;
-    g_field_view_offset_y = camera->camera_y = D_800F227C << 8;
-    camera->camera_z = g_field_view_offset_z + (D_800F2280 << 9) + 0xE000;
-    if (camera->camera_x > -(D_8010AE60 << 8))
+    camera->camera_x = g_field_view_offset_x + (g_field_camera_offset_x << 8) + (FIELD_VIEW_CENTER_X << 8);
+    g_field_view_offset_y = camera->camera_y = g_field_camera_offset_y << 8;
+    camera->camera_z = g_field_view_offset_z + (g_field_camera_offset_z << 9) + (FIELD_VIEW_CENTER_Y << 9);
+    if (camera->camera_x > -(g_field_scroll_limit_left << 8))
     {
-        camera->camera_x = -(D_800F2278 << 8) - (D_8010AE60 << 8);
-        g_field_view_offset_x = camera->camera_x - (D_800F2278 << 8) - 0xA000;
+        camera->camera_x = -(g_field_camera_offset_x << 8) - (g_field_scroll_limit_left << 8);
+        g_field_view_offset_x = camera->camera_x - (g_field_camera_offset_x << 8) - (FIELD_VIEW_CENTER_X << 8);
     }
-    if (camera->camera_x < -(D_8010AE68 << 8) + 0x14000)
+    if (camera->camera_x < -(g_field_scroll_limit_right << 8) + (FIELD_VIEW_WIDTH << 8))
     {
-        clamp_x = (D_800F2278 << 8) - 0x14000;
-        clamp_x = -(D_8010AE68 << 8) - clamp_x;
+        clamp_x = (g_field_camera_offset_x << 8) - (FIELD_VIEW_WIDTH << 8);
+        clamp_x = -(g_field_scroll_limit_right << 8) - clamp_x;
         camera->camera_x = clamp_x;
-        g_field_view_offset_x = camera->camera_x - (D_800F2278 << 8) - 0xA000;
+        g_field_view_offset_x = camera->camera_x - (g_field_camera_offset_x << 8) - (FIELD_VIEW_CENTER_X << 8);
     }
     if (camera->camera_z > 0)
     {
-        camera->camera_z = -(D_800F2280 << 9);
-        g_field_view_offset_z = camera->camera_z - (D_800F2280 << 9) - 0xE000;
+        camera->camera_z = -(g_field_camera_offset_z << 9);
+        g_field_view_offset_z = camera->camera_z - (g_field_camera_offset_z << 9) - (FIELD_VIEW_CENTER_Y << 9);
     }
-    if (camera->camera_z < -((s32)(bounds->height << 16) >> 8) + 0x1C000)
+    if (camera->camera_z < -((s16)bounds->depth << 8) + (FIELD_VIEW_HEIGHT << 9))
     {
-        clamp_z = (D_800F2280 << 9) - 0x1C000;
-        clamp_z = -((s32)(bounds->height << 16) >> 8) - clamp_z;
+        clamp_z = (g_field_camera_offset_z << 9) - (FIELD_VIEW_HEIGHT << 9);
+        clamp_z = -((s16)bounds->depth << 8) - clamp_z;
         camera->camera_z = clamp_z;
-        g_field_view_offset_z = camera->camera_z - (D_800F2280 << 9) - 0xE000;
+        g_field_view_offset_z = camera->camera_z - (g_field_camera_offset_z << 9) - (FIELD_VIEW_CENTER_Y << 9);
     }
-    if (D_8010AE7C != 0 || D_8010AE80 != 0)
+    if (g_field_scripted_scroll_x != 0 || g_field_scripted_scroll_z != 0)
     {
-        camera->camera_x = -(D_8010AE7C << 8);
-        g_field_view_offset_x = -(D_8010AE7C + 0xA0) << 8;
-        camera->camera_z = -(D_8010AE80 << 9);
-        g_field_view_offset_z = -(D_8010AE80 + 0x70) << 9;
+        camera->camera_x = -(g_field_scripted_scroll_x << 8);
+        g_field_view_offset_x = -(g_field_scripted_scroll_x + FIELD_VIEW_CENTER_X) << 8;
+        camera->camera_z = -(g_field_scripted_scroll_z << 9);
+        g_field_view_offset_z = -(g_field_scripted_scroll_z + FIELD_VIEW_CENTER_Y) << 9;
     }
-    camera_screen_x = g_field_view_offset_x / 256;
-    offset_screen_x = offset.x / 256 + 160;
-    screen_x = camera_screen_x + offset_screen_x;
-    after.x = screen_x;
-    camera_screen_y = g_field_view_offset_y / 256;
-    offset_screen_y = offset.y / 256 + 112;
-    screen_y = camera_screen_y + offset_screen_y - offset.z / 512 - g_field_view_offset_z / 512;
-    after.y = screen_y;
-    D_801077FC.x = screen_x - before.x;
-    D_801077FC.y = screen_y - before.y;
+    after.x = field_camera_screen_x(&origin);
+    after.y = field_camera_screen_y(&origin);
+    g_field_screen_scroll.x = after.x - before.x;
+    g_field_screen_scroll.y = after.y - before.y;
 }
 
 /**
- * @brief Reset the interpolation lower bound and seed the upper bound from the field bounds block.
+ * @brief Ease the scroll limits back to the whole map width.
  */
-void func_800920FC(void)
+inline void field_camera_release_scroll_limits(void)
 {
-    D_8010AE6C = 0;
-    D_8010AE58 = 0x20;
-    D_8010AE70 = FIELD_MAP_BOUNDS->width;
+    g_field_scroll_limit_left_target = 0;
+    D_8010AE58 = FIELD_SCROLL_EASE_FRAMES;
+    g_field_scroll_limit_right_target = FIELD_MAP_BOUNDS->width;
 }
 
 /**
- * @brief Configure horizontal camera interpolation bounds for the active field camera mode.
+ * @brief Ease the scroll limits to the bounds of the active actor group.
+ * @note An unknown group, or one narrower than the view, locks the scroll to the current screen.
  */
-void func_80092124(void)
+void field_camera_select_scroll_limits(void)
 {
-    s32 camera_mode;
-    FieldThreshold* camera_thresholds;
-    FieldThreshold* threshold;
     SceneState* camera;
-    s32 threshold_index;
-    s32 lower_bound;
+    FieldGroupBounds* entry;
+    s32 group;
+    FieldGroupBounds* group_bounds;
+    s32 entry_index;
 
     camera = SCENE_STATE;
-    camera_mode = g_field_active_group;
-    if (camera_mode == 0)
+    group = g_field_active_group;
+    if (group == 0)
     {
-        D_8010AE6C = 0;
-        D_8010AE58 = 32;
-        D_8010AE70 = FIELD_MAP_BOUNDS->width;
+        field_camera_release_scroll_limits();
         return;
     }
 
-    if (g_field_group_bounds_count < camera_mode)
+    if (g_field_group_bounds_count < group)
     {
-        D_8010AE58 = 16;
-        lower_bound = D_8010AE6C = -(camera->camera_x >> 8);
-        D_8010AE70 = lower_bound + SCREEN_WIDTH;
+        field_camera_lock_scroll(camera);
         return;
     }
 
-    camera_thresholds = g_field_group_bounds;
-    threshold_index = camera_mode - 1;
-    threshold = &camera_thresholds[threshold_index];
-    if (threshold->span < SCREEN_WIDTH)
+    /* indexing g_field_group_bounds[group - 1] directly changes the codegen */
+    group_bounds = g_field_group_bounds;
+    entry_index = group - 1;
+    entry = &group_bounds[entry_index];
+    if (entry->width < FIELD_VIEW_WIDTH)
     {
-        D_8010AE58 = 16;
-        lower_bound = D_8010AE6C = -(camera->camera_x >> 8);
-        D_8010AE70 = lower_bound + SCREEN_WIDTH;
+        field_camera_lock_scroll(camera);
         return;
     }
 
-    D_8010AE58 = 32;
-    D_8010AE6C = threshold->min;
-    D_8010AE70 = threshold->min + threshold->span;
+    D_8010AE58 = FIELD_SCROLL_EASE_FRAMES;
+    g_field_scroll_limit_left_target = entry->left;
+    g_field_scroll_limit_right_target = entry->left + entry->width;
 }
 
 /**
- * @brief Step the D_8010AE60 / D_8010AE68 pair toward D_8010AE6C / D_8010AE70 over the remaining D_8010AE58 frames.
+ * @brief Move the scroll limits one step toward their targets.
  */
-void func_80092200(void)
+static void field_camera_step_scroll_limits(void)
 {
     if (D_8010AE58 != 0)
     {
-        D_8010AE60 += (D_8010AE6C - D_8010AE60) / D_8010AE58;
-        D_8010AE68 += (D_8010AE70 - D_8010AE68) / D_8010AE58;
+        g_field_scroll_limit_left += (g_field_scroll_limit_left_target - g_field_scroll_limit_left) / D_8010AE58;
+        g_field_scroll_limit_right += (g_field_scroll_limit_right_target - g_field_scroll_limit_right) / D_8010AE58;
         D_8010AE58 -= 1;
     }
 }
 
 /**
- * @brief Step the D_8010AE7C / D_8010AE80 pair toward D_8010CFD8 / D_8010CFDC over the remaining D_8010AE74 frames, snapping when none remain.
+ * @brief Move the scripted scroll position one step toward its target, snapping when no frames remain.
  */
-void func_800922B8(void)
+static void field_camera_step_scripted_scroll(void)
 {
-    if (D_8010AE74 != 0)
+    if (g_field_scripted_scroll_frames != 0)
     {
-        D_8010AE7C += (D_8010CFD8 - D_8010AE7C) / D_8010AE74;
-        D_8010AE80 += (D_8010CFDC - D_8010AE80) / D_8010AE74;
-        D_8010AE74 -= 1;
+        g_field_scripted_scroll_x += (g_field_scripted_scroll_target_x - g_field_scripted_scroll_x) / g_field_scripted_scroll_frames;
+        g_field_scripted_scroll_z += (g_field_scripted_scroll_target_z - g_field_scripted_scroll_z) / g_field_scripted_scroll_frames;
+        g_field_scripted_scroll_frames -= 1;
     }
     else
     {
-        D_8010AE7C = D_8010CFD8;
-        D_8010AE80 = D_8010CFDC;
+        g_field_scripted_scroll_x = g_field_scripted_scroll_target_x;
+        g_field_scripted_scroll_z = g_field_scripted_scroll_target_z;
     }
 }
 
 /**
- * @brief Clear the interpolation state and seed both active bounds from the field bounds block.
+ * @brief Reset the scroll limits to the whole map width and clear the scripted scroll.
  */
-void func_80092394(void)
+void field_camera_reset(void)
 {
-    s32 value;
+    s32 map_width;
 
-    value = FIELD_MAP_BOUNDS->width;
+    map_width = FIELD_MAP_BOUNDS->width;
 
-    D_8010AE6C = 0;
-    D_8010AE60 = 0;
+    g_field_scroll_limit_left_target = 0;
+    g_field_scroll_limit_left = 0;
     D_8010AE58 = 0;
-    D_8010AE80 = 0;
-    D_8010AE7C = 0;
-    D_8010CFDC = 0;
-    D_8010CFD8 = 0;
-    D_8010AE74 = 0;
-    D_8010AE68 = value;
-    D_8010AE70 = value;
+    g_field_scripted_scroll_z = 0;
+    g_field_scripted_scroll_x = 0;
+    g_field_scripted_scroll_target_z = 0;
+    g_field_scripted_scroll_target_x = 0;
+    g_field_scripted_scroll_frames = 0;
+    g_field_scroll_limit_right = map_width;
+    g_field_scroll_limit_right_target = map_width;
 }

@@ -13,12 +13,12 @@ void field_reset_input_repeat(void);
 /* Defined as (void) in field_resource_load.c; the original call still passes prev in $a0. */
 void func_800B01FC(s32);
 
-extern s32 D_800F229C;
+extern s32 g_field_dialog_screen_mode;
 extern s32 g_field_render_context;
-extern s32 D_8010AE54;
-extern s32 D_8010AE78;
+extern s32 g_field_actions_limited;
+extern s32 g_field_interaction_active;
 extern s32 D_8010D034;
-extern s32 D_8010D038;
+extern s32 g_field_cd_buffer;
 extern s32 g_field_preserve_entry_music;
 extern s32 g_field_scene_mode_bit;
 extern s32 D_801178C8;
@@ -53,7 +53,7 @@ void field_initialize_subsystems(s32 render_context)
     s32 base;
 
     base = 0x80158000;
-    D_8010D038 = 0x80140000;
+    g_field_cd_buffer = 0x80140000;
     D_8010D034 = base;
     D_801227E8 = 0;
     func_800B0094();
@@ -65,7 +65,7 @@ void field_initialize_subsystems(s32 render_context)
     func_80083948();
     func_8008396C();
     field_initialize_actor_slots();
-    D_8010AE78 = 0;
+    g_field_interaction_active = 0;
     D_80122710 = 0;
     field_rebuild_party_actions(0);
     field_clear_actor_slots();
@@ -73,7 +73,7 @@ void field_initialize_subsystems(s32 render_context)
     func_80084240();
     func_80084524();
     func_800A255C();
-    func_80091410();
+    field_reset_action_command_maps();
     func_800A2DFC();
     field_reset_text_session();
     field_reset_fade_state();
@@ -82,11 +82,11 @@ void field_initialize_subsystems(s32 render_context)
     func_800A6204();
     D_8011F3AC = 0;
     g_field_gover_load_countdown = 0;
-    D_800F229C = 0;
+    g_field_dialog_screen_mode = 0;
     g_field_return_to_title_prompt_state = 0;
     g_field_return_to_title_prompt_delay = 0;
     g_field_hide_actor_panels = 0;
-    D_8010AE54 = 0;
+    g_field_actions_limited = 0;
     g_field_modal_state = 0;
     D_800F2298 = 0;
     D_8011F428 = 0;
@@ -114,7 +114,7 @@ void field_initialize_subsystems(s32 render_context)
     }
     func_800B01FC(prev);
     field_reset_input_repeat();
-    func_80086F20();
+    field_clear_fade_prims();
     func_800A3EBC();
     func_800A43C0();
     func_800ADE2C();

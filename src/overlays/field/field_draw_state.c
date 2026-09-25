@@ -8,9 +8,9 @@
 #include "field_runtime.h"
 #include "sdk/libgpu.h"
 
-extern s32 D_800F2278;
-extern s32 D_800F227C;
-extern s32 D_800F2280;
+extern s32 g_field_camera_offset_x;
+extern s32 g_field_camera_offset_y;
+extern s32 g_field_camera_offset_z;
 
 /** @brief LINE_F2 with its color word addressable as one value. */
 typedef struct
@@ -28,9 +28,9 @@ typedef struct
  */
 void func_80067AA4(void)
 {
-    D_800F2280 = 0;
-    D_800F227C = 0;
-    D_800F2278 = 0;
+    g_field_camera_offset_z = 0;
+    g_field_camera_offset_y = 0;
+    g_field_camera_offset_x = 0;
     field_reset_effect_pool();
     field_reset_global_color_scale();
 }

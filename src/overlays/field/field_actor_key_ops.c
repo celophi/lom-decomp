@@ -8,42 +8,86 @@
  */
 
 #include "common.h"
+#include "main.h"
+#include "vector.h"
+#include "sdk/libgte.h"
 #include "field_actor_routes.h"
 #include "field_calls.h"
 #include "field_actor_tables.h"
-#include "main.h"
 
-/** @brief Position triple copied out by func_80087F44. */
-typedef struct
+/** @brief Control modes (FieldActor::control & FIELD_CONTROL_MODE_MASK). */
+#define FIELD_CONTROL_PLAYER 0
+#define FIELD_CONTROL_FOLLOWER 1
+#define FIELD_CONTROL_SCRIPTED 2
+
+/** @brief Two-bit FieldActor::control field at bit 16 (meaning unknown) kept across a reset. */
+#define FIELD_CONTROL_UNK16_SHIFT 16
+#define FIELD_CONTROL_UNK16_BITS 3
+
+/** @brief Coordinate value that, in all three axes, keeps the actor's old position. */
+#define FIELD_KEEP_POSITION (-1)
+
+/** @brief Positions are stored with eight fractional bits. */
+#define FIELD_POSITION_SHIFT 8
+
+/** @brief Actors face one of eight directions. */
+#define FIELD_FACING_COUNT 8
+
+/** @brief ratan2 angle units per facing direction (ONE / FIELD_FACING_COUNT). */
+#define FIELD_FACING_ANGLE (ONE / FIELD_FACING_COUNT)
+
+/** @brief Facing steps between the ratan2 zero angle and facing 0. */
+#define FIELD_FACING_ANGLE_OFFSET 2
+
+/** @brief Menu option bit 0 (the menu's vibration switch); here it lets object 1 lead. */
+#define FIELD_OPTION_VIBRATION 0x01
+
+/** @brief Object 1, the second party member. */
+#define FIELD_SECOND_MEMBER 1
+
+/** @brief Result of field_get_actor_binding_state. */
+enum
 {
-    s32 x;
-    s32 y;
-    s32 z;
-} FieldActorPosition;
+    FIELD_BINDING_QUERY_NONE = 0,
+    FIELD_BINDING_QUERY_OTHER_OWNER = 1,
+    FIELD_BINDING_QUERY_LOADING = 2,
+    FIELD_BINDING_QUERY_PLAYING = 3,
+    FIELD_BINDING_QUERY_READY = 4
+};
 
-/** @brief Menu option bit that keeps the second party member as the leader. */
-#define PAD_OPTION_SECOND_LEADER 1
+/** @brief Sentinel returned by field_find_object_state when no object matches. */
+#define FIELD_OBJECT_STATE_NONE ((FieldObjectState*)-1)
 
-extern u8* g_field_event_scripts;
+/** @brief Event script table: u16 offsets from the table start, then the scripts. */
+extern u16* g_field_event_scripts;
 
-FieldActor* func_80087C9C(s32 key);
-long ratan2(long y, long x);
+FieldActor* field_lookup_actor(s32 key);
 int abs(int value);
 void field_restart_actor_animation(FieldActor* actor);
 
 /**
- * @brief Replace the low four group-flag bits of the object with @p key.
- * @param key Object key to look up.
- * @param group New low four bits; the object is left unchanged when absent.
+ * @brief Replace the group bits of object @p object_index.
+ * @param object_index Object whose group_flags change.
+ * @param group New group.
  */
-void func_80087614(s32 key, s32 group)
+static inline void field_set_object_group(s32 object_index, s32 group)
+{
+    g_field_object_states[object_index].group_flags = (g_field_object_states[object_index].group_flags & ~FIELD_OBJECT_GROUP_MASK) | group;
+}
+
+/**
+ * @brief Replace the group of the object with @p key.
+ * @param key Object key to look up.
+ * @param group New group (low four group-flag bits); nothing happens when the key is absent.
+ */
+void field_set_actor_group(s32 key, s32 group)
 {
     FieldActor* actor;
 
-    actor = func_80087C9C(key);
+    actor = field_lookup_actor(key);
     if (actor != FIELD_ACTOR_NONE)
     {
-        g_field_object_states[actor->object_index].group_flags = (g_field_object_states[actor->object_index].group_flags & ~0xF) | group;
+        field_set_object_group(actor->object_index, group);
     }
 }
 
@@ -51,109 +95,110 @@ void func_80087614(s32 key, s32 group)
  * @brief Reinitialize the actor with @p key at a new position and group.
  * @param key Object key to look up.
  * @param resource_entry_index Resource entry the actor record is initialized from.
- * @param group New low four group-flag bits.
+ * @param group New group.
  * @param x New X position in whole units.
  * @param y New Y position in whole units.
  * @param z New Z position in whole units.
  */
-void func_80087680(s32 key, s32 resource_entry_index, s32 group, s32 x, s32 y, s32 z)
+void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s32 y, s32 z)
 {
     FieldActor* actor;
-    s32 preserved;
+    s32 kept_bits;
 
-    actor = func_80087C9C(key);
+    actor = field_lookup_actor(key);
     if (actor != FIELD_ACTOR_NONE)
     {
-        preserved = actor->control.half[1] & 3;
+        kept_bits = actor->control.half[1] & FIELD_CONTROL_UNK16_BITS;
         field_initialize_actor_record(actor->object_index, resource_entry_index);
         actor->presence = 0;
-        actor->x = x << 8;
-        actor->control.word = (actor->control.word & 0xFFFCFFFF) | (preserved << 16);
-        actor->y = y << 8;
-        actor->z = z << 8;
-        g_field_object_states[actor->object_index].group_flags = (g_field_object_states[actor->object_index].group_flags & ~0xF) | group;
+        actor->x = x << FIELD_POSITION_SHIFT;
+        actor->control.word = (actor->control.word & ~(FIELD_CONTROL_UNK16_BITS << FIELD_CONTROL_UNK16_SHIFT)) | (kept_bits << FIELD_CONTROL_UNK16_SHIFT);
+        actor->y = y << FIELD_POSITION_SHIFT;
+        actor->z = z << FIELD_POSITION_SHIFT;
+        field_set_object_group(actor->object_index, group);
         field_restart_actor_animation(actor);
     }
 }
 
 /**
- * @brief Test whether one actor faces another within one direction step.
- * @param first_key Key of the actor whose facing is tested.
- * @param second_key Key of the target actor.
+ * @brief Test whether one actor faces another, allowing one facing step either way.
+ * @param looker_key Key of the actor whose facing is tested.
+ * @param target_key Key of the actor looked at.
  * @return -1 when either actor is absent, otherwise 1 when facing the target and 0 when not.
  */
-s32 func_80087770(s32 first_key, s32 second_key)
+s32 field_actor_faces_actor(s32 looker_key, s32 target_key)
 {
-    FieldActor* first;
-    FieldActor* second;
+    FieldActor* looker;
+    FieldActor* target;
     s32 direction;
     s32 facing;
     s32 animation;
 
-    first = func_80087C9C(first_key);
-    if (first == FIELD_ACTOR_NONE)
+    looker = field_lookup_actor(looker_key);
+    if (looker == FIELD_ACTOR_NONE)
     {
         return -1;
     }
-    second = func_80087C9C(second_key);
-    if (second == FIELD_ACTOR_NONE)
+    target = field_lookup_actor(target_key);
+    if (target == FIELD_ACTOR_NONE)
     {
         return -1;
     }
-    animation = first->animation;
-    facing = (animation & 0x7F) % 5;
-    if (animation & 0x80)
+    animation = looker->animation;
+    facing = (animation & FIELD_ANIMATION_INDEX_MASK) % FIELD_ANIMATION_DIRECTIONS;
+    if (animation & FIELD_ANIMATION_FACING)
     {
-        facing = 8 - facing;
+        facing = FIELD_FACING_COUNT - facing;
     }
-    direction = ratan2(first->z - second->z, second->x - first->x);
-    direction = (direction + 0x800) / 0x200;
-    direction += 2;
-    direction %= 8;
-    if (abs(facing - direction) < 2)
-    {
-        return 1;
-    }
-    if (abs(facing - direction + 8) < 2)
+    direction = ratan2(looker->z - target->z, target->x - looker->x);
+    direction = (direction + ONE / 2) / FIELD_FACING_ANGLE;
+    direction += FIELD_FACING_ANGLE_OFFSET;
+    direction %= FIELD_FACING_COUNT;
+    if (abs(facing - direction) <= 1)
     {
         return 1;
     }
-    return abs(direction - facing + 8) < 2;
+    if (abs(facing - direction + FIELD_FACING_COUNT) <= 1)
+    {
+        return 1;
+    }
+    return abs(direction - facing + FIELD_FACING_COUNT) <= 1;
 }
 
 /**
- * @brief Classify the animation binding state of the actor with @p key.
+ * @brief Report the state of the animation actor bound to the actor with @p key.
  * @param key Object key to look up.
- * @return -1 when absent; 0 unbound; 1 bound to another object; 2 loading; 3 or 4 by the slot's track state.
+ * @return -1 when absent, otherwise a FIELD_BINDING_QUERY_* value.
  */
-s32 func_800878B4(s32 key)
+s32 field_get_actor_binding_state(s32 key)
 {
     FieldActor* actor;
     FieldActorBinding* binding;
 
-    actor = func_80087C9C(key);
+    actor = field_lookup_actor(key);
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
-    if (field_actor_binding(actor)->state == 0)
+    /* The binding is looked up again at each use; caching it changes the code. */
+    if (field_actor_binding(actor)->state == FIELD_BINDING_IDLE)
     {
-        return 0;
+        return FIELD_BINDING_QUERY_NONE;
     }
     binding = field_actor_binding(actor);
     if (binding->owner != actor->object_index)
     {
-        return 1;
+        return FIELD_BINDING_QUERY_OTHER_OWNER;
     }
-    if (field_object_binding(binding->owner)->state == 1)
+    if (field_object_binding(binding->owner)->state == FIELD_BINDING_LOADING)
     {
-        return 2;
+        return FIELD_BINDING_QUERY_LOADING;
     }
     if (g_field_actor_slots[field_actor_binding(actor)->slot].track_mask != 0 || g_field_actor_slots[field_actor_binding(actor)->slot].pending_track_mask != 0)
     {
-        return 3;
+        return FIELD_BINDING_QUERY_PLAYING;
     }
-    return 4;
+    return FIELD_BINDING_QUERY_READY;
 }
 
 /**
@@ -162,59 +207,56 @@ s32 func_800878B4(s32 key)
  * @param resource_entry_index Resource entry to load and initialize from.
  * @param resource_slot_id Resource slot passed to the loader.
  * @param resource_base Resource base passed to the loader.
- * @param group New low four group-flag bits.
- * @param x New X position in whole units; -1 in all three coordinates keeps the old position.
+ * @param group New group.
+ * @param x New X position in whole units; FIELD_KEEP_POSITION in all three keeps the old one.
  * @param y New Y position in whole units.
  * @param z New Z position in whole units.
  * @param animation New animation byte.
- * @param resource_flag Low bit stored in the resource entry's flags.
- * @return -1 when no actor has @p key; otherwise the value left in the return register by the animation restart.
- * @note The success path has no return statement; callers never use its value.
+ * @param has_actions Non-zero marks the resource as having an action table.
+ * @return -1 when no actor has @p key; the success path returns nothing.
+ * @note Callers never use the result of a successful reload.
  */
-s32 func_80087A9C(s32 key, s32 resource_entry_index, s32 resource_slot_id, u8* resource_base, s32 group, s32 x, s32 y, s32 z, s32 animation, s32 resource_flag)
+s32 field_reload_actor(s32 key, s32 resource_entry_index, s32 resource_slot_id, u8* resource_base, s32 group, s32 x, s32 y, s32 z, s32 animation, s32 has_actions)
 {
-    s32 position[3];
+    Vec3i old_position;
     s32 control_mode;
     FieldActor* actor;
-    FieldObjectState* state;
     FieldResourceEntry* resource;
     FieldResourceEntry* resources;
-    FieldObjectState* states;
 
-    actor = func_80087C9C(key);
+    actor = field_lookup_actor(key);
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
-    position[0] = actor->x;
-    position[1] = actor->y;
-    position[2] = actor->z;
-    control_mode = actor->control.half[0] & 0x1FF;
+    old_position.x = actor->x;
+    old_position.y = actor->y;
+    old_position.z = actor->z;
+    control_mode = actor->control.half[0] & FIELD_CONTROL_MODE_MASK;
     field_load_resource_entry(resource_slot_id, resource_base, resource_entry_index);
     field_initialize_actor_record(actor->object_index, resource_entry_index);
     field_initialize_actor_part(actor->object_index, 0);
+    /* A direct &g_field_resource_entries[i] changes the code. */
     resources = g_field_resource_entries;
     resource = &resources[resource_entry_index];
-    resource->flags = (resource->flags & ~1) | (resource_flag & 1);
+    resource->flags = (resource->flags & ~FIELD_RESOURCE_HAS_ACTIONS) | (has_actions & FIELD_RESOURCE_HAS_ACTIONS);
     g_field_object_states[actor->object_index].key = key;
     actor->presence = 0;
-    if (x == -1 && y == -1 && z == -1)
+    if (x == FIELD_KEEP_POSITION && y == FIELD_KEEP_POSITION && z == FIELD_KEEP_POSITION)
     {
-        actor->x = position[0];
-        actor->y = position[1];
-        actor->z = position[2];
+        actor->x = old_position.x;
+        actor->y = old_position.y;
+        actor->z = old_position.z;
     }
     else
     {
-        actor->x = x << 8;
-        actor->y = y << 8;
-        actor->z = z << 8;
+        actor->x = x << FIELD_POSITION_SHIFT;
+        actor->y = y << FIELD_POSITION_SHIFT;
+        actor->z = z << FIELD_POSITION_SHIFT;
     }
-    states = g_field_object_states;
-    state = &states[actor->object_index];
-    state->group_flags = (state->group_flags & ~0xF) | group;
+    field_set_object_group(actor->object_index, group);
     actor->animation = animation;
-    actor->control.word = (actor->control.word & ~0x1FF) | control_mode;
+    actor->control.word = (actor->control.word & ~FIELD_CONTROL_MODE_MASK) | control_mode;
     field_restart_actor_animation(actor);
 }
 
@@ -223,7 +265,7 @@ s32 func_80087A9C(s32 key, s32 resource_entry_index, s32 resource_slot_id, u8* r
  * @param key Object key to look up.
  * @return The matching actor record, or FIELD_ACTOR_NONE.
  */
-FieldActor* func_80087C9C(s32 key)
+FieldActor* field_lookup_actor(s32 key)
 {
     return field_find_actor(key);
 }
@@ -234,7 +276,7 @@ FieldActor* func_80087C9C(s32 key)
  * @param script_index Script to run from its first command.
  * @return 0 when the script was started, or -1 when absent or in a non-interruptible command.
  */
-s32 func_80087CE0(s32 key, u8 script_index)
+s32 field_start_actor_script(s32 key, u8 script_index)
 {
     FieldActor* actor;
     s16 command;
@@ -245,17 +287,17 @@ s32 func_80087CE0(s32 key, u8 script_index)
         return -1;
     }
     command = actor->command;
-    if (command == 0x93 || command == 0x94)
+    if (command == FIELD_ACTOR_COMMAND_93 || command == FIELD_ACTOR_COMMAND_94)
     {
         return -1;
     }
-    if (command == 0x90 || command == 0xAE || command == 0x8E)
+    if (command == FIELD_ACTOR_COMMAND_90 || command == FIELD_ACTOR_COMMAND_AE || command == FIELD_ACTOR_COMMAND_TRANSITION)
     {
         return -1;
     }
     actor->script_index = script_index;
     actor->script_offset = 0;
-    actor->command = 0;
+    actor->command = FIELD_ACTOR_COMMAND_NONE;
     return 0;
 }
 
@@ -267,7 +309,7 @@ s32 func_80087CE0(s32 key, u8 script_index)
  * @param z New Z position in whole units.
  * @return 0 on success, or -1 when no actor has @p key.
  */
-s32 func_80087D8C(s32 key, s32 x, s32 y, s32 z)
+s32 field_set_actor_position(s32 key, s32 x, s32 y, s32 z)
 {
     FieldActor* actor;
 
@@ -276,9 +318,9 @@ s32 func_80087D8C(s32 key, s32 x, s32 y, s32 z)
     {
         return -1;
     }
-    actor->x = x << 8;
-    actor->y = y << 8;
-    actor->z = z << 8;
+    actor->x = x << FIELD_POSITION_SHIFT;
+    actor->y = y << FIELD_POSITION_SHIFT;
+    actor->z = z << FIELD_POSITION_SHIFT;
     return 0;
 }
 
@@ -288,7 +330,7 @@ s32 func_80087D8C(s32 key, s32 x, s32 y, s32 z)
  * @param script Script bytecode stored as the object's private script.
  * @return 0 when the script was started, or -1 when absent or in a non-interruptible command.
  */
-s32 func_80087E00(s32 key, u8* script)
+s32 field_start_actor_private_script(s32 key, u8* script)
 {
     FieldActor* actor;
     s16 command;
@@ -299,20 +341,20 @@ s32 func_80087E00(s32 key, u8* script)
         return -1;
     }
     command = actor->command;
-    if (command == 0x93 || command == 0x94)
+    if (command == FIELD_ACTOR_COMMAND_93 || command == FIELD_ACTOR_COMMAND_94)
     {
         return -1;
     }
-    if (command == 0x90 || command == 0xAE || command == 0x8E)
+    if (command == FIELD_ACTOR_COMMAND_90 || command == FIELD_ACTOR_COMMAND_AE || command == FIELD_ACTOR_COMMAND_TRANSITION)
     {
         return -1;
     }
     actor->script_index = FIELD_SCRIPT_OBJECT;
     g_field_object_states[actor->object_index].script = script;
     actor->script_offset = 0;
-    if (actor->command != 0x8B && actor->command != 0x99)
+    if (actor->command != FIELD_ACTOR_COMMAND_WALK_TO_TARGET && actor->command != FIELD_ACTOR_COMMAND_99)
     {
-        actor->command = 0;
+        actor->command = FIELD_ACTOR_COMMAND_NONE;
     }
     return 0;
 }
@@ -322,40 +364,39 @@ s32 func_80087E00(s32 key, u8* script)
  * @param index Entry index in the table's leading u16 offset list.
  * @return Address of the event script.
  */
-u8* func_80087EF0(s32 index)
+u8* field_get_event_script(s32 index)
 {
-    return g_field_event_scripts + ((u16*)g_field_event_scripts)[index];
+    return (u8*)g_field_event_scripts + g_field_event_scripts[index];
 }
 
 /**
  * @brief Find the object state that carries @p key.
  * @param key Object key to look up.
- * @return The matching object state, or (FieldObjectState*)-1.
+ * @return The matching object state, or FIELD_OBJECT_STATE_NONE.
  */
-FieldObjectState* func_80087F0C(s32 key)
+FieldObjectState* field_find_object_state(s32 key)
 {
     FieldObjectState* state;
     s32 i;
 
     state = g_field_object_states;
-    for (i = 0; i < FIELD_ACTOR_COUNT; i++)
+    for (i = 0; i < FIELD_ACTOR_COUNT; i++, state++)
     {
         if (state->key == key)
         {
             return state;
         }
-        state++;
     }
-    return (FieldObjectState*)-1;
+    return FIELD_OBJECT_STATE_NONE;
 }
 
 /**
  * @brief Copy the position of the actor with @p key.
  * @param key Object key to look up.
- * @param position Receives the actor's X, Y and Z position.
+ * @param position Receives the actor's fixed-point position.
  * @return 0 on success, or -1 when no actor has @p key.
  */
-s32 func_80087F44(s32 key, FieldActorPosition* position)
+s32 field_get_actor_position(s32 key, Vec3i* position)
 {
     FieldActor* actor;
 
@@ -371,12 +412,12 @@ s32 func_80087F44(s32 key, FieldActorPosition* position)
 }
 
 /**
- * @brief Set the nine-bit control mode of the actor with @p key.
+ * @brief Set the control mode of the actor with @p key.
  * @param key Object key to look up.
- * @param mode New control mode; only its low nine bits are used.
+ * @param mode New control mode; only the FIELD_CONTROL_MODE_MASK bits are used.
  * @return -1 when no actor has @p key, otherwise 0.
  */
-s32 func_80087FC0(s32 key, s32 mode)
+s32 field_set_actor_control_mode(s32 key, s32 mode)
 {
     FieldActor* actor;
     s32 control_mode;
@@ -388,40 +429,37 @@ s32 func_80087FC0(s32 key, s32 mode)
     {
         return -1;
     }
-    actor->control.word = (actor->control.word & ~0x1FF) | (mode & 0x1FF);
-    control_mode = actor->control.half[0] & 0x1FF;
-    if (control_mode != 1)
+    actor->control.word = (actor->control.word & ~FIELD_CONTROL_MODE_MASK) | (mode & FIELD_CONTROL_MODE_MASK);
+    control_mode = actor->control.half[0] & FIELD_CONTROL_MODE_MASK;
+    switch (control_mode)
     {
-        if (control_mode < 2)
+    case FIELD_CONTROL_PLAYER:
+        object_index = actor->object_index;
+        actor->script_index = FIELD_SCRIPT_NONE;
+        actor->unk10 = 0;
+        if (object_index == FIELD_SECOND_MEMBER)
         {
-            if (control_mode == 0)
+            if (!(g_pad_ctx->menu_option_flags & FIELD_OPTION_VIBRATION))
             {
-                object_index = actor->object_index;
-                actor->script_index = FIELD_SCRIPT_NONE;
-                actor->unk10 = 0;
-                if (object_index == 1)
-                {
-                    if (!(g_pad_ctx->menu_option_flags & PAD_OPTION_SECOND_LEADER))
-                    {
-                        render_state->leader_object_index = 0;
-                    }
-                    else
-                    {
-                        render_state->leader_object_index = object_index;
-                    }
-                }
+                render_state->leader_object_index = 0;
+            }
+            else
+            {
+                render_state->leader_object_index = object_index;
             }
         }
-    }
-    else
-    {
+        break;
+    case FIELD_CONTROL_FOLLOWER:
         actor->script_index = FIELD_SCRIPT_NONE;
         actor->unk10 = 0;
         field_refresh_party_routes();
-        if (actor->object_index == control_mode)
+        if (actor->object_index == FIELD_SECOND_MEMBER)
         {
             render_state->leader_object_index = 0;
         }
+        break;
+    case FIELD_CONTROL_SCRIPTED:
+        break;
     }
     return 0;
 }

@@ -87,7 +87,7 @@ extern s32 g_field_song_volume;
 extern s32 D_8011F310;
 extern s32 D_8011F314;
 extern AkaoHeader *D_8011F304;
-extern u8 *D_8010D038;
+extern u8 *g_field_cd_buffer;
 extern u8 D_800EC398[];
 
 /* External callees (declared here with the signature every user shares). */
@@ -406,7 +406,7 @@ void func_800A39A8(s32 sfx_index, s32 pan, s32 arg2, s32 channel_group)
  */
 void func_800A3A90(s32 sfx_index, s32 pan, s32 table_index, s32 channel_group)
 {
-    extern s32 D_8011BF00;
+    extern s32 g_field_sound_tables;
     s32 *table;
     s32 base;
     s32 i;
@@ -416,7 +416,7 @@ void func_800A3A90(s32 sfx_index, s32 pan, s32 table_index, s32 channel_group)
 
     if (table_index < 2)
     {
-        p = (u8 *)&D_8011BF00;
+        p = (u8 *)&g_field_sound_tables;
         table = (s32 *)(p + table_index * 0x1A00);
         if (table[0] != 0)
         {
@@ -504,7 +504,7 @@ void func_800A3BE8(s32 bank_id)
         header = (FieldBankCopyHeader *)offsets;
     }
     cursor = (u8 *)header + sizeof(*header);
-    offsets = (s32 *)D_8010D038;
+    offsets = (s32 *)g_field_cd_buffer;
 
     cdrom_queue_read(resource_id, offsets);
     src = (u8 *)offsets;
@@ -566,7 +566,7 @@ void func_800A3BE8(s32 bank_id)
  */
 void func_800A3D44(s32 slot, s32 bank_id)
 {
-    extern u8 D_8011BF00[];
+    extern u8 g_field_sound_tables[];
     u8 *dst;
     u8 *base;
     u8 *src;
@@ -575,13 +575,13 @@ void func_800A3D44(s32 slot, s32 bank_id)
 
     if (bank_id != -2)
     {
-        base = D_8011BF00;
+        base = g_field_sound_tables;
         dst = base + slot * 0x1A00;
         *(s32 *)dst = 0;
         if (bank_id != -1)
         {
             bank_id += 0x83;
-            src = D_8010D038;
+            src = g_field_cd_buffer;
             cdrom_queue_read(bank_id & 0xFFFF, src);
             cdrom_wait_queue_empty();
             end = src + *(s32 *)(src + (*(s32 *)src * 4));

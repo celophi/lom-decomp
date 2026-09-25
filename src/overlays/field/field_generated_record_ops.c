@@ -40,7 +40,7 @@ typedef struct FieldItemNameTable
     } body;
 } FieldItemNameTable;
 
-extern FieldGameState* D_80122B74;
+extern FieldGameState* g_field_game_state;
 extern FieldItemStaging* D_80123FC4;
 extern FieldItemTables* D_80123FC0;
 
@@ -63,12 +63,12 @@ void func_800BFA34(void)
     record = D_80123FC4->record;
     if (record->kind == 0)
     {
-        func_800C37A8(D_80122B74->unkD8, (struct FieldItemKey*)&record->unk38);
+        func_800C37A8(g_field_game_state->unkD8, (struct FieldItemKey*)&record->unk38);
         func_800BFE70(D_80123FC4->category * 16 + D_80123FC4->item_type, D_80123FC4->item_subtype + FIELD_SUBTYPE_NAME_BASE, (u8*)D_80123FC4->record);
     }
     else if (record->unk38 == 0 && record->unk3C == 0)
     {
-        func_800C37A8(D_80122B74->unkD8, (struct FieldItemKey*)&record->unk38);
+        func_800C37A8(g_field_game_state->unkD8, (struct FieldItemKey*)&record->unk38);
     }
 
     D_80123FC4->record->info.bits.category = D_80123FC4->category;

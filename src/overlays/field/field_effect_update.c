@@ -4350,7 +4350,7 @@ s32 *func_80075C88(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32
                                     actor->track_count++;
                                     g_field_object_states[contact.index].contact.flags |= 0x80;
 
-                                    func_8008A840(actor->owner_object_index, contact.index);
+                                    field_resolve_contact_hit(actor->owner_object_index, contact.index);
                                     attach_x = contact.x - sxy->x;
                                     /* layer doubles as the mask: a separate local moves the tpage layer to v1 (99.98%). */
                                     layer = ~0x1800;
@@ -4395,8 +4395,8 @@ s32 *func_80075C88(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32
                                                 g_field_actors[contact.index].facing_or_reward_kind &= 0x7F;
                                                 if (contact.index < 2)
                                                 {
-                                                    func_800A2DD8(contact.index);
-                                                    g_field_object_states[contact.index].targets[13] = 0;
+                                                    field_command_history_clear(contact.index);
+                                                    g_field_object_states[contact.index].retry_count = 0;
                                                     g_field_actors[contact.index].reference_index = 0;
                                                 }
                                             }
@@ -4412,19 +4412,19 @@ s32 *func_80075C88(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32
                                                 switch (rec->facing_or_reward_kind & 0x7F)
                                                 {
                                                 case 0x48:
-                                                    y_offset = func_8008A9D8(rec->source_object_index, contact.index, 0x10);
+                                                    y_offset = field_resolve_object_hit(rec->source_object_index, contact.index, 0x10);
                                                     break;
                                                 case 0x49:
-                                                    y_offset = func_8008A9D8(rec->source_object_index, contact.index, 0x11);
+                                                    y_offset = field_resolve_object_hit(rec->source_object_index, contact.index, 0x11);
                                                     break;
                                                 case 0x3E:
-                                                    y_offset = func_8008A9D8(rec->source_object_index, contact.index, 0x19);
+                                                    y_offset = field_resolve_object_hit(rec->source_object_index, contact.index, 0x19);
                                                     break;
                                                 case 0x45:
-                                                    y_offset = func_8008A9D8(rec->source_object_index, contact.index, 0x1A);
+                                                    y_offset = field_resolve_object_hit(rec->source_object_index, contact.index, 0x1A);
                                                     break;
                                                 default:
-                                                    y_offset = func_8008A840(rec->source_object_index, contact.index);
+                                                    y_offset = field_resolve_contact_hit(rec->source_object_index, contact.index);
                                                     break;
                                                 }
                                             }
@@ -4432,7 +4432,7 @@ s32 *func_80075C88(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32
                                             {
                                                 if (!((u16) g_field_actors[contact.index].flags & 0x1FF))
                                                 {
-                                                    func_800A2DD8(contact.index);
+                                                    field_command_history_clear(contact.index);
                                                 }
                                             }
                                             if (y_offset == 1)
@@ -5161,7 +5161,7 @@ s32 *func_80077FB4(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32
                                         }
                                         actor->track_offsets[actor->track_count].y = (s16) (contact.y - target_screen->y);
                                         actor->track_count = (u8) (actor->track_count + 1);
-                                        func_8008A840(actor->owner_object_index, contact.index);
+                                        field_resolve_contact_hit(actor->owner_object_index, contact.index);
                                         /* Loop-depth weight on slot: plain, block-local and chained forms swap s2/s3 (99.44%). */
                                         do
                                         {
@@ -5187,7 +5187,7 @@ s32 *func_80077FB4(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32
                                     }
                                     else
                                     {
-                                        if ((func_8008A840(rec->source_object_index, contact.index) == 1) && ((slot->sequence_command == 1) || (slot->sequence_command == 3) || (slot->sequence_command == 0x10)))
+                                        if ((field_resolve_contact_hit(rec->source_object_index, contact.index) == 1) && ((slot->sequence_command == 1) || (slot->sequence_command == 3) || (slot->sequence_command == 0x10)))
                                         {
                                             slot->sequence_command = 0x1E;
                                         }

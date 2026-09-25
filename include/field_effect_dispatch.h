@@ -2,6 +2,7 @@
 #define FIELD_EFFECT_DISPATCH_H
 
 #include "common.h"
+#include "field_runtime.h"
 
 /** @brief Rendering state shared by field actor and effect packet builders. */
 typedef struct
@@ -11,6 +12,9 @@ typedef struct
     u8 pad44[0x40B8 - 0x44];
     s32 *packet_cursor;
 } FieldRenderContext;
+
+/** @brief Render half being built this frame. */
+extern FieldRenderHalf* g_field_render_half;
 
 void field_render_effects(FieldRenderContext *render_context);
 

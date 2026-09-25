@@ -1,174 +1,204 @@
 /**
  * @file field_actor_input_actions.c
- * @brief Map controller input to actor actions, animation IDs, and input-state changes.
+ * @brief Map controller input to actor actions, action commands and the run button.
  */
 
 #include "common.h"
-#include "field_calls.h"
+#include "main.h"
+#include "pad.h"
 #include "controller_internal.h"
-#include "field_contact_geometry.h"
-#include "field_object_state.h"
+#include "field_actor_tables.h"
+#include "field_calls.h"
 #include "field_text.h"
 
-/** @brief Stride of one player's block in the pad context. */
-#define FIELD_PAD_PLAYER_STRIDE 0x250
+/** @brief Number of action buttons a player can bind (four face buttons, four shoulder buttons). */
+#define FIELD_BUTTON_BINDING_COUNT 8
 
-/** @brief Offset of a player's eight action bindings in the pad context. */
-#define FIELD_PAD_ACTION_BINDINGS 0x638
+/** @brief Number of party objects (two players and a companion). */
+#define FIELD_PARTY_COUNT 3
 
-/** @brief Number of action bindings per player. */
-#define FIELD_ACTION_BINDING_COUNT 8
-
-/** @brief Number of actions with an animation-map entry. */
+/** @brief Number of actions with an entry in an action command map. */
 #define FIELD_ACTION_MAP_ENTRY_COUNT 11
 
-/** @brief Action returned by func_800A29F8 when no action is queued. */
+/** @brief Action returned by the command history when no action is queued. */
 #define FIELD_ACTION_NONE 0xFF
 
-/** @brief One action-animation map: eleven animation ids and their disable flags. */
+/** @brief Actions 2 and 3 stay available while FIELD_OBJECT_ACTIONS_RESTRICTED is set. */
+#define FIELD_ACTION_RESTRICTED_FIRST 2
+#define FIELD_ACTION_RESTRICTED_LAST 3
+
+/** @brief First action blocked while g_field_actions_limited is set. */
+#define FIELD_ACTION_BLOCKABLE_FIRST 4
+
+/** @brief Shift of the mirror bit in an actor's animation byte. */
+#define FIELD_ANIMATION_FACING_SHIFT 7
+
+/** @brief Animation that keeps the action chain alive while no action is queued. */
+#define FIELD_ANIMATION_UNK3D 0x3D
+
+/** @brief Object flag: only the restricted actions are accepted. */
+#define FIELD_OBJECT_ACTIONS_RESTRICTED 0x400
+
+/** @brief Object flag: an action chain is running (cleared with the retry count). */
+#define FIELD_OBJECT_CHAINING 0x8000
+
+/** @brief Sound played when a restricted object tries another action, and its pan. */
+#define FIELD_SOUND_ACTION_REFUSED 0x78
+#define FIELD_SOUND_PAN_CENTRE 0x80
+
+/** @brief Buttons that confirm (start an interaction). */
+#define FIELD_CONFIRM_BUTTONS (PAD_BTN_CROSS | PAD_BTN_L3)
+
+/** @brief The four shoulder buttons, which keep their bits through the face-button remap. */
+#define FIELD_SHOULDER_BUTTONS (PAD_BTN_L2 | PAD_BTN_R2 | PAD_BTN_L1 | PAD_BTN_R1)
+
+/** @brief Buttons that make the actor run while held. */
+#define FIELD_RUN_BUTTONS (PAD_BTN_CIRCLE | PAD_BTN_L1)
+
+/** @brief Status returned by field_text_get_status for a closed text window. */
+#define FIELD_TEXT_CLOSED (-1)
+
+/** @brief Saved character record of the pad context (SAVED_CHARACTER_SIZE bytes). */
 typedef struct
 {
-    u16 animations[FIELD_ACTION_MAP_ENTRY_COUNT];
+    u8 unk0[0x48];
+    /** @brief Action binding code assigned to each bindable button. */
+    u8 button_actions[FIELD_BUTTON_BINDING_COUNT];
+    u8 unk50[SAVED_CHARACTER_SIZE - 0x50];
+} FieldSavedCharacter;
+
+/** @brief Pad context view holding the three saved characters. */
+typedef struct
+{
+    u8 unk0[0x5F0];
+    FieldSavedCharacter characters[FIELD_PARTY_COUNT];
+} FieldSavedParty;
+
+/** @brief The live saved game, viewed through FieldSavedParty. */
+#define FIELD_SAVED_PARTY ((FieldSavedParty*)g_pad_ctx)
+
+/** @brief One action command map: eleven actor command words and their disable flags. */
+typedef struct
+{
+    u16 commands[FIELD_ACTION_MAP_ENTRY_COUNT];
     u8 disabled[FIELD_ACTION_MAP_ENTRY_COUNT];
     u8 pad;
 } FieldActionMap;
 
-/** @brief Actor fields updated from the held buttons (0x54-byte actor record). */
-typedef struct
-{
-    u8 pad0[0x24];
-    u8 unk24;
-    u8 pad25[0x33 - 0x25];
-    u8 button_held;
-    u8 pad34[0x3B - 0x34];
-    u8 resource_index;
-} FieldInputActor;
-
-/** @brief Resource entry flags; bit 0 disables input handling. */
-typedef struct
-{
-    u8 pad0[0x10];
-    u32 flags;
-} FieldInputResource;
-
-extern u8 D_800EB23C[];
-extern u8 D_800EB244[];
-extern u8* g_pad_ctx;
-extern FieldMotionRecord g_field_actors[];
+/** @brief Pad button mask of each bindable button, in binding order. */
+extern u8 g_field_binding_buttons[FIELD_BUTTON_BINDING_COUNT];
+/** @brief Action binding code of each action. */
+extern u8 g_field_action_binding_codes[];
 extern s32 g_field_active_group;
-extern s32 D_800F229C;
-extern s32 D_8010AE78;
+extern s32 g_field_dialog_screen_mode;
+extern s32 g_field_interaction_active;
 extern s32 g_field_buffered_input;
-extern FieldActionMap g_field_action_animation_maps[];
+extern FieldActionMap g_field_action_command_maps[];
 extern s32 g_field_action_context;
-extern s32 D_8010AE54;
-extern FieldInputResource g_field_resource_entries[];
+extern s32 g_field_actions_limited;
+
+/* field_contact_geometry.h cannot be included next to field_actor_tables.h (two g_field_object_states types). */
+void field_probe_actor_interaction(struct FieldMotionRecord* entry);
 
 /**
- * @brief Build the held-button mask of the buttons bound to an action.
- * @param player Controller port and pad-context player index.
+ * @brief Collect the held buttons that are bound to an action.
+ * @param player Controller port and saved character index.
  * @param action Action whose bound buttons are collected.
- * @param actor Actor that must be a party member with no active motion flags.
+ * @param actor Actor that must be a party member in control mode 0.
  * @return The held bound buttons, or zero when input is unavailable.
  */
-s32 func_80091728(s32 player, s32 action, FieldMotionRecord* actor)
+s32 field_get_held_action_buttons(s32 player, s32 action, FieldActor* actor)
 {
     s32 mask;
     s32 i;
-    u8 binding;
+    u8 code;
     ControllerPortState* ports;
     ControllerSample* sample;
     u32 buttons;
-    u8* player_block;
 
     ports = CONTROLLER_STATE->ports;
-    if (actor->source_object_index < 3)
+    if (actor->object_index < FIELD_PARTY_COUNT)
     {
-        if ((actor->flags & 0x1FF) == 0)
+        if ((actor->control.word & FIELD_CONTROL_MODE_MASK) == 0)
         {
             mask = 0;
-            i = 0;
-            binding = D_800EB244[action];
-            player_block = g_pad_ctx + player * FIELD_PAD_PLAYER_STRIDE;
-            do
+            code = g_field_action_binding_codes[action];
+            for (i = 0; i < FIELD_BUTTON_BINDING_COUNT; i++)
             {
-                if (binding == *(player_block + i + FIELD_PAD_ACTION_BINDINGS))
+                if (code == FIELD_SAVED_PARTY->characters[player].button_actions[i])
                 {
-                    mask |= D_800EB23C[i];
+                    mask |= g_field_binding_buttons[i];
                 }
-                i += 1;
-            } while (i < FIELD_ACTION_BINDING_COUNT);
+            }
             sample = &ports[player].published_sample;
             if (sample->device_type < CONTROLLER_DEVICE_CONFIGURING)
             {
                 buttons = (u32)sample->held_buttons >> 8;
-                return (((buttons >> 1) & 0x20) | ((buttons & 0x20) * 2) | ((buttons >> 3) & 0x10) | ((buttons & 0x10) * 8) | (buttons & 0xF)) & mask;
+                return (((buttons >> 1) & PAD_BTN_CROSS) | ((buttons & PAD_BTN_CROSS) << 1) | ((buttons >> 3) & PAD_BTN_SQUARE) | ((buttons & PAD_BTN_SQUARE) << 3) | (buttons & FIELD_SHOULDER_BUTTONS)) & mask;
             }
-            return 0;
         }
-        return 0;
     }
     return 0;
 }
 
 /**
- * @brief Start a leader interaction probe when the confirm input is buffered and nothing blocks it.
+ * @brief Let the leader probe for an interaction when confirm is pressed and nothing blocks it.
  */
-void func_8009184C(void)
+void field_poll_leader_interaction(void)
 {
     s32 first_status;
     s32 second_status;
 
-    if ((g_field_active_group == 0) && (g_field_actors[0].motion_parameter == 0) && (D_800F229C == 0) && (D_8010AE78 == 0) && (g_field_buffered_input & 0x220))
+    if ((g_field_active_group == 0) && (g_field_actors[0].command == 0) && (g_field_dialog_screen_mode == 0) && (g_field_interaction_active == 0) && (g_field_buffered_input & FIELD_CONFIRM_BUTTONS))
     {
         first_status = field_text_get_status(0);
         second_status = field_text_get_status(1);
-        if ((g_field_active_group == 0) && (first_status == -1) && (second_status == first_status))
+        if ((g_field_active_group == 0) && (first_status == FIELD_TEXT_CLOSED) && (second_status == first_status))
         {
-            field_probe_actor_interaction(g_field_actors);
+            field_probe_actor_interaction((struct FieldMotionRecord*)g_field_actors);
         }
     }
 }
 
 /**
- * @brief Resolve an actor action into an enabled animation ID.
- * @param actor Actor state to query and update.
- * @param map_index Action-animation map passed to the action selector.
- * @return Enabled animation ID, or zero when no animation is available.
+ * @brief Turn the player's queued action into an enabled actor command word.
+ * @param actor Player actor; its action chain is reset when no action is queued.
+ * @param player Player index: command history and action command map.
+ * @return Command word from the player's action command map, or zero when none is available.
  */
-u16 func_80091914(FieldMotionRecord* actor, s32 map_index)
+u16 field_resolve_action_command(FieldActor* actor, s32 player)
 {
     s32 action;
 
-    action = func_800A29F8(map_index, (actor->facing_or_reward_kind >> 7) ^ 1, 0);
+    action = func_800A29F8(player, (actor->animation >> FIELD_ANIMATION_FACING_SHIFT) ^ 1, 0);
     if (action != FIELD_ACTION_NONE)
     {
         g_field_action_context = (g_field_action_context & ~0xFF) | action;
     }
-    else if ((actor->facing_or_reward_kind & 0x7F) != 0x3D)
+    else if ((actor->animation & FIELD_ANIMATION_INDEX_MASK) != FIELD_ANIMATION_UNK3D)
     {
-        actor->reference_index = 0;
-        g_field_object_states[actor->source_object_index].object_flags &= 0xFFFF7FFF;
-        g_field_object_states[actor->source_object_index].targets[13] = 0;
+        actor->variant = 0;
+        g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_CHAINING;
+        g_field_object_states[actor->object_index].retry_count = 0;
     }
-    if (g_field_object_states[actor->source_object_index].object_flags & 0x400)
+    if (g_field_object_states[actor->object_index].flags & FIELD_OBJECT_ACTIONS_RESTRICTED)
     {
-        if (action != 2 && action != 3)
+        if (action != FIELD_ACTION_RESTRICTED_FIRST && action != FIELD_ACTION_RESTRICTED_LAST)
         {
             if (action != FIELD_ACTION_NONE)
             {
-                func_800A3938(0x78, 0x80);
+                func_800A3938(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
             }
             return 0;
         }
     }
     if (action < FIELD_ACTION_MAP_ENTRY_COUNT)
     {
-        if (D_8010AE54 == 0 || action < 4)
+        if (g_field_actions_limited == 0 || action < FIELD_ACTION_BLOCKABLE_FIRST)
         {
-            if (g_field_action_animation_maps[map_index].animations[action] != 0 && g_field_action_animation_maps[map_index].disabled[action] == 0)
+            if (g_field_action_command_maps[player].commands[action] != 0 && g_field_action_command_maps[player].disabled[action] == 0)
             {
-                return g_field_action_animation_maps[map_index].animations[action];
+                return g_field_action_command_maps[player].commands[action];
             }
         }
     }
@@ -176,39 +206,39 @@ u16 func_80091914(FieldMotionRecord* actor, s32 map_index)
 }
 
 /**
- * @brief Track whether an actor's controller holds one of the 0x44 buttons.
- * @param actor Actor state to update.
- * @param port Controller port to read.
+ * @brief Set or clear the actor's running flag while a run button is held.
+ * @param actor Player actor; resources with an action table never run.
+ * @param player Controller port to read.
  */
-void func_80091AC8(FieldInputActor* actor, s32 port)
+void field_update_actor_run_button(FieldActor* actor, s32 player)
 {
     u16 raw;
-    s32 input;
+    u32 buttons;
     ControllerPortState* ports;
 
     ports = CONTROLLER_STATE->ports;
-    if (!(g_field_resource_entries[actor->resource_index].flags & 1))
+    if (!(g_field_resource_entries[actor->resource_index].flags & FIELD_RESOURCE_HAS_ACTIONS))
     {
-        input = 0;
-        if (ports[port].published_sample.device_type < CONTROLLER_DEVICE_CONFIGURING)
+        buttons = 0;
+        if (ports[player].published_sample.device_type < CONTROLLER_DEVICE_CONFIGURING)
         {
-            raw = ports[port].published_sample.held_buttons;
-            input = ((raw << 8) & 0xFF00) | (raw >> 8);
+            raw = ports[player].published_sample.held_buttons;
+            buttons = ((raw << 8) & 0xFF00) | (raw >> 8);
         }
 
-        input = ((u32)(input & 0x40) >> 1) | ((input & 0x20) * 2) | ((u32)(input & 0x80) >> 3) | ((input & 0x10) * 8) | (input & ~0xF0);
-        if (input & 0x44)
+        buttons = PAD_REMAP_FACE_BITS(buttons);
+        if (buttons & FIELD_RUN_BUTTONS)
         {
-            if (actor->button_held == 0)
+            if (actor->running == 0)
             {
-                actor->button_held = 1;
-                actor->unk24 = 0;
+                actor->running = 1;
+                actor->animation_active = 0;
             }
         }
-        else if (actor->button_held != 0)
+        else if (actor->running != 0)
         {
-            actor->button_held = 0;
-            actor->unk24 = 0;
+            actor->running = 0;
+            actor->animation_active = 0;
         }
     }
 }

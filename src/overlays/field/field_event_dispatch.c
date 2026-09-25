@@ -7,10 +7,10 @@
 #include "field_calls.h"
 #include "field_records.h"
 
-extern FieldRuntimeContext* D_80122B78;
+extern FieldRuntimeContext* g_field_runtime;
 
 void field_script_run(FieldScriptState* state);
-u8* func_80087EF0(s32 script_id);
+u8* field_get_event_script(s32 script_id);
 /* Declared without a prototype: func_800B286C forwards its own a0 without reloading it. */
 FieldActorRecord* func_800C1B60();
 u8* func_800C28F8(s32 owner_id, s32 event_index);
@@ -76,7 +76,7 @@ s32 func_800B28E0(s32 owner_id, s32 event_id, s32 mode)
                     return -1;
                 }
             }
-            if ((D_80122B78->state.flags & 0x10000) && (owner_id < FIELD_PARTY_SIZE))
+            if ((g_field_runtime->state.flags & 0x10000) && (owner_id < FIELD_PARTY_SIZE))
             {
                 actor->script.frames[actor->script.depth].pc = func_800C28F8(owner_id, event_id & 0xFF);
             }
@@ -87,7 +87,7 @@ s32 func_800B28E0(s32 owner_id, s32 event_id, s32 mode)
                 {
                     return -1;
                 }
-                actor->script.frames[actor->script.depth].pc = func_80087EF0(script_id & 0x7FFF);
+                actor->script.frames[actor->script.depth].pc = field_get_event_script(script_id & 0x7FFF);
             }
             actor->script.frames[actor->script.depth].wait.bits.resume = 0;
             actor->script.frames[actor->script.depth].wait.bits.frames = 0;

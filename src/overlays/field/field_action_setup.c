@@ -1,157 +1,257 @@
 /**
  * @file field_action_setup.c
- * @brief Resolve a field battle action: bind its records, classify it and
- *        apply its outcome.
+ * @brief Resolve a field battle action: bind its records, check the target's
+ *        guard and stance, and apply the outcome.
  */
 
 #include "game_audio.h"
 #include "common.h"
 #include "field_calls.h"
 #include "field_records.h"
+#include "sdk/rand.h"
 
 /** @brief Event slot run on the attacker and the target when an action resolves. */
 #define FIELD_ACTION_EVENT 0xC
 
-/** @brief Signal sent to an actor that dodges or cancels an action. */
-#define FIELD_ACTION_SIGNAL_CANCEL 0x90
+/** @brief FIELD_ACTION_EVENT modes. */
+enum
+{
+    FIELD_ACTION_EVENT_MISS = 0,     /**< Target: the action missed or was ignored. */
+    FIELD_ACTION_EVENT_HURT = 1,     /**< Target: hit and still standing. */
+    FIELD_ACTION_EVENT_DEFEATED = 2, /**< Target: hit and defeated. */
+    FIELD_ACTION_EVENT_HIT = 4,      /**< Attacker: the hit landed. */
+    FIELD_ACTION_EVENT_KILL = 5      /**< Attacker: the hit defeated the target. */
+};
+
+/** @brief Results of field_battle_check_target_guard. */
+enum
+{
+    FIELD_GUARD_NONE = 0,
+    FIELD_GUARD_IGNORED = 1,
+    FIELD_GUARD_BLOCKED = 2
+};
+
+/** @brief Results of field_battle_check_target_stance. */
+enum
+{
+    FIELD_STANCE_NONE = 0,
+    FIELD_STANCE_WEAPON_GUARD = 1,
+    FIELD_STANCE_IMMUNE = 2,
+    FIELD_STANCE_REPEL = 3
+};
 
 /** @brief Kind of an action descriptor (low nibble of its first word). */
-#define FIELD_DESCRIPTOR_KIND(descriptor) ((descriptor)->info.word & 0xF)
+#define FIELD_DESCRIPTOR_KIND_MASK 0xF
+#define FIELD_DESCRIPTOR_KIND(descriptor) ((descriptor)->info.word & FIELD_DESCRIPTOR_KIND_MASK)
 
 /** @brief Status intensity shift of an action descriptor (bits 8-10). */
 #define FIELD_DESCRIPTOR_SHIFT(descriptor) (((descriptor)->info.word >> 8) & 7)
 
-/** @brief Action id of the move that is always handled immediately. */
-#define FIELD_ACTION_IMMEDIATE 0x3B
+/** @brief Both defense slot bits of an action descriptor (bits 6-7). */
+#define FIELD_DESCRIPTOR_DEFENSE_SLOT_MASK 0xC0
 
-/** @brief Action id of the move that checks the attacker's weapon type. */
-#define FIELD_ACTION_WEAPON_CHECK 0x22
+/** @brief FieldStatusRecordMeta::bits.kind as a mask of the packed word. */
+#define FIELD_STATUS_META_KIND_MASK 0xFC00
+#define FIELD_STATUS_META_KIND_SHIFT 10
 
-extern FieldBattleContext* D_80123FB0;
-extern FieldGameState* D_80122B74;
+/** @brief Guard flags in FieldStatusRecordMeta::bytes.unk2. */
+#define FIELD_GUARD_FLAG_DEFLECT 0x1000 /**< Deflects descriptor kinds 2 and 3. */
+#define FIELD_GUARD_FLAG_COUNTER 0x2000 /**< Counters descriptor kind 0. */
+#define FIELD_GUARD_FLAG_BLOCK 0x4000   /**< Blocks every action. */
+#define FIELD_GUARD_FLAG_IGNORE 0x8000  /**< Ignores every action. */
 
-FieldActionDescriptor* func_800B50B8(void);
-s32 func_8008ADB4(s32 record_id);
-void func_8008AB2C(s32 actor_id, s32 value);
-void func_8008B500(s32 actor_id, s32 signal_id);
-s32 rand(void);
+/** @brief FieldStatusRecord::status_flags bits read here; meanings unknown. */
+#define FIELD_RECORD_STATUS_10 0x10
+#define FIELD_RECORD_STATUS_80 0x80
+#define FIELD_RECORD_STATUS_100 0x100
 
-void func_800B5948(FieldBattleAction* action, s32 resolve_descriptor);
-s32 func_800B5A88(void);
-s32 func_800B5C54(void);
-void func_800B5D60(s32 amount);
-void func_800B5E5C(void);
+/** @brief FieldStatusState::effect_flags bits read here. */
+#define FIELD_EFFECT_NO_INTENSITY 0x200    /**< The attacker's intensity does not rise. */
+#define FIELD_EFFECT_HOLD_MODIFIERS 0x8000 /**< The held action modifiers survive the action. */
+
+/** @brief Fields of FieldStatusRecord::unkC. */
+#define FIELD_RECORD_ACTION_MODIFIERS 0xFF     /**< Cleared after every action. */
+#define FIELD_RECORD_HELD_MODIFIERS 0xFF00     /**< Cleared unless FIELD_EFFECT_HOLD_MODIFIERS. */
+#define FIELD_RECORD_DEFEAT_FLAGS 0xFF000000U  /**< Set on the target when it is defeated. */
+
+/** @brief FIELD_RECORD_DEFEAT_FLAGS bits; meanings unknown. */
+#define FIELD_DEFEAT_FLAG_24 0x01000000
+#define FIELD_DEFEAT_FLAG_25 0x02000000
+#define FIELD_DEFEAT_FLAG_26 0x04000000
+#define FIELD_DEFEAT_FLAG_27 0x08000000
+#define FIELD_DEFEAT_FLAG_28 0x10000000
+#define FIELD_DEFEAT_FLAG_29 0x20000000
+
+/** @brief Status slot ids tested with func_800B4CE4. */
+#define FIELD_SLOT_DEFEAT_FLAG_29 3     /**< Attacker marks a defeated target with flag 29. */
+#define FIELD_SLOT_POWER_BOOST 4        /**< Kinds 0 and 1 hit with 1.5 times the power. */
+#define FIELD_SLOT_QUICK_INTENSITY 7    /**< Attacker's intensity rises twice as fast. */
+#define FIELD_SLOT_DEFEAT_FLAGS_26_27 9 /**< Attacker marks a defeated target with flags 26 and 27. */
+#define FIELD_SLOT_DEFEAT_FLAG_25 13    /**< Attacker marks a defeated target with flag 25. */
+#define FIELD_SLOT_REPEL_KIND_4 0x34    /**< Target repels descriptor kind 4. */
+#define FIELD_SLOT_REPEL_KIND_5 0x35    /**< Target repels descriptor kind 5. */
+
+/** @brief Target animations (field_get_actor_animation) that change how an action lands. */
+#define FIELD_ANIM_WEAPON_GUARD 0x22 /**< Kind 1 fails against a spear or staff. */
+#define FIELD_ANIM_IMMUNE 0x3B       /**< Kind 1 always fails. */
+#define FIELD_ANIM_REPEL_A 10        /**< Kind 4 is repelled with FIELD_RECORD_STATUS_10. */
+#define FIELD_ANIM_REPEL_B 11
+
+/**
+ * @brief Weapon types (FIELD_ITEM_TYPE) that guard in FIELD_ANIM_WEAPON_GUARD.
+ * @note Names assume the in-game weapon order (knife, sword, axe, ...).
+ */
+#define FIELD_WEAPON_SPEAR 6
+#define FIELD_WEAPON_STAFF 7
+
+/** @brief Effect animation (field_spawn_shared_animation_actor) of a target that repels an action. */
+#define FIELD_EFFECT_ANIM_REPEL 0x90
+
+/** @brief Status effect put on an attacker by a countering target. */
+#define FIELD_COUNTER_EFFECT 4
+
+/** @brief Status effect a countering target drops. */
+#define FIELD_COUNTER_CLEARED_EFFECT 6
+
+/** @brief Status effect put on a record whose action counter runs out. */
+#define FIELD_EXHAUSTED_EFFECT 5
+
+/** @brief func_800B2B54 chance threshold that always passes the 8-bit roll. */
+#define FIELD_CHANCE_ALWAYS 0x100
+
+/** @brief Highest status intensity. */
+#define FIELD_INTENSITY_MAX 255
+
+/** @brief Evasion that always evades. */
+#define FIELD_EVASION_ALWAYS 100
+
+/** @brief Record ids below this are the player characters. */
+#define FIELD_PLAYER_RECORD_COUNT 2
+
+extern FieldBattleContext* g_field_battle;
+extern FieldGameState* g_field_game_state;
+
+FieldActionDescriptor* field_select_action_descriptor(void);
+s32 field_get_actor_animation(s32 key);
+s32 field_register_actor_hit(s32 key, s32 reaction);
+s32 field_spawn_shared_animation_actor(s32 key, s32 resource_index);
+
+static void field_battle_bind_action(FieldBattleAction* action, s32 resolve_descriptor);
+static s32 field_battle_check_target_stance(void);
+static s32 field_battle_check_target_guard(void);
+static void field_battle_run_down_counters(s32 amount);
+static void field_battle_raise_attacker_intensity(void);
 
 /**
  * @brief Resolve an action and apply its outcome to the attacker and the target.
  * @param action Action to resolve.
- * @return 1 when there is nothing to resolve or the action is cancelled, the
- *         nonzero result of func_800B5C54 or func_800B5A88, otherwise 0.
+ * @return 1 when there is nothing to resolve or the target repels the action,
+ *         the guard or stance result when one stops it, otherwise 0.
  */
-s32 func_800B5534(FieldBattleAction* action)
+s32 field_battle_resolve_action(FieldBattleAction* action)
 {
     s32 result;
     s32 effect;
 
-    if (D_80123FB0 == NULL)
+    if (g_field_battle == NULL)
     {
         return 1;
     }
-    if (D_80123FB0->state.flags < 0)
-    {
-        return 1;
-    }
-
-    func_800B5948(action, -1);
-    if (D_80123FB0->descriptor == NULL)
+    if (g_field_battle->state.flags < 0)
     {
         return 1;
     }
 
-    result = func_800B5C54();
-    if (result != 0)
+    field_battle_bind_action(action, -1);
+    if (g_field_battle->descriptor == NULL)
     {
-        if (result == 1)
+        return 1;
+    }
+
+    result = field_battle_check_target_guard();
+    if (result != FIELD_GUARD_NONE)
+    {
+        if (result == FIELD_GUARD_IGNORED)
         {
-            func_800B28E0(action->target_id, FIELD_ACTION_EVENT, 0);
+            func_800B28E0(action->target_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_MISS);
         }
-        D_80123FB0->attacker->unkC &= ~0xFF;
+        g_field_battle->attacker->unkC &= ~FIELD_RECORD_ACTION_MODIFIERS;
         return result;
     }
 
-    result = func_800B5A88();
-    if (result != 0)
+    result = field_battle_check_target_stance();
+    if (result != FIELD_STANCE_NONE)
     {
-        if (result == 3)
+        if (result == FIELD_STANCE_REPEL)
         {
-            func_8008B500(action->target_id, FIELD_ACTION_SIGNAL_CANCEL);
+            field_spawn_shared_animation_actor(action->target_id, FIELD_EFFECT_ANIM_REPEL);
             return 1;
         }
-        D_80123FB0->attacker->unkC &= ~0xFF;
+        g_field_battle->attacker->unkC &= ~FIELD_RECORD_ACTION_MODIFIERS;
         return result;
     }
 
-    if (!(D_80123FB0->attacker->state->effect_flags & 0x8000))
+    if (!(g_field_battle->attacker->state->effect_flags & FIELD_EFFECT_HOLD_MODIFIERS))
     {
-        D_80123FB0->attacker->unkC &= 0xFFFF00FF;
+        g_field_battle->attacker->unkC &= ~FIELD_RECORD_HELD_MODIFIERS;
     }
-    if (func_800B6808() != 0)
+    if (field_run_action_handler() != 0)
     {
-        func_800B5E5C();
-        if (D_80123FB0->target->state->current == 0)
+        field_battle_raise_attacker_intensity();
+        if (g_field_battle->target->state->current == 0)
         {
-            if (!D_80123FB0->action_flags.bits.follow_up)
+            if (!g_field_battle->action_flags.bits.follow_up)
             {
-                func_800B28E0(action->attacker_id, FIELD_ACTION_EVENT, 5);
+                func_800B28E0(action->attacker_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_KILL);
             }
-            func_800B28E0(action->target_id, FIELD_ACTION_EVENT, 2);
-            if (func_800B4CE4(D_80123FB0->attacker, 3) != 0)
+            func_800B28E0(action->target_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_DEFEATED);
+            if (func_800B4CE4(g_field_battle->attacker, FIELD_SLOT_DEFEAT_FLAG_29) != 0)
             {
-                D_80123FB0->target->unkC |= 0x20000000;
+                g_field_battle->target->unkC |= FIELD_DEFEAT_FLAG_29;
             }
-            if (func_800B4CE4(D_80123FB0->attacker, 0xD) != 0)
+            if (func_800B4CE4(g_field_battle->attacker, FIELD_SLOT_DEFEAT_FLAG_25) != 0)
             {
-                D_80123FB0->target->unkC |= 0x02000000;
+                g_field_battle->target->unkC |= FIELD_DEFEAT_FLAG_25;
             }
-            if (func_800B4CE4(D_80123FB0->attacker, 9) != 0)
+            if (func_800B4CE4(g_field_battle->attacker, FIELD_SLOT_DEFEAT_FLAGS_26_27) != 0)
             {
-                D_80123FB0->target->unkC |= 0x0C000000;
+                g_field_battle->target->unkC |= FIELD_DEFEAT_FLAG_26 | FIELD_DEFEAT_FLAG_27;
             }
-            if (func_800B2FF8(D_80123FB0->attacker) != 0)
+            if (func_800B2FF8(g_field_battle->attacker) != 0)
             {
-                D_80123FB0->target->unkC |= 0x08000000;
+                g_field_battle->target->unkC |= FIELD_DEFEAT_FLAG_27;
             }
-            if (D_80123FB0->attacker->status_flags & 0x100)
+            if (g_field_battle->attacker->status_flags & FIELD_RECORD_STATUS_100)
             {
-                D_80123FB0->target->unkC |= 0x10000000;
+                g_field_battle->target->unkC |= FIELD_DEFEAT_FLAG_28;
             }
-            if (D_80123FB0->attacker->status_flags & 0x80)
+            if (g_field_battle->attacker->status_flags & FIELD_RECORD_STATUS_80)
             {
-                D_80123FB0->target->unkC |= 0x01000000;
+                g_field_battle->target->unkC |= FIELD_DEFEAT_FLAG_24;
             }
-            effect = func_800B6334(D_80123FB0->target);
+            effect = field_battle_handle_defeat(g_field_battle->target);
             if (effect != 0)
             {
-                func_800B65CC(effect);
+                field_battle_finish(effect);
             }
         }
         else
         {
-            func_800B5D60(1);
-            func_800B28E0(action->attacker_id, FIELD_ACTION_EVENT, 4);
-            func_800B28E0(action->target_id, FIELD_ACTION_EVENT, 1);
-            D_80123FB0->target->unkC &= 0xFFFFFF;
-            func_8008AB2C(action->target_id, 0);
+            field_battle_run_down_counters(1);
+            func_800B28E0(action->attacker_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_HIT);
+            func_800B28E0(action->target_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_HURT);
+            g_field_battle->target->unkC &= ~FIELD_RECORD_DEFEAT_FLAGS;
+            field_register_actor_hit(action->target_id, 0);
         }
-        D_80123FB0->attacker->unkC &= ~0xFF;
+        g_field_battle->attacker->unkC &= ~FIELD_RECORD_ACTION_MODIFIERS;
         return 0;
     }
     else
     {
-        func_800B5D60(0);
-        func_800B28E0(action->target_id, FIELD_ACTION_EVENT, 0);
-        D_80123FB0->target->unkC &= 0xFFFFFF;
-        D_80123FB0->attacker->unkC &= ~0xFF;
+        field_battle_run_down_counters(0);
+        func_800B28E0(action->target_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_MISS);
+        g_field_battle->target->unkC &= ~FIELD_RECORD_DEFEAT_FLAGS;
+        g_field_battle->attacker->unkC &= ~FIELD_RECORD_ACTION_MODIFIERS;
         return 0;
     }
 }
@@ -161,96 +261,97 @@ s32 func_800B5534(FieldBattleAction* action)
  * @param action Action to bind, or NULL to clear the binding.
  * @param resolve_descriptor Nonzero to select the action descriptor as well.
  */
-void func_800B5948(FieldBattleAction* action, s32 resolve_descriptor)
+static void field_battle_bind_action(FieldBattleAction* action, s32 resolve_descriptor)
 {
     FieldActionDescriptor* descriptor;
     u32 info;
 
-    D_80123FB0->action = action;
+    g_field_battle->action = action;
     if (action == NULL)
     {
-        record_game_diagnostic(0x8001, (s32)func_800B5948, 0, 0);
+        record_game_diagnostic(0x8001, (s32)field_battle_bind_action, 0, 0);
         return;
     }
-    D_80123FB0->attacker = func_800B2A9C(action->attacker_id);
-    D_80123FB0->target = func_800B2A9C(action->target_id);
-    D_80123FB0->action_flags.word = 0;
-    D_80123FB0->action_flags.bits.side = func_800B302C(action->attacker_id, action->target_id);
+    g_field_battle->attacker = func_800B2A9C(action->attacker_id);
+    g_field_battle->target = func_800B2A9C(action->target_id);
+    g_field_battle->action_flags.word = 0;
+    g_field_battle->action_flags.bits.side = func_800B302C(action->attacker_id, action->target_id);
     if (resolve_descriptor != 0)
     {
-        D_80123FB0->descriptor = func_800B50B8();
-        if (func_800B4CE4(D_80123FB0->attacker, 4) != 0)
+        g_field_battle->descriptor = field_select_action_descriptor();
+        if (func_800B4CE4(g_field_battle->attacker, FIELD_SLOT_POWER_BOOST) != 0)
         {
-            descriptor = D_80123FB0->descriptor;
+            descriptor = g_field_battle->descriptor;
             info = descriptor->info.word;
-            if ((info & 0xF) < 2)
+            if ((info & FIELD_DESCRIPTOR_KIND_MASK) < 2)
             {
-                descriptor->info.word = info | 0xC0;
-                D_80123FB0->power = (D_80123FB0->power * 3) >> 1;
+                descriptor->info.word = info | FIELD_DESCRIPTOR_DEFENSE_SLOT_MASK;
+                g_field_battle->power = (g_field_battle->power * 3) >> 1;
             }
         }
     }
     else
     {
-        D_80123FB0->descriptor = NULL;
+        g_field_battle->descriptor = NULL;
     }
 }
 
 /**
- * @brief Classify the bound action and mark follow-up actions.
- * @return 0 for a normal action, 1 when the weapon check passes, 2 for
- *         immediate handling, or 3 when a follow-up action was marked.
+ * @brief Check the target's animation and status against the bound action.
+ * @return A FIELD_STANCE_* result; FIELD_STANCE_REPEL also marks a follow-up.
  */
-s32 func_800B5A88(void)
+static s32 field_battle_check_target_stance(void)
 {
-    s32 action_id;
+    s32 animation;
     u32 kind;
     FieldStatusRecord* target;
 
-    action_id = func_8008ADB4(D_80123FB0->target->meta.bytes.id);
-    switch (FIELD_DESCRIPTOR_KIND(D_80123FB0->descriptor))
+    animation = field_get_actor_animation(g_field_battle->target->meta.bytes.id);
+    switch (FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor))
     {
     case 1:
-        if (action_id == FIELD_ACTION_IMMEDIATE)
+        if (animation == FIELD_ANIM_IMMUNE)
         {
-            return 2;
+            return FIELD_STANCE_IMMUNE;
         }
-        if (action_id == FIELD_ACTION_WEAPON_CHECK)
+        if (animation == FIELD_ANIM_WEAPON_GUARD)
         {
-            target = D_80123FB0->target;
-            kind = target->meta.packed & 0xFC00;
-            if (kind == 0 || kind == 0x400)
+            target = g_field_battle->target;
+            kind = target->meta.packed & FIELD_STATUS_META_KIND_MASK;
+            if (kind == (0 << FIELD_STATUS_META_KIND_SHIFT) || kind == (1 << FIELD_STATUS_META_KIND_SHIFT))
             {
-                u32 weapon_type = FIELD_ITEM_TYPE(D_80122B74->characters[target->meta.bytes.id].equipment[0].info.word);
+                u32 weapon_type =
+                    FIELD_ITEM_TYPE(g_field_game_state->characters[target->meta.bytes.id].equipment[FIELD_WEAPON_SLOT].info.word);
 
-                if (weapon_type == 6 || weapon_type == 7)
+                if (weapon_type == FIELD_WEAPON_SPEAR || weapon_type == FIELD_WEAPON_STAFF)
                 {
-                    return 1;
+                    return FIELD_STANCE_WEAPON_GUARD;
                 }
             }
         }
         break;
     case 4:
-        if (D_80123FB0->action_flags.bits.side)
+        if (g_field_battle->action_flags.bits.side)
         {
-            return 2;
+            return FIELD_STANCE_IMMUNE;
         }
-        if ((D_80123FB0->target->status_flags & 0x10) && (action_id == 10 || action_id == 11))
+        if ((g_field_battle->target->status_flags & FIELD_RECORD_STATUS_10) &&
+            (animation == FIELD_ANIM_REPEL_A || animation == FIELD_ANIM_REPEL_B))
         {
-            D_80123FB0->action_flags.bits.follow_up = 1;
-            return 3;
+            g_field_battle->action_flags.bits.follow_up = 1;
+            return FIELD_STANCE_REPEL;
         }
-        if (func_800B4CE4(D_80123FB0->target, 0x34))
+        if (func_800B4CE4(g_field_battle->target, FIELD_SLOT_REPEL_KIND_4))
         {
-            D_80123FB0->action_flags.bits.follow_up = 1;
-            return 3;
+            g_field_battle->action_flags.bits.follow_up = 1;
+            return FIELD_STANCE_REPEL;
         }
         break;
     case 5:
-        if (func_800B4CE4(D_80123FB0->target, 0x35))
+        if (func_800B4CE4(g_field_battle->target, FIELD_SLOT_REPEL_KIND_5))
         {
-            D_80123FB0->action_flags.bits.follow_up = 1;
-            return 3;
+            g_field_battle->action_flags.bits.follow_up = 1;
+            return FIELD_STANCE_REPEL;
         }
         break;
     case 2:
@@ -259,99 +360,104 @@ s32 func_800B5A88(void)
     default:
         break;
     }
-    return 0;
+    return FIELD_STANCE_NONE;
 }
 
 /**
  * @brief Check the target's guard flags before the action lands.
- * @return 1 when the target's 0x8000 flag is set, 2 when the action is
- *         blocked or deflected, otherwise 0.
+ * @return A FIELD_GUARD_* result.
  */
-s32 func_800B5C54(void)
+static s32 field_battle_check_target_guard(void)
 {
     u16 flags;
 
-    flags = D_80123FB0->target->meta.bytes.unk2;
-    if (flags & 0x8000)
+    flags = g_field_battle->target->meta.bytes.unk2;
+    if (flags & FIELD_GUARD_FLAG_IGNORE)
     {
-        return 1;
+        return FIELD_GUARD_IGNORED;
     }
-    if (flags & 0x4000)
+    if (flags & FIELD_GUARD_FLAG_BLOCK)
     {
-        return 2;
+        return FIELD_GUARD_BLOCKED;
     }
-    if (flags & 0x2000)
+    if (flags & FIELD_GUARD_FLAG_COUNTER)
     {
-        if (FIELD_DESCRIPTOR_KIND(D_80123FB0->descriptor) == 0)
+        if (FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor) == 0)
         {
-            func_800B2B54(D_80123FB0->target, D_80123FB0->attacker, 3, 4, 0x100, 300);
-            field_clear_record_state(D_80123FB0->target, 6);
-            return 2;
+            func_800B2B54(g_field_battle->target, g_field_battle->attacker,
+                          FIELD_STATUS_APPLY_IGNORE_IMMUNITY | FIELD_STATUS_APPLY_ALLOW_ACTIVE, FIELD_COUNTER_EFFECT,
+                          FIELD_CHANCE_ALWAYS, 300);
+            field_clear_record_state(g_field_battle->target, FIELD_COUNTER_CLEARED_EFFECT);
+            return FIELD_GUARD_BLOCKED;
         }
     }
-    if (D_80123FB0->target->meta.bytes.unk2 & 0x1000)
+    if (g_field_battle->target->meta.bytes.unk2 & FIELD_GUARD_FLAG_DEFLECT)
     {
-        u32 kind = FIELD_DESCRIPTOR_KIND(D_80123FB0->descriptor);
+        u32 kind = FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor);
 
         if (kind == 2 || kind == 3)
         {
-            func_8008B500(D_80123FB0->target->meta.bytes.id, FIELD_ACTION_SIGNAL_CANCEL);
-            return 2;
+            field_spawn_shared_animation_actor(g_field_battle->target->meta.bytes.id, FIELD_EFFECT_ANIM_REPEL);
+            return FIELD_GUARD_BLOCKED;
         }
     }
-    return 0;
+    return FIELD_GUARD_NONE;
 }
 
 /**
  * @brief Run down the attacker's and the target's action counters.
  * @param amount Amount taken from the target's counter.
  */
-void func_800B5D60(s32 amount)
+static void field_battle_run_down_counters(s32 amount)
 {
     FieldStatusRecord* attacker;
     FieldStatusRecord* target;
 
-    attacker = D_80123FB0->attacker;
+    attacker = g_field_battle->attacker;
     if (attacker->counter <= 0)
     {
         attacker->counter = attacker->counter_reset;
-        func_800B2B54(D_80123FB0->attacker, D_80123FB0->attacker, 3, 5, 0x100, 60);
+        func_800B2B54(g_field_battle->attacker, g_field_battle->attacker,
+                      FIELD_STATUS_APPLY_IGNORE_IMMUNITY | FIELD_STATUS_APPLY_ALLOW_ACTIVE, FIELD_EXHAUSTED_EFFECT,
+                      FIELD_CHANCE_ALWAYS, 60);
     }
-    if (D_80123FB0->action->param != 0)
+    if (g_field_battle->action->param != 0)
     {
-        D_80123FB0->target->counter -= amount;
-        target = D_80123FB0->target;
+        g_field_battle->target->counter -= amount;
+        target = g_field_battle->target;
         if (target->counter <= 0)
         {
             target->counter = target->counter_reset;
-            func_800B2B54(D_80123FB0->target, D_80123FB0->target, 3, 5, 0x100, 180);
+            func_800B2B54(g_field_battle->target, g_field_battle->target,
+                          FIELD_STATUS_APPLY_IGNORE_IMMUNITY | FIELD_STATUS_APPLY_ALLOW_ACTIVE, FIELD_EXHAUSTED_EFFECT,
+                          FIELD_CHANCE_ALWAYS, 180);
         }
     }
 }
 
 /**
- * @brief Raise a party attacker's status intensity after a landed action.
+ * @brief Raise a player attacker's status intensity after a landed action.
  */
-void func_800B5E5C(void)
+static void field_battle_raise_attacker_intensity(void)
 {
     FieldStatusRecord* attacker;
     FieldStatusState* state;
 
-    attacker = D_80123FB0->attacker;
-    if (attacker->meta.bytes.id < 2 && !(attacker->state->effect_flags & 0x200))
+    attacker = g_field_battle->attacker;
+    if (attacker->meta.bytes.id < FIELD_PLAYER_RECORD_COUNT && !(attacker->state->effect_flags & FIELD_EFFECT_NO_INTENSITY))
     {
-        if (func_800B4CE4(attacker, 7) != 0)
+        if (func_800B4CE4(attacker, FIELD_SLOT_QUICK_INTENSITY) != 0)
         {
-            D_80123FB0->attacker->state->status_intensity += 8 << FIELD_DESCRIPTOR_SHIFT(D_80123FB0->descriptor);
+            g_field_battle->attacker->state->status_intensity += 8 << FIELD_DESCRIPTOR_SHIFT(g_field_battle->descriptor);
         }
         else
         {
-            D_80123FB0->attacker->state->status_intensity += 4 << FIELD_DESCRIPTOR_SHIFT(D_80123FB0->descriptor);
+            g_field_battle->attacker->state->status_intensity += 4 << FIELD_DESCRIPTOR_SHIFT(g_field_battle->descriptor);
         }
-        state = D_80123FB0->attacker->state;
-        if (state->status_intensity >= 0x100)
+        state = g_field_battle->attacker->state;
+        if (state->status_intensity > FIELD_INTENSITY_MAX)
         {
-            state->status_intensity = 0xFF;
+            state->status_intensity = FIELD_INTENSITY_MAX;
         }
     }
 }
@@ -361,24 +467,24 @@ void func_800B5E5C(void)
  * @param action Action to bind before the roll.
  * @return -1 when the target always evades or the roll succeeds, otherwise 0.
  */
-s32 func_800B5F60(FieldBattleAction* action)
+s32 field_battle_roll_evasion(FieldBattleAction* action)
 {
     s32 roll;
     s32 percent;
     s32 chance;
     s32 evasion;
 
-    evasion = D_80123FB0->target->unk1A;
-    if (evasion >= 100)
+    evasion = g_field_battle->target->unk1A;
+    if (evasion >= FIELD_EVASION_ALWAYS)
     {
         return -1;
     }
 
     roll = rand() & 0xFFFF;
     percent = roll % 100;
-    func_800B5948(action, 0);
-    chance = func_800B2D34(D_80123FB0->attacker, 0);
-    if (percent < (evasion * chance) / func_800B2D34(D_80123FB0->target, 4))
+    field_battle_bind_action(action, 0);
+    chance = func_800B2D34(g_field_battle->attacker, 0);
+    if (percent < (evasion * chance) / func_800B2D34(g_field_battle->target, 4))
     {
         return -1;
     }

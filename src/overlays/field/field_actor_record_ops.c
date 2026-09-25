@@ -1,5 +1,5 @@
 /** @file field_actor_record_ops.c
- * @brief Spawn, release and query dynamic actor records.
+ * @brief Spawn and release dropped-item actor records, find the nearest one, toggle script-only mode.
  */
 
 #include "game_audio.h"
@@ -7,146 +7,157 @@
 #include "field_calls.h"
 #include "field_records.h"
 
-/** @brief Three-dimensional field position. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 z;
-} FieldPosition;
+/** @brief record_game_diagnostic status for a field error. */
+#define DIAG_ERROR 0x8001
 
-/** @brief Actor identifier paired with its distance from a reference position. */
+/** @brief Item argument that releases the item actor's record instead of spawning it. */
+#define FIELD_ITEM_RELEASE 0xFF
+
+/** @brief Actor record whose event table every spawned item record copies. */
+#define FIELD_ITEM_TEMPLATE_RECORD 4
+
+/** @brief Event run on a freshly spawned item record, with the item id as argument. */
+#define FIELD_ITEM_SPAWN_EVENT 7
+
+/** @brief Object key whose position and facing select the nearest item (role unknown). */
+#define FIELD_ITEM_SEARCH_KEY 6
+
+/** @brief Result of field_find_nearest_faced_item when no item qualifies. */
+#define FIELD_NO_ITEM_KEY 0xFF
+
+/** @brief Upper bound of the item candidates: one per actor record. */
+#define FIELD_ITEM_CANDIDATE_COUNT FIELD_ACTOR_RECORD_COUNT
+
+/** @brief field_set_actor_record_script_only flags. */
+#define FIELD_SCRIPT_ONLY_STOP_ACTOR 0x01
+#define FIELD_SCRIPT_ONLY_MOVE_AWAY 0x02
+
+/** @brief X position, in whole units, that parks an actor outside the map. */
+#define FIELD_PARKED_X (-1024)
+
+/** @brief Item key paired with its distance from the search position. */
 typedef struct
 {
-    s32 object_id;
+    s32 key;
     s32 distance;
-} FieldDistanceEntry;
+} FieldItemCandidate;
 
-/** @brief Sortable list of actor identifiers and their distances. */
+/** @brief Item candidates; func_800C1F28 sorts the entries by ascending distance. */
 typedef struct
 {
     s32 count;
-    FieldDistanceEntry entries[16];
-} FieldDistanceList;
+    FieldItemCandidate entries[FIELD_ITEM_CANDIDATE_COUNT];
+} FieldItemCandidateList;
 
 FieldActorRecord* func_800C1C50(s32 id);
-/* Declared without a prototype: callers forward their own a0. */
-FieldActorRecord* func_800C1B60();
-void func_80087F44(s32 index, FieldPosition* position);
-void func_800C1F28(u32* arg0);
-s32 func_800C1FBC(FieldPosition* arg0, FieldPosition* arg1);
+FieldActorRecord* func_800C1B98(s32 id);
+FieldActorRecord* func_800C1B60(s32 id);
+void func_800C1D14(s32 actor_id, s32 flags);
+void func_800C1F28(FieldItemCandidateList* list);
+s32 func_800C1FBC(Vec3i* first, Vec3i* second);
+s32 field_get_actor_position(s32 key, Vec3i* position);
+s32 field_set_actor_position(s32 key, s32 x, s32 y, s32 z);
 
-extern FieldRuntimeContext* D_80122B78;
+extern FieldRuntimeContext* g_field_runtime;
 
 /**
- * @brief Spawn an actor record from the event table of actor record 4, or release it.
- * @param actor_id Actor identifier.
- * @param argument Argument for the spawn event 7, or 0xFF to release the record.
+ * @brief Spawn the actor record of a dropped item and run its spawn event, or release it.
+ * @param key Object key of the item actor.
+ * @param item Item id passed to the spawn event, or FIELD_ITEM_RELEASE to release the record.
  */
-void func_800C2640(s32 actor_id, s32 argument)
+void field_spawn_item_record(s32 key, s32 item)
 {
-    FieldActorRecord* actor;
+    FieldActorRecord* record;
     s32 i;
 
-    if (argument != 0xFF)
+    if (item != FIELD_ITEM_RELEASE)
     {
-        actor = func_800C1C50(actor_id);
-        if (actor == NULL)
+        record = func_800C1C50(key);
+        if (record == NULL)
         {
-            record_game_diagnostic(0x8001, 1, 1, 1);
+            record_game_diagnostic(DIAG_ERROR, 1, 1, 1);
             return;
         }
-        actor->flags.bits.spawned = 1;
-        actor->enabled_events = D_80122B78->actors[4].enabled_events;
-        i = 0;
-        do
+        record->flags.bits.spawned = 1;
+        record->enabled_events = g_field_runtime->actors[FIELD_ITEM_TEMPLATE_RECORD].enabled_events;
+        for (i = 0; i < FIELD_ACTOR_SCRIPT_COUNT; i++)
         {
-            actor->scripts[i] = D_80122B78->actors[4].scripts[i];
-            i++;
-        } while (i < FIELD_ACTOR_SCRIPT_COUNT);
-        func_800B28E0(actor_id, 7, argument & 0xFF);
+            record->scripts[i] = g_field_runtime->actors[FIELD_ITEM_TEMPLATE_RECORD].scripts[i];
+        }
+        func_800B28E0(key, FIELD_ITEM_SPAWN_EVENT, item & 0xFF);
         return;
     }
 
-    actor = func_800C1B60(actor_id);
-    actor->flags.bits.active = 0;
-    actor->flags.bits.spawned = 0;
+    record = func_800C1B60(key);
+    record->flags.bits.active = 0;
+    record->flags.bits.spawned = 0;
 }
 
 /**
- * @brief Select the nearest eligible actor to actor six.
- * @return Object ID of the nearest eligible actor, or 0xFF when none qualify.
+ * @brief Find the nearest spawned item that object FIELD_ITEM_SEARCH_KEY faces.
+ * @param unused Script operand; not used.
+ * @return Key of the nearest faced item, or FIELD_NO_ITEM_KEY when there is none.
  */
-s32 func_800C2724(void)
+s32 field_find_nearest_faced_item(s32 unused)
 {
-    FieldDistanceList list;
-    FieldPosition reference_position;
-    FieldPosition actor_position;
-    s32 actor_index;
-    s32 flags;
-    FieldActorRecord* actor;
+    FieldItemCandidateList list;
+    Vec3i search_position;
+    Vec3i item_position;
+    s32 i;
+    FieldActorRecord* record;
 
-    func_80087F44(6, &reference_position);
-    actor_index = FIELD_PARTY_SIZE;
+    field_get_actor_position(FIELD_ITEM_SEARCH_KEY, &search_position);
     list.count = 0;
-    do
+    for (i = FIELD_PARTY_SIZE; i < FIELD_ACTOR_RECORD_COUNT; i++)
     {
-        actor = &D_80122B78->actors[actor_index];
-        flags = actor->flags.word;
-        if (flags < 0 && actor->flags.bits.spawned && func_80087770(6, actor->id) == 1)
+        record = &g_field_runtime->actors[i];
+        /* Sign test for the active bit: a bitfield test is merged with spawned into one masked compare. */
+        if (record->flags.word < 0 && record->flags.bits.spawned && field_actor_faces_actor(FIELD_ITEM_SEARCH_KEY, record->id) == 1)
         {
-            func_80087F44(actor->id, &actor_position);
-            list.entries[list.count].object_id = actor->id;
-            list.entries[list.count].distance = func_800C1FBC(&reference_position, &actor_position);
+            field_get_actor_position(record->id, &item_position);
+            list.entries[list.count].key = record->id;
+            list.entries[list.count].distance = func_800C1FBC(&search_position, &item_position);
             list.count += 1;
         }
-        actor_index += 1;
-    } while (actor_index < FIELD_ACTOR_RECORD_COUNT);
+    }
 
-    func_800C1F28((u32*)&list);
+    func_800C1F28(&list);
     if (list.count != 0)
     {
-        return list.entries[0].object_id;
+        return list.entries[0].key;
     }
-    return 0xFF;
+    return FIELD_NO_ITEM_KEY;
 }
 
-/* Declared without a prototype: func_800C2848 forwards its own a0. */
-extern FieldActorRecord* func_800C1B98();
-extern void func_800C1D14(s32 actor_id, s32 flags);
-extern void func_80087D8C(s32 actor_id, s32 arg1, s32 arg2, s32 arg3);
-
 /**
- * @brief Switch an actor to script-only mode and stop its script.
- * @param actor_id Actor identifier; passed through to func_800C1B98 in a0.
- * @param flags Bit 0 forwarded to func_800C1D14; bit 1 also calls func_80087D8C.
+ * @brief Put an actor record into script-only mode and stop its script.
+ * @param key Actor key.
+ * @param flags FIELD_SCRIPT_ONLY_STOP_ACTOR also stops the field actor; FIELD_SCRIPT_ONLY_MOVE_AWAY parks it off the map.
  */
-void func_800C2848(s32 actor_id, s32 flags)
+void field_set_actor_record_script_only(s32 key, s32 flags)
 {
-    FieldActorRecord* actor = func_800C1B98();
+    FieldActorRecord* record = func_800C1B98(key);
 
-    if (actor != NULL)
+    if (record != NULL)
     {
-        actor->flags.bits.script_only = 1;
-        func_800C1D14(actor->id, flags);
-        if (flags & 2)
+        record->flags.bits.script_only = 1;
+        func_800C1D14(record->id, flags);
+        if (flags & FIELD_SCRIPT_ONLY_MOVE_AWAY)
         {
-            func_80087D8C(actor_id, -0x400, 0, 0);
+            field_set_actor_position(key, FIELD_PARKED_X, 0, 0);
         }
     }
 }
 
 /**
- * @brief Leave script-only mode and stop the actor's script.
- * @note Takes the actor id in a0 from its caller; func_800C1B60 reads it from there.
+ * @brief Take an actor record out of script-only mode and stop its script.
+ * @param key Actor key.
  */
-void func_800C28B8(void)
+void field_clear_actor_record_script_only(s32 key)
 {
-    FieldActorRecord* actor;
-    s32 actor_id;
+    FieldActorRecord* record;
 
-    actor = func_800C1B60();
-    actor_id = actor->id;
-    actor->flags.bits.script_only = 0;
-    func_800C1D14(actor_id, 0);
+    record = func_800C1B60(key);
+    record->flags.bits.script_only = 0;
+    func_800C1D14(record->id, 0);
 }

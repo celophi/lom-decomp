@@ -1,54 +1,137 @@
+/**
+ * @file field_action_descriptors.c
+ * @brief Selection of the action descriptor for the attacker's current battle action.
+ */
+
 #include "game_audio.h"
 #include "common.h"
 #include "field_records.h"
 
-extern FieldBattleContext *D_80123FB0;
-extern u8 *D_80123FAC;
-extern u8 *D_80122B74;
+/** @brief Error status passed to record_game_diagnostic. */
+#define DIAG_ERROR 0x8001
 
-extern void *func_800B543C(s32);
-extern void *func_800C2958(s32, u16);
+/** @brief Diagnostic code: unknown command in a character's command slot. */
+#define DIAG_BAD_COMMAND 0x66
+
+/** @brief Diagnostic code: monster action id past the end of its template's list. */
+#define DIAG_BAD_MONSTER_ACTION 0x69
+
+/** @brief Record kind bits (FieldStatusRecordMeta bits.kind) within the packed word. */
+#define STATUS_KIND_MASK 0xFC00
+
+/** @brief A record kind as it appears in the packed word. */
+#define STATUS_KIND_BITS(kind) ((kind) << 10)
+
+/** @brief Record kind of the stored companion (character type 3). */
+#define STATUS_KIND_COMPANION 3
+
+/** @brief Record kind of the second companion type (character type 4). */
+#define STATUS_KIND_COMPANION_B 4
+
+/** @brief Resource page holding the companion action descriptors. */
+#define COMPANION_ACTION_PAGE 2
+
+/** @brief Monster action ids without a descriptor that are not an error. */
+#define MONSTER_ACTION_NONE_A 23
+#define MONSTER_ACTION_NONE_B 24
+
+/** @brief Tables of the action descriptor bank. */
+enum
+{
+    ACTION_TABLE_WEAPON,      /**< Indexed by the weapon's action bytes. */
+    ACTION_TABLE_WEAPON_TYPE, /**< WEAPON_TYPE_ACTION_COUNT skills per weapon type. */
+    ACTION_TABLE_ITEM,        /**< One ItemActionRow per item row. */
+    ACTION_TABLE_COMMAND      /**< Command actions, and action ids from FIRST_COMMAND_ACTION up. */
+};
+
+/** @brief Skills per weapon type in ACTION_TABLE_WEAPON_TYPE. */
+#define WEAPON_TYPE_ACTION_COUNT 24
+
+/** @brief Descriptors per row of ACTION_TABLE_ITEM. */
+#define ITEM_ROW_ACTION_COUNT 14
+
+/** @brief Action id of the first entry of ACTION_TABLE_COMMAND. */
+#define FIRST_COMMAND_ACTION 7
+
+/** @brief Character action ids. */
+enum
+{
+    ACTION_COMMAND_0 = 0, /**< Command in info.actions.commands[0]. */
+    ACTION_COMMAND_1 = 1, /**< Command in info.actions.commands[1]. */
+    ACTION_WEAPON_2 = 2,  /**< Weapon action byte 0, offset by the action parameter. */
+    ACTION_WEAPON_3 = 3,  /**< Weapon action byte 1. */
+    ACTION_SKILL_0 = 4,   /**< Actions 4 to 7: info.actions.skills[0] to [3]. */
+    ACTION_SKILL_1 = 5,
+    ACTION_SKILL_2 = 6,
+    ACTION_SKILL_3 = 7,
+    ACTION_WEAPON_8 = 8,  /**< Actions 8 to 10: weapon action bytes 2 to 4. */
+    ACTION_WEAPON_9 = 9,
+    ACTION_WEAPON_10 = 10
+};
+
+/** @brief Skill slot bit: the low bits index the item records after the equipment slots. */
+#define SKILL_SLOT_ITEM 0x80
+
+/** @brief One row of ACTION_TABLE_ITEM. */
+typedef struct ItemActionRow
+{
+    FieldActionDescriptor actions[ITEM_ROW_ACTION_COUNT];
+} ItemActionRow;
+
+extern FieldBattleContext *g_field_battle;
+extern FieldActionBank *g_field_action_bank;
+extern FieldGameState *g_field_game_state;
+
+void *func_800C2958(s32 page, u16 index);
+
+static FieldActionDescriptor *field_command_action_descriptor(s32 command);
 
 /**
- * @brief Select the active action descriptor and initialize the power fields.
- * @return The descriptor for the attacker's current action, or NULL when there is none.
+ * @brief Return one table of the action descriptor bank.
+ * @param table ACTION_TABLE_* index.
+ * @return First descriptor of the table.
  */
-void *func_800B50B8(void)
+static inline FieldActionDescriptor *action_table(s32 table)
 {
-    s32 magic_index;
-    /* Also reused for the 0x250 character offset; separate locals change registers (97.60%). */
+    return (FieldActionDescriptor *)((u8 *)g_field_action_bank + g_field_action_bank->table_offsets[table]);
+}
+
+/**
+ * @brief Select the descriptor of the attacker's current action and reset the action power.
+ * @return The descriptor, or NULL when the action has none.
+ * @note Weapon action bytes are derived.weapon.stats[0] to [4] of the attacker's weapon.
+ */
+FieldActionDescriptor *field_select_action_descriptor(void)
+{
+    s32 weapon_action;
     s32 action_id;
     s32 kind;
     u32 selector;
-    s32 entry;
-    s32 slot_offset;
-    u8 *table;
-    u8 *character;
-    u8 *item;
-    u8 *descriptor;
-    u8 *base;
+    u32 slot;
+    FieldItemRecord *weapon;
+    FieldItemRecord *item;
+    FieldActionDescriptor *descriptor;
     FieldStatusRecord *attacker;
-    FieldStatusRecord *caster;
     FieldBattleAction *action;
     FieldActorTemplate *template;
     FieldBattleContext *ctx;
 
-    D_80123FB0->power = D_80123FB0->attacker->unk18;
-    D_80123FB0->power_flags = 0U;
-    attacker = D_80123FB0->attacker;
-    kind = attacker->meta.packed & 0xFC00;
-    if (kind == 0x1400)
+    g_field_battle->power = g_field_battle->attacker->unk18;
+    g_field_battle->power_flags = 0;
+    attacker = g_field_battle->attacker;
+    kind = attacker->meta.packed & STATUS_KIND_MASK;
+    if (kind == STATUS_KIND_BITS(FIELD_STATUS_KIND_MONSTER))
     {
-        action = D_80123FB0->action;
+        action = g_field_battle->action;
         template = attacker->template;
         action_id = action->action_id;
         if (action_id < template->action_count)
         {
-            descriptor = template->actions[action_id];
+            descriptor = (FieldActionDescriptor *)template->actions[action_id];
         }
-        else if ((action_id != 0x17) && (action_id != 0x18))
+        else if ((action_id != MONSTER_ACTION_NONE_A) && (action_id != MONSTER_ACTION_NONE_B))
         {
-            record_game_diagnostic(0x8001, 0x69, action->attacker_id, action_id);
+            record_game_diagnostic(DIAG_ERROR, DIAG_BAD_MONSTER_ACTION, action->attacker_id, action_id);
             descriptor = NULL;
         }
         else
@@ -56,131 +139,114 @@ void *func_800B50B8(void)
             descriptor = NULL;
         }
     }
-    else if ((kind == 0xC00) || (kind == 0x1000))
+    else if ((kind == STATUS_KIND_BITS(STATUS_KIND_COMPANION)) || (kind == STATUS_KIND_BITS(STATUS_KIND_COMPANION_B)))
     {
-        descriptor = func_800C2958(2, (u16)D_80123FB0->action->action_id);
+        descriptor = func_800C2958(COMPANION_ACTION_PAGE, g_field_battle->action->action_id);
     }
     else
     {
-        s32 descriptor_base;
-        descriptor_base = (s32) D_80122B74;
-        character = (u8 *) ((attacker->meta.bytes.id * 0x250) + descriptor_base + 0x640);
-        D_80123FB0->power_flags = (u8) *(u8 *)(character + 0x2C);
-        selector = D_80123FB0->action->action_id;
+        weapon = &g_field_game_state->characters[attacker->meta.bytes.id].equipment[0];
+        g_field_battle->power_flags = weapon->flags2C;
+        selector = g_field_battle->action->action_id;
         switch (selector)
         {
-        case 0:
-        case 1:
-            descriptor = func_800B543C(*(D_80122B74 - (-(D_80123FB0->action->action_id + D_80123FB0->attacker->meta.bytes.id * 0x250)) + 0x60A));
+        case ACTION_COMMAND_0:
+        case ACTION_COMMAND_1:
+            descriptor = field_command_action_descriptor(
+                g_field_game_state->characters[g_field_battle->attacker->meta.bytes.id].info.actions.commands[g_field_battle->action->action_id]);
             break;
-        case 2:
-            table = D_80123FAC;
-            table += *(s32 *)(table + 0x0);
-            descriptor = table + (*(u8 *)(character + 0x26) * 8);
-            descriptor += D_80123FB0->action->param * 8;
+        case ACTION_WEAPON_2:
+            descriptor = &action_table(ACTION_TABLE_WEAPON)[weapon->derived.weapon.stats[0]];
+            descriptor += g_field_battle->action->param;
             break;
-        case 3:
-            descriptor = D_80123FAC + *(s32 *)(D_80123FAC + 0x0) + (character[D_80123FB0->action->action_id + 0x24] * 8);
+        case ACTION_WEAPON_3:
+            descriptor = &action_table(ACTION_TABLE_WEAPON)[weapon->derived.weapon.stats[g_field_battle->action->action_id - 2]];
             break;
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-            ctx = D_80123FB0;
-            base = D_80122B74;
-            action_id = ctx->attacker->meta.bytes.id * 0x250;
-            slot_offset = action_id - 4;
-            entry = *(base + (ctx->action->action_id + slot_offset) + 0x60C);
-            if (entry < 0x80U)
+        case ACTION_SKILL_0:
+        case ACTION_SKILL_1:
+        case ACTION_SKILL_2:
+        case ACTION_SKILL_3:
+            ctx = g_field_battle;
+            slot = g_field_game_state->characters[ctx->attacker->meta.bytes.id].info.actions.skills[ctx->action->action_id - ACTION_SKILL_0];
+            if (slot < SKILL_SLOT_ITEM)
             {
-                {
-                    s32 low_index;
-                    low_index = ((((u32) *(u32 *)(character + 0x14) >> 0xA) & 0x3F) * 0x18) + entry;
-                    descriptor = D_80123FAC + *(s32 *)(D_80123FAC + 0x4) + (low_index << 3);
-                }
+                s32 index;
+
+                index = weapon->info.bits.item_type * WEAPON_TYPE_ACTION_COUNT + slot;
+                descriptor = &action_table(ACTION_TABLE_WEAPON_TYPE)[index];
             }
             else
             {
-                item = base + (action_id + 0x5F0) + ((((entry + 4) & 0x7F) << 6) + 0x50);
-                entry = *(u8 *)(item + 0x26);
-                ctx->power_flags = 0U;
-                ctx->power = (u16) entry;
-                descriptor = D_80123FAC + *(s32 *)(D_80123FAC + 0x8) + (*(u8 *)(item + 0x24) * 0x70) + (*(u8 *)(item + 0x25) * 8);
+                item = &g_field_game_state->characters[ctx->attacker->meta.bytes.id].equipment[(slot + FIELD_EQUIPMENT_SLOT_COUNT) & (SKILL_SLOT_ITEM - 1)];
+                slot = item->derived.bytes[2];
+                ctx->power_flags = 0;
+                ctx->power = slot;
+                descriptor = &((ItemActionRow *)action_table(ACTION_TABLE_ITEM))[item->derived.bytes[0]].actions[item->derived.bytes[1]];
             }
             break;
-        case 8:
-        case 9:
-        case 10:
-            magic_index = D_80123FB0->action->action_id;
-            descriptor = D_80123FAC + *(s32 *)(D_80123FAC + 0x0) + (character[magic_index + 0x20] * 8);
-            if ((u32) (magic_index - 0x12) < 2U)
+        case ACTION_WEAPON_8:
+        case ACTION_WEAPON_9:
+        case ACTION_WEAPON_10:
+            weapon_action = g_field_battle->action->action_id;
+            descriptor = &action_table(ACTION_TABLE_WEAPON)[weapon->derived.weapon.stats[weapon_action - 6]];
+            /* Never true for actions 8 to 10. */
+            if (weapon_action == 18 || weapon_action == 19)
             {
-                caster = D_80123FB0->attacker;
-                caster->counter = caster->counter - 1;
+                g_field_battle->attacker->counter--;
             }
             break;
         default:
-            descriptor = (D_80123FAC + *(s32 *)(D_80123FAC + 0xC) + (selector * 8)) - 0x38;
+            descriptor = &action_table(ACTION_TABLE_COMMAND)[selector] - FIRST_COMMAND_ACTION;
             break;
         }
     }
     return descriptor;
 }
 
-
-
-typedef struct
-{
-    u8 pad0[0xC];
-    u32 unkC;
-} TrackBaseB543C;
-
-
-
-
 /**
- * @brief Compute the next command-stream pointer for a field command opcode.
- * @param opcode Field command opcode.
- * @return Pointer to the next command, or NULL when processing does not continue.
+ * @brief Return the ACTION_TABLE_COMMAND descriptor of a character command.
+ * @param command Command code from info.actions.commands.
+ * @return The descriptor, or NULL for command 0x37 and for unknown commands.
  */
-void* func_800B543C(s32 opcode)
+static FieldActionDescriptor *field_command_action_descriptor(s32 command)
 {
-    void* result;
+    FieldActionDescriptor *descriptor;
 
-    result = (u8*)D_80123FAC + ((TrackBaseB543C *)D_80123FAC)->unkC;
-    switch (opcode)
+    descriptor = action_table(ACTION_TABLE_COMMAND);
+    switch (command)
     {
     case 0x33:
-        func_800B61EC(D_80123FB0->attacker->meta.bytes.id);
-        result = (u8*)result + 0x80;
+        /* field_battle_run_party_event takes no arguments; the original call still passes the attacker id. */
+        field_battle_run_party_event(g_field_battle->attacker->meta.bytes.id);
+        descriptor += 16;
         break;
     case 0x34:
-        result = (u8*)result + 0x78;
-        D_80123FB0->attacker->counter -= 1;
+        descriptor += 15;
+        g_field_battle->attacker->counter--;
         break;
     case 0x32:
         break;
     case 0x36:
-        result = (u8*)result + 8;
+        descriptor += 1;
         break;
     case 0x37:
-        result = NULL;
+        descriptor = NULL;
         break;
     case 0x3E:
-        result = (u8*)result + 0x10;
+        descriptor += 2;
         break;
     case 0x43:
-        result = (u8*)result + 0x18;
+        descriptor += 3;
         break;
     case 0x45:
-        result = (u8*)result + 0x20;
+        descriptor += 4;
         break;
     case 0x4F:
-        result = (u8*)result + 0x70;
+        descriptor += 14;
         break;
     default:
-        record_game_diagnostic(0x8001, 0x66, opcode, -1);
+        record_game_diagnostic(DIAG_ERROR, DIAG_BAD_COMMAND, command, -1);
         return NULL;
     }
-    return result;
+    return descriptor;
 }

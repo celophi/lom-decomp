@@ -15,15 +15,15 @@ typedef struct
     s32 z;
 } FieldPosition;
 
-/** @brief Live actor position as func_80087F44 writes it. */
+/** @brief Live actor position as field_get_actor_position writes it. */
 typedef struct
 {
     FieldPosition position;
     s32 unkC;
 } FieldLivePosition;
 
-FieldStatusState* func_80087F0C(s32 actor_id);
-s32 func_80087F44(s32 actor_id, FieldLivePosition* out);
+FieldStatusState* field_find_object_state(s32 actor_id);
+s32 field_get_actor_position(s32 actor_id, FieldLivePosition* out);
 
 /**
  * @brief Manhattan distance between two positions on the X and Z axes.
@@ -65,8 +65,8 @@ s32 func_800C1FFC(s32 actor_id, s32 half_width, s32 half_depth)
     s32 center_x;
     s32 center_z;
 
-    object = func_80087F0C(actor_id);
-    func_80087F44(actor_id, &live);
+    object = field_find_object_state(actor_id);
+    field_get_actor_position(actor_id, &live);
     center_x = live.position.x;
     if ((center_x - half_width) < object->position_x && object->position_x < (center_x + half_width))
     {

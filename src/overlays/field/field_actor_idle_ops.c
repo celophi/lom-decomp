@@ -1,6 +1,11 @@
 /**
  * @file field_actor_idle_ops.c
- * @brief Return field actors to their idle animation.
+ * @brief Actor commands that wait for an animation to end and then return the actor to idle.
+ *
+ * The actor is a FieldMotionRecord here because the sequence runtime takes that view.
+ * For an actor record motion_parameter holds the command (0 = idle), motion_scale the
+ * animation repeat count (0 once the last loop has played) and facing_or_reward_kind the
+ * animation (bit 7 mirrors it).
  */
 
 #include "common.h"
@@ -8,31 +13,30 @@
 #include "field_actor_sequence_runtime.h"
 #include "field_object_state.h"
 
-/** @brief Movement flag bits cleared when an actor goes idle. */
-#define FIELD_IDLE_CLEARED_MOVEMENT_FLAGS 0x1800
+/** @brief Objects 0 and 1 are the two player characters. */
+#define PLAYER_OBJECT_COUNT 2
+
+/** @brief Fall speed per frame while the actor is above the ground (up is negative y). */
+#define FALL_STEP 0x800
+
+/** @brief Animation byte bit that mirrors the animation. */
+#define ANIMATION_MIRROR_BIT 0x80
 
 /**
- * @brief Let a falling actor settle, then idle it when its motion scale is zero.
+ * @brief Command 0x82 (hit reaction): drop the actor to the ground, then idle it.
  *
- * A negative vertical position rises by 0x800 per call and is clamped at zero.
- * Idling zeroes the height and motion parameter, releases the sequence binding,
- * clears the movement flags, restarts the animation and, for the two party
- * members, also clears their command-history idle counter.
+ * When the reaction animation has finished, the actor lands, its sequence actor is
+ * released, the movement mode is cleared and the animation restarts. A player
+ * character also has its command history, reference_index and retry count cleared.
  *
- * @param actor Actor motion record.
+ * @param actor Actor record.
  */
-void func_800923F0(FieldMotionRecord* actor)
+void field_update_hit_reaction(FieldMotionRecord* actor)
 {
-    s32 y;
-    FieldObjectRuntime* states;
-    FieldObjectRuntime* state;
-
-    y = actor->y;
-    if (y < 0)
+    if (actor->y < 0)
     {
-        y += 0x800;
-        actor->y = y;
-        if (y > 0)
+        actor->y += FALL_STEP;
+        if (actor->y > 0)
         {
             actor->y = 0;
         }
@@ -43,51 +47,49 @@ void func_800923F0(FieldMotionRecord* actor)
         actor->y = 0;
         actor->motion_parameter = 0;
         field_update_sequence_actor_binding(actor, 1);
-        states = g_field_object_states;
-        state = &states[actor->source_object_index];
-        state->movement.word &= ~FIELD_IDLE_CLEARED_MOVEMENT_FLAGS;
+        g_field_object_states[actor->source_object_index].movement.word &= ~FIELD_OBJECT_MOVEMENT_MODE_MASK;
         field_restart_sequence_animation(actor);
-        if (actor->source_object_index < 2)
+        if (actor->source_object_index < PLAYER_OBJECT_COUNT)
         {
-            func_800A2DD8(actor->source_object_index);
+            field_command_history_clear(actor->source_object_index);
             actor->reference_index = 0;
-            states[actor->source_object_index].targets[13] = 0;
+            g_field_object_states[actor->source_object_index].retry_count = 0;
         }
     }
 }
 
 /**
- * @brief Idle an actor when its motion scale is zero.
- * @param actor Actor motion record.
+ * @brief Command 0x99: idle the actor once its animation has finished.
+ * @param actor Actor record.
  */
-void func_800924D8(FieldMotionRecord* actor)
+void field_idle_actor_after_animation(FieldMotionRecord* actor)
 {
     if (actor->motion_scale == 0)
     {
         actor->motion_parameter = 0;
         field_update_sequence_actor_binding(actor, 1);
-        g_field_object_states[actor->source_object_index].movement.word &= ~FIELD_IDLE_CLEARED_MOVEMENT_FLAGS;
+        g_field_object_states[actor->source_object_index].movement.word &= ~FIELD_OBJECT_MOVEMENT_MODE_MASK;
         field_restart_sequence_animation(actor);
     }
 }
 
 /**
- * @brief Refresh the controller flags of an actor and idle it when its motion scale is zero.
+ * @brief Command 0x9A: once the animation has finished, reload the slot and idle the actor.
  *
- * Also sets the facing state to 2 while keeping its high bit.
+ * field_finish_party_slot_reload installs a pending resource for a player slot and refreshes the party
+ * control modes. The actor is then idled with animation 2, keeping its mirror bit.
  *
- * @param actor Actor motion record.
+ * @param actor Actor record.
  */
-void func_80092550(FieldMotionRecord* actor)
+void field_idle_actor_after_reload(FieldMotionRecord* actor)
 {
     if (actor->motion_scale == 0)
     {
-        func_8006AA7C(actor->source_object_index);
+        field_finish_party_slot_reload(actor->source_object_index);
         actor->motion_parameter = 0;
         field_update_sequence_actor_binding(actor, 1);
-        g_field_object_states[actor->source_object_index].movement.word =
-            g_field_object_states[actor->source_object_index].movement.word & ~FIELD_IDLE_CLEARED_MOVEMENT_FLAGS;
-        actor->facing_or_reward_kind = (u8)((actor->facing_or_reward_kind & 0x80) + 2);
+        g_field_object_states[actor->source_object_index].movement.word &= ~FIELD_OBJECT_MOVEMENT_MODE_MASK;
+        actor->facing_or_reward_kind = (actor->facing_or_reward_kind & ANIMATION_MIRROR_BIT) + 2;
         field_restart_sequence_animation(actor);
     }
 }

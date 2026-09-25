@@ -43,8 +43,8 @@
 s32 func_800AEAC0(POLY_FT4* handle, u_long* ordering_table, s32 selector, s32 x, s32 y, s32 flip);
 s32 func_800A88A0(void* prim, void* ot, void* text, s32 color, s32 x, s32 y, s32 align);
 
-extern s32 D_80122698;
-extern u8* D_801228F8[];
+extern s32 g_field_party_has_guest;
+extern u8* g_field_coordinate_labels[];
 
 /**
  * @brief Draw the coordinate panel icon and its optional label rows.
@@ -59,18 +59,18 @@ s32 func_800AE8A8(void* ot, s32 prim, s32 x_offset, s32 y_offset)
     s32 cursor;
     s32 unused[2]; /* never used; the original stack frame reserves it */
 
-    cursor = func_800AEAC0((POLY_FT4*)prim, ot, D_80122698, 2 - x_offset, -y_offset, 1);
-    if (D_801228F8[0] != 0)
+    cursor = func_800AEAC0((POLY_FT4*)prim, ot, g_field_party_has_guest, 2 - x_offset, -y_offset, 1);
+    if (g_field_coordinate_labels[0] != 0)
     {
-        cursor = func_800A88A0((void*)cursor, ot, D_801228F8[0], 4, 0x38 - x_offset, 1 - y_offset, 0);
+        cursor = func_800A88A0((void*)cursor, ot, g_field_coordinate_labels[0], 4, 0x38 - x_offset, 1 - y_offset, 0);
     }
-    if (D_801228F8[1] != 0)
+    if (g_field_coordinate_labels[1] != 0)
     {
-        cursor = func_800A88A0((void*)cursor, ot, D_801228F8[1], 4, 0x38 - x_offset, 0x11 - y_offset, 0);
+        cursor = func_800A88A0((void*)cursor, ot, g_field_coordinate_labels[1], 4, 0x38 - x_offset, 0x11 - y_offset, 0);
     }
-    if (D_801228F8[2] != 0)
+    if (g_field_coordinate_labels[2] != 0)
     {
-        cursor = func_800A88A0((void*)cursor, ot, D_801228F8[2], 4, 0x38 - x_offset, 0x21 - y_offset, 0);
+        cursor = func_800A88A0((void*)cursor, ot, g_field_coordinate_labels[2], 4, 0x38 - x_offset, 0x21 - y_offset, 0);
     }
     return cursor;
 }

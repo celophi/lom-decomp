@@ -35,7 +35,6 @@
 #define FIELD_OBJECT_IDLE_ANIMATION(state) ((state)->pad_0x168[4])
 #define FIELD_OBJECT_ACTION_MODE(state) ((state)->pad_0x16f[0])
 #define FIELD_OBJECT_LINKED_OBJECT(state) ((state)->pad_0x16f[1])
-#define FIELD_OBJECT_PENDING_STEP(state) ((state)->targets[13])
 
 /** @brief Per-player metadata; the kind byte also selects the bank of sequence rows. */
 typedef struct
@@ -103,11 +102,11 @@ extern s32 g_field_active_group;
 extern s32 g_frame_counter;
 
 void field_restart_actor_animation(FieldMotionRecord* object);
-void func_8008A9D8(s32 arg0, s32 arg1, s32 arg2);
-s32 func_8008AABC(s32 a, s32 b);
-void func_8008BC5C(FieldMotionRecord* object);
+void field_resolve_object_hit(s32 arg0, s32 arg1, s32 arg2);
+s32 field_roll_object_evasion(s32 a, s32 b);
+void field_release_object_link(FieldMotionRecord* object);
 void field_prepare_actor_action(FieldMotionRecord* object);
-void func_8008A678();
+void field_resolve_collected_hits();
 void field_stop_actor_animations_for_object(FieldMotionRecord* object, s32 force);
 void field_restart_actor_animation_reverse(FieldMotionRecord* object);
 /* Defined as returning u8; the original caller tests the unmasked int result. */
@@ -291,7 +290,7 @@ void func_80092C24(FieldMotionRecord* object, s32 animation_id)
  *
  * With no pending flags, first resolves the 0x3D transition when the current
  * animation matches, then dispatches on the state byte by trigger kind
- * (func_80091728 kinds 3, 1/0, 2), programming the resource-action animation
+ * (field_get_held_action_buttons kinds 3, 1/0, 2), programming the resource-action animation
  * request and queueing the follow-up state via field_prepare_actor_action.
  *
  * @param object Field actor record.
@@ -315,13 +314,13 @@ s32 func_80092C98(FieldMotionRecord* object)
         if (tmp == 0x3D)
         {
             /* Called as returning int: the original uses the u16 result unmasked. */
-            anim = ((s32 (*)(FieldMotionRecord*, s32))func_80091914)(object, object->source_object_index);
+            anim = ((s32 (*)(FieldMotionRecord*, s32))field_resolve_action_command)(object, object->source_object_index);
             if (g_field_resource_actions[object->source_object_index].tracks[1].command == tmp && anim == 0x185)
             {
                 object->motion_parameter = anim;
                 object->y -= FIELD_STEP_OFFSET(object);
                 field_prepare_actor_action(object);
-                func_800A2DD8(object->source_object_index);
+                field_command_history_clear(object->source_object_index);
                 object->motion_parameter = 0x9B;
                 return;
             }
@@ -330,13 +329,13 @@ s32 func_80092C98(FieldMotionRecord* object)
                 object->motion_parameter = anim;
                 object->y -= FIELD_STEP_OFFSET(object);
                 field_prepare_actor_action(object);
-                func_800A2DD8(object->source_object_index);
+                field_command_history_clear(object->source_object_index);
                 object->motion_parameter = 0x9B;
                 return;
             }
         }
     }
-    if (func_80091728(object->source_object_index, 3, object) != 0)
+    if (field_get_held_action_buttons(object->source_object_index, 3, (struct FieldActor*)object) != 0)
     {
         switch (object->facing_or_reward_kind & 0x7F)
         {
@@ -344,35 +343,35 @@ s32 func_80092C98(FieldMotionRecord* object)
         case 0x44:
             object->motion_parameter = 0x885;
             field_prepare_actor_action(object);
-            func_800A2DD8(object->source_object_index);
+            field_command_history_clear(object->source_object_index);
             break;
         case 0x3E:
             object->motion_parameter = 0xA85;
             field_prepare_actor_action(object);
-            func_800A2DD8(object->source_object_index);
+            field_command_history_clear(object->source_object_index);
             break;
         case 0x38:
             object->motion_parameter = 0xA85;
             field_prepare_actor_action(object);
-            func_800A2DD8(object->source_object_index);
+            field_command_history_clear(object->source_object_index);
             break;
         case 0x3A:
             FIELD_SET_ACTION_ANIMATION(object->source_object_index, 0x4F, 0x25, 0);
             object->motion_parameter = 0xB85;
             field_prepare_actor_action(object);
-            func_800A2DD8(object->source_object_index);
+            field_command_history_clear(object->source_object_index);
             break;
         case 0x39:
             FIELD_SET_ACTION_ANIMATION(object->source_object_index, 0x4F, 0x25, 0);
             object->motion_parameter = 0xB85;
             field_prepare_actor_action(object);
-            func_800A2DD8(object->source_object_index);
+            field_command_history_clear(object->source_object_index);
             break;
         case 0x34:
             FIELD_SET_ACTION_ANIMATION(object->source_object_index, 0x51, 0x27, 0);
             object->motion_parameter = 0xB85;
             field_prepare_actor_action(object);
-            func_800A2DD8(object->source_object_index);
+            field_command_history_clear(object->source_object_index);
             break;
         case 0x8:
         case 0x3B:
@@ -385,7 +384,7 @@ s32 func_80092C98(FieldMotionRecord* object)
             object->facing_or_reward_kind = (object->facing_or_reward_kind & 0x80) | 0x49;
             object->y -= FIELD_STEP_OFFSET(object);
             field_restart_actor_animation(object);
-            func_800A2DD8(object->source_object_index);
+            field_command_history_clear(object->source_object_index);
             object->motion_parameter = 0x96;
             object->motion_divisor = 1;
             object->unknown_0x34 = 1;
@@ -400,15 +399,15 @@ s32 func_80092C98(FieldMotionRecord* object)
                 tmp = func_800839F8(object->source_object_index, 0);
                 if (tmp != -1)
                 {
-                    if (func_8008AABC(object->source_object_index, FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index])) != 0)
+                    if (field_roll_object_evasion(object->source_object_index, FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index])) != 0)
                     {
                         if (g_field_player_records[object->source_object_index].kind == 8)
                         {
-                            func_8008A9D8(object->source_object_index, FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), 0xD);
+                            field_resolve_object_hit(object->source_object_index, FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), 0xD);
                         }
                         else
                         {
-                            func_8008A9D8(object->source_object_index, FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), 0xC);
+                            field_resolve_object_hit(object->source_object_index, FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), 0xC);
                         }
                         index = object->source_object_index;
                         anim_id = 0x64;
@@ -421,11 +420,11 @@ s32 func_80092C98(FieldMotionRecord* object)
                     {
                         if (g_field_player_records[object->source_object_index].kind == 8)
                         {
-                            func_8008A9D8(FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), object->source_object_index, 0x18);
+                            field_resolve_object_hit(FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), object->source_object_index, 0x18);
                         }
                         else
                         {
-                            func_8008A9D8(FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), object->source_object_index, 0x17);
+                            field_resolve_object_hit(FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), object->source_object_index, 0x17);
                         }
                         index = object->source_object_index;
                         anim_id = 0x65;
@@ -439,18 +438,18 @@ s32 func_80092C98(FieldMotionRecord* object)
                         targets = FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]);
                         field_start_actor_animation(tmp, 1, (u8*)&targets);
                     }
-                    func_800A2DD8(object->source_object_index);
+                    field_command_history_clear(object->source_object_index);
                 }
-                func_8008BC5C(object);
+                field_release_object_link(object);
             }
             return;
         default:
             return;
         }
     }
-    else if (func_80091728(object->source_object_index, 1, object) != 0 || func_80091728(object->source_object_index, 0, object) != 0)
+    else if (field_get_held_action_buttons(object->source_object_index, 1, (struct FieldActor*)object) != 0 || field_get_held_action_buttons(object->source_object_index, 0, (struct FieldActor*)object) != 0)
     {
-        tmp = func_80091728(object->source_object_index, 1, object) != 0;
+        tmp = field_get_held_action_buttons(object->source_object_index, 1, (struct FieldActor*)object) != 0;
         switch (object->facing_or_reward_kind & 0x7F)
         {
         case 0x25:
@@ -459,7 +458,7 @@ s32 func_80092C98(FieldMotionRecord* object)
             {
                 object->motion_parameter = 0x985;
                 field_prepare_actor_action(object);
-                func_800A2DD8(object->source_object_index);
+                field_command_history_clear(object->source_object_index);
             }
             break;
         case 0x31:
@@ -468,19 +467,19 @@ s32 func_80092C98(FieldMotionRecord* object)
                 FIELD_SET_ACTION_ANIMATION(object->source_object_index, 0x3C, 0, 1);
                 object->motion_parameter = 0xB85;
                 field_prepare_actor_action(object);
-                func_800A2DD8(object->source_object_index);
+                field_command_history_clear(object->source_object_index);
             }
             break;
         }
     }
-    else if (func_80091728(object->source_object_index, 2, object) != 0)
+    else if (field_get_held_action_buttons(object->source_object_index, 2, (struct FieldActor*)object) != 0)
     {
         if ((object->facing_or_reward_kind & ~0x80) == 0x34)
         {
             FIELD_SET_ACTION_ANIMATION(object->source_object_index, 0x50, 0x26, 0);
             object->motion_parameter = 0xB85;
             field_prepare_actor_action(object);
-            func_800A2DD8(object->source_object_index);
+            field_command_history_clear(object->source_object_index);
         }
         if ((object->facing_or_reward_kind & ~0x80) == 0x35)
         {
@@ -492,15 +491,15 @@ s32 func_80092C98(FieldMotionRecord* object)
                 tmp = func_800839F8(object->source_object_index, 0);
                 if (tmp != -1)
                 {
-                    if (func_8008AABC(object->source_object_index, FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index])) != 0)
+                    if (field_roll_object_evasion(object->source_object_index, FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index])) != 0)
                     {
                         if (g_field_player_records[object->source_object_index].kind == 8)
                         {
-                            func_8008A9D8(object->source_object_index, FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), 0xD);
+                            field_resolve_object_hit(object->source_object_index, FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), 0xD);
                         }
                         else
                         {
-                            func_8008A9D8(object->source_object_index, FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), 0xC);
+                            field_resolve_object_hit(object->source_object_index, FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), 0xC);
                         }
                         index = object->source_object_index;
                         anim_id = 0x64;
@@ -513,11 +512,11 @@ s32 func_80092C98(FieldMotionRecord* object)
                     {
                         if (g_field_player_records[object->source_object_index].kind == 8)
                         {
-                            func_8008A9D8(FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), object->source_object_index, 0x18);
+                            field_resolve_object_hit(FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), object->source_object_index, 0x18);
                         }
                         else
                         {
-                            func_8008A9D8(FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), object->source_object_index, 0x17);
+                            field_resolve_object_hit(FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), object->source_object_index, 0x17);
                         }
                         index = object->source_object_index;
                         anim_id = 0x65;
@@ -533,7 +532,7 @@ s32 func_80092C98(FieldMotionRecord* object)
                     }
                 }
             }
-            func_800A2DD8(object->source_object_index);
+            field_command_history_clear(object->source_object_index);
         }
     }
 }
@@ -583,7 +582,7 @@ s32 func_80093AB8(FieldMotionRecord* object)
         }
         if (selection == 3)
         {
-            FIELD_OBJECT_PENDING_STEP(&g_field_object_states[object->source_object_index]) = 0;
+            g_field_object_states[object->source_object_index].retry_count = 0;
             FIELD_PENDING_RETRIES(object) = 0;
         }
         else if (selection < 4)
@@ -599,9 +598,9 @@ s32 func_80093AB8(FieldMotionRecord* object)
                     (object->source_object_index < 2U && g_field_player_records[object->source_object_index].kind == 0xA &&
                      FIELD_PENDING_RETRIES(object) >= 3U))
                 {
-                    func_800A2DD8(object->source_object_index);
+                    field_command_history_clear(object->source_object_index);
                     FIELD_PENDING_RETRIES(object) = 0;
-                    FIELD_OBJECT_PENDING_STEP(&g_field_object_states[object->source_object_index]) = 0;
+                    g_field_object_states[object->source_object_index].retry_count = 0;
                     g_field_object_states[object->source_object_index].object_flags &= 0xFFFF7FFF;
                     field_restart_actor_animation_reverse(object);
                     object->motion_parameter = 0x95;
@@ -611,13 +610,13 @@ s32 func_80093AB8(FieldMotionRecord* object)
             }
             else
             {
-                FIELD_OBJECT_PENDING_STEP(&g_field_object_states[object->source_object_index]) = 0;
+                g_field_object_states[object->source_object_index].retry_count = 0;
                 FIELD_PENDING_RETRIES(object) = 0;
             }
         }
         else
         {
-            FIELD_OBJECT_PENDING_STEP(&g_field_object_states[object->source_object_index]) = 0;
+            g_field_object_states[object->source_object_index].retry_count = 0;
             FIELD_PENDING_RETRIES(object) = 0;
         }
     }
@@ -628,8 +627,8 @@ s32 func_80093AB8(FieldMotionRecord* object)
     case FIELD_PENDING_MODE_CANCEL:
         if (selection != 4 && selection != 6 && selection != 5 && selection != 7 && selection != 8 && selection != 9 && selection != 10)
         {
-            func_800A2DD8(object_index);
-            FIELD_OBJECT_PENDING_STEP(&g_field_object_states[object->source_object_index]) = 0;
+            field_command_history_clear(object_index);
+            g_field_object_states[object->source_object_index].retry_count = 0;
             FIELD_PENDING_RETRIES(object) = 0;
             g_field_object_states[object->source_object_index].object_flags &= 0xFFFF7FFF;
             field_restart_actor_animation_reverse(object);
@@ -643,8 +642,8 @@ s32 func_80093AB8(FieldMotionRecord* object)
     case 10:
         if (selection != 4 && selection != 6 && selection != 5 && selection != 7)
         {
-            func_800A2DD8(object_index);
-            FIELD_OBJECT_PENDING_STEP(&g_field_object_states[object->source_object_index]) = 0;
+            field_command_history_clear(object_index);
+            g_field_object_states[object->source_object_index].retry_count = 0;
             FIELD_PENDING_RETRIES(object) = 0;
             g_field_object_states[object->source_object_index].object_flags &= 0xFFFF7FFF;
         }
@@ -681,7 +680,7 @@ void func_80093EB4(FieldMotionRecord* object)
         states[object->source_object_index].effect_intensity = 0;
         if (object->source_object_index < 2)
         {
-            func_800A2DD8(object->source_object_index);
+            field_command_history_clear(object->source_object_index);
         }
     }
     else
@@ -692,9 +691,9 @@ void func_80093EB4(FieldMotionRecord* object)
         {
             return;
         }
-        /* The index is passed twice; func_8008A678 reads only the first. */
+        /* The index is passed twice; field_resolve_collected_hits reads only the first. */
         value = object_index;
-        func_8008A678(value, object_index);
+        field_resolve_collected_hits(value, object_index);
         object->motion_parameter = 0;
         states[object->source_object_index].movement.word &= ~0x1800;
         if (actor->owner_object_index == object->source_object_index)
@@ -705,7 +704,7 @@ void func_80093EB4(FieldMotionRecord* object)
         states[object->source_object_index].effect_intensity = 0;
         if (object->source_object_index < 2)
         {
-            func_800A2DD8(object->source_object_index);
+            field_command_history_clear(object->source_object_index);
         }
     }
 }
@@ -822,14 +821,14 @@ void func_8009403C(FieldMotionRecord* object, s32 sequence_index)
             {
                 if (state->contact.bytes.target_count == 0)
                 {
-                    func_8008A678(object_index);
+                    field_resolve_collected_hits(object_index);
                     field_stop_actor_animations_for_object(object, 1);
                     object->motion_parameter = 0;
                     field_update_sequence_actor_binding(object, 1);
                     object->flags &= ~0x800;
                     if (object->source_object_index < 2U)
                     {
-                        func_800A2DD8(object->source_object_index);
+                        field_command_history_clear(object->source_object_index);
                     }
                     states[object->source_object_index].object_flags &= ~0x4000;
                     states[object->source_object_index].object_flags &= 0xFFFF7FFF;
@@ -840,13 +839,13 @@ void func_8009403C(FieldMotionRecord* object, s32 sequence_index)
             }
             if (field_execute_actor_sequence(object, sequence_index) != 0)
             {
-                func_8008A678(object->source_object_index);
+                field_resolve_collected_hits(object->source_object_index);
                 object->motion_parameter = 0;
                 field_update_sequence_actor_binding(object, 1);
                 object->flags &= ~0x800;
                 if (object->source_object_index < 2U)
                 {
-                    func_800A2DD8(object->source_object_index);
+                    field_command_history_clear(object->source_object_index);
                 }
                 states[object->source_object_index].object_flags &= ~0x4000;
                 states[object->source_object_index].object_flags &= 0xFFFF7FFF;
@@ -1775,14 +1774,14 @@ s32 field_execute_actor_sequence(FieldMotionRecord* object, s32 script_index)
                 updated_flags = flag_state->object_flags ^ 0x4000;
                 flag_state->object_flags = updated_flags;
                 cursor += 1;
-                func_80086494(object->source_object_index);
+                field_update_object_effects(object->source_object_index);
                 continue;
             case FIELD_SEQUENCE_TOGGLE_CONTROL_15:
                 flag_state = FIELD_OBJECT_STATE_AT(slots, object->source_object_index);
                 updated_flags = flag_state->object_flags ^ 0x8000;
                 flag_state->object_flags = updated_flags;
                 cursor += 1;
-                func_80086494(object->source_object_index);
+                field_update_object_effects(object->source_object_index);
                 continue;
             case FIELD_SEQUENCE_TOGGLE_FACING:
                 cursor += 1;

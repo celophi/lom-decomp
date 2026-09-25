@@ -28,7 +28,7 @@ typedef struct
     FieldRegionRecord templates[1];
 } FieldCompanionTemplateTable;
 
-extern FieldGameState* D_80122B74;
+extern FieldGameState* g_field_game_state;
 extern u16 g_scene_mode;
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
@@ -65,28 +65,28 @@ s32 func_800C2264(s32 template_index)
 
     for (slot = 0; slot < FIELD_REGION_COUNT; slot++)
     {
-        if (D_80122B74->regions[slot].name[0] == 0)
+        if (g_field_game_state->regions[slot].name[0] == 0)
         {
-            func_800C1EC8(companion_template, &D_80122B74->regions[slot], sizeof(FieldRegionRecord));
+            func_800C1EC8(companion_template, &g_field_game_state->regions[slot], sizeof(FieldRegionRecord));
             retry = -1;
             do
             {
                 random_high = rand();
                 unique_id =
-                    (((random_high << 16) + rand()) & FIELD_RANDOM_VALUE_MASK) | ((D_80122B74->unkD4 + (D_80122B74->unkD6 << 16)) & FIELD_FIXED_VALUE_MASK);
+                    (((random_high << 16) + rand()) & FIELD_RANDOM_VALUE_MASK) | ((g_field_game_state->unkD4 + (g_field_game_state->unkD6 << 16)) & FIELD_FIXED_VALUE_MASK);
                 if (unique_id != 0)
                 {
                     retry = 0;
                 }
                 for (scan = 0; scan < FIELD_REGION_COUNT; scan++)
                 {
-                    if (D_80122B74->regions[scan].name[0] != 0 && D_80122B74->regions[scan].unique_id == unique_id)
+                    if (g_field_game_state->regions[scan].name[0] != 0 && g_field_game_state->regions[scan].unique_id == unique_id)
                     {
                         retry = -1;
                     }
                 }
             } while (retry != 0);
-            D_80122B74->regions[slot].unique_id = unique_id;
+            g_field_game_state->regions[slot].unique_id = unique_id;
             return slot;
         }
     }
@@ -107,11 +107,11 @@ s32 func_800C23F4(void)
         index = g_gosub_result_values[0];
         if (index < FIELD_REGION_COUNT)
         {
-            func_800B2844(0, (u8*)&D_80122B74->regions[index], 0x15);
+            func_800B2844(0, (u8*)&g_field_game_state->regions[index], 0x15);
             index = g_gosub_result_values[0];
-            if (index != D_80122B74->region_index)
+            if (index != g_field_game_state->region_index)
             {
-                D_80122B74->regions[index].name[0] = 0;
+                g_field_game_state->regions[index].name[0] = 0;
                 return g_gosub_result_values[0];
             }
             return FIELD_REGION_COUNT;
@@ -137,17 +137,17 @@ s32 func_800C24BC(s32 index)
     }
     else
     {
-        if (D_80122B74->regions[index].name[0] != 0)
+        if (g_field_game_state->regions[index].name[0] != 0)
         {
-            func_800B2844(0, (u8*)&D_80122B74->regions[index], 0x15);
-            status = D_80122B74->regions[index].status.word;
+            func_800B2844(0, (u8*)&g_field_game_state->regions[index], 0x15);
+            status = g_field_game_state->regions[index].status.word;
             if (status < 0)
             {
-                if (D_80122B74->regions[index].unk42 != 0)
+                if (g_field_game_state->regions[index].unk42 != 0)
                 {
                     return 0;
                 }
-                D_80122B74->regions[index].status.word = status & ~FIELD_COMPANION_NEW;
+                g_field_game_state->regions[index].status.word = status & ~FIELD_COMPANION_NEW;
                 return 1;
             }
             if (((u32)status >> 30) & 1)
@@ -173,7 +173,7 @@ void func_800C25A0(s32 index)
         record_game_diagnostic(0x8001, 0x77, index, 0);
         return;
     }
-    func_800B2844(0, (u8*)&D_80122B74->regions[index], 0x15);
-    companion = &D_80122B74->regions[index];
-    field_run_name_entry((s32)companion, (s32)companion, 3, D_80122B74->regions[index].unk15, 0);
+    func_800B2844(0, (u8*)&g_field_game_state->regions[index], 0x15);
+    companion = &g_field_game_state->regions[index];
+    field_run_name_entry((s32)companion, (s32)companion, 3, g_field_game_state->regions[index].unk15, 0);
 }

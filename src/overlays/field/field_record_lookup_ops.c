@@ -6,10 +6,10 @@
 #include "common.h"
 #include "field_records.h"
 
-FieldStatusState* func_80087F0C(s32 actor_id);
+FieldStatusState* field_find_object_state(s32 actor_id);
 void saturating_counter_add(FieldStatusState* state, s32 delta);
-s32 func_8008BD88(s32 actor_id);
-u32* func_800875B4(void);
+s32 field_stop_actor(s32 actor_id);
+u32* field_get_scene_record_table(void);
 
 /*
  * Declared without a prototype: func_800C1B60 forwards its caller's a0 to
@@ -19,7 +19,7 @@ u32* func_800875B4(void);
 FieldActorRecord* func_800C1B98();
 FieldActorRecord* func_800C1B60();
 
-extern FieldRuntimeContext* D_80122B78;
+extern FieldRuntimeContext* g_field_runtime;
 
 /**
  * @brief Battle reward entry, 0x44 bytes from the table base.
@@ -40,7 +40,7 @@ u8* field_find_free_inventory_record(void);
 void field_copy_inventory_record(u8* dst, u8* src);
 void field_append_dialog_item(s32 text, u8 quantity);
 
-extern FieldBattleContext* D_80123FB0;
+extern FieldBattleContext* g_field_battle;
 extern u16 D_800F0E98[];
 
 /**
@@ -68,7 +68,7 @@ void func_800C1A18(void* unused, s32 owner_id)
     {
         s32 key;
 
-        table = (FieldRewardEntry*)D_80123FB0->resources;
+        table = (FieldRewardEntry*)g_field_battle->resources;
         /* Kept: each do-while(0) below changes register allocation; all are required. */
         do
         {
@@ -140,7 +140,7 @@ void field_restore_actor_capacity_fraction(s32 record_id, s32 fraction_256)
     FieldStatusState* state;
     s32 scaled_capacity;
 
-    state = func_80087F0C(record_id);
+    state = field_find_object_state(record_id);
     scaled_capacity = state->maximum * fraction_256;
     saturating_counter_add(state, (u32)scaled_capacity >> 8);
 }
@@ -160,7 +160,7 @@ FieldActorRecord* func_800C1B60()
     actor = func_800C1B98();
     if (actor == NULL)
     {
-        actor = &D_80122B78->events[1];
+        actor = &g_field_runtime->events[1];
     }
     return actor;
 }
@@ -176,23 +176,23 @@ FieldActorRecord* func_800C1B98(s32 id)
 
     if (id < FIELD_PARTY_SIZE)
     {
-        return &D_80122B78->actors[id];
+        return &g_field_runtime->actors[id];
     }
     if (id < 0x80)
     {
         for (i = 0; i < FIELD_ACTOR_RECORD_COUNT; i++)
         {
-            if (D_80122B78->actors[i].flags.bits.active && (D_80122B78->actors[i].id == id))
+            if (g_field_runtime->actors[i].flags.bits.active && (g_field_runtime->actors[i].id == id))
             {
                 goto found;
             }
         }
         return NULL;
     }
-    return &D_80122B78->actors[id - 0x70];
+    return &g_field_runtime->actors[id - 0x70];
 /* Kept: the found return is emitted last; returning inside the loop moves it. */
 found:
-    return &D_80122B78->actors[i];
+    return &g_field_runtime->actors[i];
 }
 
 /**
@@ -207,29 +207,29 @@ FieldActorRecord* func_800C1C50(s32 id)
 
     for (i = 0; i < FIELD_ACTOR_RECORD_COUNT; i++)
     {
-        if (!D_80122B78->actors[i].flags.bits.active)
+        if (!g_field_runtime->actors[i].flags.bits.active)
         {
-            D_80122B78->actors[i].id = id;
-            D_80122B78->actors[i].event = FIELD_NO_EVENT;
-            D_80122B78->actors[i].enabled_events = 0xFFFF;
-            D_80122B78->actors[i].flags.bits.trigger_group = 0;
-            D_80122B78->actors[i].flags.bits.spawned = 0;
-            D_80122B78->actors[i].flags.bits.script_only = 0;
-            D_80122B78->actors[i].flags.bits.active = 1;
+            g_field_runtime->actors[i].id = id;
+            g_field_runtime->actors[i].event = FIELD_NO_EVENT;
+            g_field_runtime->actors[i].enabled_events = 0xFFFF;
+            g_field_runtime->actors[i].flags.bits.trigger_group = 0;
+            g_field_runtime->actors[i].flags.bits.spawned = 0;
+            g_field_runtime->actors[i].flags.bits.script_only = 0;
+            g_field_runtime->actors[i].flags.bits.active = 1;
             for (j = 0; j < FIELD_ACTOR_SCRIPT_COUNT; j++)
             {
-                D_80122B78->actors[i].scripts[j] = FIELD_NO_SCRIPT;
+                g_field_runtime->actors[i].scripts[j] = FIELD_NO_SCRIPT;
             }
-            return &D_80122B78->actors[i];
+            return &g_field_runtime->actors[i];
         }
     }
     return NULL;
 }
 
 /**
- * @brief Stop an actor's script, optionally notifying func_8008BD88 first.
+ * @brief Stop an actor's script, optionally notifying field_stop_actor first.
  * @param actor_id Actor id.
- * @param flags Bit 0 set requests the func_8008BD88 notification.
+ * @param flags Bit 0 set requests the field_stop_actor notification.
  */
 void func_800C1D14(s32 actor_id, s32 flags)
 {
@@ -237,7 +237,7 @@ void func_800C1D14(s32 actor_id, s32 flags)
 
     if (flags & 1)
     {
-        func_8008BD88(actor_id);
+        field_stop_actor(actor_id);
     }
     actor = func_800C1B60(actor_id);
     actor->script.depth = 0;
@@ -252,12 +252,12 @@ void func_800C1D68(void)
 {
     s32 i;
 
-    for (i = 0; i < D_80122B78->state.actor_count; i++)
+    for (i = 0; i < g_field_runtime->state.actor_count; i++)
     {
-        if (!D_80122B78->actors[i].flags.bits.script_only)
+        if (!g_field_runtime->actors[i].flags.bits.script_only)
         {
-            D_80122B78->actors[i].enabled_events &= 0xFEFF;
-            func_800C1D14(D_80122B78->actors[i].id, 1);
+            g_field_runtime->actors[i].enabled_events &= 0xFEFF;
+            func_800C1D14(g_field_runtime->actors[i].id, 1);
         }
     }
 }
@@ -271,7 +271,7 @@ void func_800C1E08(void)
     u16 count;
 
     i = 0;
-    count = D_80122B78->state.actor_count;
+    count = g_field_runtime->state.actor_count;
     if (count != 0)
     {
         do
@@ -293,7 +293,7 @@ u16* func_800C1E40(s32 resource_id)
     s32 i;
     u32 count;
 
-    base = func_800875B4();
+    base = field_get_scene_record_table();
     count = base[0] >> 2;
     for (i = 0; i < (s32)count; i++)
     {

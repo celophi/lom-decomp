@@ -79,7 +79,7 @@ void func_8008332C(FieldActorState *actor, FieldActorPartDef *parts, s32 part_co
             }
             if ((parts[i].track_flags.word >> 22) & 1)
             {
-                if (parts[i].unknown_0x12 != 0 && field_get_track_counter_modulo((s32)actor, parts[i].unknown_0x12) == 0)
+                if (parts[i].unknown_0x12 != 0 && field_get_track_counter_modulo((struct FieldActorSlot*)actor, parts[i].unknown_0x12) == 0)
                 {
                     s32 mesh_index = FIELD_PART_MESH_LAST - parts[i].effect_kind;
                     u8 frame = ++actor->unknown_0x2b[i];

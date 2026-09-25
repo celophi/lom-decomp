@@ -35,7 +35,7 @@ POLY_FT4* func_800AFC50(u32*, POLY_FT4*);
  * @param x_scale Horizontal scale in units of 1/256.
  * @param y_scale Vertical scale in units of 1/256.
  * @param lower_x_offset Horizontal offset of the lower quad edge before scaling.
- * @param adjust_primitive Enable primitive adjustment through func_80086F48.
+ * @param adjust_primitive Enable primitive adjustment through field_add_fade_prim.
  * @return First free primitive after the text and optional outline.
  */
 POLY_FT4* func_800AF950(POLY_FT4* output, u32* ot, u8* text, s32 style, s32 x, s32 y, s32 flags, s32 scratch_row, s32 x_scale, s32 y_scale, s32 lower_x_offset,
@@ -110,7 +110,7 @@ POLY_FT4* func_800AF950(POLY_FT4* output, u32* ot, u8* text, s32 style, s32 x, s
         addPrim(ot, output);
         if (adjust_primitive != 0)
         {
-            func_80086F48(output, 0);
+            field_add_fade_prim(output, 0);
         }
         output += 1;
         if (flags & FIELD_TEXT_QUAD_OUTLINE)

@@ -10,9 +10,6 @@
 /** @brief Character type that gets no equipment totals from its armor slots. */
 #define FIELD_CHARACTER_TYPE_NO_ARMOR 3
 
-/** @brief Equipment slot holding the character's weapon. */
-#define FIELD_WEAPON_SLOT 0
-
 /** @brief Lowest and highest value of a derived stat. */
 #define FIELD_STAT_MIN 1
 #define FIELD_STAT_MAX 99
@@ -43,7 +40,7 @@ typedef struct FieldStatPair
  */
 #define STAT_MODIFIER_ZX(nibble) ((s8)((volatile u8*)D_800F0C38)[nibble])
 
-extern FieldGameState* D_80122B74;
+extern FieldGameState* g_field_game_state;
 
 /** @brief Conflict bits of weapon types, indexed by FIELD_ITEM_TYPE. */
 extern u8 D_800F0BE0[];
@@ -55,7 +52,7 @@ extern u8 D_800F0BEC[];
 extern s8 D_800F0C38[];
 
 void* func_800C1EC8(void* src, void* dest, s32 size);
-FieldStatusState* func_80087F0C(s32 index);
+FieldStatusState* field_find_object_state(s32 index);
 
 void func_800B7A74(FieldCharacterRecord* character, s32 skip_slot, u8* conflicts);
 void func_800B7B98(FieldCharacterRecord* character);
@@ -224,15 +221,15 @@ void func_800B7C58(s32 index)
 {
     FieldStatusState* state;
 
-    func_800B7B98(&D_80122B74->characters[index]);
-    state = func_80087F0C(index);
-    state->maximum = D_80122B74->characters[index].hp;
+    func_800B7B98(&g_field_game_state->characters[index]);
+    state = field_find_object_state(index);
+    state->maximum = g_field_game_state->characters[index].hp;
     if (state->maximum == 0)
     {
         state->maximum = 1;
     }
-    state->current = D_80122B74->characters[index].hp;
-    state->gauge.bits.value = D_80122B74->characters[index].hp;
+    state->current = g_field_game_state->characters[index].hp;
+    state->gauge.bits.value = g_field_game_state->characters[index].hp;
     state->effect_flags = 0;
 }
 

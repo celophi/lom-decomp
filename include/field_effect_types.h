@@ -148,10 +148,20 @@ typedef struct FieldActorPartDef
     s16 unknown_0x46;
 } FieldActorPartDef;
 
-/** @brief Hit-test selection and packed owner/track synchronization selectors. */
+/** @brief FieldActorAnimationDef::flags: the definition carries its extension fields (unknown_0x12 onward). */
+#define FIELD_ANIMATION_HAS_EXTENSION 0x8000
+/** @brief FieldActorAnimationDef::flags: two alternate definitions and a three-halfword tail follow. */
+#define FIELD_ANIMATION_HAS_ALTERNATES 0x800
+
+/**
+ * @brief Hit-test selection and packed owner/track synchronization selectors.
+ * @note An actor can select one of up to three consecutive definitions.
+ */
 typedef struct FieldActorAnimationDef
 {
-    u8 pad0[0x10];
+    u8 pad0[0xC];
+    u16 flags; /**< FIELD_ANIMATION_HAS_* bits. */
+    u8 padE[0x10 - 0xE];
     u16 palette_animation;
     u16 unknown_0x12;
     u8 hit_test_mode;
@@ -170,12 +180,13 @@ typedef struct FieldActorAnimationDef
 typedef struct FieldActorState
 {
     FieldActorPartDef* parts;
-    u8 pad4[0xC - 4];
+    u8* link_records;        /* six-byte records */
+    u8* link_record_indices; /* halfword index table */
     FieldActorAnimationDef* animation;
     FieldActorAnimationDef* animations;
     u8* track_data;
     u8* mesh_data;
-    u8 pad1C[0x24 - 0x1C];
+    u8* sound_data[2]; /* sound-effect sections of the resource */
     u8 is_active;
     u8 part_count;
     u8 hit_reaction; /* reaction selector applied to collected targets */

@@ -11,7 +11,7 @@
 /** @brief Base value (before growth bits) each stat is reset to. */
 #define FIELD_RESET_STAT 20
 
-extern FieldGameState* D_80122B74;
+extern FieldGameState* g_field_game_state;
 
 /**
  * @brief Return the experience needed to advance from @p level.
@@ -35,14 +35,14 @@ static inline s32 field_level_threshold(s32 level)
  */
 s32 func_800B607C(s32 index)
 {
-    s32 level = D_80122B74->characters[index].progress.level;
+    s32 level = g_field_game_state->characters[index].progress.level;
 
     if (level < FIELD_LEVEL_CAP)
     {
         return field_level_threshold(level);
     }
 
-    return D_80122B74->characters[index].progress.word >> 8;
+    return g_field_game_state->characters[index].progress.word >> 8;
 }
 
 /**
@@ -60,13 +60,13 @@ void func_800B60DC(s32 level)
     experience = field_level_threshold(level) << 8;
     for (i = 0; i < FIELD_PARTY_SIZE; i++)
     {
-        D_80122B74->characters[i].progress.level = 1;
-        D_80122B74->characters[i].hp = FIELD_RESET_HP;
-        D_80122B74->characters[i].progress.word = D_80122B74->characters[i].progress.level | experience;
+        g_field_game_state->characters[i].progress.level = 1;
+        g_field_game_state->characters[i].hp = FIELD_RESET_HP;
+        g_field_game_state->characters[i].progress.word = g_field_game_state->characters[i].progress.level | experience;
 
         for (j = 0; j < FIELD_CHARACTER_STAT_COUNT; j++)
         {
-            D_80122B74->characters[i].stats[j] = (D_80122B74->characters[i].stats[j] & 0xFE00) | FIELD_RESET_STAT;
+            g_field_game_state->characters[i].stats[j] = (g_field_game_state->characters[i].stats[j] & 0xFE00) | FIELD_RESET_STAT;
         }
 
         while (func_800C14A4(i, 1) != 0)

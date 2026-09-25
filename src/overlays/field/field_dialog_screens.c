@@ -5,7 +5,7 @@
  * field_timed_panel.c, field_actor_text_queue.c, field_ability_progression.c
  * and field_dialog_screens.c). Symbols whose reconstructed type varies between
  * functions (g_field_player_records, g_field_object_states, g_field_actors,
- * D_8010D038, g_pad_ctx, bcopy, func_800ADF84, func_800A88A0, func_800A8A78,
+ * g_field_cd_buffer, g_pad_ctx, bcopy, func_800ADF84, func_800A88A0, func_800A8A78,
  * func_800A838C) are declared at block scope inside each user with that
  * function's original type; do not hoist them to file scope.
  */
@@ -56,7 +56,7 @@ extern UnkTable800EE6E8Entry D_800EE6E8[];
 extern FieldTransitionQuad D_800EF124[][4];
 extern u8 D_800EF85C[];
 extern s32 D_800F2298;
-extern Vec2s D_801077FC;
+extern Vec2s g_field_screen_scroll;
 extern u16 D_80122720;
 extern u16 D_80122722;
 extern s32 D_801229F0;
@@ -199,8 +199,8 @@ void func_800A5794(FieldContext *context)
         {
             D_80122904 = 0x20;
         }
-        D_801077FC.y = 0;
-        D_801077FC.x = 0;
+        g_field_screen_scroll.y = 0;
+        g_field_screen_scroll.x = 0;
         render_selector = D_800EF85C[D_801229F0];
         primitive = context->primitive;
         if (render_selector != 0)
@@ -504,10 +504,10 @@ POLY_FT4 *func_800A5960(POLY_FT4 *prim, u_long *ordering_table, s32 index)
                 case 0:
                     break;
                 case 1:
-                    func_80086F48(prim, 0);
+                    field_add_fade_prim(prim, 0);
                     break;
                 case 2:
-                    func_80086F48(prim, 0);
+                    field_add_fade_prim(prim, 0);
                     break;
                 }
             }
@@ -610,7 +610,7 @@ POLY_FT4 *func_800A6060(POLY_FT4 *prim, u_long *ordering_table)
     setaddr(ordering_table, prim);
     if ((u16)D_8011F3D0 < 0x7C)
     {
-        func_80086F48(prim, 0);
+        field_add_fade_prim(prim, 0);
     }
     return prim + 1;
 }
@@ -1325,7 +1325,7 @@ extern FieldQuadAnimationTable D_800513E8, D_80051408, D_80051428, D_80051448;
 extern s32 D_801227EC;
 extern s32 g_field_text_session_active;
 extern s32 g_field_dialog_item_count;
-extern s32 D_800F229C;
+extern s32 g_field_dialog_screen_mode;
 extern s32 D_801226D8;
 extern s32 D_8011F420;
 extern s32 g_pad_input;
@@ -1337,8 +1337,6 @@ extern s32 g_field_pending_spawn_id, g_field_pending_music_id, g_field_pending_s
 
 /* --- Shared (non-conflicting) extern function prototypes --- */
 extern void field_reset_input_repeat(void);
-/* Takes no arguments (field_action_modifiers.c); the -2 and record left in $a0/$a1 at the call are allocation leftovers. */
-void func_800B661C(void);
 extern void akao_cmd_f1(void);
 /* Defined as (void) in field_resource_load.c; the original call still passes the cursor in $a0. */
 extern s32 func_800B0888(void *arg0);
@@ -1452,7 +1450,7 @@ void func_800A6F1C(void)
  *
  * When no modal is blocking (func_800ADEEC returns 0) and a confirm or cancel
  * button is held (@c g_pad_input & 0x220), dispatches on the current dialog
- * mode @c D_800F229C: mode 1 advances via func_800A7384 (gated by
+ * mode @c g_field_dialog_screen_mode: mode 1 advances via func_800A7384 (gated by
  * @c D_801227EC); mode 3 backs out via func_800A764C when @c g_field_dialog_item_count is set,
  * else falls through to the mode-2 handler func_800A7724.
  *
@@ -1461,7 +1459,7 @@ void func_800A710C(void)
 {
     if ((func_800ADEEC() == 0) && (g_pad_input & 0x220))
     {
-        switch (D_800F229C)
+        switch (g_field_dialog_screen_mode)
         {
         case 1:
             if (D_801227EC == 0)
@@ -1489,7 +1487,7 @@ void func_800A710C(void)
  */
 void func_800A71CC(void)
 {
-    extern s32 D_8010D038;
+    extern s32 g_field_cd_buffer;
 
     s16 raw_height;
     s32 height;
@@ -1505,10 +1503,10 @@ void func_800A71CC(void)
     u32 small_state;
     FieldMenuElement *record;
 
-    cdrom_queue_read(0x5DF, D_8010D038);
+    cdrom_queue_read(0x5DF, g_field_cd_buffer);
     cdrom_wait_queue_empty();
     func_800A3938(0xA1, 0x80);
-    D_800F229C = 3;
+    g_field_dialog_screen_mode = 3;
     func_800ADF34();
     record = func_800ADF84();
     record->attr.word = (s32)((((record->attr.word & ~0x78) | 8) & 0xFFFF007F) | 0x1000);
@@ -1586,7 +1584,7 @@ void func_800A7384(void)
         i++;
     } while (i < 3);
 
-    func_8006809C();
+    field_close_dialog_screen();
 
     i = 0;
     do {
@@ -1673,7 +1671,7 @@ void func_800A74E8(void)
 
     rec->attr.word = (rec->attr.word & 0xFFFFFF) | 0xA0000000;
 
-    func_800B661C();
+    field_select_coordinate_labels();
     akao_cmd_f1();
 
     g_field_return_to_title_prompt_delay = 0x3C;
@@ -1696,7 +1694,7 @@ void func_800A764C(void)
     FieldMenuElement *rec;
     u32 state;
 
-    D_800F229C = 2;
+    g_field_dialog_screen_mode = 2;
     func_800A3938(0xB9, 0x80);
     func_800ADF34();
 
@@ -1727,7 +1725,7 @@ void func_800A7724(void)
     s32 active_count;
 
     func_800ADF34();
-    D_800F229C = 1;
+    g_field_dialog_screen_mode = 1;
     func_800A3938(0xB9, 0x80);
 
     active_count = 0;
@@ -2002,7 +2000,7 @@ s32 func_800A7FB4(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 s32 func_800A8128(s32 ordering_table, s32 cursor, s32 scroll_x, s32 scroll_y, s32 viewport_height)
 {
     s32 func_800A88A0(s32, s32, void *, s32, s32, s32, s32); /* extern */
-    extern TextResource *D_8010D038;
+    extern TextResource *g_field_cd_buffer;
 
     unsigned char pad[8];
     unsigned char *normal_names;
@@ -2027,8 +2025,8 @@ s32 func_800A8128(s32 ordering_table, s32 cursor, s32 scroll_x, s32 scroll_y, s3
     row = 0;
     normal_header_drawn = 0;
     index = 0;
-    normal_names = (unsigned char *)D_8010D038 + D_8010D038->normal;
-    special_names = (unsigned char *)D_8010D038 + D_8010D038->special;
+    normal_names = (unsigned char *)g_field_cd_buffer + g_field_cd_buffer->normal;
+    special_names = (unsigned char *)g_field_cd_buffer + g_field_cd_buffer->special;
     if (index < g_field_progression_unlock_count)
     {
         header_x = 0x20 - scroll_x;

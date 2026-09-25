@@ -23,7 +23,8 @@
 #include "field_effect_dispatch.h"
 #include "vector.h"
 
-struct FieldActorResourceSlot;
+struct FieldActor;
+struct FieldPlayerRecord;
 struct FieldActorState;
 struct FieldCdBuffer;
 struct FieldCharacterRecord;
@@ -38,77 +39,88 @@ struct FieldStatusRecord;
 struct FieldStatusState;
 
 /* field_action_modifiers.c */
-void func_800B61C4(s32 record_id);
-s32 func_800B6334(struct FieldStatusRecord *record);
-void func_800B65CC(s32 result);
-void func_800B66F0(s32 record_id);
-s32 func_800B6808(void);
+void field_battle_set_watched_record(s32 record_id);
+s32 field_battle_handle_defeat(struct FieldStatusRecord *record);
+void field_battle_finish(s32 result);
+void field_battle_defeat_record(s32 record_id);
+s32 field_run_action_handler(void);
+void field_select_coordinate_labels(void);
 
 /* field_active_record_ops.c */
-s32 func_800C2D08(void);
-s32 func_800C2DC0(void);
-s32 func_800C318C(void);
-void func_800C31BC(s32 companion);
+s32 field_join_companion(void);
+s32 field_join_golem(void);
+s32 field_join_guest(s32 guest_id);
+void field_leave_party(s32 companion);
+s32 field_rejoin_companion(void);
 
 /* field_actor_action_defaults.c */
-void func_80091518(s32 map_index);
+void field_reset_action_command_map(s32 map_index);
 
 /* field_actor_camera.c */
-void func_80091BC8(void);
-void func_80092124(void);
-void func_80092394(void);
+void field_camera_track_party(void);
+void field_camera_update(void);
+void field_camera_select_scroll_limits(void);
+void field_camera_reset(void);
 
 /* field_actor_effects.c */
-void func_8009D4D8(struct FieldMotionRecord *actor, u32 mode);
+void field_start_object_ground_effect(struct FieldMotionRecord *actor, u32 kind);
 
 /* field_actor_hud_effects.c */
-void field_draw_actor_hud(u8 *render_context);
-void func_80086494(s32 index);
-void func_80086F20(void);
-void func_80086F48(const void *src, s16 value);
-void func_80086FB8(u8 *buffer);
+void field_draw_actor_hud(struct FieldRenderHalf *render_half);
+void field_update_object_effects(s32 index);
+void field_clear_fade_prims(void);
+void field_add_fade_prim(const void *prim, s16 depth);
+void field_draw_fade_prims(struct FieldRenderHalf *render_half);
 
 /* field_actor_input_actions.c */
-s32 func_80091728(s32 player, s32 action, struct FieldMotionRecord *actor);
-u16 func_80091914(struct FieldMotionRecord *actor, s32 map_index);
+s32 field_get_held_action_buttons(s32 player, s32 action, struct FieldActor *actor);
+void field_poll_leader_interaction(void);
+u16 field_resolve_action_command(struct FieldActor *actor, s32 player);
+void field_update_actor_run_button(struct FieldActor *actor, s32 player);
 
 /* field_actor_input_map_init.c */
-void func_80091410(void);
-void func_80091438(s32 player_index);
+void field_reset_action_command_maps(void);
+void field_apply_weapon_action_params(s32 player_index);
 
 /* field_actor_key_ops.c */
-void func_80087614(s32 key, s32 group);
-s32 func_80087770(s32 first_key, s32 second_key);
-s32 func_800878B4(s32 key);
-s32 func_80087A9C(s32 key, s32 resource_entry_index, s32 resource_slot_id, u8 *resource_base, s32 group, s32 x, s32 y, s32 z, s32 animation, s32 resource_flag);
+void field_set_actor_group(s32 key, s32 group);
+s32 field_actor_faces_actor(s32 first_key, s32 second_key);
+s32 field_get_actor_binding_state(s32 key);
+s32 field_reload_actor(s32 key, s32 resource_entry_index, s32 resource_slot_id, u8 *resource_base, s32 group, s32 x, s32 y, s32 z, s32 animation, s32 resource_flag);
 
 /* field_actor_lifecycle.c */
-void func_800B4390(void);
-void func_800B4410(s32 group);
-void func_800B4584(void);
+struct FieldActorTemplate;
+struct FieldActorTemplateTable;
+void field_battle_scan_actor_objects(void);
+void field_battle_start(s32 group);
+void field_battle_suspend(void);
+void field_battle_end(void);
+struct FieldActorTemplate* field_find_actor_template(struct FieldActorTemplateTable* table, s32 id);
 
 /* field_actor_motion.c */
-s32 func_80092988(Vec3i *position, Vec3i *delta);
+s32 field_update_actor_action(struct FieldActor *actor, s32 update_action);
+s32 field_move_leaves_screen(struct FieldActor *actor, Vec3i *delta);
 
 /* field_actor_reactions.c */
-s32 func_8008BD88(s32 key);
-s32 func_8008C2EC(s32 first_key, s32 second_key);
+s32 field_stop_actor(s32 key);
+s32 field_test_actor_depth_overlap(s32 first_key, s32 second_key);
 
 /* field_actor_record_ops.c */
-void func_800C2640(s32 actor_id, s32 argument);
-s32 func_800C2724(void);
-void func_800C2848(s32 actor_id, s32 flags);
-void func_800C28B8(void);
+void field_spawn_item_record(s32 key, s32 item);
+s32 field_find_nearest_faced_item(s32 unused);
+void field_set_actor_record_script_only(s32 key, s32 flags);
+void field_clear_actor_record_script_only(s32 key);
 
 /* field_actor_resource_unpack.c */
-void func_8009A384(void);
-s32 func_8009A390(void);
-void func_8009A3E8(void);
-void func_8009A4A0(s32 group);
-void func_8009A4CC(s32 group, struct FieldActorState *actor);
+s32 field_request_resource_read(s32 resource_id);
+void field_clear_resource_queue(void);
+s32 field_get_loading_resource(void);
+void field_issue_next_resource_read(void);
+void field_free_owner_resources(s32 tag);
+void field_unpack_actor_resource(s32 owner, struct FieldActorState *actor);
 
 /* field_actor_runtime.c */
-s32 field_get_actor_resource_id(s32 unused_slot_index, struct FieldActorResourceSlot *entry, s32 alternate_set);
+s32 field_get_actor_resource_id(s32 unused_slot_index, struct FieldPlayerRecord* player, s32 weapon_set);
 void field_initialize_actor_part(s32 part_index, s32 timer_mode);
 void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index);
 void field_load_resource_entry(s32 resource_slot_id, u8 *resource_base, s32 entry_index);
@@ -116,7 +128,7 @@ void field_release_resource_entry(s32 entry_index);
 void field_render_actor_objects(FieldRenderContext *render_context);
 void field_set_global_color_scale(s16 red, s16 green, s16 blue);
 void field_unpack_resource_package(struct FieldCdBuffer *buf, s32 size, s32 slot_index, s32 palette_row);
-void func_8006AA7C(s32 actor_slot);
+void field_finish_party_slot_reload(s32 actor_slot);
 
 /* field_actor_slot_resources.c */
 s32 field_object_has_active_actor_tracks(s32 object_index);
@@ -183,7 +195,7 @@ void func_8005F5BC(s32 unused, struct FieldNode *clip);
 void func_800A255C(void);
 void func_800A2594(s32 player, s32 age_sequence);
 s32 func_800A29F8(s32 player, s32 unused, s32 peek);
-void func_800A2DD8(s32 player);
+void field_command_history_clear(s32 player);
 void func_800A2DFC(void);
 u8 *func_800A2E34(void);
 

@@ -312,7 +312,7 @@ s32 func_800AF350(FieldMenuElement *window)
                     actor->x = g_field_actors[0].x;
                     actor->y = g_field_actors[0].y;
                     actor->z = g_field_actors[0].z;
-                    direction = FIELD_DIRECTION_OFFSET(direction_table, g_field_actors[0].unk1B >> 5);
+                    direction = FIELD_DIRECTION_OFFSET(direction_table, g_field_actors[0].direction >> 5);
                     offset[0] = -direction[0];
                     offset[1] = 0;
                     offset[2] = -direction[1];
@@ -324,11 +324,11 @@ s32 func_800AF350(FieldMenuElement *window)
                     actor_direction = g_field_actors[0].animation;
                     actor_flags &= ~0x1FF;
                     actor_flags |= 2;
-                    actor->unk27 = 0;
-                    actor->unk24 = 1;
+                    actor->animation_frame = 0;
+                    actor->animation_active = 1;
                     actor->command = 0xBA;
-                    actor->unk3D = 2;
-                    actor->unk2E = 0xFE;
+                    actor->removal_delay = 2;
+                    actor->animation_state = 0xFE;
                     actor->control.word = actor_flags;
                     actor->script_index = 0;
                     actor->unk10 = 1;
@@ -337,7 +337,7 @@ s32 func_800AF350(FieldMenuElement *window)
                     state->unk18E = 1;
                     state->unk18 = 0;
                     field_restart_actor_animation(actor);
-                    func_800C2640(state->key, items[D_80122A00 * 2]);
+                    field_spawn_item_record(state->key, items[D_80122A00 * 2]);
                     animation_actor = func_800839F8(actor_index, 0);
                     if ((animation_actor != -1) && (func_80083EEC(actor_index, animation_actor, 0xAF) != 0))
                     {
@@ -439,7 +439,7 @@ s32 func_800AF350(FieldMenuElement *window)
  *
  * Increments the inventory count of the item the actor shows (its animation
  * index is the item id minus 0x60), passes 0xFF for the object's key to
- * func_800C2640 (func_800AF350 passes the item id there), marks the actor
+ * field_spawn_item_record (func_800AF350 passes the item id there), marks the actor
  * absent (0xFF) and clears the object's unk18E byte.
  *
  * @param actor_index Field actor and object index.
@@ -456,7 +456,7 @@ void func_800AF824(s32 actor_index)
     pad_entry = pad_ctx + (actor->animation & 0x7F);
     pad_entry[0x2640] = pad_entry[0x2640] + 1;
     state = &g_field_object_states[actor_index];
-    func_800C2640(state->key, 0xFF);
+    field_spawn_item_record(state->key, 0xFF);
     actor->presence = 0xFF;
     state->unk18E = 0;
 }
