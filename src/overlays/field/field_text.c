@@ -2559,7 +2559,7 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
 {
     FieldTextSystem* text_system = (FieldTextSystem*)0x801ED000;
     FieldTextVertex* vertex;
-    FieldTextVertex* mesh;
+    FieldTextVertex* lower_row;
     FieldTextVertex* bottom_vertices;
     FieldTextPacket* poly;
     u8* first;
@@ -2851,31 +2851,28 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
     }
 
     /* Draw the top and bottom borders, followed by the tiled window interior. */
-    tpage = getTPage(0, 0, 960, 256) << 16;
+    texture_command = FIELD_TEXT_QUAD_COLOR;
     texture_u_origin = 0;
     texture_v_origin = 0xE0;
-    texture_command = FIELD_TEXT_QUAD_COLOR;
+    tpage = getTPage(0, 0, 960, 256) << 16;
     vertex = (FieldTextVertex*)0x1F800000;
     packet_height = 8;
     rows_remaining = 1;
     first = *cursor;
     packet_cursor = first;
-    clut = text_system->window_clut;
-    clut <<= 16;
+    clut = text_system->window_clut << 16;
     do
     {
+        texture_uv = texture_u_origin | 0xF000;
         if (rows_remaining == 0)
         {
             texture_uv = texture_u_origin | 0xF800;
         }
-        else
-        {
-            texture_uv = texture_u_origin | 0xF000;
-        }
         poly = (FieldTextPacket*)packet_cursor;
+        /* The row below starts one mesh row (columns + 3 vertices) further on. */
+        lower_row = vertex + ((content_width + 0x3F) >> 6) + 4;
         packet_cursor += sizeof(POLY_FT4);
-        sel = (u32)packet_cursor & 0xFFFFFF;
-        poly->quad_words.tag = sel | 0x09000000;
+        poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
         poly->quad_words.uv0 = clut | texture_uv;
         poly->quad_words.uv1 = tpage | (texture_uv + 8);
         poly->quad_words.uv2 = texture_uv + (packet_height << 8);
@@ -2883,11 +2880,11 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
         poly->quad_words.uv3 = texture_uv + ((packet_height << 8) | 8);
         texture_uv += 8;
         poly->quad_words.xy0 = vertex[0].word;
-        pixels_remaining = content_width;
         poly->quad_words.xy1 = vertex[1].word;
-        bottom_vertices = vertex + ((content_width + 0x3F) >> 6) + 4;
-        poly->quad_words.xy2 = bottom_vertices[-1].word;
-        poly->quad_words.xy3 = bottom_vertices[0].word;
+        poly->quad_words.xy2 = vertex[((content_width + 0x3F) >> 6) + 3].word;
+        poly->quad_words.xy3 = vertex[((content_width + 0x3F) >> 6) + 4].word;
+        bottom_vertices = lower_row;
+        pixels_remaining = content_width;
         vertex += 1;
         if (content_width > 0)
         {
@@ -3081,26 +3078,20 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
 
     tpage = getTPage(0, 0, 960, 256) << 16;
     /* The final eight mesh vertices hold the portrait shadow and image quads. */
-    mesh = (FieldTextVertex*)0x1F800000;
     if (state->portrait != 0)
     {
         poly = (FieldTextPacket*)packet_cursor;
         packet_cursor += sizeof(POLY_FT4);
-        frame_rows = state->height;
-        frame_rows += 0x1F;
-        frame_rows >>= 5;
-        frame_rows += 3;
+        frame_rows = ((state->height + 0x1F) >> 5) + 3;
         sel = (state->flags.word >> 3) & 1;
-        clut = text_system->text_clut;
+        clut = text_system->text_clut << 16;
         poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
         poly->quad_words.rgbc = FIELD_TEXT_QUAD_SHADOW;
-        texture_uv = (((((sel * 0x30) + 0x110) & 0xFF) << 8) | 0xD0);
-        poly->quad_words.uv0 = (clut << 16) | texture_uv;
+        vertex = (frame_rows * (((content_width + 0x3F) >> 6) + 3)) + (FieldTextVertex*)0x1F800000 + text_vertex_count;
+        texture_uv = ((((sel * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
+        poly->quad_words.uv0 = clut | texture_uv;
         poly->quad_words.uv2 = texture_uv + 0x3000;
         poly->quad_words.uv1 = (texture_uv + 0x2F) | tpage;
-        clut = content_width + 0x3F;
-        clut = clut >> 6;
-        vertex = mesh + text_vertex_count + (frame_rows * (clut + 3));
         poly->quad_words.uv3 = texture_uv + 0x302F;
         poly->quad_words.xy0 = vertex[0].word;
         poly->quad_words.xy1 = vertex[1].word;
@@ -3109,16 +3100,14 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
         vertex += 4;
         poly = (FieldTextPacket*)packet_cursor;
         packet_cursor += sizeof(POLY_FT4);
-        sel = (state->flags.word >> 3) & 1;
-        clut = text_system->portrait_clut[sel];
-        texture_uv = ((((sel * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
+        clut = text_system->portrait_clut[(state->flags.word >> 3) & 1] << 16;
+        texture_uv = ((((((state->flags.word >> 3) & 1) * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
+        poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
+        poly->quad_words.rgbc = texture_command;
         poly->quad_words.uv2 = texture_uv + 0x3000;
         poly->quad_words.uv1 = (texture_uv + 0x2F) | tpage;
-        dy = (u32)packet_cursor & 0xFFFFFF;
-        poly->quad_words.tag = dy | 0x09000000;
-        poly->quad_words.rgbc = texture_command;
         poly->quad_words.uv3 = texture_uv + 0x302F;
-        poly->quad_words.uv0 = (clut << 16) | texture_uv;
+        poly->quad_words.uv0 = clut | texture_uv;
         poly->quad_words.xy0 = vertex[0].word;
         poly->quad_words.xy1 = vertex[1].word;
         poly->quad_words.xy2 = vertex[2].word;
