@@ -24,22 +24,16 @@ OBJDUMP        := $(CROSS_COMPILE)objdump
 INCLUDE_FLAGS := -Iinclude -Iinclude/sdk
 
 # GCC 2.8.0 is the default compiler. Sources are routed to G0 or G4 in the
-# source lists; G controls the maximum size of gp-relative data.
-CFLAGS_G0 := -O2 -G0 -gcoff -fsigned-char -fno-builtin
-CFLAGS_G0_BUILTIN := -O2 -G0 -gcoff -fsigned-char
-CFLAGS_G0_O0 := -O0 -G0 -gcoff -fsigned-char -fno-builtin
-CFLAGS_G0_O0_BUILTIN := -O0 -G0 -gcoff -fsigned-char
+# source lists; G controls the maximum size of gp-relative data. Builtins stay
+# enabled: code that calls abs() relies on the inline expansion, and every
+# other source builds identically with or without -fno-builtin.
+CFLAGS_G0 := -O2 -G0 -gcoff -fsigned-char
+CFLAGS_G0_O0 := -O0 -G0 -gcoff -fsigned-char
 CFLAGS_G4 := -O2 -G4 -gcoff -fsigned-char
 
 # Alternate compiler and assembler flags.
-# The GCC 2.7.2 CDK G0 pipeline optionally disables individual optimization
-# passes for source files whose target code requires it. These variables are
-# empty by default and receive target-specific assignments from mk/overlays.mk.
-# Recursive assignment keeps the target-specific values visible here.
-CFLAGS_272_CDK_SCHED_FLAG :=
-CFLAGS_272_CDK_STRENGTH_FLAG :=
-CFLAGS_272_CDK_G0 = -O2 -G0 -msoft-float -gcoff $(CFLAGS_272_CDK_SCHED_FLAG) $(CFLAGS_272_CDK_STRENGTH_FLAG)
-CFLAGS_272_GNU_G0 := -O2 -G0
+CFLAGS_272_CDK_G0  := -O2 -G0 -msoft-float -gcoff
+CFLAGS_272_GNU_G0  := -O2 -G0
 ASFLAGS_272_GNU    := -O -EL
 CFLAGS_260_G0      := -O2 -G0 -gcoff -msoft-float
 
@@ -51,14 +45,8 @@ MASPSX_PP_FLAGS := --macro-inc
 
 # Each maspsx-backed compiler family must emulate its original ASPSX version.
 MASPSX_FLAGS         := -no-pad-sections --aspsx-version=2.77 --expand-div
+MASPSX_FLAGS_272_CDK := -no-pad-sections --aspsx-version=2.67 --expand-div
 MASPSX_FLAGS_260     := -no-pad-sections --aspsx-version=2.34 --expand-div
-
-# GCC 2.7.2 CDK div expansion varies by source, like the G4 case below. The
-# flag defaults to --expand-div and is cleared with a target-specific
-# assignment for the no-expand subset. Recursive assignment keeps that value
-# visible here, so the CDK C rule must reference this with $$(...) (deferred).
-MASPSX_CDK_DIV_FLAG := --expand-div
-MASPSX_FLAGS_272_CDK = -no-pad-sections --aspsx-version=2.67 $(MASPSX_CDK_DIV_FLAG)
 
 # GCC 2.8.0 G4 division expansion varies by source. This flag is cleared with
 # a target-specific assignment for objects whose original code used bare div.

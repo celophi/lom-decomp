@@ -7,11 +7,9 @@
 # toolchain configuration:
 #
 #   overlay_<name>_gcc_272_cdk_g0_srcs
-#   overlay_<name>_gcc_272_cdk_g0_nosched_srcs
-#   overlay_<name>_gcc_272_cdk_g0_noexpand_srcs
 #   overlay_<name>_gcc_272_gnu_g0_srcs
 #   overlay_<name>_gcc_280_g0_srcs
-#   overlay_<name>_gcc_280_g0_builtin_srcs
+#   overlay_<name>_gcc_280_g0_o0_srcs
 #   overlay_<name>_gcc_280_g4_srcs
 #   overlay_<name>_gcc_280_g4_noexpand_srcs
 #
@@ -66,11 +64,10 @@ overlay_cload_gcc_272_cdk_g0_srcs := \
 
 OVERLAYS += field
 # Sources follow FIELD.BIN.yaml address order within each compiler configuration.
-overlay_field_gcc_272_gnu_g0_srcs :=
-
 overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/overlay_header.c \
 	src/overlays/field/field_frame_commands.c \
+	src/overlays/field/field_subsystem_init.c \
 	src/overlays/field/field_draw_state.c \
 	src/overlays/field/field_fade.c \
 	src/overlays/field/field_actor_runtime.c \
@@ -119,16 +116,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field_character_name_flags.c \
 	src/overlays/field/field_resource_load.c
 
-overlay_field_gcc_272_cdk_g0_nosched_srcs := \
-	src/overlays/field/field_subsystem_init.c
-
-overlay_field_gcc_272_cdk_g0_nostrength_srcs :=
-
-overlay_field_gcc_272_cdk_g0_noexpand_srcs :=
-
-overlay_field_gcc_280_g0_builtin_srcs := \
-	src/overlays/field/field_select_distance_bucket.c
-
 overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field_interaction_start.c \
 	src/overlays/field/field_event_dispatch.c \
@@ -164,11 +151,10 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field_group_stat_transfer.c \
 	src/overlays/field/field_group_derived_stats.c \
 	src/overlays/field/field_menu_ops.c \
+	src/overlays/field/field_select_distance_bucket.c \
 	src/overlays/field/field_layout_slot_state.c \
 	src/overlays/field/field_equipment_combination_rules.c \
 	src/overlays/field/field_golem_logic_blocks.c
-
-overlay_field_gcc_280_g4_srcs :=
 
 overlay_field_gcc_280_g4_noexpand_srcs := \
 	src/overlays/field/field_scene_load.c \
@@ -225,7 +211,6 @@ overlay_shop_gcc_272_cdk_g0_srcs := \
 	src/overlays/shop/shop_render.c \
 	src/overlays/shop/shop_text.c \
 	src/overlays/shop/shop_trade.c
-overlay_shop_gcc_280_g0_srcs :=
 
 OVERLAYS += title
 overlay_title_gcc_272_cdk_g0_srcs := \
@@ -290,7 +275,7 @@ overlay_wmap_gcc_280_g0_srcs := \
 	src/overlays/wmap/wmap_special_effect_34.c \
 	src/overlays/wmap/wmap_special_effect_35.c
 
-overlay_wmap_gcc_280_g0_o0_builtin_srcs := \
+overlay_wmap_gcc_280_g0_o0_srcs := \
 	src/overlays/wmap/wmap_effect_resources.c \
 	src/overlays/wmap/wmap_pathfinding.c
 

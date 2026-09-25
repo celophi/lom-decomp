@@ -85,7 +85,7 @@ segments:
 
       # Frame orchestration and actor resource runtime.
       - [0x17A45, c, field_frame_commands]
-      - [0x17C65, c, field_subsystem_init] # gcc_272_cdk_g0_nosched
+      - [0x17C65, c, field_subsystem_init]
       - [0x17E35, c, field_draw_state]
       - [0x17F1D, c, field_fade]
       - [0x18341, c, field_actor_runtime]
@@ -104,7 +104,7 @@ segments:
       - [0x3BC01, c, field_actor_reactions]
       - [0x3CAB9, c, field_actor_behavior]
       - [0x417A1, c, field_actor_input_map_init]
-      - [0x418A9, c, field_actor_action_defaults] # gcc_272_cdk_g0_nostrength
+      - [0x418A9, c, field_actor_action_defaults]
       - [0x41AB9, c, field_actor_input_actions]
       - [0x41F59, c, field_actor_camera]
       - [0x42781, c, field_actor_idle_ops]
@@ -183,7 +183,7 @@ segments:
       - [0x742A9, c, field_group_stat_transfer]
       - [0x746F5, c, field_group_derived_stats]
       - [0x75A95, c, field_menu_ops]
-      - [0x7A265, c, field_select_distance_bucket] # gcc_280_g0_builtin
+      - [0x7A265, c, field_select_distance_bucket]
       - [0x7A531, c, field_layout_slot_state]
       - [0x7A619, c, field_equipment_combination_rules]
       - [0x7BA11, c, field_golem_logic_blocks]
