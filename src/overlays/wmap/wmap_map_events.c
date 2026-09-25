@@ -31,60 +31,39 @@ static inline s32 tile_exists(s32 x, s32 y)
     return D_80139290[x][y].tile != 255;
 }
 
+/** @brief Dispatch the first pending map event and consume one event tick. */
 void func_800A5DFC(void)
 {
-/* Partial WMAP decompilation: 87.020836% (gcc280_g0). */
+    extern s32 D_800D9224;
+    extern u8 D_800DCEF4[4];
+    extern u8 D_800DCEF8;
+    extern u8 D_800DCF00;
+    extern s32 D_8011CF20;
+    extern s32 D_8011CF44;
+    extern s32 D_8011D4F8;
+    extern u8 D_8011D538;
+    extern u8 D_80123538;
+    extern u8 D_80129538;
+    extern s32 D_80129540;
+    extern s32 D_8012954C;
+    extern s32 D_80139238;
+    extern s32 D_80139248;
+    extern s32 D_80139834;
+    extern s32 D_80139900;
+    extern s32 D_8013997C;
+    extern s32 D_8013B288;
+    extern s32 D_8018222C;
+    extern s32 D_80182DD4;
+    extern s32 D_801ADAF0;
+    s32 func_8009A420(s32 initialize);
+    s32 func_8009AB20(s32 initialize);
+    s32 func_800AB850(s32 initialize);
+    s32 func_800B2080(s32 initialize);
+    s32 func_800B45B8(s32 initialize);
+    s32 func_800C2274(s32 initialize);
 
-typedef s32 M2C_UNK;
-typedef s8 M2C_UNK8;
-typedef s16 M2C_UNK16;
-typedef s32 M2C_UNK32;
-#define M2C_FIELD(expr, type_ptr, offset) (*(type_ptr)((s8 *)(expr) + (offset)))
-#define M2C_UNALIGNED32(expr) (expr)
-#define M2C_BITWISE(type, expr) ((type)(expr))
-
-void cdrom_queue_read__for_func_800A5DFC(s32, void *) __asm__("cdrom_queue_read");
-M2C_UNK cdrom_wait_queue_empty__for_func_800A5DFC() __asm__("cdrom_wait_queue_empty");                   /* extern */
-M2C_UNK func_800A61BC__for_func_800A5DFC(M2C_UNK) __asm__("func_800A61BC");                     /* extern */
-extern s32 D_800D9224;
-extern u8 D_800DCEF4;
-extern u8 D_800DCEF8;
-extern u8 D_800DCF00;
-extern s32 D_8011CF20;
-extern s32 D_8011CF44;
-extern s32 D_8011D4F8;
-extern u8 D_8011D538;
-extern u8 D_80123538;
-extern u8 D_80129538;
-extern s32 D_80129540;
-extern s32 D_8012954C;
-extern s32 D_80139238;
-extern s32 D_80139248;
-extern s32 D_80139834;
-extern s32 D_80139900;
-extern s32 D_8013997C;
-extern s32 D_8013B288;
-extern s32 D_8018222C;
-extern s32 D_80182DD4;
-extern s32 D_801ADAF0;
-extern u8 func_8009A420;
-extern u8 func_8009AB20;
-extern u8 func_800A7370__for_func_800A5DFC __asm__("func_800A7370");
-extern u8 func_800A7668__for_func_800A5DFC __asm__("func_800A7668");
-extern u8 func_800A7BE8__for_func_800A5DFC __asm__("func_800A7BE8");
-extern u8 func_800A7FD0__for_func_800A5DFC __asm__("func_800A7FD0");
-extern u8 func_800A83B8__for_func_800A5DFC __asm__("func_800A83B8");
-extern u8 func_800A87D4__for_func_800A5DFC __asm__("func_800A87D4");
-extern u8 func_800A88D8__for_func_800A5DFC __asm__("func_800A88D8");
-extern u8 func_800AB850;
-extern u8 func_800B2080;
-extern u8 func_800B45B8;
-extern u8 func_800C2274;
-
-    M2C_UNK var_a0_2;
-    s32 *var_a2;
-    u32 var_a0;
-    u8 *temp_v1;
+    s32 event_index;
+    u8 *event;
 
     if (D_8011CF44 == 0)
     {
@@ -103,11 +82,11 @@ extern u8 func_800C2274;
         }
         else if (D_8013997C != 0)
         {
-            cdrom_queue_read__for_func_800A5DFC(0x1145, &D_8011D538);
-            cdrom_queue_read__for_func_800A5DFC(0x1146, (u8 *)&D_8011D538 + 0x2000);
-            cdrom_wait_queue_empty__for_func_800A5DFC();
+            cdrom_queue_read(0x1145, &D_8011D538);
+            cdrom_queue_read(0x1146, (u8 *)&D_8011D538 + 0x2000);
+            cdrom_wait_queue_empty();
             D_8013997C = 0;
-            func_8006CAC0(&func_800A7370__for_func_800A5DFC);
+            func_8006CAC0(&func_800A7370);
         }
         else if (D_8011CF20 != 0)
         {
@@ -132,102 +111,82 @@ extern u8 func_800C2274;
         else if (D_80139248 != 0)
         {
             D_80139248 = 0;
-            func_8006CAC0(&func_800A7BE8__for_func_800A5DFC);
+            func_8006CAC0(&func_800A7BE8);
         }
         else if (D_80129540 != 0)
         {
             D_80129540 = 0;
-            func_8006CAC0(&func_800A7FD0__for_func_800A5DFC);
+            func_8006CAC0(&func_800A7FD0);
         }
         else if (D_80139900 != 0)
         {
             D_80139900 = 0;
-            func_8006CAC0(&func_800A83B8__for_func_800A5DFC);
+            func_8006CAC0(&func_800A83B8);
         }
         else if (D_80139238 != 0)
         {
             D_80139238 = 0;
-            func_8006CAC0(&func_800A87D4__for_func_800A5DFC);
+            func_8006CAC0(&func_800A87D4);
         }
         else if (D_80139834 != 0)
         {
             D_80139834 = 0;
-            func_8006CAC0(&func_800A88D8__for_func_800A5DFC);
+            func_8006CAC0(&func_800A88D8);
         }
         else
         {
-            var_a0 = 0;
-
-loop_26:
-            temp_v1 = var_a0 + (u8 *)&D_80129538;
-            if (*temp_v1 != 0)
+            for (event_index = 0; event_index < 8; event_index++)
             {
-                *temp_v1 = 0;
-                if (var_a0 < 5U)
+                event = (u8 *)&D_80129538 + event_index;
+                if (*event != 0)
                 {
-                    switch (var_a0)               
+                    *event = 0;
+                    switch (event_index)
                     {
                     case 0:
-                        cdrom_queue_read__for_func_800A5DFC(0x1149, &D_80123538);
-                        cdrom_wait_queue_empty__for_func_800A5DFC();
+                        cdrom_queue_read(0x1149, &D_80123538);
+                        cdrom_wait_queue_empty();
                         func_80064F64(0x114A);
                         func_8006D0F0(4, &D_800DCEF8, &D_800DCF00);
                         D_8018222C = 1;
-                        M2C_FIELD(&D_800DCEF4, s8 *, 3) = 1;
-                        M2C_FIELD(&D_800DCEF4, s8 *, 2) = 1;
-                        M2C_FIELD(&D_800DCEF4, s8 *, 1) = 1;
-                        M2C_FIELD(&D_800DCEF4, s8 *, 0) = 1;
+                        D_800DCEF4[3] = 1;
+                        D_800DCEF4[2] = 1;
+                        D_800DCEF4[1] = 1;
+                        D_800DCEF4[0] = 1;
                         break;
                     case 1:
-                        cdrom_queue_read__for_func_800A5DFC(0x10DE, (u8 *)&D_80123538 + 0x3538);
-                        cdrom_wait_queue_empty__for_func_800A5DFC();
+                        cdrom_queue_read(0x10DE, &D_80123538);
+                        cdrom_wait_queue_empty();
                         func_80064F64(0x10DF);
-                        var_a0_2 = 0xB;
-block_34:
-                        func_800A61BC__for_func_800A5DFC(var_a0_2);
+                        func_800A61BC(11);
                         break;
                     case 2:
-                        cdrom_queue_read__for_func_800A5DFC(0x10D8, (u8 *)&D_80123538 + 0x3538);
-                        cdrom_wait_queue_empty__for_func_800A5DFC();
+                        cdrom_queue_read(0x10D8, &D_80123538);
+                        cdrom_wait_queue_empty();
                         func_80064F64(0x10D9);
-                        var_a0_2 = 0x11;
-                        goto block_34;
+                        func_800A61BC(17);
+                        break;
                     case 3:
-                        cdrom_queue_read__for_func_800A5DFC(0x10DC, (u8 *)&D_80123538 + 0x3538);
-                        cdrom_wait_queue_empty__for_func_800A5DFC();
+                        cdrom_queue_read(0x10DC, &D_80123538);
+                        cdrom_wait_queue_empty();
                         func_80064F64(0x10DD);
-                        var_a0_2 = 0xB;
-                        goto block_34;
+                        func_800A61BC(11);
+                        break;
                     case 4:
-                        cdrom_queue_read__for_func_800A5DFC(0x10DA, (u8 *)&D_80123538 + 0x3538);
-                        cdrom_wait_queue_empty__for_func_800A5DFC();
+                        cdrom_queue_read(0x10DA, &D_80123538);
+                        cdrom_wait_queue_empty();
                         func_80064F64(0x10DB);
-                        var_a0_2 = 0xA;
-                        goto block_34;
+                        func_800A61BC(10);
+                        break;
                     }
-                }
-                func_8006CAC0(&func_800A7668__for_func_800A5DFC);
-            }
-            else
-            {
-                var_a0 += 1;
-
-                if ((s32) var_a0 >= 8)
-                {
-
-                }
-                else
-                {
-                    goto loop_26;
+                    func_8006CAC0(func_800A7668);
+                    break;
                 }
             }
         }
         D_800D9224 -= 1;
     }
 }
-#undef M2C_FIELD
-#undef M2C_UNALIGNED32
-#undef M2C_BITWISE
 
 /** @brief Select the first occupied neighbor, or a random direction when isolated. */
 void func_800A61BC(s32 tile)
