@@ -264,3 +264,7 @@ wmap_draw_model = 0x800675F0; // type:func
 g_wmap_packet_bytes = 0x800D921C;
 g_wmap_frames = 0x80129560;
 g_wmap_current_frame = 0x801398EC;
+
+// Shared particle behavior parameters.
+D_8013B264 = 0x8013B264;
+D_8013B270 = 0x8013B270;

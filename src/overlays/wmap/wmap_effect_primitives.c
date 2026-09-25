@@ -50,8 +50,10 @@ typedef struct
 } WmapMovingPoint;
 
 extern s32 D_8011CF74;
+extern s32 D_8013B264;
+extern s32 D_8013B270;
 extern s32 D_8013B278;
-extern u16 D_8013B280;
+extern s32 D_8013B280;
 extern s32 D_8013B284;
 extern WmapMotion D_801AFBD0[];
 extern s32 D_801B0FD0;
@@ -83,6 +85,30 @@ extern s32 D_8013B29C;
 
 s32 rand(void);
 
+typedef struct
+{
+    s16 id, state;
+    u8 pad04[2];
+    s8 scale;
+    u8 pad07[7];
+    s16 sequence, previous_sequence;
+    u8 pad12[2];
+    u8* cursor;
+    u8* sequence_start;
+    u8* frame_data;
+    s16 remaining, target_shade, shade, shade_step;
+    u8 pad28[4];
+} WmapParticleActor;
+
+typedef struct
+{
+    s32 unknown00;
+    s32 velocity_min, velocity_range;
+    s32 lifetime_min, lifetime_range;
+    s32 spawn_interval, radial_step, first_motion;
+    s32 texture_index, sequence, radius;
+} WmapParticleConfig;
+
 /**
  * @brief Update, project, and replenish a configured particle effect.
  * @param arg0 Actor records to update.
@@ -96,215 +122,206 @@ s32 rand(void);
  */
 void func_8006A2FC(void* arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4_value, s32 arg5_value, u32 arg6, void* arg7)
 {
-    u16 arg4 = arg4_value;
-    u16 arg5 = arg5_value;
     SVECTOR position;
-    s32 sp20;
-    M2C_UNK var_s4;
-    s16* temp_s2_2;
-    s16 temp_v0_6;
-    s32 temp_a1;
-    s32 temp_lo;
-    s32 temp_s0;
-    s32 temp_v0_3;
-    s32 temp_v0_4;
-    s32 temp_v1_2;
-    s32 var_s1;
-    s32 var_s1_2;
-    s32 var_v0;
-    u16 temp_v0;
-    u16 temp_v0_2;
-    u16 temp_v0_5;
-    u8 var_v1;
-    void* temp_s2;
-    void* temp_v0_7;
-    void* temp_v0_8;
-    void* temp_v1;
-    void* var_a0;
-    void* var_s0;
+    s32 screen_position;
+    s32 ot_index;
+    s16 sequence;
+    s32 falling_velocity;
+    s16* offsets;
+    u8* data;
+    u8* cursor;
+    s32 offset;
+    s32 lifetime_product;
+    s32 packed_radius;
+    s32 radius_min;
+    s32 radius_range;
+    s32 parabola_height;
+    s32 phase;
+    s32 spawn_interval;
+    s32 i;
+    s32 resource_offset;
+    u16 new_z;
+    s32 frame;
+    WmapMotion* motion;
+    WmapParticleActor* actor;
+    WmapParticleConfig* config = arg7;
 
-    var_s4 = 4;
-    var_s1 = 0;
+    ot_index = 4;
+    i = 0;
     if (arg2 > 0)
     {
-        var_s0 = arg0;
         do
         {
-            temp_s2 = ((var_s1 + M2C_FIELD(arg7, s32*, 0x1C)) * 0x14) + (u8*)&D_801AFBD0;
-            if (M2C_FIELD(temp_s2, s16*, 0) != 0)
+            actor = &((WmapParticleActor*)arg0)[i];
+            motion = &D_801AFBD0[i + config->first_motion];
+            if (motion->state != 0)
             {
-                position.vx = (s16)((s32)(((s32)M2C_FIELD(temp_s2, s32*, 8) >> 3) * (ccos(M2C_FIELD(temp_s2, s16*, 2)) >> 6)) >> 0xC);
-                position.vy = (s16)((s32)(((s32)M2C_FIELD(temp_s2, s32*, 8) >> 3) * (csin(M2C_FIELD(temp_s2, s16*, 2)) >> 6)) >> 0xC);
-                position.vz = M2C_FIELD(temp_s2, u16*, 0xE);
+                position.vx = ((motion->radius >> 3) * (ccos(motion->angle) >> 6)) >> 12;
+                position.vy = ((motion->radius >> 3) * (csin(motion->angle) >> 6)) >> 12;
+                position.vz = (u16)motion->z;
                 gte_ldv0(&position);
                 gte_rtps();
                 switch (arg6)
                 {
                 case 5:
-                    if (M2C_FIELD(var_s0, s16*, 0x24) >= arg3)
+                    if (actor->shade >= arg3)
                     {
-                        M2C_FIELD(var_s0, s16*, 0x22) = 0;
+                        actor->target_shade = 0;
                     }
-                    if ((M2C_FIELD(var_s0, s16*, 0x22) == 0) && (M2C_FIELD(var_s0, s16*, 0x24) < 4))
+                    if ((actor->target_shade == 0) && (actor->shade < 4))
                     {
-                        M2C_FIELD(temp_s2, s16*, 0) = 0;
+                        motion->state = 0;
                     }
                     /* fallthrough */
                 case 0:
-                    M2C_FIELD(temp_s2, u16*, 0xE) = (u16)(M2C_FIELD(temp_s2, u16*, 0xE) + M2C_FIELD(temp_s2, u16*, 4));
-                    temp_v0 = M2C_FIELD(temp_s2, u16*, 0xC) - 1;
-                    M2C_FIELD(temp_s2, u16*, 0xC) = temp_v0;
-                    M2C_FIELD(temp_s2, s32*, 8) = (s32)(M2C_FIELD(temp_s2, s32*, 8) + M2C_FIELD(arg7, s32*, 0x18));
-                    if ((temp_v0 << 0x10) == 0)
+                    motion->z = (u16)((u16)motion->z + (u16)motion->velocity);
+                    motion->radius += config->radial_step;
+                    if (--motion->lifetime == 0)
                     {
-                        M2C_FIELD(temp_s2, s16*, 0) = 0;
+                        motion->state = 0;
                     }
                 default:
-                block_28:
-                    var_v0 = var_s1 * 8;
                     break;
                 case 1:
-                    if (*(s32*)0x8013B264 < (s16)M2C_FIELD(temp_s2, u16*, 0xC))
+                    if (D_8013B264 < motion->lifetime)
                     {
-                        M2C_FIELD(temp_s2, u16*, 0xE) = (u16)(M2C_FIELD(temp_s2, u16*, 0xE) + (*(u16*)0x8013B270 + ((s32)(rand() * D_8013B278) >> 0xF)));
-                        M2C_FIELD(temp_s2, s32*, 8) = (s32)(M2C_FIELD(temp_s2, s32*, 8) + M2C_FIELD(arg7, s32*, 0x18));
+                        motion->z = (u16)((u16)motion->z + (D_8013B270 + ((s32)(rand() * D_8013B278) >> 0xF)));
+                        motion->radius += config->radial_step;
                     }
                     else
                     {
-                        temp_v0_2 = M2C_FIELD(temp_s2, u16*, 0xE) - (D_8013B280 + ((s32)(rand() * D_8013B284) >> 0xF));
-                        M2C_FIELD(temp_s2, u16*, 0xE) = temp_v0_2;
-                        if (temp_v0_2 & 0x8000)
+                        falling_velocity = (rand() * D_8013B284) >> 15;
+                        new_z = (u16)motion->z - (D_8013B280 + falling_velocity);
+                        motion->z = new_z;
+                        if ((s16)new_z < 0)
                         {
-                            M2C_FIELD(temp_s2, u16*, 0xE) = 0U;
-                            M2C_FIELD(var_s0, s16*, 0x22) = 0;
-                            M2C_FIELD(var_s0, s16*, 0x26) = 8;
-                            if (M2C_FIELD(var_s0, s16*, 0x24) < 4)
+                            motion->z = 0U;
+                            actor->target_shade = 0;
+                            actor->shade_step = 8;
+                            if (actor->shade < 4)
                             {
-                                M2C_FIELD(temp_s2, s16*, 0) = 0;
+                                motion->state = 0;
                             }
                         }
                     }
-                    var_s4 = 0xC;
-                    if ((u32)((u16)M2C_FIELD(temp_s2, s16*, 2) - 1) < 0x7FFU)
+                    ot_index = 0xC;
+                    if ((u32)((u16)motion->angle - 1) < 0x7FFU)
                     {
-                        var_s4 = 0xA;
+                        ot_index = 0xA;
                     }
-                    M2C_FIELD(temp_s2, u16*, 0xC) = (u16)(M2C_FIELD(temp_s2, u16*, 0xC) - 1);
-                    goto block_28;
+                    motion->lifetime = (u16)((u16)motion->lifetime - 1);
+                    break;
                 case 2:
-                    temp_v0_3 = (s16)M2C_FIELD(temp_s2, u16*, 0xC) - *(s32*)0x8013B264;
-                    M2C_FIELD(temp_s2, u16*, 0xE) = (u16)(D_8013B280 + (*(u16*)0x8013B270 - ((s32)(temp_v0_3 * temp_v0_3) / (s32)D_8013B278)));
-                    if ((s16)M2C_FIELD(temp_s2, u16*, 0xC) != 0)
+                    parabola_height = motion->lifetime - D_8013B264;
+                    parabola_height = (parabola_height * parabola_height) / D_8013B278;
+                    motion->z = D_8013B280 + (D_8013B270 - parabola_height);
+                    if (motion->lifetime != 0)
                     {
-                        M2C_FIELD(temp_s2, u16*, 0xC) = (u16)(M2C_FIELD(temp_s2, u16*, 0xC) - 1);
-                        M2C_FIELD(temp_s2, s32*, 8) = (s32)(M2C_FIELD(temp_s2, s32*, 8) + M2C_FIELD(arg7, s32*, 0x18));
+                        motion->lifetime--;
+                        motion->radius += config->radial_step;
                     }
-                    goto block_28;
+                    break;
                 case 3:
-                    temp_v0_4 = *(s32*)0x8013B264 - (s16)M2C_FIELD(temp_s2, u16*, 0xC);
-                    M2C_FIELD(temp_s2, u16*, 0xE) = (u16)((s32)(temp_v0_4 * temp_v0_4) / (s32) * (u16*)0x8013B270);
-                    goto block_28;
+                    phase = D_8013B264 - motion->lifetime;
+                    motion->z = (u16)((s32)(phase * phase) / (s32)D_8013B270);
+                    break;
                 case 4:
-                    M2C_FIELD(temp_s2, u16*, 0xE) = (u16)(M2C_FIELD(temp_s2, u16*, 0xE) + M2C_FIELD(temp_s2, u16*, 4));
-                    temp_v0_5 = M2C_FIELD(temp_s2, u16*, 0xC) - 1;
-                    M2C_FIELD(temp_s2, u16*, 0xC) = temp_v0_5;
-                    M2C_FIELD(temp_s2, s32*, 8) = (s32)(M2C_FIELD(temp_s2, s32*, 8) + M2C_FIELD(arg7, s32*, 0x18));
-                    if ((temp_v0_5 << 0x10) == 0)
+                    motion->z = (u16)((u16)motion->z + (u16)motion->velocity);
+                    motion->radius += config->radial_step;
+                    if (--motion->lifetime == 0)
                     {
-                        M2C_FIELD(temp_s2, s16*, 0) = 0;
+                        motion->state = 0;
                     }
-                    goto block_28;
+                    break;
                 case 7:
-                    M2C_FIELD(temp_s2, u16*, 0xE) = (u16)(M2C_FIELD(temp_s2, u16*, 0xE) + M2C_FIELD(temp_s2, u16*, 4));
-                    M2C_FIELD(temp_s2, s16*, 2) = (s16)((u16)M2C_FIELD(temp_s2, s16*, 2) + M2C_FIELD(arg7, u16*, 0x10));
-                    M2C_FIELD(temp_s2, s32*, 8) = (s32)(M2C_FIELD(temp_s2, s32*, 8) + M2C_FIELD(arg7, s32*, 0x18));
+                    motion->z = (u16)((u16)motion->z + (u16)motion->velocity);
+                    motion->angle = (s16)((u16)motion->angle + (u16)config->lifetime_range);
+                    motion->radius += config->radial_step;
                     /* fallthrough */
                 case 6:
-                    var_v0 = var_s1 * 8;
-                    if ((s16)M2C_FIELD(temp_s2, u16*, 0xE) < 0)
+                    if (motion->z < 0)
                     {
-                        M2C_FIELD(temp_s2, s16*, 0) = 0;
-                        goto block_28;
+                        motion->state = 0;
+                        break;
                     }
                     break;
                 }
-                temp_a1 = M2C_FIELD((var_v0 + arg1), s32*, 4);
-                temp_v0_6 = (s16)M2C_FIELD(var_s0, u16*, 0xE);
-                if (M2C_FIELD(var_s0, s16*, 0x10) != temp_v0_6)
+                resource_offset = i * 8;
+                offsets = *(s16**)(resource_offset + arg1 + 4);
+                data = (u8*)offsets;
+                if (actor->previous_sequence != actor->sequence)
                 {
-                    M2C_FIELD(var_s0, s16*, 0x10) = (s16)M2C_FIELD(var_s0, u16*, 0xE);
-                    M2C_FIELD(var_s0, s16*, 0x20) = 1;
-                    temp_v1 = temp_a1 + *(s16*)((temp_v0_6 * 2) + temp_a1);
-                    M2C_FIELD(var_s0, void**, 0x18) = temp_v1;
-                    M2C_FIELD(var_s0, void**, 0x14) = temp_v1;
+                    u8* sequence_cursor;
+                    actor->previous_sequence = (u16)actor->sequence;
+                    offset = offsets[actor->sequence];
+                    actor->remaining = 1;
+                    sequence_cursor = (u8*)offsets + offset;
+                    actor->sequence_start = sequence_cursor;
+                    actor->cursor = sequence_cursor;
                 }
-                if (M2C_FIELD(var_s0, s16*, 0x20) != 0xFF)
+                if (actor->remaining != 255)
                 {
-                    M2C_FIELD(var_s0, s16*, 0x20) = (s16)((u16)M2C_FIELD(var_s0, s16*, 0x20) - 1);
+                    actor->remaining--;
                 }
-                if (M2C_FIELD(var_s0, s16*, 0x20) == 0)
+                if (actor->remaining == 0)
                 {
-                    temp_v0_7 = M2C_FIELD(var_s0, void**, 0x14);
-                    var_v1 = M2C_FIELD(temp_v0_7, u8*, 0);
-                    M2C_FIELD(var_s0, s16*, 0x20) = (s16)M2C_FIELD(temp_v0_7, u8*, 1);
-                    if (var_v1 == 0xFF)
+                    cursor = actor->cursor;
+                    frame = cursor[0];
+                    actor->remaining = cursor[1];
+                    if (frame == 255)
                     {
-                        temp_v0_8 = M2C_FIELD(var_s0, void**, 0x18);
-                        M2C_FIELD(var_s0, void**, 0x14) = temp_v0_8;
-                        var_v1 = M2C_FIELD(temp_v0_8, u8*, 0);
-                        M2C_FIELD(var_s0, s16*, 0x20) = (s16)M2C_FIELD(temp_v0_8, u8*, 1);
+                        cursor = actor->sequence_start;
+                        actor->cursor = cursor;
+                        frame = cursor[0];
+                        actor->remaining = cursor[1];
                     }
-                    M2C_FIELD(var_s0, void**, 0x14) = (void*)(M2C_FIELD(var_s0, void**, 0x14) + 4);
-                    M2C_FIELD(var_s0, s32*, 0x1C) = (s32)(temp_a1 + M2C_FIELD(((var_v1 * 2) + temp_a1), s16*, 0x40));
+                    actor->cursor += 4;
+                    actor->frame_data = data + ((s16*)(frame * 2 + data))[32];
                 }
-                gte_stsxy(&sp20);
-                func_80066F9C(var_s0, sp20, M2C_FIELD(arg7, s32*, 0x20), var_s4, 0);
+                gte_stsxy(&screen_position);
+                func_80066F9C(actor, screen_position, config->texture_index, ot_index, 0);
             }
-            var_s1 += 1;
-            var_s0 += 0x2C;
-        } while (var_s1 < arg2);
+            i += 1;
+        } while (i < arg2);
     }
-    temp_v1_2 = M2C_FIELD(arg7, s32*, 0x14);
-    if ((temp_v1_2 != -1) && (((s32)D_8011CF74 % temp_v1_2) == 0) && (var_s1_2 = 0, (arg2 > 0)))
+    spawn_interval = config->spawn_interval;
+    if ((spawn_interval != -1) && (((s32)D_8011CF74 % spawn_interval) == 0) && (i = 0, (arg2 > 0)))
     {
-        var_a0 = arg0;
-    loop_43:
-        temp_s2_2 = ((var_s1_2 + M2C_FIELD(arg7, s32*, 0x1C)) * 0x14) + (u8*)&D_801AFBD0;
-        var_s1_2 += 1;
-        if (M2C_FIELD(temp_s2_2, s16*, 0) == 0)
+        do
         {
-            M2C_FIELD(var_a0, s16*, 2) = 0;
-            M2C_FIELD(var_a0, s8*, 6) = 0xF;
-            M2C_FIELD(var_a0, s16*, 0x10) = -1;
-            M2C_FIELD(var_a0, u16*, 0x22) = (u16)arg3;
-            M2C_FIELD(var_a0, u16*, 0x24) = arg4;
-            M2C_FIELD(var_a0, u16*, 0xE) = (u16)M2C_FIELD(arg7, u16*, 0x24);
-            M2C_FIELD(var_a0, u16*, 0x26) = arg5;
-            M2C_FIELD(temp_s2_2, s16*, 0) = 1;
-            M2C_FIELD(temp_s2_2, s16*, 2) = rand();
-            temp_s0 = M2C_FIELD(arg7, s32*, 0x28);
-            if (temp_s0 < 0)
+            motion = &D_801AFBD0[i + config->first_motion];
+            if (motion->state == 0)
             {
-                M2C_FIELD(temp_s2_2, s32*, 8) = (s32)(((s32)(rand() * ((temp_s0 & 0xFFFF) << 5)) >> 0xF) + ((s32)(temp_s0 & 0x7FFF0000) >> 0xE));
+                WmapParticleActor* spawn_actor = &((WmapParticleActor*)arg0)[i];
+                spawn_actor->state = 0;
+                spawn_actor->scale = 0xF;
+                sequence = (u16)config->sequence;
+                spawn_actor->previous_sequence = -1;          /* previous sequence */
+                spawn_actor->target_shade = (u16)arg3;  /* target shade */
+                spawn_actor->shade = arg4_value;
+                spawn_actor->sequence = sequence;    /* sequence */
+                spawn_actor->shade_step = arg5_value;
+                motion->state = 1;
+                motion->angle = rand();
+                packed_radius = config->radius;
+                if (packed_radius < 0)
+                {
+                    radius_min = (packed_radius & 0x7FFF0000) >> 0xE;
+                    radius_range = (packed_radius & 0xFFFF) << 5;
+                    motion->radius = ((rand() * radius_range) >> 0xF) + radius_min;
+                }
+                else
+                {
+                    motion->radius = packed_radius;
+                }
+                motion->velocity = (s32)(((s32)(rand() * config->velocity_range) >> 0xF) + config->velocity_min);
+                lifetime_product = rand() * config->lifetime_range;
+                motion->lifetime = (s16)((u16)config->lifetime_min + (lifetime_product >> 0xF));
+                motion->z = 0;
+                return;
             }
-            else
-            {
-                M2C_FIELD(temp_s2_2, s32*, 8) = temp_s0;
-            }
-            M2C_FIELD(temp_s2_2, s32*, 4) = (s32)(((s32)(rand() * M2C_FIELD(arg7, s32*, 8)) >> 0xF) + M2C_FIELD(arg7, s32*, 4));
-            temp_lo = rand() * (s32)M2C_FIELD(arg7, u16*, 0x10);
-            M2C_FIELD(temp_s2_2, s16*, 0xE) = 0;
-            M2C_FIELD(temp_s2_2, s16*, 0xC) = (s16)(M2C_FIELD(arg7, u16*, 0xC) + (temp_lo >> 0xF));
-            return;
-        }
-        var_a0 += 0x2C;
-        if (var_s1_2 >= arg2)
-        {
-        }
-        else
-        {
-            goto loop_43;
-        }
+            i++;
+        } while (i < arg2);
     }
 }
 
