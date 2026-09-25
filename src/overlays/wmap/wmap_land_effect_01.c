@@ -251,8 +251,6 @@ void func_80072B58(void)
 /** @brief Compose the effect transform and project its twenty actors. */
 void func_80072D30(void)
 {
-/* Partial WMAP decompilation: 92.546150% (gcc280_g0). */
-
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -319,7 +317,6 @@ extern u16 D_80139980;
     CompMatrix(&base_matrix, &effect_matrix, &effect_matrix);
     SetRotMatrix(&effect_matrix);
     SetTransMatrix(&effect_matrix);
-    resource = D_801399B8;
     D_801B24A0.vz -= 80;
     for (i = 0; i < 20; i++)
     {
@@ -327,6 +324,7 @@ extern u16 D_80139980;
         position.vx = ((D_801B2560[i].z >> 6) * (ccos(D_801B2560[i].angle) >> 6)) >> 12;
         position.vy = ((D_801B2560[i].z >> 6) * (csin(D_801B2560[i].angle) >> 6)) >> 12;
         motion = &D_801B2560[i];
+        resource = &D_801399B8[i];
         position.vz = motion->field_0E;
         gte_ldv0(&position);
         gte_rtps();
@@ -340,7 +338,6 @@ extern u16 D_80139980;
         actor->field_24 = D_80139980;
         gte_stsxy(&screen_position);
         func_8006CC4C(actor, resource);
-        resource++;
         func_80066F9C(actor, screen_position, 13, 31, 0);
     }
     PopMatrix();

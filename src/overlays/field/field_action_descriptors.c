@@ -7,15 +7,6 @@
 #include "common.h"
 #include "field_records.h"
 
-/** @brief Error status passed to record_game_diagnostic. */
-#define DIAG_ERROR 0x8001
-
-/** @brief Diagnostic code: unknown command in a character's command slot. */
-#define DIAG_BAD_COMMAND 0x66
-
-/** @brief Diagnostic code: monster action id past the end of its template's list. */
-#define DIAG_BAD_MONSTER_ACTION 0x69
-
 /** @brief Record kind bits (FieldStatusRecordMeta bits.kind) within the packed word. */
 #define STATUS_KIND_MASK 0xFC00
 

@@ -2,6 +2,7 @@
 #define FIELD_ACTOR_TABLES_H
 
 #include "common.h"
+#include "field_actor.h"
 
 /**
  * @file field_actor_tables.h
@@ -16,14 +17,16 @@
  * of them to the party objects.
  */
 
-/** @brief Number of objects in the parallel field object tables. */
-#define FIELD_ACTOR_COUNT 13
+/** @brief Resting value of the HUD shake counters (FieldPlayerRecord::hit_state). */
+#define FIELD_HUD_SHAKE_IDLE 0xFF
 
 /** @brief Number of general-purpose animation actor slots. */
 #define FIELD_ACTOR_SLOT_COUNT 48
 
 /** @brief First animation actor slot owned by an object (one per object, in object order). */
 #define FIELD_OBJECT_SLOT_BASE FIELD_ACTOR_SLOT_COUNT
+/** @brief Each object's effect animations play in animation actor slot 64 + object index. */
+#define FIELD_OBJECT_EFFECT_SLOT_BASE 64
 
 /** @brief Total number of animation actor slots (general, per-object and per-object effect slots). */
 #define FIELD_ACTOR_SLOT_TOTAL 80
@@ -52,81 +55,14 @@
 /** @brief Script index of an actor running its object state's private script. */
 #define FIELD_SCRIPT_OBJECT 0xFE
 
-/** @brief Presence value of an unused actor record. */
-#define FIELD_ACTOR_UNUSED 0xFF
-
-/** @brief Presence value of a hidden actor record. */
-#define FIELD_ACTOR_HIDDEN 0xFE
-
-/** @brief Low nine bits of FieldActor::control holding the control mode. */
-#define FIELD_CONTROL_MODE_MASK 0x1FF
-
-/** @brief Low seven bits of FieldActor::animation select the animation. */
-#define FIELD_ANIMATION_INDEX_MASK 0x7F
-/** @brief FieldActor::animation bit that mirrors the animation. */
-#define FIELD_ANIMATION_FACING 0x80
-/** @brief Directional animations come in groups of five (stand, then walk, then run). */
-#define FIELD_ANIMATION_DIRECTIONS 5
-
-/** @brief FieldObjectState::group_flags bits holding the object's group. */
-#define FIELD_OBJECT_GROUP_MASK 0x0F
+/** @brief First resource read id of the streamed animation resources. */
+#define FIELD_ANIMATION_RESOURCE_BASE 0x2DC
 
 /** @brief FieldActorBinding::state values. */
 #define FIELD_BINDING_IDLE 0
 #define FIELD_BINDING_LOADING 1
 #define FIELD_BINDING_READY 2
 
-/** @brief Actor commands (FieldActor::command). */
-enum
-{
-    FIELD_ACTOR_COMMAND_NONE = 0,
-    FIELD_ACTOR_COMMAND_BASE = 0x81,
-    FIELD_ACTOR_COMMAND_STEP = 0x81,
-    FIELD_ACTOR_COMMAND_HIT = 0x82,
-    FIELD_ACTOR_COMMAND_ACTION = 0x85,
-    FIELD_ACTOR_COMMAND_RECOVER = 0x86,
-    FIELD_ACTOR_COMMAND_INSTRUMENT = 0x87,
-    FIELD_ACTOR_COMMAND_WALK = 0x88,
-    FIELD_ACTOR_COMMAND_RISE = 0x89,
-    FIELD_ACTOR_COMMAND_SINK = 0x8A,
-    FIELD_ACTOR_COMMAND_WALK_TO_TARGET = 0x8B,
-    FIELD_ACTOR_COMMAND_WALK_FROM_TARGET = 0x8C,
-    FIELD_ACTOR_COMMAND_SEQUENCE_STEP = 0x8D,
-    FIELD_ACTOR_COMMAND_TRANSITION = 0x8E,
-    FIELD_ACTOR_COMMAND_JUMP = 0x8F,
-    FIELD_ACTOR_COMMAND_90 = 0x90,
-    FIELD_ACTOR_COMMAND_TECHNIQUE = 0x91,
-    FIELD_ACTOR_COMMAND_92 = 0x92,
-    FIELD_ACTOR_COMMAND_93 = 0x93,
-    FIELD_ACTOR_COMMAND_94 = 0x94,
-    FIELD_ACTOR_COMMAND_SEQUENCE_WAIT = 0x95,
-    FIELD_ACTOR_COMMAND_96 = 0x96,
-    FIELD_ACTOR_COMMAND_98 = 0x98,
-    FIELD_ACTOR_COMMAND_99 = 0x99,
-    FIELD_ACTOR_COMMAND_9A = 0x9A,
-    FIELD_ACTOR_COMMAND_9B = 0x9B,
-    FIELD_ACTOR_COMMAND_9C = 0x9C,
-    FIELD_ACTOR_COMMAND_9D = 0x9D,
-    FIELD_ACTOR_COMMAND_APPROACH_TARGET = 0xA0,
-    FIELD_ACTOR_COMMAND_ACTION_END = 0xA4,
-    FIELD_ACTOR_COMMAND_TIMED_WALK = 0xA7,
-    FIELD_ACTOR_COMMAND_WAIT_ANIMATION = 0xA8,
-    FIELD_ACTOR_COMMAND_RUN_TO_TARGET = 0xAC,
-    FIELD_ACTOR_COMMAND_RUN = 0xAD,
-    FIELD_ACTOR_COMMAND_AE = 0xAE,
-    FIELD_ACTOR_COMMAND_AF = 0xAF,
-    FIELD_ACTOR_COMMAND_WALK_PATH = 0xB0,
-    FIELD_ACTOR_COMMAND_RUN_PATH = 0xB1,
-    FIELD_ACTOR_COMMAND_TURN = 0xB2,
-    FIELD_ACTOR_COMMAND_STOP = 0xB3,
-    FIELD_ACTOR_COMMAND_LEAVE_PATH = 0xB5,
-    FIELD_ACTOR_COMMAND_TIMED_SLIDE = 0xB6,
-    FIELD_ACTOR_COMMAND_WAIT = 0xB7,
-    FIELD_ACTOR_COMMAND_ATTACHED = 0xB8,
-    FIELD_ACTOR_COMMAND_RETIRE = 0xBB,
-    FIELD_ACTOR_COMMAND_WAIT_BOUND_ACTOR = 0xBC,
-    FIELD_ACTOR_COMMAND_INSTRUMENT_END = 0xBD
-};
 
 /** @brief Map size words of the fixed field map header block at 0x801ED400. */
 typedef struct
@@ -135,95 +71,10 @@ typedef struct
     u16 depth;
 } FieldMapBounds;
 
-/** @brief Fixed field render state block at 0x801ED600 (partial). */
-typedef struct
-{
-    u8 unk0[0x91];
-    u8 unk91;
-    u8 unk92;
-    u8 unk93[0x13E - 0x93];
-    u8 leader_object_index;
-    u8 unk13F;
-    u8 unk140;
-} FieldRenderState;
-
 /** @brief Fixed address of the field map header block. */
 #define FIELD_MAP_BOUNDS ((FieldMapBounds*)0x801ED400)
 
-/** @brief Fixed address of the field render state block. */
-#define FIELD_RENDER_STATE ((FieldRenderState*)0x801ED600)
 
-/** @brief Word, halfword and bit views of an actor's control-mode word. */
-typedef union
-{
-    u32 word;
-    u16 half[2];
-} FieldActorControl;
-
-/** @brief Script, motion and animation state of one field object (0x54 bytes). */
-typedef struct FieldActor
-{
-    s32 x;
-    s32 y;
-    s32 z;
-    u32 unkC;
-    s16 unk10;
-    s16 unk12;
-    s16 unk14;
-    /** @brief Ticks left on the current animation frame; speed_accumulator is spread over them. */
-    s16 frame_timer;
-    /** @brief Actor tint, refreshed from the object part every frame. */
-    u8 tint_red;
-    u8 tint_green;
-    u8 tint_blue;
-    /** @brief Facing angle in 256 steps. */
-    u8 direction;
-    /** @brief Low nine bits hold the control mode; higher bits are flags. */
-    FieldActorControl control;
-    /** @brief Argument of the running command (a timer, step or actor index). */
-    u8 command_param;
-    /** @brief Low seven bits select the animation; bit 7 mirrors it. */
-    u8 animation;
-    /** @brief Animation actor slot and part that own the record (effect records point at their emitter). */
-    u8 owner_slot;
-    u8 owner_part;
-    u8 animation_active;
-    u8 presence;
-    u8 unk26;
-    u8 animation_frame;
-    u8 script_index;
-    u8 unk29;
-    s16 command;
-    u16 script_offset;
-    /** @brief Non-zero while the current animation is still playing. */
-    u16 animation_state;
-    u16 variant;
-    u8 unk32;
-    /** @brief Bit 0 selects the running animations. */
-    u8 running;
-    /** @brief Ticks spent on the current animation frame and the frame's length in ticks. */
-    u8 frame_ticks;
-    u8 frame_length;
-    s8 speed_accumulator;
-    s8 height;
-    /** @brief Height of the next animation frame. */
-    u8 next_height;
-    /** @brief Frames left before a stopped actor settles into its idle animation. */
-    u8 stop_delay;
-    u8 object_index;
-    u8 resource_index;
-    u8 unk3C;
-    /** @brief Frames left before a retiring actor is removed. */
-    u8 removal_delay;
-    u8 unk3E;
-    u8 unk3F;
-    /** @brief Decoded data of the displayed frame; negative values use the alternate renderer. */
-    s32 frame_data;
-    u32 unk44;
-    u32 unk48;
-    u32 unk4C;
-    u8 unk50[4];
-} FieldActor;
 
 /** @brief FieldPlayerRecord::flags bit: the party member is present. */
 #define FIELD_PLAYER_ACTIVE 0x1
@@ -470,6 +321,9 @@ typedef struct
     u8 unk38[0x48 - 0x38];
 } FieldObjectPart;
 
+/** @brief FieldObjectPart::flags bit 23: the object ignores map collision. */
+#define FIELD_PART_IGNORE_MAP_COLLISION 0x800000
+
 /** @brief Per-party-member record (0x268 bytes). */
 typedef struct FieldPlayerRecord
 {
@@ -493,9 +347,9 @@ typedef struct FieldPlayerRecord
     u8 unk25B;
     u8 unk25C;
     u8 unk25D;
-    /** @brief Frames spent in the timed transition, up to transition_limit; the HUD shows it as the recovery gauge while knocked down. */
-    s16 transition_time;
-    s16 transition_limit;
+    /** @brief Frames spent knocked down; at revive_delay the member revives (the HUD shows it as the recovery gauge). */
+    s16 revive_time;
+    s16 revive_delay;
     /** @brief Animation, effect resource and sound (-1 for none) used when the revive timer runs out. */
     s16 revive_animation;
     s16 revive_effect;
@@ -526,11 +380,14 @@ typedef struct
     FieldActionSlot slots[FIELD_RESOURCE_ACTION_COUNT];
 } FieldActionRow;
 
+/** @brief Vibration tracks of an animation: 0 drives the small motor, 1 the large motor. */
+#define FIELD_VIBRATION_TRACK_COUNT 2
+
 /** @brief Animation definition referenced by an animation actor slot. */
 typedef struct
 {
-    /** @brief Parameter curves driving the render-state tracks, 0xFF for none. */
-    u8 curve_selectors[2];
+    /** @brief Parameter curves driving the small and large vibration motors, FIELD_CURVE_NONE for none. */
+    u8 vibration_curves[FIELD_VIBRATION_TRACK_COUNT];
     /** @brief Two sound events: value compared by non-start events, event type, sound command. */
     u8 sound_subtypes[2];
     u16 sound_events[2];
@@ -543,7 +400,8 @@ typedef struct
         u8 bytes[2];
     } frame_sound;
     u16 unk10;
-    u16 unk12;
+    /** @brief Length in frames when FIELD_ANIM_OWN_DURATION is set. */
+    u16 duration;
     u8 unk14;
     u8 unk15;
     u8 unk16;
@@ -551,6 +409,39 @@ typedef struct
     u16 unk18;
     u8 unk1A[2];
 } FieldAnimationDef;
+
+/** @brief Parameter curve count of an animation (curve selectors are four bits). */
+#define FIELD_CURVE_COUNT 16
+/** @brief Curve selector of an unused render-state track. */
+#define FIELD_CURVE_NONE 0xFF
+/** @brief Neutral global colour scale. */
+#define FIELD_COLOR_SCALE_NEUTRAL 0x100
+
+/** @brief FieldAnimationDef::flags bits. */
+#define FIELD_ANIM_COLOR_CURVE_MASK 0xFF
+#define FIELD_ANIM_COLOR_RGB 0x100
+#define FIELD_ANIM_BLEND_SHIFT 9
+#define FIELD_ANIM_GLOBAL_COLOR 0x400
+#define FIELD_ANIM_KEEP_ALIVE 0x800
+#define FIELD_ANIM_CAMERA_OFFSET 0x1000
+#define FIELD_ANIM_CAMERA_MODE_SHIFT 13
+/** @brief FieldAnimationDef::flags bit 15: the definition carries its own duration. */
+#define FIELD_ANIM_OWN_DURATION 0x8000
+/** @brief FieldAnimationDef::unkE: bit 15 fires a sound at a frame; bits 8-14 are the sound, the low byte the frame. */
+#define FIELD_ANIM_FRAME_SOUND 0x8000
+/** @brief FieldAnimationDef::unk10 bits 12-15: curve of the camera offset track. */
+#define FIELD_ANIM_CAMERA_CURVE_SHIFT 12
+/** @brief FieldAnimationDef::unk14 values and bits. */
+#define FIELD_ANIM_ATTACK 2
+#define FIELD_ANIM_STARTED 0x80
+/** @brief FieldAnimationDef::unk18 bits. */
+#define FIELD_ANIM_OWNER_VISIBILITY 0x2
+#define FIELD_ANIM_TARGET_VISIBILITY 0x4
+#define FIELD_ANIM_OWNER_TRACK_OFF 0x8
+#define FIELD_ANIM_TARGET_TRACK_OFF 0x10
+#define FIELD_ANIM_RESTART_AT_END 0x20
+#define FIELD_ANIM_OWNER_CURVE_SHIFT 8
+#define FIELD_ANIM_TARGET_CURVE_SHIFT 12
 
 /** @brief Parameter curve of an animation: segment count, random flag and first segment, then the value range. */
 typedef struct
@@ -574,14 +465,32 @@ typedef union
     u32 word;
     u16 half[2];
     u8 bytes[4];
+    struct
+    {
+        /** @brief Bit 0: FIELD_SLOT_OWNER_LINKED; bits 1-4: the action element (FIELD_SLOT_ELEMENT_BITS). */
+        u8 flags;
+        /** @brief Non-zero while the animation hides its owner or targets. */
+        u8 hiding_objects;
+        /** @brief Animation resource the slot plays. */
+        u16 animation_id;
+    } parts;
 } FieldActorSlotStatus;
+
+
+/** @brief FieldActorSlot::status bit 0: the slot plays a streamed animation bound to its owner. */
+#define FIELD_SLOT_OWNER_LINKED 0x1
+/** @brief FieldActorSlot::status bits holding the action element (stored shifted by one); all set means none. */
+#define FIELD_SLOT_ELEMENT_BITS 0x1E
 
 /** @brief Animation actor bound to a party object (0x1C bytes). */
 typedef struct
 {
+    /** @brief FIELD_BINDING_IDLE, FIELD_BINDING_LOADING or FIELD_BINDING_READY. */
     s32 state;
-    s32 unk4;
-    s32 unk8;
+    /** @brief Resource read queued for the animation, 0 once it has been unpacked. */
+    s32 load_id;
+    /** @brief Animation resource number (load_id - FIELD_ANIMATION_RESOURCE_BASE). */
+    s32 resource_id;
     s32 owner;
     s32 unk10;
     s32 unk14;
@@ -651,7 +560,6 @@ typedef struct
 /** @brief FieldResourceEntry::flags bit: the resource has an action table and eight-direction animations. */
 #define FIELD_RESOURCE_HAS_ACTIONS 1
 
-extern FieldActor g_field_actors[];
 extern FieldObjectState g_field_object_states[];
 extern FieldActorBinding g_field_actor_bindings[];
 extern FieldActorSlot g_field_actor_slots[];

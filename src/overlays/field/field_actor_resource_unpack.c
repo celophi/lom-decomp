@@ -4,7 +4,7 @@
  *        actor texture upload.
  *
  * An actor resource is read from CD into g_field_cd_buffer and unpacked into blocks of
- * the actor heap (D_8010D034) tagged with the owner, so that all blocks of an owner can
+ * the actor heap (g_field_actor_heap) tagged with the owner, so that all blocks of an owner can
  * be freed together. Owners 0 and 1 are the two party players; every other owner shares
  * FIELD_SHARED_OWNER.
  */
@@ -138,7 +138,7 @@ void* memcpy(void* dst, const void* src, s32 size);
 extern s16 g_field_player_command;
 extern s32 g_field_scene_contact_latched;
 extern s32 g_field_scene_request_pending;
-extern u8* D_8010D034;
+extern u8* g_field_actor_heap;
 extern u8* g_field_cd_buffer;
 extern s32 g_field_resource_queue_count;
 extern s32 g_field_resource_queue[FIELD_RESOURCE_QUEUE_CAPACITY];
@@ -288,7 +288,7 @@ void field_issue_next_resource_read(void)
  */
 void field_free_owner_resources(s32 tag)
 {
-    func_8009CB64(D_8010D034, tag);
+    func_8009CB64(g_field_actor_heap, tag);
 }
 
 /**
@@ -400,7 +400,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
         {
             track_tag = FIELD_SHARED_OWNER;
         }
-        block = func_8009CA54(D_8010D034, track_size, track_tag);
+        block = func_8009CA54(g_field_actor_heap, track_size, track_tag);
         cursor += 2;
         memcpy(block, track_source, track_size);
         actor->track_data = block;
@@ -411,7 +411,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
     if (mesh_count != 0)
     {
         mesh_tag = field_owner_tag(owner);
-        mesh = func_8009CA54(D_8010D034, FIELD_ACTOR_MAX_MESHES * sizeof(FieldMeshResource), mesh_tag);
+        mesh = func_8009CA54(g_field_actor_heap, FIELD_ACTOR_MAX_MESHES * sizeof(FieldMeshResource), mesh_tag);
         actor->mesh_data = (u8*)mesh;
     }
     i = 0;
@@ -429,7 +429,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
             allocation_size = mesh->face_count * (FIELD_MESH_VECTORS_PER_FACE * sizeof(SVECTOR));
             vector_tag = field_owner_tag(owner);
             item = 0;
-            output.half = func_8009CA54(D_8010D034, allocation_size, vector_tag);
+            output.half = func_8009CA54(g_field_actor_heap, allocation_size, vector_tag);
             mesh_fields->vertices = (SVECTOR*)output.half;
             if ((mesh->face_count * 3) != 0)
             {
@@ -483,7 +483,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
             allocation_size = mesh->face_count * FIELD_MESH_FACE_SIZE;
             face_tag = field_owner_tag(owner);
             item = 0;
-            output.byte = func_8009CA54(D_8010D034, allocation_size, face_tag);
+            output.byte = func_8009CA54(g_field_actor_heap, allocation_size, face_tag);
             mesh_fields->faces = output.byte;
             if (mesh->face_count != 0)
             {
@@ -514,7 +514,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
                     texture->height = *block++;
                     allocation_size = texture->width * texture->height * 2;
                     pixel_tag = field_owner_tag(owner);
-                    pixel_output = func_8009CA54(D_8010D034, allocation_size, pixel_tag);
+                    pixel_output = func_8009CA54(g_field_actor_heap, allocation_size, pixel_tag);
                     row = 0;
                     texture->pixels = pixel_output;
                     texture_height = texture->height;
@@ -556,7 +556,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
             mesh++;
         } while (i < mesh_count);
     }
-    heap = &D_8010D034;
+    heap = &g_field_actor_heap;
     fallback_value = *(u16*)cursor; /* unknown_0x12 unless the extension overrides it */
     cursor += 2;
     record_count = *cursor++;
@@ -643,7 +643,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
         for (i = 0; i < sound_count; i++)
         {
             cursor = (u8*)((u32)(cursor + 3) & ~3);
-            sound_heap = &D_8010D034;
+            sound_heap = &g_field_actor_heap;
             sound_tables = g_field_sound_tables;
             sound_bytes = *(s32*)cursor;
             if (sound_bytes < FIELD_SOUND_SHARED_SIZE)

@@ -1855,7 +1855,7 @@ void field_run_menu(void* render_buffers, s32 input_source)
         return;
     }
     func_800A3938(0x80, 0x80);
-    func_80084240();
+    field_reset_actor_resources();
 
     g_active_script = 0;
 
@@ -1876,7 +1876,7 @@ void field_run_menu(void* render_buffers, s32 input_source)
             cdrom_wait_queue_empty();
             func_80140024(0x80150000, 1);
             func_800C3BB0();
-            func_80084240();
+            field_reset_actor_resources();
             field_text_reset_windows();
             g_active_script = screen_id;
             g_script_repeat_count = 0;
@@ -1907,7 +1907,7 @@ void field_run_menu(void* render_buffers, s32 input_source)
             }
         }
     }
-    func_80084240();
+    field_reset_actor_resources();
 }
 
 /**
@@ -2258,12 +2258,12 @@ void field_rebuild_party_actions(s32 refresh_only)
  */
 void field_run_name_entry(s32 initial_name, s32 active_name, s32 source_mode, s32 history_index, s32 custom_name)
 {
-    func_80084240();
+    field_reset_actor_resources();
     cdrom_stream(CD_RES_GNAME_BIN, FIELD_SUBOVERLAY_ADDRESS);
     cdrom_wait_queue_empty();
     func_80140004((void*)0x80160000, initial_name, active_name, source_mode, history_index, custom_name, 0);
     field_text_reset_windows();
-    func_80084240();
+    field_reset_actor_resources();
 }
 
 /**
@@ -2272,11 +2272,11 @@ void field_run_name_entry(s32 initial_name, s32 active_name, s32 source_mode, s3
  */
 void field_run_zukan(s32 context)
 {
-    func_80084240();
+    field_reset_actor_resources();
     cdrom_stream(CD_RES_ZUKAN_BIN, FIELD_SUBOVERLAY_ADDRESS);
     cdrom_wait_queue_empty();
     func_80140E00((void*)0x80160000, context);
-    func_80084240();
+    field_reset_actor_resources();
 }
 
 /**
@@ -2292,7 +2292,7 @@ void field_open_gosub_screen_sequence(void* screen_sequence)
     {
         D_801227F0 = 1;
         g_gosub_result_count = 0;
-        func_80084240();
+        field_reset_actor_resources();
         cdrom_stream(CD_RES_GOSUB_BIN, FIELD_SUBOVERLAY_ADDRESS);
         cdrom_wait_queue_empty();
         g_field_modal_state = FIELD_MODAL_GOSUB;
@@ -2336,7 +2336,7 @@ void field_open_shop_mode_0(s32 shop_options)
         }
         else
         {
-            func_80084240();
+            field_reset_actor_resources();
             cdrom_stream(CD_RES_SHOP_BIN, FIELD_SUBOVERLAY_ADDRESS);
             cdrom_wait_queue_empty();
             g_field_shop_active = 1;
@@ -2357,7 +2357,7 @@ void field_open_shop_mode_1(s32 entry_count, s32 entries, s32 list_options, s32 
 {
     if (g_field_modal_state == FIELD_MODAL_NONE)
     {
-        func_80084240();
+        field_reset_actor_resources();
         cdrom_stream(CD_RES_SHOP_BIN, FIELD_SUBOVERLAY_ADDRESS);
         cdrom_wait_queue_empty();
         g_field_shop_active = 1;
@@ -2383,7 +2383,7 @@ void field_update_modal(s32 context_or_delay)
         {
             g_field_shop_active = 0;
             g_field_modal_state = FIELD_MODAL_NONE;
-            func_80084240();
+            field_reset_actor_resources();
             return;
         }
     case FIELD_MODAL_NONE:
@@ -2397,7 +2397,7 @@ void field_update_modal(s32 context_or_delay)
                 {
                     DrawSync(0);
                     g_field_gosub_phase = 1;
-                    func_80084240();
+                    field_reset_actor_resources();
                     return;
                 }
             }
@@ -2415,7 +2415,7 @@ void field_update_modal(s32 context_or_delay)
     case FIELD_MODAL_CARDA:
         if ((g_field_card_overlay_mode != 0) && (func_80140370(context_or_delay) != 0))
         {
-            func_80084240();
+            field_reset_actor_resources();
             switch (g_field_card_overlay_mode)
             {
             case 2:
@@ -2455,7 +2455,7 @@ void field_update_modal(s32 context_or_delay)
     case FIELD_MODAL_NIKI:
         if ((g_field_niki_addhero_state != 0) && (func_801401F0(context_or_delay) != 0))
         {
-            func_80084240();
+            field_reset_actor_resources();
             g_field_niki_addhero_state = 0;
             g_field_modal_state = FIELD_MODAL_NONE;
             return;
@@ -2472,18 +2472,18 @@ void field_update_modal(s32 context_or_delay)
                 g_field_player_records[1].head.bits.selected = ((FieldModalSaveView*)g_pad_ctx)->second_character.bytes[0] & 1;
                 g_field_player_records[1].companion_type = 0;
                 field_activate_actor_resource_slot(-2, 0, 0);
-                func_80084240();
+                field_reset_actor_resources();
                 g_field_niki_addhero_state = 0;
                 g_field_modal_state = FIELD_MODAL_NONE;
                 return;
             case 3:
-                func_80084240();
+                field_reset_actor_resources();
                 g_field_niki_addhero_state = 0;
                 g_field_modal_state = FIELD_MODAL_NONE;
                 return;
             case 2:
                 field_release_actor_resource_slot(0);
-                func_80084240();
+                field_reset_actor_resources();
                 g_field_niki_addhero_state = 0;
                 g_field_modal_state = FIELD_MODAL_NONE;
                 return;

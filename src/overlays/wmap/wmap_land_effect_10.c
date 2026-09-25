@@ -75,9 +75,6 @@ typedef struct
  * @param end One past the last particle index to process.
  * @param particles Particle position/velocity array indexed by particle.
  * @param config Emitter tuning block.
- * @note 99.45%: structure and instruction count match; residual is global allocation
- *       swapping i (s2) with spawn/slot (s3). The slot pointer is shared by both loops on
- *       purpose (it makes the loop-1 giv non-replaceable, as in the target).
  */
 void func_8008ECF8(s32 first, s32 end, WmapSparkParticle *particles, WmapSparkConfig *config)
 {
@@ -179,7 +176,9 @@ extern WmapSparkSlot D_801AFBD0[];
                 actor = &D_800D9268[i];
                 func_8006CC4C(actor, &D_80139988[i]);
                 func_80066F9C(actor, *(s32 *)((u8 *)&D_801AFBD0[i] + 0x10), config->sprite_id, config->ot_index, 0);
-                if (--slot->timer >= 0)
+                /* Reuse the exhausted spawn counter for the fade test. */
+                spawn = --slot->timer >= 0;
+                if (spawn)
                 {
                     break;
                 }

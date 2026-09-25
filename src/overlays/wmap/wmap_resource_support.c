@@ -100,8 +100,6 @@ void func_80064F5C(void)
 /**
  * @brief Queue a TIM read from CD and upload the decoded image(s) to VRAM.
  * @param resource_index CD resource id to queue.
- * @note Remaining mismatch swaps the data and rectangle pointer registers;
- *       the branch layout and instruction count match.
  */
 void func_80064F64(s32 resource_index)
 {
@@ -112,8 +110,8 @@ void func_80064F64(s32 resource_index)
     data = D_800DCF18;
     cdrom_queue_read(resource_index & 0xFFFF, data);
     cdrom_wait_queue_empty();
-    header = data;
     data += 8;
+    header = D_800DCF18;
     if (header[4] & 8)
     {
         header = (u8*)&rectangle;
@@ -143,8 +141,6 @@ void func_80064F64(s32 resource_index)
 /**
  * @brief Stream a TIM read from CD and upload the decoded image(s) to VRAM.
  * @param resource_index CD resource id to stream.
- * @note Remaining mismatch swaps the data and rectangle pointer registers;
- *       the branch layout and instruction count match.
  */
 void func_80065078(s32 resource_index)
 {
@@ -155,8 +151,8 @@ void func_80065078(s32 resource_index)
     data = D_800DCF18;
     cdrom_stream(resource_index & 0xFFFF, data);
     cdrom_wait_queue_empty();
-    header = data;
     data += 8;
+    header = D_800DCF18;
     if (header[4] & 8)
     {
         header = (u8*)&rectangle;

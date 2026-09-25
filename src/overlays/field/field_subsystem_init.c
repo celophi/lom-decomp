@@ -17,7 +17,7 @@ extern s32 g_field_dialog_screen_mode;
 extern s32 g_field_render_context;
 extern s32 g_field_actions_limited;
 extern s32 g_field_interaction_active;
-extern s32 D_8010D034;
+extern s32 g_field_actor_heap;
 extern s32 g_field_cd_buffer;
 extern s32 g_field_preserve_entry_music;
 extern s32 g_field_scene_mode_bit;
@@ -54,7 +54,7 @@ void field_initialize_subsystems(s32 render_context)
 
     base = 0x80158000;
     g_field_cd_buffer = 0x80140000;
-    D_8010D034 = base;
+    g_field_actor_heap = base;
     D_801227E8 = 0;
     func_800B0094();
     field_bind_saved_game_context();
@@ -62,16 +62,16 @@ void field_initialize_subsystems(s32 render_context)
     g_field_render_context = render_context;
     g_field_scene_mode_bit = 0;
     D_801178C8 = 0;
-    func_80083948();
-    func_8008396C();
+    field_bind_builtin_animations();
+    field_upload_common_texture();
     field_initialize_actor_slots();
     g_field_interaction_active = 0;
     D_80122710 = 0;
     field_rebuild_party_actions(0);
     field_clear_actor_slots();
     func_80067AA4();
-    func_80084240();
-    func_80084524();
+    field_reset_actor_resources();
+    field_reset_object_states();
     func_800A255C();
     field_reset_action_command_maps();
     func_800A2DFC();

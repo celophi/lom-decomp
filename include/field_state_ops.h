@@ -13,6 +13,15 @@ enum
 
 /** @brief Record kind stored in FieldStatusRecordMeta::bits.kind for a template-built monster. */
 #define FIELD_STATUS_KIND_MONSTER 5
+/** @brief FieldStatusRecordMeta::packed views of the active, ally and kind fields. */
+#define FIELD_STATUS_META_ACTIVE 0x100
+#define FIELD_STATUS_META_ALLY 0x200
+#define FIELD_STATUS_META_KIND_SHIFT 10
+#define FIELD_STATUS_META_KIND_MASK (0x3F << FIELD_STATUS_META_KIND_SHIFT)
+/** @brief Highest level a record can reach. */
+#define FIELD_LEVEL_MAX 99
+/** @brief Element attack and defense level of a record with no modifiers. */
+#define FIELD_ELEMENT_LEVEL_NEUTRAL 5
 
 /** @brief Packed identifier and flags stored by each field status record. */
 typedef union
@@ -68,7 +77,7 @@ typedef struct FieldActorTemplate
     u8 immunity_flags;
     u8 weak_elements;
     u8 resist_elements;
-    /** @brief Bit 1: not linked from the actor; bit 2: level from the land; bit 7: see the HP gauge. */
+    /** @brief Bit 1: not linked from the object state; bit 2: level from the hero's level instead of the land's; bit 7: see the HP gauge. */
     u8 flags;
     u8 pad40[0x50 - 0x40];
     s32 action_count;

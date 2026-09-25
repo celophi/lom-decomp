@@ -354,17 +354,17 @@ s32 akao_cmd_c1(s32 arg0, s32 arg1, s32 arg2);
  * @param request_index Index in the load list; zero resets the action subsystem.
  * @note Action kind 3 uses the previous, uninitialized entry pointer before selecting
  * actor 1. This unresolved behavior is present in the original code.
- * @note Packed-word accesses and shared switch tails preserve the current reconstruction.
+ * @note Actor cases 2-4 are written as independent bodies; jump2 cross-jumps their
+ * identical activation tails into the shared tail seen in the binary.
+ * @note The script case keeps its first flag store in a do/while(0) block: GCC 2.8
+ * sched2 would otherwise sink the store below the following flags copy.
  */
 void field_install_actor_action(FieldActionRequest* request, s32 request_index)
 {
-    s32 masked_request_flags;
-    s32 flags_mask;
     s32 action_index;
     FieldActionEntry* entry;
     s32 value;
     s32 source_actor;
-    s32 request_flags;
     s32 interaction_id;
     s32 entry_flags;
     s32 script_index;
@@ -437,47 +437,36 @@ void field_install_actor_action(FieldActionRequest* request, s32 request_index)
             script_entry->id = (s8)(request_index + FIELD_ACTION_DYNAMIC_ID_BASE);
             action_index = 0;
             *(s32*)&script_entry->flags = *(s32*)&script_entry->flags | FIELD_ACTION_ACTIVE;
-            flags_mask = ~FIELD_ACTION_ENTRY_FLAG_MASK;
-            flag_entry = entry;
-            flags_to_set = (*(s32*)&flag_entry->flags & flags_mask) | (request->control.flags & FIELD_ACTION_ENTRY_FLAG_MASK);
+            flags_to_set = (*(s32*)&entry->flags & ~FIELD_ACTION_ENTRY_FLAG_MASK) | (request->control.flags & FIELD_ACTION_ENTRY_FLAG_MASK);
+            /* Loop notes keep this store ahead of the flags copy below (sched2 tie). */
             do
             {
-                *(s32*)&flag_entry->flags = flags_to_set;
+                *(s32*)&entry->flags = flags_to_set;
             } while (0);
-            flags = flags_to_set;
-            flags_to_set = FIELD_ACTION_SCRIPT_ONLY;
-            goto set_entry_flags;
-        case FIELD_ACTION_ACTOR_0:
-            action_index = 0;
-            flags_mask = FIELD_ACTION_INACTIVE_MASK;
-            masked_request_flags = request->control.flags & flags_mask;
-            flag_entry = &((FieldActionTable*)g_field_runtime)->entries[0];
-            request->control.flags = masked_request_flags;
-            entry = flag_entry;
+            flag_entry = entry;
             flags = *(s32*)&flag_entry->flags;
-            flags_to_set = FIELD_ACTION_ACTIVE;
+            flags_to_set = FIELD_ACTION_SCRIPT_ONLY;
             *(s32*)&flag_entry->flags = flags | flags_to_set;
             break;
-        case FIELD_ACTION_ACTOR_1:
-            /* The original path reads entry before assigning actor 1. */
-            request_flags = *(s32*)&request->control;
+        case FIELD_ACTION_ACTOR_0:
             action_index = 0;
-            *(s32*)&request->control = request_flags & FIELD_ACTION_INACTIVE_MASK;
+            request->control.flags = request->control.flags & FIELD_ACTION_INACTIVE_MASK;
+            entry = &((FieldActionTable*)g_field_runtime)->entries[0];
+            *(s32*)&entry->flags = *(s32*)&entry->flags | FIELD_ACTION_ACTIVE;
+            break;
+        case FIELD_ACTION_ACTOR_1:
+            /* The original path activates the previous entry before selecting actor 1. */
+            action_index = 0;
+            request->control.flags = request->control.flags & FIELD_ACTION_INACTIVE_MASK;
             flag_entry = entry;
             entry = &((FieldActionTable*)g_field_runtime)->entries[1];
-            goto activate_entry;
+            *(s32*)&flag_entry->flags = *(s32*)&flag_entry->flags | FIELD_ACTION_ACTIVE;
+            break;
         case FIELD_ACTION_ACTOR_2:
             action_index = 0;
-            flags_mask = FIELD_ACTION_INACTIVE_MASK;
-            masked_request_flags = request->control.flags & flags_mask;
-            flag_entry = &((FieldActionTable*)g_field_runtime)->entries[2];
-            request->control.flags = masked_request_flags;
-            entry = flag_entry;
-        activate_entry:
-            flags = *(s32*)&flag_entry->flags;
-            flags_to_set = FIELD_ACTION_ACTIVE;
-        set_entry_flags:
-            *(s32*)&flag_entry->flags = flags | flags_to_set;
+            request->control.flags = request->control.flags & FIELD_ACTION_INACTIVE_MASK;
+            entry = &((FieldActionTable*)g_field_runtime)->entries[2];
+            *(s32*)&entry->flags = *(s32*)&entry->flags | FIELD_ACTION_ACTIVE;
             break;
         case FIELD_ACTION_EVENT:
             request->control.flags = request->control.flags & FIELD_ACTION_INACTIVE_MASK;

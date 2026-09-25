@@ -1328,56 +1328,53 @@ void func_800B7420(void);
     D_801B3130++;
 }
 
+/** @brief Update active effects and initialize the next available config slot. */
 void func_800BA408(void)
 {
-/* Partial WMAP decompilation: 91.659580% (gcc280_g0). */
+    typedef struct
+    {
+        s16 field_00;
+        s16 field_02;
+        u8 pad_04[2];
+        u8 field_06;
+        u8 pad_07[7];
+        s16 field_0E;
+        s16 field_10;
+        u8 pad_12[0x10];
+        s16 field_22;
+        s16 field_24;
+        s16 field_26;
+        u8 pad_28[4];
+    } WmapConfigA;
 
-typedef struct
-{
-    s16 field_00;
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[4];
-} WmapConfigA;
+    typedef struct
+    {
+        s32 field_00;
+        s32 field_04;
+    } WmapAlignedPair;
 
-typedef struct
-{
-    s32 words[11];
-} WmapConfigBlock;
+    extern WmapConfigA D_800D9268[];
+    extern s32 D_8011CF4C;
+    extern s32 D_8011CF74;
+    extern u8 D_80139988[];
 
-typedef struct
-{
-    s32 field_00;
-    s32 field_04;
-} WmapAlignedPair;
-
-extern WmapConfigA D_800D9268[];
-extern s32 D_8011CF4C;
-extern s32 D_8011CF74;
-extern u8 D_80139988[];
+    extern void func_80066F9C(void*, s32, s32, s32, s32);
 
     s32 index;
     s32 config_offset;
     u16 value;
     u8* config_base;
-    volatile WmapConfigA* config;
+    WmapConfigA* config;
     void* entry;
 
     index = 0xAA;
-    config_base = (u8*)D_800D9268;
-    config = (WmapConfigA*)(config_base + 0x1DE8);
-    config_offset = 0x1DE8;
+
     do
     {
+        config_offset = index * 0x2C + 0xB0;
+        config_base = (u8*)D_800D9268;
         entry = (void*)(config_offset + (u32)config_base);
+        config = &D_800D9268[index + 4];
         if (*(s16*)(entry + 2) == 0)
         {
             func_80066F9C((void*)config, D_8011CF4C, 0xB, 2, 0);
@@ -1388,19 +1385,21 @@ extern u8 D_80139988[];
                 *(s16*)(entry + 2) = (value = -1);
             }
         }
-        config++;
         index++;
-        config_offset += sizeof(WmapConfigA);
     } while (index < 0xB9);
 
     index = 0xAA;
     if ((D_8011CF74 & 1) == 0)
     {
+        void* entry;
+        u8* copy_end;
+        s32 config_offset;
         s32 screen_offset;
         u8* scan_base;
         u8* screen_base;
 
         scan_base = (u8*)D_800D9268;
+        copy_end = scan_base + 0x154;
         screen_base = D_80139988;
         config_offset = 0x1DE8;
         screen_offset = 0x570;
@@ -1409,8 +1408,23 @@ extern u8 D_80139988[];
             entry = (void*)(config_offset + (u32)scan_base);
             if (((WmapConfigA*)entry)->field_02 != 0)
             {
-                *(WmapConfigBlock*)entry =
-                    *(WmapConfigBlock*)(scan_base + 0x134);
+                typedef struct
+                {
+                    s32 words[4];
+                } Chunk;
+                typedef struct
+                {
+                    s32 words[3];
+                } Tail;
+                u8* source;
+                source = scan_base + 0x134;
+                do
+                {
+                    *(Chunk*)entry = *(Chunk*)source;
+                    source += 16;
+                    entry += 16;
+                } while (source != copy_end);
+                *(Tail*)entry = *(Tail*)source;
                 *(WmapAlignedPair*)(screen_offset + (u32)screen_base) = *(WmapAlignedPair*)(screen_base + 0x38);
                 ((WmapConfigA*)(config_offset + (u32)scan_base))->field_22 = 0;
                 return;
@@ -3413,8 +3427,6 @@ void func_800B7420(void);
 
 void func_800BA844(void)
 {
-/* Partial WMAP decompilation: 96.078430% (gcc280_g0). */
-
 typedef struct
 {
     s32 field_00; s32 field_04; s32 field_08; s32 field_0C; s32 field_10;
@@ -3431,7 +3443,7 @@ extern u8 D_801AFBD0[];
 extern s32 D_801B3180;
 extern s32 D_801B3184;
 
-extern void func_800BC7F4__for_func_800BA844(void) __asm__("func_800BC7F4");
+extern void func_800BC7F4(void);
 
     s32 index;
     s32 screen_offset;
@@ -3446,6 +3458,7 @@ extern void func_800BC7F4__for_func_800BA844(void) __asm__("func_800BC7F4");
     config_base = D_801AFBD0;
     screen_base = D_80139988;
     resource = &D_80121538;
+    D_80139280 += 0;
     screen_offset = 0xA0;
     config_offset = 0x190;
     D_80139280->field_0C = 0x80;
@@ -3470,7 +3483,7 @@ extern void func_800BC7F4__for_func_800BA844(void) __asm__("func_800BC7F4");
     } while (index < 0x3C);
     D_801B3184 = 0xB4;
     D_801B3180++;
-    func_800BC7F4__for_func_800BA844();
+    func_800BC7F4();
 }
 
 void func_800BA910(void)

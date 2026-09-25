@@ -3,6 +3,8 @@
 
 #include "field_effect_types.h"
 
+struct FieldActor;
+
 /** @brief Binding of an object owner to a temporary animation actor. */
 typedef struct
 {
@@ -15,11 +17,11 @@ typedef struct
 
 extern FieldSequenceBinding g_field_actor_bindings[];
 
-void field_apply_sequence_displacement(FieldMotionRecord* object, s32 direction_x, s32 vertical_step, s32 direction_z);
-void field_update_sequence_actor_binding(FieldMotionRecord* object, s32 release_actor);
-s32 field_execute_actor_sequence(FieldMotionRecord* object, s32 script_index);
+void field_apply_sequence_displacement(struct FieldActor* actor, s32 direction_x, s32 vertical_step, s32 direction_z);
+void field_update_sequence_actor_binding(struct FieldActor* actor, s32 release_actor);
+s32 field_execute_actor_sequence(struct FieldActor* actor, s32 script_index);
 s32 field_allocate_sequence_actor(s32 index, s32 flags);
-void field_restart_sequence_animation(FieldMotionRecord* object);
+void field_restart_sequence_animation(struct FieldActor* actor);
 void field_update_object_tints(void);
 
 #endif

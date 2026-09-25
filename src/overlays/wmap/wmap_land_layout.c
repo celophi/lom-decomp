@@ -1135,7 +1135,6 @@ void wmap_append_land_spirit_labels(s32 mode, u32 x, s32 y, s32 mask, s32* count
  * @param groups Receives the mask of nonempty label groups.
  * @param output Destination for the packed label groups.
  * @param land Artifact being previewed.
- * @note TODO: This reconstruction still differs from the original assembly.
  */
 void wmap_build_placement_labels(s32 selected_cell, u32 x, s32 y, s32* groups, s32* output, s32 land)
 {
@@ -1155,7 +1154,6 @@ void wmap_build_placement_labels(s32 selected_cell, u32 x, s32 y, s32* groups, s
     WmapLayout* terrain;
     s32 spirit;
     s32 record;
-    s32 group_row;
     s32 current_group_row;
     s32 component_offset;
     u32 cell_x;
@@ -1193,13 +1191,14 @@ void wmap_build_placement_labels(s32 selected_cell, u32 x, s32 y, s32* groups, s
     }
     record = 0;
 
-    group_row = 0;
     left_x = x - (selected_cell % 3);
     top_y = y - (selected_cell / 3);
     do
     {
         spirit = 0;
-        current_group_row = group_row;
+        /* Preserve the row copy through loop strength reduction. */
+        current_group_row = (record * 3) + record;
+        current_group_row -= record;
         cell_y = top_y + record;
         row_offset = cell_y * WMAP_GRID_SIZE;
         cell_x = left_x;
@@ -1261,7 +1260,6 @@ void wmap_build_placement_labels(s32 selected_cell, u32 x, s32 y, s32* groups, s
 
         } while (spirit < 3);
         record += 1;
-        group_row += 3;
     } while (record < 3);
     record = 0;
     *groups |= WMAP_LABEL_PROPOSED_GROUP;

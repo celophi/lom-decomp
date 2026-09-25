@@ -14,9 +14,6 @@
 /** @brief Number of action buttons a player can bind (four face buttons, four shoulder buttons). */
 #define FIELD_BUTTON_BINDING_COUNT 8
 
-/** @brief Number of party objects (two players and a companion). */
-#define FIELD_PARTY_COUNT 3
-
 /** @brief Number of actions with an entry in an action command map. */
 #define FIELD_ACTION_MAP_ENTRY_COUNT 11
 

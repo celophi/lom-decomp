@@ -338,8 +338,8 @@ s32 func_800AF350(FieldMenuElement *window)
                     state->unk18 = 0;
                     field_restart_actor_animation(actor);
                     field_spawn_item_record(state->key, items[D_80122A00 * 2]);
-                    animation_actor = func_800839F8(actor_index, 0);
-                    if ((animation_actor != -1) && (func_80083EEC(actor_index, animation_actor, 0xAF) != 0))
+                    animation_actor = field_find_free_actor_slot(actor_index, 0);
+                    if ((animation_actor != -1) && (field_start_builtin_animation(actor_index, animation_actor, 0xAF) != 0))
                     {
                         field_start_actor_animation(animation_actor, 0, 0);
                     }

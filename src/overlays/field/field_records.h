@@ -829,4 +829,47 @@ typedef struct FieldBattleContext
     u8 pad4A3;
 } FieldBattleContext;
 
+/** @brief FIELD diagnostic codes passed to record_game_diagnostic. */
+#define DIAG_BAD_MONSTER_OBJECT 0x64 /**< A monster group member has no object state. */
+#define DIAG_BAD_COMMAND 0x66        /**< Unknown command in a character's command slot. */
+#define DIAG_BAD_MONSTER_ACTION 0x69 /**< Monster action id past the end of its template's list. */
+#define DIAG_BAD_GUEST 0x6D          /**< No guest template for the requested guest. */
+#define DIAG_BAD_COMPANION 0x6E      /**< The requested stored companion does not exist. */
+
+/** @brief Script variables read or written by the battle code (see func_800BD414). */
+/** @brief Script variable: number of party records still standing. */
+#define FIELD_VAR_ALLY_COUNT 0x4280
+
+/** @brief Script variable: number of monster records still standing. */
+#define FIELD_VAR_ENEMY_COUNT 0x4284
+
+/** @brief Script variable: battle result reported by field_battle_finish. */
+#define FIELD_VAR_BATTLE_RESULT 0x4288
+
+/** @brief Script variable: record id watched by field_battle_handle_defeat (-1 when none). */
+#define FIELD_VAR_WATCHED_RECORD 0x428C
+
+/** @brief Per-record script variable receiving the element mask of an action. */
+#define FIELD_VAR_RECORD_ELEMENTS 0xD008
+
+/** @brief Companion script variable; four times its value adds to the power of type 4 attackers. */
+#define FIELD_VAR_COMPANION_POWER_BONUS 0xD038
+
+/** @brief Debug flags: log damage, and spare the party or the monsters. */
+#define FIELD_VAR_DEBUG_LOG_DAMAGE 0xFFC
+#define FIELD_VAR_DEBUG_SPARE_PARTY 0xFFA
+#define FIELD_VAR_DEBUG_SPARE_ENEMIES 0xFFB
+/** @brief Debug flag: monsters start with 1 HP. */
+#define FIELD_VAR_DEBUG_ONE_HP_MONSTERS 0xFFE
+/** @brief Script variable: when non-zero, the level every monster uses. */
+#define FIELD_VAR_MONSTER_LEVEL 0x2F78
+/** @brief Script variable: difficulty; 1 adds 20 monster levels and doubles monster HP, 2 uses the top level row and triples it. */
+#define FIELD_VAR_DIFFICULTY 0x2938
+/** @brief Script variable: bit 7 bases every monster level on the hero's level. */
+#define FIELD_VAR_LEVEL_FLAGS 0x52F0
+#define FIELD_LEVEL_FLAG_HERO 0x80
+/** @brief Script variables: lowest and highest monster level. */
+#define FIELD_VAR_MONSTER_LEVEL_MIN 0x52E0
+#define FIELD_VAR_MONSTER_LEVEL_MAX 0x52E8
+
 #endif

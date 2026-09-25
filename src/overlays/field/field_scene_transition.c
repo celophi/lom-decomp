@@ -793,7 +793,7 @@ void field_update_scene(void)
             } while (actor_index < (actor_end - 3));
         }
         field_upload_transition_tiles();
-        func_80084630();
+        field_reset_object_tints();
         field_load_scene_actors((s32*)layout_base);
         if (g_field_pending_music_id != -1)
         {
@@ -902,7 +902,7 @@ void field_update_scene(void)
         field_initialize_actor_slots();
         field_clear_actor_slots();
         func_80067AA4();
-        func_80084240();
+        field_reset_actor_resources();
         func_800A255C();
         field_clear_fade_prims();
         saved_scene_id = g_scene_mode;

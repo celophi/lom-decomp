@@ -29,16 +29,6 @@
 
 /* ---- HUD ------------------------------------------------------------------ */
 
-/** @brief Party records with a HUD panel. */
-#define FIELD_HUD_PARTY_COUNT 3
-
-/** @brief Actor commands that keep the special attack gauge hidden. */
-#define FIELD_COMMAND_PERFORM_ACTION 0x85
-#define FIELD_COMMAND_87 0x87
-
-/** @brief Actor command of a knocked-down party member (the HUD shows the recovery gauge). */
-#define FIELD_COMMAND_KNOCKED_DOWN 0x8E
-
 /** @brief FieldObjectState.hud.word bit: show the special attack gauge. */
 #define FIELD_HUD_SPECIAL_GAUGE 0x1
 
@@ -77,9 +67,8 @@
 /** @brief Animation of an anchor effect record that the panel does not follow. */
 #define FIELD_HUD_ANCHOR_IGNORED_ANIMATION 0x2F
 
-/** @brief Frames of the panel shake; the shake counters rest at 0xFF. */
+/** @brief Frames of the panel shake. */
 #define FIELD_HUD_SHAKE_FRAMES 6
-#define FIELD_HUD_SHAKE_IDLE 0xFF
 
 /** @brief Portrait blink: frames per animation, idle chance mask and the table of blinking objects. */
 #define FIELD_HUD_BLINK_FRAMES 6
@@ -167,9 +156,9 @@ extern CVECTOR g_field_hud_status_colors[2];
 extern CVECTOR g_field_hud_effect_colors[2];
 extern CVECTOR g_field_hud_full_status_colors[2];
 extern CVECTOR g_field_hud_companion_status_colors[2];
-extern s32 g_field_party_hud_order[FIELD_HUD_PARTY_COUNT];
+extern s32 g_field_party_hud_order[FIELD_PARTY_COUNT];
 extern s16 g_field_hud_shake_offsets[];
-extern s32 g_field_hud_blink_frames[FIELD_HUD_PARTY_COUNT];
+extern s32 g_field_hud_blink_frames[FIELD_PARTY_COUNT];
 extern s32 g_field_boss_hud_shake_frame;
 extern s32 g_field_hud_bar_height;
 extern s32 g_field_hud_bar_width;
@@ -186,8 +175,6 @@ extern u8* g_field_cd_buffer;
 
 /* ---- Object flag handlers and fading primitives ---------------------------- */
 
-/** @brief Each object's effect animations play in animation actor slot 64 + object index. */
-#define FIELD_OBJECT_EFFECT_SLOT_BASE 64
 
 /** @brief Number of bits in FieldObjectState.flags that have a handler entry. */
 #define FIELD_OBJECT_HANDLER_COUNT 16
@@ -204,7 +191,6 @@ extern u8* g_field_cd_buffer;
 #define FIELD_OBJECT_FLAG_0040 0x0040
 #define FIELD_OBJECT_FLAG_0080 0x0080
 #define FIELD_OBJECT_FLAG_0100 0x0100
-#define FIELD_OBJECT_FLAG_KNOCKED_OUT 0x0200
 #define FIELD_OBJECT_FLAG_2000 0x2000
 #define FIELD_OBJECT_FLAG_4000 0x4000
 #define FIELD_OBJECT_FLAG_8000 0x8000
@@ -386,10 +372,10 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
         if (g_field_actors[i].presence != unused_presence && (g_field_player_records[i].flags & FIELD_PLAYER_ACTIVE))
         {
             /* each command goes through the local; comparing the constants directly changes the code */
-            command = FIELD_COMMAND_PERFORM_ACTION;
+            command = FIELD_ACTOR_COMMAND_ACTION;
             if (g_field_actors[i].command != command)
             {
-                command = FIELD_COMMAND_87;
+                command = FIELD_ACTOR_COMMAND_INSTRUMENT;
                 if (g_field_actors[i].command != command)
                 {
                     g_field_object_states[i].hud.word |= FIELD_HUD_SPECIAL_GAUGE;
@@ -398,11 +384,11 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
             panel_count++;
         }
         i++;
-    } while (i < FIELD_HUD_PARTY_COUNT);
+    } while (i < FIELD_PARTY_COUNT);
     switch (panel_count)
     {
     case 1:
-        for (i = 0; i < FIELD_HUD_PARTY_COUNT; i++)
+        for (i = 0; i < FIELD_PARTY_COUNT; i++)
         {
             single_actor = &g_field_actors[i];
             single_player = &g_field_player_records[i];
@@ -414,7 +400,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
         break;
     case 2:
         panel_count = 0;
-        for (i = 0; i < FIELD_HUD_PARTY_COUNT; i++)
+        for (i = 0; i < FIELD_PARTY_COUNT; i++)
         {
             paired_actor = &g_field_actors[i];
             paired_player = &g_field_player_records[i];
@@ -427,7 +413,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
         break;
     case 3:
         panel_count = 0;
-        for (i = 0; i < FIELD_HUD_PARTY_COUNT; i++)
+        for (i = 0; i < FIELD_PARTY_COUNT; i++)
         {
             if (g_field_actors[g_field_party_hud_order[i]].presence != FIELD_ACTOR_UNUSED &&
                 (g_field_player_records[g_field_party_hud_order[i]].flags & FIELD_PLAYER_ACTIVE))
@@ -450,7 +436,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
     {
         if (D_80122B20 == 0)
         {
-            for (i = FIELD_HUD_PARTY_COUNT; i < FIELD_ACTOR_COUNT; i++)
+            for (i = FIELD_PARTY_COUNT; i < FIELD_ACTOR_COUNT; i++)
             {
                 group = g_field_object_states[i].group_flags & 0xF;
                 if (group == g_field_active_group && group != 0)
@@ -646,7 +632,7 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
     u8* gauge_cursor;
     POLY_G4* bar;
 
-    if (slot < FIELD_HUD_PARTY_COUNT)
+    if (slot < FIELD_PARTY_COUNT)
     {
         if (g_field_player_records[slot].hit_state < FIELD_HUD_SHAKE_FRAMES)
         {
@@ -678,7 +664,7 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
     }
     ctx = render_half;
     label_cursor = ctx->primitive_cursor;
-    if (state->hud.bytes.object_index < FIELD_HUD_PARTY_COUNT)
+    if (state->hud.bytes.object_index < FIELD_PARTY_COUNT)
     {
         g_field_hud_bar_offset_x = 29;
         g_field_hud_bar_offset_y = 9;
@@ -703,7 +689,7 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
         g_field_hud_bar_height = FIELD_HUD_BAR_HEIGHT;
     }
     sprite_cursor = label_cursor;
-    if (slot < FIELD_HUD_PARTY_COUNT)
+    if (slot < FIELD_PARTY_COUNT)
     {
         if (g_field_hud_blink_frames[slot] >= FIELD_HUD_BLINK_FRAMES || ++g_field_hud_blink_frames[slot] >= FIELD_HUD_BLINK_FRAMES)
         {
@@ -798,8 +784,8 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
     }
     /* A knocked-down member shows the recovery gauge instead of the HP bars. */
     gauge_cursor = helper_cursor;
-    if (slot < FIELD_HUD_PARTY_COUNT && (players = g_field_player_records, player = &players[slot], player->transition_limit != 0) &&
-        g_field_actors[slot].command == FIELD_COMMAND_KNOCKED_DOWN)
+    if (slot < FIELD_PARTY_COUNT && (players = g_field_player_records, player = &players[slot], player->revive_delay != 0) &&
+        g_field_actors[slot].command == FIELD_ACTOR_COMMAND_KNOCKED_DOWN)
     {
         bar = (POLY_G4*)gauge_cursor;
         SET_BGR0_PACKED(bar, FIELD_HUD_RECOVERY_DARK);
@@ -808,8 +794,8 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
         setcode(bar, FIELD_POLY_G4_CODE);
         SET_POLY_G4_BGR1_PACKED(bar, FIELD_HUD_WHITE);
         SET_POLY_G4_BGR3_PACKED(bar, FIELD_HUD_WHITE);
-        recovery_width = (s16)player->transition_limit;
-        recovery_width = (s32)(g_field_hud_bar_width * player->transition_time) / (s32)recovery_width;
+        recovery_width = (s16)player->revive_delay;
+        recovery_width = (s32)(g_field_hud_bar_width * player->revive_time) / (s32)recovery_width;
         field_hud_set_bar_geometry(bar, x, y, recovery_width);
         addPrim(&ctx->ordering_table[FIELD_HUD_OT_INDEX], bar);
         gauge_cursor += sizeof(POLY_G4);
@@ -1380,7 +1366,7 @@ void field_update_object_effects(s32 index)
                     {
                         if (state->flags & bit_mask)
                         {
-                            func_80083EEC(index, animation_slot, handler_value);
+                            field_start_builtin_animation(index, animation_slot, handler_value);
                             field_start_actor_animation(animation_slot, 0, 0);
                         }
                     }
@@ -1436,7 +1422,7 @@ void field_update_object_effects(s32 index)
                         goto find_highest;
                     }
                     /* Flag bit whose handler plays the slot's current animation resource. */
-                    animation_kind = slot->status.half[1];
+                    animation_kind = slot->status.parts.animation_id;
                     animation_bit = 0x20;
                     switch (animation_kind)
                     {
@@ -1509,7 +1495,7 @@ void field_handle_object_flag_0004(FieldActor* actor, s32 is_set)
         actor->animation_active = 1;
         g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
         field_restart_actor_animation(actor);
-        func_80083EEC(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 7);
+        field_start_builtin_animation(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 7);
         field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
         field_clear_link_target_flag(actor->object_index);
     }
@@ -1530,7 +1516,7 @@ void field_handle_object_flag_0020(FieldActor* actor, s32 is_set)
         actor->animation_active = 1;
         g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
         field_restart_actor_animation(actor);
-        func_80083EEC(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 10);
+        field_start_builtin_animation(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 10);
         field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
     }
 }
@@ -1565,7 +1551,7 @@ void field_handle_object_flag_0040(FieldActor* actor, s32 is_set)
 
     if (is_set != 0)
     {
-        func_80083EEC(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 9);
+        field_start_builtin_animation(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 9);
         field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
         animation = actor->animation;
         if ((animation & FIELD_ANIMATION_SEQUENCE_MASK) != FIELD_ANIMATION_FLAG_0040_POSE)
@@ -1608,7 +1594,7 @@ void field_handle_object_flag_0080(FieldActor* actor, s32 is_set)
         actor->animation &= FIELD_ANIMATION_MIRROR_FLAG;
         g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
         field_restart_actor_animation(actor);
-        func_80083EEC(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0x91);
+        field_start_builtin_animation(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0x91);
         field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
         actor->control.word &= ~FIELD_ACTOR_CONTROL_40000;
     }
@@ -1639,14 +1625,14 @@ void field_handle_object_flag_0100(FieldActor* actor, s32 is_set)
 {
     if (is_set != 0)
     {
-        func_80083EEC(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 12);
+        field_start_builtin_animation(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 12);
         field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
         actor->presence = FIELD_ACTOR_HIDDEN;
         field_clear_link_target_flag(actor->object_index);
     }
     else
     {
-        func_80083EEC(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 13);
+        field_start_builtin_animation(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 13);
         field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
         actor->presence = 0;
     }
@@ -1670,7 +1656,7 @@ void field_handle_object_flag_8000(FieldActor* actor, s32 is_set)
 {
     if (is_set != 0)
     {
-        func_80083EEC(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 14);
+        field_start_builtin_animation(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 14);
         field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
     }
     else
@@ -1689,7 +1675,7 @@ void field_handle_object_flag_4000(FieldActor* actor, s32 is_set)
 {
     if (is_set != 0)
     {
-        func_80083EEC(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 25);
+        field_start_builtin_animation(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 25);
         field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
     }
     else

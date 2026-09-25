@@ -105,7 +105,6 @@ extern s32 D_801B2980;
 /** @brief Project a spiral emitter and append animated copies along its trail. */
 void func_80088B38(void)
 {
-/* Partial WMAP decompilation: 99.577540% (gcc280_g0). */
 
 /** @brief World-map actor configuration. */
 typedef struct
@@ -160,6 +159,7 @@ extern s32 D_801B298C;
     s32 remaining;
     WmapMotion *motion;
     WmapResource *resource;
+    WmapConfigA *actor;
 
     position.vx = ((D_801B0080.z >> 3) * (ccos(D_801B0080.angle) >> 6)) >> 12;
     position.vy = ((D_801B0080.z >> 3) * (csin(D_801B0080.angle) >> 6)) >> 12;
@@ -190,10 +190,11 @@ extern s32 D_801B298C;
     }
     for (i = 61; i < D_80139234 + 60; i++)
     {
-        resource = &D_80139988[i];
+        actor = &D_800D9268[i];
         motion = &D_801AFBD0[i];
-        func_8006CC4C(&D_800D9268[i], resource);
-        func_80066F9C(&D_800D9268[i], motion->screen.packed, 8, 10, 0);
+        resource = &D_80139988[i];
+        func_8006CC4C(actor, resource);
+        func_80066F9C(actor, motion->screen.packed, 8, 10, 0);
     }
     remaining = D_801B298C - 1;
     D_801B298C = remaining;

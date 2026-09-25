@@ -19,13 +19,6 @@
 /** @brief Control mode of an actor driven by its script. */
 #define FIELD_CONTROL_SCRIPTED 2
 
-/**
- * @brief Objects 0 and 1 are the two players; objects below FIELD_PARTY_COUNT are the party.
- * @note Some tests compare an object index against these as unsigned, hence the (u32) casts.
- */
-#define FIELD_PLAYER_COUNT 2
-#define FIELD_PARTY_COUNT 3
-
 /** @brief Binding shared by every object from FIELD_PLAYER_COUNT up. */
 #define FIELD_SHARED_BINDING (FIELD_ACTOR_BINDING_COUNT - 1)
 
@@ -78,8 +71,6 @@
 #define FIELD_OBJECT_CHAINING 0x8000
 #define FIELD_OBJECT_FLAG_HIT 0x10000000
 
-/** @brief FieldObjectState::contact bits. */
-#define FIELD_CONTACT_UNTARGETABLE 0x01
 #define FIELD_CONTACT_ACTION_BITS 0x1C
 #define FIELD_CONTACT_ACTION_PENDING 0x40
 #define FIELD_CONTACT_TARGETED 0x80
@@ -523,13 +514,13 @@ static void field_run_actor_script_command(FieldActor* actor)
                     spawn_state->unk18 = 0;
                     contact_or_z = spawn_state->contact.word;
                     contact_or_z &= ~FIELD_CONTACT_TARGETED;
-                    contact_or_z &= ~FIELD_CONTACT_UNTARGETABLE;
+                    contact_or_z &= ~FIELD_CONTACT_ANIMATION_HIDDEN;
                     spawn_state->contact.word = contact_or_z;
                     field_restart_actor_animation(spawn_actor, spawn_control);
-                    spawn_slot = func_800839F8(index_or_count, 0);
+                    spawn_slot = field_find_free_actor_slot(index_or_count, 0);
                     if (spawn_slot != -1)
                     {
-                        if (func_80083EEC(index_or_count, spawn_slot, FIELD_SPAWN_EFFECT_RESOURCE) != 0)
+                        if (field_start_builtin_animation(index_or_count, spawn_slot, FIELD_SPAWN_EFFECT_RESOURCE) != 0)
                         {
                             field_start_actor_animation(spawn_slot, 0, 0);
                         }
@@ -641,7 +632,7 @@ static void field_run_actor_script_command(FieldActor* actor)
             }
             technique_owner = actor->object_index;
             if (!((g_field_object_states[technique_owner].technique_gauge == FIELD_TECHNIQUE_GAUGE_FULL) &&
-                  (func_8008404C(technique_owner, (action_slot->command & FIELD_ACTION_TECHNIQUE_MASK) +
+                  (field_start_streamed_animation(technique_owner, (action_slot->command & FIELD_ACTION_TECHNIQUE_MASK) +
                                                       (u16)((g_field_player_records[technique_owner].weapon_type * FIELD_TECHNIQUES_PER_WEAPON) + FIELD_TECHNIQUE_SEQUENCE_BASE)) != 0)))
             {
                 actor->command = FIELD_ACTOR_COMMAND_NONE;
@@ -664,7 +655,7 @@ static void field_run_actor_script_command(FieldActor* actor)
             request = action_slot->parameter;
             if (request & FIELD_REQUEST_BOUND)
             {
-                if (func_8008404C(actor->object_index, request & FIELD_REQUEST_ANIMATION_MASK) == 0)
+                if (field_start_streamed_animation(actor->object_index, request & FIELD_REQUEST_ANIMATION_MASK) == 0)
                 {
                     actor->command = FIELD_ACTOR_COMMAND_NONE;
                     return;
@@ -701,8 +692,8 @@ static void field_run_actor_script_command(FieldActor* actor)
             slot_animation = action_slot->animation;
             if ((slot_animation != FIELD_ACTION_NO_ANIMATION) && (slot_animation != 0))
             {
-                key_or_index = func_800839F8(actor->object_index, 0);
-                if ((key_or_index != -1) && (func_80083EEC(actor->object_index, key_or_index, action_slot->animation) != 0))
+                key_or_index = field_find_free_actor_slot(actor->object_index, 0);
+                if ((key_or_index != -1) && (field_start_builtin_animation(actor->object_index, key_or_index, action_slot->animation) != 0))
                 {
                     slot_owner = actor->object_index;
                     g_field_actor_slots[key_or_index].actor_type = g_field_object_states[slot_owner].action;
@@ -887,7 +878,7 @@ static void field_run_actor_script_command(FieldActor* actor)
                 actor->unk10 = 0;
                 return;
             }
-            if (func_8008404C(technique_object, key_or_index) == 0)
+            if (field_start_streamed_animation(technique_object, key_or_index) == 0)
             {
                 actor->script_index = FIELD_SCRIPT_NONE;
                 actor->unk10 = 0;
@@ -920,7 +911,7 @@ static void field_run_actor_script_command(FieldActor* actor)
                 actor->unk10 = 0;
                 return;
             }
-            if (func_8008404C(actor->object_index, key_or_index) == 0)
+            if (field_start_streamed_animation(actor->object_index, key_or_index) == 0)
             {
                 actor->script_index = FIELD_SCRIPT_NONE;
                 actor->unk10 = 0;
@@ -1087,7 +1078,7 @@ static void field_run_actor_script_command(FieldActor* actor)
     case FIELD_SCRIPT_OP_LOAD_BOUND_ANIMATION:
         key_or_index = script[1] + (script[2] << 8);
         actor->script_offset += 3;
-        if (g_field_actions_limited == 0 && func_8008404C(actor->object_index, key_or_index) != 0)
+        if (g_field_actions_limited == 0 && field_start_streamed_animation(actor->object_index, key_or_index) != 0)
         {
             pending_flag = g_field_binding_restart_pending;
             if (actor->object_index < (u32)FIELD_PLAYER_COUNT)
@@ -1302,8 +1293,8 @@ s32 field_retire_actor(s32 key, s32 resource_index)
     }
     if (resource_index != -1)
     {
-        slot_index = func_800839F8(actor->object_index, 0);
-        if ((slot_index != -1) && (func_80083EEC(actor->object_index, slot_index, resource_index) != 0))
+        slot_index = field_find_free_actor_slot(actor->object_index, 0);
+        if ((slot_index != -1) && (field_start_builtin_animation(actor->object_index, slot_index, resource_index) != 0))
         {
             field_start_actor_animation(slot_index, 0, 0);
         }
@@ -1339,8 +1330,8 @@ s32 field_schedule_actor_revive(s32 key, s32 animation, s32 effect, s32 sound, s
     {
         return -1;
     }
-    g_field_player_records[actor->object_index].transition_limit = delay;
-    g_field_player_records[actor->object_index].transition_time = 0;
+    g_field_player_records[actor->object_index].revive_delay = delay;
+    g_field_player_records[actor->object_index].revive_time = 0;
     g_field_player_records[actor->object_index].revive_animation = animation;
     g_field_player_records[actor->object_index].revive_effect = effect;
     g_field_player_records[actor->object_index].revive_sound = sound;
@@ -1383,8 +1374,8 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound)
     field_restart_actor_animation(actor);
     if (effect != -1)
     {
-        slot_index = func_800839F8(actor->object_index, 0);
-        if ((slot_index != -1) && (func_80083EEC(actor->object_index, slot_index, effect) != 0))
+        slot_index = field_find_free_actor_slot(actor->object_index, 0);
+        if ((slot_index != -1) && (field_start_builtin_animation(actor->object_index, slot_index, effect) != 0))
         {
             field_start_actor_animation(slot_index, 0, 0);
             g_field_object_states[actor->object_index].contact.bytes.animation_actor_index = slot_index;
@@ -1566,7 +1557,7 @@ s32 field_load_bound_animation(s32 key, s32 resource_id)
     {
         return -1;
     }
-    if (func_8008404C(actor->object_index, resource_id) != 0)
+    if (field_start_streamed_animation(actor->object_index, resource_id) != 0)
     {
         pending_flags = g_field_binding_restart_pending;
         if (actor->object_index < FIELD_PLAYER_COUNT)
@@ -2179,8 +2170,8 @@ s32 field_spawn_animation_actor(s32 key, s32 resource_index)
     {
         return -1;
     }
-    slot_index = func_800839F8(actor->object_index, 0);
-    if ((slot_index != -1) && (func_80083EEC(actor->object_index, slot_index, resource_index) != 0))
+    slot_index = field_find_free_actor_slot(actor->object_index, 0);
+    if ((slot_index != -1) && (field_start_builtin_animation(actor->object_index, slot_index, resource_index) != 0))
     {
         field_start_actor_animation(slot_index, 0, 0);
         return 0;
@@ -2204,8 +2195,8 @@ s32 field_spawn_shared_animation_actor(s32 key, s32 resource_index)
     {
         return -1;
     }
-    slot_index = func_800839F8(0, 0);
-    if ((slot_index != -1) && (func_80083EEC(actor->object_index, slot_index, resource_index) != 0))
+    slot_index = field_find_free_actor_slot(0, 0);
+    if ((slot_index != -1) && (field_start_builtin_animation(actor->object_index, slot_index, resource_index) != 0))
     {
         field_start_actor_animation(slot_index, 0, 0);
         return 0;
@@ -2245,8 +2236,8 @@ s32 field_spawn_targeted_animation_actor(s32 key, s32 resource_index, s32 target
     {
         return -1;
     }
-    slot_index = func_800839F8(actor->object_index, 0);
-    if ((slot_index != -1) && (func_80083EEC(actor->object_index, slot_index, resource_index) != 0))
+    slot_index = field_find_free_actor_slot(actor->object_index, 0);
+    if ((slot_index != -1) && (field_start_builtin_animation(actor->object_index, slot_index, resource_index) != 0))
     {
         field_start_actor_animation(slot_index, target_count, (u8*)targets);
         return 0;

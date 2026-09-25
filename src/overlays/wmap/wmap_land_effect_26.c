@@ -392,7 +392,6 @@ extern void func_80078CB4__for_func_8007724C(void) __asm__("func_80078CB4");
  * @param start First actor index.
  * @param end Exclusive end index.
  * @param depth Rendering depth.
- * @note Partial reconstruction: 95.990560% with gcc280_g0.
  */
 void func_800773B8(s32 start, s32 end, s32 depth)
 {
@@ -407,11 +406,11 @@ void func_800773B8(s32 start, s32 end, s32 depth)
     s32 x;
     s32 angle;
     s32 resource_offset;
-    WmapResource* resource;
-    WmapMotion* motion;
-    u8* slot_data;
-    s8* table;
-    WmapConfigA* actor;
+    WmapMotion *motion;
+    u8 *motion_base;
+    s8 *table;
+    u8 *resource_base;
+    WmapConfigA *actor;
     WmapScreenPoint screen;
 
     i = start;
@@ -420,11 +419,13 @@ void func_800773B8(s32 start, s32 end, s32 depth)
         return;
     }
     table = D_80051B4C;
-    motion_offset = i * (s32)sizeof(WmapMotion);
+    motion_offset = i * 20;
     for (; i < end; i++)
     {
-        slot_data = (u8*)D_801AFBD0;
-        motion = (WmapMotion*)(slot_data + motion_offset);
+        motion_base = (u8 *)D_801AFBD0;
+        motion = (WmapMotion *)(motion_base + motion_offset);
+        motion_base++;
+        motion_base--;
         actor = &D_800D9268[i];
         motion->field_0E += motion->x;
         if (motion->field_0E >= 3841)
@@ -433,16 +434,19 @@ void func_800773B8(s32 start, s32 end, s32 depth)
         }
         motion->field_12 = (motion->field_12 + motion->field_10) & 4095;
         angle = motion->angle;
-        x = table[motion->field_12 / 16] * motion->scale;
+        x = (motion->field_12 / 16) + (s32)table;
+        x = *(s8 *)x * motion->scale;
         screen.point.x = (angle + x / 16) / 16;
         screen.point.y = motion->field_0E / 16;
         actor->field_22 = D_80182DF4;
         actor->field_24 = D_80182DF4;
-        resource_offset = i * (s32)sizeof(WmapResource);
-        slot_data = (u8*)D_80139988;
-        resource = (WmapResource*)(slot_data + resource_offset);
-        func_8006CC4C(actor, resource);
-        motion_offset += sizeof(WmapMotion);
+        func_8006CC4C(actor,
+                       (resource_offset = i * 8,
+                        resource_base = (u8 *)D_80139988,
+                        (WmapResource *)(resource_base + resource_offset)));
+        resource_base++;
+        resource_base--;
+        motion_offset += 20;
         func_80066F9C(actor, screen.packed, depth, 4, 0);
     }
 }

@@ -1278,8 +1278,8 @@ typedef struct
  */
 #define FIELD_TEXT_AT(bank, low, high) ((u8 *)((low) + (((high) << 8) + (s32)(bank))))
 
-/** @brief Experience a party member gained since D_801229A0 was sampled. */
-#define FIELD_EXPERIENCE_GAIN(index) ((s32)((g_pad_ctx->characters[index].progress.word >> 8) - D_801229A0[index]))
+/** @brief Experience a party member gained since g_field_experience_snapshot was sampled. */
+#define FIELD_EXPERIENCE_GAIN(index) ((s32)((g_pad_ctx->characters[index].progress.word >> 8) - g_field_experience_snapshot[index]))
 
 /** @brief Two-byte relative offset into the shared FIELD string table. */
 typedef struct
@@ -1316,7 +1316,7 @@ extern u8 D_800EC3C6[], D_800EC3DA[];
 extern u8 g_field_dialog_item_quantities[];
 extern unsigned char D_800EC3C4[];
 extern void *g_field_dialog_item_texts[];
-extern s32 D_801229A0[];
+extern s32 g_field_experience_snapshot[];
 extern Rec54 g_field_actors[];
 extern StructEC D_800EC3D8;
 extern PackedOffset D_800EC3CC;

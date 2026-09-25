@@ -113,8 +113,8 @@ void func_800B0244(void)
             }
             if (D_80122B28[i].animation != -1)
             {
-                actor_track = func_800839F8(object->object_index, 0);
-                if ((actor_track != -1) && (func_80083EEC(object->object_index, actor_track, D_80122B28[i].animation) != 0))
+                actor_track = field_find_free_actor_slot(object->object_index, 0);
+                if ((actor_track != -1) && (field_start_builtin_animation(object->object_index, actor_track, D_80122B28[i].animation) != 0))
                 {
                     field_start_actor_animation(actor_track, 0, 0);
                     g_field_object_states[object->object_index].contact.bytes.animation_actor_index = (u8)actor_track;
@@ -203,7 +203,7 @@ void func_800B0244(void)
                             i += 1;
                         } while (i < 3);
                         DrawSync(0);
-                        func_80084240();
+                        field_reset_actor_resources();
                         field_restore_default_action_animation_mappings(1);
                         func_800B34D0(g_field_active_group);
                         D_80122B20 = 0;

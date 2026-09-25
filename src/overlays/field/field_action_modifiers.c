@@ -8,29 +8,8 @@
 #include "common.h"
 #include "field_calls.h"
 #include "field_records.h"
+#include "field_actor.h"
 
-/** @brief Script variable: number of party records still standing. */
-#define FIELD_VAR_ALLY_COUNT 0x4280
-
-/** @brief Script variable: number of monster records still standing. */
-#define FIELD_VAR_ENEMY_COUNT 0x4284
-
-/** @brief Script variable: battle result reported by field_battle_finish. */
-#define FIELD_VAR_BATTLE_RESULT 0x4288
-
-/** @brief Script variable: record id watched by field_battle_handle_defeat (-1 when none). */
-#define FIELD_VAR_WATCHED_RECORD 0x428C
-
-/** @brief Per-record script variable receiving the element mask of an action. */
-#define FIELD_VAR_RECORD_ELEMENTS 0xD008
-
-/** @brief Companion script variable; four times its value adds to the power of type 4 attackers. */
-#define FIELD_VAR_COMPANION_POWER_BONUS 0xD038
-
-/** @brief Debug flags: log damage, and spare the party or the monsters. */
-#define FIELD_VAR_DEBUG_LOG_DAMAGE 0xFFC
-#define FIELD_VAR_DEBUG_SPARE_PARTY 0xFFA
-#define FIELD_VAR_DEBUG_SPARE_ENEMIES 0xFFB
 
 /** @brief field_battle_side_defeated results. */
 #define FIELD_BATTLE_ONGOING 0
@@ -106,10 +85,6 @@
 #define FIELD_STATUS_ID_ON_HIT_FIRST 0x50
 #define FIELD_STATUS_ID_ON_HIT_END 0x60
 
-/** @brief Actor animations that change the defense. */
-#define FIELD_ANIMATION_GUARD 10
-#define FIELD_ANIMATION_GUARD_ALT 11
-#define FIELD_ANIMATION_DEFENSELESS 0x31
 
 /** @brief Number of party records; higher record ids are monsters. */
 #define FIELD_PARTY_RECORD_COUNT 3

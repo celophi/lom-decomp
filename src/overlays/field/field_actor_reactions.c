@@ -10,14 +10,6 @@
 #include "field_calls.h"
 #include "sdk/rand.h"
 
-/** @brief Objects 0 and 1 are the two players. */
-#define FIELD_PLAYER_COUNT 2
-
-/** @brief Objects 0 to 2 are the party (two players and a companion). */
-#define FIELD_PARTY_COUNT 3
-
-/** @brief Each object's effect animations play in animation actor slot 64 + object index. */
-#define FIELD_OBJECT_EFFECT_SLOT_BASE 64
 
 /** @brief First frame of the HUD panel shake started by a hit (counts down to 0). */
 #define FIELD_HUD_SHAKE_START 5
@@ -28,7 +20,6 @@
 #define FIELD_OBJECT_FLAG_0040 0x0040
 #define FIELD_OBJECT_FLAG_0080 0x0080
 #define FIELD_OBJECT_FLAG_0100 0x0100
-#define FIELD_OBJECT_FLAG_KNOCKED_OUT 0x0200
 /** @brief Another object holds a link to this object (FieldContactWord linked bit). */
 #define FIELD_OBJECT_FLAG_LINK_TARGET 0x2000
 #define FIELD_OBJECT_FLAG_4000 0x4000
@@ -40,28 +31,10 @@
     (FIELD_OBJECT_FLAG_0004 | FIELD_OBJECT_FLAG_0020 | FIELD_OBJECT_FLAG_0040 | FIELD_OBJECT_FLAG_0080 | FIELD_OBJECT_FLAG_0100 |                              \
      FIELD_OBJECT_FLAG_KNOCKED_OUT | FIELD_OBJECT_FLAG_LINK_TARGET)
 
-/** @brief FieldObjectState.contact bits. */
-#define FIELD_CONTACT_UNTARGETABLE 0x01
-#define FIELD_CONTACT_NO_HIT_TEST 0x20
-/** @brief Hits land even while the object's own bound animation actor is running. */
-#define FIELD_CONTACT_IGNORE_BINDING 0x40
-
-/** @brief FieldObjectState.movement bits of the running animation sequence. */
-#define FIELD_MOVEMENT_SEQUENCE_0800 0x0800
-#define FIELD_MOVEMENT_SEQUENCE_1000 0x1000
-#define FIELD_MOVEMENT_SEQUENCE_MASK (FIELD_MOVEMENT_SEQUENCE_0800 | FIELD_MOVEMENT_SEQUENCE_1000)
-
-/** @brief FieldActor.control flag set while an action is running. */
-#define FIELD_CONTROL_IN_ACTION 0x800
 
 /** @brief FieldResourceEntry.unkE flag: the defeat animation plays on the bound animation actor. */
 #define FIELD_REQUEST_BOUND 0x8000
 
-/** @brief Actor animations started by the reactions. */
-#define FIELD_ANIMATION_GUARD_ALT 11
-#define FIELD_ANIMATION_13 0x13
-/** @brief First of the two hit animations; one is picked at random. */
-#define FIELD_ANIMATION_HIT 20
 #define FIELD_ANIMATION_KNOCKED_DOWN 29
 /** @brief An actor playing this animation ignores hits. */
 #define FIELD_ANIMATION_44 0x44
@@ -89,7 +62,6 @@ void field_restart_actor_animation(FieldActor* actor);
 void field_restart_actor_animation_reverse(FieldActor* actor);
 void field_update_sequence_actor_binding(FieldActor* actor, s32 release_actor);
 void field_stop_actor_animations_for_object(FieldActor* actor, s32 force);
-void func_80083BC0(FieldActor* actor, FieldActorSlot* slot, s32 force);
 
 /**
  * @brief Put an actor into its hit reaction and reset its motion and animation flags.
@@ -122,14 +94,14 @@ void field_start_actor_hit_reaction(FieldActor* actor, s32 guard)
         }
     }
     command = actor->command;
-    if (command != FIELD_ACTOR_COMMAND_93 && command != FIELD_ACTOR_COMMAND_94 && command != FIELD_ACTOR_COMMAND_90)
+    if (command != FIELD_ACTOR_COMMAND_DEFEAT_WAIT && command != FIELD_ACTOR_COMMAND_DEFEAT_END && command != FIELD_ACTOR_COMMAND_DEFEATED)
     {
         states = g_field_object_states;
         state = &states[actor->object_index];
         flags = state->flags;
         if (!(flags & FIELD_OBJECT_FLAG_KNOCKED_OUT))
         {
-            if ((state->contact.bytes.flags & FIELD_CONTACT_UNTARGETABLE) || (flags & FIELD_OBJECT_IMMOBILE_FLAGS))
+            if ((state->contact.bytes.flags & FIELD_CONTACT_ANIMATION_HIDDEN) || (flags & FIELD_OBJECT_IMMOBILE_FLAGS))
             {
                 actor->animation_state = 1;
                 actor->animation_frame = 0;
@@ -240,7 +212,7 @@ s32 field_stop_actor(s32 key)
     actor->script_offset++;
     field_update_sequence_actor_binding(actor, 0);
     field_stop_actor_animations_for_object(actor, 1);
-    func_80084424(actor->object_index);
+    field_release_actor_binding(actor->object_index);
     return 0;
 }
 
@@ -256,10 +228,10 @@ void field_knock_down_actor(FieldActor* actor, s32 clear_recovery)
 
     field_release_object_link(actor);
     field_release_links_to_actor(actor);
-    actor->command = FIELD_ACTOR_COMMAND_TRANSITION;
+    actor->command = FIELD_ACTOR_COMMAND_KNOCKED_DOWN;
     if (clear_recovery != 0 && actor->object_index < FIELD_PARTY_COUNT)
     {
-        g_field_player_records[actor->object_index].transition_limit = 0;
+        g_field_player_records[actor->object_index].revive_delay = 0;
     }
 
     actor->script_index = FIELD_SCRIPT_NONE;
@@ -275,10 +247,10 @@ void field_knock_down_actor(FieldActor* actor, s32 clear_recovery)
     field_restart_actor_animation(actor);
 
     field_stop_actor_animations_for_object(actor, 1);
-    func_80083BC0(actor, &g_field_actor_slots[FIELD_OBJECT_EFFECT_SLOT_BASE + actor->object_index], 1);
-    actor->control.word |= FIELD_CONTROL_IN_ACTION;
+    field_stop_actor_slot(actor, &g_field_actor_slots[FIELD_OBJECT_EFFECT_SLOT_BASE + actor->object_index], 1);
+    actor->control.word |= FIELD_CONTROL_PLAY_ONCE;
     field_update_sequence_actor_binding(actor, 0);
-    func_80084424(actor->object_index);
+    field_release_actor_binding(actor->object_index);
 }
 
 /**
@@ -314,13 +286,13 @@ void field_start_actor_defeat(FieldActor* actor, s8 value)
 {
     if (actor->object_index < FIELD_PARTY_COUNT)
     {
-        g_field_player_records[actor->object_index].transition_limit = 0;
+        g_field_player_records[actor->object_index].revive_delay = 0;
     }
 
     g_field_object_states[actor->object_index].flags &= FIELD_OBJECT_FLAG_KNOCKED_OUT;
     g_field_object_states[actor->object_index].contact.word |= FIELD_CONTACT_NO_HIT_TEST;
     g_field_object_states[actor->object_index].unk16C = value;
-    actor->command = FIELD_ACTOR_COMMAND_AE;
+    actor->command = FIELD_ACTOR_COMMAND_DEFEAT_DELAY;
     actor->command_param = FIELD_DEFEAT_DELAY;
 }
 
@@ -340,7 +312,7 @@ s32 field_collapse_defeated_actor(FieldActor* actor)
 
     field_release_object_link(actor);
     field_release_links_to_actor(actor);
-    actor->command = FIELD_ACTOR_COMMAND_TRANSITION;
+    actor->command = FIELD_ACTOR_COMMAND_KNOCKED_DOWN;
     actor->script_index = FIELD_SCRIPT_NONE;
     actor->animation_state = 1;
     actor->animation_active = 1;
@@ -352,34 +324,34 @@ s32 field_collapse_defeated_actor(FieldActor* actor)
     state->movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
     field_restart_actor_animation(actor);
     field_stop_actor_animations_for_object(actor, 1);
-    func_80083BC0(actor, &g_field_actor_slots[FIELD_OBJECT_EFFECT_SLOT_BASE + actor->object_index], 1);
-    actor->control.word |= FIELD_CONTROL_IN_ACTION;
+    field_stop_actor_slot(actor, &g_field_actor_slots[FIELD_OBJECT_EFFECT_SLOT_BASE + actor->object_index], 1);
+    actor->control.word |= FIELD_CONTROL_PLAY_ONCE;
     field_update_sequence_actor_binding(actor, 0);
-    func_80084424(actor->object_index);
+    field_release_actor_binding(actor->object_index);
     object_index = actor->object_index;
-    if (!(states[object_index].contact.bytes.flags & FIELD_CONTACT_UNTARGETABLE))
+    if (!(states[object_index].contact.bytes.flags & FIELD_CONTACT_ANIMATION_HIDDEN))
     {
         resources = g_field_resource_entries;
         resource = &resources[actor->resource_index];
         if (resource->unkE & FIELD_REQUEST_BOUND)
         {
-            actor->command = FIELD_ACTOR_COMMAND_92;
+            actor->command = FIELD_ACTOR_COMMAND_DEFEAT_BOUND;
         }
         else
         {
-            func_80083EEC(object_index, object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, resource->unkE);
+            field_start_builtin_animation(object_index, object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, resource->unkE);
             field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
         }
     }
     if (!(g_field_object_states[actor->object_index].flags & FIELD_OBJECT_FLAG_KNOCKED_OUT))
     {
-        if (actor->command == FIELD_ACTOR_COMMAND_92)
+        if (actor->command == FIELD_ACTOR_COMMAND_DEFEAT_BOUND)
         {
-            actor->command = FIELD_ACTOR_COMMAND_93;
+            actor->command = FIELD_ACTOR_COMMAND_DEFEAT_WAIT;
         }
         else
         {
-            actor->command = FIELD_ACTOR_COMMAND_90;
+            actor->command = FIELD_ACTOR_COMMAND_DEFEATED;
         }
     }
 }
@@ -483,8 +455,8 @@ void field_count_chain_hit(s32 object_index)
             actor = field_find_actor(state->key);
             if (actor != FIELD_ACTOR_NONE)
             {
-                effect_slot = func_800839F8(0, 0);
-                if ((effect_slot != -1) && (func_80083EEC(actor->object_index, effect_slot, FIELD_CHAIN_LIMIT_EFFECT) != 0))
+                effect_slot = field_find_free_actor_slot(0, 0);
+                if ((effect_slot != -1) && (field_start_builtin_animation(actor->object_index, effect_slot, FIELD_CHAIN_LIMIT_EFFECT) != 0))
                 {
                     field_start_actor_animation(effect_slot, 0, 0);
                 }

@@ -8,6 +8,7 @@
  */
 
 #include "common.h"
+#include "controller_internal.h"
 #include "main.h"
 #include "vector.h"
 #include "sdk/libgte.h"
@@ -287,11 +288,11 @@ s32 field_start_actor_script(s32 key, u8 script_index)
         return -1;
     }
     command = actor->command;
-    if (command == FIELD_ACTOR_COMMAND_93 || command == FIELD_ACTOR_COMMAND_94)
+    if (command == FIELD_ACTOR_COMMAND_DEFEAT_WAIT || command == FIELD_ACTOR_COMMAND_DEFEAT_END)
     {
         return -1;
     }
-    if (command == FIELD_ACTOR_COMMAND_90 || command == FIELD_ACTOR_COMMAND_AE || command == FIELD_ACTOR_COMMAND_TRANSITION)
+    if (command == FIELD_ACTOR_COMMAND_DEFEATED || command == FIELD_ACTOR_COMMAND_DEFEAT_DELAY || command == FIELD_ACTOR_COMMAND_KNOCKED_DOWN)
     {
         return -1;
     }
@@ -341,18 +342,18 @@ s32 field_start_actor_private_script(s32 key, u8* script)
         return -1;
     }
     command = actor->command;
-    if (command == FIELD_ACTOR_COMMAND_93 || command == FIELD_ACTOR_COMMAND_94)
+    if (command == FIELD_ACTOR_COMMAND_DEFEAT_WAIT || command == FIELD_ACTOR_COMMAND_DEFEAT_END)
     {
         return -1;
     }
-    if (command == FIELD_ACTOR_COMMAND_90 || command == FIELD_ACTOR_COMMAND_AE || command == FIELD_ACTOR_COMMAND_TRANSITION)
+    if (command == FIELD_ACTOR_COMMAND_DEFEATED || command == FIELD_ACTOR_COMMAND_DEFEAT_DELAY || command == FIELD_ACTOR_COMMAND_KNOCKED_DOWN)
     {
         return -1;
     }
     actor->script_index = FIELD_SCRIPT_OBJECT;
     g_field_object_states[actor->object_index].script = script;
     actor->script_offset = 0;
-    if (actor->command != FIELD_ACTOR_COMMAND_WALK_TO_TARGET && actor->command != FIELD_ACTOR_COMMAND_99)
+    if (actor->command != FIELD_ACTOR_COMMAND_WALK_TO_TARGET && actor->command != FIELD_ACTOR_COMMAND_IDLE_AFTER_ANIMATION)
     {
         actor->command = FIELD_ACTOR_COMMAND_NONE;
     }
@@ -422,7 +423,7 @@ s32 field_set_actor_control_mode(s32 key, s32 mode)
     FieldActor* actor;
     s32 control_mode;
     u8 object_index;
-    FieldRenderState* render_state = FIELD_RENDER_STATE;
+    ControllerState* controller = CONTROLLER_STATE;
 
     actor = field_find_actor(key);
     if (actor == FIELD_ACTOR_NONE)
@@ -441,11 +442,11 @@ s32 field_set_actor_control_mode(s32 key, s32 mode)
         {
             if (!(g_pad_ctx->menu_option_flags & FIELD_OPTION_VIBRATION))
             {
-                render_state->leader_object_index = 0;
+                controller->ports[1].actuators_enabled = 0;
             }
             else
             {
-                render_state->leader_object_index = object_index;
+                controller->ports[1].actuators_enabled = object_index;
             }
         }
         break;
@@ -455,7 +456,7 @@ s32 field_set_actor_control_mode(s32 key, s32 mode)
         field_refresh_party_routes();
         if (actor->object_index == FIELD_SECOND_MEMBER)
         {
-            render_state->leader_object_index = 0;
+            controller->ports[1].actuators_enabled = 0;
         }
         break;
     case FIELD_CONTROL_SCRIPTED:

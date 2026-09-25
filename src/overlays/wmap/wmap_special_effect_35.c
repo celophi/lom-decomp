@@ -46,8 +46,6 @@ typedef struct
  */
 void func_800C0CA4(WmapStateHead* state)
 {
-    /* Partial WMAP decompilation: 98.788040% (gcc280_g0). */
-
     extern WmapConfigA D_800D9268[];
     extern WmapSlot8 D_80139988[];
     extern WmapConfigB D_801AFBD0[];
@@ -59,7 +57,6 @@ void func_800C0CA4(WmapStateHead* state)
     WmapConfigB* config;
     WmapConfigB* deactivate_config;
     WmapConfigA* display;
-    s32 draw_type;
     s32 radius;
     s32 base_radius;
 
@@ -71,16 +68,25 @@ void func_800C0CA4(WmapStateHead* state)
         deactivate_config = (WmapConfigB*)((index * sizeof(WmapConfigB)) + (s32)config_base);
         for (; index < state->field_04; index++)
         {
-            config = &D_801AFBD0[index];
+            config = (WmapConfigB*)((u32)deactivate_config + index);
+            config = (WmapConfigB*)((u32)config - index);
             if (config->field_00 != 0)
             {
-                display = &D_800D9268[index];
+                u8* data_base;
+                u8* resource_base;
+                s32 resource_offset;
+                data_base = (u8*)D_800D9268;
+                display = (WmapConfigA*)(index * sizeof(WmapConfigA) + (u32)data_base);
                 position.vx = (config->field_08 * (ccos(config->field_02) >> 5)) >> 0xC;
                 position.vy = (config->field_08 * (csin(config->field_02) >> 5)) >> 0xC;
                 position.vz = config->field_0E;
                 gte_ldv0(&position);
                 gte_rtps();
-                func_8006CC4C(display, &D_80139988[index]);
+                resource_offset = index * sizeof(WmapSlot8);
+                data_base = (u8*)D_80139988;
+                resource_base = data_base;
+                data_base = 0;
+                func_8006CC4C(display, (void*)(resource_offset + (u32)resource_base));
                 gte_stsxy(&screen_position);
                 if (index < 0x78)
                 {
