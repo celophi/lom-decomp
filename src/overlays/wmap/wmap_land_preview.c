@@ -93,18 +93,22 @@ enum WmapPreviewTextureWord
     WMAP_PREVIEW_TEXTURE_WORDS = 4
 };
 
-/**
- * @brief Two-byte preview texture cell: a packed U/V pair or the width/height extent after it.
- * @note Cells are read by direct const-array indexing so width/height reads stay unchanging.
- */
+/** @brief Width and height bytes following a packed U/V pair. */
 typedef struct
 {
     u8 width;
     u8 height;
 } WmapPreviewExtent;
 
+/** @brief Halfword texture cell, viewed as either packed UVs or byte extents. */
+typedef union
+{
+    u16 uv;
+    WmapPreviewExtent extent;
+} WmapPreviewTextureCell;
+
 extern const POLY_FT4 g_wmap_preview_quad_template;
-extern const WmapPreviewExtent g_wmap_preview_textures[];
+extern const WmapPreviewTextureCell g_wmap_preview_textures[];
 extern const DVECTOR g_wmap_preview_map_positions[WMAP_VIEW_ROWS * WMAP_VIEW_COLUMNS];
 extern const DVECTOR g_wmap_empty_marker_positions[WMAP_VIEW_ROWS][WMAP_VIEW_COLUMNS];
 extern u8 g_wmap_preview_quad_shapes[];
@@ -144,13 +148,6 @@ extern s32 D_801ADAE0;
 /**
  * @brief Advance the map selection preview and draw its marker and artifact.
  * @note Artifact transfer frames run before the cursor returns to the map or carousel.
- * @note Partial match: 99.800350% (1157/1162 exact rows, gcc280_g0). Register
- *       allocation is exact; only the sched2 order of the x0/x1/y0 packet stores
- *       at +0x8CC-0x90C differs (target stores x1, x0, then y0 after the uv0
- *       texture read). Measured inert: statement order of x0/y0/x1, operand
- *       order, raw x/y stores, uv0 read spelling. Regressions: inlining offset
- *       locals, moving y0 past the uv0 read (-69), a const u16/extent union.
- *       Working state: working/wmap_update_land_preview/.
  */
 void wmap_update_land_preview(void)
 {
@@ -431,22 +428,20 @@ void wmap_update_land_preview(void)
             packet->x0 = x0_offset + screen_x;
             packet->y0 = y0_offset + screen_y;
             packet->x1 = x1_offset + screen_x;
-
-            /* Copy the adjacent U/V bytes together from the texture record. */
-            *(u16*)&packet->u0 = *(u16*)&g_wmap_preview_textures[g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS];
-            packet->u1 = packet->u0 + g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS) | WMAP_PREVIEW_TEXTURE_EXTENT].width;
-            packet->v1 = packet->v0;
-            packet->u2 = packet->u0;
-            packet->v2 = packet->v0 + g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS) | WMAP_PREVIEW_TEXTURE_EXTENT].height;
-
             packet->y1 = y1_offset + screen_y;
             packet->x2 = x2_offset + screen_x;
             packet->y2 = y2_offset + screen_y;
             packet->x3 = x3_offset + screen_x;
             packet->y3 = y3_offset + screen_y;
 
-            packet->u3 = packet->u0 + g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS) | WMAP_PREVIEW_TEXTURE_EXTENT].width;
-            packet->v3 = packet->v0 + g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS) | WMAP_PREVIEW_TEXTURE_EXTENT].height;
+            /* Copy the adjacent U/V bytes together from the texture record. */
+            *(u16*)&packet->u0 = g_wmap_preview_textures[g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS].uv;
+            packet->u1 = packet->u0 + g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS) | WMAP_PREVIEW_TEXTURE_EXTENT].extent.width;
+            packet->v1 = packet->v0;
+            packet->u2 = packet->u0;
+            packet->v2 = packet->v0 + g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS) | WMAP_PREVIEW_TEXTURE_EXTENT].extent.height;
+            packet->u3 = packet->u0 + g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS) | WMAP_PREVIEW_TEXTURE_EXTENT].extent.width;
+            packet->v3 = packet->v0 + g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS) | WMAP_PREVIEW_TEXTURE_EXTENT].extent.height;
 
             if (g_wmap_preview_texture != 0)
             {
