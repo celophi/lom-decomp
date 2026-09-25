@@ -51,12 +51,14 @@ segments:
       - [0x15E9, .rodata, wmap_land_effect_loader] # compiler-generated switch table
       - [0x1671, rodata, wmap_1671]
       - [0x1839, .rodata, wmap_land_preview] # compiler-generated switch table
+      - [0x184D, rodatabin, wmap_land_preview_rodata_alignment] # zero word after the five-entry table; GNU as does not reproduce it
       - [0x1851, rodata, wmap_1851]
       - [0x186D, .rodata, wmap_land_layout] # compiler-generated switch table
       - [0x1885, rodata, wmap_1885]
       - [0x1E21, .rodata, wmap_main] # switch tables and display-transfer rectangle
       - [0x1EDD, rodata, wmap_1EDD]
       - [0x4CFD, .rodata, wmap_model_render] # compiler-generated switch table
+      - [0x4D71, rodatabin, wmap_model_render_rodata_alignment] # zero word after the 29-entry table, so the next table starts on an 8-byte offset
       - [0x4D75, .rodata, wmap_effect_primitives] # compiler-generated switch table
       - [0x4D95, .rodata, wmap_map_events] # compiler-generated switch table
       - [0x4DA9, rodata, wmap_4DA9]
