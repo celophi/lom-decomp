@@ -10,8 +10,7 @@
 #include "game_audio.h"
 
 void field_reset_input_repeat(void);
-/* Defined as (void) in field_resource_load.c; the original call still passes prev in $a0. */
-void func_800B01FC(s32);
+void func_800B01FC(void);
 
 extern s32 g_field_dialog_screen_mode;
 extern s32 g_field_render_context;
@@ -111,7 +110,7 @@ void field_initialize_subsystems(s32 render_context)
     {
         g_field_preserve_entry_music = 0;
     }
-    func_800B01FC(prev);
+    func_800B01FC();
     field_reset_input_repeat();
     field_clear_fade_prims();
     field_reset_music_stream();

@@ -33,5 +33,3 @@ __pycache__/
 
 # m2c context cache files
 *.m2c
-# Standalone repo (github.com/celophi/custom-permuter); developed in-place
-tools/custom-permuter/

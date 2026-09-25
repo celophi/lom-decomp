@@ -182,15 +182,6 @@ SRCS_G4 := \
 	src/akao_control.c \
 	src/akao_xa_stream.c
 
-# Subset of SRCS_G4 (or any G4 object) whose original code uses bare
-# `div $zero,...` and must be assembled WITHOUT --expand-div. List the .c here
-# in addition to SRCS_G4; their objects get MASPSX_DIV_FLAG_G4 cleared below.
-SRCS_G4_NOEXPAND :=
-
-SRCS_CDK_G0 := \
-	src/overlays/checkps/init.c \
-	src/overlays/checkps/font.c
-
 SRCS_GCC_260_G0 := \
 	src/field_runtime_text.c \
 	src/field_runtime_glyph.c \
@@ -219,17 +210,13 @@ ASM_SRCS := \
 
 OBJS_G0  			:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_G0))
 OBJS_G4  			:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_G4))
-OBJS_G4_NOEXPAND	:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_G4_NOEXPAND))
-# Clear the div-expansion flag for the no-expand subset (target-specific var).
-$(OBJS_G4_NOEXPAND): MASPSX_DIV_FLAG_G4 :=
-OBJS_CDK_G0 		:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_CDK_G0))
 OBJS_GCC_260_G0 	:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_GCC_260_G0))
 OBJS_ASM 			:= $(patsubst $(ASM_DIR)/%.s,$(STAGING)/build/$(ASM_DIR)/%.o,$(ASM_SRCS))
 
 # Preserve the original glyph instructions and explicit delay slots.
 $(STAGING)/build/$(SRC_DIR)/field_runtime_glyph.o: MASPSX_FLAGS_260 += --passthrough
 
-OBJECTS  := $(OBJS_G0) $(OBJS_G4) $(OBJS_CDK_G0) $(OBJS_GCC_260_G0) $(OBJS_ASM)
+OBJECTS  := $(OBJS_G0) $(OBJS_G4) $(OBJS_GCC_260_G0) $(OBJS_ASM)
 
 # ============================================================================
 #  Compilation Rules — Main SLUS
@@ -254,12 +241,6 @@ $(OBJS_G4): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $(@D)
 	cd $(STAGING) && $(CC) $(CFLAGS_G4) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_G4) -o build/$(SRC_DIR)/$*.o
-
-# ── GCC 2.7.2 CDK, G0 ──
-$(OBJS_CDK_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
-	@mkdir -p $(@D)
-	cd $(STAGING) && $(CC_272_CDK) $(CFLAGS_272_CDK_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) -o build/$(SRC_DIR)/$*.o
 
 # ── GCC 2.6.0, G0 ──
 $(OBJS_GCC_260_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)

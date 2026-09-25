@@ -299,42 +299,20 @@ You can also use [decomp.me](https://decomp.me) for collaborative matching. Exis
 ## Compiler and assembler toolchains
 
 A critical detail of this project is that **not every source file uses the same compiler configuration**.
+Honestly, It was a lot of "fun" dealing with this. Especially the GNU one let me tell you.
 
-The build defines 13 pipeline variants across four historical compiler builds. Compiler and assembler flags live in [`mk/toolchains.mk`](mk/toolchains.mk). Source routing and per-file overrides are in [`mk/main.mk`](mk/main.mk) and [`mk/overlay-registry.mk`](mk/overlay-registry.mk); [`mk/overlays.mk`](mk/overlays.mk) applies the overlay variants.
+The build defines 7 pipeline variants across four historical compiler builds. Compiler and assembler flags live in [`mk/toolchains.mk`](mk/toolchains.mk). Source routing and per-file overrides are in [`mk/main.mk`](mk/main.mk) and [`mk/overlay-registry.mk`](mk/overlay-registry.mk); [`mk/overlays.mk`](mk/overlays.mk) applies the overlay variants.
 
-| Pipeline | Compiler flags | Assembly path | Review |
-|---|---|---|:---:|
-| GCC 2.8.0 G0 (default) | `-O2 -G0 -gcoff -fsigned-char -fno-builtin` | maspsx, ASPSX 2.77, expanded division |  |
-| GCC 2.8.0 G0, builtins enabled | `-O2 -G0 -gcoff -fsigned-char` | maspsx, ASPSX 2.77, expanded division | \* |
-| GCC 2.8.0 G0, unoptimized | `-O0 -G0 -gcoff -fsigned-char -fno-builtin` | maspsx, ASPSX 2.77, expanded division |  |
-| GCC 2.8.0 G0, unoptimized with builtins enabled | `-O0 -G0 -gcoff -fsigned-char` | maspsx, ASPSX 2.77, expanded division | \* |
-| GCC 2.8.0 G4 | `-O2 -G4 -gcoff -fsigned-char` | maspsx, ASPSX 2.77, expanded division |  |
-| GCC 2.8.0 G4, no division expansion | `-O2 -G4 -gcoff -fsigned-char` | maspsx, ASPSX 2.77, bare division |  |
-| GCC 2.7.2 CDK G0 | `-O2 -G0 -msoft-float -gcoff` | maspsx, ASPSX 2.67, expanded division |  |
-| GCC 2.7.2 CDK G0, scheduling disabled | `-O2 -G0 -msoft-float -gcoff -fno-schedule-insns` | maspsx, ASPSX 2.67, expanded division | \* |
-| GCC 2.7.2 CDK G0, strength reduction disabled | `-O2 -G0 -msoft-float -gcoff -fno-strength-reduce` | maspsx, ASPSX 2.67, expanded division | \* |
-| GCC 2.7.2 CDK G0, no division expansion | `-O2 -G0 -msoft-float -gcoff` | maspsx, ASPSX 2.67, bare division | \* |
-| GCC 2.7.2 GNU G0 | `-O2 -G0` | Historical GNU `as` with `-O -EL` |  |
-| GCC 2.6.0 G0 | `-O2 -G0 -gcoff -msoft-float` | maspsx, ASPSX 2.34, expanded division |  |
-| GCC 2.6.0 G0, `-O1` | `-O1 -G0 -gcoff -msoft-float` | maspsx, ASPSX 2.34, expanded division | \* |
+| Pipeline | Compiler flags | Assembly path |
+|---|---|---|
+| GCC 2.8.0 G0 (default) | `-O2 -G0 -gcoff -fsigned-char` | maspsx, ASPSX 2.77, expanded division |
+| GCC 2.8.0 G0, unoptimized | `-O0 -G0 -gcoff -fsigned-char` | maspsx, ASPSX 2.77, expanded division |
+| GCC 2.8.0 G4 | `-O2 -G4 -gcoff -fsigned-char` | maspsx, ASPSX 2.77, expanded division |
+| GCC 2.8.0 G4, no division expansion | `-O2 -G4 -gcoff -fsigned-char` | maspsx, ASPSX 2.77, bare division |
+| GCC 2.7.2 CDK G0 | `-O2 -G0 -msoft-float -gcoff` | maspsx, ASPSX 2.67, expanded division |
+| GCC 2.7.2 GNU G0 | `-O2 -G0` | Historical GNU `as` with `-O -EL` |
+| GCC 2.6.0 G0 | `-O2 -G0 -gcoff -msoft-float` | maspsx, ASPSX 2.34, expanded division |
 
-\* These variants need further investigation to establish whether their compiler and assembler settings reflect the original build. A match with altered optimization levels, builtin handling, scheduling, strength reduction, or division expansion does not by itself establish a distinct historical toolchain. Further source reconstruction may produce the same match with an established configuration and make those settings unnecessary.
-
-`-G0` and `-G4` select the small-data threshold for GP-relative addressing. The builtin-enabled GCC 2.8.0 variants omit `-fno-builtin`. All maspsx pipelines use `-no-pad-sections`; expanded division adds `--expand-div`, while the no-expansion variants omit it. Modern `mipsel-linux-gnu-` binutils handle linking, binary conversion, and object inspection.
-
-Current examples of the specialized routes include:
-
-- FIELD's `field_select_distance_bucket.c`: GCC 2.8.0 G0 with builtins enabled.
-- WMAP's `wmap_effect_resources.c` and `wmap_pathfinding.c`: GCC 2.8.0 G0 at `-O0` with builtins enabled.
-- ZUKAN's `zukan_category.c`: GCC 2.8.0 G0 at `-O0` with builtins disabled.
-- FIELD's `field_subsystem_init.c`: GCC 2.7.2 CDK with `-fno-schedule-insns`.
-- FIELD's `field_actor_action_defaults.c`: GCC 2.7.2 CDK with `-fno-strength-reduce`.
-- FIELD's G4 source group: GCC 2.8.0 without division expansion.
-- The main executable's `field_runtime_glyph.c`: might be GCC 2.6.0 at `-O1`, but I'm 98% sure this is just handwritten asm at this point.
-
-The CDK no-division-expansion route is supported, but its source list is currently empty. Per-file assembler and object-conversion overrides, such as CHECKPS's GNU `cdrom.c` route, are also recorded in the overlay registry.
-
-When matching a function, **use the exact toolchain selected for its source file**. Do not substitute the host GCC, Clang/LLVM, a different GCC release, or a different assembler and treat that result as authoritative.
 
 ## Copyrighted data and assets
 
