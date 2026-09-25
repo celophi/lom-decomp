@@ -10,7 +10,7 @@ A complete **100% matching decompilation** of the North American PlayStation rel
 
 The current target is `SLUS_010.13` (disc serial **SLUS-01013**). The project reconstructs readable C source code that compiles down to the original MIPS machine code that exists on the disc for all 18 binaries byte-for-byte.
 
-This repository is the decompilation itself, **not a PC port or a mod**; those will live in a separate repository (see the [roadmap](#roadmap)). The repository does not include the game executable, overlay binaries, artwork, audio, or other copyrighted game data. You must provide the required files from your own copy of the game.
+This is a decompilation project, **not a PC port**. The repository does not include the game executable, overlay binaries, artwork, audio, or other copyrighted game data. You must provide the required files from your own copy of the game.
 
 The primary motivation for this project is to preserve the original game's logic and behavior for educational research and potential modding capabilities.
 
@@ -27,41 +27,15 @@ The main executable is not compressed, so for `SLUS_010.13` condition 1 is the w
 
 Run `make verify-bins` to check every module.
 
-<details>
-<summary>Module status</summary>
-
-| Module | | Status |
-|---|:---:|---|
-| SLUS_010.13 | 🔒 | Fully linked |
-| ADDHERO.BIN | 🔒 | Fully linked |
-| CARDA.BIN | 🔒 | Fully linked |
-| CHECKPS.BIN | 🔒 | Fully linked |
-| CLOAD.BIN | 🔒 | Fully linked |
-| FIELD.BIN | 🔒 | Fully linked |
-| GNAME.BIN | 🔒 | Fully linked |
-| GOLEM.BIN | 🔒 | Fully linked |
-| GOSUB.BIN | 🔒 | Fully linked |
-| GOVER.BIN | 🔒 | Fully linked |
-| MENU.BIN | 🔒 | Fully linked |
-| MOVIE.BIN | 🔒 | Fully linked |
-| NIKI.BIN | 🔒 | Fully linked |
-| SHOP.BIN | 🔒 | Fully linked |
-| TITLE.BIN | 🔒 | Fully linked |
-| WMAP.BIN | 🔒 | Fully linked |
-| WSEL.BIN | 🔒 | Fully linked |
-| ZUKAN.BIN | 🔒 | Fully linked |
-
-</details>
-
 ## Roadmap
 
 1. ✅ **100% matching** - *done.* The main executable (`SLUS_010.13`) and all 17 overlays are fully linked (see above). The Psy-Q SDK libraries are still linked from the original assembly.
 
-2. 🚧 **Cleanup and documentation** - *in progress.* Remove decompilation artifacts (goto-built loops, register levers, placeholder names), give functions, globals, and structs meaningful names, and document them.
+2. 🚧 **Cleanup and documentation** - *in progress.* Remove decompilation artifacts and document functionality.
 
 3. 💤 **NTSC-J version** - support the original Japanese release (`SLPS-02170`) alongside the North American one.
 
-4. 💤 **Modding and source ports** - build on the reconstructed source to make modding practical and to enable ports to other platforms. This work will happen in a **separate repository**; this one stays a byte-matching decompilation of the original PlayStation binaries.
+4. 💤 **Modding and source port** - build on the reconstructed source to make modding practical and to enable ports to other platforms.
 
 ## Supported game version
 
@@ -214,7 +188,7 @@ To also produce a flat binary:
 make bin
 ```
 
-Build one overlay:
+Build one registered overlay:
 
 ```bash
 make field
@@ -222,31 +196,23 @@ make menu
 make checkps
 ```
 
-Build all 17 overlays:
+Build all overlays currently registered in `mk/overlay-registry.mk`:
 
 ```bash
 make overlays
 ```
 
-Build the main executable and all overlays:
+Build the main executable and all registered overlays:
 
 ```bash
 make everything
 ```
 
-`mk/overlay-registry.mk` lists each overlay's sources and toolchain assignments.
+`mk/overlay-registry.mk` is the authoritative list of overlays currently wired into the linkable build.
 
-### 8. Verify
+## Normal development workflow
 
-```bash
-make verify-bins
-```
-
-This rebuilds the main executable and every overlay, recompresses the overlays, and checks each result against your files in `disc/`. Each module should print an `[OK] ... matches original ROM` line.
-
-## Development workflow
-
-With everything matching, the job of each change (renaming, documenting, cleaning up artifacts) is to keep the output byte-identical:
+After the initial setup, you generally do **not** need to clean the project after every edit:
 
 ```text
 edit source on host
@@ -255,14 +221,19 @@ edit source on host
 make <smallest relevant target> inside lom-dev
         |
         v
-make verify-bins
+inspect objdiff / diff output
+        |
+        v
+edit and repeat
 ```
 
-If `make verify-bins` fails, `make diff-all` / `make diff-text` (or opening objdiff at the repository root after `make objdiff-objects objdiff-config`) will show which function or object changed.
+The Makefile automatically stages changed inputs before compiling. If the staged copy ever appears stale, run:
 
-Source comments contain `@see` links to [decomp.me](https://decomp.me) scratches recording where each function's match work lives; preserve them when editing.
+```bash
+make recopy
+```
 
-The Makefile automatically stages changed inputs before compiling, so you generally do **not** need to clean between edits. If the staged copy ever appears stale, run `make recopy`. Use `make clean` only when you actually want to remove `build/` and the `/staging` copy.
+Use `make clean` only when you actually want to remove `build/` and the `/staging` copy.
 
 ## Why `/staging` exists
 
@@ -284,9 +255,9 @@ For that reason, do not bypass the build system and invoke the old compiler dire
 |---|---|
 | `make` | Build the main `SLUS_010.13` ELF. |
 | `make bin` | Also produce `build/SLUS_010.13.bin`. |
-| `make <overlay>` | Build one overlay, such as `make field`. |
-| `make overlays` | Build all overlays. |
-| `make everything` | Build the main executable and all overlays. |
+| `make <overlay>` | Build one registered overlay, such as `make field`. |
+| `make overlays` | Build all registered overlays. |
+| `make everything` | Build the main executable and all registered overlays. |
 | `make splat` | Split the main executable and all overlay configs. |
 | `make objdiff-objects` | Build target and reconstructed objects for objdiff. |
 | `make objdiff-config` | Regenerate `objdiff.json`. |
@@ -296,16 +267,40 @@ For that reason, do not bypass the build system and invoke the old compiler dire
 | `make dump-objs` | Disassemble built objects for code-generation analysis. |
 | `make validate-assets` | Round-trip and validate format-aware assets. |
 | `make verify-slus` | Check that the linked main executable equals `disc/SLUS_010.13`. |
-| `make verify-bins` | Run `verify-slus` and the whole-overlay SHA-1 check for every overlay. |
+| `make verify-bins` | Run `verify-slus` and all registered whole-overlay SHA-1 checks. |
 | `make verify-compressor` | Verify the compressor against all 17 original overlay files. |
 | `make recopy` | Force source/config files to be copied to `/staging` again. |
 | `make clean` | Remove build output and `/staging`. |
+
+## Matching functions
+
+The project uses [objdiff](https://github.com/encounter/objdiff) for local function and object comparison.
+
+Build both sides and generate the objdiff config:
+
+```bash
+make objdiff-objects
+make objdiff-config
+```
+
+Then open objdiff and point it at the repository root.
+
+For a command-line workflow:
+
+```bash
+make diff-all
+make diff-text
+```
+
+The compact reports are written below `build/diffs/`.
+
+You can also use [decomp.me](https://decomp.me) for collaborative matching. Existing source comments contain links to many decomp.me scratches; preserve those references when editing a function.
 
 ## Compiler and assembler toolchains
 
 A critical detail of this project is that **not every source file uses the same compiler configuration**.
 
-The build defines 12 pipeline variants across four historical compiler builds. Compiler and assembler flags live in [`mk/toolchains.mk`](mk/toolchains.mk). Source routing and per-file overrides are in [`mk/main.mk`](mk/main.mk) and [`mk/overlay-registry.mk`](mk/overlay-registry.mk); [`mk/overlays.mk`](mk/overlays.mk) applies the overlay variants.
+The build defines 13 pipeline variants across four historical compiler builds. Compiler and assembler flags live in [`mk/toolchains.mk`](mk/toolchains.mk). Source routing and per-file overrides are in [`mk/main.mk`](mk/main.mk) and [`mk/overlay-registry.mk`](mk/overlay-registry.mk); [`mk/overlays.mk`](mk/overlays.mk) applies the overlay variants.
 
 | Pipeline | Compiler flags | Assembly path | Review |
 |---|---|---|:---:|
@@ -321,8 +316,9 @@ The build defines 12 pipeline variants across four historical compiler builds. C
 | GCC 2.7.2 CDK G0, no division expansion | `-O2 -G0 -msoft-float -gcoff` | maspsx, ASPSX 2.67, bare division | \* |
 | GCC 2.7.2 GNU G0 | `-O2 -G0` | Historical GNU `as` with `-O -EL` |  |
 | GCC 2.6.0 G0 | `-O2 -G0 -gcoff -msoft-float` | maspsx, ASPSX 2.34, expanded division |  |
+| GCC 2.6.0 G0, `-O1` | `-O1 -G0 -gcoff -msoft-float` | maspsx, ASPSX 2.34, expanded division | \* |
 
-\* These variants need further investigation to establish whether their compiler and assembler settings reflect the original build. A match with altered optimization levels, builtin handling, scheduling, strength reduction, or division expansion does not by itself establish a distinct historical toolchain. Cleanup work may find source that produces the same bytes under an established configuration and make those settings unnecessary.
+\* These variants need further investigation to establish whether their compiler and assembler settings reflect the original build. A match with altered optimization levels, builtin handling, scheduling, strength reduction, or division expansion does not by itself establish a distinct historical toolchain. Further source reconstruction may produce the same match with an established configuration and make those settings unnecessary.
 
 `-G0` and `-G4` select the small-data threshold for GP-relative addressing. The builtin-enabled GCC 2.8.0 variants omit `-fno-builtin`. All maspsx pipelines use `-no-pad-sections`; expanded division adds `--expand-div`, while the no-expansion variants omit it. Modern `mipsel-linux-gnu-` binutils handle linking, binary conversion, and object inspection.
 
@@ -334,10 +330,11 @@ Current examples of the specialized routes include:
 - FIELD's `field_subsystem_init.c`: GCC 2.7.2 CDK with `-fno-schedule-insns`.
 - FIELD's `field_actor_action_defaults.c`: GCC 2.7.2 CDK with `-fno-strength-reduce`.
 - FIELD's G4 source group: GCC 2.8.0 without division expansion.
+- The main executable's `field_runtime_glyph.c`: might be GCC 2.6.0 at `-O1`, but I'm 98% sure this is just handwritten asm at this point.
 
 The CDK no-division-expansion route is supported, but its source list is currently empty. Per-file assembler and object-conversion overrides, such as CHECKPS's GNU `cdrom.c` route, are also recorded in the overlay registry.
 
-When editing a function, **check the result with the exact toolchain selected for its source file**. Do not substitute the host GCC, Clang/LLVM, a different GCC release, or a different assembler and treat that result as authoritative.
+When matching a function, **use the exact toolchain selected for its source file**. Do not substitute the host GCC, Clang/LLVM, a different GCC release, or a different assembler and treat that result as authoritative.
 
 ## Copyrighted data and assets
 
@@ -349,41 +346,41 @@ The project uses a hybrid approach:
 - understood binary formats can use byte-exact extractors/builders;
 - unknown or creative data can remain as named local `databin`/`rodatabin` assets referenced with `.incbin`.
 
+See:
+
+- [`docs/handling-copyrighted-data.md`](docs/handling-copyrighted-data.md)
+- [`docs/asset-data-architecture.md`](docs/asset-data-architecture.md)
+
 ## Repository layout
 
 ```text
 lom-decomp/
-|-- src/                    # Reconstructed C source for the main executable
-|   |-- overlays/           # One source tree per overlay (addhero/ ... zukan/)
-|   `-- psyq/               # Psy-Q SDK library objects (still original assembly)
-|-- include/                # Project headers and assembly macros
-|   `-- sdk/                # Psy-Q SDK headers
-|-- config/
-|   |-- SLUS_010.13.yaml    # Splat config for the main executable
-|   |-- overlays/           # Splat config for each overlay
-|   |-- symbols/            # Function and global addresses
-|   `-- relocations/        # Relocation overrides for splat
-|-- mk/                     # Build rules, toolchain definitions, overlay registry
-|-- tools/                  # Compressor, asset codecs, splat extensions, objdiff scripts, submodules
-|-- docs/                   # Architecture and matching notes
+|-- src/                    # Reconstructed C source
+|   |-- overlays/           # Overlay source trees
+|   `-- psyq/               # Reconstructed Psy-Q library code
+|-- include/                # Project and Psy-Q headers/macros
+|-- config/                 # Splat configs, symbols, relocations
+|-- mk/                     # Build rules and toolchain routing
+|-- tools/                  # Decompilation, compiler, diff, and asset tools
+|-- docs/                   # Architecture and matching documentation
+|-- disc/                   # Your local original game files (gitignored)
+|-- assets/                 # Local/generated asset data where required
+|-- asm/                    # Splat-generated target assembly (gitignored)
+|-- linker/                 # Splat-generated linker files (gitignored)
+|-- build/                  # Objects, ELFs, maps, diffs, and reports
 |-- dockerfiles/            # Development and CI containers
-|-- disc/                   # Your original game files (gitignored)
-|-- asm/                    # Splat-generated assembly (gitignored)
-|-- assets/                 # Splat-extracted game data (gitignored)
-|-- linker/                 # Splat-generated linker scripts (gitignored)
-|-- build/                  # Objects, ELFs, maps, diffs, and reports (gitignored)
 |-- Makefile
 `-- requirements.txt
 ```
 
 Useful places to start exploring:
 
-- `src/` and `src/overlays/` - the reconstructed game code.
-- `include/` - shared types and structures such as `main.h`, `saved_game.h`, and the per-subsystem field and world map headers.
-- `config/symbols/` - known function and global addresses. Update these when renaming a symbol with a fixed address.
-- `mk/overlay-registry.mk` - each overlay's source list and toolchain assignments.
-- `tools/compressor/` - the overlay compressor and the whole-binary verification script.
-- `docs/` - disc layout, CD system architecture, and matching notes.
+- `src/` - reconstructed game and Psy-Q code.
+- `asm/nonmatchings/` and `asm/overlays/*/nonmatchings/` - generated target assembly for unmatched functions.
+- `config/symbols/` - known function/global addresses.
+- `config/relocations/` - relocation overrides used when splat needs help reconstructing symbolic references.
+- `mk/overlay-registry.mk` - overlay source/toolchain assignments.
+- `docs/decompilation/` - project-specific matching notes.
 
 ## Documentation
 
@@ -412,7 +409,11 @@ Use the Makefile instead of compiling directly from `/lom`. Run `make recopy` if
 
 Run `make splat` again. Do not edit generated `asm/` or `linker/` files manually.
 
-**objdiff reports 100%, but `make verify-bins` fails**
+**A function matches with another compiler but not in the project build**
+
+Check its routing in `mk/main.mk` or `mk/overlay-registry.mk`. The configured historical toolchain is the authoritative one.
+
+**objdiff reports 100%, but whole-overlay verification fails**
 
 Check data/rodata jump table or case targets, relocation addends, linker section order, the overlay segment's `align:` key, and generated assets. 
 
