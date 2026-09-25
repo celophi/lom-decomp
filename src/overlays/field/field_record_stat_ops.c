@@ -104,7 +104,7 @@ s32 func_800B7980(FieldCharacterRecord* character, s32 slot_index, FieldItemReco
         }
         return -1;
     }
-    case FIELD_ITEM_CATEGORY_ACCESSORY:
+    case FIELD_ITEM_CATEGORY_INSTRUMENT:
         if (slot_index < FIELD_EQUIPMENT_SLOT_COUNT)
         {
             return 0;

@@ -1,34 +1,33 @@
 /** @file field_character_name_flags.c
- * @brief Set named-character flags by looking up the fixed character-name table.
+ * @brief Recognise memory-card saves of other games by their product code.
  */
 
 #include "common.h"
+#include "main.h"
+#include "sdk/strings.h"
 
-/** @brief Number of entries in the character-name table. */
-#define FIELD_CHARACTER_NAME_COUNT 11
+/** @brief Number of entries in the known product-code table. */
+#define FIELD_KNOWN_SAVE_CODE_COUNT 11
 
-/** @brief Length of one fixed-width character-name entry, in bytes. */
-#define FIELD_CHARACTER_NAME_LENGTH 12
+/** @brief Length of one product code (region prefix plus product id, no terminator). */
+#define FIELD_KNOWN_SAVE_CODE_LENGTH 12
 
-/** @brief Byte offset of the named-character flag word in the pad context. */
-#define FIELD_CHARACTER_NAME_FLAGS_OFFSET 0x204
-
-extern u8* g_pad_ctx;
-extern char D_800ECFDC[FIELD_CHARACTER_NAME_COUNT][FIELD_CHARACTER_NAME_LENGTH];
+/** @brief Memory-card file-name prefixes of the recognised saves. */
+extern char g_field_known_save_codes[FIELD_KNOWN_SAVE_CODE_COUNT][FIELD_KNOWN_SAVE_CODE_LENGTH];
 
 /**
- * @brief Set the flag bit of every character-name table entry that equals @p name.
- * @param name Name to compare, up to FIELD_CHARACTER_NAME_LENGTH bytes.
+ * @brief Set the PadContext.known_save_flags bit of every product code that @p file_name starts with.
+ * @param file_name Memory-card file name of one directory entry.
  */
-void func_800B0170(char* name)
+void field_flag_known_save(char* file_name)
 {
     s32 i;
 
-    for (i = 0; i < FIELD_CHARACTER_NAME_COUNT; i++)
+    for (i = 0; i < FIELD_KNOWN_SAVE_CODE_COUNT; i++)
     {
-        if (strncmp(name, D_800ECFDC[i], FIELD_CHARACTER_NAME_LENGTH) == 0)
+        if (strncmp(file_name, g_field_known_save_codes[i], FIELD_KNOWN_SAVE_CODE_LENGTH) == 0)
         {
-            *(u32*)(g_pad_ctx + FIELD_CHARACTER_NAME_FLAGS_OFFSET) |= 1 << i;
+            g_pad_ctx->known_save_flags |= 1 << i;
         }
     }
 }

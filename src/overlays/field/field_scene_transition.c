@@ -348,7 +348,7 @@ void field_update_scene(void)
 
     void field_init_ctx();
 
-    u8* func_800630BC(u16);
+    u8* field_header_record_at(u16);
     void field_restart_actor_animation();
     /* Unprototyped on purpose: the (s16, s8, s8, ...) definition would narrow the arguments here. */
     void field_store_entry_settings();
@@ -484,7 +484,7 @@ void field_update_scene(void)
             fade_out_current_song();
             if (g_field_pending_music_id == -1)
             {
-                func_800A380C();
+                field_play_song();
                 akao_cmd_c1(0, 1, g_field_song_volume);
             }
             g_field_audio_timer = 0;
@@ -516,7 +516,7 @@ void field_update_scene(void)
         g_field_active_group = 0;
         g_field_duel_mode = 0;
         func_800B01FC();
-        func_800A6204();
+        field_clear_actor_texts();
         akao_cmd_f1();
         field_initialize_actor_system();
         field_upload_transition_tiles();
@@ -531,7 +531,7 @@ void field_update_scene(void)
         } while (actor_index < 3);
         if (previous_mode != g_field_scene_mode_bit)
         {
-            func_800A35F4(g_field_scene_mode_bit == 0);
+            field_load_instrument_bank(g_field_scene_mode_bit == 0);
         }
         field_upload_transition_tiles();
         list_output = g_field_group_bounds;
@@ -797,22 +797,22 @@ void field_update_scene(void)
         field_load_scene_actors((s32*)layout_base);
         if (g_field_pending_music_id != -1)
         {
-            func_800B0094();
+            field_capture_card_clock();
             if (g_field_preserve_entry_music == 0)
             {
                 field_stop_song();
             }
             if (g_field_pending_music_id != -2)
             {
-                func_800A368C(g_field_pending_music_id, 0);
+                field_load_song(g_field_pending_music_id, 0);
                 if ((g_field_preserve_entry_music == 0) && (g_field_pending_music_id != -2))
                 {
-                    func_800A380C();
+                    field_play_song();
                 }
             }
             else
             {
-                func_800A3728();
+                field_load_fixed_song();
             }
             g_layout_flag = g_field_pending_music_id;
         }
@@ -822,7 +822,7 @@ void field_update_scene(void)
         }
         if (g_field_pending_secondary_music_id != -1)
         {
-            func_800A368C(g_field_pending_secondary_music_id, 1);
+            field_load_song(g_field_pending_secondary_music_id, 1);
             g_layout_sub_mode = g_field_pending_secondary_music_id;
         }
         field_upload_transition_tiles();
@@ -837,7 +837,7 @@ void field_update_scene(void)
         g_field_preserve_entry_music = 0;
         if (g_field_scene_mode_bit != 0)
         {
-            func_800A3654();
+            field_upload_resource_22_bank();
         }
         field_upload_transition_tiles();
         DrawSync(0);
@@ -853,7 +853,7 @@ void field_update_scene(void)
         {
             func_800B34D0(0);
         }
-        spawn_record = (FieldSceneSpawn*)func_800630BC((u16)spawn_id);
+        spawn_record = (FieldSceneSpawn*)field_header_record_at((u16)spawn_id);
         if (spawn_record == NULL)
         {
             spawn.h.z = 0xE0;
@@ -895,15 +895,15 @@ void field_update_scene(void)
         field_camera_track_party();
         g_field_camera_follow_x = g_field_camera_target_x;
         g_field_camera_follow_z = g_field_camera_target_z;
-        func_800A3BE8(sound_bank_id);
+        field_load_sfx_tables(sound_bank_id);
         g_layout_option = sound_bank_id;
         field_upload_transition_tiles();
         g_field_scene_contact_latched = 0;
         field_initialize_actor_slots();
         field_clear_actor_slots();
-        func_80067AA4();
+        field_reset_draw_state();
         field_reset_actor_resources();
-        func_800A255C();
+        field_command_history_reset();
         field_clear_fade_prims();
         saved_scene_id = g_scene_mode;
         if (g_field_scene_mode_bit != 0)
@@ -913,10 +913,10 @@ void field_update_scene(void)
         field_store_entry_settings(saved_scene_id, object_id, g_layout_flag, spawn_id, g_layout_option, g_layout_sub_mode);
         func_800A54D0();
         field_refresh_party_routes();
-        func_800A2DFC();
+        field_pair_indicators_reset();
         func_800AF8C4();
         field_upload_transition_tiles();
-        func_800A6EEC();
+        field_save_retry_snapshot();
     }
 }
 
@@ -1121,7 +1121,7 @@ static void field_refresh_actor_collisions(void)
                 mover->surface = 0;
                 mover->mode.bits.bit17 = 0;
                 mover->mode.bits.bit16 = 0;
-                func_8005B6AC((struct FieldCollisionMover*)mover);
+                field_collision_move_mover((struct FieldCollisionMover*)mover);
                 slot->contact = mover->contact;
                 slot->surface = mover->surface;
                 slot->height = mover->height >> 8;
@@ -1197,7 +1197,7 @@ void field_move_actor_position(void* actor, void* motion)
     mover->mode.bits.bit17 = 0;
     mover->mode.bits.bit16 = 0;
 
-    func_8005B6AC((struct FieldCollisionMover*)mover);
+    field_collision_move_mover((struct FieldCollisionMover*)mover);
 
     ((MoverPosition*)actor)->x = mover->x;
     ((MoverPosition*)actor)->z = mover->z;

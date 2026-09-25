@@ -80,13 +80,12 @@ extern s32 g_field_camera_offset_x;
 extern s32 g_field_camera_offset_y;
 extern s32 g_field_camera_offset_z;
 extern s32 D_8010CFD4;
-extern s32 g_field_actor_heap;
+extern u8* g_field_actor_heap;
 extern s32 g_field_boss_hud_shake_frame;
 
 void field_clear_actor_effects(FieldActorSlot* slot);
 s32 field_load_vram_resource(s32 id, RECT* rect, s32 mode);
 void field_clear_pending_binding_restarts(void);
-void* func_8009CA54(s32 pool, s32 size, s32 tag);
 
 /**
  * @brief Point the built-in animation globals at the loaded resource.
@@ -227,7 +226,7 @@ void field_stop_actor_animations_for_object(FieldActor* actor, s32 force)
             field_stop_actor_slot(actor, slot, force);
         }
     }
-    func_800A3B78(actor->object_index);
+    field_release_sfx_group(actor->object_index);
 }
 
 /**
@@ -462,10 +461,10 @@ void field_reset_actor_resources(void)
     g_field_actor_bindings[1].load_id = 0;
     g_field_actor_bindings[0].load_id = 0;
     field_clear_resource_queue();
-    func_8009CA08((u32*)g_field_actor_heap, FIELD_ACTOR_HEAP_SIZE);
-    g_field_mesh_transformed_normals = func_8009CA54(g_field_actor_heap, FIELD_MESH_VERTEX_MAX * sizeof(SVECTOR), FIELD_MESH_HEAP_TAG);
-    g_field_mesh_screen_vertices = func_8009CA54(g_field_actor_heap, FIELD_MESH_VERTEX_MAX * sizeof(s32), FIELD_MESH_HEAP_TAG);
-    g_field_mesh_depth_offsets = func_8009CA54(g_field_actor_heap, FIELD_MESH_VERTEX_MAX * sizeof(s32), FIELD_MESH_HEAP_TAG);
+    field_block_pool_init(g_field_actor_heap, FIELD_ACTOR_HEAP_SIZE);
+    g_field_mesh_transformed_normals = field_block_alloc(g_field_actor_heap, FIELD_MESH_VERTEX_MAX * sizeof(SVECTOR), FIELD_MESH_HEAP_TAG);
+    g_field_mesh_screen_vertices = field_block_alloc(g_field_actor_heap, FIELD_MESH_VERTEX_MAX * sizeof(s32), FIELD_MESH_HEAP_TAG);
+    g_field_mesh_depth_offsets = field_block_alloc(g_field_actor_heap, FIELD_MESH_VERTEX_MAX * sizeof(s32), FIELD_MESH_HEAP_TAG);
 }
 
 /**
@@ -531,7 +530,7 @@ void field_release_actor_binding(s32 owner)
         slots = g_field_actor_slots;
         if (slots[bindings[FIELD_BINDING_INDEX(owner)].slot].active == 0)
         {
-            func_800A3B78(owner);
+            field_release_sfx_group(owner);
             bindings[FIELD_BINDING_INDEX(owner)].state = FIELD_BINDING_IDLE;
             D_8010CFD4 = 0;
             field_free_owner_resources(FIELD_BINDING_INDEX(owner));

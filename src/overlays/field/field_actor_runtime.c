@@ -294,7 +294,7 @@ typedef struct
 
 void func_80140004(s32 work_address, s32 image_resource_index, s32 music_resource_index, s32 audio_clip_index);
 void field_reset_input_repeat();
-void func_800A8880(s32);
+void field_draw_dialog_windows(s32);
 void field_merge_dialog_items(void);
 void akao_cmd_c1(s32, s32, s32);
 void akao_cmd_a9(s32, s32);
@@ -324,8 +324,8 @@ void field_unpack_resource_package(FieldCdBuffer* buf, s32 size, s32 slot_index,
 static void field_upload_resource_texture(FieldCdBuffer* buf, s32 slot_index, s32 texture_index, s32 palette_row);
 static void field_append_resource_data(u32* src, s32 length, s32 slot_index);
 static void field_refresh_actor_portraits();
-s32* func_80077FB4(FieldActor* actor, s32* packet, u32* ordering_table, s32 frame_data, s32 unused, FieldObjectPart* part);
-s32* func_80075C88(FieldActor* actor, s32* packet, u32* ordering_table, s32 frame_data, s32 unused, FieldObjectPart* part);
+s32* field_render_effect_frame16(FieldActor* actor, s32* packet, u32* ordering_table, s32 frame_data, s32 unused, FieldObjectPart* part);
+s32* field_render_effect_frame8(FieldActor* actor, s32* packet, u32* ordering_table, s32 frame_data, s32 unused, FieldObjectPart* part);
 
 extern FieldColorScale g_field_color_scale;
 extern s8 g_field_color_scale_active;
@@ -384,13 +384,13 @@ void field_update_dialog_runtime(s32 update_mode)
 {
     if (g_field_dialog_screen_mode != 0)
     {
-        func_800A710C();
+        field_update_battle_results_input();
         if (g_field_dialog_screen_mode != 0)
         {
             field_text_reset_scratch();
             if (g_field_dialog_screen_mode != 0)
             {
-                func_800A8880(update_mode);
+                field_draw_dialog_windows(update_mode);
             }
             field_text_upload_immediate_cache();
         }
@@ -411,11 +411,11 @@ void func_80068028(void)
     {
         field_merge_dialog_items();
         field_advance_ability_progression();
-        func_800A7434();
+        field_open_battle_results();
     }
     else
     {
-        func_800A74B8();
+        field_open_duel_results();
     }
 }
 
@@ -546,13 +546,13 @@ void field_update_return_to_title_prompt(s32 render_ctx)
         }
         else
         {
-            func_800A6F1C();
+            field_handle_return_to_title_prompt();
             if (g_field_return_to_title_prompt_state != 0)
             {
                 field_text_reset_scratch();
                 if (g_field_return_to_title_prompt_state != 0)
                 {
-                    func_800A8880(render_ctx);
+                    field_draw_dialog_windows(render_ctx);
                 }
                 field_text_upload_immediate_cache();
             }
@@ -567,7 +567,7 @@ void field_update_return_to_title_prompt(s32 render_ctx)
 void field_open_return_to_title_prompt(void)
 {
     field_reset_input_repeat();
-    func_800A74E8();
+    field_setup_return_to_title_prompt();
 }
 
 /**
@@ -602,8 +602,8 @@ void field_update_audio_timer(void)
         if (remaining_frames == 0)
         {
             fade_out_current_song();
-            func_800A380C();
-            func_800A3904(0, 1, g_field_song_volume);
+            field_play_song();
+            field_fade_song(0, 1, g_field_song_volume);
         }
     }
 }
@@ -1215,13 +1215,13 @@ void field_dispatch_actor_audio_event(FieldActorSlot* slot, s32 event_type, s32 
                 switch (sound_command >> FIELD_SOUND_KIND_SHIFT)
                 {
                 case 0:
-                    func_800A3938(sound_command & FIELD_SOUND_ID_MASK, pan);
+                    field_play_sound(sound_command & FIELD_SOUND_ID_MASK, pan);
                     break;
 
                 case 1:
                     if (slot->owner_object_index < FIELD_PLAYER_COUNT)
                     {
-                        func_800A3A90(sound_command & FIELD_SOUND_ID_MASK, pan, slot->owner_object_index);
+                        field_play_weapon_sfx(sound_command & FIELD_SOUND_ID_MASK, pan, slot->owner_object_index);
                     }
                     else
                     {
@@ -1232,11 +1232,11 @@ void field_dispatch_actor_audio_event(FieldActorSlot* slot, s32 event_type, s32 
                         {
                             if (D_800FF59C != 0)
                             {
-                                func_800A39A8(sound_command & FIELD_SOUND_ID_MASK, pan, 0, slot->owner_object_index);
+                                field_play_set_sfx(sound_command & FIELD_SOUND_ID_MASK, pan, 0, slot->owner_object_index);
                             }
                             else
                             {
-                                func_800A39A8(sound_command & FIELD_SOUND_ID_MASK, pan, owner->resource_index - FIELD_RESOURCE_VOICE_FIRST, slot->owner_object_index);
+                                field_play_set_sfx(sound_command & FIELD_SOUND_ID_MASK, pan, owner->resource_index - FIELD_RESOURCE_VOICE_FIRST, slot->owner_object_index);
                             }
                         }
                     }
@@ -1245,7 +1245,7 @@ void field_dispatch_actor_audio_event(FieldActorSlot* slot, s32 event_type, s32 
                 case 2:
                     if ((sound_command & FIELD_SOUND_ID_MASK) < 2)
                     {
-                        func_800A3E10(slot->sound_params[sound_command & FIELD_SOUND_ID_MASK], pan, slot->owner_object_index);
+                        field_play_sfx_buffer(slot->sound_params[sound_command & FIELD_SOUND_ID_MASK], pan, slot->owner_object_index);
                     }
                     break;
                 }
@@ -1342,7 +1342,7 @@ void field_update_actor_animations(void)
             }
             if (slot->track_mask != 0)
             {
-                func_8007100C(slot);
+                field_advance_actor_effects(slot);
                 if (slot->animation->unk14 == FIELD_ANIM_ATTACK)
                 {
                     if ((&slot->parts[slot->animation->unk15])->flags & FIELD_PART_ATTACK_SPHERE)
@@ -1841,7 +1841,7 @@ void field_initialize_actor_system(void)
 
                 if (j < FIELD_PLAYER_COUNT)
                 {
-                    func_800A3D44(j, g_field_player_records[j].weapon_type);
+                    field_load_weapon_sfx_table(j, g_field_player_records[j].weapon_type);
                 }
             }
         }
@@ -2311,7 +2311,7 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
 
     if ((g_field_scene_mode_bit != 0) && (slot == 1))
     {
-        func_800A3D44(1, D_800FDA81);
+        field_load_weapon_sfx_table(1, D_800FDA81);
     }
 
     field_refresh_party_routes();
@@ -2902,11 +2902,11 @@ void field_render_actor_objects(FieldRenderContext* render_context)
         {
             if (actor->frame_data >= 0)
             {
-                packet_cursor = func_80077FB4(actor, packet_cursor, ordering_table, actor->frame_data, 0, &g_field_object_parts[i]);
+                packet_cursor = field_render_effect_frame16(actor, packet_cursor, ordering_table, actor->frame_data, 0, &g_field_object_parts[i]);
             }
             else
             {
-                packet_cursor = func_80075C88(actor, packet_cursor, ordering_table, actor->frame_data, 0, &g_field_object_parts[i]);
+                packet_cursor = field_render_effect_frame8(actor, packet_cursor, ordering_table, actor->frame_data, 0, &g_field_object_parts[i]);
             }
         }
         else if (actor->presence == FIELD_ACTOR_HIDDEN)
@@ -3350,7 +3350,7 @@ u8* field_advance_actor_part_animation_frame(FieldActor* actor, u8* resource_bas
             part = &g_field_actor_slots[actor->owner_slot].parts[actor->owner_part];
             if (!((part->unk4.word >> FIELD_PART_LOOP_SHIFT) & 3))
             {
-                func_80071500(actor, part);
+                field_retire_effect(actor, part);
                 return 0;
             }
             actor->animation_frame = 0;
@@ -3619,7 +3619,7 @@ static void field_refresh_actor_portraits(void)
 
         if (g_field_player_records[1].character_kind == FIELD_PLAYER_KIND_HERO)
         {
-            func_800A5638(partner_portrait, (FIELD_PLAYER_FLAG_WORD(&g_field_player_records[1]) >> 1) & 1);
+            field_copy_portrait_palette(partner_portrait, (FIELD_PLAYER_FLAG_WORD(&g_field_player_records[1]) >> 1) & 1);
         }
 
         if (g_pad_ctx->gname_name[0] != 0 && (g_pad_ctx->unkAA8 & COMPANION_KIND_MASK) == COMPANION_KIND_GOLEM)
@@ -3779,7 +3779,7 @@ static void field_update_actor_part_effects(FieldActorSlot* slot)
                 {
                     previous_count = slot->effect_counts[g_field_track_index][i];
                     D_80105760 = 0;
-                    if (func_8006D79C(slot, i, 0) == -1)
+                    if (field_spawn_actor_effect(slot, i, 0) == -1)
                     {
                         break;
                     }
@@ -3802,7 +3802,7 @@ static void field_update_actor_part_effects(FieldActorSlot* slot)
                             break;
                         }
                         D_80105760 = 0;
-                        if (func_8006D79C(slot, i, 0) == -1)
+                        if (field_spawn_actor_effect(slot, i, 0) == -1)
                         {
                             break;
                         }

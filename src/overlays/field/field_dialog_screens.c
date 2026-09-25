@@ -1,13 +1,11 @@
 /** @file field_dialog_screens.c
- * @brief Timed panels, actor text queue, ability progression and dialog screens.
+ * @brief Timed panels, actor texts, ability progression and the battle result screens.
  *
- * One translation unit covering 0x800A5638 .. 0x800A88A0 (formerly
- * field_timed_panel.c, field_actor_text_queue.c, field_ability_progression.c
- * and field_dialog_screens.c). Symbols whose reconstructed type varies between
- * functions (g_field_player_records, g_field_object_states, g_field_actors,
- * g_field_cd_buffer, g_pad_ctx, bcopy, func_800ADF84, func_800A88A0, func_800A8A78,
- * func_800A838C) are declared at block scope inside each user with that
- * function's original type; do not hoist them to file scope.
+ * One translation unit covering 0x800A5638 .. 0x800A88A0: the timed image
+ * panel started by a script, the short texts shown over actors (technique
+ * names), weapon/ability proficiency and unlocks after a battle, the result
+ * windows (party summary and experience ranking, items, unlocks) and the
+ * return-to-title prompt with its battle retry.
  */
 
 #include "common.h"
@@ -26,23 +24,66 @@
 #include "field_records.h"
 #include "controller_internal.h"
 #include "field_menu_element.h"
+#include "field_actor_tables.h"
+#include "field_runtime.h"
+#include "pad.h"
+#include "gpu_packet.h"
+#include "game_state.h"
+#include "sdk/memory.h"
+
+/* main.h declares this as PadContext *; FIELD reads the same saved game through FieldGameState. */
+extern FieldGameState* g_pad_ctx;
+extern u8* g_field_cd_buffer;
 
 /* ---- Timed panels (0x800A5638 .. 0x800A6204) ---- */
 
-/** @brief One 0x20-byte record in the D_800EE6E8 lookup table. */
-typedef struct
-{
-    u8 data[0x20];
-} UnkTable800EE6E8Entry;
+/** @brief Image resources of the timed panels (index 0 first). */
+#define FIELD_TIMED_PANEL_RESOURCE_BASE 0x1060
+/** @brief VRAM position of the panel image and its palette row. */
+#define FIELD_TIMED_PANEL_VRAM_X 320
+#define FIELD_TIMED_PANEL_CLUT_Y 498
+/** @brief Frames a panel stays up, and the lengths of its fades. */
+#define FIELD_TIMED_PANEL_FRAMES 150
+#define FIELD_TIMED_PANEL_FADE_IN_FRAMES 32
+#define FIELD_TIMED_PANEL_FADE_OUT_START 32
+/** @brief Screen fade length when the panel opens and closes. */
+#define FIELD_TIMED_PANEL_FADE_FRAMES 20
+/** @brief Confirm skips to the fade-out while the timer is below this. */
+#define FIELD_TIMED_PANEL_SKIP_END 103
+/** @brief Full brightness, and the level below which the fade primitive is added. */
+#define FIELD_TIMED_PANEL_FULL_BRIGHTNESS 0x80
+#define FIELD_TIMED_PANEL_FADE_LIMIT 0x7C
+/** @brief Mode byte: bit 7 selects a quad effect group (low bits), else the plain image. */
+#define FIELD_TIMED_PANEL_EFFECT 0x80
+#define FIELD_TIMED_PANEL_EFFECT_MASK 0x7F
 
-/**
- * @brief FIELD context field holding the current primitive-chain handle.
- */
+/** @brief Opening and closing sounds of the panel variants. */
+#define FIELD_SOUND_PANEL_IMAGE_START 0x118
+#define FIELD_SOUND_PANEL_IMAGE_END 0x119
+#define FIELD_SOUND_PANEL_EFFECT1_START 0x11A
+#define FIELD_SOUND_PANEL_EFFECT1_END 0x11B
+#define FIELD_SOUND_PANEL_EFFECT0_START 0x11C
+#define FIELD_SOUND_PANEL_EFFECT0_END 0x11D
+#define FIELD_SOUND_PANEL_EFFECT2_START 0x11E
+#define FIELD_SOUND_PANEL_EFFECT2_END 0x11F
+/** @brief Centered pan for field_play_sound(). */
+#define FIELD_SOUND_CENTER 0x80
+
+/** @brief Confirm buttons of the result and panel screens. */
+#define FIELD_PAD_CONFIRM (PAD_BTN_CROSS | PAD_BTN_L3)
+
+/** @brief A 16-color palette strip (one row of a portrait image). */
 typedef struct
 {
-    u8 pad0[0x40B8];
-    s32 primitive;
-} FieldContext;
+    u16 colors[16];
+} FieldPortraitPalette;
+
+/** @brief FieldTransitionQuad::x of an unused descriptor. */
+#define FIELD_TRANSITION_QUAD_UNUSED 0xFFFF
+/** @brief FieldTransitionQuad::flags: bits 0-1 texture mode, 4-7 palette column, 9-10 blend, 11-14 effect. */
+#define FIELD_TRANSITION_QUAD_HALF_WIDTH 0xF
+#define FIELD_TRANSITION_QUAD_SEMI_TRANSPARENT 0x100
+#define FIELD_TRANSITION_QUAD_EFFECT(flags) (((flags) >> 11) & 0xF)
 
 /** @brief Position, texture coordinates, dimensions and effect flags of one quad. */
 typedef struct
@@ -52,43 +93,43 @@ typedef struct
     u16 width, height, flags;
 } FieldTransitionQuad;
 
-extern UnkTable800EE6E8Entry D_800EE6E8[];
-extern FieldTransitionQuad D_800EF124[][4];
-extern u8 D_800EF85C[];
+extern FieldPortraitPalette g_field_portrait_palettes[];
+extern FieldTransitionQuad g_field_timed_panel_quads[][4];
+extern u8 g_field_timed_panel_modes[];
+/** @brief Nonzero while a timed panel is shown. */
 extern s32 D_800F2298;
 extern Vec2s g_field_screen_scroll;
-extern u16 D_80122720;
-extern u16 D_80122722;
-extern s32 D_801229F0;
+extern u16 g_field_timed_panel_width;
+extern u16 g_field_timed_panel_height;
+extern s32 g_field_timed_panel_index;
+extern u16 g_field_timed_panel_brightness;
+extern u16 g_field_timed_panel_timer;
 extern s32 g_pad_input;
 
-void field_load_vram_resource(s32 id, s16 *rect, s32 arg2);
+s32 field_load_vram_resource(s32 id, RECT* rect, s32 mode);
 s32 rcos(s32);
 s32 rsin(s32);
-POLY_FT4 *func_800A5960(POLY_FT4 *prim, u_long *ordering_table, s32 index);
-POLY_FT4 *func_800A6060(POLY_FT4 *prim, u_long *ordering_table);
+static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4* prim, u_long* ordering_table, s32 index);
+static POLY_FT4* field_draw_timed_panel_image(POLY_FT4* prim, u_long* ordering_table);
 
 /**
- * @brief Copy one 0x20-byte record out of the D_800EE6E8 lookup table.
- * @param dest Destination buffer receiving the copied record.
- * @param index Record index into D_800EE6E8.
+ * @brief Copy one of the portrait palettes into a portrait image.
+ * @param dest Palette strip at the start of the portrait image.
+ * @param index Palette index.
  */
-void func_800A5638(void *dest, s32 index)
+void field_copy_portrait_palette(void* dest, s32 index)
 {
-    extern void *bcopy(const unsigned char *, unsigned char *, int);
-    bcopy((u8 *)&D_800EE6E8[index], dest, 0x20);
+    bcopy((u8*)&g_field_portrait_palettes[index], dest, sizeof(FieldPortraitPalette));
 }
 
 /**
- * @brief Initializes field resource state and selects its startup sound.
- * @param index Resource-table index used to select the field data and sound.
+ * @brief Load a timed panel image, fade the screen and play the opening sound.
+ * @param index Panel index (image resource and mode byte).
  */
-void func_800A5670(s32 index)
+void field_start_timed_panel(s32 index)
 {
-    extern s16 D_8011F3D0;
-    extern s16 D_80122904;
-    s16 rect[4];
-    u8 value;
+    RECT rect;
+    u8 mode;
     s32 sound_id;
 
     if (D_800F2298 != 0)
@@ -96,33 +137,31 @@ void func_800A5670(s32 index)
         return;
     }
 
-    rect[0] = 0x140;
-    rect[1] = 0;
-    rect[2] = 0;
-    rect[3] = 0x1F2;
-    field_load_vram_resource(index + 0x1060, rect, 1);
+    /* x/y: image destination, w/h: palette destination; the loader returns the image size in x/y. */
+    setRECT(&rect, FIELD_TIMED_PANEL_VRAM_X, 0, 0, FIELD_TIMED_PANEL_CLUT_Y);
+    field_load_vram_resource(index + FIELD_TIMED_PANEL_RESOURCE_BASE, &rect, 1);
 
-    D_801229F0 = index;
-    D_80122720 = rect[0];
-    D_80122722 = rect[1];
-    field_set_fade_target_only(0x80, 0x80, 0x80, 0x14);
-    D_80122904 = 0x96;
-    D_8011F3D0 = 0;
+    g_field_timed_panel_index = index;
+    g_field_timed_panel_width = rect.x;
+    g_field_timed_panel_height = rect.y;
+    field_set_fade_target_only(0x80, 0x80, 0x80, FIELD_TIMED_PANEL_FADE_FRAMES);
+    g_field_timed_panel_timer = FIELD_TIMED_PANEL_FRAMES;
+    g_field_timed_panel_brightness = 0;
     D_800F2298 = 1;
 
-    value = D_800EF85C[D_801229F0];
-    if (value & 0x80)
+    mode = g_field_timed_panel_modes[g_field_timed_panel_index];
+    if (mode & FIELD_TIMED_PANEL_EFFECT)
     {
-        switch (value & 0x7F)
+        switch (mode & FIELD_TIMED_PANEL_EFFECT_MASK)
         {
         case 0:
-            sound_id = 0x11C;
+            sound_id = FIELD_SOUND_PANEL_EFFECT0_START;
             break;
         case 1:
-            sound_id = 0x11A;
+            sound_id = FIELD_SOUND_PANEL_EFFECT1_START;
             break;
         case 2:
-            sound_id = 0x11E;
+            sound_id = FIELD_SOUND_PANEL_EFFECT2_START;
             break;
         default:
             return;
@@ -130,88 +169,86 @@ void func_800A5670(s32 index)
     }
     else
     {
-        sound_id = 0x118;
+        sound_id = FIELD_SOUND_PANEL_IMAGE_START;
     }
 
-    func_800A3938(sound_id, 0x80);
+    field_play_sound(sound_id, FIELD_SOUND_CENTER);
 }
 
 /**
- * @brief Advance a timed FIELD panel, update its fade, and render its contents.
- * @param context FIELD context containing the primitive-chain handle.
- * @note Selected pad buttons shorten the middle portion of the countdown.
+ * @brief Count down the timed panel, fade it in and out and draw it.
+ * @param render Render half receiving the panel primitives.
+ * @note Confirm skips ahead to the fade-out while the panel is fully shown.
  * @note timer is a u16 (a halfword pseudo), so CSE does not match it against
  *       the zero-extended timer read in the fade-in arm, which reloads it.
  */
-void func_800A5794(FieldContext *context)
+void field_update_timed_panel(FieldRenderHalf* render)
 {
-    extern s16 D_8011F3D0;
-    extern u16 D_80122904;
-    s32 primitive;
+    POLY_FT4* prim;
     u16 timer;
     u8 event_selector;
     u8 render_selector;
 
     if (D_800F2298 != 0)
     {
-        if (--D_80122904 == 0x14)
+        if (--g_field_timed_panel_timer == FIELD_TIMED_PANEL_FADE_FRAMES)
         {
-            field_restore_fade_target_with_duration(0x14);
+            field_restore_fade_target_with_duration(FIELD_TIMED_PANEL_FADE_FRAMES);
         }
-        timer = D_80122904;
+        timer = g_field_timed_panel_timer;
         if (timer == 0)
         {
             D_800F2298 = 0;
             return;
         }
-        if (timer < 0x20)
+        if (timer < FIELD_TIMED_PANEL_FADE_OUT_START)
         {
-            if (timer == 0x1F)
+            if (timer == FIELD_TIMED_PANEL_FADE_OUT_START - 1)
             {
-                event_selector = D_800EF85C[D_801229F0];
-                if (event_selector & 0x80)
+                event_selector = g_field_timed_panel_modes[g_field_timed_panel_index];
+                if (event_selector & FIELD_TIMED_PANEL_EFFECT)
                 {
-                    switch (event_selector & 0x7F)
+                    switch (event_selector & FIELD_TIMED_PANEL_EFFECT_MASK)
                     {
                     case 0:
-                        func_800A3938(0x11D, 0x80);
+                        field_play_sound(FIELD_SOUND_PANEL_EFFECT0_END, FIELD_SOUND_CENTER);
                         break;
                     case 1:
-                        func_800A3938(0x11B, 0x80);
+                        field_play_sound(FIELD_SOUND_PANEL_EFFECT1_END, FIELD_SOUND_CENTER);
                         break;
                     case 2:
-                        func_800A3938(0x11F, 0x80);
+                        field_play_sound(FIELD_SOUND_PANEL_EFFECT2_END, FIELD_SOUND_CENTER);
                         break;
                     }
                 }
                 else
                 {
-                    func_800A3938(0x119, 0x80);
+                    field_play_sound(FIELD_SOUND_PANEL_IMAGE_END, FIELD_SOUND_CENTER);
                 }
             }
-            D_8011F3D0 = D_80122904 * 4;
+            g_field_timed_panel_brightness = g_field_timed_panel_timer * 4;
         }
-        else if (timer >= 0x76)
+        else if (timer >= FIELD_TIMED_PANEL_FRAMES - FIELD_TIMED_PANEL_FADE_IN_FRAMES)
         {
-            D_8011F3D0 = (0x96 - D_80122904) * 4;
+            g_field_timed_panel_brightness = (FIELD_TIMED_PANEL_FRAMES - g_field_timed_panel_timer) * 4;
         }
-        else if (timer >= 0x21 && timer < 0x67 && (g_pad_input & 0x220))
+        else if (timer >= FIELD_TIMED_PANEL_FADE_OUT_START + 1 && timer < FIELD_TIMED_PANEL_SKIP_END && (g_pad_input & FIELD_PAD_CONFIRM))
         {
-            D_80122904 = 0x20;
+            g_field_timed_panel_timer = FIELD_TIMED_PANEL_FADE_OUT_START;
         }
         g_field_screen_scroll.y = 0;
         g_field_screen_scroll.x = 0;
-        render_selector = D_800EF85C[D_801229F0];
-        primitive = context->primitive;
+        render_selector = g_field_timed_panel_modes[g_field_timed_panel_index];
+        prim = (POLY_FT4*)render->primitive_cursor;
         if (render_selector != 0)
         {
-            primitive = func_800A5960(primitive, context, render_selector & 0x7F);
+            prim = field_draw_timed_panel_quads(prim, render->ordering_table, render_selector & FIELD_TIMED_PANEL_EFFECT_MASK);
         }
         else
         {
-            primitive = func_800A6060(primitive, context);
+            prim = field_draw_timed_panel_image(prim, render->ordering_table);
         }
-        context->primitive = primitive;
+        render->primitive_cursor = (u8*)prim;
     }
 }
 
@@ -224,23 +261,21 @@ void func_800A5794(FieldContext *context)
 #define QUAD_OF_FLAGS(flags_ptr) ((FieldTransitionQuad *)((u8 *)(flags_ptr) - 10))
 
 /**
- * @brief Append up to four textured quads for a field transition effect.
- * @param prim Next available primitive packet.
- * @param ordering_table Ordering-table entry receiving each generated primitive.
- * @param index Selects a group of four transition descriptors.
- * @return First unused packet after the generated textured quads.
- * @note Effect flags select expansion, translation, rotation or brightness;
- *       disabled descriptors have X equal to 0xFFFF.
- * @note The do/while(0) blocks around the two width products in the rotation
- *       case raise their loop weight so width keeps its saved register.
+ * @brief Draw the up to four quads of a timed panel effect group.
+ * @param prim Next free primitive.
+ * @param ordering_table Ordering table receiving the quads.
+ * @param index Effect group (four FieldTransitionQuad descriptors).
+ * @return First unused primitive.
+ * @note The effect bits select a zoom (0, 4), a slide (1), a spin (2) or a flash (3),
+ *       all driven by the panel brightness.
+ * @note The do/while(0) blocks around the two width products in the spin case
+ *       give width the loop weight that keeps it in a saved register (UNSOLVED lever).
  * @note bottom_1 is a u16 screen coordinate: its sum is done on halfword reads,
  *       which CSE does not share with the zero-extended height read of the
  *       following product, so height is read twice as in the original.
  */
-POLY_FT4 *func_800A5960(POLY_FT4 *prim, u_long *ordering_table, s32 index)
+static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_table, s32 index)
 {
-    extern u16 D_8011F3D0;
-    extern u16 D_80122904;
     s32 quad_index;
     u32 half_width;
     s32 bottom_2;
@@ -280,27 +315,27 @@ POLY_FT4 *func_800A5960(POLY_FT4 *prim, u_long *ordering_table, s32 index)
     u32 half;
     u32 width;
 
-    quad = D_800EF124[index];
+    quad = g_field_timed_panel_quads[index];
     flags_base = (u8 *)&quad->flags;
     for (quad_index = 0; quad_index < 4; quad_index++, quad++)
     {
         quad_flags = flags_base + quad_index * 12;
-        if (quad->x != 0xFFFF)
+        if (quad->x != FIELD_TRANSITION_QUAD_UNUSED)
         {
             raw_width = QUAD_OF_FLAGS(quad_flags)->width;
-            if (QUAD_OF_FLAGS(quad_flags)->flags & 0xF)
+            if (QUAD_OF_FLAGS(quad_flags)->flags & FIELD_TRANSITION_QUAD_HALF_WIDTH)
             {
                 raw_width = (u16)(raw_width >> 1);
             }
             setPolyFT4(prim);
             width = raw_width & 0xFFFF;
-            prim->r0 = prim->g0 = prim->b0 = D_8011F3D0;
-            if ((D_8011F3D0 != 0x80) || (QUAD_OF_FLAGS(quad_flags)->flags & 0x100))
+            prim->r0 = prim->g0 = prim->b0 = g_field_timed_panel_brightness;
+            if ((g_field_timed_panel_brightness != FIELD_TIMED_PANEL_FULL_BRIGHTNESS) || (QUAD_OF_FLAGS(quad_flags)->flags & FIELD_TRANSITION_QUAD_SEMI_TRANSPARENT))
             {
                 setSemiTrans(prim, 1);
             }
-            expansion = 0x80 - D_8011F3D0;
-            switch ((QUAD_OF_FLAGS(quad_flags)->flags >> 11) & 0xF)
+            expansion = FIELD_TIMED_PANEL_FULL_BRIGHTNESS - g_field_timed_panel_brightness;
+            switch (FIELD_TRANSITION_QUAD_EFFECT(QUAD_OF_FLAGS(quad_flags)->flags))
             {
             case 0:
                 term = width * expansion;
@@ -322,7 +357,7 @@ POLY_FT4 *func_800A5960(POLY_FT4 *prim, u_long *ordering_table, s32 index)
                 prim->y2 = prim->y3 = bottom_1 + (scaled >> 7) - 1;
                 break;
             case 1:
-                if (D_80122904 < 0x25)
+                if (g_field_timed_panel_timer < 0x25)
                 {
                     scaled = width * expansion;
                     adjusted = scaled;
@@ -454,13 +489,13 @@ POLY_FT4 *func_800A5960(POLY_FT4 *prim, u_long *ordering_table, s32 index)
                 prim->y2 = bottom_2;
                 break;
             case 3:
-                if (D_8011F3D0 < 0x40)
+                if (g_field_timed_panel_brightness < 0x40)
                 {
-                    brightness = D_8011F3D0 * 4;
+                    brightness = g_field_timed_panel_brightness * 4;
                 }
                 else
                 {
-                    brightness = ~((D_8011F3D0 - 0x40) * 2);
+                    brightness = ~((g_field_timed_panel_brightness - 0x40) * 2);
                 }
                 prim->r0 = prim->g0 = prim->b0 = brightness;
                 prim->x0 = prim->x2 = quad->x;
@@ -493,12 +528,12 @@ POLY_FT4 *func_800A5960(POLY_FT4 *prim, u_long *ordering_table, s32 index)
             prim->v0 = prim->v1 = QUAD_OF_FLAGS(quad_flags)->v;
             palette_mask = 0xF0;
             prim->v2 = prim->v3 = QUAD_OF_FLAGS(quad_flags)->v + QUAD_OF_FLAGS(quad_flags)->height - 1;
-            prim->clut = getClut(QUAD_OF_FLAGS(quad_flags)->flags & palette_mask, 0x1F2);
-            prim->tpage = getTPage(QUAD_OF_FLAGS(quad_flags)->flags & 3, (QUAD_OF_FLAGS(quad_flags)->flags >> 9) & 3, 320, 0);
+            prim->clut = getClut(QUAD_OF_FLAGS(quad_flags)->flags & palette_mask, FIELD_TIMED_PANEL_CLUT_Y);
+            prim->tpage = getTPage(QUAD_OF_FLAGS(quad_flags)->flags & 3, (QUAD_OF_FLAGS(quad_flags)->flags >> 9) & 3, FIELD_TIMED_PANEL_VRAM_X, 0);
             addPrim(ordering_table, prim);
-            if (D_8011F3D0 < 0x7C)
+            if (g_field_timed_panel_brightness < FIELD_TIMED_PANEL_FADE_LIMIT)
             {
-                term = (QUAD_OF_FLAGS(quad_flags)->flags >> 11) & 15;
+                term = FIELD_TRANSITION_QUAD_EFFECT(QUAD_OF_FLAGS(quad_flags)->flags);
                 switch (term)
                 {
                 case 0:
@@ -518,14 +553,15 @@ POLY_FT4 *func_800A5960(POLY_FT4 *prim, u_long *ordering_table, s32 index)
 }
 
 /**
- * @brief Build and link a textured field quad using the current field dimensions.
- * @param prim Primitive buffer slot to populate.
- * @param ordering_table Ordering-table entry receiving the primitive.
- * @return Pointer to the next primitive buffer slot.
+ * @brief Draw the plain timed panel image, zoomed in from the screen center by the fade.
+ * @param prim Primitive to fill.
+ * @param ordering_table Ordering table receiving the quad.
+ * @return Next free primitive.
+ * @note The value0..value5 locals are reused on purpose: their reassignments
+ *       order the scheduler the way the target is laid out.
  */
-POLY_FT4 *func_800A6060(POLY_FT4 *prim, u_long *ordering_table)
+static POLY_FT4* field_draw_timed_panel_image(POLY_FT4 *prim, u_long *ordering_table)
 {
-    extern s16 D_8011F3D0;
     s32 value0;
     s32 value1;
     s32 value2;
@@ -538,16 +574,16 @@ POLY_FT4 *func_800A6060(POLY_FT4 *prim, u_long *ordering_table)
     setlen(prim, value0);
     value0 = 0x2C;
     setcode(prim, value0);
-    value0 = (u8)D_8011F3D0;
+    value0 = (u8)g_field_timed_panel_brightness;
     prim->b0 = value0;
     prim->g0 = value0;
     prim->r0 = value0;
     value1 = getcode(prim);
     value1 |= 2;
     setcode(prim, value1);
-    value1 = 0x80;
-    value0 = (u16)D_8011F3D0;
-    value4 = D_80122720;
+    value1 = FIELD_TIMED_PANEL_FULL_BRIGHTNESS;
+    value0 = (u16)g_field_timed_panel_brightness;
+    value4 = g_field_timed_panel_width;
     value5 = value1 - value0;
     value3 = value4 * value5;
     value2 = value3 / 32;
@@ -559,12 +595,12 @@ POLY_FT4 *func_800A6060(POLY_FT4 *prim, u_long *ordering_table)
     prim->x0 = value0;
     value0 = value4 * 4;
     value0 += 0xA0;
-    /* Loop notes keep the scheduler from moving this subtract into the load delay slot. */
+    /* The loop notes keep sched1 from moving this subtract into the load delay slot (UNSOLVED lever). */
     do
     {
         value0 -= value1;
     } while (0);
-    value3 = D_80122722;
+    value3 = g_field_timed_panel_height;
     value1 = value3 * value5;
     value0 += value2;
     value0--;
@@ -589,10 +625,10 @@ POLY_FT4 *func_800A6060(POLY_FT4 *prim, u_long *ordering_table)
     value0--;
     prim->y3 = value0;
     prim->y2 = value0;
-    value0 = 0x7C80;
+    value0 = getClut(0, FIELD_TIMED_PANEL_CLUT_Y);
     prim->u2 = 0;
     prim->u0 = 0;
-    value1 = D_80122720;
+    value1 = g_field_timed_panel_width;
     prim->v1 = 0;
     prim->v0 = 0;
     prim->clut = value0;
@@ -600,15 +636,15 @@ POLY_FT4 *func_800A6060(POLY_FT4 *prim, u_long *ordering_table)
     value1--;
     prim->u3 = value1;
     prim->u1 = value1;
-    value0 = (u8)D_80122722;
-    value1 = 0x25;
+    value0 = (u8)g_field_timed_panel_height;
+    value1 = getTPage(0, 1, FIELD_TIMED_PANEL_VRAM_X, 0);
     prim->tpage = value1;
     value0--;
     prim->v3 = value0;
     prim->v2 = value0;
     setaddr(prim, *ordering_table & address_mask);
     setaddr(ordering_table, prim);
-    if ((u16)D_8011F3D0 < 0x7C)
+    if ((u16)g_field_timed_panel_brightness < FIELD_TIMED_PANEL_FADE_LIMIT)
     {
         field_add_fade_prim(prim, 0);
     }
@@ -617,96 +653,87 @@ POLY_FT4 *func_800A6060(POLY_FT4 *prim, u_long *ordering_table)
 
 /* ---- Actor text queue (0x800A6204 .. 0x800A68B4) ---- */
 
-/** @brief Text pointer and packed position/countdown state for one text slot. */
-typedef struct Slot
-{
-    u8 *text;
-    u32 x : 9;         /**< Screen X of the text. */
-    u32 y : 8;         /**< Screen Y of the text. */
-    u32 countdown : 6; /**< Frames left to show the text; 0 when the slot is free. */
-    u32 unused : 9;
-} Slot;
+/** @brief Number of actor text slots (the first two follow the players). */
+#define FIELD_ACTOR_TEXT_COUNT 3
+/** @brief Frames an actor text stays up; it fades out over the last 32. */
+#define FIELD_ACTOR_TEXT_FRAMES 63
+#define FIELD_ACTOR_TEXT_FADE_FRAMES 32
+/** @brief field_draw_tinted_text() color that selects the neutral tint. */
+#define FIELD_TEXT_TINT_NEUTRAL 0x100
+/** @brief Primitive-buffer depth of the text layer in the render half's ordering table. */
+#define FIELD_TEXT_OT_DEPTH 16
 
-/** @brief Fixed-point position at the start of a 0x54-byte actor entry. */
-typedef struct Position
+/** @brief Packed screen position and countdown of an actor text. */
+typedef union
 {
-    s32 x, y, z;
-    u8 rest[0x54 - 12];
-} Position;
+    u32 word;
+    struct
+    {
+        u32 x : 9;         /**< Screen X of the text. */
+        u32 y : 8;         /**< Screen Y of the text. */
+        u32 countdown : 6; /**< Frames left to show the text; 0 when the slot is free. */
+        u32 unused : 9;
+    } bits;
+} FieldActorTextState;
 
-/** @brief Two-word view of a pending text entry used by the frame handler. */
-typedef struct
+/** @brief One actor text slot: a string shown over an actor for a few frames. */
+typedef struct FieldActorText
 {
-    u32 unk0;   /* 0x0 */
-    u32 unk4;   /* 0x4 */
-} ArgB;
+    u8* text;
+    FieldActorTextState state;
+} FieldActorText;
 
-/** @brief FIELD context passed through to the text entry handler. */
-typedef struct
-{
-    u8 pad0[0x40];
-    u8 unk40;   /* 0x40 */
-    u8 pad41[0x40B8 - 0x41];
-    s32 unk40B8; /* 0x40B8 */
-} ArgA;
-
-extern u8 D_800ED064[];
+extern FieldActorText g_field_actor_texts[FIELD_ACTOR_TEXT_COUNT];
+/** @brief Technique name bank: u16 offsets from the bank start, then the strings. */
+extern u8 g_field_technique_names[];
 
 extern s32 g_field_text_session_active;
-extern s32 D_801227DC;
+extern s32 g_field_actor_text_count;
 
-
-
-
-void func_800A6634(ArgA *arg0, ArgB *arg1);
-
-SPRT *func_800AD658(s32 *ordering_table, SPRT *sprite_cursor, s32 count);
+static void field_draw_actor_text(FieldRenderHalf* render, FieldActorText* text);
+static void* field_draw_tinted_text(SPRT* sprite_cursor, s32* ordering_table, u8* text, s32 text_color, s32 x, s32 y, s32 alignment, s32 color);
+SPRT* func_800AD658(s32* ordering_table, SPRT* sprite_cursor, s32 count);
 
 /**
- * @brief Clear the six-bit frame countdown of the first three text entries.
+ * @brief Clear the countdown of every actor text.
  */
-void func_800A6204(void)
+void field_clear_actor_texts(void)
 {
-    extern s32 D_801226A0[];
-
-    D_801226A0[5] &= 0xFF81FFFF;
-    D_801226A0[3] &= 0xFF81FFFF;
-    D_801226A0[1] &= 0xFF81FFFF;
+    g_field_actor_texts[2].state.bits.countdown = 0;
+    g_field_actor_texts[1].state.bits.countdown = 0;
+    g_field_actor_texts[0].state.bits.countdown = 0;
 }
 
 /**
- * @brief Start an inactive text slot near its actor and clamp its screen position.
- * @param index Actor/text slot index; indices at least two are ignored.
- * @param text_id Text table index, or a negative packed selector into the pad context.
+ * @brief Show a text over a player's actor unless one is already showing.
+ * @param index Player (actor and text slot) index; other actors are ignored.
+ * @param text_id Technique name index, or negative: bits 16-23 party character and
+ *        bits 0-7 record index of a name stored in the saved character.
  * @note The actor terms are (s16) screen coordinates; the casts also keep fold
  *       from moving the 160/112 screen-centre constants onto the view offsets.
  */
-void func_800A623C(s32 index, s32 text_id)
+void field_start_actor_text(s32 index, s32 text_id)
 {
-    extern u8 *g_pad_ctx;
-    extern Position g_field_actors[];
-    extern Slot D_801226A0[];
-
     s16 point[2];
     s32 width;
 
-    if (index < 2)
+    if (index < FIELD_PLAYER_COUNT)
     {
-        if (D_801226A0[index].countdown == 0)
+        if (g_field_actor_texts[index].state.bits.countdown == 0)
         {
             if (text_id < 0)
             {
                 /* Bits 16-23 pick a party character, bits 0-7 one of its 64-byte records. */
-                D_801226A0[index].text = &g_pad_ctx[(((u32)text_id >> 16) & 0xFF) * 0x250 + 0x5F0] + (((text_id & 0xFF) << 6) + 0x150);
+                g_field_actor_texts[index].text = (u8 *)&g_pad_ctx->characters[((u32)text_id >> 16) & 0xFF].unk150[text_id & 0xFF];
             }
             else
             {
-                D_801226A0[index].text = (u8 *)(((u16 *)D_800ED064)[text_id] + (s32)D_800ED064);
+                g_field_actor_texts[index].text = (u8 *)(((u16 *)g_field_technique_names)[text_id] + (s32)g_field_technique_names);
             }
-            D_801226A0[index].countdown = 0x3F;
+            g_field_actor_texts[index].state.bits.countdown = FIELD_ACTOR_TEXT_FRAMES;
             point[0] = g_field_view_offset_x / 256 + (s16)(g_field_actors[index].x / 256 + 160);
             point[1] = g_field_view_offset_y / 256 + (s16)(g_field_actors[index].y / 256 + 112) - g_field_actors[index].z / 512 - g_field_view_offset_z / 512;
-            width = func_800AE864(D_801226A0[index].text) * 6;
+            width = func_800AE864(g_field_actor_texts[index].text) * 6;
             if (point[0] + width >= 321)
             {
                 point[0] = 320 - width;
@@ -723,33 +750,23 @@ void func_800A623C(s32 index, s32 text_id)
             {
                 point[1] = 50;
             }
-            D_801226A0[index].x = point[0];
-            D_801226A0[index].y = point[1] + 4;
+            g_field_actor_texts[index].state.bits.x = point[0];
+            g_field_actor_texts[index].state.bits.y = point[1] + 4;
         }
     }
 }
 
 /**
- * @brief Report whether any of the first three text entries has a pending countdown.
- * @return 1 if an entry's six-bit countdown field is nonzero, otherwise 0.
+ * @brief Report whether any actor text is still showing.
+ * @return 1 if a slot's countdown is nonzero, otherwise 0.
  */
-s32 func_800A6490(void)
+s32 field_actor_text_pending(void)
 {
-    typedef struct
-    {
-        s32 unk0;
-        s32 unk4;
-    } UnkStruct801226A0;
-    extern UnkStruct801226A0 D_801226A0[];
-
     s32 i;
-    UnkStruct801226A0 *p;
 
-    i = 0;
-    p = D_801226A0;
-    for (; i < 3; i++, p++)
+    for (i = 0; i < FIELD_ACTOR_TEXT_COUNT; i++)
     {
-        if (((u32)p->unk4 >> 17) & 0x3F)
+        if (g_field_actor_texts[i].state.bits.countdown != 0)
         {
             return 1;
         }
@@ -758,21 +775,12 @@ s32 func_800A6490(void)
 }
 
 /**
- * @brief Process pending text entries, or clear their countdowns when disabled.
- * @param arg0 FIELD context forwarded to each active entry's handler.
+ * @brief Draw and count down the actor texts, or clear them while a text session runs.
+ * @param render Render half receiving the text primitives.
  * @note The previous active count controls window cleanup on the next frame.
  */
-void func_800A64D0(ArgA *arg0)
+void field_update_actor_texts(FieldRenderHalf* render)
 {
-    typedef struct
-    {
-        s32 unk0;
-        u32 low : 17;
-        u32 count : 6;
-        u32 high : 9;
-    } UnkStruct801226A0;
-    extern UnkStruct801226A0 D_801226A0[];
-
     s32 i;
     s32 active_count;
 
@@ -780,17 +788,17 @@ void func_800A64D0(ArgA *arg0)
     if (g_field_text_session_active != 0)
     {
         i = 0;
-        for (; i < 3; i++)
+        for (; i < FIELD_ACTOR_TEXT_COUNT; i++)
         {
-            D_801226A0[i].count = 0;
+            g_field_actor_texts[i].state.bits.countdown = 0;
         }
-        D_801227DC = 0;
+        g_field_actor_text_count = 0;
         return;
     }
 
-    for (i = 0; i < 3; i++)
+    for (i = 0; i < FIELD_ACTOR_TEXT_COUNT; i++)
     {
-        if (D_801226A0[i].count)
+        if (g_field_actor_texts[i].state.bits.countdown)
         {
             active_count += 1;
         }
@@ -799,58 +807,51 @@ void func_800A64D0(ArgA *arg0)
     if (active_count != 0)
     {
         field_text_reset_scratch();
-        for (i = 0; i < 3; i++)
+        for (i = 0; i < FIELD_ACTOR_TEXT_COUNT; i++)
         {
-            if (D_801226A0[i].count)
+            if (g_field_actor_texts[i].state.bits.countdown)
             {
-                func_800A6634(arg0, &D_801226A0[i]);
-                D_801226A0[i].count--;
+                field_draw_actor_text(render, &g_field_actor_texts[i]);
+                g_field_actor_texts[i].state.bits.countdown--;
             }
         }
         field_text_upload_immediate_cache();
     }
-    else if (D_801227DC != 0)
+    else if (g_field_actor_text_count != 0)
     {
         field_text_reset_windows();
     }
-    D_801227DC = active_count;
+    g_field_actor_text_count = active_count;
 }
 
 /**
- * @brief Schedule the next text draw for an active entry and store its handle.
- * @param arg0 FIELD context holding the scratch base and current draw handle.
- * @param arg1 Pending text entry supplying the packed position and text pointer.
+ * @brief Draw one actor text, fading it out over its last frames.
+ * @param render Render half holding the primitive cursor and the text layer.
+ * @param text Actor text slot to draw.
  */
-void func_800A6634(ArgA *arg0, ArgB *arg1)
+static void field_draw_actor_text(FieldRenderHalf* render, FieldActorText* text)
 {
-    s32 count;
-    s32 val;
-    u32 field4;
-    s32 handle;
-    void *p40;
+    s32 tint;
+    s32 countdown;
+    FieldActorTextState state;
+    u8* cursor;
+    u_long* ot;
 
-    count = 0x100;
-    handle = arg0->unk40B8;
-    field4 = arg1->unk4;
-    val = (field4 >> 0x11) & 0x3F;
-    p40 = &arg0->unk40;
-    if (val < 0x20)
+    tint = FIELD_TEXT_TINT_NEUTRAL;
+    cursor = render->primitive_cursor;
+    state = text->state;
+    /* Shift and mask by hand: the bitfield read reuses one register for both steps. */
+    countdown = (state.word >> 17) & 0x3F;
+    ot = &render->ordering_table[FIELD_TEXT_OT_DEPTH];
+    if (countdown < FIELD_ACTOR_TEXT_FADE_FRAMES)
     {
-        count = val * 4;
+        tint = countdown * 4;
     }
-    arg0->unk40B8 = func_800A66B4(
-        handle,
-        p40,
-        arg1->unk0,
-        4,
-        field4 & 0x1FF,
-        (arg1->unk4 >> 9) & 0xFF,
-        2,
-        count);
+    render->primitive_cursor = field_draw_tinted_text((SPRT*)cursor, (s32*)ot, text->text, 4, state.bits.x, text->state.bits.y, 2, tint);
 }
 
 /**
- * @brief Builds and links text sprite primitives into an ordering table.
+ * @brief Draw a text line like func_800A88A0, with a gray tint for fading.
  * @param sprite_cursor Primitive-buffer cursor used for generated sprites.
  * @param ordering_table Ordering-table entry that receives the generated primitives.
  * @param text Null-terminated text to render.
@@ -858,10 +859,10 @@ void func_800A6634(ArgA *arg0, ArgB *arg1)
  * @param x Horizontal origin used to position the rendered text.
  * @param y Vertical origin used to position the rendered text.
  * @param alignment Horizontal alignment mode for the generated glyphs.
- * @param color Sprite tint value, or 0x100 to use the neutral tint.
+ * @param color Tint level, or FIELD_TEXT_TINT_NEUTRAL for the neutral tint.
  * @return Primitive-buffer cursor immediately after the generated draw commands.
  */
-void* func_800A66B4(SPRT* sprite_cursor, s32* ordering_table, u8* text, s32 text_color, s32 x, s32 y, s32 alignment, s32 color)
+static void* field_draw_tinted_text(SPRT* sprite_cursor, s32* ordering_table, u8* text, s32 text_color, s32 x, s32 y, s32 alignment, s32 color)
 {
     s32 n, count, i, acc;
     SPRT* sprite;
@@ -932,14 +933,8 @@ void* func_800A66B4(SPRT* sprite_cursor, s32* ordering_table, u8* text, s32 text
 /* ---- Party proficiency and ability/technique unlock progression ---- */
 
 #define FIELD_TECHNIQUE_UNLOCK_RULE_COUNT 227
-#define FIELD_ABILITY_PROFICIENCY_COUNT 88
-#define FIELD_PROGRESSION_PARTY_SIZE 3
-#define FIELD_PROGRESSION_ACTIVE_FLAG 1
-#define FIELD_PROGRESSION_CHARACTER_MASK 0x7F
-#define FIELD_PROGRESSION_PLAYER_COUNT 2U
 #define FIELD_PROFICIENCY_MAX 100U
 #define FIELD_PROFICIENCY_BONUS 4
-#define FIELD_WEAPON_CATEGORY_COUNT 11
 #define FIELD_EQUIPPED_ABILITY_COUNT 2
 #define FIELD_WEAPON_CATEGORY_SHIFT 10
 #define FIELD_WEAPON_CATEGORY_MASK 0x3F
@@ -960,37 +955,6 @@ typedef struct
     u8 weapon_proficiency;
 } FieldTechniqueUnlockRule;
 
-/** @brief Saved character fields used to identify equipped abilities and weapons. */
-typedef struct
-{
-    u8 pad_0[0x18];
-    u8 character;
-    u8 unknown_0x19;
-    u8 abilities[FIELD_EQUIPPED_ABILITY_COUNT];
-    u8 pad_1c[0x64 - 0x1C];
-    u32 equipment;
-    u8 pad_68[SAVED_CHARACTER_SIZE - 0x68];
-} FieldProgressionCharacter;
-
-/** @brief Persistent unlock masks, proficiency counters, and party equipment. */
-typedef struct
-{
-    u8 pad_0[0x34];
-    u32 techniques[FIELD_WEAPON_CATEGORY_COUNT];
-    u32 abilities[3];
-    u8 ability_proficiency[FIELD_ABILITY_PROFICIENCY_COUNT];
-    u8 weapon_proficiency[FIELD_WEAPON_CATEGORY_COUNT];
-    u8 pad_cf[0x5F0 - 0xCF];
-    FieldProgressionCharacter characters[FIELD_PROGRESSION_PARTY_SIZE];
-} FieldProgressionContext;
-
-/** @brief Presence flags at the start of each runtime party record. */
-typedef struct
-{
-    u8 flags;
-    u8 pad_1[0x268 - 1];
-} FieldProgressionPartyRecord;
-
 extern FieldTechniqueUnlockRule g_field_technique_unlock_rules[];
 /* Scene image setup also uses this flag; its broader purpose is unresolved. */
 extern s32 D_80115890;
@@ -1002,14 +966,12 @@ extern s32 D_80115890;
  */
 void field_advance_ability_progression(void)
 {
-    extern FieldProgressionContext* g_pad_ctx;
-    extern FieldProgressionPartyRecord g_field_player_records[];
     s32 ability_index;
     FieldAbilityUnlockRule* ability_base;
     s32 technique_index;
     FieldTechniqueUnlockRule* technique_base;
     FieldTechniqueUnlockRule* active_rule;
-    FieldProgressionContext* context;
+    FieldGameState* context;
     FieldAbilityUnlockRule* ability_rule;
     FieldTechniqueUnlockRule* technique_rule;
     s32 technique_mask;
@@ -1029,11 +991,11 @@ void field_advance_ability_progression(void)
     party_index = 0;
     do
     {
-        if (g_field_player_records[party_index].flags & FIELD_PROGRESSION_ACTIVE_FLAG)
+        if (g_field_player_records[party_index].flags & FIELD_PLAYER_ACTIVE)
         {
-            if ((u32)(g_pad_ctx->characters[party_index].character & FIELD_PROGRESSION_CHARACTER_MASK) < FIELD_PROGRESSION_PLAYER_COUNT)
+            if ((u32)(g_pad_ctx->characters[party_index].info.actions.type & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
             {
-                weapon_category = (g_pad_ctx->characters[party_index].equipment >> FIELD_WEAPON_CATEGORY_SHIFT) & FIELD_WEAPON_CATEGORY_MASK;
+                weapon_category = (g_pad_ctx->characters[party_index].equipment[FIELD_WEAPON_SLOT].info.word >> FIELD_WEAPON_CATEGORY_SHIFT) & FIELD_WEAPON_CATEGORY_MASK;
                 if (weapon_category < FIELD_WEAPON_CATEGORY_COUNT)
                 {
                     weapon_proficiency = g_pad_ctx->weapon_proficiency[weapon_category];
@@ -1043,10 +1005,10 @@ void field_advance_ability_progression(void)
                         {
                             g_pad_ctx->weapon_proficiency[weapon_category] = weapon_proficiency + FIELD_PROFICIENCY_BONUS;
 
-                            if (g_pad_ctx->weapon_proficiency[((g_pad_ctx->characters[party_index].equipment >> FIELD_WEAPON_CATEGORY_SHIFT) &
+                            if (g_pad_ctx->weapon_proficiency[((g_pad_ctx->characters[party_index].equipment[FIELD_WEAPON_SLOT].info.word >> FIELD_WEAPON_CATEGORY_SHIFT) &
                                                                FIELD_WEAPON_CATEGORY_MASK)] > FIELD_PROFICIENCY_MAX)
                             {
-                                g_pad_ctx->weapon_proficiency[((g_pad_ctx->characters[party_index].equipment >> FIELD_WEAPON_CATEGORY_SHIFT) &
+                                g_pad_ctx->weapon_proficiency[((g_pad_ctx->characters[party_index].equipment[FIELD_WEAPON_SLOT].info.word >> FIELD_WEAPON_CATEGORY_SHIFT) &
                                                                FIELD_WEAPON_CATEGORY_MASK)] = FIELD_PROFICIENCY_MAX;
                             }
                         }
@@ -1058,29 +1020,29 @@ void field_advance_ability_progression(void)
                 }
                 for (ability = 0; ability < FIELD_EQUIPPED_ABILITY_COUNT; ability++)
                 {
-                    ability_proficiency = g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].abilities[ability]];
+                    ability_proficiency = g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].info.actions.commands[ability]];
                     if (ability_proficiency < FIELD_PROFICIENCY_MAX)
                     {
                         if (D_80115890 != 0)
                         {
-                            g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].abilities[ability]] =
+                            g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].info.actions.commands[ability]] =
                                 ability_proficiency + FIELD_PROFICIENCY_BONUS;
 
-                            if (g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].abilities[ability]] > FIELD_PROFICIENCY_MAX)
+                            if (g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].info.actions.commands[ability]] > FIELD_PROFICIENCY_MAX)
                             {
-                                g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].abilities[ability]] = FIELD_PROFICIENCY_MAX;
+                                g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].info.actions.commands[ability]] = FIELD_PROFICIENCY_MAX;
                             }
                         }
                         else
                         {
-                            g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].abilities[ability]] = ability_proficiency + 1;
+                            g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].info.actions.commands[ability]] = ability_proficiency + 1;
                         }
                     }
                 }
             }
         }
         party_index++;
-    } while (party_index < FIELD_PROGRESSION_PARTY_SIZE);
+    } while (party_index < FIELD_PARTY_SIZE);
     context = g_pad_ctx;
     /* Ability rules require each nonempty prerequisite to be learned and trained. */
     ability_index = 0;
@@ -1091,22 +1053,22 @@ void field_advance_ability_progression(void)
         ability_rule = &ability_base[ability_index];
         ability = ability_rule->result;
         ability_word = ability / FIELD_UNLOCK_BITS_PER_WORD;
-        if (!(context->abilities[ability_word] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))))
+        if (!(context->ability_bits[ability_word] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))))
         {
             ability = ability_rule->prerequisites[0].ability;
             if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
-                ((context->abilities[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
+                ((context->ability_bits[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
                  (context->ability_proficiency[ability] >= ability_rule->prerequisites[0].proficiency)))
             {
                 ability = ability_rule->prerequisites[1].ability;
                 if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
-                    ((context->abilities[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
+                    ((context->ability_bits[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
                      (context->ability_proficiency[ability] >= ability_rule->prerequisites[1].proficiency)))
                 {
                     ability = ability_rule->result;
                     unlocked_ability_word = ability / FIELD_UNLOCK_BITS_PER_WORD;
-                    context->abilities[unlocked_ability_word] =
-                        (s32)(context->abilities[unlocked_ability_word] | (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD)));
+                    context->ability_bits[unlocked_ability_word] =
+                        (s32)(context->ability_bits[unlocked_ability_word] | (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD)));
                     g_field_progression_unlocks[g_field_progression_unlock_count] = (s16)ability;
                     g_field_progression_unlock_count += 1;
                 }
@@ -1123,26 +1085,26 @@ void field_advance_ability_progression(void)
         technique_rule = &technique_base[technique_index];
         technique_group = technique_rule->weapon >> FIELD_TECHNIQUE_GROUP_SHIFT;
         ability = technique_rule->result & FIELD_TECHNIQUE_INDEX_MASK;
-        if (!(context->techniques[technique_group] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))))
+        if (!(context->technique_bits[technique_group] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))))
         {
             ability = technique_rule->prerequisites[0].ability;
             if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
-                ((context->abilities[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
+                ((context->ability_bits[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
                  (context->ability_proficiency[ability] >= technique_rule->prerequisites[0].proficiency)))
             {
                 ability = technique_rule->prerequisites[1].ability;
                 if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
-                    ((context->abilities[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
+                    ((context->ability_bits[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
                      (context->ability_proficiency[ability] >= technique_rule->prerequisites[1].proficiency)))
                 {
                     ability = technique_rule->prerequisites[2].ability;
                     if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
-                        ((context->abilities[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
+                        ((context->ability_bits[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
                          (context->ability_proficiency[ability] >= technique_rule->prerequisites[2].proficiency)))
                     {
                         ability = technique_rule->prerequisites[3].ability;
                         if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
-                            ((context->abilities[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
+                            ((context->ability_bits[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
                              (context->ability_proficiency[ability] >= technique_rule->prerequisites[3].proficiency)))
                         {
                             technique_party_index = 0;
@@ -1150,21 +1112,21 @@ void field_advance_ability_progression(void)
                             ability = technique_rule->result & FIELD_TECHNIQUE_INDEX_MASK;
                             do
                             {
-                                if ((g_field_player_records[technique_party_index].flags & FIELD_PROGRESSION_ACTIVE_FLAG) &&
-                                    ((u32)(context->characters[technique_party_index].character & FIELD_PROGRESSION_CHARACTER_MASK) <
-                                     FIELD_PROGRESSION_PLAYER_COUNT))
+                                if ((g_field_player_records[technique_party_index].flags & FIELD_PLAYER_ACTIVE) &&
+                                    ((u32)(context->characters[technique_party_index].info.actions.type & FIELD_CHARACTER_TYPE_MASK) <
+                                     FIELD_CHARACTER_GUEST))
                                 {
                                     weapon_requirement = active_rule->weapon;
                                     equipped_weapon =
-                                        (context->characters[technique_party_index].equipment >> FIELD_WEAPON_CATEGORY_SHIFT) & FIELD_WEAPON_CATEGORY_MASK;
+                                        (context->characters[technique_party_index].equipment[FIELD_WEAPON_SLOT].info.word >> FIELD_WEAPON_CATEGORY_SHIFT) & FIELD_WEAPON_CATEGORY_MASK;
                                     if (equipped_weapon == (weapon_requirement & FIELD_TECHNIQUE_WEAPON_MASK))
                                     {
                                         if (context->weapon_proficiency[equipped_weapon] >= active_rule->weapon_proficiency)
                                         {
-                                            if (!(context->techniques[technique_group] & (technique_mask = 1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))))
+                                            if (!(context->technique_bits[technique_group] & (technique_mask = 1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))))
                                             {
                                                 technique_group = weapon_requirement >> FIELD_TECHNIQUE_GROUP_SHIFT;
-                                                context->techniques[technique_group] = (s32)(context->techniques[technique_group] | technique_mask);
+                                                context->technique_bits[technique_group] = (s32)(context->technique_bits[technique_group] | technique_mask);
                                                 if (!(active_rule->result & FIELD_TECHNIQUE_SILENT_FLAG))
                                                 {
                                                     g_field_progression_unlocks[g_field_progression_unlock_count] =
@@ -1176,7 +1138,7 @@ void field_advance_ability_progression(void)
                                     }
                                 }
                                 technique_party_index += 1;
-                            } while (technique_party_index < FIELD_PROGRESSION_PARTY_SIZE);
+                            } while (technique_party_index < FIELD_PARTY_SIZE);
                         }
                     }
                 }
@@ -1188,81 +1150,35 @@ void field_advance_ability_progression(void)
 
 /* ---- Dialog screens (0x800A6EEC .. 0x800A88A0) ---- */
 
-/** @brief Opaque pad-context handle; some users view it as other record types. */
-typedef struct PadContext PadContext;
+/** @brief g_field_dialog_screen_mode values of the battle result screens. */
+#define FIELD_RESULTS_PARTY_SUMMARY 1
+#define FIELD_RESULTS_ITEM_LIST 2
+#define FIELD_RESULTS_UNLOCK_LIST 3
 
-/** @brief Packed actor addresses and restored state in a 0x23C-byte record. */
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-    u8 padC[0x48 - 12];
-    s16 unk48;
-    u8 pad4A[0x23C - 0x4A];
-} Actor;
+/** @brief Result window layout: left edge, row height, vertical center and largest visible height. */
+#define FIELD_RESULTS_WINDOW_X 0x20
+#define FIELD_RESULTS_ROW_HEIGHT 16
+#define FIELD_RESULTS_CENTER_Y 112
+#define FIELD_RESULTS_MAX_HEIGHT 160
+/** @brief Unlock list columns: group header and centered name. */
+#define FIELD_RESULTS_HEADER_X 0x20
+#define FIELD_RESULTS_NAME_X 0x80
+/** @brief Palette and texture page of the animated result icons. */
+#define FIELD_RESULTS_ICON_CLUT getClut(112, 490)
+#define FIELD_RESULTS_ICON_TPAGE getTPage(0, 1, 384, 0)
 
-/** @brief Saved pad-context counter used when resuming the field. */
-typedef struct
-{
-    u8 pad0[0x315C];
-    s32 unk315C;
-} Pad;
+/** @brief Resource with the ability and technique name tables. */
+#define FIELD_RES_UNLOCK_NAMES 0x5DF
+#define FIELD_SOUND_UNLOCK_LIST 0xA1
+#define FIELD_SOUND_WINDOW_OPEN 0xB9
+#define FIELD_SOUND_CURSOR 0x7D
+#define FIELD_SOUND_SELECT 0x7E
 
-/** @brief 0x268-byte entry whose first halfword carries per-slot flag bits. */
-typedef struct {
-    union { u16 h; struct { u8 unk0; u8 unk1; } b; } u0;
-    u8 pad2[0x268 - 2];
-} Entry268;
+/** @brief Frames the party summary waits before it accepts confirm. */
+#define FIELD_RESULTS_WAIT_FRAMES 4
 
-/** @brief 0x54-byte record exposing the halfword at 0x2A. */
-typedef struct {
-    u8 pad0[0x2A];
-    s16 unk2A;
-    u8 pad2C[0x54 - 0x2C];
-} Rec54;
-
-/** @brief 0x23C-byte state record exposing words at 0xC and 0x178. */
-typedef struct {
-    u8 pad0[0xC];
-    s32 unkC;
-    u8 pad10[0x178 - 0x10];
-    s32 unk178;
-    u8 pad17C[0x23C - 0x17C];
-} State23C;
-
-/** @brief Partial slot record exposing the halfword cleared by func_800A74E8. */
-typedef struct
-{
-    u8 pad0[0x260];
-    s16 unk260;
-    u8 pad262[0x268 - 0x262];
-} RecFD818;
-
-/** @brief Actor record prefix containing the active flag. */
-typedef struct
-{
-    u8 active;
-    u8 pad1[0x268 - 1];
-} FieldActorEntry;
-
-/** @brief 0x268-byte record exposing the two count bytes at 0x25C/0x25D. */
-typedef struct
-{
-    u8 pad0[0x25C];
-    u8 unk25C;
-    u8 unk25D;
-    u8 pad25E[0x268 - 0x25E];
-} FieldEntry268;
-
-/** @brief Displayed numeric fields in a 0x268-byte player record. */
-typedef struct
-{
-    u8 pad0[0x25A];
-    u8 first;
-    u8 second;
-    u8 tail[0xC];
-} FieldRankPlayer;
+/** @brief g_field_progression_unlocks entry: technique (low bits: group * 24 + index) rather than ability. */
+#define FIELD_UNLOCK_TECHNIQUE FIELD_TECHNIQUE_UNLOCK_FLAG
 
 /** @brief Drawing position and three sorted actor indices sharing the local work area. */
 typedef struct
@@ -1281,53 +1197,48 @@ typedef struct
 /** @brief Experience a party member gained since g_field_experience_snapshot was sampled. */
 #define FIELD_EXPERIENCE_GAIN(index) ((s32)((g_pad_ctx->characters[index].progress.word >> 8) - g_field_experience_snapshot[index]))
 
-/** @brief Two-byte relative offset into the shared FIELD string table. */
-typedef struct
-{
-    u8 unk0;
-    u8 unk1;
-} StructEC;
-
-/** @brief Packed little-endian offset into the shared header text block. */
+/** @brief One entry of the dialog text bank's offset table (little-endian, read bytewise). */
 typedef struct PackedOffset
 {
-    unsigned char low;
-    unsigned char high;
+    u8 low;
+    u8 high;
 } PackedOffset;
 
-/** @brief Text resource header with offsets to both item-name tables. */
+/** @brief Header of the unlock name resource: offsets of its two name banks. */
 typedef struct TextResource
 {
     s32 unused;
-    s32 normal;
-    s32 special;
+    s32 ability_names;
+    s32 technique_names;
 } TextResource;
 
-/** @brief Eight-word animation lookup table copied to local storage. */
+/** @brief Eight-frame animation table; the icon drawers copy it into a local array. */
 typedef struct
 {
     s32 words[8];
 } FieldQuadAnimationTable;
 
-/* --- Shared (non-conflicting) extern data --- */
-extern u8 D_8011F430[];
+extern u8 g_field_retry_snapshot[];
+/*
+ * The dialog text bank D_800EC3C4 starts with PackedOffset entries (offsets
+ * from the bank start); the entries used here are referenced by their own
+ * address symbols, which the code needs for its address arithmetic.
+ */
 extern u8 D_800EC3D6[];
 extern u8 D_800EC3C6[], D_800EC3DA[];
 extern u8 g_field_dialog_item_quantities[];
-extern unsigned char D_800EC3C4[];
-extern void *g_field_dialog_item_texts[];
+extern u8 D_800EC3C4[];
+extern u8* g_field_dialog_item_texts[];
 extern s32 g_field_experience_snapshot[];
-extern Rec54 g_field_actors[];
-extern StructEC D_800EC3D8;
+extern PackedOffset D_800EC3D8;
 extern PackedOffset D_800EC3CC;
 extern PackedOffset D_800EC3CE;
-extern FieldQuadAnimationTable D_800513E8, D_80051408, D_80051428, D_80051448;
-extern s32 D_801227EC;
+extern FieldQuadAnimationTable g_field_small_icon_frames, g_field_marker_x_offsets, g_field_marker_u_offsets, g_field_marker_widths;
+extern s32 g_field_results_wait_frames;
 extern s32 g_field_text_session_active;
 extern s32 g_field_dialog_item_count;
 extern s32 g_field_dialog_screen_mode;
-extern s32 D_801226D8;
-extern s32 D_8011F420;
+extern s32 g_field_money_snapshot;
 extern s32 g_pad_input;
 extern s32 g_pending_game_state;
 extern s32 g_field_return_to_title_prompt_state;
@@ -1335,72 +1246,65 @@ extern s32 g_field_return_to_title_prompt_delay;
 extern s32 g_frame_counter;
 extern s32 g_field_pending_spawn_id, g_field_pending_music_id, g_field_pending_secondary_music_id, g_field_pending_scene_id, g_field_pending_object_id, g_field_pending_sound_bank_id;
 
-/* --- Shared (non-conflicting) extern function prototypes --- */
 extern void field_reset_input_repeat(void);
 extern void akao_cmd_f1(void);
 /* Defined as (void) in field_resource_load.c; the original call still passes the cursor in $a0. */
 extern s32 func_800B0888(void *arg0);
-extern s32 field_emit_actor_portrait(s32, s32, s32, Vec2s *);
+/* Defined in field_modal_runtime.c and field_actor_hud_effects.c. */
+void* func_800A88A0(SPRT* cursor, s32* ot, u8* text, s32 color, s32 x, s32 y, s32 flags);
+void* func_800A8A78(void* ot, void* cursor, s32 value, s32 color, Vec2s* position, s32 flags);
+void* field_emit_actor_portrait(SPRT* sprt, u_long* ot, s32 index, Vec2s* position);
 
-/* --- Forward prototypes for members defined later (real signatures) --- */
-void func_800A7384(void);
-void func_800A764C(void);
-void func_800A7724(void);
-void func_800A788C(void *ot, void *cursor, s32 x_offset, s32 y_offset);
-s32 func_800A7B54(s32 ordering_table, s32 cursor, s32 x_offset, s32 y_offset);
-s32 func_800A7FB4(s32 *ot, s32 prim, s32 arg2, s32 arg3);
-s32 func_800A8128(s32 ordering_table, s32 cursor, s32 scroll_x, s32 scroll_y, s32 viewport_height);
-void *func_800A8524(s32 *ordering_table, POLY_FT4 *prim, s32 x, s32 y);
-void *func_800A8660(s32 *ordering_table, POLY_FT4 *prim, s32 x, s32 y);
+void field_close_battle_results(void);
+static void field_open_unlock_list(void);
+static void field_open_item_list(void);
+static void field_open_party_summary(void);
+static void* field_draw_party_totals(void* ot, void* cursor, s32 x_offset, s32 y_offset);
+static void* field_draw_experience_ranking(void* ot, void* cursor, s32 x_offset, s32 y_offset);
+static void* field_draw_item_list(void* ot, void* cursor, s32 x_offset, s32 y_offset);
+static void* field_draw_unlock_list(void* ot, void* cursor, s32 scroll_x, s32 scroll_y, s32 viewport_height);
+static POLY_FT4* field_draw_animated_icon(u32* ordering_table, POLY_FT4* prim, s32 x, s32 y, s32 wide);
+static void* field_draw_animated_small_icon(s32* ordering_table, POLY_FT4* prim, s32 x, s32 y);
+static void* field_draw_animated_marker(s32* ordering_table, POLY_FT4* prim, s32 x, s32 y);
 
 /**
- * @brief Snapshot the pad context into the field save buffer.
+ * @brief Save the game state before a battle so that it can be retried.
  */
-void func_800A6EEC(void)
+void field_save_retry_snapshot(void)
 {
-    extern void *bcopy(const void *, void *, int);
-    extern PadContext *g_pad_ctx;
-
-    bcopy(g_pad_ctx, D_8011F430, 0x3268);
+    bcopy((u8*)g_pad_ctx, g_field_retry_snapshot, SAVED_GAME_DATA_SIZE);
 }
 
 /**
- * @brief Process the return-to-title choice or restore the saved field scene.
+ * @brief Run the return-to-title prompt: take its choice, then quit or retry the battle.
+ * @note Retrying restores g_field_retry_snapshot, refills the party's HP and
+ *       technique gauges and restarts the scene.
  */
-void func_800A6F1C(void)
+void field_handle_return_to_title_prompt(void)
 {
-    extern void bcopy(void *, void *, s32);
-    extern Pad *g_pad_ctx;
-    extern u8 g_field_player_records[];
-    extern Actor g_field_object_states[];
-
-    Actor *actor;
-    s32 prompt_state;
-    s32 resume_count;
+    FieldObjectState* actor;
     s32 actor_index;
-    u32 low_mask, high_mask;
-    s16 sentinel;
-    u8 *player_record;
+    u32 hp_mask, status_mask;
+    s16 full_gauge;
+    FieldPlayerRecord* player;
 
-    ControllerState *controller = CONTROLLER_STATE;
+    ControllerState* controller = CONTROLLER_STATE;
 
-    if (!(D_80122828[0].attr.word & 7))
+    if (D_80122828[0].attr.bits.state == 0)
     {
-        prompt_state = g_field_return_to_title_prompt_state - 1;
-        g_field_return_to_title_prompt_state = prompt_state;
-        if (prompt_state == 0)
+        /* The prompt window has closed: act on the choice. */
+        if (--g_field_return_to_title_prompt_state == 0)
         {
-            if (D_801226D8 != 0)
+            if (g_field_return_to_title_choice != 0)
             {
                 g_field_return_to_title_prompt_state = 1;
-                g_pending_game_state = 2;
+                g_pending_game_state = GAME_STATE_TITLE;
                 return;
             }
-            bcopy(D_8011F430, g_pad_ctx, 0x3268);
-            resume_count = g_pad_ctx->unk315C;
-            if (resume_count != -1)
+            bcopy(g_field_retry_snapshot, (u8*)g_pad_ctx, SAVED_GAME_DATA_SIZE);
+            if (g_pad_ctx->retry_count != -1)
             {
-                g_pad_ctx->unk315C = (s32)(resume_count + 1);
+                g_pad_ctx->retry_count++;
             }
             controller->ports[1].small_motor_command = 0;
             controller->ports[0].small_motor_command = 0;
@@ -1410,225 +1314,190 @@ void func_800A6F1C(void)
             field_set_scene_parameters(g_field_pending_scene_id, g_field_pending_object_id, g_field_pending_spawn_id, g_field_pending_music_id, g_field_pending_sound_bank_id,
                                        g_field_pending_secondary_music_id);
             actor_index = 0;
-            /* Mask locals set the order of the hoisted loop constants. */
-            low_mask = 0xFFFFFF;
-            high_mask = 0xFF000000;
-            sentinel = 0xFF;
-            player_record = g_field_player_records;
-            for (; actor_index < 3; actor_index++)
+            /* The mask locals set the order of the hoisted loop constants. */
+            hp_mask = 0xFFFFFF;
+            status_mask = 0xFF000000;
+            full_gauge = 0xFF;
+            for (; actor_index < FIELD_PARTY_COUNT; actor_index++)
             {
                 actor = &g_field_object_states[actor_index];
-                actor->unk8 = (actor->unk8 & high_mask) | (actor->unk0 & low_mask);
-                actor->unk4 = actor->unk0 & low_mask;
-                if (*player_record & 1)
+                player = &g_field_player_records[actor_index];
+                actor->unk8.word = (actor->unk8.word & status_mask) | (actor->unk0 & hp_mask);
+                actor->unk4.word = actor->unk0 & hp_mask;
+                if (player->flags & FIELD_PLAYER_ACTIVE)
                 {
-                    actor->unk48 = sentinel;
+                    actor->technique_gauge = full_gauge;
                 }
-                player_record += 0x268;
             }
         }
     }
     else if (func_800ADEEC() == 0)
     {
-        if (g_pad_input & 0xA20)
+        if (g_pad_input & (FIELD_PAD_CONFIRM | PAD_BTN_START))
         {
-            func_800A3938(0x7E, 0x80);
+            field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_CENTER);
             func_800ADF34();
             field_begin_return_to_title_prompt_close();
             return;
         }
-        if (g_pad_input & 0xF100)
+        if (g_pad_input & (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT | PAD_BTN_SELECT))
         {
-            func_800A3938(0x7D, 0x80);
-            D_801226D8 ^= 1;
+            field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_CENTER);
+            g_field_return_to_title_choice ^= 1;
         }
     }
 }
 
 /**
- * @brief Route a confirm/cancel pad press to the active field sub-dialog.
- *
- * When no modal is blocking (func_800ADEEC returns 0) and a confirm or cancel
- * button is held (@c g_pad_input & 0x220), dispatches on the current dialog
- * mode @c g_field_dialog_screen_mode: mode 1 advances via func_800A7384 (gated by
- * @c D_801227EC); mode 3 backs out via func_800A764C when @c g_field_dialog_item_count is set,
- * else falls through to the mode-2 handler func_800A7724.
- *
+ * @brief Advance the battle result screens on confirm: unlocks, then items, then the party summary, then close.
  */
-void func_800A710C(void)
+void field_update_battle_results_input(void)
 {
-    if ((func_800ADEEC() == 0) && (g_pad_input & 0x220))
+    if ((func_800ADEEC() == 0) && (g_pad_input & FIELD_PAD_CONFIRM))
     {
         switch (g_field_dialog_screen_mode)
         {
-        case 1:
-            if (D_801227EC == 0)
+        case FIELD_RESULTS_PARTY_SUMMARY:
+            if (g_field_results_wait_frames == 0)
             {
-                func_800A7384();
+                field_close_battle_results();
                 return;
             }
             break;
-        case 3:
+        case FIELD_RESULTS_UNLOCK_LIST:
             if (g_field_dialog_item_count != 0)
             {
-                func_800A764C();
+                field_open_item_list();
                 return;
             }
             /* fallthrough */
-        case 2:
-            func_800A7724();
+        case FIELD_RESULTS_ITEM_LIST:
+            field_open_party_summary();
             break;
         }
     }
 }
 
 /**
- * @brief Load menu data and size its display record for both entry categories.
+ * @brief Open the list of abilities and techniques learned in the battle.
  */
-void func_800A71CC(void)
+static void field_open_unlock_list(void)
 {
-    extern s32 g_field_cd_buffer;
-
-    s16 raw_height;
-    s32 height;
-    u16 entry_count;
-    s32 entry_limit;
+    s16 height;
     s32 padding;
     s32 index;
-    s32 saw_special;
-    s32 saw_normal;
-    u16 *entry;
-    u32 large_state;
-    u32 state;
-    u32 small_state;
+    s32 saw_technique;
+    s32 saw_ability;
     FieldMenuElement *record;
+    u32 size;
 
-    cdrom_queue_read(0x5DF, g_field_cd_buffer);
+    cdrom_queue_read(FIELD_RES_UNLOCK_NAMES, g_field_cd_buffer);
     cdrom_wait_queue_empty();
-    func_800A3938(0xA1, 0x80);
-    g_field_dialog_screen_mode = 3;
+    field_play_sound(FIELD_SOUND_UNLOCK_LIST, FIELD_SOUND_CENTER);
+    g_field_dialog_screen_mode = FIELD_RESULTS_UNLOCK_LIST;
     func_800ADF34();
     record = func_800ADF84();
-    record->attr.word = (s32)((((record->attr.word & ~0x78) | 8) & 0xFFFF007F) | 0x1000);
-    saw_normal = 0;
-    saw_special = 0;
-    index = 0;
+    record->attr.bits.step = 1;
+    record->attr.bits.x = FIELD_RESULTS_WINDOW_X;
+    /* Each group (abilities, techniques) gets a header row. */
+    saw_ability = 0;
+    saw_technique = 0;
     padding = 0;
-    entry_count = g_field_progression_unlock_count;
-    if (entry_count != 0)
+    for (index = 0; index < g_field_progression_unlock_count; index++)
     {
-        entry_limit = entry_count;
-        entry = g_field_progression_unlocks;
-        do
+        if (g_field_progression_unlocks[index] & FIELD_UNLOCK_TECHNIQUE)
         {
-            if (*entry & 0x8000)
+            if (saw_technique == 0)
             {
-                if (saw_special == 0)
-                {
-                    saw_special = 1;
-                    padding += 0x10;
-                }
+                saw_technique = 1;
+                padding += FIELD_RESULTS_ROW_HEIGHT;
             }
-            else if (saw_normal == 0)
-            {
-                saw_normal = 1;
-                padding += 0x10;
-            }
-            index += 1;
-            entry++;
-        } while (index < entry_limit);
+        }
+        else if (saw_ability == 0)
+        {
+            saw_ability = 1;
+            padding += FIELD_RESULTS_ROW_HEIGHT;
+        }
     }
 
     /* The callback has its own prototype; cast to the element draw type. */
-    record->draw = (FieldMenuDrawFn)func_800A8128;
-    record->attr.word = (s32)(record->attr.word & 0xFFFFFF);
-    state = record->size.word;
-    state |= 1;
-    record->size.word = state;
-    raw_height = (g_field_progression_unlock_count * 0x10) + padding;
-    record->size.word = state | 0x200;
-    record->size.fields.content_height = raw_height;
-    height = raw_height;
-    if (height < 0xA1)
+    record->draw = (FieldMenuDrawFn)field_draw_unlock_list;
+    record->attr.word &= ~FIELD_MENU_ATTR_WIDTH_LOW;
+    size = record->size.word;
+    size |= FIELD_MENU_SIZE_WIDTH_HIGH;
+    record->size.word = size;
+    height = g_field_progression_unlock_count * FIELD_RESULTS_ROW_HEIGHT + padding;
+    record->size.word = size | FIELD_MENU_SIZE_BLINK;
+    record->size.fields.content_height = height;
+    if (height <= FIELD_RESULTS_MAX_HEIGHT)
     {
-        small_state = (record->size.word & ~0x1FE) | ((height & 0xFF) * 2);
-        record->size.word = small_state;
-        record->attr.bytes.y = 0x70 - ((small_state >> 2) & 0x7F);
+        record->size.bits.height = height;
+        record->attr.bytes.y = FIELD_RESULTS_CENTER_Y - record->size.bits.height / 2;
         return;
     }
 
+    /* Too tall for the screen: scroll it with the pad. */
     record->scroll = 0;
     record->scroll_target = 0;
     record->scroll_ticks = 0;
-    large_state = (((record->size.word & ~0xC00) | 0x400) & ~0x1FE) | 0x140;
-    record->size.word = large_state;
-    record->attr.bytes.y = 0x70 - ((large_state >> 2) & 0x50);
+    record->size.bits.scroll_mode = 1;
+    record->size.bits.height = FIELD_RESULTS_MAX_HEIGHT;
+    record->attr.bytes.y = FIELD_RESULTS_CENTER_Y - record->size.bits.height / 2;
 }
 
 /**
- * @brief Clear pending selection flags across the three actor slots.
+ * @brief Close the result screens: get knocked-down players up and clear the party's battle flags.
  */
-void func_800A7384(void)
+void field_close_battle_results(void)
 {
-    extern Entry268 g_field_player_records[];
-    extern State23C g_field_object_states[];
-
     s32 i;
 
     g_field_text_session_active = 0;
-    i = 0;
-    do {
-        if ((g_field_player_records[i].u0.b.unk0 & 1) && g_field_actors[i].unk2A == 0x8E) {
-            g_field_actors[i].unk2A = 0;
+    for (i = 0; i < FIELD_PARTY_COUNT; i++)
+    {
+        if ((g_field_player_records[i].flags & FIELD_PLAYER_ACTIVE) && g_field_actors[i].command == FIELD_ACTOR_COMMAND_KNOCKED_DOWN)
+        {
+            g_field_actors[i].command = 0;
         }
-        i++;
-    } while (i < 3);
+    }
 
     field_close_dialog_screen();
 
-    i = 0;
-    do {
-        g_field_object_states[i].unkC = 0;
-        g_field_object_states[i].unk178 &= ~0x20;
-        i++;
-    } while (i < 3);
+    for (i = 0; i < FIELD_PARTY_COUNT; i++)
+    {
+        g_field_object_states[i].flags = 0;
+        g_field_object_states[i].contact.word &= ~FIELD_CONTACT_NO_HIT_TEST;
+    }
     g_field_dialog_item_count = 0;
 }
 
 /**
- * @brief Reset field sub-state and dispatch to one of three handlers.
- *
- * Runs the shared reset (func_800ADEB0, then latches @c D_801227EC to 4 and
- * calls field_reset_input_repeat), then selects a handler by state: func_800A71CC when
- * @c g_field_progression_unlock_count is set, else func_800A764C when @c g_field_dialog_item_count is set, else
- * func_800A7724. Finishes with func_800B0A08(0).
- *
+ * @brief Open the battle result screens with the first one that has content.
  */
-void func_800A7434(void)
+void field_open_battle_results(void)
 {
-
     func_800ADEB0();
-    D_801227EC = 4;
+    g_field_results_wait_frames = FIELD_RESULTS_WAIT_FRAMES;
     field_reset_input_repeat();
     if (g_field_progression_unlock_count != 0)
     {
-        func_800A71CC();
+        field_open_unlock_list();
     }
     else if (g_field_dialog_item_count != 0)
     {
-        func_800A764C();
+        field_open_item_list();
     }
     else
     {
-        func_800A7724();
+        field_open_party_summary();
     }
     func_800B0A08(0);
 }
 
 /**
- * @brief Finish a field sub-dialog and return to the base field loop.
+ * @brief End a duel: show its result panel instead of the result screens.
  */
-void func_800A74B8(void)
+void field_open_duel_results(void)
 {
     field_reset_input_repeat();
     func_800B0A08(0);
@@ -1636,174 +1505,160 @@ void func_800A74B8(void)
 }
 
 /**
- * @brief Configure the return-to-title prompt and reset its three slot values.
+ * @brief Open the return-to-title prompt windows (coordinate panel and yes/no choice).
  * @note The mixed word and bitfield updates preserve the original store widths.
  */
-void func_800A74E8(void)
+void field_setup_return_to_title_prompt(void)
 {
-    extern RecFD818 g_field_player_records[];
-
     FieldMenuElement *rec;
-    u32 state;
     s32 i;
 
     func_800ADEB0();
-    func_800A3938(0xB9, 0x80);
+    field_play_sound(FIELD_SOUND_WINDOW_OPEN, FIELD_SOUND_CENTER);
 
     rec = func_800ADF84();
     /* The callback has its own prototype; cast to the element draw type. */
-    rec->draw = (FieldMenuDrawFn)func_800AE8A8;
+    rec->draw = (FieldMenuDrawFn)field_draw_coordinate_panel;
     rec->attr.bits.step = 1;
     rec->attr.bits.x = 0x20;
-    state = (rec->size.word | 1) & ~0x1FE;
+    rec->size.bits.width_high = 1;
+    rec->size.bits.height = 48;
     rec->attr.bits.y = 0x30;
-    state |= 0x60;
-    rec->size.word = state;
-    rec->attr.word &= 0xFFFFFF;
+    rec->attr.word &= ~FIELD_MENU_ATTR_WIDTH_LOW;
 
     rec = func_800ADF84();
-    rec->draw = (FieldMenuDrawFn)func_800AED20;
+    rec->draw = (FieldMenuDrawFn)field_draw_return_to_title_choices;
     rec->attr.bits.step = 1;
     rec->attr.bits.x = 0x50;
     rec->size.bits.width_high = 0;
     rec->size.bits.height = 0x22;
     rec->attr.bits.y = 0x80;
 
-    rec->attr.word = (rec->attr.word & 0xFFFFFF) | 0xA0000000;
+    rec->attr.word = (rec->attr.word & ~FIELD_MENU_ATTR_WIDTH_LOW) | (160 << FIELD_MENU_ATTR_WIDTH_LOW_SHIFT);
 
     field_select_coordinate_labels();
     akao_cmd_f1();
 
     g_field_return_to_title_prompt_delay = 0x3C;
     g_field_return_to_title_prompt_state = 3;
-    D_801226D8 = 0;
-    func_800AE9E0();
+    g_field_return_to_title_choice = 0;
+    field_upload_player_icons();
 
     for (i = 2; i >= 0; i--)
     {
-        g_field_player_records[i].unk260 = 0;
+        g_field_player_records[i].revive_delay = 0;
     }
 }
 
 /**
- * @brief Configure a field prompt record for the current selection state.
+ * @brief Open the list of items found in the battle.
  */
-void func_800A764C(void)
+static void field_open_item_list(void)
 {
-
     FieldMenuElement *rec;
     u32 state;
 
-    g_field_dialog_screen_mode = 2;
-    func_800A3938(0xB9, 0x80);
+    g_field_dialog_screen_mode = FIELD_RESULTS_ITEM_LIST;
+    field_play_sound(FIELD_SOUND_WINDOW_OPEN, FIELD_SOUND_CENTER);
     func_800ADF34();
 
     rec = func_800ADF84();
     rec->attr.bits.step = 1;
     rec->attr.bits.x = 0x40;
 
-    state = rec->size.word & ~0x1FE;
-    state |= (((g_field_dialog_item_count << 4) + 0x10) & 0xFF) << 1;
-    rec->attr.bits.y = 0x70 - ((state >> 2) & 0x78);
+    state = rec->size.word & ~FIELD_MENU_SIZE_HEIGHT_MASK;
+    state |= (((g_field_dialog_item_count << 4) + FIELD_RESULTS_ROW_HEIGHT) & 0xFF) << FIELD_MENU_SIZE_HEIGHT_SHIFT;
+    rec->attr.bits.y = FIELD_RESULTS_CENTER_Y - FIELD_MENU_SIZE_HEIGHT(state) / 2;
 
     /* The callback has its own prototype; cast to the element draw type. */
-    rec->draw = (FieldMenuDrawFn)func_800A7FB4;
+    rec->draw = (FieldMenuDrawFn)field_draw_item_list;
     rec->size.word = state;
-    rec->attr.word = (rec->attr.word & 0xFFFFFF) | 0xC0000000;
+    rec->attr.word = (rec->attr.word & ~FIELD_MENU_ATTR_WIDTH_LOW) | (192 << FIELD_MENU_ATTR_WIDTH_LOW_SHIFT);
     rec->size.bits.width_high = 0;
 }
 
 /**
- * @brief Initialize two field processes and position the second from the active actor count.
+ * @brief Open the party summary: the totals row and the experience ranking below it.
  */
-void func_800A7724(void)
+static void field_open_party_summary(void)
 {
-    extern FieldActorEntry g_field_player_records[];
-
     FieldMenuElement *record;
     s32 actor_index;
     s32 active_count;
 
     func_800ADF34();
-    g_field_dialog_screen_mode = 1;
-    func_800A3938(0xB9, 0x80);
+    g_field_dialog_screen_mode = FIELD_RESULTS_PARTY_SUMMARY;
+    field_play_sound(FIELD_SOUND_WINDOW_OPEN, FIELD_SOUND_CENTER);
 
     active_count = 0;
     record = func_800ADF84();
     actor_index = active_count;
     /* The callback has its own prototype; cast to the element draw type. */
-    record->draw = (FieldMenuDrawFn)func_800A788C;
+    record->draw = (FieldMenuDrawFn)field_draw_party_totals;
     record->attr.bits.step = 1;
     record->attr.bits.x = 0x20;
     record->attr.bits.y = 0x30;
     record->size.bits.width_high = 1;
     record->size.bits.height = 0x20;
-    record->attr.word &= 0xFFFFFF;
+    record->attr.word &= ~FIELD_MENU_ATTR_WIDTH_LOW;
 
     for (actor_index = 0; actor_index < 3; actor_index++)
     {
-        if (g_field_player_records[actor_index].active & 1)
+        if (g_field_player_records[actor_index].flags & FIELD_PLAYER_ACTIVE)
         {
             active_count++;
         }
     }
 
     record = func_800ADF84();
-    record->draw = (FieldMenuDrawFn)func_800A7B54;
+    record->draw = (FieldMenuDrawFn)field_draw_experience_ranking;
     record->attr.bits.step = 1;
     record->attr.bits.x = 0x20;
     record->attr.bits.y = 0x58;
     record->size.bits.width_high = 1;
     record->size.bits.height = ((active_count * 28) + 16) & 0xFF;
-    record->attr.word &= 0xFFFFFF;
+    record->attr.word &= ~FIELD_MENU_ATTR_WIDTH_LOW;
 }
 
 /**
- * @brief Draw the field process/actor summary row.
- * @param ot Ordering-table address used by the drawing helpers.
- * @param cursor Current primitive-buffer cursor.
- * @param x_offset Horizontal drawing origin subtracted from each column.
- * @param y_offset Vertical drawing origin subtracted from each row.
+ * @brief Draw the party totals row (two per-player counters summed, money gained).
+ * @param ot Ordering table.
+ * @param cursor Primitive cursor.
+ * @param x_offset Horizontal window offset subtracted from each column.
+ * @param y_offset Vertical window offset subtracted from each row.
+ * @return Primitive cursor after the row.
+ * @note While g_field_results_wait_frames runs it also waits for queued resources.
  */
-void func_800A788C(void *ot, void *cursor, s32 x_offset, s32 y_offset)
+static void* field_draw_party_totals(void* ot, void* cursor, s32 x_offset, s32 y_offset)
 {
-    extern u8 *g_pad_ctx;
-    extern FieldEntry268 g_field_player_records[];
-    void *func_800A88A0(void *sprite_cursor, void *ot, u8 *text, s32 color, s32 x, s32 y, s32 flags);
-    void *func_800A8A78(void *ot, void *cursor, s32 value, s32 color, s16 *position, s32 flags);
-
     s32 i;
     s32 total_x;
     s32 total_y;
     u8 *text_base;
     void *handle;
     void *first_cursor;
-    s16 position[2];
+    Vec2s position;
     s16 y;
 
-    if (D_801227EC != 0)
+    if (g_field_results_wait_frames != 0)
     {
         first_cursor = cursor;
         if ((x_offset | y_offset) != 0)
         {
             goto loop_setup;
         }
-        D_801227EC--;
-        if (D_801227EC != 0)
+        g_field_results_wait_frames--;
+        if (g_field_results_wait_frames != 0)
         {
             goto loop_setup;
         }
         if (func_800B0888(first_cursor) != 0)
         {
-            D_801227EC = 1;
+            g_field_results_wait_frames = 1;
         }
     }
 
-    /*
-     * The gotos skip this reassignment. Structured forms: one join assignment
-     * after the if reaches 99.97% (reorg does not retarget the --D branch past
-     * it); a copy inside the call arm is deleted by CSE as a no-op (95.6%).
-     */
+    /* The gotos skip this reassignment (UNSOLVED lever, see the hu34 report). */
     first_cursor = cursor;
 loop_setup:
     i = 0;
@@ -1811,7 +1666,7 @@ loop_setup:
     total_y = i;
     for (; i < 3; i++)
     {
-        if (g_pad_ctx[i * SAVED_CHARACTER_SIZE + 0x5F0] != 0)
+        if (g_pad_ctx->characters[i].name[0] != 0)
         {
             total_x += g_field_player_records[i].unk25C;
             total_y += g_field_player_records[i].unk25D;
@@ -1824,27 +1679,27 @@ loop_setup:
     text_base = D_800EC3D6 - 0x12;
 
     y = 0x10 - y_offset;
-    position[1] = y;
-    handle = func_800A8660(ot, handle, 0x18 - x_offset, y - 3);
+    position.y = y;
+    handle = field_draw_animated_marker(ot, handle, 0x18 - x_offset, y - 3);
 
-    position[0] = 0x28 - x_offset;
-    handle = func_800A8A78(ot, handle, total_x, 4, position, 0);
+    position.x = 0x28 - x_offset;
+    handle = func_800A8A78(ot, handle, total_x, 4, &position, 0);
     handle = func_800A88A0(handle, ot,
         FIELD_TEXT_AT(text_base, text_base[0x16], text_base[0x17]),
-        4, 0x40 - x_offset, position[1], 0);
-    handle = func_800A8524(ot, handle, 0x50 - x_offset, position[1] + 2);
+        4, 0x40 - x_offset, position.y, 0);
+    handle = field_draw_animated_small_icon(ot, handle, 0x50 - x_offset, position.y + 2);
 
-    position[0] = 0x60 - x_offset;
-    handle = func_800A8A78(ot, handle, total_y, 4, position, 0);
+    position.x = 0x60 - x_offset;
+    handle = func_800A8A78(ot, handle, total_y, 4, &position, 0);
     handle = func_800A88A0(handle, ot,
         FIELD_TEXT_AT(text_base, text_base[0x1A], text_base[0x1B]),
-        4, 0x80 - x_offset, position[1], 0);
+        4, 0x80 - x_offset, position.y, 0);
 
-    position[0] = 0xD0 - x_offset;
-    handle = func_800A8A78(ot, handle, *(s32 *)(g_pad_ctx + 0x2C) - D_8011F420, 4, position, 1);
-    func_800A88A0(handle, ot,
+    position.x = 0xD0 - x_offset;
+    handle = func_800A8A78(ot, handle, g_pad_ctx->money - g_field_money_snapshot, 4, &position, 1);
+    return func_800A88A0(handle, ot,
         FIELD_TEXT_AT(text_base, text_base[0], text_base[1]),
-        4, 0xF0 - x_offset, position[1], 1);
+        4, 0xF0 - x_offset, position.y, 1);
 }
 
 /**
@@ -1855,26 +1710,18 @@ loop_setup:
  * @param y_offset Vertical drawing origin subtracted from each row position.
  * @return Primitive-buffer address after the final emitted element.
  * @note Equal gains keep party order during the insertion sort.
- * @note The split `pos += 2; pos--` step stays: with one increment loop.c
- *       strength-reduces the order[] address (plain `pos++` 93.5%, for/break 98.6%).
  * @note The draw guard repeats the loop test `i < count` so CSE folds the
- *       rotated loop entry test away; `count > 0` keeps it (98.6%).
+ *       rotated loop entry test away.
  */
-s32 func_800A7B54(s32 ordering_table, s32 cursor, s32 x_offset, s32 y_offset)
+static void* field_draw_experience_ranking(void* ordering_table, void* cursor, s32 x_offset, s32 y_offset)
 {
-    extern FieldGameState *g_pad_ctx;
-    extern FieldRankPlayer g_field_player_records[];
-    extern s32 func_800A88A0(s32, s32, u8 *, s32, s32, s32, s32);
-    extern s32 func_800A838C(s32, s32, s32, s32, s32);
-    extern s32 func_800A8A78(s32, s32, s32, s32, Vec2s *, s32);
-
     FieldRankWork work;
     s32 count;
     s32 i;
     s32 pos;
     s32 j;
     s32 row;
-    s32 result;
+    void* result;
     s16 y;
     u8 *text;
     u8 *text_base;
@@ -1886,10 +1733,12 @@ s32 func_800A7B54(s32 ordering_table, s32 cursor, s32 x_offset, s32 y_offset)
         if (g_pad_ctx->characters[i].name[0] != 0)
         {
             pos = 0;
-            while (pos < count && FIELD_EXPERIENCE_GAIN(work.order[pos]) >= FIELD_EXPERIENCE_GAIN(i))
+            for (; pos < count; pos++)
             {
-                pos += 2;
-                pos--;
+                if (FIELD_EXPERIENCE_GAIN(i) > FIELD_EXPERIENCE_GAIN(work.order[pos]))
+                {
+                    break;
+                }
             }
             if (pos == count)
             {
@@ -1922,14 +1771,14 @@ s32 func_800A7B54(s32 ordering_table, s32 cursor, s32 x_offset, s32 y_offset)
                 result = field_emit_actor_portrait(result, ordering_table, work.order[i], &work.position);
                 y += 8;
                 work.position.y = y;
-                result = func_800A838C(ordering_table, result, 0x38 - x_offset, y - 8, 1);
+                result = field_draw_animated_icon(ordering_table, result, 0x38 - x_offset, y - 8, 1);
                 work.position.x = 0x48 - x_offset;
-                result = func_800A8A78(ordering_table, result, g_field_player_records[work.order[i]].first, 4, &work.position, 0);
+                result = func_800A8A78(ordering_table, result, g_field_player_records[work.order[i]].unk25A, 4, &work.position, 0);
                 result = func_800A88A0(result, ordering_table, FIELD_TEXT_AT(text, D_800EC3DA[0], text_base[1]), 4, 0x68 - x_offset, work.position.y, 0);
-                result = func_800A838C(ordering_table, result, 0x78 - x_offset, work.position.y, 0);
+                result = field_draw_animated_icon(ordering_table, result, 0x78 - x_offset, work.position.y, 0);
                 work.position.x = 0x88 - x_offset;
                 work.position.y = y;
-                result = func_800A8A78(ordering_table, result, g_field_player_records[work.order[i]].second, 4, &work.position, 0);
+                result = func_800A8A78(ordering_table, result, g_field_player_records[work.order[i]].unk25B, 4, &work.position, 0);
                 result = func_800A88A0(result, ordering_table, FIELD_TEXT_AT(text, text[0x1A], text[0x1B]), 4, 0xA8 - x_offset, work.position.y, 0);
                 work.position.x = 0xE0 - x_offset;
                 work.position.y = y;
@@ -1942,54 +1791,46 @@ s32 func_800A7B54(s32 ordering_table, s32 cursor, s32 x_offset, s32 y_offset)
 }
 
 /**
- * @brief Draw a FIELD text list and the nonzero amount beside each entry.
- * @param ot Ordering table receiving the generated primitives.
- * @param prim Current primitive-chain handle.
- * @param arg2 Horizontal origin adjustment, also used by the amount row position.
- * @param arg3 Vertical origin adjustment for the list text.
- * @return Updated primitive-chain handle after drawing the list.
+ * @brief Draw the battle item list: a header, then each item name and its quantity.
+ * @param ot Ordering table.
+ * @param prim Primitive cursor.
+ * @param x_offset Horizontal window offset (the quantity row also subtracts it from y).
+ * @param y_offset Vertical window offset.
+ * @return Primitive cursor after the list.
  */
-s32 func_800A7FB4(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+static void* field_draw_item_list(void* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    extern s32 func_800A88A0(s32 prim, s32 *ot, void *tex, s32 arg3, s32 x, s32 y, s32 z);
-    extern s32 func_800A8A78(s32 *ot, s32 prim, u32 val, s32 arg3, Vec2s *pos, s32 arg5);
-
     s32 i;
     Vec2s pos;
-    u8 pad[0x84];
+    u8 pad[0x84]; /* never used; the original frame reserves it */
     s32 row;
     s32 low;
     s32 offset;
-    u8 *tex;
+    u8* tex;
 
-    low = D_800EC3D8.unk0;
-    offset = (D_800EC3D8.unk1 << 8) + (s32)((u8 *)&D_800EC3D8 - 0x14);
-    tex = (u8 *)(low + offset);
-    prim = func_800A88A0(prim, ot, tex, 4, 0x20 - arg2, -arg3, 0);
-    i = 0;
-    if (g_field_dialog_item_count > 0)
+    low = D_800EC3D8.low;
+    offset = (D_800EC3D8.high << 8) + (s32)((u8*)&D_800EC3D8 - 0x14);
+    tex = (u8*)(low + offset);
+    prim = func_800A88A0(prim, ot, tex, 4, 0x20 - x_offset, -y_offset, 0);
+    for (i = 0; i < g_field_dialog_item_count; i++)
     {
-        do
+        row = i * FIELD_RESULTS_ROW_HEIGHT;
+        prim = func_800A88A0(prim, ot, g_field_dialog_item_texts[i], 4, 0x10 - x_offset, (row + FIELD_RESULTS_ROW_HEIGHT) - y_offset, 0);
+        pos.x = 0xB0 - x_offset;
+        /* The original subtracts the horizontal offset here too. */
+        pos.y = (row + FIELD_RESULTS_ROW_HEIGHT) - x_offset;
+        if (g_field_dialog_item_quantities[i] != 0)
         {
-            row = i * 0x10;
-            prim = func_800A88A0(prim, ot, g_field_dialog_item_texts[i], 4, 0x10 - arg2, (row + 0x10) - arg3, 0);
-            pos.x = 0xB0 - arg2;
-            pos.y = (row + 0x10) - arg2;
-            if (g_field_dialog_item_quantities[i] != 0)
-            {
-                prim = func_800A8A78(ot, prim, g_field_dialog_item_quantities[i], 4, &pos, 1);
-            }
-            i += 1;
-        } while (i < g_field_dialog_item_count);
+            prim = func_800A8A78(ot, prim, g_field_dialog_item_quantities[i], 4, &pos, 1);
+        }
     }
     return prim;
 }
 
 /**
- * @brief Draw the visible rows of the two-group item list, inserting each group header once.
- *
- * @param ordering_table Ordering-table address used by the text renderer.
- * @param cursor Current primitive buffer cursor.
+ * @brief Draw the visible rows of the unlock list, with one header before the abilities and one before the techniques.
+ * @param ordering_table Ordering table.
+ * @param cursor Primitive cursor.
  * @param scroll_x Horizontal scroll offset.
  * @param scroll_y Vertical scroll offset.
  * @param viewport_height Bottom clipping boundary.
@@ -1997,103 +1838,100 @@ s32 func_800A7FB4(s32 *ot, s32 prim, s32 arg2, s32 arg3)
  * @note The guard repeats the loop test so CSE folds the rotated entry test;
  *       the count is re-read on every pass because the loop calls out.
  */
-s32 func_800A8128(s32 ordering_table, s32 cursor, s32 scroll_x, s32 scroll_y, s32 viewport_height)
+static void* field_draw_unlock_list(void* ordering_table, void* cursor, s32 scroll_x, s32 scroll_y, s32 viewport_height)
 {
-    s32 func_800A88A0(s32, s32, void *, s32, s32, s32, s32); /* extern */
-    extern TextResource *g_field_cd_buffer;
-
-    unsigned char pad[8];
-    unsigned char *normal_names;
-    unsigned char *special_names;
+    u8 pad[8]; /* never used; the original frame reserves it */
+    u8* ability_names;
+    u8* technique_names;
     s32 header_x;
     s32 item_x;
-    s32 normal_header_y;
-    s32 special_header_y;
-    s32 next_cursor;
-    s32 special_header_drawn;
+    s32 ability_header_y;
+    s32 technique_header_y;
+    void* next_cursor;
+    s32 technique_header_drawn;
     s32 row;
     s32 index;
-    s32 normal_header_drawn;
-    s32 special_row_y;
-    s32 normal_row_y;
+    s32 ability_header_drawn;
+    s32 technique_row_y;
+    s32 ability_row_y;
     s32 item_y;
     u16 *entry;
     u16 name_index;
 
     next_cursor = cursor;
-    special_header_drawn = 0;
+    technique_header_drawn = 0;
     row = 0;
-    normal_header_drawn = 0;
+    ability_header_drawn = 0;
     index = 0;
-    normal_names = (unsigned char *)g_field_cd_buffer + g_field_cd_buffer->normal;
-    special_names = (unsigned char *)g_field_cd_buffer + g_field_cd_buffer->special;
+    ability_names = g_field_cd_buffer + ((TextResource*)g_field_cd_buffer)->ability_names;
+    technique_names = g_field_cd_buffer + ((TextResource*)g_field_cd_buffer)->technique_names;
     if (index < g_field_progression_unlock_count)
     {
-        header_x = 0x20 - scroll_x;
-        item_x = 0x80 - scroll_x;
+        header_x = FIELD_RESULTS_HEADER_X - scroll_x;
+        item_x = FIELD_RESULTS_NAME_X - scroll_x;
         entry = g_field_progression_unlocks;
         for (; index < g_field_progression_unlock_count; index++)
         {
-            if (*entry & 0x8000)
+            if (*entry & FIELD_UNLOCK_TECHNIQUE)
             {
-                special_row_y = row * 0x10;
-                if (special_header_drawn == 0)
+                technique_row_y = row * FIELD_RESULTS_ROW_HEIGHT;
+                if (technique_header_drawn == 0)
                 {
-                    special_header_y = special_row_y - scroll_y;
-                    if ((special_header_y >= -0xF) && (special_header_y < viewport_height))
+                    technique_header_y = technique_row_y - scroll_y;
+                    if ((technique_header_y > -FIELD_RESULTS_ROW_HEIGHT) && (technique_header_y < viewport_height))
                     {
                         s32 low;
                         s32 offset;
-                        unsigned char *base;
+                        u8* base;
 
                         low = D_800EC3CE.low;
                         base = D_800EC3C4;
                         offset = (D_800EC3CE.high << 8) + (s32)base;
-                        next_cursor = func_800A88A0(next_cursor, ordering_table, (void *)(low + offset), 4, header_x, special_header_y, 0);
+                        next_cursor = func_800A88A0(next_cursor, ordering_table, (void *)(low + offset), 4, header_x, technique_header_y, 0);
                     }
-                    special_header_drawn = 1;
+                    technique_header_drawn = 1;
                     row += 1;
-                    special_row_y = row * 0x10;
+                    technique_row_y = row * FIELD_RESULTS_ROW_HEIGHT;
                 }
-                item_y = special_row_y - scroll_y;
-                if (item_y >= -0xF)
+                item_y = technique_row_y - scroll_y;
+                if (item_y > -FIELD_RESULTS_ROW_HEIGHT)
                 {
                     if (item_y < viewport_height)
                     {
-                        name_index = *entry & 0x7FFF;
+                        name_index = *entry & ~FIELD_UNLOCK_TECHNIQUE;
                         next_cursor = func_800A88A0(next_cursor, ordering_table,
-                                                    special_names +
-                                                        ((u16 *)special_names)[name_index],
+                                                    technique_names +
+                                                        ((u16 *)technique_names)[name_index],
                                                     4, item_x, item_y, 2);
                     }
                 }
             }
             else
             {
-                normal_row_y = row * 0x10;
-                if (normal_header_drawn == 0)
+                ability_row_y = row * FIELD_RESULTS_ROW_HEIGHT;
+                if (ability_header_drawn == 0)
                 {
-                    normal_header_y = normal_row_y - scroll_y;
-                    if ((normal_header_y >= -0xF) && (normal_header_y < viewport_height))
+                    ability_header_y = ability_row_y - scroll_y;
+                    if ((ability_header_y > -FIELD_RESULTS_ROW_HEIGHT) && (ability_header_y < viewport_height))
                     {
                         next_cursor =
                             func_800A88A0(next_cursor, ordering_table,
                                           D_800EC3C4 + D_800EC3CC.low + (D_800EC3CC.high << 8),
-                                          4, header_x, normal_header_y, 0);
+                                          4, header_x, ability_header_y, 0);
                     }
-                    normal_header_drawn = 1;
+                    ability_header_drawn = 1;
                     row += 1;
-                    normal_row_y = row * 0x10;
+                    ability_row_y = row * FIELD_RESULTS_ROW_HEIGHT;
                 }
-                item_y = normal_row_y - scroll_y;
-                if (item_y >= -0xF)
+                item_y = ability_row_y - scroll_y;
+                if (item_y > -FIELD_RESULTS_ROW_HEIGHT)
                 {
                     if (item_y < viewport_height)
                     {
                         name_index = *entry;
                         next_cursor = func_800A88A0(next_cursor, ordering_table,
-                                                    normal_names +
-                                                        ((u16 *)normal_names)[name_index],
+                                                    ability_names +
+                                                        ((u16 *)ability_names)[name_index],
                                                     4, item_x, item_y, 2);
                     }
                 }
@@ -2106,7 +1944,7 @@ s32 func_800A8128(s32 ordering_table, s32 cursor, s32 scroll_x, s32 scroll_y, s3
 }
 
 /**
- * @brief Build and link an animated textured quad primitive.
+ * @brief Draw an animated icon (four-frame ping-pong animation from the frame counter).
  * @param ordering_table Ordering-table tag to link the primitive into.
  * @param prim Primitive buffer slot to populate.
  * @param x Left screen coordinate.
@@ -2114,14 +1952,14 @@ s32 func_800A8128(s32 ordering_table, s32 cursor, s32 scroll_x, s32 scroll_y, s3
  * @param wide Selects the larger geometry and texture region when nonzero.
  * @return Pointer just past the emitted primitive.
  */
-POLY_FT4* func_800A838C(u32* ordering_table, POLY_FT4* prim, s16 x, s16 y, s32 wide)
+static POLY_FT4* field_draw_animated_icon(u32* ordering_table, POLY_FT4* prim, s32 x, s32 y, s32 wide)
 {
     s32 phase_table[8] = {0, 1, 2, 3, 2, 1, 0, 0};
     s32 phase;
 
     phase = phase_table[((g_frame_counter >> 2) + 1) & 7];
 
-    *(u32*)&prim->r0 = 0x808080;
+    SET_BGR0_PACKED(prim, GPU_TINT_NEUTRAL);
     setPolyFT4(prim);
     prim->x2 = x;
     prim->x0 = x;
@@ -2159,21 +1997,21 @@ POLY_FT4* func_800A838C(u32* ordering_table, POLY_FT4* prim, s16 x, s16 y, s32 w
         prim->v2 = 0x50;
     }
 
-    prim->clut = 0x7A87;
-    prim->tpage = 0x26;
+    prim->clut = FIELD_RESULTS_ICON_CLUT;
+    prim->tpage = FIELD_RESULTS_ICON_TPAGE;
     addPrim(ordering_table, prim);
     return prim + 1;
 }
 
 /**
- * @brief Build and link an animated eight-pixel textured quad.
+ * @brief Draw an animated 8x8 icon.
  * @param ordering_table Ordering-table tag receiving the primitive.
  * @param prim Primitive buffer to populate.
  * @param x Left screen coordinate.
  * @param y Top screen coordinate.
  * @return Buffer address immediately after the emitted primitive.
  */
-void *func_800A8524(s32 *ordering_table, POLY_FT4 *prim, s32 x, s32 y)
+static void* field_draw_animated_small_icon(s32* ordering_table, POLY_FT4* prim, s32 x, s32 y)
 {
     FieldQuadAnimationTable table;
     s32 phase_index;
@@ -2183,13 +2021,13 @@ void *func_800A8524(s32 *ordering_table, POLY_FT4 *prim, s32 x, s32 y)
     u16 left_u;
     u16 right_u;
 
-    table = D_800513E8;
-    color = 0x808080;
+    table = g_field_small_icon_frames;
+    color = GPU_TINT_NEUTRAL;
     frame = g_frame_counter;
     phase_index = ((frame >> 2) + 2) & 7;
     phase = table.words[phase_index];
 
-    *(u32 *)&prim->r0 = color;
+    SET_BGR0_PACKED(prim, color);
     setPolyFT4(prim);
     prim->x2 = x;
     prim->x0 = x;
@@ -2203,8 +2041,8 @@ void *func_800A8524(s32 *ordering_table, POLY_FT4 *prim, s32 x, s32 y)
     prim->v0 = 0x78;
     prim->v3 = 0x80;
     prim->v2 = 0x80;
-    prim->clut = 0x7A87;
-    prim->tpage = 0x26;
+    prim->clut = FIELD_RESULTS_ICON_CLUT;
+    prim->tpage = FIELD_RESULTS_ICON_TPAGE;
 
     phase *= 8;
     left_u = phase + 0x20;
@@ -2215,18 +2053,18 @@ void *func_800A8524(s32 *ordering_table, POLY_FT4 *prim, s32 x, s32 y)
     prim->u0 = left_u;
 
     addPrim(ordering_table, prim);
-    return (u8 *)prim + 0x28;
+    return prim + 1;
 }
 
 /**
- * @brief Append an animated textured quad to an ordering table.
+ * @brief Draw an animated marker whose position, texture and width follow the frame counter.
  * @param ordering_table Ordering-table entry receiving the primitive.
  * @param prim Writable primitive buffer.
  * @param x Horizontal origin.
  * @param y Vertical origin.
  * @return Buffer address immediately after the emitted primitive.
  */
-void *func_800A8660(s32 *ordering_table, POLY_FT4 *prim, s32 x, s32 y)
+static void* field_draw_animated_marker(s32* ordering_table, POLY_FT4* prim, s32 x, s32 y)
 {
     s32 frame;
     u32 color;
@@ -2237,19 +2075,19 @@ void *func_800A8660(s32 *ordering_table, POLY_FT4 *prim, s32 x, s32 y)
     u8 texture_u;
     s32 phase_index;
 
-    tables[0] = D_800513E8;
-    tables[1] = D_80051408;
-    tables[2] = D_80051428;
-    tables[3] = D_80051448;
-    color = 0x808080;
+    tables[0] = g_field_small_icon_frames;
+    tables[1] = g_field_marker_x_offsets;
+    tables[2] = g_field_marker_u_offsets;
+    tables[3] = g_field_marker_widths;
+    color = GPU_TINT_NEUTRAL;
     frame = g_frame_counter;
-    *(u32 *)&prim->r0 = color;
+    SET_BGR0_PACKED(prim, color);
     setPolyFT4(prim);
     phase_index = ((frame >> 2) + 3) & 7;
-    left_x = *(u16 *)&tables[1].words[phase_index] + x;
+    left_x = (u16)tables[1].words[phase_index] + x;
     prim->x2 = left_x;
     prim->x0 = left_x;
-    width = *(u16 *)&tables[3].words[phase_index];
+    width = tables[3].words[phase_index];
     prim->y1 = y;
     prim->y0 = y;
     y += 0x10;
@@ -2258,26 +2096,26 @@ void *func_800A8660(s32 *ordering_table, POLY_FT4 *prim, s32 x, s32 y)
     right_x = left_x + width;
     prim->x3 = right_x;
     prim->x1 = right_x;
-    texture_u = *(u8 *)&tables[2].words[phase_index];
+    texture_u = tables[2].words[phase_index];
     prim->u2 = texture_u;
     prim->u0 = texture_u;
-    texture_u += *(u8 *)&tables[3].words[phase_index];
+    texture_u += tables[3].words[phase_index];
     prim->u3 = texture_u;
     prim->u1 = texture_u;
     prim->v1 = 0x80;
     prim->v0 = 0x80;
     prim->v3 = 0x90;
     prim->v2 = 0x90;
-    prim->clut = 0x7A87;
-    prim->tpage = 0x26;
+    prim->clut = FIELD_RESULTS_ICON_CLUT;
+    prim->tpage = FIELD_RESULTS_ICON_TPAGE;
     addPrim(ordering_table, prim);
     return prim + 1;
 }
 
 /**
- * @brief Thin wrapper delegating to the field menu-window handler.
+ * @brief Draw the dialog windows (the result screens or the return-to-title prompt).
  */
-void func_800A8880(void)
+void field_draw_dialog_windows(void)
 {
     func_800AE008();
 }

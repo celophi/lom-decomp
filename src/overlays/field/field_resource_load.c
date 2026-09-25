@@ -122,7 +122,7 @@ void func_800B0244(void)
             }
             if (D_80122B28[i].sound != -1)
             {
-                func_800A3938(D_80122B28[i].sound, 0x80);
+                field_play_sound(D_80122B28[i].sound, 0x80);
                 VSync(0);
             }
         }
@@ -174,7 +174,7 @@ void func_800B0244(void)
                             g_field_actors[i].command = 0;
                             i += 1;
                         } while (i < 3);
-                        func_800A3938(0x79, 0x80);
+                        field_play_sound(0x79, 0x80);
                         i = 0;
                         do
                         {

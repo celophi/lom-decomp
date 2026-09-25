@@ -159,7 +159,7 @@ void func_800B4B44(void)
     } while (i < 3);
 
     i = 0;
-    list = func_800A2E34();
+    list = field_pair_indicators_get_list();
     while (*list != 0xFF)
     {
         other = list + 1;
@@ -176,11 +176,11 @@ void func_800B4B44(void)
 
     if (func_800B4CE4(&g_field_battle->records[1], 0) < 3)
     {
-        func_800B28E0(1, 0xC, 6);
+        field_run_actor_event(1, 0xC, 6);
     }
     if (func_800B4CE4(&g_field_battle->records[2], 0) < 3)
     {
-        func_800B28E0(2, 0xC, 6);
+        field_run_actor_event(2, 0xC, 6);
     }
     if (i >= 4)
     {

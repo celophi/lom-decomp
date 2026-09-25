@@ -20,6 +20,12 @@
 #define FIELD_FADE_ADDITIVE_DRAW_MODE getTPage(0, 1, 320, 0)
 /** @brief Texture-page word for the subtractive blend pass. */
 #define FIELD_FADE_SUBTRACTIVE_DRAW_MODE getTPage(0, 2, 320, 0)
+/** @brief Frames the preset and restore fades take. */
+#define FIELD_FADE_DEFAULT_FRAMES 5
+/** @brief Channel level of the dimmed modal-overlay fade. */
+#define FIELD_FADE_MODAL_LEVEL 0xC0
+/** @brief Red level of the CD error tint (green and blue stay neutral). */
+#define FIELD_FADE_CD_ERROR_RED 0xD0
 
 /** @brief Packet view for a fade TILE or draw-mode command. */
 typedef union
@@ -72,12 +78,12 @@ void field_reset_fade_state(void)
 
 /**
  * @brief Advance the screen fade one step and emit its blend tile + draw mode.
- * @param ctx Render half whose ordering-table entry FIELD_FADE_OT_INDEX receives the packets.
+ * @param render_half Render half whose ordering-table entry FIELD_FADE_OT_INDEX receives the packets.
  */
-void field_update_and_render_fade(FieldRenderHalf* ctx)
+void field_update_and_render_fade(FieldRenderHalf* render_half)
 {
-    FieldFadePrimitive* primitive = (FieldFadePrimitive*)ctx->primitive_cursor;
-    u_long* ordering_table_tag = &ctx->ordering_table[FIELD_FADE_OT_INDEX];
+    FieldFadePrimitive* primitive = (FieldFadePrimitive*)render_half->primitive_cursor;
+    u_long* ordering_table_tag = &render_half->ordering_table[FIELD_FADE_OT_INDEX];
     s32 dr;
     s32 dg;
     s32 db;
@@ -88,10 +94,10 @@ void field_update_and_render_fade(FieldRenderHalf* ctx)
         dr = (g_field_fade_target.red - g_field_fade_current.red) / g_field_fade_target.duration;
         dg = (g_field_fade_target.green - g_field_fade_current.green) / g_field_fade_target.duration;
         db = (g_field_fade_target.blue - g_field_fade_current.blue) / g_field_fade_target.duration;
-        g_field_fade_target.duration = g_field_fade_target.duration - 1;
-        g_field_fade_current.red = g_field_fade_current.red + dr;
-        g_field_fade_current.green = g_field_fade_current.green + dg;
-        g_field_fade_current.blue = g_field_fade_current.blue + db;
+        g_field_fade_target.duration--;
+        g_field_fade_current.red += dr;
+        g_field_fade_current.green += dg;
+        g_field_fade_current.blue += db;
     }
     else
     {
@@ -152,7 +158,7 @@ void field_update_and_render_fade(FieldRenderHalf* ctx)
 
         primitive = FIELD_NEXT_FADE_PRIMITIVE(primitive, DR_TPAGE);
     }
-    ctx->primitive_cursor = (u8*)primitive;
+    render_half->primitive_cursor = (u8*)primitive;
 }
 
 /**
@@ -178,10 +184,10 @@ void field_set_fade_target(s16 red, s16 green, s16 blue, s16 duration)
  */
 void field_set_cd_error_fade_target(void)
 {
-    g_field_fade_target.red = 0xD0;
-    g_field_fade_target.green = 0x100;
-    g_field_fade_target.blue = 0x100;
-    g_field_fade_target.duration = 5;
+    g_field_fade_target.red = FIELD_FADE_CD_ERROR_RED;
+    g_field_fade_target.green = FIELD_FADE_NEUTRAL;
+    g_field_fade_target.blue = FIELD_FADE_NEUTRAL;
+    g_field_fade_target.duration = FIELD_FADE_DEFAULT_FRAMES;
 }
 
 /**
@@ -200,14 +206,14 @@ void field_set_fade_target_only(s16 red, s16 green, s16 blue, s16 duration)
 }
 
 /**
- * @brief Restore the saved field fade color over five frames.
+ * @brief Restore the saved field fade color over FIELD_FADE_DEFAULT_FRAMES frames.
  */
 void field_restore_fade_target(void)
 {
-    g_field_fade_target.duration = 5;
-    g_field_fade_target.red = (u16)g_field_fade_restore_color.red;
-    g_field_fade_target.green = (u16)g_field_fade_restore_color.green;
-    g_field_fade_target.blue = (u16)g_field_fade_restore_color.blue;
+    g_field_fade_target.duration = FIELD_FADE_DEFAULT_FRAMES;
+    g_field_fade_target.red = g_field_fade_restore_color.red;
+    g_field_fade_target.green = g_field_fade_restore_color.green;
+    g_field_fade_target.blue = g_field_fade_restore_color.blue;
 }
 
 /**
@@ -217,9 +223,9 @@ void field_restore_fade_target(void)
 void field_restore_fade_target_with_duration(s16 duration)
 {
     g_field_fade_target.duration = duration;
-    g_field_fade_target.red = (u16)g_field_fade_restore_color.red;
-    g_field_fade_target.green = (u16)g_field_fade_restore_color.green;
-    g_field_fade_target.blue = (u16)g_field_fade_restore_color.blue;
+    g_field_fade_target.red = g_field_fade_restore_color.red;
+    g_field_fade_target.green = g_field_fade_restore_color.green;
+    g_field_fade_target.blue = g_field_fade_restore_color.blue;
 }
 
 /**
@@ -227,8 +233,8 @@ void field_restore_fade_target_with_duration(s16 duration)
  */
 void field_set_default_fade_target(void)
 {
-    g_field_fade_target.red = 0xC0;
-    g_field_fade_target.green = 0xC0;
-    g_field_fade_target.blue = 0xC0;
-    g_field_fade_target.duration = 5;
+    g_field_fade_target.red = FIELD_FADE_MODAL_LEVEL;
+    g_field_fade_target.green = FIELD_FADE_MODAL_LEVEL;
+    g_field_fade_target.blue = FIELD_FADE_MODAL_LEVEL;
+    g_field_fade_target.duration = FIELD_FADE_DEFAULT_FRAMES;
 }

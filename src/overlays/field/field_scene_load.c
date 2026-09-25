@@ -91,16 +91,12 @@ typedef struct
 #define FIELD_CD_SYSTEM ((u8*)0x801ED800)
 
 extern u8 g_cd_audio_enabled;
-extern s32 D_801ED000;
-extern s32 D_801ED00C;
-extern s32 D_801ED010;
-extern s32 D_801ED02C;
 extern u16 D_801ED480;
 extern u16 D_801ED482;
 extern s32 D_801ED490;
 
 void func_80140018(s32 mode);
-void func_8006312C(void);
+void field_collision_rebuild_spans(void);
 void field_select_object(u16 object_index, FieldRenderBuffer* buffers);
 void field_build_render_records(FieldMapObject* object, u16 object_index);
 void field_load_map(s32 map_id);
@@ -144,7 +140,7 @@ void field_scene_reset(void)
     state->map_id = 0;
     state->object_index = 0;
     state->pixel_lookup_selector = 0;
-    D_801ED02C = 0;
+    g_field_scene_fade_mode = 0;
     field_text_init();
 }
 
@@ -236,11 +232,11 @@ void field_init_with_fmv(void* unused, FieldRenderBuffer* buffers)
     ClearOTagR(buffers[0].ordering_table, FIELD_RENDER_OT_LENGTH);
     ClearOTagR(buffers[1].ordering_table, FIELD_RENDER_OT_LENGTH);
     field_select_object(object_index & 0xFFFF, buffers);
-    g_field_text_saved_configs = (FieldTextConfig*)D_801ED000;
-    D_801ED000 += FIELD_TEXT_SAVED_CONFIG_SIZE;
+    g_field_text_saved_configs = (FieldTextConfig*)g_field_mem_top;
+    g_field_mem_top += FIELD_TEXT_SAVED_CONFIG_SIZE;
     field_size_work_buffer();
-    FIELD_PRIM_CURSOR(&buffers[0]) = (u8*)D_801ED00C;
-    FIELD_PRIM_CURSOR(&buffers[1]) = (u8*)D_801ED010;
+    FIELD_PRIM_CURSOR(&buffers[0]) = (u8*)g_field_mem_base;
+    FIELD_PRIM_CURSOR(&buffers[1]) = (u8*)g_field_mem_midpoint;
     field_text_reset_windows();
 }
 
@@ -266,11 +262,11 @@ void field_init_with_fmv_alloc(void)
     ClearOTagR(buffers[0].ordering_table, FIELD_RENDER_OT_LENGTH);
     ClearOTagR(buffers[1].ordering_table, FIELD_RENDER_OT_LENGTH);
     field_select_object(object_index & 0xFFFF, buffers);
-    g_field_text_saved_configs = (FieldTextConfig*)D_801ED000;
-    D_801ED000 += FIELD_TEXT_SAVED_CONFIG_SIZE;
+    g_field_text_saved_configs = (FieldTextConfig*)g_field_mem_top;
+    g_field_mem_top += FIELD_TEXT_SAVED_CONFIG_SIZE;
     field_size_work_buffer();
-    FIELD_PRIM_CURSOR(&buffers[0]) = (u8*)D_801ED00C;
-    FIELD_PRIM_CURSOR(&buffers[1]) = (u8*)D_801ED010;
+    FIELD_PRIM_CURSOR(&buffers[0]) = (u8*)g_field_mem_base;
+    FIELD_PRIM_CURSOR(&buffers[1]) = (u8*)g_field_mem_midpoint;
     field_text_reset_windows();
 }
 
@@ -456,5 +452,5 @@ void field_select_object(u16 object_index, FieldRenderBuffer* buffers)
         LoadImage(&rect, image);
     }
     field_build_render_records(object, object_index & 0xFFFF);
-    func_8006312C();
+    field_collision_rebuild_spans();
 }

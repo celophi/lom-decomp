@@ -122,7 +122,7 @@ extern s32 g_field_interaction_active;
 s32 field_set_actor_control_mode(s32 key, s32 mode);
 s32 field_get_actor_position(s32, s32*);
 /* Int parameters on purpose: with the (s32, u8, s8) definition the calls would narrow their arguments. */
-s32 func_800B286C(s32 owner_id, s32 event_id, s32 argument);
+s32 field_queue_actor_event(s32 owner_id, s32 event_id, s32 argument);
 void field_face_actor(s32 arg0, s32 arg1, FieldScriptRecord* record, s32 record_index);
 s32 field_set_actor_position(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 void field_spawn_targeted_animation_actor(s32 arg0, s32 arg1, s32 arg2, s32* arg3);
@@ -1035,7 +1035,7 @@ void field_script_op_18(void)
  */
 void field_script_op_19(void)
 {
-    func_800A3938(FIELD_SCRIPT_ACTIVE_RECORD()->pc[1], FIELD_SCRIPT_ACTIVE_RECORD()->pc[2]);
+    field_play_sound(FIELD_SCRIPT_ACTIVE_RECORD()->pc[1], FIELD_SCRIPT_ACTIVE_RECORD()->pc[2]);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc += 3;
 }
 
@@ -1313,7 +1313,7 @@ void field_script_op_28(void)
         arg2 = -1;
     }
     func_800A43E8(descriptor & 3, arg0, (u16)arg1, arg2);
-    func_800B286C(0x80, 0, 0xF);
+    field_queue_actor_event(0x80, 0, 0xF);
 }
 
 /**
@@ -1328,12 +1328,12 @@ void field_script_op_29(void)
     result = func_800A4744();
     if (result < 0)
     {
-        func_800B286C(0x80, 0, func_800A4778() & 0xFF);
+        field_queue_actor_event(0x80, 0, func_800A4778() & 0xFF);
         g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
         return;
     }
     func_800BD520(0, 0x7100, result);
-    func_800B286C(0x80, 0, 0x10);
+    field_queue_actor_event(0x80, 0, 0x10);
     rec = FIELD_SCRIPT_ACTIVE_RECORD();
     rec->pc += 1;
 }
@@ -1592,7 +1592,7 @@ void field_script_op_34(void)
     next = field_script_read_operand(OPERAND_TYPE_1(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc, &unused);
     rec = FIELD_SCRIPT_ACTIVE_RECORD();
     rec->pc = next;
-    func_800A3988(sound_id, pan, unused);
+    field_play_set_sfx_group0(sound_id, pan, unused);
 }
 
 /**
@@ -1902,7 +1902,7 @@ void func_800BBAC8(u32 command, s32 operand)
         field_request_return_to_title((s32)operand);
         return;
     case 0x1:
-        func_800A5670((s32)operand);
+        field_start_timed_panel((s32)operand);
         return;
     case 0x2:
         func_800C2094((s32)operand);
@@ -1926,7 +1926,7 @@ void func_800BBAC8(u32 command, s32 operand)
         field_control_animation(0, (s32)operand, -1, 4);
         return;
     case 0x9:
-        func_800A37E4();
+        field_stop_second_song();
         return;
     case 0xA:
         field_run_zukan((s32)operand);
@@ -1942,7 +1942,7 @@ void func_800BBAC8(u32 command, s32 operand)
         return;
     case 0xE:
         FIELD_RUNTIME->scene_entry |= 0x8000;
-        func_800A38D4();
+        field_play_second_song();
         return;
     case 0xF:
         func_800C35AC((s32)operand);
@@ -2519,7 +2519,7 @@ void func_800BC8CC(s32 dest_variable, s32 source_variable)
 }
 
 /**
- * @brief Call func_800A3904 in mode 1 with value clamped to 0x7F and count defaulting to 1.
+ * @brief Call field_fade_song in mode 1 with value clamped to 0x7F and count defaulting to 1.
  * @param value Value clamped to 0x7F.
  * @param count Count; 0 becomes 1.
  */
@@ -2530,19 +2530,19 @@ void func_800BC91C(s32 value, s32 count)
     {
         value = 0x7F;
     }
-    func_800A3904(1, count, value);
+    field_fade_song(1, count, value);
 }
 
 /**
- * @brief Thin stack-frame wrapper around func_800A3858.
+ * @brief Thin stack-frame wrapper around field_play_song_section.
  */
 void func_800BC960(void)
 {
-    func_800A3858();
+    field_play_song_section();
 }
 
 /**
- * @brief Call func_800A3904 in mode 0 with value clamped to 0x7F and count defaulting to 1.
+ * @brief Call field_fade_song in mode 0 with value clamped to 0x7F and count defaulting to 1.
  * @param value Value clamped to 0x7F.
  * @param count Count; 0 becomes 1.
  */
@@ -2553,7 +2553,7 @@ void func_800BC980(s32 value, s32 count)
     {
         value = 0x7F;
     }
-    func_800A3904(0, count, value);
+    field_fade_song(0, count, value);
 }
 
 /**
@@ -2594,13 +2594,13 @@ void func_800BC9F8(s32 actor_id, s32 resource_entry_index)
 }
 
 /**
- * @brief Forward two values to func_800A3938.
+ * @brief Forward two values to field_play_sound.
  * @param sound_id Forwarded unchanged.
  * @param pan Forwarded unchanged.
  */
 void func_800BCA88(s32 sound_id, s32 pan)
 {
-    func_800A3938(sound_id, pan);
+    field_play_sound(sound_id, pan);
 }
 
 /**
@@ -2866,9 +2866,9 @@ void field_script_op_86(s32 operand_0, s32 resource_id, s32 entry_index, s32 ope
 }
 
 /**
- * @brief Opcode 0x87: route an actor to func_800B28E0 or func_800B286C by selector.
+ * @brief Opcode 0x87: route an actor to field_run_actor_event or field_queue_actor_event by selector.
  *
- * Selector 0 forwards to func_800B28E0 and selector 1 to func_800B286C, each
+ * Selector 0 forwards to field_run_actor_event and selector 1 to field_queue_actor_event, each
  * with the resolved actor id and the low bytes of the last two operands.
  *
  * @param selector Handler selector, 0 or 1.
@@ -2885,10 +2885,10 @@ void field_script_op_87(s32 selector, s32 actor_id, s32 operand_2, s32 operand_3
     switch (selector)
     {
     case 0:
-        func_800B28E0(actor_id, operand_2 & 0xFF, operand_3 & 0xFF);
+        field_run_actor_event(actor_id, operand_2 & 0xFF, operand_3 & 0xFF);
         break;
     case 1:
-        func_800B286C(actor_id, operand_2 & 0xFF, operand_3 & 0xFF);
+        field_queue_actor_event(actor_id, operand_2 & 0xFF, operand_3 & 0xFF);
         break;
     }
 }

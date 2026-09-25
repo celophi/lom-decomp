@@ -61,6 +61,17 @@ typedef union FieldMenuSize
     } fields;
 } FieldMenuSize;
 
+/** @brief FieldMenuAttr::word bits of width_low. */
+#define FIELD_MENU_ATTR_WIDTH_LOW 0xFF000000
+#define FIELD_MENU_ATTR_WIDTH_LOW_SHIFT 24
+/** @brief FieldMenuSize::word bits of width_high, height and blink. */
+#define FIELD_MENU_SIZE_WIDTH_HIGH 0x1
+#define FIELD_MENU_SIZE_HEIGHT_MASK 0x1FE
+#define FIELD_MENU_SIZE_HEIGHT_SHIFT 1
+#define FIELD_MENU_SIZE_BLINK 0x200
+/** @brief The height field of a FieldMenuSize word. */
+#define FIELD_MENU_SIZE_HEIGHT(word) (((word) >> FIELD_MENU_SIZE_HEIGHT_SHIFT) & 0xFF)
+
 /** @brief Twenty-byte menu element with packed geometry, scrolling, and draw callback. */
 struct FieldMenuElement
 {

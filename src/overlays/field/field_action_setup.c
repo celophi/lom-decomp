@@ -173,7 +173,7 @@ s32 field_battle_resolve_action(FieldBattleAction* action)
     {
         if (result == FIELD_GUARD_IGNORED)
         {
-            func_800B28E0(action->target_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_MISS);
+            field_run_actor_event(action->target_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_MISS);
         }
         g_field_battle->attacker->unkC &= ~FIELD_RECORD_ACTION_MODIFIERS;
         return result;
@@ -202,9 +202,9 @@ s32 field_battle_resolve_action(FieldBattleAction* action)
         {
             if (!g_field_battle->action_flags.bits.follow_up)
             {
-                func_800B28E0(action->attacker_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_KILL);
+                field_run_actor_event(action->attacker_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_KILL);
             }
-            func_800B28E0(action->target_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_DEFEATED);
+            field_run_actor_event(action->target_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_DEFEATED);
             if (func_800B4CE4(g_field_battle->attacker, FIELD_SLOT_DEFEAT_FLAG_29) != 0)
             {
                 g_field_battle->target->unkC |= FIELD_DEFEAT_FLAG_29;
@@ -238,8 +238,8 @@ s32 field_battle_resolve_action(FieldBattleAction* action)
         else
         {
             field_battle_run_down_counters(1);
-            func_800B28E0(action->attacker_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_HIT);
-            func_800B28E0(action->target_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_HURT);
+            field_run_actor_event(action->attacker_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_HIT);
+            field_run_actor_event(action->target_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_HURT);
             g_field_battle->target->unkC &= ~FIELD_RECORD_DEFEAT_FLAGS;
             field_register_actor_hit(action->target_id, 0);
         }
@@ -249,7 +249,7 @@ s32 field_battle_resolve_action(FieldBattleAction* action)
     else
     {
         field_battle_run_down_counters(0);
-        func_800B28E0(action->target_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_MISS);
+        field_run_actor_event(action->target_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_MISS);
         g_field_battle->target->unkC &= ~FIELD_RECORD_DEFEAT_FLAGS;
         g_field_battle->attacker->unkC &= ~FIELD_RECORD_ACTION_MODIFIERS;
         return 0;

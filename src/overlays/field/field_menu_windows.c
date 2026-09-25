@@ -410,7 +410,7 @@ void func_800AE008(FieldMenuRenderContext *context)
                             (s16)scroll_target + (s32)((input_size >> 1) & 255) <
                                 element->size.fields.content_height)
                         {
-                            func_800A3938(0x7D, 0x80);
+                            field_play_sound(0x7D, 0x80);
                             next_scroll_target = (u16)element->scroll_target + 16;
                             element->scroll_target = next_scroll_target;
                             clamped_target = next_scroll_target;
@@ -425,7 +425,7 @@ void func_800AE008(FieldMenuRenderContext *context)
                         }
                         else if ((g_pad_input & 0x1000) && element->scroll > 0)
                         {
-                            func_800A3938(0x7D, 0x80);
+                            field_play_sound(0x7D, 0x80);
                             next_scroll_target = (u16)element->scroll_target - 16;
                             element->scroll_target = next_scroll_target;
                             if (next_scroll_target < 0)

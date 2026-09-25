@@ -81,7 +81,7 @@ void field_spawn_item_record(s32 key, s32 item)
         {
             record->scripts[i] = g_field_runtime->actors[FIELD_ITEM_TEMPLATE_RECORD].scripts[i];
         }
-        func_800B28E0(key, FIELD_ITEM_SPAWN_EVENT, item & 0xFF);
+        field_run_actor_event(key, FIELD_ITEM_SPAWN_EVENT, item & 0xFF);
         return;
     }
 

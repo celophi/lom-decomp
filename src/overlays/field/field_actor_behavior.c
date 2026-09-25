@@ -159,7 +159,7 @@
 
 /** @brief Sound played when an action cannot start. */
 #define FIELD_SOUND_ACTION_REFUSED 0x78
-/** @brief Centre pan for func_800A3938. */
+/** @brief Centre pan for field_play_sound. */
 #define FIELD_SOUND_PAN_CENTRE 0x80
 /** @brief g_field_action_sound_ids value without a sound. */
 #define FIELD_SOUND_NONE 0xFF
@@ -199,7 +199,7 @@
 #define FIELD_MOVER_AIRBORNE_HIGH 0x20000
 /** @brief field_find_actor_overlap result bits holding the overlapped object (0x8000 marks a hit). */
 #define FIELD_OVERLAP_INDEX_MASK 0x7FFF
-/** @brief func_8005B368 result without a blocking marker. */
+/** @brief field_collision_hit_markers result without a blocking marker. */
 #define FIELD_MARKER_NONE -1
 /** @brief func_800AD7DC result without a combo. */
 #define FIELD_COMBO_NONE 0xFF
@@ -236,7 +236,7 @@
 #define FIELD_COLLISION_PROBE ((struct FieldCollisionQuery*)0x1F800040)
 
 /**
- * @brief Collision mover handed to func_8005B6AC (same layout as in field_collision.c).
+ * @brief Collision mover handed to field_collision_move_mover (same layout as in field_collision.c).
  * @note The low half of mode_flags doubles as the footprint depth.
  */
 struct FieldCollisionMover
@@ -257,17 +257,6 @@ struct FieldCollisionMover
         s32 mode_flags;
         s16 footprint_depth;
     } mode;
-};
-
-/** @brief Footprint query handed to func_8005B368 (same layout as in field_collision.c). */
-struct FieldCollisionQuery
-{
-    s32 x;
-    s32 y;
-    s32 z;
-    u16 width;
-    s16 height_tolerance;
-    u16 depth;
 };
 
 /** @brief One action of a resource's action table (eight bytes). */
@@ -302,8 +291,8 @@ s32 func_8001CDAC(s32* in, s32* out);
 void field_route_actor_to_object(FieldActor* actor, s32 target_index, s32 mode);
 void field_restart_actor_animation(FieldActor* actor);
 void field_stop_actor_animations_for_object(FieldActor* actor, s32 force);
-s32 field_find_actor_overlap(void* record, void* position, s32 filter_group);
-void field_start_actor_contact_interaction(void* record, s32 actor_index);
+s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group);
+void field_start_actor_contact_interaction(FieldActor* actor, s32 object_index);
 /* Defined as (void) in field_actor_slot_resources.c, but every call here passes the object index. */
 s32 field_count_free_actor_slots(s32 object_index);
 static s32 field_apply_action_animation(FieldActor* actor, FieldObjectState* state, FieldResourceAction* action);
@@ -667,6 +656,36 @@ void field_record_actor_position(FieldActor* record)
 }
 
 /**
+ * @brief Settle a follower that stopped moving into its standing animation.
+ * @param actor Follower actor.
+ * @note Resources with an action table drop to animation 0; others turn a walk
+ *       animation into the standing one of the same direction.
+ */
+static inline void field_stop_follower_animation(FieldActor* actor)
+{
+    u8 old_animation;
+    s32 animation_index;
+
+    old_animation = actor->animation;
+    animation_index = old_animation & FIELD_ANIMATION_INDEX_MASK;
+    if ((animation_index < FIELD_ANIMATION_WALK) || (g_field_resource_entries[actor->resource_index].flags & FIELD_RESOURCE_HAS_ACTIONS))
+    {
+        if ((animation_index == 0) || !(g_field_resource_entries[actor->resource_index].flags & FIELD_RESOURCE_HAS_ACTIONS))
+        {
+            return;
+        }
+        actor->animation = old_animation & FIELD_ANIMATION_FACING;
+    }
+    else
+    {
+        actor->animation = (animation_index % FIELD_ANIMATION_DIRECTIONS) | (old_animation & FIELD_ANIMATION_FACING);
+    }
+    actor->animation_frame = 0;
+    actor->animation_active = 1;
+    field_restart_actor_animation(actor);
+}
+
+/**
  * @brief Walk a follower along the leader's route history.
  *
  * The follower moves towards the leader's history entry at its route_index,
@@ -686,7 +705,6 @@ void field_follow_leader_route(FieldActor* actor, s32 follower_index)
     s16 frame_timer;
     s32 limit;
     s32 position_z;
-    s32 animation_index;
     s32 actor_x;
     s32 advance_dx;
     s32 retreat_dx;
@@ -700,7 +718,6 @@ void field_follow_leader_route(FieldActor* actor, s32 follower_index)
     u8 route_index;
     s32 sample_index;
     u8 recorded_animation;
-    u8 old_animation;
     u8 animation;
     FieldObjectState* sample_state;
     FieldActor* leader;
@@ -855,7 +872,7 @@ void field_follow_leader_route(FieldActor* actor, s32 follower_index)
             mover->mode.mode_flags &= ~FIELD_MOVER_AIRBORNE_LOW;
             mover->collision_node = g_field_object_states[actor->object_index].collision_node;
             mover->flags = g_field_object_states[actor->object_index].collision_flags;
-            func_8005B6AC(mover);
+            field_collision_move_mover(mover);
             g_field_object_states[actor->object_index].collision_node = mover->collision_node;
             g_field_object_states[actor->object_index].collision_flags = mover->flags;
             actor->y = mover->height;
@@ -890,25 +907,7 @@ void field_follow_leader_route(FieldActor* actor, s32 follower_index)
     }
     else
     {
-        old_animation = actor->animation;
-        animation_index = old_animation & FIELD_ANIMATION_INDEX_MASK;
-        if ((animation_index < FIELD_ANIMATION_WALK) || (g_field_resource_entries[actor->resource_index].flags & FIELD_RESOURCE_HAS_ACTIONS))
-        {
-            if ((animation_index != 0) && (g_field_resource_entries[actor->resource_index].flags & FIELD_RESOURCE_HAS_ACTIONS))
-            {
-                /* Writing the restart tail out here moves the shared block. */
-                actor->animation = old_animation & FIELD_ANIMATION_FACING;
-                goto restart_animation;
-            }
-        }
-        else
-        {
-            actor->animation = (animation_index % FIELD_ANIMATION_DIRECTIONS) | (old_animation & FIELD_ANIMATION_FACING);
-        restart_animation:
-            actor->animation_frame = 0;
-            actor->animation_active = 1;
-            field_restart_actor_animation(actor);
-        }
+        field_stop_follower_animation(actor);
     }
     if ((dx | dz) != 0)
     {
@@ -988,7 +987,7 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
     {
         record_input = command != FIELD_ACTOR_COMMAND_96;
     }
-    func_800A2594(pad_index, record_input);
+    field_command_history_record(pad_index, record_input);
     if (D_80122B20 != 0)
     {
         g_field_pad_buttons = 0;
@@ -1010,7 +1009,7 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
     {
         actor->command = field_resolve_action_command(actor, pad_index);
     }
-    if (func_800A6490() == 0)
+    if (field_actor_text_pending() == 0)
     {
         text_status = field_text_get_status(0);
         status_or_contact = -1;
@@ -1130,7 +1129,7 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
                 mover->mode.mode_flags &= ~FIELD_MOVER_AIRBORNE_LOW;
                 mover->collision_node = g_field_object_states[movement_actor->object_index].collision_node;
                 mover->flags = g_field_object_states[movement_actor->object_index].collision_flags;
-                if ((func_8005B6AC(mover) & FIELD_COLLISION_BLOCKED) == FIELD_COLLISION_BLOCKED)
+                if ((field_collision_move_mover(mover) & FIELD_COLLISION_BLOCKED) == FIELD_COLLISION_BLOCKED)
                 {
                     movement_actor->control.word = movement_actor->control.word & ~FIELD_CONTROL_MOVEMENT_MASK;
                 }
@@ -1161,8 +1160,8 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
             probe->x = mover->x;
             probe->y = movement_actor->y;
             probe->z = mover->z;
-            /* func_8005B368 is called as returning int: the original compares the s16 result unextended. */
-            if ((g_field_active_group != 0) && (((s32(*)(struct FieldCollisionQuery*))func_8005B368)(probe) != FIELD_MARKER_NONE))
+            /* field_collision_hit_markers is called as returning int: the original compares the s16 result unextended. */
+            if ((g_field_active_group != 0) && (((s32(*)(struct FieldCollisionQuery*))field_collision_hit_markers)(probe) != FIELD_MARKER_NONE))
             {
                 work.motion.vx = movement_actor->x;
                 work.motion.vz = movement_actor->z;
@@ -1198,7 +1197,7 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
         {
             movement_actor->x = work.motion.vx;
             movement_actor->z = work.motion.vz;
-            if (field_find_actor_overlap(movement_actor, movement_actor, 0) == 0)
+            if (field_find_actor_overlap(movement_actor, &movement_actor->x, 0) == 0)
             {
                 released_state = &g_field_object_states[movement_actor->object_index];
                 released_state->movement.word = released_state->movement.word & ~FIELD_MOVEMENT_OVERLAPPING;
@@ -1214,7 +1213,7 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
             }
             else
             {
-                if (field_find_actor_overlap(movement_actor, movement_actor, 0) != 0)
+                if (field_find_actor_overlap(movement_actor, &movement_actor->x, 0) != 0)
                 {
                     blocked_state = &g_field_object_states[movement_actor->object_index];
                     blocked_state->movement.word = blocked_state->movement.word | FIELD_MOVEMENT_OVERLAPPING;
@@ -1280,7 +1279,7 @@ void field_prepare_actor_action(FieldActor* actor)
     }
     if (!(action->flags & FIELD_ACTION_INSTRUMENT) && (action->command == 0) && (action->animation == 0))
     {
-        func_800A3938(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
         actor->command = FIELD_ACTOR_COMMAND_NONE;
         return;
     }
@@ -1303,7 +1302,7 @@ void field_prepare_actor_action(FieldActor* actor)
         object_index = actor->object_index;
         if (g_field_object_states[object_index].technique_gauge != FIELD_TECHNIQUE_GAUGE_FULL)
         {
-            func_800A3938(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
             actor->command = FIELD_ACTOR_COMMAND_NONE;
             return;
         }
@@ -1760,9 +1759,9 @@ s32 field_update_actor_command(FieldActor* actor)
     case FIELD_ACTOR_COMMAND_TURN:
         if (!(g_field_resource_entries[actor->resource_index].flags & FIELD_RESOURCE_HAS_ACTIONS))
         {
-            /* The target reads command_param twice back to back; plain reads fold into one load. */
-            turn_animation = g_field_actor_turn_animations[((volatile FieldActor*)actor)->command_param];
-            actor->command_param = (u8)(((volatile FieldActor*)actor)->command_param + 1);
+            turn_animation = actor->command_param;
+            turn_animation = g_field_actor_turn_animations[turn_animation];
+            actor->command_param++;
             actor->animation = turn_animation;
             if (g_field_actor_turn_animations[actor->command_param] == FIELD_TURN_ANIMATION_END)
             {
@@ -2227,7 +2226,7 @@ s32 field_update_actor_command(FieldActor* actor)
                             field_start_actor_animation(target_count_or_slot, 0, 0);
                             charge_states[actor->object_index].contact.bytes.animation_actor_index = target_count_or_slot;
                             charge_object_index = actor->object_index;
-                            func_800A623C(charge_object_index,
+                            field_start_actor_text(charge_object_index,
                                           (0x80000000 | (charge_object_index << 0x10)) |
                                               (charge_states[charge_object_index].action - 4));
                             return;
@@ -2337,7 +2336,7 @@ s32 field_update_actor_command(FieldActor* actor)
                 if (actor->object_index < FIELD_PARTY_COUNT)
                 {
                     technique_object_index = actor->object_index;
-                    func_800A623C(technique_object_index,
+                    field_start_actor_text(technique_object_index,
                                   (action->command & FIELD_ACTION_TECHNIQUE_MASK) + (g_field_player_records[technique_object_index].weapon_type * FIELD_TECHNIQUES_PER_WEAPON));
                 }
                 field_execute_actor_sequence(actor, action->command & FIELD_ACTION_TECHNIQUE_MASK);
@@ -2559,7 +2558,7 @@ static s32 field_apply_action_animation(FieldActor* actor, FieldObjectState* sta
     }
     if ((actor->object_index < FIELD_PLAYER_COUNT) && (g_field_action_sound_ids[actor->animation & FIELD_ANIMATION_INDEX_MASK] != FIELD_SOUND_NONE))
     {
-        func_800A3938(g_field_action_sound_ids[actor->animation & FIELD_ANIMATION_INDEX_MASK], FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(g_field_action_sound_ids[actor->animation & FIELD_ANIMATION_INDEX_MASK], FIELD_SOUND_PAN_CENTRE);
     }
 }
 

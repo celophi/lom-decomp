@@ -23,9 +23,6 @@ typedef struct
     u32 word : 32;
 } CdWordBits;
 
-extern u16 g_field_movie_frame_width;
-extern u16 g_field_movie_frame_height;
-
 void func_800157B0(s32);
 
 void func_80059F18(void);
@@ -33,10 +30,6 @@ void func_80059F18(void);
    prototype in scope, field_update_scene_fade converts the arguments and
    the image changes. */
 s32 func_8005A84C(s32, s32);
-void func_8005A984(FieldPart*, s32, s32);
-void func_8005AA68(FieldObj*, s32, s32);
-void func_80140358(s32, s32, s32, s32);
-void func_801406E4(void);
 
 /**
  * @brief World position of a field object or part, in whole pixels.
@@ -307,7 +300,7 @@ void field_start_animation(FieldSeq* seq)
             anim->flags.b.state = frame;
             anim->flags.b.keyframe = frame;
         }
-        span = (FieldTweenSpan*)field_find_count_table_span((u8*)def, anim->flags.b.keyframe, &base);
+        span = field_find_count_table_span(def, anim->flags.b.keyframe, &base);
         if (def->flags.word & 0x20)
         {
             anim->timer = span->duration;
@@ -424,11 +417,11 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
         }
         while (seq != NULL)
         {
-            if ((seq->flags & 3) != 0)
+            if ((seq->flags.word & 3) != 0)
             {
-                if (((u8*)&seq->flags)[1] == index)
+                if (seq->flags.b.index == index)
                 {
-                    seq->flags &= ~3;
+                    seq->flags.word &= ~3;
                 }
                 cmd = seq->def;
                 field_control_animation(cmd->list_kind, cmd->anim_index, -1, 1);
@@ -465,7 +458,7 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
                 anim->flags.b.state = frame;
                 anim->flags.b.keyframe = frame;
             }
-            span = (FieldTweenSpan*)field_find_count_table_span((u8*)def, anim->flags.b.keyframe, &base);
+            span = field_find_count_table_span(def, anim->flags.b.keyframe, &base);
             if (def->flags.word & 0x20)
             {
                 anim->timer = span->duration;
@@ -576,7 +569,6 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
     }
 }
 
-extern s32 D_801ED02C;
 
 /*
  * func_8005A0D0 is deliberately left undeclared here. It is defined at the end
@@ -607,9 +599,9 @@ extern s32 D_801ED02C;
  *
  * @note @c fade_mode is written two different ways on purpose and neither is
  *       interchangeable: the mode-2 store at the end of the fade-out uses the
- *       standalone symbol @c D_801ED02C (costs 2 rows written through
+ *       standalone symbol @c g_field_scene_fade_mode (costs 2 rows written through
  *       @c state), while the mode-0 store at the end of the fade-in goes
- *       through @c state (costs 1 row written as @c D_801ED02C). Same address,
+ *       through @c state (costs 1 row written as @c g_field_scene_fade_mode). Same address,
  *       different addressing mode - the same split as SCENE_STATE->camera_x vs g_field_camera_x.
  * @note @c state and @c scene are both locals, and @c scene has to be read at
  *       the very top, before the switch: reading it where it is first used
@@ -684,11 +676,11 @@ void field_update_scene_fade(void)
                 seq = scene->seqs;
                 while (seq != NULL)
                 {
-                    seq->flags = ((seq->flags & ~0xC) | ((((u8*)&seq->flags)[0] & 3) << 2)) & ~3;
+                    seq->flags.word = ((seq->flags.word & ~0xC) | ((seq->flags.b.state & 3) << 2)) & ~3;
                     seq = seq->next;
                 }
                 field_control_animation(0, 0, 0, 0);
-                D_801ED02C = 2;
+                g_field_scene_fade_mode = 2;
                 func_8005A0D0(0, 0x100, 0x100, 0x100);
             }
         }
@@ -719,7 +711,7 @@ void field_update_scene_fade(void)
  * 0x100 on the following frames.
  *
  * @note @c list exists to make @c scene->objects address-taken. Without it gcc
- *       can prove the @c D_801ED02C store does not alias the load and hoists
+ *       can prove the @c g_field_scene_fade_mode store does not alias the load and hoists
  *       the load above it, which the target does not do (2 rows). The inline
  *       spelling @c *(&scene->objects) does NOT work - gcc folds the @c *&
  *       pair before aliasing is computed, so the pointer has to be a real named
@@ -730,7 +722,7 @@ void field_update_scene_fade(void)
  *       from the byte view instead costs 3 rows.
  * @note @c part must be re-assigned as its own statement rather than chained as
  *       @c part->next->visible - the chained form costs 8 rows.
- * @note Measured non-factor, still 100%: writing @c D_801ED02C before rather
+ * @note Measured non-factor, still 100%: writing @c g_field_scene_fade_mode before rather
  *       than after the @c scene read.
  *
  */
@@ -744,7 +736,7 @@ void field_begin_scene_fade_in(void)
     FieldSeq* seq;
 
     scene = g_field_scene.scene;
-    D_801ED02C = 3;
+    g_field_scene_fade_mode = 3;
     list = &scene->objects;
     obj = *list;
     obj->flags.word &= ~1;
@@ -785,7 +777,7 @@ void field_begin_scene_fade_in(void)
     seq = scene->seqs;
     while (seq != NULL)
     {
-        seq->flags = (seq->flags & ~3) | (((u32)seq->flags >> 2) & 3);
+        seq->flags.word = (seq->flags.word & ~3) | (((u32)seq->flags.word >> 2) & 3);
         seq = seq->next;
     }
 }
@@ -1129,11 +1121,11 @@ void func_8005A67C(s32 index, s32 op)
     }
     while (seq != NULL)
     {
-        if ((seq->flags & 3) != 0)
+        if ((seq->flags.word & 3) != 0)
         {
-            if (((u8*)&seq->flags)[1] == index)
+            if (seq->flags.b.index == index)
             {
-                seq->flags &= ~3;
+                seq->flags.word &= ~3;
             }
             cmd = seq->def;
             field_control_animation(cmd->list_kind, cmd->anim_index, -1, 1);
@@ -1185,10 +1177,10 @@ void func_8005A744(FieldSeq* seq, u8 index)
     s32 i;
 
     scene = g_field_scene.scene;
-    seq->unkC = 1;
-    seq->flags = (seq->flags & ~3) | 1;
+    seq->phase_frames = 1;
+    seq->flags.word = (seq->flags.word & ~3) | 1;
     def = seq->def;
-    ((u8*)&seq->flags)[1] = index;
+    seq->flags.b.index = index;
     field_start_animation(seq);
     i = def->start_link;
     if (i != 0xFF && def->start_delay == 0)
@@ -1230,9 +1222,9 @@ s32 func_8005A7EC(s32 index)
     seq = g_field_scene.scene->seqs;
     while (seq != NULL)
     {
-        if ((seq->flags & 3) != 0)
+        if ((seq->flags.word & 3) != 0)
         {
-            if (((u8*)&seq->flags)[1] == index)
+            if (seq->flags.b.index == index)
             {
                 return 0;
             }
@@ -1313,9 +1305,9 @@ s32 func_8005A84C(s32 list_kind, s32 index)
         seq = g_field_scene.scene->seqs;
         while (seq != NULL)
         {
-            if ((seq->flags & 3) != 0)
+            if ((seq->flags.word & 3) != 0)
             {
-                if (((u8*)&seq->flags)[1] == index)
+                if (seq->flags.b.index == index)
                 {
                     status = 0;
                     goto done;
@@ -2065,7 +2057,6 @@ void func_8005B0F4(s32 index, s32 from_keyframe)
 }
 
 
-extern s32 D_801ED02C;
 
 extern u8 D_800CBF44[];
 extern s32 D_801ED490;
@@ -2086,12 +2077,12 @@ void func_8005B1EC(void)
 }
 
 /**
- * @brief Return non-zero if D_801ED02C is set.
- * @return 1 if D_801ED02C != 0, 0 otherwise.
+ * @brief Return non-zero if g_field_scene_fade_mode is set.
+ * @return 1 if g_field_scene_fade_mode != 0, 0 otherwise.
  */
 s32 func_8005B218(void)
 {
-    return D_801ED02C != 0;
+    return g_field_scene_fade_mode != 0;
 }
 
 /**
@@ -2099,7 +2090,7 @@ s32 func_8005B218(void)
  *        re-rasterise the groups when the collision work area exists.
  * @param index Number of @c next hops along the scene's node list (0 = head).
  * @param enabled Stored in FieldNode::unk18; zero drops the node from the
- *                group scan in func_8005F158.
+ *                group scan in field_collision_collect_groups.
  * @note Called by the script ops with 1 / 0 to switch a node on or off.
  * @see decomp.me (100%) https://decomp.me/scratch/lN7ye
  */
@@ -2117,10 +2108,10 @@ void func_8005B228(s32 index, s32 enabled)
         remaining -= 1;
     }
     node->unk18 = enabled;
-    if (scene->unk28 != 0)
+    if (scene->group_work != 0)
     {
-        /* func_8005F5BC takes two parameters; the original also passes the scene and flag in $a2 and $a3. */
-        ((void (*)(s32, FieldNode*, FieldScene*, s32))func_8005F5BC)(0, node, scene, enabled);
+        /* field_collision_rasterize_groups takes two parameters; the original also passes the scene and flag in $a2 and $a3. */
+        ((void (*)(s32, FieldNode*, FieldScene*, s32))field_collision_rasterize_groups)(0, node, scene, enabled);
     }
 }
 

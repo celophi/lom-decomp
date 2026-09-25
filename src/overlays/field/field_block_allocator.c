@@ -1,8 +1,10 @@
 /** @file field_block_allocator.c
- * @brief Packed FIELD block-list initialization, allocation and release.
+ * @brief Tagged block pool used for the FIELD actor heap.
  *
  * A pool is a chain of blocks, each a one-word header followed by its
- * payload. The last word of the pool is a used block with the end tag.
+ * payload. Blocks carry an owner tag so that every block of one owner can be
+ * released in one call. The last word of the pool is a used block with the
+ * end tag.
  */
 
 #include "common.h"
@@ -10,6 +12,9 @@
 
 /** @brief Tag of the terminal block that ends a pool. */
 #define FIELD_BLOCK_TAG_END 0x7FF
+
+/** @brief Mask of the size field in a block header word. */
+#define FIELD_BLOCK_SIZE_MASK 0xFFFFF
 
 /** @brief Header word in front of every block of a pool. */
 typedef struct
@@ -20,39 +25,73 @@ typedef struct
 } FieldBlockHeader;
 
 /**
- * @brief Initialize a packed block pool and its terminal marker.
+ * @brief Return the header of the block that follows a block.
+ * @param block Block header.
+ * @return Header right after the payload of block.
+ */
+static inline FieldBlockHeader* field_block_next(FieldBlockHeader* block)
+{
+    return (FieldBlockHeader*)((u8*)block + block->size + sizeof(FieldBlockHeader));
+}
+
+/**
+ * @brief Grow a free block over the block that follows it.
+ * @param into Free block that absorbs the next one.
+ * @param block Block right after into, header included.
+ */
+static inline void field_block_absorb(FieldBlockHeader* into, FieldBlockHeader* block)
+{
+    into->size = into->size + block->size + sizeof(FieldBlockHeader);
+}
+
+/**
+ * @brief Mark a block free and clear its owner tag.
+ * @param block Block header.
+ */
+static inline void field_block_release(FieldBlockHeader* block)
+{
+    block->used = 0;
+    block->tag = 0;
+}
+
+/**
+ * @brief Initialize a pool as one free block plus the terminal marker.
  * @param pool Word-aligned pool buffer.
  * @param size Pool size in bytes, rounded down to a multiple of four.
  */
-void func_8009CA08(u32* pool, u32 size)
+void field_block_pool_init(void* pool, u32 size)
 {
     FieldBlockHeader* end;
     s32 unused[6]; /* never used; the original stack frame reserves it */
 
-    size &= 0xFFFFC;
-    pool[0] = (size - 8) & 0xFFFFF;
+    size &= FIELD_BLOCK_SIZE_MASK & ~3;
+    /* One word store: a free block with tag 0 spanning all but two headers. */
+    *(u32*)pool = (size - 2 * sizeof(FieldBlockHeader)) & FIELD_BLOCK_SIZE_MASK;
     end = (FieldBlockHeader*)((u8*)pool + size) - 1;
     end->used = 1;
     end->tag = FIELD_BLOCK_TAG_END;
 }
 
 /**
- * @brief Allocate a tagged block from a packed block pool.
+ * @brief Allocate a tagged block from a pool.
  *
  * Takes the first free block that is large enough. A block with at most four
  * spare bytes is used whole; a larger one is split and its remainder becomes
  * a new free block.
  *
- * @param block First block header of the pool.
+ * @param pool Pool buffer set up by field_block_pool_init().
  * @param size Requested payload size in bytes.
  * @param tag Owner tag stored in the allocated block header.
- * @return Pointer to the allocated payload, or NULL when no suitable block exists.
+ * @return Pointer to the allocated payload, or NULL when no block fits.
  */
-void* func_8009CA54(FieldBlockHeader* block, s32 size, s32 tag)
+void* field_block_alloc(void* pool, s32 size, s32 tag)
 {
+    FieldBlockHeader* block;
     u32 need;
     FieldBlockHeader* next;
 
+    block = pool;
+    /* Round up to whole words (the original mask keeps 24 bits). */
     need = (size + 3) & 0xFFFFFC;
     while (1)
     {
@@ -60,7 +99,7 @@ void* func_8009CA54(FieldBlockHeader* block, s32 size, s32 tag)
         {
             if (block->size >= need)
             {
-                if (block->size == need || block->size == need + 4)
+                if (block->size == need || block->size == need + sizeof(FieldBlockHeader))
                 {
                     block->used = 1;
                     block->tag = tag;
@@ -68,7 +107,7 @@ void* func_8009CA54(FieldBlockHeader* block, s32 size, s32 tag)
                 }
                 next = (FieldBlockHeader*)((u8*)block + need) + 1;
                 next->used = 0;
-                next->size = block->size - need - 4;
+                next->size = block->size - need - sizeof(FieldBlockHeader);
                 next->tag = 0;
                 block->used = 1;
                 block->tag = tag;
@@ -80,87 +119,50 @@ void* func_8009CA54(FieldBlockHeader* block, s32 size, s32 tag)
         {
             return NULL;
         }
-        block = (FieldBlockHeader*)((u8*)block + block->size + 4);
+        block = field_block_next(block);
     }
 }
 
 /**
- * @brief Free every block with the requested tag and merge adjacent free blocks.
- * @param first_block First block header of the pool, viewed as raw header words.
- * @param requested_tag Owner tag of the blocks to free.
- * @note Written with header masks in locals rather than FieldBlockHeader
- *       bitfields; the bitfield form does not reproduce the original code.
+ * @brief Free every block with a tag and merge adjacent free blocks.
+ * @param pool Pool buffer set up by field_block_pool_init().
+ * @param tag Owner tag of the blocks to free.
  */
-void func_8009CB64(u32* first_block, s32 requested_tag)
+void field_block_free_tag(void* pool, s32 tag)
 {
-    u32* previous_block;
-    u32 header;
-    u32 coalesce_header;
-    s32 block_tag;
-    s32 previous_header;
-    s32 coalesce_previous_header;
-    u32 tag_bits;
-    u32 cleared_header;
-    u32 clear_used_mask;
-    u32 keep_header_mask;
-    u32 size_mask;
-    u32 flags_mask;
+    FieldBlockHeader* block;
+    FieldBlockHeader* previous;
 
-    previous_block = first_block;
-    clear_used_mask = 0x7FFFFFFF;
-    keep_header_mask = 0x800FFFFF;
-    size_mask = 0xFFFFF;
-    flags_mask = 0xFFF00000;
-    do
+    block = pool;
+    previous = block;
+    while (1)
     {
-        header = *first_block;
-        tag_bits = header >> 20;
-        block_tag = tag_bits & 0x7FF;
-        tag_bits = 0x7FF;
-        if (block_tag == tag_bits)
+        if (block->tag == FIELD_BLOCK_TAG_END)
         {
             return;
         }
-
-        if ((s32)header < 0 && block_tag == requested_tag)
+        if (block->used && block->tag == tag)
         {
-            if (previous_block != first_block)
+            if (previous == block)
             {
-                previous_header = *previous_block;
-                if (previous_header >= 0)
-                {
-                    *previous_block = (previous_header & flags_mask) | (((previous_header & size_mask) + (header & size_mask) + 4) & size_mask);
-                    first_block = previous_block;
-                }
-                else
-                {
-                    cleared_header = header & clear_used_mask;
-                    *first_block = cleared_header & keep_header_mask;
-                }
+                field_block_release(block);
+            }
+            else if (!previous->used)
+            {
+                field_block_absorb(previous, block);
+                block = previous;
             }
             else
             {
-                cleared_header = header & clear_used_mask;
-                *first_block = cleared_header & keep_header_mask;
+                field_block_release(block);
             }
         }
-
-        if (previous_block != first_block)
+        if (previous != block && !block->used && !previous->used)
         {
-            coalesce_header = *first_block;
-            if ((s32)coalesce_header >= 0)
-            {
-                coalesce_previous_header = *previous_block;
-                if (coalesce_previous_header >= 0)
-                {
-                    *previous_block =
-                        (coalesce_previous_header & flags_mask) | (((coalesce_previous_header & size_mask) + (coalesce_header & size_mask) + 4) & size_mask);
-                    first_block = previous_block;
-                }
-            }
+            field_block_absorb(previous, block);
+            block = previous;
         }
-
-        previous_block = first_block;
-        first_block = (u32*)((u8*)first_block + (*first_block & size_mask) + 4);
-    } while (1);
+        previous = block;
+        block = field_block_next(block);
+    }
 }

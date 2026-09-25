@@ -60,7 +60,7 @@
 /** @brief Number of equipment_totals values in a character or stored companion record. */
 #define FIELD_EQUIPMENT_TOTAL_COUNT 4
 
-/** @brief Number of entries in FieldCharacterRecord.unk48. */
+/** @brief Number of entries in FieldCharacterRecord.button_actions. */
 #define FIELD_CHARACTER_ORDER_COUNT 8
 
 /** @brief First armor slot; the armor slots follow the weapon slot. */
@@ -277,7 +277,7 @@ static void field_load_companion(s32 companion_index)
     g_field_game_state->characters[FIELD_PARTY_COMPANION].unk43 = g_field_game_state->regions[companion_index].unk38[3];
     for (i = 0; i < FIELD_CHARACTER_ORDER_COUNT; i++)
     {
-        g_field_game_state->characters[FIELD_PARTY_COMPANION].unk48[i] = i;
+        g_field_game_state->characters[FIELD_PARTY_COMPANION].button_actions[i] = i;
     }
     table = func_800C1E40(FIELD_RESOURCE_WEAPON_TEMPLATES);
     if (table != NULL)

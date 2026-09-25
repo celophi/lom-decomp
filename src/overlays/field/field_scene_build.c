@@ -905,7 +905,7 @@ void field_build_render_records(FieldMapObject *map, u16 object_index)
         tail->next = (FieldLink *) seq;
         tail = (FieldLink *) seq;
         seq->def = seq_def++;
-        seq->flags &= ~3;
+        seq->flags.word &= ~3;
     }
     /* Keeps the sllv ahead of the terminator store (plain: 98.83%). */
     do { mask = 1 << object_index; } while (0);
@@ -1228,7 +1228,7 @@ void field_build_animation_list(FieldAnimDef *def, u8 **arena, FieldAnim **tail)
         }
         else
         {
-            span = (FieldTweenSpan *) field_find_count_table_span((u8 *) def, anim->flags.b.keyframe, &range_start);
+            span = field_find_count_table_span(def, anim->flags.b.keyframe, &range_start);
             if (def->flags.word & 0x20)
             {
                 anim->timer = span->duration;
