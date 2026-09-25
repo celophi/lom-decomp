@@ -7,14 +7,40 @@
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
 
-/* Partial WMAP decompilation: 75.209880% (gcc280_g0). */
-
-#define M2C_FIELD(expr, type_ptr, offset) (*(type_ptr)((s8*)(expr) + (offset)))
-
 void* memset(void*, int, unsigned int);
-extern u8 D_800D0A6C;
+typedef struct
+{
+    u8 pad00[6];
+    s8 scale_index;
+    u8 pad07[0x15];
+    u8* parts;
+    u8 pad20[2];
+    s16 target_shade;
+    s16 shade;
+    u16 shade_step;
+} SpriteActor;
 
+typedef struct
+{
+    u8 pad00[8];
+    u16 clut[8];
+    u16 tpage;
+    u16 pad1A;
+} SpriteTexture;
 
+typedef struct
+{
+    u8 x, y, u, v, width, height;
+    s8 flags, texture, angle, blend, x_high, y_high;
+} SpritePart;
+
+typedef union
+{
+    s16 value;
+    u8 byte[2];
+} SpriteCoordinate;
+
+extern SpriteTexture D_800D0A6C[];
 
 /**
  * @brief Advance sprite-part shading and append transformed textured quads.
@@ -27,227 +53,221 @@ extern u8 D_800D0A6C;
 void func_80066F9C(void* actor, s32 screen_position, s32 texture_index, s32 ot_index, s32 variant)
 {
     SVECTOR position;
-    s16* sp7C;
-    u16* sp78;
-    s16 sp6C;
-    void* sp68;
-    void* sp64;
-    s32 sp60;
-    MATRIX sp40;
-    SVECTOR sp38;
-    VECTOR sp28;
     VECTOR transformed;
-    s16 temp_a0;
-    s16 temp_a0_2;
-    s16 temp_a1;
-    s16 temp_a2;
-    s16 temp_v0;
-    s16 temp_v0_2;
-    s16 temp_v0_3;
-    s16 temp_v1_2;
-    s16 var_s5;
-    s32 var_v0;
-    s16 var_v0_3;
-    s32 temp_a0_3;
-    s32 temp_a0_4;
-    s32 temp_a2_2;
-    s32 temp_s4;
-    s32 temp_v1_3;
-    s8* temp_s3;
-    s8 temp_v0_6;
-    s8 temp_v0_7;
-    s8 var_s6;
-    u16 temp_v1;
-    u32 var_v0_2;
-    u8* var_s3;
-    u8 temp_v0_4;
-    u8 temp_v0_5;
-    u8 temp_v1_4;
-    u8 temp_v1_5;
-    u8 var_v0_4;
-    void* temp_a0_5;
-    void* temp_a1_2;
-    void* temp_s1;
-    void* var_a3;
-    void* var_s2;
+    VECTOR translation_vector;
+    SVECTOR rotation_vector;
+    MATRIX matrix;
+    s32 page_y_offset;
+    VECTOR* translation;
+    SVECTOR* rotation;
+    s16 current_shade;
+    SpriteCoordinate part_x;
+    SpriteCoordinate part_y;
+    s16 origin_y;
+    s16 origin_x;
+    s16 target_shade;
+    s16 shade;
+    s32 brightness;
+    s16 bottom_y;
+    s32 high_x;
+    s32 high_y;
+    s32 width;
+    s32 height;
+    s32 scaled_y;
+    s32 scaled_bottom;
+    s32 scaled_right;
+    s32 screen_y;
+    s32 scaled_x;
+    s8 flipped_v;
+    s8 top_v;
+    s32 part_count;
+    u32 count_index;
+    u8* part_bytes;
+    u8 flipped_u;
+    u8 left_u;
+    u8 flipped_right_u;
+    u8 right_u;
+    u8 bottom_v;
+    WmapQuadScale* scale;
+    POLY_FT4* quad;
+    WmapFrame* frame;
+    SpritePart* part;
 
     if (variant >= 0x100)
     {
-        sp60 = ((variant >> 8) - 1) << 6;
+        page_y_offset = ((variant >> 8) - 1) << 6;
         variant &= 0xFF;
     }
     else
     {
-        sp60 = 0;
+        page_y_offset = 0;
     }
-    temp_s3 = M2C_FIELD(actor, s8**, 0x1C);
-    temp_a0 = M2C_FIELD(actor, s16*, 0x24);
-    temp_v0 = M2C_FIELD(actor, s16*, 0x22);
-    temp_v1 = (u16)M2C_FIELD(actor, s16*, 0x24);
-    var_s6 = *temp_s3;
-    var_s3 = temp_s3 + 1;
-    if (temp_a0 != temp_v0)
+    part_bytes = (u8*)((SpriteActor*)actor)->parts;
+    current_shade = ((SpriteActor*)actor)->shade;
+    target_shade = ((SpriteActor*)actor)->target_shade;
+    part_count = *(s8*)part_bytes++;
+    if (current_shade != target_shade)
     {
-        if (temp_v0 < temp_a0)
+        if (target_shade < current_shade)
         {
-            temp_v0_2 = temp_v1 - M2C_FIELD(actor, u16*, 0x26);
-            M2C_FIELD(actor, s16*, 0x24) = temp_v0_2;
-            var_v0 = temp_v0_2;
+            ((SpriteActor*)actor)->shade -= ((SpriteActor*)actor)->shade_step;
+            if (((SpriteActor*)actor)->shade < 0)
+            {
+                ((SpriteActor*)actor)->shade = 0;
+            }
         }
         else
         {
-            temp_v0_3 = temp_v1 + M2C_FIELD(actor, u16*, 0x26);
-            M2C_FIELD(actor, s16*, 0x24) = temp_v0_3;
-            if (temp_v0_3 >= 0x100)
+            ((SpriteActor*)actor)->shade += ((SpriteActor*)actor)->shade_step;
+            if (((SpriteActor*)actor)->shade >= 0x100)
             {
-                M2C_FIELD(actor, s16*, 0x24) = 0xFF;
+                ((SpriteActor*)actor)->shade = 0xFF;
             }
-            var_v0 = M2C_FIELD(actor, s16*, 0x24);
+            if (((SpriteActor*)actor)->shade < 0)
+            {
+                ((SpriteActor*)actor)->shade = 0;
+            }
         }
-        var_v0_2 = var_s6 - 1;
-        if (var_v0 < 0)
-        {
-            M2C_FIELD(actor, s16*, 0x24) = 0;
-            goto block_11;
-        }
+    }
+    count_index = part_count - 1;
+    if (count_index >= 0x20U)
+    {
+        func_80064F14();
+        return;
+    }
+    shade = ((SpriteActor*)actor)->shade;
+    if (shade >= 0x80)
+    {
+        brightness = 0x100 - shade;
     }
     else
     {
-    block_11:
-        var_v0_2 = var_s6 - 1;
+        brightness = shade;
     }
-    if (var_v0_2 >= 0x20U)
-    {
-        func_80064F14(temp_a0);
-        return;
-    }
-    temp_v1_2 = M2C_FIELD(actor, s16*, 0x24);
-    var_s5 = temp_v1_2;
-    if (temp_v1_2 >= 0x80)
-    {
-        var_s5 = 0x100 - temp_v1_2;
-    }
-    sp64 = &sp28;
-    temp_s4 = screen_position >> 0x10;
-    sp68 = &sp38;
-    sp7C = &position.vx;
-    var_s2 = var_s3 + 9;
-    sp78 = (u16*)&transformed;
+    translation = &translation_vector;
+    rotation = &rotation_vector;
+    screen_y = screen_position >> 0x10;
+    part = (SpritePart*)part_bytes;
     do
     {
-        temp_s1 = M2C_FIELD(g_wmap_current_frame, void**, 0x33C);
-        if (M2C_FIELD(var_s2, s8*, -1) != 0)
+        quad = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
+        if (part->angle != 0)
         {
-            memset(sp64, 0, 0x10);
-            memset(sp68, 0, 8);
-            sp38.vz = (s16)((s32)((u8)M2C_FIELD(var_s2, s8*, -1) << 0x18) >> 0x14);
-            TransMatrix(&sp40, sp64);
-            RotMatrix(sp68, &sp40);
-            SetRotMatrix(&sp40);
-            SetTransMatrix(&sp40);
-            temp_a0_2 = *var_s3 | (M2C_FIELD(var_s2, u8*, 1) << 8);
-            temp_a2 = temp_a0_2 + screen_position;
-            M2C_FIELD(temp_s1, s16*, 8) = temp_a2;
-            temp_a1 = (M2C_FIELD(var_s2, u8*, -8) | (M2C_FIELD(var_s2, u8*, 2) << 8)) + temp_s4;
-            M2C_FIELD(temp_s1, s16*, 0xA) = temp_a1;
+            memset(translation, 0, 0x10);
+            memset(rotation, 0, 8);
+            rotation_vector.vz = (s16)((s32)((u8)part->angle << 0x18) >> 0x14);
+            TransMatrix(&matrix, translation);
+            RotMatrix(rotation, &matrix);
+            SetRotMatrix(&matrix);
+            SetTransMatrix(&matrix);
+            part_x.byte[0] = *part_bytes;
+            part_x.byte[1] = part->x_high;
+            part_y.byte[0] = part->y;
+            part_y.byte[1] = part->y_high;
+            origin_x = part_x.value + screen_position;
+            quad->x0 = origin_x;
+            origin_y = part_y.value + screen_y;
+            quad->y0 = origin_y;
+            position.vx = part->width;
             position.vy = 0;
             position.vz = 0;
-            sp6C = temp_a0_2;
-            position.vx = (s16)M2C_FIELD(var_s2, u8*, -5);
             gte_ldv0(&position);
             gte_rtv0tr();
             gte_stlvnl(&transformed);
-            M2C_FIELD(temp_s1, s16*, 0x10) = (s16)(transformed.vx + temp_a2);
-            M2C_FIELD(temp_s1, s16*, 0x12) = (s16)(transformed.vy + temp_a1);
+            quad->x1 = (s16)((u16)transformed.vx + origin_x);
+            quad->y1 = (s16)((u16)transformed.vy + origin_y);
             position.vx = 0;
+            position.vy = part->height;
             position.vz = 0;
-            position.vy = (s16)M2C_FIELD(var_s2, u8*, -4);
             gte_ldv0(&position);
             gte_rtv0tr();
             gte_stlvnl(&transformed);
-            M2C_FIELD(temp_s1, s16*, 0x18) = (s16)(transformed.vx + temp_a2);
-            M2C_FIELD(temp_s1, s16*, 0x1A) = (s16)(transformed.vy + temp_a1);
-            position.vx = (s16)M2C_FIELD(var_s2, u8*, -5);
+            quad->x2 = (s16)((u16)transformed.vx + origin_x);
+            quad->y2 = (s16)((u16)transformed.vy + origin_y);
+            position.vx = part->width;
+            position.vy = part->height;
             position.vz = 0;
-            position.vy = (s16)M2C_FIELD(var_s2, u8*, -4);
             gte_ldv0(&position);
             gte_rtv0tr();
             gte_stlvnl(&transformed);
-            M2C_FIELD(temp_s1, s16*, 0x20) = (s16)(transformed.vx + temp_a2);
-            var_v0_3 = transformed.vy + temp_a1;
+            quad->x3 = (s16)((u16)transformed.vx + origin_x);
+            bottom_y = (u16)transformed.vy + origin_y;
         }
         else
         {
-            temp_a1_2 = (variant << 8) + ((M2C_FIELD(actor, s8*, 6) * 0x10) + (u8*)&g_wmap_land_quad_scales);
-            temp_v1_3 = (s8)*var_s3 | ((s8)M2C_FIELD(var_s2, u8*, 1) << 8);
-            M2C_FIELD(temp_s1, s16*, 8) = (s16)(screen_position + ((s32)(temp_v1_3 * M2C_FIELD(temp_a1_2, s16*, 0)) >> 8));
-            temp_a2_2 = temp_v1_3 + M2C_FIELD(var_s2, u8*, -5);
-            M2C_FIELD(temp_s1, s16*, 0x10) = (s16)(screen_position + ((s32)(temp_a2_2 * M2C_FIELD(temp_a1_2, s16*, 4)) >> 8));
-            M2C_FIELD(temp_s1, s16*, 0x18) = (s16)(screen_position + ((s32)(temp_v1_3 * M2C_FIELD(temp_a1_2, s16*, 8)) >> 8));
-            M2C_FIELD(temp_s1, s16*, 0x20) = (s16)(screen_position + ((s32)(temp_a2_2 * M2C_FIELD(temp_a1_2, s16*, 0xC)) >> 8));
-            temp_a0_3 = (s8)M2C_FIELD(var_s2, u8*, -8) | ((s8)M2C_FIELD(var_s2, u8*, 2) << 8);
-            M2C_FIELD(temp_s1, s16*, 0xA) = (s16)(temp_s4 + ((s32)(temp_a0_3 * M2C_FIELD(temp_a1_2, s16*, 2)) >> 8));
-            M2C_FIELD(temp_s1, s16*, 0x12) = (s16)(temp_s4 + ((s32)(temp_a0_3 * M2C_FIELD(temp_a1_2, s16*, 6)) >> 8));
-            temp_a0_4 = temp_a0_3 + M2C_FIELD(var_s2, u8*, -4);
-            M2C_FIELD(temp_s1, s16*, 0x1A) = (s16)(temp_s4 + ((s32)(temp_a0_4 * M2C_FIELD(temp_a1_2, s16*, 0xA)) >> 8));
-            var_v0_3 = temp_s4 + ((s32)(temp_a0_4 * M2C_FIELD(temp_a1_2, s16*, 0xE)) >> 8);
+            high_x = part->x_high << 8;
+            scale = &((WmapQuadScale(*)[16])g_wmap_land_quad_scales)[variant][((SpriteActor*)actor)->scale_index];
+            scaled_x = (s8)*part_bytes | high_x;
+            width = part->width;
+            high_y = part->y_high << 8;
+            height = part->height;
+            scaled_y = (s8)part->y | high_y;
+            quad->x0 = (s16)(screen_position + ((s32)(scaled_x * scale->x0) >> 8));
+            scaled_right = scaled_x + width;
+            quad->x1 = (s16)(screen_position + ((s32)(scaled_right * scale->x1) >> 8));
+            quad->x2 = (s16)(screen_position + ((s32)(scaled_x * scale->x2) >> 8));
+            quad->x3 = (s16)(screen_position + ((s32)(scaled_right * scale->x3) >> 8));
+            quad->y0 = (s16)(screen_y + ((s32)(scaled_y * scale->y0) >> 8));
+            quad->y1 = (s16)(screen_y + ((s32)(scaled_y * scale->y1) >> 8));
+            scaled_bottom = scaled_y + height;
+            quad->y2 = (s16)(screen_y + ((s32)(scaled_bottom * scale->y2) >> 8));
+            bottom_y = screen_y + ((s32)(scaled_bottom * scale->y3) >> 8);
         }
-        M2C_FIELD(temp_s1, s16*, 0x22) = var_v0_3;
-        if (M2C_FIELD(var_s2, s8*, -3) & 0x80)
+        quad->y3 = bottom_y;
+        if (part->flags & 0x80)
         {
-            temp_v0_4 = M2C_FIELD(var_s2, u8*, -7);
-            M2C_FIELD(temp_s1, u8*, 0x24) = temp_v0_4;
-            M2C_FIELD(temp_s1, u8*, 0x14) = temp_v0_4;
-            temp_v1_4 = M2C_FIELD(var_s2, u8*, -7) + M2C_FIELD(var_s2, u8*, -5);
-            M2C_FIELD(temp_s1, u8*, 0x1C) = temp_v1_4;
-            M2C_FIELD(temp_s1, u8*, 0xC) = temp_v1_4;
+            flipped_u = part->u;
+            quad->u3 = flipped_u;
+            quad->u1 = flipped_u;
+            flipped_right_u = part->u + part->width;
+            quad->u2 = flipped_right_u;
+            quad->u0 = flipped_right_u;
         }
         else
         {
-            temp_v0_5 = M2C_FIELD(var_s2, u8*, -7);
-            M2C_FIELD(temp_s1, u8*, 0x1C) = temp_v0_5;
-            M2C_FIELD(temp_s1, u8*, 0xC) = temp_v0_5;
-            temp_v1_5 = M2C_FIELD(var_s2, u8*, -7) + M2C_FIELD(var_s2, u8*, -5);
-            M2C_FIELD(temp_s1, u8*, 0x24) = temp_v1_5;
-            M2C_FIELD(temp_s1, u8*, 0x14) = temp_v1_5;
+            left_u = part->u;
+            quad->u2 = left_u;
+            quad->u0 = left_u;
+            right_u = part->u + part->width;
+            quad->u3 = right_u;
+            quad->u1 = right_u;
         }
-        if ((u8)M2C_FIELD(var_s2, s8*, -3) & 0x40)
+        if ((u8)part->flags & 0x40)
         {
-            temp_v0_6 = M2C_FIELD(var_s2, u8*, -6) + M2C_FIELD(var_s2, u8*, -4);
-            M2C_FIELD(temp_s1, s8*, 0x15) = temp_v0_6;
-            M2C_FIELD(temp_s1, s8*, 0xD) = temp_v0_6;
-            var_v0_4 = M2C_FIELD(var_s2, u8*, -6);
-            M2C_FIELD(temp_s1, u8*, 0x25) = var_v0_4;
+            flipped_v = part->v + part->height;
+            quad->v1 = flipped_v;
+            quad->v0 = flipped_v;
+            bottom_v = part->v;
+            quad->v3 = bottom_v;
+            quad->v2 = bottom_v;
         }
         else
         {
-            temp_v0_7 = M2C_FIELD(var_s2, u8*, -6) + sp60;
-            M2C_FIELD(temp_s1, s8*, 0x15) = temp_v0_7;
-            M2C_FIELD(temp_s1, s8*, 0xD) = temp_v0_7;
-            var_v0_4 = M2C_FIELD(var_s2, u8*, -6) + M2C_FIELD(var_s2, u8*, -4) + sp60;
-            M2C_FIELD(temp_s1, u8*, 0x25) = var_v0_4;
+            top_v = part->v + page_y_offset;
+            quad->v1 = top_v;
+            quad->v0 = top_v;
+            bottom_v = part->v + part->height + page_y_offset;
+            quad->v3 = bottom_v;
+            quad->v2 = bottom_v;
         }
-        M2C_FIELD(temp_s1, u8*, 0x1D) = var_v0_4;
-        M2C_FIELD(temp_s1, s32*, 4) = (s32)(var_s5 | (var_s5 << 8) | (var_s5 << 0x10));
-        M2C_FIELD(temp_s1, u16*, 0x16) = (u16)M2C_FIELD((((texture_index + M2C_FIELD(var_s2, s8*, -2)) * 0x1C) + (u8*)&D_800D0A6C), u16*, 0x18);
-        M2C_FIELD(temp_s1, s8*, 3) = 9;
-        M2C_FIELD(temp_s1, s8*, 7) = 0x2C;
-        M2C_FIELD(temp_s1, u16*, 0xE) = (u16)M2C_FIELD(((((u8)M2C_FIELD(var_s2, s8*, -3) & 0x3F) * 2) + (texture_index * 0x1C) + (u8*)&D_800D0A6C), u16*, 8);
-        if ((var_s5 != 0x80) || (M2C_FIELD(var_s2, s8*, 0) != 0))
+        *(u32*)&quad->r0 = (s32)(brightness | (brightness << 8) | (brightness << 0x10));
+        quad->tpage = D_800D0A6C[texture_index + part->texture].tpage;
+        quad->clut = D_800D0A6C[texture_index].clut[(u8)part->flags & 0x3F];
+        setlen(quad, 9);
+        quad->code = 0x2C;
+        if ((brightness != 0x80) || (part->blend != 0))
         {
-            M2C_FIELD(temp_s1, s8*, 7) = 0x2E;
+            quad->code = 0x2E;
         }
-        var_a3 = g_wmap_current_frame;
-        temp_a0_5 = (ot_index * 4) + var_a3;
-        M2C_FIELD(temp_s1, s32*, 0) = (s32)((M2C_FIELD(temp_s1, s32*, 0) & 0xFF000000) | (M2C_FIELD(temp_a0_5, s32*, 0x70) & 0xFFFFFF));
-        M2C_FIELD(temp_a0_5, s32*, 0x70) = (s32)((M2C_FIELD(temp_a0_5, s32*, 0x70) & 0xFF000000) | ((s32)temp_s1 & 0xFFFFFF));
-        if (g_wmap_packet_bytes < 0x7D00)
+        frame = g_wmap_current_frame;
+        addPrim(&frame->ordering_table[ot_index], quad);
+        if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
         {
-            g_wmap_packet_bytes += 0x28;
-            M2C_FIELD(var_a3, void**, 0x33C) = (void*)(M2C_FIELD(var_a3, void**, 0x33C) + 0x28);
+            g_wmap_packet_bytes += sizeof(POLY_FT4);
+            frame->packet_cursor += sizeof(POLY_FT4);
         }
-        var_s2 += 0xC;
-        var_s6 -= 1;
-        var_s3 += 0xC;
-    } while (var_s6 != 0);
+        part++;
+        part_count -= 1;
+        part_bytes += sizeof(SpritePart);
+    } while (part_count != 0);
 }
