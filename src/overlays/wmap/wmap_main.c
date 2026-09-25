@@ -1720,11 +1720,19 @@ s32 wmap_run_loop(void)
             }
         }
         cdrom_queue_read(0x10C7, &D_801ADBA0);
+        /* Slot 16 holds the resident land 31 image read above. */
+        g_wmap_land_image_cache[16].animation_data = (u8*)&D_801ADBA0;
         g_wmap_land_image_cache[16].slot_index = 0x10;
         g_wmap_land_image_cache[16].resource_id = 0x1F;
-        g_wmap_land_image_cache[16].animation_data = (u8*)&D_801ADBA0;
         g_wmap_land_image_cache[16].loaded_frame = 0xFFFF;
         g_wmap_land_image_cache[16].busy = 0;
+        /*
+         * Redundant in the original source: CSE makes this store reuse the
+         * first store's constant register and jump2 deletes it after reload,
+         * but the second use is what schedules `li a2, 16` ahead of the other
+         * stores. Removing it breaks the match.
+         */
+        g_wmap_land_image_cache[16].slot_index = 0x10;
         {
             u8* data;
             u8* header;
