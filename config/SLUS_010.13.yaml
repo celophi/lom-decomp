@@ -225,6 +225,10 @@ segments:
       - [0x14A00, c, psyq/libspu/S_STM]              # psyq 4.1-4.6
       - [0x14A30, c, psyq/libspu/S_STC]              # psyq 4.1-4.6
       - [0x14A60, c, akao_voice]
+      - [0x168CC, c, psyq/libspu/S_SNC]              # psyq: SpuSetNoiseClock
+      - [0x1691C, c, psyq/libspu/S_GVEX]             # psyq: SpuGetVoiceEnvelope
+      - [0x1693C, c, psyq/libspu/S_SRMD]             # psyq: SpuSetReverbModeDepth
+      - [0x1696C, c, akao_control]
       - [0x1998C, c, psyq/libspu/S_SRMT]             # psyq 4.1-4.6
       - [0x19B5C, c, psyq/libspu/S_SRA]              # psyq 4.1-4.6
       - [0x1A02C, c, psyq/libspu/S_CRWA]             # psyq 4.1-4.6

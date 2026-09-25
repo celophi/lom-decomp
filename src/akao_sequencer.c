@@ -1,4 +1,5 @@
 #include "akao_sequencer.h"
+#include "akao_control.h"
 #include "akao_voice.h"
 
 /* Channel-role AkaoChannelState.flags bits. */
@@ -101,15 +102,6 @@ typedef struct
     u8 volume_scale;
 } AkaoKeyMapEntry;
 
-/** @brief Parameter block passed to akao_sfx_play by ext opcode FE 0B. */
-typedef struct
-{
-    u32 unk0;
-    u32 unk4;
-    u32 pan;
-    s32 expression;
-} AkaoSfxPlayParams;
-
 /* Defined in the sdata segment (asm/data/sdata.data.s) at their gp-relative
  * addresses near gp_value 0x8003EC14; declared extern here so akao_sequencer does not
  * emit a second (.bss) definition. */
@@ -121,7 +113,6 @@ extern s32 D_8003EC18;
 
 void akao_seq_step_opcode(AkaoChannelState* channel, s32 channel_mask);
 void akao_flush_voice_key_offs(void);
-void akao_seq_flag_volume_update(AkaoChannelState* song, AkaoChannelState* channels);
 
 /** @brief 12-entry semitone pitch-ratio table indexed by note % 12 in akao_compute_pitch. */
 extern u32 g_akao_pitch_table[];
@@ -142,10 +133,10 @@ extern u16 g_akao_note_duration_table[];
 /** @brief 256-entry pitch jitter table indexed by g_akao_cdvol_tick. */
 extern u8 D_8003D27C[];
 
-extern AkaoSfxPlayParams D_8004D3A0;
+/** @brief akao_sfx_play parameter slots filled by ext opcode FE 0B: reverb mask, flags, pan, volume. */
+extern AkaoCommandParam D_8004D3A0[];
 extern s16 D_8004D428[];
 
-void akao_sfx_play(AkaoSfxPlayParams* params, u8* seq_data0, u8* seq_data1, s32 skip_stop);
 
 /**
  * @brief Write the current CD-audio volume to both SPU CD volume registers.
@@ -646,8 +637,9 @@ promote_done:
  *        state are not modified, only the tie flags in @c note_flags.
  * @return The next note opcode (< 0x9A), 0xA0 for a rest/end, or 0x83, 0x84
  *         or 0x8F for the 0xF0..0xFD length-prefixed note forms.
- * @note The extended opcodes FE 0A/0B/0C share their bodies with the primary
- *       opcodes 0xC9/0xCB/0xCA; the two gotos reproduce that shared code.
+ * @note Extended opcodes FE 06/0E (jump), FE 07 (conditional jump), FE 08/09
+ *       (loop exit) and FE 0F (return to the saved cursor) change the cursor;
+ *       the other FE opcodes without a length are skipped.
  * @see decomp.me (100%) https://decomp.me/scratch/52mKD
  */
 u8 akao_seq_skip_to_next_note(AkaoChannelState* channel)
@@ -709,7 +701,8 @@ u8 akao_seq_skip_to_next_note(AkaoChannelState* channel)
             }
             switch (op - 6)
             {
-            case 0:
+            case 2:
+            case 3:
                 cursor++;
                 if (*cursor == channel->loop_count[depth] + 1)
                 {
@@ -725,13 +718,14 @@ u8 akao_seq_skip_to_next_note(AkaoChannelState* channel)
                     cursor += 3;
                 }
                 continue;
-            case 1:
+            case 0:
+            case 8:
                 cursor++;
                 offset = cursor[0];
                 offset += cursor[1] << 8;
                 cursor += (s16)offset;
                 continue;
-            case 2:
+            case 1:
                 cursor++;
                 if (g_akao_seq_channel0->unk60 >= *cursor++)
                 {
@@ -744,27 +738,13 @@ u8 akao_seq_skip_to_next_note(AkaoChannelState* channel)
                     cursor += 2;
                 }
                 continue;
-            case 3:
+            case 9:
                 cursor = (u8*)channel->note_on_mask;
                 continue;
-            case 4:
-                goto loop_end;
-            case 5:
-                channel->note_flags &= 0xFFFA;
-                cursor++;
-                continue;
-            case 6:
-                goto loop_break;
-            case 7:
-            case 8:
-            case 9:
-                break;
             default:
                 continue;
             }
-            break;
         case 0xC9:
-        loop_end:
             cursor++;
             if (*cursor == channel->loop_count[depth] + 1)
             {
@@ -785,7 +765,6 @@ u8 akao_seq_skip_to_next_note(AkaoChannelState* channel)
             cursor++;
             continue;
         case 0xCA:
-        loop_break:
             if (!(channel->flags & AKAO_CH_STOP_PENDING))
             {
                 cursor = channel->w04.loop_cursor[depth];
@@ -3299,12 +3278,12 @@ void akao_seq_op_play_sfx(AkaoChannelState* channel)
         seq_data1 = 0;
     }
 
-    D_8004D3A0.unk0 = 0;
-    D_8004D3A0.unk4 = 0;
-    D_8004D3A0.pan = channel->pan >> 8;
-    D_8004D3A0.expression = channel->unk48 >> 23;
+    D_8004D3A0[0].value = 0;
+    D_8004D3A0[1].value = 0;
+    D_8004D3A0[2].value = channel->pan >> 8;
+    D_8004D3A0[3].value = channel->unk48 >> 23;
 
-    akao_sfx_play(&D_8004D3A0, seq_data0, seq_data1, 0);
+    akao_sfx_play(D_8004D3A0, seq_data0, seq_data1, 0);
 
     channel->seq_cursor += 4;
 }

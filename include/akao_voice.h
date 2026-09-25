@@ -40,6 +40,31 @@ typedef struct
     s16 volume_right;      /**< Computed right volume. */
 } SpuVoiceParams;
 
+/* ---- Driver constants and tables shared by akao_voice.c and akao_control.c ---- */
+
+/** @brief Number of SPU hardware voices; also the "no voice assigned" marker. */
+#define AKAO_VOICE_COUNT 24
+
+/** @brief Number of channel slots in one song channel table. */
+#define AKAO_CHANNEL_COUNT 32
+
+/** @brief Channel-mask bit of the first SFX channel; SFX channels use bits 12-23. */
+#define AKAO_SFX_FIRST_CHANNEL_BIT 0x1000
+
+/** @brief SFX channel flag (AkaoChannelState::tempo_acc) that exempts it from global volume/pan/pause control. */
+#define AKAO_SFX_FLAG_SUPPRESS 0x02000000
+
+/*
+ * Halfword views of AkaoChannelState words that the driver keeps as Q16
+ * fixed-point accumulators (integer part in the high halfword).
+ */
+#define HALF_LOW_U16(word) (((u16*)&(word))[0])
+#define HALF_HIGH_U16(word) (((u16*)&(word))[1])
+#define HALF_HIGH_S16(word) (((s16*)&(word))[1])
+
+extern AkaoChannelState* D_8004F7C0[];
+
+extern s32 D_8004F76C[];
 
 /* ---- Common (non-voice) SPU register writers ---- */
 

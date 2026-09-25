@@ -1,5 +1,5 @@
 # ============================================================================
-# Compressed overlay ROM verification
+# ROM verification: main executable and compressed overlays
 # ============================================================================
 #
 # To prove a compressed overlay is byte-perfect, reproduce the file stored in
@@ -73,10 +73,36 @@ endef
 $(foreach name,$(VERIFIED_OVERLAYS),\
 	$(eval $(call compressed-overlay-rules,$(name),$(call upper-case,$(name)))))
 
+# ── Main executable ──────────────────────────────────────────────────────────
+#
+# SLUS_010.13 is not compressed: its linked ELF, converted to a raw binary
+# (which includes the 0x800-byte PS-X EXE header), must equal the disc file.
+.PHONY: verify-slus
+
+build/$(GAME).raw: all
+	@mkdir -p $(@D)
+	$(OBJCOPY) -O binary $(TARGET) $@.tmp
+	mv $@.tmp $@
+
+verify-slus: build/$(GAME).raw
+	@mkdir -p build
+	@set -eu; \
+		expected=$$(sha1sum disc/$(GAME) | awk '{print $$1}'); \
+		actual=$$(sha1sum $< | awk '{print $$1}'); \
+		echo "$(GAME) expected: $$expected"; \
+		echo "$(GAME) actual:   $$actual"; \
+		if [ "$$expected" = "$$actual" ]; then \
+			echo "[OK] $(GAME) matches original ROM"; \
+			grep -qxF main $(COMPLETE_MANIFEST) 2>/dev/null || echo main >> $(COMPLETE_MANIFEST); \
+		else \
+			echo "[FAIL] $(GAME) sha1 mismatch"; \
+			exit 1; \
+		fi
+
 # ── Aggregate ────────────────────────────────────────────────────────────────
 #
 # Register a new overlay by adding it to VERIFIED_OVERLAYS above.
-verify-bins: $(foreach name,$(VERIFIED_OVERLAYS),verify-$(name))
+verify-bins: verify-slus $(foreach name,$(VERIFIED_OVERLAYS),verify-$(name))
 	@echo "Verified compressed overlays: $$(cat $(COMPLETE_MANIFEST) 2>/dev/null | tr '\n' ' ')"
 
 # Check the compressor itself against all 17 original overlays, without needing

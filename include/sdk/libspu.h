@@ -48,6 +48,9 @@ extern long SpuSetIRQ(long on_off);
 extern unsigned long SpuSetIRQAddr(unsigned long addr);
 extern SpuIRQCallbackProc SpuSetIRQCallback(SpuIRQCallbackProc func);
 extern long SpuInitMalloc(long count, char *top);
+extern long SpuSetNoiseClock(long n_clock);
+extern void SpuGetVoiceEnvelope(int vNum, short *envx);
+extern void SpuSetReverbModeDepth(short depth_left, short depth_right);
 extern long SpuSetReverbModeType(long mode);
 extern void SpuGetReverbModeType(long *mode);
 
