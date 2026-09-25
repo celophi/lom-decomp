@@ -1239,6 +1239,7 @@ s32 field_start_actor_turn(s32 key)
             actor->command_param = FIELD_TURN_SECTOR_ENTRIES * 7;
             break;
         case 0:
+        default:
             actor->command_param = 0;
             break;
         }

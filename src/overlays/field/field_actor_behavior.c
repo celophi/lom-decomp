@@ -2359,6 +2359,8 @@ s32 field_update_actor_command(FieldActor* actor)
             return;
         }
         break;
+    case FIELD_ACTOR_COMMAND_BA:
+        break;
     default:
         scratch.displacement.vx = 0;
         scratch.displacement.vy = 0;

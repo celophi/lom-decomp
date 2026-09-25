@@ -6862,6 +6862,7 @@ u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32
     half_delta = &FIELD_RIBBON_SCRATCH->half_delta;
     delta = &FIELD_RIBBON_SCRATCH->delta;
     direction = &FIELD_RIBBON_SCRATCH->direction;
+    endpoint = &FIELD_RIBBON_SCRATCH->endpoint;
 
     part = &g_field_actor_slots[effect->actor_index].parts[effect->part_index];
     state = &g_field_actor_slots[effect->actor_index];
@@ -6926,28 +6927,24 @@ u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32
     {
         segment_count = effect->animation_active;
     }
-    endpoint = &FIELD_RIBBON_SCRATCH->endpoint;
     if (segment_count <= 0)
     {
         segment_count = 1;
     }
     step = FIELD_ANGLE_HALF_TURN / segment_count;
 
-    field_resolve_effect_position(effect, part, &FIELD_RIBBON_SCRATCH->endpoint);
-    {
-        midpoint->vx = (FIELD_RIBBON_SCRATCH->endpoint.vx + effect->x) >> 1;
-        midpoint->vy = FIELD_RIBBON_SCRATCH->endpoint.vy;
-        midpoint->vz = (FIELD_RIBBON_SCRATCH->endpoint.vz + effect->z) >> 1;
-        delta->vx = endpoint->vx - effect->x;
-        half_delta->vx = delta->vx >> 1;
-        delta->vy = effect->y - FIELD_RIBBON_SCRATCH->endpoint.vy;
-        half_delta->vy = delta->vy;
-        i = segment_count - 1;
-        delta->vz = FIELD_RIBBON_SCRATCH->endpoint.vz - effect->z;
-        half_delta->vz = delta->vz >> 1;
-    }
+    field_resolve_effect_position(effect, part, endpoint);
+    midpoint->vx = (endpoint->vx + effect->x) >> 1;
+    midpoint->vy = endpoint->vy;
+    midpoint->vz = (endpoint->vz + effect->z) >> 1;
+    delta->vx = endpoint->vx - effect->x;
+    half_delta->vx = delta->vx >> 1;
+    delta->vy = effect->y - endpoint->vy;
+    half_delta->vy = delta->vy;
+    delta->vz = endpoint->vz - effect->z;
+    half_delta->vz = delta->vz >> 1;
 
-    for (; i > 0; i--, rotation++)
+    for (i = segment_count - 1; i > 0; i--, rotation++)
     {
         direction->vector.vx = 0;
         direction->vector.vy = (s16)((rand() << 12) >> 15);
@@ -7045,20 +7042,14 @@ u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32
             quad->gpu.y1 -= angle;
             quad->gpu.x1 -= edge_x;
 
-            {
-                u16 first_uv;
-                u16 clut;
-                first_uv = quad->packed.vertices[0].uv;
-                quad[1].packed.vertices[3].uv = quad->packed.vertices[3].uv;
-                quad[1].packed.vertices[0].uv = first_uv;
-                quad[1].gpu.tpage = quad->gpu.tpage;
-                quad[1].packed.vertices[2].xy = quad->packed.vertices[3].xy;
-                quad[1].packed.vertices[0].xy = quad->packed.vertices[1].xy;
-                clut = quad->gpu.clut;
-                quad[1].packed.vertices[1].uv = quad->packed.vertices[1].uv;
-                quad[1].packed.vertices[2].uv = quad->packed.vertices[2].uv;
-                quad[1].gpu.clut = clut;
-            }
+            quad[1].packed.vertices[0].uv = quad->packed.vertices[0].uv;
+            quad[1].packed.vertices[2].xy = quad->packed.vertices[3].xy;
+            quad[1].packed.vertices[0].xy = quad->packed.vertices[1].xy;
+            quad[1].packed.vertices[1].uv = quad->packed.vertices[1].uv;
+            quad[1].packed.vertices[2].uv = quad->packed.vertices[2].uv;
+            quad[1].packed.vertices[3].uv = quad->packed.vertices[3].uv;
+            quad[1].gpu.tpage = quad->gpu.tpage;
+            quad[1].gpu.clut = quad->gpu.clut;
 
             depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
             if (depth < 0)
@@ -7103,13 +7094,7 @@ u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32
         {
             view_y += 255;
         }
-        {
-            s32 depth;
-            view_y = FIELD_EFFECT_CENTER_Y + (view_y >> 8) + endpoint->vy / 256;
-            depth = endpoint->vz;
-            view_y -= depth / 512;
-            quad->gpu.y1 = view_y - g_field_view_offset_z / 512;
-        }
+        quad->gpu.y1 = (s16)(FIELD_EFFECT_CENTER_Y + (view_y >> 8) + endpoint->vy / 256 - endpoint->vz / 512 - g_field_view_offset_z / 512);
     }
     quad->gpu.x3 = quad->gpu.x1 + edge_x;
     quad->gpu.y3 = quad->gpu.y1 + angle;

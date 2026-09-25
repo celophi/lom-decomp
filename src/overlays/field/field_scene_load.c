@@ -198,8 +198,7 @@ void field_clear_node_accumulators(s32 skip_animation_x, s32 skip_animation_y)
 {
     FieldNode* node;
 
-    /* BUG: reads the word 0x14 past g_field_scene; the retail code reads g_field_scene itself. */
-    for (node = ((FieldScene**)&g_field_scene)[5]->nodes; node != NULL; node = node->next)
+    for (node = g_field_scene.scene->nodes; node != NULL; node = node->next)
     {
         node->unk24 = 0;
         node->delta_x = 0;

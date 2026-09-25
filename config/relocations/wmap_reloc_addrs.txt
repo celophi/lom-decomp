@@ -33,3 +33,36 @@ rom:0x1A93D reloc:MIPS_LO16 symbol:D_8013B264
 rom:0x1A98D reloc:MIPS_LO16 symbol:D_8013B270
 rom:0x1A9D1 reloc:MIPS_LO16 symbol:D_8013B264
 rom:0x1A9E5 reloc:MIPS_LO16 symbol:D_8013B270
+
+// wmap_run_loop keeps four scalar globals in saved-register high halves across
+// the event switch. Every annotated immediate is checked against retail WMAP.BIN.
+rom:0x127BD reloc:MIPS_HI16 symbol:g_wmap_input_script
+rom:0x127C1 reloc:MIPS_HI16 symbol:g_wmap_party_visible
+rom:0x127D1 reloc:MIPS_HI16 symbol:D_801ADB90
+rom:0x127D5 reloc:MIPS_HI16 symbol:D_8013B208
+rom:0x12889 reloc:MIPS_LO16 symbol:g_wmap_input_script
+rom:0x12895 reloc:MIPS_LO16 symbol:g_wmap_input_script
+rom:0x1289D reloc:MIPS_LO16 symbol:g_wmap_input_script
+rom:0x128A1 reloc:MIPS_LO16 symbol:g_wmap_party_visible
+rom:0x12911 reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x1296D reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x12971 reloc:MIPS_LO16 symbol:g_wmap_party_visible
+rom:0x12979 reloc:MIPS_LO16 symbol:D_8013B208
+rom:0x12981 reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x12999 reloc:MIPS_LO16 symbol:D_8013B208
+rom:0x129E1 reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x129E5 reloc:MIPS_LO16 symbol:g_wmap_party_visible
+rom:0x129F1 reloc:MIPS_LO16 symbol:D_8013B208
+rom:0x12A09 reloc:MIPS_LO16 symbol:D_8013B208
+rom:0x12A49 reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x12A89 reloc:MIPS_LO16 symbol:D_8013B208
+rom:0x12A8D reloc:MIPS_LO16 symbol:g_wmap_party_visible
+rom:0x12AD5 reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x12AD9 reloc:MIPS_LO16 symbol:g_wmap_party_visible
+rom:0x12ADD reloc:MIPS_LO16 symbol:D_8013B208
+rom:0x12B65 reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x12B69 reloc:MIPS_LO16 symbol:g_wmap_party_visible
+rom:0x12B6D reloc:MIPS_LO16 symbol:D_8013B208
+rom:0x12BDD reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x12BE1 reloc:MIPS_LO16 symbol:g_wmap_party_visible
+rom:0x12BE5 reloc:MIPS_LO16 symbol:D_8013B208
