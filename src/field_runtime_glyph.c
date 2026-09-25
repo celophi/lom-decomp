@@ -1,43 +1,217 @@
+/**
+ * @file
+ * @brief Field font helpers preserved in their original assembly form.
+ * 
+ * For these two functions, the original source is not known. 
+ * After asking smart people in the community, the best guess is that it could have been
+ * a custom .LIB compiled with something other than GCC, or it could have been handwritten assembly.
+ * Also, it appears right before SDK code, and these don't seem to be referenced in any running game code,
+ * so maybe they existed for the purpose of debugging.
+ *
+ * Supporting Evidence:
+ * The glyph helper uses two trapping addi instructions.
+ * The hex helper uses two trapping add instructions for digit-table addresses.
+ * 
+ * These differ from the non-trapping additions expected from the GCC versions tested for this code. 
+ * The hex helper also loads its fifth argument before allocating its frame and 
+ * leaves an unused saved-register slot at sp+0x38.
+ * Its 0x40-byte frame resembles the neighboring clamped hex helper, 
+ * which uses that slot for s4 and keeps a local digit-table copy absent here.
+ *
+ * C variants of the hex helper were tested with IDO 5.3 (-O1/-O2), IDO 7.1,
+ * and PlayStation MWCC 2.44.14 (CodeWarrior Release 4, -O0 through -O4).
+ * 
+ * None reproduced its original stack layout. 
+ * This does not rule out either compiler family with other versions, flags, or source forms.
+ *
+ * These are just clues, and aren't proof of any origin, 
+ * but since none of the compilers tested produce anything like the original, 
+ * it is marked as handwritten assembly for now.
+ * 
+ * The assembly preserves the original instructions and delay slots, 
+ * with a disabled C reference below to describe the behavior.
+ */
 #include "field_runtime.h"
-#include "gpu_packet.h"
-
-/*
- * TODO: Get community consensus on the origin of both functions in this TU
- *       (field_draw_glyph, field_draw_hex_byte_masked) before treating either
- *       as a compiled C match.
- *
- *       Working conclusion (2026-09-20): both are hand-written or hand-edited
- *       assembly, and the C below is a wrapper that forces the bytes rather
- *       than a source reconstruction. The community has already agreed that
- *       GCC will not emit the trapping addi in field_draw_glyph; the current
- *       100% is only reached by pasting those two instructions in via inline
- *       __asm__ (FIELD_SET_GLYPH_UV) and by allocator-steering operands. A
- *       clean C version compiles to 92.86% (reachable colouring, but the addi
- *       pair and the redundant g_field_primitive_cursor reload need levers).
- *       field_draw_hex_byte_masked has never matched under any probed
- *       compiler; the per-function docblocks list the binary evidence.
- *
- *       Open questions for the community:
- *       - Confirm hand-written vs hand-edited compiler output for each.
- *       - Decide how the tree should represent them: INCLUDE_ASM with a
- *         readable non-matching C reference, or keep the lever-driven C.
- *       - Whether inline __asm__ pins are acceptable for a "100%" claim.
- *       Until decided, do not read either function's C as original source.
- */
-
-/*
- * The two glyph helpers below only match at -O1, unlike the rest of
- * field_runtime_text.c (GCC 2.6.0 -O2). They are split out here so the build
- * can compile just this object at -O1 via a target-specific flag override; the
- * compiler (GCC 2.6.0) and maspsx version (ASPSX 2.34) are otherwise identical.
- * GCC 2.6.0 and 2.7.2 emit byte-identical code for these two at -O1.
- */
 
 /**
- * @brief One glyph sprite primitive as written into the field render list.
- * @note Layout mirrors field_runtime_text.c's FieldGlyphPrimitive; duplicated
- *       here because this is a separate translation unit.
+ * @brief Draw one 8x8 glyph, or advance past a space, at the text cursor.
+ * @param character Character code selecting the font atlas cell.
+ * @param ot_depth Ordering-table depth used to link the sprite.
+ * @param clut_offset Offset added to the base font CLUT identifier.
+ * @note Always advances the X cursor by eight pixels.
+ * @see decomp.me (prior C/inline-asm version, 100% in-tree) https://decomp.me/scratch/1IyXY
+ * @see decomp.me (prior C/inline-asm version, 100% in-tree) https://decomp.me/scratch/BhIpy
  */
+void field_draw_glyph(u8 character, s32 ot_depth, s32 clut_offset);
+
+__asm__(
+    ".section .text\n"
+    ".set noat\n"
+    ".set noreorder\n"
+    "glabel field_draw_glyph\n"
+
+    /* A space only advances the cursor; each ordering-table entry is a word. */
+    "    andi    $t1, $a0, 0xFF\n"
+    "    ori     $v0, $zero, 0x20\n"
+    "    beq     $t1, $v0, .Lfield_glyph_advance\n"
+    "     sll    $t2, $a1, 2\n"
+
+    /* Start a textured sprite with neutral RGB modulation. */
+    "    lui     $v1, %hi(g_field_primitive_cursor)\n"
+    "    lw      $v1, %lo(g_field_primitive_cursor)($v1)\n"
+    "    lui     $v0, 0x6680\n"
+    "    ori     $v0, $v0, 0x8080\n"
+    "    sw      $v0, 0x04($v1)\n"
+    "    lui     $a3, 0x00FF\n"
+    "    ori     $a3, $a3, 0xFFFF\n"
+
+    /* Pack the cursor position and select the font palette. */
+    "    lui     $a0, %hi(g_text_cursor_y)\n"
+    "    lw      $a0, %lo(g_text_cursor_y)($a0)\n"
+    "    lui     $t0, %hi(g_text_clut_base)\n"
+    "    lhu     $t0, %lo(g_text_clut_base)($t0)\n"
+    "    lui     $a1, %hi(g_text_cursor_x)\n"
+    "    lw      $a1, %lo(g_text_cursor_x)($a1)\n"
+    "    sll     $a0, $a0, 16\n"
+    "    or      $a0, $a0, $a1\n"
+    "    addu    $t0, $t0, $a2\n"
+    "    sll     $t0, $t0, 16\n"
+
+    /* Each atlas cell is 8x8; retain the original trapping UV additions. */
+    "    andi    $a1, $t1, 0x0F\n"
+    "    sll     $a1, $a1, 3\n"
+    "    addi    $a1, $a1, 0x80\n"
+    "    or      $a1, $t0, $a1\n"
+    "    addiu   $v0, $t1, -0x20\n"
+    "    andi    $v0, $v0, 0xF0\n"
+    "    srl     $v0, $v0, 1\n"
+    "    addi    $v0, $v0, 0xE0\n"
+    "    sll     $v0, $v0, 8\n"
+    "    or      $v0, $a1, $v0\n"
+    "    sw      $v0, 0x0C($v1)\n"
+    "    sw      $a0, 0x08($v1)\n"
+
+    /* Finish the sprite and locate the OT link at render_half + 0x10 + depth*4. */
+    "    lui     $a2, 0xFF00\n"
+    "    lui     $a0, %hi(g_field_primitive_cursor)\n"
+    "    lw      $a0, %lo(g_field_primitive_cursor)($a0)\n"
+    "    lui     $v0, 0x0008\n"
+    "    ori     $v0, $v0, 0x0008\n"
+    "    sw      $v0, 0x10($a0)\n"
+    "    lui     $v0, %hi(g_field_current_render_half)\n"
+    "    lw      $v0, %lo(g_field_current_render_half)($v0)\n"
+    "    lw      $v1, 0x00($a0)\n"
+    "    addu    $t2, $t2, $v0\n"
+    "    lw      $v0, 0x10($t2)\n"
+
+    /* Prepend a four-word GPU packet, preserving the OT tag's upper byte. */
+    "    lui     $v1, 0x0400\n"
+    "    and     $a1, $v0, $a3\n"
+    "    or      $v1, $a1, $v1\n"
+    "    sw      $v1, 0x00($a0)\n"
+    "    addiu   $v1, $a0, 0x14\n"
+    "    and     $a0, $a0, $a3\n"
+    "    lui     $at, %hi(g_field_primitive_cursor)\n"
+    "    sw      $v1, %lo(g_field_primitive_cursor)($at)\n"
+    "    and     $v0, $v0, $a2\n"
+    "    or      $v0, $v0, $a0\n"
+    "    sw      $v0, 0x10($t2)\n"
+
+    /* Spaces and visible glyphs both consume one character cell. */
+    ".Lfield_glyph_advance:\n"
+    "    lui     $v0, %hi(g_text_cursor_x)\n"
+    "    lw      $v0, %lo(g_text_cursor_x)($v0)\n"
+    "    nop\n"
+    "    addiu   $v0, $v0, 8\n"
+    "    lui     $at, %hi(g_text_cursor_x)\n"
+    "    sw      $v0, %lo(g_text_cursor_x)($at)\n"
+    "    jr      $ra\n"
+    "     nop\n"
+    "endlabel field_draw_glyph\n"
+    ".set reorder\n"
+    ".set at\n"
+);
+
+/**
+ * @brief Draw the low byte as two hexadecimal glyphs, including a leading zero.
+ * @param value Value whose low two nibbles are rendered.
+ * @param x Starting X coordinate of the text cursor.
+ * @param y Starting Y coordinate of the text cursor.
+ * @param ot_depth Ordering-table depth used for both glyphs.
+ * @param clut_offset Offset added to the base font CLUT identifier.
+ * @note Leaves the cursor at (x + 16, y).
+ * @see decomp.me (prior C version, 67.69% in-tree) https://decomp.me/scratch/7XlDl
+ */
+void field_draw_hex_byte_masked(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut_offset);
+
+__asm__(
+    ".section .text\n"
+    ".set noat\n"
+    ".set noreorder\n"
+    "glabel field_draw_hex_byte_masked\n"
+
+    /* Fetch the stack argument before allocating the original 0x40-byte frame. */
+    "    lw      $v0, 0x10($sp)\n"
+    "    addiu   $sp, $sp, -0x40\n"
+    "    sw      $s0, 0x28($sp)\n"
+    "    sw      $s1, 0x2C($sp)\n"
+    "    sw      $s2, 0x30($sp)\n"
+    "    sw      $s3, 0x34($sp)\n"
+    "    sw      $ra, 0x3C($sp)\n"
+
+    /* Set the cursor; s0/s1/s2/s3 retain value/depth/CLUT offset/digit table. */
+    "    lui     $s3, %hi(g_hex_digit_table)\n"
+    "    addiu   $s3, $s3, %lo(g_hex_digit_table)\n"
+    "    lui     $at, %hi(g_text_cursor_x)\n"
+    "    sw      $a1, %lo(g_text_cursor_x)($at)\n"
+    "    lui     $at, %hi(g_text_cursor_y)\n"
+    "    sw      $a2, %lo(g_text_cursor_y)($at)\n"
+    "    addu    $a1, $a3, $zero\n"
+    "    addu    $a2, $v0, $zero\n"
+    "    addu    $s2, $v0, $zero\n"
+    "    addu    $s0, $a0, $zero\n"
+
+    /* Draw the high nibble; preserve depth in the call's delay slot. */
+    "    ori     $v0, $zero, 0xF0\n"
+    "    and     $v0, $v0, $s0\n"
+    "    srl     $v0, $v0, 4\n"
+    "    add     $v0, $v0, $s3\n"
+    "    lb      $a0, 0x00($v0)\n"
+    "    jal     field_draw_glyph\n"
+    "     addu   $s1, $a1, $zero\n"
+
+    /* Draw the low nibble with the same depth and palette offset. */
+    "    ori     $v0, $zero, 0x0F\n"
+    "    and     $v0, $v0, $s0\n"
+    "    addu    $a1, $s1, $zero\n"
+    "    add     $v0, $v0, $s3\n"
+    "    lb      $a0, 0x00($v0)\n"
+    "    jal     field_draw_glyph\n"
+    "     addu   $a2, $s2, $zero\n"
+
+    "    lw      $ra, 0x3C($sp)\n"
+    "    lw      $s3, 0x34($sp)\n"
+    "    lw      $s2, 0x30($sp)\n"
+    "    lw      $s1, 0x2C($sp)\n"
+    "    lw      $s0, 0x28($sp)\n"
+    "    addiu   $sp, $sp, 0x40\n"
+    "    jr      $ra\n"
+    "     nop\n"
+    "endlabel field_draw_hex_byte_masked\n"
+    ".set reorder\n"
+    ".set at\n"
+);
+
+#if 0
+/* Behavioral C reference for PS1 RAM; not compiled or intended to match. */
+#include "gpu_packet.h"
+
+#define FIELD_GLYPH_SIZE 8
+#define FIELD_TEXT_OT_OFFSET 4
+#define GPU_LINK_ADDRESS_MASK 0x00FFFFFFu
+#define GPU_LINK_LENGTH_MASK 0xFF000000u
+
+/** @brief Four-word sprite payload preceded by its GPU linked-list tag. */
 typedef struct FieldGlyphPrimitive
 {
     u32 tag;
@@ -47,251 +221,62 @@ typedef struct FieldGlyphPrimitive
     u32 size;
 } FieldGlyphPrimitive;
 
-/**
- * @brief One ordering-table entry (16-byte payload followed by the link tag).
- */
-typedef struct FieldOrderingTableEntry
-{
-    u8 pad[16];
-    u32 tag;
-} FieldOrderingTableEntry;
-
 extern s32 g_text_cursor_x;
 extern s32 g_text_cursor_y;
 extern s32 g_text_clut_base;
 extern u8 g_hex_digit_table[17];
 extern FieldGlyphPrimitive* g_field_primitive_cursor;
-extern FieldOrderingTableEntry* g_field_current_render_half;
+extern FieldRenderHalf* g_field_current_render_half;
 
 /**
- * @brief Build the glyph texcoord+CLUT word and store it into the primitive.
- *
- * Both glyph UV offsets are emitted as trapping signed @c addi instructions
- * (@c addi u,0x80 for the column and @c addi v,0xe0 for the row), which the
- * game's disassembly flags as handwritten - GCC never emits a trapping
- * @c addi for a plain @c +constant, so the original devs hand-wrote these two
- * instructions. Reproducing that is a sanctioned exception to the no-inline-asm
- * rule for this function. At the very least, @c addi is indeed handwritten or 
- * part of a macro and this is verified by the decomp community.
- *
- * @note The extra operands on the two asm statements (the @c "$6" clobber on
- *       the column addi and the @c "=&r"(clut_word) output plus the two
- *       @c "m"(*(p)) memory operands on the row addi) do not correspond to any
- *       handwritten instruction; they only steer GCC 2.6.0's register
- *       allocator onto the exact coloring the target uses. Dropping them keeps
- *       the two @c addi but regresses the match to ~97% (pure register
- *       permutation). A clobber-free source shape that colors naturally has not
- *       been found.
- * @param p          Glyph primitive being written (used as the store target).
- * @param ch         Masked character code selecting the atlas cell.
- * @param clut_word  Shifted CLUT word ORed into the low half of the result.
- * @param u_work     Scratch that receives the column offset (@c (ch&0xf)<<3).
- * @param packed_work Scratch that receives the final texcoord+CLUT word.
- */
-#define FIELD_SET_GLYPH_UV(p, ch, clut_word, u_work, packed_work) ({ \
-    u32 _v; \
-    u32 _uv; \
-    s32 _field_v; \
-    (u_work) = ((ch) & 0xf) << 3; \
-    __asm__ ("addi %0, %1, %2" : "=r"(u_work) : "r"(u_work), "i"(0x80) : "$6", "memory"); \
-    (_uv) = (clut_word) | (u32)(u_work); \
-    (_v) = ((u32)(((ch) - 0x20) & 0xf0)) >> 1; \
-    _field_v = (_v); \
-    __asm__ ("addi %0, %2, %3" \
-             : "=r"(_field_v), "=&r"(clut_word) \
-             : "r"(_field_v), "i"(0xe0), "m"(*(p)), "m"(*(p)) \
-             : "memory"); \
-    (_v) = _field_v; \
-    (_v) <<= 8; \
-    (packed_work) = (_uv) | (_v); \
-    SET_SPRT_UV_CLUT_WORD((p), (packed_work)); \
-})
-
-void field_draw_glyph(u8 character, s32 ot_depth, s32 clut_offset);
-
-/**
- * @brief Emit one font glyph sprite and link it into the ordering table.
- *
- * Space (0x20) draws nothing and only advances the cursor. The font atlas cell
- * is selected from the character code: the low nibble picks the U column and
- * the high nibble (offset from 0x20) picks the V row. The primitive is written
- * through g_field_primitive_cursor, then chained into g_field_current_render_half
- * at the requested ordering-table depth, preserving the tag's length byte.
- *
- * @param character   Character code whose atlas cell is selected.
- * @param ot_depth    Ordering-table depth used to link the glyph primitive.
+ * @brief C reference for glyph emission and cursor advancement.
+ * @param character Character code selecting the font atlas cell.
+ * @param ot_depth Ordering-table depth used to link the sprite.
  * @param clut_offset Offset added to the base font CLUT identifier.
- * @see decomp.me (100%) https://decomp.me/scratch/1IyXY OR https://decomp.me/scratch/BhIpy
- * @note Matches 100% in-tree under GCC 2.6.0 -O1 (maspsx 2.34); the linked
- *       scratch predates the register-allocation fix and still reads 97.06%.
- *       The two handwritten UV @c addi offsets and the allocator-steering
- *       operands that pin the coloring both live in @ref FIELD_SET_GLYPH_UV.
- * @note gcc 2.7.2 (not CDK) produces equivalent asm.
  */
 void field_draw_glyph(u8 character, s32 ot_depth, s32 clut_offset)
 {
-    s32 masked_char;
-    s32 ot_byte_offset;
     FieldGlyphPrimitive* primitive;
-    volatile FieldGlyphPrimitive* primitive2;
-    u32 mask_lo24;
-    s32 cursor_y;
+    u_long* ot_entry;
     u32 clut;
-    u32 packed_pos;
-    u32 u_lo;
-    u32 uv_dead; /* Reused as scratch for the UV word and the render-half base. */
-    u32 dummy;
-    u32 packed_len;
-    FieldGlyphPrimitive* next;
+    u32 u;
+    u32 v;
 
-    masked_char = character & 0xff;
-    ot_byte_offset = ot_depth << 2;
-    if (masked_char != 0x20)
+    if (character != ' ')
     {
         primitive = g_field_primitive_cursor;
-        SET_BGR0_PACKED(primitive, 0x66000000u | GPU_TINT_NEUTRAL);
-        mask_lo24 = 0x00ffffff;
-        cursor_y = g_text_cursor_y;
-        packed_len = g_text_clut_base;
-        clut = (u16)packed_len;
-        ot_depth = g_text_cursor_x;
-        packed_pos = (cursor_y << 16) | ot_depth;
-        clut += clut_offset;
-        clut <<= 16;
-        FIELD_SET_GLYPH_UV(primitive, masked_char, clut, ot_depth, uv_dead);
-        SET_SPRT_XY0_WORD(primitive, packed_pos);
-        clut_offset = (s32)0xff000000;
-        primitive2 = g_field_primitive_cursor;
-        SET_SPRT_WH_PACKED(primitive2, 8, 8);
-        uv_dead = (u32)g_field_current_render_half;
-        next = (FieldGlyphPrimitive*)primitive2->tag;
-        ot_byte_offset += uv_dead;
-        packed_len = *(u32*)(ot_byte_offset + 0x10);
-        dummy = 0x04000000;
-        ot_depth = (s32)(packed_len & mask_lo24);
-        dummy |= (u32)ot_depth;
-        primitive2->tag = dummy;
-        next = (FieldGlyphPrimitive*)(primitive2 + 1);
-        u_lo = ((u32)primitive2) & mask_lo24;
-        g_field_primitive_cursor = next;
-        packed_len &= (u32)clut_offset;
-        *(u32*)(ot_byte_offset + 0x10) = packed_len | u_lo;
+        clut = (u32)(u16)g_text_clut_base + (u32)clut_offset;
+        u = 0x80 + (character & 0x0F) * FIELD_GLYPH_SIZE;
+        v = 0xE0 + (((u32)character - 0x20) & 0xF0) / 2;
+
+        primitive->color_code = 0x66000000u | GPU_TINT_NEUTRAL;
+        primitive->position = ((u32)g_text_cursor_y << 16) | (u32)g_text_cursor_x;
+        /* Keep the full V result: the original packs it without a byte mask. */
+        primitive->texcoord_clut = (clut << 16) | (v << 8) | u;
+        primitive->size = (FIELD_GLYPH_SIZE << 16) | FIELD_GLYPH_SIZE;
+
+        ot_entry = &g_field_current_render_half->ordering_table[ot_depth + FIELD_TEXT_OT_OFFSET];
+        primitive->tag = 0x04000000u | (*ot_entry & GPU_LINK_ADDRESS_MASK);
+        *ot_entry = (*ot_entry & GPU_LINK_LENGTH_MASK) | ((u32)primitive & GPU_LINK_ADDRESS_MASK);
+        g_field_primitive_cursor = primitive + 1;
     }
-    g_text_cursor_x += 8;
+    g_text_cursor_x = (s32)((u32)g_text_cursor_x + FIELD_GLYPH_SIZE);
 }
 
 /**
- * @brief Draw the low byte of a value as two hexadecimal glyphs.
- * @param value       Value whose low two nibbles are rendered.
- * @param x           Starting X coordinate of the text cursor.
- * @param y           Starting Y coordinate of the text cursor.
- * @param ot_depth    Ordering-table depth used for both glyphs.
+ * @brief C reference for drawing the low byte as two hexadecimal digits.
+ * @param value Value whose low two nibbles are rendered.
+ * @param x Starting X coordinate of the text cursor.
+ * @param y Starting Y coordinate of the text cursor.
+ * @param ot_depth Ordering-table depth used for both glyphs.
  * @param clut_offset Offset added to the base font CLUT identifier.
- * @see decomp.me (67.69%) https://decomp.me/scratch/7XlDl
- * @note WIP under GCC 2.6.0 -O1 (maspsx 2.34). The unusual temporaries
- *       and empty conditionals are retained for the current partial match.
- *       The percentage above is the in-tree result; the linked scratch is older.
- * @note Source/assembly comparison supports functional equivalence for normal
- *       game execution: all 256 low-byte values select the same two entries in
- *       the original "0123456789ABCDEF" table, with unchanged depth and CLUT
- *       arguments for both calls. The cursor finishes at (x + 16, y).
- *       This was checked against the assembly, not tested in-game.
- * @note Toolchain probes also tried GCC 2.6.3, GCC 2.7.2 (GNU/CDK), GCC 2.8.0,
- *       and original Psy-Q 4.1/4.4/4.5 WIN/4.6 compilers (respectively GCC
- *       2.7.2, 2.8.1, egcs-2.91.66, and GCC 2.95.2) at -O1. PlayStation
- *       CodeWarrior Release 4 (2.44.14) was tested at -O0 through -O4 after
- *       correcting wrapper detection so its optimization settings took effect.
- *       None of these probes reproduced the target's stack layout: s0-s3 are
- *       saved at sp+0x28..0x34, but ra is at sp+0x3c, leaving sp+0x38 unused.
- *       The tested compilers instead saved registers in contiguous slots.
- *       GCC 2.6.0 -O1 remains the primary hypothesis given the adjacent glyph
- *       match. These probes neither identify a different original compiler nor
- *       establish that this entire function was handwritten. The target's two
- *       trapping ADD address calculations also remain unmatched by this C.
- * @note Conclusion (2026-09-20): the target is hand-written assembly, most
- *       likely GCC 2.6.0 -O1 output for field_draw_hex_byte_clamped edited by
- *       hand, so no compiler can reproduce it. Evidence from the target binary:
- *       - The only 4 trapping add/addi instructions in the entire binary
- *         (main executable plus all overlays) are in this translation unit,
- *         two here and two in field_draw_glyph. GCC only emits addu/addiu.
- *       - The first instruction reads the fifth argument from 0x10($sp)
- *         before the prologue adjusts sp. GCC always adjusts sp first; this
- *         is the only function in the binary with that pattern.
- *       - Callee saves are stored in ascending order (s0, s1, s2, s3, ra).
- *         In the 100%-matched siblings the GCC 2.6.0 scheduler interleaves
- *         them (s4, s3, s1, ra, s2, s0 in field_draw_hex_byte_clamped).
- *         GCC's own emission order is descending (ra first), and every GCC
- *         used by this game (2.6.0, 2.7.2 CDK/GNU, 2.8.0, -O0 to -O2) either
- *         keeps that or lets the scheduler scramble it. A survey of all 985
- *         functions in the binary with 3+ saves found an ascending,
- *         uninterrupted save block only here and in the SN Systems SNMAIN
- *         startup stubs (__main, __do_global_dtors), which are vendor asm.
- *       - The delay-slot move addu s1, a1, zero copies a1 after a1 was set
- *         from a3; a compiler would move a3 into s1 directly.
- *       - The 0x40 frame is a fossil of the sibling. field_draw_hex_byte_clamped
- *         and field_draw_hex_word (both 100% under GCC 2.6.0 -O1) use 0x40 with
- *         a 17-byte digit-table copy at 0x10..0x20, s0..s4 at 0x28..0x38 and
- *         ra at 0x3c. This function keeps the same frame and the same s0..s3
- *         and ra slots but never touches 0x10..0x27 or the s4 slot at 0x38,
- *         and reads g_hex_digit_table directly through s3. The table copy,
- *         the clamp and the s4 use were removed and the frame left as-is; no
- *         compiler leaves an unused save slot between s3 and ra.
- *       The same conclusion applies to field_draw_glyph above: its 100% is
- *       only reached via the inline __asm__ addi pins in FIELD_SET_GLYPH_UV.
- *
- * The target asm passes ot_depth to both field_draw_glyph calls
- * (addu s1,a1 / addu a1,s1 around the calls), so the second call below
- * passes ot_depth; an earlier revision passed the high-nibble mask instead.
  */
 void field_draw_hex_byte_masked(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut_offset)
 {
-    u8 unused_stack_table[17]; /* Unused, but required for the -0x40 frame size. */
-    short style_args_zero;
-    signed char* digit_ptr;
-    s32 clut_offset_copy;
-    int ot_depth_copy;
-    signed char* digit_table = g_hex_digit_table;
-    signed char* digit_table_copy;
-    short style_args_zero_copy;
-    int working_mask;
-    unsigned short low_nibble_mask;
-    int high_nibble_mask;
-    int depth_is_zero;
-    s32 working_value;
-    s32 codegen_temp0;
-    unsigned int digit_index;
-    s32 codegen_temp2;
-    s32 codegen_temp3;
-    clut_offset_copy = clut_offset;
     g_text_cursor_x = x;
-    high_nibble_mask = ot_depth;
-    working_mask = ot_depth;
-    working_value = !high_nibble_mask;
-    working_value = working_value && (!high_nibble_mask);
-    low_nibble_mask = 0xf;
-    depth_is_zero = working_value != 0;
-    high_nibble_mask = 0xF0;
-    ot_depth_copy = working_mask;
-    style_args_zero = (!clut_offset) && (!ot_depth_copy);
-    codegen_temp0 = (0, clut_offset);
-    digit_index = working_mask;
-    codegen_temp2 = clut_offset;
-    codegen_temp3 = ot_depth;
-    if (depth_is_zero)
-    {
-    }
-    if ((!g_hex_digit_table) && (!g_hex_digit_table))
-    {
-    }
     g_text_cursor_y = y;
-    style_args_zero_copy = style_args_zero;
-    ot_depth_copy = (working_mask = high_nibble_mask);
-    if (style_args_zero_copy)
-    {
-    }
-    working_value = value;
-    digit_index = (high_nibble_mask & ((int)working_value)) >> 3;
-    field_draw_glyph(digit_table[digit_index >> 1], ot_depth, clut_offset_copy);
-    digit_table_copy = digit_table;
-    field_draw_glyph(*(digit_ptr = &digit_table_copy[low_nibble_mask & working_value]), ot_depth, clut_offset_copy);
+
+    field_draw_glyph(g_hex_digit_table[(value & 0xF0) >> 4], ot_depth, clut_offset);
+    field_draw_glyph(g_hex_digit_table[value & 0x0F], ot_depth, clut_offset);
 }
+#endif
