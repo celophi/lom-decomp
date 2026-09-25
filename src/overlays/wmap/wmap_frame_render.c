@@ -219,7 +219,6 @@ static __inline__ void project_panels(VECTOR* p38, VECTOR* p48, VECTOR* p58, VEC
 }
 
 /** @brief Update and project the paired world-map panels, then append their primitives. */
-/* TODO: match the two adjacent LUI instructions in the packet setup; see working/func_8006454C/status.md. */
 void func_8006454C(void)
 {
     MATRIX sp18;
@@ -256,6 +255,8 @@ void func_8006454C(void)
     SetTransMatrix(&sp18);
     project_panels(&sp38, &sp48, &sp58, &sp68, &sp78, &sp88);
     quad = (WmapQuad*)g_wmap_current_frame->packet_cursor;
+    /* Keep the frame load ahead of packet-mask setup during scheduling. */
+    g_wmap_current_frame->packet_cursor += 0;
     width = 0x140;
     quad->x3 = width;
     quad->x1 = width;
