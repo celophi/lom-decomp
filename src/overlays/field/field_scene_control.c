@@ -569,7 +569,6 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
     }
 }
 
-extern s32 D_801ED02C;
 
 /*
  * func_8005A0D0 is deliberately left undeclared here. It is defined at the end
@@ -600,9 +599,9 @@ extern s32 D_801ED02C;
  *
  * @note @c fade_mode is written two different ways on purpose and neither is
  *       interchangeable: the mode-2 store at the end of the fade-out uses the
- *       standalone symbol @c D_801ED02C (costs 2 rows written through
+ *       standalone symbol @c g_field_scene_fade_mode (costs 2 rows written through
  *       @c state), while the mode-0 store at the end of the fade-in goes
- *       through @c state (costs 1 row written as @c D_801ED02C). Same address,
+ *       through @c state (costs 1 row written as @c g_field_scene_fade_mode). Same address,
  *       different addressing mode - the same split as SCENE_STATE->camera_x vs g_field_camera_x.
  * @note @c state and @c scene are both locals, and @c scene has to be read at
  *       the very top, before the switch: reading it where it is first used
@@ -681,7 +680,7 @@ void field_update_scene_fade(void)
                     seq = seq->next;
                 }
                 field_control_animation(0, 0, 0, 0);
-                D_801ED02C = 2;
+                g_field_scene_fade_mode = 2;
                 func_8005A0D0(0, 0x100, 0x100, 0x100);
             }
         }
@@ -712,7 +711,7 @@ void field_update_scene_fade(void)
  * 0x100 on the following frames.
  *
  * @note @c list exists to make @c scene->objects address-taken. Without it gcc
- *       can prove the @c D_801ED02C store does not alias the load and hoists
+ *       can prove the @c g_field_scene_fade_mode store does not alias the load and hoists
  *       the load above it, which the target does not do (2 rows). The inline
  *       spelling @c *(&scene->objects) does NOT work - gcc folds the @c *&
  *       pair before aliasing is computed, so the pointer has to be a real named
@@ -723,7 +722,7 @@ void field_update_scene_fade(void)
  *       from the byte view instead costs 3 rows.
  * @note @c part must be re-assigned as its own statement rather than chained as
  *       @c part->next->visible - the chained form costs 8 rows.
- * @note Measured non-factor, still 100%: writing @c D_801ED02C before rather
+ * @note Measured non-factor, still 100%: writing @c g_field_scene_fade_mode before rather
  *       than after the @c scene read.
  *
  */
@@ -737,7 +736,7 @@ void field_begin_scene_fade_in(void)
     FieldSeq* seq;
 
     scene = g_field_scene.scene;
-    D_801ED02C = 3;
+    g_field_scene_fade_mode = 3;
     list = &scene->objects;
     obj = *list;
     obj->flags.word &= ~1;
@@ -2058,7 +2057,6 @@ void func_8005B0F4(s32 index, s32 from_keyframe)
 }
 
 
-extern s32 D_801ED02C;
 
 extern u8 D_800CBF44[];
 extern s32 D_801ED490;
@@ -2079,12 +2077,12 @@ void func_8005B1EC(void)
 }
 
 /**
- * @brief Return non-zero if D_801ED02C is set.
- * @return 1 if D_801ED02C != 0, 0 otherwise.
+ * @brief Return non-zero if g_field_scene_fade_mode is set.
+ * @return 1 if g_field_scene_fade_mode != 0, 0 otherwise.
  */
 s32 func_8005B218(void)
 {
-    return D_801ED02C != 0;
+    return g_field_scene_fade_mode != 0;
 }
 
 /**

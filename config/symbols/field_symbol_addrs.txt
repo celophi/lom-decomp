@@ -406,6 +406,10 @@ g_field_movie_frame_width             = 0x80140000;
 g_field_movie_frame_height            = 0x80140002;
 g_field_node_angle_table              = 0x8018001C;
 // FIELD bounds/work data is accessed through a fixed address, not a relocatable symbol.
+g_field_mem_top                       = 0x801ED000;
+g_field_mem_base                      = 0x801ED00C;
+g_field_mem_midpoint                  = 0x801ED010;
+g_field_scene_fade_mode               = 0x801ED02C;
 D_801ED400                            = 0x801ED400; // ignore:true
 g_field_camera_x                      = 0x801ED484;
 g_field_camera_y                      = 0x801ED488;

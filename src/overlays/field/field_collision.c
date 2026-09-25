@@ -6814,12 +6814,12 @@ void field_collision_rebuild_spans(void)
     s32 allocator_cursor;
 
     node = g_field_scene.scene->nodes;
-    allocator_cursor = FIELD_MEM_STATE->top;
+    allocator_cursor = g_field_mem_top;
     while (node != NULL)
     {
         field_collision_rasterize_node((FieldCollisionNode*)node, &allocator_cursor);
         node = node->next;
     }
     field_collision_collect_groups(&allocator_cursor);
-    FIELD_MEM_STATE->top = allocator_cursor;
+    g_field_mem_top = allocator_cursor;
 }

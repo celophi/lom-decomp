@@ -1011,13 +1011,27 @@ typedef struct
     u8 _pad1[0x2C - 0x14];
     /**
      * 0x2C fade state: 1 fading out, 2 held out, 3 fading in, 0 idle. Also
-     * reachable as the standalone symbol D_801ED02C, and the two spellings are
-     * not interchangeable - see field_update_scene_fade.
+     * reachable as the global g_field_scene_fade_mode, and the two spellings
+     * are not interchangeable - see field_update_scene_fade.
      */
     s32 fade_mode;
     /** 0x30 fade level, 0x100 is fully lit; stepped by 8 per frame. */
     s32 fade_level;
 } FieldMemState;
+
+/*
+ * Words of the allocator block that the code also reaches as plain globals.
+ * The original mixes both spellings; each compiles differently (one lui per
+ * global access, a shared base register through FIELD_MEM_STATE).
+ */
+/** @brief Top of the allocated region (FieldMemState.top). */
+extern s32 g_field_mem_top;
+/** @brief Base of the allocated region (FieldMemState.base). */
+extern s32 g_field_mem_base;
+/** @brief End of the first half of the region (FieldMemState.midpoint). */
+extern s32 g_field_mem_midpoint;
+/** @brief Scene fade state (FieldMemState.fade_mode). */
+extern s32 g_field_scene_fade_mode;
 
 extern FieldSceneGlobals g_field_scene;
 extern s32 g_field_marker_overlay_enabled[2];
