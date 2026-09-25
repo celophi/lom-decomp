@@ -41,7 +41,7 @@ The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each mod
 | CARDA.BIN | 🔒 | Fully linked |
 | CHECKPS.BIN | 🔒 | Fully linked |
 | CLOAD.BIN | 🔒 | Fully linked |
-| FIELD.BIN | 🪲 | Non-matching |
+| FIELD.BIN | 🔒 | Fully linked |
 | GNAME.BIN | 🔒 | Fully linked |
 | GOLEM.BIN | 🔒 | Fully linked |
 | GOSUB.BIN | 🔒 | Fully linked |
@@ -432,7 +432,7 @@ Check its routing in `mk/main.mk` or `mk/overlay-registry.mk`. The configured hi
 
 **objdiff reports 100%, but whole-overlay verification fails**
 
-Check data/rodata, relocations, linker section order, alignment, and generated assets. Function-level matching does not prove whole-file identity.
+Check data/rodata (including jump-table case targets), relocation addends, linker section order, the overlay segment's `align:` key, and generated assets. Function-level matching does not prove whole-file identity.
 
 ## Reverse-engineering provenance
 

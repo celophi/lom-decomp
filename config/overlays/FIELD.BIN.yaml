@@ -43,6 +43,7 @@ segments:
     type: decompress_overlay
     start: 0x1
     vram: 0x8004FC70
+    align: 4
     subsegments:
       - [auto, c, overlay_header] # overlay metadata
       - [0x1, .rodata, overlay_header]
