@@ -82,8 +82,12 @@ def load_complete_overlays() -> set[str]:
     }
 
 
-def build_main_units(config: dict) -> list[dict]:
-    """Create units for the main SLUS executable."""
+def build_main_units(config: dict, complete: bool = False) -> list[dict]:
+    """Create units for the main SLUS executable.
+
+    If `complete` is True (the linked executable matches the disc file), every
+    unit is stamped with metadata.complete = true.
+    """
     units = []
     for name in extract_c_subsegments(config):
         if should_skip(name):
@@ -94,6 +98,7 @@ def build_main_units(config: dict) -> list[dict]:
             "base_path": f"build/src/{name}.o",
             "metadata": {
                 "progress_categories": ["main"],
+                **({"complete": True} if complete else {}),
             },
         })
     return units
@@ -167,14 +172,16 @@ def main():
     categories = [{"id": "main", "name": "Main Executable"}]
     units = []
 
+    complete_overlays = load_complete_overlays()
+
     # ── Main executable ──
     if MAIN_CONFIG.exists():
         main_cfg = load_yaml(MAIN_CONFIG)
-        units.extend(build_main_units(main_cfg))
-        print(f"Main executable: {len(units)} units")
+        main_complete = "main" in complete_overlays
+        units.extend(build_main_units(main_cfg, complete=main_complete))
+        print(f"Main executable: {len(units)} units" + (" [complete]" if main_complete else ""))
 
     # ── Overlays ──
-    complete_overlays = load_complete_overlays()
     if complete_overlays:
         print(f"Complete overlays (BIN sha matches ROM): {sorted(complete_overlays)}")
 
