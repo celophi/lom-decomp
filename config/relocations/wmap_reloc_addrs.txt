@@ -23,3 +23,13 @@ rom:0x56475 reloc:MIPS_LO16 symbol:D_80123538
 rom:0x56499 reloc:MIPS_LO16 symbol:D_80123538
 rom:0x564BD reloc:MIPS_LO16 symbol:D_80123538
 rom:0x564E1 reloc:MIPS_LO16 symbol:D_80123538
+
+// func_8006A2FC retains the particle globals in s6/s5 across switch paths.
+rom:0x1A6D9 reloc:MIPS_HI16 symbol:D_8013B264
+rom:0x1A6DD reloc:MIPS_HI16 symbol:D_8013B270
+rom:0x1A849 reloc:MIPS_LO16 symbol:D_8013B264
+rom:0x1A875 reloc:MIPS_LO16 symbol:D_8013B270
+rom:0x1A93D reloc:MIPS_LO16 symbol:D_8013B264
+rom:0x1A98D reloc:MIPS_LO16 symbol:D_8013B270
+rom:0x1A9D1 reloc:MIPS_LO16 symbol:D_8013B264
+rom:0x1A9E5 reloc:MIPS_LO16 symbol:D_8013B270
