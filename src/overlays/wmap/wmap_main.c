@@ -1240,6 +1240,13 @@ static inline void wmap_upload_tim_block(RECT* rect, u8* block)
     LoadImage(rect, block + 12);
 }
 
+/** @brief Clear the map image destination to black. */
+static inline void wmap_clear_map_surface(RECT* rectangle)
+{
+    *rectangle = D_80051A88;
+    ClearImage(rectangle, 0, 0, 0);
+}
+
 /**
  * @brief Load world-map resources and run frames until the map exits.
  * @return Two for the controller reset chord, or zero after the exit effect.
@@ -1625,16 +1632,25 @@ s32 wmap_run_loop(void)
         header = D_800DCF18;
         if (header[4] & 8)
         {
-            wmap_copy_rectangle(&rects[1], data);
-            LoadImage(&rects[1], data + 12);
+            wmap_upload_tim_block(&rects[1], data);
             data += *(s32*)data;
+            wmap_copy_rectangle(&rects[1], data);
+            if (rects[1].x != -1)
+            {
+                LoadImage(&rects[1], data + 12);
+                DrawSync(0);
+                D_801ADAFC = 1;
+            }
         }
-        wmap_copy_rectangle(&rects[1], data);
-        if (rects[1].x != -1)
+        else
         {
-            LoadImage(&rects[1], data + 12);
-            DrawSync(0);
-            D_801ADAFC = 1;
+            wmap_copy_rectangle(&rects[1], data);
+            if (rects[1].x != -1)
+            {
+                LoadImage(&rects[1], data + 12);
+                DrawSync(0);
+                D_801ADAFC = 1;
+            }
         }
     }
     g_wmap_backdrop_target_level = 8;
@@ -1659,9 +1675,9 @@ s32 wmap_run_loop(void)
     {
         u8* data;
         u8* header;
-        data = D_800DCF18;
-        cdrom_stream(0x10C6, data);
+        cdrom_stream(0x10C6, D_800DCF18);
         cdrom_wait_queue_empty();
+        data = D_800DCF18;
         data += 8;
         header = D_800DCF18;
         if (header[4] & 8)
@@ -1701,16 +1717,25 @@ s32 wmap_run_loop(void)
         header = D_800DCF18;
         if (header[4] & 8)
         {
-            wmap_copy_rectangle(&rects[1], data);
-            LoadImage(&rects[1], data + 12);
+            wmap_upload_tim_block(&rects[1], data);
             data += *(s32*)data;
+            wmap_copy_rectangle(&rects[1], data);
+            if (rects[1].x != -1)
+            {
+                LoadImage(&rects[1], data + 12);
+                DrawSync(0);
+                D_801ADAFC = 1;
+            }
         }
-        wmap_copy_rectangle(&rects[1], data);
-        if (rects[1].x != -1)
+        else
         {
-            LoadImage(&rects[1], data + 12);
-            DrawSync(0);
-            D_801ADAFC = 1;
+            wmap_copy_rectangle(&rects[1], data);
+            if (rects[1].x != -1)
+            {
+                LoadImage(&rects[1], data + 12);
+                DrawSync(0);
+                D_801ADAFC = 1;
+            }
         }
     }
     g_wmap_land_display[31].previous_animation_index = -1;
@@ -1741,7 +1766,6 @@ s32 wmap_run_loop(void)
     }
     D_80139950.vx = (s32)(scroll_cell_x * WMAP_MAP_CELL_SIZE);
     D_80139950.vy = (s32)(scroll_cell_y * WMAP_MAP_CELL_SIZE);
-    rects[1] = D_80051A88;
     traveler_x = (g_wmap_travelers[0].cell_x - 1) * WMAP_TRAVEL_CELL_SIZE;
     g_wmap_travelers[0].next_cell_x = (u16)g_wmap_travelers[0].cell_x;
     g_wmap_travelers[0].next_cell_y = (u16)g_wmap_travelers[0].cell_y;
@@ -1750,7 +1774,7 @@ s32 wmap_run_loop(void)
     traveler_y = (g_wmap_travelers[0].cell_y - 1) * WMAP_TRAVEL_CELL_SIZE;
     g_wmap_travelers[0].position_y = traveler_y;
     g_wmap_travelers[0].target_y = traveler_y;
-    ClearImage(&rects[1], 0, 0, 0);
+    wmap_clear_map_surface(&rects[1]);
     rects[1].x = 0x2C0;
     rects[1].y = 0x1FF;
     rects[1].w = 0x100;
