@@ -1148,7 +1148,7 @@ void wmap_draw_land_animation(s32 x, s32 y, WmapLandDisplay* state, s32 resource
         texture_base = D_800CBBE8;
         address_mask = 0x00FFFFFF;
         tag_mask = 0xFF000000;
-        scale = &g_wmap_land_quad_scales[(s8)state->scale_frame];
+        scale = &g_wmap_land_quad_scales[0][(s8)state->scale_frame];
 
         packet->x0 = locals.screen.vx + ((quad->x * scale->x0) >> 8);
         packet->x1 = locals.screen.vx + (((quad->x + (s8)quad->width) * scale->x1) >> 8);

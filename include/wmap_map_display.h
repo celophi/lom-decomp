@@ -48,7 +48,10 @@ typedef struct
 } WmapQuadScale;
 extern WmapLandDisplay g_wmap_land_display[64];
 extern WmapCacheEntry g_wmap_land_image_cache[];
-extern WmapQuadScale g_wmap_land_quad_scales[];
+/** @brief Sprite quad corner scales: one row of WMAP_QUAD_SCALE_STEPS per draw variant. */
+#define WMAP_QUAD_SCALE_VARIANTS 3
+#define WMAP_QUAD_SCALE_STEPS 16
+extern WmapQuadScale g_wmap_land_quad_scales[WMAP_QUAD_SCALE_VARIANTS][WMAP_QUAD_SCALE_STEPS];
 extern s32 g_wmap_information_groups;
 extern s32 g_wmap_game_start_delay;
 extern s32 g_wmap_spirit_brightness;

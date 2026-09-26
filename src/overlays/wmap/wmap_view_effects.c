@@ -117,23 +117,6 @@ typedef struct
     s32 unknown_0c;
 } WmapView;
 
-/** @brief World-map sprite actor as read by the animator and the sprite renderer. */
-typedef struct
-{
-    s16 unknown_00;
-    s16 unknown_02;
-    u8 unknown_04[2];
-    u8 scale_index;
-    u8 unknown_07[7];
-    s16 sequence;
-    s16 previous_sequence;
-    u8 unknown_12[0x10];
-    s16 target_shade;
-    s16 shade;
-    s16 shade_step;
-    u8 unknown_28[4];
-} WmapSpriteActor;
-
 /** @brief One particle of the radial burst. */
 typedef struct
 {
