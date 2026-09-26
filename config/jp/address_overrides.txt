@@ -1,0 +1,7 @@
+// JP addresses confirmed by hand for symbols the automatic US -> JP map in
+// tools/versions/port_us_layout.py cannot place (it lists them as unverified).
+// The tool uses these ahead of anything it derives. Say how each was confirmed.
+
+// cload_expand_text_glyph_codes loads the table origin 0x80143458 (table - 0x19 * 0x210);
+// the JP table's 33-byte rows start there.
+g_cload_double_byte_char_table = 0x801467E8;

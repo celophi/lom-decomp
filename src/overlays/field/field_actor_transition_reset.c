@@ -24,10 +24,15 @@
  * @note field_cancel_animation_bindings reaches the object states through this page once; the
  *       page base in a register plus the member offset is the original codegen
  *       (the plain g_field_object_states symbol schedules its %hi late).
+ * @note The object states sit 0x558 bytes lower in JP (0x80105588).
  */
 typedef struct
 {
+#if defined(VERSION_JP)
+    u8 unk0[0x5588];
+#else
     u8 unk0[0x5AE0];
+#endif
     FieldObjectState object_states[FIELD_ACTOR_COUNT];
 } FieldStatePage;
 

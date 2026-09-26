@@ -835,7 +835,7 @@ field_idle_actor_after_reload         = 0x80091FA4;
 
 // Controller input to actor actions (field_actor_input_actions.c).
 field_get_held_action_buttons = 0x80091228;
-field_poll_leader_interaction = 0x80091320;
+field_poll_leader_interaction = 0x80091318;
 field_resolve_action_command = 0x800913A0;
 field_update_actor_run_button = 0x80091554;
 g_field_binding_buttons = 0x800EAE08;
@@ -1674,12 +1674,7 @@ D_801ED482       = 0x801ED482;
 D_801ED490       = 0x801ED490;
 
 // JP-only names at addresses that ported US placeholder names encode; without them splat would auto-name these the same.
-func_800BB9F4_jp = 0x800BB9F4; // type:func
-func_800BBA24_jp = 0x800BBA24; // type:func
-func_800BBA44_jp = 0x800BBA44; // type:func
-func_800BBAC8_jp = 0x800BBAC8; // type:func
-func_800BD99C_jp = 0x800BD99C; // type:func
-D_800FDA80_jp    = 0x800FDA80;
-D_800FE000_jp    = 0x800FE000;
-D_80105778_jp    = 0x80105778;
-D_8011F3A8_jp    = 0x8011F3A8;
+D_800FDA80_jp = 0x800FDA80;
+D_800FE000_jp = 0x800FE000;
+D_80105778_jp = 0x80105778;
+D_8011F3A8_jp = 0x8011F3A8;

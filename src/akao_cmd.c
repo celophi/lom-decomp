@@ -62,8 +62,13 @@ extern AkaoBankHeader g_akao_bank_staging;
  * g_akao_seq_channel0, read through its fixed address. This file is built with
  * -G0, where the symbol form loads the %hi part into a different register than
  * the original code; the constant address reproduces the original load pair.
+ * The symbol sits at 0x8003EDCC in JP.
  */
+#if defined(VERSION_JP)
+#define AKAO_CHANNEL_STATE (*(AkaoChannelState**)0x8003EDCC)
+#else
 #define AKAO_CHANNEL_STATE (*(AkaoChannelState**)0x8003EC5C)
+#endif
 
 /**
  * Central dispatcher for the AKAO sound driver. Each high-level wrapper

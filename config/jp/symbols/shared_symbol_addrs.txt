@@ -1401,13 +1401,12 @@ D_8004F830    = 0x8004F998;
 D_8004F834    = 0x8004F99C;
 
 // JP-only names at addresses that ported US placeholder names encode; without them splat would auto-name these the same.
-func_80034710_jp = 0x80034710; // type:func
-D_8003D160_jp    = 0x8003D160;
-D_8003D248_jp    = 0x8003D248;
-D_8003D27C_jp    = 0x8003D27C;
-D_8003EC30_jp    = 0x8003EC30;
-D_8003EC34_jp    = 0x8003EC34;
-D_8003EC58_jp    = 0x8003EC58;
-D_8003EC6C_jp    = 0x8003EC6C;
-D_8004C2D0_jp    = 0x8004C2D0;
-D_8004F830_jp    = 0x8004F830;
+D_8003D160_jp = 0x8003D160;
+D_8003D248_jp = 0x8003D248;
+D_8003D27C_jp = 0x8003D27C;
+D_8003EC30_jp = 0x8003EC30;
+D_8003EC34_jp = 0x8003EC34;
+D_8003EC58_jp = 0x8003EC58;
+D_8003EC6C_jp = 0x8003EC6C;
+D_8004C2D0_jp = 0x8004C2D0;
+D_8004F830_jp = 0x8004F830;

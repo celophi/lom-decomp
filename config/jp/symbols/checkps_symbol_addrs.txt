@@ -86,24 +86,28 @@ draw_kanji_string = 0x80051BBC;
 // would emit the jlabel macro, whose default visibility is global in macro.inc.
 // Plain .L labels assemble locally and make the table relocations section-relative,
 // matching GCC 2.7.2 + GNU as -L.
-.L80050B5C = 0x80050B5C; // type:label
-.L80050B78 = 0x80050B78; // type:label
-.L80050C14 = 0x80050C14; // type:label
-.L80050C90 = 0x80050C90; // type:label
-.L80050E00 = 0x80050E00; // type:label
-.L80050ED0 = 0x80050ED0; // type:label
-.L80050F68 = 0x80050F68; // type:label
-.L80050FBC = 0x80050FBC; // type:label
-.L80051020 = 0x80051020; // type:label
-.L80051060 = 0x80051060; // type:label
-.L800510BC = 0x800510BC; // type:label
-.L80051118 = 0x80051118; // type:label
-.L80051180 = 0x80051180; // type:label
-.L800511E4 = 0x800511E4; // type:label
-.L8005122C = 0x8005122C; // type:label
-.L800512B4 = 0x800512B4; // type:label
-.L80051304 = 0x80051304; // type:label
-.L80051364 = 0x80051364; // type:label
-.L800513E4 = 0x800513E4; // type:label
-.L80051424 = 0x80051424; // type:label
+.L80050B5C = 0x80050EE8; // type:label
+.L80050B78 = 0x80050F04; // type:label
+.L80050C14 = 0x80050FA0; // type:label
+.L80050C90 = 0x8005101C; // type:label
+.L80050E00 = 0x8005118C; // type:label
+.L80050ED0 = 0x8005125C; // type:label
+.L80050F68 = 0x800512F4; // type:label
+.L80050FBC = 0x80051348; // type:label
+.L80051020 = 0x800513AC; // type:label
+.L80051060 = 0x800513EC; // type:label
+.L800510BC = 0x80051448; // type:label
+.L80051118 = 0x800514A4; // type:label
+.L80051180 = 0x8005150C; // type:label
+.L800511E4 = 0x80051570; // type:label
+.L8005122C = 0x800515B8; // type:label
+.L800512B4 = 0x80051640; // type:label
+.L80051304 = 0x80051690; // type:label
+.L80051364 = 0x800516F0; // type:label
+.L800513E4 = 0x80051770; // type:label
+.L80051424 = 0x800517B0; // type:label
 g_checkps_overlay_id = 0x8004FDD8;
+
+// JP-only names at addresses that ported US placeholder names encode; without them splat would auto-name these the same.
+.L80050F68_jp = 0x80050F68; // type:label
+.L800512B4_jp = 0x800512B4; // type:label
