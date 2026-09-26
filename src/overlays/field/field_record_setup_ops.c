@@ -200,7 +200,7 @@ void func_800BEA10(FieldItemRecord* record, s32 category, s32 item_type, s32 row
     g_field_script = (FieldScriptContext*)&g_field_runtime->events[0].script;
     func_800BF2F0(D_80123FC0->grid.commands[command_index - FIELD_STAGING_COMMAND_BASE]);
     g_field_script = saved_script;
-    func_800BFA34();
+    field_write_staged_item();
 
     record->derived.bytes[0] = D_80123FC4->properties[0];
 
@@ -340,15 +340,15 @@ void func_800BEF74(void)
     }
     func_800BF700();
     g_field_script = saved_script;
-    func_800BFA34();
+    field_write_staged_item();
 
     switch (D_80123FC4->category)
     {
     case FIELD_ITEM_CATEGORY_WEAPON:
-        func_800BFF90(D_80123FC4->record);
+        field_derive_weapon_values(D_80123FC4->record);
         return;
     case FIELD_ITEM_CATEGORY_ARMOR:
-        func_800C015C(D_80123FC4->record);
+        field_derive_armor_values(D_80123FC4->record);
         return;
     }
 }

@@ -82,7 +82,7 @@ typedef struct FieldActorPartDef
     u8 green_or_track;
     u8 blue_or_track;
     u8 turn_end_age;
-    u8 unknown_0x12;
+    u8 texture_frame_period; /* frames per mesh texture frame; 0 = none */
     u8 rotation_y_16;
     FieldPartFlags orientation_flags; /* Also read through its upper halfword. */
     s16 unknown_0x18;
@@ -194,7 +194,7 @@ typedef struct FieldActorState
     u8 unknown_0x28;
     u8 animation_index;
     u8 sequence_active;
-    u8 unknown_0x2b[16];
+    u8 mesh_texture_frames[16]; /* per-part mesh texture animation frame */
     u8 active_counts[9][16];
     u8 padCB;
     u16 track_counters[9][16];

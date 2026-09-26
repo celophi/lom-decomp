@@ -8,18 +8,6 @@
 #include "field_calls.h"
 #include "field_records.h"
 
-/** @brief Land flag: the land has been placed on the map. */
-#define FIELD_LAND_PLACED 0x01
-
-/** @brief Land flag: TODO meaning unknown; excludes a placed land from the active count. */
-#define FIELD_LAND_FLAG_02 0x02
-
-/** @brief Land flag: TODO meaning unknown. */
-#define FIELD_LAND_FLAG_04 0x04
-
-/** @brief Land flag: the land is available for placement. */
-#define FIELD_LAND_AVAILABLE 0x08
-
 /** @brief Most lands that can be active before only the first requested land is placed. */
 #define FIELD_ACTIVE_LAND_LIMIT 3
 
@@ -37,13 +25,6 @@
 
 /** @brief Special id slot that holds no special. */
 #define FIELD_NO_SPECIAL 0xFF
-
-/** @brief Pair of words that identifies one item record. */
-typedef struct FieldItemKey
-{
-    s32 first;
-    s32 second;
-} FieldItemKey;
 
 /** @brief Item value tables (resource 0x11). */
 typedef struct
@@ -147,9 +128,9 @@ s32 func_800C3518(s32 land_index)
         {
             return -1;
         }
-        g_field_game_state->control.fields.unk2E4 += 1;
+        g_field_game_state->control.fields.placed_land_count += 1;
         g_field_game_state->lands[land_index].flags |= FIELD_LAND_PLACED;
-        g_field_game_state->lands[land_index].count = g_field_game_state->control.fields.unk2E4;
+        g_field_game_state->lands[land_index].count = g_field_game_state->control.fields.placed_land_count;
         return land_index;
     }
     return -1;
@@ -281,7 +262,7 @@ s32 func_800C36F0(FieldItemKey* key)
 
     for (i = 0; i < FIELD_ITEM_COUNT; i++)
     {
-        if ((g_field_game_state->items[i].kind != 0) && (g_field_game_state->items[i].unk38 == first) && (g_field_game_state->items[i].unk3C == second))
+        if ((g_field_game_state->items[i].kind != 0) && (g_field_game_state->items[i].key.first == first) && (g_field_game_state->items[i].key.second == second))
         {
             return 1;
         }
@@ -290,8 +271,8 @@ s32 func_800C36F0(FieldItemKey* key)
     /* The hero's equipment[] runs on into unk150[]: eight item records. */
     for (i = 0; i < 8; i++)
     {
-        if ((g_field_game_state->characters[0].equipment[i].kind != 0) && (g_field_game_state->characters[0].equipment[i].unk38 == first) &&
-            (g_field_game_state->characters[0].equipment[i].unk3C == second))
+        if ((g_field_game_state->characters[0].equipment[i].kind != 0) && (g_field_game_state->characters[0].equipment[i].key.first == first) &&
+            (g_field_game_state->characters[0].equipment[i].key.second == second))
         {
             return 1;
         }

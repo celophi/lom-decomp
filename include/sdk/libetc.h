@@ -17,6 +17,8 @@
 #define PADR2      (1 << 1)
 #define PADselect  (1 << 8)
 
+#define getScratchAddr(offset) ((u_long *)(0x1f800000 + (offset) * 4))
+
 int CheckCallback(void);
 int ResetCallback(void);
 int RestartCallback(void);

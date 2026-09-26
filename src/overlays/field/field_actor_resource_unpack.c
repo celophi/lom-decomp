@@ -137,7 +137,7 @@ extern u8 g_field_sound_tables[];
 extern s16 g_field_texture_slot_flags[FIELD_OWNER_COUNT];
 
 /* Local: field_contact_geometry.c calls it with a third argument, so it stays out of field_calls.h. */
-s32 func_800B22F0(s32 actor_id, s32 script);
+s32 field_start_interaction(s32 actor_id, s32 script);
 
 static s32 field_enqueue_resource_read(s32 resource_id);
 static void field_upload_actor_texture(u8* tim, s32 owner);
@@ -183,7 +183,7 @@ void field_check_marker_contact(Vec3i* position)
             {
                 if (g_field_scene_contact_latched == 0)
                 {
-                    func_800B22F0(0, label | FIELD_INTERACTION_SCRIPT);
+                    field_start_interaction(0, label | FIELD_INTERACTION_SCRIPT);
                 }
                 g_field_scene_contact_latched = 1;
                 return;
@@ -471,7 +471,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
             face_tag = field_owner_tag(owner);
             item = 0;
             output.byte = field_block_alloc(g_field_actor_heap, allocation_size, face_tag);
-            mesh_fields->faces = output.byte;
+            mesh_fields->faces = (FieldMeshFace*)output.byte;
             if (mesh->face_count != 0)
             {
                 do

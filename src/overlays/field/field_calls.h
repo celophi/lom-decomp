@@ -280,44 +280,37 @@ void field_set_fade_target_only(s16 red, s16 green, s16 blue, s16 duration);
 void field_update_and_render_fade(struct FieldRenderHalf *ctx);
 
 /* field_generated_record_ops.c */
-void func_800BFA34(void);
-void func_800BFF90(struct FieldItemRecord *record);
-void func_800C015C(struct FieldItemRecord *record);
+void field_write_staged_item(void);
+void field_derive_weapon_values(struct FieldItemRecord *record);
+void field_derive_armor_values(struct FieldItemRecord *record);
 
 /* field_group_derived_stats.c */
-void func_800C4364(s32 arg0);
+void field_golem_build_group_record(s32 group);
 
 /* field_group_layout_ops.c */
-void func_800C3A00(s32 command);
-void func_800C3B50(s32 type);
-void func_800C3BB0(void);
+void field_golem_commit_group_edit(s32 command);
+void field_golem_select_logic_type(s32 type);
+void field_golem_rebuild_current_grid(void);
 
 /* field_group_stat_transfer.c */
-void func_800C3F18(s32 group_index, void *destination);
+void field_golem_build_companion(s32 group, struct FieldCharacterRecord *record);
 
 /* field_interaction_start.c */
-void func_800B177C(void);
-void func_800B19FC(void);
-void func_800B2654(s32 *actor_id, s32 *plane, s32 *effect, s32 *selector);
-void func_800B2844(s32 slot, u8 *text, u8 character_limit);
+void field_end_party_script_control(void);
+void field_runtime_update(void);
+void field_resolve_talk_window(s32 *actor_id, s32 *plane, s32 *effect, s32 *selector);
+void field_set_text_macro(s32 slot, u8 *text, u8 character_limit);
 
 /* field_item_selection.c */
-void func_800AEE28(void);
-void func_800AF824(s32 actor_index);
+void field_open_item_drop_menu(void);
+void field_pick_up_item_actor(s32 actor_index);
 
 /* field_layout_slot_state.c */
-void func_800CA1A0(s32 arg0);
-void func_800CA1E0(void);
+void field_place_land(s32 land_index);
+void field_reset_lands(void);
 
 /* field_menu_ops.c */
-void func_800C5704(s32 op);
-
-/* field_menu_windows.c */
-void func_800ADE2C(void);
-void func_800ADEB0(void);
-s32 func_800ADEEC(void);
-void func_800ADF34(void);
-s32 func_800AE864(u8 *str);
+void field_run_menu_op(s32 op);
 
 /* field_modal_runtime.c */
 void field_bind_saved_game_context(void);
@@ -330,31 +323,34 @@ void field_run_name_entry(s32 initial_name, s32 active_name, s32 source_mode, s3
 void field_run_zukan(s32 context);
 
 /* field_modal_stream_start.c */
-void func_800AD030(s32 mode);
-void func_800AD194(s32 mode);
+void field_open_carda(s32 mode);
+void field_run_golem(void);
+void field_modal_frame_stub(s32 render_half);
+void field_open_niki(s32 mode);
+void field_open_addhero(s32 mode);
 
 /* field_pair_indicators.c */
-void func_800A2E40(u8 *buffer);
+void field_update_pair_indicators(struct FieldRenderHalf *render_half);
 
 /* field_progression_ops.c */
-void func_800B60DC(s32 level);
+void field_reset_party_to_level(s32 level);
 
 /* field_record_effect_ops.c */
-void func_800C0260(s32 group_index, s32 slot_index);
-void func_800C0490(s32 group_index);
-void func_800C06E8(void);
+void field_roll_menu_slot_effect(s32 group_index, s32 slot_index);
+void field_classify_menu_slots(s32 group_index);
+void field_apply_pending_region_effects(void);
 
 /* field_record_growth_ops.c */
-void func_800C0E18(s32 recipient, s32 amount);
-void func_800C0E54(s32 record_index, s32 amount);
-void func_800C11F0(s32 index, s32 notify);
-void func_800C1230(s32 slot);
-s32 func_800C14A4(s32 index, s32 notify);
-s32 func_800C19D0(s32 value, s32 increase, s32 flags);
+void field_add_money(s32 recipient, s32 amount);
+void field_award_experience(s32 record_index, s32 amount);
+void field_apply_character_level_ups(s32 index, s32 notify);
+void field_apply_region_level_ups(s32 slot);
+s32 field_try_character_level_up(s32 index, s32 notify);
+s32 field_add_stat_increase(s32 value, s32 increase, s32 flags);
 
 /* field_record_lookup_ops.c */
 void field_restore_actor_capacity_fraction(s32 record_id, s32 fraction_256);
-void func_800C1A18(void *unused, s32 owner_id);
+void field_grant_actor_pickup(void *unused, s32 owner_id);
 
 /* field_record_position_queries.c */
 s32 func_800C1FFC(s32 actor_id, s32 half_width, s32 half_depth);

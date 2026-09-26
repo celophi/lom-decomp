@@ -1,43 +1,31 @@
+/**
+ * @file field_progression_ops.c
+ * @brief Party level queries: experience to the next level and replaying level-ups.
+ */
+
 #include "common.h"
 #include "field_calls.h"
 #include "field_records.h"
 
-/** @brief Level at and above which the experience threshold is the stored experience. */
-#define FIELD_LEVEL_CAP 99
-
 /** @brief Hit points a character is reset to before replaying its level-ups. */
 #define FIELD_RESET_HP 50
 
-/** @brief Base value (before growth bits) each stat is reset to. */
+/** @brief Base value (quarter units) each stat is reset to before replaying its level-ups. */
 #define FIELD_RESET_STAT 20
 
 extern FieldGameState* g_field_game_state;
 
 /**
- * @brief Return the experience needed to advance from @p level.
- * @param level Current level.
- * @return (level - 1) * level * 20 + level * 10.
- */
-static inline s32 field_level_threshold(s32 level)
-{
-    s32 previous = level - 1;
-    s32 scaled = level * 5;
-    s32 scaled_x4 = scaled * 4;
-
-    return previous * scaled_x4 + scaled * 2;
-}
-
-/**
  * @brief Return the experience a party character needs for its next level.
  * @param index Party character index.
- * @return (level - 1) * level * 20 + level * 10 below level 99, otherwise the
- *         character's current experience.
+ * @return field_level_threshold() of the character's level below FIELD_LEVEL_MAX, otherwise
+ *         the character's current experience.
  */
-s32 func_800B607C(s32 index)
+s32 field_get_next_level_experience(s32 index)
 {
     s32 level = g_field_game_state->characters[index].progress.level;
 
-    if (level < FIELD_LEVEL_CAP)
+    if (level < FIELD_LEVEL_MAX)
     {
         return field_level_threshold(level);
     }
@@ -46,11 +34,11 @@ s32 func_800B607C(s32 index)
 }
 
 /**
- * @brief Reset every party character to level 1 and level it up to @p level.
- * @param level Target level; each character gets the experience threshold of
- *              level - 1 and then advances through func_800C14A4.
+ * @brief Reset every party character to level 1 and replay its level-ups up to @p level.
+ * @param level Target level; each character gets the experience threshold of level - 1
+ *              and then advances through field_try_character_level_up.
  */
-void func_800B60DC(s32 level)
+void field_reset_party_to_level(s32 level)
 {
     s32 i;
     s32 j;
@@ -66,10 +54,10 @@ void func_800B60DC(s32 level)
 
         for (j = 0; j < FIELD_CHARACTER_STAT_COUNT; j++)
         {
-            g_field_game_state->characters[i].stats[j] = (g_field_game_state->characters[i].stats[j] & 0xFE00) | FIELD_RESET_STAT;
+            g_field_game_state->characters[i].stats[j] = (g_field_game_state->characters[i].stats[j] & FIELD_STAT_EFFECTIVE_MASK) | FIELD_RESET_STAT;
         }
 
-        while (func_800C14A4(i, 1) != 0)
+        while (field_try_character_level_up(i, 1) != 0)
         {
         }
     }

@@ -19,13 +19,6 @@
 /** @brief g_field_runtime viewed as the field runtime context it points at. */
 #define FIELD_RUNTIME ((FieldRuntimeContext*)g_field_runtime)
 
-/** @brief A FieldLandRecord whose first four bytes are also read as one word. */
-typedef union
-{
-    FieldLandRecord record;
-    u32 word;
-} FieldLandWords;
-
 /** @brief FieldGameState.lands viewed as FieldLandWords. */
 #define FIELD_LAND_WORDS ((FieldLandWords*)FIELD_GAME->lands)
 
@@ -102,7 +95,7 @@ typedef struct
 void func_800B820C();
 void func_800B8308();
 void func_800BD520(s32, s32, s32);
-u8* func_800C1B60(s32);
+u8* field_find_actor_record_or_default(s32);
 extern void (*g_field_script_op_table[])();
 extern FieldDispatchFn D_800F0D48[];
 u8* func_800B84B4(s32 arg0, u8* arg1, s32* arg2);
@@ -135,15 +128,15 @@ void func_8005B0F4(s32, s32);
 void field_start_actor_turn(s32);
 void field_toggle_actor_hidden(s32);
 /* Local: field_contact_geometry.c calls it with a third argument, so it stays out of field_calls.h. */
-s32 func_800B22F0(s32 actor_id, s32 script);
+s32 field_start_interaction(s32 actor_id, s32 script);
 void func_800BCCE0();
-void func_800C1D14(s32, s32);
-void func_800C1D68(void);
+void field_stop_actor_script(s32, s32);
+void field_stop_non_script_actors(void);
 void func_800C1E08(void);
 void func_800C299C(s32);
 s32 func_800C29CC(s32);
 void func_800C2A88(s32);
-extern s32 g_field_hide_actor_panels, g_field_duel_mode, D_80117EC4, D_80122980;
+extern s32 g_field_hide_actor_panels, g_field_duel_mode, g_field_pair_indicators_disabled, D_80122980;
 extern s32 g_gosub_result_count, g_gosub_result_values;
 void field_load_bound_animation(s32 arg0, s32 arg1);
 void field_spawn_shared_animation_actor(s32 arg0, s32 arg1);
@@ -173,7 +166,7 @@ void field_script_run(FieldScriptContext* context)
 
     previous_context = g_field_script;
     g_field_script = context;
-    func_800BD520(g_field_script->status.owner_id, 0xD000, ((u8*)func_800C1B60(context->status.owner_id))[5]);
+    func_800BD520(g_field_script->status.owner_id, 0xD000, ((u8*)field_find_actor_record_or_default(context->status.owner_id))[5]);
     wait_record = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
     wait_state = wait_record->wait;
     wait_count = wait_state >> 1;
@@ -608,7 +601,7 @@ void func_800B8E84(void)
         selected_base = (s32)&FIELD_RUNTIME->state;
         break;
     case 2:
-        selected_base = (s32)func_800C1B60(target_index);
+        selected_base = (s32)field_find_actor_record_or_default(target_index);
         break;
     case 3:
         selected_base = D_80123FC4;
@@ -717,7 +710,7 @@ void func_800B941C(void)
         target = -1;
         break;
     case 0xFF:
-        call_pc = func_800C1B60(owner);
+        call_pc = field_find_actor_record_or_default(owner);
         target = -1;
         if (call_pc[1] != mode)
         {
@@ -927,7 +920,7 @@ void func_800B99A8(void)
     mode = rec->pc[1];
     if (mode == 0xFF)
     {
-        resolved = ((u32)FIELD_RUNTIME->unk41C >> 8) & 3;
+        resolved = ((u32)FIELD_RUNTIME->talk_window.word >> 8) & 3;
     }
     else
     {
@@ -1511,7 +1504,7 @@ void field_script_op_31(void)
 }
 
 /**
- * @brief Opcode 0x32: read four operands, resolve them through func_800B2654 and pass them to func_8009C620.
+ * @brief Opcode 0x32: read four operands, resolve them through field_resolve_talk_window and pass them to func_8009C620.
  * @note A first operand of 0xFF is replaced by the owner id before resolution.
  */
 void field_script_op_32(void)
@@ -1536,13 +1529,13 @@ void field_script_op_32(void)
         target = g_field_script->status.owner_id;
     }
     arg0 = target;
-    func_800B2654(&arg0, &arg1, &arg2, &arg3);
+    field_resolve_talk_window(&arg0, &arg1, &arg2, &arg3);
     func_8009C620(arg1, arg3, arg0, arg2);
 }
 
 /**
  * @brief Opcode 0x33: read three operands and pass them to func_8009C77C.
- * @note A first operand of 0xFF is replaced by bits 8-9 of FieldRuntimeContext.unk41C.
+ * @note A first operand of 0xFF is replaced by bits 8-9 of FieldRuntimeContext.talk_window.
  */
 void field_script_op_33(void)
 {
@@ -1560,7 +1553,7 @@ void field_script_op_33(void)
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_2(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc, &arg2);
     if (arg0 == 0xFF)
     {
-        slot = (u32)FIELD_RUNTIME->unk41C >> 8;
+        slot = (u32)FIELD_RUNTIME->talk_window.word >> 8;
         slot &= 3;
     }
     else
@@ -1785,7 +1778,7 @@ void func_800BB7B4(void)
         func_800B34D0(1);
         break;
     case 3:
-        FIELD_RUNTIME->trigger_table = func_800C1E40(6);
+        FIELD_RUNTIME->trigger_table = (FieldTriggerTable*)func_800C1E40(6);
         FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
         return;
     case 4:
@@ -1793,11 +1786,11 @@ void func_800BB7B4(void)
         FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
         return;
     case 5:
-        func_800C1230(0);
-        func_800C1230(1);
-        func_800C1230(2);
-        func_800C1230(3);
-        func_800C1230(4);
+        field_apply_region_level_ups(0);
+        field_apply_region_level_ups(1);
+        field_apply_region_level_ups(2);
+        field_apply_region_level_ups(3);
+        field_apply_region_level_ups(4);
         break;
     case 6:
         i = 0;
@@ -1813,7 +1806,7 @@ void func_800BB7B4(void)
         i = 0;
         do
         {
-            FIELD_GAME->counters[i] = 99;
+            FIELD_GAME->item_counts[i] = 99;
             i += 1;
         } while (i < 0xFD);
         break;
@@ -1932,7 +1925,7 @@ void func_800BBAC8(u32 command, s32 operand)
         field_run_zukan((s32)operand);
         return;
     case 0xB:
-        func_800C5704((s32)operand);
+        field_run_menu_op((s32)operand);
         return;
     case 0xC:
         field_open_gosub_screen_sequence(g_field_runtime + (operand * 4));
@@ -1951,7 +1944,7 @@ void func_800BBAC8(u32 command, s32 operand)
         field_leave_party((s32)operand);
         return;
     case 0x11:
-        func_800C1D14((s32)actor_index, 0);
+        field_stop_actor_script((s32)actor_index, 0);
         return;
     case 0x12:
         /* Called as returning int: the original does not mask the u8 result. */
@@ -1982,7 +1975,7 @@ void func_800BBAC8(u32 command, s32 operand)
         field_set_actor_record_script_only((s32)actor_index, 2);
         return;
     case 0x1B:
-        func_800B22F0(0x80, operand & 0xFFFF);
+        field_start_interaction(0x80, operand & 0xFFFF);
         return;
     case 0x1C:
         field_control_animation(1, operand, 0, 2);
@@ -2018,7 +2011,7 @@ void func_800BBAC8(u32 command, s32 operand)
         func_800C2A88((s32)operand);
         return;
     case 0x27:
-        func_800C1D68();
+        field_stop_non_script_actors();
         return;
     case 0x28:
         func_800C1E08();
@@ -2027,7 +2020,7 @@ void func_800BBAC8(u32 command, s32 operand)
         func_800C299C((s32)operand);
         return;
     case 0x2A:
-        func_800AD030((s32)operand);
+        field_open_carda((s32)operand);
         return;
     case 0x2B:
         func_800BD520(0, (s32)operand, 1);
@@ -2045,7 +2038,7 @@ void func_800BBAC8(u32 command, s32 operand)
         D_80122980 = (s32)operand;
         return;
     case 0x33:
-        D_80117EC4 = (s32)operand;
+        g_field_pair_indicators_disabled = (s32)operand;
         return;
     case 0x34:
         func_800BD520(0, 0x7100, field_find_nearest_faced_item((s32)operand));
@@ -2102,7 +2095,7 @@ void func_800BBAC8(u32 command, s32 operand)
         field_stop_actor((s32)actor_index);
         return;
     case 0x41:
-        func_800C06E8();
+        field_apply_pending_region_effects();
         return;
     case 0x42:
         func_8005B1EC();
@@ -2121,10 +2114,10 @@ void func_800BBAC8(u32 command, s32 operand)
         akao_cmd_f1();
         return;
     case 0x47:
-        func_800B60DC((s32)operand);
+        field_reset_party_to_level((s32)operand);
         return;
     case 0x48:
-        func_800C1230((s32)operand);
+        field_apply_region_level_ups((s32)operand);
         return;
     case 0x49:
         g_script_pair_value_49 = (s32)operand;
@@ -2143,14 +2136,14 @@ void func_800BBAC8(u32 command, s32 operand)
         return;
     case 0x4D:
         g_music_track_index = 0;
-        func_800AD030(0);
+        field_open_carda(0);
         func_800BCCE0(0xFFFE, 0, 0, 0);
         return;
     case 0x4E:
         FIELD_SAVED->layout.option_flags |= SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3;
         func_800C1EC8(0, FIELD_GAME->words, 0x200);
         func_800C1EC8(0, (s32*)&FIELD_GAME->control, 0x30C);
-        FIELD_GAME->control.fields.unk2E4 = 1;
+        FIELD_GAME->control.fields.placed_land_count = 1;
         FIELD_GAME->flag_bits[0] |= 0x10000000;
         /* actor_index doubles as the land counter; a separate local changes allocation. */
         for (actor_index = 0; actor_index < FIELD_LAND_COUNT; actor_index++)
@@ -2470,7 +2463,7 @@ void func_800BC6B0(s32 list_index, s32 price_scale)
  *
  * When @p actor_id is the sentinel 0xFF the index is the script owner; otherwise
  * it is @p actor_id itself. The resolved index selects a state record via
- * func_800C1B60, whose flags word has bits 31 and 29 cleared, then the
+ * field_find_actor_record_or_default, whose flags word has bits 31 and 29 cleared, then the
  * index and @p resource_index are dispatched to field_retire_actor.
  *
  * @param actor_id Target index, or 0xFF for the script owner.
@@ -2489,7 +2482,7 @@ void func_800BC7EC(s32 actor_id, s32 resource_index)
     {
         actor = actor_id;
     }
-    record = (FieldActorRecord*)func_800C1B60(actor);
+    record = (FieldActorRecord*)field_find_actor_record_or_default(actor);
     record->flags.word &= 0x7FFFFFFF;
     record->flags.word &= 0xDFFFFFFF;
     field_retire_actor(actor, resource_index);
@@ -2842,16 +2835,16 @@ s32 flags;
 }
 
 /**
- * @brief Opcode 0x86: dispatch an entry of a resource record through func_800B2844.
+ * @brief Opcode 0x86: dispatch an entry of a resource record through field_set_text_macro.
  *
  * Fetches the record for @p resource_id via func_800C1E40; when non-NULL, reads
- * the halfword at @c entry_index*2 + 4 within it and calls func_800B2844 with
+ * the halfword at @c entry_index*2 + 4 within it and calls field_set_text_macro with
  * the record address offset by that halfword plus 4.
  *
- * @param operand_0 Forwarded to func_800B2844 as its first argument.
+ * @param operand_0 Forwarded to field_set_text_macro as its first argument.
  * @param resource_id Record selector passed to func_800C1E40.
  * @param entry_index Halfword index within the record (scaled by 2).
- * @param operand_3 Forwarded to func_800B2844 as its third argument.
+ * @param operand_3 Forwarded to field_set_text_macro as its third argument.
  */
 void field_script_op_86(s32 operand_0, s32 resource_id, s32 entry_index, s32 operand_3)
 {
@@ -2861,7 +2854,7 @@ void field_script_op_86(s32 operand_0, s32 resource_id, s32 entry_index, s32 ope
     {
         u16 h = *(u16*)(p + (entry_index << 1) + 4);
         /* Int limit on purpose: the original passes operand_3 without narrowing it to u8. */
-        ((void (*)(s32, u8 *, s32))func_800B2844)(operand_0, p + (h + 4), operand_3);
+        ((void (*)(s32, u8 *, s32))field_set_text_macro)(operand_0, p + (h + 4), operand_3);
     }
 }
 

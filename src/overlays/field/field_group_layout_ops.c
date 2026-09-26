@@ -1,7 +1,24 @@
+/**
+ * @file field_group_layout_ops.c
+ * @brief Golem group bookkeeping and the logic-block placement grid.
+ *
+ * The golem companion is built from one of three saved groups (the
+ * LargeHistoryRecord entries). These functions reorder the groups, save the
+ * party golem back into its group when it leaves, and rebuild the six-by-six
+ * grid that records which logic block covers each cell.
+ */
+
 #include "saved_game.h"
 #include "common.h"
 #include "field_calls.h"
 #include "field_golem_layout.h"
+
+/** @brief field_golem_commit_group_edit command: move the joined group to the order slot in D_80122C00. */
+#define GOLEM_COMMAND_REORDER 0x92BC
+/** @brief Number of cells whose lower neighbour is still on the grid. */
+#define GOLEM_GRID_UPPER_CELL_COUNT (GOLEM_GRID_CELL_COUNT - GOLEM_GRID_WIDTH)
+/** @brief D_80122C06 value when the joined group kept its order slot. */
+#define GOLEM_SLOT_STATUS_UNCHANGED 3
 
 extern s32 D_80122C00;
 extern s16 D_80122C06;
@@ -9,48 +26,48 @@ extern s16 D_80122C1A;
 extern s8 D_800459AF;
 extern GolemShapeTable D_80051888;
 
-void func_800C3BB0(void);
-void func_800C3BD8(s32 type);
-void func_800C3CB4(void);
-void func_800C3D38(s32 index, s32 rotation, s32 x, s32 y);
+static void field_golem_rebuild_grid(s32 type);
+static void field_golem_mark_grid_edges(void);
+static void field_golem_stamp_block_shape(s32 index, s32 rotation, s32 x, s32 y);
 
 /**
- * @brief Swap the edited golem logic group into a new order slot, or save it.
- * @param command 0x92BC moves the active group to the order slot in D_80122C00;
- *        any other value stores the edit record and clears the active group.
+ * @brief Move the joined golem group to a new order slot, or save it when it leaves.
+ * @param command GOLEM_COMMAND_REORDER swaps the joined group into the order
+ *        slot in D_80122C00; any other value copies the companion name back
+ *        into the group record and marks no group as joined.
  */
-void func_800C3A00(s32 command)
+void field_golem_commit_group_edit(s32 command)
 {
     s32 i;
     s32 found;
     s32 target;
-    s8 active;
+    s8 joined;
     GolemLayoutView* layout;
     s32 group;
 
     i = 0;
-    if (command == 0x92BC)
+    if (command == GOLEM_COMMAND_REORDER)
     {
         target = D_80122C00;
-        if ((u32)target < 3)
+        if ((u32)target < LARGE_HISTORY_RECORD_COUNT)
         {
             layout = GOLEM_LAYOUT;
-            active = layout->header.fields.active_group;
+            joined = layout->header.fields.joined_group;
             do
             {
-                /* Index-first sum: group_order[i] adds the base first. */
-                if (*(i + layout->group_order) == active)
+                /* Written index first: the address sum adds i before the base. */
+                if (*(i + layout->group_order) == joined)
                 {
                     found = i;
                 }
                 i++;
-            } while (i < 3);
+            } while (i < LARGE_HISTORY_RECORD_COUNT);
 
             GOLEM.group_order[found] = GOLEM.group_order[target];
-            GOLEM.group_order[target] = GOLEM.header.fields.active_group;
-            if (GOLEM.group_order[found] == GOLEM.header.fields.active_group)
+            GOLEM.group_order[target] = GOLEM.header.fields.joined_group;
+            if (GOLEM.group_order[found] == GOLEM.header.fields.joined_group)
             {
-                D_80122C06 = 3;
+                D_80122C06 = GOLEM_SLOT_STATUS_UNCHANGED;
             }
             else
             {
@@ -61,96 +78,97 @@ void func_800C3A00(s32 command)
     }
     else
     {
-        for (; i < 0x15; i++)
+        for (; i < GOLEM_NAME_LENGTH; i++)
         {
-            GOLEM.group_records[GOLEM.header.fields.active_group].name[i] = GOLEM.edit_record[i];
+            GOLEM.group_records[GOLEM.header.fields.joined_group].name[i] = GOLEM.companion.name[i];
         }
-        group = GOLEM.header.fields.active_group;
-        if (group != 3)
+        group = GOLEM.header.fields.joined_group;
+        if (group != GOLEM_NO_GROUP)
         {
-            GOLEM.header.word = (GOLEM.header.word & ~0xF0) | ((group & 0xF) << 4);
+            GOLEM.header.word = (GOLEM.header.word & ~GOLEM_SAVED_GROUP_MASK) | ((group & 0xF) << GOLEM_SAVED_GROUP_SHIFT);
         }
-        GOLEM.header.fields.active_group = 3;
+        GOLEM.header.fields.joined_group = GOLEM_NO_GROUP;
     }
 }
 
 /**
- * @brief Select the logic type to lay out, rebuild the grid and reload the edit record.
- * @param type Logic type to show, or 3 to restore the saved active group.
+ * @brief Show one logic type on the grid and rebuild the golem companion record.
+ * @param type Logic type to show, or GOLEM_NO_GROUP to rejoin the saved group.
  */
-void func_800C3B50(s32 type)
+void field_golem_select_logic_type(s32 type)
 {
-    if (type == 3)
+    if (type == GOLEM_NO_GROUP)
     {
-        GOLEM.header.fields.active_group = GOLEM.header.fields.saved_group >> 4;
+        GOLEM.header.fields.joined_group = GOLEM.header.fields.saved_group >> GOLEM_SAVED_GROUP_SHIFT;
     }
     else
     {
         D_800459AF = type;
     }
 
-    func_800C3BB0();
-    func_800C3F18(GOLEM.header.fields.active_group, GOLEM.edit_record);
+    field_golem_rebuild_current_grid();
+    field_golem_build_companion(GOLEM.header.fields.joined_group, &GOLEM.companion);
 }
 
-/** @brief Rebuild the placement grid for the current logic type in D_800459AF. */
-void func_800C3BB0(void)
+/** @brief Rebuild the placement grid for the logic type in D_800459AF. */
+void field_golem_rebuild_current_grid(void)
 {
-    func_800C3BD8(D_800459AF);
+    field_golem_rebuild_grid(D_800459AF);
 }
 
 /**
  * @brief Clear the placement grid and place every block of one logic type on it.
- * @param type Logic type whose placed blocks are drawn; 3 only clears the grid.
+ * @param type Logic type whose placed blocks are stamped; GOLEM_NO_GROUP only clears the grid.
  */
-void func_800C3BD8(s32 type)
+static void field_golem_rebuild_grid(s32 type)
 {
     s32 i;
     LogicBlock block;
 
-    for (i = 0; i < 36; i++)
+    for (i = 0; i < GOLEM_GRID_CELL_COUNT; i++)
     {
         GOLEM.grid[i].block_id = 0;
         GOLEM.grid[i].detail = 0;
     }
 
-    if (type != 3)
+    if (type != GOLEM_NO_GROUP)
     {
         for (i = 0; i < GOLEM.header.fields.block_count; i++)
         {
             block = GOLEM.logic_blocks[i];
-            if ((block.f.unknown_bit16 == 1) && (block.f.logic_type == type))
+            if ((block.f.placed == 1) && (block.f.logic_type == type))
             {
-                func_800C3D38(i, block.f.rotation, block.f.grid_x, block.f.grid_y);
+                field_golem_stamp_block_shape(i, block.f.rotation, block.f.grid_x, block.f.grid_y);
             }
         }
-        func_800C3CB4();
+        field_golem_mark_grid_edges();
     }
 }
 
 /** @brief Mark each grid cell whose lower neighbour belongs to a different block. */
-void func_800C3CB4(void)
+static void field_golem_mark_grid_edges(void)
 {
     s32 i;
     u8 owner;
     u8 below;
-    u8 none;
+    u8 empty;
 
-    none = 99;
-    for (i = 35; i >= 0; i--)
+    /* A local, not the constant: loading it before i is set is what the code does. */
+    empty = GOLEM_GRID_EMPTY;
+    for (i = GOLEM_GRID_CELL_COUNT - 1; i >= 0; i--)
     {
-        GOLEM.grid[i].edge = none;
+        GOLEM.grid[i].edge = empty;
     }
 
-    for (i = 0; i < 30; i++)
+    for (i = 0; i < GOLEM_GRID_UPPER_CELL_COUNT; i++)
     {
         owner = GOLEM.grid[i].owner;
-        if (owner != 99)
+        if (owner != GOLEM_GRID_EMPTY)
         {
-            below = GOLEM.grid[i + 6].owner;
-            if ((below != 99) && (owner != below))
+            below = GOLEM.grid[i + GOLEM_GRID_WIDTH].owner;
+            if ((below != GOLEM_GRID_EMPTY) && (owner != below))
             {
-                GOLEM.grid[i].edge = i + 6;
+                GOLEM.grid[i].edge = i + GOLEM_GRID_WIDTH;
             }
         }
     }
@@ -159,60 +177,23 @@ void func_800C3CB4(void)
 /**
  * @brief Stamp one logic block's shape onto the placement grid.
  * @param index Logic-block index written to each covered cell.
- * @param rotation Orientation selecting a five-point row of the shape.
+ * @param rotation Rotation of the shape to place.
  * @param x Grid column of the shape origin.
- * @param y Grid row of the shape origin (six columns per row).
+ * @param y Grid row of the shape origin.
  */
-void func_800C3D38(s32 index, s32 rotation, s32 x, s32 y)
+static void field_golem_stamp_block_shape(s32 index, s32 rotation, s32 x, s32 y)
 {
     GolemShapeTable table;
-    s32 offset;
     s32 i;
-    s32 step;
-    GolemLayoutView* layout;
-    GolemLayoutView* entry;
-    GolemLayoutView* grid;
-    GolemShapePoint* point;
-    GolemLayoutView* cell;
+    s32 cell;
 
-    /* The single-pass do/while wrappers set allocation priorities; the "- -" sum keeps the test out of CSE. */
     table = D_80051888;
-    offset = index * sizeof(LogicBlock);
-    layout = GOLEM_LAYOUT;
-    do
+    for (i = 0; i < table.shapes[GOLEM.logic_blocks[index].f.shape].count; i++)
     {
-        i = 0;
-    } while (0);
-
-    if (table.shapes[((GolemLayoutView*)(offset - -(s32)layout))->logic_blocks[0].f.shape].count != 0)
-    {
-        do
-        {
-            do
-            {
-                do
-                {
-                    grid = layout;
-                } while (0);
-            } while (0);
-        } while (0);
-
-        step = rotation * 5 * sizeof(GolemShapePoint);
-        /* entry and cell are layout views displaced by one element's byte offset. */
-        do
-        {
-            entry = (GolemLayoutView*)((u8*)grid + offset);
-        } while (0);
-
-        do
-        {
-            point = GOLEM_SHAPE_POINT(table, entry->logic_blocks[0].f.shape, step);
-            cell = (GolemLayoutView*)((x + point->x + (y + point->y) * 6) * sizeof(GolemGridCell) + (s32)grid);
-            cell->grid[0].owner = index;
-            cell->grid[0].block_id = entry->logic_blocks[0].f.id;
-            cell->grid[0].detail = entry->logic_blocks[0].f.quantity;
-            i++;
-            step += sizeof(GolemShapePoint);
-        } while (i < table.shapes[entry->logic_blocks[0].f.shape].count);
+        cell = x + table.shapes[GOLEM.logic_blocks[index].f.shape].rotations[rotation].parts[i].x +
+               (y + table.shapes[GOLEM.logic_blocks[index].f.shape].rotations[rotation].parts[i].y) * GOLEM_GRID_WIDTH;
+        GOLEM.grid[cell].owner = index;
+        GOLEM.grid[cell].block_id = GOLEM.logic_blocks[index].f.id;
+        GOLEM.grid[cell].detail = GOLEM.logic_blocks[index].f.quantity;
     }
 }

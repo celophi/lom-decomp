@@ -230,7 +230,7 @@ typedef struct
     s32 unk18;
 } ArgB800BE404;
 
-/** @brief Actor state returned by func_800C1B60; unk90 holds status flags. */
+/** @brief Actor state returned by field_find_actor_record_or_default; unk90 holds status flags. */
 typedef struct
 {
     u8 pad0[0x90];
@@ -270,7 +270,7 @@ extern void func_800BD520(s32, s32, s32);
 extern void func_800C1EC8(s32, void*, s32);
 extern u8 *g_field_game_state, *g_field_runtime, *D_80123FC4, *g_field_script;
 extern u8* func_800B2A9C(s32 value);
-extern void func_800C1F28(u32* arg0);
+extern void field_sort_keyed_list(u32* arg0);
 extern void (*D_800F0E54[])(s32* arg0, void* arg1, void* arg2);
 s32 func_800C1FBC(FieldPosition* first, FieldPosition* second);
 extern u8* g_field_battle;
@@ -282,7 +282,7 @@ extern s32 field_set_actor_position(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 s32 field_set_actor_position(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 void field_revive_actor(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 void* func_800B2B08(void);
-CmdB800BE404* func_800C1B60(s32 arg0);
+CmdB800BE404* field_find_actor_record_or_default(s32 arg0);
 void func_800C1EC8(s32 arg0, void* arg1, s32 arg2);
 
 /**
@@ -386,21 +386,21 @@ void func_800BD778(s32 unused, Request* request)
 
 void func_800BD95C(void)
 {
-    func_800B168C(1);
+    field_begin_party_script_control(1);
 }
 
 /**
- * @brief Thin stack-frame wrapper around func_800B168C with a fixed arg.
+ * @brief Thin stack-frame wrapper around field_begin_party_script_control with a fixed arg.
  */
 void func_800BD97C(void)
 {
-    func_800B168C(2);
+    field_begin_party_script_control(2);
 }
 
 /**
  * @brief Re-issue every active table element and clear the batch-dirty flags.
  *
- * After func_800B177C, walks the @c count live elements of @c g_field_runtime,
+ * After field_end_party_script_control, walks the @c count live elements of @c g_field_runtime,
  * dispatching field_queue_actor_event for each element's id, then clears the 0x60000 bits
  * of the flag word at 0x400 and resets @c g_field_interaction_active.
  *
@@ -409,7 +409,7 @@ void func_800BD99C(void)
 {
     s32 i;
 
-    func_800B177C();
+    field_end_party_script_control();
     for (i = 0; i < (s32)((Foo*)g_field_runtime)->f400.count; i++)
     {
         field_queue_actor_event(((Foo*)g_field_runtime)->elem[i].unk0, 0xD, 0x82);
@@ -671,7 +671,7 @@ void func_800BDF00(s32 unused, UnkStruct800BDF00* request)
 
     if (records[0].status != 0)
     {
-        func_800C1F28((u32*)&records[0].status);
+        field_sort_keyed_list((u32*)&records[0].status);
         if (request->unk2 & 0x8000)
         {
             request->unk0 = records[records[0].status - 1].unk4;
@@ -900,7 +900,7 @@ void func_800BE404(s32 arg0, ArgB800BE404* arg1)
     {
         id = arg1->unk0;
     }
-    if (id != 0 && ((func_800C1B60(id)->unk90 >> 0x1E) & 1))
+    if (id != 0 && ((field_find_actor_record_or_default(id)->unk90 >> 0x1E) & 1))
     {
         handle = (s32)func_800B2B08();
         if (handle != 0)

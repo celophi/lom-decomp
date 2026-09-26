@@ -62,7 +62,7 @@
 #define FIELD_COORDINATE_LABEL_COLOR 4
 
 s32 field_draw_player_icon(POLY_FT4* prim, u_long* ordering_table, s32 selector, s32 x, s32 y, s32 flip);
-s32 func_800A88A0(void* prim, void* ot, void* text, s32 color, s32 x, s32 y, s32 align);
+s32 field_draw_text(void* prim, void* ot, void* text, s32 color, s32 x, s32 y, s32 align);
 
 extern s32 g_field_party_has_guest;
 extern u8* g_field_coordinate_labels[];
@@ -83,17 +83,17 @@ s32 field_draw_coordinate_panel(void* ot, s32 prim, s32 x_offset, s32 y_offset)
     cursor = field_draw_player_icon((POLY_FT4*)prim, ot, g_field_party_has_guest, FIELD_COORDINATE_ICON_X - x_offset, -y_offset, 1);
     if (g_field_coordinate_labels[0] != NULL)
     {
-        cursor = func_800A88A0((void*)cursor, ot, g_field_coordinate_labels[0], FIELD_COORDINATE_LABEL_COLOR, FIELD_COORDINATE_LABEL_X - x_offset,
+        cursor = field_draw_text((void*)cursor, ot, g_field_coordinate_labels[0], FIELD_COORDINATE_LABEL_COLOR, FIELD_COORDINATE_LABEL_X - x_offset,
                                FIELD_COORDINATE_LABEL_Y - y_offset, 0);
     }
     if (g_field_coordinate_labels[1] != NULL)
     {
-        cursor = func_800A88A0((void*)cursor, ot, g_field_coordinate_labels[1], FIELD_COORDINATE_LABEL_COLOR, FIELD_COORDINATE_LABEL_X - x_offset,
+        cursor = field_draw_text((void*)cursor, ot, g_field_coordinate_labels[1], FIELD_COORDINATE_LABEL_COLOR, FIELD_COORDINATE_LABEL_X - x_offset,
                                FIELD_COORDINATE_LABEL_Y + FIELD_COORDINATE_LABEL_ROW_HEIGHT - y_offset, 0);
     }
     if (g_field_coordinate_labels[2] != NULL)
     {
-        cursor = func_800A88A0((void*)cursor, ot, g_field_coordinate_labels[2], FIELD_COORDINATE_LABEL_COLOR, FIELD_COORDINATE_LABEL_X - x_offset,
+        cursor = field_draw_text((void*)cursor, ot, g_field_coordinate_labels[2], FIELD_COORDINATE_LABEL_COLOR, FIELD_COORDINATE_LABEL_X - x_offset,
                                FIELD_COORDINATE_LABEL_Y + 2 * FIELD_COORDINATE_LABEL_ROW_HEIGHT - y_offset, 0);
     }
     return cursor;

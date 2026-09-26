@@ -64,9 +64,6 @@
 /** @brief Character ids of companions from this value on are drawn in a selectable colour. */
 #define FIELD_COMPANION_COLOR_ID_MIN 0x41
 
-/** @brief FieldPlayerRecord::flags bit selecting the hero's alternate sprite and portrait set. */
-#define FIELD_PLAYER_ALT_APPEARANCE 0x2
-
 /** @brief CD resource id bases of the party sprite packages. */
 #define FIELD_RES_HERO_SPRITES 0xAEB
 #define FIELD_RES_PARTNER_SPRITES 0xAEE
@@ -232,18 +229,6 @@
 
 /** @brief Word view of FieldActor bytes 0x3C..0x3F; bit 24 is FIELD_FRAME_UNCHANGED. */
 #define FIELD_ACTOR_FRAME_WORD(actor) (*(u32*)&(actor)->unk3C)
-
-/**
- * @brief Flags and weapon type of a party member as one halfword.
- * @note The game updates the flags with halfword loads and stores.
- */
-#define FIELD_PLAYER_FLAG_WORD(player) (((FieldPlayerFlagWord*)(player))->word)
-
-/** @brief Halfword view of FieldPlayerRecord::flags and weapon_type (see FIELD_PLAYER_FLAG_WORD). */
-typedef struct
-{
-    u16 word;
-} FieldPlayerFlagWord;
 
 /** @brief Target and restore colours of the field fade (see field_fade.c). */
 typedef struct
@@ -436,7 +421,7 @@ void field_close_dialog_screen(void)
 
     for (i = 0; i < FIELD_PLAYER_COUNT; i++)
     {
-        if (g_field_player_records[i].flags & FIELD_PLAYER_ACTIVE)
+        if (g_field_player_records[i].head.bytes.flags & FIELD_PLAYER_ACTIVE)
         {
             g_field_actors[i].command = FIELD_ACTOR_COMMAND_IDLE_AFTER_RELOAD;
             g_field_actors[i].animation_state = 1;
@@ -1743,9 +1728,9 @@ void field_reset_actor_resource_slots(void)
     g_field_player_records[1].portrait_index = 0xFF;
     g_field_player_records[2].portrait_index = 0xFF;
 
-    FIELD_PLAYER_FLAG_WORD(&g_field_player_records[0]) = (u16)(FIELD_PLAYER_FLAG_WORD(&g_field_player_records[0]) & ~FIELD_PLAYER_ALT_APPEARANCE);
-    FIELD_PLAYER_FLAG_WORD(&g_field_player_records[1]) = (u16)(FIELD_PLAYER_FLAG_WORD(&g_field_player_records[1]) & ~FIELD_PLAYER_ACTIVE);
-    FIELD_PLAYER_FLAG_WORD(&g_field_player_records[2]) = (u16)(FIELD_PLAYER_FLAG_WORD(&g_field_player_records[2]) & ~FIELD_PLAYER_ACTIVE);
+    g_field_player_records[0].head.bits.alt_appearance = 0;
+    g_field_player_records[1].head.bits.active = 0;
+    g_field_player_records[2].head.bits.active = 0;
 }
 
 /**
@@ -1799,7 +1784,7 @@ void field_initialize_actor_system(void)
     {
         for (j = 0; j < FIELD_PARTY_COUNT; j++)
         {
-            if (g_field_player_records[j].flags & FIELD_PLAYER_ACTIVE)
+            if (g_field_player_records[j].head.bytes.flags & FIELD_PLAYER_ACTIVE)
             {
                 D_800FE774++;
                 if (j == FIELD_COMPANION_INDEX)
@@ -1841,7 +1826,7 @@ void field_initialize_actor_system(void)
 
                 if (j < FIELD_PLAYER_COUNT)
                 {
-                    field_load_weapon_sfx_table(j, g_field_player_records[j].weapon_type);
+                    field_load_weapon_sfx_table(j, g_field_player_records[j].head.bytes.weapon_type);
                 }
             }
         }
@@ -1850,7 +1835,7 @@ void field_initialize_actor_system(void)
     {
         for (j = 0; j < FIELD_PARTY_COUNT; j++)
         {
-            if ((g_field_player_records[j].flags & FIELD_PLAYER_ACTIVE) != 0)
+            if ((g_field_player_records[j].head.bytes.flags & FIELD_PLAYER_ACTIVE) != 0)
             {
                 D_800FE774++;
                 i = field_get_actor_resource_id(j, &g_field_player_records[j], 0);
@@ -1999,11 +1984,11 @@ s32 field_get_actor_resource_id(s32 unused_slot_index, FieldPlayerRecord* player
         switch (player->character_kind)
         {
         case FIELD_PLAYER_KIND_HERO:
-            if (FIELD_PLAYER_FLAG_WORD(player) & FIELD_PLAYER_ALT_APPEARANCE)
+            if (player->head.bits.alt_appearance)
             {
-                return player->weapon_type + FIELD_RES_HERO_ALT_WEAPON_SPRITES;
+                return player->head.bytes.weapon_type + FIELD_RES_HERO_ALT_WEAPON_SPRITES;
             }
-            return player->weapon_type + FIELD_RES_HERO_WEAPON_SPRITES;
+            return player->head.bytes.weapon_type + FIELD_RES_HERO_WEAPON_SPRITES;
 
         case FIELD_PLAYER_KIND_PARTNER:
             return player->character_id + FIELD_RES_PARTNER_WEAPON_SPRITES;
@@ -2018,7 +2003,7 @@ s32 field_get_actor_resource_id(s32 unused_slot_index, FieldPlayerRecord* player
         switch (player->character_kind)
         {
         case FIELD_PLAYER_KIND_HERO:
-            return ((FIELD_PLAYER_FLAG_WORD(player) >> 1) & 1) + FIELD_RES_HERO_SPRITES;
+            return player->head.bits.alt_appearance + FIELD_RES_HERO_SPRITES;
 
         case FIELD_PLAYER_KIND_PARTNER:
             return player->character_id + FIELD_RES_PARTNER_SPRITES;
@@ -2087,7 +2072,7 @@ void field_finish_party_slot_reload(s32 actor_slot)
 
             for (i = 0; i < FIELD_PLAYER_COUNT; i++)
             {
-                if (g_field_player_records[i].flags & FIELD_PLAYER_ACTIVE)
+                if (g_field_player_records[i].head.bytes.flags & FIELD_PLAYER_ACTIVE)
                 {
                     work_value = ~FIELD_CONTROL_MODE_MASK;
                     control_flags = g_field_actors[i].control.word & work_value;
@@ -2124,12 +2109,12 @@ void field_release_actor_resource_slot(s32 slot_index_minus_one)
     slot_index = slot_index_minus_one;
     slot_index += 1;
 
-    if (g_field_player_records[slot_index].flags & FIELD_PLAYER_ACTIVE)
+    if (g_field_player_records[slot_index].head.bytes.flags & FIELD_PLAYER_ACTIVE)
     {
         entry = &g_field_resource_entries[slot_index];
 
         /* A single-pass loop: the target fetches the actor pointer inside its own block. */
-        while (g_field_player_records[slot_index].flags & FIELD_PLAYER_ACTIVE)
+        while (g_field_player_records[slot_index].head.bytes.flags & FIELD_PLAYER_ACTIVE)
         {
             actors = g_field_actors;
             member = &actors[slot_index];
@@ -2143,7 +2128,7 @@ void field_release_actor_resource_slot(s32 slot_index_minus_one)
 
         g_field_player_records[slot_index].portrait_index = 0xFF;
 
-        FIELD_PLAYER_FLAG_WORD(&g_field_player_records[slot_index]) &= ~FIELD_PLAYER_ACTIVE;
+        g_field_player_records[slot_index].head.bits.active = 0;
 
         while (src != g_field_resource_cursor)
         {
@@ -2199,7 +2184,7 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
     s32 control_flags;
     u8* player_block;
 
-    if (g_field_player_records[slot].flags & FIELD_PLAYER_ACTIVE)
+    if (g_field_player_records[slot].head.bytes.flags & FIELD_PLAYER_ACTIVE)
     {
         return 0;
     }
@@ -2213,7 +2198,7 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
         }
     }
 
-    FIELD_PLAYER_FLAG_WORD(&g_field_player_records[slot]) |= FIELD_PLAYER_ACTIVE;
+    g_field_player_records[slot].head.bits.active = 1;
     if (source_selector == -2)
     {
         g_field_player_records[slot].character_kind = FIELD_PLAYER_KIND_HERO;
@@ -2229,7 +2214,7 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
     switch (player->character_kind)
     {
     case FIELD_PLAYER_KIND_HERO:
-        resource_id = ((FIELD_PLAYER_FLAG_WORD(player) >> 1) & 1) + FIELD_RES_HERO_SPRITES;
+        resource_id = player->head.bits.alt_appearance + FIELD_RES_HERO_SPRITES;
         break;
 
     case FIELD_PLAYER_KIND_PARTNER:
@@ -2478,7 +2463,7 @@ void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index)
 
     g_field_object_states[actor_index].collision_node = -1;
     g_field_object_states[actor_index].collision_flags = 0;
-    g_field_object_states[actor_index].unk18E = 0;
+    g_field_object_states[actor_index].interaction_kind = 0;
     g_field_object_states[actor_index].contact.word &= ~FIELD_CONTACT_TARGETED;
     g_field_object_states[actor_index].contact.word &= ~FIELD_CONTACT_UNK40;
 
@@ -3580,10 +3565,10 @@ static void field_refresh_actor_portraits(void)
     }
     else
     {
-        partner_portrait_index = (FIELD_PLAYER_FLAG_WORD(&g_field_player_records[1]) >> 1) & 1;
+        partner_portrait_index = g_field_player_records[1].head.bits.alt_appearance;
     }
 
-    if (g_field_player_records[0].portrait_index != ((FIELD_PLAYER_FLAG_WORD(&g_field_player_records[0]) >> 1) & 1) ||
+    if (g_field_player_records[0].portrait_index != g_field_player_records[0].head.bits.alt_appearance ||
         g_field_player_records[1].portrait_index != partner_portrait_index ||
         g_field_player_records[2].portrait_index != g_field_player_records[2].character_id + FIELD_PORTRAIT_COMPANION_BASE)
     {
@@ -3606,7 +3591,7 @@ static void field_refresh_actor_portraits(void)
         cdrom_stream(FIELD_RES_PORTRAITS, g_field_cd_buffer);
         cdrom_wait_queue_empty();
 
-        g_field_player_records[0].portrait_index = (FIELD_PLAYER_FLAG_WORD(&g_field_player_records[0]) >> 1) & 1;
+        g_field_player_records[0].portrait_index = g_field_player_records[0].head.bits.alt_appearance;
         bcopy((u8*)g_field_cd_buffer + g_field_cd_buffer->offsets[g_field_player_records[0].portrait_index + 1], g_prim_rect_buf, FIELD_PORTRAIT_SIZE);
 
         partner_portrait = g_prim_rect_buf + FIELD_PORTRAIT_SIZE;
@@ -3619,7 +3604,7 @@ static void field_refresh_actor_portraits(void)
 
         if (g_field_player_records[1].character_kind == FIELD_PLAYER_KIND_HERO)
         {
-            field_copy_portrait_palette(partner_portrait, (FIELD_PLAYER_FLAG_WORD(&g_field_player_records[1]) >> 1) & 1);
+            field_copy_portrait_palette(partner_portrait, g_field_player_records[1].head.bits.alt_appearance);
         }
 
         if (g_pad_ctx->gname_name[0] != 0 && (g_pad_ctx->unkAA8 & COMPANION_KIND_MASK) == COMPANION_KIND_GOLEM)

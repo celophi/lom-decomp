@@ -152,7 +152,7 @@ void gosub_build_screen_0_item_list(void)
 /**
  * @brief Build the logic-block list for the gosub screen entered by arm 11.
  * @note Bit 2 of the row flag word is cleared only for blocks that have
- *       unknown_bit16 clear and are fully ready; every other block sets it.
+ *       placed clear and are fully ready; every other block sets it.
  */
 void gosub_build_packed_record_list(void)
 {
@@ -176,7 +176,7 @@ void gosub_build_packed_record_list(void)
         g_gosub_rows[i].desc = ARCHIVE_ENTRY(g_gosub_text_archive_offsets_0[7], g_gosub_rows[i].detail_group);
         g_gosub_rows[i].value = -2;
         g_gosub_rows[i].detail_variant = g_pad_ctx->logic_blocks[i].f.shape;
-        if (g_pad_ctx->logic_blocks[i].f.unknown_bit16 != 0 ||
+        if (g_pad_ctx->logic_blocks[i].f.placed != 0 ||
             g_pad_ctx->logic_blocks[i].f.logic_type != LOGIC_BLOCK_UNASSIGNED)
         {
             g_gosub_rows[i].flags.word |= 4;

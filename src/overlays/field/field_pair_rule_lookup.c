@@ -1,33 +1,32 @@
 /** @file field_pair_rule_lookup.c
- * @brief Find an unordered pair in the shared packed rule table.
+ * @brief Find the ability that two abilities combine into.
  */
 
 #include "field_ability_progression.h"
 
 /**
- * @brief Looks up the result byte for an unordered pair (@p first_ability, @p second_ability).
+ * @brief Look up the ability unlocked by an unordered pair of abilities.
  *
- * Scans 18 table entries for one whose prerequisite abilities hold @p first_ability and @p second_ability in
- * either order.
- * @param first_ability First prerequisite ability.
- * @param second_ability Second prerequisite ability.
- * @return The resulting ability, or 0xFF when no rule matches.
+ * Scans g_field_ability_unlock_rules for a rule whose two prerequisite
+ * abilities are @p first_ability and @p second_ability, in either order.
+ *
+ * @param first_ability First ability of the pair.
+ * @param second_ability Second ability of the pair.
+ * @return The rule's resulting ability, or FIELD_ABILITY_NONE when no rule matches.
  */
-s32 func_800AD7DC(s32 first_ability, s32 second_ability)
+s32 field_find_combined_ability(s32 first_ability, s32 second_ability)
 {
-    FieldAbilityUnlockRule* rule = g_field_ability_unlock_rules;
-    s32 rule_index;
+    FieldAbilityUnlockRule* rule;
+    s32 i;
 
-    rule_index = 0;
-    while (rule_index < FIELD_ABILITY_UNLOCK_RULE_COUNT)
+    rule = g_field_ability_unlock_rules;
+    for (i = 0; i < FIELD_ABILITY_UNLOCK_RULE_COUNT; i++, rule++)
     {
         if ((rule->prerequisites[0].ability == first_ability && rule->prerequisites[1].ability == second_ability) ||
             (rule->prerequisites[0].ability == second_ability && rule->prerequisites[1].ability == first_ability))
         {
             return rule->result;
         }
-        rule_index++;
-        rule++;
     }
-    return 0xFF;
+    return FIELD_ABILITY_NONE;
 }

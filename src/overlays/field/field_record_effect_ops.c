@@ -1,19 +1,60 @@
+/**
+ * @file field_record_effect_ops.c
+ * @brief Menu slot effects (rolling and grading) and pending effects of the stored companion records.
+ */
+
 #include "game_audio.h"
 #include "common.h"
+#include "sdk/rand.h"
 #include "field_calls.h"
 #include "field_records.h"
 
-extern void *func_800C1E40(s32);
-extern s32 rand(void);
-extern FieldGameState *g_field_game_state;
+/** @brief First item id with a row of random effect picks in resource 0xB. */
+#define FIELD_EFFECT_ITEM_BASE 0x58
 
-/** @brief Resource 0xB: random effect picks per selector row, then the effect codes. */
+/** @brief Items with a row of random effect picks. */
+#define FIELD_EFFECT_ITEM_COUNT 8
+
+/** @brief Random effect picks per item row. */
+#define FIELD_EFFECT_PICK_COUNT 16
+
+/** @brief Effect code bits 0-5: effect id minus FIELD_EFFECT_ID_BASE; bits 6-7: result type. */
+#define FIELD_EFFECT_CODE_ID_MASK 0x3F
+#define FIELD_EFFECT_CODE_TYPE_SHIFT 6
+
+/** @brief Threshold pairs of resource 0x10. */
+#define FIELD_EFFECT_THRESHOLD_COUNT 8
+
+/** @brief Effect ids below this one set a flag bit, the next ones up to FIELD_EFFECT_CLEAR_END clear one. */
+#define FIELD_EFFECT_SET_END 8
+#define FIELD_EFFECT_CLEAR_END 16
+
+/** @brief Effect kinds of the remaining effect ids. */
+#define FIELD_EFFECT_KIND_WEAPON 0xF0
+#define FIELD_EFFECT_KIND_ARMOR 0xF1
+
+/** @brief Four-bit growth accumulators are clamped to 0 to this value. */
+#define FIELD_GROWTH_ACCUMULATOR_MAX 15
+
+/** @brief Pending effect slots of a stored companion record. */
+#define FIELD_REGION_PENDING_EFFECT_COUNT 3
+
+/** @brief FieldRegionRecord::status bits 24-26: pending effects already applied. */
+#define FIELD_REGION_APPLIED_SHIFT 24
+#define FIELD_REGION_APPLIED_MASK 7
+
+/** @brief Resource ids of the effect tables. */
+#define FIELD_RESOURCE_EFFECT_PICKS 0xB
+#define FIELD_RESOURCE_EFFECT_THRESHOLDS 0x10
+#define FIELD_RESOURCE_REGION_EFFECTS 0x12
+
+/** @brief Resource 0xB: random effect picks per item row, then the effect codes. */
 typedef struct
 {
     u8 header[4];
-    /** @brief Sixteen candidate effects for each selector 0x58-0x5F. */
-    u8 picks[8][16];
-    /** @brief Low six bits: slot entry index minus 0x60; high two bits: result type. */
+    /** @brief Sixteen candidate effects for each item FIELD_EFFECT_ITEM_BASE and up. */
+    u8 picks[FIELD_EFFECT_ITEM_COUNT][FIELD_EFFECT_PICK_COUNT];
+    /** @brief FIELD_EFFECT_CODE_* packed effect id and result type, indexed by the combined picks. */
     u8 codes[1];
 } FieldSlotEffectTable;
 
@@ -24,15 +65,15 @@ typedef struct
     u8 stat_deltas[FIELD_CHARACTER_STAT_COUNT];
     /** @brief Same for the four total growth accumulators. */
     u8 total_deltas[4];
-    /** @brief Pairs of (kind, value): kinds 0-7 set, 8-15 clear a flag bit; 0xF0/0xF1 set equipment ids. */
+    /** @brief Pairs of (kind, value): a flag bit and its chance, or a FIELD_EFFECT_KIND_* and an equipment id. */
     u8 effects[4][2];
 } FieldRegionEffectRow;
 
-/** @brief Resource 0x12: a header, then one row per effect id 0x60-0x87. */
+/** @brief Resource 0x12: a header, then one row per effect id. */
 typedef struct
 {
     u8 header[4];
-    FieldRegionEffectRow rows[0x28];
+    FieldRegionEffectRow rows[FIELD_EFFECT_COUNT];
 } FieldRegionEffectTable;
 
 /** @brief Low/high threshold pair of resource 0x10. */
@@ -40,242 +81,199 @@ typedef struct
 {
     u8 low;
     u8 high;
-} EffectThreshold;
+} FieldEffectThreshold;
 
-/** @brief Resource 0x10: threshold pairs; the bytes from 0x14 on also index them per effect row. */
+/** @brief Resource 0x10: threshold pairs, then per effect id the pair each slot counter is graded against. */
 typedef struct
 {
-    u8 unk00[4];
-    EffectThreshold thresholds[256];
-} EffectThresholdTable;
+    u8 header[4];
+    FieldEffectThreshold thresholds[FIELD_EFFECT_THRESHOLD_COUNT];
+    u8 threshold_indexes[FIELD_EFFECT_COUNT][FIELD_MENU_SLOT_COUNTER_COUNT];
+} FieldEffectThresholdTable;
 
-/** @brief Byte @p i of the eight threshold indexes for effect row @p row (the rows overlap thresholds[]). */
-#define EFFECT_THRESHOLD_INDEX(table, row, i) (*((u8 *)(table) + ((i) + (row)) + 0x14))
+extern void* func_800C1E40(s32);
+extern FieldGameState* g_field_game_state;
 
-/** @brief Offset of menu_slots[0].slots[0].entry in FieldGameState. */
-#define MENU_SLOT_ENTRY_OFFSET 0x26F4
-/** @brief Offset of menu_slots[0].slots[0].pad8 in FieldGameState. */
-#define MENU_SLOT_PAYLOAD_OFFSET 0x26F8
-
-void func_800C0814(FieldRegionRecord *record, s32 effect_id, FieldRegionEffectTable *table);
-s32 func_800C0560(s32 group_index, s32 slot_index, EffectThresholdTable *table);
+static s32 field_classify_menu_slot(s32 group_index, s32 slot_index, FieldEffectThresholdTable* table);
+static void field_apply_region_effect(FieldRegionRecord* record, s32 effect, FieldRegionEffectTable* table);
 
 /**
- * @brief Combine random picks for a slot group's selectors into one slot effect and clear its payload.
+ * @brief Roll a random effect for a menu slot from the items of its group and reset the slot's counters.
  * @param group_index Menu slot group index.
  * @param slot_index Slot within the group that receives the effect.
+ * @note Every item adds one random pick; a group with a single item rolls it twice. The picks
+ *       are OR-ed into an index of the effect codes.
  */
-void func_800C0260(s32 group_index, s32 slot_index)
+void field_roll_menu_slot_effect(s32 group_index, s32 slot_index)
 {
-    FieldSlotEffectTable *table;
+    FieldSlotEffectTable* table;
     s32 random_value;
     s32 index;
     s32 effect_index;
     s32 selection;
 
-    table = func_800C1E40(0xB);
-    if (((g_field_game_state->menu_slots[group_index].flags >> 0xC) & 0xF) == 1)
+    table = func_800C1E40(FIELD_RESOURCE_EFFECT_PICKS);
+    if (g_field_game_state->menu_slots[group_index].flags.bits.item_count == 1)
     {
         index = 0;
         random_value = rand();
-        effect_index = table->picks[g_field_game_state->menu_slots[group_index].selectors[0] - 0x58][random_value & 0xF];
+        effect_index = table->picks[g_field_game_state->menu_slots[group_index].items[0] - FIELD_EFFECT_ITEM_BASE][random_value & 0xF];
         random_value = rand();
-        selection = table->picks[g_field_game_state->menu_slots[group_index].selectors[0] - 0x58][random_value & 0xF];
+        selection = table->picks[g_field_game_state->menu_slots[group_index].items[0] - FIELD_EFFECT_ITEM_BASE][random_value & 0xF];
         effect_index |= selection;
     }
     else
     {
         index = 1;
         random_value = rand();
-        effect_index = table->picks[g_field_game_state->menu_slots[group_index].selectors[0] - 0x58][random_value & 0xF];
-        for (; index < (s32)((g_field_game_state->menu_slots[group_index].flags >> 0xC) & 0xF); index++)
+        effect_index = table->picks[g_field_game_state->menu_slots[group_index].items[0] - FIELD_EFFECT_ITEM_BASE][random_value & 0xF];
+        for (; index < (s32)g_field_game_state->menu_slots[group_index].flags.bits.item_count; index++)
         {
             random_value = rand();
-            selection = table->picks[g_field_game_state->menu_slots[group_index].selectors[index] - 0x58][random_value & 0xF];
+            selection = table->picks[g_field_game_state->menu_slots[group_index].items[index] - FIELD_EFFECT_ITEM_BASE][random_value & 0xF];
             effect_index |= selection;
         }
         index = 0;
     }
-    g_field_game_state->menu_slots[group_index].slots[slot_index].entry.index = (table->codes[effect_index] & 0x3F) + 0x60;
-    g_field_game_state->menu_slots[group_index].slots[slot_index].entry.word =
-        (g_field_game_state->menu_slots[group_index].slots[slot_index].entry.word & ~0x300) | ((table->codes[effect_index] >> 6) << 8);
+    g_field_game_state->menu_slots[group_index].slots[slot_index].entry.index = (table->codes[effect_index] & FIELD_EFFECT_CODE_ID_MASK) + FIELD_EFFECT_ID_BASE;
+    g_field_game_state->menu_slots[group_index].slots[slot_index].entry.bits.result_type = table->codes[effect_index] >> FIELD_EFFECT_CODE_TYPE_SHIFT;
+    /* Both paths leave index at 0. */
     do
     {
-        g_field_game_state->menu_slots[group_index].slots[slot_index].pad8[index] = 0;
-        index += 1;
-    } while (index < 8);
+        g_field_game_state->menu_slots[group_index].slots[slot_index].counters[index] = 0;
+        index++;
+    } while (index < FIELD_MENU_SLOT_COUNTER_COUNT);
 }
 
 /**
- * @brief Classify every set slot of a menu slot group against the effect thresholds.
+ * @brief Grade every used slot of a menu slot group against the effect thresholds.
  * @param group_index Menu slot group index.
  */
-void func_800C0490(s32 group_index)
+void field_classify_menu_slots(s32 group_index)
 {
-    EffectThresholdTable *table;
+    FieldEffectThresholdTable* table;
     s32 slot_index;
 
-    table = func_800C1E40(0x10);
+    table = func_800C1E40(FIELD_RESOURCE_EFFECT_THRESHOLDS);
     if (table == NULL)
     {
-        record_game_diagnostic(0x8001, 0x3E7, 0, 0);
+        record_game_diagnostic(DIAG_ERROR, DIAG_MISSING_EFFECT_THRESHOLDS, 0, 0);
         return;
     }
-    slot_index = 0;
-    do
+    for (slot_index = 0; slot_index < FIELD_MENU_GROUP_SLOT_COUNT; slot_index++)
     {
-        if (g_field_game_state->menu_slots[group_index].slots[slot_index].entry.index != 0xFF)
+        if (g_field_game_state->menu_slots[group_index].slots[slot_index].entry.index != FIELD_MENU_ENTRY_EMPTY)
         {
-            g_field_game_state->menu_slots[group_index].slots[slot_index].handle = func_800C0560(group_index, slot_index, table);
+            g_field_game_state->menu_slots[group_index].slots[slot_index].handle = field_classify_menu_slot(group_index, slot_index, table);
         }
-        slot_index += 1;
-    } while (slot_index < 8);
+    }
 }
 
 /**
- * @brief Classify a slot's eight payload bytes against its effect thresholds.
+ * @brief Grade a slot's counters against the threshold pairs of its effect.
  * @param group_index Menu slot group index.
  * @param slot_index Slot within the group.
  * @param table Threshold table (resource 0x10).
- * @return 3 when every byte reaches its high threshold, 2 when every byte reaches its low one,
- *         1 when any byte is nonzero, 0 otherwise.
+ * @return FIELD_MENU_SLOT_INDEXED when every counter reaches its high threshold,
+ *         FIELD_MENU_SLOT_ITEM when every counter reaches its low one,
+ *         FIELD_MENU_SLOT_PLAIN when any counter is nonzero, otherwise FIELD_MENU_SLOT_UNUSED.
  */
-s32 func_800C0560(s32 group_index, s32 slot_index, EffectThresholdTable *table)
+static s32 field_classify_menu_slot(s32 group_index, s32 slot_index, FieldEffectThresholdTable* table)
 {
     s32 flag;
     s32 i;
 
-    /* Byte view of g_field_game_state: the loops index it with integer offset sums (typed menu_slots access: 86.52%). */
+    i = 0;
+    flag = -1;
+    for (; i < FIELD_MENU_SLOT_COUNTER_COUNT; i++)
     {
-        s32 group_offset;
-        s32 slot_offset;
-        s32 row;
-        s32 scan_offset;
-        u8 *base;
+        s32 effect = g_field_game_state->menu_slots[group_index].slots[slot_index].entry.index - FIELD_EFFECT_ID_BASE;
 
-        i = 0;
-        base = (u8 *)g_field_game_state;
-        slot_offset = slot_index * sizeof(FieldMenuSlot);
-        group_offset = group_index * sizeof(FieldMenuSlotGroup);
-        row = (*(base + (slot_offset + group_offset) + MENU_SLOT_ENTRY_OFFSET) - 0x60) * 8;
-        flag = -1;
-        for (i = 0; i < 8; i++)
+        if (g_field_game_state->menu_slots[group_index].slots[slot_index].counters[i] < table->thresholds[table->threshold_indexes[effect][i]].high)
         {
-            scan_offset = i + slot_offset;
-            if (*(base + (scan_offset + group_offset) + MENU_SLOT_PAYLOAD_OFFSET) <
-                table->thresholds[EFFECT_THRESHOLD_INDEX(table, row, i)].high)
-            {
-                flag = 0;
-                break;
-            }
+            flag = 0;
+            break;
         }
     }
     if (flag != 0)
     {
-        return 3;
+        return FIELD_MENU_SLOT_INDEXED;
     }
 
+    i = 0;
+    flag = -1;
+    for (; i < FIELD_MENU_SLOT_COUNTER_COUNT; i++)
     {
-        s32 group_offset;
-        s32 slot_offset;
-        s32 row;
-        s32 scan_offset;
-        u8 *base;
+        s32 effect = g_field_game_state->menu_slots[group_index].slots[slot_index].entry.index - FIELD_EFFECT_ID_BASE;
 
-        i = 0;
-        base = (u8 *)g_field_game_state;
-        slot_offset = slot_index * sizeof(FieldMenuSlot);
-        group_offset = group_index * sizeof(FieldMenuSlotGroup);
-        row = (*(base + (slot_offset + group_offset) + MENU_SLOT_ENTRY_OFFSET) - 0x60) * 8;
-        flag = -1;
-        for (i = 0; i < 8; i++)
+        if (g_field_game_state->menu_slots[group_index].slots[slot_index].counters[i] < table->thresholds[table->threshold_indexes[effect][i]].low)
         {
-            scan_offset = i + slot_offset;
-            if (*(base + (scan_offset + group_offset) + MENU_SLOT_PAYLOAD_OFFSET) <
-                table->thresholds[EFFECT_THRESHOLD_INDEX(table, row, i)].low)
-            {
-                flag = 0;
-                break;
-            }
+            flag = 0;
+            break;
         }
     }
     if (flag != 0)
     {
-        return 2;
+        return FIELD_MENU_SLOT_ITEM;
     }
 
+    for (i = 0; i < FIELD_MENU_SLOT_COUNTER_COUNT; i++)
     {
-        s32 group_offset;
-        s32 slot_offset;
-        u8 *base;
-
-        i = 0;
-        base = (u8 *)g_field_game_state;
-        slot_offset = slot_index * sizeof(FieldMenuSlot);
-        group_offset = group_index * sizeof(FieldMenuSlotGroup);
-        for (i = 0; i < 8; i++)
+        if (g_field_game_state->menu_slots[group_index].slots[slot_index].counters[i] != 0)
         {
-            if (*(base + (i + slot_offset + group_offset) + MENU_SLOT_PAYLOAD_OFFSET) != 0)
-            {
-                flag = -1;
-            }
+            flag = -1;
         }
     }
     return -flag;
 }
 
 /**
- * @brief Apply each pending, not yet applied effect of the stored region records.
+ * @brief Apply each pending, not yet applied effect of the stored companion records.
  */
-void func_800C06E8(void)
+void field_apply_pending_region_effects(void)
 {
-    FieldRegionEffectTable *table;
+    FieldRegionEffectTable* table;
     s32 record_index;
     s32 effect_index;
     u32 status;
     u32 value;
     s32 applied;
-    FieldRegionRecord *record;
+    FieldRegionRecord* record;
 
-    table = func_800C1E40(0x12);
-    record_index = 0;
-    do
+    table = func_800C1E40(FIELD_RESOURCE_REGION_EFFECTS);
+    for (record_index = 0; record_index < FIELD_REGION_COUNT; record_index++)
     {
         if (g_field_game_state->regions[record_index].name[0] != 0)
         {
-            effect_index = 0;
-            do
+            for (effect_index = 0; effect_index < FIELD_REGION_PENDING_EFFECT_COUNT; effect_index++)
             {
                 value = g_field_game_state->regions[record_index].status.effects[effect_index];
-                if (value != 0xFF)
+                if (value != FIELD_NO_EFFECT)
                 {
                     status = g_field_game_state->regions[record_index].status.word;
-                    applied = (status >> 24) & 7;
+                    applied = (status >> FIELD_REGION_APPLIED_SHIFT) & FIELD_REGION_APPLIED_MASK;
                     if (!((applied >> effect_index) & 1))
                     {
                         record = &g_field_game_state->regions[record_index];
-                        value = (status & 0xF8FFFFFF) | (((applied | (1 << effect_index)) & 7) << 24);
+                        value = (status & ~(FIELD_REGION_APPLIED_MASK << FIELD_REGION_APPLIED_SHIFT)) |
+                                (((applied | (1 << effect_index)) & FIELD_REGION_APPLIED_MASK) << FIELD_REGION_APPLIED_SHIFT);
                         g_field_game_state->regions[record_index].status.word = value;
-                        func_800C0814(record, g_field_game_state->regions[record_index].status.effects[effect_index], table);
+                        field_apply_region_effect(record, g_field_game_state->regions[record_index].status.effects[effect_index], table);
                     }
                 }
-                effect_index += 1;
-            } while (effect_index < 3);
+            }
         }
-        record_index += 1;
-    } while (record_index < FIELD_REGION_COUNT);
+    }
 }
 
 /**
- * @brief Apply one effect row to a stored region record: growth deltas, then flag and equipment changes.
- * @param record Region record to update.
- * @param effect_id Effect id; values outside 0x60 to 0x87 are ignored.
+ * @brief Apply one effect row to a stored companion record: growth deltas, then flag and equipment changes.
+ * @param record Companion record to update.
+ * @param effect Effect id; ids without an effect table row are ignored. Turned into the row index.
  * @param table Effect table (resource 0x12).
  */
-void func_800C0814(FieldRegionRecord *record, s32 effect_id, FieldRegionEffectTable *table)
+static void field_apply_region_effect(FieldRegionRecord* record, s32 effect, FieldRegionEffectTable* table)
 {
-    u32 offset;
-    s32 row;
     s32 i;
     s32 value;
     s32 clamped;
@@ -283,28 +281,21 @@ void func_800C0814(FieldRegionRecord *record, s32 effect_id, FieldRegionEffectTa
     u8 total_delta;
     s32 kind;
     s32 amount;
-    u8 *bytes;
+    FieldRegionRecord* view;
 
-    offset = effect_id - 0x60;
-    if (offset < 0x28U)
+    if ((u32)(effect - FIELD_EFFECT_ID_BASE) < FIELD_EFFECT_COUNT)
     {
-        i = 0;
-        /* Allocation lever: without the wrapper row and the effect pointer swap s3/s4 (99.42%). */
-        do
+        effect -= FIELD_EFFECT_ID_BASE;
+        for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
         {
-            row = offset;
-        } while (0);
-        do
-        {
-            /* A byte view keeps record + i recomputed per pass, as in the original. */
-            bytes = (u8 *)record + i;
-            value = bytes[0x4C];
-            stat_delta = table->rows[row].stat_deltas[i];
+            view = FIELD_REGION_AT(record, i);
+            value = view->stat_growth[0].byte;
+            stat_delta = table->rows[effect].stat_deltas[i];
             value = ((u32)value >> 4) + (stat_delta & 0xF) - (stat_delta >> 4);
             if (value >= 0)
             {
-                clamped = 0xF;
-                if (value < 0x10)
+                clamped = FIELD_GROWTH_ACCUMULATOR_MAX;
+                if (value <= FIELD_GROWTH_ACCUMULATOR_MAX)
                 {
                     clamped = value;
                 }
@@ -313,20 +304,18 @@ void func_800C0814(FieldRegionRecord *record, s32 effect_id, FieldRegionEffectTa
             {
                 clamped = 0;
             }
-            i += 1;
-            bytes[0x4C] = (bytes[0x4C] & 0xF) | (clamped * 0x10);
-        } while (i < FIELD_CHARACTER_STAT_COUNT);
-        i = 0;
-        do
+            view->stat_growth[0].byte = (view->stat_growth[0].byte & 0xF) | (clamped << 4);
+        }
+        for (i = 0; i < 4; i++)
         {
-            bytes = (u8 *)record + i;
-            value = bytes[0x54];
-            total_delta = table->rows[row].total_deltas[i];
+            view = FIELD_REGION_AT(record, i);
+            value = view->total_growth[0].byte;
+            total_delta = table->rows[effect].total_deltas[i];
             value = ((u32)value >> 4) + (total_delta & 0xF) - (total_delta >> 4);
             if (value >= 0)
             {
-                clamped = 0xF;
-                if (value < 0x10)
+                clamped = FIELD_GROWTH_ACCUMULATOR_MAX;
+                if (value <= FIELD_GROWTH_ACCUMULATOR_MAX)
                 {
                     clamped = value;
                 }
@@ -335,15 +324,13 @@ void func_800C0814(FieldRegionRecord *record, s32 effect_id, FieldRegionEffectTa
             {
                 clamped = 0;
             }
-            i += 1;
-            bytes[0x54] = (bytes[0x54] & 0xF) | (clamped * 0x10);
-        } while (i < 4);
-        i = 0;
-        do
+            view->total_growth[0].byte = (view->total_growth[0].byte & 0xF) | (clamped << 4);
+        }
+        for (i = 0; i < 4; i++)
         {
-            kind = table->rows[row].effects[i][0];
-            amount = table->rows[row].effects[i][1];
-            if (row < 8)
+            kind = table->rows[effect].effects[i][0];
+            amount = table->rows[effect].effects[i][1];
+            if (effect < FIELD_EFFECT_SET_END)
             {
                 value = rand() & 0xFF;
                 if (value < amount)
@@ -351,27 +338,26 @@ void func_800C0814(FieldRegionRecord *record, s32 effect_id, FieldRegionEffectTa
                     record->unk48.flags |= 1 << kind;
                 }
             }
-            else if (row < 0x10)
+            else if (effect < FIELD_EFFECT_CLEAR_END)
             {
                 value = rand() & 0xFF;
                 if (value < amount)
                 {
-                    record->unk48.flags &= ~(1 << (kind - 8));
+                    record->unk48.flags &= ~(1 << (kind - FIELD_EFFECT_SET_END));
                 }
             }
             else
             {
                 switch (kind)
                 {
-                case 0xF0:
+                case FIELD_EFFECT_KIND_WEAPON:
                     record->weapon_id = amount;
                     break;
-                case 0xF1:
+                case FIELD_EFFECT_KIND_ARMOR:
                     record->armor_ids[0] = amount;
                     break;
                 }
             }
-            i += 1;
-        } while (i < 4);
+        }
     }
 }

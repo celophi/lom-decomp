@@ -98,7 +98,7 @@ void func_800C0B40(s32 recipient, void *context, u32 selector)
             reward_value = ((reward_value - 10) / 2) + 10;
             argument_value = reward_value * 4;
         }
-        func_800C0E54(recipient, (argument_value + reward_value) * 2);
+        field_award_experience(recipient, (argument_value + reward_value) * 2);
         return;
     case 1:
         reward_value = *g_field_battle;
@@ -107,16 +107,16 @@ void func_800C0B40(s32 recipient, void *context, u32 selector)
             reward_value = ((reward_value - 10) / 2) + 10;
         }
         argument_value = reward_value;
-        func_800C0E54(recipient, argument_value);
+        field_award_experience(recipient, argument_value);
         return;
     case 2:
-        func_800C0E18(recipient, 50);
+        field_add_money(recipient, 50);
         return;
     case 3:
-        func_800C0E18(recipient, 10);
+        field_add_money(recipient, 10);
         return;
     case 4:
-        func_800C1A18((void *)recipient, (s32)context);
+        field_grant_actor_pickup((void *)recipient, (s32)context);
         return;
     case 5:
         field_restore_actor_capacity_fraction(recipient, 64);
@@ -250,18 +250,18 @@ s32 func_800C0D58(s32 command, s32 value)
     return 0x21;
 }
 
-extern UnkStruct800C0D90_Ret *func_800C1B60(u8 arg0);
+extern UnkStruct800C0D90_Ret *field_find_actor_record_or_default(u8 arg0);
 
 /**
  * @brief Reward handler: store value with bit 15 set in the looked-up record.
  * @param command Dispatch command index (unused).
  * @param value Value to store.
- * @param record Record whose unk4 byte selects the target through func_800C1B60.
+ * @param record Record whose unk4 byte selects the target through field_find_actor_record_or_default.
  * @return Always 0x20.
  */
 s32 func_800C0D90(s32 command, s32 value, UnkStruct800C0D90_Arg2 *record)
 {
-    func_800C1B60(record->unk4)->unk2 = (s16) (value | 0x8000);
+    field_find_actor_record_or_default(record->unk4)->unk2 = (s16) (value | 0x8000);
     return 0x20;
 }
 
@@ -269,11 +269,11 @@ s32 func_800C0D90(s32 command, s32 value, UnkStruct800C0D90_Arg2 *record)
  * @brief Reward handler: store value plus 16 times a byte of the record's unk14 data.
  * @param command Dispatch command index (unused).
  * @param value Base value.
- * @param record Record whose unk4 byte selects the target through func_800C1B60.
+ * @param record Record whose unk4 byte selects the target through field_find_actor_record_or_default.
  * @return Always 0x20.
  */
 s32 func_800C0DC4(s32 command, s32 value, UnkStruct800C0DC4_Arg2 *record)
 {
-    func_800C1B60(record->unk4)->unk2 = (s16) (value + (record->unk14->unk18 << 4));
+    field_find_actor_record_or_default(record->unk4)->unk2 = (s16) (value + (record->unk14->unk18 << 4));
     return 0x20;
 }

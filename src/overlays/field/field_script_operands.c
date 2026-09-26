@@ -12,7 +12,7 @@ u8* field_script_read_u16(u8* data, u16* value);
 s32 func_800BD3B0(s32 owner_id, FieldScriptVariableRef var_ref);
 extern s32 g_field_game_state;
 extern s32 g_field_runtime;
-StructC1B60* func_800C1B60(s32 arg0);
+StructC1B60* field_find_actor_record_or_default(s32 arg0);
 extern u8 D_800F0E08[8];
 s32 func_800BD318(s32 owner_id, FieldScriptVariableRef var_ref, s32* element_index, s32* bit_shift);
 s32 func_800BD650(s32 width, u8* base, s32 index, s32 shift, s32 bit_count);
@@ -146,7 +146,7 @@ s32 func_800BD318(s32 owner_id, FieldScriptVariableRef var_ref, s32* element_ind
         result = g_field_runtime;
         if (var_ref.value & 0x8000)
         {
-            *element_index += (func_800C1B60(owner_id)->unk28 >> 9) & 0x7F;
+            *element_index += (field_find_actor_record_or_default(owner_id)->unk28 >> 9) & 0x7F;
         }
     }
     return result;

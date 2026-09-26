@@ -620,7 +620,7 @@ static void field_run_actor_script_command(FieldActor* actor)
             technique_owner = actor->object_index;
             if (!((g_field_object_states[technique_owner].technique_gauge == FIELD_TECHNIQUE_GAUGE_FULL) &&
                   (field_start_streamed_animation(technique_owner, (action_slot->command & FIELD_ACTION_TECHNIQUE_MASK) +
-                                                      (u16)((g_field_player_records[technique_owner].weapon_type * FIELD_TECHNIQUES_PER_WEAPON) + FIELD_TECHNIQUE_SEQUENCE_BASE)) != 0)))
+                                                      (u16)((g_field_player_records[technique_owner].head.bytes.weapon_type * FIELD_TECHNIQUES_PER_WEAPON) + FIELD_TECHNIQUE_SEQUENCE_BASE)) != 0)))
             {
                 actor->command = FIELD_ACTOR_COMMAND_NONE;
                 return;

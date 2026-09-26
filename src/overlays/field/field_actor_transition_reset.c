@@ -151,7 +151,7 @@ void field_set_battle_group(s32 mode, void* actor_data)
     {
         for (index = 1; index < FIELD_PARTY_COUNT; index++)
         {
-            if (g_field_player_records[index].flags & FIELD_PLAYER_ACTIVE)
+            if (g_field_player_records[index].head.bytes.flags & FIELD_PLAYER_ACTIVE)
             {
                 if (g_field_actors[index].control.half[0] & FIELD_CONTROL_MODE_MASK)
                 {
@@ -334,7 +334,7 @@ void field_update_battle_end(void)
             field_play_sound(0x24, 0x80);
             for (i = 0; i < FIELD_PARTY_COUNT; i++)
             {
-                if (g_field_player_records[i].flags & FIELD_PLAYER_ACTIVE)
+                if (g_field_player_records[i].head.bytes.flags & FIELD_PLAYER_ACTIVE)
                 {
                     g_field_object_states[i].flags = 0;
                     g_field_object_states[i].contact.word &= ~FIELD_CONTACT_ANIMATION_HIDDEN;

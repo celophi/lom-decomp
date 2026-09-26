@@ -3,11 +3,23 @@
  */
 
 #include "common.h"
+#include "field_actor.h"
 #include "field_calls.h"
+#include "field_contact_geometry.h"
 #include "field_effect_render_state.h"
+#include "field_object_state.h"
 #include "field_runtime.h"
 #include "gpu_packet.h"
 #include "sdk/libgpu.h"
+
+/** @brief Two party members closer than this (whole units) form a pair. */
+#define FIELD_PAIR_RANGE 32
+
+/** @brief Object flags that keep a party member out of every pair. */
+#define FIELD_PAIR_EXCLUDED_FLAGS 0x23E4
+
+/** @brief Terminator of g_field_pair_indicator_list. */
+#define FIELD_PAIR_LIST_END 0xFF
 
 /** @brief Frame counter value of an indicator that is waiting for its pair to come close. */
 #define FIELD_INDICATOR_IDLE -2
@@ -16,13 +28,26 @@
 #define FIELD_INDICATOR_DONE -1
 
 /** @brief Length of the indicator animation, in frames. */
-#define FIELD_INDICATOR_FRAMES 0x180
+#define FIELD_INDICATOR_FRAMES 384
+
+/** @brief Frame after which the indicator fades out. */
+#define FIELD_INDICATOR_FADE_START 256
+
+/** @brief Ribbon animation table shared with the effect ribbons. */
+#define FIELD_RIBBON_FRAME_COUNT 12
+#define FIELD_RIBBON_UV_VARIANT 0x01
+#define FIELD_RIBBON_FLIP_V 0x40
+#define FIELD_RIBBON_FLIP_U 0x80
+
+/** @brief Ordering-table entry the indicators are drawn into. */
+#define FIELD_INDICATOR_OT_INDEX 3
 
 /**
- * @brief Frame counter of indicator @p slot (> 0) in @p counters; indicators 0 and 1 share the first.
- * @note Summed as integers, index first, which is how the original addresses the counters.
+ * @brief Address of element @p index of @p base, summed as integers.
+ * @note The original adds the scaled index before the base address; pointer
+ *       arithmetic in this unit emits the base first.
  */
-#define FIELD_INDICATOR_COUNTER_AT(counters, slot) ((s32*)(((slot) - 1) * sizeof(s32) + (u32)(counters)))
+#define FIELD_ELEMENT_AT(base, index) ((void*)((index) * sizeof(*(base)) + (u32)(base)))
 
 /** @brief Texture coordinate pair, addressable whole or by coordinate. */
 typedef union
@@ -57,249 +82,223 @@ typedef struct
     u16 pad2;
 } FieldIndicatorQuad;
 
-/** @brief Actor presence byte within the original 0x54-byte record. */
-typedef struct
-{
-    u8 pad0[0x25];
-    u8 unk25;
-    u8 pad26[0x54 - 0x26];
-} Actor;
-/** @brief Action flags within the original 0x23C-byte runtime slot. */
-typedef struct
-{
-    u8 pad0[12];
-    s32 flags;
-    u8 pad10[0x23C - 0x10];
-} Slot;
-
-s32 field_get_position_distance(void*, void*); /* extern */
-void func_800A32A8(s32 slot, FieldRenderHalf* render_half);
+static void field_draw_pair_indicator(s32 slot, FieldRenderHalf* render_half);
 
 extern s32 g_field_party_hud_order[];
-extern u8 D_800EC33C[];
-extern s32 D_80117ED0[];
-
-extern Actor g_field_actors[];
+/** @brief Packed x/y screen corners of the four indicators, four words each. */
+extern u32 g_field_pair_indicator_corners[];
+/** @brief Animation frame of each pair indicator (0 and 1 share the first). */
+extern s32 g_field_pair_indicator_counters[];
 extern s32 g_field_active_group;
-extern Slot g_field_object_states[];
 extern s32 g_field_scene_mode_bit;
-extern s32 D_80117EC0;
-extern s32 D_80117EC4;
-extern u8 D_80117EC8[];
+/** @brief Number of pairs in g_field_pair_indicator_list. */
+extern s32 g_field_pair_indicator_count;
+/** @brief Nonzero while a script has turned the pair indicators off. */
+extern s32 g_field_pair_indicators_disabled;
+/** @brief Actor index pairs of the close pairs, ended by FIELD_PAIR_LIST_END. */
+extern u8 g_field_pair_indicator_list[];
 extern s32 g_field_text_session_active;
 
 /**
- * @brief Select nearby active actor pairs and draw their animated indicators.
- * @param buffer Render buffer forwarded to the indicator drawing function.
- * @note Two active actors use indicator zero; three actors use the external pair order.
- * @note Distance checks exclude slots with flags 0x23E4 and use a threshold of 0x20.
+ * @brief Find the close party pairs of this frame and draw their indicators.
+ *
+ * With two party members present they form indicator 0; with three, each
+ * member pairs with the next one in g_field_party_hud_order (indicators 1-3).
+ *
+ * @param render_half Render half receiving the indicator primitives.
  */
-void func_800A2E40(u8* buffer)
+void field_update_pair_indicators(FieldRenderHalf* render_half)
 {
-    s32 entries[3];
-    Actor* actor;
-    s32* counter;
-    s32* second_entry;
-    s32* first_entry;
-    s32* entry_cursor;
-    s32 first_actor;
+    s32 active[FIELD_PARTY_COUNT];
+    FieldActor* actor;
+    /* Fills active[], then points at the second member of a pair. */
+    s32* entry;
+    s32 first;
 
     s32 active_count;
-    s32 pair_index;
+    s32 pair;
     s32 index;
-    s32 absent;
-    s32 first_absent;
-    Slot* slot_base;
+    /* The goto loop below is invisible to loop.c, so the tables and the
+       FIELD_ACTOR_UNUSED marker are held in locals (one marker per loop). */
+    s32 unused;
+    s32 unused_marker;
+    FieldObjectRuntime* states;
     s32* order;
-    Actor* actor_base;
-    s32* counter_base;
-    s32 index_or_distance;
-    s32 pair_offset;
-    s32 next_offset;
+    FieldActor* actors;
+    s32* counters;
+    /* Holds the second member's index, then the pair's distance. */
+    s32 distance;
 
-    D_80117EC0 = 0;
-    D_80117EC8[0] = 0xFFU;
-    if ((D_80117EC4 == 0) && (g_field_scene_mode_bit != 0))
+    g_field_pair_indicator_count = 0;
+    g_field_pair_indicator_list[0] = FIELD_PAIR_LIST_END;
+    if ((g_field_pair_indicators_disabled == 0) && (g_field_scene_mode_bit != 0))
     {
         index = 0;
         if (g_field_active_group != 0)
         {
             active_count = index;
-            first_absent = 0xFF;
+            unused_marker = FIELD_ACTOR_UNUSED;
             actor = g_field_actors;
-            entry_cursor = entries;
+            entry = active;
             do
             {
-                if (actor->unk25 != first_absent)
+                if (actor->presence != unused_marker)
                 {
-                    *entry_cursor = index;
-                    entry_cursor++;
-                    active_count += 1;
+                    *entry = index;
+                    entry++;
+                    active_count++;
                 }
-                index += 1;
+                index++;
                 actor++;
-            } while (index < 3);
+            } while (index < FIELD_PARTY_COUNT);
             if (active_count >= 2)
             {
-                pair_index = 0;
+                pair = 0;
                 if (active_count == 2)
                 {
-                    index_or_distance = 0x20;
-                    if (!(g_field_object_states[entries[0]].flags & 0x23E4))
+                    distance = FIELD_PAIR_RANGE;
+                    if (!(g_field_object_states[active[0]].object_flags & FIELD_PAIR_EXCLUDED_FLAGS))
                     {
-                        index_or_distance = entries[1];
-                        if (g_field_object_states[index_or_distance].flags & 0x23E4)
+                        distance = active[1];
+                        if (g_field_object_states[distance].object_flags & FIELD_PAIR_EXCLUDED_FLAGS)
                         {
-                            index_or_distance = 0x20;
+                            distance = FIELD_PAIR_RANGE;
                         }
                         else
                         {
-                            index_or_distance = field_get_position_distance(&g_field_actors[entries[0]], &g_field_actors[index_or_distance]);
+                            distance = field_get_position_distance((VECTOR*)&g_field_actors[active[0]], (VECTOR*)&g_field_actors[distance]);
                         }
                     }
-                    if (index_or_distance < 0x20)
+                    if (distance < FIELD_PAIR_RANGE)
                     {
-                        if (D_80117ED0[0] == -2)
+                        if (g_field_pair_indicator_counters[0] == FIELD_INDICATOR_IDLE)
                         {
-                            D_80117ED0[0] = 0;
+                            g_field_pair_indicator_counters[0] = 0;
                         }
-                        if (D_80117ED0[0] != -1)
+                        if (g_field_pair_indicator_counters[0] != FIELD_INDICATOR_DONE)
                         {
-                            D_80117EC8[2] = 0xFF;
-                            D_80117EC0 = 2;
-                            D_80117EC8[0] = (u8)entries[0];
-                            D_80117EC8[1] = (u8)entries[1];
+                            /* The count is set to 2 here, not 1; readers stop at the terminator. */
+                            g_field_pair_indicator_list[2] = FIELD_PAIR_LIST_END;
+                            g_field_pair_indicator_count = 2;
+                            g_field_pair_indicator_list[0] = active[0];
+                            g_field_pair_indicator_list[1] = active[1];
                         }
                     }
                     else
                     {
-                        D_80117ED0[0] = -2;
+                        g_field_pair_indicator_counters[0] = FIELD_INDICATOR_IDLE;
                     }
-                    func_800A32A8(0, (FieldRenderHalf*)buffer);
+                    field_draw_pair_indicator(0, render_half);
                 }
                 else
                 {
-                    slot_base = g_field_object_states;
+                    states = g_field_object_states;
                     order = g_field_party_hud_order;
-                    actor_base = g_field_actors;
-                    absent = 0xFF;
-                    counter_base = D_80117ED0;
-                pair_loop:
-                {
-                    first_actor = order[pair_index];
-                    index_or_distance = 0x20;
-                    if (!(slot_base[first_actor].flags & 0x23E4))
+                    actors = g_field_actors;
+                    unused = FIELD_ACTOR_UNUSED;
+                    counters = g_field_pair_indicator_counters;
+                next_pair:
+                    first = order[pair];
+                    distance = FIELD_PAIR_RANGE;
+                    if (!(states[first].object_flags & FIELD_PAIR_EXCLUDED_FLAGS))
                     {
-                        entry_cursor = (s32*)((((pair_index + 1) % 3) * sizeof(*order)) + (u32)order);
-                        index_or_distance = *entry_cursor;
-                        if (slot_base[index_or_distance].flags & 0x23E4)
+                        entry = FIELD_ELEMENT_AT(order, (pair + 1) % FIELD_PARTY_COUNT);
+                        distance = *entry;
+                        if (states[distance].object_flags & FIELD_PAIR_EXCLUDED_FLAGS)
                         {
-                            index_or_distance = 0x20;
+                            distance = FIELD_PAIR_RANGE;
                         }
                         else
                         {
-                            Actor* first_actor_ptr;
-                            Actor* second_actor_ptr;
-
-                            first_actor_ptr = (Actor*)(first_actor * sizeof(*actor_base) + (u32)actor_base);
-                            second_actor_ptr = (Actor*)(index_or_distance * sizeof(*actor_base) + (u32)actor_base);
-                            index_or_distance = field_get_position_distance(first_actor_ptr, second_actor_ptr);
+                            distance = field_get_position_distance(FIELD_ELEMENT_AT(actors, first), FIELD_ELEMENT_AT(actors, distance));
                         }
                     }
-                    if ((index_or_distance < 0x20) &&
-                        (pair_offset = pair_index * sizeof(*order), first_entry = (s32*)(pair_offset + (u32)order),
-                         (actor_base[*first_entry].unk25 != absent)) &&
-                        (next_offset = ((pair_index + 1) % 3) * sizeof(*order), second_entry = (s32*)(next_offset + (u32)order),
-                         counter = (s32*)(pair_offset + (u32)counter_base), (actor_base[*second_entry].unk25 != absent)))
+                    if ((distance < FIELD_PAIR_RANGE) && (actors[order[pair]].presence != unused) &&
+                        (actors[order[(pair + 1) % FIELD_PARTY_COUNT]].presence != unused))
                     {
-                        if (*counter == -2)
+                        if (counters[pair] == FIELD_INDICATOR_IDLE)
                         {
-                            *counter = 0;
+                            counters[pair] = 0;
                         }
-                        if (*counter != -1)
+                        if (counters[pair] != FIELD_INDICATOR_DONE)
                         {
-                            D_80117EC8[D_80117EC0 * 2] = (u8)*first_entry;
-                            D_80117EC8[D_80117EC0 * 2 + 1] = (u8)*second_entry;
-                            D_80117EC0 += 1;
+                            g_field_pair_indicator_list[g_field_pair_indicator_count * 2] = order[pair];
+                            g_field_pair_indicator_list[g_field_pair_indicator_count * 2 + 1] = order[(pair + 1) % FIELD_PARTY_COUNT];
+                            g_field_pair_indicator_count++;
                         }
                     }
                     else
                     {
-                        counter_base[pair_index] = -2;
+                        counters[pair] = FIELD_INDICATOR_IDLE;
                     }
-                    pair_index += 1;
-                    func_800A32A8(pair_index, (FieldRenderHalf*)buffer);
-                }
-                    if (pair_index < 3)
+                    pair++;
+                    field_draw_pair_indicator(pair, render_half);
+                    /* A goto loop: a for loop gets strength reduction and loop-depth
+                       allocation weights that the original code does not have. */
+                    if (pair < FIELD_PARTY_COUNT)
                     {
-                        goto pair_loop;
+                        goto next_pair;
                     }
                 }
-                index = D_80117EC0;
-                D_80117EC8[index * 2] = 0xFF;
+                index = g_field_pair_indicator_count;
+                g_field_pair_indicator_list[index * 2] = FIELD_PAIR_LIST_END;
             }
         }
     }
 }
 
 /**
- * @brief Emit a fading animated textured quad for an active pair indicator.
- * @param slot Indicator index; indicators 0 and 1 share the first frame counter.
+ * @brief Frame counter of pair indicator @p slot.
+ * @param counters g_field_pair_indicator_counters.
+ * @param slot Indicator 0-3; indicators 0 and 1 share the first counter.
+ * @return Address of the indicator's frame counter.
+ */
+static inline s32* field_get_pair_indicator_counter(s32* counters, s32 slot)
+{
+    s32* counter;
+
+    counter = counters;
+    if (slot != 0)
+    {
+        counter = FIELD_ELEMENT_AT(counters, slot - 1);
+    }
+    return counter;
+}
+
+/**
+ * @brief Advance one pair indicator and draw it as a fading animated quad.
+ * @param slot Indicator 0-3; indicators 0 and 1 share the first frame counter.
  * @param render_half Render half whose ordering table and packet cursor receive the quad.
  */
-void func_800A32A8(s32 slot, FieldRenderHalf* render_half)
+static void field_draw_pair_indicator(s32 slot, FieldRenderHalf* render_half)
 {
     FieldIndicatorQuad* quad;
     s32 uv_offset;
     s32 frame;
     s32 brightness;
-    u8 swap_value;
+    u8 swap;
     u8 uv_flags;
     u_long* ordering_table;
     s32* counters;
-    s32* read_counter;
-    s32* reset_counter;
-    s32* write_counter;
-    s32* increment_counter;
 
     quad = (FieldIndicatorQuad*)render_half->primitive_cursor;
     ordering_table = render_half->ordering_table;
-    counters = D_80117ED0;
-    read_counter = counters;
-    if (slot != 0)
-    {
-        read_counter = FIELD_INDICATOR_COUNTER_AT(counters, slot);
-    }
-    frame = *read_counter;
+    counters = g_field_pair_indicator_counters;
+    frame = *field_get_pair_indicator_counter(counters, slot);
     if (frame != FIELD_INDICATOR_IDLE && frame != FIELD_INDICATOR_DONE)
     {
         if (frame >= FIELD_INDICATOR_FRAMES)
         {
-            reset_counter = counters;
-            if (slot != 0)
-            {
-                reset_counter = FIELD_INDICATOR_COUNTER_AT(counters, slot);
-            }
-            *reset_counter = FIELD_INDICATOR_DONE;
+            *field_get_pair_indicator_counter(counters, slot) = FIELD_INDICATOR_DONE;
             return;
         }
         if (g_field_text_session_active == 0)
         {
-            write_counter = counters;
-            if (slot != 0)
-            {
-                write_counter = FIELD_INDICATOR_COUNTER_AT(counters, slot);
-            }
-            increment_counter = counters;
-            if (slot != 0)
-            {
-                increment_counter = FIELD_INDICATOR_COUNTER_AT(counters, slot);
-            }
-            *write_counter = *increment_counter + 1;
+            *field_get_pair_indicator_counter(counters, slot) = *field_get_pair_indicator_counter(counters, slot) + 1;
         }
-        if (frame > 0x100)
+        if (frame > FIELD_INDICATOR_FADE_START)
         {
-            brightness = 0xFF - ((frame - 0x100) * 2);
+            brightness = 255 - ((frame - FIELD_INDICATOR_FADE_START) * 2);
         }
         else
         {
@@ -309,44 +308,44 @@ void func_800A32A8(s32 slot, FieldRenderHalf* render_half)
         {
             brightness = 0;
         }
-        if (brightness > 0xFF)
+        if (brightness > 255)
         {
-            brightness = 0x100;
+            brightness = 256;
         }
         setlen(quad, 9);
         SET_BGR0(quad, brightness, brightness, brightness);
         setcode(quad, 0x2E);
-        quad->xy0 = *(u32*)(slot * 0x10 + D_800EC33C);
-        quad->xy1 = *(u32*)(D_800EC33C + slot * 0x10 + 0x4);
-        quad->xy2 = *(u32*)(D_800EC33C + slot * 0x10 + 0x8);
-        quad->xy3 = *(u32*)(D_800EC33C + slot * 0x10 + 0xC);
-        uv_flags = g_field_ribbon_frame_flags[frame % 12];
-        uv_offset = (uv_flags & 1) * 4;
+        quad->xy0 = g_field_pair_indicator_corners[slot * 4];
+        quad->xy1 = g_field_pair_indicator_corners[slot * 4 + 1];
+        quad->xy2 = g_field_pair_indicator_corners[slot * 4 + 2];
+        quad->xy3 = g_field_pair_indicator_corners[slot * 4 + 3];
+        uv_flags = g_field_ribbon_frame_flags[frame % FIELD_RIBBON_FRAME_COUNT];
+        uv_offset = (uv_flags & FIELD_RIBBON_UV_VARIANT) * 4;
         quad->uv0.word = g_field_ribbon_uv_corners[uv_offset];
         quad->uv1.word = g_field_ribbon_uv_corners[uv_offset + 1];
         quad->uv2.word = g_field_ribbon_uv_corners[uv_offset + 2];
         quad->uv3.word = g_field_ribbon_uv_corners[uv_offset + 3];
-        if (uv_flags & 0x80)
+        if (uv_flags & FIELD_RIBBON_FLIP_U)
         {
-            swap_value = quad->uv0.c.u;
+            swap = quad->uv0.c.u;
             quad->uv0.c.u = quad->uv1.c.u;
-            quad->uv1.c.u = swap_value;
-            swap_value = quad->uv2.c.u;
+            quad->uv1.c.u = swap;
+            swap = quad->uv2.c.u;
             quad->uv2.c.u = quad->uv3.c.u;
-            quad->uv3.c.u = swap_value;
+            quad->uv3.c.u = swap;
         }
-        if (uv_flags & 0x40)
+        if (uv_flags & FIELD_RIBBON_FLIP_V)
         {
-            swap_value = quad->uv0.c.v;
+            swap = quad->uv0.c.v;
             quad->uv0.c.v = quad->uv2.c.v;
-            quad->uv2.c.v = swap_value;
-            swap_value = quad->uv1.c.v;
+            quad->uv2.c.v = swap;
+            swap = quad->uv1.c.v;
             quad->uv1.c.v = quad->uv3.c.v;
-            quad->uv3.c.v = swap_value;
+            quad->uv3.c.v = swap;
         }
         quad->tpage = getTPage(0, 1, 448, 0);
         quad->clut = getClut(80, 492);
-        addPrim(&ordering_table[3], quad);
+        addPrim(&ordering_table[FIELD_INDICATOR_OT_INDEX], quad);
         quad++;
         render_half->primitive_cursor = (u8*)quad;
     }

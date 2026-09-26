@@ -4,12 +4,6 @@
 #include "field_actor_runtime.h"
 #include "field_records.h"
 
-/** @brief Party slot of the guest character. */
-#define FIELD_PARTY_GUEST 1
-
-/** @brief Party slot of the companion (a stored companion or a golem). */
-#define FIELD_PARTY_COMPANION 2
-
 /** @brief Number of guest characters with a template in resource 3. */
 #define FIELD_GUEST_COUNT 12
 
@@ -37,13 +31,6 @@
 
 /** @brief Script variable of guest 0; guest n uses FIELD_VARIABLE_GUEST_BASE + n * 8. */
 #define FIELD_VARIABLE_GUEST_BASE 0xF87
-
-/** @brief Script variables holding the resource variant of the guest and companion actors. */
-#define FIELD_VARIABLE_GUEST_VARIANT 0x2F08
-#define FIELD_VARIABLE_COMPANION_VARIANT 0x2F00
-
-/** @brief Resource variant written when a slot is emptied, or returned when a join fails. */
-#define FIELD_NO_VARIANT 0xFF
 
 /**
  * @brief Offset added to a golem's info byte 1 to form its resource variant.
@@ -172,7 +159,7 @@ s32 field_join_guest(s32 guest_id)
                 {
                     g_field_game_state->characters[FIELD_PARTY_GUEST].progress.bits.experience = FIELD_EXPERIENCE_MAX;
                 }
-                func_800C11F0(FIELD_PARTY_GUEST, 0);
+                field_apply_character_level_ups(FIELD_PARTY_GUEST, 0);
                 func_800B7C58(FIELD_PARTY_GUEST);
                 func_800BD520(0, guest_id * 8 + FIELD_VARIABLE_GUEST_BASE, 1);
                 return -1;
@@ -309,12 +296,12 @@ static void field_load_companion(s32 companion_index)
 /**
  * @brief Rebuild the golem in party slot 2 and return its resource variant.
  * @return The golem's info byte 1 plus FIELD_GOLEM_VARIANT_BASE.
- * @note Guess: slot 2 holds a golem when this is called (func_800C3B50 is the golem layout code).
+ * @note field_golem_select_logic_type rebuilds party slot 2 from the joined golem group.
  */
 s32 field_join_golem(void)
 {
-    /* func_800C3B50 takes a type; the original call leaves $a0 as it is. */
-    ((void (*)(void))func_800C3B50)();
+    /* field_golem_select_logic_type takes a type; the original call leaves $a0 as it is. */
+    ((void (*)(void))field_golem_select_logic_type)();
     return g_field_game_state->characters[FIELD_PARTY_COMPANION].info.bytes[1] + FIELD_GOLEM_VARIANT_BASE;
 }
 
@@ -343,7 +330,7 @@ void field_leave_party(s32 companion)
         }
         else
         {
-            func_800C3A00(0);
+            field_golem_commit_group_edit(0);
         }
         g_field_game_state->characters[FIELD_PARTY_COMPANION].name[0] = 0;
         g_field_game_state->characters[FIELD_PARTY_COMPANION].info.word |= FIELD_CHARACTER_TYPE_MASK;

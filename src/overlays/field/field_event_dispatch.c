@@ -7,14 +7,11 @@
 #include "field_calls.h"
 #include "field_records.h"
 
-/** @brief Runtime state flag: party actors take event scripts from their resource pages. */
-#define FIELD_STATE_PARTY_PAGE_SCRIPTS 0x10000
-
 extern FieldRuntimeContext* g_field_runtime;
 
 void field_script_run(FieldScriptState* state);
 u8* field_get_event_script(s32 script_id);
-FieldActorRecord* func_800C1B60(s32 id);
+FieldActorRecord* field_find_actor_record_or_default(s32 id);
 u8* func_800C28F8(s32 page, u16 entry);
 
 /**
@@ -29,7 +26,7 @@ s32 field_queue_actor_event(s32 owner_id, u8 event_id, s8 argument)
     s32 index;
     FieldActorRecord* actor;
 
-    actor = func_800C1B60(owner_id);
+    actor = field_find_actor_record_or_default(owner_id);
     index = event_id;
     if ((actor->enabled_events >> index) & 1)
     {
@@ -62,7 +59,7 @@ s32 field_run_actor_event(s32 owner_id, s32 event_id, s32 mode)
     event_index = event_id & 0xFF;
     if (event_index < FIELD_ACTOR_SCRIPT_COUNT)
     {
-        actor = func_800C1B60(owner_id);
+        actor = field_find_actor_record_or_default(owner_id);
         if ((actor->enabled_events >> event_index) & 1)
         {
             depth = actor->script.depth;

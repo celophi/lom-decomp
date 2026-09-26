@@ -3,6 +3,8 @@
 
 #include "common.h"
 
+/** @brief Owner slots below this (the two players) have their own CLUT rows and texture pages. */
+#define FIELD_ACTOR_PALETTE_OWNERS 2
 /** @brief Bytes of CLUT data owned by each of the two actor palette owners. */
 #define FIELD_ACTOR_CLUT_BUFFER_SIZE 0x400
 

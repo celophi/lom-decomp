@@ -129,7 +129,7 @@ s32 func_800C29CC(s32 index)
 
     record = field_find_free_inventory_record();
     item_template = &table->templates[index];
-    func_800B2844(0, (u8*)item_template, 0x15);
+    field_set_text_macro(0, (u8*)item_template, 0x15);
     if (record != NULL)
     {
         field_copy_inventory_record((u8*)record, (u8*)item_template);

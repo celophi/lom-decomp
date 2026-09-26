@@ -1,250 +1,291 @@
 /** @file
- * @brief FIELD menu-window rendering: bordered frames, sprite tiling, element
- *        lifecycle and the eight-element update/draw loop.
+ * @brief FIELD menu windows: bordered frames, scroll arrows, the element
+ *        lifecycle and the per-frame update/draw of the eight elements.
  *
- * Consolidated translation unit (gcc272_cdk) for the related menu-window family
- * at 0x800AD850-0x800AE8A8. See docs/decompilation/field-boundaries/map.md
- * (candidate field_menu_windows). @c D_80122828 is the table of eight
- * FieldMenuElement records; @c g_menu_element_counter is read as u16 or s32 per
- * its original use.
+ * The frame artwork is a 64x32 4-bit image in the texture page at (256, 256)
+ * holding two 32x32 frame styles side by side, each with 8-pixel corners,
+ * 16-pixel edges and the two scroll arrows in the middle. Its two palettes
+ * sit at (256, 499). @c g_menu_element_counter selects the style: 0 for the
+ * field frame, 32 (the u of the second style) for the frame of the
+ * sub-overlays (shops, save screens), which also takes the second palette.
  */
 
 #include "common.h"
+#include "main.h"
+#include "display.h"
+#include "gpu_packet.h"
 #include "field_calls.h"
 #include "sdk/libgpu.h"
+#include "sdk/libetc.h"
 #include "field_menu_element.h"
 
-/** @brief Render context with ordering-table head, buffer selector, and packet cursor. */
-struct FieldMenuRenderContext
+/** @brief VRAM position of the texture page, palettes and artwork of the frames. */
+#define MENU_TPAGE_X 256
+#define MENU_TPAGE_Y 256
+#define MENU_CLUT_X 256
+#define MENU_CLUT_Y 499
+#define MENU_FRAME_IMAGE_X 272
+#define MENU_FRAME_IMAGE_Y 480
+/** @brief Size of the palettes and of the artwork, in VRAM halfwords. */
+#define MENU_CLUT_COLORS 16
+#define MENU_FRAME_STYLES 2
+#define MENU_FRAME_IMAGE_WIDTH 16
+#define MENU_FRAME_IMAGE_HEIGHT 32
+
+/** @brief Artwork origin in the texture page (4-bit texels, four per halfword). */
+#define MENU_FRAME_TEX_U ((MENU_FRAME_IMAGE_X - MENU_TPAGE_X) * 4)
+#define MENU_FRAME_TEX_V (MENU_FRAME_IMAGE_Y - MENU_TPAGE_Y)
+/** @brief Frame corner and border thickness, in pixels. */
+#define MENU_FRAME_BORDER 8
+/** @brief Length of one frame edge tile, in pixels. */
+#define MENU_FRAME_EDGE 16
+/** @brief u of the right-hand frame column (and v of the bottom row). */
+#define MENU_FRAME_FAR (MENU_FRAME_BORDER + MENU_FRAME_EDGE)
+/** @brief Scroll arrow size, in pixels. */
+#define MENU_ARROW_WIDTH 8
+#define MENU_ARROW_HEIGHT 16
+
+/** @brief Palettes of the two frame styles. */
+#define MENU_FRAME_CLUT getClut(MENU_CLUT_X, MENU_CLUT_Y)
+#define MENU_FRAME_CLUT_ALTERNATE getClut(MENU_CLUT_X, MENU_CLUT_Y + 1)
+/** @brief Texture page of the frame artwork. */
+#define MENU_FRAME_TPAGE getTPage(0, 0, MENU_TPAGE_X, MENU_TPAGE_Y)
+/** @brief Draw mode linked after the fill (so drawn before it): subtractive blending. */
+#define MENU_FILL_TPAGE getTPage(0, 2, MENU_TPAGE_X, MENU_TPAGE_Y)
+
+/** @brief Fill colours subtracted from the scene inside a frame. */
+#define MENU_FILL_COLOR GPU_COLOR_WORD(0x30, 0x30, 0x30)
+#define MENU_FILL_COLOR_BRIGHT GPU_COLOR_WORD(0xA0, 0xA0, 0xA0)
+
+/** @brief Inset of the clip area inside a frame, in pixels. */
+#define MENU_FRAME_CLIP_INSET 2
+
+/** @brief Scroll arrow x offset from the right edge, and y offset from the top/bottom edge. */
+#define MENU_ARROW_RIGHT_INSET 16
+#define MENU_ARROW_EDGE_INSET 8
+/** @brief Pixels one pad press scrolls, and the frames the scroll eases over. */
+#define MENU_SCROLL_STEP 16
+#define MENU_SCROLL_TICKS 4
+
+/** @brief Animation steps of the opening and closing frame. */
+#define MENU_ANIMATION_STEPS 8
+/** @brief g_frame_counter bit that times the border blink. */
+#define MENU_BLINK_FRAME_BIT 4
+/** @brief Pixels the blinking border grows by on each side. */
+#define MENU_BLINK_GROW 2
+
+#define FIELD_SOUND_CURSOR 0x7D
+#define FIELD_SOUND_PAN_CENTRE 0x80
+
+/** @brief Glyph codes 0x19-0x1F take a second byte. */
+#define TEXT_TWO_BYTE_FIRST 0x19
+#define TEXT_TWO_BYTE_LAST 0x1F
+
+/** @brief The frame palettes followed by the frame artwork. */
+typedef struct
 {
-    u32 tag;
-    u8 pad4[0x40B2 - 4];
-    s16 buffer;
-    u8 pad40b4[4];
-    s32 *cursor;
-};
+    u16 cluts[MENU_FRAME_STYLES][MENU_CLUT_COLORS];
+    u16 pixels[MENU_FRAME_IMAGE_HEIGHT][MENU_FRAME_IMAGE_WIDTH];
+} MenuFrameImage;
 
-extern u8 D_800EF1BC[];
-extern s32 g_pad_input, g_frame_counter;
+extern MenuFrameImage g_field_menu_frame_image;
 
-void *func_800ADCD0(void *, u32 *, RECT *, RECT *);
-u_long *func_800AE76C(u_long *, u_long *, s32, s32, s32);
+static void* field_draw_menu_sprite_tiles(void* packet, u_long* ot, RECT* destination, RECT* texture);
 
 /**
- * @brief Emit a bordered menu rectangle, fill tile and draw-mode command.
- * @param buffer First free primitive-buffer address.
- * @param ordering Ordering-table entry receiving the new primitive chain.
- * @param x Rectangle origin in screen coordinates.
- * @param y Rectangle origin in screen coordinates.
- * @param width Rectangle width in pixels.
- * @param height Rectangle height in pixels.
- * @param bottom_buffer Nonzero selects the lower framebuffer clipping region.
- * @param bright Nonzero selects the brighter fill color.
- * @return First free buffer address after all emitted primitives.
+ * @brief Emit a bordered menu frame: its clip area, frame tiles and fill.
+ * @param packet First free primitive-buffer byte.
+ * @param ot Ordering-table entry receiving the primitives.
+ * @param x Left edge of the window, in screen pixels.
+ * @param y Top edge of the window, in screen pixels.
+ * @param width Window width in pixels.
+ * @param height Window height in pixels.
+ * @param display_y Display y of the render half; nonzero draws into the area at SCREEN_HEIGHT.
+ * @param bright Nonzero selects the brighter fill.
+ * @return First free buffer byte after the emitted primitives.
  */
-s32 *func_800AD850(s32 *buffer, s32 *ordering, s32 x, s32 y, s32 width, s32 height,
-                   s32 bottom_buffer, s32 bright)
+void* field_draw_menu_frame(void* packet, u_long* ot, s32 x, s32 y, s32 width, s32 height, s32 display_y, s32 bright)
 {
-    extern u16 g_menu_element_counter;
-    s32 *ot = ordering;
-    DR_ENV *draw_packet = (DR_ENV *)buffer;
+    DR_ENV* clip;
     DRAWENV draw_env;
     RECT destination;
     RECT texture;
-    s32 *cursor;
-    u_long *packet;
+    TILE* fill;
+    DR_TPAGE* mode;
 
-    if (bottom_buffer != 0)
+    clip = packet;
+    if (display_y != 0)
     {
-        SetDefDrawEnv(&draw_env, x + 2, y + 0xF2, width - 4, height - 4);
+        SetDefDrawEnv(&draw_env, x + MENU_FRAME_CLIP_INSET, y + SCREEN_HEIGHT + MENU_FRAME_CLIP_INSET, width - MENU_FRAME_CLIP_INSET * 2,
+                      height - MENU_FRAME_CLIP_INSET * 2);
     }
     else
     {
-        SetDefDrawEnv(&draw_env, x + 2, y + 0xA, width - 4, height - 4);
+        SetDefDrawEnv(&draw_env, x + MENU_FRAME_CLIP_INSET, y + VRAM_BACK_DRAW_Y + MENU_FRAME_CLIP_INSET, width - MENU_FRAME_CLIP_INSET * 2,
+                      height - MENU_FRAME_CLIP_INSET * 2);
     }
-    SetDrawEnv(draw_packet, &draw_env);
-    addPrim(ot, draw_packet);
-    cursor = (s32 *)(draw_packet + 1);
-    setRECT(&destination, x - 4, y - 4, 8, 8);
-    setRECT(&texture, g_menu_element_counter + 0x40, 0xE0, 8, 8);
-    cursor = func_800ADCD0(cursor, ot, &destination, &texture);
-    setRECT(&destination, x + width - 4, y - 4, 8, 8);
-    setRECT(&texture, g_menu_element_counter + 0x58, 0xE0, 8, 8);
-    cursor = func_800ADCD0(cursor, ot, &destination, &texture);
-    setRECT(&destination, x - 4, y + height - 4, 8, 8);
-    setRECT(&texture, g_menu_element_counter + 0x40, 0xF8, 8, 8);
-    cursor = func_800ADCD0(cursor, ot, &destination, &texture);
-    setRECT(&destination, x + width - 4, y + height - 4, 8, 8);
-    setRECT(&texture, g_menu_element_counter + 0x58, 0xF8, 8, 8);
-    cursor = func_800ADCD0(cursor, ot, &destination, &texture);
-    setRECT(&destination, x + 4, y - 4, width - 8, 8);
-    setRECT(&texture, g_menu_element_counter + 0x48, 0xE0, 16, 8);
-    cursor = func_800ADCD0(cursor, ot, &destination, &texture);
-    setRECT(&destination, x + 4, y + height - 4, width - 8, 8);
-    setRECT(&texture, g_menu_element_counter + 0x48, 0xF8, 16, 8);
-    cursor = func_800ADCD0(cursor, ot, &destination, &texture);
-    setRECT(&destination, x - 4, y + 4, 8, height - 8);
-    setRECT(&texture, g_menu_element_counter + 0x40, 0xE8, 8, 16);
-    cursor = func_800ADCD0(cursor, ot, &destination, &texture);
-    setRECT(&destination, x + width - 4, y + 4, 8, height - 8);
-    setRECT(&texture, g_menu_element_counter + 0x58, 0xE8, 8, 16);
-    cursor = func_800ADCD0(cursor, ot, &destination, &texture);
-    packet = (u_long *)cursor;
+    SetDrawEnv(clip, &draw_env);
+    addPrim(ot, clip);
+    packet = clip + 1;
+
+    /* The border straddles the window edge: corners, top and bottom edges, left and right edges. */
+    setRECT(&destination, x - MENU_FRAME_BORDER / 2, y - MENU_FRAME_BORDER / 2, MENU_FRAME_BORDER, MENU_FRAME_BORDER);
+    setRECT(&texture, g_menu_element_counter + MENU_FRAME_TEX_U, MENU_FRAME_TEX_V, MENU_FRAME_BORDER, MENU_FRAME_BORDER);
+    packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
+    setRECT(&destination, x + width - MENU_FRAME_BORDER / 2, y - MENU_FRAME_BORDER / 2, MENU_FRAME_BORDER, MENU_FRAME_BORDER);
+    setRECT(&texture, g_menu_element_counter + MENU_FRAME_TEX_U + MENU_FRAME_FAR, MENU_FRAME_TEX_V, MENU_FRAME_BORDER, MENU_FRAME_BORDER);
+    packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
+    setRECT(&destination, x - MENU_FRAME_BORDER / 2, y + height - MENU_FRAME_BORDER / 2, MENU_FRAME_BORDER, MENU_FRAME_BORDER);
+    setRECT(&texture, g_menu_element_counter + MENU_FRAME_TEX_U, MENU_FRAME_TEX_V + MENU_FRAME_FAR, MENU_FRAME_BORDER, MENU_FRAME_BORDER);
+    packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
+    setRECT(&destination, x + width - MENU_FRAME_BORDER / 2, y + height - MENU_FRAME_BORDER / 2, MENU_FRAME_BORDER, MENU_FRAME_BORDER);
+    setRECT(&texture, g_menu_element_counter + MENU_FRAME_TEX_U + MENU_FRAME_FAR, MENU_FRAME_TEX_V + MENU_FRAME_FAR, MENU_FRAME_BORDER,
+            MENU_FRAME_BORDER);
+    packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
+    setRECT(&destination, x + MENU_FRAME_BORDER / 2, y - MENU_FRAME_BORDER / 2, width - MENU_FRAME_BORDER, MENU_FRAME_BORDER);
+    setRECT(&texture, g_menu_element_counter + MENU_FRAME_TEX_U + MENU_FRAME_BORDER, MENU_FRAME_TEX_V, MENU_FRAME_EDGE, MENU_FRAME_BORDER);
+    packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
+    setRECT(&destination, x + MENU_FRAME_BORDER / 2, y + height - MENU_FRAME_BORDER / 2, width - MENU_FRAME_BORDER, MENU_FRAME_BORDER);
+    setRECT(&texture, g_menu_element_counter + MENU_FRAME_TEX_U + MENU_FRAME_BORDER, MENU_FRAME_TEX_V + MENU_FRAME_FAR, MENU_FRAME_EDGE,
+            MENU_FRAME_BORDER);
+    packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
+    setRECT(&destination, x - MENU_FRAME_BORDER / 2, y + MENU_FRAME_BORDER / 2, MENU_FRAME_BORDER, height - MENU_FRAME_BORDER);
+    setRECT(&texture, g_menu_element_counter + MENU_FRAME_TEX_U, MENU_FRAME_TEX_V + MENU_FRAME_BORDER, MENU_FRAME_BORDER, MENU_FRAME_EDGE);
+    packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
+    setRECT(&destination, x + width - MENU_FRAME_BORDER / 2, y + MENU_FRAME_BORDER / 2, MENU_FRAME_BORDER, height - MENU_FRAME_BORDER);
+    setRECT(&texture, g_menu_element_counter + MENU_FRAME_TEX_U + MENU_FRAME_FAR, MENU_FRAME_TEX_V + MENU_FRAME_BORDER, MENU_FRAME_BORDER,
+            MENU_FRAME_EDGE);
+    packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
+
+    fill = packet;
     if (bright != 0)
     {
-        *(u32 *)&((TILE *)packet)->r0 = 0xA0A0A0;
+        SET_BGR0_PACKED(fill, MENU_FILL_COLOR_BRIGHT);
     }
     else
     {
-        *(u32 *)&((TILE *)packet)->r0 = 0x303030;
+        SET_BGR0_PACKED(fill, MENU_FILL_COLOR);
     }
+    setTile(fill);
+    setSemiTrans(fill, 1);
+    setXY0(fill, x, y);
+    setWH(fill, width, height);
+    addPrim(ot, fill);
 
-    setTile((TILE *)packet);
-    setSemiTrans((TILE *)packet, 1);
-    setXY0((TILE *)packet, x, y);
-    setWH((TILE *)packet, width, height);
-    addPrim(ot, packet);
-    packet += sizeof(TILE) / sizeof(*packet);
-    setlen((DR_TPAGE *)packet, 1);
-    ((DR_TPAGE *)packet)->code[0] = 0xE1000054;
-    addPrim(ot, (DR_TPAGE *)packet);
-    return (s32 *)((DR_TPAGE *)packet + 1);
+    fill++;
+    mode = (DR_TPAGE*)fill;
+    setDrawTPage(mode, 0, 0, MENU_FILL_TPAGE);
+    addPrim(ot, mode);
+    return mode + 1;
 }
 
 /**
- * @brief Tile a rectangle with sprite primitives and link them into an ordering table.
- * @param packet_cursor Next free primitive-buffer address.
- * @param ordering_table Ordering-table entry receiving the primitive chain.
- * @param destination Destination rectangle position and dimensions.
- * @param texture Texture origin and maximum tile dimensions.
- * @return The first free buffer address after the emitted primitives.
+ * @brief Cover a screen rectangle with sprites that repeat one texture region.
+ * @param packet First free primitive-buffer byte.
+ * @param ot Ordering-table entry receiving the sprites.
+ * @param destination Screen rectangle to cover.
+ * @param texture Texture region; its size is the largest sprite.
+ * @return First free buffer byte after the emitted sprites.
  */
-void *func_800ADCD0(void *packet_cursor, u32 *ordering_table, RECT *destination, RECT *texture)
+static void* field_draw_menu_sprite_tiles(void* packet, u_long* ot, RECT* destination, RECT* texture)
 {
-    extern s32 g_menu_element_counter;
+    SPRT* sprite;
     s32 remaining_height;
     s32 remaining_width;
     s32 y_offset;
     s32 x_offset;
     s32 tile_height;
     s32 tile_width;
-    u32 primitive_addr;
-    s32 tag_length;
-    s32 command;
-    s16 clut;
-    s32 color_word;
-    s32 tag_length_mask;
 
-    if (destination->w > 0)
+    sprite = packet;
+    if (destination->w > 0 && destination->h > 0)
     {
-        if (destination->h > 0)
+        y_offset = 0;
+        remaining_height = destination->h;
+        do
         {
-            y_offset = 0;
-            remaining_height = destination->h;
-            color_word = 0x808080;
-            tag_length = 4;
-            command = 0x64;
+            x_offset = 0;
+            tile_height = remaining_height;
+            if (texture->h < remaining_height)
+            {
+                tile_height = texture->h;
+            }
+            remaining_width = destination->w;
             do
             {
-                x_offset = 0;
-                tile_height = remaining_height;
-                if (texture->h < remaining_height)
+                tile_width = remaining_width;
+                if (texture->w < remaining_width)
                 {
-                    tile_height = texture->h;
+                    tile_width = texture->w;
                 }
-                remaining_width = destination->w;
-                tag_length_mask = 0xFF000000;
-                do
-                {
-                    tile_width = remaining_width;
-                    if (texture->w < remaining_width)
-                    {
-                        tile_width = texture->w;
-                    }
 
-                    *(u32 *)&((SPRT *)packet_cursor)->r0 = color_word;
-                    setlen((SPRT *)packet_cursor, tag_length);
-                    setcode((SPRT *)packet_cursor, command);
-                    setXY0((SPRT *)packet_cursor, (s16)((u16)destination->x + x_offset), (s16)((u16)destination->y + y_offset));
-                    setUV0((SPRT *)packet_cursor, (u8)texture->x, (u8)texture->y);
-                    setWH((SPRT *)packet_cursor, tile_width, tile_height);
-                    clut = 0x7CD0;
-                    if (g_menu_element_counter != 0)
-                    {
-                        clut = 0x7D10;
-                    }
-                    ((SPRT *)packet_cursor)->clut = clut;
+                SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+                setSprt(sprite);
+                setXY0(sprite, destination->x + x_offset, destination->y + y_offset);
+                setUV0(sprite, texture->x, texture->y);
+                setWH(sprite, tile_width, tile_height);
+                sprite->clut = (g_menu_element_counter != 0) ? MENU_FRAME_CLUT_ALTERNATE : MENU_FRAME_CLUT;
+                addPrim(ot, sprite);
+                sprite++;
 
-                    ((SPRT *)packet_cursor)->tag = (((SPRT *)packet_cursor)->tag & tag_length_mask) | (*ordering_table & 0xFFFFFF);
-                    primitive_addr = (u32)packet_cursor & 0xFFFFFF;
-                    *ordering_table = (*ordering_table & tag_length_mask) | (primitive_addr & 0xFFFFFF);
-                    packet_cursor = (u8 *)packet_cursor + sizeof(SPRT);
+                x_offset += tile_width;
+                remaining_width -= tile_width;
+            } while (remaining_width != 0);
 
-                    x_offset += tile_width;
-                    remaining_width -= tile_width;
-                } while (remaining_width != 0);
-
-                remaining_height -= tile_height;
-                y_offset += tile_height;
-            } while (remaining_height != 0);
-        }
-        return packet_cursor;
+            remaining_height -= tile_height;
+            y_offset += tile_height;
+        } while (remaining_height != 0);
     }
-    return packet_cursor;
+    return sprite;
 }
 
 /**
- * @brief Load two fixed sub-images into VRAM from @c D_800EF1BC.
- *
- * Transfers a 0x10x2 block to VRAM (0x100, 0x1F3) from the base image data and
- * a 0x10x0x20 block to (0x110, 0x1E0) from the data 0x40 bytes further in.
- *
+ * @brief Upload the menu frame palettes and artwork to VRAM.
  */
-void func_800ADE2C(void)
+void field_load_menu_frame_image(void)
 {
     RECT rect;
 
-    setRECT(&rect, 0x100, 0x1F3, 0x10, 2);
-    LoadImage(&rect, (u_long *)D_800EF1BC);
-    setRECT(&rect, 0x110, 0x1E0, 0x10, 0x20);
-    LoadImage(&rect, (u_long *)(D_800EF1BC + 0x40));
+    setRECT(&rect, MENU_CLUT_X, MENU_CLUT_Y, MENU_CLUT_COLORS, MENU_FRAME_STYLES);
+    LoadImage(&rect, (u_long*)g_field_menu_frame_image.cluts);
+    setRECT(&rect, MENU_FRAME_IMAGE_X, MENU_FRAME_IMAGE_Y, MENU_FRAME_IMAGE_WIDTH, MENU_FRAME_IMAGE_HEIGHT);
+    LoadImage(&rect, (u_long*)g_field_menu_frame_image.pixels);
 }
 
 /**
- * @brief Clear the menu-element counter and the low tag bits of all eight records.
+ * @brief Select the field frame style and set every menu element idle.
  */
-void func_800ADEB0(void)
+void field_reset_menu_elements(void)
 {
-    extern s32 g_menu_element_counter;
-    FieldMenuElement *p;
+    FieldMenuElement* element;
     s32 i;
 
     g_menu_element_counter = 0;
-    p = D_80122828;
-    for (i = 0; i < 8; i++)
+    element = g_field_menu_elements;
+    for (i = 0; i < FIELD_MENU_ELEMENT_COUNT; i++)
     {
-        p->attr.word &= ~7;
-        p++;
+        element->attr.bits.state = FIELD_MENU_STATE_IDLE;
+        element++;
     }
 }
 
 /**
- * @brief Report whether any menu record is in a non-idle, non-active state.
- * @return 1 when a record has a set state other than 2, otherwise 0.
+ * @brief Report whether a menu element is opening or closing.
+ * @return 1 when an element is neither idle nor open, otherwise 0.
  */
-s32 func_800ADEEC(void)
+s32 field_menu_elements_animating(void)
 {
-    FieldMenuElement *p;
+    FieldMenuElement* element;
     s32 i;
-    s32 x;
+    s32 state;
 
-    p = D_80122828;
-    for (i = 0; i < 8; i++, p++)
+    element = g_field_menu_elements;
+    for (i = 0; i < FIELD_MENU_ELEMENT_COUNT; i++, element++)
     {
-        x = p->attr.word & 0x7;
-        if (x != 0)
+        state = element->attr.bits.state;
+        if (state != FIELD_MENU_STATE_IDLE)
         {
-            if (x != 2)
+            if (state != FIELD_MENU_STATE_OPEN)
             {
                 return 1;
             }
@@ -254,377 +295,274 @@ s32 func_800ADEEC(void)
 }
 
 /**
- * @brief Force every active menu record into the closing state.
+ * @brief Start closing every menu element that is not idle.
  */
-void func_800ADF34(void)
+void field_close_menu_elements(void)
 {
-    FieldMenuElement *p;
+    FieldMenuElement* element;
     s32 i;
-    u32 x;
 
-    p = D_80122828;
-    for (i = 0; i < 8; i++, p++)
+    element = g_field_menu_elements;
+    for (i = 0; i < FIELD_MENU_ELEMENT_COUNT; i++, element++)
     {
-        x = p->attr.word;
-        if (x & 7)
+        if (element->attr.bits.state != FIELD_MENU_STATE_IDLE)
         {
-            p->attr.word = (((x & ~7) | 3) & ~0x78) | 0x40;
+            element->attr.bits.state = FIELD_MENU_STATE_CLOSING;
+            element->attr.bits.step = MENU_ANIMATION_STEPS;
         }
     }
 }
 
 /**
- * @brief Allocate the first idle menu record and initialize it to the opening state.
- * @return The claimed record, or the first record when none are free.
+ * @brief Claim the first idle menu element and start opening it.
+ * @return The claimed element, or the first element when none is idle.
  */
-FieldMenuElement *func_800ADF84(void)
+FieldMenuElement* field_claim_menu_element(void)
 {
-    FieldMenuElement *rec;
+    FieldMenuElement* element;
     s32 i;
 
-    rec = D_80122828;
-    for (i = 0; i < 8; i++, rec++)
+    element = g_field_menu_elements;
+    for (i = 0; i < FIELD_MENU_ELEMENT_COUNT; i++, element++)
     {
-        if ((rec->attr.word & 7) == 0)
+        if (element->attr.bits.state == FIELD_MENU_STATE_IDLE)
         {
-            rec->attr.word = (rec->attr.word & ~7) | 1;
-            rec->scroll = 0;
-            rec->scroll_target = 0;
-            rec->size.word &= ~0x200;
-            rec->size.word &= ~0xC00;
-            rec->size.fields.content_height = 0;
-            rec->scroll_ticks = 0;
-            return rec;
+            element->attr.bits.state = FIELD_MENU_STATE_OPENING;
+            element->scroll = 0;
+            element->scroll_target = 0;
+            element->size.bits.blink = 0;
+            element->size.bits.scroll_mode = 0;
+            element->size.fields.content_height = 0;
+            element->scroll_ticks = 0;
+            return element;
         }
     }
-    return D_80122828;
+    return g_field_menu_elements;
 }
 
 /**
- * @brief Update scrolling and emit drawing packets for the eight field menu elements.
+ * @brief Scroll, animate and draw the eight menu elements for this frame.
  *
- * Active elements receive scroll markers and their draw-environment packet.
- * Each element callback emits its contents, followed by an opening, steady,
- * blinking, or closing border. The updated packet cursor returns to the context.
+ * A scrolled element gets its scroll arrows and eases towards its scroll
+ * target (a pad-scrolled element takes a new target from up/down). Every
+ * element that is not idle draws its contents and its frame, which grows
+ * while opening, blinks when asked to, and shrinks while closing.
  *
- * @param context Ordering-table and primitive-buffer state for the current frame.
+ * @param render_half Render half being built; its packet cursor is advanced.
  */
-void func_800AE008(FieldMenuRenderContext *context)
+void field_draw_menu_elements(FieldRenderHalf* render_half)
 {
-    DRAWENV env;
-    u32 marker_x, marker_width_low, opening_x, opening_width_low, active_width_low, closing_x,
-        closing_width_low;
-    u32 marker_attr;
-    u32 marker_size;
-    u32 input_size;
-    s32 clamp_height;
-    s16 scroll_ticks;
-    u32 state_attr;
-    u32 opening_geometry;
-    s32 opening_height;
-    s32 opening_width;
-    s32 opening_step;
-    s32 opening_width_product;
-    s32 opening_height_product;
-    u32 opening_updated_attr;
-    u32 opening_previous_attr;
-    u32 opening_draw_attr;
-    u32 opening_draw_geometry;
-    u32 active_geometry;
-    u32 active_attr;
-    u32 active_blink_attr;
-    u32 closing_geometry;
-    s32 closing_height;
-    s32 closing_width;
-    s32 closing_step;
-    s32 closing_width_product;
-    s32 closing_height_product;
-    u32 closing_updated_attr;
-    u32 closing_previous_attr;
-    u32 closing_draw_attr;
-    u32 closing_draw_geometry;
-    s32 *cursor;
-    FieldMenuRenderContext *ordering;
-    FieldMenuElement *element;
-    s32 element_index;
-    u32 entry_attr, scroll_size;
-    s32 mode;
-    s32 visible_height, animated_width, animated_height;
-    u16 scroll_target;
-    s16 next_scroll_target;
-    s32 clamped_target;
-    cursor = context->cursor;
-    ordering = context;
-    if (context->buffer)
+    DRAWENV draw_env;
+    u8* packet;
+    u_long* ot;
+    FieldMenuElement* element;
+    s32 i;
+    s32 view_height;
+    s32 frame_width;
+    s32 frame_height;
+
+    packet = render_half->primitive_cursor;
+    ot = render_half->ordering_table;
+    if (render_half->display_rect.y != 0)
     {
-        SetDefDrawEnv(&env, 0, 0xF0, 0x140, 0xE0);
+        SetDefDrawEnv(&draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
     }
     else
     {
-        SetDefDrawEnv(&env, 0, 8, 0x140, 0xE0);
+        SetDefDrawEnv(&draw_env, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
     }
-    element = D_80122828;
-    element_index = 0;
-    for (; element_index < 8; element_index++, element++)
+    element = g_field_menu_elements;
+    for (i = 0; i < FIELD_MENU_ELEMENT_COUNT; i++, element++)
     {
-        entry_attr = element->attr.word;
-        if (entry_attr & 7)
+        if (element->attr.bits.state != FIELD_MENU_STATE_IDLE)
         {
-            scroll_size = element->size.word;
-            if ((scroll_size >> 10) & 3)
+            if (element->size.bits.scroll_mode != FIELD_MENU_SCROLL_NONE)
             {
                 if (element->scroll != 0)
                 {
-                    marker_x = (entry_attr >> 7) & 0x1ff;
-                    marker_width_low = entry_attr >> 24;
-                    cursor =
-                        func_800AE76C(cursor, ordering,
-                                      marker_x + (((scroll_size & 1) << 8) | marker_width_low) - 16,
-                                      element->attr.bytes.y + 8, 1);
+                    u32 arrow_x = FIELD_MENU_ATTR_X(element->attr.word);
+                    u32 arrow_width_low = FIELD_MENU_WIDTH_LOW(element);
+
+                    packet = field_draw_menu_scroll_arrow(packet, ot, arrow_x + FIELD_MENU_JOIN_WIDTH(element, arrow_width_low) - MENU_ARROW_RIGHT_INSET,
+                                                          element->attr.bytes.y + MENU_ARROW_EDGE_INSET, 1);
                 }
-                marker_size = element->size.word;
-                visible_height = (marker_size >> 1) & 255;
-                if (element->scroll + visible_height < element->size.fields.content_height)
+                view_height = FIELD_MENU_SIZE_HEIGHT(element->size.word);
+                if (element->scroll + view_height < element->size.fields.content_height)
                 {
-                    marker_attr = element->attr.word;
-                    cursor =
-                        func_800AE76C(cursor, ordering,
-                                      ((marker_attr >> 7) & 0x1ff) +
-                                          (((marker_size & 1) << 8) | (marker_attr >> 24)) - 16,
-                                      element->attr.bytes.y + visible_height - 8, 0);
+                    packet = field_draw_menu_scroll_arrow(packet, ot, FIELD_MENU_X(element) + FIELD_MENU_WIDTH(element) - MENU_ARROW_RIGHT_INSET,
+                                                          element->attr.bytes.y + view_height - MENU_ARROW_EDGE_INSET, 0);
                 }
-                scroll_ticks = element->scroll_ticks;
-                if (scroll_ticks != 0)
+                if (element->scroll_ticks != 0)
                 {
-                    element->scroll += (element->scroll_target - element->scroll) / scroll_ticks;
+                    element->scroll += (element->scroll_target - element->scroll) / element->scroll_ticks;
                     element->scroll_ticks--;
                 }
                 else
                 {
-                    input_size = element->size.word;
-                    scroll_target = element->scroll_target;
-                    element->scroll = scroll_target;
-                    if (((input_size >> 10) & 3) == 1)
+                    element->scroll = element->scroll_target;
+                    if (element->size.bits.scroll_mode == FIELD_MENU_SCROLL_BY_PAD)
                     {
-                        if ((g_pad_input & 0x4000) &&
-                            (s16)scroll_target + (s32)((input_size >> 1) & 255) <
-                                element->size.fields.content_height)
+                        if ((g_pad_input & PADLdown) && element->scroll + element->size.bits.height < element->size.fields.content_height)
                         {
-                            field_play_sound(0x7D, 0x80);
-                            next_scroll_target = (u16)element->scroll_target + 16;
-                            element->scroll_target = next_scroll_target;
-                            clamped_target = next_scroll_target;
-                            clamp_height = (element->size.word >> 1) & 255;
-                            if (element->size.fields.content_height - clamp_height <
-                                clamped_target)
+                            field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+                            element->scroll_target += MENU_SCROLL_STEP;
+                            if (element->scroll_target > element->size.fields.content_height - element->size.bits.height)
                             {
-                                element->scroll_target =
-                                    element->size.fields.content_height - clamp_height;
+                                element->scroll_target = element->size.fields.content_height - element->size.bits.height;
                             }
-                            element->scroll_ticks = 4;
+                            element->scroll_ticks = MENU_SCROLL_TICKS;
                         }
-                        else if ((g_pad_input & 0x1000) && element->scroll > 0)
+                        else if ((g_pad_input & PADLup) && element->scroll > 0)
                         {
-                            field_play_sound(0x7D, 0x80);
-                            next_scroll_target = (u16)element->scroll_target - 16;
-                            element->scroll_target = next_scroll_target;
-                            if (next_scroll_target < 0)
+                            field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+                            element->scroll_target -= MENU_SCROLL_STEP;
+                            if (element->scroll_target < 0)
                             {
                                 element->scroll_target = 0;
                             }
-                            element->scroll_ticks = 4;
+                            element->scroll_ticks = MENU_SCROLL_TICKS;
                         }
                     }
                 }
             }
-            SetDrawEnv((DR_ENV *)cursor, &env);
-            addPrim(&ordering->tag, cursor);
-            state_attr = element->attr.word;
-            mode = state_attr & 7;
-            cursor = (s32 *)((u8 *)cursor + 0x40);
-            switch (mode)
+            SetDrawEnv((DR_ENV*)packet, &draw_env);
+            addPrim(ot, packet);
+            packet += sizeof(DR_ENV);
+            switch (element->attr.bits.state)
             {
-            case 1:
-                opening_geometry = element->size.word;
-                opening_width = ((opening_geometry & 1) << 8) | (state_attr >> 24);
-                opening_step = (state_attr >> 3) & 15;
-                opening_width_product = opening_width * opening_step;
-                if (opening_width_product < 0)
+            case FIELD_MENU_STATE_OPENING:
                 {
-                    opening_width_product += 7;
+                    s32 width;
+                    s32 height;
+                    s32 x;
+                    s32 width_low;
+
+                    width = FIELD_MENU_WIDTH(element);
+                    frame_width = width * element->attr.bits.step / MENU_ANIMATION_STEPS;
+                    height = FIELD_MENU_SIZE_HEIGHT(element->size.word);
+                    frame_height = height * element->attr.bits.step / MENU_ANIMATION_STEPS;
+                    packet = element->draw(ot, packet, (width - frame_width) / 2, (height - frame_height) / 2 + element->scroll, height, element);
+                    x = FIELD_MENU_X(element);
+                    width_low = FIELD_MENU_WIDTH_LOW(element);
+                    packet = field_draw_menu_frame(packet, ot, x + (FIELD_MENU_JOIN_WIDTH(element, width_low) - frame_width) / 2,
+                                                   element->attr.bytes.y + (element->size.bits.height - frame_height) / 2, frame_width, frame_height,
+                                                   render_half->display_rect.y, 0);
                 }
-                opening_height = (opening_geometry >> 1) & 255;
-                opening_height_product = opening_height * opening_step;
-                animated_width = opening_width_product >> 3;
-                if (opening_height_product < 0)
+                element->attr.bits.step++;
+                if (element->attr.bits.step == MENU_ANIMATION_STEPS)
                 {
-                    opening_height_product += 7;
-                }
-                animated_height = opening_height_product >> 3;
-                cursor = element->draw(ordering, cursor, (opening_width - animated_width) / 2,
-                                       (opening_height - animated_height) / 2 + element->scroll,
-                                       opening_height, element);
-                opening_draw_attr = element->attr.word;
-                opening_draw_geometry = element->size.word;
-                opening_x = (opening_draw_attr >> 7) & 0x1ff;
-                opening_width_low = opening_draw_attr >> 24;
-                cursor = func_800AD850(
-                    cursor, ordering,
-                    opening_x + (s32)((((opening_draw_geometry & 1) << 8) | opening_width_low) -
-                                      animated_width) /
-                                    2,
-                    element->attr.bytes.y +
-                        (s32)(((opening_draw_geometry >> 1) & 255) - animated_height) / 2,
-                    animated_width, animated_height, context->buffer, 0);
-                opening_previous_attr = element->attr.word;
-                opening_updated_attr = opening_previous_attr & ~0x78;
-                opening_updated_attr |= (((((opening_previous_attr >> 3) & 15) + 1) & 15) * 8);
-                element->attr.word = opening_updated_attr;
-                if (((opening_updated_attr >> 3) & 15) == 8)
-                {
-                    element->attr.word = (opening_updated_attr & ~7) | 2;
+                    element->attr.bits.state = FIELD_MENU_STATE_OPEN;
                 }
                 break;
-            case 2:
-                active_geometry = element->size.word;
-                if ((active_geometry >> 9) & 1)
+            case FIELD_MENU_STATE_OPEN:
+                if (element->size.bits.blink)
                 {
-                    animated_width = 0;
-                    if (!(g_frame_counter & 4))
+                    s32 width_low;
+
+                    /* frame_width is the blink offset here; a separate local takes packet's register. */
+                    frame_width = 0;
+                    if (!(g_frame_counter & MENU_BLINK_FRAME_BIT))
                     {
-                        animated_width = -2;
+                        frame_width = -MENU_BLINK_GROW;
                     }
-                    cursor = element->draw(ordering, cursor, animated_width,
-                                           animated_width + element->scroll,
-                                           (active_geometry >> 1) & 255, element);
-                    active_blink_attr = element->attr.word;
-                    active_width_low = active_blink_attr >> 24;
-                    cursor = func_800AD850(
-                        cursor, ordering, ((active_blink_attr >> 7) & 0x1ff) + animated_width,
-                        element->attr.bytes.y + animated_width,
-                        (((element->size.word & 1) << 8) | active_width_low) - animated_width * 2,
-                        ((element->size.word >> 1) & 255) - animated_width * 2, context->buffer, 0);
+                    packet = element->draw(ot, packet, frame_width, frame_width + element->scroll, element->size.bits.height, element);
+                    width_low = FIELD_MENU_WIDTH_LOW(element);
+                    packet = field_draw_menu_frame(packet, ot, FIELD_MENU_X(element) + frame_width, element->attr.bytes.y + frame_width,
+                                                   FIELD_MENU_JOIN_WIDTH(element, width_low) - frame_width * 2, element->size.bits.height - frame_width * 2,
+                                                   render_half->display_rect.y, 0);
                 }
                 else
                 {
-                    cursor = element->draw(ordering, cursor, 0, element->scroll,
-                                           (active_geometry >> 1) & 255, element);
-                    active_attr = element->attr.word;
-                    active_width_low = active_attr >> 24;
-                    cursor = func_800AD850(cursor, ordering, (active_attr >> 7) & 0x1ff,
-                                           element->attr.bytes.y,
-                                           ((element->size.word & 1) << 8) | active_width_low,
-                                           (element->size.word >> 1) & 255, context->buffer, 0);
+                    s32 width_low;
+
+                    packet = element->draw(ot, packet, 0, element->scroll, element->size.bits.height, element);
+                    width_low = FIELD_MENU_WIDTH_LOW(element);
+                    packet = field_draw_menu_frame(packet, ot, FIELD_MENU_X(element), element->attr.bytes.y, FIELD_MENU_JOIN_WIDTH(element, width_low),
+                                                   element->size.bits.height, render_half->display_rect.y, 0);
                 }
                 break;
-            case 3:
-                closing_geometry = element->size.word;
-                closing_width = ((closing_geometry & 1) << 8) | (state_attr >> 24);
-                closing_step = (state_attr >> 3) & 15;
-                closing_width_product = closing_width * closing_step;
-                if (closing_width_product < 0)
+            case FIELD_MENU_STATE_CLOSING:
                 {
-                    closing_width_product += 7;
+                    s32 width;
+                    s32 height;
+                    s32 x;
+                    s32 width_low;
+
+                    width = FIELD_MENU_WIDTH(element);
+                    frame_width = width * element->attr.bits.step / MENU_ANIMATION_STEPS;
+                    height = FIELD_MENU_SIZE_HEIGHT(element->size.word);
+                    frame_height = height * element->attr.bits.step / MENU_ANIMATION_STEPS;
+                    packet = element->draw(ot, packet, (width - frame_width) / 2, (height - frame_height) / 2 + element->scroll, height, element);
+                    x = FIELD_MENU_X(element);
+                    width_low = FIELD_MENU_WIDTH_LOW(element);
+                    packet = field_draw_menu_frame(packet, ot, x + (FIELD_MENU_JOIN_WIDTH(element, width_low) - frame_width) / 2,
+                                                   element->attr.bytes.y + (element->size.bits.height - frame_height) / 2, frame_width, frame_height,
+                                                   render_half->display_rect.y, 0);
                 }
-                closing_height = (closing_geometry >> 1) & 255;
-                closing_height_product = closing_height * closing_step;
-                animated_width = closing_width_product >> 3;
-                if (closing_height_product < 0)
+                element->attr.bits.step--;
+                if (element->attr.bits.step == 0)
                 {
-                    closing_height_product += 7;
-                }
-                animated_height = closing_height_product >> 3;
-                cursor = element->draw(ordering, cursor, (closing_width - animated_width) / 2,
-                                       (closing_height - animated_height) / 2 + element->scroll,
-                                       closing_height, element);
-                closing_draw_attr = element->attr.word;
-                closing_draw_geometry = element->size.word;
-                closing_x = (closing_draw_attr >> 7) & 0x1ff;
-                closing_width_low = closing_draw_attr >> 24;
-                cursor = func_800AD850(
-                    cursor, ordering,
-                    closing_x + (s32)((((closing_draw_geometry & 1) << 8) | closing_width_low) -
-                                      animated_width) /
-                                    2,
-                    element->attr.bytes.y +
-                        (s32)(((closing_draw_geometry >> 1) & 255) - animated_height) / 2,
-                    animated_width, animated_height, context->buffer, 0);
-                closing_previous_attr = element->attr.word;
-                closing_updated_attr = (closing_previous_attr & ~0x78) |
-                                       (((((closing_previous_attr >> 3) & 15) - 1) & 15) * 8);
-                element->attr.word = closing_updated_attr;
-                if (((closing_updated_attr >> 3) & 15) == 0)
-                {
-                    element->attr.word = closing_updated_attr & ~7;
+                    element->attr.bits.state = FIELD_MENU_STATE_IDLE;
                 }
                 break;
             }
         }
     }
-    context->cursor = cursor;
+    render_half->primitive_cursor = packet;
 }
 
 /**
- * @brief Build a clipped menu primitive and append its draw-mode packet to the ordering table.
- * @param packet_buffer Current GPU packet cursor.
- * @param ordering_table Ordering-table entry to link the packet into.
- * @param x Source rectangle x coordinate before the four-pixel inset.
- * @param y Source rectangle y coordinate before the eight-pixel inset.
- * @param alternate Select the menu-counter offset used for the destination rectangle.
- * @return GPU packet cursor advanced past the emitted draw-mode packet.
+ * @brief Draw a menu scroll arrow centred on a point.
+ * @param buffer First free primitive-buffer byte.
+ * @param ot Ordering-table entry receiving the primitives.
+ * @param x Arrow centre x, in screen pixels.
+ * @param y Arrow centre y, in screen pixels.
+ * @param up Nonzero draws the up arrow, zero the down arrow.
+ * @return First free buffer byte after the emitted primitives.
  */
-u_long *func_800AE76C(u_long *packet_buffer, u_long *ordering_table, s32 x, s32 y, s32 alternate)
+void* field_draw_menu_scroll_arrow(void* buffer, u_long* ot, s32 x, s32 y, s32 up)
 {
-    extern u16 g_menu_element_counter;
-    u_long *packet;
-    RECT source;
+    DR_TPAGE* packet;
     RECT destination;
+    RECT texture;
 
-    packet = packet_buffer;
-    setRECT(&source, x - 4, y - 8, 8, 0x10);
-
-    if (alternate != 0)
+    packet = buffer;
+    setRECT(&destination, x - MENU_ARROW_WIDTH / 2, y - MENU_ARROW_HEIGHT / 2, MENU_ARROW_WIDTH, MENU_ARROW_HEIGHT);
+    if (up != 0)
     {
-        setRECT(&destination, g_menu_element_counter + 0x48, 0xE8, 8, 0x10);
+        setRECT(&texture, g_menu_element_counter + MENU_FRAME_TEX_U + MENU_FRAME_BORDER, MENU_FRAME_TEX_V + MENU_FRAME_BORDER, MENU_ARROW_WIDTH,
+                MENU_ARROW_HEIGHT);
     }
     else
     {
-        setRECT(&destination, g_menu_element_counter + 0x50, 0xE8, 8, 0x10);
+        setRECT(&texture, g_menu_element_counter + MENU_FRAME_TEX_U + MENU_FRAME_BORDER + MENU_ARROW_WIDTH, MENU_FRAME_TEX_V + MENU_FRAME_BORDER,
+                MENU_ARROW_WIDTH, MENU_ARROW_HEIGHT);
     }
-
-    packet = func_800ADCD0(packet, ordering_table, &source, &destination);
-    setDrawTPage((DR_TPAGE *)packet, 0, 0, 0x14);
-    addPrim(ordering_table, packet);
-    return packet + 2;
+    packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
+    setDrawTPage(packet, 0, 0, MENU_FRAME_TPAGE);
+    addPrim(ot, packet);
+    return packet + 1;
 }
 
 /**
- * @brief Count printable glyphs in a menu string, treating a wide-glyph range as two bytes.
- * @param str NUL-terminated menu string.
+ * @brief Count the glyphs of a menu string; codes 0x19-0x1F take two bytes.
+ * @param text NUL-terminated menu string.
  * @return Glyph count.
  */
-s32 func_800AE864(u8 *str)
+s32 field_count_text_glyphs(u8* text)
 {
     s32 count;
-    s32 c;
 
-    count = 0;
-    c = str[0];
-    if (c != 0)
+    for (count = 0; *text != 0; count++)
     {
-        do
+        if (*text >= TEXT_TWO_BYTE_FIRST && *text <= TEXT_TWO_BYTE_LAST)
         {
-            if ((u32) (c - 0x19) < 7)
-            {
-                str += 2;
-            }
-            else
-            {
-                str += 1;
-            }
-            c = str[0];
-            count++;
-        } while (c != 0);
+            text += 2;
+        }
+        else
+        {
+            text++;
+        }
     }
     return count;
 }

@@ -1,582 +1,398 @@
-#include "saved_game.h"
-
-/** @file field_group_derived_stats.c
- * @brief Recompute derived party-member statistics from the selected gosub results.
+/**
+ * @file field_group_derived_stats.c
+ * @brief Build a golem group's name and derived stats from the items it is made of.
  */
 
+#include "saved_game.h"
 #include "common.h"
 #include "field_calls.h"
-#define U8(p, o) (*(u8*)((u8*)(p) + (o)))
-#define U16(p, o) (*(u16*)((u8*)(p) + (o)))
-#define U32(p, o) (*(u32*)((u8*)(p) + (o)))
+#include "field_golem_layout.h"
+#include "field_records.h"
 
+/** @brief func_800C1E40 id of the golem name text table. */
+#define FIELD_RESOURCE_GOLEM_NAME_TEXT 0x100
+/** @brief Name text entry appended after the golem number (entries 0-9 are the digits). */
+#define GOLEM_NAME_TEXT_SUFFIX 10
+/** @brief Name text entry of the first name prefix; one prefix per GOLEM_NAME_PREFIX_SPAN golems. */
+#define GOLEM_NAME_TEXT_PREFIX 11
+/** @brief Golems created per name prefix. */
+#define GOLEM_NAME_PREFIX_SPAN 50
+/** @brief Creation count from which golems get no number and a bonus on every nibble. */
+#define GOLEM_VETERAN_COUNT 200
+/** @brief Bonus added to every bonus nibble of a veteran golem. */
+#define GOLEM_VETERAN_BONUS 2
+
+/** @brief Number of weapon types in the logic class table. */
+#define GOLEM_WEAPON_TYPE_COUNT 27
+
+/** @brief Grid bound with fewer than two armor items. */
+#define GOLEM_GRID_BOUND_BASE 4
+/** @brief Number of bonus nibbles: eight from the weapons, then eight from the armor. */
+#define GOLEM_BONUS_COUNT 16
+/** @brief Offset of the armor sums in the bonus accumulators. */
+#define GOLEM_ARMOR_BONUS_BASE 8
+/** @brief Power range. */
+#define GOLEM_POWER_MIN 10
+#define GOLEM_POWER_MAX 200
+/** @brief Largest equipment total. */
+#define GOLEM_EQUIPMENT_TOTAL_MAX 99
+/** @brief Largest bonus nibble value. */
+#define GOLEM_BONUS_MAX 9
+/** @brief Effective stat range. */
+#define GOLEM_STAT_MIN 20
+#define GOLEM_STAT_MAX 99
+/** @brief Max HP range. */
+#define GOLEM_MAX_HP_MIN 50
+#define GOLEM_MAX_HP_MAX 999
+
+/** @brief Golem name text: a four-byte header, then the entry offsets and the text bytes. */
 typedef struct
 {
-    u8 pad[0x2B0C];
-    u8 unk2B0C;
-} NameView;
+    u8 header[4];
+    u8 bytes[1]; /**< Entry n spans bytes[offset(n)] to bytes[offset(n + 1)]; offsets are little-endian halfwords at bytes[2 * n]. */
+} GolemNameText;
 
+/** @brief Logic class of each weapon type. */
 typedef struct
 {
-    s32 a[27];
-} LocalTableCopy;
+    s32 classes[GOLEM_WEAPON_TYPE_COUNT];
+} GolemWeaponClassTable;
 
-typedef struct
-{
-    u8 pad[4];
-    u8 value;
-} ResourceByte;
+/** @brief The game state viewed as FIELD's record layout. */
+#define GAME_STATE ((FieldGameState*)g_saved_game.bytes)
+/** @brief The golem name text table. */
+#define GOLEM_NAME_TEXT ((GolemNameText*)func_800C1E40(FIELD_RESOURCE_GOLEM_NAME_TEXT))
 
-typedef struct
-{
-    u8 pad[0x2B30];
-    unsigned int a0 : 4;
-    unsigned int a1 : 4;
-    unsigned int a2 : 4;
-    unsigned int a3 : 4;
-    unsigned int a4 : 4;
-    unsigned int a5 : 4;
-    unsigned int a6 : 4;
-    unsigned int a7 : 4;
-    unsigned int a8 : 4;
-    unsigned int a9 : 4;
-    unsigned int a10 : 4;
-    unsigned int a11 : 4;
-    unsigned int a12 : 4;
-    unsigned int a13 : 4;
-    unsigned int a14 : 4;
-    unsigned int a15 : 4;
-} StatNibbles;
-
-typedef struct
-{
-    u8 pad[0x2B22];
-    u16 hp, stat0, stat1, stat2, stat3, stat4;
-} OutputStats;
-
-typedef struct
-{
-    u8 pad[0x2B48];
-    u8 flags0, flags1, flags2, enabled;
-    u32 zero;
-    unsigned int low : 4;
-    unsigned int high : 4;
-    unsigned int rest : 24;
-} GroupOutput;
-
-typedef struct
-{
-    u8 pad[0x2B38];
-    u16 resistance;
-} ResistanceView;
-
-typedef struct
-{
-    u8 pad[0xCF4];
-    unsigned int id : 8;
-    unsigned int type : 2;
-    unsigned int category : 6;
-    unsigned int rest : 16;
-} ItemHeader;
-
-extern u8* func_800C1E40(s32 arg0);
-extern u32 D_80051C50[];
+extern u8* func_800C1E40(s32 resource_id);
+extern GolemWeaponClassTable D_80051C50;
 extern s8 D_800F0C38[];
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
 
 /**
- * @brief Recomputes a party member's derived stat block from its gosub result set.
- *
- * Decodes the digit-name glyph runs for the member's level, sums element/attribute
- * counts and resistances across the selected inventory records, clamps each derived
- * value into range, and writes the packed stat fields back into the member's layout
- * record at @c arg0 * 0x14C inside the global menu layout buffer.
- *
- * @param arg0 Party member / layout record index.
+ * @brief Start offset of a golem name text entry in GolemNameText.bytes.
+ * @param entry Text entry index.
+ * @return Byte offset of the entry's first character.
  */
-void func_800C4364(s32 arg0)
+static inline s32 golem_name_text_offset(s32 entry)
 {
-    s32 local_table[27];
-    s32 accum[16];
-    s32 count;
+    return GOLEM_NAME_TEXT->bytes[entry * 2] + (GOLEM_NAME_TEXT->bytes[entry * 2 + 1] << 8);
+}
+
+/**
+ * @brief Build a golem group's name and derived stats from the items selected in GOSUB.
+ *
+ * The name is a prefix picked by the creation count, the golem number and a
+ * suffix. Power, equipment totals, bonus nibbles, stats and flags are summed
+ * over the selected weapons and armor and clamped; the last weapon's type
+ * picks the logic class and the armor count the grid bound.
+ *
+ * @param group Golem group record to fill.
+ */
+void field_golem_build_group_record(s32 group)
+{
+    GolemWeaponClassTable weapon_classes;
+    s32 work[GOLEM_BONUS_COUNT]; /* text range, sums and clamped values; [15] holds the creation count while the name is built */
+    s32 length;
     s32 i;
-    s32 digit;
-    s32 value;
-    s32 record_offset;
-    s32 work_value;
-    s32 type;
-    u8* base;
-    u8* out_base;
-    u8 *tb0, *tb1, *tb2, *tb3, *tb4, *tb5;
+    s32 entry;
+    s32 created;
+    s32 max_hp;
+    s32 hundreds;
+    s32 index;
 
-    *(LocalTableCopy*)local_table = *(LocalTableCopy*)D_80051C50;
+    weapon_classes = D_80051C50;
 
-    count = 0;
-    base = g_saved_game.bytes;
-    accum[15] = (s32)base[0x29D5];
-    digit = accum[15] / 50;
-    digit += 11;
+    length = 0;
+    work[15] = GOLEM.header.fields.created_count;
+    entry = work[15] / GOLEM_NAME_PREFIX_SPAN;
+    entry += GOLEM_NAME_TEXT_PREFIX;
+    work[0] = golem_name_text_offset(entry);
+    work[1] = golem_name_text_offset(entry + 1);
+    for (i = work[0]; i < work[1]; i++)
     {
-        s32 low_index;
-        s32 high_index;
-        accum[0] = ((ResourceByte*)(func_800C1E40(0x100) + (low_index = digit * 2)))->value +
-                   (((ResourceByte*)(func_800C1E40(0x100) + ((high_index = digit * 2 + 1))))->value << 8);
-    }
-    {
-        s32 low_index;
-        s32 high_index;
-        accum[1] = ((ResourceByte*)(func_800C1E40(0x100) + (low_index = (digit + 1) * 2)))->value +
-                   (((ResourceByte*)(func_800C1E40(0x100) + ((high_index = (digit + 1) * 2 + 1))))->value << 8);
-    }
-    i = accum[0];
-    if (i < accum[1])
-    {
-        out_base = base;
-        record_offset = arg0 * 0x14C;
-        do
+        if (length < GOLEM_NAME_LENGTH)
         {
-            if (count < 21)
-            {
-                ((NameView*)((count + record_offset) + (u32)out_base))->unk2B0C = ((ResourceByte*)(func_800C1E40(0x100) + i))->value;
-            }
-            count++;
-            i++;
-        } while (i < accum[1]);
+            GOLEM.group_records[group].name[length] = GOLEM_NAME_TEXT->bytes[i];
+        }
+        length++;
     }
 
-    value = accum[15];
-    if (value < 200)
+    created = work[15];
+    if (created < GOLEM_VETERAN_COUNT)
     {
-        accum[15] = value % 50 + 1;
+        work[15] = created % GOLEM_NAME_PREFIX_SPAN + 1;
+        hundreds = work[15] / 100;
+        if (work[15] >= 100)
         {
-            s32 hundreds_digit;
-            hundreds_digit = accum[15] / 100;
-            if (accum[15] >= 100)
+            work[0] = golem_name_text_offset(hundreds);
+            work[1] = golem_name_text_offset(hundreds + 1);
+            for (i = work[0]; i < work[1]; i++)
             {
+                if (length < GOLEM_NAME_LENGTH)
                 {
-                    s32 low_index;
-                    s32 high_index;
-                    accum[0] = ((ResourceByte*)(func_800C1E40(0x100) + (low_index = hundreds_digit * 2)))->value +
-                               (((ResourceByte*)(func_800C1E40(0x100) + ((high_index = hundreds_digit * 2 + 1))))->value << 8);
+                    GOLEM.group_records[group].name[length] = GOLEM_NAME_TEXT->bytes[i];
                 }
+                length++;
+            }
+        }
+        entry = (work[15] % 100) / 10;
+        if (work[15] >= 10)
+        {
+            work[0] = golem_name_text_offset(entry);
+            work[1] = golem_name_text_offset(entry + 1);
+            for (i = work[0]; i < work[1]; i++)
+            {
+                if (length < GOLEM_NAME_LENGTH)
                 {
-                    s32 low_index;
-                    s32 high_index;
-                    accum[1] = ((ResourceByte*)(func_800C1E40(0x100) + (low_index = (hundreds_digit + 1) * 2)))->value +
-                               (((ResourceByte*)(func_800C1E40(0x100) + ((high_index = (hundreds_digit + 1) * 2 + 1))))->value << 8);
+                    GOLEM.group_records[group].name[length] = GOLEM_NAME_TEXT->bytes[i];
                 }
-                i = accum[0];
-                if (i < accum[1])
-                {
-                    out_base = g_saved_game.bytes;
-                    record_offset = arg0 * 0x14C;
-                    do
-                    {
-                        if (count < 21)
-                        {
-                            ((NameView*)((count + record_offset) + (u32)out_base))->unk2B0C = ((ResourceByte*)(func_800C1E40(0x100) + i))->value;
-                        }
-                        count++;
-                        i++;
-                    } while (i < accum[1]);
-                }
+                length++;
             }
         }
-        digit = (accum[15] % 100) / 10;
-        if (accum[15] >= 10)
+        entry = work[15] % 10;
+        work[0] = golem_name_text_offset(entry);
+        work[1] = golem_name_text_offset(entry + 1);
+        for (i = work[0]; i < work[1]; i++)
         {
+            if (length < GOLEM_NAME_LENGTH)
             {
-                s32 low_index;
-                s32 high_index;
-                accum[0] = ((ResourceByte*)(func_800C1E40(0x100) + (low_index = digit * 2)))->value +
-                           (((ResourceByte*)(func_800C1E40(0x100) + ((high_index = digit * 2 + 1))))->value << 8);
+                GOLEM.group_records[group].name[length] = GOLEM_NAME_TEXT->bytes[i];
             }
+            length++;
+        }
+        work[0] = golem_name_text_offset(GOLEM_NAME_TEXT_SUFFIX);
+        work[1] = golem_name_text_offset(GOLEM_NAME_TEXT_SUFFIX + 1);
+        for (i = work[0]; i < work[1]; i++)
+        {
+            if (length < GOLEM_NAME_LENGTH)
             {
-                s32 low_index;
-                s32 high_index;
-                accum[1] = ((ResourceByte*)(func_800C1E40(0x100) + (low_index = (digit + 1) * 2)))->value +
-                           (((ResourceByte*)(func_800C1E40(0x100) + ((high_index = (digit + 1) * 2 + 1))))->value << 8);
+                GOLEM.group_records[group].name[length] = GOLEM_NAME_TEXT->bytes[i];
             }
-            i = accum[0];
-            if (i < accum[1])
-            {
-                out_base = g_saved_game.bytes;
-                record_offset = arg0 * 0x14C;
-                do
-                {
-                    if (count < 21)
-                    {
-                        ((NameView*)((count + record_offset) + (u32)out_base))->unk2B0C = ((ResourceByte*)(func_800C1E40(0x100) + i))->value;
-                    }
-                    count++;
-                    i++;
-                } while (i < accum[1]);
-            }
-        }
-        digit = accum[15] % 10;
-        {
-            s32 low_index;
-            s32 high_index;
-            accum[0] = ((ResourceByte*)(func_800C1E40(0x100) + (low_index = digit * 2)))->value +
-                       (((ResourceByte*)(func_800C1E40(0x100) + ((high_index = digit * 2 + 1))))->value << 8);
-        }
-        {
-            s32 low_index;
-            s32 high_index;
-            accum[1] = ((ResourceByte*)(func_800C1E40(0x100) + (low_index = (digit + 1) * 2)))->value +
-                       (((ResourceByte*)(func_800C1E40(0x100) + ((high_index = (digit + 1) * 2 + 1))))->value << 8);
-        }
-        i = accum[0];
-        if (i < accum[1])
-        {
-            out_base = g_saved_game.bytes;
-            record_offset = arg0 * 0x14C;
-            do
-            {
-                if (count < 21)
-                {
-                    ((NameView*)((count + record_offset) + (u32)out_base))->unk2B0C = ((ResourceByte*)(func_800C1E40(0x100) + i))->value;
-                }
-                count++;
-                i++;
-            } while (i < accum[1]);
-        }
-        accum[0] = func_800C1E40(0x100)[0x18] + (func_800C1E40(0x100)[0x19] << 8);
-        accum[1] = func_800C1E40(0x100)[0x1A] + (func_800C1E40(0x100)[0x1B] << 8);
-        i = accum[0];
-        if (i < accum[1])
-        {
-            out_base = g_saved_game.bytes;
-            record_offset = arg0 * 0x14C;
-            do
-            {
-                if (count < 21)
-                {
-                    ((NameView*)((count + record_offset) + (u32)out_base))->unk2B0C = ((ResourceByte*)(func_800C1E40(0x100) + i))->value;
-                }
-                count++;
-                i++;
-            } while (i < accum[1]);
+            length++;
         }
     }
-    if (count < 21)
+    if (length < GOLEM_NAME_LENGTH)
     {
-        u8* end_base = g_saved_game.bytes;
-        s32 end_offset = arg0 * 0x14C;
-        ((NameView*)(end_base + (count + end_offset)))->unk2B0C = 0;
+        GOLEM.group_records[group].name[length] = 0;
     }
 
-    i = 0;
-    accum[0] = 0;
-    if (g_gosub_result_count > 0)
-    {
-        u8* scan_base = g_saved_game.bytes;
-        u8* record_base = scan_base + 0xCE0;
-        s32 result_count = g_gosub_result_count;
-        s32* results;
-        results = g_gosub_result_values;
-        do
-        {
-            work_value = *results << 6;
-            if (((U32(scan_base, work_value + 0xCF4) >> 8) & 3) == 0)
-            {
-                accum[0] += U16(record_base, work_value + 0x24);
-            }
-            i++;
-            results++;
-        } while (i < result_count);
-    }
-    accum[0] = accum[0] < 10 ? 10 : accum[0] > 200 ? 200 : accum[0];
-    ((OutputStats*)(g_saved_game.bytes + arg0 * 0x14C))->stat0 = (u16)accum[0];
-
-    i = 0;
-    accum[0] = 0;
-    accum[1] = 0;
-    accum[2] = 0;
-    accum[3] = 0;
-    if (g_gosub_result_count > 0)
-    {
-        s32 selected_type = 1;
-        u8* scan_base = g_saved_game.bytes;
-        u8* record_base = scan_base + 0xCE0;
-        s32 result_count = g_gosub_result_count;
-        s32* results;
-        results = g_gosub_result_values;
-        do
-        {
-            work_value = *results << 6;
-            if (((U32(scan_base, work_value + 0xCF4) >> 8) & 3) == selected_type)
-            {
-                accum[0] += U16(record_base, work_value + 0x24);
-                accum[1] += U16(record_base, work_value + 0x26);
-                accum[2] += U16(record_base, work_value + 0x28);
-                accum[3] += U16(record_base, work_value + 0x2A);
-            }
-            i++;
-            results++;
-        } while (i < result_count);
-    }
-    {
-        u8* stat_base;
-        i = 0;
-        stat_base = g_saved_game.bytes;
-        for (; i < 4; i++)
-        {
-            s32 output_offset;
-            accum[i] = accum[i] < 0 ? 0 : accum[i] > 99 ? 99 : accum[i];
-            ((OutputStats*)((output_offset = arg0 * 0x14C + i * 2) + (u32)stat_base))->stat1 = (u16)accum[i];
-        }
-    }
-
-    accum[0] = 0;
-    accum[1] = 0;
-    accum[2] = 0;
-    accum[3] = 0;
-    accum[4] = 0;
-    accum[5] = 0;
-    accum[6] = 0;
-    accum[7] = 0;
-    accum[8] = 0;
-    accum[9] = 0;
-    accum[10] = 0;
-    accum[11] = 0;
-    accum[12] = 0;
-    accum[13] = 0;
-    accum[14] = 0;
-    accum[15] = 0;
-    i = 0;
-    if (g_gosub_result_count > i)
-    {
-        u8* item_base = g_saved_game.bytes;
-        s32 result_count = g_gosub_result_count;
-        s32* results = g_gosub_result_values;
-        do
-        {
-            u8* item = (u8*)((*results << 6) + (u32)item_base);
-            type = (U32(item, 0xCF4) >> 8) & 3;
-            if (type == 0)
-            {
-                accum[0] += U32(item, 0xCF8) & 0xF;
-                accum[1] += U8(item, 0xCF8) >> 4;
-                accum[2] += (U32(item, 0xCF8) >> 8) & 0xF;
-                accum[3] += (U32(item, 0xCF8) >> 12) & 0xF;
-                accum[4] += U16(item, 0xCFA) & 0xF;
-                accum[5] += (U32(item, 0xCF8) >> 20) & 0xF;
-                accum[6] += U8(item, 0xCFB) & 0xF;
-                accum[7] += U32(item, 0xCF8) >> 28;
-            }
-            else if (type == 1)
-            {
-                accum[8] += U32(item, 0xCF8) & 0xF;
-                accum[9] += U8(item, 0xCF8) >> 4;
-                accum[10] += (U32(item, 0xCF8) >> 8) & 0xF;
-                accum[11] += (U32(item, 0xCF8) >> 12) & 0xF;
-                accum[12] += U16(item, 0xCFA) & 0xF;
-                accum[13] += (U32(item, 0xCF8) >> 20) & 0xF;
-                accum[14] += U8(item, 0xCFB) & 0xF;
-                accum[15] += U32(item, 0xCF8) >> 28;
-            }
-            i++;
-            results++;
-        } while (i < result_count);
-    }
-    for (i = 0; i < 16; i++)
-    {
-        if (g_saved_game.bytes[0x29D5] >= 200)
-        {
-            accum[i] += 2;
-        }
-        accum[i] = accum[i] < 0 ? 0 : accum[i] > 9 ? 9 : accum[i];
-    }
-
-    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a0 = accum[0];
-    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a1 = accum[1];
-    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a2 = accum[2];
-    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a3 = accum[3];
-    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a4 = accum[4];
-    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a5 = accum[5];
-    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a6 = accum[6];
-    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a7 = accum[7];
-    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a8 = accum[8];
-    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a9 = accum[9];
-    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a10 = accum[10];
-    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a11 = accum[11];
-    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a12 = accum[12];
-    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a13 = accum[13];
-    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a14 = accum[14];
-    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a15 = accum[15];
-
-    accum[0] = 0;
-    accum[1] = 0;
-    accum[2] = 0;
-    accum[3] = 0;
-    accum[4] = 0;
-    accum[5] = 0;
-    accum[6] = 0;
-    accum[7] = 0;
+    work[0] = 0;
     for (i = 0; i < g_gosub_result_count; i++)
     {
-        s8* resistance_table = D_800F0C38;
-        u8* item = g_saved_game.bytes + (work_value = g_gosub_result_values[i] << 6);
-        accum[0] += resistance_table[U32(item, 0xCFC) & 0xF];
-        accum[1] += resistance_table[U8(item, 0xCFC) >> 4];
-        accum[2] += resistance_table[(U32(item, 0xCFC) >> 8) & 0xF];
-        accum[3] += resistance_table[(U32(item, 0xCFC) >> 12) & 0xF];
-        accum[4] += resistance_table[U16(item, 0xCFE) & 0xF];
-        accum[5] += resistance_table[(U32(item, 0xCFC) >> 20) & 0xF];
-        accum[6] += resistance_table[U8(item, 0xCFF) & 0xF];
-        accum[7] += resistance_table[U32(item, 0xCFC) >> 28];
-    }
-    for (i = 0; i < 8; i++)
-    {
-        accum[i] = (accum[i] * 5) + 20;
-        accum[i] = accum[i] < 20 ? 20 : accum[i] > 99 ? 99 : accum[i];
-        ((ResistanceView*)(g_saved_game.bytes + arg0 * 0x14C + i * 2))->resistance &= 0xFE00;
-        ((ResistanceView*)(g_saved_game.bytes + arg0 * 0x14C + i * 2))->resistance = (u16)accum[i] << 9;
-    }
+        index = g_gosub_result_values[i];
+        if (GAME_STATE->items[index].info.bits.category == FIELD_ITEM_CATEGORY_WEAPON)
+        {
+            FieldItemRecord* item = &GAME_STATE->items[index];
 
-    accum[0] = 0;
-    i = 0;
-    if (g_gosub_result_count > i)
-    {
-        s32 selected_type = 1;
-        u8* scan_base = g_saved_game.bytes;
-        u8* record_base = scan_base + 0xCE0;
-        s32 result_count = g_gosub_result_count;
-        s32* results;
-        results = g_gosub_result_values;
-        do
-        {
-            work_value = *results << 6;
-            if (((U32(scan_base, work_value + 0xCF4) >> 8) & 3) == selected_type)
-            {
-                accum[0] |= U8(record_base, work_value + 0x2c);
-            }
-            i++;
-            results++;
-        } while (i < result_count);
+            work[0] += item->derived.values[0];
+        }
     }
-    g_saved_game.bytes[arg0 * 0x14C + 0x2B48] = (u8)accum[0];
-    accum[0] = 0;
-    i = 0;
-    if (g_gosub_result_count > 0)
-    {
-        u8* scan_base = g_saved_game.bytes;
-        u8* record_base = scan_base + 0xCE0;
-        s32 result_count = g_gosub_result_count;
-        s32* results;
-        results = g_gosub_result_values;
-        do
-        {
-            work_value = *results << 6;
-            if (((U32(scan_base, work_value + 0xCF4) >> 8) & 3) == 0)
-            {
-                accum[0] |= U8(record_base, work_value + 0x2c);
-            }
-            i++;
-            results++;
-        } while (i < result_count);
-    }
-    g_saved_game.bytes[arg0 * 0x14C + 0x2B49] = (u8)accum[0];
-    accum[0] = 0;
-    i = 0;
-    if (g_gosub_result_count > 0)
-    {
-        s32 selected_type = 1;
-        u8* scan_base = g_saved_game.bytes;
-        u8* record_base = scan_base + 0xCE0;
-        s32 result_count = g_gosub_result_count;
-        s32* results;
-        results = g_gosub_result_values;
-        do
-        {
-            work_value = *results << 6;
-            if (((U32(scan_base, work_value + 0xCF4) >> 8) & 3) == selected_type)
-            {
-                accum[0] |= U8(record_base, work_value + 0x2d);
-            }
-            i++;
-            results++;
-        } while (i < result_count);
-    }
+    work[0] = work[0] < GOLEM_POWER_MIN ? GOLEM_POWER_MIN : work[0] > GOLEM_POWER_MAX ? GOLEM_POWER_MAX : work[0];
+    GOLEM.group_records[group].power = work[0];
 
-    tb0 = g_saved_game.bytes;
-    (tb0 + arg0 * 0x14C)[0x2B4A] = (u8)accum[0];
-    (tb0 + arg0 * 0x14C)[0x2B4B] = 1;
-    U32((tb0 + arg0 * 0x14C), 0x2B4C) = 0;
-    ((GroupOutput*)(tb0 + arg0 * 0x14C))->low = 0;
+    work[0] = 0;
+    work[1] = 0;
+    work[2] = 0;
+    work[3] = 0;
     for (i = 0; i < g_gosub_result_count; i++)
     {
-        if (((ItemHeader*)(g_saved_game.bytes + (g_gosub_result_values[i] << 6)))->type == 0)
+        index = g_gosub_result_values[i];
+        if (GAME_STATE->items[index].info.bits.category == FIELD_ITEM_CATEGORY_ARMOR)
         {
-            ((GroupOutput*)(tb0 + arg0 * 0x14C))->low = (u8)local_table[((ItemHeader*)(g_saved_game.bytes + (g_gosub_result_values[i] << 6)))->category];
+            FieldItemRecord* item = &GAME_STATE->items[index];
+
+            work[0] += item->derived.values[0];
+            work[1] += item->derived.values[1];
+            work[2] += item->derived.values[2];
+            work[3] += item->derived.values[3];
+        }
+    }
+    for (i = 0; i < HISTORY_RECORD_STAT_COUNT; i++)
+    {
+        work[i] = work[i] < 0 ? 0 : work[i] > GOLEM_EQUIPMENT_TOTAL_MAX ? GOLEM_EQUIPMENT_TOTAL_MAX : work[i];
+        GOLEM.group_records[group].equipment_totals[i] = work[i];
+    }
+
+    work[0] = 0;
+    work[1] = 0;
+    work[2] = 0;
+    work[3] = 0;
+    work[4] = 0;
+    work[5] = 0;
+    work[6] = 0;
+    work[7] = 0;
+    work[8] = 0;
+    work[9] = 0;
+    work[10] = 0;
+    work[11] = 0;
+    work[12] = 0;
+    work[13] = 0;
+    work[14] = 0;
+    work[15] = 0;
+    for (i = 0; i < g_gosub_result_count; i++)
+    {
+        index = g_gosub_result_values[i];
+        if (GAME_STATE->items[index].info.bits.category == FIELD_ITEM_CATEGORY_WEAPON)
+        {
+            work[0] += GAME_STATE->items[index].bonus_nibbles.bits.n0;
+            work[1] += GAME_STATE->items[index].bonus_nibbles.bits.n1;
+            work[2] += GAME_STATE->items[index].bonus_nibbles.bits.n2;
+            work[3] += GAME_STATE->items[index].bonus_nibbles.bits.n3;
+            work[4] += GAME_STATE->items[index].bonus_nibbles.bits.n4;
+            work[5] += GAME_STATE->items[index].bonus_nibbles.bits.n5;
+            work[6] += GAME_STATE->items[index].bonus_nibbles.bits.n6;
+            work[7] += GAME_STATE->items[index].bonus_nibbles.bits.n7;
+        }
+        else if (GAME_STATE->items[index].info.bits.category == FIELD_ITEM_CATEGORY_ARMOR)
+        {
+            work[GOLEM_ARMOR_BONUS_BASE + 0] += GAME_STATE->items[index].bonus_nibbles.bits.n0;
+            work[GOLEM_ARMOR_BONUS_BASE + 1] += GAME_STATE->items[index].bonus_nibbles.bits.n1;
+            work[GOLEM_ARMOR_BONUS_BASE + 2] += GAME_STATE->items[index].bonus_nibbles.bits.n2;
+            work[GOLEM_ARMOR_BONUS_BASE + 3] += GAME_STATE->items[index].bonus_nibbles.bits.n3;
+            work[GOLEM_ARMOR_BONUS_BASE + 4] += GAME_STATE->items[index].bonus_nibbles.bits.n4;
+            work[GOLEM_ARMOR_BONUS_BASE + 5] += GAME_STATE->items[index].bonus_nibbles.bits.n5;
+            work[GOLEM_ARMOR_BONUS_BASE + 6] += GAME_STATE->items[index].bonus_nibbles.bits.n6;
+            work[GOLEM_ARMOR_BONUS_BASE + 7] += GAME_STATE->items[index].bonus_nibbles.bits.n7;
+        }
+    }
+    for (i = 0; i < GOLEM_BONUS_COUNT; i++)
+    {
+        if (GOLEM.header.fields.created_count >= GOLEM_VETERAN_COUNT)
+        {
+            work[i] += GOLEM_VETERAN_BONUS;
+        }
+        work[i] = work[i] < 0 ? 0 : work[i] > GOLEM_BONUS_MAX ? GOLEM_BONUS_MAX : work[i];
+    }
+    GOLEM.group_records[group].weapon_bonus.n0 = work[0];
+    GOLEM.group_records[group].weapon_bonus.n1 = work[1];
+    GOLEM.group_records[group].weapon_bonus.n2 = work[2];
+    GOLEM.group_records[group].weapon_bonus.n3 = work[3];
+    GOLEM.group_records[group].weapon_bonus.n4 = work[4];
+    GOLEM.group_records[group].weapon_bonus.n5 = work[5];
+    GOLEM.group_records[group].weapon_bonus.n6 = work[6];
+    GOLEM.group_records[group].weapon_bonus.n7 = work[7];
+    GOLEM.group_records[group].armor_bonus.n0 = work[GOLEM_ARMOR_BONUS_BASE + 0];
+    GOLEM.group_records[group].armor_bonus.n1 = work[GOLEM_ARMOR_BONUS_BASE + 1];
+    GOLEM.group_records[group].armor_bonus.n2 = work[GOLEM_ARMOR_BONUS_BASE + 2];
+    GOLEM.group_records[group].armor_bonus.n3 = work[GOLEM_ARMOR_BONUS_BASE + 3];
+    GOLEM.group_records[group].armor_bonus.n4 = work[GOLEM_ARMOR_BONUS_BASE + 4];
+    GOLEM.group_records[group].armor_bonus.n5 = work[GOLEM_ARMOR_BONUS_BASE + 5];
+    GOLEM.group_records[group].armor_bonus.n6 = work[GOLEM_ARMOR_BONUS_BASE + 6];
+    GOLEM.group_records[group].armor_bonus.n7 = work[GOLEM_ARMOR_BONUS_BASE + 7];
+
+    work[0] = 0;
+    work[1] = 0;
+    work[2] = 0;
+    work[3] = 0;
+    work[4] = 0;
+    work[5] = 0;
+    work[6] = 0;
+    work[7] = 0;
+    for (i = 0; i < g_gosub_result_count; i++)
+    {
+        index = g_gosub_result_values[i];
+        work[0] += D_800F0C38[GAME_STATE->items[index].stat_nibbles.bits.n0];
+        work[1] += D_800F0C38[GAME_STATE->items[index].stat_nibbles.bits.n1];
+        work[2] += D_800F0C38[GAME_STATE->items[index].stat_nibbles.bits.n2];
+        work[3] += D_800F0C38[GAME_STATE->items[index].stat_nibbles.bits.n3];
+        work[4] += D_800F0C38[GAME_STATE->items[index].stat_nibbles.bits.n4];
+        work[5] += D_800F0C38[GAME_STATE->items[index].stat_nibbles.bits.n5];
+        work[6] += D_800F0C38[GAME_STATE->items[index].stat_nibbles.bits.n6];
+        work[7] += D_800F0C38[GAME_STATE->items[index].stat_nibbles.bits.n7];
+    }
+    for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
+    {
+        work[i] = work[i] * 5 + GOLEM_STAT_MIN;
+        work[i] = work[i] < GOLEM_STAT_MIN ? GOLEM_STAT_MIN : work[i] > GOLEM_STAT_MAX ? GOLEM_STAT_MAX : work[i];
+        /* The base clear is overwritten by the full store below; both stores are in the original. */
+        GOLEM.group_records[group].stats[i].bits.base = 0;
+        GOLEM.group_records[group].stats[i].value = work[i] << FIELD_STAT_EFFECTIVE_SHIFT;
+    }
+
+    work[0] = 0;
+    for (i = 0; i < g_gosub_result_count; i++)
+    {
+        index = g_gosub_result_values[i];
+        if (GAME_STATE->items[index].info.bits.category == FIELD_ITEM_CATEGORY_ARMOR)
+        {
+            FieldItemRecord* item = &GAME_STATE->items[index];
+
+            work[0] |= item->flags2C;
+        }
+    }
+    GOLEM.group_records[group].armor_flags = work[0];
+    work[0] = 0;
+    for (i = 0; i < g_gosub_result_count; i++)
+    {
+        index = g_gosub_result_values[i];
+        if (GAME_STATE->items[index].info.bits.category == FIELD_ITEM_CATEGORY_WEAPON)
+        {
+            FieldItemRecord* item = &GAME_STATE->items[index];
+
+            work[0] |= item->flags2C;
+        }
+    }
+    GOLEM.group_records[group].weapon_flags = work[0];
+    work[0] = 0;
+    for (i = 0; i < g_gosub_result_count; i++)
+    {
+        index = g_gosub_result_values[i];
+        if (GAME_STATE->items[index].info.bits.category == FIELD_ITEM_CATEGORY_ARMOR)
+        {
+            FieldItemRecord* item = &GAME_STATE->items[index];
+
+            work[0] |= item->flags2D;
+        }
+    }
+    GOLEM.group_records[group].armor_flags2 = work[0];
+    GOLEM.group_records[group].unknown_0x3F = 1;
+    GOLEM.group_records[group].unknown_0x40 = 0;
+
+    GOLEM.group_records[group].logic_class = 0;
+    for (i = 0; i < g_gosub_result_count; i++)
+    {
+        index = g_gosub_result_values[i];
+        if (GAME_STATE->items[index].info.bits.category == FIELD_ITEM_CATEGORY_WEAPON)
+        {
+            GOLEM.group_records[group].logic_class = weapon_classes.classes[GAME_STATE->items[index].info.bits.item_type];
         }
     }
 
-    i = 0;
-    accum[0] = 0;
-    tb1 = g_saved_game.bytes;
-    ((GroupOutput*)(tb1 + arg0 * 0x14C))->high = 4;
+    work[0] = 0;
+    GOLEM.group_records[group].grid_bound = GOLEM_GRID_BOUND_BASE;
+    for (i = 0; i < g_gosub_result_count; i++)
     {
-        s32 result_count = g_gosub_result_count;
-        s32* results;
-        if (result_count > 0)
+        index = g_gosub_result_values[i];
+        if (GAME_STATE->items[index].info.bits.category == FIELD_ITEM_CATEGORY_ARMOR)
         {
-            u8* scan_base = g_saved_game.bytes;
-            s32 selected_type = 1;
-            results = g_gosub_result_values;
-            do
-            {
-                if (((U32(scan_base, (*results << 6) + 0xCF4) >> 8) & 3) == selected_type)
-                {
-                    accum[0]++;
-                }
-                i++;
-                results++;
-            } while (i < result_count);
+            work[0]++;
         }
     }
-    if (accum[0] == 2)
+    if (work[0] == 2)
     {
-        tb2 = g_saved_game.bytes;
-        ((GroupOutput*)(tb2 + arg0 * 0x14C))->high = 5;
+        GOLEM.group_records[group].grid_bound = GOLEM_GRID_BOUND_BASE + 1;
     }
-    if (accum[0] == 3)
+    if (work[0] == 3)
     {
-        tb3 = g_saved_game.bytes;
-        ((GroupOutput*)(tb3 + arg0 * 0x14C))->high = 6;
+        GOLEM.group_records[group].grid_bound = GOLEM_GRID_BOUND_BASE + 2;
     }
-    tb4 = g_saved_game.bytes;
-    (tb4 + arg0 * 0x14C)[0x2B51] = 0;
-    accum[0] = 75 - (((tb4 + arg0 * 0x14C)[0x2B50] >> 4) * 10);
-    accum[0] = accum[0] < 0 ? 0 : accum[0] > 50 ? 50 : accum[0];
-    tb5 = g_saved_game.bytes;
-    (tb5 + arg0 * 0x14C)[0x2B52] = (u8)accum[0];
-    (tb5 + arg0 * 0x14C)[0x2B53] = 0;
-    U32((tb5 + arg0 * 0x14C), 0x2B54) = 0;
-    accum[0] = U16((tb5 + arg0 * 0x14C), 0x2B24);
-    accum[1] = U16((tb5 + arg0 * 0x14C), 0x2B26);
-    accum[2] = U16((tb5 + arg0 * 0x14C), 0x2B28);
-    accum[3] = U16((tb5 + arg0 * 0x14C), 0x2B2A);
-    accum[4] = U16((tb5 + arg0 * 0x14C), 0x2B2C);
-    count = accum[0] + accum[1] + accum[2] + accum[3] + accum[4];
-    count = count * 5 >> 1;
-    if (count >= 50)
-    {
-        work_value = 999;
-        if (count < 1000)
-        {
-            work_value = count;
-        }
-    }
-    else
-    {
-        work_value = 50;
-    }
-    {
-        u8* hp_base;
-        hp_base = g_saved_game.bytes;
-        U16((hp_base + arg0 * 0x14C), 0x2B22) = (s16)work_value;
-    }
+
+    GOLEM.group_records[group].unknown_0x45 = 0;
+    work[0] = 75 - GOLEM.group_records[group].grid_bound * 10;
+    work[0] = work[0] < 0 ? 0 : work[0] > 50 ? 50 : work[0];
+    GOLEM.group_records[group].unknown_0x46 = work[0];
+    GOLEM.group_records[group].unknown_0x47 = 0;
+    GOLEM.group_records[group].unknown_0x48 = 0;
+
+    work[0] = GOLEM.group_records[group].power;
+    work[1] = GOLEM.group_records[group].equipment_totals[0];
+    work[2] = GOLEM.group_records[group].equipment_totals[1];
+    work[3] = GOLEM.group_records[group].equipment_totals[2];
+    work[4] = GOLEM.group_records[group].equipment_totals[3];
+    /* The name length local doubles as the stat total; a separate local changes the register allocation. */
+    length = work[0] + work[1] + work[2] + work[3] + work[4];
+    length = length * 5 >> 1;
+    max_hp = length < GOLEM_MAX_HP_MIN ? GOLEM_MAX_HP_MIN : length > GOLEM_MAX_HP_MAX ? GOLEM_MAX_HP_MAX : length;
+    GOLEM.group_records[group].hp = max_hp;
 }

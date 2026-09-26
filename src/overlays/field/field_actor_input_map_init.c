@@ -49,7 +49,7 @@ void field_apply_weapon_action_params(s32 player_index)
 
     for (i = 0; i < FIELD_WEAPON_ACTION_COUNT; i++)
     {
-        switch (g_field_player_records[player_index].weapon_type)
+        switch (g_field_player_records[player_index].head.bytes.weapon_type)
         {
         case FIELD_WEAPON_HAMMER:
         case FIELD_WEAPON_STAFF:

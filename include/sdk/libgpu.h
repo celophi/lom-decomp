@@ -86,6 +86,14 @@ typedef struct {
     short x0, y0;
     short x1, y1;
     short x2, y2;
+} POLY_F3;
+
+typedef struct {
+    u_long tag;
+    u_char r0, g0, b0, code;
+    short x0, y0;
+    short x1, y1;
+    short x2, y2;
     short x3, y3;
 } POLY_F4;
 
@@ -103,6 +111,23 @@ typedef struct {
     u_char u2, v2;
     u_short pad1;
 } POLY_FT3;
+
+/** @brief Gouraud-shaded textured triangle GPU packet. */
+typedef struct {
+    u_long tag;
+    u_char r0, g0, b0, code;
+    short x0, y0;
+    u_char u0, v0;
+    u_short clut;
+    u_char r1, g1, b1, p1;
+    short x1, y1;
+    u_char u1, v1;
+    u_short tpage;
+    u_char r2, g2, b2, p2;
+    short x2, y2;
+    u_char u2, v2;
+    u_short pad2;
+} POLY_GT3;
 
 typedef struct {
     u_long tag;
@@ -271,7 +296,10 @@ typedef struct {
 #define setTexWindow(prim, window) \
     (setlen((prim), 2), ((u_long *)(prim))[1] = _get_tw(window), ((u_long *)(prim))[2] = 0)
 
+#define setPolyF3(prim)   (setlen((prim), 4), setcode((prim), 0x20))
+#define setPolyFT3(prim)  (setlen((prim), 7), setcode((prim), 0x24))
 #define setPolyG3(prim)   (setlen((prim), 6), setcode((prim), 0x30))
+#define setPolyGT3(prim)  (setlen((prim), 9), setcode((prim), 0x34))
 #define setPolyF4(prim)   (setlen((prim), 5), setcode((prim), 0x28))
 #define setPolyFT4(prim)  (setlen((prim), 9), setcode((prim), 0x2c))
 #define setSprt16(prim)   (setlen((prim), 3), setcode((prim), 0x7c))

@@ -1,71 +1,73 @@
+/**
+ * @file field_layout_slot_state.c
+ * @brief Place a land on the world map and reset all lands for a new game.
+ */
+
 #include "saved_game.h"
 #include "common.h"
 #include "field_calls.h"
+#include "field_records.h"
+
+/** @brief g_saved_game viewed as FIELD's game state. */
+#define FIELD_SAVED_GAME ((FieldGameState *)&g_saved_game)
 
 /**
- * @brief Activate a layout slot and assign its insertion sequence number.
- * @param arg0 Index of the 12-byte layout-slot record.
+ * @brief Place a land on the map without any checks and record its placement order.
+ * @param land_index Land index, below FIELD_LAND_COUNT.
+ * @see func_800C3518 for the checked version.
  */
-void func_800CA1A0(s32 arg0)
+void field_place_land(s32 land_index)
 {
-    u8* rec;
+    FieldGameState *game = FIELD_SAVED_GAME;
 
-    rec = &g_saved_game.bytes[arg0 * 0xC];
-    g_saved_game.bytes[0x2E4]++;
-    rec[0x2F0] |= 1;
-    rec[0x2F3] = g_saved_game.bytes[0x2E4];
+    game->control.fields.placed_land_count++;
+    game->lands[land_index].flags |= FIELD_LAND_PLACED;
+    game->lands[land_index].count = game->control.fields.placed_land_count;
 }
 
 /**
- * @brief Reset the 0x40 per-slot layout records in g_saved_game.bytes.
+ * @brief Take every land off the map and clear its levels, as for a new game.
  *
- * Clears the two header bytes at 0x2E4/0x2E5, then walks 0x40 records of 0xC
- * bytes each (base offset 0x2F0): sets the first field to 0xFF, zeroes the
- * rest, and clears the low three bits of the flag byte. A second pass sets
- * bit 2 of every record's flag byte, and finally clears bit 2 of the word at
- * 0x410.
- *
+ * Also clears the hero level. Afterwards every land has FIELD_LAND_FLAG_04
+ * set except land 24.
  */
-void func_800CA1E0(void)
+void field_reset_lands(void)
 {
+    FieldGameState *game;
+    FieldGameState *view;
     s32 i;
-    u8* p;
-    u8* q;
-    u8* r;
 
     i = 0;
-    g_saved_game.bytes[0x2E4] = 0;
-    g_saved_game.bytes[0x2E5] = 0;
-    p = g_saved_game.bytes;
-reset_slots:
-    i += 1;
-    p[0x2F1] = 0xFF;
-    p[0x2F2] = 0;
-    p[0x2F3] = 0;
-    p[0x2F4] = 0;
-    p[0x2F5] = 0;
-    p[0x2F6] = 0;
-    p[0x2F7] = 0;
-    p[0x2F8] = 0;
-    p[0x2F9] = 0;
-    p[0x2FA] = 0;
-    p[0x2FB] = 0;
-    p[0x2F0] &= 0xF8;
-    p += 0xC;
-    if (i < 0x40)
+    FIELD_SAVED_GAME->control.fields.placed_land_count = 0;
+    FIELD_SAVED_GAME->control.fields.hero_level = 0;
+    /* view walks g_saved_game one land record per pass, so view->lands[0] is lands[i].
+     * A structured loop lets loop.c hoist the FIELD_LAND_POSITION_NONE constant out of it. */
+    view = FIELD_SAVED_GAME;
+reset_land:
+    i++;
+    view->lands[0].position = FIELD_LAND_POSITION_NONE;
+    view->lands[0].unk2 = 0;
+    view->lands[0].count = 0;
+    view->lands[0].levels[0] = 0;
+    view->lands[0].levels[1] = 0;
+    view->lands[0].levels[2] = 0;
+    view->lands[0].levels[3] = 0;
+    view->lands[0].levels[4] = 0;
+    view->lands[0].levels[5] = 0;
+    view->lands[0].levels[6] = 0;
+    view->lands[0].levels[7] = 0;
+    view->lands[0].flags &= ~(FIELD_LAND_PLACED | FIELD_LAND_FLAG_02 | FIELD_LAND_FLAG_04);
+    view = (FieldGameState *)((FieldLandRecord *)view + 1);
+    if (i < FIELD_LAND_COUNT)
     {
-        goto reset_slots;
+        goto reset_land;
     }
-    i = 0;
-    q = g_saved_game.bytes;
-enable_slots:
-    i += 1;
-    q[0x2F0] |= 4;
-    q += 0xC;
-    if (i < 0x40)
+
+    for (i = 0; i < FIELD_LAND_COUNT; i++)
     {
-        goto enable_slots;
+        FIELD_SAVED_GAME->lands[i].flags |= FIELD_LAND_FLAG_04;
     }
-    r = g_saved_game.bytes;
-    *((s32*)(r + 0x410)) &= ~4;
+    /* Through a local pointer; the direct form folds the offset into the symbol address. */
+    game = FIELD_SAVED_GAME;
+    ((FieldLandWords *)game->lands)[24].word &= ~FIELD_LAND_FLAG_04;
 }

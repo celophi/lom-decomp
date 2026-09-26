@@ -43,6 +43,9 @@
 /** @brief Number of animation actor bindings (party members 0, 1 and everyone else). */
 #define FIELD_ACTOR_BINDING_COUNT 3
 
+/** @brief FieldObjectState::interaction_kind of a dropped item the player can pick up. */
+#define FIELD_INTERACTION_ITEM 1
+
 /** @brief Sentinel returned by the actor lookups when no object matches. */
 #define FIELD_ACTOR_NONE ((FieldActor*)-1)
 
@@ -204,7 +207,8 @@ typedef struct
     s32 target_y;
     s32 target_z;
     u8 unk5C[0x64 - 0x5C];
-    s32 unk64;
+    /** @brief Display name of the object, NULL when it has no label. */
+    u8* name;
     s32 unk68;
     FieldRoutePoint route_history[FIELD_ROUTE_HISTORY_LENGTH];
     FieldCollisionWord collision;
@@ -230,7 +234,8 @@ typedef struct
     s32 previous_flags;
     u8 targets[13];
     u8 retry_count;
-    u8 unk18E;
+    /** @brief Non-zero when the player can interact with the object; FIELD_INTERACTION_ITEM for an item to pick up. */
+    u8 interaction_kind;
     u8 unk18F[0x19C - 0x18F];
     /** @brief Floor node cached between collision passes (-1 asks for a fresh search). */
     s32 collision_node;
@@ -324,12 +329,31 @@ typedef struct
 /** @brief FieldObjectPart::flags bit 23: the object ignores map collision. */
 #define FIELD_PART_IGNORE_MAP_COLLISION 0x800000
 
+/** @brief Flag byte and weapon type of a party member, also updated as one halfword. */
+typedef union FieldPlayerHead
+{
+    u16 word;
+    struct
+    {
+        /** @brief FIELD_PLAYER_ACTIVE and the other bits of @c bits. */
+        u8 flags;
+        /** @brief Weapon type (item type) of the equipped weapon, 0xFF before the first party update. */
+        u8 weapon_type;
+    } bytes;
+    struct
+    {
+        /** @brief Same bit as FIELD_PLAYER_ACTIVE. */
+        u16 active : 1;
+        /** @brief Selects the hero's alternate sprite and portrait set. */
+        u16 alt_appearance : 1;
+        u16 unk2 : 14;
+    } bits;
+} FieldPlayerHead;
+
 /** @brief Per-party-member record (0x268 bytes). */
 typedef struct FieldPlayerRecord
 {
-    u8 flags;
-    /** @brief Weapon type (item type) of the equipped weapon. */
-    u8 weapon_type;
+    FieldPlayerHead head;
     /** @brief Character within character_kind (partner or companion id). */
     u8 character_id;
     /** @brief FIELD_PLAYER_KIND_* value selecting the resource set. */

@@ -1,10 +1,10 @@
 /** @file field_modal_runtime.c
- * @brief Immediate text, input/text session and modal runtime for FIELD.
+ * @brief Immediate text, actor labels, field input and the modal overlays.
  *
- * One translation unit covering 0x800A88A0 .. 0x800AD030 (formerly
- * field_immediate_text.c, field_input_text_session.c and field_modal_runtime.c).
- * Globals whose reconstructed type differs between the former files are
- * declared at block scope in the earlier users.
+ * Covers 0x800A88A0 .. 0x800AD030: the immediate text drawer and number
+ * formatter, saved names and inventory helpers, the actor-label text session,
+ * controller input with key repeat, and the menu, shop, GOSUB, CARDA, NIKI,
+ * ADDHERO and duel modal screens.
  */
 
 #include "field_text.h"
@@ -12,6 +12,7 @@
 #include "field_actor_routes.h"
 #include "field_actor_runtime.h"
 #include "field_calls.h"
+#include "field_menu_element.h"
 #include "gpu_packet.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
@@ -24,38 +25,335 @@
 #include "field_scene_transition.h"
 #include "cd_resources.h"
 #include "controller_internal.h"
+#include "field_records.h"
+#include "field_actor_tables.h"
+#include "field_runtime.h"
+#include "display.h"
+#include "game_state.h"
 
-/* ---- Immediate text (0x800A88A0 .. 0x800A8CFC) ---- */
+/** @brief Text lead bytes 0x19 to 0x1F start a two-byte glyph. */
+#define IS_DBCS_LEAD_BYTE(byte) (((byte) >= 0x19) && ((byte) <= 0x1F))
+#define NAME_GLYPH_SIZE_SINGLE 1
+#define NAME_GLYPH_SIZE_DOUBLE 2
+/** @brief Lead byte of the double-byte digit glyphs (followed by the digit value). */
+#define FIELD_TEXT_DIGIT_LEAD 0x1D
+
+/** @brief Largest number of entries in the dialog item list. */
+#define FIELD_DIALOG_ITEM_LIMIT 10
+
+/** @brief Frames a newly pressed button waits before it repeats. */
+#define FIELD_PAD_REPEAT_DELAY 15
+/** @brief Frames between two repeats of a held button (it fires every third frame). */
+#define FIELD_PAD_REPEAT_INTERVAL 2
+#define FIELD_PAD_DIRECTIONS (PADLup | PADLdown | PADLleft | PADLright)
+/** @brief Buttons whose presses count as still holding the repeating buttons. */
+#define FIELD_PAD_HOLD_BUTTONS (PADh | PADi | PADselect | PADRdown | PADRright | PADL1 | PADL2 | PADR1 | PADR2)
+/** @brief Button combination that resets the game to the title screen. */
+#define FIELD_INPUT_RESET_COMBINATION (PADh | PADselect | PADL1 | PADL2 | PADR1 | PADR2)
+/** @brief Analog stick offsets beyond this count as a direction press. */
+#define FIELD_PAD_STICK_THRESHOLD 1
+
+/** @brief Ordering table entry of the field text; the selected label goes one entry in front. */
+#define FIELD_TEXT_OT_INDEX 15
+/** @brief field_draw_text alignment flags and the flag that adds the glyph shadow pass. */
+#define FIELD_TEXT_ALIGN_MASK 0x7F
+#define FIELD_TEXT_ALIGN_RIGHT 1
+#define FIELD_TEXT_ALIGN_CENTER 2
+#define FIELD_TEXT_SHADOW 0x80
+/** @brief field_draw_text text colours. */
+#define FIELD_TEXT_COLOR_NORMAL 4
+#define FIELD_TEXT_COLOR_DIM 5
+
+/** @brief Scale given to the part of the selected label's actor (0x40 is full size). */
+#define FIELD_LABEL_SELECTED_SCALE 0x80
+#define FIELD_LABEL_MIN_Y 50
+#define FIELD_LABEL_MAX_Y 176
+/** @brief Half width of one label glyph in pixels. */
+#define FIELD_LABEL_GLYPH_HALF_WIDTH 6
+/** @brief Glyphs of the brackets drawn around the selected label (func_800AD524). */
+#define FIELD_LABEL_LEFT_BRACKET 12
+#define FIELD_LABEL_RIGHT_BRACKET 13
+/** @brief Smallest gap between a label and the left screen edge. */
+#define FIELD_LABEL_MARGIN 8
+/** @brief func_800AD524 / func_800AD208 flags of the label glyphs: outline plus palette 1 or 2. */
+#define FIELD_LABEL_SELECTED_DIGITS (FIELD_TEXT_SHADOW | 1)
+#define FIELD_LABEL_NORMAL_DIGITS (FIELD_TEXT_SHADOW | 2)
+/** @brief Screen row of the field origin (actors are drawn relative to it). */
+#define FIELD_SCREEN_CENTER_Y 112
+/** @brief Held-button hints: eight hint buttons, portrait and text position (32 pixels per player). */
+#define FIELD_HINT_BUTTON_COUNT 8
+#define FIELD_HINT_PORTRAIT_X 96
+#define FIELD_HINT_PORTRAIT_Y 60
+#define FIELD_HINT_TEXT_X 128
+#define FIELD_HINT_TEXT_Y 64
+/** @brief Byte offset of a member (the classic offsetof). */
+#define FIELD_OFFSET_OF(type, member) ((s32) & ((type*)0)->member)
+
+#define FIELD_SOUND_ACTION_REFUSED 0x78
+#define FIELD_SOUND_CURSOR 0x7D
+#define FIELD_SOUND_SELECT 0x7E
+#define FIELD_SOUND_MENU_OPEN 0x80
+#define FIELD_SOUND_LOW_HP 0xA6
+#define FIELD_SOUND_EMPTY_SHOP 0xC7
+#define FIELD_SOUND_DUEL_INTRO 0x125
+#define FIELD_SOUND_DUEL_RESULT 0x126
+#define FIELD_SOUND_DUEL_PANEL_OUT 0x127
+#define FIELD_SOUND_PAN_CENTRE 0x80
+
+/** @brief FieldPlayerRecord weapon type before the first party update. */
+#define FIELD_WEAPON_TYPE_UNSET 0xFF
+/** @brief FieldPlayerRecord::portrait_index when no portrait is cached. */
+#define FIELD_PORTRAIT_NONE 0xFF
+/** @brief Party record of the companion. */
+#define FIELD_COMPANION_INDEX 2
+/** @brief Golem companions use character ids from this value on. */
+#define FIELD_COMPANION_GOLEM_ID_BASE 0x41
+/** @brief Resource id base of the companion action packages (func_800A5174). */
+#define FIELD_RES_COMPANION_ACTIONS 0xA9B
+/** @brief Action slots of a party member's row: two commands, then four skills from slot 4. */
+#define FIELD_COMMAND_SLOT_COUNT 2
+/** @brief Button action of the first command: button actions 2 and 3 run resource action slots 0 and 1. */
+#define FIELD_COMMAND_BUTTON_ACTION 2
+#define FIELD_SKILL_SLOT_COUNT 4
+#define FIELD_SKILL_ACTION_BASE 4
+/** @brief Saved skill values: none, or an instrument (plus its item record index). */
+#define FIELD_SKILL_NONE 0xFF
+#define FIELD_SKILL_INSTRUMENT 0x80
+/** @brief FieldActionFlags::target_filter of an action without a target predicate. */
+#define FIELD_ACTION_TARGET_NONE 0xFF
+/** @brief Technique actions: command flag and sequence ids (FIELD_TECHNIQUE_SEQUENCE_BASE + weapon type * 24 + technique). */
+#define FIELD_ACTION_TECHNIQUE 0x8000
+#define FIELD_ACTION_TECHNIQUE_MASK 0x7FFF
+#define FIELD_TECHNIQUES_PER_WEAPON 24
+#define FIELD_TECHNIQUE_SEQUENCE_BASE 0x88
+/** @brief Action animation of a technique. */
+#define FIELD_TECHNIQUE_ANIMATION 2
+
+/** @brief Load address of the sub-overlays (MENU, GOLEM, GNAME, ZUKAN, GOSUB, SHOP). */
+#define FIELD_SUBOVERLAY_ADDRESS ((void*)0x80140000)
+/** @brief Work buffers handed to the sub-overlays. */
+#define FIELD_MENU_RENDER_BUFFERS ((void*)0x80170000)
+#define FIELD_GOLEM_WORK_BUFFER 0x80150000
+#define FIELD_SHOP_WORK_BUFFER ((void*)0x80150000)
+#define FIELD_GNAME_WORK_BUFFER ((void*)0x80160000)
+#define FIELD_GOSUB_WORK_BUFFER ((void*)0x80175000)
+
+/** @brief Screens the MENU overlay returns: 0 closes the menu, others open GNAME with that mode. */
+#define FIELD_MENU_CLOSED 0
+#define FIELD_MENU_GOLEM 10
+#define FIELD_MENU_NAME_ENTRY_B 11
+#define FIELD_MENU_NAME_ENTRY_C 12
+
+/** @brief g_field_gosub_phase: idle, closing (the screens finished), running. */
+#define FIELD_GOSUB_IDLE 0
+#define FIELD_GOSUB_CLOSING 1
+#define FIELD_GOSUB_RUNNING 2
+
+/** @brief func_800AF950 scales (1/256 units) and lower-edge slant of the duel panel text. */
+#define FIELD_DUEL_TEXT_SCALE 0x180
+#define FIELD_DUEL_TITLE_SCALE 0x200
+#define FIELD_DUEL_WINNER_SCALE 0x1C0
+#define FIELD_DUEL_TEXT_SLANT (-4)
+#define FIELD_DUEL_PANEL_HOLD_FRAMES 90
+#define FIELD_DUEL_PANEL_START_OFFSET 500
+/** @brief The duel panel is gone once it has slid this far past the screen edge. */
+#define FIELD_DUEL_PANEL_END_OFFSET (-100)
+/** @brief Animation of the losing hero; decides the duel winner. */
+#define FIELD_ANIMATION_DUEL_LOST 0x1D
+
+/** @brief The duel panels' text is drawn only while they slide in or out. */
+#define FIELD_DUEL_PANEL_MOVING (g_field_duel_panel_phase == FIELD_DUEL_SLIDE_IN || g_field_duel_panel_phase == FIELD_DUEL_SLIDE_OUT)
+
+/** @brief Animation stages shared by the duel introduction and winner panels. */
+typedef enum FieldDuelPanelPhase
+{
+    FIELD_DUEL_SLIDE_IN,
+    FIELD_DUEL_HOLD,
+    FIELD_DUEL_SLIDE_OUT,
+    FIELD_DUEL_FINISHED
+} FieldDuelPanelPhase;
 
 /**
- * @brief Two-byte descriptor used to locate the "minus" glyph string.
- * @note Local to this TU; a distinct name avoids clashing with other files.
+ * @brief Entry of the dialog text bank at D_800EC3C4: a little-endian byte
+ *        offset from the start of the bank to one string.
  */
 typedef struct
 {
-    u8 unk0;
-    u8 unk1;
-} StructEC;
+    u8 low;
+    u8 high;
+} FieldTextOffset;
 
+/* Dialog text bank entries (FieldTextOffset). */
+extern FieldTextOffset D_800EC3D2;
+extern FieldTextOffset D_800EC3D4;
+extern FieldTextOffset D_800EC3E4;
+extern FieldTextOffset D_800EC400;
+extern FieldTextOffset D_800EC406;
+extern FieldTextOffset D_800EC408;
+extern FieldTextOffset D_800EC40A;
+extern FieldTextOffset D_800EC40C;
+extern FieldTextOffset D_800EC3E0;
+extern FieldTextOffset D_800EC3E6;
+extern FieldTextOffset D_800EC3E8;
+/* Dialog text bank (starts with FieldTextOffset entries). */
+extern u8 D_800EC3C4[];
+/* Offset tables of the ability and technique names (u16 offsets from the table start). */
+extern u8 g_field_command_names[];
+extern u8 g_field_technique_names[];
+extern FieldActionRow g_field_resource_actions[];
+/* Action slot bound to each hint button (index into FieldCharacterRecord::button_actions). */
+extern u8 g_field_hint_button_map[];
+/* Icon and texture parameters of the action animations, two bytes per action. */
+extern u8 g_field_action_animation_parameters[];
+/* Action icons of the instrument types. */
+extern u8 g_field_instrument_icons[];
 
+/*
+ * Saved game (g_saved_game) as FIELD reads it; main.h declares the same
+ * pointer as PadContext, so this file does not include main.h and declares
+ * the main executable globals it uses itself.
+ */
+extern FieldGameState* g_pad_ctx;
+extern s32 g_pad_input;
+extern s32 g_pad_input_inject;
+extern s32 g_save_slot_index;
+extern u16 g_music_track_index;
+extern s32 g_frame_counter;
+extern s32 g_pending_game_state;
+extern s32 g_active_script;
+extern s32 g_script_repeat_count;
+
+/* Dialog item list shown by the result screens. */
+extern s32 g_field_dialog_item_texts[];
+extern s32 g_field_dialog_item_count;
+extern u8 g_field_dialog_item_quantities[];
+
+/* Actor-label text session. */
+extern u8 g_field_selected_actor_label;
+extern u8 g_field_label_actor_indices[];
+extern u8 g_field_label_actor_count;
+/* Saved FieldObjectPart scale_z and scale_x of each labelled actor. */
+extern u8 g_field_label_saved_scale_x[];
+extern u8 g_field_label_saved_scale_y[];
+extern s32 g_field_text_session_active;
+extern s32 g_field_text_session_cd_error;
+extern s32 g_field_draw_count;
+
+/* Input repeat state of both controllers. */
+extern s32 g_field_primary_held_buttons;
+extern s32 g_field_primary_repeat_delay;
+extern s32 g_field_secondary_held_buttons;
+extern s32 g_field_secondary_repeat_delay;
+extern s32 g_field_buffered_input;
+extern u8 g_field_menu_controller_types[CONTROLLER_PORT_COUNT];
+
+/* Field state that blocks the menu. */
+extern s32 g_field_active_group;
+extern s32 g_field_interaction_active;
+extern s32 D_80122710;
+extern s32 D_80122714;
+extern s32 D_800F2298;
+extern s32 g_field_dialog_screen_mode;
+extern s32 g_field_return_to_title_prompt_state;
+extern s32 D_8012291C;
+extern s32 D_80122980;
+extern s32 g_field_scene_mode_bit;
+
+/* Modal overlays. */
+extern s32 g_field_modal_state;
+extern s32 g_field_gosub_phase;
+extern s32 D_801227F0;
+extern s32 g_field_shop_active;
+extern s32 g_gosub_result_count;
+extern s32 g_gosub_result_values;
+extern s32 g_field_niki_addhero_state;
+extern s32 g_field_card_overlay_mode;
+extern s32 g_field_shop_notice_hidden;
+extern s32 g_field_duel_panel_phase;
+extern s32 g_field_duel_panel_offset;
+extern s32 g_field_duel_panel_hold_frames;
+extern s32 g_field_duel_winner;
+
+/* Item rename request left by the MENU overlay for GNAME: the item record, its old name, extra text, source selector and item category. */
+extern u8 g_field_rename_custom_name[];
+extern u8 g_field_rename_initial_name[];
+extern s32 g_field_rename_item_category;
+extern u8* g_field_rename_target;
+extern s32 g_field_rename_source;
+
+void akao_stop_sfx_by_id(s32 id);
+void akao_cmd_99_9b_9d_9f(s32 arg0);
+void akao_cmd_98_9a_9c_9e(s32 arg0);
+void akao_set_paused(s32 mode);
+
+/* Sub-overlay entry points, valid once their overlay is loaded at FIELD_SUBOVERLAY_ADDRESS. */
+/* GNAME and SHOP share this entry address but have different parameter lists. */
+void func_80140004();
+void func_80140024(u32 work, s32 mode);
+s32 func_801400C4(FieldRenderHalf* render);
+s32 func_801400D4(FieldRenderHalf* render);
+s32 func_801401F0(FieldRenderHalf* render);
+s32 func_801401F8(FieldRenderHalf* render);
+s32 func_80140370(FieldRenderHalf* render);
+s32 func_801405B0(s32 render_buffers);
+void func_80140080(void* work, void* screen_sequence);
+void func_80140E00(void* work, s32 context);
+
+s32 func_800B0888(void);
+void* field_emit_actor_portrait(SPRT* cursor, u32* ot, s32 index, u32* position);
+void* func_800AD208(s32* ot, void* cursor, s32 value, s32 digits, u16* position, s32 flags);
+void* func_800AD524(u8* cursor, s32* ot, s32 glyph, s32* position, s32 flags);
 SPRT* func_800AD658(s32* ot, SPRT* sprite_cursor, s32 count);
-s32 field_name_byte_length(u8 *arg0);
-void field_copy_name(u8 *dest, u8 *src);
+s32 field_draw_player_icon(s32 packet_cursor, u_long* ot, s32 player, s32 x, s32 y, s32 flip);
+s32 func_800AF950(s32 packet_cursor, u_long* ot, u8* text, s32 color, s32 x, s32 y, s32 align, s32 slot, s32 scale_x, s32 scale_y, s32 arg10, s32 visible);
+
+void* field_draw_text(SPRT* sprite_cursor, s32* ot, u8* text, s32 text_color, s32 x, s32 y, s32 flags);
+void field_format_number(u8* text, s32 number, s32 wide_request);
+s32 field_name_byte_length(u8* name);
+void field_copy_name(u8* destination, u8* source);
+s32 field_read_controller_buttons(s32 index);
+void field_reset_input_repeat(void);
+static void field_init_actor_labels(void);
+static void field_draw_cd_error_text(FieldRenderHalf* render);
+static void field_draw_actor_labels(FieldRenderHalf* render);
+static s32 field_play_low_hp_warning(void);
+static void field_update_text_session(void);
+static void field_run_menu(void* render_buffers, s32 controller);
+static void field_begin_text_session(void);
+static void field_update_modal_text_session(FieldRenderHalf* render);
+static void field_begin_empty_shop_notice(s32 hidden);
+static void field_draw_empty_shop_notice(FieldRenderHalf* render);
+static s32 field_draw_duel_intro(FieldRenderHalf* render);
+static s32 field_draw_duel_result(FieldRenderHalf* render);
 
 /**
- * @brief Build and enqueue text-glyph sprites for a line of immediate text.
- * @param sprite_cursor Sprite scratch buffer to fill and enqueue.
- * @param ot Ordering table to add primitives to.
- * @param text Glyph string to render.
- * @param text_color Text color/style selector passed to the glyph builder.
- * @param x Starting x coordinate (adjusted for center/right alignment).
- * @param y Starting y coordinate.
- * @param flags Alignment bits (0x7F) plus 0x80 post-processing flag.
- * @return Pointer just past the trailing DR_TPAGE primitive.
+ * @brief Address of the string a dialog text bank entry points at.
+ * @param entry Bank entry.
+ * @param index Position of @p entry in the bank; its offset counts from the bank start.
+ * @return The entry's string.
  */
-void* func_800A88A0(SPRT* sprite_cursor, s32* ot, u8* text, s32 text_color, s32 x, s32 y, s32 flags)
+static inline u8* field_dialog_text(FieldTextOffset* entry, s32 index)
 {
-    s32 n, count, i, acc;
+    return (u8*)(entry->low + ((entry->high << 8) + (s32)((u8*)entry - index * sizeof(FieldTextOffset))));
+}
+
+/**
+ * @brief Build the glyph sprites of a text line and add them to the ordering table.
+ * @param sprite_cursor First free sprite; the glyph sprites are built here.
+ * @param ot Ordering table entry receiving the sprites.
+ * @param text Encoded text; an empty string draws nothing.
+ * @param text_color Text colour passed to the glyph builder.
+ * @param x Left edge, or the right edge / centre for FIELD_TEXT_ALIGN_RIGHT / FIELD_TEXT_ALIGN_CENTER.
+ * @param y Top edge.
+ * @param flags Alignment in FIELD_TEXT_ALIGN_MASK, plus FIELD_TEXT_SHADOW for the black outline copies.
+ * @return First free primitive after the text and its closing DR_TPAGE.
+ */
+void* field_draw_text(SPRT* sprite_cursor, s32* ot, u8* text, s32 text_color, s32 x, s32 y, s32 flags)
+{
+    s32 glyph_count;
+    s32 remaining;
+    s32 i;
+    s32 advance;
     SPRT* sprite;
     DR_TPAGE* tpage;
 
@@ -64,15 +362,15 @@ void* func_800A88A0(SPRT* sprite_cursor, s32* ot, u8* text, s32 text_color, s32 
         return sprite_cursor;
     }
 
-    n = field_text_build_sprites(sprite_cursor, text, text_color);
-    count = n;
+    glyph_count = field_text_build_sprites(sprite_cursor, text, text_color);
+    remaining = glyph_count;
 
-    if ((flags & 0x7F) != 1)
+    if ((flags & FIELD_TEXT_ALIGN_MASK) != FIELD_TEXT_ALIGN_RIGHT)
     {
-        if ((flags & 0x7F) == 2)
+        if ((flags & FIELD_TEXT_ALIGN_MASK) == FIELD_TEXT_ALIGN_CENTER)
         {
             sprite = sprite_cursor;
-            for (i = 0; i < count; i++)
+            for (i = 0; i < remaining; i++)
             {
                 x -= sprite[i].w >> 1;
             }
@@ -81,33 +379,33 @@ void* func_800A88A0(SPRT* sprite_cursor, s32* ot, u8* text, s32 text_color, s32 
     else
     {
         sprite = sprite_cursor;
-        for (i = 0; i < count; i++)
+        for (i = 0; i < remaining; i++)
         {
             x -= sprite[i].w;
         }
     }
 
-    acc = 0;
+    advance = 0;
 
-    if (count != 0)
+    if (remaining != 0)
     {
         do
         {
             sprite = sprite_cursor;
             SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
             setSprt(sprite);
-            setXY0(sprite, x + acc, y);
-            acc += sprite->w;
+            setXY0(sprite, x + advance, y);
+            advance += sprite->w;
 
             addPrim(ot, sprite);
             sprite_cursor++;
-            count--;
-        } while (count != 0);
+            remaining--;
+        } while (remaining != 0);
     }
 
-    if (flags & 0x80)
+    if (flags & FIELD_TEXT_SHADOW)
     {
-        sprite_cursor = func_800AD658(ot, sprite_cursor, n);
+        sprite_cursor = func_800AD658(ot, sprite_cursor, glyph_count);
     }
 
     tpage = (DR_TPAGE*)sprite_cursor;
@@ -118,354 +416,103 @@ void* func_800A88A0(SPRT* sprite_cursor, s32* ot, u8* text, s32 text_color, s32 
 }
 
 /**
- * @brief Format a value as a narrow decimal string, then render it as text.
- * @param arg0 Ordering table for func_800A88A0.
- * @param arg1 Sprite scratch buffer for func_800A88A0.
- * @param arg2 Signed value to format into the glyph buffer.
- * @param arg3 Text color/style selector.
- * @param arg4 Pointer to a two-element x/y coordinate pair.
- * @param arg5 Alignment/post-processing flags.
- * @return Primitive cursor after the text.
+ * @brief Draw a signed decimal number as text.
+ * @param ot Ordering table entry receiving the sprites.
+ * @param sprite_cursor First free sprite.
+ * @param value Number to draw.
+ * @param text_color Text colour.
+ * @param position X and y of the text.
+ * @param flags field_draw_text alignment and shadow flags.
+ * @return First free primitive after the text.
  */
-void* func_800A8A78(void *arg0, void *arg1, s32 arg2, s32 arg3, s16 *arg4, s32 arg5)
+void* field_draw_number(s32* ot, SPRT* sprite_cursor, s32 value, s32 text_color, s16* position, s32 flags)
 {
-    extern void func_800A8B90(void *out, s32 arg1, s32 arg2);
-    u8 local[0x40];
+    u8 text[64];
 
-    func_800A8B90(local, arg2, 0);
-    return func_800A88A0(arg1, arg0, local, arg3, arg4[0], arg4[1], arg5);
+    field_format_number(text, value, 0);
+    return field_draw_text(sprite_cursor, ot, text, text_color, position[0], position[1], flags);
 }
 
 /**
- * @brief Format a value as a wide decimal string, then render it as text.
- * @param arg0 Ordering table for func_800A88A0.
- * @param arg1 Sprite scratch buffer for func_800A88A0.
- * @param arg2 Signed value to format into the glyph buffer.
- * @param arg3 Text color/style selector.
- * @param arg4 Pointer to a two-element x/y coordinate pair.
- * @param arg5 Alignment/post-processing flags.
- * @return Primitive cursor after the text.
+ * @brief Draw a signed decimal number as text, asking the formatter for double-byte digits.
+ * @param ot Ordering table entry receiving the sprites.
+ * @param sprite_cursor First free sprite.
+ * @param value Number to draw.
+ * @param text_color Text colour.
+ * @param position X and y of the text.
+ * @param flags field_draw_text alignment and shadow flags.
+ * @return First free primitive after the text.
+ * @note field_format_number ignores the request, so the digits come out as in field_draw_number.
  */
-void* func_800A8B04(void *arg0, void *arg1, s32 arg2, s32 arg3, s16 *arg4, s32 arg5)
+void* field_draw_number_wide(s32* ot, SPRT* sprite_cursor, s32 value, s32 text_color, s16* position, s32 flags)
 {
-    extern void func_800A8B90(void *out, s32 arg1, s32 arg2);
-    u8 local[0x40];
+    u8 text[64];
 
-    func_800A8B90(local, arg2, 1);
-    return func_800A88A0(arg1, arg0, local, arg3, arg4[0], arg4[1], arg5);
+    field_format_number(text, value, 1);
+    return field_draw_text(sprite_cursor, ot, text, text_color, position[0], position[1], flags);
 }
 
 /**
- * @brief Format a signed decimal value into the destination glyph buffer.
- * @param buf Destination buffer.
- * @param val Signed value to format.
+ * @brief Format a signed decimal number (up to eight digits) as encoded text.
+ * @param text Buffer receiving the text and its terminator.
+ * @param number Number to format; a negative number starts with the bank's minus sign.
+ * @param wide_request Double-byte digits requested by field_draw_number_wide; ignored.
+ * @note The double-byte branch tests a local that is always zero, so the digits are always single-byte.
  */
-void func_800A8B90(u8 *buf, s32 val)
+inline void field_format_number(u8* text, s32 number, s32 wide_request)
 {
-    extern StructEC D_800EC3E4;
-    u8 *dst;
+    u8* cursor;
     s32 value;
-    s32 wide;
-    u8 *minus;
-    s32 low;
-    s32 offset;
-    s32 div;
+    s32 double_byte;
+    u8* minus;
+    s32 divisor;
     s32 started;
     s32 digit;
 
-    dst = buf;
-    value = val;
-    wide = 0;
+    cursor = text;
+    value = number;
+    double_byte = 0;
     if (value < 0)
     {
         value = -value;
-        low = D_800EC3E4.unk0;
-        offset = (D_800EC3E4.unk1 << 8) + (s32)((u8 *)&D_800EC3E4 - 0x20);
-        minus = (u8 *)(low + offset);
-        field_copy_name(dst, minus);
-        dst += field_name_byte_length(minus);
+        minus = field_dialog_text(&D_800EC3E4, 16);
+        field_copy_name(cursor, minus);
+        cursor += field_name_byte_length(minus);
     }
-    div = 10000000;
+    divisor = 10000000;
     started = 0;
     do
     {
-        digit = value / div;
+        digit = value / divisor;
         if (digit != 0)
         {
             started = 1;
         }
-        if (started || div == 1)
+        if (started || divisor == 1)
         {
-            if (wide)
+            if (double_byte)
             {
-                *dst++ = 0x1D;
-                *dst = digit;
+                *cursor++ = FIELD_TEXT_DIGIT_LEAD;
+                *cursor = digit;
             }
             else
             {
-                *dst = digit + '0';
+                *cursor = digit + '0';
             }
-            dst++;
-            value -= (value / div) * div;
+            cursor++;
+            value -= (value / divisor) * divisor;
         }
-        div /= 10;
-    } while (div != 0);
-    *dst = 0;
+        divisor /= 10;
+    } while (divisor != 0);
+    *cursor = 0;
 }
-
-/* ---- Input repeat, saved names and inventory, actor labels (0x800A8CFC .. 0x800AA570) ---- */
-
-#define FIELD_INVENTORY_COUNT 100
-#define FIELD_INVENTORY_RECORD_SIZE 64
-#define FIELD_DIALOG_ITEM_LIMIT 10
-#define FIELD_PAD_REPEAT_DELAY 15
-#define FIELD_PAD_REPEAT_INTERVAL 2
-#define FIELD_PAD_DIRECTIONS (PADLup | PADLdown | PADLleft | PADLright)
-#define FIELD_PAD_INACTIVE 0xFE
-#define FIELD_ACTOR_ABSENT 0xFF
-#define FIELD_SECONDARY_INPUT_ENABLED 0x80
-#define FIELD_ACTOR_LABEL_HIGHLIGHT 0x80
-#define FIELD_LABEL_FIRST_ACTOR 3
-#define FIELD_LABEL_ACTOR_LIMIT 13
-#define FIELD_LABEL_SCREEN_WIDTH 320
-#define FIELD_LABEL_MIN_Y 50
-#define FIELD_LABEL_MAX_Y 176
-#define FIELD_LABEL_SELECTED_STYLE 4
-#define FIELD_LABEL_NORMAL_STYLE 5
-#define FIELD_LOW_HP_SOUND 0xA6
-#define FIELD_INPUT_RESET_COMBINATION (PADh | PADselect | PADL1 | PADL2 | PADR1 | PADR2)
-#define FIELD_MODAL_WORK_BUFFER ((void*)0x80170000)
-
-/** @brief Saved inventory entry; a zero first byte marks a free slot. */
-typedef struct
-{
-    u8 kind;
-    u8 data[FIELD_INVENTORY_RECORD_SIZE - 1];
-} FieldInventoryRecord;
-
-/** @brief Saved per-player action choices and physical-button mapping. */
-typedef struct
-{
-    u8 pad_0x0[0x608];
-    u8 actions[0x30];
-    u8 button_actions[8];
-} FieldSavedInputMap;
-
-/** @brief Player flags and resource kind in a 0x268-byte runtime record. */
-typedef struct
-{
-    u8 flags;
-    u8 kind;
-    u8 pad_0x2[0x268 - 2];
-} FieldLabelPlayer;
-
-/** @brief Eight-byte action record whose first halfword selects label text. */
-typedef struct
-{
-    u16 text_index;
-    u8 pad_0x2[6];
-} FieldLabelAction;
-
-/** @brief Saved input settings and inventory used by this module. */
-typedef struct
-{
-    u8 pad_0x0[0x840];
-    u8 inject_enable;
-    u8 pad_0x841[0x858 - 0x841];
-    u32 inject_flags;
-    u8 pad_0x85c[0xCE0 - 0x85C];
-    FieldInventoryRecord inventory[FIELD_INVENTORY_COUNT];
-} PadContext;
-
-/** @brief Header fields of the pad context written by field_store_entry_settings. */
-typedef struct
-{
-    u8 pad_0x0[0x18];
-    u32 entry_config; /* 0x18 */
-    s16 option_id;    /* 0x1C */
-    s8 sub_mode;      /* 0x1E */
-    u8 pad_0x1f;
-    u32 music_track; /* 0x20 */
-    s16 scene_mode;  /* 0x24 */
-    s8 field_flags;  /* 0x26 */
-    s8 layout_flags; /* 0x27 */
-    u8 pad_0x28[0xCF - 0x28];
-    s8 save_slot; /* 0xCF */
-} FieldEntryHeader;
-
-/** @brief Two-byte CD-error status string descriptor (field_draw_cd_error_text). */
-typedef struct
-{
-    u8 low;
-    u8 high;
-} FieldTextOffset;
-
-/** @brief Text ordering context passed to field_draw_cd_error_text. */
-typedef struct
-{
-    u8 pad_0x0[0x3C];
-    u32 ordering_table[1];
-    u8 pad_0x40[0x40B8 - 0x40];
-    s32 primitive_cursor;
-} FieldLabelRenderContext;
-
-/** @brief Presence byte in a scene actor record; stride 0x54. */
-typedef struct
-{
-    u8 pad_0x0[0x25];
-    u8 presence;
-    u8 pad_0x26[0x54 - 0x26];
-} FieldSceneActor;
-
-/** @brief HP, group membership, and name used by actor labels; stride 0x23C. */
-typedef struct
-{
-    s32 maximum_hp;
-    s32 current_hp;
-    s32 hp_display_flags;
-    u32 object_flags;
-    s32 group_flags;
-    s32 record_id;
-    u8 pad_0x18[0x4C - 0x18];
-    u8 label_number;
-    u8 pad_0x4d[0x64 - 0x4D];
-    u8* name;
-    u8 pad_0x68[0x23C - 0x68];
-} FieldLabelActorState;
-
-/** @brief Part footprint scales saved and restored by actor-label selection; stride 0x48. */
-typedef struct
-{
-    u8 pad_0x0[0x2E];
-    u8 footprint_scale_x;
-    u8 pad_0x2f[0x33 - 0x2F];
-    u8 footprint_scale_y;
-    u8 pad_0x34[0x48 - 0x34];
-} FieldLabelPart;
-
-/** @brief Controller packet, quantized analog axes, and feedback bytes; stride 0xAE. */
-typedef struct
-{
-    u8 device_type;
-    u8 pad_0x1;
-    u16 buttons;
-    u8 pad_0x4[0x2C - 4];
-    s16 axis_x;
-    s16 axis_y;
-    u8 pad_0x30[0x91 - 0x30];
-    u8 feedback[2];
-    u8 pad_0x93[0xAE - 0x93];
-} FieldControllerSample;
-
-/** @brief Flags, presence, and state in a 0x54-byte field actor record. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 z;
-    u8 pad_0x0[0x1C - 12];
-    u32 flags;
-    u8 pad_0x20[5];
-    u8 presence;
-    u8 pad_0x26[4];
-    s16 state;
-    u8 tail[0x28];
-} FieldInputActor;
-
-#define PAD_HEADER ((FieldEntryHeader*)g_pad_ctx)
-
-#define IS_DBCS_LEAD_BYTE(byte) (((byte) >= 0x19) && ((byte) <= 0x1F))
-#define NAME_GLYPH_SIZE_SINGLE 1
-#define NAME_GLYPH_SIZE_DOUBLE 2
-
-#define FIELD_CONTROLLER_SAMPLES ((FieldControllerSample*)0x801ED600)
-
-extern FieldLabelPart g_field_object_parts[];
-extern u8 g_field_selected_actor_label;
-
-/* Text and quantity pairs displayed by the field dialog. */
-extern s32 g_field_dialog_item_texts[];
-extern s32 g_field_dialog_item_count;
-extern u8 g_field_dialog_item_quantities[];
-
-/* Selected-actor bookkeeping. */
-extern u8 g_field_label_actor_indices[];
-extern u8 g_field_label_actor_count;
-extern u8 g_field_label_saved_scale_x[];
-extern u8 g_field_label_saved_scale_y[];
-
-/* Field / actor tables. */
-extern FieldSceneActor g_field_scene_actors[];
-extern FieldLabelActorState g_field_scene_object_states[];
-extern s32 g_field_active_group;
-extern s32 D_800FDFC8;
-
-/* Text/label offset tables (byte views). */
-extern u8 g_field_hint_button_map[];
-extern u8 D_800EC3C4[];
-extern u8 D_800EC3E0[];
-extern u8 D_800EC3E6[];
-extern u8 D_800EC3E8[];
-extern u8 g_field_technique_names[];
-extern u8 D_800EDBE4[];
-extern u8 D_8010A028[];
-
-/* CD-error status string descriptors (field_draw_cd_error_text). */
-extern FieldTextOffset D_800EC3D2;
-extern FieldTextOffset D_800EC3D4;
-
-/* Input repeat state. */
-extern s32 g_field_primary_held_buttons;
-extern s32 g_field_primary_repeat_delay;
-extern s32 g_field_text_session_active;
-extern s32 g_field_secondary_held_buttons;
-extern s32 g_field_secondary_repeat_delay;
-extern s32 g_field_buffered_input;
-extern s32 g_field_text_session_cd_error;
-
-/* Menu-open guards / miscellaneous field state. */
-extern s32 g_field_interaction_active;
-extern s32 D_80122710;
-extern s32 D_80122714;
-extern s32 D_800F2298;
-extern s32 g_field_dialog_screen_mode;
-extern s32 g_field_return_to_title_prompt_state;
-extern s32 D_8012291C;
-extern s32 D_80122980;
-extern u8 g_field_menu_controller_types[2];
-extern u8 D_801227B9;
-extern s32 g_pending_game_state;
-extern s32 g_field_draw_count;
-extern s32 g_frame_counter;
-
-extern s32 g_save_slot_index;
-extern s32 g_pad_input;
-extern s32 g_pad_input_inject;
-
-void akao_stop_sfx_by_id(s32 id);
-void akao_cmd_99_9b_9d_9f(s32 arg0);
-void akao_cmd_98_9a_9c_9e(s32 arg0);
-
-
-
-void* func_800A88A0(SPRT* cursor, s32* ordering_table, u8* text, s32 color, s32 x, s32 y, s32 flags);
-void* field_emit_actor_portrait(SPRT*, u32*, s32, u32*);
-void* func_800AD208(s32*, void*, s32, s32, u16*, s32);
-void* func_800AD524(u8*, s32*, s32, s32*, s32);
-
-/* Forward declarations for members called before their definition. */
-void field_draw_cd_error_text(FieldLabelRenderContext* arg0);
-void field_draw_actor_labels(void* arg0);
-void field_reset_input_repeat(void);
-s32 field_play_low_hp_warning(void);
 
 /**
  * @brief Bind the field input and inventory context to the loaded saved game.
  */
 void field_bind_saved_game_context(void)
 {
-    extern PadContext* g_pad_ctx;
-    g_pad_ctx = (PadContext*)g_saved_game.bytes;
+    g_pad_ctx = (FieldGameState*)g_saved_game.bytes;
 }
 
 /**
@@ -479,17 +526,14 @@ void field_bind_saved_game_context(void)
  */
 void field_store_entry_settings(s16 scene_mode, s8 field_flags, s8 layout_flags, s32 entry_config, s32 option_id, s32 sub_mode)
 {
-    extern PadContext* g_pad_ctx;
-    extern u16 g_music_track_index;
-    PAD_HEADER->scene_mode = scene_mode;
-    PAD_HEADER->field_flags = field_flags;
-    PAD_HEADER->layout_flags = layout_flags;
-    PAD_HEADER->entry_config = (PAD_HEADER->entry_config & 0xFE000000) | (entry_config & 0x01FFFFFF);
-    PAD_HEADER->option_id = (s16)option_id;
-    PAD_HEADER->sub_mode = (s8)sub_mode;
-    PAD_HEADER->music_track = (PAD_HEADER->music_track & 0xFFFC0000) | g_music_track_index;
-    /* The saved header stores a single-byte slot number. */
-    PAD_HEADER->save_slot = *(u8*)&g_save_slot_index;
+    g_pad_ctx->scene_mode = scene_mode;
+    g_pad_ctx->field_flags = field_flags;
+    g_pad_ctx->layout_flags = layout_flags;
+    g_pad_ctx->entry_config = entry_config;
+    g_pad_ctx->option_id = option_id;
+    g_pad_ctx->sub_mode = sub_mode;
+    g_pad_ctx->music_track = g_music_track_index;
+    g_pad_ctx->save_slot = g_save_slot_index;
 }
 
 /**
@@ -527,13 +571,13 @@ s32 field_name_byte_length(u8* name)
         {
             if (IS_DBCS_LEAD_BYTE(character))
             {
-                name += 2;
-                count += 2;
+                name += NAME_GLYPH_SIZE_DOUBLE;
+                count += NAME_GLYPH_SIZE_DOUBLE;
             }
             else
             {
-                name += 1;
-                count += 1;
+                name += NAME_GLYPH_SIZE_SINGLE;
+                count += NAME_GLYPH_SIZE_SINGLE;
             }
             character = *name;
         } while (character != 0);
@@ -558,13 +602,13 @@ void field_copy_name(u8* destination, u8* source)
     {
         if (IS_DBCS_LEAD_BYTE(*cursor))
         {
-            cursor += 2;
-            byte_count += 2;
+            cursor += NAME_GLYPH_SIZE_DOUBLE;
+            byte_count += NAME_GLYPH_SIZE_DOUBLE;
         }
         else
         {
-            cursor += 1;
-            byte_count += 1;
+            cursor += NAME_GLYPH_SIZE_SINGLE;
+            byte_count += NAME_GLYPH_SIZE_SINGLE;
         }
     }
     for (byte_index = 0; byte_index < byte_count; byte_index++)
@@ -579,43 +623,44 @@ void field_copy_name(u8* destination, u8* source)
  * @param destination Existing name; the source is appended after its last glyph.
  * @param source Name to append.
  */
-void field_append_name(u8* destination, const u8* source)
+inline void field_append_name(u8* destination, const u8* source)
 {
-    const u8* scan_cursor;
+    const u8* destination_cursor;
     s32 destination_byte_count;
+    const u8* source_cursor;
     s32 source_byte_count;
     s32 append_offset;
     s32 byte_index;
 
-    scan_cursor = destination;
+    destination_cursor = destination;
     destination_byte_count = 0;
-    while (*scan_cursor)
+    while (*destination_cursor)
     {
-        if (IS_DBCS_LEAD_BYTE(*scan_cursor))
+        if (IS_DBCS_LEAD_BYTE(*destination_cursor))
         {
-            scan_cursor += NAME_GLYPH_SIZE_DOUBLE;
+            destination_cursor += NAME_GLYPH_SIZE_DOUBLE;
             destination_byte_count += NAME_GLYPH_SIZE_DOUBLE;
         }
         else
         {
-            scan_cursor += NAME_GLYPH_SIZE_SINGLE;
+            destination_cursor += NAME_GLYPH_SIZE_SINGLE;
             destination_byte_count += NAME_GLYPH_SIZE_SINGLE;
         }
     }
 
-    scan_cursor = source;
+    source_cursor = source;
     source_byte_count = 0;
     append_offset = destination_byte_count;
-    while (*scan_cursor)
+    while (*source_cursor)
     {
-        if (IS_DBCS_LEAD_BYTE(*scan_cursor))
+        if (IS_DBCS_LEAD_BYTE(*source_cursor))
         {
-            scan_cursor += NAME_GLYPH_SIZE_DOUBLE;
+            source_cursor += NAME_GLYPH_SIZE_DOUBLE;
             source_byte_count += NAME_GLYPH_SIZE_DOUBLE;
         }
         else
         {
-            scan_cursor += NAME_GLYPH_SIZE_SINGLE;
+            source_cursor += NAME_GLYPH_SIZE_SINGLE;
             source_byte_count += NAME_GLYPH_SIZE_SINGLE;
         }
     }
@@ -625,6 +670,22 @@ void field_append_name(u8* destination, const u8* source)
         destination[byte_index + append_offset] = source[byte_index];
     }
     destination[byte_index + append_offset] = 0;
+}
+
+/**
+ * @brief Append a dialog text bank string onto a name.
+ * @param destination Name to extend.
+ * @param entry Bank entry of the string.
+ * @param index Position of @p entry in the bank.
+ * @note Adds the offset before the bank start, unlike field_dialog_text; the other order changes the generated code.
+ */
+static inline void field_append_dialog_text(u8* destination, FieldTextOffset* entry, s32 index)
+{
+    u8* text;
+
+    text = (u8*)((entry->high << 8) + entry->low);
+    text += (s32)((u8*)entry - index * sizeof(FieldTextOffset));
+    field_append_name(destination, text);
 }
 
 /**
@@ -641,7 +702,7 @@ void field_copy_inventory_record(u8* destination, u8* source)
     {
         byte_index++;
         *destination++ = *source++;
-    } while (byte_index < FIELD_INVENTORY_RECORD_SIZE);
+    } while (byte_index < sizeof(FieldItemRecord));
 }
 
 /**
@@ -650,13 +711,12 @@ void field_copy_inventory_record(u8* destination, u8* source)
  */
 void field_compact_inventory(void)
 {
-    extern PadContext* g_pad_ctx;
     s32 record_index;
-    FieldInventoryRecord* write_record;
-    FieldInventoryRecord* read_record;
+    FieldItemRecord* write_record;
+    FieldItemRecord* read_record;
 
     record_index = 0;
-    write_record = g_pad_ctx->inventory;
+    write_record = g_pad_ctx->items;
     read_record = write_record;
     do
     {
@@ -671,8 +731,8 @@ void field_compact_inventory(void)
         }
         record_index += 1;
         read_record++;
-    } while (record_index < FIELD_INVENTORY_COUNT);
-    while (write_record < &g_pad_ctx->inventory[FIELD_INVENTORY_COUNT])
+    } while (record_index < FIELD_ITEM_COUNT);
+    while (write_record < &g_pad_ctx->items[FIELD_ITEM_COUNT])
     {
         write_record->kind = 0;
         write_record++;
@@ -685,12 +745,11 @@ void field_compact_inventory(void)
  */
 u8* field_find_free_inventory_record(void)
 {
-    extern PadContext* g_pad_ctx;
     s32 record_index;
-    FieldInventoryRecord* record;
+    FieldItemRecord* record;
 
-    record = g_pad_ctx->inventory;
-    for (record_index = 0; record_index < FIELD_INVENTORY_COUNT; record_index++)
+    record = g_pad_ctx->items;
+    for (record_index = 0; record_index < FIELD_ITEM_COUNT; record_index++)
     {
         if (record->kind == 0)
         {
@@ -702,20 +761,20 @@ u8* field_find_free_inventory_record(void)
 }
 
 /**
- * @brief Draw actor labels or CD-error text and upload the text cache.
- * @param context Render context receiving the text primitives.
+ * @brief Draw the CD error text or the actor labels, then upload the text cache.
+ * @param render Render half receiving the text primitives.
  */
-void field_draw_text_session(void* context)
+inline void field_draw_text_session(FieldRenderHalf* render)
 {
     field_text_reset_scratch();
 
     if (g_field_text_session_cd_error)
     {
-        field_draw_cd_error_text(context);
+        field_draw_cd_error_text(render);
     }
     else
     {
-        field_draw_actor_labels(context);
+        field_draw_actor_labels(render);
     }
 
     field_text_upload_immediate_cache();
@@ -724,331 +783,275 @@ void field_draw_text_session(void* context)
 /**
  * @brief Restore the part scales saved before displaying actor labels.
  */
-void field_restore_label_actor_parts(void)
+inline void field_restore_label_actor_parts(void)
 {
     s32 index;
-    FieldLabelPart* part;
+    FieldObjectPart* part;
 
-    akao_stop_sfx_by_id(0x7E);
+    akao_stop_sfx_by_id(FIELD_SOUND_SELECT);
     for (index = 0; index < g_field_label_actor_count; index++)
     {
         part = &g_field_object_parts[g_field_label_actor_indices[index]];
-        part->footprint_scale_x = g_field_label_saved_scale_x[index];
-        part->footprint_scale_y = g_field_label_saved_scale_y[index];
+        part->scale_z = g_field_label_saved_scale_x[index];
+        part->scale_x = g_field_label_saved_scale_y[index];
     }
 }
 
 /**
- * @brief Collect living named actors in the active group and save their part scales.
+ * @brief Collect the living named actors of the active group as labels and save their part scales.
  */
-void field_init_actor_labels(void)
+static void field_init_actor_labels(void)
 {
-    FieldSceneActor* actor;
-    FieldLabelActorState* state;
+    FieldActor* actor;
+    FieldObjectState* state;
     s32 actor_index;
 
     field_reset_input_repeat();
     akao_cmd_99_9b_9d_9f(2);
-    field_fade_song(0, 0x3C, 0);
-    akao_stop_sfx_by_id(0x7E);
-    actor = g_field_scene_actors;
-    actor_index = FIELD_LABEL_FIRST_ACTOR;
-    state = g_field_scene_object_states;
+    field_fade_song(0, 60, 0);
+    akao_stop_sfx_by_id(FIELD_SOUND_SELECT);
+    actor = &g_field_actors[FIELD_PARTY_COUNT];
+    actor_index = FIELD_PARTY_COUNT;
+    state = &g_field_object_states[FIELD_PARTY_COUNT];
     g_field_label_actor_count = 0;
     g_field_selected_actor_label = 0;
     do
     {
-        if (actor->presence != FIELD_ACTOR_ABSENT && state->current_hp != 0 && g_field_active_group == (state->group_flags & 0xF) && state->name != 0)
+        if (actor->presence != FIELD_ACTOR_UNUSED && state->unk4.word != 0 && g_field_active_group == (state->group_flags & FIELD_OBJECT_GROUP_MASK) &&
+            state->name != NULL)
         {
             g_field_label_actor_indices[g_field_label_actor_count] = actor_index;
-            g_field_label_saved_scale_x[g_field_label_actor_count] = g_field_object_parts[actor_index].footprint_scale_x;
-            g_field_label_saved_scale_y[g_field_label_actor_count] = g_field_object_parts[actor_index].footprint_scale_y;
+            g_field_label_saved_scale_x[g_field_label_actor_count] = g_field_object_parts[actor_index].scale_z;
+            g_field_label_saved_scale_y[g_field_label_actor_count] = g_field_object_parts[actor_index].scale_x;
             g_field_label_actor_count += 1;
         }
         actor_index += 1;
         state++;
         actor++;
-    } while (actor_index < FIELD_LABEL_ACTOR_LIMIT);
+    } while (actor_index < FIELD_ACTOR_COUNT);
 }
 
 /**
- * @brief Draw the status text selected by the current CD-ROM error.
- * @param context Render context containing the ordering table and primitive cursor.
+ * @brief Draw the status text of the current CD-ROM error.
+ * @param render Render half receiving the text.
  */
-void field_draw_cd_error_text(FieldLabelRenderContext* context)
+static void field_draw_cd_error_text(FieldRenderHalf* render)
 {
-    s32 primitive;
-    void* ordering_table;
-    Vec2s text_positions[2];
+    SPRT* primitive;
+    u_long* ordering_table;
+    Vec2s unused[2]; /* Never used; the original frame has room for it. */
 
-    primitive = context->primitive_cursor;
-    ordering_table = &context->ordering_table;
+    primitive = (SPRT*)render->primitive_cursor;
+    ordering_table = &render->ordering_table[FIELD_TEXT_OT_INDEX];
+    /* 2 is CdErrorStatus CD_ERROR_STATUS_DISC_CHECK_PENDING (private to cdrom.c). */
     if (cdrom_get_error_status() == 2)
     {
-        s32 low;
-        s32 offset;
-        u8* base;
-
-        low = D_800EC3D2.low;
-        offset = (D_800EC3D2.high << 8) + (s32)(base = (u8*)&D_800EC3D2 - 0xE);
-        primitive = (s32)func_800A88A0((SPRT*)primitive, ordering_table, (u8*)(low + offset), 4, 0xA0, 0x64, 0x82);
+        primitive = field_draw_text(primitive, (s32*)ordering_table, field_dialog_text(&D_800EC3D2, 7), FIELD_TEXT_COLOR_NORMAL, SCREEN_WIDTH / 2, 100,
+                                    FIELD_TEXT_SHADOW | FIELD_TEXT_ALIGN_CENTER);
     }
     else
     {
-        s32 low;
-        s32 offset;
-        u8* base;
-
-        low = D_800EC3D4.low;
-        offset = (D_800EC3D4.high << 8) + (s32)(base = (u8*)&D_800EC3D4 - 0x10);
-        primitive = (s32)func_800A88A0((SPRT*)primitive, ordering_table, (u8*)(low + offset), 4, 0xA0, 0x64, 0x82);
+        primitive = field_draw_text(primitive, (s32*)ordering_table, field_dialog_text(&D_800EC3D4, 8), FIELD_TEXT_COLOR_NORMAL, SCREEN_WIDTH / 2, 100,
+                                    FIELD_TEXT_SHADOW | FIELD_TEXT_ALIGN_CENTER);
     }
-    context->primitive_cursor = primitive;
+    render->primitive_cursor = (u8*)primitive;
 }
 
 /**
- * @brief Draw controller action hints and labels for the selectable field actors.
- * @param context Render context receiving the labels.
- * @note Each controller displays the first active button among eight mapped controls.
+ * @brief Draw each player's held-button action hint and the labels of the selectable actors.
+ * @param render Render half receiving the text.
+ * @note A player's hint shows the action bound to the first held button among the eight hint buttons.
  */
-void field_draw_actor_labels(void* context)
+static void field_draw_actor_labels(FieldRenderHalf* render)
 {
-    extern u8 g_field_resource_actions[];
-    extern FieldLabelPlayer g_field_player_records[];
-    extern FieldLabelActorState g_field_object_states[];
-    extern FieldInputActor g_field_actors[];
-    extern PadContext* g_pad_ctx;
-    s32 custom_text_offset;
-    s32 pad_offset;
     DVECTOR point;
-    FieldLabelPlayer* object_record;
-    u8* label_low;
-    u8* label_descriptor;
-    s32 text_style;
+    FieldTextOffset* bank_entry;
+    s32 text_color;
     u16 text_offset;
-    s32 swapped_buttons;
-    s32 text_address;
-    void** context_slot;
-    s32 text_base;
-    s32 label_base;
-    s32 local_pad_offset;
-    s32 local_text_offset;
+    s32 work;          /* Held buttons, then the player's save base, then a text index or skill. */
+    s32 text_or_state; /* Hint text in the first loop, the label actor's object state in the second. */
+    s32 bank;
+    s32 record_offset;
     s32 screen_y;
-    s32 projected_y;
-    s32 actor_screen_x;
-    s32 label_ot;
+    s32 screen_x;
+    s32 ot;
     s32 label_half_width;
-    s32 actor_x;
-    s32 camera_height;
     s32 number_ot;
     s32 camera_x;
     s32 camera_y;
-    s32 camera_y_pixels;
     s32 text_ot;
     s32 left_glyph_ot;
     s32 right_glyph_ot;
-    s32 button_or_x; /* Hint button index in the first loop, label x in the second. */
+    s32 button_or_x; /* Hint button index in the first loop; camera x in pixels, then the label x, in the second. */
     s32 index;
-    s32 primitive;
+    s32 cursor;
     s32 action_offset;
-    s32 actor_y;
     s32 label_y;
-    s32 actor_height;
     u16 raw_buttons;
-    u8* default_label_offset;
-    s32 actor_id;
-    s32 action_slot;
+    s32 bit_or_actor; /* Hint button bit in the first loop, label actor index in the second. */
+    s32 action;
     s32 secondary_action;
     s32 secondary_action_alt;
-    s32 label_value;
-    FieldLabelPart* highlight_part;
-    FieldInputActor* actor_position;
-    FieldLabelPart* normal_part;
-    FieldControllerSample* pad_sample;
-    s32 text_high_or_offset;
-    s32 pad_base;
-    s32 name_offset;
+    s32 text_value;
+    FieldObjectPart* highlight_part;
+    FieldActor* actor;
+    FieldObjectPart* normal_part;
+    ControllerPortState* port;
+    s32 text_part;
+    ControllerPortState* ports;
+    s32 record_base_offset;
 
-    primitive = ((FieldLabelRenderContext*)context)->primitive_cursor;
-    label_ot = (s32)((FieldLabelRenderContext*)context)->ordering_table;
+    cursor = (s32)render->primitive_cursor;
+    ot = (s32)&render->ordering_table[FIELD_TEXT_OT_INDEX];
     index = 0;
-    pad_base = 0x801ED600;
+    ports = CONTROLLER_STATE->ports;
     do
     {
-        action_offset = index * 0x190;
-        if ((g_field_player_records[index].flags & 1) && ((pad_sample = (FieldControllerSample*)(pad_base + index * 0xAE))->device_type < 0xFEU))
+        action_offset = index * sizeof(FieldActionRow);
+        if ((g_field_player_records[index].head.bytes.flags & FIELD_PLAYER_ACTIVE) &&
+            ((port = &ports[index])->published_sample.device_type < CONTROLLER_DEVICE_CONFIGURING))
         {
-            actor_id = 1;
+            bit_or_actor = 1;
             button_or_x = 0;
-            text_base = (s32)D_800EC3C4;
-            local_pad_offset = index * 0x250;
-            raw_buttons = pad_sample->buttons;
-            name_offset = index * 0x250 + 0x5F0;
-            swapped_buttons = ((raw_buttons << 8) & 0xFF00) | (raw_buttons >> 8);
-            swapped_buttons = (((u32)(swapped_buttons & 0x40) >> 1) | ((swapped_buttons & 0x20) * 2) | ((u32)(swapped_buttons & 0x80) >> 3) |
-                               ((swapped_buttons & 0x10) * 8) | (swapped_buttons & 0xFF0F));
+            bank = (s32)D_800EC3C4;
+            record_offset = index * sizeof(FieldCharacterRecord);
+            raw_buttons = port->published_sample.held_buttons;
+            record_base_offset = index * sizeof(FieldCharacterRecord) + FIELD_OFFSET_OF(FieldGameState, characters);
+            work = ((raw_buttons << 8) & 0xFF00) | (raw_buttons >> 8);
+            work = (((u32)(work & 0x40) >> 1) | ((work & 0x20) * 2) | ((u32)(work & 0x80) >> 3) | ((work & 0x10) * 8) | (work & 0xFF0F));
             do
             {
-                if (swapped_buttons & actor_id)
+                if (work & bit_or_actor)
                 {
-                    swapped_buttons = (s32)g_pad_ctx + local_pad_offset;
-                    action_slot = ((FieldSavedInputMap*)swapped_buttons)->button_actions[g_field_hint_button_map[button_or_x]];
-                    switch (action_slot)
+                    /* characters[0] of this shifted base is characters[index]; indexing directly changes the loop hoisting. */
+                    work = (s32)g_pad_ctx + record_offset;
+                    action = ((FieldGameState*)work)->characters[0].button_actions[g_field_hint_button_map[button_or_x]];
+                    switch (action)
                     {
-                    case 2:
-                    case 3:
-                        text_high_or_offset = (s32)D_8010A028 + action_offset;
-                        action_slot *= sizeof(FieldLabelAction);
-                        swapped_buttons = ((FieldLabelAction*)(text_high_or_offset + action_slot))->text_index & 0x7FFF;
-                        label_value = (s32)D_800EDBE4;
-                        text_high_or_offset = ((u16*)label_value)[swapped_buttons];
-                        text_address = text_high_or_offset + label_value;
+                    case FIELD_COMMAND_BUTTON_ACTION: /* The two commands: resource action slots 0 and 1. */
+                    case FIELD_COMMAND_BUTTON_ACTION + 1:
+                        text_part = (s32)&g_field_resource_actions->slots[-FIELD_COMMAND_BUTTON_ACTION] + action_offset;
+                        action *= sizeof(FieldActionSlot);
+                        work = ((FieldActionSlot*)(text_part + action))->command & FIELD_ACTION_TECHNIQUE_MASK;
+                        text_value = (s32)g_field_command_names;
+                        text_part = ((u16*)text_value)[work];
+                        text_or_state = text_part + text_value;
                         break;
 
-                    case 0:
-                        if (((((FieldSavedInputMap*)swapped_buttons)->actions[0] & 0x7F) == 2) &&
-                            ((secondary_action = ((FieldSavedInputMap*)swapped_buttons)->actions[1], (secondary_action == 5)) || (secondary_action == 8)))
+                    case 0: /* Guests 5 and 8 have no attack or guard. */
+                        if (((((FieldGameState*)work)->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GUEST) &&
+                            ((secondary_action = ((FieldGameState*)work)->characters[0].info.bytes[1], (secondary_action == 5)) || (secondary_action == 8)))
                         {
-                            text_offset = D_800EC3E0[1] << 8;
-                            text_high_or_offset = text_offset + text_base;
-                            label_value = D_800EC3E0[0];
-                            text_address = text_high_or_offset + label_value;
+                            text_offset = D_800EC3E0.high << 8;
+                            text_part = text_offset + bank;
+                            text_value = D_800EC3E0.low;
+                            text_or_state = text_part + text_value;
                         }
                         else
                         {
-                            label_descriptor = D_800EC3E6;
-                            text_high_or_offset = label_descriptor[1];
-                            label_value = D_800EC3E6[0];
-                            text_high_or_offset <<= 8;
-                            text_high_or_offset += text_base;
-                            text_address = text_high_or_offset + label_value;
+                            bank_entry = &D_800EC3E6;
+                            text_part = bank_entry->high;
+                            text_value = D_800EC3E6.low;
+                            text_part <<= 8;
+                            text_part += bank;
+                            text_or_state = text_part + text_value;
                         }
 
                         break;
                     case 1:
-                        if (((((FieldSavedInputMap*)swapped_buttons)->actions[0] & 0x7F) == 2) &&
-                            ((secondary_action_alt = ((FieldSavedInputMap*)swapped_buttons)->actions[1], (secondary_action_alt == 5)) ||
+                        if (((((FieldGameState*)work)->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GUEST) &&
+                            ((secondary_action_alt = ((FieldGameState*)work)->characters[0].info.bytes[1], (secondary_action_alt == 5)) ||
                              (secondary_action_alt == 8)))
                         {
-                            text_offset = D_800EC3E0[1] << 8;
-                            text_high_or_offset = text_offset + text_base;
-                            label_value = D_800EC3E0[0];
-                            text_address = text_high_or_offset + label_value;
+                            text_offset = D_800EC3E0.high << 8;
+                            text_part = text_offset + bank;
+                            text_value = D_800EC3E0.low;
+                            text_or_state = text_part + text_value;
                         }
                         else
                         {
-                            text_high_or_offset = D_800EC3E8[1];
-                            text_high_or_offset <<= 8;
-                            text_high_or_offset += text_base;
-                            label_value = D_800EC3E8[0];
-                            text_address = text_high_or_offset + label_value;
+                            text_part = D_800EC3E8.high;
+                            text_part <<= 8;
+                            text_part += bank;
+                            text_value = D_800EC3E8.low;
+                            text_or_state = text_part + text_value;
                         }
                         break;
                     default:
-                        /* The original also loads the technique text bank here; it is overwritten before use. */
-                        label_value = (s32)g_field_technique_names;
-                        swapped_buttons = ((FieldSavedInputMap*)((u8*)g_pad_ctx + local_pad_offset))->actions[action_slot];
-                        if (swapped_buttons == 0xFF)
+                        /* Dead store (overwritten below); without it the technique bank's high half is not hoisted as in the original. */
+                        text_value = (s32)g_field_technique_names;
+                        work = ((FieldGameState*)((u8*)g_pad_ctx + record_offset))->characters[0].info.bytes[action];
+                        if (work == FIELD_SKILL_NONE)
                         {
-                            text_offset = D_800EC3E0[1] << 8;
-                            text_high_or_offset = text_offset + text_base;
-                            label_value = D_800EC3E0[0];
-                            text_address = text_high_or_offset + label_value;
+                            text_offset = D_800EC3E0.high << 8;
+                            text_part = text_offset + bank;
+                            text_value = D_800EC3E0.low;
+                            text_or_state = text_part + text_value;
                         }
                         else
                         {
-                            if (swapped_buttons & 0x80)
+                            if (work & FIELD_SKILL_INSTRUMENT)
                             {
-                                text_offset = swapped_buttons & 0xFF7F;
-                                text_address = (s32)(&((u8*)g_pad_ctx)[name_offset] + ((text_offset << 6) + 0x150));
+                                text_offset = work & ~FIELD_SKILL_INSTRUMENT;
+                                text_or_state = (s32) & ((FieldCharacterRecord*)((u8*)g_pad_ctx + record_base_offset))->unk150[text_offset];
                             }
                             else
                             {
-                                action_slot = (s32)&((FieldLabelAction*)g_field_resource_actions)[action_slot];
-                                swapped_buttons = ((FieldLabelAction*)(index * 0x190 + action_slot))->text_index;
-                                swapped_buttons &= 0x7FFF;
-                                label_value = g_field_player_records[index].kind;
-                                swapped_buttons += label_value * 0x18;
+                                action = (s32)&g_field_resource_actions->slots[action];
+                                work = ((FieldActionSlot*)(index * sizeof(FieldActionRow) + action))->command;
+                                work &= FIELD_ACTION_TECHNIQUE_MASK;
+                                text_value = g_field_player_records[index].head.bytes.weapon_type;
+                                work += text_value * FIELD_TECHNIQUES_PER_WEAPON;
 
-                                label_value = (s32)g_field_technique_names;
-                                text_high_or_offset = ((u16*)label_value)[swapped_buttons];
-                                text_address = text_high_or_offset + label_value;
+                                text_value = (s32)g_field_technique_names;
+                                text_part = ((u16*)text_value)[work];
+                                text_or_state = text_part + text_value;
                             }
                         }
 
                         break;
                     }
                     label_y = index;
-                    point.vx = 0x60;
+                    point.vx = FIELD_HINT_PORTRAIT_X;
                     label_y <<= 5;
-                    point.vy = label_y + 0x3C;
-                    primitive = (s32)field_emit_actor_portrait((SPRT*)primitive, (u32*)label_ot, index, (u32*)&point);
-                    primitive = (s32)func_800A88A0((SPRT*)primitive, (s32*)label_ot, (u8*)text_address, 4, 0x80, label_y + 0x40, 0x80);
+                    point.vy = label_y + FIELD_HINT_PORTRAIT_Y;
+                    cursor = (s32)field_emit_actor_portrait((SPRT*)cursor, (u32*)ot, index, (u32*)&point);
+                    cursor = (s32)field_draw_text((SPRT*)cursor, (s32*)ot, (u8*)text_or_state, FIELD_TEXT_COLOR_NORMAL, FIELD_HINT_TEXT_X,
+                                                  label_y + FIELD_HINT_TEXT_Y, FIELD_TEXT_SHADOW);
                     break;
                 }
                 else
                 {
                     button_or_x += 1;
-                    actor_id *= 2;
+                    bit_or_actor *= 2;
                 }
-            } while (button_or_x < 8);
+            } while (button_or_x < FIELD_HINT_BUTTON_COUNT);
         }
         index += 1;
-    } while (index < 2);
+    } while (index < FIELD_PLAYER_COUNT);
     index = 0;
     if (g_field_label_actor_count != 0)
     {
         do
         {
-            actor_id = g_field_label_actor_indices[index];
+            bit_or_actor = g_field_label_actor_indices[index];
             camera_x = g_field_view_offset_x;
-            text_address = (s32)&g_field_object_states[actor_id];
-            actor_position = &g_field_actors[actor_id];
-            if (camera_x < 0)
+            text_or_state = (s32)&g_field_object_states[bit_or_actor];
+            actor = &g_field_actors[bit_or_actor];
+            button_or_x = camera_x / 256;
+            screen_x = actor->x / 256 + SCREEN_WIDTH / 2;
+            point.vx = button_or_x + screen_x;
+            camera_y = g_field_view_offset_y / 256;
+            screen_y = actor->y / 256 + FIELD_SCREEN_CENTER_Y;
+            point.vy = ((camera_y + screen_y) - actor->z / 512) - g_field_view_offset_z / 512;
+            label_half_width = field_count_text_glyphs(((FieldObjectState*)text_or_state)->name) * FIELD_LABEL_GLYPH_HALF_WIDTH;
+            if ((point.vx + label_half_width) > SCREEN_WIDTH)
             {
-                camera_x += 0xFF;
+                point.vx = SCREEN_WIDTH - label_half_width;
             }
-            actor_x = actor_position->x;
-            button_or_x = camera_x >> 8;
-            if (actor_x < 0)
+            if (((point.vx - label_half_width) - FIELD_LABEL_MARGIN) < 0)
             {
-                actor_x += 0xFF;
-            }
-            camera_y = g_field_view_offset_y;
-            actor_screen_x = (actor_x >> 8) + 0xA0;
-            point.vx = button_or_x + actor_screen_x;
-            if (camera_y < 0)
-            {
-                camera_y += 0xFF;
-            }
-            camera_y_pixels = camera_y >> 8;
-            actor_y = actor_position->y;
-            if (actor_y < 0)
-            {
-                actor_y += 0xFF;
-            }
-            actor_height = actor_position->z;
-            actor_y = (actor_y >> 8) + 0x70;
-            screen_y = camera_y_pixels + actor_y;
-            if (actor_height < 0)
-            {
-                actor_height += 0x1FF;
-            }
-            camera_height = g_field_view_offset_z;
-            projected_y = screen_y - (actor_height >> 9);
-            if (camera_height < 0)
-            {
-                camera_height += 0x1FF;
-            }
-            point.vy = projected_y - (camera_height >> 9);
-            label_half_width = func_800AE864(((FieldLabelActorState*)text_address)->name) * 6;
-            if ((point.vx + label_half_width) > FIELD_LABEL_SCREEN_WIDTH)
-            {
-                point.vx = FIELD_LABEL_SCREEN_WIDTH - label_half_width;
-            }
-            if (((point.vx - label_half_width) - 8) < 0)
-            {
-                point.vx = label_half_width + 8;
+                point.vx = label_half_width + FIELD_LABEL_MARGIN;
             }
             if (point.vy > FIELD_LABEL_MAX_Y)
             {
@@ -1059,56 +1062,58 @@ void field_draw_actor_labels(void* context)
                 point.vy = FIELD_LABEL_MIN_Y;
             }
             button_or_x = point.vx;
-            text_ot = label_ot;
+            text_ot = ot;
             if (g_field_selected_actor_label == index)
             {
-                text_ot = label_ot - 4;
+                text_ot = ot - sizeof(u_long);
             }
-            text_style = FIELD_LABEL_NORMAL_STYLE;
+            text_color = FIELD_TEXT_COLOR_DIM;
             if (g_field_selected_actor_label == index)
             {
-                text_style = FIELD_LABEL_SELECTED_STYLE;
+                text_color = FIELD_TEXT_COLOR_NORMAL;
             }
-            primitive = (s32)func_800A88A0((SPRT*)primitive, (s32*)text_ot, ((FieldLabelActorState*)text_address)->name, text_style, button_or_x,
-                                           (s32)point.vy, 0x82);
-            left_glyph_ot = label_ot;
+            cursor = (s32)field_draw_text((SPRT*)cursor, (s32*)text_ot, ((FieldObjectState*)text_or_state)->name, text_color, button_or_x, (s32)point.vy,
+                                          FIELD_TEXT_SHADOW | FIELD_TEXT_ALIGN_CENTER);
+            left_glyph_ot = ot;
             point.vy = (u16)point.vy - 8;
             if (g_field_selected_actor_label == index)
             {
-                left_glyph_ot = label_ot - 4;
+                left_glyph_ot = ot - sizeof(u_long);
             }
-            primitive = (s32)func_800AD524((u8*)primitive, (s32*)left_glyph_ot, 0xC, (s32*)&point, g_field_selected_actor_label == index ? 0x81 : 0x82);
-            right_glyph_ot = label_ot;
+            cursor = (s32)func_800AD524((u8*)cursor, (s32*)left_glyph_ot, FIELD_LABEL_LEFT_BRACKET, (s32*)&point,
+                                        g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
+            right_glyph_ot = ot;
             point.vx = (u16)point.vx + 8;
             if (g_field_selected_actor_label == index)
             {
-                right_glyph_ot = label_ot - 4;
+                right_glyph_ot = ot - sizeof(u_long);
             }
-            primitive = (s32)func_800AD524((u8*)primitive, (s32*)right_glyph_ot, 0xD, (s32*)&point, g_field_selected_actor_label == index ? 0x81 : 0x82);
-            number_ot = label_ot;
+            cursor = (s32)func_800AD524((u8*)cursor, (s32*)right_glyph_ot, FIELD_LABEL_RIGHT_BRACKET, (s32*)&point,
+                                        g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
+            number_ot = ot;
             point.vx = (u16)point.vx + 8;
             if (g_field_selected_actor_label == index)
             {
-                number_ot -= 4;
+                number_ot -= sizeof(u_long);
             }
-            primitive = (s32)func_800AD208((s32*)number_ot, (void*)primitive, ((FieldLabelActorState*)text_address)->label_number >> 1, 2, (u16*)&point,
-                                           g_field_selected_actor_label == index ? 0x81 : 0x82);
-            if ((g_field_selected_actor_label == index) && (((FieldLabelActorState*)text_address)->hp_display_flags >= 0))
+            cursor = (s32)func_800AD208((s32*)number_ot, (void*)cursor, ((FieldObjectState*)text_or_state)->hud.bytes.flags >> 1, 2, (u16*)&point,
+                                        g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
+            if ((g_field_selected_actor_label == index) && (((FieldObjectState*)text_or_state)->unk8.word >= 0))
             {
-                highlight_part = &g_field_object_parts[actor_id];
-                highlight_part->footprint_scale_x = FIELD_ACTOR_LABEL_HIGHLIGHT;
-                highlight_part->footprint_scale_y = FIELD_ACTOR_LABEL_HIGHLIGHT;
+                highlight_part = &g_field_object_parts[bit_or_actor];
+                highlight_part->scale_z = FIELD_LABEL_SELECTED_SCALE;
+                highlight_part->scale_x = FIELD_LABEL_SELECTED_SCALE;
             }
             else
             {
-                normal_part = &g_field_object_parts[actor_id];
-                normal_part->footprint_scale_x = (u8)g_field_label_saved_scale_x[index];
-                normal_part->footprint_scale_y = (u8)g_field_label_saved_scale_y[index];
+                normal_part = &g_field_object_parts[bit_or_actor];
+                normal_part->scale_z = (u8)g_field_label_saved_scale_x[index];
+                normal_part->scale_x = (u8)g_field_label_saved_scale_y[index];
             }
             index += 1;
         } while (index < (s32)g_field_label_actor_count);
     }
-    ((FieldLabelRenderContext*)context)->primitive_cursor = primitive;
+    render->primitive_cursor = (u8*)cursor;
 }
 
 /**
@@ -1153,27 +1158,18 @@ void field_merge_dialog_items(void)
 }
 
 /**
- * @brief Move the actor-label selection or close the active text session.
+ * @brief Move the actor-label selection, or close the text session on START (or once the CD error is gone).
  */
-void field_update_text_session(void)
+static void field_update_text_session(void)
 {
-    extern PadContext* g_pad_ctx;
-    s32 actor_index;
-    FieldLabelPart* part;
     if ((g_field_text_session_cd_error && !cdrom_get_error_status()) ||
-        (!g_field_text_session_cd_error &&
-         (g_pad_input == PADh || ((g_pad_ctx->inject_flags & FIELD_SECONDARY_INPUT_ENABLED) && g_pad_ctx->inject_enable && g_pad_input_inject == PADh))))
+        (!g_field_text_session_cd_error && (g_pad_input == PADh || ((g_pad_ctx->characters[1].info.word & FIELD_CHARACTER_AI) &&
+                                                                    g_pad_ctx->characters[1].name[0] && g_pad_input_inject == PADh))))
     {
         g_field_draw_count = 0;
         g_field_text_session_active = 0;
         field_restore_fade_target();
-        akao_stop_sfx_by_id(0x7E);
-        for (actor_index = 0; actor_index < g_field_label_actor_count; actor_index++)
-        {
-            part = &g_field_object_parts[g_field_label_actor_indices[actor_index]];
-            part->footprint_scale_x = g_field_label_saved_scale_x[actor_index];
-            part->footprint_scale_y = g_field_label_saved_scale_y[actor_index];
-        }
+        field_restore_label_actor_parts();
         field_reset_input_repeat();
     }
     else
@@ -1185,86 +1181,85 @@ void field_update_text_session(void)
             if (g_pad_input & (PADLup | PADLleft))
             {
                 g_field_selected_actor_label = g_field_selected_actor_label ? g_field_selected_actor_label - 1 : g_field_label_actor_count - 1;
-                akao_stop_sfx_by_id(0x7D);
+                akao_stop_sfx_by_id(FIELD_SOUND_CURSOR);
             }
             else if (g_pad_input & (PADLdown | PADLright))
             {
                 g_field_selected_actor_label = g_field_selected_actor_label == g_field_label_actor_count - 1 ? 0 : g_field_selected_actor_label + 1;
-                akao_stop_sfx_by_id(0x7D);
+                akao_stop_sfx_by_id(FIELD_SOUND_CURSOR);
             }
         }
     }
 }
 
 /**
- * @brief Read field buttons, including directional input from the analog axes.
- * @param index Controller port index.
- * @return Field button mask, or zero if the controller is unavailable.
- * @note Face-button bits are reordered from the hardware packet layout.
+ * @brief Read a controller's buttons in field bit order, with the left stick as directions.
+ * @param index Controller port.
+ * @return Button mask, or zero when the controller is missing or still being configured.
+ * @note The packet's button bytes are swapped and bits 4-7 reordered into the PAD* layout.
  */
 s32 field_read_controller_buttons(s32 index)
 {
-    FieldControllerSample* base;
-    FieldControllerSample* record;
-    u16 flags;
-    s32 value;
-    s16 state;
-    s32 sample_offset;
+    ControllerPortState* ports;
+    ControllerPortState* port;
+    u16 raw_buttons;
+    s32 buttons;
+    s16 stick;
+    s32 port_offset;
 
-    base = FIELD_CONTROLLER_SAMPLES;
-    record = &base[index];
-    if (record->device_type >= FIELD_PAD_INACTIVE)
+    ports = CONTROLLER_STATE->ports;
+    port = &ports[index];
+    if (port->published_sample.device_type >= CONTROLLER_DEVICE_CONFIGURING)
     {
         return 0;
     }
 
-    flags = record->buttons;
-    value = (flags >> 8) | ((flags & 0xFF) << 8);
-    value = ((u32)(value & 0x40) >> 1) | ((value & 0x20) << 1) | ((u32)(value & 0x80) >> 3) | ((value & 0x10) << 3) | (value & 0xFF0F);
+    raw_buttons = port->published_sample.held_buttons;
+    buttons = (raw_buttons >> 8) | ((raw_buttons & 0xFF) << 8);
+    buttons = ((u32)(buttons & 0x40) >> 1) | ((buttons & 0x20) << 1) | ((u32)(buttons & 0x80) >> 3) | ((buttons & 0x10) << 3) | (buttons & 0xFF0F);
 
-    if (record->device_type != 0)
+    if (port->published_sample.device_type != CONTROLLER_DEVICE_DIGITAL)
     {
-        state = record->axis_x;
-        if (state < -1)
+        stick = port->current_sample.left_stick_x;
+        if (stick < -FIELD_PAD_STICK_THRESHOLD)
         {
-            value |= PADLleft;
+            buttons |= PADLleft;
         }
-        else if (state >= 2)
+        else if (stick > FIELD_PAD_STICK_THRESHOLD)
         {
-            value |= PADLright;
+            buttons |= PADLright;
         }
 
-        sample_offset = index * sizeof(*base);
-        state = ((FieldControllerSample*)((u8*)base + sample_offset))->axis_y;
-        if (state < -1)
+        port_offset = index * sizeof(*ports);
+        stick = ((ControllerPortState*)((u8*)ports + port_offset))->current_sample.left_stick_y;
+        if (stick < -FIELD_PAD_STICK_THRESHOLD)
         {
-            value |= PADLup;
+            buttons |= PADLup;
         }
-        else if (state >= 2)
+        else if (stick > FIELD_PAD_STICK_THRESHOLD)
         {
-            value |= PADLdown;
+            buttons |= PADLdown;
         }
     }
 
-    return value;
+    return buttons;
 }
 
 /**
- * @brief Apply initial-delay and repeat timing to both field controller inputs.
- * @note Held input waits fifteen ticks initially, then repeats every three ticks.
- * @note Modal input gives held direction buttons priority.
- * @see 100% match with GCC 2.7.2 CDK: 109 instructions, 436 bytes.
+ * @brief Read both controllers and apply the initial delay and key repeat to their buttons.
+ * @note A new button fires at once, waits FIELD_PAD_REPEAT_DELAY frames, then repeats every third frame.
+ * @note While a modal screen is open, held directions repeat on their own without the other buttons.
  */
 void field_update_input_repeat(void)
 {
-    extern s32 g_field_modal_state;
     s32 directions;
     s32 buttons;
 
     buttons = field_read_controller_buttons(0);
     g_pad_input = 0;
     g_field_buffered_input = 0;
-    if (((buttons == g_field_primary_held_buttons) || ((g_field_primary_held_buttons != 0) && (buttons & (g_field_primary_held_buttons | 0xB6F)))) &&
+    if (((buttons == g_field_primary_held_buttons) ||
+         ((g_field_primary_held_buttons != 0) && (buttons & (g_field_primary_held_buttons | FIELD_PAD_HOLD_BUTTONS)))) &&
         buttons != 0)
     {
         directions = buttons & FIELD_PAD_DIRECTIONS;
@@ -1297,7 +1292,8 @@ void field_update_input_repeat(void)
     }
     buttons = field_read_controller_buttons(1);
     g_pad_input_inject = 0;
-    if (((buttons == g_field_secondary_held_buttons) || ((g_field_secondary_held_buttons != 0) && (buttons & (g_field_secondary_held_buttons | 0xB6F)))) &&
+    if (((buttons == g_field_secondary_held_buttons) ||
+         ((g_field_secondary_held_buttons != 0) && (buttons & (g_field_secondary_held_buttons | FIELD_PAD_HOLD_BUTTONS)))) &&
         buttons != 0)
     {
         directions = buttons & FIELD_PAD_DIRECTIONS;
@@ -1334,7 +1330,7 @@ void field_update_input_repeat(void)
 /**
  * @brief Clear delivered input and restart both controllers' held-button delays.
  */
-void field_reset_input_repeat(void)
+inline void field_reset_input_repeat(void)
 {
     g_pad_input = 0;
     g_field_primary_held_buttons = field_read_controller_buttons(0);
@@ -1346,25 +1342,18 @@ void field_reset_input_repeat(void)
 }
 
 /**
- * @brief Handle reset, controller removal, CD errors, and guarded field-menu input.
- * @param context Value forwarded to the active text-session handler.
+ * @brief Handle the soft reset, the text session, and the menu, CD error and item-drop buttons.
+ * @param render Render half; the text session draws into it.
+ * @note Unplugging a controller opens the menu for that controller.
  */
-void field_process_input(s32 context)
+void field_process_input(FieldRenderHalf* render)
 {
-    extern s32 g_field_modal_state;
-    extern FieldLabelActorState g_field_object_states[];
-    extern FieldInputActor g_field_actors[];
-    extern PadContext* g_pad_ctx;
-    FieldControllerSample* pad = FIELD_CONTROLLER_SAMPLES;
+    ControllerPortState* ports = CONTROLLER_STATE->ports;
     u32 buttons;
-    FieldInputActor* actor;
-    FieldInputActor* candidate;
-    FieldLabelActorState* state;
     s32 actor_count;
     s32 actor_index;
-    s32 absent_actor;
 
-    buttons = pad[0].buttons;
+    buttons = ports[0].published_sample.held_buttons;
     buttons = (buttons >> 8) | ((buttons & 0xFF) << 8);
     buttons = ((buttons & 0x40) >> 1) | ((buttons & 0x20) << 1) | ((buttons & 0x80) >> 3) | ((buttons & 0x10) << 3) | (buttons & 0xFF0F);
     if (g_field_modal_state != 0)
@@ -1373,13 +1362,13 @@ void field_process_input(s32 context)
     }
     if (buttons == FIELD_INPUT_RESET_COMBINATION)
     {
-        g_pending_game_state = 4;
-        pad[0].feedback[0] = 0;
-        pad[0].feedback[1] = 0;
-        pad[1].feedback[0] = 0;
-        pad[1].feedback[1] = 0;
+        g_pending_game_state = GAME_STATE_RETURN_TO_TITLE;
+        ports[0].small_motor_command = 0;
+        ports[0].actuator_control.fields.large_motor_command = 0;
+        ports[1].small_motor_command = 0;
+        ports[1].actuator_control.fields.large_motor_command = 0;
         akao_cmd_98_9a_9c_9e(0);
-        field_fade_song(0, 0x3C, 0x7F);
+        field_fade_song(0, 60, 127);
         return;
     }
     if (g_field_interaction_active != 0)
@@ -1394,91 +1383,80 @@ void field_process_input(s32 context)
     }
     if (g_field_text_session_active != 0)
     {
-        field_update_modal_text_session(context);
+        field_update_modal_text_session(render);
         return;
     }
-    actor = g_field_actors;
-    actor_count = 0;
-    if (!(actor->flags & 0x1FF))
+    if (!(g_field_actors[0].control.word & FIELD_CONTROL_MODE_MASK))
     {
-        do
+        for (actor_count = 0; actor_count < FIELD_PARTY_COUNT; actor_count++)
         {
-            if (g_field_actors[actor_count].presence != FIELD_ACTOR_ABSENT && g_field_actors[actor_count].state == 0x9A)
+            if (g_field_actors[actor_count].presence != FIELD_ACTOR_UNUSED && g_field_actors[actor_count].command == FIELD_ACTOR_COMMAND_IDLE_AFTER_RELOAD)
             {
                 return;
             }
-            actor_count++;
-            actor++;
-        } while (actor_count < 3);
-        if (field_text_get_status(0) == -1 && D_800F2298 == 0 && g_field_dialog_screen_mode == 0 && g_field_return_to_title_prompt_state == 0 && D_80122714 == 0 &&
-            func_800B0850() == 0)
+        }
+        if (field_text_get_status(0) == -1 && D_800F2298 == 0 && g_field_dialog_screen_mode == 0 && g_field_return_to_title_prompt_state == 0 &&
+            D_80122714 == 0 && func_800B0850() == 0)
         {
-            if (g_field_menu_controller_types[0] != 0xFF && pad[0].device_type == 0xFF)
+            if (g_field_menu_controller_types[0] != CONTROLLER_DEVICE_DISCONNECTED && ports[0].published_sample.device_type == CONTROLLER_DEVICE_DISCONNECTED)
             {
-                field_run_menu(FIELD_MODAL_WORK_BUFFER, 0);
+                field_run_menu(FIELD_MENU_RENDER_BUFFERS, 0);
             }
-            if (D_801227B9 != 0xFF && pad[1].device_type == 0xFF)
+            if (g_field_menu_controller_types[1] != CONTROLLER_DEVICE_DISCONNECTED && ports[1].published_sample.device_type == CONTROLLER_DEVICE_DISCONNECTED)
             {
-                field_run_menu(FIELD_MODAL_WORK_BUFFER, 1);
+                field_run_menu(FIELD_MENU_RENDER_BUFFERS, 1);
             }
             if (cdrom_get_error_status() != 0)
             {
                 g_field_text_session_cd_error = 1;
-                pad[0].feedback[0] = 0;
-                pad[0].feedback[1] = 0;
-                pad[1].feedback[0] = 0;
-                pad[1].feedback[1] = 0;
+                ports[0].small_motor_command = 0;
+                ports[0].actuator_control.fields.large_motor_command = 0;
+                ports[1].small_motor_command = 0;
+                ports[1].actuator_control.fields.large_motor_command = 0;
                 field_begin_text_session();
                 return;
             }
-            g_field_menu_controller_types[0] = pad[0].device_type;
-            g_field_menu_controller_types[1] = pad[1].device_type;
+            g_field_menu_controller_types[0] = ports[0].published_sample.device_type;
+            g_field_menu_controller_types[1] = ports[1].published_sample.device_type;
             if (D_8012291C != 0)
             {
                 if (func_8005B218() == 0)
                 {
                     if (g_pad_input == PADh ||
-                        ((g_pad_ctx->inject_flags & FIELD_SECONDARY_INPUT_ENABLED) && g_pad_ctx->inject_enable && g_pad_input_inject == PADh))
+                        ((g_pad_ctx->characters[1].info.word & FIELD_CHARACTER_AI) && g_pad_ctx->characters[1].name[0] && g_pad_input_inject == PADh))
                     {
-                        field_run_menu(FIELD_MODAL_WORK_BUFFER, 0);
+                        field_run_menu(FIELD_MENU_RENDER_BUFFERS, 0);
                     }
                 }
             }
             else
             {
                 if (g_pad_input == PADh || g_pad_input == PADRup ||
-                    ((g_pad_ctx->inject_flags & FIELD_SECONDARY_INPUT_ENABLED) && g_pad_ctx->inject_enable &&
+                    ((g_pad_ctx->characters[1].info.word & FIELD_CHARACTER_AI) && g_pad_ctx->characters[1].name[0] &&
                      (g_pad_input_inject == PADh || g_pad_input_inject == PADRup)))
                 {
-                    field_run_menu(FIELD_MODAL_WORK_BUFFER, 0);
+                    field_run_menu(FIELD_MENU_RENDER_BUFFERS, 0);
                 }
             }
             field_play_low_hp_warning();
-            if (g_pad_input & 0x80)
+            if (g_pad_input & PADRleft)
             {
                 actor_count = 0;
                 if (D_80122980 != 0)
                 {
-                    actor_index = actor_count;
-                    absent_actor = 0xFF;
-                    state = g_field_object_states;
-                    candidate = g_field_actors;
-                    do
+                    for (actor_index = 0; actor_index < FIELD_ACTOR_COUNT; actor_index++)
                     {
-                        if (candidate->presence != absent_actor && state->record_id >= 0x14)
+                        if (g_field_actors[actor_index].presence != FIELD_ACTOR_UNUSED && g_field_object_states[actor_index].key >= 0x14)
                         {
                             actor_count++;
                         }
-                        state++;
-                        actor_index++;
-                        candidate++;
-                    } while (actor_index < FIELD_LABEL_ACTOR_LIMIT);
+                    }
                     if (actor_count < 5)
                     {
-                        func_800AEE28();
+                        field_open_item_drop_menu();
                         return;
                     }
-                    field_play_sound(0x78, 0x80);
+                    field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
                 }
             }
         }
@@ -1486,356 +1464,37 @@ void field_process_input(s32 context)
 }
 
 /**
- * @brief Play a staggered warning for living players below one-quarter HP.
- * @return Unspecified; callers ignore the return value.
+ * @brief Play the low-HP warning for each player below a quarter of their maximum HP.
+ * @return Undefined: declared s32 but falls off the end (v0 stays live at the exit, which keeps the delay slots empty).
+ * @note The two players' warnings alternate every sixteen frames; player 2 only warns while pad controlled.
  */
-s32 field_play_low_hp_warning(void)
+static s32 field_play_low_hp_warning(void)
 {
-    extern FieldLabelActorState g_field_object_states[];
     if (g_field_active_group != 0)
     {
         if (!(g_frame_counter & 0x1F))
         {
-            if ((g_field_object_states[0].current_hp != 0) && ((u32)(g_field_object_states[0].current_hp * 4) < (u32)g_field_object_states[0].maximum_hp))
+            if ((g_field_object_states[0].unk4.word != 0) && ((u32)(g_field_object_states[0].unk4.word * 4) < (u32)g_field_object_states[0].unk0))
             {
-                field_play_sound(FIELD_LOW_HP_SOUND, 0x80);
+                field_play_sound(FIELD_SOUND_LOW_HP, FIELD_SOUND_PAN_CENTRE);
             }
         }
 
-        if (!((g_frame_counter + 0x10) & 0x1F) && !(D_800FDFC8 & 0x1FF) && (g_field_object_states[1].current_hp != 0) &&
-            ((u32)(g_field_object_states[1].current_hp * 4) < (u32)g_field_object_states[1].maximum_hp))
+        if (!((g_frame_counter + 0x10) & 0x1F) && !(g_field_actors[1].control.word & FIELD_CONTROL_MODE_MASK) && (g_field_object_states[1].unk4.word != 0) &&
+            ((u32)(g_field_object_states[1].unk4.word * 4) < (u32)g_field_object_states[1].unk0))
         {
-            field_play_sound(FIELD_LOW_HP_SOUND, 0x80);
+            field_play_sound(FIELD_SOUND_LOW_HP, FIELD_SOUND_PAN_CENTRE);
         }
     }
 }
 
-/* ---- Menu dispatch, modal overlays and duel panels (0x800AA570 .. 0x800AD030) ---- */
-
-#define FIELD_SUBOVERLAY_ADDRESS ((void*)0x80140000)
-#define FIELD_SAVED_CHARACTER_STRIDE 0x250
-#define FIELD_INPUT_REPEAT_DELAY 15
-#define FIELD_DUEL_PANEL_HOLD_FRAMES 90
-#define FIELD_DUEL_PANEL_START_OFFSET 500
-
-/** @brief Animation stages shared by the duel introduction and winner panels. */
-typedef enum FieldDuelPanelPhase
-{
-    FIELD_DUEL_SLIDE_IN,
-    FIELD_DUEL_HOLD,
-    FIELD_DUEL_SLIDE_OUT,
-    FIELD_DUEL_FINISHED
-} FieldDuelPanelPhase;
-
-/** @brief Party flags, weapon category, and action state in one 0x268-byte slot. */
-typedef struct
-{
-    union
-    {
-        u16 word;
-        struct
-        {
-            u8 flags, weapon_type;
-        } bytes;
-        struct
-        {
-            u16 active : 1;
-            u16 selected : 1;
-            u16 rest : 14;
-        } bits;
-    } head;
-    u8 companion_id, companion_type;
-    u8 unknown_0x004[0x250];
-    u16 action_state;
-    u8 action_index;
-    u8 unknown_0x257;
-    u8 weapon_flag;
-    u8 unknown_0x259[0xF];
-} FieldModalPartySlot;
-/** @brief Actor flags within the 0x54-byte field record. */
-typedef struct
-{
-    u8 unknown_0x000[0x1C];
-    s32 flags;
-    u8 unknown_0x020[0x34];
-} FieldModalActor;
-/** @brief Runtime health fields within the 0x23C-byte actor state. */
-typedef struct
-{
-    s32 max_hp, hp, display_hp;
-    u8 unknown_0x00c[0x230];
-} FieldModalActorHealth;
-/** @brief Eight-byte action descriptor with byte and halfword flag access. */
-typedef struct
-{
-    s16 action_id;
-    union
-    {
-        u16 word;
-        struct
-        {
-            u8 low, high;
-        } byte;
-    } bits;
-    s16 icon_id, texture_id;
-} FieldModalAction;
-/** @brief Selected item attributes at offsets 0x24 and 0x25. */
-typedef struct
-{
-    u8 unknown_0x000[0x24];
-    u8 instrument_type, spell;
-} FieldModalInstrument;
-/** @brief Accessed global settings and player fields within the saved context. */
-typedef struct
-{
-    u8 unknown_0x000[0x18];
-    u32 scene_config;
-    s16 scene_option;
-    s8 scene_sub_mode;
-    u8 unknown_0x01f;
-    s32 music_track;
-    u16 scene_mode;
-    u8 scene_flags;
-    u8 layout_flags;
-    u32 option_flags;
-    u8 unknown_0x02c[0x5F0 - 0x2C];
-    u8 name[24];
-    u8 character_kind, character_id;
-    u8 bound_actions[2];
-    u8 equipped_abilities[4];
-    u8 unknown_0x610[4];
-    u16 max_hp;
-    u8 unknown_0x616[0x1E];
-    u16 duel_wins;
-    u16 duel_losses;
-    u8 unknown_0x638[8];
-    u8 equipment_present_at_slot;
-    u8 unknown_0x641[0x13];
-    u32 equipment_flags;
-    u8 unknown_0x658[0x1E8];
-    u8 second_name[24];
-    union
-    {
-        u32 word;
-        u8 bytes[4];
-    } second_character;
-    u8 unknown_0x85c[0x884 - 0x85C];
-    u16 second_duel_wins;
-    u16 second_duel_losses;
-    u8 unknown_0x888[0xCE0 - 0x888];
-    u8 equipment_present;
-    u8 unknown_0xce1[0x25E0 - 0xCE1];
-    u8 item_counts[256];
-} FieldModalSaveView;
-
-/** @brief Unaligned little-endian offset into the field UI string table. */
-typedef struct
-{
-    u8 low;
-    u8 high;
-} FieldModalStringOffset;
-
-/** @brief Caller-owned block whose packet cursor lives at 0x40B8. */
-typedef struct
-{
-    u8 unknown_0x000[0x40B8];
-    s32 packet_cursor;
-} FieldModalDrawContext;
-
-s32 field_read_controller_buttons(s32);
-void akao_cmd_98_9a_9c_9e(s32 context);
-
-void field_update_text_session(void);
-
-void* func_800A88A0(SPRT* cursor, s32* ot, u8* text, s32 color, s32 x, s32 y, s32 flags);
-s32 field_name_byte_length(u8* context);
-void field_copy_name(u8* dest, u8* src);
-s32 field_draw_player_icon(s32 packet_cursor, void* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5);
-s32 func_800AF950(s32 packet_cursor, void* arg1, u8* str, s32 arg3, s32 x, s32 y, s32 arg6, s32 arg7, s32 arg8, s32 arg9, s32 arg10, s32 arg11);
-
-void field_draw_empty_shop_notice(FieldModalDrawContext* context);
-s32 field_draw_duel_intro(FieldModalDrawContext* context);
-s32 field_draw_duel_result(FieldModalDrawContext* context);
-
-extern u8 g_field_menu_controller_types[CONTROLLER_PORT_COUNT];
-extern s32 g_field_primary_held_buttons;
-extern s32 g_field_primary_repeat_delay;
-extern s32 g_field_text_session_active;
-extern s32 g_field_secondary_held_buttons;
-extern s32 g_field_secondary_repeat_delay;
-extern s32 D_8012291C;
-extern s32 g_field_text_session_cd_error;
-extern s32 g_field_buffered_input;
-extern s32 g_pad_input;
-extern s32 g_pad_input_inject;
-
-extern s32 g_field_gosub_phase;
-extern s32 D_801227F0;
-extern s32 g_field_shop_active;
-extern s32 g_gosub_result_count;
-
-extern FieldModalStringOffset D_800EC400;
-extern s32 g_field_duel_panel_phase;
-extern s32 g_field_shop_notice_hidden;
-extern s32 g_field_duel_panel_offset;
-extern s32 g_field_duel_panel_hold_frames;
-
-extern FieldModalStringOffset D_800EC3E4;
-extern FieldModalStringOffset D_800EC406;
-extern FieldModalStringOffset D_800EC408;
-extern FieldModalStringOffset D_800EC40A;
-extern FieldModalStringOffset D_800EC40C;
-extern s32 g_field_duel_winner;
-
-extern void func_80140024(u32, s32);
-extern s32 func_801405B0(s32);
-extern s32 g_field_actor_bindings[];
-extern u8 D_801226B8[], D_801226F0[];
-extern s32 D_8011F424, D_801227D4, D_801229F4, g_active_script, g_script_repeat_count;
-extern void akao_set_paused(s32);
-extern u8 g_field_action_animation_parameters[];
-extern u8 D_800EB24C[];
-extern FieldModalPartySlot g_field_player_records[];
-extern FieldModalActor g_field_actors[];
-extern FieldModalActorHealth g_field_object_states[];
-extern FieldModalAction g_field_resource_actions[];
-extern s32 g_field_scene_mode_bit;
-extern u8* g_pad_ctx;
-extern u32 g_field_modal_state;
-
-extern s32 func_800B0888(void);
-extern s32 func_801400C4(s32);
-extern s32 func_801400D4(s32);
-extern s32 func_801401F0(s32);
-extern s32 func_801401F8(s32);
-extern s32 func_80140370(s32);
-extern s32 g_field_niki_addhero_state;
-extern s32 g_field_card_overlay_mode;
-extern s32 g_gosub_result_values;
-extern s16 g_music_track_index;
-extern u8 D_800FDF79;
-/* GNAME and SHOP share this entry address but have different parameter lists. */
-extern void func_80140004();
-
-/** @brief True for a DBCS lead byte (0x19-0x1F), which owns the following byte. */
-#define IS_DBCS(c) IS_DBCS_LEAD_BYTE(c)
-
-/** @brief Write a signed decimal into @p record_text (minus-sign glyph from the string table). */
-#define FORMAT_SIGNED(record_text, val)                                                                                                                        \
-    {                                                                                                                                                          \
-        u8* dst;                                                                                                                                               \
-        s32 value;                                                                                                                                             \
-        s32 double_byte_digits;                                                                                                                                \
-        u8* minus;                                                                                                                                             \
-        s32 low;                                                                                                                                               \
-        s32 offset;                                                                                                                                            \
-        s32 div;                                                                                                                                               \
-        s32 started;                                                                                                                                           \
-        s32 digit;                                                                                                                                             \
-        dst = record_text;                                                                                                                                     \
-        value = val;                                                                                                                                           \
-        double_byte_digits = 0;                                                                                                                                \
-        if (value < 0)                                                                                                                                         \
-        {                                                                                                                                                      \
-            value = -value;                                                                                                                                    \
-            low = D_800EC3E4.low;                                                                                                                              \
-            offset = (D_800EC3E4.high << 8) + (s32)((u8*)&D_800EC3E4 - 0x20);                                                                                  \
-            minus = (u8*)(low + offset);                                                                                                                       \
-            field_copy_name(dst, minus);                                                                                                                       \
-            dst += field_name_byte_length(minus);                                                                                                              \
-        }                                                                                                                                                      \
-        div = 10000000;                                                                                                                                        \
-        started = 0;                                                                                                                                           \
-        do                                                                                                                                                     \
-        {                                                                                                                                                      \
-            digit = value / div;                                                                                                                               \
-            if (digit != 0)                                                                                                                                    \
-            {                                                                                                                                                  \
-                started = 1;                                                                                                                                   \
-            }                                                                                                                                                  \
-            if (started || div == 1)                                                                                                                           \
-            {                                                                                                                                                  \
-                if (double_byte_digits)                                                                                                                        \
-                {                                                                                                                                              \
-                    *dst++ = 0x1D;                                                                                                                             \
-                    *dst = digit;                                                                                                                              \
-                }                                                                                                                                              \
-                else                                                                                                                                           \
-                {                                                                                                                                              \
-                    *dst = digit + '0';                                                                                                                        \
-                }                                                                                                                                              \
-                dst++;                                                                                                                                         \
-                value -= (value / div) * div;                                                                                                                  \
-            }                                                                                                                                                  \
-            div /= 10;                                                                                                                                         \
-        } while (div != 0);                                                                                                                                    \
-        *dst = 0;                                                                                                                                              \
-    }
-
-/** @brief Advance @p p to the terminator, accumulating the DBCS-aware byte length. */
-#define STR_LEN_LOOP(p, len)                                                                                                                                   \
-    while (*p != 0)                                                                                                                                            \
-    {                                                                                                                                                          \
-        if (IS_DBCS(*p))                                                                                                                                       \
-        {                                                                                                                                                      \
-            p += 2;                                                                                                                                            \
-            len += 2;                                                                                                                                          \
-        }                                                                                                                                                      \
-        else                                                                                                                                                   \
-        {                                                                                                                                                      \
-            p += 1;                                                                                                                                            \
-            len += 1;                                                                                                                                          \
-        }                                                                                                                                                      \
-    }
-
-/** @brief Shared strcat body: append @p s_ after the last glyph of @p d_. */
-#define STR_CAT_BODY(d_, s_, qsrc)                                                                                                                             \
-    {                                                                                                                                                          \
-        u8* p = d_;                                                                                                                                            \
-        s32 len_d = 0;                                                                                                                                         \
-        u8* q;                                                                                                                                                 \
-        s32 len_s;                                                                                                                                             \
-        s32 append;                                                                                                                                            \
-        s32 i;                                                                                                                                                 \
-        STR_LEN_LOOP(p, len_d)                                                                                                                                 \
-        q = qsrc;                                                                                                                                              \
-        len_s = 0;                                                                                                                                             \
-        append = len_d;                                                                                                                                        \
-        STR_LEN_LOOP(q, len_s)                                                                                                                                 \
-        for (i = 0; i < len_s; i++)                                                                                                                            \
-        {                                                                                                                                                      \
-            d_[i + append] = s_[i];                                                                                                                            \
-        }                                                                                                                                                      \
-        d_[i + append] = 0;                                                                                                                                    \
-    }
-
-/** @brief Append buffer @p s onto @p d. */
-#define STR_CAT(d, s)                                                                                                                                          \
-    {                                                                                                                                                          \
-        u8* d_ = (d);                                                                                                                                          \
-        u8* s_ = (s);                                                                                                                                          \
-        STR_CAT_BODY(d_, s_, (s))                                                                                                                              \
-    }
-
-/** @brief Append string-table entry @p sym onto @p d. */
-#define STR_CAT_ENTRY(d, sym, off)                                                                                                                             \
-    {                                                                                                                                                          \
-        u8* d_ = (d);                                                                                                                                          \
-        u8* s_ = (u8*)(((sym).high << 8) + (sym).low);                                                                                                         \
-        s_ += (s32)((u8*)&(sym) - (off));                                                                                                                      \
-        STR_CAT_BODY(d_, s_, s_)                                                                                                                               \
-    }
-
-/** @brief Panel contents are drawn only while the panel is entering or leaving. */
-#define DRAW_FLAG (g_field_duel_panel_phase == FIELD_DUEL_SLIDE_IN || g_field_duel_panel_phase == FIELD_DUEL_SLIDE_OUT)
-
 /**
- * @brief Run the menu overlay and dispatch its requested follow-up screens.
- * @param render_buffers Pair of MENU render buffers.
- * @param input_source Caller input-source selector; unused by this routine.
- * @note Fixed entry addresses are reused by the overlays loaded before each call.
+ * @brief Run the MENU overlay and the GOLEM or GNAME screens it asks for, until the menu closes.
+ * @param render_buffers Render buffers handed to MENU.
+ * @param controller Controller that opened the menu; unused.
+ * @note While D_8012291C is set, or an animation binding is busy, the actor-label session opens instead.
  */
-void field_run_menu(void* render_buffers, s32 input_source)
+static void field_run_menu(void* render_buffers, s32 controller)
 {
     s32 menu_locked;
     ControllerState* controllers;
@@ -1848,12 +1507,13 @@ void field_run_menu(void* render_buffers, s32 input_source)
     controllers->ports[0].actuator_control.fields.large_motor_command = 0;
     controllers->ports[1].small_motor_command = 0;
     controllers->ports[1].actuator_control.fields.large_motor_command = 0;
-    if (menu_locked != 0 || g_field_actor_bindings[0] != 0 || g_field_actor_bindings[7] != 0 || g_field_actor_bindings[14] != 0)
+    if (menu_locked != 0 || g_field_actor_bindings[0].state != FIELD_BINDING_IDLE || g_field_actor_bindings[1].state != FIELD_BINDING_IDLE ||
+        g_field_actor_bindings[2].state != FIELD_BINDING_IDLE)
     {
         field_begin_text_session();
         return;
     }
-    field_play_sound(0x80, 0x80);
+    field_play_sound(FIELD_SOUND_MENU_OPEN, FIELD_SOUND_PAN_CENTRE);
     field_reset_actor_resources();
 
     g_active_script = 0;
@@ -1863,18 +1523,18 @@ void field_run_menu(void* render_buffers, s32 input_source)
         cdrom_stream(CD_RES_MENU_BIN, FIELD_SUBOVERLAY_ADDRESS);
         cdrom_wait_queue_empty();
         screen_id = func_801405B0((s32)render_buffers);
-        if (screen_id == 0)
+        if (screen_id == FIELD_MENU_CLOSED)
         {
             field_rebuild_party_actions(1);
             break;
         }
-        if (screen_id == 0xA)
+        if (screen_id == FIELD_MENU_GOLEM)
         {
             field_rebuild_party_actions(1);
             cdrom_stream(CD_RES_GOLEM_BIN, FIELD_SUBOVERLAY_ADDRESS);
             cdrom_wait_queue_empty();
-            func_80140024(0x80150000, 1);
-            func_800C3BB0();
+            func_80140024(FIELD_GOLEM_WORK_BUFFER, 1);
+            field_golem_rebuild_current_grid();
             field_reset_actor_resources();
             field_text_reset_windows();
             g_active_script = screen_id;
@@ -1885,24 +1545,24 @@ void field_run_menu(void* render_buffers, s32 input_source)
             field_rebuild_party_actions(1);
             cdrom_stream(CD_RES_GNAME_BIN, FIELD_SUBOVERLAY_ADDRESS);
             cdrom_wait_queue_empty();
-            if ((screen_id == 0xB) || (screen_id == 0xC))
+            if ((screen_id == FIELD_MENU_NAME_ENTRY_B) || (screen_id == FIELD_MENU_NAME_ENTRY_C))
             {
-                func_80140004((void*)0x80160000, D_801226F0, D_801227D4, 1, D_801229F4, D_801226B8, 0);
+                func_80140004(FIELD_GNAME_WORK_BUFFER, g_field_rename_initial_name, g_field_rename_target, 1, g_field_rename_source, g_field_rename_custom_name, 0);
             }
             else
             {
-                func_80140004((void*)0x80160000, D_801226F0, D_801227D4, screen_id, D_801229F4, D_801226B8, 0);
+                func_80140004(FIELD_GNAME_WORK_BUFFER, g_field_rename_initial_name, g_field_rename_target, screen_id, g_field_rename_source, g_field_rename_custom_name, 0);
             }
             field_text_reset_windows();
-            g_script_repeat_count = D_801229F4;
-            if ((screen_id == 0xB) || (screen_id == 0xC))
+            g_script_repeat_count = g_field_rename_source;
+            if ((screen_id == FIELD_MENU_NAME_ENTRY_B) || (screen_id == FIELD_MENU_NAME_ENTRY_C))
             {
                 g_script_repeat_count = 0;
                 g_active_script = screen_id;
             }
             else
             {
-                g_active_script = D_8011F424 + 1;
+                g_active_script = g_field_rename_item_category + 1;
             }
         }
     }
@@ -1910,19 +1570,13 @@ void field_run_menu(void* render_buffers, s32 input_source)
 }
 
 /**
- * @brief Open the field text session and reset both controller repeat timers.
+ * @brief Open the actor-label text session.
  */
-void field_begin_text_session(void)
+static void field_begin_text_session(void)
 {
     g_field_text_session_active = 1;
     field_set_cd_error_fade_target();
-    g_pad_input = 0;
-    g_field_primary_held_buttons = field_read_controller_buttons(0);
-    g_field_primary_repeat_delay = FIELD_INPUT_REPEAT_DELAY;
-    g_pad_input_inject = 0;
-    g_field_secondary_held_buttons = field_read_controller_buttons(1);
-    g_field_secondary_repeat_delay = FIELD_INPUT_REPEAT_DELAY;
-    g_field_buffered_input = 0;
+    field_reset_input_repeat();
     field_init_actor_labels();
 }
 
@@ -1940,320 +1594,316 @@ void field_reset_text_session(void)
 }
 
 /**
- * @brief Update the active text session, draw its contents, and handle closing.
- * @param context Render context forwarded to the text renderer.
+ * @brief Run one frame of the text session and restore the field when it closes.
+ * @param render Render half receiving the text.
  */
-void field_update_modal_text_session(s32 context)
+static void field_update_modal_text_session(FieldRenderHalf* render)
 {
     if (g_field_text_session_active != 0)
     {
         field_update_text_session();
         if (g_field_text_session_active != 0)
         {
-            field_text_reset_scratch();
-            if (g_field_text_session_cd_error != 0)
-            {
-                field_draw_cd_error_text(context);
-            }
-            else
-            {
-                field_draw_actor_labels(context);
-            }
-            field_text_upload_immediate_cache();
+            field_draw_text_session(render);
             return;
         }
         field_text_reset_windows();
         akao_cmd_98_9a_9c_9e(2);
-        field_fade_song(0, 0x3C, 0x7F);
+        field_fade_song(0, 60, 127);
     }
 }
 
 /**
- * @brief Apply saved player settings and rebuild the party action descriptors.
- * @param refresh_only Nonzero preserves the current party membership and health values.
- * @note Zero also reloads active-party data and palettes before refreshing actions.
- * @note Packed descriptor byte writes preserve the other flag byte.
+ * @brief Apply the saved sound and vibration options and rebuild the party's action slots.
+ * @param refresh_only Nonzero keeps the party membership and HP; zero also reloads them from the saved game.
+ * @note Action slots 0-1 are the two commands, 4-7 the skills: a technique, an instrument
+ *       (FIELD_SKILL_INSTRUMENT plus an item record) or none (FIELD_SKILL_NONE).
+ * @note The FieldGameState pointers here are g_pad_ctx advanced by a character's offset, so their
+ *       characters[0] is that character, the way the original addresses the per-character data.
  */
 void field_rebuild_party_actions(s32 refresh_only)
 {
-    FieldModalPartySlot* initial_party;
-    FieldModalPartySlot* party;
-    FieldModalPartySlot* equipment_owner;
-    s32 texture_value;
+    FieldPlayerRecord* member;
+    FieldPlayerRecord* player;
+    FieldPlayerRecord* equipment_player;
+    s32 parameter;
     s16 technique_action_id;
-    u8* item_context;
-    u8* icon_base;
-    s32 context_offset;
-    s32 record_offset;
-    s32 absent;
-    s32 ability_empty;
-    u8* pair_first;
-    u8* pair_second;
-    FieldModalSaveView* input_base;
+    u8* save_base;
+    u8* instrument_icons;
+    s32 skill_character_offset;
+    s32 skill_row_offset;
+    s32 skill_none;
+    s32 skill_empty;
+    u8* animation_params;
+    u8* parameter_params;
+    FieldGameState* command_save;
     s32 character_kind;
-    s32 controller_or_player_test;
+    s32 controllers_or_is_player;
     s32 equipment_offset;
     s32 equipment_index;
-    s32 button_index;
-    s32 action_offset;
-    s32 saved_offset;
-    s32 actor_stride_words;
+    s32 slot_or_type;
+    s32 command_action_offset;
+    s32 member_offset;
+    s32 actor_words;
     s32 player_index;
-    s32 context_stride;
-    s32 record_stride;
-    s32 state_stride;
-    s32 item_record_offset;
-    u16 max_hp;
-    u32 equipment_flags;
+    s32 character_offset;
+    s32 row_offset;
+    s32 state_offset;
+    s32 skill_action_offset;
+    u16 hp;
+    u32 equipment_info;
     u8 spell;
     u8 weapon_type;
-    u8 ability_id;
-    FieldModalActor* actor;
-    FieldModalActor* actor_base;
-    FieldModalAction* button_action;
-    FieldModalInstrument* instrument;
-    FieldModalAction* technique_action;
-    FieldModalSaveView* saved_player;
-    FieldModalAction* instrument_action;
-    FieldModalSaveView* ability_start;
-    FieldModalAction* empty_action;
-    FieldModalSaveView* saved_member;
-    FieldModalActorHealth* health;
-    FieldModalSaveView* equipment;
-    FieldModalSaveView* button;
-    FieldModalSaveView* item_cursor;
+    u8 skill;
+    FieldActor* actor;
+    FieldActor* actor_base;
+    FieldActionSlot* command_action;
+    FieldItemRecord* instrument;
+    FieldActionSlot* technique_action;
+    FieldGameState* player_save;
+    FieldActionSlot* instrument_action;
+    FieldGameState* skills_start;
+    FieldActionSlot* empty_action;
+    FieldGameState* member_save;
+    FieldObjectState* health;
+    FieldGameState* equipment;
+    FieldGameState* command_view;
+    FieldGameState* skill_cursor;
 
-    akao_set_paused((((u32)((FieldModalSaveView*)g_pad_ctx)->option_flags >> 1) & 1) ^ 1);
-    cdrom_set_audio_volume(0x7F, ((u32)((FieldModalSaveView*)g_pad_ctx)->option_flags >> 1) & 1);
-    controller_or_player_test = (s32)CONTROLLER_STATE;
-    ((ControllerState*)controller_or_player_test)->ports[0].actuators_enabled = (s8)(*(volatile u32*)&((FieldModalSaveView*)g_pad_ctx)->option_flags & 1);
-    if ((((FieldModalSaveView*)g_pad_ctx)->second_character.word & 0x80) && (((FieldModalSaveView*)g_pad_ctx)->second_name[0] != 0))
+    akao_set_paused(g_pad_ctx->mono_sound ^ 1);
+    cdrom_set_audio_volume(0x7F, g_pad_ctx->mono_sound);
+    controllers_or_is_player = (s32)CONTROLLER_STATE;
+    ((ControllerState*)controllers_or_is_player)->ports[0].actuators_enabled = g_pad_ctx->vibration;
+    if ((g_pad_ctx->characters[1].info.word & FIELD_CHARACTER_AI) && (g_pad_ctx->characters[1].name[0] != 0))
     {
-        ((ControllerState*)controller_or_player_test)->ports[1].actuators_enabled = (s8)(*(volatile u32*)&((FieldModalSaveView*)g_pad_ctx)->option_flags & 1);
+        ((ControllerState*)controllers_or_is_player)->ports[1].actuators_enabled = g_pad_ctx->vibration;
     }
     else
     {
-        ((ControllerState*)controller_or_player_test)->ports[1].actuators_enabled = 0;
+        ((ControllerState*)controllers_or_is_player)->ports[1].actuators_enabled = 0;
     }
     if (refresh_only == 0)
     {
         player_index = 0;
         do
         {
-            saved_offset = player_index * FIELD_SAVED_CHARACTER_STRIDE;
-            initial_party = &g_field_player_records[player_index];
+            member_offset = player_index * sizeof(FieldCharacterRecord);
+            member = &g_field_player_records[player_index];
 
-            if (((FieldModalSaveView*)(g_pad_ctx + saved_offset))->name[0] != 0)
+            if (((FieldGameState*)((u8*)g_pad_ctx + member_offset))->characters[0].name[0] != 0)
             {
-                initial_party->head.bytes.weapon_type = 0xFF;
-                saved_member = (FieldModalSaveView*)(g_pad_ctx + saved_offset);
-                initial_party->head.bits.active = 1;
-                button_index = saved_member->character_kind & 0x7F;
-                character_kind = button_index;
-                if (character_kind < 2)
+                member->head.bytes.weapon_type = FIELD_WEAPON_TYPE_UNSET;
+                member_save = (FieldGameState*)((u8*)g_pad_ctx + member_offset);
+                member->head.bits.active = 1;
+                slot_or_type = member_save->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK;
+                character_kind = slot_or_type;
+                if (character_kind < FIELD_CHARACTER_GUEST)
                 {
-                    initial_party->head.bits.selected = character_kind;
-                    initial_party->companion_type = 0;
+                    member->head.bits.alt_appearance = character_kind;
+                    member->character_kind = FIELD_PLAYER_KIND_HERO;
                 }
-                else if (character_kind == 2)
+                else if (character_kind == FIELD_CHARACTER_GUEST)
                 {
-                    initial_party->head.bits.selected = 0;
-                    initial_party->companion_id = saved_member->character_id;
-                    initial_party->companion_type = 1;
+                    member->head.bits.alt_appearance = 0;
+                    member->character_id = member_save->characters[0].info.bytes[1];
+                    member->character_kind = FIELD_PLAYER_KIND_PARTNER;
                 }
-                else if (character_kind == 3)
+                else if (character_kind == FIELD_CHARACTER_COMPANION)
                 {
-                    initial_party->head.bits.selected = 0;
-                    initial_party->companion_id = saved_member->character_id;
-                    initial_party->companion_type = 2;
+                    member->head.bits.alt_appearance = 0;
+                    member->character_id = member_save->characters[0].info.bytes[1];
+                    member->character_kind = FIELD_PLAYER_KIND_COMPANION;
                 }
-                else if (character_kind == 4)
+                else if (character_kind == FIELD_CHARACTER_GOLEM)
                 {
-                    initial_party->head.bits.selected = 0;
-                    initial_party->companion_id = saved_member->character_id + 0x41;
-                    initial_party->companion_type = 2;
+                    member->head.bits.alt_appearance = 0;
+                    member->character_id = member_save->characters[0].info.bytes[1] + FIELD_COMPANION_GOLEM_ID_BASE;
+                    member->character_kind = FIELD_PLAYER_KIND_COMPANION;
                 }
             }
             else
             {
-                initial_party->companion_type = 1;
-                initial_party->companion_id = 0U;
-                initial_party->head.bits.active = 0;
+                member->character_kind = FIELD_PLAYER_KIND_PARTNER;
+                member->character_id = 0;
+                member->head.bits.active = 0;
             }
             player_index += 1;
 
-        } while (player_index < 3);
+        } while (player_index < FIELD_PARTY_COUNT);
         func_800A54D0();
     }
     player_index = 0;
     do
     {
-        party = (FieldModalPartySlot*)((u8*)g_field_player_records + (player_index << 9) + player_index * 0x68);
-        state_stride = player_index * 0x23C;
-        context_stride = player_index * FIELD_SAVED_CHARACTER_STRIDE;
-        record_stride = player_index * 0x190;
-        actor_stride_words = player_index * 0x14;
+        player = (FieldPlayerRecord*)((u8*)g_field_player_records + (player_index << 9) + player_index * 0x68);
+        state_offset = player_index * sizeof(FieldObjectState);
+        character_offset = player_index * sizeof(FieldCharacterRecord);
+        row_offset = player_index * sizeof(FieldActionRow);
+        actor_words = player_index * 0x14;
 
-        if (party->head.bytes.flags & 1)
+        if (player->head.bytes.flags & FIELD_PLAYER_ACTIVE)
         {
             actor_base = g_field_actors;
-            actor = (FieldModalActor*)((actor_stride_words + player_index) * 4 + (u8*)actor_base);
-            saved_player = (FieldModalSaveView*)(g_pad_ctx + context_stride);
-            actor->flags = (s32)((actor->flags & ~0x1FF) | (((u8)saved_player->character_kind >> 7) ^ 1));
-            weapon_type = ((u32)saved_player->equipment_flags >> 0xA) & 0x3F;
-            controller_or_player_test = player_index < 2;
-            if (party->head.bytes.weapon_type != weapon_type)
+            actor = (FieldActor*)((actor_words + player_index) * 4 + (u8*)actor_base);
+            player_save = (FieldGameState*)((u8*)g_pad_ctx + character_offset);
+            actor->control.word = ((actor->control.word & ~FIELD_CONTROL_MODE_MASK) | ((player_save->characters[0].info.bytes[0] >> 7) ^ 1));
+            weapon_type = FIELD_ITEM_TYPE(player_save->characters[0].equipment[FIELD_WEAPON_SLOT].info.word);
+            controllers_or_is_player = player_index < FIELD_PLAYER_COUNT;
+            if (player->head.bytes.weapon_type != weapon_type)
             {
-                party->head.bytes.weapon_type = weapon_type;
-                if (controller_or_player_test != 0)
+                player->head.bytes.weapon_type = weapon_type;
+                if (controllers_or_is_player != 0)
                 {
                     field_apply_weapon_action_params(player_index);
                 }
                 if (refresh_only == 0)
                 {
-                    health = (FieldModalActorHealth*)(state_stride + (u8*)g_field_object_states);
-                    max_hp = ((FieldModalSaveView*)(g_pad_ctx + context_stride))->max_hp;
-                    health->display_hp = (s32)((health->display_hp & 0xFF000000) | max_hp);
-                    health->max_hp = (s32)max_hp;
-                    health->hp = (s32)max_hp;
+                    health = &g_field_object_states[player_index];
+                    hp = ((FieldGameState*)((u8*)g_pad_ctx + character_offset))->characters[0].hp;
+                    health->unk8.word = (health->unk8.word & 0xFF000000) | hp;
+                    health->unk0 = hp;
+                    health->unk4.word = hp;
                 }
-                if ((g_field_scene_mode_bit != 0) && (refresh_only != 0) && (controller_or_player_test != 0))
+                if ((g_field_scene_mode_bit != 0) && (refresh_only != 0) && (controllers_or_is_player != 0))
                 {
-                    field_load_weapon_sfx_table(player_index, party->head.bytes.weapon_type);
+                    field_load_weapon_sfx_table(player_index, player->head.bytes.weapon_type);
                 }
             }
-            party->weapon_flag = 0;
-            if ((u32)(party->head.bytes.weapon_type - 1) < 2U)
+            player->unk258 = 0;
+            if ((u32)(player->head.bytes.weapon_type - 1) < 2U)
             {
-                party->weapon_flag = 1;
+                player->unk258 = 1;
                 equipment_index = 1;
-                equipment_owner = party;
-                equipment_offset = context_stride + 0x40;
+                equipment_player = player;
+                equipment_offset = character_offset + sizeof(FieldItemRecord);
                 do
                 {
-                    equipment = (FieldModalSaveView*)(g_pad_ctx + equipment_offset);
-                    if (equipment->equipment_present_at_slot != 0)
+                    equipment = (FieldGameState*)((u8*)g_pad_ctx + equipment_offset);
+                    if (equipment->characters[0].equipment[0].kind != 0)
                     {
-                        equipment_flags = equipment->equipment_flags;
-                        if ((((equipment_flags >> 8) & 3) == 1) && !((equipment_flags >> 0xA) & 0x3F))
+                        equipment_info = equipment->characters[0].equipment[0].info.word;
+                        if ((FIELD_ITEM_CATEGORY(equipment_info) == FIELD_ITEM_CATEGORY_ARMOR) && !FIELD_ITEM_TYPE(equipment_info))
                         {
-                            equipment_owner->weapon_flag = 0;
+                            equipment_player->unk258 = 0;
                         }
                     }
                     equipment_index += 1;
-                    equipment_offset += 0x40;
-                } while (equipment_index < 4);
+                    equipment_offset += sizeof(FieldItemRecord);
+                } while (equipment_index < FIELD_EQUIPMENT_SLOT_COUNT);
             }
-            if (player_index == 2 && g_field_player_records[2].companion_type == player_index)
+            if (player_index == FIELD_COMPANION_INDEX && g_field_player_records[FIELD_COMPANION_INDEX].character_kind == player_index)
             {
-                func_800A5174(2, g_field_player_records[2].companion_id + 0xA9B);
+                func_800A5174(2, g_field_player_records[FIELD_COMPANION_INDEX].character_id + FIELD_RES_COMPANION_ACTIONS);
             }
             else
             {
-                button_index = 0;
-                pair_first = g_field_action_animation_parameters;
-                pair_second = g_field_action_animation_parameters + 1;
-                input_base = (FieldModalSaveView*)(g_pad_ctx + context_stride);
-                action_offset = record_stride;
+                slot_or_type = 0;
+                animation_params = g_field_action_animation_parameters;
+                parameter_params = g_field_action_animation_parameters + 1;
+                command_save = (FieldGameState*)((u8*)g_pad_ctx + character_offset);
+                command_action_offset = row_offset;
                 do
                 {
-                    button = (FieldModalSaveView*)((u8*)input_base + button_index);
-                    button_action = (FieldModalAction*)(action_offset + (u32)g_field_resource_actions);
-                    button_action->action_id = (s16)button->bound_actions[0];
-                    button_action->icon_id = (s16) * ((button->bound_actions[0] * 2) + pair_first);
-                    button_action->texture_id = (s16) * ((button->bound_actions[0] * 2) + pair_second);
-                    action_offset += 8;
-                    button_index += 1;
-                } while (button_index < 2);
-                context_offset = context_stride;
-                absent = 0xFF;
-                record_offset = record_stride;
-                item_context = g_pad_ctx;
-                ability_start = (FieldModalSaveView*)(item_context + context_offset);
-                item_record_offset = 0x20;
-                item_cursor = ability_start;
+                    command_view = (FieldGameState*)((u8*)command_save + slot_or_type);
+                    command_action = (FieldActionSlot*)(command_action_offset + (u32)g_field_resource_actions);
+                    command_action->command = command_view->characters[0].info.actions.commands[0];
+                    command_action->animation = animation_params[command_view->characters[0].info.actions.commands[0] * 2];
+                    command_action->parameter = parameter_params[command_view->characters[0].info.actions.commands[0] * 2];
+                    command_action_offset += sizeof(FieldActionSlot);
+                    slot_or_type += 1;
+                } while (slot_or_type < FIELD_COMMAND_SLOT_COUNT);
+                skill_character_offset = character_offset;
+                skill_none = FIELD_SKILL_NONE;
+                skill_row_offset = row_offset;
+                save_base = (u8*)g_pad_ctx;
+                skills_start = (FieldGameState*)(save_base + skill_character_offset);
+                skill_action_offset = FIELD_SKILL_ACTION_BASE * sizeof(FieldActionSlot);
+                skill_cursor = skills_start;
                 do
                 {
-                    context_offset = ~context_offset;
-                    context_offset = ~context_offset;
-                    item_record_offset = (~(u32)item_record_offset);
-                    item_record_offset = (~(u32)item_record_offset);
-                    record_offset = (~(u32)record_offset);
-                    record_offset = (~(u32)record_offset);
-                    absent = (~(u32)absent);
-                    absent = (~(u32)absent);
-                    ability_start = (FieldModalSaveView*)(~(u32)ability_start);
-                    ability_start = (FieldModalSaveView*)(~(u32)ability_start);
-                    item_context = (u8*)(~(u32)item_context);
-                    item_context = (u8*)(~(u32)item_context);
-                    item_cursor = (FieldModalSaveView*)(~(u32)item_cursor);
-                    item_cursor = (FieldModalSaveView*)(~(u32)item_cursor);
-                    ability_empty = item_cursor->equipped_abilities[0] == absent;
-                    if (ability_empty)
+                    /* Net-zero writes: they keep loop.c from hoisting and strength-reducing these offsets, which the original loop does not do. */
+                    skill_character_offset = ~skill_character_offset;
+                    skill_character_offset = ~skill_character_offset;
+                    skill_action_offset = (~(u32)skill_action_offset);
+                    skill_action_offset = (~(u32)skill_action_offset);
+                    skill_row_offset = (~(u32)skill_row_offset);
+                    skill_row_offset = (~(u32)skill_row_offset);
+                    skill_none = (~(u32)skill_none);
+                    skill_none = (~(u32)skill_none);
+                    skills_start = (FieldGameState*)(~(u32)skills_start);
+                    skills_start = (FieldGameState*)(~(u32)skills_start);
+                    save_base = (u8*)(~(u32)save_base);
+                    save_base = (u8*)(~(u32)save_base);
+                    skill_cursor = (FieldGameState*)(~(u32)skill_cursor);
+                    skill_cursor = (FieldGameState*)(~(u32)skill_cursor);
+                    skill_empty = skill_cursor->characters[0].info.actions.skills[0] == skill_none;
+                    if (skill_empty)
                     {
-                        empty_action = (FieldModalAction*)(item_record_offset + record_offset + (u32)g_field_resource_actions);
-                        empty_action->bits.word = (u16)(empty_action->bits.word & 0xFBFF);
-                        empty_action->bits.byte.low = absent;
-                        empty_action->action_id = 0;
-                        empty_action->icon_id = 0;
-                        empty_action->texture_id = 0;
-                        empty_action->bits.word = (u16)(empty_action->bits.word & 0xFCFF);
+                        empty_action = (FieldActionSlot*)(skill_action_offset + skill_row_offset + (u32)g_field_resource_actions);
+                        empty_action->flags.instrument = 0;
+                        empty_action->flags.target_filter = skill_none;
+                        empty_action->command = 0;
+                        empty_action->animation = 0;
+                        empty_action->parameter = 0;
+                        empty_action->flags.target_group = 0;
                     }
                     else
                     {
-                        ability_id = item_cursor->equipped_abilities[0];
-                        if (ability_id & 0x80)
+                        skill = skill_cursor->characters[0].info.actions.skills[0];
+                        if (skill & FIELD_SKILL_INSTRUMENT)
                         {
-                            instrument_action = (FieldModalAction*)(item_record_offset + record_offset + (u32)g_field_resource_actions);
-                            instrument_action->action_id = 0;
-                            instrument_action->bits.word = (u16)(instrument_action->bits.word | 0x400);
-                            instrument = (FieldModalInstrument*)(item_context + (context_offset + 0x5F0) + (((ability_id & 0x7F) << 6) + 0x150));
-                            instrument_action->bits.byte.low = (s8)((u8)instrument->spell >> 1);
-                            icon_base = D_800EB24C;
-                            instrument_action->icon_id = (s16) * (instrument->instrument_type + icon_base);
-                            icon_base = 0;
-                            spell = instrument->spell;
-                            texture_value = 0x8018;
-                            texture_value += spell;
-                            texture_value += instrument->instrument_type * 0xE;
+                            instrument_action = (FieldActionSlot*)(skill_action_offset + skill_row_offset + (u32)g_field_resource_actions);
+                            instrument_action->command = 0;
+                            instrument_action->flags.instrument = 1;
+                            instrument = (FieldItemRecord*)(save_base + (skill_character_offset + FIELD_OFFSET_OF(FieldGameState, characters)) +
+                                                            (((skill & ~FIELD_SKILL_INSTRUMENT) << 6) + FIELD_OFFSET_OF(FieldCharacterRecord, unk150)));
+                            instrument_action->flags.target_filter = instrument->derived.bytes[1] >> 1;
+                            instrument_icons = g_field_instrument_icons;
+                            instrument_action->animation = instrument_icons[instrument->derived.bytes[0]];
+                            instrument_icons = 0;
+                            spell = instrument->derived.bytes[1];
+                            parameter = 0x8018;
+                            parameter += spell;
+                            parameter += instrument->derived.bytes[0] * 14;
                             if (!(spell & 1))
                             {
-                                texture_value += 0x800;
+                                parameter += 0x800;
                             }
-                            instrument_action->texture_id = texture_value;
-                            instrument_action->bits.word = (u16)(instrument_action->bits.word & 0xFCFF);
+                            instrument_action->parameter = parameter;
+                            instrument_action->flags.target_group = 0;
                         }
                         else
                         {
-                            technique_action = (FieldModalAction*)(item_record_offset + record_offset + (u32)g_field_resource_actions);
-                            technique_action->bits.word = (u16)(technique_action->bits.word & 0xFBFF);
-                            ability_id = item_cursor->equipped_abilities[0];
-                            technique_action_id = (s16)(ability_id | 0x8000);
-                            technique_action->bits.byte.low = absent;
-                            technique_action->icon_id = 2;
-                            technique_action->action_id = technique_action_id;
-                            ability_id = item_cursor->equipped_abilities[0];
-                            weapon_type = party->head.bytes.weapon_type;
-                            technique_action->bits.word = (u16)(technique_action->bits.word & 0xFCFF);
-                            technique_action->texture_id = (s16)(((ability_id + 0x88) | ~0x7FFF) + (weapon_type * 0x18));
+                            technique_action = (FieldActionSlot*)(skill_action_offset + skill_row_offset + (u32)g_field_resource_actions);
+                            technique_action->flags.instrument = 0;
+                            skill = skill_cursor->characters[0].info.actions.skills[0];
+                            technique_action_id = skill | FIELD_ACTION_TECHNIQUE;
+                            technique_action->flags.target_filter = skill_none;
+                            technique_action->animation = FIELD_TECHNIQUE_ANIMATION;
+                            technique_action->command = technique_action_id;
+                            skill = skill_cursor->characters[0].info.actions.skills[0];
+                            weapon_type = player->head.bytes.weapon_type;
+                            technique_action->flags.target_group = 0;
+                            technique_action->parameter =
+                                (((skill + FIELD_TECHNIQUE_SEQUENCE_BASE) | ~FIELD_ACTION_TECHNIQUE_MASK) + (weapon_type * FIELD_TECHNIQUES_PER_WEAPON));
                         }
                     }
-                    item_cursor = (FieldModalSaveView*)((u8*)item_cursor + 1);
-                    item_record_offset += 8;
-                } while ((s32)item_cursor < (s32)((u8*)ability_start + 4));
+                    skill_cursor = (FieldGameState*)((u8*)skill_cursor + 1);
+                    skill_action_offset += sizeof(FieldActionSlot);
+                } while ((s32)skill_cursor < (s32)((u8*)skills_start + FIELD_SKILL_SLOT_COUNT));
             }
         }
         player_index += 1;
 
-    } while (player_index < 3);
+    } while (player_index < FIELD_PARTY_COUNT);
     field_refresh_party_routes();
 }
 
 /**
  * @brief Load GNAME.BIN and run the name-entry screen.
  *
- * Argument order follows gname_run, which receives the 0x80160000 render
- * buffers first and allow_empty_cancel = 0 last.
+ * Argument order follows gname_run, which receives its work buffer first and
+ * allow_empty_cancel = 0 last.
  *
  * @param initial_name Name shown when the screen opens.
  * @param active_name Name buffer edited by the UI.
@@ -2266,13 +1916,13 @@ void field_run_name_entry(s32 initial_name, s32 active_name, s32 source_mode, s3
     field_reset_actor_resources();
     cdrom_stream(CD_RES_GNAME_BIN, FIELD_SUBOVERLAY_ADDRESS);
     cdrom_wait_queue_empty();
-    func_80140004((void*)0x80160000, initial_name, active_name, source_mode, history_index, custom_name, 0);
+    func_80140004(FIELD_GNAME_WORK_BUFFER, initial_name, active_name, source_mode, history_index, custom_name, 0);
     field_text_reset_windows();
     field_reset_actor_resources();
 }
 
 /**
- * @brief Load ZUKAN.BIN and run its entry point at 0x80140E00.
+ * @brief Load ZUKAN.BIN and run the encyclopedia screen.
  * @param context Forwarded to the ZUKAN entry point; meaning not yet established.
  */
 void field_run_zukan(s32 context)
@@ -2280,14 +1930,14 @@ void field_run_zukan(s32 context)
     field_reset_actor_resources();
     cdrom_stream(CD_RES_ZUKAN_BIN, FIELD_SUBOVERLAY_ADDRESS);
     cdrom_wait_queue_empty();
-    func_80140E00((void*)0x80160000, context);
+    func_80140E00(FIELD_GNAME_WORK_BUFFER, context);
     field_reset_actor_resources();
 }
 
 /**
  * @brief Load GOSUB.BIN and open a screen sequence, unless a sub-overlay is already active.
  *
- * Sets g_field_modal_state to 2 for the duration and clears the gosub result count.
+ * Sets g_field_modal_state to FIELD_MODAL_GOSUB for the duration and clears the gosub result count.
  *
  * @param screen_sequence Terminated s32 array passed to gosub_open_screen_sequence.
  */
@@ -2301,15 +1951,15 @@ void field_open_gosub_screen_sequence(void* screen_sequence)
         cdrom_stream(CD_RES_GOSUB_BIN, FIELD_SUBOVERLAY_ADDRESS);
         cdrom_wait_queue_empty();
         g_field_modal_state = FIELD_MODAL_GOSUB;
-        g_field_gosub_phase = 2;
-        func_80140080((void*)0x80175000, screen_sequence);
+        g_field_gosub_phase = FIELD_GOSUB_RUNNING;
+        func_80140080(FIELD_GOSUB_WORK_BUFFER, screen_sequence);
     }
 }
 
 /**
  * @brief Open the selling screen when inventory is present, otherwise show a notice.
  * @param shop_options Value forwarded to the shop; meaning not yet established.
- * @note The equipment loop repeatedly checks the first record, as in the original.
+ * @note The inventory loop tests items[0] on every pass, so only the first record counts.
  */
 void field_open_shop_mode_0(s32 shop_options)
 {
@@ -2319,17 +1969,17 @@ void field_open_shop_mode_0(s32 shop_options)
     if (g_field_modal_state == FIELD_MODAL_NONE)
     {
         count = 0;
-        for (i = 0; i < 0x64; i++)
+        for (i = 0; i < FIELD_ITEM_COUNT; i++)
         {
-            if (((FieldModalSaveView*)g_pad_ctx)->equipment_present != 0)
+            if (g_pad_ctx->items[0].kind != 0)
             {
                 count++;
                 break;
             }
         }
-        for (i = 0; i < 0x100; i++)
+        for (i = 0; i < FIELD_ITEM_KIND_COUNT; i++)
         {
-            if (((FieldModalSaveView*)g_pad_ctx)->item_counts[i] != 0)
+            if (g_pad_ctx->item_counts[i] != 0)
             {
                 count++;
                 break;
@@ -2346,7 +1996,7 @@ void field_open_shop_mode_0(s32 shop_options)
             cdrom_wait_queue_empty();
             g_field_shop_active = 1;
             g_field_modal_state = FIELD_MODAL_SHOP;
-            func_80140004((void*)0x80150000, 0, 0, 0, 0, shop_options);
+            func_80140004(FIELD_SHOP_WORK_BUFFER, 0, 0, 0, 0, shop_options);
         }
     }
 }
@@ -2367,24 +2017,23 @@ void field_open_shop_mode_1(s32 entry_count, s32 entries, s32 list_options, s32 
         cdrom_wait_queue_empty();
         g_field_shop_active = 1;
         g_field_modal_state = FIELD_MODAL_SHOP;
-        func_80140004((void*)0x80150000, 1, entry_count, entries, list_options, shop_options);
+        func_80140004(FIELD_SHOP_WORK_BUFFER, 1, entry_count, entries, list_options, shop_options);
     }
 }
 
 /**
- * @brief Advance the active modal overlay and restore field input on completion.
- * @param context_or_delay Render context address, reused for the input repeat delay.
+ * @brief Run one frame of the open modal screen and give the input back to the field when it closes.
+ * @param render Render half the modal screens draw into.
  */
-void field_update_modal(s32 context_or_delay)
+void field_update_modal(FieldRenderHalf* render)
 {
-    FieldModalPartySlot* slot;
     s32 result;
-    s32 index_or_zero;
+    s32 index; /* Also the controller port read by the closing code (0). */
 
     switch (g_field_modal_state)
     {
     case FIELD_MODAL_SHOP:
-        if ((g_field_shop_active != 0) && (func_801400D4(context_or_delay) != 0))
+        if ((g_field_shop_active != 0) && (func_801400D4(render) != 0))
         {
             g_field_shop_active = 0;
             g_field_modal_state = FIELD_MODAL_NONE;
@@ -2394,14 +2043,14 @@ void field_update_modal(s32 context_or_delay)
     case FIELD_MODAL_NONE:
         return;
     case FIELD_MODAL_GOSUB:
-        if (g_field_gosub_phase != 0)
+        if (g_field_gosub_phase != FIELD_GOSUB_IDLE)
         {
-            if (g_field_gosub_phase >= 2)
+            if (g_field_gosub_phase >= FIELD_GOSUB_RUNNING)
             {
-                if (func_801400C4(context_or_delay) != 0)
+                if (func_801400C4(render) != 0)
                 {
                     DrawSync(0);
-                    g_field_gosub_phase = 1;
+                    g_field_gosub_phase = FIELD_GOSUB_CLOSING;
                     field_reset_actor_resources();
                     return;
                 }
@@ -2412,33 +2061,28 @@ void field_update_modal(s32 context_or_delay)
                 field_text_reset_windows();
                 D_801227F0 = 2;
                 g_field_modal_state = FIELD_MODAL_NONE;
-                g_field_gosub_phase = 0;
+                g_field_gosub_phase = FIELD_GOSUB_IDLE;
                 return;
             }
         }
         return;
     case FIELD_MODAL_CARDA:
-        if ((g_field_card_overlay_mode != 0) && (func_80140370(context_or_delay) != 0))
+        if ((g_field_card_overlay_mode != 0) && (func_80140370(render) != 0))
         {
             field_reset_actor_resources();
             switch (g_field_card_overlay_mode)
             {
             case 2:
                 field_rebuild_party_actions(0);
-                index_or_zero = 0;
-                slot = g_field_player_records;
-                do
+                for (index = 0; index < FIELD_PARTY_COUNT; index++)
                 {
-                    slot = &g_field_player_records[index_or_zero];
-                    slot->action_state = 0;
-                    slot->action_index = 0xFF;
-                    index_or_zero += 1;
-                } while (index_or_zero < 3);
-                g_music_track_index = (s16) * (volatile s32*)&((FieldModalSaveView*)g_pad_ctx)->music_track;
-                field_set_scene_parameters(((FieldModalSaveView*)g_pad_ctx)->scene_mode, ((FieldModalSaveView*)g_pad_ctx)->scene_flags,
-                                           ((FieldModalSaveView*)g_pad_ctx)->scene_config & 0x01FFFFFF, ((FieldModalSaveView*)g_pad_ctx)->layout_flags,
-                                           (s32)((FieldModalSaveView*)g_pad_ctx)->scene_option, (s32)((FieldModalSaveView*)g_pad_ctx)->scene_sub_mode);
-                field_set_fade_target_only(0x100, 0x100, 0x100, 8);
+                    g_field_player_records[index].resource_id = 0;
+                    g_field_player_records[index].portrait_index = FIELD_PORTRAIT_NONE;
+                }
+                g_music_track_index = g_pad_ctx->music_track;
+                field_set_scene_parameters(g_pad_ctx->scene_mode, g_pad_ctx->field_flags, g_pad_ctx->entry_config, g_pad_ctx->layout_flags,
+                                           g_pad_ctx->option_id, g_pad_ctx->sub_mode);
+                field_set_fade_target_only(FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL, 8);
                 break;
             case 6:
             case 7:
@@ -2458,7 +2102,7 @@ void field_update_modal(s32 context_or_delay)
         }
         return;
     case FIELD_MODAL_NIKI:
-        if ((g_field_niki_addhero_state != 0) && (func_801401F0(context_or_delay) != 0))
+        if ((g_field_niki_addhero_state != 0) && (func_801401F0(render) != 0))
         {
             field_reset_actor_resources();
             g_field_niki_addhero_state = 0;
@@ -2469,13 +2113,13 @@ void field_update_modal(s32 context_or_delay)
     case FIELD_MODAL_ADDHERO:
         if (g_field_niki_addhero_state != 0)
         {
-            result = func_801401F8(context_or_delay);
+            result = func_801401F8(render);
             switch (result)
             {
             case 1:
                 g_field_player_records[1].head.bits.active = 0;
-                g_field_player_records[1].head.bits.selected = ((FieldModalSaveView*)g_pad_ctx)->second_character.bytes[0] & 1;
-                g_field_player_records[1].companion_type = 0;
+                g_field_player_records[1].head.bits.alt_appearance = g_pad_ctx->characters[1].info.bytes[0] & 1;
+                g_field_player_records[1].character_kind = FIELD_PLAYER_KIND_HERO;
                 field_activate_actor_resource_slot(-2, 0, 0);
                 field_reset_actor_resources();
                 g_field_niki_addhero_state = 0;
@@ -2499,46 +2143,45 @@ void field_update_modal(s32 context_or_delay)
         if (g_pad_input & (PADRright | PADi))
         {
             field_text_reset_windows();
-            index_or_zero = 0;
+            index = 0;
             g_field_modal_state = FIELD_MODAL_NONE;
             g_pad_input = 0;
             break;
         }
         field_text_reset_scratch();
-        field_draw_empty_shop_notice((void*)context_or_delay);
+        field_draw_empty_shop_notice(render);
         field_text_upload_immediate_cache();
         return;
     case FIELD_MODAL_DUEL_INTRO:
-        if (field_draw_duel_intro((void*)context_or_delay) == 0)
+        if (field_draw_duel_intro(render) == 0)
         {
             return;
         }
-        field_play_set_sfx(0, 0x80, 0, 3);
+        field_play_set_sfx(0, FIELD_SOUND_PAN_CENTRE, 0, 3);
         field_text_reset_windows();
-        index_or_zero = 0;
+        index = 0;
         g_field_modal_state = FIELD_MODAL_NONE;
         g_pad_input = 0;
         break;
     case FIELD_MODAL_DUEL_RESULT:
-        if (field_draw_duel_result((void*)context_or_delay) == 0 || func_800B0888() != 0)
+        if (field_draw_duel_result(render) == 0 || func_800B0888() != 0)
         {
             return;
         }
         field_close_battle_results();
         field_text_reset_windows();
-        index_or_zero = 0;
+        index = 0;
         g_field_modal_state = FIELD_MODAL_NONE;
         g_pad_input = 0;
         break;
     default:
         return;
     }
-    g_field_primary_held_buttons = field_read_controller_buttons(index_or_zero);
-    context_or_delay = FIELD_INPUT_REPEAT_DELAY;
-    g_field_primary_repeat_delay = context_or_delay;
+    g_field_primary_held_buttons = field_read_controller_buttons(index);
+    g_field_primary_repeat_delay = FIELD_PAD_REPEAT_DELAY;
     g_pad_input_inject = 0;
     g_field_secondary_held_buttons = field_read_controller_buttons(1);
-    g_field_secondary_repeat_delay = context_or_delay;
+    g_field_secondary_repeat_delay = FIELD_PAD_REPEAT_DELAY;
     g_field_buffered_input = 0;
     field_restore_fade_target();
 }
@@ -2547,33 +2190,29 @@ void field_update_modal(s32 context_or_delay)
  * @brief Open the empty-inventory notice with a red fade.
  * @param hidden Nonzero suppresses the notice text.
  */
-void field_begin_empty_shop_notice(s32 hidden)
+static void field_begin_empty_shop_notice(s32 hidden)
 {
     g_field_modal_state = FIELD_MODAL_EMPTY_SHOP;
     field_set_fade_target_only(0xC0, 0x80, 0x80, 8);
-    field_play_sound(0xC7, 0x80);
+    field_play_sound(FIELD_SOUND_EMPTY_SHOP, FIELD_SOUND_PAN_CENTRE);
     g_field_shop_notice_hidden = hidden;
 }
 
 /**
  * @brief Draw the empty-inventory notice unless its text is suppressed.
- * @param context Field drawing context and packet cursor.
+ * @param render Render half receiving the notice.
  */
-void field_draw_empty_shop_notice(FieldModalDrawContext* context)
+static void field_draw_empty_shop_notice(FieldRenderHalf* render)
 {
-    s32 packet_cursor;
-    s32 low;
-    s32 offset;
-    u8* base;
+    SPRT* packet_cursor;
 
-    packet_cursor = context->packet_cursor;
+    packet_cursor = (SPRT*)render->primitive_cursor;
     if (g_field_shop_notice_hidden == 0)
     {
-        low = D_800EC400.low;
-        offset = (D_800EC400.high << 8) + (s32)(base = (u8*)&D_800EC400 - 0x3C);
-        packet_cursor = (s32)func_800A88A0((SPRT*)packet_cursor, (s32*)context, (u8*)(low + offset), 4, 0xA0, 0x68, 2);
+        packet_cursor = field_draw_text(packet_cursor, (s32*)render->ordering_table, field_dialog_text(&D_800EC400, 30), FIELD_TEXT_COLOR_NORMAL,
+                                        SCREEN_WIDTH / 2, 104, FIELD_TEXT_ALIGN_CENTER);
     }
-    context->packet_cursor = packet_cursor;
+    render->primitive_cursor = (u8*)packet_cursor;
 }
 
 /**
@@ -2584,7 +2223,7 @@ void field_begin_duel_intro(void)
     g_field_modal_state = FIELD_MODAL_DUEL_INTRO;
     field_set_fade_target_only(0xC0, 0xC0, 0xC0, 8);
     field_upload_player_icons();
-    field_play_sound(0x125, 0x80);
+    field_play_sound(FIELD_SOUND_DUEL_INTRO, FIELD_SOUND_PAN_CENTRE);
     g_field_duel_panel_phase = FIELD_DUEL_SLIDE_IN;
     g_field_duel_panel_hold_frames = 0;
     g_field_duel_panel_offset = FIELD_DUEL_PANEL_START_OFFSET;
@@ -2598,45 +2237,45 @@ void field_begin_duel_result(void)
     g_field_modal_state = FIELD_MODAL_DUEL_RESULT;
     field_set_fade_target_only(0xC0, 0xC0, 0xC0, 8);
     field_upload_player_icons();
-    field_play_sound(0x126, 0x80);
+    field_play_sound(FIELD_SOUND_DUEL_RESULT, FIELD_SOUND_PAN_CENTRE);
     g_field_duel_panel_phase = FIELD_DUEL_SLIDE_IN;
     g_field_duel_panel_hold_frames = 0;
     g_field_duel_panel_offset = FIELD_DUEL_PANEL_START_OFFSET;
 
-    if ((D_800FDF79 & 0x7F) == 0x1D)
+    if ((g_field_actors[0].animation & FIELD_ANIMATION_INDEX_MASK) == FIELD_ANIMATION_DUEL_LOST)
     {
         g_field_duel_winner = 1;
-        ((FieldModalSaveView*)g_pad_ctx)->duel_losses = ((FieldModalSaveView*)g_pad_ctx)->duel_losses + 1;
-        if ((u32)(((FieldModalSaveView*)g_pad_ctx)->second_character.bytes[0] & 0x7F) < 2)
+        g_pad_ctx->characters[0].duel_losses = g_pad_ctx->characters[0].duel_losses + 1;
+        if ((u32)(g_pad_ctx->characters[1].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
         {
-            ((FieldModalSaveView*)g_pad_ctx)->second_duel_wins = ((FieldModalSaveView*)g_pad_ctx)->second_duel_wins + 1;
+            g_pad_ctx->characters[1].duel_wins = g_pad_ctx->characters[1].duel_wins + 1;
         }
     }
     else
     {
         g_field_duel_winner = 0;
-        ((FieldModalSaveView*)g_pad_ctx)->duel_wins = ((FieldModalSaveView*)g_pad_ctx)->duel_wins + 1;
-        if ((u32)(((FieldModalSaveView*)g_pad_ctx)->second_character.bytes[0] & 0x7F) < 2)
+        g_pad_ctx->characters[0].duel_wins = g_pad_ctx->characters[0].duel_wins + 1;
+        if ((u32)(g_pad_ctx->characters[1].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
         {
-            ((FieldModalSaveView*)g_pad_ctx)->second_duel_losses = ((FieldModalSaveView*)g_pad_ctx)->second_duel_losses + 1;
+            g_pad_ctx->characters[1].duel_losses = g_pad_ctx->characters[1].duel_losses + 1;
         }
     }
 }
 
 /**
  * @brief Animate and draw the opposing players and their duel records.
- * @param context Field drawing context and packet cursor.
+ * @param render Render half receiving the panels.
  * @return Nonzero after the panels have slid out.
  */
-s32 field_draw_duel_intro(FieldModalDrawContext* context)
+static s32 field_draw_duel_intro(FieldRenderHalf* render)
 {
-    u8 record_text[0x38];
-    u8 loss_text[0x38];
+    u8 record_text[56];
+    u8 loss_text[56];
     s32 packet_cursor;
-    void* draw_context;
+    u_long* ot;
 
-    packet_cursor = context->packet_cursor;
-    draw_context = context;
+    packet_cursor = (s32)render->primitive_cursor;
+    ot = render->ordering_table;
     switch (g_field_duel_panel_phase)
     {
     case FIELD_DUEL_SLIDE_IN:
@@ -2651,14 +2290,14 @@ s32 field_draw_duel_intro(FieldModalDrawContext* context)
         g_field_duel_panel_hold_frames--;
         if (g_field_duel_panel_hold_frames == 0)
         {
-            field_play_sound(0x127, 0x80);
+            field_play_sound(FIELD_SOUND_DUEL_PANEL_OUT, FIELD_SOUND_PAN_CENTRE);
             g_field_duel_panel_phase = FIELD_DUEL_SLIDE_OUT;
             g_field_duel_panel_offset = -1;
         }
         break;
     case FIELD_DUEL_SLIDE_OUT:
         g_field_duel_panel_offset *= 2;
-        if (g_field_duel_panel_offset < -0x64)
+        if (g_field_duel_panel_offset < FIELD_DUEL_PANEL_END_OFFSET)
         {
             g_field_duel_panel_phase = FIELD_DUEL_FINISHED;
         }
@@ -2667,55 +2306,53 @@ s32 field_draw_duel_intro(FieldModalDrawContext* context)
         return 1;
     }
 
-    packet_cursor = field_draw_player_icon(packet_cursor, draw_context, 0, g_field_duel_panel_offset + 0x32, 0x22, 1);
-    packet_cursor = func_800AF950(packet_cursor, draw_context, &((FieldModalSaveView*)g_pad_ctx)->name[0], 4, g_field_duel_panel_offset + 0x6C, 0x32, 0, 5,
-                                  0x180, 0x180, -4, DRAW_FLAG);
+    packet_cursor = field_draw_player_icon(packet_cursor, ot, 0, g_field_duel_panel_offset + 50, 34, 1);
+    packet_cursor = func_800AF950(packet_cursor, ot, g_pad_ctx->characters[0].name, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 108, 50, 0, 5, 384,
+                                  384, -4, FIELD_DUEL_PANEL_MOVING);
 
-    FORMAT_SIGNED(record_text, ((FieldModalSaveView*)g_pad_ctx)->duel_wins);
-    STR_CAT_ENTRY(record_text, D_800EC408, 0x44);
-    FORMAT_SIGNED(loss_text, ((FieldModalSaveView*)g_pad_ctx)->duel_losses);
-    STR_CAT(record_text, loss_text);
-    STR_CAT_ENTRY(record_text, D_800EC40A, 0x46);
+    field_format_number(record_text, g_pad_ctx->characters[0].duel_wins, 0);
+    field_append_dialog_text(record_text, &D_800EC408, 34);
+    field_format_number(loss_text, g_pad_ctx->characters[0].duel_losses, 0);
+    field_append_name(record_text, loss_text);
+    field_append_dialog_text(record_text, &D_800EC40A, 35);
 
-    packet_cursor = func_800AF950(packet_cursor, draw_context, record_text, 4, g_field_duel_panel_offset + 0x6C, 0x42, 0, 6, 0x180, 0x180, -4, DRAW_FLAG);
+    packet_cursor = func_800AF950(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 108, 66, 0, 6, FIELD_DUEL_TEXT_SCALE,
+                                  FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
+    packet_cursor = func_800AF950(packet_cursor, ot, field_dialog_text(&D_800EC406, 33), FIELD_TEXT_COLOR_NORMAL, 160, 100, 2, 7, FIELD_DUEL_TEXT_SCALE,
+                                  FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
+    packet_cursor = field_draw_player_icon(packet_cursor, ot, 1, 222 - g_field_duel_panel_offset, 134, 0);
+    packet_cursor = func_800AF950(packet_cursor, ot, g_pad_ctx->characters[1].name, FIELD_TEXT_COLOR_NORMAL, 212 - g_field_duel_panel_offset, 150, 1, 8,
+                                  FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
+
+    if ((u32)(g_pad_ctx->characters[1].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
     {
-        s32 low = D_800EC406.low;
-        s32 offset = (D_800EC406.high << 8) + (s32)((u8*)&D_800EC406 - 0x42);
-        packet_cursor = func_800AF950(packet_cursor, draw_context, (u8*)(low + offset), 4, 0xA0, 0x64, 2, 7, 0x180, 0x180, -4, DRAW_FLAG);
-    }
-    packet_cursor = field_draw_player_icon(packet_cursor, draw_context, 1, 0xDE - g_field_duel_panel_offset, 0x86, 0);
-    packet_cursor = func_800AF950(packet_cursor, draw_context, &((FieldModalSaveView*)g_pad_ctx)->second_name[0], 4, 0xD4 - g_field_duel_panel_offset, 0x96, 1,
-                                  8, 0x180, 0x180, -4, DRAW_FLAG);
-
-    if ((u32)(((FieldModalSaveView*)g_pad_ctx)->second_character.bytes[0] & 0x7F) < 2)
-    {
-        FORMAT_SIGNED(record_text, ((FieldModalSaveView*)g_pad_ctx)->second_duel_wins);
-        STR_CAT_ENTRY(record_text, D_800EC408, 0x44);
-        FORMAT_SIGNED(loss_text, ((FieldModalSaveView*)g_pad_ctx)->second_duel_losses);
-        STR_CAT(record_text, loss_text);
-        STR_CAT_ENTRY(record_text, D_800EC40A, 0x46);
-        packet_cursor = func_800AF950(packet_cursor, draw_context, record_text, 4, 0xD4 - g_field_duel_panel_offset, 0xA6, 1, 9, 0x180, 0x180, -4, DRAW_FLAG);
+        field_format_number(record_text, g_pad_ctx->characters[1].duel_wins, 0);
+        field_append_dialog_text(record_text, &D_800EC408, 34);
+        field_format_number(loss_text, g_pad_ctx->characters[1].duel_losses, 0);
+        field_append_name(record_text, loss_text);
+        field_append_dialog_text(record_text, &D_800EC40A, 35);
+        packet_cursor = func_800AF950(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, 212 - g_field_duel_panel_offset, 166, 1, 9,
+                                      FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
     }
 
-    context->packet_cursor = packet_cursor;
+    render->primitive_cursor = (u8*)packet_cursor;
     return 0;
 }
 
 /**
  * @brief Animate and draw the winner and their duel record.
- * @param context Field drawing context and packet cursor.
+ * @param render Render half receiving the panels.
  * @return Nonzero after the panel has slid out.
  */
-s32 field_draw_duel_result(FieldModalDrawContext* context)
+static s32 field_draw_duel_result(FieldRenderHalf* render)
 {
-    u8 record_text[0x38];
-    u8 loss_text[0x38];
+    u8 record_text[56];
+    u8 loss_text[56];
     s32 packet_cursor;
-    void* draw_context;
-    FieldModalSaveView* winner;
+    u_long* ot;
 
-    packet_cursor = context->packet_cursor;
-    draw_context = context;
+    packet_cursor = (s32)render->primitive_cursor;
+    ot = render->ordering_table;
     switch (g_field_duel_panel_phase)
     {
     case FIELD_DUEL_SLIDE_IN:
@@ -2730,14 +2367,14 @@ s32 field_draw_duel_result(FieldModalDrawContext* context)
         g_field_duel_panel_hold_frames--;
         if (g_field_duel_panel_hold_frames == 0)
         {
-            field_play_sound(0x127, 0x80);
+            field_play_sound(FIELD_SOUND_DUEL_PANEL_OUT, FIELD_SOUND_PAN_CENTRE);
             g_field_duel_panel_phase = FIELD_DUEL_SLIDE_OUT;
             g_field_duel_panel_offset = -1;
         }
         break;
     case FIELD_DUEL_SLIDE_OUT:
         g_field_duel_panel_offset *= 2;
-        if (g_field_duel_panel_offset < -0x64)
+        if (g_field_duel_panel_offset < FIELD_DUEL_PANEL_END_OFFSET)
         {
             g_field_duel_panel_phase = FIELD_DUEL_FINISHED;
         }
@@ -2746,29 +2383,23 @@ s32 field_draw_duel_result(FieldModalDrawContext* context)
         return 1;
     }
 
-    {
-        s32 low = D_800EC40C.low;
-        s32 offset = (D_800EC40C.high << 8) + (s32)((u8*)&D_800EC40C - 0x48);
-        packet_cursor = func_800AF950(packet_cursor, draw_context, (u8*)(low + offset), 4, 0xA0, 0x34, 2, 5, 0x200, 0x200, -4, DRAW_FLAG);
-    }
-    packet_cursor = field_draw_player_icon(packet_cursor, draw_context, g_field_duel_winner, g_field_duel_panel_offset + 0x32, 0x54, 1);
-    packet_cursor = func_800AF950(packet_cursor, draw_context, g_pad_ctx + (g_field_duel_winner * FIELD_SAVED_CHARACTER_STRIDE + 0x5F0), 4,
-                                  g_field_duel_panel_offset + 0x6C, 0x64, 0, 6, 0x1C0, 0x1C0, -4, DRAW_FLAG);
+    packet_cursor = func_800AF950(packet_cursor, ot, field_dialog_text(&D_800EC40C, 36), FIELD_TEXT_COLOR_NORMAL, 160, 52, 2, 5, FIELD_DUEL_TITLE_SCALE,
+                                  FIELD_DUEL_TITLE_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
+    packet_cursor = field_draw_player_icon(packet_cursor, ot, g_field_duel_winner, g_field_duel_panel_offset + 50, 84, 1);
+    packet_cursor = func_800AF950(packet_cursor, ot, g_pad_ctx->characters[g_field_duel_winner].name, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 108,
+                                  100, 0, 6, FIELD_DUEL_WINNER_SCALE, FIELD_DUEL_WINNER_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
 
-    winner = (FieldModalSaveView*)(g_pad_ctx + g_field_duel_winner * FIELD_SAVED_CHARACTER_STRIDE);
-    if ((u32)(winner->character_kind & 0x7F) < 2)
+    if ((u32)(g_pad_ctx->characters[g_field_duel_winner].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
     {
-        FieldModalSaveView* winner_record;
-
-        FORMAT_SIGNED(record_text, winner->duel_wins);
-        STR_CAT_ENTRY(record_text, D_800EC408, 0x44);
-        winner_record = (FieldModalSaveView*)(g_pad_ctx + g_field_duel_winner * FIELD_SAVED_CHARACTER_STRIDE);
-        FORMAT_SIGNED(loss_text, winner_record->duel_losses);
-        STR_CAT(record_text, loss_text);
-        STR_CAT_ENTRY(record_text, D_800EC40A, 0x46);
-        packet_cursor = func_800AF950(packet_cursor, draw_context, record_text, 4, g_field_duel_panel_offset + 0x8C, 0x84, 0, 7, 0x180, 0x180, -4, DRAW_FLAG);
+        field_format_number(record_text, g_pad_ctx->characters[g_field_duel_winner].duel_wins, 0);
+        field_append_dialog_text(record_text, &D_800EC408, 34);
+        field_format_number(loss_text, g_pad_ctx->characters[g_field_duel_winner].duel_losses, 0);
+        field_append_name(record_text, loss_text);
+        field_append_dialog_text(record_text, &D_800EC40A, 35);
+        packet_cursor = func_800AF950(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 140, 132, 0, 7,
+                                      FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
     }
 
-    context->packet_cursor = packet_cursor;
+    render->primitive_cursor = (u8*)packet_cursor;
     return 0;
 }
