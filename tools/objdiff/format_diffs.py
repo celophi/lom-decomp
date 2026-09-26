@@ -13,9 +13,9 @@ Lines prefixed with '!' differ. Gaps (insert/delete) show '<gap>' on the
 missing side. The right-side source line number is appended when available.
 
 Usage:
-    python3 tools/objdiff/format_diffs.py build/diffs/main/cdrom.json
-    python3 tools/objdiff/format_diffs.py build/diffs/main/cdrom.json -o out.txt
-    python3 tools/objdiff/format_diffs.py build/diffs/main/cdrom.json --all
+    python3 tools/objdiff/format_diffs.py build/us/diffs/main/cdrom.json
+    python3 tools/objdiff/format_diffs.py build/us/diffs/main/cdrom.json -o out.txt
+    python3 tools/objdiff/format_diffs.py build/us/diffs/main/cdrom.json --all
 """
 
 import argparse

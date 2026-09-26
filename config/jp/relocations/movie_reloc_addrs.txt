@@ -1,0 +1,8 @@
+// These loads are constant-address accesses into the fixed MovieState block
+// (0x801ED500), not references to the g_gpu_mode / g_sectorsRemaining globals
+// that share the address; the original object has no relocation here, so stop
+// splat from guessing one.
+rom:0x389 reloc:MIPS_NONE symbol:g_gpu_mode
+rom:0x38D reloc:MIPS_NONE symbol:g_gpu_mode
+rom:0xEF9 reloc:MIPS_NONE symbol:g_sectorsRemaining
+rom:0xEFD reloc:MIPS_NONE symbol:g_sectorsRemaining

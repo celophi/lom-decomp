@@ -1,0 +1,88 @@
+name: CHECKPS.BIN
+sha1: 388f95071ba5107108eeeb2296439871c22c4185
+options:
+  base_path: ../../../
+  basename: CHECKPS.BIN
+  platform: psx
+  compiler: PSYQ
+  # include/include_asm.h, macro.inc, labels.inc and gte_macros.inc are
+  # project-owned (include_asm.h prefixes the per-version asm directory),
+  # so splat must not regenerate them.
+  generate_asm_macros_files: False
+  target_path: disc/us/BIN/CHECKPS.BIN
+  extensions_path: tools/splat_ext
+  asset_path: assets/us
+  elf_path: build/us/overlays/checkps.elf
+
+  # Overlay-specific output paths (separate from SLUS)
+  asm_path: asm/us/overlays/checkps
+  src_path: src/overlays/checkps
+  build_path: build/us/overlays/checkps
+
+  ld_script_path: linker/us/overlays/checkps/checkps.ld
+  ld_dependencies: True
+  ld_legacy_generation: True
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
+  undefined_funcs_auto_path: linker/us/overlays/checkps/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/us/overlays/checkps/undefined_syms_auto.txt
+
+  symbol_addrs_path:    
+    - config/us/symbols/shared_symbol_addrs.txt
+    - config/us/symbols/checkps_symbol_addrs.txt
+
+  reloc_addrs_path:
+    - config/us/relocations/checkps_reloc_addrs.txt
+
+  find_file_boundaries: False
+  make_full_disasm_for_code: True
+  use_legacy_include_asm: False
+  o_as_suffix: True
+  subalign: 2
+
+  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
+
+  string_encoding: ASCII
+  data_string_encoding: ASCII
+
+segments:
+  - name: checkps
+    type: decompress_overlay
+    start: 0x1
+    vram: 0x8004FC70
+    subsegments:
+      - [auto, c, overlay_header]
+      - [0x1, .rodata, overlay_header]
+      - [0x5, .rodata, cdrom]
+      # pattern.o .rodata, extracted as a raw asset: the Shift-JIS warning text,
+      # the vertex signs, and the 12 zero bytes GNU as pads the section with.
+      - start: 0x55
+        type: rodatabin
+        name: pattern_rodata
+        dir: checkps
+      - [0xA5, c, init]
+      - [0xE95, c, cdrom]
+      - [0x1BC1, c, kanji]
+      - [0x1DB5, c, pattern]
+      - [0x1F45, c, font]
+      - start: 0x27B9
+        type: databin
+        name: embedded_akao
+        dir: checkps
+      - start: 0xBAD5
+        type: databin
+        name: image_asset
+        dir: checkps
+      # cdrom.o .data (CD command table, register pointers, state) followed by
+      # the pattern ring size table and 6 zero bytes; kept as assembly.
+      - [0xD321, data, table]
+      # font.o .data, extracted as a raw asset: the Shift-JIS decimal and hex
+      # digit tables and the glyph CLUT prefix.
+      - start: 0xD3A9
+        type: databin
+        name: font_data
+        dir: checkps
+      - [0xD3F1, .bss, init]
+      - [0x31441, .bss, cdrom]
+      - [0x31451, .bss, font]
+  - [0x39869]

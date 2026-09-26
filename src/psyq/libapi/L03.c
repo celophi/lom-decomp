@@ -1,3 +1,3 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libapi/L03", SysDeqIntRP);
+INCLUDE_ASM("nonmatchings/psyq/libapi/L03", SysDeqIntRP);

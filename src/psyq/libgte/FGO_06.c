@@ -1,3 +1,3 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libgte/FGO_06", RotMatrixZ);
+INCLUDE_ASM("nonmatchings/psyq/libgte/FGO_06", RotMatrixZ);

@@ -13,22 +13,29 @@
 # A sentinel tracks the last successful staging operation. Its prerequisites
 # include every staged input, so host edits/additions/deletions automatically
 # refresh /staging. Run `make recopy` to force a refresh.
-COPY_SENTINEL := $(STAGING)/.sources_copied
+#
+# Each version has its own sentinel because each stages a different asm/,
+# linker/, and assets/ tree. The unversioned .sources_copied marker is also
+# touched so external tooling that only checks "has staging ever run" keeps
+# working.
+COPY_SENTINEL := $(STAGING)/.sources_copied.$(VERSION)
+LEGACY_COPY_SENTINEL := $(STAGING)/.sources_copied
 
-# Project inputs that must exist before staging (splat generates asm/ and
-# linker/; the rest are checked in).
+# Project inputs that must exist before staging (splat generates the
+# version's asm/ and linker/ trees; the rest are checked in).
 STAGE_PATHS_REQUIRED := \
 	src \
-	asm \
+	$(ASM_DIR) \
 	include \
-	linker \
-	tools/maspsx 
+	$(LINKER_DIR) \
+	tools/maspsx
 
-# Optional inputs are staged only when present. `assets/` holds gitignored
-# binary data (splat databin / asset_src) and is absent when no overlay embeds
-# such data. Guarding with $(wildcard) keeps it out of the prerequisite list, so
-# a missing assets/ does not abort staging with "No rule to make target 'assets'".
-STAGE_PATHS_OPTIONAL := assets
+# Optional inputs are staged only when present. The version's assets/ tree
+# holds gitignored binary data (splat databin / asset_src) and is absent when
+# no overlay embeds such data. Guarding with $(wildcard) keeps it out of the
+# prerequisite list, so a missing tree does not abort staging with "No rule to
+# make target".
+STAGE_PATHS_OPTIONAL := $(ASSETS_DIR)
 
 # Project inputs needed by the Make build (required plus any present optional).
 STAGE_PATHS := $(STAGE_PATHS_REQUIRED) $(wildcard $(STAGE_PATHS_OPTIONAL))
@@ -52,7 +59,7 @@ STAGE_TEXT_FIND_EXPR := \
 # than recursively expanding one Make wildcard per directory. Directories are
 # included so adding or deleting a staged file invalidates the sentinel.
 # Changes to this file also invalidate the sentinel.
-STAGE_INPUTS := Makefile mk/staging.mk $(STAGE_PATHS) \
+STAGE_INPUTS := Makefile mk/staging.mk mk/version.mk $(STAGE_PATHS) \
 	$(shell find $(STAGE_PATHS) -print 2>/dev/null)
 
 .PHONY: recopy
@@ -73,7 +80,7 @@ $(COPY_SENTINEL): $(STAGE_INPUTS)
 			echo "Refusing unsafe staging path: '$(STAGING)'" >&2; \
 			exit 1; \
 		fi; \
-		rm -f "$$staging_abs/.sources_copied"; \
+		rm -f "$(COPY_SENTINEL)"; \
 		for path in $(STAGE_PATHS_REQUIRED); do \
 			if [ ! -e "$$path" ]; then \
 				echo "Missing required staging input: $$path" >&2; \
@@ -90,5 +97,5 @@ $(COPY_SENTINEL): $(STAGE_INPUTS)
 	@find $(addprefix $(STAGING)/,$(STAGE_MANAGED_PATHS)) -type f \
 		\( $(STAGE_TEXT_FIND_EXPR) \) \
 		-exec dos2unix -q {} +
-	@touch $@
-	@echo "Staging complete."
+	@touch $@ $(LEGACY_COPY_SENTINEL)
+	@echo "Staging complete ($(VERSION))."

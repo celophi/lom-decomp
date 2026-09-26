@@ -1,3 +1,3 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libc2/PUTS", puts);
+INCLUDE_ASM("nonmatchings/psyq/libc2/PUTS", puts);

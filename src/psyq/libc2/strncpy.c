@@ -1,3 +1,3 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libc2/strncpy", strncpy);
+INCLUDE_ASM("nonmatchings/psyq/libc2/strncpy", strncpy);

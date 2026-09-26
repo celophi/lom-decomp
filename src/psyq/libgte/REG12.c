@@ -1,3 +1,3 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libgte/REG12", SetGeomOffset);
+INCLUDE_ASM("nonmatchings/psyq/libgte/REG12", SetGeomOffset);

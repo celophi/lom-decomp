@@ -27,6 +27,9 @@
 #   make clean        — remove all build artifacts
 #   make recopy       — force re-copy of source files to /staging
 #
+# Every target builds the North American version by default. Pass
+# VERSION=<name> to select another release (see mk/version.mk).
+#
 # ============================================================================
 
 
@@ -40,22 +43,21 @@
 STAGING      := /staging
 MOUNT        := /lom
 
-GAME         := SLUS_010.13
-TARGET       := $(STAGING)/build/$(GAME).elf
-BIN          := build/$(GAME).bin
+# Selects VERSION and defines GAME plus the per-version directories
+# (DISC_DIR, CONFIG_DIR, ASM_DIR, LINKER_DIR, ASSETS_DIR, BUILD_DIR, ROM_BIN_DIR).
+include mk/version.mk
 
-# Directories (relative — used for both the mount and staging mirror)
+TARGET       := $(STAGING)/$(BUILD_DIR)/$(GAME).elf
+BIN          := $(BUILD_DIR)/$(GAME).bin
+
+# Shared C sources (relative — used for both the mount and staging mirror)
 SRC_DIR      := src
-ASM_DIR      := asm
 
 .DEFAULT_GOAL := all
 
-# Original ROM overlay BINs live here in CI (copied from the container's /rom/BIN).
-ROM_BIN_DIR       := disc/BIN
-
 # Manifest of overlays whose rebuilt+compressed BIN matches the original ROM.
 # Read by tools/objdiff/generate_objdiff_config.py to mark units complete.
-COMPLETE_MANIFEST := build/complete_overlays.txt
+COMPLETE_MANIFEST := $(BUILD_DIR)/complete_overlays.txt
 
 # Recursive wildcard helper used while overlay rules are expanded.
 rwildcard = $(foreach d,$(wildcard $1/*),$(call rwildcard,$d,$2)) \
@@ -74,4 +76,4 @@ include mk/verification.mk
 .PHONY: clean
 
 clean:
-	rm -rf build/ $(STAGING)
+	rm -rf $(BUILD_DIR)/ $(STAGING)

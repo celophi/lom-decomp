@@ -1,0 +1,56 @@
+name: SHOP.BIN
+sha1: 33bf665c2fe24e108cef91f789061d8df56cc231
+options:
+  base_path: ../../../
+  basename: SHOP.BIN
+  platform: psx
+  compiler: PSYQ
+  # include/include_asm.h, macro.inc, labels.inc and gte_macros.inc are
+  # project-owned (include_asm.h prefixes the per-version asm directory),
+  # so splat must not regenerate them.
+  generate_asm_macros_files: False
+  target_path: disc/jp/BIN/SHOP.BIN
+  extensions_path: tools/splat_ext
+  asset_path: assets/jp
+  elf_path: build/jp/overlays/shop.elf
+
+  # Overlay-specific output paths (separate from SLUS)
+  asm_path: asm/jp/overlays/shop
+  src_path: src/overlays/shop
+  build_path: build/jp/overlays/shop
+
+  ld_script_path: linker/jp/overlays/shop/shop.ld
+  ld_dependencies: True
+  undefined_funcs_auto_path: linker/jp/overlays/shop/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/jp/overlays/shop/undefined_syms_auto.txt
+
+  symbol_addrs_path:
+    - config/jp/symbols/shared_symbol_addrs.txt
+    - config/jp/symbols/shop_symbol_addrs.txt
+
+  find_file_boundaries: False
+  make_full_disasm_for_code: True
+  use_legacy_include_asm: False
+  o_as_suffix: True
+  subalign: 2
+
+  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
+
+  string_encoding: ASCII
+  data_string_encoding: ASCII
+
+segments:
+  - name: shop
+    type: decompress_overlay
+    start: 0x1
+    vram: 0x80140000
+    align: 4
+    subsegments:
+      - [auto, c, overlay_header]
+      - [0x1, .rodata, overlay_header]
+      - [0x5, c, shop]
+      - [0xE01, asm, shop_render]  # JP: differs from US, kept as assembly
+      - [0x2125, c, shop_text]
+      - [0x2279, c, shop_trade]
+      - [0x2CF9, data, data]
+  - [0x586D]

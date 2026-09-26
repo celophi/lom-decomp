@@ -1,0 +1,68 @@
+// wmap_draw_model retains %hi(g_wmap_current_frame) in t4 across its loop.
+// These loads use the same -0x6714 low half; Splat loses the high-half
+// association across the switch paths. Verified against decompressed retail bytes.
+rom:0x180AD reloc:MIPS_LO16 symbol:g_wmap_current_frame
+rom:0x1854D reloc:MIPS_LO16 symbol:g_wmap_current_frame
+rom:0x185B5 reloc:MIPS_LO16 symbol:g_wmap_current_frame
+rom:0x18A4D reloc:MIPS_LO16 symbol:g_wmap_current_frame
+rom:0x18AB1 reloc:MIPS_LO16 symbol:g_wmap_current_frame
+rom:0x18FE9 reloc:MIPS_LO16 symbol:g_wmap_current_frame
+rom:0x19051 reloc:MIPS_LO16 symbol:g_wmap_current_frame
+rom:0x19315 reloc:MIPS_LO16 symbol:g_wmap_current_frame
+rom:0x1937D reloc:MIPS_LO16 symbol:g_wmap_current_frame
+rom:0x1961D reloc:MIPS_LO16 symbol:g_wmap_current_frame
+rom:0x19941 reloc:MIPS_LO16 symbol:g_wmap_current_frame
+rom:0x19C45 reloc:MIPS_LO16 symbol:g_wmap_current_frame
+rom:0x19CA9 reloc:MIPS_LO16 symbol:g_wmap_current_frame
+rom:0x1A421 reloc:MIPS_LO16 symbol:g_wmap_current_frame
+
+// func_800A5DFC hoists %hi(D_80123538) before its switch. Each case
+// adds the same low half; Splat loses the association after case zero.
+// All 960 linked bytes independently match decompressed retail WMAP.BIN.
+rom:0x56431 reloc:MIPS_LO16 symbol:D_80123538
+rom:0x56455 reloc:MIPS_LO16 symbol:D_80123538
+rom:0x56479 reloc:MIPS_LO16 symbol:D_80123538
+rom:0x5649D reloc:MIPS_LO16 symbol:D_80123538
+
+// func_8006A2FC retains the particle globals in s6/s5 across switch paths.
+rom:0x1A695 reloc:MIPS_HI16 symbol:D_8013B264
+rom:0x1A699 reloc:MIPS_HI16 symbol:D_8013B270
+rom:0x1A805 reloc:MIPS_LO16 symbol:D_8013B264
+rom:0x1A831 reloc:MIPS_LO16 symbol:D_8013B270
+rom:0x1A8F9 reloc:MIPS_LO16 symbol:D_8013B264
+rom:0x1A949 reloc:MIPS_LO16 symbol:D_8013B270
+rom:0x1A98D reloc:MIPS_LO16 symbol:D_8013B264
+rom:0x1A9A1 reloc:MIPS_LO16 symbol:D_8013B270
+
+// wmap_run_loop keeps four scalar globals in saved-register high halves across
+// the event switch. Every annotated immediate is checked against retail WMAP.BIN.
+// JP not found: rom:0x127BD reloc:MIPS_HI16 symbol:g_wmap_input_script
+rom:0x127AD reloc:MIPS_HI16 symbol:g_wmap_party_visible
+rom:0x127BD reloc:MIPS_HI16 symbol:D_801ADB90
+rom:0x127C9 reloc:MIPS_HI16 symbol:D_8013B208
+// JP not found: rom:0x12889 reloc:MIPS_LO16 symbol:g_wmap_input_script
+// JP not found: rom:0x12895 reloc:MIPS_LO16 symbol:g_wmap_input_script
+// JP not found: rom:0x1289D reloc:MIPS_LO16 symbol:g_wmap_input_script
+rom:0x12851 reloc:MIPS_LO16 symbol:g_wmap_party_visible
+rom:0x128C1 reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x1290D reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x12911 reloc:MIPS_LO16 symbol:g_wmap_party_visible
+rom:0x12921 reloc:MIPS_LO16 symbol:D_8013B208
+rom:0x12929 reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x12941 reloc:MIPS_LO16 symbol:D_8013B208
+rom:0x12979 reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x1297D reloc:MIPS_LO16 symbol:g_wmap_party_visible
+rom:0x12991 reloc:MIPS_LO16 symbol:D_8013B208
+rom:0x129A9 reloc:MIPS_LO16 symbol:D_8013B208
+rom:0x129E9 reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x12A19 reloc:MIPS_LO16 symbol:D_8013B208
+rom:0x12A1D reloc:MIPS_LO16 symbol:g_wmap_party_visible
+rom:0x12A6D reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x12A71 reloc:MIPS_LO16 symbol:g_wmap_party_visible
+rom:0x12A75 reloc:MIPS_LO16 symbol:D_8013B208
+rom:0x12AE5 reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x12AE9 reloc:MIPS_LO16 symbol:g_wmap_party_visible
+rom:0x12AF5 reloc:MIPS_LO16 symbol:D_8013B208
+rom:0x12B91 reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x12B95 reloc:MIPS_LO16 symbol:g_wmap_party_visible
+rom:0x12BA1 reloc:MIPS_LO16 symbol:D_8013B208

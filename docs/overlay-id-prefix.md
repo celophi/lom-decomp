@@ -227,7 +227,7 @@ in `mk/overlay-registry.mk`. For MOVIE, whose code is built with GCC 2.8.0
 
 ### Symbols
 
-Each `config/symbols/<name>_symbol_addrs.txt` declares
+Each `config/<version>/symbols/<name>_symbol_addrs.txt` declares
 `g_<name>_overlay_id` at the load address (0x80140000 or 0x8004FC70).
 
 ## Unknowns

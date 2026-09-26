@@ -8,29 +8,51 @@ on:
     branches:
       - 'master'
 
-env:
-  # Project configuration
-  ROM_ID: SLUS_010.13
-  WORKING_DIR: lom
-  
-  # Tool paths (relative to working directory)
-  OBJDIFF_CLI: ./tools/objdiff/objdiff-cli-linux-x86_64
-  OBJDIFF_CONFIG_GENERATOR: tools/objdiff/generate_objdiff_config.py
-  
-  # Build artifacts
-  PROGRESS_REPORT: build/progress.json
-
 jobs:
   build-and-report:
+    # One job per game version (see mk/version.mk). Each builds its own objects
+    # and uploads its own progress report, named after the version's main
+    # executable (e.g. SLUS_010.13_report, SLPS_021.70_report).
+    name: ${{ matrix.rom_id }}
     runs-on: ubuntu-latest
-    
+
+    strategy:
+      # A failure in one version must not cancel the other's report.
+      fail-fast: false
+      matrix:
+        include:
+          - version: us
+            rom_id: SLUS_010.13
+            # Fully linked: verify every rebuilt binary against the disc.
+            verify: true
+          - version: jp
+            rom_id: SLPS_021.70
+            # Linked purely from the first-pass splat assembly (no C yet), so
+            # the progress report shows 0% matched, but every rebuilt binary is
+            # still checked against the disc (see RAW_VERIFIED_OVERLAYS_jp in
+            # mk/verification.mk for the four checked at raw-image level).
+            verify: true
+
     container:
-      image: ghcr.io/celophi/slus-01013:v5.0
-    
+      # The CI image holds every disc under /rom/<version>/.
+      image: ghcr.io/celophi/slus-01013:v6.0
+
+    env:
+      VERSION: ${{ matrix.version }}
+      ROM_ID: ${{ matrix.rom_id }}
+      WORKING_DIR: lom
+
+      # Tool paths (relative to working directory)
+      OBJDIFF_CLI: ./tools/objdiff/objdiff-cli-linux-x86_64
+      OBJDIFF_CONFIG_GENERATOR: tools/objdiff/generate_objdiff_config.py
+
+      # Build artifacts
+      PROGRESS_REPORT: build/${{ matrix.version }}/progress.json
+
     defaults:
       run:
-        working-directory: ${{ env.WORKING_DIR }}
-    
+        working-directory: lom
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -38,12 +60,12 @@ jobs:
           path: ${{ env.WORKING_DIR }}
           submodules: recursive
           ref: ${{ github.head_ref || github.ref_name }}
-      
+
       - name: Copy ROM from container
         run: |
-          mkdir -p disc/BIN
-          cp /rom/${{ env.ROM_ID }} disc/
-          cp /rom/BIN/*.BIN disc/BIN/
+          mkdir -p disc/${{ env.VERSION }}/BIN
+          cp /rom/${{ env.VERSION }}/${{ env.ROM_ID }} disc/${{ env.VERSION }}/
+          cp /rom/${{ env.VERSION }}/BIN/*.BIN disc/${{ env.VERSION }}/BIN/
 
       - name: Setup Python environment
         run: |
@@ -51,22 +73,23 @@ jobs:
           pip install -r requirements.txt
 
       - name: Split ROM with splat
-        run: make splat
+        run: make splat VERSION=${{ env.VERSION }}
 
       - name: Build objects for comparison
         run: |
-          make clean
-          make objdiff-objects
+          make clean VERSION=${{ env.VERSION }}
+          make objdiff-objects VERSION=${{ env.VERSION }}
 
       - name: Verify compressed overlay BINs against ROM
+        if: ${{ matrix.verify }}
         # Builds each verifiable overlay's compressed .BIN and SHA1-compares it
         # against the original ROM file. On match, the overlay name is appended
-        # to build/complete_overlays.txt, which the objdiff config generator
-        # reads to stamp metadata.complete = true on those units.
-        run: make verify-bins
+        # to build/<version>/complete_overlays.txt, which the objdiff config
+        # generator reads to stamp metadata.complete = true on those units.
+        run: make verify-bins VERSION=${{ env.VERSION }}
 
       - name: Generate objdiff configuration
-        run: python3 ${{ env.OBJDIFF_CONFIG_GENERATOR }}
+        run: python3 ${{ env.OBJDIFF_CONFIG_GENERATOR }} --version ${{ env.VERSION }}
 
       - name: Generate progress report
         run: |

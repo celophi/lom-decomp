@@ -1,3 +1,3 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libapi/CHCLRPAD", _remove_ChgclrPAD);
+INCLUDE_ASM("nonmatchings/psyq/libapi/CHCLRPAD", _remove_ChgclrPAD);

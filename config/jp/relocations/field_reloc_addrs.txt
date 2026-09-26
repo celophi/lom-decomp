@@ -1,0 +1,153 @@
+rom:0x25C5 reloc:MIPS_NONE symbol:g_field_scene
+rom:0x25D5 reloc:MIPS_NONE symbol:g_field_scene
+rom:0x25D9 reloc:MIPS_NONE symbol:g_field_scene
+rom:0x25E5 reloc:MIPS_NONE symbol:g_field_vram_byte_count
+
+// field_build_render_records: the original code addresses the 0x80180000 work
+// area through one literal page base (a single lui shared across fields at
+// +0x10/+0x14/+0x18/+0x1C), which gcc 2.8.0 can only emit from a raw address.
+// Splat symbolizes each field access individually; strip those false-positive
+// relocations so the target shows the literal base+offset the retail bytes hold.
+rom:0x2909 reloc:MIPS_NONE symbol:g_field_scene
+rom:0x2941 reloc:MIPS_NONE symbol:g_field_scene
+rom:0x296D reloc:MIPS_NONE symbol:g_field_node_angle_table
+rom:0x39F9 reloc:MIPS_NONE symbol:g_field_dyn_count
+rom:0x3A01 reloc:MIPS_NONE symbol:g_field_dyn_count
+rom:0x3A05 reloc:MIPS_NONE symbol:D_80180018
+
+rom:0x62ED reloc:MIPS_NONE symbol:D_1F800008
+rom:0x6425 reloc:MIPS_NONE symbol:D_1F800008
+rom:0x665D reloc:MIPS_NONE symbol:D_1F800008
+
+// func_80060364: two literal scratchpad page bases feed a moving row cursor.
+// The addiu at 0x80060748 adds the third-word offset (8) to that cursor;
+// it does not complete a symbol address. Keep the retail literal operands.
+rom:0x109A5 reloc:MIPS_NONE symbol:D_1F800008
+rom:0x109A9 reloc:MIPS_NONE symbol:D_1F800008
+rom:0x109F1 reloc:MIPS_NONE symbol:D_1F800008
+
+// field_text_build_transition_packets: literal scratchpad page and cursor
+// offsets. The low halves add 8 or 16 to moving vertex pointers; they do not
+// complete symbol addresses. Preserve the original instruction operands.
+rom:0x16241 reloc:MIPS_NONE symbol:D_1F800010
+rom:0x165B1 reloc:MIPS_NONE symbol:D_1F800008
+rom:0x166ED reloc:MIPS_NONE symbol:D_1F800008
+rom:0x167E1 reloc:MIPS_NONE symbol:D_1F800010
+
+// field_apply_weapon_action_params: the branch-delay-slot page load at 0x800914A8 is the
+// high half of g_field_weapon_action_blunt_params. Splat loses the relocation on this control-flow
+// path even though GCC emits the same instruction with an R_MIPS_HI16 reloc.
+rom:0x411D1 reloc:MIPS_HI16 symbol:g_field_weapon_action_blunt_params
+
+// func_800920FC: 0x801ED400 is a fixed field-work-area address. Splat
+// auto-symbolizes the literal load as D_801ED400; preserve the retail literal.
+rom:0x41D8D reloc:MIPS_NONE symbol:D_801ED400
+rom:0x41D91 reloc:MIPS_NONE symbol:D_801ED400
+
+// func_80092124: this reset path reads the same fixed field-work-area address.
+// Splat auto-symbolizes the literal load as D_801ED400; preserve the retail literal.
+rom:0x41DCD reloc:MIPS_NONE symbol:D_801ED400
+rom:0x41DD1 reloc:MIPS_NONE symbol:D_801ED400
+
+// func_800A3728: the first word of the 0x80180000 SEQ scratch buffer is read
+// through a literal address. Splat auto-symbolizes the raw page-base load as
+// D_80180000, but the retail instruction words carry no recoverable symbol.
+rom:0x5382D reloc:MIPS_NONE symbol:D_80180000
+rom:0x53831 reloc:MIPS_NONE symbol:D_80180000
+
+// func_80096B54: literal 0x80100000 page plus 0x5AE0 at the final slot update.
+// Retail words: 0x3C178010 (lui s7,0x8010), 0x26E55AE0 (addiu a1,s7,0x5AE0).
+// Splat inferred a symbol pair across the actor scan; preserve the literal
+// operands used by the matching C page-base access. No instruction bytes change.
+rom:0x46CED reloc:MIPS_NONE symbol:g_field_object_states
+rom:0x46F2D reloc:MIPS_NONE symbol:g_field_object_states
+
+// func_800632E0: glyph widths use the fixed RAM table at 0x801E26E0.
+// The low halves remain load displacements after adding the glyph index.
+// Suppress inferred symbol relocations; preserve the original literal operands.
+// JP not found: rom:0x13A71 reloc:MIPS_NONE symbol:D_801E26E0
+// JP not found: rom:0x13A81 reloc:MIPS_NONE symbol:D_801E26E0
+// JP not found: rom:0x13D11 reloc:MIPS_NONE symbol:D_801E26E0
+// JP not found: rom:0x13D21 reloc:MIPS_NONE symbol:D_801E26E0
+
+// func_8008343C: these are literal +2 scratchpad-pointer increments. Splat
+// otherwise misidentifies them as low-half references to D_1F800002.
+rom:0x33401 reloc:MIPS_NONE symbol:D_1F800002
+rom:0x33459 reloc:MIPS_NONE symbol:D_1F800002
+rom:0x334C1 reloc:MIPS_NONE symbol:D_1F800002
+rom:0x33519 reloc:MIPS_NONE symbol:D_1F800002
+rom:0x33565 reloc:MIPS_NONE symbol:D_1F800002
+rom:0x335A5 reloc:MIPS_NONE symbol:D_1F800002
+rom:0x3361D reloc:MIPS_NONE symbol:D_1F800002
+rom:0x3365D reloc:MIPS_NONE symbol:D_1F800002
+
+// func_8007100C: the effect-array bound is base + 256 * 0x54. The named
+// end symbol aliases that address (0x80104A58); retain the array addend in
+// these two relocations so objdiff compares the same symbolic expression.
+rom:0x21291 reloc:MIPS_HI16 symbol:g_field_effect_records addend:0x5400
+rom:0x21295 reloc:MIPS_LO16 symbol:g_field_effect_records addend:0x5400
+
+// The field objects' reserved animation slots start at g_field_actor_slots[64]
+// (base + 64 * 0x244). Splat otherwise names that address D_800FB3C8; keep the
+// array addend so objdiff compares the same symbolic expression as the C.
+// func_80086494
+rom:0x363D1 reloc:MIPS_HI16 symbol:g_field_actor_slots addend:0x9100
+rom:0x363D5 reloc:MIPS_LO16 symbol:g_field_actor_slots addend:0x9100
+// field_knock_down_actor
+rom:0x3BCAD reloc:MIPS_HI16 symbol:g_field_actor_slots addend:0x9100
+rom:0x3BCB1 reloc:MIPS_LO16 symbol:g_field_actor_slots addend:0x9100
+// field_collapse_defeated_actor
+rom:0x3BF31 reloc:MIPS_HI16 symbol:g_field_actor_slots addend:0x9100
+rom:0x3BF35 reloc:MIPS_LO16 symbol:g_field_actor_slots addend:0x9100
+// func_800966F0
+rom:0x468D1 reloc:MIPS_HI16 symbol:g_field_actor_slots addend:0x9100
+rom:0x468D5 reloc:MIPS_LO16 symbol:g_field_actor_slots addend:0x9100
+
+// func_8008A0B0: the target stores load &g_field_object_states[0].target_x
+// (base + 0x50) as one constant. Splat otherwise names it D_80105B30.
+rom:0x3A021 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x50
+rom:0x3A025 reloc:MIPS_LO16 symbol:g_field_object_states addend:0x50
+
+// field_actor_behavior.c: route histories, the first two followers and the
+// redirect action of resource 0 are interior addresses of their tables.
+rom:0x3C4A1 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x6C
+rom:0x3C59D reloc:MIPS_HI16 symbol:g_field_object_states addend:0x6C
+rom:0x3C5C1 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x6C
+rom:0x3C5F5 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x6C
+rom:0x3C619 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x6C
+rom:0x3C6C5 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x6C
+rom:0x3C6E9 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x6C
+rom:0x3C785 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x6C
+rom:0x3C7A9 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x6C
+rom:0x3CF6D reloc:MIPS_HI16 symbol:g_field_object_states addend:0x6C
+rom:0x3C4A5 reloc:MIPS_LO16 symbol:g_field_object_states addend:0x6C
+rom:0x3C61D reloc:MIPS_LO16 symbol:g_field_object_states addend:0x6C
+rom:0x3C6ED reloc:MIPS_LO16 symbol:g_field_object_states addend:0x6C
+rom:0x3C7AD reloc:MIPS_LO16 symbol:g_field_object_states addend:0x6C
+rom:0x3CF71 reloc:MIPS_LO16 symbol:g_field_object_states addend:0x6C
+rom:0x3C629 reloc:MIPS_HI16 symbol:g_field_actors addend:0x54
+rom:0x3C62D reloc:MIPS_LO16 symbol:g_field_actors addend:0x54
+rom:0x3C6F9 reloc:MIPS_HI16 symbol:g_field_actors addend:0x54
+rom:0x3C6FD reloc:MIPS_LO16 symbol:g_field_actors addend:0x54
+rom:0x3C7B9 reloc:MIPS_HI16 symbol:g_field_actors addend:0xA8
+rom:0x3C7BD reloc:MIPS_LO16 symbol:g_field_actors addend:0xA8
+rom:0x3FF71 reloc:MIPS_HI16 symbol:g_field_resource_actions addend:0x58
+rom:0x3FF75 reloc:MIPS_LO16 symbol:g_field_resource_actions addend:0x58
+
+// The ground attachment points of the field objects are
+// g_field_object_states[i].ground_attachment_points (base + 0x190). Splat
+// otherwise names that address D_80105C70; keep the field addend so objdiff
+// compares the same symbolic expression as the C.
+// field_actor_near_ground_points
+rom:0x4D129 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x190
+rom:0x4D12D reloc:MIPS_LO16 symbol:g_field_object_states addend:0x190
+// field_actor_near_first_ground_point
+rom:0x4D251 reloc:MIPS_HI16 symbol:g_field_object_states addend:0x190
+rom:0x4D255 reloc:MIPS_LO16 symbol:g_field_object_states addend:0x190
+
+// field_text_start_timed_window: fixed FieldTextSystem.timed_text access at
+// 0x801ED008. The literal-address C matches all 236 retail instruction bytes
+// after resolving its two code jumps. Keep the literal store address instead
+// of Splat's inferred standalone g_field_timed_text relocation.
+rom:0x17215 reloc:MIPS_NONE symbol:g_field_timed_text
+rom:0x17219 reloc:MIPS_NONE symbol:g_field_timed_text

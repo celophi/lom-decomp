@@ -6,48 +6,57 @@ versions:
     fullname: SLUS-01013 (US)
     sha1: d11dfdd50d412ac3fa3e2eb80fbde138da118f27
     paths:
-      target: disc/SLUS_010.13
-      build_dir: build/
-      map: build/SLUS_010.13.map
-      compiled_target: build/SLUS_010.13.bin
-      elf: build/SLUS_010.13.elf
+      target: disc/us/SLUS_010.13
+      build_dir: build/us/
+      map: build/us/SLUS_010.13.map
+      compiled_target: build/us/SLUS_010.13.bin
+      elf: build/us/SLUS_010.13.elf
+  - name: jp
+    fullname: SLPS-02170 (JP)
+    sha1: b067188a92e4de9a4db7bb7e5343c757e9884bfa
+    paths:
+      target: disc/jp/SLPS_021.70
+      build_dir: build/jp/
+      map: build/jp/SLPS_021.70.map
+      compiled_target: build/jp/SLPS_021.70.bin
+      elf: build/jp/SLPS_021.70.elf
   - name: menu
     fullname: Menu Overlay
     paths:
-      target: disc/SLUS_010.13
-      build_dir: build/overlays/menu/
-      map: build/overlays/menu/menu.map
-      compiled_target: build/overlays/menu/menu.elf
-      elf: build/overlays/menu/menu.elf
+      target: disc/us/SLUS_010.13
+      build_dir: build/us/overlays/menu/
+      map: build/us/overlays/menu/menu.map
+      compiled_target: build/us/overlays/menu/menu.elf
+      elf: build/us/overlays/menu/menu.elf
   - name: title
     fullname: Title Overlay
     paths:
-      target: disc/SLUS_010.13
-      build_dir: build/overlays/title/
-      map: build/overlays/title/title.map
-      compiled_target: build/overlays/title/title.elf
-      elf: build/overlays/title/title.elf
+      target: disc/us/SLUS_010.13
+      build_dir: build/us/overlays/title/
+      map: build/us/overlays/title/title.map
+      compiled_target: build/us/overlays/title/title.elf
+      elf: build/us/overlays/title/title.elf
   - name: movie
     fullname: Movie Overlay
     paths:
-      target: disc/SLUS_010.13
-      build_dir: build/overlays/movie/
-      map: build/overlays/movie/movie.map
-      compiled_target: build/overlays/movie/movie.elf
-      elf: build/overlays/movie/movie.elf
+      target: disc/us/SLUS_010.13
+      build_dir: build/us/overlays/movie/
+      map: build/us/overlays/movie/movie.map
+      compiled_target: build/us/overlays/movie/movie.elf
+      elf: build/us/overlays/movie/movie.elf
   - name: gname
     fullname: GName Overlay
     paths:
-      target: disc/SLUS_010.13
-      build_dir: build/overlays/gname/
-      map: build/overlays/gname/gname.map
-      compiled_target: build/overlays/gname/gname.elf
-      elf: build/overlays/gname/gname.elf
+      target: disc/us/SLUS_010.13
+      build_dir: build/us/overlays/gname/
+      map: build/us/overlays/gname/gname.map
+      compiled_target: build/us/overlays/gname/gname.elf
+      elf: build/us/overlays/gname/gname.elf
   - name: gover
     fullname: GOver Overlay
     paths:
-      target: disc/SLUS_010.13
-      build_dir: build/overlays/gover/
-      map: build/overlays/gover/gover.map
-      compiled_target: build/overlays/gover/gover.elf
-      elf: build/overlays/gover/gover.elf
+      target: disc/us/SLUS_010.13
+      build_dir: build/us/overlays/gover/
+      map: build/us/overlays/gover/gover.map
+      compiled_target: build/us/overlays/gover/gover.elf
+      elf: build/us/overlays/gover/gover.elf

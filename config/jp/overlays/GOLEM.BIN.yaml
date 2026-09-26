@@ -1,0 +1,73 @@
+name: GOLEM.BIN
+sha1: 92d5e895181199fcfe5b6106237534398217b346
+options:
+  base_path: ../../../
+  basename: GOLEM.BIN
+  platform: psx
+  compiler: PSYQ
+  # include/include_asm.h, macro.inc, labels.inc and gte_macros.inc are
+  # project-owned (include_asm.h prefixes the per-version asm directory),
+  # so splat must not regenerate them.
+  generate_asm_macros_files: False
+  target_path: disc/jp/BIN/GOLEM.BIN
+  extensions_path: tools/splat_ext
+  asset_path: assets/jp
+  elf_path: build/jp/overlays/golem.elf
+
+  # Overlay-specific output paths (separate from SLUS)
+  asm_path: asm/jp/overlays/golem
+  src_path: src/overlays/golem
+  build_path: build/jp/overlays/golem
+
+  ld_script_path: linker/jp/overlays/golem/golem.ld
+  ld_dependencies: True
+  undefined_funcs_auto_path: linker/jp/overlays/golem/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/jp/overlays/golem/undefined_syms_auto.txt
+
+  symbol_addrs_path:
+    - config/jp/symbols/shared_symbol_addrs.txt
+    - config/jp/symbols/golem_symbol_addrs.txt
+
+  find_file_boundaries: False
+  make_full_disasm_for_code: True
+  use_legacy_include_asm: False
+  o_as_suffix: True
+  subalign: 2
+
+  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
+
+  string_encoding: ASCII
+  data_string_encoding: ASCII
+
+segments:
+  - name: golem
+    type: decompress_overlay
+    start: 0x1
+    vram: 0x80140000
+    align: 4
+    subsegments:
+      - [auto, c, overlay_header]
+      - [0x1, .rodata, overlay_header]
+      - [0x5, .rodata, golem]
+      - [0x25, c, golem]
+      - start: 0x287D
+        type: databin
+        name: ui_image
+        dir: golem
+      - start: 0xAAA1
+        type: databin
+        name: text_archive
+        dir: golem
+      - start: 0xB119
+        type: databin
+        name: glyph_metrics
+        dir: golem
+      - start: 0xB3A9
+        type: databin
+        name: panel_records
+        dir: golem
+      - start: 0xBFB1
+        type: databin
+        name: runtime_state
+        dir: golem
+  - [0xC0D5]

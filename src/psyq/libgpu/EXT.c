@@ -1,5 +1,5 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libgpu/EXT", SetDefDrawEnv);
+INCLUDE_ASM("nonmatchings/psyq/libgpu/EXT", SetDefDrawEnv);
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libgpu/EXT", SetDefDispEnv);
+INCLUDE_ASM("nonmatchings/psyq/libgpu/EXT", SetDefDispEnv);

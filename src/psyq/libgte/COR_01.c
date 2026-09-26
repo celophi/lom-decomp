@@ -1,3 +1,3 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libgte/COR_01", csincos);
+INCLUDE_ASM("nonmatchings/psyq/libgte/COR_01", csincos);

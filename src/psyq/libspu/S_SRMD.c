@@ -1,3 +1,3 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libspu/S_SRMD", SpuSetReverbModeDepth);
+INCLUDE_ASM("nonmatchings/psyq/libspu/S_SRMD", SpuSetReverbModeDepth);

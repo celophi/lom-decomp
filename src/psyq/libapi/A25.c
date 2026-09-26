@@ -1,3 +1,3 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libapi/A25", HookEntryInt);
+INCLUDE_ASM("nonmatchings/psyq/libapi/A25", HookEntryInt);

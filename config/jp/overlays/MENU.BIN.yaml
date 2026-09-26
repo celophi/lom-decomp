@@ -1,0 +1,63 @@
+name: MENU.BIN
+sha1: 1d30715ea624781eb610efd3ac59656239457ede
+options:
+  base_path: ../../../
+  basename: MENU.BIN
+  platform: psx
+  compiler: PSYQ
+  # include/include_asm.h, macro.inc, labels.inc and gte_macros.inc are
+  # project-owned (include_asm.h prefixes the per-version asm directory),
+  # so splat must not regenerate them.
+  generate_asm_macros_files: False
+  target_path: disc/jp/BIN/MENU.BIN
+  extensions_path: tools/splat_ext
+  asset_path: assets/jp
+  elf_path: build/jp/overlays/menu.elf
+
+  # Overlay-specific output paths (separate from SLUS)
+  asm_path: asm/jp/overlays/menu
+  src_path: src/overlays/menu
+  build_path: build/jp/overlays/menu
+
+  ld_script_path: linker/jp/overlays/menu/menu.ld
+  ld_dependencies: True
+  undefined_funcs_auto_path: linker/jp/overlays/menu/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/jp/overlays/menu/undefined_syms_auto.txt
+
+  symbol_addrs_path:    
+    - config/jp/symbols/shared_symbol_addrs.txt
+    - config/jp/symbols/menu_symbol_addrs.txt
+
+  find_file_boundaries: False
+  make_full_disasm_for_code: True
+  use_legacy_include_asm: False
+  o_as_suffix: True
+  subalign: 2
+
+  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
+
+  string_encoding: ASCII
+  data_string_encoding: ASCII
+
+segments:
+  - name: menu
+    type: decompress_overlay
+    start: 0x1
+    vram: 0x80140000
+    align: 4
+    subsegments:
+      - [auto, c, overlay_header]
+      - [0x1, .rodata, overlay_header]
+      - [0x5, .rodata, menu]
+      - [0xD1, rodatabin, menu_scene_rodata_alignment]
+      - [0xD5, rodata, menu_screens]  # JP: differs from US, kept as assembly
+      - [0x541, rodatabin, menu_actions_rodata_alignment]
+      - [0x545, .rodata, menu_actions]
+      - [0x57D, rodata, card_strings]
+      - [0x5B1, c, menu]
+      - [0x3965, asm, menu_screens]  # JP: differs from US, kept as assembly
+      - [0x9E05, c, menu_lists]
+      - [0xCBFD, c, menu_actions]
+      - [0xF2A5, c, menu_card]
+      - [0xFBE9, data, data]
+  - [0x2B0BD]

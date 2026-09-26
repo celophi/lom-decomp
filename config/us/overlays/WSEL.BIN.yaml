@@ -1,0 +1,53 @@
+name: WSEL.BIN
+sha1: 3f5b45b81cfd83dbad6c2853e4befd769d9a0468
+options:
+  base_path: ../../../
+  basename: WSEL.BIN
+  platform: psx
+  compiler: PSYQ
+  # include/include_asm.h, macro.inc, labels.inc and gte_macros.inc are
+  # project-owned (include_asm.h prefixes the per-version asm directory),
+  # so splat must not regenerate them.
+  generate_asm_macros_files: False
+  target_path: disc/us/BIN/WSEL.BIN
+  extensions_path: tools/splat_ext
+  asset_path: assets/us
+  elf_path: build/us/overlays/wsel.elf
+
+  # Overlay-specific output paths (separate from SLUS)
+  asm_path: asm/us/overlays/wsel
+  src_path: src/overlays/wsel
+  build_path: build/us/overlays/wsel
+
+  ld_script_path: linker/us/overlays/wsel/wsel.ld
+  ld_dependencies: True
+  undefined_funcs_auto_path: linker/us/overlays/wsel/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/us/overlays/wsel/undefined_syms_auto.txt
+
+  symbol_addrs_path:
+    - config/us/symbols/wsel_symbol_addrs.txt
+
+  find_file_boundaries: False
+  make_full_disasm_for_code: True
+  use_legacy_include_asm: False
+  o_as_suffix: True
+  subalign: 2
+
+  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
+
+  string_encoding: ASCII
+  data_string_encoding: ASCII
+
+segments:
+  - name: wsel
+    type: decompress_overlay
+    start: 0x1
+    vram: 0x8004FC70
+    align: 4
+    subsegments:
+      - [auto, c, overlay_header]
+      - [0x1, .rodata, overlay_header]
+      - [0x5, .rodata, wsel]
+      - [0x1D, c, wsel]  # gcc272_cdk, original WSEL translation unit
+      - [0x2999, data, data]
+  - [0x7AC75]

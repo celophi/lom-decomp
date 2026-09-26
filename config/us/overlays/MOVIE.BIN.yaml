@@ -1,0 +1,57 @@
+name: MOVIE.BIN
+sha1: 4ede2a498e06efdf712414b052bb21fe0d198298
+options:
+  base_path: ../../../
+  basename: MOVIE.BIN
+  platform: psx
+  compiler: PSYQ
+  # include/include_asm.h, macro.inc, labels.inc and gte_macros.inc are
+  # project-owned (include_asm.h prefixes the per-version asm directory),
+  # so splat must not regenerate them.
+  generate_asm_macros_files: False
+  target_path: disc/us/BIN/MOVIE.BIN
+  extensions_path: tools/splat_ext
+  asset_path: assets/us
+  elf_path: build/us/overlays/movie.elf
+
+  # Overlay-specific output paths (separate from SLUS)
+  asm_path: asm/us/overlays/movie
+  src_path: src/overlays/movie
+  build_path: build/us/overlays/movie
+
+  ld_script_path: linker/us/overlays/movie/movie.ld
+  ld_dependencies: True
+  undefined_funcs_auto_path: linker/us/overlays/movie/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/us/overlays/movie/undefined_syms_auto.txt
+
+  symbol_addrs_path:    
+    - config/us/symbols/shared_symbol_addrs.txt
+    - config/us/symbols/movie_symbol_addrs.txt
+
+  reloc_addrs_path:
+    - config/us/relocations/movie_reloc_addrs.txt
+
+  find_file_boundaries: False
+  make_full_disasm_for_code: True
+  use_legacy_include_asm: False
+  o_as_suffix: True
+  subalign: 4
+
+  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
+
+  string_encoding: ASCII
+  data_string_encoding: ASCII
+
+segments:
+  - name: movie
+    type: decompress_overlay
+    start: 0x1
+    vram: 0x80140000
+    align: 4
+    subsegments:
+      - [auto, c, overlay_header]
+      - [0x1, .rodata, overlay_header]
+      - [0x5, .rodata, movie]
+      - [0x19, c, movie]
+      - [0xAC1, c, movie_stream]
+  - [0x1915]

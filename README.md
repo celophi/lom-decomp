@@ -84,29 +84,30 @@ git submodule update --init --recursive
 
 ### 2. Add the original game files
 
-Extract the main executable and the game's `BIN` directory from your North American disc/image so the repository contains the following (the Japanese release has the same 17 overlay files under `BIN/`, but its layout in `disc/` is not defined yet):
+Extract the main executable and the game's `BIN` directory from your North American disc/image into `disc/us/`, so the repository contains the following (the Japanese release will go in `disc/jp/` with the same layout once it is supported):
 
 ```text
 disc/
-|-- SLUS_010.13
-`-- BIN/
-    |-- ADDHERO.BIN
-    |-- CARDA.BIN
-    |-- CHECKPS.BIN
-    |-- CLOAD.BIN
-    |-- FIELD.BIN
-    |-- GNAME.BIN
-    |-- GOLEM.BIN
-    |-- GOSUB.BIN
-    |-- GOVER.BIN
-    |-- MENU.BIN
-    |-- MOVIE.BIN
-    |-- NIKI.BIN
-    |-- SHOP.BIN
-    |-- TITLE.BIN
-    |-- WMAP.BIN
-    |-- WSEL.BIN
-    `-- ZUKAN.BIN
+`-- us/
+    |-- SLUS_010.13
+    `-- BIN/
+        |-- ADDHERO.BIN
+        |-- CARDA.BIN
+        |-- CHECKPS.BIN
+        |-- CLOAD.BIN
+        |-- FIELD.BIN
+        |-- GNAME.BIN
+        |-- GOLEM.BIN
+        |-- GOSUB.BIN
+        |-- GOVER.BIN
+        |-- MENU.BIN
+        |-- MOVIE.BIN
+        |-- NIKI.BIN
+        |-- SHOP.BIN
+        |-- TITLE.BIN
+        |-- WMAP.BIN
+        |-- WSEL.BIN
+        `-- ZUKAN.BIN
 ```
 
 You do not need to copy the rest of the disc into the repository.
@@ -114,13 +115,13 @@ You do not need to copy the rest of the disc into the repository.
 To confirm the main executable is the expected version:
 
 ```bash
-sha1sum disc/SLUS_010.13
+sha1sum disc/us/SLUS_010.13
 ```
 
 Expected:
 
 ```text
-d11dfdd50d412ac3fa3e2eb80fbde138da118f27  disc/SLUS_010.13
+d11dfdd50d412ac3fa3e2eb80fbde138da118f27  disc/us/SLUS_010.13
 ```
 
 The splat configs also contain expected SHA-1 hashes for the overlay files.
@@ -172,7 +173,7 @@ The remaining setup commands are run **inside the container**.
 make splat
 ```
 
-This generates local build inputs such as `asm/`, `linker/`, and extracted assets. These files are intentionally not all stored in Git.
+This generates local build inputs such as `asm/us/`, `linker/us/`, and extracted assets under `assets/us/`. These files are intentionally not all stored in Git.
 
 Run `make splat` again after changing splat configs, segment boundaries, symbol maps, or relocation overrides.
 
@@ -187,7 +188,7 @@ make
 Output:
 
 ```text
-build/SLUS_010.13.elf
+build/us/SLUS_010.13.elf
 ```
 
 To also produce a flat binary:
@@ -241,7 +242,7 @@ The Makefile automatically stages changed inputs before compiling. If the staged
 make recopy
 ```
 
-Use `make clean` only when you actually want to remove `build/` and the `/staging` copy.
+Use `make clean` only when you actually want to remove `build/us/` and the `/staging` copy.
 
 ## Why `/staging` exists
 
@@ -262,23 +263,25 @@ For that reason, do not bypass the build system and invoke the old compiler dire
 | Target | Purpose |
 |---|---|
 | `make` | Build the main `SLUS_010.13` ELF. |
-| `make bin` | Also produce `build/SLUS_010.13.bin`. |
+| `make bin` | Also produce `build/us/SLUS_010.13.bin`. |
 | `make <overlay>` | Build one registered overlay, such as `make field`. |
 | `make overlays` | Build all registered overlays. |
 | `make everything` | Build the main executable and all registered overlays. |
 | `make splat` | Split the main executable and all overlay configs. |
 | `make objdiff-objects` | Build target and reconstructed objects for objdiff. |
 | `make objdiff-config` | Regenerate `objdiff.json`. |
-| `make progress` | Generate `build/progress.json`. |
+| `make progress` | Generate `build/us/progress.json`. |
 | `make diff-all` | Run objdiff across all configured units. |
-| `make diff-text` | Generate compact text reports under `build/diffs/`. |
+| `make diff-text` | Generate compact text reports under `build/us/diffs/`. |
 | `make dump-objs` | Disassemble built objects for code-generation analysis. |
 | `make validate-assets` | Round-trip and validate format-aware assets. |
-| `make verify-slus` | Check that the linked main executable equals `disc/SLUS_010.13`. |
-| `make verify-bins` | Run `verify-slus` and all registered whole-overlay SHA-1 checks. |
+| `make verify-main` | Check that the linked main executable equals `disc/us/SLUS_010.13` (`verify-slus` is an alias). |
+| `make verify-bins` | Run `verify-main` and all registered whole-overlay SHA-1 checks. |
 | `make verify-compressor` | Verify the compressor against all 17 original overlay files. |
 | `make recopy` | Force source/config files to be copied to `/staging` again. |
 | `make clean` | Remove build output and `/staging`. |
+
+Every target builds the North American version by default. Add `VERSION=<name>` to select another release, e.g. `make VERSION=jp`; see [Version layout](#version-layout).
 
 ## Matching functions
 
@@ -300,7 +303,7 @@ make diff-all
 make diff-text
 ```
 
-The compact reports are written below `build/diffs/`.
+The compact reports are written below `build/us/diffs/`.
 
 You can also use [decomp.me](https://decomp.me) for collaborative matching. Existing source comments contain links to many decomp.me scratches; preserve those references when editing a function.
 
@@ -337,6 +340,23 @@ See:
 - [`docs/handling-copyrighted-data.md`](docs/handling-copyrighted-data.md)
 - [`docs/asset-data-architecture.md`](docs/asset-data-architecture.md)
 
+## Version layout
+
+One C source tree builds every regional release. Anything that comes from a particular disc lives in a per-version folder, and `VERSION=<name>` on the `make` command line picks which one to build.
+
+| `VERSION` | Release | Status |
+|---|---|---|
+| `us` (default) | North America, `SLUS-01013` | Fully linked |
+| `jp` | Japan, `SLPS-02170` | In progress - all 18 binaries rebuild byte-exact from first-pass splat assembly (one block per module); no code is decompiled yet |
+
+| Shared by all versions | Per version |
+|---|---|
+| `src/`, `include/`, `mk/`, `tools/`, `docs/` | `disc/<version>/`, `config/<version>/`, and the generated `asm/<version>/`, `linker/<version>/`, `assets/<version>/`, `build/<version>/` |
+
+Where the code differs between releases, the shared C source uses `#if defined(VERSION_JP)` / `#if defined(VERSION_US)` blocks; the build defines exactly one of them (see [`mk/version.mk`](mk/version.mk) and [`include/version.h`](include/version.h)). Symbol names are shared, but addresses are not, so each version has its own `config/<version>/symbols/` files.
+
+Each version gets its own objdiff progress report, and CI builds both (`SLUS_010.13_report` and `SLPS_021.70_report`). Until the JP code is split into C files, its report counts the JP assembly as unmatched code, and the shared C sources are only built for the North American layout (`TU_LAYOUT_VERSIONS` in [`mk/version.mk`](mk/version.mk)).
+
 ## Repository layout
 
 ```text
@@ -345,15 +365,15 @@ lom-decomp/
 |   |-- overlays/           # Overlay source trees
 |   `-- psyq/               # Reconstructed Psy-Q library code
 |-- include/                # Project and Psy-Q headers/macros
-|-- config/                 # Splat configs, symbols, relocations
+|-- config/<version>/       # Splat configs, symbols, relocations
 |-- mk/                     # Build rules and toolchain routing
 |-- tools/                  # Decompilation, compiler, diff, and asset tools
 |-- docs/                   # Architecture and matching documentation
-|-- disc/                   # Your local original game files (gitignored)
-|-- assets/                 # Local/generated asset data where required
-|-- asm/                    # Splat-generated target assembly (gitignored)
-|-- linker/                 # Splat-generated linker files (gitignored)
-|-- build/                  # Objects, ELFs, maps, diffs, and reports
+|-- disc/<version>/         # Your local original game files (gitignored)
+|-- assets/<version>/       # Local/generated asset data where required
+|-- asm/<version>/          # Splat-generated target assembly (gitignored)
+|-- linker/<version>/       # Splat-generated linker files (gitignored)
+|-- build/<version>/        # Objects, ELFs, maps, diffs, and reports
 |-- dockerfiles/            # Development and CI containers
 |-- Makefile
 `-- requirements.txt
@@ -362,9 +382,9 @@ lom-decomp/
 Useful places to start exploring:
 
 - `src/` - reconstructed game and Psy-Q code.
-- `asm/nonmatchings/` and `asm/overlays/*/nonmatchings/` - generated target assembly for unmatched functions.
-- `config/symbols/` - known function/global addresses.
-- `config/relocations/` - relocation overrides used when splat needs help reconstructing symbolic references.
+- `asm/us/nonmatchings/` and `asm/us/overlays/*/nonmatchings/` - generated target assembly for unmatched functions.
+- `config/us/symbols/` - known function/global addresses.
+- `config/us/relocations/` - relocation overrides used when splat needs help reconstructing symbolic references.
 - `mk/overlay-registry.mk` - overlay source/toolchain assignments.
 - `docs/decompilation/` - project-specific matching notes.
 
@@ -381,7 +401,7 @@ Useful project-specific references include:
 
 **`make splat` reports a missing file or SHA-1 mismatch**
 
-Make sure you extracted the North American version and placed the files at `disc/SLUS_010.13` and `disc/BIN/*.BIN` without renaming them.
+Make sure you extracted the North American version and placed the files at `disc/us/SLUS_010.13` and `disc/us/BIN/*.BIN` without renaming them.
 
 **Docker cannot find an `old-gcc/...` image**
 

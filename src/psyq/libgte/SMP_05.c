@@ -1,3 +1,3 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libgte/SMP_05", NormalClip);
+INCLUDE_ASM("nonmatchings/psyq/libgte/SMP_05", NormalClip);

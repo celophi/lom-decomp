@@ -1,0 +1,80 @@
+name: ZUKAN.BIN
+sha1: ccb3e4f650a62146e703c033ab869fa4a42ce600
+options:
+  base_path: ../../../
+  basename: ZUKAN.BIN
+  platform: psx
+  compiler: PSYQ
+  # include/include_asm.h, macro.inc, labels.inc and gte_macros.inc are
+  # project-owned (include_asm.h prefixes the per-version asm directory),
+  # so splat must not regenerate them.
+  generate_asm_macros_files: False
+  target_path: disc/us/BIN/ZUKAN.BIN
+  extensions_path: tools/splat_ext
+  asset_path: assets/us
+  elf_path: build/us/overlays/zukan.elf
+
+  # Overlay-specific output paths (separate from SLUS)
+  asm_path: asm/us/overlays/zukan
+  src_path: src/overlays/zukan
+  build_path: build/us/overlays/zukan
+
+  ld_script_path: linker/us/overlays/zukan/zukan.ld
+  ld_dependencies: True
+  undefined_funcs_auto_path: linker/us/overlays/zukan/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/us/overlays/zukan/undefined_syms_auto.txt
+
+  symbol_addrs_path:
+    - config/us/symbols/shared_symbol_addrs.txt
+    - config/us/symbols/zukan_symbol_addrs.txt
+
+  find_file_boundaries: False
+  make_full_disasm_for_code: True
+  use_legacy_include_asm: False
+  o_as_suffix: True
+  subalign: 2
+
+  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
+
+  string_encoding: ASCII
+  data_string_encoding: ASCII
+
+segments:
+  - name: zukan
+    type: decompress_overlay
+    start: 0x1
+    vram: 0x80140000
+    align: 4
+    subsegments:
+      - [auto, c, overlay_header]
+      - [0x1, .rodata, overlay_header]
+      - [0x5, .rodata, zukan]
+      - [0x1D, rodatabin, zukan_category_ranges]
+      - [0x51, rodatabin, zukan_group_ranges]
+      - [0x6D, rodatabin, zukan_entry_values]
+      - [0x861, rodatabin, zukan_display_order]
+      - [0x1095, c, zukan] # gcc272_cdk
+      - [0x2D09, c, zukan_category] # gcc280_g0_o0
+      - [0x471D, databin, g_zukan_resource_archive]
+      - [0x17421, databin, g_zukan_ui_sprites]
+      - [0x17521, databin, g_zukan_resource_buffer]
+      - [0x17529, databin, g_zukan_exit_requested]
+      - [0x17531, databin, g_zukan_list_entries]
+      - [0x17D31, databin, g_zukan_fade_target]
+      - [0x17D37, databin, g_zukan_input_blocked]
+      - [0x17D39, databin, g_zukan_category]
+      - [0x17D3D, databin, g_zukan_entry_count]
+      - [0x17D41, databin, g_zukan_previous_resource_id]
+      - [0x17D49, databin, g_zukan_fade_current]
+      - [0x17D51, databin, g_zukan_displayed_entry]
+      - [0x17D55, databin, g_zukan_transition_frame]
+      - [0x17D59, databin, g_zukan_view_mode]
+      - [0x17D5D, databin, g_zukan_image_mode]
+      - [0x17D61, databin, g_zukan_selected_entry]
+      - [0x17D65, databin, g_zukan_transition_state]
+      - [0x17D69, databin, g_zukan_scroll_steps]
+      - [0x17D6D, databin, g_zukan_work_buffer]
+      - [0x17D71, databin, g_zukan_scroll_y]
+      - [0x17D75, databin, g_zukan_scroll_target_y]
+      - [0x17D79, databin, g_zukan_next_resource_id]
+  - [0x17D7D]
