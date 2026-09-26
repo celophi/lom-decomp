@@ -108,7 +108,7 @@
 #define FIELD_COMPANION_INDEX 2
 /** @brief Golem companions use character ids from this value on. */
 #define FIELD_COMPANION_GOLEM_ID_BASE 0x41
-/** @brief Resource id base of the companion action packages (func_800A5174). */
+/** @brief Resource id base of the companion action packages (field_load_party_script_page). */
 #define FIELD_RES_COMPANION_ACTIONS 0xA9B
 /** @brief Action slots of a party member's row: two commands, then four skills from slot 4. */
 #define FIELD_COMMAND_SLOT_COUNT 2
@@ -299,7 +299,7 @@ s32 func_801405B0(s32 render_buffers);
 void func_80140080(void* work, void* screen_sequence);
 void func_80140E00(void* work, s32 context);
 
-s32 func_800B0888(void);
+s32 field_party_reload_reading(void);
 void* field_emit_actor_portrait(SPRT* cursor, u32* ot, s32 index, u32* position);
 void* func_800AD208(s32* ot, void* cursor, s32 value, s32 digits, u16* position, s32 flags);
 void* func_800AD524(u8* cursor, s32* ot, s32 glyph, s32* position, s32 flags);
@@ -741,9 +741,9 @@ void field_compact_inventory(void)
 
 /**
  * @brief Find a free slot in the saved inventory.
- * @return Address of the first free record, or NULL when the inventory is full.
+ * @return The first free record, or NULL when the inventory is full.
  */
-u8* field_find_free_inventory_record(void)
+FieldItemRecord* field_find_free_inventory_record(void)
 {
     s32 record_index;
     FieldItemRecord* record;
@@ -753,7 +753,7 @@ u8* field_find_free_inventory_record(void)
     {
         if (record->kind == 0)
         {
-            return (u8*)record;
+            return record;
         }
         record++;
     }
@@ -1396,7 +1396,7 @@ void field_process_input(FieldRenderHalf* render)
             }
         }
         if (field_text_get_status(0) == -1 && D_800F2298 == 0 && g_field_dialog_screen_mode == 0 && g_field_return_to_title_prompt_state == 0 &&
-            D_80122714 == 0 && func_800B0850() == 0)
+            D_80122714 == 0 && field_party_reload_pending() == 0)
         {
             if (g_field_menu_controller_types[0] != CONTROLLER_DEVICE_DISCONNECTED && ports[0].published_sample.device_type == CONTROLLER_DEVICE_DISCONNECTED)
             {
@@ -1420,7 +1420,7 @@ void field_process_input(FieldRenderHalf* render)
             g_field_menu_controller_types[1] = ports[1].published_sample.device_type;
             if (D_8012291C != 0)
             {
-                if (func_8005B218() == 0)
+                if (field_is_scene_fading() == 0)
                 {
                     if (g_pad_input == PADh ||
                         ((g_pad_ctx->characters[1].info.word & FIELD_CHARACTER_AI) && g_pad_ctx->characters[1].name[0] && g_pad_input_inject == PADh))
@@ -1730,7 +1730,7 @@ void field_rebuild_party_actions(s32 refresh_only)
             player_index += 1;
 
         } while (player_index < FIELD_PARTY_COUNT);
-        func_800A54D0();
+        field_upload_golem_palettes();
     }
     player_index = 0;
     do
@@ -1793,7 +1793,7 @@ void field_rebuild_party_actions(s32 refresh_only)
             }
             if (player_index == FIELD_COMPANION_INDEX && g_field_player_records[FIELD_COMPANION_INDEX].character_kind == player_index)
             {
-                func_800A5174(2, g_field_player_records[FIELD_COMPANION_INDEX].character_id + FIELD_RES_COMPANION_ACTIONS);
+                field_load_party_script_page(2, g_field_player_records[FIELD_COMPANION_INDEX].character_id + FIELD_RES_COMPANION_ACTIONS);
             }
             else
             {
@@ -1911,7 +1911,7 @@ void field_rebuild_party_actions(s32 refresh_only)
  * @param history_index History-list entry selector.
  * @param custom_name Custom random-name source.
  */
-void field_run_name_entry(s32 initial_name, s32 active_name, s32 source_mode, s32 history_index, s32 custom_name)
+void field_run_name_entry(u8* initial_name, u8* active_name, s32 source_mode, s32 history_index, s32 custom_name)
 {
     field_reset_actor_resources();
     cdrom_stream(CD_RES_GNAME_BIN, FIELD_SUBOVERLAY_ADDRESS);
@@ -2164,7 +2164,7 @@ void field_update_modal(FieldRenderHalf* render)
         g_pad_input = 0;
         break;
     case FIELD_MODAL_DUEL_RESULT:
-        if (field_draw_duel_result(render) == 0 || func_800B0888() != 0)
+        if (field_draw_duel_result(render) == 0 || field_party_reload_reading() != 0)
         {
             return;
         }

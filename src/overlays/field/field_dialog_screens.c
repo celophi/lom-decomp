@@ -1249,7 +1249,7 @@ extern s32 g_field_pending_spawn_id, g_field_pending_music_id, g_field_pending_s
 extern void field_reset_input_repeat(void);
 extern void akao_cmd_f1(void);
 /* Defined as (void) in field_resource_load.c; the original call still passes the cursor in $a0. */
-extern s32 func_800B0888(void *arg0);
+extern s32 field_party_reload_reading(void *arg0);
 /* Defined in field_modal_runtime.c and field_actor_hud_effects.c. */
 void* field_draw_text(SPRT* cursor, s32* ot, u8* text, s32 color, s32 x, s32 y, s32 flags);
 void* field_draw_number(void* ot, void* cursor, s32 value, s32 color, Vec2s* position, s32 flags);
@@ -1491,7 +1491,7 @@ void field_open_battle_results(void)
     {
         field_open_party_summary();
     }
-    func_800B0A08(0);
+    field_request_party_reload(0);
 }
 
 /**
@@ -1500,7 +1500,7 @@ void field_open_battle_results(void)
 void field_open_duel_results(void)
 {
     field_reset_input_repeat();
-    func_800B0A08(0);
+    field_request_party_reload(0);
     field_begin_duel_result();
 }
 
@@ -1652,7 +1652,7 @@ static void* field_draw_party_totals(void* ot, void* cursor, s32 x_offset, s32 y
         {
             goto loop_setup;
         }
-        if (func_800B0888(first_cursor) != 0)
+        if (field_party_reload_reading(first_cursor) != 0)
         {
             g_field_results_wait_frames = 1;
         }

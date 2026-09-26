@@ -1,13 +1,12 @@
 #include "game_audio.h"
 #include "common.h"
 #include "field_calls.h"
+#include "field_script.h"
 #include "field_records.h"
 
 extern FieldBattleContext *g_field_battle;
 extern FieldRuntimeContext *g_field_runtime;
 
-s32 func_800BD414(s32 arg0, s32 arg1);
-void func_800BD520(s32 arg0, u32 arg1, s32 arg2);
 
 /**
  * @brief Count one more battle for the ally or the enemy side in script variables 0x4280 / 0x4284.
@@ -19,15 +18,15 @@ void func_800B48B8(void)
     if ((g_field_battle != NULL) && (g_field_battle->state.flags >= 0))
     {
         /* No argument: the original leaves $a0 as the caller set it. 0x200 is meta.bits.ally. */
-        if (((FieldStatusRecord *(*)(void))func_800B2A9C)()->meta.packed & 0x200)
+        if (((FieldStatusRecord *(*)(void))field_find_status_record)()->meta.packed & 0x200)
         {
-            count = func_800BD414(0, 0x4280);
-            func_800BD520(0, 0x4280, count + 1);
+            count = field_get_script_var(0, 0x4280);
+            field_set_script_var(0, 0x4280, count + 1);
         }
         else
         {
-            count = func_800BD414(0, 0x4284);
-            func_800BD520(0, 0x4284, count + 1);
+            count = field_get_script_var(0, 0x4284);
+            field_set_script_var(0, 0x4284, count + 1);
         }
     }
 }
@@ -93,7 +92,7 @@ void func_800B49C0(void)
         {
             if (g_field_battle->records[i].meta.bits.active)
             {
-                if (func_800BD414(0, 0xFFD) == 0)
+                if (field_get_script_var(0, 0xFFD) == 0)
                 {
                     keep = i < 3;
                 }
@@ -222,7 +221,7 @@ void func_800B4D1C(FieldStatusRecord *record)
 
     if (func_800B4CE4(record, 5) != 0)
     {
-        field_clear_record_state(record, 0xFF);
+        field_clear_status_effect(record, 0xFF);
     }
 
     i = 0x60;
@@ -230,7 +229,7 @@ void func_800B4D1C(FieldStatusRecord *record)
     {
         if (func_800B4CE4(record, i) != 0)
         {
-            field_clear_record_state(record, i - 0x60);
+            field_clear_status_effect(record, i - 0x60);
         }
         i++;
     } while (i < 0x6C);
@@ -248,7 +247,7 @@ void func_800B4D1C(FieldStatusRecord *record)
     {
         if (func_800B4CE4(record, j) != 0)
         {
-            func_800B2D64(record, j - 0x70, 0xA, 0);
+            field_scale_status_stat(record, j - 0x70, 0xA, 0);
         }
         j++;
     } while (j < 0x80);
@@ -259,7 +258,7 @@ void func_800B4D1C(FieldStatusRecord *record)
  *
  * For each of the twelve half-word timers at record offset 0x50, decrements a
  * nonzero timer and, when it reaches zero or below, clears that state via
- * field_clear_record_state.
+ * field_clear_status_effect.
  *
  * @param record Status record whose timers are ticked.
  */
@@ -275,7 +274,7 @@ void func_800B4DF0(FieldStatusRecord *record)
             record->status_timers[i] = remaining;
             if (remaining <= 0)
             {
-                field_clear_record_state(record, i);
+                field_clear_status_effect(record, i);
             }
         }
     }
@@ -431,7 +430,7 @@ void func_800B4F80(FieldStatusRecord *record)
         }
     }
 
-    scaled_remaining = (0x64 - func_800B2D34(record, 4)) * multiplier;
+    scaled_remaining = (0x64 - field_get_status_stat(record, 4)) * multiplier;
     if (scaled_remaining < 0)
     {
         scaled_remaining += 0xF;
@@ -443,10 +442,10 @@ void func_800B4F80(FieldStatusRecord *record)
     }
     if ((u32)g_field_runtime->frame_count % (u32)divisor == 0)
     {
-        saturating_counter_add(record->state, 1);
+        field_heal_status(record->state, 1);
         if (record->meta.bytes.id < 3)
         {
-            saturating_counter_add(record->state, func_800B4CE4(record, 1));
+            field_heal_status(record->state, func_800B4CE4(record, 1));
         }
     }
 }

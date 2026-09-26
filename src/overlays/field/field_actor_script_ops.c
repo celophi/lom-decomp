@@ -136,9 +136,6 @@
 /** @brief Technique gauge value of a full gauge. */
 #define FIELD_TECHNIQUE_GAUGE_FULL 0xFF
 
-/** @brief FieldObjectState::hud flag showing the technique gauge. */
-#define FIELD_HUD_SHOW_TECHNIQUE_GAUGE 0x01
-
 /** @brief Techniques per weapon and the first technique sequence (see field_actor_behavior.c). */
 #define FIELD_TECHNIQUES_PER_WEAPON 24
 #define FIELD_TECHNIQUE_SEQUENCE_BASE 0x88
@@ -498,7 +495,7 @@ static void field_run_actor_script_command(FieldActor* actor)
                     spawn_state->group_flags = 0;
                     spawn_state->flags = 0;
                     spawn_state->key = index_or_count;
-                    spawn_state->unk18 = 0;
+                    spawn_state->enabled_events = 0;
                     contact_or_z = spawn_state->contact.word;
                     contact_or_z &= ~FIELD_CONTACT_TARGETED;
                     contact_or_z &= ~FIELD_CONTACT_ANIMATION_HIDDEN;

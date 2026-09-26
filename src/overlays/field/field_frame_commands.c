@@ -22,7 +22,7 @@ extern s32 g_field_active_group;
 extern s32 g_field_pickup_sound_played;
 extern s32 g_field_hide_actor_panels;
 /** @brief Ring menu state; nonzero while the ring menu is open. */
-extern s32 D_8011F3AC;
+extern s32 g_field_ring_menu_state;
 extern s32 g_field_modal_state;
 extern s32 g_field_text_session_active;
 extern s32 g_field_scene_request_pending;
@@ -46,7 +46,7 @@ void field_build_frame_commands(s32 render_half, s32 alternate)
     field_update_input_repeat();
     field_process_input((FieldRenderHalf*)render_half);
     field_update_and_render_fade((FieldRenderHalf*)render_half);
-    func_800B0244();
+    field_update_battle_entry();
     if (g_field_active_group != 0)
     {
         if (g_field_hide_actor_panels == 0)
@@ -61,14 +61,14 @@ void field_build_frame_commands(s32 render_half, s32 alternate)
         {
             return;
         }
-        if (D_8011F3AC == 0)
+        if (g_field_ring_menu_state == 0)
         {
             field_update_actor_objects();
         }
     }
-    func_800A4798((u8*)render_half);
+    field_update_ring_menu((FieldRenderHalf*)render_half);
     field_cancel_animation_bindings();
-    if ((D_800F2298 == 0) && (g_field_gover_load_countdown == 0) && (g_field_modal_state == 0) && (D_8011F3AC == 0) && (g_field_text_session_active == 0))
+    if ((D_800F2298 == 0) && (g_field_gover_load_countdown == 0) && (g_field_modal_state == 0) && (g_field_ring_menu_state == 0) && (g_field_text_session_active == 0))
     {
         field_update_actor_animations();
     }

@@ -66,13 +66,13 @@ void field_write_staged_item(void)
     record = D_80123FC4->record;
     if (record->kind == 0)
     {
-        func_800C37A8(g_field_game_state->unkD8, &record->key);
+        field_generate_item_key(g_field_game_state->unkD8, &record->key);
         field_build_item_name(D_80123FC4->category * FIELD_TYPE_NAMES_PER_CATEGORY + D_80123FC4->item_type, D_80123FC4->item_subtype + FIELD_SUBTYPE_NAME_BASE,
                               (u8*)D_80123FC4->record);
     }
     else if (record->key.first == 0 && record->key.second == 0)
     {
-        func_800C37A8(g_field_game_state->unkD8, &record->key);
+        field_generate_item_key(g_field_game_state->unkD8, &record->key);
     }
 
     D_80123FC4->record->info.bits.category = D_80123FC4->category;
@@ -102,7 +102,7 @@ void field_write_staged_item(void)
         D_80123FC4->record->special_ids[i] = D_80123FC4->slots[i + 2];
     }
     D_80123FC4->record->special_ids[3] = D_80123FC4->slots[1];
-    D_80123FC4->record->handle = 0;
+    D_80123FC4->record->value = 0;
 }
 
 /**

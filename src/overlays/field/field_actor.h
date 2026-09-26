@@ -61,6 +61,16 @@ typedef union
 {
     u32 word;
     u16 half[2];
+    struct
+    {
+        u32 unk0 : 16;
+        /** @brief Actor group of a layout actor (FieldActionRequest group bits). */
+        u32 group : 2;
+        u32 unk18 : 1;
+        /** @brief CLUT column of the actor's sprite palette. */
+        u32 palette : 4;
+        u32 unk23 : 9;
+    } bits;
 } FieldActorControl;
 
 /** @brief Script, motion and animation state of one field object (0x54 bytes). */

@@ -14,54 +14,6 @@
 #include "scene_state.h"
 #include "field_calls.h"
 
-/** Handler kinds of the tile animation list (FieldScene::anims). */
-enum
-{
-    FIELD_TILE_ANIM_BLIT = 0,         /**< copy a frame into the cel's tile records */
-    FIELD_TILE_ANIM_CEL_CYCLE = 2,    /**< show the cel of the current frame */
-    FIELD_TILE_ANIM_UPLOAD = 3,       /**< upload the frame's pixels to the tile rect */
-    FIELD_TILE_ANIM_MOVIE = 4,        /**< stream a movie into the tile rect */
-    FIELD_TILE_ANIM_TWEEN_PART = 5,   /**< move a part along the keyframe offsets */
-    FIELD_TILE_ANIM_TWEEN_OBJECT = 6, /**< move an object along the keyframe offsets */
-    FIELD_TILE_ANIM_SOUND = 7         /**< play the keyframe's sound */
-};
-
-/** Handler kinds of the palette animation list (FieldScene::strips). */
-enum
-{
-    FIELD_PALETTE_ANIM_CEL_CLUT = 0,      /**< point a cel's tiles at the frame's CLUTs */
-    FIELD_PALETTE_ANIM_CEL_LIST_CLUT = 1, /**< the same for every cel of a tint source */
-    FIELD_PALETTE_ANIM_CYCLE = 2,         /**< rotate the colours of one CLUT row */
-    FIELD_PALETTE_ANIM_CLUT_ROW = 3,      /**< upload the frame's colours into a CLUT row */
-    FIELD_PALETTE_ANIM_CLUT_BLOCK = 4,    /**< upload the frame's colours into a block of CLUTs */
-    FIELD_PALETTE_ANIM_BLEND = 5          /**< upload a blend of two frames */
-};
-
-/** Handler kinds of the tint animation list (FieldScene::sprites). */
-enum
-{
-    FIELD_TINT_ANIM_CEL = 0,     /**< tint one cel */
-    FIELD_TINT_ANIM_CEL_LIST = 1 /**< tint every cel of a tint source */
-};
-
-/** Handler kind of a definition (low three bits of its flag word). */
-#define FIELD_ANIM_KIND(def) ((def)->flags.word & FIELD_ANIM_KIND_MASK)
-/** True for the two tween kinds of the tile list. */
-#define FIELD_ANIM_IS_TWEEN(def) ((FIELD_ANIM_KIND(def) >= FIELD_TILE_ANIM_TWEEN_PART) && (FIELD_ANIM_KIND(def) <= FIELD_TILE_ANIM_TWEEN_OBJECT))
-
-/** FieldAnimDef::flags.b.handler_group of the tile and palette lists. */
-#define FIELD_ANIM_GROUP_TILE 0
-#define FIELD_ANIM_GROUP_PALETTE 1
-/** Masks the handler group byte and the handler kind in FieldAnimDef::flags.word. */
-#define FIELD_ANIM_GROUP_KIND_MASK 0xFF000007
-/** FieldAnimDef::flags.word value of a palette-list blend definition. */
-#define FIELD_ANIM_PALETTE_BLEND_WORD ((FIELD_ANIM_GROUP_PALETTE << 24) | FIELD_PALETTE_ANIM_BLEND)
-
-/** Sweep mode in bits 12-15 of a part definition word (0 = none, 1-4 = mode). */
-#define FIELD_PART_SWEEP_MASK 0xF000
-#define FIELD_PART_SWEEP_MODE(def) (((def)->u.word >> 12) & 0xF)
-#define FIELD_PART_SWEEP_MODE_COUNT 5
-
 /** VRAM halfwords per tile column of an animation rectangle (16 pixels at 4 bpp). */
 #define FIELD_ANIM_TILE_VRAM_WIDTH 4
 /** Bytes of image data per tile of an animation rectangle. */
@@ -70,16 +22,6 @@ enum
 /** 15-bit colour: semi-transparency bit and the mask of one 5-bit component. */
 #define FIELD_COLOR_STP 0x8000
 #define FIELD_COLOR_COMPONENT 0x1F
-
-/** Bytes of a cel tile record; each word the cel shares (code, tpage) is left out. */
-#define FIELD_CEL_RECORD_SIZE 12
-#define FIELD_CEL_SHARED_WORD_SIZE 4
-/** FieldTileDesc::clut_slot bit marking a tile the palette and tint handlers rewrite. */
-#define FIELD_TILE_ANIMATED 0x80
-
-/** Colours in one 4 bpp CLUT; one 8 bpp CLUT fills a whole 256-colour row. */
-#define FIELD_CLUT_4BIT_COLORS 16
-#define FIELD_CLUT_8BIT_COLORS 256
 
 /** Movies 0 and 1 play on a pair of scene cels; the others fill the lower tile bank. */
 #define FIELD_SCENE_MOVIE_COUNT 2
@@ -123,37 +65,8 @@ typedef struct
 
 #define FIELD_CD_STATUS ((FieldCdStatus*)FIELD_CD_SYSTEM_ADDRESS)
 
-/** Sound keyframe (FieldSfxKey) fields. */
-#define FIELD_SFX_KEY_KIND_MASK 7
-#define FIELD_SFX_KEY_SOUND 1
-#define FIELD_SFX_CHANNEL_MASK 0x1F00 /* channel slot, 1-31 */
-#define FIELD_SFX_FIXED_PAN 0x4000
-#define FIELD_SFX_PLAY 0x8000
-#define FIELD_SFX_ID_MASK 0x3FF
-#define FIELD_SFX_ONE_SHOT 0x8000
-#define FIELD_SFX_VOLUME(key) (((key)->sound.word >> 8) & 0x7F)
-/** FieldObjDef::flags bit: the object ignores the camera scroll. */
-#define FIELD_OBJ_DEF_SCREEN_FIXED 2
-
-/** Axis argument of func_8005A984 / func_8005AA68. */
-#define FIELD_AXIS_X 0
-#define FIELD_AXIS_Y 1
-#define FIELD_AXIS_Z 2
-
 /** FieldTweenKey::visibility bit copied to the target's visibility. */
 #define FIELD_TWEEN_VISIBLE_SHIFT 15
-/** FieldObj::flags.word bit holding the object's visibility. */
-#define FIELD_OBJ_VISIBLE 1
-
-/** FieldSeq::flags bits 0-1: the sequence phase. */
-#define FIELD_SEQ_PHASE_MASK 3
-#define FIELD_SEQ_PHASE_RUNNING 1
-#define FIELD_SEQ_PHASE_FINISHED 2
-/** FieldSeqDef link value for "no sequence". */
-#define FIELD_SEQ_NO_LINK 0xFF
-/** func_8005A84C result of a finished animation node. */
-#define FIELD_ANIM_STATE_FINISHED 2
-
 static void field_update_part_sweep(FieldPart* part);
 static void field_update_animation_sfx(FieldAnimDef* def, FieldAnim* anim);
 static void field_retarget_cel_cluts(FieldAnimDef* anim_def, FieldPart* cel, s32 frame);
@@ -695,9 +608,9 @@ void field_update_scene_animations(void)
                     {
                         target_sequence = target_sequence->next;
                     }
-                    func_8005A744(target_sequence, sequence->flags.b.index);
+                    field_start_sequence(target_sequence, sequence->flags.b.index);
                 }
-                if (func_8005A84C(command->list_kind, command->anim_index) == FIELD_ANIM_STATE_FINISHED)
+                if (field_get_animation_state(command->list_kind, command->anim_index) == FIELD_ANIM_STATE_FINISHED)
                 {
                     if (command->end_link != FIELD_SEQ_NO_LINK)
                     {
@@ -718,7 +631,7 @@ void field_update_scene_animations(void)
                 {
                     target_sequence = target_sequence->next;
                 }
-                func_8005A744(target_sequence, sequence->flags.b.index);
+                field_start_sequence(target_sequence, sequence->flags.b.index);
                 if (target_sequence != sequence)
                 {
                     sequence->flags.word &= ~FIELD_SEQ_PHASE_MASK;
@@ -956,7 +869,6 @@ void field_blit_animation_frame(FieldAnimDef* def, FieldAnim* anim, s32 frame)
     }
 }
 
-
 /**
  * @brief Interpolate the current tween keyframe and optionally move its target.
  *
@@ -1014,12 +926,12 @@ void field_apply_animation_tween(FieldAnimDef* def, FieldAnim* anim, s32 apply_t
         if (FIELD_ANIM_KIND(def) == FIELD_TILE_ANIM_TWEEN_PART)
         {
             part->x += delta;
-            func_8005A984(part, delta, FIELD_AXIS_X);
+            field_move_part_nodes(part, delta, FIELD_AXIS_X);
         }
         else
         {
             object->x += delta;
-            func_8005AA68(object, delta, FIELD_AXIS_X);
+            field_move_object_nodes(object, delta, FIELD_AXIS_X);
         }
         if (anim->timer == 0)
         {
@@ -1042,12 +954,12 @@ void field_apply_animation_tween(FieldAnimDef* def, FieldAnim* anim, s32 apply_t
         if (FIELD_ANIM_KIND(def) == FIELD_TILE_ANIM_TWEEN_PART)
         {
             part->y += delta;
-            func_8005A984(part, delta, FIELD_AXIS_Y);
+            field_move_part_nodes(part, delta, FIELD_AXIS_Y);
         }
         else
         {
             object->y += delta;
-            func_8005AA68(object, delta, FIELD_AXIS_Y);
+            field_move_object_nodes(object, delta, FIELD_AXIS_Y);
         }
         if (anim->timer == 0)
         {
@@ -1070,12 +982,12 @@ void field_apply_animation_tween(FieldAnimDef* def, FieldAnim* anim, s32 apply_t
         if (FIELD_ANIM_KIND(def) == FIELD_TILE_ANIM_TWEEN_PART)
         {
             part->z += delta;
-            func_8005A984(part, delta, FIELD_AXIS_Z);
+            field_move_part_nodes(part, delta, FIELD_AXIS_Z);
         }
         else
         {
             object->z += delta;
-            func_8005AA68(object, delta, FIELD_AXIS_Z);
+            field_move_object_nodes(object, delta, FIELD_AXIS_Z);
         }
         if (anim->timer == 0)
         {
@@ -1091,7 +1003,6 @@ void field_apply_animation_tween(FieldAnimDef* def, FieldAnim* anim, s32 apply_t
         anim->tween_z = value;
     }
 }
-
 
 /**
  * @brief Play, update or stop the sound of the animation's current keyframe.
@@ -1160,7 +1071,7 @@ static void field_update_animation_sfx(FieldAnimDef* def, FieldAnim* anim)
             }
             else
             {
-                if (object->def->flags & FIELD_OBJ_DEF_SCREEN_FIXED)
+                if (object->def->flags.word & FIELD_OBJ_DEF_SCREEN_FIXED)
                 {
                     x = 0;
                     camera_screen_y = 0;
@@ -1607,7 +1518,7 @@ void field_tint_animation_cel(FieldAnimDef* def, FieldPart* cel, FieldTintSrc* s
     stride = 0;
     palette = FIELD_TINT_COLORS;
     palette_data = src->palette->data;
-    func_8005AC50((u8*)(palette_data + 2), palette_data[0], rgb);
+    field_build_tint_colors((u8*)(palette_data + 2), palette_data[0], rgb);
     grid = cel->def;
     record_cursor = cel->records;
     tile = grid->tiles;
@@ -1713,7 +1624,7 @@ static void field_tint_animation_cel_list(FieldAnimDef* def, FieldTintSrc* src, 
     stride = 0;
     palette = FIELD_TINT_COLORS;
     palette_data = src->palette->data;
-    func_8005AC50((u8*)(palette_data + 2), palette_data[0], rgb);
+    field_build_tint_colors((u8*)(palette_data + 2), palette_data[0], rgb);
     first_slot = def->u.tint.first_slot;
     last_slot = first_slot + def->u.tint.slot_count;
     for (cel = src->cels; cel != NULL; cel = cel->next)

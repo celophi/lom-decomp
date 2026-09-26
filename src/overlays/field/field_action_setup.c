@@ -69,25 +69,12 @@ enum
 #define FIELD_EFFECT_NO_INTENSITY 0x200    /**< The attacker's intensity does not rise. */
 #define FIELD_EFFECT_HOLD_MODIFIERS 0x8000 /**< The held action modifiers survive the action. */
 
-/** @brief Fields of FieldStatusRecord::unkC. */
-#define FIELD_RECORD_ACTION_MODIFIERS 0xFF     /**< Cleared after every action. */
-#define FIELD_RECORD_HELD_MODIFIERS 0xFF00     /**< Cleared unless FIELD_EFFECT_HOLD_MODIFIERS. */
-#define FIELD_RECORD_DEFEAT_FLAGS 0xFF000000U  /**< Set on the target when it is defeated. */
-
-/** @brief FIELD_RECORD_DEFEAT_FLAGS bits; meanings unknown. */
-#define FIELD_DEFEAT_FLAG_24 0x01000000
-#define FIELD_DEFEAT_FLAG_25 0x02000000
-#define FIELD_DEFEAT_FLAG_26 0x04000000
-#define FIELD_DEFEAT_FLAG_27 0x08000000
-#define FIELD_DEFEAT_FLAG_28 0x10000000
-#define FIELD_DEFEAT_FLAG_29 0x20000000
-
 /** @brief Status slot ids tested with func_800B4CE4. */
-#define FIELD_SLOT_DEFEAT_FLAG_29 3     /**< Attacker marks a defeated target with flag 29. */
+#define FIELD_SLOT_MONEY_PLUS_2 3       /**< Attacker adds FIELD_DEFEAT_MONEY_PLUS_2 to a defeated target. */
 #define FIELD_SLOT_POWER_BOOST 4        /**< Kinds 0 and 1 hit with 1.5 times the power. */
 #define FIELD_SLOT_QUICK_INTENSITY 7    /**< Attacker's intensity rises twice as fast. */
-#define FIELD_SLOT_DEFEAT_FLAGS_26_27 9 /**< Attacker marks a defeated target with flags 26 and 27. */
-#define FIELD_SLOT_DEFEAT_FLAG_25 13    /**< Attacker marks a defeated target with flag 25. */
+#define FIELD_SLOT_RARE_DROPS 9         /**< Attacker adds FIELD_DEFEAT_EXTRA_DROP_SLOTS and _NO_COMMON_DROPS. */
+#define FIELD_SLOT_EXPERIENCE_PLUS_2 13 /**< Attacker adds FIELD_DEFEAT_EXPERIENCE_PLUS_2 to a defeated target. */
 #define FIELD_SLOT_REPEL_KIND_4 0x34    /**< Target repels descriptor kind 4. */
 #define FIELD_SLOT_REPEL_KIND_5 0x35    /**< Target repels descriptor kind 5. */
 
@@ -116,7 +103,7 @@ enum
 /** @brief Status effect put on a record whose action counter runs out. */
 #define FIELD_EXHAUSTED_EFFECT 5
 
-/** @brief func_800B2B54 chance threshold that always passes the 8-bit roll. */
+/** @brief field_apply_status_effect chance threshold that always passes the 8-bit roll. */
 #define FIELD_CHANCE_ALWAYS 0x100
 
 /** @brief Highest status intensity. */
@@ -205,29 +192,29 @@ s32 field_battle_resolve_action(FieldBattleAction* action)
                 field_run_actor_event(action->attacker_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_KILL);
             }
             field_run_actor_event(action->target_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_DEFEATED);
-            if (func_800B4CE4(g_field_battle->attacker, FIELD_SLOT_DEFEAT_FLAG_29) != 0)
+            if (func_800B4CE4(g_field_battle->attacker, FIELD_SLOT_MONEY_PLUS_2) != 0)
             {
-                g_field_battle->target->unkC |= FIELD_DEFEAT_FLAG_29;
+                g_field_battle->target->unkC |= FIELD_DEFEAT_MONEY_PLUS_2;
             }
-            if (func_800B4CE4(g_field_battle->attacker, FIELD_SLOT_DEFEAT_FLAG_25) != 0)
+            if (func_800B4CE4(g_field_battle->attacker, FIELD_SLOT_EXPERIENCE_PLUS_2) != 0)
             {
-                g_field_battle->target->unkC |= FIELD_DEFEAT_FLAG_25;
+                g_field_battle->target->unkC |= FIELD_DEFEAT_EXPERIENCE_PLUS_2;
             }
-            if (func_800B4CE4(g_field_battle->attacker, FIELD_SLOT_DEFEAT_FLAGS_26_27) != 0)
+            if (func_800B4CE4(g_field_battle->attacker, FIELD_SLOT_RARE_DROPS) != 0)
             {
-                g_field_battle->target->unkC |= FIELD_DEFEAT_FLAG_26 | FIELD_DEFEAT_FLAG_27;
+                g_field_battle->target->unkC |= FIELD_DEFEAT_EXTRA_DROP_SLOTS | FIELD_DEFEAT_NO_COMMON_DROPS;
             }
-            if (func_800B2FF8(g_field_battle->attacker) != 0)
+            if (field_roll_last_stat(g_field_battle->attacker) != 0)
             {
-                g_field_battle->target->unkC |= FIELD_DEFEAT_FLAG_27;
+                g_field_battle->target->unkC |= FIELD_DEFEAT_NO_COMMON_DROPS;
             }
             if (g_field_battle->attacker->status_flags & FIELD_RECORD_STATUS_100)
             {
-                g_field_battle->target->unkC |= FIELD_DEFEAT_FLAG_28;
+                g_field_battle->target->unkC |= FIELD_DEFEAT_MONEY_PLUS_1;
             }
             if (g_field_battle->attacker->status_flags & FIELD_RECORD_STATUS_80)
             {
-                g_field_battle->target->unkC |= FIELD_DEFEAT_FLAG_24;
+                g_field_battle->target->unkC |= FIELD_DEFEAT_EXPERIENCE_PLUS_1;
             }
             effect = field_battle_handle_defeat(g_field_battle->target);
             if (effect != 0)
@@ -272,10 +259,10 @@ static void field_battle_bind_action(FieldBattleAction* action, s32 resolve_desc
         record_game_diagnostic(0x8001, (s32)field_battle_bind_action, 0, 0);
         return;
     }
-    g_field_battle->attacker = func_800B2A9C(action->attacker_id);
-    g_field_battle->target = func_800B2A9C(action->target_id);
+    g_field_battle->attacker = field_find_status_record(action->attacker_id);
+    g_field_battle->target = field_find_status_record(action->target_id);
     g_field_battle->action_flags.word = 0;
-    g_field_battle->action_flags.bits.side = func_800B302C(action->attacker_id, action->target_id);
+    g_field_battle->action_flags.bits.side = field_is_actor_in_front(action->attacker_id, action->target_id);
     if (resolve_descriptor != 0)
     {
         g_field_battle->descriptor = field_select_action_descriptor();
@@ -384,10 +371,10 @@ static s32 field_battle_check_target_guard(void)
     {
         if (FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor) == 0)
         {
-            func_800B2B54(g_field_battle->target, g_field_battle->attacker,
+            field_apply_status_effect(g_field_battle->target, g_field_battle->attacker,
                           FIELD_STATUS_APPLY_IGNORE_IMMUNITY | FIELD_STATUS_APPLY_ALLOW_ACTIVE, FIELD_COUNTER_EFFECT,
                           FIELD_CHANCE_ALWAYS, 300);
-            field_clear_record_state(g_field_battle->target, FIELD_COUNTER_CLEARED_EFFECT);
+            field_clear_status_effect(g_field_battle->target, FIELD_COUNTER_CLEARED_EFFECT);
             return FIELD_GUARD_BLOCKED;
         }
     }
@@ -417,7 +404,7 @@ static void field_battle_run_down_counters(s32 amount)
     if (attacker->counter <= 0)
     {
         attacker->counter = attacker->counter_reset;
-        func_800B2B54(g_field_battle->attacker, g_field_battle->attacker,
+        field_apply_status_effect(g_field_battle->attacker, g_field_battle->attacker,
                       FIELD_STATUS_APPLY_IGNORE_IMMUNITY | FIELD_STATUS_APPLY_ALLOW_ACTIVE, FIELD_EXHAUSTED_EFFECT,
                       FIELD_CHANCE_ALWAYS, 60);
     }
@@ -428,7 +415,7 @@ static void field_battle_run_down_counters(s32 amount)
         if (target->counter <= 0)
         {
             target->counter = target->counter_reset;
-            func_800B2B54(g_field_battle->target, g_field_battle->target,
+            field_apply_status_effect(g_field_battle->target, g_field_battle->target,
                           FIELD_STATUS_APPLY_IGNORE_IMMUNITY | FIELD_STATUS_APPLY_ALLOW_ACTIVE, FIELD_EXHAUSTED_EFFECT,
                           FIELD_CHANCE_ALWAYS, 180);
         }
@@ -483,8 +470,8 @@ s32 field_battle_roll_evasion(FieldBattleAction* action)
     roll = rand() & 0xFFFF;
     percent = roll % 100;
     field_battle_bind_action(action, 0);
-    chance = func_800B2D34(g_field_battle->attacker, 0);
-    if (percent < (evasion * chance) / func_800B2D34(g_field_battle->target, 4))
+    chance = field_get_status_stat(g_field_battle->attacker, 0);
+    if (percent < (evasion * chance) / field_get_status_stat(g_field_battle->target, 4))
     {
         return -1;
     }

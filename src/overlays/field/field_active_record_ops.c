@@ -1,6 +1,7 @@
 #include "game_audio.h"
 #include "common.h"
 #include "field_calls.h"
+#include "field_script.h"
 #include "field_actor_runtime.h"
 #include "field_records.h"
 
@@ -93,8 +94,6 @@ extern void func_800C1EC8(void* source, void* destination, s32 size);
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
 extern s32 D_801227F0;
-extern void func_800BD520(s32 owner_id, s32 variable, s32 value);
-extern s32 func_800BD414(s32 owner_id, s32 variable);
 
 static void field_load_companion(s32 companion_index);
 static void field_store_companion(void);
@@ -160,8 +159,8 @@ s32 field_join_guest(s32 guest_id)
                     g_field_game_state->characters[FIELD_PARTY_GUEST].progress.bits.experience = FIELD_EXPERIENCE_MAX;
                 }
                 field_apply_character_level_ups(FIELD_PARTY_GUEST, 0);
-                func_800B7C58(FIELD_PARTY_GUEST);
-                func_800BD520(0, guest_id * 8 + FIELD_VARIABLE_GUEST_BASE, 1);
+                field_refresh_party_member(FIELD_PARTY_GUEST);
+                field_set_script_var(0, guest_id * 8 + FIELD_VARIABLE_GUEST_BASE, 1);
                 return -1;
             }
         }
@@ -191,7 +190,7 @@ s32 field_join_companion(void)
             if (g_field_game_state->regions[index].name[0] != 0)
             {
                 g_field_game_state->region_index = index;
-                func_800BD520(0, FIELD_VARIABLE_COMPANION, g_gosub_result_values[0]);
+                field_set_script_var(0, FIELD_VARIABLE_COMPANION, g_gosub_result_values[0]);
                 field_load_companion(g_gosub_result_values[0]);
                 return g_field_game_state->characters[FIELD_PARTY_COMPANION].info.bytes[1];
             }
@@ -207,7 +206,7 @@ s32 field_join_companion(void)
  */
 s32 field_rejoin_companion(void)
 {
-    s32 index = func_800BD414(0, FIELD_VARIABLE_COMPANION);
+    s32 index = field_get_script_var(0, FIELD_VARIABLE_COMPANION);
     s32 result;
 
     if ((u32)index < FIELD_REGION_COUNT)
@@ -290,7 +289,7 @@ static void field_load_companion(s32 companion_index)
     }
     g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT].flags2C = g_field_game_state->regions[companion_index].unk38[0];
     g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT].flags2D = g_field_game_state->regions[companion_index].unk38[2];
-    func_800B7C58(FIELD_PARTY_COMPANION);
+    field_refresh_party_member(FIELD_PARTY_COMPANION);
 }
 
 /**
@@ -315,9 +314,9 @@ void field_leave_party(s32 companion)
     {
         if ((g_field_game_state->characters[FIELD_PARTY_GUEST].info.word & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GUEST)
         {
-            func_800BD520(0, (g_field_game_state->characters[FIELD_PARTY_GUEST].info.bytes[1] << 3) + FIELD_VARIABLE_GUEST_BASE, 0);
+            field_set_script_var(0, (g_field_game_state->characters[FIELD_PARTY_GUEST].info.bytes[1] << 3) + FIELD_VARIABLE_GUEST_BASE, 0);
         }
-        func_800BD520(0, FIELD_VARIABLE_GUEST_VARIANT, FIELD_NO_VARIANT);
+        field_set_script_var(0, FIELD_VARIABLE_GUEST_VARIANT, FIELD_NO_VARIANT);
         g_field_game_state->characters[FIELD_PARTY_GUEST].name[0] = 0;
         g_field_game_state->characters[FIELD_PARTY_GUEST].info.word |= FIELD_CHARACTER_TYPE_MASK;
     }
@@ -334,7 +333,7 @@ void field_leave_party(s32 companion)
         }
         g_field_game_state->characters[FIELD_PARTY_COMPANION].name[0] = 0;
         g_field_game_state->characters[FIELD_PARTY_COMPANION].info.word |= FIELD_CHARACTER_TYPE_MASK;
-        func_800BD520(0, FIELD_VARIABLE_COMPANION_VARIANT, FIELD_NO_VARIANT);
+        field_set_script_var(0, FIELD_VARIABLE_COMPANION_VARIANT, FIELD_NO_VARIANT);
     }
     field_release_actor_resource_slot(companion);
 }

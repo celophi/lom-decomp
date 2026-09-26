@@ -18,6 +18,15 @@
 #define FIELD_EFFECT_FACING_FLIPPED 0x80
 #define FIELD_EFFECT_RETIRE_ON_HIT 0x08000000
 
+/** @brief High-halfword actor action kinds handled as collectible rewards; also the drop a defeated monster leaves (field_roll_defeat_drop). */
+typedef enum
+{
+    FIELD_PICKUP_EXPERIENCE_OR_CURRENCY = 31,
+    FIELD_PICKUP_ITEM = 32,
+    FIELD_PICKUP_RESTORE_QUARTER = 33,
+    FIELD_PICKUP_RESTORE_HALF = 34
+} FieldPickupAction;
+
 /** @brief Hit-test paths observed in actor animation resources. */
 typedef enum
 {

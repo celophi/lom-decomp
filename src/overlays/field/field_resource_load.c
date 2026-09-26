@@ -1,212 +1,256 @@
-#include "field_scene_transition.h"
-#include "cdrom.h"
+/**
+ * @file field_resource_load.c
+ * @brief Battle entry sequence and the party resource reload that goes with it.
+ *
+ * When field_battle_start starts a battle, field_begin_battle_entry arms a
+ * small state machine that field_update_battle_entry advances once per frame:
+ * it waits for the
+ * party's animation bindings, requests the battle resources of both players,
+ * applies the actor changes queued by field_queue_battle_entry_change, waits
+ * until everything has settled and then installs the new resources and sets
+ * up the battle. The resources are read into per-player staging buffers and
+ * installed by field_install_party_reload (also used after the battle, when
+ * the field resources are read back).
+ */
+
 #include "common.h"
+#include "cdrom.h"
+#include "sdk/libetc.h"
+#include "sdk/libgpu.h"
 #include "field_actor_runtime.h"
-#include "field_calls.h"
 #include "field_actor_tables.h"
-/** @brief Queued change to one actor: pose, animation track and sound; -1 leaves a field unchanged. */
+#include "field_calls.h"
+#include "field_scene_transition.h"
+#include "field_state_ops.h"
+
+/** @brief Capacity of g_field_battle_entry_changes. */
+#define FIELD_BATTLE_ENTRY_CHANGE_COUNT 8
+/** @brief Field of a FieldBattleEntryChange left unchanged. */
+#define FIELD_BATTLE_ENTRY_KEEP (-1)
+
+/** @brief Battle entry states (D_80122B20). */
+enum
+{
+    FIELD_BATTLE_ENTRY_IDLE = 0,
+    FIELD_BATTLE_ENTRY_WAIT_BINDINGS = 1,
+    FIELD_BATTLE_ENTRY_REQUEST_RESOURCES = 2,
+    FIELD_BATTLE_ENTRY_APPLY_CHANGES = 3,
+    FIELD_BATTLE_ENTRY_WAIT_SETTLED = 4
+};
+
+/** @brief field_get_actor_resource_id weapon_set value: the weapon-specific (battle) packages. */
+#define FIELD_WEAPON_SET_BATTLE 1
+
+/** @brief Offset of the first player's staging buffer in g_field_cd_buffer, and the size of each. */
+#define FIELD_PARTY_RELOAD_BUFFER_OFFSET 0x8000
+#define FIELD_PARTY_RELOAD_BUFFER_SIZE 0x18000
+/** @brief Staging buffer that player @p slot's reloaded resource is read into. */
+#define FIELD_PARTY_RELOAD_BUFFER(slot) (g_field_cd_buffer + FIELD_PARTY_RELOAD_BUFFER_OFFSET + (slot) * FIELD_PARTY_RELOAD_BUFFER_SIZE)
+
+/** @brief Animation both players start once their battle resources are installed. */
+#define FIELD_ANIMATION_BATTLE_ENTRY 0x11
+/** @brief Tint flash length of the party members when a battle starts, in frames. */
+#define FIELD_BATTLE_ENTRY_TINT_FRAMES 60
+
+/** @brief Sound played when a battle starts. */
+#define FIELD_SOUND_BATTLE_ENTRY 0x79
+#define FIELD_SOUND_PAN_CENTRE 0x80
+
+/** @brief Change applied to one actor on battle entry; FIELD_BATTLE_ENTRY_KEEP leaves a field unchanged. */
 typedef struct
 {
     s16 actor_index;
-    s16 pose;
+    /** @brief Actor animation (FieldActor::animation without the facing bit). */
     s16 animation;
+    /** @brief Builtin animation started on the actor. */
+    s16 builtin_animation;
     s16 sound;
-} FieldPendingActorChange;
+} FieldBattleEntryChange;
 
-FieldActor* field_lookup_actor(s32 arg0);
-
-extern s32 D_80122B10;
-extern FieldPendingActorChange D_80122B28[];
-
-extern s32 D_80122B68[];
-extern s32 D_80122B10;
-extern s32 D_80122B20;
-
-/** @brief Clear pending actors, load state, and both pending resource IDs. */
-void func_800B01FC(void)
-{
-    s32 i;
-
-    D_80122B10 = 0;
-    D_80122B20 = 0;
-
-    for (i = 1; i >= 0; i--)
-    {
-        D_80122B68[i] = 0;
-    }
-}
-
-extern s32 D_80122B20;
-
-/** @brief Start processing pending actor and resource changes.
- * @return The initial processing state, one.
- */
-s32 func_800B0234(void)
-{
-    return D_80122B20 = 1;
-}
-
-extern s32 g_field_active_group;
-void func_800B0A08(s32);
-s32 func_800B0888(void);
-void func_800B08FC(s32, s32);
-void field_restart_actor_animation(u8*);
-s32 VSync(s32);
-s32 DrawSync(s32);
-void func_800B34D0(s32);
+/* Not in field_calls.h: field_dialog_screens.c calls it with an argument. */
+s32 field_party_reload_reading(void);
+FieldActor* field_lookup_actor(s32 key);
+void field_restart_actor_animation(FieldActor* actor);
 /* Defined as (void) in field_actor_runtime.c; the original call still loads 1 into $a0. */
 void field_restore_default_action_animation_mappings(s32);
 
-/** @brief Advance pending actor changes through resource loading and installation. */
-void func_800B0244(void)
+extern s32 g_field_battle_entry_change_count;
+extern s32 g_field_party_reload_sizes[FIELD_PLAYER_COUNT];
+extern s32 D_80122B20;
+extern FieldBattleEntryChange g_field_battle_entry_changes[FIELD_BATTLE_ENTRY_CHANGE_COUNT];
+extern s32 g_field_party_reload_resource_ids[FIELD_PLAYER_COUNT];
+extern s32 g_field_active_group;
+extern u8* g_field_cd_buffer;
+extern void* g_field_resource_cursor;
+
+/** @brief Cancel the battle entry: drop the queued changes and the pending party reloads. */
+void field_reset_battle_entry(void)
+{
+    s32 i;
+
+    g_field_battle_entry_change_count = 0;
+    D_80122B20 = FIELD_BATTLE_ENTRY_IDLE;
+
+    for (i = FIELD_PLAYER_COUNT - 1; i >= 0; i--)
+    {
+        g_field_party_reload_resource_ids[i] = 0;
+    }
+}
+
+/**
+ * @brief Start the battle entry sequence.
+ * @return The new state, FIELD_BATTLE_ENTRY_WAIT_BINDINGS.
+ */
+s32 field_begin_battle_entry(void)
+{
+    return D_80122B20 = FIELD_BATTLE_ENTRY_WAIT_BINDINGS;
+}
+
+/** @brief Advance the battle entry sequence by one step. */
+void field_update_battle_entry(void)
 {
     s32 state;
     s32 i;
 
     state = D_80122B20;
-    if (state == 0)
+    if (state == FIELD_BATTLE_ENTRY_IDLE)
     {
         return;
     }
     switch (state)
     {
-    case 1:
-        if ((g_field_actor_bindings[0].state | g_field_actor_bindings[1].state | g_field_actor_bindings[2].state) == 0)
+    case FIELD_BATTLE_ENTRY_WAIT_BINDINGS:
+        if ((g_field_actor_bindings[0].state | g_field_actor_bindings[1].state | g_field_actor_bindings[2].state) == FIELD_BINDING_IDLE)
         {
-            D_80122B20 = 2;
+            D_80122B20 = FIELD_BATTLE_ENTRY_REQUEST_RESOURCES;
         }
         break;
 
-    case 2:
-        func_800B0A08(1);
-        D_80122B20 = 3;
+    case FIELD_BATTLE_ENTRY_REQUEST_RESOURCES:
+        field_request_party_reload(FIELD_WEAPON_SET_BATTLE);
+        D_80122B20 = FIELD_BATTLE_ENTRY_APPLY_CHANGES;
         break;
 
-    case 3:
+    case FIELD_BATTLE_ENTRY_APPLY_CHANGES:
     {
-        FieldActor* object;
-        s32 actor_track;
-        u8 flags;
+        FieldActor* actor;
+        s32 actor_slot;
+        u8 animation;
 
-        for (i = 0; i < D_80122B10; i++)
+        for (i = 0; i < g_field_battle_entry_change_count; i++)
         {
-            object = g_field_actors + D_80122B28[i].actor_index;
-            if (D_80122B28[i].pose != -1)
+            actor = &g_field_actors[g_field_battle_entry_changes[i].actor_index];
+            if (g_field_battle_entry_changes[i].animation != FIELD_BATTLE_ENTRY_KEEP)
             {
-                object->presence = 0;
-                object->command = 0x8D;
-                flags = (u8)D_80122B28[i].pose | (object->animation & 0x80);
-                object->animation = flags;
-                if (flags & 0x80)
+                actor->presence = 0;
+                actor->command = FIELD_ACTOR_COMMAND_SEQUENCE_STEP;
+                animation = g_field_battle_entry_changes[i].animation | (actor->animation & FIELD_ANIMATION_FACING);
+                actor->animation = animation;
+                if (animation & FIELD_ANIMATION_FACING)
                 {
-                    object->direction = 0;
+                    actor->direction = 0;
                 }
                 else
                 {
-                    object->direction = 0x80;
+                    actor->direction = 0x80;
                 }
-                object->animation_state = 1;
-                object->animation_active = 1;
-                object->control.word &= ~0x800;
-                object->script_offset += 3;
-                field_restart_actor_animation((u8*)object);
+                actor->animation_state = 1;
+                actor->animation_active = 1;
+                actor->control.word &= ~FIELD_CONTROL_PLAY_ONCE;
+                actor->script_offset += 3;
+                field_restart_actor_animation(actor);
             }
-            if (D_80122B28[i].animation != -1)
+            if (g_field_battle_entry_changes[i].builtin_animation != FIELD_BATTLE_ENTRY_KEEP)
             {
-                actor_track = field_find_free_actor_slot(object->object_index, 0);
-                if ((actor_track != -1) && (field_start_builtin_animation(object->object_index, actor_track, D_80122B28[i].animation) != 0))
+                actor_slot = field_find_free_actor_slot(actor->object_index, 0);
+                if ((actor_slot != -1) &&
+                    (field_start_builtin_animation(actor->object_index, actor_slot, g_field_battle_entry_changes[i].builtin_animation) != 0))
                 {
-                    field_start_actor_animation(actor_track, 0, 0);
-                    g_field_object_states[object->object_index].contact.bytes.animation_actor_index = (u8)actor_track;
+                    field_start_actor_animation(actor_slot, 0, NULL);
+                    g_field_object_states[actor->object_index].contact.bytes.animation_actor_index = actor_slot;
                 }
             }
-            if (D_80122B28[i].sound != -1)
+            if (g_field_battle_entry_changes[i].sound != FIELD_BATTLE_ENTRY_KEEP)
             {
-                field_play_sound(D_80122B28[i].sound, 0x80);
+                field_play_sound(g_field_battle_entry_changes[i].sound, FIELD_SOUND_PAN_CENTRE);
                 VSync(0);
             }
         }
-        D_80122B20 = 4;
+        D_80122B20 = FIELD_BATTLE_ENTRY_WAIT_SETTLED;
         break;
     }
 
-    case 4:
+    case FIELD_BATTLE_ENTRY_WAIT_SETTLED:
     {
-        s16 scan_object_type;
+        s16 command;
 
-        if (func_800B0888() == 0)
+        if (field_party_reload_reading() == 0)
         {
-            for (i = 0; i < D_80122B10; i++)
+            for (i = 0; i < g_field_battle_entry_change_count; i++)
             {
-                if (field_object_has_active_actor_tracks(D_80122B28[i].actor_index) != 0)
+                if (field_object_has_active_actor_tracks(g_field_battle_entry_changes[i].actor_index) != 0)
                 {
                     break;
                 }
             }
-            if (i == D_80122B10)
+            if (i == g_field_battle_entry_change_count)
             {
-                for (i = 3; i < 0xD; i++)
+                for (i = FIELD_PARTY_COUNT; i < FIELD_ACTOR_COUNT; i++)
                 {
-                    if (g_field_actors[i].presence != 0xFF && g_field_actors[i].command == 0x8D)
+                    if (g_field_actors[i].presence != FIELD_ACTOR_UNUSED && g_field_actors[i].command == FIELD_ACTOR_COMMAND_SEQUENCE_STEP)
                     {
                         break;
                     }
                 }
-                if (i == 0xD)
+                if (i == FIELD_ACTOR_COUNT)
                 {
-                    for (i = 1; i < 3; i++)
+                    for (i = 1; i < FIELD_PARTY_COUNT; i++)
                     {
-                        if (g_field_player_records[i].head.bytes.flags & 1)
+                        if (g_field_player_records[i].head.bytes.flags & FIELD_PLAYER_ACTIVE)
                         {
-                            scan_object_type = g_field_actors[i].command;
-                            if ((scan_object_type == 0xAF) || (scan_object_type == 0xB1))
+                            command = g_field_actors[i].command;
+                            if ((command == FIELD_ACTOR_COMMAND_FOLLOW_LEADER) || (command == FIELD_ACTOR_COMMAND_RUN_PATH))
                             {
                                 break;
                             }
                         }
                     }
-                    if (i == 3)
+                    if (i == FIELD_PARTY_COUNT)
                     {
-                        i = 0;
-                        do
+                        for (i = 0; i < FIELD_PARTY_COUNT; i++)
                         {
-                            g_field_object_parts[i].flags &= ~0x800000;
-                            g_field_actors[i].command = 0;
-                            i += 1;
-                        } while (i < 3);
-                        field_play_sound(0x79, 0x80);
-                        i = 0;
-                        do
+                            g_field_object_parts[i].flags &= ~FIELD_PART_IGNORE_MAP_COLLISION;
+                            g_field_actors[i].command = FIELD_ACTOR_COMMAND_NONE;
+                        }
+                        field_play_sound(FIELD_SOUND_BATTLE_ENTRY, FIELD_SOUND_PAN_CENTRE);
+                        for (i = 0; i < FIELD_PLAYER_COUNT; i++)
                         {
-                            if (D_80122B68[i] != 0)
+                            if (g_field_party_reload_resource_ids[i] != 0)
                             {
-                                func_800B08FC(1, i);
-                                g_field_actors[i].command = 0x99;
+                                field_install_party_reload(FIELD_RESOURCE_HAS_ACTIONS, i);
+                                g_field_actors[i].command = FIELD_ACTOR_COMMAND_IDLE_AFTER_ANIMATION;
                                 g_field_actors[i].animation_state = 1;
                                 g_field_actors[i].animation_frame = 0;
                                 g_field_actors[i].animation_active = 1;
-                                g_field_actors[i].animation = (g_field_actors[i].animation & 0x80) + 0x11;
-                                g_field_actors[i].control.word &= ~0x800;
-                                g_field_object_states[i].movement.word &= ~0x1800;
-                                field_restart_actor_animation((u8*)&g_field_actors[i]);
+                                g_field_actors[i].animation = (g_field_actors[i].animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_BATTLE_ENTRY;
+                                g_field_actors[i].control.word &= ~FIELD_CONTROL_PLAY_ONCE;
+                                g_field_object_states[i].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
+                                field_restart_actor_animation(&g_field_actors[i]);
                             }
-                            i += 1;
-                        } while (i < 2);
-                        i = 0;
-                        do
+                        }
+                        for (i = 0; i < FIELD_PARTY_COUNT; i++)
                         {
-                            if (g_field_player_records[i].head.bytes.flags & 1)
+                            if (g_field_player_records[i].head.bytes.flags & FIELD_PLAYER_ACTIVE)
                             {
-                                g_field_object_states[i].tint_timer = 0x3C;
-                                g_field_object_states[i].movement.word |= 0x8000;
+                                g_field_object_states[i].tint_timer = FIELD_BATTLE_ENTRY_TINT_FRAMES;
+                                g_field_object_states[i].movement.word |= FIELD_MOVEMENT_TINT_FLASH;
                             }
-                            i += 1;
-                        } while (i < 3);
+                        }
                         DrawSync(0);
                         field_reset_actor_resources();
                         field_restore_default_action_animation_mappings(1);
-                        func_800B34D0(g_field_active_group);
-                        D_80122B20 = 0;
+                        field_battle_setup(g_field_active_group);
+                        D_80122B20 = FIELD_BATTLE_ENTRY_IDLE;
                     }
                 }
             }
@@ -217,78 +261,74 @@ void func_800B0244(void)
 }
 
 /**
- * @brief Update an existing pending actor entry or append a new one.
- * @param arg0 Actor identifier used to resolve the source record.
- * @param arg1 Value stored in the entry's second field.
- * @param arg2 Value stored in the entry's third field and used to select its reset value.
- * @param arg3 Value stored in the entry's fourth field.
- * @return Zero on success, or -1 when no entry can be created.
+ * @brief Queue a change to an actor for the battle entry, or replace the actor's queued change.
+ * @param actor_key Actor key resolved with field_lookup_actor.
+ * @param animation Actor animation, or FIELD_BATTLE_ENTRY_KEEP.
+ * @param builtin_animation Builtin animation to start, or FIELD_BATTLE_ENTRY_KEEP.
+ * @param sound Sound to play, or FIELD_BATTLE_ENTRY_KEEP.
+ * @return 0 on success, -1 when the queue is full or the actor does not exist.
  */
-s32 func_800B0710(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+s32 field_queue_battle_entry_change(s32 actor_key, s32 animation, s32 builtin_animation, s32 sound)
 {
-    FieldActor* rec;
+    FieldActor* actor;
     s32 i;
-    FieldPendingActorChange* p;
+    FieldBattleEntryChange* change;
+    FieldBattleEntryChange* changes;
 
-    if (D_80122B10 == 8)
+    if (g_field_battle_entry_change_count == FIELD_BATTLE_ENTRY_CHANGE_COUNT)
     {
         return -1;
     }
-    rec = field_lookup_actor(arg0);
-    if (rec == (FieldActor*)-1)
+    actor = field_lookup_actor(actor_key);
+    if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
-    if (rec->presence == 0xFF)
+    if (actor->presence == FIELD_ACTOR_UNUSED)
     {
         return -1;
     }
-    for (i = 0; i < D_80122B10; i++)
+    for (i = 0; i < g_field_battle_entry_change_count; i++)
     {
-        p = &D_80122B28[i];
-        if (p->actor_index == rec->object_index)
+        change = &g_field_battle_entry_changes[i];
+        if (change->actor_index == actor->object_index)
         {
-            p->actor_index = (s16)rec->object_index;
-            p->pose = arg1;
-            p->animation = arg2;
-            if (arg2 != -1)
+            change->actor_index = actor->object_index;
+            change->animation = animation;
+            change->builtin_animation = builtin_animation;
+            if (builtin_animation != FIELD_BATTLE_ENTRY_KEEP)
             {
-                p->pose = 0;
+                change->animation = 0;
             }
-            p->sound = arg3;
+            change->sound = sound;
             return 0;
         }
     }
+    changes = g_field_battle_entry_changes;
+    change = &changes[g_field_battle_entry_change_count];
+    change->actor_index = actor->object_index;
+    change->animation = animation;
+    change->builtin_animation = builtin_animation;
+    if (builtin_animation != FIELD_BATTLE_ENTRY_KEEP)
     {
-        FieldPendingActorChange* base = D_80122B28;
-        s32 idx = D_80122B10;
-
-        p = &base[idx];
+        change->animation = FIELD_ANIMATION_GUARD;
     }
-    p->actor_index = (s16)rec->object_index;
-    p->pose = arg1;
-    p->animation = arg2;
-    if (arg2 != -1)
-    {
-        p->pose = 0xA;
-    }
-    D_80122B28[D_80122B10].sound = arg3;
-    D_80122B10 += 1;
+    changes[g_field_battle_entry_change_count].sound = sound;
+    g_field_battle_entry_change_count += 1;
     return 0;
 }
 
-extern s32 D_80122B68[];
-
-/** @brief Check whether either field resource slot is active.
- * @return One if a resource is active, otherwise zero.
+/**
+ * @brief Check whether a party reload is waiting to be installed.
+ * @return 1 if a player has a pending reload, otherwise 0.
  */
-s32 func_800B0850(void)
+s32 field_party_reload_pending(void)
 {
     s32 i;
 
-    for (i = 0; i < 2; i++)
+    for (i = 0; i < FIELD_PLAYER_COUNT; i++)
     {
-        if (D_80122B68[i] != 0)
+        if (g_field_party_reload_resource_ids[i] != 0)
         {
             return 1;
         }
@@ -297,98 +337,81 @@ s32 func_800B0850(void)
     return 0;
 }
 
-extern s32 D_80122B68[];
-
 /**
- * @brief Checks whether either active field resource is already queued.
- *
- * @return 1 if an active resource is already queued, otherwise 0.
+ * @brief Check whether a pending party reload is still being read from CD.
+ * @return 1 if a read is still queued, otherwise 0.
  */
-s32 func_800B0888(void)
+s32 field_party_reload_reading(void)
 {
-    s32* resource_index;
     s32 i;
 
-    i = 0;
-    resource_index = D_80122B68;
-    do
+    for (i = 0; i < FIELD_PLAYER_COUNT; i++)
     {
-        if (*resource_index != 0)
+        if (g_field_party_reload_resource_ids[i] != 0)
         {
-            if (cdrom_can_queue_resource((u16)*resource_index) == 0)
+            /* CD resource ids are 16-bit. */
+            if (cdrom_can_queue_resource((u16)g_field_party_reload_resource_ids[i]) == 0)
             {
                 return 1;
             }
         }
-        i++;
-        resource_index++;
-    } while (i < 2);
+    }
 
     return 0;
 }
 
-extern u8* g_field_cd_buffer;
-extern s32 D_80122B18[];
-extern s32 g_field_resource_cursor;
-
 /**
- * @brief Install a queued resource and record its allocated memory range.
- * @param arg0 Flags whose low bit selects the resource state.
- * @param arg1 Resource slot index.
+ * @brief Install a player's reloaded resource from its staging buffer.
+ * @param alternate_layout FIELD_RESOURCE_HAS_ACTIONS for a battle package, 0 for a field package.
+ * @param slot Player index; nothing happens without a pending reload.
  */
-void func_800B08FC(s32 arg0, s32 arg1)
+void field_install_party_reload(s32 alternate_layout, s32 slot)
 {
     FieldResourceEntry* entry;
-    FieldResourceEntry* base;
+    FieldResourceEntry* entries;
     u32 flags;
 
-    if (D_80122B68[arg1] != 0)
+    if (g_field_party_reload_resource_ids[slot] != 0)
     {
-        field_release_resource_entry(arg1);
-        base = g_field_resource_entries;
-        entry = base + arg1;
-        entry->slot_index = (u8)arg1;
+        field_release_resource_entry(slot);
+        entries = g_field_resource_entries;
+        entry = &entries[slot];
+        entry->slot_index = slot;
         entry->unk8 = 0;
         field_set_party_palettes();
         entry->unkE = 0x2F;
         flags = entry->flags;
-        flags &= ~1;
-        flags |= arg0 & 1;
+        flags &= ~FIELD_RESOURCE_HAS_ACTIONS;
+        flags |= alternate_layout & 1;
         entry->flags = flags;
-        entry->start = (u8*)g_field_resource_cursor;
-        field_unpack_resource_package((struct FieldCdBuffer*)(g_field_cd_buffer + (0x8000 + arg1 * 0x18000)), D_80122B18[arg1], arg1, arg1);
-        entry->end = (u8*)g_field_resource_cursor;
-        entry->flags |= 2;
-        D_80122B68[arg1] = 0;
+        entry->start = g_field_resource_cursor;
+        field_unpack_resource_package((struct FieldCdBuffer*)FIELD_PARTY_RELOAD_BUFFER(slot), g_field_party_reload_sizes[slot], slot, slot);
+        entry->end = g_field_resource_cursor;
+        entry->flags |= FIELD_RESOURCE_LOADED;
+        g_field_party_reload_resource_ids[slot] = 0;
     }
 }
 
-extern s32 D_80122B68[];
-extern s32 D_80122B18[];
-extern u8* g_field_cd_buffer;
-
 /**
- * @brief Queue CD reads for each active field resource slot.
- * @param arg0 Resource-selection mode forwarded to field_get_actor_resource_id.
+ * @brief Request the resources of both players for a weapon set; inactive players get none.
+ * @param weapon_set Weapon set passed to field_get_actor_resource_id.
  */
-void func_800B0A08(s32 arg0)
+void field_request_party_reload(s32 weapon_set)
 {
     s32 i;
-    u8* buffer;
 
-    for (i = 0; i < 2; i++)
+    for (i = 0; i < FIELD_PLAYER_COUNT; i++)
     {
-        if (g_field_player_records[i].head.bytes.flags & 1)
+        if (g_field_player_records[i].head.bytes.flags & FIELD_PLAYER_ACTIVE)
         {
-            D_80122B68[i] = field_get_actor_resource_id(i, &g_field_player_records[i], arg0);
-            buffer = g_field_cd_buffer + 0x8000 + i * 0x18000;
-            g_field_player_records[i].resource_id = (u16)D_80122B68[i];
-            D_80122B18[i] = cdrom_queue_read((u16)D_80122B68[i], buffer);
+            g_field_party_reload_resource_ids[i] = field_get_actor_resource_id(i, &g_field_player_records[i], weapon_set);
+            g_field_player_records[i].resource_id = g_field_party_reload_resource_ids[i];
+            g_field_party_reload_sizes[i] = cdrom_queue_read((u16)g_field_party_reload_resource_ids[i], FIELD_PARTY_RELOAD_BUFFER(i));
         }
         else
         {
-            D_80122B18[i] = 0;
-            D_80122B68[i] = 0;
+            g_field_party_reload_sizes[i] = 0;
+            g_field_party_reload_resource_ids[i] = 0;
         }
     }
 }

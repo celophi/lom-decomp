@@ -20,6 +20,7 @@
 #include "field_effect_primitives.h"
 #include "field_mesh_render.h"
 #include "field_actor_sequence_runtime.h"
+#include "field_path_interpolation.h"
 
 #define FIELD_EFFECT_ORIGIN_ADDRESS 0x1F800000
 #define FIELD_EFFECT_VECTOR_ADDRESS 0x1F800010
@@ -1263,12 +1264,12 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
     }
     if ((effect->flags & 0x07000000) == 0x05000000)
     {
-        func_800A1D98(effect, field_resolve_effect_extent(actor, part), (part->placement_flags.word >> 15) & 1, D_80105770);
+        field_init_path(effect, field_resolve_effect_extent(actor, part), (part->placement_flags.word >> 15) & 1, D_80105770);
         effect->position_data.path_time = 0;
         effect->path_group = D_80105770;
-        func_800A1D48(&effect->position_data.path_time, effect, D_80105770);
+        field_update_path_position(&effect->position_data.path_time, effect, D_80105770);
         D_80105770 = D_80105770 + 1;
-        if (D_80105770 == 0x20)
+        if (D_80105770 == FIELD_PATH_GROUP_COUNT)
         {
             D_80105770 = 0;
         }
@@ -1488,15 +1489,6 @@ typedef struct
     unsigned int opcode : 6;
     unsigned int upper : 8;
 } FieldPlacementBits;
-
-/** @brief High-halfword actor action kinds handled as collectible rewards. */
-typedef enum
-{
-    FIELD_PICKUP_EXPERIENCE_OR_CURRENCY = 31,
-    FIELD_PICKUP_ITEM = 32,
-    FIELD_PICKUP_RESTORE_QUARTER = 33,
-    FIELD_PICKUP_RESTORE_HALF = 34
-} FieldPickupAction;
 
 /** @brief Bit positions in the part's behavior flags. */
 #define FIELD_PART_PITCH_ACCELERATION_BIT 2
@@ -2056,7 +2048,7 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
     if ((record_flags & FIELD_EFFECT_MOTION_KIND_MASK) == FIELD_EFFECT_MOTION_PATH)
     {
         record->position_data.path_time = record->position_data.path_time + record->motion_parameter;
-        func_800A1D48(&record->position_data.path_time, record, record->path_group);
+        field_update_path_position(&record->position_data.path_time, record, record->path_group);
     }
 
     /* Attached effects rebuild an origin, then add the rotated local displacement. */
@@ -2828,7 +2820,7 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
                         counter_index = record->facing_or_reward_kind;
                         counter_slot = recipient_index < 3 ? recipient_index : 2;
                         counter_base[counter_slot].status.counters[counter_index] = counter_base[recipient_index < 3 ? recipient_index : 2].status.counters[counter_index] + 1;
-                        func_800C0B40(recipient_object->record_id, object_base[actor->owner_object_index].record_id, record->facing_or_reward_kind - 0x16);
+                        field_grant_reward(recipient_object->record_id, object_base[actor->owner_object_index].record_id, record->facing_or_reward_kind - 0x16);
                         field_release_actor_if_no_effects(record);
                         return;
                     }
@@ -2852,7 +2844,7 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
                         object_base = g_field_object_states;
                         recipient_object = &object_base[recipient_index];
                         field_set_action_context(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 4);
-                        func_800C0B40(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 4);
+                        field_grant_reward(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 4);
                         field_release_actor_if_no_effects(record);
                         return;
                     }
@@ -2877,7 +2869,7 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
                         object_base = g_field_object_states;
                         recipient_object = &object_base[recipient_index];
                         field_set_action_context(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 5);
-                        func_800C0B40(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 5);
+                        field_grant_reward(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 5);
                         field_play_object_animation(&g_field_actors[recipient_index], 0x2C);
                         field_release_actor_if_no_effects(record);
                         return;
@@ -2903,7 +2895,7 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
                         object_base = g_field_object_states;
                         recipient_object = &object_base[recipient_index];
                         field_set_action_context(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 6);
-                        func_800C0B40(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 6);
+                        field_grant_reward(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 6);
                         field_play_object_animation(&g_field_actors[recipient_index], 0x2D);
                         field_release_actor_if_no_effects(record);
                         return;

@@ -1,743 +1,669 @@
-#include "cdrom.h"
-#include "field_effect_render_state.h"
+/**
+ * @file field_ring_selection.c
+ * @brief Ring menu (icons on a rotating ellipse), party script pages, golem palettes
+ *        and the framebuffer thumbnail.
+ */
+
 #include "common.h"
+#include "cdrom.h"
+#include "display.h"
+#include "main.h"
+#include "menu.h"
+#include "pad.h"
+#include "field_actor_tables.h"
 #include "field_calls.h"
+#include "field_effect_render_state.h"
+#include "field_records.h"
 #include "sdk/libgpu.h"
 #include "sdk/libgte.h"
 #include "sdk/memory.h"
 
-/** @brief Three fixed-point coordinates at the head of the field actor record. */
-typedef struct
+/** @brief Ring menu states (g_field_ring_menu_state). */
+enum
 {
-    s32 x, y, z;
-} FieldSelectionPosition;
-/** @brief Two halfword state fields cleared when selection begins. */
-typedef struct
+    FIELD_RING_CLOSED = 0,
+    FIELD_RING_SELECTING = 1,
+    FIELD_RING_OPENING = 2,
+    FIELD_RING_CLOSING = 3
+};
+
+/** @brief Ring menu placement (position_mode of field_open_ring_menu). */
+enum
 {
-    s16 first, second;
-} FieldSelectionState;
+    FIELD_RING_AT_SCREEN_CENTER = 0,
+    FIELD_RING_AT_PLAYER = 1
+};
 
-/** @brief Streamed chunk header: payload offset, end offset, and reserved word. */
-typedef struct { s32 unk0; s32 unk4; s32 unk8; } BufHdr;
+/** @brief CD resource id of ring menu 0's icon sheet; ring menu n uses the id plus n. */
+#define FIELD_RING_ICON_RESOURCE_BASE 0xBE8
+/** @brief VRAM position of the icon sheet (a 4-bit texture page). */
+#define FIELD_RING_IMAGE_X SCREEN_WIDTH
+#define FIELD_RING_IMAGE_Y 0
+/** @brief Width in texels of the 4-bit icon sheet page. */
+#define FIELD_RING_PAGE_WIDTH 256
+/** @brief Colors in a 4-bit CLUT; each ring icon has its own, in one VRAM row from x = 0. */
+#define FIELD_CLUT_COLORS 16
 
-/** @brief Ordering-table head and primitive allocation cursor. */
-typedef struct
-{
-    u32 tag;
-    u8 pad4[0x40B8 - 4];
-    u8 *cursor;
-} RenderContext;
+/** @brief Screen center used by FIELD_RING_AT_SCREEN_CENTER and as the player offset. */
+#define FIELD_RING_CENTER_X (SCREEN_WIDTH / 2)
+#define FIELD_RING_CENTER_Y (VRAM_DRAW_HEIGHT / 2)
 
-/** @brief Textured quad packet with word views for tag and color writes. */
-typedef struct
-{
-    union
-    {
-        u32 word;
-        struct
-        {
-            u8 link[3];
-            u8 length;
-        } bytes;
-    } tag;
-    union
-    {
-        u32 word;
-        struct
-        {
-            u8 r, g, b, code;
-        } bytes;
-    } color;
-    s16 x0, y0;
-    u8 u0, v0;
-    s16 clut;
-    s16 x1, y1;
-    u8 u1, v1;
-    s16 tpage;
-    s16 x2, y2;
-    u8 u2, v2;
-    s16 pad2;
-    s16 x3, y3;
-    u8 u3, v3;
-    s16 pad3;
-} TexturedQuad;
+/** @brief Radius the ring opens from. */
+#define FIELD_RING_START_RADIUS 256
+/** @brief Frames the radius takes to ease to its target while opening. */
+#define FIELD_RING_RADIUS_EASE_STEPS 32
+/** @brief Frames the opening spin takes at full, half and quarter speed. */
+#define FIELD_RING_SPIN_FAST_STEPS 8
+#define FIELD_RING_SPIN_MEDIUM_STEPS 16
+#define FIELD_RING_SPIN_STEPS 32
+/** @brief Frames the ring takes to collapse when closing. */
+#define FIELD_RING_CLOSE_STEPS 16
+/** @brief Frames a one-entry rotation takes. */
+#define FIELD_RING_ROTATE_STEPS 10
+/** @brief Icon brightness once the ring is open (0x80 = unmodulated texture). */
+#define FIELD_RING_FULL_BRIGHTNESS 0x80
+/** @brief Brightness change per frame while opening and closing. */
+#define FIELD_RING_OPEN_FADE_STEP 4
+#define FIELD_RING_CLOSE_FADE_STEP 8
 
-/** @brief Active flag and palette index in the runtime slot context. */
-typedef struct
-{
-    u8 pad0[0x2B0C];
-    u8 unk2B0C;
-    u8 pad2B0D[0x2B54 - 0x2B0D];
-    s32 unk2B54;
-} PadCtxB800A54D0;
+/** @brief cancel_index of a ring menu that cannot be cancelled. */
+#define FIELD_RING_NO_CANCEL -1
 
-/*
- * Shared file-scope externs used with a consistent type across the TU.
- * D_8011F3AC (s32 vs s32[]) and D_8011F388 (s8[] vs u8[]) carry type
- * conflicts across functions and are declared at block scope instead.
- */
+/** @brief Ordering-table slot of the icon at the front of the ring; icons further back go deeper. */
+#define FIELD_RING_OT_FRONT 16
 
-extern FieldSelectionPosition g_field_actors;
-extern FieldSelectionState g_field_screen_scroll;
-extern u8 D_800EDED8[];
-extern u8 D_800EE2D8;
-extern u8 D_800EE4D8;
-extern u8 g_field_resource_actions[];
-extern u8 *g_field_cd_buffer;
-extern u8 D_801148B0[];
-extern s16 D_8011F330;
-extern s32 D_8011F334;
-extern s32 D_8011F338;
-extern s32 D_8011F33C;
-extern s32 D_8011F340;
-extern s32 D_8011F344;
-extern s32 D_8011F348;
-extern s32 D_8011F34C;
-extern s32 D_8011F350;
-extern s32 D_8011F354;
-extern u8 D_8011F358[];
-extern s32 D_8011F378;
-extern s32 D_8011F37C;
-extern s32 D_8011F380;
-extern s32 D_8011F3A8;
-extern s32 D_8011F3B0;
-extern s32 D_8011F3B4;
-extern s32 D_8011F3B8;
-extern s32 D_8011F3BC;
-extern s32 D_8011F3C0;
-extern s32 D_8011F3C4;
-extern s32 D_8011F3C8;
-extern u8 *g_pad_ctx;
-extern s32 g_pad_input;
-extern s32 g_frame_counter;
-
-/* External callees (not members of this TU). */
-u32 field_load_vram_resource(s32, s16 *, s32);
-void field_reset_input_repeat(void);
-
-/* Forward declarations for members called before their definition. */
-void func_800A4838(void);
-void func_800A496C(void);
-void func_800A4A0C(void);
-void func_800A4D1C(u8 *render_context);
+/** @brief Buttons that confirm, cancel and rotate the ring. */
+#define FIELD_RING_CONFIRM_BUTTONS (PAD_BTN_CROSS | PAD_BTN_L3)
+#define FIELD_RING_CANCEL_BUTTONS PAD_BTN_CIRCLE
+#define FIELD_RING_PREVIOUS_BUTTONS (PAD_BTN_LEFT | PAD_BTN_UP | PAD_BTN_R1)
+#define FIELD_RING_NEXT_BUTTONS (PAD_BTN_DOWN | PAD_BTN_RIGHT | PAD_BTN_L1)
 
 /**
- * @brief Initialize a resource-backed selection display and its rotation state.
- * @param position_mode Zero centers the display; one follows the first actor.
- * @param resource_index Resource offset and saved-selection index.
- * @param excluded_mask Bit mask of resource entries omitted from selection.
- * @param cancel_index Selection used when cancelling, or minus one to disable it.
- * @note The six-halfword load buffer also holds the signed screen coordinates.
- * @note Subtracting the negated offset preserves the original addition operand order.
+ * @brief Scale @p value by the depth of ring angle @p angle.
+ * @note Gives @p value at the front of the ring and half of it at the back.
  */
-void func_800A43E8(s32 position_mode, s32 resource_index, u16 excluded_mask, s32 cancel_index)
+#define FIELD_RING_DEPTH_SCALE(value, angle) ((value) + ((((value) >> 1) * (rcos(angle) - ONE)) >> 13))
+/** @brief Ordering-table depth of ring angle @p angle: 0 at the front, -128 at the back. */
+#define FIELD_RING_DEPTH(angle) ((rcos(angle) - ONE) / 64)
+
+/** @brief Palettes per golem palette bank; a palette index selects bank index / 16. */
+#define FIELD_GOLEM_BANK_PALETTES 16
+/** @brief VRAM position of the golem CLUTs: one row per golem. */
+#define FIELD_GOLEM_CLUT_X 256
+#define FIELD_GOLEM_CLUT_Y 496
+
+/** @brief Thumbnail strips: one per 64-texel column of the 320-pixel framebuffer. */
+#define FIELD_THUMBNAIL_STRIPS 5
+/** @brief Width of one thumbnail strip on screen (a quarter of the 64-texel column). */
+#define FIELD_THUMBNAIL_STRIP_WIDTH 16
+/** @brief Texture pages of framebuffer rows 0-255 and 256-511 at x = 0 (15-bit direct); OR in the 64-texel page column. */
+#define FIELD_THUMBNAIL_TPAGE_TOP getTPage(2, 1, 0, 0)
+#define FIELD_THUMBNAIL_TPAGE_BOTTOM getTPage(2, 1, 0, 256)
+/** @brief Unmodulated grey of the thumbnail quads (r = g = b = 0x80). */
+#define FIELD_THUMBNAIL_GREY 0x808080
+
+/** @brief POLY_FT4 with its color and command byte addressed as one word. */
+typedef struct
 {
-    extern s32 D_8011F3AC;
-    extern s8 D_8011F388[];
-    s16 load_params[6];
-    s16 screen_x;
-    s16 screen_y;
-    s32 rotation;
+    u_long tag;
+    u_long rgbc;
+    short x0, y0;
+    u_char u0, v0;
+    u_short clut;
+    short x1, y1;
+    u_char u1, v1;
+    u_short tpage;
+    short x2, y2;
+    u_char u2, v2;
+    u_short pad1;
+    short x3, y3;
+    u_char u3, v3;
+    u_short pad2;
+} FieldThumbnailQuad;
+
+extern Vec2s g_field_screen_scroll;
+extern u8* g_field_cd_buffer;
+extern FieldActionRow g_field_resource_actions[];
+/** @brief Golem sprite CLUTs, two banks of 16. */
+extern u16 g_field_golem_palettes[2][FIELD_GOLEM_BANK_PALETTES * FIELD_CLUT_COLORS];
+/** @brief Golem portrait palettes, two banks of 16. */
+extern u16 g_field_golem_portrait_palettes[2][FIELD_GOLEM_BANK_PALETTES * FIELD_CLUT_COLORS];
+
+extern u16 g_field_ring_excluded_mask;
+extern s32 g_field_ring_menu_id;
+extern s32 g_field_ring_radius_steps;
+extern s32 g_field_ring_target_angle;
+extern s32 g_field_ring_center_x;
+extern s32 g_field_ring_center_y;
+extern s32 g_field_ring_icon_width;
+extern s32 g_field_ring_icon_height;
+extern s32 g_field_ring_radius;
+extern s32 g_field_ring_target_radius;
+extern u8 g_field_ring_saved_selections[];
+extern s32 g_field_ring_cursor;
+extern s32 g_field_ring_cancel_index;
+extern s32 D_8011F380;
+extern u8 g_field_ring_entries[];
+extern s32 g_field_ring_step;
+extern s32 g_field_ring_menu_state;
+extern s32 g_field_ring_start_angle;
+extern s32 g_field_ring_semi_trans;
+extern s32 g_field_ring_entry_count;
+extern s32 g_field_ring_brightness;
+extern s32 g_field_ring_angle;
+extern s32 g_field_ring_icon_count;
+extern s32 g_field_frame_thumbnail_enabled;
+
+static void field_ring_menu_open_step(void);
+static void field_ring_menu_close_step(void);
+static void field_ring_menu_select_step(void);
+static void field_draw_ring_menu(FieldRenderHalf* render_half);
+static void field_draw_frame_thumbnail(FieldRenderHalf* render_half, s32 frame);
+
+/**
+ * @brief Open a ring menu: load its icon sheet and start the opening animation.
+ * @param position_mode FIELD_RING_AT_SCREEN_CENTER or FIELD_RING_AT_PLAYER.
+ * @param menu_id Ring menu id: selects the icon sheet and the saved selection.
+ * @param excluded_mask One bit per icon of the sheet that is left out of the ring.
+ * @param cancel_index Entry that cancel selects and that is saved as 0, or FIELD_RING_NO_CANCEL.
+ * @note Does nothing while a ring menu is already open.
+ */
+void field_open_ring_menu(s32 position_mode, s32 menu_id, u16 excluded_mask, s32 cancel_index)
+{
+    RECT rect;
+    DVECTOR center;
+    s32 view_x;
+    s32 view_y;
+    s32 screen_x;
+    s32 screen_y;
+    s32 angle;
     s32 bit;
-    s32 camera_x;
-    s32 camera_y;
-    s32 index;
-    u32 resource_info;
-    u8 *saved_index;
+    s32 icon;
+    u32 sheet_info;
+    u8* saved_selection;
     u8 selection;
 
-    if (D_8011F3AC == 0)
+    if (g_field_ring_menu_state == FIELD_RING_CLOSED)
     {
         field_reset_input_repeat();
-        D_8011F37C = cancel_index;
-        D_8011F330 = excluded_mask;
-        load_params[0] = 0x140;
-        load_params[1] = 0;
-        load_params[2] = 0;
-        load_params[3] = 0x1F2;
-        resource_info = field_load_vram_resource(resource_index + 0xBE8, &load_params[0], 1);
+        g_field_ring_cancel_index = cancel_index;
+        g_field_ring_excluded_mask = excluded_mask;
+        setRECT(&rect, FIELD_RING_IMAGE_X, FIELD_RING_IMAGE_Y, 0, VRAM_CLUT_Y);
+        /* The sheet describes itself in CLUT entries 240/241: icon size, icon count and ring radius. */
+        sheet_info = field_load_vram_resource(menu_id + FIELD_RING_ICON_RESOURCE_BASE, &rect, 1);
+        g_field_ring_icon_width = (sheet_info & 0x1F) * 8;
+        g_field_ring_icon_height = (sheet_info >> 2) & 0xF8;
+        g_field_ring_icon_count = (sheet_info >> 10) & 0x1F;
+        g_field_ring_entry_count = 0;
         bit = 1;
-        index = 0;
-        D_8011F348 = (resource_info & 0x1F) * 8;
-        D_8011F34C = (resource_info >> 2) & 0xF8;
-        D_8011F3C4 = (resource_info >> 0xA) & 0x1F;
-        D_8011F3B8 = 0;
-        if (D_8011F3C4 != 0)
+        for (icon = 0; icon < g_field_ring_icon_count; icon++, bit <<= 1)
         {
-            do
+            if (!(excluded_mask & bit))
             {
-                if (!(excluded_mask & 0xFFFF & bit))
-                {
-                    D_8011F388[D_8011F3B8] = index;
-                    D_8011F3B8 += 1;
-                }
-                index += 1;
-                bit *= 2;
-            } while (index < D_8011F3C4);
+                g_field_ring_entries[g_field_ring_entry_count] = icon;
+                g_field_ring_entry_count++;
+            }
         }
-        D_8011F350 = 0x100;
-        D_8011F354 = (resource_info >> 0xD) & 0xF8;
-        D_8011F338 = 0x20;
-        saved_index = resource_index + D_8011F358;
-        selection = *saved_index;
-        if ((s32)selection >= D_8011F3B8)
+        g_field_ring_radius = FIELD_RING_START_RADIUS;
+        g_field_ring_target_radius = (sheet_info >> 13) & 0xF8;
+        g_field_ring_radius_steps = FIELD_RING_RADIUS_EASE_STEPS;
+        saved_selection = &g_field_ring_saved_selections[menu_id];
+        selection = *saved_selection;
+        if (selection >= g_field_ring_entry_count)
         {
-            *saved_index = 0;
-            D_8011F378 = 0;
+            *saved_selection = 0;
+            g_field_ring_cursor = 0;
         }
         else
         {
-            D_8011F378 = (s32)selection % (s32)D_8011F3B8;
+            g_field_ring_cursor = selection % g_field_ring_entry_count;
         }
-        rotation = -(0x1000 / (s32)D_8011F3B8) * D_8011F378;
-        D_8011F334 = resource_index;
+        angle = -(ONE / g_field_ring_entry_count) * g_field_ring_cursor;
+        g_field_ring_menu_id = menu_id;
         D_8011F380 = 0;
-        D_8011F3C0 = rotation;
-        D_8011F33C = rotation;
+        g_field_ring_angle = angle;
+        g_field_ring_target_angle = angle;
         switch (position_mode)
-        { /* irregular */
-        case 0:
-            D_8011F340 = 0xA0;
-            D_8011F344 = 0x70;
+        {
+        case FIELD_RING_AT_SCREEN_CENTER:
+            g_field_ring_center_x = FIELD_RING_CENTER_X;
+            g_field_ring_center_y = FIELD_RING_CENTER_Y;
             break;
-        case 1:
-            camera_x = g_field_view_offset_x / 256;
-            screen_x = g_field_actors.x / 256 + 160;
-            screen_x = camera_x - (-screen_x);
-            load_params[4] = screen_x;
-            camera_y = g_field_view_offset_y / 256;
-            screen_y = g_field_actors.y / 256 + 112;
-            screen_y = camera_y - (-screen_y);
-            screen_y -= g_field_actors.z / 512;
-            screen_y -= g_field_view_offset_z / 512;
-            load_params[5] = screen_y;
-            D_8011F340 = load_params[4];
-            D_8011F344 = load_params[5];
+
+        case FIELD_RING_AT_PLAYER:
+            view_x = g_field_view_offset_x / 256;
+            screen_x = g_field_actors[0].x / 256 + FIELD_RING_CENTER_X;
+            center.vx = view_x + screen_x;
+            view_y = g_field_view_offset_y / 256;
+            screen_y = g_field_actors[0].y / 256 + FIELD_RING_CENTER_Y;
+            center.vy = view_y + screen_y - g_field_actors[0].z / 512 - g_field_view_offset_z / 512;
+            g_field_ring_center_x = center.vx;
+            g_field_ring_center_y = center.vy;
             break;
         }
-        D_8011F3AC = 2;
-        D_8011F3BC = 0;
-        D_8011F3B4 = 1;
-        D_8011F3A8 = 0;
-        g_field_screen_scroll.second = 0;
-        g_field_screen_scroll.first = 0;
+        g_field_ring_menu_state = FIELD_RING_OPENING;
+        g_field_ring_brightness = 0;
+        g_field_ring_semi_trans = 1;
+        g_field_ring_step = 0;
+        g_field_screen_scroll.y = 0;
+        g_field_screen_scroll.x = 0;
     }
 }
 
 /**
- * @brief Return the resource entry currently selected by the ring, or -1 while busy.
- * @return The selected entry byte when idle (state 0), otherwise -1.
+ * @brief Return the entry chosen in the last ring menu.
+ * @return The icon index under the cursor once the menu has closed, or -1 while it is open.
  */
-s32 func_800A4744(void)
+s32 field_get_ring_result(void)
 {
-    extern s32 D_8011F3AC[];
-    extern u8 D_8011F388[];
-    s32 value;
-
-    value = D_8011F3AC[0];
-    if (value == 0)
+    if (g_field_ring_menu_state != FIELD_RING_CLOSED)
     {
-        s32 index = D_8011F378;
-        value = D_8011F388[index];
+        return -1;
     }
-    else
-    {
-        value = -1;
-    }
-    return value;
+    return g_field_ring_entries[g_field_ring_cursor];
 }
 
 /**
- * @brief Look up a byte from the D_8011F388 table using the D_8011F378
- *        index.
- * @return D_8011F388[D_8011F378].
+ * @brief Return the icon index of the ring entry under the cursor.
+ * @return The icon index of the cursor entry.
  */
-u8 func_800A4778(void)
+u8 field_get_ring_cursor_entry(void)
 {
-    extern u8 D_8011F388[];
-    return D_8011F388[D_8011F378];
+    return g_field_ring_entries[g_field_ring_cursor];
 }
 
 /**
- * @brief Drive the ring selection state machine for one frame and redraw it.
- * @param render_context Render context passed through to the draw routine.
- * @return 1 while the ring is active, 0 when it is idle.
+ * @brief Run one frame of the ring menu and draw it.
+ * @param render_half Render half the icons are drawn into.
+ * @return 1 while a ring menu is open, otherwise 0.
  */
-s32 func_800A4798(u8 *render_context)
+s32 field_update_ring_menu(FieldRenderHalf* render_half)
 {
-    extern s32 D_8011F3AC;
     s32 state;
 
-    state = D_8011F3AC;
-    if (state == 0)
+    state = g_field_ring_menu_state;
+    if (state == FIELD_RING_CLOSED)
     {
         return 0;
     }
 
     switch (state)
     {
-        case 1:
-            func_800A4A0C();
-            break;
+    case FIELD_RING_SELECTING:
+        field_ring_menu_select_step();
+        break;
 
-        case 2:
-            func_800A4838();
-            break;
+    case FIELD_RING_OPENING:
+        field_ring_menu_open_step();
+        break;
 
-        case 3:
-            func_800A496C();
-            break;
+    case FIELD_RING_CLOSING:
+        field_ring_menu_close_step();
+        break;
     }
 
-    func_800A4D1C(render_context);
+    field_draw_ring_menu(render_half);
     return 1;
 }
 
-/** @brief Advance interpolation and the three-phase field animation counter. */
-void func_800A4838(void)
+/**
+ * @brief Opening animation: ease the radius in, spin two turns while slowing down and fade in.
+ */
+static void field_ring_menu_open_step(void)
 {
-    extern s32 D_8011F3AC;
-    if (D_8011F338 != 0)
+    if (g_field_ring_radius_steps != 0)
     {
-        D_8011F350 += (D_8011F354 - D_8011F350) / D_8011F338;
-        D_8011F338 -= 1;
+        g_field_ring_radius += (g_field_ring_target_radius - g_field_ring_radius) / g_field_ring_radius_steps;
+        g_field_ring_radius_steps--;
     }
     else
     {
-        D_8011F350 = D_8011F354;
+        g_field_ring_radius = g_field_ring_target_radius;
     }
 
-    if (D_8011F3A8 < 8)
+    if (g_field_ring_step < FIELD_RING_SPIN_FAST_STEPS)
     {
-        D_8011F3C0 += 0x200;
+        g_field_ring_angle += ONE / 8;
     }
-    else if (D_8011F3A8 < 0x10)
+    else if (g_field_ring_step < FIELD_RING_SPIN_MEDIUM_STEPS)
     {
-        D_8011F3C0 += 0x100;
+        g_field_ring_angle += ONE / 16;
     }
-    else if (D_8011F3A8 < 0x20)
+    else if (g_field_ring_step < FIELD_RING_SPIN_STEPS)
     {
-        D_8011F3C0 += 0x80;
+        g_field_ring_angle += ONE / 32;
     }
     else
     {
-        D_8011F3B4 = 0;
-        D_8011F3AC = 1;
-        D_8011F3A8 = 0;
-        D_8011F3BC = 0x80;
+        g_field_ring_semi_trans = 0;
+        g_field_ring_menu_state = FIELD_RING_SELECTING;
+        g_field_ring_step = 0;
+        g_field_ring_brightness = FIELD_RING_FULL_BRIGHTNESS;
         return;
     }
-    D_8011F3BC += 4;
-    D_8011F3A8 += 1;
+    g_field_ring_brightness += FIELD_RING_OPEN_FADE_STEP;
+    g_field_ring_step++;
 }
 
 /**
- * @brief Advance the field fade-in ramp by one step, or finish it.
- *
- * Marks the ramp active, then eases @c D_8011F350 toward its target by the
- * remaining-steps fraction. Once @c D_8011F3A8 reaches 0x10 the ramp completes:
- * the step counter and phase are reset and the routine returns early; otherwise
- * it decrements @c D_8011F3BC and advances the step counter.
- *
+ * @brief Closing animation: collapse the radius and fade out, then close the menu.
  */
-void func_800A496C(void)
+static void field_ring_menu_close_step(void)
 {
-    extern s32 D_8011F3AC;
-    D_8011F3B4 = 1;
-    if (D_8011F3A8 < 0x10)
+    g_field_ring_semi_trans = 1;
+    if (g_field_ring_step < FIELD_RING_CLOSE_STEPS)
     {
-        D_8011F350 -= D_8011F350 / (0x10 - D_8011F3A8);
+        g_field_ring_radius -= g_field_ring_radius / (FIELD_RING_CLOSE_STEPS - g_field_ring_step);
     }
     else
     {
-        D_8011F3A8 = 0;
-        D_8011F3AC = 0;
+        g_field_ring_step = 0;
+        g_field_ring_menu_state = FIELD_RING_CLOSED;
         return;
     }
-    D_8011F3BC -= 8;
-    D_8011F3A8 += 1;
+    g_field_ring_brightness -= FIELD_RING_CLOSE_FADE_STEP;
+    g_field_ring_step++;
 }
 
 /**
- * @brief Advance the FIELD selection rotation and process selection input.
- * @note Active rotation interpolates over ten updates before snapping to its target.
- * @note Input branches remain independent so simultaneous button bits retain order.
- * @note Save the current rotation before decrementing the selected index.
+ * @brief Selection: finish a running rotation, otherwise handle confirm, cancel and rotate input.
+ * @note Confirm saves the cursor as the menu's selection (the cancel entry saves 0) and starts closing.
  */
-void func_800A4A0C(void)
+static void field_ring_menu_select_step(void)
 {
-    extern s32 D_8011F3AC;
-    s32 previous_index;
+    s32 cursor;
 
-    if (D_8011F3A8 != 0)
+    if (g_field_ring_step != 0)
     {
-        D_8011F3C0 = D_8011F3B0 + (((D_8011F33C - D_8011F3B0) * D_8011F3A8) / 10);
-        if (D_8011F3A8 == 0xA)
+        g_field_ring_angle = g_field_ring_start_angle + (g_field_ring_target_angle - g_field_ring_start_angle) * g_field_ring_step / FIELD_RING_ROTATE_STEPS;
+        if (g_field_ring_step == FIELD_RING_ROTATE_STEPS)
         {
-            D_8011F3A8 = 0;
-            D_8011F3C0 = (s32) (-D_8011F378 << 12) / (s32) D_8011F3B8;
+            g_field_ring_step = 0;
+            g_field_ring_angle = -g_field_ring_cursor * ONE / g_field_ring_entry_count;
             return;
         }
-        D_8011F3A8 += 1;
+        g_field_ring_step++;
         return;
     }
-    if (g_pad_input & 0x220)
+    if (g_pad_input & FIELD_RING_CONFIRM_BUTTONS)
     {
-        D_8011F3AC = 3;
-        if ((D_8011F37C != -1) && (D_8011F378 == D_8011F37C))
+        g_field_ring_menu_state = FIELD_RING_CLOSING;
+        if (g_field_ring_cancel_index != FIELD_RING_NO_CANCEL && g_field_ring_cursor == g_field_ring_cancel_index)
         {
-            D_8011F358[D_8011F334] = 0;
+            g_field_ring_saved_selections[g_field_ring_menu_id] = 0;
         }
         else
         {
-            D_8011F358[D_8011F334] = (u8) D_8011F378;
+            g_field_ring_saved_selections[g_field_ring_menu_id] = g_field_ring_cursor;
         }
     }
-    if ((g_pad_input & 0x40) && (D_8011F37C != -1))
+    if ((g_pad_input & FIELD_RING_CANCEL_BUTTONS) && g_field_ring_cancel_index != FIELD_RING_NO_CANCEL)
     {
-        D_8011F378 = D_8011F37C;
-        D_8011F3A8 = 1;
-        D_8011F3B0 = D_8011F3C0;
-        D_8011F33C = (s32) (-D_8011F37C << 12) / (s32) D_8011F3B8;
+        g_field_ring_cursor = g_field_ring_cancel_index;
+        g_field_ring_step = 1;
+        g_field_ring_start_angle = g_field_ring_angle;
+        g_field_ring_target_angle = -g_field_ring_cancel_index * ONE / g_field_ring_entry_count;
     }
-    if (g_pad_input & 0x9008)
+    if (g_pad_input & FIELD_RING_PREVIOUS_BUTTONS)
     {
-        D_8011F3A8 = 1;
-        D_8011F3B0 = D_8011F3C0;
-        previous_index = D_8011F378 - 1;
-        D_8011F378 = previous_index;
-        D_8011F33C = D_8011F3C0 + (0x1000 / (s32) D_8011F3B8);
-        if (previous_index < 0)
+        g_field_ring_step = 1;
+        g_field_ring_start_angle = g_field_ring_angle;
+        cursor = g_field_ring_cursor - 1;
+        g_field_ring_cursor = cursor;
+        g_field_ring_target_angle = g_field_ring_angle + ONE / g_field_ring_entry_count;
+        if (cursor < 0)
         {
-            D_8011F378 = D_8011F3B8 - 1;
+            g_field_ring_cursor = g_field_ring_entry_count - 1;
         }
     }
-    if (g_pad_input & 0x6004)
+    if (g_pad_input & FIELD_RING_NEXT_BUTTONS)
     {
-        D_8011F3A8 = 1;
-        D_8011F3B0 = D_8011F3C0;
-        D_8011F33C = D_8011F3C0 - (0x1000 / (s32) D_8011F3B8);
-        D_8011F378 = (s32) (D_8011F378 + 1) % (s32) D_8011F3B8;
+        g_field_ring_step = 1;
+        g_field_ring_start_angle = g_field_ring_angle;
+        g_field_ring_target_angle = g_field_ring_angle - ONE / g_field_ring_entry_count;
+        g_field_ring_cursor = (g_field_ring_cursor + 1) % g_field_ring_entry_count;
     }
 }
 
 /**
- * @brief Draw the selectable textured quads arranged around the rotating menu ring.
- * @param render_context Rendering context with an ordering table at 0x40 and packet cursor at
- * 0x40B8.
- * @note Ring angle controls position, brightness, size, and ordering depth. The selected
- * item grows by one eighth every eighth frame. Only submitted quads advance the packet cursor.
+ * @brief Draw the ring entries as icons on an ellipse around the ring center.
+ * @param render_half Render half that receives the icon quads.
+ * @note Icons further back are smaller, darker and sorted deeper; the cursor icon pulses
+ *       every eighth frame.
  */
-void func_800A4D1C(u8 *render_context)
+static void field_draw_ring_menu(FieldRenderHalf* render_half)
 {
-    extern u8 D_8011F388[];
-    s32 *bucket;
-    POLY_FT4 *prim;
-    u32 address_mask;
-    u32 tag_mask;
-    s32 columns;
-    s32 vertical_product;
-    s32 u_or_angle;
-    s32 final_cosine;
-    s32 initial_count;
-    s32 depth_cosine;
-    s32 depth;
-    s32 final_depth;
-    s32 v_or_width;
-    s32 height;
+    POLY_FT4* prim;
+    u_long* ot;
     s32 index;
-    s32 visible_depth;
-    s32 depth_numerator;
-    s32 right_u;
-    s32 bottom_v;
-    s32 brightness;
-    u16 left;
-    u8 *entry;
-    u8 tile;
-    u32 *ordering_table;
+    s32 columns;
+    s32 icon;
+    s32 u_or_angle; /* texture u, then the entry's ring angle: separate locals change the register allocation */
+    s32 v_or_width; /* texture v, then the icon width, for the same reason */
+    s32 height;
 
-    initial_count = D_8011F3B8;
-    index = 0;
-    ordering_table = (u32 *)(render_context + 0x40);
-    prim = *(POLY_FT4 **)(render_context + 0x40B8);
-    if (initial_count > 0)
+    ot = &render_half->ordering_table[FIELD_RING_OT_FRONT];
+    prim = (POLY_FT4*)render_half->primitive_cursor;
+    for (index = 0; index < g_field_ring_entry_count; index++)
     {
-        address_mask = 0xFFFFFF;
-        entry = D_8011F388;
-        do
-        {
-            setPolyFT4(prim);
-            setSemiTrans(prim, D_8011F3B4);
-            columns = 0x100 / (s32)D_8011F348;
-            tile = *entry;
-            u_or_angle = ((s32)tile % columns) * D_8011F348;
-            v_or_width = ((s32)tile / columns) * D_8011F34C;
-            prim->u2 = u_or_angle;
-            prim->u0 = u_or_angle;
-            right_u = ((u8)D_8011F348 + u_or_angle) - 1;
-            prim->u3 = right_u;
-            prim->u1 = right_u;
-            prim->v1 = v_or_width;
-            prim->v0 = v_or_width;
-            bottom_v = ((u8)D_8011F34C + v_or_width) - 1;
-            prim->v3 = bottom_v;
-            prim->v2 = bottom_v;
-            u_or_angle = ((s32)(index << 0xC) / (s32)D_8011F3B8) + D_8011F3C0;
-            final_cosine = rcos(u_or_angle);
-            brightness = (u8)D_8011F3BC +
-                         ((s32)(((s32)D_8011F3BC >> 1) * (final_cosine - 0x1000)) >> 0xD);
-            prim->b0 = brightness;
-            prim->g0 = brightness;
-            prim->r0 = brightness;
-            v_or_width =
-                D_8011F348 + ((s32)(((s32)D_8011F348 >> 1) * (rcos(u_or_angle) - 0x1000)) >> 0xD);
-            height =
-                D_8011F34C + ((s32)(((s32)D_8011F34C >> 1) * (rcos(u_or_angle) - 0x1000)) >> 0xD);
-            if ((index == D_8011F378) && !(g_frame_counter & 7))
-            {
-                v_or_width = v_or_width * 9 / 8;
-                height = height * 9 / 8;
-            }
-            left = ((u16)D_8011F340 + ((s32)(D_8011F350 * rsin(u_or_angle)) >> 0xC)) -
-                   (v_or_width >> 1);
-            prim->x2 = left;
-            prim->x0 = left;
-            vertical_product = D_8011F350 * rcos(u_or_angle);
-            prim->tpage = 0x25;
-            prim->y1 = prim->y0 = (u16)D_8011F344 + (vertical_product >> 0xE) - (height >> 1);
-            prim->y2 = prim->y3 = prim->y0 + height;
-            prim->x1 = prim->x3 = prim->x0 + v_or_width;
-            prim->clut = (s16)((*entry & 0x3F) | 0x7C80);
-            visible_depth = (rcos(u_or_angle) - 0x1000) / 64;
-            if (visible_depth <= 0)
-            {
-                depth_cosine = rcos(u_or_angle);
-                depth_numerator = depth_cosine - 0x1000;
-                if (depth_numerator < 0)
-                {
-                    depth_numerator = depth_cosine - 0xFC1;
-                }
-                {
-                    s32 *link_bucket;
+        setPolyFT4(prim);
+        setSemiTrans(prim, g_field_ring_semi_trans);
+        columns = FIELD_RING_PAGE_WIDTH / g_field_ring_icon_width;
+        icon = g_field_ring_entries[index];
+        u_or_angle = (icon % columns) * g_field_ring_icon_width;
+        v_or_width = (icon / columns) * g_field_ring_icon_height;
+        prim->u0 = prim->u2 = u_or_angle;
+        prim->u1 = prim->u3 = u_or_angle + g_field_ring_icon_width - 1;
+        prim->v0 = prim->v1 = v_or_width;
+        prim->v2 = prim->v3 = v_or_width + g_field_ring_icon_height - 1;
 
-                    link_bucket = (s32 *)(ordering_table - (depth_numerator >> 6));
-                    tag_mask = 0xFF000000;
-                    *(u32 *)prim = (*(u32 *)prim & tag_mask) | (*(u32 *)link_bucket & address_mask);
-                }
-                depth = (rcos(u_or_angle) - 0x1000) / 64;
-                bucket = (s32 *)(ordering_table - depth);
-                *bucket = (*bucket & tag_mask) | ((s32)prim & address_mask);
-                final_cosine = rcos(u_or_angle);
-                final_depth = final_cosine - 0x1000;
-                if (final_depth < 0)
-                {
-                    final_depth = final_cosine - 0xFC1;
-                }
-                /* Int depth on purpose: the original passes it without narrowing to s16. */
-                ((void (*)(const void *, s32))field_add_fade_prim)(prim, -(final_depth >> 6) + 0x10);
-                prim++;
-            }
-            entry += 1;
-        } while (++index < D_8011F3B8);
+        u_or_angle = (index * ONE) / g_field_ring_entry_count + g_field_ring_angle;
+        prim->r0 = prim->g0 = prim->b0 = FIELD_RING_DEPTH_SCALE(g_field_ring_brightness, u_or_angle);
+        v_or_width = FIELD_RING_DEPTH_SCALE(g_field_ring_icon_width, u_or_angle);
+        height = FIELD_RING_DEPTH_SCALE(g_field_ring_icon_height, u_or_angle);
+        if (index == g_field_ring_cursor && !(g_frame_counter & 7))
+        {
+            v_or_width = v_or_width * 9 / 8;
+            height = height * 9 / 8;
+        }
+        /* The ellipse is a quarter as tall as it is wide. */
+        prim->x0 = prim->x2 = g_field_ring_center_x + ((g_field_ring_radius * rsin(u_or_angle)) >> 12) - (v_or_width >> 1);
+        prim->y1 = prim->y0 = g_field_ring_center_y + ((g_field_ring_radius * rcos(u_or_angle)) >> 14) - (height >> 1);
+        prim->tpage = getTPage(0, 1, FIELD_RING_IMAGE_X, FIELD_RING_IMAGE_Y);
+        prim->y2 = prim->y3 = prim->y0 + height;
+        prim->x1 = prim->x3 = prim->x0 + v_or_width;
+        prim->clut = getClut(g_field_ring_entries[index] * FIELD_CLUT_COLORS, VRAM_CLUT_Y);
+        if (FIELD_RING_DEPTH(u_or_angle) <= 0)
+        {
+            addPrim(ot - FIELD_RING_DEPTH(u_or_angle), prim);
+            /* Called with an int depth: the original passes it without narrowing to s16. */
+            ((void (*)(const void*, s32))field_add_fade_prim)(prim, -FIELD_RING_DEPTH(u_or_angle) + FIELD_RING_OT_FRONT);
+            prim++;
+        }
     }
-    *(POLY_FT4 **)(render_context + 0x40B8) = prim;
+    render_half->primitive_cursor = (u8*)prim;
 }
 
 /**
- * @brief Stream a field data chunk from CD and copy its sections into RAM.
- * @param bank Destination bank; bank 2 also copies the action table, and it scales the D_801148B0 offset.
- * @param queue_id CD queue id (low 16 bits) of the chunk to read.
+ * @brief Load a party member's script package from CD into its script page.
+ * @param party_slot Party slot (1 partner, 2 companion); the companion also gets its action slots.
+ * @param resource_id CD resource id of the package (low 16 bits).
+ * @note The package starts with the offsets of its sections: the action table (a count, then
+ *       FieldActionSlot records), the script page, and the end of the script page.
  */
-void func_800A5174(s32 bank, s32 queue_id)
+void field_load_party_script_page(s32 party_slot, s32 resource_id)
 {
-    s32 *action_section;
-    s32 section_start;
-    BufHdr *header;
-    u8 *action_entries;
-    s32 count;
+    s32* section;
+    s32* action_table;
+    FieldActionSlot* actions;
+    FieldActionRow* action_rows;
+    s32 action_count;
 
-    header = (BufHdr *)g_field_cd_buffer;
-    cdrom_queue_read(queue_id & 0xFFFF, header);
+    section = (s32*)g_field_cd_buffer;
+    cdrom_queue_read(resource_id & 0xFFFF, section);
     cdrom_wait_queue_empty();
-    action_section = (s32 *)(g_field_cd_buffer + header->unk0);
-    action_entries = (u8 *)action_section + 4;
-    count = *action_section;
-    if (bank == 2)
+    action_table = (s32*)(g_field_cd_buffer + section[0]);
+    actions = (FieldActionSlot*)(action_table + 1);
+    action_count = action_table[0];
+    if (party_slot == 2)
     {
-        u8 *dst = g_field_resource_actions;
-        dst += 0x320;
-        bcopy(action_entries, dst, count * 8);
+        /* Through a local: a constant &g_field_resource_actions[2] changes the address code. */
+        action_rows = g_field_resource_actions;
+        bcopy((u8*)actions, (u8*)&action_rows[2], action_count * sizeof(FieldActionSlot));
     }
-    header = (BufHdr *)((u8 *)header + 4);
-    {
-        u8 *src = g_field_cd_buffer;
-        s32 end;
-        section_start = header->unk0;
-        end = header->unk4;
-        src += section_start;
-        bcopy(src, D_801148B0 + (bank << 12), end - section_start);
-    }
+    section++;
+    bcopy(g_field_cd_buffer + section[0], g_field_party_script_pages[party_slot].bytes, section[1] - section[0]);
 }
 
 /**
- * @brief Queue five textured strips using the selected field rendering layout.
- * @param context Render context containing the ordering table and packet cursor.
- * @param layout Zero selects two quads per strip; nonzero selects one quad.
+ * @brief Draw a quarter-size thumbnail of a framebuffer in the top-left corner.
+ * @param render_half Render half that receives the thumbnail quads.
+ * @param frame 0 shows the frame drawn at y = SCREEN_HEIGHT, otherwise the frame drawn at y = VRAM_BACK_DRAW_Y.
+ * @note Debug view: nothing calls it and g_field_frame_thumbnail_enabled is never set. With @p frame 0
+ *       each strip leaves one unused quad in the packet buffer, otherwise every strip does.
  */
-void func_800A5224(RenderContext *context, s32 layout)
+static void field_draw_frame_thumbnail(FieldRenderHalf* render_half, s32 frame)
 {
-    u32 *head;
-    u32 split_address_mask;
-    u32 split_tag_mask;
-    u32 full_address_mask;
-    u32 full_tag_mask;
-    s32 full_color;
-    s32 full_length;
-    s32 full_height;
-    s32 full_v_top;
-    s32 full_u_right;
-    s32 full_v_bottom;
-    s16 split_left_x;
-    s16 full_left_x;
-    s16 full_right_x;
-    s16 split_right_x;
-    u8 *packet;
-    s32 split_page;
-    s32 full_page;
-    s32 strip_index;
-    s32 packet_code;
-    TexturedQuad *full_quad;
-    TexturedQuad *split_quad;
+    u_long* ot;
+    s32 strip;
+    FieldThumbnailQuad* quad;
 
-    if (D_8011F3C8 != 0)
+    if (g_field_frame_thumbnail_enabled != 0)
     {
-        packet = context->cursor;
-        head = &context->tag;
-        if (layout == 0)
+        quad = (FieldThumbnailQuad*)render_half->primitive_cursor;
+        ot = render_half->ordering_table;
+        if (frame == 0)
         {
-            strip_index = 0;
-            split_quad = (TexturedQuad *)packet;
+            s16 left;
+            s32 page;
+
+            /* Rows 240-255 of the top page, then rows 0-207 of the bottom page. */
+            strip = 0;
             do
             {
-                split_left_x = strip_index * 0x10;
-                split_page = strip_index & 0xF;
-                split_quad->color.word = 0x808080;
-                split_quad->tag.bytes.length = 9;
-                split_quad->color.bytes.code = 0x2C;
-                setXY4(split_quad, split_left_x, 0, ((strip_index * 0x10) + 0x10), 0, split_left_x, 4, ((strip_index * 0x10) + 0x10), 4);
-                setUV4(split_quad, 0, 0xF0, 0x40, 0xF0, 0, 0xFF, 0x40, 0xFF);
-                split_quad->clut = 0;
-                split_quad->tpage = (s16) (split_page | 0x120);
-                split_quad++;
-                split_address_mask = 0xFFFFFF;
-                split_tag_mask = 0xFF000000;
-                ((TexturedQuad *)packet)->tag.word = (((TexturedQuad *)packet)->tag.word & split_tag_mask) | (*head & split_address_mask);
-                *head = (s32) ((*head & split_tag_mask) | ((s32) packet & split_address_mask));
-                packet += 0x28;
-                split_quad->color.word = 0x808080;
-                split_quad->tag.bytes.length = 9;
-                split_quad->color.bytes.code = 0x2C;
-                setXY4(split_quad, split_left_x, 4, ((strip_index * 0x10) + 0x10), 4, split_left_x, 0x38, ((strip_index * 0x10) + 0x10), 0x38);
-                strip_index += 1;
-                setUV4(split_quad, 0, 0, 0x40, 0, 0, 0xD0, 0x40, 0xD0);
-                split_quad->clut = 0;
-                split_quad->tpage = (s16) (split_page | 0x130);
-                split_quad += 2;
-                ((TexturedQuad *)packet)->tag.word = (s32) ((((TexturedQuad *)packet)->tag.word & split_tag_mask) | (*head & split_address_mask));
-                *head = (s32) ((*head & split_tag_mask) | ((s32) packet & split_address_mask));
-                packet += 0x50;
-            } while (strip_index < 5);
-            context->cursor = packet;
+                left = strip * FIELD_THUMBNAIL_STRIP_WIDTH;
+                page = strip & 0xF;
+                quad->rgbc = FIELD_THUMBNAIL_GREY;
+                setPolyFT4(quad);
+                setXY4(quad, left, 0, strip * FIELD_THUMBNAIL_STRIP_WIDTH + FIELD_THUMBNAIL_STRIP_WIDTH, 0, left, 4,
+                       strip * FIELD_THUMBNAIL_STRIP_WIDTH + FIELD_THUMBNAIL_STRIP_WIDTH, 4);
+                setUV4(quad, 0, 240, 64, 240, 0, 255, 64, 255);
+                quad->clut = 0;
+                quad->tpage = FIELD_THUMBNAIL_TPAGE_TOP | page;
+                addPrim(ot, quad);
+                quad++;
+                quad->rgbc = FIELD_THUMBNAIL_GREY;
+                setPolyFT4(quad);
+                setXY4(quad, left, 4, strip * FIELD_THUMBNAIL_STRIP_WIDTH + FIELD_THUMBNAIL_STRIP_WIDTH, 4, left, 56,
+                       strip * FIELD_THUMBNAIL_STRIP_WIDTH + FIELD_THUMBNAIL_STRIP_WIDTH, 56);
+                strip++;
+                setUV4(quad, 0, 0, 64, 0, 0, 208, 64, 208);
+                quad->clut = 0;
+                quad->tpage = FIELD_THUMBNAIL_TPAGE_BOTTOM | page;
+                addPrim(ot, quad);
+                quad += 2;
+            } while (strip < FIELD_THUMBNAIL_STRIPS);
+            render_half->primitive_cursor = (u8*)quad;
             return;
         }
-        strip_index = 0;
-        full_color = 0x808080;
-        full_length = 9;
-        full_height = 0x38;
-        full_v_top = 8;
-        full_u_right = 0x40;
-        full_v_bottom = 0xE8;
-        full_address_mask = 0xFFFFFF;
-        full_tag_mask = 0xFF000000;
-        full_right_x = 0x10;
-        full_quad = (TexturedQuad *)packet;
-        do
+        /* Rows 8-231 of the top page. */
         {
-            full_quad->x1 = full_right_x;
-            full_quad->x3 = full_right_x;
-            full_right_x += 0x10;
-            full_left_x = strip_index * 0x10;
-            full_page = strip_index & 0xF;
-            strip_index += 1;
-            full_quad->color.word = full_color;
-            full_quad->tag.bytes.length = full_length;
-            packet_code = 0x2C;
-            full_quad->color.bytes.code = packet_code;
-            full_quad->x0 = full_left_x;
-            packet_code = 0;
-            full_quad->y0 = packet_code;
-            full_quad->y1 = 0;
-            full_quad->x2 = full_left_x;
-            full_quad->y2 = full_height;
-            full_quad->y3 = full_height;
-            setUV4(full_quad, 0, full_v_top, full_u_right, full_v_top, 0, full_v_bottom, full_u_right, full_v_bottom);
-            full_quad->clut = 0;
-            full_quad->tpage = (s16) (full_page | 0x120);
-            full_quad += 2;
-            ((TexturedQuad *)packet)->tag.word = (((TexturedQuad *)packet)->tag.word & full_tag_mask) | (*head & full_address_mask);
-            *head = (s32) ((*head & full_tag_mask) | ((s32) packet & full_address_mask));
-            packet += 0x50;
-        } while (strip_index < 5);
-        context->cursor = packet;
+            /* Constants, link masks and the reused value local: literals and addPrim change the loop's register use. */
+            u32 address_mask;
+            u32 tag_mask;
+            s32 color;
+            s32 length;
+            s32 height;
+            s32 v_top;
+            s32 u_right;
+            s32 v_bottom;
+            s16 left;
+            s16 right;
+            s32 page;
+            s32 value;
+
+            strip = 0;
+            color = FIELD_THUMBNAIL_GREY;
+            length = 9;
+            height = 56;
+            v_top = 8;
+            u_right = 64;
+            v_bottom = 232;
+            address_mask = 0xFFFFFF;
+            tag_mask = 0xFF000000;
+            right = FIELD_THUMBNAIL_STRIP_WIDTH;
+            do
+            {
+                quad->x3 = quad->x1 = right;
+                right += FIELD_THUMBNAIL_STRIP_WIDTH;
+                left = strip * FIELD_THUMBNAIL_STRIP_WIDTH;
+                page = strip & 0xF;
+                strip++;
+                quad->rgbc = color;
+                setlen(quad, length);
+                value = 0x2C;
+                setcode(quad, value);
+                quad->x0 = left;
+                value = 0;
+                quad->y0 = value;
+                quad->y1 = 0;
+                quad->x2 = left;
+                quad->y2 = height;
+                quad->y3 = height;
+                setUV4(quad, 0, v_top, u_right, v_top, 0, v_bottom, u_right, v_bottom);
+                quad->clut = 0;
+                quad->tpage = FIELD_THUMBNAIL_TPAGE_TOP | page;
+                quad->tag = (quad->tag & tag_mask) | (*ot & address_mask);
+                *ot = (*ot & tag_mask) | ((u_long)quad & address_mask);
+                quad += 2;
+            } while (strip < FIELD_THUMBNAIL_STRIPS);
+        }
+        render_half->primitive_cursor = (u8*)quad;
     }
 }
 
 /**
- * @brief Upload palettes for the three active runtime slots.
+ * @brief Upload the CLUT of each existing golem to its VRAM row.
  */
-void func_800A54D0(void)
+void field_upload_golem_palettes(void)
 {
     RECT rect;
-    PadCtxB800A54D0 *p;
     s32 i;
-    s32 offset;
 
-    i = 0;
-    do
+    for (i = 0; i < LARGE_HISTORY_RECORD_COUNT; i++)
     {
-        offset = i * 0x14C;
-        p = (PadCtxB800A54D0 *) (g_pad_ctx + offset);
-        if (p->unk2B0C != 0)
+        if (g_pad_ctx->large_history_records[i].name[0] != 0)
         {
-            if ((u32) p->unk2B54 < 0x10)
+            if ((u32)g_pad_ctx->large_history_records[i].unknown_0x48 < FIELD_GOLEM_BANK_PALETTES)
             {
-                setRECT(&rect, 0x100, i + 0x1F0, 0x10, 1);
-                LoadImage(&rect, (u_long *)(D_800EDED8 + (p->unk2B54 << 5)));
+                setRECT(&rect, FIELD_GOLEM_CLUT_X, FIELD_GOLEM_CLUT_Y + i, FIELD_CLUT_COLORS, 1);
+                LoadImage(&rect, (u_long*)&g_field_golem_palettes[0][g_pad_ctx->large_history_records[i].unknown_0x48 * FIELD_CLUT_COLORS]);
             }
             else
             {
-                setRECT(&rect, 0x100, i + 0x1F0, 0x10, 1);
-                LoadImage(&rect, (u_long *)((D_800EDED8 + 0x200) + ((p->unk2B54 - 0x10) << 5)));
+                setRECT(&rect, FIELD_GOLEM_CLUT_X, FIELD_GOLEM_CLUT_Y + i, FIELD_CLUT_COLORS, 1);
+                LoadImage(
+                    &rect,
+                    (u_long*)&g_field_golem_palettes[1][(g_pad_ctx->large_history_records[i].unknown_0x48 - FIELD_GOLEM_BANK_PALETTES) * FIELD_CLUT_COLORS]);
             }
         }
-        i += 1;
-    } while (i < 3);
+    }
 }
 
 /**
- * @brief Copies a 32-byte entry from one of two field-data tables.
- *
- * @param destination Buffer that receives the selected entry.
- * @param index Combined index across the two 16-entry tables.
+ * @brief Copy a golem portrait palette into a portrait image.
+ * @param destination Palette strip at the start of the portrait image.
+ * @param palette Golem palette index (0-31).
  */
-void func_800A55E4(unsigned char *destination, s32 index)
+void field_copy_golem_portrait_palette(u8* destination, s32 palette)
 {
-    if (index < 0x10)
+    if (palette < FIELD_GOLEM_BANK_PALETTES)
     {
-        bcopy(&D_800EE2D8 + (index << 5), destination, 0x20);
+        bcopy((u8*)&g_field_golem_portrait_palettes[0][palette * FIELD_CLUT_COLORS], destination, FIELD_CLUT_COLORS * sizeof(u16));
     }
     else
     {
-        bcopy(&D_800EE4D8 + ((index - 0x10) << 5), destination, 0x20);
+        bcopy((u8*)&g_field_golem_portrait_palettes[1][(palette - FIELD_GOLEM_BANK_PALETTES) * FIELD_CLUT_COLORS], destination,
+              FIELD_CLUT_COLORS * sizeof(u16));
     }
 }

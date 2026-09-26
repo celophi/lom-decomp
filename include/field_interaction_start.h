@@ -27,10 +27,12 @@ typedef struct
             /** @brief Menu actions: bit 7 menu slot group, bits 0-2 slot; events: event group. */
             u32 selector : 8;
             u32 local_variable_count : 8;
-            u32 unk24 : 4;
+            /** @brief CLUT column of the actor's palette (FieldActorControl::palette). */
+            u32 palette : 4;
             /** @brief Group actors: actor group plus one; zero takes the layout default. */
             u32 group : 2;
-            u32 unk30 : 1;
+            /** @brief The actor starts hidden (FIELD_ACTOR_HIDDEN). */
+            u32 hidden : 1;
             /** @brief Set while the action is installed and active. */
             u32 active : 1;
         } bits;
@@ -49,6 +51,13 @@ typedef struct
             u16 x;
             u16 z;
         } halves;
+        struct
+        {
+            u32 x : 16;
+            u32 z : 11;
+            u32 unk27 : 3;
+            u32 y : 2;
+        } bits;
     } position;
     union
     {

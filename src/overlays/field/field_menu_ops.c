@@ -2,6 +2,7 @@
 #include "saved_game.h"
 #include "common.h"
 #include "field_calls.h"
+#include "field_script.h"
 #include "field_menu_vars.h"
 #include "main.h"
 
@@ -483,11 +484,8 @@ extern u8 D_800F0E98[];
 extern void field_menu_clear_item_slots(void);
 extern s32 rand(void);
 s32 field_get_actor_facing(s32 arg0);
-void func_800C2A88(s32 arg0);
 extern s32 D_8011F428;
 extern void field_menu_compact_pending_items(void);
-extern s32 func_800BD414(s32 arg0, s32 arg1);
-extern void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
 extern FieldFavoredElementTable D_80051ED8;
 extern u16 g_music_track_index;
 extern FieldGosubSequence D_80051EF8;
@@ -631,7 +629,7 @@ void field_menu_create_golem(void)
         {
             FIELD_PAD.large_history_records[FIELD_PAD.large_history_order[D_80122C00.golem.slot]].unknown_0x4C[i << 6] = 0;
         }
-        func_800A54D0();
+        field_upload_golem_palettes();
     }
 }
 
@@ -1197,7 +1195,7 @@ void field_menu_set_golem_palette(void)
     }
     record_index = FIELD_PAD.large_history_order[D_80122C00.golem.slot];
     FIELD_PAD.large_history_records[record_index].unknown_0x48 = clamped;
-    func_800A54D0();
+    field_upload_golem_palettes();
 }
 
 /**
@@ -1218,13 +1216,13 @@ void field_menu_set_active_golem(void)
  */
 void field_menu_read_ring_selection(void)
 {
-    s32 result = func_800A4744();
+    s32 result = field_get_ring_result();
 
     if (result < 0)
     {
         FIELD_LOCAL_HALF(FIELD_RING_BUSY) = 1;
         /* Called as an int function (no prototype in the original), so the byte is not masked. */
-        FIELD_LOCAL_HALF(FIELD_RING_ENTRY) = ((s32 (*)(void))func_800A4778)();
+        FIELD_LOCAL_HALF(FIELD_RING_ENTRY) = ((s32 (*)(void))field_get_ring_cursor_entry)();
     }
     else
     {
@@ -2324,7 +2322,7 @@ void field_menu_add_pending_record(void)
         if (FIELD_MENU_ITEMS->pending[i].active == 0)
         {
             field_copy_inventory_record((u8*)&FIELD_MENU_ITEMS->pending[i], (u8*)&FIELD_MENU_ITEMS->inventory[selected]);
-            func_800C2A88(selected);
+            field_discard_item(selected);
             value = FIELD_MENU_ITEMS->pending[i].unknown_0x34;
             if (value == 0)
             {
@@ -2907,11 +2905,11 @@ void field_menu_set_history_entry(void)
  */
 void func_800C93B4(void)
 {
-    if (func_800BD414(0, 0x2F08) == 0x80)
+    if (field_get_script_var(0, 0x2F08) == 0x80)
     {
         field_open_addhero(1);
     }
-    else if (func_800BD414(0, 0x2F08) == 0xFF)
+    else if (field_get_script_var(0, 0x2F08) == 0xFF)
     {
         field_open_addhero(0);
     }
@@ -3027,11 +3025,11 @@ void func_800C963C(void)
 {
     if (FIELD_PAD.inject_enable != 0)
     {
-        func_800BD520(0, 0x2F08, 0x80);
+        field_set_script_var(0, 0x2F08, 0x80);
     }
     else
     {
-        func_800BD520(0, 0x2F08, 0xFF);
+        field_set_script_var(0, 0x2F08, 0xFF);
     }
 }
 

@@ -1,7 +1,7 @@
 /**
  * @file field_record_setup_ops.c
- * @brief Stage an item record: fill the staging block for a new or existing
- *        item, run the generation scripts and write the result back.
+ * @brief Item creation and tempering: fill the staging block for a new or
+ *        existing item, run the generation scripts and write the result back.
  */
 
 #include "common.h"
@@ -9,13 +9,13 @@
 #include "field_records.h"
 #include "field_script.h"
 
-/** @brief func_800C1E40 id of the category 0/1 item table. */
+/** @brief func_800C1E40 id of the weapon and armor generation table. */
 #define FIELD_ITEM_TABLE 4
 
-/** @brief func_800C1E40 id of the category 2 item table. */
+/** @brief func_800C1E40 id of the instrument generation table. */
 #define FIELD_ITEM_GRID_TABLE 0xF
 
-/** @brief Script variable that receives the staged item's inventory index. */
+/** @brief Script variable that receives the created item's inventory index. */
 #define FIELD_ITEM_RESULT_VARIABLE 0x7100
 
 /** @brief Inventory index reported when the inventory is full. */
@@ -24,20 +24,26 @@
 /** @brief Inventory index reported when no gosub result was queued. */
 #define FIELD_ITEM_RESULT_NONE 0xFF
 
+/** @brief field_create_item_from_gosub kind that tempers an existing inventory item. */
+#define FIELD_CREATE_KIND_TEMPER 3
+
+/** @brief Command selector of a new weapon or armor: no tempering item. */
+#define FIELD_ITEM_COMMAND_NONE 0xFF
+
 /** @brief Default stat modifier index written to every staged stat. */
 #define FIELD_DEFAULT_STAT_MODIFIER 4
+
+/** @brief Bounds-row nibble of a staged stats byte (the low nibble is the modifier). */
+#define FIELD_STAGING_BOUNDS_MASK 0xF0
+
+/** @brief FieldItemStaging slot_class when no slot value is below FIELD_SLOT_CLASS_LIMIT. */
+#define FIELD_SLOT_CLASS_NONE 0xF
 
 /** @brief Staged slot values below this set the staging slot class. */
 #define FIELD_SLOT_CLASS_LIMIT 0x10
 
-/** @brief Largest row or column of the category 2 grid. */
+/** @brief Largest row or column of the instrument grid. */
 #define FIELD_GRID_MAX 7
-
-/** @brief func_800BE710 kind that stages a new category 2 item. */
-#define FIELD_STAGE_NEW_GRID_ITEM 2
-
-/** @brief func_800BE710 kind that restages an existing inventory item. */
-#define FIELD_STAGE_EXISTING_ITEM 3
 
 extern s32 D_801227F0;
 extern s32 g_gosub_result_count;
@@ -48,28 +54,25 @@ extern FieldItemStaging* D_80123FC4;
 extern FieldItemTables* D_80123FC0;
 
 FieldItemRecord* field_find_free_inventory_record(void);
-void func_800BD520(s32 owner, s32 variable, s32 value);
 s32* func_800C1EC8(s32* src, s32* dest, s32 size);
 void* func_800C1E40(s32 table_id);
 
-void func_800BE888(FieldItemRecord* record, s32 category, s32 item_type, s32 item_subtype);
-void func_800BEA10(FieldItemRecord* record, s32 category, s32 item_type, s32 row, s32 command_index);
-void func_800BEC44(FieldItemRecord* record, s32 command_index);
-void func_800BEF74(void);
-void func_800BF158(void);
+static void field_create_instrument_item(FieldItemRecord* record, s32 category, s32 item_type, s32 row, s32 command_index);
+static void field_generate_staged_item(void);
+static void field_load_staged_subtype(void);
 
 /**
- * @brief Stage an item from the queued gosub results and report its inventory index.
+ * @brief Create or temper an item from the queued gosub results.
  *
- * Kind 2 creates a category 2 item, kind 3 restages the inventory item
- * given by the first result, any other kind creates an item of that
- * category. The inventory index, FIELD_ITEM_RESULT_FULL or
- * FIELD_ITEM_RESULT_NONE is written to script variable
- * FIELD_ITEM_RESULT_VARIABLE.
+ * FIELD_ITEM_CATEGORY_INSTRUMENT creates an instrument,
+ * FIELD_CREATE_KIND_TEMPER tempers the inventory item named by the first
+ * result, any other kind creates a weapon or armor of that category. The
+ * inventory index, FIELD_ITEM_RESULT_FULL or FIELD_ITEM_RESULT_NONE is
+ * written to script variable FIELD_ITEM_RESULT_VARIABLE.
  *
- * @param kind Staging kind; also the category of a new category 0/1 item.
+ * @param kind Item category of a new item, or FIELD_CREATE_KIND_TEMPER.
  */
-void func_800BE710(s32 kind)
+void field_create_item_from_gosub(s32 kind)
 {
     FieldItemRecord* record;
 
@@ -80,67 +83,65 @@ void func_800BE710(s32 kind)
     {
         switch (kind)
         {
-        case FIELD_STAGE_NEW_GRID_ITEM:
+        case FIELD_ITEM_CATEGORY_INSTRUMENT:
             record = field_find_free_inventory_record();
             if (record != NULL)
             {
-                func_800BEA10(record, FIELD_STAGE_NEW_GRID_ITEM, g_gosub_result_values[0], g_gosub_result_values[1], g_gosub_result_values[2]);
-                func_800BD520(0, FIELD_ITEM_RESULT_VARIABLE, record - g_field_game_state->items);
+                field_create_instrument_item(record, FIELD_ITEM_CATEGORY_INSTRUMENT, g_gosub_result_values[0], g_gosub_result_values[1],
+                                             g_gosub_result_values[2]);
+                field_set_script_var(0, FIELD_ITEM_RESULT_VARIABLE, record - g_field_game_state->items);
             }
             else
             {
-                func_800BD520(0, FIELD_ITEM_RESULT_VARIABLE, FIELD_ITEM_RESULT_FULL);
+                field_set_script_var(0, FIELD_ITEM_RESULT_VARIABLE, FIELD_ITEM_RESULT_FULL);
             }
             break;
-        case FIELD_STAGE_EXISTING_ITEM:
-            func_800BEC44(&g_field_game_state->items[g_gosub_result_values[0]], g_gosub_result_values[1]);
-            func_800BD520(0, FIELD_ITEM_RESULT_VARIABLE, g_gosub_result_values[0]);
+        case FIELD_CREATE_KIND_TEMPER:
+            field_temper_item(&g_field_game_state->items[g_gosub_result_values[0]], g_gosub_result_values[1]);
+            field_set_script_var(0, FIELD_ITEM_RESULT_VARIABLE, g_gosub_result_values[0]);
             break;
         default:
             record = field_find_free_inventory_record();
             if (record != NULL)
             {
-                func_800BE888(record, kind, g_gosub_result_values[0], g_gosub_result_values[1]);
-                func_800BD520(0, FIELD_ITEM_RESULT_VARIABLE, record - g_field_game_state->items);
+                field_create_equipment_item(record, kind, g_gosub_result_values[0], g_gosub_result_values[1]);
+                field_set_script_var(0, FIELD_ITEM_RESULT_VARIABLE, record - g_field_game_state->items);
             }
             else
             {
-                func_800BD520(0, FIELD_ITEM_RESULT_VARIABLE, FIELD_ITEM_RESULT_FULL);
+                field_set_script_var(0, FIELD_ITEM_RESULT_VARIABLE, FIELD_ITEM_RESULT_FULL);
             }
             break;
         }
     }
     else
     {
-        func_800BD520(0, FIELD_ITEM_RESULT_VARIABLE, FIELD_ITEM_RESULT_NONE);
+        field_set_script_var(0, FIELD_ITEM_RESULT_VARIABLE, FIELD_ITEM_RESULT_NONE);
     }
 }
 
 /**
- * @brief Stage a new category 0/1 item and generate it.
+ * @brief Create a new weapon or armor, consuming one of its material item, and generate it.
  * @param record Item record that receives the item.
- * @param category Item category.
+ * @param category FIELD_ITEM_CATEGORY_WEAPON or FIELD_ITEM_CATEGORY_ARMOR.
  * @param item_type Item type.
- * @param item_subtype Item subtype.
+ * @param item_subtype Item subtype; also the item kind of the material consumed.
  */
-void func_800BE888(FieldItemRecord* record, s32 category, s32 item_type, s32 item_subtype)
+void field_create_equipment_item(FieldItemRecord* record, s32 category, s32 item_type, s32 item_subtype)
 {
-    FieldItemStaging* staging;
     s32 i;
 
     func_800C21C0(item_subtype);
 
-    /* The first two stores go through a local copy of D_80123FC4. */
-    staging = D_80123FC4;
-    staging->category = category;
-    staging->record = record;
+    D_80123FC4->record = record;
+    D_80123FC4->category = category;
     D_80123FC4->item_type = item_type;
     D_80123FC4->item_subtype = item_subtype;
-    D_80123FC4->command_index = 0xFF;
+    D_80123FC4->command_index = FIELD_ITEM_COMMAND_NONE;
 
     for (i = 0; i < FIELD_STAGING_STAT_COUNT; i++)
     {
-        D_80123FC4->stats.bytes[i] = (D_80123FC4->stats.bytes[i] & 0xF0) | FIELD_DEFAULT_STAT_MODIFIER;
+        D_80123FC4->stats.bytes[i] = (D_80123FC4->stats.bytes[i] & FIELD_STAGING_BOUNDS_MASK) | FIELD_DEFAULT_STAT_MODIFIER;
         D_80123FC4->base_stats[i] = FIELD_DEFAULT_STAT_MODIFIER;
     }
 
@@ -156,18 +157,18 @@ void func_800BE888(FieldItemRecord* record, s32 category, s32 item_type, s32 ite
     D_80123FC4->properties[4] = (D_80123FC4->item_type << 4) + 0xF;
     D_80123FC4->properties[5] = 0xFF;
 
-    func_800BEF74();
+    field_generate_staged_item();
 }
 
 /**
- * @brief Stage a new category 2 item, run its command script and store its grid values.
+ * @brief Create a new instrument, consuming its two ingredient items, and store its grid values.
  * @param record Item record that receives the item.
- * @param category Item category.
+ * @param category Item category (FIELD_ITEM_CATEGORY_INSTRUMENT).
  * @param item_type Item type.
- * @param row Row of the grid table pair and item subtype.
- * @param command_index Command selector, biased by FIELD_STAGING_COMMAND_BASE.
+ * @param row Row of the grid table pairs; also the item subtype and the first ingredient's item kind.
+ * @param command_index Item kind of the second ingredient; selects the command script.
  */
-void func_800BEA10(FieldItemRecord* record, s32 category, s32 item_type, s32 row, s32 command_index)
+static void field_create_instrument_item(FieldItemRecord* record, s32 category, s32 item_type, s32 row, s32 command_index)
 {
     FieldScriptContext* saved_script;
     s32 column;
@@ -184,7 +185,7 @@ void func_800BEA10(FieldItemRecord* record, s32 category, s32 item_type, s32 row
 
     for (i = 0; i < FIELD_STAGING_STAT_COUNT; i++)
     {
-        D_80123FC4->stats.bytes[i] = (D_80123FC4->stats.bytes[i] & 0xF0) | FIELD_DEFAULT_STAT_MODIFIER;
+        D_80123FC4->stats.bytes[i] = (D_80123FC4->stats.bytes[i] & FIELD_STAGING_BOUNDS_MASK) | FIELD_DEFAULT_STAT_MODIFIER;
     }
     for (i = 0; i < FIELD_STAGING_SLOT_COUNT; i++)
     {
@@ -235,11 +236,11 @@ void func_800BEA10(FieldItemRecord* record, s32 category, s32 item_type, s32 row
 }
 
 /**
- * @brief Stage an existing item record and regenerate it.
- * @param record Item record to restage.
- * @param command_index Command selector, biased by FIELD_STAGING_COMMAND_BASE.
+ * @brief Temper an existing weapon or armor with one more item and regenerate it.
+ * @param record Item record to temper.
+ * @param command_index Item kind of the tempering item; selects the command entry.
  */
-void func_800BEC44(FieldItemRecord* record, s32 command_index)
+void field_temper_item(FieldItemRecord* record, s32 command_index)
 {
     s32 i;
 
@@ -279,7 +280,7 @@ void func_800BEC44(FieldItemRecord* record, s32 command_index)
 
     D_80123FC4->slots[0] = FIELD_STAGING_SLOT_EMPTY;
     D_80123FC4->slots[1] = record->special_ids[3];
-    for (i = 0; i < 3; i++)
+    for (i = 0; i < FIELD_ITEM_SPECIAL_COUNT - 1; i++)
     {
         D_80123FC4->slots[i + 2] = record->special_ids[i];
     }
@@ -300,7 +301,7 @@ void func_800BEC44(FieldItemRecord* record, s32 command_index)
         break;
     }
 
-    func_800BEF74();
+    field_generate_staged_item();
 }
 
 /**
@@ -308,16 +309,15 @@ void func_800BEC44(FieldItemRecord* record, s32 command_index)
  *
  * The type, subtype, command and slot scripts run on the event script
  * context; pending levels, flags and stat clamping are applied, the item is
- * written back and the category 0/1 derived values are computed.
- *
+ * written back and its weapon or armor derived values are computed.
  */
-void func_800BEF74(void)
+static void field_generate_staged_item(void)
 {
     FieldScriptContext* saved_script;
 
     saved_script = g_field_script;
     g_field_script = (FieldScriptContext*)&g_field_runtime->events[0].script;
-    func_800BF158();
+    field_load_staged_subtype();
     if (D_80123FC4->category == FIELD_ITEM_CATEGORY_WEAPON)
     {
         func_800BF2F0(D_80123FC0->item.types[D_80123FC4->item_type].scripts[0]);
@@ -356,17 +356,17 @@ void func_800BEF74(void)
 /**
  * @brief Load the item table and copy the staged subtype's entry into the staging block.
  */
-void func_800BF158(void)
+static void field_load_staged_subtype(void)
 {
     s32 i;
 
     D_80123FC0 = func_800C1E40(FIELD_ITEM_TABLE);
     D_80123FC4->unk3A = D_80123FC0->item.subtypes[D_80123FC4->item_subtype].divisor;
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < FIELD_STAGING_FACTOR_COUNT; i++)
     {
         D_80123FC4->weights[i] = D_80123FC0->item.subtypes[D_80123FC4->item_subtype].weights[i];
     }
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < FIELD_STAGING_FACTOR_COUNT; i++)
     {
         D_80123FC4->multipliers[i] = D_80123FC0->item.subtypes[D_80123FC4->item_subtype].multipliers[i];
     }
@@ -376,8 +376,9 @@ void func_800BF158(void)
         D_80123FC4->pending_levels[i] = 0;
     }
 
-    D_80123FC4->flags.bits.slot_class = 0xF;
-    for (i = 1; i < 5; i++)
+    /* Slots 0 and 5 never hold a slot value. */
+    D_80123FC4->flags.bits.slot_class = FIELD_SLOT_CLASS_NONE;
+    for (i = 1; i < FIELD_STAGING_SLOT_COUNT - 1; i++)
     {
         if (D_80123FC4->slots[i] < FIELD_SLOT_CLASS_LIMIT)
         {

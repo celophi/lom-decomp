@@ -56,9 +56,6 @@ enum
     FIELD_BINDING_QUERY_READY = 4
 };
 
-/** @brief Sentinel returned by field_find_object_state when no object matches. */
-#define FIELD_OBJECT_STATE_NONE ((FieldObjectState*)-1)
-
 /** @brief Event script table: u16 offsets from the table start, then the scripts. */
 extern u16* g_field_event_scripts;
 
