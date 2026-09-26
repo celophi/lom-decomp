@@ -34,6 +34,13 @@ ifeq ($(filter $(VERSION),$(SUPPORTED_VERSIONS)),)
 $(error Unknown VERSION '$(VERSION)'. Supported versions: $(SUPPORTED_VERSIONS))
 endif
 
+# Versions whose code is split into C translation units. The source lists in
+# mk/main.mk and the routing in mk/overlay-registry.mk describe this layout.
+# A version not listed here has no split TUs yet: it builds no C objects, and
+# its objdiff/progress units are the splat assembly alone (0% matched).
+TU_LAYOUT_VERSIONS := us
+HAS_TU_LAYOUT := $(filter $(VERSION),$(TU_LAYOUT_VERSIONS))
+
 # Main executable file name on each disc.
 GAME_us := SLUS_010.13
 GAME_jp := SLPS_021.70

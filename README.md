@@ -347,13 +347,15 @@ One C source tree builds every regional release. Anything that comes from a part
 | `VERSION` | Release | Status |
 |---|---|---|
 | `us` (default) | North America, `SLUS-01013` | Fully linked |
-| `jp` | Japan, `SLPS-02170` | In progress - folders and build switch are in place, splat configs are not written yet |
+| `jp` | Japan, `SLPS-02170` | In progress - first-pass splat configs split the disc into one assembly block per module; nothing is decompiled or linked yet |
 
 | Shared by all versions | Per version |
 |---|---|
 | `src/`, `include/`, `mk/`, `tools/`, `docs/` | `disc/<version>/`, `config/<version>/`, and the generated `asm/<version>/`, `linker/<version>/`, `assets/<version>/`, `build/<version>/` |
 
 Where the code differs between releases, the shared C source uses `#if defined(VERSION_JP)` / `#if defined(VERSION_US)` blocks; the build defines exactly one of them (see [`mk/version.mk`](mk/version.mk) and [`include/version.h`](include/version.h)). Symbol names are shared, but addresses are not, so each version has its own `config/<version>/symbols/` files.
+
+Each version gets its own objdiff progress report, and CI builds both (`SLUS_010.13_report` and `SLPS_021.70_report`). Until the JP code is split into C files, its report counts the JP assembly as unmatched code, and the shared C sources are only built for the North American layout (`TU_LAYOUT_VERSIONS` in [`mk/version.mk`](mk/version.mk)).
 
 ## Repository layout
 

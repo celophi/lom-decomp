@@ -66,6 +66,23 @@ def extract_c_subsegments(config: dict) -> list[str]:
     return names
 
 
+def extract_asm_subsegments(config: dict) -> list[str]:
+    """Pull out names of [offset, 'asm', name] subsegments.
+
+    These are code ranges not yet split into C translation units (the whole
+    first-pass layout of a newly added game version). They become target-only
+    units: objdiff counts their code toward the total with nothing matched.
+    """
+    names = []
+    for segment in config.get("segments", []):
+        if not isinstance(segment, dict):
+            continue
+        for subseg in segment.get("subsegments", []):
+            if isinstance(subseg, list) and len(subseg) >= 3 and subseg[1] == "asm":
+                names.append(subseg[2])
+    return names
+
+
 def extract_data_subsegments(config: dict) -> list[str]:
     """Pull out names of standalone data translation units.
 
@@ -126,6 +143,12 @@ def build_main_units(config: dict, complete: bool = False) -> list[dict]:
                 **({"complete": True} if complete else {}),
             },
         })
+    for name in extract_asm_subsegments(config):
+        units.append({
+            "name": f"main/{name}",
+            "target_path": f"{build_path}/{asm_path}/{name}.o",
+            "metadata": {"progress_categories": ["main"]},
+        })
     return units
 
 
@@ -154,6 +177,15 @@ def build_overlay_units(config: dict, overlay_name: str, complete: bool = False)
             "target_path": f"{build_path}/target/{name}.o",
             "base_path": f"{build_path}/{src_path}/{name}.o",
             "metadata": _metadata(),
+        })
+
+    # Code not yet split into C files: target-only units (see
+    # extract_asm_subsegments). Never marked complete.
+    for name in extract_asm_subsegments(config):
+        units.append({
+            "name": f"{overlay_name}/{name}",
+            "target_path": f"{build_path}/target/{name}.o",
+            "metadata": {"progress_categories": [overlay_name]},
         })
 
     # Standalone data translation units: the target object is generated from an

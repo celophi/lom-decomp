@@ -203,6 +203,17 @@ ASM_SRCS := \
 	$(ASM_DIR)/data/rodata_data4.rodata.s
 
 
+# The lists above are the North American translation-unit layout. Versions
+# without a split TU layout (see HAS_TU_LAYOUT in mk/version.mk) build no C or
+# standalone assembly objects for the main executable yet.
+ifeq ($(HAS_TU_LAYOUT),)
+SRCS_G0 :=
+SRCS_G4 :=
+SRCS_GCC_260_G0 :=
+ASM_SRCS :=
+endif
+
+
 # ─── Object File Paths ─────────────────────────────────────────────────────────
 #
 # patsubst turns  src/foo/bar.c  →  /staging/build/<version>/src/foo/bar.o

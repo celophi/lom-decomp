@@ -70,7 +70,8 @@ $(1)_ROUTED_SRCS = $$($(1)_GCC_272_CDK_G0_SRCS) $$($(1)_GCC_272_GNU_G0_SRCS) $$(
 # Generated unk*.c files are gitignored and splat does not remove outputs from
 # older configurations. Treat tracked C files and explicitly routed generated
 # files as build inputs so stale ignored files cannot enter the build by accident.
-$(1)_TRACKED_C_SRCS := $$(filter $$(wildcard $$($(1)_SRC_DIR)/*.c),$$(shell git ls-files -- '$$($(1)_SRC_DIR)/*.c' 2>/dev/null))
+# Versions without a split TU layout do not build the shared C sources yet.
+$(1)_TRACKED_C_SRCS := $$(if $(HAS_TU_LAYOUT),$$(filter $$(wildcard $$($(1)_SRC_DIR)/*.c),$$(shell git ls-files -- '$$($(1)_SRC_DIR)/*.c' 2>/dev/null)))
 $(1)_C_SRCS = $$(sort $$($(1)_TRACKED_C_SRCS) $$(filter $$($(1)_ROUTED_SRCS),$$(wildcard $$($(1)_SRC_DIR)/*.c)))
 $(1)_UNROUTED_SRCS = $$(filter-out $$($(1)_ROUTED_SRCS),$$($(1)_C_SRCS))
 $(1)_UNKNOWN_ROUTED_SRCS = $$(filter-out $$($(1)_C_SRCS),$$($(1)_ROUTED_SRCS))
@@ -210,8 +211,10 @@ $(1)-target-objects: $(1)-validate $(COPY_SENTINEL) $$($(1)_TGT_OBJS)
 
 $(1)-base-objects: $(1)-validate $(COPY_SENTINEL) $$($(1)_C_OBJS)
 	@mkdir -p $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)
-	@cp -a "$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/." \
-		"$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/"
+	@if [ -n "$$(firstword $$($(1)_C_OBJS))" ]; then \
+		cp -a "$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/." \
+			"$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/"; \
+	fi
 
 $(1)-objdiff: $(1)-target-objects $(1)-base-objects
 

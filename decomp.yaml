@@ -11,6 +11,15 @@ versions:
       map: build/us/SLUS_010.13.map
       compiled_target: build/us/SLUS_010.13.bin
       elf: build/us/SLUS_010.13.elf
+  - name: jp
+    fullname: SLPS-02170 (JP)
+    sha1: b067188a92e4de9a4db7bb7e5343c757e9884bfa
+    paths:
+      target: disc/jp/SLPS_021.70
+      build_dir: build/jp/
+      map: build/jp/SLPS_021.70.map
+      compiled_target: build/jp/SLPS_021.70.bin
+      elf: build/jp/SLPS_021.70.elf
   - name: menu
     fullname: Menu Overlay
     paths:

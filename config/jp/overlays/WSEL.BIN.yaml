@@ -48,5 +48,5 @@ segments:
     subsegments:
       - [0x1, rodata, wsel_rodata]
       - [0x1D, asm, wsel_text]
-      - [0x2999, data, wsel_data]
+      - [0x28F1, data, wsel_data]
   - [0x7ABCD]

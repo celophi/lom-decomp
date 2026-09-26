@@ -10,7 +10,8 @@ the fully linked US build is used as a reference to lay out the JP binaries:
      function in JP.
   2. Each JP overlay's load address is recovered from `jal` instructions that
      call matched functions, and each module's text range is extrapolated from
-     the first and last matched functions using the US layout.
+     the first and last matched functions using the US layout (the end is then
+     trimmed back to the last `jr $ra` so trailing data is not disassembled).
   3. One splat config per module is written to config/jp/: rodata before the
      text, the whole text as a single `asm` subsegment, and data after it.
      Uniquely matched function names go to config/jp/symbols/, except US
@@ -40,6 +41,8 @@ from decompress import decompress  # noqa: E402
 US_MAIN = "SLUS_010.13"
 JP_MAIN = "SLPS_021.70"
 MAIN_VRAM = 0x80010000
+
+JR_RA = 0x03E00008
 
 # Auto-generated names that encode a US address.
 PLACEHOLDER_NAME = re.compile(r"^(func|FUN|D|jtbl)_[0-9A-Fa-f]{8}(_[0-9A-Fa-f]+)?$")
@@ -131,6 +134,14 @@ def map_module(us_image: bytes, us_vram: int, jp_image: bytes, functions, defaul
     last = max(matches.values(), key=lambda m: m[0] + m[1])
     text_start = max(0, us_text_start + (first[2] - first[0]))
     text_end = min(len(jp_image), us_text_end + (last[2] - last[0]))
+    # The extrapolated end can overshoot into data when JP code near the end
+    # differs in size. Trim it to just after the last `jr $ra` + delay slot,
+    # but never before the end of the last matched function.
+    last_matched_end = last[2] + last[1]
+    for i in range(text_end // 4 - 2, last_matched_end // 4 - 3, -1):
+        if jp_words[i] == JR_RA:
+            text_end = max(last_matched_end, (i + 2) * 4)
+            break
 
     # Placeholder names (func_<US address>) would mislabel the JP address, so
     # only real names are ported; splat names the rest after their JP address.

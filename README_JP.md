@@ -351,13 +351,15 @@ make diff-text
 | `VERSION` | リリース | 状態 |
 |---|---|---|
 | `us`（既定） | 北米版 `SLUS-01013` | 完全リンク済み |
-| `jp` | 日本版 `SLPS-02170` | 対応中 - フォルダとビルドの切り替えは用意済み、splat設定はまだ未作成 |
+| `jp` | 日本版 `SLPS-02170` | 対応中 - 第一段階のsplat設定で、モジュールごとに1つのアセンブリとして分割済み。デコンパイルとリンクはまだです |
 
 | 全バージョン共通 | バージョンごと |
 |---|---|
 | `src/`、`include/`、`mk/`、`tools/`、`docs/` | `disc/<version>/`、`config/<version>/`、および生成される `asm/<version>/`、`linker/<version>/`、`assets/<version>/`、`build/<version>/` |
 
 リリース間でコードが異なる箇所は、共通のCソース内で `#if defined(VERSION_JP)` / `#if defined(VERSION_US)` を使って書き分けます。ビルドはどちらか一方だけを定義します（[`mk/version.mk`](mk/version.mk) と [`include/version.h`](include/version.h) を参照）。シンボル名は共通ですがアドレスは異なるため、`config/<version>/symbols/` はバージョンごとに用意します。
+
+進捗レポートはバージョンごとに生成され、CIは両方をビルドします（`SLUS_010.13_report` と `SLPS_021.70_report`）。日本版のコードがCファイルに分割されるまでは、日本版のレポートはアセンブリをすべて未一致のコードとして数えます。共通のCソースは、現在は北米版の構成でのみビルドされます（[`mk/version.mk`](mk/version.mk) の `TU_LAYOUT_VERSIONS`）。
 
 ## リポジトリ構成
 

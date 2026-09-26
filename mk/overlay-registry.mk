@@ -293,3 +293,10 @@ overlay_zukan_gcc_272_cdk_g0_srcs := \
 	src/overlays/zukan/zukan.c
 overlay_zukan_gcc_280_g0_o0_srcs := \
 	src/overlays/zukan/zukan_category.c
+
+# The routing above is the North American translation-unit layout. Versions
+# without a split TU layout (see HAS_TU_LAYOUT in mk/version.mk) route no
+# sources yet; their overlays contribute target assembly objects only.
+ifeq ($(HAS_TU_LAYOUT),)
+$(foreach var,$(filter overlay_%_srcs,$(.VARIABLES)),$(eval $(var) :=))
+endif
