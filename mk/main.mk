@@ -203,12 +203,16 @@ ASM_SRCS := \
 	$(ASM_DIR)/data/rodata_data4.rodata.s
 
 
-# The lists above are the North American translation-unit layout. Versions
-# without a split TU layout (see HAS_TU_LAYOUT in mk/version.mk) build no C
-# objects yet; their main executable links purely from splat assembly. Splat's
-# dependency file lists exactly the objects the linker script uses (it is
-# absent until `make splat` has run for the version).
-ifeq ($(HAS_TU_LAYOUT),)
+# The lists above are the translation-unit layout of the main executable.
+# A version whose main executable does not use it yet (see TU_LAYOUT_<version>
+# in mk/version.mk) builds no C objects; its main executable links purely from
+# splat assembly. Splat's dependency file lists exactly the objects the linker
+# script uses (it is absent until `make splat` has run for the version).
+SRCS_G0 := $(filter-out $(ASM_UNITS),$(SRCS_G0))
+SRCS_G4 := $(filter-out $(ASM_UNITS),$(SRCS_G4))
+SRCS_GCC_260_G0 := $(filter-out $(ASM_UNITS),$(SRCS_GCC_260_G0))
+
+ifeq ($(call has-tu-layout,main),)
 SRCS_G0 :=
 SRCS_G4 :=
 SRCS_GCC_260_G0 :=

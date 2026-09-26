@@ -70,8 +70,8 @@ $(1)_ROUTED_SRCS = $$($(1)_GCC_272_CDK_G0_SRCS) $$($(1)_GCC_272_GNU_G0_SRCS) $$(
 # Generated unk*.c files are gitignored and splat does not remove outputs from
 # older configurations. Treat tracked C files and explicitly routed generated
 # files as build inputs so stale ignored files cannot enter the build by accident.
-# Versions without a split TU layout do not build the shared C sources yet.
-$(1)_TRACKED_C_SRCS := $$(if $(HAS_TU_LAYOUT),$$(filter $$(wildcard $$($(1)_SRC_DIR)/*.c),$$(shell git ls-files -- '$$($(1)_SRC_DIR)/*.c' 2>/dev/null)))
+# An overlay without a C layout for this version does not build the C sources.
+$(1)_TRACKED_C_SRCS := $$(filter-out $(ASM_UNITS),$$(if $$(call has-tu-layout,$(1)),$$(filter $$(wildcard $$($(1)_SRC_DIR)/*.c),$$(shell git ls-files -- '$$($(1)_SRC_DIR)/*.c' 2>/dev/null))))
 $(1)_C_SRCS = $$(sort $$($(1)_TRACKED_C_SRCS) $$(filter $$($(1)_ROUTED_SRCS),$$(wildcard $$($(1)_SRC_DIR)/*.c)))
 $(1)_UNROUTED_SRCS = $$(filter-out $$($(1)_ROUTED_SRCS),$$($(1)_C_SRCS))
 $(1)_UNKNOWN_ROUTED_SRCS = $$(filter-out $$($(1)_C_SRCS),$$($(1)_ROUTED_SRCS))

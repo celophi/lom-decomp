@@ -25,7 +25,6 @@ options:
   undefined_syms_auto_path: linker/jp/overlays/niki/undefined_syms_auto.txt
 
   symbol_addrs_path:
-    - config/jp/symbols/shared_symbol_addrs.txt
     - config/jp/symbols/niki_symbol_addrs.txt
 
   find_file_boundaries: False

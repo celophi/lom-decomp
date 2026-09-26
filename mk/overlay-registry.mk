@@ -294,9 +294,12 @@ overlay_zukan_gcc_272_cdk_g0_srcs := \
 overlay_zukan_gcc_280_g0_o0_srcs := \
 	src/overlays/zukan/zukan_category.c
 
-# The routing above is the North American translation-unit layout. Versions
-# without a split TU layout (see HAS_TU_LAYOUT in mk/version.mk) route no
-# sources yet; their overlays contribute target assembly objects only.
-ifeq ($(HAS_TU_LAYOUT),)
-$(foreach var,$(filter overlay_%_srcs,$(.VARIABLES)),$(eval $(var) :=))
-endif
+# The routing above is the translation-unit layout of each overlay. An overlay
+# that does not use it yet for this version (see TU_LAYOUT_<version> in
+# mk/version.mk) routes no sources; it contributes target assembly objects only.
+$(foreach ov,$(OVERLAYS),$(if $(call has-tu-layout,$(ov)),,\
+	$(foreach var,$(filter overlay_$(ov)_%_srcs,$(.VARIABLES)),$(eval $(var) :=))))
+
+# Units this version takes from assembly (ASM_UNITS in mk/version.mk) are not
+# compiled either.
+$(foreach var,$(filter overlay_%_srcs,$(.VARIABLES)),$(eval $(var) := $(filter-out $(ASM_UNITS),$($(var)))))

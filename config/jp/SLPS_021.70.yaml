@@ -26,6 +26,7 @@ options:
 
   symbol_addrs_path:
     - config/jp/symbols/shared_symbol_addrs.txt
+    - config/jp/symbols/slus_01013_symbol_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True
