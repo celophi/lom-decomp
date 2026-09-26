@@ -5,6 +5,10 @@ options:
   basename: ZUKAN.BIN
   platform: psx
   compiler: PSYQ
+  # include/include_asm.h, macro.inc, labels.inc and gte_macros.inc are
+  # project-owned (include_asm.h prefixes the per-version asm directory),
+  # so splat must not regenerate them.
+  generate_asm_macros_files: False
   target_path: disc/us/BIN/ZUKAN.BIN
   extensions_path: tools/splat_ext
   asset_path: assets/us

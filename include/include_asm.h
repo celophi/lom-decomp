@@ -1,6 +1,12 @@
 #ifndef INCLUDE_ASM_H
 #define INCLUDE_ASM_H
 
+/*
+ * Project-owned copy of splat's include_asm.h. The splat configs set
+ * generate_asm_macros_files: False so `make splat` does not overwrite it;
+ * the only change from splat's template is the ASM_VERSION_DIR prefix.
+ */
+
 #include "version.h"
 
 #if !defined(M2CTX) && !defined(PERMUTER)

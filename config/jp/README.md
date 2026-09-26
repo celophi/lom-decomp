@@ -12,6 +12,10 @@ Nothing here is wired up yet. Expected contents once the port starts:
 | `symbols/*_symbol_addrs.txt` | Same symbol names as `config/us/symbols/`, with JP addresses |
 | `relocations/*_reloc_addrs.txt` | JP relocation overrides |
 
+Every yaml must also set `generate_asm_macros_files: False` (see
+`config/us/`), or `make splat` overwrites the project-owned
+`include/include_asm.h`.
+
 Every path inside the yamls points at the `jp` trees (`disc/jp/`, `asm/jp/`,
 `linker/jp/`, `assets/jp/`, `build/jp/`) and uses `base_path: ../../` (main
 executable) or `base_path: ../../../` (overlays).

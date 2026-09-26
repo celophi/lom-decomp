@@ -8,6 +8,10 @@ options:
   
   platform: psx
   compiler: PSYQ
+  # include/include_asm.h, macro.inc, labels.inc and gte_macros.inc are
+  # project-owned (include_asm.h prefixes the per-version asm directory),
+  # so splat must not regenerate them.
+  generate_asm_macros_files: False
 
   asm_path: asm/us
   src_path: src
