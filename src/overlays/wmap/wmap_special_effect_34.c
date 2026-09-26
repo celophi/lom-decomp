@@ -10,6 +10,30 @@
 #include "cdrom.h"
 #include "sdk/libgte.h"
 
+void func_800BFEEC(void);
+void func_800BFF28(void);
+void func_800BFF98(void);
+void func_800BFFD8(void);
+s32 func_800C0034(s32 reset);
+void func_800C06DC(void);
+void func_800C071C(void);
+void func_800C075C(void);
+void func_800C079C(void);
+s32 func_800C0474(s32 reset);
+s32 func_800C064C(s32 reset);
+void func_800C0150(void);
+void func_800C018C(void);
+void func_800C0254(void);
+void func_800C0294(void);
+void func_800C02C0(void);
+void func_800C07DC(void);
+void func_800C02FC(void);
+s32 func_800C07F8(s32 reset);
+s32 func_800C09F4(s32 reset);
+void func_800C0960(void);
+void func_800C0B00(void);
+void func_800C0BC8(void);
+
 void func_800BF4C0(void)
 {
 typedef struct
@@ -218,7 +242,7 @@ extern WmapConfigA D_800D9420;
 extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
-extern WmapPair16 D_8011CF4C;
+extern WmapPair16 g_wmap_focus_screen_position;
 extern s32* D_8011CF1C;
 extern s32* D_8011CF24;
 extern s32* D_8011CF28;
@@ -564,15 +588,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC__for_func_800BF4C0(void) __asm__("func_800BFEEC");
-extern void func_800BFF28__for_func_800BF4C0(void) __asm__("func_800BFF28");
-extern void func_800BFF98__for_func_800BF4C0(void) __asm__("func_800BFF98");
-extern void func_800BFFD8__for_func_800BF4C0(void) __asm__("func_800BFFD8");
-extern s32 func_800C0034__for_func_800BF4C0(s32) __asm__("func_800C0034");
-extern void func_800C06DC__for_func_800BF4C0(void) __asm__("func_800C06DC");
-extern void func_800C071C__for_func_800BF4C0(void) __asm__("func_800C071C");
-extern void func_800C075C__for_func_800BF4C0(void) __asm__("func_800C075C");
-extern void func_800C079C__for_func_800BF4C0(void) __asm__("func_800C079C");
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -878,7 +893,7 @@ extern WmapConfigA D_800D9420;
 extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
-extern WmapPair16 D_8011CF4C;
+extern WmapPair16 g_wmap_focus_screen_position;
 extern s32* D_8011CF1C;
 extern s32* D_8011CF24;
 extern s32* D_8011CF28;
@@ -1224,15 +1239,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC__for_func_800BF5D4(void) __asm__("func_800BFEEC");
-extern void func_800BFF28__for_func_800BF5D4(void) __asm__("func_800BFF28");
-extern void func_800BFF98__for_func_800BF5D4(void) __asm__("func_800BFF98");
-extern void func_800BFFD8__for_func_800BF5D4(void) __asm__("func_800BFFD8");
-extern s32 func_800C0034__for_func_800BF5D4(s32) __asm__("func_800C0034");
-extern void func_800C06DC__for_func_800BF5D4(void) __asm__("func_800C06DC");
-extern void func_800C071C__for_func_800BF5D4(void) __asm__("func_800C071C");
-extern void func_800C075C__for_func_800BF5D4(void) __asm__("func_800C075C");
-extern void func_800C079C__for_func_800BF5D4(void) __asm__("func_800C079C");
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -1535,7 +1541,7 @@ extern WmapConfigA D_800D9420;
 extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
-extern WmapPair16 D_8011CF4C;
+extern WmapPair16 g_wmap_focus_screen_position;
 extern s32* D_8011CF1C;
 extern s32* D_8011CF24;
 extern s32* D_8011CF28;
@@ -1881,15 +1887,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC__for_func_800BF6F8(void) __asm__("func_800BFEEC");
-extern void func_800BFF28__for_func_800BF6F8(void) __asm__("func_800BFF28");
-extern void func_800BFF98__for_func_800BF6F8(void) __asm__("func_800BFF98");
-extern void func_800BFFD8__for_func_800BF6F8(void) __asm__("func_800BFFD8");
-extern s32 func_800C0034__for_func_800BF6F8(s32) __asm__("func_800C0034");
-extern void func_800C06DC__for_func_800BF6F8(void) __asm__("func_800C06DC");
-extern void func_800C071C__for_func_800BF6F8(void) __asm__("func_800C071C");
-extern void func_800C075C__for_func_800BF6F8(void) __asm__("func_800C075C");
-extern void func_800C079C__for_func_800BF6F8(void) __asm__("func_800C079C");
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -2192,7 +2189,7 @@ extern WmapConfigA D_800D9420;
 extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
-extern WmapPair16 D_8011CF4C;
+extern WmapPair16 g_wmap_focus_screen_position;
 extern s32* D_8011CF1C;
 extern s32* D_8011CF24;
 extern s32* D_8011CF28;
@@ -2538,15 +2535,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC__for_func_800BF81C(void) __asm__("func_800BFEEC");
-extern void func_800BFF28__for_func_800BF81C(void) __asm__("func_800BFF28");
-extern void func_800BFF98__for_func_800BF81C(void) __asm__("func_800BFF98");
-extern void func_800BFFD8__for_func_800BF81C(void) __asm__("func_800BFFD8");
-extern s32 func_800C0034__for_func_800BF81C(s32) __asm__("func_800C0034");
-extern void func_800C06DC__for_func_800BF81C(void) __asm__("func_800C06DC");
-extern void func_800C071C__for_func_800BF81C(void) __asm__("func_800C071C");
-extern void func_800C075C__for_func_800BF81C(void) __asm__("func_800C075C");
-extern void func_800C079C__for_func_800BF81C(void) __asm__("func_800C079C");
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -2624,7 +2612,7 @@ void func_800B7420(void);
         g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * 0x30) - g_wmap_view.field_04;
     }
     D_801B3230++;
-    func_800C06DC__for_func_800BF81C();
+    func_800C06DC();
 }
 
 void func_800BF920(void)
@@ -2835,7 +2823,7 @@ extern WmapConfigA D_800D9420;
 extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
-extern WmapPair16 D_8011CF4C;
+extern WmapPair16 g_wmap_focus_screen_position;
 extern s32* D_8011CF1C;
 extern s32* D_8011CF24;
 extern s32* D_8011CF28;
@@ -3181,15 +3169,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC__for_func_800BF920(void) __asm__("func_800BFEEC");
-extern void func_800BFF28__for_func_800BF920(void) __asm__("func_800BFF28");
-extern void func_800BFF98__for_func_800BF920(void) __asm__("func_800BFF98");
-extern void func_800BFFD8__for_func_800BF920(void) __asm__("func_800BFFD8");
-extern s32 func_800C0034__for_func_800BF920(s32) __asm__("func_800C0034");
-extern void func_800C06DC__for_func_800BF920(void) __asm__("func_800C06DC");
-extern void func_800C071C__for_func_800BF920(void) __asm__("func_800C071C");
-extern void func_800C075C__for_func_800BF920(void) __asm__("func_800C075C");
-extern void func_800C079C__for_func_800BF920(void) __asm__("func_800C079C");
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -3267,7 +3246,7 @@ void func_800B7420(void);
         g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * 0x30) - g_wmap_view.field_04;
     }
     D_801B3230++;
-    func_800C071C__for_func_800BF920();
+    func_800C071C();
 }
 
 void func_800BFA24(void)
@@ -3478,7 +3457,7 @@ extern WmapConfigA D_800D9420;
 extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
-extern WmapPair16 D_8011CF4C;
+extern WmapPair16 g_wmap_focus_screen_position;
 extern s32* D_8011CF1C;
 extern s32* D_8011CF24;
 extern s32* D_8011CF28;
@@ -3824,15 +3803,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC__for_func_800BFA24(void) __asm__("func_800BFEEC");
-extern void func_800BFF28__for_func_800BFA24(void) __asm__("func_800BFF28");
-extern void func_800BFF98__for_func_800BFA24(void) __asm__("func_800BFF98");
-extern void func_800BFFD8__for_func_800BFA24(void) __asm__("func_800BFFD8");
-extern s32 func_800C0034__for_func_800BFA24(s32) __asm__("func_800C0034");
-extern void func_800C06DC__for_func_800BFA24(void) __asm__("func_800C06DC");
-extern void func_800C071C__for_func_800BFA24(void) __asm__("func_800C071C");
-extern void func_800C075C__for_func_800BFA24(void) __asm__("func_800C075C");
-extern void func_800C079C__for_func_800BFA24(void) __asm__("func_800C079C");
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -3910,7 +3880,7 @@ void func_800B7420(void);
         g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * 0x30) - g_wmap_view.field_04;
     }
     D_801B3230++;
-    func_800C075C__for_func_800BFA24();
+    func_800C075C();
 }
 
 void func_800BFB28(void)
@@ -4121,7 +4091,7 @@ extern WmapConfigA D_800D9420;
 extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
-extern WmapPair16 D_8011CF4C;
+extern WmapPair16 g_wmap_focus_screen_position;
 extern s32* D_8011CF1C;
 extern s32* D_8011CF24;
 extern s32* D_8011CF28;
@@ -4467,15 +4437,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC__for_func_800BFB28(void) __asm__("func_800BFEEC");
-extern void func_800BFF28__for_func_800BFB28(void) __asm__("func_800BFF28");
-extern void func_800BFF98__for_func_800BFB28(void) __asm__("func_800BFF98");
-extern void func_800BFFD8__for_func_800BFB28(void) __asm__("func_800BFFD8");
-extern s32 func_800C0034__for_func_800BFB28(s32) __asm__("func_800C0034");
-extern void func_800C06DC__for_func_800BFB28(void) __asm__("func_800C06DC");
-extern void func_800C071C__for_func_800BFB28(void) __asm__("func_800C071C");
-extern void func_800C075C__for_func_800BFB28(void) __asm__("func_800C075C");
-extern void func_800C079C__for_func_800BFB28(void) __asm__("func_800C079C");
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -4553,7 +4514,7 @@ void func_800B7420(void);
         g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * 0x30) - g_wmap_view.field_04;
     }
     D_801B3230++;
-    func_800C079C__for_func_800BFB28();
+    func_800C079C();
 }
 
 void func_800BFC28(void)
@@ -4764,7 +4725,7 @@ extern WmapConfigA D_800D9420;
 extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
-extern WmapPair16 D_8011CF4C;
+extern WmapPair16 g_wmap_focus_screen_position;
 extern s32* D_8011CF1C;
 extern s32* D_8011CF24;
 extern s32* D_8011CF28;
@@ -5110,15 +5071,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC__for_func_800BFC28(void) __asm__("func_800BFEEC");
-extern void func_800BFF28__for_func_800BFC28(void) __asm__("func_800BFF28");
-extern void func_800BFF98__for_func_800BFC28(void) __asm__("func_800BFF98");
-extern void func_800BFFD8__for_func_800BFC28(void) __asm__("func_800BFFD8");
-extern s32 func_800C0034__for_func_800BFC28(s32) __asm__("func_800C0034");
-extern void func_800C06DC__for_func_800BFC28(void) __asm__("func_800C06DC");
-extern void func_800C071C__for_func_800BFC28(void) __asm__("func_800C071C");
-extern void func_800C075C__for_func_800BFC28(void) __asm__("func_800C075C");
-extern void func_800C079C__for_func_800BFC28(void) __asm__("func_800C079C");
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -5426,7 +5378,7 @@ extern WmapConfigA D_800D9420;
 extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
-extern WmapPair16 D_8011CF4C;
+extern WmapPair16 g_wmap_focus_screen_position;
 extern s32* D_8011CF1C;
 extern s32* D_8011CF24;
 extern s32* D_8011CF28;
@@ -5772,15 +5724,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC__for_func_800BFD18(void) __asm__("func_800BFEEC");
-extern void func_800BFF28__for_func_800BFD18(void) __asm__("func_800BFF28");
-extern void func_800BFF98__for_func_800BFD18(void) __asm__("func_800BFF98");
-extern void func_800BFFD8__for_func_800BFD18(void) __asm__("func_800BFFD8");
-extern s32 func_800C0034__for_func_800BFD18(s32) __asm__("func_800C0034");
-extern void func_800C06DC__for_func_800BFD18(void) __asm__("func_800C06DC");
-extern void func_800C071C__for_func_800BFD18(void) __asm__("func_800C071C");
-extern void func_800C075C__for_func_800BFD18(void) __asm__("func_800C075C");
-extern void func_800C079C__for_func_800BFD18(void) __asm__("func_800C079C");
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -6074,7 +6017,7 @@ extern WmapConfigA D_800D9420;
 extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
-extern WmapPair16 D_8011CF4C;
+extern WmapPair16 g_wmap_focus_screen_position;
 extern s32* D_8011CF1C;
 extern s32* D_8011CF24;
 extern s32* D_8011CF28;
@@ -6420,15 +6363,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC__for_func_800BFD90(void) __asm__("func_800BFEEC");
-extern void func_800BFF28__for_func_800BFD90(void) __asm__("func_800BFF28");
-extern void func_800BFF98__for_func_800BFD90(void) __asm__("func_800BFF98");
-extern void func_800BFFD8__for_func_800BFD90(void) __asm__("func_800BFFD8");
-extern s32 func_800C0034__for_func_800BFD90(s32) __asm__("func_800C0034");
-extern void func_800C06DC__for_func_800BFD90(void) __asm__("func_800C06DC");
-extern void func_800C071C__for_func_800BFD90(void) __asm__("func_800C071C");
-extern void func_800C075C__for_func_800BFD90(void) __asm__("func_800C075C");
-extern void func_800C079C__for_func_800BFD90(void) __asm__("func_800C079C");
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -6710,7 +6644,7 @@ extern WmapConfigA D_800D9420;
 extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
-extern WmapPair16 D_8011CF4C;
+extern WmapPair16 g_wmap_focus_screen_position;
 extern s32* D_8011CF1C;
 extern s32* D_8011CF24;
 extern s32* D_8011CF28;
@@ -7056,15 +6990,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC__for_func_800BFDA8(void) __asm__("func_800BFEEC");
-extern void func_800BFF28__for_func_800BFDA8(void) __asm__("func_800BFF28");
-extern void func_800BFF98__for_func_800BFDA8(void) __asm__("func_800BFF98");
-extern void func_800BFFD8__for_func_800BFDA8(void) __asm__("func_800BFFD8");
-extern s32 func_800C0034__for_func_800BFDA8(s32) __asm__("func_800C0034");
-extern void func_800C06DC__for_func_800BFDA8(void) __asm__("func_800C06DC");
-extern void func_800C071C__for_func_800BFDA8(void) __asm__("func_800C071C");
-extern void func_800C075C__for_func_800BFDA8(void) __asm__("func_800C075C");
-extern void func_800C079C__for_func_800BFDA8(void) __asm__("func_800C079C");
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -7137,8 +7062,8 @@ void func_800B7420(void);
     s32 field_00;
     s32 field_04;
 
-    D_8011CF4C.field_00 = 0xA4;
-    D_8011CF4C.field_02 = 0x69;
+    g_wmap_focus_screen_position.field_00 = 0xA4;
+    g_wmap_focus_screen_position.field_02 = 0x69;
     g_wmap_saved_view = g_wmap_view;
     field_00 = g_wmap_cursor_column;
     field_04 = g_wmap_cursor_row;
@@ -7359,7 +7284,7 @@ extern WmapConfigA D_800D9420;
 extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
-extern WmapPair16 D_8011CF4C;
+extern WmapPair16 g_wmap_focus_screen_position;
 extern s32* D_8011CF1C;
 extern s32* D_8011CF24;
 extern s32* D_8011CF28;
@@ -7705,15 +7630,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC__for_func_800BFE54(void) __asm__("func_800BFEEC");
-extern void func_800BFF28__for_func_800BFE54(void) __asm__("func_800BFF28");
-extern void func_800BFF98__for_func_800BFE54(void) __asm__("func_800BFF98");
-extern void func_800BFFD8__for_func_800BFE54(void) __asm__("func_800BFFD8");
-extern s32 func_800C0034__for_func_800BFE54(s32) __asm__("func_800C0034");
-extern void func_800C06DC__for_func_800BFE54(void) __asm__("func_800C06DC");
-extern void func_800C071C__for_func_800BFE54(void) __asm__("func_800C071C");
-extern void func_800C075C__for_func_800BFE54(void) __asm__("func_800C075C");
-extern void func_800C079C__for_func_800BFE54(void) __asm__("func_800C079C");
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -7997,7 +7913,7 @@ extern WmapConfigA D_800D9420;
 extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
-extern WmapPair16 D_8011CF4C;
+extern WmapPair16 g_wmap_focus_screen_position;
 extern s32* D_8011CF1C;
 extern s32* D_8011CF24;
 extern s32* D_8011CF28;
@@ -8343,15 +8259,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC__for_func_800BFE88(void) __asm__("func_800BFEEC");
-extern void func_800BFF28__for_func_800BFE88(void) __asm__("func_800BFF28");
-extern void func_800BFF98__for_func_800BFE88(void) __asm__("func_800BFF98");
-extern void func_800BFFD8__for_func_800BFE88(void) __asm__("func_800BFFD8");
-extern s32 func_800C0034__for_func_800BFE88(s32) __asm__("func_800C0034");
-extern void func_800C06DC__for_func_800BFE88(void) __asm__("func_800C06DC");
-extern void func_800C071C__for_func_800BFE88(void) __asm__("func_800C071C");
-extern void func_800C075C__for_func_800BFE88(void) __asm__("func_800C075C");
-extern void func_800C079C__for_func_800BFE88(void) __asm__("func_800C079C");
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -8424,10 +8331,10 @@ void func_800B7420(void);
     cdrom_wait_queue_empty();
     func_800651B4(&D_80182E40);
     func_800651B4(&D_8018B240);
-    func_8006CAC0(func_800C0034__for_func_800BFE88);
+    wmap_start_sequence(func_800C0034);
     D_8013B20C = 1;
     D_801B3218++;
-    func_800BFEEC__for_func_800BFE88();
+    func_800BFEEC();
 }
 
 void func_800BFEEC(void)
@@ -8638,7 +8545,7 @@ extern WmapConfigA D_800D9420;
 extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
-extern WmapPair16 D_8011CF4C;
+extern WmapPair16 g_wmap_focus_screen_position;
 extern s32* D_8011CF1C;
 extern s32* D_8011CF24;
 extern s32* D_8011CF28;
@@ -8985,14 +8892,6 @@ extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
 extern void func_800BFEEC(void);
-extern void func_800BFF28__for_func_800BFEEC(void) __asm__("func_800BFF28");
-extern void func_800BFF98__for_func_800BFEEC(void) __asm__("func_800BFF98");
-extern void func_800BFFD8__for_func_800BFEEC(void) __asm__("func_800BFFD8");
-extern s32 func_800C0034__for_func_800BFEEC(s32) __asm__("func_800C0034");
-extern void func_800C06DC__for_func_800BFEEC(void) __asm__("func_800C06DC");
-extern void func_800C071C__for_func_800BFEEC(void) __asm__("func_800C071C");
-extern void func_800C075C__for_func_800BFEEC(void) __asm__("func_800C075C");
-extern void func_800C079C__for_func_800BFEEC(void) __asm__("func_800C079C");
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -9065,7 +8964,7 @@ void func_800B7420(void);
     if (D_8013B20C == 0)
     {
         D_801B3218++;
-        func_800BFF28__for_func_800BFEEC();
+        func_800BFF28();
     }
 }
 
@@ -9277,7 +9176,7 @@ extern WmapConfigA D_800D9420;
 extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
-extern WmapPair16 D_8011CF4C;
+extern WmapPair16 g_wmap_focus_screen_position;
 extern s32* D_8011CF1C;
 extern s32* D_8011CF24;
 extern s32* D_8011CF28;
@@ -9623,15 +9522,7 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC__for_func_800BFF28(void) __asm__("func_800BFEEC");
 extern void func_800BFF28(void);
-extern void func_800BFF98__for_func_800BFF28(void) __asm__("func_800BFF98");
-extern void func_800BFFD8__for_func_800BFF28(void) __asm__("func_800BFFD8");
-extern s32 func_800C0034__for_func_800BFF28(s32) __asm__("func_800C0034");
-extern void func_800C06DC__for_func_800BFF28(void) __asm__("func_800C06DC");
-extern void func_800C071C__for_func_800BFF28(void) __asm__("func_800C071C");
-extern void func_800C075C__for_func_800BFF28(void) __asm__("func_800C075C");
-extern void func_800C079C__for_func_800BFF28(void) __asm__("func_800C079C");
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -9705,7 +9596,7 @@ void func_800B7420(void);
     g_wmap_scroll_remaining_x = g_wmap_saved_view.field_00 - g_wmap_view.field_00;
     g_wmap_scroll_remaining_y = g_wmap_saved_view.field_04 - g_wmap_view.field_04;
     D_801B3218++;
-    func_800BFF98__for_func_800BFF28();
+    func_800BFF98();
 }
 
 void func_800BFF98(void)
@@ -9916,7 +9807,7 @@ extern WmapConfigA D_800D9420;
 extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
-extern WmapPair16 D_8011CF4C;
+extern WmapPair16 g_wmap_focus_screen_position;
 extern s32* D_8011CF1C;
 extern s32* D_8011CF24;
 extern s32* D_8011CF28;
@@ -10262,15 +10153,7 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC__for_func_800BFF98(void) __asm__("func_800BFEEC");
-extern void func_800BFF28__for_func_800BFF98(void) __asm__("func_800BFF28");
 extern void func_800BFF98(void);
-extern void func_800BFFD8__for_func_800BFF98(void) __asm__("func_800BFFD8");
-extern s32 func_800C0034__for_func_800BFF98(s32) __asm__("func_800C0034");
-extern void func_800C06DC__for_func_800BFF98(void) __asm__("func_800C06DC");
-extern void func_800C071C__for_func_800BFF98(void) __asm__("func_800C071C");
-extern void func_800C075C__for_func_800BFF98(void) __asm__("func_800C075C");
-extern void func_800C079C__for_func_800BFF98(void) __asm__("func_800C079C");
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -10343,7 +10226,7 @@ void func_800B7420(void);
     if (g_wmap_view_scroll_mode != 2)
     {
         D_801B3218++;
-        func_800BFFD8__for_func_800BFF98();
+        func_800BFFD8();
     }
 }
 
@@ -10555,7 +10438,7 @@ extern WmapConfigA D_800D9420;
 extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
-extern WmapPair16 D_8011CF4C;
+extern WmapPair16 g_wmap_focus_screen_position;
 extern s32* D_8011CF1C;
 extern s32* D_8011CF24;
 extern s32* D_8011CF28;
@@ -10901,15 +10784,7 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC__for_func_800BFFD8(void) __asm__("func_800BFEEC");
-extern void func_800BFF28__for_func_800BFFD8(void) __asm__("func_800BFF28");
-extern void func_800BFF98__for_func_800BFFD8(void) __asm__("func_800BFF98");
 extern void func_800BFFD8(void);
-extern s32 func_800C0034__for_func_800BFFD8(s32) __asm__("func_800C0034");
-extern void func_800C06DC__for_func_800BFFD8(void) __asm__("func_800C06DC");
-extern void func_800C071C__for_func_800BFFD8(void) __asm__("func_800C071C");
-extern void func_800C075C__for_func_800BFFD8(void) __asm__("func_800C075C");
-extern void func_800C079C__for_func_800BFFD8(void) __asm__("func_800C079C");
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -11195,7 +11070,7 @@ extern WmapConfigA D_800D9420;
 extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
-extern WmapPair16 D_8011CF4C;
+extern WmapPair16 g_wmap_focus_screen_position;
 extern s32* D_8011CF1C;
 extern s32* D_8011CF24;
 extern s32* D_8011CF28;
@@ -11541,15 +11416,7 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC__for_func_800C0034(void) __asm__("func_800BFEEC");
-extern void func_800BFF28__for_func_800C0034(void) __asm__("func_800BFF28");
-extern void func_800BFF98__for_func_800C0034(void) __asm__("func_800BFF98");
-extern void func_800BFFD8__for_func_800C0034(void) __asm__("func_800BFFD8");
 extern s32 func_800C0034(s32);
-extern void func_800C06DC__for_func_800C0034(void) __asm__("func_800C06DC");
-extern void func_800C071C__for_func_800C0034(void) __asm__("func_800C071C");
-extern void func_800C075C__for_func_800C0034(void) __asm__("func_800C075C");
-extern void func_800C079C__for_func_800C0034(void) __asm__("func_800C079C");
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -11843,7 +11710,7 @@ extern WmapConfigA D_800D9420;
 extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
-extern WmapPair16 D_8011CF4C;
+extern WmapPair16 g_wmap_focus_screen_position;
 extern s32* D_8011CF1C;
 extern s32* D_8011CF24;
 extern s32* D_8011CF28;
@@ -12189,15 +12056,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC__for_func_800C00AC(void) __asm__("func_800BFEEC");
-extern void func_800BFF28__for_func_800C00AC(void) __asm__("func_800BFF28");
-extern void func_800BFF98__for_func_800C00AC(void) __asm__("func_800BFF98");
-extern void func_800BFFD8__for_func_800C00AC(void) __asm__("func_800BFFD8");
-extern s32 func_800C0034__for_func_800C00AC(s32) __asm__("func_800C0034");
-extern void func_800C06DC__for_func_800C00AC(void) __asm__("func_800C06DC");
-extern void func_800C071C__for_func_800C00AC(void) __asm__("func_800C071C");
-extern void func_800C075C__for_func_800C00AC(void) __asm__("func_800C075C");
-extern void func_800C079C__for_func_800C00AC(void) __asm__("func_800C079C");
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -12277,10 +12135,6 @@ extern s32 D_8013924C;
 extern s32 D_8013B208;
 extern s32 D_80139234;
 extern s32 D_801B3220;
-extern s32 func_800C0474__for_func_800C00C4(s32) __asm__("func_800C0474");
-extern s32 func_800C064C__for_func_800C00C4(s32) __asm__("func_800C064C");
-extern void func_800C0150__for_func_800C00C4(void) __asm__("func_800C0150");
-extern void func_800C018C__for_func_800C00C4(void) __asm__("func_800C018C");
 
     D_8013B208 = 1;
     wmap_play_sound(0x3B, 0x80);
@@ -12288,10 +12142,10 @@ extern void func_800C018C__for_func_800C00C4(void) __asm__("func_800C018C");
     g_wmap_backdrop_target_level = 0xA;
     D_80139234 = 1;
     D_8013924C = 1;
-    func_8006CAC0(func_800C0474__for_func_800C00C4);
-    func_8006CAC0(func_800C064C__for_func_800C00C4);
+    wmap_start_sequence(func_800C0474);
+    wmap_start_sequence(func_800C064C);
     D_801B3220++;
-    func_800C0150__for_func_800C00C4();
+    func_800C0150();
 }
 
 /**
@@ -12303,15 +12157,12 @@ extern s32 D_8013924C;
 extern s32 D_8013B208;
 extern s32 D_80139234;
 extern s32 D_801B3220;
-extern s32 func_800C0474__for_func_800C0150(s32) __asm__("func_800C0474");
-extern s32 func_800C064C__for_func_800C0150(s32) __asm__("func_800C064C");
 extern void func_800C0150(void);
-extern void func_800C018C__for_func_800C0150(void) __asm__("func_800C018C");
 
     if (D_80139234 == 0)
     {
         D_801B3220 += 1;
-        func_800C018C__for_func_800C0150();
+        func_800C018C();
     }
 }
 
@@ -12335,14 +12186,13 @@ extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
 extern s32 D_80182DD8;
 extern s32 D_801B3220;
-extern void func_800C0254__for_func_800C018C(void) __asm__("func_800C0254");
 
     wmap_find_land_cell(D_80054A18[D_80182DD8 - 4], &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_view_scroll_mode = 2;
     g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * 0x30) - g_wmap_view.field_00;
     g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * 0x30) - g_wmap_view.field_04;
     D_801B3220++;
-    func_800C0254__for_func_800C018C();
+    func_800C0254();
 }
 
 /**
@@ -12352,12 +12202,11 @@ void func_800C0254(void)
 {
 extern s32 g_wmap_view_scroll_mode;
 extern s32 D_801B3220;
-extern void func_800C0294__for_func_800C0254(void) __asm__("func_800C0294");
 
     if (g_wmap_view_scroll_mode != 2)
     {
         D_801B3220 += 1;
-        func_800C0294__for_func_800C0254();
+        func_800C0294();
     }
 }
 
@@ -12365,10 +12214,9 @@ extern void func_800C0294__for_func_800C0254(void) __asm__("func_800C0294");
 void func_800C0294(void)
 {
 extern s32 D_801B3220;
-extern void func_800C02C0__for_func_800C0294(void) __asm__("func_800C02C0");
 
     D_801B3220 += 1;
-    func_800C02C0__for_func_800C0294();
+    func_800C02C0();
 }
 
 void func_800C02C0(void)
@@ -12425,7 +12273,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -12439,25 +12287,10 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0__for_func_800C02C0(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C02C0(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C02C0(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C02C0(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C02C0(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C02C0(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C02C0(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C02C0(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C02C0(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C02C0(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C02C0(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C02C0(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C02C0(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C02C0(void) __asm__("func_800C0BC8");
-
     if (D_8013924C == 0)
     {
         D_801B3220++;
-        func_800C02FC__for_func_800C02C0();
+        func_800C02FC();
     }
 }
 
@@ -12515,7 +12348,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -12529,22 +12362,9 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0__for_func_800C02FC(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C02FC(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C02FC(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C02FC(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C02FC(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C02FC(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C02FC(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C02FC(void) __asm__("func_800C07DC");
 extern void func_800C02FC(void);
-extern s32 func_800C07F8__for_func_800C02FC(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C02FC(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C02FC(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C02FC(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C02FC(void) __asm__("func_800C0BC8");
 
-    func_8006CAC0(func_800C07F8__for_func_800C02FC);
+    wmap_start_sequence(func_800C07F8);
     D_801B3224 = 0xC;
     D_801B3220++;
 }
@@ -12603,7 +12423,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -12616,21 +12436,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0__for_func_800C0338(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C0338(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C0338(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C0338(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C0338(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C0338(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C0338(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C0338(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C0338(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C0338(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C0338(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C0338(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C0338(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C0338(void) __asm__("func_800C0BC8");
 
     if (--D_801B3224 == 0)
     {
@@ -12692,7 +12497,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -12706,22 +12511,7 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0__for_func_800C036C(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C036C(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C036C(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C036C(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C036C(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C036C(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C036C(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C036C(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C036C(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C036C(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C036C(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C036C(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C036C(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C036C(void) __asm__("func_800C0BC8");
-
-    func_8006CAC0(func_800C09F4__for_func_800C036C);
+    wmap_start_sequence(func_800C09F4);
     D_801B3224 = 0x5A;
     D_801B3220++;
 }
@@ -12780,7 +12570,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -12793,21 +12583,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0__for_func_800C03A8(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C03A8(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C03A8(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C03A8(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C03A8(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C03A8(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C03A8(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C03A8(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C03A8(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C03A8(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C03A8(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C03A8(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C03A8(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C03A8(void) __asm__("func_800C0BC8");
 
     if (--D_801B3224 == 0)
     {
@@ -12869,7 +12644,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -12882,21 +12657,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0__for_func_800C03DC(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C03DC(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C03DC(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C03DC(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C03DC(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C03DC(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C03DC(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C03DC(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C03DC(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C03DC(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C03DC(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C03DC(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C03DC(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C03DC(void) __asm__("func_800C0BC8");
 
     wmap_start_map_tint(0x808080);
     g_wmap_backdrop_target_level = 0x10;
@@ -12958,7 +12718,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -12971,21 +12731,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0__for_func_800C0424(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C0424(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C0424(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C0424(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C0424(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C0424(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C0424(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C0424(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C0424(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C0424(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C0424(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C0424(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C0424(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C0424(void) __asm__("func_800C0BC8");
 
     if (--D_801B3224 == 0)
     {
@@ -13047,7 +12792,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -13060,21 +12805,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0__for_func_800C0458(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C0458(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C0458(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C0458(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C0458(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C0458(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C0458(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C0458(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C0458(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C0458(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C0458(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C0458(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C0458(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C0458(void) __asm__("func_800C0BC8");
 
     D_8013B20C = 0;
     D_801B3220++;
@@ -13134,7 +12864,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -13147,21 +12877,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0__for_func_800C0474(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C0474(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C0474(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C0474(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C0474(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C0474(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C0474(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C0474(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C0474(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C0474(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C0474(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C0474(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C0474(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C0474(void) __asm__("func_800C0BC8");
 
     if (reset != 0)
     {
@@ -13233,7 +12948,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -13246,21 +12961,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0__for_func_800C04EC(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C04EC(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C04EC(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C04EC(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C04EC(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C04EC(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C04EC(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C04EC(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C04EC(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C04EC(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C04EC(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C04EC(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C04EC(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C04EC(void) __asm__("func_800C0BC8");
 
     D_801B3228 = 1;
     D_801B322C = 1;
@@ -13320,7 +13020,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -13334,21 +13034,6 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0__for_func_800C0504(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C0504(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C0504(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C0504(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C0504(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C0504(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C0504(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C0504(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C0504(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C0504(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C0504(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C0504(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C0504(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C0504(void) __asm__("func_800C0BC8");
-
     D_801B24A0 = D_80139258;
     D_801B2650 = D_8011CF60;
     D_80182DE8 = 0;
@@ -13357,7 +13042,7 @@ extern void func_800C0BC8__for_func_800C0504(void) __asm__("func_800C0BC8");
     D_8013923C = 0;
     D_801B322C = 0x3C;
     D_801B3228++;
-    func_800BF4C0__for_func_800C0504();
+    func_800BF4C0();
 }
 
 void func_800C05C0(void)
@@ -13414,7 +13099,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -13428,24 +13113,9 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0__for_func_800C05C0(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C05C0(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C05C0(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C05C0(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C05C0(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C05C0(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C05C0(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C05C0(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C05C0(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C05C0(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C05C0(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C05C0(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C05C0(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C05C0(void) __asm__("func_800C0BC8");
-
     D_801B322C = 0xB4;
     D_801B3228++;
-    func_800BF5D4__for_func_800C05C0();
+    func_800BF5D4();
 }
 
 void func_800C05F8(void)
@@ -13502,7 +13172,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -13516,24 +13186,9 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0__for_func_800C05F8(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C05F8(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C05F8(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C05F8(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C05F8(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C05F8(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C05F8(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C05F8(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C05F8(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C05F8(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C05F8(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C05F8(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C05F8(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C05F8(void) __asm__("func_800C0BC8");
-
     D_801B322C = 0x1E;
     D_801B3228++;
-    func_800BF6F8__for_func_800C05F8();
+    func_800BF6F8();
 }
 
 void func_800C0630(void)
@@ -13590,7 +13245,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -13603,21 +13258,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0__for_func_800C0630(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C0630(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C0630(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C0630(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C0630(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C0630(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C0630(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C0630(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C0630(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C0630(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C0630(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C0630(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C0630(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C0630(void) __asm__("func_800C0BC8");
 
     D_8013924C = 0;
     D_801B3228++;
@@ -13677,7 +13317,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -13690,21 +13330,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0__for_func_800C064C(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C064C(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C064C(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C064C(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C064C(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C064C(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C064C(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C064C(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C064C(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C064C(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C064C(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C064C(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C064C(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C064C(void) __asm__("func_800C0BC8");
 
     if (reset != 0)
     {
@@ -13776,7 +13401,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -13789,21 +13414,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0__for_func_800C06C4(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C06C4(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C06C4(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C06C4(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C06C4(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C06C4(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C06C4(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C06C4(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C06C4(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C06C4(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C06C4(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C06C4(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C06C4(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C06C4(void) __asm__("func_800C0BC8");
 
     D_801B3230 = 1;
     D_801B3234 = 1;
@@ -13863,7 +13473,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -13877,25 +13487,10 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0__for_func_800C06DC(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C06DC(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C06DC(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C06DC(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C06DC(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C06DC(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C06DC(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C06DC(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C06DC(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C06DC(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C06DC(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C06DC(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C06DC(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C06DC(void) __asm__("func_800C0BC8");
-
     if (g_wmap_view_scroll_mode != 2)
     {
         D_801B3230++;
-        func_800BF920__for_func_800C06DC();
+        func_800BF920();
     }
 }
 
@@ -13953,7 +13548,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -13967,25 +13562,10 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0__for_func_800C071C(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C071C(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C071C(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C071C(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C071C(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C071C(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C071C(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C071C(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C071C(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C071C(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C071C(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C071C(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C071C(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C071C(void) __asm__("func_800C0BC8");
-
     if (g_wmap_view_scroll_mode != 2)
     {
         D_801B3230++;
-        func_800BFA24__for_func_800C071C();
+        func_800BFA24();
     }
 }
 
@@ -14043,7 +13623,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -14057,25 +13637,10 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0__for_func_800C075C(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C075C(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C075C(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C075C(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C075C(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C075C(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C075C(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C075C(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C075C(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C075C(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C075C(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C075C(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C075C(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C075C(void) __asm__("func_800C0BC8");
-
     if (g_wmap_view_scroll_mode != 2)
     {
         D_801B3230++;
-        func_800BFB28__for_func_800C075C();
+        func_800BFB28();
     }
 }
 
@@ -14133,7 +13698,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -14147,25 +13712,10 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0__for_func_800C079C(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C079C(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C079C(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C079C(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C079C(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C079C(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C079C(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C079C(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C079C(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C079C(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C079C(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C079C(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C079C(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C079C(void) __asm__("func_800C0BC8");
-
     if (g_wmap_view_scroll_mode != 2)
     {
         D_801B3230++;
-        func_800C07DC__for_func_800C079C();
+        func_800C07DC();
     }
 }
 
@@ -14223,7 +13773,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -14237,20 +13787,7 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0__for_func_800C07DC(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C07DC(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C07DC(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C07DC(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C07DC(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C07DC(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C07DC(void) __asm__("func_800BFC28");
 extern void func_800C07DC(void);
-extern void func_800C02FC__for_func_800C07DC(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C07DC(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C07DC(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C07DC(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C07DC(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C07DC(void) __asm__("func_800C0BC8");
 
     D_80139234 = 0;
     D_801B3230++;
@@ -14310,7 +13847,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -14324,20 +13861,7 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0__for_func_800C07F8(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C07F8(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C07F8(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C07F8(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C07F8(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C07F8(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C07F8(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C07F8(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C07F8(void) __asm__("func_800C02FC");
 extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4__for_func_800C07F8(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C07F8(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C07F8(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C07F8(void) __asm__("func_800C0BC8");
 
     if (reset != 0)
     {
@@ -14409,7 +13933,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -14422,21 +13946,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0__for_func_800C0870(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C0870(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C0870(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C0870(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C0870(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C0870(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C0870(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C0870(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C0870(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C0870(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C0870(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C0870(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C0870(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C0870(void) __asm__("func_800C0BC8");
 
     D_801B3238 = 1;
     D_801B323C = 1;
@@ -14496,7 +14005,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -14510,21 +14019,6 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0__for_func_800C0888(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C0888(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C0888(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C0888(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C0888(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C0888(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C0888(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C0888(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C0888(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C0888(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C0888(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C0888(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C0888(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C0888(void) __asm__("func_800C0BC8");
-
     D_801399B4 = &D_8011F538;
     D_800D9344.field_06 = 0xF;
     D_800D9344.field_0E = 1;
@@ -14537,7 +14031,7 @@ extern void func_800C0BC8__for_func_800C0888(void) __asm__("func_800C0BC8");
     D_80182D60.field_02 = 0;
     D_801B323C = 0x64;
     D_801B3238++;
-    func_800BFC28__for_func_800C0888();
+    func_800BFC28();
 }
 
 void func_800C0914(void)
@@ -14594,7 +14088,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -14608,26 +14102,11 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0__for_func_800C0914(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C0914(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C0914(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C0914(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C0914(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C0914(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C0914(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C0914(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C0914(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C0914(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C0914(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C0914(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C0914(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C0914(void) __asm__("func_800C0BC8");
-
     D_800D9344.field_26 = 4;
     D_800D9344.field_22 = 0;
     D_801B323C = 0x20;
     D_801B3238++;
-    func_800C0960__for_func_800C0914();
+    func_800C0960();
 }
 
 void func_800C0960(void)
@@ -14684,7 +14163,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -14698,20 +14177,7 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0__for_func_800C0960(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C0960(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C0960(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C0960(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C0960(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C0960(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C0960(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C0960(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C0960(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C0960(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C0960(s32) __asm__("func_800C09F4");
 extern void func_800C0960(void);
-extern void func_800C0B00__for_func_800C0960(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C0960(void) __asm__("func_800C0BC8");
 
     wmap_step_actor_animation(&D_800D9344, &D_801399B0);
     wmap_draw_actor_sprite(&D_800D9344, D_80182D58, 8, 8, 0);
@@ -14775,7 +14241,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -14788,21 +14254,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0__for_func_800C09DC(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C09DC(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C09DC(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C09DC(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C09DC(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C09DC(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C09DC(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C09DC(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C09DC(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C09DC(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C09DC(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C09DC(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C09DC(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C09DC(void) __asm__("func_800C0BC8");
 
     D_801B3238++;
 }
@@ -14861,7 +14312,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -14875,20 +14326,7 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0__for_func_800C09F4(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C09F4(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C09F4(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C09F4(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C09F4(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C09F4(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C09F4(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C09F4(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C09F4(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C09F4(s32) __asm__("func_800C07F8");
 extern s32 func_800C09F4(s32);
-extern void func_800C0960__for_func_800C09F4(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C09F4(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C09F4(void) __asm__("func_800C0BC8");
 
     if (reset != 0)
     {
@@ -14960,7 +14398,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -14973,21 +14411,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0__for_func_800C0A6C(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C0A6C(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C0A6C(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C0A6C(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C0A6C(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C0A6C(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C0A6C(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C0A6C(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C0A6C(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C0A6C(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C0A6C(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C0A6C(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C0A6C(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C0A6C(void) __asm__("func_800C0BC8");
 
     D_801B3240 = 1;
     D_801B3244 = 1;
@@ -15047,7 +14470,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -15061,21 +14484,6 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0__for_func_800C0A84(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C0A84(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C0A84(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C0A84(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C0A84(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C0A84(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C0A84(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C0A84(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C0A84(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C0A84(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C0A84(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C0A84(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C0A84(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C0A84(void) __asm__("func_800C0BC8");
-
     D_801399BC = &D_8011F538;
     D_800D9370.field_06 = 0xF;
     D_800D9370.field_10 = -1;
@@ -15086,7 +14494,7 @@ extern void func_800C0BC8__for_func_800C0A84(void) __asm__("func_800C0BC8");
     D_800D9370.field_24 = 0;
     D_801B3244 = 0x3E;
     D_801B3240++;
-    func_800C0B00__for_func_800C0A84();
+    func_800C0B00();
 }
 
 void func_800C0B00(void)
@@ -15143,7 +14551,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -15157,23 +14565,10 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0__for_func_800C0B00(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C0B00(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C0B00(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C0B00(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C0B00(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C0B00(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C0B00(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C0B00(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C0B00(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C0B00(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C0B00(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C0B00(void) __asm__("func_800C0960");
 extern void func_800C0B00(void);
-extern void func_800C0BC8__for_func_800C0B00(void) __asm__("func_800C0BC8");
 
     wmap_step_actor_animation(&D_800D9370, &D_801399B8);
-    wmap_draw_actor_sprite(&D_800D9370, D_8011CF4C, 8, 8, 0);
+    wmap_draw_actor_sprite(&D_800D9370, g_wmap_focus_screen_position, 8, 8, 0);
     if (--D_801B3244 == 0)
     {
         D_801B3240++;
@@ -15234,7 +14629,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -15248,26 +14643,11 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0__for_func_800C0B7C(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C0B7C(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C0B7C(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C0B7C(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C0B7C(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C0B7C(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C0B7C(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C0B7C(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C0B7C(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C0B7C(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C0B7C(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C0B7C(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C0B7C(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C0B7C(void) __asm__("func_800C0BC8");
-
     D_800D9370.field_26 = 2;
     D_800D9370.field_22 = 0;
     D_801B3244 = 0x40;
     D_801B3240++;
-    func_800C0BC8__for_func_800C0B7C();
+    func_800C0BC8();
 }
 
 void func_800C0BC8(void)
@@ -15324,7 +14704,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -15338,23 +14718,10 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0__for_func_800C0BC8(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C0BC8(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C0BC8(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C0BC8(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C0BC8(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C0BC8(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C0BC8(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C0BC8(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C0BC8(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C0BC8(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C0BC8(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C0BC8(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C0BC8(void) __asm__("func_800C0B00");
 extern void func_800C0BC8(void);
 
     wmap_step_actor_animation(&D_800D9370, &D_801399B8);
-    wmap_draw_actor_sprite(&D_800D9370, D_8011CF4C, 8, 8, 0);
+    wmap_draw_actor_sprite(&D_800D9370, g_wmap_focus_screen_position, 8, 8, 0);
     if (--D_801B3244 == 0)
     {
         D_801B3240++;
@@ -15415,7 +14782,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -15428,21 +14795,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0__for_func_800C0C44(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C0C44(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C0C44(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C0C44(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C0C44(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C0C44(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C0C44(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C0C44(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C0C44(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C0C44(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C0C44(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C0C44(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C0C44(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C0C44(void) __asm__("func_800C0BC8");
 
     D_801B3240++;
 }
@@ -15501,7 +14853,7 @@ extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
 extern void* D_801399BC;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern WmapPair D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B3220;
@@ -15514,21 +14866,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0__for_func_800C0C5C(void) __asm__("func_800BF4C0");
-extern void func_800BF5D4__for_func_800C0C5C(void) __asm__("func_800BF5D4");
-extern void func_800BF6F8__for_func_800C0C5C(void) __asm__("func_800BF6F8");
-extern void func_800BF920__for_func_800C0C5C(void) __asm__("func_800BF920");
-extern void func_800BFA24__for_func_800C0C5C(void) __asm__("func_800BFA24");
-extern void func_800BFB28__for_func_800C0C5C(void) __asm__("func_800BFB28");
-extern void func_800BFC28__for_func_800C0C5C(void) __asm__("func_800BFC28");
-extern void func_800C07DC__for_func_800C0C5C(void) __asm__("func_800C07DC");
-extern void func_800C02FC__for_func_800C0C5C(void) __asm__("func_800C02FC");
-extern s32 func_800C07F8__for_func_800C0C5C(s32) __asm__("func_800C07F8");
-extern s32 func_800C09F4__for_func_800C0C5C(s32) __asm__("func_800C09F4");
-extern void func_800C0960__for_func_800C0C5C(void) __asm__("func_800C0960");
-extern void func_800C0B00__for_func_800C0C5C(void) __asm__("func_800C0B00");
-extern void func_800C0BC8__for_func_800C0C5C(void) __asm__("func_800C0BC8");
 
     MATRIX matrix;
 

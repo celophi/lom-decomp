@@ -307,7 +307,7 @@ void func_80064AF8(void)
     ClearOTagR(g_wmap_current_frame->ordering_table, 179);
     D_800DBE7C = 0;
     D_8011CF74++;
-    func_8006CB60();
+    wmap_update_callbacks();
     DrawSync(0);
     VSync(4);
     PutDispEnv(&g_wmap_current_frame->disp_env);

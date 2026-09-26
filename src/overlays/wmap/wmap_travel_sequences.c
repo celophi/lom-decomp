@@ -822,7 +822,7 @@ void wmap_special_travel_cruise(void)
 void wmap_special_travel_start_landing(void)
 {
     g_wmap_vehicle_phase = 1;
-    func_8006CAC0(wmap_finish_vehicle_turn);
+    wmap_start_sequence(wmap_finish_vehicle_turn);
     g_wmap_special_travel_step += 1;
     wmap_special_travel_wait_landing();
 }
@@ -960,7 +960,7 @@ void wmap_special_return_cruise(void)
 void wmap_special_return_start_landing(void)
 {
     g_wmap_vehicle_phase = 1;
-    func_8006CAC0(wmap_finish_vehicle_turn);
+    wmap_start_sequence(wmap_finish_vehicle_turn);
     g_wmap_special_return_step += 1;
     wmap_special_return_wait_landing();
 }

@@ -165,7 +165,7 @@ extern s32 g_wmap_cursor_column;
 extern s32 g_wmap_cursor_row;
 extern s32 g_wmap_spirit_selection;
 extern s32 D_8011CF18;
-extern s32 D_8011CF44;
+extern s32 g_wmap_sequence_count;
 extern s32 g_wmap_view_scroll_enabled;
 extern s32 g_wmap_view_mode;
 extern s32 g_wmap_view_scroll_mode;
@@ -193,11 +193,11 @@ extern VECTOR g_wmap_camera_translation;
 extern s32 D_8013B20C;
 extern s32 g_wmap_focus_origin_x;
 extern s32 g_wmap_focus_origin_y;
-extern s32 D_801B1098;
-extern s32 D_801B109C;
+extern s32 g_wmap_land_focus_step;
+extern s32 g_wmap_land_focus_timer;
 extern s32 D_8011D510;
 extern s32 D_8011D530;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 
 static s32 wmap_update_map_tint(s32 initialize);
 static void wmap_project_map_grid(void);
@@ -491,7 +491,7 @@ s32 wmap_update_map_view(s32 initialize)
             if ((g_wmap_scroll_remaining_y | g_wmap_scroll_remaining_x) == 0)
             {
                 g_wmap_view_scroll_mode = 0;
-                if (D_8011CF44 == 0)
+                if (g_wmap_sequence_count == 0)
                 {
                     g_wmap_input_locked = 0;
                 }
@@ -1075,10 +1075,10 @@ void wmap_begin_cell_focus(void)
     screen_y = screen.point.y;
     D_800DBE70 = 1;
     D_800D9268[0].target_shade = 0;
-    D_801B109C = 4;
+    g_wmap_land_focus_timer = 4;
     g_wmap_focus_origin_x = screen.point.x;
     g_wmap_focus_origin_y = screen_y;
-    D_801B1098++;
+    g_wmap_land_focus_step++;
 }
 
 /** @brief Land sequence step: project the focused land cell relative to the view and advance. */
@@ -1096,7 +1096,7 @@ void wmap_project_focus_position(void)
     position.vy = (((D_8011D530 - 1) * WMAP_CELL_SIZE - g_wmap_view.y * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale;
     gte_ldv0(&position);
     gte_rtps();
-    gte_stsxy(&D_8011CF4C);
+    gte_stsxy(&g_wmap_focus_screen_position);
     D_8013B20C = 0;
-    D_801B1098++;
+    g_wmap_land_focus_step++;
 }

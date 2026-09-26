@@ -9,11 +9,39 @@
 #include "wmap_view_effects.h"
 #include "wmap_resource_support.h"
 
+void func_80074F20(void);
+void func_80075094(void);
+void func_800750D0(void);
+s32 func_80075168(s32 arg0);
+void func_80075114(void);
+void func_80075150(void);
+s32 func_80075704(s32 arg0);
+s32 func_80075B34(s32 arg0);
+s32 func_800759B4(s32 arg0);
+s32 func_80076AE8(s32 arg0);
+s32 func_800765A4(s32 arg0);
+s32 func_80076848(s32 arg0);
+s32 func_80075DD8(s32 arg0);
+s32 func_80076074(s32 arg0);
+s32 func_800761C0(s32 arg0);
+s32 func_8007630C(s32 arg0);
+s32 func_80076458(s32 arg0);
+void func_800757FC(void);
+void func_800758EC(void);
+void func_80075AC0(void);
+void func_80075C30(void);
+void func_80075D1C(void);
+void func_80075ED0(void);
+void func_80075FBC(void);
+void func_800766A4(void);
+void func_80076790(void);
+void func_8007694C(void);
+void func_80076A38(void);
+
 /** @brief Project active particles and initialize the first available slot. */
 void func_80074368(WmapConfigA *actors, WmapResource *resources, s32 count)
 {
 /** @brief World-map actor configuration. */
-
 
 /** @brief Per-actor motion and animation parameters. */
 typedef struct
@@ -28,8 +56,6 @@ typedef struct
 } WmapMotion;
 
 /** @brief Animation resource slot. */
-
-
 
 extern WmapMotion D_801AFBD0[];
 extern s32 D_800D922C;
@@ -121,7 +147,7 @@ typedef struct
 
 extern WmapConfigA D_800D9528;
 extern u8 *D_80139A08;
-extern u16 D_8011CF4C[2];
+extern u16 g_wmap_focus_screen_position[2];
 extern s32 D_80182DEC;
 extern s32 D_801B25A0;
 extern s32 D_801B25A4;
@@ -132,8 +158,8 @@ extern s32 D_801B25A4;
         s32 word;
     } position;
 
-    position.half[0] = D_8011CF4C[0] - 6;
-    position.half[1] = D_8011CF4C[1] + 12;
+    position.half[0] = g_wmap_focus_screen_position[0] - 6;
+    position.half[1] = g_wmap_focus_screen_position[1] + 12;
     D_800D9528.field_24 = *(u16 *)&D_80182DEC;
     D_800D9528.field_22 = *(u16 *)&D_80182DEC;
     wmap_step_actor_animation(&D_800D9528, &D_80139A08);
@@ -174,7 +200,7 @@ typedef struct
 
 extern WmapConfigA D_800D9528;
 extern u8 *D_80139A08;
-extern u16 D_8011CF4C[2];
+extern u16 g_wmap_focus_screen_position[2];
 extern s32 D_80182DEC;
 extern s32 D_801B25A0;
 extern s32 D_801B25A4;
@@ -185,8 +211,8 @@ extern s32 D_801B25A4;
         s32 word;
     } position;
 
-    position.half[0] = D_8011CF4C[0] - 6;
-    position.half[1] = D_8011CF4C[1] + 12;
+    position.half[0] = g_wmap_focus_screen_position[0] - 6;
+    position.half[1] = g_wmap_focus_screen_position[1] + 12;
     wmap_step_actor_animation(&D_800D9528, &D_80139A08);
     wmap_draw_actor_sprite(&D_800D9528, position.word, 4, 11, 0);
     D_800D9528.field_24 = *(u16 *)&D_80182DEC;
@@ -224,7 +250,7 @@ typedef struct
 
 extern WmapConfigA D_800D9554;
 extern u8 *D_80139A10;
-extern u16 D_8011CF4C[2];
+extern u16 g_wmap_focus_screen_position[2];
 extern s32 D_801B25DC;
 extern s32 D_801B25A8;
 extern s32 D_801B25AC;
@@ -235,8 +261,8 @@ extern s32 D_801B25AC;
         s32 word;
     } position;
 
-    position.half[0] = D_8011CF4C[0] + 16;
-    position.half[1] = D_8011CF4C[1];
+    position.half[0] = g_wmap_focus_screen_position[0] + 16;
+    position.half[1] = g_wmap_focus_screen_position[1];
     D_800D9554.field_24 = *(u16 *)&D_801B25DC;
     D_800D9554.field_22 = *(u16 *)&D_801B25DC;
     wmap_step_actor_animation(&D_800D9554, &D_80139A10);
@@ -274,7 +300,7 @@ typedef struct
 
 extern WmapConfigA D_800D9554;
 extern u8 *D_80139A10;
-extern u16 D_8011CF4C[2];
+extern u16 g_wmap_focus_screen_position[2];
 extern s32 D_801B25DC;
 extern s32 D_801B25A8;
 extern s32 D_801B25AC;
@@ -285,8 +311,8 @@ extern s32 D_801B25AC;
         s32 word;
     } position;
 
-    position.half[0] = D_8011CF4C[0] + 16;
-    position.half[1] = D_8011CF4C[1];
+    position.half[0] = g_wmap_focus_screen_position[0] + 16;
+    position.half[1] = g_wmap_focus_screen_position[1];
     wmap_step_actor_animation(&D_800D9554, &D_80139A10);
     wmap_draw_actor_sprite(&D_800D9554, position.word, 4, 11, 0);
     D_800D9554.field_24 = *(u16 *)&D_801B25DC;
@@ -324,7 +350,7 @@ typedef struct
 
 extern WmapConfigA D_800D9580;
 extern u8 *D_80139A18;
-extern u16 D_8011CF4C[2];
+extern u16 g_wmap_focus_screen_position[2];
 extern s32 D_801B25E0;
 extern s32 D_801B25B0;
 extern s32 D_801B25B4;
@@ -337,8 +363,8 @@ extern s32 D_801B25B4;
 
     D_800D9580.field_24 = *(u16 *)&D_801B25E0;
     D_800D9580.field_22 = *(u16 *)&D_801B25E0;
-    position.half[0] = D_8011CF4C[0] + 24;
-    position.half[1] = D_8011CF4C[1] + 4;
+    position.half[0] = g_wmap_focus_screen_position[0] + 24;
+    position.half[1] = g_wmap_focus_screen_position[1] + 4;
     wmap_step_actor_animation(&D_800D9580, &D_80139A18);
     wmap_draw_actor_sprite(&D_800D9580, position.word, 4, 11, 0);
     D_801B25E0 += 8;
@@ -377,7 +403,7 @@ typedef struct
 
 extern WmapConfigA D_800D9580;
 extern u8 *D_80139A18;
-extern u16 D_8011CF4C[2];
+extern u16 g_wmap_focus_screen_position[2];
 extern s32 D_801B25E0;
 extern s32 D_801B25B0;
 extern s32 D_801B25B4;
@@ -388,8 +414,8 @@ extern s32 D_801B25B4;
         s32 word;
     } position;
 
-    position.half[0] = D_8011CF4C[0] + 24;
-    position.half[1] = D_8011CF4C[1] + 4;
+    position.half[0] = g_wmap_focus_screen_position[0] + 24;
+    position.half[1] = g_wmap_focus_screen_position[1] + 4;
     wmap_step_actor_animation(&D_800D9580, &D_80139A18);
     wmap_draw_actor_sprite(&D_800D9580, position.word, 4, 11, 0);
     D_800D9580.field_24 = *(u16 *)&D_801B25E0;
@@ -430,7 +456,7 @@ typedef struct
 
 extern WmapConfigA D_800D95AC;
 extern u8 *D_80139A20;
-extern u16 D_8011CF4C[2];
+extern u16 g_wmap_focus_screen_position[2];
 extern s32 D_801B25E4;
 extern s32 D_801B25B8;
 extern s32 D_801B25BC;
@@ -441,8 +467,8 @@ extern s32 D_801B25BC;
         s32 word;
     } position;
 
-    position.half[0] = D_8011CF4C[0] - 24;
-    position.half[1] = D_8011CF4C[1] - 10;
+    position.half[0] = g_wmap_focus_screen_position[0] - 24;
+    position.half[1] = g_wmap_focus_screen_position[1] - 10;
     D_800D95AC.field_24 = *(u16 *)&D_801B25E4;
     D_800D95AC.field_22 = *(u16 *)&D_801B25E4;
     wmap_step_actor_animation(&D_800D95AC, &D_80139A20);
@@ -483,7 +509,7 @@ typedef struct
 
 extern WmapConfigA D_800D95AC;
 extern u8 *D_80139A20;
-extern u16 D_8011CF4C[2];
+extern u16 g_wmap_focus_screen_position[2];
 extern s32 D_801B25E4;
 extern s32 D_801B25B8;
 extern s32 D_801B25BC;
@@ -494,8 +520,8 @@ extern s32 D_801B25BC;
         s32 word;
     } position;
 
-    position.half[0] = D_8011CF4C[0] - 24;
-    position.half[1] = D_8011CF4C[1] - 10;
+    position.half[0] = g_wmap_focus_screen_position[0] - 24;
+    position.half[1] = g_wmap_focus_screen_position[1] - 10;
     wmap_step_actor_animation(&D_800D95AC, &D_80139A20);
     wmap_draw_actor_sprite(&D_800D95AC, position.word, 4, 11, 0);
     D_800D95AC.field_24 = *(u16 *)&D_801B25E4;
@@ -529,7 +555,7 @@ extern s32 D_801B25D8;
     TransMatrix(&matrix, &D_80139888);
     SetRotMatrix(&matrix);
     SetTransMatrix(&matrix);
-    func_8006CD98(D_800DCF18, 0, 36, 183, 0x7A40, 1, -1);
+    wmap_draw_model_default(D_800DCF18, 0, 36, 183, 0x7A40, 1, -1);
     PopMatrix();
     intensity = D_801B25D8 + 15;
     D_801B25D8 = intensity;
@@ -566,7 +592,7 @@ extern s32 D_801B25D8;
         TransMatrix(&matrix, &D_80139888);
         SetRotMatrix(&matrix);
         SetTransMatrix(&matrix);
-        func_8006CD98(D_800DCF18, 0, 36, 183, 0x7A40, 1, D_801B25D8);
+        wmap_draw_model_default(D_800DCF18, 0, 36, 183, 0x7A40, 1, D_801B25D8);
         intensity = D_801B25D8 - 4;
         D_801B25D8 = intensity;
         if (intensity < 0)
@@ -636,7 +662,6 @@ extern s32 D_8011D538;
 extern u8 D_800D9268;
 extern s32 D_801B2580;
 extern s32 D_801B2584;
-extern void func_80074F20__for_func_80074EA8(void) __asm__("func_80074F20");
 
     u8 *base = &D_800D9268;
 
@@ -649,7 +674,7 @@ extern void func_80074F20__for_func_80074EA8(void) __asm__("func_80074F20");
     *(s16 *)(base + 0x100) = 0x80;
     D_801B2584 = 0x36;
     D_801B2580 += 1;
-    func_80074F20__for_func_80074EA8();
+    func_80074F20();
 }
 
 /**
@@ -660,11 +685,11 @@ void func_80074F20(void)
 extern s32 D_801B2580;
 extern u8 D_800D9344[];
 extern u8 D_801399B0[];
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern s32 D_801B2584;
 
     wmap_step_actor_animation(D_800D9344, D_801399B0);
-    wmap_draw_actor_sprite(D_800D9344, D_8011CF4C, 0xF, 0xB, 0);
+    wmap_draw_actor_sprite(D_800D9344, g_wmap_focus_screen_position, 0xF, 0xB, 0);
     if (--D_801B2584 == 0)
     {
         D_801B2580 += 1;
@@ -679,7 +704,7 @@ void func_80074F9C(void)
 extern s32 D_801B2580;
 extern u8 D_800D9344[];
 extern u8 D_801399B0[];
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern s32 D_801B2584;
 
     D_801B2580 += 1;
@@ -737,13 +762,12 @@ void func_80075044(void)
 {
 extern s32 D_8013B20C;
 extern s32 D_801B2568;
-extern void func_80075094__for_func_80075044(void) __asm__("func_80075094");
 
     g_wmap_input_locked = 1;
-    func_8006CAC0(func_8006C81C);
+    wmap_start_sequence(wmap_run_land_focus);
     D_8013B20C = 1;
     D_801B2568 += 1;
-    func_80075094__for_func_80075044();
+    func_80075094();
 }
 
 /**
@@ -753,14 +777,11 @@ void func_80075094(void)
 {
 extern s32 D_8013B20C;
 extern s32 D_801B2568;
-extern void func_800750D0__for_func_80075094(void) __asm__("func_800750D0");
-extern void func_80075168__for_func_80075094(void) __asm__("func_80075168");
-extern void func_80075114__for_func_80075094(void) __asm__("func_80075114");
 
     if (D_8013B20C == 0)
     {
         D_801B2568 += 1;
-        func_800750D0__for_func_80075094();
+        func_800750D0();
     }
 }
 
@@ -772,13 +793,11 @@ void func_800750D0(void)
 extern s32 D_8013B20C;
 extern s32 D_801B2568;
 extern void func_800750D0(void);
-extern void func_80075168__for_func_800750D0(void) __asm__("func_80075168");
-extern void func_80075114__for_func_800750D0(void) __asm__("func_80075114");
 
-    func_8006CAC0(func_80075168__for_func_800750D0);
+    wmap_start_sequence(func_80075168);
     D_8013B20C = 1;
     D_801B2568 += 1;
-    func_80075114__for_func_800750D0();
+    func_80075114();
 }
 
 /**
@@ -788,12 +807,11 @@ void func_80075114(void)
 {
 extern s32 D_801B2568;
 extern s32 D_8013B20C;
-extern void func_80075150__for_func_80075114(void) __asm__("func_80075150");
 
     if (D_8013B20C == 0)
     {
         D_801B2568 += 1;
-        func_80075150__for_func_80075114();
+        func_80075150();
     }
 }
 
@@ -884,12 +902,11 @@ extern s32 D_801B2570;
 /** @brief World-map step handler: register a callback and advance the step counter. */
 void func_80075274(void)
 {
-extern void func_80075704__for_func_80075274(void) __asm__("func_80075704");
 extern s32 D_801B2570;
 extern s32 D_801B2574;
 
     wmap_play_sound(0x10, 0x80);
-    func_8006CAC0(func_80075704__for_func_80075274);
+    wmap_start_sequence(func_80075704);
     D_801B2574 = 8;
     D_801B2570 += 1;
 }
@@ -916,10 +933,9 @@ void func_800752F0(void)
 extern s32 D_801ADAE0;
 extern s32 D_801B2574;
 extern s32 D_801B2570;
-extern void func_80074E20__for_func_800752F0(void) __asm__("func_80074E20");
 
     D_801ADAE0 = 1;
-    func_8006CAC0(func_80074E20__for_func_800752F0);
+    wmap_start_sequence(func_80074E20);
     D_801B2574 = 0x24;
     D_801B2570 += 1;
 }
@@ -931,8 +947,6 @@ void func_80075338(void)
 {
 extern s32 D_801B2574;
 extern s32 D_801B2570;
-extern void func_80075B34__for_func_80075338(void) __asm__("func_80075B34");
-extern void func_800759B4__for_func_80075338(void) __asm__("func_800759B4");
 
     if (--D_801B2574 == 0)
     {
@@ -947,11 +961,9 @@ void func_8007536C(void)
 {
 extern s32 D_801B2574;
 extern s32 D_801B2570;
-extern void func_80075B34__for_func_8007536C(void) __asm__("func_80075B34");
-extern void func_800759B4__for_func_8007536C(void) __asm__("func_800759B4");
 
-    func_8006CAC0(func_80075B34__for_func_8007536C);
-    func_8006CAC0(func_800759B4__for_func_8007536C);
+    wmap_start_sequence(func_80075B34);
+    wmap_start_sequence(func_800759B4);
     D_801B2574 = 0x20;
     D_801B2570 += 1;
 }
@@ -963,7 +975,6 @@ void func_800753B4(void)
 {
 extern s32 D_801B2574;
 extern s32 D_801B2570;
-extern void func_80076AE8__for_func_800753B4(void) __asm__("func_80076AE8");
 
     if (--D_801B2574 == 0)
     {
@@ -978,9 +989,8 @@ void func_800753E8(void)
 {
 extern s32 D_801B2574;
 extern s32 D_801B2570;
-extern void func_80076AE8__for_func_800753E8(void) __asm__("func_80076AE8");
 
-    func_8006CAC0(func_80076AE8__for_func_800753E8);
+    wmap_start_sequence(func_80076AE8);
     D_801B2574 = 0xE;
     D_801B2570 += 1;
 }
@@ -992,7 +1002,6 @@ void func_80075424(void)
 {
 extern s32 D_801B2574;
 extern s32 D_801B2570;
-extern void func_800765A4__for_func_80075424(void) __asm__("func_800765A4");
 
     if (--D_801B2574 == 0)
     {
@@ -1007,9 +1016,8 @@ void func_80075458(void)
 {
 extern s32 D_801B2574;
 extern s32 D_801B2570;
-extern void func_800765A4__for_func_80075458(void) __asm__("func_800765A4");
 
-    func_8006CAC0(func_800765A4__for_func_80075458);
+    wmap_start_sequence(func_800765A4);
     D_801B2574 = 0x4;
     D_801B2570 += 1;
 }
@@ -1021,7 +1029,6 @@ void func_80075494(void)
 {
 extern s32 D_801B2574;
 extern s32 D_801B2570;
-extern void func_80076848__for_func_80075494(void) __asm__("func_80076848");
 
     if (--D_801B2574 == 0)
     {
@@ -1036,9 +1043,8 @@ void func_800754C8(void)
 {
 extern s32 D_801B2574;
 extern s32 D_801B2570;
-extern void func_80076848__for_func_800754C8(void) __asm__("func_80076848");
 
-    func_8006CAC0(func_80076848__for_func_800754C8);
+    wmap_start_sequence(func_80076848);
     D_801B2574 = 0x26;
     D_801B2570 += 1;
 }
@@ -1062,9 +1068,8 @@ void func_80075538(void)
 {
 extern s32 D_801B2570;
 extern s32 D_801B2574;
-extern void func_80075DD8__for_func_80075538(void) __asm__("func_80075DD8");
 
-    func_8006CAC0(func_80075DD8__for_func_80075538);
+    wmap_start_sequence(func_80075DD8);
     D_801B2574 = 1;
     D_801B2570 += 1;
 }
@@ -1088,11 +1093,9 @@ void func_800755A8(void)
 {
 extern s32 D_801B2570;
 extern s32 D_801B2574;
-extern void func_80076074__for_func_800755A8(void) __asm__("func_80076074");
-extern void func_800761C0__for_func_800755A8(void) __asm__("func_800761C0");
 
-    func_8006CAC0(&func_80076074__for_func_800755A8);
-    func_8006CAC0(&func_800761C0__for_func_800755A8);
+    wmap_start_sequence(&func_80076074);
+    wmap_start_sequence(&func_800761C0);
     D_801B2574 = 1;
     D_801B2570 += 1;
 }
@@ -1104,8 +1107,6 @@ void func_800755F0(void)
 {
 extern s32 D_801B2574;
 extern s32 D_801B2570;
-extern void func_8007630C__for_func_800755F0(void) __asm__("func_8007630C");
-extern void func_80076458__for_func_800755F0(void) __asm__("func_80076458");
 
     if (--D_801B2574 == 0)
     {
@@ -1120,11 +1121,9 @@ void func_80075624(void)
 {
 extern s32 D_801B2574;
 extern s32 D_801B2570;
-extern void func_8007630C__for_func_80075624(void) __asm__("func_8007630C");
-extern void func_80076458__for_func_80075624(void) __asm__("func_80076458");
 
-    func_8006CAC0(func_8007630C__for_func_80075624);
-    func_8006CAC0(func_80076458__for_func_80075624);
+    wmap_start_sequence(func_8007630C);
+    wmap_start_sequence(func_80076458);
     D_801B2574 = 0x3B;
     D_801B2570 += 1;
 }
@@ -1217,7 +1216,6 @@ extern u8 D_800D9268[];
 extern s32 D_801B24B4;
 extern s32 D_801B2578;
 extern s32 D_801B257C;
-extern void func_800757FC__for_func_8007578C(void) __asm__("func_800757FC");
 
     u8 *base;
 
@@ -1230,7 +1228,7 @@ extern void func_800757FC__for_func_8007578C(void) __asm__("func_800757FC");
     D_801B24B4 = 0;
     D_801B257C = 8;
     D_801B2578 += 1;
-    func_800757FC__for_func_8007578C();
+    func_800757FC();
 }
 
 /** @brief Draw the actor, increase its scale, and advance when its timer expires. */
@@ -1255,7 +1253,7 @@ typedef struct
 
 extern WmapConfigA D_800D9318;
 extern u8 *D_801399A8;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern s32 D_801B24B4;
 extern s32 D_801B2578;
 extern s32 D_801B257C;
@@ -1268,7 +1266,7 @@ extern s32 D_801B257C;
     actors[4].field_24 = *(u16 *)&D_801B24B4;
     actors[4].field_22 = *(u16 *)&D_801B24B4;
     wmap_step_actor_animation(obj, &D_801399A8);
-    wmap_draw_actor_sprite(obj, D_8011CF4C, 15, 4, 0);
+    wmap_draw_actor_sprite(obj, g_wmap_focus_screen_position, 15, 4, 0);
     D_801B24B4 += 8;
     if (D_801B24B4 >= 0x82)
     {
@@ -1285,13 +1283,12 @@ extern s32 D_801B257C;
  */
 void func_800758B4(void)
 {
-extern void func_800758EC__for_func_800758B4(void) __asm__("func_800758EC");
 extern s32 D_801B257C;
 extern s32 D_801B2578;
 
     D_801B257C = 0x20;
     D_801B2578 += 1;
-    func_800758EC__for_func_800758B4();
+    func_800758EC();
 }
 
 /** @brief Draw the actor, reduce its scale, and advance when its timer expires. */
@@ -1316,7 +1313,7 @@ typedef struct
 
 extern WmapConfigA D_800D9318;
 extern u8 *D_801399A8;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern s32 D_801B24B4;
 extern s32 D_801B2578;
 extern s32 D_801B257C;
@@ -1329,7 +1326,7 @@ extern s32 D_801B257C;
     actors[4].field_24 = *(u16 *)&D_801B24B4;
     actors[4].field_22 = *(u16 *)&D_801B24B4;
     wmap_step_actor_animation(obj, &D_801399A8);
-    wmap_draw_actor_sprite(obj, D_8011CF4C, 15, 4, 0);
+    wmap_draw_actor_sprite(obj, g_wmap_focus_screen_position, 15, 4, 0);
     D_801B24B4 -= 2;
     if (D_801B24B4 < 0)
     {
@@ -1418,7 +1415,6 @@ extern s32 D_8011D538;
 extern WmapSlot14 D_801AFBD0[];
 extern s32 D_801B258C;
 extern s32 D_801B2588;
-extern void func_80075AC0__for_func_80075A3C(void) __asm__("func_80075AC0");
 
     s32 i;
 
@@ -1430,19 +1426,18 @@ extern void func_80075AC0__for_func_80075A3C(void) __asm__("func_80075AC0");
     }
     D_801B258C = 0x30;
     D_801B2588 += 1;
-    func_80075AC0__for_func_80075A3C();
+    func_80075AC0();
 }
 
 /** @brief World-map step handler: run the sub-step, then advance after the timer. */
 void func_80075AC0(void)
 {
-extern u8 D_800DB578[];
-extern u8 D_80139FE8[];
+extern WmapConfigA D_800DB578[];
+extern WmapResource D_80139FE8[];
 extern s32 D_801B2588;
 extern s32 D_801B258C;
-extern void func_80074368__for_func_80075AC0(u8 *a0, u8 *a1, s32 a2) __asm__("func_80074368");
 
-    func_80074368__for_func_80075AC0(D_800DB578, D_80139FE8, 0x18);
+    func_80074368(D_800DB578, D_80139FE8, 0x18);
     if (--D_801B258C == 0)
     {
         D_801B2588 += 1;
@@ -1530,7 +1525,6 @@ extern WmapConfigA D_800D9268[];
 extern s32 D_80182DE4;
 extern s32 D_801B2590;
 extern s32 D_801B2594;
-extern void func_80075C30__for_func_80075BBC(void) __asm__("func_80075C30");
 
     D_801399BC = D_8011D538;
     D_800D9268[6].field_06 = 0xF;
@@ -1540,7 +1534,7 @@ extern void func_80075C30__for_func_80075BBC(void) __asm__("func_80075C30");
     D_800D9268[6].field_02 = 0;
     D_801B2594 = 0x28;
     D_801B2590 += 1;
-    func_80075C30__for_func_80075BBC();
+    func_80075C30();
 }
 
 /**
@@ -1551,7 +1545,7 @@ void func_80075C30(void)
 extern u8 D_800D9370[];
 extern u8 D_80182DE4[];
 extern u8 D_801399B8[];
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern s32 D_801B2594;
 extern s32 D_801B2590;
 
@@ -1561,7 +1555,7 @@ extern s32 D_801B2590;
     *(s16*)&obj[0x24] = pos;
     *(s16*)&obj[0x22] = pos;
     wmap_step_actor_animation(obj, D_801399B8);
-    wmap_draw_actor_sprite(obj, D_8011CF4C, 0xF, 0xB, 0);
+    wmap_draw_actor_sprite(obj, g_wmap_focus_screen_position, 0xF, 0xB, 0);
     *(s32*)&D_80182DE4[0] += 4;
     if (*(s32*)&D_80182DE4[0] >= 0x82)
     {
@@ -1578,13 +1572,12 @@ extern s32 D_801B2590;
  */
 void func_80075CE4(void)
 {
-extern void func_80075D1C__for_func_80075CE4(void) __asm__("func_80075D1C");
 extern s32 D_801B2594;
 extern s32 D_801B2590;
 
     D_801B2594 = 0x20;
     D_801B2590 += 1;
-    func_80075D1C__for_func_80075CE4();
+    func_80075D1C();
 }
 
 /** @brief Draw the actor, reduce its scale, and advance when its timer expires. */
@@ -1609,7 +1602,7 @@ typedef struct
 
 extern WmapConfigA D_800D9370;
 extern u8 *D_801399B8;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern s32 D_80182DE4;
 extern s32 D_801B2590;
 extern s32 D_801B2594;
@@ -1617,7 +1610,7 @@ extern s32 D_801B2594;
     WmapConfigA *actors;
 
     wmap_step_actor_animation(&D_800D9370, &D_801399B8);
-    wmap_draw_actor_sprite(&D_800D9370, D_8011CF4C, 15, 11, 0);
+    wmap_draw_actor_sprite(&D_800D9370, g_wmap_focus_screen_position, 15, 11, 0);
     actors = &D_800D9370 - 6;
     actors[6].field_24 = *(u16 *)&D_80182DE4;
     actors[6].field_22 = *(u16 *)&D_80182DE4;
@@ -1695,7 +1688,6 @@ extern u8 D_800D939C[];
 extern s32 D_80182DE8;
 extern s32 D_801B2598;
 extern s32 D_801B259C;
-extern void func_80075ED0__for_func_80075E60(void) __asm__("func_80075ED0");
 
     u8 *base;
 
@@ -1708,7 +1700,7 @@ extern void func_80075ED0__for_func_80075E60(void) __asm__("func_80075ED0");
     D_80182DE8 = 0;
     D_801B259C = 0xC;
     D_801B2598 += 1;
-    func_80075ED0__for_func_80075E60();
+    func_80075ED0();
 }
 
 /**
@@ -1719,7 +1711,7 @@ void func_80075ED0(void)
 extern u8 D_800D939C[];
 extern u8 D_80182DE8[];
 extern u8 D_801399C0[];
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern s32 D_801B259C;
 extern s32 D_801B2598;
 
@@ -1729,7 +1721,7 @@ extern s32 D_801B2598;
     *(s16*)&obj[0x24] = pos;
     *(s16*)&obj[0x22] = pos;
     wmap_step_actor_animation(obj, D_801399C0);
-    wmap_draw_actor_sprite(obj, D_8011CF4C, 0x4, 0xB, 0);
+    wmap_draw_actor_sprite(obj, g_wmap_focus_screen_position, 0x4, 0xB, 0);
     *(s32*)&D_80182DE8[0] += 0x18;
     if (*(s32*)&D_80182DE8[0] >= 0x82)
     {
@@ -1746,13 +1738,12 @@ extern s32 D_801B2598;
  */
 void func_80075F84(void)
 {
-extern void func_80075FBC__for_func_80075F84(void) __asm__("func_80075FBC");
 extern s32 D_801B259C;
 extern s32 D_801B2598;
 
     D_801B259C = 0x24;
     D_801B2598 += 1;
-    func_80075FBC__for_func_80075F84();
+    func_80075FBC();
 }
 
 /** @brief World-map step: build a sprite, decrement a shared budget, expire the timer. */
@@ -1760,13 +1751,13 @@ void func_80075FBC(void)
 {
 extern u8 D_800D939C[];
 extern s32 D_801399C0;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern s32 D_80182DE8;
 extern s32 D_801B2598;
 extern s32 D_801B259C;
 
     wmap_step_actor_animation(D_800D939C, &D_801399C0);
-    wmap_draw_actor_sprite(D_800D939C, D_8011CF4C, 4, 0xB, 0);
+    wmap_draw_actor_sprite(D_800D939C, g_wmap_focus_screen_position, 4, 0xB, 0);
     *(s16 *)(D_800D939C + 0x24) = (u16)D_80182DE8;
     *(s16 *)(D_800D939C + 0x22) = (u16)D_80182DE8;
     D_80182DE8 -= 4;
@@ -1861,7 +1852,6 @@ extern WmapConfigA D_800D9528;
 extern s32 D_80182DEC;
 extern s32 D_801B25A0;
 extern s32 D_801B25A4;
-extern void func_800745A4__for_func_800760FC(void) __asm__("func_800745A4");
 
     D_80139A0C = D_8011F538;
     D_800D9528.field_06 = 0xF;
@@ -1871,7 +1861,7 @@ extern void func_800745A4__for_func_800760FC(void) __asm__("func_800745A4");
     D_800D9528.field_02 = 0;
     D_801B25A4 = 0x18;
     D_801B25A0 += 1;
-    func_800745A4__for_func_800760FC();
+    func_800745A4();
 }
 
 /**
@@ -1880,12 +1870,11 @@ extern void func_800745A4__for_func_800760FC(void) __asm__("func_800745A4");
 void func_80076170(void)
 {
 extern s32 D_801B25A0;
-extern void func_80074680__for_func_80076170(void) __asm__("func_80074680");
 extern s32 D_801B25A4;
 
     D_801B25A4 = 0x28;
     D_801B25A0 += 1;
-    func_80074680__for_func_80076170();
+    func_80074680();
 }
 
 /**
@@ -1894,7 +1883,6 @@ extern s32 D_801B25A4;
 void func_800761A8(void)
 {
 extern s32 D_801B25A0;
-extern void func_80074680__for_func_800761A8(void) __asm__("func_80074680");
 extern s32 D_801B25A4;
 
     D_801B25A0 += 1;
@@ -1971,7 +1959,6 @@ extern WmapConfigA D_800D9554;
 extern s32 D_801B25DC;
 extern s32 D_801B25A8;
 extern s32 D_801B25AC;
-extern void func_80074748__for_func_80076248(void) __asm__("func_80074748");
 
     D_80139A14 = D_8011F538;
     D_800D9554.field_06 = 0xF;
@@ -1981,7 +1968,7 @@ extern void func_80074748__for_func_80076248(void) __asm__("func_80074748");
     D_800D9554.field_02 = 0;
     D_801B25AC = 0x18;
     D_801B25A8 += 1;
-    func_80074748__for_func_80076248();
+    func_80074748();
 }
 
 /**
@@ -1990,12 +1977,11 @@ extern void func_80074748__for_func_80076248(void) __asm__("func_80074748");
 void func_800762BC(void)
 {
 extern s32 D_801B25A8;
-extern void func_80074820__for_func_800762BC(void) __asm__("func_80074820");
 extern s32 D_801B25AC;
 
     D_801B25AC = 0x20;
     D_801B25A8 += 1;
-    func_80074820__for_func_800762BC();
+    func_80074820();
 }
 
 /**
@@ -2004,7 +1990,6 @@ extern s32 D_801B25AC;
 void func_800762F4(void)
 {
 extern s32 D_801B25A8;
-extern void func_80074820__for_func_800762F4(void) __asm__("func_80074820");
 extern s32 D_801B25AC;
 
     D_801B25A8 += 1;
@@ -2081,7 +2066,6 @@ extern WmapConfigA D_800D9580;
 extern s32 D_801B25E0;
 extern s32 D_801B25B0;
 extern s32 D_801B25B4;
-extern void func_800748E4__for_func_80076394(void) __asm__("func_800748E4");
 
     D_80139A1C = D_8011F538;
     D_800D9580.field_06 = 0xF;
@@ -2091,7 +2075,7 @@ extern void func_800748E4__for_func_80076394(void) __asm__("func_800748E4");
     D_800D9580.field_02 = 0;
     D_801B25B4 = 0x20;
     D_801B25B0 += 1;
-    func_800748E4__for_func_80076394();
+    func_800748E4();
 }
 
 /**
@@ -2100,12 +2084,11 @@ extern void func_800748E4__for_func_80076394(void) __asm__("func_800748E4");
 void func_80076408(void)
 {
 extern s32 D_801B25B0;
-extern void func_800749C0__for_func_80076408(void) __asm__("func_800749C0");
 extern s32 D_801B25B4;
 
     D_801B25B4 = 0x20;
     D_801B25B0 += 1;
-    func_800749C0__for_func_80076408();
+    func_800749C0();
 }
 
 /**
@@ -2114,7 +2097,6 @@ extern s32 D_801B25B4;
 void func_80076440(void)
 {
 extern s32 D_801B25B0;
-extern void func_800749C0__for_func_80076440(void) __asm__("func_800749C0");
 extern s32 D_801B25B4;
 
     D_801B25B0 += 1;
@@ -2191,7 +2173,6 @@ extern WmapConfigA D_800D95AC;
 extern s32 D_801B25E4;
 extern s32 D_801B25B8;
 extern s32 D_801B25BC;
-extern void func_80074A88__for_func_800764E0(void) __asm__("func_80074A88");
 
     D_80139A24 = D_8011F538;
     D_800D95AC.field_06 = 0xF;
@@ -2201,7 +2182,7 @@ extern void func_80074A88__for_func_800764E0(void) __asm__("func_80074A88");
     D_800D95AC.field_02 = 0;
     D_801B25BC = 0xC;
     D_801B25B8 += 1;
-    func_80074A88__for_func_800764E0();
+    func_80074A88();
 }
 
 /**
@@ -2210,12 +2191,11 @@ extern void func_80074A88__for_func_800764E0(void) __asm__("func_80074A88");
 void func_80076554(void)
 {
 extern s32 D_801B25B8;
-extern void func_80074B64__for_func_80076554(void) __asm__("func_80074B64");
 extern s32 D_801B25BC;
 
     D_801B25BC = 0x28;
     D_801B25B8 += 1;
-    func_80074B64__for_func_80076554();
+    func_80074B64();
 }
 
 /**
@@ -2224,7 +2204,6 @@ extern s32 D_801B25BC;
 void func_8007658C(void)
 {
 extern s32 D_801B25B8;
-extern void func_80074B64__for_func_8007658C(void) __asm__("func_80074B64");
 extern s32 D_801B25BC;
 
     D_801B25B8 += 1;
@@ -2284,7 +2263,6 @@ extern u8 D_800D93F4[];
 extern s32 D_80182DF0;
 extern s32 D_801B25C0;
 extern s32 D_801B25C4;
-extern void func_800766A4__for_func_80076634(void) __asm__("func_800766A4");
 
     u8 *base;
 
@@ -2297,7 +2275,7 @@ extern void func_800766A4__for_func_80076634(void) __asm__("func_800766A4");
     D_80182DF0 = 0;
     D_801B25C4 = 0x10;
     D_801B25C0 += 1;
-    func_800766A4__for_func_80076634();
+    func_800766A4();
 }
 
 /**
@@ -2308,7 +2286,7 @@ void func_800766A4(void)
 extern u8 D_800D93F4[];
 extern u8 D_80182DF0[];
 extern u8 D_801399D0[];
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern s32 D_801B25C4;
 extern s32 D_801B25C0;
 
@@ -2318,7 +2296,7 @@ extern s32 D_801B25C0;
     *(s16*)&obj[0x24] = pos;
     *(s16*)&obj[0x22] = pos;
     wmap_step_actor_animation(obj, D_801399D0);
-    wmap_draw_actor_sprite(obj, D_8011CF4C, 0x10, 0xB, 0);
+    wmap_draw_actor_sprite(obj, g_wmap_focus_screen_position, 0x10, 0xB, 0);
     *(s32*)&D_80182DF0[0] += 0x20;
     if (*(s32*)&D_80182DF0[0] >= 0x82)
     {
@@ -2335,13 +2313,12 @@ extern s32 D_801B25C0;
  */
 void func_80076758(void)
 {
-extern void func_80076790__for_func_80076758(void) __asm__("func_80076790");
 extern s32 D_801B25C4;
 extern s32 D_801B25C0;
 
     D_801B25C4 = 0x10;
     D_801B25C0 += 1;
-    func_80076790__for_func_80076758();
+    func_80076790();
 }
 
 /** @brief World-map step: build a sprite, decrement a shared budget, expire the timer. */
@@ -2349,13 +2326,13 @@ void func_80076790(void)
 {
 extern u8 D_800D93F4[];
 extern s32 D_801399D0;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern s32 D_80182DF0;
 extern s32 D_801B25C0;
 extern s32 D_801B25C4;
 
     wmap_step_actor_animation(D_800D93F4, &D_801399D0);
-    wmap_draw_actor_sprite(D_800D93F4, D_8011CF4C, 0x10, 0xB, 0);
+    wmap_draw_actor_sprite(D_800D93F4, g_wmap_focus_screen_position, 0x10, 0xB, 0);
     *(s16 *)(D_800D93F4 + 0x24) = (u16)D_80182DF0;
     *(s16 *)(D_800D93F4 + 0x22) = (u16)D_80182DF0;
     D_80182DF0 -= 0x10;
@@ -2451,7 +2428,6 @@ extern WmapConfigA D_800D9420;
 extern s32 D_80182DF4;
 extern s32 D_801B25C8;
 extern s32 D_801B25CC;
-extern void func_8007694C__for_func_800768D8(void) __asm__("func_8007694C");
 
     D_801399DC = D_80121538;
     D_800D9420.field_06 = 0xF;
@@ -2461,7 +2437,7 @@ extern void func_8007694C__for_func_800768D8(void) __asm__("func_8007694C");
     D_800D9420.field_02 = 0;
     D_801B25CC = 0x59;
     D_801B25C8 += 1;
-    func_8007694C__for_func_800768D8();
+    func_8007694C();
 }
 
 /**
@@ -2472,7 +2448,7 @@ void func_8007694C(void)
 extern u8 D_800D9420[];
 extern u8 D_80182DF4[];
 extern u8 D_801399D8[];
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern s32 D_801B25CC;
 extern s32 D_801B25C8;
 
@@ -2482,7 +2458,7 @@ extern s32 D_801B25C8;
     *(s16*)&obj[0x24] = pos;
     *(s16*)&obj[0x22] = pos;
     wmap_step_actor_animation(obj, D_801399D8);
-    wmap_draw_actor_sprite(obj, D_8011CF4C, 0x10, 0xB, 0);
+    wmap_draw_actor_sprite(obj, g_wmap_focus_screen_position, 0x10, 0xB, 0);
     *(s32*)&D_80182DF4[0] += 0x8;
     if (*(s32*)&D_80182DF4[0] >= 0x81)
     {
@@ -2499,13 +2475,12 @@ extern s32 D_801B25C8;
  */
 void func_80076A00(void)
 {
-extern void func_80076A38__for_func_80076A00(void) __asm__("func_80076A38");
 extern s32 D_801B25CC;
 extern s32 D_801B25C8;
 
     D_801B25CC = 0x10;
     D_801B25C8 += 1;
-    func_80076A38__for_func_80076A00();
+    func_80076A38();
 }
 
 /** @brief Draw the actor, update two effect fields, and advance when the countdown expires. */
@@ -2529,7 +2504,7 @@ typedef struct
 } WmapConfigA;
 
 extern WmapConfigA D_800D9420;
-extern s32 D_8011CF4C;
+extern s32 g_wmap_focus_screen_position;
 extern u8 D_801399D8[];
 extern s32 D_80182DF4;
 extern s32 D_801B25C8;
@@ -2538,7 +2513,7 @@ extern s32 D_801B25CC;
     s32 remaining_ticks;
 
     wmap_step_actor_animation(&D_800D9420, &D_801399D8);
-    wmap_draw_actor_sprite(&D_800D9420, D_8011CF4C, 0x10, 0xB, 0);
+    wmap_draw_actor_sprite(&D_800D9420, g_wmap_focus_screen_position, 0x10, 0xB, 0);
     D_800D9420.field_24 = (u16) D_80182DF4;
     D_800D9420.field_22 = (u16) D_80182DF4;
     if ((s32) D_80182DF4 < 0)
@@ -2629,7 +2604,6 @@ extern WmapTransform D_80139888;
 extern s32 D_801B25D8;
 extern s32 D_801B25D0;
 extern s32 D_801B25D4;
-extern void func_80074C2C__for_func_80076B70(void) __asm__("func_80074C2C");
 
     D_801B25D8 = 0;
     D_801B24A0 = D_80139258;
@@ -2637,7 +2611,7 @@ extern void func_80074C2C__for_func_80076B70(void) __asm__("func_80074C2C");
     D_80139888.words[2] = 0xC350;
     D_801B25D4 = 10;
     D_801B25D0++;
-    func_80074C2C__for_func_80076B70();
+    func_80074C2C();
 }
 
 /**
@@ -2646,12 +2620,11 @@ extern void func_80074C2C__for_func_80076B70(void) __asm__("func_80074C2C");
 void func_80076C1C(void)
 {
 extern s32 D_801B25D0;
-extern void func_80074D28__for_func_80076C1C(void) __asm__("func_80074D28");
 extern s32 D_801B25D4;
 
     D_801B25D4 = 0x60;
     D_801B25D0 += 1;
-    func_80074D28__for_func_80076C1C();
+    func_80074D28();
 }
 
 /**
@@ -2660,7 +2633,6 @@ extern s32 D_801B25D4;
 void func_80076C54(void)
 {
 extern s32 D_801B25D0;
-extern void func_80074D28__for_func_80076C54(void) __asm__("func_80074D28");
 extern s32 D_801B25D4;
 
     D_801B25D0 += 1;

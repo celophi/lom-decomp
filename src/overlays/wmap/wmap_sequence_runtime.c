@@ -4,21 +4,40 @@
 #include "wmap_main.h"
 #include "wmap_effect_primitives.h"
 #include "wmap_sequence_runtime.h"
+#include "wmap_sprite_render.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
 
-/** @brief Animation fields within a world-map actor. */
-typedef struct
-{
-    u8 unknown_00[0xE];
-    s16 sequence;
-    s16 previous_sequence;
-    u8 unknown_12[2];
-    u8* cursor;
-    u8* sequence_start;
-    u8* frame_data;
-    s16 remaining;
-} WmapAnimation;
+/** @brief Sequence and callback slot counts, and the number of sprite actors. */
+#define WMAP_SEQUENCE_SLOTS 14
+#define WMAP_CALLBACK_SLOTS 8
+#define WMAP_ACTOR_COUNT 256
+
+/** @brief An animation resource starts with this many sequence offsets, followed by the frame offsets. */
+#define WMAP_ANIMATION_SEQUENCES 32
+/** @brief Animation duration that never counts down. */
+#define WMAP_ANIMATION_HOLD 255
+/** @brief End-of-sequence marker in a sequence's frame list. */
+#define WMAP_ANIMATION_LOOP 255
+
+/** @brief Map-to-model and model scales used to project a map position (see wmap_view_effects.c). */
+#define WMAP_MAP_PROJECTION_SCALE 0x14000
+#define WMAP_VIEW_SCALE 0x6000
+/** @brief Map units between two land cells, and map distance of one cell. */
+#define WMAP_CELL_SIZE 160
+#define WMAP_CELL_SPACING 48
+
+/** @brief Step counts of the land focus, land entry and land return sequences. */
+#define WMAP_LAND_FOCUS_STEPS 10
+#define WMAP_LAND_ENTRY_STEPS 4
+#define WMAP_LAND_RETURN_STEPS 6
+
+/** @brief Default screen position of the land focus. */
+#define WMAP_FOCUS_DEFAULT_X 164
+#define WMAP_FOCUS_DEFAULT_Y 105
+
+/** @brief Land entered without a screen fade. */
+#define WMAP_NO_FADE_LAND 31
 
 /** @brief Resource slot containing the animation data block. */
 typedef struct
@@ -27,35 +46,21 @@ typedef struct
     u8* data;
 } WmapAnimationResource;
 
-/** @brief World-map actor configuration with its original field layout. */
+/** @brief Map scroll position and projection scale (see wmap_view_effects.c). */
 typedef struct
 {
-    s16 field_00;
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[4];
-} WmapConfigA;
+    s32 x;
+    s32 y;
+    s32 projection_scale;
+    s32 unknown_0c;
+} WmapView;
 
-/** @brief Map translation and projection scale. */
+/** @brief First word of a map cell: the land placed there. */
 typedef struct
 {
-    s32 x, y, scale, pad;
-} WmapTransform;
-
-/** @brief Record with a leading value and a 40-byte stride. */
-typedef struct
-{
-    s32 value;
-    u8 unknown_4[36];
-} WmapValueRecord;
+    s32 land_id;
+    u8 unknown_04[36];
+} WmapLandCell;
 
 /** @brief Two signed coordinates stored consecutively. */
 typedef struct
@@ -64,27 +69,27 @@ typedef struct
     s16 y;
 } WmapCoordinatePair;
 
-extern s32 D_8011CF44;
-extern s32 D_801B0FD8[];
-extern WmapSequenceCallback D_801B1018[];
+extern s32 g_wmap_sequence_count;
+extern s32 g_wmap_sequence_active[];
+extern WmapSequenceCallback g_wmap_sequences[];
 extern s32 D_8013B20C;
-extern u32 D_801B10A0;
-extern u32 D_801B1098;
-extern s32 D_801B109C;
-extern void (*D_800D0A44[])(void);
+extern u32 g_wmap_land_entry_step;
+extern u32 g_wmap_land_focus_step;
+extern s32 g_wmap_land_focus_timer;
+extern void (*g_wmap_land_focus_steps[WMAP_LAND_FOCUS_STEPS])(void);
 extern s32 D_8011D4FC;
 extern s32 D_80182E34;
 extern s32 D_800DBE70;
 extern s32 D_800DBE78;
 extern s32 D_8013B208;
-extern s32 D_801B1058[];
-extern WmapSequenceCallback D_801B1078[];
-extern WmapConfigA D_800D9268[];
-extern s32 D_80139988[];
+extern s32 g_wmap_callback_active[];
+extern WmapSequenceCallback g_wmap_callbacks[];
+extern WmapSpriteActor D_800D9268[];
+extern WmapAnimationResource D_80139988[];
 
 extern s32 D_8011D510;
 extern s32 D_8011D530;
-extern WmapTransform g_wmap_view;
+extern WmapView g_wmap_view;
 extern s32 D_800D923C;
 extern s32* D_80139280;
 extern s32 D_80139234;
@@ -97,72 +102,98 @@ extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
 extern s32 D_80139284;
-extern WmapValueRecord D_80139290[][6];
+extern WmapLandCell D_80139290[][6];
 extern VECTOR D_8011CF60;
-extern WmapCoordinatePair D_8011CF4C;
+extern WmapCoordinatePair g_wmap_focus_screen_position;
 extern SVECTOR g_wmap_camera_rotation;
-extern s32 D_801B10A4;
-extern void (*D_800D0FAC[])(void);
-extern u32 D_801B10A8;
-extern s32 D_801B10AC;
-extern void (*D_800D0FBC[])(void);
+extern s32 g_wmap_land_entry_timer;
+extern void (*g_wmap_land_entry_steps[WMAP_LAND_ENTRY_STEPS])(void);
+extern u32 g_wmap_land_return_step;
+extern s32 g_wmap_land_return_timer;
+extern void (*g_wmap_land_return_steps[WMAP_LAND_RETURN_STEPS])(void);
 extern s32 g_wmap_vehicle_cell_x;
 extern s32 g_wmap_vehicle_cell_y;
 extern s32 g_wmap_view_scroll_mode;
 extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
 
-void func_8006D1AC(VECTOR* translation, SVECTOR* rotation);
-static s32 func_8006D328(s32 arg0);
+/* Sequence steps: reached through the step tables and from the step before them. */
+void wmap_land_entry_start_focus(void);
+void wmap_land_focus_reset(void);
+void wmap_land_focus_wait_2(void);
+void wmap_land_focus_fade_out(void);
+void wmap_land_focus_wait_4(void);
+void wmap_land_focus_hold(void);
+void wmap_land_focus_wait_6(void);
+void wmap_land_focus_lock(void);
+void wmap_land_focus_wait_8(void);
+void wmap_land_entry_reset(void);
+void wmap_land_entry_wait(void);
+void wmap_land_entry_finish(void);
+void wmap_land_return_reset(void);
+void wmap_land_return_start(void);
+void wmap_land_return_wait_sequences(void);
+void wmap_land_return_scroll_back(void);
+void wmap_land_return_wait_scroll(void);
+void wmap_land_return_finish(void);
+static void wmap_set_camera_model_transform(VECTOR* translation, SVECTOR* rotation);
+static s32 wmap_run_land_return(s32 reset);
 
 /**
- * @brief Register and initialize a callback in the first free slot.
+ * @brief Install and initialize a counted sequence in the first free slot.
+ * @param callback Sequence callback, called with 1 to initialize and 0 to update.
  */
-void func_8006C754(void)
+static inline void wmap_start_sequence_slot(WmapSequenceCallback callback)
 {
     s32 i;
-    WmapSequenceCallback callback;
 
-    callback = func_8006C81C;
-    for (i = 0; i < 14; i++)
+    for (i = 0; i < WMAP_SEQUENCE_SLOTS; i++)
     {
-        if (D_801B0FD8[i] == 0)
+        if (g_wmap_sequence_active[i] == 0)
         {
-            D_801B1018[i] = callback;
-            D_801B0FD8[i] = 1;
-            (D_801B1018[i])(1);
-            D_8011CF44++;
+            g_wmap_sequences[i] = callback;
+            g_wmap_sequence_active[i] = 1;
+            (g_wmap_sequences[i])(1);
+            g_wmap_sequence_count++;
             break;
         }
     }
-    if (i == 14)
+    if (i == WMAP_SEQUENCE_SLOTS)
     {
         func_80064F14();
     }
-    D_8013B20C = 1;
-    D_801B10A0++;
-    func_8006D2D4();
 }
 
 /**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or a reset occurred, 0 if the index was out of range.
+ * @brief Land entry step 1: start the land focus sequence and mark the land effect as running.
  */
-s32 func_8006C81C(s32 arg0)
+void wmap_land_entry_start_focus(void)
+{
+    wmap_start_sequence_slot(wmap_run_land_focus);
+    D_8013B20C = 1;
+    g_wmap_land_entry_step++;
+    wmap_land_entry_wait();
+}
+
+/**
+ * @brief Run the current step of the land focus sequence (scroll to the land, fade, project it).
+ * @param reset Nonzero restarts the sequence instead of running a step.
+ * @return 1 while the sequence runs, 0 once it has finished.
+ */
+s32 wmap_run_land_focus(s32 reset)
 {
     s32 result;
 
-    if (arg0 != 0)
+    if (reset != 0)
     {
-        D_801B1098 = 1;
-        D_801B109C = 1;
+        g_wmap_land_focus_step = 1;
+        g_wmap_land_focus_timer = 1;
         return 1;
     }
 
-    if (D_801B1098 < 0xA)
+    if (g_wmap_land_focus_step < WMAP_LAND_FOCUS_STEPS)
     {
-        D_800D0A44[D_801B1098]();
+        g_wmap_land_focus_steps[g_wmap_land_focus_step]();
         result = 1;
     }
     else
@@ -173,187 +204,159 @@ s32 func_8006C81C(s32 arg0)
 }
 
 /**
- * @brief Set two adjacent world-map state flags.
+ * @brief Land focus step 0: restart the sequence.
  */
-void func_8006C894(void)
+void wmap_land_focus_reset(void)
 {
-    D_801B1098 = 1;
-    D_801B109C = 1;
+    g_wmap_land_focus_step = 1;
+    g_wmap_land_focus_timer = 1;
 }
 
 /**
- * @brief Tick the sequence wait timer; advance the step counter when it expires.
+ * @brief Land focus step 2: wait for the step timer.
  */
-void func_8006C8AC(void)
+void wmap_land_focus_wait_2(void)
 {
-    if (--D_801B109C == 0)
+    if (--g_wmap_land_focus_timer == 0)
     {
-        D_801B1098 += 1;
+        g_wmap_land_focus_step += 1;
     }
 }
 
-/** @brief Set world-map flags and advance to a two-tick delay. */
-void func_8006C8E0(void)
+/**
+ * @brief Land focus step 3: start the screen fade (not for WMAP_NO_FADE_LAND) and dim the spirit panel.
+ */
+void wmap_land_focus_fade_out(void)
 {
-    if (D_8011D4FC != 0x1F)
+    if (D_8011D4FC != WMAP_NO_FADE_LAND)
     {
         g_wmap_screen_fade_mode = 2;
     }
     D_80182E34 = 3;
     g_wmap_spirit_target_brightness = 0;
-    D_801B109C = 2;
-    D_801B1098 += 1;
+    g_wmap_land_focus_timer = 2;
+    g_wmap_land_focus_step += 1;
 }
 
 /**
- * @brief Tick the sequence wait timer; advance the step counter when it expires.
+ * @brief Land focus step 4: wait for the step timer.
  */
-void func_8006C930(void)
+void wmap_land_focus_wait_4(void)
 {
-    if (--D_801B109C == 0)
+    if (--g_wmap_land_focus_timer == 0)
     {
-        D_801B1098 += 1;
+        g_wmap_land_focus_step += 1;
     }
 }
 
 /**
- * @brief Reset a world-map step slot: arm its wait and advance the step index.
+ * @brief Land focus step 5: wait four frames.
  */
-void func_8006C964(void)
+void wmap_land_focus_hold(void)
 {
-    D_801B109C = 4;
-    D_801B1098 += 1;
+    g_wmap_land_focus_timer = 4;
+    g_wmap_land_focus_step += 1;
 }
 
 /**
- * @brief Tick the sequence wait timer; advance the step counter when it expires.
+ * @brief Land focus step 6: wait for the step timer.
  */
-void func_8006C984(void)
+void wmap_land_focus_wait_6(void)
 {
-    if (--D_801B109C == 0)
+    if (--g_wmap_land_focus_timer == 0)
     {
-        D_801B1098 += 1;
+        g_wmap_land_focus_step += 1;
     }
 }
 
-/** @brief Set world-map flags, start an eight-tick delay, and advance the state. */
-void func_8006C9B8(void)
+/**
+ * @brief Land focus step 7: set the transition flags and wait eight frames.
+ */
+void wmap_land_focus_lock(void)
 {
     D_800DBE70 = 0;
     D_8013B208 = 1;
     D_800DBE78 = 1;
-    D_801B109C = 8;
-    D_801B1098 += 1;
+    g_wmap_land_focus_timer = 8;
+    g_wmap_land_focus_step += 1;
 }
 
 /**
- * @brief Tick the sequence wait timer; advance the step counter when it expires.
+ * @brief Land focus step 8: wait for the step timer.
  */
-void func_8006C9F4(void)
+void wmap_land_focus_wait_8(void)
 {
-    if (--D_801B109C == 0)
+    if (--g_wmap_land_focus_timer == 0)
     {
-        D_801B1098 += 1;
+        g_wmap_land_focus_step += 1;
     }
 }
 
-/** @brief Run active callbacks and decrement the active count when a callback finishes. */
-void func_8006CA28(void)
+/**
+ * @brief Update every running counted sequence; a sequence that returns 0 is freed and uncounted.
+ */
+void wmap_update_sequences(void)
 {
     s32 i;
     s32 result;
 
-    i = 0;
-    for (; i < 14; i++)
+    for (i = 0; i < WMAP_SEQUENCE_SLOTS; i++)
     {
-        if (D_801B0FD8[i] != 0)
+        if (g_wmap_sequence_active[i] != 0)
         {
-            result = D_801B1018[i](0);
-            D_801B0FD8[i] = result;
+            result = g_wmap_sequences[i](0);
+            g_wmap_sequence_active[i] = result;
             if (result == 0)
             {
-                D_8011CF44--;
+                g_wmap_sequence_count--;
             }
         }
     }
 }
 
 /**
- * @brief Register and initialize a callback in the first free slot.
- * @param callback Callback receiving one for initialization and zero for updates.
+ * @brief Start a counted sequence in the first free slot (g_wmap_sequence_count blocks map input).
+ * @param callback Callback, called with 1 to initialize and 0 to update.
  */
-void func_8006CAC0(WmapSequenceCallback callback)
+void wmap_start_sequence(WmapSequenceCallback callback)
 {
-    s32 i;
-
-    for (i = 0; i < 14; i++)
-    {
-        if (D_801B0FD8[i] == 0)
-        {
-            D_801B1018[i] = callback;
-            D_801B0FD8[i] = 1;
-            (D_801B1018[i])(1);
-            D_8011CF44++;
-            break;
-        }
-    }
-    if (i == 14)
-    {
-        func_80064F14();
-    }
-}
-
-/** @brief Run each active callback and retain its returned active state. */
-void func_8006CB60(void)
-{
-    s32 (**callback)(s32);
-    s32* active;
-    s32 i;
-
-    i = 0;
-    active = D_801B1058;
-    callback = D_801B1078;
-    do
-    {
-        if (*active != 0)
-        {
-            *active = (*callback)(0);
-        }
-        active++;
-        i++;
-        callback++;
-    } while (i < 8);
+    wmap_start_sequence_slot(callback);
 }
 
 /**
- * @brief Install and initialize a callback in the first inactive slot.
- * @param callback Callback receiving one for initialization and zero for updates.
+ * @brief Update every installed callback and keep the ones that return nonzero.
+ */
+void wmap_update_callbacks(void)
+{
+    s32 i;
+
+    for (i = 0; i < WMAP_CALLBACK_SLOTS; i++)
+    {
+        if (g_wmap_callback_active[i] != 0)
+        {
+            g_wmap_callback_active[i] = g_wmap_callbacks[i](0);
+        }
+    }
+}
+
+/**
+ * @brief Install an uncounted callback in the first free slot and run its initialization.
+ * @param callback Callback, called with 1 to initialize and 0 to update.
  */
 void wmap_install_callback(WmapSequenceCallback callback)
 {
-    WmapSequenceCallback* slot;
-    s32* active;
     s32 i;
 
-    i = 0;
-    active = D_801B1058;
-    slot = D_801B1078;
-next_slot:
-    i++;
-    if (*active == 0)
+    for (i = 0; i < WMAP_CALLBACK_SLOTS; i++)
     {
-        *slot = callback;
-        *active = 1;
-        *active = (*slot)(1);
-        return;
+        if (g_wmap_callback_active[i] == 0)
+        {
+            g_wmap_callbacks[i] = callback;
+            g_wmap_callback_active[i] = 1;
+            g_wmap_callback_active[i] = g_wmap_callbacks[i](1);
+            return;
+        }
     }
-    active++;
-    slot++;
-    if (i >= 8)
-    {
-        return;
-    }
-    goto next_slot;
 }
 
 /**
@@ -364,7 +367,7 @@ next_slot:
  */
 s32 wmap_step_actor_animation(void* actor_data, void* resource_data)
 {
-    WmapAnimation* actor = actor_data;
+    WmapSpriteActor* actor = actor_data;
     WmapAnimationResource* resource = resource_data;
     u8* data;
     s16* offsets;
@@ -377,21 +380,21 @@ s32 wmap_step_actor_animation(void* actor_data, void* resource_data)
     data = (u8*)offsets;
     if (actor->previous_sequence != actor->sequence)
     {
-        actor->previous_sequence = (u16)actor->sequence;
+        actor->previous_sequence = actor->sequence;
         actor->sequence_start = (u8*)offsets + offsets[actor->sequence];
         actor->cursor = actor->sequence_start;
         actor->remaining = 1;
     }
-    if (actor->remaining != 255)
+    if (actor->remaining != WMAP_ANIMATION_HOLD)
     {
-        actor->remaining = (u16)actor->remaining - 1;
+        actor->remaining--;
     }
     if (actor->remaining == 0)
     {
         cursor = actor->cursor;
         frame = cursor[0];
         actor->remaining = cursor[1];
-        if (frame == 255)
+        if (frame == WMAP_ANIMATION_LOOP)
         {
             cursor = actor->sequence_start;
             actor->cursor = cursor;
@@ -399,68 +402,53 @@ s32 wmap_step_actor_animation(void* actor_data, void* resource_data)
             actor->remaining = cursor[1];
         }
         actor->cursor += 4;
-        actor->frame_data = data + ((s16*)(frame * 2 + data))[32];
+        actor->frame_data = data + offsets[WMAP_ANIMATION_SEQUENCES + frame];
         result = frame;
     }
     return result;
 }
 
-/** @brief Initialize actor indices and clear the callback state tables. */
-void func_8006CD18(void)
+/**
+ * @brief Give every sprite actor and animation slot its index and clear all sequence and callback slots.
+ */
+void wmap_init_sequences(void)
 {
-    s32 index;
-    s32* callback_state;
-    s32* active;
+    s32 i;
 
-    for (index = 0; index < 256; index++)
+    for (i = 0; i < WMAP_ACTOR_COUNT; i++)
     {
-        D_800D9268[index].field_00 = index;
-        D_80139988[index * 2] = index;
-        D_800D9268[index].field_02 = -1;
+        D_800D9268[i].unknown_00 = i;
+        D_80139988[i].unknown_00 = i;
+        D_800D9268[i].unknown_02 = -1;
     }
-    index = 0xD;
-    callback_state = D_801B0FD8;
-    callback_state += index;
-    do
+    for (i = WMAP_SEQUENCE_SLOTS - 1; i >= 0; i--)
     {
-        *callback_state = 0;
-        index -= 1;
-        callback_state--;
-    } while (index >= 0);
-    index = 7;
-    active = D_801B1058;
-    active += index;
-    do
+        g_wmap_sequence_active[i] = 0;
+    }
+    for (i = WMAP_CALLBACK_SLOTS - 1; i >= 0; i--)
     {
-        *active = 0;
-        index -= 1;
-        active--;
-    } while (index >= 0);
+        g_wmap_callback_active[i] = 0;
+    }
 }
 
 /**
- * @brief Draw a world-map resource without screen offsets or an extra Z divisor.
- * @param resource_table Resource table.
- * @param resource_index Resource to draw.
- * @param ot_index Ordering-table index.
- * @param tpage Texture page.
- * @param clut Color lookup table.
- * @param blend_mode Blending mode.
- * @param color_scale Color scale.
+ * @brief Draw a model with no screen offset and the default depth divisor.
  */
-void func_8006CD98(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpage, s32 clut, s32 blend_mode, s32 color_scale)
+void wmap_draw_model_default(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpage, s32 clut, s32 blend_mode, s32 color_scale)
 {
     wmap_draw_model(resource_table, resource_index, ot_index, tpage, clut, blend_mode, color_scale, 0, 0, -1);
 }
 
-/** @brief Project the current map position through the active GTE matrix. */
-void func_8006CDDC(void)
+/**
+ * @brief Project the focused land cell, relative to the map view, through the current GTE matrix.
+ */
+void wmap_project_focus_cell(void)
 {
     SVECTOR position;
 
     position.vz = 0;
-    position.vx = (((D_8011D510 - 1) * 160 - g_wmap_view.x * 0x14000 / g_wmap_view.scale) * 0x6000) / g_wmap_view.scale;
-    position.vy = (((D_8011D530 - 1) * 160 - g_wmap_view.y * 0x14000 / g_wmap_view.scale) * 0x6000) / g_wmap_view.scale;
+    position.vx = (((D_8011D510 - 1) * WMAP_CELL_SIZE - g_wmap_view.x * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale;
+    position.vy = (((D_8011D530 - 1) * WMAP_CELL_SIZE - g_wmap_view.y * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale;
     gte_ldv0(&position);
     gte_rtps();
 }
@@ -471,7 +459,7 @@ void func_8006CDDC(void)
  * @param scale Scale in units of 1/128, or -1 to preserve the color.
  * @return Packed scaled color; channel results wrap to eight bits.
  */
-s32 func_8006CF40(CVECTOR color, s32 scale)
+s32 wmap_scale_color(CVECTOR color, s32 scale)
 {
     /* The packet color word is passed by value and returned in packed form. */
     CVECTOR* channels = &color;
@@ -495,32 +483,30 @@ s32 func_8006CF40(CVECTOR color, s32 scale)
 }
 
 /**
- * @brief Select the world-map transform helper using the current mode.
- * @param translation Translation passed to the selected helper.
- * @param rotation Rotation passed to the selected helper.
+ * @brief Install the model transform through the helper selected by D_800D923C.
  */
-void func_8006CFA8(VECTOR* translation, SVECTOR* rotation)
+void wmap_set_model_transform(VECTOR* translation, SVECTOR* rotation)
 {
     if (D_800D923C != 0)
     {
         func_8006ADD0(translation, rotation);
         return;
     }
-    func_8006D1AC(translation, rotation);
+    wmap_set_camera_model_transform(translation, rotation);
 }
 
 /**
- * @brief Forward six arguments with the final option cleared.
- * @param arg0 First forwarded argument.
- * @param arg1 Second forwarded argument.
- * @param arg2 Third forwarded argument.
- * @param arg3 Fourth forwarded argument.
- * @param arg4 Fifth forwarded argument.
- * @param arg5 Sixth forwarded argument.
+ * @brief Call func_8006D014 with its last drawing parameter cleared.
+ * @param actor Actor configuration passed to the drawing helper.
+ * @param resource Resource slot passed to the drawing helper.
+ * @param arg2 TODO: drawing parameter meaning unknown.
+ * @param arg3 TODO: drawing parameter meaning unknown.
+ * @param arg4 TODO: drawing parameter meaning unknown.
+ * @param arg5 TODO: drawing parameter meaning unknown.
  */
-void func_8006CFE4(void* arg0, void* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
+void func_8006CFE4(void* actor, void* resource, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
 {
-    func_8006D014(arg0, arg1, arg2, arg3, arg4, arg5, 0);
+    func_8006D014(actor, resource, arg2, arg3, arg4, arg5, 0);
 }
 
 /**
@@ -563,7 +549,7 @@ s32 wmap_find_land_cell(s32 value, s32* row_out, s32* column_out)
     {
         for (row = 0; row < 6; row++)
         {
-            if (D_80139290[row][column].value == value)
+            if (D_80139290[row][column].land_id == value)
             {
                 *row_out = row;
                 *column_out = column;
@@ -575,10 +561,9 @@ s32 wmap_find_land_cell(s32 value, s32* row_out, s32* column_out)
 }
 
 /**
- * @brief Install a rotation matrix with the world-map translation.
- * @param rotation Rotation angles used to build the matrix.
+ * @brief Install a rotation matrix with the map translation.
  */
-void func_8006D150(SVECTOR* rotation)
+void wmap_set_map_rotation(SVECTOR* rotation)
 {
     MATRIX matrix;
     RotMatrix(rotation, &matrix);
@@ -588,20 +573,18 @@ void func_8006D150(SVECTOR* rotation)
 }
 
 /**
- * @brief Set the world-map coordinate pair to its default position.
+ * @brief Put the land focus back at its default screen position.
  */
-void func_8006D190(void)
+void wmap_reset_focus_screen_position(void)
 {
-    D_8011CF4C.x = 0xA4;
-    D_8011CF4C.y = 0x69;
+    g_wmap_focus_screen_position.x = WMAP_FOCUS_DEFAULT_X;
+    g_wmap_focus_screen_position.y = WMAP_FOCUS_DEFAULT_Y;
 }
 
 /**
- * @brief Compose the global and local transforms and install the result in the GTE.
- * @param translation Translation for the global rotation matrix.
- * @param rotation Local rotation angles.
+ * @brief Compose the camera rotation with a model rotation and install the result.
  */
-void func_8006D1AC(VECTOR* translation, SVECTOR* rotation)
+static void wmap_set_camera_model_transform(VECTOR* translation, SVECTOR* rotation)
 {
     MATRIX matrices[2];
 
@@ -617,24 +600,24 @@ void func_8006D1AC(VECTOR* translation, SVECTOR* rotation)
 }
 
 /**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or reset, 0 if the step index was out of range.
+ * @brief Run the current step of the land entry sequence (land focus, then wait for the land effect).
+ * @param reset Nonzero restarts the sequence instead of running a step.
+ * @return 1 while the sequence runs, 0 once it has finished.
  */
-s32 func_8006D244(s32 arg0)
+s32 wmap_run_land_entry(s32 reset)
 {
     s32 result;
 
-    if (arg0 != 0)
+    if (reset != 0)
     {
-        D_801B10A0 = 1;
-        D_801B10A4 = 1;
+        g_wmap_land_entry_step = 1;
+        g_wmap_land_entry_timer = 1;
         return 1;
     }
 
-    if (D_801B10A0 < 0x4)
+    if (g_wmap_land_entry_step < WMAP_LAND_ENTRY_STEPS)
     {
-        D_800D0FAC[D_801B10A0]();
+        g_wmap_land_entry_steps[g_wmap_land_entry_step]();
         result = 1;
     }
     else
@@ -645,53 +628,53 @@ s32 func_8006D244(s32 arg0)
 }
 
 /**
- * @brief Set two adjacent world-map state flags.
+ * @brief Land entry step 0: restart the sequence.
  */
-void func_8006D2BC(void)
+void wmap_land_entry_reset(void)
 {
-    D_801B10A0 = 1;
-    D_801B10A4 = 1;
+    g_wmap_land_entry_step = 1;
+    g_wmap_land_entry_timer = 1;
 }
 
 /**
- * @brief Advance this sequence one step while its gate flag is clear.
+ * @brief Land entry step 2: wait until the land effect clears D_8013B20C.
  */
-void func_8006D2D4(void)
+void wmap_land_entry_wait(void)
 {
     if (D_8013B20C == 0)
     {
-        D_801B10A0 += 1;
-        func_8006D310();
+        g_wmap_land_entry_step += 1;
+        wmap_land_entry_finish();
     }
 }
 
 /**
- * @brief Increment a world-map state counter.
+ * @brief Land entry step 3: finish the sequence.
  */
-void func_8006D310(void)
+void wmap_land_entry_finish(void)
 {
-    D_801B10A0 += 1;
+    g_wmap_land_entry_step += 1;
 }
 
 /**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or reset, 0 if the step index was out of range.
+ * @brief Run the current step of the land return sequence (scroll back to the vehicle cell).
+ * @param reset Nonzero restarts the sequence instead of running a step.
+ * @return 1 while the sequence runs, 0 once it has finished.
  */
-static s32 func_8006D328(s32 arg0)
+static s32 wmap_run_land_return(s32 reset)
 {
     s32 result;
 
-    if (arg0 != 0)
+    if (reset != 0)
     {
-        D_801B10A8 = 1;
-        D_801B10AC = 1;
+        g_wmap_land_return_step = 1;
+        g_wmap_land_return_timer = 1;
         return 1;
     }
 
-    if (D_801B10A8 < 0x6)
+    if (g_wmap_land_return_step < WMAP_LAND_RETURN_STEPS)
     {
-        D_800D0FBC[D_801B10A8]();
+        g_wmap_land_return_steps[g_wmap_land_return_step]();
         result = 1;
     }
     else
@@ -702,60 +685,65 @@ static s32 func_8006D328(s32 arg0)
 }
 
 /**
- * @brief Set two adjacent world-map state flags.
+ * @brief Land return step 0: restart the sequence.
  */
-void func_8006D3A0(void)
+void wmap_land_return_reset(void)
 {
-    D_801B10A8 = 1;
-    D_801B10AC = 1;
-}
-
-/** @brief World-map step handler: bump the step counter and run the next step. */
-void func_8006D3B8(void)
-{
-    D_801B10A8 += 1;
-    func_8006D3E4();
+    g_wmap_land_return_step = 1;
+    g_wmap_land_return_timer = 1;
 }
 
 /**
- * @brief Advance this sequence one step while its gate flag is clear.
+ * @brief Land return step 1: start the return.
  */
-void func_8006D3E4(void)
+void wmap_land_return_start(void)
 {
-    if (D_8011CF44 == 0)
+    g_wmap_land_return_step += 1;
+    wmap_land_return_wait_sequences();
+}
+
+/**
+ * @brief Land return step 2: wait until no counted sequence is running.
+ */
+void wmap_land_return_wait_sequences(void)
+{
+    if (g_wmap_sequence_count == 0)
     {
-        D_801B10A8 += 1;
-        func_8006D420();
+        g_wmap_land_return_step += 1;
+        wmap_land_return_scroll_back();
     }
 }
 
-/** @brief Compute the map-coordinate offset and advance the sequence. */
-void func_8006D420(void)
+/**
+ * @brief Land return step 3: scroll the map back to the vehicle cell.
+ */
+void wmap_land_return_scroll_back(void)
 {
-
     g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = g_wmap_view.x - ((g_wmap_vehicle_cell_x - 1) * 0x30);
-    g_wmap_scroll_remaining_y = g_wmap_view.y - ((g_wmap_vehicle_cell_y - 1) * 0x30);
-    D_801B10A8 += 1;
-    func_8006D4B0();
+    g_wmap_scroll_remaining_x = g_wmap_view.x - ((g_wmap_vehicle_cell_x - 1) * WMAP_CELL_SPACING);
+    g_wmap_scroll_remaining_y = g_wmap_view.y - ((g_wmap_vehicle_cell_y - 1) * WMAP_CELL_SPACING);
+    g_wmap_land_return_step += 1;
+    wmap_land_return_wait_scroll();
 }
 
 /**
- * @brief Advance this sequence one step unless its gate flag hit the stop value.
+ * @brief Land return step 4: wait for the map scroll.
  */
-void func_8006D4B0(void)
+void wmap_land_return_wait_scroll(void)
 {
     if (g_wmap_view_scroll_mode != 2)
     {
-        D_801B10A8 += 1;
-        func_8006D4F0();
+        g_wmap_land_return_step += 1;
+        wmap_land_return_finish();
     }
 }
 
-/** @brief Clear the world-map flag, run setup, and advance the state. */
-void func_8006D4F0(void)
+/**
+ * @brief Land return step 5: clear the transition flag and restore the map state.
+ */
+void wmap_land_return_finish(void)
 {
     D_8013B208 = 0;
     wmap_reset_after_transition();
-    D_801B10A8 += 1;
+    g_wmap_land_return_step += 1;
 }

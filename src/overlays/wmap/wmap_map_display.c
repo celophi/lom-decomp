@@ -1432,10 +1432,10 @@ void wmap_draw_cell_effect(s32 x, s32 y)
         gte_ldv3(&transformed[0], &transformed[1], &transformed[2]);
         gte_rtpt();
 
-        *(u32*)&poly->r0 = func_8006CF40(source->colors[0], color_frame);
-        *(u32*)&poly->r1 = func_8006CF40(source->colors[1], color_frame);
-        *(u32*)&poly->r2 = func_8006CF40(source->colors[2], color_frame);
-        *(u32*)&poly->r3 = func_8006CF40(source->colors[3], color_frame);
+        *(u32*)&poly->r0 = wmap_scale_color(source->colors[0], color_frame);
+        *(u32*)&poly->r1 = wmap_scale_color(source->colors[1], color_frame);
+        *(u32*)&poly->r2 = wmap_scale_color(source->colors[2], color_frame);
+        *(u32*)&poly->r3 = wmap_scale_color(source->colors[3], color_frame);
 
         if ((D_8011D4FC == 3) || (D_8011D4FC == 7) || (D_8011D4FC == 0x1B))
         {
