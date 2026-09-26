@@ -386,3 +386,4 @@ g_wmap_special_return_step = 0x801B2C54;
 g_wmap_special_return_timer = 0x801B2C58;
 g_wmap_special_return_steps = 0x800D656C;
 wmap_find_land_cell = 0x8006D0F0; // type:func
+g_wmap_sprite_textures = 0x800D0A6C;

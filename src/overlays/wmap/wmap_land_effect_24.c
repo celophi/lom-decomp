@@ -1358,8 +1358,6 @@ void func_800BA408(void)
     extern s32 D_8011CF74;
     extern u8 D_80139988[];
 
-    extern void wmap_draw_actor_sprite(void*, s32, s32, s32, s32);
-
     s32 index;
     s32 config_offset;
     u16 value;
