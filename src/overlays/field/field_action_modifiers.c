@@ -69,7 +69,7 @@
 /** @brief Effect played when a party record revives or recovers. */
 #define FIELD_REVIVE_EFFECT 0x2C
 
-/** @brief Status slot ids tested with func_800B4CE4. */
+/** @brief Status slot ids tested with field_count_status_slots. */
 #define FIELD_STATUS_ID_RESIST_ALL 8
 #define FIELD_STATUS_ID_DRAIN 10
 #define FIELD_STATUS_ID_DAMAGE_IMMUNE 11
@@ -291,7 +291,7 @@ s32 field_battle_handle_defeat(FieldStatusRecord* record)
             {
                 duration = FIELD_DEFEAT_TIMER_SHORT;
             }
-            if (func_800B4CE4(record, FIELD_STATUS_ID_QUICK_RECOVERY) != 0)
+            if (field_count_status_slots(record, FIELD_STATUS_ID_QUICK_RECOVERY) != 0)
             {
                 descriptor = g_field_battle->descriptor;
                 if (descriptor != NULL && FIELD_DESCRIPTOR_KIND(descriptor) < FIELD_ACTION_KIND_ELEMENTAL)
@@ -425,7 +425,7 @@ void field_consume_revive_item(FieldStatusRecord* record)
                 {
                     item->special_ids[j] = FIELD_ITEM_ID_NONE;
                     item->effect_index = 0;
-                    func_800B4934(record);
+                    field_rebuild_equipment_status_flags(record);
                     return;
                 }
             }
@@ -778,7 +778,7 @@ void field_apply_element_modifiers(s32 unused, s32 element_mask, s32* attack, s3
         *attack = (u32)(*attack * (sum + 5)) >> 2;
     }
 
-    if (func_800B4CE4(g_field_battle->target, FIELD_STATUS_ID_RESIST_ALL) == 0)
+    if (field_count_status_slots(g_field_battle->target, FIELD_STATUS_ID_RESIST_ALL) == 0)
     {
         mask = elements & g_field_battle->target->resist_elements;
     }
@@ -831,7 +831,7 @@ s32 field_apply_damage(u32 attack, u32 defense)
     FieldStatusRecord* attacker;
     s32 quarter;
 
-    if (func_800B4CE4(g_field_battle->target, FIELD_STATUS_ID_DAMAGE_IMMUNE) != 0)
+    if (field_count_status_slots(g_field_battle->target, FIELD_STATUS_ID_DAMAGE_IMMUNE) != 0)
     {
         return 0;
     }
@@ -871,7 +871,7 @@ s32 field_apply_damage(u32 attack, u32 defense)
     attack = (u32)((g_field_battle->descriptor->info.bytes.power + bonus) * attack) >> 4;
     attack = field_apply_status_multipliers(attack * g_field_battle->action->damage_scale);
 
-    if ((func_800B4CE4(g_field_battle->attacker, FIELD_STATUS_ID_DRAIN) != 0) && (FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor) < FIELD_ACTION_KIND_ELEMENTAL))
+    if ((field_count_status_slots(g_field_battle->attacker, FIELD_STATUS_ID_DRAIN) != 0) && (FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor) < FIELD_ACTION_KIND_ELEMENTAL))
     {
         /* Open-coded attack / 4; value holds the state pointer because the
            target keeps it in the divisor's register. */
@@ -920,33 +920,33 @@ s32 field_apply_status_multipliers(s32 damage)
     s32 count;
     s32 kind;
 
-    count = func_800B4CE4(g_field_battle->attacker, FIELD_DESCRIPTOR_DEFENSE_SLOT(g_field_battle->descriptor) | FIELD_STATUS_ID_SLOT_BOOST);
+    count = field_count_status_slots(g_field_battle->attacker, FIELD_DESCRIPTOR_DEFENSE_SLOT(g_field_battle->descriptor) | FIELD_STATUS_ID_SLOT_BOOST);
     for (; count != 0; count--)
     {
         damage = (damage * 3) / 2;
     }
 
     kind = FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor);
-    count = func_800B4CE4(g_field_battle->attacker, kind + FIELD_STATUS_ID_KIND_BOOST);
+    count = field_count_status_slots(g_field_battle->attacker, kind + FIELD_STATUS_ID_KIND_BOOST);
     for (; count != 0; count--)
     {
         damage = (damage * 3) / 2;
     }
 
     kind = FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor);
-    count = func_800B4CE4(g_field_battle->target, kind + FIELD_STATUS_ID_KIND_GUARD);
+    count = field_count_status_slots(g_field_battle->target, kind + FIELD_STATUS_ID_KIND_GUARD);
     for (; count != 0; count--)
     {
         damage = damage / 2;
     }
 
-    count = func_800B4CE4(g_field_battle->attacker, g_field_battle->target->race + FIELD_STATUS_ID_RACE_SLAYER);
+    count = field_count_status_slots(g_field_battle->attacker, g_field_battle->target->race + FIELD_STATUS_ID_RACE_SLAYER);
     for (; count != 0; count--)
     {
         damage = (damage * 3) / 2;
     }
 
-    count = func_800B4CE4(g_field_battle->target, g_field_battle->attacker->race + FIELD_STATUS_ID_RACE_GUARD);
+    count = field_count_status_slots(g_field_battle->target, g_field_battle->attacker->race + FIELD_STATUS_ID_RACE_GUARD);
     for (; count != 0; count--)
     {
         damage = damage / 2;
@@ -985,7 +985,7 @@ void field_apply_on_hit_statuses(void)
     {
         for (status = FIELD_STATUS_ID_ON_HIT_FIRST; status < FIELD_STATUS_ID_ON_HIT_END; status++)
         {
-            if (func_800B4CE4(g_field_battle->attacker, status) != 0)
+            if (field_count_status_slots(g_field_battle->attacker, status) != 0)
             {
                 /* Indexing the table directly folds the -0xA0 bias into the address. */
                 table = g_field_on_hit_statuses;

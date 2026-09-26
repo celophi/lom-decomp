@@ -149,7 +149,7 @@
 #define FIELD_GOSUB_CLOSING 1
 #define FIELD_GOSUB_RUNNING 2
 
-/** @brief func_800AF950 scales (1/256 units) and lower-edge slant of the duel panel text. */
+/** @brief field_text_draw_scaled_quad scales (1/256 units) and lower-edge slant of the duel panel text. */
 #define FIELD_DUEL_TEXT_SCALE 0x180
 #define FIELD_DUEL_TITLE_SCALE 0x200
 #define FIELD_DUEL_WINNER_SCALE 0x1C0
@@ -305,7 +305,7 @@ void* func_800AD208(s32* ot, void* cursor, s32 value, s32 digits, u16* position,
 void* func_800AD524(u8* cursor, s32* ot, s32 glyph, s32* position, s32 flags);
 SPRT* func_800AD658(s32* ot, SPRT* sprite_cursor, s32 count);
 s32 field_draw_player_icon(s32 packet_cursor, u_long* ot, s32 player, s32 x, s32 y, s32 flip);
-s32 func_800AF950(s32 packet_cursor, u_long* ot, u8* text, s32 color, s32 x, s32 y, s32 align, s32 slot, s32 scale_x, s32 scale_y, s32 arg10, s32 visible);
+s32 field_text_draw_scaled_quad(s32 packet_cursor, u_long* ot, u8* text, s32 color, s32 x, s32 y, s32 align, s32 slot, s32 scale_x, s32 scale_y, s32 arg10, s32 visible);
 
 void* field_draw_text(SPRT* sprite_cursor, s32* ot, u8* text, s32 text_color, s32 x, s32 y, s32 flags);
 void field_format_number(u8* text, s32 number, s32 wide_request);
@@ -1670,13 +1670,13 @@ void field_rebuild_party_actions(s32 refresh_only)
     FieldGameState* command_view;
     FieldGameState* skill_cursor;
 
-    akao_set_paused(g_pad_ctx->mono_sound ^ 1);
-    cdrom_set_audio_volume(0x7F, g_pad_ctx->mono_sound);
+    akao_set_paused(g_pad_ctx->options.bits.mono_sound ^ 1);
+    cdrom_set_audio_volume(0x7F, g_pad_ctx->options.bits.mono_sound);
     controllers_or_is_player = (s32)CONTROLLER_STATE;
-    ((ControllerState*)controllers_or_is_player)->ports[0].actuators_enabled = g_pad_ctx->vibration;
+    ((ControllerState*)controllers_or_is_player)->ports[0].actuators_enabled = g_pad_ctx->options.bits.vibration;
     if ((g_pad_ctx->characters[1].info.word & FIELD_CHARACTER_AI) && (g_pad_ctx->characters[1].name[0] != 0))
     {
-        ((ControllerState*)controllers_or_is_player)->ports[1].actuators_enabled = g_pad_ctx->vibration;
+        ((ControllerState*)controllers_or_is_player)->ports[1].actuators_enabled = g_pad_ctx->options.bits.vibration;
     }
     else
     {
@@ -2004,11 +2004,11 @@ void field_open_shop_mode_0(s32 shop_options)
 /**
  * @brief Open the shop with a caller-supplied entry list.
  * @param entry_count Number of entries in the supplied list.
- * @param entries Address of the eight-byte shop entry array.
- * @param list_options Additional list data forwarded to the shop; meaning unresolved.
+ * @param entries Shop entry array.
+ * @param item_records Item records that the entries flagged SHOP_ENTRY_RECORD_FLAG index.
  * @param shop_options Value forwarded as the final shop argument.
  */
-void field_open_shop_mode_1(s32 entry_count, s32 entries, s32 list_options, s32 shop_options)
+void field_open_shop_mode_1(s32 entry_count, struct ShopEntry* entries, struct FieldItemRecord* item_records, s32 shop_options)
 {
     if (g_field_modal_state == FIELD_MODAL_NONE)
     {
@@ -2017,7 +2017,7 @@ void field_open_shop_mode_1(s32 entry_count, s32 entries, s32 list_options, s32 
         cdrom_wait_queue_empty();
         g_field_shop_active = 1;
         g_field_modal_state = FIELD_MODAL_SHOP;
-        func_80140004(FIELD_SHOP_WORK_BUFFER, 1, entry_count, entries, list_options, shop_options);
+        func_80140004(FIELD_SHOP_WORK_BUFFER, 1, entry_count, entries, item_records, shop_options);
     }
 }
 
@@ -2307,7 +2307,7 @@ static s32 field_draw_duel_intro(FieldRenderHalf* render)
     }
 
     packet_cursor = field_draw_player_icon(packet_cursor, ot, 0, g_field_duel_panel_offset + 50, 34, 1);
-    packet_cursor = func_800AF950(packet_cursor, ot, g_pad_ctx->characters[0].name, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 108, 50, 0, 5, 384,
+    packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, g_pad_ctx->characters[0].name, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 108, 50, 0, 5, 384,
                                   384, -4, FIELD_DUEL_PANEL_MOVING);
 
     field_format_number(record_text, g_pad_ctx->characters[0].duel_wins, 0);
@@ -2316,12 +2316,12 @@ static s32 field_draw_duel_intro(FieldRenderHalf* render)
     field_append_name(record_text, loss_text);
     field_append_dialog_text(record_text, &D_800EC40A, 35);
 
-    packet_cursor = func_800AF950(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 108, 66, 0, 6, FIELD_DUEL_TEXT_SCALE,
+    packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 108, 66, 0, 6, FIELD_DUEL_TEXT_SCALE,
                                   FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
-    packet_cursor = func_800AF950(packet_cursor, ot, field_dialog_text(&D_800EC406, 33), FIELD_TEXT_COLOR_NORMAL, 160, 100, 2, 7, FIELD_DUEL_TEXT_SCALE,
+    packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, field_dialog_text(&D_800EC406, 33), FIELD_TEXT_COLOR_NORMAL, 160, 100, 2, 7, FIELD_DUEL_TEXT_SCALE,
                                   FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
     packet_cursor = field_draw_player_icon(packet_cursor, ot, 1, 222 - g_field_duel_panel_offset, 134, 0);
-    packet_cursor = func_800AF950(packet_cursor, ot, g_pad_ctx->characters[1].name, FIELD_TEXT_COLOR_NORMAL, 212 - g_field_duel_panel_offset, 150, 1, 8,
+    packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, g_pad_ctx->characters[1].name, FIELD_TEXT_COLOR_NORMAL, 212 - g_field_duel_panel_offset, 150, 1, 8,
                                   FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
 
     if ((u32)(g_pad_ctx->characters[1].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
@@ -2331,7 +2331,7 @@ static s32 field_draw_duel_intro(FieldRenderHalf* render)
         field_format_number(loss_text, g_pad_ctx->characters[1].duel_losses, 0);
         field_append_name(record_text, loss_text);
         field_append_dialog_text(record_text, &D_800EC40A, 35);
-        packet_cursor = func_800AF950(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, 212 - g_field_duel_panel_offset, 166, 1, 9,
+        packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, 212 - g_field_duel_panel_offset, 166, 1, 9,
                                       FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
     }
 
@@ -2383,10 +2383,10 @@ static s32 field_draw_duel_result(FieldRenderHalf* render)
         return 1;
     }
 
-    packet_cursor = func_800AF950(packet_cursor, ot, field_dialog_text(&D_800EC40C, 36), FIELD_TEXT_COLOR_NORMAL, 160, 52, 2, 5, FIELD_DUEL_TITLE_SCALE,
+    packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, field_dialog_text(&D_800EC40C, 36), FIELD_TEXT_COLOR_NORMAL, 160, 52, 2, 5, FIELD_DUEL_TITLE_SCALE,
                                   FIELD_DUEL_TITLE_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
     packet_cursor = field_draw_player_icon(packet_cursor, ot, g_field_duel_winner, g_field_duel_panel_offset + 50, 84, 1);
-    packet_cursor = func_800AF950(packet_cursor, ot, g_pad_ctx->characters[g_field_duel_winner].name, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 108,
+    packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, g_pad_ctx->characters[g_field_duel_winner].name, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 108,
                                   100, 0, 6, FIELD_DUEL_WINNER_SCALE, FIELD_DUEL_WINNER_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
 
     if ((u32)(g_pad_ctx->characters[g_field_duel_winner].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
@@ -2396,7 +2396,7 @@ static s32 field_draw_duel_result(FieldRenderHalf* render)
         field_format_number(loss_text, g_pad_ctx->characters[g_field_duel_winner].duel_losses, 0);
         field_append_name(record_text, loss_text);
         field_append_dialog_text(record_text, &D_800EC40A, 35);
-        packet_cursor = func_800AF950(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 140, 132, 0, 7,
+        packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 140, 132, 0, 7,
                                       FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
     }
 

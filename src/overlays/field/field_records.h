@@ -461,6 +461,9 @@ typedef struct FieldRegionRecord
     s32 unique_id;
 } FieldRegionRecord;
 
+/** @brief FieldRegionRecord::status bit 31: the companion has just joined. */
+#define FIELD_COMPANION_NEW 0x80000000
+
 /** @brief Value of an empty pending-effect slot in FieldRegionRecord::status. */
 #define FIELD_NO_EFFECT 0xFF
 
@@ -516,10 +519,17 @@ typedef struct FieldGameState
     u16 scene_mode;
     u8 field_flags;
     u8 layout_flags;
-    /** @brief Config menu options: controller vibration and mono sound. */
-    u32 vibration : 1;
-    u32 mono_sound : 1;
-    u32 unk28_2 : 30;
+    /** @brief Config menu options (SavedGameLayout::option_flags): controller vibration, mono sound, SAVED_OPTION_FLAG_*. */
+    union
+    {
+        u32 word;
+        struct
+        {
+            u32 vibration : 1;
+            u32 mono_sound : 1;
+            u32 unk2 : 30;
+        } bits;
+    } options;
     /** @brief Money, saturated at 10,000,000. */
     u32 money;
     u8 pad030[0x34 - 0x30];
@@ -550,6 +560,14 @@ typedef struct FieldGameState
             /** @brief Bits 0-6: day of the week (index into g_field_weekday_names). */
             u16 weekday;
         } fields;
+        struct
+        {
+            u32 placed_land_count : 8;
+            u32 hero_level : 8;
+            /** @brief Day of the week (index into g_field_weekday_names). */
+            u32 weekday : 7;
+            u32 unk23 : 9;
+        } bits;
     } control;
     u32 flag_bits[2];
     FieldLandRecord lands[FIELD_LAND_COUNT];
@@ -634,7 +652,7 @@ typedef struct FieldItemStaging
     FieldStagingLevel levels[FIELD_STAGING_LEVEL_COUNT];
     u8 effect_index;
     u8 pad1D[3];
-    /** @brief Per stat, low nibble: modifier index; high nibble: row of the D_800F0E88 bounds. */
+    /** @brief Per stat, low nibble: modifier index; high nibble: row of the g_field_stat_modifier_limits bounds. */
     union
     {
         u8 bytes[FIELD_STAGING_STAT_COUNT];
@@ -744,7 +762,7 @@ typedef struct FieldItemGridTable
 
 /**
  * @brief Generation table currently loaded into D_80123FC0.
- * @note Script offsets passed to func_800BF2F0 are relative to @c bytes.
+ * @note Script offsets passed to field_run_item_script are relative to @c bytes.
  */
 typedef union FieldItemTables
 {
@@ -829,6 +847,18 @@ typedef struct FieldActorRecord
     } flags;
 } FieldActorRecord;
 
+/** @brief FieldActorRecord::selector of a record without one. */
+#define FIELD_NO_SELECTOR 0xFF
+
+/** @brief field_resolve_talk_window operand values. */
+#define FIELD_TALK_AUTO 0xFF
+#define FIELD_TALK_EFFECT_SELECTOR 0xFE
+#define FIELD_TALK_PLANE_MASK 3
+#define FIELD_TALK_PLANE_NO_FACING 0x80
+#define FIELD_TALK_PLANE_FACING 0x40
+/** @brief Effect flag set when the speaker's facing angle is in the flipped range. */
+#define FIELD_TALK_FACING_FLAG 0x40
+
 /** @brief FieldActorRecord::pickup bit: the pickup is a counter, not a reward table key. */
 #define FIELD_PICKUP_COUNTER 0x8000
 
@@ -888,7 +918,9 @@ typedef struct FieldTriggerTable
 typedef struct FieldRuntimeContext
 {
     s32 local_variable_base;
-    u8 pad004[0x44 - 0x4];
+    u8 pad004[0x24 - 0x4];
+    /** @brief Parameter block of the script commands (opcode 0x03): runtime script variable words 9 to 16. */
+    s32 command_params[8];
     s32 actor_positions[FIELD_PARTY_SIZE];
     u8 pad050[4];
     s32 view_x;
@@ -940,13 +972,16 @@ typedef struct FieldRuntimeContext
         struct
         {
             u16 scene_id;
-            u8 unk41A;
-            u8 unk41B;
+            /** @brief Field object of the new scene. */
+            u8 object_id;
+            /** @brief Bits 0-4: spawn point in the new scene (FIELD_SPAWN_ID_MASK). */
+            u8 spawn;
         } fields;
         struct
         {
             u32 scene_id : 16;
-            u32 unk16 : 13;
+            u32 object_id : 8;
+            u32 spawn_id : 5;
             /** @brief Set once the transition fade has been started. */
             u32 fade_started : 1;
             /** @brief Set by a script to request the transition. */
@@ -1208,7 +1243,5 @@ typedef struct FieldBattleContext
 
 /** @brief Owner-relative script variable: event argument of the script owner, set when its script runs. */
 #define FIELD_VAR_EVENT_ARGUMENT 0xD000
-/** @brief Script variable receiving the result of a query command. */
-#define FIELD_VAR_RESULT 0x7100
 
 #endif

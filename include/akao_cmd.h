@@ -16,5 +16,6 @@ void akao_play_sfx(s32 sound_id, s32 parameter, s32 pan, s32 volume);
 void akao_cmd_21(s32 value0, s32 value1);
 void akao_cmd_a1(s32 value0, s32 value1, s32 value2, s32 value3);
 void akao_cmd_a3(s32 value0, s32 value1, s32 value2, s32 value3);
+void akao_cmd_a9(s32 value0, s32 value1);
 
 #endif

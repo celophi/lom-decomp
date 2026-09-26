@@ -5,6 +5,7 @@
 #include "field_script.h"
 #include "field_menu_vars.h"
 #include "main.h"
+#include "sdk/abs.h"
 
 /**
  * @brief The game-state workspace viewed as the pad context that main.h maps.
@@ -1082,14 +1083,7 @@ void field_menu_ease_object(void)
     if (y == target_y || y < target_y)
     {
         delta = x - target_x;
-        distance = delta;
-        if (delta < 0)
-        {
-            /* Net-zero update: keeps the negation on the copy in distance. */
-            delta++;
-            delta--;
-            distance = -distance;
-        }
+        distance = abs(delta);
         if (distance * 2 >= 4)
         {
             position[0] = target_x + delta * 2 / 3;
@@ -1107,14 +1101,7 @@ void field_menu_ease_object(void)
     if (position[1] == target_y || position[1] < target_y)
     {
         delta = position[2] - target_z;
-        distance = delta;
-        if (delta < 0)
-        {
-            /* Net-zero update: keeps the negation on the copy in distance. */
-            delta++;
-            delta--;
-            distance = -distance;
-        }
+        distance = abs(delta);
         if (distance * 2 >= 4)
         {
             position[2] = target_z + delta * 2 / 3;
@@ -1132,14 +1119,7 @@ void field_menu_ease_object(void)
     if ((position[0] == target_x && position[2] == target_z) || position[1] >= target_y)
     {
         delta = position[1] - target_y;
-        distance = delta;
-        if (delta < 0)
-        {
-            /* Net-zero update: keeps the negation on the copy in distance. */
-            delta++;
-            delta--;
-            distance = -distance;
-        }
+        distance = abs(delta);
         if (distance * 2 >= 4)
         {
             position[1] = target_y + delta * 2 / 3;
@@ -1422,11 +1402,11 @@ void field_menu_add_logic_block(void)
 }
 
 /**
- * @brief Pass the variable at D_80122C1C to func_800C9ED4.
+ * @brief Pass the variable at D_80122C1C to field_select_distance_bucket.
  */
 void func_800C6DA0(void)
 {
-    func_800C9ED4(D_80122C1C);
+    field_select_distance_bucket(D_80122C1C);
 }
 
 /**

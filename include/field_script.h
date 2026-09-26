@@ -109,9 +109,9 @@ void field_script_branch();
 
 /*
  * Declared without a prototype: their FieldScriptVariableRef argument travels
- * in the upper half of a register, and the opcode handlers pass it as an int
- * shifted left by 16 (field_get_script_var and field_set_script_var take a
- * plain int reference instead).
+ * in the upper half of a register, and some callers pass it as an int shifted
+ * left by 16 instead of the struct (field_get_script_var and
+ * field_set_script_var take a plain int reference).
  */
 s32 field_read_script_var();
 void field_write_script_var();

@@ -131,8 +131,8 @@ void field_grant_actor_pickup(void* unused, s32 owner_id)
         field_append_dialog_item((s32)handle, 0);
         return;
     }
-    /* The original passes the actor as a second argument, which func_800C2138 ignores. */
-    ((void (*)(s32, FieldActorRecord*))func_800C2138)(index, actor);
+    /* The original passes the actor as a second argument, which field_receive_item ignores. */
+    ((void (*)(s32, FieldActorRecord*))field_receive_item)(index, actor);
     field_append_dialog_item((s32)((u8*)D_800F0E98 + D_800F0E98[index]), 1);
 }
 

@@ -1,189 +1,229 @@
+/**
+ * @file field_status_ticks.c
+ * @brief Per-frame upkeep of the battle status records: partner status slots,
+ *        status timers, HP drain and regeneration, and stat recovery.
+ */
+
 #include "game_audio.h"
 #include "common.h"
 #include "field_calls.h"
 #include "field_script.h"
 #include "field_records.h"
 
-extern FieldBattleContext *g_field_battle;
-extern FieldRuntimeContext *g_field_runtime;
+/** @brief Script variable: when non-zero, records 0 and 1 keep full status intensity. */
+#define FIELD_VAR_DEBUG_FULL_INTENSITY 0xFFD
 
+/** @brief Records below this id get full intensity from FIELD_VAR_DEBUG_FULL_INTENSITY. */
+#define FULL_INTENSITY_RECORD_COUNT 2
+/** @brief Status intensity given by FIELD_VAR_DEBUG_FULL_INTENSITY and STATUS_ID_FULL_INTENSITY. */
+#define STATUS_INTENSITY_FULL 0xFF
+
+/** @brief The status and regeneration updates of the second pass run every this many frames. */
+#define SLOW_TICK_FRAME_MASK 0xF
+
+/** @brief Status slot ids handled here (see field_count_status_slots). */
+#define STATUS_ID_EMPTY 0
+#define STATUS_ID_EXTRA_REGEN 1         /**< Each slot heals one more point per regeneration tick. */
+#define STATUS_ID_FAST_REGEN 2          /**< Regeneration as with STATUS_FLAG_FAST_REGEN. */
+#define STATUS_ID_CLEAR_EFFECTS 5       /**< Clears every status effect each frame. */
+#define STATUS_ID_FULL_INTENSITY 6      /**< Keeps the hero (record 0) at full intensity. */
+#define STATUS_ID_IMMUNITY_BASE 0x60    /**< + n: clears status effect n each frame. */
+#define STATUS_ID_IMMUNITY_END 0x6C
+#define STATUS_ID_STAT_BOOST_BASE 0x70  /**< + n: raises stat selector n to 10/8 each frame. */
+#define STATUS_ID_STAT_BOOST_END 0x80
+
+/** @brief field_clear_status_effect index that clears every effect. */
+#define STATUS_EFFECT_ALL 0xFF
+/** @brief Stat scale of a STATUS_ID_STAT_BOOST_BASE slot, in eighths. */
+#define STATUS_STAT_BOOST_SCALE 10
+
+/** @brief A record with fewer empty status slots than this has a partner. */
+#define STATUS_PARTNER_EVENT_THRESHOLD 3
+/** @brief Actor event run for a party member that has a partner, and its mode. */
+#define STATUS_PARTNER_EVENT 0xC
+#define STATUS_PARTNER_EVENT_MODE 6
+/** @brief Number of partner pairs the status slots can hold. */
+#define STATUS_PARTNER_PAIR_MAX FIELD_STATUS_SLOT_COUNT
+/** @brief Diagnostic code for too many partner pairs (passed as the first argument). */
+#define DIAG_TOO_MANY_PARTNER_PAIRS 0x6F
+/** @brief End marker of the partner pair list. */
+#define PARTNER_LIST_END 0xFF
+
+/** @brief FieldStatusRecord::status_flags bits read here. */
+#define STATUS_FLAG_NO_REGEN 0x1
+#define STATUS_FLAG_FAST_REGEN 0x8
+
+/** @brief FieldStatusState::effect_flags bits that drain HP: for party members, and for monsters. */
+#define STATUS_EFFECTS_DRAIN_PARTY 0x190
+#define STATUS_EFFECTS_DRAIN_MONSTER 0x191
+/** @brief FieldStatusState::effect_flags bits that stop regeneration. */
+#define STATUS_EFFECTS_NO_REGEN 0x391
+
+/** @brief HP drained per tick, as a right shift of the maximum HP (bosses drain less). */
+#define DRAIN_SHIFT 5
+#define DRAIN_SHIFT_BOSS 8
+
+/** @brief Stat that slows regeneration, and the value at which regeneration is slowest. */
+#define REGEN_STAT 4
+#define REGEN_STAT_RANGE 100
+/** @brief Regeneration speed multipliers: fast, standing or walking, and animation REGEN_ANIMATION. */
+#define REGEN_MULTIPLIER_FAST 8
+#define REGEN_MULTIPLIER_IDLE 4
+#define REGEN_MULTIPLIER_REST 2
+/** @brief Animations below this one count as standing or walking. */
+#define REGEN_ANIMATION_IDLE_END 2
+/** @brief Animation that regenerates at REGEN_MULTIPLIER_REST. */
+#define REGEN_ANIMATION_REST 0x31
+
+extern FieldBattleContext* g_field_battle;
+extern FieldRuntimeContext* g_field_runtime;
+extern FieldGameState* g_field_game_state;
+/** @brief Status flag bits granted by each equipment effect index. */
+extern u16 g_field_equipment_status_flags[];
+
+static void field_rebuild_partner_slots(void);
+static void field_apply_status_slots(FieldStatusRecord* record);
+static void field_tick_status_timers(FieldStatusRecord* record);
+static void field_drain_status_hp(FieldStatusRecord* record);
+static void field_recover_status_stats(FieldStatusRecord* record);
+static void field_regenerate_status_hp(FieldStatusRecord* record);
+
+s32 field_get_actor_animation(s32 key);
 
 /**
- * @brief Count one more battle for the ally or the enemy side in script variables 0x4280 / 0x4284.
+ * @brief Count one more standing record on the side of a revived actor.
+ *
+ * Adds one to FIELD_VAR_ALLY_COUNT for a party-side record, else to
+ * FIELD_VAR_ENEMY_COUNT; nothing happens outside a running battle.
+ *
+ * @param key Object key of the revived actor.
  */
-void func_800B48B8(void)
+void field_count_revived_record(s32 key)
 {
     s32 count;
 
-    if ((g_field_battle != NULL) && (g_field_battle->state.flags >= 0))
+    if (g_field_battle != NULL && g_field_battle->state.flags >= 0)
     {
-        /* No argument: the original leaves $a0 as the caller set it. 0x200 is meta.bits.ally. */
-        if (((FieldStatusRecord *(*)(void))field_find_status_record)()->meta.packed & 0x200)
+        if (field_find_status_record(key)->meta.packed & FIELD_STATUS_META_ALLY)
         {
-            count = field_get_script_var(0, 0x4280);
-            field_set_script_var(0, 0x4280, count + 1);
+            count = field_get_script_var(0, FIELD_VAR_ALLY_COUNT);
+            field_set_script_var(0, FIELD_VAR_ALLY_COUNT, count + 1);
         }
         else
         {
-            count = field_get_script_var(0, 0x4284);
-            field_set_script_var(0, 0x4284, count + 1);
+            count = field_get_script_var(0, FIELD_VAR_ENEMY_COUNT);
+            field_set_script_var(0, FIELD_VAR_ENEMY_COUNT, count + 1);
         }
     }
 }
 
-extern u16 D_800F0B58[];
-extern u8 *g_field_game_state;
-
 /**
- * @brief Rebuild an actor's 16-bit status mask from its four sub-entries.
- *
- * Clears the actor's 0xA mask, then walks the four 0x40-byte records that begin
- * at offset 0x5F0 of the actor's per-index block (stride 0x250) inside the table
- * pointed to by @c g_field_game_state. For each active record (byte 0 non-zero) it ORs in
- * the 16-bit flag looked up in @c D_800F0B58 by the record's 0x2E field.
- *
- * @param record Status record whose id selects the block and whose status_flags are rebuilt.
+ * @brief Rebuild a party record's status flags from its character's equipment.
+ * @param record Status record whose id selects the character; its status_flags are rebuilt.
  */
-void func_800B4934(FieldStatusRecord *record)
+void field_rebuild_equipment_status_flags(FieldStatusRecord* record)
 {
     s32 i;
-    s32 off;
-    u8 *base;
-    u8 *rec;
-    u16 *tbl;
+    FieldItemRecord* item;
 
-    i = 0;
-    tbl = D_800F0B58;
     record->status_flags = 0;
-    off = 0x50;
-    base = g_field_game_state + (record->meta.bytes.id * 0x250 + 0x5F0);
-    do
+    for (i = 0; i < FIELD_EQUIPMENT_SLOT_COUNT; i++)
     {
-        rec = base + off;
-        if (*rec != 0)
+        item = &g_field_game_state->characters[record->meta.bytes.id].equipment[i];
+        if (item->kind != 0)
         {
-            record->status_flags |= tbl[*(u16 *)(rec + 0x2E)];
+            record->status_flags |= g_field_equipment_status_flags[item->effect_index];
         }
-        i += 1;
-        off += 0x40;
-    } while (i < 4);
+    }
 }
 
-void func_800B4B44(void);
-void func_800B4D1C(FieldStatusRecord *record);
-void func_800B4DF0(FieldStatusRecord *record);
-void func_800B4E60(FieldStatusRecord *record);
-void func_800B4F38(FieldStatusRecord *record);
-void func_800B4F80(FieldStatusRecord *record);
-
 /**
- * @brief Run two update passes over the active field status records.
+ * @brief Per-frame update of the battle status records.
+ *
+ * Rebuilds the partner status slots, then applies the slots, the regeneration
+ * and the status timers of every active record; every sixteenth frame it also
+ * drains HP and moves the stats back toward their base values.
  */
-void func_800B49C0(void)
+void field_tick_battle_status(void)
 {
     s32 i;
-    s32 keep;
 
-    if ((g_field_battle != NULL) && (g_field_battle->state.flags >= 0))
+    if (g_field_battle != NULL && g_field_battle->state.flags >= 0)
     {
-        i = 0;
-        func_800B4B44();
-        do
+        field_rebuild_partner_slots();
+        for (i = 0; i < FIELD_BATTLE_RECORD_COUNT; i++)
         {
             if (g_field_battle->records[i].meta.bits.active)
             {
-                if (field_get_script_var(0, 0xFFD) == 0)
+                if (field_get_script_var(0, FIELD_VAR_DEBUG_FULL_INTENSITY) != 0 && g_field_battle->records[i].meta.bytes.id < FULL_INTENSITY_RECORD_COUNT)
                 {
-                    keep = i < 3;
+                    g_field_battle->records[i].state->status_intensity = STATUS_INTENSITY_FULL;
                 }
-                else
+                if (i < FIELD_PARTY_SIZE)
                 {
-                    if (g_field_battle->records[i].meta.bytes.id < 2)
-                    {
-                        g_field_battle->records[i].state->status_intensity = 0xFF;
-                    }
-                    keep = i < 3;
+                    field_apply_status_slots(&g_field_battle->records[i]);
+                    field_regenerate_status_hp(&g_field_battle->records[i]);
                 }
-                if (keep)
-                {
-                    func_800B4D1C(&g_field_battle->records[i]);
-                    func_800B4F80(&g_field_battle->records[i]);
-                }
-                func_800B4DF0(&g_field_battle->records[i]);
+                field_tick_status_timers(&g_field_battle->records[i]);
             }
-            i++;
-        } while (i < 11);
+        }
 
-        i = 0;
-        if ((g_field_runtime->frame_count & 0xF) == 0)
+        if ((g_field_runtime->frame_count & SLOW_TICK_FRAME_MASK) == 0)
         {
-            do
+            for (i = 0; i < FIELD_BATTLE_RECORD_COUNT; i++)
             {
                 if (g_field_battle->records[i].meta.bits.active)
                 {
-                    func_800B4E60(&g_field_battle->records[i]);
-                    func_800B4F38(&g_field_battle->records[i]);
+                    field_drain_status_hp(&g_field_battle->records[i]);
+                    field_recover_status_stats(&g_field_battle->records[i]);
                 }
-                i++;
-            } while (i < 11);
+            }
         }
     }
 }
 
-u32 func_800B4CE4(FieldStatusRecord *record, s32 status);
-
 /**
- * @brief Rebuild indexed field-state byte mappings and trigger dependent handlers.
+ * @brief Give each partner pair's members the other's partner status.
+ *
+ * Clears the status slots of the party records, then for pair n of the
+ * partner list stores each member's unk4C in slot n of the other member.
+ * Party members 1 and 2 that now have a partner run STATUS_PARTNER_EVENT.
  */
-void func_800B4B44(void)
+static void field_rebuild_partner_slots(void)
 {
     s32 i;
     s32 j;
-    u8 *list;
-    u8 *other;
-    s32 first;
-    s32 second;
-    s32 current;
+    u8* pair;
 
-    i = 0;
-    do
+    for (i = 0; i < FIELD_PARTY_SIZE; i++)
     {
-        j = 0;
-        do
+        for (j = 0; j < FIELD_STATUS_SLOT_COUNT; j++)
         {
-            g_field_battle->records[i].status_slots[j] = 0;
-            j++;
-        } while (j < 3);
-        i++;
-    } while (i < 3);
+            g_field_battle->records[i].status_slots[j] = STATUS_ID_EMPTY;
+        }
+    }
 
     i = 0;
-    list = field_pair_indicators_get_list();
-    while (*list != 0xFF)
+    pair = field_pair_indicators_get_list();
+    while (pair[0] != PARTNER_LIST_END)
     {
-        other = list + 1;
-        current = *list;
-        first = *other;
-        g_field_battle->records[current].status_slots[i] = g_field_battle->records[first].unk4C;
-        second = *other;
-        other += 2;
-        first = *list;
-        list += 2;
-        g_field_battle->records[second].status_slots[i] = g_field_battle->records[first].unk4C;
+        g_field_battle->records[pair[0]].status_slots[i] = g_field_battle->records[pair[1]].unk4C;
+        g_field_battle->records[pair[1]].status_slots[i] = g_field_battle->records[pair[0]].unk4C;
+        pair += 2;
         i++;
     }
 
-    if (func_800B4CE4(&g_field_battle->records[1], 0) < 3)
+    if (field_count_status_slots(&g_field_battle->records[1], STATUS_ID_EMPTY) < STATUS_PARTNER_EVENT_THRESHOLD)
     {
-        field_run_actor_event(1, 0xC, 6);
+        field_run_actor_event(1, STATUS_PARTNER_EVENT, STATUS_PARTNER_EVENT_MODE);
     }
-    if (func_800B4CE4(&g_field_battle->records[2], 0) < 3)
+    if (field_count_status_slots(&g_field_battle->records[2], STATUS_ID_EMPTY) < STATUS_PARTNER_EVENT_THRESHOLD)
     {
-        field_run_actor_event(2, 0xC, 6);
+        field_run_actor_event(2, STATUS_PARTNER_EVENT, STATUS_PARTNER_EVENT_MODE);
     }
-    if (i >= 4)
+    if (i > STATUS_PARTNER_PAIR_MAX)
     {
-        record_game_diagnostic(0x8001, 0x6F, i, 0);
+        record_game_diagnostic(DIAG_ERROR, DIAG_TOO_MANY_PARTNER_PAIRS, i, 0);
     }
 }
 
@@ -193,14 +233,14 @@ void func_800B4B44(void)
  * @param status Status id to count.
  * @return Number of the FIELD_STATUS_SLOT_COUNT slots equal to @p status.
  */
-u32 func_800B4CE4(FieldStatusRecord *record, s32 status)
+u32 field_count_status_slots(FieldStatusRecord* record, s32 status)
 {
     u32 count;
     u32 i;
 
     i = 0;
-    count = i;
-    for (; i < 3; i++)
+    count = 0;
+    for (; i < FIELD_STATUS_SLOT_COUNT; i++)
     {
         if (record->status_slots[i] == status)
         {
@@ -211,66 +251,57 @@ u32 func_800B4CE4(FieldStatusRecord *record, s32 status)
 }
 
 /**
- * @brief Clear selected record state and apply active field record actions.
- * @param record Status record whose active statuses are processed.
+ * @brief Apply the per-frame effects of a party record's status slots.
+ * @param record Status record whose slots are applied.
  */
-void func_800B4D1C(FieldStatusRecord *record)
+static void field_apply_status_slots(FieldStatusRecord* record)
 {
-    s32 i;
-    s32 j;
+    s32 status;
 
-    if (func_800B4CE4(record, 5) != 0)
+    if (field_count_status_slots(record, STATUS_ID_CLEAR_EFFECTS) != 0)
     {
-        field_clear_status_effect(record, 0xFF);
+        field_clear_status_effect(record, STATUS_EFFECT_ALL);
     }
 
-    i = 0x60;
-    do
+    for (status = STATUS_ID_IMMUNITY_BASE; status < STATUS_ID_IMMUNITY_END; status++)
     {
-        if (func_800B4CE4(record, i) != 0)
+        if (field_count_status_slots(record, status) != 0)
         {
-            field_clear_status_effect(record, i - 0x60);
+            field_clear_status_effect(record, status - STATUS_ID_IMMUNITY_BASE);
         }
-        i++;
-    } while (i < 0x6C);
+    }
 
-    if (func_800B4CE4(record, 6) != 0)
+    if (field_count_status_slots(record, STATUS_ID_FULL_INTENSITY) != 0)
     {
         if (record->meta.bytes.id == 0)
         {
-            record->state->status_intensity = 0xFF;
+            record->state->status_intensity = STATUS_INTENSITY_FULL;
         }
     }
 
-    j = 0x70;
-    do
+    for (status = STATUS_ID_STAT_BOOST_BASE; status < STATUS_ID_STAT_BOOST_END; status++)
     {
-        if (func_800B4CE4(record, j) != 0)
+        if (field_count_status_slots(record, status) != 0)
         {
-            field_scale_status_stat(record, j - 0x70, 0xA, 0);
+            field_scale_status_stat(record, status - STATUS_ID_STAT_BOOST_BASE, STATUS_STAT_BOOST_SCALE, 0);
         }
-        j++;
-    } while (j < 0x80);
+    }
 }
 
 /**
- * @brief Ticks a record's twelve state timers and clears any that expire.
- *
- * For each of the twelve half-word timers at record offset 0x50, decrements a
- * nonzero timer and, when it reaches zero or below, clears that state via
- * field_clear_status_effect.
- *
+ * @brief Count down a record's status timers and clear the effects that run out.
  * @param record Status record whose timers are ticked.
  */
-void func_800B4DF0(FieldStatusRecord *record)
+static void field_tick_status_timers(FieldStatusRecord* record)
 {
     s32 i;
+    s16 remaining;
 
-    for (i = 0; i < 12; i++)
+    for (i = 0; i < FIELD_STATUS_TIMER_COUNT; i++)
     {
         if ((s16)record->status_timers[i] != 0)
         {
-            s16 remaining = record->status_timers[i] - 1;
+            remaining = record->status_timers[i] - 1;
             record->status_timers[i] = remaining;
             if (remaining <= 0)
             {
@@ -281,87 +312,81 @@ void func_800B4DF0(FieldStatusRecord *record)
 }
 
 /**
- * @brief Drain a record's current value by its per-tick cost while a draining effect is active.
- * @param record Status record to update; the cost is maximum >> 5, or >> 8 for party
- *               members whose template shows the HP gauge.
- * @note The current value never drops below 1.
+ * @brief Store drained HP, keeping at least 1.
+ * @param state Status state to update.
+ * @param hp HP after the drain; values below 1 store 1.
  */
-void func_800B4E60(FieldStatusRecord *record)
+static inline void field_store_drained_hp(FieldStatusState* state, s32 hp)
 {
-    s32 current;
-    u32 value;
-    s32 cost;
-    FieldStatusState *state_again;
-    FieldStatusState *state;
+    if (hp > 0)
+    {
+        state->current = hp;
+        return;
+    }
+    state->current = 1;
+}
 
-    value = record->meta.bytes.id;
+/**
+ * @brief Drain a record's HP while a draining status effect is active.
+ *
+ * The drain is max_hp >> DRAIN_SHIFT (>> DRAIN_SHIFT_BOSS for boss monsters),
+ * at least 1; HP never drops below 1.
+ *
+ * @param record Status record to update.
+ */
+static void field_drain_status_hp(FieldStatusRecord* record)
+{
+    FieldStatusState* state;
+    s32 hp;
+    u32 drain;
+    s32 cost;
+
     state = record->state;
-    value = value < 3U;
-    current = state->current;
-    if (value != 0)
-{
-        value = state->effect_flags;
-        value &= 0x190;
-        if (value != 0)
-{
-            value = state->maximum;
-            value >>= 5;
-            do {
-                cost = 1;
-                if (value != 0)
-{
-                    cost = value;
-                }
-                current -= cost;
-            } while (0);
-            value = 1;
-            if (current > 0)
-{
-                state->current = current;
-                return;
+    hp = state->current;
+    if (record->meta.bytes.id < FIELD_PARTY_SIZE)
+    {
+        if (state->effect_flags & STATUS_EFFECTS_DRAIN_PARTY)
+        {
+            cost = 1;
+            drain = state->maximum >> DRAIN_SHIFT;
+            if (drain != 0)
+            {
+                cost = drain;
             }
-            state->current = value;
+            hp -= cost;
+            field_store_drained_hp(state, hp);
         }
-    } else {
-        value = state->effect_flags;
-        value &= 0x191;
-        if (value != 0)
-{
-            value = record->template->flags;
-            value &= 0x80;
-            do {
-                cost = 1;
-                if (value != 0)
-{
-                    value = state->maximum;
-                    value >>= 8;
-                } else {
-                    value = state->maximum;
-                    value >>= 5;
-                }
-                if (value != 0)
-{
-                    cost = value;
-                }
-                current -= cost;
-            } while (0);
-            state_again = record->state;
-            value = 1;
-            if (current > 0)
-{
-                state_again->current = current;
-                return;
+    }
+    else if (state->effect_flags & STATUS_EFFECTS_DRAIN_MONSTER)
+    {
+        if (record->template->flags & FIELD_TEMPLATE_BOSS)
+        {
+            cost = 1;
+            drain = state->maximum >> DRAIN_SHIFT_BOSS;
+            if (drain != 0)
+            {
+                cost = drain;
             }
-            state_again->current = value;
         }
+        else
+        {
+            cost = 1;
+            drain = state->maximum >> DRAIN_SHIFT;
+            if (drain != 0)
+            {
+                cost = drain;
+            }
+        }
+        hp -= cost;
+        field_store_drained_hp(record->state, hp);
     }
 }
 
 /**
- * @brief Step each current stat one point toward its base value.
+ * @brief Move each stat one point toward its base value.
  * @param record Status record whose stats are updated.
  */
-void func_800B4F38(FieldStatusRecord *record)
+static void field_recover_status_stats(FieldStatusRecord* record)
 {
     s32 i;
     u8 current;
@@ -382,70 +407,67 @@ void func_800B4F38(FieldStatusRecord *record)
     }
 }
 
-s32 field_get_actor_animation(u8 arg0);
-
 /**
- * @brief Update the record's saturating counters when its growth interval elapses.
- * @param record Status record whose linked state counter grows.
+ * @brief Regenerate one HP point when the record's regeneration interval has passed.
+ *
+ * The interval shrinks with the multiplier (fast regeneration, standing or
+ * walking, or resting) and grows with stat REGEN_STAT; party members also heal
+ * one more point per STATUS_ID_EXTRA_REGEN slot.
+ *
+ * @param record Status record to regenerate.
  */
-void func_800B4F80(FieldStatusRecord *record)
+static void field_regenerate_status_hp(FieldStatusRecord* record)
 {
     u16 flags;
     s32 multiplier;
-    s32 scaled_remaining;
-    s32 divisor;
-    s32 classification;
+    s32 interval;
+    s32 animation;
 
     flags = record->status_flags;
-    if (flags & 1)
+    if (flags & STATUS_FLAG_NO_REGEN)
     {
         return;
     }
-    if (record->state->effect_flags & 0x391)
+    if (record->state->effect_flags & STATUS_EFFECTS_NO_REGEN)
     {
         return;
     }
-    if ((flags & 8) || func_800B4CE4(record, 2) != 0)
+    if ((flags & STATUS_FLAG_FAST_REGEN) || field_count_status_slots(record, STATUS_ID_FAST_REGEN) != 0)
     {
-        multiplier = 8;
+        multiplier = REGEN_MULTIPLIER_FAST;
     }
     else
     {
-        classification = field_get_actor_animation(record->meta.bytes.id);
-        if (classification < 0)
+        animation = field_get_actor_animation(record->meta.bytes.id);
+        if (animation < 0)
         {
             return;
         }
-        if (classification < 2)
+        if (animation < REGEN_ANIMATION_IDLE_END)
         {
-            multiplier = 4;
+            multiplier = REGEN_MULTIPLIER_IDLE;
         }
-        else if (classification != 0x31)
+        else if (animation != REGEN_ANIMATION_REST)
         {
             return;
         }
         else
         {
-            multiplier = 2;
+            multiplier = REGEN_MULTIPLIER_REST;
         }
     }
 
-    scaled_remaining = (0x64 - field_get_status_stat(record, 4)) * multiplier;
-    if (scaled_remaining < 0)
+    interval = (REGEN_STAT_RANGE - field_get_status_stat(record, REGEN_STAT)) * multiplier / 16;
+    if (interval <= 0)
     {
-        scaled_remaining += 0xF;
+        interval = 1;
     }
-    divisor = scaled_remaining >> 4;
-    if (divisor <= 0)
-    {
-        divisor = 1;
-    }
-    if ((u32)g_field_runtime->frame_count % (u32)divisor == 0)
+    if ((u32)g_field_runtime->frame_count % (u32)interval == 0)
     {
         field_heal_status(record->state, 1);
-        if (record->meta.bytes.id < 3)
+        if (record->meta.bytes.id < FIELD_PARTY_SIZE)
         {
-            field_heal_status(record->state, func_800B4CE4(record, 1));
+            field_heal_status(record->state, field_count_status_slots(record, STATUS_ID_EXTRA_REGEN));
         }
     }
 }

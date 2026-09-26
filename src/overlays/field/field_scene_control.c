@@ -8,31 +8,8 @@
 #include "field_animation.h"
 #include "field_calls.h"
 
-/** Scene lists selected by field_control_animation and field_get_animation_state (FieldSeqDef::list_kind). */
-enum
-{
-    FIELD_LIST_TILE_ANIMS = 0,    /**< FieldScene::anims */
-    FIELD_LIST_PALETTE_ANIMS = 1, /**< FieldScene::strips */
-    FIELD_LIST_TINT_ANIMS = 2,    /**< FieldScene::sprites (any other value selects it too) */
-    FIELD_LIST_SEQUENCES = 3      /**< FieldScene::seqs */
-};
-
-/** Operations of field_control_animation. */
-enum
-{
-    FIELD_ANIM_OP_START = 0,      /**< run the node */
-    FIELD_ANIM_OP_STOP = 1,       /**< stop now, or at a keyframe */
-    FIELD_ANIM_OP_RESTART = 2,    /**< rewind to the first frame, then run */
-    FIELD_ANIM_OP_SEEK = 3,       /**< run towards a keyframe and stop there */
-    FIELD_ANIM_OP_FINISH_LOOP = 4 /**< let a looping node stop at the end of its loop */
-};
-
-/** part_index value that selects the object itself instead of one of its parts. */
-#define FIELD_WHOLE_OBJECT (-1)
 /** Object index of field_set_color_scale that selects every object and the tile and effect lists. */
 #define FIELD_ALL_OBJECTS (-1)
-/** Keyframe argument of FIELD_ANIM_OP_STOP that stops the node at once. */
-#define FIELD_KEYFRAME_NONE (-1)
 /** FieldSeqDef::stop_keyframe value for "run on". */
 #define FIELD_SEQ_NO_STOP 0xFF
 

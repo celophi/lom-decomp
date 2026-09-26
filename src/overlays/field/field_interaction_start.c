@@ -40,9 +40,6 @@
 #define FIELD_LOCAL_BASE_PARTY_2 0x38
 #define FIELD_LOCAL_BASE_FIRST_FREE 0x40
 
-/** @brief Selector of a record without one. */
-#define FIELD_NO_SELECTOR 0xFF
-
 /** @brief Owner id of event record 0; event record n is this plus n. */
 #define FIELD_EVENT_OWNER 0x80
 
@@ -85,7 +82,7 @@
 /** @brief Scene id bits of a transition's scene_id. */
 #define FIELD_SCENE_ID_MASK 0x7FFF
 
-/** @brief Spawn id bits of a transition's unk41B byte. */
+/** @brief Spawn id bits of a transition's spawn byte. */
 #define FIELD_SPAWN_ID_MASK 0x1F
 
 /** @brief Runtime state flag: a talk window is open. */
@@ -106,14 +103,6 @@
 #define FIELD_VIEW_WIDTH 320
 #define FIELD_VIEW_DEPTH 448
 
-/** @brief field_resolve_talk_window operand values. */
-#define FIELD_TALK_AUTO 0xFF
-#define FIELD_TALK_EFFECT_SELECTOR 0xFE
-#define FIELD_TALK_PLANE_MASK 3
-#define FIELD_TALK_PLANE_NO_FACING 0x80
-#define FIELD_TALK_PLANE_FACING 0x40
-/** @brief Effect flag set when the speaker's facing angle is in the flipped range. */
-#define FIELD_TALK_FACING_FLAG 0x40
 /** @brief Depth below the view top from which the talk window uses the lower plane. */
 #define FIELD_TALK_LOWER_PLANE_DEPTH 0xC000
 /** @brief Facing angles (0x100 per turn) that set FIELD_TALK_FACING_FLAG. */
@@ -681,7 +670,7 @@ void field_runtime_update(void)
     field_update_event_records();
     if (g_field_runtime->state.flags & FIELD_STATE_PARTY_PAGE_SCRIPTS)
     {
-        func_800B49C0();
+        field_tick_battle_status();
     }
     g_field_runtime->frame_count++;
 }
@@ -714,7 +703,7 @@ static void field_leave_scene(void)
         }
         return;
     default:
-        field_set_scene_parameters(g_field_runtime->transition.fields.scene_id, g_field_runtime->transition.fields.unk41A, g_field_runtime->transition.fields.unk41B & FIELD_SPAWN_ID_MASK,
+        field_set_scene_parameters(g_field_runtime->transition.fields.scene_id, g_field_runtime->transition.fields.object_id, g_field_runtime->transition.fields.spawn & FIELD_SPAWN_ID_MASK,
                                    g_field_runtime->scene_entry, g_field_runtime->scene_argument1, g_field_runtime->scene_argument2);
         break;
     }
@@ -1043,8 +1032,8 @@ s32 field_start_interaction(s32 actor_id, s32 script)
     selector = FIELD_TALK_AUTO;
     g_field_runtime->state.flags |= FIELD_STATE_TALKING;
     field_resolve_talk_window(&speaker, &plane, &effect, &selector);
-    func_8009C620(plane, selector, speaker, effect);
-    func_8009C77C(plane, script_id, 1);
+    field_open_text_window(plane, selector, speaker, effect);
+    field_set_text_window_string(plane, script_id, 1);
     return -1;
 }
 

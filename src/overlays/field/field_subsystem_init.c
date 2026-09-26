@@ -9,15 +9,24 @@
 #include "field_menu_element.h"
 #include "field_modal_runtime.h"
 #include "game_audio.h"
+#include "game_state.h"
+#include "main.h"
+#include "field_runtime.h"
+#include "menu.h"
 
-void field_reset_input_repeat(void);
+/** @brief Fixed work areas of the field overlay: CD read buffer and actor resource heap. */
+#define FIELD_CD_BUFFER_AREA ((u8*)0x80140000)
+#define FIELD_ACTOR_HEAP_AREA ((u8*)0x80158000)
+
+/** @brief g_music_track_table entry of a track index that has no music. */
+#define FIELD_MUSIC_TRACK_NONE 0xFF
 
 extern s32 g_field_dialog_screen_mode;
-extern s32 g_field_render_context;
+extern FieldRenderHalf* g_field_render_context;
 extern s32 g_field_actions_limited;
 extern s32 g_field_interaction_active;
-extern s32 g_field_actor_heap;
-extern s32 g_field_cd_buffer;
+extern u8* g_field_actor_heap;
+extern u8* g_field_cd_buffer;
 extern s32 g_field_preserve_entry_music;
 extern s32 g_field_scene_mode_bit;
 extern s32 D_801178C8;
@@ -29,9 +38,6 @@ extern s32 g_field_gover_load_countdown;
 extern s32 D_801227F0;
 extern s32 g_field_return_to_title_prompt_delay;
 extern s32 g_field_return_to_title_prompt_state;
-extern s32 g_previous_game_state;
-extern s32 g_field_audio_timer;
-extern u16 g_music_track_index;
 extern s32 D_800F2298;
 extern s32 g_field_hide_actor_panels;
 extern s32 g_field_modal_state;
@@ -40,19 +46,17 @@ extern s32 g_field_modal_state;
  * @brief Reset every field subsystem for a freshly entered scene.
  *
  * Also decides whether the entry music keeps playing: it does when the
- * previous game state was 1 and the current track is valid.
+ * field is entered from the world map and the current track has music.
  *
  * @param render_context Render context to install as the active one.
  * @see decomp.me (100%) https://decomp.me/scratch/fKHnZ
  */
-void field_initialize_subsystems(s32 render_context)
+void field_initialize_subsystems(FieldRenderHalf* render_context)
 {
-    s32 prev;
-    s32 base;
+    s32 previous_state;
 
-    base = 0x80158000;
-    g_field_cd_buffer = 0x80140000;
-    g_field_actor_heap = base;
+    g_field_cd_buffer = FIELD_CD_BUFFER_AREA;
+    g_field_actor_heap = FIELD_ACTOR_HEAP_AREA;
     g_field_card_clock_valid = 0;
     field_capture_card_clock();
     field_bind_saved_game_context();
@@ -90,21 +94,10 @@ void field_initialize_subsystems(s32 render_context)
     D_8011F428 = 0;
     D_801227F0 = 0;
     g_field_audio_timer = 0;
-    prev = g_previous_game_state;
-    if (prev == 1)
+    previous_state = g_previous_game_state;
+    if (previous_state == GAME_STATE_WORLD_MAP && g_music_track_table[g_music_track_index] != FIELD_MUSIC_TRACK_NONE)
     {
-        /* the unused table pointer is kept: it loads the table address before the index */
-        u16* track_index = &g_music_track_index;
-        u8* track_table = g_music_track_table;
-
-        if (g_music_track_table[*track_index] != 0xFF)
-        {
-            g_field_preserve_entry_music = prev;
-        }
-        else
-        {
-            g_field_preserve_entry_music = 0;
-        }
+        g_field_preserve_entry_music = previous_state;
     }
     else
     {

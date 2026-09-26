@@ -272,7 +272,6 @@ void field_start_actor_jump();
 void field_start_actor_defeat();
 void field_count_chain_hit(s32 object_index);
 /* Defined (void); the call passes the object key. */
-void func_800B48B8();
 s32 field_battle_resolve_action(FieldBattleAction* action);
 s32 field_battle_roll_evasion(FieldBattleAction* action);
 
@@ -1370,7 +1369,7 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound)
     {
         field_play_sound(sound, FIELD_SOUND_PAN_CENTRE);
     }
-    func_800B48B8(g_field_object_states[actor->object_index].key);
+    field_count_revived_record(g_field_object_states[actor->object_index].key);
     g_field_object_states[actor->object_index].flags = 0;
     g_field_object_states[actor->object_index].contact.bits.flag5 = 0;
     /* unk0 holds the maximum HP; unk4 and the low 24 bits of unk8 the current HP. */

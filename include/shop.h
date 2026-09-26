@@ -19,8 +19,12 @@ typedef struct
     u8* prim_cursor;
 } ShopPacketBuffer;
 
+/** @brief Entry id bit marking an entry that refers to an inventory record. */
+#define SHOP_ENTRY_RECORD_FLAG 0x8000
+#define SHOP_ENTRY_RECORD_INDEX_MASK 0x7FFF
+
 /** @brief One row of the shop list. */
-typedef struct
+typedef struct ShopEntry
 {
     u16 id;    /**< Item type, or SHOP_ENTRY_RECORD_FLAG plus an inventory-record index. */
     u16 count; /**< Remaining stock; zero means unlimited. */

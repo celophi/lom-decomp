@@ -30,8 +30,6 @@
 /** @brief Unique-id bits taken from the game-state words at unkD4/unkD6. */
 #define FIELD_FIXED_VALUE_MASK 0x00FF00FF
 
-/** @brief Companion status bit 31: the companion has just joined. */
-#define FIELD_COMPANION_NEW 0x80000000
 /** @brief Companion status bit 30: the companion gains experience. */
 #define FIELD_COMPANION_GAINS_EXPERIENCE_BIT 30
 

@@ -131,7 +131,7 @@ void field_create_equipment_item(FieldItemRecord* record, s32 category, s32 item
 {
     s32 i;
 
-    func_800C21C0(item_subtype);
+    field_consume_item(item_subtype);
 
     D_80123FC4->record = record;
     D_80123FC4->category = category;
@@ -175,8 +175,8 @@ static void field_create_instrument_item(FieldItemRecord* record, s32 category, 
     s32 grid_row;
     s32 i;
 
-    func_800C21C0(row);
-    func_800C21C0(command_index);
+    field_consume_item(row);
+    field_consume_item(command_index);
     D_80123FC4->record = record;
     D_80123FC4->category = category;
     D_80123FC4->item_type = item_type;
@@ -199,7 +199,7 @@ static void field_create_instrument_item(FieldItemRecord* record, s32 category, 
 
     saved_script = g_field_script;
     g_field_script = (FieldScriptContext*)&g_field_runtime->events[0].script;
-    func_800BF2F0(D_80123FC0->grid.commands[command_index - FIELD_STAGING_COMMAND_BASE]);
+    field_run_item_script(D_80123FC0->grid.commands[command_index - FIELD_STAGING_COMMAND_BASE]);
     g_field_script = saved_script;
     field_write_staged_item();
 
@@ -245,7 +245,7 @@ void field_temper_item(FieldItemRecord* record, s32 command_index)
     s32 i;
 
     D_80123FC0 = func_800C1E40(FIELD_ITEM_TABLE);
-    func_800C21C0(command_index);
+    field_consume_item(command_index);
 
     D_80123FC4->record = record;
     D_80123FC4->category = record->info.bits.category;
@@ -320,25 +320,25 @@ static void field_generate_staged_item(void)
     field_load_staged_subtype();
     if (D_80123FC4->category == FIELD_ITEM_CATEGORY_WEAPON)
     {
-        func_800BF2F0(D_80123FC0->item.types[D_80123FC4->item_type].scripts[0]);
+        field_run_item_script(D_80123FC0->item.types[D_80123FC4->item_type].scripts[0]);
     }
     else
     {
-        func_800BF2F0(D_80123FC0->item.alternate_types[D_80123FC4->item_type].scripts[0]);
+        field_run_item_script(D_80123FC0->item.alternate_types[D_80123FC4->item_type].scripts[0]);
     }
-    func_800BF2F0(D_80123FC0->item.subtypes[D_80123FC4->item_subtype].script);
-    func_800BF2F0(D_80123FC0->item.commands[D_80123FC4->command_index - FIELD_STAGING_COMMAND_BASE].script);
-    func_800BF3D8();
-    func_800BF800();
+    field_run_item_script(D_80123FC0->item.subtypes[D_80123FC4->item_subtype].script);
+    field_run_item_script(D_80123FC0->item.commands[D_80123FC4->command_index - FIELD_STAGING_COMMAND_BASE].script);
+    field_run_slot_scripts();
+    field_apply_pending_levels();
     if (D_80123FC4->category == FIELD_ITEM_CATEGORY_WEAPON)
     {
-        func_800BF2F0(D_80123FC0->item.types[D_80123FC4->item_type].scripts[1]);
+        field_run_item_script(D_80123FC0->item.types[D_80123FC4->item_type].scripts[1]);
     }
     else
     {
-        func_800BF2F0(D_80123FC0->item.alternate_types[D_80123FC4->item_type].scripts[1]);
+        field_run_item_script(D_80123FC0->item.alternate_types[D_80123FC4->item_type].scripts[1]);
     }
-    func_800BF700();
+    field_finish_staged_item();
     g_field_script = saved_script;
     field_write_staged_item();
 

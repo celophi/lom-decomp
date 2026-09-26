@@ -1049,8 +1049,6 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
     }
     if (actor->height >= FIELD_OVERLAP_MAX_HEIGHT)
     {
-    /* The later failures jump here; written as plain returns, jump.c cross-jumps this block into a later copy. */
-    return_zero:
         return 0;
     }
     target_index = index;
@@ -1091,7 +1089,7 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
     if (target_index == target_end)
     {
         g_field_last_actor_contact = 0;
-        goto return_zero;
+        return 0;
     }
     if (g_field_resource_entries[actor->resource_index].state != 0)
     {
@@ -1133,7 +1131,8 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
 
                                 if (((FieldSequenceBinding*)(bindings + owner_binding_offset))->state != 0)
                                 {
-                                    goto return_zero;
+                                    /* A return here would be its own return-0 copy and change which copy jump.c keeps. */
+                                    goto no_contact;
                                 }
                             }
                         }
@@ -1158,7 +1157,8 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
                     }
                 }
             }
-            goto return_zero;
+        no_contact:
+            return 0;
         }
     }
     g_field_last_actor_contact = target_index + FIELD_CONTACT_RESULT_PRESENT;

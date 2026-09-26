@@ -87,7 +87,7 @@ void field_build_frame_commands(s32 render_half, s32 alternate)
     field_update_modal((FieldRenderHalf*)render_half);
     field_modal_frame_stub(render_half);
     field_update_timed_panel((FieldRenderHalf*)render_half);
-    func_800AF8E8(render_half);
+    field_update_item_menu((FieldRenderHalf*)render_half);
     field_update_music_stream();
     field_update_audio_timer();
     field_update_gover_load();

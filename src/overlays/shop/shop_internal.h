@@ -15,9 +15,6 @@
 /** @brief Frames an opening or closing window takes to reach its final size. */
 #define SHOP_WINDOW_ANIM_STEPS 8
 
-/** @brief Entry id bit marking an entry that refers to an inventory record. */
-#define SHOP_ENTRY_RECORD_FLAG 0x8000
-#define SHOP_ENTRY_RECORD_INDEX_MASK 0x7FFF
 /** @brief Entry id of a sold-out entry. */
 #define SHOP_ENTRY_EMPTY 0xFFFF
 

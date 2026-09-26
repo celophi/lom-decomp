@@ -9,6 +9,9 @@ typedef struct FieldTextConfig FieldTextConfig;
 
 extern FieldTextConfig* g_field_text_saved_configs;
 
+/** @brief Number of text window slots. */
+#define FIELD_TEXT_WINDOW_SLOTS 4
+
 /** @brief Replacement text and its unsigned character budget. */
 typedef struct
 {
@@ -31,6 +34,12 @@ void field_text_set_string(s32 window_index, u8* text, s32 text_options);
 void field_text_start_timed_window(u8* text);
 void field_text_set_position(s32 slot, s16 x, s16 y);
 void field_text_close_window(s32 slot);
+/** @brief field_text_get_status results. */
+#define FIELD_TEXT_STATUS_CLOSED (-1) /**< The window is not in dialogue mode. */
+#define FIELD_TEXT_STATUS_DONE 0      /**< All text has been shown. */
+#define FIELD_TEXT_STATUS_BUSY 1      /**< Text remains to be shown. */
+#define FIELD_TEXT_STATUS_PROMPT 2    /**< The window waits at a prompt. */
+
 s32 field_text_get_status(s32 slot);
 s32 field_text_get_choice(s32 slot);
 void field_text_format_number(s32 window_index, u32 value, u8 digits);

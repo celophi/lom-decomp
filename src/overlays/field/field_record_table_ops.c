@@ -128,7 +128,7 @@ s32 field_place_lands(s32 first_land, s32 second_land, s32* placed)
         {
             table_index = i;
         }
-        func_800C2138(g_field_land_distance_items[table_index]);
+        field_receive_item(g_field_land_distance_items[table_index]);
     }
     *cursor = FIELD_LAND_LIST_END;
     return placed_count;
