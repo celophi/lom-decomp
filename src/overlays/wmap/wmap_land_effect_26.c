@@ -425,51 +425,25 @@ void func_800773B8(s32 start, s32 end, s32 depth)
     extern u16 D_80182DF4;
 
     s32 i;
-    s32 motion_offset;
-    s32 x;
-    s32 angle;
-    s32 resource_offset;
     WmapMotion *motion;
-    u8 *motion_base;
-    s8 *table;
-    u8 *resource_base;
     WmapConfigA *actor;
     WmapScreenPoint screen;
 
-    i = start;
-    if (i >= end)
+    for (i = start; i < end; i++)
     {
-        return;
-    }
-    table = D_80051B4C;
-    motion_offset = i * 20;
-    for (; i < end; i++)
-    {
-        motion_base = (u8 *)D_801AFBD0;
-        motion = (WmapMotion *)(motion_base + motion_offset);
-        motion_base++;
-        motion_base--;
         actor = &D_800D9268[i];
+        motion = &D_801AFBD0[i];
         motion->field_0E += motion->x;
         if (motion->field_0E >= 3841)
         {
             motion->field_0E = 0;
         }
         motion->field_12 = (motion->field_12 + motion->field_10) & 4095;
-        angle = motion->angle;
-        x = (motion->field_12 / 16) + (s32)table;
-        x = *(s8 *)x * motion->scale;
-        screen.point.x = (angle + x / 16) / 16;
+        screen.point.x = (motion->angle + (D_80051B4C[motion->field_12 / 16] * motion->scale) / 16) / 16;
         screen.point.y = motion->field_0E / 16;
         actor->field_22 = D_80182DF4;
         actor->field_24 = D_80182DF4;
-        wmap_step_actor_animation(actor,
-                       (resource_offset = i * 8,
-                        resource_base = (u8 *)D_80139988,
-                        (WmapResource *)(resource_base + resource_offset)));
-        resource_base++;
-        resource_base--;
-        motion_offset += 20;
+        wmap_step_actor_animation(actor, &D_80139988[i]);
         wmap_draw_actor_sprite(actor, screen.packed, depth, 4, 0);
     }
 }

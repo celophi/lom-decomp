@@ -3600,8 +3600,8 @@ void field_text_start_timed_window(u8* text)
 
     field_text_apply_config(state);
     u = 0;
+    v = 0;
     rows = state->height;
-    v = u;
     state->text_cursor = text;
     FIELD_TEXT_SYSTEM->timed_text = text;
     state->dirty_start_u = 0;
@@ -3611,32 +3611,25 @@ void field_text_start_timed_window(u8* text)
     state->cursor_v = 0;
     state->region_start_v = 0;
     state->flags.word = ((state->flags.word & ~FIELD_TEXT_STATE_MASK) | FIELD_TEXT_TIMED | FIELD_TEXT_INSTANT) & ~FIELD_TEXT_AUTO_CLOSE;
-    if (rows > 0)
+    while (rows > 0)
     {
-        do
+        span = state->line_advance;
+        while (span > 0)
         {
-            span = state->line_advance;
-            if (span > 0)
+            avail = FIELD_TEXT_CACHE_WIDTH - u;
+            if (span >= avail)
             {
-                do
-                {
-                    avail = FIELD_TEXT_CACHE_WIDTH - u;
-                    if (span >= avail)
-                    {
-                        u += span;
-                        span -= avail;
-                        u = 0;
-                        v += state->line_height;
-                    }
-                    else
-                    {
-                        u += span;
-                        span = 0;
-                    }
-                } while (span > 0);
+                span -= avail;
+                u = 0;
+                v += state->line_height;
             }
-            rows -= FIELD_TEXT_LINE_SPACING;
-        } while (rows > 0);
+            else
+            {
+                u += span;
+                span = 0;
+            }
+        }
+        rows -= FIELD_TEXT_LINE_SPACING;
     }
     state->dirty_end_u = u;
     state->region_end_u = u;
@@ -3719,7 +3712,6 @@ void field_text_format_number(s32 window_index, u32 value, u8 digits)
     u32 place_value;
     u32 digit;
     s32 leading_zero;
-    u32 space;
 
     leading_zero = 1;
     text = FIELD_TEXT_SYSTEM->windows[window_index & 0xFFFF].inline_text;
@@ -3728,30 +3720,24 @@ void field_text_format_number(s32 window_index, u32 value, u8 digits)
     {
         place_value = place_value * 10;
     }
-    space = ' ';
-    if (place_value != 1)
+    while (place_value != 1)
     {
-        do
+        digit = value / place_value;
+        if ((digit == 0) && (leading_zero != 0))
         {
-            digit = value / place_value;
-            if ((digit == 0) && (leading_zero != 0))
+            *text++ = ' ';
+        }
+        else
+        {
+            if (digit >= 10)
             {
-                *text = space;
-                text += 1;
+                digit = 9;
             }
-            else
-            {
-                if (digit >= 10)
-                {
-                    digit = 9;
-                }
-                *text = digit + '0';
-                text += 1;
-                leading_zero = 0;
-            }
-            value = value % place_value;
-            place_value = place_value / 10;
-        } while (place_value != 1);
+            *text++ = digit + '0';
+            leading_zero = 0;
+        }
+        value = value % place_value;
+        place_value = place_value / 10;
     }
     *text = value + '0';
     text[1] = 0;

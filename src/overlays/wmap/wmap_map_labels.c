@@ -92,13 +92,13 @@ void func_8005F9BC(void)
             D_8011CF80 = g_wmap_travel_day;
             D_801391E8 = D_80182DA0;
             D_80182DA0.r0 = 0;
-            D_800DBE80 = D_801398D8;
-            D_801398D8.u0 = 0;
             setSemiTrans(&D_801391E8, 1);
             D_80182DA0.u0 = ((g_wmap_travel_day & 1) * 0x30) + 8;
             D_80182DA0.v0 = ((g_wmap_travel_day / 2) * 0x38) + 0xE;
+            D_800DBE80 = D_801398D8;
+            D_801398D8.u0 = 0;
             setSemiTrans(&D_800DBE80, 1);
-            D_801398D8.v0 = *(volatile s32*)&g_wmap_travel_day << 5;
+            D_801398D8.v0 = g_wmap_travel_day * 32;
         }
         D_80182DA0.g0 = D_80182DA0.r0;
         D_80182DA0.b0 = D_80182DA0.r0;
