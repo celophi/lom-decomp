@@ -57,9 +57,9 @@ extern s32 D_8013B280;
 extern s32 D_8013B284;
 extern WmapMotion D_801AFBD0[];
 extern s32 D_801B0FD0;
-extern SVECTOR D_80139278;
+extern SVECTOR g_wmap_camera_rotation;
 extern SVECTOR D_801398C8;
-extern VECTOR D_80182DC0;
+extern VECTOR g_wmap_camera_translation;
 extern VECTOR D_80182D48;
 extern MATRIX D_8011D0E8;
 extern WmapActor D_800D9268[];
@@ -78,7 +78,7 @@ extern s32 D_80139204;
 extern u16 D_80139210;
 extern u16 D_80139212;
 extern u16 D_80139214;
-extern u8 D_80139950;
+extern u8 g_wmap_view;
 extern s32 D_80139968;
 extern s32 D_8013996C;
 extern s32 D_8013B29C;
@@ -279,7 +279,7 @@ void func_8006A2FC(void* arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4_value, s32
                     actor->frame_data = data + ((s16*)(frame * 2 + data))[32];
                 }
                 gte_stsxy(&screen_position);
-                func_80066F9C(actor, screen_position, config->texture_index, ot_index, 0);
+                wmap_draw_actor_sprite(actor, screen_position, config->texture_index, ot_index, 0);
             }
             i += 1;
         } while (i < arg2);
@@ -422,7 +422,7 @@ void func_8006A9C4(s32 actor_address, s32 resource_address, s32 first, s32 end, 
                     M2C_FIELD(actor, void **, 0x14) = (void *) (M2C_FIELD(actor, void **, 0x14) + 4);
                     M2C_FIELD(actor, s32 *, 0x1C) = (s32) (animation_address + M2C_FIELD(((animation_frame * 2) + animation_address), s16 *, 0x40));
                 }
-                func_80066F9C(actor, screen_position, frame, 0xA, 0);
+                wmap_draw_actor_sprite(actor, screen_position, frame, 0xA, 0);
                 remaining_lifetime = M2C_FIELD(motion, u16 *, 0xC) - 1;
                 M2C_FIELD(motion, u16 *, 0xC) = remaining_lifetime;
                 if ((remaining_lifetime << 0x10) == 0)
@@ -473,12 +473,12 @@ void func_8006ADD0(VECTOR* translation, SVECTOR* rotation)
     SVECTOR combined_rotation;
     VECTOR combined_translation;
 
-    combined_rotation.vx = D_80139278.vx + D_801398C8.vx;
-    combined_rotation.vy = D_80139278.vy + D_801398C8.vy;
-    combined_rotation.vz = D_80139278.vz + D_801398C8.vz;
-    combined_translation.vx = D_80182DC0.vx + D_80182D48.vx;
-    combined_translation.vy = D_80182DC0.vy + D_80182D48.vy;
-    combined_translation.vz = D_80182DC0.vz + D_80182D48.vz;
+    combined_rotation.vx = g_wmap_camera_rotation.vx + D_801398C8.vx;
+    combined_rotation.vy = g_wmap_camera_rotation.vy + D_801398C8.vy;
+    combined_rotation.vz = g_wmap_camera_rotation.vz + D_801398C8.vz;
+    combined_translation.vx = g_wmap_camera_translation.vx + D_80182D48.vx;
+    combined_translation.vy = g_wmap_camera_translation.vy + D_80182D48.vy;
+    combined_translation.vz = g_wmap_camera_translation.vz + D_80182D48.vz;
     RotMatrix(&combined_rotation, &base);
     TransMatrix(&base, translation);
     SetRotMatrix(&base);
@@ -496,12 +496,12 @@ void func_8006AEE0(void)
     SVECTOR rotation;
     VECTOR translation;
 
-    rotation.vx = D_80139278.vx + D_801398C8.vx;
-    rotation.vy = D_80139278.vy + D_801398C8.vy;
-    rotation.vz = D_80139278.vz + D_801398C8.vz;
-    translation.vx = D_80182DC0.vx + D_80182D48.vx;
-    translation.vy = D_80182DC0.vy + D_80182D48.vy;
-    translation.vz = D_80182DC0.vz + D_80182D48.vz;
+    rotation.vx = g_wmap_camera_rotation.vx + D_801398C8.vx;
+    rotation.vy = g_wmap_camera_rotation.vy + D_801398C8.vy;
+    rotation.vz = g_wmap_camera_rotation.vz + D_801398C8.vz;
+    translation.vx = g_wmap_camera_translation.vx + D_80182D48.vx;
+    translation.vy = g_wmap_camera_translation.vy + D_80182D48.vy;
+    translation.vz = g_wmap_camera_translation.vz + D_80182D48.vz;
     RotMatrix(&rotation, &D_8011D0E8);
     TransMatrix(&D_8011D0E8, &translation);
     SetRotMatrix(&D_8011D0E8);
@@ -595,7 +595,7 @@ void func_8006AFAC(s32 first, s32 end, s32 frame, s32 depth,
                 actor->cursor += 4;
                 actor->frame_data = data + ((s16 *)(animation_frame * 2 + data))[32];
             }
-            func_80066F9C(actor, screen_position, frame, depth, 0);
+            wmap_draw_actor_sprite(actor, screen_position, frame, depth, 0);
             motion->lifetime--;
             if (motion->lifetime == 0)
             {
@@ -716,7 +716,7 @@ void func_8006B328(s32 first, s32 end, s32 spawn_interval, s32 scale_override, s
                     M2C_FIELD(actor, s32 *, 0x1C) = (s32) (address + M2C_FIELD(((animation_frame * 2) + address), s16 *, 0x40));
                 }
                 gte_stsxy(&screen_position);
-                func_80066F9C(actor, screen_position, frame, 4, 0);
+                wmap_draw_actor_sprite(actor, screen_position, frame, 4, 0);
                 next_z = M2C_FIELD(motion, u16 *, 0xE) - M2C_FIELD(motion, u16 *, 4);
                 M2C_FIELD(motion, u16 *, 0xE) = next_z;
                 if ((s16) next_z < fade_z)
@@ -844,11 +844,11 @@ void func_8006B6EC(s32 first, s32 end, s32 frame, s32 z_step, s32 depth)
             }
             if ((u32)((u16)motion->angle - 1025) < 2047U)
             {
-                func_80066F9C(actor, screen_position, frame, depth + 2, 0);
+                wmap_draw_actor_sprite(actor, screen_position, frame, depth + 2, 0);
             }
             else
             {
-                func_80066F9C(actor, screen_position, frame, depth - 2, 0);
+                wmap_draw_actor_sprite(actor, screen_position, frame, depth - 2, 0);
             }
             motion->lifetime--;
             if (motion->lifetime == 0)
@@ -924,7 +924,7 @@ void func_8006B998(s32 first, s32 end, void *point_data, s32 frame, s32 depth)
             actor->frame_data = data + ((s16 *)(animation_frame * 2 + data))[32];
         }
         gte_stsxy(&screen_position);
-        func_80066F9C(actor, screen_position, frame, depth, 0);
+        wmap_draw_actor_sprite(actor, screen_position, frame, depth, 0);
         point->position.vx += point->velocity.vx;
         point->position.vy += point->velocity.vy;
         point->position.vz += point->velocity.vz;
@@ -1056,7 +1056,7 @@ void func_8006BC44(s32 first, s32 count, void *config, s32 expire_by_size)
                 draw_actor->cursor += 4;
                 draw_actor->frame_data = data + ((s16 *)(animation_frame * 2 + data))[32];
             }
-            func_80066F9C(draw_actor, M2C_FIELD(motion, s32 *, 0x10), M2C_FIELD(config, s32 *, 0x24), M2C_FIELD(config, s32 *, 0x20), 0);
+            wmap_draw_actor_sprite(draw_actor, M2C_FIELD(motion, s32 *, 0x10), M2C_FIELD(config, s32 *, 0x24), M2C_FIELD(config, s32 *, 0x20), 0);
             if ((expire_by_size != 0) && ((size = M2C_FIELD(draw_actor, s16 *, 0x24), ((size < 0xFD) == 0)) || (size < 4)))
             {
                 M2C_FIELD(motion, s16 *, 0) = 0;
@@ -1076,11 +1076,11 @@ s32 func_8006C0EC(void)
     func_8006AEE0();
     position.vz = 0;
     position.vx =
-        (s16)((s32)((((D_8011D510 - 1) * 0xA0) - ((s32)(M2C_FIELD(&D_80139950, s32*, 0) * 0x14000) / (s32)M2C_FIELD(&D_80139950, s32*, 8))) * 0x6000) /
-              (s32)M2C_FIELD(&D_80139950, s32*, 8));
+        (s16)((s32)((((D_8011D510 - 1) * 0xA0) - ((s32)(M2C_FIELD(&g_wmap_view, s32*, 0) * 0x14000) / (s32)M2C_FIELD(&g_wmap_view, s32*, 8))) * 0x6000) /
+              (s32)M2C_FIELD(&g_wmap_view, s32*, 8));
     position.vy =
-        (s16)((s32)((((D_8011D530 - 1) * 0xA0) - ((s32)(M2C_FIELD(&D_80139950, s32*, 4) * 0x14000) / (s32)M2C_FIELD(&D_80139950, s32*, 8))) * 0x6000) /
-              (s32)M2C_FIELD(&D_80139950, s32*, 8));
+        (s16)((s32)((((D_8011D530 - 1) * 0xA0) - ((s32)(M2C_FIELD(&g_wmap_view, s32*, 4) * 0x14000) / (s32)M2C_FIELD(&g_wmap_view, s32*, 8))) * 0x6000) /
+              (s32)M2C_FIELD(&g_wmap_view, s32*, 8));
     gte_ldv0(&position);
     gte_rtps();
     if (M2C_FIELD(&D_800DCEB8, s16*, 0) != D_801398C8.vx)
@@ -1248,7 +1248,7 @@ void func_8006C448(void *config)
                 actor->frame_data = data + ((s16 *)(animation_frame * 2 + data))[32];
             }
             gte_stsxy(&screen_position);
-            func_80066F9C(actor, screen_position, M2C_FIELD(config, s32 *, 0x30), M2C_FIELD(config, s32 *, 0x2C), 0);
+            wmap_draw_actor_sprite(actor, screen_position, M2C_FIELD(config, s32 *, 0x30), M2C_FIELD(config, s32 *, 0x2C), 0);
         }
     }
 

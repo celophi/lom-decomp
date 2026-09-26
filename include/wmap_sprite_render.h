@@ -3,6 +3,6 @@
 
 #include "common.h"
 
-void func_80066F9C(void* actor, s32 screen_position, s32 texture_index, s32 ot_index, s32 variant);
+void wmap_draw_actor_sprite(void* actor, s32 screen_position, s32 texture_index, s32 ot_index, s32 variant);
 
 #endif

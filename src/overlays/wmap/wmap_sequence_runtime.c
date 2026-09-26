@@ -84,7 +84,7 @@ extern s32 D_80139988[];
 
 extern s32 D_8011D510;
 extern s32 D_8011D530;
-extern WmapTransform D_80139950;
+extern WmapTransform g_wmap_view;
 extern s32 D_800D923C;
 extern s32* D_80139280;
 extern s32 D_80139234;
@@ -100,7 +100,7 @@ extern s32 D_80139284;
 extern WmapValueRecord D_80139290[][6];
 extern VECTOR D_8011CF60;
 extern WmapCoordinatePair D_8011CF4C;
-extern SVECTOR D_80139278;
+extern SVECTOR g_wmap_camera_rotation;
 extern s32 D_801B10A4;
 extern void (*D_800D0FAC[])(void);
 extern u32 D_801B10A8;
@@ -108,9 +108,9 @@ extern s32 D_801B10AC;
 extern void (*D_800D0FBC[])(void);
 extern s32 D_800DCEF8;
 extern s32 D_800DCF00;
-extern s32 D_801398D0;
-extern s32 D_80182D68;
-extern s32 D_80182D78;
+extern s32 g_wmap_view_scroll_mode;
+extern s32 g_wmap_scroll_remaining_x;
+extern s32 g_wmap_scroll_remaining_y;
 
 void func_8006D1AC(VECTOR* translation, SVECTOR* rotation);
 static s32 func_8006D328(s32 arg0);
@@ -329,7 +329,7 @@ void func_8006CB60(void)
  * @brief Install and initialize a callback in the first inactive slot.
  * @param callback Callback receiving one for initialization and zero for updates.
  */
-void func_8006CBD8(WmapSequenceCallback callback)
+void wmap_install_callback(WmapSequenceCallback callback)
 {
     WmapSequenceCallback* slot;
     s32* active;
@@ -362,7 +362,7 @@ next_slot:
  * @param resource_data Animation block containing sequence and frame offsets.
  * @return New frame index, or -1 when the current frame is still active.
  */
-s32 func_8006CC4C(void* actor_data, void* resource_data)
+s32 wmap_step_actor_animation(void* actor_data, void* resource_data)
 {
     WmapAnimation* actor = actor_data;
     WmapAnimationResource* resource = resource_data;
@@ -459,8 +459,8 @@ void func_8006CDDC(void)
     SVECTOR position;
 
     position.vz = 0;
-    position.vx = (((D_8011D510 - 1) * 160 - D_80139950.x * 0x14000 / D_80139950.scale) * 0x6000) / D_80139950.scale;
-    position.vy = (((D_8011D530 - 1) * 160 - D_80139950.y * 0x14000 / D_80139950.scale) * 0x6000) / D_80139950.scale;
+    position.vx = (((D_8011D510 - 1) * 160 - g_wmap_view.x * 0x14000 / g_wmap_view.scale) * 0x6000) / g_wmap_view.scale;
+    position.vy = (((D_8011D530 - 1) * 160 - g_wmap_view.y * 0x14000 / g_wmap_view.scale) * 0x6000) / g_wmap_view.scale;
     gte_ldv0(&position);
     gte_rtps();
 }
@@ -605,7 +605,7 @@ void func_8006D1AC(VECTOR* translation, SVECTOR* rotation)
 {
     MATRIX matrices[2];
 
-    RotMatrix(&D_80139278, &matrices[0]);
+    RotMatrix(&g_wmap_camera_rotation, &matrices[0]);
     TransMatrix(&matrices[0], translation);
     SetRotMatrix(&matrices[0]);
     SetTransMatrix(&matrices[0]);
@@ -733,9 +733,9 @@ void func_8006D3E4(void)
 void func_8006D420(void)
 {
 
-    D_801398D0 = 2;
-    D_80182D68 = D_80139950.x - ((D_800DCEF8 - 1) * 0x30);
-    D_80182D78 = D_80139950.y - ((D_800DCF00 - 1) * 0x30);
+    g_wmap_view_scroll_mode = 2;
+    g_wmap_scroll_remaining_x = g_wmap_view.x - ((D_800DCEF8 - 1) * 0x30);
+    g_wmap_scroll_remaining_y = g_wmap_view.y - ((D_800DCF00 - 1) * 0x30);
     D_801B10A8 += 1;
     func_8006D4B0();
 }
@@ -745,7 +745,7 @@ void func_8006D420(void)
  */
 void func_8006D4B0(void)
 {
-    if (D_801398D0 != 2)
+    if (g_wmap_view_scroll_mode != 2)
     {
         D_801B10A8 += 1;
         func_8006D4F0();

@@ -211,13 +211,13 @@ extern s32 g_wmap_game_hits;
 extern s32 D_800DBE78;
 extern s32 D_800DCEC0;
 extern s32 D_8011CF18;
-extern s32 D_8011CF7C;
+extern s32 g_wmap_view_scroll_enabled;
 extern s32 D_8011D4FC;
 extern WmapDisplayCell D_80139290[6][6];
-extern s32 D_8013986C;
+extern s32 g_wmap_view_mode;
 extern s32 g_wmap_game_phase;
 
-extern WmapDisplayProjection D_80139950;
+extern WmapDisplayProjection g_wmap_view;
 extern s32 D_8013B258;
 extern s32 g_wmap_game_round;
 extern s32 g_wmap_game_timer;
@@ -228,8 +228,8 @@ extern SPRT g_wmap_game_countdown_sprite;
 extern s32 g_wmap_game_spawn_timer;
 extern s32 D_800D922C;
 extern s32 D_800D9234;
-extern s32 D_800DCEEC;
-extern s32 D_800DCEF0;
+extern s32 g_wmap_cursor_column;
+extern s32 g_wmap_cursor_row;
 extern u8 g_wmap_game_spawn_patterns[][9];
 extern s32 D_800500DC[];
 extern WmapTextureInfo D_800CBBE8[];
@@ -242,12 +242,12 @@ extern WmapMapPoint D_8004FD04[];
 extern s16 D_800D036C[];
 extern s32 g_wmap_land_scale_steps[];
 extern s32 D_800DBE70;
-extern SVECTOR D_80139278;
+extern SVECTOR g_wmap_camera_rotation;
 extern SVECTOR D_801398C8;
 extern s32 D_80139958;
 extern s32 D_80139978;
 extern VECTOR D_80182D48;
-extern VECTOR D_80182DC0;
+extern VECTOR g_wmap_camera_translation;
 extern s32 D_801ADAE0;
 extern s32 g_wmap_cell_effect_steps[];
 extern WmapQuadTemplate g_wmap_cell_effect_quads[16];
@@ -261,14 +261,14 @@ extern SPRT g_wmap_spirit_level_sprites[16];
 extern SPRT g_wmap_spirit_accent_sprites[16];
 extern s32 D_80129550;
 extern const s32 D_8004FC74[];
-extern WmapDisplayProjection D_800DCEC8;
-extern s32 D_800DCF04;
+extern WmapDisplayProjection g_wmap_saved_view;
+extern s32 g_wmap_spirit_selection;
 extern s32 D_80139218;
 extern WmapGlyph g_wmap_information_glyphs[];
 extern WmapGlyphPlacement g_wmap_information_placements[];
 extern s32 g_wmap_information_group_starts[];
 extern s32 g_wmap_information_values[];
-extern s32 D_801398D0;
+extern s32 g_wmap_view_scroll_mode;
 extern s32 D_800D7D60;
 extern s32 D_800D7D64;
 extern s32 D_800D7D68;
@@ -311,8 +311,8 @@ void wmap_update_map_game(void)
             if (timer == 0)
             {
                 valid = 1;
-                g_wmap_game_origin_y = D_80139950.y / WMAP_CELL_SPACING;
-                g_wmap_game_origin_x = D_80139950.x / WMAP_CELL_SPACING;
+                g_wmap_game_origin_y = g_wmap_view.y / WMAP_CELL_SPACING;
+                g_wmap_game_origin_x = g_wmap_view.x / WMAP_CELL_SPACING;
 
                 for (scan_y = g_wmap_game_origin_y; scan_y < g_wmap_game_origin_y + WMAP_GAME_AREA_SIZE; scan_y++)
                 {
@@ -325,7 +325,7 @@ void wmap_update_map_game(void)
                     }
                 }
 
-                if ((D_800DBE78 != 0) || (D_8013986C != 0) || (D_8011CF18 != 0) || (g_wmap_party_moving != 0) || (D_8011D4FC != -1))
+                if ((D_800DBE78 != 0) || (g_wmap_view_mode != 0) || (D_8011CF18 != 0) || (g_wmap_party_moving != 0) || (D_8011D4FC != -1))
                 {
                     valid = 0;
                 }
@@ -340,7 +340,7 @@ void wmap_update_map_game(void)
                 func_80064F64(0x1154);
                 g_wmap_game_score = 0;
                 g_wmap_game_displayed_score = 0;
-                D_8011CF7C = 0;
+                g_wmap_view_scroll_enabled = 0;
                 g_wmap_game_phase = WMAP_GAME_PROMPT;
                 g_wmap_game_timer = 0x708;
                 D_800DBE78 = 1;
@@ -490,7 +490,7 @@ void wmap_update_map_game_prompt(void)
         {
             g_wmap_game_phase = WMAP_GAME_COUNTING_DOWN;
             g_wmap_game_timer = WMAP_GAME_COUNTDOWN;
-            func_800652A8(0x3C, 0x80);
+            wmap_play_sound(0x3C, 0x80);
             g_wmap_game_hits = 0;
             g_wmap_game_round++;
         }
@@ -498,7 +498,7 @@ void wmap_update_map_game_prompt(void)
         {
             g_wmap_game_start_delay = WMAP_GAME_RETRY_DELAY;
             g_wmap_game_phase = WMAP_GAME_PROMPT;
-            D_8011CF7C = 1;
+            g_wmap_view_scroll_enabled = 1;
             D_800DCEC0 = 1;
             D_800DBE78 = 2;
             wmap_reset_after_transition();
@@ -515,7 +515,7 @@ void wmap_update_map_game_prompt(void)
         {
             g_wmap_game_start_delay = WMAP_GAME_RETRY_DELAY;
             g_wmap_game_phase = WMAP_GAME_PROMPT;
-            D_8011CF7C = 1;
+            g_wmap_view_scroll_enabled = 1;
             D_800DCEC0 = 1;
             D_800DBE78 = 2;
             wmap_reset_after_transition();
@@ -598,8 +598,8 @@ void wmap_update_map_game_round(void)
     D_800D9234 = g_wmap_buttons_held;
     wmap_update_map_game_spawns();
 
-    y = g_wmap_game_origin_y + D_800DCEF0;
-    x = g_wmap_game_origin_x + D_800DCEEC;
+    y = g_wmap_game_origin_y + g_wmap_cursor_row;
+    x = g_wmap_game_origin_x + g_wmap_cursor_column;
     object_id = D_80139290[x][y].object_id;
     object = &g_wmap_land_display[object_id];
 
@@ -617,7 +617,7 @@ void wmap_update_map_game_round(void)
             D_800D922C = g_wmap_game_score;
             wmap_set_land_display_mode(object_id, 1);
             object->scale_frame = 1;
-            func_800652A8(0x3E, 0x80);
+            wmap_play_sound(0x3E, 0x80);
         }
         else
         {
@@ -627,7 +627,7 @@ void wmap_update_map_game_round(void)
             {
                 g_wmap_game_score = 0;
             }
-            func_800652A8(0x3F, 0x80);
+            wmap_play_sound(0x3F, 0x80);
         }
     }
 
@@ -644,7 +644,7 @@ void wmap_update_map_game_round(void)
                 {
                     wmap_set_land_display_mode(D_80139290[x][y].object_id, 1);
                     object->scale_frame = 4;
-                    func_800652A8(2, 0x80);
+                    wmap_play_sound(2, 0x80);
                 }
             }
         }
@@ -715,7 +715,7 @@ void wmap_spawn_map_game_lands(s32 delay_min, s32 delay_range, s32 timer_min, s3
         }
     }
 
-    func_800652A8(0x3D, 0x80);
+    wmap_play_sound(0x3D, 0x80);
 }
 
 /**
@@ -923,7 +923,7 @@ void wmap_draw_land_marker(s32 map_x, s32 map_y, WmapLandDisplay* marker)
 
     sprite = g_wmap_current_frame->packet_cursor;
 
-    switch (D_8013986C)
+    switch (g_wmap_view_mode)
     {
     case 0:
     {
@@ -931,9 +931,9 @@ void wmap_draw_land_marker(s32 map_x, s32 map_y, WmapLandDisplay* marker)
         s32 z_bucket;
         s32 sprite_y;
 
-        scale = D_80139950.scale;
-        position.vx = ((((map_x - 1) * 160) - ((D_80139950.x * 0x14000) / scale)) * 0x6000) / scale;
-        position.vy = ((((map_y - 1) * 160) - ((D_80139950.y * 0x14000) / scale)) * 0x6000) / scale;
+        scale = g_wmap_view.scale;
+        position.vx = ((((map_x - 1) * 160) - ((g_wmap_view.x * 0x14000) / scale)) * 0x6000) / scale;
+        position.vy = ((((map_y - 1) * 160) - ((g_wmap_view.y * 0x14000) / scale)) * 0x6000) / scale;
         position.vz = 0;
 
         gte_ldv0(&position);
@@ -1071,9 +1071,9 @@ void wmap_draw_land_animation(s32 x, s32 y, WmapLandDisplay* state, s32 resource
         return;
     }
 
-    projection_scale = D_80139950.scale;
-    locals.position.vx = (((x - 1) * 0xA0 - (D_80139950.x * 0x14000) / projection_scale) * 0x6000) / projection_scale;
-    locals.position.vy = (((y - 1) * 0xA0 - (D_80139950.y * 0x14000) / projection_scale) * 0x6000) / projection_scale;
+    projection_scale = g_wmap_view.scale;
+    locals.position.vx = (((x - 1) * 0xA0 - (g_wmap_view.x * 0x14000) / projection_scale) * 0x6000) / projection_scale;
+    locals.position.vy = (((y - 1) * 0xA0 - (g_wmap_view.y * 0x14000) / projection_scale) * 0x6000) / projection_scale;
     locals.position.vz = 0;
 
     gte_ldv0(&locals.position);
@@ -1205,13 +1205,13 @@ void wmap_draw_lands(void)
     s32 part_index;
     s32 distance_state;
 
-    rotation.vx = D_80139278.vx + D_801398C8.vx;
-    rotation.vy = D_80139278.vy + D_801398C8.vy;
-    rotation.vz = D_80139278.vz + D_801398C8.vz;
+    rotation.vx = g_wmap_camera_rotation.vx + D_801398C8.vx;
+    rotation.vy = g_wmap_camera_rotation.vy + D_801398C8.vy;
+    rotation.vz = g_wmap_camera_rotation.vz + D_801398C8.vz;
 
-    world_position.vx = D_80182DC0.vx + D_80182D48.vx;
-    world_position.vy = D_80182DC0.vy + D_80182D48.vy;
-    world_position.vz = D_80182DC0.vz + D_80182D48.vz;
+    world_position.vx = g_wmap_camera_translation.vx + D_80182D48.vx;
+    world_position.vy = g_wmap_camera_translation.vy + D_80182D48.vy;
+    world_position.vz = g_wmap_camera_translation.vz + D_80182D48.vz;
 
     translation = world_position;
     translation.vz = (translation.vz * D_80139958) / 0x6000;
@@ -1227,7 +1227,7 @@ void wmap_draw_lands(void)
         {
             object_id = D_80139290[x][y].object_id;
 
-            if (D_8013986C == 1)
+            if (g_wmap_view_mode == 1)
             {
                 state = 1;
             }
@@ -1349,7 +1349,7 @@ void wmap_draw_lands(void)
             }
             wmap_set_cell_effect_mode(x, y, state);
 
-            if ((D_80139290[x][y].effect_enabled != 0) && (D_8013986C == 0))
+            if ((D_80139290[x][y].effect_enabled != 0) && (g_wmap_view_mode == 0))
             {
                 wmap_draw_cell_effect(x, y);
             }
@@ -1400,10 +1400,10 @@ void wmap_draw_cell_effect(s32 x, s32 y)
         return;
     }
 
-    projected_x = (D_80139950.x * 0x14000) / D_80139950.scale;
-    projected_y = (D_80139950.y * 0x14000) / D_80139950.scale;
-    base.x = ((((x - 1) * 0xA0) - projected_x) * 0x6000) / D_80139950.scale + 0xA;
-    base.y = ((((y - 1) * 0xA0) - projected_y) * 0x6000) / D_80139950.scale + 0xC;
+    projected_x = (g_wmap_view.x * 0x14000) / g_wmap_view.scale;
+    projected_y = (g_wmap_view.y * 0x14000) / g_wmap_view.scale;
+    base.x = ((((x - 1) * 0xA0) - projected_x) * 0x6000) / g_wmap_view.scale + 0xA;
+    base.y = ((((y - 1) * 0xA0) - projected_y) * 0x6000) / g_wmap_view.scale + 0xC;
     base.z = 0;
 
     color_frame = cell->frame * 7;
@@ -1571,8 +1571,8 @@ void wmap_draw_spirit_levels(void)
         return;
     }
 
-    x = D_80139950.x / WMAP_CELL_SPACING + D_800DCEEC;
-    y = D_80139950.y / WMAP_CELL_SPACING + D_800DCEF0;
+    x = g_wmap_view.x / WMAP_CELL_SPACING + g_wmap_cursor_column;
+    y = g_wmap_view.y / WMAP_CELL_SPACING + g_wmap_cursor_row;
 
     if (x < 0)
     {
@@ -1673,8 +1673,8 @@ void wmap_draw_spirit_grid(s32 spirit_index)
         return;
     }
 
-    target_x = D_800DCEC8.x / WMAP_CELL_SPACING + D_800DCEEC;
-    target_y = D_800DCEC8.y / WMAP_CELL_SPACING + D_800DCEF0;
+    target_x = g_wmap_saved_view.x / WMAP_CELL_SPACING + g_wmap_cursor_column;
+    target_y = g_wmap_saved_view.y / WMAP_CELL_SPACING + g_wmap_cursor_row;
 
     cur_y = 0;
     do
@@ -1744,7 +1744,7 @@ void wmap_update_map_display(void)
 {
     if (g_wmap_spirit_brightness != 0)
     {
-        switch (D_8013986C)
+        switch (g_wmap_view_mode)
         {
         case 0:
             wmap_draw_spirit_icons(-1);
@@ -1752,10 +1752,10 @@ void wmap_update_map_display(void)
             wmap_draw_information_labels();
             break;
         case 1:
-            if (D_800DCF04 != 0)
+            if (g_wmap_spirit_selection != 0)
             {
-                wmap_draw_spirit_icons(D_800DCF04 - 1);
-                wmap_draw_spirit_grid(D_800DCF04 - 1);
+                wmap_draw_spirit_icons(g_wmap_spirit_selection - 1);
+                wmap_draw_spirit_grid(g_wmap_spirit_selection - 1);
             }
             break;
         }
@@ -1795,7 +1795,7 @@ void wmap_draw_information_labels(void)
     WmapGlyph* image;
     SPRT* packet;
 
-    if ((g_wmap_buttons_repeat & (PADLup | PADLright | PADLdown | PADLleft)) || D_801398D0 != 0)
+    if ((g_wmap_buttons_repeat & (PADLup | PADLright | PADLdown | PADLleft)) || g_wmap_view_scroll_mode != 0)
     {
         g_wmap_information_groups = 0;
     }
@@ -1806,7 +1806,7 @@ void wmap_draw_information_labels(void)
     }
     if (g_wmap_information_groups == 0)
     {
-        wmap_build_placement_labels(D_800DCEEC + D_800DCEF0 * 3, D_80139950.x / WMAP_CELL_SPACING + D_800DCEEC, D_80139950.y / WMAP_CELL_SPACING + D_800DCEF0,
+        wmap_build_placement_labels(g_wmap_cursor_column + g_wmap_cursor_row * 3, g_wmap_view.x / WMAP_CELL_SPACING + g_wmap_cursor_column, g_wmap_view.y / WMAP_CELL_SPACING + g_wmap_cursor_row,
                       &g_wmap_information_groups, g_wmap_information_values, D_8011D4FC);
     }
     dynamic_index = 0;
@@ -2082,11 +2082,11 @@ s32 wmap_classify_map_point(s32 x, s32 y)
     s32 dy;
     u32 dx;
 
-    dx = x - D_80139950.x;
-    dy = y - D_80139950.y;
+    dx = x - g_wmap_view.x;
+    dy = y - g_wmap_view.y;
     if ((dx < 0x61U) && (dy >= 0) && (dy < 0x61))
     {
-        if ((D_8013986C == 3) || (D_8013986C == 1))
+        if ((g_wmap_view_mode == 3) || (g_wmap_view_mode == 1))
         {
             return 0;
         }

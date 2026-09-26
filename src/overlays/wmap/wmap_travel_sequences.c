@@ -147,7 +147,7 @@ extern void func_80099918__for_func_80099848(void) __asm__("func_80099918");
     D_801AFBD0[0].field_02 = 0;
     D_801AFBD0[0].field_10 = 0x3C;
     D_801AFBD0[0].field_04 = 0;
-    func_8006CBD8(func_800999D0__for_func_80099848);
+    wmap_install_callback(func_800999D0__for_func_80099848);
     D_801B2C50 = 0x3C;
     D_801B2C4C += 1;
     func_80099918__for_func_80099848();
@@ -253,22 +253,22 @@ extern WmapMotion D_801AFBD0;
     position.vz = D_801AFBD0.field_0E;
     gte_ldv0(&position);
     gte_rtps();
-    animation_frame = func_8006CC4C(actor, &D_8013A180);
+    animation_frame = wmap_step_actor_animation(actor, &D_8013A180);
     if (D_80139224 != 0)
     {
         if (animation_frame == 12 || animation_frame == 22 || animation_frame == 0)
         {
-            func_800652A8(51, 127);
+            wmap_play_sound(51, 127);
         }
     }
     gte_stsxy(&D_8011CF54);
     if (D_801AFBD0.x != 0)
     {
-        func_80066F9C(actor, D_8011CF54, 40, D_801AFBD0.x, 2);
+        wmap_draw_actor_sprite(actor, D_8011CF54, 40, D_801AFBD0.x, 2);
     }
     else
     {
-        func_80066F9C(actor, D_8011CF54, 40, D_801AFBD0.field_10, 2);
+        wmap_draw_actor_sprite(actor, D_8011CF54, 40, D_801AFBD0.field_10, 2);
     }
     PopMatrix();
     return D_801AFBD0.state;
@@ -281,9 +281,9 @@ s32 func_80099B50(s32 arg3)
     extern s32 D_800DCEE4;
     extern s32 D_800DCEF8;
     extern s32 D_800DCF00;
-    extern s32 D_801398D0;
-    extern s32 D_80182D68;
-    extern s32 D_80182D78;
+    extern s32 g_wmap_view_scroll_mode;
+    extern s32 g_wmap_scroll_remaining_x;
+    extern s32 g_wmap_scroll_remaining_y;
     extern s32 D_8019D240;
     s32 dx;
     s32 dy;
@@ -347,8 +347,8 @@ s32 func_80099B50(s32 arg3)
     }
     if (D_8019D240 != -1)
     {
-        D_801398D0 = 2;
-        func_8006CBD8(func_80099E84);
+        g_wmap_view_scroll_mode = 2;
+        wmap_install_callback(func_80099E84);
     }
     else
     {
@@ -369,8 +369,8 @@ s32 func_80099B50(s32 arg3)
                 }
             }
             difference = difference * sign;
-            D_80182D78 = 0;
-            D_80182D68 = difference * 48;
+            g_wmap_scroll_remaining_y = 0;
+            g_wmap_scroll_remaining_x = difference * 48;
             D_800DCEF8 += difference;
             if (dx > 0)
             {
@@ -395,8 +395,8 @@ s32 func_80099B50(s32 arg3)
                 }
             }
             difference = difference * sign;
-            D_80182D68 = 0;
-            D_80182D78 = difference * 48;
+            g_wmap_scroll_remaining_x = 0;
+            g_wmap_scroll_remaining_y = difference * 48;
             D_800DCF00 += difference;
             if (tail_dy > 0)
             {
@@ -407,7 +407,7 @@ s32 func_80099B50(s32 arg3)
                 D_8019D240 = 1;
             }
         }
-        func_8006CBD8(func_80099F98);
+        wmap_install_callback(func_80099F98);
     }
     return 0;
 }
@@ -426,9 +426,9 @@ extern s32 D_800DCEE4;
 extern s32 D_800DCEF8;
 extern s32 D_800DCF00;
 extern s32 D_801398AC;
-extern s32 D_801398D0;
-extern s32 D_80182D68;
-extern s32 D_80182D78;
+extern s32 g_wmap_view_scroll_mode;
+extern s32 g_wmap_scroll_remaining_x;
+extern s32 g_wmap_scroll_remaining_y;
 extern s32 D_8019D240;
 extern s16 D_801AFBD2;
 
@@ -437,14 +437,14 @@ extern s16 D_801AFBD2;
         func_80099754__for_func_80099E84(1);
         if (D_801AFBD2 == D_800D6508[D_8019D240])
         {
-            D_801398D0 = 2;
-            D_80182D68 = (D_800DCED8 - D_800DCEF8) * 0x30;
-            D_80182D78 = (D_800DCEE4 - D_800DCF00) * 0x30;
+            g_wmap_view_scroll_mode = 2;
+            g_wmap_scroll_remaining_x = (D_800DCED8 - D_800DCEF8) * 0x30;
+            g_wmap_scroll_remaining_y = (D_800DCEE4 - D_800DCF00) * 0x30;
             D_800D9164 += 1;
         }
         return 1;
     }
-    if (D_801398D0 == 2)
+    if (g_wmap_view_scroll_mode == 2)
     {
         return 1;
     }
@@ -466,7 +466,7 @@ extern s32 D_800DCED8;
 extern s32 D_800DCEE4;
 extern s32 D_800DCEF8;
 extern s32 D_800DCF00;
-extern s32 D_801398D0;
+extern s32 g_wmap_view_scroll_mode;
 extern s32 D_8019D240;
 extern s16 D_801AFBD2;
 extern s32 func_80099E84__for_func_80099F98(void) __asm__("func_80099E84");
@@ -484,12 +484,12 @@ extern void func_80099754__for_func_80099F98(s32) __asm__("func_80099754");
         if (D_801AFBD2 == D_800D6508[D_8019D240])
        
       {
-            D_801398D0 = 2;
+            g_wmap_view_scroll_mode = 2;
             D_800D9164++;
         }
         return 1;
     }
-    if (D_801398D0 == 2)
+    if (g_wmap_view_scroll_mode == 2)
    
   {
         return 1;
@@ -528,7 +528,7 @@ extern void func_80099754__for_func_80099F98(s32) __asm__("func_80099754");
         delta_y = 1;
     }
     D_8019D240 = delta_x + (delta_y * 3);
-    func_8006CBD8(func_80099E84__for_func_80099F98);
+    wmap_install_callback(func_80099E84__for_func_80099F98);
     return 0;
 }
 
@@ -544,18 +544,18 @@ typedef struct
     s32 pad;
 } WmapTransform;
 
-extern WmapTransform D_800DCEC8;
-extern WmapTransform D_80139950;
+extern WmapTransform g_wmap_saved_view;
+extern WmapTransform g_wmap_view;
 extern s32 D_800DCEF8;
 extern s32 D_800DCF00;
 extern s32 D_800DCEC0;
 extern s32 D_801B2C48;
 extern u8 D_8011D538[];
-extern s32 D_801398D0;
+extern s32 g_wmap_view_scroll_mode;
 extern s32 D_8013B208;
 extern s32 D_8013B288;
-extern s32 D_80182D68;
-extern s32 D_80182D78;
+extern s32 g_wmap_scroll_remaining_x;
+extern s32 g_wmap_scroll_remaining_y;
 extern s32 D_801B2C54;
 extern void func_8009ABB0__for_func_8009A114(void) __asm__("func_8009ABB0");
 
@@ -565,15 +565,15 @@ extern void func_8009ABB0__for_func_8009A114(void) __asm__("func_8009ABB0");
     D_8013B208 = 1;
     func_8005FF88(-1);
     D_800DCEC0 = 0;
-    D_800DCEC8 = D_80139950;
+    g_wmap_saved_view = g_wmap_view;
     cdrom_queue_read(0x1145, D_8011D538);
     cdrom_queue_read(0x1146, D_8011D538 + 0x2000);
     func_800A8AA8(0x1147);
     func_800A8AF0(0x1148);
     func_8006D0F0(24, &D_800DCEF8, &D_800DCF00);
-    D_801398D0 = 2;
-    D_80182D68 = ((D_800DCEF8 - 1) * 48) - D_80139950.x;
-    D_80182D78 = ((D_800DCF00 - 1) * 48) - D_80139950.y;
+    g_wmap_view_scroll_mode = 2;
+    g_wmap_scroll_remaining_x = ((D_800DCEF8 - 1) * 48) - g_wmap_view.x;
+    g_wmap_scroll_remaining_y = ((D_800DCF00 - 1) * 48) - g_wmap_view.y;
     D_801B2C54++;
     func_8009ABB0__for_func_8009A114();
 }
@@ -641,7 +641,7 @@ extern void func_8009A328__for_func_8009A258(void) __asm__("func_8009A328");
     D_801AFBD0[0].field_02 = 0;
     D_801AFBD0[0].field_10 = 0x3C;
     D_801AFBD0[0].field_04 = 0;
-    func_8006CBD8(func_800999D0__for_func_8009A258);
+    wmap_install_callback(func_800999D0__for_func_8009A258);
     D_801B2C58 = 0x3C;
     D_801B2C54 += 1;
     func_8009A328__for_func_8009A258();
@@ -758,10 +758,10 @@ typedef struct
 } WmapTransform;
 
 extern s32 D_800DCEC0;
-extern WmapTransform D_800DCEC8;
+extern WmapTransform g_wmap_saved_view;
 extern u8 D_8011D538[];
 extern s32 D_80139224;
-extern WmapTransform D_80139950;
+extern WmapTransform g_wmap_view;
 extern s32 D_8013B208;
 extern s32 D_8013B288;
 extern s32 D_801B2C48;
@@ -775,7 +775,7 @@ extern s32 D_801B2C50;
     D_8013B208 = 1;
     func_8005FF88(-1);
     D_800DCEC0 = 0;
-    D_800DCEC8 = D_80139950;
+    g_wmap_saved_view = g_wmap_view;
     cdrom_queue_read(0x1145, D_8011D538);
     cdrom_queue_read(0x1146, D_8011D538 + 0x2000);
     func_800A8AA8(0x1147);
@@ -804,16 +804,16 @@ void func_8009A5BC(void)
 extern void func_8009A668__for_func_8009A5BC(void) __asm__("func_8009A668");
 extern s32 D_800DCEF8;
 extern s32 D_800DCF00;
-extern s32 D_801398D0;
-extern s32 D_80139950[];
-extern s32 D_80182D68;
-extern s32 D_80182D78;
+extern s32 g_wmap_view_scroll_mode;
+extern s32 g_wmap_view[];
+extern s32 g_wmap_scroll_remaining_x;
+extern s32 g_wmap_scroll_remaining_y;
 extern s32 D_801B2C4C;
 
     func_8006D0F0(2, &D_800DCEF8, &D_800DCF00);
-    D_801398D0 = 2;
-    D_80182D68 = ((D_800DCEF8 - 1) * 0x30) - D_80139950[0];
-    D_80182D78 = ((D_800DCF00 - 1) * 0x30) - D_80139950[1];
+    g_wmap_view_scroll_mode = 2;
+    g_wmap_scroll_remaining_x = ((D_800DCEF8 - 1) * 0x30) - g_wmap_view[0];
+    g_wmap_scroll_remaining_y = ((D_800DCF00 - 1) * 0x30) - g_wmap_view[1];
     D_801B2C4C += 1;
     func_8009A668__for_func_8009A5BC();
 }
@@ -823,11 +823,11 @@ extern s32 D_801B2C4C;
  */
 void func_8009A668(void)
 {
-extern s32 D_801398D0;
+extern s32 g_wmap_view_scroll_mode;
 extern s32 D_801B2C4C;
 extern void func_80099848__for_func_8009A668(void) __asm__("func_80099848");
 
-    if (D_801398D0 != 2)
+    if (g_wmap_view_scroll_mode != 2)
     {
         D_801B2C4C += 1;
         func_80099848__for_func_8009A668();
@@ -863,7 +863,7 @@ extern void func_8009A75C__for_func_8009A6A8(void) __asm__("func_8009A75C");
         D_800DCED8 = g_wmap_travelers[0].cell_x;
         D_800DCEE4 = g_wmap_travelers[0].cell_y;
         D_801398AC = 1;
-        func_8006CBD8(func_80099B50__for_func_8009A6A8);
+        wmap_install_callback(func_80099B50__for_func_8009A6A8);
     }
     D_801B2C4C++;
     func_8009A75C__for_func_8009A6A8();
@@ -943,7 +943,7 @@ extern s32 func_80099B50__for_func_8009A854(s32) __asm__("func_80099B50");
     func_8006D0F0(0x18, &D_800DCED8, &D_800DCEE4);
     wmap_set_traveler_position(0, D_800DCED8, D_800DCEE4);
     D_801398AC = 1;
-    func_8006CBD8(&func_80099B50__for_func_8009A854);
+    wmap_install_callback(&func_80099B50__for_func_8009A854);
     D_801B2C4C += 1;
     func_8009A8D0__for_func_8009A854();
 }
@@ -1064,8 +1064,8 @@ extern void func_80099754__for_func_8009AA6C(s32 arg) __asm__("func_80099754");
     u8* actor = D_800DBE3C;
 
     func_80099754__for_func_8009AA6C(0);
-    func_8006CC4C(actor, &D_8013A180);
-    func_80066F9C(actor, D_8011CF54, 0x28, D_801AFBE0, 2);
+    wmap_step_actor_animation(actor, &D_8013A180);
+    wmap_draw_actor_sprite(actor, D_8011CF54, 0x28, D_801AFBE0, 2);
     *(s16 *)&D_8011CF54 = *(u16 *)&D_8011CF54 - 6;
     if (--D_801B2C50 == 0)
     {
@@ -1093,7 +1093,7 @@ s32 func_8009AB20(s32 arg0)
 extern u32 D_801B2C54;
 extern s32 D_801B2C58;
 extern void (*D_800D656C[])(void);
-extern s32 D_801398D0;
+extern s32 g_wmap_view_scroll_mode;
 extern void func_8009A258__for_func_8009AB20(void) __asm__("func_8009A258");
 
     s32 result;
@@ -1125,7 +1125,7 @@ void func_8009AB98(void)
 extern u32 D_801B2C54;
 extern s32 D_801B2C58;
 extern void (*D_800D656C[])(void);
-extern s32 D_801398D0;
+extern s32 g_wmap_view_scroll_mode;
 extern void func_8009A258__for_func_8009AB98(void) __asm__("func_8009A258");
 
     D_801B2C54 = 1;
@@ -1140,10 +1140,10 @@ void func_8009ABB0(void)
 extern u32 D_801B2C54;
 extern s32 D_801B2C58;
 extern void (*D_800D656C[])(void);
-extern s32 D_801398D0;
+extern s32 g_wmap_view_scroll_mode;
 extern void func_8009A258__for_func_8009ABB0(void) __asm__("func_8009A258");
 
-    if (D_801398D0 != 2)
+    if (g_wmap_view_scroll_mode != 2)
     {
         D_801B2C54 += 1;
         func_8009A258__for_func_8009ABB0();
@@ -1164,7 +1164,7 @@ extern s32 D_801B2C54;
     func_8006D0F0(0, &D_800DCED8, &D_800DCEE4);
     wmap_set_traveler_position(0, D_800DCED8, D_800DCEE4);
     D_801398AC = 1;
-    func_8006CBD8(func_80099B50__for_func_8009ABF0);
+    wmap_install_callback(func_80099B50__for_func_8009ABF0);
     D_801B2C54 += 1;
     func_8009AC6C__for_func_8009ABF0();
 }
@@ -1285,8 +1285,8 @@ extern void func_80099754__for_func_8009AE08(s32 arg) __asm__("func_80099754");
     u8* actor = D_800DBE3C;
 
     func_80099754__for_func_8009AE08(0);
-    func_8006CC4C(actor, &D_8013A180);
-    func_80066F9C(actor, D_8011CF54, 0x28, D_801AFBE0, 2);
+    wmap_step_actor_animation(actor, &D_8013A180);
+    wmap_draw_actor_sprite(actor, D_8011CF54, 0x28, D_801AFBE0, 2);
     *(s16 *)&D_8011CF54 = *(u16 *)&D_8011CF54 - 4;
     if (--D_801B2C58 == 0)
     {

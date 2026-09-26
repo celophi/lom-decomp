@@ -224,15 +224,15 @@ void func_800651B4(u8* data)
 /**
  * @brief Play a sound selected from the world-map sound table.
  * @param sound_index One-based sound index; invalid indices select sound one.
- * @param volume Volume passed to the audio player.
+ * @param pan Stereo pan position (128 = center).
  */
-void func_800652A8(s32 sound_index, s32 volume)
+void wmap_play_sound(s32 sound_index, s32 pan)
 {
     if ((u32)(sound_index - 1) >= 0x41U)
     {
         sound_index = 1;
     }
-    akao_play_sfx_from_buffer(D_800CB1FC[sound_index - 1], 0, volume, 0x7F);
+    akao_play_sfx_from_buffer(D_800CB1FC[sound_index - 1], 0, pan, 0x7F);
 }
 
 /** @brief Clear the configured image rectangle to black. */

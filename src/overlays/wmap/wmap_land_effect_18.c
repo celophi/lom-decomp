@@ -64,8 +64,8 @@ void func_8006D918(void)
 {
 extern void *D_8011CF24;
 extern VECTOR D_8011CF60;
-extern SVECTOR D_80139278;
-extern VECTOR D_80182DC0;
+extern SVECTOR g_wmap_camera_rotation;
+extern VECTOR g_wmap_camera_translation;
 extern SVECTOR D_801B24A0;
 extern s32 D_801B2410;
 extern s32 D_801B2414;
@@ -75,8 +75,8 @@ extern s32 D_801B2414;
     s32 remaining;
 
     PushMatrix();
-    RotMatrix(&D_80139278, &base);
-    TransMatrix(&base, &D_80182DC0);
+    RotMatrix(&g_wmap_camera_rotation, &base);
+    TransMatrix(&base, &g_wmap_camera_translation);
     SetRotMatrix(&base);
     SetTransMatrix(&base);
     RotMatrix(&D_801B24A0, &effect);
@@ -100,8 +100,8 @@ void func_8006DA24(void)
 {
 extern void *D_8011CF24;
 extern VECTOR D_8011CF60;
-extern SVECTOR D_80139278;
-extern VECTOR D_80182DC0;
+extern SVECTOR g_wmap_camera_rotation;
+extern VECTOR g_wmap_camera_translation;
 extern s32 D_801B2410;
 extern s32 D_801B2414;
 extern SVECTOR D_801B24A0;
@@ -115,8 +115,8 @@ extern s32 D_801B24B4;
     if (D_801B24B4 != 0)
     {
         PushMatrix();
-        RotMatrix(&D_80139278, &base);
-        TransMatrix(&base, &D_80182DC0);
+        RotMatrix(&g_wmap_camera_rotation, &base);
+        TransMatrix(&base, &g_wmap_camera_translation);
         SetRotMatrix(&base);
         SetTransMatrix(&base);
         RotMatrix(&D_801B24A0, &effect);
@@ -146,7 +146,7 @@ extern s32 D_801B24B4;
 void func_8006DB68(void)
 {
 extern void *D_8011CF1C;
-extern VECTOR D_80182DC0;
+extern VECTOR g_wmap_camera_translation;
 extern SVECTOR D_801B2490;
 extern SVECTOR D_801B2498;
 extern s32 D_801B2468;
@@ -157,10 +157,10 @@ extern s32 D_801B241C;
     s32 intensity;
 
     PushMatrix();
-    func_8006CFA8(&D_80182DC0, &D_801B2490);
+    func_8006CFA8(&g_wmap_camera_translation, &D_801B2490);
     func_8006CD98(D_8011CF1C, 0, 4, 183, 0x7A80, 0, D_801B2468);
     D_801B2490.vz = (u16)(D_801B2490.vz + 32);
-    func_8006CFA8(&D_80182DC0, &D_801B2498);
+    func_8006CFA8(&g_wmap_camera_translation, &D_801B2498);
     func_8006CD98(D_8011CF1C, 0, 4, 183, 0x7A80, 0, D_801B2468);
     D_801B2498.vz = (u16)(D_801B2498.vz + 16);
     PopMatrix();
@@ -182,7 +182,7 @@ extern s32 D_801B241C;
 void func_8006DC98(void)
 {
 extern void *D_8011CF1C;
-extern VECTOR D_80182DC0;
+extern VECTOR g_wmap_camera_translation;
 extern SVECTOR D_801B2490;
 extern SVECTOR D_801B2498;
 extern s32 D_801B2468;
@@ -194,7 +194,7 @@ extern s32 D_801B241C;
     s32 frame;
 
     PushMatrix();
-    func_8006CFA8(&D_80182DC0, &D_801B2490);
+    func_8006CFA8(&g_wmap_camera_translation, &D_801B2490);
     frame = D_801B24B0 + 1;
     D_801B24B0 = frame;
     if (frame >= 8)
@@ -207,7 +207,7 @@ extern s32 D_801B241C;
     }
     func_8006CD98(D_8011CF1C, D_801B24B0, 4, 183, 0x7A80, 0, D_801B2468);
     D_801B2490.vz = (u16)(D_801B2490.vz + 32);
-    func_8006CFA8(&D_80182DC0, &D_801B2498);
+    func_8006CFA8(&g_wmap_camera_translation, &D_801B2498);
     func_8006CD98(D_8011CF1C, D_801B24B0, 4, 183, 0x7A80, 0, D_801B2468);
     D_801B2498.vz = (u16)(D_801B2498.vz + 16);
     PopMatrix();
@@ -223,7 +223,7 @@ extern s32 D_801B241C;
 void func_8006DDEC(void)
 {
 extern void *D_8011CF1C;
-extern VECTOR D_80182DC0;
+extern VECTOR g_wmap_camera_translation;
 extern SVECTOR D_801B2490;
 extern SVECTOR D_801B2498;
 extern s32 D_801B2468;
@@ -233,10 +233,10 @@ extern s32 D_801B241C;
     s32 remaining;
 
     PushMatrix();
-    func_8006CFA8(&D_80182DC0, &D_801B2490);
+    func_8006CFA8(&g_wmap_camera_translation, &D_801B2490);
     func_8006CD98(D_8011CF1C, 7, 4, 183, 0x7A80, 0, D_801B2468);
     D_801B2490.vz = (u16)(D_801B2490.vz + 32);
-    func_8006CFA8(&D_80182DC0, &D_801B2498);
+    func_8006CFA8(&g_wmap_camera_translation, &D_801B2498);
     func_8006CD98(D_8011CF1C, 7, 4, 183, 0x7A80, 0, D_801B2468);
     D_801B2498.vz = (u16)(D_801B2498.vz + 16);
     PopMatrix();
@@ -252,7 +252,7 @@ extern s32 D_801B241C;
 void func_8006DEFC(void)
 {
 extern void *D_8011CF1C;
-extern VECTOR D_80182DC0;
+extern VECTOR g_wmap_camera_translation;
 extern SVECTOR D_801B2490;
 extern SVECTOR D_801B2498;
 extern s32 D_801B2468;
@@ -263,10 +263,10 @@ extern s32 D_801B241C;
     s32 intensity;
 
     PushMatrix();
-    func_8006CFA8(&D_80182DC0, &D_801B2490);
+    func_8006CFA8(&g_wmap_camera_translation, &D_801B2490);
     func_8006CD98(D_8011CF1C, 7, 4, 183, 0x7A80, 0, D_801B2468);
     D_801B2490.vz = (u16)(D_801B2490.vz + 32);
-    func_8006CFA8(&D_80182DC0, &D_801B2498);
+    func_8006CFA8(&g_wmap_camera_translation, &D_801B2498);
     func_8006CD98(D_8011CF1C, 7, 4, 183, 0x7A80, 0, D_801B2468);
     D_801B2498.vz = (u16)(D_801B2498.vz + 16);
     PopMatrix();
@@ -289,7 +289,7 @@ void func_8006E024(void)
 {
 extern u8 *D_8011CF24;
 extern VECTOR D_8011CF60;
-extern SVECTOR D_80139278;
+extern SVECTOR g_wmap_camera_rotation;
 extern VECTOR D_80139870;
 extern s32 D_80139878;
 extern SVECTOR D_8013B238;
@@ -316,7 +316,7 @@ extern s32 D_801B2488;
     }
     D_801B2488 += 1;
     PushMatrix();
-    RotMatrix(&D_80139278, &base);
+    RotMatrix(&g_wmap_camera_rotation, &base);
     TransMatrix(&base, &D_80139870);
     SetRotMatrix(&base);
     SetTransMatrix(&base);
@@ -342,7 +342,7 @@ extern u8 *D_8011CF24;
 extern s32 D_8011CF74;
 extern s32 D_80139878;
 extern VECTOR D_8011CF60;
-extern SVECTOR D_80139278;
+extern SVECTOR g_wmap_camera_rotation;
 extern VECTOR D_80139870;
 extern SVECTOR D_8013B238;
 extern s32 D_801B2420;
@@ -361,7 +361,7 @@ extern s32 D_801B2424;
         D_80139878 = 18000;
     }
     PushMatrix();
-    RotMatrix(&D_80139278, &base);
+    RotMatrix(&g_wmap_camera_rotation, &base);
     TransMatrix(&base, &D_80139870);
     SetRotMatrix(&base);
     SetTransMatrix(&base);
@@ -387,7 +387,7 @@ extern u8 *D_8011CF24;
 extern s32 D_8011CF74;
 extern s32 D_80139878;
 extern VECTOR D_8011CF60;
-extern SVECTOR D_80139278;
+extern SVECTOR g_wmap_camera_rotation;
 extern VECTOR D_80139870;
 extern SVECTOR D_8013B238;
 extern s32 D_801B2420;
@@ -407,7 +407,7 @@ extern s32 D_801B2424;
         D_80139878 = 18000;
     }
     PushMatrix();
-    RotMatrix(&D_80139278, &base);
+    RotMatrix(&g_wmap_camera_rotation, &base);
     TransMatrix(&base, &D_80139870);
     SetRotMatrix(&base);
     SetTransMatrix(&base);
@@ -432,7 +432,7 @@ void func_8006E3E4(void)
 {
 extern u8 *D_8011CF24;
 extern VECTOR D_8011CF60;
-extern SVECTOR D_80139278;
+extern SVECTOR g_wmap_camera_rotation;
 extern s32 D_80182DC8;
 extern s32 D_801B2428;
 extern s32 D_801B242C;
@@ -455,7 +455,7 @@ extern SVECTOR D_801B24A8;
         D_801B2474 = D_801B2470;
     }
     PushMatrix();
-    RotMatrix(&D_80139278, &base);
+    RotMatrix(&g_wmap_camera_rotation, &base);
     TransMatrix(&base, &D_801B2478);
     SetRotMatrix(&base);
     SetTransMatrix(&base);
@@ -488,7 +488,7 @@ void func_8006E544(void)
 {
 extern u8 *D_8011CF24;
 extern VECTOR D_8011CF60;
-extern SVECTOR D_80139278;
+extern SVECTOR g_wmap_camera_rotation;
 extern s32 D_80182DC8;
 extern s32 D_801B2428;
 extern s32 D_801B242C;
@@ -512,7 +512,7 @@ extern SVECTOR D_801B24A8;
         D_801B2474 = D_801B2470;
     }
     PushMatrix();
-    RotMatrix(&D_80139278, &base);
+    RotMatrix(&g_wmap_camera_rotation, &base);
     TransMatrix(&base, &D_801B2478);
     SetRotMatrix(&base);
     SetTransMatrix(&base);
@@ -580,8 +580,8 @@ extern s32 D_801B0FD0;
             draw->unk22 = *(u16*)&D_80139980;
             draw->unk24 = *(u16*)&D_80139980;
             gte_stsxy(&screen);
-            func_8006CC4C(draw, &D_801399B8[i * 8]);
-            func_80066F9C(draw, screen, 9, 0x1F, 0);
+            wmap_step_actor_animation(draw, &D_801399B8[i * 8]);
+            wmap_draw_actor_sprite(draw, screen, 9, 0x1F, 0);
             if (--spark->timer == 0)
             {
                 spark->active = 0;
@@ -641,7 +641,7 @@ typedef struct
 } WmapTransform;
 extern s32 D_8011D510;
 extern s32 D_8011D530;
-extern WmapTransform D_80139950;
+extern WmapTransform g_wmap_view;
 
 extern WmapConfigA D_800D9268[];
 extern s32 D_8011CF4C;
@@ -663,11 +663,11 @@ extern void func_8006F864__for_func_8006E8BC(void) __asm__("func_8006F864");
     D_800D9268[4].field_24 = 128;
     position.vz = 0;
     position.vx = (((D_8011D510 - 1) * 160 -
-                   D_80139950.x * 0x14000 / D_80139950.scale) * 0x6000) /
-                  D_80139950.scale;
+                   g_wmap_view.x * 0x14000 / g_wmap_view.scale) * 0x6000) /
+                  g_wmap_view.scale;
     position.vy = (((D_8011D530 - 1) * 160 -
-                   D_80139950.y * 0x14000 / D_80139950.scale) * 0x6000) /
-                  D_80139950.scale;
+                   g_wmap_view.y * 0x14000 / g_wmap_view.scale) * 0x6000) /
+                  g_wmap_view.scale;
     gte_ldv0(&position);
     gte_rtps();
     gte_stsxy(&D_8011CF4C);
@@ -803,7 +803,7 @@ void func_8006ECC0(void)
 extern u8 *D_8011CF24;
 extern s32 D_80182DE4;
 extern VECTOR D_8011CF60;
-extern SVECTOR D_80139278;
+extern SVECTOR g_wmap_camera_rotation;
 /** @brief Translation whose depth read is retained by the original draw routine. */
 typedef struct
 {
@@ -826,7 +826,7 @@ extern s32 D_801B2464;
     /* Preserve the original depth read before installing the transform. */
     (void)D_80139888.vz;
     PushMatrix();
-    RotMatrix(&D_80139278, &base);
+    RotMatrix(&g_wmap_camera_rotation, &base);
     TransMatrix(&base, (VECTOR *)&D_80139888);
     SetRotMatrix(&base);
     SetTransMatrix(&base);
@@ -860,7 +860,7 @@ void func_8006EDF4(void)
 extern u8 *D_8011CF24;
 extern s32 D_80182DE4;
 extern VECTOR D_8011CF60;
-extern SVECTOR D_80139278;
+extern SVECTOR g_wmap_camera_rotation;
 /** @brief Translation whose depth read is retained by the original draw routine. */
 typedef struct
 {
@@ -883,7 +883,7 @@ extern s32 D_801B2464;
     /* Preserve the original depth read before installing the transform. */
     (void)D_80139888.vz;
     PushMatrix();
-    RotMatrix(&D_80139278, &base);
+    RotMatrix(&g_wmap_camera_rotation, &base);
     TransMatrix(&base, (VECTOR *)&D_80139888);
     SetRotMatrix(&base);
     SetTransMatrix(&base);
@@ -1188,7 +1188,7 @@ typedef struct
 
 extern WmapOrientation D_80139258;
 extern WmapOrientation D_8013B238;
-extern WmapTransform D_80182DC0;
+extern WmapTransform g_wmap_camera_translation;
 extern WmapTransform D_80139870;
 extern s32 D_801B246C;
 extern s32 D_801B2488;
@@ -1197,7 +1197,7 @@ extern s32 D_801B2424;
 extern void func_8006E024__for_func_8006F2B4(void) __asm__("func_8006E024");
 
     D_8013B238 = D_80139258;
-    D_80139870 = D_80182DC0;
+    D_80139870 = g_wmap_camera_translation;
     D_801B2488 = 0;
     D_801B246C = 0x80;
     D_801B2424 = 4;
@@ -1306,7 +1306,7 @@ typedef struct
 
 extern WmapOrientation D_80139258;
 extern WmapOrientation D_801B24A8;
-extern WmapTransform D_80182DC0;
+extern WmapTransform g_wmap_camera_translation;
 extern WmapTransform D_801B2478;
 extern s32 D_801B2470;
 extern s32 D_801B2428;
@@ -1314,7 +1314,7 @@ extern s32 D_801B242C;
 extern void func_8006E3E4__for_func_8006F470(void) __asm__("func_8006E3E4");
 
     D_801B24A8 = D_80139258;
-    D_801B2478 = D_80182DC0;
+    D_801B2478 = g_wmap_camera_translation;
     D_801B2470 = 0x80;
     D_801B242C = 1;
     D_801B2428++;
@@ -1558,8 +1558,8 @@ extern u8 D_800D9318[];
 extern u8 D_801399A8[];
 extern s32 D_8011CF4C;
 
-    func_8006CC4C(D_800D9318, D_801399A8);
-    func_80066F9C(D_800D9318, D_8011CF4C, 8, 0x2E, 0);
+    wmap_step_actor_animation(D_800D9318, D_801399A8);
+    wmap_draw_actor_sprite(D_800D9318, D_8011CF4C, 8, 0x2E, 0);
     if (--D_801B243C == 0)
     {
         D_801B2438 += 1;
@@ -1596,8 +1596,8 @@ extern u8 D_800D9318[];
 extern u8 D_801399A8[];
 extern s32 D_8011CF4C;
 
-    func_8006CC4C(D_800D9318, D_801399A8);
-    func_80066F9C(D_800D9318, D_8011CF4C, 0x8, 0x2E, 0);
+    wmap_step_actor_animation(D_800D9318, D_801399A8);
+    wmap_draw_actor_sprite(D_800D9318, D_8011CF4C, 0x8, 0x2E, 0);
     if (--D_801B243C == 0)
     {
         D_801B2438 += 1;
@@ -1697,8 +1697,8 @@ extern s32 D_801B2444;
 
     func_8006CDDC();
     gte_stsxy(&screen_position);
-    func_8006CC4C(actor, D_801399B0);
-    func_80066F9C(actor, screen_position, 8, 0x2E, 0);
+    wmap_step_actor_animation(actor, D_801399B0);
+    wmap_draw_actor_sprite(actor, screen_position, 8, 0x2E, 0);
     remaining = D_801B2444 - 1;
     D_801B2444 = remaining;
     if (remaining == 0)
@@ -1771,7 +1771,7 @@ extern s32 D_801B2404;
 
     D_80139244 = 1;
     g_wmap_backdrop_target_level = 8;
-    func_8006683C(0x262726);
+    wmap_start_map_tint(0x262726);
     D_801B2404 = 8;
     D_801B2400 += 1;
 }
@@ -1799,7 +1799,7 @@ extern s32 D_801B2404;
 extern void func_8006F7DC__for_func_8006FC80(void) __asm__("func_8006F7DC");
 extern void func_80070530__for_func_8006FC80(void) __asm__("func_80070530");
 
-    func_800652A8(0x12, 0x80);
+    wmap_play_sound(0x12, 0x80);
     func_8006CAC0(&func_80070530__for_func_8006FC80);
     D_801ADAE0 = 1;
     func_8006CAC0(&func_8006F7DC__for_func_8006FC80);
@@ -1981,7 +1981,7 @@ void func_8006FF68(void)
 extern s32 D_801B2400;
 extern s32 D_801B2404;
 
-    func_8006683C(0x808080);
+    wmap_start_map_tint(0x808080);
     D_801B2404 = 0x54;
     D_801B2400 += 1;
 }
@@ -2421,7 +2421,7 @@ typedef struct
 
 extern WmapOrientation D_80139258;
 extern WmapOrientation D_8013B240;
-extern WmapTransform D_80182DC0;
+extern WmapTransform g_wmap_camera_translation;
 extern WmapTransform D_80139888;
 extern s32 D_80182DE4;
 extern s32 D_801B2460;
@@ -2429,7 +2429,7 @@ extern s32 D_801B2464;
 extern void func_8006ECC0__for_func_800705B8(void) __asm__("func_8006ECC0");
 
     D_8013B240 = D_80139258;
-    D_80139888 = D_80182DC0;
+    D_80139888 = g_wmap_camera_translation;
     D_80182DE4 = 0;
     D_80139888.words[2] = 0;
     D_801B2464 = 12;
