@@ -554,7 +554,7 @@ void field_reset_object_states(void)
         g_field_object_states[i].key = i;
         g_field_object_states[i].unk18 = 0;
         g_field_object_states[i].flags = 0;
-        g_field_object_states[i].unk18E = 0;
+        g_field_object_states[i].interaction_kind = 0;
         g_field_object_states[i].unk8.bits.value = g_field_object_states[i].unk4.bits.value;
         g_field_object_states[i].unk8.bits.unk24 = 0;
         g_field_object_states[i].unk8.bits.flag31 = 0;
@@ -594,9 +594,9 @@ void field_reset_object_tints(void)
         g_field_object_states[i].flags = 0;
         g_field_object_states[i].previous_flags = 0;
         g_field_object_states[i].action_parameter = 0;
-        g_field_object_states[i].unk64 = 0;
+        g_field_object_states[i].name = NULL;
         g_field_object_states[i].action = 0;
-        g_field_object_states[i].unk18E = 0;
+        g_field_object_states[i].interaction_kind = 0;
         g_field_object_states[i].movement.bits.flag15 = 0;
         g_field_object_states[i].contact.bits.flag7 = 0;
         g_field_object_states[i].contact.bits.flag0 = 0;

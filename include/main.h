@@ -67,7 +67,7 @@ typedef union
         u32 id : 6;            /**< Logic-block type index. */
         u32 quantity : 4;      /**< Level shown after the name; zero hides it. */
         u32 shape : 4;         /**< Index of the block's composite-icon layout. */
-        u32 unknown_bit16 : 1;
+        u32 placed : 1;        /**< Set while the block is placed on its golem group's grid. */
         u32 rotation : 2;      /**< Placed rotation, 0-3. */
         s32 grid_x : 5;        /**< Placed grid column, relative to the layout origin. */
         s32 grid_y : 5;        /**< Placed grid row, relative to the layout origin. */
@@ -92,6 +92,14 @@ typedef struct
     u8 unknown_0x4C[0x14C - 0x4C];
 } LargeHistoryRecord;
 
+/** @brief Selection flags word of a SmallHistoryRecord. */
+typedef struct
+{
+    u32 unknown_bits : 30;
+    u32 selection_restricted : 1; /**< Restricts GOSUB selection of this record. */
+    u32 selection_blocked : 1;    /**< Blocks GOSUB selection of this record. */
+} SmallHistorySelection;
+
 /** @brief Compact saved-history record with a leading encoded name. */
 typedef struct
 {
@@ -106,12 +114,7 @@ typedef struct
     u16 stats[HISTORY_RECORD_STAT_COUNT];
     u8 unknown_0x28[0x42 - 0x28];
     u16 unknown_0x42;
-    struct
-    {
-        u32 unknown_bits : 30;
-        u32 selection_restricted : 1; /**< Restricts GOSUB selection of this record. */
-        u32 selection_blocked : 1;    /**< Blocks GOSUB selection of this record. */
-    } selection_flags;
+    SmallHistorySelection selection_flags;
     u8 unknown_0x48[0x60 - 0x48];
 } SmallHistoryRecord;
 

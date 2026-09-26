@@ -45,7 +45,7 @@ u8 func_800C20D8(s32 index)
     if (index < FIELD_COUNTER_LIMIT)
     {
         func_800C2228(index);
-        return g_field_game_state->counters[index];
+        return g_field_game_state->item_counts[index];
     }
     record_game_diagnostic(0x8001, 0x70, index, 0);
     return 0;
@@ -59,10 +59,10 @@ void func_800C2138(s32 index)
 {
     if (index < FIELD_COUNTER_LIMIT)
     {
-        g_field_game_state->counters[index]++;
-        if (g_field_game_state->counters[index] > FIELD_COUNTER_MAX)
+        g_field_game_state->item_counts[index]++;
+        if (g_field_game_state->item_counts[index] > FIELD_COUNTER_MAX)
         {
-            g_field_game_state->counters[index] = FIELD_COUNTER_MAX;
+            g_field_game_state->item_counts[index] = FIELD_COUNTER_MAX;
         }
         func_800C2228(index);
     }
@@ -82,10 +82,10 @@ void func_800C21C0(s32 index)
 
     if (index < FIELD_COUNTER_LIMIT)
     {
-        value = g_field_game_state->counters[index];
+        value = g_field_game_state->item_counts[index];
         if (value != 0)
         {
-            g_field_game_state->counters[index] = value - 1;
+            g_field_game_state->item_counts[index] = value - 1;
         }
         func_800C2228(index);
     }
@@ -101,5 +101,5 @@ void func_800C21C0(s32 index)
  */
 void func_800C2228(s32 index)
 {
-    func_800B2844(0, (u8*)D_800F0E98 + D_800F0E98[index], 0x15);
+    field_set_text_macro(0, (u8*)D_800F0E98 + D_800F0E98[index], 0x15);
 }

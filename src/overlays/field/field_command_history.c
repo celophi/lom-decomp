@@ -76,10 +76,10 @@ extern char g_field_command_patterns[FIELD_COMMAND_PATTERN_COUNT][FIELD_COMMAND_
 /** @brief Command returned for each entry of g_field_command_patterns. */
 extern u8 g_field_command_pattern_ids[FIELD_COMMAND_PATTERN_COUNT];
 
-extern s32 D_80117ED0[];
-extern s32 D_80117EC0;
-extern s32 D_80117EC4;
-extern u8 D_80117EC8[];
+extern s32 g_field_pair_indicator_counters[];
+extern s32 g_field_pair_indicator_count;
+extern s32 g_field_pair_indicators_disabled;
+extern u8 g_field_pair_indicator_list[];
 
 static void field_command_history_shift(s32 player);
 static void field_command_history_consume(s32 player, s32 count);
@@ -444,19 +444,19 @@ void field_command_history_clear(s32 player)
  */
 void field_pair_indicators_reset(void)
 {
-    D_80117ED0[2] = -2;
-    D_80117ED0[1] = -2;
-    D_80117ED0[0] = -2;
-    D_80117EC0 = 0;
-    D_80117EC8[0] = 0xFF;
-    D_80117EC4 = 0;
+    g_field_pair_indicator_counters[2] = -2;
+    g_field_pair_indicator_counters[1] = -2;
+    g_field_pair_indicator_counters[0] = -2;
+    g_field_pair_indicator_count = 0;
+    g_field_pair_indicator_list[0] = 0xFF;
+    g_field_pair_indicators_disabled = 0;
 }
 
 /**
  * @brief Return the pair indicator list.
- * @return Address of D_80117EC8.
+ * @return Address of g_field_pair_indicator_list.
  */
 u8 *field_pair_indicators_get_list(void)
 {
-    return D_80117EC8;
+    return g_field_pair_indicator_list;
 }

@@ -10,6 +10,7 @@
 #include "field_effect_geometry.h"
 #include "field_effect_dispatch.h"
 #include "field_actor_palette.h"
+#include "field_mesh_transform.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 #include "sdk/rand.h"
@@ -1782,7 +1783,7 @@ void field_advance_actor_effects(FieldActorState *actor_state)
         LoadImage(&palette_rect, (u8 *) palette_buffer + 0x200);
     }
     field_update_actor_palette_animation(actor);
-    func_8008332C(actor, actor->parts, actor->part_count);
+    field_animate_mesh_textures(actor, actor->parts, actor->part_count);
 }
 
 /**

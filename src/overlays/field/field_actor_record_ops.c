@@ -39,18 +39,18 @@ typedef struct
     s32 distance;
 } FieldItemCandidate;
 
-/** @brief Item candidates; func_800C1F28 sorts the entries by ascending distance. */
+/** @brief Item candidates; field_sort_keyed_list moves the nearest entry to the front. */
 typedef struct
 {
     s32 count;
     FieldItemCandidate entries[FIELD_ITEM_CANDIDATE_COUNT];
 } FieldItemCandidateList;
 
-FieldActorRecord* func_800C1C50(s32 id);
-FieldActorRecord* func_800C1B98(s32 id);
-FieldActorRecord* func_800C1B60(s32 id);
-void func_800C1D14(s32 actor_id, s32 flags);
-void func_800C1F28(FieldItemCandidateList* list);
+FieldActorRecord* field_alloc_actor_record(s32 id);
+FieldActorRecord* field_find_actor_record(s32 id);
+FieldActorRecord* field_find_actor_record_or_default(s32 id);
+void field_stop_actor_script(s32 actor_id, s32 flags);
+void field_sort_keyed_list(FieldItemCandidateList* list);
 s32 func_800C1FBC(Vec3i* first, Vec3i* second);
 s32 field_get_actor_position(s32 key, Vec3i* position);
 s32 field_set_actor_position(s32 key, s32 x, s32 y, s32 z);
@@ -69,7 +69,7 @@ void field_spawn_item_record(s32 key, s32 item)
 
     if (item != FIELD_ITEM_RELEASE)
     {
-        record = func_800C1C50(key);
+        record = field_alloc_actor_record(key);
         if (record == NULL)
         {
             record_game_diagnostic(DIAG_ERROR, 1, 1, 1);
@@ -85,7 +85,7 @@ void field_spawn_item_record(s32 key, s32 item)
         return;
     }
 
-    record = func_800C1B60(key);
+    record = field_find_actor_record_or_default(key);
     record->flags.bits.active = 0;
     record->flags.bits.spawned = 0;
 }
@@ -118,7 +118,7 @@ s32 field_find_nearest_faced_item(s32 unused)
         }
     }
 
-    func_800C1F28(&list);
+    field_sort_keyed_list(&list);
     if (list.count != 0)
     {
         return list.entries[0].key;
@@ -133,12 +133,12 @@ s32 field_find_nearest_faced_item(s32 unused)
  */
 void field_set_actor_record_script_only(s32 key, s32 flags)
 {
-    FieldActorRecord* record = func_800C1B98(key);
+    FieldActorRecord* record = field_find_actor_record(key);
 
     if (record != NULL)
     {
         record->flags.bits.script_only = 1;
-        func_800C1D14(record->id, flags);
+        field_stop_actor_script(record->id, flags);
         if (flags & FIELD_SCRIPT_ONLY_MOVE_AWAY)
         {
             field_set_actor_position(key, FIELD_PARKED_X, 0, 0);
@@ -154,7 +154,7 @@ void field_clear_actor_record_script_only(s32 key)
 {
     FieldActorRecord* record;
 
-    record = func_800C1B60(key);
+    record = field_find_actor_record_or_default(key);
     record->flags.bits.script_only = 0;
-    func_800C1D14(record->id, 0);
+    field_stop_actor_script(record->id, 0);
 }

@@ -6,6 +6,7 @@
 #include "field_contact_geometry.h"
 #include "field_actor_runtime.h"
 #include "field_calls.h"
+#include "field_menu_element.h"
 #include "field_modal_runtime.h"
 #include "game_audio.h"
 
@@ -115,5 +116,5 @@ void field_initialize_subsystems(s32 render_context)
     field_clear_fade_prims();
     field_reset_music_stream();
     field_reset_ring_selections();
-    func_800ADE2C();
+    field_load_menu_frame_image();
 }

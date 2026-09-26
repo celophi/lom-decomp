@@ -14,9 +14,6 @@ void field_restart_pending_bindings(void);
 void field_update_timed_panel(FieldRenderHalf* render);
 void field_update_actor_texts(FieldRenderHalf* render);
 void field_update_input_repeat(void);
-void field_process_input(s32);
-/* Defined as (void); the call passes render_half, which the original loads into $a0. */
-void func_800AD118(s32);
 extern s32 g_field_action_context;
 /** @brief Nonzero while a picture screen is shown (set by func_800A5670). */
 extern s32 D_800F2298;
@@ -47,7 +44,7 @@ void field_build_frame_commands(s32 render_half, s32 alternate)
     g_field_pickup_sound_played = 0;
     g_field_action_context &= 0xFF;
     field_update_input_repeat();
-    field_process_input(render_half);
+    field_process_input((FieldRenderHalf*)render_half);
     field_update_and_render_fade((FieldRenderHalf*)render_half);
     func_800B0244();
     if (g_field_active_group != 0)
@@ -59,7 +56,7 @@ void field_build_frame_commands(s32 render_half, s32 alternate)
     }
     if ((D_800F2298 == 0) && (g_field_gover_load_countdown == 0) && (g_field_modal_state == 0) && (g_field_text_session_active == 0))
     {
-        func_800B19FC();
+        field_runtime_update();
         if (g_field_scene_request_pending != 0)
         {
             return;
@@ -78,7 +75,7 @@ void field_build_frame_commands(s32 render_half, s32 alternate)
     field_prepare_actor_render_commands(render_half, alternate);
     field_render_actor_objects((FieldRenderContext*)render_half);
     field_draw_fade_prims((FieldRenderHalf*)render_half);
-    func_800A2E40((u8*)render_half);
+    field_update_pair_indicators((FieldRenderHalf*)render_half);
     field_pair_indicators_get_list();
     field_poll_streamed_animations();
     g_frame_counter++;
@@ -87,8 +84,8 @@ void field_build_frame_commands(s32 render_half, s32 alternate)
     field_update_return_to_title_prompt(render_half);
     field_update_battle_end();
     field_update_actor_texts((FieldRenderHalf*)render_half);
-    field_update_modal(render_half);
-    func_800AD118(render_half);
+    field_update_modal((FieldRenderHalf*)render_half);
+    field_modal_frame_stub(render_half);
     field_update_timed_panel((FieldRenderHalf*)render_half);
     func_800AF8E8(render_half);
     field_update_music_stream();

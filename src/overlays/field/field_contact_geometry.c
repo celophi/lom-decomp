@@ -214,7 +214,7 @@ extern s32 g_field_duel_mode;
 extern s32 g_field_last_actor_contact;
 
 /* Defined as (s32, s32) in field_interaction_start.c; the original call also loads the state table into $a2. */
-void func_800B22F0(s32 value, u16 entry, FieldObjectRuntime* states);
+void field_start_interaction(s32 value, u16 entry, FieldObjectRuntime* states);
 s32 field_resolve_contact_hit(s32 source_index, s32 target_index);
 s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action);
 void field_release_object_link(FieldActor* actor);
@@ -1247,7 +1247,7 @@ void field_probe_actor_interaction(FieldActor* actor)
         if (state->interaction_kind != 0)
         {
             field_play_sound(FIELD_SOUND_INTERACT, FIELD_SOUND_PAN_CENTER);
-            func_800AF824(object_index);
+            field_pick_up_item_actor(object_index);
             return;
         }
         if (state->interaction_flags & FIELD_INTERACTION_FLAG_TRIGGERED)
@@ -1281,7 +1281,7 @@ static void field_dispatch_object_state_entry(FieldActor* actor, s32 entry_index
     FieldObjectRuntime* state;
 
     state = &g_field_object_states[actor->object_index];
-    func_800B22F0(state->record_id, state->state_entries[entry_index], g_field_object_states);
+    field_start_interaction(state->record_id, state->state_entries[entry_index], g_field_object_states);
 }
 /**
  * @brief Hit every new object whose projected bounds contain an effect's position.

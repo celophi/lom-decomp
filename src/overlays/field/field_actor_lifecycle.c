@@ -45,7 +45,7 @@ extern s32 g_field_duel_mode;
 
 extern FieldStatusState* field_find_object_state(s32 actor_id);
 extern s32 field_set_actor_control_mode(s32 party_index, s32 mode);
-extern void func_800C1D14(s32 actor_id, s32 flags);
+extern void field_stop_actor_script(s32 actor_id, s32 flags);
 extern s32 akao_cmd_c1(s32 song, s32 fade_ticks, s32 volume);
 
 /**
@@ -162,7 +162,7 @@ void field_battle_end(void)
                 g_field_runtime->actors[i].scripts[j] = FIELD_NO_SCRIPT;
             }
             field_set_actor_control_mode(i, FIELD_CONTROL_FOLLOW);
-            func_800C1D14(i, 0);
+            field_stop_actor_script(i, 0);
         }
     }
 

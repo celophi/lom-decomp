@@ -14,11 +14,22 @@ typedef struct FieldMeshTexturePart
     u16 *pixels;
 } FieldMeshTexturePart;
 
-/**
- * @brief 0x18-byte mesh record in an actor's mesh table (FieldActorState.mesh_data).
- * @note faces holds 16-byte triangle records; bits 1..4 of byte 6 of the first
- *       face select the primitive kind of the whole mesh.
- */
+/** @brief 16-byte triangle record of a mesh. */
+typedef struct FieldMeshFace
+{
+    union
+    {
+        u16 uv[3];   /**< Textured faces: packed u, v of each vertex. */
+        u8 color[3]; /**< Flat faces: face colour. */
+    } texture;
+    u8 kind;                  /**< Bits 1..4: primitive kind (the first face's kind applies to the whole mesh). */
+    u8 vertex_colors[3][3];   /**< Gouraud faces: colour of each vertex. */
+} FieldMeshFace;
+
+/** @brief Primitive kind of a mesh face (FieldMeshFace kind). */
+#define FIELD_MESH_FACE_KIND(face) (((face)->kind >> 1) & 0xF)
+
+/** @brief 0x18-byte mesh record in an actor's mesh table (FieldActorState.mesh_data). */
 typedef struct FieldMeshResource
 {
     u16 face_count;
@@ -28,7 +39,7 @@ typedef struct FieldMeshResource
     SVECTOR *vertices;
     SVECTOR *normals;
     SVECTOR *offsets;
-    u8 *faces;
+    FieldMeshFace *faces;
 } FieldMeshResource;
 
 /** @brief Mesh record @p index of @p actor's mesh table. */

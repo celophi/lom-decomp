@@ -61,7 +61,7 @@ s32 func_800C2264(s32 template_index)
     }
 
     companion_template = &table->templates[template_index];
-    func_800B2844(1, (u8*)companion_template, 0x15);
+    field_set_text_macro(1, (u8*)companion_template, 0x15);
 
     for (slot = 0; slot < FIELD_REGION_COUNT; slot++)
     {
@@ -107,7 +107,7 @@ s32 func_800C23F4(void)
         index = g_gosub_result_values[0];
         if (index < FIELD_REGION_COUNT)
         {
-            func_800B2844(0, (u8*)&g_field_game_state->regions[index], 0x15);
+            field_set_text_macro(0, (u8*)&g_field_game_state->regions[index], 0x15);
             index = g_gosub_result_values[0];
             if (index != g_field_game_state->region_index)
             {
@@ -139,7 +139,7 @@ s32 func_800C24BC(s32 index)
     {
         if (g_field_game_state->regions[index].name[0] != 0)
         {
-            func_800B2844(0, (u8*)&g_field_game_state->regions[index], 0x15);
+            field_set_text_macro(0, (u8*)&g_field_game_state->regions[index], 0x15);
             status = g_field_game_state->regions[index].status.word;
             if (status < 0)
             {
@@ -173,7 +173,7 @@ void func_800C25A0(s32 index)
         record_game_diagnostic(0x8001, 0x77, index, 0);
         return;
     }
-    func_800B2844(0, (u8*)&g_field_game_state->regions[index], 0x15);
+    field_set_text_macro(0, (u8*)&g_field_game_state->regions[index], 0x15);
     companion = &g_field_game_state->regions[index];
     field_run_name_entry((s32)companion, (s32)companion, 3, g_field_game_state->regions[index].unk15, 0);
 }

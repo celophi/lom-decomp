@@ -17,11 +17,14 @@
 /** @brief Largest derived value an item record can hold. */
 #define FIELD_DERIVED_VALUE_MAX 999
 
-/** @brief Item name table id passed to func_800C1E40. */
+/** @brief Resource id (func_800C1E40) of the item name table. */
 #define FIELD_ITEM_NAME_TABLE 8
 
+/** @brief Name table entries per item category: the type names of one category. */
+#define FIELD_TYPE_NAMES_PER_CATEGORY 16
+
 /** @brief First name entry of the item subtypes in the item name table. */
-#define FIELD_SUBTYPE_NAME_BASE 0x24
+#define FIELD_SUBTYPE_NAME_BASE 36
 
 /** @brief First control code (0x1D-0x1F) that carries one argument byte in item names. */
 #define FIELD_TEXT_ARG_CODE_MIN 0x1D
@@ -46,7 +49,7 @@ extern FieldItemTables* D_80123FC0;
 
 void* func_800C1E40(s32 table_id);
 
-void func_800BFE70(s32 type_entry, s32 subtype_entry, u8* dest);
+static void field_build_item_name(s32 type_entry, s32 subtype_entry, u8* dest);
 
 /**
  * @brief Write the staged item back into its item record.
@@ -55,7 +58,7 @@ void func_800BFE70(s32 type_entry, s32 subtype_entry, u8* dest);
  * a named record without a serial only gets the serial. Then the identity,
  * level, stat modifier and slot fields are copied from the staging block.
  */
-void func_800BFA34(void)
+void field_write_staged_item(void)
 {
     s32 i;
     FieldItemRecord* record;
@@ -63,12 +66,13 @@ void func_800BFA34(void)
     record = D_80123FC4->record;
     if (record->kind == 0)
     {
-        func_800C37A8(g_field_game_state->unkD8, (struct FieldItemKey*)&record->unk38);
-        func_800BFE70(D_80123FC4->category * 16 + D_80123FC4->item_type, D_80123FC4->item_subtype + FIELD_SUBTYPE_NAME_BASE, (u8*)D_80123FC4->record);
+        func_800C37A8(g_field_game_state->unkD8, &record->key);
+        field_build_item_name(D_80123FC4->category * FIELD_TYPE_NAMES_PER_CATEGORY + D_80123FC4->item_type, D_80123FC4->item_subtype + FIELD_SUBTYPE_NAME_BASE,
+                              (u8*)D_80123FC4->record);
     }
-    else if (record->unk38 == 0 && record->unk3C == 0)
+    else if (record->key.first == 0 && record->key.second == 0)
     {
-        func_800C37A8(g_field_game_state->unkD8, (struct FieldItemKey*)&record->unk38);
+        func_800C37A8(g_field_game_state->unkD8, &record->key);
     }
 
     D_80123FC4->record->info.bits.category = D_80123FC4->category;
@@ -107,7 +111,7 @@ void func_800BFA34(void)
  * @param subtype_entry Name table entry of the item subtype.
  * @param dest Destination buffer; receives the terminated name.
  */
-void func_800BFE70(s32 type_entry, s32 subtype_entry, u8* dest)
+static void field_build_item_name(s32 type_entry, s32 subtype_entry, u8* dest)
 {
     FieldItemNameTable* table;
     u8* src;
@@ -168,7 +172,7 @@ void func_800BFE70(s32 type_entry, s32 subtype_entry, u8* dest)
  *
  * @param record Item record to update.
  */
-void func_800BFF90(FieldItemRecord* record)
+void field_derive_weapon_values(FieldItemRecord* record)
 {
     s32 i;
     s32 weight;
@@ -176,7 +180,7 @@ void func_800BFF90(FieldItemRecord* record)
     u16 divisor;
     u16 power;
 
-    for (i = 0, weight = 0; i < 4; i++)
+    for (i = 0, weight = 0; i < FIELD_STAGING_FACTOR_COUNT; i++)
     {
         weight += D_80123FC0->item.types[D_80123FC4->item_type].weights[i] * D_80123FC4->weights[i];
     }
@@ -201,7 +205,7 @@ void func_800BFF90(FieldItemRecord* record)
     record->flags2C = D_80123FC4->flags2C;
     record->effect_index = D_80123FC4->effect_index;
 
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < FIELD_STAGING_FACTOR_COUNT; i++)
     {
         record->attributes[i] = (D_80123FC0->item.types[D_80123FC4->item_type].factors[i] * D_80123FC4->multipliers[i]) >> 6;
     }
@@ -211,12 +215,12 @@ void func_800BFF90(FieldItemRecord* record)
  * @brief Derive the category 1 values of an item record from the staging block.
  * @param record Item record to update.
  */
-void func_800C015C(FieldItemRecord* record)
+void field_derive_armor_values(FieldItemRecord* record)
 {
     s32 i;
     u32 value;
 
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < FIELD_STAGING_FACTOR_COUNT; i++)
     {
         value = (D_80123FC0->item.alternate_types[D_80123FC4->item_type].weights[i] * D_80123FC4->multipliers[i]) >> 6;
         record->derived.values[i] = value;

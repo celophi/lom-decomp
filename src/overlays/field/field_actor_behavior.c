@@ -14,6 +14,7 @@
 #include "field_text.h"
 #include "field_effect_render_state.h"
 #include "field_actor_runtime.h"
+#include "field_ability_progression.h"
 #include "field_calls.h"
 #include "field_types.h"
 #include "controller_internal.h"
@@ -201,7 +202,7 @@
 #define FIELD_OVERLAP_INDEX_MASK 0x7FFF
 /** @brief field_collision_hit_markers result without a blocking marker. */
 #define FIELD_MARKER_NONE -1
-/** @brief func_800AD7DC result without a combo. */
+/** @brief field_find_combined_ability result without a combo. */
 #define FIELD_COMBO_NONE 0xFF
 /** @brief rand() results above this pick the second idle animation. */
 #define FIELD_IDLE_ALTERNATE_THRESHOLD 0x6000
@@ -1307,7 +1308,7 @@ void field_prepare_actor_action(FieldActor* actor)
             return;
         }
         technique = action->command & FIELD_ACTION_TECHNIQUE_MASK;
-        technique_base = (g_field_player_records[object_index].weapon_type * FIELD_TECHNIQUES_PER_WEAPON) + FIELD_TECHNIQUE_SEQUENCE_BASE;
+        technique_base = (g_field_player_records[object_index].head.bytes.weapon_type * FIELD_TECHNIQUES_PER_WEAPON) + FIELD_TECHNIQUE_SEQUENCE_BASE;
         if (field_start_streamed_animation(object_index, technique + technique_base) == 0)
         {
             actor->command = FIELD_ACTOR_COMMAND_NONE;
@@ -1682,7 +1683,7 @@ s32 field_update_actor_command(FieldActor* actor)
                 {
                     action_rows = g_field_resource_actions;
                     combo_actions = action_rows[actor->resource_index];
-                    combo_or_slot = func_800AD7DC(combo_actions[0].command, combo_actions[1].command);
+                    combo_or_slot = field_find_combined_ability(combo_actions[0].command, combo_actions[1].command);
                     parameter_offset = combo_or_slot * 2;
                     if (combo_or_slot != FIELD_COMBO_NONE)
                     {
@@ -2332,12 +2333,12 @@ s32 field_update_actor_command(FieldActor* actor)
                 state->action_parameter = action->animation;
                 state->movement.word = state->movement.word & ~FIELD_MOVEMENT_SEQUENCE_MASK;
                 state->sequence_id = (((action->command & FIELD_ACTION_TECHNIQUE_MASK) + FIELD_TECHNIQUE_SEQUENCE_BASE) | FIELD_SEQUENCE_TECHNIQUE) +
-                                     (g_field_player_records[actor->object_index].weapon_type * FIELD_TECHNIQUES_PER_WEAPON);
+                                     (g_field_player_records[actor->object_index].head.bytes.weapon_type * FIELD_TECHNIQUES_PER_WEAPON);
                 if (actor->object_index < FIELD_PARTY_COUNT)
                 {
                     technique_object_index = actor->object_index;
                     field_start_actor_text(technique_object_index,
-                                  (action->command & FIELD_ACTION_TECHNIQUE_MASK) + (g_field_player_records[technique_object_index].weapon_type * FIELD_TECHNIQUES_PER_WEAPON));
+                                  (action->command & FIELD_ACTION_TECHNIQUE_MASK) + (g_field_player_records[technique_object_index].head.bytes.weapon_type * FIELD_TECHNIQUES_PER_WEAPON));
                 }
                 field_execute_actor_sequence(actor, action->command & FIELD_ACTION_TECHNIQUE_MASK);
                 state->sequence = action->command & FIELD_ACTION_TECHNIQUE_MASK;
@@ -2519,7 +2520,7 @@ static s32 field_apply_action_animation(FieldActor* actor, FieldObjectState* sta
         state->flags = state->flags | 0x4000;
     }
     if ((action->command == 0x1F) && (actor->variant != 0) &&
-        ((actor->object_index >= FIELD_PLAYER_COUNT) || (g_field_player_records[actor->object_index].weapon_type != FIELD_WEAPON_TYPE_NO_VARIANT)))
+        ((actor->object_index >= FIELD_PLAYER_COUNT) || (g_field_player_records[actor->object_index].head.bytes.weapon_type != FIELD_WEAPON_TYPE_NO_VARIANT)))
     {
         actor->animation = (u8)actor->variant + ((u8)action->command + (actor->animation & FIELD_ANIMATION_FACING));
     }

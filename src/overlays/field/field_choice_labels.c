@@ -22,7 +22,7 @@
 /** @brief Text color of the other choice. */
 #define FIELD_CHOICE_COLOR_INACTIVE 5
 
-/** @brief func_800A88A0() flag that centers the text on x. */
+/** @brief field_draw_text() flag that centers the text on x. */
 #define FIELD_TEXT_ALIGN_CENTER 2
 
 /** @brief Horizontal center of the choices inside the prompt window. */
@@ -34,7 +34,7 @@
 /** @brief Top of the second choice inside the prompt window. */
 #define FIELD_CHOICE_SECOND_Y 17
 
-void* func_800A88A0(SPRT* sprite_cursor, s32* ot, u8* text, s32 color, s32 x, s32 y, s32 flags);
+void* field_draw_text(SPRT* sprite_cursor, s32* ot, u8* text, s32 color, s32 x, s32 y, s32 flags);
 
 /** @brief Offset entry of UI string FIELD_TITLE_CHOICE_FIRST_TEXT (each entry is its own symbol). */
 extern u8 g_field_title_choice_text_entry[];
@@ -62,9 +62,9 @@ void field_draw_return_to_title_choices(s32* ot, void* prim, s32 scroll_x, s32 s
     text_table = g_field_title_choice_text_entry - FIELD_TITLE_CHOICE_FIRST_TEXT * 2;
     first_color = (g_field_return_to_title_choice == FIELD_TITLE_CHOICE_CONTINUE) ? FIELD_CHOICE_COLOR_ACTIVE : FIELD_CHOICE_COLOR_INACTIVE;
     x = FIELD_CHOICE_CENTER_X - scroll_x;
-    cursor = func_800A88A0(cursor, ot, first_text, first_color, x, FIELD_CHOICE_FIRST_Y - scroll_y, FIELD_TEXT_ALIGN_CENTER);
+    cursor = field_draw_text(cursor, ot, first_text, first_color, x, FIELD_CHOICE_FIRST_Y - scroll_y, FIELD_TEXT_ALIGN_CENTER);
 
     second_text = FIELD_UI_TEXT(text_table, FIELD_TITLE_CHOICE_FIRST_TEXT + 1);
     second_color = (g_field_return_to_title_choice == FIELD_TITLE_CHOICE_QUIT) ? FIELD_CHOICE_COLOR_ACTIVE : FIELD_CHOICE_COLOR_INACTIVE;
-    func_800A88A0(cursor, ot, second_text, second_color, x, FIELD_CHOICE_SECOND_Y - scroll_y, FIELD_TEXT_ALIGN_CENTER);
+    field_draw_text(cursor, ot, second_text, second_color, x, FIELD_CHOICE_SECOND_Y - scroll_y, FIELD_TEXT_ALIGN_CENTER);
 }

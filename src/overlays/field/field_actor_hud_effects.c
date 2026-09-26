@@ -168,7 +168,7 @@ extern s32 g_field_active_group;
 extern s32 g_field_scene_mode_bit;
 extern s32 g_frame_counter;
 extern s32 D_80122B20;
-extern u8 D_80117EC8[];
+extern u8 g_field_pair_indicator_list[];
 extern u8 D_800FDCEA;
 extern u16 D_800FE01E;
 extern u8* g_field_cd_buffer;
@@ -297,7 +297,7 @@ void field_restart_actor_animation(FieldActor* actor);
 void field_clear_actor_effects(FieldActorSlot* slot);
 static inline void field_clear_link_target_flag(s32 object_index);
 FieldActor* field_lookup_actor(s32 key);
-void func_800B2198(s32 actor_id, void* unused);
+void field_update_actor_record(s32 actor_id, void* unused);
 
 /**
  * @brief Set the corners of a slanted gauge bar.
@@ -372,7 +372,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
 
     do
     {
-        if (g_field_actors[i].presence != unused_presence && (g_field_player_records[i].flags & FIELD_PLAYER_ACTIVE))
+        if (g_field_actors[i].presence != unused_presence && (g_field_player_records[i].head.bytes.flags & FIELD_PLAYER_ACTIVE))
         {
             /* each command goes through the local; comparing the constants directly changes the code */
             command = FIELD_ACTOR_COMMAND_ACTION;
@@ -395,7 +395,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
         {
             single_actor = &g_field_actors[i];
             single_player = &g_field_player_records[i];
-            if (single_actor->presence != FIELD_ACTOR_UNUSED && (single_player->flags & FIELD_PLAYER_ACTIVE))
+            if (single_actor->presence != FIELD_ACTOR_UNUSED && (single_player->head.bytes.flags & FIELD_PLAYER_ACTIVE))
             {
                 field_draw_actor_hud_panel(FIELD_HUD_SINGLE_X, FIELD_HUD_PARTY_Y, i, render_half, FIELD_HUD_HP_PER_BAR);
             }
@@ -407,7 +407,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
         {
             paired_actor = &g_field_actors[i];
             paired_player = &g_field_player_records[i];
-            if (paired_actor->presence != FIELD_ACTOR_UNUSED && (paired_player->flags & FIELD_PLAYER_ACTIVE))
+            if (paired_actor->presence != FIELD_ACTOR_UNUSED && (paired_player->head.bytes.flags & FIELD_PLAYER_ACTIVE))
             {
                 field_draw_actor_hud_panel(FIELD_HUD_PAIR_X + panel_count * FIELD_HUD_PAIR_STEP, FIELD_HUD_PARTY_Y, i, render_half, FIELD_HUD_HP_PER_BAR);
                 panel_count++;
@@ -419,7 +419,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
         for (i = 0; i < FIELD_PARTY_COUNT; i++)
         {
             if (g_field_actors[g_field_party_hud_order[i]].presence != FIELD_ACTOR_UNUSED &&
-                (g_field_player_records[g_field_party_hud_order[i]].flags & FIELD_PLAYER_ACTIVE))
+                (g_field_player_records[g_field_party_hud_order[i]].head.bytes.flags & FIELD_PLAYER_ACTIVE))
             {
                 panel_y = FIELD_HUD_TRIO_LOW_Y;
                 if (i & 1)
@@ -698,11 +698,11 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
         {
             for (scan_slot = 0; scan_slot < FIELD_HUD_BLINK_LIST_COUNT; scan_slot++)
             {
-                if (D_80117EC8[scan_slot] == FIELD_HUD_BLINK_LIST_END)
+                if (g_field_pair_indicator_list[scan_slot] == FIELD_HUD_BLINK_LIST_END)
                 {
                     break;
                 }
-                if (D_80117EC8[scan_slot] == slot)
+                if (g_field_pair_indicator_list[scan_slot] == slot)
                 {
                     g_field_hud_blink_frames[slot] = 0;
                     break;
@@ -1874,7 +1874,7 @@ POLY_FT4* field_render_actor_ground_shadow(FieldActor* actor, POLY_FT4* prim, s3
 void field_update_spawned_actor(FieldActor* actor)
 {
     g_field_updating_actor = actor;
-    func_800B2198(g_field_object_states[actor->object_index].key, g_field_object_states);
+    field_update_actor_record(g_field_object_states[actor->object_index].key, g_field_object_states);
 }
 
 /**

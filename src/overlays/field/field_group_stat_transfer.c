@@ -1,184 +1,98 @@
+/**
+ * @file field_group_stat_transfer.c
+ * @brief Build the golem party companion from its saved group record.
+ */
+
 #include "saved_game.h"
 #include "common.h"
 #include "field_calls.h"
+#include "field_golem_layout.h"
+#include "field_records.h"
 
-#define U8(p, o) (*(u8*)((u8*)(p) + (o)))
-#define U16(p, o) (*(u16*)((u8*)(p) + (o)))
-#define U32(p, o) (*(u32*)((u8*)(p) + (o)))
-
-typedef struct
-{
-    unsigned int nibble0 : 4;
-    unsigned int nibble1 : 4;
-    unsigned int nibble2 : 4;
-    unsigned int nibble3 : 4;
-    unsigned int nibble4 : 4;
-    unsigned int nibble5 : 4;
-    unsigned int nibble6 : 4;
-    unsigned int nibble7 : 4;
-} PackedNibbles8;
-
-typedef struct
-{
-    unsigned int low : 8;
-    unsigned int high : 24;
-} ActivePacked32;
-
-typedef struct
-{
-    unsigned short low : 9;
-    unsigned short high : 7;
-} ActivePacked16;
+/** @brief Level of every golem companion. */
+#define GOLEM_COMPANION_LEVEL 99
+/** @brief Equipment slot that receives the golem's armor values and flags. */
+#define GOLEM_ARMOR_SLOT 1
+/** @brief Number of battle command slots in FieldCharacterRecord.info. */
+#define FIELD_COMMAND_SLOT_COUNT 2
+/** @brief Number of battle skill slots in FieldCharacterRecord.info. */
+#define FIELD_SKILL_SLOT_COUNT 4
 
 /**
- * @brief Copy the selected group's derived stats into an active record.
- * @param group_index Index of the source group in the menu-layout stat table.
- * @param destination Active record to populate.
+ * @brief Fill a party character record from one saved golem group.
+ * @param group Golem group whose record is copied.
+ * @param record Party record to fill (party slot 2).
  */
-void func_800C3F18(s32 group_index, void* destination)
+void field_golem_build_companion(s32 group, FieldCharacterRecord* record)
 {
-    u8* record = destination;
-    s32 packed_metadata;
-    s32 group_offset;
-    s32 stat_record_offset;
-    s32 stat_cursor_offset;
-    s32 index;
-    s32 resistance_offset;
-    u16 primary_stat;
-    u16 stat_value;
-    u8* name_destination;
-    u8 name_value;
-    u8 flags0;
-    u8 flags1;
-    u8 flags2_or_enabled;
-    u8* stat_record;
-    u8* resistance_source;
-    u8* source_record;
-    u8* stat_source;
-    u8* resistance_cursor;
-    u8* slot_cursor;
-    u8* secondary_clear_cursor;
-    u8* clear_cursor;
-    u8* record_stat_cursor;
-    u8* name_table;
-    u8* group_table;
-    s32 stat_table_address;
-    u8* final_table;
+    s32 i;
 
-    index = 0;
-    name_table = g_saved_game.bytes;
-    group_offset = group_index * 0x14C;
-    U8(record, 0x50) = 1;
-    U8(record, 0x90) = 1;
-    U8(record, 0xD0) = 0;
-    U8(record, 0x110) = 0;
-    do
+    record->equipment[FIELD_WEAPON_SLOT].kind = 1;
+    record->equipment[GOLEM_ARMOR_SLOT].kind = 1;
+    record->equipment[2].kind = 0;
+    record->equipment[3].kind = 0;
+    for (i = 0; i < GOLEM_NAME_LENGTH; i++)
     {
-        name_destination = record + index;
-        name_value = U8(name_table, index + group_offset + 0x2B0C);
-        index += 1;
-        *name_destination = name_value;
-    } while (index < 0x15);
-    index = 1;
-    U32(record, 0x18) = (s32)(((U32(record, 0x18) & ~0x7F) | 4) & ~0x80);
-    clear_cursor = record + 1;
-    group_table = g_saved_game.bytes;
-    U8(record, 0x19) = (s8)(U8(group_table, group_index * 0x14C + 0x2B50) & 0xF);
-    do
+        record->name[i] = GOLEM.group_records[group].name[i];
+    }
+    record->info.word = ((record->info.word & ~FIELD_CHARACTER_TYPE_MASK) | FIELD_CHARACTER_GOLEM) & ~FIELD_CHARACTER_AI;
+    record->info.actions.unk19 = GOLEM.group_records[group].logic_class;
+    for (i = 0; i < FIELD_COMMAND_SLOT_COUNT; i++)
     {
-        U8(clear_cursor, 0x1A) = 0;
-        index -= 1;
-        clear_cursor -= 1;
-    } while (index >= 0);
-    index = 3;
-    secondary_clear_cursor = record + 3;
-    do
+        record->info.actions.commands[i] = 0;
+    }
+    for (i = 0; i < FIELD_SKILL_SLOT_COUNT; i++)
     {
-        U8(secondary_clear_cursor, 0x1C) = 0;
-        index -= 1;
-        secondary_clear_cursor -= 1;
-    } while (index >= 0);
-    index = 0;
-    stat_record_offset = group_index * 0x14C;
-    stat_record = (u8*)(stat_record_offset + (s32)g_saved_game.bytes);
-    stat_table_address = (s32)g_saved_game.bytes;
-    ((ActivePacked32*)(record + 0x20))->low = 0x63;
-    ((ActivePacked32*)(record + 0x20))->high = 0;
-    slot_cursor = record + 0x90;
-    U16(record, 0x24) = (u16)U16(stat_record, 0x2B22);
-    stat_cursor_offset = stat_record_offset;
-    primary_stat = U16(stat_record, 0x2B24);
-    record_stat_cursor = record;
-    U16(record, 0x26) = primary_stat;
-    U16(record, 0x74) = primary_stat;
-    do
+        record->info.actions.skills[i] = 0;
+    }
+    record->progress.bits.level = GOLEM_COMPANION_LEVEL;
+    record->progress.bits.experience = 0;
+    record->hp = GOLEM.group_records[group].hp;
+    record->equipment[FIELD_WEAPON_SLOT].derived.weapon.power = record->unk26 = GOLEM.group_records[group].power;
+    for (i = 0; i < HISTORY_RECORD_STAT_COUNT; i++)
     {
-        stat_source = (u8*)(stat_cursor_offset + stat_table_address);
-        stat_cursor_offset += 2;
-        stat_value = U16(stat_source, 0x2B26);
-        index += 1;
-        U16(record_stat_cursor, 0x28) = stat_value;
-        U16(slot_cursor, 0x24) = stat_value;
-        slot_cursor += 2;
-        record_stat_cursor += 2;
-    } while (index < 4);
-    index = 0;
-    stat_table_address = (s32)g_saved_game.bytes;
-    resistance_offset = group_index * 0x14C;
-    resistance_cursor = record;
-    do
+        record->equipment_totals[i] = GOLEM.group_records[group].equipment_totals[i];
+        /* Through the slot address: an indexed equipment[] store shares the totals address and changes the loop. */
+        (&record->equipment[GOLEM_ARMOR_SLOT])->derived.values[i] = record->equipment_totals[i];
+    }
+    for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
     {
-        resistance_cursor++;
-        resistance_cursor--;
-        resistance_source = (u8*)(resistance_offset + stat_table_address);
-        resistance_offset += 2;
-        index += 1;
-        ((ActivePacked16*)(resistance_cursor + 0x30))->low = ((ActivePacked16*)(resistance_source + 0x2B38))->low;
-        ((ActivePacked16*)(resistance_cursor + 0x30))->high = ((ActivePacked16*)(resistance_source + 0x2B38))->high;
-        resistance_cursor += 2;
-    } while (index < 8);
-    final_table = g_saved_game.bytes;
-    source_record = (group_index * 0x14C) + final_table;
-    flags0 = U8(source_record, 0x2B48);
-    U8(record, 0x40) = flags0;
-    U8(record, 0xBC) = flags0;
-    flags1 = U8(source_record, 0x2B49);
-    U8(record, 0x41) = flags1;
-    U8(record, 0x7C) = flags1;
-    flags2_or_enabled = U8(source_record, 0x2B4A);
-    U8(record, 0x42) = flags2_or_enabled;
-    U8(record, 0xBD) = flags2_or_enabled;
-    flags2_or_enabled = U8(source_record, 0x2B4B);
-    U8(record, 0x48) = 0;
-    U8(record, 0x49) = 0;
-    U8(record, 0x4A) = 0;
-    U8(record, 0x4B) = 0;
-    U8(record, 0x4C) = 0;
-    U8(record, 0x4D) = 0;
-    U8(record, 0x4E) = 0;
-    U8(record, 0x4F) = 0;
-    U8(record, 0x43) = flags2_or_enabled;
-    ((PackedNibbles8*)(record + 0x68))->nibble0 = ((PackedNibbles8*)(source_record + 0x2B30))->nibble0;
-    ((PackedNibbles8*)(record + 0x68))->nibble1 = ((PackedNibbles8*)(source_record + 0x2B30))->nibble1;
-    ((PackedNibbles8*)(record + 0x68))->nibble2 = ((PackedNibbles8*)(source_record + 0x2B30))->nibble2;
-    ((PackedNibbles8*)(record + 0x68))->nibble3 = ((PackedNibbles8*)(source_record + 0x2B30))->nibble3;
-    ((PackedNibbles8*)(record + 0x68))->nibble4 = ((PackedNibbles8*)(source_record + 0x2B30))->nibble4;
-    ((PackedNibbles8*)(record + 0x68))->nibble5 = ((PackedNibbles8*)(source_record + 0x2B30))->nibble5;
-    ((PackedNibbles8*)(record + 0x68))->nibble6 = ((PackedNibbles8*)(source_record + 0x2B30))->nibble6;
-    ((PackedNibbles8*)(record + 0x68))->nibble7 = ((PackedNibbles8*)(source_record + 0x2B30))->nibble7;
-    ((PackedNibbles8*)(record + 0xA8))->nibble0 = ((PackedNibbles8*)(source_record + 0x2B34))->nibble0;
-    ((PackedNibbles8*)(record + 0xA8))->nibble1 = ((PackedNibbles8*)(source_record + 0x2B34))->nibble1;
-    ((PackedNibbles8*)(record + 0xA8))->nibble2 = ((PackedNibbles8*)(source_record + 0x2B34))->nibble2;
-    ((PackedNibbles8*)(record + 0xA8))->nibble3 = ((PackedNibbles8*)(source_record + 0x2B34))->nibble3;
-    ((PackedNibbles8*)(record + 0xA8))->nibble4 = ((PackedNibbles8*)(source_record + 0x2B34))->nibble4;
-    ((PackedNibbles8*)(record + 0xA8))->nibble5 = ((PackedNibbles8*)(source_record + 0x2B34))->nibble5;
-    ((PackedNibbles8*)(record + 0xA8))->nibble6 = ((PackedNibbles8*)(source_record + 0x2B34))->nibble6;
-    ((PackedNibbles8*)(record + 0xA8))->nibble7 = ((PackedNibbles8*)(source_record + 0x2B34))->nibble7;
-    packed_metadata = (U32(record, 0x174) & ~0xF) | (U8(source_record, 0x2B50) & 0xF);
-    U32(record, 0x174) = packed_metadata;
-    U32(record, 0x174) = (s32)((packed_metadata & ~0xF0) | (U8(source_record, 0x2B50) & 0xF0));
-    U8(record, 0x175) = (u8)U8(source_record, 0x2B51);
-    U8(record, 0x176) = (u8)U8(source_record, 0x2B52);
-    U8(record, 0x177) = (u8)U8(source_record, 0x2B53);
-    U32(record, 0x178) = (s32)U32(source_record, 0x2B54);
+        /* FieldCharacterRecord.stats is a plain u16 array; the copy stores the two FieldStat bit-fields. */
+        ((FieldStat*)record->stats)[i].bits.base = GOLEM.group_records[group].stats[i].bits.base;
+        ((FieldStat*)record->stats)[i].bits.effective = GOLEM.group_records[group].stats[i].bits.effective;
+    }
+    record->equipment[GOLEM_ARMOR_SLOT].flags2C = record->unk40 = GOLEM.group_records[group].armor_flags;
+    record->equipment[FIELD_WEAPON_SLOT].flags2C = record->unk41 = GOLEM.group_records[group].weapon_flags;
+    record->equipment[GOLEM_ARMOR_SLOT].flags2D = record->unk42 = GOLEM.group_records[group].armor_flags2;
+    record->unk43 = GOLEM.group_records[group].unknown_0x3F;
+    record->button_actions[0] = 0;
+    record->button_actions[1] = 0;
+    record->button_actions[2] = 0;
+    record->button_actions[3] = 0;
+    record->button_actions[4] = 0;
+    record->button_actions[5] = 0;
+    record->button_actions[6] = 0;
+    record->button_actions[7] = 0;
+    record->equipment[FIELD_WEAPON_SLOT].bonus_nibbles.bits.n0 = GOLEM.group_records[group].weapon_bonus.n0;
+    record->equipment[FIELD_WEAPON_SLOT].bonus_nibbles.bits.n1 = GOLEM.group_records[group].weapon_bonus.n1;
+    record->equipment[FIELD_WEAPON_SLOT].bonus_nibbles.bits.n2 = GOLEM.group_records[group].weapon_bonus.n2;
+    record->equipment[FIELD_WEAPON_SLOT].bonus_nibbles.bits.n3 = GOLEM.group_records[group].weapon_bonus.n3;
+    record->equipment[FIELD_WEAPON_SLOT].bonus_nibbles.bits.n4 = GOLEM.group_records[group].weapon_bonus.n4;
+    record->equipment[FIELD_WEAPON_SLOT].bonus_nibbles.bits.n5 = GOLEM.group_records[group].weapon_bonus.n5;
+    record->equipment[FIELD_WEAPON_SLOT].bonus_nibbles.bits.n6 = GOLEM.group_records[group].weapon_bonus.n6;
+    record->equipment[FIELD_WEAPON_SLOT].bonus_nibbles.bits.n7 = GOLEM.group_records[group].weapon_bonus.n7;
+    record->equipment[GOLEM_ARMOR_SLOT].bonus_nibbles.bits.n0 = GOLEM.group_records[group].armor_bonus.n0;
+    record->equipment[GOLEM_ARMOR_SLOT].bonus_nibbles.bits.n1 = GOLEM.group_records[group].armor_bonus.n1;
+    record->equipment[GOLEM_ARMOR_SLOT].bonus_nibbles.bits.n2 = GOLEM.group_records[group].armor_bonus.n2;
+    record->equipment[GOLEM_ARMOR_SLOT].bonus_nibbles.bits.n3 = GOLEM.group_records[group].armor_bonus.n3;
+    record->equipment[GOLEM_ARMOR_SLOT].bonus_nibbles.bits.n4 = GOLEM.group_records[group].armor_bonus.n4;
+    record->equipment[GOLEM_ARMOR_SLOT].bonus_nibbles.bits.n5 = GOLEM.group_records[group].armor_bonus.n5;
+    record->equipment[GOLEM_ARMOR_SLOT].bonus_nibbles.bits.n6 = GOLEM.group_records[group].armor_bonus.n6;
+    record->equipment[GOLEM_ARMOR_SLOT].bonus_nibbles.bits.n7 = GOLEM.group_records[group].armor_bonus.n7;
+    record->unk150[0].derived.golem.logic_class = GOLEM.group_records[group].logic_class;
+    record->unk150[0].derived.golem.grid_bound = GOLEM.group_records[group].grid_bound;
+    record->unk150[0].derived.bytes[1] = GOLEM.group_records[group].unknown_0x45;
+    record->unk150[0].derived.bytes[2] = GOLEM.group_records[group].unknown_0x46;
+    record->unk150[0].derived.bytes[3] = GOLEM.group_records[group].unknown_0x47;
+    record->unk150[0].derived.golem.unknown_0x48 = GOLEM.group_records[group].unknown_0x48;
 }

@@ -50,7 +50,7 @@ extern u16 g_music_track_index;
 extern u8 D_800F0B28[];
 /** @brief Per-effect stat pair: high nibble selects the source stat, low nibble the target stat. */
 extern u8 D_800F0B38[];
-extern u8 D_800F0B48[];
+extern u8 g_field_element_level_by_land_level[];
 extern u8 D_800F0B50[];
 extern FieldActionBank D_800EF8C0;
 extern u8 D_800F0AE8[];
@@ -569,7 +569,7 @@ void func_800B3580(void)
 
     for (i = 0; i < 8; i++)
     {
-        g_field_battle->element_levels[i] = D_800F0B48[g_field_game_state->lands[g_music_track_index].levels[i]];
+        g_field_battle->element_levels[i] = g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[i]];
     }
 
     resource = func_800C1E40(1);

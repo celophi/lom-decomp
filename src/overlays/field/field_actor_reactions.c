@@ -450,7 +450,7 @@ void field_count_chain_hit(s32 object_index)
     {
         hit_count = state->retry_count + 1;
         state->retry_count = hit_count;
-        if ((object_index < FIELD_PLAYER_COUNT) && ((u8)hit_count >= g_field_weapon_chain_limits[g_field_player_records[object_index].weapon_type]))
+        if ((object_index < FIELD_PLAYER_COUNT) && ((u8)hit_count >= g_field_weapon_chain_limits[g_field_player_records[object_index].head.bytes.weapon_type]))
         {
             actor = field_find_actor(state->key);
             if (actor != FIELD_ACTOR_NONE)

@@ -5,7 +5,7 @@
 
 #include "common.h"
 
-/** @brief One (value, key) pair of a FieldKeyedList. */
+/** @brief One (value, key) pair of a FieldKeyedList; field_sort_keyed_list orders by @c key. */
 typedef struct FieldKeyedPair
 {
     u32 value;
@@ -51,10 +51,13 @@ s32* func_800C1EC8(s32* src, s32* dest, s32 size)
 }
 
 /**
- * @brief Sort a (value, key) pair list in place by ascending key.
- * @param list Pair list to sort.
+ * @brief Reorder a (value, key) pair list by unsigned key: smallest first, the rest descending.
+ * @param list Pair list to reorder.
+ * @note Every pass compares entry @c i with entries 1 to count - 1 (not i + 1 on), so after
+ *       the first pass puts the smallest key in entry 0 the remaining passes leave entries
+ *       1 on in descending key order.
  */
-void func_800C1F28(FieldKeyedList* list)
+void field_sort_keyed_list(FieldKeyedList* list)
 {
     u32 i;
     u32 j;

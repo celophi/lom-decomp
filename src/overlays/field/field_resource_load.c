@@ -156,7 +156,7 @@ void func_800B0244(void)
                 {
                     for (i = 1; i < 3; i++)
                     {
-                        if (g_field_player_records[i].flags & 1)
+                        if (g_field_player_records[i].head.bytes.flags & 1)
                         {
                             scan_object_type = g_field_actors[i].command;
                             if ((scan_object_type == 0xAF) || (scan_object_type == 0xB1))
@@ -195,7 +195,7 @@ void func_800B0244(void)
                         i = 0;
                         do
                         {
-                            if (g_field_player_records[i].flags & 1)
+                            if (g_field_player_records[i].head.bytes.flags & 1)
                             {
                                 g_field_object_states[i].tint_timer = 0x3C;
                                 g_field_object_states[i].movement.word |= 0x8000;
@@ -378,7 +378,7 @@ void func_800B0A08(s32 arg0)
 
     for (i = 0; i < 2; i++)
     {
-        if (g_field_player_records[i].flags & 1)
+        if (g_field_player_records[i].head.bytes.flags & 1)
         {
             D_80122B68[i] = field_get_actor_resource_id(i, &g_field_player_records[i], arg0);
             buffer = g_field_cd_buffer + 0x8000 + i * 0x18000;

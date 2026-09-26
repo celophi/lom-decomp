@@ -17,13 +17,12 @@ typedef enum FieldModalState
     FIELD_MODAL_DUEL_RESULT = 8
 } FieldModalState;
 
-void field_run_menu(void* render_buffers, s32 input_source);
-void field_begin_text_session(void);
+struct FieldRenderHalf;
+
+void field_process_input(struct FieldRenderHalf* render);
 void field_reset_text_session(void);
-void field_update_modal_text_session(s32 context);
 void field_rebuild_party_actions(s32 refresh_only);
-void field_update_modal(s32 context);
-void field_begin_empty_shop_notice(s32 hidden);
+void field_update_modal(struct FieldRenderHalf* render);
 void field_begin_duel_intro(void);
 void field_begin_duel_result(void);
 

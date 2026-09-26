@@ -733,7 +733,7 @@ void field_start_actor_text(s32 index, s32 text_id)
             g_field_actor_texts[index].state.bits.countdown = FIELD_ACTOR_TEXT_FRAMES;
             point[0] = g_field_view_offset_x / 256 + (s16)(g_field_actors[index].x / 256 + 160);
             point[1] = g_field_view_offset_y / 256 + (s16)(g_field_actors[index].y / 256 + 112) - g_field_actors[index].z / 512 - g_field_view_offset_z / 512;
-            width = func_800AE864(g_field_actor_texts[index].text) * 6;
+            width = field_count_text_glyphs(g_field_actor_texts[index].text) * 6;
             if (point[0] + width >= 321)
             {
                 point[0] = 320 - width;
@@ -851,7 +851,7 @@ static void field_draw_actor_text(FieldRenderHalf* render, FieldActorText* text)
 }
 
 /**
- * @brief Draw a text line like func_800A88A0, with a gray tint for fading.
+ * @brief Draw a text line like field_draw_text, with a gray tint for fading.
  * @param sprite_cursor Primitive-buffer cursor used for generated sprites.
  * @param ordering_table Ordering-table entry that receives the generated primitives.
  * @param text Null-terminated text to render.
@@ -991,7 +991,7 @@ void field_advance_ability_progression(void)
     party_index = 0;
     do
     {
-        if (g_field_player_records[party_index].flags & FIELD_PLAYER_ACTIVE)
+        if (g_field_player_records[party_index].head.bytes.flags & FIELD_PLAYER_ACTIVE)
         {
             if ((u32)(g_pad_ctx->characters[party_index].info.actions.type & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
             {
@@ -1112,7 +1112,7 @@ void field_advance_ability_progression(void)
                             ability = technique_rule->result & FIELD_TECHNIQUE_INDEX_MASK;
                             do
                             {
-                                if ((g_field_player_records[technique_party_index].flags & FIELD_PLAYER_ACTIVE) &&
+                                if ((g_field_player_records[technique_party_index].head.bytes.flags & FIELD_PLAYER_ACTIVE) &&
                                     ((u32)(context->characters[technique_party_index].info.actions.type & FIELD_CHARACTER_TYPE_MASK) <
                                      FIELD_CHARACTER_GUEST))
                                 {
@@ -1251,8 +1251,8 @@ extern void akao_cmd_f1(void);
 /* Defined as (void) in field_resource_load.c; the original call still passes the cursor in $a0. */
 extern s32 func_800B0888(void *arg0);
 /* Defined in field_modal_runtime.c and field_actor_hud_effects.c. */
-void* func_800A88A0(SPRT* cursor, s32* ot, u8* text, s32 color, s32 x, s32 y, s32 flags);
-void* func_800A8A78(void* ot, void* cursor, s32 value, s32 color, Vec2s* position, s32 flags);
+void* field_draw_text(SPRT* cursor, s32* ot, u8* text, s32 color, s32 x, s32 y, s32 flags);
+void* field_draw_number(void* ot, void* cursor, s32 value, s32 color, Vec2s* position, s32 flags);
 void* field_emit_actor_portrait(SPRT* sprt, u_long* ot, s32 index, Vec2s* position);
 
 void field_close_battle_results(void);
@@ -1290,7 +1290,7 @@ void field_handle_return_to_title_prompt(void)
 
     ControllerState* controller = CONTROLLER_STATE;
 
-    if (D_80122828[0].attr.bits.state == 0)
+    if (g_field_menu_elements[0].attr.bits.state == 0)
     {
         /* The prompt window has closed: act on the choice. */
         if (--g_field_return_to_title_prompt_state == 0)
@@ -1324,19 +1324,19 @@ void field_handle_return_to_title_prompt(void)
                 player = &g_field_player_records[actor_index];
                 actor->unk8.word = (actor->unk8.word & status_mask) | (actor->unk0 & hp_mask);
                 actor->unk4.word = actor->unk0 & hp_mask;
-                if (player->flags & FIELD_PLAYER_ACTIVE)
+                if (player->head.bytes.flags & FIELD_PLAYER_ACTIVE)
                 {
                     actor->technique_gauge = full_gauge;
                 }
             }
         }
     }
-    else if (func_800ADEEC() == 0)
+    else if (field_menu_elements_animating() == 0)
     {
         if (g_pad_input & (FIELD_PAD_CONFIRM | PAD_BTN_START))
         {
             field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_CENTER);
-            func_800ADF34();
+            field_close_menu_elements();
             field_begin_return_to_title_prompt_close();
             return;
         }
@@ -1353,7 +1353,7 @@ void field_handle_return_to_title_prompt(void)
  */
 void field_update_battle_results_input(void)
 {
-    if ((func_800ADEEC() == 0) && (g_pad_input & FIELD_PAD_CONFIRM))
+    if ((field_menu_elements_animating() == 0) && (g_pad_input & FIELD_PAD_CONFIRM))
     {
         switch (g_field_dialog_screen_mode)
         {
@@ -1395,8 +1395,8 @@ static void field_open_unlock_list(void)
     cdrom_wait_queue_empty();
     field_play_sound(FIELD_SOUND_UNLOCK_LIST, FIELD_SOUND_CENTER);
     g_field_dialog_screen_mode = FIELD_RESULTS_UNLOCK_LIST;
-    func_800ADF34();
-    record = func_800ADF84();
+    field_close_menu_elements();
+    record = field_claim_menu_element();
     record->attr.bits.step = 1;
     record->attr.bits.x = FIELD_RESULTS_WINDOW_X;
     /* Each group (abilities, techniques) gets a header row. */
@@ -1455,7 +1455,7 @@ void field_close_battle_results(void)
     g_field_text_session_active = 0;
     for (i = 0; i < FIELD_PARTY_COUNT; i++)
     {
-        if ((g_field_player_records[i].flags & FIELD_PLAYER_ACTIVE) && g_field_actors[i].command == FIELD_ACTOR_COMMAND_KNOCKED_DOWN)
+        if ((g_field_player_records[i].head.bytes.flags & FIELD_PLAYER_ACTIVE) && g_field_actors[i].command == FIELD_ACTOR_COMMAND_KNOCKED_DOWN)
         {
             g_field_actors[i].command = 0;
         }
@@ -1476,7 +1476,7 @@ void field_close_battle_results(void)
  */
 void field_open_battle_results(void)
 {
-    func_800ADEB0();
+    field_reset_menu_elements();
     g_field_results_wait_frames = FIELD_RESULTS_WAIT_FRAMES;
     field_reset_input_repeat();
     if (g_field_progression_unlock_count != 0)
@@ -1513,10 +1513,10 @@ void field_setup_return_to_title_prompt(void)
     FieldMenuElement *rec;
     s32 i;
 
-    func_800ADEB0();
+    field_reset_menu_elements();
     field_play_sound(FIELD_SOUND_WINDOW_OPEN, FIELD_SOUND_CENTER);
 
-    rec = func_800ADF84();
+    rec = field_claim_menu_element();
     /* The callback has its own prototype; cast to the element draw type. */
     rec->draw = (FieldMenuDrawFn)field_draw_coordinate_panel;
     rec->attr.bits.step = 1;
@@ -1526,7 +1526,7 @@ void field_setup_return_to_title_prompt(void)
     rec->attr.bits.y = 0x30;
     rec->attr.word &= ~FIELD_MENU_ATTR_WIDTH_LOW;
 
-    rec = func_800ADF84();
+    rec = field_claim_menu_element();
     rec->draw = (FieldMenuDrawFn)field_draw_return_to_title_choices;
     rec->attr.bits.step = 1;
     rec->attr.bits.x = 0x50;
@@ -1560,9 +1560,9 @@ static void field_open_item_list(void)
 
     g_field_dialog_screen_mode = FIELD_RESULTS_ITEM_LIST;
     field_play_sound(FIELD_SOUND_WINDOW_OPEN, FIELD_SOUND_CENTER);
-    func_800ADF34();
+    field_close_menu_elements();
 
-    rec = func_800ADF84();
+    rec = field_claim_menu_element();
     rec->attr.bits.step = 1;
     rec->attr.bits.x = 0x40;
 
@@ -1586,12 +1586,12 @@ static void field_open_party_summary(void)
     s32 actor_index;
     s32 active_count;
 
-    func_800ADF34();
+    field_close_menu_elements();
     g_field_dialog_screen_mode = FIELD_RESULTS_PARTY_SUMMARY;
     field_play_sound(FIELD_SOUND_WINDOW_OPEN, FIELD_SOUND_CENTER);
 
     active_count = 0;
-    record = func_800ADF84();
+    record = field_claim_menu_element();
     actor_index = active_count;
     /* The callback has its own prototype; cast to the element draw type. */
     record->draw = (FieldMenuDrawFn)field_draw_party_totals;
@@ -1604,13 +1604,13 @@ static void field_open_party_summary(void)
 
     for (actor_index = 0; actor_index < 3; actor_index++)
     {
-        if (g_field_player_records[actor_index].flags & FIELD_PLAYER_ACTIVE)
+        if (g_field_player_records[actor_index].head.bytes.flags & FIELD_PLAYER_ACTIVE)
         {
             active_count++;
         }
     }
 
-    record = func_800ADF84();
+    record = field_claim_menu_element();
     record->draw = (FieldMenuDrawFn)field_draw_experience_ranking;
     record->attr.bits.step = 1;
     record->attr.bits.x = 0x20;
@@ -1673,7 +1673,7 @@ loop_setup:
         }
     }
 
-    handle = func_800A88A0(first_cursor, ot,
+    handle = field_draw_text(first_cursor, ot,
         D_800EC3D6[0] + (D_800EC3D6 - 0x12) + (D_800EC3D6[1] << 8),
         4, 0x10 - x_offset, -y_offset, 0);
     text_base = D_800EC3D6 - 0x12;
@@ -1683,21 +1683,21 @@ loop_setup:
     handle = field_draw_animated_marker(ot, handle, 0x18 - x_offset, y - 3);
 
     position.x = 0x28 - x_offset;
-    handle = func_800A8A78(ot, handle, total_x, 4, &position, 0);
-    handle = func_800A88A0(handle, ot,
+    handle = field_draw_number(ot, handle, total_x, 4, &position, 0);
+    handle = field_draw_text(handle, ot,
         FIELD_TEXT_AT(text_base, text_base[0x16], text_base[0x17]),
         4, 0x40 - x_offset, position.y, 0);
     handle = field_draw_animated_small_icon(ot, handle, 0x50 - x_offset, position.y + 2);
 
     position.x = 0x60 - x_offset;
-    handle = func_800A8A78(ot, handle, total_y, 4, &position, 0);
-    handle = func_800A88A0(handle, ot,
+    handle = field_draw_number(ot, handle, total_y, 4, &position, 0);
+    handle = field_draw_text(handle, ot,
         FIELD_TEXT_AT(text_base, text_base[0x1A], text_base[0x1B]),
         4, 0x80 - x_offset, position.y, 0);
 
     position.x = 0xD0 - x_offset;
-    handle = func_800A8A78(ot, handle, g_pad_ctx->money - g_field_money_snapshot, 4, &position, 1);
-    return func_800A88A0(handle, ot,
+    handle = field_draw_number(ot, handle, g_pad_ctx->money - g_field_money_snapshot, 4, &position, 1);
+    return field_draw_text(handle, ot,
         FIELD_TEXT_AT(text_base, text_base[0], text_base[1]),
         4, 0xF0 - x_offset, position.y, 1);
 }
@@ -1726,7 +1726,7 @@ static void* field_draw_experience_ranking(void* ordering_table, void* cursor, s
     u8 *text;
     u8 *text_base;
 
-    result = func_800A88A0(cursor, ordering_table, (D_800EC3C6[1] << 8) + ((D_800EC3C6 - 2) + D_800EC3C6[0]), 4, 0x10 - x_offset, -y_offset, 0);
+    result = field_draw_text(cursor, ordering_table, (D_800EC3C6[1] << 8) + ((D_800EC3C6 - 2) + D_800EC3C6[0]), 4, 0x10 - x_offset, -y_offset, 0);
     count = 0;
     for (i = 0; i < 3; i++)
     {
@@ -1773,16 +1773,16 @@ static void* field_draw_experience_ranking(void* ordering_table, void* cursor, s
                 work.position.y = y;
                 result = field_draw_animated_icon(ordering_table, result, 0x38 - x_offset, y - 8, 1);
                 work.position.x = 0x48 - x_offset;
-                result = func_800A8A78(ordering_table, result, g_field_player_records[work.order[i]].unk25A, 4, &work.position, 0);
-                result = func_800A88A0(result, ordering_table, FIELD_TEXT_AT(text, D_800EC3DA[0], text_base[1]), 4, 0x68 - x_offset, work.position.y, 0);
+                result = field_draw_number(ordering_table, result, g_field_player_records[work.order[i]].unk25A, 4, &work.position, 0);
+                result = field_draw_text(result, ordering_table, FIELD_TEXT_AT(text, D_800EC3DA[0], text_base[1]), 4, 0x68 - x_offset, work.position.y, 0);
                 result = field_draw_animated_icon(ordering_table, result, 0x78 - x_offset, work.position.y, 0);
                 work.position.x = 0x88 - x_offset;
                 work.position.y = y;
-                result = func_800A8A78(ordering_table, result, g_field_player_records[work.order[i]].unk25B, 4, &work.position, 0);
-                result = func_800A88A0(result, ordering_table, FIELD_TEXT_AT(text, text[0x1A], text[0x1B]), 4, 0xA8 - x_offset, work.position.y, 0);
+                result = field_draw_number(ordering_table, result, g_field_player_records[work.order[i]].unk25B, 4, &work.position, 0);
+                result = field_draw_text(result, ordering_table, FIELD_TEXT_AT(text, text[0x1A], text[0x1B]), 4, 0xA8 - x_offset, work.position.y, 0);
                 work.position.x = 0xE0 - x_offset;
                 work.position.y = y;
-                result = func_800A8A78(ordering_table, result, FIELD_EXPERIENCE_GAIN(work.order[i]), 4, &work.position, 1);
+                result = field_draw_number(ordering_table, result, FIELD_EXPERIENCE_GAIN(work.order[i]), 4, &work.position, 1);
             }
             row += 0x1C;
         }
@@ -1811,17 +1811,17 @@ static void* field_draw_item_list(void* ot, void* prim, s32 x_offset, s32 y_offs
     low = D_800EC3D8.low;
     offset = (D_800EC3D8.high << 8) + (s32)((u8*)&D_800EC3D8 - 0x14);
     tex = (u8*)(low + offset);
-    prim = func_800A88A0(prim, ot, tex, 4, 0x20 - x_offset, -y_offset, 0);
+    prim = field_draw_text(prim, ot, tex, 4, 0x20 - x_offset, -y_offset, 0);
     for (i = 0; i < g_field_dialog_item_count; i++)
     {
         row = i * FIELD_RESULTS_ROW_HEIGHT;
-        prim = func_800A88A0(prim, ot, g_field_dialog_item_texts[i], 4, 0x10 - x_offset, (row + FIELD_RESULTS_ROW_HEIGHT) - y_offset, 0);
+        prim = field_draw_text(prim, ot, g_field_dialog_item_texts[i], 4, 0x10 - x_offset, (row + FIELD_RESULTS_ROW_HEIGHT) - y_offset, 0);
         pos.x = 0xB0 - x_offset;
         /* The original subtracts the horizontal offset here too. */
         pos.y = (row + FIELD_RESULTS_ROW_HEIGHT) - x_offset;
         if (g_field_dialog_item_quantities[i] != 0)
         {
-            prim = func_800A8A78(ot, prim, g_field_dialog_item_quantities[i], 4, &pos, 1);
+            prim = field_draw_number(ot, prim, g_field_dialog_item_quantities[i], 4, &pos, 1);
         }
     }
     return prim;
@@ -1887,7 +1887,7 @@ static void* field_draw_unlock_list(void* ordering_table, void* cursor, s32 scro
                         low = D_800EC3CE.low;
                         base = D_800EC3C4;
                         offset = (D_800EC3CE.high << 8) + (s32)base;
-                        next_cursor = func_800A88A0(next_cursor, ordering_table, (void *)(low + offset), 4, header_x, technique_header_y, 0);
+                        next_cursor = field_draw_text(next_cursor, ordering_table, (void *)(low + offset), 4, header_x, technique_header_y, 0);
                     }
                     technique_header_drawn = 1;
                     row += 1;
@@ -1899,7 +1899,7 @@ static void* field_draw_unlock_list(void* ordering_table, void* cursor, s32 scro
                     if (item_y < viewport_height)
                     {
                         name_index = *entry & ~FIELD_UNLOCK_TECHNIQUE;
-                        next_cursor = func_800A88A0(next_cursor, ordering_table,
+                        next_cursor = field_draw_text(next_cursor, ordering_table,
                                                     technique_names +
                                                         ((u16 *)technique_names)[name_index],
                                                     4, item_x, item_y, 2);
@@ -1915,7 +1915,7 @@ static void* field_draw_unlock_list(void* ordering_table, void* cursor, s32 scro
                     if ((ability_header_y > -FIELD_RESULTS_ROW_HEIGHT) && (ability_header_y < viewport_height))
                     {
                         next_cursor =
-                            func_800A88A0(next_cursor, ordering_table,
+                            field_draw_text(next_cursor, ordering_table,
                                           D_800EC3C4 + D_800EC3CC.low + (D_800EC3CC.high << 8),
                                           4, header_x, ability_header_y, 0);
                     }
@@ -1929,7 +1929,7 @@ static void* field_draw_unlock_list(void* ordering_table, void* cursor, s32 scro
                     if (item_y < viewport_height)
                     {
                         name_index = *entry;
-                        next_cursor = func_800A88A0(next_cursor, ordering_table,
+                        next_cursor = field_draw_text(next_cursor, ordering_table,
                                                     ability_names +
                                                         ((u16 *)ability_names)[name_index],
                                                     4, item_x, item_y, 2);
@@ -2114,8 +2114,9 @@ static void* field_draw_animated_marker(s32* ordering_table, POLY_FT4* prim, s32
 
 /**
  * @brief Draw the dialog windows (the result screens or the return-to-title prompt).
+ * @param render_half Render half being built.
  */
-void field_draw_dialog_windows(void)
+void field_draw_dialog_windows(FieldRenderHalf* render_half)
 {
-    func_800AE008();
+    field_draw_menu_elements(render_half);
 }

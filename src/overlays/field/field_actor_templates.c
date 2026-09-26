@@ -135,7 +135,7 @@ void field_init_monster_record(s32 actor_id, FieldStatusRecord *record, FieldSta
         {
             do
             {
-                state->maximum = func_800C19D0(state->maximum, (u32)((template->stats[4].base * 4) + (template->stats[4].growth * work)) >> 2, 1);
+                state->maximum = field_add_stat_increase(state->maximum, (u32)((template->stats[4].base * 4) + (template->stats[4].growth * work)) >> 2, 1);
                 work++;
             } while ((u32)level >= work);
         }
