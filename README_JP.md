@@ -1,5 +1,7 @@
 # Legend of Mana PSX Decompilation
 
+**言語:** [English](README.md) | 日本語
+
 [![Progress]][progress site]
 [![Build and Progress](https://github.com/celophi/lom-decomp/actions/workflows/progress.yaml/badge.svg)](https://github.com/celophi/lom-decomp/actions/workflows/progress.yaml)
 
