@@ -438,8 +438,7 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
     s32 sfx_id;
     s32 flags;
 
-    /* Read through the resource header: the sequence arm reads g_field_scene again. */
-    scene = FIELD_RESOURCE->scene;
+    scene = g_field_scene.scene;
     switch (list_kind)
     {
     case FIELD_LIST_TILE_ANIMS:
@@ -448,6 +447,10 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
     case FIELD_LIST_PALETTE_ANIMS:
         anim = scene->strips;
         break;
+        /* Unreachable: its loop note keeps cse from carrying the scene load into the next arm (CSE-11). */
+        do
+        {
+        } while (0);
     case FIELD_LIST_SEQUENCES:
         field_start_or_stop_sequence(index, op != FIELD_ANIM_OP_STOP);
         return;
@@ -1013,8 +1016,7 @@ s32 field_get_animation_state(s32 list_kind, s32 index)
     FieldAnimDef* def;
     FieldScene* scene;
 
-    /* Read through the resource header: the sequence arm reads g_field_scene again. */
-    scene = FIELD_RESOURCE->scene;
+    scene = g_field_scene.scene;
     switch (list_kind)
     {
     case FIELD_LIST_TILE_ANIMS:
@@ -1023,6 +1025,10 @@ s32 field_get_animation_state(s32 list_kind, s32 index)
     case FIELD_LIST_PALETTE_ANIMS:
         anim = scene->strips;
         break;
+        /* Unreachable: its loop note keeps cse from carrying the scene load into the next arm (CSE-11). */
+        do
+        {
+        } while (0);
     case FIELD_LIST_SEQUENCES:
         return field_scan_sequence_chain(index) * FIELD_ANIM_STATE_FINISHED;
     default:
