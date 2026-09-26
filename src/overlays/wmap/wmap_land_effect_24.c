@@ -3247,51 +3247,44 @@ typedef struct
     s32 field_50;
 } WmapState;
 
+typedef struct
+{
+    s32 field_00;
+    void* resource;
+} WmapScreenEntry;
+
+typedef struct
+{
+    s16 field_00;
+    u8 pad_02[0x12];
+} WmapConfigEntry;
+
 extern u8 D_80121538;
 extern WmapState* D_80139280;
-extern u8 D_80139988[];
-extern u8 D_801AFBD0[];
+extern WmapScreenEntry D_80139988[];
+extern WmapConfigEntry D_801AFBD0[];
 extern s32 D_801B3180;
 extern s32 D_801B3184;
 
 extern void func_800BC7F4(void);
 
-    s32 index;
-    s32 screen_offset;
-    s32 config_offset;
-    u8* config_base;
-    u8* screen_base;
-    u8* resource;
-    u8* screen_entry;
-    s16* config_entry;
+    s32 i;
 
-    index = 0;
-    config_base = D_801AFBD0;
-    screen_base = D_80139988;
-    resource = &D_80121538;
-    D_80139280 += 0;
-    screen_offset = 0xA0;
-    config_offset = 0x190;
+    D_80139280->field_04 = 0;
+    D_80139280->field_08 = 0;
     D_80139280->field_0C = 0x80;
+    D_80139280->field_10 = 0;
     D_80139280->field_14 = 3;
     D_80139280->field_18 = 0x384;
     D_80139280->field_1C = 0x14;
     D_80139280->field_20 = 8;
     D_80139280->state_24 = 1;
-    D_80139280->field_04 = 0;
-    D_80139280->field_08 = 0;
-    D_80139280->field_10 = 0;
     D_80139280->field_28 = 0x1F40;
-    do
+    for (i = 0; i < 60; i++)
     {
-        screen_entry = (u8*)(screen_offset + (s32)screen_base);
-        screen_offset += 8;
-        config_entry = (s16*)(config_offset + (s32)config_base);
-        config_offset += 0x14;
-        index++;
-        *config_entry = 0;
-        *(u8**)(screen_entry + 4) = resource;
-    } while (index < 0x3C);
+        D_801AFBD0[i + 20].field_00 = 0;
+        D_80139988[i + 20].resource = &D_80121538;
+    }
     D_801B3184 = 0xB4;
     D_801B3180++;
     func_800BC7F4();
@@ -3966,36 +3959,18 @@ extern s32 D_801B3190;
 extern s32 D_801B3194;
 
     s32 i;
-    volatile WmapConfigA* config;
-    WmapScreenEntry* screen_entry;
-    WmapConfigEntry* config_entry;
-    u8* resource;
-    s32 field_06;
-    s32 value;
 
-    i = 0x78;
-    resource = &D_8011D538;
-    field_06 = 0xF;
-    config = &D_800D9268[i];
-    screen_entry = &D_80139988[i];
-    config_entry = &D_801AFBD0[i];
     D_801B25DC = 1;
-    D_800DCEB0 = 0xC;
-    do
+    D_800DCEB0 = 12;
+    for (i = 120; i < 156; i++)
     {
-        config_entry->field_00 = 0;
-        screen_entry->resource = resource;
-        value = i;
-        config->field_0E = (value & 1) + 2;
-        config->field_02 = 0;
-        config->field_06 = field_06;
-        value = -1;
-        config->field_10 = value;
-        config++;
-        screen_entry++;
-        i++;
-        config_entry++;
-    } while (i < 0x9C);
+        D_801AFBD0[i].field_00 = 0;
+        D_80139988[i].resource = &D_8011D538;
+        D_800D9268[i].field_0E = (i & 1) + 2;
+        D_800D9268[i].field_02 = 0;
+        D_800D9268[i].field_06 = 15;
+        D_800D9268[i].field_10 = -1;
+    }
 
     D_800D9158 = 2;
     D_801B3194 = 0x10;

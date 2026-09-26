@@ -2992,6 +2992,26 @@ static void field_set_action_context(s32 recipient_id, s32 source_id, s32 action
 }
 
 /**
+ * @brief Motion record of the object the effect's actor is tracking in the current track.
+ * @param effect Effect whose actor slot selects the tracked object.
+ * @return Motion record of the tracked object.
+ */
+static inline FieldMotionRecord *field_effect_track_object(FieldMotionRecord *effect)
+{
+    return &g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]];
+}
+
+/**
+ * @brief Motion record of the object that owns the effect's actor.
+ * @param effect Effect whose actor slot selects the owner object.
+ * @return Motion record of the owner object.
+ */
+static inline FieldMotionRecord *field_effect_owner_object(FieldMotionRecord *effect)
+{
+    return &g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index];
+}
+
+/**
  * @brief Resolve an effect's selected target/attachment position in world coordinates.
  * @param effect Record selecting a source and supplying saved positions or effect links.
  * @param part Part definition controlling anchor choice, placement, and facing updates.
@@ -3003,15 +3023,10 @@ void field_resolve_effect_position(FieldMotionRecord *effect, FieldActorPartDef 
 {
     FieldMotionRecord *source_record;
     FieldMotionRecord *opposite_record;
-    FieldMotionRecord *track_record;
-    FieldMotionRecord *owner_record;
     FieldMotionRecord *linked_record;
     FieldObjectRuntime *source_object;
-    FieldActorState *actors;
-    FieldActorState *owner_actors;
     s32 object_index;
     s32 source_index;
-    s32 owner_index;
     s32 placement;
     s32 delta_x;
     s32 position_x;
@@ -3021,28 +3036,14 @@ void field_resolve_effect_position(FieldMotionRecord *effect, FieldActorPartDef 
     switch (effect->color_position.fields.position_source)
     {
     case FIELD_POSITION_TRACK_OBJECT:
-        actors = g_field_actor_slots;
-        position->vx = g_field_actors[actors[effect->actor_index].track_object_indices[g_field_track_index]].x;
-        position->vy = g_field_actors[actors[effect->actor_index].track_object_indices[g_field_track_index]].y;
-        object_index = actors[effect->actor_index].track_object_indices[g_field_track_index];
-        /* The loop notes make local-alloc give g_field_actors a0 and the slot table a1; swapped, jump.c cross-jumps this tail. */
-        do
-        {
-            track_record = &g_field_actors[object_index];
-        } while (0);
-        position->vz = track_record->z;
+        position->vx = field_effect_track_object(effect)->x;
+        position->vy = field_effect_track_object(effect)->y;
+        position->vz = field_effect_track_object(effect)->z;
         return;
     case FIELD_POSITION_OWNER_OBJECT:
-        owner_actors = g_field_actor_slots;
-        position->vx = g_field_actors[owner_actors[effect->actor_index].owner_object_index].x;
-        position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].y;
-        owner_index = owner_actors[effect->actor_index].owner_object_index;
-        /* Same loop-note weighting as case 1. */
-        do
-        {
-            owner_record = &g_field_actors[owner_index];
-        } while (0);
-        position->vz = owner_record->z;
+        position->vx = field_effect_owner_object(effect)->x;
+        position->vy = field_effect_owner_object(effect)->y;
+        position->vz = field_effect_owner_object(effect)->z;
         return;
     case FIELD_POSITION_SAVED:
         position->vx = effect->work_x - g_field_view_offset_x;
@@ -3159,15 +3160,15 @@ void field_resolve_effect_position(FieldMotionRecord *effect, FieldActorPartDef 
         return;
     case FIELD_POSITION_OWNER_BOUNDS_CENTER:
         source_object = &g_field_object_states[g_field_actor_slots[effect->actor_index].owner_object_index];
-        position->vx = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].x + ((source_object->bounds.half.right + source_object->bounds.half.left) << 7);
-        position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].y + ((source_object->bounds.half.bottom + source_object->bounds.half.top) << 7);
-        position->vz = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].z;
+        position->vx = field_effect_owner_object(effect)->x + ((source_object->bounds.half.right + source_object->bounds.half.left) << 7);
+        position->vy = field_effect_owner_object(effect)->y + ((source_object->bounds.half.bottom + source_object->bounds.half.top) << 7);
+        position->vz = field_effect_owner_object(effect)->z;
         return;
     case FIELD_POSITION_TRACK_BOUNDS_CENTER:
         source_object = &g_field_object_states[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]];
-        position->vx = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x + ((source_object->bounds.half.right + source_object->bounds.half.left) << 7);
-        position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].y + ((source_object->bounds.half.bottom + source_object->bounds.half.top) << 7);
-        position->vz = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].z;
+        position->vx = field_effect_track_object(effect)->x + ((source_object->bounds.half.right + source_object->bounds.half.left) << 7);
+        position->vy = field_effect_track_object(effect)->y + ((source_object->bounds.half.bottom + source_object->bounds.half.top) << 7);
+        position->vz = field_effect_track_object(effect)->z;
         return;
     case FIELD_POSITION_REFLECT_TRACK_X:
     case FIELD_POSITION_EXTEND_TRACK_X:

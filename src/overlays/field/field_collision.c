@@ -195,13 +195,6 @@
 /** Padding value for both edge bytes of an unused raster span. */
 #define FIELD_COLLISION_RASTER_EMPTY_FLAGS 0xFFFF
 
-/**
- * @brief Address of span @p n - 1 of a raster row, as an integer sum.
- * @note The original adds the scaled index before the row pointer; pointer
- *       arithmetic (&row[n - 1]) always emits the pointer operand first.
- */
-#define FIELD_COLLISION_RASTER_LAST_SPAN(row, n) ((FieldCollisionRasterSpan*)((n) * sizeof(*(row)) + (s32)(row) - sizeof(*(row))))
-
 /** Most distinct group ids field_collision_collect_groups collects while scanning. */
 #define FIELD_COLLISION_GROUP_SCAN_MAX 20
 /** Most groups a scene can keep (FieldScene::group_ids capacity). */
@@ -2817,7 +2810,6 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, s32* alloc)
     s32 rows;
     s16 capacity;
     s32 count;
-    FieldCollisionRasterSpan* merge_span;
     s32 j;
     s32 n;
     s32 sort_n;
@@ -2835,10 +2827,8 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, s32* alloc)
     s16 dx;
 
     s32 dy;
-    s32 main_dy;
     s16 x;
     s16 sgn;
-    s16 main_sgn;
     s16 ystep;
     s16 row;
     s16 err;
@@ -2846,8 +2836,7 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, s32* alloc)
     s16 merge_row2;
 
     def = node->surface;
-    rows = node->max_z;
-    rows = rows - node->min_z;
+    rows = node->max_z - node->min_z;
 
     capacity = FIELD_COLLISION_SURFACE_SPANS(def);
     capacity *= 2;
@@ -2894,35 +2883,33 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, s32* alloc)
                 {
                     x = prev->x;
                     y0 = prev->z;
-                    main_dy = pt->z;
-                    main_dy -= y0;
+                    dy = pt->z;
+                    dy -= y0;
                     ybase = node->min_z;
                     row = y0 - ybase;
-                    main_sgn = 1;
+                    sgn = 1;
                 }
                 else
                 {
                     dx = -dx;
                     x = pt->x;
-                    main_sgn = -1;
-                    main_dy = pt->z;
-                    y0 = main_dy;
-                    main_dy = prev->z;
-                    main_dy -= y0;
+                    sgn = -1;
+                    y0 = pt->z;
+                    dy = prev->z;
+                    dy -= y0;
                     ybase = node->min_z;
                     row = y0 - ybase;
                 }
 
                 cp = &counts[row];
                 sp_row = &spans[row * w];
-                sgn = main_sgn;
                 fl_row = &flags[row * w];
-                if ((s16)main_dy != 0)
+                if ((s16)dy != 0)
                 {
                     ystep = 1;
-                    if ((s16)main_dy < 0)
+                    if ((s16)dy < 0)
                     {
-                        main_dy = -main_dy;
+                        dy = -dy;
                         ystep = -1;
                     }
 
@@ -2939,7 +2926,7 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, s32* alloc)
                     {
                         first_dir = last_dir;
                     }
-                    if ((s16)main_dy < dx)
+                    if ((s16)dy < dx)
                     {
                         j = dx + 1;
                         err = -dx;
@@ -2963,7 +2950,7 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, s32* alloc)
                             do
                             {
                                 x++;
-                                err += (s16)main_dy * 2;
+                                err += (s16)dy * 2;
                                 j--;
                             } while ((err < 0) && (j > 0));
                             if (row == merge_row)
@@ -2988,8 +2975,8 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, s32* alloc)
                     }
                     else
                     {
-                        err = -(s16)main_dy;
-                        for (j = (s16)main_dy; j != -1; j--)
+                        err = -(s16)dy;
+                        for (j = (s16)dy; j != -1; j--)
                         {
                             n = *cp;
 
@@ -3022,7 +3009,7 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, s32* alloc)
                             if (err >= 0)
                             {
                                 x++;
-                                err -= (s16)main_dy * 2;
+                                err -= (s16)dy * 2;
                             }
                         }
                     }
@@ -3216,15 +3203,14 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, s32* alloc)
                 n = *cp;
                 if (row == merge_row)
                 {
-                    merge_span = FIELD_COLLISION_RASTER_LAST_SPAN(sp_row, n);
                     if (sp_row[n - 1].x.x0 > x)
                     {
                         sp_row[n - 1].x.x0 = x;
                         fl_row[n - 1].f.f0 = attr;
                     }
-                    if (merge_span->x.x1 < x)
+                    if (sp_row[n - 1].x.x1 < x)
                     {
-                        merge_span->x.x1 = x;
+                        sp_row[n - 1].x.x1 = x;
                         fl_row[n - 1].f.f1 = attr;
                     }
                 }
@@ -4987,7 +4973,6 @@ static s32 field_collision_mark_footprint(FieldCollisionQuery* margins, FieldCol
     s32 count;
     s32 group;
     s32 i;
-    s32 height;
     s32 cell;
     s32 floor_cell;
     s32 half;
@@ -5021,12 +5006,7 @@ static s32 field_collision_mark_footprint(FieldCollisionQuery* margins, FieldCol
         return -1;
     }
 
-    height = query->y;
-    floor_cell = height >> 8;
-    if (height < 0)
-    {
-        floor_cell = (height + 0xFF) >> 8;
-    }
+    floor_cell = FIELD_COLLISION_CELL(query->y);
 
     count = scene->group_count;
     group = count - 1;
@@ -5108,8 +5088,7 @@ static s32 field_collision_mark_footprint(FieldCollisionQuery* margins, FieldCol
 
     if (col_start <= 0)
     {
-        clipped = ncol - 1;
-        clipped = clipped + col_start;
+        clipped = ncol + (col_start - 1);
         if (clipped <= 0)
         {
             return -2;
