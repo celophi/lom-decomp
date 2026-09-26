@@ -6,9 +6,14 @@
 [Progress]: https://decomp.dev/celophi/lom-decomp.svg?mode=shield&measure=code&category=all&label=Progress
 [progress site]: https://decomp.dev/celophi/lom-decomp
 
-A complete **100% matching decompilation** of the North American PlayStation release of **Legend of Mana**.
+A **matching decompilation** of the PlayStation game **Legend of Mana**. The North American release is **100% matched**; the Japanese release is in progress.
 
-The current target is `SLUS_010.13` (disc serial **SLUS-01013**). The project reconstructs readable C source code that compiles down to the original MIPS machine code that exists on the disc for all 18 binaries byte-for-byte.
+The project reconstructs readable C source code that compiles down to the original MIPS machine code that exists on the disc, byte-for-byte. Two regional releases are targeted:
+
+- **North America** - `SLUS_010.13` (disc serial **SLUS-01013**). Complete: all 18 binaries are fully linked.
+- **Japan** - `SLPS_021.70` (disc serial **SLPS-02170**). In progress: not yet wired into the build.
+
+Unless a section says otherwise, the build instructions, targets, and file names below refer to the North American version.
 
 This is a decompilation project, **not a PC port**. The repository does not include the game executable, overlay binaries, artwork, audio, or other copyrighted game data. You must provide the required files from your own copy of the game.
 
@@ -16,7 +21,7 @@ The primary motivation for this project is to preserve the original game's logic
 
 ## Fully linked
 
-Every module - the main executable and all 17 overlays - is **fully linked**. A module is fully linked when two conditions hold:
+For the North American version, every module - the main executable and all 17 overlays - is **fully linked**. A module is fully linked when two conditions hold:
 
 1. The build produces an **ELF whose bytes match the original decompressed file**, and
 2. Running the project's compressor on that ELF (stripped to a raw binary) **reproduces an exact replica of the `.BIN` file as it appears on the disc**.
@@ -25,7 +30,7 @@ In other words, the round-trip `original .BIN -> decompress -> C source -> compi
 The main executable is not compressed, so for `SLUS_010.13` condition 1 is the whole check: the linked ELF, converted to a raw binary, equals the disc file.
 *(Check out the compressor! It's honestly really amazing that it is **bit identical** and kind of extraneous, but cool nonetheless!)*
 
-Run `make verify-bins` to check every module.
+Run `make verify-bins` to check every module. The Japanese version has not reached this stage yet.
 
 ## Roadmap
 
@@ -33,21 +38,22 @@ Run `make verify-bins` to check every module.
 
 2. 🚧 **Cleanup and documentation** - *in progress.* Remove decompilation artifacts and document functionality.
 
-3. 💤 **NTSC-J version** - support the original Japanese release (`SLPS-02170`) alongside the North American one.
+3. 🚧 **NTSC-J version** - *in progress.* Support the original Japanese release (`SLPS-02170`) alongside the North American one.
 
 4. 💤 **Modding and source port** - build on the reconstructed source to make modding practical and to enable ports to other platforms.
 
-## Supported game version
+## Supported game versions
 
-| Item | Value |
-|---|---|
-| Region | North America |
-| Disc serial | `SLUS-01013` |
-| Main executable | `SLUS_010.13` |
-| Main executable SHA-1 | `d11dfdd50d412ac3fa3e2eb80fbde138da118f27` |
-| Architecture | 32-bit little-endian MIPS / PlayStation |
+| Item | North America | Japan |
+|---|---|---|
+| Status | ✅ Fully linked | 🚧 In progress |
+| Disc serial | `SLUS-01013` | `SLPS-02170` |
+| Main executable | `SLUS_010.13` | `SLPS_021.70` |
+| Main executable SHA-1 | `d11dfdd50d412ac3fa3e2eb80fbde138da118f27` | `b067188a92e4de9a4db7bb7e5343c757e9884bfa` |
+| Disc image (`.bin`) SHA-1 | `c1b536c99f0d390584eb30462a7e37f2bbef3902` | `7a314615be8a482cf3f81b4101cc19aaa738f36d` |
+| Architecture | 32-bit little-endian MIPS / PlayStation | 32-bit little-endian MIPS / PlayStation |
 
-Other regional versions are not currently supported by the build configs.
+The Japanese version is not yet supported by the build configs; the getting-started steps below cover the North American version only. Other regional versions are not currently supported.
 
 ## Requirements
 
@@ -55,7 +61,7 @@ For the normal build you need:
 
 - **Git**, including submodule support.
 - **Docker** - Docker Desktop on Windows/macOS or Docker Engine on Linux.
-- A **legally obtained North American copy of Legend of Mana**.
+- A **legally obtained North American copy of Legend of Mana**. The Japanese release cannot be built yet (see [Supported game versions](#supported-game-versions)).
 
 You do not need to install the historical PSX compilers, Psy-Q tools, Python packages, or a MIPS cross-compiler directly on your host. The development container provides them.
 
@@ -76,7 +82,7 @@ git submodule update --init --recursive
 
 ### 2. Add the original game files
 
-Extract the main executable and the game's `BIN` directory from your North American disc/image so the repository contains:
+Extract the main executable and the game's `BIN` directory from your North American disc/image so the repository contains the following (the Japanese release has the same 17 overlay files under `BIN/`, but its layout in `disc/` is not defined yet):
 
 ```text
 disc/
