@@ -72,6 +72,8 @@ typedef struct
 {
     s16 width;
     u16 depth;
+    /** Bit 1 of the selected object's background flags (field_select_object). */
+    u8 unk4;
 } FieldMapBounds;
 
 /** @brief Fixed address of the field map header block. */
@@ -174,6 +176,9 @@ typedef union
     } half;
 } FieldCollisionWord;
 
+/** @brief FieldObjectState::hud flag (FieldStatusState::level byte) showing the technique gauge. */
+#define FIELD_HUD_SHOW_TECHNIQUE_GAUGE 0x01
+
 /** @brief Runtime state of one field object (0x23C bytes). */
 typedef struct
 {
@@ -183,8 +188,11 @@ typedef struct
     u32 flags;
     s32 group_flags;
     s32 key;
-    s16 unk18;
-    u8 unk1A[0x3C - 0x1A];
+    /** @brief Event bits the object's scripts react to (FieldActionRequest::enabled_events). */
+    u16 enabled_events;
+    /** @brief Script offsets copied from the object's FieldActionRequest. */
+    u16 scripts[16];
+    u8 unk3A[2];
     s32 action_parameter;
     s32 sequence_id;
     s32 sequence_position;
@@ -248,6 +256,9 @@ typedef struct
     u8 tint_timer;
     FieldPathPoint path[FIELD_PATH_MAX_POINTS];
 } FieldObjectState;
+
+/** @brief Sentinel returned by field_find_object_state when no object matches. */
+#define FIELD_OBJECT_STATE_NONE ((FieldObjectState*)-1)
 
 /** @brief Model part data of one field object or animation actor part (0x48 bytes). */
 typedef struct
@@ -576,13 +587,17 @@ typedef struct
     u8* end;
     u8 unk8;
     u8 slot_index;
-    u8 unkA[0xE - 0xA];
+    /** @brief CLUT row of the resource's images (field_set_party_palettes, field_update_scene). */
+    u16 palette;
+    u16 unkC;
     u16 unkE;
     u32 flags;
 } FieldResourceEntry;
 
 /** @brief FieldResourceEntry::flags bit: the resource has an action table and eight-direction animations. */
 #define FIELD_RESOURCE_HAS_ACTIONS 1
+/** @brief FieldResourceEntry::flags bit: the entry holds loaded data. */
+#define FIELD_RESOURCE_LOADED 2
 
 extern FieldObjectState g_field_object_states[];
 extern FieldActorBinding g_field_actor_bindings[];

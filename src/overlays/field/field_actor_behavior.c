@@ -998,7 +998,7 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
         field_update_actor_command(actor);
         return 0;
     }
-    if (func_800B0850() != 0)
+    if (field_party_reload_pending() != 0)
     {
         return 0;
     }

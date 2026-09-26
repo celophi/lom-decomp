@@ -76,7 +76,7 @@ void field_grant_actor_pickup(void* unused, s32 owner_id)
         s32 key;
 
         table = (FieldRewardEntry*)g_field_battle->resources;
-        /* Kept: each do-while(0) below changes register allocation; all are required. */
+        /* The do/while(0) blocks weight the table, count and key registers for the allocator. */
         do
         {
             found = NULL;
@@ -149,7 +149,7 @@ void field_restore_actor_capacity_fraction(s32 record_id, s32 fraction_256)
 
     state = field_find_object_state(record_id);
     scaled_capacity = state->maximum * fraction_256;
-    saturating_counter_add(state, (u32)scaled_capacity >> 8);
+    field_heal_status(state, (u32)scaled_capacity >> 8);
 }
 
 /**

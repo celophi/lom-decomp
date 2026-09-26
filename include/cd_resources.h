@@ -84,6 +84,9 @@ typedef enum CdResourceId
     /* Twelve-row bitmap font used by the FIELD text renderer. */
     CD_RES_FIELD_FONT = 178,
 
+    /* First field map resource; map ids index from this entry. */
+    CD_RES_FIELD_MAP_BASE = 180,
+
     /* First field scene resource; scene selectors index from this entry. */
     CD_RES_FIELD_SCENE_BASE = 1548,
 } CdResourceId;

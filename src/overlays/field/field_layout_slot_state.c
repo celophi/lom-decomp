@@ -14,7 +14,7 @@
 /**
  * @brief Place a land on the map without any checks and record its placement order.
  * @param land_index Land index, below FIELD_LAND_COUNT.
- * @see func_800C3518 for the checked version.
+ * @see field_try_place_land for the checked version.
  */
 void field_place_land(s32 land_index)
 {
@@ -34,33 +34,25 @@ void field_place_land(s32 land_index)
 void field_reset_lands(void)
 {
     FieldGameState *game;
-    FieldGameState *view;
     s32 i;
 
-    i = 0;
     FIELD_SAVED_GAME->control.fields.placed_land_count = 0;
     FIELD_SAVED_GAME->control.fields.hero_level = 0;
-    /* view walks g_saved_game one land record per pass, so view->lands[0] is lands[i].
-     * A structured loop lets loop.c hoist the FIELD_LAND_POSITION_NONE constant out of it. */
-    view = FIELD_SAVED_GAME;
-reset_land:
-    i++;
-    view->lands[0].position = FIELD_LAND_POSITION_NONE;
-    view->lands[0].unk2 = 0;
-    view->lands[0].count = 0;
-    view->lands[0].levels[0] = 0;
-    view->lands[0].levels[1] = 0;
-    view->lands[0].levels[2] = 0;
-    view->lands[0].levels[3] = 0;
-    view->lands[0].levels[4] = 0;
-    view->lands[0].levels[5] = 0;
-    view->lands[0].levels[6] = 0;
-    view->lands[0].levels[7] = 0;
-    view->lands[0].flags &= ~(FIELD_LAND_PLACED | FIELD_LAND_FLAG_02 | FIELD_LAND_FLAG_04);
-    view = (FieldGameState *)((FieldLandRecord *)view + 1);
-    if (i < FIELD_LAND_COUNT)
+    for (i = 0; i < FIELD_LAND_COUNT; i++)
     {
-        goto reset_land;
+        FIELD_SAVED_GAME->lands[i].x = FIELD_LAND_CELL_NONE;
+        FIELD_SAVED_GAME->lands[i].z = FIELD_LAND_CELL_NONE;
+        FIELD_SAVED_GAME->lands[i].unk2 = 0;
+        FIELD_SAVED_GAME->lands[i].count = 0;
+        FIELD_SAVED_GAME->lands[i].levels[0] = 0;
+        FIELD_SAVED_GAME->lands[i].levels[1] = 0;
+        FIELD_SAVED_GAME->lands[i].levels[2] = 0;
+        FIELD_SAVED_GAME->lands[i].levels[3] = 0;
+        FIELD_SAVED_GAME->lands[i].levels[4] = 0;
+        FIELD_SAVED_GAME->lands[i].levels[5] = 0;
+        FIELD_SAVED_GAME->lands[i].levels[6] = 0;
+        FIELD_SAVED_GAME->lands[i].levels[7] = 0;
+        FIELD_SAVED_GAME->lands[i].flags &= ~(FIELD_LAND_PLACED | FIELD_LAND_FLAG_02 | FIELD_LAND_FLAG_04);
     }
 
     for (i = 0; i < FIELD_LAND_COUNT; i++)

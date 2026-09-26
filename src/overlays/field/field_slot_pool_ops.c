@@ -55,10 +55,9 @@ void func_800BF2F0(s32 offset)
     }
     context = g_field_script;
     FIELD_SCRIPT_RECORD_STATE(context->active_record)->pc = D_80123FC0->bytes + (offset & 0xFFFF);
-    /* two separate field clears of the wait word (bit 0, then bits 1-31) */
-    FIELD_SCRIPT_RECORD_STATE(context->active_record)->wait &= ~1;
-    FIELD_SCRIPT_RECORD_STATE(context->active_record)->wait &= 1;
-    func_800BD434(context->status.owner_id, 0xD0000000, 0);
+    FIELD_SCRIPT_RECORD_STATE(context->active_record)->wait.bits.resume = 0;
+    FIELD_SCRIPT_RECORD_STATE(context->active_record)->wait.bits.frames = 0;
+    field_write_script_var(context->status.owner_id, 0xD0000000, 0);
     field_script_run(g_field_script);
 }
 

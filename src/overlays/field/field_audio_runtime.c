@@ -171,7 +171,7 @@ extern AkaoHeader *g_field_instrument_bank;
 /** @brief Song handles, indexed by FIELD_SONG_MAIN / FIELD_SONG_SECOND. */
 extern s32 g_field_song_handles[2];
 
-extern u8 D_8011F358[];
+extern u8 g_field_ring_saved_selections[];
 
 /* Music stream state (field_start_music_stream .. field_stream_sector_callback). */
 extern s32 g_field_stream_sector_ready;
@@ -851,12 +851,12 @@ static u8 *field_stream_sector_callback(s32 bytes_transferred, u32 bytes_remaini
 }
 
 /**
- * @brief Clear the saved ring selections (D_8011F358), last entry first.
+ * @brief Clear the saved ring menu selections, last entry first.
  */
 void field_reset_ring_selections(void)
 {
     s32 i = FIELD_RING_SELECTION_COUNT - 1;
-    u8 *p = &D_8011F358[i];
+    u8 *p = &g_field_ring_saved_selections[i];
 
     for (; i >= 0; i--)
     {

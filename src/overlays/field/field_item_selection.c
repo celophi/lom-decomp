@@ -395,7 +395,7 @@ static inline void drop_selected_item(void)
             actor->animation = (item_id - FIELD_DROP_ITEM_FIRST) | (leader_animation & FIELD_ANIMATION_FACING);
             state->key = actor_index + FIELD_ITEM_ACTOR_KEY_BASE;
             state->interaction_kind = FIELD_INTERACTION_ITEM;
-            state->unk18 = 0;
+            state->enabled_events = 0;
             field_restart_actor_animation(actor);
             field_spawn_item_record(state->key, g_field_item_list[g_field_item_list_cursor].item_id);
             animation_slot = field_find_free_actor_slot(actor_index, 0);

@@ -117,7 +117,7 @@ void field_award_experience(s32 record_index, s32 amount)
     u32 distributed_value;
     u32 clamped_value;
 
-    if ((record_index < FIELD_REWARD_PARTY_LIMIT) && (entry = func_800B2A9C(record_index), (entry != NULL)))
+    if ((record_index < FIELD_REWARD_PARTY_LIMIT) && (entry = field_find_status_record(record_index), (entry != NULL)))
     {
         switch (entry->meta.bytes.id)
         {
@@ -350,7 +350,7 @@ s32 field_try_character_level_up(s32 index, s32 notify)
         {
             field_grow_character_stats(&g_field_game_state->characters[index]);
         }
-        func_800B7C58(index);
+        field_refresh_party_member(index);
         if (notify != 0)
         {
             field_spawn_shared_animation_actor(index, FIELD_SIGNAL_LEVEL_UP);

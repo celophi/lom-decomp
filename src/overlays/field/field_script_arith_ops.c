@@ -3,180 +3,178 @@
 #include "sdk/rand.h"
 
 /*
- * Two-operand helpers used by the field script interpreter. func_800BE5C8
- * dispatches through the D_800F0E58 table of (s32, s32) functions; the
- * arithmetic, logic, min/max and random helpers below share that signature.
+ * Binary operators of the field script calculate opcode (0x1C). The opcode
+ * takes the operator index from the high nibble of its descriptor byte and
+ * calls field_script_calc, which dispatches through g_field_script_calc_ops.
+ * Every operator is called with the two decoded operands; the division,
+ * modulo, minimum and maximum operators treat them as unsigned.
  */
 
-typedef s32 (*UnkFunc800F0E58)(s32, s32);
+/** @brief Number of entries in g_field_script_calc_ops. */
+#define FIELD_SCRIPT_CALC_OP_COUNT 12
 
-extern UnkFunc800F0E58 D_800F0E58[];
+typedef s32 (*FieldScriptCalcOp)(s32 left, s32 right);
+
+extern FieldScriptCalcOp g_field_script_calc_ops[FIELD_SCRIPT_CALC_OP_COUNT];
 
 /**
- * @brief Call entry idx of the D_800F0E58 handler table with two arguments.
- * @param idx Table index.
- * @param arg1 First handler argument.
- * @param arg2 Second handler argument.
- * @return The handler's result.
+ * @brief Apply one of the script calculation operators.
+ * @param op Operator index into g_field_script_calc_ops.
+ * @param left First operand.
+ * @param right Second operand.
+ * @return The operator's result.
  */
-s32 func_800BE5C8(s32 idx, s32 arg1, s32 arg2)
+s32 field_script_calc(s32 op, s32 left, s32 right)
 {
-    return D_800F0E58[idx](arg1, arg2);
+    return g_field_script_calc_ops[op](left, right);
 }
 
 /**
- * @brief Add two integers.
- * @param a First operand.
- * @param b Second operand.
- * @return a + b.
+ * @brief Operator 0: addition.
+ * @param left First operand.
+ * @param right Second operand.
+ * @return left + right.
  */
-s32 func_800BE600(s32 a, s32 b)
+s32 field_script_calc_add(s32 left, s32 right)
 {
-    return a + b;
+    return left + right;
 }
 
 /**
- * @brief Subtract two integers.
- * @param a First operand.
- * @param b Second operand, subtracted from the first.
- * @return a - b.
+ * @brief Operator 1: subtraction.
+ * @param left First operand.
+ * @param right Second operand.
+ * @return left - right.
  */
-s32 func_800BE608(s32 a, s32 b)
+s32 field_script_calc_sub(s32 left, s32 right)
 {
-    return a - b;
+    return left - right;
 }
 
 /**
- * @brief Multiply two signed 32-bit integers.
- * @param arg0 First operand.
- * @param arg1 Second operand.
- * @return arg0 * arg1.
+ * @brief Operator 2: multiplication.
+ * @param left First operand.
+ * @param right Second operand.
+ * @return left * right.
  */
-s32 func_800BE610(s32 arg0, s32 arg1)
+s32 field_script_calc_mul(s32 left, s32 right)
 {
-    return arg0 * arg1;
+    return left * right;
 }
 
 /**
- * @brief Unsigned divide with a -1 result for a zero divisor.
- * @param arg0 Dividend.
- * @param arg1 Divisor.
- * @return arg0 / arg1, or 0xFFFFFFFF when arg1 is 0.
+ * @brief Operator 3: unsigned division.
+ * @param left Dividend.
+ * @param right Divisor.
+ * @return left / right, or 0xFFFFFFFF when @p right is 0.
  */
-u32 func_800BE620(u32 arg0, u32 arg1)
+u32 field_script_calc_div(u32 left, u32 right)
 {
-    if (arg1 == 0)
+    if (right == 0)
     {
         return -1;
     }
-    return arg0 / arg1;
+    return left / right;
 }
 
 /**
- * @brief Unsigned remainder with a 0 result for a zero divisor.
- * @param arg0 Dividend.
- * @param arg1 Divisor.
- * @return arg0 % arg1, or 0 when arg1 is 0.
+ * @brief Operator 4: unsigned remainder.
+ * @param left Dividend.
+ * @param right Divisor.
+ * @return left % right, or 0 when @p right is 0.
  */
-u32 func_800BE644(u32 arg0, u32 arg1)
+u32 field_script_calc_mod(u32 left, u32 right)
 {
-    if (arg1 == 0)
+    if (right == 0)
     {
         return 0;
     }
-    return arg0 % arg1;
+    return left % right;
 }
 
 /**
- * @brief Bitwise AND.
- * @param arg0 First operand.
- * @param arg1 Second operand.
- * @return arg0 & arg1.
+ * @brief Operator 5: bitwise AND.
+ * @param left First operand.
+ * @param right Second operand.
+ * @return left & right.
  */
-s32 func_800BE668(s32 arg0, s32 arg1)
+s32 field_script_calc_and(s32 left, s32 right)
 {
-    return arg0 & arg1;
+    return left & right;
 }
 
 /**
- * @brief Bitwise OR.
- * @param arg0 First operand.
- * @param arg1 Second operand.
- * @return arg0 | arg1.
+ * @brief Operator 6: bitwise OR.
+ * @param left First operand.
+ * @param right Second operand.
+ * @return left | right.
  */
-s32 func_800BE670(s32 arg0, s32 arg1)
+s32 field_script_calc_or(s32 left, s32 right)
 {
-    return arg0 | arg1;
+    return left | right;
 }
 
 /**
- * @brief Bitwise XOR.
- * @param a First operand.
- * @param b Second operand.
- * @return a ^ b.
+ * @brief Operator 7: bitwise XOR.
+ * @param left First operand.
+ * @param right Second operand.
+ * @return left ^ right.
  */
-s32 func_800BE678(s32 a, s32 b)
+s32 field_script_calc_xor(s32 left, s32 right)
 {
-    return a ^ b;
+    return left ^ right;
 }
 
 /**
- * @brief Returns a random value bounded by an inclusive maximum.
- *
- * @param maximum Inclusive upper bound. A value of -1 returns the raw random
- *                 value.
- * @return The raw random value for -1, or the random value modulo
- *         `maximum + 1` otherwise.
+ * @brief Operator 8: random number up to an inclusive maximum.
+ * @param maximum Largest value to return; -1 returns the raw rand() value.
+ * @return A random value from 0 to @p maximum.
+ * @note Called with two operands like the other operators; the second is ignored.
  */
-u32 func_800BE680(s32 maximum)
+u32 field_script_calc_random(s32 maximum)
 {
     u32 range = maximum + 1;
 
-    if (range == 0)
-    {
-        return rand();
-    }
     if (range != 0)
     {
         return rand() % range;
     }
+    return rand();
 }
 
 /**
- * @brief Unsigned maximum.
- * @param arg0 First operand.
- * @param arg1 Second operand.
- * @return The larger of the two.
+ * @brief Operator 9: unsigned maximum.
+ * @param left First operand.
+ * @param right Second operand.
+ * @return The larger operand.
  */
-u32 func_800BE6D0(u32 arg0, u32 arg1)
+u32 field_script_calc_max(u32 left, u32 right)
 {
-    u32 var_v0 = arg1;
-
-    if (arg0 < var_v0)
+    if (left < right)
     {
-        return var_v0;
+        return right;
     }
-    return arg0;
+    return left;
 }
 
 /**
- * @brief Unsigned minimum.
- * @param arg0 First operand.
- * @param arg1 Second operand.
- * @return The smaller of the two.
+ * @brief Operator 10: unsigned minimum.
+ * @param left First operand.
+ * @param right Second operand.
+ * @return The smaller operand.
  */
-u32 func_800BE6EC(u32 arg0, u32 arg1)
+u32 field_script_calc_min(u32 left, u32 right)
 {
-    if (arg1 < arg0)
+    if (right < left)
     {
-        return arg1;
+        return right;
     }
-    return arg0;
+    return left;
 }
 
 /**
- * @brief Empty stub function; body is a no-op.
+ * @brief Operator 11: does nothing.
  */
-void func_800BE708(void)
+void field_script_calc_nop(void)
 {
 }

@@ -5,11 +5,24 @@
 
 #include "game_audio.h"
 #include "common.h"
+#include "main.h"
+#include "sdk/rand.h"
 #include "field_calls.h"
 #include "field_records.h"
 
 /** @brief Resource id of the companion template table. */
 #define FIELD_RESOURCE_COMPANION_TEMPLATES 7
+
+/** @brief Diagnostic codes of this file (DIAG_BAD_COMPANION is shared). */
+#define DIAG_BAD_COMPANION_STATUS 0x76   /**< Status query for a companion index out of range. */
+#define DIAG_BAD_COMPANION_RENAME 0x77   /**< Rename of a companion index out of range. */
+#define DIAG_NO_COMPANION_TEMPLATES 0x78 /**< The companion template table (resource 7) is not loaded. */
+
+/** @brief Returned when the template table is missing or no stored companion can be released. */
+#define FIELD_COMPANION_NONE 0xFF
+
+/** @brief Random-name source of the name-entry screen for a stored companion. */
+#define FIELD_NAME_SOURCE_COMPANION 3
 
 /** @brief Unique-id bits taken from the random value. */
 #define FIELD_RANDOM_VALUE_MASK 0xFF00FF00
@@ -19,6 +32,18 @@
 
 /** @brief Companion status bit 31: the companion has just joined. */
 #define FIELD_COMPANION_NEW 0x80000000
+/** @brief Companion status bit 30: the companion gains experience. */
+#define FIELD_COMPANION_GAINS_EXPERIENCE_BIT 30
+
+/** @brief Results of field_get_stored_companion_status. */
+enum
+{
+    FIELD_COMPANION_STATUS_NEW_HELD = 0,         /**< Newly joined, not acknowledged while unk42 is set. */
+    FIELD_COMPANION_STATUS_NEW = 1,              /**< Newly joined; the flag is cleared by the query. */
+    FIELD_COMPANION_STATUS_GAINS_EXPERIENCE = 2, /**< Status bit 30 is set. */
+    FIELD_COMPANION_STATUS_IDLE = 3,
+    FIELD_COMPANION_STATUS_EMPTY = 0xFF /**< The record is not in use. */
+};
 
 /** @brief Companion template table (resource 7). */
 typedef struct
@@ -29,21 +54,19 @@ typedef struct
 } FieldCompanionTemplateTable;
 
 extern FieldGameState* g_field_game_state;
-extern u16 g_scene_mode;
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
 extern s32 D_801227F0;
 
 extern void* func_800C1E40(s32 resource_id);
 extern void* func_800C1EC8(void* source, void* destination, s32 size);
-extern s32 rand(void);
 
 /**
  * @brief Copy a companion template into the first free stored record and give it a unique id.
  * @param template_index Index of the template in resource 7.
- * @return Allocated record index, FIELD_REGION_COUNT if all records are in use, or 0xFF if resource 7 is unavailable.
+ * @return Record index, FIELD_REGION_COUNT when every record is in use, or FIELD_COMPANION_NONE when resource 7 is not loaded.
  */
-s32 func_800C2264(s32 template_index)
+s32 field_add_stored_companion(s32 template_index)
 {
     FieldCompanionTemplateTable* table;
     FieldRegionRecord* companion_template;
@@ -56,12 +79,12 @@ s32 func_800C2264(s32 template_index)
     table = func_800C1E40(FIELD_RESOURCE_COMPANION_TEMPLATES);
     if (table == NULL)
     {
-        record_game_diagnostic(0x8001, 0x78, template_index, g_scene_mode);
-        return 0xFF;
+        record_game_diagnostic(DIAG_ERROR, DIAG_NO_COMPANION_TEMPLATES, template_index, g_scene_mode);
+        return FIELD_COMPANION_NONE;
     }
 
     companion_template = &table->templates[template_index];
-    field_set_text_macro(1, (u8*)companion_template, 0x15);
+    field_set_text_macro(1, companion_template->name, FIELD_COMPANION_NAME_LENGTH);
 
     for (slot = 0; slot < FIELD_REGION_COUNT; slot++)
     {
@@ -72,8 +95,8 @@ s32 func_800C2264(s32 template_index)
             do
             {
                 random_high = rand();
-                unique_id =
-                    (((random_high << 16) + rand()) & FIELD_RANDOM_VALUE_MASK) | ((g_field_game_state->unkD4 + (g_field_game_state->unkD6 << 16)) & FIELD_FIXED_VALUE_MASK);
+                unique_id = (((random_high << 16) + rand()) & FIELD_RANDOM_VALUE_MASK) |
+                            ((g_field_game_state->unkD4 + (g_field_game_state->unkD6 << 16)) & FIELD_FIXED_VALUE_MASK);
                 if (unique_id != 0)
                 {
                     retry = 0;
@@ -95,9 +118,9 @@ s32 func_800C2264(s32 template_index)
 
 /**
  * @brief Release the stored companion named by the first gosub result.
- * @return The released index, FIELD_REGION_COUNT when it is the active companion, or 0xFF on failure.
+ * @return The released index, FIELD_REGION_COUNT when it is the active companion, or FIELD_COMPANION_NONE.
  */
-s32 func_800C23F4(void)
+s32 field_release_stored_companion(void)
 {
     s32 index;
 
@@ -107,7 +130,7 @@ s32 func_800C23F4(void)
         index = g_gosub_result_values[0];
         if (index < FIELD_REGION_COUNT)
         {
-            field_set_text_macro(0, (u8*)&g_field_game_state->regions[index], 0x15);
+            field_set_text_macro(0, g_field_game_state->regions[index].name, FIELD_COMPANION_NAME_LENGTH);
             index = g_gosub_result_values[0];
             if (index != g_field_game_state->region_index)
             {
@@ -116,64 +139,63 @@ s32 func_800C23F4(void)
             }
             return FIELD_REGION_COUNT;
         }
-        record_game_diagnostic(0x8001, 0x6E, index, 0);
+        record_game_diagnostic(DIAG_ERROR, DIAG_BAD_COMPANION, index, 0);
     }
-    return 0xFF;
+    return FIELD_COMPANION_NONE;
 }
 
 /**
  * @brief Report a stored companion's state, acknowledging a newly joined one.
  * @param index Stored companion index.
- * @return 0 new but unk42 set, 1 newly joined (flag cleared), 2 gaining experience,
- *         3 idle, 0xFF empty; unspecified for an out-of-range index.
+ * @return A FIELD_COMPANION_STATUS_ value; unspecified for an out-of-range index.
  */
-s32 func_800C24BC(s32 index)
+s32 field_get_stored_companion_status(s32 index)
 {
     s32 status;
 
     if (index >= FIELD_REGION_COUNT)
     {
-        record_game_diagnostic(0x8001, 0x76, index, 0);
+        record_game_diagnostic(DIAG_ERROR, DIAG_BAD_COMPANION_STATUS, index, 0);
     }
     else
     {
         if (g_field_game_state->regions[index].name[0] != 0)
         {
-            field_set_text_macro(0, (u8*)&g_field_game_state->regions[index], 0x15);
+            field_set_text_macro(0, g_field_game_state->regions[index].name, FIELD_COMPANION_NAME_LENGTH);
             status = g_field_game_state->regions[index].status.word;
             if (status < 0)
             {
                 if (g_field_game_state->regions[index].unk42 != 0)
                 {
-                    return 0;
+                    return FIELD_COMPANION_STATUS_NEW_HELD;
                 }
                 g_field_game_state->regions[index].status.word = status & ~FIELD_COMPANION_NEW;
-                return 1;
+                return FIELD_COMPANION_STATUS_NEW;
             }
-            if (((u32)status >> 30) & 1)
+            if (((u32)status >> FIELD_COMPANION_GAINS_EXPERIENCE_BIT) & 1)
             {
-                return 2;
+                return FIELD_COMPANION_STATUS_GAINS_EXPERIENCE;
             }
-            return 3;
+            return FIELD_COMPANION_STATUS_IDLE;
         }
-        return 0xFF;
+        return FIELD_COMPANION_STATUS_EMPTY;
     }
 }
 
 /**
- * @brief Open name entry for a stored companion, or report an invalid index.
- * @param index Stored companion index; >= FIELD_REGION_COUNT records a diagnostic.
+ * @brief Open the name-entry screen for a stored companion.
+ * @param index Stored companion index; an out-of-range index records a diagnostic.
  */
-void func_800C25A0(s32 index)
+void field_rename_stored_companion(s32 index)
 {
     FieldRegionRecord* companion;
 
     if (index >= FIELD_REGION_COUNT)
     {
-        record_game_diagnostic(0x8001, 0x77, index, 0);
+        record_game_diagnostic(DIAG_ERROR, DIAG_BAD_COMPANION_RENAME, index, 0);
         return;
     }
-    field_set_text_macro(0, (u8*)&g_field_game_state->regions[index], 0x15);
+    field_set_text_macro(0, g_field_game_state->regions[index].name, FIELD_COMPANION_NAME_LENGTH);
     companion = &g_field_game_state->regions[index];
-    field_run_name_entry((s32)companion, (s32)companion, 3, g_field_game_state->regions[index].unk15, 0);
+    field_run_name_entry(companion->name, companion->name, FIELD_NAME_SOURCE_COMPANION, g_field_game_state->regions[index].unk15, 0);
 }

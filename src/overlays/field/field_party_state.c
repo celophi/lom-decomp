@@ -1,19 +1,27 @@
 #include "common.h"
 #include "field_calls.h"
+#include "field_script.h"
 #include "game_audio.h"
+#include "main.h"
 #include "field_records.h"
 #include "field_types.h"
 #include "sdk/rand.h"
 
-enum
-{
-    FIELD_STATUS_PRIMARY_RECORD_COUNT = 3,
-    FIELD_STATUS_EFFECT_COUNT = 15,
-    FIELD_STATUS_RESULT_ROW_COUNT = 36,
-    FIELD_STATUS_MAX_DURATION = 240
-};
+/** @brief Number of status effects; effect n owns status timer n and effect flag bit n. */
+#define FIELD_STATUS_EFFECT_COUNT 15
+/** @brief Longest duration a status effect can be given. */
+#define FIELD_STATUS_MAX_DURATION 240
+/** @brief Effect flag bits that have a status timer. */
+#define FIELD_STATUS_TIMED_EFFECT_FLAGS_MASK 0xFFFF
 
-/** @brief Stat selectors of func_800B2D64 beyond the eight single stats. */
+/** @brief Status slot ids FIELD_STATUS_SLOT_ID_BASE + n grant immunity to effect n. */
+#define FIELD_STATUS_SLOT_ID_BASE 0x60
+#define FIELD_STATUS_SLOT_ID_COUNT 16
+
+/** @brief Stat scale that leaves a stat unchanged; field_scale_status_stat scales in eighths. */
+#define FIELD_STAT_SCALE_UNIT 8
+
+/** @brief Stat selectors of field_scale_status_stat beyond the eight single stats. */
 enum
 {
     FIELD_STAT_SELECT_ALL = 9,
@@ -21,60 +29,108 @@ enum
     FIELD_STAT_SELECT_GROUP_B = 11
 };
 
-/** @brief Status slot ids FIELD_STATUS_SLOT_ID_BASE + n grant immunity to effect n. */
-#define FIELD_STATUS_SLOT_ID_BASE 0x60
-#define FIELD_STATUS_SLOT_ID_COUNT 16
-#define FIELD_STATUS_TIMED_EFFECT_FLAGS_MASK 0xFFFF
+/** @brief Shared animations played for a stat change: all stats, or the first of eight per-stat ones. */
+#define FIELD_ANIMATION_ALL_STATS_UP 0x9D
+#define FIELD_ANIMATION_STAT_UP 0x9E
+#define FIELD_ANIMATION_ALL_STATS_DOWN 0xA6
+#define FIELD_ANIMATION_STAT_DOWN 0xA7
 
-/** @brief Status record that belongs to the third party slot. */
-#define FIELD_COMPANION_RECORD_ID 2
+/** @brief Facing angles (256 per turn) from FIELD_FACING_NEGATIVE_X_MIN to _MAX face towards negative X. */
+#define FIELD_FACING_NEGATIVE_X_MIN 0x40
+#define FIELD_FACING_NEGATIVE_X_MAX 0xC0
 
-/** @brief Item type (FieldItemRecord::info bits 10-15) that adds to a character's footprint strength. */
+/** @brief Item type of a weapon that adds FIELD_FOOTPRINT_WEAPON_BONUS to a character's footprint strength. */
 #define FIELD_ITEM_TYPE_FOOTPRINT_BONUS 7
+#define FIELD_FOOTPRINT_WEAPON_BONUS 0x80
+/** @brief Largest footprint strength. */
+#define FIELD_FOOTPRINT_STRENGTH_MAX 0xFF
 
-/** @brief Character type (low seven bits of the info byte) that publishes its region. */
-#define FIELD_CHARACTER_TYPE_COMPANION 3
+/** @brief Race of the party characters' status records. */
+#define FIELD_PARTY_RACE 15
+/** @brief HP multiplier of the party characters in a duel. */
+#define FIELD_DUEL_HP_SCALE 3
+/** @brief Counter and counter reset of a new party record. */
+#define FIELD_PARTY_COUNTER_START 5
 
+/** @brief Rows of g_field_monster_level_by_rank. */
+#define FIELD_LEVEL_RANK_COUNT 64
+/** @brief Ranks added on FIELD_DIFFICULTY_HARD. */
+#define FIELD_LEVEL_RANK_HARD_BONUS 20
 
-/** @brief Size of the battle context cleared by func_800B3580. */
-#define FIELD_BATTLE_CONTEXT_SIZE 0x4A4
+/** @brief Status intensity range; field_raise_companion_intensity wraps it to 0 at this value. */
+#define FIELD_INTENSITY_RANGE 256
+/** @brief Intensity range with one increment multiplier in field_raise_companion_intensity. */
+#define FIELD_INTENSITY_QUARTER (FIELD_INTENSITY_RANGE / 4)
+
+/** @brief Valid grid_bound values of the golem companion. */
+#define FIELD_LOGIC_GRID_BOUND_MIN 4
+#define FIELD_LOGIC_GRID_BOUND_MAX 7
+/** @brief Logic values written when the random-action roll succeeds, or when no grid cell applies. */
+#define FIELD_LOGIC_RANDOM 100
+#define FIELD_LOGIC_INVALID 99
+/** @brief Block id written when no grid cell supplies one. */
+#define FIELD_LOGIC_FALLBACK_BLOCK 129
+
+/** @brief Companion script variables written by the golem logic functions. */
+#define FIELD_VAR_LOGIC_CELL 0xD028
+#define FIELD_VAR_LOGIC_BLOCK 0xD030
+#define FIELD_VAR_LOGIC_EDGE 0xD040
+/** @brief Companion script variable receiving the active stored companion's flag word. */
+#define FIELD_VAR_COMPANION_FLAGS 0xF020
+
+/** @brief Resource with the monster templates and the battle reward table. */
+#define FIELD_RESOURCE_BATTLE 1
+
+/** @brief Diagnostic codes of this file. */
+#define DIAG_BAD_STATUS_RECORD 0x68   /**< No status record has the requested id. */
+#define DIAG_BAD_LOGIC_GRID_SIZE 0x74 /**< The companion's grid_bound is outside 4 to 7 (passed as the status). */
+#define DIAG_BAD_REGION_INDEX 0x75    /**< The active stored companion index is out of range. */
+#define DIAG_NEGATIVE_DAMAGE 0x7A     /**< A negative damage amount. */
+
+/** @brief Header of the FIELD_RESOURCE_BATTLE resource: byte offsets of its tables from the resource start. */
+typedef struct FieldBattleResource
+{
+    s32 unk0;
+    s32 templates_offset;
+    s32 rewards_offset;
+} FieldBattleResource;
 
 extern FieldGameState* g_field_game_state;
 extern FieldBattleContext* g_field_battle;
-extern FieldBattleContext D_80123B08;
+extern FieldBattleContext g_field_battle_context;
 extern FieldActionBank* g_field_action_bank;
+extern FieldActionBank g_field_default_action_bank;
 extern s32 g_field_duel_mode;
-extern u16 g_music_track_index;
 
 /** @brief Per-effect immunity masks; also indexed by status slot id - FIELD_STATUS_SLOT_ID_BASE. */
-extern u8 D_800F0B28[];
-/** @brief Per-effect stat pair: high nibble selects the source stat, low nibble the target stat. */
-extern u8 D_800F0B38[];
+extern u8 g_field_status_immunity_masks[FIELD_STATUS_SLOT_ID_COUNT];
+/** @brief Per-effect stats scaling the duration: high nibble the source's stat, low nibble the target's. */
+extern u8 g_field_status_duration_stats[FIELD_STATUS_SLOT_ID_COUNT];
 extern u8 g_field_element_level_by_land_level[];
-extern u8 D_800F0B50[];
-extern FieldActionBank D_800EF8C0;
-extern u8 D_800F0AE8[];
+/** @brief Status signal stored for a stat change, indexed by the scale's distance from FIELD_STAT_SCALE_UNIT. */
+extern u8 g_field_stat_change_signals[];
+/** @brief Base monster level of each level rank. */
+extern u8 g_field_monster_level_by_rank[FIELD_LEVEL_RANK_COUNT];
 
 s32 field_get_actor_facing(s32 actor_id);
-s32 field_get_actor_position(s32 actor_id, VECTOR* out);
+s32 field_get_actor_position(s32 actor_id, Vec3i* position);
+/* Declared without parameters: field_revive_status_record passes only the key. */
 s32 field_revive_actor();
 FieldStatusState* field_find_object_state(s32 actor_id);
-s32 field_spawn_shared_animation_actor(s32 record_id, s32 signal_id);
-u32 func_800BD414(s32 owner_id, s32 variable_id);
-void func_800BD520(s32 owner_id, u32 variable_id, s32 value);
+s32 field_spawn_shared_animation_actor(s32 key, s32 resource_index);
 void func_800C1EC8(s32 value, void* buffer, s32 size);
 u8* func_800C1E40(s32 resource_id);
-void func_800B3580(void);
-s32 func_800B3670(s32 use_hero_level);
-s32 func_800B37D4(void);
-void func_800B3D84(void);
+
+static void field_battle_reset_context(void);
+static s32 field_build_party_records(void);
+static void field_publish_companion_flags(void);
 
 /**
- * @brief Find a status record by its identifier.
- * @param record_id Identifier to find.
- * @return Matching status record, or null when no record has the identifier.
+ * @brief Find the battle status record with an identifier.
+ * @param record_id Record identifier (party slot for the party records).
+ * @return Matching record, or NULL after a diagnostic when no record has the identifier.
  */
-FieldStatusRecord* func_800B2A9C(s32 record_id)
+FieldStatusRecord* field_find_status_record(s32 record_id)
 {
     s32 i;
 
@@ -85,19 +141,19 @@ FieldStatusRecord* func_800B2A9C(s32 record_id)
             return &g_field_battle->records[i];
         }
     }
-    record_game_diagnostic(0x8001, 0x68, record_id, -1);
+    record_game_diagnostic(DIAG_ERROR, DIAG_BAD_STATUS_RECORD, record_id, -1);
     return NULL;
 }
 
 /**
- * @brief Find the first available secondary status record.
- * @return First secondary record that is not active, or null when none is available.
+ * @brief Find the first unused status record after the party records.
+ * @return First inactive non-party record, or NULL when all are in use.
  */
-FieldStatusRecord* func_800B2B08(void)
+FieldStatusRecord* field_find_free_status_record(void)
 {
     s32 i;
 
-    for (i = FIELD_STATUS_PRIMARY_RECORD_COUNT; i < FIELD_BATTLE_RECORD_COUNT; i++)
+    for (i = FIELD_PARTY_SIZE; i < FIELD_BATTLE_RECORD_COUNT; i++)
     {
         if (!g_field_battle->records[i].meta.bits.active)
         {
@@ -108,22 +164,29 @@ FieldStatusRecord* func_800B2B08(void)
 }
 
 /**
- * @brief Apply a permitted effect with a chance check and scaled duration.
- * @param source Actor providing the offensive scale.
- * @param target Actor receiving the effect.
- * @param apply_flags Controls immunity checks and whether an active effect may be replaced.
- * @param effect_index Effect to apply.
- * @param chance_threshold Threshold compared against an eight-bit random value.
- * @param duration Base duration scaled by the actors and capped at 240.
+ * @brief Roll a timed status effect onto a record and set its duration.
+ *
+ * The effect fails on a defeated target, on an immunity (the target's own
+ * immunity_flags or one granted by its status slots), on an effect already
+ * active, and when the random byte is not below @p chance_threshold. The
+ * duration is scaled by one stat of each record (g_field_status_duration_stats)
+ * and capped at FIELD_STATUS_MAX_DURATION.
+ *
+ * @param source Record causing the effect.
+ * @param target Record receiving the effect.
+ * @param apply_flags FIELD_STATUS_APPLY_* bits.
+ * @param effect_index Effect to apply, below FIELD_STATUS_EFFECT_COUNT.
+ * @param chance_threshold Success threshold for a random value from 0 to 255.
+ * @param duration Base duration in status ticks.
  */
-void func_800B2B54(FieldStatusRecord* source, FieldStatusRecord* target, s32 apply_flags, s32 effect_index, s32 chance_threshold, s32 duration)
+void field_apply_status_effect(FieldStatusRecord* source, FieldStatusRecord* target, s32 apply_flags, s32 effect_index, s32 chance_threshold, s32 duration)
 {
     s32 effect_mask;
     s32 slot_index;
     s32 attack;
     s32 defense;
     s32 scaled_duration;
-    FieldStatusRecord* timer_base;
+    FieldStatusRecord* timer_record;
 
     if (effect_index >= FIELD_STATUS_EFFECT_COUNT)
     {
@@ -135,7 +198,7 @@ void func_800B2B54(FieldStatusRecord* source, FieldStatusRecord* target, s32 app
     }
     if (!(apply_flags & FIELD_STATUS_APPLY_IGNORE_IMMUNITY))
     {
-        if (target->immunity_flags & D_800F0B28[effect_index])
+        if (target->immunity_flags & g_field_status_immunity_masks[effect_index])
         {
             return;
         }
@@ -145,10 +208,10 @@ void func_800B2B54(FieldStatusRecord* source, FieldStatusRecord* target, s32 app
             if (target->status_slots[slot_index] >= FIELD_STATUS_SLOT_ID_BASE &&
                 target->status_slots[slot_index] < FIELD_STATUS_SLOT_ID_BASE + FIELD_STATUS_SLOT_ID_COUNT)
             {
-                effect_mask |= D_800F0B28[target->status_slots[slot_index] - FIELD_STATUS_SLOT_ID_BASE];
+                effect_mask |= g_field_status_immunity_masks[target->status_slots[slot_index] - FIELD_STATUS_SLOT_ID_BASE];
             }
         }
-        if (effect_mask & D_800F0B28[effect_index])
+        if (effect_mask & g_field_status_immunity_masks[effect_index])
         {
             return;
         }
@@ -163,53 +226,48 @@ void func_800B2B54(FieldStatusRecord* source, FieldStatusRecord* target, s32 app
         return;
     }
     target->state->effect_flags |= effect_mask;
-    attack = func_800B2D34(source, D_800F0B38[effect_index] >> 4);
-    defense = func_800B2D34(target, D_800F0B38[effect_index] & 0xF);
+    attack = field_get_status_stat(source, g_field_status_duration_stats[effect_index] >> 4);
+    defense = field_get_status_stat(target, g_field_status_duration_stats[effect_index] & 0xF);
     scaled_duration = duration * attack / defense;
-    /* The timer address is formed before the clamp: the record shifted by the timer index. */
-    timer_base = (FieldStatusRecord*)((u8*)target + effect_index * sizeof(u16));
+    /* A shifted record, not &status_timers[effect_index]: the original forms this address before the clamp. */
+    timer_record = (FieldStatusRecord*)((u8*)target + effect_index * sizeof(u16));
     if (scaled_duration > FIELD_STATUS_MAX_DURATION)
     {
         scaled_duration = FIELD_STATUS_MAX_DURATION;
     }
-    timer_base->status_timers[0] = scaled_duration;
+    timer_record->status_timers[0] = scaled_duration;
 }
 
 /**
- * @brief Read a status stat with a minimum value of one.
+ * @brief Read a battle stat of a record, never less than 1 (it is used as a divisor).
  * @param record Status record to read.
- * @param stat_index Stat index.
- * @return Selected stat, or one when the stat is zero or the index is out of range.
+ * @param stat_index Stat index, below FIELD_STATUS_STAT_COUNT.
+ * @return The stat, or 1 when it is 0 or @p stat_index is out of range.
  */
-s32 func_800B2D34(FieldStatusRecord* record, s32 stat_index)
+s32 field_get_status_stat(FieldStatusRecord* record, s32 stat_index)
 {
-    u32 value;
-
     if (stat_index < FIELD_STATUS_STAT_COUNT)
     {
-        if (record->stats[stat_index] == 0)
-        {
-            value = 1;
-        }
-        else
-        {
-            value = record->stats[stat_index];
-        }
-        return value;
+        return (record->stats[stat_index] != 0) ? record->stats[stat_index] : 1;
     }
 
     return 1;
 }
 
 /**
- * @brief Scale one or more status stats from their base values and optionally signal the actor.
+ * @brief Raise or lower one or more battle stats to a multiple of their base values.
+ *
+ * A raise never lowers a stat and a lowering never raises one. With
+ * @p emit_signal the record's status signal is set from
+ * g_field_stat_change_signals and the matching stat-change animation plays.
+ *
  * @param record Status record to update.
- * @param stat_selector Stat index, FIELD_STAT_SELECT_ALL, or a grouped-stat selector.
- * @param scale Scale in eighths; above eight raises the stats, otherwise lowers them.
- * @param emit_signal Nonzero to store the change signal and notify the actor.
- * @return 0 when the record's state has no current value; the other paths return no defined value.
+ * @param stat_selector Stat index, or a FIELD_STAT_SELECT_* group.
+ * @param scale New value in eighths of the base value; above FIELD_STAT_SCALE_UNIT raises.
+ * @param emit_signal Nonzero to set the signal and play the animation.
+ * @return 0 for a defeated record; the other paths return no value.
  */
-s32 func_800B2D64(FieldStatusRecord* record, u32 stat_selector, u32 scale, s32 emit_signal)
+s32 field_scale_status_stat(FieldStatusRecord* record, u32 stat_selector, u32 scale, s32 emit_signal)
 {
     u32 value;
     s32 stat_index;
@@ -220,8 +278,8 @@ s32 func_800B2D64(FieldStatusRecord* record, u32 stat_selector, u32 scale, s32 e
     }
     if (stat_selector < FIELD_STATUS_STAT_COUNT)
     {
-        value = (record->base_stats[stat_selector] * scale) >> 3;
-        if (scale > 8)
+        value = record->base_stats[stat_selector] * scale / FIELD_STAT_SCALE_UNIT;
+        if (scale > FIELD_STAT_SCALE_UNIT)
         {
             if (value < record->stats[stat_selector])
             {
@@ -230,10 +288,10 @@ s32 func_800B2D64(FieldStatusRecord* record, u32 stat_selector, u32 scale, s32 e
             record->stats[stat_selector] = value;
             if (emit_signal != 0)
             {
-                record->state->status_signal = D_800F0B50[scale - 8];
-                if (record->state->status_signal != 0)
+                record->state->signal.stat_change = g_field_stat_change_signals[scale - FIELD_STAT_SCALE_UNIT];
+                if (record->state->signal.stat_change != 0)
                 {
-                    field_spawn_shared_animation_actor(record->meta.bytes.id, stat_selector + 0x9E);
+                    field_spawn_shared_animation_actor(record->meta.bytes.id, FIELD_ANIMATION_STAT_UP + stat_selector);
                 }
             }
         }
@@ -246,10 +304,10 @@ s32 func_800B2D64(FieldStatusRecord* record, u32 stat_selector, u32 scale, s32 e
             record->stats[stat_selector] = value;
             if (emit_signal != 0)
             {
-                record->state->status_signal = D_800F0B50[8 - scale];
-                if (record->state->status_signal != 0)
+                record->state->signal.stat_change = g_field_stat_change_signals[FIELD_STAT_SCALE_UNIT - scale];
+                if (record->state->signal.stat_change != 0)
                 {
-                    field_spawn_shared_animation_actor(record->meta.bytes.id, stat_selector + 0xA7);
+                    field_spawn_shared_animation_actor(record->meta.bytes.id, FIELD_ANIMATION_STAT_DOWN + stat_selector);
                 }
             }
         }
@@ -261,67 +319,67 @@ s32 func_800B2D64(FieldStatusRecord* record, u32 stat_selector, u32 scale, s32 e
         case FIELD_STAT_SELECT_ALL:
             for (stat_index = 0; stat_index < FIELD_STATUS_STAT_COUNT; stat_index++)
             {
-                func_800B2D64(record, stat_index, scale, 0);
+                field_scale_status_stat(record, stat_index, scale, 0);
             }
             if (emit_signal != 0)
             {
-                if (scale > 8)
+                if (scale > FIELD_STAT_SCALE_UNIT)
                 {
-                    record->state->status_signal = D_800F0B50[scale - 8];
-                    field_spawn_shared_animation_actor(record->meta.bytes.id, 0x9D);
+                    record->state->signal.stat_change = g_field_stat_change_signals[scale - FIELD_STAT_SCALE_UNIT];
+                    field_spawn_shared_animation_actor(record->meta.bytes.id, FIELD_ANIMATION_ALL_STATS_UP);
                 }
                 else
                 {
-                    record->state->status_signal = D_800F0B50[8 - scale];
-                    field_spawn_shared_animation_actor(record->meta.bytes.id, 0xA6);
+                    record->state->signal.stat_change = g_field_stat_change_signals[FIELD_STAT_SCALE_UNIT - scale];
+                    field_spawn_shared_animation_actor(record->meta.bytes.id, FIELD_ANIMATION_ALL_STATS_DOWN);
                 }
             }
             break;
         case FIELD_STAT_SELECT_GROUP_A:
-            func_800B2D64(record, 0, scale, 0);
-            func_800B2D64(record, 1, scale, 0);
-            func_800B2D64(record, 2, scale, 0);
+            field_scale_status_stat(record, 0, scale, 0);
+            field_scale_status_stat(record, 1, scale, 0);
+            field_scale_status_stat(record, 2, scale, 0);
             break;
         case FIELD_STAT_SELECT_GROUP_B:
-            func_800B2D64(record, 3, scale, 0);
-            func_800B2D64(record, 5, scale, 0);
-            func_800B2D64(record, 6, scale, 0);
+            field_scale_status_stat(record, 3, scale, 0);
+            field_scale_status_stat(record, 5, scale, 0);
+            field_scale_status_stat(record, 6, scale, 0);
             break;
         }
     }
 }
 
 /**
- * @brief Roll a random byte against the record's final status stat.
+ * @brief Roll a random value from 0 to 255 against the record's last battle stat.
  * @param record Status record supplying the threshold.
- * @return 1 when the random byte is below the threshold, otherwise 0.
+ * @return 1 when the roll is below the stat, otherwise 0.
  */
-s32 func_800B2FF8(FieldStatusRecord* record)
+s32 field_roll_last_stat(FieldStatusRecord* record)
 {
     u32 threshold;
 
-    threshold = func_800B2D34(record, FIELD_STATUS_STAT_COUNT - 1);
+    threshold = field_get_status_stat(record, FIELD_STATUS_STAT_COUNT - 1);
     return (rand() & 0xFF) < threshold;
 }
 
 /**
- * @brief Tell whether the first actor is on the side the second actor faces.
- * @param first_actor_id Actor whose position is tested.
- * @param second_actor_id Actor whose position and facing are the reference.
- * @return -1 when the first actor is on the faced side, otherwise 0.
+ * @brief Tell whether an actor is on the side of the X axis that another actor faces.
+ * @param actor_id Actor whose position is tested.
+ * @param observer_id Actor whose position and facing are the reference.
+ * @return -1 when @p actor_id is in front of @p observer_id, otherwise 0.
  */
-s32 func_800B302C(s32 first_actor_id, s32 second_actor_id)
+s32 field_is_actor_in_front(s32 actor_id, s32 observer_id)
 {
-    s32 direction;
-    VECTOR first_position;
-    VECTOR second_position;
+    s32 facing;
+    Vec3i actor_position;
+    Vec3i observer_position;
 
-    direction = field_get_actor_facing(second_actor_id);
-    field_get_actor_position(first_actor_id, &first_position);
-    field_get_actor_position(second_actor_id, &second_position);
-    if (first_position.vx - second_position.vx < 0)
+    facing = field_get_actor_facing(observer_id);
+    field_get_actor_position(actor_id, &actor_position);
+    field_get_actor_position(observer_id, &observer_position);
+    if (actor_position.x - observer_position.x < 0)
     {
-        if (direction < 0x40 || direction > 0xC0)
+        if (facing < FIELD_FACING_NEGATIVE_X_MIN || facing > FIELD_FACING_NEGATIVE_X_MAX)
         {
             return 0;
         }
@@ -329,7 +387,7 @@ s32 func_800B302C(s32 first_actor_id, s32 second_actor_id)
     }
     else
     {
-        if (direction < 0x40 || direction > 0xC0)
+        if (facing < FIELD_FACING_NEGATIVE_X_MIN || facing > FIELD_FACING_NEGATIVE_X_MAX)
         {
             return -1;
         }
@@ -338,21 +396,21 @@ s32 func_800B302C(s32 first_actor_id, s32 second_actor_id)
 }
 
 /**
- * @brief Subtract from a status value while clamping it at zero.
+ * @brief Take damage from a status state's HP, stopping at 0.
  * @param state Status state to update.
- * @param amount Amount to subtract; negative values are reported as diagnostics.
+ * @param damage Damage to take; a negative value is only reported.
  */
-void func_800B30B8(FieldStatusState* state, s32 amount)
+void field_damage_status(FieldStatusState* state, s32 damage)
 {
     s32 remaining;
 
-    if (amount < 0)
+    if (damage < 0)
     {
-        record_game_diagnostic(0x8001, 0x7A, state->actor_id, amount);
+        record_game_diagnostic(DIAG_ERROR, DIAG_NEGATIVE_DAMAGE, state->actor_id, damage);
     }
     else
     {
-        remaining = state->current - amount;
+        remaining = state->current - damage;
         if (remaining >= 0)
         {
             state->current = remaining;
@@ -365,17 +423,17 @@ void func_800B30B8(FieldStatusState* state, s32 amount)
 }
 
 /**
- * @brief Add to a counter and clamp it to its cap on overflow.
- * @param state Status state containing the counter and its maximum.
- * @param delta Amount to add to the counter's value.
+ * @brief Restore a status state's HP, stopping at its maximum.
+ * @param state Status state to update.
+ * @param amount HP to restore.
  */
-void saturating_counter_add(FieldStatusState* state, s32 delta)
+void field_heal_status(FieldStatusState* state, s32 amount)
 {
     u32 maximum;
     u32 sum;
 
     maximum = state->maximum;
-    sum = state->current + delta;
+    sum = state->current + amount;
     state->current = sum;
     if (maximum < sum)
     {
@@ -384,27 +442,27 @@ void saturating_counter_add(FieldStatusState* state, s32 delta)
 }
 
 /**
- * @brief Forward a status record identifier to the actor-state helper.
- * @param record Status record whose identifier is forwarded.
+ * @brief Revive the actor of a status record.
+ * @param record Status record whose identifier is the actor key.
  */
-void func_800B313C(FieldStatusRecord* record)
+void field_revive_status_record(FieldStatusRecord* record)
 {
     field_revive_actor(record->meta.bytes.id);
 }
 
 /**
- * @brief Clear one timed status effect or all timed status effects.
+ * @brief Clear one timed status effect, or all of them.
  * @param record Status record to update.
- * @param index Effect index, or an out-of-range value to clear every timed effect.
+ * @param effect_index Effect to clear; FIELD_STATUS_TIMER_COUNT or more clears every timed effect.
  */
-void field_clear_record_state(FieldStatusRecord* record, u32 index)
+void field_clear_status_effect(FieldStatusRecord* record, u32 effect_index)
 {
     s32 timer_index;
 
-    if (index < FIELD_STATUS_TIMER_COUNT)
+    if (effect_index < FIELD_STATUS_TIMER_COUNT)
     {
-        record->state->effect_flags &= ~(1 << index);
-        record->status_timers[index] = 0;
+        record->state->effect_flags &= ~(1 << effect_index);
+        record->status_timers[effect_index] = 0;
         return;
     }
     record->state->effect_flags &= ~FIELD_STATUS_TIMED_EFFECT_FLAGS_MASK;
@@ -415,82 +473,96 @@ void field_clear_record_state(FieldStatusRecord* record, u32 index)
 }
 
 /**
- * @brief Choose and write the field script result derived from chance, actor distance, and status intensity.
- * @param actor_id Actor used for the distance-weighted selection.
+ * @brief Choose the golem companion's logic grid cell and store it in FIELD_VAR_LOGIC_CELL.
+ *
+ * With the companion's random-action chance (byte 2 of its golem data, in
+ * percent) the result is FIELD_LOGIC_RANDOM. Otherwise the row follows the
+ * companion's status intensity and the column the distance bucket of
+ * @p actor_id, both within the golem's grid_bound.
+ *
+ * @param actor_id Actor whose distance selects the column.
  */
-void func_800B31CC(s32 actor_id)
+void field_golem_select_logic_cell(s32 actor_id)
 {
     u32 chance;
     u8 unused[32]; /* never used; the original stack frame reserves it */
-    u32 count;
-    u32 index;
+    u32 grid_bound;
+    u32 column;
+    u32 row;
 
-    chance = g_field_game_state->characters[2].unk150[0].derived.bytes[2];
+    chance = g_field_game_state->characters[FIELD_PARTY_COMPANION].unk150[0].derived.bytes[2];
     if (rand() % 100 < chance)
     {
-        func_800BD520(2, 0xD028, 100);
+        field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_LOGIC_CELL, FIELD_LOGIC_RANDOM);
     }
     else
     {
-        count = g_field_game_state->characters[2].unk150[0].derived.bytes[0] >> 4;
-        if (count < 4 || count >= 8)
+        grid_bound = g_field_game_state->characters[FIELD_PARTY_COMPANION].unk150[0].derived.bytes[0] >> 4;
+        if (grid_bound < FIELD_LOGIC_GRID_BOUND_MIN || grid_bound > FIELD_LOGIC_GRID_BOUND_MAX)
         {
-            record_game_diagnostic(0x74, count, 0, 0);
-            func_800BD520(2, 0xD028, 99);
+            record_game_diagnostic(DIAG_BAD_LOGIC_GRID_SIZE, grid_bound, 0, 0);
+            field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_LOGIC_CELL, FIELD_LOGIC_INVALID);
         }
-        index = func_800C9ED4(actor_id);
-        if (index >= count)
+        column = func_800C9ED4(actor_id);
+        if (column >= grid_bound)
         {
-            index = count - 1;
+            column = grid_bound - 1;
         }
-        func_800BD520(2, 0xD028, ((func_800B2A9C(FIELD_COMPANION_RECORD_ID)->state->status_intensity * count) >> 8) * 6 + index);
+        row = field_find_status_record(FIELD_PARTY_COMPANION)->state->status_intensity * grid_bound / FIELD_INTENSITY_RANGE;
+        field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_LOGIC_CELL, row * GOLEM_GRID_WIDTH + column);
     }
 }
 
 /**
- * @brief Write a three-value field script result from chance or a configured result row.
- * @param row_index Result-table row; out-of-range rows use the fixed fallback values.
+ * @brief Store a golem logic grid cell in the companion's logic script variables.
+ *
+ * With the companion's random-action chance the fallback block and
+ * FIELD_LOGIC_RANDOM are stored instead; an out-of-range cell stores the
+ * fallback block and FIELD_LOGIC_INVALID.
+ *
+ * @param cell_index Grid cell, row * GOLEM_GRID_WIDTH + column.
  */
-void func_800B32FC(s32 row_index)
+void field_golem_publish_logic_cell(s32 cell_index)
 {
     s32 chance;
 
-    chance = g_field_game_state->characters[2].unk150[0].derived.bytes[2];
+    chance = g_field_game_state->characters[FIELD_PARTY_COMPANION].unk150[0].derived.bytes[2];
     if (rand() * 100 / (RAND_MAX + 1) < chance)
     {
-        func_800BD520(2, 0xD030, 129);
-        func_800BD520(2, 0xD038, 0);
-        func_800BD520(2, 0xD040, 100);
+        field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_LOGIC_BLOCK, FIELD_LOGIC_FALLBACK_BLOCK);
+        field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_COMPANION_POWER_BONUS, 0);
+        field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_LOGIC_EDGE, FIELD_LOGIC_RANDOM);
     }
-    else if (row_index < FIELD_STATUS_RESULT_ROW_COUNT)
+    else if (cell_index < GOLEM_GRID_CELL_COUNT)
     {
-        func_800BD520(2, 0xD030, g_field_game_state->result_rows[row_index][0]);
-        func_800BD520(2, 0xD038, g_field_game_state->result_rows[row_index][1]);
-        func_800BD520(2, 0xD040, g_field_game_state->result_rows[row_index][2]);
+        field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_LOGIC_BLOCK, g_field_game_state->golem_grid[cell_index].block_id);
+        field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_COMPANION_POWER_BONUS, g_field_game_state->golem_grid[cell_index].detail);
+        field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_LOGIC_EDGE, g_field_game_state->golem_grid[cell_index].edge);
     }
     else
     {
-        func_800BD520(2, 0xD030, 129);
-        func_800BD520(2, 0xD038, 0);
-        func_800BD520(2, 0xD040, 99);
+        field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_LOGIC_BLOCK, FIELD_LOGIC_FALLBACK_BLOCK);
+        field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_COMPANION_POWER_BONUS, 0);
+        field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_LOGIC_EDGE, FIELD_LOGIC_INVALID);
     }
 }
 
 /**
- * @brief Advance the companion's status intensity with a multiplier that decreases each quarter.
- * @param amount Base increment.
+ * @brief Raise the companion's status intensity, by less in each higher quarter of its range.
+ * @param amount Increment in the top quarter; lower quarters add two, three and four times it.
+ * @note The intensity wraps to 0 once it reaches FIELD_INTENSITY_RANGE.
  */
-void func_800B3420(s32 amount)
+void field_raise_companion_intensity(s32 amount)
 {
     FieldStatusRecord* record;
     FieldStatusState* state;
     u32 value;
 
-    record = func_800B2A9C(FIELD_COMPANION_RECORD_ID);
+    record = field_find_status_record(FIELD_PARTY_COMPANION);
     state = record->state;
     value = state->status_intensity;
 
-    switch (value >> 6)
+    switch (value / FIELD_INTENSITY_QUARTER)
     {
     case 0:
         state->status_intensity = value + (amount * 4);
@@ -506,45 +578,45 @@ void func_800B3420(s32 amount)
         break;
     }
 
-    if (record->state->status_intensity >= 256)
+    if (record->state->status_intensity >= FIELD_INTENSITY_RANGE)
     {
         record->state->status_intensity = 0;
     }
 }
 
 /**
- * @brief Rebuild the battle context and publish the party and monster counts, or call field_battle_scan_actor_objects when @p group is 0.
+ * @brief Build the battle records of the party and a monster group and publish their counts.
  *
- * Script variables 0x4280 and 0x4284 hold the party and monster counts
- * that func_800B48B8 updates and field_battle_side_defeated tests for zero. With
- * g_field_duel_mode set both are written as 1.
+ * FIELD_VAR_ALLY_COUNT and FIELD_VAR_ENEMY_COUNT receive the record counts
+ * (1 each in a duel); func_800B48B8 updates them and
+ * field_battle_side_defeated tests them for zero.
  *
- * @param group Monster group to build; 0 selects field_battle_scan_actor_objects instead.
+ * @param group Monster group to build; 0 only runs field_battle_scan_actor_objects.
  */
-void func_800B34D0(s32 group)
+void field_battle_setup(s32 group)
 {
     s32 count;
 
     if (group != 0)
     {
-        func_800B3580();
-        count = func_800B37D4();
+        field_battle_reset_context();
+        count = field_build_party_records();
         if (g_field_duel_mode != 0)
         {
-            func_800BD520(0, 0x4280, 1);
+            field_set_script_var(0, FIELD_VAR_ALLY_COUNT, 1);
         }
         else
         {
-            func_800BD520(0, 0x4280, count);
+            field_set_script_var(0, FIELD_VAR_ALLY_COUNT, count);
         }
         count = field_build_group_monster_records(group);
         if (g_field_duel_mode != 0)
         {
-            func_800BD520(0, 0x4284, 1);
+            field_set_script_var(0, FIELD_VAR_ENEMY_COUNT, 1);
         }
         else
         {
-            func_800BD520(0, 0x4284, count);
+            field_set_script_var(0, FIELD_VAR_ENEMY_COUNT, count);
         }
     }
     else
@@ -554,143 +626,142 @@ void func_800B34D0(s32 group)
 }
 
 /**
- * @brief Clear the battle context, then fill its header from the current land and resource 1.
+ * @brief Clear the battle context and fill its header from the current land and FIELD_RESOURCE_BATTLE.
  */
-void func_800B3580(void)
+static void field_battle_reset_context(void)
 {
     s32 i;
-    u8* resource;
+    FieldBattleResource* resource;
 
-    g_field_action_bank = &D_800EF8C0;
-    g_field_battle = &D_80123B08;
-    func_800C1EC8(0, &D_80123B08, FIELD_BATTLE_CONTEXT_SIZE);
+    g_field_action_bank = &g_field_default_action_bank;
+    g_field_battle = &g_field_battle_context;
+    func_800C1EC8(0, &g_field_battle_context, sizeof(FieldBattleContext));
     g_field_battle->action = NULL;
-    g_field_battle->state.level = func_800B3670(0);
+    g_field_battle->state.level = field_compute_base_monster_level(0);
 
-    for (i = 0; i < 8; i++)
+    for (i = 0; i < FIELD_ELEMENT_COUNT; i++)
     {
         g_field_battle->element_levels[i] = g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[i]];
     }
 
-    resource = func_800C1E40(1);
-    g_field_battle->templates = (FieldActorTemplateTable*)(resource + *(s32*)(resource + 4));
-    g_field_battle->resources = resource + *(s32*)(resource + 8);
-    func_800BD520(0, 0x428C, -1);
+    resource = (FieldBattleResource*)func_800C1E40(FIELD_RESOURCE_BATTLE);
+    g_field_battle->templates = (FieldActorTemplateTable*)((u8*)resource + resource->templates_offset);
+    g_field_battle->resources = (u8*)resource + resource->rewards_offset;
+    field_set_script_var(0, FIELD_VAR_WATCHED_RECORD, -1);
 }
 
 /**
- * @brief Compute the monster level from the hero's level or the land, clamped by script variables.
+ * @brief Compute the battle's base monster level from the hero's level or the land.
  *
- * The base comes from the hero's level when @p use_hero_level or bit 7 of
- * FIELD_VAR_LEVEL_FLAGS says so, otherwise from func_800C3688 for the
- * current land. FIELD_VAR_DIFFICULTY adds 20 (mode 1) or forces 63
- * (mode 2). The result indexes D_800F0AE8 and is clamped to
- * FIELD_VAR_MONSTER_LEVEL_MIN..MAX and to FIELD_LEVEL_MAX.
+ * The level rank is 1.5 times the hero's level when @p use_hero_level or
+ * FIELD_LEVEL_FLAG_HERO is set, otherwise the current land's distance
+ * (field_get_land_distance). FIELD_DIFFICULTY_HARD adds FIELD_LEVEL_RANK_HARD_BONUS
+ * ranks and FIELD_DIFFICULTY_HARDEST uses the top rank. The rank's level
+ * from g_field_monster_level_by_rank is clamped to FIELD_VAR_MONSTER_LEVEL_MIN
+ * and _MAX, then to FIELD_LEVEL_MAX.
  *
  * @param use_hero_level Nonzero to base the level on the hero's level.
- * @return Level in 0..99.
+ * @return Base monster level, at most FIELD_LEVEL_MAX.
  */
-s32 func_800B3670(s32 use_hero_level)
+s32 field_compute_base_monster_level(s32 use_hero_level)
 {
-    s32 flag;
-    s32 mode;
-    s32 index;
-    s32 value;
-    u32 lo;
-    u32 hi;
+    s32 use_hero;
+    s32 difficulty;
+    s32 rank;
+    s32 level;
+    u32 level_min;
+    u32 level_max;
 
-    flag = use_hero_level;
-    if (func_800BD414(0, FIELD_VAR_LEVEL_FLAGS) & FIELD_LEVEL_FLAG_HERO)
+    use_hero = use_hero_level;
+    if (field_get_script_var(0, FIELD_VAR_LEVEL_FLAGS) & FIELD_LEVEL_FLAG_HERO)
     {
-        flag = 1;
+        use_hero = 1;
     }
-    mode = func_800BD414(0, FIELD_VAR_DIFFICULTY);
+    difficulty = field_get_script_var(0, FIELD_VAR_DIFFICULTY);
 
-    if (flag != 0)
+    if (use_hero != 0)
     {
-        switch (mode)
+        switch (difficulty)
         {
-        case 1:
-            index = g_field_game_state->control.fields.hero_level + 20;
+        case FIELD_DIFFICULTY_HARD:
+            rank = g_field_game_state->control.fields.hero_level + FIELD_LEVEL_RANK_HARD_BONUS;
             break;
-        case 2:
-            index = 63;
+        case FIELD_DIFFICULTY_HARDEST:
+            rank = FIELD_LEVEL_RANK_COUNT - 1;
             break;
         default:
-            index = g_field_game_state->control.fields.hero_level;
+            rank = g_field_game_state->control.fields.hero_level;
             break;
         }
-        index = (index * 3) / 2;
+        rank = (rank * 3) / 2;
     }
     else
     {
-        index = func_800C3688(g_music_track_index);
-        switch (mode)
+        rank = field_get_land_distance(g_music_track_index);
+        switch (difficulty)
         {
-        case 1:
-            index += 20;
+        case FIELD_DIFFICULTY_HARD:
+            rank += FIELD_LEVEL_RANK_HARD_BONUS;
             break;
-        case 2:
-            index = 63;
+        case FIELD_DIFFICULTY_HARDEST:
+            rank = FIELD_LEVEL_RANK_COUNT - 1;
             break;
         }
     }
 
-    if (index >= 64)
+    if (rank >= FIELD_LEVEL_RANK_COUNT)
     {
-        index = 63;
+        rank = FIELD_LEVEL_RANK_COUNT - 1;
     }
 
-    value = D_800F0AE8[index];
-    lo = func_800BD414(0, FIELD_VAR_MONSTER_LEVEL_MIN);
-    hi = func_800BD414(0, FIELD_VAR_MONSTER_LEVEL_MAX);
-    if (value < lo)
+    level = g_field_monster_level_by_rank[rank];
+    level_min = field_get_script_var(0, FIELD_VAR_MONSTER_LEVEL_MIN);
+    level_max = field_get_script_var(0, FIELD_VAR_MONSTER_LEVEL_MAX);
+    if (level < level_min)
     {
-        value = lo;
+        level = level_min;
     }
-    else if (value > hi)
+    else if (level > level_max)
     {
-        value = hi;
+        level = level_max;
     }
 
-    if (value > FIELD_LEVEL_MAX)
+    if (level > FIELD_LEVEL_MAX)
     {
-        value = FIELD_LEVEL_MAX;
+        level = FIELD_LEVEL_MAX;
     }
-    return value;
+    return level;
 }
 
 /**
- * @brief Build the status records of the party characters.
+ * @brief Build the battle status records of the party characters from their game-state records.
  * @return Number of party slots in use.
  */
-s32 func_800B37D4(void)
+static s32 field_build_party_records(void)
 {
     s32 active_count;
     s32 index;
     s32 stat_index;
     s32 equipment_index;
-    s32 ally;
     s8 stat;
     s32 party_index;
     u32 strength;
     u32 nibbles;
 
-    party_index = 0;
     active_count = 0;
-    do
+    for (party_index = 0; party_index < FIELD_PARTY_SIZE; party_index++)
     {
         if (g_field_game_state->characters[party_index].name[0] != 0)
         {
             if (g_field_duel_mode != 0 && party_index == 0)
             {
-                g_field_battle->records[0].unk0 |= 0x40;
+                g_field_battle->records[0].unk0 |= FIELD_RECORD_MONSTER_SIDE;
             }
             else
             {
-                g_field_battle->records[party_index].unk0 |= 0x80;
+                g_field_battle->records[party_index].unk0 |= FIELD_RECORD_PARTY_SIDE;
             }
-            g_field_battle->records[party_index].race = 0xF;
+            g_field_battle->records[party_index].race = FIELD_PARTY_RACE;
             g_field_battle->records[party_index].meta.bytes.id = party_index;
             g_field_battle->records[party_index].meta.bits.active = 1;
             if (g_field_duel_mode != 0)
@@ -702,66 +773,57 @@ s32 func_800B37D4(void)
                 g_field_battle->records[party_index].meta.bits.ally = 1;
             }
             {
-                FieldBattleContext* context = g_field_battle;
+                FieldBattleContext* battle = g_field_battle;
 
-                context->records[party_index].meta.bits.kind = g_field_game_state->characters[party_index].info.bytes[0];
-                context->records[party_index].counter = 5;
-                context->records[party_index].meta.bytes.unk2 = 0;
+                battle->records[party_index].meta.bits.kind = g_field_game_state->characters[party_index].info.bytes[0];
+                battle->records[party_index].counter = FIELD_PARTY_COUNTER_START;
+                battle->records[party_index].meta.bytes.unk2 = 0;
             }
-            g_field_battle->records[party_index].counter_reset = 5;
+            g_field_battle->records[party_index].counter_reset = FIELD_PARTY_COUNTER_START;
             g_field_battle->records[party_index].status_flags = 0;
             g_field_battle->records[party_index].unkC = 0;
             g_field_battle->records[party_index].state = field_find_object_state(party_index);
-            stat_index = 0;
             g_field_battle->records[party_index].unk18 = g_field_game_state->characters[party_index].equipment->derived.values[0];
             g_field_battle->records[party_index].unk1A = 25;
-            do
+            for (stat_index = 0; stat_index < 4; stat_index++)
             {
-                index = 1;
                 g_field_battle->records[party_index].equipment_stats[stat_index] = 0;
-                g_field_battle->records[party_index].equipment_attributes[stat_index] = g_field_game_state->characters[party_index].equipment->attributes[stat_index];
-                do
+                g_field_battle->records[party_index].equipment_attributes[stat_index] =
+                    g_field_game_state->characters[party_index].equipment->attributes[stat_index];
+                /* The armor slots are read as (equipment + index)->; equipment[index]. changes the address arithmetic. */
+                for (index = 1; index < FIELD_EQUIPMENT_SLOT_COUNT; index++)
                 {
                     if (g_field_game_state->characters[party_index].equipment[index].kind != 0)
                     {
-                        FieldBattleContext* context = g_field_battle;
+                        FieldBattleContext* battle = g_field_battle;
 
-                        context->records[party_index].equipment_stats[stat_index] +=
+                        battle->records[party_index].equipment_stats[stat_index] +=
                             (g_field_game_state->characters[party_index].equipment + index)->derived.values[stat_index];
-                        context->records[party_index].equipment_attributes[stat_index] +=
+                        battle->records[party_index].equipment_attributes[stat_index] +=
                             (g_field_game_state->characters[party_index].equipment + index)->attributes[stat_index];
                     }
-                    index += 1;
-                } while (index < FIELD_EQUIPMENT_SLOT_COUNT);
-                stat_index += 1;
-            } while (stat_index < 4);
-            index = 0;
+                }
+            }
             func_800B4934(&g_field_battle->records[party_index]);
             nibbles = g_field_game_state->characters[party_index].equipment->bonus_nibbles.word;
-            do
+            for (index = 0; index < FIELD_STATUS_STAT_COUNT; index++)
             {
-                stat = func_800B7EE8(&g_field_game_state->characters[party_index], index);
-                {
-                    FieldBattleContext* context = g_field_battle;
-
-                    context->records[party_index].base_stats[index] = stat;
-                    context->records[party_index].stats[index] = stat;
-                }
+                stat = field_get_equipped_stat(&g_field_game_state->characters[party_index], index);
+                g_field_battle->records[party_index].stats[index] = g_field_battle->records[party_index].base_stats[index] = stat;
                 g_field_battle->records[party_index].element_attack[index] = nibbles & 0xF;
                 nibbles >>= 4;
                 g_field_battle->records[party_index].element_attack[index] += g_field_battle->element_levels[index];
-                index += 1;
-            } while (index < FIELD_STATUS_STAT_COUNT);
-            equipment_index = 1;
+            }
             /* index is 8 here, so this clears unk4C (rewritten below). */
             g_field_battle->records[party_index].element_defense[index] = 0;
             g_field_battle->records[party_index].immunity_flags = 0;
             g_field_battle->records[party_index].weak_elements = 0;
             g_field_battle->records[party_index].resist_elements = 0;
-            do
+            for (equipment_index = 1; equipment_index < FIELD_EQUIPMENT_SLOT_COUNT; equipment_index++)
             {
                 if (g_field_game_state->characters[party_index].equipment[equipment_index].kind != 0)
                 {
+                    /* Same (equipment + index)-> form as the armor totals above. */
                     nibbles = (g_field_game_state->characters[party_index].equipment + equipment_index)->bonus_nibbles.word;
                     for (index = 0; index < FIELD_STATUS_STAT_COUNT; index++)
                     {
@@ -771,15 +833,14 @@ s32 func_800B37D4(void)
                     g_field_battle->records[party_index].immunity_flags |= (g_field_game_state->characters[party_index].equipment + equipment_index)->flags2C;
                     g_field_battle->records[party_index].resist_elements |= (g_field_game_state->characters[party_index].equipment + equipment_index)->flags2D;
                 }
-                equipment_index += 1;
-            } while (equipment_index < FIELD_EQUIPMENT_SLOT_COUNT);
+            }
             g_field_battle->records[party_index].template = NULL;
             g_field_battle->records[party_index].unk4C = g_field_game_state->characters[party_index].unk43;
             if (g_field_duel_mode != 0)
             {
-                g_field_battle->records[party_index].state->maximum = g_field_game_state->characters[party_index].hp * 3;
-                g_field_battle->records[party_index].state->current = g_field_game_state->characters[party_index].hp * 3;
-                g_field_battle->records[party_index].state->gauge.bits.value = g_field_game_state->characters[party_index].hp * 3;
+                g_field_battle->records[party_index].state->maximum = g_field_game_state->characters[party_index].hp * FIELD_DUEL_HP_SCALE;
+                g_field_battle->records[party_index].state->current = g_field_game_state->characters[party_index].hp * FIELD_DUEL_HP_SCALE;
+                g_field_battle->records[party_index].state->gauge.bits.value = g_field_game_state->characters[party_index].hp * FIELD_DUEL_HP_SCALE;
                 g_field_battle->records[party_index].state->gauge.bits.hud_bits = 0;
             }
             else
@@ -790,39 +851,39 @@ s32 func_800B37D4(void)
                 FieldStatusState* state;
 
                 strength = g_field_battle->records[party_index].stats[3] * 2;
-                if (((g_field_game_state->characters[party_index].equipment[0].info.word >> 10) & 0x3F) == FIELD_ITEM_TYPE_FOOTPRINT_BONUS)
+                if (FIELD_ITEM_TYPE(g_field_game_state->characters[party_index].equipment[FIELD_WEAPON_SLOT].info.word) == FIELD_ITEM_TYPE_FOOTPRINT_BONUS)
                 {
-                    strength += 0x80;
+                    strength += FIELD_FOOTPRINT_WEAPON_BONUS;
                 }
                 state = g_field_battle->records[party_index].state;
-                if (strength < 0x100)
+                if (strength <= FIELD_FOOTPRINT_STRENGTH_MAX)
                 {
                     state->effect_footprint_strength = strength;
                 }
                 else
                 {
-                    state->effect_footprint_strength = 0xFF;
+                    state->effect_footprint_strength = FIELD_FOOTPRINT_STRENGTH_MAX;
                 }
             }
-            if ((g_field_game_state->characters[party_index].info.bytes[0] & 0x7F) == FIELD_CHARACTER_TYPE_COMPANION)
+            if ((g_field_game_state->characters[party_index].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_COMPANION)
             {
-                func_800B3D84();
+                field_publish_companion_flags();
             }
             active_count += 1;
         }
-        party_index += 1;
-    } while (party_index < FIELD_PARTY_SIZE);
+    }
     return active_count;
 }
 
 /**
- * @brief Report an out-of-range region index, then publish the current region's value.
+ * @brief Store the active stored companion's flag word in FIELD_VAR_COMPANION_FLAGS.
+ * @note An out-of-range region_index is reported but still used.
  */
-void func_800B3D84(void)
+static void field_publish_companion_flags(void)
 {
     if (g_field_game_state->region_index < 0 || g_field_game_state->region_index >= FIELD_REGION_COUNT)
     {
-        record_game_diagnostic(0x8001, 0x75, g_field_game_state->region_index, 0);
+        record_game_diagnostic(DIAG_ERROR, DIAG_BAD_REGION_INDEX, g_field_game_state->region_index, 0);
     }
-    func_800BD520(2, 0xF020, g_field_game_state->regions[g_field_game_state->region_index].unk48.word);
+    field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_COMPANION_FLAGS, g_field_game_state->regions[g_field_game_state->region_index].unk48.word);
 }

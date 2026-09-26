@@ -29,9 +29,6 @@
 
 /* ---- HUD ------------------------------------------------------------------ */
 
-/** @brief FieldObjectState.hud.word bit: show the special attack gauge. */
-#define FIELD_HUD_SPECIAL_GAUGE 0x1
-
 /** @brief FieldObjectState.unk8 layout: displayed HP, panel timer and boss flag. */
 #define FIELD_HUD_HP_MASK 0xFFFFFF
 #define FIELD_HUD_DISPLAY_FLAGS_MASK 0xFF000000
@@ -381,7 +378,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
                 command = FIELD_ACTOR_COMMAND_INSTRUMENT;
                 if (g_field_actors[i].command != command)
                 {
-                    g_field_object_states[i].hud.word |= FIELD_HUD_SPECIAL_GAUGE;
+                    g_field_object_states[i].hud.word |= FIELD_HUD_SHOW_TECHNIQUE_GAUGE;
                 }
             }
             panel_count++;
@@ -751,7 +748,7 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
     helper_cursor = sprite_cursor;
     if (gauge_type < 2)
     {
-        if (state->hud.word & FIELD_HUD_SPECIAL_GAUGE)
+        if (state->hud.word & FIELD_HUD_SHOW_TECHNIQUE_GAUGE)
         {
             if (state->technique_gauge == 0xFF)
             {

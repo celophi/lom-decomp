@@ -8,6 +8,7 @@
 #include "sdk/rand.h"
 #include "common.h"
 #include "field_calls.h"
+#include "field_script.h"
 #include "field_interaction_start.h"
 #include "field_records.h"
 #include "field_scene_internal.h"
@@ -90,34 +91,10 @@
 /** @brief Runtime state flag: a talk window is open. */
 #define FIELD_STATE_TALKING 0x80000
 
-/** @brief Both party mode bits of the runtime state (party mode 3). */
-#define FIELD_STATE_PARTY_MODE_MASK 0x60000
-
-/** @brief Party control modes of field_begin_party_script_control. */
-#define FIELD_PARTY_MODE_ALL 1
-#define FIELD_PARTY_MODE_PAD_CONTROLLED 2
-#define FIELD_PARTY_MODE_EVENT 3
-
 /** @brief Actor control modes of field_set_actor_control_mode. */
 #define FIELD_CONTROL_PLAYER 0
 #define FIELD_CONTROL_FOLLOWER 1
 #define FIELD_CONTROL_SCRIPTED 2
-
-/** @brief Actor events delivered by the field runtime. */
-#define FIELD_EVENT_ON_SCREEN 2
-#define FIELD_EVENT_OFF_SCREEN 3
-#define FIELD_EVENT_IDLE 8
-#define FIELD_EVENT_INTERACTION 0xD
-#define FIELD_EVENT_FRAME 0xE
-#define FIELD_EVENT_START 15
-
-/** @brief Arguments of FIELD_EVENT_INTERACTION. */
-#define FIELD_INTERACTION_SCRIPT_TARGET 0x80
-#define FIELD_INTERACTION_SCRIPT_OTHER 0x81
-#define FIELD_INTERACTION_END 0x82
-#define FIELD_INTERACTION_TALK_TARGET 0x83
-#define FIELD_INTERACTION_TALK_OTHER 0x84
-#define FIELD_INTERACTION_TALK_END 0x85
 
 /** @brief Script id bit that runs the script as the field script instead of a talk message. */
 #define FIELD_INTERACTION_SCRIPT 0x8000
@@ -207,9 +184,7 @@ extern FieldMapPoint g_field_player_map_position;
 
 /* Functions of other FIELD files without a shared prototype. */
 s32* func_800C1EC8(s32* src, s32* dest, s32 n);
-s32 func_800BD3B0(s32 owner_id, s32 variable);
-s32 func_800BD414(s32 owner_id, s32 variable_id);
-void func_800BD520(s32 owner_id, u32 variable_id, s32 value);
+s32 field_read_script_var(s32 owner_id, s32 variable);
 void field_start_actor_script(s32 actor_id, s32 mode);
 u8* field_get_event_script(s32 script_id);
 s32 field_get_actor_position(s32 key, Vec3i* position);
@@ -221,7 +196,6 @@ s32 field_queue_actor_event(s32 owner_id, s32 event_id, s32 argument);
 FieldActorRecord* field_find_actor_record();
 FieldActorRecord* field_find_actor_record_or_default(u32 actor_id, FieldRuntimeContext* context);
 void field_stop_actor_script(s32 actor_id, s32 flags);
-void func_800C299C(s32 source);
 void field_script_run(FieldScriptState* state);
 s32 akao_cmd_c1(s32 arg0, s32 arg1, s32 arg2);
 
@@ -259,7 +233,7 @@ static void field_runtime_init(void)
 
     if (g_field_game_state->characters[1].name[0] != 0)
     {
-        if (func_800BD414(0, FIELD_VARIABLE_GUEST_VARIANT) == FIELD_NO_VARIANT)
+        if (field_get_script_var(0, FIELD_VARIABLE_GUEST_VARIANT) == FIELD_NO_VARIANT)
         {
             record_game_diagnostic(DIAG_ERROR, DIAG_MISSING_PARTY_VARIANT, 1, 0);
         }
@@ -267,7 +241,7 @@ static void field_runtime_init(void)
 
     if (g_field_game_state->characters[2].name[0] != 0)
     {
-        if (func_800BD414(0, FIELD_VARIABLE_COMPANION_VARIANT) == FIELD_NO_VARIANT)
+        if (field_get_script_var(0, FIELD_VARIABLE_COMPANION_VARIANT) == FIELD_NO_VARIANT)
         {
             record_game_diagnostic(DIAG_ERROR, DIAG_MISSING_PARTY_VARIANT, 2, 0);
         }
@@ -309,13 +283,13 @@ static void field_init_text_macros(void)
     g_field_text_macros[FIELD_TEXT_MACRO_WEEKDAY].character_limit = FIELD_TEXT_NO_LIMIT;
     g_field_text_macros[FIELD_TEXT_MACRO_WEEKDAY].text = FIELD_OFFSET_TABLE_TEXT(g_field_weekday_names, g_field_game_state->control.fields.weekday & FIELD_WEEKDAY_MASK);
 
-    if ((func_800BD414(0, FIELD_VAR_UNKA02) != 0) || ((g_field_game_state->characters[1].info.word & FIELD_CHARACTER_AI) != 0))
+    if ((field_get_script_var(0, FIELD_VAR_UNKA02) != 0) || ((g_field_game_state->characters[1].info.word & FIELD_CHARACTER_AI) != 0))
     {
-        func_800BD520(0, FIELD_VAR_UNKA03, 1);
+        field_set_script_var(0, FIELD_VAR_UNKA03, 1);
     }
     else
     {
-        func_800BD520(0, FIELD_VAR_UNKA03, 0);
+        field_set_script_var(0, FIELD_VAR_UNKA03, 0);
     }
 }
 
@@ -384,25 +358,25 @@ static void field_init_script_variables(void)
     {
         g_field_game_state->control.word = flags & ~FIELD_CONTROL_RESET_WORDS;
         func_800C1EC8(NULL, g_field_game_state->words, 0x20);
-        func_800BD520(0, FIELD_VAR_RANDOM_SEED, rand() & 0xFF);
+        field_set_script_var(0, FIELD_VAR_RANDOM_SEED, rand() & 0xFF);
     }
 
     if (g_field_game_state->control.fields.hero_level >= 18)
     {
-        func_800BD520(0, FIELD_VAR_UNKA00, 1);
+        field_set_script_var(0, FIELD_VAR_UNKA00, 1);
     }
 
-    func_800BD520(0, FIELD_VAR_WEEKDAY, g_field_game_state->control.fields.weekday & FIELD_WEEKDAY_MASK);
-    func_800BD520(0, FIELD_VAR_ELEMENT_LEVELS + 0x00, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[0]]);
-    func_800BD520(0, FIELD_VAR_ELEMENT_LEVELS + 0x04, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[1]]);
-    func_800BD520(0, FIELD_VAR_ELEMENT_LEVELS + 0x08, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[2]]);
-    func_800BD520(0, FIELD_VAR_ELEMENT_LEVELS + 0x0C, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[3]]);
-    func_800BD520(0, FIELD_VAR_ELEMENT_LEVELS + 0x10, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[4]]);
-    func_800BD520(0, FIELD_VAR_ELEMENT_LEVELS + 0x14, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[5]]);
-    func_800BD520(0, FIELD_VAR_ELEMENT_LEVELS + 0x18, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[6]]);
-    func_800BD520(0, FIELD_VAR_ELEMENT_LEVELS + 0x1C, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[7]]);
-    func_800BD520(0, FIELD_VAR_UNK5320, func_800C3688(g_music_track_index));
-    func_800BD520(0, FIELD_VAR_MUSIC_TRACK, g_music_track_index);
+    field_set_script_var(0, FIELD_VAR_WEEKDAY, g_field_game_state->control.fields.weekday & FIELD_WEEKDAY_MASK);
+    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x00, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[0]]);
+    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x04, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[1]]);
+    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x08, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[2]]);
+    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x0C, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[3]]);
+    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x10, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[4]]);
+    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x14, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[5]]);
+    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x18, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[6]]);
+    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x1C, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[7]]);
+    field_set_script_var(0, FIELD_VAR_UNK5320, field_get_land_distance(g_music_track_index));
+    field_set_script_var(0, FIELD_VAR_MUSIC_TRACK, g_music_track_index);
 }
 
 /**
@@ -424,7 +398,7 @@ void field_install_actor_action(FieldActionRequest* request, s32 request_index)
     {
         field_runtime_init();
     }
-    value = func_800BD3B0(0, request->condition.variable << 16);
+    value = field_read_script_var(0, request->condition.variable << 16);
     if ((value >= request->condition.minimum) && (value <= request->condition.maximum))
     {
         switch (request->control.bits.kind)
@@ -717,7 +691,7 @@ static void field_leave_scene(void)
 {
     u16 scene_id;
 
-    func_800BD520(0, FIELD_VAR_KEEP_PARTY_SCRIPTED, 0);
+    field_set_script_var(0, FIELD_VAR_KEEP_PARTY_SCRIPTED, 0);
     scene_id = g_field_runtime->transition.fields.scene_id;
     switch (scene_id)
     {
@@ -732,7 +706,7 @@ static void field_leave_scene(void)
         g_pending_game_state = GAME_STATE_WORLD_MAP;
         g_layout_sub_mode = -1;
         g_layout_option = -1;
-        if (func_800BD414(0, FIELD_VAR_WORLD_MAP_REDIRECT) != 0)
+        if (field_get_script_var(0, FIELD_VAR_WORLD_MAP_REDIRECT) != 0)
         {
             g_pending_game_state = GAME_STATE_FIELD;
             g_field_runtime->transition.fields.scene_id = 1;
@@ -877,7 +851,7 @@ static void field_update_main_script(void)
         {
             field_queue_actor_event(g_field_runtime->actors[i].id, FIELD_EVENT_INTERACTION, FIELD_INTERACTION_END);
         }
-        if (!g_field_runtime->transition.bits.requested && (func_800BD414(0, FIELD_VAR_KEEP_PARTY_SCRIPTED) == 0))
+        if (!g_field_runtime->transition.bits.requested && (field_get_script_var(0, FIELD_VAR_KEEP_PARTY_SCRIPTED) == 0))
         {
             field_end_party_script_control();
         }
@@ -980,7 +954,7 @@ s32 field_start_interaction(s32 actor_id, s32 script)
     {
         return 0;
     }
-    if (func_800BD414(0, FIELD_VAR_INTERACTIONS_BLOCKED) != 0)
+    if (field_get_script_var(0, FIELD_VAR_INTERACTIONS_BLOCKED) != 0)
     {
         return 0;
     }
@@ -1004,7 +978,7 @@ s32 field_start_interaction(s32 actor_id, s32 script)
     source = (flags >> FIELD_ACTOR_SOURCE_SHIFT) & FIELD_ACTOR_SOURCE_MASK;
     if (source != 0)
     {
-        func_800C299C(source);
+        field_unlock_encyclopedia_entry(source);
     }
 
     if ((script & FIELD_INTERACTION_SCRIPT) != 0)

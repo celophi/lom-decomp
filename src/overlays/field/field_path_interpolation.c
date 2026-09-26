@@ -1,353 +1,255 @@
-#include "common.h"
-
 /**
  * @file field_path_interpolation.c
- * @brief Field effect-point path interpolation: entry generation, weight
- *        evaluation, and knot/offset setup.
+ * @brief Closed B-spline paths for path-mode field effects.
  *
- * Groups the six contiguous GCC 2.7.2 CDK routines at 800A1D48..800A22A8 that
- * share the D_80117Exx interpolation-parameter block and the D_801178E8 point
- * table: advance/generate entries, evaluate weights, fill knot offsets, build
- * samples, and evaluate the knot recurrence. func_800A2128 was previously kept
- * as a separate GCC 2.8.0 G0 unit, but it also matches byte-for-byte under this
- * unit's CDK configuration. See docs/decompilation/field-boundaries/map.md.
+ * field_init_path scatters control points on a ring around an effect and sets
+ * up a uniform, closed spline of FIELD_PATH_DEGREE through them;
+ * field_update_path_position then evaluates the spline at the effect's path
+ * time. Weights and knots use 20.12 fixed point (ONE is 1.0), control points
+ * are whole field units (positions >> 8).
  */
 
-/** @brief Actor record supplying base coordinates for generated entries. */
+#include "common.h"
+#include "field_path_interpolation.h"
+#include "sdk/libgte.h"
+#include "sdk/rand.h"
+
+/** @brief Control point slots per path group (FIELD_PATH_POINT_COUNT are used). */
+#define FIELD_PATH_POINT_CAPACITY 11
+
+/** @brief Control points field_init_path generates. */
+#define FIELD_PATH_POINT_COUNT 10
+
+/** @brief Spline degree field_init_path selects (cubic). */
+#define FIELD_PATH_DEGREE 3
+
+/** @brief Path time steps between two control points. */
+#define FIELD_PATH_SEGMENT_STEPS 20
+
+/** @brief Ored into a 15-bit rand() value so a random radius is at least half the requested one. */
+#define FIELD_PATH_MIN_RADIUS_BIT 0x4000
+
+/** @brief Control points of one path, X and Z in whole field units. */
 typedef struct
 {
-    s32 x;
-    u8 pad4[4];
-    s32 z;
-} FieldPathSource;
+    s16 x[FIELD_PATH_POINT_CAPACITY];
+    s16 z[FIELD_PATH_POINT_CAPACITY];
+} FieldPathGroup;
 
-/** @brief Field position with the vertical component left unchanged here. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 z;
-} FieldPosition;
+extern s32 g_field_path_segment_steps;
+extern FieldPathGroup g_field_path_groups[FIELD_PATH_GROUP_COUNT];
 
-/** @brief Interpolation workspace matching the observed contiguous stack buffers. */
-typedef struct
-{
-    s32 coefficients[22];
-    s32 samples[12];
-    s32 knots[34];
-    s32 span;
-} InterpolationWorkspace;
+/** @brief Spline order (degree + 1). */
+extern s32 g_field_path_order;
 
-extern s32 D_801178E0;
-extern u8 D_801178E8[];
-extern s32 D_80117E68;
-extern s32 D_80117E6C;
-extern s32 D_80117E70;
-extern s32 D_80117E74;
-extern s32 D_80117E78;
-extern s32 D_80117E7C;
-extern s32 D_80117E80;
-extern s32 D_80117E84;
+/** @brief Path time steps per loop; path time wraps here. */
+extern s32 g_field_path_length;
 
-s32 rand(void);
-s32 rcos(s32 angle);
-s32 rsin(s32 angle);
+/** @brief Control points the evaluation wraps around. */
+extern s32 g_field_path_point_count;
 
-/* Forward declarations for routines defined later in this unit. */
-void func_800A20DC(s32 *);
-void func_800A22A8(s32, s32, s32 *, s32 *, s32 *);
-void func_800A2128(s32 (*)[2], s32 *);
+/** @brief Spline order / 2. */
+extern s32 g_field_path_half_order;
+
+/** @brief Basis functions of the unwrapped spline (points + degree). */
+extern s32 g_field_path_basis_count;
+
+/** @brief Knots of the unwrapped spline (points + 2 * degree). */
+extern s32 g_field_path_knot_count;
+
+extern s32 g_field_path_degree;
+
+/** @brief Control points field_init_path generated. */
+extern s32 g_field_path_generated_count;
+
+static void field_evaluate_path(s32 time, FieldMotionRecord* record, s32 group);
+static void field_build_path_knots(s32* knots);
+static void field_fold_path_weights(s32 (*basis)[2], s32* weights);
+static void field_compute_path_basis(s32 order, s32 parameter, s32* span, s32* knots, s32 (*basis)[2]);
 
 /**
- * @brief Advance an actor's animation index and drive one interpolation step.
- * @param index Pointer to the actor's current index byte.
- * @param position Field position that receives the interpolated components.
- * @param group Effect-entry group index.
+ * @brief Wrap an effect's path time into the path length and move the effect to that point.
+ * @param time Path time of the effect, wrapped in place.
+ * @param record Effect whose x and z are set.
+ * @param group Path group the effect follows.
  */
-void func_800A1D48(u8 *index, FieldPosition *position, s32 group)
+void field_update_path_position(u8* time, FieldMotionRecord* record, s32 group)
 {
-    u8 value = *index;
-
-    if (value >= D_80117E6C)
+    if (*time >= g_field_path_length)
     {
-        *index = value - (u8)D_80117E6C;
+        *time -= g_field_path_length;
     }
-
-    func_800A1F2C(*index, position, group);
+    field_evaluate_path(*time, record, group);
 }
 
 /**
- * @brief Initialize the field effect entries associated with an actor record.
- * @param source Actor record that supplies the base coordinates.
- * @param magnitude Magnitude used to offset each generated entry.
- * @param randomize Nonzero to randomize the generated magnitude.
- * @param group Effect-entry group index.
+ * @brief Scatter a path group's control points on a ring around an effect and set up the spline.
+ * @param center Effect whose x and z are the ring center.
+ * @param radius Ring radius in whole field units.
+ * @param randomize Nonzero to give each point a random radius from radius / 2 to radius.
+ * @param group Path group to fill.
  */
-void func_800A1D98(FieldPathSource *source, s32 magnitude, s32 randomize, s32 group)
+void field_init_path(FieldMotionRecord* center, s32 radius, s32 randomize, s32 group)
 {
     s32 i;
     s32 angle;
-    s32 entry_magnitude;
-    u8 *base;
-    u8 *entry;
+    s32 point_radius;
 
-    i = 0;
-    base = D_801178E8;
-    entry = base + group * 0x2C;
-    D_80117E80 = 3;
-    D_801178E0 = 0x14;
-    D_80117E84 = 0xA;
-    do
+    g_field_path_degree = FIELD_PATH_DEGREE;
+    g_field_path_segment_steps = FIELD_PATH_SEGMENT_STEPS;
+    g_field_path_generated_count = FIELD_PATH_POINT_COUNT;
+    for (i = 0; i < FIELD_PATH_POINT_COUNT; i++)
     {
         angle = rand() >> 3;
-        if (randomize != 0)
+        if (randomize)
         {
-            entry_magnitude = (s32)((rand() | 0x4000) * magnitude) >> 0xF;
+            point_radius = ((rand() | FIELD_PATH_MIN_RADIUS_BIT) * radius) >> 15;
         }
         else
         {
-            entry_magnitude = magnitude;
+            point_radius = radius;
         }
-        *(s16 *)(entry + 0) = (s16)(((s32)(rcos(angle) * entry_magnitude) >> 0xC) + ((s32)source->x >> 8));
-        i += 1;
-        *(s16 *)(entry + 0x16) = (s16)(((s32)(rsin(angle) * entry_magnitude) >> 0xC) + ((s32)source->z >> 8));
-        entry += 2;
-    } while (i < 0xA);
-    D_80117E70 = D_80117E84;
-    D_80117E78 = D_80117E84 + D_80117E80;
-    D_80117E68 = D_80117E80 + 1;
-    D_80117E74 = D_80117E68 >> 1;
-    D_80117E7C = D_80117E84 + (D_80117E80 * 2);
-    D_80117E6C = (D_801178E0 * D_80117E84) + 1;
+        g_field_path_groups[group].x[i] = ((rcos(angle) * point_radius) >> 12) + (center->x >> 8);
+        g_field_path_groups[group].z[i] = ((rsin(angle) * point_radius) >> 12) + (center->z >> 8);
+    }
+    g_field_path_point_count = g_field_path_generated_count;
+    g_field_path_basis_count = g_field_path_generated_count + g_field_path_degree;
+    g_field_path_order = g_field_path_degree + 1;
+    g_field_path_half_order = g_field_path_order >> 1;
+    g_field_path_knot_count = g_field_path_generated_count + g_field_path_degree * 2;
+    g_field_path_length = g_field_path_segment_steps * g_field_path_generated_count + 1;
 }
 
 /**
- * @brief Evaluate a field point group using the generated interpolation weights.
- * @param time Input parameter scaled by D_801178E0.
- * @param position Receives the interpolated x and z components in field units.
- * @param group Index of the point group with a 0x2C-byte stride.
- * @note The moving workspace view retains the samples' 0x58-byte displacement.
- * @note Keep separate stack, map and group bases to preserve address setup.
- * @note GCC 2.7.2 CDK: 100% match, 108 instructions (432 bytes), frame 0x148.
+ * @brief Evaluate a path group's spline at a path time.
+ * @param time Path time, 0 to g_field_path_length - 1.
+ * @param record Effect whose x and z receive the point.
+ * @param group Path group to evaluate.
+ * @note basis holds 11 rows but the recurrence clears g_field_path_basis_count + 1 of
+ *       them; the extra rows run into weights, which is only filled after they are read.
  */
-void func_800A1F2C(s32 time, FieldPosition *position, s32 group)
+static void field_evaluate_path(s32 time, FieldMotionRecord* record, s32 group)
 {
-    InterpolationWorkspace work;
-    s32 last;
+    s32 basis[11][2];
+    s32 weights[12];
+    s32 knots[34];
+    s32 span;
     s32 first;
+    s32 last;
     s32 i;
     s32 x;
     s32 z;
-    s32 weight;
-    s32 product;
-    s32 product_z;
-    s32 base;
-    s32 group_base;
-    s32 map_base;
-    u8 *point;
-    InterpolationWorkspace *sample;
 
-    func_800A20DC(work.knots);
-    func_800A22A8(D_80117E68, (time << 12) / D_801178E0, &work.span, work.knots, work.coefficients);
-    func_800A2128((s32 (*)[2])work.coefficients, work.samples);
-    last = work.span - D_80117E74 + 1;
-    first = last - D_80117E80;
-    if (first < 0 || D_80117E70 - 1 < last)
+    field_build_path_knots(knots);
+    field_compute_path_basis(g_field_path_order, (time << 12) / g_field_path_segment_steps, &span, knots, basis);
+    field_fold_path_weights(basis, weights);
+    last = span - g_field_path_half_order + 1;
+    first = last - g_field_path_degree;
+    if (first < 0 || last > g_field_path_point_count - 1)
     {
         first = 0;
-        last = D_80117E70 - 1;
+        last = g_field_path_point_count - 1;
     }
     x = 0;
     z = 0;
-    i = first;
-    if (last >= i)
+    for (i = first; i <= last; i++)
     {
-        base = (s32)&work;
-        sample = (InterpolationWorkspace *)(i * 4 + base);
-        map_base = (s32)D_801178E8;
-        group_base = group * 0x2C + map_base;
-        point = (u8 *)(i * 2 + group_base);
-        do
-        {
-            product = *(s16 *)point * sample->samples[0];
-            product_z = *(s16 *)(point + 0x16) * sample->samples[0];
-            x += product >> 12;
-            z += product_z >> 12;
-            sample = (InterpolationWorkspace *)((u8 *)sample + 4);
-            i++;
-            point += 2;
-        } while (last >= i);
+        x += (g_field_path_groups[group].x[i] * weights[i]) >> 12;
+        z += (g_field_path_groups[group].z[i] * weights[i]) >> 12;
     }
-    position->x = x << 8;
-    position->z = z << 8;
+    record->x = x << 8;
+    record->z = z << 8;
 }
 
 /**
- * @brief Fill an output array with fixed-point offsets derived from field globals.
- * @param out Destination array for the generated 20.12 fixed-point values.
+ * @brief Build the uniform knot vector, starting at 1 - order so the first span begins at 0.
+ * @param knots Receives g_field_path_knot_count knots.
  */
-void func_800A20DC(s32 *out)
+static void field_build_path_knots(s32* knots)
 {
-    s32 value;
-    s32 base;
-    s32 bound;
     s32 i;
 
-    i = 0;
-    value = D_80117E7C;
-    if (value > 0)
+    for (i = 0; i < g_field_path_knot_count; i++)
     {
-        bound = value;
-        value = D_80117E68;
-        base = value - 1;
-        do
-        {
-            *out++ = (i - base) << 12;
-            i++;
-        } while (i < bound);
+        knots[i] = (i + 1 - g_field_path_order) << 12;
     }
 }
 
 /**
- * @brief Build interpolation samples from the selected coefficient column.
- * @param source Two-word coefficient records.
- * @param output Destination sample array.
+ * @brief Fold the unwrapped basis weights onto the control points of the closed path.
+ * @param basis Basis weights from field_compute_path_basis; the last level's column is used.
+ * @param weights Receives one weight per control point.
  */
-void func_800A2128(s32 (*source)[2], s32 *output)
+static void field_fold_path_weights(s32 (*basis)[2], s32* weights)
 {
-    s32 selector;
-    s32 index;
-    s32 *output_cursor;
-    s32 value0;
-    s32 value1;
+    s32 i;
 
-    index = 0;
-    if (D_80117E74 > 0)
+    for (i = 0; i < g_field_path_half_order; i++)
     {
-        s32 count;
-        s32 offset;
-
-        count = D_80117E74;
-        output_cursor = output;
-        selector = (D_80117E68 - 1) & 1;
-        offset = D_80117E70;
-        do
-        {
-            value1 = source[index + count - 1][selector];
-            value0 = source[index + offset + count - 1][selector];
-            index++;
-            *output_cursor = value1 + value0;
-            output_cursor++;
-        } while (index < count);
+        weights[i] = basis[i + g_field_path_half_order - 1][(g_field_path_order - 1) & 1] +
+                     basis[i + g_field_path_point_count + g_field_path_half_order - 1][(g_field_path_order - 1) & 1];
     }
-
-    index = 0;
-    if (D_80117E70 - D_80117E80 > 0)
+    for (i = 0; i < g_field_path_point_count - g_field_path_degree; i++)
     {
-        s32 output_offset;
-        s32 source_offset;
-        s32 count;
-
-        output_offset = D_80117E74;
-        source_offset = D_80117E80;
-        count = D_80117E70 - D_80117E80;
-        selector = (D_80117E68 - 1) & 1;
-        do
-        {
-            s32 output_index;
-            s32 source_index;
-
-            output_index = index + output_offset;
-            source_index = index + source_offset;
-            index++;
-            output[output_index] = source[source_index][selector];
-        } while (index < count);
+        weights[i + g_field_path_half_order] = basis[i + g_field_path_degree][(g_field_path_order - 1) & 1];
     }
-
-    index = 0;
-    if (D_80117E74 - 1 > 0)
+    for (i = 0; i < g_field_path_half_order - 1; i++)
     {
-        s32 output_offset;
-        s32 count;
-        s32 source_offset;
-
-        output_offset = D_80117E74;
-        count = D_80117E74 - 1;
-        source_offset = D_80117E70;
-        selector = (D_80117E68 - 1) & 1;
-        do
-        {
-            s32 source_index;
-
-            source_index = index + source_offset;
-            output[source_index - output_offset + 1] = source[source_index][selector] + source[index][selector];
-            index++;
-        } while (index < count);
+        weights[i + g_field_path_point_count - g_field_path_half_order + 1] =
+            basis[i + g_field_path_point_count][(g_field_path_order - 1) & 1] + basis[i][(g_field_path_order - 1) & 1];
     }
 }
 
 /**
- * @brief Evaluate fixed-point interpolation weights for a knot sequence.
- * @param order Number of interpolation levels, including the initial span test.
- * @param parameter Parameter to evaluate against the knot sequence.
- * @param span Receives the selected knot span.
- * @param knots Knot values used by the interpolation recurrence.
- * @param workspace Interleaved two-column weight buffer for successive levels.
- * @note Weights use 0x1000 as unity and alternate columns on each level.
- * @note Keep separate knot pairs to preserve the original register allocation.
- * @note GCC 2.7.2 CDK matches all 173 instructions (692 bytes).
+ * @brief Evaluate the B-spline basis functions at a parameter (Cox-de Boor recurrence).
+ * @param order Spline order; levels 1 to order - 1 are computed.
+ * @param parameter Spline parameter in 20.12 knot units.
+ * @param span Receives the knot span that contains @p parameter.
+ * @param knots Knot vector from field_build_path_knots.
+ * @param basis Weights per basis function; level n is kept in column n & 1.
  */
-void func_800A22A8(s32 order, s32 parameter, s32 *span, s32 *knots, s32 *workspace)
+static void field_compute_path_basis(s32 order, s32 parameter, s32* span, s32* knots, s32 (*basis)[2])
 {
     s32 i;
     s32 level;
     s32 left;
     s32 right;
-    s32 lower;
-    s32 upper;
-    s32 second_lower;
-    s32 second_upper;
 
-    for (i = 0; i < D_80117E78 + 1; i++)
+    for (i = 0; i < g_field_path_basis_count + 1; i++)
     {
-        ((s32 (*)[2])workspace)[i][0] = 0;
+        basis[i][0] = 0;
     }
-    for (i = 0; i < D_80117E78; i++)
+    for (i = 0; i < g_field_path_basis_count; i++)
     {
         if (parameter >= knots[i] && parameter < knots[i + 1])
         {
-            ((s32 (*)[2])workspace)[i][0] = 0x1000;
+            basis[i][0] = ONE;
             *span = i;
         }
     }
-    if (parameter >= knots[D_80117E78 - 1] && parameter <= knots[D_80117E78] + 1)
+    if (parameter >= knots[g_field_path_basis_count - 1] && parameter <= knots[g_field_path_basis_count] + 1)
     {
-        ((s32 (*)[2])workspace)[D_80117E78 - 1][0] = 0x1000;
-        *span = D_80117E78 - 1;
+        basis[g_field_path_basis_count - 1][0] = ONE;
+        *span = g_field_path_basis_count - 1;
     }
     for (level = 1; level < order; level++)
     {
-        for (i = 0; i < D_80117E78 + 1; i++)
+        for (i = 0; i < g_field_path_basis_count + 1; i++)
         {
-            ((s32 (*)[2])workspace)[i][level & 1] = 0;
+            basis[i][level & 1] = 0;
         }
         for (i = *span - level; i <= *span; i++)
         {
-            right = 0;
-            left = right;
-            lower = knots[i + 1];
-            upper = knots[i + level + 1];
-            if (lower != upper)
+            left = right = 0;
+            if (knots[i + 1] != knots[i + level + 1])
             {
-                right = ((upper - parameter) * ((s32 (*)[2])workspace)[i + 1][(level - 1) & 1]) / (upper - lower);
+                right = ((knots[i + level + 1] - parameter) * basis[i + 1][(level - 1) & 1]) / (knots[i + level + 1] - knots[i + 1]);
             }
-            second_lower = knots[i];
-            second_upper = knots[i + level];
-            if (second_lower != second_upper)
+            if (knots[i] != knots[i + level])
             {
-                left = ((parameter - second_lower) * ((s32 (*)[2])workspace)[i][(level - 1) & 1]) / (second_upper - second_lower);
+                left = ((parameter - knots[i]) * basis[i][(level - 1) & 1]) / (knots[i + level] - knots[i]);
             }
-            ((s32 (*)[2])workspace)[i][level & 1] = right + left;
+            basis[i][level & 1] = right + left;
         }
     }
 }

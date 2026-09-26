@@ -26,6 +26,9 @@
 
 #define FIELD_SCRIPT_RUNNING 0x80000000
 
+/* Actor id operand value that stands for the script's owner. */
+#define FIELD_SCRIPT_OWNER 0xFF
+
 /* Bit 0 of a record's flags word is the result of the last comparison. */
 #define FIELD_SCRIPT_COND 0x1
 
@@ -53,7 +56,17 @@ typedef struct
     s32 unk4;
     u8* pc;
     u32 flags;
-    s32 wait;
+    union
+    {
+        u32 word;
+        struct
+        {
+            /** @brief Set on a called record: returning to it keeps the step loop running. */
+            u32 resume : 1;
+            /** @brief Frames left to wait before the record runs again. */
+            u32 frames : 31;
+        } bits;
+    } wait;
 } FieldScriptRecordState;
 
 /**
@@ -87,13 +100,27 @@ extern void (*g_field_script_ext_op_table[16])();
 #define FIELD_SCRIPT_ACTIVE_RECORD() FIELD_SCRIPT_RECORD(g_field_script->active_record)
 #define FIELD_SCRIPT_ACTIVE_RECORD_STATE() FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)
 
-u8* field_script_read_operand(u32 type, u8* data, s32* value);
-u8* field_script_read_operand_or_owner(u32 type, u8* data, s32* value);
+u8* field_script_read_operand(s32 type, u8* data, s32* value);
+u8* field_script_read_operand_or_owner(s32 type, u8* data, s32* value);
 u8* field_script_read_u16(u8* data, u16* value);
 
 /* Declared without a prototype: opcode 0x0E passes the record and its depth as extra arguments. */
 void field_script_branch();
-s32 func_800BD3B0();
-void func_800BD434();
+
+/*
+ * Declared without a prototype: their FieldScriptVariableRef argument travels
+ * in the upper half of a register, and the opcode handlers pass it as an int
+ * shifted left by 16 (field_get_script_var and field_set_script_var take a
+ * plain int reference instead).
+ */
+s32 field_read_script_var();
+void field_write_script_var();
+
+s32 field_get_script_var(s32 owner_id, s32 variable);
+void field_set_script_var(s32 owner_id, u32 variable, s32 value);
+
+/* Bit field access to an array of bytes, halfwords or words (width 0, 1 or 2). */
+s32 field_read_bits(s32 width, void* base, s32 index, s32 shift, s32 bit_count);
+void field_write_bits(s32 width, void* base, s32 index, s32 shift, s32 bit_count, s32 value);
 
 #endif

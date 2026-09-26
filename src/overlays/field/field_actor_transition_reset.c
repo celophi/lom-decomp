@@ -60,8 +60,8 @@ s32 field_find_active_special_attack_actor(void);
 void field_initialize_actor_slots(void);
 void field_reset_global_color_scale(void);
 void field_restart_actor_animation(FieldActor* actor);
-void func_8005A0D0(s32 object_index, s32 red, s32 green, s32 blue);
-s32 func_8005B218(void);
+void field_set_color_scale(s32 object_index, s32 red, s32 green, s32 blue);
+s32 field_is_scene_fading(void);
 void field_reset_draw_state(void);
 void func_80068028(void);
 void field_update_object_effects(s32 object_index);
@@ -71,8 +71,7 @@ void field_command_history_clear(s32 object_index);
 void field_play_sound(s32 arg0, s32 arg1);
 void field_release_sfx_group(s32 object_index);
 void field_clear_actor_texts(void);
-void func_800B0234(void);
-void func_800B34D0(s32 mode);
+void field_battle_setup(s32 mode);
 s32 field_find_defeating_actor(void);
 s32 field_defeat_animation_playing(void);
 void field_cancel_animation_bindings(void);
@@ -97,7 +96,7 @@ void field_set_battle_group(s32 mode, void* actor_data)
     {
         field_cancel_animation_bindings();
         g_field_restore_group = 0;
-        func_800B34D0(0);
+        field_battle_setup(0);
         g_field_actions_limited = 1;
         for (index = 0; index < FIELD_PARTY_COUNT; index++)
         {
@@ -139,7 +138,7 @@ void field_set_battle_group(s32 mode, void* actor_data)
     pad_context = g_pad_ctx;
     D_8012291C = 1;
     g_field_money_snapshot = *(s32*)(pad_context + 0x2C);
-    func_800B0234();
+    field_begin_battle_entry();
 
     g_field_actors[0].animation_active = g_field_actors[0].animation_state = 1;
     g_field_actors[0].animation_frame = 0;
@@ -247,7 +246,7 @@ void field_cancel_animation_bindings(void)
     s32 index;
     s32 owner;
 
-    if (func_8005B218() != 0)
+    if (field_is_scene_fading() != 0)
     {
         page = FIELD_STATE_PAGE;
         for (i = 0; i < FIELD_ACTOR_BINDING_COUNT; i++)
@@ -312,7 +311,7 @@ void field_update_battle_end(void)
 
     if (g_field_actions_limited != 0)
     {
-        if ((field_find_active_special_attack_actor() == 0) && (field_find_defeating_actor() == 0) && (g_field_text_session_active == 0) && (func_8005B218() == 0) &&
+        if ((field_find_active_special_attack_actor() == 0) && (field_find_defeating_actor() == 0) && (g_field_text_session_active == 0) && (field_is_scene_fading() == 0) &&
             (field_defeat_animation_playing() == 0))
         {
             g_field_battle_idle_checks += 1;
@@ -334,7 +333,7 @@ void field_update_battle_end(void)
             func_80068028();
             akao_cmd_f1();
             field_reset_global_color_scale();
-            func_8005A0D0(-1, FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL);
+            field_set_color_scale(-1, FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL);
             field_clear_actor_texts();
             field_play_sound(0x24, 0x80);
             for (i = 0; i < FIELD_PARTY_COUNT; i++)

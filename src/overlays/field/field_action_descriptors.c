@@ -5,6 +5,7 @@
 
 #include "game_audio.h"
 #include "common.h"
+#include "field_calls.h"
 #include "field_records.h"
 
 /** @brief Record kind bits (FieldStatusRecordMeta bits.kind) within the packed word. */
@@ -73,8 +74,6 @@ extern FieldBattleContext *g_field_battle;
 extern FieldActionBank *g_field_action_bank;
 extern FieldGameState *g_field_game_state;
 
-void *func_800C2958(s32 page, u16 index);
-
 static FieldActionDescriptor *field_command_action_descriptor(s32 command);
 
 /**
@@ -132,7 +131,7 @@ FieldActionDescriptor *field_select_action_descriptor(void)
     }
     else if ((kind == STATUS_KIND_BITS(STATUS_KIND_COMPANION)) || (kind == STATUS_KIND_BITS(STATUS_KIND_COMPANION_B)))
     {
-        descriptor = func_800C2958(COMPANION_ACTION_PAGE, g_field_battle->action->action_id);
+        descriptor = field_get_party_action(COMPANION_ACTION_PAGE, g_field_battle->action->action_id);
     }
     else
     {

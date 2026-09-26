@@ -23,6 +23,7 @@
 #include "field_effect_dispatch.h"
 #include "vector.h"
 
+struct FieldActionDescriptor;
 struct FieldActor;
 struct FieldActorSlot;
 struct FieldPlayerRecord;
@@ -58,6 +59,14 @@ typedef struct FieldCollisionQuery
     u16 depth;
 } FieldCollisionQuery;
 
+/** @brief Position of a scene object or part in whole pixels (field_get_object_position). */
+typedef struct FieldPos
+{
+    s16 x;
+    s16 y;
+    s16 z;
+} FieldPos;
+
 /* field_action_modifiers.c */
 void field_battle_set_watched_record(s32 record_id);
 s32 field_battle_handle_defeat(struct FieldStatusRecord *record);
@@ -90,6 +99,7 @@ void field_draw_actor_hud(struct FieldRenderHalf *render_half);
 void field_update_object_effects(s32 index);
 void field_clear_fade_prims(void);
 void field_add_fade_prim(const void *prim, s16 depth);
+s32 field_load_vram_resource(s32 id, RECT *rect, s32 mode);
 void field_draw_fade_prims(struct FieldRenderHalf *render_half);
 
 /* field_actor_input_actions.c */
@@ -319,7 +329,7 @@ void field_copy_inventory_record(u8 *destination, u8 *source);
 void field_open_gosub_screen_sequence(void *screen_sequence);
 void field_open_shop_mode_0(s32 shop_options);
 void field_open_shop_mode_1(s32 entry_count, s32 entries, s32 list_options, s32 shop_options);
-void field_run_name_entry(s32 initial_name, s32 active_name, s32 source_mode, s32 history_index, s32 custom_name);
+void field_run_name_entry(u8 *initial_name, u8 *active_name, s32 source_mode, s32 history_index, s32 custom_name);
 void field_run_zukan(s32 context);
 
 /* field_modal_stream_start.c */
@@ -353,46 +363,62 @@ void field_restore_actor_capacity_fraction(s32 record_id, s32 fraction_256);
 void field_grant_actor_pickup(void *unused, s32 owner_id);
 
 /* field_record_position_queries.c */
-s32 func_800C1FFC(s32 actor_id, s32 half_width, s32 half_depth);
+s32 field_is_actor_near_stored_position(s32 actor_id, s32 half_width, s32 half_depth);
 
 /* field_record_setup_ops.c */
-void func_800BE710(s32 kind);
-void func_800BE888(struct FieldItemRecord *record, s32 category, s32 item_type, s32 item_subtype);
-void func_800BEC44(struct FieldItemRecord *record, s32 command_index);
+void field_create_item_from_gosub(s32 kind);
+void field_create_equipment_item(struct FieldItemRecord *record, s32 category, s32 item_type, s32 item_subtype);
+void field_temper_item(struct FieldItemRecord *record, s32 command_index);
 
 /* field_record_stat_ops.c */
-void func_800B7C58(s32 index);
-s32 func_800B7EE8(struct FieldCharacterRecord *character, u32 stat_index);
+void field_refresh_party_member(s32 index);
+s32 field_get_equipped_stat(struct FieldCharacterRecord *character, u32 stat_index);
 
 /* field_record_table_ops.c */
-void func_800C35AC(s32 land_index);
-s32 func_800C35E4(s32 land_index);
-s32 func_800C3688(s32 land_index);
-void func_800C37A8(u32 seed, struct FieldItemKey *out);
-s32 func_800C3860(s32 amount);
-s32 func_800C3894(u32 amount);
-s32 func_800C38C8(struct FieldItemRecord *item);
-void func_800C396C(void);
+void field_make_land_available(s32 land_index);
+s32 field_get_land_state(s32 land_index);
+s32 field_get_land_distance(s32 land_index);
+void field_generate_item_key(u32 seed, struct FieldItemKey *out);
+s32 field_receive_money(s32 amount);
+s32 field_spend_money(u32 amount);
+s32 field_get_item_value(struct FieldItemRecord *item);
+void field_cache_inventory_values(void);
 
 /* field_resource_load.c */
-void func_800B0244(void);
-s32 func_800B0710(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-s32 func_800B0850(void);
-void func_800B0A08(s32 arg0);
+void field_reset_battle_entry(void);
+s32 field_begin_battle_entry(void);
+void field_update_battle_entry(void);
+s32 field_queue_battle_entry_change(s32 actor_key, s32 animation, s32 builtin_animation, s32 sound);
+s32 field_party_reload_pending(void);
+void field_install_party_reload(s32 alternate_layout, s32 slot);
+void field_request_party_reload(s32 weapon_set);
+
+/* field_resource_table_ops.c */
+u8* field_get_party_event_script(s32 page, u16 entry);
+u8* field_get_party_private_script(s32 page, u16 entry);
+struct FieldActionDescriptor* field_get_party_action(s32 page, u16 index);
+void field_unlock_encyclopedia_entry(u32 entry);
+s32 field_add_template_item(s32 index);
+void field_discard_item(s32 index);
+
+/* field_reward_command_ops.c */
+s32 field_roll_defeat_drop(struct FieldStatusRecord* record);
+void field_grant_reward(s32 recipient, s32 owner, u32 kind);
 
 /* field_ring_selection.c */
-void func_800A43E8(s32 position_mode, s32 resource_index, u16 excluded_mask, s32 cancel_index);
-s32 func_800A4744(void);
-u8 func_800A4778(void);
-s32 func_800A4798(u8 *render_context);
-void func_800A5174(s32 bank, s32 queue_id);
-void func_800A54D0(void);
+void field_open_ring_menu(s32 position_mode, s32 menu_id, u16 excluded_mask, s32 cancel_index);
+s32 field_get_ring_result(void);
+u8 field_get_ring_cursor_entry(void);
+s32 field_update_ring_menu(struct FieldRenderHalf *render_half);
+void field_load_party_script_page(s32 party_slot, s32 resource_id);
+void field_upload_golem_palettes(void);
+void field_copy_golem_portrait_palette(u8 *destination, s32 palette);
 
 /* field_saved_slot_ops.c */
-s32 func_800C2264(s32 template_index);
-s32 func_800C23F4(void);
-s32 func_800C24BC(s32 index);
-void func_800C25A0(s32 index);
+s32 field_add_stored_companion(s32 template_index);
+s32 field_release_stored_companion(void);
+s32 field_get_stored_companion_status(s32 index);
+void field_rename_stored_companion(s32 index);
 
 /* field_scene_build.c */
 void field_draw_scene_objects(u8* *cursor, u_long *ot, s32 update_mode);
@@ -402,21 +428,25 @@ void field_size_work_buffer(void);
 void field_apply_pixel_lookup(u16 *pixels, s32 pixel_count, s32 table_index, void *unused);
 void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op);
 void field_update_scene_fade(void);
-void func_8005A67C(s32 index, s32 op);
-s32 func_8005A84C(s32 list_kind, s32 index);
-void func_8005B1EC(void);
-s32 func_8005B218(void);
-void func_8005B228(s32 index, s32 enabled);
-void func_8005B288(s32 selector);
+void field_set_object_visible(s32 obj_index, s32 part_index, s32 visible);
+void field_get_object_position(s32 obj_index, s32 part_index, FieldPos *out);
+void field_play_effect_animation(s32 index, s32 forward);
+void field_control_sequence(s32 index, s32 op);
+s32 field_get_animation_state(s32 list_kind, s32 index);
+void field_begin_scene_fade_out(void);
+s32 field_is_scene_fading(void);
+void field_set_node_enabled(s32 index, s32 enabled);
+void field_set_pixel_lookup(s32 selector);
 
 /* field_scene_load.c */
-void field_load_map(s32 map_id);
+void field_load_map(u16 map_id);
+void field_init_ctx(struct FieldRenderHalf* buffers, u16 object_index);
 
 /* field_script_arith_ops.c */
-s32 func_800BE5C8(s32 idx, s32 arg1, s32 arg2);
+s32 field_script_calc(s32 op, s32 left, s32 right);
 
 /* field_script_commands.c */
-void func_800BD6F4(s32 value, u8 *params);
+void field_script_command(s32 command, void *params);
 
 /* field_select_distance_bucket.c */
 s32 func_800C9ED4(s32 actor_id);

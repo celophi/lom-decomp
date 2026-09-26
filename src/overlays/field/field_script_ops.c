@@ -10,18 +10,49 @@
 #include "field_records.h"
 #include "shop.h"
 
-/** @brief g_field_game_state viewed as the game state it points at. */
-#define FIELD_GAME ((FieldGameState*)g_field_game_state)
-
 /** @brief g_field_game_state viewed as the saved game workspace it points at (g_saved_game). */
 #define FIELD_SAVED ((SavedGame*)g_field_game_state)
 
-/** @brief g_field_runtime viewed as the field runtime context it points at. */
-#define FIELD_RUNTIME ((FieldRuntimeContext*)g_field_runtime)
-
 /** @brief FieldGameState.lands viewed as FieldLandWords. */
-#define FIELD_LAND_WORDS ((FieldLandWords*)FIELD_GAME->lands)
+#define FIELD_LAND_WORDS ((FieldLandWords*)g_field_game_state->lands)
 
+/** @brief First opcode dispatched through g_field_script_pair_op_table. */
+#define FIELD_SCRIPT_PAIR_OP_BASE 0x40
+/** @brief First opcode past the pair opcodes that have handlers. */
+#define FIELD_SCRIPT_PAIR_OP_END 0x60
+/** @brief First opcode dispatched through g_field_script_ext_op_table. */
+#define FIELD_SCRIPT_EXT_OP_BASE 0x80
+
+/** @brief record_game_diagnostic codes of the interpreter. */
+#define DIAG_SCRIPT_BAD_OPCODE 1
+#define DIAG_SCRIPT_CALL_OVERFLOW 2
+
+/** @brief Actor operand value that stands for the script owner. */
+#define FIELD_SCRIPT_OWNER 0xFF
+
+/** @brief Operand types of pair and extended opcodes, one per descriptor nibble. */
+enum
+{
+    FIELD_SCRIPT_OPERAND_BYTE = 0,
+    FIELD_SCRIPT_OPERAND_HALFWORD = 1,
+    FIELD_SCRIPT_OPERAND_WORD = 2,
+    /** @brief Halfword variable reference; the value is read with field_get_script_var. */
+    FIELD_SCRIPT_OPERAND_VARIABLE = 3,
+    FIELD_SCRIPT_OPERAND_HALFWORD_ALT = 4,
+    /** @brief Halfword plus 0x10000. */
+    FIELD_SCRIPT_OPERAND_HALFWORD_HIGH = 5,
+    /** @brief No bytes and no value: the operand keeps its previous contents. */
+    FIELD_SCRIPT_OPERAND_NONE_6 = 6,
+    FIELD_SCRIPT_OPERAND_NONE_7 = 7,
+    /** @brief No bytes; the value is 0. */
+    FIELD_SCRIPT_OPERAND_ZERO = 8,
+    /** @brief No bytes; the value is 1. */
+    FIELD_SCRIPT_OPERAND_ONE = 9,
+    /** @brief No bytes; the value is FIELD_SCRIPT_OWNER. */
+    FIELD_SCRIPT_OPERAND_OWNER = 10
+};
+
+/** @brief Handler of a pair opcode: the two decoded operands. */
 typedef void (*FieldDispatchFn)(s32, s32);
 
 typedef struct
@@ -77,41 +108,33 @@ typedef struct
     FieldItemRecord records[1];
 } FieldItemResource;
 
-/*
- * Helpers reached from field script handlers. Most take an actor id where
- * 0xFF means the script owner; the owner id is byte 0 of g_field_script.
- */
-
-/*
- * Extended field script opcodes 0x80 through 0x8F.
- *
- * field_script_run hands opcodes of 0x80 and above to func_800B8308, which
- * decodes up to four operands from the descriptor bytes that follow the opcode
- * and jumps through g_field_script_ext_op_table[opcode - 0x80]. Every handler
- * here receives those decoded operands in order. An operand of 0xFF in an
- * actor-id slot means the script owner.
- */
-
-void func_800B820C();
-void func_800B8308();
-void func_800BD520(s32, s32, s32);
-u8* field_find_actor_record_or_default(s32);
+/* Opcodes below 0x40 dispatch through this table, indexed by opcode. */
 extern void (*g_field_script_op_table[])();
-extern FieldDispatchFn D_800F0D48[];
-u8* func_800B84B4(s32 arg0, u8* arg1, s32* arg2);
-s32 func_800BD414(s32 arg0, s32 arg1);
-extern u8* g_field_runtime;
-s32 field_find_object_state(s32);
-s32 func_800BD650(s32, s32, s32, s32, s32);
-void func_800BD55C(s32, s32, s32, s32, s32, s32);
-extern u8* g_field_game_state;
+/* Opcodes 0x40 to 0x5F dispatch through this table, indexed by opcode - 0x40. */
+extern FieldDispatchFn g_field_script_pair_op_table[];
+
+extern FieldRuntimeContext* g_field_runtime;
+extern FieldGameState* g_field_game_state;
 extern s32 g_field_battle, D_80123FC4;
-extern u8* field_get_event_script(s32);
-s32 field_read_actor_binding_state(s32 key);
 extern s32 D_8011F428;
 extern s32 D_801227F0;
-s32 field_is_actor_idle(s32 actor);
 extern s32 g_field_interaction_active;
+extern s32 g_field_hide_actor_panels, g_field_duel_mode, g_field_pair_indicators_disabled, D_80122980;
+extern s32 g_gosub_result_count, g_gosub_result_values;
+
+void field_script_op_00(void);
+static void field_script_dispatch_pair_op(void);
+static void field_script_dispatch_ext_op(void);
+static u8* field_script_decode_operand(s32 type, u8* data, s32* value);
+void field_script_op_85();
+
+s32 field_read_script_var(s32 owner_id, FieldScriptVariableRef variable);
+void field_write_script_var(s32 owner_id, FieldScriptVariableRef variable, s32 value);
+FieldActorRecord* field_find_actor_record_or_default(s32 id);
+s32 field_find_object_state(s32);
+extern u8* field_get_event_script(s32);
+s32 field_read_actor_binding_state(s32 key);
+s32 field_is_actor_idle(s32 actor);
 s32 field_set_actor_control_mode(s32 key, s32 mode);
 s32 field_get_actor_position(s32, s32*);
 /* Int parameters on purpose: with the (s32, u8, s8) definition the calls would narrow their arguments. */
@@ -120,30 +143,39 @@ void field_face_actor(s32 arg0, s32 arg1, FieldScriptRecord* record, s32 record_
 s32 field_set_actor_position(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 void field_spawn_targeted_animation_actor(s32 arg0, s32 arg1, s32 arg2, s32* arg3);
 u8* func_800C1E40(s32 arg0);
-extern void func_800B34D0(s32);
-extern extern s32* func_800C1EC8(s32*, s32*, s32);
+s32* func_800C1EC8(s32*, s32*, s32);
 void akao_cmd_f1(void);
 void akao_stop_song(s32);
-void func_8005B0F4(s32, s32);
+void akao_cmd_a9(s32 arg0, s32 arg1);
 void field_start_actor_turn(s32);
 void field_toggle_actor_hidden(s32);
 /* Local: field_contact_geometry.c calls it with a third argument, so it stays out of field_calls.h. */
 s32 field_start_interaction(s32 actor_id, s32 script);
-void func_800BCCE0();
 void field_stop_actor_script(s32, s32);
 void field_stop_non_script_actors(void);
 void func_800C1E08(void);
-void func_800C299C(s32);
-s32 func_800C29CC(s32);
-void func_800C2A88(s32);
-extern s32 g_field_hide_actor_panels, g_field_duel_mode, g_field_pair_indicators_disabled, D_80122980;
-extern s32 g_gosub_result_count, g_gosub_result_values;
 void field_load_bound_animation(s32 arg0, s32 arg1);
 void field_spawn_shared_animation_actor(s32 arg0, s32 arg1);
 void field_retire_actor(s32 arg0, s32 arg1);
-void akao_cmd_a9(s32 arg0, s32 arg1);
 void field_revive_actor(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-void field_script_op_00(void);
+
+/**
+ * @brief Report an opcode that has no handler, step past it and end the step loop.
+ * @param context Script context that holds the opcode.
+ * @param record Active record of @p context.
+ * @param pc Address of the opcode.
+ */
+static inline void field_script_reject_opcode(FieldScriptContext* context, FieldScriptRecordState* record, u8* pc)
+{
+    s32 owner_id;
+    s32 opcode;
+
+    owner_id = context->status.owner_id;
+    opcode = *pc;
+    record->pc = pc + 1;
+    record_game_diagnostic(DIAG_ERROR, DIAG_SCRIPT_BAD_OPCODE, owner_id, opcode);
+    g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
+}
 
 /**
  * @brief Run a field script until it yields, preserving any enclosing script context.
@@ -151,32 +183,25 @@ void field_script_op_00(void);
  */
 void field_script_run(FieldScriptContext* context)
 {
-    s32 status;
-    u32 wait_count;
-    u32 wait_state;
     FieldScriptContext* previous_context;
+    FieldScriptContext* current_context;
+    FieldScriptRecordState* waiting_record;
+    FieldScriptRecordState* record;
+    s32 status;
     u8* pc;
     u8 opcode;
-    FieldScriptRecordState* wait_record;
-    FieldScriptContext* current_context;
-    FieldScriptRecordState* active_record;
-    s32 step;
-    s32 owner_id;
-    s32 invalid_opcode;
 
     previous_context = g_field_script;
     g_field_script = context;
-    func_800BD520(g_field_script->status.owner_id, 0xD000, ((u8*)field_find_actor_record_or_default(context->status.owner_id))[5]);
-    wait_record = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
-    wait_state = wait_record->wait;
-    wait_count = wait_state >> 1;
-    if (wait_count != 0)
+    field_set_script_var(g_field_script->status.owner_id, FIELD_VAR_EVENT_ARGUMENT, field_find_actor_record_or_default(context->status.owner_id)->event_argument);
+    waiting_record = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
+    if (waiting_record->wait.bits.frames != 0)
     {
-        wait_record->wait = (u32)((wait_state & 1) | ((wait_count - 1) * 2));
+        waiting_record->wait.bits.frames--;
     }
     else
     {
-        status = (s32)g_field_script->status.word;
+        status = g_field_script->status.word;
         status |= FIELD_SCRIPT_RUNNING;
         g_field_script->status.word = status;
         if (status < 0)
@@ -184,51 +209,36 @@ void field_script_run(FieldScriptContext* context)
             do
             {
                 current_context = g_field_script;
-                active_record = (FieldScriptRecordState*)((u8*)current_context + (current_context->active_record * 3 << 2));
-                pc = active_record->pc;
+                record = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
+                pc = record->pc;
                 opcode = *pc;
-                if (opcode < 0x40)
+                if (opcode < FIELD_SCRIPT_PAIR_OP_BASE)
                 {
                     g_field_script_op_table[*pc]();
                 }
-                else if (opcode >= 0x40 && opcode < 0x80)
+                else if (opcode >= FIELD_SCRIPT_PAIR_OP_BASE && opcode < FIELD_SCRIPT_EXT_OP_BASE)
                 {
-                    if (opcode >= 0x60)
+                    if (opcode >= FIELD_SCRIPT_PAIR_OP_END)
                     {
-                        step = 1;
-                        owner_id = current_context->status.owner_id;
-                        invalid_opcode = *pc;
-                        active_record->pc = pc + step;
-                        record_game_diagnostic(0x8001, step, owner_id, invalid_opcode);
-                        g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
+                        field_script_reject_opcode(current_context, record, pc);
                         break;
                     }
-                    func_800B820C();
+                    field_script_dispatch_pair_op();
                 }
-                else if (opcode >= 0x80 && opcode < 0xC0)
+                else if (opcode >= FIELD_SCRIPT_EXT_OP_BASE && opcode < 0xC0)
                 {
                     if (opcode >= 0xD0)
                     {
-                        step = 1;
-                        owner_id = current_context->status.owner_id;
-                        invalid_opcode = *pc;
-                        active_record->pc = pc + step;
-                        record_game_diagnostic(0x8001, step, owner_id, invalid_opcode);
-                        g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
+                        field_script_reject_opcode(current_context, record, pc);
                         break;
                     }
-                    func_800B8308();
+                    field_script_dispatch_ext_op();
                 }
                 else if (opcode >= 0xC0)
                 {
-                    step = 1;
-                    owner_id = current_context->status.owner_id;
-                    invalid_opcode = *pc;
-                    active_record->pc = pc + step;
-                    record_game_diagnostic(0x8001, step, owner_id, invalid_opcode);
-                    g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
+                    field_script_reject_opcode(current_context, record, pc);
                 }
-            } while ((s32)g_field_script->status.word < 0);
+            } while (g_field_script->status.word & FIELD_SCRIPT_RUNNING);
         }
     }
     if (previous_context != NULL)
@@ -238,111 +248,108 @@ void field_script_run(FieldScriptContext* context)
 }
 
 /**
- * @brief Decode two operands and dispatch a field-script opcode in the 0x40 to 0x5F range.
- * @note Jumps through D_800F0D48[opcode - 0x40] with the decoded operands.
+ * @brief Decode the two operands of a pair opcode (0x40 to 0x5F) and run its handler.
+ * @note The descriptor byte after the opcode holds one operand type per nibble, low nibble first.
  */
-void func_800B820C(void)
+static void field_script_dispatch_pair_op(void)
 {
-    s32 arg0;
-    s32 arg1;
-    u8 descriptor;
+    s32 first;
+    s32 second;
+    u8 types;
     u8* pc;
-    s32 opcode;
-    s32 high;
+    s32 index;
+    s32 second_type;
 
     pc = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
-    descriptor = pc[1];
-    opcode = pc[0] - 0x40;
-    high = descriptor >> 4;
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc = func_800B84B4(descriptor & 0xF, pc + 2, &arg0);
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc = func_800B84B4(high, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &arg1);
-    D_800F0D48[opcode](arg0, arg1);
+    types = pc[1];
+    index = pc[0] - FIELD_SCRIPT_PAIR_OP_BASE;
+    second_type = types >> 4;
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_decode_operand(types & 0xF, pc + 2, &first);
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_decode_operand(second_type, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &second);
+    g_field_script_pair_op_table[index](first, second);
 }
 
 /**
- * @brief Decode four operands and dispatch an extended field-script opcode.
- * @note Descriptor nibbles are materialized before the first decode call.
- * @note Each decoder result updates the active record's program counter.
+ * @brief Decode the four operands of an extended opcode (0x80 to 0x8F) and run its handler.
+ * @note The two descriptor bytes after the opcode hold one operand type per nibble, low nibble first.
  */
-void func_800B8308(void)
+static void field_script_dispatch_ext_op(void)
 {
-    s32 arg0;
-    s32 arg1;
-    s32 arg2;
-    s32 arg3;
-    u8 first;
-    u8 second;
-    s32 opcode;
-    s32 high_first;
-    s32 low_second;
-    s32 high_second;
+    s32 operand0;
+    s32 operand1;
+    s32 operand2;
+    s32 operand3;
+    u8 types01;
+    u8 types23;
+    s32 index;
+    s32 type1;
+    s32 type2;
+    s32 type3;
     u8* pc;
 
     pc = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
-    first = pc[1];
-    second = pc[2];
-    opcode = pc[0] - 0x80;
-    high_first = first >> 4;
-    low_second = second & 0xF;
-    high_second = second >> 4;
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc = func_800B84B4(first & 0xF, pc + 3, &arg0);
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc = func_800B84B4(high_first, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &arg1);
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc = func_800B84B4(low_second, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &arg2);
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc = func_800B84B4(high_second, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &arg3);
-    g_field_script_ext_op_table[opcode](arg0, arg1, arg2, arg3);
+    types01 = pc[1];
+    types23 = pc[2];
+    index = pc[0] - FIELD_SCRIPT_EXT_OP_BASE;
+    type1 = types01 >> 4;
+    type2 = types23 & 0xF;
+    type3 = types23 >> 4;
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_decode_operand(types01 & 0xF, pc + 3, &operand0);
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_decode_operand(type1, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &operand1);
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_decode_operand(type2, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &operand2);
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_decode_operand(type3, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &operand3);
+    g_field_script_ext_op_table[index](operand0, operand1, operand2, operand3);
 }
 
 /**
- * @brief Decode a script operand value from a byte stream.
- * @param type Operand encoding type.
- * @param data Pointer to the encoded operand bytes.
- * @param value Receives the decoded value.
- * @return Pointer to the next unread byte.
+ * @brief Decode one operand of a pair or extended opcode.
+ * @param type Operand type (FIELD_SCRIPT_OPERAND_*).
+ * @param data Encoded operand bytes.
+ * @param value Receives the decoded value; left unchanged for the types without a value.
+ * @return @p data advanced past the operand bytes.
  */
-u8* func_800B84B4(s32 type, u8* data, s32* value)
+static u8* field_script_decode_operand(s32 type, u8* data, s32* value)
 {
-    u8* p;
+    u8* cursor;
 
-    p = data;
+    cursor = data;
     switch (type)
     {
-    case 0:
-        *value = *p;
-        return p + 1;
-    case 1:
-    case 4:
-        *value = p[0] + (p[1] << 8);
-        return p + 2;
-    case 2:
-        *value = p[0] + (p[1] << 8) + (p[2] << 16) + (p[3] << 24);
-        return p + 4;
-    case 3:
-        *value = func_800BD414(g_field_script->status.owner_id, p[0] | (p[1] << 8));
-        return p + 2;
-    case 5:
-        *value = (p[0] + (p[1] << 8)) + 0x10000;
-        return p + 2;
-    case 6:
-    case 7:
+    case FIELD_SCRIPT_OPERAND_BYTE:
+        *value = *cursor;
+        return cursor + 1;
+    case FIELD_SCRIPT_OPERAND_HALFWORD:
+    case FIELD_SCRIPT_OPERAND_HALFWORD_ALT:
+        *value = cursor[0] + (cursor[1] << 8);
+        return cursor + 2;
+    case FIELD_SCRIPT_OPERAND_WORD:
+        *value = cursor[0] + (cursor[1] << 8) + (cursor[2] << 16) + (cursor[3] << 24);
+        return cursor + 4;
+    case FIELD_SCRIPT_OPERAND_VARIABLE:
+        *value = field_get_script_var(g_field_script->status.owner_id, cursor[0] | (cursor[1] << 8));
+        return cursor + 2;
+    case FIELD_SCRIPT_OPERAND_HALFWORD_HIGH:
+        *value = (cursor[0] + (cursor[1] << 8)) + 0x10000;
+        return cursor + 2;
+    case FIELD_SCRIPT_OPERAND_NONE_6:
+    case FIELD_SCRIPT_OPERAND_NONE_7:
         break;
-    case 8:
+    case FIELD_SCRIPT_OPERAND_ZERO:
         *value = 0;
         break;
-    case 9:
+    case FIELD_SCRIPT_OPERAND_ONE:
         *value = 1;
         break;
-    case 10:
-        *value = 0xFF;
+    case FIELD_SCRIPT_OPERAND_OWNER:
+        *value = FIELD_SCRIPT_OWNER;
         break;
     }
-    return p;
+    return cursor;
 }
 
-/* Field script opcode handlers 0x00 and 0x01 (see field_script.h). */
-
 /**
- * @brief Opcode 0x00: return to the previous record, or halt when already at the outermost one.
- * @note Ends the step loop unless the popped record's wait word has bit 0 set. At depth 0 it clears the program counter instead.
+ * @brief Opcode 0x00: return from a call, or end the script at the outermost record.
+ * @note Returning keeps the step loop running only when the returning record was entered with resume set.
  */
 void field_script_op_00(void)
 {
@@ -351,15 +358,15 @@ void field_script_op_00(void)
     depth = g_field_script->active_record;
     if (depth > 0)
     {
-        if ((FIELD_SCRIPT_RECORD_STATE(depth)->wait & 1) == 0)
+        if (!FIELD_SCRIPT_RECORD_STATE(depth)->wait.bits.resume)
         {
             g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
         }
-        g_field_script->active_record = g_field_script->active_record - 1;
+        g_field_script->active_record--;
         return;
     }
     g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc = 0;
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc = NULL;
 }
 
 /**
@@ -371,9 +378,10 @@ void field_script_op_01(void)
 }
 
 /**
- * @brief Push a field-script subroutine record and branch to its target.
+ * @brief Opcode 0x02: call the subroutine at the relative halfword branch target.
+ * @note On overflow of the record stack the call is reported and skipped.
  */
-void func_800B8684(void)
+void field_script_op_02(void)
 {
     s32 depth;
     s32 next_depth;
@@ -381,21 +389,21 @@ void func_800B8684(void)
     depth = g_field_script->active_record;
     next_depth = depth + 1;
     g_field_script->active_record = next_depth;
-    if (next_depth >= 8)
+    if (next_depth >= FIELD_SCRIPT_FRAME_COUNT)
     {
         FieldScriptRecord* rec;
 
-        record_game_diagnostic(0x8001, 2, g_field_script->status.owner_id, 0);
-        g_field_script->active_record = 7;
-        rec = FIELD_SCRIPT_RECORD(7);
+        record_game_diagnostic(DIAG_ERROR, DIAG_SCRIPT_CALL_OVERFLOW, g_field_script->status.owner_id, 0);
+        g_field_script->active_record = FIELD_SCRIPT_FRAME_COUNT - 1;
+        rec = FIELD_SCRIPT_RECORD(FIELD_SCRIPT_FRAME_COUNT - 1);
         rec->pc += 3;
         return;
     }
 
     FIELD_SCRIPT_RECORD(next_depth)->pc = FIELD_SCRIPT_RECORD(depth)->pc;
     FIELD_SCRIPT_ACTIVE_RECORD_STATE()->flags = FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record - 1)->flags;
-    FIELD_SCRIPT_ACTIVE_RECORD_STATE()->wait |= 1;
-    FIELD_SCRIPT_ACTIVE_RECORD_STATE()->wait &= 1;
+    FIELD_SCRIPT_ACTIVE_RECORD_STATE()->wait.bits.resume = 1;
+    FIELD_SCRIPT_ACTIVE_RECORD_STATE()->wait.bits.frames = 0;
     FIELD_SCRIPT_RECORD(g_field_script->active_record - 1)->pc += 3;
     field_script_branch(1);
 }
@@ -405,7 +413,7 @@ void func_800B8684(void)
  */
 void field_script_op_03(void)
 {
-    func_800BD6F4(FIELD_SCRIPT_ACTIVE_RECORD()->pc[1], (u8*)g_field_runtime + 0x24);
+    field_script_command(FIELD_SCRIPT_ACTIVE_RECORD()->pc[1], (u8*)g_field_runtime + 0x24);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
 }
 
@@ -416,7 +424,7 @@ void field_script_op_04(void)
 {
     FieldScriptRecordState* rec;
 
-    rec = (FieldScriptRecordState*)((u8*)g_field_script + g_field_script->active_record * 0xC);
+    rec = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
     if (rec->flags & FIELD_SCRIPT_COND)
     {
         field_script_branch(1);
@@ -432,7 +440,7 @@ void field_script_op_05(void)
 {
     FieldScriptRecordState* rec;
 
-    rec = (FieldScriptRecordState*)((u8*)g_field_script + g_field_script->active_record * 12);
+    rec = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
     if (rec->flags & FIELD_SCRIPT_COND)
     {
         rec->pc += 3;
@@ -457,17 +465,10 @@ void field_script_op_06(void)
 void field_script_op_07(void)
 {
     FieldScriptRecordState* rec;
-    FieldScriptRecordState* rec2;
-    u32 flags;
-    u32 masked;
 
-    rec = (FieldScriptRecordState*)((u8*)g_field_script + g_field_script->active_record * 0xC);
-    flags = rec->flags;
-    masked = flags & ~FIELD_SCRIPT_COND;
-    masked |= (flags >> 1) & 1;
-    rec->flags = masked;
-    rec2 = (FieldScriptRecordState*)((u8*)g_field_script + g_field_script->active_record * 0xC);
-    rec2->pc++;
+    rec = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
+    rec->flags = (rec->flags & ~FIELD_SCRIPT_COND) | ((rec->flags >> 1) & 1);
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc++;
 }
 
 /**
@@ -476,7 +477,7 @@ void field_script_op_07(void)
  */
 void field_script_op_08(void)
 {
-    u16 var_ref;
+    FieldScriptVariableRef var_ref;
     s32 low;
     s32 high;
     u8 descriptor;
@@ -485,8 +486,8 @@ void field_script_op_08(void)
 
     operands = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
     descriptor = operands[1];
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_u16(operands + 2, &var_ref);
-    value = func_800BD3B0(g_field_script->status.owner_id, var_ref << 16);
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_u16(operands + 2, &var_ref.value);
+    value = field_read_script_var(g_field_script->status.owner_id, var_ref);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(descriptor, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &low);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(descriptor >> 2, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &high);
     if ((u32)value >= (u32)low && (u32)value <= (u32)high)
@@ -503,7 +504,7 @@ void field_script_op_08(void)
  * @brief Skip forward to the next opcode equal to the operand (or 0xFF), then take a branch.
  * @note Scans the active record's pc in 3-byte steps.
  */
-void func_800B8B80(void)
+void field_script_op_09(void)
 {
     s32 value;
     u8* pc;
@@ -539,7 +540,7 @@ void field_script_op_0a(void)
     operands = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(operands[1], operands + 2, &frames);
     rec = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
-    rec->wait = (rec->wait & 1) | (frames * 2);
+    rec->wait.bits.frames = frames;
     g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
@@ -548,7 +549,7 @@ void field_script_op_0a(void)
  * @note Operands: source owner, source variable reference, destination owner, destination reference.
  * @note The block-scope prototype stands in for the unprototyped field_script.h declaration.
  */
-void func_800B8CFC(void)
+void field_script_op_0b(void)
 {
     s32 source_owner;
     FieldScriptVariableRef source_ref;
@@ -557,16 +558,15 @@ void func_800B8CFC(void)
     u8 descriptor;
     u8* operands;
     s32 value;
-    void func_800BD434(s32 owner, FieldScriptVariableRef ref, s32 new_value);
 
     operands = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
     descriptor = operands[1];
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand_or_owner(OPERAND_TYPE_3(descriptor), operands + 2, &source_owner);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_u16(FIELD_SCRIPT_ACTIVE_RECORD()->pc, &source_ref.value);
-    value = func_800BD3B0(source_owner, source_ref.value << 16);
+    value = field_read_script_var(source_owner, source_ref);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand_or_owner(OPERAND_TYPE_2(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc + 2, &destination_owner);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_u16(FIELD_SCRIPT_ACTIVE_RECORD()->pc, &destination_ref.value);
-    func_800BD434(destination_owner, destination_ref, value);
+    field_write_script_var(destination_owner, destination_ref, value);
 }
 
 /**
@@ -574,10 +574,10 @@ void func_800B8CFC(void)
  * @note Operands: descriptor, base selector (0 to 7), record index, field spec, then the
  *       destination variable (0x0C) or the value to write (0x0D).
  */
-void func_800B8E84(void)
+void field_script_op_0c(void)
 {
     u32 value;
-    u16 destination_ref;
+    FieldScriptVariableRef destination_ref;
     FieldScriptFieldSpec field;
     s32 target_index;
     s32 selected_base;
@@ -598,7 +598,7 @@ void func_800B8E84(void)
     default:
         break;
     case 1:
-        selected_base = (s32)&FIELD_RUNTIME->state;
+        selected_base = (s32)&g_field_runtime->state;
         break;
     case 2:
         selected_base = (s32)field_find_actor_record_or_default(target_index);
@@ -610,10 +610,10 @@ void func_800B8E84(void)
         selected_base = g_field_battle;
         break;
     case 5:
-        selected_base = (s32)func_800B2A9C(target_index);
+        selected_base = (s32)field_find_status_record(target_index);
         break;
     case 6:
-        selected_base = (s32)&FIELD_GAME->characters[target_index];
+        selected_base = (s32)&g_field_game_state->characters[target_index];
         break;
     case 7:
         selected_base = (s32)g_field_game_state;
@@ -621,13 +621,13 @@ void func_800B8E84(void)
     }
     if (opcode == 0xC)
     {
-        value = func_800BD650(field.word >> 30, selected_base, (field.word >> 16) & 0x3FFF, field.bytes[1], field.bytes[0]);
-        FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_u16(FIELD_SCRIPT_ACTIVE_RECORD()->pc, &destination_ref);
-        func_800BD434(g_field_script->status.owner_id, destination_ref << 0x10, value);
+        value = field_read_bits(field.word >> 30, selected_base, (field.word >> 16) & 0x3FFF, field.bytes[1], field.bytes[0]);
+        FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_u16(FIELD_SCRIPT_ACTIVE_RECORD()->pc, &destination_ref.value);
+        field_write_script_var(g_field_script->status.owner_id, destination_ref, value);
         return;
     }
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(operand_type, FIELD_SCRIPT_ACTIVE_RECORD()->pc, (s32*)&value);
-    func_800BD55C(field.word >> 30, selected_base, (field.word >> 16) & 0x3FFF, field.bytes[1], field.bytes[0], value);
+    field_write_bits(field.word >> 30, selected_base, (field.word >> 16) & 0x3FFF, field.bytes[1], field.bytes[0], value);
 }
 
 /**
@@ -636,15 +636,11 @@ void func_800B8E84(void)
 void field_script_op_0e(void)
 {
     FieldScriptVariableRef var_ref;
-    s32 depth;
-    FieldScriptRecord* rec;
     s32 value;
 
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_u16(FIELD_SCRIPT_ACTIVE_RECORD()->pc + 1, &var_ref.value);
-    value = func_800BD3B0(g_field_script->status.owner_id, var_ref.value << 16);
-    depth = g_field_script->active_record;
-    rec = FIELD_SCRIPT_RECORD(depth);
-    rec->pc += value * 2;
+    value = field_read_script_var(g_field_script->status.owner_id, var_ref);
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc += value * 2;
     field_script_branch(0);
 }
 
@@ -653,9 +649,9 @@ void field_script_op_0e(void)
  * @note Clamp the depth at seven and record a diagnostic on overflow.
  * @note Sets then masks the new record's wait word, keeping only bit 0.
  */
-void func_800B9278(void)
+void field_script_op_10(void)
 {
-    u16 operand;
+    FieldScriptVariableRef operand;
     s32 depth;
 
     depth = g_field_script->active_record + 1;
@@ -667,17 +663,17 @@ void func_800B9278(void)
     }
     FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->pc = FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record - 1)->pc;
     FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->flags = FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record - 1)->flags;
-    FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->wait |= 1;
-    FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->wait &= 1;
+    FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->wait.bits.resume = 1;
+    FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->wait.bits.frames = 0;
     FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record - 1)->pc =
-        field_script_read_u16(FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->pc + 1, &operand);
-    FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->pc = field_get_event_script(func_800BD3B0(g_field_script->status.owner_id, operand << 16) & 0x7FFF);
+        field_script_read_u16(FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->pc + 1, &operand.value);
+    FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->pc = field_get_event_script(field_read_script_var(g_field_script->status.owner_id, operand) & 0x7FFF);
 }
 
 /**
  * @brief Decode a seven-byte field command and dispatch its action parameters.
  */
-void func_800B941C(void)
+void field_script_op_11(void)
 {
     u8* first_pc;
     u8* command_pc;
@@ -752,7 +748,7 @@ void func_800B941C(void)
  * @param unused1 Unused value inherited from the opcode dispatcher.
  * @param wait Initial wait condition; valid selectors replace it with the evaluated result.
  */
-void func_800B95EC(s32 unused0, s32 unused1, s32 wait)
+void field_script_op_12(s32 unused0, s32 unused1, s32 wait)
 {
     FieldScriptRecord* rec;
     u8* pc;
@@ -767,11 +763,11 @@ void func_800B95EC(s32 unused0, s32 unused1, s32 wait)
     switch (selector)
     {
     case 0:
-        result = func_8005A84C(0, operand) ^ 2;
+        result = field_get_animation_state(0, operand) ^ 2;
         wait = 0 < (u32)result;
         break;
     case 1:
-        result = func_8005A84C(0, operand) ^ 3;
+        result = field_get_animation_state(0, operand) ^ 3;
         wait = 0 < (u32)result;
         break;
     case 2:
@@ -832,7 +828,7 @@ void func_800B95EC(s32 unused0, s32 unused1, s32 wait)
  * @brief Opcode 0x13: end the step loop while the actor named by a script variable is still busy.
  * @note Selector 0 is the only one handled; any other selector tests an uninitialized value.
  */
-void func_800B977C(void)
+void field_script_op_13(void)
 {
     u8* pc;
     s32 selector;
@@ -841,7 +837,7 @@ void func_800B977C(void)
 
     pc = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
     selector = pc[1];
-    actor = func_800BD414(0, pc[2] | (pc[3] << 8));
+    actor = field_get_script_var(0, pc[2] | (pc[3] << 8));
     switch (selector)
     {
     case 0:
@@ -863,7 +859,7 @@ void func_800B977C(void)
  * @brief Opcode 0x14: end the step loop while a field condition selected by the operand holds.
  * @note Selectors 3 and 4 also copy D_8011F428 into script variable 0x7100 once the wait ends.
  */
-void func_800B9868(void)
+void field_script_op_14(void)
 {
     u32 selector;
     s32 wait;
@@ -874,7 +870,7 @@ void func_800B9868(void)
     {
     case 1:
         /* The redundant & 1 keeps the lhu result in its own register (99.88% without). */
-        wait = FIELD_RUNTIME->state.bits.group_active & 1;
+        wait = g_field_runtime->state.bits.group_active & 1;
         break;
     case 2:
         wait = D_801227F0 != 2;
@@ -896,7 +892,7 @@ void func_800B9868(void)
     FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
     if (selector == 3 || selector == 4)
     {
-        func_800BD520(0, 0x7100, D_8011F428);
+        field_set_script_var(0, FIELD_VAR_RESULT, D_8011F428);
     }
 }
 
@@ -904,7 +900,7 @@ void func_800B9868(void)
  * @brief Handle a script mode query, advancing the PC or clearing the run flag.
  * @note A 0xFF operand selects the mode from the shared field state.
  */
-void func_800B99A8(void)
+void field_script_op_15(void)
 {
     FieldScriptRecord* rec;
     FieldScriptContext* ctx;
@@ -916,11 +912,11 @@ void func_800B99A8(void)
 
     active_record = g_field_script->active_record;
     ctx = g_field_script;
-    rec = (FieldScriptRecord*)((u8*)ctx + ((active_record * 3) << 2));
+    rec = FIELD_SCRIPT_RECORD(active_record);
     mode = rec->pc[1];
     if (mode == 0xFF)
     {
-        resolved = ((u32)FIELD_RUNTIME->talk_window.word >> 8) & 3;
+        resolved = ((u32)g_field_runtime->talk_window.word >> 8) & 3;
     }
     else
     {
@@ -933,7 +929,7 @@ void func_800B99A8(void)
     {
         if (result == -1)
         {
-            func_800BD520(0, 0x7100, field_text_get_choice(selector));
+            field_set_script_var(0, FIELD_VAR_RESULT, field_text_get_choice(selector));
             FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
             return;
         }
@@ -950,7 +946,7 @@ void func_800B99A8(void)
  * @brief Opcode 0x16: wait until field_is_actor_idle reports the actor ready, skipping absent party members.
  * @note A party slot (0 to 2) that is empty, or AI-controlled while g_field_interaction_active is clear, is skipped at once.
  */
-void func_800B9AC4(void)
+void field_script_op_16(void)
 {
     FieldScriptRecord* rec;
     u8* pc;
@@ -972,12 +968,12 @@ void func_800B9AC4(void)
     party_index = actor;
     if (party_index < 3)
     {
-        if (FIELD_GAME->characters[party_index].name[0] == 0)
+        if (g_field_game_state->characters[party_index].name[0] == 0)
         {
             rec->pc = pc + 2;
             return;
         }
-        if ((FIELD_GAME->characters[party_index].info.bytes[0] >> 7) != 0)
+        if ((g_field_game_state->characters[party_index].info.bytes[0] >> 7) != 0)
         {
             if (g_field_interaction_active == 0)
             {
@@ -1015,11 +1011,11 @@ void field_script_op_18(void)
     s32 entry;
 
     depth = g_field_script->active_record;
-    rec = (FieldScriptRecord*)((u8*)g_field_script + depth * 0xC);
+    rec = FIELD_SCRIPT_RECORD(depth);
     entry = rec->pc[1] + (rec->pc[2] << 8);
     field_seek_scene_resource(entry & 0x7FFF);
     depth = g_field_script->active_record;
-    rec = (FieldScriptRecord*)((u8*)g_field_script + depth * 0xC);
+    rec = FIELD_SCRIPT_RECORD(depth);
     rec->pc += 3;
 }
 
@@ -1061,7 +1057,7 @@ void field_script_op_1a(void)
  */
 void field_script_op_1b(void)
 {
-    u16 var_ref;
+    FieldScriptVariableRef var_ref;
     s32 value;
     u8 descriptor;
     u8* operands;
@@ -1071,23 +1067,23 @@ void field_script_op_1b(void)
 
     operands = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
     descriptor = operands[1];
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_u16(operands + 2, &var_ref);
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_u16(operands + 2, &var_ref.value);
     next = field_script_read_operand(descriptor, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &value);
     depth = g_field_script->active_record;
     rec = FIELD_SCRIPT_RECORD(depth);
     rec->pc = next;
-    func_800BD434(g_field_script->status.owner_id, var_ref << 16, value);
+    field_write_script_var(g_field_script->status.owner_id, var_ref, value);
 }
 
 /**
- * @brief Opcode 0x1C: combine two operands through func_800BE5C8 and store the result in a script variable.
+ * @brief Opcode 0x1C: combine two operands through field_script_calc and store the result in a script variable.
  * @note The operation selector is the top two bits of the descriptor; the variable reference follows the operands.
  */
 void field_script_op_1c(void)
 {
     s32 arg0;
     s32 arg1;
-    u16 var_ref;
+    FieldScriptVariableRef var_ref;
     u32 descriptor;
     u8* operands;
     s32 result;
@@ -1098,18 +1094,16 @@ void field_script_op_1c(void)
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(descriptor, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &arg0);
     descriptor >>= 2;
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(descriptor, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &arg1);
-    result = func_800BE5C8(descriptor >> 2, arg0, arg1);
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_u16(FIELD_SCRIPT_ACTIVE_RECORD()->pc, &var_ref);
-    func_800BD434(g_field_script->status.owner_id, var_ref << 16, result);
+    result = field_script_calc(descriptor >> 2, arg0, arg1);
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_u16(FIELD_SCRIPT_ACTIVE_RECORD()->pc, &var_ref.value);
+    field_write_script_var(g_field_script->status.owner_id, var_ref, result);
 }
-
-void func_800BD434(s32, FieldScriptVariableRef, s32);
 
 /**
  * @brief Opcode 0x1D: write an actor position into three script variables.
  * @note The Y and Z variables sit 0x20 and 0x40 past the X variable's offset (wrapping in 12 bits); Y is negated.
  */
-void func_800B9FF8(void)
+void field_script_op_1d(void)
 {
     s32 position[4];
     FieldScriptPositionOperands operands;
@@ -1149,19 +1143,19 @@ void func_800B9FF8(void)
         FieldScriptVariableRef reference;
 
         reference.value = operands.reference;
-        func_800BD434(g_field_script->status.owner_id, reference, position[0]);
+        field_write_script_var(g_field_script->status.owner_id, reference, position[0]);
     }
     {
         FieldScriptVariableRef reference;
 
         reference.value = first_reference;
-        func_800BD434(g_field_script->status.owner_id, reference, -position[1]);
+        field_write_script_var(g_field_script->status.owner_id, reference, -position[1]);
     }
     {
         FieldScriptVariableRef reference;
 
         reference.value = second_reference;
-        func_800BD434(g_field_script->status.owner_id, reference, position[2]);
+        field_write_script_var(g_field_script->status.owner_id, reference, position[2]);
     }
 }
 
@@ -1269,23 +1263,23 @@ void field_script_op_27(void)
     state = FIELD_SCRIPT_ACTIVE_RECORD()->pc[1];
     if (state == 0)
     {
-        FIELD_GAME->characters[1].name[0] = 0;
-        FIELD_GAME->characters[1].info.word |= 0x7F;
-        func_800BD520(0, (FIELD_GAME->characters[1].info.bytes[1] << 3) + 0xF87, 0);
-        func_800BD520(0, 0x2F08, 0xFF);
+        g_field_game_state->characters[1].name[0] = 0;
+        g_field_game_state->characters[1].info.word |= 0x7F;
+        field_set_script_var(0, (g_field_game_state->characters[1].info.bytes[1] << 3) + 0xF87, 0);
+        field_set_script_var(0, 0x2F08, 0xFF);
     }
     else
     {
-        FIELD_GAME->characters[2].name[0] = 0;
-        FIELD_GAME->characters[2].info.word |= 0x7F;
-        func_800BD520(0, 0x2F00, 0xFF);
+        g_field_game_state->characters[2].name[0] = 0;
+        g_field_game_state->characters[2].info.word |= 0x7F;
+        field_set_script_var(0, 0x2F00, 0xFF);
     }
     field_release_actor_resource_slot(state);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
 }
 
 /**
- * @brief Opcode 0x28: read three operands and pass them to func_800A43E8, then claim command slot 0xF.
+ * @brief Opcode 0x28: read three operands and pass them to field_open_ring_menu, then claim command slot 0xF.
  * @note The low two descriptor bits are passed as the first argument; a third operand of 0xFF becomes -1.
  */
 void field_script_op_28(void)
@@ -1305,27 +1299,27 @@ void field_script_op_28(void)
     {
         arg2 = -1;
     }
-    func_800A43E8(descriptor & 3, arg0, (u16)arg1, arg2);
+    field_open_ring_menu(descriptor & 3, arg0, (u16)arg1, arg2);
     field_queue_actor_event(0x80, 0, 0xF);
 }
 
 /**
- * @brief Opcode 0x29: issue command 0x7100 with func_800A4744's result, or end the step loop when it is negative.
- * @note On success claims command slot 0x10 and steps past the opcode; on failure claims the slot func_800A4778 names.
+ * @brief Opcode 0x29: issue command 0x7100 with field_get_ring_result's result, or end the step loop when it is negative.
+ * @note On success claims command slot 0x10 and steps past the opcode; on failure claims the slot field_get_ring_cursor_entry names.
  */
 void field_script_op_29(void)
 {
     s32 result;
     FieldScriptRecord* rec;
 
-    result = func_800A4744();
+    result = field_get_ring_result();
     if (result < 0)
     {
-        field_queue_actor_event(0x80, 0, func_800A4778() & 0xFF);
+        field_queue_actor_event(0x80, 0, field_get_ring_cursor_entry() & 0xFF);
         g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
         return;
     }
-    func_800BD520(0, 0x7100, result);
+    field_set_script_var(0, FIELD_VAR_RESULT, result);
     field_queue_actor_event(0x80, 0, 0x10);
     rec = FIELD_SCRIPT_ACTIVE_RECORD();
     rec->pc += 1;
@@ -1553,7 +1547,7 @@ void field_script_op_33(void)
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_2(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc, &arg2);
     if (arg0 == 0xFF)
     {
-        slot = (u32)FIELD_RUNTIME->talk_window.word >> 8;
+        slot = (u32)g_field_runtime->talk_window.word >> 8;
         slot &= 3;
     }
     else
@@ -1623,7 +1617,7 @@ s32 field_script_op_36(void)
  * @brief Build the current shop item list from field-script operands and open the shop interface.
  * @note Operands: shop list index in resource 0xA, then the price scale (in sixteenths).
  */
-void func_800BB3D8(void)
+void field_script_op_37(void)
 {
     u8* operands;
     u8 descriptor;
@@ -1751,7 +1745,7 @@ s32 field_script_op_3f(void)
 /**
  * @brief Dispatch the reset subcommand at the active script PC and advance by two bytes.
  */
-void func_800BB7B4(void)
+void field_script_op_0f(void)
 {
     s32 all_categories;
     s32 flag_mask;
@@ -1775,14 +1769,14 @@ void func_800BB7B4(void)
         record->pc += 2;
         return;
     case 1:
-        func_800B34D0(1);
+        field_battle_setup(1);
         break;
     case 3:
-        FIELD_RUNTIME->trigger_table = (FieldTriggerTable*)func_800C1E40(6);
+        g_field_runtime->trigger_table = (FieldTriggerTable*)func_800C1E40(6);
         FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
         return;
     case 4:
-        func_800C1EC8(0, FIELD_GAME->words, 0x200);
+        func_800C1EC8(0, g_field_game_state->words, 0x200);
         FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
         return;
     case 5:
@@ -1797,8 +1791,8 @@ void func_800BB7B4(void)
         flag_mask = 0x7FFFFFFF;
         do
         {
-            FIELD_GAME->regions[i].unk42 = 0;
-            FIELD_GAME->regions[i].status.word &= flag_mask;
+            g_field_game_state->regions[i].unk42 = 0;
+            g_field_game_state->regions[i].status.word &= flag_mask;
             i += 1;
         } while (i < 5);
         break;
@@ -1806,7 +1800,7 @@ void func_800BB7B4(void)
         i = 0;
         do
         {
-            FIELD_GAME->item_counts[i] = 99;
+            g_field_game_state->item_counts[i] = 99;
             i += 1;
         } while (i < 0xFD);
         break;
@@ -1816,12 +1810,12 @@ void func_800BB7B4(void)
 
 /**
  * @brief Opcode 0x40: store a value into one of the script owner's variables.
- * @param variable Variable id passed to func_800BD520.
+ * @param variable Variable id passed to field_set_script_var.
  * @param value Value to store.
  */
-void func_800BB9C0(s32 variable, s32 value)
+void field_script_op_40(s32 variable, s32 value)
 {
-    func_800BD520(g_field_script->status.owner_id, variable, value);
+    field_set_script_var(g_field_script->status.owner_id, variable, value);
 }
 
 /**
@@ -1829,7 +1823,7 @@ void func_800BB9C0(s32 variable, s32 value)
  * @param index Animation index in list 0.
  * @param keyframe Keyframe passed to field_control_animation.
  */
-void func_800BB9F4(s32 index, s32 keyframe)
+void field_script_op_41(s32 index, s32 keyframe)
 {
     field_control_animation(0, index, keyframe, 1);
 }
@@ -1839,17 +1833,17 @@ void func_800BB9F4(s32 index, s32 keyframe)
  * @param resource_slot_id Passed through to field_find_or_load_resource_entry.
  * @param resource_base Passed through to field_find_or_load_resource_entry.
  */
-void func_800BBA24(s32 resource_slot_id, s32 resource_base)
+void field_script_op_42(s32 resource_slot_id, s32 resource_base)
 {
     field_find_or_load_resource_entry(resource_slot_id, resource_base);
 }
 
 /**
- * @brief Opcode 0x43: set the active record's condition flag from func_800C1FFC for an actor.
+ * @brief Opcode 0x43: set the active record's condition flag from field_is_actor_near_stored_position for an actor.
  * @param mode Guard; the update runs only when zero.
  * @param actor Actor id, or 0xFF for the script owner.
  */
-void func_800BBA44(s32 mode, s32 actor)
+void field_script_op_43(s32 mode, s32 actor)
 {
     s32 target;
     FieldScriptRecordState* rec;
@@ -1865,8 +1859,8 @@ void func_800BBA44(s32 mode, s32 actor)
         {
             target = actor;
         }
-        result = func_800C1FFC(target, 0x1100, 0x1100);
-        rec = (FieldScriptRecordState*)((u8*)g_field_script + g_field_script->active_record * 0xC);
+        result = field_is_actor_near_stored_position(target, 0x1100, 0x1100);
+        rec = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
         rec->flags = (rec->flags & ~FIELD_SCRIPT_COND) | (result & 1);
     }
 }
@@ -1876,7 +1870,7 @@ void func_800BBA44(s32 mode, s32 actor)
  * @param command Command number, 0x00 to 0x4E.
  * @param operand Command argument; commands that take an actor treat 0xFF as the script owner.
  */
-void func_800BBAC8(u32 command, s32 operand)
+void field_script_op_44(u32 command, s32 operand)
 {
     s32 actor_index;
     FieldScriptRecordState* script_record;
@@ -1904,13 +1898,13 @@ void func_800BBAC8(u32 command, s32 operand)
         field_stop_actor((s32)operand);
         return;
     case 0x4:
-        func_8005B0F4((s32)operand, 1);
+        field_play_effect_animation((s32)operand, 1);
         return;
     case 0x5:
-        func_8005B0F4((s32)operand, 0);
+        field_play_effect_animation((s32)operand, 0);
         return;
     case 0x6:
-        FIELD_GAME->lands[operand].flags |= 4;
+        g_field_game_state->lands[operand].flags |= 4;
         return;
     case 0x7:
         field_control_animation(0, operand, 0, 2);
@@ -1928,17 +1922,17 @@ void func_800BBAC8(u32 command, s32 operand)
         field_run_menu_op((s32)operand);
         return;
     case 0xC:
-        field_open_gosub_screen_sequence(g_field_runtime + (operand * 4));
+        field_open_gosub_screen_sequence((u8*)g_field_runtime + (operand * 4));
         return;
     case 0xD:
-        func_800BE710((s32)operand);
+        field_create_item_from_gosub((s32)operand);
         return;
     case 0xE:
-        FIELD_RUNTIME->scene_entry |= 0x8000;
+        g_field_runtime->scene_entry |= 0x8000;
         field_play_second_song();
         return;
     case 0xF:
-        func_800C35AC((s32)operand);
+        field_make_land_available((s32)operand);
         return;
     case 0x10:
         field_leave_party((s32)operand);
@@ -1948,7 +1942,7 @@ void func_800BBAC8(u32 command, s32 operand)
         return;
     case 0x12:
         /* Called as returning int: the original does not mask the u8 result. */
-        func_800BD520(0, 0x7100, ((s32 (*)(s32))func_800C20D8)((s32)operand));
+        field_set_script_var(0, FIELD_VAR_RESULT, ((s32 (*)(s32))func_800C20D8)((s32)operand));
         return;
     case 0x13:
         func_800C2138((s32)operand);
@@ -1957,7 +1951,7 @@ void func_800BBAC8(u32 command, s32 operand)
         func_800C21C0((s32)operand);
         return;
     case 0x15:
-        func_800BD520(0, 0x7100, func_800C35E4((s32)operand));
+        field_set_script_var(0, FIELD_VAR_RESULT, field_get_land_state((s32)operand));
         return;
     case 0x16:
         field_toggle_actor_hidden((s32)actor_index);
@@ -1966,10 +1960,10 @@ void func_800BBAC8(u32 command, s32 operand)
         field_start_actor_turn((s32)actor_index);
         return;
     case 0x18:
-        func_800BD520(0, 0x7100, func_800C2264((s32)operand));
+        field_set_script_var(0, FIELD_VAR_RESULT, field_add_stored_companion((s32)operand));
         return;
     case 0x19:
-        func_800BD520(0, 0x7100, func_800C23F4());
+        field_set_script_var(0, FIELD_VAR_RESULT, field_release_stored_companion());
         return;
     case 0x1A:
         field_set_actor_record_script_only((s32)actor_index, 2);
@@ -1990,25 +1984,25 @@ void func_800BBAC8(u32 command, s32 operand)
         field_control_animation(2, operand, -1, 1);
         return;
     case 0x20:
-        func_8005B228((s32)operand, 1);
+        field_set_node_enabled((s32)operand, 1);
         return;
     case 0x21:
-        func_8005B228((s32)operand, 0);
+        field_set_node_enabled((s32)operand, 0);
         return;
     case 0x22:
-        func_800BD520(0, 0x7100, func_800C29CC((s32)operand));
+        field_set_script_var(0, FIELD_VAR_RESULT, field_add_template_item((s32)operand));
         return;
     case 0x23:
-        func_800B31CC((s32)actor_index);
+        field_golem_select_logic_cell((s32)actor_index);
         return;
     case 0x24:
-        func_800B32FC((s32)operand);
+        field_golem_publish_logic_cell((s32)operand);
         return;
     case 0x25:
-        func_800B3420((s32)operand);
+        field_raise_companion_intensity((s32)operand);
         return;
     case 0x26:
-        func_800C2A88((s32)operand);
+        field_discard_item((s32)operand);
         return;
     case 0x27:
         field_stop_non_script_actors();
@@ -2017,22 +2011,22 @@ void func_800BBAC8(u32 command, s32 operand)
         func_800C1E08();
         return;
     case 0x29:
-        func_800C299C((s32)operand);
+        field_unlock_encyclopedia_entry((s32)operand);
         return;
     case 0x2A:
         field_open_carda((s32)operand);
         return;
     case 0x2B:
-        func_800BD520(0, (s32)operand, 1);
+        field_set_script_var(0, (s32)operand, 1);
         return;
     case 0x2C:
         field_clear_actor_record_script_only((s32)actor_index);
         return;
     case 0x2D:
-        func_800BD520(0, 0x7100, func_800C24BC((s32)operand));
+        field_set_script_var(0, FIELD_VAR_RESULT, field_get_stored_companion_status((s32)operand));
         return;
     case 0x2E:
-        func_800C25A0((s32)operand);
+        field_rename_stored_companion((s32)operand);
         return;
     case 0x32:
         D_80122980 = (s32)operand;
@@ -2041,13 +2035,13 @@ void func_800BBAC8(u32 command, s32 operand)
         g_field_pair_indicators_disabled = (s32)operand;
         return;
     case 0x34:
-        func_800BD520(0, 0x7100, field_find_nearest_faced_item((s32)operand));
+        field_set_script_var(0, FIELD_VAR_RESULT, field_find_nearest_faced_item((s32)operand));
         return;
     case 0x35:
-        func_8005A67C((s32)operand, 0);
+        field_control_sequence((s32)operand, 0);
         return;
     case 0x36:
-        func_8005A67C((s32)operand, 1);
+        field_control_sequence((s32)operand, 1);
         return;
     case 0x37:
         func_8009C974((s32)operand);
@@ -2056,10 +2050,10 @@ void func_800BBAC8(u32 command, s32 operand)
         field_battle_defeat_record((s32)actor_index);
         return;
     case 0x39:
-        func_800BD520(0, 0x7100, func_800C3860((s32)operand));
+        field_set_script_var(0, FIELD_VAR_RESULT, field_receive_money((s32)operand));
         return;
     case 0x3A:
-        func_800BD520(0, 0x7100, func_800C3894((s32)operand));
+        field_set_script_var(0, FIELD_VAR_RESULT, field_spend_money((s32)operand));
         return;
     case 0x3B:
         if ((s32)operand >= 0x40)
@@ -2077,7 +2071,7 @@ void func_800BBAC8(u32 command, s32 operand)
             unsigned phase : 7;
             unsigned high : 9;
         } PhaseWord;
-        PhaseWord* state = (PhaseWord*)&FIELD_GAME->control;
+        PhaseWord* state = (PhaseWord*)&g_field_game_state->control;
         state->phase++;
         state->phase %= 6U;
         return;
@@ -2089,7 +2083,7 @@ void func_800BBAC8(u32 command, s32 operand)
         field_open_shop_mode_0((s32)operand);
         return;
     case 0x3F:
-        func_800C396C();
+        field_cache_inventory_values();
         return;
     case 0x40:
         field_stop_actor((s32)actor_index);
@@ -2098,11 +2092,11 @@ void func_800BBAC8(u32 command, s32 operand)
         field_apply_pending_region_effects();
         return;
     case 0x42:
-        func_8005B1EC();
+        field_begin_scene_fade_out();
         return;
     case 0x2F:
     case 0x43:
-        func_8005B288((s32)operand);
+        field_set_pixel_lookup((s32)operand);
         return;
     case 0x44:
         g_field_duel_mode = (s32)operand;
@@ -2124,7 +2118,7 @@ void func_800BBAC8(u32 command, s32 operand)
         return;
     case 0x4A:
         script_record = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
-        script_record->wait = (script_record->wait & 1) | (operand * 2);
+        script_record->wait.bits.frames = operand;
         g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
         return;
     case 0x4B:
@@ -2132,27 +2126,27 @@ void func_800BBAC8(u32 command, s32 operand)
         g_gosub_result_values = (s32)operand;
         return;
     case 0x4C:
-        FIELD_GAME->money = operand;
+        g_field_game_state->money = operand;
         return;
     case 0x4D:
         g_music_track_index = 0;
         field_open_carda(0);
-        func_800BCCE0(0xFFFE, 0, 0, 0);
+        field_script_op_85(0xFFFE, 0, 0, 0);
         return;
     case 0x4E:
         FIELD_SAVED->layout.option_flags |= SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3;
-        func_800C1EC8(0, FIELD_GAME->words, 0x200);
-        func_800C1EC8(0, (s32*)&FIELD_GAME->control, 0x30C);
-        FIELD_GAME->control.fields.placed_land_count = 1;
-        FIELD_GAME->flag_bits[0] |= 0x10000000;
+        func_800C1EC8(0, g_field_game_state->words, 0x200);
+        func_800C1EC8(0, (s32*)&g_field_game_state->control, 0x30C);
+        g_field_game_state->control.fields.placed_land_count = 1;
+        g_field_game_state->flag_bits[0] |= 0x10000000;
         /* actor_index doubles as the land counter; a separate local changes allocation. */
         for (actor_index = 0; actor_index < FIELD_LAND_COUNT; actor_index++)
         {
-            FIELD_GAME->lands[actor_index].position |= 0xF;
-            FIELD_GAME->lands[actor_index].position |= 0xF0;
+            g_field_game_state->lands[actor_index].x = FIELD_LAND_CELL_NONE;
+            g_field_game_state->lands[actor_index].z = FIELD_LAND_CELL_NONE;
         }
         FIELD_LAND_WORDS[0].word |= 1;
-        FIELD_GAME->lands[0].count = 1;
+        g_field_game_state->lands[0].count = 1;
         FIELD_LAND_WORDS[0].word |= 4;
         FIELD_LAND_WORDS[1].word |= 4;
         FIELD_LAND_WORDS[2].word |= 4;
@@ -2169,7 +2163,7 @@ void func_800BBAC8(u32 command, s32 operand)
  * @brief Forward an actor id to field_set_actor_animation.
  * @param actor_id Actor id, or 0xFF for the script owner.
  */
-void func_800BC268(s32 actor_id)
+void field_script_op_45(s32 actor_id)
 {
     s32 actor;
 
@@ -2191,7 +2185,7 @@ void func_800BC268(s32 actor_id)
  * @param first_id First actor id, or 0xFF for the script owner.
  * @param second_id Second actor id, or 0xFF for the script owner.
  */
-void func_800BC2A0(s32 first_id, s32 second_id)
+void field_script_op_46(s32 first_id, s32 second_id)
 {
     FieldScriptRecordState* rec;
     s32 result;
@@ -2230,7 +2224,7 @@ void func_800BC2A0(s32 first_id, s32 second_id)
  * @param actor_id Actor id, or 0xFF for the script owner.
  * @param record_id Secondary parameter forwarded to the dispatched calls.
  */
-void func_800BC328(s32 actor_id, s32 record_id)
+void field_script_op_47(s32 actor_id, s32 record_id)
 {
     s32 actor;
 
@@ -2247,9 +2241,9 @@ void func_800BC328(s32 actor_id, s32 record_id)
     if (g_field_interaction_active != 0)
     {
         field_set_actor_control_mode(1, 2);
-        FIELD_RUNTIME->state.flags = (FIELD_RUNTIME->state.flags & 0xFFF9FFFF) | 0x20000;
+        g_field_runtime->state.flags = (g_field_runtime->state.flags & 0xFFF9FFFF) | 0x20000;
     }
-    func_800BD520(0, 0x2F08, record_id);
+    field_set_script_var(0, 0x2F08, record_id);
 }
 
 /**
@@ -2257,7 +2251,7 @@ void func_800BC328(s32 actor_id, s32 record_id)
  * @param actor_id Actor id, or 0xFF for the script owner.
  * @param source 1 selects field_rejoin_companion, anything else field_join_companion.
  */
-void func_800BC3DC(s32 actor_id, s32 source)
+void field_script_op_48(s32 actor_id, s32 source)
 {
     s32 actor;
     s32 slot_value;
@@ -2282,7 +2276,7 @@ void func_800BC3DC(s32 actor_id, s32 source)
     {
         field_activate_actor_resource_slot(actor, slot_value, 1);
     }
-    func_800BD520(0, 0x2F00, slot_value);
+    field_set_script_var(0, 0x2F00, slot_value);
 }
 
 /**
@@ -2290,7 +2284,7 @@ void func_800BC3DC(s32 actor_id, s32 source)
  * @param actor_id Actor id, or 0xFF for the script owner.
  * @param argument Passed in $a0 to field_join_golem, whose definition takes no parameters.
  */
-void func_800BC474(s32 actor_id, s32 argument)
+void field_script_op_49(s32 actor_id, s32 argument)
 {
     s32 value;
 
@@ -2305,20 +2299,20 @@ void func_800BC474(s32 actor_id, s32 argument)
     {
         field_activate_actor_resource_slot(actor_id, value, 1);
     }
-    func_800BD520(0, 0x2F00, value);
+    field_set_script_var(0, 0x2F00, value);
 }
 
 /**
  * @brief Route a resolved actor index to one of two handlers, then clear bit 31 of the script status word.
  *
  * When bit 0x10000 of the runtime state word is set and the index
- * is below 3, calls field_start_actor_private_script with func_800C2928's record; otherwise calls
+ * is below 3, calls field_start_actor_private_script with field_get_party_private_script's record; otherwise calls
  * field_start_actor_script with the index.
  *
  * @param actor_index Actor index, or 0xFF for the script owner.
- * @param entry Forwarded (low 16 bits) to func_800C2928.
+ * @param entry Forwarded (low 16 bits) to field_get_party_private_script.
  */
-void func_800BC4E8(s32 actor_index, s32 entry)
+void field_script_op_4a(s32 actor_index, s32 entry)
 {
     s32 actor;
     u32 actor_id;
@@ -2329,9 +2323,9 @@ void func_800BC4E8(s32 actor_index, s32 entry)
         actor = g_field_script->status.owner_id;
     }
     actor_id = actor & 0xFF;
-    if ((FIELD_RUNTIME->state.flags & 0x10000) && actor_id < 3)
+    if ((g_field_runtime->state.flags & 0x10000) && actor_id < 3)
     {
-        field_start_actor_private_script(actor_id, func_800C2928(actor_id, entry & 0xFFFF));
+        field_start_actor_private_script(actor_id, field_get_party_private_script(actor_id, entry & 0xFFFF));
     }
     else
     {
@@ -2341,32 +2335,32 @@ void func_800BC4E8(s32 actor_index, s32 entry)
 }
 
 /**
- * @brief Call func_8005AF04 in mode 1 with 0xFF mapped to -1.
+ * @brief Call field_set_object_visible in mode 1 with 0xFF mapped to -1.
  * @param obj_index Object index.
  * @param part_index Part index; 0xFF becomes -1.
  */
-void func_800BC58C(s32 obj_index, s32 part_index)
+void field_script_op_4b(s32 obj_index, s32 part_index)
 {
     if (part_index == 0xFF)
     {
         part_index = -1;
     }
-    func_8005AF04(obj_index, part_index, 1);
+    field_set_object_visible(obj_index, part_index, 1);
 }
 
 /**
- * @brief Call func_8005AF04 in mode 0 with 0xFF mapped to -1.
+ * @brief Call field_set_object_visible in mode 0 with 0xFF mapped to -1.
  * @param obj_index Object index.
  * @param part_index Part index; 0xFF becomes -1.
  */
-void func_800BC5B8(s32 obj_index, s32 part_index)
+void field_script_op_4c(s32 obj_index, s32 part_index)
 {
     if (part_index == 0xFF)
     {
         part_index = -1;
     }
 
-    func_8005AF04(obj_index, part_index, 0);
+    field_set_object_visible(obj_index, part_index, 0);
 }
 
 /**
@@ -2374,7 +2368,7 @@ void func_800BC5B8(s32 obj_index, s32 part_index)
  * @param actor_id Actor id, or 0xFF for the script owner.
  * @param height Negated and used as the new Y.
  */
-void func_800BC5E4(s32 actor_id, s32 height)
+void field_script_op_4d(s32 actor_id, s32 height)
 {
     s32 actor;
     s32 position[4];
@@ -2397,7 +2391,7 @@ void func_800BC5E4(s32 actor_id, s32 height)
  * @param actor_id Actor id, or 0xFF for the script owner.
  * @param resource Bit 15 selects field_load_bound_animation with the low 15 bits; otherwise field_spawn_shared_animation_actor gets it whole.
  */
-void func_800BC65C(s32 actor_id, s32 resource)
+void field_script_op_4e(s32 actor_id, s32 resource)
 {
     if (actor_id == 0xFF)
     {
@@ -2419,7 +2413,7 @@ void func_800BC65C(s32 actor_id, s32 resource)
  * @param list_index Index of the packed shop list to load.
  * @param price_scale Scale applied to each generated item price.
  */
-void func_800BC6B0(s32 list_index, s32 price_scale)
+void field_script_op_4f(s32 list_index, s32 price_scale)
 {
     FieldShopListTable* lists;
     FieldShopList* list;
@@ -2441,8 +2435,8 @@ void func_800BC6B0(s32 list_index, s32 price_scale)
             entries[index].id = list->entries[index].item | 0x8000;
             item = &items->records[list->entries[index].item];
             entries[index].count = 0;
-            price = func_800C38C8(item);
-            item->handle = price;
+            price = field_get_item_value(item);
+            item->value = price;
             scaled = (u32)(price * price_scale) >> 3;
             entries[index].price = scaled;
         }
@@ -2469,7 +2463,7 @@ void func_800BC6B0(s32 list_index, s32 price_scale)
  * @param actor_id Target index, or 0xFF for the script owner.
  * @param resource_index Forwarded to field_retire_actor.
  */
-void func_800BC7EC(s32 actor_id, s32 resource_index)
+void field_script_op_50(s32 actor_id, s32 resource_index)
 {
     s32 actor;
     FieldActorRecord* record;
@@ -2493,12 +2487,12 @@ void func_800BC7EC(s32 actor_id, s32 resource_index)
  * @param first_key First actor id, or 0xFF for the script owner.
  * @param second_key Second actor id, or 0xFF for the script owner.
  */
-void func_800BC86C(s32 first_key, s32 second_key)
+void field_script_op_51(s32 first_key, s32 second_key)
 {
     first_key = (first_key == 0xFF) ? g_field_script->status.owner_id : first_key;
     second_key = (second_key == 0xFF) ? g_field_script->status.owner_id : second_key;
 
-    func_800BD520(0, 0x7100, field_actor_faces_actor(first_key, second_key));
+    field_set_script_var(0, FIELD_VAR_RESULT, field_actor_faces_actor(first_key, second_key));
 }
 
 /**
@@ -2506,9 +2500,9 @@ void func_800BC86C(s32 first_key, s32 second_key)
  * @param dest_variable Destination variable id.
  * @param source_variable Source variable id (low 16 bits).
  */
-void func_800BC8CC(s32 dest_variable, s32 source_variable)
+void field_script_op_52(s32 dest_variable, s32 source_variable)
 {
-    func_800BD520(g_field_script->status.owner_id, dest_variable, func_800BD414(g_field_script->status.owner_id, source_variable & 0xFFFF));
+    field_set_script_var(g_field_script->status.owner_id, dest_variable, field_get_script_var(g_field_script->status.owner_id, source_variable & 0xFFFF));
 }
 
 /**
@@ -2516,7 +2510,7 @@ void func_800BC8CC(s32 dest_variable, s32 source_variable)
  * @param value Value clamped to 0x7F.
  * @param count Count; 0 becomes 1.
  */
-void func_800BC91C(s32 value, s32 count)
+void field_script_op_53(s32 value, s32 count)
 {
     count = (count != 0) ? count : 1;
     if (value >= 0x80)
@@ -2529,7 +2523,7 @@ void func_800BC91C(s32 value, s32 count)
 /**
  * @brief Thin stack-frame wrapper around field_play_song_section.
  */
-void func_800BC960(void)
+void field_script_op_54(void)
 {
     field_play_song_section();
 }
@@ -2539,7 +2533,7 @@ void func_800BC960(void)
  * @param value Value clamped to 0x7F.
  * @param count Count; 0 becomes 1.
  */
-void func_800BC980(s32 value, s32 count)
+void field_script_op_55(s32 value, s32 count)
 {
     count = (count != 0) ? count : 1;
     if (value >= 0x80)
@@ -2554,9 +2548,9 @@ void func_800BC980(s32 value, s32 count)
  * @param land Land index.
  * @param value Value; only the low 2 bits are stored.
  */
-void func_800BC9C4(s32 land, s32 value)
+void field_script_op_56(s32 land, s32 value)
 {
-    FIELD_GAME->lands[land].flags = (FIELD_GAME->lands[land].flags & 0xCF) | ((value & 3) << 4);
+    g_field_game_state->lands[land].flags = (g_field_game_state->lands[land].flags & 0xCF) | ((value & 3) << 4);
 }
 
 /**
@@ -2564,7 +2558,7 @@ void func_800BC9C4(s32 land, s32 value)
  * @param actor_id Actor id, or 0xFF for the script owner.
  * @param resource_entry_index Forwarded to field_reset_actor_at.
  */
-void func_800BC9F8(s32 actor_id, s32 resource_entry_index)
+void field_script_op_57(s32 actor_id, s32 resource_entry_index)
 {
     s32 position[3];
     s32 actor;
@@ -2582,7 +2576,7 @@ void func_800BC9F8(s32 actor_id, s32 resource_entry_index)
         s32 x = position[0] >> 8;
         s32 y = position[1] >> 8;
         s32 z = position[2] >> 8;
-        field_reset_actor_at(actor, resource_entry_index, FIELD_RUNTIME->state.bytes.trigger_group, x, y, z);
+        field_reset_actor_at(actor, resource_entry_index, g_field_runtime->state.bytes.trigger_group, x, y, z);
     }
 }
 
@@ -2591,7 +2585,7 @@ void func_800BC9F8(s32 actor_id, s32 resource_entry_index)
  * @param sound_id Forwarded unchanged.
  * @param pan Forwarded unchanged.
  */
-void func_800BCA88(s32 sound_id, s32 pan)
+void field_script_op_58(s32 sound_id, s32 pan)
 {
     field_play_sound(sound_id, pan);
 }
@@ -2600,9 +2594,9 @@ void func_800BCA88(s32 sound_id, s32 pan)
  * @brief Write the party's money to script variable @p variable_id.
  * @param variable_id Script variable id.
  */
-void func_800BCAA8(s32 variable_id)
+void field_script_op_59(s32 variable_id)
 {
-    func_800BD520(0, variable_id, FIELD_GAME->money);
+    field_set_script_var(0, variable_id, g_field_game_state->money);
 }
 
 /**
@@ -2610,7 +2604,7 @@ void func_800BCAA8(s32 variable_id)
  * @param variable_id Script variable id.
  * @param actor_id Actor id, or 0xFF for the script owner.
  */
-void func_800BCAD8(s32 variable_id, s32 actor_id)
+void field_script_op_5a(s32 variable_id, s32 actor_id)
 {
     s32 actor;
 
@@ -2622,41 +2616,41 @@ void func_800BCAD8(s32 variable_id, s32 actor_id)
     {
         actor = actor_id;
     }
-    func_800BD520(actor, variable_id, field_get_actor_binding_state(actor));
+    field_set_script_var(actor, variable_id, field_get_actor_binding_state(actor));
 }
 
 /**
  * @brief Empty function; no-op.
  */
-void func_800BCB40(void)
+void field_script_op_5b(void)
 {
 }
 
 /**
  * @brief Empty function; no-op.
  */
-void func_800BCB48(void)
+void field_script_op_5c(void)
 {
 }
 
 /**
  * @brief Empty function; no-op.
  */
-void func_800BCB50(void)
+void field_script_op_5d(void)
 {
 }
 
 /**
  * @brief Empty function; no-op.
  */
-void func_800BCB58(void)
+void field_script_op_5e(void)
 {
 }
 
 /**
  * @brief Empty function; no-op.
  */
-void func_800BCB60(void)
+void field_script_op_5f(void)
 {
 }
 
@@ -2667,7 +2661,7 @@ void func_800BCB60(void)
  * @param value0 First diagnostic value.
  * @param value1 Second diagnostic value.
  */
-void func_800BCB68(s32 status, s32 code, s32 value0, s32 value1)
+void field_script_op_80(s32 status, s32 code, s32 value0, s32 value1)
 {
     record_game_diagnostic(status, code, value0, value1);
 }
@@ -2679,7 +2673,7 @@ void func_800BCB68(s32 status, s32 code, s32 value0, s32 value1)
  * @param green Forwarded as the second argument.
  * @param blue Forwarded as the third argument.
  */
-void func_800BCB88(s32 mode, s32 red, s32 green, s32 blue)
+void field_script_op_81(s32 mode, s32 red, s32 green, s32 blue)
 {
     s32 flag;
 
@@ -2702,7 +2696,7 @@ void func_800BCB88(s32 mode, s32 red, s32 green, s32 blue)
  * @param resource_slot_id Forwarded to field_reload_actor.
  * @param resource_base Forwarded to field_reload_actor.
  */
-void func_800BCBD0(s32 key, s32 resource_entry_index, s32 resource_slot_id, s32 resource_base)
+void field_script_op_82(s32 key, s32 resource_entry_index, s32 resource_slot_id, s32 resource_base)
 {
     s32 actor;
     s32 flag;
@@ -2724,18 +2718,18 @@ void func_800BCBD0(s32 key, s32 resource_entry_index, s32 resource_slot_id, s32 
 /**
  * @brief Empty function; no-op.
  */
-void func_800BCC6C(void)
+void field_script_op_83(void)
 {
 }
 
 /**
- * @brief Forward four values to func_800B0710, mapping 0xFF to the script owner in the first and to -1 in the rest.
+ * @brief Forward four values to field_queue_battle_entry_change, mapping 0xFF to the script owner in the first and to -1 in the rest.
  * @param actor_id Actor id, or 0xFF for the script owner.
  * @param value1 0xFF becomes -1.
  * @param value2 0xFF becomes -1.
  * @param value3 0xFF becomes -1.
  */
-void func_800BCC74(s32 actor_id, s32 value1, s32 value2, s32 value3)
+void field_script_op_84(s32 actor_id, s32 value1, s32 value2, s32 value3)
 {
     s32 actor;
 
@@ -2747,7 +2741,7 @@ void func_800BCC74(s32 actor_id, s32 value1, s32 value2, s32 value3)
     {
         actor = actor_id;
     }
-    func_800B0710(actor, (value1 == 0xFF) ? -1 : value1, (value2 == 0xFF) ? -1 : value2, (value3 == 0xFF) ? -1 : value3);
+    field_queue_battle_entry_change(actor, (value1 == 0xFF) ? -1 : value1, (value2 == 0xFF) ? -1 : value2, (value3 == 0xFF) ? -1 : value3);
 }
 
 /**
@@ -2757,7 +2751,7 @@ void func_800BCC74(s32 actor_id, s32 value1, s32 value2, s32 value3)
  * @param selectors Packed bytes for scene_argument1, scene_entry and scene_argument2; 0xFE and 0xFF select sentinel behavior.
  * @param flags Five-bit flags stored at transition bits 24 through 28.
  */
-void func_800BCCE0(transition_id, mode, selectors, flags) s16 transition_id;
+void field_script_op_85(transition_id, mode, selectors, flags) s16 transition_id;
 
 s8 mode;
 
@@ -2770,7 +2764,7 @@ s32 flags;
     s32 third_selector;
     s32 option;
 
-    FieldRuntimeContext* runtime = FIELD_RUNTIME;
+    FieldRuntimeContext* runtime = g_field_runtime;
     option = selectors & 0xFF;
     runtime->transition.flags |= 0x40000000;
     runtime->transition.fields.unk41A = mode;
@@ -2780,55 +2774,55 @@ s32 flags;
     switch (option)
     {
     case 0xFE:
-        FIELD_RUNTIME->scene_argument1 = -2;
+        g_field_runtime->scene_argument1 = -2;
         break;
     case 0xFF:
         g_layout_option = -1;
-        FIELD_RUNTIME->scene_argument1 = -1;
+        g_field_runtime->scene_argument1 = -1;
         break;
     default:
         if (option == g_layout_option)
         {
-            FIELD_RUNTIME->scene_argument1 = -2;
+            g_field_runtime->scene_argument1 = -2;
         }
         else
         {
-            FIELD_RUNTIME->scene_argument1 = option;
+            g_field_runtime->scene_argument1 = option;
         }
         break;
     }
     switch (layout)
     {
     case 0xFE:
-        FIELD_RUNTIME->scene_entry = -2;
+        g_field_runtime->scene_entry = -2;
         break;
     case 0xFF:
-        FIELD_RUNTIME->scene_entry = -1;
+        g_field_runtime->scene_entry = -1;
         break;
     default:
         if (layout == g_layout_flag)
         {
-            FIELD_RUNTIME->scene_entry = -1;
+            g_field_runtime->scene_entry = -1;
         }
         else
         {
-            FIELD_RUNTIME->scene_entry = layout;
+            g_field_runtime->scene_entry = layout;
         }
         break;
     }
     switch (third_selector)
     {
     case 0xFE:
-        FIELD_RUNTIME->scene_argument2 = -2;
+        g_field_runtime->scene_argument2 = -2;
         break;
     case 0xFF:
-        FIELD_RUNTIME->scene_argument2 = -1;
+        g_field_runtime->scene_argument2 = -1;
         break;
     default:
-        FIELD_RUNTIME->scene_argument2 = third_selector;
+        g_field_runtime->scene_argument2 = third_selector;
         break;
     }
-    FIELD_RUNTIME->transition.flags = (FIELD_RUNTIME->transition.flags & 0xE0FFFFFF) | ((flags & 0x1F) << 24);
+    g_field_runtime->transition.flags = (g_field_runtime->transition.flags & 0xE0FFFFFF) | ((flags & 0x1F) << 24);
     g_field_script->active_record = 0;
     g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = 0;
@@ -2974,7 +2968,7 @@ void field_script_op_8b(s32 red, s32 green, s32 blue, s32 timer)
 {
     FieldRuntimeContext* runtime;
 
-    runtime = FIELD_RUNTIME;
+    runtime = g_field_runtime;
     runtime->fade_timer = timer;
     runtime->fade_color.bits.red = red;
     runtime->fade_color.bits.green = green;

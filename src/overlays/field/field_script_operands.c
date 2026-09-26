@@ -1,57 +1,82 @@
 #include "common.h"
 #include "field_script.h"
+#include "field_records.h"
 
-typedef struct
+/*
+ * Script variables.
+ *
+ * A variable reference is a 16-bit value: bits 0-4 are the bit position of
+ * the variable inside its word, bits 5-11 the word index and bits 12-14 the
+ * variable kind, which selects the bit width (g_field_script_var_widths).
+ * Kinds below FIELD_SCRIPT_VAR_LOCAL_KIND are game-state variables in
+ * FieldGameState::words and are saved with the game; the others are words at
+ * the start of the field runtime context. Bit 15 makes a local reference
+ * relative to the owner actor's local variable base.
+ */
+
+/** @brief Bits 0-11 of a variable reference: word index and bit position. */
+#define FIELD_SCRIPT_VAR_LOCATION_MASK 0xFFF
+
+/** @brief Bits 0-4 of a variable reference: bit position inside the word. */
+#define FIELD_SCRIPT_VAR_SHIFT_MASK 0x1F
+
+/** @brief Variable kind, bits 12-14 of a variable reference. */
+#define FIELD_SCRIPT_VAR_KIND(ref) (((ref) >> 12) & 7)
+
+/** @brief First variable kind that lives in the field runtime context. */
+#define FIELD_SCRIPT_VAR_LOCAL_KIND 3
+
+/** @brief Variable reference bit: offset the word index by the owner's local variable base. */
+#define FIELD_SCRIPT_VAR_OWNER_RELATIVE 0x8000
+
+/** @brief Element widths of field_read_bits and field_write_bits. */
+enum
 {
-    u8 pad0[0x28];
-    u32 unk28;
-} StructC1B60;
+    FIELD_BITS_BYTE = 0,
+    FIELD_BITS_HALFWORD = 1,
+    FIELD_BITS_WORD = 2
+};
+
+/** @brief Bit width of each variable kind. */
+extern u8 g_field_script_var_widths[8];
+
+extern FieldGameState* g_field_game_state;
+extern FieldRuntimeContext* g_field_runtime;
 
 void field_script_op_00(void);
-u8* field_script_read_u16(u8* data, u16* value);
-s32 func_800BD3B0(s32 owner_id, FieldScriptVariableRef var_ref);
-extern s32 g_field_game_state;
-extern s32 g_field_runtime;
-StructC1B60* field_find_actor_record_or_default(s32 arg0);
-extern u8 D_800F0E08[8];
-s32 func_800BD318(s32 owner_id, FieldScriptVariableRef var_ref, s32* element_index, s32* bit_shift);
-s32 func_800BD650(s32 width, u8* base, s32 index, s32 shift, s32 bit_count);
-void func_800BD55C(s32 width, s32 base, s32 index, s32 shift, s32 bit_count, s32 value);
-void func_800BD434(s32 owner_id, FieldScriptVariableRef var_ref, s32 value);
-void func_800BD4A8(s32 owner_id, FieldScriptVariableRef var_ref, s32 value);
+FieldActorRecord* field_find_actor_record_or_default(s32 id);
+
+s32 field_read_script_var(s32 owner_id, FieldScriptVariableRef var_ref);
+void field_write_script_var(s32 owner_id, FieldScriptVariableRef var_ref, s32 value);
+static u32* field_resolve_script_var(s32 owner_id, FieldScriptVariableRef var_ref, s32* word_index, s32* bit_shift);
+static void func_800BD4A8(s32 owner_id, FieldScriptVariableRef var_ref, s32 value);
 
 /**
- * @brief Apply a signed 16-bit relative jump to the active record's program counter.
+ * @brief Apply a relative jump to the active record's program counter.
  *
- * Reads a little-endian 16-bit delta from the active record's program counter
- * at offset @p delta_offset. A non-zero delta advances the pc by it
- * (sign-extended via the 0x8000 bit); a zero delta hands off to
- * field_script_op_00 to step the cursor.
+ * Reads a little-endian 16-bit two's-complement delta @p delta_offset bytes
+ * after the program counter and adds it. A zero delta instead steps past the
+ * opcode through field_script_op_00.
  *
- * @param delta_offset Byte offset from the program counter holding the delta.
+ * @param delta_offset Byte offset from the program counter of the delta.
  */
 void field_script_branch(s32 delta_offset)
 {
     FieldScriptRecord* rec;
-    s32 pc;
-    u8* ptr;
-    s32 val;
-    s32 lo;
+    u8* pc;
+    u16 delta;
 
     rec = FIELD_SCRIPT_ACTIVE_RECORD();
-    pc = (s32)rec->pc;
-    ptr = (u8*)(pc + delta_offset);
-    val = ptr[0] + (ptr[1] << 8);
-    lo = val & 0xFFFF;
-    if (lo != 0)
+    pc = rec->pc;
+    delta = pc[delta_offset] + (pc[delta_offset + 1] << 8);
+    if (delta != 0)
     {
-        if (val & 0x8000)
+        if (delta & 0x8000)
         {
-            s32 t = pc + 0xFFFF0000;
-            rec->pc = (u8*)(t + lo);
+            rec->pc = pc - (0x10000 - delta);
             return;
         }
-        rec->pc = (u8*)(pc + lo);
+        rec->pc = pc + delta;
         return;
     }
     field_script_op_00();
@@ -64,7 +89,7 @@ void field_script_branch(s32 delta_offset)
  * @param value Receives the decoded value.
  * @return The advanced operand stream position.
  */
-u8* field_script_read_operand_or_owner(u32 type, u8* data, s32* value)
+u8* field_script_read_operand_or_owner(s32 type, u8* data, s32* value)
 {
     u8* result;
 
@@ -83,19 +108,16 @@ u8* field_script_read_operand_or_owner(u32 type, u8* data, s32* value)
  * @param value Destination for the decoded 32-bit value.
  * @return @p data advanced past the bytes consumed for this operand.
  */
-u8* field_script_read_operand(u32 operand_type, u8* data, s32* value)
+u8* field_script_read_operand(s32 type, u8* data, s32* value)
 {
-    s32 type = operand_type;
-
-    type &= 3;
-    switch (type)
+    switch (type & 3)
     {
     case 0:
     {
         FieldScriptVariableRef var_ref;
 
         data = field_script_read_u16(data, &var_ref.value);
-        *value = func_800BD3B0(g_field_script->status.owner_id, var_ref);
+        *value = field_read_script_var(g_field_script->status.owner_id, var_ref);
         return data;
     }
     case 1:
@@ -111,8 +133,9 @@ u8* field_script_read_operand(u32 operand_type, u8* data, s32* value)
 }
 
 /**
- * @param data Byte stream to read a little-endian 16-bit value from.
- * @param value Destination for the unpacked 16-bit value.
+ * @brief Read a little-endian halfword from the script stream.
+ * @param data Byte stream to read from.
+ * @param value Receives the halfword.
  * @return @p data advanced past the two bytes read.
  */
 u8* field_script_read_u16(u8* data, u16* value)
@@ -122,143 +145,141 @@ u8* field_script_read_u16(u8* data, u16* value)
 }
 
 /**
- * @brief Decode a packed field-script variable reference.
- * @param owner_id Owner or record identifier used when resolving adjusted references.
- * @param var_ref Packed variable reference to decode.
- * @param element_index Receives the element index (reference bits 5-11).
- * @param bit_shift Receives the bit shift (reference bits 0-4).
- * @return Base value selected by the reference kind.
+ * @brief Locate the word that holds a script variable.
+ * @param owner_id Actor whose local variable base applies to owner-relative references.
+ * @param var_ref Variable reference.
+ * @param word_index Receives the word index from the variable base.
+ * @param bit_shift Receives the bit position inside the word.
+ * @return The variable base: FieldGameState::words or the field runtime context.
  */
-s32 func_800BD318(s32 owner_id, FieldScriptVariableRef var_ref, s32* element_index, s32* bit_shift)
+static u32* field_resolve_script_var(s32 owner_id, FieldScriptVariableRef var_ref, s32* word_index, s32* bit_shift)
 {
-    u32 value;
-    s32 result;
+    u32 location;
+    u32* base;
 
-    value = var_ref.value & 0xFFF;
-    *element_index = value >> 5;
-    *bit_shift = value & 0x1F;
-    if (((var_ref.value >> 12) & 7) < 3)
+    location = var_ref.value & FIELD_SCRIPT_VAR_LOCATION_MASK;
+    *word_index = location >> 5;
+    *bit_shift = location & FIELD_SCRIPT_VAR_SHIFT_MASK;
+    if (FIELD_SCRIPT_VAR_KIND(var_ref.value) < FIELD_SCRIPT_VAR_LOCAL_KIND)
     {
-        result = g_field_game_state + 0xE4;
+        base = (u32*)g_field_game_state->words;
     }
     else
     {
-        result = g_field_runtime;
-        if (var_ref.value & 0x8000)
+        base = (u32*)g_field_runtime;
+        if (var_ref.value & FIELD_SCRIPT_VAR_OWNER_RELATIVE)
         {
-            *element_index += (field_find_actor_record_or_default(owner_id)->unk28 >> 9) & 0x7F;
+            *word_index += field_find_actor_record_or_default(owner_id)->script.status.bits.local_base;
         }
     }
-    return result;
+    return base;
 }
 
 /**
- * @brief Resolve and read a packed field-script variable reference.
- * @param owner_id Owner or record identifier used while resolving the reference.
- * @param var_ref Packed variable reference to read.
- * @return Value read from the resolved variable.
+ * @brief Read a script variable.
+ * @param owner_id Actor whose local variable base applies to owner-relative references.
+ * @param var_ref Variable reference.
+ * @return The variable's value.
  */
-s32 func_800BD3B0(s32 owner_id, FieldScriptVariableRef var_ref)
+s32 field_read_script_var(s32 owner_id, FieldScriptVariableRef var_ref)
 {
-    s32 element_index;
+    s32 word_index;
     s32 bit_shift;
-    s32 base;
+    u32* base;
 
-    base = func_800BD318(owner_id, var_ref, &element_index, &bit_shift);
-    return func_800BD650(2, (u8*)base, element_index, bit_shift, D_800F0E08[(var_ref.value >> 12) & 7]);
+    base = field_resolve_script_var(owner_id, var_ref, &word_index, &bit_shift);
+    return field_read_bits(FIELD_BITS_WORD, base, word_index, bit_shift, g_field_script_var_widths[FIELD_SCRIPT_VAR_KIND(var_ref.value)]);
 }
 
 /**
- * @brief Resolve a 16-bit field-script variable reference and discard its value.
- * @param owner_id Owner or record identifier used while resolving the reference.
- * @param raw_ref Packed 16-bit variable reference.
+ * @brief Read a script variable given as a plain integer.
+ * @param owner_id Actor whose local variable base applies to owner-relative references.
+ * @param variable Variable reference in the low 16 bits.
+ * @return The variable's value.
  */
-void func_800BD414(s32 owner_id, s32 raw_ref)
+s32 field_get_script_var(s32 owner_id, s32 variable)
 {
     FieldScriptVariableRef var_ref;
 
-    var_ref.value = raw_ref;
-    func_800BD3B0(owner_id, var_ref);
+    var_ref.value = variable;
+    return field_read_script_var(owner_id, var_ref);
 }
 
 /**
- * @brief Resolve a packed field-script variable reference and write a value.
- * @param owner_id Owner or record identifier used while resolving the reference.
- * @param var_ref Packed variable reference to write.
- * @param value Value to write.
+ * @brief Write a script variable.
+ * @param owner_id Actor whose local variable base applies to owner-relative references.
+ * @param var_ref Variable reference.
+ * @param value Value to store; bits above the variable's width are dropped.
  */
-void func_800BD434(s32 owner_id, FieldScriptVariableRef var_ref, s32 value)
+void field_write_script_var(s32 owner_id, FieldScriptVariableRef var_ref, s32 value)
 {
-    s32 element_index;
+    s32 word_index;
     s32 bit_shift;
-    s32 base;
+    u32* base;
 
-    base = func_800BD318(owner_id, var_ref, &element_index, &bit_shift);
-    func_800BD55C(2, base, element_index, bit_shift, D_800F0E08[(var_ref.value >> 12) & 7], value);
+    base = field_resolve_script_var(owner_id, var_ref, &word_index, &bit_shift);
+    field_write_bits(FIELD_BITS_WORD, base, word_index, bit_shift, g_field_script_var_widths[FIELD_SCRIPT_VAR_KIND(var_ref.value)], value);
 }
 
 /**
- * @brief Resolve a packed variable reference and write using decremented width metadata.
- * @param owner_id Owner or record identifier used while resolving the reference.
- * @param var_ref Packed variable reference to write.
- * @param value Value to write.
+ * @brief Write a script variable using one bit less than its kind's width.
+ * @param owner_id Actor whose local variable base applies to owner-relative references.
+ * @param var_ref Variable reference.
+ * @param value Value to store.
  */
-void func_800BD4A8(s32 owner_id, FieldScriptVariableRef var_ref, s32 value)
+static void func_800BD4A8(s32 owner_id, FieldScriptVariableRef var_ref, s32 value)
 {
-    s32 element_index;
+    s32 word_index;
     s32 bit_shift;
-    s32 base;
+    u32* base;
 
-    base = func_800BD318(owner_id, var_ref, &element_index, &bit_shift);
-    func_800BD55C(2, base, element_index, bit_shift, D_800F0E08[(var_ref.value >> 12) & 7] - 1, value);
+    base = field_resolve_script_var(owner_id, var_ref, &word_index, &bit_shift);
+    field_write_bits(FIELD_BITS_WORD, base, word_index, bit_shift, g_field_script_var_widths[FIELD_SCRIPT_VAR_KIND(var_ref.value)] - 1, value);
 }
 
 /**
- * @brief Dispatch a raw variable reference to the appropriate write helper.
- * @param owner_id Owner or record identifier used while resolving the reference.
- * @param raw_ref Raw variable reference value.
- * @param value Value to write.
+ * @brief Write a script variable given as a plain integer.
+ * @param owner_id Actor whose local variable base applies to owner-relative references.
+ * @param variable Variable reference in the low 16 bits; a value above 0xFFFF writes one bit less (func_800BD4A8).
+ * @param value Value to store.
  */
-void func_800BD520(s32 owner_id, u32 raw_ref, s32 value)
+void field_set_script_var(s32 owner_id, u32 variable, s32 value)
 {
     FieldScriptVariableRef var_ref;
 
-    var_ref.value = raw_ref;
-    if (raw_ref <= 0xFFFFU)
+    var_ref.value = variable;
+    if (variable <= 0xFFFF)
     {
-        func_800BD434(owner_id, var_ref, value);
+        field_write_script_var(owner_id, var_ref, value);
         return;
     }
     func_800BD4A8(owner_id, var_ref, value);
 }
 
 /**
- * @brief Write a masked bitfield into an 8-, 16-, or 32-bit element.
- * @param width Element width selector: 0 = byte, 1 = halfword, 2 = word.
- * @param base Base address of the element array; 0 and -1 mean no target.
+ * @brief Store a value into a bit field of an 8-, 16- or 32-bit array element.
+ * @param width Element width, a FIELD_BITS_* value.
+ * @param base Element array; NULL and -1 mean there is nothing to write.
  * @param index Element index.
- * @param shift Left-shift amount of the field.
- * @param bit_count Field width in bits; values >= 32 replace the whole element.
+ * @param shift Bit position of the field.
+ * @param bit_count Field width in bits; 32 or more replaces the whole element.
  * @param value Value to store in the field.
  */
-void func_800BD55C(s32 width, s32 base, s32 index, s32 shift, s32 bit_count, s32 value)
+void field_write_bits(s32 width, void* base, s32 index, s32 shift, s32 bit_count, s32 value)
 {
     s32 clear_mask;
     s32 value_mask;
-    u8* p8;
-    u16* p16;
-    s32* p32;
 
-    if (base == 0)
+    if (base == NULL)
     {
         return;
     }
-    if (base == -1)
+    if (base == (void*)-1)
     {
         return;
     }
 
-    if (bit_count < 0x20)
+    if (bit_count < 32)
     {
         clear_mask = ~(((1 << bit_count) - 1) << shift);
     }
@@ -267,7 +288,7 @@ void func_800BD55C(s32 width, s32 base, s32 index, s32 shift, s32 bit_count, s32
         clear_mask = 0;
     }
 
-    if (bit_count < 0x20)
+    if (bit_count < 32)
     {
         value_mask = ((1 << bit_count) - 1) << shift;
     }
@@ -278,38 +299,33 @@ void func_800BD55C(s32 width, s32 base, s32 index, s32 shift, s32 bit_count, s32
 
     switch (width)
     {
-    case 0:
-        p8 = (u8*)(base + index);
-        *p8 = (*p8 & clear_mask) | (value_mask & (value << shift));
+    case FIELD_BITS_BYTE:
+        ((u8*)base)[index] = (((u8*)base)[index] & clear_mask) | (value_mask & (value << shift));
         break;
-    case 1:
-        p16 = (u16*)((index * 2) + base);
-        *p16 = (*p16 & clear_mask) | (value_mask & (value << shift));
+    case FIELD_BITS_HALFWORD:
+        ((u16*)base)[index] = (((u16*)base)[index] & clear_mask) | (value_mask & (value << shift));
         break;
-    case 2:
-        p32 = (s32*)((index * 4) + base);
-        *p32 = (*p32 & clear_mask) | (value_mask & (value << shift));
+    case FIELD_BITS_WORD:
+        ((u32*)base)[index] = (((u32*)base)[index] & clear_mask) | (value_mask & (value << shift));
         break;
     }
 }
 
 /**
- * @brief Extract a masked bitfield from an 8-, 16-, or 32-bit element.
- *
- * @param width Element width selector: 0 = byte, 1 = halfword, 2 = word.
- * @param base Base address of the element array.
+ * @brief Extract a bit field from an 8-, 16- or 32-bit array element.
+ * @param width Element width, a FIELD_BITS_* value.
+ * @param base Element array.
  * @param index Element index.
- * @param shift Right-shift amount.
- * @param bit_count Number of low bits to retain; values >= 32 retain all bits.
- * @return The selected element shifted right by @p shift and masked to @p bit_count bits.
- * @note Other width values fall off the end without a return value, as in the original.
+ * @param shift Bit position of the field.
+ * @param bit_count Field width in bits; 32 or more returns the whole shifted element.
+ * @return The field's value; undefined for an unknown @p width.
  */
-s32 func_800BD650(s32 width, u8* base, s32 index, s32 shift, s32 bit_count)
+s32 field_read_bits(s32 width, void* base, s32 index, s32 shift, s32 bit_count)
 {
     s32 mask;
     s32 value;
 
-    if (bit_count < 0x20)
+    if (bit_count < 32)
     {
         mask = (1 << bit_count) - 1;
     }
@@ -320,13 +336,13 @@ s32 func_800BD650(s32 width, u8* base, s32 index, s32 shift, s32 bit_count)
 
     switch (width)
     {
-    case 0:
-        value = base[index] >> shift;
+    case FIELD_BITS_BYTE:
+        value = ((u8*)base)[index] >> shift;
         return value & mask;
-    case 1:
-        value = (*(u16*)(base + index * 2)) >> shift;
+    case FIELD_BITS_HALFWORD:
+        value = ((u16*)base)[index] >> shift;
         return value & mask;
-    case 2:
-        return (*(u32*)(base + index * 4) >> shift) & mask;
+    case FIELD_BITS_WORD:
+        return (((u32*)base)[index] >> shift) & mask;
     }
 }

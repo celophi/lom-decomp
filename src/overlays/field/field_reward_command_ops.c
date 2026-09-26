@@ -1,279 +1,244 @@
+/**
+ * @file field_reward_command_ops.c
+ * @brief Defeat drops of monsters and the rewards their pickups grant.
+ *
+ * The drop handlers are only called through g_field_drop_handlers, a data table.
+ */
+
 #include "game_audio.h"
 #include "common.h"
 #include "field_calls.h"
+#include "field_effect_types.h"
+#include "field_records.h"
+#include "sdk/rand.h"
 
-/** @brief Partial Rec layout used by func_800C0A38. */
-typedef struct Rec
-{
-    u8 pad0[0xC];
-    s32 unkC;
-    u8 *unk10;
-    u8 *unk14;
-} Rec;
+/** @brief Drop handlers of field_roll_defeat_drop. */
+#define FIELD_DROP_HANDLER_COUNT 4
 
-extern u8 D_800F18C4[];
-extern s32 (*D_800F18B4[])(s32, s32, Rec *);
+/** @brief g_field_drop_slots_by_level has one entry per 16 monster levels. */
+#define FIELD_DROP_LEVEL_BAND_SHIFT 4
+/** @brief Drop slots added by FIELD_DEFEAT_EXTRA_DROP_SLOTS. */
+#define FIELD_DROP_EXTRA_SLOTS 2
 
-s32 rand(void);
+/** @brief Monster level above which the experience reward grows at half the rate. */
+#define FIELD_REWARD_LEVEL_KNEE 10
+/** @brief Experience of a large pickup, in small pickups. */
+#define FIELD_REWARD_LARGE_EXPERIENCE_SCALE 10
+/** @brief Money of a large and a small money pickup. */
+#define FIELD_REWARD_MONEY_LARGE_AMOUNT 50
+#define FIELD_REWARD_MONEY_SMALL_AMOUNT 10
+/** @brief Share of the maximum restored by a restore pickup, out of 256. */
+#define FIELD_REWARD_RESTORE_QUARTER_SHARE 64
+#define FIELD_REWARD_RESTORE_HALF_SHARE 128
+
+/** @brief Diagnostic for an unknown reward kind. */
+#define DIAG_BAD_REWARD_KIND 300
+
+/** @brief Item pickup codes of a template drop: 16 per monster template. */
+#define FIELD_TEMPLATE_PICKUP_CODES 16
+
+/** @brief Drop handler (g_field_drop_handlers): returns the FieldPickupAction the defeated monster leaves. */
+typedef s32 (*FieldDropHandler)(s32 handler, s32 value, FieldStatusRecord* record);
+
+FieldActorRecord* field_find_actor_record_or_default(s32 id);
+
+extern FieldDropHandler g_field_drop_handlers[FIELD_DROP_HANDLER_COUNT];
+/** @brief Drop slots taking part in the drop roll, per 16 monster levels. */
+extern u8 g_field_drop_slots_by_level[];
+extern FieldBattleContext* g_field_battle;
 
 /**
- * @brief Select a bounded random entry and invoke its dispatch handler.
- * @param record Actor record containing flags and selection tables.
- * @return The handler result, or -1 for a null record or invalid dispatch entry.
+ * @brief Roll the drop of a defeated monster and run the drop slot's handler.
+ * @param record Status record of the defeated monster, or NULL.
+ * @return The FieldPickupAction to leave, or -1 for none.
+ * @note Slot n is picked when bit n is the lowest set bit of a random mask (probability 1/2^(n+1)),
+ *       and the last slot taking part in the roll when none is.
  */
-s32 func_800C0A38(Rec *record)
+s32 field_roll_defeat_drop(FieldStatusRecord* record)
 {
-    s32 result;
-    s32 count;
+    s32 slot_count;
     s32 mask;
-    s32 shift_count;
-    u8 *entry;
-    u8 dispatch_idx;
+    s32 random;
+    s32 slot;
+    FieldActorTemplate* template;
 
-    /* Kept: without the do/while(0) (93.9%) or the volatile re-read below (95.0%) the match breaks. */
-    do
+    if (record == NULL)
     {
-        result = -1;
-    } while (0);
-    if (record != NULL)
-    {
-        count = D_800F18C4[(u8)(record->unk10[0x4C]) >> 5];
-        if (record->unkC & 0x04000000)
-        {
-            count += 2;
-        }
-        if (count >= 8)
-        {
-            count = 7;
-        }
-        shift_count = rand();
-        mask = shift_count & 0xFFFF;
-        if (record->unkC & 0x08000000)
-        {
-            mask = shift_count & 0xFFFC;
-        }
-        shift_count = 0;
-        if (count != 0)
-        {
-            while (!(mask & 1))
-            {
-                shift_count += 1;
-                mask >>= 1;
-                if (shift_count >= count)
-                {
-                    break;
-                }
-            }
-        }
-        entry = record->unk14 + (shift_count * 2);
-        if (*(volatile u8 *)(entry + 0x40) >= 4)
-        {
-            return -1;
-        }
-        dispatch_idx = entry[0x40];
-        result = D_800F18B4[dispatch_idx](dispatch_idx, entry[0x41], record);
+        return -1;
     }
-    return result;
+    slot_count = g_field_drop_slots_by_level[record->state->level.bits.level >> FIELD_DROP_LEVEL_BAND_SHIFT];
+    if (record->unkC & FIELD_DEFEAT_EXTRA_DROP_SLOTS)
+    {
+        slot_count += FIELD_DROP_EXTRA_SLOTS;
+    }
+    if (slot_count >= FIELD_ACTOR_DROP_SLOT_COUNT)
+    {
+        slot_count = FIELD_ACTOR_DROP_SLOT_COUNT - 1;
+    }
+    random = rand();
+    mask = random & 0xFFFF;
+    if (record->unkC & FIELD_DEFEAT_NO_COMMON_DROPS)
+    {
+        mask = random & 0xFFFC;
+    }
+    for (slot = 0; slot < slot_count; slot++)
+    {
+        if (mask & 1)
+        {
+            break;
+        }
+        mask >>= 1;
+    }
+    template = record->template;
+    if (template->drops[slot].handler < FIELD_DROP_HANDLER_COUNT)
+    {
+        return g_field_drop_handlers[template->drops[slot].handler](template->drops[slot].handler, template->drops[slot].value, record);
+    }
+    return -1;
 }
 
-extern u8 *g_field_battle;
 /**
- * @brief Dispatch an experience, currency, item, or counter reward.
- * @param recipient Recipient identifier passed to reward handlers.
- * @param context Context value used by object and audio reward operations.
- * @param selector Reward operation selector.
+ * @brief Grant the reward of a pickup.
+ * @param recipient Status record id of the party member that picked it up.
+ * @param owner Status record id of the actor that left it.
+ * @param kind FieldRewardKind.
  */
-void func_800C0B40(s32 recipient, void *context, u32 selector)
+void field_grant_reward(s32 recipient, s32 owner, u32 kind)
 {
-    s32 argument_value;
-    s32 reward_value;
+    s32 level;
 
-    switch (selector)
+    switch (kind)
     {
-    case 0:
-        reward_value = *g_field_battle;
-        argument_value = reward_value * 4;
-        if (reward_value >= 11)
+    case FIELD_REWARD_EXPERIENCE_LARGE:
+        level = g_field_battle->state.level;
+        if (level > FIELD_REWARD_LEVEL_KNEE)
         {
-            reward_value = ((reward_value - 10) / 2) + 10;
-            argument_value = reward_value * 4;
+            level = ((level - FIELD_REWARD_LEVEL_KNEE) / 2) + FIELD_REWARD_LEVEL_KNEE;
         }
-        field_award_experience(recipient, (argument_value + reward_value) * 2);
+        field_award_experience(recipient, level * FIELD_REWARD_LARGE_EXPERIENCE_SCALE);
         return;
-    case 1:
-        reward_value = *g_field_battle;
-        if (reward_value >= 11)
+    case FIELD_REWARD_EXPERIENCE_SMALL:
+        level = g_field_battle->state.level;
+        if (level > FIELD_REWARD_LEVEL_KNEE)
         {
-            reward_value = ((reward_value - 10) / 2) + 10;
+            level = ((level - FIELD_REWARD_LEVEL_KNEE) / 2) + FIELD_REWARD_LEVEL_KNEE;
         }
-        argument_value = reward_value;
-        field_award_experience(recipient, argument_value);
+        field_award_experience(recipient, level);
         return;
-    case 2:
-        field_add_money(recipient, 50);
+    case FIELD_REWARD_MONEY_LARGE:
+        field_add_money(recipient, FIELD_REWARD_MONEY_LARGE_AMOUNT);
         return;
-    case 3:
-        field_add_money(recipient, 10);
+    case FIELD_REWARD_MONEY_SMALL:
+        field_add_money(recipient, FIELD_REWARD_MONEY_SMALL_AMOUNT);
         return;
-    case 4:
-        field_grant_actor_pickup((void *)recipient, (s32)context);
+    case FIELD_REWARD_ITEM:
+        field_grant_actor_pickup((void*)recipient, owner);
         return;
-    case 5:
-        field_restore_actor_capacity_fraction(recipient, 64);
+    case FIELD_REWARD_RESTORE_QUARTER:
+        field_restore_actor_capacity_fraction(recipient, FIELD_REWARD_RESTORE_QUARTER_SHARE);
         return;
-    case 6:
-        field_restore_actor_capacity_fraction(recipient, 128);
+    case FIELD_REWARD_RESTORE_HALF:
+        field_restore_actor_capacity_fraction(recipient, FIELD_REWARD_RESTORE_HALF_SHARE);
         return;
     default:
-        argument_value = (s32)context;
-        record_game_diagnostic(0x8001, 300, argument_value, selector);
+        record_game_diagnostic(DIAG_ERROR, DIAG_BAD_REWARD_KIND, owner, kind);
         return;
     }
 }
 
-typedef struct Quad
-{
-    u8 pad0[0x60];
-    u8 unk60;
-    u8 unk61;
-    u8 unk62;
-    u8 unk63;
-} Quad;
-
-typedef struct Flag
-{
-    u8 pad0[0x3F];
-    u8 unk3F;
-} Flag;
-
-typedef struct DirectionalRec
-{
-    u8 pad0[0xC];
-    s32 unkC;
-    Quad *unk10;
-    Flag *unk14;
-} DirectionalRec;
-
 /**
- * @brief Decode packed directional flags into the record output bytes.
- * @param command Dispatch command index (unused).
- * @param value Packed value: high nibble and low nibble.
- * @param record Record receiving the decoded values.
- * @return Constant command length value 0x1F.
+ * @brief Drop handler 0: scatter experience and money pickups.
+ * @param handler Drop handler index (unused).
+ * @param value Experience pickups in the high nibble, money pickups in the low nibble.
+ * @param record Status record of the defeated monster.
+ * @return FIELD_PICKUP_EXPERIENCE_OR_CURRENCY.
  */
-s32 func_800C0C74(void *command, s32 value, DirectionalRec *record)
+s32 field_drop_pickups(s32 handler, s32 value, FieldStatusRecord* record)
 {
     s32 flags;
-    s32 high;
+    s32 experience;
 
-    high = value >> 4;
+    experience = value >> 4;
     flags = record->unkC;
     value = value & 0xF;
-    if (flags < 0)
+    if (flags & FIELD_DEFEAT_EXPERIENCE_AS_MONEY)
     {
-        value += high;
-        high = 0;
+        value += experience;
+        experience = 0;
     }
-    if (flags & 0x20000000)
+    if (flags & FIELD_DEFEAT_MONEY_PLUS_2)
     {
         value += 2;
     }
-    if (flags & 0x10000000)
+    if (flags & FIELD_DEFEAT_MONEY_PLUS_1)
     {
         value += 1;
     }
-    if (flags & 0x02000000)
+    if (flags & FIELD_DEFEAT_EXPERIENCE_PLUS_2)
     {
-        high += 2;
+        experience += 2;
     }
-    if (flags & 0x01000000)
+    if (flags & FIELD_DEFEAT_EXPERIENCE_PLUS_1)
     {
-        high += 1;
+        experience += 1;
     }
-    if (record->unk14->unk3F & 0x80)
+    if (record->template->flags & FIELD_TEMPLATE_BOSS)
     {
-        record->unk10->unk60 = (s8) high;
-        record->unk10->unk61 = 0;
-        record->unk10->unk62 = (s8) value;
-        record->unk10->unk63 = 0;
+        record->state->signal.drop_counts[FIELD_REWARD_EXPERIENCE_LARGE] = experience;
+        record->state->signal.drop_counts[FIELD_REWARD_EXPERIENCE_SMALL] = 0;
+        record->state->signal.drop_counts[FIELD_REWARD_MONEY_LARGE] = value;
+        record->state->signal.drop_counts[FIELD_REWARD_MONEY_SMALL] = 0;
     }
     else
     {
-        record->unk10->unk60 = 0;
-        record->unk10->unk61 = (s8) high;
-        record->unk10->unk62 = 0;
-        record->unk10->unk63 = (s8) value;
+        record->state->signal.drop_counts[FIELD_REWARD_EXPERIENCE_LARGE] = 0;
+        record->state->signal.drop_counts[FIELD_REWARD_EXPERIENCE_SMALL] = experience;
+        record->state->signal.drop_counts[FIELD_REWARD_MONEY_LARGE] = 0;
+        record->state->signal.drop_counts[FIELD_REWARD_MONEY_SMALL] = value;
     }
 
-    return 0x1F;
+    return FIELD_PICKUP_EXPERIENCE_OR_CURRENCY;
 }
 
-typedef struct
-{
-    u8 unk0[4];
-    u8 unk4;
-} UnkStruct800C0D90_Arg2;
-
-typedef struct
-{
-    u8 unk0[2];
-    s16 unk2;
-} UnkStruct800C0D90_Ret;
-
-typedef struct
-{
-    u8 unk0[0x18];
-    u8 unk18;
-} UnkStruct800C0DC4_Ptr;
-
-typedef struct
-{
-    u8 unk0[4];
-    u8 unk4;
-    u8 unk5[0xF];
-    UnkStruct800C0DC4_Ptr *unk14;
-} UnkStruct800C0DC4_Arg2;
-
 /**
- * @brief Reward handler: pick command 0x22 with probability value / 256, else 0x21.
- * @param command Dispatch command index (unused).
- * @param value Chance out of 256.
- * @return 0x22 on success, 0x21 otherwise.
+ * @brief Drop handler 1: leave a restore pickup, a half restore with probability value / 256.
+ * @param handler Drop handler index (unused).
+ * @param value Chance of the half restore, out of 256.
+ * @param record Status record of the defeated monster (unused).
+ * @return FIELD_PICKUP_RESTORE_HALF or FIELD_PICKUP_RESTORE_QUARTER.
  */
-s32 func_800C0D58(s32 command, s32 value)
+s32 field_drop_restore(s32 handler, s32 value, FieldStatusRecord* record)
 {
     if ((rand() & 0xFF) < value)
     {
-        return 0x22;
+        return FIELD_PICKUP_RESTORE_HALF;
     }
 
-    return 0x21;
-}
-
-extern UnkStruct800C0D90_Ret *field_find_actor_record_or_default(u8 arg0);
-
-/**
- * @brief Reward handler: store value with bit 15 set in the looked-up record.
- * @param command Dispatch command index (unused).
- * @param value Value to store.
- * @param record Record whose unk4 byte selects the target through field_find_actor_record_or_default.
- * @return Always 0x20.
- */
-s32 func_800C0D90(s32 command, s32 value, UnkStruct800C0D90_Arg2 *record)
-{
-    field_find_actor_record_or_default(record->unk4)->unk2 = (s16) (value | 0x8000);
-    return 0x20;
+    return FIELD_PICKUP_RESTORE_QUARTER;
 }
 
 /**
- * @brief Reward handler: store value plus 16 times a byte of the record's unk14 data.
- * @param command Dispatch command index (unused).
- * @param value Base value.
- * @param record Record whose unk4 byte selects the target through field_find_actor_record_or_default.
- * @return Always 0x20.
+ * @brief Drop handler 2: leave an item pickup for a counter.
+ * @param handler Drop handler index (unused).
+ * @param value Counter index.
+ * @param record Status record of the defeated monster.
+ * @return FIELD_PICKUP_ITEM.
  */
-s32 func_800C0DC4(s32 command, s32 value, UnkStruct800C0DC4_Arg2 *record)
+s32 field_drop_counter(s32 handler, s32 value, FieldStatusRecord* record)
 {
-    field_find_actor_record_or_default(record->unk4)->unk2 = (s16) (value + (record->unk14->unk18 << 4));
-    return 0x20;
+    field_find_actor_record_or_default(record->meta.bytes.id)->pickup = value | FIELD_PICKUP_COUNTER;
+    return FIELD_PICKUP_ITEM;
+}
+
+/**
+ * @brief Drop handler 3: leave an item pickup from the monster template's reward keys.
+ * @param handler Drop handler index (unused).
+ * @param value Reward key within the template's FIELD_TEMPLATE_PICKUP_CODES.
+ * @param record Status record of the defeated monster.
+ * @return FIELD_PICKUP_ITEM.
+ */
+s32 field_drop_template_item(s32 handler, s32 value, FieldStatusRecord* record)
+{
+    field_find_actor_record_or_default(record->meta.bytes.id)->pickup = value + record->template->id * FIELD_TEMPLATE_PICKUP_CODES;
+    return FIELD_PICKUP_ITEM;
 }

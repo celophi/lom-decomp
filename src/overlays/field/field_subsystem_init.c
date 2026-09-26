@@ -11,7 +11,6 @@
 #include "game_audio.h"
 
 void field_reset_input_repeat(void);
-void func_800B01FC(void);
 
 extern s32 g_field_dialog_screen_mode;
 extern s32 g_field_render_context;
@@ -25,7 +24,7 @@ extern s32 D_801178C8;
 extern s32 D_8011F428;
 extern s32 D_80122710;
 extern s32 g_field_actor_text_count;
-extern s32 D_8011F3AC;
+extern s32 g_field_ring_menu_state;
 extern s32 g_field_gover_load_countdown;
 extern s32 D_801227F0;
 extern s32 g_field_return_to_title_prompt_delay;
@@ -79,7 +78,7 @@ void field_initialize_subsystems(s32 render_context)
     field_load_actor_sequence_data();
     g_field_actor_text_count = 0;
     field_clear_actor_texts();
-    D_8011F3AC = 0;
+    g_field_ring_menu_state = 0;
     g_field_gover_load_countdown = 0;
     g_field_dialog_screen_mode = 0;
     g_field_return_to_title_prompt_state = 0;
@@ -111,7 +110,7 @@ void field_initialize_subsystems(s32 render_context)
     {
         g_field_preserve_entry_music = 0;
     }
-    func_800B01FC();
+    field_reset_battle_entry();
     field_reset_input_repeat();
     field_clear_fade_prims();
     field_reset_music_stream();

@@ -1,6 +1,7 @@
 #include "game_audio.h"
 #include "common.h"
 #include "field_calls.h"
+#include "field_script.h"
 #include "field_records.h"
 
 extern FieldBattleContext *g_field_battle;
@@ -8,16 +9,12 @@ extern FieldRuntimeContext *g_field_runtime;
 
 /** @brief Runtime actor flag bits holding the trigger group. */
 #define FIELD_TRIGGER_GROUP_MASK 0xF
-/** @brief FieldStatusRecord::unk0 value of a record on the monsters' side. */
-#define FIELD_RECORD_MONSTER_SIDE 0x40
 /** @brief FieldActorTemplate::flags bits. */
 #define FIELD_TEMPLATE_UNLINKED 0x2   /**< The object state keeps no link to the template. */
 #define FIELD_TEMPLATE_HERO_LEVEL 0x4 /**< The level follows the hero's level instead of the land's. */
 
-s32 func_800B3670(s32 use_hero_level);
 s32 field_compute_monster_level(FieldActorTemplate *template);
 /* Defined without a result; the value is the one it leaves in the return register. */
-u32 func_800BD414(s32 owner_id, s32 variable_id);
 FieldStatusState *field_find_object_state(s32 key);
 
 /**
@@ -91,7 +88,7 @@ void field_init_monster_record(s32 actor_id, FieldStatusRecord *record, FieldSta
         clamped = level;
     }
     level = clamped;
-    work = func_800BD414(0, FIELD_VAR_MONSTER_LEVEL);
+    work = field_get_script_var(0, FIELD_VAR_MONSTER_LEVEL);
     if (work != 0)
     {
         level = work;
@@ -140,16 +137,16 @@ void field_init_monster_record(s32 actor_id, FieldStatusRecord *record, FieldSta
             } while ((u32)level >= work);
         }
     }
-    switch (func_800BD414(0, FIELD_VAR_DIFFICULTY))
+    switch (field_get_script_var(0, FIELD_VAR_DIFFICULTY))
     {
-    case 1:
+    case FIELD_DIFFICULTY_HARD:
         state->maximum *= 2;
         break;
-    case 2:
+    case FIELD_DIFFICULTY_HARDEST:
         state->maximum *= 3;
         break;
     }
-    if ((func_800BD414(0, FIELD_VAR_DEBUG_ONE_HP_MONSTERS) != 0) || (state->maximum == 0))
+    if ((field_get_script_var(0, FIELD_VAR_DEBUG_ONE_HP_MONSTERS) != 0) || (state->maximum == 0))
     {
         state->maximum = 1;
     }
@@ -213,7 +210,7 @@ s32 field_compute_monster_level(FieldActorTemplate *template)
     }
     value = clamped;
 
-    scaled = (u32)(func_800B3670(template->flags & FIELD_TEMPLATE_HERO_LEVEL) * value) >> 3;
+    scaled = (u32)(field_compute_base_monster_level(template->flags & FIELD_TEMPLATE_HERO_LEVEL) * value) >> 3;
 
     if (scaled >= 2)
     {

@@ -12,7 +12,6 @@ extern FieldRuntimeContext* g_field_runtime;
 void field_script_run(FieldScriptState* state);
 u8* field_get_event_script(s32 script_id);
 FieldActorRecord* field_find_actor_record_or_default(s32 id);
-u8* func_800C28F8(s32 page, u16 entry);
 
 /**
  * @brief Queue an event on an actor when the event is enabled and nothing is pending.
@@ -77,7 +76,7 @@ s32 field_run_actor_event(s32 owner_id, s32 event_id, s32 mode)
             }
             if ((g_field_runtime->state.flags & FIELD_STATE_PARTY_PAGE_SCRIPTS) && (owner_id < FIELD_PARTY_SIZE))
             {
-                actor->script.frames[actor->script.depth].pc = func_800C28F8(owner_id, event_id & 0xFF);
+                actor->script.frames[actor->script.depth].pc = field_get_party_event_script(owner_id, event_id & 0xFF);
             }
             else
             {

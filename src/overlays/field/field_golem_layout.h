@@ -17,12 +17,6 @@
 #include "saved_game.h"
 #include "field_records.h"
 
-/** @brief Number of cells in the six-by-six placement grid. */
-#define GOLEM_GRID_CELL_COUNT 36
-/** @brief Number of columns in the placement grid. */
-#define GOLEM_GRID_WIDTH 6
-/** @brief Grid cell owner value for an empty cell. */
-#define GOLEM_GRID_EMPTY 99
 /** @brief Length of a golem name (group record and companion record). */
 #define GOLEM_NAME_LENGTH 21
 /** @brief joined_group value when no golem group is in the party. */
@@ -77,15 +71,6 @@ typedef struct
 {
     GolemShape shapes[GOLEM_SHAPE_COUNT];
 } GolemShapeTable;
-
-/** @brief One cell of the six-by-six golem logic-block placement grid. */
-typedef struct
-{
-    u8 block_id; /**< Id of the block covering the cell. */
-    u8 detail;   /**< Detail value of that block. */
-    u8 edge;     /**< Index of the cell below when it belongs to another block, else 99. */
-    u8 owner;    /**< Logic-block index covering the cell, or 99 when empty. */
-} GolemGridCell;
 
 /**
  * @brief Golem group record: the golem built from a set of weapons and armor.

@@ -410,7 +410,7 @@ s32 field_start_streamed_animation(s32 owner, s32 resource_id)
     FieldActorSlot* slots;
     FieldActorSlot* slot;
 
-    if (func_800B0850() != 0)
+    if (field_party_reload_pending() != 0)
     {
         return 0;
     }
@@ -552,7 +552,7 @@ void field_reset_object_states(void)
         g_field_object_states[i].action_charge = 0;
         g_field_object_states[i].technique_gauge = 0;
         g_field_object_states[i].key = i;
-        g_field_object_states[i].unk18 = 0;
+        g_field_object_states[i].enabled_events = 0;
         g_field_object_states[i].flags = 0;
         g_field_object_states[i].interaction_kind = 0;
         g_field_object_states[i].unk8.bits.value = g_field_object_states[i].unk4.bits.value;
