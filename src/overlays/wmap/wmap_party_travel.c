@@ -113,7 +113,7 @@ extern s32 g_wmap_cursor_column;
 extern s32 g_wmap_cursor_row;
 extern s32 D_8011CF18;
 extern s32 D_8011CF20;
-extern s32 D_8011CF44;
+extern s32 g_wmap_sequence_count;
 extern s32 D_80129550;
 extern s32 g_wmap_view_mode;
 extern s32 D_801398B8;
@@ -249,7 +249,7 @@ void wmap_update_travelers(void)
     }
     if (g_wmap_party_moving != g_wmap_travel_sound_active)
     {
-        if (g_wmap_party_moving != 0 && D_8011CF44 == 0)
+        if (g_wmap_party_moving != 0 && g_wmap_sequence_count == 0)
         {
             wmap_play_sound(WMAP_TRAVEL_SOUND, WMAP_TRAVEL_SOUND_VOLUME);
             g_wmap_travel_sound_active = g_wmap_party_moving;
@@ -352,7 +352,7 @@ void wmap_update_party_travel(void)
             {
                 if (D_80139290[selected_x][selected_y].land_id == WMAP_SPECIAL_TRAVEL_LAND)
                 {
-                    func_8006CAC0(wmap_run_special_travel);
+                    wmap_start_sequence(wmap_run_special_travel);
                 }
                 else
                 {

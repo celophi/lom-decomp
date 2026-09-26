@@ -117,7 +117,7 @@ extern s32 D_800DBE70;
 extern s32 D_800DBE78;
 extern s32 g_wmap_cursor_column;
 extern s32 g_wmap_cursor_row;
-extern s32 D_8011CF44;
+extern s32 g_wmap_sequence_count;
 extern s32 D_80139244;
 extern s32 g_wmap_view_mode;
 extern s32 g_wmap_view_scroll_mode;
@@ -167,7 +167,7 @@ s32 wmap_begin_land_placement(s32 initialize)
     s32 x;
     s32 y;
 
-    if (D_8011CF44 != 0)
+    if (g_wmap_sequence_count != 0)
     {
         return 1;
     }

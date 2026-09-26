@@ -62,94 +62,94 @@ extern s32 func_800BD83C(s32);
     switch (selection)
     {
     case 33:
-        func_8006CAC0(func_800BD83C);
+        wmap_start_sequence(func_800BD83C);
         break;
     case 24:
-        func_8006CAC0(func_800BAE24);
+        wmap_start_sequence(func_800BAE24);
         break;
     case 31:
-        func_8006CAC0(func_800B7290);
+        wmap_start_sequence(func_800B7290);
         break;
     case 25:
-        func_8006CAC0(func_800AEAB8);
+        wmap_start_sequence(func_800AEAB8);
         break;
     case 22:
-        func_8006CAC0(func_800A1604);
+        wmap_start_sequence(func_800A1604);
         break;
     case 19:
-        func_8006CAC0(func_800A3CC8);
+        wmap_start_sequence(func_800A3CC8);
         break;
     case 23:
-        func_8006CAC0(func_8009E250);
+        wmap_start_sequence(func_8009E250);
         break;
     case 27:
-        func_8006CAC0(func_8009B8E4);
+        wmap_start_sequence(func_8009B8E4);
         break;
     case 16:
-        func_8006CAC0(func_80097C50);
+        wmap_start_sequence(func_80097C50);
         break;
     case 0:
-        func_8006CAC0(func_80091C0C);
+        wmap_start_sequence(func_80091C0C);
         break;
     case 9:
-        func_8006CAC0(func_80095F34);
+        wmap_start_sequence(func_80095F34);
         break;
     case 8:
-        func_8006CAC0(func_80093E98);
+        wmap_start_sequence(func_80093E98);
         break;
     case 10:
-        func_8006CAC0(func_8008FD1C);
+        wmap_start_sequence(func_8008FD1C);
         break;
     case 5:
-        func_8006CAC0(func_8008D4B4);
+        wmap_start_sequence(func_8008D4B4);
         break;
     case 17:
-        func_8006CAC0(func_8008B25C);
+        wmap_start_sequence(func_8008B25C);
         break;
     case 21:
-        func_8006CAC0(func_80089134);
+        wmap_start_sequence(func_80089134);
         break;
     case 3:
-        func_8006CAC0(func_8008759C);
+        wmap_start_sequence(func_8008759C);
         break;
     case 11:
-        func_8006CAC0(func_80085A70);
+        wmap_start_sequence(func_80085A70);
         break;
     case 12:
-        func_8006CAC0(func_8008437C);
+        wmap_start_sequence(func_8008437C);
         break;
     case 30:
-        func_8006CAC0(func_80081BA0);
+        wmap_start_sequence(func_80081BA0);
         break;
     case 7:
-        func_8006CAC0(func_8007F398);
+        wmap_start_sequence(func_8007F398);
         break;
     case 2:
-        func_8006CAC0(func_8007DC14);
+        wmap_start_sequence(func_8007DC14);
         break;
     case 15:
-        func_8006CAC0(func_8007B910);
+        wmap_start_sequence(func_8007B910);
         break;
     case 32:
-        func_8006CAC0(func_8007998C);
+        wmap_start_sequence(func_8007998C);
         break;
     case 26:
-        func_8006CAC0(func_80077560);
+        wmap_start_sequence(func_80077560);
         break;
     case 1:
-        func_8006CAC0(func_8007369C);
+        wmap_start_sequence(func_8007369C);
         break;
     case 18:
-        func_8006CAC0(func_800706B0);
+        wmap_start_sequence(func_800706B0);
         break;
     case 4:
-        func_8006CAC0(func_800712C0);
+        wmap_start_sequence(func_800712C0);
         break;
     case 13:
-        func_8006CAC0(func_80074FB4);
+        wmap_start_sequence(func_80074FB4);
         break;
     default:
-        func_8006CAC0(func_8006D244);
+        wmap_start_sequence(wmap_run_land_entry);
         break;
     }
 }

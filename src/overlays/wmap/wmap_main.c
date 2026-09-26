@@ -158,7 +158,7 @@ extern u8 D_8010CF18[];
 extern u8 D_80114F18[];
 extern s32 D_8011CF18;
 extern s32 D_8011CF20;
-extern s32 D_8011CF44;
+extern s32 g_wmap_sequence_count;
 extern s32 D_8011CF58;
 extern VECTOR D_8011CF60;
 extern s32 D_8011CF70;
@@ -398,7 +398,7 @@ void wmap_init_state(void)
     g_wmap_frames[1].packet_cursor = D_80114F18;
     g_wmap_map_shadow_level = 0x40;
     g_wmap_input_locked = 1;
-    D_8011CF44 = 0;
+    g_wmap_sequence_count = 0;
     D_800DCEFC = 0;
     D_80182D88 = 0;
     func_8006D8F0(0);
@@ -412,7 +412,7 @@ void wmap_init_state(void)
     wmap_init_land_image_cache();
     func_80058298();
     wmap_init_land_display();
-    func_8006CD18();
+    wmap_init_sequences();
     func_8005909C();
     g_wmap_spirit_brightness = 0;
     g_wmap_spirit_target_brightness = 0x80;
@@ -530,7 +530,7 @@ s32 wmap_draw_backdrop(s32 initialize)
         }
         color.cd = 0x2C;
         /* Each strip has two copies so it wraps across the screen. */
-        if ((D_8011CF44 == 0) && (g_wmap_map_controls_active != 0))
+        if ((g_wmap_sequence_count == 0) && (g_wmap_map_controls_active != 0))
         {
             for (strip = 0; strip < 4; strip++)
             {
@@ -1001,7 +1001,7 @@ void wmap_wait_for_script_event(void)
         }
         break;
     case WMAP_SCRIPT_WAIT_PREVIEW:
-        if (D_8011CF44 == 0)
+        if (g_wmap_sequence_count == 0)
         {
             g_wmap_script_wait = 0;
         }
@@ -1881,7 +1881,7 @@ s32 wmap_run_loop(void)
             D_800DBE7C = 0;
             D_8011CF74 = (s32)(D_8011CF74 + 1);
             if ((g_wmap_input_locked != 0) || (D_8011CF18 >= 3) ||
-                (D_80139960 != 0) || (g_wmap_view_scroll_mode != 0) || (D_8011CF44 != 0))
+                (D_80139960 != 0) || (g_wmap_view_scroll_mode != 0) || (g_wmap_sequence_count != 0))
             {
                 g_wmap_buttons_repeat = 0;
                 g_wmap_buttons_held = 0;
@@ -2074,8 +2074,8 @@ s32 wmap_run_loop(void)
                 }
                 wmap_update_view_zoom();
                 SetSpadStack(WMAP_SCRATCH_STACK_SAVE_SLOT);
-                func_8006CB60();
-                func_8006CA28();
+                wmap_update_callbacks();
+                wmap_update_sequences();
                 ResetSpadStack();
                 wmap_update_map_game();
                 if (g_wmap_game_start_delay != 0)

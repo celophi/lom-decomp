@@ -70,7 +70,7 @@ extern u8 D_800DCEA8;
 extern u8 D_800DCEB8;
 extern s16 D_800DCEBA;
 extern s16 D_800DCEBC;
-extern u8 D_8011CF4C;
+extern u8 g_wmap_focus_screen_position;
 extern s32 D_8011D510;
 extern s32 D_8011D530;
 extern u8 D_80139200;
@@ -1152,11 +1152,11 @@ s32 func_8006C0EC(void)
         M2C_FIELD(&D_800DCEB8, s16*, 0) = 0;
         M2C_FIELD(&D_800DCEB8, s16*, 2) = 0;
         M2C_FIELD(&D_800DCEB8, s16*, 4) = 0;
-        M2C_FIELD(&D_8011CF4C, s16*, 0) = 0xA4;
-        M2C_FIELD(&D_8011CF4C, s16*, 2) = 0x69;
+        M2C_FIELD(&g_wmap_focus_screen_position, s16*, 0) = 0xA4;
+        M2C_FIELD(&g_wmap_focus_screen_position, s16*, 2) = 0x69;
         return 0;
     }
-    gte_stsxy(&D_8011CF4C);
+    gte_stsxy(&g_wmap_focus_screen_position);
     return D_8013B29C;
 }
 
