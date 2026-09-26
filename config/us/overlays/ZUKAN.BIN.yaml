@@ -1,28 +1,28 @@
 name: ZUKAN.BIN
 sha1: ccb3e4f650a62146e703c033ab869fa4a42ce600
 options:
-  base_path: ../../
+  base_path: ../../../
   basename: ZUKAN.BIN
   platform: psx
   compiler: PSYQ
-  target_path: disc/BIN/ZUKAN.BIN
+  target_path: disc/us/BIN/ZUKAN.BIN
   extensions_path: tools/splat_ext
-  asset_path: assets
-  elf_path: build/overlays/zukan.elf
+  asset_path: assets/us
+  elf_path: build/us/overlays/zukan.elf
 
   # Overlay-specific output paths (separate from SLUS)
-  asm_path: asm/overlays/zukan
+  asm_path: asm/us/overlays/zukan
   src_path: src/overlays/zukan
-  build_path: build/overlays/zukan
+  build_path: build/us/overlays/zukan
 
-  ld_script_path: linker/overlays/zukan/zukan.ld
+  ld_script_path: linker/us/overlays/zukan/zukan.ld
   ld_dependencies: True
-  undefined_funcs_auto_path: linker/overlays/zukan/undefined_funcs_auto.txt
-  undefined_syms_auto_path: linker/overlays/zukan/undefined_syms_auto.txt
+  undefined_funcs_auto_path: linker/us/overlays/zukan/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/us/overlays/zukan/undefined_syms_auto.txt
 
   symbol_addrs_path:
-    - config/symbols/shared_symbol_addrs.txt
-    - config/symbols/zukan_symbol_addrs.txt
+    - config/us/symbols/shared_symbol_addrs.txt
+    - config/us/symbols/zukan_symbol_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True

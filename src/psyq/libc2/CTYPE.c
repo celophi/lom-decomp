@@ -1,5 +1,5 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libc2/CTYPE", toupper);
+INCLUDE_ASM("nonmatchings/psyq/libc2/CTYPE", toupper);
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libc2/CTYPE", tolower);
+INCLUDE_ASM("nonmatchings/psyq/libc2/CTYPE", tolower);

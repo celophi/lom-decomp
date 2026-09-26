@@ -1,3 +1,3 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libpress/BUILD", DecDCTvlcBuild);
+INCLUDE_ASM("nonmatchings/psyq/libpress/BUILD", DecDCTvlcBuild);

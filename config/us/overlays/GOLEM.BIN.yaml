@@ -1,28 +1,28 @@
 name: GOLEM.BIN
 sha1: daf8ab21241b9613ed0ada1fa540dd254fe27306
 options:
-  base_path: ../../
+  base_path: ../../../
   basename: GOLEM.BIN
   platform: psx
   compiler: PSYQ
-  target_path: disc/BIN/GOLEM.BIN
+  target_path: disc/us/BIN/GOLEM.BIN
   extensions_path: tools/splat_ext
-  asset_path: assets
-  elf_path: build/overlays/golem.elf
+  asset_path: assets/us
+  elf_path: build/us/overlays/golem.elf
 
   # Overlay-specific output paths (separate from SLUS)
-  asm_path: asm/overlays/golem
+  asm_path: asm/us/overlays/golem
   src_path: src/overlays/golem
-  build_path: build/overlays/golem
+  build_path: build/us/overlays/golem
 
-  ld_script_path: linker/overlays/golem/golem.ld
+  ld_script_path: linker/us/overlays/golem/golem.ld
   ld_dependencies: True
-  undefined_funcs_auto_path: linker/overlays/golem/undefined_funcs_auto.txt
-  undefined_syms_auto_path: linker/overlays/golem/undefined_syms_auto.txt
+  undefined_funcs_auto_path: linker/us/overlays/golem/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/us/overlays/golem/undefined_syms_auto.txt
 
   symbol_addrs_path:
-    - config/symbols/shared_symbol_addrs.txt
-    - config/symbols/golem_symbol_addrs.txt
+    - config/us/symbols/shared_symbol_addrs.txt
+    - config/us/symbols/golem_symbol_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True

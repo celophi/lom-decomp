@@ -1,3 +1,3 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libapi/A66", firstfile2);
+INCLUDE_ASM("nonmatchings/psyq/libapi/A66", firstfile2);

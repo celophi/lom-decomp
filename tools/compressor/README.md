@@ -1,7 +1,7 @@
 # Overlay compressor
 
 Legend of Mana stores its overlays on the disc in a compressed form
-(`disc/BIN/*.BIN`) using a proprietary LZ + pattern-opcode scheme. This
+(`disc/us/BIN/*.BIN`) using a proprietary LZ + pattern-opcode scheme. This
 directory holds the encoder that reproduces those streams **byte for byte**.
 
 Reproducing the exact byte stream matters because many different encodings
@@ -80,7 +80,7 @@ stream = compress(raw_bytes)
 ## Verifying
 
 Check every overlay round-trips exactly (no build or toolchain needed - it
-works straight from `disc/BIN`):
+works straight from `disc/us/BIN`):
 
 ```bash
 python3 tools/compressor/verify_exact_bins.py
@@ -102,7 +102,7 @@ the ones that currently link.
 ## Where the build uses this
 
 `mk/verification.mk` compresses each fully-linked overlay's raw image, prepends
-the `0x01` tag, and SHA1-compares the result against `disc/BIN/<NAME>.BIN`. On
+the `0x01` tag, and SHA1-compares the result against `disc/us/BIN/<NAME>.BIN`. On
 a match the overlay is recorded in `build/complete_overlays.txt`, which the
 objdiff config generator reads to stamp those units complete. Run it with:
 

@@ -1,28 +1,28 @@
 name: GNAME.BIN
 sha1: e428114bd699f557d3508a4f26a8e3c2c495db29
 options:
-  base_path: ../../
+  base_path: ../../../
   basename: GNAME.BIN
   platform: psx
   compiler: PSYQ
-  target_path: disc/BIN/GNAME.BIN
+  target_path: disc/us/BIN/GNAME.BIN
   extensions_path: tools/splat_ext
-  asset_path: assets
-  elf_path: build/overlays/gname.elf
+  asset_path: assets/us
+  elf_path: build/us/overlays/gname.elf
 
   # Overlay-specific output paths (separate from SLUS)
-  asm_path: asm/overlays/gname
+  asm_path: asm/us/overlays/gname
   src_path: src/overlays/gname
-  build_path: build/overlays/gname
+  build_path: build/us/overlays/gname
 
-  ld_script_path: linker/overlays/gname/gname.ld
+  ld_script_path: linker/us/overlays/gname/gname.ld
   ld_dependencies: True
-  undefined_funcs_auto_path: linker/overlays/gname/undefined_funcs_auto.txt
-  undefined_syms_auto_path: linker/overlays/gname/undefined_syms_auto.txt
+  undefined_funcs_auto_path: linker/us/overlays/gname/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/us/overlays/gname/undefined_syms_auto.txt
 
   symbol_addrs_path:    
-    - config/symbols/shared_symbol_addrs.txt
-    - config/symbols/gname_symbol_addrs.txt
+    - config/us/symbols/shared_symbol_addrs.txt
+    - config/us/symbols/gname_symbol_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True

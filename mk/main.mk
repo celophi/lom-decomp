@@ -193,28 +193,28 @@ SRCS_GCC_260_G0 := \
 # below are the standalone leftovers: pure data constants (D_ symbols
 # referenced extern).
 ASM_SRCS := \
-	asm/header.s \
-	asm/data/initialized.data.s \
-	asm/data/sdata.data.s \
-	asm/data/rodata_data0.rodata.s \
-	asm/data/rodata_data1.rodata.s \
-	asm/data/rodata_data2.rodata.s \
-	asm/data/rodata_data3.rodata.s \
-	asm/data/rodata_data4.rodata.s
+	$(ASM_DIR)/header.s \
+	$(ASM_DIR)/data/initialized.data.s \
+	$(ASM_DIR)/data/sdata.data.s \
+	$(ASM_DIR)/data/rodata_data0.rodata.s \
+	$(ASM_DIR)/data/rodata_data1.rodata.s \
+	$(ASM_DIR)/data/rodata_data2.rodata.s \
+	$(ASM_DIR)/data/rodata_data3.rodata.s \
+	$(ASM_DIR)/data/rodata_data4.rodata.s
 
 
 # ─── Object File Paths ─────────────────────────────────────────────────────────
 #
-# patsubst turns  src/foo/bar.c  →  /staging/build/src/foo/bar.o
+# patsubst turns  src/foo/bar.c  →  /staging/build/<version>/src/foo/bar.o
 # This mirrors the source tree under the staging build directory.
 
-OBJS_G0  			:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_G0))
-OBJS_G4  			:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_G4))
-OBJS_GCC_260_G0 	:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_GCC_260_G0))
-OBJS_ASM 			:= $(patsubst $(ASM_DIR)/%.s,$(STAGING)/build/$(ASM_DIR)/%.o,$(ASM_SRCS))
+OBJS_G0  			:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/$(BUILD_DIR)/$(SRC_DIR)/%.o,$(SRCS_G0))
+OBJS_G4  			:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/$(BUILD_DIR)/$(SRC_DIR)/%.o,$(SRCS_G4))
+OBJS_GCC_260_G0 	:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/$(BUILD_DIR)/$(SRC_DIR)/%.o,$(SRCS_GCC_260_G0))
+OBJS_ASM 			:= $(patsubst $(ASM_DIR)/%.s,$(STAGING)/$(BUILD_DIR)/$(ASM_DIR)/%.o,$(ASM_SRCS))
 
 # Preserve the original glyph instructions and explicit delay slots.
-$(STAGING)/build/$(SRC_DIR)/field_runtime_glyph.o: MASPSX_FLAGS_260 += --passthrough
+$(STAGING)/$(BUILD_DIR)/$(SRC_DIR)/field_runtime_glyph.o: MASPSX_FLAGS_260 += --passthrough
 
 OBJECTS  := $(OBJS_G0) $(OBJS_G4) $(OBJS_GCC_260_G0) $(OBJS_ASM)
 
@@ -223,7 +223,7 @@ OBJECTS  := $(OBJS_G0) $(OBJS_G4) $(OBJS_GCC_260_G0) $(OBJS_ASM)
 # ============================================================================
 #
 # Static pattern rules:
-#   $(TARGETS): $(STAGING)/build/src/%.o: src/%.c
+#   $(TARGETS): $(STAGING)/$(BUILD_DIR)/src/%.o: src/%.c
 #   reads as: "for each file in TARGETS, the .o comes from the matching .c"
 #
 # The recipe pipes GCC asm output directly into maspsx:
@@ -231,54 +231,54 @@ OBJECTS  := $(OBJS_G0) $(OBJS_G4) $(OBJS_GCC_260_G0) $(OBJS_ASM)
 #   | maspsx.py ... → translate to ASPSX syntax and assemble into .o
 
 # ── GCC 2.8.0, G0 (default) ──
-$(OBJS_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
+$(OBJS_G0): $(STAGING)/$(BUILD_DIR)/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $(@D)
-	cd $(STAGING) && $(CC) $(CFLAGS_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o build/$(SRC_DIR)/$*.o
+	cd $(STAGING) && $(CC) $(CFLAGS_G0) $(VERSION_CPP_FLAGS) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o $(BUILD_DIR)/$(SRC_DIR)/$*.o
 
 # ── GCC 2.8.0, G4 ──
-$(OBJS_G4): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
+$(OBJS_G4): $(STAGING)/$(BUILD_DIR)/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $(@D)
-	cd $(STAGING) && $(CC) $(CFLAGS_G4) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_G4) -o build/$(SRC_DIR)/$*.o
+	cd $(STAGING) && $(CC) $(CFLAGS_G4) $(VERSION_CPP_FLAGS) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_G4) -o $(BUILD_DIR)/$(SRC_DIR)/$*.o
 
 # ── GCC 2.6.0, G0 ──
-$(OBJS_GCC_260_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
+$(OBJS_GCC_260_G0): $(STAGING)/$(BUILD_DIR)/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $(@D)
-	cd $(STAGING) && $(CC_260) $(CFLAGS_260_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_260) -o build/$(SRC_DIR)/$*.o
+	cd $(STAGING) && $(CC_260) $(CFLAGS_260_G0) $(VERSION_CPP_FLAGS) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_260) -o $(BUILD_DIR)/$(SRC_DIR)/$*.o
 
 # ── Hand-written assembly (header, data sections) ──
 # These use --macro-inc because they contain ASPSX directives (dlabel, etc.)
 # The pipeline: cat .s | maspsx (preprocess) | maspsx --run-assembler (assemble)
-$(OBJS_ASM): $(STAGING)/build/$(ASM_DIR)/%.o: $(ASM_DIR)/%.s $(COPY_SENTINEL)
+$(OBJS_ASM): $(STAGING)/$(BUILD_DIR)/$(ASM_DIR)/%.o: $(ASM_DIR)/%.s $(COPY_SENTINEL)
 	@mkdir -p $(@D)
 	cd $(STAGING) && cat $(ASM_DIR)/$*.s | \
 		$(MASPSX) $(MASPSX_PP_FLAGS) | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o build/$(ASM_DIR)/$*.o
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o $(BUILD_DIR)/$(ASM_DIR)/$*.o
 
 
 # ============================================================================
 #  Linking — Main SLUS
 # ============================================================================
 
-$(TARGET): $(COPY_SENTINEL) $(OBJECTS) $(STAGING)/linker/$(GAME).ld
-	@mkdir -p $(STAGING)/build
-	cd $(STAGING) && $(LD) -o build/$(GAME).elf \
-		-T linker/$(GAME).ld \
-		-T linker/undefined_syms_auto.txt \
-		-T linker/undefined_funcs_auto.txt \
+$(TARGET): $(COPY_SENTINEL) $(OBJECTS) $(STAGING)/$(LINKER_DIR)/$(GAME).ld
+	@mkdir -p $(STAGING)/$(BUILD_DIR)
+	cd $(STAGING) && $(LD) -o $(BUILD_DIR)/$(GAME).elf \
+		-T $(LINKER_DIR)/$(GAME).ld \
+		-T $(LINKER_DIR)/undefined_syms_auto.txt \
+		-T $(LINKER_DIR)/undefined_funcs_auto.txt \
 		$(patsubst $(STAGING)/%,%,$(OBJECTS)) \
-		-Map build/$(GAME).map
+		-Map $(BUILD_DIR)/$(GAME).map
 
 .PHONY: all bin
 
 # Default target: build the main SLUS executable
 all: $(TARGET)
-	@mkdir -p build
-	@cp -r $(STAGING)/build/* build/
-	@echo "Build complete: build/$(GAME).elf"
+	@mkdir -p $(BUILD_DIR)
+	@cp -r $(STAGING)/$(BUILD_DIR)/* $(BUILD_DIR)/
+	@echo "Build complete: $(BUILD_DIR)/$(GAME).elf"
 
 # Produce a raw binary from the ELF (for running on real hardware / emulators)
 bin: all
-	$(OBJCOPY) -O binary build/$(GAME).elf $(BIN)
+	$(OBJCOPY) -O binary $(BUILD_DIR)/$(GAME).elf $(BIN)

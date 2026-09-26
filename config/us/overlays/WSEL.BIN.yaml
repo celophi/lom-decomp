@@ -1,27 +1,27 @@
 name: WSEL.BIN
 sha1: 3f5b45b81cfd83dbad6c2853e4befd769d9a0468
 options:
-  base_path: ../../
+  base_path: ../../../
   basename: WSEL.BIN
   platform: psx
   compiler: PSYQ
-  target_path: disc/BIN/WSEL.BIN
+  target_path: disc/us/BIN/WSEL.BIN
   extensions_path: tools/splat_ext
-  asset_path: assets
-  elf_path: build/overlays/wsel.elf
+  asset_path: assets/us
+  elf_path: build/us/overlays/wsel.elf
 
   # Overlay-specific output paths (separate from SLUS)
-  asm_path: asm/overlays/wsel
+  asm_path: asm/us/overlays/wsel
   src_path: src/overlays/wsel
-  build_path: build/overlays/wsel
+  build_path: build/us/overlays/wsel
 
-  ld_script_path: linker/overlays/wsel/wsel.ld
+  ld_script_path: linker/us/overlays/wsel/wsel.ld
   ld_dependencies: True
-  undefined_funcs_auto_path: linker/overlays/wsel/undefined_funcs_auto.txt
-  undefined_syms_auto_path: linker/overlays/wsel/undefined_syms_auto.txt
+  undefined_funcs_auto_path: linker/us/overlays/wsel/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/us/overlays/wsel/undefined_syms_auto.txt
 
   symbol_addrs_path:
-    - config/symbols/wsel_symbol_addrs.txt
+    - config/us/symbols/wsel_symbol_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True

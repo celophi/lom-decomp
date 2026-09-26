@@ -1,3 +1,3 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libgpu/P18", SetPolyG4);
+INCLUDE_ASM("nonmatchings/psyq/libgpu/P18", SetPolyG4);

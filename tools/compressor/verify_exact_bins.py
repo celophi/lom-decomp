@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Regression verifier for the byte-exact Legend of Mana BIN compressor.
 
-Each reference overlay in ``disc/BIN`` is decompressed with the project's
+Each reference overlay in ``disc/us/BIN`` is decompressed with the project's
 reference decoder (``tools/splat_ext/decompress.py``), recompressed with
 ``tools/compressor/compressor.py``, and compared byte-for-byte against the
 original disc stream.  This exercises exactly the transformation the build
@@ -30,7 +30,7 @@ from pathlib import Path
 from types import ModuleType
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_BIN_DIR = REPO_ROOT / "disc" / "BIN"
+DEFAULT_BIN_DIR = REPO_ROOT / "disc" / "us" / "BIN"
 COMPRESSOR_PATH = Path(__file__).resolve().parent / "compressor.py"
 DECOMPRESSOR_PATH = REPO_ROOT / "tools" / "splat_ext" / "decompress.py"
 

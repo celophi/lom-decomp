@@ -1,31 +1,31 @@
 name: WMAP.BIN
 sha1: 7be4443eb8b28643d161f56c68d9ece0583945b5
 options:
-  base_path: ../../
+  base_path: ../../../
   basename: WMAP.BIN
   platform: psx
   compiler: PSYQ
-  target_path: disc/BIN/WMAP.BIN
+  target_path: disc/us/BIN/WMAP.BIN
   extensions_path: tools/splat_ext
-  asset_path: assets
-  elf_path: build/overlays/wmap.elf
+  asset_path: assets/us
+  elf_path: build/us/overlays/wmap.elf
 
   # Overlay-specific output paths (separate from SLUS)
-  asm_path: asm/overlays/wmap
+  asm_path: asm/us/overlays/wmap
   src_path: src/overlays/wmap
-  build_path: build/overlays/wmap
+  build_path: build/us/overlays/wmap
 
-  ld_script_path: linker/overlays/wmap/wmap.ld
+  ld_script_path: linker/us/overlays/wmap/wmap.ld
   ld_dependencies: True
-  undefined_funcs_auto_path: linker/overlays/wmap/undefined_funcs_auto.txt
-  undefined_syms_auto_path: linker/overlays/wmap/undefined_syms_auto.txt
+  undefined_funcs_auto_path: linker/us/overlays/wmap/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/us/overlays/wmap/undefined_syms_auto.txt
 
   symbol_addrs_path:
-    - config/symbols/shared_symbol_addrs.txt
-    - config/symbols/wmap_symbol_addrs.txt
+    - config/us/symbols/shared_symbol_addrs.txt
+    - config/us/symbols/wmap_symbol_addrs.txt
 
   reloc_addrs_path:
-    - config/relocations/wmap_reloc_addrs.txt
+    - config/us/relocations/wmap_reloc_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True

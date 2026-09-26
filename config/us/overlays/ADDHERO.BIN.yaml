@@ -1,27 +1,27 @@
 name: ADDHERO.BIN
 sha1: 960ecb0253546dc843333c261f43d7f4b9876aba
 options:
-  base_path: ../../
+  base_path: ../../../
   basename: ADDHERO.BIN
   platform: psx
   compiler: PSYQ
-  target_path: disc/BIN/ADDHERO.BIN
+  target_path: disc/us/BIN/ADDHERO.BIN
   extensions_path: tools/splat_ext
-  asset_path: assets
-  elf_path: build/overlays/addhero.elf
+  asset_path: assets/us
+  elf_path: build/us/overlays/addhero.elf
 
   # Overlay-specific output paths (separate from SLUS)
-  asm_path: asm/overlays/addhero
+  asm_path: asm/us/overlays/addhero
   src_path: src/overlays/addhero
-  build_path: build/overlays/addhero
+  build_path: build/us/overlays/addhero
 
-  ld_script_path: linker/overlays/addhero/addhero.ld
+  ld_script_path: linker/us/overlays/addhero/addhero.ld
   ld_dependencies: True
-  undefined_funcs_auto_path: linker/overlays/addhero/undefined_funcs_auto.txt
-  undefined_syms_auto_path: linker/overlays/addhero/undefined_syms_auto.txt
+  undefined_funcs_auto_path: linker/us/overlays/addhero/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/us/overlays/addhero/undefined_syms_auto.txt
 
   symbol_addrs_path:
-    - config/symbols/addhero_symbol_addrs.txt
+    - config/us/symbols/addhero_symbol_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True

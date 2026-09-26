@@ -1,34 +1,34 @@
 name: CHECKPS.BIN
 sha1: 388f95071ba5107108eeeb2296439871c22c4185
 options:
-  base_path: ../../
+  base_path: ../../../
   basename: CHECKPS.BIN
   platform: psx
   compiler: PSYQ
-  target_path: disc/BIN/CHECKPS.BIN
+  target_path: disc/us/BIN/CHECKPS.BIN
   extensions_path: tools/splat_ext
-  asset_path: assets
-  elf_path: build/overlays/checkps.elf
+  asset_path: assets/us
+  elf_path: build/us/overlays/checkps.elf
 
   # Overlay-specific output paths (separate from SLUS)
-  asm_path: asm/overlays/checkps
+  asm_path: asm/us/overlays/checkps
   src_path: src/overlays/checkps
-  build_path: build/overlays/checkps
+  build_path: build/us/overlays/checkps
 
-  ld_script_path: linker/overlays/checkps/checkps.ld
+  ld_script_path: linker/us/overlays/checkps/checkps.ld
   ld_dependencies: True
   ld_legacy_generation: True
   ld_align_section_vram_end: False
   ld_align_segment_vram_end: False
-  undefined_funcs_auto_path: linker/overlays/checkps/undefined_funcs_auto.txt
-  undefined_syms_auto_path: linker/overlays/checkps/undefined_syms_auto.txt
+  undefined_funcs_auto_path: linker/us/overlays/checkps/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/us/overlays/checkps/undefined_syms_auto.txt
 
   symbol_addrs_path:    
-    - config/symbols/shared_symbol_addrs.txt
-    - config/symbols/checkps_symbol_addrs.txt
+    - config/us/symbols/shared_symbol_addrs.txt
+    - config/us/symbols/checkps_symbol_addrs.txt
 
   reloc_addrs_path:
-    - config/relocations/checkps_reloc_addrs.txt
+    - config/us/relocations/checkps_reloc_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True

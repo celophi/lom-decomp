@@ -1,19 +1,19 @@
 name: SLUS_010.13
 sha1: d11dfdd50d412ac3fa3e2eb80fbde138da118f27
 options:
-  base_path: ../
+  base_path: ../../
   basename: SLUS_010.13
-  target_path: disc/SLUS_010.13
-  elf_path: build/SLUS_010.13.elf
+  target_path: disc/us/SLUS_010.13
+  elf_path: build/us/SLUS_010.13.elf
   
   platform: psx
   compiler: PSYQ
 
-  asm_path: asm
+  asm_path: asm/us
   src_path: src
-  build_path: build
+  build_path: build/us
 
-  ld_script_path: linker/SLUS_010.13.ld
+  ld_script_path: linker/us/SLUS_010.13.ld
   ld_dependencies: True
   ld_bss_is_noload: True
   # BSS allocations have explicit VRAM regions below.
@@ -29,16 +29,17 @@ options:
   section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
 
   symbol_addrs_path:    
-    - config/symbols/shared_symbol_addrs.txt
-    - config/symbols/slus_01013_symbol_addrs.txt
+    - config/us/symbols/shared_symbol_addrs.txt
+    - config/us/symbols/slus_01013_symbol_addrs.txt
 
   reloc_addrs_path:
-    - config/relocations/slus_reloc_addrs.txt
+    - config/us/relocations/slus_reloc_addrs.txt
 
-  undefined_funcs_auto_path: linker/undefined_funcs_auto.txt
-  undefined_syms_auto_path: linker/undefined_syms_auto.txt
+  undefined_funcs_auto_path: linker/us/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/us/undefined_syms_auto.txt
 
   extensions_path: tools/splat_ext
+  asset_path: assets/us
 
   subalign: 2
 

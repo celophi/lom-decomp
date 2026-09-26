@@ -1,28 +1,28 @@
 name: GOSUB.BIN
 sha1: 1361a14f2d461fd99c2e9d5d4f5e70b7704bb098
 options:
-  base_path: ../../
+  base_path: ../../../
   basename: GOSUB.BIN
   platform: psx
   compiler: PSYQ
-  target_path: disc/BIN/GOSUB.BIN
+  target_path: disc/us/BIN/GOSUB.BIN
   extensions_path: tools/splat_ext
-  asset_path: assets
-  elf_path: build/overlays/gosub.elf
+  asset_path: assets/us
+  elf_path: build/us/overlays/gosub.elf
 
   # Overlay-specific output paths (separate from SLUS)
-  asm_path: asm/overlays/gosub
+  asm_path: asm/us/overlays/gosub
   src_path: src/overlays/gosub
-  build_path: build/overlays/gosub
+  build_path: build/us/overlays/gosub
 
-  ld_script_path: linker/overlays/gosub/gosub.ld
+  ld_script_path: linker/us/overlays/gosub/gosub.ld
   ld_dependencies: True
-  undefined_funcs_auto_path: linker/overlays/gosub/undefined_funcs_auto.txt
-  undefined_syms_auto_path: linker/overlays/gosub/undefined_syms_auto.txt
+  undefined_funcs_auto_path: linker/us/overlays/gosub/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/us/overlays/gosub/undefined_syms_auto.txt
 
   symbol_addrs_path:
-    - config/symbols/shared_symbol_addrs.txt
-    - config/symbols/gosub_symbol_addrs.txt
+    - config/us/symbols/shared_symbol_addrs.txt
+    - config/us/symbols/gosub_symbol_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True

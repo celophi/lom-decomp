@@ -86,29 +86,30 @@ git submodule update --init --recursive
 
 ### 2. オリジナルのゲームファイルを配置する
 
-現在のビルドには北米版が必要です（日本版にも近日対応予定です）。北米版のディスクまたはディスクイメージから、メイン実行ファイルとゲームの `BIN` ディレクトリを抽出し、リポジトリ内を次の構成にしてください。
+現在のビルドには北米版が必要です（日本版にも近日対応予定です）。ゲームファイルはバージョンごとのフォルダに配置します。北米版は `disc/us/`、日本版は `disc/jp/` です。ディスクまたはディスクイメージから、メイン実行ファイルとゲームの `BIN` ディレクトリを抽出し、リポジトリ内を次の構成にしてください（例は日本版です。北米版では `disc/us/SLUS_010.13` になります）。
 
 ```text
 disc/
-|-- SLPS_021.70
-`-- BIN/
-    |-- ADDHERO.BIN
-    |-- CARDA.BIN
-    |-- CHECKPS.BIN
-    |-- CLOAD.BIN
-    |-- FIELD.BIN
-    |-- GNAME.BIN
-    |-- GOLEM.BIN
-    |-- GOSUB.BIN
-    |-- GOVER.BIN
-    |-- MENU.BIN
-    |-- MOVIE.BIN
-    |-- NIKI.BIN
-    |-- SHOP.BIN
-    |-- TITLE.BIN
-    |-- WMAP.BIN
-    |-- WSEL.BIN
-    `-- ZUKAN.BIN
+`-- jp/
+    |-- SLPS_021.70
+    `-- BIN/
+        |-- ADDHERO.BIN
+        |-- CARDA.BIN
+        |-- CHECKPS.BIN
+        |-- CLOAD.BIN
+        |-- FIELD.BIN
+        |-- GNAME.BIN
+        |-- GOLEM.BIN
+        |-- GOSUB.BIN
+        |-- GOVER.BIN
+        |-- MENU.BIN
+        |-- MOVIE.BIN
+        |-- NIKI.BIN
+        |-- SHOP.BIN
+        |-- TITLE.BIN
+        |-- WMAP.BIN
+        |-- WSEL.BIN
+        `-- ZUKAN.BIN
 ```
 
 ディスクの残りのファイルをリポジトリへコピーする必要はありません。
@@ -116,13 +117,13 @@ disc/
 メイン実行ファイルが想定しているバージョンか確認するには、次を実行します。
 
 ```bash
-sha1sum disc/SLPS_021.70
+sha1sum disc/jp/SLPS_021.70
 ```
 
 期待される結果:
 
 ```text
-b067188a92e4de9a4db7bb7e5343c757e9884bfa  disc/SLPS_021.70
+b067188a92e4de9a4db7bb7e5343c757e9884bfa  disc/jp/SLPS_021.70
 ```
 
 （日本版はまだビルドに対応していないため、現時点ではお手元のダンプが正しいかの確認用です。）
@@ -176,7 +177,7 @@ docker run --rm -it -v "%cd%:/lom" lom-dev
 make splat
 ```
 
-これにより、`asm/`、`linker/`、抽出されたアセットなど、ローカルで使用するビルド入力が生成されます。これらのファイルは意図的にすべてをGitへ保存しているわけではありません。
+これにより、`asm/<version>/`、`linker/<version>/`、`assets/<version>/` 以下の抽出アセットなど、ローカルで使用するビルド入力が生成されます。これらのファイルは意図的にすべてをGitへ保存しているわけではありません。
 
 splat設定、セグメント境界、シンボルマップ、relocation overrideを変更した場合は、`make splat` を再実行してください。
 
@@ -191,7 +192,7 @@ make
 出力:
 
 ```text
-build/SLPS_021.70.elf
+build/jp/SLPS_021.70.elf
 ```
 
 フラットバイナリも生成する場合:
@@ -245,7 +246,7 @@ Makefileは、コンパイル前に変更された入力を自動的にステー
 make recopy
 ```
 
-`make clean` は、`build/` と `/staging` のコピーを実際に削除したい場合にのみ使用してください。
+`make clean` は、`build/<version>/` と `/staging` のコピーを実際に削除したい場合にのみ使用してください。
 
 ## `/staging` が存在する理由
 
@@ -266,23 +267,25 @@ Makefileでは、必要な入力を `/staging` へコピーし、テキストフ
 | ターゲット | 用途 |
 |---|---|
 | `make` | メインの `SLPS_021.70` ELFをビルドします。 |
-| `make bin` | `build/SLPS_021.70.bin` も生成します。 |
+| `make bin` | `build/jp/SLPS_021.70.bin` も生成します。 |
 | `make <overlay>` | `make field` など、登録済みのオーバーレイを1つビルドします。 |
 | `make overlays` | 登録済みの全オーバーレイをビルドします。 |
 | `make everything` | メイン実行ファイルと登録済みの全オーバーレイをビルドします。 |
 | `make splat` | メイン実行ファイルと全オーバーレイ設定を分割します。 |
 | `make objdiff-objects` | objdiff用にターゲット側と復元側のオブジェクトをビルドします。 |
 | `make objdiff-config` | `objdiff.json` を再生成します。 |
-| `make progress` | `build/progress.json` を生成します。 |
+| `make progress` | `build/<version>/progress.json` を生成します。 |
 | `make diff-all` | 設定済みの全ユニットに対してobjdiffを実行します。 |
-| `make diff-text` | `build/diffs/` 以下に簡潔なテキストレポートを生成します。 |
+| `make diff-text` | `build/<version>/diffs/` 以下に簡潔なテキストレポートを生成します。 |
 | `make dump-objs` | コード生成の解析用にビルド済みオブジェクトを逆アセンブルします。 |
 | `make validate-assets` | フォーマットを認識するアセットについて、往復変換と検証を行います。 |
-| `make verify-slus` | リンク済みのメイン実行ファイルが `disc/SLPS_021.70` と一致するか確認します。 |
-| `make verify-bins` | `verify-slus` と、登録済み全オーバーレイのSHA-1チェックを実行します。 |
+| `make verify-main` | リンク済みのメイン実行ファイルが `disc/jp/SLPS_021.70` と一致するか確認します（`verify-slus` は別名）。 |
+| `make verify-bins` | `verify-main` と、登録済み全オーバーレイのSHA-1チェックを実行します。 |
 | `make verify-compressor` | オリジナルの17個すべてのオーバーレイファイルに対してコンプレッサーを検証します。 |
 | `make recopy` | ソース / 設定ファイルを `/staging` へ強制的に再コピーします。 |
 | `make clean` | ビルド出力と `/staging` を削除します。 |
+
+すべてのターゲットは、既定では北米版（`VERSION=us`）をビルドします。日本版は `make VERSION=jp` のように `VERSION=jp` を付けて指定します（対応予定）。表中のファイル名は日本版の例です。
 
 ## 関数のマッチング
 
@@ -304,7 +307,7 @@ make diff-all
 make diff-text
 ```
 
-簡潔なレポートは `build/diffs/` 以下に出力されます。
+簡潔なレポートは `build/<version>/diffs/` 以下に出力されます。
 
 共同でマッチング作業を行う場合は [decomp.me](https://decomp.me) も利用できます。既存のソースコメントには多数のdecomp.me scratchへのリンクが含まれているため、関数を編集する際はそれらの参照を残してください。
 
@@ -341,6 +344,21 @@ make diff-text
 - [`docs/handling-copyrighted-data.md`](docs/handling-copyrighted-data.md)
 - [`docs/asset-data-architecture.md`](docs/asset-data-architecture.md)
 
+## バージョン構成
+
+1つのCソースツリーで、すべてのリージョン版をビルドします。特定のディスクに由来するものはバージョンごとのフォルダに置き、`make` のコマンドラインに `VERSION=<name>` を付けてビルドするバージョンを選びます。
+
+| `VERSION` | リリース | 状態 |
+|---|---|---|
+| `us`（既定） | 北米版 `SLUS-01013` | 完全リンク済み |
+| `jp` | 日本版 `SLPS-02170` | 対応中 - フォルダとビルドの切り替えは用意済み、splat設定はまだ未作成 |
+
+| 全バージョン共通 | バージョンごと |
+|---|---|
+| `src/`、`include/`、`mk/`、`tools/`、`docs/` | `disc/<version>/`、`config/<version>/`、および生成される `asm/<version>/`、`linker/<version>/`、`assets/<version>/`、`build/<version>/` |
+
+リリース間でコードが異なる箇所は、共通のCソース内で `#if defined(VERSION_JP)` / `#if defined(VERSION_US)` を使って書き分けます。ビルドはどちらか一方だけを定義します（[`mk/version.mk`](mk/version.mk) と [`include/version.h`](include/version.h) を参照）。シンボル名は共通ですがアドレスは異なるため、`config/<version>/symbols/` はバージョンごとに用意します。
+
 ## リポジトリ構成
 
 ```text
@@ -349,15 +367,15 @@ lom-decomp/
 |   |-- overlays/           # オーバーレイのソースツリー
 |   `-- psyq/               # 復元したPsy-Qライブラリコード
 |-- include/                # プロジェクトおよびPsy-Qのヘッダ / マクロ
-|-- config/                 # Splat設定、シンボル、relocation
+|-- config/<version>/       # Splat設定、シンボル、relocation
 |-- mk/                     # ビルドルールとツールチェーンの振り分け
 |-- tools/                  # デコンパイル、コンパイラ、diff、アセット用ツール
 |-- docs/                   # アーキテクチャとマッチング関連ドキュメント
-|-- disc/                   # 手元のオリジナルゲームファイル（gitignore対象）
-|-- assets/                 # 必要に応じて使用するローカル / 生成アセットデータ
-|-- asm/                    # Splatが生成するターゲットアセンブリ（gitignore対象）
-|-- linker/                 # Splatが生成するリンカーファイル（gitignore対象）
-|-- build/                  # オブジェクト、ELF、map、diff、レポート
+|-- disc/<version>/         # 手元のオリジナルゲームファイル（gitignore対象）
+|-- assets/<version>/       # 必要に応じて使用するローカル / 生成アセットデータ
+|-- asm/<version>/          # Splatが生成するターゲットアセンブリ（gitignore対象）
+|-- linker/<version>/       # Splatが生成するリンカーファイル（gitignore対象）
+|-- build/<version>/        # オブジェクト、ELF、map、diff、レポート
 |-- dockerfiles/            # 開発用 / CI用コンテナ
 |-- Makefile
 `-- requirements.txt
@@ -366,9 +384,9 @@ lom-decomp/
 まず確認するとよい場所:
 
 - `src/` - 復元したゲームコードとPsy-Qコード。
-- `asm/nonmatchings/` と `asm/overlays/*/nonmatchings/` - 未一致関数向けに生成されたターゲットアセンブリ。
-- `config/symbols/` - 判明している関数 / グローバルのアドレス。
-- `config/relocations/` - splatがシンボリック参照を正しく復元できない場合に使用するrelocation override。
+- `asm/<version>/nonmatchings/` と `asm/<version>/overlays/*/nonmatchings/` - 未一致関数向けに生成されたターゲットアセンブリ。
+- `config/<version>/symbols/` - 判明している関数 / グローバルのアドレス。
+- `config/<version>/relocations/` - splatがシンボリック参照を正しく復元できない場合に使用するrelocation override。
 - `mk/overlay-registry.mk` - オーバーレイごとのソース / ツールチェーン割り当て。
 - `docs/decompilation/` - このプロジェクト固有のマッチング作業メモ。
 
@@ -385,7 +403,7 @@ lom-decomp/
 
 **`make splat` でファイル不足またはSHA-1不一致が報告される**
 
-現在のビルドには北米版が必要です（日本版にも近日対応予定です）。北米版からファイルを抽出し、名前を変更せずに `disc/SLPS_021.70` と `disc/BIN/*.BIN` へ配置していることを確認してください。
+現在のビルドには北米版が必要です（日本版にも近日対応予定です）。北米版からファイルを抽出し、名前を変更せずに `disc/us/SLUS_010.13` と `disc/us/BIN/*.BIN` へ配置していることを確認してください（日本版は `disc/jp/` 以下に同じ構成で配置します）。
 
 **Dockerが `old-gcc/...` イメージを見つけられない**
 

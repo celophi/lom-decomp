@@ -1,27 +1,27 @@
 name: CLOAD.BIN
 sha1: 9aa31d6f62ee68bff73bbe0e8b4416e34bb20e58
 options:
-  base_path: ../../
+  base_path: ../../../
   basename: CLOAD.BIN
   platform: psx
   compiler: PSYQ
-  target_path: disc/BIN/CLOAD.BIN
+  target_path: disc/us/BIN/CLOAD.BIN
   extensions_path: tools/splat_ext
-  asset_path: assets
-  elf_path: build/overlays/cload.elf
+  asset_path: assets/us
+  elf_path: build/us/overlays/cload.elf
 
   # Overlay-specific output paths (separate from SLUS)
-  asm_path: asm/overlays/cload
+  asm_path: asm/us/overlays/cload
   src_path: src/overlays/cload
-  build_path: build/overlays/cload
+  build_path: build/us/overlays/cload
 
-  ld_script_path: linker/overlays/cload/cload.ld
+  ld_script_path: linker/us/overlays/cload/cload.ld
   ld_dependencies: True
-  undefined_funcs_auto_path: linker/overlays/cload/undefined_funcs_auto.txt
-  undefined_syms_auto_path: linker/overlays/cload/undefined_syms_auto.txt
+  undefined_funcs_auto_path: linker/us/overlays/cload/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/us/overlays/cload/undefined_syms_auto.txt
 
   symbol_addrs_path:
-    - config/symbols/cload_symbol_addrs.txt
+    - config/us/symbols/cload_symbol_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True

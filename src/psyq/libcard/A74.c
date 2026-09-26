@@ -1,3 +1,3 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libcard/A74", InitCARD2);
+INCLUDE_ASM("nonmatchings/psyq/libcard/A74", InitCARD2);

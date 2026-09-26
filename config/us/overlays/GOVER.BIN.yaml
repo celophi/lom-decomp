@@ -1,28 +1,28 @@
 name: GOVER.BIN
 sha1: ac4127a6294b6bc04ef848dad355fc9866d268cb
 options:
-  base_path: ../../
+  base_path: ../../../
   basename: GOVER.BIN
   platform: psx
   compiler: PSYQ
-  target_path: disc/BIN/GOVER.BIN
+  target_path: disc/us/BIN/GOVER.BIN
   extensions_path: tools/splat_ext
-  asset_path: assets
-  elf_path: build/overlays/gover.elf
+  asset_path: assets/us
+  elf_path: build/us/overlays/gover.elf
 
   # Overlay-specific output paths (separate from SLUS)
-  asm_path: asm/overlays/gover
+  asm_path: asm/us/overlays/gover
   src_path: src/overlays/gover
-  build_path: build/overlays/gover
+  build_path: build/us/overlays/gover
 
-  ld_script_path: linker/overlays/gover/gover.ld
+  ld_script_path: linker/us/overlays/gover/gover.ld
   ld_dependencies: True
-  undefined_funcs_auto_path: linker/overlays/gover/undefined_funcs_auto.txt
-  undefined_syms_auto_path: linker/overlays/gover/undefined_syms_auto.txt
+  undefined_funcs_auto_path: linker/us/overlays/gover/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/us/overlays/gover/undefined_syms_auto.txt
 
   symbol_addrs_path:    
-    - config/symbols/shared_symbol_addrs.txt
-    - config/symbols/gover_symbol_addrs.txt
+    - config/us/symbols/shared_symbol_addrs.txt
+    - config/us/symbols/gover_symbol_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True

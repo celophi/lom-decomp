@@ -1,3 +1,3 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libspu/S_SIC", SpuSetIRQCallback);
+INCLUDE_ASM("nonmatchings/psyq/libspu/S_SIC", SpuSetIRQCallback);

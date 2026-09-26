@@ -1,31 +1,31 @@
 name: MOVIE.BIN
 sha1: 4ede2a498e06efdf712414b052bb21fe0d198298
 options:
-  base_path: ../../
+  base_path: ../../../
   basename: MOVIE.BIN
   platform: psx
   compiler: PSYQ
-  target_path: disc/BIN/MOVIE.BIN
+  target_path: disc/us/BIN/MOVIE.BIN
   extensions_path: tools/splat_ext
-  asset_path: assets
-  elf_path: build/overlays/movie.elf
+  asset_path: assets/us
+  elf_path: build/us/overlays/movie.elf
 
   # Overlay-specific output paths (separate from SLUS)
-  asm_path: asm/overlays/movie
+  asm_path: asm/us/overlays/movie
   src_path: src/overlays/movie
-  build_path: build/overlays/movie
+  build_path: build/us/overlays/movie
 
-  ld_script_path: linker/overlays/movie/movie.ld
+  ld_script_path: linker/us/overlays/movie/movie.ld
   ld_dependencies: True
-  undefined_funcs_auto_path: linker/overlays/movie/undefined_funcs_auto.txt
-  undefined_syms_auto_path: linker/overlays/movie/undefined_syms_auto.txt
+  undefined_funcs_auto_path: linker/us/overlays/movie/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/us/overlays/movie/undefined_syms_auto.txt
 
   symbol_addrs_path:    
-    - config/symbols/shared_symbol_addrs.txt
-    - config/symbols/movie_symbol_addrs.txt
+    - config/us/symbols/shared_symbol_addrs.txt
+    - config/us/symbols/movie_symbol_addrs.txt
 
   reloc_addrs_path:
-    - config/relocations/movie_reloc_addrs.txt
+    - config/us/relocations/movie_reloc_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True

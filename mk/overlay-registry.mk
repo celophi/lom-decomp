@@ -14,9 +14,10 @@
 #   overlay_<name>_gcc_280_g4_noexpand_srcs
 #
 # overlays.mk rejects missing, unknown, or multiply routed sources. If a linker
-# script expects a standalone assets/<name>.o, define:
+# script expects a standalone assets/<name>.o, define (path under the version's
+# assets tree):
 #
-#   overlay_<name>_asset_src := assets/<name>.bin
+#   overlay_<name>_asset_src := $(ASSETS_DIR)/<name>.bin
 #
 # Splat databin assets referenced through .incbin do not use this setting.
 

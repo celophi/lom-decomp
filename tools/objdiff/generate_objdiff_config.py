@@ -9,22 +9,42 @@ an objdiff.json with:
   - Units tagged with their category for per-overlay progress breakdowns
 
 Usage:
-    python3 tools/objdiff/generate_objdiff_config.py
+    python3 tools/objdiff/generate_objdiff_config.py [--version us]
 """
 
+import argparse
 import json
 import yaml
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
-MAIN_CONFIG = PROJECT_ROOT / "config" / "SLUS_010.13.yaml"
-OVERLAY_CONFIG_DIR = PROJECT_ROOT / "config" / "overlays"
 OUTPUT_PATH = PROJECT_ROOT / "objdiff.json"
+
+# Main executable file name per game version (mirrors mk/version.mk).
+MAIN_EXECUTABLES = {
+    "us": "SLUS_010.13",
+    "jp": "SLPS_021.70",
+}
+
+# Set by configure_version() from the --version argument.
+VERSION = "us"
+MAIN_CONFIG = Path()
+OVERLAY_CONFIG_DIR = Path()
 
 # Manifest of overlays whose rebuilt+compressed BIN matches the original ROM.
 # Written by the Makefile's verify-* targets. Units of overlays listed here are
 # stamped with metadata.complete = true so objdiff reports them as linked.
-COMPLETE_MANIFEST = PROJECT_ROOT / "build" / "complete_overlays.txt"
+COMPLETE_MANIFEST = Path()
+
+
+def configure_version(version: str) -> None:
+    """Point the config, overlay, and manifest paths at one game version."""
+    global VERSION, MAIN_CONFIG, OVERLAY_CONFIG_DIR, COMPLETE_MANIFEST
+    VERSION = version
+    config_dir = PROJECT_ROOT / "config" / version
+    MAIN_CONFIG = config_dir / f"{MAIN_EXECUTABLES[version]}.yaml"
+    OVERLAY_CONFIG_DIR = config_dir / "overlays"
+    COMPLETE_MANIFEST = PROJECT_ROOT / "build" / version / "complete_overlays.txt"
 
 # SDK files are not our code — skip them in progress tracking
 SKIP_PATHS = {"psyq"}
@@ -88,14 +108,19 @@ def build_main_units(config: dict, complete: bool = False) -> list[dict]:
     If `complete` is True (the linked executable matches the disc file), every
     unit is stamped with metadata.complete = true.
     """
+    options = config.get("options", {})
+    asm_path = options.get("asm_path", f"asm/{VERSION}")
+    build_path = options.get("build_path", f"build/{VERSION}")
+    src_path = options.get("src_path", "src")
+
     units = []
     for name in extract_c_subsegments(config):
         if should_skip(name):
             continue
         units.append({
             "name": f"main/{name}",
-            "target_path": f"build/asm/{name}.o",
-            "base_path": f"build/src/{name}.o",
+            "target_path": f"{build_path}/{asm_path}/{name}.o",
+            "base_path": f"{build_path}/{src_path}/{name}.o",
             "metadata": {
                 "progress_categories": ["main"],
                 **({"complete": True} if complete else {}),
@@ -111,8 +136,7 @@ def build_overlay_units(config: dict, overlay_name: str, complete: bool = False)
     which tells objdiff to treat the object as fully linked/matching.
     """
     options = config.get("options", {})
-    asm_path = options.get("asm_path", f"asm/overlays/{overlay_name}")
-    build_path = options.get("build_path", f"build/overlays/{overlay_name}")
+    build_path = options.get("build_path", f"build/{VERSION}/overlays/{overlay_name}")
     src_path = options.get("src_path", f"src/overlays/{overlay_name}")
 
     def _metadata() -> dict:
@@ -149,7 +173,7 @@ def build_overlay_units(config: dict, overlay_name: str, complete: bool = False)
 
 
 def discover_overlay_configs() -> list[Path]:
-    """Find all overlay YAML configs in config/overlays/."""
+    """Find all overlay YAML configs in config/<version>/overlays/."""
     if not OVERLAY_CONFIG_DIR.is_dir():
         return []
     return sorted(OVERLAY_CONFIG_DIR.glob("*.yaml"))
@@ -169,6 +193,15 @@ def overlay_name_from_config(config: dict) -> str:
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Generate objdiff.json for one game version.")
+    parser.add_argument(
+        "--version",
+        choices=sorted(MAIN_EXECUTABLES),
+        default="us",
+        help="game version whose configs and build outputs to use (default: us)",
+    )
+    configure_version(parser.parse_args().version)
+
     categories = [{"id": "main", "name": "Main Executable"}]
     units = []
 
@@ -199,7 +232,7 @@ def main():
     objdiff_config = {
         "$schema": "https://raw.githubusercontent.com/encounter/objdiff/main/config.schema.json",
         "custom_make": "make",
-        "custom_args": ["objdiff-objects"],
+        "custom_args": ["objdiff-objects", f"VERSION={VERSION}"],
         "build_target": True,
         "build_base": True,
         "watch_patterns": [

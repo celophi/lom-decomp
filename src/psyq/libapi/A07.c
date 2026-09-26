@@ -1,3 +1,3 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libapi/A07", DeliverEvent);
+INCLUDE_ASM("nonmatchings/psyq/libapi/A07", DeliverEvent);

@@ -1,28 +1,28 @@
 name: SHOP.BIN
 sha1: 09645449948177200d87cb9350a87df165e34453
 options:
-  base_path: ../../
+  base_path: ../../../
   basename: SHOP.BIN
   platform: psx
   compiler: PSYQ
-  target_path: disc/BIN/SHOP.BIN
+  target_path: disc/us/BIN/SHOP.BIN
   extensions_path: tools/splat_ext
-  asset_path: assets
-  elf_path: build/overlays/shop.elf
+  asset_path: assets/us
+  elf_path: build/us/overlays/shop.elf
 
   # Overlay-specific output paths (separate from SLUS)
-  asm_path: asm/overlays/shop
+  asm_path: asm/us/overlays/shop
   src_path: src/overlays/shop
-  build_path: build/overlays/shop
+  build_path: build/us/overlays/shop
 
-  ld_script_path: linker/overlays/shop/shop.ld
+  ld_script_path: linker/us/overlays/shop/shop.ld
   ld_dependencies: True
-  undefined_funcs_auto_path: linker/overlays/shop/undefined_funcs_auto.txt
-  undefined_syms_auto_path: linker/overlays/shop/undefined_syms_auto.txt
+  undefined_funcs_auto_path: linker/us/overlays/shop/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/us/overlays/shop/undefined_syms_auto.txt
 
   symbol_addrs_path:
-    - config/symbols/shared_symbol_addrs.txt
-    - config/symbols/shop_symbol_addrs.txt
+    - config/us/symbols/shared_symbol_addrs.txt
+    - config/us/symbols/shop_symbol_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True

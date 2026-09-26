@@ -1,3 +1,3 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libspu/S_R", SpuRead);
+INCLUDE_ASM("nonmatchings/psyq/libspu/S_R", SpuRead);

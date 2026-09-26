@@ -800,7 +800,7 @@ g_field_party_has_guest = 0x80122698;
 g_field_coordinate_labels = 0x801228F8;
 
 // Interior addresses of arrays, reached through base + addend relocations in
-// config/relocations/field_reloc_addrs.txt; not symbols of their own.
+// config/us/relocations/field_reloc_addrs.txt; not symbols of their own.
 D_800FB3C8 = 0x800FB3C8; // ignore:true
 D_80105B30 = 0x80105B30; // ignore:true
 D_80105B4C = 0x80105B4C; // ignore:true

@@ -1,31 +1,31 @@
 name: FIELD.BIN
 sha1: 5b0325f90d55daef8321606d9a439238b0a5518d
 options:
-  base_path: ../../
+  base_path: ../../../
   basename: FIELD.BIN
   platform: psx
   compiler: PSYQ
-  target_path: disc/BIN/FIELD.BIN
+  target_path: disc/us/BIN/FIELD.BIN
   extensions_path: tools/splat_ext
-  asset_path: assets
-  elf_path: build/overlays/field.elf
+  asset_path: assets/us
+  elf_path: build/us/overlays/field.elf
 
   # Overlay-specific output paths (separate from SLUS)
-  asm_path: asm/overlays/field
+  asm_path: asm/us/overlays/field
   src_path: src/overlays/field
-  build_path: build/overlays/field
+  build_path: build/us/overlays/field
 
-  ld_script_path: linker/overlays/field/field.ld
+  ld_script_path: linker/us/overlays/field/field.ld
   ld_dependencies: True
-  undefined_funcs_auto_path: linker/overlays/field/undefined_funcs_auto.txt
-  undefined_syms_auto_path: linker/overlays/field/undefined_syms_auto.txt
+  undefined_funcs_auto_path: linker/us/overlays/field/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/us/overlays/field/undefined_syms_auto.txt
 
   symbol_addrs_path:
-    - config/symbols/shared_symbol_addrs.txt
-    - config/symbols/field_symbol_addrs.txt
+    - config/us/symbols/shared_symbol_addrs.txt
+    - config/us/symbols/field_symbol_addrs.txt
 
   reloc_addrs_path:
-    - config/relocations/field_reloc_addrs.txt
+    - config/us/relocations/field_reloc_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True

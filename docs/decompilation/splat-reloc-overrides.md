@@ -4,7 +4,7 @@
 
 When `target.s` shows a literal offset like `sw v0,0x522c(s1)` but your `compiled.s`
 shows the symbolic form `sw v0,%lo(g_gameState)(s1)`, **don't change the C source**
-— add a `MIPS_LO16` entry to `config/relocations/slus_reloc_addrs.txt`. The opposite
+— add a `MIPS_LO16` entry to `config/us/relocations/slus_reloc_addrs.txt`. The opposite
 case (target symbolic, compiled literal) is rare and usually means you should use
 `MIPS_NONE` instead.
 
@@ -65,7 +65,7 @@ is a `g_gameState` access that splat failed to symbolize.
 The compiler always emits all of these symbolically, so `compiled.s` shows
 `%lo(g_gameState)(s1)` everywhere — diff fails on every literal-form line.
 
-## The Fix: `config/relocations/<overlay>_reloc_addrs.txt`
+## The Fix: `config/us/relocations/<overlay>_reloc_addrs.txt`
 
 Splat accepts override entries that force a specific relocation type on a
 specific instruction address. The file format is one entry per line:
@@ -97,7 +97,7 @@ ROM = VRAM - 0x80010000 + 0x800
 
 To find the ROM offset of a specific instruction inside a function:
 
-1. Look up the function's VRAM in `config/symbols/shared_symbol_addrs.txt`
+1. Look up the function's VRAM in `config/us/symbols/shared_symbol_addrs.txt`
    (e.g. `Main = 0x80010D58`).
 2. Convert to ROM: `0x10D58 - 0x10000 + 0x800 = 0x1558`.
 3. Add the function-relative offset shown in `target.s` (e.g. `0x31c` → ROM
@@ -145,7 +145,7 @@ If those are all true, it's safe to add a `MIPS_LO16` override and move on.
 
 ## Working Example
 
-See `config/relocations/slus_reloc_addrs.txt` for live overrides:
+See `config/us/relocations/slus_reloc_addrs.txt` for live overrides:
 
 - `g_akao_seq_channel0` in `akao_upload_xa_program` / `akao_cmd_ec` uses
   `MIPS_NONE` (splat over-eagerly resolved a literal as a symbol — strip it).

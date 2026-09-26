@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
 Run objdiff diff on every unit in objdiff.json and write JSON results to
-build/diffs/, mirroring the unit name as a path (e.g. "main/cdrom" ->
-build/diffs/main/cdrom.json).
+build/<version>/diffs/, mirroring the unit name as a path (e.g. "main/cdrom" ->
+build/us/diffs/main/cdrom.json).
 
 Usage:
-    python3 tools/objdiff/run_diffs.py [--cli <path>]
+    python3 tools/objdiff/run_diffs.py [--cli <path>] [--output-dir <dir>]
 """
 
 import argparse
@@ -18,13 +18,16 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 DEFAULT_CLI = PROJECT_ROOT / "tools" / "objdiff" / "objdiff-cli-linux-x86_64"
 CONFIG_PATH = PROJECT_ROOT / "objdiff.json"
-OUTPUT_DIR = PROJECT_ROOT / "build" / "diffs"
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "build" / "us" / "diffs"
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cli", default=str(DEFAULT_CLI), help="Path to objdiff-cli binary")
+    parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR),
+                        help="Directory for per-unit JSON diffs (default: build/us/diffs)")
     args = parser.parse_args()
+    output_dir = Path(args.output_dir)
 
     cli = Path(args.cli)
     if not cli.exists():
@@ -48,7 +51,7 @@ def main():
         name = unit["name"]
         target = unit["target_path"]
         base = unit["base_path"]
-        out = OUTPUT_DIR / f"{name}.json"
+        out = output_dir / f"{name}.json"
         out.parent.mkdir(parents=True, exist_ok=True)
 
         result = subprocess.run(
@@ -63,7 +66,7 @@ def main():
             if result.stderr:
                 print(f"        {result.stderr.decode().strip()}", file=sys.stderr)
 
-    print(f"Done: {ok} ok, {fail} failed. Results in {OUTPUT_DIR}/")
+    print(f"Done: {ok} ok, {fail} failed. Results in {output_dir}/")
 
 
 if __name__ == "__main__":

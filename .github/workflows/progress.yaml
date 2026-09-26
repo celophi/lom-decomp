@@ -10,6 +10,10 @@ on:
 
 env:
   # Project configuration
+  # VERSION selects the game release (see mk/version.mk). Only the North
+  # American disc is available in the CI container so far; ROM_ID is the
+  # matching main executable and also names the uploaded report artifact.
+  VERSION: us
   ROM_ID: SLUS_010.13
   WORKING_DIR: lom
   
@@ -18,7 +22,7 @@ env:
   OBJDIFF_CONFIG_GENERATOR: tools/objdiff/generate_objdiff_config.py
   
   # Build artifacts
-  PROGRESS_REPORT: build/progress.json
+  PROGRESS_REPORT: build/us/progress.json
 
 jobs:
   build-and-report:
@@ -41,9 +45,9 @@ jobs:
       
       - name: Copy ROM from container
         run: |
-          mkdir -p disc/BIN
-          cp /rom/${{ env.ROM_ID }} disc/
-          cp /rom/BIN/*.BIN disc/BIN/
+          mkdir -p disc/${{ env.VERSION }}/BIN
+          cp /rom/${{ env.ROM_ID }} disc/${{ env.VERSION }}/
+          cp /rom/BIN/*.BIN disc/${{ env.VERSION }}/BIN/
 
       - name: Setup Python environment
         run: |
@@ -51,22 +55,22 @@ jobs:
           pip install -r requirements.txt
 
       - name: Split ROM with splat
-        run: make splat
+        run: make splat VERSION=${{ env.VERSION }}
 
       - name: Build objects for comparison
         run: |
-          make clean
-          make objdiff-objects
+          make clean VERSION=${{ env.VERSION }}
+          make objdiff-objects VERSION=${{ env.VERSION }}
 
       - name: Verify compressed overlay BINs against ROM
         # Builds each verifiable overlay's compressed .BIN and SHA1-compares it
         # against the original ROM file. On match, the overlay name is appended
-        # to build/complete_overlays.txt, which the objdiff config generator
-        # reads to stamp metadata.complete = true on those units.
-        run: make verify-bins
+        # to build/<version>/complete_overlays.txt, which the objdiff config
+        # generator reads to stamp metadata.complete = true on those units.
+        run: make verify-bins VERSION=${{ env.VERSION }}
 
       - name: Generate objdiff configuration
-        run: python3 ${{ env.OBJDIFF_CONFIG_GENERATOR }}
+        run: python3 ${{ env.OBJDIFF_CONFIG_GENERATOR }} --version ${{ env.VERSION }}
 
       - name: Generate progress report
         run: |

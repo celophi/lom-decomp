@@ -1,5 +1,5 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libetc/VSYNC", VSync);
+INCLUDE_ASM("nonmatchings/psyq/libetc/VSYNC", VSync);
 
-INCLUDE_ASM("asm/nonmatchings/psyq/libetc/VSYNC", VSYNC_OBJ_178);
+INCLUDE_ASM("nonmatchings/psyq/libetc/VSYNC", VSYNC_OBJ_178);

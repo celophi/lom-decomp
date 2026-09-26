@@ -8,15 +8,16 @@ Usage:
     python tools/find_small_funcs.py slus
     python tools/find_small_funcs.py field --top 20
 
-The overlay name should match the directory under asm/overlays/ (e.g. "field",
+The overlay name should match the directory under asm/us/overlays/ (e.g. "field",
 "menu", "addhero") or use "slus" for the main executable's nonmatchings under
-asm/nonmatchings/.
+asm/us/nonmatchings/.
 
 Output columns:
     size (bytes)  function name  .s file path (relative to repo root)
 """
 
 import argparse
+import os
 import re
 import sys
 from pathlib import Path
@@ -58,12 +59,14 @@ def main() -> None:
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parent.parent
+    # Game version whose asm/ tree to search (see mk/version.mk).
+    version_asm = repo_root / "asm" / os.environ.get("LOM_VERSION", "us")
 
     if args.overlay.lower() == "slus":
-        asm_root = repo_root / "asm" / "nonmatchings"
+        asm_root = version_asm / "nonmatchings"
         label = "SLUS (main executable)"
     else:
-        asm_root = repo_root / "asm" / "overlays" / args.overlay / "nonmatchings"
+        asm_root = version_asm / "overlays" / args.overlay / "nonmatchings"
         label = args.overlay
 
     if not asm_root.exists():

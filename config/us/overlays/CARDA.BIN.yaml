@@ -1,27 +1,27 @@
 name: CARDA.BIN
 sha1: 8c553e14f4426011ff9b19c07d50f44fbc537413
 options:
-  base_path: ../../
+  base_path: ../../../
   basename: CARDA.BIN
   platform: psx
   compiler: PSYQ
-  target_path: disc/BIN/CARDA.BIN
+  target_path: disc/us/BIN/CARDA.BIN
   extensions_path: tools/splat_ext
-  asset_path: assets
-  elf_path: build/overlays/carda.elf
+  asset_path: assets/us
+  elf_path: build/us/overlays/carda.elf
 
   # Overlay-specific output paths (separate from SLUS)
-  asm_path: asm/overlays/carda
+  asm_path: asm/us/overlays/carda
   src_path: src/overlays/carda
-  build_path: build/overlays/carda
+  build_path: build/us/overlays/carda
 
-  ld_script_path: linker/overlays/carda/carda.ld
+  ld_script_path: linker/us/overlays/carda/carda.ld
   ld_dependencies: True
-  undefined_funcs_auto_path: linker/overlays/carda/undefined_funcs_auto.txt
-  undefined_syms_auto_path: linker/overlays/carda/undefined_syms_auto.txt
+  undefined_funcs_auto_path: linker/us/overlays/carda/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/us/overlays/carda/undefined_syms_auto.txt
 
   symbol_addrs_path:
-    - config/symbols/carda_symbol_addrs.txt
+    - config/us/symbols/carda_symbol_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True
