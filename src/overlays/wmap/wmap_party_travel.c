@@ -100,7 +100,7 @@ typedef union
 extern WmapTravelSprite D_800D9268[];
 extern WmapTravelAnimation D_80139988[];
 extern WmapTravelCell D_80139290[WMAP_GRID_SIZE][WMAP_GRID_SIZE];
-extern WmapTravelProjection D_80139950;
+extern WmapTravelProjection g_wmap_view;
 extern const WmapTravelScreen D_8004FD04[];
 extern u8 D_800DBE98[];
 extern u8 D_800DC298[];
@@ -110,19 +110,19 @@ extern s16 D_800D9296;
 extern s16 D_800D92C2;
 extern s32 D_800D9224;
 extern s32 D_800DBE78;
-extern s32 D_800DCEEC;
-extern s32 D_800DCEF0;
+extern s32 g_wmap_cursor_column;
+extern s32 g_wmap_cursor_row;
 extern s32 D_8011CF18;
 extern s32 D_8011CF20;
 extern s32 D_8011CF44;
 extern s32 D_80129550;
-extern s32 D_8013986C;
+extern s32 g_wmap_view_mode;
 extern s32 D_801398B8;
-extern s32 D_801398D0;
+extern s32 g_wmap_view_scroll_mode;
 extern s32 D_8013B294;
 extern s32 D_80182D5C;
-extern s32 D_80182D68;
-extern s32 D_80182D78;
+extern s32 g_wmap_scroll_remaining_x;
+extern s32 g_wmap_scroll_remaining_y;
 extern s32 D_80182E1C;
 extern s32 D_80182E34;
 extern s32 g_wmap_travel_sound_active;
@@ -201,9 +201,9 @@ void wmap_update_travelers(void)
                 traveler->target_y = (next_y - 1) * WMAP_TRAVEL_CELL_UNITS;
                 if (g_wmap_scripted_travel_active != 0 && i == WMAP_SCRIPTED_TRAVELER)
                 {
-                    D_801398D0 = 2;
-                    D_80182D68 = ((scripted_traveler = &g_wmap_travelers[WMAP_SCRIPTED_TRAVELER])->next_cell_x - previous_cell_x) * WMAP_CELL_SPACING;
-                    D_80182D78 = (scripted_traveler->next_cell_y - previous_cell_y) * WMAP_CELL_SPACING;
+                    g_wmap_view_scroll_mode = 2;
+                    g_wmap_scroll_remaining_x = ((scripted_traveler = &g_wmap_travelers[WMAP_SCRIPTED_TRAVELER])->next_cell_x - previous_cell_x) * WMAP_CELL_SPACING;
+                    g_wmap_scroll_remaining_y = (scripted_traveler->next_cell_y - previous_cell_y) * WMAP_CELL_SPACING;
                 }
                 traveler->moving = 1;
             }
@@ -252,7 +252,7 @@ void wmap_update_travelers(void)
     {
         if (g_wmap_party_moving != 0 && D_8011CF44 == 0)
         {
-            func_800652A8(WMAP_TRAVEL_SOUND, WMAP_TRAVEL_SOUND_VOLUME);
+            wmap_play_sound(WMAP_TRAVEL_SOUND, WMAP_TRAVEL_SOUND_VOLUME);
             g_wmap_travel_sound_active = g_wmap_party_moving;
         }
         if (g_wmap_party_moving != g_wmap_travel_sound_active && g_wmap_party_moving == 0)
@@ -295,15 +295,15 @@ void wmap_update_party_travel(void)
             sprite = &D_800D9268[i];
             if (sprite->resource_index != -1)
             {
-                func_8006CC4C(sprite, &D_80139988[i]);
-                if (D_8013986C == 0)
+                wmap_step_actor_animation(sprite, &D_80139988[i]);
+                if (g_wmap_view_mode == 0)
                 {
                     screen.point.x = g_wmap_travelers[i].position_x;
                     screen.point.y = g_wmap_travelers[i].position_y;
-                    scale = D_80139950.scale;
-                    view_x = D_80139950.x * 0x14000 / scale - 20;
+                    scale = g_wmap_view.scale;
+                    view_x = g_wmap_view.x * 0x14000 / scale - 20;
                     position.vx = (g_wmap_travelers[i].position_x - view_x) * 0x6000 / scale;
-                    view_y = D_80139950.y * 0x14000 / scale - 20;
+                    view_y = g_wmap_view.y * 0x14000 / scale - 20;
                     position.vy = (g_wmap_travelers[i].position_y - view_y) * 0x6000 / scale;
                     position.vz = 0;
                     gte_ldv0(&position);
@@ -320,10 +320,10 @@ void wmap_update_party_travel(void)
                                                     g_wmap_travelers[i].position_y * WMAP_CELL_SPACING / WMAP_TRAVEL_CELL_UNITS + WMAP_CELL_SPACING,
                                                     scale) != 0)
                     {
-                        func_80066F9C(sprite, screen.packed, i, ot_index, WMAP_TRAVEL_TEXTURE_ROW + i * WMAP_TRAVEL_TEXTURE_ROW);
+                        wmap_draw_actor_sprite(sprite, screen.packed, i, ot_index, WMAP_TRAVEL_TEXTURE_ROW + i * WMAP_TRAVEL_TEXTURE_ROW);
                     }
                 }
-                if (D_8013986C == 1)
+                if (g_wmap_view_mode == 1)
                 {
                     packed_position = D_8004FD04[g_wmap_travelers[i].cell_x + g_wmap_travelers[i].cell_y * WMAP_GRID_SIZE].packed;
                     flat_x_bits = packed_position + 14;
@@ -332,7 +332,7 @@ void wmap_update_party_travel(void)
                     packed_position |= flat_x_bits;
                     flat_y = packed_position >> 16;
                     packed_position &= 0xFFFF;
-                    func_80066F9C(sprite, (u16)packed_position | ((flat_y + 28) << 16), i, WMAP_TRAVEL_OT_FALLBACK, WMAP_TRAVEL_TEXTURE_ROW + i * WMAP_TRAVEL_TEXTURE_ROW);
+                    wmap_draw_actor_sprite(sprite, (u16)packed_position | ((flat_y + 28) << 16), i, WMAP_TRAVEL_OT_FALLBACK, WMAP_TRAVEL_TEXTURE_ROW + i * WMAP_TRAVEL_TEXTURE_ROW);
                 }
             }
             i++;
@@ -340,9 +340,9 @@ void wmap_update_party_travel(void)
     }
     if ((g_wmap_buttons_repeat & PADRdown) && g_wmap_party_moving == 0 && D_80129550 == 0)
     {
-        selected_x = D_80139950.x / WMAP_CELL_SPACING + D_800DCEEC;
-        selected_y = D_80139950.y / WMAP_CELL_SPACING + D_800DCEF0;
-        if (D_80139290[selected_x][selected_y].traversable != 0 && D_8013986C == 0 && D_8011CF18 == 0)
+        selected_x = g_wmap_view.x / WMAP_CELL_SPACING + g_wmap_cursor_column;
+        selected_y = g_wmap_view.y / WMAP_CELL_SPACING + g_wmap_cursor_row;
+        if (D_80139290[selected_x][selected_y].traversable != 0 && g_wmap_view_mode == 0 && D_8011CF18 == 0)
         {
             if (selected_x != g_wmap_travelers[0].cell_x || (at_destination = 1, selected_y != g_wmap_travelers[0].cell_y))
             {

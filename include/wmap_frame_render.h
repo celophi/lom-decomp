@@ -6,6 +6,10 @@
 
 #define WMAP_OT_COUNT 179
 #define WMAP_PACKET_LIMIT 32000
+/** @brief Map tiles per grid row and column. */
+#define WMAP_MAP_TILES 26
+/** @brief Drop-shadow polygons under the map edges. */
+#define WMAP_SHADOW_POLYS 184
 
 /** @brief Drawing environments, depth buckets, and polygon storage for one map frame. */
 typedef struct
@@ -16,11 +20,12 @@ typedef struct
     u8* packet_cursor;
     union
     {
-        POLY_FT4 flat[26 * 26];
-        POLY_FT4 rows[26][26];
+        POLY_FT4 flat[WMAP_MAP_TILES * WMAP_MAP_TILES];
+        POLY_FT4 rows[WMAP_MAP_TILES][WMAP_MAP_TILES];
     } tiles;
-    POLY_F4 fade[184];
-    u8 tail[32];
+    POLY_F4 shadow[WMAP_SHADOW_POLYS];
+    /** @brief Off-screen triangle that selects the shadow texture page and blend mode. */
+    POLY_FT3 tpage_select;
 } WmapFrame;
 
 /** @brief Double-buffered world-map drawing state. */

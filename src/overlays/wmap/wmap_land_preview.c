@@ -120,8 +120,8 @@ extern WmapArtifactTransferFrame g_wmap_artifact_return_frames[];
 extern s32 g_wmap_preview_foreground;
 
 extern s32 D_800DCEC0;
-extern s32 D_800DCEEC;
-extern s32 D_800DCEF0;
+extern s32 g_wmap_cursor_column;
+extern s32 g_wmap_cursor_row;
 extern s32 D_8011CF18;
 extern s32 g_wmap_preview_bob_y;
 extern s32 D_8011CF74;
@@ -129,19 +129,19 @@ extern s32 D_8011D4FC;
 extern s32 D_8011D504;
 extern s32 D_8011D508;
 extern s32 D_8011D52C;
-extern SVECTOR D_80139278;
+extern SVECTOR g_wmap_camera_rotation;
 extern WmapCell D_80139290[][6];
 extern s32 D_80139838[];
-extern s32 D_8013986C;
-extern s32 D_801398D0;
+extern s32 g_wmap_view_mode;
+extern s32 g_wmap_view_scroll_mode;
 
-extern WmapProjection D_80139950;
+extern WmapProjection g_wmap_view;
 extern s32 D_8013B208;
 extern s32 g_wmap_preview_projection_x;
 extern s32 g_wmap_preview_projection_y;
-extern s32 D_80182234;
-extern s32 D_8018223C;
-extern VECTOR D_80182DC0;
+extern s32 g_wmap_focus_origin_x;
+extern s32 g_wmap_focus_origin_y;
+extern VECTOR g_wmap_camera_translation;
 extern s32 D_80182DE0;
 extern s32 D_801ADAE0;
 
@@ -208,24 +208,24 @@ void wmap_update_land_preview(void)
             g_wmap_preview_bob_y = 0;
         }
 
-        if (D_801398D0 == WMAP_PREVIEW_PROJECTED_MODE)
+        if (g_wmap_view_scroll_mode == WMAP_PREVIEW_PROJECTED_MODE)
         {
-            RotMatrix(&D_80139278, &matrix);
-            TransMatrix(&matrix, &D_80182DC0);
+            RotMatrix(&g_wmap_camera_rotation, &matrix);
+            TransMatrix(&matrix, &g_wmap_camera_translation);
             SetRotMatrix(&matrix);
             SetTransMatrix(&matrix);
 
             position.vz = 0;
-            position.vx = ((D_80139950.x * WMAP_PREVIEW_MAP_SCALE) / D_80139950.projection_scale * WMAP_PREVIEW_EFFECT_SCALE) / D_80139950.projection_scale;
-            position.vy = ((D_80139950.y * WMAP_PREVIEW_MAP_SCALE) / D_80139950.projection_scale * WMAP_PREVIEW_EFFECT_SCALE) / D_80139950.projection_scale;
+            position.vx = ((g_wmap_view.x * WMAP_PREVIEW_MAP_SCALE) / g_wmap_view.projection_scale * WMAP_PREVIEW_EFFECT_SCALE) / g_wmap_view.projection_scale;
+            position.vy = ((g_wmap_view.y * WMAP_PREVIEW_MAP_SCALE) / g_wmap_view.projection_scale * WMAP_PREVIEW_EFFECT_SCALE) / g_wmap_view.projection_scale;
 
             gte_ldv0(&position);
             gte_rtps();
             screen_ptr = &screen;
             gte_stsxy(screen_ptr);
 
-            g_wmap_preview_projection_x = D_80182234 - screen.vx;
-            g_wmap_preview_projection_y = D_8018223C - screen_ptr->vy;
+            g_wmap_preview_projection_x = g_wmap_focus_origin_x - screen.vx;
+            g_wmap_preview_projection_y = g_wmap_focus_origin_y - screen_ptr->vy;
         }
         else
         {
@@ -237,8 +237,8 @@ void wmap_update_land_preview(void)
         switch (D_8011CF18)
         {
         case WMAP_SELECTION_MAP:
-            g_wmap_preview_x = g_wmap_preview_map_positions[D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS].vx;
-            g_wmap_preview_y = g_wmap_preview_map_positions[D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS].vy;
+            g_wmap_preview_x = g_wmap_preview_map_positions[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS].vx;
+            g_wmap_preview_y = g_wmap_preview_map_positions[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS].vy;
             break;
 
         case WMAP_SELECTION_OPENING:
@@ -272,7 +272,7 @@ void wmap_update_land_preview(void)
                 }
                 else if (g_wmap_artifact_transfer_frame == g_wmap_artifact_transfer_end)
                 {
-                    func_800652A8(g_wmap_artifact_return_frames[g_wmap_artifact_transfer_end].sound_id, WMAP_ARTIFACT_RETURN_VOLUME);
+                    wmap_play_sound(g_wmap_artifact_return_frames[g_wmap_artifact_transfer_end].sound_id, WMAP_ARTIFACT_RETURN_VOLUME);
                     D_8011CF18 = WMAP_SELECTION_ARTIFACTS;
                     g_wmap_input_locked = 0;
                     g_wmap_preview_texture = 0;
@@ -369,7 +369,7 @@ void wmap_update_land_preview(void)
                 sound_id = pickup_frame->sound_id;
                 if (sound_id != -1)
                 {
-                    func_800652A8(sound_id, WMAP_ARTIFACT_PICKUP_VOLUME);
+                    wmap_play_sound(sound_id, WMAP_ARTIFACT_PICKUP_VOLUME);
                 }
                 ot_shift = WMAP_PREVIEW_OT_SHIFT;
                 next_transfer_frame = g_wmap_artifact_transfer_frame + 1;
@@ -386,7 +386,7 @@ void wmap_update_land_preview(void)
         g_wmap_preview_draw_x = g_wmap_preview_x;
         g_wmap_preview_draw_y = g_wmap_preview_y;
 
-        if ((D_8013B208 == 0) && (D_8013986C == 0))
+        if ((D_8013B208 == 0) && (g_wmap_view_mode == 0))
         {
             POLY_FT4* packet;
             s16 x0_offset;
@@ -492,14 +492,14 @@ void wmap_update_land_preview(void)
             }
         }
 
-        if ((D_801ADAE0 == 0) && (D_8013986C == 0))
+        if ((D_801ADAE0 == 0) && (g_wmap_view_mode == 0))
         {
             if (((D_8011D4FC != WMAP_NO_ARTIFACT) && (g_wmap_preview_artifact_visible != 0)) || (D_8011D52C != 0))
             {
                 SPRT* sprite;
 
                 sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
-                if ((D_8011D52C != 0) && (D_801398D0 != WMAP_PREVIEW_PROJECTED_MODE))
+                if ((D_8011D52C != 0) && (g_wmap_view_scroll_mode != WMAP_PREVIEW_PROJECTED_MODE))
                 {
                     sprite->x0 = D_8011D504;
                     sprite->y0 = D_8011D508;
@@ -531,8 +531,8 @@ void wmap_update_land_preview(void)
                 func_8006534C(WMAP_ARTIFACT_TPAGE, WMAP_PREVIEW_FRONT_OT);
             }
 
-            cell_x = (D_80139950.x / WMAP_CELL_SPACING) + D_800DCEEC;
-            cell_y = (D_80139950.y / WMAP_CELL_SPACING) + D_800DCEF0;
+            cell_x = (g_wmap_view.x / WMAP_CELL_SPACING) + g_wmap_cursor_column;
+            cell_y = (g_wmap_view.y / WMAP_CELL_SPACING) + g_wmap_cursor_row;
             if ((D_8011CF18 == WMAP_SELECTION_MAP) && (D_800DCEC0 != 0))
             {
                 land_id = D_80139290[cell_x][cell_y].land_id;
@@ -543,7 +543,7 @@ void wmap_update_land_preview(void)
                 func_8005FF88(land_id);
             }
 
-            if ((D_80139290[cell_x][cell_y].land_id == WMAP_EMPTY_CELL) && (D_8011CF18 == WMAP_SELECTION_MAP) && (D_801398D0 != WMAP_PREVIEW_PROJECTED_MODE) &&
+            if ((D_80139290[cell_x][cell_y].land_id == WMAP_EMPTY_CELL) && (D_8011CF18 == WMAP_SELECTION_MAP) && (g_wmap_view_scroll_mode != WMAP_PREVIEW_PROJECTED_MODE) &&
                 (D_8013B208 == 0))
             {
                 POLY_FT4* packet;
@@ -551,8 +551,8 @@ void wmap_update_land_preview(void)
                 s32 column;
                 packet = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
                 SET_BGR0_PACKED(packet, GPU_TINT_NEUTRAL);
-                row = D_800DCEF0;
-                column = D_800DCEEC;
+                row = g_wmap_cursor_row;
+                column = g_wmap_cursor_column;
                 *(u16*)&packet->clut = WMAP_EMPTY_MARKER_CLUT;
                 packet->u3 = WMAP_EMPTY_MARKER_SIZE;
                 packet->u1 = WMAP_EMPTY_MARKER_SIZE;

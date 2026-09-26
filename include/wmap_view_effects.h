@@ -3,17 +3,24 @@
 
 #include "common.h"
 
-s32 func_8006544C(s32 initialize);
-void func_800654BC(void);
-void func_800654D4(void);
+/** @brief g_wmap_view_mode values. */
+#define WMAP_VIEW_MODE_HIDDEN (-1)
+#define WMAP_VIEW_MODE_MAP 0
+#define WMAP_VIEW_MODE_SPIRITS 1
+#define WMAP_VIEW_MODE_ZOOM_IN 2
+#define WMAP_VIEW_MODE_ZOOM_OUT 3
+
+s32 wmap_run_view_sequence(s32 initialize);
+void wmap_reset_view_sequence(void);
+void wmap_advance_view_sequence(void);
 void func_800654EC(void);
-void func_800654F8(void);
-s32 func_8006579C(s32 initialize);
-void func_800664B8(void);
-s32 func_8006683C(s32 color);
-s32 func_8006688C(void);
-void func_80066B4C(void);
-void func_80066BA4(void);
-void func_80066DD8(void);
+void wmap_init_map_packets(void);
+s32 wmap_update_map_view(s32 initialize);
+void wmap_update_view_zoom(void);
+s32 wmap_start_map_tint(s32 color);
+s32 wmap_update_burst_particles(void);
+void wmap_init_burst_particles(void);
+void wmap_begin_cell_focus(void);
+void wmap_project_focus_position(void);
 
 #endif

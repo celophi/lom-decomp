@@ -111,19 +111,19 @@ typedef union
     } point;
 } WmapScreenPosition;
 
-extern const WmapPoint D_80054944[];
+extern const WmapPoint g_wmap_cell_focus_offsets[];
 extern s16 D_800D928A;
 extern s32 D_800DBE70;
 extern s32 D_800DBE78;
-extern s32 D_800DCEEC;
-extern s32 D_800DCEF0;
+extern s32 g_wmap_cursor_column;
+extern s32 g_wmap_cursor_row;
 extern s32 D_8011CF44;
 extern s32 D_80139244;
-extern s32 D_8013986C;
-extern s32 D_801398D0;
+extern s32 g_wmap_view_mode;
+extern s32 g_wmap_view_scroll_mode;
 extern s32 D_8013B208;
-extern s32 D_80182D68;
-extern s32 D_80182D78;
+extern s32 g_wmap_scroll_remaining_x;
+extern s32 g_wmap_scroll_remaining_y;
 extern s32 D_80182E34;
 extern const s32 D_8005135C[];
 extern u16 D_800CC776;
@@ -137,7 +137,7 @@ extern s32 D_8011D530;
 extern s32 D_80129550;
 extern WmapCell D_80139290[6][6];
 extern s32 D_801398F4;
-extern WmapProjectionState D_80139950;
+extern WmapProjectionState g_wmap_view;
 extern s32 D_80182DE0;
 
 extern s32 D_801ADAFC;
@@ -172,7 +172,7 @@ s32 wmap_begin_land_placement(s32 initialize)
         return 1;
     }
     func_80064F64(wmap_get_land_count_tier() + WMAP_PLACEMENT_RESOURCE_BASE);
-    func_8006683C(0x808080);
+    wmap_start_map_tint(0x808080);
     D_800DBE70 = 2;
     g_wmap_screen_fade_mode = 1;
     D_800DBE78 = WMAP_CAROUSEL_SLIDE_IN;
@@ -180,17 +180,17 @@ s32 wmap_begin_land_placement(s32 initialize)
     D_80182E34 = 2;
     g_wmap_backdrop_target_level = 0x10;
     func_8006D870(0);
-    D_801398D0 = 2;
-    D_8013986C = 0;
+    g_wmap_view_scroll_mode = 2;
+    g_wmap_view_mode = 0;
     D_8013B208 = 0;
     D_800D928A = 0x80;
-    points = D_80054944;
-    y = D_800DCEF0;
-    x = D_800DCEEC;
+    points = g_wmap_cell_focus_offsets;
+    y = g_wmap_cursor_row;
+    x = g_wmap_cursor_column;
     index = y * WMAP_VIEW_COLUMNS + x;
     point = &points[index];
-    D_80182D68 = -point->x;
-    D_80182D78 = -point->y;
+    g_wmap_scroll_remaining_x = -point->x;
+    g_wmap_scroll_remaining_y = -point->y;
     wmap_reset_after_transition();
     return 0;
 }
@@ -201,8 +201,8 @@ void wmap_update_artifact_selection(void)
     s32 map_x;
     s32 map_y;
 
-    map_x = D_80139950.x / WMAP_CELL_SPACING + D_800DCEEC;
-    map_y = D_80139950.y / WMAP_CELL_SPACING + D_800DCEF0;
+    map_x = g_wmap_view.x / WMAP_CELL_SPACING + g_wmap_cursor_column;
+    map_y = g_wmap_view.y / WMAP_CELL_SPACING + g_wmap_cursor_row;
 
     if (g_wmap_carousel_turn_frames != 0)
     {
@@ -252,7 +252,7 @@ void wmap_update_artifact_selection(void)
                 g_wmap_buttons_repeat = 0;
                 func_8005FF88(-1);
 
-                view_index = D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS;
+                view_index = g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS;
                 first_frame = D_8005135C[view_index];
                 g_wmap_preview_travel_frame = first_frame;
                 g_wmap_preview_travel_end = D_8005135C[view_index + 1] - 1;
@@ -260,14 +260,14 @@ void wmap_update_artifact_selection(void)
                 func_8006D870(1);
                 D_80129550 = 0;
                 g_wmap_artifact_transfer_frame = no_artifact;
-                func_800652A8(WMAP_SOUND_OPEN_ARTIFACTS, WMAP_SELECTION_VOLUME);
+                wmap_play_sound(WMAP_SOUND_OPEN_ARTIFACTS, WMAP_SELECTION_VOLUME);
             }
         }
 
         if (D_80129550 == 1 && (g_wmap_buttons_repeat & PADRdown) != 0 && D_8011D4FC != -1 && D_80139290[map_x][map_y].placement_allowed != 0 && D_80182DE0 == 0)
         {
             D_80182DE0 = D_80129550;
-            func_800652A8(WMAP_SOUND_PLACE_ARTIFACT, WMAP_SELECTION_VOLUME);
+            wmap_play_sound(WMAP_SOUND_PLACE_ARTIFACT, WMAP_SELECTION_VOLUME);
             g_wmap_buttons_held = 0;
             g_wmap_buttons_repeat = 0;
             g_wmap_map_button_mask = 0x20;
@@ -311,7 +311,7 @@ void wmap_update_artifact_selection(void)
                 {
                     wmap_place_land(D_8011D510, D_8011D530, artifact_id);
                 }
-                func_8006CBD8(wmap_begin_land_placement);
+                wmap_install_callback(wmap_begin_land_placement);
             }
         }
     }
@@ -322,12 +322,12 @@ void wmap_update_artifact_selection(void)
             func_8005FF88(-1);
             D_8011CF18 = WMAP_SELECTION_SHOW_MAP;
             g_wmap_input_locked = 1;
-            g_wmap_preview_travel_frame = D_8005135C[D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS + 1] - 1;
-            g_wmap_preview_travel_end = D_8005135C[D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS];
+            g_wmap_preview_travel_frame = D_8005135C[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS + 1] - 1;
+            g_wmap_preview_travel_end = D_8005135C[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS];
             func_8006D870(0);
             D_8011D4FC = -1;
             g_wmap_preview_artifact_visible = 0;
-            func_800652A8(WMAP_SOUND_CLOSE_ARTIFACTS, WMAP_SELECTION_VOLUME);
+            wmap_play_sound(WMAP_SOUND_CLOSE_ARTIFACTS, WMAP_SELECTION_VOLUME);
             g_wmap_input_locked = 1;
             g_wmap_buttons_held = 0;
             g_wmap_buttons_repeat = 0;
@@ -338,7 +338,7 @@ void wmap_update_artifact_selection(void)
             g_wmap_input_locked = 1;
             g_wmap_buttons_held = 0;
             g_wmap_buttons_repeat = 0;
-            func_800652A8(WMAP_SOUND_TURN_RIGHT, WMAP_CAROUSEL_VOLUME);
+            wmap_play_sound(WMAP_SOUND_TURN_RIGHT, WMAP_CAROUSEL_VOLUME);
             g_wmap_carousel_turn_step = 1;
             g_wmap_carousel_turn_frames = WMAP_CAROUSEL_STEP_FRAMES;
             wmap_scroll_artifact_list(1, D_80139838);
@@ -349,7 +349,7 @@ void wmap_update_artifact_selection(void)
             g_wmap_input_locked = 1;
             g_wmap_buttons_held = 0;
             g_wmap_buttons_repeat = 0;
-            func_800652A8(WMAP_SOUND_TURN_LEFT, WMAP_CAROUSEL_VOLUME);
+            wmap_play_sound(WMAP_SOUND_TURN_LEFT, WMAP_CAROUSEL_VOLUME);
             g_wmap_carousel_turn_step = -1;
             g_wmap_carousel_turn_frames = WMAP_CAROUSEL_STEP_FRAMES;
             wmap_scroll_artifact_list(0, D_80139838);
@@ -380,8 +380,8 @@ void wmap_update_artifact_selection(void)
                 g_wmap_buttons_repeat = 0;
                 g_wmap_artifact_transfer_frame = D_800CCBF4[D_8011D4FC];
                 g_wmap_artifact_transfer_end = D_800CCBF4[D_8011D4FC + 1] - 1;
-                g_wmap_preview_travel_frame = D_8005135C[D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS + 1] - 1;
-                g_wmap_preview_travel_end = D_8005135C[D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS];
+                g_wmap_preview_travel_frame = D_8005135C[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS + 1] - 1;
+                g_wmap_preview_travel_end = D_8005135C[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS];
                 func_8006D870(0);
                 func_800A89DC(D_8011D4FC);
             }

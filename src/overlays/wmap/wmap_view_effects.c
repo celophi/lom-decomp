@@ -3,26 +3,102 @@
 #include "wmap_sprite_render.h"
 #include "wmap_view_effects.h"
 #include "common.h"
+#include "sdk/libetc.h"
 #include "sdk/libgpu.h"
+#include "gpu_packet.h"
 #include "wmap_resource_support.h"
 #include "wmap_effect_primitives.h"
 #include "sdk/libgte.h"
+#include "sdk/rand.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
 #include "wmap_map_labels.h"
 #include "wmap_sequence_runtime.h"
 #include "wmap_effect_backdrop.h"
 
-#define M2C_FIELD(expr, type_ptr, offset) (*(type_ptr)((s8*)(expr) + (offset)))
-#define M2C_UNALIGNED32(expr) (expr)
-#define M2C_BITWISE(type, expr) ((type)(expr))
+/** @brief Map tiles drawn inside the one-tile border of the grid. */
+#define WMAP_MAP_VISIBLE_FIRST 1
+#define WMAP_MAP_VISIBLE_END (WMAP_MAP_TILES - 1)
+/** @brief Projected grid vertices per row and column. */
+#define WMAP_MAP_VERTICES (WMAP_MAP_TILES - 1)
+/** @brief Ordering-table depth of the map grid and its shadow. */
+#define WMAP_MAP_OT_INDEX 175
 
-typedef s32 M2C_UNK;
-typedef s8 M2C_UNK8;
-typedef s16 M2C_UNK16;
-typedef s32 M2C_UNK32;
+/** @brief Tile page and palette of the map texture. */
+#define WMAP_MAP_TPAGE getTPage(0, 0, 576, 0)
+#define WMAP_MAP_CLUT getClut(576, 384)
+/** @brief VRAM x of the two map texture pages and y of the lower one. */
+#define WMAP_MAP_PAGE_X 576
+#define WMAP_MAP_PAGE_X_WRAP 640
+#define WMAP_MAP_PAGE_Y_LOW 256
+/** @brief Texels per texture page, per map tile, and the page overlap a wrapped tile skips. */
+#define WMAP_MAP_PAGE_TEXELS 256
+#define WMAP_MAP_TEXEL_TILE 48
+#define WMAP_MAP_TEXEL_WRAP 32
+/** @brief Last texel column at which a tile still starts on the first page. */
+#define WMAP_MAP_TEXEL_EDGE (WMAP_MAP_PAGE_TEXELS - (WMAP_MAP_TEXEL_TILE - WMAP_MAP_TEXEL_WRAP))
 
-/** @brief Packed color and GPU command byte. */
+/** @brief Subtractive-blend texture page selected for the shadow polygons. */
+#define WMAP_SHADOW_TPAGE getTPage(0, 2, 320, 0)
+/** @brief Brightest shadow level and the shadow's vertical offset. */
+#define WMAP_SHADOW_LEVEL_MAX 64
+#define WMAP_SHADOW_OFFSET_Y 10
+/** @brief Tiles copied into the shadow: the bottom rows, then the right columns above them. */
+#define WMAP_SHADOW_BOTTOM_ROW 22
+#define WMAP_SHADOW_RIGHT_COLUMN 23
+#define WMAP_SHADOW_TOP_ROW 3
+
+/** @brief POLY_FT4 command bytes for the tile color word. */
+#define WMAP_TILE_CODE 0x2C
+#define WMAP_TILE_CODE_BLENDED 0x2E
+
+/** @brief World-map sound ids and the pan position of the screen center. */
+#define WMAP_SOUND_ZOOM_OUT 1
+#define WMAP_SOUND_ZOOM_IN 2
+#define WMAP_SOUND_CURSOR 3
+#define WMAP_PAN_CENTER 128
+#define WMAP_PAN_PER_COLUMN 24
+
+/** @brief Map scroll limit, map scroll speed and the map distance of one cursor step. */
+#define WMAP_VIEW_SCROLL_MAX 144
+#define WMAP_VIEW_SCROLL_SPEED 4
+#define WMAP_VIEW_SCROLL_STEP 48
+/** @brief Spirit entries cycled in the spirit view (0 = none). */
+#define WMAP_SPIRIT_SELECTIONS 9
+
+/** @brief Projection scale of the map view and of the zoomed-out spirit view. */
+#define WMAP_VIEW_SCALE 0x6000
+#define WMAP_SPIRIT_VIEW_SCALE 0xC000
+/** @brief Frames of the zoom animation; zoom values are 8.8 fixed point. */
+#define WMAP_ZOOM_FRAMES 16
+#define WMAP_ZOOM_ONE 256
+
+/** @brief Map-to-model scale used to project a map position. */
+#define WMAP_MAP_PROJECTION_SCALE 0x14000
+/** @brief Map units between two land cells. */
+#define WMAP_CELL_SIZE 160
+
+/** @brief Burst particle slots, their first sprite actor, and the burst center. */
+#define WMAP_BURST_PARTICLES 110
+#define WMAP_BURST_ACTOR_FIRST 6
+#define WMAP_BURST_CENTER_X 160
+#define WMAP_BURST_CENTER_Y 120
+#define WMAP_BURST_ACTOR_SCALE 15
+#define WMAP_BURST_ACTOR_SHADE 129
+#define WMAP_BURST_SEQUENCE_LARGE 3
+#define WMAP_BURST_OT_INDEX 4
+/** @brief Spawns per frame and particle slots scanned, per unit of D_801B0FD0. */
+#define WMAP_BURST_SPAWNS_PER_UNIT 3
+#define WMAP_BURST_SLOTS_PER_UNIT 70
+/** @brief Shortest particle lifetime. */
+#define WMAP_BURST_LIFETIME_MIN 5
+/** @brief Sprite textures of the large and the small burst particles. */
+#define WMAP_BURST_TEXTURE_LARGE 6
+#define WMAP_BURST_TEXTURE_SMALL 7
+/** @brief Sprite shade that draws the texture unmodified. */
+#define WMAP_ACTOR_SHADE_NEUTRAL 128
+
+/** @brief Packed color word: three channels and the GPU command byte. */
 typedef union
 {
     u32 packed;
@@ -32,165 +108,138 @@ typedef union
     } channels;
 } WmapColor;
 
-/** @brief Byte-aligned source vertex record. */
+/** @brief Map scroll position (map units) and projection scale. */
 typedef struct
 {
-    u8 bytes[8];
-} WmapVertex;
-/** @brief Textured quad with packed coordinate words. */
-typedef struct
-{
-    u32 tag, color;
-    s32 xy0;
-    u32 uv0;
-    s32 xy1;
-    u32 uv1;
-    s32 xy2;
-    u32 uv2;
-    s32 xy3;
-    u32 uv3;
-} WmapQuad;
-
-/** @brief World-map actor configuration. */
-typedef struct
-{
-    s16 field_00;
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[4];
-} WmapConfigA;
-
-/** @brief Per-actor motion and animation parameters. */
-typedef struct
-{
-    s16 state;
-    s16 angle;
     s32 x;
-    s32 z;
-    s16 scale;
-    s16 field_0E;
-    s32 field_10;
-} WmapMotion;
+    s32 y;
+    s32 projection_scale;
+    s32 unknown_0c;
+} WmapView;
 
-/** @brief Animation resource slot. */
+/** @brief World-map sprite actor as read by the animator and the sprite renderer. */
 typedef struct
 {
-    s32 field_00;
-    void* resource;
-} WmapResource;
+    s16 unknown_00;
+    s16 unknown_02;
+    u8 unknown_04[2];
+    u8 scale_index;
+    u8 unknown_07[7];
+    s16 sequence;
+    s16 previous_sequence;
+    u8 unknown_12[0x10];
+    s16 target_shade;
+    s16 shade;
+    s16 shade_step;
+    u8 unknown_28[4];
+} WmapSpriteActor;
 
-/** @brief Pointer slot in the world-map display table. */
+/** @brief One particle of the radial burst. */
 typedef struct
 {
-    s32 unknown_0;
+    s16 active;
+    s16 angle;
+    s32 speed;
+    s32 distance;
+    s16 lifetime;
+    s16 unknown_0e;
+    s32 unknown_10;
+} WmapBurstParticle;
+
+/** @brief Animation resource slot of a sprite actor. */
+typedef struct
+{
+    s32 unknown_00;
     u8* data;
-} WmapPointerSlot;
+} WmapAnimationSlot;
 
-/** @brief Screen-space position for a map scale and layout. */
+/** @brief Screen-space offset of a cursor cell. */
 typedef struct
 {
-    s16 x, y;
+    s16 x;
+    s16 y;
 } WmapPoint;
 
-/** @brief Fade-alpha field within a world-map actor configuration. */
-typedef struct
+/** @brief GTE screen coordinate, read as one packed word or as two halves. */
+typedef union
 {
-    s16 alpha;
-} WmapFadeAlpha;
+    s32 packed;
+    WmapPoint point;
+} WmapScreenPosition;
 
-/** @brief Map translation and projection scale. */
-typedef struct
-{
-    s32 x, y, scale, pad;
-} WmapTransform;
-
-extern u32 D_801AFBA0;
-extern s32 D_801AFBA4;
-extern void (*D_800D0458[])(void);
+extern u32 g_wmap_view_sequence_step;
+extern s32 g_wmap_view_sequence_timer;
+extern void (*g_wmap_view_sequence_steps[])(void);
 extern s32 D_80182D88;
 
-
-extern s32 D_801ADAE8;
-extern CVECTOR D_8011D50C;
-extern WmapColor D_80129548;
-extern s32 D_801398B0;
-extern u8 D_8013B24C;
-extern s32 D_80054934[];
-extern s32 D_800DCEEC;
-extern s32 D_800DCEF0;
-extern s32 D_800DCF04;
+extern s32 g_wmap_map_shadow_level;
+extern CVECTOR g_wmap_tint_target;
+extern WmapColor g_wmap_tint;
+extern s32 g_wmap_tint_blending;
+extern u8 g_wmap_tint_speed;
+extern s32 g_wmap_cursor_limits[];
+extern s32 g_wmap_cursor_column;
+extern s32 g_wmap_cursor_row;
+extern s32 g_wmap_spirit_selection;
 extern s32 D_8011CF18;
 extern s32 D_8011CF44;
-extern s32 D_8011CF7C;
-extern s32 D_8013986C;
-extern s32 D_801398D0;
-extern WmapTransform D_80139950;
-extern s32 D_80139954;
-extern s32 D_80182D68;
-extern s32 D_80182D78;
-extern WmapVertex D_80051D4C[];
-extern s16 D_80053414[];
-extern s16 D_800D928A;
+extern s32 g_wmap_view_scroll_enabled;
+extern s32 g_wmap_view_mode;
+extern s32 g_wmap_view_scroll_mode;
+extern WmapView g_wmap_view;
+extern s32 g_wmap_scroll_remaining_x;
+extern s32 g_wmap_scroll_remaining_y;
+extern SVECTOR g_wmap_grid_vertices[];
+extern s16 g_wmap_grid_vertex_indices[];
 extern s32 D_800DBE70;
 extern s32 D_800DBE78;
-extern u8 D_800DCEC8;
+extern WmapView g_wmap_saved_view;
 extern s32 D_8011D4FC;
-extern u8 D_801AFBA8;
-extern u8 D_801AFBB8;
+extern WmapView g_wmap_zoom_view;
+extern WmapView g_wmap_zoom_step;
 extern s32 D_80139288;
-extern WmapConfigA D_800D9268[];
-extern WmapConfigA D_800D9370[];
-extern WmapMotion D_801AFBD0[];
-extern WmapResource D_801399B8[];
-extern s32 D_801AFBC8;
+extern WmapSpriteActor D_800D9268[];
+extern WmapBurstParticle D_801AFBD0[];
+extern WmapAnimationSlot D_80139988[];
+extern s32 g_wmap_burst_spawning;
 extern s32 D_801B0FD0;
-extern u32 rand(void);
 extern u8 D_8011D538[];
-extern u8 D_80139988[];
-extern WmapPoint D_80054944[][3];
-extern SVECTOR D_80139278;
-extern VECTOR D_80182DC0;
+extern WmapPoint g_wmap_cell_focus_offsets[][3];
+extern SVECTOR g_wmap_camera_rotation;
+extern VECTOR g_wmap_camera_translation;
 extern s32 D_8013B20C;
-extern s32 D_80182234;
-extern s32 D_8018223C;
+extern s32 g_wmap_focus_origin_x;
+extern s32 g_wmap_focus_origin_y;
 extern s32 D_801B1098;
 extern s32 D_801B109C;
 extern s32 D_8011D510;
 extern s32 D_8011D530;
 extern s32 D_8011CF4C;
 
-static s32 func_80065620(s32 initialize);
-void func_80065E20(void);
-void func_80065F54(void);
-void func_800660BC(void);
-void func_800667E8(s32 value);
+static s32 wmap_update_map_tint(s32 initialize);
+static void wmap_project_map_grid(void);
+static void wmap_update_map_shadow(void);
+static void wmap_update_map_texcoords(void);
+static void wmap_set_map_color(s32 color);
 
 /**
- * @brief Dispatch the current world-map sequence step, seeding it first if requested.
- * @param initialize Non-zero seeds the step counters before dispatching.
- * @return 1 if a step ran, 0 if the step index was out of range.
+ * @brief Run the current step of the map view sequence.
+ * @param initialize Nonzero restarts the sequence before running the step.
+ * @return 1 while a step ran, 0 once the sequence has finished.
  */
-s32 func_8006544C(s32 initialize)
+s32 wmap_run_view_sequence(s32 initialize)
 {
     s32 result;
 
     if (initialize != 0)
     {
-        D_801AFBA0 = 1;
-        D_801AFBA4 = 1;
+        g_wmap_view_sequence_step = 1;
+        g_wmap_view_sequence_timer = 1;
     }
 
-    if (D_801AFBA0 < 0x2)
+    if (g_wmap_view_sequence_step < 2)
     {
-        D_800D0458[D_801AFBA0]();
+        g_wmap_view_sequence_steps[g_wmap_view_sequence_step]();
         result = 1;
     }
     else
@@ -200,459 +249,456 @@ s32 func_8006544C(s32 initialize)
     return result;
 }
 
-/**
- * @brief Set two adjacent world-map state flags.
- */
-void func_800654BC(void)
+/** @brief Map view sequence step 0: restart the sequence. */
+void wmap_reset_view_sequence(void)
 {
-    D_801AFBA0 = 1;
-    D_801AFBA4 = 1;
+    g_wmap_view_sequence_step = 1;
+    g_wmap_view_sequence_timer = 1;
 }
 
-/**
- * @brief Increment a world-map state counter.
- */
-void func_800654D4(void)
+/** @brief Map view sequence step 1: advance to the next step. */
+void wmap_advance_view_sequence(void)
 {
-    D_801AFBA0 += 1;
+    g_wmap_view_sequence_step += 1;
 }
 
-/**
- * @brief Clear the world-map state value at D_80182D88.
- */
+/** @brief Clear the world-map state value at D_80182D88. */
 void func_800654EC(void)
 {
     D_80182D88 = 0;
 }
 
-/** @brief Initialize both map polygon buffers and update the fade packet colors. */
-void func_800654F8(void)
+/** @brief Build the map tiles, shadow polygons and texture-page selector of both frames. */
+void wmap_init_map_packets(void)
 {
     s32 buffer_index;
     s32 row;
     s32 column;
     WmapFrame* buffer;
     POLY_FT4* tile;
-    POLY_F4* fade;
+    POLY_F4* shadow;
 
     for (buffer_index = 0; buffer_index < 2; buffer_index++)
     {
         buffer = &g_wmap_frames[buffer_index];
-        *(s16*)(buffer->tail + 0x16) = 0x45;
+        buffer->tpage_select.tpage = WMAP_SHADOW_TPAGE;
         g_wmap_current_frame = buffer;
-        *(s32*)(buffer->tail + 0x18) = 0;
-        *(s32*)(buffer->tail + 0x10) = 0;
-        *(s32*)(buffer->tail + 8) = 0;
-        *(s32*)(buffer->tail + 4) = 0;
-        buffer->tail[3] = 7;
-        g_wmap_current_frame->tail[7] = 0x24;
-        for (row = 0; row < 26; row++)
+        /* Each vertex is cleared as one packed x/y word. */
+        *(u32*)&buffer->tpage_select.x2 = 0;
+        *(u32*)&buffer->tpage_select.x1 = 0;
+        *(u32*)&buffer->tpage_select.x0 = 0;
+        SET_BGR0_PACKED(&buffer->tpage_select, 0);
+        setPolyFT3(&g_wmap_current_frame->tpage_select);
+        for (row = 0; row < WMAP_MAP_TILES; row++)
         {
-            for (column = 0; column < 26; column++)
+            for (column = 0; column < WMAP_MAP_TILES; column++)
             {
-                tile = &g_wmap_current_frame->tiles.flat[row * 26 + column];
-                *(s32*)&tile->r0 = 0;
-                tile->tpage = 9;
-                tile->clut = 0x6024;
-                ((u8*)tile)[3] = 9;
-                tile->code = 0x2C;
+                tile = &g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column];
+                SET_BGR0_PACKED(tile, 0);
+                tile->tpage = WMAP_MAP_TPAGE;
+                tile->clut = WMAP_MAP_CLUT;
+                setPolyFT4(tile);
             }
         }
-        if (D_801ADAE8 != 0)
+        if (g_wmap_map_shadow_level != 0)
         {
-            if (D_801ADAE8 < 64)
+            if (g_wmap_map_shadow_level < WMAP_SHADOW_LEVEL_MAX)
             {
-                D_801ADAE8++;
+                g_wmap_map_shadow_level++;
             }
-            for (column = 0; column < 184; column++)
+            for (column = 0; column < WMAP_SHADOW_POLYS; column++)
             {
-                fade = &g_wmap_current_frame->fade[column];
-                fade->r0 = D_801ADAE8;
-                fade->g0 = D_801ADAE8;
-                fade->b0 = D_801ADAE8;
-                ((u8*)fade)[3] = 5;
-                fade->code = 0x2A;
+                shadow = &g_wmap_current_frame->shadow[column];
+                setRGB0(shadow, g_wmap_map_shadow_level, g_wmap_map_shadow_level, g_wmap_map_shadow_level);
+                setPolyF4(shadow);
+                setSemiTrans(shadow, 1);
             }
         }
     }
 }
 
-/** @brief Step the map tint toward its target color.
- * @return Nonzero if a color channel was adjusted.
-
- * @param initialize Sequence event selector, unused by this callback.
+/**
+ * @brief Step the map tint toward its target color.
+ * @param initialize Sequence callback flag; unused.
+ * @return Nonzero while a channel still moved.
  */
-static s32 func_80065620(s32 initialize)
+static s32 wmap_update_map_tint(s32 initialize)
 {
-    s32 packed_color;
+    s32 color;
     s32 changed;
 
     changed = 0;
-    if (D_8011D50C.r > D_80129548.channels.r)
+    if (g_wmap_tint_target.r > g_wmap_tint.channels.r)
     {
         changed = 1;
-        D_80129548.channels.r = (u8)(D_80129548.channels.r + D_8013B24C);
+        g_wmap_tint.channels.r += g_wmap_tint_speed;
     }
-    if ((u8)D_8011D50C.r < (u8)D_80129548.channels.r)
+    if (g_wmap_tint_target.r < g_wmap_tint.channels.r)
     {
         changed = 1;
-        D_80129548.channels.r = (u8)(D_80129548.channels.r - D_8013B24C);
+        g_wmap_tint.channels.r -= g_wmap_tint_speed;
     }
-    if ((u8)D_80129548.channels.g < (u8)D_8011D50C.g)
+    if (g_wmap_tint.channels.g < g_wmap_tint_target.g)
     {
         changed = 1;
-        D_80129548.channels.g = (u8)(D_80129548.channels.g + D_8013B24C);
+        g_wmap_tint.channels.g += g_wmap_tint_speed;
     }
-    if ((u8)D_8011D50C.g < (u8)D_80129548.channels.g)
+    if (g_wmap_tint_target.g < g_wmap_tint.channels.g)
     {
         changed = 1;
-        D_80129548.channels.g = (u8)(D_80129548.channels.g - D_8013B24C);
+        g_wmap_tint.channels.g -= g_wmap_tint_speed;
     }
-    if ((u8)D_80129548.channels.b < (u8)D_8011D50C.b)
+    if (g_wmap_tint.channels.b < g_wmap_tint_target.b)
     {
         changed = 1;
-        D_80129548.channels.b = (u8)(D_80129548.channels.b + D_8013B24C);
+        g_wmap_tint.channels.b += g_wmap_tint_speed;
     }
-    if ((u8)D_8011D50C.b < (u8)D_80129548.channels.b)
+    if (g_wmap_tint_target.b < g_wmap_tint.channels.b)
     {
         changed = 1;
-        D_80129548.channels.b = (u8)(D_80129548.channels.b - D_8013B24C);
+        g_wmap_tint.channels.b -= g_wmap_tint_speed;
     }
-    if (D_801398B0 != 0)
+    if (g_wmap_tint_blending != 0)
     {
-        packed_color = D_80129548.packed & 0xFFFFFF;
-        if (packed_color == 0x808080)
+        color = g_wmap_tint.packed & 0xFFFFFF;
+        if (color == GPU_TINT_NEUTRAL)
         {
-            *(u32*)&D_8011D50C = packed_color;
-            D_80129548.packed = packed_color;
-            D_80129548.channels.code = 0x2C;
-            D_801398B0 = 0;
+            *(u32*)&g_wmap_tint_target = color;
+            g_wmap_tint.packed = color;
+            g_wmap_tint.channels.code = WMAP_TILE_CODE;
+            g_wmap_tint_blending = 0;
         }
         else
         {
-            D_80129548.channels.code = 0x2E;
+            g_wmap_tint.channels.code = WMAP_TILE_CODE_BLENDED;
         }
     }
     else
     {
-        D_80129548.channels.code = 0x2C;
+        g_wmap_tint.channels.code = WMAP_TILE_CODE;
     }
-    func_800667E8(D_80129548.packed);
+    wmap_set_map_color(g_wmap_tint.packed);
     return changed;
 }
 
-/** @brief Update the map view and submit the grid and fade packets.
- * @param initialize Sequence event selector, unused by this callback.
- * @return Always one.
+/**
+ * @brief Move the map cursor, scroll the map view, and queue the map packets.
+ * @param initialize Sequence callback flag; unused.
+ * @return Always 1, so the callback stays installed.
  */
-s32 func_8006579C(s32 initialize)
+s32 wmap_update_map_view(s32 initialize)
 {
-    s32 left_sound_position;
-    s32 right_sound_position;
-    s32 previous_row;
-    s32 previous_slot;
+    s32 left_pan;
+    s32 right_pan;
+    s32 row;
+    s32 selection;
     s32 next_y;
     s32 next_x;
     s32 y_step;
     s32 x_step;
     s32 column;
-    s32 row;
+    s32 row_index;
 
-    if (D_8013986C == -1)
+    if (g_wmap_view_mode == WMAP_VIEW_MODE_HIDDEN)
     {
         func_8006AEE0();
         return 1;
     }
-    if ((D_8013986C == 0) && (D_801398D0 == 0) && (D_8011CF18 == 0))
+    if ((g_wmap_view_mode == WMAP_VIEW_MODE_MAP) && (g_wmap_view_scroll_mode == 0) && (D_8011CF18 == 0))
     {
-        if (g_wmap_buttons_repeat & 0x8000)
+        if (g_wmap_buttons_repeat & PADLleft)
         {
-            left_sound_position = ((D_800DCEEC - 2) * 0x18) + 0x80;
-            D_800DCEEC -= 1;
-            func_800652A8(3, left_sound_position);
-            if (D_800DCEEC < 0)
+            left_pan = ((g_wmap_cursor_column - 2) * WMAP_PAN_PER_COLUMN) + WMAP_PAN_CENTER;
+            g_wmap_cursor_column -= 1;
+            wmap_play_sound(WMAP_SOUND_CURSOR, left_pan);
+            if (g_wmap_cursor_column < 0)
             {
-                D_800DCEEC = 0;
-                if (D_80139950.x > 0)
+                g_wmap_cursor_column = 0;
+                if (g_wmap_view.x > 0)
                 {
-                    D_80182D68 = -0x30;
-                    if (D_8011CF7C != 0)
+                    g_wmap_scroll_remaining_x = -WMAP_VIEW_SCROLL_STEP;
+                    if (g_wmap_view_scroll_enabled != 0)
                     {
-                        D_801398D0 = 1;
+                        g_wmap_view_scroll_mode = 1;
                     }
                 }
             }
         }
-        if (g_wmap_buttons_repeat & 0x2000)
+        if (g_wmap_buttons_repeat & PADLright)
         {
-            right_sound_position = (D_800DCEEC * 0x18) + 0x80;
-            D_800DCEEC += 1;
-            func_800652A8(3, right_sound_position);
-            if (D_800DCEEC > D_80054934[D_8013986C])
+            right_pan = (g_wmap_cursor_column * WMAP_PAN_PER_COLUMN) + WMAP_PAN_CENTER;
+            g_wmap_cursor_column += 1;
+            wmap_play_sound(WMAP_SOUND_CURSOR, right_pan);
+            if (g_wmap_cursor_column > g_wmap_cursor_limits[g_wmap_view_mode])
             {
-                D_800DCEEC = D_80054934[D_8013986C];
-                if (D_80139950.x < 0x90)
+                g_wmap_cursor_column = g_wmap_cursor_limits[g_wmap_view_mode];
+                if (g_wmap_view.x < WMAP_VIEW_SCROLL_MAX)
                 {
-                    D_80182D68 = 0x30;
-                    if (D_8011CF7C != 0)
+                    g_wmap_scroll_remaining_x = WMAP_VIEW_SCROLL_STEP;
+                    if (g_wmap_view_scroll_enabled != 0)
                     {
-                        D_801398D0 = 1;
+                        g_wmap_view_scroll_mode = 1;
                     }
                 }
             }
         }
-        if (g_wmap_buttons_repeat & 0x1000)
+        if (g_wmap_buttons_repeat & PADLup)
         {
-            func_800652A8(3, ((D_800DCEEC - 1) * 0x18) + 0x80);
-            previous_row = D_800DCEF0 - 1;
-            D_800DCEF0 = previous_row;
-            if (previous_row < 0)
+            wmap_play_sound(WMAP_SOUND_CURSOR, ((g_wmap_cursor_column - 1) * WMAP_PAN_PER_COLUMN) + WMAP_PAN_CENTER);
+            row = g_wmap_cursor_row - 1;
+            g_wmap_cursor_row = row;
+            if (row < 0)
             {
-                D_800DCEF0 = 0;
-                if (D_80139954 > 0)
+                g_wmap_cursor_row = 0;
+                if (g_wmap_view.y > 0)
                 {
-                    D_80182D78 = -0x30;
-                    if (D_8011CF7C != 0)
+                    g_wmap_scroll_remaining_y = -WMAP_VIEW_SCROLL_STEP;
+                    if (g_wmap_view_scroll_enabled != 0)
                     {
-                        D_801398D0 = 1;
+                        g_wmap_view_scroll_mode = 1;
                     }
                 }
             }
         }
-        if (g_wmap_buttons_repeat & 0x4000)
+        if (g_wmap_buttons_repeat & PADLdown)
         {
-            func_800652A8(3, ((D_800DCEEC - 1) * 0x18) + 0x80);
-            D_800DCEF0 += 1;
-            if (D_800DCEF0 > D_80054934[D_8013986C])
+            wmap_play_sound(WMAP_SOUND_CURSOR, ((g_wmap_cursor_column - 1) * WMAP_PAN_PER_COLUMN) + WMAP_PAN_CENTER);
+            g_wmap_cursor_row += 1;
+            if (g_wmap_cursor_row > g_wmap_cursor_limits[g_wmap_view_mode])
             {
-                D_800DCEF0 = D_80054934[D_8013986C];
-                if (D_80139954 < 0x90)
+                g_wmap_cursor_row = g_wmap_cursor_limits[g_wmap_view_mode];
+                if (g_wmap_view.y < WMAP_VIEW_SCROLL_MAX)
                 {
-                    D_80182D78 = 0x30;
-                    if (D_8011CF7C != 0)
+                    g_wmap_scroll_remaining_y = WMAP_VIEW_SCROLL_STEP;
+                    if (g_wmap_view_scroll_enabled != 0)
                     {
-                        D_801398D0 = 1;
+                        g_wmap_view_scroll_mode = 1;
                     }
                 }
             }
         }
     }
-    if (D_8013986C == 1)
+    if (g_wmap_view_mode == WMAP_VIEW_MODE_SPIRITS)
     {
-        if (g_wmap_buttons_repeat & 0x8000)
+        if (g_wmap_buttons_repeat & PADLleft)
         {
-            previous_slot = D_800DCF04 - 1;
-            D_800DCF04 = previous_slot;
-            if (previous_slot < 0)
+            selection = g_wmap_spirit_selection - 1;
+            g_wmap_spirit_selection = selection;
+            if (selection < 0)
             {
-                D_800DCF04 = 8;
+                g_wmap_spirit_selection = WMAP_SPIRIT_SELECTIONS - 1;
             }
         }
-        if (g_wmap_buttons_repeat & 0x2000)
+        if (g_wmap_buttons_repeat & PADLright)
         {
-            D_800DCF04 = (D_800DCF04 + 1) % 9;
+            g_wmap_spirit_selection = (g_wmap_spirit_selection + 1) % WMAP_SPIRIT_SELECTIONS;
         }
     }
-    if (D_801398D0 != 0)
+    if (g_wmap_view_scroll_mode != 0)
     {
-        if (D_8013986C == 1)
+        if (g_wmap_view_mode == WMAP_VIEW_MODE_SPIRITS)
         {
-            D_80182D78 = 0;
-            D_801398D0 = 0;
-            D_80182D68 = 0;
+            g_wmap_scroll_remaining_y = 0;
+            g_wmap_view_scroll_mode = 0;
+            g_wmap_scroll_remaining_x = 0;
         }
         else
         {
             g_wmap_buttons_repeat = 0;
-            if ((D_80182D78 | D_80182D68) == 0)
+            if ((g_wmap_scroll_remaining_y | g_wmap_scroll_remaining_x) == 0)
             {
-                D_801398D0 = 0;
+                g_wmap_view_scroll_mode = 0;
                 if (D_8011CF44 == 0)
                 {
                     g_wmap_input_locked = 0;
                 }
             }
-            if (D_80182D78 != 0)
+            if (g_wmap_scroll_remaining_y != 0)
             {
-                y_step = -4;
-                if (D_8011CF7C != 0)
+                y_step = -WMAP_VIEW_SCROLL_SPEED;
+                if (g_wmap_view_scroll_enabled != 0)
                 {
                     g_wmap_input_locked = 1;
                     g_wmap_buttons_held = 0;
                     g_wmap_buttons_repeat = 0;
-                    if (D_80182D78 > 0)
+                    if (g_wmap_scroll_remaining_y > 0)
                     {
-                        y_step = 4;
+                        y_step = WMAP_VIEW_SCROLL_SPEED;
                     }
-                    D_80182D78 -= y_step;
-                    next_y = D_80139950.y + y_step;
-                    D_80139950.y = next_y;
-                    if (D_801398D0 == 1)
+                    g_wmap_scroll_remaining_y -= y_step;
+                    next_y = g_wmap_view.y + y_step;
+                    g_wmap_view.y = next_y;
+                    if (g_wmap_view_scroll_mode == 1)
                     {
                         if (next_y < 0)
                         {
-                            D_80139950.y = 0;
-                            D_80182D78 = 0;
+                            g_wmap_view.y = 0;
+                            g_wmap_scroll_remaining_y = 0;
                             g_wmap_buttons_repeat = 0;
-                            D_801398D0 = 0;
+                            g_wmap_view_scroll_mode = 0;
                         }
-                        if (D_80139950.y >= 0x91)
+                        if (g_wmap_view.y > WMAP_VIEW_SCROLL_MAX)
                         {
-                            D_80139950.y = 0x90;
-                            D_80182D78 = 0;
-                            D_801398D0 = 0;
-                            g_wmap_buttons_repeat &= ~0x5000;
+                            g_wmap_view.y = WMAP_VIEW_SCROLL_MAX;
+                            g_wmap_scroll_remaining_y = 0;
+                            g_wmap_view_scroll_mode = 0;
+                            g_wmap_buttons_repeat &= ~(PADLup | PADLdown);
                         }
                     }
                 }
             }
-            if (D_80182D68 != 0)
+            if (g_wmap_scroll_remaining_x != 0)
             {
-                x_step = -4;
-                if (D_8011CF7C != 0)
+                x_step = -WMAP_VIEW_SCROLL_SPEED;
+                if (g_wmap_view_scroll_enabled != 0)
                 {
                     g_wmap_input_locked = 1;
                     g_wmap_buttons_held = 0;
                     g_wmap_buttons_repeat = 0;
-                    if (D_80182D68 > 0)
+                    if (g_wmap_scroll_remaining_x > 0)
                     {
-                        x_step = 4;
+                        x_step = WMAP_VIEW_SCROLL_SPEED;
                     }
-                    D_80182D68 -= x_step;
-                    next_x = D_80139950.x + x_step;
-                    D_80139950.x = next_x;
-                    if (D_801398D0 == 1)
+                    g_wmap_scroll_remaining_x -= x_step;
+                    next_x = g_wmap_view.x + x_step;
+                    g_wmap_view.x = next_x;
+                    if (g_wmap_view_scroll_mode == 1)
                     {
                         if (next_x < 0)
                         {
-                            D_80139950.x = 0;
-                            D_80182D68 = 0;
+                            g_wmap_view.x = 0;
+                            g_wmap_scroll_remaining_x = 0;
                             g_wmap_buttons_repeat = 0;
-                            D_801398D0 = 0;
+                            g_wmap_view_scroll_mode = 0;
                         }
-                        if (D_80139950.x >= 0x91)
+                        if (g_wmap_view.x > WMAP_VIEW_SCROLL_MAX)
                         {
-                            D_80139950.x = 0x90;
-                            D_80182D68 = 0;
-                            D_801398D0 = 0;
-                            g_wmap_buttons_repeat &= 0xFFFF5FFF;
+                            g_wmap_view.x = WMAP_VIEW_SCROLL_MAX;
+                            g_wmap_scroll_remaining_x = 0;
+                            g_wmap_view_scroll_mode = 0;
+                            g_wmap_buttons_repeat &= ~(PADLleft | PADLright);
                         }
                     }
                 }
             }
         }
     }
-    func_800660BC();
-    func_80065E20();
-    for (row = 1; row < 25; row++)
+    wmap_update_map_texcoords();
+    wmap_project_map_grid();
+    for (row_index = WMAP_MAP_VISIBLE_FIRST; row_index < WMAP_MAP_VISIBLE_END; row_index++)
     {
-        for (column = 1; column < 25; column++)
+        for (column = WMAP_MAP_VISIBLE_FIRST; column < WMAP_MAP_VISIBLE_END; column++)
         {
-            addPrim(&g_wmap_current_frame->ordering_table[175], &g_wmap_current_frame->tiles.flat[row * 26 + column]);
+            addPrim(&g_wmap_current_frame->ordering_table[WMAP_MAP_OT_INDEX], &g_wmap_current_frame->tiles.flat[row_index * WMAP_MAP_TILES + column]);
         }
     }
-    for (column = 0; column < 184; column++)
+    for (column = 0; column < WMAP_SHADOW_POLYS; column++)
     {
-        POLY_F4* fade = &g_wmap_current_frame->fade[column];
-        addPrim(&g_wmap_current_frame->ordering_table[175], fade);
+        POLY_F4* shadow = &g_wmap_current_frame->shadow[column];
+
+        addPrim(&g_wmap_current_frame->ordering_table[WMAP_MAP_OT_INDEX], shadow);
     }
-    addPrim(&g_wmap_current_frame->ordering_table[175], g_wmap_current_frame->tail);
+    addPrim(&g_wmap_current_frame->ordering_table[WMAP_MAP_OT_INDEX], &g_wmap_current_frame->tpage_select);
     return 1;
 }
 
 /**
- * @brief Project grid vertices into the four adjacent textured quads.
+ * @brief Project the map grid vertices into the corners of the four tiles that share each one.
+ * @note The next vertex index is computed while the GTE runs the perspective transform.
  */
-void func_80065E20(void)
+static void wmap_project_map_grid(void)
 {
-    WmapVertex position;
+    SVECTOR position;
     s32 screen_position;
     s32 row;
     s32 column;
-    s32 vertex_index;
-    WmapQuad* top_left;
-    WmapQuad* top_right;
-    WmapQuad* bottom_left;
-    WmapQuad* bottom_right;
+    s32 point;
+    POLY_FT4* top_left;
+    POLY_FT4* top_right;
+    POLY_FT4* bottom_left;
+    POLY_FT4* bottom_right;
 
     func_8006AEE0();
-    for (row = 0; row < 25; row++)
+    for (row = 0; row < WMAP_MAP_VERTICES; row++)
     {
-        top_left = (WmapQuad*)&g_wmap_current_frame->tiles.rows[row][0];
+        top_left = g_wmap_current_frame->tiles.rows[row];
         top_right = top_left + 1;
-        bottom_left = top_left + 26;
-        bottom_right = top_left + 27;
-        vertex_index = (row + 1) * 4;
-        for (column = 0; column < 25;)
+        bottom_left = top_left + WMAP_MAP_TILES;
+        bottom_right = top_left + WMAP_MAP_TILES + 1;
+        point = (row + 1) * 4;
+        for (column = 0; column < WMAP_MAP_VERTICES;)
         {
-            position = D_80051D4C[D_80053414[vertex_index]];
+            position = g_wmap_grid_vertices[g_wmap_grid_vertex_indices[point]];
             gte_ldv0(&position);
             gte_rtps();
-            vertex_index = (column + 1) * 104 + (row + 1) * 4;
+            point = (column + 1) * (WMAP_MAP_TILES * 4) + (row + 1) * 4;
             column++;
             gte_stsxy(&screen_position);
-            bottom_right->xy0 = screen_position;
-            bottom_left->xy1 = screen_position;
-            top_right->xy2 = screen_position;
-            top_left->xy3 = screen_position;
+            /* The GTE result is one packed x/y word for each shared corner. */
+            *(s32*)&bottom_right->x0 = screen_position;
+            *(s32*)&bottom_left->x1 = screen_position;
+            *(s32*)&top_right->x2 = screen_position;
+            *(s32*)&top_left->x3 = screen_position;
             top_left++;
             top_right++;
             bottom_left++;
             bottom_right++;
         }
     }
-    func_80065F54();
+    wmap_update_map_shadow();
 }
 
-/**
- * @brief Copy map edge coordinates into the fade polygons with a vertical offset.
- */
-void func_80065F54(void)
+/** @brief Copy the bottom rows and right columns of the map into the shadow polygons, shifted down. */
+static void wmap_update_map_shadow(void)
 {
     s32 row;
     s32 column;
     POLY_FT4* tile;
-    POLY_F4* fade;
+    POLY_F4* shadow;
 
-    fade = g_wmap_current_frame->fade;
-    for (row = 22; row < 25; row++)
+    shadow = g_wmap_current_frame->shadow;
+    for (row = WMAP_SHADOW_BOTTOM_ROW; row < WMAP_MAP_VISIBLE_END; row++)
     {
-        tile = &g_wmap_current_frame->tiles.flat[row * 26 + 1];
-        for (column = 1; column < 25; column++)
+        tile = &g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + WMAP_MAP_VISIBLE_FIRST];
+        for (column = WMAP_MAP_VISIBLE_FIRST; column < WMAP_MAP_VISIBLE_END; column++)
         {
-            fade->x0 = tile->x0;
-            fade->y0 = tile->y0 + 10;
-            fade->x1 = tile->x1;
-            fade->y1 = tile->y1 + 10;
-            fade->x2 = tile->x2;
-            fade->y2 = tile->y2 + 10;
-            fade->x3 = tile->x3;
-            fade->y3 = tile->y3 + 10;
-            fade++;
+            shadow->x0 = tile->x0;
+            shadow->y0 = tile->y0 + WMAP_SHADOW_OFFSET_Y;
+            shadow->x1 = tile->x1;
+            shadow->y1 = tile->y1 + WMAP_SHADOW_OFFSET_Y;
+            shadow->x2 = tile->x2;
+            shadow->y2 = tile->y2 + WMAP_SHADOW_OFFSET_Y;
+            shadow->x3 = tile->x3;
+            shadow->y3 = tile->y3 + WMAP_SHADOW_OFFSET_Y;
+            shadow++;
             tile++;
         }
     }
-    for (column = 23; column < 25; column++)
+    for (column = WMAP_SHADOW_RIGHT_COLUMN; column < WMAP_MAP_VISIBLE_END; column++)
     {
-        tile = &g_wmap_current_frame->tiles.flat[column + 3 * 26];
-        for (row = 3; row < 23; row++)
+        tile = &g_wmap_current_frame->tiles.flat[column + WMAP_SHADOW_TOP_ROW * WMAP_MAP_TILES];
+        for (row = WMAP_SHADOW_TOP_ROW; row < WMAP_SHADOW_BOTTOM_ROW + 1; row++)
         {
-            fade->x0 = tile->x0;
-            fade->y0 = tile->y0 + 10;
-            fade->x1 = tile->x1;
-            fade->y1 = tile->y1 + 10;
-            fade->x2 = tile->x2;
-            fade->y2 = tile->y2 + 10;
-            fade->x3 = tile->x3;
-            fade->y3 = tile->y3 + 10;
-            fade++;
-            tile += 26;
+            shadow->x0 = tile->x0;
+            shadow->y0 = tile->y0 + WMAP_SHADOW_OFFSET_Y;
+            shadow->x1 = tile->x1;
+            shadow->y1 = tile->y1 + WMAP_SHADOW_OFFSET_Y;
+            shadow->x2 = tile->x2;
+            shadow->y2 = tile->y2 + WMAP_SHADOW_OFFSET_Y;
+            shadow->x3 = tile->x3;
+            shadow->y3 = tile->y3 + WMAP_SHADOW_OFFSET_Y;
+            shadow++;
+            tile += WMAP_MAP_TILES;
         }
     }
 }
 
-/** @brief Update texture coordinates across the map grid. */
-void func_800660BC(void)
+/**
+ * @brief Recompute the map tile texture coordinates for the current scroll and scale.
+ * @note The map texture spans two VRAM pages; each tile keeps the VRAM x and y of its
+ *       page in the unused pad2 and pad1 fields until the last pass builds its tpage.
+ */
+static void wmap_update_map_texcoords(void)
 {
     s32 row, column;
     s32 wrapped;
@@ -660,243 +706,238 @@ void func_800660BC(void)
     POLY_FT4 *tile, *next;
 
     wrapped = 0;
-    for (row = 0; row < 25; row++)
+    for (row = 0; row < WMAP_MAP_VERTICES; row++)
     {
-        next = &g_wmap_current_frame->tiles.flat[row * 26];
-        next->u0 = next->u2 = D_80139950.x + D_80139950.scale / 4096;
-        for (column = 0; column < 25; column++)
+        next = &g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES];
+        next->u0 = next->u2 = g_wmap_view.x + g_wmap_view.projection_scale / ONE;
+        for (column = 0; column < WMAP_MAP_VERTICES; column++)
         {
-            tile = &g_wmap_current_frame->tiles.flat[row * 26 + column];
-            next = &g_wmap_current_frame->tiles.flat[row * 26 + column + 1];
-            coordinate = column * D_80139950.scale / 4096 + D_80139950.x;
-            edge = coordinate + 48;
+            tile = &g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column];
+            next = &g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column + 1];
+            coordinate = column * g_wmap_view.projection_scale / ONE + g_wmap_view.x;
+            edge = coordinate + WMAP_MAP_TEXEL_TILE;
             if (wrapped != 0)
             {
                 wrapped = 0;
-                tile->u1 = tile->u3 = coordinate + 16;
-                tile->pad2 = 0x280;
+                tile->u1 = tile->u3 = coordinate + (WMAP_MAP_TEXEL_TILE - WMAP_MAP_TEXEL_WRAP);
+                tile->pad2 = WMAP_MAP_PAGE_X_WRAP;
             }
             else
             {
-                if (edge < 256)
+                if (edge < WMAP_MAP_PAGE_TEXELS)
                 {
-                    tile->pad2 = 0x240;
+                    tile->pad2 = WMAP_MAP_PAGE_X;
                 }
                 else
                 {
-                    tile->pad2 = 0x280;
+                    tile->pad2 = WMAP_MAP_PAGE_X_WRAP;
                 }
                 tile->u1 = tile->u3 = edge;
             }
-            if (edge < 240)
+            if (edge < WMAP_MAP_TEXEL_EDGE)
             {
-                next->pad2 = 0x240;
+                next->pad2 = WMAP_MAP_PAGE_X;
                 next->u0 = next->u2 = edge;
             }
             else
             {
-                next->pad2 = 0x280;
-                if (edge >= 256)
+                next->pad2 = WMAP_MAP_PAGE_X_WRAP;
+                if (edge >= WMAP_MAP_PAGE_TEXELS)
                 {
                     next->u0 = next->u2 = edge;
                 }
                 else
                 {
                     wrapped = 1;
-                    next->u0 = next->u2 = edge - 32;
+                    next->u0 = next->u2 = edge - WMAP_MAP_TEXEL_WRAP;
                 }
             }
         }
-        tile = &g_wmap_current_frame->tiles.flat[row * 26 + column];
-        coordinate = column * D_80139950.scale / 4096 + D_80139950.x;
-        edge = coordinate + 48;
+        tile = &g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column];
+        coordinate = column * g_wmap_view.projection_scale / ONE + g_wmap_view.x;
+        edge = coordinate + WMAP_MAP_TEXEL_TILE;
         if (wrapped != 0)
         {
             wrapped = 0;
-            tile->u1 = tile->u3 = coordinate + 16;
+            tile->u1 = tile->u3 = coordinate + (WMAP_MAP_TEXEL_TILE - WMAP_MAP_TEXEL_WRAP);
         }
         else
         {
-            if (edge < 256)
+            if (edge < WMAP_MAP_PAGE_TEXELS)
             {
-                tile->pad2 = 0x240;
+                tile->pad2 = WMAP_MAP_PAGE_X;
             }
             else
             {
-                tile->pad2 = 0x280;
+                tile->pad2 = WMAP_MAP_PAGE_X_WRAP;
             }
             tile->u1 = tile->u3 = edge;
         }
     }
     wrapped = 0;
-    for (column = 0; column < 25; column++)
+    for (column = 0; column < WMAP_MAP_VERTICES; column++)
     {
-        next = &g_wmap_current_frame->tiles.flat[column * 26];
-        next->v0 = next->v1 = D_80139950.y + D_80139950.scale / 4096;
-        for (row = 0; row < 25; row++)
+        next = &g_wmap_current_frame->tiles.flat[column * WMAP_MAP_TILES];
+        next->v0 = next->v1 = g_wmap_view.y + g_wmap_view.projection_scale / ONE;
+        for (row = 0; row < WMAP_MAP_VERTICES; row++)
         {
-            tile = &g_wmap_current_frame->tiles.flat[row * 26 + column];
-            next = &g_wmap_current_frame->tiles.flat[(row + 1) * 26 + column];
-            coordinate = row * D_80139950.scale / 4096 + D_80139950.y;
-            edge = coordinate + 48;
+            tile = &g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column];
+            next = &g_wmap_current_frame->tiles.flat[(row + 1) * WMAP_MAP_TILES + column];
+            coordinate = row * g_wmap_view.projection_scale / ONE + g_wmap_view.y;
+            edge = coordinate + WMAP_MAP_TEXEL_TILE;
             if (wrapped != 0)
             {
                 wrapped = 0;
-                tile->v2 = tile->v3 = coordinate + 16;
-                tile->pad1 = 0x100;
+                tile->v2 = tile->v3 = coordinate + (WMAP_MAP_TEXEL_TILE - WMAP_MAP_TEXEL_WRAP);
+                tile->pad1 = WMAP_MAP_PAGE_Y_LOW;
             }
             else
             {
-                if (edge < 256)
+                if (edge < WMAP_MAP_PAGE_TEXELS)
                 {
                     tile->pad1 = 0;
                 }
                 else
                 {
-                    tile->pad1 = 0x100;
+                    tile->pad1 = WMAP_MAP_PAGE_Y_LOW;
                 }
                 tile->v2 = tile->v3 = edge;
             }
-            if (edge < 240)
+            if (edge < WMAP_MAP_TEXEL_EDGE)
             {
-                next->pad1 = 0x100;
+                next->pad1 = WMAP_MAP_PAGE_Y_LOW;
                 next->v0 = next->v1 = edge;
             }
             else
             {
-                next->pad1 = 0x100;
-                if (edge >= 256)
+                next->pad1 = WMAP_MAP_PAGE_Y_LOW;
+                if (edge >= WMAP_MAP_PAGE_TEXELS)
                 {
                     next->v0 = next->v1 = edge;
                 }
                 else
                 {
                     wrapped = 1;
-                    next->v0 = next->v1 = edge - 32;
+                    next->v0 = next->v1 = edge - WMAP_MAP_TEXEL_WRAP;
                 }
             }
         }
-        tile = &g_wmap_current_frame->tiles.flat[row * 26 + column];
-        coordinate = row * D_80139950.scale / 4096 + D_80139950.y;
-        edge = coordinate + 48;
+        tile = &g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column];
+        coordinate = row * g_wmap_view.projection_scale / ONE + g_wmap_view.y;
+        edge = coordinate + WMAP_MAP_TEXEL_TILE;
         if (wrapped != 0)
         {
             wrapped = 0;
-            tile->v2 = tile->v3 = coordinate + 16;
+            tile->v2 = tile->v3 = coordinate + (WMAP_MAP_TEXEL_TILE - WMAP_MAP_TEXEL_WRAP);
         }
         else
         {
-            if (edge < 256)
+            if (edge < WMAP_MAP_PAGE_TEXELS)
             {
                 tile->pad1 = 0;
             }
             else
             {
-                tile->pad1 = 0x100;
+                tile->pad1 = WMAP_MAP_PAGE_Y_LOW;
             }
             tile->v2 = tile->v3 = edge;
         }
     }
-    for (row = 1; row < 25; row++)
+    for (row = WMAP_MAP_VISIBLE_FIRST; row < WMAP_MAP_VISIBLE_END; row++)
     {
-        for (column = 1; column < 25; column++)
+        for (column = WMAP_MAP_VISIBLE_FIRST; column < WMAP_MAP_VISIBLE_END; column++)
         {
-            g_wmap_current_frame->tiles.flat[row * 26 + column].tpage = ((g_wmap_current_frame->tiles.flat[row * 26 + column].pad1 & 0x100) >> 4)
-                | ((g_wmap_current_frame->tiles.flat[row * 26 + column].pad2 & 0x3FF) >> 6)
-                | ((g_wmap_current_frame->tiles.flat[row * 26 + column].pad1 & 0x200) * 4);
+            g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column].tpage = getTPage(0, 0, g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column].pad2,
+                                                                                         g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column].pad1);
         }
     }
 }
 
-/**
- * @brief Advance the map selection transition and its view state.
- */
-void func_800664B8(void)
+/** @brief Run the zoom between the map view and the spirit view (started with triangle). */
+void wmap_update_view_zoom(void)
 {
-    s32 map_y;
-    s32 zoom_y;
-    s32 delta_y;
-    s32 map_scale;
-    s32 zoomed_scale;
-    s32 state;
-    s32 map_x;
-    s32 zoom_x;
+    s32 in_y;
+    s32 out_y;
+    s32 in_scale;
+    s32 out_scale;
+    s32 mode;
+    s32 in_x;
+    s32 out_x;
 
-    state = D_8013986C;
-    switch (state)
+    mode = g_wmap_view_mode;
+    switch (mode)
     {
-    case 0:
-        if ((g_wmap_buttons_repeat & 0x10) && (D_8011CF18 == 0) && (D_8011D4FC == -1))
+    case WMAP_VIEW_MODE_MAP:
+        if ((g_wmap_buttons_repeat & PADRup) && (D_8011CF18 == 0) && (D_8011D4FC == -1))
         {
-            D_8013986C = 3;
+            g_wmap_view_mode = WMAP_VIEW_MODE_ZOOM_OUT;
             func_8005FF88(-1);
-            *(WmapTransform*)&D_800DCEC8 = D_80139950;
-            ((WmapTransform*)&D_801AFBB8)->x = (s32) (D_80139950.x << 8);
-            ((WmapTransform*)&D_801AFBB8)->y = (s32) (D_80139950.y << 8);
-            ((WmapTransform*)&D_801AFBB8)->scale = (s32) (D_80139950.scale << 8);
-            ((WmapTransform*)&D_801AFBA8)->x = (s32) -(D_80139950.x * 0x10);
-            delta_y = -(D_80139950.y * 0x10);
-            ((WmapTransform*)&D_801AFBA8)->y = delta_y;
-            ((WmapTransform*)&D_801AFBA8)->scale = (s32) (0xC0000 - (D_80139950.scale * 0x10));
-            func_800652A8(1, 0x80);
-            g_wmap_map_button_mask = 0xA130;
+            g_wmap_saved_view = g_wmap_view;
+            g_wmap_zoom_view.x = g_wmap_view.x * WMAP_ZOOM_ONE;
+            g_wmap_zoom_view.y = g_wmap_view.y * WMAP_ZOOM_ONE;
+            g_wmap_zoom_view.projection_scale = g_wmap_view.projection_scale * WMAP_ZOOM_ONE;
+            g_wmap_zoom_step.x = -(g_wmap_view.x * (WMAP_ZOOM_ONE / WMAP_ZOOM_FRAMES));
+            g_wmap_zoom_step.y = -(g_wmap_view.y * (WMAP_ZOOM_ONE / WMAP_ZOOM_FRAMES));
+            g_wmap_zoom_step.projection_scale = WMAP_SPIRIT_VIEW_SCALE * (WMAP_ZOOM_ONE / WMAP_ZOOM_FRAMES) - g_wmap_view.projection_scale * (WMAP_ZOOM_ONE / WMAP_ZOOM_FRAMES);
+            wmap_play_sound(WMAP_SOUND_ZOOM_OUT, WMAP_PAN_CENTER);
+            g_wmap_map_button_mask = PADLleft | PADLright | PADselect | PADRup | PADRright;
             g_wmap_buttons_held = 0;
             g_wmap_buttons_repeat = 0;
-            return;
         }
         return;
-    case 1:
-        if (g_wmap_buttons_repeat & 0x30)
+    case WMAP_VIEW_MODE_SPIRITS:
+        if (g_wmap_buttons_repeat & (PADRup | PADRright))
         {
-            D_8013986C = 2;
-            D_800D928A = 0x80;
-            func_800652A8(2, 0x80);
+            g_wmap_view_mode = WMAP_VIEW_MODE_ZOOM_IN;
+            D_800D9268[0].target_shade = WMAP_ACTOR_SHADE_NEUTRAL;
+            wmap_play_sound(WMAP_SOUND_ZOOM_IN, WMAP_PAN_CENTER);
             g_wmap_map_button_mask = -1;
             g_wmap_buttons_held = 0;
             g_wmap_buttons_repeat = 0;
             return;
         }
         break;
-    case 2:
+    case WMAP_VIEW_MODE_ZOOM_IN:
         g_wmap_buttons_repeat = 0;
-        map_x = ((WmapTransform*)&D_801AFBB8)->x - ((WmapTransform*)&D_801AFBA8)->x;
-        ((WmapTransform*)&D_801AFBB8)->x = map_x;
-        map_y = ((WmapTransform*)&D_801AFBB8)->y - ((WmapTransform*)&D_801AFBA8)->y;
-        map_scale = ((WmapTransform*)&D_801AFBB8)->scale - ((WmapTransform*)&D_801AFBA8)->scale;
-        ((WmapTransform*)&D_801AFBB8)->y = map_y;
-        ((WmapTransform*)&D_801AFBB8)->scale = map_scale;
-        D_80139950.x = map_x / 256;
-        D_80139950.y = map_y / 256;
-        D_80139950.scale = map_scale / 256;
-        if (map_scale == 0x600000)
+        in_x = g_wmap_zoom_view.x - g_wmap_zoom_step.x;
+        g_wmap_zoom_view.x = in_x;
+        in_y = g_wmap_zoom_view.y - g_wmap_zoom_step.y;
+        in_scale = g_wmap_zoom_view.projection_scale - g_wmap_zoom_step.projection_scale;
+        g_wmap_zoom_view.y = in_y;
+        g_wmap_zoom_view.projection_scale = in_scale;
+        g_wmap_view.x = in_x / WMAP_ZOOM_ONE;
+        g_wmap_view.y = in_y / WMAP_ZOOM_ONE;
+        g_wmap_view.projection_scale = in_scale / WMAP_ZOOM_ONE;
+        if (in_scale == WMAP_VIEW_SCALE * WMAP_ZOOM_ONE)
         {
-            D_80139950 = *(WmapTransform*)&D_800DCEC8;
+            g_wmap_view = g_wmap_saved_view;
             D_800DBE78 = 0;
-            D_8013986C = 0;
-            D_800DBE70 = state;
+            g_wmap_view_mode = WMAP_VIEW_MODE_MAP;
+            D_800DBE70 = mode;
             return;
         }
         break;
-    case 3:
+    case WMAP_VIEW_MODE_ZOOM_OUT:
     {
-        s32 zoom_scale = 0xC000;
+        s32 target_scale = WMAP_SPIRIT_VIEW_SCALE;
+
         g_wmap_buttons_repeat = 0;
-        zoom_x = ((WmapTransform*)&D_801AFBB8)->x + ((WmapTransform*)&D_801AFBA8)->x;
-        ((WmapTransform*)&D_801AFBB8)->x = zoom_x;
-        zoom_y = ((WmapTransform*)&D_801AFBB8)->y + ((WmapTransform*)&D_801AFBA8)->y;
-        zoomed_scale = ((WmapTransform*)&D_801AFBB8)->scale + ((WmapTransform*)&D_801AFBA8)->scale;
-        ((WmapTransform*)&D_801AFBB8)->y = zoom_y;
-        ((WmapTransform*)&D_801AFBB8)->scale = zoomed_scale;
-        D_80139950.x = zoom_x / 256;
-        D_80139950.y = zoom_y / 256;
-        D_80139950.scale = zoomed_scale / 256;
-        if (zoomed_scale == zoom_scale * 256)
+        out_x = g_wmap_zoom_view.x + g_wmap_zoom_step.x;
+        g_wmap_zoom_view.x = out_x;
+        out_y = g_wmap_zoom_view.y + g_wmap_zoom_step.y;
+        out_scale = g_wmap_zoom_view.projection_scale + g_wmap_zoom_step.projection_scale;
+        g_wmap_zoom_view.y = out_y;
+        g_wmap_zoom_view.projection_scale = out_scale;
+        g_wmap_view.x = out_x / WMAP_ZOOM_ONE;
+        g_wmap_view.y = out_y / WMAP_ZOOM_ONE;
+        g_wmap_view.projection_scale = out_scale / WMAP_ZOOM_ONE;
+        if (out_scale == target_scale * WMAP_ZOOM_ONE)
         {
-            D_80139950.x = 0;
-            D_80139950.scale = zoom_scale;
+            g_wmap_view.x = 0;
+            g_wmap_view.projection_scale = target_scale;
             D_800DBE78 = 0;
-            D_8013986C = 1;
-            D_80139950.y = 0;
+            g_wmap_view_mode = WMAP_VIEW_MODE_SPIRITS;
+            g_wmap_view.y = 0;
             D_800DBE70 = 1;
         }
         break;
@@ -905,81 +946,75 @@ void func_800664B8(void)
 }
 
 /**
- * @brief Fill the leading value of each interior world-map grid cell.
- * @param value Value assigned to the 24-by-24 interior.
+ * @brief Set the color word (color and command byte) of every visible map tile.
+ * @param color Packed color word, see WmapColor.
  */
-void func_800667E8(s32 value)
+static void wmap_set_map_color(s32 color)
 {
     s32 row;
     s32 column;
-    for (row = 1; row < 25; row++)
+
+    for (row = WMAP_MAP_VISIBLE_FIRST; row < WMAP_MAP_VISIBLE_END; row++)
     {
-        for (column = 1; column < 25; column++)
+        for (column = WMAP_MAP_VISIBLE_FIRST; column < WMAP_MAP_VISIBLE_END; column++)
         {
-            *(s32*)((s32)g_wmap_current_frame + (row * 26 + column) * 0x28 + 0x344) = value;
+            SET_BGR0_PACKED(&g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column], color);
         }
     }
 }
 
 /**
- * @brief Store a drawing color and register its update callback.
- * @param color Packed color bytes.
- * @return Always one.
+ * @brief Start tinting the map toward a color.
+ * @param color Target color, packed as in WmapColor; the command byte is ignored.
+ * @return Always 1.
  */
-s32 func_8006683C(s32 color)
+s32 wmap_start_map_tint(s32 color)
 {
-    D_8011D50C = *(CVECTOR*)&color;
+    /* The packed word is reinterpreted as the color bytes. */
+    g_wmap_tint_target = *(CVECTOR*)&color;
     D_80139288 = 1;
-    func_8006CBD8(func_80065620);
+    wmap_install_callback(wmap_update_map_tint);
     return 1;
 }
 
 /**
- * @brief Spawn radial particles, advance their animation, and count active slots.
- * @return Number of active particle slots.
+ * @brief Spawn radial burst particles, move and draw them, and count the live ones.
+ * @return Number of live particles.
  */
-s32 func_8006688C(void)
+s32 wmap_update_burst_particles(void)
 {
     s32 i;
-    s32 actor_offset;
     s32 active;
     s32 remaining;
     s32 random_value;
-    union
-    {
-        struct
-        {
-            s16 x, y;
-        } point;
-        s32 packed;
-    } screen;
-    WmapConfigA* actor;
-    WmapConfigA* actor_base;
-    WmapMotion* motion;
+    WmapScreenPosition screen;
+    WmapSpriteActor* actor;
+    WmapBurstParticle* particle;
+    s32 actor_index;
 
     active = 0;
-    remaining = D_801B0FD0 * 3;
-    for (i = 0; i < D_801B0FD0 * 70; i++)
+    remaining = D_801B0FD0 * WMAP_BURST_SPAWNS_PER_UNIT;
+    for (i = 0; i < D_801B0FD0 * WMAP_BURST_SLOTS_PER_UNIT; i++)
     {
-        actor_offset = (i + 6) * 44;
-        motion = &D_801AFBD0[i];
-        if (motion->state == 0)
+        actor_index = i + WMAP_BURST_ACTOR_FIRST;
+        particle = &D_801AFBD0[i];
+        if (particle->active == 0)
         {
-            actor = (WmapConfigA*)((u8*)D_800D9268 + actor_offset);
-            if (D_801AFBC8 != 0)
+            actor = &D_800D9268[actor_index];
+            if (g_wmap_burst_spawning != 0)
             {
-                actor->field_02 = 0;
-                actor->field_06 = 15;
-                actor->field_0E = ((s32)(rand() * D_801B0FD0) >> 15) + 1;
-                actor->field_10 = -1;
-                actor->field_22 = 129;
-                actor->field_24 = 129;
-                motion->state = 1;
-                motion->angle = rand() >> 3;
-                motion->z = 0;
-                motion->x = rand() * D_801B0FD0;
+                actor->unknown_02 = 0;
+                actor->scale_index = WMAP_BURST_ACTOR_SCALE;
+                actor->sequence = ((rand() * D_801B0FD0) >> 15) + 1;
+                actor->previous_sequence = -1;
+                actor->target_shade = WMAP_BURST_ACTOR_SHADE;
+                actor->shade = WMAP_BURST_ACTOR_SHADE;
+                particle->active = 1;
+                particle->angle = (u32)rand() >> 3;
+                particle->distance = 0;
+                particle->speed = rand() * D_801B0FD0;
                 random_value = rand();
-                motion->scale = ((s32)(random_value * ((D_801B0FD0 * 5) << 2)) >> 15) + 5;
+                particle->lifetime = ((random_value * ((D_801B0FD0 * 5) << 2)) >> 15) + WMAP_BURST_LIFETIME_MIN;
                 if (--remaining == 0)
                 {
                     break;
@@ -987,30 +1022,28 @@ s32 func_8006688C(void)
             }
         }
     }
-    for (i = 0; i < 110; i++)
+    for (i = 0; i < WMAP_BURST_PARTICLES; i++)
     {
-        motion = &D_801AFBD0[i];
-        actor = &D_800D9370[i];
-        actor_base = D_800D9370 - 6;
-        actor_offset = i * 44 + 264;
-        if (motion->state != 0)
+        particle = &D_801AFBD0[i];
+        actor = &D_800D9268[WMAP_BURST_ACTOR_FIRST + i];
+        if (particle->active != 0)
         {
-            motion->z += motion->x;
-            screen.point.x = ((motion->z * ccos(motion->angle)) >> 24) + 160;
-            screen.point.y = ((motion->z * csin(motion->angle)) >> 24) + 120;
-            func_8006CC4C(actor, &D_801399B8[i]);
-            if (((WmapConfigA*)((u8*)actor_base + actor_offset))->field_0E == 3)
+            particle->distance += particle->speed;
+            screen.point.x = ((particle->distance * ccos(particle->angle)) >> 24) + WMAP_BURST_CENTER_X;
+            screen.point.y = ((particle->distance * csin(particle->angle)) >> 24) + WMAP_BURST_CENTER_Y;
+            wmap_step_actor_animation(actor, &D_80139988[WMAP_BURST_ACTOR_FIRST + i]);
+            if (D_800D9268[i + WMAP_BURST_ACTOR_FIRST].sequence == WMAP_BURST_SEQUENCE_LARGE)
             {
-                func_80066F9C(actor, screen.packed, 6, 4, 0);
+                wmap_draw_actor_sprite(actor, screen.packed, WMAP_BURST_TEXTURE_LARGE, WMAP_BURST_OT_INDEX, 0);
             }
             else
             {
-                func_80066F9C(actor, screen.packed, 7, 4, 0);
+                wmap_draw_actor_sprite(actor, screen.packed, WMAP_BURST_TEXTURE_SMALL, WMAP_BURST_OT_INDEX, 0);
             }
-            motion->scale--;
-            if (motion->scale == 0)
+            particle->lifetime--;
+            if (particle->lifetime == 0)
             {
-                motion->state = 0;
+                particle->active = 0;
             }
             active++;
         }
@@ -1018,78 +1051,66 @@ s32 func_8006688C(void)
     return active;
 }
 
-/** @brief Reset 110 display states, install their default pointers, and enable processing. */
-void func_80066B4C(void)
+/** @brief Clear every burst particle, give its actor the default animation, and enable spawning. */
+void wmap_init_burst_particles(void)
 {
-    s32 index = 0;
-    u8* base = D_80139988;
-    u8* data = D_8011D538;
-    s32 offset = 0x30;
-    WmapPointerSlot* slot;
-    do
+    s32 i;
+
+    for (i = 0; i < WMAP_BURST_PARTICLES; i++)
     {
-        slot = (WmapPointerSlot*)(offset + (s32)base);
-        offset += 8;
-        D_801AFBD0[index].state = 0;
-        slot->data = data;
-        index++;
-    } while (index < 110);
+        D_801AFBD0[i].active = 0;
+        D_80139988[WMAP_BURST_ACTOR_FIRST + i].data = D_8011D538;
+    }
     D_801B0FD0 = 1;
-    D_801AFBC8 = 1;
+    g_wmap_burst_spawning = 1;
 }
 
-/**
- * @brief Initialize the map effect and project its initial screen position.
- */
-void func_80066BA4(void)
+/** @brief Land sequence step: scroll to the cursor cell and record the projected view origin. */
+void wmap_begin_cell_focus(void)
 {
     s16 screen_y;
     SVECTOR position;
     MATRIX matrix;
-    union
-    {
-        u32 packed;
-        WmapPoint point;
-    } screen;
+    WmapScreenPosition screen;
 
     D_8013B20C = 1;
     func_8006D8F0(1);
     func_8006D870(1);
-    D_801398D0 = 2;
-    D_80182D68 = D_80054944[D_800DCEF0][D_800DCEEC].x;
-    D_80182D78 = D_80054944[D_800DCEF0][D_800DCEEC].y;
-    RotMatrix(&D_80139278, &matrix);
-    TransMatrix(&matrix, &D_80182DC0);
+    g_wmap_view_scroll_mode = 2;
+    g_wmap_scroll_remaining_x = g_wmap_cell_focus_offsets[g_wmap_cursor_row][g_wmap_cursor_column].x;
+    g_wmap_scroll_remaining_y = g_wmap_cell_focus_offsets[g_wmap_cursor_row][g_wmap_cursor_column].y;
+    RotMatrix(&g_wmap_camera_rotation, &matrix);
+    TransMatrix(&matrix, &g_wmap_camera_translation);
     SetRotMatrix(&matrix);
     SetTransMatrix(&matrix);
     position.vz = 0;
-    position.vx = ((D_80139950.x * 0x14000 / D_80139950.scale) * 0x6000) / D_80139950.scale;
-    position.vy = ((D_80139950.y * 0x14000 / D_80139950.scale) * 0x6000) / D_80139950.scale;
+    position.vx = ((g_wmap_view.x * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale;
+    position.vy = ((g_wmap_view.y * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale;
     gte_ldv0(&position);
     gte_rtps();
     gte_stsxy(&screen);
     screen_y = screen.point.y;
     D_800DBE70 = 1;
-    ((WmapFadeAlpha*)&D_800D928A)->alpha = 0;
+    D_800D9268[0].target_shade = 0;
     D_801B109C = 4;
-    D_80182234 = screen.point.x;
-    D_8018223C = screen_y;
+    g_wmap_focus_origin_x = screen.point.x;
+    g_wmap_focus_origin_y = screen_y;
     D_801B1098++;
 }
 
-/** @brief Set the map transform, project its position, and advance the effect. */
-void func_80066DD8(void)
+/** @brief Land sequence step: project the focused land cell relative to the view and advance. */
+void wmap_project_focus_position(void)
 {
     MATRIX matrix;
     SVECTOR position;
 
-    RotMatrix(&D_80139278, &matrix);
-    TransMatrix(&matrix, &D_80182DC0);
+    RotMatrix(&g_wmap_camera_rotation, &matrix);
+    TransMatrix(&matrix, &g_wmap_camera_translation);
     SetRotMatrix(&matrix);
     SetTransMatrix(&matrix);
     position.vz = 0;
-    position.vx = (((D_8011D510 - 1) * 160 - D_80139950.x * 0x14000 / D_80139950.scale) * 0x6000) / D_80139950.scale;
-    position.vy = (((D_8011D530 - 1) * 160 - D_80139950.y * 0x14000 / D_80139950.scale) * 0x6000) / D_80139950.scale;
+    position.vx = (((D_8011D510 - 1) * WMAP_CELL_SIZE - g_wmap_view.x * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale;
+    position.vy = (((D_8011D530 - 1) * WMAP_CELL_SIZE - g_wmap_view.y * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale;
     gte_ldv0(&position);
     gte_rtps();
     gte_stsxy(&D_8011CF4C);

@@ -32,11 +32,11 @@ extern s32 D_800D0230[];
 extern s32 D_800D0254[];
 extern s32 D_800D0368;
 extern u16 D_800D036C[];
-extern s32 D_800DCEEC;
-extern s32 D_800DCEF0;
+extern s32 g_wmap_cursor_column;
+extern s32 g_wmap_cursor_row;
 extern u16 D_8011CF78;
 extern SPRT D_8011D518;
-extern s32 D_801398D0;
+extern s32 g_wmap_view_scroll_mode;
 extern u16 D_80182DD0;
 extern s32 D_80182E04;
 extern SPRT D_80182E08;
@@ -187,7 +187,7 @@ void func_8005FF88(s32 selection)
     {
         selection = 24;
     }
-    if (D_801398D0 != 0)
+    if (g_wmap_view_scroll_mode != 0)
     {
         selection = -1;
     }
@@ -205,7 +205,7 @@ void func_8005FF88(s32 selection)
             D_8011D518.r0 = 0;
             return;
         }
-        position = D_800DCEEC + D_800DCEF0 * 3;
+        position = g_wmap_cursor_column + g_wmap_cursor_row * 3;
         if (selection >= 64)
         {
             D_8011CF78 = 45;

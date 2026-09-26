@@ -57,8 +57,8 @@ extern s32 rand(void);
             motion->field_0E += motion->x;
             motion->z += 1000;
             gte_stsxy(&screen_position);
-            func_8006CC4C(&actors[i], &resources[i]);
-            func_80066F9C(&actors[i], screen_position, 15, 7, 0);
+            wmap_step_actor_animation(&actors[i], &resources[i]);
+            wmap_draw_actor_sprite(&actors[i], screen_position, 15, 7, 0);
             motion->scale--;
             if (motion->scale == 0)
             {
@@ -136,8 +136,8 @@ extern s32 D_801B25A4;
     position.half[1] = D_8011CF4C[1] + 12;
     D_800D9528.field_24 = *(u16 *)&D_80182DEC;
     D_800D9528.field_22 = *(u16 *)&D_80182DEC;
-    func_8006CC4C(&D_800D9528, &D_80139A08);
-    func_80066F9C(&D_800D9528, position.word, 4, 11, 0);
+    wmap_step_actor_animation(&D_800D9528, &D_80139A08);
+    wmap_draw_actor_sprite(&D_800D9528, position.word, 4, 11, 0);
     D_80182DEC += 8;
     if (D_80182DEC >= 0x82)
     {
@@ -187,8 +187,8 @@ extern s32 D_801B25A4;
 
     position.half[0] = D_8011CF4C[0] - 6;
     position.half[1] = D_8011CF4C[1] + 12;
-    func_8006CC4C(&D_800D9528, &D_80139A08);
-    func_80066F9C(&D_800D9528, position.word, 4, 11, 0);
+    wmap_step_actor_animation(&D_800D9528, &D_80139A08);
+    wmap_draw_actor_sprite(&D_800D9528, position.word, 4, 11, 0);
     D_800D9528.field_24 = *(u16 *)&D_80182DEC;
     D_800D9528.field_22 = *(u16 *)&D_80182DEC;
     D_80182DEC -= 8;
@@ -239,8 +239,8 @@ extern s32 D_801B25AC;
     position.half[1] = D_8011CF4C[1];
     D_800D9554.field_24 = *(u16 *)&D_801B25DC;
     D_800D9554.field_22 = *(u16 *)&D_801B25DC;
-    func_8006CC4C(&D_800D9554, &D_80139A10);
-    func_80066F9C(&D_800D9554, position.word, 4, 11, 0);
+    wmap_step_actor_animation(&D_800D9554, &D_80139A10);
+    wmap_draw_actor_sprite(&D_800D9554, position.word, 4, 11, 0);
     D_801B25DC += 8;
     if (D_801B25DC >= 0x82)
     {
@@ -287,8 +287,8 @@ extern s32 D_801B25AC;
 
     position.half[0] = D_8011CF4C[0] + 16;
     position.half[1] = D_8011CF4C[1];
-    func_8006CC4C(&D_800D9554, &D_80139A10);
-    func_80066F9C(&D_800D9554, position.word, 4, 11, 0);
+    wmap_step_actor_animation(&D_800D9554, &D_80139A10);
+    wmap_draw_actor_sprite(&D_800D9554, position.word, 4, 11, 0);
     D_800D9554.field_24 = *(u16 *)&D_801B25DC;
     D_800D9554.field_22 = *(u16 *)&D_801B25DC;
     D_801B25DC -= 8;
@@ -339,8 +339,8 @@ extern s32 D_801B25B4;
     D_800D9580.field_22 = *(u16 *)&D_801B25E0;
     position.half[0] = D_8011CF4C[0] + 24;
     position.half[1] = D_8011CF4C[1] + 4;
-    func_8006CC4C(&D_800D9580, &D_80139A18);
-    func_80066F9C(&D_800D9580, position.word, 4, 11, 0);
+    wmap_step_actor_animation(&D_800D9580, &D_80139A18);
+    wmap_draw_actor_sprite(&D_800D9580, position.word, 4, 11, 0);
     D_801B25E0 += 8;
     if (D_801B25E0 >= 0x82)
     {
@@ -390,8 +390,8 @@ extern s32 D_801B25B4;
 
     position.half[0] = D_8011CF4C[0] + 24;
     position.half[1] = D_8011CF4C[1] + 4;
-    func_8006CC4C(&D_800D9580, &D_80139A18);
-    func_80066F9C(&D_800D9580, position.word, 4, 11, 0);
+    wmap_step_actor_animation(&D_800D9580, &D_80139A18);
+    wmap_draw_actor_sprite(&D_800D9580, position.word, 4, 11, 0);
     D_800D9580.field_24 = *(u16 *)&D_801B25E0;
     D_800D9580.field_22 = *(u16 *)&D_801B25E0;
     D_801B25E0 -= 8;
@@ -445,8 +445,8 @@ extern s32 D_801B25BC;
     position.half[1] = D_8011CF4C[1] - 10;
     D_800D95AC.field_24 = *(u16 *)&D_801B25E4;
     D_800D95AC.field_22 = *(u16 *)&D_801B25E4;
-    func_8006CC4C(&D_800D95AC, &D_80139A20);
-    func_80066F9C(&D_800D95AC, position.word, 4, 11, 0);
+    wmap_step_actor_animation(&D_800D95AC, &D_80139A20);
+    wmap_draw_actor_sprite(&D_800D95AC, position.word, 4, 11, 0);
     D_801B25E4 += 8;
     if (D_801B25E4 >= 0x82)
     {
@@ -496,8 +496,8 @@ extern s32 D_801B25BC;
 
     position.half[0] = D_8011CF4C[0] - 24;
     position.half[1] = D_8011CF4C[1] - 10;
-    func_8006CC4C(&D_800D95AC, &D_80139A20);
-    func_80066F9C(&D_800D95AC, position.word, 4, 11, 0);
+    wmap_step_actor_animation(&D_800D95AC, &D_80139A20);
+    wmap_draw_actor_sprite(&D_800D95AC, position.word, 4, 11, 0);
     D_800D95AC.field_24 = *(u16 *)&D_801B25E4;
     D_800D95AC.field_22 = *(u16 *)&D_801B25E4;
     D_801B25E4 -= 8;
@@ -663,8 +663,8 @@ extern u8 D_801399B0[];
 extern s32 D_8011CF4C;
 extern s32 D_801B2584;
 
-    func_8006CC4C(D_800D9344, D_801399B0);
-    func_80066F9C(D_800D9344, D_8011CF4C, 0xF, 0xB, 0);
+    wmap_step_actor_animation(D_800D9344, D_801399B0);
+    wmap_draw_actor_sprite(D_800D9344, D_8011CF4C, 0xF, 0xB, 0);
     if (--D_801B2584 == 0)
     {
         D_801B2580 += 1;
@@ -862,7 +862,7 @@ extern s32 D_801B2570;
 extern s32 D_801B2574;
 
     D_8013B208 = 1;
-    func_8006683C(0x404040);
+    wmap_start_map_tint(0x404040);
     D_801B2574 = 2;
     D_801B2570 += 1;
 }
@@ -888,7 +888,7 @@ extern void func_80075704__for_func_80075274(void) __asm__("func_80075704");
 extern s32 D_801B2570;
 extern s32 D_801B2574;
 
-    func_800652A8(0x10, 0x80);
+    wmap_play_sound(0x10, 0x80);
     func_8006CAC0(func_80075704__for_func_80075274);
     D_801B2574 = 8;
     D_801B2570 += 1;
@@ -1267,8 +1267,8 @@ extern s32 D_801B257C;
     actors = obj - 4;
     actors[4].field_24 = *(u16 *)&D_801B24B4;
     actors[4].field_22 = *(u16 *)&D_801B24B4;
-    func_8006CC4C(obj, &D_801399A8);
-    func_80066F9C(obj, D_8011CF4C, 15, 4, 0);
+    wmap_step_actor_animation(obj, &D_801399A8);
+    wmap_draw_actor_sprite(obj, D_8011CF4C, 15, 4, 0);
     D_801B24B4 += 8;
     if (D_801B24B4 >= 0x82)
     {
@@ -1328,8 +1328,8 @@ extern s32 D_801B257C;
     actors = obj - 4;
     actors[4].field_24 = *(u16 *)&D_801B24B4;
     actors[4].field_22 = *(u16 *)&D_801B24B4;
-    func_8006CC4C(obj, &D_801399A8);
-    func_80066F9C(obj, D_8011CF4C, 15, 4, 0);
+    wmap_step_actor_animation(obj, &D_801399A8);
+    wmap_draw_actor_sprite(obj, D_8011CF4C, 15, 4, 0);
     D_801B24B4 -= 2;
     if (D_801B24B4 < 0)
     {
@@ -1560,8 +1560,8 @@ extern s32 D_801B2590;
 
     *(s16*)&obj[0x24] = pos;
     *(s16*)&obj[0x22] = pos;
-    func_8006CC4C(obj, D_801399B8);
-    func_80066F9C(obj, D_8011CF4C, 0xF, 0xB, 0);
+    wmap_step_actor_animation(obj, D_801399B8);
+    wmap_draw_actor_sprite(obj, D_8011CF4C, 0xF, 0xB, 0);
     *(s32*)&D_80182DE4[0] += 4;
     if (*(s32*)&D_80182DE4[0] >= 0x82)
     {
@@ -1616,8 +1616,8 @@ extern s32 D_801B2594;
 
     WmapConfigA *actors;
 
-    func_8006CC4C(&D_800D9370, &D_801399B8);
-    func_80066F9C(&D_800D9370, D_8011CF4C, 15, 11, 0);
+    wmap_step_actor_animation(&D_800D9370, &D_801399B8);
+    wmap_draw_actor_sprite(&D_800D9370, D_8011CF4C, 15, 11, 0);
     actors = &D_800D9370 - 6;
     actors[6].field_24 = *(u16 *)&D_80182DE4;
     actors[6].field_22 = *(u16 *)&D_80182DE4;
@@ -1728,8 +1728,8 @@ extern s32 D_801B2598;
 
     *(s16*)&obj[0x24] = pos;
     *(s16*)&obj[0x22] = pos;
-    func_8006CC4C(obj, D_801399C0);
-    func_80066F9C(obj, D_8011CF4C, 0x4, 0xB, 0);
+    wmap_step_actor_animation(obj, D_801399C0);
+    wmap_draw_actor_sprite(obj, D_8011CF4C, 0x4, 0xB, 0);
     *(s32*)&D_80182DE8[0] += 0x18;
     if (*(s32*)&D_80182DE8[0] >= 0x82)
     {
@@ -1765,8 +1765,8 @@ extern s32 D_80182DE8;
 extern s32 D_801B2598;
 extern s32 D_801B259C;
 
-    func_8006CC4C(D_800D939C, &D_801399C0);
-    func_80066F9C(D_800D939C, D_8011CF4C, 4, 0xB, 0);
+    wmap_step_actor_animation(D_800D939C, &D_801399C0);
+    wmap_draw_actor_sprite(D_800D939C, D_8011CF4C, 4, 0xB, 0);
     *(s16 *)(D_800D939C + 0x24) = (u16)D_80182DE8;
     *(s16 *)(D_800D939C + 0x22) = (u16)D_80182DE8;
     D_80182DE8 -= 4;
@@ -2317,8 +2317,8 @@ extern s32 D_801B25C0;
 
     *(s16*)&obj[0x24] = pos;
     *(s16*)&obj[0x22] = pos;
-    func_8006CC4C(obj, D_801399D0);
-    func_80066F9C(obj, D_8011CF4C, 0x10, 0xB, 0);
+    wmap_step_actor_animation(obj, D_801399D0);
+    wmap_draw_actor_sprite(obj, D_8011CF4C, 0x10, 0xB, 0);
     *(s32*)&D_80182DF0[0] += 0x20;
     if (*(s32*)&D_80182DF0[0] >= 0x82)
     {
@@ -2354,8 +2354,8 @@ extern s32 D_80182DF0;
 extern s32 D_801B25C0;
 extern s32 D_801B25C4;
 
-    func_8006CC4C(D_800D93F4, &D_801399D0);
-    func_80066F9C(D_800D93F4, D_8011CF4C, 0x10, 0xB, 0);
+    wmap_step_actor_animation(D_800D93F4, &D_801399D0);
+    wmap_draw_actor_sprite(D_800D93F4, D_8011CF4C, 0x10, 0xB, 0);
     *(s16 *)(D_800D93F4 + 0x24) = (u16)D_80182DF0;
     *(s16 *)(D_800D93F4 + 0x22) = (u16)D_80182DF0;
     D_80182DF0 -= 0x10;
@@ -2481,8 +2481,8 @@ extern s32 D_801B25C8;
 
     *(s16*)&obj[0x24] = pos;
     *(s16*)&obj[0x22] = pos;
-    func_8006CC4C(obj, D_801399D8);
-    func_80066F9C(obj, D_8011CF4C, 0x10, 0xB, 0);
+    wmap_step_actor_animation(obj, D_801399D8);
+    wmap_draw_actor_sprite(obj, D_8011CF4C, 0x10, 0xB, 0);
     *(s32*)&D_80182DF4[0] += 0x8;
     if (*(s32*)&D_80182DF4[0] >= 0x81)
     {
@@ -2537,8 +2537,8 @@ extern s32 D_801B25CC;
 
     s32 remaining_ticks;
 
-    func_8006CC4C(&D_800D9420, &D_801399D8);
-    func_80066F9C(&D_800D9420, D_8011CF4C, 0x10, 0xB, 0);
+    wmap_step_actor_animation(&D_800D9420, &D_801399D8);
+    wmap_draw_actor_sprite(&D_800D9420, D_8011CF4C, 0x10, 0xB, 0);
     D_800D9420.field_24 = (u16) D_80182DF4;
     D_800D9420.field_22 = (u16) D_80182DF4;
     if ((s32) D_80182DF4 < 0)
@@ -2624,7 +2624,7 @@ typedef struct
 
 extern WmapOrientation D_80139258;
 extern WmapOrientation D_801B24A0;
-extern WmapTransform D_80182DC0;
+extern WmapTransform g_wmap_camera_translation;
 extern WmapTransform D_80139888;
 extern s32 D_801B25D8;
 extern s32 D_801B25D0;
@@ -2633,7 +2633,7 @@ extern void func_80074C2C__for_func_80076B70(void) __asm__("func_80074C2C");
 
     D_801B25D8 = 0;
     D_801B24A0 = D_80139258;
-    D_80139888 = D_80182DC0;
+    D_80139888 = g_wmap_camera_translation;
     D_80139888.words[2] = 0xC350;
     D_801B25D4 = 10;
     D_801B25D0++;

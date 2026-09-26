@@ -10,7 +10,7 @@ void func_80064F64(s32 resource_index);
 void func_80065078(s32 resource_index);
 void func_8006518C(s32 resource_index);
 void func_800651B4(u8* data);
-void func_800652A8();
+void wmap_play_sound(s32 sound_index, s32 pan);
 void func_800652F8(void);
 void func_8006534C();
 void func_800653EC(void);

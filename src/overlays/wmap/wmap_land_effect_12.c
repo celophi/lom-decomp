@@ -13,7 +13,7 @@
  */
 void func_80083D64(void)
 {
-extern u8 D_80182DC0[];
+extern u8 g_wmap_camera_translation[];
 extern u8 D_801B2490[];
 extern u8 D_801B2498[];
 extern s32 D_8011CF1C;
@@ -24,10 +24,10 @@ extern s32 D_801B2888;
     s32 value;
 
     PushMatrix();
-    func_8006CFA8(D_80182DC0, D_801B2490);
+    func_8006CFA8(g_wmap_camera_translation, D_801B2490);
     func_8006CD98(D_8011CF1C, 0, 0x10, 0x36, 0x7880, 1, D_801B2468);
     ((u16*)D_801B2490)[2] += 0xC;
-    func_8006CFA8(D_80182DC0, D_801B2498);
+    func_8006CFA8(g_wmap_camera_translation, D_801B2498);
     func_8006CD98(D_8011CF1C, 0, 0x10, 0x36, 0x7880, 1, D_801B2468);
     ((u16*)D_801B2498)[2] += 0x4;
     PopMatrix();
@@ -49,7 +49,7 @@ extern s32 D_801B2888;
  */
 void func_80083EA0(void)
 {
-extern u8 D_80182DC0[];
+extern u8 g_wmap_camera_translation[];
 extern u8 D_801B2490[];
 extern u8 D_801B2498[];
 extern s32 D_8011CF1C;
@@ -58,10 +58,10 @@ extern s32 D_801B2888;
 extern s32 D_801B288C;
 
     PushMatrix();
-    func_8006CFA8(D_80182DC0, D_801B2490);
+    func_8006CFA8(g_wmap_camera_translation, D_801B2490);
     func_8006CD98(D_8011CF1C, 0, 0x10, 0x36, 0x7880, 1, D_801B2468);
     ((u16*)D_801B2490)[2] += 0xC;
-    func_8006CFA8(D_80182DC0, D_801B2498);
+    func_8006CFA8(g_wmap_camera_translation, D_801B2498);
     func_8006CD98(D_8011CF1C, 0, 0x10, 0x36, 0x7880, 1, D_801B2468);
     ((u16*)D_801B2498)[2] += 4;
     PopMatrix();
@@ -481,9 +481,9 @@ extern void func_8008489C__for_func_800845B4(void) __asm__("func_8008489C");
 extern void func_80084D30__for_func_800845B4(void) __asm__("func_80084D30");
 
     D_8013B208 = 1;
-    func_8006683C(0x304010);
+    wmap_start_map_tint(0x304010);
     g_wmap_backdrop_target_level = 4;
-    func_800652A8(0x1F, 0x80);
+    wmap_play_sound(0x1F, 0x80);
     func_8006CAC0(func_8008489C__for_func_800845B4);
     func_8006CAC0(func_80084D30__for_func_800845B4);
     D_801B2874 = 8;
@@ -745,8 +745,8 @@ extern u8 D_800D9318[];
 extern u8 D_801399A8[];
 extern s32 D_8011CF4C;
 
-    func_8006CC4C(D_800D9318, D_801399A8);
-    func_80066F9C(D_800D9318, D_8011CF4C, 0x19, 0xE, 0);
+    wmap_step_actor_animation(D_800D9318, D_801399A8);
+    wmap_draw_actor_sprite(D_800D9318, D_8011CF4C, 0x19, 0xE, 0);
     if (--D_801B287C == 0)
     {
         D_801B2878 += 1;
@@ -863,8 +863,8 @@ extern u8 D_800D9344[];
 extern u8 D_801399B0[];
 extern s32 D_8011CF4C;
 
-    func_8006CC4C(D_800D9344, D_801399B0);
-    func_80066F9C(D_800D9344, D_8011CF4C, 0x1A, 0xF, 0);
+    wmap_step_actor_animation(D_800D9344, D_801399B0);
+    wmap_draw_actor_sprite(D_800D9344, D_8011CF4C, 0x1A, 0xF, 0);
     if (--D_801B2884 == 0)
     {
         D_801B2880 += 1;
@@ -991,7 +991,7 @@ extern s32 D_801B2894;
 extern void (*D_800D5908[])(void);
 extern WmapBlk8 D_80139258;
 extern WmapBlk8 D_801B24A0;
-extern WmapBlk16 D_80182DC0;
+extern WmapBlk16 g_wmap_camera_translation;
 extern WmapBlk16 D_801B2650;
 extern s32 D_80182DE8;
 extern void func_80083FD4__for_func_80084D30(void) __asm__("func_80083FD4");
@@ -1030,7 +1030,7 @@ extern s32 D_801B2894;
 extern void (*D_800D5908[])(void);
 extern WmapBlk8 D_80139258;
 extern WmapBlk8 D_801B24A0;
-extern WmapBlk16 D_80182DC0;
+extern WmapBlk16 g_wmap_camera_translation;
 extern WmapBlk16 D_801B2650;
 extern s32 D_80182DE8;
 extern void func_80083FD4__for_func_80084DA8(void) __asm__("func_80083FD4");
@@ -1052,13 +1052,13 @@ extern s32 D_801B2894;
 extern void (*D_800D5908[])(void);
 extern WmapBlk8 D_80139258;
 extern WmapBlk8 D_801B24A0;
-extern WmapBlk16 D_80182DC0;
+extern WmapBlk16 g_wmap_camera_translation;
 extern WmapBlk16 D_801B2650;
 extern s32 D_80182DE8;
 extern void func_80083FD4__for_func_80084DC0(void) __asm__("func_80083FD4");
 
     D_801B24A0 = D_80139258;
-    D_801B2650 = D_80182DC0;
+    D_801B2650 = g_wmap_camera_translation;
     D_80182DE8 = 0x80;
     D_801B2650.w[2] = 0xAFC8;
     D_801B2894 = 0x20;
