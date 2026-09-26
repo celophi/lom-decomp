@@ -10,9 +10,10 @@ on:
 
 env:
   # Project configuration
-  # VERSION selects the game release (see mk/version.mk). Only the North
-  # American disc is available in the CI container so far; ROM_ID is the
-  # matching main executable and also names the uploaded report artifact.
+  # VERSION selects the game release (see mk/version.mk). The CI image holds
+  # every disc under /rom/<version>/, but only the North American build is
+  # linked so far. ROM_ID is the matching main executable and also names the
+  # uploaded report artifact.
   VERSION: us
   ROM_ID: SLUS_010.13
   WORKING_DIR: lom
@@ -29,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     
     container:
-      image: ghcr.io/celophi/slus-01013:v5.0
+      image: ghcr.io/celophi/slus-01013:v6.0
     
     defaults:
       run:
@@ -46,8 +47,8 @@ jobs:
       - name: Copy ROM from container
         run: |
           mkdir -p disc/${{ env.VERSION }}/BIN
-          cp /rom/${{ env.ROM_ID }} disc/${{ env.VERSION }}/
-          cp /rom/BIN/*.BIN disc/${{ env.VERSION }}/BIN/
+          cp /rom/${{ env.VERSION }}/${{ env.ROM_ID }} disc/${{ env.VERSION }}/
+          cp /rom/${{ env.VERSION }}/BIN/*.BIN disc/${{ env.VERSION }}/BIN/
 
       - name: Setup Python environment
         run: |
