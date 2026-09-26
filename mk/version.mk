@@ -42,7 +42,7 @@ endif
 # builds no C objects: it links from splat assembly alone and its
 # objdiff/progress units are that assembly (0% matched).
 TU_LAYOUT_us := all
-TU_LAYOUT_jp := golem gover zukan menu shop
+TU_LAYOUT_jp := main golem gover zukan menu shop checkps movie niki gosub wmap field addhero
 
 # $(call has-tu-layout,<module>) is non-empty when <module> uses the C layout.
 has-tu-layout = $(or $(filter all,$(TU_LAYOUT_$(VERSION))),$(filter $(1),$(TU_LAYOUT_$(VERSION))))

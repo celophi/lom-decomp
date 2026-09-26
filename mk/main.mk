@@ -212,6 +212,14 @@ SRCS_G0 := $(filter-out $(ASM_UNITS),$(SRCS_G0))
 SRCS_G4 := $(filter-out $(ASM_UNITS),$(SRCS_G4))
 SRCS_GCC_260_G0 := $(filter-out $(ASM_UNITS),$(SRCS_GCC_260_G0))
 
+# Units kept as assembly (ASM_UNITS) link from the splat objects that splat's
+# dependency file lists for them, next to the fixed assembly above.
+ifneq ($(filter-out src/overlays/%,$(ASM_UNITS)),)
+MAIN_LINK_DEPS := $(LINKER_DIR)/$(GAME).d
+ASM_SRCS := $(sort $(ASM_SRCS) $(patsubst $(BUILD_DIR)/%.o,%.s,$(filter $(BUILD_DIR)/$(ASM_DIR)/%.o,\
+	$(if $(wildcard $(MAIN_LINK_DEPS)),$(file <$(MAIN_LINK_DEPS))))))
+endif
+
 ifeq ($(call has-tu-layout,main),)
 SRCS_G0 :=
 SRCS_G4 :=

@@ -2,18 +2,21 @@
 
 **言語:** [English](README.md) | 日本語
 
-[![Progress]][progress site]
+[![US Progress]][us progress site]
+[![JP Progress]][jp progress site]
 [![Build and Progress](https://github.com/celophi/lom-decomp/actions/workflows/progress.yaml/badge.svg)](https://github.com/celophi/lom-decomp/actions/workflows/progress.yaml)
 
-[Progress]: https://decomp.dev/celophi/lom-decomp.svg?mode=shield&measure=code&category=all&label=Progress
-[progress site]: https://decomp.dev/celophi/lom-decomp
+[US Progress]: https://decomp.dev/celophi/lom-decomp/SLUS_010.13.svg?mode=shield&measure=code&label=%E5%8C%97%E7%B1%B3%E7%89%88
+[us progress site]: https://decomp.dev/celophi/lom-decomp/SLUS_010.13
+[JP Progress]: https://decomp.dev/celophi/lom-decomp/SLPS_021.70.svg?mode=shield&measure=code&label=%E6%97%A5%E6%9C%AC%E7%89%88
+[jp progress site]: https://decomp.dev/celophi/lom-decomp/SLPS_021.70
 
 PlayStation用ソフト **『聖剣伝説 LEGEND OF MANA』** を、オリジナルと一致する形で復元する**デコンパイルプロジェクト**です。北米版は **100%一致**しており、日本版は現在対応を進めています。
 
 本プロジェクトでは、ディスク上のオリジナルのMIPS機械語とバイト単位で一致するように、読みやすいCソースコードを復元しています。対象としているリージョンは次の2つです。
 
 - **北米版** - `SLUS_010.13`（ディスクシリアル **SLUS-01013**）。完了済みで、18個すべてのバイナリが完全にリンクされています。
-- **日本版** - `SLPS_021.70`（ディスクシリアル **SLPS-02170**）。対応中で、まだビルドには組み込まれていません。
+- **日本版** - `SLPS_021.70`（ディスクシリアル **SLPS-02170**）。対応中です。18個すべてのバイナリがバイト単位で一致し、コードの大部分は共通のCソースからビルドされます。
 
 特に記載がない限り、以下のビルド手順、ターゲット、ファイル名は北米版を対象としています。
 
@@ -34,7 +37,7 @@ PlayStation用ソフト **『聖剣伝説 LEGEND OF MANA』** を、オリジナ
 
 **（コンプレッサーもぜひ見てみてください。正直ここまでやる必要はないのですが、元のファイルと _ビット単位で完全一致_ するのはかなり面白いです！）**
 
-すべてのモジュールを確認するには `make verify-bins` を実行してください。日本版はまだこの段階には到達していません。
+すべてのモジュールを確認するには `make verify-bins` を実行してください。日本版（`make verify-bins VERSION=jp`）もバイト単位で一致しますが、まだ完全リンクではありません。コンプレッサーが4つの `.BIN`（FIELD、GNAME、GOSUB、TITLE）のストリームをまだ再現できないため、これらは展開後のイメージでのみ確認しています。
 
 ## ロードマップ
 
@@ -57,7 +60,7 @@ PlayStation用ソフト **『聖剣伝説 LEGEND OF MANA』** を、オリジナ
 | ディスクイメージ（`.bin`）SHA-1 | `c1b536c99f0d390584eb30462a7e37f2bbef3902` | `7a314615be8a482cf3f81b4101cc19aaa738f36d` |
 | アーキテクチャ | 32-bit little-endian MIPS / PlayStation | 32-bit little-endian MIPS / PlayStation |
 
-日本版はまだビルド設定に組み込まれていないため、以下の導入手順は北米版のみを対象としています。その他のリージョンには現在対応していません。
+以下の導入手順は北米版を例にしています。日本版も同じ手順で、ファイルを `disc/jp/` に置き、`make` に `VERSION=jp` を付けてビルドします。その他のリージョンには現在対応していません。
 
 ## 必要なもの
 
@@ -65,7 +68,7 @@ PlayStation用ソフト **『聖剣伝説 LEGEND OF MANA』** を、オリジナ
 
 - **Git** - サブモジュールを利用できること。
 - **Docker** - Windows/macOSではDocker Desktop、LinuxではDocker Engine。
-- **正規に入手した北米版『Legend of Mana』**。日本版はまだビルドできません（[対応ゲームバージョン](#対応ゲームバージョン)を参照）。
+- **正規に入手した『Legend of Mana』**（北米版または日本版。[対応ゲームバージョン](#対応ゲームバージョン)を参照）。
 
 当時のPSXコンパイラ、Psy-Qツール、Pythonパッケージ、MIPSクロスコンパイラなどをホスト環境へ直接インストールする必要はありません。開発用コンテナに必要なものが含まれています。
 
@@ -86,7 +89,7 @@ git submodule update --init --recursive
 
 ### 2. オリジナルのゲームファイルを配置する
 
-現在のビルドには北米版が必要です（日本版にも近日対応予定です）。ゲームファイルはバージョンごとのフォルダに配置します。北米版は `disc/us/`、日本版は `disc/jp/` です。ディスクまたはディスクイメージから、メイン実行ファイルとゲームの `BIN` ディレクトリを抽出し、リポジトリ内を次の構成にしてください（例は日本版です。北米版では `disc/us/SLUS_010.13` になります）。
+ゲームファイルはバージョンごとのフォルダに配置します。北米版は `disc/us/`、日本版は `disc/jp/` です。ディスクまたはディスクイメージから、メイン実行ファイルとゲームの `BIN` ディレクトリを抽出し、リポジトリ内を次の構成にしてください（例は日本版です。北米版では `disc/us/SLUS_010.13` になります）。
 
 ```text
 disc/
@@ -125,8 +128,6 @@ sha1sum disc/jp/SLPS_021.70
 ```text
 b067188a92e4de9a4db7bb7e5343c757e9884bfa  disc/jp/SLPS_021.70
 ```
-
-（日本版はまだビルドに対応していないため、現時点ではお手元のダンプが正しいかの確認用です。）
 
 splatの設定ファイルには、各オーバーレイファイルの期待されるSHA-1ハッシュも記載されています。
 
@@ -285,7 +286,7 @@ Makefileでは、必要な入力を `/staging` へコピーし、テキストフ
 | `make recopy` | ソース / 設定ファイルを `/staging` へ強制的に再コピーします。 |
 | `make clean` | ビルド出力と `/staging` を削除します。 |
 
-すべてのターゲットは、既定では北米版（`VERSION=us`）をビルドします。日本版は `make VERSION=jp` のように `VERSION=jp` を付けて指定します（対応予定）。表中のファイル名は日本版の例です。
+すべてのターゲットは、既定では北米版（`VERSION=us`）をビルドします。日本版は `make VERSION=jp` のように `VERSION=jp` を付けて指定します。表中のファイル名は日本版の例です。
 
 ## 関数のマッチング
 
@@ -351,7 +352,7 @@ make diff-text
 | `VERSION` | リリース | 状態 |
 |---|---|---|
 | `us`（既定） | 北米版 `SLUS-01013` | 完全リンク済み |
-| `jp` | 日本版 `SLPS-02170` | 対応中 - 18個すべてのバイナリが、第一段階のsplatアセンブリ（モジュールごとに1ブロック）からバイト単位で完全に再構築できます。コードのデコンパイルはまだです |
+| `jp` | 日本版 `SLPS-02170` | 対応中 - 18個すべてのバイナリがバイト単位で完全に再構築できます。メイン実行ファイルと12個のオーバーレイは、日本版でコードが異なるユニットを除いて共通のCソースからビルドされます。CARDA、CLOAD、GNAME、TITLE、WSELは、まだ第一段階のsplatアセンブリからリンクしています |
 
 | 全バージョン共通 | バージョンごと |
 |---|---|
@@ -359,7 +360,7 @@ make diff-text
 
 リリース間でコードが異なる箇所は、共通のCソース内で `#if defined(VERSION_JP)` / `#if defined(VERSION_US)` を使って書き分けます。ビルドはどちらか一方だけを定義します（[`mk/version.mk`](mk/version.mk) と [`include/version.h`](include/version.h) を参照）。シンボル名は共通ですがアドレスは異なるため、`config/<version>/symbols/` はバージョンごとに用意します。
 
-進捗レポートはバージョンごとに生成され、CIは両方をビルドします（`SLUS_010.13_report` と `SLPS_021.70_report`）。日本版のコードがCファイルに分割されるまでは、日本版のレポートはアセンブリをすべて未一致のコードとして数えます。共通のCソースは、現在は北米版の構成でのみビルドされます（[`mk/version.mk`](mk/version.mk) の `TU_LAYOUT_VERSIONS`）。
+進捗レポートはバージョンごとに生成され、CIは両方をビルドします（`SLUS_010.13_report` と `SLPS_021.70_report`）。日本版では、[`mk/version.mk`](mk/version.mk) の `TU_LAYOUT_jp` に挙げたモジュールが共通のCソースからビルドされます。ただし `config/jp/asm_units.txt` に挙げたファイルは、日本版でコードが異なるためアセンブリから取り込みます。日本版のレポートでは、そのアセンブリと、まだ移植していないモジュールを未一致のコードとして数えます。
 
 ## リポジトリ構成
 
@@ -405,7 +406,7 @@ lom-decomp/
 
 **`make splat` でファイル不足またはSHA-1不一致が報告される**
 
-現在のビルドには北米版が必要です（日本版にも近日対応予定です）。北米版からファイルを抽出し、名前を変更せずに `disc/us/SLUS_010.13` と `disc/us/BIN/*.BIN` へ配置していることを確認してください（日本版は `disc/jp/` 以下に同じ構成で配置します）。
+北米版は `disc/us/SLUS_010.13` と `disc/us/BIN/*.BIN`、日本版は `disc/jp/SLPS_021.70` と `disc/jp/BIN/*.BIN` に、名前を変更せずに配置していることを確認してください。
 
 **Dockerが `old-gcc/...` イメージを見つけられない**
 

@@ -2,18 +2,21 @@
 
 **Languages:** English | [日本語](README_JP.md)
 
-[![Progress]][progress site]
+[![US Progress]][us progress site]
+[![JP Progress]][jp progress site]
 [![Build and Progress](https://github.com/celophi/lom-decomp/actions/workflows/progress.yaml/badge.svg)](https://github.com/celophi/lom-decomp/actions/workflows/progress.yaml)
 
-[Progress]: https://decomp.dev/celophi/lom-decomp.svg?mode=shield&measure=code&category=all&label=Progress
-[progress site]: https://decomp.dev/celophi/lom-decomp
+[US Progress]: https://decomp.dev/celophi/lom-decomp/SLUS_010.13.svg?mode=shield&measure=code&label=US%20Progress
+[us progress site]: https://decomp.dev/celophi/lom-decomp/SLUS_010.13
+[JP Progress]: https://decomp.dev/celophi/lom-decomp/SLPS_021.70.svg?mode=shield&measure=code&label=JP%20Progress
+[jp progress site]: https://decomp.dev/celophi/lom-decomp/SLPS_021.70
 
 A **matching decompilation** of the PlayStation game **Legend of Mana**. The North American release is **100% matched**; the Japanese release is in progress.
 
 The project reconstructs readable C source code that compiles down to the original MIPS machine code that exists on the disc, byte-for-byte. Two regional releases are targeted:
 
 - **North America** - `SLUS_010.13` (disc serial **SLUS-01013**). Complete: all 18 binaries are fully linked.
-- **Japan** - `SLPS_021.70` (disc serial **SLPS-02170**). In progress: not yet wired into the build.
+- **Japan** - `SLPS_021.70` (disc serial **SLPS-02170**). In progress: all 18 binaries rebuild byte-exact, and most of the code builds from the shared C sources.
 
 Unless a section says otherwise, the build instructions, targets, and file names below refer to the North American version.
 
@@ -32,7 +35,7 @@ In other words, the round-trip `original .BIN -> decompress -> C source -> compi
 The main executable is not compressed, so for `SLUS_010.13` condition 1 is the whole check: the linked ELF, converted to a raw binary, equals the disc file.
 *(Check out the compressor! It's honestly really amazing that it is **bit identical** and kind of extraneous, but cool nonetheless!)*
 
-Run `make verify-bins` to check every module. The Japanese version has not reached this stage yet.
+Run `make verify-bins` to check every module. The Japanese version (`make verify-bins VERSION=jp`) matches byte-for-byte too, but is not fully linked yet: the compressor cannot reproduce four of its `.BIN` streams (FIELD, GNAME, GOSUB, TITLE), so those are checked against the decompressed image only.
 
 ## Roadmap
 
@@ -55,7 +58,7 @@ Run `make verify-bins` to check every module. The Japanese version has not reach
 | Disc image (`.bin`) SHA-1 | `c1b536c99f0d390584eb30462a7e37f2bbef3902` | `7a314615be8a482cf3f81b4101cc19aaa738f36d` |
 | Architecture | 32-bit little-endian MIPS / PlayStation | 32-bit little-endian MIPS / PlayStation |
 
-The Japanese version is not yet supported by the build configs; the getting-started steps below cover the North American version only. Other regional versions are not currently supported.
+The getting-started steps below use the North American version. The Japanese version works the same way, with its files under `disc/jp/` and `VERSION=jp` on the `make` command line. Other regional versions are not currently supported.
 
 ## Requirements
 
@@ -63,7 +66,7 @@ For the normal build you need:
 
 - **Git**, including submodule support.
 - **Docker** - Docker Desktop on Windows/macOS or Docker Engine on Linux.
-- A **legally obtained North American copy of Legend of Mana**. The Japanese release cannot be built yet (see [Supported game versions](#supported-game-versions)).
+- A **legally obtained copy of Legend of Mana**, North American or Japanese (see [Supported game versions](#supported-game-versions)).
 
 You do not need to install the historical PSX compilers, Psy-Q tools, Python packages, or a MIPS cross-compiler directly on your host. The development container provides them.
 
@@ -84,7 +87,7 @@ git submodule update --init --recursive
 
 ### 2. Add the original game files
 
-Extract the main executable and the game's `BIN` directory from your North American disc/image into `disc/us/`, so the repository contains the following (the Japanese release will go in `disc/jp/` with the same layout once it is supported):
+Extract the main executable and the game's `BIN` directory from your North American disc/image into `disc/us/`, so the repository contains the following (the Japanese release goes in `disc/jp/` with the same layout):
 
 ```text
 disc/
@@ -347,7 +350,7 @@ One C source tree builds every regional release. Anything that comes from a part
 | `VERSION` | Release | Status |
 |---|---|---|
 | `us` (default) | North America, `SLUS-01013` | Fully linked |
-| `jp` | Japan, `SLPS-02170` | In progress - all 18 binaries rebuild byte-exact from first-pass splat assembly (one block per module); no code is decompiled yet |
+| `jp` | Japan, `SLPS-02170` | In progress - all 18 binaries rebuild byte-exact. The main executable and 12 overlays build from the shared C sources, except the units whose JP code differs; CARDA, CLOAD, GNAME, TITLE and WSEL still link from first-pass splat assembly |
 
 | Shared by all versions | Per version |
 |---|---|
@@ -355,7 +358,7 @@ One C source tree builds every regional release. Anything that comes from a part
 
 Where the code differs between releases, the shared C source uses `#if defined(VERSION_JP)` / `#if defined(VERSION_US)` blocks; the build defines exactly one of them (see [`mk/version.mk`](mk/version.mk) and [`include/version.h`](include/version.h)). Symbol names are shared, but addresses are not, so each version has its own `config/<version>/symbols/` files.
 
-Each version gets its own objdiff progress report, and CI builds both (`SLUS_010.13_report` and `SLPS_021.70_report`). Until the JP code is split into C files, its report counts the JP assembly as unmatched code, and the shared C sources are only built for the North American layout (`TU_LAYOUT_VERSIONS` in [`mk/version.mk`](mk/version.mk)).
+Each version gets its own objdiff progress report, and CI builds both (`SLUS_010.13_report` and `SLPS_021.70_report`). For JP, the modules listed in `TU_LAYOUT_jp` in [`mk/version.mk`](mk/version.mk) build from the shared C sources, minus the files in `config/jp/asm_units.txt`, which JP takes from assembly because their code differs. The JP report counts that assembly, and the modules not yet ported, as unmatched code.
 
 ## Repository layout
 
@@ -401,7 +404,7 @@ Useful project-specific references include:
 
 **`make splat` reports a missing file or SHA-1 mismatch**
 
-Make sure you extracted the North American version and placed the files at `disc/us/SLUS_010.13` and `disc/us/BIN/*.BIN` without renaming them.
+Make sure the files are at `disc/us/SLUS_010.13` and `disc/us/BIN/*.BIN` (or `disc/jp/SLPS_021.70` and `disc/jp/BIN/*.BIN` for the Japanese version), without renaming them.
 
 **Docker cannot find an `old-gcc/...` image**
 

@@ -12,7 +12,7 @@ run_checkps                              = 0x8004FE7C;
 // Main-only alias for the common overlay load base. This must not be shared,
 // because each overlay defines its own code symbols in the same address range.
 g_overlay_load_base                 = 0x8004FDD8;
-g_title_overlay_end                = 0x801026D0;
+g_title_overlay_end                = 0x80102790;
 g_field_render_buffers              = 0x80120A60;
 g_world_map_overlay_end             = 0x801B32D8;
 
