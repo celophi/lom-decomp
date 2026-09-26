@@ -11,6 +11,7 @@
 #define PADRright  (1 << 5)
 #define PADi       (1 << 9)
 #define PADh       (1 << 11)
+#define PADstart   PADh
 #define PADL1      (1 << 2)
 #define PADL2      (1 << 0)
 #define PADR1      (1 << 3)

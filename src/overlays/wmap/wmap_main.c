@@ -7,6 +7,7 @@
 #include "wmap_main.h"
 #include "wmap_land_preview.h"
 #include "common.h"
+#include "gpu_packet.h"
 #include "sdk/libgpu.h"
 #include "sdk/libgte.h"
 #include "sdk/libetc.h"
@@ -20,8 +21,6 @@
 #include "tim.h"
 #include "controller_internal.h"
 
-#define M2C_FIELD(expr, type_ptr, offset) (*(type_ptr)((s8*)(expr) + (offset)))
-
 #define WMAP_GRID_SIZE 6
 #define WMAP_MAP_CELL_SIZE 48
 #define WMAP_TRAVEL_CELL_SIZE 160
@@ -34,8 +33,22 @@
 #define WMAP_BACKDROP_COLOR_STEP 8
 #define WMAP_FADE_COLOR_STEP 4
 
+/** @brief Soft-reset chord (select, start and all four shoulder buttons) and the D-pad bits. */
+#define WMAP_RESET_CHORD (PADselect | PADstart | PADL1 | PADL2 | PADR1 | PADR2)
+#define WMAP_DPAD_MASK (PADLup | PADLright | PADLdown | PADLleft)
+/** @brief 15-bit pixel semi-transparency (mask) bit. */
+#define WMAP_PIXEL_MASK_BIT 0x8000
+
 /** @brief Scratchpad word holding the world-map caller's saved stack pointer. */
 #define WMAP_SCRATCH_STACK_SAVE_SLOT 0x1F8003F0
+
+/** @brief Backdrop color: three channels. */
+typedef struct
+{
+    u8 r;
+    u8 g;
+    u8 b;
+} WmapColor3;
 
 /** @brief Gouraud triangle used by the world-map menu cursor. */
 typedef struct
@@ -140,7 +153,7 @@ extern RECT D_80051A80;
 extern s32 D_800D0550;
 extern s32 D_80182228;
 extern s32 D_80182240;
-extern u8 D_80139258;
+extern SVECTOR D_80139258;
 extern s32 D_8005136C;
 extern POLY_G4 D_800D06BC;
 extern s32 D_800D9224;
@@ -175,11 +188,11 @@ extern s32 D_80139228;
 extern s32 D_80139244;
 extern s32 D_80139248;
 extern SVECTOR g_wmap_camera_rotation;
-extern s32 D_80139280;
+extern s32* D_80139280;
 extern s32 g_wmap_tint_blending;
 extern s32 D_801398B8;
 extern s32 D_801398BC;
-extern u8 D_801398C8;
+extern SVECTOR D_801398C8;
 extern s32 g_wmap_view_scroll_mode;
 extern s32 D_801398F4;
 extern s32 D_80139900;
@@ -213,18 +226,10 @@ extern s32 D_801ADB90;
 extern POLY_FT4 g_wmap_backdrop_front_quads[4];
 extern POLY_FT4 g_wmap_backdrop_back_quads[4];
 
-extern u8 D_80182D74;
-extern u8 D_80182D75;
-extern u8 D_80182D76;
-extern u8 D_80182D80;
-extern u8 D_80182D81;
-extern u8 D_80182D82;
-extern u8 D_80182D8C;
-extern u8 D_80182D8D;
-extern u8 D_80182D8E;
-extern u8 D_80182D94;
-extern u8 D_80182D95;
-extern u8 D_80182D96;
+extern WmapColor3 D_80182D74;
+extern WmapColor3 D_80182D80;
+extern WmapColor3 D_80182D8C;
+extern WmapColor3 D_80182D94;
 extern POLY_FT4 D_800D0694;
 extern u8 D_800D0698;
 extern s32 D_800CB204;
@@ -249,7 +254,6 @@ extern s32 D_8011D0E0;
 extern s32 D_8011D0E4;
 extern s32 D_8011D500;
 extern s8 D_80129538[5];
-extern u8 D_801295BC[];
 extern s32 D_80139238;
 extern s32 D_80139834;
 extern s32 g_wmap_view_mode;
@@ -269,7 +273,7 @@ extern s32 D_80182DD4;
 extern s32 D_80182E38;
 extern s32 D_801ADAF8;
 extern s32 D_801ADB08;
-extern u16 D_801ADBA0;
+extern u8 D_801ADBA0[];
 extern VECTOR D_801B2478;
 extern SVECTOR D_801B24A8;
 extern RECT D_80051A88;
@@ -380,7 +384,7 @@ void wmap_init_state(void)
     D_800DCEC0 = 1;
     D_800D9224 = 0;
     g_wmap_information_groups = 0;
-    D_80139280 = 0x1F800000;
+    D_80139280 = (s32*)getScratchAddr(0);
     g_wmap_party_visible = 1;
     D_801ADAFC = 1;
     g_wmap_view_scroll_enabled = 1;
@@ -445,7 +449,7 @@ void wmap_init_state(void)
     D_8011CF58 = 0;
     D_80139960 = 0;
     D_80182D48 = D_8011CF60;
-    *(SVECTOR*)&D_801398C8 = *(SVECTOR*)&D_80139258;
+    D_801398C8 = D_80139258;
     D_8011CF18 = 0;
     D_8013B208 = 0;
     D_801ADAE0 = 0;
@@ -486,6 +490,17 @@ void wmap_init_state(void)
     wmap_refresh_cells();
     func_8005B548();
 }
+
+/**
+ * @brief A CVECTOR read back as the packed word a packet's color slot holds.
+ * @note Reading through this member keeps each copy ordered after the strip's
+ *       vertex stores, so the word is reloaded from the stack for every packet.
+ */
+typedef union
+{
+    CVECTOR rgb;
+    u_long word;
+} WmapPackedColor;
 
 /**
  * @brief Fade and scroll the textured backdrop, or draw its color gradient.
@@ -540,10 +555,7 @@ s32 wmap_draw_backdrop(s32 initialize)
                 wrapped_x = (front_x + g_wmap_backdrop_scroll) % WMAP_BACKDROP_WRAP_WIDTH;
                 packet->x0 = packet->x2 = wrapped_x - SCREEN_WIDTH;
                 packet->x1 = packet->x3 = wrapped_x - WMAP_BACKDROP_QUAD_WIDTH;
-                do
-            {
-                *(u_long*)&packet->r0 = *(u_long*)&color;
-            } while (0);
+                SET_BGR0_PACKED(packet, ((WmapPackedColor*)&color)->word);
                 packet->code |= 2;
                 addPrim(&g_wmap_current_frame->ordering_table[177], g_wmap_current_frame->packet_cursor);
                 if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
@@ -556,10 +568,7 @@ s32 wmap_draw_backdrop(s32 initialize)
                 wrapped_x = (packet->x0 + g_wmap_backdrop_scroll) % WMAP_BACKDROP_WRAP_WIDTH;
                 packet->x0 = packet->x2 = wrapped_x - SCREEN_WIDTH;
                 packet->x1 = packet->x3 = wrapped_x - WMAP_BACKDROP_QUAD_WIDTH;
-                do
-            {
-                *(u_long*)&packet->r0 = *(u_long*)&color;
-            } while (0);
+                SET_BGR0_PACKED(packet, ((WmapPackedColor*)&color)->word);
                 packet->code |= 2;
                 addPrim(&g_wmap_current_frame->ordering_table[177], g_wmap_current_frame->packet_cursor);
                 if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
@@ -581,10 +590,7 @@ s32 wmap_draw_backdrop(s32 initialize)
             wrapped_x = (back_x - g_wmap_backdrop_scroll) % WMAP_BACKDROP_WRAP_WIDTH;
             packet->x0 = packet->x2 = wrapped_x - SCREEN_WIDTH;
             packet->x1 = packet->x3 = wrapped_x - WMAP_BACKDROP_QUAD_WIDTH;
-            do
-            {
-                *(u_long*)&packet->r0 = *(u_long*)&color;
-            } while (0);
+            SET_BGR0_PACKED(packet, ((WmapPackedColor*)&color)->word);
             addPrim(&g_wmap_current_frame->ordering_table[177], g_wmap_current_frame->packet_cursor);
             if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
             {
@@ -597,10 +603,7 @@ s32 wmap_draw_backdrop(s32 initialize)
             wrapped_x = (wrapped_back_x - g_wmap_backdrop_scroll) % WMAP_BACKDROP_WRAP_WIDTH;
             packet->x0 = packet->x2 = wrapped_x - SCREEN_WIDTH;
             packet->x1 = packet->x3 = wrapped_x - WMAP_BACKDROP_QUAD_WIDTH;
-            do
-            {
-                *(u_long*)&packet->r0 = *(u_long*)&color;
-            } while (0);
+            SET_BGR0_PACKED(packet, ((WmapPackedColor*)&color)->word);
             addPrim(&g_wmap_current_frame->ordering_table[177], g_wmap_current_frame->packet_cursor);
             if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
             {
@@ -611,9 +614,9 @@ s32 wmap_draw_backdrop(s32 initialize)
         return 1;
     }
     /* The gradient takes over once the textured backdrop has faded away. */
-    if (D_80182D74 != (D_800D9240.r0 & 0xFF))
+    if (D_80182D74.r != D_800D9240.r0)
     {
-        if ((D_800D9240.r0 & 0xFF) >= (u8)D_80182D74)
+        if (D_800D9240.r0 >= D_80182D74.r)
         {
             D_800D9240.r0 -= WMAP_BACKDROP_COLOR_STEP;
         }
@@ -622,9 +625,9 @@ s32 wmap_draw_backdrop(s32 initialize)
             D_800D9240.r0 += WMAP_BACKDROP_COLOR_STEP;
         }
     }
-    if (D_80182D75 != (D_800D9240.g0 & 0xFF))
+    if (D_80182D74.g != D_800D9240.g0)
     {
-        if ((D_800D9240.g0 & 0xFF) >= (u8)D_80182D75)
+        if (D_800D9240.g0 >= D_80182D74.g)
         {
             D_800D9240.g0 -= WMAP_BACKDROP_COLOR_STEP;
         }
@@ -633,9 +636,9 @@ s32 wmap_draw_backdrop(s32 initialize)
             D_800D9240.g0 += WMAP_BACKDROP_COLOR_STEP;
         }
     }
-    if (D_80182D76 != (D_800D9240.b0 & 0xFF))
+    if (D_80182D74.b != D_800D9240.b0)
     {
-        if ((D_800D9240.b0 & 0xFF) >= (u8)D_80182D76)
+        if (D_800D9240.b0 >= D_80182D74.b)
         {
             D_800D9240.b0 -= WMAP_BACKDROP_COLOR_STEP;
         }
@@ -644,9 +647,9 @@ s32 wmap_draw_backdrop(s32 initialize)
             D_800D9240.b0 += WMAP_BACKDROP_COLOR_STEP;
         }
     }
-    if (D_80182D80 != (D_800D9240.r1 & 0xFF))
+    if (D_80182D80.r != D_800D9240.r1)
     {
-        if ((D_800D9240.r1 & 0xFF) >= (u8)D_80182D80)
+        if (D_800D9240.r1 >= D_80182D80.r)
         {
             D_800D9240.r1 -= WMAP_BACKDROP_COLOR_STEP;
         }
@@ -655,9 +658,9 @@ s32 wmap_draw_backdrop(s32 initialize)
             D_800D9240.r1 += WMAP_BACKDROP_COLOR_STEP;
         }
     }
-    if (D_80182D81 != (D_800D9240.g1 & 0xFF))
+    if (D_80182D80.g != D_800D9240.g1)
     {
-        if ((D_800D9240.g1 & 0xFF) >= (u8)D_80182D81)
+        if (D_800D9240.g1 >= D_80182D80.g)
         {
             D_800D9240.g1 -= WMAP_BACKDROP_COLOR_STEP;
         }
@@ -666,9 +669,9 @@ s32 wmap_draw_backdrop(s32 initialize)
             D_800D9240.g1 += WMAP_BACKDROP_COLOR_STEP;
         }
     }
-    if (D_80182D82 != (D_800D9240.b1 & 0xFF))
+    if (D_80182D80.b != D_800D9240.b1)
     {
-        if ((D_800D9240.b1 & 0xFF) >= (u8)D_80182D82)
+        if (D_800D9240.b1 >= D_80182D80.b)
         {
             D_800D9240.b1 -= WMAP_BACKDROP_COLOR_STEP;
         }
@@ -677,9 +680,9 @@ s32 wmap_draw_backdrop(s32 initialize)
             D_800D9240.b1 += WMAP_BACKDROP_COLOR_STEP;
         }
     }
-    if (D_80182D8C != (D_800D9240.r2 & 0xFF))
+    if (D_80182D8C.r != D_800D9240.r2)
     {
-        if ((D_800D9240.r2 & 0xFF) >= (u8)D_80182D8C)
+        if (D_800D9240.r2 >= D_80182D8C.r)
         {
             D_800D9240.r2 -= WMAP_BACKDROP_COLOR_STEP;
         }
@@ -688,9 +691,9 @@ s32 wmap_draw_backdrop(s32 initialize)
             D_800D9240.r2 += WMAP_BACKDROP_COLOR_STEP;
         }
     }
-    if (D_80182D8D != (D_800D9240.g2 & 0xFF))
+    if (D_80182D8C.g != D_800D9240.g2)
     {
-        if ((D_800D9240.g2 & 0xFF) >= (u8)D_80182D8D)
+        if (D_800D9240.g2 >= D_80182D8C.g)
         {
             D_800D9240.g2 -= WMAP_BACKDROP_COLOR_STEP;
         }
@@ -699,9 +702,9 @@ s32 wmap_draw_backdrop(s32 initialize)
             D_800D9240.g2 += WMAP_BACKDROP_COLOR_STEP;
         }
     }
-    if (D_80182D8E != (D_800D9240.b2 & 0xFF))
+    if (D_80182D8C.b != D_800D9240.b2)
     {
-        if ((D_800D9240.b2 & 0xFF) >= (u8)D_80182D8E)
+        if (D_800D9240.b2 >= D_80182D8C.b)
         {
             D_800D9240.b2 -= WMAP_BACKDROP_COLOR_STEP;
         }
@@ -710,9 +713,9 @@ s32 wmap_draw_backdrop(s32 initialize)
             D_800D9240.b2 += WMAP_BACKDROP_COLOR_STEP;
         }
     }
-    if (D_80182D94 != (D_800D9240.r3 & 0xFF))
+    if (D_80182D94.r != D_800D9240.r3)
     {
-        if ((D_800D9240.r3 & 0xFF) >= (u8)D_80182D94)
+        if (D_800D9240.r3 >= D_80182D94.r)
         {
             D_800D9240.r3 -= WMAP_BACKDROP_COLOR_STEP;
         }
@@ -721,9 +724,9 @@ s32 wmap_draw_backdrop(s32 initialize)
             D_800D9240.r3 += WMAP_BACKDROP_COLOR_STEP;
         }
     }
-    if (D_80182D95 != (D_800D9240.g3 & 0xFF))
+    if (D_80182D94.g != D_800D9240.g3)
     {
-        if ((D_800D9240.g3 & 0xFF) >= (u8)D_80182D95)
+        if (D_800D9240.g3 >= D_80182D94.g)
         {
             D_800D9240.g3 -= WMAP_BACKDROP_COLOR_STEP;
         }
@@ -732,9 +735,9 @@ s32 wmap_draw_backdrop(s32 initialize)
             D_800D9240.g3 += WMAP_BACKDROP_COLOR_STEP;
         }
     }
-    if (D_80182D96 != (D_800D9240.b3 & 0xFF))
+    if (D_80182D94.b != D_800D9240.b3)
     {
-        if ((D_800D9240.b3 & 0xFF) >= (u8)D_80182D96)
+        if (D_800D9240.b3 >= D_80182D94.b)
         {
             D_800D9240.b3 -= WMAP_BACKDROP_COLOR_STEP;
         }
@@ -777,6 +780,7 @@ s32 wmap_update_screen_fade(s32 initialize)
         }
         else
         {
+            /* r0 is known to be nonzero here; the target skips the D_800D0698 test. */
             goto draw;
         }
         break;
@@ -878,53 +882,53 @@ void wmap_update_menu(s32 buttons)
             {
                 g_wmap_menu_cursor_y += 4;
             }
-            goto draw_menu;
         }
-        if (g_wmap_menu_page == 0)
-        {
-            if (g_wmap_buttons_repeat & PADLup)
-            {
-                g_wmap_menu_selection = previous_item;
-                if (previous_item <= 0)
-                {
-                    g_wmap_menu_selection = WMAP_MENU_ITEM_COUNT;
-                }
-                akao_play_sfx_from_buffer(D_800CB204, 0, 0x80, 0x7F);
-            }
-            if (g_wmap_buttons_repeat & PADLdown)
-            {
-                next_item = g_wmap_menu_selection + 1;
-                g_wmap_menu_selection = next_item;
-                if (next_item > WMAP_MENU_ITEM_COUNT)
-                {
-                    g_wmap_menu_selection = 1;
-                }
-                akao_play_sfx_from_buffer(D_800CB204, 0, 0x80, 0x7F);
-            }
-        }
-        if (g_wmap_buttons_repeat & PADRdown)
+        else
         {
             if (g_wmap_menu_page == 0)
             {
-                g_wmap_menu_page = g_wmap_menu_selection;
-                akao_play_sfx_from_buffer(D_800CB254, 0, 0x80, 0x7F);
+                if (g_wmap_buttons_repeat & PADLup)
+                {
+                    g_wmap_menu_selection = previous_item;
+                    if (previous_item <= 0)
+                    {
+                        g_wmap_menu_selection = WMAP_MENU_ITEM_COUNT;
+                    }
+                    akao_play_sfx_from_buffer(D_800CB204, 0, 0x80, 0x7F);
+                }
+                if (g_wmap_buttons_repeat & PADLdown)
+                {
+                    next_item = g_wmap_menu_selection + 1;
+                    g_wmap_menu_selection = next_item;
+                    if (next_item > WMAP_MENU_ITEM_COUNT)
+                    {
+                        g_wmap_menu_selection = 1;
+                    }
+                    akao_play_sfx_from_buffer(D_800CB204, 0, 0x80, 0x7F);
+                }
             }
-        }
-        if (g_wmap_buttons_repeat & PADRright)
-        {
-            if (g_wmap_menu_page == 0)
+            if (g_wmap_buttons_repeat & PADRdown)
             {
-                g_wmap_map_controls_active = g_wmap_map_controls_active == 0;
+                if (g_wmap_menu_page == 0)
+                {
+                    g_wmap_menu_page = g_wmap_menu_selection;
+                    akao_play_sfx_from_buffer(D_800CB254, 0, 0x80, 0x7F);
+                }
+            }
+            if (g_wmap_buttons_repeat & PADRright)
+            {
+                if (g_wmap_menu_page == 0)
+                {
+                    g_wmap_map_controls_active = g_wmap_map_controls_active == 0;
+                    akao_play_sfx_from_buffer(D_800CB224, 0, 0x80, 0x7F);
+                    g_wmap_buttons_held = 0;
+                    g_wmap_buttons_repeat = 0;
+                    return;
+                }
+                g_wmap_menu_page = 0;
                 akao_play_sfx_from_buffer(D_800CB224, 0, 0x80, 0x7F);
-                g_wmap_buttons_held = 0;
-                g_wmap_buttons_repeat = 0;
-                return;
             }
-            g_wmap_menu_page = 0;
-            akao_play_sfx_from_buffer(D_800CB224, 0, 0x80, 0x7F);
-            goto draw_menu;
         }
-    draw_menu:
         if (g_wmap_loaded_menu_page != g_wmap_menu_page)
         {
             image = (TimPrefix*)&D_8019D6E0;
@@ -1043,16 +1047,9 @@ void wmap_step_input_script(void)
     TimBlock* image_block;
     s32 duration;
     s32 command;
-    s16 home_y;
     s32 buttons;
     s32 row;
     s32 column;
-    s32 map_x;
-    s32 packed_row;
-    s32 home_row;
-    s32 packed_column;
-    s32 home_column;
-    s32 row_scale;
     s32 button_result;
     s16* script;
 
@@ -1130,32 +1127,20 @@ void wmap_step_input_script(void)
         case WMAP_SCRIPT_FIND_HOME:
             for (row = 0; row < WMAP_GRID_SIZE; row++)
             {
-                for (map_x = column = 0; column < WMAP_GRID_SIZE; column++)
+                for (column = 0; column < WMAP_GRID_SIZE; column++)
                 {
                     if (D_80139290[column][row].land_id == 0)
                     {
-                        packed_column = column << 0x10;
-                        g_wmap_travelers[0].target_x = map_x;
-                        g_wmap_travelers[0].position_x = map_x;
-                        map_x = WMAP_GRID_SIZE * WMAP_MAP_CELL_SIZE;
+                        g_wmap_travelers[0].position_x = g_wmap_travelers[0].target_x = column * WMAP_MAP_CELL_SIZE;
                         g_wmap_travelers[0].next_cell_x = column;
-                        column = WMAP_GRID_SIZE;
-                        row_scale = row * 3;
-                        packed_row = row << 0x10;
                         g_wmap_travelers[0].next_cell_y = row;
-                        row = WMAP_GRID_SIZE;
-                        home_y = row_scale * 0x10;
-                        home_column = packed_column >> 0x10;
-                        home_row = packed_row >> 0x10;
-                        g_wmap_travelers[0].target_y = home_y;
-                        g_wmap_travelers[0].position_y = home_y;
-                        g_wmap_travelers[0].destination_x = home_column;
-                        g_wmap_travelers[0].cell_x = home_column;
-                        g_wmap_travelers[0].destination_y = home_row;
-                        g_wmap_travelers[0].cell_y = home_row;
+                        g_wmap_travelers[0].position_y = g_wmap_travelers[0].target_y = row * WMAP_MAP_CELL_SIZE;
+                        g_wmap_travelers[0].cell_x = g_wmap_travelers[0].destination_x = g_wmap_travelers[0].next_cell_x;
+                        g_wmap_travelers[0].cell_y = g_wmap_travelers[0].destination_y = g_wmap_travelers[0].next_cell_y;
                         g_wmap_travelers[0].moving = 0;
+                        column = WMAP_GRID_SIZE;
+                        row = WMAP_GRID_SIZE;
                     }
-                    map_x += WMAP_MAP_CELL_SIZE;
                 }
             }
             g_wmap_script_word += 2;
@@ -1534,12 +1519,12 @@ s32 wmap_run_loop(void)
         D_800D0A08[6] = 0x20;
         D_800D0A08[5] = 0x20;
         D_800D0A08[4] = 0x20;
-        PutDispEnv(D_801295BC);
-        PutDrawEnv(D_801295BC - 0x5C);
+        PutDispEnv(&g_wmap_frames[0].disp_env);
+        PutDrawEnv(&g_wmap_frames[0].draw_env);
         SetDispMask(1);
         DrawPrim(D_800D0A08);
-        PutDispEnv(D_801295BC + 0x7E40);
-        PutDrawEnv(D_801295BC + 0x7DE4);
+        PutDispEnv(&g_wmap_frames[1].disp_env);
+        PutDrawEnv(&g_wmap_frames[1].draw_env);
         DrawPrim(D_800D0A08);
     }
     /* Load the sound banks before starting the world-map song. */
@@ -1563,11 +1548,11 @@ s32 wmap_run_loop(void)
         D_800D0A08[6] = 0x40;
         D_800D0A08[5] = 0x40;
         D_800D0A08[4] = 0x40;
-        PutDispEnv(D_801295BC);
-        PutDrawEnv(D_801295BC - 0x5C);
+        PutDispEnv(&g_wmap_frames[0].disp_env);
+        PutDrawEnv(&g_wmap_frames[0].draw_env);
         DrawPrim(D_800D0A08);
-        PutDispEnv(D_801295BC + 0x7E40);
-        PutDrawEnv(D_801295BC + 0x7DE4);
+        PutDispEnv(&g_wmap_frames[1].disp_env);
+        PutDrawEnv(&g_wmap_frames[1].draw_env);
         DrawPrim(D_800D0A08);
     }
     if (D_801ADB90 != 0)
@@ -1678,11 +1663,11 @@ s32 wmap_run_loop(void)
             D_800D0A08[6] = 0x80;
             D_800D0A08[5] = 0x80;
             D_800D0A08[4] = 0x80;
-            PutDispEnv(D_801295BC);
-            PutDrawEnv(D_801295BC - 0x5C);
+            PutDispEnv(&g_wmap_frames[0].disp_env);
+            PutDrawEnv(&g_wmap_frames[0].draw_env);
             DrawPrim(D_800D0A08);
-            PutDispEnv(D_801295BC + 0x7E40);
-            PutDrawEnv(D_801295BC + 0x7DE4);
+            PutDispEnv(&g_wmap_frames[1].disp_env);
+            PutDrawEnv(&g_wmap_frames[1].draw_env);
             DrawPrim(D_800D0A08);
         }
         wmap_install_callback(&wmap_update_map_view);
@@ -1719,9 +1704,9 @@ s32 wmap_run_loop(void)
                 }
             }
         }
-        cdrom_queue_read(0x10C7, &D_801ADBA0);
+        cdrom_queue_read(0x10C7, D_801ADBA0);
         /* Slot 16 holds the resident land 31 image read above. */
-        g_wmap_land_image_cache[16].animation_data = (u8*)&D_801ADBA0;
+        g_wmap_land_image_cache[16].animation_data = D_801ADBA0;
         g_wmap_land_image_cache[16].slot_index = 0x10;
         g_wmap_land_image_cache[16].resource_id = 0x1F;
         g_wmap_land_image_cache[16].loaded_frame = 0xFFFF;
@@ -1792,8 +1777,8 @@ s32 wmap_run_loop(void)
         }
         g_wmap_view.vx = (s32)(scroll_cell_x * WMAP_MAP_CELL_SIZE);
         g_wmap_view.vy = (s32)(scroll_cell_y * WMAP_MAP_CELL_SIZE);
-        g_wmap_travelers[0].next_cell_x = (u16)g_wmap_travelers[0].cell_x;
-        g_wmap_travelers[0].next_cell_y = (u16)g_wmap_travelers[0].cell_y;
+        g_wmap_travelers[0].next_cell_x = g_wmap_travelers[0].cell_x;
+        g_wmap_travelers[0].next_cell_y = g_wmap_travelers[0].cell_y;
         traveler_x = (g_wmap_travelers[0].cell_x - 1) * WMAP_TRAVEL_CELL_SIZE;
         g_wmap_travelers[0].position_x = traveler_x;
         g_wmap_travelers[0].target_x = traveler_x;
@@ -1892,8 +1877,8 @@ s32 wmap_run_loop(void)
             }
             if (D_8011CF74 < 0x28)
             {
-                g_wmap_buttons_repeat &= 0xF000;
-                g_wmap_buttons_held &= 0xF000;
+                g_wmap_buttons_repeat &= WMAP_DPAD_MASK;
+                g_wmap_buttons_held &= WMAP_DPAD_MASK;
             }
             if (g_wmap_input_script != 0)
             {
@@ -1916,7 +1901,7 @@ s32 wmap_run_loop(void)
                     }
                 }
             }
-            controller_buttons = M2C_FIELD(D_800D0454, u16*, 0xB4);
+            controller_buttons = D_800D0454[1].published_sample.repeat_buttons;
             if ((controller_buttons >> 8) & 1)
             {
                 D_8011D0E4 = 1;
@@ -1927,7 +1912,7 @@ s32 wmap_run_loop(void)
             }
             raw_buttons = D_800D0454->published_sample.held_buttons;
             raw_buttons = (raw_buttons >> 8) | (raw_buttons << 8);
-            if ((raw_buttons & 0x90F) == 0x90F)
+            if ((raw_buttons & WMAP_RESET_CHORD) == WMAP_RESET_CHORD)
             {
                 return 2;
             }
@@ -1970,9 +1955,9 @@ s32 wmap_run_loop(void)
                     StoreImage(&g_wmap_current_frame->disp_env.disp, D_800DCF18);
                     MoveImage(&g_wmap_current_frame->disp_env.disp, g_wmap_current_frame->draw_env.tw.x, g_wmap_current_frame->draw_env.tw.y);
                     DrawSync(0);
-                    for (pixel_index = 0; pixel_index < 0x12C00; pixel_index++)
+                    for (pixel_index = 0; pixel_index < SCREEN_WIDTH * SCREEN_HEIGHT; pixel_index++)
                     {
-                        screen_pixel[pixel_index] |= 0x8000;
+                        screen_pixel[pixel_index] |= WMAP_PIXEL_MASK_BIT;
                     }
                     /* Reload the captured frame into the 320x240 buffer at x = 320. */
                     rects[1] = (RECT){SCREEN_WIDTH, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
@@ -2145,7 +2130,7 @@ s32 wmap_run_loop(void)
                 {
                     g_wmap_cd_error = 5;
                 }
-                *(u32*)&error_quad->r0 = 0x808080;
+                SET_BGR0_PACKED(error_quad, GPU_TINT_NEUTRAL);
                 error_quad->x2 = 0x64;
                 error_quad->x0 = 0x64;
                 error_quad->x3 = 0xE4;
