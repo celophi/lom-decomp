@@ -237,8 +237,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -517,8 +517,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -800,8 +800,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -1090,8 +1090,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -1380,8 +1380,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -1664,8 +1664,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -1948,8 +1948,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -2232,8 +2232,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -2519,8 +2519,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -2820,8 +2820,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -3121,8 +3121,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -3422,8 +3422,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -3723,8 +3723,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -4024,8 +4024,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -4325,8 +4325,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -4624,8 +4624,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -4926,8 +4926,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -5241,8 +5241,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -5518,8 +5518,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -5785,8 +5785,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -6061,8 +6061,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -6331,8 +6331,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -6599,8 +6599,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -6878,8 +6878,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -7145,8 +7145,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -7322,10 +7322,10 @@ void func_800C23CC__for_func_800C2488(void) __asm__("func_800C23CC");
 
     D_8013B208 = 1;
     D_801ADAE0 = 1;
-    func_8006D0F0(0x1F, &D_800DCEF8, &D_800DCF00);
+    wmap_find_land_cell(0x1F, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = ((D_800DCEF8 - 1) * 0x30) - g_wmap_view.field_00;
-    g_wmap_scroll_remaining_y = ((D_800DCF00 - 1) * 0x30) - g_wmap_view.field_04;
+    g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * 0x30) - g_wmap_view.field_00;
+    g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * 0x30) - g_wmap_view.field_04;
     D_801B3250++;
     func_800C2548__for_func_800C2488();
 }
@@ -7418,8 +7418,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -7688,8 +7688,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -7957,8 +7957,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -8226,8 +8226,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -8494,8 +8494,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -8763,8 +8763,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -9034,8 +9034,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -9303,8 +9303,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -9571,8 +9571,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -9840,8 +9840,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -10108,8 +10108,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -10377,8 +10377,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -10645,8 +10645,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -10914,8 +10914,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -11182,8 +11182,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -11451,8 +11451,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -11719,8 +11719,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -11988,8 +11988,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -12256,8 +12256,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -12525,8 +12525,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -12794,8 +12794,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -13063,8 +13063,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -13331,8 +13331,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -13600,8 +13600,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -13869,8 +13869,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -14140,8 +14140,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -14409,8 +14409,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -14677,8 +14677,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -14946,8 +14946,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -15215,8 +15215,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -15483,8 +15483,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -15752,8 +15752,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -16020,8 +16020,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -16289,8 +16289,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -16556,8 +16556,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -16835,8 +16835,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -17102,8 +17102,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -17373,8 +17373,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -17639,8 +17639,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -17918,8 +17918,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -18185,8 +18185,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -18456,8 +18456,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -18722,8 +18722,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -19001,8 +19001,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -19268,8 +19268,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -19544,8 +19544,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -19815,8 +19815,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -20085,8 +20085,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -20356,8 +20356,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -20622,8 +20622,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -20901,8 +20901,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -21168,8 +21168,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -21446,8 +21446,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -21717,8 +21717,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -21987,8 +21987,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -22258,8 +22258,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -22524,8 +22524,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -22803,8 +22803,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -23070,8 +23070,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -23346,8 +23346,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -23617,8 +23617,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -23887,8 +23887,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -24158,8 +24158,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -24424,8 +24424,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -24703,8 +24703,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -24970,8 +24970,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -25241,8 +25241,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -25509,8 +25509,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -25775,8 +25775,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -26054,8 +26054,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -26321,8 +26321,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -26592,8 +26592,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -26860,8 +26860,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -27126,8 +27126,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -27405,8 +27405,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -27672,8 +27672,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -27953,8 +27953,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -28219,8 +28219,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -28498,8 +28498,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -28765,8 +28765,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -29046,8 +29046,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -29312,8 +29312,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -29591,8 +29591,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -29858,8 +29858,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -30139,8 +30139,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -30405,8 +30405,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -30684,8 +30684,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -30951,8 +30951,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -31232,8 +31232,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -31498,8 +31498,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -31777,8 +31777,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -32044,8 +32044,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -32325,8 +32325,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -32591,8 +32591,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -32870,8 +32870,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -33137,8 +33137,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -33418,8 +33418,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -33684,8 +33684,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -33963,8 +33963,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -34230,8 +34230,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -34511,8 +34511,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -34777,8 +34777,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -35056,8 +35056,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -35323,8 +35323,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -35593,8 +35593,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -35862,8 +35862,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -36132,8 +36132,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -36398,8 +36398,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -36677,8 +36677,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -36944,8 +36944,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -37214,8 +37214,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -37483,8 +37483,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
@@ -37753,8 +37753,8 @@ typedef struct
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];

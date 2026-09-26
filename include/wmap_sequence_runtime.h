@@ -29,7 +29,7 @@ s32 func_8006CF40(CVECTOR color, s32 scale);
 void func_8006CFA8(VECTOR* translation, SVECTOR* rotation);
 void func_8006CFE4(void* arg0, void* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5);
 void func_8006D014(void* actor, void* resource, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6);
-s32 func_8006D0F0(s32 value, s32* row_out, s32* column_out);
+s32 wmap_find_land_cell(s32 value, s32* row_out, s32* column_out);
 void func_8006D150(SVECTOR* rotation);
 void func_8006D190(void);
 s32 func_8006D244(s32 arg0);

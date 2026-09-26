@@ -5,6 +5,8 @@
 
 #define WMAP_TRAVELER_COUNT 4
 #define WMAP_TRAVEL_PATH_CAPACITY 32
+/** @brief Land reached by the special travel sequence instead of walking. */
+#define WMAP_SPECIAL_TRAVEL_LAND 24
 
 /** @brief Route coordinates written as words and consumed as signed halfwords. */
 typedef union

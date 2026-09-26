@@ -4,6 +4,7 @@
 #include "wmap_resource_support.h"
 #include "wmap_sequence_runtime.h"
 #include "wmap_sprite_render.h"
+#include "sdk/abs.h"
 #include "sdk/libgte.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
@@ -11,299 +12,405 @@
 #include "wmap_effect_resources.h"
 #include "cdrom.h"
 
-/**
- * @brief Select the animation and resource bank from the current rotation.
- * @param advance Nonzero to advance the rotation by 32 units.
- * @return Actor animation state.
- */
-WmapAnimation *func_80099754(s32 advance)
-{
-extern WmapAnimation D_800DBE3C;
+/** @brief Land the special travel starts from and the land the return trip ends on. */
+#define WMAP_TRAVEL_START_LAND 2
+#define WMAP_RETURN_LAND 0
+
+/** @brief Map distance of one land cell. */
+#define WMAP_CELL_SPACING 48
+
+/** @brief Vehicle heading: 12-bit angle, turn speed, and the headings the sequences wait for. */
+#define WMAP_HEADING_MASK 0xFFF
+#define WMAP_HEADING_TURN_SPEED 32
+#define WMAP_HEADING_DEPARTURE 0x200
+#define WMAP_HEADING_CRUISE 0x400
+#define WMAP_HEADING_LANDING 0x3E0
+
+/** @brief Vehicle sprite: texture, draw variant, ordering-table depths and flap sound. */
+#define WMAP_VEHICLE_TEXTURE 40
+#define WMAP_VEHICLE_VARIANT 2
+#define WMAP_VEHICLE_OT_FRONT 50
+#define WMAP_VEHICLE_OT_BEHIND 61
+#define WMAP_VEHICLE_OT_START 60
+#define WMAP_VEHICLE_OT_FLIGHT 59
+#define WMAP_VEHICLE_SOUND_FLAP 51
+#define WMAP_VEHICLE_SOUND_PAN 127
+#define WMAP_VEHICLE_SCALE_MAX 15
+#define WMAP_VEHICLE_SHADE_NEUTRAL 128
+
+/** @brief Vehicle orbit: start radius and height, their limits, and the climb step. */
+#define WMAP_VEHICLE_START_RADIUS 200
+#define WMAP_VEHICLE_START_HEIGHT 10
+#define WMAP_VEHICLE_MAX_RADIUS 480
+#define WMAP_VEHICLE_MAX_HEIGHT 100
+#define WMAP_VEHICLE_RADIUS_STEP 4
+#define WMAP_VEHICLE_LOW_HEIGHT 40
+
+/** @brief Size of one vehicle animation bank in D_8011D538 and the CD files that fill it. */
+#define WMAP_VEHICLE_BANK_SIZE 0x2000
+#define WMAP_VEHICLE_BANK_FILE 0x1145
+#define WMAP_VEHICLE_BANK_FILE_2 0x1146
+#define WMAP_VEHICLE_TEXTURE_FILE 0x1147
+#define WMAP_VEHICLE_PALETTE_FILE 0x1148
+
+/** @brief Sequence timers, in frames. */
+#define WMAP_VEHICLE_CLIMB_FRAMES 60
+#define WMAP_VEHICLE_TURN_FRAMES 300
+#define WMAP_VEHICLE_WAIT_FRAMES 120
+
+/** @brief Step counts of the two sequences. */
+#define WMAP_SPECIAL_TRAVEL_STEPS 20
+#define WMAP_SPECIAL_RETURN_STEPS 14
+
+/** @brief Route directions (dx + 1) + (dy + 1) * 3; the center value 4 is unused. */
+#define WMAP_ROUTE_NONE (-1)
+#define WMAP_ROUTE_UP 1
+#define WMAP_ROUTE_LEFT 3
+#define WMAP_ROUTE_RIGHT 5
+#define WMAP_ROUTE_DOWN 7
+
+/** @brief Element 0 of the D_801AFBD0 motion table while it drives the travel vehicle. */
 typedef struct
 {
-    s16 field_00;
-    u16 angle;
-} WmapRotation;
+    s16 active;
+    s16 heading;
+    s32 ot_override;
+    s32 radius;
+    s16 unknown_0c;
+    s16 height;
+    s16 ot_index;
+    s16 unknown_12;
+} WmapVehicleMotion;
 
-extern WmapRotation D_801AFBD0;
-extern s16 D_801AFBDE;
-extern s16 D_801AFBE0;
+/** @brief Animation resource slot of a sprite actor. */
+typedef struct
+{
+    s32 unknown_00;
+    u8* data;
+} WmapAnimationSlot;
+
+/** @brief GTE screen coordinate, read as one packed word or as two halves. */
+typedef union
+{
+    s32 packed;
+    struct
+    {
+        s16 x;
+        s16 y;
+    } point;
+} WmapScreenPosition;
+
+/** @brief Map scroll position and projection scale (see wmap_view_effects.c). */
+typedef struct
+{
+    s32 x;
+    s32 y;
+    s32 projection_scale;
+    s32 unknown_0c;
+} WmapView;
+
+/** @brief First word of a map cell: the land placed there. */
+typedef struct
+{
+    s32 land_id;
+    u8 unknown_04[36];
+} WmapLandCell;
+
+extern WmapSpriteActor g_wmap_vehicle_actor;
+extern WmapVehicleMotion D_801AFBD0;
+extern WmapAnimationSlot g_wmap_vehicle_animation;
 extern u8 D_8011D538[];
-extern u8 D_8011F538[];
-extern u8 *D_8013A184;
-extern s32 D_801B2C48;
-
-    s32 rotated_angle;
-    s32 value;
-    WmapAnimation *actor;
-
-    actor = &D_800DBE3C;
-    if (advance != 0)
-    {
-        WmapRotation* rotation = &D_801AFBD0;
-        s32 angle = rotation->angle + 32;
-        angle &= 0xFFF;
-        value = rotation->angle = angle;
-    }
-    else
-    {
-        WmapRotation* rotation = &D_801AFBD0;
-        s32 angle = rotation->angle;
-        angle &= 0xFFF;
-        value = rotation->angle = angle;
-    }
-    rotated_angle = value + 0x200;
-    actor->sequence = (rotated_angle >> 9) & 3;
-    if (rotated_angle & 0x800)
-    {
-        if (D_801B2C48 == 0)
-        {
-            actor->previous_sequence = -1;
-        }
-        D_8013A184 = D_8011F538;
-        D_801B2C48 = 1;
-    }
-    else
-    {
-        if (D_801B2C48 != 0)
-        {
-            actor->previous_sequence = -1;
-        }
-        D_8013A184 = D_8011D538;
-        D_801B2C48 = 0;
-    }
-    if ((u32)(value - 0x401) < 0x7FFU && D_801AFBDE < 40)
-    {
-        value = 61;
-    }
-    else
-    {
-        value = 50;
-    }
-    D_801AFBE0 = value;
-    return actor;
-}
-
-/** @brief World-map step: reset the actor and its slot, register a callback, advance. */
-void func_80099848(void)
-{
-/** @brief World-map actor record reset when this step spawns it. */
-typedef struct
-{
-    u8 pad_00[2];
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[2];
-} WmapActor;
-
-/** @brief World-map slot record populated when spawning this actor. */
-typedef struct
-{
-    s16 field_00;
-    s16 field_02;
-    s32 field_04;
-    s32 field_08;
-    u8 pad_0C[2];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[2];
-} WmapSlotB;
-
-extern WmapActor D_800DBE3C;
+extern s32 g_wmap_vehicle_bank_flipped;
+extern MATRIX D_8011D0E8;
+extern s32 D_80139224;
+extern WmapScreenPosition g_wmap_vehicle_screen_position;
+extern s32 D_8011CF74;
 extern u8 D_80182E40[];
 extern u8 D_8018B240[];
-extern void *D_8013A184;
-extern s32 D_8011D538;
-extern WmapSlotB D_801AFBD0[];
-extern s32 D_801B2C4C;
-extern s32 D_801B2C50;
-extern void func_800999D0__for_func_80099848(void) __asm__("func_800999D0");
-extern void func_80099918__for_func_80099848(void) __asm__("func_80099918");
+extern WmapSpriteActor D_800D9268[];
 
-    WmapActor *actor = &D_800DBE3C;
+extern s16 g_wmap_route_headings[];
+extern s32 g_wmap_vehicle_route;
+extern s32 g_wmap_vehicle_phase;
+extern s32 g_wmap_vehicle_flying;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
+extern s32 g_wmap_vehicle_target_x;
+extern s32 g_wmap_vehicle_target_y;
+extern WmapLandCell D_80139290[][6];
+
+extern s32 g_wmap_view_scroll_mode;
+extern s32 g_wmap_scroll_remaining_x;
+extern s32 g_wmap_scroll_remaining_y;
+extern WmapView g_wmap_view;
+extern WmapView g_wmap_saved_view;
+extern s32 D_800DCEC0;
+extern s32 D_8013B208;
+extern s32 D_8013B288;
+extern s32 D_8013B294;
+
+extern u32 g_wmap_special_travel_step;
+extern s32 g_wmap_special_travel_timer;
+extern void (*g_wmap_special_travel_steps[])(void);
+extern u32 g_wmap_special_return_step;
+extern s32 g_wmap_special_return_timer;
+extern void (*g_wmap_special_return_steps[])(void);
+
+static s32 wmap_start_vehicle_flight(s32 initialize);
+static s32 wmap_fly_vehicle(s32 initialize);
+static s32 wmap_fly_vehicle_first_leg(s32 initialize);
+
+/* Sequence steps: called through the step tables and by the step before them. */
+void wmap_special_travel_spawn_vehicle(void);
+void wmap_special_travel_climb_vehicle(void);
+void wmap_special_return_prepare(void);
+void wmap_special_return_spawn_vehicle(void);
+void wmap_special_return_climb_vehicle(void);
+void wmap_special_travel_reset(void);
+void wmap_special_travel_prepare(void);
+void wmap_special_travel_wait(void);
+void wmap_special_travel_scroll_to_start(void);
+void wmap_special_travel_wait_scroll(void);
+void wmap_special_travel_fly_to_party(void);
+void wmap_special_travel_wait_party(void);
+void wmap_special_travel_start_turn(void);
+void wmap_special_travel_turn(void);
+void wmap_special_travel_fly_to_land(void);
+void wmap_special_travel_wait_land(void);
+void wmap_special_travel_start_cruise(void);
+void wmap_special_travel_cruise(void);
+void wmap_special_travel_start_landing(void);
+void wmap_special_travel_wait_landing(void);
+void wmap_special_travel_stop_vehicle(void);
+void wmap_special_travel_fly_away(void);
+void wmap_special_travel_finish(void);
+void wmap_special_return_reset(void);
+void wmap_special_return_wait_scroll(void);
+void wmap_special_return_fly_home(void);
+void wmap_special_return_wait_home(void);
+void wmap_special_return_start_cruise(void);
+void wmap_special_return_cruise(void);
+void wmap_special_return_start_landing(void);
+void wmap_special_return_wait_landing(void);
+void wmap_special_return_stop_vehicle(void);
+void wmap_special_return_fly_away(void);
+void wmap_special_return_finish(void);
+
+/** @brief Lock input, save the map view, and queue the vehicle animation banks and texture. */
+static inline void wmap_load_vehicle(void)
+{
+    D_8013B288 = 0;
+    g_wmap_input_locked = 1;
+    g_wmap_vehicle_bank_flipped = 0;
+    D_8013B208 = 1;
+    func_8005FF88(-1);
+    D_800DCEC0 = 0;
+    g_wmap_saved_view = g_wmap_view;
+    cdrom_queue_read(WMAP_VEHICLE_BANK_FILE, D_8011D538);
+    cdrom_queue_read(WMAP_VEHICLE_BANK_FILE_2, D_8011D538 + WMAP_VEHICLE_BANK_SIZE);
+    func_800A8AA8(WMAP_VEHICLE_TEXTURE_FILE);
+    func_800A8AF0(WMAP_VEHICLE_PALETTE_FILE);
+}
+
+/** @brief Upload the vehicle resources, reset its sprite and orbit, and start drawing it. */
+static inline void wmap_place_vehicle(void)
+{
+    WmapSpriteActor* actor = &g_wmap_vehicle_actor;
 
     cdrom_wait_queue_empty();
     func_800651B4(D_80182E40);
     func_800651B4(D_8018B240);
-    D_8013A184 = &D_8011D538;
-    actor->field_10 = -1;
-    actor->field_22 = 0x80;
-    actor->field_24 = 0x80;
-    actor->field_02 = 0;
-    actor->field_06 = 0;
-    actor->field_0E = 0;
-    actor->field_26 = 0;
-    D_801AFBD0[0].field_00 = 1;
-    D_801AFBD0[0].field_08 = 0xC8;
-    D_801AFBD0[0].field_0E = 0xA;
-    D_801AFBD0[0].field_02 = 0;
-    D_801AFBD0[0].field_10 = 0x3C;
-    D_801AFBD0[0].field_04 = 0;
-    wmap_install_callback(func_800999D0__for_func_80099848);
-    D_801B2C50 = 0x3C;
-    D_801B2C4C += 1;
-    func_80099918__for_func_80099848();
+    g_wmap_vehicle_animation.data = D_8011D538;
+    actor->previous_sequence = -1;
+    actor->target_shade = WMAP_VEHICLE_SHADE_NEUTRAL;
+    actor->shade = WMAP_VEHICLE_SHADE_NEUTRAL;
+    actor->unknown_02 = 0;
+    actor->scale_index = 0;
+    actor->sequence = 0;
+    actor->shade_step = 0;
+    D_801AFBD0.active = 1;
+    D_801AFBD0.radius = WMAP_VEHICLE_START_RADIUS;
+    D_801AFBD0.height = WMAP_VEHICLE_START_HEIGHT;
+    D_801AFBD0.heading = 0;
+    D_801AFBD0.ot_index = WMAP_VEHICLE_OT_START;
+    D_801AFBD0.ot_override = 0;
+    wmap_install_callback(wmap_draw_vehicle);
 }
 
-/**
- * @brief World-map actor tick: advance timers, bump a wave index, and expire the step.
- */
-void func_80099918(void)
+/** @brief Turn the vehicle while it climbs away from the center and grows. */
+static inline void wmap_climb_vehicle(void)
 {
-extern s8 *func_80099754__for_func_80099918(s32 arg0) __asm__("func_80099754");
-extern u8 D_801AFBD0[];
-extern s32 D_8011CF74;
-extern s32 D_801B2C4C;
-extern s32 D_801B2C50;
+    WmapSpriteActor* actor;
 
-    s8 *obj;
-    u8 *base;
-
-    obj = func_80099754__for_func_80099918(1);
-    base = D_801AFBD0;
-    if (*(s16 *)(base + 0xE) < 100)
+    actor = wmap_turn_vehicle(1);
+    if (D_801AFBD0.height < WMAP_VEHICLE_MAX_HEIGHT)
     {
-        *(s16 *)(base + 0xE) += 1;
+        D_801AFBD0.height += 1;
     }
-    if (*(s32 *)(base + 0x8) < 0x1E0)
+    if (D_801AFBD0.radius < WMAP_VEHICLE_MAX_RADIUS)
     {
-        *(s32 *)(base + 0x8) += 4;
+        D_801AFBD0.radius += WMAP_VEHICLE_RADIUS_STEP;
     }
     if ((D_8011CF74 & 3) == 0)
     {
-        if (obj[6] < 0xF)
+        if (actor->scale_index < WMAP_VEHICLE_SCALE_MAX)
         {
-            obj[6] += 1;
+            actor->scale_index += 1;
         }
-    }
-    if (--D_801B2C50 == 0)
-    {
-        D_801B2C4C += 1;
     }
 }
 
-/** @brief Project and draw the effect actor, playing sounds at selected frames.
- * @return Actor motion state.
+/**
+ * @brief Update the vehicle heading and pick its facing, animation bank and depth.
+ * @param advance Nonzero turns the vehicle by one step first.
+ * @return The vehicle sprite actor.
+ * @note Headings from 0x800 use the mirrored second animation bank.
  */
-s16 func_800999D0(void)
+WmapSpriteActor* wmap_turn_vehicle(s32 advance)
 {
-/** @brief World-map actor configuration. */
-typedef struct
+    s32 facing_angle;
+    s32 heading;
+    WmapSpriteActor* actor;
+
+    actor = &g_wmap_vehicle_actor;
+    /* The heading is read unsigned here (lhu); the other users read it signed. */
+    if (advance != 0)
+    {
+        WmapVehicleMotion* motion = &D_801AFBD0;
+        s32 angle = (u16)motion->heading + WMAP_HEADING_TURN_SPEED;
+
+        angle &= WMAP_HEADING_MASK;
+        heading = motion->heading = angle;
+    }
+    else
+    {
+        WmapVehicleMotion* motion = &D_801AFBD0;
+        s32 angle = (u16)motion->heading;
+
+        angle &= WMAP_HEADING_MASK;
+        heading = motion->heading = angle;
+    }
+    facing_angle = heading + 0x200;
+    actor->sequence = (facing_angle >> 9) & 3;
+    if (facing_angle & 0x800)
+    {
+        if (g_wmap_vehicle_bank_flipped == 0)
+        {
+            actor->previous_sequence = -1;
+        }
+        g_wmap_vehicle_animation.data = &D_8011D538[WMAP_VEHICLE_BANK_SIZE];
+        g_wmap_vehicle_bank_flipped = 1;
+    }
+    else
+    {
+        if (g_wmap_vehicle_bank_flipped != 0)
+        {
+            actor->previous_sequence = -1;
+        }
+        g_wmap_vehicle_animation.data = D_8011D538;
+        g_wmap_vehicle_bank_flipped = 0;
+    }
+    if ((u32)(heading - 0x401) < 0x7FFU && D_801AFBD0.height < WMAP_VEHICLE_LOW_HEIGHT)
+    {
+        heading = WMAP_VEHICLE_OT_BEHIND;
+    }
+    else
+    {
+        heading = WMAP_VEHICLE_OT_FRONT;
+    }
+    D_801AFBD0.ot_index = heading;
+    return actor;
+}
+
+/** @brief Special travel step 5: load the vehicle, place it on its orbit and start drawing it. */
+void wmap_special_travel_spawn_vehicle(void)
 {
-    s16 field_00;
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[4];
-} WmapConfigA;
+    wmap_place_vehicle();
+    g_wmap_special_travel_timer = WMAP_VEHICLE_CLIMB_FRAMES;
+    g_wmap_special_travel_step += 1;
+    wmap_special_travel_climb_vehicle();
+}
 
-/** @brief Per-actor motion and animation parameters. */
-typedef struct
+/** @brief Special travel step 6: turn the vehicle while it climbs and grows, until the timer ends. */
+void wmap_special_travel_climb_vehicle(void)
 {
-    s16 state;
-    s16 angle;
-    s32 x;
-    s32 z;
-    s16 scale;
-    s16 field_0E;
-    s16 field_10;
-    s16 field_12;
-} WmapMotion;
+    wmap_climb_vehicle();
+    if (--g_wmap_special_travel_timer == 0)
+    {
+        g_wmap_special_travel_step += 1;
+    }
+}
 
-/** @brief Animation resource slot. */
-typedef struct
+/**
+ * @brief Project and draw the vehicle on its orbit, playing the flap sound on wing frames.
+ * @param initialize Sequence callback flag; unused.
+ * @return Nonzero while the vehicle is active, so the callback stays installed.
+ */
+s32 wmap_draw_vehicle(s32 initialize)
 {
-    s32 field_00;
-    void *resource;
-} WmapResource;
-
-extern WmapConfigA D_800DBE3C;
-extern s32 D_8011CF54;
-extern MATRIX D_8011D0E8;
-extern s32 D_80139224;
-extern WmapResource D_8013A180;
-extern WmapMotion D_801AFBD0;
-
     SVECTOR position;
     s32 angle;
-    WmapConfigA *actor = &D_800DBE3C;
+    WmapSpriteActor* actor = &g_wmap_vehicle_actor;
     s32 animation_frame;
 
-    angle = D_801AFBD0.angle;
+    angle = D_801AFBD0.heading;
     PushMatrix();
     SetRotMatrix(&D_8011D0E8);
     SetTransMatrix(&D_8011D0E8);
-    position.vx = ((D_801AFBD0.z >> 4) * (ccos(angle) >> 4)) >> 6;
-    position.vy = ((D_801AFBD0.z >> 4) * (csin(angle) >> 4)) >> 6;
-    position.vz = D_801AFBD0.field_0E;
+    position.vx = ((D_801AFBD0.radius >> 4) * (ccos(angle) >> 4)) >> 6;
+    position.vy = ((D_801AFBD0.radius >> 4) * (csin(angle) >> 4)) >> 6;
+    position.vz = D_801AFBD0.height;
     gte_ldv0(&position);
     gte_rtps();
-    animation_frame = wmap_step_actor_animation(actor, &D_8013A180);
+    animation_frame = wmap_step_actor_animation(actor, &g_wmap_vehicle_animation);
     if (D_80139224 != 0)
     {
         if (animation_frame == 12 || animation_frame == 22 || animation_frame == 0)
         {
-            wmap_play_sound(51, 127);
+            wmap_play_sound(WMAP_VEHICLE_SOUND_FLAP, WMAP_VEHICLE_SOUND_PAN);
         }
     }
-    gte_stsxy(&D_8011CF54);
-    if (D_801AFBD0.x != 0)
+    gte_stsxy(&g_wmap_vehicle_screen_position);
+    if (D_801AFBD0.ot_override != 0)
     {
-        wmap_draw_actor_sprite(actor, D_8011CF54, 40, D_801AFBD0.x, 2);
+        wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, D_801AFBD0.ot_override, WMAP_VEHICLE_VARIANT);
     }
     else
     {
-        wmap_draw_actor_sprite(actor, D_8011CF54, 40, D_801AFBD0.field_10, 2);
+        wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, D_801AFBD0.ot_index, WMAP_VEHICLE_VARIANT);
     }
     PopMatrix();
-    return D_801AFBD0.state;
+    return D_801AFBD0.active;
 }
 
-s32 func_80099B50(s32 arg3)
+/**
+ * @brief Plan the flight from the vehicle cell to the target cell and install its callback.
+ * @param initialize Sequence callback flag; unused.
+ * @return Always 0: the callback only runs once.
+ * @note A straight or exactly diagonal route flies directly; any other route first flies
+ *       the straight part that makes the rest diagonal.
+ */
+static s32 wmap_start_vehicle_flight(s32 initialize)
 {
-    extern s32 D_800D9164;
-    extern s32 D_800DCED8;
-    extern s32 D_800DCEE4;
-    extern s32 D_800DCEF8;
-    extern s32 D_800DCF00;
-    extern s32 g_wmap_view_scroll_mode;
-    extern s32 g_wmap_scroll_remaining_x;
-    extern s32 g_wmap_scroll_remaining_y;
-    extern s32 D_8019D240;
     s32 dx;
     s32 dy;
-    s32 direction_y;
+    s32 delta;
     s32 difference;
     s32 sign;
-    s32 tail_dy;
-    s32 tail_magnitude_x;
-    s32 tail_magnitude_y;
+    s32 leg_dy;
+    s32 magnitude_x;
+    s32 magnitude_y;
 
-    D_8019D240 = -1;
-    D_800D9164 = 0;
-    if ((D_800DCEF8 == D_800DCED8 && D_800DCF00 != D_800DCEE4) ||
-    (D_800DCEF8 != D_800DCED8 && D_800DCF00 == D_800DCEE4))
+    g_wmap_vehicle_route = WMAP_ROUTE_NONE;
+    g_wmap_vehicle_phase = 0;
+    if ((g_wmap_vehicle_cell_x == g_wmap_vehicle_target_x && g_wmap_vehicle_cell_y != g_wmap_vehicle_target_y) ||
+        (g_wmap_vehicle_cell_x != g_wmap_vehicle_target_x && g_wmap_vehicle_cell_y == g_wmap_vehicle_target_y))
     {
-        dx = D_800DCED8 - D_800DCEF8;
-        dy = D_800DCEE4 - D_800DCF00;
+        dx = g_wmap_vehicle_target_x - g_wmap_vehicle_cell_x;
+        dy = g_wmap_vehicle_target_y - g_wmap_vehicle_cell_y;
         if (dx != 0)
         {
-            dx = dx / __builtin_abs(dx) + 1;
+            dx = dx / abs(dx) + 1;
         }
         else
         {
@@ -311,24 +418,24 @@ s32 func_80099B50(s32 arg3)
         }
         if (dy != 0)
         {
-            dy = dy / __builtin_abs(dy) + 1;
+            dy = dy / abs(dy) + 1;
         }
         else
         {
             dy = 1;
         }
-        D_8019D240 = dx + dy * 3;
+        g_wmap_vehicle_route = dx + dy * 3;
     }
     else
     {
-        direction_y = D_800DCED8 - D_800DCEF8;
-        dy = D_800DCEE4 - D_800DCF00;
-        if (__builtin_abs(direction_y) == __builtin_abs(dy))
+        delta = g_wmap_vehicle_target_x - g_wmap_vehicle_cell_x;
+        dy = g_wmap_vehicle_target_y - g_wmap_vehicle_cell_y;
+        if (abs(delta) == abs(dy))
         {
-            dx = direction_y;
+            dx = delta;
             if (dx != 0)
             {
-                dx = dx / __builtin_abs(dx) + 1;
+                dx = dx / abs(dx) + 1;
             }
             else
             {
@@ -336,27 +443,27 @@ s32 func_80099B50(s32 arg3)
             }
             if (dy != 0)
             {
-                dy = dy / __builtin_abs(dy) + 1;
+                dy = dy / abs(dy) + 1;
             }
             else
             {
                 dy = 1;
             }
-            D_8019D240 = dx + dy * 3;
+            g_wmap_vehicle_route = dx + dy * 3;
         }
     }
-    if (D_8019D240 != -1)
+    if (g_wmap_vehicle_route != WMAP_ROUTE_NONE)
     {
         g_wmap_view_scroll_mode = 2;
-        wmap_install_callback(func_80099E84);
+        wmap_install_callback(wmap_fly_vehicle);
     }
     else
     {
-        dx = D_800DCED8 - D_800DCEF8;
-        tail_dy = D_800DCEE4 - D_800DCF00;
-        tail_magnitude_x = __builtin_abs(dx);
-        tail_magnitude_y = __builtin_abs(tail_dy);
-        difference = tail_magnitude_x - tail_magnitude_y;
+        dx = g_wmap_vehicle_target_x - g_wmap_vehicle_cell_x;
+        leg_dy = g_wmap_vehicle_target_y - g_wmap_vehicle_cell_y;
+        magnitude_x = abs(dx);
+        magnitude_y = abs(leg_dy);
+        difference = magnitude_x - magnitude_y;
         if (difference > 0)
         {
             sign = 0;
@@ -370,25 +477,26 @@ s32 func_80099B50(s32 arg3)
             }
             difference = difference * sign;
             g_wmap_scroll_remaining_y = 0;
-            g_wmap_scroll_remaining_x = difference * 48;
-            D_800DCEF8 += difference;
+            g_wmap_scroll_remaining_x = difference * WMAP_CELL_SPACING;
+            g_wmap_vehicle_cell_x += difference;
             if (dx > 0)
             {
-                D_8019D240 = 5;
+                g_wmap_vehicle_route = WMAP_ROUTE_RIGHT;
             }
             else
             {
-                D_8019D240 = 3;
+                g_wmap_vehicle_route = WMAP_ROUTE_LEFT;
             }
         }
         else
         {
-            direction_y = D_800DCF00 - D_800DCEE4;
+            delta = g_wmap_vehicle_cell_y - g_wmap_vehicle_target_y;
             sign = 0;
-            if (direction_y != 0)
+            if (delta != 0)
             {
                 sign = -1;
-                dx = direction_y > 0;
+                /* dx is reused for the test; a separate temporary changes the register allocation. */
+                dx = delta > 0;
                 if (dx)
                 {
                     sign = 1;
@@ -396,51 +504,38 @@ s32 func_80099B50(s32 arg3)
             }
             difference = difference * sign;
             g_wmap_scroll_remaining_x = 0;
-            g_wmap_scroll_remaining_y = difference * 48;
-            D_800DCF00 += difference;
-            if (tail_dy > 0)
+            g_wmap_scroll_remaining_y = difference * WMAP_CELL_SPACING;
+            g_wmap_vehicle_cell_y += difference;
+            if (leg_dy > 0)
             {
-                D_8019D240 = 7;
+                g_wmap_vehicle_route = WMAP_ROUTE_DOWN;
             }
             else
             {
-                D_8019D240 = 1;
+                g_wmap_vehicle_route = WMAP_ROUTE_UP;
             }
         }
-        wmap_install_callback(func_80099F98);
+        wmap_install_callback(wmap_fly_vehicle_first_leg);
     }
     return 0;
 }
 
 /**
- * @brief Start map movement after the actor faces its route, then wait for completion.
- * @return One while movement is pending, zero after arrival.
+ * @brief Turn the vehicle to its route, then scroll the map to the target cell.
+ * @param initialize Sequence callback flag; unused.
+ * @return 1 while the flight is running, 0 once the vehicle has arrived.
  */
-s32 func_80099E84(void)
+static s32 wmap_fly_vehicle(s32 initialize)
 {
-extern void func_80099754__for_func_80099E84(s32) __asm__("func_80099754");
-extern s16 D_800D6508[];
-extern s32 D_800D9164;
-extern s32 D_800DCED8;
-extern s32 D_800DCEE4;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
-extern s32 D_801398AC;
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
-extern s32 D_8019D240;
-extern s16 D_801AFBD2;
-
-    if (D_800D9164 == 0)
+    if (g_wmap_vehicle_phase == 0)
     {
-        func_80099754__for_func_80099E84(1);
-        if (D_801AFBD2 == D_800D6508[D_8019D240])
+        wmap_turn_vehicle(1);
+        if (D_801AFBD0.heading == g_wmap_route_headings[g_wmap_vehicle_route])
         {
             g_wmap_view_scroll_mode = 2;
-            g_wmap_scroll_remaining_x = (D_800DCED8 - D_800DCEF8) * 0x30;
-            g_wmap_scroll_remaining_y = (D_800DCEE4 - D_800DCF00) * 0x30;
-            D_800D9164 += 1;
+            g_wmap_scroll_remaining_x = (g_wmap_vehicle_target_x - g_wmap_vehicle_cell_x) * WMAP_CELL_SPACING;
+            g_wmap_scroll_remaining_y = (g_wmap_vehicle_target_y - g_wmap_vehicle_cell_y) * WMAP_CELL_SPACING;
+            g_wmap_vehicle_phase += 1;
         }
         return 1;
     }
@@ -448,65 +543,42 @@ extern s16 D_801AFBD2;
     {
         return 1;
     }
-    D_801398AC = 0;
-    D_800DCEF8 = D_800DCED8;
-    D_800DCF00 = D_800DCEE4;
+    g_wmap_vehicle_flying = 0;
+    g_wmap_vehicle_cell_x = g_wmap_vehicle_target_x;
+    g_wmap_vehicle_cell_y = g_wmap_vehicle_target_y;
     return 0;
 }
 
-/** @brief Wait for facing to settle, then select the next movement direction.
- * @return One while waiting, zero after scheduling movement.
+/**
+ * @brief Fly the straight first leg of a two-leg flight, then plan the diagonal rest.
+ * @param initialize Sequence callback flag; unused.
+ * @return 1 while the leg is running, 0 once the diagonal leg is installed.
  */
-s32 func_80099F98(void)
-
+static s32 wmap_fly_vehicle_first_leg(s32 initialize)
 {
-extern s16 D_800D6508[];
-extern s32 D_800D9164;
-extern s32 D_800DCED8;
-extern s32 D_800DCEE4;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
-extern s32 g_wmap_view_scroll_mode;
-extern s32 D_8019D240;
-extern s16 D_801AFBD2;
-extern s32 func_80099E84__for_func_80099F98(void) __asm__("func_80099E84");
-extern void func_80099754__for_func_80099F98(s32) __asm__("func_80099754");
-
     s32 delta_y;
     s32 delta_x;
-    s32 magnitude_x;
-    s32 magnitude_y;
 
-    if (D_800D9164 == 0)
-   
-  {
-        func_80099754__for_func_80099F98(1);
-        if (D_801AFBD2 == D_800D6508[D_8019D240])
-       
-      {
+    if (g_wmap_vehicle_phase == 0)
+    {
+        wmap_turn_vehicle(1);
+        if (D_801AFBD0.heading == g_wmap_route_headings[g_wmap_vehicle_route])
+        {
             g_wmap_view_scroll_mode = 2;
-            D_800D9164++;
+            g_wmap_vehicle_phase++;
         }
         return 1;
     }
     if (g_wmap_view_scroll_mode == 2)
-   
-  {
+    {
         return 1;
     }
-    D_800D9164 = 0;
-    delta_x = D_800DCED8 - D_800DCEF8;
-    delta_y = D_800DCEE4 - D_800DCF00;
+    g_wmap_vehicle_phase = 0;
+    delta_x = g_wmap_vehicle_target_x - g_wmap_vehicle_cell_x;
+    delta_y = g_wmap_vehicle_target_y - g_wmap_vehicle_cell_y;
     if (delta_x != 0)
     {
-        magnitude_x = delta_x;
-        if (delta_x < 0)
-        {
-            delta_x++;
-            delta_x--;
-            magnitude_x = -magnitude_x;
-        }
-        delta_x = (delta_x / magnitude_x) + 1;
+        delta_x = (delta_x / abs(delta_x)) + 1;
     }
     else
     {
@@ -514,218 +586,83 @@ extern void func_80099754__for_func_80099F98(s32) __asm__("func_80099754");
     }
     if (delta_y != 0)
     {
-        magnitude_y = delta_y;
-        if (delta_y < 0)
-        {
-            delta_y++;
-            delta_y--;
-            magnitude_y = -magnitude_y;
-        }
-        delta_y = (delta_y / magnitude_y) + 1;
+        delta_y = (delta_y / abs(delta_y)) + 1;
     }
     else
     {
         delta_y = 1;
     }
-    D_8019D240 = delta_x + (delta_y * 3);
-    wmap_install_callback(func_80099E84__for_func_80099F98);
+    g_wmap_vehicle_route = delta_x + (delta_y * 3);
+    wmap_install_callback(wmap_fly_vehicle);
     return 0;
 }
 
-/** @brief Save the projection state and set the next effect's map-relative position. */
-void func_8009A114(void)
+/** @brief Special return step 1: lock input, load the vehicle and scroll to the special land. */
+void wmap_special_return_prepare(void)
 {
-/** @brief Four-word world-map transform state. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 z;
-    s32 pad;
-} WmapTransform;
-
-extern WmapTransform g_wmap_saved_view;
-extern WmapTransform g_wmap_view;
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
-extern s32 D_800DCEC0;
-extern s32 D_801B2C48;
-extern u8 D_8011D538[];
-extern s32 g_wmap_view_scroll_mode;
-extern s32 D_8013B208;
-extern s32 D_8013B288;
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
-extern s32 D_801B2C54;
-extern void func_8009ABB0__for_func_8009A114(void) __asm__("func_8009ABB0");
-
-    D_8013B288 = 0;
-    g_wmap_input_locked = 1;
-    D_801B2C48 = 0;
-    D_8013B208 = 1;
-    func_8005FF88(-1);
-    D_800DCEC0 = 0;
-    g_wmap_saved_view = g_wmap_view;
-    cdrom_queue_read(0x1145, D_8011D538);
-    cdrom_queue_read(0x1146, D_8011D538 + 0x2000);
-    func_800A8AA8(0x1147);
-    func_800A8AF0(0x1148);
-    func_8006D0F0(24, &D_800DCEF8, &D_800DCF00);
+    wmap_load_vehicle();
+    wmap_find_land_cell(WMAP_SPECIAL_TRAVEL_LAND, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = ((D_800DCEF8 - 1) * 48) - g_wmap_view.x;
-    g_wmap_scroll_remaining_y = ((D_800DCF00 - 1) * 48) - g_wmap_view.y;
-    D_801B2C54++;
-    func_8009ABB0__for_func_8009A114();
+    g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * WMAP_CELL_SPACING) - g_wmap_view.x;
+    g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * WMAP_CELL_SPACING) - g_wmap_view.y;
+    g_wmap_special_return_step++;
+    wmap_special_return_wait_scroll();
 }
 
-/** @brief World-map step: reset the actor and its slot, register a callback, advance. */
-void func_8009A258(void)
+/** @brief Special return step 3: as wmap_special_travel_spawn_vehicle, on the return sequence. */
+void wmap_special_return_spawn_vehicle(void)
 {
-/** @brief World-map actor record reset when this step spawns it. */
-typedef struct
-{
-    u8 pad_00[2];
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[2];
-} WmapActor;
-
-/** @brief World-map slot record populated when spawning this actor. */
-typedef struct
-{
-    s16 field_00;
-    s16 field_02;
-    s32 field_04;
-    s32 field_08;
-    u8 pad_0C[2];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[2];
-} WmapSlotB;
-
-extern WmapActor D_800DBE3C;
-extern u8 D_80182E40[];
-extern u8 D_8018B240[];
-extern void *D_8013A184;
-extern s32 D_8011D538;
-extern WmapSlotB D_801AFBD0[];
-extern s32 D_801B2C54;
-extern s32 D_801B2C58;
-extern void func_800999D0__for_func_8009A258(void) __asm__("func_800999D0");
-extern void func_8009A328__for_func_8009A258(void) __asm__("func_8009A328");
-
-    WmapActor *actor = &D_800DBE3C;
-
-    cdrom_wait_queue_empty();
-    func_800651B4(D_80182E40);
-    func_800651B4(D_8018B240);
-    D_8013A184 = &D_8011D538;
-    actor->field_10 = -1;
-    actor->field_22 = 0x80;
-    actor->field_24 = 0x80;
-    actor->field_02 = 0;
-    actor->field_06 = 0;
-    actor->field_0E = 0;
-    actor->field_26 = 0;
-    D_801AFBD0[0].field_00 = 1;
-    D_801AFBD0[0].field_08 = 0xC8;
-    D_801AFBD0[0].field_0E = 0xA;
-    D_801AFBD0[0].field_02 = 0;
-    D_801AFBD0[0].field_10 = 0x3C;
-    D_801AFBD0[0].field_04 = 0;
-    wmap_install_callback(func_800999D0__for_func_8009A258);
-    D_801B2C58 = 0x3C;
-    D_801B2C54 += 1;
-    func_8009A328__for_func_8009A258();
+    wmap_place_vehicle();
+    g_wmap_special_return_timer = WMAP_VEHICLE_CLIMB_FRAMES;
+    g_wmap_special_return_step += 1;
+    wmap_special_return_climb_vehicle();
 }
 
-/**
- * @brief World-map actor tick: advance timers, bump a wave index, and expire the step.
- */
-void func_8009A328(void)
+/** @brief Special return step 4: as wmap_special_travel_climb_vehicle, on the return sequence. */
+void wmap_special_return_climb_vehicle(void)
 {
-extern s8 *func_80099754__for_func_8009A328(s32 arg0) __asm__("func_80099754");
-extern u8 D_801AFBD0[];
-extern s32 D_8011CF74;
-extern s32 D_801B2C54;
-extern s32 D_801B2C58;
-
-    s8 *obj;
-    u8 *base;
-
-    obj = func_80099754__for_func_8009A328(1);
-    base = D_801AFBD0;
-    if (*(s16 *)(base + 0xE) < 100)
+    wmap_climb_vehicle();
+    if (--g_wmap_special_return_timer == 0)
     {
-        *(s16 *)(base + 0xE) += 1;
-    }
-    if (*(s32 *)(base + 0x8) < 0x1E0)
-    {
-        *(s32 *)(base + 0x8) += 4;
-    }
-    if ((D_8011CF74 & 3) == 0)
-    {
-        if (obj[6] < 0xF)
-        {
-            obj[6] += 1;
-        }
-    }
-    if (--D_801B2C58 == 0)
-    {
-        D_801B2C54 += 1;
+        g_wmap_special_return_step += 1;
     }
 }
 
 /**
- * @brief Update the world map and clear its flag when the tracked value reaches 0x3E0.
- * @return Zero at the target value, otherwise one.
+ * @brief Turn the vehicle until it faces the landing heading.
+ * @param initialize Sequence callback flag; unused.
+ * @return 1 while turning, 0 once the heading is reached.
  */
-s32 func_8009A3E0(void)
+s32 wmap_finish_vehicle_turn(s32 initialize)
 {
-extern void func_80099754__for_func_8009A3E0(s32) __asm__("func_80099754");
-extern s32 D_800D9164;
-extern s16 D_801AFBD2;
-
-    func_80099754__for_func_8009A3E0(1);
-    if (D_801AFBD2 == 0x3E0)
+    wmap_turn_vehicle(1);
+    if (D_801AFBD0.heading == WMAP_HEADING_LANDING)
     {
-        D_800D9164 = 0;
+        g_wmap_vehicle_phase = 0;
         return 0;
     }
     return 1;
 }
 
 /**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or reset, 0 if the step index was out of range.
+ * @brief Run the current step of the special travel sequence (flight to the special land).
+ * @param initialize Nonzero restarts the sequence instead of running a step.
+ * @return 1 while the sequence runs, 0 once every step has run.
  */
-s32 func_8009A420(s32 arg0)
+s32 wmap_run_special_travel(s32 initialize)
 {
-extern u32 D_801B2C4C;
-extern s32 D_801B2C50;
-extern void (*D_800D651C[])(void);
-
     s32 result;
 
-    if (arg0 != 0)
+    if (initialize != 0)
     {
-        D_801B2C4C = 1;
-        D_801B2C50 = 1;
+        g_wmap_special_travel_step = 1;
+        g_wmap_special_travel_timer = 1;
         return 1;
     }
 
-    if (D_801B2C4C < 0x14)
+    if (g_wmap_special_travel_step < WMAP_SPECIAL_TRAVEL_STEPS)
     {
-        D_800D651C[D_801B2C4C]();
+        g_wmap_special_travel_steps[g_wmap_special_travel_step]();
         result = 1;
     }
     else
@@ -735,379 +672,221 @@ extern void (*D_800D651C[])(void);
     return result;
 }
 
-/**
- * @brief Set two adjacent world-map state flags.
- */
-void func_8009A498(void)
+/** @brief Special travel step 0: restart the sequence. */
+void wmap_special_travel_reset(void)
 {
-extern u32 D_801B2C4C;
-extern s32 D_801B2C50;
-extern void (*D_800D651C[])(void);
-
-    D_801B2C4C = 1;
-    D_801B2C50 = 1;
+    g_wmap_special_travel_step = 1;
+    g_wmap_special_travel_timer = 1;
 }
 
-/** @brief Save the projection state and queue resources for the next sequence. */
-void func_8009A4B0(void)
+/** @brief Special travel step 1: lock input, save the view and load the vehicle. */
+void wmap_special_travel_prepare(void)
 {
-/** @brief Four-word world-map transform state. */
-typedef struct
-{
-    s32 words[4];
-} WmapTransform;
-
-extern s32 D_800DCEC0;
-extern WmapTransform g_wmap_saved_view;
-extern u8 D_8011D538[];
-extern s32 D_80139224;
-extern WmapTransform g_wmap_view;
-extern s32 D_8013B208;
-extern s32 D_8013B288;
-extern s32 D_801B2C48;
-extern s32 D_801B2C4C;
-extern s32 D_801B2C50;
-
     D_80139224 = 1;
-    D_8013B288 = 0;
-    g_wmap_input_locked = 1;
-    D_801B2C48 = 0;
-    D_8013B208 = 1;
-    func_8005FF88(-1);
-    D_800DCEC0 = 0;
-    g_wmap_saved_view = g_wmap_view;
-    cdrom_queue_read(0x1145, D_8011D538);
-    cdrom_queue_read(0x1146, D_8011D538 + 0x2000);
-    func_800A8AA8(0x1147);
-    func_800A8AF0(0x1148);
-    D_801B2C50 = 1;
-    D_801B2C4C += 1;
+    wmap_load_vehicle();
+    g_wmap_special_travel_timer = 1;
+    g_wmap_special_travel_step += 1;
 }
 
-/**
- * @brief Tick the sequence wait timer; advance the step counter when it expires.
- */
-void func_8009A588(void)
+/** @brief Special travel step 2: wait for the step timer. */
+void wmap_special_travel_wait(void)
 {
-extern s32 D_801B2C50;
-extern s32 D_801B2C4C;
-
-    if (--D_801B2C50 == 0)
+    if (--g_wmap_special_travel_timer == 0)
     {
-        D_801B2C4C += 1;
+        g_wmap_special_travel_step += 1;
     }
 }
 
-/** @brief Calculate the selected map position relative to the current projection origin. */
-void func_8009A5BC(void)
+/** @brief Special travel step 3: scroll the map to the vehicle's start land. */
+void wmap_special_travel_scroll_to_start(void)
 {
-extern void func_8009A668__for_func_8009A5BC(void) __asm__("func_8009A668");
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_view[];
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
-extern s32 D_801B2C4C;
-
-    func_8006D0F0(2, &D_800DCEF8, &D_800DCF00);
+    wmap_find_land_cell(WMAP_TRAVEL_START_LAND, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = ((D_800DCEF8 - 1) * 0x30) - g_wmap_view[0];
-    g_wmap_scroll_remaining_y = ((D_800DCF00 - 1) * 0x30) - g_wmap_view[1];
-    D_801B2C4C += 1;
-    func_8009A668__for_func_8009A5BC();
+    g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * WMAP_CELL_SPACING) - g_wmap_view.x;
+    g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * WMAP_CELL_SPACING) - g_wmap_view.y;
+    g_wmap_special_travel_step += 1;
+    wmap_special_travel_wait_scroll();
 }
 
-/**
- * @brief Advance this sequence one step unless its gate flag hit the stop value.
- */
-void func_8009A668(void)
+/** @brief Special travel step 4: wait for the map scroll, then spawn the vehicle. */
+void wmap_special_travel_wait_scroll(void)
 {
-extern s32 g_wmap_view_scroll_mode;
-extern s32 D_801B2C4C;
-extern void func_80099848__for_func_8009A668(void) __asm__("func_80099848");
-
     if (g_wmap_view_scroll_mode != 2)
     {
-        D_801B2C4C += 1;
-        func_80099848__for_func_8009A668();
+        g_wmap_special_travel_step += 1;
+        wmap_special_travel_spawn_vehicle();
     }
 }
 
-/** @brief Schedule the selected cell effect unless its value is two. */
-void func_8009A6A8(void)
+/** @brief Special travel step 7: fly the vehicle to the party unless the party is at the start land. */
+void wmap_special_travel_fly_to_party(void)
 {
-/** @brief First word of a 40-byte world-map cell. */
-typedef struct
-{
-    s32 value;
-    u8 unknown_04[36];
-} WmapValueRecord;
-
-extern s16 D_801AFBE0;
-extern WmapValueRecord D_80139290[][6];
-extern s32 D_801398AC;
-extern s32 D_800DCED8;
-extern s32 D_800DCEE4;
-extern s32 D_801B2C4C;
-extern void func_80099B50__for_func_8009A6A8(void) __asm__("func_80099B50");
-extern void func_8009A75C__for_func_8009A6A8(void) __asm__("func_8009A75C");
-
-    D_801AFBE0 = 0x3B;
-    if (D_80139290[g_wmap_travelers[0].cell_x][g_wmap_travelers[0].cell_y].value == 2)
+    D_801AFBD0.ot_index = WMAP_VEHICLE_OT_FLIGHT;
+    if (D_80139290[g_wmap_travelers[0].cell_x][g_wmap_travelers[0].cell_y].land_id == WMAP_TRAVEL_START_LAND)
     {
-        D_801398AC = 0;
+        g_wmap_vehicle_flying = 0;
     }
     else
     {
-        D_800DCED8 = g_wmap_travelers[0].cell_x;
-        D_800DCEE4 = g_wmap_travelers[0].cell_y;
-        D_801398AC = 1;
-        wmap_install_callback(func_80099B50__for_func_8009A6A8);
+        g_wmap_vehicle_target_x = g_wmap_travelers[0].cell_x;
+        g_wmap_vehicle_target_y = g_wmap_travelers[0].cell_y;
+        g_wmap_vehicle_flying = 1;
+        wmap_install_callback(wmap_start_vehicle_flight);
     }
-    D_801B2C4C++;
-    func_8009A75C__for_func_8009A6A8();
+    g_wmap_special_travel_step++;
+    wmap_special_travel_wait_party();
 }
 
-/**
- * @brief Advance this sequence one step while its gate flag is clear.
- */
-void func_8009A75C(void)
+/** @brief Special travel step 8: wait for the flight to the party. */
+void wmap_special_travel_wait_party(void)
 {
-extern s32 D_801398AC;
-extern s32 D_801B2C4C;
-extern void func_8009A798__for_func_8009A75C(void) __asm__("func_8009A798");
-extern void func_8009A7D0__for_func_8009A75C(void) __asm__("func_8009A7D0");
-extern s32 D_801B2C50;
-
-    if (D_801398AC == 0)
+    if (g_wmap_vehicle_flying == 0)
     {
-        D_801B2C4C += 1;
-        func_8009A798__for_func_8009A75C();
+        g_wmap_special_travel_step += 1;
+        wmap_special_travel_start_turn();
     }
 }
 
-/**
- * @brief Set the sequence parameter, advance the counter, and run the handler.
- */
-void func_8009A798(void)
+/** @brief Special travel step 9: start the turn to the departure heading. */
+void wmap_special_travel_start_turn(void)
 {
-extern s32 D_801398AC;
-extern s32 D_801B2C4C;
-extern void func_8009A798(void);
-extern void func_8009A7D0__for_func_8009A798(void) __asm__("func_8009A7D0");
-extern s32 D_801B2C50;
-
-    D_801B2C50 = 0x12C;
-    D_801B2C4C += 1;
-    func_8009A7D0__for_func_8009A798();
+    g_wmap_special_travel_timer = WMAP_VEHICLE_TURN_FRAMES;
+    g_wmap_special_travel_step += 1;
+    wmap_special_travel_turn();
 }
 
-/** @brief Update the effect and advance its sequence on completion or timeout. */
-void func_8009A7D0(void)
+/** @brief Special travel step 10: turn to the departure heading (sets actor 0 unknown_02 to -1 there). */
+void wmap_special_travel_turn(void)
 {
-extern void func_80099754__for_func_8009A7D0(s32) __asm__("func_80099754");
-extern s16 D_800D926A;
-extern s16 D_801AFBD2;
-extern s32 D_801B2C4C;
-extern s32 D_801B2C50;
-
     s32 remaining_ticks;
 
-    func_80099754__for_func_8009A7D0(1);
-    if (D_801AFBD2 == 0x200)
+    wmap_turn_vehicle(1);
+    if (D_801AFBD0.heading == WMAP_HEADING_DEPARTURE)
     {
-        D_800D926A = -1;
-        D_801B2C50 = 0;
-        D_801B2C4C += 1;
+        D_800D9268[0].unknown_02 = -1;
+        g_wmap_special_travel_timer = 0;
+        g_wmap_special_travel_step += 1;
     }
-    remaining_ticks = D_801B2C50 - 1;
-    D_801B2C50 = remaining_ticks;
+    remaining_ticks = g_wmap_special_travel_timer - 1;
+    g_wmap_special_travel_timer = remaining_ticks;
     if (remaining_ticks == 0)
     {
-        D_801B2C4C += 1;
+        g_wmap_special_travel_step += 1;
     }
 }
 
-/** @brief Set initial map coordinates, register the callback, and advance the sequence. */
-void func_8009A854(void)
+/** @brief Special travel step 11: move the party to the special land and fly the vehicle there. */
+void wmap_special_travel_fly_to_land(void)
 {
-
-extern void func_8009A8D0__for_func_8009A854(void) __asm__("func_8009A8D0");
-extern s32 D_800DCED8;
-extern s32 D_800DCEE4;
-extern s32 D_801398AC;
-extern s32 D_801B2C4C;
-extern s32 func_80099B50__for_func_8009A854(s32) __asm__("func_80099B50");
-
-    func_8006D0F0(0x18, &D_800DCED8, &D_800DCEE4);
-    wmap_set_traveler_position(0, D_800DCED8, D_800DCEE4);
-    D_801398AC = 1;
-    wmap_install_callback(&func_80099B50__for_func_8009A854);
-    D_801B2C4C += 1;
-    func_8009A8D0__for_func_8009A854();
+    wmap_find_land_cell(WMAP_SPECIAL_TRAVEL_LAND, &g_wmap_vehicle_target_x, &g_wmap_vehicle_target_y);
+    wmap_set_traveler_position(0, g_wmap_vehicle_target_x, g_wmap_vehicle_target_y);
+    g_wmap_vehicle_flying = 1;
+    wmap_install_callback(wmap_start_vehicle_flight);
+    g_wmap_special_travel_step += 1;
+    wmap_special_travel_wait_land();
 }
 
-/**
- * @brief Advance this sequence one step while its gate flag is clear.
- */
-void func_8009A8D0(void)
+/** @brief Special travel step 12: wait for the flight to the special land. */
+void wmap_special_travel_wait_land(void)
 {
-extern s32 D_801398AC;
-extern s32 D_801B2C4C;
-extern void func_8009A90C__for_func_8009A8D0(void) __asm__("func_8009A90C");
-extern void func_8009A944__for_func_8009A8D0(void) __asm__("func_8009A944");
-extern s32 D_801B2C50;
-
-    if (D_801398AC == 0)
+    if (g_wmap_vehicle_flying == 0)
     {
-        D_801B2C4C += 1;
-        func_8009A90C__for_func_8009A8D0();
+        g_wmap_special_travel_step += 1;
+        wmap_special_travel_start_cruise();
     }
 }
 
-/**
- * @brief Set the sequence parameter, advance the counter, and run the handler.
- */
-void func_8009A90C(void)
+/** @brief Special travel step 13: start circling over the special land. */
+void wmap_special_travel_start_cruise(void)
 {
-extern s32 D_801398AC;
-extern s32 D_801B2C4C;
-extern void func_8009A90C(void);
-extern void func_8009A944__for_func_8009A90C(void) __asm__("func_8009A944");
-extern s32 D_801B2C50;
-
-    D_801B2C50 = 0x78;
-    D_801B2C4C += 1;
-    func_8009A944__for_func_8009A90C();
+    g_wmap_special_travel_timer = WMAP_VEHICLE_WAIT_FRAMES;
+    g_wmap_special_travel_step += 1;
+    wmap_special_travel_cruise();
 }
 
-/** @brief Advance a world-map sub-state, clearing a flag when a marker hits its cap. */
-void func_8009A944(void)
+/** @brief Special travel step 14: circle over the land (clears actor 0 unknown_02 at the cruise heading). */
+void wmap_special_travel_cruise(void)
 {
-extern s16 D_801AFBD2;
-extern s16 D_800D926A;
-extern s32 D_801B2C4C;
-extern s32 D_801B2C50;
-extern void func_80099754__for_func_8009A944(s32 arg) __asm__("func_80099754");
-
-    func_80099754__for_func_8009A944(1);
-    if (D_801AFBD2 == 0x400)
+    wmap_turn_vehicle(1);
+    if (D_801AFBD0.heading == WMAP_HEADING_CRUISE)
     {
-        D_800D926A = 0;
+        D_800D9268[0].unknown_02 = 0;
     }
-    if (--D_801B2C50 == 0)
+    if (--g_wmap_special_travel_timer == 0)
     {
-        D_801B2C4C += 1;
+        g_wmap_special_travel_step += 1;
     }
 }
 
-/** @brief World-map step handler: install a callback, advance the step counter, chain to the next step. */
-void func_8009A9A8(void)
+/** @brief Special travel step 15: turn to the landing heading. */
+void wmap_special_travel_start_landing(void)
 {
-extern void func_8009A3E0__for_func_8009A9A8(void) __asm__("func_8009A3E0");
-extern void func_8009A9F0__for_func_8009A9A8(void) __asm__("func_8009A9F0");
-extern s32 D_800D9164;
-extern s32 D_801B2C4C;
-
-    D_800D9164 = 1;
-    func_8006CAC0(func_8009A3E0__for_func_8009A9A8);
-    D_801B2C4C += 1;
-    func_8009A9F0__for_func_8009A9A8();
+    g_wmap_vehicle_phase = 1;
+    func_8006CAC0(wmap_finish_vehicle_turn);
+    g_wmap_special_travel_step += 1;
+    wmap_special_travel_wait_landing();
 }
 
-/**
- * @brief Advance this sequence one step while its gate flag is clear.
- */
-void func_8009A9F0(void)
+/** @brief Special travel step 16: wait for the landing turn. */
+void wmap_special_travel_wait_landing(void)
 {
-extern s32 D_800D9164;
-extern s32 D_801B2C4C;
-extern void func_8009AA2C__for_func_8009A9F0(void) __asm__("func_8009AA2C");
-
-    if (D_800D9164 == 0)
+    if (g_wmap_vehicle_phase == 0)
     {
-        D_801B2C4C += 1;
-        func_8009AA2C__for_func_8009A9F0();
+        g_wmap_special_travel_step += 1;
+        wmap_special_travel_stop_vehicle();
     }
 }
 
-/**
- * @brief Reset a world-map animation flag and schedule the next step.
- */
-void func_8009AA2C(void)
+/** @brief Special travel step 17: stop drawing the vehicle on its orbit. */
+void wmap_special_travel_stop_vehicle(void)
 {
-extern u16 D_801AFBD0;
-extern s32 D_801B2C4C;
-extern s32 D_801B2C50;
-extern void func_8009AA6C__for_func_8009AA2C(void) __asm__("func_8009AA6C");
-
-    D_801AFBD0 = 0;
-    D_801B2C50 = 0x78;
-    D_801B2C4C += 1;
-    func_8009AA6C__for_func_8009AA2C();
+    D_801AFBD0.active = 0;
+    g_wmap_special_travel_timer = WMAP_VEHICLE_WAIT_FRAMES;
+    g_wmap_special_travel_step += 1;
+    wmap_special_travel_fly_away();
 }
 
-/**
- * @brief World-map step: build a sprite, decrement a shared budget, expire the timer.
- */
-void func_8009AA6C(void)
+/** @brief Special travel step 18: draw the vehicle flying off to the left. */
+void wmap_special_travel_fly_away(void)
 {
-extern u8 D_800DBE3C[];
-extern s32 D_8013A180;
-extern s32 D_8011CF54;
-extern s16 D_801AFBE0;
-extern s32 D_801B2C4C;
-extern s32 D_801B2C50;
-extern void func_80099754__for_func_8009AA6C(s32 arg) __asm__("func_80099754");
+    WmapSpriteActor* actor = &g_wmap_vehicle_actor;
 
-    u8* actor = D_800DBE3C;
-
-    func_80099754__for_func_8009AA6C(0);
-    wmap_step_actor_animation(actor, &D_8013A180);
-    wmap_draw_actor_sprite(actor, D_8011CF54, 0x28, D_801AFBE0, 2);
-    *(s16 *)&D_8011CF54 = *(u16 *)&D_8011CF54 - 6;
-    if (--D_801B2C50 == 0)
+    wmap_turn_vehicle(0);
+    wmap_step_actor_animation(actor, &g_wmap_vehicle_animation);
+    wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, D_801AFBD0.ot_index, WMAP_VEHICLE_VARIANT);
+    g_wmap_vehicle_screen_position.point.x -= 6;
+    if (--g_wmap_special_travel_timer == 0)
     {
-        D_801B2C4C += 1;
+        g_wmap_special_travel_step += 1;
     }
 }
 
-/** @brief Set the world-map ready flag and bump the wave index. */
-void func_8009AB00(void)
+/** @brief Special travel step 19: flag the arrival. */
+void wmap_special_travel_finish(void)
 {
-extern s32 D_8013B294;
-extern s32 D_801B2C4C;
-
     D_8013B294 = 1;
-    D_801B2C4C += 1;
+    g_wmap_special_travel_step += 1;
 }
 
 /**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or reset, 0 if the step index was out of range.
+ * @brief Run the current step of the special return sequence (flight back from the special land).
+ * @param initialize Nonzero restarts the sequence instead of running a step.
+ * @return 1 while the sequence runs, 0 once every step has run.
  */
-s32 func_8009AB20(s32 arg0)
+s32 wmap_run_special_return(s32 initialize)
 {
-extern u32 D_801B2C54;
-extern s32 D_801B2C58;
-extern void (*D_800D656C[])(void);
-extern s32 g_wmap_view_scroll_mode;
-extern void func_8009A258__for_func_8009AB20(void) __asm__("func_8009A258");
-
     s32 result;
 
-    if (arg0 != 0)
+    if (initialize != 0)
     {
-        D_801B2C54 = 1;
-        D_801B2C58 = 1;
+        g_wmap_special_return_step = 1;
+        g_wmap_special_return_timer = 1;
         return 1;
     }
 
-    if (D_801B2C54 < 0xE)
+    if (g_wmap_special_return_step < WMAP_SPECIAL_RETURN_STEPS)
     {
-        D_800D656C[D_801B2C54]();
+        g_wmap_special_return_steps[g_wmap_special_return_step]();
         result = 1;
     }
     else
@@ -1117,189 +896,112 @@ extern void func_8009A258__for_func_8009AB20(void) __asm__("func_8009A258");
     return result;
 }
 
-/**
- * @brief Set two adjacent world-map state flags.
- */
-void func_8009AB98(void)
+/** @brief Special return step 0: restart the sequence. */
+void wmap_special_return_reset(void)
 {
-extern u32 D_801B2C54;
-extern s32 D_801B2C58;
-extern void (*D_800D656C[])(void);
-extern s32 g_wmap_view_scroll_mode;
-extern void func_8009A258__for_func_8009AB98(void) __asm__("func_8009A258");
-
-    D_801B2C54 = 1;
-    D_801B2C58 = 1;
+    g_wmap_special_return_step = 1;
+    g_wmap_special_return_timer = 1;
 }
 
-/**
- * @brief Advance this sequence one step unless its gate flag hit the stop value.
- */
-void func_8009ABB0(void)
+/** @brief Special return step 2: wait for the map scroll, then spawn the vehicle. */
+void wmap_special_return_wait_scroll(void)
 {
-extern u32 D_801B2C54;
-extern s32 D_801B2C58;
-extern void (*D_800D656C[])(void);
-extern s32 g_wmap_view_scroll_mode;
-extern void func_8009A258__for_func_8009ABB0(void) __asm__("func_8009A258");
-
     if (g_wmap_view_scroll_mode != 2)
     {
-        D_801B2C54 += 1;
-        func_8009A258__for_func_8009ABB0();
+        g_wmap_special_return_step += 1;
+        wmap_special_return_spawn_vehicle();
     }
 }
 
-/** @brief Set initial map coordinates, register the callback, and advance the sequence. */
-void func_8009ABF0(void)
+/** @brief Special return step 5: move the party to the return land and fly the vehicle there. */
+void wmap_special_return_fly_home(void)
 {
-
-extern s32 func_80099B50__for_func_8009ABF0(s32) __asm__("func_80099B50");
-extern void func_8009AC6C__for_func_8009ABF0(void) __asm__("func_8009AC6C");
-extern s32 D_800DCED8;
-extern s32 D_800DCEE4;
-extern s32 D_801398AC;
-extern s32 D_801B2C54;
-
-    func_8006D0F0(0, &D_800DCED8, &D_800DCEE4);
-    wmap_set_traveler_position(0, D_800DCED8, D_800DCEE4);
-    D_801398AC = 1;
-    wmap_install_callback(func_80099B50__for_func_8009ABF0);
-    D_801B2C54 += 1;
-    func_8009AC6C__for_func_8009ABF0();
+    wmap_find_land_cell(WMAP_RETURN_LAND, &g_wmap_vehicle_target_x, &g_wmap_vehicle_target_y);
+    wmap_set_traveler_position(0, g_wmap_vehicle_target_x, g_wmap_vehicle_target_y);
+    g_wmap_vehicle_flying = 1;
+    wmap_install_callback(wmap_start_vehicle_flight);
+    g_wmap_special_return_step += 1;
+    wmap_special_return_wait_home();
 }
 
-/**
- * @brief Advance this sequence one step while its gate flag is clear.
- */
-void func_8009AC6C(void)
+/** @brief Special return step 6: wait for the flight to the return land. */
+void wmap_special_return_wait_home(void)
 {
-extern s32 D_801398AC;
-extern s32 D_801B2C54;
-extern void func_8009ACA8__for_func_8009AC6C(void) __asm__("func_8009ACA8");
-extern void func_8009ACE0__for_func_8009AC6C(void) __asm__("func_8009ACE0");
-extern s32 D_801B2C58;
-
-    if (D_801398AC == 0)
+    if (g_wmap_vehicle_flying == 0)
     {
-        D_801B2C54 += 1;
-        func_8009ACA8__for_func_8009AC6C();
+        g_wmap_special_return_step += 1;
+        wmap_special_return_start_cruise();
     }
 }
 
-/**
- * @brief Set the sequence parameter, advance the counter, and run the handler.
- */
-void func_8009ACA8(void)
+/** @brief Special return step 7: start circling over the return land. */
+void wmap_special_return_start_cruise(void)
 {
-extern s32 D_801398AC;
-extern s32 D_801B2C54;
-extern void func_8009ACA8(void);
-extern void func_8009ACE0__for_func_8009ACA8(void) __asm__("func_8009ACE0");
-extern s32 D_801B2C58;
-
-    D_801B2C58 = 0x78;
-    D_801B2C54 += 1;
-    func_8009ACE0__for_func_8009ACA8();
+    g_wmap_special_return_timer = WMAP_VEHICLE_WAIT_FRAMES;
+    g_wmap_special_return_step += 1;
+    wmap_special_return_cruise();
 }
 
-/** @brief Advance a world-map sub-state, clearing a flag when a marker hits its cap. */
-void func_8009ACE0(void)
+/** @brief Special return step 8: circle over the land (clears actor 0 unknown_02 at the cruise heading). */
+void wmap_special_return_cruise(void)
 {
-extern s16 D_801AFBD2;
-extern s16 D_800D926A;
-extern s32 D_801B2C54;
-extern s32 D_801B2C58;
-extern void func_80099754__for_func_8009ACE0(s32 arg) __asm__("func_80099754");
-
-    func_80099754__for_func_8009ACE0(1);
-    if (D_801AFBD2 == 0x400)
+    wmap_turn_vehicle(1);
+    if (D_801AFBD0.heading == WMAP_HEADING_CRUISE)
     {
-        D_800D926A = 0;
+        D_800D9268[0].unknown_02 = 0;
     }
-    if (--D_801B2C58 == 0)
+    if (--g_wmap_special_return_timer == 0)
     {
-        D_801B2C54 += 1;
+        g_wmap_special_return_step += 1;
     }
 }
 
-/** @brief World-map step handler: install a callback, advance the step counter, chain to the next step. */
-void func_8009AD44(void)
+/** @brief Special return step 9: turn to the landing heading. */
+void wmap_special_return_start_landing(void)
 {
-extern void func_8009A3E0__for_func_8009AD44(void) __asm__("func_8009A3E0");
-extern void func_8009AD8C__for_func_8009AD44(void) __asm__("func_8009AD8C");
-extern s32 D_800D9164;
-extern s32 D_801B2C54;
-
-    D_800D9164 = 1;
-    func_8006CAC0(func_8009A3E0__for_func_8009AD44);
-    D_801B2C54 += 1;
-    func_8009AD8C__for_func_8009AD44();
+    g_wmap_vehicle_phase = 1;
+    func_8006CAC0(wmap_finish_vehicle_turn);
+    g_wmap_special_return_step += 1;
+    wmap_special_return_wait_landing();
 }
 
-/**
- * @brief Advance this sequence one step while its gate flag is clear.
- */
-void func_8009AD8C(void)
+/** @brief Special return step 10: wait for the landing turn. */
+void wmap_special_return_wait_landing(void)
 {
-extern s32 D_800D9164;
-extern s32 D_801B2C54;
-extern void func_8009ADC8__for_func_8009AD8C(void) __asm__("func_8009ADC8");
-
-    if (D_800D9164 == 0)
+    if (g_wmap_vehicle_phase == 0)
     {
-        D_801B2C54 += 1;
-        func_8009ADC8__for_func_8009AD8C();
+        g_wmap_special_return_step += 1;
+        wmap_special_return_stop_vehicle();
     }
 }
 
-/**
- * @brief Reset a world-map animation flag and schedule the next step.
- */
-void func_8009ADC8(void)
+/** @brief Special return step 11: stop drawing the vehicle on its orbit. */
+void wmap_special_return_stop_vehicle(void)
 {
-extern u16 D_801AFBD0;
-extern s32 D_801B2C54;
-extern s32 D_801B2C58;
-extern void func_8009AE08__for_func_8009ADC8(void) __asm__("func_8009AE08");
-
-    D_801AFBD0 = 0;
-    D_801B2C58 = 0x78;
-    D_801B2C54 += 1;
-    func_8009AE08__for_func_8009ADC8();
+    D_801AFBD0.active = 0;
+    g_wmap_special_return_timer = WMAP_VEHICLE_WAIT_FRAMES;
+    g_wmap_special_return_step += 1;
+    wmap_special_return_fly_away();
 }
 
-/**
- * @brief World-map step: build a sprite, decrement a shared budget, expire the timer.
- */
-void func_8009AE08(void)
+/** @brief Special return step 12: draw the vehicle flying off to the left. */
+void wmap_special_return_fly_away(void)
 {
-extern u8 D_800DBE3C[];
-extern s32 D_8013A180;
-extern s32 D_8011CF54;
-extern s16 D_801AFBE0;
-extern s32 D_801B2C54;
-extern s32 D_801B2C58;
-extern void func_80099754__for_func_8009AE08(s32 arg) __asm__("func_80099754");
+    WmapSpriteActor* actor = &g_wmap_vehicle_actor;
 
-    u8* actor = D_800DBE3C;
-
-    func_80099754__for_func_8009AE08(0);
-    wmap_step_actor_animation(actor, &D_8013A180);
-    wmap_draw_actor_sprite(actor, D_8011CF54, 0x28, D_801AFBE0, 2);
-    *(s16 *)&D_8011CF54 = *(u16 *)&D_8011CF54 - 4;
-    if (--D_801B2C58 == 0)
+    wmap_turn_vehicle(0);
+    wmap_step_actor_animation(actor, &g_wmap_vehicle_animation);
+    wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, D_801AFBD0.ot_index, WMAP_VEHICLE_VARIANT);
+    g_wmap_vehicle_screen_position.point.x -= 4;
+    if (--g_wmap_special_return_timer == 0)
     {
-        D_801B2C54 += 1;
+        g_wmap_special_return_step += 1;
     }
 }
 
-/** @brief Set the world-map ready flag and bump the wave index. */
-void func_8009AE9C(void)
+/** @brief Special return step 13: flag the arrival. */
+void wmap_special_return_finish(void)
 {
-extern s32 D_8013B294;
-extern s32 D_801B2C54;
-
     D_8013B294 = 1;
-    D_801B2C54 += 1;
+    g_wmap_special_return_step += 1;
 }

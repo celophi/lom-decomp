@@ -106,8 +106,8 @@ extern void (*D_800D0FAC[])(void);
 extern u32 D_801B10A8;
 extern s32 D_801B10AC;
 extern void (*D_800D0FBC[])(void);
-extern s32 D_800DCEF8;
-extern s32 D_800DCF00;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
 extern s32 g_wmap_view_scroll_mode;
 extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
@@ -549,13 +549,13 @@ void func_8006D014(void* actor, void* resource, s32 arg2, s32 arg3, s32 arg4, s3
 }
 
 /**
- * @brief Find a value in the six-by-six world-map record table.
- * @param value Value to find.
- * @param row_out Receives the first matching row.
- * @param column_out Receives the first matching column.
+ * @brief Find the map cell that holds a land.
+ * @param value Land id to find.
+ * @param row_out Receives the cell x (first index of D_80139290).
+ * @param column_out Receives the cell y.
  * @return One if found, otherwise zero; outputs are unchanged on failure.
  */
-s32 func_8006D0F0(s32 value, s32* row_out, s32* column_out)
+s32 wmap_find_land_cell(s32 value, s32* row_out, s32* column_out)
 {
     s32 row;
     s32 column;
@@ -734,8 +734,8 @@ void func_8006D420(void)
 {
 
     g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = g_wmap_view.x - ((D_800DCEF8 - 1) * 0x30);
-    g_wmap_scroll_remaining_y = g_wmap_view.y - ((D_800DCF00 - 1) * 0x30);
+    g_wmap_scroll_remaining_x = g_wmap_view.x - ((g_wmap_vehicle_cell_x - 1) * 0x30);
+    g_wmap_scroll_remaining_y = g_wmap_view.y - ((g_wmap_vehicle_cell_y - 1) * 0x30);
     D_801B10A8 += 1;
     func_8006D4B0();
 }
