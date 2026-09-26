@@ -8,6 +8,7 @@
 #include "field_calls.h"
 #include "field_records.h"
 #include "field_script.h"
+#include "sdk/abs.h"
 
 /** @brief Slot values that stay in slot 4 unless the release flag is set. */
 #define FIELD_SLOT_IS_HIGH_CLASS(value) ((value) >= 0x51 && (value) <= 0x57)
@@ -21,29 +22,34 @@
 /** @brief Slot whose values may be pinned by the staging flags. */
 #define FIELD_PINNED_SLOT 4
 
+/** @brief FieldItemStaging::stats byte: modifier index (low nibble) and limits row (high nibble). */
+#define STAGED_STAT_MODIFIER_MASK 0x0F
+#define STAGED_STAT_LIMITS_MASK 0xF0
+#define STAGED_STAT_LIMITS_SHIFT 4
+
 extern FieldItemStaging* D_80123FC4;
 extern FieldItemTables* D_80123FC0;
 extern s8 D_800F0C38[];
-extern u8 D_800F0E88[][2];
+/** @brief Lowest and highest modifier index a stat may have, per limits row. */
+extern u8 g_field_stat_modifier_limits[][2];
 
 void field_script_run(FieldScriptContext* context);
 
-s32 func_800BF514(s32 slot);
-void func_800BF730(void);
-void func_800BF880(s32 index);
-void func_800BF8E0(void);
-void func_800BF944(void);
-s32 func_800BF9F0(s32 cost);
+static s32 field_shift_slot_chain(s32 slot);
+static void field_clamp_staged_stats(void);
+static void field_apply_flags2c_mask(void);
+static void field_apply_flags2d_mask(void);
 
 /**
  * @brief Queue a script from the item generation table on the active script context.
  *
  * Opens a new record when the current one already has a program, points it at
- * @p offset inside the loaded table, clears its wait word and runs the script.
+ * @p offset inside the loaded table, clears its wait word and the owner's
+ * event argument, and runs the script.
  *
  * @param offset Byte offset of the script inside the loaded table; only the low 16 bits are used.
  */
-void func_800BF2F0(s32 offset)
+void field_run_item_script(s32 offset)
 {
     s32 depth;
     FieldScriptContext* context;
@@ -57,36 +63,36 @@ void func_800BF2F0(s32 offset)
     FIELD_SCRIPT_RECORD_STATE(context->active_record)->pc = D_80123FC0->bytes + (offset & 0xFFFF);
     FIELD_SCRIPT_RECORD_STATE(context->active_record)->wait.bits.resume = 0;
     FIELD_SCRIPT_RECORD_STATE(context->active_record)->wait.bits.frames = 0;
-    field_write_script_var(context->status.owner_id, 0xD0000000, 0);
+    field_write_script_var(context->status.owner_id, FIELD_VAR_EVENT_ARGUMENT << 16, 0);
     field_script_run(g_field_script);
 }
 
 /**
  * @brief Run the slot scripts of the staged slots, from the last slot to the first.
  */
-void func_800BF3D8(void)
+void field_run_slot_scripts(void)
 {
     s32 slot;
 
-    func_800BF514(0);
+    field_shift_slot_chain(0);
     if (D_80123FC4->slots[5] < FIELD_SLOT_SCRIPT_LIMIT)
     {
-        func_800BF2F0(D_80123FC0->item.slot_values[D_80123FC4->slots[5]].scripts[3]);
+        field_run_item_script(D_80123FC0->item.slot_values[D_80123FC4->slots[5]].scripts[3]);
     }
     for (slot = 4; slot >= 3; slot--)
     {
         if (D_80123FC4->slots[slot] < FIELD_SLOT_SCRIPT_LIMIT)
         {
-            func_800BF2F0(D_80123FC0->item.slot_values[D_80123FC4->slots[slot]].scripts[2]);
+            field_run_item_script(D_80123FC0->item.slot_values[D_80123FC4->slots[slot]].scripts[2]);
         }
     }
     if (D_80123FC4->slots[2] < FIELD_SLOT_SCRIPT_LIMIT)
     {
-        func_800BF2F0(D_80123FC0->item.slot_values[D_80123FC4->slots[2]].scripts[1]);
+        field_run_item_script(D_80123FC0->item.slot_values[D_80123FC4->slots[2]].scripts[1]);
     }
     if (D_80123FC4->slots[1] < FIELD_SLOT_SCRIPT_LIMIT)
     {
-        func_800BF2F0(D_80123FC0->item.slot_values[D_80123FC4->slots[1]].scripts[0]);
+        field_run_item_script(D_80123FC0->item.slot_values[D_80123FC4->slots[1]].scripts[0]);
     }
 }
 
@@ -99,7 +105,7 @@ void func_800BF3D8(void)
  * @param slot First slot of the chain to shift.
  * @return -1 when @p slot is free or was vacated, 0 when its value must stay.
  */
-s32 func_800BF514(s32 slot)
+static s32 field_shift_slot_chain(s32 slot)
 {
     s32 next;
 
@@ -121,7 +127,7 @@ s32 func_800BF514(s32 slot)
     }
 
     next = slot + 1;
-    if (func_800BF514(next) != 0)
+    if (field_shift_slot_chain(next) != 0)
     {
         D_80123FC4->slots[next] = D_80123FC4->slots[slot];
         D_80123FC4->slots[slot] = FIELD_STAGING_SLOT_EMPTY;
@@ -142,16 +148,16 @@ s32 func_800BF514(s32 slot)
 
 /**
  * @brief Replace a slot value in slots 4 down to 2, if the pool can pay for it.
- * @param cost Pool cost checked by func_800BF9F0.
+ * @param cost Pool cost checked by field_can_pay_staged_cost.
  * @param value Slot value to find.
  * @param replacement Value written over the first match.
  * @return Index of the replaced slot, or 0xFF when nothing was replaced.
  */
-s32 func_800BF68C(s32 cost, s32 value, s32 replacement)
+s32 field_replace_slot_value(s32 cost, s32 value, s32 replacement)
 {
     s32 slot;
 
-    if (func_800BF9F0(cost) != 0)
+    if (field_can_pay_staged_cost(cost) != 0)
     {
         for (slot = 4; slot >= 2; slot--)
         {
@@ -169,91 +175,68 @@ s32 func_800BF68C(s32 cost, s32 value, s32 replacement)
 /**
  * @brief Finish the staged flags and clamp the staged stat modifiers.
  */
-void func_800BF700(void)
+void field_finish_staged_item(void)
 {
-    func_800BF8E0();
-    func_800BF944();
-    func_800BF730();
+    field_apply_flags2c_mask();
+    field_apply_flags2d_mask();
+    field_clamp_staged_stats();
 }
 
 /**
- * @brief Pick each stat's stronger modifier and clamp it to the stat's bounds.
+ * @brief Pick each stat's stronger modifier and clamp it to the stat's limits.
  *
- * The modifier whose D_800F0C38 value has the larger magnitude wins between
- * the stat's own modifier and its base modifier; the winner is then clamped to
- * the stat's (minimum, maximum) row of D_800F0E88.
+ * Of the stat's own modifier and its base modifier, the one whose D_800F0C38
+ * value has the larger magnitude wins (the own modifier on a tie); the winner
+ * is then clamped to the stat's row of g_field_stat_modifier_limits.
  */
-void func_800BF730(void)
+static void field_clamp_staged_stats(void)
 {
     s32 i;
-    FieldItemStaging* entry;
-    u8 packed;
-    u8 result;
-    s32 base_modifier;
-    s32 magnitude;
-    s32 base_magnitude;
     s32 modifier;
-    s32 maximum;
+    s32 base_modifier;
     s32 own_modifier;
-    s8* modifiers;
-    s8* own_entry;
-    s8* lookup;
+    s32 maximum;
+    u8 result;
+    s8* modifier_values;
+    u8* limits;
+    FieldItemStaging* entry;
 
     for (i = 0; i < FIELD_STAGING_STAT_COUNT; i++)
     {
-        /* the do/while(0) blocks, the dead first own_entry and the integer sums are kept levers */
-        modifiers = D_800F0C38;
-        entry = FIELD_STAGING_AT(D_80123FC4, i);
-        do
-        {
-            packed = entry->stats.bytes[0];
-            base_modifier = entry->base_stats[0];
-        } while (0);
-
-        own_modifier = packed & 0xF;
-        own_entry = (s8*)(own_modifier + (s32)modifiers);
-        modifier = own_modifier;
-        do
-        {
-            own_entry = (s8*)(modifier + (s32)modifiers);
-        } while (0);
-        lookup = (s8*)(base_modifier + (s32)modifiers);
-        magnitude = *own_entry;
-        base_magnitude = *lookup;
-        if (magnitude < 0)
-        {
-            magnitude = -magnitude;
-        }
-        if (base_magnitude < 0)
-        {
-            base_magnitude = -base_magnitude;
-        }
-        magnitude = magnitude < base_magnitude;
-        if (magnitude)
+        /* set inside the loop: hoisting it changes the loop preheader order */
+        modifier_values = D_800F0C38;
+        base_modifier = D_80123FC4->base_stats[i];
+        own_modifier = D_80123FC4->stats.bytes[i] & STAGED_STAT_MODIFIER_MASK;
+        if (abs(modifier_values[own_modifier]) < abs(modifier_values[base_modifier]))
         {
             modifier = base_modifier;
         }
+        else
+        {
+            modifier = own_modifier;
+        }
 
-        lookup = (s8*)D_800F0E88[packed >> 4];
-        result = ((u8*)lookup)[0];
+        /* the clamp works through a shifted view; indexing stats.bytes[i] again changes register use */
+        entry = FIELD_STAGING_AT(D_80123FC4, i);
+        limits = g_field_stat_modifier_limits[entry->stats.bytes[0] >> STAGED_STAT_LIMITS_SHIFT];
+        result = limits[0];
         if (modifier >= result)
         {
-            maximum = ((u8*)lookup)[1];
+            maximum = limits[1];
             result = maximum;
             if (modifier <= maximum)
             {
                 result = modifier;
             }
         }
-
-        entry->stats.bytes[0] = (entry->stats.bytes[0] & 0xF0) | (result & 0xF);
+        entry->stats.bytes[0] = (entry->stats.bytes[0] & STAGED_STAT_LIMITS_MASK) | (result & STAGED_STAT_MODIFIER_MASK);
     }
 }
 
 /**
  * @brief Apply every pending level increase of the staged level entries.
  */
-void func_800BF800(void)
+void field_apply_pending_levels(void)
 {
     s32 i;
 
@@ -261,7 +244,7 @@ void func_800BF800(void)
     {
         while (D_80123FC4->pending_levels[i] != 0)
         {
-            func_800BF880(i);
+            field_raise_staged_level(i);
             D_80123FC4->pending_levels[i]--;
         }
     }
@@ -275,7 +258,7 @@ void func_800BF800(void)
  *
  * @param index Level entry to raise.
  */
-void func_800BF880(s32 index)
+void field_raise_staged_level(s32 index)
 {
     FieldItemStaging* staging;
     FieldItemStaging* entry;
@@ -305,7 +288,7 @@ void func_800BF880(s32 index)
 /**
  * @brief Set the flags2C bits whose mask bit is set and whose level is nonzero.
  */
-void func_800BF8E0(void)
+static void field_apply_flags2c_mask(void)
 {
     s32 mask;
     s32 i;
@@ -322,7 +305,7 @@ void func_800BF8E0(void)
 /**
  * @brief Rebuild flags2D from the bits of flags2D_mask.
  */
-void func_800BF944(void)
+static void field_apply_flags2d_mask(void)
 {
     s32 mask;
     s32 i;
@@ -341,7 +324,7 @@ void func_800BF944(void)
  * @brief Lower one staged level and refund its price to the pool.
  * @param index Level entry to lower.
  */
-void func_800BF9A0(s32 index)
+void field_lower_staged_level(s32 index)
 {
     u8 level;
 
@@ -358,7 +341,7 @@ void func_800BF9A0(s32 index)
  * @param cost Price to test; treated as 0 while the staging slot class is 0.
  * @return -1 when the pool covers the price, else 0.
  */
-s32 func_800BF9F0(s32 cost)
+s32 field_can_pay_staged_cost(s32 cost)
 {
     FieldItemStaging* staging;
 

@@ -95,7 +95,7 @@ extern s32 g_field_scene_mode_bit;
 extern s32 g_field_pair_indicator_count;
 /** @brief Nonzero while a script has turned the pair indicators off. */
 extern s32 g_field_pair_indicators_disabled;
-/** @brief Actor index pairs of the close pairs, ended by FIELD_PAIR_LIST_END. */
+/** @brief Actor index pairs of the close pairs (two bytes per pair), ended by FIELD_PAIR_LIST_END. */
 extern u8 g_field_pair_indicator_list[];
 extern s32 g_field_text_session_active;
 
@@ -110,139 +110,100 @@ extern s32 g_field_text_session_active;
 void field_update_pair_indicators(FieldRenderHalf* render_half)
 {
     s32 active[FIELD_PARTY_COUNT];
-    FieldActor* actor;
-    /* Fills active[], then points at the second member of a pair. */
-    s32* entry;
-    s32 first;
-
     s32 active_count;
-    s32 pair;
     s32 index;
-    /* The goto loop below is invisible to loop.c, so the tables and the
-       FIELD_ACTOR_UNUSED marker are held in locals (one marker per loop). */
-    s32 unused;
-    s32 unused_marker;
-    FieldObjectRuntime* states;
-    s32* order;
-    FieldActor* actors;
-    s32* counters;
+    s32 pair;
     /* Holds the second member's index, then the pair's distance. */
     s32 distance;
 
     g_field_pair_indicator_count = 0;
     g_field_pair_indicator_list[0] = FIELD_PAIR_LIST_END;
-    if ((g_field_pair_indicators_disabled == 0) && (g_field_scene_mode_bit != 0))
+    if ((g_field_pair_indicators_disabled == 0) && (g_field_scene_mode_bit != 0) && (g_field_active_group != 0))
     {
-        index = 0;
-        if (g_field_active_group != 0)
+        for (index = 0, active_count = 0; index < FIELD_PARTY_COUNT; index++)
         {
-            active_count = index;
-            unused_marker = FIELD_ACTOR_UNUSED;
-            actor = g_field_actors;
-            entry = active;
-            do
+            if (g_field_actors[index].presence != FIELD_ACTOR_UNUSED)
             {
-                if (actor->presence != unused_marker)
+                active[active_count++] = index;
+            }
+        }
+        if (active_count >= 2)
+        {
+            if (active_count == 2)
+            {
+                distance = FIELD_PAIR_RANGE;
+                if (!(g_field_object_states[active[0]].object_flags & FIELD_PAIR_EXCLUDED_FLAGS))
                 {
-                    *entry = index;
-                    entry++;
-                    active_count++;
+                    distance = active[1];
+                    if (g_field_object_states[distance].object_flags & FIELD_PAIR_EXCLUDED_FLAGS)
+                    {
+                        distance = FIELD_PAIR_RANGE;
+                    }
+                    else
+                    {
+                        distance = field_get_position_distance((VECTOR*)&g_field_actors[active[0]], (VECTOR*)&g_field_actors[distance]);
+                    }
                 }
-                index++;
-                actor++;
-            } while (index < FIELD_PARTY_COUNT);
-            if (active_count >= 2)
+                if (distance < FIELD_PAIR_RANGE)
+                {
+                    if (g_field_pair_indicator_counters[0] == FIELD_INDICATOR_IDLE)
+                    {
+                        g_field_pair_indicator_counters[0] = 0;
+                    }
+                    if (g_field_pair_indicator_counters[0] != FIELD_INDICATOR_DONE)
+                    {
+                        /* The count is set to 2 here, not 1; readers stop at the terminator. */
+                        g_field_pair_indicator_list[2] = FIELD_PAIR_LIST_END;
+                        g_field_pair_indicator_count = 2;
+                        g_field_pair_indicator_list[0] = active[0];
+                        g_field_pair_indicator_list[1] = active[1];
+                    }
+                }
+                else
+                {
+                    g_field_pair_indicator_counters[0] = FIELD_INDICATOR_IDLE;
+                }
+                field_draw_pair_indicator(0, render_half);
+            }
+            else
             {
-                pair = 0;
-                if (active_count == 2)
+                for (pair = 0; pair < FIELD_PARTY_COUNT; pair++)
                 {
                     distance = FIELD_PAIR_RANGE;
-                    if (!(g_field_object_states[active[0]].object_flags & FIELD_PAIR_EXCLUDED_FLAGS))
+                    if (!(g_field_object_states[g_field_party_hud_order[pair]].object_flags & FIELD_PAIR_EXCLUDED_FLAGS))
                     {
-                        distance = active[1];
+                        distance = g_field_party_hud_order[(pair + 1) % FIELD_PARTY_COUNT];
                         if (g_field_object_states[distance].object_flags & FIELD_PAIR_EXCLUDED_FLAGS)
                         {
                             distance = FIELD_PAIR_RANGE;
                         }
                         else
                         {
-                            distance = field_get_position_distance((VECTOR*)&g_field_actors[active[0]], (VECTOR*)&g_field_actors[distance]);
+                            distance = field_get_position_distance((VECTOR*)&g_field_actors[g_field_party_hud_order[pair]], (VECTOR*)&g_field_actors[distance]);
                         }
                     }
-                    if (distance < FIELD_PAIR_RANGE)
+                    if ((distance < FIELD_PAIR_RANGE) && (g_field_actors[g_field_party_hud_order[pair]].presence != FIELD_ACTOR_UNUSED) &&
+                        (g_field_actors[g_field_party_hud_order[(pair + 1) % FIELD_PARTY_COUNT]].presence != FIELD_ACTOR_UNUSED))
                     {
-                        if (g_field_pair_indicator_counters[0] == FIELD_INDICATOR_IDLE)
+                        if (g_field_pair_indicator_counters[pair] == FIELD_INDICATOR_IDLE)
                         {
-                            g_field_pair_indicator_counters[0] = 0;
+                            g_field_pair_indicator_counters[pair] = 0;
                         }
-                        if (g_field_pair_indicator_counters[0] != FIELD_INDICATOR_DONE)
+                        if (g_field_pair_indicator_counters[pair] != FIELD_INDICATOR_DONE)
                         {
-                            /* The count is set to 2 here, not 1; readers stop at the terminator. */
-                            g_field_pair_indicator_list[2] = FIELD_PAIR_LIST_END;
-                            g_field_pair_indicator_count = 2;
-                            g_field_pair_indicator_list[0] = active[0];
-                            g_field_pair_indicator_list[1] = active[1];
-                        }
-                    }
-                    else
-                    {
-                        g_field_pair_indicator_counters[0] = FIELD_INDICATOR_IDLE;
-                    }
-                    field_draw_pair_indicator(0, render_half);
-                }
-                else
-                {
-                    states = g_field_object_states;
-                    order = g_field_party_hud_order;
-                    actors = g_field_actors;
-                    unused = FIELD_ACTOR_UNUSED;
-                    counters = g_field_pair_indicator_counters;
-                next_pair:
-                    first = order[pair];
-                    distance = FIELD_PAIR_RANGE;
-                    if (!(states[first].object_flags & FIELD_PAIR_EXCLUDED_FLAGS))
-                    {
-                        entry = FIELD_ELEMENT_AT(order, (pair + 1) % FIELD_PARTY_COUNT);
-                        distance = *entry;
-                        if (states[distance].object_flags & FIELD_PAIR_EXCLUDED_FLAGS)
-                        {
-                            distance = FIELD_PAIR_RANGE;
-                        }
-                        else
-                        {
-                            distance = field_get_position_distance(FIELD_ELEMENT_AT(actors, first), FIELD_ELEMENT_AT(actors, distance));
-                        }
-                    }
-                    if ((distance < FIELD_PAIR_RANGE) && (actors[order[pair]].presence != unused) &&
-                        (actors[order[(pair + 1) % FIELD_PARTY_COUNT]].presence != unused))
-                    {
-                        if (counters[pair] == FIELD_INDICATOR_IDLE)
-                        {
-                            counters[pair] = 0;
-                        }
-                        if (counters[pair] != FIELD_INDICATOR_DONE)
-                        {
-                            g_field_pair_indicator_list[g_field_pair_indicator_count * 2] = order[pair];
-                            g_field_pair_indicator_list[g_field_pair_indicator_count * 2 + 1] = order[(pair + 1) % FIELD_PARTY_COUNT];
+                            g_field_pair_indicator_list[g_field_pair_indicator_count << 1] = g_field_party_hud_order[pair];
+                            g_field_pair_indicator_list[(g_field_pair_indicator_count << 1) + 1] = g_field_party_hud_order[(pair + 1) % FIELD_PARTY_COUNT];
                             g_field_pair_indicator_count++;
                         }
                     }
                     else
                     {
-                        counters[pair] = FIELD_INDICATOR_IDLE;
+                        g_field_pair_indicator_counters[pair] = FIELD_INDICATOR_IDLE;
                     }
-                    pair++;
-                    field_draw_pair_indicator(pair, render_half);
-                    /* A goto loop: a for loop gets strength reduction and loop-depth
-                       allocation weights that the original code does not have. */
-                    if (pair < FIELD_PARTY_COUNT)
-                    {
-                        goto next_pair;
-                    }
+                    field_draw_pair_indicator(pair + 1, render_half);
                 }
-                index = g_field_pair_indicator_count;
-                g_field_pair_indicator_list[index * 2] = FIELD_PAIR_LIST_END;
             }
+            g_field_pair_indicator_list[g_field_pair_indicator_count << 1] = FIELD_PAIR_LIST_END;
         }
     }
 }

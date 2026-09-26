@@ -620,22 +620,22 @@ void field_command_items(s32 command, FieldItemCommandParams* params)
     case FIELD_ITEM_COMMAND_LOWER_LEVEL:
         while (params->args[1] != 0)
         {
-            func_800BF9A0(params->args[0]);
+            field_lower_staged_level(params->args[0]);
             params->args[1]--;
         }
         return;
     case FIELD_ITEM_COMMAND_RAISE_LEVEL:
         while (params->args[1] != 0)
         {
-            func_800BF880(params->args[0]);
+            field_raise_staged_level(params->args[0]);
             params->args[1]--;
         }
         return;
     case FIELD_ITEM_COMMAND_TEST_COST:
-        FIELD_SCRIPT_ACTIVE_RECORD_STATE()->flags = (FIELD_SCRIPT_ACTIVE_RECORD_STATE()->flags & ~FIELD_SCRIPT_COND) | (func_800BF9F0(params->args[0]) & FIELD_SCRIPT_COND);
+        FIELD_SCRIPT_ACTIVE_RECORD_STATE()->flags = (FIELD_SCRIPT_ACTIVE_RECORD_STATE()->flags & ~FIELD_SCRIPT_COND) | (field_can_pay_staged_cost(params->args[0]) & FIELD_SCRIPT_COND);
         return;
     case FIELD_ITEM_COMMAND_REPLACE_SLOT:
-        field_set_script_var(0, FIELD_VAR_RESULT, func_800BF68C(params->args[0], params->args[1], params->args[2]));
+        field_set_script_var(0, FIELD_VAR_RESULT, field_replace_slot_value(params->args[0], params->args[1], params->args[2]));
         return;
     case FIELD_ITEM_COMMAND_RESERVED:
     default:

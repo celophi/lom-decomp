@@ -294,13 +294,13 @@ static void field_load_companion(s32 companion_index)
 
 /**
  * @brief Rebuild the golem in party slot 2 and return its resource variant.
+ * @param logic_type Logic type passed to field_golem_select_logic_type (GOLEM_NO_GROUP rejoins the saved group).
  * @return The golem's info byte 1 plus FIELD_GOLEM_VARIANT_BASE.
  * @note field_golem_select_logic_type rebuilds party slot 2 from the joined golem group.
  */
-s32 field_join_golem(void)
+s32 field_join_golem(s32 logic_type)
 {
-    /* field_golem_select_logic_type takes a type; the original call leaves $a0 as it is. */
-    ((void (*)(void))field_golem_select_logic_type)();
+    field_golem_select_logic_type(logic_type);
     return g_field_game_state->characters[FIELD_PARTY_COMPANION].info.bytes[1] + FIELD_GOLEM_VARIANT_BASE;
 }
 

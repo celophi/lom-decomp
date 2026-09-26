@@ -828,7 +828,7 @@ void field_update_scene(void)
         field_upload_golem_palettes();
         field_refresh_party_routes();
         field_pair_indicators_reset();
-        func_800AF8C4();
+        field_reset_item_menu();
         field_upload_transition_tiles();
         field_save_retry_snapshot();
     }

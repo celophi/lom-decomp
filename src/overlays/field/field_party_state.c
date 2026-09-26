@@ -503,7 +503,7 @@ void field_golem_select_logic_cell(s32 actor_id)
             record_game_diagnostic(DIAG_BAD_LOGIC_GRID_SIZE, grid_bound, 0, 0);
             field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_LOGIC_CELL, FIELD_LOGIC_INVALID);
         }
-        column = func_800C9ED4(actor_id);
+        column = field_select_distance_bucket(actor_id);
         if (column >= grid_bound)
         {
             column = grid_bound - 1;
@@ -588,7 +588,7 @@ void field_raise_companion_intensity(s32 amount)
  * @brief Build the battle records of the party and a monster group and publish their counts.
  *
  * FIELD_VAR_ALLY_COUNT and FIELD_VAR_ENEMY_COUNT receive the record counts
- * (1 each in a duel); func_800B48B8 updates them and
+ * (1 each in a duel); field_count_revived_record updates them and
  * field_battle_side_defeated tests them for zero.
  *
  * @param group Monster group to build; 0 only runs field_battle_scan_actor_objects.
@@ -804,7 +804,7 @@ static s32 field_build_party_records(void)
                     }
                 }
             }
-            func_800B4934(&g_field_battle->records[party_index]);
+            field_rebuild_equipment_status_flags(&g_field_battle->records[party_index]);
             nibbles = g_field_game_state->characters[party_index].equipment->bonus_nibbles.word;
             for (index = 0; index < FIELD_STATUS_STAT_COUNT; index++)
             {

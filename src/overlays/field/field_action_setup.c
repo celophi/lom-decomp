@@ -69,7 +69,7 @@ enum
 #define FIELD_EFFECT_NO_INTENSITY 0x200    /**< The attacker's intensity does not rise. */
 #define FIELD_EFFECT_HOLD_MODIFIERS 0x8000 /**< The held action modifiers survive the action. */
 
-/** @brief Status slot ids tested with func_800B4CE4. */
+/** @brief Status slot ids tested with field_count_status_slots. */
 #define FIELD_SLOT_MONEY_PLUS_2 3       /**< Attacker adds FIELD_DEFEAT_MONEY_PLUS_2 to a defeated target. */
 #define FIELD_SLOT_POWER_BOOST 4        /**< Kinds 0 and 1 hit with 1.5 times the power. */
 #define FIELD_SLOT_QUICK_INTENSITY 7    /**< Attacker's intensity rises twice as fast. */
@@ -192,15 +192,15 @@ s32 field_battle_resolve_action(FieldBattleAction* action)
                 field_run_actor_event(action->attacker_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_KILL);
             }
             field_run_actor_event(action->target_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_DEFEATED);
-            if (func_800B4CE4(g_field_battle->attacker, FIELD_SLOT_MONEY_PLUS_2) != 0)
+            if (field_count_status_slots(g_field_battle->attacker, FIELD_SLOT_MONEY_PLUS_2) != 0)
             {
                 g_field_battle->target->unkC |= FIELD_DEFEAT_MONEY_PLUS_2;
             }
-            if (func_800B4CE4(g_field_battle->attacker, FIELD_SLOT_EXPERIENCE_PLUS_2) != 0)
+            if (field_count_status_slots(g_field_battle->attacker, FIELD_SLOT_EXPERIENCE_PLUS_2) != 0)
             {
                 g_field_battle->target->unkC |= FIELD_DEFEAT_EXPERIENCE_PLUS_2;
             }
-            if (func_800B4CE4(g_field_battle->attacker, FIELD_SLOT_RARE_DROPS) != 0)
+            if (field_count_status_slots(g_field_battle->attacker, FIELD_SLOT_RARE_DROPS) != 0)
             {
                 g_field_battle->target->unkC |= FIELD_DEFEAT_EXTRA_DROP_SLOTS | FIELD_DEFEAT_NO_COMMON_DROPS;
             }
@@ -266,7 +266,7 @@ static void field_battle_bind_action(FieldBattleAction* action, s32 resolve_desc
     if (resolve_descriptor != 0)
     {
         g_field_battle->descriptor = field_select_action_descriptor();
-        if (func_800B4CE4(g_field_battle->attacker, FIELD_SLOT_POWER_BOOST) != 0)
+        if (field_count_status_slots(g_field_battle->attacker, FIELD_SLOT_POWER_BOOST) != 0)
         {
             descriptor = g_field_battle->descriptor;
             info = descriptor->info.word;
@@ -328,14 +328,14 @@ static s32 field_battle_check_target_stance(void)
             g_field_battle->action_flags.bits.follow_up = 1;
             return FIELD_STANCE_REPEL;
         }
-        if (func_800B4CE4(g_field_battle->target, FIELD_SLOT_REPEL_KIND_4))
+        if (field_count_status_slots(g_field_battle->target, FIELD_SLOT_REPEL_KIND_4))
         {
             g_field_battle->action_flags.bits.follow_up = 1;
             return FIELD_STANCE_REPEL;
         }
         break;
     case 5:
-        if (func_800B4CE4(g_field_battle->target, FIELD_SLOT_REPEL_KIND_5))
+        if (field_count_status_slots(g_field_battle->target, FIELD_SLOT_REPEL_KIND_5))
         {
             g_field_battle->action_flags.bits.follow_up = 1;
             return FIELD_STANCE_REPEL;
@@ -433,7 +433,7 @@ static void field_battle_raise_attacker_intensity(void)
     attacker = g_field_battle->attacker;
     if (attacker->meta.bytes.id < FIELD_PLAYER_RECORD_COUNT && !(attacker->state->effect_flags & FIELD_EFFECT_NO_INTENSITY))
     {
-        if (func_800B4CE4(attacker, FIELD_SLOT_QUICK_INTENSITY) != 0)
+        if (field_count_status_slots(attacker, FIELD_SLOT_QUICK_INTENSITY) != 0)
         {
             g_field_battle->attacker->state->status_intensity += 8 << FIELD_DESCRIPTOR_SHIFT(g_field_battle->descriptor);
         }

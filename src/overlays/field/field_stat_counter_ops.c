@@ -1,6 +1,6 @@
 /**
  * @file field_stat_counter_ops.c
- * @brief Game-state flag bits and the saturating per-index counters.
+ * @brief Game flag bits and the saturating item counts of the game state.
  */
 
 #include "game_audio.h"
@@ -8,23 +8,32 @@
 #include "field_calls.h"
 #include "field_records.h"
 
-/** @brief Largest value a game-state counter can hold. */
-#define FIELD_COUNTER_MAX 99
+/** @brief Largest quantity an item count can hold. */
+#define FIELD_ITEM_COUNT_MAX 99
 
-/** @brief Counter indexes at or above this value are rejected with a diagnostic. */
-#define FIELD_COUNTER_LIMIT 0xFF
+/** @brief Item kinds at or above this value are rejected with a diagnostic. */
+#define FIELD_ITEM_KIND_LIMIT 0xFF
 
-void func_800C2228(s32 index);
+/** @brief Character limit of an item name placed in a text macro. */
+#define FIELD_ITEM_NAME_LENGTH 21
+
+/** @brief Diagnostic codes for an out-of-range item kind (passed as the first argument). */
+#define DIAG_BAD_ITEM_KIND_GET 0x70
+#define DIAG_BAD_ITEM_KIND_ADD 0x71
+#define DIAG_BAD_ITEM_KIND_REMOVE 0x72
+
+static void field_set_item_name_macro(s32 kind);
 
 extern FieldGameState* g_field_game_state;
+/** @brief Item name texts: a table of offsets from the table start, one per item kind. */
 extern u16 D_800F0E98[];
 
 /**
- * @brief Set one bit of the game-state flag bits.
+ * @brief Set one of the game flag bits.
  * @param bit_index Bit to set; bit n lives in word n / 32.
  * @return Always -1.
  */
-s32 func_800C2094(s32 bit_index)
+s32 field_set_game_flag(s32 bit_index)
 {
     s32 word;
     s32 bit;
@@ -36,70 +45,70 @@ s32 func_800C2094(s32 bit_index)
 }
 
 /**
- * @brief Run the counter's notification entry and return the counter.
- * @param index Counter index, or >= 0xFF to report an invalid index.
- * @return The counter value, or 0 for an invalid index.
+ * @brief Put an item's name in text macro 0 and return how many are held.
+ * @param kind Item kind, or FIELD_ITEM_KIND_LIMIT and above to report an invalid kind.
+ * @return The item count, or 0 for an invalid kind.
  */
-u8 func_800C20D8(s32 index)
+u8 field_get_item_count(s32 kind)
 {
-    if (index < FIELD_COUNTER_LIMIT)
+    if (kind < FIELD_ITEM_KIND_LIMIT)
     {
-        func_800C2228(index);
-        return g_field_game_state->item_counts[index];
+        field_set_item_name_macro(kind);
+        return g_field_game_state->item_counts[kind];
     }
-    record_game_diagnostic(0x8001, 0x70, index, 0);
+    record_game_diagnostic(DIAG_ERROR, DIAG_BAD_ITEM_KIND_GET, kind, 0);
     return 0;
 }
 
 /**
- * @brief Increment a counter, saturating at FIELD_COUNTER_MAX, then run its notification entry.
- * @param index Counter index, or >= 0xFF to report an invalid index.
+ * @brief Add one item, saturating at FIELD_ITEM_COUNT_MAX, and put its name in text macro 0.
+ * @param kind Item kind, or FIELD_ITEM_KIND_LIMIT and above to report an invalid kind.
  */
-void func_800C2138(s32 index)
+void field_receive_item(s32 kind)
 {
-    if (index < FIELD_COUNTER_LIMIT)
+    if (kind < FIELD_ITEM_KIND_LIMIT)
     {
-        g_field_game_state->item_counts[index]++;
-        if (g_field_game_state->item_counts[index] > FIELD_COUNTER_MAX)
+        g_field_game_state->item_counts[kind]++;
+        if (g_field_game_state->item_counts[kind] > FIELD_ITEM_COUNT_MAX)
         {
-            g_field_game_state->item_counts[index] = FIELD_COUNTER_MAX;
+            g_field_game_state->item_counts[kind] = FIELD_ITEM_COUNT_MAX;
         }
-        func_800C2228(index);
+        field_set_item_name_macro(kind);
     }
     else
     {
-        record_game_diagnostic(0x8001, 0x71, index, 0);
+        record_game_diagnostic(DIAG_ERROR, DIAG_BAD_ITEM_KIND_ADD, kind, 0);
     }
 }
 
 /**
- * @brief Decrement a nonzero counter, then run its notification entry.
- * @param index Counter index, or >= 0xFF to report an invalid index.
+ * @brief Remove one item if any is held, and put its name in text macro 0.
+ * @param kind Item kind, or FIELD_ITEM_KIND_LIMIT and above to report an invalid kind.
  */
-void func_800C21C0(s32 index)
+void field_consume_item(s32 kind)
 {
-    u8 value;
+    u8 count;
 
-    if (index < FIELD_COUNTER_LIMIT)
+    if (kind < FIELD_ITEM_KIND_LIMIT)
     {
-        value = g_field_game_state->item_counts[index];
-        if (value != 0)
+        count = g_field_game_state->item_counts[kind];
+        if (count != 0)
         {
-            g_field_game_state->item_counts[index] = value - 1;
+            g_field_game_state->item_counts[kind] = count - 1;
         }
-        func_800C2228(index);
+        field_set_item_name_macro(kind);
     }
     else
     {
-        record_game_diagnostic(0x8001, 0x72, index, 0);
+        record_game_diagnostic(DIAG_ERROR, DIAG_BAD_ITEM_KIND_REMOVE, kind, 0);
     }
 }
 
 /**
- * @brief Run the D_800F0E98 script entry for a counter.
- * @param index Counter index; selects a self-relative offset in D_800F0E98.
+ * @brief Put the name of an item kind in text macro 0.
+ * @param kind Item kind; selects an offset in D_800F0E98.
  */
-void func_800C2228(s32 index)
+static void field_set_item_name_macro(s32 kind)
 {
-    field_set_text_macro(0, (u8*)D_800F0E98 + D_800F0E98[index], 0x15);
+    field_set_text_macro(0, (u8*)D_800F0E98 + D_800F0E98[kind], FIELD_ITEM_NAME_LENGTH);
 }

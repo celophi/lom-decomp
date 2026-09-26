@@ -1,8 +1,10 @@
 #include "field_text.h"
+#include "akao.h"
 #include "cdrom.h"
 #include "cd_resources.h"
 #include "common.h"
 #include "gpu_packet.h"
+#include "display.h"
 #include "field_animation.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
@@ -20,18 +22,75 @@
 #define FIELD_TEXT_REOPEN_PACKED 0x2000
 #define FIELD_TEXT_REOPEN_FIXED 0x4000
 #define FIELD_TEXT_REOPEN_MASK (FIELD_TEXT_REOPEN_PACKED | FIELD_TEXT_REOPEN_FIXED)
+/** @brief Portrait VRAM slot (0 or 1) of a flags word. */
+#define FIELD_TEXT_PORTRAIT_INDEX(flags) (((flags) >> 3) & 1)
+/** @brief Portrait placement (FieldTextPortraitSide) of a flags word. */
+#define FIELD_TEXT_PORTRAIT_SIDE(flags) (((flags) >> 4) & 3)
+/** @brief Reopen mode of a flags word: 1 packed, 2 fixed placement. */
+#define FIELD_TEXT_REOPEN_MODE(flags) (((flags) >> 13) & 3)
 #define FIELD_TEXT_CACHE_WIDTH 256
+#define FIELD_TEXT_CACHE_HEIGHT 96
 #define FIELD_TEXT_PIXELS_PER_WORD 4
 #define FIELD_TEXT_CACHE_ROW_WORDS (FIELD_TEXT_CACHE_WIDTH / FIELD_TEXT_PIXELS_PER_WORD)
+#define FIELD_TEXT_CACHE_ROW_BYTES (FIELD_TEXT_CACHE_ROW_WORDS * 2)
+/** Glyph staging rows in the scratchpad: 16 glyph pixels plus the 4 carried from the previous glyph. */
+#define FIELD_TEXT_STAGING_ROW_WORDS 5
 #define FIELD_TEXT_LINE_HEIGHT 12
 #define FIELD_TEXT_LINE_SPACING 16
 #define FIELD_TEXT_PORTRAIT_SIZE 48
 #define FIELD_TEXT_PORTRAIT_MARGIN 56
 #define FIELD_TEXT_TRANSITION_FRAMES 4
+/** Display time of a timed window, in frames. */
+#define FIELD_TEXT_TIMED_FRAMES 50
+/** Line width of the immediate-string window; wide enough never to wrap. */
+#define FIELD_TEXT_IMMEDIATE_WIDTH 0xFF0
+
+/* Character codes and glyph advances. Codes of 0x80 and above are two-byte characters. */
+#define FIELD_TEXT_FIRST_PRINTABLE 0x20
+#define FIELD_TEXT_WIDE_SPACE 0x80
+/** Pseudo code for FIELD_TEXT_CMD_INDENT at a line start; widened when no portrait sits on the left. */
+#define FIELD_TEXT_CODE_INDENT 0xFFFF
+#define FIELD_TEXT_SPACE_WIDTH 5
+#define FIELD_TEXT_WIDE_WIDTH 12
+#define FIELD_TEXT_DOUBLE_BYTE_WIDTH 9
+/** Added in 16 bits: commands 0x19-0x1F select the high byte (1-7) of a two-byte code. */
+#define FIELD_TEXT_DOUBLE_BYTE_BIAS 0xFFE8
+#define FIELD_TEXT_SHORT_DELAY 4
+#define FIELD_TEXT_CHOICE_BLINK_FRAMES 4
+#define FIELD_TEXT_PROMPT_BLINK_FRAMES 8
+
+/* Buttons in the controller-protocol order of FieldInputState (PAD_BTN_* before the byte swap). */
+#define FIELD_TEXT_PAD_L3 0x0002
+#define FIELD_TEXT_PAD_UP 0x0010
+#define FIELD_TEXT_PAD_DOWN 0x0040
+#define FIELD_TEXT_PAD_CROSS 0x4000
+#define FIELD_TEXT_SFX_CURSOR 0x7D
+#define FIELD_TEXT_SFX_CONFIRM 0x7E
+#define FIELD_TEXT_SFX_PAN 0x80
+
+/* VRAM layout: the text cache and the window frame textures below it share the 4bpp page at (960, 256). */
+#define FIELD_TEXT_CACHE_VRAM_X 960
+#define FIELD_TEXT_CACHE_VRAM_Y 384
+#define FIELD_TEXT_FRAME_VRAM_Y 480
+#define FIELD_TEXT_TPAGE_VRAM_Y 256
+#define FIELD_TEXT_PORTRAIT_VRAM_X 1012
+#define FIELD_TEXT_PORTRAIT_VRAM_Y 272
+#define FIELD_TEXT_CLUT_X 304
+#define FIELD_TEXT_PORTRAIT_CLUT_Y 506
+#define FIELD_TEXT_TEXT_CLUT_Y 508
+#define FIELD_TEXT_WINDOW_CLUT_Y 509
+#define FIELD_TEXT_PROMPT_CLUT_Y 510
+#define FIELD_TEXT_ALT_CLUT_Y 511
+/* Texture coordinates of the cache, frame and portrait images inside that page. */
+#define FIELD_TEXT_CACHE_V (FIELD_TEXT_CACHE_VRAM_Y - FIELD_TEXT_TPAGE_VRAM_Y)
+#define FIELD_TEXT_FRAME_V (FIELD_TEXT_FRAME_VRAM_Y - FIELD_TEXT_TPAGE_VRAM_Y)
+#define FIELD_TEXT_PORTRAIT_U ((FIELD_TEXT_PORTRAIT_VRAM_X - FIELD_TEXT_CACHE_VRAM_X) * FIELD_TEXT_PIXELS_PER_WORD)
 
 #define FIELD_TEXT_FRAME_TILE_WIDTH 64
 #define FIELD_TEXT_FRAME_TILE_HEIGHT 32
 #define FIELD_TEXT_BORDER_WIDTH 8
+/** @brief P_TAG word that links a packet of type @p type to the packet at @p next. */
+#define FIELD_TEXT_TAG(next, type) (((u32)(next) & 0xFFFFFF) | ((sizeof(type) / 4 - 1) << 24))
 #define FIELD_TEXT_SPRITE_COLOR (0x65000000 | GPU_TINT_NEUTRAL)
 #define FIELD_TEXT_QUAD_COLOR (0x2D000000 | GPU_TINT_NEUTRAL)
 #define FIELD_TEXT_CHOICE_COLOR (0x7D000000 | GPU_TINT_NEUTRAL)
@@ -45,6 +104,12 @@
 #define FIELD_TEXT_PENDING_CONFIG ((FieldTextConfig*)0x801ED408)
 #define FIELD_TEXT_INPUT ((FieldInputState*)0x801ED600)
 #define FIELD_TEXT_SCRATCH ((u16*)0x1F800000)
+/** Transition mesh vertices, built in the same scratchpad area. */
+#define FIELD_TEXT_MESH ((FieldTextVertex*)0x1F800000)
+/** @brief Number of 64-pixel frame tiles across a window of @p width. */
+#define FIELD_TEXT_MESH_COLUMNS(width) (((width) + 0x3F) >> 6)
+/** @brief Number of 32-pixel frame tiles down a window of @p height. */
+#define FIELD_TEXT_MESH_ROWS(height) (((height) + 0x1F) >> 5)
 /** 4bpp text cache (256 by 96 pixels), preloaded with the window textures. */
 #define FIELD_TEXT_CACHE ((u16*)0x801DE000)
 /** 12-row, 16-pixel-wide glyph bitmaps, starting at the space character. */
@@ -69,6 +134,14 @@ typedef enum
     FIELD_TEXT_MODE_UNKNOWN_5,
     FIELD_TEXT_IMMEDIATE
 } FieldTextMode;
+
+/** @brief Portrait placement, bits 4-5 of a window's flags. */
+typedef enum
+{
+    FIELD_TEXT_SIDE_LEFT,   /**< Inside the window, left of the text. */
+    FIELD_TEXT_SIDE_RIGHT,  /**< Inside the window, right of the text. */
+    FIELD_TEXT_SIDE_OUTSIDE /**< Beside the window; the frame does not widen. */
+} FieldTextPortraitSide;
 
 /** @brief Pending actions completed by the dialogue prompt. */
 typedef enum
@@ -297,24 +370,23 @@ typedef struct
     u32 left_stick_axes;
 } FieldInputState;
 
-void field_text_typeset(FieldTextState* state, s32 budget);
-void field_text_blit_glyph(FieldTextState* state, s32 code, u16 width);
-void field_text_clear_cache(FieldTextState* state);
-s32 field_text_advance_line(FieldTextState* state);
-void field_text_clear_window(FieldTextState* state);
-void field_text_apply_config(FieldTextState* state);
-void field_text_build_transition_quad(FieldTextState* state, FieldTextQuad* out, s32 frame);
-void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOrderingTags* ot);
-void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* quad, u8** cursor, FieldOrderingTags* ot);
-void field_text_scroll_cache(FieldTextState* state);
-void field_text_queue_uploads(FieldTextState* state, u8** cursor);
-void field_text_save_config(u16 slot);
-void field_text_close(FieldTextState* state, s32 animate);
-void field_text_render_window(FieldTextState* state, u8** cursor, FieldOrderingTags* ot);
-void field_text_queue_portrait_upload(FieldTextPortrait* image, u8** cursor, s32 slot, s32 mirror);
-void field_text_restore_window(u16 slot, s32 placement_mode);
+static void field_text_typeset(FieldTextState* state, s32 budget);
+static void field_text_blit_glyph(FieldTextState* state, s32 code, u16 width);
+static void field_text_clear_cache(FieldTextState* state);
+static s32 field_text_advance_line(FieldTextState* state);
+static void field_text_clear_window(FieldTextState* state);
+static void field_text_apply_config(FieldTextState* state);
+static void field_text_build_transition_quad(FieldTextState* state, FieldTextQuad* out, s32 frame);
+static void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOrderingTags* ot);
+static void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* quad, u8** cursor, FieldOrderingTags* ot);
+static void field_text_scroll_cache(FieldTextState* state);
+static void field_text_queue_uploads(FieldTextState* state, u8** cursor);
+static void field_text_save_config(u16 slot);
+static void field_text_close(FieldTextState* state, s32 animate);
+static void field_text_render_window(FieldTextState* state, u8** cursor, FieldOrderingTags* ot);
+static void field_text_queue_portrait_upload(FieldTextPortrait* image, u8** cursor, s32 slot, s32 mirror);
+static void field_text_restore_window(u16 slot, s32 placement_mode);
 
-extern u8* g_field_timed_text;
 extern s16 g_field_text_portrait_slots;
 extern s32 g_field_text_window0_flags;
 
@@ -334,8 +406,8 @@ void field_text_upload_immediate_cache(void)
     s32 i;
     s32 j;
 
-    rect.x = 960;
-    rect.y = 384;
+    rect.x = FIELD_TEXT_CACHE_VRAM_X;
+    rect.y = FIELD_TEXT_CACHE_VRAM_Y;
     text_width = FIELD_TEXT_IMMEDIATE_STATE->width - FIELD_TEXT_IMMEDIATE_STATE->remaining_width;
     words = ((text_width & 3) + text_width + 5) >> 2;
     cache = FIELD_TEXT_CACHE;
@@ -375,7 +447,7 @@ void field_text_upload_immediate_cache(void)
  * @param state Window and nested text cursors to advance.
  * @param budget Character budget; zero draws without a limit.
  */
-void field_text_typeset(FieldTextState* state, s32 budget)
+static void field_text_typeset(FieldTextState* state, s32 budget)
 {
     u8* glyph_run;
     u8* cursor;
@@ -451,8 +523,8 @@ void field_text_typeset(FieldTextState* state, s32 budget)
         {
             if (state->pending_spaces != 0)
             {
-                code = 0x20;
-                width = 5;
+                code = ' ';
+                width = FIELD_TEXT_SPACE_WIDTH;
                 advance = 0;
                 state->pending_spaces = state->pending_spaces - 1;
             }
@@ -460,7 +532,7 @@ void field_text_typeset(FieldTextState* state, s32 budget)
             {
                 opcode = *cursor;
                 cursor++;
-                if ((opcode < 0x20) && (opcode != FIELD_TEXT_CMD_WIDE_CHARACTER))
+                if ((opcode < FIELD_TEXT_FIRST_PRINTABLE) && (opcode != FIELD_TEXT_CMD_WIDE_CHARACTER))
                 {
                     switch (opcode)
                     {
@@ -555,7 +627,7 @@ void field_text_typeset(FieldTextState* state, s32 budget)
                         cursor++;
                         break;
                     case FIELD_TEXT_CMD_SHORT_DELAY:
-                        state->char_delay = 4;
+                        state->char_delay = FIELD_TEXT_SHORT_DELAY;
                         goto store_and_return;
                     case FIELD_TEXT_CMD_DELAY:
                         state->char_delay = *cursor;
@@ -586,8 +658,8 @@ void field_text_typeset(FieldTextState* state, s32 budget)
                     case FIELD_TEXT_CMD_INDENT:
                         if (new_line != 0)
                         {
-                            code = 0xFFFF;
-                            width = 0xC;
+                            code = FIELD_TEXT_CODE_INDENT;
+                            width = FIELD_TEXT_WIDE_WIDTH;
                             advance = 1;
                         }
                         break;
@@ -596,13 +668,13 @@ void field_text_typeset(FieldTextState* state, s32 budget)
                         cursor++;
                         if (opcode == 0)
                         {
-                            code = 0x20;
-                            width = 5;
+                            code = ' ';
+                            width = FIELD_TEXT_SPACE_WIDTH;
                             advance = 2;
                         }
                         /* fallthrough */
                     case FIELD_TEXT_CMD_EXTENDED_GLYPH_RUN:
-                        opcode = *cursor + 0x1F;
+                        opcode = *cursor + FIELD_TEXT_CMD_EXTENDED_GLYPH_RUN;
                         cursor++;
                         /* fallthrough */
                     default:
@@ -621,26 +693,26 @@ void field_text_typeset(FieldTextState* state, s32 budget)
                 }
                 else
                 {
-                    if (opcode >= 0x20)
+                    if (opcode >= FIELD_TEXT_FIRST_PRINTABLE)
                     {
                         code = opcode;
                         advance = 1;
                     }
                     else
                     {
-                        code = *cursor | ((opcode + 0xFFE8) << 8);
+                        code = *cursor | ((opcode + FIELD_TEXT_DOUBLE_BYTE_BIAS) << 8);
                         cursor++;
                         advance = 2;
                     }
 
                     character = code;
-                    if (character == 0x80)
+                    if (character == FIELD_TEXT_WIDE_SPACE)
                     {
-                        width = 0xC;
+                        width = FIELD_TEXT_WIDE_WIDTH;
                     }
-                    else if (character >= 0x80)
+                    else if (character >= FIELD_TEXT_WIDE_SPACE)
                     {
-                        width = 9;
+                        width = FIELD_TEXT_DOUBLE_BYTE_WIDTH;
                     }
                     else
                     {
@@ -651,7 +723,7 @@ void field_text_typeset(FieldTextState* state, s32 budget)
 
             character = code;
 
-            if ((character == 0x20) || (character == 0x80))
+            if ((character == ' ') || (character == FIELD_TEXT_WIDE_SPACE))
             {
                 if (state->remaining_width < width)
                 {
@@ -670,7 +742,7 @@ void field_text_typeset(FieldTextState* state, s32 budget)
             state->last_was_break = 0;
         }
         word_continues = state->last_was_break;
-        if ((code == 0x20) || (code == 0x80) || (code == 0xFFFF))
+        if ((code == ' ') || (code == FIELD_TEXT_WIDE_SPACE) || (code == FIELD_TEXT_CODE_INDENT))
         {
             state->last_was_break = 1;
         }
@@ -720,7 +792,7 @@ void field_text_typeset(FieldTextState* state, s32 budget)
                     {
                         opcode = *look_cursor;
                         look_cursor++;
-                        if ((opcode < 0x20) && (opcode != FIELD_TEXT_CMD_WIDE_CHARACTER))
+                        if ((opcode < FIELD_TEXT_FIRST_PRINTABLE) && (opcode != FIELD_TEXT_CMD_WIDE_CHARACTER))
                         {
                             switch (opcode)
                             {
@@ -784,7 +856,7 @@ void field_text_typeset(FieldTextState* state, s32 budget)
                                 }
                                 /* fallthrough */
                             case FIELD_TEXT_CMD_EXTENDED_GLYPH_RUN:
-                                opcode = *look_cursor + 0x1F;
+                                opcode = *look_cursor + FIELD_TEXT_CMD_EXTENDED_GLYPH_RUN;
                                 look_cursor++;
                                 /* fallthrough */
                             default:
@@ -803,26 +875,26 @@ void field_text_typeset(FieldTextState* state, s32 budget)
                         }
                         else
                         {
-                            if (opcode >= 0x20)
+                            if (opcode >= FIELD_TEXT_FIRST_PRINTABLE)
                             {
                                 look_code = opcode;
                                 look_advance = 1;
                             }
                             else
                             {
-                                look_code = *look_cursor | ((opcode + 0xFFE8) << 8);
+                                look_code = *look_cursor | ((opcode + FIELD_TEXT_DOUBLE_BYTE_BIAS) << 8);
                                 look_cursor++;
                                 look_advance = 2;
                             }
                             if (look_code != 0)
                             {
-                                if ((look_code == 0x20) || (look_code == 0x80) || (look_code == 0xFFFF))
+                                if ((look_code == ' ') || (look_code == FIELD_TEXT_WIDE_SPACE) || (look_code == FIELD_TEXT_CODE_INDENT))
                                 {
                                     word_continues = 0;
                                 }
-                                else if (look_code >= 0x80)
+                                else if (look_code >= FIELD_TEXT_WIDE_SPACE)
                                 {
-                                    look_width += 9;
+                                    look_width += FIELD_TEXT_DOUBLE_BYTE_WIDTH;
                                 }
                                 else
                                 {
@@ -865,13 +937,13 @@ void field_text_typeset(FieldTextState* state, s32 budget)
             state->text_cursor = cursor;
         }
         glyph_width = width;
-        if (code == 0xFFFF)
+        if (code == FIELD_TEXT_CODE_INDENT)
         {
-            code = 0x20;
-            width = 0xC;
-            if ((state->portrait == 0) || (state->flags.word & FIELD_TEXT_PORTRAIT_MASK))
+            code = ' ';
+            width = FIELD_TEXT_WIDE_WIDTH;
+            if ((state->portrait == NULL) || (state->flags.word & FIELD_TEXT_PORTRAIT_MASK))
             {
-                field_text_blit_glyph(state, 0x20, 0xC);
+                field_text_blit_glyph(state, ' ', FIELD_TEXT_WIDE_WIDTH);
             }
             glyph_width = width;
         }
@@ -879,7 +951,7 @@ void field_text_typeset(FieldTextState* state, s32 budget)
         {
             field_text_blit_glyph(state, code, glyph_width);
         }
-        if ((remaining != 0) && !(state->flags.word & FIELD_TEXT_INSTANT) && ((new_line == 0) || (code != 0x20)))
+        if ((remaining != 0) && !(state->flags.word & FIELD_TEXT_INSTANT) && ((new_line == 0) || (code != ' ')))
         {
             first_character = 0;
             remaining--;
@@ -892,17 +964,17 @@ void field_text_typeset(FieldTextState* state, s32 budget)
     }
     return;
 
-    /* Stop tails shared by the switch cases; the target keeps one copy after the loop. */
+    /* Stop tails shared by the prompt and delay commands. */
 set_wide:
     state->flow_code = FIELD_TEXT_FLOW_CHOICE;
     state->prompt_frame = 0;
-    state->prompt_timer = 4;
+    state->prompt_timer = FIELD_TEXT_CHOICE_BLINK_FRAMES;
     state->choice_index = 0;
     goto store_and_return;
 
 set_break:
     state->prompt_frame = 0;
-    state->prompt_timer = 8;
+    state->prompt_timer = FIELD_TEXT_PROMPT_BLINK_FRAMES;
 
 store_and_return:
     if (state->glyph_cursor != NULL)
@@ -924,135 +996,135 @@ store_and_return:
  * @param code Character code; the font starts at the space character.
  * @param width Glyph advance in pixels.
  */
-void field_text_blit_glyph(FieldTextState* state, s32 code, u16 width)
+static void field_text_blit_glyph(FieldTextState* state, s32 code, u16 width)
 {
-    u16* scratch;
+    u16* staging;
     u16* carry;
-    u16* glyph;
-    u8* line;
-    u16* dst;
+    u16* glyph_row;
+    u8* cache_line;
+    u16* cache_dst;
     u16* row_src;
     u16* row_dst;
-    u8* px;
+    u8* staging_row;
     s32 rows;
-    s32 shift;
+    s32 line_x;
     s32 i;
     s32 j;
     s32 r;
     s32 col;
     s32 words;
-    s32 lo_fill;
-    s32 hi_fill;
-    s32 lo_shadow;
-    s32 hi_shadow;
-    u32 nibbles;
-    u32 left;
-    u32 mask;
+    s32 fill_low;
+    s32 fill_high;
+    s32 shadow_low;
+    s32 shadow_high;
+    u32 pixel_count;
+    u32 words_left;
+    u32 bit;
     u32 fill;
     u32 shade;
     u32 acc;
     u32 cur;
     u32 next;
-    u32 avail;
-    u32 span;
-    s32 nib;
+    u32 room;
+    u32 pixel_span;
+    s32 high_nibble;
 
-    scratch = FIELD_TEXT_SCRATCH;
+    staging = FIELD_TEXT_SCRATCH;
     carry = state->row_carry;
-    i = state->line_height;
-    rows = i;
-    shift = state->width - state->remaining_width;
-    for (i = rows - 1; i != -1; i--)
+    rows = state->line_height;
+    i = rows;
+    line_x = state->width - state->remaining_width;
+    while (--i != -1)
     {
-        j = 4;
-        if (shift != 0)
+        j = FIELD_TEXT_STAGING_ROW_WORDS - 1;
+        if (line_x != 0)
         {
-            *scratch++ = *carry++;
+            *staging++ = *carry++;
         }
         else
         {
-            j = 5;
+            j = FIELD_TEXT_STAGING_ROW_WORDS;
         }
-        for (j = j - 1; j != -1; j--)
+        while (--j != -1)
         {
-            *scratch++ = 0;
+            *staging++ = 0;
         }
     }
 
     if ((state->flags.word & FIELD_TEXT_STYLE_MASK) == FIELD_TEXT_STYLE_BOLD)
     {
-        lo_fill = 6;
-        hi_fill = 0x60;
-        lo_shadow = 7;
-        hi_shadow = 0x70;
-        nibbles = width + 2;
+        fill_low = 6;
+        fill_high = 0x60;
+        shadow_low = 7;
+        shadow_high = 0x70;
+        pixel_count = width + 2;
     }
     else
     {
         switch (state->text_color)
         {
         case 0:
-            lo_fill = 2;
-            hi_fill = 0x20;
-            lo_shadow = 3;
-            hi_shadow = 0x30;
+            fill_low = 2;
+            fill_high = 0x20;
+            shadow_low = 3;
+            shadow_high = 0x30;
             break;
         case 1:
-            lo_fill = 4;
-            hi_fill = 0x40;
-            lo_shadow = 5;
-            hi_shadow = 0x50;
+            fill_low = 4;
+            fill_high = 0x40;
+            shadow_low = 5;
+            shadow_high = 0x50;
             break;
         case 2:
-            lo_fill = 6;
-            hi_fill = 0x60;
-            lo_shadow = 7;
-            hi_shadow = 0x70;
+            fill_low = 6;
+            fill_high = 0x60;
+            shadow_low = 7;
+            shadow_high = 0x70;
             break;
         case 3:
-            lo_fill = 8;
-            hi_fill = 0x80;
-            lo_shadow = 9;
-            hi_shadow = 0x90;
+            fill_low = 8;
+            fill_high = 0x80;
+            shadow_low = 9;
+            shadow_high = 0x90;
             break;
         case 4:
-            lo_fill = 0xA;
-            hi_fill = 0xA0;
-            lo_shadow = 0xB;
-            hi_shadow = 0xB0;
+            fill_low = 0xA;
+            fill_high = 0xA0;
+            shadow_low = 0xB;
+            shadow_high = 0xB0;
             break;
         case 5:
-            lo_fill = 0xC;
-            hi_fill = 0xC0;
-            lo_shadow = 0xD;
-            hi_shadow = 0xD0;
+            fill_low = 0xC;
+            fill_high = 0xC0;
+            shadow_low = 0xD;
+            shadow_high = 0xD0;
             break;
         default:
-            lo_fill = 0xE;
-            hi_fill = 0xE0;
-            lo_shadow = 0xF;
-            hi_shadow = 0xF0;
+            fill_low = 0xE;
+            fill_high = 0xE0;
+            shadow_low = 0xF;
+            shadow_high = 0xF0;
             break;
         }
-        nibbles = width + 1;
+        pixel_count = width + 1;
     }
 
-    glyph = FIELD_TEXT_FONT + ((u16)code - 0x20) * FIELD_TEXT_LINE_HEIGHT;
-    px = (u8*)FIELD_TEXT_SCRATCH + (((u32)shift & 3) >> 1);
+    glyph_row = FIELD_TEXT_FONT + ((u16)code - ' ') * FIELD_TEXT_LINE_HEIGHT;
+    staging_row = (u8*)FIELD_TEXT_SCRATCH + (((u32)line_x & 3) >> 1);
     fill = 0;
-    shade = fill;
-    acc = fill;
+    shade = 0;
+    acc = 0;
     for (i = rows - 1; i != -1; i--)
     {
-        u8* p = px;
+        u8* pixels = staging_row;
 
-        nib = shift & 1;
-        mask = 0x8000;
+        high_nibble = line_x & 1;
+        bit = 0x8000;
         if ((state->flags.word & FIELD_TEXT_STYLE_MASK) == FIELD_TEXT_STYLE_BOLD)
         {
             if (i != 0)
             {
-                next = *glyph;
+                next = *glyph_row;
                 cur = (next & 0xFFFF) >> 1;
                 next |= (next & 0xFFFF) >> 2;
                 acc |= next;
@@ -1061,83 +1133,84 @@ void field_text_blit_glyph(FieldTextState* state, s32 code, u16 width)
             }
             else
             {
-                next = cur = 0;
+                cur = 0;
+                next = 0;
             }
-            for (j = nibbles - 1; j != -1; j--)
+            for (j = pixel_count - 1; j != -1; j--)
             {
-                if (nib == 0)
+                if (high_nibble == 0)
                 {
-                    if ((shade & mask) != 0)
+                    if ((shade & bit) != 0)
                     {
-                        *p = lo_shadow | (*p & 0xF0);
+                        *pixels = shadow_low | (*pixels & 0xF0);
                     }
-                    nib = 1;
-                    if ((fill & mask) != 0)
+                    high_nibble = 1;
+                    if ((fill & bit) != 0)
                     {
-                        *p = lo_fill | (*p & 0xF0);
+                        *pixels = fill_low | (*pixels & 0xF0);
                     }
                 }
                 else
                 {
-                    if ((shade & mask) != 0)
+                    if ((shade & bit) != 0)
                     {
-                        *p = hi_shadow | (*p & 0xF);
+                        *pixels = shadow_high | (*pixels & 0xF);
                     }
-                    nib = 0;
-                    if ((fill & mask) != 0)
+                    high_nibble = 0;
+                    if ((fill & bit) != 0)
                     {
-                        *p = hi_fill | (*p & 0xF);
+                        *pixels = fill_high | (*pixels & 0xF);
                     }
-                    p++;
+                    pixels++;
                 }
-                mask >>= 1;
+                bit >>= 1;
             }
             shade = acc;
             fill = cur;
         }
         else
         {
-            cur = *glyph;
+            cur = *glyph_row;
             next = cur >> 1;
             acc |= next;
             next |= cur;
-            for (j = nibbles - 1; j != -1; j--)
+            for (j = pixel_count - 1; j != -1; j--)
             {
-                if (nib == 0)
+                if (high_nibble == 0)
                 {
-                    if ((acc & mask) != 0)
+                    if ((acc & bit) != 0)
                     {
-                        *p = lo_shadow | (*p & 0xF0);
+                        *pixels = shadow_low | (*pixels & 0xF0);
                     }
-                    nib = 1;
-                    if ((cur & mask) != 0)
+                    high_nibble = 1;
+                    if ((cur & bit) != 0)
                     {
-                        *p = lo_fill | (*p & 0xF0);
+                        *pixels = fill_low | (*pixels & 0xF0);
                     }
                 }
                 else
                 {
-                    if ((acc & mask) != 0)
+                    if ((acc & bit) != 0)
                     {
-                        *p = hi_shadow | (*p & 0xF);
+                        *pixels = shadow_high | (*pixels & 0xF);
                     }
-                    nib = 0;
-                    if ((cur & mask) != 0)
+                    high_nibble = 0;
+                    if ((cur & bit) != 0)
                     {
-                        *p = hi_fill | (*p & 0xF);
+                        *pixels = fill_high | (*pixels & 0xF);
                     }
-                    p++;
+                    pixels++;
                 }
-                mask >>= 1;
+                bit >>= 1;
             }
         }
-        glyph++;
+        glyph_row++;
         acc = next;
-        px += 10;
+        staging_row += FIELD_TEXT_STAGING_ROW_WORDS * sizeof(u16);
     }
 
     i = state->cursor_v;
-    j = state->cursor_u + shift;
+    j = state->cursor_u + line_x;
     while (j >= FIELD_TEXT_CACHE_WIDTH)
     {
         j -= FIELD_TEXT_CACHE_WIDTH;
@@ -1146,68 +1219,68 @@ void field_text_blit_glyph(FieldTextState* state, s32 code, u16 width)
 
     if ((state->flags.word & FIELD_TEXT_STYLE_MASK) == FIELD_TEXT_STYLE_BOLD)
     {
-        avail = state->remaining_width + 4;
+        room = state->remaining_width + 4;
     }
     else
     {
-        avail = state->remaining_width;
+        room = state->remaining_width;
     }
-    if (avail < nibbles)
+    if (room < pixel_count)
     {
-        span = avail + (shift & 3);
+        pixel_span = room + (line_x & 3);
     }
     else
     {
-        span = nibbles + (shift & 3);
+        pixel_span = pixel_count + (line_x & 3);
     }
-    scratch = FIELD_TEXT_SCRATCH;
-    left = (span + 3) >> 2;
-    if (left != 0)
+    staging = FIELD_TEXT_SCRATCH;
+    words_left = (pixel_span + 3) >> 2;
+    if (words_left != 0)
     {
         do
         {
-            line = (u8*)FIELD_TEXT_CACHE + (i << 7);
+            cache_line = (u8*)FIELD_TEXT_CACHE + i * FIELD_TEXT_CACHE_ROW_BYTES;
             col = j >> 2;
-            dst = FIELD_TEXT_CACHE_WORD(line, col * 2);
-            if ((u32)(col + left) >= 0x41U)
+            cache_dst = FIELD_TEXT_CACHE_WORD(cache_line, col * 2);
+            if ((u32)(col + words_left) > FIELD_TEXT_CACHE_ROW_WORDS)
             {
-                words = 0x40 - col;
-                left -= words;
+                words = FIELD_TEXT_CACHE_ROW_WORDS - col;
+                words_left -= words;
                 j = 0;
                 i += rows;
             }
             else
             {
-                j += left * 4;
-                words = left;
-                left = 0;
+                j += words_left * 4;
+                words = words_left;
+                words_left = 0;
             }
-            row_src = scratch;
+            row_src = staging;
             for (r = rows - 1; r != -1; r--)
             {
-                u16* s = row_src;
+                u16* src = row_src;
 
-                row_dst = dst;
+                row_dst = cache_dst;
                 for (col = words - 1; col != -1; col--)
                 {
-                    *row_dst++ = *s++;
+                    *row_dst++ = *src++;
                 }
-                row_src += 5;
-                dst += 0x40;
+                row_src += FIELD_TEXT_STAGING_ROW_WORDS;
+                cache_dst += FIELD_TEXT_CACHE_ROW_WORDS;
             }
-            scratch += words;
-        } while (left != 0);
+            staging += words;
+        } while (words_left != 0);
     }
 
     state->dirty_end_u = j;
-    j = (shift & 3) + width;
-    scratch = FIELD_TEXT_SCRATCH + (j >> 2);
+    j = (line_x & 3) + width;
+    staging = FIELD_TEXT_SCRATCH + (j >> 2);
     carry = state->row_carry;
     state->dirty_end_v = i;
     for (i = rows - 1; i != -1; i--)
     {
-        *carry++ = *scratch;
-        scratch += 5;
+        *carry++ = *staging;
+        staging += FIELD_TEXT_STAGING_ROW_WORDS;
     }
     state->remaining_width = state->remaining_width - width;
 }
@@ -1216,7 +1289,7 @@ void field_text_blit_glyph(FieldTextState* state, s32 code, u16 width)
  * @brief Clear the window cache region and mark it for upload.
  * @param state Window whose cached text is erased.
  */
-void field_text_clear_cache(FieldTextState* state)
+static void field_text_clear_cache(FieldTextState* state)
 {
     u16* cache_row;
     u16* pixel_word;
@@ -1241,7 +1314,7 @@ void field_text_clear_cache(FieldTextState* state)
         byte_span = pixel_span >> 1;
     }
     glyph_rows = state->line_height;
-    cache_row = (FIELD_TEXT_CACHE + (cache_u >> 2)) + (cache_v << 6);
+    cache_row = (FIELD_TEXT_CACHE + (cache_u >> 2)) + (cache_v * FIELD_TEXT_CACHE_ROW_WORDS);
     for (rows_remaining = glyph_rows - 1; rows_remaining != -1; rows_remaining--)
     {
         pixel_word = cache_row;
@@ -1258,8 +1331,8 @@ void field_text_clear_cache(FieldTextState* state)
         cache_v += glyph_rows;
         if (cache_v != state->region_end_v)
         {
-            cache_row = FIELD_TEXT_CACHE + (cache_v << 6);
-            rows_remaining = (state->region_end_v - cache_v) << 6;
+            cache_row = FIELD_TEXT_CACHE + (cache_v * FIELD_TEXT_CACHE_ROW_WORDS);
+            rows_remaining = (state->region_end_v - cache_v) * FIELD_TEXT_CACHE_ROW_WORDS;
             while (--rows_remaining != -1)
             {
                 *cache_row++ = 0;
@@ -1267,7 +1340,7 @@ void field_text_clear_cache(FieldTextState* state)
         }
         if (state->region_end_u != 0)
         {
-            cache_row = FIELD_TEXT_CACHE + (state->region_end_v << 6);
+            cache_row = FIELD_TEXT_CACHE + (state->region_end_v * FIELD_TEXT_CACHE_ROW_WORDS);
             for (rows_remaining = glyph_rows - 1; rows_remaining != -1; rows_remaining--)
             {
                 pixel_word = cache_row;
@@ -1291,7 +1364,7 @@ void field_text_clear_cache(FieldTextState* state)
  * @param state Window cursor to advance.
  * @return 1 when the window is full; 0 when the next line is available.
  */
-s32 field_text_advance_line(FieldTextState* state)
+static s32 field_text_advance_line(FieldTextState* state)
 {
     u16 x;
     u16 y;
@@ -1319,7 +1392,7 @@ s32 field_text_advance_line(FieldTextState* state)
  * @brief Clear the window and return its cursor to the first line.
  * @param state Window to clear.
  */
-void field_text_clear_window(FieldTextState* state)
+static void field_text_clear_window(FieldTextState* state)
 {
     u16 start_u = state->region_start_u;
     u16 start_v = state->region_start_v;
@@ -1345,21 +1418,22 @@ void field_text_init(void)
 
     cdrom_stream(CD_RES_FIELD_WINDOW_TEXTURES, FIELD_TEXT_CACHE);
 
-    setRECT(&rect, 304, 508, 16, 4);
+    /* The file starts with the four text CLUTs, followed by the window frame textures. */
+    setRECT(&rect, FIELD_TEXT_CLUT_X, FIELD_TEXT_TEXT_CLUT_Y, 16, 4);
     LoadImage(&rect, (u_long*)FIELD_TEXT_CACHE);
 
-    setRECT(&rect, 960, 480, 64, 32);
-    LoadImage(&rect, (u_long*)(FIELD_TEXT_CACHE + 0x40));
+    setRECT(&rect, FIELD_TEXT_CACHE_VRAM_X, FIELD_TEXT_FRAME_VRAM_Y, FIELD_TEXT_FRAME_TILE_WIDTH, FIELD_TEXT_FRAME_TILE_HEIGHT);
+    LoadImage(&rect, (u_long*)(FIELD_TEXT_CACHE + 16 * 4));
 
-    draw_mode = _get_mode(1, 0, getTPage(0, 0, 960, 256));
+    draw_mode = _get_mode(1, 0, getTPage(0, 0, FIELD_TEXT_CACHE_VRAM_X, FIELD_TEXT_TPAGE_VRAM_Y));
     text_sys->draw_mode0 = draw_mode;
     text_sys->draw_mode1 = draw_mode;
-    text_sys->text_clut = getClut(304, 508);
-    text_sys->text_alt_clut = getClut(304, 511);
-    text_sys->window_clut = getClut(304, 509);
-    text_sys->prompt_clut = getClut(304, 510);
-    text_sys->portrait_clut[0] = getClut(304, 506);
-    text_sys->portrait_clut[1] = getClut(304, 507);
+    text_sys->text_clut = getClut(FIELD_TEXT_CLUT_X, FIELD_TEXT_TEXT_CLUT_Y);
+    text_sys->text_alt_clut = getClut(FIELD_TEXT_CLUT_X, FIELD_TEXT_ALT_CLUT_Y);
+    text_sys->window_clut = getClut(FIELD_TEXT_CLUT_X, FIELD_TEXT_WINDOW_CLUT_Y);
+    text_sys->prompt_clut = getClut(FIELD_TEXT_CLUT_X, FIELD_TEXT_PROMPT_CLUT_Y);
+    text_sys->portrait_clut[0] = getClut(FIELD_TEXT_CLUT_X, FIELD_TEXT_PORTRAIT_CLUT_Y);
+    text_sys->portrait_clut[1] = getClut(FIELD_TEXT_CLUT_X, FIELD_TEXT_PORTRAIT_CLUT_Y + 1);
     text_sys->portrait_slots = 0;
 
     state = FIELD_TEXT_WINDOWS;
@@ -1398,18 +1472,18 @@ void field_text_reset_scratch(void)
     {
         field_text_close(FIELD_TEXT_WINDOWS, 0);
     }
-    /* The one-pass loop scope is kept: its loop depth weights the register allocation. */
+    /* Without the loop scope the state pointer and the flag masks swap registers. */
     do
     {
         FieldTextState* state = FIELD_TEXT_IMMEDIATE_STATE;
         state->dirty_end_u = FIELD_TEXT_CACHE_WIDTH;
         state->region_end_u = FIELD_TEXT_CACHE_WIDTH;
-        state->dirty_end_v = 0x60;
-        state->region_end_v = 0x60;
-        state->line_advance = 0xFF0;
-        state->width = 0xFF0;
-        state->remaining_width = 0xFF0;
-        state->line_height = 0xC;
+        state->dirty_end_v = FIELD_TEXT_CACHE_HEIGHT;
+        state->region_end_v = FIELD_TEXT_CACHE_HEIGHT;
+        state->line_advance = FIELD_TEXT_IMMEDIATE_WIDTH;
+        state->width = FIELD_TEXT_IMMEDIATE_WIDTH;
+        state->remaining_width = FIELD_TEXT_IMMEDIATE_WIDTH;
+        state->line_height = FIELD_TEXT_LINE_HEIGHT;
         state->dirty_start_u = 0;
         state->cursor_u = 0;
         state->region_start_u = 0;
@@ -1457,8 +1531,8 @@ s32 field_text_build_sprites(SPRT* prim, u8* text, s32 text_style)
     state->last_was_break = 1;
     state->text_color = style & 7;
     carry = state->row_carry;
-    state->macro_cursor = 0;
-    state->glyph_cursor = 0;
+    state->macro_cursor = NULL;
+    state->glyph_cursor = NULL;
     state->pending_spaces = 0;
     state->flow_code = FIELD_TEXT_FLOW_NONE;
     remaining = state->line_height;
@@ -1466,8 +1540,7 @@ s32 field_text_build_sprites(SPRT* prim, u8* text, s32 text_style)
     state->text_cursor = text;
     while (--remaining != -1)
     {
-        *carry = 0;
-        carry += 1;
+        *carry++ = 0;
     }
     field_text_typeset(state, 0);
     tex_u = start_x;
@@ -1477,7 +1550,7 @@ s32 field_text_build_sprites(SPRT* prim, u8* text, s32 text_style)
     while (tex_u >= FIELD_TEXT_CACHE_WIDTH)
     {
         tex_u -= FIELD_TEXT_CACHE_WIDTH;
-        tex_v += 0xC;
+        tex_v += FIELD_TEXT_LINE_HEIGHT;
     }
     remaining = ((end_x - start_x) + 3) >> 2;
     if (remaining != 0)
@@ -1485,13 +1558,14 @@ s32 field_text_build_sprites(SPRT* prim, u8* text, s32 text_style)
         do
         {
             col = tex_u >> 2;
+            /* In 8 bits this is tex_v + FIELD_TEXT_CACHE_V. */
             prim->v0 = tex_v - 0x80;
             prim->u0 = tex_u;
-            if ((col + remaining) >= 0x41)
+            if ((col + remaining) > FIELD_TEXT_CACHE_ROW_WORDS)
             {
-                cols = 0x40 - col;
+                cols = FIELD_TEXT_CACHE_ROW_WORDS - col;
                 tex_u = 0;
-                tex_v += 0xC;
+                tex_v += FIELD_TEXT_LINE_HEIGHT;
                 remaining -= cols;
             }
             else
@@ -1499,17 +1573,17 @@ s32 field_text_build_sprites(SPRT* prim, u8* text, s32 text_style)
                 cols = remaining;
                 remaining = 0;
             }
-            setWH(prim, cols * 4, 0xC);
+            setWH(prim, cols * FIELD_TEXT_PIXELS_PER_WORD, FIELD_TEXT_LINE_HEIGHT);
             if (style >= 8)
             {
-                prim->clut = getClut(304, 508);
+                prim->clut = getClut(FIELD_TEXT_CLUT_X, FIELD_TEXT_TEXT_CLUT_Y);
             }
             else
             {
-                prim->clut = getClut(304, 511);
+                prim->clut = getClut(FIELD_TEXT_CLUT_X, FIELD_TEXT_ALT_CLUT_Y);
             }
-            prim += 1;
-            count += 1;
+            prim++;
+            count++;
         } while (remaining != 0);
     }
     return count;
@@ -1549,7 +1623,7 @@ void field_text_open_packed_window(slot) u16 slot;
         return;
     }
     field_text_apply_config(state);
-    if (state->portrait != 0)
+    if (state->portrait != NULL)
     {
         if ((system->portrait_slots & 1) == 0)
         {
@@ -1600,7 +1674,7 @@ void field_text_open_packed_window(slot) u16 slot;
                 w = 0;
             }
         }
-        n -= 0x10;
+        n -= FIELD_TEXT_LINE_SPACING;
     }
     state->dirty_end_u = x;
     state->region_end_u = x;
@@ -1641,7 +1715,7 @@ void field_text_open_fixed_window(slot) u16 slot;
         return;
     }
     field_text_apply_config(state);
-    if (state->portrait != 0)
+    if (state->portrait != NULL)
     {
         if (slot == 0)
         {
@@ -1662,7 +1736,7 @@ void field_text_open_fixed_window(slot) u16 slot;
     else
     {
         x = 0;
-        y = 0x30;
+        y = FIELD_TEXT_PORTRAIT_SIZE;
     }
     h = state->height;
     state->dirty_start_u = x;
@@ -1689,7 +1763,7 @@ void field_text_open_fixed_window(slot) u16 slot;
                 w = 0;
             }
         }
-        h -= 0x10;
+        h -= FIELD_TEXT_LINE_SPACING;
     }
     state->dirty_end_u = x;
     state->region_end_u = x;
@@ -1701,7 +1775,7 @@ void field_text_open_fixed_window(slot) u16 slot;
  * @brief Apply the pending text configuration to a runtime window state.
  * @param state Window state to initialize.
  */
-void field_text_apply_config(FieldTextState* state)
+static void field_text_apply_config(FieldTextState* state)
 {
     FieldTextConfig* config = FIELD_TEXT_PENDING_CONFIG;
     u32 flags;
@@ -1732,9 +1806,9 @@ void field_text_apply_config(FieldTextState* state)
     }
     config_value = config->height;
     width = config->width;
-    if ((state->portrait != 0) && ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) != 0x20) && ((s32)config_value < 0x30))
+    if ((state->portrait != NULL) && ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) != FIELD_TEXT_PORTRAIT_OUTSIDE) && ((s32)config_value < FIELD_TEXT_PORTRAIT_SIZE))
     {
-        config_value = 0x30;
+        config_value = FIELD_TEXT_PORTRAIT_SIZE;
     }
     state->remaining_width = width;
     state->width = width;
@@ -1742,18 +1816,18 @@ void field_text_apply_config(FieldTextState* state)
     if ((state->flags.word & FIELD_TEXT_STYLE_MASK) == FIELD_TEXT_STYLE_BOLD)
     {
         state->line_advance = width + 4;
-        state->line_height = 0xD;
+        state->line_height = FIELD_TEXT_LINE_HEIGHT + 1;
         state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | FIELD_TEXT_ACTIVE;
     }
     else
     {
-        state->line_height = 0xC;
+        state->line_height = FIELD_TEXT_LINE_HEIGHT;
         state->line_advance = width;
         state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | FIELD_TEXT_OPENING;
     }
-    state->text_cursor = 0;
-    state->macro_cursor = 0;
-    state->glyph_cursor = 0;
+    state->text_cursor = NULL;
+    state->macro_cursor = NULL;
+    state->glyph_cursor = NULL;
     state->last_was_break = 1;
     if ((config->anchor.word == 0) && ((config->flags.word & 0x70FF) == 0))
     {
@@ -1780,6 +1854,85 @@ void field_text_apply_config(FieldTextState* state)
 }
 
 /**
+ * @brief Release the portrait VRAM slot held by a window.
+ * @param state Text-window state.
+ */
+static inline void field_text_release_portrait(FieldTextState* state)
+{
+    if (state->portrait != NULL)
+    {
+        if ((state->flags.word & FIELD_TEXT_PORTRAIT_SLOT) == 0)
+        {
+            g_field_text_portrait_slots &= 0xFFFE;
+        }
+        else
+        {
+            g_field_text_portrait_slots &= 0xFFFD;
+        }
+    }
+}
+
+/**
+ * @brief Copy a window configuration byte by byte.
+ * @param dst_config Destination configuration.
+ * @param src_config Source configuration.
+ */
+static inline void field_text_copy_config(FieldTextConfig* dst_config, FieldTextConfig* src_config)
+{
+    u8* dst = (u8*)dst_config;
+    u8* src = (u8*)src_config;
+    s32 bytes_remaining;
+
+    for (bytes_remaining = sizeof(FieldTextConfig) - 1; bytes_remaining != -1; bytes_remaining--)
+    {
+        *dst++ = *src++;
+    }
+}
+
+/**
+ * @brief Load a saved window configuration and reopen the slot with it.
+ * @param slot Window slot index.
+ * @param placement_mode 1 uses packed placement; other values use fixed placement.
+ */
+static inline void field_text_reopen_window(u16 slot, s32 placement_mode)
+{
+    FieldTextConfig* config;
+
+    config = &g_field_text_saved_configs[slot];
+    field_text_copy_config(FIELD_TEXT_PENDING_CONFIG, config);
+    if (placement_mode == 1)
+    {
+        field_text_open_packed_window(slot);
+    }
+    else
+    {
+        field_text_open_fixed_window(slot);
+    }
+    if (config->text != NULL)
+    {
+        field_text_set_string(slot, config->text, config->flags.b.byte2);
+    }
+}
+
+/**
+ * @brief Release a window's portrait slot and start closing it.
+ * @param state Text-window state; bold windows close at once, others animate.
+ */
+static inline void field_text_start_closing(FieldTextState* state)
+{
+    field_text_release_portrait(state);
+    if ((state->flags.word & FIELD_TEXT_STYLE_MASK) == FIELD_TEXT_STYLE_BOLD)
+    {
+        state->flags.word = state->flags.word & ~FIELD_TEXT_STATE_MASK;
+    }
+    else
+    {
+        state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | FIELD_TEXT_CLOSING;
+        state->transition_frame = 0;
+    }
+}
+
+/**
  * @brief Update, upload, and render all field text windows for one frame.
  * @param packet_cursor Address of the render-packet cursor.
  * @param ot Ordering-table base address.
@@ -1789,15 +1942,9 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
 {
     FieldInputState* input = FIELD_TEXT_INPUT;
     FieldTextState* state = FIELD_TEXT_WINDOWS;
-    FieldTextConfig* config;
-    u8* src;
-    u8* dst;
     s32 i;
-    s32 n;
     s32 keys;
-    s32 mode;
-    s32 tmp;
-    u16 idx;
+    s32 choice;
 
     i = 3;
     do
@@ -1809,10 +1956,10 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
         case FIELD_TEXT_CLOSING:
             if (state->needs_init == 1)
             {
-                if (state->portrait != 0)
+                if (state->portrait != NULL)
                 {
-                    field_text_queue_portrait_upload(state->portrait, packet_cursor, (state->flags.word >> 3) & 1,
-                                                     (state->flags.word & FIELD_TEXT_PORTRAIT_MASK) != 0x10);
+                    field_text_queue_portrait_upload(state->portrait, packet_cursor, FIELD_TEXT_PORTRAIT_INDEX(state->flags.word),
+                                                     (state->flags.word & FIELD_TEXT_PORTRAIT_MASK) != FIELD_TEXT_PORTRAIT_RIGHT);
                 }
                 field_text_clear_window(state);
                 field_text_queue_uploads(state, packet_cursor);
@@ -1851,17 +1998,17 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
                                 keys = 0;
                                 break;
                             }
-                            if ((keys & 0x10) != 0)
+                            if ((keys & FIELD_TEXT_PAD_UP) != 0)
                             {
-                                tmp = state->choice_index;
-                                if (tmp == 0)
+                                choice = state->choice_index;
+                                if (choice == 0)
                                 {
-                                    tmp = state->choice_count;
+                                    choice = state->choice_count;
                                 }
-                                state->choice_index = tmp - 1;
-                                akao_play_sfx(0x7D, 0, 0x80, 0x7F);
+                                state->choice_index = choice - 1;
+                                akao_play_sfx(FIELD_TEXT_SFX_CURSOR, 0, FIELD_TEXT_SFX_PAN, AKAO_VOLUME_MAX);
                             }
-                            if ((keys & 0x40) != 0)
+                            if ((keys & FIELD_TEXT_PAD_DOWN) != 0)
                             {
                                 if (state->choice_index < (state->choice_count - 1))
                                 {
@@ -1871,40 +2018,21 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
                                 {
                                     state->choice_index = 0;
                                 }
-                                akao_play_sfx(0x7D, 0, 0x80, 0x7F);
+                                akao_play_sfx(FIELD_TEXT_SFX_CURSOR, 0, FIELD_TEXT_SFX_PAN, AKAO_VOLUME_MAX);
                             }
-                            if ((input->pressed_buttons & 0x4002) != 0)
+                            if ((input->pressed_buttons & (FIELD_TEXT_PAD_CROSS | FIELD_TEXT_PAD_L3)) != 0)
                             {
                                 state->flow_code = FIELD_TEXT_FLOW_NONE;
                                 state->choice_count = 0;
-                                state->text_cursor = 0;
+                                state->text_cursor = NULL;
                                 if ((state->flags.word & FIELD_TEXT_AUTO_CLOSE) != 0)
                                 {
-                                    if (state->portrait != 0)
-                                    {
-                                        if ((state->flags.word & FIELD_TEXT_PORTRAIT_SLOT) == 0)
-                                        {
-                                            g_field_text_portrait_slots &= 0xFFFE;
-                                        }
-                                        else
-                                        {
-                                            g_field_text_portrait_slots &= 0xFFFD;
-                                        }
-                                    }
-                                    if ((state->flags.word & FIELD_TEXT_STYLE_MASK) == FIELD_TEXT_STYLE_BOLD)
-                                    {
-                                        state->flags.word = state->flags.word & ~FIELD_TEXT_STATE_MASK;
-                                    }
-                                    else
-                                    {
-                                        state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | FIELD_TEXT_CLOSING;
-                                        state->transition_frame = 0;
-                                    }
+                                    field_text_start_closing(state);
                                 }
-                                akao_play_sfx(0x7E, 0, 0x80, 0x7F);
+                                akao_play_sfx(FIELD_TEXT_SFX_CONFIRM, 0, FIELD_TEXT_SFX_PAN, AKAO_VOLUME_MAX);
                             }
                         }
-                        else if (((input->pressed_buttons & 0x4002) != 0) && (state->prompt_frame != 2))
+                        else if (((input->pressed_buttons & (FIELD_TEXT_PAD_CROSS | FIELD_TEXT_PAD_L3)) != 0) && (state->prompt_frame != 2))
                         {
                             state->prompt_frame = 2;
                             state->prompt_timer = 3;
@@ -1926,7 +2054,7 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
                             field_text_queue_uploads(state, packet_cursor);
                         }
                     }
-                    else if (state->text_cursor != 0)
+                    else if (state->text_cursor != NULL)
                     {
                         field_text_typeset(state, 4);
                         field_text_queue_uploads(state, packet_cursor);
@@ -1946,7 +2074,7 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
                         {
                             state->prompt_frame = 0;
                         }
-                        state->prompt_timer = 4;
+                        state->prompt_timer = FIELD_TEXT_CHOICE_BLINK_FRAMES;
                     }
                 }
                 else
@@ -1959,29 +2087,10 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
                             switch (state->flow_code)
                             {
                             case FIELD_TEXT_FLOW_END:
-                                state->text_cursor = 0;
+                                state->text_cursor = NULL;
                                 if ((state->flags.word & FIELD_TEXT_AUTO_CLOSE) != 0)
                                 {
-                                    if (state->portrait != 0)
-                                    {
-                                        if ((state->flags.word & FIELD_TEXT_PORTRAIT_SLOT) == 0)
-                                        {
-                                            g_field_text_portrait_slots &= 0xFFFE;
-                                        }
-                                        else
-                                        {
-                                            g_field_text_portrait_slots &= 0xFFFD;
-                                        }
-                                    }
-                                    if ((state->flags.word & FIELD_TEXT_STYLE_MASK) == FIELD_TEXT_STYLE_BOLD)
-                                    {
-                                        state->flags.word = state->flags.word & ~FIELD_TEXT_STATE_MASK;
-                                    }
-                                    else
-                                    {
-                                        state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | FIELD_TEXT_CLOSING;
-                                        state->transition_frame = 0;
-                                    }
+                                    field_text_start_closing(state);
                                 }
                                 break;
                             case FIELD_TEXT_FLOW_CLEAR:
@@ -1997,48 +2106,27 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
                         else
                         {
                             state->prompt_frame = 1 - state->prompt_frame;
-                            state->prompt_timer = 8;
+                            state->prompt_timer = FIELD_TEXT_PROMPT_BLINK_FRAMES;
                         }
                     }
                 }
             }
             if (((state->flags.word & FIELD_TEXT_STATE_MASK) == FIELD_TEXT_CLOSED) && ((state->flags.word & FIELD_TEXT_REOPEN_MASK) != 0))
             {
-                idx = 3 - i;
-                mode = (state->flags.word >> 13) & 3;
-                dst = (u8*)FIELD_TEXT_PENDING_CONFIG;
-                n = sizeof(FieldTextConfig) - 1;
-                config = &g_field_text_saved_configs[idx];
-                src = (u8*)config;
-                for (; n != -1; n--)
-                {
-                    *dst++ = *src++;
-                }
-                if (mode == 1)
-                {
-                    field_text_open_packed_window(idx);
-                }
-                else
-                {
-                    field_text_open_fixed_window(idx);
-                }
-                if (config->text != 0)
-                {
-                    field_text_set_string(idx, config->text, config->flags.b.byte2);
-                }
+                field_text_reopen_window(3 - i, FIELD_TEXT_REOPEN_MODE(state->flags.word));
             }
             break;
         case FIELD_TEXT_TIMED:
             if (state->needs_init == 1)
             {
-                state->transition_frame = 0x32;
+                state->transition_frame = FIELD_TEXT_TIMED_FRAMES;
                 state->needs_init = 0;
             }
-            if (state->text_cursor != 0)
+            if (state->text_cursor != NULL)
             {
                 field_text_clear_window(state);
                 field_text_typeset(state, 0);
-                state->text_cursor = 0;
+                state->text_cursor = NULL;
                 state->flow_code = FIELD_TEXT_FLOW_NONE;
                 state->dirty_start_u = state->region_start_u;
                 state->dirty_start_v = state->region_start_v;
@@ -2050,17 +2138,7 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
             state->transition_frame = state->transition_frame - 1;
             if (state->transition_frame == 0)
             {
-                if (state->portrait != 0)
-                {
-                    if ((state->flags.word & FIELD_TEXT_PORTRAIT_SLOT) == 0)
-                    {
-                        g_field_text_portrait_slots &= 0xFFFE;
-                    }
-                    else
-                    {
-                        g_field_text_portrait_slots &= 0xFFFD;
-                    }
-                }
+                field_text_release_portrait(state);
                 state->flags.word = state->flags.word & ~FIELD_TEXT_STATE_MASK;
             }
             break;
@@ -2080,12 +2158,12 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
  * @param out Output screen-space quad.
  * @param frame Transition frame in the range 0..4.
  */
-void field_text_build_transition_quad(FieldTextState* state, FieldTextQuad* out, s32 frame)
+static void field_text_build_transition_quad(FieldTextState* state, FieldTextQuad* out, s32 frame)
 {
     s32 half_w;
     s32 half_h;
     s32 pad_h;
-    s32 n;
+    s32 scale;
     s32 x0;
     s32 y0;
     s32 x1;
@@ -2094,12 +2172,11 @@ void field_text_build_transition_quad(FieldTextState* state, FieldTextQuad* out,
     s32 y2;
     s32 x3;
     s32 y3;
-    s32 cx;
-    s32 cy;
-    s32 rem;
-    s32 neg_h;
+    s32 center_x;
+    s32 center_y;
+    s32 frames_left;
 
-    if ((state->portrait != 0) && (((state->flags.word >> 4) & 3) < 2))
+    if ((state->portrait != NULL) && (FIELD_TEXT_PORTRAIT_SIDE(state->flags.word) < FIELD_TEXT_SIDE_OUTSIDE))
     {
         half_w = state->width + FIELD_TEXT_PORTRAIT_MARGIN;
     }
@@ -2107,42 +2184,45 @@ void field_text_build_transition_quad(FieldTextState* state, FieldTextQuad* out,
     {
         half_w = state->width;
     }
-    half_w = half_w / 2 + 8;
+    half_w = half_w / 2 + FIELD_TEXT_BORDER_WIDTH;
     half_h = (u32)state->height / 2;
-    pad_h = half_h + 8;
-    neg_h = -pad_h;
+    pad_h = half_h + FIELD_TEXT_BORDER_WIDTH;
+
+    /* Start from the full-size edges and scale each corner toward the center. */
     x2 = -half_w;
     x3 = half_w;
-    n = frame + 3;
-    if (n > 4)
+    y1 = -pad_h;
+    scale = frame + 3;
+    if (scale > FIELD_TEXT_TRANSITION_FRAMES)
     {
-        n = 4;
+        scale = FIELD_TEXT_TRANSITION_FRAMES;
     }
-    x0 = (x2 * n) / 4;
-    x1 = (x3 * n) / 4;
-    x2 = (x2 * n) / 4;
-    y1 = (x3 * n) / 4;
-    x3 = y1;
-    y0 = ((neg_h + 2) * frame) / 4 - 2;
-    y1 = ((neg_h + 2) * frame) / 4 - 2;
-    y2 = ((half_h + 6) * frame) / 4 + 2;
-    y3 = ((half_h + 6) * frame) / 4 + 2;
-    cx = state->x + half_w;
-    cy = state->y + pad_h;
+    x0 = (x2 * scale) / FIELD_TEXT_TRANSITION_FRAMES;
+    x1 = (x3 * scale) / FIELD_TEXT_TRANSITION_FRAMES;
+    x2 = (x2 * scale) / FIELD_TEXT_TRANSITION_FRAMES;
+    x3 = (x3 * scale) / FIELD_TEXT_TRANSITION_FRAMES;
+    y0 = ((y1 + 2) * frame) / FIELD_TEXT_TRANSITION_FRAMES - 2;
+    y1 = ((y1 + 2) * frame) / FIELD_TEXT_TRANSITION_FRAMES - 2;
+    y2 = ((half_h + 6) * frame) / FIELD_TEXT_TRANSITION_FRAMES + 2;
+    y3 = ((half_h + 6) * frame) / FIELD_TEXT_TRANSITION_FRAMES + 2;
+
+    center_x = state->x + half_w;
+    center_y = state->y + pad_h;
     if (state->flags.b.byte2 != 0)
     {
-        rem = 4 - frame;
-        cx = (cx * frame + state->transition_anchor_x * rem) / 4;
-        cy = (cy * frame + (0xE0 - state->transition_anchor_y) * rem) / 4;
+        /* Move the center between the window and its anchor; anchor Y counts up from the bottom. */
+        frames_left = FIELD_TEXT_TRANSITION_FRAMES - frame;
+        center_x = (center_x * frame + state->transition_anchor_x * frames_left) / FIELD_TEXT_TRANSITION_FRAMES;
+        center_y = (center_y * frame + (VRAM_DRAW_HEIGHT - state->transition_anchor_y) * frames_left) / FIELD_TEXT_TRANSITION_FRAMES;
     }
-    out->x0 = cx + x0;
-    out->x1 = cx + x1;
-    out->x2 = cx + x2;
-    out->x3 = cx + x3;
-    out->y0 = cy + y0;
-    out->y1 = cy + y1;
-    out->y2 = cy + y2;
-    out->y3 = cy + y3;
+    out->x0 = center_x + x0;
+    out->x1 = center_x + x1;
+    out->x2 = center_x + x2;
+    out->x3 = center_x + x3;
+    out->y0 = center_y + y0;
+    out->y1 = center_y + y1;
+    out->y2 = center_y + y2;
+    out->y3 = center_y + y3;
 }
 
 /**
@@ -2153,7 +2233,7 @@ void field_text_build_transition_quad(FieldTextState* state, FieldTextQuad* out,
  */
 static inline s32 field_text_portrait_y_word(s32 y, s32 h)
 {
-    h -= 0x30;
+    h -= FIELD_TEXT_PORTRAIT_SIZE;
     h >>= 1;
     h += 8;
     y += h;
@@ -2166,7 +2246,7 @@ static inline s32 field_text_portrait_y_word(s32 y, s32 h)
  * @param cursor In/out render-packet cursor.
  * @param ot Ordering-table slot.
  */
-void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOrderingTags* ot)
+static void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOrderingTags* ot)
 {
     FieldTextSystem* text_system = FIELD_TEXT_SYSTEM;
     FieldTextPacket* prim;
@@ -2177,7 +2257,7 @@ void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOr
     s32 xy;
     s32 pixels_remaining;
     s32 rows;
-    s32 row_height;
+    u32 row_height;
     s32 texture_u_origin;
     s32 uv_base;
     s32 cache_u;
@@ -2186,10 +2266,6 @@ void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOr
     s32 available_pixels;
     u32 sprite_color;
     s32 bottom_border_v;
-    u32 tag_mask;
-    u32 tag_len;
-    u32 corner_size;
-    u32 border_tile_size;
     s32 top_border_v;
 
     sprite_color = FIELD_TEXT_SPRITE_COLOR;
@@ -2197,45 +2273,30 @@ void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOr
     prim = (FieldTextPacket*)packet_cursor;
     first = packet_cursor;
     packet_cursor += sizeof(DR_TPAGE);
-    prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x01000000;
+    prim->sprite_words.tag = FIELD_TEXT_TAG(packet_cursor, DR_TPAGE);
     prim->sprite_words.rgbc = text_system->draw_mode0;
     texture_u_origin = 0;
-    uv_base = 0xE0;
+    uv_base = FIELD_TEXT_FRAME_V;
     if ((state->flags.word & FIELD_TEXT_STYLE_MASK) == 0)
     {
         y = state->y;
         rows = 1;
         top_border_v = 0xF000;
         bottom_border_v = 0xF800;
-        tag_mask = 0xFFFFFF;
-        tag_len = 0x04000000;
-        corner_size = 0x80008;
-        border_tile_size = 0x80040;
         do
         {
-            {
-                s32 uv_hi;
-                uv_hi = text_system->window_clut << 16;
-                if (rows != 0)
-                {
-                    uv = (uv_hi | top_border_v) | texture_u_origin;
-                }
-                else
-                {
-                    uv = (uv_hi | bottom_border_v) | texture_u_origin;
-                }
-            }
+            uv = (text_system->window_clut << 16) | (rows != 0 ? top_border_v : bottom_border_v) | texture_u_origin;
             prim = (FieldTextPacket*)packet_cursor;
             packet_cursor += sizeof(SPRT);
             xy = state->x | (y << 16);
             prim->sprite_words.uv = uv;
             uv += 8;
-            prim->sprite_words.tag = ((u32)packet_cursor & tag_mask) | tag_len;
+            prim->sprite_words.tag = FIELD_TEXT_TAG(packet_cursor, SPRT);
             prim->sprite_words.rgbc = sprite_color;
-            prim->sprite_words.wh = corner_size;
+            prim->sprite_words.wh = 0x80008;
             prim->sprite_words.xy = xy;
             xy += 8;
-            if ((state->portrait != 0) && (((state->flags.word >> 4) & 3) < 2))
+            if ((state->portrait != NULL) && (FIELD_TEXT_PORTRAIT_SIDE(state->flags.word) < FIELD_TEXT_SIDE_OUTSIDE))
             {
                 pixels_remaining = state->width + FIELD_TEXT_PORTRAIT_MARGIN;
             }
@@ -2249,13 +2310,13 @@ void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOr
                 {
                     prim = (FieldTextPacket*)packet_cursor;
                     packet_cursor += sizeof(SPRT);
-                    prim->sprite_words.tag = ((u32)packet_cursor & tag_mask) | tag_len;
+                    prim->sprite_words.tag = FIELD_TEXT_TAG(packet_cursor, SPRT);
                     prim->sprite_words.rgbc = sprite_color;
                     prim->sprite_words.xy = xy;
                     prim->sprite_words.uv = uv;
                     if (pixels_remaining >= 0x41)
                     {
-                        prim->sprite_words.wh = border_tile_size;
+                        prim->sprite_words.wh = 0x80040;
                         xy += 0x40;
                         pixels_remaining -= 0x40;
                     }
@@ -2271,11 +2332,11 @@ void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOr
             prim = (FieldTextPacket*)packet_cursor;
             packet_cursor += sizeof(SPRT);
             rows -= 1;
-            prim->sprite_words.tag = ((u32)packet_cursor & tag_mask) | tag_len;
+            prim->sprite_words.tag = FIELD_TEXT_TAG(packet_cursor, SPRT);
             prim->sprite_words.rgbc = sprite_color;
             prim->sprite_words.xy = xy;
             prim->sprite_words.uv = uv;
-            prim->sprite_words.wh = corner_size;
+            prim->sprite_words.wh = 0x80008;
             y += state->height + 8;
         } while (rows != -1);
         rows = state->height;
@@ -2295,12 +2356,12 @@ void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOr
                 packet_cursor += sizeof(SPRT);
                 prim->sprite_words.xy = xy;
                 xy += 8;
-                prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x04000000;
+                prim->sprite_words.tag = FIELD_TEXT_TAG(packet_cursor, SPRT);
                 prim->sprite_words.rgbc = sprite_color;
                 prim->sprite_words.uv = uv;
                 prim->sprite_words.wh = row_height | 8;
                 uv -= 0x40;
-                if ((state->portrait != 0) && (((state->flags.word >> 4) & 3) < 2))
+                if ((state->portrait != NULL) && (FIELD_TEXT_PORTRAIT_SIDE(state->flags.word) < FIELD_TEXT_SIDE_OUTSIDE))
                 {
                     pixels_remaining = state->width + FIELD_TEXT_PORTRAIT_MARGIN;
                 }
@@ -2314,7 +2375,7 @@ void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOr
                     {
                         prim = (FieldTextPacket*)packet_cursor;
                         packet_cursor += sizeof(SPRT);
-                        prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x04000000;
+                        prim->sprite_words.tag = FIELD_TEXT_TAG(packet_cursor, SPRT);
                         prim->sprite_words.rgbc = sprite_color;
                         prim->sprite_words.xy = xy;
                         prim->sprite_words.uv = uv;
@@ -2337,7 +2398,7 @@ void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOr
                 packet_cursor += sizeof(SPRT);
                 y += 0x20;
                 rows -= 0x20;
-                prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x04000000;
+                prim->sprite_words.tag = FIELD_TEXT_TAG(packet_cursor, SPRT);
                 prim->sprite_words.rgbc = sprite_color;
                 prim->sprite_words.xy = xy;
                 prim->sprite_words.uv = uv;
@@ -2346,7 +2407,7 @@ void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOr
         }
         texture_u_origin = 0;
     }
-    uv_base = 0x80;
+    uv_base = FIELD_TEXT_CACHE_V;
     row_height = state->line_height;
     cache_u = state->region_start_u;
     cache_v = state->region_start_v;
@@ -2356,10 +2417,9 @@ void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOr
     rows -= 1;
     if (rows != -1)
     {
-        s32 neg16;
         do
         {
-            if ((state->portrait != 0) && ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) == 0))
+            if ((state->portrait != NULL) && ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) == 0))
             {
                 xy = ((state->x + 0x40) & 0xFFFF) | (y << 16);
             }
@@ -2372,7 +2432,7 @@ void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOr
             {
                 do
                 {
-                    if ((scroll_pixels != 0) && ((u32)(0x10 - scroll_pixels) >= (u32)row_height))
+                    if ((scroll_pixels != 0) && ((FIELD_TEXT_LINE_SPACING - scroll_pixels) >= row_height))
                     {
                         available_pixels = FIELD_TEXT_CACHE_WIDTH - cache_u;
                         cache_u += pixels_remaining;
@@ -2392,16 +2452,15 @@ void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOr
                     {
                         prim = (FieldTextPacket*)packet_cursor;
                         packet_cursor += sizeof(SPRT);
-                        prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x04000000;
+                        prim->sprite_words.tag = FIELD_TEXT_TAG(packet_cursor, SPRT);
                         prim->sprite_words.rgbc = sprite_color;
                         prim->sprite_words.xy = xy;
                         prim->sprite.u0 = texture_u_origin + cache_u;
                         prim->sprite.clut = text_system->text_clut;
                         if (scroll_pixels != 0)
                         {
-                            neg16 = 0xFFF0;
-                            prim->sprite.v0 = (uv_base + cache_v + 0x10) - scroll_pixels;
-                            prim->sprite.h = row_height + (scroll_pixels + neg16);
+                            prim->sprite.v0 = (uv_base + cache_v + FIELD_TEXT_LINE_SPACING) - scroll_pixels;
+                            prim->sprite.h = row_height + (scroll_pixels - FIELD_TEXT_LINE_SPACING);
                         }
                         else
                         {
@@ -2438,11 +2497,11 @@ void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOr
             rows -= 1;
         } while (rows != -1);
     }
-    if (state->portrait != 0)
+    if (state->portrait != NULL)
     {
         prim = (FieldTextPacket*)packet_cursor;
         packet_cursor += sizeof(DR_TPAGE);
-        prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x01000000;
+        prim->sprite_words.tag = FIELD_TEXT_TAG(packet_cursor, DR_TPAGE);
         prim->sprite_words.rgbc = text_system->draw_mode1;
         if ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) == 0)
         {
@@ -2450,37 +2509,34 @@ void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOr
         }
         else
         {
-            s32 px;
-            s32 pw;
-            px = state->x;
-            pw = state->width;
-            pw += 0x10;
-            px += pw;
-            xy = px & 0xFFFF;
+            s32 frame_width;
+
+            frame_width = state->width + 2 * FIELD_TEXT_BORDER_WIDTH;
+            xy = (state->x + frame_width) & 0xFFFF;
         }
         {
-            s32 py;
-            s32 ph;
-            u32 pflags;
+            s32 window_y;
+            s32 window_height;
+            u32 flags;
+
             prim = (FieldTextPacket*)packet_cursor;
             packet_cursor += sizeof(SPRT);
-            py = state->y;
-            ph = state->height;
-            pflags = state->flags.word;
-            prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x04000000;
+            window_y = state->y;
+            window_height = state->height;
+            flags = state->flags.word;
+            prim->sprite_words.tag = FIELD_TEXT_TAG(packet_cursor, SPRT);
             prim->sprite_words.rgbc = FIELD_TEXT_SPRITE_SHADOW;
-            py = field_text_portrait_y_word(py, ph);
-            xy |= py;
+            xy |= field_text_portrait_y_word(window_y, window_height);
             prim->sprite_words.xy = xy + 0x20002;
-            uv = ((((((pflags >> 3) & 1) * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
+            uv = ((((FIELD_TEXT_PORTRAIT_INDEX(flags) * FIELD_TEXT_PORTRAIT_SIZE) + FIELD_TEXT_PORTRAIT_VRAM_Y) & 0xFF) << 8) | FIELD_TEXT_PORTRAIT_U;
             prim->sprite_words.uv = (text_system->text_clut << 16) | uv;
             prim->sprite_words.wh = 0x300030;
             prim = (FieldTextPacket*)packet_cursor;
             packet_cursor += sizeof(SPRT);
-            prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x04000000;
+            prim->sprite_words.tag = FIELD_TEXT_TAG(packet_cursor, SPRT);
             prim->sprite_words.rgbc = sprite_color;
             prim->sprite_words.xy = xy;
-            prim->sprite_words.uv = (text_system->portrait_clut[(state->flags.word >> 3) & 1] << 16) | uv;
+            prim->sprite_words.uv = (text_system->portrait_clut[FIELD_TEXT_PORTRAIT_INDEX(state->flags.word)] << 16) | uv;
             prim->sprite_words.wh = 0x300030;
         }
     }
@@ -2491,15 +2547,15 @@ void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOr
         {
             prim = (FieldTextPacket*)packet_cursor;
             packet_cursor += sizeof(DR_TPAGE);
-            prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x01000000;
+            prim->sprite_words.tag = FIELD_TEXT_TAG(packet_cursor, DR_TPAGE);
             prim->sprite_words.rgbc = text_system->draw_mode0;
             if (state->flow_code == FIELD_TEXT_FLOW_CHOICE)
             {
                 prim = (FieldTextPacket*)packet_cursor;
                 packet_cursor += sizeof(SPRT_16);
-                prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x03000000;
+                prim->sprite_words.tag = FIELD_TEXT_TAG(packet_cursor, SPRT_16);
                 prim->sprite_words.rgbc = FIELD_TEXT_CHOICE_COLOR;
-                if ((state->portrait != 0) && ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) == 0))
+                if ((state->portrait != NULL) && ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) == 0))
                 {
                     prim->sprite16.x0 = state->x + FIELD_TEXT_PORTRAIT_MARGIN;
                 }
@@ -2507,22 +2563,22 @@ void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOr
                 {
                     prim->sprite16.x0 = state->x + 0xE;
                 }
-                prim->sprite16.y0 = state->y + ((state->choice_start_line + state->choice_index) * 0x10);
+                prim->sprite16.y0 = state->y + ((state->choice_start_line + state->choice_index) * FIELD_TEXT_LINE_SPACING);
                 rows = state->prompt_frame;
                 if (rows == 3)
                 {
                     rows = 1;
                 }
-                setUV0(&prim->sprite16, (rows << 4) + 0x60, 0xE0);
+                setUV0(&prim->sprite16, (rows << 4) + 0x60, FIELD_TEXT_FRAME_V);
                 prim->sprite16.clut = text_system->prompt_clut;
             }
             else
             {
                 prim = (FieldTextPacket*)packet_cursor;
                 packet_cursor += sizeof(SPRT);
-                prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x04000000;
+                prim->sprite_words.tag = FIELD_TEXT_TAG(packet_cursor, SPRT);
                 prim->sprite_words.rgbc = sprite_color;
-                if ((state->portrait != 0) && (((state->flags.word >> 4) & 3) < 2))
+                if ((state->portrait != NULL) && (FIELD_TEXT_PORTRAIT_SIDE(state->flags.word) < FIELD_TEXT_SIDE_OUTSIDE))
                 {
                     prim->sprite.x0 = state->x + ((state->width + FIELD_TEXT_PORTRAIT_MARGIN) >> 1);
                 }
@@ -2533,12 +2589,8 @@ void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOr
                 prim->sprite.y0 = state->y + state->height + 6;
                 prim->sprite.clut = text_system->prompt_clut;
                 prim->sprite.u0 = 0xF0;
-                {
-                    s32 frame;
-                    frame = state->prompt_frame;
-                    prim->sprite_words.wh = 0x80010;
-                    prim->sprite.v0 = (frame * 8) - 0x20;
-                }
+                prim->sprite.v0 = (state->prompt_frame * 8) - 0x20;
+                prim->sprite_words.wh = 0x80010;
             }
         }
     }
@@ -2555,9 +2607,9 @@ void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOr
  * @note The frame, cached text spans, and portrait share a scratchpad mesh.
  *       Its vertices are mapped into the transition quad with integer bilinear interpolation.
  */
-void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* quad, u8** cursor, FieldOrderingTags* ot)
+static void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* quad, u8** cursor, FieldOrderingTags* ot)
 {
-    FieldTextSystem* text_system = (FieldTextSystem*)0x801ED000;
+    FieldTextSystem* text_system = FIELD_TEXT_SYSTEM;
     FieldTextVertex* vertex;
     FieldTextVertex* lower_row;
     FieldTextVertex* bottom_vertices;
@@ -2588,18 +2640,19 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
     s32 dx;
     s32 dy;
     s32 previous_y;
+    s32 vertex_y;
     s32 row_v;
     s32 sel;
     s32 texture_u_origin;
     u32 texture_command;
-    s32 rows_remaining;
+    s32 remaining;
     s32 texture_v_origin;
 
     base_x = 0;
     base_y = 0;
     dx = 0;
     dy = 0;
-    if ((state->portrait != 0) && (((state->flags.word >> 4) & 3) < 2))
+    if ((state->portrait != NULL) && (FIELD_TEXT_PORTRAIT_SIDE(state->flags.word) < FIELD_TEXT_SIDE_OUTSIDE))
     {
         content_width = state->width + FIELD_TEXT_PORTRAIT_MARGIN;
     }
@@ -2609,7 +2662,7 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
     }
 
     /* Build the unwarped mesh in scratchpad RAM. */
-    vertex = (FieldTextVertex*)0x1F800000;
+    vertex = FIELD_TEXT_MESH;
     mesh_y = 0;
     vertex->pos.vx = 0;
     vertex->pos.vy = mesh_y;
@@ -2641,10 +2694,10 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
     vertex[1].pos.vy = mesh_y;
     vertex += 2;
 
-    rows_remaining = state->height;
-    rows_remaining -= 1;
+    remaining = state->height;
+    remaining -= 1;
     mesh_y += 8;
-    if (rows_remaining != -1)
+    if (remaining != -1)
     {
         do
         {
@@ -2677,21 +2730,21 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
             vertex[1].pos.vx = mesh_x + 8;
             vertex[1].pos.vy = mesh_y;
             vertex += 2;
-            if (rows_remaining >= 0x21)
+            if (remaining >= 0x21)
             {
                 mesh_y += 0x20;
-                rows_remaining -= 0x20;
+                remaining -= 0x20;
             }
             else
             {
-                mesh_y += rows_remaining;
-                rows_remaining = 0;
+                mesh_y += remaining;
+                remaining = 0;
             }
-            rows_remaining -= 1;
-        } while (rows_remaining != -1);
+            remaining -= 1;
+        } while (remaining != -1);
     }
 
-    rows_remaining = 1;
+    remaining = 1;
     do
     {
         vertex->pos.vx = 0;
@@ -2723,21 +2776,21 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
         vertex[1].pos.vx = mesh_x + 8;
         vertex[1].pos.vy = mesh_y;
         vertex += 2;
-        rows_remaining -= 1;
+        remaining -= 1;
         mesh_y += 8;
-    } while (rows_remaining != -1);
+    } while (remaining != -1);
 
     mesh_y = 8;
     u = state->region_start_u;
-    rows_remaining = state->height >> 4;
-    rows_remaining -= 1;
+    remaining = state->height >> 4;
+    remaining -= 1;
     text_vertex_count = 0;
-    if (rows_remaining != -1)
+    if (remaining != -1)
     {
         do
         {
             mesh_x = 8;
-            if ((state->portrait != 0) && ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) == 0))
+            if ((state->portrait != NULL) && ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) == 0))
             {
                 mesh_x = 0x40;
             }
@@ -2773,12 +2826,12 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
             vertex[1].pos.vy = state->line_height + mesh_y;
             vertex += 2;
             text_vertex_count += 2;
-            rows_remaining -= 1;
+            remaining -= 1;
             mesh_y += 0x10;
-        } while (rows_remaining != -1);
+        } while (remaining != -1);
     }
 
-    rows_remaining = 1;
+    remaining = 1;
     mesh_y = ((state->height - 0x30) >> 1) + 0xA;
     do
     {
@@ -2797,11 +2850,11 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
             vertex += 1;
             mesh_x += 0x30;
         }
-        rows_remaining -= 1;
+        remaining -= 1;
         mesh_y += 0x30;
-    } while (rows_remaining != -1);
+    } while (remaining != -1);
 
-    rows_remaining = 1;
+    remaining = 1;
     mesh_y = ((state->height - 0x30) >> 1) + 8;
     do
     {
@@ -2820,59 +2873,58 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
             vertex += 1;
             mesh_x += 0x30;
         }
-        rows_remaining -= 1;
+        remaining -= 1;
         mesh_y += 0x30;
-    } while (rows_remaining != -1);
+    } while (remaining != -1);
 
     /* Interpolate the two side edges once per row, then interpolate across each row. */
-    vertex = (FieldTextVertex*)0x1F800000;
+    vertex = FIELD_TEXT_MESH;
     previous_y = -1;
     mesh_width = content_width + 0x10;
-    rows_remaining = ((((state->height + 0x1F) >> 5) + 3) * (((content_width + 0x3F) >> 6) + 3)) + text_vertex_count + 7;
+    remaining = ((FIELD_TEXT_MESH_ROWS(state->height) + 3) * (FIELD_TEXT_MESH_COLUMNS(content_width) + 3)) + text_vertex_count + 7;
     mesh_height = state->height + 0x10;
-    if (rows_remaining != -1)
+    if (remaining != -1)
     {
         do
         {
-            u = vertex->pos.vy;
-            if (previous_y != u)
+            vertex_y = vertex->pos.vy;
+            if (previous_y != vertex_y)
             {
-                previous_y = u;
-                base_x = (((quad->x2 - quad->x0) * u) / mesh_height) + quad->x0;
-                base_y = (((quad->y2 - quad->y0) * u) / mesh_height) + quad->y0;
-                dx = ((((quad->x3 - quad->x1) * u) / mesh_height) + quad->x1) - base_x;
-                dy = ((((quad->y3 - quad->y1) * u) / mesh_height) + quad->y1) - base_y;
+                previous_y = vertex_y;
+                base_x = (((quad->x2 - quad->x0) * vertex_y) / mesh_height) + quad->x0;
+                base_y = (((quad->y2 - quad->y0) * vertex_y) / mesh_height) + quad->y0;
+                dx = ((((quad->x3 - quad->x1) * vertex_y) / mesh_height) + quad->x1) - base_x;
+                dy = ((((quad->y3 - quad->y1) * vertex_y) / mesh_height) + quad->y1) - base_y;
             }
             vertex->pos.vy = ((dy * vertex->pos.vx) / mesh_width) + base_y;
-            rows_remaining -= 1;
             vertex->pos.vx = ((dx * vertex->pos.vx) / mesh_width) + base_x;
             vertex += 1;
-        } while (rows_remaining != -1);
+        } while (--remaining != -1);
     }
 
     /* Draw the top and bottom borders, followed by the tiled window interior. */
     texture_command = FIELD_TEXT_QUAD_COLOR;
     texture_u_origin = 0;
-    texture_v_origin = 0xE0;
-    tpage = getTPage(0, 0, 960, 256) << 16;
-    vertex = (FieldTextVertex*)0x1F800000;
+    texture_v_origin = FIELD_TEXT_FRAME_V;
+    tpage = getTPage(0, 0, FIELD_TEXT_CACHE_VRAM_X, FIELD_TEXT_TPAGE_VRAM_Y) << 16;
+    vertex = FIELD_TEXT_MESH;
     packet_height = 8;
-    rows_remaining = 1;
+    remaining = 1;
     first = *cursor;
     packet_cursor = first;
     clut = text_system->window_clut << 16;
     do
     {
         texture_uv = texture_u_origin | 0xF000;
-        if (rows_remaining == 0)
+        if (remaining == 0)
         {
             texture_uv = texture_u_origin | 0xF800;
         }
         poly = (FieldTextPacket*)packet_cursor;
         /* The row below starts one mesh row (columns + 3 vertices) further on. */
-        lower_row = vertex + ((content_width + 0x3F) >> 6) + 4;
+        lower_row = vertex + FIELD_TEXT_MESH_COLUMNS(content_width) + 4;
         packet_cursor += sizeof(POLY_FT4);
-        poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
+        poly->quad_words.tag = FIELD_TEXT_TAG(packet_cursor, POLY_FT4);
         poly->quad_words.uv0 = clut | texture_uv;
         poly->quad_words.uv1 = tpage | (texture_uv + 8);
         poly->quad_words.uv2 = texture_uv + (packet_height << 8);
@@ -2881,8 +2933,8 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
         texture_uv += 8;
         poly->quad_words.xy0 = vertex[0].word;
         poly->quad_words.xy1 = vertex[1].word;
-        poly->quad_words.xy2 = vertex[((content_width + 0x3F) >> 6) + 3].word;
-        poly->quad_words.xy3 = vertex[((content_width + 0x3F) >> 6) + 4].word;
+        poly->quad_words.xy2 = vertex[FIELD_TEXT_MESH_COLUMNS(content_width) + 3].word;
+        poly->quad_words.xy3 = vertex[FIELD_TEXT_MESH_COLUMNS(content_width) + 4].word;
         bottom_vertices = lower_row;
         pixels_remaining = content_width;
         vertex += 1;
@@ -2892,7 +2944,7 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
             {
                 poly = (FieldTextPacket*)packet_cursor;
                 packet_cursor += sizeof(POLY_FT4);
-                poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
+                poly->quad_words.tag = FIELD_TEXT_TAG(packet_cursor, POLY_FT4);
                 poly->quad_words.rgbc = texture_command;
                 if (pixels_remaining >= 0x41)
                 {
@@ -2919,7 +2971,7 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
         texture_uv += 0x40;
         poly = (FieldTextPacket*)packet_cursor;
         packet_cursor += sizeof(POLY_FT4);
-        poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
+        poly->quad_words.tag = FIELD_TEXT_TAG(packet_cursor, POLY_FT4);
         poly->quad_words.uv0 = clut | texture_uv;
         poly->quad_words.uv1 = tpage | (texture_uv + 7);
         poly->quad_words.rgbc = texture_command;
@@ -2929,30 +2981,30 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
         poly->quad_words.xy1 = vertex[1].word;
         poly->quad_words.xy2 = bottom_vertices[0].word;
         poly->quad_words.xy3 = bottom_vertices[1].word;
-        rows_remaining -= 1;
-        vertex = (FieldTextVertex*)0x1F800000 + ((((state->height + 0x1F) >> 5) + 1) * (((content_width + 0x3F) >> 6) + 3));
+        remaining -= 1;
+        vertex = FIELD_TEXT_MESH + ((FIELD_TEXT_MESH_ROWS(state->height) + 1) * (FIELD_TEXT_MESH_COLUMNS(content_width) + 3));
         packet_height = 7;
-    } while (rows_remaining != -1);
+    } while (remaining != -1);
 
     {
         FieldTextVertex* bottom_vertices;
 
-        vertex = (FieldTextVertex*)0x1F800000 + 3 + ((content_width + 0x3F) >> 6);
-        bottom_vertices = vertex + ((content_width + 0x3F) >> 6) + 3;
-        rows_remaining = state->height;
-        if (rows_remaining > 0)
+        vertex = FIELD_TEXT_MESH + 3 + FIELD_TEXT_MESH_COLUMNS(content_width);
+        bottom_vertices = vertex + FIELD_TEXT_MESH_COLUMNS(content_width) + 3;
+        remaining = state->height;
+        if (remaining > 0)
         {
             do
             {
                 texture_uv = (texture_v_origin << 8) | (texture_u_origin + 0xE0);
                 packet_height = 0x1F00;
-                if (rows_remaining < 0x20)
+                if (remaining < 0x20)
                 {
-                    packet_height = rows_remaining << 8;
+                    packet_height = remaining << 8;
                 }
                 poly = (FieldTextPacket*)packet_cursor;
                 packet_cursor += sizeof(POLY_FT4);
-                poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
+                poly->quad_words.tag = FIELD_TEXT_TAG(packet_cursor, POLY_FT4);
                 poly->quad_words.uv0 = clut | texture_uv;
                 poly->quad_words.uv1 = tpage | (texture_uv + 8);
                 poly->quad_words.uv2 = texture_uv + packet_height;
@@ -2972,7 +3024,7 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
                     {
                         poly = (FieldTextPacket*)packet_cursor;
                         packet_cursor += sizeof(POLY_FT4);
-                        poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
+                        poly->quad_words.tag = FIELD_TEXT_TAG(packet_cursor, POLY_FT4);
                         poly->quad_words.rgbc = texture_command;
                         if (pixels_remaining >= 0x41)
                         {
@@ -2999,33 +3051,33 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
                 texture_uv += 0x48;
                 poly = (FieldTextPacket*)packet_cursor;
                 packet_cursor += sizeof(POLY_FT4);
-                poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
+                poly->quad_words.tag = FIELD_TEXT_TAG(packet_cursor, POLY_FT4);
                 poly->quad_words.uv0 = clut | texture_uv;
                 poly->quad_words.uv1 = tpage | (texture_uv + 8);
                 poly->quad_words.uv2 = texture_uv + packet_height;
                 poly->quad_words.rgbc = texture_command;
                 poly->quad_words.uv3 = texture_uv + (packet_height | 8);
                 poly->quad_words.xy0 = vertex[0].word;
-                rows_remaining -= 0x20;
+                remaining -= 0x20;
                 poly->quad_words.xy1 = vertex[1].word;
                 poly->quad_words.xy2 = bottom_vertices[0].word;
                 poly->quad_words.xy3 = bottom_vertices[1].word;
                 vertex += 2;
                 bottom_vertices += 2;
-            } while (rows_remaining > 0);
+            } while (remaining > 0);
         }
     }
 
     /* Text vertices are pairs of upper/lower endpoints split at cache page boundaries. */
     texture_u_origin = 0;
-    texture_v_origin = 0x80;
+    texture_v_origin = FIELD_TEXT_CACHE_V;
     u = state->region_start_u;
     row_v = state->region_start_v;
     text_area_height = state->height;
-    rows_remaining = text_area_height >> 4;
-    rows_remaining -= 1;
-    vertex = (FieldTextVertex*)0x1F800000 + ((((text_area_height + 0x1F) >> 5) + 3) * (((content_width + 0x3F) >> 6) + 3));
-    if (rows_remaining != -1)
+    remaining = text_area_height >> 4;
+    remaining -= 1;
+    vertex = FIELD_TEXT_MESH + ((FIELD_TEXT_MESH_ROWS(text_area_height) + 3) * (FIELD_TEXT_MESH_COLUMNS(content_width) + 3));
+    if (remaining != -1)
     {
         do
         {
@@ -3040,7 +3092,7 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
                     texture_uv = glyph_v | glyph_u;
                     poly = (FieldTextPacket*)packet_cursor;
                     packet_cursor += sizeof(POLY_FT4);
-                    poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
+                    poly->quad_words.tag = FIELD_TEXT_TAG(packet_cursor, POLY_FT4);
                     poly->quad_words.rgbc = texture_command;
                     poly->quad_words.uv0 = (text_system->text_clut << 16) | texture_uv;
                     poly->quad_words.uv1 = tpage | texture_uv;
@@ -3071,24 +3123,24 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
                     }
                 } while (pixels_remaining > 0);
             }
-            rows_remaining -= 1;
+            remaining -= 1;
             vertex += 2;
-        } while (rows_remaining != -1);
+        } while (remaining != -1);
     }
 
-    tpage = getTPage(0, 0, 960, 256) << 16;
     /* The final eight mesh vertices hold the portrait shadow and image quads. */
-    if (state->portrait != 0)
+    if (state->portrait != NULL)
     {
+        tpage = getTPage(0, 0, FIELD_TEXT_CACHE_VRAM_X, FIELD_TEXT_TPAGE_VRAM_Y) << 16;
         poly = (FieldTextPacket*)packet_cursor;
         packet_cursor += sizeof(POLY_FT4);
-        frame_rows = ((state->height + 0x1F) >> 5) + 3;
-        sel = (state->flags.word >> 3) & 1;
+        frame_rows = FIELD_TEXT_MESH_ROWS(state->height) + 3;
+        sel = FIELD_TEXT_PORTRAIT_INDEX(state->flags.word);
         clut = text_system->text_clut << 16;
-        poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
+        poly->quad_words.tag = FIELD_TEXT_TAG(packet_cursor, POLY_FT4);
         poly->quad_words.rgbc = FIELD_TEXT_QUAD_SHADOW;
-        vertex = (frame_rows * (((content_width + 0x3F) >> 6) + 3)) + (FieldTextVertex*)0x1F800000 + text_vertex_count;
-        texture_uv = ((((sel * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
+        vertex = (frame_rows * (FIELD_TEXT_MESH_COLUMNS(content_width) + 3)) + FIELD_TEXT_MESH + text_vertex_count;
+        texture_uv = ((((sel * FIELD_TEXT_PORTRAIT_SIZE) + FIELD_TEXT_PORTRAIT_VRAM_Y) & 0xFF) << 8) | FIELD_TEXT_PORTRAIT_U;
         poly->quad_words.uv0 = clut | texture_uv;
         poly->quad_words.uv2 = texture_uv + 0x3000;
         poly->quad_words.uv1 = (texture_uv + 0x2F) | tpage;
@@ -3100,9 +3152,9 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
         vertex += 4;
         poly = (FieldTextPacket*)packet_cursor;
         packet_cursor += sizeof(POLY_FT4);
-        clut = text_system->portrait_clut[(state->flags.word >> 3) & 1] << 16;
-        texture_uv = ((((((state->flags.word >> 3) & 1) * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
-        poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
+        clut = text_system->portrait_clut[FIELD_TEXT_PORTRAIT_INDEX(state->flags.word)] << 16;
+        texture_uv = ((((FIELD_TEXT_PORTRAIT_INDEX(state->flags.word) * FIELD_TEXT_PORTRAIT_SIZE) + FIELD_TEXT_PORTRAIT_VRAM_Y) & 0xFF) << 8) | FIELD_TEXT_PORTRAIT_U;
+        poly->quad_words.tag = FIELD_TEXT_TAG(packet_cursor, POLY_FT4);
         poly->quad_words.rgbc = texture_command;
         poly->quad_words.uv2 = texture_uv + 0x3000;
         poly->quad_words.uv1 = (texture_uv + 0x2F) | tpage;
@@ -3121,7 +3173,7 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
  * @brief Scroll the text cache up one row and clear the vacated row.
  * @param state Text-window state.
  */
-void field_text_scroll_cache(FieldTextState* state)
+static void field_text_scroll_cache(FieldTextState* state)
 {
     u16* destination_row;
     u16* source_row;
@@ -3169,8 +3221,8 @@ void field_text_scroll_cache(FieldTextState* state)
         source_v = next_v;
         while (pixels_remaining > 0)
         {
-            destination_row = (FIELD_TEXT_CACHE + (destination_u >> 2)) + (destination_v << 6);
-            source_row = (FIELD_TEXT_CACHE + (source_u >> 2)) + (source_v << 6);
+            destination_row = (FIELD_TEXT_CACHE + (destination_u >> 2)) + (destination_v * FIELD_TEXT_CACHE_ROW_WORDS);
+            source_row = (FIELD_TEXT_CACHE + (source_u >> 2)) + (source_v * FIELD_TEXT_CACHE_ROW_WORDS);
             pixel_span = FIELD_TEXT_CACHE_WIDTH - source_u;
             copy_count = FIELD_TEXT_CACHE_WIDTH - destination_u;
             if (copy_count < pixel_span)
@@ -3214,7 +3266,7 @@ void field_text_scroll_cache(FieldTextState* state)
     pixels_remaining = state->line_advance;
     while (pixels_remaining > 0)
     {
-        destination_row = (FIELD_TEXT_CACHE + (next_u >> 2)) + (next_v << 6);
+        destination_row = (FIELD_TEXT_CACHE + (next_u >> 2)) + (next_v * FIELD_TEXT_CACHE_ROW_WORDS);
         pixel_span = FIELD_TEXT_CACHE_WIDTH - next_u;
         if (pixels_remaining < pixel_span)
         {
@@ -3251,7 +3303,7 @@ void field_text_scroll_cache(FieldTextState* state)
  * @param state Text-window state.
  * @param cursor In/out packet cursor used for upload requests and staging data.
  */
-void field_text_queue_uploads(FieldTextState* state, u8** cursor)
+static void field_text_queue_uploads(FieldTextState* state, u8** cursor)
 {
     FieldImageReq* req;
     u16* cur;
@@ -3284,12 +3336,12 @@ void field_text_queue_uploads(FieldTextState* state, u8** cursor)
     }
     column = x >> 2;
     column_bytes = column << 1;
-    row = (u8*)FIELD_TEXT_CACHE + (y << 7);
+    row = (u8*)FIELD_TEXT_CACHE + y * FIELD_TEXT_CACHE_ROW_BYTES;
     src = FIELD_TEXT_CACHE_WORD(row, column_bytes);
     h = state->line_height;
-    req->rect.x = column + 960;
+    req->rect.x = column + FIELD_TEXT_CACHE_VRAM_X;
     w = span >> 1;
-    req->rect.y = y + 384;
+    req->rect.y = y + FIELD_TEXT_CACHE_VRAM_Y;
     req->rect.w = w;
     req->rect.h = h;
     if (span == FIELD_TEXT_CACHE_WIDTH / 2)
@@ -3321,9 +3373,9 @@ void field_text_queue_uploads(FieldTextState* state, u8** cursor)
         if (y != state->dirty_end_v)
         {
             cur += sizeof(FieldImageReq) / sizeof(*cur);
-            src = FIELD_TEXT_CACHE + (y << 6);
-            req->rect.x = 960;
-            req->rect.y = y + 384;
+            src = FIELD_TEXT_CACHE + (y * FIELD_TEXT_CACHE_ROW_WORDS);
+            req->rect.x = FIELD_TEXT_CACHE_VRAM_X;
+            req->rect.y = y + FIELD_TEXT_CACHE_VRAM_Y;
             req->rect.w = FIELD_TEXT_CACHE_ROW_WORDS;
             req->rect.h = state->dirty_end_v - y;
             req->data = (u_long*)src;
@@ -3333,11 +3385,11 @@ void field_text_queue_uploads(FieldTextState* state, u8** cursor)
         if (state->dirty_end_u != 0)
         {
             cur += sizeof(FieldImageReq) / sizeof(*cur);
-            req->rect.x = 960;
-            req->rect.y = state->dirty_end_v + 384;
+            req->rect.x = FIELD_TEXT_CACHE_VRAM_X;
+            req->rect.y = state->dirty_end_v + FIELD_TEXT_CACHE_VRAM_Y;
             req->rect.w = state->dirty_end_u >> 2;
             req->rect.h = h;
-            src = FIELD_TEXT_CACHE + (state->dirty_end_v << 6);
+            src = FIELD_TEXT_CACHE + (state->dirty_end_v * FIELD_TEXT_CACHE_ROW_WORDS);
             dst = cur;
             cur += (((state->dirty_end_u >> 2) * h) + 1) & ~1;
             rows = h;
@@ -3381,8 +3433,8 @@ void field_text_set_string(s32 window_index, u8* text, s32 text_options)
     }
     state->last_was_break = 1;
     state->text_cursor = text;
-    state->macro_cursor = 0;
-    state->glyph_cursor = 0;
+    state->macro_cursor = NULL;
+    state->glyph_cursor = NULL;
     state->pending_spaces = 0;
     state->flow_code = FIELD_TEXT_FLOW_NONE;
     state->flags.word = (state->flags.word & ~FIELD_TEXT_AUTO_CLOSE) | ((options & 1) << 12);
@@ -3392,22 +3444,13 @@ void field_text_set_string(s32 window_index, u8* text, s32 text_options)
  * @brief Save the pending text configuration for a window slot.
  * @param slot Window slot index.
  */
-void field_text_save_config(u16 slot)
+static void field_text_save_config(u16 slot)
 {
-    u8* src;
-    u8* dst;
-    s32 bytes_remaining;
     FieldTextConfig* config;
 
-    src = (u8*)FIELD_TEXT_PENDING_CONFIG;
-    bytes_remaining = sizeof(FieldTextConfig) - 1;
     config = &g_field_text_saved_configs[slot];
     config->text = NULL;
-    dst = (u8*)config;
-    for (; bytes_remaining != -1; bytes_remaining--)
-    {
-        *dst++ = *src++;
-    }
+    field_text_copy_config(config, FIELD_TEXT_PENDING_CONFIG);
 }
 
 /**
@@ -3415,9 +3458,9 @@ void field_text_save_config(u16 slot)
  * @param state Text-window state.
  * @param animate Non-zero starts the closing animation when supported.
  */
-void field_text_close(FieldTextState* state, s32 animate)
+static void field_text_close(FieldTextState* state, s32 animate)
 {
-    if (state->portrait != 0)
+    if (state->portrait != NULL)
     {
         if ((state->flags.word & FIELD_TEXT_PORTRAIT_SLOT) == 0)
         {
@@ -3445,7 +3488,7 @@ void field_text_close(FieldTextState* state, s32 animate)
  * @param cursor In/out render-packet cursor.
  * @param ot Ordering-table slot.
  */
-void field_text_render_window(FieldTextState* state, u8** cursor, FieldOrderingTags* ot)
+static void field_text_render_window(FieldTextState* state, u8** cursor, FieldOrderingTags* ot)
 {
     FieldTextQuad quad;
 
@@ -3484,7 +3527,7 @@ void field_text_render_window(FieldTextState* state, u8** cursor, FieldOrderingT
  * @param slot Portrait VRAM slot.
  * @param mirror Non-zero mirrors the portrait horizontally before upload.
  */
-void field_text_queue_portrait_upload(FieldTextPortrait* image, u8** cursor, s32 slot, s32 mirror)
+static void field_text_queue_portrait_upload(FieldTextPortrait* image, u8** cursor, s32 slot, s32 mirror)
 {
     FieldImageReq* req;
     u8* packet_cursor;
@@ -3498,15 +3541,15 @@ void field_text_queue_portrait_upload(FieldTextPortrait* image, u8** cursor, s32
     packet_cursor = *cursor;
     req = (FieldImageReq*)packet_cursor;
     packet_cursor += 2 * sizeof(FieldImageReq);
-    req->rect.x = 304;
-    req->rect.y = slot + 506;
+    req->rect.x = FIELD_TEXT_CLUT_X;
+    req->rect.y = slot + FIELD_TEXT_PORTRAIT_CLUT_Y;
     req->rect.w = 16;
     req->rect.h = 1;
     req->data = (u_long*)image->palette;
     field_queue_vram_upload(req);
     req += 1;
-    req->rect.x = 1012;
-    req->rect.y = (slot * FIELD_TEXT_PORTRAIT_SIZE) + 272;
+    req->rect.x = FIELD_TEXT_PORTRAIT_VRAM_X;
+    req->rect.y = (slot * FIELD_TEXT_PORTRAIT_SIZE) + FIELD_TEXT_PORTRAIT_VRAM_Y;
     req->rect.w = FIELD_TEXT_PORTRAIT_SIZE / 4;
     req->rect.h = FIELD_TEXT_PORTRAIT_SIZE;
     /* Reverse the byte order and the two pixels within each byte. */
@@ -3592,7 +3635,7 @@ void field_text_start_timed_window(u8* text)
                     }
                 } while (span > 0);
             }
-            rows -= 0x10;
+            rows -= FIELD_TEXT_LINE_SPACING;
         } while (rows > 0);
     }
     state->dirty_end_u = u;
@@ -3606,33 +3649,9 @@ void field_text_start_timed_window(u8* text)
  * @param slot Window slot index.
  * @param placement_mode 1 uses packed placement; other values use fixed placement.
  */
-void field_text_restore_window(u16 slot, s32 placement_mode)
+static void field_text_restore_window(u16 slot, s32 placement_mode)
 {
-    u8* dst;
-    u8* src;
-    s32 bytes_remaining;
-    FieldTextConfig* config;
-
-    dst = (u8*)FIELD_TEXT_PENDING_CONFIG;
-    bytes_remaining = sizeof(FieldTextConfig) - 1;
-    config = &g_field_text_saved_configs[slot];
-    src = (u8*)config;
-    for (; bytes_remaining != -1; bytes_remaining--)
-    {
-        *dst++ = *src++;
-    }
-    if (placement_mode == 1)
-    {
-        field_text_open_packed_window(slot);
-    }
-    else
-    {
-        field_text_open_fixed_window(slot);
-    }
-    if (config->text != 0)
-    {
-        field_text_set_string(slot, config->text, config->flags.b.byte2);
-    }
+    field_text_reopen_window(slot, placement_mode);
 }
 
 /**
@@ -3661,21 +3680,21 @@ void field_text_close_window(s32 slot)
 /**
  * @brief Read the progress of an active dialogue window.
  * @param slot Window slot; only the low 16 bits are used.
- * @return -1 outside dialogue mode, 2 at a prompt, 1 while text remains, or 0 when finished.
+ * @return A FIELD_TEXT_STATUS_* value: CLOSED outside dialogue mode, PROMPT, BUSY while text remains, or DONE.
  */
 s32 field_text_get_status(s32 slot)
 {
     FieldTextState* state = &FIELD_TEXT_SYSTEM->windows[slot & 0xFFFF];
 
-    if (((state->flags.word & FIELD_TEXT_STATE_MASK) != 0) && ((state->flags.b.low & FIELD_TEXT_STATE_MASK) < 4))
+    if (((state->flags.word & FIELD_TEXT_STATE_MASK) != FIELD_TEXT_CLOSED) && ((state->flags.b.low & FIELD_TEXT_STATE_MASK) < FIELD_TEXT_TIMED))
     {
         if (state->flow_code != FIELD_TEXT_FLOW_NONE)
         {
-            return 2;
+            return FIELD_TEXT_STATUS_PROMPT;
         }
-        return state->text_cursor != 0;
+        return state->text_cursor != NULL;
     }
-    return -1;
+    return FIELD_TEXT_STATUS_CLOSED;
 }
 
 /**

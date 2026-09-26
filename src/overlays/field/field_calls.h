@@ -34,6 +34,7 @@ struct FieldCharacterRecord;
 struct FieldCollisionMover;
 struct FieldItemKey;
 struct FieldItemRecord;
+struct ShopEntry;
 struct FieldMotionRecord;
 struct FieldNode;
 struct FieldRenderHalf;
@@ -77,7 +78,7 @@ void field_select_coordinate_labels(void);
 
 /* field_active_record_ops.c */
 s32 field_join_companion(void);
-s32 field_join_golem(void);
+s32 field_join_golem(s32 logic_type);
 s32 field_join_guest(s32 guest_id);
 void field_leave_party(s32 companion);
 s32 field_rejoin_companion(void);
@@ -328,7 +329,7 @@ void field_compact_inventory(void);
 void field_copy_inventory_record(u8 *destination, u8 *source);
 void field_open_gosub_screen_sequence(void *screen_sequence);
 void field_open_shop_mode_0(s32 shop_options);
-void field_open_shop_mode_1(s32 entry_count, s32 entries, s32 list_options, s32 shop_options);
+void field_open_shop_mode_1(s32 entry_count, struct ShopEntry *entries, struct FieldItemRecord *item_records, s32 shop_options);
 void field_run_name_entry(u8 *initial_name, u8 *active_name, s32 source_mode, s32 history_index, s32 custom_name);
 void field_run_zukan(s32 context);
 
@@ -425,6 +426,31 @@ void field_draw_scene_objects(u8* *cursor, u_long *ot, s32 update_mode);
 void field_size_work_buffer(void);
 
 /* field_scene_control.c */
+
+/** Scene lists selected by field_control_animation and field_get_animation_state (FieldSeqDef::list_kind). */
+enum
+{
+    FIELD_LIST_TILE_ANIMS = 0,    /**< FieldScene::anims */
+    FIELD_LIST_PALETTE_ANIMS = 1, /**< FieldScene::strips */
+    FIELD_LIST_TINT_ANIMS = 2,    /**< FieldScene::sprites (any other value selects it too) */
+    FIELD_LIST_SEQUENCES = 3      /**< FieldScene::seqs */
+};
+
+/** Operations of field_control_animation. */
+enum
+{
+    FIELD_ANIM_OP_START = 0,      /**< run the node */
+    FIELD_ANIM_OP_STOP = 1,       /**< stop now, or at a keyframe */
+    FIELD_ANIM_OP_RESTART = 2,    /**< rewind to the first frame, then run */
+    FIELD_ANIM_OP_SEEK = 3,       /**< run towards a keyframe and stop there */
+    FIELD_ANIM_OP_FINISH_LOOP = 4 /**< let a looping node stop at the end of its loop */
+};
+
+/** part_index value that selects the object itself instead of one of its parts. */
+#define FIELD_WHOLE_OBJECT (-1)
+/** Keyframe argument of FIELD_ANIM_OP_STOP that stops the node at once. */
+#define FIELD_KEYFRAME_NONE (-1)
+
 void field_apply_pixel_lookup(u16 *pixels, s32 pixel_count, s32 table_index, void *unused);
 void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op);
 void field_update_scene_fade(void);
@@ -449,36 +475,39 @@ s32 field_script_calc(s32 op, s32 left, s32 right);
 void field_script_command(s32 command, void *params);
 
 /* field_select_distance_bucket.c */
-s32 func_800C9ED4(s32 actor_id);
+s32 field_select_distance_bucket(s32 actor_id);
 
 /* field_slot_pool_ops.c */
-void func_800BF2F0(s32 offset);
-void func_800BF3D8(void);
-s32 func_800BF68C(s32 cost, s32 value, s32 replacement);
-void func_800BF700(void);
-void func_800BF800(void);
-void func_800BF880(s32 index);
-void func_800BF9A0(s32 index);
-s32 func_800BF9F0(s32 cost);
+void field_run_item_script(s32 offset);
+void field_run_slot_scripts(void);
+s32 field_replace_slot_value(s32 cost, s32 value, s32 replacement);
+void field_finish_staged_item(void);
+void field_apply_pending_levels(void);
+void field_raise_staged_level(s32 index);
+void field_lower_staged_level(s32 index);
+s32 field_can_pay_staged_cost(s32 cost);
 
 /* field_stat_counter_ops.c */
-s32 func_800C2094(s32 bit_index);
-u8 func_800C20D8(s32 index);
-void func_800C2138(s32 index);
-void func_800C21C0(s32 index);
+s32 field_set_game_flag(s32 bit_index);
+u8 field_get_item_count(s32 index);
+void field_receive_item(s32 index);
+void field_consume_item(s32 index);
 
 /* field_status_ticks.c */
-void func_800B4934(struct FieldStatusRecord *record);
-void func_800B49C0(void);
-u32 func_800B4CE4(struct FieldStatusRecord *record, s32 status);
+void field_count_revived_record(s32 key);
+void field_rebuild_equipment_status_flags(struct FieldStatusRecord *record);
+void field_tick_battle_status(void);
+u32 field_count_status_slots(struct FieldStatusRecord *record, s32 status);
 
 /* field_text_session.c */
-void func_800AF8C4(void);
-void func_800AF8E8(s32 context);
+void field_reset_item_menu(void);
+void field_update_item_menu(struct FieldRenderHalf* render_half);
 
 /* field_text_window_api.c */
-void func_8009C620(s32 window_slot, s32 layout_index, s32 unused, s32 portrait_selector);
-void func_8009C77C(s32 window_slot, s32 string_index, s32 options);
-void func_8009C974(s32 string_index);
+void field_open_text_window(s32 window_slot, s32 layout_index, s32 unused, s32 portrait_selector);
+void field_set_text_window_string(s32 window_slot, s32 string_index, s32 options);
+void field_open_text_window_with_string(s32 string_index, s32 window_slot, s32 layout_index, s32 unused, s32 portrait_selector);
+void field_close_text_window(s32 window_slot);
+void field_show_timed_text(s32 string_index);
 
 #endif

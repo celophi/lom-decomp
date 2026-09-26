@@ -1,105 +1,106 @@
+/**
+ * @file field_select_distance_bucket.c
+ * @brief Distance-weighted random choice of a golem logic grid column.
+ */
+
 #include "saved_game.h"
 #include "common.h"
 #include "field_calls.h"
+#include "field_golem_layout.h"
+#include "vector.h"
+#include "sdk/abs.h"
 #include "sdk/rand.h"
 
-extern int abs(int);
-s32 field_get_actor_position(s32 arg0, void* arg1);
+/** @brief Smallest and largest number of distance buckets (the grid bound is clamped to them). */
+#define DISTANCE_BUCKET_COUNT_MIN 4
+#define DISTANCE_BUCKET_COUNT_MAX 6
+/** @brief Number of distance steps shared out over the buckets. */
+#define DISTANCE_STEP_COUNT 150
+/** @brief Position units per distance step. */
+#define DISTANCE_STEP_SIZE 256
+/** @brief Weight of the bucket the distance falls into; each bucket further away gets a third. */
+#define DISTANCE_BUCKET_WEIGHT 1024
+
+/** @brief @p value limited to the range @p low to @p high. */
+#define CLAMP(value, low, high) ((value) < (low) ? (low) : ((value) > (high) ? (high) : (value)))
+
+s32 field_get_actor_position(s32 key, Vec3i* position);
 
 /**
- * @brief Select a distance-weighted index within the active layout bound.
- * @param actor_id Actor whose first coordinate is compared with actor 2.
- * @return Selected weighted index, or the center index when no interval is selected.
+ * @brief Pick a grid column from the distance between the companion and an actor.
+ *
+ * The x distance, in DISTANCE_STEP_SIZE steps up to DISTANCE_STEP_COUNT, is
+ * split into grid_bound buckets (the joined golem group's grid_bound, clamped
+ * to 4-6). The bucket the distance falls into weighs DISTANCE_BUCKET_WEIGHT
+ * and every bucket further away a third of its neighbour; a random draw over
+ * the total weight selects the column.
+ *
+ * @param actor_id Actor whose distance to the companion is measured.
+ * @return Selected bucket, or the distance's own bucket when the draw selects none.
+ * @note With no golem group joined the bucket count is read uninitialized, and
+ *       the weight total is never cleared before it is summed (original bugs).
  */
-s32 func_800C9ED4(s32 actor_id)
+s32 field_select_distance_bucket(s32 actor_id)
 {
-    s32 reference_position[4];
-    s32 actor_position[4];
-    s32 weight_values[6];
-    s32 random_value;
-    s32 table_index;
+    Vec3i companion_position;
+    Vec3i actor_position;
+    s32 weights[DISTANCE_BUCKET_COUNT_MAX];
+    s32 draw;
+    s32 index;
     s32 radius;
-    s32 selection_index;
-    s32 weight_divisor;
+    s32 bucket;
+    s32 divisor;
     s32 cumulative_weight;
-    s32 center_index;
-    s32 weight_total;
-    s32 selected_index;
+    s32 center;
+    s32 total_weight;
+    s32 selected;
     s32 distance;
-    u32 slot_count;
-    u32 bounded_count;
-    u8* layout;
+    s32 bucket_count;
 
-    /* BUG: slot_count is read uninitialized when the byte at 0x29D7 is 3. */
-    selected_index = -1;
-    layout = g_saved_game.bytes;
-    if (((s8*)layout)[0x29D7] != 3)
+    selected = -1;
+    if (GOLEM.header.fields.joined_group != GOLEM_NO_GROUP)
     {
-        slot_count = layout[((s8*)layout)[0x29D7] * 0x14C + 0x2B50] >> 4;
+        bucket_count = GOLEM.group_records[GOLEM.header.fields.joined_group].grid_bound;
     }
-    if ((s32)slot_count >= 4)
+    bucket_count = CLAMP(bucket_count, DISTANCE_BUCKET_COUNT_MIN, DISTANCE_BUCKET_COUNT_MAX);
+    field_get_actor_position(FIELD_PARTY_COMPANION, &companion_position);
+    field_get_actor_position(actor_id, &actor_position);
+    distance = abs(companion_position.x - actor_position.x);
+    center = distance / DISTANCE_STEP_SIZE;
+    center = CLAMP(center, 0, DISTANCE_STEP_COUNT - 1);
+    divisor = 1;
+    center /= DISTANCE_STEP_COUNT / bucket_count;
+    for (radius = 0; radius < bucket_count; radius++)
     {
-        bounded_count = 6;
-        if ((s32)slot_count < 7)
+        index = center + radius;
+        if (index < bucket_count)
         {
-            bounded_count = slot_count;
+            weights[index] = DISTANCE_BUCKET_WEIGHT / divisor;
         }
-    }
-    else
-    {
-        bounded_count = 4;
-    }
-    slot_count = bounded_count;
-    field_get_actor_position(2, reference_position);
-    field_get_actor_position(actor_id, actor_position);
-    distance = abs(reference_position[0] - actor_position[0]);
-    center_index = distance / 0x100;
-    if (center_index >= 0)
-    {
-        table_index = 0x95;
-        if (center_index < 0x96)
+        index = center - radius;
+        if (index >= 0)
         {
-            table_index = center_index;
+            weights[index] = DISTANCE_BUCKET_WEIGHT / divisor;
         }
+        divisor *= 3;
     }
-    else
+    for (radius = 0; radius < bucket_count; radius++)
     {
-        table_index = 0;
+        total_weight += weights[radius];
     }
-    weight_divisor = 1;
-    center_index = table_index / (s32)(0x96 / (s32)slot_count);
-    for (radius = 0; radius < (s32)slot_count; radius++)
-    {
-        table_index = center_index + radius;
-        if (table_index < (s32)slot_count)
-        {
-            weight_values[table_index] = 0x400 / weight_divisor;
-        }
-        table_index = center_index - radius;
-        if (table_index >= 0)
-        {
-            weight_values[table_index] = 0x400 / weight_divisor;
-        }
-        weight_divisor += weight_divisor * 2;
-    }
-    /* BUG: weight_total is never initialized before this sum. */
-    for (radius = 0; radius < (s32)slot_count; radius++)
-    {
-        weight_total += weight_values[radius];
-    }
-    random_value = (rand() * weight_total) / 32767;
+    draw = (rand() * total_weight) / RAND_MAX;
     cumulative_weight = 0;
-    for (selection_index = 0; selection_index < (s32)slot_count; selection_index++)
+    for (bucket = 0; bucket < bucket_count; bucket++)
     {
-        if ((random_value >= cumulative_weight) && (random_value < (cumulative_weight + weight_values[selection_index])))
+        if (draw >= cumulative_weight && draw < cumulative_weight + weights[bucket])
         {
-            selected_index = selection_index;
+            selected = bucket;
         }
-        cumulative_weight += weight_values[selection_index];
+        cumulative_weight += weights[bucket];
     }
-    if (selected_index == -1)
+    if (selected == -1)
     {
-        selected_index = center_index;
+        selected = center;
     }
-    return selected_index;
+    return selected;
 }
