@@ -29,7 +29,6 @@
 #define WMAP_TRAVEL_OT_BASE 42
 #define WMAP_TRAVEL_DEPTH_ORIGIN 7057
 #define WMAP_TRAVEL_DEPTH_RANGE 144U
-#define WMAP_SPECIAL_TRAVEL_LAND 24
 #define WMAP_TRAVEL_ANIMATION_RESOURCE 0x10C9
 #define WMAP_TRAVEL_SPRITE_RESOURCE 0x10CA
 #define WMAP_TRAVEL_ALTERNATE_SPRITE_RESOURCE 0x10CB
@@ -353,7 +352,7 @@ void wmap_update_party_travel(void)
             {
                 if (D_80139290[selected_x][selected_y].land_id == WMAP_SPECIAL_TRAVEL_LAND)
                 {
-                    func_8006CAC0(func_8009A420);
+                    func_8006CAC0(wmap_run_special_travel);
                 }
                 else
                 {
@@ -440,7 +439,7 @@ void wmap_init_party_travel(void)
     {
         cdrom_queue_read(WMAP_TRAVEL_SECOND_ANIMATION_RESOURCE, D_800DC298);
         D_800D9296 = 1;
-        func_8006D0F0(27, &first_x, &first_y);
+        wmap_find_land_cell(27, &first_x, &first_y);
         wmap_set_traveler_position(1, first_x, first_y);
         cdrom_wait_queue_empty();
     }
@@ -448,7 +447,7 @@ void wmap_init_party_travel(void)
     {
         cdrom_queue_read(WMAP_TRAVEL_THIRD_ANIMATION_RESOURCE, D_800DC698);
         D_800D92C2 = 2;
-        func_8006D0F0(3, &second_x, &second_y);
+        wmap_find_land_cell(3, &second_x, &second_y);
         wmap_set_traveler_position(2, second_x, second_y);
         cdrom_wait_queue_empty();
     }

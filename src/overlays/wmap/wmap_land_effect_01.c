@@ -1481,14 +1481,14 @@ extern void func_80074044__for_func_80073FD0(void) __asm__("func_80074044");
  */
 void func_80074044(void)
 {
-extern u8 D_800DBE3C[];
-extern u8 D_8013A180[];
+extern u8 g_wmap_vehicle_actor[];
+extern u8 g_wmap_vehicle_animation[];
 extern s32 D_8011CF4C;
 extern s32 D_801B2554;
 extern s32 D_801B2550;
 
-    wmap_step_actor_animation(D_800DBE3C, D_8013A180);
-    wmap_draw_actor_sprite(D_800DBE3C, D_8011CF4C, 0xD, 0xA, 0);
+    wmap_step_actor_animation(g_wmap_vehicle_actor, g_wmap_vehicle_animation);
+    wmap_draw_actor_sprite(g_wmap_vehicle_actor, D_8011CF4C, 0xD, 0xA, 0);
     if (--D_801B2554 == 0)
     {
         D_801B2550 += 1;
@@ -1517,13 +1517,13 @@ extern void func_80074100__for_func_800740C0(void) __asm__("func_80074100");
 void func_80074100(void)
 {
 extern s32 D_801B2550;
-extern u8 D_800DBE3C[];
-extern u8 D_8013A180[];
+extern u8 g_wmap_vehicle_actor[];
+extern u8 g_wmap_vehicle_animation[];
 extern s32 D_8011CF4C;
 extern s32 D_801B2554;
 
-    wmap_step_actor_animation(D_800DBE3C, D_8013A180);
-    wmap_draw_actor_sprite(D_800DBE3C, D_8011CF4C, 0xD, 0xA, 0);
+    wmap_step_actor_animation(g_wmap_vehicle_actor, g_wmap_vehicle_animation);
+    wmap_draw_actor_sprite(g_wmap_vehicle_actor, D_8011CF4C, 0xD, 0xA, 0);
     if (--D_801B2554 == 0)
     {
         D_801B2550 += 1;
@@ -1536,8 +1536,8 @@ extern s32 D_801B2554;
 void func_8007417C(void)
 {
 extern s32 D_801B2550;
-extern u8 D_800DBE3C[];
-extern u8 D_8013A180[];
+extern u8 g_wmap_vehicle_actor[];
+extern u8 g_wmap_vehicle_animation[];
 extern s32 D_8011CF4C;
 extern s32 D_801B2554;
 
