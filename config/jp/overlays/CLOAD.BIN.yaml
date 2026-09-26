@@ -20,6 +20,7 @@ options:
   build_path: build/jp/overlays/cload
 
   ld_script_path: linker/jp/overlays/cload/cload.ld
+  ld_dependencies: True
   undefined_funcs_auto_path: linker/jp/overlays/cload/undefined_funcs_auto.txt
   undefined_syms_auto_path: linker/jp/overlays/cload/undefined_syms_auto.txt
 
@@ -35,9 +36,11 @@ options:
 
   section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
 
-  # Japanese text is Shift-JIS.
-  string_encoding: SHIFT-JIS
-  data_string_encoding: SHIFT-JIS
+  # ASCII, not SHIFT-JIS: splat writes decoded strings into the .s files
+  # as UTF-8, which reassembles to different (longer) bytes. Japanese
+  # text stays as raw data so the disassembly round-trips exactly.
+  string_encoding: ASCII
+  data_string_encoding: ASCII
 
 segments:
   - name: cload

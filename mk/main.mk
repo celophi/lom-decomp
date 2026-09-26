@@ -204,13 +204,17 @@ ASM_SRCS := \
 
 
 # The lists above are the North American translation-unit layout. Versions
-# without a split TU layout (see HAS_TU_LAYOUT in mk/version.mk) build no C or
-# standalone assembly objects for the main executable yet.
+# without a split TU layout (see HAS_TU_LAYOUT in mk/version.mk) build no C
+# objects yet; their main executable links purely from splat assembly. Splat's
+# dependency file lists exactly the objects the linker script uses (it is
+# absent until `make splat` has run for the version).
 ifeq ($(HAS_TU_LAYOUT),)
 SRCS_G0 :=
 SRCS_G4 :=
 SRCS_GCC_260_G0 :=
-ASM_SRCS :=
+MAIN_LINK_DEPS := $(LINKER_DIR)/$(GAME).d
+ASM_SRCS := $(sort $(patsubst $(BUILD_DIR)/%.o,%.s,$(filter $(BUILD_DIR)/$(ASM_DIR)/%.o,\
+	$(if $(wildcard $(MAIN_LINK_DEPS)),$(file <$(MAIN_LINK_DEPS))))))
 endif
 
 

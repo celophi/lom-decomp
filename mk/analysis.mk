@@ -60,8 +60,10 @@ define copy-staged-objects
 		done
 endef
 
-target-objects: $(COPY_SENTINEL) $(TARGET_OBJS)
-	$(call copy-staged-objects,$(TARGET_OBJS))
+# OBJS_ASM is included because a version without a split TU layout assembles
+# its main code through that rule (the objects are its objdiff targets).
+target-objects: $(COPY_SENTINEL) $(TARGET_OBJS) $(OBJS_ASM)
+	$(call copy-staged-objects,$(TARGET_OBJS) $(OBJS_ASM))
 	@echo "Target objects built."
 
 base-objects: $(COPY_SENTINEL) $(OBJDIFF_BASE_OBJS)

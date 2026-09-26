@@ -20,6 +20,7 @@ options:
   build_path: build/jp
 
   ld_script_path: linker/jp/SLPS_021.70.ld
+  ld_dependencies: True
   undefined_funcs_auto_path: linker/jp/undefined_funcs_auto.txt
   undefined_syms_auto_path: linker/jp/undefined_syms_auto.txt
 
@@ -34,10 +35,13 @@ options:
 
   section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
 
-  # Japanese text is Shift-JIS.
-  string_encoding: SHIFT-JIS
-  data_string_encoding: SHIFT-JIS
+  # ASCII, not SHIFT-JIS: splat writes decoded strings into the .s files
+  # as UTF-8, which reassembles to different (longer) bytes. Japanese
+  # text stays as raw data so the disassembly round-trips exactly.
+  string_encoding: ASCII
+  data_string_encoding: ASCII
   gp_value: 0x8003ED80
+  ld_bss_is_noload: True
 
 segments:
   - name: header

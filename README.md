@@ -347,7 +347,7 @@ One C source tree builds every regional release. Anything that comes from a part
 | `VERSION` | Release | Status |
 |---|---|---|
 | `us` (default) | North America, `SLUS-01013` | Fully linked |
-| `jp` | Japan, `SLPS-02170` | In progress - first-pass splat configs split the disc into one assembly block per module; nothing is decompiled or linked yet |
+| `jp` | Japan, `SLPS-02170` | In progress - all 18 binaries rebuild byte-exact from first-pass splat assembly (one block per module); no code is decompiled yet |
 
 | Shared by all versions | Per version |
 |---|---|

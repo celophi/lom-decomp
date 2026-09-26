@@ -197,6 +197,7 @@ def common_options(base_path: str, basename: str, target: str, name: str, is_mai
         f"  build_path: build/jp{sub}\n"
         "\n"
         f"  ld_script_path: {ld}\n"
+        "  ld_dependencies: True\n"
         f"  undefined_funcs_auto_path: linker/jp{sub}/undefined_funcs_auto.txt\n"
         f"  undefined_syms_auto_path: linker/jp{sub}/undefined_syms_auto.txt\n"
         "\n"
@@ -211,9 +212,11 @@ def common_options(base_path: str, basename: str, target: str, name: str, is_mai
         "\n"
         '  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]\n'
         "\n"
-        "  # Japanese text is Shift-JIS.\n"
-        "  string_encoding: SHIFT-JIS\n"
-        "  data_string_encoding: SHIFT-JIS\n"
+        "  # ASCII, not SHIFT-JIS: splat writes decoded strings into the .s files\n"
+        "  # as UTF-8, which reassembles to different (longer) bytes. Japanese\n"
+        "  # text stays as raw data so the disassembly round-trips exactly.\n"
+        "  string_encoding: ASCII\n"
+        "  data_string_encoding: ASCII\n"
     )
 
 
@@ -260,6 +263,7 @@ def main() -> int:
         + f"name: {JP_MAIN}\nsha1: {sha1(jp_path)}\n"
         + common_options("../../", JP_MAIN, f"disc/jp/{JP_MAIN}", "main", True)
         + f"  gp_value: 0x{gp:08X}\n"
+        + "  ld_bss_is_noload: True\n"
         + "\nsegments:\n  - name: header\n    type: header\n    start: 0x0\n\n"
         + f"  - name: main\n    type: code\n    start: 0x{EXE_HEADER_SIZE:X}\n    vram: 0x{MAIN_VRAM:08X}\n"
         + "    align: 4\n    subsegments:\n"

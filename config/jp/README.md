@@ -21,6 +21,13 @@ Splitting a block into `c` subsegments (and adding `jp` to
 turns it into real translation units. Once the configs are refined by hand,
 stop regenerating them.
 
+All 18 binaries link from this assembly and `make verify-bins VERSION=jp`
+checks them against the disc. FIELD, GNAME, GOSUB, and TITLE are checked at
+the raw-image level only, because the compressor cannot yet reproduce their
+JP streams (`RAW_VERIFIED_OVERLAYS_jp` in `mk/verification.mk`). Strings are
+split as ASCII: splat writes decoded Shift-JIS as UTF-8, which does not
+reassemble to the original bytes.
+
 Load addresses that differ from US: `gp` is `0x8003ED80` (US `0x8003EC14`),
 and the FIELD, WMAP, TITLE, WSEL, and CHECKPS overlays load at `0x8004FDD8`
 (US `0x8004FC70`).

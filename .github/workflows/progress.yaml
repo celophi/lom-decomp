@@ -27,9 +27,11 @@ jobs:
             verify: true
           - version: jp
             rom_id: SLPS_021.70
-            # First-pass disassembly only: nothing links yet, so skip the
-            # binary checks and report the splat assembly as 0% matched.
-            verify: false
+            # Linked purely from the first-pass splat assembly (no C yet), so
+            # the progress report shows 0% matched, but every rebuilt binary is
+            # still checked against the disc (see RAW_VERIFIED_OVERLAYS_jp in
+            # mk/verification.mk for the four checked at raw-image level).
+            verify: true
 
     container:
       # The CI image holds every disc under /rom/<version>/.
