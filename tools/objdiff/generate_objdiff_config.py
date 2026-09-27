@@ -32,8 +32,9 @@ MAIN_CONFIG = Path()
 OVERLAY_CONFIG_DIR = Path()
 
 # Manifest of overlays whose rebuilt+compressed BIN matches the original ROM.
-# Written by the Makefile's verify-* targets. Units of overlays listed here are
-# stamped with metadata.complete = true so objdiff reports them as linked.
+# Written by the Makefile's verify-* targets. Fully decompiled units of overlays
+# listed here (see fully_decompiled) are stamped with metadata.complete = true so
+# objdiff reports them as linked.
 COMPLETE_MANIFEST = Path()
 
 
@@ -108,6 +109,19 @@ def should_skip(file_name: str) -> bool:
     return any(part in SKIP_PATHS for part in file_name.split("/"))
 
 
+def fully_decompiled(base_path: str) -> bool:
+    """True if the unit's compiled object exists and holds no assembly function.
+
+    INCLUDE_ASM files start each function with splat's `nonmatching` macro,
+    which defines a `<name>.NON_MATCHING` symbol. A unit that still includes
+    one is byte-exact but not decompiled, so it must not be reported complete
+    (objdiff would count its assembly functions as matched). A missing object
+    (config generated before the build) is not complete either.
+    """
+    path = PROJECT_ROOT / base_path
+    return path.is_file() and b".NON_MATCHING\0" not in path.read_bytes()
+
+
 def load_complete_overlays() -> set[str]:
     """Overlays whose rebuilt compressed BIN matched the original ROM SHA1."""
     if not COMPLETE_MANIFEST.exists():
@@ -123,7 +137,7 @@ def build_main_units(config: dict, complete: bool = False) -> list[dict]:
     """Create units for the main SLUS executable.
 
     If `complete` is True (the linked executable matches the disc file), every
-    unit is stamped with metadata.complete = true.
+    fully decompiled unit is stamped with metadata.complete = true.
     """
     options = config.get("options", {})
     asm_path = options.get("asm_path", f"asm/{VERSION}")
@@ -134,13 +148,14 @@ def build_main_units(config: dict, complete: bool = False) -> list[dict]:
     for name in extract_c_subsegments(config):
         if should_skip(name):
             continue
+        base_path = f"{build_path}/{src_path}/{name}.o"
         units.append({
             "name": f"main/{name}",
             "target_path": f"{build_path}/{asm_path}/{name}.o",
-            "base_path": f"{build_path}/{src_path}/{name}.o",
+            "base_path": base_path,
             "metadata": {
                 "progress_categories": ["main"],
-                **({"complete": True} if complete else {}),
+                **({"complete": True} if complete and fully_decompiled(base_path) else {}),
             },
         })
     for name in extract_asm_subsegments(config):
@@ -155,16 +170,17 @@ def build_main_units(config: dict, complete: bool = False) -> list[dict]:
 def build_overlay_units(config: dict, overlay_name: str, complete: bool = False) -> list[dict]:
     """Create units for one overlay from its splat config.
 
-    If `complete` is True, every unit is stamped with metadata.complete = true,
-    which tells objdiff to treat the object as fully linked/matching.
+    If `complete` is True, every fully decompiled unit is stamped with
+    metadata.complete = true, which tells objdiff to treat the object as fully
+    linked/matching.
     """
     options = config.get("options", {})
     build_path = options.get("build_path", f"build/{VERSION}/overlays/{overlay_name}")
     src_path = options.get("src_path", f"src/overlays/{overlay_name}")
 
-    def _metadata() -> dict:
+    def _metadata(base_path: str) -> dict:
         meta = {"progress_categories": [overlay_name]}
-        if complete:
+        if complete and fully_decompiled(base_path):
             meta["complete"] = True
         return meta
 
@@ -172,11 +188,12 @@ def build_overlay_units(config: dict, overlay_name: str, complete: bool = False)
     for name in extract_c_subsegments(config):
         if should_skip(name):
             continue
+        base_path = f"{build_path}/{src_path}/{name}.o"
         units.append({
             "name": f"{overlay_name}/{name}",
             "target_path": f"{build_path}/target/{name}.o",
-            "base_path": f"{build_path}/{src_path}/{name}.o",
-            "metadata": _metadata(),
+            "base_path": base_path,
+            "metadata": _metadata(base_path),
         })
 
     # Code not yet split into C files: target-only units (see
@@ -194,11 +211,12 @@ def build_overlay_units(config: dict, overlay_name: str, complete: bool = False)
     for name in extract_data_subsegments(config):
         if should_skip(name):
             continue
+        base_path = f"{build_path}/{src_path}/{name}.o"
         units.append({
             "name": f"{overlay_name}/{name}",
             "target_path": f"{build_path}/target/{name}.o",
-            "base_path": f"{build_path}/{src_path}/{name}.o",
-            "metadata": _metadata(),
+            "base_path": base_path,
+            "metadata": _metadata(base_path),
         })
 
     return units
