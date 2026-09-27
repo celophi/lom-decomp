@@ -91,7 +91,6 @@ typedef struct
     u8 threshold_indexes[FIELD_EFFECT_COUNT][FIELD_MENU_SLOT_COUNTER_COUNT];
 } FieldEffectThresholdTable;
 
-extern void* field_find_resource(s32);
 extern FieldGameState* g_field_game_state;
 
 static s32 field_classify_menu_slot(s32 group_index, s32 slot_index, FieldEffectThresholdTable* table);

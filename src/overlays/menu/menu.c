@@ -1340,7 +1340,7 @@ void menu_node_tree_init(void)
     }
     if (D_800FDCE8 & 1)
     {
-        if ((g_pad_ctx->unkAA8 & 0x7F) == 4)
+        if ((g_pad_ctx->companion_info & COMPANION_KIND_MASK) == COMPANION_KIND_GOLEM)
         {
             g_menu_nodes[0xF].u2.bits.active = 1;
         }

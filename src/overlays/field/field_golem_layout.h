@@ -9,7 +9,7 @@
  * live in the same buffer that main.h maps as PadContext. PadContext does not
  * map the header word at 0x29D4 or the grid at 0x2A7C yet, so FIELD reads the
  * region through GolemLayoutView, built from the main.h element types. Each
- * group record (LargeHistoryRecord in main.h) is read through GolemGroupRecord.
+ * group record (GolemRecord in main.h) is read through GolemGroupRecord.
  */
 
 #include "common.h"
@@ -27,12 +27,9 @@
 /** @brief Shift of the saved_group bits in the header word. */
 #define GOLEM_SAVED_GROUP_SHIFT 4
 
-/** @brief Number of source items (weapons and armor) kept in a group record. */
-#define GOLEM_SOURCE_ITEM_COUNT 4
-
 /**
  * @brief Golem group record: the golem built from a set of weapons and armor.
- * @note Same bytes as LargeHistoryRecord (main.h), which MENU and GOSUB read.
+ * @note Same bytes as GolemRecord (main.h), which MENU and GOSUB read.
  *       field_golem_build_companion copies it into the party companion record;
  *       the field names follow the members they fill.
  */
@@ -40,9 +37,9 @@ typedef struct
 {
     u8 name[GOLEM_NAME_LENGTH];
     u8 unknown_0x15;
-    u16 hp;                                           /**< LargeHistoryRecord secondary_value. */
-    u16 power;                                        /**< LargeHistoryRecord primary_value; weapon power. */
-    u16 equipment_totals[HISTORY_RECORD_STAT_COUNT];  /**< Summed armor values, 0-99; LargeHistoryRecord stats. */
+    u16 hp;                                     /**< GolemRecord secondary_value. */
+    u16 power;                                  /**< GolemRecord primary_value; weapon power. */
+    u16 equipment_totals[COMPANION_STAT_COUNT]; /**< Summed armor values, 0-99; GolemRecord stats. */
     u8 unknown_0x22[2];
     FieldNibbles weapon_bonus;                        /**< Summed weapon bonus nibbles, 0-9. */
     FieldNibbles armor_bonus;                         /**< Summed armor bonus nibbles, 0-9. */
@@ -57,16 +54,16 @@ typedef struct
     u8 unknown_0x45;
     u8 unknown_0x46;                                  /**< 75 - 10 * grid_bound, clamped to 0-50. */
     u8 unknown_0x47;
-    s32 unknown_0x48;
+    s32 palette; /**< GolemRecord palette. */
     FieldItemRecord source_items[GOLEM_SOURCE_ITEM_COUNT];
 } GolemGroupRecord;
 
 /**
  * @brief Golem logic-block state inside the shared game-state buffer.
- * @note Same bytes as PadContext (main.h): companion starts at gname_name,
+ * @note Same bytes as PadContext (main.h): companion starts at companion_name,
  *       header byte 2 is logic_block_count, header byte 3 is
- *       large_history_index, group_order is large_history_order, group_records
- *       is large_history_records.
+ *       joined_golem, group_order is golem_order, group_records
+ *       is golem_records.
  */
 typedef struct
 {
@@ -84,11 +81,11 @@ typedef struct
             s8 joined_group; /**< Golem group in the party slot, or GOLEM_NO_GROUP. */
         } fields;
     } header;
-    u8 group_order[LARGE_HISTORY_RECORD_COUNT]; /**< Order slot -> logic type (group). */
+    u8 group_order[GOLEM_RECORD_COUNT]; /**< Order slot -> logic type (group). */
     u8 pad_29DB;
     LogicBlock logic_blocks[LOGIC_BLOCK_CAPACITY];
     GolemGridCell grid[GOLEM_GRID_CELL_COUNT];
-    GolemGroupRecord group_records[LARGE_HISTORY_RECORD_COUNT];
+    GolemGroupRecord group_records[GOLEM_RECORD_COUNT];
 } GolemLayoutView;
 
 /** @brief The game-state buffer viewed as the golem layout. */

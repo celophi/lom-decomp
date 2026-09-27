@@ -84,10 +84,6 @@
 /** @brief Size of one cached portrait image. */
 #define FIELD_PORTRAIT_SIZE 0x4A0
 
-/** @brief Companion kind bits of PadContext::unkAA8 and the golem kind. */
-#define COMPANION_KIND_MASK 0x7F
-#define COMPANION_KIND_GOLEM 4
-
 /** @brief Per-player block of the saved game and its control byte (bit 7: controller in use). */
 #define FIELD_SAVED_PLAYER_STRIDE 0x250
 #define FIELD_SAVED_PLAYER_CONTROL 0x608
@@ -2238,8 +2234,8 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
     {
         FieldActor* companion = &g_field_actors[FIELD_COMPANION_INDEX];
 
-        companion->control.word = (companion->control.word & ~FIELD_CONTROL_VARIANT_MASK) |
-                                  ((((u8)((PadContext*)pad_context)->large_history_index + 1) & 3) << FIELD_CONTROL_VARIANT_SHIFT);
+        companion->control.word =
+            (companion->control.word & ~FIELD_CONTROL_VARIANT_MASK) | ((((u8)((PadContext*)pad_context)->joined_golem + 1) & 3) << FIELD_CONTROL_VARIANT_SHIFT);
     }
     else
     {
@@ -2524,7 +2520,7 @@ void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index)
         FieldActor* companion = &g_field_actors[FIELD_COMPANION_INDEX];
 
         companion->control.word =
-            (companion->control.word & ~FIELD_CONTROL_VARIANT_MASK) | ((((u8)g_pad_ctx->large_history_index + 1) & 3) << FIELD_CONTROL_VARIANT_SHIFT);
+            (companion->control.word & ~FIELD_CONTROL_VARIANT_MASK) | ((((u8)g_pad_ctx->joined_golem + 1) & 3) << FIELD_CONTROL_VARIANT_SHIFT);
         return;
     }
 
@@ -3605,12 +3601,12 @@ static void field_refresh_actor_portraits(void)
             field_copy_portrait_palette(partner_portrait, g_field_player_records[1].head.bits.alt_appearance);
         }
 
-        if (g_pad_ctx->gname_name[0] != 0 && (g_pad_ctx->unkAA8 & COMPANION_KIND_MASK) == COMPANION_KIND_GOLEM)
+        if (g_pad_ctx->companion_name[0] != 0 && (g_pad_ctx->companion_info & COMPANION_KIND_MASK) == COMPANION_KIND_GOLEM)
         {
-            golem_index = g_pad_ctx->large_history_index;
-            if (golem_index < LARGE_HISTORY_RECORD_COUNT)
+            golem_index = g_pad_ctx->joined_golem;
+            if (golem_index < GOLEM_RECORD_COUNT)
             {
-                field_copy_golem_portrait_palette(companion_portrait, g_pad_ctx->large_history_records[golem_index].unknown_0x48);
+                field_copy_golem_portrait_palette(companion_portrait, g_pad_ctx->golem_records[golem_index].palette);
             }
         }
     }

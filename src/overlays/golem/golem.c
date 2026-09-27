@@ -387,12 +387,12 @@ u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel)
     if (restore_slot_on_cancel != 0)
     {
         menu_data = GOLEM_PAD_CTX;
-        selected_logic_type = menu_data->large_history_index;
+        selected_logic_type = menu_data->joined_golem;
         g_golem_saved_logic_type_slot = D_80122C00;
         D_80122C00 = 0;
-        for (slot_index = 0; slot_index < LARGE_HISTORY_RECORD_COUNT; slot_index++)
+        for (slot_index = 0; slot_index < GOLEM_RECORD_COUNT; slot_index++)
         {
-            if (*(menu_data->large_history_order + slot_index) == selected_logic_type)
+            if (*(menu_data->golem_order + slot_index) == selected_logic_type)
             {
                 D_80122C00 = slot_index;
             }
@@ -400,7 +400,7 @@ u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel)
     }
 
     g_golem_grid_size_class = func_800CB758() - 4;
-    logic_type = GOLEM_PAD_CTX->large_history_order[D_80122C00];
+    logic_type = GOLEM_PAD_CTX->golem_order[D_80122C00];
     g_golem_block_rotation = 0;
     g_golem_block_y = 0;
     g_golem_block_x = 0;

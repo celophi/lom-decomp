@@ -314,8 +314,6 @@ extern s32 g_field_scripted_scroll_frames;
 extern s32 g_field_scripted_scroll_target_x;
 extern s32 g_field_scripted_scroll_target_z;
 
-s32* field_copy_words(s32* src, s32* dest, s32 size);
-u16* field_find_resource(s32 resource_id);
 FieldStatusState* field_find_object_state(s32 key);
 FieldActorRecord* field_find_actor_record_or_default(s32 id);
 s32 field_get_actor_position(s32 key, Vec3i* position);
@@ -531,7 +529,7 @@ void field_command_read_nibble_table(s32 command, FieldNibbleTableParams* params
 {
     FieldNibbleTable* table;
 
-    table = (FieldNibbleTable*)field_find_resource(FIELD_RESOURCE_NIBBLE_TABLE);
+    table = field_find_resource(FIELD_RESOURCE_NIBBLE_TABLE);
     if (table != NULL)
     {
         params->low = table->cells[params->row][params->column - FIELD_NIBBLE_TABLE_FIRST_COLUMN] & 0xF;
@@ -574,7 +572,7 @@ void field_command_items(s32 command, FieldItemCommandParams* params)
     {
     case FIELD_ITEM_COMMAND_RESET:
         g_field_item_staging = &g_field_runtime->item_staging;
-        field_copy_words(NULL, (s32*)&g_field_runtime->item_staging, sizeof(FieldItemStaging));
+        field_copy_words(NULL, &g_field_runtime->item_staging, sizeof(FieldItemStaging));
         return;
     case FIELD_ITEM_COMMAND_CREATE:
         record = field_find_free_inventory_record();
@@ -912,7 +910,7 @@ void field_command_spawn_monster(s32 command, FieldSpawnParams* params)
             {
                 sound = params->sound;
             }
-            field_copy_words(NULL, (s32*)record, sizeof(FieldStatusRecord));
+            field_copy_words(NULL, record, sizeof(FieldStatusRecord));
             field_init_monster_record(actor, record, field_find_object_state(actor));
             field_revive_actor(actor, animation, effect, sound);
         }

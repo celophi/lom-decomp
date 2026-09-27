@@ -109,15 +109,13 @@ enum
     GNAME_RENDER_BUFFER_B
 };
 
-/* Run-loop timing and history layout. */
+/* Run-loop timing and the party companion kind. */
 #define GNAME_FRAME_VSYNC_INTERVAL 2U
 #define GNAME_INIT_STACK_PAD_WORDS 2
 #define GNAME_FADE_IN_FRAMES 20
 #define GNAME_STARTUP_DELAY_FRAMES 40
 #define GNAME_NAME_BUFFER_SIZE 48
-#define GNAME_HISTORY_LAYOUT_MASK 0x7F
-#define GNAME_HISTORY_LAYOUT_LARGE 4
-#define GNAME_USES_LARGE_HISTORY(ctx) (((ctx)->unkAA8 & GNAME_HISTORY_LAYOUT_MASK) == GNAME_HISTORY_LAYOUT_LARGE)
+#define GNAME_COMPANION_IS_GOLEM(ctx) (((ctx)->companion_info & COMPANION_KIND_MASK) == COMPANION_KIND_GOLEM)
 
 #define NAME_MAX_GLYPHS 10
 
@@ -528,7 +526,7 @@ static s32 name_is_blank(const u8* name_buf);
 s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_name, s32 source_mode, s32 history_index, const u8* custom_name,
               s32 allow_empty_cancel)
 {
-    s32 history_byte_index;
+    s32 name_byte_index;
     RenderContext* draw_buffer;
     RenderContext* next_buffer;
     RenderContext* other_buffer;
@@ -624,24 +622,24 @@ s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_
     VSync(0);
     field_reset_input_repeat();
 
-    /* Persist edits only when this run targeted the pad context's history name. */
-    if ((source_mode == GNAME_SRC_HISTORY) && (active_name == g_pad_ctx->gname_name))
+    /* Renaming the party companion also renames its golem or pet record. */
+    if ((source_mode == GNAME_SRC_HISTORY) && (active_name == g_pad_ctx->companion_name))
     {
-        history_byte_index = 0;
-        if (GNAME_USES_LARGE_HISTORY(g_pad_ctx))
+        name_byte_index = 0;
+        if (GNAME_COMPANION_IS_GOLEM(g_pad_ctx))
         {
-            while (history_byte_index < (s32)sizeof(g_pad_ctx->large_history_records[0].name))
+            while (name_byte_index < (s32)sizeof(g_pad_ctx->golem_records[0].name))
             {
-                g_pad_ctx->large_history_records[g_pad_ctx->large_history_index].name[history_byte_index] = active_name[history_byte_index];
-                history_byte_index++;
+                g_pad_ctx->golem_records[g_pad_ctx->joined_golem].name[name_byte_index] = active_name[name_byte_index];
+                name_byte_index++;
             }
         }
         else
         {
-            while (history_byte_index < (s32)sizeof(g_pad_ctx->small_history_records[0].name))
+            while (name_byte_index < (s32)sizeof(g_pad_ctx->pet_records[0].name))
             {
-                g_pad_ctx->small_history_records[g_pad_ctx->small_history_index].name[history_byte_index] = active_name[history_byte_index];
-                history_byte_index++;
+                g_pad_ctx->pet_records[g_pad_ctx->joined_pet].name[name_byte_index] = active_name[name_byte_index];
+                name_byte_index++;
             }
         }
     }

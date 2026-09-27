@@ -366,6 +366,10 @@ void field_grant_actor_pickup(void *unused, s32 owner_id);
 /* field_record_position_queries.c */
 s32 field_is_actor_near_stored_position(s32 actor_id, s32 half_width, s32 half_depth);
 
+/* field_record_lookup_ops.c / field_record_buffer_ops.c */
+void* field_find_resource(s32 resource_id);
+void* field_copy_words(const void* src, void* dest, s32 size);
+
 /* field_record_setup_ops.c */
 void field_create_item_from_gosub(s32 kind);
 void field_create_equipment_item(struct FieldItemRecord* record, s32 category, s32 item_type, s32 material);

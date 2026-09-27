@@ -212,10 +212,10 @@ void gosub_build_companion_list(s32 mode)
     row_count = 0;
     if (mode != GOSUB_COMPANIONS_PETS)
     {
-        for (order_index = 0; order_index < LARGE_HISTORY_RECORD_COUNT; order_index++)
+        for (order_index = 0; order_index < GOLEM_RECORD_COUNT; order_index++)
         {
-            record_index = g_pad_ctx->large_history_order[order_index];
-            if (record_index < LARGE_HISTORY_RECORD_COUNT)
+            record_index = g_pad_ctx->golem_order[order_index];
+            if (record_index < GOLEM_RECORD_COUNT)
             {
                 if (mode == GOSUB_COMPANIONS_ALL)
                 {
@@ -227,7 +227,7 @@ void gosub_build_companion_list(s32 mode)
                 }
                 g_gosub_rows[row_count].value = GOSUB_ROW_COMPANION;
                 g_gosub_rows[row_count].flags.companion.pet = 0;
-                if (g_pad_ctx->large_history_index == record_index)
+                if (g_pad_ctx->joined_golem == record_index)
                 {
                     g_gosub_rows[row_count].detail_group = 1;
                 }
@@ -238,30 +238,30 @@ void gosub_build_companion_list(s32 mode)
                 g_gosub_rows[row_count].flags.companion.egg = 0;
                 g_gosub_rows[row_count].flags.companion.grazing = 0;
                 g_gosub_rows[row_count].text_color = GOSUB_TEXT_COLOR_NORMAL;
-                g_gosub_rows[row_count].name = g_pad_ctx->large_history_records[record_index].name;
+                g_gosub_rows[row_count].name = g_pad_ctx->golem_records[record_index].name;
                 /* The golem's type and palette. */
-                g_gosub_rows[row_count].detail_id = g_pad_ctx->large_history_records[record_index].unknown_0x44 & 0xF;
-                g_gosub_rows[row_count].detail_variant = g_pad_ctx->large_history_records[record_index].unknown_0x48;
-                g_gosub_rows[row_count].primary_value = g_pad_ctx->large_history_records[record_index].primary_value;
-                for (stat_index = 0; stat_index < HISTORY_RECORD_STAT_COUNT; stat_index++)
+                g_gosub_rows[row_count].detail_id = g_pad_ctx->golem_records[record_index].logic_layout & GOLEM_LOGIC_CLASS_MASK;
+                g_gosub_rows[row_count].detail_variant = g_pad_ctx->golem_records[record_index].palette;
+                g_gosub_rows[row_count].primary_value = g_pad_ctx->golem_records[record_index].primary_value;
+                for (stat_index = 0; stat_index < COMPANION_STAT_COUNT; stat_index++)
                 {
-                    g_gosub_rows[row_count].stats[stat_index] = g_pad_ctx->large_history_records[record_index].stats[stat_index];
+                    g_gosub_rows[row_count].stats[stat_index] = g_pad_ctx->golem_records[record_index].stats[stat_index];
                 }
-                g_gosub_rows[row_count].secondary_value = g_pad_ctx->large_history_records[record_index].secondary_value;
+                g_gosub_rows[row_count].secondary_value = g_pad_ctx->golem_records[record_index].secondary_value;
                 row_count++;
             }
         }
     }
     if (mode != GOSUB_COMPANIONS_GOLEMS)
     {
-        for (slot = 0; slot < SMALL_HISTORY_RECORD_COUNT; slot++)
+        for (slot = 0; slot < PET_RECORD_COUNT; slot++)
         {
-            if (g_pad_ctx->small_history_records[slot].name[0] != 0)
+            if (g_pad_ctx->pet_records[slot].name[0] != 0)
             {
                 g_gosub_rows[row_count].index = slot;
                 g_gosub_rows[row_count].value = GOSUB_ROW_COMPANION;
                 g_gosub_rows[row_count].flags.companion.pet = 1;
-                if (g_pad_ctx->small_history_index == slot)
+                if (g_pad_ctx->joined_pet == slot)
                 {
                     g_gosub_rows[row_count].detail_group = 1;
                 }
@@ -270,22 +270,22 @@ void gosub_build_companion_list(s32 mode)
                     g_gosub_rows[row_count].detail_group = 0;
                 }
                 g_gosub_rows[row_count].text_color = GOSUB_TEXT_COLOR_NORMAL;
-                g_gosub_rows[row_count].name = g_pad_ctx->small_history_records[slot].name;
+                g_gosub_rows[row_count].name = g_pad_ctx->pet_records[slot].name;
                 /* The pet's species and level. */
-                g_gosub_rows[row_count].detail_id = g_pad_ctx->small_history_records[slot].unknown_0x15;
-                g_gosub_rows[row_count].primary_value = g_pad_ctx->small_history_records[slot].primary_value;
-                g_gosub_rows[row_count].flags.companion.egg = g_pad_ctx->small_history_records[slot].selection_flags.selection_blocked;
-                g_gosub_rows[row_count].flags.companion.grazing = g_pad_ctx->small_history_records[slot].selection_flags.selection_restricted;
-                g_gosub_rows[row_count].detail_variant = g_pad_ctx->small_history_records[slot].unknown_0x18;
+                g_gosub_rows[row_count].detail_id = g_pad_ctx->pet_records[slot].species;
+                g_gosub_rows[row_count].primary_value = g_pad_ctx->pet_records[slot].primary_value;
+                g_gosub_rows[row_count].flags.companion.egg = g_pad_ctx->pet_records[slot].status.egg;
+                g_gosub_rows[row_count].flags.companion.grazing = g_pad_ctx->pet_records[slot].status.grazing;
+                g_gosub_rows[row_count].detail_variant = g_pad_ctx->pet_records[slot].level;
                 if (g_gosub_rows[row_count].flags.half & 1)
                 {
                     /* An egg shows its egg portrait and how long it still needs to hatch. */
-                    g_gosub_rows[row_count].detail_id = g_pad_ctx->small_history_records[slot].unknown_0x16 + GOSUB_EGG_PORTRAIT_FIRST;
-                    if (g_pad_ctx->small_history_records[slot].unknown_0x42 < GOSUB_EGG_ANY_TIME_BELOW)
+                    g_gosub_rows[row_count].detail_id = g_pad_ctx->pet_records[slot].egg_species + GOSUB_EGG_PORTRAIT_FIRST;
+                    if (g_pad_ctx->pet_records[slot].hatch_counter < GOSUB_EGG_ANY_TIME_BELOW)
                     {
                         g_gosub_rows[row_count].detail_variant = GOSUB_EGG_HATCH_ANY_TIME;
                     }
-                    else if (g_pad_ctx->small_history_records[slot].unknown_0x42 < GOSUB_EGG_ALMOST_READY_BELOW)
+                    else if (g_pad_ctx->pet_records[slot].hatch_counter < GOSUB_EGG_ALMOST_READY_BELOW)
                     {
                         g_gosub_rows[row_count].detail_variant = GOSUB_EGG_HATCH_ALMOST_READY;
                     }
@@ -294,11 +294,11 @@ void gosub_build_companion_list(s32 mode)
                         g_gosub_rows[row_count].detail_variant = GOSUB_EGG_HATCH_NEEDS_TIME;
                     }
                 }
-                for (stat_index = 0; stat_index < HISTORY_RECORD_STAT_COUNT; stat_index++)
+                for (stat_index = 0; stat_index < COMPANION_STAT_COUNT; stat_index++)
                 {
-                    g_gosub_rows[row_count].stats[stat_index] = g_pad_ctx->small_history_records[slot].stats[stat_index];
+                    g_gosub_rows[row_count].stats[stat_index] = g_pad_ctx->pet_records[slot].stats[stat_index];
                 }
-                g_gosub_rows[row_count].secondary_value = g_pad_ctx->small_history_records[slot].secondary_value;
+                g_gosub_rows[row_count].secondary_value = g_pad_ctx->pet_records[slot].secondary_value;
                 row_count++;
             }
         }

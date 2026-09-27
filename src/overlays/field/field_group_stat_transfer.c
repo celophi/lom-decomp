@@ -49,7 +49,7 @@ void field_golem_build_companion(s32 group, FieldCharacterRecord* record)
     record->progress.bits.experience = 0;
     record->hp = GOLEM.group_records[group].hp;
     record->equipment[FIELD_WEAPON_SLOT].derived.weapon.power = record->unk26 = GOLEM.group_records[group].power;
-    for (i = 0; i < HISTORY_RECORD_STAT_COUNT; i++)
+    for (i = 0; i < COMPANION_STAT_COUNT; i++)
     {
         record->equipment_totals[i] = GOLEM.group_records[group].equipment_totals[i];
         /* Through the slot address: an indexed equipment[] store shares the totals address and changes the loop. */
@@ -94,5 +94,5 @@ void field_golem_build_companion(s32 group, FieldCharacterRecord* record)
     record->unk150[0].derived.bytes[1] = GOLEM.group_records[group].unknown_0x45;
     record->unk150[0].derived.bytes[2] = GOLEM.group_records[group].unknown_0x46;
     record->unk150[0].derived.bytes[3] = GOLEM.group_records[group].unknown_0x47;
-    record->unk150[0].derived.golem.unknown_0x48 = GOLEM.group_records[group].unknown_0x48;
+    record->unk150[0].derived.golem.palette = GOLEM.group_records[group].palette;
 }

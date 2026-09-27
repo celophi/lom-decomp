@@ -213,7 +213,7 @@ typedef struct FieldItemRecord
             u32 logic_class : 4;
             u32 grid_bound : 4;
             u32 unknown_bits : 24;
-            s32 unknown_0x48;
+            s32 palette;
         } golem;
     } derived;
     /** @brief Weapon: power flags used in battle. Armor: status immunities. */

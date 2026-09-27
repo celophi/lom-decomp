@@ -48,7 +48,6 @@ extern u8 g_field_armor_type_conflicts[];
 /** @brief Signed stat modifiers indexed by an item's four-bit modifier values. */
 extern s8 D_800F0C38[];
 
-void* field_copy_words(void* src, void* dest, s32 size);
 FieldStatusState* field_find_object_state(s32 index);
 
 static s32 field_can_equip_item(FieldCharacterRecord* character, s32 slot_index, FieldItemRecord* item);

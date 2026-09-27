@@ -37,12 +37,6 @@
 /** @brief Object index of the companion. */
 #define COMPANION_OBJECT_INDEX 2
 
-/** @brief Companion kind bits of PadContext::unkAA8. */
-#define COMPANION_KIND_MASK 0x7F
-
-/** @brief Companion kind whose ground effect is not drawn (the golem). */
-#define COMPANION_KIND_GOLEM 4
-
 /** @brief Screen position of the view center. */
 #define SCREEN_CENTER_X (SCREEN_WIDTH / 2)
 #define SCREEN_CENTER_Y (VRAM_DRAW_HEIGHT / 2)
@@ -370,7 +364,7 @@ void field_draw_object_ground_effect(FieldMotionRecord* actor, u32 kind)
     draw = 1;
     if (actor->source_object_index == COMPANION_OBJECT_INDEX)
     {
-        if ((g_pad_ctx->unkAA8 & COMPANION_KIND_MASK) == COMPANION_KIND_GOLEM)
+        if ((g_pad_ctx->companion_info & COMPANION_KIND_MASK) == COMPANION_KIND_GOLEM)
         {
             draw = 0;
         }

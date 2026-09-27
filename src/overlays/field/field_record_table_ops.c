@@ -54,7 +54,6 @@ typedef struct
     u16 special_values[1];
 } FieldItemValueTables;
 
-void* field_find_resource(s32 resource_id);
 s32 rand(void);
 
 extern FieldGameState* g_field_game_state;

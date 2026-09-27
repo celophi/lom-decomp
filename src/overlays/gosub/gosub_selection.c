@@ -398,7 +398,7 @@ void gosub_build_equipment_list(u32 item_kind)
                 case GOSUB_EQUIPMENT_KIND_ARMOR:
                     gosub_append_encoded_string(g_gosub_text_buffers[row_count],
                                                 GOSUB_TEXT(GOSUB_TEXT_EQUIPMENT_TYPES, INVENTORY_CATEGORY(attributes) + GOSUB_ARMOR_TYPE_FIRST));
-                    for (stat_index = 0; stat_index < HISTORY_RECORD_STAT_COUNT; stat_index++)
+                    for (stat_index = 0; stat_index < COMPANION_STAT_COUNT; stat_index++)
                     {
                         g_gosub_rows[row_count].stats[stat_index] = GOSUB_INVENTORY_RECORD(item_index)->stats.values[stat_index];
                     }
