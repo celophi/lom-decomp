@@ -25,17 +25,14 @@ unsigned short upload_save_layout_textures(void);
  * Counterpart of CHECKPS update_controller_input.
  *
  * decomp.me (100%) https://decomp.me/scratch/1dQbp
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP reports the face buttons as read (no PAD_REMAP_FACE_BITS swap).
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/title/nonmatchings/title_save", read_pad_input);
-#else
 static void read_pad_input(void)
 {
     SCDRegs* base = SCD_REGS;
     s32 state;
     u32 buttons;
-    s16 axis;
+    s32 axis;
 
     g_debouncedInput = 0;
     if (g_controller_device_type >= TITLE_PAD_UNAVAILABLE)
@@ -45,7 +42,9 @@ static void read_pad_input(void)
     else
     {
         buttons = ((base->held_buttons >> 8) & 0xFF) | (base->held_buttons << 8);
+#if !defined(VERSION_JP)
         buttons = PAD_REMAP_FACE_BITS(buttons);
+#endif
         if (base->device_type != 0)
         {
             axis = base->axis_x.signed_value;
@@ -72,7 +71,6 @@ static void read_pad_input(void)
     g_lastInputState = state;
     g_inputRepeatTimer = 15;
 }
-#endif
 
 /**
  * Initialises the save-slot sub-menu state and uploads its sprite atlases.

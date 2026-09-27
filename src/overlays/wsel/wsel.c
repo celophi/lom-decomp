@@ -1380,11 +1380,8 @@ static void wsel_upload_tim(u8* tim_data, s32 index)
 /**
  * @brief Read the controller buttons, folding analog stick deflection into the D-pad bits.
  * @return Button mask in PAD_BTN_* order, or 0 when no controller is available.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP reports the face buttons as read (no PAD_REMAP_FACE_BITS swap).
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/wsel/nonmatchings/wsel", wsel_read_pad);
-#else
 s32 wsel_read_pad(void)
 {
     SCDRegs* regs = SCD_REGS;
@@ -1403,7 +1400,9 @@ s32 wsel_read_pad(void)
     hi_read = regs->held_buttons;
     lo_read = regs->held_buttons;
     buttons = (hi_read >> 8) | (lo_read << 8);
+#if !defined(VERSION_JP)
     buttons = PAD_REMAP_FACE_BITS(buttons);
+#endif
     if (regs->device_type != 0)
     {
         /* Convert signed analog-axis thresholds to digital directions. */
@@ -1429,21 +1428,16 @@ s32 wsel_read_pad(void)
     }
     return buttons;
 }
-#endif
 
 /**
  * @brief Sample the controller and update the held, pressed, and key-repeat state.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP reads the face buttons as they are (no PAD_REMAP_FACE_BITS swap).
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/wsel/nonmatchings/wsel", wsel_update_pad_repeat);
-#else
 static void wsel_update_pad_repeat(void)
 {
     SCDRegs* regs = SCD_REGS;
     u32 buttons;
-    s16 axis_x;
-    s16 axis_y;
+    s32 axis;
     s32 sampled_buttons;
     s32 input_state;
 
@@ -1454,25 +1448,27 @@ static void wsel_update_pad_repeat(void)
     else
     {
         buttons = (regs->held_buttons >> 8) | (regs->held_buttons << 8);
+#if !defined(VERSION_JP)
         buttons = PAD_REMAP_FACE_BITS(buttons);
+#endif
         if (regs->device_type != 0)
         {
-            axis_x = regs->axis_x.signed_value;
-            if (axis_x < -1)
+            axis = regs->axis_x.signed_value;
+            if (axis < -1)
             {
                 buttons |= PAD_BTN_LEFT;
             }
-            else if (axis_x >= 2)
+            else if (axis >= 2)
             {
                 buttons |= PAD_BTN_RIGHT;
             }
 
-            axis_y = regs->axis_y.signed_value;
-            if (axis_y < -1)
+            axis = regs->axis_y.signed_value;
+            if (axis < -1)
             {
                 buttons |= PAD_BTN_UP;
             }
-            else if (axis_y >= 2)
+            else if (axis >= 2)
             {
                 buttons |= PAD_BTN_DOWN;
             }
@@ -1515,21 +1511,16 @@ static void wsel_update_pad_repeat(void)
         g_wsel_repeat_timer = WSEL_INITIAL_REPEAT_DELAY;
     }
 }
-#endif
 
 /**
  * @brief Seed the key-repeat state from the current controller sample.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP reports the face buttons as read (no PAD_REMAP_FACE_BITS swap).
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/wsel/nonmatchings/wsel", wsel_init_pad_repeat);
-#else
 static void wsel_init_pad_repeat(void)
 {
     SCDRegs* regs = SCD_REGS;
     u32 buttons;
-    s16 axis_x;
-    s16 axis_y;
+    s32 axis;
     s32 input_state;
 
     g_wsel_buttons_pressed = 0;
@@ -1540,25 +1531,27 @@ static void wsel_init_pad_repeat(void)
     else
     {
         buttons = (regs->held_buttons >> 8) | (regs->held_buttons << 8);
+#if !defined(VERSION_JP)
         buttons = PAD_REMAP_FACE_BITS(buttons);
+#endif
         if (regs->device_type != 0)
         {
-            axis_x = regs->axis_x.signed_value;
-            if (axis_x < -1)
+            axis = regs->axis_x.signed_value;
+            if (axis < -1)
             {
                 buttons |= PAD_BTN_LEFT;
             }
-            else if (axis_x >= 2)
+            else if (axis >= 2)
             {
                 buttons |= PAD_BTN_RIGHT;
             }
 
-            axis_y = regs->axis_y.signed_value;
-            if (axis_y < -1)
+            axis = regs->axis_y.signed_value;
+            if (axis < -1)
             {
                 buttons |= PAD_BTN_UP;
             }
-            else if (axis_y >= 2)
+            else if (axis >= 2)
             {
                 buttons |= PAD_BTN_DOWN;
             }
@@ -1568,4 +1561,3 @@ static void wsel_init_pad_repeat(void)
     g_wsel_repeat_buttons = input_state;
     g_wsel_repeat_timer = WSEL_INITIAL_REPEAT_DELAY;
 }
-#endif

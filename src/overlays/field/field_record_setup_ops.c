@@ -315,11 +315,8 @@ void field_temper_item(FieldItemRecord* record, s32 command_index)
  * The type, subtype, command and slot scripts run on the event script
  * context; pending levels, flags and stat clamping are applied, the item is
  * written back and its weapon or armor derived values are computed.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP applies the pending levels in field_finish_staged_item instead.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_record_setup_ops", field_generate_staged_item);
-#else
 static void field_generate_staged_item(void)
 {
     FieldScriptContext* saved_script;
@@ -338,7 +335,9 @@ static void field_generate_staged_item(void)
     field_run_item_script(D_80123FC0->item.subtypes[D_80123FC4->item_subtype].script);
     field_run_item_script(D_80123FC0->item.commands[D_80123FC4->command_index - FIELD_STAGING_COMMAND_BASE].script);
     field_run_slot_scripts();
+#if !defined(VERSION_JP)
     field_apply_pending_levels();
+#endif
     if (D_80123FC4->category == FIELD_ITEM_CATEGORY_WEAPON)
     {
         field_run_item_script(D_80123FC0->item.types[D_80123FC4->item_type].scripts[1]);
@@ -361,7 +360,6 @@ static void field_generate_staged_item(void)
         return;
     }
 }
-#endif
 
 /**
  * @brief Load the item table and copy the staged subtype's entry into the staging block.

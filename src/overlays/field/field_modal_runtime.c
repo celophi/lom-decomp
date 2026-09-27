@@ -456,13 +456,10 @@ void* field_draw_number_wide(s32* ot, SPRT* sprite_cursor, s32 value, s32 text_c
  * @brief Format a signed decimal number (up to eight digits) as encoded text.
  * @param text Buffer receiving the text and its terminator.
  * @param number Number to format; a negative number starts with the bank's minus sign.
- * @param wide_request Double-byte digits requested by field_draw_number_wide; ignored.
- * @note The double-byte branch tests a local that is always zero, so the digits are always single-byte.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @param wide_request Double-byte digits requested by field_draw_number_wide; ignored in US.
+ * @note The US double-byte branch tests a local that is always zero, so the digits are always single-byte.
+ *       JP honours @p wide_request.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_modal_runtime", field_format_number);
-#else
 inline void field_format_number(u8* text, s32 number, s32 wide_request)
 {
     u8* cursor;
@@ -475,7 +472,11 @@ inline void field_format_number(u8* text, s32 number, s32 wide_request)
 
     cursor = text;
     value = number;
+#if defined(VERSION_JP)
+    double_byte = wide_request;
+#else
     double_byte = 0;
+#endif
     if (value < 0)
     {
         value = -value;
@@ -510,7 +511,6 @@ inline void field_format_number(u8* text, s32 number, s32 wide_request)
     } while (divisor != 0);
     *cursor = 0;
 }
-#endif
 
 /**
  * @brief Bind the field input and inventory context to the loaded saved game.
@@ -1207,18 +1207,15 @@ static void field_update_text_session(void)
  * @param index Controller port.
  * @return Button mask, or zero when the controller is missing or still being configured.
  * @note The packet's button bytes are swapped and bits 4-7 reordered into the PAD* layout.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP returns the face buttons as read (no swap).
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_modal_runtime", field_read_controller_buttons);
-#else
 s32 field_read_controller_buttons(s32 index)
 {
     ControllerPortState* ports;
     ControllerPortState* port;
     u16 raw_buttons;
     s32 buttons;
-    s16 stick;
+    s32 stick;
     s32 port_offset;
 
     ports = CONTROLLER_STATE->ports;
@@ -1230,7 +1227,9 @@ s32 field_read_controller_buttons(s32 index)
 
     raw_buttons = port->published_sample.held_buttons;
     buttons = (raw_buttons >> 8) | ((raw_buttons & 0xFF) << 8);
+#if !defined(VERSION_JP)
     buttons = ((u32)(buttons & 0x40) >> 1) | ((buttons & 0x20) << 1) | ((u32)(buttons & 0x80) >> 3) | ((buttons & 0x10) << 3) | (buttons & 0xFF0F);
+#endif
 
     if (port->published_sample.device_type != CONTROLLER_DEVICE_DIGITAL)
     {
@@ -1258,7 +1257,6 @@ s32 field_read_controller_buttons(s32 index)
 
     return buttons;
 }
-#endif
 
 /**
  * @brief Read both controllers and apply the initial delay and key repeat to their buttons.

@@ -79,16 +79,15 @@ s32 gosub_validate_pending_pair_selection(void)
 /**
  * @brief Commit a pending row move by swapping the two marked rows.
  * @return Always 0.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP does not swap the two index fields back after swapping the rows.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/gosub/nonmatchings/gosub_selection", gosub_commit_row_reorder);
-#else
 s32 gosub_commit_row_reorder(void)
 {
     GosubListRow entry_tmp;
     LogicBlock rec_tmp;
+#if !defined(VERSION_JP)
     s32 saved_index;
+#endif
 
     if (g_gosub_selection_count == 0)
     {
@@ -107,9 +106,11 @@ s32 gosub_commit_row_reorder(void)
         gosub_copy_list_row(&entry_tmp, &g_gosub_rows[g_gosub_selected_rows[0]]);
         gosub_copy_list_row(&g_gosub_rows[g_gosub_selected_rows[0]], &g_gosub_rows[g_gosub_selected_rows[1]]);
         gosub_copy_list_row(&g_gosub_rows[g_gosub_selected_rows[1]], &entry_tmp);
+#if !defined(VERSION_JP)
         saved_index = g_gosub_rows[g_gosub_selected_rows[0]].index;
         g_gosub_rows[g_gosub_selected_rows[0]].index = g_gosub_rows[g_gosub_selected_rows[1]].index;
         g_gosub_rows[g_gosub_selected_rows[1]].index = saved_index;
+#endif
         g_gosub_selection_count = 0;
     }
     else
@@ -119,7 +120,6 @@ s32 gosub_commit_row_reorder(void)
     }
     return 0;
 }
-#endif
 
 /**
  * @brief Update row colors for the current group selection.

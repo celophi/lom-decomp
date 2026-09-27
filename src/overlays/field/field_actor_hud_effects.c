@@ -1486,11 +1486,8 @@ void field_update_object_effects(s32 index)
  * @brief Flag 0x0004 handler: restart the actor's animation and play effect resource 7.
  * @param actor Actor of the object.
  * @param is_set Nonzero when the flag became set; zero does nothing.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP does not clear the linked object's flag 0x2000.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_actor_hud_effects", field_handle_object_flag_0004);
-#else
 void field_handle_object_flag_0004(FieldActor* actor, s32 is_set)
 {
     if (is_set != 0)
@@ -1503,10 +1500,11 @@ void field_handle_object_flag_0004(FieldActor* actor, s32 is_set)
         field_restart_actor_animation(actor);
         field_start_builtin_animation(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 7);
         field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
+#if !defined(VERSION_JP)
         field_clear_link_target_flag(actor->object_index);
+#endif
     }
 }
-#endif
 
 /**
  * @brief Flag 0x0020 handler: restart the actor's animation and play effect resource 10.
@@ -1551,11 +1549,8 @@ void field_set_actor_horizontal_scale(FieldActor* actor, s32 half_scale)
  * @brief Flag 0x0040 handler: play effect resource 9 and hold the actor in animation 0x1B.
  * @param actor Actor of the object.
  * @param is_set Nonzero when the flag became set; zero does nothing.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP does not clear the linked object's flag 0x2000.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_actor_hud_effects", field_handle_object_flag_0040);
-#else
 void field_handle_object_flag_0040(FieldActor* actor, s32 is_set)
 {
     u8 animation;
@@ -1575,20 +1570,18 @@ void field_handle_object_flag_0040(FieldActor* actor, s32 is_set)
             field_restart_actor_animation(actor);
             actor->control.word |= FIELD_ANIMATION_HOLD_LAST_FRAME;
         }
+#if !defined(VERSION_JP)
         field_clear_link_target_flag(actor->object_index);
+#endif
     }
 }
-#endif
 
 /**
  * @brief Flag 0x0080 handler: hold the actor in animation 0x14, or release it and play effect resource 0x91.
  * @param actor Actor of the object.
  * @param is_set Nonzero when the flag became set, zero when it was cleared.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP does not clear the linked object's flag 0x2000.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_actor_hud_effects", field_handle_object_flag_0080);
-#else
 void field_handle_object_flag_0080(FieldActor* actor, s32 is_set)
 {
     if (is_set != 0)
@@ -1600,7 +1593,9 @@ void field_handle_object_flag_0080(FieldActor* actor, s32 is_set)
         g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
         field_restart_actor_animation(actor);
         actor->control.word |= FIELD_ACTOR_CONTROL_40000 | FIELD_ANIMATION_HOLD_LAST_FRAME;
+#if !defined(VERSION_JP)
         field_clear_link_target_flag(actor->object_index);
+#endif
     }
     else
     {
@@ -1615,7 +1610,6 @@ void field_handle_object_flag_0080(FieldActor* actor, s32 is_set)
         actor->control.word &= ~FIELD_ACTOR_CONTROL_40000;
     }
 }
-#endif
 
 /**
  * @brief Clear flag 0x2000 of the object that @p object_index is linked to, if it is linked.
@@ -1637,11 +1631,8 @@ static inline void field_clear_link_target_flag(s32 object_index)
  * @brief Flag 0x0100 handler: play effect resource 12 and hide the actor, or play 13 and show it.
  * @param actor Actor of the object.
  * @param is_set Nonzero when the flag became set, zero when it was cleared.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP does not clear the linked object's flag 0x2000.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_actor_hud_effects", field_handle_object_flag_0100);
-#else
 void field_handle_object_flag_0100(FieldActor* actor, s32 is_set)
 {
     if (is_set != 0)
@@ -1649,7 +1640,9 @@ void field_handle_object_flag_0100(FieldActor* actor, s32 is_set)
         field_start_builtin_animation(actor->object_index, actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 12);
         field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
         actor->presence = FIELD_ACTOR_HIDDEN;
+#if !defined(VERSION_JP)
         field_clear_link_target_flag(actor->object_index);
+#endif
     }
     else
     {
@@ -1658,21 +1651,18 @@ void field_handle_object_flag_0100(FieldActor* actor, s32 is_set)
         actor->presence = 0;
     }
 }
-#endif
 
 /**
  * @brief Knocked-out flag handler: clear flag 0x2000 of the object the actor is linked to.
  * @param actor Actor of the object.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP's handler is empty.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_actor_hud_effects", field_handle_object_knocked_out);
-#else
 void field_handle_object_knocked_out(FieldActor* actor)
 {
+#if !defined(VERSION_JP)
     field_clear_link_target_flag(actor->object_index);
-}
 #endif
+}
 
 /**
  * @brief Flag 0x8000 handler: play effect resource 14, or stop the object's effect slot.

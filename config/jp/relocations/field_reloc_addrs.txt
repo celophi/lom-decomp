@@ -151,3 +151,10 @@ rom:0x4D255 reloc:MIPS_LO16 symbol:g_field_object_states addend:0x190
 // of Splat's inferred standalone g_field_timed_text relocation.
 rom:0x17215 reloc:MIPS_NONE symbol:g_field_timed_text
 rom:0x17219 reloc:MIPS_NONE symbol:g_field_timed_text
+
+// JP-only entries from config/jp/reloc_extra/field_reloc_addrs.txt.
+// field_draw_frame (JP): both audio checks read FIELD_CD_SYSTEM->audio_enabled,
+// a literal address; splat names the first one after g_cd_audio_enabled, which
+// sits at the same address. Strip that false-positive relocation.
+rom:0x2311 reloc:MIPS_NONE symbol:g_cd_audio_enabled
+rom:0x2315 reloc:MIPS_NONE symbol:g_cd_audio_enabled

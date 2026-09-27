@@ -333,17 +333,14 @@ void field_apply_region_level_ups(s32 slot)
  * @return -1 when the member advanced a level, otherwise 0.
  * @note A stored companion in the party grows through field_grow_companion_stats, the
  *       others through field_grow_character_stats.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP differs only in field_level_threshold().
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_record_growth_ops", field_try_character_level_up);
-#else
 s32 field_try_character_level_up(s32 index, s32 notify)
 {
     s32 level;
 
     level = g_field_game_state->characters[index].progress.level;
-    if ((s32)(g_field_game_state->characters[index].progress.word >> 8) >= field_level_threshold(level))
+    if (field_level_threshold(level) <= (s32)(g_field_game_state->characters[index].progress.word >> 8))
     {
         g_field_game_state->characters[index].progress.level = level + 1;
         if (g_field_game_state->characters[index].progress.level > FIELD_LEVEL_MAX)
@@ -368,7 +365,6 @@ s32 field_try_character_level_up(s32 index, s32 notify)
     }
     return 0;
 }
-#endif
 
 /**
  * @brief Level-up growth of a party member that is not a stored companion.
