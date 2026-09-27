@@ -2,6 +2,8 @@
 # C anyway: the differences are `#if defined(VERSION_JP)` values in the source.
 # tools/versions/port_us_layout.py keeps these as C instead of listing them in
 # asm_units.txt. Add a unit here only after `make VERSION=jp verify-bins` passes.
+src/overlays/addhero/addhero.c
+src/overlays/addhero/addhero_widgets.c
 src/overlays/field/field_action_modifiers.c
 src/overlays/field/field_actor_behavior.c
 src/overlays/field/field_actor_input_actions.c
@@ -27,4 +29,5 @@ src/overlays/gosub/gosub_render.c
 src/overlays/wmap/wmap_land_transition.c
 src/overlays/wmap/wmap_map_display.c
 src/overlays/wmap/wmap_party_travel.c
+src/overlays/wmap/wmap_special_effect_34.c
 src/overlays/wmap/wmap_view_effects.c

@@ -14,3 +14,8 @@ field_reset_party_to_level = 0x800B5CE0;
 // get_world_map_overlay_end returns it (lui 0x801B + addiu 0x33A0 at JP
 // 0x80015C38); it is the JP WMAP image end (wmap_VRAM_END in the JP link map).
 g_world_map_overlay_end = 0x801B33A0;
+
+// Last function of field_generated_record_ops: the JP unit has the same four
+// functions in the same order as US, and the fourth starts here (splat's
+// func_800BFD54 before it was named).
+field_derive_armor_values = 0x800BFD54;
