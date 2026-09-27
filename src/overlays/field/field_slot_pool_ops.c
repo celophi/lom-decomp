@@ -174,13 +174,18 @@ s32 field_replace_slot_value(s32 cost, s32 value, s32 replacement)
 
 /**
  * @brief Finish the staged flags and clamp the staged stat modifiers.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_slot_pool_ops", field_finish_staged_item);
+#else
 void field_finish_staged_item(void)
 {
     field_apply_flags2c_mask();
     field_apply_flags2d_mask();
     field_clamp_staged_stats();
 }
+#endif
 
 /**
  * @brief Pick each stat's stronger modifier and clamp it to the stat's limits.
@@ -257,7 +262,11 @@ void field_apply_pending_levels(void)
  * level; the level stops at FIELD_STAGING_LEVEL_MAX.
  *
  * @param index Level entry to raise.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_slot_pool_ops", field_raise_staged_level);
+#else
 void field_raise_staged_level(s32 index)
 {
     FieldItemStaging* staging;
@@ -284,10 +293,15 @@ void field_raise_staged_level(s32 index)
         entry->levels[0].level++;
     }
 }
+#endif
 
 /**
  * @brief Set the flags2C bits whose mask bit is set and whose level is nonzero.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_slot_pool_ops", field_apply_flags2c_mask);
+#else
 static void field_apply_flags2c_mask(void)
 {
     s32 mask;
@@ -301,10 +315,15 @@ static void field_apply_flags2c_mask(void)
         }
     }
 }
+#endif
 
 /**
  * @brief Rebuild flags2D from the bits of flags2D_mask.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_slot_pool_ops", field_apply_flags2d_mask);
+#else
 static void field_apply_flags2d_mask(void)
 {
     s32 mask;
@@ -319,6 +338,7 @@ static void field_apply_flags2d_mask(void)
         }
     }
 }
+#endif
 
 /**
  * @brief Lower one staged level and refund its price to the pool.

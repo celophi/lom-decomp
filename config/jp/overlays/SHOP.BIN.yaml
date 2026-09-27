@@ -49,7 +49,7 @@ segments:
       - [auto, c, overlay_header]
       - [0x1, .rodata, overlay_header]
       - [0x5, c, shop]
-      - [0xE01, asm, shop_render]  # JP: differs from US, kept as assembly
+      - [0xE01, c, shop_render]
       - [0x2125, c, shop_text]
       - [0x2279, c, shop_trade]
       - [0x2CF9, data, data]

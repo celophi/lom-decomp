@@ -6436,6 +6436,14 @@ void func_800B7420(void);
     D_801B321C = 1;
 }
 
+/**
+ * @brief Effect 34 step: save the view and cursor, move the focus, load
+ *        effect resource 0x22 and advance the step.
+ * @note JP changes this function; the JP build takes it from assembly.
+ */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/wmap/nonmatchings/wmap_special_effect_34", func_800BFDA8);
+#else
 void func_800BFDA8(void)
 {
 typedef struct
@@ -7075,6 +7083,7 @@ void func_800B7420(void);
     D_801B321C = 0x1E;
     D_801B3218++;
 }
+#endif
 
 void func_800BFE54(void)
 {
@@ -10230,6 +10239,14 @@ void func_800B7420(void);
     }
 }
 
+/**
+ * @brief Effect 34 step: reset after the transition, restore the saved
+ *        cursor and advance the step.
+ * @note JP changes this function; the JP build takes it from assembly.
+ */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/wmap/nonmatchings/wmap_special_effect_34", func_800BFFD8);
+#else
 void func_800BFFD8(void)
 {
 typedef struct
@@ -10861,6 +10878,7 @@ void func_800B7420(void);
     g_wmap_cursor_row = D_801B3214;
     D_801B3218++;
 }
+#endif
 
 s32 func_800C0034(s32 reset)
 {

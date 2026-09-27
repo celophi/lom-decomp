@@ -8,6 +8,33 @@
 #define ADDHERO_TEXT_BY_OFFSET(table, offset) ((u8*)((s32)(offset) + (s32)(table)))
 
 /**
+ * @brief Card slot label layout: window and dimming-tile width, label text X,
+ *        and the slot-0 window X.
+ * @note JP narrows both labels to 0x70 and moves slot 0 right.
+ */
+#if defined(VERSION_JP)
+#define ADDHERO_CARD_LABEL_WIDTH 0x70
+#define ADDHERO_CARD_LABEL_TEXT_X 0x38
+#define ADDHERO_CARD_SLOT0_LABEL_X 0x28
+#else
+#define ADDHERO_CARD_LABEL_WIDTH 0x80
+#define ADDHERO_CARD_LABEL_TEXT_X 0x40
+#define ADDHERO_CARD_SLOT0_LABEL_X 0x18
+#endif
+
+/**
+ * @brief Entry list columns: the suffix value and the rank marker.
+ * @note JP moves both right.
+ */
+#if defined(VERSION_JP)
+#define ADDHERO_ENTRY_VALUE_X 0x94
+#define ADDHERO_ENTRY_MARKER_X 0xCC
+#else
+#define ADDHERO_ENTRY_VALUE_X 0x86
+#define ADDHERO_ENTRY_MARKER_X 0xC0
+#endif
+
+/**
  * @brief Reset overlay state and build the initial UI elements.
  * @param work_base Work-RAM base (always 0x80170000); stored in g_addhero_work_ram_base, unused so far.
  * @param mode Mode selector, stored in g_addhero_mode.
@@ -101,11 +128,11 @@ void addhero_build_ui_elements(void)
         element = addhero_alloc_element();
         element->draw_handler = addhero_draw_card_slot0_label;
         element->attr.bits.transition_step = 1;
-        element->attr.bits.x = 0x18;
+        element->attr.bits.x = ADDHERO_CARD_SLOT0_LABEL_X;
         element->attr.bits.y = 0x4D;
         element->size.bits.width_high = 0;
         element->size.bits.height = 0x10;
-        ADDHERO_SET_ELEMENT_WIDTH_LOW(element, 0x80);
+        ADDHERO_SET_ELEMENT_WIDTH_LOW(element, ADDHERO_CARD_LABEL_WIDTH);
 
         element = addhero_alloc_element();
         element->draw_handler = addhero_draw_card_slot1_label;
@@ -114,7 +141,7 @@ void addhero_build_ui_elements(void)
         element->attr.bits.y = 0x4D;
         element->size.bits.width_high = 0;
         element->size.bits.height = 0x10;
-        ADDHERO_SET_ELEMENT_WIDTH_LOW(element, 0x80);
+        ADDHERO_SET_ELEMENT_WIDTH_LOW(element, ADDHERO_CARD_LABEL_WIDTH);
         g_addhero_element_pool[0].attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
         return;
     }
@@ -142,11 +169,11 @@ void addhero_build_ui_elements(void)
     element = addhero_alloc_element();
     element->draw_handler = addhero_draw_card_slot0_label;
     element->attr.bits.transition_step = 1;
-    element->attr.bits.x = 0x18;
+    element->attr.bits.x = ADDHERO_CARD_SLOT0_LABEL_X;
     element->attr.bits.y = 0x1E;
     element->size.bits.width_high = 0;
     element->size.bits.height = 0x10;
-    ADDHERO_SET_ELEMENT_WIDTH_LOW(element, 0x80);
+    ADDHERO_SET_ELEMENT_WIDTH_LOW(element, ADDHERO_CARD_LABEL_WIDTH);
 
     element = addhero_alloc_element();
     element->draw_handler = addhero_draw_card_slot1_label;
@@ -155,7 +182,7 @@ void addhero_build_ui_elements(void)
     element->attr.bits.y = 0x1E;
     element->size.bits.width_high = 0;
     element->size.bits.height = 0x10;
-    ADDHERO_SET_ELEMENT_WIDTH_LOW(element, 0x80);
+    ADDHERO_SET_ELEMENT_WIDTH_LOW(element, ADDHERO_CARD_LABEL_WIDTH);
 
     element = addhero_alloc_element();
     element->draw_handler = addhero_draw_selected_entry_details;
@@ -552,19 +579,19 @@ void* addhero_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset
                 {
                     if (g_addhero_entry_ranks[entry_index] >= 0)
                     {
-                        value_pos.vx = list_x + 0x86;
+                        value_pos.vx = list_x + ADDHERO_ENTRY_VALUE_X;
                         value_pos.vy = row_y;
                         prim = func_800A88A0(func_800A8A78(ot, prim, g_addhero_entry_suffix_values[entry_index], 4, &value_pos, 0), ot,
                                              ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_glyph_entry_value_label), 4, list_x + 0x70, row_y, 0);
                         if ((g_addhero_rank_count - 1) == g_addhero_entry_ranks[entry_index])
                         {
                             marker_offset = text_table[27];
-                            prim = func_800A88A0(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, marker_offset), 4, list_x + 0xC0, row_y, 0);
+                            prim = func_800A88A0(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, marker_offset), 4, list_x + ADDHERO_ENTRY_MARKER_X, row_y, 0);
                         }
                         else if (g_addhero_entry_ranks[entry_index] < 2)
                         {
                             marker_offset = text_table[28];
-                            prim = func_800A88A0(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, marker_offset), 4, list_x + 0xC0, row_y, 0);
+                            prim = func_800A88A0(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, marker_offset), 4, list_x + ADDHERO_ENTRY_MARKER_X, row_y, 0);
                         }
                         if (*addhero_skip_hex_digits(&g_addhero_entries[g_addhero_card_slot][entry_index].name[ADDHERO_SAVE_FILENAME_PREFIX_LENGTH]) == '+')
                         {
@@ -658,11 +685,11 @@ void* addhero_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_
         setlen(tile, 3);
         setcode(tile, 0x62);
         setXY0(tile, 0, 0);
-        setWH(tile, 0x80, 0x10);
+        setWH(tile, ADDHERO_CARD_LABEL_WIDTH, 0x10);
         addPrim(ot, tile);
         prim = tile + 1;
     }
-    return func_800A88A0(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_card_slot0_label, 6), 4, -x_offset + 0x40, -y_offset, 2);
+    return func_800A88A0(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_card_slot0_label, 6), 4, -x_offset + ADDHERO_CARD_LABEL_TEXT_X, -y_offset, 2);
 }
 
 /**
@@ -686,11 +713,11 @@ void* addhero_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_
         setlen(tile, 3);
         setcode(tile, 0x62);
         setXY0(tile, 0, 0);
-        setWH(tile, 0x80, 0x10);
+        setWH(tile, ADDHERO_CARD_LABEL_WIDTH, 0x10);
         addPrim(ot, tile);
         prim = tile + 1;
     }
-    return func_800A88A0(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_card_slot1_label, 7), 4, -x_offset + 0x40, -y_offset, 2);
+    return func_800A88A0(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_card_slot1_label, 7), 4, -x_offset + ADDHERO_CARD_LABEL_TEXT_X, -y_offset, 2);
 }
 
 /**
@@ -702,7 +729,11 @@ void* addhero_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_
  * @param x_offset Horizontal offset; screen X is derived from it.
  * @param y_offset Vertical offset.
  * @return The updated primitive pointer.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/addhero/nonmatchings/addhero", addhero_draw_selected_entry_details);
+#else
 void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     void* result;
@@ -885,6 +916,7 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
     }
     return result;
 }
+#endif
 
 /**
  * @brief Advance past a run of hex digit characters (0-9, a-f, A-F) and return

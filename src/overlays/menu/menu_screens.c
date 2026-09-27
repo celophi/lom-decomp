@@ -1128,7 +1128,11 @@ static inline MenuCharacterRecord* menu_active_character(PadContext* context)
  * @param packet_cursor GPU packet cursor advanced as primitives are emitted.
  * @param ot_entry Ordering-table entry passed to render helpers.
  * @return Updated GPU packet cursor after drawing.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/menu/nonmatchings/menu_screens", menu_draw_scene_content);
+#else
 void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
 {
     u8 text_buffer[0x40];
@@ -2694,6 +2698,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
 
     return packet_cursor;
 }
+#endif
 
 /**
  * @brief Build the equipped-item ability mask while excluding one equipment slot.

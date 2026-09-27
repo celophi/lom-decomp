@@ -70,7 +70,11 @@ void field_release_object_link(FieldActor* actor);
  * @return Never set; the function is declared int but callers ignore the value.
  * @note While the animation plays, the remaining slide speed moves the actor
  *       along its facing; once it has finished, the action is wound down.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_actor_motion", field_update_actor_action);
+#else
 s32 field_update_actor_action(FieldActor* actor, s32 update_action)
 {
     Vec3i* displacement = FIELD_SCRATCH_DISPLACEMENT;
@@ -151,6 +155,7 @@ s32 field_update_actor_action(FieldActor* actor, s32 update_action)
         }
     }
 }
+#endif
 
 /**
  * @brief Test whether a proposed move takes an actor past the edge of the screen.

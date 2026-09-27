@@ -87,7 +87,7 @@ segments:
       - [0x4C48, c, cdrom_decompress]
       - [0x52DC, c, controller]
       - [0x6418, c, overlay_memory]
-      - [0x6458, asm, field_runtime]  # JP: differs from US, kept as assembly
+      - [0x6458, c, field_runtime]
       - [0x6948, c, field_runtime_text]
       - [0x6DB8, c, field_runtime_glyph]           # original glyph assembly maintained in C asm blocks
       - [0x6F50, asm, card_callbacks]  # JP: differs from US, kept as assembly

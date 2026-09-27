@@ -4,7 +4,11 @@
  * @brief Play the selected MDEC cinematic.
  * @param movie_index Cinematic index (0..4); other values use the final attract segment.
  * @see https://decomp.me/scratch/gkEWm (100%)
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/movie/nonmatchings/movie", movie_play);
+#else
 void movie_play(s32 movie_index)
 {
     DISPENV display_envs[2];
@@ -195,6 +199,7 @@ void movie_play(s32 movie_index)
     VSync(0);
     SetDispMask(0);
 }
+#endif
 
 /**
  * @brief Initialize movie buffers and streaming state.

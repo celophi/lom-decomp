@@ -242,7 +242,11 @@ void field_apply_character_level_ups(s32 index, s32 notify)
  * @note Each level adds the stat growth accumulators, rebuilds the effective stat
  *       bits, carries the total accumulators, recomputes hp and clears the
  *       pending effects.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_record_growth_ops", field_apply_region_level_ups);
+#else
 void field_apply_region_level_ups(s32 slot)
 {
     s32 level;
@@ -320,6 +324,7 @@ void field_apply_region_level_ups(s32 slot)
         } while (pending != 0);
     }
 }
+#endif
 
 /**
  * @brief Advance a party member one level when its experience reaches the threshold.
@@ -328,7 +333,11 @@ void field_apply_region_level_ups(s32 slot)
  * @return -1 when the member advanced a level, otherwise 0.
  * @note A stored companion in the party grows through field_grow_companion_stats, the
  *       others through field_grow_character_stats.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_record_growth_ops", field_try_character_level_up);
+#else
 s32 field_try_character_level_up(s32 index, s32 notify)
 {
     s32 level;
@@ -359,6 +368,7 @@ s32 field_try_character_level_up(s32 index, s32 notify)
     }
     return 0;
 }
+#endif
 
 /**
  * @brief Level-up growth of a party member that is not a stored companion.

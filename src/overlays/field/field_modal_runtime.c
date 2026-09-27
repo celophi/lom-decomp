@@ -458,7 +458,11 @@ void* field_draw_number_wide(s32* ot, SPRT* sprite_cursor, s32 value, s32 text_c
  * @param number Number to format; a negative number starts with the bank's minus sign.
  * @param wide_request Double-byte digits requested by field_draw_number_wide; ignored.
  * @note The double-byte branch tests a local that is always zero, so the digits are always single-byte.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_modal_runtime", field_format_number);
+#else
 inline void field_format_number(u8* text, s32 number, s32 wide_request)
 {
     u8* cursor;
@@ -506,6 +510,7 @@ inline void field_format_number(u8* text, s32 number, s32 wide_request)
     } while (divisor != 0);
     *cursor = 0;
 }
+#endif
 
 /**
  * @brief Bind the field input and inventory context to the loaded saved game.
@@ -861,7 +866,11 @@ static void field_draw_cd_error_text(FieldRenderHalf* render)
  * @brief Draw each player's held-button action hint and the labels of the selectable actors.
  * @param render Render half receiving the text.
  * @note A player's hint shows the action bound to the first held button among the eight hint buttons.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_modal_runtime", field_draw_actor_labels);
+#else
 static void field_draw_actor_labels(FieldRenderHalf* render)
 {
     DVECTOR point;
@@ -1115,6 +1124,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
     }
     render->primitive_cursor = (u8*)cursor;
 }
+#endif
 
 /**
  * @brief Combine quantities for repeated dialog text entries and close the gaps.
@@ -1197,7 +1207,11 @@ static void field_update_text_session(void)
  * @param index Controller port.
  * @return Button mask, or zero when the controller is missing or still being configured.
  * @note The packet's button bytes are swapped and bits 4-7 reordered into the PAD* layout.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_modal_runtime", field_read_controller_buttons);
+#else
 s32 field_read_controller_buttons(s32 index)
 {
     ControllerPortState* ports;
@@ -1244,6 +1258,7 @@ s32 field_read_controller_buttons(s32 index)
 
     return buttons;
 }
+#endif
 
 /**
  * @brief Read both controllers and apply the initial delay and key repeat to their buttons.
@@ -1345,7 +1360,11 @@ inline void field_reset_input_repeat(void)
  * @brief Handle the soft reset, the text session, and the menu, CD error and item-drop buttons.
  * @param render Render half; the text session draws into it.
  * @note Unplugging a controller opens the menu for that controller.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_modal_runtime", field_process_input);
+#else
 void field_process_input(FieldRenderHalf* render)
 {
     ControllerPortState* ports = CONTROLLER_STATE->ports;
@@ -1462,6 +1481,7 @@ void field_process_input(FieldRenderHalf* render)
         }
     }
 }
+#endif
 
 /**
  * @brief Play the low-HP warning for each player below a quarter of their maximum HP.
@@ -2266,7 +2286,11 @@ void field_begin_duel_result(void)
  * @brief Animate and draw the opposing players and their duel records.
  * @param render Render half receiving the panels.
  * @return Nonzero after the panels have slid out.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_modal_runtime", field_draw_duel_intro);
+#else
 static s32 field_draw_duel_intro(FieldRenderHalf* render)
 {
     u8 record_text[56];
@@ -2338,12 +2362,17 @@ static s32 field_draw_duel_intro(FieldRenderHalf* render)
     render->primitive_cursor = (u8*)packet_cursor;
     return 0;
 }
+#endif
 
 /**
  * @brief Animate and draw the winner and their duel record.
  * @param render Render half receiving the panels.
  * @return Nonzero after the panel has slid out.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_modal_runtime", field_draw_duel_result);
+#else
 static s32 field_draw_duel_result(FieldRenderHalf* render)
 {
     u8 record_text[56];
@@ -2403,3 +2432,4 @@ static s32 field_draw_duel_result(FieldRenderHalf* render)
     render->primitive_cursor = (u8*)packet_cursor;
     return 0;
 }
+#endif

@@ -1,6 +1,34 @@
 #include "cload_internal.h"
 
 /**
+ * @brief Card slot label layout: window width, label text X and the two window Xs.
+ * @note JP narrows both labels to 0x70 and moves both right by 8.
+ */
+#if defined(VERSION_JP)
+#define CLOAD_CARD_LABEL_WIDTH 0x70
+#define CLOAD_CARD_LABEL_TEXT_X 0x38
+#define CLOAD_CARD_SLOT0_LABEL_X 32
+#define CLOAD_CARD_SLOT1_LABEL_X 176
+#else
+#define CLOAD_CARD_LABEL_WIDTH 0x80
+#define CLOAD_CARD_LABEL_TEXT_X 0x40
+#define CLOAD_CARD_SLOT0_LABEL_X 24
+#define CLOAD_CARD_SLOT1_LABEL_X 168
+#endif
+
+/**
+ * @brief Entry list columns: the suffix value and the rank marker.
+ * @note JP moves both right.
+ */
+#if defined(VERSION_JP)
+#define CLOAD_ENTRY_VALUE_X 0x94
+#define CLOAD_ENTRY_MARKER_X 0xCC
+#else
+#define CLOAD_ENTRY_VALUE_X 0x86
+#define CLOAD_ENTRY_MARKER_X 0xC2
+#endif
+
+/**
  * @brief Address of the CLOAD text whose table offset is @p offset.
  * @note Summed as integers, offset first, like the original list drawing code.
  */
@@ -197,22 +225,22 @@ void cload_build_ui_elements(void)
     element = cload_alloc_element();
     element->attr.f.state = CLOAD_ELEMENT_OPEN;
     element->attr.f.phase = 1;
-    element->attr.f.x = 24;
+    element->attr.f.x = CLOAD_CARD_SLOT0_LABEL_X;
     element->draw = cload_draw_card_slot0_label;
     element->attr.f.y = 44;
     element->size.f.framed = 0;
-    CLOAD_SET_ELEMENT_WIDTH_LOW(element, 0x80);
+    CLOAD_SET_ELEMENT_WIDTH_LOW(element, CLOAD_CARD_LABEL_WIDTH);
     element->size.f.width_high = 0;
     CLOAD_SET_ELEMENT_HEIGHT(element, 15);
 
     element = cload_alloc_element();
     element->attr.f.state = CLOAD_ELEMENT_OPEN;
     element->attr.f.phase = 1;
-    element->attr.f.x = 168;
+    element->attr.f.x = CLOAD_CARD_SLOT1_LABEL_X;
     element->draw = cload_draw_card_slot1_label;
     element->attr.f.y = 44;
     element->size.f.framed = 0;
-    CLOAD_SET_ELEMENT_WIDTH_LOW(element, 0x80);
+    CLOAD_SET_ELEMENT_WIDTH_LOW(element, CLOAD_CARD_LABEL_WIDTH);
     element->size.f.width_high = 0;
     CLOAD_SET_ELEMENT_HEIGHT(element, 15);
 
@@ -574,18 +602,18 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
                     flag_ptr = (s32 *)((u8 *)g_cload_entry_ranks + off);
                     if (*flag_ptr >= 0)
                     {
-                        pos.vx = base_x + 0x86;
+                        pos.vx = base_x + CLOAD_ENTRY_VALUE_X;
                         pos.vy = row_y;
                         prim = func_800A88A0(func_800A8A78(ot, prim, *(s32 *)((u8 *)g_cload_entry_suffix_values + off), 1, &pos, 0), ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_number_prefix), 1, base_x + 0x70, row_y, 0);
                         if ((g_cload_rank_count - 1) == *flag_ptr)
                         {
                             marker_offset = text_table[27];
-                            prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, marker_offset), 1, base_x + 0xC2, row_y, 0);
+                            prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, marker_offset), 1, base_x + CLOAD_ENTRY_MARKER_X, row_y, 0);
                         }
                         else if (*flag_ptr < 2)
                         {
                             marker_offset = text_table[28];
-                            prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, marker_offset), 1, base_x + 0xC2, row_y, 0);
+                            prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, marker_offset), 1, base_x + CLOAD_ENTRY_MARKER_X, row_y, 0);
                         }
                         if (*cload_skip_hex_digits((u8 *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry + 0xC)) == 0x2B)
                         {
@@ -686,7 +714,7 @@ void *cload_draw_card_slot0_label(u_long *ot, void *prim, s32 x_offset, s32 y_of
     {
         color = 3;
     }
-    return func_800A88A0(prim, ot, text, color, -x_offset + 0x40, -y_offset, 2);
+    return func_800A88A0(prim, ot, text, color, -x_offset + CLOAD_CARD_LABEL_TEXT_X, -y_offset, 2);
 }
 
 /**
@@ -709,7 +737,7 @@ void *cload_draw_card_slot1_label(u_long *ot, void *prim, s32 x_offset, s32 y_of
     {
         color = 3;
     }
-    return func_800A88A0(prim, ot, text, color, -x_offset + 0x40, -y_offset, 2);
+    return func_800A88A0(prim, ot, text, color, -x_offset + CLOAD_CARD_LABEL_TEXT_X, -y_offset, 2);
 }
 
 /**
@@ -726,7 +754,11 @@ void *cload_draw_card_slot1_label(u_long *ot, void *prim, s32 x_offset, s32 y_of
  *       count (i) and the raw slot index (j) as two separate locals, and the
  *       fallback-text branch wraps its two copy loops in the target's nested
  *       do/while(0) cross-jump shells.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/cload/nonmatchings/cload", cload_draw_selected_entry_details);
+#else
 void *cload_draw_selected_entry_details(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
 {
     void *result;
@@ -903,6 +935,7 @@ void *cload_draw_selected_entry_details(u_long *ot, void *prim, s32 x_offset, s3
     }
     return result;
 }
+#endif
 
 /**
  * @brief Zero-fill a 64-byte text buffer after its encoded terminator.

@@ -49,13 +49,13 @@ segments:
       - [auto, c, overlay_header]
       - [0x1, .rodata, overlay_header]
       - [0x5, .rodata, gosub]
-      - [0x55, rodata, gosub_selection]  # JP: differs from US, kept as assembly
+      - [0x55, .rodata, gosub_selection]
       - [0x69, rodatabin, group_first_indices]
       - [0x75, rodatabin, group_counts]
       - [0x81, c, gosub]       # CDK (default)
       - [0xC19, c, gosub_elements]
       - [0x16E1, c, gosub_lists]
-      - [0x229D, asm, gosub_selection]  # JP: differs from US, kept as assembly
+      - [0x229D, c, gosub_selection]
       - [0x3225, c, gosub_runtime]
       - [0x3B31, c, gosub_render]
       - [0x5491, c, gosub_dialogs]

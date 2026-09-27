@@ -103,7 +103,11 @@ void field_probe_actor_interaction(FieldActor* actor);
  * @param action Action whose bound buttons are collected.
  * @param actor Actor that must be a party member in control mode 0.
  * @return The held bound buttons, or zero when input is unavailable.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_actor_input_actions", field_get_held_action_buttons);
+#else
 s32 field_get_held_action_buttons(s32 player, s32 action, FieldActor* actor)
 {
     s32 mask;
@@ -137,10 +141,15 @@ s32 field_get_held_action_buttons(s32 player, s32 action, FieldActor* actor)
     }
     return 0;
 }
+#endif
 
 /**
  * @brief Let the leader probe for an interaction when confirm is pressed and nothing blocks it.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_actor_input_actions", field_poll_leader_interaction);
+#else
 void field_poll_leader_interaction(void)
 {
     s32 first_status;
@@ -156,6 +165,7 @@ void field_poll_leader_interaction(void)
         }
     }
 }
+#endif
 
 /**
  * @brief Turn the player's queued action into an enabled actor command word.
@@ -206,7 +216,11 @@ u16 field_resolve_action_command(FieldActor* actor, s32 player)
  * @brief Set or clear the actor's running flag while a run button is held.
  * @param actor Player actor; resources with an action table never run.
  * @param player Controller port to read.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_actor_input_actions", field_update_actor_run_button);
+#else
 void field_update_actor_run_button(FieldActor* actor, s32 player)
 {
     u16 raw;
@@ -239,3 +253,4 @@ void field_update_actor_run_button(FieldActor* actor, s32 player)
         }
     }
 }
+#endif

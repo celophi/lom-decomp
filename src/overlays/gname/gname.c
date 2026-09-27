@@ -62,7 +62,12 @@ enum
     GNAME_MODE_ACTION_RANDOM,
     GNAME_MODE_ACTION_DEFAULT,
     GNAME_MODE_PANEL_BASE,
+#if defined(VERSION_JP)
+    /* JP navigates all four panel tabs; US skips the last one. */
+    GNAME_MODE_PANEL_NAV_LAST = GNAME_MODE_PANEL_BASE + 3,
+#else
     GNAME_MODE_PANEL_NAV_LAST = GNAME_MODE_PANEL_BASE + 2,
+#endif
     GNAME_MODE_PANEL_LAST = GNAME_MODE_PANEL_BASE + 3,
     GNAME_MODE_GRID = 0x10
 };
@@ -435,8 +440,10 @@ s32 g_scroll_target;
 s32 g_scroll_steps;
 /** Currently selected kanji category index. */
 s32 g_kanji_cat;
-/** Rendered pixel width of the current name. */
+#if !defined(VERSION_JP)
+/** Rendered pixel width of the current name (US only; JP has no such variable). */
 s32 g_name_pixel_width;
+#endif
 /** Linearized character cursor position in the grid: row * 10 + col. */
 s32 g_char_cursor;
 /** Unknown trailing BSS word retained for layout. */
@@ -766,7 +773,11 @@ static void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count)
 /**
  * @brief Initialize name-entry resources and session state.
  * @see https://decomp.me/scratch/pnzC1 (100%)
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/gname/nonmatchings/gname", gname_init);
+#else
 void gname_init(void)
 {
     s32 frame_padding[GNAME_INIT_STACK_PAD_WORDS];
@@ -778,6 +789,7 @@ void gname_init(void)
     reset_run_state();
     field_text_upload_immediate_cache();
 }
+#endif
 
 /**
  * @brief Upload the name-entry TIM to its fixed VRAM destinations.
@@ -1042,7 +1054,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
         /* Left-column character-panel selector tabs. */
         case GNAME_MODE_PANEL_BASE:
         case GNAME_MODE_PANEL_BASE + GNAME_NAVIGATION_STEP:
-        case GNAME_MODE_PANEL_NAV_LAST:
+        case GNAME_MODE_PANEL_BASE + 2:
         case GNAME_MODE_PANEL_LAST:
             /* Confirm changes panels only when the selected tab is not already active. */
             if (buttons & GNAME_BTN_CONFIRM)
@@ -1419,7 +1431,11 @@ static u_long* emit_cursor_glyph(u_long* packet_cursor, u_long* ot_entry, s16 x,
  * @brief Render the interactive name-entry elements for one frame.
  * @param render_ctx Render context whose ordering table and packet cursor are updated.
  * @see decomp.me (100%) https://decomp.me/scratch/a0Oye
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/gname/nonmatchings/gname", gname_render);
+#else
 static void gname_render(RenderContext* render_ctx)
 {
     s32 selection_index;
@@ -1494,6 +1510,7 @@ static void gname_render(RenderContext* render_ctx)
     render_char_panel(render_ctx, g_char_panel);
     render_name_strip(render_ctx, g_active_name, g_strip_width);
 }
+#endif
 
 /**
  * @brief Emit the tab sprite for the current navigation mode.
@@ -2039,7 +2056,11 @@ static void name_copy(u8* destination, const u8* source)
 /**
  * @brief Recalculate the active name and strip widths.
  * @see https://decomp.me/scratch/y0CgJ (100%)
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/gname/nonmatchings/gname", recalc_name_width);
+#else
 static void recalc_name_width(void)
 {
     SPRT glyphs[NAME_MEASURE_CAPACITY];
@@ -2058,6 +2079,7 @@ static void recalc_name_width(void)
 
     g_strip_width_target = g_name_pixel_width + NAME_STRIP_HORIZONTAL_PADDING;
 }
+#endif
 
 /**
  * @brief Prepend a packed glyph to a name buffer.
@@ -2232,7 +2254,11 @@ static void* render_glyph_append_anim(void* packet_cursor, RenderContext* render
  * @param name_buf Null-terminated name buffer.
  * @return TRUE if blank, otherwise FALSE.
  * @see https://decomp.me/scratch/rdbBA (100%)
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/gname/nonmatchings/gname", name_is_blank);
+#else
 static s32 name_is_blank(const u8* name_buf)
 {
     while (*name_buf != '\0')
@@ -2247,3 +2273,4 @@ static s32 name_is_blank(const u8* name_buf)
 
     return TRUE;
 }
+#endif

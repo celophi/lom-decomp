@@ -2522,7 +2522,11 @@ void field_menu_list_restricted_history(void)
  * inventory, equipment or pending record sets status 2. Otherwise the name,
  * name text, kind, category, stat value and item value go to the script
  * variables, with the value's digit count at D_80122C0C.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_menu_ops", field_menu_describe_shared_item);
+#else
 void field_menu_describe_shared_item(void)
 {
     s32 i;
@@ -2650,6 +2654,7 @@ void field_menu_describe_shared_item(void)
     D_80122C03 = 2;
     field_set_text_macro(0, &g_field_shared_items[selected].active, 0xFF);
 }
+#endif
 
 /**
  * @brief Drop spent pending item records and compact the four-entry pending table.

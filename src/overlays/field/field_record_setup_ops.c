@@ -239,7 +239,11 @@ static void field_create_instrument_item(FieldItemRecord* record, s32 category, 
  * @brief Temper an existing weapon or armor with one more item and regenerate it.
  * @param record Item record to temper.
  * @param command_index Item kind of the tempering item; selects the command entry.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_record_setup_ops", field_temper_item);
+#else
 void field_temper_item(FieldItemRecord* record, s32 command_index)
 {
     s32 i;
@@ -303,6 +307,7 @@ void field_temper_item(FieldItemRecord* record, s32 command_index)
 
     field_generate_staged_item();
 }
+#endif
 
 /**
  * @brief Run the generation scripts of the staged item and write it back.
@@ -310,7 +315,11 @@ void field_temper_item(FieldItemRecord* record, s32 command_index)
  * The type, subtype, command and slot scripts run on the event script
  * context; pending levels, flags and stat clamping are applied, the item is
  * written back and its weapon or armor derived values are computed.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_record_setup_ops", field_generate_staged_item);
+#else
 static void field_generate_staged_item(void)
 {
     FieldScriptContext* saved_script;
@@ -352,6 +361,7 @@ static void field_generate_staged_item(void)
         return;
     }
 }
+#endif
 
 /**
  * @brief Load the item table and copy the staged subtype's entry into the staging block.

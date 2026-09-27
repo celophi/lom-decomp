@@ -107,7 +107,11 @@ s32 run_field_scene(void)
  *        requested via g_pending_game_state.
  * @param render_buffers Both field render buffers.
  * @see decomp.me (100%) https://decomp.me/scratch/ViJdW
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("nonmatchings/field_runtime", field_run_frame_loop);
+#else
 void field_run_frame_loop(FieldRenderHalf* render_buffers)
 {
     RECT vram_rect;
@@ -172,6 +176,7 @@ void field_run_frame_loop(FieldRenderHalf* render_buffers)
     VSync(0);
     SetDispMask(0);
 }
+#endif
 
 /**
  * @brief Field overlay one-time init: projection geometry, double-buffer

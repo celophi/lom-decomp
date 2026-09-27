@@ -930,7 +930,11 @@ void field_follow_leader_route(FieldActor* actor, s32 follower_index)
  * @param actor Controlled actor.
  * @param pad_index Controller port.
  * @return The two FieldActor::control movement bits (bit 0 = moving), or 0 when input is blocked.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_actor_behavior", field_update_actor_input);
+#else
 s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
 {
     /** @brief Pad direction, requested position and applied displacement. */
@@ -1231,6 +1235,7 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
     }
     return (movement_actor->control.word >> FIELD_CONTROL_MOVEMENT_SHIFT) & 3;
 }
+#endif
 
 /**
  * @brief Validate the action requested by a FIELD_ACTOR_COMMAND_ACTION command and start it.

@@ -271,7 +271,11 @@ void field_apply_pending_region_effects(void)
  * @param record Companion record to update.
  * @param effect Effect id; ids without an effect table row are ignored. Turned into the row index.
  * @param table Effect table (resource 0x12).
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_record_effect_ops", field_apply_region_effect);
+#else
 static void field_apply_region_effect(FieldRegionRecord* record, s32 effect, FieldRegionEffectTable* table)
 {
     s32 i;
@@ -361,3 +365,4 @@ static void field_apply_region_effect(FieldRegionRecord* record, s32 effect, Fie
         }
     }
 }
+#endif

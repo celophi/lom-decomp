@@ -162,7 +162,11 @@ s32 field_equip_item(FieldCharacterRecord* character, s32 slot_index, FieldItemR
  * @brief Recompute a character's equipment totals and reset its effective stats.
  * @param character Character to update.
  * @note A stored companion gets no totals from its armor slots.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_record_stat_ops", field_refresh_equipment_stats);
+#else
 static void field_refresh_equipment_stats(FieldCharacterRecord* character)
 {
     s32 i;
@@ -195,6 +199,7 @@ static void field_refresh_equipment_stats(FieldCharacterRecord* character)
         character->stats[i] = base | ((base >> 2) << FIELD_STAT_EFFECTIVE_SHIFT);
     }
 }
+#endif
 
 /**
  * @brief Refresh a party character's equipment and reset its field object HP.

@@ -58,7 +58,7 @@ segments:
       - [0x1851, rodata, wmap_1851]
       - [0x186D, .rodata, wmap_land_layout]
       - [0x1885, rodata, wmap_1885]
-      - [0x1E21, rodata, wmap_main]  # JP: differs from US, kept as assembly
+      - [0x1E21, .rodata, wmap_main]
       - [0x1EDD, rodata, wmap_1EDD]
       - [0x4CFD, .rodata, wmap_model_render]
       - [0x4D71, rodatabin, wmap_model_render_rodata_alignment]
@@ -75,7 +75,7 @@ segments:
       - [0xB91D, c, wmap_land_layout]
       - [0xDF49, c, wmap_pathfinding] # gcc280_g0_o0
       - [0xFD4D, c, wmap_map_labels]
-      - [0x10AB1, asm, wmap_main]  # JP: differs from US, kept as assembly
+      - [0x10AB1, c, wmap_main]
       - [0x14529, c, wmap_frame_render]
       - [0x15261, c, wmap_resource_support]
       - [0x15799, c, wmap_view_effects]
@@ -119,7 +119,7 @@ segments:
       - [0x66059, c, wmap_land_effect_31]
       - [0x6A575, c, wmap_land_effect_24]
       - [0x6D769, c, wmap_land_effect_33]
-      - [0x6F80D, asm, wmap_special_effect_34]  # JP: differs from US, kept as assembly
+      - [0x6F80D, c, wmap_special_effect_34]
       - [0x70FA1, c, wmap_special_effect_35]
       - [0x74885, data, data]
   - [0x1635C9]

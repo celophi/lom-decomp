@@ -79,7 +79,11 @@ s32 gosub_validate_pending_pair_selection(void)
 /**
  * @brief Commit a pending row move by swapping the two marked rows.
  * @return Always 0.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/gosub/nonmatchings/gosub_selection", gosub_commit_row_reorder);
+#else
 s32 gosub_commit_row_reorder(void)
 {
     GosubListRow entry_tmp;
@@ -115,6 +119,7 @@ s32 gosub_commit_row_reorder(void)
     }
     return 0;
 }
+#endif
 
 /**
  * @brief Update row colors for the current group selection.

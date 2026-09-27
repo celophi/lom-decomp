@@ -14,3 +14,31 @@ field_reset_party_to_level = 0x800B5CE0;
 // get_world_map_overlay_end returns it (lui 0x801B + addiu 0x33A0 at JP
 // 0x80015C38); it is the JP WMAP image end (wmap_VRAM_END in the JP link map).
 g_world_map_overlay_end = 0x801B33A0;
+
+// Last function of field_generated_record_ops: the JP unit has the same four
+// functions in the same order as US, and the fourth starts here (splat's
+// func_800BFD54 before it was named).
+field_derive_armor_values = 0x800BFD54;
+
+// Only field_draw_object_ground_effect (changed in JP) calls it, twice (jal
+// 0x800A09F8 at JP 0x8009DD00 and 0x8009DD1C). It keeps its US size 0x838 and
+// moves -0x114 like its neighbours field_build_effect_strips and _spiral.
+field_build_effect_curves = 0x800A09F8;
+
+// JP reduces it to an empty function (jr $ra); the object flag handler table
+// holds it in the same slot as US (JP 0x800EABFC, US 0x800EB030).
+field_handle_object_knocked_out = 0x80086910;
+
+// field_finish_staged_item calls field_apply_pending_levels, then these two,
+// then field_clamp_staged_stats, as in US (jal targets at JP 0x800BF308 and
+// 0x800BF310). Both grow in JP (0xC8 and 0x98 bytes).
+field_apply_flags2c_mask = 0x800BF4D8;
+field_apply_flags2d_mask = 0x800BF5A0;
+
+// JP carda_build_ui_elements is 4 bytes shorter, so the next three functions
+// start 4 bytes earlier than their US addresses (the map kept the US ones;
+// splat then named the real starts func_8014082C, func_80140914 and
+// func_80140BA8, 4-byte stubs). carda_switch_card at 0x801410E0 confirms -4.
+carda_update_menu = 0x8014082C;
+carda_update_save_sequence = 0x80140914;
+carda_handle_input = 0x80140BA8;

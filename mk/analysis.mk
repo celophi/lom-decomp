@@ -76,7 +76,9 @@ PROGRESS_REPORT ?= $(BUILD_DIR)/progress.json
 
 objdiff-objects: target-objects base-objects $(addsuffix -objdiff,$(OVERLAYS))
 
-objdiff-config:
+# Needs the objects: units that still include assembly functions are not marked
+# complete, which the generator reads from their compiled objects.
+objdiff-config: objdiff-objects
 	python3 $(OBJDIFF_CONFIG_GENERATOR) --version $(VERSION)
 
 # Generate the objdiff progress report (build/<version>/progress.json). Mirrors the CI
