@@ -262,7 +262,6 @@ typedef struct CdSystem
 extern CdlCB g_cd_sync_callback_result;
 extern CdlCB g_cd_ready_callback_result;
 extern s32 g_cd_vsync_timestamp;
-extern u8 g_cd_status_byte;
 extern u8 g_cd_audio_enabled;
 extern u8 g_cd_playback_state;
 extern u32 g_cd_read_remaining_bytes;
@@ -361,7 +360,7 @@ void cdrom_init(void)
     {
     }
 
-    if ((g_cd_status_byte & CdlStatShellOpen) != 0)
+    if ((g_cd_system.status_byte & CdlStatShellOpen) != 0)
     {
         cd_result = CdDiskReady(1);
 
@@ -686,6 +685,8 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
                             {
                                 source_word = *(u32*)source_ptr;
                                 source_ptr += CD_STREAM_COPY_WORD_SIZE;
+
+                                /* TODO: Need to figure out how to replace this cast. */
                                 *((u32*)destination)++ = source_word;
                             }
                         }
