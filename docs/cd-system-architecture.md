@@ -1,6 +1,6 @@
 # CD-ROM subsystem architecture
 
-## Executive view
+## High-level Overview
 
 The main CD-ROM subsystem turns resource requests into a serialized stream of
 reads from one physical drive. It serves overlay loading, asset loading, and the
