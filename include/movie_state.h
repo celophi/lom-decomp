@@ -22,15 +22,12 @@ typedef union
  *
  * The block lives at a fixed address and is shared between the main loop
  * and the interrupt-driven callbacks (CD sector, MDEC output, DrawSync).
- * Fields written from interrupt context and read or polled elsewhere are
- * declared @c volatile: the ring write indices, ring sizes and last-frame
- * markers produced by cd_sector_callback, and the MDEC/GPU handshake flags
- * produced by the MDEC and DrawSync callbacks. Fields owned by a single
- * context stay plain.
+ * Completed frames become visible to the consumer when the sector callback
+ * advances the write index and last-frame marker. GPU and MDEC callbacks
+ * communicate pending work and completed output through the handshake flags.
  */
 typedef struct
 {
-
     union VideoSectorEntry* video_table_base;
     union VideoVlcPayload* video_data_base;
     struct AudioSector* audio_data_base;
@@ -53,10 +50,10 @@ typedef struct
 
     volatile s32 video_write_idx;
     s32 video_read_idx;
-    volatile s32 video_ring_size;
+    volatile s32 video_wrap_idx; /**< End of the older contiguous ring segment. */
     volatile s32 audio_write_idx;
     s32 audio_read_idx;
-    volatile s32 audio_ring_size;
+    volatile s32 audio_wrap_idx; /**< End of the older contiguous ring segment. */
     s32 audio_buffered_count;
     volatile u32 frame_number;
     u32 continuation_type;
@@ -75,7 +72,7 @@ typedef struct
     u8 input_buf_idx;
     u8 vlc_retry_count;
     u8 mdec_retry_pending;
-    u8 busy;
+    u8 video_service_busy;
     volatile u8 draw_sync_target;
     volatile u8 chunk_idx;
     volatile u8 out_buf_idx;
@@ -91,5 +88,12 @@ typedef struct
 
 extern u8 g_gpu_mode;
 extern u8 g_movie_use_cd_audio;
+
+/** @brief Foreground video servicing excludes the DrawSync callback. */
+extern u8 g_movie_video_service_busy;
+/** @brief A decoded frame is waiting for the MDEC input buffer. */
+extern u8 g_movie_mdec_retry_pending;
+/** @brief Audio ring priming state shared with the sector callback. */
+extern u8 g_movie_audio_stream_state;
 
 #endif

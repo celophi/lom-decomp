@@ -1,8 +1,126 @@
 #include "movie_internal.h"
+#include "field_scene.h"
+
+/** @brief Fixed configuration used by @ref movie_play. */
+#define MOVIE_DISPLAY_WIDTH 320
+#define MOVIE_DISPLAY_HEIGHT 240
+#define MOVIE_RGB24_VRAM_WIDTH ((MOVIE_DISPLAY_WIDTH * 3) / 2)
+#define STANDARD_DECODE_RECT_WIDTH 24
+#define ALTERNATE_DECODE_RECT_WIDTH 16
+#define ALTERNATE_RECT_WRAP_THRESHOLD 768
+#define ALTERNATE_RECT_WRAP_X 512
+#define MOVIE_UPDATE_POLL_LIMIT 8192
+#define CONTROLLER_VSYNC_INTERVAL_SINGLE 1
+#define MOVIE_FRAME_VSYNC_INTERVAL 4
+#define CD_ERROR_STATUS_RETRIES_EXHAUSTED 5
+
+/** @brief Per-stream frame totals used as the playback stop condition. */
+#define MOVIE_INTRO_TOTAL_FRAMES 2098
+#define MOVIE_ATTRACT_1_TOTAL_FRAMES 2473
+#define MOVIE_ATTRACT_2_PART_1_TOTAL_FRAMES 1318
+#define MOVIE_ATTRACT_2_PART_2_TOTAL_FRAMES 5368
+#define MOVIE_ATTRACT_2_PART_3_TOTAL_FRAMES 898
+
+/** @brief Skip-cinematic gating used by movie_play. */
+#define MOVIE_FIRST_UNSKIPPABLE_INDEX MOVIE_INDEX_ATTRACT_2_PART_1
+#define MOVIE_INTRO_SKIP_MASK ((u16) ~(PAD_BTN_SQUARE | PAD_BTN_CROSS | PAD_BTN_CIRCLE | PAD_BTN_TRIANGLE))
+#define MOVIE_ATTRACT_1_SKIP_MASK (PAD_BTN_R2 | PAD_BTN_R1 | PAD_BTN_DOWN)
+#define SCD_VALID_DEVICE_TYPE_COUNT 3 /**< digital, analog joystick, analog controller */
+
+/** @brief Movie resource-table base, index representation, and initialization flag. */
+#define MOVIE_RESOURCE_BASE 0x16A0
+#define MOVIE_INIT_GPU_MODE_MASK 0x7F
+#define MOVIE_INIT_USE_CD_AUDIO 0x80
+#define MOVIE_INDEX_MASK 0xFFFF
+
+/**
+ * @brief Audio fade-out ramp during a skip-triggered exit.
+ *
+ * Armed by setting audio_fade_vol = AUDIO_FADE_INITIAL, stepped down by
+ * AUDIO_FADE_STEP each outer-loop iteration, exits the loop when it reaches 0.
+ */
+#define AUDIO_FADE_DISARMED (-1)
+#define AUDIO_FADE_INITIAL 112
+#define AUDIO_FADE_STEP 16
+
+/** @brief Movie initialization sentinels and audio parameters. */
+#define MOVIE_FRAME_NONE ((u32) - 1)
+#define AKAO_CD_VOLUME_MAX 127
+#define MOVIE_AKAO_C8_INIT_VALUE 0x7FFF
+#define MOVIE_NONSTREAMED_CD_MIX_VOLUME 160
+
+/** @brief Ring capacities for the two movie buffer layouts. */
+#define STANDARD_VIDEO_RING_SLOTS 50
+#define ALTERNATE_VIDEO_RING_SLOTS 30
+#define AUDIO_RING_SLOTS 16
+
+/** @brief Fixed RAM layout used by the standard movie path. */
+#define MOVIE_BUFFER_RAM_BASE 0x80147000
+#define MOVIE_VLC_TABLE_BYTES 69632
+#define STANDARD_VLC_INPUT_BYTES 81920
+#define STANDARD_MDEC_OUTPUT_BYTES 11520
+
+/**
+ * @brief Cinematic indices selected by the main game-state dispatcher.
+ *
+ * GAME_STATE_ATTRACT_2 plays its three stream segments consecutively.
+ */
+typedef enum
+{
+    MOVIE_INDEX_INTRO = 0,
+    MOVIE_INDEX_ATTRACT_1 = 1,
+    MOVIE_INDEX_ATTRACT_2_PART_1 = 2,
+    MOVIE_INDEX_ATTRACT_2_PART_2 = 3,
+    MOVIE_INDEX_ATTRACT_2_PART_3 = 4
+} MovieIndex;
+
+/** @brief Full-screen video, audio and decoder storage in the movie arena. */
+typedef struct
+{
+    VideoSectorEntry video_table[STANDARD_VIDEO_RING_SLOTS];
+    VideoVlcPayload video_data[STANDARD_VIDEO_RING_SLOTS];
+    AudioSector audio_data[AUDIO_RING_SLOTS];
+    u8 vlc_table[MOVIE_VLC_TABLE_BYTES];
+    u8 vlc_input_buf[2][STANDARD_VLC_INPUT_BYTES];
+    u_long mdec_output_buf[2][STANDARD_MDEC_OUTPUT_BYTES / sizeof(u_long)];
+} StandardMovieBuffers;
+
+#define STANDARD_MOVIE_BUFFERS ((StandardMovieBuffers*)MOVIE_BUFFER_RAM_BASE)
+
+/** @brief Fixed RAM layout used by the alternate movie path. */
+#define ALTERNATE_VLC_INPUT_BYTES 69632
+
+/** @brief FIELD movie rings and VLC input buffers in the movie arena. */
+typedef struct
+{
+    VideoSectorEntry video_table[ALTERNATE_VIDEO_RING_SLOTS];
+    VideoVlcPayload video_data[ALTERNATE_VIDEO_RING_SLOTS];
+    AudioSector audio_data[AUDIO_RING_SLOTS];
+    u8 vlc_input_buf[2][ALTERNATE_VLC_INPUT_BYTES];
+} AlternateMovieBuffers;
+
+#define ALTERNATE_MOVIE_BUFFERS ((AlternateMovieBuffers*)MOVIE_BUFFER_RAM_BASE)
+
+/** @brief VLC and MDEC storage reserved by the FIELD scene. */
+#define ALTERNATE_MDEC_OUTPUT_BYTES 7680
+
+/** @brief FIELD-owned decode table and two MDEC output slices. */
+typedef struct
+{
+    u8 vlc_table[MOVIE_VLC_TABLE_BYTES];
+    u_long mdec_output_buf[2][ALTERNATE_MDEC_OUTPUT_BYTES / sizeof(u_long)];
+} AlternateMovieDecodeBuffers;
+
+/** @brief A queued frame is either a video bitstream or an AKAO audio block. */
+typedef union
+{
+    VideoVlcPayload* video;
+    AudioSector* audio;
+} MovieFrameData;
 
 /**
  * @brief Play the selected MDEC cinematic.
- * @param movie_index Cinematic index (0..4); other values use the final attract segment.
+ * @param movie_index Cinematic index (0..4) in the low halfword.
  * @see https://decomp.me/scratch/gkEWm (100%)
  * @note JP changes this function; the JP build takes it from assembly.
  */
@@ -16,7 +134,6 @@ void movie_play(s32 movie_index)
     MovieState* state;
     s32 audio_fade_vol;
     s32 retry_exhausted_status;
-    s8 end_state_match;
     s32 error_status;
     s32 update_poll_budget;
     u16 movie_index_low;
@@ -86,7 +203,6 @@ void movie_play(s32 movie_index)
     audio_fade_vol = AUDIO_FADE_DISARMED;
     retry_exhausted_status = CD_ERROR_STATUS_RETRIES_EXHAUSTED;
     state = MOVIE_STATE;
-    end_state_match = END_STATE_DONE;
 
     while (TRUE)
     {
@@ -116,7 +232,7 @@ void movie_play(s32 movie_index)
                     break;
                 }
 
-                if (state->end_state == end_state_match)
+                if (state->end_state == END_STATE_DONE)
                 {
                     reset_controller_vsync_state();
                     cdrom_reset();
@@ -132,7 +248,7 @@ void movie_play(s32 movie_index)
                 {
                     break;
                 }
-            };
+            }
 
             if (update_poll_budget == 0)
             {
@@ -159,7 +275,7 @@ void movie_play(s32 movie_index)
         if ((movie_index_value < MOVIE_FIRST_UNSKIPPABLE_INDEX) && ((SCD_REGS)->device_type < SCD_VALID_DEVICE_TYPE_COUNT))
         {
             buttons = (SCD_REGS)->pressed_buttons;
-            if (((movie_index_value != MOVIE_INDEX_INTRO) ? ((buttons & MOVIE_ATTRACT_1_SKIP_MASK) != 0) : ((buttons & MOVIE_INTRO_SKIP_MASK) != 0)) != 0)
+            if (movie_index_value != MOVIE_INDEX_INTRO ? (buttons & MOVIE_ATTRACT_1_SKIP_MASK) != 0 : (buttons & MOVIE_INTRO_SKIP_MASK) != 0)
             {
                 if (g_movie_use_cd_audio == 0)
                 {
@@ -173,7 +289,7 @@ void movie_play(s32 movie_index)
             }
         }
 
-        /* Fade XA audio after a skip request. */
+        /* A skip fades the streamed audio before leaving playback. */
         if ((g_movie_use_cd_audio != 0) && (audio_fade_vol != AUDIO_FADE_DISARMED))
         {
             akao_cmd_e4_set_cd_volume(audio_fade_vol);
@@ -186,7 +302,7 @@ void movie_play(s32 movie_index)
             audio_fade_vol -= AUDIO_FADE_STEP;
         }
 
-        if (state->end_state == end_state_match)
+        if (state->end_state == END_STATE_DONE)
         {
             break;
         }
@@ -211,8 +327,8 @@ void movie_play(s32 movie_index)
  */
 void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer_idx)
 {
-    AllocInfo* alloc_info = g_allocInfo;
-    MovieState* ms;
+    FieldScene* scene = g_field_scene.scene;
+    MovieState* state;
 
     /* Decode the GPU and audio modes from the initialization flags. */
     MOVIE_STATE->gpu_mode = flags & MOVIE_INIT_GPU_MODE_MASK;
@@ -253,14 +369,14 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
     }
     else
     {
-        /* Configure the alternate layout around allocator-owned VLC storage. */
+        /* Configure the alternate layout around the FIELD scene's VLC storage. */
         MOVIE_STATE->video_table_base = ALTERNATE_MOVIE_BUFFERS->video_table;
         MOVIE_STATE->audio_data_base = ALTERNATE_MOVIE_BUFFERS->audio_data;
-        MOVIE_STATE->vlc_table = alloc_info->alloc_base->vlc_table;
+        MOVIE_STATE->vlc_table = ((AlternateMovieDecodeBuffers*)scene->vlc_table)->vlc_table;
         MOVIE_STATE->vlc_input_buf[0] = ALTERNATE_MOVIE_BUFFERS->vlc_input_buf[0];
         MOVIE_STATE->vlc_input_buf[1] = ALTERNATE_MOVIE_BUFFERS->vlc_input_buf[1];
-        MOVIE_STATE->mdec_output_buf[0] = alloc_info->alloc_base->mdec_output_buf[0];
-        MOVIE_STATE->mdec_output_buf[1] = alloc_info->alloc_base->mdec_output_buf[1];
+        MOVIE_STATE->mdec_output_buf[0] = ((AlternateMovieDecodeBuffers*)scene->vlc_table)->mdec_output_buf[0];
+        MOVIE_STATE->mdec_output_buf[1] = ((AlternateMovieDecodeBuffers*)scene->vlc_table)->mdec_output_buf[1];
         if (MOVIE_STATE->rects[0].x >= ALTERNATE_RECT_WRAP_THRESHOLD)
         {
             MOVIE_STATE->rects[1].x = ALTERNATE_RECT_WRAP_X;
@@ -279,52 +395,52 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
         MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].w = ALTERNATE_DECODE_RECT_WIDTH;
         MOVIE_STATE->video_ring_capacity = ALTERNATE_VIDEO_RING_SLOTS;
         MOVIE_STATE->audio_ring_capacity = AUDIO_RING_SLOTS;
-        MOVIE_STATE->video_data_base = VIDEO_PAYLOADS_AFTER_TABLE(MOVIE_STATE->video_table_base, ALTERNATE_VIDEO_RING_SLOTS);
+        MOVIE_STATE->video_data_base = (VideoVlcPayload*)(MOVIE_STATE->video_table_base + ALTERNATE_VIDEO_RING_SLOTS);
         MOVIE_STATE->chunk_idx = init_buffer_idx;
     }
 
-    ms = MOVIE_STATE;
+    state = MOVIE_STATE;
 
     /* Reset stream counters and pipeline state. */
-    ms->resource_index = resource_index;
-    ms->current_frame = 0;
-    ms->total_frames = total_frames;
-    ms->input_buf_idx = 0;
-    ms->vlc_retry_count = 0;
-    ms->mdec_retry_pending = 0;
-    ms->busy = 0;
-    ms->draw_sync_target = 0;
-    ms->out_buf_idx = 0;
-    ms->pending_vram_upload = 0;
-    ms->pending_mdec_decode = 0;
-    ms->mdec_busy = MDEC_STATE_IDLE;
-    ms->frame_ready = 0;
-    ms->end_of_stream = 0;
-    ms->end_state = 0;
-    ms->audio_stream_state = AUDIO_STREAM_STATE_IDLE;
-    ms->video_write_idx = 0;
-    ms->video_read_idx = 0;
-    ms->video_ring_size = 0;
-    ms->audio_write_idx = 0;
-    ms->audio_read_idx = 0;
-    ms->audio_ring_size = 0;
-    ms->audio_buffered_count = 0;
-    ms->frame_number = 0;
-    ms->continuation_type = 0;
-    ms->sectors_remaining = 0;
-    ms->last_video_frame = MOVIE_FRAME_NONE;
-    ms->last_consumed_video_frame = MOVIE_FRAME_NONE;
-    ms->last_audio_frame = MOVIE_FRAME_NONE;
-    ms->last_consumed_audio_frame = MOVIE_FRAME_NONE;
+    state->resource_index = resource_index;
+    state->current_frame = 0;
+    state->total_frames = total_frames;
+    state->input_buf_idx = 0;
+    state->vlc_retry_count = 0;
+    state->mdec_retry_pending = 0;
+    state->video_service_busy = 0;
+    state->draw_sync_target = 0;
+    state->out_buf_idx = 0;
+    state->pending_vram_upload = 0;
+    state->pending_mdec_decode = 0;
+    state->mdec_busy = MDEC_STATE_IDLE;
+    state->frame_ready = 0;
+    state->end_of_stream = 0;
+    state->end_state = END_STATE_RUNNING;
+    state->audio_stream_state = AUDIO_STREAM_STATE_IDLE;
+    state->video_write_idx = 0;
+    state->video_read_idx = 0;
+    state->video_wrap_idx = 0;
+    state->audio_write_idx = 0;
+    state->audio_read_idx = 0;
+    state->audio_wrap_idx = 0;
+    state->audio_buffered_count = 0;
+    state->frame_number = 0;
+    state->continuation_type = 0;
+    state->sectors_remaining = 0;
+    state->last_video_frame = MOVIE_FRAME_NONE;
+    state->last_consumed_video_frame = MOVIE_FRAME_NONE;
+    state->last_audio_frame = MOVIE_FRAME_NONE;
+    state->last_consumed_audio_frame = MOVIE_FRAME_NONE;
 
     /* Install movie callbacks and retain the previous handlers. */
-    ms->dec_dct_out_callback.address = DecDCToutCallback(&movie_mdec_out_callback);
-    ms->draw_sync_callback.address = DrawSyncCallback(&draw_sync_callback);
+    state->dec_dct_out_callback.address = DecDCToutCallback(&movie_mdec_out_callback);
+    state->draw_sync_callback.address = DrawSyncCallback(&draw_sync_callback);
 
     /* Configure audio for streamed or non-streamed playback. */
-    if (ms->use_cd_audio != 0)
+    if (state->use_cd_audio != 0)
     {
-        akao_cmd_e8_start_xa_stream(AKAO_STREAM_ADDRESS(ms->audio_data_base), ms->audio_ring_capacity * sizeof(AudioSector));
+        akao_cmd_e8_start_xa_stream((s32)state->audio_data_base, state->audio_ring_capacity * sizeof(AudioSector));
         akao_cmd_e4_set_cd_volume(AKAO_CD_VOLUME_MAX);
     }
     else
@@ -337,52 +453,49 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
     cdrom_wait_queue_empty();
     cdrom_queue_command(CdlReadS, (s16)resource_index, NULL, cd_sector_callback);
 
-    ms = MOVIE_STATE;
+    state = MOVIE_STATE;
 
     /* Prepare display memory and VLC tables for the standard GPU path. */
     if (g_gpu_mode == MOVIE_GPU_MODE_STANDARD)
     {
         VSync(0);
         SetDispMask(0);
-        ClearImage(&ms->rects[0], 0, 0, 0);
-        ClearImage(&ms->rects[1], 0, 0, 0);
-        DecDCTvlcBuild(ms->vlc_table);
+        ClearImage(&state->rects[0], 0, 0, 0);
+        ClearImage(&state->rects[1], 0, 0, 0);
+        DecDCTvlcBuild(state->vlc_table);
         DrawSync(0);
     }
 }
 
 /**
- * @brief Advance movie video decoding and XA audio playback.
+ * @brief Advance video decoding and the AKAO audio stream.
  * @see https://decomp.me/scratch/NpM84 (100%)
  */
 void movie_update(void)
 {
     s32 audio_ring_capacity;
-
-    MovieStreamEntryPointer stream_entry;
+    MovieFrameData frame;
     VideoSectorEntry* stream_header;
-
     s32 vlc_decode_complete = 0;
     MovieState* movie_state = MOVIE_STATE;
 
     /* Retry a deferred MDEC submission when the decoder is idle. */
-    if (g_mdecRetryPending != 0)
+    if (g_movie_mdec_retry_pending != 0)
     {
         if ((MOVIE_STATE->mdec_busy == MDEC_STATE_IDLE) && (movie_state->frame_ready == 0))
         {
+            s32 pixel_count;
+
             MOVIE_STATE->mdec_busy = MDEC_STATE_ACTIVE;
             DecDCTin(MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx], MOVIE_STATE->gpu_mode == MOVIE_GPU_MODE_STANDARD);
-            {
-                s32 pixel_count = MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].w * MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].h;
-                s32 word_count = pixel_count + SIGNED_HALF_ROUNDING(pixel_count);
-                DecDCTout(MOVIE_STATE->mdec_output_buf[MOVIE_STATE->out_buf_idx], word_count >> 1);
-            }
+            pixel_count = MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].w * MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].h;
+            DecDCTout(MOVIE_STATE->mdec_output_buf[MOVIE_STATE->out_buf_idx], pixel_count / 2);
             MOVIE_STATE->mdec_retry_pending = 0;
         }
     }
 
     /* Continue VLC decoding or begin the next buffered video frame. */
-    if (g_mdecRetryPending == 0)
+    if (g_movie_mdec_retry_pending == 0)
     {
         u8 retry_count = MOVIE_STATE->vlc_retry_count;
         if (retry_count != 0)
@@ -399,7 +512,7 @@ void movie_update(void)
                 MOVIE_STATE->vlc_retry_count = 0;
             }
         }
-        else if (get_next_video_entry(&stream_entry.video_payload, &stream_header) != 0)
+        else if (get_next_video_entry(&frame.video, &stream_header) != 0)
         {
             MOVIE_STATE->current_frame = stream_header->header.frame_number;
 
@@ -420,7 +533,7 @@ void movie_update(void)
                 DecDCTvlcSize2(ALTERNATE_VLC_DECODE_SIZE);
                 MOVIE_STATE->vlc_retry_count = ALTERNATE_VLC_RETRY_COUNT;
             }
-            if (DecDCTvlc2(stream_entry.video_payload->words, MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx], MOVIE_STATE->vlc_table) == 0)
+            if (DecDCTvlc2(frame.video->words, MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx], MOVIE_STATE->vlc_table) == 0)
             {
                 vlc_decode_complete = 1;
                 MOVIE_STATE->vlc_retry_count = 0;
@@ -434,35 +547,31 @@ void movie_update(void)
 
     if (vlc_decode_complete != 0)
     {
-        s32 output_available;
-        s32 rounding_adjustment;
-
         /* Submit the decoded frame or defer it until the MDEC is idle. */
         advance_video_read();
 
-        if ((MOVIE_STATE->mdec_busy == MDEC_STATE_IDLE) && (output_available = (MOVIE_STATE->frame_ready == 0)))
+        if ((MOVIE_STATE->mdec_busy == MDEC_STATE_IDLE) && (MOVIE_STATE->frame_ready == 0))
         {
+            s32 pixel_count;
+
             MOVIE_STATE->mdec_busy = MDEC_STATE_ACTIVE;
             DecDCTin(MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx], MOVIE_STATE->gpu_mode == MOVIE_GPU_MODE_STANDARD);
-            {
-                s32 pixel_count = MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].w * MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].h;
-                rounding_adjustment = SIGNED_HALF_ROUNDING(pixel_count);
-                DecDCTout(MOVIE_STATE->mdec_output_buf[MOVIE_STATE->out_buf_idx], (pixel_count + rounding_adjustment) >> 1);
-            }
+            pixel_count = MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].w * MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].h;
+            DecDCTout(MOVIE_STATE->mdec_output_buf[MOVIE_STATE->out_buf_idx], pixel_count / 2);
         }
         else
         {
-            g_mdecRetryPending = 1;
+            g_movie_mdec_retry_pending = 1;
         }
     }
 
-    /* Advance XA playback and retire consumed audio sectors. */
+    /* Release audio sectors only after the SPU has consumed their samples. */
     movie_state = MOVIE_STATE;
     if (g_movie_use_cd_audio != 0)
     {
-        if (get_next_audio_entry(&stream_entry.audio_sector) != 0)
+        if (get_next_audio_entry(&frame.audio) != 0)
         {
-            stream_header = stream_entry.video_header;
+            stream_header = &frame.audio->header_block;
             movie_state->current_frame = stream_header->header.frame_number;
 
             if ((stream_header->header.frame_number > movie_state->total_frames) && (movie_state->end_state < END_STATE_DONE))
@@ -472,7 +581,7 @@ void movie_update(void)
             akao_xa_advance_frame();
         }
         movie_state = MOVIE_STATE;
-        if (g_audioStreamState == AUDIO_STREAM_STATE_PRIMED)
+        if (g_movie_audio_stream_state == AUDIO_STREAM_STATE_PRIMED)
         {
             audio_ring_capacity = movie_state->audio_ring_capacity;
 

@@ -2,6 +2,8 @@
 #define FIELD_SCENE_INTERNAL_H
 
 #include "common.h"
+#include "field_scene.h"
+#include "movie.h"
 #include "field_animation.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
@@ -376,7 +378,7 @@ struct FieldHeaderRec
  *       update in field_update_scene_animations also reads the pixel-source base at 0x04 and the
  *       column stride at 0x28.
  */
-typedef struct
+typedef struct FieldSceneHeader
 {
     u8 _pad0[4];
     u16* pixel_data; /* 0x04 strip pixel-source base */
@@ -978,55 +980,6 @@ struct FieldNode
     s32 unk40;
 };
 
-typedef struct
-{
-    FieldSceneHeader* header; /* 0x00 */
-    FieldObj* objects;        /* 0x04 head of the object list */
-    FieldNode* nodes;         /* 0x08 head of the attached-node list */
-    /** 0x0C secondary node chain consulted by the collision resolver. */
-    FieldNode* secondary_nodes;
-    FieldMarker* markers; /* 0x10 head of the marker list */
-    FieldSeq* seqs;       /* 0x14 head of the sequence list */
-    FieldAnim* anims;     /* 0x18 head of the animation list */
-    FieldAnim* strips;    /* 0x1C head of the strip list */
-    FieldAnim* sprites;   /* 0x20 head of the sprite list */
-    FieldAnim* effects;   /* 0x24 head of the effect list */
-    /** 0x28 base of the per-group tile bitmask rows, or 0 when no groups
-        are active (then group_count holds a FIELD_COLLISION_GROUP_ERROR_*
-        code); field_set_node_enabled gates its field_collision_rasterize_groups call on this. */
-    s32 group_work;
-    /** 0x2C base of the per-group byte tile maps. */
-    s32 group_tiles;
-    /** 0x30 end of the per-group work area. */
-    s32 group_work_end;
-    FieldImageReq* uploads; /* 0x34 head of the pending upload list */
-    /** 0x38 set by a movie animation while the scene builds, then the MDEC VLC table it gets. */
-    s32 vlc_table;
-    /** 0x3C cleared by the scene build. */
-    s32 unk3C;
-    /** 0x40 tile edge in pixels, 4 or 8. */
-    u8 tile_size;
-    /** 0x41 number of active groups; 0 or 1 when the scan found nothing. */
-    u8 group_count;
-    /** 0x42 bitmask words per group in the work area. */
-    s16 group_stride;
-    /** 0x44 tiles per group (tile_cols * tile_rows). */
-    u16 group_tile_count;
-    /** 0x46 tile columns. */
-    u16 tile_cols;
-    /** 0x48 tile rows. */
-    u16 tile_rows;
-    /** 0x4A group ids (floor heights), sorted ascending by field_collision_collect_groups. */
-    s16 group_ids[10];
-    /** 0x5E per-group counters, zeroed alongside group_ids. */
-    s16 group_counters[10];
-} FieldScene;
-
-typedef struct
-{
-    FieldScene* scene;
-} FieldSceneGlobals;
-
 /** @brief Background colour word of a FieldMapObject, tested whole and read by byte. */
 typedef union
 {
@@ -1146,7 +1099,6 @@ extern s32 g_field_mem_midpoint;
 /** @brief Scene fade state (FieldMemState.fade_mode). */
 extern s32 g_field_scene_fade_mode;
 
-extern FieldSceneGlobals g_field_scene;
 extern s32 g_field_marker_overlay_enabled[2];
 /*
  * Standalone symbols for SCENE_STATE->camera_x/y/z (scene_state.h, 0x801ED484..0x801ED48C).
@@ -1192,10 +1144,6 @@ FieldPart* field_find_grid_part(FieldPartDef* grid, FieldTintSrc** out_src);
 void field_build_tint_colors(u8* colors, s32 count, s32* rgb_scale);
 void field_set_tint_primitive_code(u8 format, s32 count, u8* primitive_code);
 FieldObj* field_find_object_by_definition(void* definition);
-
-/* MOVIE.BIN entry points, called in place after FIELD streams MOVIE.BIN to 0x80140000. */
-void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer_idx);
-void movie_update(void);
 
 /** Size of the full-screen movie still image, in pixels. */
 extern u16 g_field_movie_frame_width;

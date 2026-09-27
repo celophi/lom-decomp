@@ -470,7 +470,7 @@ s32 cdrom_stream(s32 resource_index, u8* destination)
     CD_STREAM_STATE.input_complete = FALSE;
     CD_STREAM_STATE.bytes_consumed = 0;
 
-    remaining_size = cdrom_queue_command(CdlReadN, resource_index, NULL, cdrom_handle_stream_data) - 1;
+    remaining_size = cdrom_queue_command(CdlReadN, (u16)resource_index, NULL, cdrom_handle_stream_data) - 1;
     timestamp = VSync(-1);
 
     while (TRUE)
@@ -790,7 +790,7 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
  * @brief Queues a CD-ROM command and starts processing when idle.
  *
  * @param command        CD-ROM command.
- * @param resource_index Resource table index, or CD_RESOURCE_INDEX_DEFAULT.
+ * @param resource_id    Resource table index in the low halfword, or CD_RESOURCE_INDEX_DEFAULT.
  * @param dst_buffer     Destination for read data.
  * @param callback       Supplies the destination for each sector; NULL uses dst_buffer.
  *
@@ -798,8 +798,9 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/izXP3
  */
-s32 cdrom_queue_command(u8 command, u16 resource_index, void* dst_buffer, CdCommandCallback callback)
+s32 cdrom_queue_command(u8 command, s32 resource_id, void* dst_buffer, CdCommandCallback callback)
 {
+    u16 resource_index = resource_id;
     s32 timestamp;
     s32 write_index;
     u32 status_flags;
@@ -2344,7 +2345,7 @@ void cdrom_load_resource_table(s32 lba, s32 data_size_bytes)
  */
 s32 cdrom_queue_read(s32 resource_index, void* dst_buffer)
 {
-    return cdrom_queue_command(CdlReadN, resource_index, dst_buffer, NULL);
+    return cdrom_queue_command(CdlReadN, (u16)resource_index, dst_buffer, NULL);
 }
 
 /**
@@ -2359,7 +2360,7 @@ s32 cdrom_queue_read(s32 resource_index, void* dst_buffer)
  */
 s32 cdrom_queue_read_with_callback(s32 resource_index, CdCommandCallback callback)
 {
-    return cdrom_queue_command(CdlReadN, resource_index, NULL, callback);
+    return cdrom_queue_command(CdlReadN, (u16)resource_index, NULL, callback);
 }
 
 /**
@@ -2373,7 +2374,7 @@ s32 cdrom_queue_read_with_callback(s32 resource_index, CdCommandCallback callbac
  */
 s32 cdrom_queue_seek(s32 resource_index)
 {
-    return cdrom_queue_command(CdlSeekL, resource_index, NULL, NULL);
+    return cdrom_queue_command(CdlSeekL, (u16)resource_index, NULL, NULL);
 }
 
 /**

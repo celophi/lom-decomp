@@ -1281,17 +1281,15 @@ s32 func_80022EF8(void* bank, s32 slot, s32 wait_for_completion)
  * If bit 1 of @c D_8004F754 is set, all four CdlATV slots get
  * @c (volume * 0xB570) >> 0x11 - a 16-bit-fixed-point scale of @p volume across
  * a stereo pair. Otherwise only the two "main" slots get @p volume and the
- * "side" slots are zeroed. @p reserved is ignored here but participates in the
- * larger XA-streaming setup at the callers.
+ * "side" slots are zeroed.
  *
  * @param volume  Target CD volume (0-127 expected).
- * @param reserved  Reserved / unused at this call site.
  *
  * @return 0 after the operation completes.
  *
  * @see https://decomp.me/scratch/hcfmi (100%)
  */
-s32 akao_xa_setup_panning(s32 volume, void* reserved)
+s32 akao_xa_setup_panning(s32 volume)
 {
     if (D_8004F754 & 2)
     {

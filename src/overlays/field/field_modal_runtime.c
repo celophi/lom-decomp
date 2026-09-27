@@ -8,6 +8,7 @@
  */
 
 #include "field_text.h"
+#include "akao_cmd.h"
 #include "common.h"
 #include "field_actor_routes.h"
 #include "field_actor_runtime.h"
@@ -283,7 +284,6 @@ extern s32 g_field_rename_source;
 
 void akao_stop_sfx_by_id(s32 id);
 void akao_cmd_99_9b_9d_9f(s32 arg0);
-void akao_cmd_98_9a_9c_9e(s32 arg0);
 void akao_set_paused(s32 mode);
 
 /* Sub-overlay entry points, valid once their overlay is loaded at FIELD_SUBOVERLAY_ADDRESS. */
