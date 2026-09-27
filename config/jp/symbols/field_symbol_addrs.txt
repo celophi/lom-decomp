@@ -562,9 +562,9 @@ field_swap_effect_position_source            = 0x80070B04;
 field_collect_effect_hits                    = 0x80098F50;
 field_install_actor_action                  = 0x800B0D84;
 
-movie_init                          = 0x80140358;
-movie_update                        = 0x801406E4;
-movie_service_video_ops             = 0x80140D48;
+movie_init                          = 0x8014033C;
+movie_update                        = 0x801406C8;
+movie_service_video_ops             = 0x80140D2C;
 carda_init                          = 0x8014024C;
 niki_addhero_init                   = 0x8014011C;
 
@@ -1195,7 +1195,7 @@ field_find_combined_ability           = 0x800AD430;
 
 // field_progression_ops.c
 field_get_next_level_experience       = 0x800B5C74;
-// JP unverified: field_reset_party_to_level            = 0x800B5CD4;
+field_reset_party_to_level            = 0x800B5CE0;
 
 // field_record_growth_ops.c
 field_add_money                       = 0x800C09EC;

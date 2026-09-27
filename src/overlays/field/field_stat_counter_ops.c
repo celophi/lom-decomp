@@ -14,8 +14,15 @@
 /** @brief Item kinds at or above this value are rejected with a diagnostic. */
 #define FIELD_ITEM_KIND_LIMIT 0xFF
 
-/** @brief Character limit of an item name placed in a text macro. */
+/**
+ * @brief Character limit of an item name placed in a text macro.
+ * @note JP passes 10 (its item names are Shift-JIS text); US passes 21.
+ */
+#if defined(VERSION_JP)
+#define FIELD_ITEM_NAME_LENGTH 10
+#else
 #define FIELD_ITEM_NAME_LENGTH 21
+#endif
 
 /** @brief Diagnostic codes for an out-of-range item kind (passed as the first argument). */
 #define DIAG_BAD_ITEM_KIND_GET 0x70

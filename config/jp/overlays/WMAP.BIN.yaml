@@ -65,11 +65,11 @@ segments:
       - [0x4D75, .rodata, wmap_effect_primitives]
       - [0x4D95, .rodata, wmap_map_events]
       - [0x4DA9, rodata, wmap_4DA9]
-      - [0x4DBD, asm, wmap_map_display]  # JP: differs from US, kept as assembly
-      - [0x8845, asm, wmap_party_travel]  # JP: differs from US, kept as assembly
+      - [0x4DBD, c, wmap_map_display]
+      - [0x8845, c, wmap_party_travel]
       - [0x942D, c, wmap_land_selection]
       - [0x9539, c, wmap_land_effect_loader]
-      - [0x9765, asm, wmap_land_transition]  # JP: differs from US, kept as assembly
+      - [0x9765, c, wmap_land_transition]
       - [0xA6A9, c, wmap_land_preview]
       - [0xB8D1, c, wmap_land_preview_lines]
       - [0xB91D, c, wmap_land_layout]
@@ -78,7 +78,7 @@ segments:
       - [0x10AB1, asm, wmap_main]  # JP: differs from US, kept as assembly
       - [0x14529, c, wmap_frame_render]
       - [0x15261, c, wmap_resource_support]
-      - [0x15799, asm, wmap_view_effects]  # JP: differs from US, kept as assembly
+      - [0x15799, c, wmap_view_effects]
       - [0x172E9, c, wmap_sprite_render]
       - [0x1793D, c, wmap_model_render]
       - [0x1A649, c, wmap_effect_primitives]

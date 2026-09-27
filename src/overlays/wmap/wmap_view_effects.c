@@ -863,13 +863,13 @@ void wmap_update_view_zoom(void)
             g_wmap_zoom_step.y = -(g_wmap_view.y * (WMAP_ZOOM_ONE / WMAP_ZOOM_FRAMES));
             g_wmap_zoom_step.projection_scale = WMAP_SPIRIT_VIEW_SCALE * (WMAP_ZOOM_ONE / WMAP_ZOOM_FRAMES) - g_wmap_view.projection_scale * (WMAP_ZOOM_ONE / WMAP_ZOOM_FRAMES);
             wmap_play_sound(WMAP_SOUND_ZOOM_OUT, WMAP_PAN_CENTER);
-            g_wmap_map_button_mask = PADLleft | PADLright | PADselect | PADRup | PADRright;
+            g_wmap_map_button_mask = PADLleft | PADLright | PADselect | PADRup | WMAP_PAD_CANCEL;
             g_wmap_buttons_held = 0;
             g_wmap_buttons_repeat = 0;
         }
         return;
     case WMAP_VIEW_MODE_SPIRITS:
-        if (g_wmap_buttons_repeat & (PADRup | PADRright))
+        if (g_wmap_buttons_repeat & (PADRup | WMAP_PAD_CANCEL))
         {
             g_wmap_view_mode = WMAP_VIEW_MODE_ZOOM_IN;
             D_800D9268[0].target_shade = WMAP_ACTOR_SHADE_NEUTRAL;

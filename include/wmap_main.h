@@ -11,6 +11,18 @@ extern s32 g_wmap_input_locked;
 extern s32 g_wmap_backdrop_target_level;
 extern s32 g_wmap_screen_fade_mode;
 
+/**
+ * @brief Confirm and cancel buttons of the world-map prompts (sdk/libetc.h bits).
+ * @note US confirms with cross and cancels with circle; JP swaps them.
+ */
+#if defined(VERSION_JP)
+#define WMAP_PAD_CONFIRM PADRright
+#define WMAP_PAD_CANCEL PADRdown
+#else
+#define WMAP_PAD_CONFIRM PADRdown
+#define WMAP_PAD_CANCEL PADRright
+#endif
+
 void wmap_reset_after_transition(void);
 
 #endif
