@@ -1,385 +1,564 @@
-# CD-ROM Subsystem Architecture
+# CD-ROM subsystem architecture
 
-## Overview
+## High-level Overview
 
-The CD-ROM subsystem is the central data delivery layer of the game engine. It manages all disc reads, XA audio playback, disc validation, and hardware error recovery through an asynchronous, frame-driven design.
+The main CD-ROM subsystem turns resource requests into a serialized stream of
+reads from one physical drive. It serves overlay loading, asset loading, and the
+CD side of movie/XA playback. Callers identify a resource by index; a resident
+resource table supplies its disc position and byte length.
 
-Game code submits read commands to a 16-entry circular queue and receives data through destination buffers or callbacks. The disc drive is controlled entirely through PsyQ's interrupt callback system — the game thread never blocks on disc I/O except at explicit synchronization points. All command lifecycle management, retry logic, and error recovery runs autonomously within the frame loop.
+The design combines an asynchronous command queue, interrupt callbacks, and
+caller-driven supervision. Interrupt callbacks move sectors and advance
+commands. `cdrom_process_state()` observes progress, checks the drive, and runs
+automatic error recovery when callers service it. Blocking loading routines
+build on that same machinery and decompress data while sectors arrive.
 
-### Design Principles
+Three properties matter at the architectural level:
 
-| Concern | Approach |
-|---|---|
-| Asynchrony | Commands queued; data delivered via DMA and callbacks |
-| Frame pacing | `cdrom_process_state()` drives all progress once per VSync |
-| Error tolerance | Automatic retry with multi-state hardware recovery |
-| Throughput | Double-speed mode, 2340-byte sectors, streaming LZ decompression |
-| Disc validation | Shift-JIS ID string verified against `g_disc_validation_id` at boot |
+- **One owner of the drive.** One global controller, one active transfer, and
+  one pair of libcd callback slots serialize access. There are 16 queue slots,
+  with room for 15 outstanding entries because one slot distinguishes full
+  from empty.
+- **Fixed memory use.** Compressed input uses an 8 KiB region in main RAM.
+  Streaming metadata lives separately in scratchpad RAM. Chunked output uses
+  another fixed staging area and preserves 4096 bytes of decompression history.
+- **Progress depends on both interrupts and servicing.** Queue submission is
+  asynchronous, but initialization, sector extraction, recovery operations,
+  and synchronous loading can wait. Frame-based watchdogs support recovery;
+  they do not guarantee a maximum loading time.
 
----
+This is an implementation description of [the main CD module](../src/cdrom.c)
+and [its decompressor](../src/cdrom_decompress.c). The separate CD implementation
+inside CHECKPS is outside this document's scope. The architecture and known
+limitations below describe the matching code, including behavior retained from
+the original executable.
 
-## System Architecture
-
-```mermaid
-graph TD
-    subgraph Game["Game Layer"]
-        GC["Game Code / Overlays"]
-    end
-
-    subgraph API["Public API"]
-        QR["cdrom_queue_read()"]
-        CS["cdrom_stream()"]
-        PS["cdrom_process_state()"]
-        WQ["cdrom_wait_queue_empty()"]
-        LRT["cdrom_load_resource_table()"]
-    end
-
-    subgraph Core["CD Subsystem Core"]
-        CQ["Command Queue\n16-entry circular buffer"]
-        FSM["Frame State Machine"]
-        REC["Recovery State Machine\ncdrom_recover()"]
-    end
-
-    subgraph CBK["Hardware Callbacks"]
-        CC["cdrom_complete_command\nCdSyncCallback — normal"]
-        HRI["cdrom_handle_ready_intr\nCdReadyCallback — normal"]
-        HRS["cdrom_handle_recovery_sync\nCdSyncCallback — init / recovery"]
-        VD["cdrom_verify_disc\nCdReadyCallback — init"]
-        VR["cdrom_verify_recovery\nCdReadyCallback — recovery"]
-    end
-
-    subgraph STR["Streaming Engine"]
-        RB["Ring Buffer\nScratchpad RAM 0x1F800000\nCdStreamState"]
-        DEC["LZ Decompressor\ncdrom_decompress_data()"]
-    end
-
-    subgraph PSY["PsyQ CD Library"]
-        LIB["CdControlB / CdControlF\nCdGetSector / CdSync\nCdSyncCallback / CdReadyCallback"]
-    end
-
-    HW["CD-ROM Hardware"]
-
-    GC -->|"queue_read / stream"| QR & CS
-    GC -->|"once per VSync"| PS
-    QR --> CQ
-    CS --> CQ
-    CS --> RB
-    PS --> FSM
-    FSM --> CQ
-    FSM --> REC
-    REC --> HRS
-    CC -->|"advance queue"| CQ
-    HRI --> RB
-    RB --> DEC
-    DEC -->|"decompressed output"| GC
-
-    CC & HRS & VD & VR & HRI --> LIB
-    FSM --> LIB
-    LIB <--> HW
-
-    HW -->|"sync IRQ"| CC
-    HW -->|"sync IRQ"| HRS
-    HW -->|"ready IRQ"| HRI
-    HW -->|"ready IRQ"| VD
-    HW -->|"ready IRQ"| VR
-```
-
----
-
-## Central State: `CdSystem`
-
-All subsystem state lives in a single `CdSystem` struct mapped at fixed address `0x801ED800`. Key fields:
-
-| Field | Purpose |
-|---|---|
-| `statusFlags` | Bitmask: error (bit 0–2), recovery-deferred (bit 3), busy (bit 4), playing (bit 6), retry-exhausted (byte 3) |
-| `commandQueue` | 16-entry circular buffer of `CdCommandQueueItem` |
-| `queueReadIndex` / `queueWriteIndex` | Head and tail of the circular queue (masked with `& 0xF`) |
-| `currentCommand` / `initCommand` | Active command identifiers; non-zero means the system is busy |
-| `initState` | Current state within the init/recovery state machine |
-| `transferCallback` | Per-sector callback installed for streaming and audio reads |
-| `currentWritePtr` | Destination pointer advanced as each full sector is delivered |
-| `readRemainingBytes` | Bytes left to read in the current multi-sector transfer |
-| `vsyncTimestamp` | VSync counter snapshot used for timeout calculations |
-| `previousSyncCallback` / `previousReadyCallback` | Saved PsyQ callbacks restored on `cdrom_restore_callbacks()` |
-
-Scratchpad RAM at `0x1F800000` is aliased as `CdStreamState` during streaming operations (see [Streaming Architecture](#streaming-architecture)).
-
----
-
-## Command Queue
-
-Each of the 16 queue slots holds:
-
-```
-CdCommandQueueItem {
-    command        — CD-ROM command byte (CdlReadN, CdlSeekL, etc.)
-    resourceIndex  — Index into CD_RESOURCE_ENTRIES, or 0xFFFF for the default resource
-    entry          — Resolved pointer to CdResourceEntry (disc location + data size)
-    dstBuffer      — Destination RAM address for read data
-    callback       — Invoked on command completion
-}
-```
-
-`CdResourceEntry` records map resource indices to disc locations and byte sizes. They are loaded from disc at startup by `cdrom_load_resource_table()` into `CD_RESOURCE_ENTRIES` at `0x801ED998`.
-
-`cdrom_queue_command()` performs deduplication (skips re-enqueue if the same command, resource, buffer, and callback are already pending) and validates that the resource has a non-zero disc location and data size before writing to the queue.
-
----
-
-## Frame State Machine
-
-`cdrom_process_state()` is called once per VSync frame and selects one of three execution branches based on `statusFlags`:
+## Components and ownership
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Idle
+flowchart TB
+    Game["Game and overlays"]
+    Queue["Resource lookup and command queue"]
+    Service["Caller-driven supervision and recovery"]
+    Callbacks["Command and sector callbacks"]
+    Decode["Blocking stream loader and decompressor"]
+    Input["Compressed input in main RAM"]
+    SDK["Psy-Q libcd"]
+    Drive["CD-ROM drive"]
 
-    Idle --> Idle: Queue empty\n30-frame NOP poll
-    Idle --> Bootstrapping: Queue non-empty\nno active command
-
-    Bootstrapping --> Executing: CdlNop sent\ncdrom_complete_command installed
-
-    Executing --> Executing: syncComplete not set\nmonitor timeout
-    Executing --> Executing: Sector delivered\n(cdrom_process_sector)
-    Executing --> Idle: Queue drained
-    Executing --> ErrorRecovery: statusFlags bits 0-2 set
-
-    ErrorRecovery --> ErrorRecovery: Retry cycle\n30-frame NOP polls\n270-frame read retries
-    ErrorRecovery --> RecoveryDeferred: statusFlags bit 3 set\n(cdrom_recover takes over)
-    RecoveryDeferred --> Executing: Drive re-initialized\nread command re-issued
-    ErrorRecovery --> Idle: Recovery complete
+    Game -->|queue a resource| Queue
+    Game -->|service progress| Service
+    Game -->|load compressed data| Decode
+    Decode -->|queue a read| Queue
+    Queue -->|start when idle| SDK
+    Service -->|poll and recover| SDK
+    SDK -->|commands| Drive
+    Drive -->|interrupts| SDK
+    SDK -->|sync and ready events| Callbacks
+    Callbacks -->|advance queue| Queue
+    Callbacks -->|extract a sector through libcd| Input
+    Input -->|compressed bytes| Decode
+    Decode -->|decompressed output| Game
 ```
 
-**Timeout constants (NTSC 60 Hz):**
+The input-buffer branch shows compressed loading. Ordinary reads transfer into
+the caller's destination. Movie/XA reads use a specialized transfer callback.
 
-| Timeout | Frames | Purpose |
+| Component | Responsibility | State it depends on |
 |---|---|---|
-| NOP poll | 30 | Periodic drive status check when idle or in recovery |
-| Command timeout | 240 | Re-install callbacks and retry via CdlNop |
-| Read retry | 270 | Re-issue CdlReadN after a stall |
+| Resource table and queue | Resolve indices, admit requests, retain their order | `CdResourceEntry`, `CdCommandQueueItem`, queue indices |
+| Controller | Track the active command, transfer position, status, and recovery phase | `CdSystem` |
+| libcd callbacks | React to command completion and sector availability | Active callback slots and `CdSystem` |
+| Supervisor | Detect missing progress, poll status, validate the disc after errors | VSync timestamps, status flags, recovery state |
+| Stream loader | Consume compressed input, release consumed space, produce output | Scratchpad `CdStreamState`, main-RAM buffers |
+| Movie integration | Coordinate sector delivery with MDEC, GPU, and audio activity | `MovieState`, transfer callback, deferred-ready flag |
 
----
+### Execution context
 
-## Callback Architecture
+There is no worker thread in this module. Foreground game code and interrupt
+callbacks share state on the same CPU. Disc activity can continue while the
+foreground runs, and callbacks can interrupt decompression.
 
-The subsystem maintains two distinct callback pairs and swaps between them depending on operating mode:
+| Work | Where it runs |
+|---|---|
+| Queue submission and `cdrom_process_state()` | The calling game or overlay code |
+| Normal sync/ready handlers | libcd callback context |
+| `CdCommandCallback` | Inside sector processing, normally the ready callback; also the deferred-service path |
+| Decompression, `get_buffer`, and `chunk_done` | Inside the synchronous stream-loading call |
+| `cdrom_verify_recovery()` | Its caller's context; the movie MDEC-output callback is one concrete caller |
 
-```mermaid
-graph LR
-    subgraph Normal["Normal Operation"]
-        CC["cdrom_complete_command\nCdSyncCallback"]
-        HRI["cdrom_handle_ready_intr\nCdReadyCallback"]
-    end
+`cdrom_verify_recovery()` is a deferred-sector service routine. It is not
+installed as a libcd ready callback. The name alone does not describe its
+execution context.
 
-    subgraph Init["Initialization / Recovery"]
-        HRS["cdrom_handle_recovery_sync\nCdSyncCallback"]
-        VD["cdrom_verify_disc\nCdReadyCallback — init"]
-        VR["cdrom_verify_recovery\nCdReadyCallback — recovery"]
-    end
+The controller uses handshake flags such as `sync_complete` and
+`data_ready_pending`; the stream uses `data_ready` and `input_complete`.
+Some fields are volatile because callbacks update them. These are local
+coordination mechanisms, not a general thread-safety or reentrancy contract.
+Nested stream loads would share the same metadata and buffers.
 
-    CC -->|"queue advance\nor error"| CC
-    CC -->|"on error:\ncdrom_handle_sync_error"| HRS
-    HRI -->|"sector ready"| CC
-    HRS -->|"init complete\nhandoff"| CC
-    HRS -->|"disc read ready"| VD
-    VD -->|"ID match"| CC
-    VD -->|"ID mismatch"| ErrorPause["CD_INIT_STATE_ERROR_PAUSE\nCdlPause"]
-```
+Sources: [CD controller](../src/cdrom.c),
+[stream state](../src/cdrom_internal.h), and
+[movie deferred-sector integration](../src/overlays/movie/movie_stream.c).
 
-`cdrom_handle_sync_error()` handles unrecoverable sync failures by clearing both callbacks, setting `statusFlags` bit 0 (error), resetting all command state, and recording a fresh VSync timestamp so recovery timing begins cleanly.
+## Public contract and request lifecycle
 
----
+### Entry points
 
-## Initialization and Disc Validation
+| API | Caller-visible behavior |
+|---|---|
+| `cdrom_init()` | Blocks while initializing the drive, clears subsystem state, and selects double-speed, 2340-byte sector mode |
+| `cdrom_queue_read()` | Queues an ordinary resource read into caller-owned memory |
+| `cdrom_queue_read_with_callback()` | Queues a read whose callback supplies each sector destination |
+| `cdrom_queue_seek()` | Queues a seek; dispatch may discard it if another queued command supersedes it |
+| `cdrom_process_state()` | Services progress and recovery; returns the pending count, except that explicit reconfiguration returns zero immediately |
+| `cdrom_wait_queue_empty()` | Repeatedly services the controller and waits on VSync while that return value is nonzero |
+| `cdrom_stream()` | Drains earlier queued work, then blocks while reading and decompressing one resource; returns decompressed byte count |
+| `cdrom_stream_chunked()` | Blocks while obtaining output buffers and reporting completed chunks; shares the global streaming resources |
+| `cdrom_get_error_status()` | Reports a prioritized subsystem error state, separate from queue admission results |
+| `cdrom_stop()` / `cdrom_reset()` | Pause activity and clear state; reset also restores movie-related callbacks and handles CD audio |
 
-On startup, `cdrom_init()` performs a blocking hardware initialization, then the system drives a multi-state init protocol through `cdrom_handle_recovery_sync`:
+A successful queue call returns the resource's byte size, not a request handle
+or a completion result. Admission errors are `-1` for a full queue, `-2` for an
+entry with zero location or size, and `-3` for a locked queue. The module does
+not validate a resource index against a table-length field.
+
+Resource `0xFFFF` selects `default_cd_resource`. This lets
+`cdrom_load_resource_table()` bootstrap the table itself: set a location from
+the supplied LBA, queue the read into `CD_RESOURCE_ENTRIES`, then wait for it.
+Normal callers subsequently use indexed table entries rather than path lookup.
+See [disc layout](disc-layout.md) for the table and on-disc resource organization.
+
+### Admission and completion are different events
+
+The queue suppresses a consecutive duplicate while the controller is busy if
+command, resource, destination, and callback all match the last submission.
+It does not search the whole queue for duplicates. The active request remains
+at the read index until its transfer or command-specific completion logic
+advances that index.
+
+`CdCommandCallback(bytes_transferred, bytes_remaining)` runs **before** the
+pending ordinary sector is copied. `bytes_remaining` includes that sector.
+Its return value selects the destination; returning `NULL` requests a retry
+of the current sector. This is not a command-completion callback.
+
+For movie/XA transfers, the callback handles the specialized sector path and
+`NULL` means end the transfer. The generic data path's byte accounting and
+buffer-return contract must not be applied to that mode unchanged.
+
+Sources: [public types and API](../include/cdrom.h), `cdrom_queue_command()`,
+`cdrom_run_command()`, and `cdrom_process_sector()` in
+[the controller](../src/cdrom.c).
+
+### Ordinary read sequence
+
+This sequence shows an idle controller, an accepted read, no errors, and an
+empty queue after its final sector. It omits repeated supervisor calls to keep
+the transfer order visible.
 
 ```mermaid
 sequenceDiagram
     participant Game
-    participant cdrom_init
-    participant PsyQ
-    participant HW as CD Hardware
-    participant HRS as cdrom_handle_recovery_sync
-    participant VD as cdrom_verify_disc
+    participant Core as Controller
+    participant SDK as libcd and drive
+    participant Sync as Sync handler
+    participant Ready as Ready handler
+    participant Provider as Buffer callback
 
-    Game->>cdrom_init: cdrom_init()
-    cdrom_init->>PsyQ: CdInit() — spin until ready
-    cdrom_init->>PsyQ: Install cdrom_handle_recovery_sync as CdSyncCallback
-    cdrom_init->>PsyQ: CdlSetmode (double-speed, 2340-byte sectors)
-    cdrom_init->>PsyQ: CdlNop — poll drive status
+    Game->>Core: Queue resource read
+    Core->>Core: Resolve resource<br/>reserve slot
+    Core->>SDK: Install normal sync handler<br/>send Nop
+    Core-->>Game: Resource size
+    SDK-->>Sync: Command event
+    Sync->>Core: Dispatch queued ReadN
+    Core->>SDK: Install ready handler<br/>read at resource position
 
-    loop Init state machine (states 1→6)
-        HW-->>HRS: Sync IRQ
-        HRS->>PsyQ: CdlGetStat / CdlSetMode / CdlSetfilter
+    loop Each available ordinary data sector
+        SDK-->>Ready: DataReady
+        Ready->>SDK: Read 3-word sector header
+        Ready->>Ready: Check expected sector position
+        opt Callback-backed destination
+            Ready->>Provider: Bytes transferred<br/>bytes remaining
+            Provider-->>Ready: Destination buffer
+        end
+        alt More than 2048 bytes remain
+            Ready->>SDK: Extract 2048 payload bytes
+            Ready->>Core: Advance position<br/>reduce remaining count
+        else Final sector, no next request
+            Ready->>Core: Advance queue read index
+            Ready->>SDK: Install recovery sync handler<br/>disable ready handler
+            Ready->>SDK: Send Pause<br/>extract final payload
+            Ready->>Core: Clear active command
+        end
     end
-
-    HRS->>PsyQ: CdlReadN — read validation sector
-    HW-->>VD: Ready IRQ (sector available)
-    VD->>PsyQ: CdGetSector — read disc ID into discValidationId
-
-    alt Disc ID matches g_disc_validation_id
-        VD->>PsyQ: Install cdrom_complete_command as CdSyncCallback
-        VD->>PsyQ: CdlSetmode — finalize drive config
-        Note over Game: System ready for normal operation
-    else ID mismatch or wrong sector position
-        VD->>PsyQ: CdlPause
-        Note over Game: CD_INIT_STATE_ERROR_PAUSE — disc rejected
-    end
+    SDK-->>Sync: Pause completion<br/>recovery sync handler
+    Sync->>Core: Clear pending pause state
 ```
 
----
+Normal reads issue `ReadN` with the target location; there is no mandatory
+separate `SeekL` command before every read. Header validation compares the
+low 24 bits of the sector position before accepting the payload.
 
-## Normal Data Read
+A full ordinary payload is 2048 bytes, despite the drive's 2340-byte sector
+mode. The final extraction rounds the remaining byte count up to 32-bit words.
+Destination storage must accommodate that rounding.
+
+If another request is queued, the final-sector path can dispatch it directly.
+`CdExecutionMode` preserves the ordering between starting that next command
+and extracting the previous request's final payload:
+
+| Mode | Ordering |
+|---|---|
+| `CD_EXECUTION_MODE_ASYNC` | Start the command and install the normal read callback when needed |
+| `CD_EXECUTION_MODE_COMMAND_THEN_READ` | Issue the next command before extracting the previous final payload |
+| `CD_EXECUTION_MODE_READ_THEN_COMMAND` | Extract the previous final payload before issuing the next command |
+
+Deferred sector service uses the read-first ordering. With no next request,
+it likewise sends Pause after extracting the final payload. Queue retirement,
+last-byte delivery, and drive pause completion are therefore distinct events.
+There is no public per-request completion callback in this API.
+
+## Streaming and decompression
+
+Streaming uses a producer/consumer handoff. Sector processing produces
+compressed bytes; the foreground loader consumes them. `CdStreamState` is
+metadata in scratchpad RAM. The compressed bytes themselves are in main RAM.
+
+### Memory and ownership
+
+| Location | Use | Important boundary |
+|---|---|---|
+| `0x1F800000` | Scratchpad `CdStreamState` during streaming | Shared with other scratchpad uses; not the compressed-data buffer |
+| `0x801DC000` to `0x801DE000` exclusive | 8192-byte compressed-input region | First payload starts at `0x801DC001`, skipping one header byte |
+| `0x801DC118` | Wrapped-input restart/compaction anchor | 280 bytes above input base; not the buffer end |
+| `0x801DA000` | Chunked-output staging base | Retains the last 4096 output bytes when recycling staging |
+| `0x801DBBE8` | Staging decoder stop threshold | Checked between opcode expansions, not a strict last-write address |
+| Caller-supplied destination | Final decompressed output | Caller supplies sufficient storage and preserves its lifetime |
+
+The metadata fields describe the handoff:
+
+| Field | Meaning |
+|---|---|
+| `buffer_start` | Start of the current contiguous compressed-input span |
+| `input_cursor` | Decoder's current position within that input |
+| `bytes_buffered` | Bytes represented by the current span |
+| `bytes_consumed` | Consumption published by the loader when releasing the span |
+| `wrap_overflow` | Bytes received in the wrapped portion, pending reconciliation |
+| `data_ready` | Published input is available; clearing it releases consumed space for compaction |
+| `input_complete` | Final-input indication set on the callback's append path |
+| `deferred_sectors` | Count of incoming sectors refused for lack of safe buffer space |
+
+`input_cursor` is an input pointer. The producer's next write address is
+calculated by `cdrom_handle_stream_data()` and returned to sector processing;
+it is not stored in a field named `write_ptr`.
+
+### Producer/consumer sequence
 
 ```mermaid
 sequenceDiagram
-    participant Game
-    participant Queue as Command Queue
-    participant PS as cdrom_process_state
-    participant CC as cdrom_complete_command
-    participant RC as cdrom_run_command
-    participant HRI as cdrom_handle_ready_intr
-    participant PSec as cdrom_process_sector
-    participant PsyQ
+    participant Loader as Foreground loader
+    participant State as Scratchpad state
+    participant Ready as Sector processing
+    participant Buffer as Stream buffer callback
+    participant SDK as libcd
 
-    Game->>Queue: cdrom_queue_read(resourceIndex, buffer)
-    Queue->>PsyQ: Install cdrom_complete_command\nSend CdlNop (bootstrap)
+    Loader->>Loader: Queue ReadN<br/>with stream callback
+    SDK-->>Ready: Sector available
+    Ready->>Buffer: Request destination<br/>for pending sector
+    Buffer->>State: Initialize or extend<br/>input metadata
+    Buffer-->>Ready: Input buffer address
+    Ready->>SDK: Extract sector into<br/>returned address
+    Note over Loader,Ready: Foreground resumes<br/>after sector processing
+    Loader->>State: Decode available input<br/>advance input_cursor
 
-    loop Each VSync frame
-        Game->>PS: cdrom_process_state()
-        PS->>PS: Poll syncComplete flag
+    opt Consumer reaches its available input bound
+        Loader->>State: Publish bytes_consumed<br/>clear data_ready
+        SDK-->>Ready: Next sector available
+        Ready->>Buffer: Request next destination
+        Buffer->>Buffer: Compact unread input
+        Buffer->>State: Reconcile wrapped bytes<br/>set data_ready
+        Buffer-->>Ready: Destination after retained input
+        Ready->>SDK: Extract pending sector
     end
 
-    PsyQ-->>CC: Sync IRQ (CdlNop complete)
-    CC->>RC: cdrom_run_command(CdlReadN, ...)
-    RC->>PsyQ: Install cdrom_handle_ready_intr as CdReadyCallback
-    RC->>PsyQ: CdlSeekL + CdlReadN
-
-    loop For each sector (readRemainingBytes > 0x800)
-        PsyQ-->>HRI: Ready IRQ (sector available)
-        HRI->>PSec: cdrom_process_sector(0)
-        PSec->>PsyQ: CdGetSector → 0x800 bytes to buffer
-        PSec->>PSec: Advance disc position\nDecrement readRemainingBytes
+    opt Incoming sector would overwrite unread input
+        Ready->>Buffer: Request destination
+        Buffer-->>Ready: NULL<br/>increment deferred_sectors
+        Ready->>SDK: Reissue read at the same position
     end
-
-    Note over PSec: Final sector
-    PsyQ-->>HRI: Ready IRQ
-    HRI->>PSec: cdrom_process_sector(0)
-    PSec->>PsyQ: Install cdrom_complete_command\nRemove CdReadyCallback
-    PSec->>PsyQ: CdGetSector → remaining bytes
-    PSec->>PsyQ: CdlPause
-
-    PsyQ-->>CC: Sync IRQ (CdlPause complete)
-    CC->>Queue: Advance queueReadIndex
-    CC->>Game: Invoke completion callback
 ```
 
----
+The callback updates metadata before sector extraction. Correct use relies on
+this execution order and the target's callback/DMA behavior; `data_ready` by
+itself is not a portable cross-thread publication barrier.
 
-## Error Recovery
+While more compressed input is expected, the loader leaves a 280-byte guard
+at the input boundary. When input wraps, unread bytes are copied into a
+contiguous region before `CD_STREAM_WRAP_START`, with alignment padding for
+word copies. The callback performs this compaction on the next handoff, or the
+loader reconciles the final buffered input itself when no further sector will
+do so. Buffer pressure causes a sector retry rather than overwriting unread
+compressed data.
 
-When the drive reports an error or the disc tray is opened, `statusFlags` bits 0–2 are set and `cdrom_recover()` takes control of the re-initialization sequence:
+### Decoder and output modes
+
+`cdrom_decompress_data()` interprets a custom bytecode containing literals,
+repeated patterns, arithmetic runs, and backward copies. Its longest encoded
+back-reference reaches 4096 bytes into earlier output. This explains why
+chunked decoding must retain output history even after delivering a chunk.
+
+The decoder updates both cursors and returns:
+
+- `FALSE` after consuming the `0xFF` end marker;
+- `TRUE` when an input or output boundary stops the next opcode expansion.
+
+Bounds are checked between complete opcodes. One expansion may cross a stop
+threshold, so guard space and buffer sizing are part of the caller contract.
+This decoder is built for the game's resource format; it is not a validating
+parser with a defined malformed-input error result.
+
+`cdrom_stream()` decodes directly into caller memory and returns the number of
+output bytes at the end marker. It has no destination-capacity argument.
+Decompression completion does not itself assert that the drive has completed
+its final pause; many callers follow it with `cdrom_wait_queue_empty()`.
+
+With a finite chunk capacity, `cdrom_stream_chunked()` decodes into staging,
+copies output across buffers supplied by `get_buffer()`, and calls
+`chunk_done()` for completed chunks and the final chunk. Recycling staging
+copies the last 4096 output bytes back to its base before decoding continues.
+These output callbacks run in the loading call, unlike `CdCommandCallback`.
+
+An initial capacity of `-1` selects direct output. That branch currently
+ignores the decoder's end-marker return value. It must not be documented as
+having the same completion behavior as finite-capacity chunking. No caller of
+`cdrom_stream_chunked()` was found in the inspected C sources; its wider runtime
+use is unconfirmed.
+
+Sources: [stream-loading loops](../src/cdrom.c),
+[buffer callback and decoder](../src/cdrom_decompress.c), and
+[shared metadata](../src/cdrom_internal.h).
+
+## Initialization, recovery, and callback ownership
+
+### Startup is a blocking configuration path
+
+`cdrom_init()` retries `CdInit()`, saves and clears existing libcd callbacks,
+resets the controller and queue, checks status with `CdlNop`, waits for the
+drive if the shell-open status is present, and applies
+`CdlModeSpeed | CdlModeSize1` through `CdControlB()`.
+
+It does not install the asynchronous disc-validation callback or compare the
+disc ID. The main startup sequence then loads the resource table and begins
+resource loading. Disc-ID validation in this module belongs to automatic
+recovery. See [main startup](../src/main.c).
+
+### Callback roles change with the active operation
+
+libcd exposes one sync slot and one ready slot. The controller replaces or
+clears them as operations change; all of the handlers below are not active
+simultaneously.
+
+| Situation | Sync handler | Ready handler |
+|---|---|---|
+| Normal command dispatch and data reads | `cdrom_complete_command` | `cdrom_handle_ready_intr` for reads |
+| Final pause or mode restoration | `cdrom_handle_recovery_sync` | Cleared |
+| Recovery disc-ID read | `cdrom_handle_recovery_sync`, or cleared after its command event | `cdrom_verify_disc` |
+| Explicit reconfiguration | `cdrom_handle_recovery_sync` while a step is outstanding | Cleared |
+| Sync error reset | Cleared | Cleared |
+
+`cdrom_restore_callbacks()` reinstates the callbacks saved at initialization,
+pauses the drive, and clears the controller. Movie reset also restores saved
+MDEC/GPU callbacks. Ownership therefore extends beyond the CD queue during
+movie playback.
+
+### Automatic recovery after drive errors
+
+`cdrom_handle_sync_error()` clears the callbacks, records `CD_STATUS_SYNC_ERROR`,
+resets command/retry state, and starts a fresh timestamp. Subsequent calls to
+`cdrom_process_state()` drive status checks, disc readiness checks, disc-type
+inspection, mode setup, and the validation-sector read.
+
+The following groups several implementation states into architectural phases.
+Individual retries and callback substitutions are described in the timing and
+callback tables rather than shown as separate states.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Flush: Error detected\nor shell opened
+    state "Normal command processing" as Normal
+    state "Poll status and wait for drive" as Check
+    state "Inspect disc type" as DiscType
+    state "Configure read mode" as Mode
+    state "Read and compare disc ID" as Validate
+    state "Restore mode and clear errors" as Restore
+    state "Stop and wait for another recovery attempt" as Rejected
 
-    Flush: State 0 — Flush
-    Flush: CdFlush() discards pending commands
-    Flush --> SetMode: 1-frame delay
-
-    SetMode: State 1 — Set Mode
-    SetMode: CdlSetmode 0xA0\n(double-speed, 2340-byte sectors)
-    SetMode: Installs cdrom_handle_recovery_sync
-    SetMode --> SetFilter: 4-frame delay
-
-    SetFilter: State 2 — Set Filter
-    SetFilter: CdlSetfilter (file=1, channel=1)
-    SetFilter: initCommand = 0x11
-    SetFilter --> Dispatch
-
-    Dispatch: State 3 — Dispatch
-    Dispatch: Waits for syncComplete\nor 30-frame timeout
-
-    state Dispatch {
-        [*] --> CheckCmd
-        CheckCmd --> SendDemute: initCommand = 0x11
-        CheckCmd --> RetryFilter: initCommand = 0x10
-        CheckCmd --> SendPause: initCommand = 0x12
-        SendDemute --> CheckCmd: CdlDemute sent
-        RetryFilter --> CheckCmd: CdlSetfilter re-sent
-        SendPause --> [*]: CdlPause sent\nRecovery complete
-    }
-
-    Dispatch --> Flush: 270-frame timeout\nor persistent error
-    Dispatch --> [*]: Drive ready\nResume read command
+    Normal --> Check: Sync error or shell-open detection
+    Check --> DiscType: Readiness checks advance
+    DiscType --> Mode: Disc format accepted for validation
+    DiscType --> Rejected: No-disc result
+    Mode --> Validate: Mode completion permits ID read
+    Validate --> Validate: Wrong sector or read retry
+    Validate --> Restore: Expected ID bytes match
+    Validate --> Rejected: ID mismatch
+    Restore --> Normal: Restore-mode completion<br/>restart queued work
+    Rejected --> Check: Shell open or failed status poll
+    Mode --> Check: Shell open or failed status poll
+    Validate --> Check: Shell open or failed status poll
 ```
 
-After successful recovery, the interrupted read command is re-issued at the last known `recoveryReadPosition`. Sector headers are verified by `cdrom_verify_recovery()` before accepting data (up to 16 retries per sector).
+Validation reads a three-word header and a 32-byte ID buffer. It checks sector
+position against `recovery_read_position`, then compares the expected string
+from `g_disc_validation_id`, including the supported multibyte lead-byte
+ranges. A wrong sector triggers Pause and retry. An ID mismatch sets the
+error/stop phase and removes the ready callback; it does not immediately
+follow the successful reconfiguration path.
 
----
+On a match, `cdrom_verify_disc()` requests mode restoration. Its sync completion
+clears the recovery error flags and bootstraps remaining queued work. The normal
+read path retains or reinitializes transfer state according to
+`playback_state`, the buffer, and the callback. It continues validating incoming
+positions against `current_location`; the ID-read position and active-transfer
+position are separate fields.
 
-## Streaming Architecture
+### Explicit reconfiguration is a separate protocol
 
-`cdrom_stream()` and `cdrom_stream_chunked()` deliver large compressed assets using a ring buffer in scratchpad RAM and an inline LZ decompressor, allowing decompression to proceed concurrently with sector delivery.
+`cdrom_enter_recovery_mode()` only accepts entry while idle, with an empty queue
+and no recovery errors. It sets `CD_STATUS_RECOVERY_PENDING`.
+`cdrom_process_state()` returns zero immediately while that bit is set; it does
+not call `cdrom_recover()` on the caller's behalf.
+
+A caller must instead service `cdrom_recover()`. Its stages are Flush, Setmode,
+Setfilter, then completion of Demute and Pause through
+`cdrom_handle_recovery_sync()`. Completion clears the pending bit.
+
+These routines share `init_state` and `init_command` with automatic recovery,
+but interpret different state/command families. No C call sites for the
+explicit entry/service pair were found in the inspected tree. Their integration
+should not be inferred from their names or treated as a normal startup step.
+
+## Timing and failure behavior
+
+VSync counts measure elapsed display intervals. They do not schedule a
+supervisor call. Callers service `cdrom_process_state()` in game loops, overlay
+loops, or blocking waits; the code does not enforce exactly one call per frame.
+Interrupt-driven transfers can advance between those calls.
+
+The active-command watchdog illustrates the distinction:
 
 ```mermaid
-graph TD
-    subgraph Game["Game Thread (per VSync)"]
-        GS["cdrom_stream(resourceIndex, dst)"]
-        DC["cdrom_decompress_data()\nLZ opcode interpreter"]
-    end
+sequenceDiagram
+    participant Drive as libcd and callbacks
+    participant State as Shared CD state
+    participant Game as Caller / supervisor
 
-    subgraph Scratchpad["Scratchpad RAM 0x1F800000 — CdStreamState"]
-        DR["dataReady flag"]
-        WP["writePtr"]
-        RP["readPtr"]
-        BB["bytesBuffered"]
-        WO["wrapOverflow"]
-        BC["bytesConsumed"]
-    end
-
-    subgraph CDCallback["CD Interrupt Context"]
-        HSD["cdrom_handle_stream_data()\ntransferCallback"]
-        PSec["cdrom_process_sector()"]
-    end
-
-    HW["CD-ROM Hardware\n(DMA sector delivery)"]
-
-    GS -->|"queue CdlReadN\ntransferCallback = cdrom_handle_stream_data"| HSD
-    HW -->|"sector ready IRQ"| PSec
-    PSec -->|"calls transferCallback"| HSD
-    HSD -->|"init: return 0x801DC000\nsubsequent: compact buffer, return next write addr"| PSec
-    PSec -->|"CdGetSector → writePtr"| Scratchpad
-    HSD -->|"update writePtr\nbytesBuffered\nwrapOverflow"| Scratchpad
-
-    Scratchpad -->|"dataReady=1\nread from readPtr"| DC
-    DC -->|"bytesConsumed\nper pass"| Scratchpad
-    DC -->|"decompressed bytes"| GS
+    Drive->>State: Set sync_complete on observed activity
+    Game->>State: Service and consume activity flag
+    Game->>State: Refresh vsync_timestamp
+    Note over State,Game: Further observed activity refreshes the baseline
+    Note over Drive,Game: Assume no further callback activity
+    Game->>State: Service before baseline + 240 frames
+    State-->>Game: Keep waiting
+    Game->>State: First service at or after baseline + 240 frames
+    Game->>Drive: Reinstall appropriate sync handler<br/>disable ready handler<br/>send Nop
+    Game->>State: Refresh watchdog baseline
 ```
 
-**Ring buffer bounds:**
-- Buffer base: `0x801DC000` (scratchpad start)
-- Buffer end: `0x801DC118`
-- On wrap: unprocessed bytes are relocated just before the end address (word-aligned), and `wrapOverflow` is merged into `bytesBuffered` on the next sector callback
+This diagram describes ordering and eligibility, not measured hardware latency.
+The Nop recovery operation itself can block. A callback event is an activity
+signal, not proof that the application request has completed.
 
-**Chunked mode** (`cdrom_stream_chunked`) uses an intermediate staging buffer at `0x801DA000–0x801DBBE8`. When the staging buffer fills, the last 4096 bytes (the LZ sliding-window dictionary) are preserved at the base and decompression resumes at `0x801DB000`, maintaining back-reference validity across resets.
-
----
-
-## Key Memory Map
-
-| Address | Symbol | Contents |
+| Threshold | Where used | Interpretation |
 |---|---|---|
-| `0x801ED800` | `CD_SYSTEM` | `CdSystem` struct — all subsystem state |
-| `0x801ED8F0` | `g_commandQueueOffset` | `commandQueue.items[11]` (queue base anchor) |
-| `0x801ED940` | `CD_SECTOR_HEADER_BUFFER` | 3-word sector header staging area |
-| `0x801ED950` | *(async mode param)* | `CdlSetmode` parameter buffer (async) |
-| `0x801ED958` | `CD_COMMAND_PARAM_BUFFER` | Current `CdlLOC` for active read command |
-| `0x801ED990` | `g_default_cd_resource` | Default `CdResourceEntry` (LBA + size) |
-| `0x801ED998` | `CD_RESOURCE_ENTRIES` | Resource entry table loaded from disc |
-| `0x1F800000` | `SCRATCHPAD` / `CD_STREAM_STATE` | Scratchpad RAM; aliased as `CdStreamState` during streaming |
-| `0x801DA000` | *(staging base)* | Chunked streaming staging buffer |
-| `0x801DC000` | *(ring base)* | Streaming ring buffer base |
+| 30 frames | Idle status polling and automatic recovery polling | Check eligibility against the stored timestamp |
+| 30 frames | Stream-loader timeout branch | Call the supervisor when the local timer expires; active decoding can refresh that timer |
+| 240 frames | Active-command watchdog | Reestablish callback/status handling when no activity was observed |
+| 270 frames | Automatic recovery while waiting for validation-read progress | Retry the outstanding validation command, Pause, or mode restoration |
+| 1 frame | Explicit reconfiguration after Flush | Earliest eligibility for the Setmode stage |
+| 4 frames | Setmode timestamp adjustments | Path-specific retry/poll timing; not a guaranteed gap before every next command |
+| 30 frames | Explicit reconfiguration wait state | Retry the outstanding reconfiguration step when no activity was observed |
+
+For orientation, 30, 240, and 270 intervals are approximately 0.5, 4, and 4.5
+seconds at 60 intervals per second. Those conversions are not service-time
+promises. Some paths backdate timestamps to make retries eligible sooner.
+In explicit reconfiguration, a successful Setmode callback can advance the
+state without waiting for its recorded four-frame deadline.
+
+Retry counters also need their exact comparison semantics:
+
+| Path | Behavior from a reset counter |
+|---|---|
+| Ordinary sector-position retry | `retry_count++ < 17` permits 17 reissues; the following failure marks exhaustion and returns through Nop handling |
+| Idle Nop failure | `retry_counter++ >= 11` escalates on the twelfth failed poll; this is not a uniform 30-frame spacing between failures |
+| Disc-readiness wait | One failed pass advances the counter twice and compares the intermediate value against 13; it is not simply 13 retries |
+
+Successful sector processing clears `retry_exhausted`. `cdrom_get_error_status()`
+prioritizes sync error, pending disc validation, invalid disc, no disc, and then
+retry exhaustion. The low status byte also contains recovery-pending,
+command-active, idle-poll-suppression, and queue-lock bits. Bit `0x40` is the
+queue lock, not a playback indicator; the meaning of preserved bit `0x80`
+remains unestablished.
+
+There is no overall deadline, cancellation handle, or terminal error result
+from the blocking stream loaders. Queue failure handling and output capacity
+are caller assumptions in those paths. Operations such as `CdControlB()` and
+sector polling can wait independently of the frame watchdogs.
+
+## Engineering implications and known limits
+
+The fixed buffers and single queue make resource ownership predictable on the
+original machine. They also couple loading, recovery, and movie playback to
+one global execution protocol. The main integration obligations are to service
+the controller, keep destinations alive, respect callback context, and avoid
+concurrent reuse of streaming scratchpad and buffers.
+
+Several details should remain explicit in design reviews:
+
+| Constraint or limitation | Consequence |
+|---|---|
+| Queue admission can fail | A returned resource size is acceptance information; negative returns must not be treated as a transfer length |
+| Queue emptiness differs from hardware quiescence | The final data path retires the entry before its pause handshake completes; explicit reconfiguration also makes the supervisor return zero |
+| `cdrom_can_queue_resource()` wraps its scan before incrementing | Crossing slot 15 can inspect slot 16 and skip slot zero; this original bug is retained |
+| Chunked direct-output mode ignores the end marker result | Completion parity with ordinary streaming is not established |
+| Fixed addresses and overlapping global aliases remain | This is a target-specific memory model; moving data requires more than changing one declaration |
+| Polling assignment and cast-as-lvalue increment remain in matching C | Source cleanup is incomplete, even though the compiled binary matches |
+| Shared flags are not a portable synchronization abstraction | A threaded port would need an explicit ownership and publication design |
+
+These are properties of the current reconstruction, not recommendations to
+remove checks or change behavior. Any implementation cleanup must preserve the
+project's binary-matching contract. Architectural interpretations that are not
+established, such as callers of the explicit reconfiguration pair, are left as
+open questions rather than presented as normal runtime flows.
+
+## Source and memory reference
+
+The addresses below describe the current main-executable layout. Symbol maps
+for each region remain the authority for placement.
+
+| Address | Object or field |
+|---|---|
+| `0x801ED800` | `CdSystem` / `g_cd_system` |
+| `0x801ED840` | `command_queue.items[0]` |
+| `0x801ED940` | `sector_header_buffer` |
+| `0x801ED94C` | `vsync_timestamp` |
+| `0x801ED950` | `set_mode_param_blocking` |
+| `0x801ED954` | `set_mode_param_async` |
+| `0x801ED958` | `current_location` |
+| `0x801ED95C` | `recovery_read_position` |
+| `0x801ED960` | `status_byte`, followed by command-dependent reply data |
+| `0x801ED970` | `disc_validation_id` buffer |
+| `0x801ED990` | `default_cd_resource` |
+| `0x801ED998` | `CD_RESOURCE_ENTRIES` |
+
+The reply byte after `status_byte` is not a saved drive-mode setting. In the
+error branch, `response_data[0] & 0x40` tests the invalid-command error bit.
+
+| Source | Start here for |
+|---|---|
+| [src/cdrom.c](../src/cdrom.c) | Queue admission, callbacks, supervisor, recovery, and stream-loading loops |
+| [include/cdrom.h](../include/cdrom.h) | Public entry points and callback contracts |
+| [src/cdrom_internal.h](../src/cdrom_internal.h) | Stream metadata and shared buffer conventions |
+| [src/cdrom_decompress.c](../src/cdrom_decompress.c) | Buffer handoff, input compaction, and bytecode decoding |
+| [src/main.c](../src/main.c) | Startup and blocking overlay loads |
+| [movie.c](../src/overlays/movie/movie.c) and [movie_stream.c](../src/overlays/movie/movie_stream.c) | Movie/XA submission and deferred sector service |
+| [US symbols](../config/us/symbols/shared_symbol_addrs.txt) and [JP symbols](../config/jp/symbols/shared_symbol_addrs.txt) | Fixed-address placement |
+| [Disc layout](disc-layout.md) | Resource-table contents and disc organization |

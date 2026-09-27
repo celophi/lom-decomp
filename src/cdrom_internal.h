@@ -7,7 +7,7 @@
 #define CD_DECOMPRESS_UNBOUNDED_END ((u8*)0xFFFFFFFCU)
 #define CD_STREAM_COPY_WORD_SIZE 4
 #define CD_STREAM_COPY_WORD_MASK 3
-#define CD_DATA_SECTOR_SIZE 0x800
+#define CD_DATA_SECTOR_SIZE 2048
 
 /** @brief Byte and word views of an aligned stream-copy cursor. */
 typedef union
@@ -25,8 +25,8 @@ typedef struct
     volatile u8 data_ready;
     volatile u8 input_complete;
     u8 pad[2];
-    u8* read_ptr;
-    u8* write_ptr;
+    u8* buffer_start;
+    u8* input_cursor;
     s32 bytes_buffered;
     s32 wrap_overflow;
     s32 bytes_consumed;

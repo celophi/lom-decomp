@@ -3,7 +3,10 @@
 
 #include "common.h"
 
-/** @brief Supplies a destination for the next sector; NULL retries it later. */
+/**
+ * @brief Supplies the next data-sector destination, or handles an XA sector.
+ * @note NULL retries an ordinary data sector but ends an XA/movie transfer.
+ */
 typedef u8* (*CdCommandCallback)(s32 bytes_transferred, u32 bytes_remaining);
 /** @brief Supplies an output chunk and its capacity; -1 selects direct output. */
 typedef u8* (*CdStreamGetBufferCallback)(s32 bytes_delivered, s32* capacity);
