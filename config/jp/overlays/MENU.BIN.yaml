@@ -50,12 +50,12 @@ segments:
       - [0x1, .rodata, overlay_header]
       - [0x5, .rodata, menu]
       - [0xD1, rodatabin, menu_scene_rodata_alignment]
-      - [0xD5, rodata, menu_screens]  # JP: differs from US, kept as assembly
+      - [0xD5, .rodata, menu_screens]
       - [0x541, rodatabin, menu_actions_rodata_alignment]
       - [0x545, .rodata, menu_actions]
       - [0x57D, rodata, card_strings]
       - [0x5B1, c, menu]
-      - [0x3965, asm, menu_screens]  # JP: differs from US, kept as assembly
+      - [0x3965, c, menu_screens]
       - [0x9E05, c, menu_lists]
       - [0xCBFD, c, menu_actions]
       - [0xF2A5, c, menu_card]

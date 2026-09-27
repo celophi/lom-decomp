@@ -296,7 +296,11 @@ void field_play_object_animation(FieldActor* actor, s32 animation_id)
  * @brief Chain the actor's held action buttons into a follow-up action.
  * @param actor Player actor; its animation selects which actions can follow.
  * @return Unspecified; callers ignore it.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_actor_state_updates", field_update_actor_action_chain);
+#else
 s32 field_update_actor_action_chain(FieldActor* actor)
 {
     s32 targets;
@@ -537,6 +541,7 @@ s32 field_update_actor_action_chain(FieldActor* actor)
         }
     }
 }
+#endif
 
 /* field_actor_action_runtime: Validate pending actions, clear completed state, and advance actor sequences. */
 

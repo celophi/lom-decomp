@@ -102,8 +102,8 @@ memory_card_fill_test_data                = 0x8014FBC0;
 
 // Data
 g_menu_overlay_id = 0x80140000;
-jtbl_8014049C = 0x8014049C; // type:jtbl
-jtbl_801404DC = 0x801404DC; // type:jtbl
+jtbl_8014049C = 0x8014049C; // type:jtbl visibility:local
+jtbl_801404DC = 0x801404DC; // type:jtbl visibility:local
 g_menu_frame           = 0x8016878C;
 g_party_sort_marker    = 0x80168790;
 g_menu_item_nav_entries = 0x80168798;

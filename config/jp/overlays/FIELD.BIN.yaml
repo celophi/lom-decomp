@@ -55,13 +55,13 @@ segments:
       - [0x79, .rodata, field_animation]
       - [0x115, .rodata, field_scene_control]
       - [0x129, .rodata, field_collision]
-      - [0x155, rodata, field_text]  # JP: differs from US, kept as assembly
+      - [0x155, .rodata, field_text]
       - [0x1D5, .rodata, field_effect_update] # field7/8/9 animation + placement, frame and actor update switch tables
       - [0x5C9, .rodata, field_mesh_render]
       - [0x5E1, rodata, field_actor_hud_effects] # func_80086494 eight-entry animation-kind jump table
       - [0x601, .rodata, field_actor_script_ops] # func_80088198/func_80089980/func_8008B288 tables; the zero word at 0x8005095C is intra-object jtbl alignment
       - [0xE7D, .rodata, field_actor_behavior] # field_update_actor_command + field_apply_action_animation (58-entry) jump tables
-      - [0x10D5, rodata, field_actor_state_updates] # func_80092AD8 + func_80092C98 movement-state tables, then the twenty-entry actor sequence switch; the zero word at 0x80051008 is intra-object jtbl alignment
+      - [0x10D5, .rodata, field_actor_state_updates] # func_80092AD8 + func_80092C98 movement-state tables, then the twenty-entry actor sequence switch; the zero word at 0x80051008 is intra-object jtbl alignment
       - [0x133D, .rodata, field_contact_geometry] # func_80099018 (30-entry) + func_80099A48 (20-entry) reaction switches
       - [0x1405, rodata, field_actor_effects] # func_8009D4D8 movement-mode table, 4-byte jtbl alignment pad, func_8009D95C + func_8009D9E0 switch tables
       - [0x1481, .rodata, field_command_history] # func_800A29F8 128-entry input command jump table
@@ -85,7 +85,7 @@ segments:
       - [0x6CAD, c, field_animation] # gcc_280_g4_noexpand
       - [0x955D, c, field_scene_control] # gcc_280_g4_noexpand
       - [0xB611, c, field_collision] # gcc_280_g4_noexpand
-      - [0x1343D, asm, field_text] # gcc_280_g4_noexpand
+      - [0x1343D, c, field_text] # gcc_280_g4_noexpand
 
       # Frame orchestration and actor resource runtime.
       - [0x17595, c, field_frame_commands]
@@ -113,7 +113,7 @@ segments:
       - [0x41845, c, field_actor_camera]
       - [0x4206D, c, field_actor_idle_ops]
       - [0x42269, c, field_actor_motion]
-      - [0x42821, asm, field_actor_state_updates]  # JP: differs from US, kept as assembly
+      - [0x42821, c, field_actor_state_updates]
       - [0x46851, c, field_actor_transition_reset]
 
       # Contact geometry, scene transitions, actor effects, and paths.

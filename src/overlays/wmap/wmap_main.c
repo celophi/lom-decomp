@@ -506,7 +506,11 @@ typedef union
  * @brief Fade and scroll the textured backdrop, or draw its color gradient.
  * @param initialize Callback initialization flag; unused.
  * @return One to keep the callback active.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/wmap/nonmatchings/wmap_main", wmap_draw_backdrop);
+#else
 s32 wmap_draw_backdrop(s32 initialize)
 {
     CVECTOR color;
@@ -756,6 +760,7 @@ s32 wmap_draw_backdrop(s32 initialize)
     }
     return 1;
 }
+#endif
 
 /**
  * @brief Advance the screen-covering fade and submit its polygon.
@@ -907,7 +912,7 @@ void wmap_update_menu(s32 buttons)
                     akao_play_sfx_from_buffer(D_800CB204, 0, 0x80, 0x7F);
                 }
             }
-            if (g_wmap_buttons_repeat & PADRdown)
+            if (g_wmap_buttons_repeat & WMAP_PAD_CONFIRM)
             {
                 if (g_wmap_menu_page == 0)
                 {
@@ -915,7 +920,7 @@ void wmap_update_menu(s32 buttons)
                     akao_play_sfx_from_buffer(D_800CB254, 0, 0x80, 0x7F);
                 }
             }
-            if (g_wmap_buttons_repeat & PADRright)
+            if (g_wmap_buttons_repeat & WMAP_PAD_CANCEL)
             {
                 if (g_wmap_menu_page == 0)
                 {
@@ -1255,7 +1260,11 @@ static inline void wmap_load_pixel_block(TimBlock* block)
 /**
  * @brief Load world-map resources and run frames until the map exits.
  * @return Two for the controller reset chord, or zero after the exit effect.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/wmap/nonmatchings/wmap_main", wmap_run_loop);
+#else
 s32 wmap_run_loop(void)
 {
     u8* palette_color;
@@ -2159,6 +2168,7 @@ s32 wmap_run_loop(void)
         return 0;
     }
 }
+#endif
 
 /**
  * @brief Read controller buttons, generate analog repeats, and apply input masks.
@@ -2264,11 +2274,11 @@ void wmap_read_controller(void)
     }
     if (g_wmap_buttons_held & PAD_BTN_L3)
     {
-        g_wmap_buttons_held |= PADRdown;
+        g_wmap_buttons_held |= WMAP_PAD_CONFIRM;
     }
     if (g_wmap_buttons_repeat & PAD_BTN_L3)
     {
-        g_wmap_buttons_repeat |= PADRdown;
+        g_wmap_buttons_repeat |= WMAP_PAD_CONFIRM;
     }
     masked_held = g_wmap_buttons_held & g_wmap_script_button_mask;
     g_wmap_buttons_held = masked_held;

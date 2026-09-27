@@ -2,6 +2,33 @@
 #include "niki_internal.h"
 
 /**
+ * @brief Card slot label layout: window and dimming-tile width, label text X,
+ *        and the slot-0 window X.
+ * @note JP narrows both labels to 0x70 and moves slot 0 right.
+ */
+#if defined(VERSION_JP)
+#define NIKI_CARD_LABEL_WIDTH 0x70
+#define NIKI_CARD_LABEL_TEXT_X 0x38
+#define NIKI_CARD_SLOT0_LABEL_X 0x28
+#else
+#define NIKI_CARD_LABEL_WIDTH 0x80
+#define NIKI_CARD_LABEL_TEXT_X 0x40
+#define NIKI_CARD_SLOT0_LABEL_X 0x18
+#endif
+
+/**
+ * @brief Entry list columns: the suffix value and the rank marker.
+ * @note JP moves both right.
+ */
+#if defined(VERSION_JP)
+#define NIKI_ENTRY_VALUE_X 0x94
+#define NIKI_ENTRY_MARKER_X 0xCC
+#else
+#define NIKI_ENTRY_VALUE_X 0x86
+#define NIKI_ENTRY_MARKER_X 0xC0
+#endif
+
+/**
  * @brief Initialize card browsing, drawing resources, and the selected menu mode.
  * @param context_value Caller value retained for the overlay; its meaning is unresolved.
  * @param mode Menu mode, with zero selecting the entry browser.
@@ -88,11 +115,11 @@ void niki_build_ui_elements(void)
         element = niki_alloc_element();
         element->draw = niki_draw_card_slot0_label;
         element->attr.f.phase = 1;
-        element->attr.f.x = 0x18;
+        element->attr.f.x = NIKI_CARD_SLOT0_LABEL_X;
         element->attr.f.y = 0x4D;
         element->dimensions.f.width_high = 0;
         element->dimensions.f.height = 0x10;
-        NIKI_SET_ELEMENT_WIDTH_LOW(element, 0x80);
+        NIKI_SET_ELEMENT_WIDTH_LOW(element, NIKI_CARD_LABEL_WIDTH);
 
         element = niki_alloc_element();
         element->draw = niki_draw_card_slot1_label;
@@ -101,7 +128,7 @@ void niki_build_ui_elements(void)
         element->attr.f.y = 0x4D;
         element->dimensions.f.width_high = 0;
         element->dimensions.f.height = 0x10;
-        NIKI_SET_ELEMENT_WIDTH_LOW(element, 0x80);
+        NIKI_SET_ELEMENT_WIDTH_LOW(element, NIKI_CARD_LABEL_WIDTH);
         g_niki_element_pool[0].attr.f.state = 0;
         return;
     }
@@ -128,11 +155,11 @@ void niki_build_ui_elements(void)
     element = niki_alloc_element();
     element->draw = niki_draw_card_slot0_label;
     element->attr.f.phase = 1;
-    element->attr.f.x = 0x18;
+    element->attr.f.x = NIKI_CARD_SLOT0_LABEL_X;
     element->attr.f.y = 0x1E;
     element->dimensions.f.width_high = 0;
     element->dimensions.f.height = 0x10;
-    NIKI_SET_ELEMENT_WIDTH_LOW(element, 0x80);
+    NIKI_SET_ELEMENT_WIDTH_LOW(element, NIKI_CARD_LABEL_WIDTH);
 
     element = niki_alloc_element();
     element->draw = niki_draw_card_slot1_label;
@@ -141,7 +168,7 @@ void niki_build_ui_elements(void)
     element->attr.f.y = 0x1E;
     element->dimensions.f.width_high = 0;
     element->dimensions.f.height = 0x10;
-    NIKI_SET_ELEMENT_WIDTH_LOW(element, 0x80);
+    NIKI_SET_ELEMENT_WIDTH_LOW(element, NIKI_CARD_LABEL_WIDTH);
 
     element = niki_alloc_element();
     element->draw = niki_draw_selected_entry_details;
@@ -544,19 +571,19 @@ s32 niki_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                     rank = &g_niki_entry_ranks[entry_index];
                     if (*rank >= 0)
                     {
-                        pos.x = base_x + 0x86;
+                        pos.x = base_x + NIKI_ENTRY_VALUE_X;
                         pos.y = row_y;
                         prim = func_800A8A78(ot, prim, g_niki_entry_suffix_values[entry_index], 4, &pos, 0);
                         prim = func_800A88A0(prim, ot, (void*)((s32)D_80147126 + (s32)glyph_table), 4, base_x + 0x70, row_y, 0);
                         if ((g_niki_rank_count - 1) == *rank)
                         {
                             marker_offset = *(u16*)(glyph_table + 0x36);
-                            prim = func_800A88A0(prim, ot, (void*)((s32)marker_offset + (s32)glyph_table), 4, base_x + 0xC0, row_y, 0);
+                            prim = func_800A88A0(prim, ot, (void*)((s32)marker_offset + (s32)glyph_table), 4, base_x + NIKI_ENTRY_MARKER_X, row_y, 0);
                         }
                         else if (*rank < 2)
                         {
                             marker_offset = *(u16*)(glyph_table + 0x38);
-                            prim = func_800A88A0(prim, ot, (void*)((s32)marker_offset + (s32)glyph_table), 4, base_x + 0xC0, row_y, 0);
+                            prim = func_800A88A0(prim, ot, (void*)((s32)marker_offset + (s32)glyph_table), 4, base_x + NIKI_ENTRY_MARKER_X, row_y, 0);
                         }
                         if (*niki_skip_hex_digits(&g_niki_entries[g_niki_card_slot][entry_index].name[12]) == '+')
                         {
@@ -650,13 +677,13 @@ s32 niki_draw_card_slot0_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         tile->color.bytes.code = 0x62;
         tile->x0 = 0;
         tile->y0 = 0;
-        tile->w = 0x80;
+        tile->w = NIKI_CARD_LABEL_WIDTH;
         tile->h = 0x10;
         tile->tag.word = (tile->tag.word & GPU_TAG_HIGH_MASK) | (*ot & GPU_ADDR_MASK);
         *ot = (*ot & GPU_TAG_HIGH_MASK) | ((s32)tile & GPU_ADDR_MASK);
         prim += sizeof(NikiTile);
     }
-    return func_800A88A0(prim, ot, GLYPH_SYM(D_80147104, 0xC), 4, -x_offset + 0x40, -y_offset, 2);
+    return func_800A88A0(prim, ot, GLYPH_SYM(D_80147104, 0xC), 4, -x_offset + NIKI_CARD_LABEL_TEXT_X, -y_offset, 2);
 }
 
 /**
@@ -680,14 +707,14 @@ s32 niki_draw_card_slot1_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         tile->color.bytes.code = 0x62;
         tile->x0 = 0;
         tile->y0 = 0;
-        tile->w = 0x80;
+        tile->w = NIKI_CARD_LABEL_WIDTH;
         tile->h = 0x10;
         tile->tag.word = (tile->tag.word & GPU_TAG_HIGH_MASK) | (*ot & GPU_ADDR_MASK);
         *ot = (*ot & GPU_TAG_HIGH_MASK) | ((s32)tile & GPU_ADDR_MASK);
         prim += sizeof(NikiTile);
     }
 
-    return func_800A88A0(prim, ot, GLYPH_SYM(D_80147106, 0xE), 4, -x_offset + 0x40, -y_offset, 2);
+    return func_800A88A0(prim, ot, GLYPH_SYM(D_80147106, 0xE), 4, -x_offset + NIKI_CARD_LABEL_TEXT_X, -y_offset, 2);
 }
 
 /**
@@ -706,7 +733,11 @@ s32 niki_draw_card_slot1_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
  * @param x_offset Horizontal scroll offset (subtracted from every x).
  * @param y_offset Vertical scroll offset (subtracted from every row y).
  * @return Advanced primitive-buffer write cursor.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/niki/nonmatchings/niki", niki_draw_selected_entry_details);
+#else
 s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     s32 result;
@@ -900,6 +931,7 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
     }
     return result;
 }
+#endif
 
 /**
  * @brief Zero-fill a 64-byte text field from its first character-boundary terminator.
@@ -1637,11 +1669,16 @@ s32 niki_draw_icon_highlight(s32 prim, s32* ot, s32 x, s32 y, s32 width, s32 ico
 
 /**
  * @brief Select the cancellation choice when opening a confirmation prompt.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/niki/nonmatchings/niki", niki_enable_choice_toggle);
+#else
 void niki_enable_choice_toggle(void)
 {
     g_niki_choice_toggle = 1;
 }
+#endif
 
 /**
  * @brief Draw both choices and toggle the selection on horizontal input.
@@ -1702,7 +1739,11 @@ static inline NikiEntryMetadata* niki_preview_metadata(void)
  * @param x_offset Horizontal displacement subtracted from glyph positions.
  * @param y_offset Vertical displacement subtracted from glyph positions.
  * @return Advanced GPU packet cursor.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/niki/nonmatchings/niki", niki_draw_state_page);
+#else
 s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
@@ -2183,6 +2224,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 
     return prim;
 }
+#endif
 
 /**
  * @brief Advance past a run of ASCII hexadecimal-digit characters.

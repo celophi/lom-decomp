@@ -47,9 +47,9 @@ segments:
     subsegments:
       - [auto, c, overlay_header]
       - [0x1, .rodata, overlay_header]
-      - [0x5, rodata, niki]  # JP: differs from US, kept as assembly
+      - [0x5, .rodata, niki]
       - [0x99, .rodata, niki_io]
-      - [0x11D, asm, niki]  # JP: differs from US, kept as assembly
+      - [0x11D, c, niki]
       - [0x4DE5, c, niki_io]
       - [0x70E5, databin, niki_data]
   - [0x2E859]

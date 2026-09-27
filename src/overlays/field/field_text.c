@@ -58,12 +58,25 @@
 #define FIELD_TEXT_SHORT_DELAY 4
 #define FIELD_TEXT_CHOICE_BLINK_FRAMES 4
 #define FIELD_TEXT_PROMPT_BLINK_FRAMES 8
+/* Glyphs field_text_update typesets per frame; JP (two-byte text) does 2. */
+#if defined(VERSION_JP)
+#define FIELD_TEXT_FRAME_TYPESET_BUDGET 2
+#else
+#define FIELD_TEXT_FRAME_TYPESET_BUDGET 4
+#endif
 
 /* Buttons in the controller-protocol order of FieldInputState (PAD_BTN_* before the byte swap). */
 #define FIELD_TEXT_PAD_L3 0x0002
 #define FIELD_TEXT_PAD_UP 0x0010
 #define FIELD_TEXT_PAD_DOWN 0x0040
+#define FIELD_TEXT_PAD_CIRCLE 0x2000
 #define FIELD_TEXT_PAD_CROSS 0x4000
+/* Button that advances and confirms text: US cross, JP circle. */
+#if defined(VERSION_JP)
+#define FIELD_TEXT_PAD_CONFIRM FIELD_TEXT_PAD_CIRCLE
+#else
+#define FIELD_TEXT_PAD_CONFIRM FIELD_TEXT_PAD_CROSS
+#endif
 #define FIELD_TEXT_SFX_CURSOR 0x7D
 #define FIELD_TEXT_SFX_CONFIRM 0x7E
 #define FIELD_TEXT_SFX_PAN 0x80
@@ -213,7 +226,10 @@ typedef struct
 {
     u8* text_cursor;
     u8* macro_cursor;
+#if !defined(VERSION_JP)
+    /* JP has no glyph cursor, so every later field sits 4 bytes lower. */
     u8* glyph_cursor;
+#endif
     FieldTextPortrait* portrait;
     FieldTextFlags flags;
     u8 flow_code;
@@ -446,7 +462,11 @@ void field_text_upload_immediate_cache(void)
  * @brief Decode text commands and draw glyphs until the character budget or a prompt stops the step.
  * @param state Window and nested text cursors to advance.
  * @param budget Character budget; zero draws without a limit.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_typeset);
+#else
 static void field_text_typeset(FieldTextState* state, s32 budget)
 {
     u8* glyph_run;
@@ -989,6 +1009,7 @@ store_and_return:
     }
     state->text_cursor = cursor;
 }
+#endif
 
 /**
  * @brief Expand a font glyph into the 4bpp text cache with a drop shadow.
@@ -1465,7 +1486,11 @@ void field_text_reset_windows(void)
 
 /**
  * @brief Reset the scratch state used for immediate string rendering.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_reset_scratch);
+#else
 void field_text_reset_scratch(void)
 {
     if ((g_field_text_window0_flags & FIELD_TEXT_STATE_MASK) == FIELD_TEXT_TIMED)
@@ -1506,6 +1531,7 @@ void field_text_reset_scratch(void)
                             ~FIELD_TEXT_AUTO_CLOSE;
     } while (0);
 }
+#endif
 
 /**
  * @brief Typeset a string and describe its cached spans as sprite primitives.
@@ -1513,7 +1539,11 @@ void field_text_reset_scratch(void)
  * @param text Text to typeset.
  * @param text_style Text palette/style selector; only the low 16 bits are used.
  * @return Number of sprite spans written.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_build_sprites);
+#else
 s32 field_text_build_sprites(SPRT* prim, u8* text, s32 text_style)
 {
     u16 style = text_style;
@@ -1588,12 +1618,17 @@ s32 field_text_build_sprites(SPRT* prim, u8* text, s32 text_style)
     }
     return count;
 }
+#endif
 
 /**
  * @brief Open a text window after the cache region used by earlier active slots.
  * @param slot Window slot index; only the low 16 bits are used.
  * @note Old-style definition: callers pass a word and the body works on a u16.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_open_packed_window);
+#else
 void field_text_open_packed_window(slot) u16 slot;
 {
     FieldTextSystem* system = FIELD_TEXT_SYSTEM;
@@ -1681,12 +1716,17 @@ void field_text_open_packed_window(slot) u16 slot;
     state->dirty_end_v = y;
     state->region_end_v = y;
 }
+#endif
 
 /**
  * @brief Open a text window in its fixed cache region.
  * @param slot Window slot index; only the low 16 bits are used.
  * @note Old-style definition: callers pass a word and the body works on a u16.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_open_fixed_window);
+#else
 void field_text_open_fixed_window(slot) u16 slot;
 {
     FieldTextSystem* system = FIELD_TEXT_SYSTEM;
@@ -1770,11 +1810,16 @@ void field_text_open_fixed_window(slot) u16 slot;
     state->dirty_end_v = y;
     state->region_end_v = y;
 }
+#endif
 
 /**
  * @brief Apply the pending text configuration to a runtime window state.
  * @param state Window state to initialize.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_apply_config);
+#else
 static void field_text_apply_config(FieldTextState* state)
 {
     FieldTextConfig* config = FIELD_TEXT_PENDING_CONFIG;
@@ -1852,6 +1897,7 @@ static void field_text_apply_config(FieldTextState* state)
     state->flags.word &= ~FIELD_TEXT_AUTO_CLOSE;
     state->flags.word &= ~FIELD_TEXT_REOPEN_MASK;
 }
+#endif
 
 /**
  * @brief Release the portrait VRAM slot held by a window.
@@ -2020,7 +2066,7 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
                                 }
                                 akao_play_sfx(FIELD_TEXT_SFX_CURSOR, 0, FIELD_TEXT_SFX_PAN, AKAO_VOLUME_MAX);
                             }
-                            if ((input->pressed_buttons & (FIELD_TEXT_PAD_CROSS | FIELD_TEXT_PAD_L3)) != 0)
+                            if ((input->pressed_buttons & (FIELD_TEXT_PAD_CONFIRM | FIELD_TEXT_PAD_L3)) != 0)
                             {
                                 state->flow_code = FIELD_TEXT_FLOW_NONE;
                                 state->choice_count = 0;
@@ -2032,7 +2078,7 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
                                 akao_play_sfx(FIELD_TEXT_SFX_CONFIRM, 0, FIELD_TEXT_SFX_PAN, AKAO_VOLUME_MAX);
                             }
                         }
-                        else if (((input->pressed_buttons & (FIELD_TEXT_PAD_CROSS | FIELD_TEXT_PAD_L3)) != 0) && (state->prompt_frame != 2))
+                        else if (((input->pressed_buttons & (FIELD_TEXT_PAD_CONFIRM | FIELD_TEXT_PAD_L3)) != 0) && (state->prompt_frame != 2))
                         {
                             state->prompt_frame = 2;
                             state->prompt_timer = 3;
@@ -2056,7 +2102,7 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
                     }
                     else if (state->text_cursor != NULL)
                     {
-                        field_text_typeset(state, 4);
+                        field_text_typeset(state, FIELD_TEXT_FRAME_TYPESET_BUDGET);
                         field_text_queue_uploads(state, packet_cursor);
                     }
                 }
@@ -3415,7 +3461,11 @@ static void field_text_queue_uploads(FieldTextState* state, u8** cursor)
  * @param window_index Window slot; only the low 16 bits are used.
  * @param text Text pointer.
  * @param text_options Text options; bit 0 enables automatic close.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_set_string);
+#else
 void field_text_set_string(s32 window_index, u8* text, s32 text_options)
 {
     u16 slot = window_index;
@@ -3439,6 +3489,7 @@ void field_text_set_string(s32 window_index, u8* text, s32 text_options)
     state->flow_code = FIELD_TEXT_FLOW_NONE;
     state->flags.word = (state->flags.word & ~FIELD_TEXT_AUTO_CLOSE) | ((options & 1) << 12);
 }
+#endif
 
 /**
  * @brief Save the pending text configuration for a window slot.
@@ -3652,29 +3703,43 @@ static void field_text_restore_window(u16 slot, s32 placement_mode)
  * @param slot Window slot; only the low 16 bits are used.
  * @param x Left screen coordinate.
  * @param y Top screen coordinate.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_set_position);
+#else
 void field_text_set_position(s32 slot, s16 x, s16 y)
 {
     FieldTextState* state = &FIELD_TEXT_SYSTEM->windows[slot & 0xFFFF];
     state->x = x;
     state->y = y;
 }
+#endif
 
 /**
  * @brief Start closing a text window.
  * @param slot Window slot; only the low 16 bits are used.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_close_window);
+#else
 void field_text_close_window(s32 slot)
 {
     FieldTextState* state = &FIELD_TEXT_SYSTEM->windows[slot & 0xFFFF];
     field_text_close(state, 1);
 }
+#endif
 
 /**
  * @brief Read the progress of an active dialogue window.
  * @param slot Window slot; only the low 16 bits are used.
  * @return A FIELD_TEXT_STATUS_* value: CLOSED outside dialogue mode, PROMPT, BUSY while text remains, or DONE.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_get_status);
+#else
 s32 field_text_get_status(s32 slot)
 {
     FieldTextState* state = &FIELD_TEXT_SYSTEM->windows[slot & 0xFFFF];
@@ -3689,23 +3754,33 @@ s32 field_text_get_status(s32 slot)
     }
     return FIELD_TEXT_STATUS_CLOSED;
 }
+#endif
 
 /**
  * @brief Read the last selected choice in a text window.
  * @param slot Window slot; only the low 16 bits are used.
  * @return Zero-based choice index.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_get_choice);
+#else
 s32 field_text_get_choice(s32 slot)
 {
     return FIELD_TEXT_SYSTEM->windows[slot & 0xFFFF].choice_index;
 }
+#endif
 
 /**
  * @brief Format an unsigned value into a window's inline text buffer.
  * @param window_index Window slot; only the low 16 bits are used.
  * @param value Value to format as decimal text.
  * @param digits Number of columns; leading zeroes become spaces. Must be positive.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_format_number);
+#else
 void field_text_format_number(s32 window_index, u32 value, u8 digits)
 {
     u8* text;
@@ -3742,3 +3817,4 @@ void field_text_format_number(s32 window_index, u32 value, u8 digits)
     *text = value + '0';
     text[1] = 0;
 }
+#endif

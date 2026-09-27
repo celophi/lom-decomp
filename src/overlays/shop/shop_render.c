@@ -21,7 +21,15 @@
 #define SHOP_SCROLLBAR_FRAME_WIDTH 10
 
 #define SHOP_TITLE_TEXT_X 56
+/**
+ * @brief X of the money window label.
+ * @note JP moves it to 96.
+ */
+#if defined(VERSION_JP)
+#define SHOP_MONEY_LABEL_X 96
+#else
 #define SHOP_MONEY_LABEL_X 80
+#endif
 #define SHOP_MONEY_VALUE_X 48
 
 /** @brief Inventory record named by record entry id @p id, summed as integers, index first. */
@@ -357,7 +365,11 @@ u8* shop_draw_list_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
  * @param x_inset Horizontal offset subtracted from every x coordinate.
  * @param y_inset Vertical offset subtracted from every y coordinate.
  * @return Next free primitive after the window's contents.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/shop/nonmatchings/shop_render", shop_draw_detail_window);
+#else
 u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
 {
     Vec2s position;
@@ -487,6 +499,7 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
     }
     return prim;
 }
+#endif
 
 /**
  * @brief Draw the title window with the FIELD UI string chosen by shop_init.
