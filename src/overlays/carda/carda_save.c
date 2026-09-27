@@ -142,7 +142,11 @@ static inline CardaElement *carda_save_alloc_element(void)
  *       it holds the directory entry count while the card is searched for an existing
  *       save; above it, the dialog currently shown. Dialog states also read the pad,
  *       move to the next state and start card sequences through g_carda_save_step.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/carda/nonmatchings/carda_save", carda_draw_save_flow);
+#else
 s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     s32 unused[2]; /* never used, but the original stack frame reserves it */
@@ -186,7 +190,7 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         }
         else
         {
-            prim = func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_card_unformatted, 0x5A), 4, -x_offset + CARDA_SAVE_TEXT_X, -y_offset, 2);
+            prim = func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_card_unformatted, CARDA_TEXT_CARD_UNFORMATTED), 4, -x_offset + CARDA_SAVE_TEXT_X, -y_offset, 2);
             prim = carda_draw_slot_prompt(prim, ot, CARDA_SAVE_TEXT_X - x_offset, 0xE - y_offset);
         }
         break;
@@ -716,6 +720,7 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     }
     return prim;
 }
+#endif
 
 /**
  * @brief Serialize the game state into the save buffer and copy the active record into it.

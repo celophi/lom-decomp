@@ -102,6 +102,16 @@ typedef struct
  */
 #define CARDA_TEXT_AT(entry, index) ((u8 *)&(entry) - (index) * 2 + (entry))
 
+/**
+ * @brief Text table index of the entry g_carda_text_card_unformatted names.
+ * @note JP reorders the text offset table; this entry is index 18 there.
+ */
+#if defined(VERSION_JP)
+#define CARDA_TEXT_CARD_UNFORMATTED 18
+#else
+#define CARDA_TEXT_CARD_UNFORMATTED 90
+#endif
+
 /** @brief Start of the CARDA text offset table, derived from entry @p entry at @p index. */
 #define CARDA_TEXT_TABLE(entry, index) (&(entry) - (index))
 

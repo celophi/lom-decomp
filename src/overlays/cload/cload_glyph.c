@@ -17,8 +17,13 @@
  * @note This is g_cload_double_byte_char_table - 0x19 * CLOAD_CHAR_TABLE_PAGE_BYTES.
  *       That address falls inside cload_load_icon_resources, and the target
  *       relocation is named after that function, so the base is spelled from it.
+ *       In JP it falls 0x70 bytes into cload_emit_icon_highlight_strip.
  */
+#if defined(VERSION_JP)
+#define CLOAD_DOUBLE_BYTE_TABLE_ORIGIN ((u8 *)cload_emit_icon_highlight_strip + 0x70)
+#else
 #define CLOAD_DOUBLE_BYTE_TABLE_ORIGIN ((u8 *)cload_load_icon_resources + 0x2C)
+#endif
 
 /**
  * @brief Draw @p value as up to five full-width decimal digits through the

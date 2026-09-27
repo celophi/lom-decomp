@@ -554,12 +554,17 @@ CloadGpuPacket *cload_emit_icon_highlight_strip(SPRT *sprite, u_long *ot)
 /**
  * @brief Initialize the two-choice prompt selection state.
  * @return Always 1.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/cload/nonmatchings/cload_widgets", cload_enable_choice_toggle);
+#else
 s32 cload_enable_choice_toggle(void)
 {
     g_cload_choice_toggle = 1;
     return 1;
 }
+#endif
 
 /**
  * @brief Draw the two choices of a yes/no prompt from the FIELD UI string table,

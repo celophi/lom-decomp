@@ -1377,6 +1377,14 @@ static void wsel_upload_tim(u8* tim_data, s32 index)
     LoadImage(&rect, (u_long*)(pixel_block + 1));
 }
 
+/**
+ * @brief Read the controller buttons, folding analog stick deflection into the D-pad bits.
+ * @return Button mask in PAD_BTN_* order, or 0 when no controller is available.
+ * @note JP changes this function; the JP build takes it from assembly.
+ */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/wsel/nonmatchings/wsel", wsel_read_pad);
+#else
 s32 wsel_read_pad(void)
 {
     SCDRegs* regs = SCD_REGS;
@@ -1421,10 +1429,15 @@ s32 wsel_read_pad(void)
     }
     return buttons;
 }
+#endif
 
 /**
  * @brief Sample the controller and update the held, pressed, and key-repeat state.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/wsel/nonmatchings/wsel", wsel_update_pad_repeat);
+#else
 static void wsel_update_pad_repeat(void)
 {
     SCDRegs* regs = SCD_REGS;
@@ -1502,10 +1515,15 @@ static void wsel_update_pad_repeat(void)
         g_wsel_repeat_timer = WSEL_INITIAL_REPEAT_DELAY;
     }
 }
+#endif
 
 /**
  * @brief Seed the key-repeat state from the current controller sample.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/wsel/nonmatchings/wsel", wsel_init_pad_repeat);
+#else
 static void wsel_init_pad_repeat(void)
 {
     SCDRegs* regs = SCD_REGS;
@@ -1550,3 +1568,4 @@ static void wsel_init_pad_repeat(void)
     g_wsel_repeat_buttons = input_state;
     g_wsel_repeat_timer = WSEL_INITIAL_REPEAT_DELAY;
 }
+#endif

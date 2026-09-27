@@ -833,7 +833,11 @@ void* carda_draw_save_complete(u_long* ot, void* prim, s32 x_offset, s32 y_offse
  * @param x_offset Horizontal transition offset.
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/carda/nonmatchings/carda_widgets", carda_draw_format_prompt);
+#else
 void* carda_draw_format_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     s32 unused[2]; /* never used, but the original stack frame reserves it */
@@ -853,7 +857,7 @@ void* carda_draw_format_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
     }
     else
     {
-        prim = func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_card_unformatted, 90), 4, -x_offset + 0x90, -y, 2);
+        prim = func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_card_unformatted, CARDA_TEXT_CARD_UNFORMATTED), 4, -x_offset + 0x90, -y, 2);
     }
     x = -x_offset + 0x90;
     prim = func_800A88A0(prim, ot, CARDA_TEXT_AT(D_8014B05E, 19), 4, x, 0x1C - y, 2);
@@ -933,6 +937,7 @@ void* carda_draw_format_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
     }
     return prim;
 }
+#endif
 
 /**
  * @brief Draw the formatting message (or, once done, the saving message);
@@ -1262,11 +1267,16 @@ void* carda_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 wi
 
 /**
  * @brief Preselect the second choice of the two-choice prompt.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/carda/nonmatchings/carda_widgets", carda_enable_choice_toggle);
+#else
 void carda_enable_choice_toggle(void)
 {
     g_carda_choice_toggle = 1;
 }
+#endif
 
 /**
  * @brief Draw the two choices of a yes/no prompt from the FIELD UI string table,

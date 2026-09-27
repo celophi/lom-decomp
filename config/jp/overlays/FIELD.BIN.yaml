@@ -58,12 +58,12 @@ segments:
       - [0x155, .rodata, field_text]
       - [0x1D5, .rodata, field_effect_update] # field7/8/9 animation + placement, frame and actor update switch tables
       - [0x5C9, .rodata, field_mesh_render]
-      - [0x5E1, rodata, field_actor_hud_effects] # func_80086494 eight-entry animation-kind jump table
+      - [0x5E1, .rodata, field_actor_hud_effects] # func_80086494 eight-entry animation-kind jump table
       - [0x601, .rodata, field_actor_script_ops] # func_80088198/func_80089980/func_8008B288 tables; the zero word at 0x8005095C is intra-object jtbl alignment
       - [0xE7D, .rodata, field_actor_behavior] # field_update_actor_command + field_apply_action_animation (58-entry) jump tables
       - [0x10D5, .rodata, field_actor_state_updates] # func_80092AD8 + func_80092C98 movement-state tables, then the twenty-entry actor sequence switch; the zero word at 0x80051008 is intra-object jtbl alignment
       - [0x133D, .rodata, field_contact_geometry] # func_80099018 (30-entry) + func_80099A48 (20-entry) reaction switches
-      - [0x1405, rodata, field_actor_effects] # func_8009D4D8 movement-mode table, 4-byte jtbl alignment pad, func_8009D95C + func_8009D9E0 switch tables
+      - [0x1405, .rodata, field_actor_effects] # func_8009D4D8 movement-mode table, 4-byte jtbl alignment pad, func_8009D95C + func_8009D9E0 switch tables
       - [0x1481, .rodata, field_command_history] # func_800A29F8 128-entry input command jump table
       - [0x1681, .rodata, field_audio_runtime] # func_800A3FB0 five-entry audio transfer state jump table
       - [0x1695, .rodata, field_dialog_screens] # func_800A5960 five-entry effect switch, func_800A838C phase table
@@ -102,7 +102,7 @@ segments:
 
       # Actor resources, script commands, input, movement, and state machines.
       - [0x33829, c, field_actor_slot_resources]
-      - [0x345E1, asm, field_actor_hud_effects]  # JP: differs from US, kept as assembly
+      - [0x345E1, c, field_actor_hud_effects]
       - [0x37385, c, field_actor_key_ops]
       - [0x37E5D, c, field_actor_script_ops]
       - [0x3B5E1, c, field_actor_reactions]
@@ -123,7 +123,7 @@ segments:
       - [0x4C761, c, field_text_window_api]
       - [0x4CB49, c, field_block_allocator]
       - [0x4CDA1, c, field_actor_target_queries]
-      - [0x4D619, asm, field_actor_effects]  # JP: differs from US, kept as assembly
+      - [0x4D619, c, field_actor_effects]
       - [0x51E5D, c, field_path_interpolation]
 
       # Command history, audio, dialogs, and field UI.
@@ -167,7 +167,7 @@ segments:
 
       # Record creation, rewards, growth, queries, and counters.
       - [0x6E541, c, field_record_setup_ops]
-      - [0x6F111, asm, field_slot_pool_ops]  # JP: differs from US, kept as assembly
+      - [0x6F111, c, field_slot_pool_ops]
       - [0x6F8F5, c, field_generated_record_ops]
       - [0x7005D, c, field_record_effect_ops]
       - [0x70835, c, field_reward_command_ops]

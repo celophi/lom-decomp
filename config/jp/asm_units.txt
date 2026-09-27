@@ -5,7 +5,4 @@
 src/card_callbacks.c
 src/main.c
 src/overlays/checkps/init.c
-src/overlays/field/field_actor_effects.c
-src/overlays/field/field_actor_hud_effects.c
 src/overlays/field/field_progression_ops.c
-src/overlays/field/field_slot_pool_ops.c

@@ -1,6 +1,28 @@
 #include "carda_internal.h"
 
 /**
+ * @brief Card slot label layout: dimming-tile width and label text X.
+ * @note JP narrows the label to 0x70 and centres the text at 0x38.
+ */
+#if defined(VERSION_JP)
+#define CARDA_CARD_LABEL_TILE_WIDTH 0x70
+#define CARDA_CARD_LABEL_TEXT_X 0x38
+#else
+#define CARDA_CARD_LABEL_TILE_WIDTH 0x80
+#define CARDA_CARD_LABEL_TEXT_X 0x40
+#endif
+
+/**
+ * @brief X of the entry list's suffix value column.
+ * @note JP moves it right.
+ */
+#if defined(VERSION_JP)
+#define CARDA_ENTRY_VALUE_X 0x94
+#else
+#define CARDA_ENTRY_VALUE_X 0x86
+#endif
+
+/**
  * @brief Address of the CARDA text whose table offset is @p offset.
  * @note Summed as integers, offset first, like the original list drawing code.
  */
@@ -34,7 +56,11 @@ s32 carda_update_frame(CardaRenderBuffer* frame)
  *
  * Modes 2 and 3 get a four-window layout, every other mode the five-window
  * save-file browser.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/carda/nonmatchings/carda", carda_build_ui_elements);
+#else
 void carda_build_ui_elements(void)
 {
     CardaElement* element;
@@ -138,6 +164,7 @@ void carda_build_ui_elements(void)
     }
     g_carda_element_pool[0].attr.f.state = CARDA_ELEMENT_FREE;
 }
+#endif
 
 /**
  * @brief Update elements, the card sequence, input and scrolling for one frame.
@@ -570,7 +597,7 @@ void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         prim = func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_no_lom_save_data, 26), 4, -x_offset + 0x96, -y_offset, 2);
         break;
     case 0xF9:
-        prim = func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_card_unformatted, 90), 4, -x_offset + 0x96, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_card_unformatted, CARDA_TEXT_CARD_UNFORMATTED), 4, -x_offset + 0x96, -y_offset, 2);
         break;
     case 0xF6:
         prim = func_800A88A0(prim, ot, CARDA_TEXT_AT(D_8014B07A, 33), 4, -x_offset + 0x96, -y_offset, 2);
@@ -657,7 +684,7 @@ void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                 {
                     if (g_carda_entry_ranks[i] >= 0)
                     {
-                        pos.vx = base_x + 0x86;
+                        pos.vx = base_x + CARDA_ENTRY_VALUE_X;
                         pos.vy = row_y;
                         prim = func_800A8A78(ot, prim, g_carda_entry_suffix_values[i], color, &pos, 0);
                         prim = func_800A88A0(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, g_carda_text_number_prefix), color, base_x + 0x70, row_y, 0);
@@ -774,11 +801,11 @@ void* carda_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_of
         setlen(tile, 3);
         setcode(tile, 0x62);
         setXY0(tile, 0, 0);
-        setWH(tile, 0x80, 0x10);
+        setWH(tile, CARDA_CARD_LABEL_TILE_WIDTH, 0x10);
         addPrim(ot, tile);
         prim = tile + 1;
     }
-    return func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_card_slot_1, 6), 4, -x_offset + 0x40, -y_offset, 2);
+    return func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_card_slot_1, 6), 4, -x_offset + CARDA_CARD_LABEL_TEXT_X, -y_offset, 2);
 }
 
 /**
@@ -801,11 +828,11 @@ void* carda_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_of
         setlen(tile, 3);
         setcode(tile, 0x62);
         setXY0(tile, 0, 0);
-        setWH(tile, 0x80, 0x10);
+        setWH(tile, CARDA_CARD_LABEL_TILE_WIDTH, 0x10);
         addPrim(ot, tile);
         prim = tile + 1;
     }
-    return func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_card_slot_2, 7), 4, -x_offset + 0x40, -y_offset, 2);
+    return func_800A88A0(prim, ot, CARDA_TEXT_AT(g_carda_text_card_slot_2, 7), 4, -x_offset + CARDA_CARD_LABEL_TEXT_X, -y_offset, 2);
 }
 
 /**
@@ -821,7 +848,11 @@ void* carda_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_of
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
  * @see matching: 100.00%
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/carda/nonmatchings/carda", carda_draw_selected_entry_details);
+#else
 void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     void* result;
@@ -1003,6 +1034,7 @@ void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
     }
     return result;
 }
+#endif
 
 /**
  * @brief Zero-fill a 64-byte text buffer after its encoded terminator.

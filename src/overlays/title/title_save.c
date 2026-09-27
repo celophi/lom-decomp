@@ -25,7 +25,11 @@ unsigned short upload_save_layout_textures(void);
  * Counterpart of CHECKPS update_controller_input.
  *
  * decomp.me (100%) https://decomp.me/scratch/1dQbp
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/title/nonmatchings/title_save", read_pad_input);
+#else
 static void read_pad_input(void)
 {
     SCDRegs* base = SCD_REGS;
@@ -68,6 +72,7 @@ static void read_pad_input(void)
     g_lastInputState = state;
     g_inputRepeatTimer = 15;
 }
+#endif
 
 /**
  * Initialises the save-slot sub-menu state and uploads its sprite atlases.

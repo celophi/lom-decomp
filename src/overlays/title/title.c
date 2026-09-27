@@ -11,6 +11,16 @@
  * field-entry path. */
 #define TITLE_SELECTION_SENTINEL 0xFF
 
+/**
+ * @brief Screen X of the title menu's header quad (texture row 0).
+ * @note JP moves it to 0x70.
+ */
+#if defined(VERSION_JP)
+#define TITLE_MENU_HEADER_X 0x70
+#else
+#define TITLE_MENU_HEADER_X 0x64
+#endif
+
 /** @brief Fixed RAM buffer that CD resources are staged into before being unpacked. */
 #define TITLE_LOAD_BUFFER ((u8*)0x80180000)
 /** @brief Offset table at the head of a staged file: [0] first block, [1] instrument bank. */
@@ -784,7 +794,7 @@ void render_title_menu_items(void* ctx)
 
     ot_head = (s32)(((u8*)ctx) + 0x40);
     first_prim = *((s32*)(((u8*)ctx) + 0x80B8));
-    prim = emit_menu_item_quad(ot_head, first_prim, 0, 0x64, 0xC8, 0, 0x80, 1);
+    prim = emit_menu_item_quad(ot_head, first_prim, 0, TITLE_MENU_HEADER_X, 0xC8, 0, 0x80, 1);
     item_x = 0x88;
     item_y = 0xA0;
     visible_index = 0;
@@ -1035,7 +1045,11 @@ void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y)
  *         (g_controller_device_type >= TITLE_PAD_UNAVAILABLE).
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/Z5swg
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/title/nonmatchings/title", read_pad_state);
+#else
 s32 read_pad_state(void)
 {
     SCDRegs* regs = SCD_REGS;
@@ -1080,6 +1094,7 @@ s32 read_pad_state(void)
     }
     return buttons;
 }
+#endif
 
 /**
  * @brief Read the SCD pad, debounce it, and publish the result in g_debouncedInput.
@@ -1096,7 +1111,11 @@ s32 read_pad_state(void)
  *  - No input clears all three globals.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/geg1v
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/title/nonmatchings/title", update_menu_input);
+#else
 void update_menu_input(void)
 {
     SCDRegs* regs = SCD_REGS;
@@ -1169,3 +1188,4 @@ void update_menu_input(void)
         g_inputRepeatTimer = TITLE_INITIAL_REPEAT_DELAY;
     }
 }
+#endif
