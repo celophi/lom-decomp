@@ -51,7 +51,7 @@ segments:
     subsegments:
       - [auto, c, overlay_header] # overlay metadata
       - [0x1, .rodata, overlay_header]
-      - [0x5, rodata, field_scene_build]  # JP: differs from US, kept as assembly
+      - [0x5, .rodata, field_scene_build]
       - [0x79, .rodata, field_animation]
       - [0x115, .rodata, field_scene_control]
       - [0x129, .rodata, field_collision]
@@ -81,7 +81,7 @@ segments:
 
       # Scene loading, construction, rendering, animation, and text.
       - [0x2209, asm, field_scene_load] # gcc_280_g4_noexpand
-      - [0x28F1, asm, field_scene_build] # gcc_280_g4_noexpand
+      - [0x28F1, c, field_scene_build] # gcc_280_g4_noexpand
       - [0x6CAD, c, field_animation] # gcc_280_g4_noexpand
       - [0x955D, c, field_scene_control] # gcc_280_g4_noexpand
       - [0xB611, c, field_collision] # gcc_280_g4_noexpand

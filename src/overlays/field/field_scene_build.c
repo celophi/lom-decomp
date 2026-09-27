@@ -1837,7 +1837,11 @@ void field_size_work_buffer(void)
  * @param ot Ordering-table base, forwarded to the part emitters.
  * @param update_mode FIELD_DRAW_ADVANCE advances the drift; FIELD_DRAW_UNSCALED
  *                    ignores the scroll factors.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_scene_build", field_draw_scene_objects);
+#else
 void field_draw_scene_objects(u8** cursor, u_long* ot, s32 update_mode)
 {
     FieldViewport viewport;
@@ -2045,6 +2049,7 @@ void field_draw_scene_objects(u8** cursor, u_long* ot, s32 update_mode)
         field_draw_marker_overlay(cursor, ot);
     }
 }
+#endif
 
 /**
  * @brief Draw the marker debug overlay: an outline and a numeric label per marker.
