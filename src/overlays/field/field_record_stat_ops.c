@@ -48,7 +48,7 @@ extern u8 g_field_armor_type_conflicts[];
 /** @brief Signed stat modifiers indexed by an item's four-bit modifier values. */
 extern s8 D_800F0C38[];
 
-void* func_800C1EC8(void* src, void* dest, s32 size);
+void* field_copy_words(void* src, void* dest, s32 size);
 FieldStatusState* field_find_object_state(s32 index);
 
 static s32 field_can_equip_item(FieldCharacterRecord* character, s32 slot_index, FieldItemRecord* item);
@@ -149,9 +149,9 @@ s32 field_equip_item(FieldCharacterRecord* character, s32 slot_index, FieldItemR
     if (field_can_equip_item(character, slot_index, item) != 0)
     {
         slot = &character->equipment[slot_index];
-        func_800C1EC8(slot, &previous, sizeof(FieldItemRecord));
-        func_800C1EC8(item, slot, sizeof(FieldItemRecord));
-        func_800C1EC8(&previous, item, sizeof(FieldItemRecord));
+        field_copy_words(slot, &previous, sizeof(FieldItemRecord));
+        field_copy_words(item, slot, sizeof(FieldItemRecord));
+        field_copy_words(&previous, item, sizeof(FieldItemRecord));
         field_refresh_equipment_stats(character);
         return -1;
     }
@@ -186,7 +186,7 @@ static void field_refresh_equipment_stats(FieldCharacterRecord* character)
     {
         FieldItemRecord* armor = &character->equipment[i];
 
-        if (armor->kind != 0)
+        if (armor->name[0] != 0)
         {
             for (j = 0; j < FIELD_EQUIPMENT_TOTAL_COUNT; j++)
             {
@@ -206,7 +206,7 @@ static void field_refresh_equipment_stats(FieldCharacterRecord* character)
         {
             FieldItemRecord* armor = &character->equipment[i];
 
-            if (armor->kind != 0)
+            if (armor->name[0] != 0)
             {
                 for (j = 0; j < FIELD_EQUIPMENT_TOTAL_COUNT; j++)
                 {
@@ -285,7 +285,7 @@ s32 field_get_equipped_stat(FieldCharacterRecord* character, u32 stat_index)
     value = (character->stats[stat_index] & FIELD_STAT_BASE_MASK) >> 2;
     for (i = 0; i < FIELD_EQUIPMENT_SLOT_COUNT; i++)
     {
-        if (character->equipment[i].kind != 0)
+        if (character->equipment[i].name[0] != 0)
         {
             switch (stat_index)
             {

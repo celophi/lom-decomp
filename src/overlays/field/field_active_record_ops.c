@@ -89,11 +89,11 @@ typedef struct
 extern FieldGameState* g_field_game_state;
 /** @brief Experience needed to reach each level; entry n is for level n + 1. */
 extern s32 g_field_level_experience[FIELD_LEVEL_EXPERIENCE_COUNT];
-extern void* func_800C1E40(s32 resource_id);
-extern void func_800C1EC8(void* source, void* destination, s32 size);
+extern void* field_find_resource(s32 resource_id);
+extern void field_copy_words(void* source, void* destination, s32 size);
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
-extern s32 D_801227F0;
+extern s32 g_field_gosub_state;
 
 static void field_load_companion(s32 companion_index);
 static void field_store_companion(void);
@@ -115,7 +115,7 @@ s32 field_join_guest(s32 guest_id)
 
     if (guest_id < FIELD_GUEST_COUNT)
     {
-        table = func_800C1E40(FIELD_RESOURCE_GUEST_TEMPLATES);
+        table = field_find_resource(FIELD_RESOURCE_GUEST_TEMPLATES);
         for (i = 0; i < table->count; i++)
         {
             if (table->guests[i].id == guest_id)
@@ -138,7 +138,7 @@ s32 field_join_guest(s32 guest_id)
                 {
                     bank = &table->guests[i].banks[3];
                 }
-                func_800C1EC8(bank, &g_field_game_state->characters[FIELD_PARTY_GUEST], sizeof(FieldCharacterRecord));
+                field_copy_words(bank, &g_field_game_state->characters[FIELD_PARTY_GUEST], sizeof(FieldCharacterRecord));
                 g_field_game_state->characters[FIELD_PARTY_GUEST].info.word =
                     (g_field_game_state->characters[FIELD_PARTY_GUEST].info.word & ~FIELD_CHARACTER_AI) | (ai_flag << FIELD_CHARACTER_AI_SHIFT);
                 if (g_field_game_state->control.fields.hero_level < FIELD_LEVEL_EXPERIENCE_COUNT)
@@ -181,7 +181,7 @@ s32 field_join_companion(void)
 {
     s32 index;
 
-    D_801227F0 = 0;
+    g_field_gosub_state = 0;
     if (g_gosub_result_count != 0)
     {
         index = g_gosub_result_values[0];
@@ -265,20 +265,20 @@ static void field_load_companion(s32 companion_index)
     {
         g_field_game_state->characters[FIELD_PARTY_COMPANION].button_actions[i] = i;
     }
-    table = func_800C1E40(FIELD_RESOURCE_WEAPON_TEMPLATES);
+    table = field_find_resource(FIELD_RESOURCE_WEAPON_TEMPLATES);
     if (table != NULL)
     {
-        func_800C1EC8(&table->templates[g_field_game_state->regions[companion_index].weapon_id],
-                      &g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_WEAPON_SLOT], sizeof(FieldItemRecord));
+        field_copy_words(&table->templates[g_field_game_state->regions[companion_index].weapon_id],
+                         &g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_WEAPON_SLOT], sizeof(FieldItemRecord));
     }
     g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_WEAPON_SLOT].derived.values[0] = g_field_game_state->regions[companion_index].unk1E;
-    table = func_800C1E40(FIELD_RESOURCE_ARMOR_TEMPLATES);
+    table = field_find_resource(FIELD_RESOURCE_ARMOR_TEMPLATES);
     if (table != NULL)
     {
         for (i = 0; i < FIELD_ARMOR_SLOT_COUNT; i++)
         {
-            func_800C1EC8(&table->templates[g_field_game_state->regions[companion_index].armor_ids[i]],
-                          &g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT + i], sizeof(FieldItemRecord));
+            field_copy_words(&table->templates[g_field_game_state->regions[companion_index].armor_ids[i]],
+                             &g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT + i], sizeof(FieldItemRecord));
         }
     }
     state = g_field_game_state;
@@ -287,8 +287,8 @@ static void field_load_companion(s32 companion_index)
     {
         item->derived.values[i] = state->regions[companion_index].equipment_totals[i];
     }
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT].flags2C = g_field_game_state->regions[companion_index].unk38[0];
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT].flags2D = g_field_game_state->regions[companion_index].unk38[2];
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT].status_flags = g_field_game_state->regions[companion_index].unk38[0];
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT].element_flags = g_field_game_state->regions[companion_index].unk38[2];
     field_refresh_party_member(FIELD_PARTY_COMPANION);
 }
 
@@ -354,7 +354,7 @@ static void field_store_companion(void)
         g_field_game_state->regions[g_field_game_state->region_index].progress.bits.level = g_field_game_state->characters[FIELD_PARTY_COMPANION].progress.bits.level;
         g_field_game_state->regions[g_field_game_state->region_index].progress.bits.experience = g_field_game_state->characters[FIELD_PARTY_COMPANION].progress.bits.experience;
         g_field_game_state->regions[g_field_game_state->region_index].hp = g_field_game_state->characters[FIELD_PARTY_COMPANION].hp;
-        func_800C1EC8(g_field_game_state->characters[FIELD_PARTY_COMPANION].stats, g_field_game_state->regions[g_field_game_state->region_index].stats,
-                      sizeof(g_field_game_state->characters[FIELD_PARTY_COMPANION].stats));
+        field_copy_words(g_field_game_state->characters[FIELD_PARTY_COMPANION].stats, g_field_game_state->regions[g_field_game_state->region_index].stats,
+                         sizeof(g_field_game_state->characters[FIELD_PARTY_COMPANION].stats));
     }
 }

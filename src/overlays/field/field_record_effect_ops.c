@@ -91,7 +91,7 @@ typedef struct
     u8 threshold_indexes[FIELD_EFFECT_COUNT][FIELD_MENU_SLOT_COUNTER_COUNT];
 } FieldEffectThresholdTable;
 
-extern void* func_800C1E40(s32);
+extern void* field_find_resource(s32);
 extern FieldGameState* g_field_game_state;
 
 static s32 field_classify_menu_slot(s32 group_index, s32 slot_index, FieldEffectThresholdTable* table);
@@ -112,7 +112,7 @@ void field_roll_menu_slot_effect(s32 group_index, s32 slot_index)
     s32 effect_index;
     s32 selection;
 
-    table = func_800C1E40(FIELD_RESOURCE_EFFECT_PICKS);
+    table = field_find_resource(FIELD_RESOURCE_EFFECT_PICKS);
     if (g_field_game_state->menu_slots[group_index].flags.bits.item_count == 1)
     {
         index = 0;
@@ -154,7 +154,7 @@ void field_classify_menu_slots(s32 group_index)
     FieldEffectThresholdTable* table;
     s32 slot_index;
 
-    table = func_800C1E40(FIELD_RESOURCE_EFFECT_THRESHOLDS);
+    table = field_find_resource(FIELD_RESOURCE_EFFECT_THRESHOLDS);
     if (table == NULL)
     {
         record_game_diagnostic(DIAG_ERROR, DIAG_MISSING_EFFECT_THRESHOLDS, 0, 0);
@@ -240,7 +240,7 @@ void field_apply_pending_region_effects(void)
     s32 applied;
     FieldRegionRecord* record;
 
-    table = func_800C1E40(FIELD_RESOURCE_REGION_EFFECTS);
+    table = field_find_resource(FIELD_RESOURCE_REGION_EFFECTS);
     for (record_index = 0; record_index < FIELD_REGION_COUNT; record_index++)
     {
         if (g_field_game_state->regions[record_index].name[0] != 0)

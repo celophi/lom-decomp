@@ -37,7 +37,6 @@ typedef struct
     u16 reserved;
 } GolemLogicBlockIcon;
 
-extern GolemShape g_golem_shape_table[GOLEM_SHAPE_COUNT];
 extern s32 g_golem_logic_block_class[];
 extern GolemLogicBlockIcon g_golem_logic_block_icons[];
 extern u8 D_800459AE;

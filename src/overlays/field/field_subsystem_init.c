@@ -35,7 +35,7 @@ extern s32 D_80122710;
 extern s32 g_field_actor_text_count;
 extern s32 g_field_ring_menu_state;
 extern s32 g_field_gover_load_countdown;
-extern s32 D_801227F0;
+extern s32 g_field_gosub_state;
 extern s32 g_field_return_to_title_prompt_delay;
 extern s32 g_field_return_to_title_prompt_state;
 extern s32 D_800F2298;
@@ -92,7 +92,7 @@ void field_initialize_subsystems(FieldRenderHalf* render_context)
     g_field_modal_state = 0;
     D_800F2298 = 0;
     D_8011F428 = 0;
-    D_801227F0 = 0;
+    g_field_gosub_state = 0;
     g_field_audio_timer = 0;
     previous_state = g_previous_game_state;
     if (previous_state == GAME_STATE_WORLD_MAP && g_music_track_table[g_music_track_index] != FIELD_MUSIC_TRACK_NONE)

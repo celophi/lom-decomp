@@ -368,8 +368,8 @@ s32 field_is_actor_near_stored_position(s32 actor_id, s32 half_width, s32 half_d
 
 /* field_record_setup_ops.c */
 void field_create_item_from_gosub(s32 kind);
-void field_create_equipment_item(struct FieldItemRecord *record, s32 category, s32 item_type, s32 item_subtype);
-void field_temper_item(struct FieldItemRecord *record, s32 command_index);
+void field_create_equipment_item(struct FieldItemRecord* record, s32 category, s32 item_type, s32 material);
+void field_temper_item(struct FieldItemRecord* record, s32 secondary_item);
 
 /* field_record_stat_ops.c */
 void field_refresh_party_member(s32 index);

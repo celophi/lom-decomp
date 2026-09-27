@@ -118,8 +118,8 @@ s32 field_get_actor_position(s32 actor_id, Vec3i* position);
 s32 field_revive_actor();
 FieldStatusState* field_find_object_state(s32 actor_id);
 s32 field_spawn_shared_animation_actor(s32 key, s32 resource_index);
-void func_800C1EC8(s32 value, void* buffer, s32 size);
-u8* func_800C1E40(s32 resource_id);
+void field_copy_words(s32 value, void* buffer, s32 size);
+u8* field_find_resource(s32 resource_id);
 
 static void field_battle_reset_context(void);
 static s32 field_build_party_records(void);
@@ -635,7 +635,7 @@ static void field_battle_reset_context(void)
 
     g_field_action_bank = &g_field_default_action_bank;
     g_field_battle = &g_field_battle_context;
-    func_800C1EC8(0, &g_field_battle_context, sizeof(FieldBattleContext));
+    field_copy_words(0, &g_field_battle_context, sizeof(FieldBattleContext));
     g_field_battle->action = NULL;
     g_field_battle->state.level = field_compute_base_monster_level(0);
 
@@ -644,7 +644,7 @@ static void field_battle_reset_context(void)
         g_field_battle->element_levels[i] = g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[i]];
     }
 
-    resource = (FieldBattleResource*)func_800C1E40(FIELD_RESOURCE_BATTLE);
+    resource = (FieldBattleResource*)field_find_resource(FIELD_RESOURCE_BATTLE);
     g_field_battle->templates = (FieldActorTemplateTable*)((u8*)resource + resource->templates_offset);
     g_field_battle->resources = (u8*)resource + resource->rewards_offset;
     field_set_script_var(0, FIELD_VAR_WATCHED_RECORD, -1);
@@ -793,7 +793,7 @@ static s32 field_build_party_records(void)
                 /* The armor slots are read as (equipment + index)->; equipment[index]. changes the address arithmetic. */
                 for (index = 1; index < FIELD_EQUIPMENT_SLOT_COUNT; index++)
                 {
-                    if (g_field_game_state->characters[party_index].equipment[index].kind != 0)
+                    if (g_field_game_state->characters[party_index].equipment[index].name[0] != 0)
                     {
                         FieldBattleContext* battle = g_field_battle;
 
@@ -821,7 +821,7 @@ static s32 field_build_party_records(void)
             g_field_battle->records[party_index].resist_elements = 0;
             for (equipment_index = 1; equipment_index < FIELD_EQUIPMENT_SLOT_COUNT; equipment_index++)
             {
-                if (g_field_game_state->characters[party_index].equipment[equipment_index].kind != 0)
+                if (g_field_game_state->characters[party_index].equipment[equipment_index].name[0] != 0)
                 {
                     /* Same (equipment + index)-> form as the armor totals above. */
                     nibbles = (g_field_game_state->characters[party_index].equipment + equipment_index)->bonus_nibbles.word;
@@ -830,8 +830,10 @@ static s32 field_build_party_records(void)
                         g_field_battle->records[party_index].element_defense[index] += nibbles & 0xF;
                         nibbles >>= 4;
                     }
-                    g_field_battle->records[party_index].immunity_flags |= (g_field_game_state->characters[party_index].equipment + equipment_index)->flags2C;
-                    g_field_battle->records[party_index].resist_elements |= (g_field_game_state->characters[party_index].equipment + equipment_index)->flags2D;
+                    g_field_battle->records[party_index].immunity_flags |=
+                        (g_field_game_state->characters[party_index].equipment + equipment_index)->status_flags;
+                    g_field_battle->records[party_index].resist_elements |=
+                        (g_field_game_state->characters[party_index].equipment + equipment_index)->element_flags;
                 }
             }
             g_field_battle->records[party_index].template = NULL;

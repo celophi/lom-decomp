@@ -54,10 +54,10 @@ typedef struct
 extern FieldGameState* g_field_game_state;
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
-extern s32 D_801227F0;
+extern s32 g_field_gosub_state;
 
-extern void* func_800C1E40(s32 resource_id);
-extern void* func_800C1EC8(void* source, void* destination, s32 size);
+extern void* field_find_resource(s32 resource_id);
+extern void* field_copy_words(void* source, void* destination, s32 size);
 
 /**
  * @brief Copy a companion template into the first free stored record and give it a unique id.
@@ -74,7 +74,7 @@ s32 field_add_stored_companion(s32 template_index)
     s32 unique_id;
     s32 random_high;
 
-    table = func_800C1E40(FIELD_RESOURCE_COMPANION_TEMPLATES);
+    table = field_find_resource(FIELD_RESOURCE_COMPANION_TEMPLATES);
     if (table == NULL)
     {
         record_game_diagnostic(DIAG_ERROR, DIAG_NO_COMPANION_TEMPLATES, template_index, g_scene_mode);
@@ -88,7 +88,7 @@ s32 field_add_stored_companion(s32 template_index)
     {
         if (g_field_game_state->regions[slot].name[0] == 0)
         {
-            func_800C1EC8(companion_template, &g_field_game_state->regions[slot], sizeof(FieldRegionRecord));
+            field_copy_words(companion_template, &g_field_game_state->regions[slot], sizeof(FieldRegionRecord));
             retry = -1;
             do
             {
@@ -122,7 +122,7 @@ s32 field_release_stored_companion(void)
 {
     s32 index;
 
-    D_801227F0 = 0;
+    g_field_gosub_state = 0;
     if (g_gosub_result_count != 0)
     {
         index = g_gosub_result_values[0];

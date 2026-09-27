@@ -256,7 +256,7 @@ static u8* shop_draw_sell_prompt(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
             entry = SHOP_SELECTED_ENTRY();
             if (entry->id & SHOP_ENTRY_RECORD_FLAG)
             {
-                g_shop_item_records[entry->id & SHOP_ENTRY_RECORD_INDEX_MASK].active = 0;
+                g_shop_item_records[entry->id & SHOP_ENTRY_RECORD_INDEX_MASK].name[0] = 0;
                 SHOP_SELECTED_ENTRY()->id = SHOP_ENTRY_EMPTY;
             }
             else

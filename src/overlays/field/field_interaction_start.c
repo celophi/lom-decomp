@@ -179,7 +179,7 @@ extern s32 g_pending_game_state;
 extern FieldMapPoint g_field_player_map_position;
 
 /* Functions of other FIELD files without a shared prototype. */
-s32* func_800C1EC8(s32* src, s32* dest, s32 n);
+s32* field_copy_words(s32* src, s32* dest, s32 n);
 s32 field_read_script_var(s32 owner_id, s32 variable);
 void field_start_actor_script(s32 actor_id, s32 mode);
 u8* field_get_event_script(s32 script_id);
@@ -220,7 +220,7 @@ static void field_update_event_records(void);
 static void field_runtime_init(void)
 {
     field_bind_runtime_pointers();
-    func_800C1EC8(NULL, (s32*)&g_field_runtime->state, 0xB04);
+    field_copy_words(NULL, (s32*)&g_field_runtime->state, 0xB04);
     field_reset_scene_fade();
     field_init_text_macros();
     field_init_party_actors();
@@ -358,7 +358,7 @@ static void field_init_script_variables(void)
     if (flags & FIELD_CONTROL_RESET_WORDS)
     {
         g_field_game_state->control.word = flags & ~FIELD_CONTROL_RESET_WORDS;
-        func_800C1EC8(NULL, g_field_game_state->words, 0x20);
+        field_copy_words(NULL, g_field_game_state->words, 0x20);
         field_set_script_var(0, FIELD_VAR_RANDOM_SEED, rand() & 0xFF);
     }
 

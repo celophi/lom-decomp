@@ -167,7 +167,7 @@ extern u8 g_field_element_resist_slots[FIELD_ELEMENT_COUNT];
 
 extern FieldOnHitStatus g_field_on_hit_statuses[];
 
-u8* func_800C1E40(s32 resource_id);
+u8* field_find_resource(s32 resource_id);
 s32 field_get_actor_animation(s32 key);
 s32 field_start_actor_defeat_by_key(s32 key, s32 value);
 s32 field_spawn_shared_animation_actor(s32 key, s32 resource_index);
@@ -381,7 +381,7 @@ void field_select_coordinate_labels(void)
         first = (g_field_game_state->characters[1].info.bytes[1] + 1) * FIELD_COORDINATE_LABEL_COUNT;
     }
 
-    resource = func_800C1E40(FIELD_RESOURCE_COORDINATE_LABELS);
+    resource = field_find_resource(FIELD_RESOURCE_COORDINATE_LABELS);
     i = 0;
     if (resource != NULL)
     {
@@ -437,7 +437,7 @@ void field_consume_revive_item(FieldStatusRecord* record)
     for (i = 0; i < FIELD_EQUIPMENT_SLOT_COUNT; i++)
     {
         item = &g_field_game_state->characters[record->meta.bytes.id].equipment[i];
-        if (item->kind != 0 && (item->effect_index & FIELD_ITEM_EFFECT_REVIVE))
+        if (item->name[0] != 0 && (item->effect_index & FIELD_ITEM_EFFECT_REVIVE))
         {
             for (j = 0; j < FIELD_ITEM_SPECIAL_COUNT; j++)
             {

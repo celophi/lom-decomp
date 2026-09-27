@@ -27,10 +27,10 @@ void field_golem_build_companion(s32 group, FieldCharacterRecord* record)
 {
     s32 i;
 
-    record->equipment[FIELD_WEAPON_SLOT].kind = 1;
-    record->equipment[GOLEM_ARMOR_SLOT].kind = 1;
-    record->equipment[2].kind = 0;
-    record->equipment[3].kind = 0;
+    record->equipment[FIELD_WEAPON_SLOT].name[0] = 1;
+    record->equipment[GOLEM_ARMOR_SLOT].name[0] = 1;
+    record->equipment[2].name[0] = 0;
+    record->equipment[3].name[0] = 0;
     for (i = 0; i < GOLEM_NAME_LENGTH; i++)
     {
         record->name[i] = GOLEM.group_records[group].name[i];
@@ -61,9 +61,9 @@ void field_golem_build_companion(s32 group, FieldCharacterRecord* record)
         ((FieldStat*)record->stats)[i].bits.base = GOLEM.group_records[group].stats[i].bits.base;
         ((FieldStat*)record->stats)[i].bits.effective = GOLEM.group_records[group].stats[i].bits.effective;
     }
-    record->equipment[GOLEM_ARMOR_SLOT].flags2C = record->unk40 = GOLEM.group_records[group].armor_flags;
-    record->equipment[FIELD_WEAPON_SLOT].flags2C = record->unk41 = GOLEM.group_records[group].weapon_flags;
-    record->equipment[GOLEM_ARMOR_SLOT].flags2D = record->unk42 = GOLEM.group_records[group].armor_flags2;
+    record->equipment[GOLEM_ARMOR_SLOT].status_flags = record->unk40 = GOLEM.group_records[group].armor_flags;
+    record->equipment[FIELD_WEAPON_SLOT].status_flags = record->unk41 = GOLEM.group_records[group].weapon_flags;
+    record->equipment[GOLEM_ARMOR_SLOT].element_flags = record->unk42 = GOLEM.group_records[group].armor_flags2;
     record->unk43 = GOLEM.group_records[group].unknown_0x3F;
     record->button_actions[0] = 0;
     record->button_actions[1] = 0;

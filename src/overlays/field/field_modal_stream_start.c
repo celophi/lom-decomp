@@ -21,7 +21,7 @@ extern s32 g_field_modal_state;
 extern s32 g_field_card_overlay_mode;
 extern s32 g_field_niki_addhero_state;
 extern s32 g_field_card_save_slot;
-extern s32 D_801227F0;
+extern s32 g_field_gosub_state;
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
 
@@ -41,7 +41,7 @@ void field_open_carda(s32 mode)
         cdrom_stream(CD_RES_CARDA_BIN, FIELD_SUBOVERLAY_ADDRESS);
         cdrom_wait_queue_empty();
         g_field_card_overlay_mode = mode + 1;
-        D_801227F0 = 1;
+        g_field_gosub_state = 1;
         g_gosub_result_count = 0;
         g_field_modal_state = FIELD_MODAL_CARDA;
         g_field_card_save_slot = g_gosub_result_values[0];

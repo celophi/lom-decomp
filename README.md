@@ -338,11 +338,6 @@ The project uses a hybrid approach:
 - understood binary formats can use byte-exact extractors/builders;
 - unknown or creative data can remain as named local `databin`/`rodatabin` assets referenced with `.incbin`.
 
-See:
-
-- [`docs/handling-copyrighted-data.md`](docs/handling-copyrighted-data.md)
-- [`docs/asset-data-architecture.md`](docs/asset-data-architecture.md)
-
 ## Version layout
 
 One C source tree builds every regional release. Anything that comes from a particular disc lives in a per-version folder, and `VERSION=<name>` on the `make` command line picks which one to build.

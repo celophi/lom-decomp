@@ -80,11 +80,11 @@ enum
 #define FIELD_ITEM_COMMAND_NO_FREE_RECORD 0xFA
 #define FIELD_ITEM_COMMAND_NO_ITEM 0xFB
 #define FIELD_ITEM_COMMAND_NO_STOCK 0xFD
-#define FIELD_ITEM_COMMAND_BAD_SUBTYPE 0xFE
+#define FIELD_ITEM_COMMAND_BAD_MATERIAL 0xFE
 #define FIELD_ITEM_COMMAND_BAD_OPERATION 0xFF
 
 /** @brief Item subtypes with a generation table entry. */
-#define FIELD_ITEM_SUBTYPE_COUNT 64
+#define FIELD_MATERIAL_COUNT 64
 
 /** @brief field_command_query_records query bits: handler index, and "take the last entry". */
 #define FIELD_RECORD_QUERY_INDEX_MASK 0x7FFF
@@ -308,15 +308,14 @@ extern FieldRecordQuery g_field_record_queries[];
 extern FieldGameState* g_field_game_state;
 extern FieldRuntimeContext* g_field_runtime;
 extern FieldBattleContext* g_field_battle;
-extern FieldItemStaging* D_80123FC4;
 extern SceneState* g_field_scene_state;
 extern s32 g_field_interaction_active;
 extern s32 g_field_scripted_scroll_frames;
 extern s32 g_field_scripted_scroll_target_x;
 extern s32 g_field_scripted_scroll_target_z;
 
-s32* func_800C1EC8(s32* src, s32* dest, s32 size);
-u16* func_800C1E40(s32 resource_id);
+s32* field_copy_words(s32* src, s32* dest, s32 size);
+u16* field_find_resource(s32 resource_id);
 FieldStatusState* field_find_object_state(s32 key);
 FieldActorRecord* field_find_actor_record_or_default(s32 id);
 s32 field_get_actor_position(s32 key, Vec3i* position);
@@ -352,7 +351,7 @@ void field_script_command(s32 command, void* params)
  */
 void field_command_clear_params(s32 command, FieldCommandParams* params)
 {
-    func_800C1EC8(NULL, params->words, sizeof(params->words));
+    field_copy_words(NULL, params->words, sizeof(params->words));
 }
 
 /**
@@ -532,7 +531,7 @@ void field_command_read_nibble_table(s32 command, FieldNibbleTableParams* params
 {
     FieldNibbleTable* table;
 
-    table = (FieldNibbleTable*)func_800C1E40(FIELD_RESOURCE_NIBBLE_TABLE);
+    table = (FieldNibbleTable*)field_find_resource(FIELD_RESOURCE_NIBBLE_TABLE);
     if (table != NULL)
     {
         params->low = table->cells[params->row][params->column - FIELD_NIBBLE_TABLE_FIRST_COLUMN] & 0xF;
@@ -574,14 +573,14 @@ void field_command_items(s32 command, FieldItemCommandParams* params)
     switch (params->operation)
     {
     case FIELD_ITEM_COMMAND_RESET:
-        D_80123FC4 = &g_field_runtime->item_staging;
-        func_800C1EC8(NULL, (s32*)&g_field_runtime->item_staging, sizeof(FieldItemStaging));
+        g_field_item_staging = &g_field_runtime->item_staging;
+        field_copy_words(NULL, (s32*)&g_field_runtime->item_staging, sizeof(FieldItemStaging));
         return;
     case FIELD_ITEM_COMMAND_CREATE:
         record = field_find_free_inventory_record();
         if (record != NULL)
         {
-            if (params->args[2] < FIELD_ITEM_SUBTYPE_COUNT)
+            if (params->args[2] < FIELD_MATERIAL_COUNT)
             {
                 stock = g_field_game_state->item_counts[params->args[2]];
                 if (stock != 0)
@@ -595,14 +594,14 @@ void field_command_items(s32 command, FieldItemCommandParams* params)
                 params->result = FIELD_ITEM_COMMAND_NO_STOCK;
                 return;
             }
-            params->result = FIELD_ITEM_COMMAND_BAD_SUBTYPE;
+            params->result = FIELD_ITEM_COMMAND_BAD_MATERIAL;
             return;
         }
         params->result = FIELD_ITEM_COMMAND_NO_FREE_RECORD;
         return;
     case FIELD_ITEM_COMMAND_TEMPER:
         record = &g_field_game_state->items[params->args[0]];
-        if (record->kind != 0)
+        if (record->name[0] != 0)
         {
             stock = g_field_game_state->item_counts[params->args[1]];
             if (stock != 0)
@@ -913,7 +912,7 @@ void field_command_spawn_monster(s32 command, FieldSpawnParams* params)
             {
                 sound = params->sound;
             }
-            func_800C1EC8(NULL, (s32*)record, sizeof(FieldStatusRecord));
+            field_copy_words(NULL, (s32*)record, sizeof(FieldStatusRecord));
             field_init_monster_record(actor, record, field_find_object_state(actor));
             field_revive_actor(actor, animation, effect, sound);
         }
