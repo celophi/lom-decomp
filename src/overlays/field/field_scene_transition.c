@@ -914,7 +914,11 @@ static void field_copy_scene_geometry(s32* src, s32* end)
  * @brief Install the scene's layout actions and place its active actors.
  * @param layout Actor layout of the scene file.
  * @note Active entries fill consecutive actor records from FIELD_PARTY_COUNT on.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_scene_transition", field_load_scene_actors);
+#else
 static void field_load_scene_actors(FieldSceneLayout* layout)
 {
     FieldActor* actor = &g_field_actors[FIELD_PARTY_COUNT];
@@ -981,6 +985,7 @@ static void field_load_scene_actors(FieldSceneLayout* layout)
         }
     }
 }
+#endif
 
 /**
  * @brief Settle every present field actor on the map collision.

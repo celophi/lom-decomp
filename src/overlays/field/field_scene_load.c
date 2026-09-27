@@ -131,7 +131,11 @@ void field_scene_reset(void)
  * @param update_mode Update mode for the scene objects and text windows (1 while a text session pauses the field).
  * @param force_unscaled Non-zero draws the scene objects with the unscaled camera offsets (update mode 2).
  * @see decomp.me (100%) https://decomp.me/scratch/lg9gw
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_scene_load", field_draw_frame);
+#else
 void field_draw_frame(s32 alternate_half, FieldRenderHalf* buffer, s32 update_mode, s32 force_unscaled)
 {
     FieldCdSystem* cd_system;
@@ -156,6 +160,7 @@ void field_draw_frame(s32 alternate_half, FieldRenderHalf* buffer, s32 update_mo
         movie_service_video_ops();
     }
 }
+#endif
 
 /**
  * @brief Zero the four per-node accumulators across the scene's node list.
@@ -165,7 +170,11 @@ void field_draw_frame(s32 alternate_half, FieldRenderHalf* buffer, s32 update_mo
  * @param update_mode Field update mode; non-zero skips the animation update.
  * @param force_unscaled Non-zero skips the animation update.
  * @see decomp.me (100%) https://decomp.me/scratch/KyLZb
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_scene_load", field_clear_node_accumulators);
+#else
 void field_clear_node_accumulators(s32 update_mode, s32 force_unscaled)
 {
     FieldNode* node;
@@ -182,6 +191,7 @@ void field_clear_node_accumulators(s32 update_mode, s32 force_unscaled)
         field_update_scene_animations();
     }
 }
+#endif
 
 /**
  * @brief Initialize a field scene and its FMV using a caller-supplied context.

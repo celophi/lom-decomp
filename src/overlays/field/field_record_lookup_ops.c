@@ -54,7 +54,11 @@ extern u16 D_800F0E98[];
  * @brief Hand an actor's pickup to the party: an item from the reward table or a counter.
  * @param unused Unused.
  * @param owner_id Actor whose pickup code is resolved.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_record_lookup_ops", field_grant_actor_pickup);
+#else
 void field_grant_actor_pickup(void* unused, s32 owner_id)
 {
     FieldActorRecord* actor;
@@ -135,6 +139,7 @@ void field_grant_actor_pickup(void* unused, s32 owner_id)
     ((void (*)(s32, FieldActorRecord*))field_receive_item)(index, actor);
     field_append_dialog_item((s32)((u8*)D_800F0E98 + D_800F0E98[index]), 1);
 }
+#endif
 
 /**
  * @brief Restore a fraction of an actor's maximum capacity, capped at that maximum.

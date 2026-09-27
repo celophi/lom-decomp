@@ -102,7 +102,11 @@ void field_command_history_reset(void)
  * @param player Controller port; ports at or above two are ignored.
  * @param age_sequence Nonzero to advance the idle counter and drop an idle history.
  * @note A new button also records the direction held with it first.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_command_history", field_command_history_record);
+#else
 void field_command_history_record(s32 player, s32 age_sequence)
 {
     s16 axis;
@@ -220,6 +224,7 @@ void field_command_history_record(s32 player, s32 age_sequence)
         }
     }
 }
+#endif
 
 /**
  * @brief Drop the oldest entry of a player's full history row.

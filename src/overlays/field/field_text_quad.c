@@ -59,7 +59,11 @@ static POLY_FT4* field_text_add_quad_outline(u32* ot, POLY_FT4* output);
  * @param add_fade_copy Nonzero to also queue a copy of the quad in the fading-primitive pool.
  * @return First free primitive after the text and optional outline.
  * @note Only text that fits in one sprite is drawn; longer text draws nothing.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_text_quad", field_text_draw_scaled_quad);
+#else
 POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* output, u32* ot, u8* text, s32 style, s32 x, s32 y, s32 flags, s32 scratch_row, s32 x_scale, s32 y_scale,
                                       s32 lower_x_offset, s32 add_fade_copy)
 {
@@ -126,6 +130,7 @@ POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* output, u32* ot, u8* text, s32 s
     }
     return output;
 }
+#endif
 
 /**
  * @brief Add four black, one-pixel-offset copies of the preceding textured quad.

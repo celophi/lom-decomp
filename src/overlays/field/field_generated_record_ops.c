@@ -57,7 +57,11 @@ static void field_build_item_name(s32 type_entry, s32 subtype_entry, u8* dest);
  * A record without a name gets a serial and the name "<subtype> <type>";
  * a named record without a serial only gets the serial. Then the identity,
  * level, stat modifier and slot fields are copied from the staging block.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_generated_record_ops", field_write_staged_item);
+#else
 void field_write_staged_item(void)
 {
     s32 i;
@@ -104,6 +108,7 @@ void field_write_staged_item(void)
     D_80123FC4->record->special_ids[3] = D_80123FC4->slots[1];
     D_80123FC4->record->value = 0;
 }
+#endif
 
 /**
  * @brief Build an item name from a subtype name followed by a type name.
@@ -171,7 +176,11 @@ static void field_build_item_name(s32 type_entry, s32 subtype_entry, u8* dest)
  * are copied and the four factors are scaled by the subtype multipliers.
  *
  * @param record Item record to update.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_generated_record_ops", field_derive_weapon_values);
+#else
 void field_derive_weapon_values(FieldItemRecord* record)
 {
     s32 i;
@@ -210,11 +219,16 @@ void field_derive_weapon_values(FieldItemRecord* record)
         record->attributes[i] = (D_80123FC0->item.types[D_80123FC4->item_type].factors[i] * D_80123FC4->multipliers[i]) >> 6;
     }
 }
+#endif
 
 /**
  * @brief Derive the category 1 values of an item record from the staging block.
  * @param record Item record to update.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_generated_record_ops", field_derive_armor_values);
+#else
 void field_derive_armor_values(FieldItemRecord* record)
 {
     s32 i;
@@ -235,3 +249,4 @@ void field_derive_armor_values(FieldItemRecord* record)
     record->flags2D = D_80123FC4->flags2D;
     record->effect_index = D_80123FC4->effect_index;
 }
+#endif

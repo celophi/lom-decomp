@@ -75,7 +75,11 @@ static s32 field_is_item_key_used(FieldItemKey* key);
  * @param second_land Second land to place; only tried while fewer than FIELD_ACTIVE_LAND_LIMIT lands are active.
  * @param placed Output list of placed lands, terminated with FIELD_LAND_LIST_END.
  * @return Number of lands placed.
+ * @note JP changes this function; the JP build takes it from assembly.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_record_table_ops", field_place_lands);
+#else
 s32 field_place_lands(s32 first_land, s32 second_land, s32* placed)
 {
     s32* cursor;
@@ -133,6 +137,7 @@ s32 field_place_lands(s32 first_land, s32 second_land, s32* placed)
     *cursor = FIELD_LAND_LIST_END;
     return placed_count;
 }
+#endif
 
 /**
  * @brief Place an available land that is not placed yet, recording its placement order.

@@ -258,7 +258,13 @@ static void field_reset_scene_fade(void)
     context->fade_color.bits.blue = 0;
 }
 
-/** @brief Set up the party name and weekday text macros and script variable 0xA03. */
+/**
+ * @brief Set up the party name and weekday text macros and script variable 0xA03.
+ * @note JP changes this function; the JP build takes it from assembly.
+ */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/field/nonmatchings/field_interaction_start", field_init_text_macros);
+#else
 static void field_init_text_macros(void)
 {
     s32 slot;
@@ -281,6 +287,7 @@ static void field_init_text_macros(void)
         field_set_script_var(0, FIELD_VAR_UNKA03, 0);
     }
 }
+#endif
 
 /**
  * @brief Initialize the party actor records and the script local-variable bases.
