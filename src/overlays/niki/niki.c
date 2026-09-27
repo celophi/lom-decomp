@@ -1669,16 +1669,16 @@ s32 niki_draw_icon_highlight(s32 prim, s32* ot, s32 x, s32 y, s32 width, s32 ico
 
 /**
  * @brief Select the cancellation choice when opening a confirmation prompt.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP selects the first choice instead.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/niki/nonmatchings/niki", niki_enable_choice_toggle);
-#else
 void niki_enable_choice_toggle(void)
 {
+#if defined(VERSION_JP)
+    g_niki_choice_toggle = 0;
+#else
     g_niki_choice_toggle = 1;
-}
 #endif
+}
 
 /**
  * @brief Draw both choices and toggle the selection on horizontal input.

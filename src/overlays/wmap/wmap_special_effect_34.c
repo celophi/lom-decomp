@@ -4,6 +4,7 @@
 #include "wmap_view_effects.h"
 #include "wmap_resource_support.h"
 #include "wmap_main.h"
+#include "wmap_map_labels.h"
 #include "wmap_effect_primitives.h"
 #include "wmap_sequence_runtime.h"
 #include "wmap_effect_resources.h"
@@ -6439,11 +6440,8 @@ void func_800B7420(void);
 /**
  * @brief Effect 34 step: save the view and cursor, move the focus, load
  *        effect resource 0x22 and advance the step.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP keeps the cursor and calls func_8005FF88(-1) instead.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/wmap/nonmatchings/wmap_special_effect_34", func_800BFDA8);
-#else
 void func_800BFDA8(void)
 {
 typedef struct
@@ -7067,23 +7065,28 @@ void func_800B73A0(void);
 void func_800B73E4(void);
 void func_800B7420(void);
 
+#if !defined(VERSION_JP)
     s32 field_00;
     s32 field_04;
+#endif
 
     g_wmap_focus_screen_position.field_00 = 0xA4;
     g_wmap_focus_screen_position.field_02 = 0x69;
     g_wmap_saved_view = g_wmap_view;
+#if defined(VERSION_JP)
+    func_8005FF88(-1);
+#else
     field_00 = g_wmap_cursor_column;
     field_04 = g_wmap_cursor_row;
     g_wmap_cursor_row = 1;
     g_wmap_cursor_column = 1;
     D_801B3210 = field_00;
     D_801B3214 = field_04;
+#endif
     func_800A89DC(0x22);
     D_801B321C = 0x1E;
     D_801B3218++;
 }
-#endif
 
 void func_800BFE54(void)
 {
@@ -10242,11 +10245,8 @@ void func_800B7420(void);
 /**
  * @brief Effect 34 step: reset after the transition, restore the saved
  *        cursor and advance the step.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP neither sets D_8013B294 nor restores the cursor.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/wmap/nonmatchings/wmap_special_effect_34", func_800BFFD8);
-#else
 void func_800BFFD8(void)
 {
 typedef struct
@@ -10873,12 +10873,13 @@ void func_800B7420(void);
 
     D_8013B208 = 0;
     wmap_reset_after_transition();
+#if !defined(VERSION_JP)
     D_8013B294 = 1;
     g_wmap_cursor_column = D_801B3210;
     g_wmap_cursor_row = D_801B3214;
+#endif
     D_801B3218++;
 }
-#endif
 
 s32 func_800C0034(s32 reset)
 {

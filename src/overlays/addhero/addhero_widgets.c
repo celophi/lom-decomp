@@ -791,16 +791,16 @@ void* addhero_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 
 
 /**
  * @brief Select the second (cancel) option as the default choice.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP selects the first option instead.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/addhero/nonmatchings/addhero_widgets", addhero_enable_choice_toggle);
-#else
 void addhero_enable_choice_toggle(void)
 {
+#if defined(VERSION_JP)
+    g_addhero_choice_toggle = 0;
+#else
     g_addhero_choice_toggle = 1;
-}
 #endif
+}
 
 /**
  * @brief Draw the two-option (yes/no) choice glyphs, highlighting the current

@@ -162,17 +162,39 @@ s32 field_equip_item(FieldCharacterRecord* character, s32 slot_index, FieldItemR
  * @brief Recompute a character's equipment totals and reset its effective stats.
  * @param character Character to update.
  * @note A stored companion gets no totals from its armor slots.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP also totals a companion's armor, and clears the totals and
+ *       recomputes the stats before summing the armor.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_record_stat_ops", field_refresh_equipment_stats);
-#else
 static void field_refresh_equipment_stats(FieldCharacterRecord* character)
 {
     s32 i;
     s32 j;
     u16 base;
 
+#if defined(VERSION_JP)
+    for (i = FIELD_EQUIPMENT_TOTAL_COUNT - 1; i >= 0; i--)
+    {
+        character->equipment_totals[i] = 0;
+    }
+    for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
+    {
+        base = character->stats[i] & FIELD_STAT_BASE_MASK;
+        character->stats[i] = base | ((base >> 2) << FIELD_STAT_EFFECTIVE_SHIFT);
+    }
+    character->unk26 = character->equipment[FIELD_WEAPON_SLOT].derived.values[0];
+    for (i = FIELD_FIRST_ARMOR_SLOT; i < FIELD_EQUIPMENT_SLOT_COUNT; i++)
+    {
+        FieldItemRecord* armor = &character->equipment[i];
+
+        if (armor->kind != 0)
+        {
+            for (j = 0; j < FIELD_EQUIPMENT_TOTAL_COUNT; j++)
+            {
+                character->equipment_totals[j] += armor->derived.values[j];
+            }
+        }
+    }
+#else
     character->unk26 = character->equipment[FIELD_WEAPON_SLOT].derived.values[0];
     if ((character->info.word & FIELD_CHARACTER_TYPE_MASK) != FIELD_CHARACTER_COMPANION)
     {
@@ -198,8 +220,8 @@ static void field_refresh_equipment_stats(FieldCharacterRecord* character)
         base = character->stats[i] & FIELD_STAT_BASE_MASK;
         character->stats[i] = base | ((base >> 2) << FIELD_STAT_EFFECTIVE_SHIFT);
     }
-}
 #endif
+}
 
 /**
  * @brief Refresh a party character's equipment and reset its field object HP.

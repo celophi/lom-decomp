@@ -55,6 +55,8 @@
 #define FIELD_TEXT_DOUBLE_BYTE_WIDTH 9
 /** Added in 16 bits: commands 0x19-0x1F select the high byte (1-7) of a two-byte code. */
 #define FIELD_TEXT_DOUBLE_BYTE_BIAS 0xFFE8
+/* Lead byte of the JP two-byte digit glyphs; the digit value (0-9) follows it. */
+#define FIELD_TEXT_JP_DIGIT_LEAD 0x1D
 #define FIELD_TEXT_SHORT_DELAY 4
 #define FIELD_TEXT_CHOICE_BLINK_FRAMES 4
 #define FIELD_TEXT_PROMPT_BLINK_FRAMES 8
@@ -1486,11 +1488,7 @@ void field_text_reset_windows(void)
 
 /**
  * @brief Reset the scratch state used for immediate string rendering.
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_reset_scratch);
-#else
 void field_text_reset_scratch(void)
 {
     if ((g_field_text_window0_flags & FIELD_TEXT_STATE_MASK) == FIELD_TEXT_TIMED)
@@ -1519,7 +1517,9 @@ void field_text_reset_scratch(void)
         state->portrait = NULL;
         state->text_cursor = NULL;
         state->macro_cursor = NULL;
+#if !defined(VERSION_JP)
         state->glyph_cursor = NULL;
+#endif
         state->flow_code = FIELD_TEXT_FLOW_NONE;
         state->pending_spaces = 0;
         state->choice_count = 0;
@@ -1531,7 +1531,6 @@ void field_text_reset_scratch(void)
                             ~FIELD_TEXT_AUTO_CLOSE;
     } while (0);
 }
-#endif
 
 /**
  * @brief Typeset a string and describe its cached spans as sprite primitives.
@@ -1539,11 +1538,8 @@ void field_text_reset_scratch(void)
  * @param text Text to typeset.
  * @param text_style Text palette/style selector; only the low 16 bits are used.
  * @return Number of sprite spans written.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP does not set last_was_break (and has no glyph cursor to clear).
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_build_sprites);
-#else
 s32 field_text_build_sprites(SPRT* prim, u8* text, s32 text_style)
 {
     u16 style = text_style;
@@ -1558,11 +1554,15 @@ s32 field_text_build_sprites(SPRT* prim, u8* text, s32 text_style)
     s32 col;
     s32 cols;
 
+#if !defined(VERSION_JP)
     state->last_was_break = 1;
+#endif
     state->text_color = style & 7;
     carry = state->row_carry;
     state->macro_cursor = NULL;
+#if !defined(VERSION_JP)
     state->glyph_cursor = NULL;
+#endif
     state->pending_spaces = 0;
     state->flow_code = FIELD_TEXT_FLOW_NONE;
     remaining = state->line_height;
@@ -1618,7 +1618,6 @@ s32 field_text_build_sprites(SPRT* prim, u8* text, s32 text_style)
     }
     return count;
 }
-#endif
 
 /**
  * @brief Open a text window after the cache region used by earlier active slots.
@@ -1722,11 +1721,7 @@ void field_text_open_packed_window(slot) u16 slot;
  * @brief Open a text window in its fixed cache region.
  * @param slot Window slot index; only the low 16 bits are used.
  * @note Old-style definition: callers pass a word and the body works on a u16.
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_open_fixed_window);
-#else
 void field_text_open_fixed_window(slot) u16 slot;
 {
     FieldTextSystem* system = FIELD_TEXT_SYSTEM;
@@ -1810,16 +1805,12 @@ void field_text_open_fixed_window(slot) u16 slot;
     state->dirty_end_v = y;
     state->region_end_v = y;
 }
-#endif
 
 /**
  * @brief Apply the pending text configuration to a runtime window state.
  * @param state Window state to initialize.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP does not set last_was_break (and has no glyph cursor to clear).
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_apply_config);
-#else
 static void field_text_apply_config(FieldTextState* state)
 {
     FieldTextConfig* config = FIELD_TEXT_PENDING_CONFIG;
@@ -1872,8 +1863,10 @@ static void field_text_apply_config(FieldTextState* state)
     }
     state->text_cursor = NULL;
     state->macro_cursor = NULL;
+#if !defined(VERSION_JP)
     state->glyph_cursor = NULL;
     state->last_was_break = 1;
+#endif
     if ((config->anchor.word == 0) && ((config->flags.word & 0x70FF) == 0))
     {
         state->flags.b.byte2 = 0;
@@ -1897,7 +1890,6 @@ static void field_text_apply_config(FieldTextState* state)
     state->flags.word &= ~FIELD_TEXT_AUTO_CLOSE;
     state->flags.word &= ~FIELD_TEXT_REOPEN_MASK;
 }
-#endif
 
 /**
  * @brief Release the portrait VRAM slot held by a window.
@@ -3461,11 +3453,8 @@ static void field_text_queue_uploads(FieldTextState* state, u8** cursor)
  * @param window_index Window slot; only the low 16 bits are used.
  * @param text Text pointer.
  * @param text_options Text options; bit 0 enables automatic close.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP does not set last_was_break (and has no glyph cursor to clear).
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_set_string);
-#else
 void field_text_set_string(s32 window_index, u8* text, s32 text_options)
 {
     u16 slot = window_index;
@@ -3481,15 +3470,18 @@ void field_text_set_string(s32 window_index, u8* text, s32 text_options)
         config->flags.b.byte2 = options;
         return;
     }
+#if !defined(VERSION_JP)
     state->last_was_break = 1;
+#endif
     state->text_cursor = text;
     state->macro_cursor = NULL;
+#if !defined(VERSION_JP)
     state->glyph_cursor = NULL;
+#endif
     state->pending_spaces = 0;
     state->flow_code = FIELD_TEXT_FLOW_NONE;
     state->flags.word = (state->flags.word & ~FIELD_TEXT_AUTO_CLOSE) | ((options & 1) << 12);
 }
-#endif
 
 /**
  * @brief Save the pending text configuration for a window slot.
@@ -3703,43 +3695,29 @@ static void field_text_restore_window(u16 slot, s32 placement_mode)
  * @param slot Window slot; only the low 16 bits are used.
  * @param x Left screen coordinate.
  * @param y Top screen coordinate.
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_set_position);
-#else
 void field_text_set_position(s32 slot, s16 x, s16 y)
 {
     FieldTextState* state = &FIELD_TEXT_SYSTEM->windows[slot & 0xFFFF];
     state->x = x;
     state->y = y;
 }
-#endif
 
 /**
  * @brief Start closing a text window.
  * @param slot Window slot; only the low 16 bits are used.
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_close_window);
-#else
 void field_text_close_window(s32 slot)
 {
     FieldTextState* state = &FIELD_TEXT_SYSTEM->windows[slot & 0xFFFF];
     field_text_close(state, 1);
 }
-#endif
 
 /**
  * @brief Read the progress of an active dialogue window.
  * @param slot Window slot; only the low 16 bits are used.
  * @return A FIELD_TEXT_STATUS_* value: CLOSED outside dialogue mode, PROMPT, BUSY while text remains, or DONE.
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_get_status);
-#else
 s32 field_text_get_status(s32 slot)
 {
     FieldTextState* state = &FIELD_TEXT_SYSTEM->windows[slot & 0xFFFF];
@@ -3754,33 +3732,24 @@ s32 field_text_get_status(s32 slot)
     }
     return FIELD_TEXT_STATUS_CLOSED;
 }
-#endif
 
 /**
  * @brief Read the last selected choice in a text window.
  * @param slot Window slot; only the low 16 bits are used.
  * @return Zero-based choice index.
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_get_choice);
-#else
 s32 field_text_get_choice(s32 slot)
 {
     return FIELD_TEXT_SYSTEM->windows[slot & 0xFFFF].choice_index;
 }
-#endif
 
 /**
  * @brief Format an unsigned value into a window's inline text buffer.
  * @param window_index Window slot; only the low 16 bits are used.
  * @param value Value to format as decimal text.
  * @param digits Number of columns; leading zeroes become spaces. Must be positive.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP writes each digit as a two-byte glyph: FIELD_TEXT_JP_DIGIT_LEAD, then the digit.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_format_number);
-#else
 void field_text_format_number(s32 window_index, u32 value, u8 digits)
 {
     u8* text;
@@ -3789,8 +3758,13 @@ void field_text_format_number(s32 window_index, u32 value, u8 digits)
     s32 leading_zero;
 
     leading_zero = 1;
+#if defined(VERSION_JP)
+    place_value = 1;
+    text = FIELD_TEXT_SYSTEM->windows[window_index & 0xFFFF].inline_text;
+#else
     text = FIELD_TEXT_SYSTEM->windows[window_index & 0xFFFF].inline_text;
     place_value = 1;
+#endif
     while (--digits != 0)
     {
         place_value = place_value * 10;
@@ -3808,13 +3782,22 @@ void field_text_format_number(s32 window_index, u32 value, u8 digits)
             {
                 digit = 9;
             }
+#if defined(VERSION_JP)
+            *text++ = FIELD_TEXT_JP_DIGIT_LEAD;
+            *text++ = digit;
+#else
             *text++ = digit + '0';
+#endif
             leading_zero = 0;
         }
         value = value % place_value;
         place_value = place_value / 10;
     }
+#if defined(VERSION_JP)
+    *text++ = FIELD_TEXT_JP_DIGIT_LEAD;
+    *text = value;
+#else
     *text = value + '0';
+#endif
     text[1] = 0;
 }
-#endif

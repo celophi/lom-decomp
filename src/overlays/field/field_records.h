@@ -478,11 +478,16 @@ typedef struct FieldRegionRecord
 /**
  * @brief Experience a character or stored companion needs to advance from @p level.
  * @param level Current level.
- * @return 10 * level * (2 * level - 1).
+ * @return 10 * level * (2 * level - 1); JP: 5 * level * (5 * level - 2).
+ * @note JP uses a steeper curve.
  */
 static inline s32 field_level_threshold(s32 level)
 {
+#if defined(VERSION_JP)
+    return (level - 1) * (level * 24 + level) + level * 15;
+#else
     return (level - 1) * ((level * 5) << 2) + ((level * 5) << 1);
+#endif
 }
 
 /** @brief Number of cells in the six-by-six golem logic-block placement grid. */

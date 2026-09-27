@@ -19,6 +19,12 @@
 /** @brief Slot values at or above this have no slot script. */
 #define FIELD_SLOT_SCRIPT_LIMIT 0xA0
 
+/** @brief Pool cost JP checks before setting a staged flags2C/flags2D bit. */
+#define FIELD_STAGED_FLAG_COST 0x10
+
+/** @brief Pool price JP deducts for each flags2C bit it sets. */
+#define FIELD_STAGED_FLAG2C_PRICE 8
+
 /** @brief Slot whose values may be pinned by the staging flags. */
 #define FIELD_PINNED_SLOT 4
 
@@ -174,18 +180,17 @@ s32 field_replace_slot_value(s32 cost, s32 value, s32 replacement)
 
 /**
  * @brief Finish the staged flags and clamp the staged stat modifiers.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP applies the pending level-ups first.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_slot_pool_ops", field_finish_staged_item);
-#else
 void field_finish_staged_item(void)
 {
+#if defined(VERSION_JP)
+    field_apply_pending_levels();
+#endif
     field_apply_flags2c_mask();
     field_apply_flags2d_mask();
     field_clamp_staged_stats();
 }
-#endif
 
 /**
  * @brief Pick each stat's stronger modifier and clamp it to the stat's limits.
@@ -262,11 +267,8 @@ void field_apply_pending_levels(void)
  * level; the level stops at FIELD_STAGING_LEVEL_MAX.
  *
  * @param index Level entry to raise.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP has no level cap here.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_slot_pool_ops", field_raise_staged_level);
-#else
 void field_raise_staged_level(s32 index)
 {
     FieldItemStaging* staging;
@@ -287,21 +289,22 @@ void field_raise_staged_level(s32 index)
     pool = staging->pool;
     price <<= entry->levels[0].level;
 
+#if defined(VERSION_JP)
+    if (pool >= price)
+#else
     if (pool >= price && entry->levels[0].level < FIELD_STAGING_LEVEL_MAX)
+#endif
     {
         staging->pool = pool - price;
         entry->levels[0].level++;
     }
 }
-#endif
 
 /**
  * @brief Set the flags2C bits whose mask bit is set and whose level is nonzero.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP sets only bits not set yet, and each costs FIELD_STAGED_FLAG2C_PRICE
+ *       from the pool (after a FIELD_STAGED_FLAG_COST check).
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_slot_pool_ops", field_apply_flags2c_mask);
-#else
 static void field_apply_flags2c_mask(void)
 {
     s32 mask;
@@ -309,21 +312,26 @@ static void field_apply_flags2c_mask(void)
 
     for (i = 0, mask = 1; i < FIELD_STAGING_LEVEL_COUNT; i++, mask <<= 1)
     {
+#if defined(VERSION_JP)
+        if ((mask & D_80123FC4->flags2C_mask) && !(mask & D_80123FC4->flags2C) && field_can_pay_staged_cost(FIELD_STAGED_FLAG_COST) &&
+            D_80123FC4->pool >= FIELD_STAGED_FLAG2C_PRICE && D_80123FC4->levels[i].level != 0)
+        {
+            D_80123FC4->pool -= FIELD_STAGED_FLAG2C_PRICE;
+            D_80123FC4->flags2C |= mask;
+        }
+#else
         if ((mask & D_80123FC4->flags2C_mask) && D_80123FC4->levels[i].level != 0)
         {
             D_80123FC4->flags2C |= mask;
         }
+#endif
     }
 }
-#endif
 
 /**
  * @brief Rebuild flags2D from the bits of flags2D_mask.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP sets a bit only when the pool can pay FIELD_STAGED_FLAG_COST.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_slot_pool_ops", field_apply_flags2d_mask);
-#else
 static void field_apply_flags2d_mask(void)
 {
     s32 mask;
@@ -332,13 +340,16 @@ static void field_apply_flags2d_mask(void)
     D_80123FC4->flags2D = 0;
     for (i = 0, mask = 1; i < 8; i++, mask <<= 1)
     {
+#if defined(VERSION_JP)
+        if ((D_80123FC4->flags2D_mask & mask) && field_can_pay_staged_cost(FIELD_STAGED_FLAG_COST))
+#else
         if (D_80123FC4->flags2D_mask & mask)
+#endif
         {
             D_80123FC4->flags2D |= mask;
         }
     }
 }
-#endif
 
 /**
  * @brief Lower one staged level and refund its price to the pool.

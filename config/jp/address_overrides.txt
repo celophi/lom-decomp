@@ -42,3 +42,7 @@ field_apply_flags2d_mask = 0x800BF5A0;
 carda_update_menu = 0x8014082C;
 carda_update_save_sequence = 0x80140914;
 carda_handle_input = 0x80140BA8;
+
+// field_init_text_macros indexes it exactly like US (weekday & 0x7F, s16
+// offsets from the table start); splat labelled it D_800EF118 in data_c.
+g_field_weekday_names = 0x800EF118;

@@ -1,0 +1,5 @@
+// field_draw_frame (JP): both audio checks read FIELD_CD_SYSTEM->audio_enabled,
+// a literal address; splat names the first one after g_cd_audio_enabled, which
+// sits at the same address. Strip that false-positive relocation.
+rom:0x2311 reloc:MIPS_NONE symbol:g_cd_audio_enabled
+rom:0x2315 reloc:MIPS_NONE symbol:g_cd_audio_enabled

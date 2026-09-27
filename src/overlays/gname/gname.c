@@ -230,6 +230,9 @@ enum
 #define NAME_STRIP_BACKING_PAGE1_Y 0x100
 #define NAME_STRIP_BACKING_HEIGHT 0x20
 #define NAME_STRIP_HORIZONTAL_PADDING 0x18
+
+/** @brief Width of every name glyph in JP, which measures names by glyph count. */
+#define NAME_JP_GLYPH_WIDTH 12
 #define NAME_MEASURE_CAPACITY 16
 #define NAME_MEASURE_TEXT_COLOR 0
 
@@ -500,7 +503,7 @@ static void* emit_glyph_sprt(void* packet_start, u_long* ot_entry, s32 glyph_id,
                              s32 use_blue_overlay);
 static void render_layout_sprite_batch(RenderContext* render_ctx);
 static s32 name_byte_length(const u8* name_buf);
-static s32 name_glyph_count(const u8* name_buf);
+static inline s32 name_glyph_count(const u8* name_buf);
 static void name_append(u8* destination, const u8* source);
 static s32 name_pop_last_glyph(u8* name_buf);
 static void name_copy(u8* destination, const u8* source);
@@ -773,11 +776,8 @@ static void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count)
 /**
  * @brief Initialize name-entry resources and session state.
  * @see https://decomp.me/scratch/pnzC1 (100%)
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP skips the FIELD text scratch reset and cache upload.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/gname/nonmatchings/gname", gname_init);
-#else
 void gname_init(void)
 {
     s32 frame_padding[GNAME_INIT_STACK_PAD_WORDS];
@@ -785,11 +785,14 @@ void gname_init(void)
     load_name_entry_tim();
     field_reset_input_repeat();
     g_startup_delay = GNAME_STARTUP_DELAY_FRAMES;
+#if !defined(VERSION_JP)
     field_text_reset_scratch();
-    reset_run_state();
-    field_text_upload_immediate_cache();
-}
 #endif
+    reset_run_state();
+#if !defined(VERSION_JP)
+    field_text_upload_immediate_cache();
+#endif
+}
 
 /**
  * @brief Upload the name-entry TIM to its fixed VRAM destinations.
@@ -1907,14 +1910,23 @@ static s32 name_byte_length(const u8* name_buf)
  * @param name_buf Null-terminated name buffer.
  * @return Number of encoded glyphs.
  * @see https://decomp.me/scratch/c8fPe (100%)
+ * @note Inline: calls before this definition stay calls, and the JP
+ *       recalc_name_width after it gets the loop inlined.
  */
-static s32 name_glyph_count(const u8* name_buf)
+static inline s32 name_glyph_count(const u8* name_buf)
 {
     s32 glyph_count = 0;
 
     while (*name_buf)
     {
-        name_buf += IS_DBCS_LEAD_BYTE(*name_buf) ? NAME_GLYPH_SIZE_DOUBLE : NAME_GLYPH_SIZE_SINGLE;
+        if (IS_DBCS_LEAD_BYTE(*name_buf))
+        {
+            name_buf += NAME_GLYPH_SIZE_DOUBLE;
+        }
+        else
+        {
+            name_buf += NAME_GLYPH_SIZE_SINGLE;
+        }
         glyph_count++;
     }
 
@@ -2056,13 +2068,14 @@ static void name_copy(u8* destination, const u8* source)
 /**
  * @brief Recalculate the active name and strip widths.
  * @see https://decomp.me/scratch/y0CgJ (100%)
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP measures the name by glyph count (fixed-width glyphs) instead of
+ *       building its sprites.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/gname/nonmatchings/gname", recalc_name_width);
-#else
 static void recalc_name_width(void)
 {
+#if defined(VERSION_JP)
+    g_strip_width_target = name_glyph_count(g_active_name) * NAME_JP_GLYPH_WIDTH + NAME_STRIP_HORIZONTAL_PADDING;
+#else
     SPRT glyphs[NAME_MEASURE_CAPACITY];
     s16 glyph_width;
     s32 glyph_count;
@@ -2078,8 +2091,8 @@ static void recalc_name_width(void)
     }
 
     g_strip_width_target = g_name_pixel_width + NAME_STRIP_HORIZONTAL_PADDING;
-}
 #endif
+}
 
 /**
  * @brief Prepend a packed glyph to a name buffer.
@@ -2254,16 +2267,17 @@ static void* render_glyph_append_anim(void* packet_cursor, RenderContext* render
  * @param name_buf Null-terminated name buffer.
  * @return TRUE if blank, otherwise FALSE.
  * @see https://decomp.me/scratch/rdbBA (100%)
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP counts only NAME_BYTE_SPACE as blank.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/gname/nonmatchings/gname", name_is_blank);
-#else
 static s32 name_is_blank(const u8* name_buf)
 {
     while (*name_buf != '\0')
     {
+#if defined(VERSION_JP)
+        if (*name_buf != NAME_BYTE_SPACE)
+#else
         if ((*name_buf != NAME_BYTE_SPACE) && (*name_buf != NAME_BYTE_ALT_BLANK))
+#endif
         {
             return FALSE;
         }
@@ -2273,4 +2287,3 @@ static s32 name_is_blank(const u8* name_buf)
 
     return TRUE;
 }
-#endif

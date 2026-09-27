@@ -1267,16 +1267,16 @@ void* carda_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 wi
 
 /**
  * @brief Preselect the second choice of the two-choice prompt.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP preselects the first choice instead.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/carda/nonmatchings/carda_widgets", carda_enable_choice_toggle);
-#else
 void carda_enable_choice_toggle(void)
 {
+#if defined(VERSION_JP)
+    g_carda_choice_toggle = 0;
+#else
     g_carda_choice_toggle = 1;
-}
 #endif
+}
 
 /**
  * @brief Draw the two choices of a yes/no prompt from the FIELD UI string table,

@@ -1045,11 +1045,8 @@ void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y)
  *         (g_controller_device_type >= TITLE_PAD_UNAVAILABLE).
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/Z5swg
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP reports the face buttons as read (no PAD_REMAP_FACE_BITS swap).
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/title/nonmatchings/title", read_pad_state);
-#else
 s32 read_pad_state(void)
 {
     SCDRegs* regs = SCD_REGS;
@@ -1068,7 +1065,9 @@ s32 read_pad_state(void)
     hi_read = regs->held_buttons;
     lo_read = regs->held_buttons;
     buttons = (hi_read >> 8) | (lo_read << 8);
+#if !defined(VERSION_JP)
     buttons = PAD_REMAP_FACE_BITS(buttons);
+#endif
     if (regs->device_type != 0)
     {
         /* Convert signed analog-axis thresholds to digital directions. */
@@ -1094,7 +1093,6 @@ s32 read_pad_state(void)
     }
     return buttons;
 }
-#endif
 
 /**
  * @brief Read the SCD pad, debounce it, and publish the result in g_debouncedInput.
@@ -1111,17 +1109,13 @@ s32 read_pad_state(void)
  *  - No input clears all three globals.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/geg1v
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP reads the face buttons as they are (no PAD_REMAP_FACE_BITS swap).
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/title/nonmatchings/title", update_menu_input);
-#else
 void update_menu_input(void)
 {
     SCDRegs* regs = SCD_REGS;
     u32 buttons;
-    s16 axis_x;
-    s16 axis_y;
+    s32 axis;
     s32 input_state;
 
     if (g_controller_device_type >= TITLE_PAD_UNAVAILABLE)
@@ -1131,25 +1125,27 @@ void update_menu_input(void)
     else
     {
         buttons = (regs->held_buttons >> 8) | (regs->held_buttons << 8);
+#if !defined(VERSION_JP)
         buttons = PAD_REMAP_FACE_BITS(buttons);
+#endif
         if (regs->device_type != 0)
         {
-            axis_x = regs->axis_x.signed_value;
-            if (axis_x < -1)
+            axis = regs->axis_x.signed_value;
+            if (axis < -1)
             {
                 buttons |= PAD_BTN_LEFT;
             }
-            else if (axis_x >= 2)
+            else if (axis >= 2)
             {
                 buttons |= PAD_BTN_RIGHT;
             }
 
-            axis_y = regs->axis_y.signed_value;
-            if (axis_y < -1)
+            axis = regs->axis_y.signed_value;
+            if (axis < -1)
             {
                 buttons |= PAD_BTN_UP;
             }
-            else if (axis_y >= 2)
+            else if (axis >= 2)
             {
                 buttons |= PAD_BTN_DOWN;
             }
@@ -1188,4 +1184,3 @@ void update_menu_input(void)
         g_inputRepeatTimer = TITLE_INITIAL_REPEAT_DELAY;
     }
 }
-#endif

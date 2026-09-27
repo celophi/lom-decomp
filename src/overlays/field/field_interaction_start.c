@@ -28,6 +28,13 @@
 /** @brief Character budget of a macro with no practical limit. */
 #define FIELD_TEXT_NO_LIMIT 0xFF
 
+/** @brief Character limit of the weekday text macro: none in US, 10 in JP. */
+#if defined(VERSION_JP)
+#define FIELD_WEEKDAY_CHARACTER_LIMIT 10
+#else
+#define FIELD_WEEKDAY_CHARACTER_LIMIT FIELD_TEXT_NO_LIMIT
+#endif
+
 /** @brief Fade length set up for a new scene, in frames. */
 #define FIELD_SCENE_FADE_FRAMES 16
 
@@ -260,11 +267,8 @@ static void field_reset_scene_fade(void)
 
 /**
  * @brief Set up the party name and weekday text macros and script variable 0xA03.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP limits the weekday text to 10 characters and leaves 0xA03 alone.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_interaction_start", field_init_text_macros);
-#else
 static void field_init_text_macros(void)
 {
     s32 slot;
@@ -275,9 +279,10 @@ static void field_init_text_macros(void)
         g_field_text_macros[FIELD_TEXT_MACRO_PARTY_NAME - slot].text = g_field_game_state->characters[slot].name;
     }
 
-    g_field_text_macros[FIELD_TEXT_MACRO_WEEKDAY].character_limit = FIELD_TEXT_NO_LIMIT;
+    g_field_text_macros[FIELD_TEXT_MACRO_WEEKDAY].character_limit = FIELD_WEEKDAY_CHARACTER_LIMIT;
     g_field_text_macros[FIELD_TEXT_MACRO_WEEKDAY].text = FIELD_OFFSET_TABLE_TEXT(g_field_weekday_names, g_field_game_state->control.fields.weekday & FIELD_WEEKDAY_MASK);
 
+#if !defined(VERSION_JP)
     if ((field_get_script_var(0, FIELD_VAR_UNKA02) != 0) || ((g_field_game_state->characters[1].info.word & FIELD_CHARACTER_AI) != 0))
     {
         field_set_script_var(0, FIELD_VAR_UNKA03, 1);
@@ -286,8 +291,8 @@ static void field_init_text_macros(void)
     {
         field_set_script_var(0, FIELD_VAR_UNKA03, 0);
     }
-}
 #endif
+}
 
 /**
  * @brief Initialize the party actor records and the script local-variable bases.

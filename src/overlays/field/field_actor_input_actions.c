@@ -103,11 +103,8 @@ void field_probe_actor_interaction(FieldActor* actor);
  * @param action Action whose bound buttons are collected.
  * @param actor Actor that must be a party member in control mode 0.
  * @return The held bound buttons, or zero when input is unavailable.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP returns the face buttons as read (no swap).
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_actor_input_actions", field_get_held_action_buttons);
-#else
 s32 field_get_held_action_buttons(s32 player, s32 action, FieldActor* actor)
 {
     s32 mask;
@@ -115,7 +112,9 @@ s32 field_get_held_action_buttons(s32 player, s32 action, FieldActor* actor)
     u8 code;
     ControllerPortState* ports;
     ControllerSample* sample;
+#if !defined(VERSION_JP)
     u32 buttons;
+#endif
 
     ports = CONTROLLER_STATE->ports;
     if (actor->object_index < FIELD_PARTY_COUNT)
@@ -134,28 +133,32 @@ s32 field_get_held_action_buttons(s32 player, s32 action, FieldActor* actor)
             sample = &ports[player].published_sample;
             if (sample->device_type < CONTROLLER_DEVICE_CONFIGURING)
             {
+#if defined(VERSION_JP)
+                return ((u32)sample->held_buttons >> 8) & mask;
+#else
                 buttons = (u32)sample->held_buttons >> 8;
                 return (((buttons >> 1) & PAD_BTN_CROSS) | ((buttons & PAD_BTN_CROSS) << 1) | ((buttons >> 3) & PAD_BTN_SQUARE) | ((buttons & PAD_BTN_SQUARE) << 3) | (buttons & FIELD_SHOULDER_BUTTONS)) & mask;
+#endif
             }
         }
     }
     return 0;
 }
-#endif
 
 /**
  * @brief Let the leader probe for an interaction when confirm is pressed and nothing blocks it.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP checks only for an active interaction before reading the text windows.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_actor_input_actions", field_poll_leader_interaction);
-#else
 void field_poll_leader_interaction(void)
 {
     s32 first_status;
     s32 second_status;
 
+#if defined(VERSION_JP)
+    if ((g_field_interaction_active == 0) && (g_field_buffered_input & FIELD_CONFIRM_BUTTONS))
+#else
     if ((g_field_active_group == 0) && (g_field_actors[0].command == 0) && (g_field_dialog_screen_mode == 0) && (g_field_interaction_active == 0) && (g_field_buffered_input & FIELD_CONFIRM_BUTTONS))
+#endif
     {
         first_status = field_text_get_status(0);
         second_status = field_text_get_status(1);
@@ -165,7 +168,6 @@ void field_poll_leader_interaction(void)
         }
     }
 }
-#endif
 
 /**
  * @brief Turn the player's queued action into an enabled actor command word.
@@ -216,11 +218,8 @@ u16 field_resolve_action_command(FieldActor* actor, s32 player)
  * @brief Set or clear the actor's running flag while a run button is held.
  * @param actor Player actor; resources with an action table never run.
  * @param player Controller port to read.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP tests the buttons as read (no PAD_REMAP_FACE_BITS swap).
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_actor_input_actions", field_update_actor_run_button);
-#else
 void field_update_actor_run_button(FieldActor* actor, s32 player)
 {
     u16 raw;
@@ -230,6 +229,17 @@ void field_update_actor_run_button(FieldActor* actor, s32 player)
     ports = CONTROLLER_STATE->ports;
     if (!(g_field_resource_entries[actor->resource_index].flags & FIELD_RESOURCE_HAS_ACTIONS))
     {
+#if defined(VERSION_JP)
+        if (ports[player].published_sample.device_type >= CONTROLLER_DEVICE_CONFIGURING)
+        {
+            buttons = 0;
+        }
+        else
+        {
+            raw = ports[player].published_sample.held_buttons;
+            buttons = ((raw << 8) & 0xFF00) | (raw >> 8);
+        }
+#else
         buttons = 0;
         if (ports[player].published_sample.device_type < CONTROLLER_DEVICE_CONFIGURING)
         {
@@ -238,6 +248,7 @@ void field_update_actor_run_button(FieldActor* actor, s32 player)
         }
 
         buttons = PAD_REMAP_FACE_BITS(buttons);
+#endif
         if (buttons & FIELD_RUN_BUTTONS)
         {
             if (actor->running == 0)
@@ -253,4 +264,3 @@ void field_update_actor_run_button(FieldActor* actor, s32 player)
         }
     }
 }
-#endif

@@ -176,18 +176,17 @@ static void field_build_item_name(s32 type_entry, s32 subtype_entry, u8* dest)
  * are copied and the four factors are scaled by the subtype multipliers.
  *
  * @param record Item record to update.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP does not cap the power at FIELD_DERIVED_VALUE_MAX.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_generated_record_ops", field_derive_weapon_values);
-#else
 void field_derive_weapon_values(FieldItemRecord* record)
 {
     s32 i;
     s32 weight;
     s32 levels;
     u16 divisor;
+#if !defined(VERSION_JP)
     u16 power;
+#endif
 
     for (i = 0, weight = 0; i < FIELD_STAGING_FACTOR_COUNT; i++)
     {
@@ -200,12 +199,16 @@ void field_derive_weapon_values(FieldItemRecord* record)
     }
 
     divisor = D_80123FC0->item.subtypes[D_80123FC4->item_subtype].divisor;
+#if defined(VERSION_JP)
+    record->derived.weapon.power = (weight * (levels + divisor) / divisor) >> 7;
+#else
     power = (weight * (levels + divisor) / divisor) >> 7;
     record->derived.weapon.power = power;
     if (power >= 1000)
     {
         record->derived.weapon.power = FIELD_DERIVED_VALUE_MAX;
     }
+#endif
 
     for (i = 0; i < FIELD_STAGING_PROPERTY_COUNT; i++)
     {
@@ -219,29 +222,31 @@ void field_derive_weapon_values(FieldItemRecord* record)
         record->attributes[i] = (D_80123FC0->item.types[D_80123FC4->item_type].factors[i] * D_80123FC4->multipliers[i]) >> 6;
     }
 }
-#endif
 
 /**
  * @brief Derive the category 1 values of an item record from the staging block.
  * @param record Item record to update.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP does not cap the derived values at FIELD_DERIVED_VALUE_MAX.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_generated_record_ops", field_derive_armor_values);
-#else
 void field_derive_armor_values(FieldItemRecord* record)
 {
     s32 i;
+#if !defined(VERSION_JP)
     u32 value;
+#endif
 
     for (i = 0; i < FIELD_STAGING_FACTOR_COUNT; i++)
     {
+#if defined(VERSION_JP)
+        record->derived.values[i] = (D_80123FC0->item.alternate_types[D_80123FC4->item_type].weights[i] * D_80123FC4->multipliers[i]) >> 6;
+#else
         value = (D_80123FC0->item.alternate_types[D_80123FC4->item_type].weights[i] * D_80123FC4->multipliers[i]) >> 6;
         record->derived.values[i] = value;
         if (value >= 1000)
         {
             record->derived.values[i] = FIELD_DERIVED_VALUE_MAX;
         }
+#endif
         record->attributes[i] = (D_80123FC0->item.alternate_types[D_80123FC4->item_type].factors[i] * D_80123FC4->multipliers[i]) >> 6;
     }
 
@@ -249,4 +254,3 @@ void field_derive_armor_values(FieldItemRecord* record)
     record->flags2D = D_80123FC4->flags2D;
     record->effect_index = D_80123FC4->effect_index;
 }
-#endif

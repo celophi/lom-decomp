@@ -131,15 +131,16 @@ void field_scene_reset(void)
  * @param update_mode Update mode for the scene objects and text windows (1 while a text session pauses the field).
  * @param force_unscaled Non-zero draws the scene objects with the unscaled camera offsets (update mode 2).
  * @see decomp.me (100%) https://decomp.me/scratch/lg9gw
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP ignores @p force_unscaled and reads both audio checks through
+ *       cd_system (US reads the first through g_cd_audio_enabled, the same byte).
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_scene_load", field_draw_frame);
-#else
 void field_draw_frame(s32 alternate_half, FieldRenderHalf* buffer, s32 update_mode, s32 force_unscaled)
 {
     FieldCdSystem* cd_system;
 
+#if defined(VERSION_JP)
+    field_draw_scene_objects(&buffer->primitive_cursor, &buffer->ordering_table[FIELD_SCENE_OT_OFFSET], update_mode);
+#else
     if (force_unscaled != 0)
     {
         field_draw_scene_objects(&buffer->primitive_cursor, &buffer->ordering_table[FIELD_SCENE_OT_OFFSET], 2);
@@ -148,9 +149,14 @@ void field_draw_frame(s32 alternate_half, FieldRenderHalf* buffer, s32 update_mo
     {
         field_draw_scene_objects(&buffer->primitive_cursor, &buffer->ordering_table[FIELD_SCENE_OT_OFFSET], update_mode);
     }
+#endif
     cd_system = FIELD_CD_SYSTEM;
     field_update_scene_fade();
+#if defined(VERSION_JP)
+    if (cd_system->audio_enabled != 0)
+#else
     if (g_cd_audio_enabled != 0)
+#endif
     {
         movie_service_video_ops();
     }
@@ -160,21 +166,17 @@ void field_draw_frame(s32 alternate_half, FieldRenderHalf* buffer, s32 update_mo
         movie_service_video_ops();
     }
 }
-#endif
 
 /**
  * @brief Zero the four per-node accumulators across the scene's node list.
  *
- * When both arguments are zero, also advances the scene animations.
+ * When both arguments are zero (JP: when update_mode is zero), also advances
+ * the scene animations.
  *
  * @param update_mode Field update mode; non-zero skips the animation update.
- * @param force_unscaled Non-zero skips the animation update.
+ * @param force_unscaled Non-zero skips the animation update (US only; JP ignores it).
  * @see decomp.me (100%) https://decomp.me/scratch/KyLZb
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_scene_load", field_clear_node_accumulators);
-#else
 void field_clear_node_accumulators(s32 update_mode, s32 force_unscaled)
 {
     FieldNode* node;
@@ -186,12 +188,15 @@ void field_clear_node_accumulators(s32 update_mode, s32 force_unscaled)
         node->delta_y = 0;
         node->unk30 = 0;
     }
+#if defined(VERSION_JP)
+    if (update_mode == 0)
+#else
     if ((update_mode == 0) && (force_unscaled == 0))
+#endif
     {
         field_update_scene_animations();
     }
 }
-#endif
 
 /**
  * @brief Initialize a field scene and its FMV using a caller-supplied context.

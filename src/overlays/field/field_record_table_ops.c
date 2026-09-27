@@ -75,18 +75,17 @@ static s32 field_is_item_key_used(FieldItemKey* key);
  * @param second_land Second land to place; only tried while fewer than FIELD_ACTIVE_LAND_LIMIT lands are active.
  * @param placed Output list of placed lands, terminated with FIELD_LAND_LIST_END.
  * @return Number of lands placed.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP indexes the distance item table without clamping the distance.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_record_table_ops", field_place_lands);
-#else
 s32 field_place_lands(s32 first_land, s32 second_land, s32* placed)
 {
     s32* cursor;
     s32 placed_count;
     s32 active_count;
     s32 i;
+#if !defined(VERSION_JP)
     u32 table_index;
+#endif
     u32 flags;
 
     cursor = placed;
@@ -125,6 +124,10 @@ s32 field_place_lands(s32 first_land, s32 second_land, s32* placed)
 
     if (placed_count == 0)
     {
+#if defined(VERSION_JP)
+        i = field_get_land_distance(g_music_track_index);
+        field_receive_item(g_field_land_distance_items[i]);
+#else
         /* i doubles as the distance: a separate local changes the register allocation. */
         i = field_get_land_distance(g_music_track_index);
         table_index = FIELD_LAND_DISTANCE_MAX;
@@ -133,11 +136,11 @@ s32 field_place_lands(s32 first_land, s32 second_land, s32* placed)
             table_index = i;
         }
         field_receive_item(g_field_land_distance_items[table_index]);
+#endif
     }
     *cursor = FIELD_LAND_LIST_END;
     return placed_count;
 }
-#endif
 
 /**
  * @brief Place an available land that is not placed yet, recording its placement order.
