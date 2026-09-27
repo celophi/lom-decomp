@@ -384,15 +384,14 @@ Useful places to start exploring:
 - `config/us/symbols/` - known function/global addresses.
 - `config/us/relocations/` - relocation overrides used when splat needs help reconstructing symbolic references.
 - `mk/overlay-registry.mk` - overlay source/toolchain assignments.
-- `docs/decompilation/` - project-specific matching notes.
 
 ## Documentation
 
-Useful project-specific references include:
+Browse the [documentation index](docs/README.md) for architecture guides and
+project references. Useful starting points include:
 
-- [`docs/decompilation/gcc-272-matching-techniques.md`](docs/decompilation/gcc-272-matching-techniques.md)
-- [`docs/decompilation/splat-reloc-overrides.md`](docs/decompilation/splat-reloc-overrides.md)
-- [`docs/decompilation/psyq-gpu-primitives.md`](docs/decompilation/psyq-gpu-primitives.md)
+- [CD-ROM subsystem architecture](docs/en/technical/architecture/cdrom.md)
+- [MOVIE overlay architecture](docs/en/technical/architecture/movie.md)
 - [`tools/compressor/README.md`](tools/compressor/README.md)
 
 ## Troubleshooting

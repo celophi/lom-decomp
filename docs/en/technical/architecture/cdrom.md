@@ -1,5 +1,7 @@
 # CD-ROM subsystem architecture
 
+[English documentation](../../README.md)
+
 ## High-level Overview
 
 The main CD-ROM subsystem turns resource requests into a serialized stream of
@@ -27,8 +29,8 @@ Three properties matter at the architectural level:
   and synchronous loading can wait. Frame-based watchdogs support recovery;
   they do not guarantee a maximum loading time.
 
-This is an implementation description of [the main CD module](../src/cdrom.c)
-and [its decompressor](../src/cdrom_decompress.c). The separate CD implementation
+This is an implementation description of [the main CD module](../../../../src/cdrom.c)
+and [its decompressor](../../../../src/cdrom_decompress.c). The separate CD implementation
 inside CHECKPS is outside this document's scope. The architecture and known
 limitations below describe the matching code, including behavior retained from
 the original executable.
@@ -97,9 +99,9 @@ Some fields are volatile because callbacks update them. These are local
 coordination mechanisms, not a general thread-safety or reentrancy contract.
 Nested stream loads would share the same metadata and buffers.
 
-Sources: [CD controller](../src/cdrom.c),
-[stream state](../src/cdrom_internal.h), and
-[movie deferred-sector integration](../src/overlays/movie/movie_stream.c).
+Sources: [CD controller](../../../../src/cdrom.c),
+[stream state](../../../../src/cdrom_internal.h), and
+[movie deferred-sector integration](../../../../src/overlays/movie/movie_stream.c).
 
 ## Public contract and request lifecycle
 
@@ -127,7 +129,7 @@ Resource `0xFFFF` selects `default_cd_resource`. This lets
 `cdrom_load_resource_table()` bootstrap the table itself: set a location from
 the supplied LBA, queue the read into `CD_RESOURCE_ENTRIES`, then wait for it.
 Normal callers subsequently use indexed table entries rather than path lookup.
-See [disc layout](disc-layout.md) for the table and on-disc resource organization.
+See [disc layout](../reference/disc-layout.md) for the table and on-disc resource organization.
 
 ### Admission and completion are different events
 
@@ -146,9 +148,9 @@ For movie/XA transfers, the callback handles the specialized sector path and
 `NULL` means end the transfer. The generic data path's byte accounting and
 buffer-return contract must not be applied to that mode unchanged.
 
-Sources: [public types and API](../include/cdrom.h), `cdrom_queue_command()`,
+Sources: [public types and API](../../../../include/cdrom.h), `cdrom_queue_command()`,
 `cdrom_run_command()`, and `cdrom_process_sector()` in
-[the controller](../src/cdrom.c).
+[the controller](../../../../src/cdrom.c).
 
 ### Ordinary read sequence
 
@@ -334,9 +336,9 @@ having the same completion behavior as finite-capacity chunking. No caller of
 `cdrom_stream_chunked()` was found in the inspected C sources; its wider runtime
 use is unconfirmed.
 
-Sources: [stream-loading loops](../src/cdrom.c),
-[buffer callback and decoder](../src/cdrom_decompress.c), and
-[shared metadata](../src/cdrom_internal.h).
+Sources: [stream-loading loops](../../../../src/cdrom.c),
+[buffer callback and decoder](../../../../src/cdrom_decompress.c), and
+[shared metadata](../../../../src/cdrom_internal.h).
 
 ## Initialization, recovery, and callback ownership
 
@@ -350,7 +352,7 @@ drive if the shell-open status is present, and applies
 It does not install the asynchronous disc-validation callback or compare the
 disc ID. The main startup sequence then loads the resource table and begins
 resource loading. Disc-ID validation in this module belongs to automatic
-recovery. See [main startup](../src/main.c).
+recovery. See [main startup](../../../../src/main.c).
 
 ### Callback roles change with the active operation
 
@@ -370,6 +372,8 @@ simultaneously.
 pauses the drive, and clears the controller. Movie reset also restores saved
 MDEC/GPU callbacks. Ownership therefore extends beyond the CD queue during
 movie playback.
+The [MOVIE architecture](movie.md) describes the decoder,
+audio pipeline, and presentation ownership in detail.
 
 ### Automatic recovery after drive errors
 
@@ -554,11 +558,11 @@ error branch, `response_data[0] & 0x40` tests the invalid-command error bit.
 
 | Source | Start here for |
 |---|---|
-| [src/cdrom.c](../src/cdrom.c) | Queue admission, callbacks, supervisor, recovery, and stream-loading loops |
-| [include/cdrom.h](../include/cdrom.h) | Public entry points and callback contracts |
-| [src/cdrom_internal.h](../src/cdrom_internal.h) | Stream metadata and shared buffer conventions |
-| [src/cdrom_decompress.c](../src/cdrom_decompress.c) | Buffer handoff, input compaction, and bytecode decoding |
-| [src/main.c](../src/main.c) | Startup and blocking overlay loads |
-| [movie.c](../src/overlays/movie/movie.c) and [movie_stream.c](../src/overlays/movie/movie_stream.c) | Movie/XA submission and deferred sector service |
-| [US symbols](../config/us/symbols/shared_symbol_addrs.txt) and [JP symbols](../config/jp/symbols/shared_symbol_addrs.txt) | Fixed-address placement |
-| [Disc layout](disc-layout.md) | Resource-table contents and disc organization |
+| [src/cdrom.c](../../../../src/cdrom.c) | Queue admission, callbacks, supervisor, recovery, and stream-loading loops |
+| [include/cdrom.h](../../../../include/cdrom.h) | Public entry points and callback contracts |
+| [src/cdrom_internal.h](../../../../src/cdrom_internal.h) | Stream metadata and shared buffer conventions |
+| [src/cdrom_decompress.c](../../../../src/cdrom_decompress.c) | Buffer handoff, input compaction, and bytecode decoding |
+| [src/main.c](../../../../src/main.c) | Startup and blocking overlay loads |
+| [movie.c](../../../../src/overlays/movie/movie.c) and [movie_stream.c](../../../../src/overlays/movie/movie_stream.c) | Movie/XA submission and deferred sector service |
+| [US symbols](../../../../config/us/symbols/shared_symbol_addrs.txt) and [JP symbols](../../../../config/jp/symbols/shared_symbol_addrs.txt) | Fixed-address placement |
+| [Disc layout](../reference/disc-layout.md) | Resource-table contents and disc organization |

@@ -1,5 +1,7 @@
 # Overlay ID Prefix
 
+[English documentation](../../README.md)
+
 Status: implemented. Every overlay with C sources in the build carries its
 header word in a dedicated `overlay_header.c` translation unit that is linked
 first. The nine verified overlays reproduce their disc SHA1s under this layout.
