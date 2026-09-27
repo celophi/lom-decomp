@@ -5,3 +5,12 @@
 // cload_expand_text_glyph_codes loads the table origin 0x80143458 (table - 0x19 * 0x210);
 // the JP table's 33-byte rows start there.
 g_cload_double_byte_char_table = 0x801467E8;
+
+// field_script_op_44 calls it (jal 0x800B5CE0 at JP 0x800BBC64); JP
+// field_get_next_level_experience is 0xC bytes longer, so the next function
+// starts there.
+field_reset_party_to_level = 0x800B5CE0;
+
+// get_world_map_overlay_end returns it (lui 0x801B + addiu 0x33A0 at JP
+// 0x80015C38); it is the JP WMAP image end (wmap_VRAM_END in the JP link map).
+g_world_map_overlay_end = 0x801B33A0;

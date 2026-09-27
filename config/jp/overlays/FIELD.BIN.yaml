@@ -52,11 +52,11 @@ segments:
       - [auto, c, overlay_header] # overlay metadata
       - [0x1, .rodata, overlay_header]
       - [0x5, rodata, field_scene_build]  # JP: differs from US, kept as assembly
-      - [0x79, rodata, field_animation]  # JP: differs from US, kept as assembly
+      - [0x79, .rodata, field_animation]
       - [0x115, .rodata, field_scene_control]
       - [0x129, .rodata, field_collision]
       - [0x155, rodata, field_text]  # JP: differs from US, kept as assembly
-      - [0x1D5, rodata, field_effect_update] # field7/8/9 animation + placement, frame and actor update switch tables
+      - [0x1D5, .rodata, field_effect_update] # field7/8/9 animation + placement, frame and actor update switch tables
       - [0x5C9, .rodata, field_mesh_render]
       - [0x5E1, rodata, field_actor_hud_effects] # func_80086494 eight-entry animation-kind jump table
       - [0x601, .rodata, field_actor_script_ops] # func_80088198/func_80089980/func_8008B288 tables; the zero word at 0x8005095C is intra-object jtbl alignment
@@ -74,7 +74,7 @@ segments:
       - [0x1861, .rodata, field_action_descriptors] # descriptor-selection tables
       - [0x1909, .rodata, field_action_setup] # six-entry action jump table
       - [0x1921, rodata, field_record_stat_ops]  # JP: differs from US, kept as assembly
-      - [0x1941, rodata, field_script_ops] # flow/primary/pair jump tables (79-entry runtime subcommand table last)
+      - [0x1941, .rodata, field_script_ops] # flow/primary/pair jump tables (79-entry runtime subcommand table last)
       - [0x1B0D, .rodata, field_script_commands] # actor and record command jump tables
       - [0x1B4D, .rodata, field_reward_command_ops]
       - [0x1B69, rodata, unk2_rodata_after_bdca4]
@@ -82,7 +82,7 @@ segments:
       # Scene loading, construction, rendering, animation, and text.
       - [0x2209, asm, field_scene_load] # gcc_280_g4_noexpand
       - [0x28F1, asm, field_scene_build] # gcc_280_g4_noexpand
-      - [0x6CAD, asm, field_animation] # gcc_280_g4_noexpand
+      - [0x6CAD, c, field_animation] # gcc_280_g4_noexpand
       - [0x955D, c, field_scene_control] # gcc_280_g4_noexpand
       - [0xB611, c, field_collision] # gcc_280_g4_noexpand
       - [0x1343D, asm, field_text] # gcc_280_g4_noexpand
@@ -95,9 +95,9 @@ segments:
       - [0x17E91, c, field_actor_runtime]
 
       # Effect updates, primitive generation, geometry, and mesh transforms.
-      - [0x1D67D, asm, field_effect_update]  # JP: differs from US, kept as assembly
+      - [0x1D67D, c, field_effect_update]
       - [0x2FEA9, c, field_mesh_render]
-      - [0x32185, asm, field_mesh_transform]  # JP: differs from US, kept as assembly
+      - [0x32185, c, field_mesh_transform]
       - [0x331D1, c, field_mesh_part_animation]
 
       # Actor resources, script commands, input, movement, and state machines.
@@ -156,11 +156,11 @@ segments:
       - [0x64ED9, c, field_action_descriptors]
       - [0x65355, c, field_action_setup]
       - [0x65E9D, asm, field_progression_ops]  # JP: differs from US, kept as assembly
-      - [0x66001, asm, field_action_modifiers]  # JP: differs from US, kept as assembly
+      - [0x66001, c, field_action_modifiers]
       - [0x677BD, asm, field_record_stat_ops]  # JP: differs from US, kept as assembly
 
       # Script dispatch and opcode families.
-      - [0x67E35, asm, field_script_ops]  # JP: differs from US, kept as assembly
+      - [0x67E35, c, field_script_ops]
       - [0x6CF59, c, field_script_operands]
       - [0x6D525, c, field_script_commands]
       - [0x6E3F9, c, field_script_arith_ops]
@@ -175,7 +175,7 @@ segments:
       - [0x7182D, asm, field_record_lookup_ops]  # JP: differs from US, kept as assembly
       - [0x71CD5, c, field_record_buffer_ops]
       - [0x71DC9, c, field_record_position_queries]
-      - [0x71EA1, asm, field_stat_counter_ops]  # JP: differs from US, kept as assembly
+      - [0x71EA1, c, field_stat_counter_ops]
       - [0x72071, c, field_saved_slot_ops]
       - [0x7244D, c, field_actor_record_ops]
       - [0x72705, c, field_resource_table_ops]

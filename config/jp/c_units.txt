@@ -1,0 +1,12 @@
+# C translation units whose JP code differs from US but builds from the shared
+# C anyway: the differences are `#if defined(VERSION_JP)` values in the source.
+# tools/versions/port_us_layout.py keeps these as C instead of listing them in
+# asm_units.txt. Add a unit here only after `make VERSION=jp verify-bins` passes.
+src/overlays/field/field_action_modifiers.c
+src/overlays/field/field_stat_counter_ops.c
+src/overlays/gosub/gosub_dialogs.c
+src/overlays/gosub/gosub_render.c
+src/overlays/wmap/wmap_land_transition.c
+src/overlays/wmap/wmap_map_display.c
+src/overlays/wmap/wmap_party_travel.c
+src/overlays/wmap/wmap_view_effects.c

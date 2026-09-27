@@ -236,7 +236,7 @@ void wmap_update_artifact_selection(void)
         input_mask = PADRleft;
         if (D_8011D4FC != no_artifact)
         {
-            input_mask = PADRright;
+            input_mask = WMAP_PAD_CANCEL;
         }
 
         if ((g_wmap_buttons_repeat & input_mask) != 0)
@@ -264,18 +264,18 @@ void wmap_update_artifact_selection(void)
             }
         }
 
-        if (D_80129550 == 1 && (g_wmap_buttons_repeat & PADRdown) != 0 && D_8011D4FC != -1 && D_80139290[map_x][map_y].placement_allowed != 0 && D_80182DE0 == 0)
+        if (D_80129550 == 1 && (g_wmap_buttons_repeat & WMAP_PAD_CONFIRM) != 0 && D_8011D4FC != -1 && D_80139290[map_x][map_y].placement_allowed != 0 && D_80182DE0 == 0)
         {
             D_80182DE0 = D_80129550;
             wmap_play_sound(WMAP_SOUND_PLACE_ARTIFACT, WMAP_SELECTION_VOLUME);
             g_wmap_buttons_held = 0;
             g_wmap_buttons_repeat = 0;
-            g_wmap_map_button_mask = 0x20;
+            g_wmap_map_button_mask = WMAP_PAD_CANCEL;
             g_wmap_buttons_held = 0;
             g_wmap_buttons_repeat = 0;
         }
 
-        if ((g_wmap_buttons_repeat & PADRright) != 0)
+        if ((g_wmap_buttons_repeat & WMAP_PAD_CANCEL) != 0)
         {
             D_80182DE0 = 0;
             g_wmap_map_button_mask = -1;
@@ -317,7 +317,7 @@ void wmap_update_artifact_selection(void)
     }
     else
     {
-        if ((g_wmap_buttons_repeat & (PADRright | PADRleft)) != 0)
+        if ((g_wmap_buttons_repeat & (WMAP_PAD_CANCEL | PADRleft)) != 0)
         {
             func_8005FF88(-1);
             D_8011CF18 = WMAP_SELECTION_SHOW_MAP;
@@ -355,7 +355,7 @@ void wmap_update_artifact_selection(void)
             wmap_scroll_artifact_list(0, D_80139838);
         }
 
-        if ((g_wmap_buttons_repeat & PADRdown) != 0)
+        if ((g_wmap_buttons_repeat & WMAP_PAD_CONFIRM) != 0)
         {
             s32 artifact_id;
 

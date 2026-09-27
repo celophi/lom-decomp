@@ -120,6 +120,26 @@
 /** @brief Defense slot of an action descriptor (bits 6-7). */
 #define FIELD_DESCRIPTOR_DEFENSE_SLOT(descriptor) ((descriptor)->info.bytes.flags >> 6)
 
+/**
+ * @brief Stat scale of attack and defense: value * (stat + N) / N.
+ * @note JP rebalances it to 20; US uses 50.
+ */
+#if defined(VERSION_JP)
+#define FIELD_STAT_SCALE 20
+#else
+#define FIELD_STAT_SCALE 50
+#endif
+
+/**
+ * @brief Bias of the element weakness multiplier: attack * (sum + N) / 4.
+ * @note JP uses 4 (no bonus without a weakness sum); US uses 5.
+ */
+#if defined(VERSION_JP)
+#define FIELD_WEAKNESS_BIAS 4
+#else
+#define FIELD_WEAKNESS_BIAS 5
+#endif
+
 /** @brief Handler for one action descriptor kind; returns the damage dealt. */
 typedef s32 (*FieldActionHandler)(void);
 
@@ -701,14 +721,14 @@ s32 field_action_none(void)
 /**
  * @brief Compute the attack value from an attacker stat and the action power.
  * @param stat_index Attacker stat.
- * @param attack Receives power * (stat + 50) / 50.
+ * @param attack Receives power * (stat + FIELD_STAT_SCALE) / FIELD_STAT_SCALE.
  */
 void field_compute_attack(s32 stat_index, s32* attack)
 {
     s32 stat;
 
     stat = field_get_status_stat(g_field_battle->attacker, stat_index);
-    *attack = (u32)(g_field_battle->power * (stat + 50)) / 50;
+    *attack = (u32)(g_field_battle->power * (stat + FIELD_STAT_SCALE)) / FIELD_STAT_SCALE;
 }
 
 /**
@@ -743,7 +763,7 @@ void field_compute_defense(s32 stat_index, s32* defense)
         slot = FIELD_DESCRIPTOR_DEFENSE_SLOT(g_field_battle->descriptor);
         *defense = target->equipment_stats[slot];
     }
-    *defense = (u32)(*defense * (stat + 50)) / 50;
+    *defense = (u32)(*defense * (stat + FIELD_STAT_SCALE)) / FIELD_STAT_SCALE;
 }
 
 /**
@@ -775,7 +795,7 @@ void field_apply_element_modifiers(s32 unused, s32 element_mask, s32* attack, s3
             }
             mask >>= 1;
         }
-        *attack = (u32)(*attack * (sum + 5)) >> 2;
+        *attack = (u32)(*attack * (sum + FIELD_WEAKNESS_BIAS)) >> 2;
     }
 
     if (field_count_status_slots(g_field_battle->target, FIELD_STATUS_ID_RESIST_ALL) == 0)

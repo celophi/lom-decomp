@@ -621,12 +621,12 @@ GosubTilePacket* gosub_draw_item_list(s32* ot, s32 initial_prim, s32 x_off, s32 
                     }
                     line_y2 = y + 0x20;
                     prim = func_800A88A0(prim, ot, MSG_HI(0x26), g_gosub_rows[row].text_color, label_x, line_y2, 0);
-                    pos.x = 0x48 - x_off;
+                    pos.x = GOSUB_CARD_SECONDARY_VALUE_X - x_off;
                     pos.y = line_y2;
                     prim = func_800A8A78(ot, prim, g_gosub_rows[row].secondary_value, g_gosub_rows[row].text_color, pos_p, 0);
                     prim = func_800A88A0(prim, ot, (void*)(g_gosub_message_archive_offset + (*(u16*)(g_gosub_message_archive_offset + (s32)archive_data) + base)),
-                                         g_gosub_rows[row].text_color, 0x64 - x_off, line_y2, 0);
-                    pos.x = 0xB0 - x_off;
+                                         g_gosub_rows[row].text_color, GOSUB_CARD_VALUE_LABEL_X - x_off, line_y2, 0);
+                    pos.x = GOSUB_CARD_PRIMARY_VALUE_X - x_off;
                     pos.y = line_y2;
                     prim = func_800A8A78(ot, prim, g_gosub_rows[row].primary_value, g_gosub_rows[row].text_color, pos_p, 0);
                     if (g_gosub_rows[row].detail_group != 0)

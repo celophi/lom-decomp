@@ -494,7 +494,7 @@ void wmap_update_map_game_prompt(void)
             g_wmap_game_hits = 0;
             g_wmap_game_round++;
         }
-        else if (state_flags & PADRright)
+        else if (state_flags & WMAP_PAD_CANCEL)
         {
             g_wmap_game_start_delay = WMAP_GAME_RETRY_DELAY;
             g_wmap_game_phase = WMAP_GAME_PROMPT;
@@ -511,7 +511,7 @@ void wmap_update_map_game_prompt(void)
         state_flags = g_wmap_buttons_repeat;
         *sprite = g_wmap_game_exit_prompt;
 
-        if (state_flags & PADRright)
+        if (state_flags & WMAP_PAD_CANCEL)
         {
             g_wmap_game_start_delay = WMAP_GAME_RETRY_DELAY;
             g_wmap_game_phase = WMAP_GAME_PROMPT;
@@ -603,7 +603,7 @@ void wmap_update_map_game_round(void)
     object_id = D_80139290[x][y].object_id;
     object = &g_wmap_land_display[object_id];
 
-    if (g_wmap_buttons_repeat & PADRdown)
+    if (g_wmap_buttons_repeat & WMAP_PAD_CONFIRM)
     {
         if ((u32)(object->transition - 2) < 2)
         {

@@ -63,13 +63,39 @@ typedef struct GosubTilePacket GosubTilePacket;
 /** @brief TIM flag indicating that a CLUT block precedes the pixel block. */
 #define GOSUB_TIM_HAS_CLUT 0x8
 
-/** @brief Positions and color used by the equipment detail line. */
+/**
+ * @brief Positions and color used by the equipment detail line.
+ * @note JP moves the weapon and instrument power columns.
+ */
 #define GOSUB_EQUIPMENT_DETAIL_LABEL_X 0x10
 #define GOSUB_EQUIPMENT_DETAIL_Y 0x12
+#if defined(VERSION_JP)
+#define GOSUB_WEAPON_POWER_X 0x40
+#else
 #define GOSUB_WEAPON_POWER_X 0x68
+#endif
 #define GOSUB_ARMOR_DEFENSE_X 0x60
+#if defined(VERSION_JP)
+#define GOSUB_INSTRUMENT_POWER_X 0x30
+#else
 #define GOSUB_INSTRUMENT_POWER_X 0x38
+#endif
 #define GOSUB_INSTRUMENT_EFFECT_X 0x60
+
+/**
+ * @brief Columns of the third line of an equipment card row in the item list:
+ *        secondary value, the label after it, then the primary value.
+ * @note JP lays the line out differently.
+ */
+#if defined(VERSION_JP)
+#define GOSUB_CARD_SECONDARY_VALUE_X 0x54
+#define GOSUB_CARD_VALUE_LABEL_X 0x78
+#define GOSUB_CARD_PRIMARY_VALUE_X 0x9C
+#else
+#define GOSUB_CARD_SECONDARY_VALUE_X 0x48
+#define GOSUB_CARD_VALUE_LABEL_X 0x64
+#define GOSUB_CARD_PRIMARY_VALUE_X 0xB0
+#endif
 
 /** @brief Position of the centered current-row description. */
 #define GOSUB_ROW_DESCRIPTION_X 0x84

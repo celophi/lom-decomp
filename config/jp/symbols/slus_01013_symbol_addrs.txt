@@ -14,7 +14,7 @@ run_checkps                              = 0x8004FE7C;
 g_overlay_load_base                 = 0x8004FDD8;
 g_title_overlay_end                = 0x80102790;
 g_field_render_buffers              = 0x80120A60;
-g_world_map_overlay_end             = 0x801B32D8;
+g_world_map_overlay_end             = 0x801B33A0;
 
 // CHECKPS.BIN
 poll_input_device                        = 0x8005086C;
@@ -60,7 +60,7 @@ field_restore_entry_music           = 0x800A33E4;
 // Uncategorized
 gname_run                           = 0x80140004;
 movie_play                          = 0x80140018;
-movie_service_video_ops                        = 0x80140D48;
+movie_service_video_ops                        = 0x80140D2C;
 
 // TITLE entry point used while TITLE.BIN occupies the primary overlay slot.
 run_title = 0x8004FDDC;

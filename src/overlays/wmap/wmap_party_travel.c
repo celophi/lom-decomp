@@ -337,7 +337,7 @@ void wmap_update_party_travel(void)
             i++;
         } while (i < WMAP_TRAVELER_COUNT);
     }
-    if ((g_wmap_buttons_repeat & PADRdown) && g_wmap_party_moving == 0 && D_80129550 == 0)
+    if ((g_wmap_buttons_repeat & WMAP_PAD_CONFIRM) && g_wmap_party_moving == 0 && D_80129550 == 0)
     {
         selected_x = g_wmap_view.x / WMAP_CELL_SPACING + g_wmap_cursor_column;
         selected_y = g_wmap_view.y / WMAP_CELL_SPACING + g_wmap_cursor_row;
