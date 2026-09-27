@@ -56,9 +56,6 @@ extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
 extern s32 g_field_gosub_state;
 
-extern void* field_find_resource(s32 resource_id);
-extern void* field_copy_words(void* source, void* destination, s32 size);
-
 /**
  * @brief Copy a companion template into the first free stored record and give it a unique id.
  * @param template_index Index of the template in resource 7.

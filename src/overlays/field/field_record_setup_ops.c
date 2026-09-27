@@ -54,8 +54,6 @@ extern FieldGameState* g_field_game_state;
 extern FieldRuntimeContext* g_field_runtime;
 
 FieldItemRecord* field_find_free_inventory_record(void);
-s32* field_copy_words(s32* src, s32* dest, s32 size);
-void* field_find_resource(s32 table_id);
 
 static void field_create_instrument_item(FieldItemRecord* record, s32 category, s32 item_type, s32 material, s32 secondary_item);
 static void field_generate_staged_item(void);
@@ -77,7 +75,7 @@ void field_create_item_from_gosub(s32 kind)
     FieldItemRecord* record;
 
     g_field_gosub_state = 0;
-    field_copy_words(NULL, (s32*)g_field_item_staging, sizeof(FieldItemStaging));
+    field_copy_words(NULL, g_field_item_staging, sizeof(FieldItemStaging));
 
     if (g_gosub_result_count != 0)
     {

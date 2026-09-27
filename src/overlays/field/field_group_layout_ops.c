@@ -3,7 +3,7 @@
  * @brief Golem group bookkeeping and the logic-block placement grid.
  *
  * The golem companion is built from one of three saved groups (the
- * LargeHistoryRecord entries). These functions reorder the groups, save the
+ * GolemRecord entries). These functions reorder the groups, save the
  * party golem back into its group when it leaves, and rebuild the six-by-six
  * grid that records which logic block covers each cell.
  */
@@ -49,7 +49,7 @@ void field_golem_commit_group_edit(s32 command)
     if (command == GOLEM_COMMAND_REORDER)
     {
         target = D_80122C00;
-        if ((u32)target < LARGE_HISTORY_RECORD_COUNT)
+        if ((u32)target < GOLEM_RECORD_COUNT)
         {
             layout = GOLEM_LAYOUT;
             joined = layout->header.fields.joined_group;
@@ -61,7 +61,7 @@ void field_golem_commit_group_edit(s32 command)
                     found = i;
                 }
                 i++;
-            } while (i < LARGE_HISTORY_RECORD_COUNT);
+            } while (i < GOLEM_RECORD_COUNT);
 
             GOLEM.group_order[found] = GOLEM.group_order[target];
             GOLEM.group_order[target] = GOLEM.header.fields.joined_group;

@@ -34,7 +34,6 @@ typedef struct
 
 static s32 field_discard_all_items(void);
 
-void* field_find_resource(s32 resource_id);
 FieldItemRecord* field_find_free_inventory_record(void);
 
 extern FieldGameState* g_field_game_state;

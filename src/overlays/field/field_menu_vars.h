@@ -21,7 +21,7 @@ typedef union
     /** @brief Golem slot menus. */
     struct
     {
-        s32 slot; /**< Selected golem slot, an index into large_history_order. */
+        s32 slot; /**< Selected golem slot, an index into golem_order. */
         s16 state;
         s16 slot_status[3];
         u8 unk0C[4];

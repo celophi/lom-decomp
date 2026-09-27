@@ -89,8 +89,6 @@ typedef struct
 extern FieldGameState* g_field_game_state;
 /** @brief Experience needed to reach each level; entry n is for level n + 1. */
 extern s32 g_field_level_experience[FIELD_LEVEL_EXPERIENCE_COUNT];
-extern void* field_find_resource(s32 resource_id);
-extern void field_copy_words(void* source, void* destination, s32 size);
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
 extern s32 g_field_gosub_state;

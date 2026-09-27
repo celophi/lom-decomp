@@ -1086,15 +1086,15 @@ s32 menu_build_inventory_nav_entries(s32 item_kind)
 }
 
 /**
- * @brief Return a saved-history record from the shared context.
- * @param context Context containing the saved-history records.
- * @param index Record index.
- * @return Selected history record.
+ * @brief Return a golem record from the shared context.
+ * @param context Context containing the golem records.
+ * @param index Golem record index.
+ * @return Selected golem record.
  */
-static inline LargeHistoryRecord* menu_history_record(PadContext* context, s32 index)
+static inline GolemRecord* menu_golem_record(PadContext* context, s32 index)
 {
-    u8* records = (u8*)context->large_history_records;
-    return (LargeHistoryRecord*)(records + index * sizeof(LargeHistoryRecord));
+    u8* records = (u8*)context->golem_records;
+    return (GolemRecord*)(records + index * sizeof(GolemRecord));
 }
 
 /**
@@ -2414,11 +2414,11 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             break;
                             case 0x4A:
                             {
-                                s8 history_index = g_pad_ctx->large_history_index;
-                                if (history_index >= 0)
+                                s8 golem_index = g_pad_ctx->joined_golem;
+                                if (golem_index >= 0)
                                 {
                                     PadContext* context = g_pad_ctx;
-                                    u8 v = menu_history_record(context, history_index)->unknown_0x44 & 0xF;
+                                    u8 v = menu_golem_record(context, golem_index)->logic_layout & GOLEM_LOGIC_CLASS_MASK;
                                     void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x80));
                                     packet_cursor = func_800A88A0(packet_cursor, ot_entry, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), 1,
                                                                   content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
@@ -2428,11 +2428,11 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             break;
                             case 0x4B:
                             {
-                                s8 history_index = g_pad_ctx->large_history_index;
-                                if (history_index >= 0)
+                                s8 golem_index = g_pad_ctx->joined_golem;
+                                if (golem_index >= 0)
                                 {
                                     PadContext* context = g_pad_ctx;
-                                    u8 v = menu_history_record(context, history_index)->unknown_0x44 >> 4;
+                                    u8 v = menu_golem_record(context, golem_index)->logic_layout >> GOLEM_GRID_BOUND_SHIFT;
                                     void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x7C));
                                     packet_cursor = func_800A88A0(packet_cursor, ot_entry, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), 1,
                                                                   content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
@@ -2442,11 +2442,11 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             break;
                             case 0x4C:
                             {
-                                s8 history_index = g_pad_ctx->large_history_index;
-                                if (history_index >= 0)
+                                s8 golem_index = g_pad_ctx->joined_golem;
+                                if (golem_index >= 0)
                                 {
                                     PadContext* context = g_pad_ctx;
-                                    u8 v = menu_history_record(context, history_index)->unknown_0x46;
+                                    u8 v = menu_golem_record(context, golem_index)->unknown_0x46;
                                     packet_cursor = func_800A8A78(ot_entry, packet_cursor, v, 1, &pos,
                                                                   ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
@@ -2454,15 +2454,15 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             break;
                             case 0x4D:
                             {
-                                s8 history_index = g_pad_ctx->large_history_index;
-                                if (history_index >= 0)
+                                s8 golem_index = g_pad_ctx->joined_golem;
+                                if (golem_index >= 0)
                                 {
                                     PadContext* context;
                                     s32 idx;
                                     draw_packet_cursor = packet_cursor;
                                     base_a2_10 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x70));
                                     context = g_pad_ctx;
-                                    idx = menu_history_record(context, history_index)->unknown_0x48;
+                                    idx = menu_golem_record(context, golem_index)->palette;
                                     {
                                         void* a2_2 = (void*)((u8*)base_a2_10 + *(u16*)((u8*)base_a2_10 + (idx * 2)));
                                         packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,

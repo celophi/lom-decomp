@@ -118,8 +118,6 @@ s32 field_get_actor_position(s32 actor_id, Vec3i* position);
 s32 field_revive_actor();
 FieldStatusState* field_find_object_state(s32 actor_id);
 s32 field_spawn_shared_animation_actor(s32 key, s32 resource_index);
-void field_copy_words(s32 value, void* buffer, s32 size);
-u8* field_find_resource(s32 resource_id);
 
 static void field_battle_reset_context(void);
 static s32 field_build_party_records(void);
@@ -644,7 +642,7 @@ static void field_battle_reset_context(void)
         g_field_battle->element_levels[i] = g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[i]];
     }
 
-    resource = (FieldBattleResource*)field_find_resource(FIELD_RESOURCE_BATTLE);
+    resource = field_find_resource(FIELD_RESOURCE_BATTLE);
     g_field_battle->templates = (FieldActorTemplateTable*)((u8*)resource + resource->templates_offset);
     g_field_battle->resources = (u8*)resource + resource->rewards_offset;
     field_set_script_var(0, FIELD_VAR_WATCHED_RECORD, -1);

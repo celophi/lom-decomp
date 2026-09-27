@@ -45,12 +45,20 @@ extern s32 g_frame_counter;
 /** @brief Base of the primitive-rect scratch buffer (stride 0x4A0 per record). */
 extern u8 g_prim_rect_buf[];
 
-/** @brief Number of stat values stored in each saved-history record. */
-#define HISTORY_RECORD_STAT_COUNT 4
-/** @brief Number of large saved-history records in the pad context. */
-#define LARGE_HISTORY_RECORD_COUNT 3
-/** @brief Number of small saved-history records in the pad context. */
-#define SMALL_HISTORY_RECORD_COUNT 5
+/** @brief Number of armor stat values stored in a golem or pet record. */
+#define COMPANION_STAT_COUNT 4
+/** @brief Number of golem records in the pad context. */
+#define GOLEM_RECORD_COUNT 3
+/** @brief Number of pet records in the pad context. */
+#define PET_RECORD_COUNT 5
+/** @brief Mask of PadContext.companion_info selecting the companion's character type. */
+#define COMPANION_KIND_MASK 0x7F
+/** @brief Companion character type of a golem. */
+#define COMPANION_KIND_GOLEM 4
+
+/** @brief Mask of PadContext.golem_count selecting the number of golems. */
+#define GOLEM_COUNT_MASK 0xF
+
 /** @brief Capacity of the packed logic-block table in the pad context. */
 #define LOGIC_BLOCK_CAPACITY 40
 
@@ -74,49 +82,6 @@ typedef union
         u32 unknown_bits : 3;
     } f;
 } LogicBlock;
-
-/** @brief Large saved-history record with a leading encoded name. */
-typedef struct
-{
-    u8 name[0x15];
-    u8 unknown_0x15;
-    u16 secondary_value; /**< Value shown in the second stat column of the GOSUB roster. */
-    u16 primary_value;   /**< Value shown in the first stat column of the GOSUB roster. */
-    u16 stats[HISTORY_RECORD_STAT_COUNT];
-    u8 unknown_0x22[0x44 - 0x22];
-    u8 unknown_0x44; /**< Packed indices into two menu text tables. */
-    u8 unknown_0x45;
-    u8 unknown_0x46;
-    u8 unknown_0x47;
-    s32 unknown_0x48; /**< Index into a menu text table. */
-    u8 unknown_0x4C[0x14C - 0x4C];
-} LargeHistoryRecord;
-
-/** @brief Selection flags word of a SmallHistoryRecord. */
-typedef struct
-{
-    u32 unknown_bits : 30;
-    u32 selection_restricted : 1; /**< Restricts GOSUB selection of this record. */
-    u32 selection_blocked : 1;    /**< Blocks GOSUB selection of this record. */
-} SmallHistorySelection;
-
-/** @brief Compact saved-history record with a leading encoded name. */
-typedef struct
-{
-    u8 name[0x15];
-    u8 unknown_0x15;
-    u8 unknown_0x16;
-    u8 unknown_0x17;
-    u8 unknown_0x18;
-    u8 unknown_0x19[0x1C - 0x19];
-    u16 secondary_value; /**< Value shown in the second stat column of the GOSUB roster. */
-    u16 primary_value;   /**< Value shown in the first stat column of the GOSUB roster. */
-    u16 stats[HISTORY_RECORD_STAT_COUNT];
-    u8 unknown_0x28[0x42 - 0x28];
-    u16 unknown_0x42;
-    SmallHistorySelection selection_flags;
-    u8 unknown_0x48[0x60 - 0x48];
-} SmallHistoryRecord;
 
 #define PLAYER_EQUIPMENT_SLOT_COUNT 4
 #define INVENTORY_RECORD_COUNT 100
@@ -159,6 +124,60 @@ typedef struct
     u8 unknown_0x38[8];
 } InventoryRecord;
 
+/** @brief Mask of GolemRecord.logic_layout selecting the golem's logic class (its type). */
+#define GOLEM_LOGIC_CLASS_MASK 0xF
+/** @brief Shift of the grid bound (usable placement grid size) in GolemRecord.logic_layout. */
+#define GOLEM_GRID_BOUND_SHIFT 4
+
+/** @brief Number of source items (weapons and armor) a golem is built from. */
+#define GOLEM_SOURCE_ITEM_COUNT 4
+
+/**
+ * @brief Golem record: a golem built at the workshop from weapons and armor.
+ * @note FIELD reads the same bytes through GolemGroupRecord (field_golem_layout.h).
+ */
+typedef struct
+{
+    u8 name[0x15];
+    u8 unknown_0x15;
+    u16 secondary_value; /**< Hit points; the second stat column of the GOSUB roster. */
+    u16 primary_value;   /**< Weapon power; the first stat column of the GOSUB roster. */
+    u16 stats[COMPANION_STAT_COUNT];
+    u8 unknown_0x22[0x44 - 0x22];
+    u8 logic_layout; /**< Low nibble: logic class; high nibble: grid bound. */
+    u8 unknown_0x45;
+    u8 unknown_0x46; /**< 75 - 10 * grid bound, clamped to 0-50; shown as a number by MENU. */
+    u8 unknown_0x47;
+    s32 palette;     /**< Portrait and sprite palette, 0-31; MENU also names it as the golem's color. */
+    InventoryRecord source_items[GOLEM_SOURCE_ITEM_COUNT]; /**< Items the golem was built from; an empty name ends the list. */
+} GolemRecord;
+
+/** @brief Status flags word of a PetRecord. */
+typedef struct
+{
+    u32 unknown_bits : 30;
+    u32 grazing : 1; /**< The pet is left grazing at the ranch and cannot join the party. */
+    u32 egg : 1;     /**< The pet has not hatched yet. */
+} PetStatusFlags;
+
+/** @brief Pet record: a monster raised at the ranch, or an egg waiting to hatch. */
+typedef struct
+{
+    u8 name[0x15];
+    u8 species;     /**< Monster species; also picks the pet's portrait. */
+    u8 egg_species; /**< Species of the egg's portrait while the pet is still an egg. */
+    u8 unknown_0x17;
+    u8 level;
+    u8 unknown_0x19[0x1C - 0x19];
+    u16 secondary_value; /**< Value shown in the second stat column of the GOSUB roster. */
+    u16 primary_value;   /**< Value shown in the first stat column of the GOSUB roster. */
+    u16 stats[COMPANION_STAT_COUNT];
+    u8 unknown_0x28[0x42 - 0x28];
+    u16 hatch_counter; /**< Egg hatching countdown; low values mean the egg is nearly ready. */
+    PetStatusFlags status;
+    u8 unknown_0x48[0x60 - 0x48];
+} PetRecord;
+
 /**
  * @brief Controller/pad context object (partial layout).
  *
@@ -179,21 +198,23 @@ typedef struct
     u8  _pad841[0x858 - 0x841]; /**< 0x841: not yet mapped. */
     u32 inject_flags;       /**< 0x858: bit 0x80 enables input injection. */
     u8  _pad85C[0x234];          /**< 0x85C: not yet mapped. */
-    u8  gname_name[0x18];        /**< 0xA90: name buffer edited by the GNAME overlay. */
-    u32 unkAA8;
+    u8  companion_name[0x18];    /**< 0xA90: name of the party companion (character slot 2); GNAME edits it. */
+    u32 companion_info;          /**< 0xAA8: bits 0-6 the companion's character type; byte 1 a golem's class. */
     u8  _padAAC[0xCE0 - 0xAAC];
     InventoryRecord inventory[INVENTORY_RECORD_COUNT];
     u8  item_counts[ITEM_TYPE_COUNT];
-    u8  _pad26E0[0x29D6 - 0x26E0];
+    u8  _pad26E0[0x29D4 - 0x26E0];
+    u8  golem_count;              /**< 0x29D4: low nibble the number of golems; high nibble the golem that last left the party. */
+    u8  golems_created;           /**< 0x29D5: golems created so far, saturating at 200. */
     u8  logic_block_count;        /**< Number of used entries in @c logic_blocks. */
-    s8  large_history_index;      /**< 0x29D7: slot index into @c large_history_records. */
-    u8  large_history_order[LARGE_HISTORY_RECORD_COUNT]; /**< Display order of @c large_history_records; values >= 3 are empty. */
-    u8  _pad29DB;
+    s8  joined_golem;             /**< 0x29D7: golem record in the party, or 3 for none. */
+    u8  golem_order[GOLEM_RECORD_COUNT]; /**< Display order of @c golem_records; values >= 3 are empty. */
+    u8  golem_display_order;      /**< 0x29DB: golem slot shown at each display position, three 2-bit fields. */
     LogicBlock logic_blocks[LOGIC_BLOCK_CAPACITY];
     u8  _pad2A7C[0x2B0C - 0x2A7C];
-    LargeHistoryRecord large_history_records[LARGE_HISTORY_RECORD_COUNT];
-    u32 small_history_index;      /**< 0x2EF0: slot index into @c small_history_records. */
-    SmallHistoryRecord small_history_records[SMALL_HISTORY_RECORD_COUNT];
+    GolemRecord golem_records[GOLEM_RECORD_COUNT];
+    u32 joined_pet;               /**< 0x2EF0: pet record in the party. */
+    PetRecord pet_records[PET_RECORD_COUNT];
 } PadContext;
 
 /** @brief Pointer to the controller/pad context object. */

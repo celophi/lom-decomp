@@ -4,6 +4,7 @@
  */
 
 #include "common.h"
+#include "field_calls.h"
 
 /** @brief One (value, key) pair of a FieldKeyedList; field_sort_keyed_list orders by @c key. */
 typedef struct FieldKeyedPair
@@ -26,16 +27,20 @@ typedef struct FieldKeyedList
  * @param size Byte count; only complete 32-bit words are processed.
  * @return Pointer to the first destination word after the processed range.
  */
-s32* field_copy_words(s32* src, s32* dest, s32 size)
+void* field_copy_words(const void* src, void* dest, s32 size)
 {
+    const s32* from;
+    s32* to;
     s32 count;
 
+    from = src;
+    to = dest;
     count = size / 4;
-    if (src != NULL)
+    if (from != NULL)
     {
         while (count != 0)
         {
-            *dest++ = *src++;
+            *to++ = *from++;
             count--;
         }
     }
@@ -43,11 +48,11 @@ s32* field_copy_words(s32* src, s32* dest, s32 size)
     {
         while (count != 0)
         {
-            *dest++ = 0;
+            *to++ = 0;
             count--;
         }
     }
-    return dest;
+    return to;
 }
 
 /**

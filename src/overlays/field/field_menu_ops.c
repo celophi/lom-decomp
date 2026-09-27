@@ -14,21 +14,13 @@
  */
 #define FIELD_PAD (*(PadContext*)&g_saved_game)
 
-/*
- * Golem bytes of the pad context that main.h does not map yet (inside
- * _pad26E0 and _pad29DB, and byte 1 of unkAA8). They are read as bytes and
- * as parts of words, so they are indexed through g_saved_game.bytes.
- */
-/** @brief Offset of the packed golem counts word; its low nibble is the golem count. */
-#define FIELD_GOLEM_COUNTS 0x29D4
+/** @brief Value at which PadContext.golems_created saturates. */
+#define FIELD_GOLEMS_CREATED_MAX 200
 
-/** @brief Offset of the golem creation counter, byte 1 of the golem counts word. */
-#define FIELD_GOLEM_CREATED 0x29D5
+/** @brief golem_order and joined_golem value for no golem record. */
+#define FIELD_GOLEM_NO_RECORD 3
 
-/** @brief Offset of the packed golem display order, three 2-bit slot indices. */
-#define FIELD_GOLEM_DISPLAY_ORDER 0x29DB
-
-/** @brief Offset of the active golem's class, byte 1 of unkAA8. */
+/** @brief Offset of the joined golem's class, byte 1 of PadContext.companion_info. */
 #define FIELD_ACTIVE_GOLEM_CLASS 0xAA9
 
 /** @brief The object-menu variables, which start at D_80122C0C. */
@@ -69,13 +61,13 @@
 
 /* Menu-op numbers (g_field_menu_ops indices) that report errors. */
 #define FIELD_MENU_OP_ITEM_NAME_ROW 0x22
-#define FIELD_MENU_OP_DESCRIBE_SELECTED_HISTORY 0x27
-#define FIELD_MENU_OP_RESTRICT_SELECTED_HISTORY 0x29
-#define FIELD_MENU_OP_PUBLISH_HISTORY_SLOTS 0x2E
-#define FIELD_MENU_OP_ADD_HISTORY_SLOT 0x30
-#define FIELD_MENU_OP_UNRESTRICT_CURRENT_HISTORY 0x32
-#define FIELD_MENU_OP_UNRESTRICT_CURSOR_HISTORY 0x4B
-#define FIELD_MENU_OP_SET_HISTORY_ENTRY 0x4C
+#define FIELD_MENU_OP_DESCRIBE_SELECTED_PET 0x27
+#define FIELD_MENU_OP_SEND_SELECTED_PET_GRAZING 0x29
+#define FIELD_MENU_OP_PUBLISH_PET_SLOTS 0x2E
+#define FIELD_MENU_OP_ADD_PET_SLOT 0x30
+#define FIELD_MENU_OP_RECALL_JOINED_PET 0x32
+#define FIELD_MENU_OP_RECALL_CURSOR_PET 0x4B
+#define FIELD_MENU_OP_HATCH_PET 0x4C
 
 /* Script locals read by field_menu_apply_affinity (byte indices unless noted). */
 #define FIELD_AFFINITY_ELEMENT 3           /**< Element of the applied source. */
@@ -131,16 +123,21 @@
 #define FIELD_RECORD_RESULT 2      /**< Word index: pending result given to a set-aside record. */
 #define FIELD_SET_ASIDE_ACTIVE 0x19 /**< Four bytes: saved active byte of each set-aside shared record. */
 
-/* Script locals of the small history entry menus (byte indices). */
-#define FIELD_HISTORY_ENTRY_ID 0x11
-#define FIELD_HISTORY_INDEX 0x12
-#define FIELD_UNRESTRICT_SLOT 0x19 /**< Cursor slot whose record field_menu_unrestrict_cursor_history frees. */
+/* Script locals of the pet ranch menus (byte indices). */
+#define FIELD_HATCH_SPECIES 0x11   /**< Species field_menu_hatch_pet gives the egg. */
+#define FIELD_HATCH_PET_INDEX 0x12 /**< Pet record field_menu_hatch_pet hatches. */
+#define FIELD_RECALL_SLOT 0x19     /**< Cursor slot whose pet field_menu_recall_cursor_pet brings back. */
 
 /** @brief Halfword local index of the three card ids left over by field_menu_remove_record_cards. */
 #define FIELD_LEFTOVER_CARDS 3
 
+/** @brief Golem slot status of a slot holding no golem, or the joined golem. */
+#define FIELD_GOLEM_SLOT_EMPTY 3
+/** @brief Golem slot status of an empty slot shown at display @p position. */
+#define FIELD_GOLEM_SLOT_POSITION(position) (4 + (position))
+
 /* Script locals written by field_menu_refresh_golem_order (halfword indices). */
-#define FIELD_GOLEM_SLOT_STATUS 3      /**< Three halfwords: golem record per slot, 3 for none or active. */
+#define FIELD_GOLEM_SLOT_STATUS 3       /**< Three halfwords: golem record per slot, or a FIELD_GOLEM_SLOT_* status. */
 #define FIELD_GOLEM_ACTIVE_POSITION 0xE /**< Display position of the selected slot. */
 #define FIELD_GOLEM_ACTIVE_RECORD 0xF  /**< Active golem record index. */
 
@@ -151,10 +148,10 @@
 #define FIELD_DRAWN_ELEMENT 5   /**< Element drawn by weight (mode 0). */
 #define FIELD_UNIFORM_ELEMENT 6 /**< Element drawn uniformly (other modes). */
 
-/* Script locals of the small history cursor menus (field_menu_swap_cursor_history, field_menu_publish_cursor_history). */
-#define FIELD_CURSOR_ENTRY_ID 0xA     /**< Halfword index: entry id of the swapped-in record. */
+/* Script locals of the grazing pet cursor menus (field_menu_swap_joined_pet, field_menu_publish_cursor_pet). */
+#define FIELD_CURSOR_SPECIES 0xA      /**< Halfword index: species of the pet sent grazing. */
 #define FIELD_CURSOR_SLOT 0x1C        /**< Selected cursor slot; also the text macro index. */
-#define FIELD_CURSOR_SLOT_TABLE 0x1D  /**< Small history index shown in each cursor slot. */
+#define FIELD_CURSOR_SLOT_TABLE 0x1D  /**< Pet record index shown in each cursor slot. */
 
 /** @brief Text resource @p id. */
 #define FIELD_TEXT_RESOURCE(id) ((FieldTextResource*)field_find_resource(id))
@@ -180,8 +177,8 @@
 /** @brief Largest value field_menu_apply_affinity stores. */
 #define FIELD_AFFINITY_VALUE_MAX 0x7FFF
 
-/** @brief The game-state workspace viewed as FieldMenuHistoryData. */
-#define FIELD_MENU_HISTORY ((FieldMenuHistoryData*)g_saved_game.bytes)
+/** @brief The game-state workspace viewed as FieldMenuPetData. */
+#define FIELD_MENU_PETS ((FieldMenuPetData*)g_saved_game.bytes)
 
 /**
  * @brief Text @p id of the menu text table at D_800F0E98.
@@ -274,27 +271,27 @@ typedef struct
 } FieldGosubSequence;
 
 /**
- * @brief Small history record (main.h SmallHistoryRecord) with its 0x44 word split into bytes.
- * @note The low three bytes of the selection word hold extra slot ids (0xFE/0xFF are empty).
+ * @brief Pet record (main.h PetRecord) with its 0x44 status word split into bytes.
+ * @note The low three bytes of the status word hold extra slot ids (0xFE/0xFF are empty).
  */
 typedef struct
 {
     u8 name[0x15];
-    u8 entry_id; /**< 0x15: id stored for the record's menu entry. */
+    u8 species; /**< 0x15: monster species. */
     u8 unknown_0x16[0x44 - 0x16];
     u8 extra_slots[3]; /**< 0x44: extra slot ids; 0xFE and 0xFF mark an unused slot. */
-    u8 selection_bits; /**< 0x47: bits 30-31 of the selection word. */
+    u8 status_bits;    /**< 0x47: bits 30-31 of the status word (grazing, egg). */
     u8 unknown_0x48[0x5A - 0x48];
     u16 unknown_0x5A;
     u8 unknown_0x5C[4];
-} FieldSmallHistoryRecord;
+} FieldPetRecord;
 
-/** @brief Pad context view whose small history records use FieldSmallHistoryRecord. */
+/** @brief Pad context view whose pet records use FieldPetRecord. */
 typedef struct
 {
     u8 _pad0000[0x2EF4];
-    FieldSmallHistoryRecord small_history_records[SMALL_HISTORY_RECORD_COUNT];
-} FieldMenuHistoryData;
+    FieldPetRecord pet_records[PET_RECORD_COUNT];
+} FieldMenuPetData;
 
 /** @brief One 0x10-byte action slot of a menu action group. */
 typedef struct
@@ -478,7 +475,6 @@ extern FieldPaletteSlotTable D_80051CBC;
 extern FieldGosubSequence D_800F19CC;
 extern FieldLogicClassTable D_80051CE4;
 extern FieldLogicClassTable D_80051DCC;
-u8* field_find_resource(s32 arg0);
 extern FieldGosubSequence D_80051EC0;
 extern FieldGosubSequence D_80051ECC;
 extern u8 D_800F0E98[];
@@ -519,9 +515,9 @@ void field_menu_classify_golem_slot(void)
     PadContext* ctx;
 
     ctx = &FIELD_PAD;
-    if (ctx->large_history_order[D_80122C00.golem.slot] == 3)
+    if (ctx->golem_order[D_80122C00.golem.slot] == FIELD_GOLEM_NO_RECORD)
     {
-        if ((u8)ctx->large_history_index >= 3U)
+        if ((u8)ctx->joined_golem >= GOLEM_RECORD_COUNT)
         {
             D_80122C00.golem.state = 1;
             return;
@@ -529,7 +525,7 @@ void field_menu_classify_golem_slot(void)
         D_80122C00.golem.state = 2;
         return;
     }
-    if (ctx->large_history_order[D_80122C00.golem.slot] == ctx->large_history_index)
+    if (ctx->golem_order[D_80122C00.golem.slot] == ctx->joined_golem)
     {
         D_80122C00.golem.state = 3;
         return;
@@ -571,64 +567,66 @@ void field_menu_create_golem(void)
     u8 count;
     u8 previous;
 
-    free_record = 3;
-    for (i = 0; i < 3; i++)
+    free_record = FIELD_GOLEM_NO_RECORD;
+    for (i = 0; i < GOLEM_RECORD_COUNT; i++)
     {
         candidate = i;
-        for (slot = 0; slot < 3; slot++)
+        for (slot = 0; slot < GOLEM_RECORD_COUNT; slot++)
         {
-            if (FIELD_PAD.large_history_order[slot] == i)
+            if (FIELD_PAD.golem_order[slot] == i)
             {
-                candidate = 3;
+                candidate = FIELD_GOLEM_NO_RECORD;
             }
         }
-        if (candidate != 3)
+        if (candidate != FIELD_GOLEM_NO_RECORD)
         {
             free_record = candidate;
         }
     }
-    if (free_record != 3)
+    if (free_record != FIELD_GOLEM_NO_RECORD)
     {
         field_golem_build_group_record(free_record);
-        count = g_saved_game.bytes[FIELD_GOLEM_CREATED] + 1;
-        g_saved_game.bytes[FIELD_GOLEM_CREATED] = count;
-        if (count >= 201)
+        count = FIELD_PAD.golems_created + 1;
+        FIELD_PAD.golems_created = count;
+        if (count > FIELD_GOLEMS_CREATED_MAX)
         {
-            g_saved_game.bytes[FIELD_GOLEM_CREATED] = 200;
+            FIELD_PAD.golems_created = FIELD_GOLEMS_CREATED_MAX;
         }
-        previous = FIELD_PAD.large_history_order[D_80122C00.golem.slot];
-        if (previous != 3)
+        /* A golem already in the slot moves to the first empty slot. */
+        previous = FIELD_PAD.golem_order[D_80122C00.golem.slot];
+        if (previous != FIELD_GOLEM_NO_RECORD)
         {
-            if (FIELD_PAD.large_history_order[0] == 3)
+            if (FIELD_PAD.golem_order[0] == FIELD_GOLEM_NO_RECORD)
             {
-                FIELD_PAD.large_history_order[0] = previous;
+                FIELD_PAD.golem_order[0] = previous;
             }
-            else if (FIELD_PAD.large_history_order[1] == 3)
+            else if (FIELD_PAD.golem_order[1] == FIELD_GOLEM_NO_RECORD)
             {
-                FIELD_PAD.large_history_order[1] = previous;
+                FIELD_PAD.golem_order[1] = previous;
             }
-            else if (FIELD_PAD.large_history_order[2] == 3)
+            else if (FIELD_PAD.golem_order[2] == FIELD_GOLEM_NO_RECORD)
             {
-                FIELD_PAD.large_history_order[2] = previous;
+                FIELD_PAD.golem_order[2] = previous;
             }
         }
-        FIELD_PAD.large_history_order[D_80122C00.golem.slot] = free_record;
-        packed_counts = (*(s32*)&g_saved_game.bytes[FIELD_GOLEM_COUNTS] & ~0xF) | (((g_saved_game.bytes[FIELD_GOLEM_COUNTS] & 0xF) + 1) & 0xF);
-        *(s32*)&g_saved_game.bytes[FIELD_GOLEM_COUNTS] = packed_counts;
-        if ((g_saved_game.bytes[FIELD_GOLEM_COUNTS] & 0xF) >= 4)
+        FIELD_PAD.golem_order[D_80122C00.golem.slot] = free_record;
+        /* The count nibble is updated with word read-modify-writes. */
+        packed_counts = (*(s32*)&FIELD_PAD.golem_count & ~GOLEM_COUNT_MASK) | (((FIELD_PAD.golem_count & GOLEM_COUNT_MASK) + 1) & GOLEM_COUNT_MASK);
+        *(s32*)&FIELD_PAD.golem_count = packed_counts;
+        if ((FIELD_PAD.golem_count & GOLEM_COUNT_MASK) > GOLEM_RECORD_COUNT)
         {
-            *(s32*)&g_saved_game.bytes[FIELD_GOLEM_COUNTS] = (packed_counts & ~0xF) | 3;
+            *(s32*)&FIELD_PAD.golem_count = (packed_counts & ~GOLEM_COUNT_MASK) | GOLEM_RECORD_COUNT;
         }
         for (i = 0; i < g_gosub_result_count; i++)
         {
-            field_copy_inventory_record(&FIELD_PAD.large_history_records[FIELD_PAD.large_history_order[D_80122C00.golem.slot]].unknown_0x4C[i << 6],
+            field_copy_inventory_record(FIELD_PAD.golem_records[FIELD_PAD.golem_order[D_80122C00.golem.slot]].source_items[i].name,
                                         (u8*)&FIELD_PAD.inventory[g_gosub_result_values[i]]);
             FIELD_PAD.inventory[g_gosub_result_values[i]].name[0] = 0;
         }
         field_compact_inventory();
-        for (i = g_gosub_result_count; i < 4; i++)
+        for (i = g_gosub_result_count; i < GOLEM_SOURCE_ITEM_COUNT; i++)
         {
-            FIELD_PAD.large_history_records[FIELD_PAD.large_history_order[D_80122C00.golem.slot]].unknown_0x4C[i << 6] = 0;
+            FIELD_PAD.golem_records[FIELD_PAD.golem_order[D_80122C00.golem.slot]].source_items[i].name[0] = 0;
         }
         field_upload_golem_palettes();
     }
@@ -667,29 +665,29 @@ void field_menu_load_golem_class(void)
     s32 record_index;
 
     ctx = &FIELD_PAD;
-    record_index = ctx->large_history_order[D_80122C00.golem.slot];
+    record_index = ctx->golem_order[D_80122C00.golem.slot];
     D_80122C00.golem.slot_status[0] = record_index;
-    D_80122C00.golem.detail = ctx->large_history_records[record_index].unknown_0x44 & 0xF;
+    D_80122C00.golem.detail = ctx->golem_records[record_index].logic_layout & GOLEM_LOGIC_CLASS_MASK;
 }
 
 /**
  * @brief Report whether the golem menu may create, or only view, a golem.
  *
  * Clamps an out-of-range active golem index to 3 (none), then stores 2 when the
- * low seven bits of the word at 0xAA8 equal 3, 0 when no golem is active and 1
+ * companion's character type is 3, 0 when no golem is active and 1
  * otherwise.
  */
 void field_menu_check_golem_creation(void)
 {
-    if ((u8)FIELD_PAD.large_history_index >= 4U)
+    if ((u8)FIELD_PAD.joined_golem > FIELD_GOLEM_NO_RECORD)
     {
-        FIELD_PAD.large_history_index = 3;
+        FIELD_PAD.joined_golem = FIELD_GOLEM_NO_RECORD;
     }
-    if ((FIELD_PAD.unkAA8 & 0x7F) == 3)
+    if ((FIELD_PAD.companion_info & COMPANION_KIND_MASK) == 3)
     {
         D_80122C00.golem.result = 2;
     }
-    else if (FIELD_PAD.large_history_index == 3)
+    else if (FIELD_PAD.joined_golem == FIELD_GOLEM_NO_RECORD)
     {
         D_80122C00.golem.result = 0;
     }
@@ -713,29 +711,29 @@ void field_menu_dismiss_golem(void)
 
     for (i = 0; i < FIELD_PAD.logic_block_count; i++)
     {
-        word = FIELD_PAD.logic_blocks[i].word;
-        if ((word & 3) == FIELD_PAD.large_history_order[D_80122C00.golem.slot])
+        if (FIELD_PAD.logic_blocks[i].f.logic_type == FIELD_PAD.golem_order[D_80122C00.golem.slot])
         {
-            FIELD_PAD.logic_blocks[i].word = (word | 3) & 0xFFFEFFFF;
+            FIELD_PAD.logic_blocks[i].f.logic_type = LOGIC_BLOCK_UNASSIGNED;
+            FIELD_PAD.logic_blocks[i].f.placed = 0;
         }
     }
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < GOLEM_SOURCE_ITEM_COUNT; i++)
     {
-        if (FIELD_PAD.large_history_records[FIELD_PAD.large_history_order[D_80122C00.golem.slot]].unknown_0x4C[i * 0x40] != 0)
+        if (FIELD_PAD.golem_records[FIELD_PAD.golem_order[D_80122C00.golem.slot]].source_items[i].name[0] != 0)
         {
             if (field_find_free_inventory_record() != 0)
             {
                 field_copy_inventory_record(field_find_free_inventory_record(),
-                                            &FIELD_PAD.large_history_records[FIELD_PAD.large_history_order[D_80122C00.golem.slot]].unknown_0x4C[i * 0x40]);
+                                            FIELD_PAD.golem_records[FIELD_PAD.golem_order[D_80122C00.golem.slot]].source_items[i].name);
             }
         }
     }
-    FIELD_PAD.large_history_records[FIELD_PAD.large_history_order[D_80122C00.golem.slot]].name[0] = 0;
-    FIELD_PAD.large_history_order[D_80122C00.golem.slot] = 3;
-    word = *(u32*)&g_saved_game.bytes[FIELD_GOLEM_COUNTS];
-    if ((word & 0xF) != 0)
+    FIELD_PAD.golem_records[FIELD_PAD.golem_order[D_80122C00.golem.slot]].name[0] = 0;
+    FIELD_PAD.golem_order[D_80122C00.golem.slot] = FIELD_GOLEM_NO_RECORD;
+    word = *(u32*)&FIELD_PAD.golem_count;
+    if ((word & GOLEM_COUNT_MASK) != 0)
     {
-        *(u32*)&g_saved_game.bytes[FIELD_GOLEM_COUNTS] = (word & ~0xF) | (((g_saved_game.bytes[FIELD_GOLEM_COUNTS] & 0xF) - 1) & 0xF);
+        *(u32*)&FIELD_PAD.golem_count = (word & ~GOLEM_COUNT_MASK) | (((FIELD_PAD.golem_count & GOLEM_COUNT_MASK) - 1) & GOLEM_COUNT_MASK);
     }
 }
 
@@ -744,9 +742,9 @@ void field_menu_dismiss_golem(void)
  */
 void field_menu_publish_golem_name(void)
 {
-    u8 record_index = FIELD_PAD.large_history_order[D_80122C00.golem.slot];
+    u8 record_index = FIELD_PAD.golem_order[D_80122C00.golem.slot];
 
-    field_set_text_macro(0, (u8*)&FIELD_PAD.large_history_records[record_index], 0xFF);
+    field_set_text_macro(0, FIELD_PAD.golem_records[record_index].name, 0xFF);
 }
 
 /**
@@ -765,185 +763,144 @@ void field_menu_clear_golem_result(void)
  */
 void field_menu_refresh_golem_order(void)
 {
-    s32 order[3];
-    s32 inverse[3];
-    s32* inverse_entry;
+    s32 order[GOLEM_RECORD_COUNT];
+    s32 inverse[GOLEM_RECORD_COUNT];
     s32 packed_order;
-    s32 clamped_order_0;
-    s32 clamped_order_1;
-    s32 clamped_order_2;
     s32 i;
     s32 active_index;
     s8 selected_index;
     s32 j;
 
-    FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS) = 3;
-    FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 1) = 3;
-    FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 2) = 3;
-    if (FIELD_PAD.large_history_order[0] != FIELD_PAD.large_history_index)
+    FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS) = FIELD_GOLEM_SLOT_EMPTY;
+    FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 1) = FIELD_GOLEM_SLOT_EMPTY;
+    FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 2) = FIELD_GOLEM_SLOT_EMPTY;
+    if (FIELD_PAD.golem_order[0] != FIELD_PAD.joined_golem)
     {
-        FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS) = FIELD_PAD.large_history_order[0];
+        FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS) = FIELD_PAD.golem_order[0];
     }
-    if (FIELD_PAD.large_history_order[1] != FIELD_PAD.large_history_index)
+    if (FIELD_PAD.golem_order[1] != FIELD_PAD.joined_golem)
     {
-        FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 1) = FIELD_PAD.large_history_order[1];
+        FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 1) = FIELD_PAD.golem_order[1];
     }
-    if (FIELD_PAD.large_history_order[2] != FIELD_PAD.large_history_index)
+    if (FIELD_PAD.golem_order[2] != FIELD_PAD.joined_golem)
     {
-        FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 2) = FIELD_PAD.large_history_order[2];
+        FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 2) = FIELD_PAD.golem_order[2];
     }
-    packed_order = g_saved_game.bytes[FIELD_GOLEM_DISPLAY_ORDER];
-    i = packed_order & 3;
+    packed_order = FIELD_PAD.golem_display_order;
+    order[0] = packed_order & 3;
     order[1] = (packed_order >> 2) & 3;
-    order[0] = i;
     order[2] = (packed_order >> 4) & 3;
-    if (i >= 0)
+    order[0] = FIELD_CLAMP(order[0], 0, GOLEM_RECORD_COUNT - 1);
+    order[1] = FIELD_CLAMP(order[1], 0, GOLEM_RECORD_COUNT - 1);
+    order[2] = FIELD_CLAMP(order[2], 0, GOLEM_RECORD_COUNT - 1);
+    /* Drop duplicate positions, then give each dropped slot the first unused position. */
+    inverse[0] = FIELD_GOLEM_NO_RECORD;
+    inverse[1] = FIELD_GOLEM_NO_RECORD;
+    inverse[2] = FIELD_GOLEM_NO_RECORD;
+    for (i = 0; i < GOLEM_RECORD_COUNT; i++)
     {
-        clamped_order_0 = 2;
-        if (i < 3)
-        {
-            clamped_order_0 = i;
-        }
-    }
-    else
-    {
-        clamped_order_0 = 0;
-    }
-    order[0] = clamped_order_0;
-    if (order[1] >= 0)
-    {
-        clamped_order_1 = 2;
-        if (order[1] < 3)
-        {
-            clamped_order_1 = order[1];
-        }
-    }
-    else
-    {
-        clamped_order_1 = 0;
-    }
-    order[1] = clamped_order_1;
-    if (order[2] >= 0)
-    {
-        clamped_order_2 = 2;
-        if (order[2] < 3)
-        {
-            clamped_order_2 = order[2];
-        }
-    }
-    else
-    {
-        clamped_order_2 = 0;
-    }
-    order[2] = clamped_order_2;
-    inverse[0] = 3;
-    inverse[1] = 3;
-    inverse[2] = 3;
-    for (i = 0; i < 3; i++)
-    {
-        for (j = 0; j < 3; j++)
+        for (j = 0; j < GOLEM_RECORD_COUNT; j++)
         {
             if (order[i] == j)
             {
-                if (inverse[j] == 3)
+                if (inverse[j] == FIELD_GOLEM_NO_RECORD)
                 {
                     inverse[j] = i;
                 }
                 else
                 {
-                    order[i] = 3;
+                    order[i] = FIELD_GOLEM_NO_RECORD;
                 }
             }
         }
     }
-    for (i = 0; i < 3; i++)
+    for (i = 0; i < GOLEM_RECORD_COUNT; i++)
     {
-        if (order[i] == 3)
+        if (order[i] == FIELD_GOLEM_NO_RECORD)
         {
-            for (j = 0; j < 3; j++)
+            for (j = 0; j < GOLEM_RECORD_COUNT; j++)
             {
-                inverse_entry = &inverse[j];
-                if (*inverse_entry == 3)
+                if (inverse[j] == FIELD_GOLEM_NO_RECORD)
                 {
                     order[i] = j;
-                    j = 3;
-                    *inverse_entry = i;
+                    inverse[j] = i;
+                    j = GOLEM_RECORD_COUNT; /* stop searching */
                 }
             }
         }
     }
     packed_order = order[0] + (order[1] * 4) + (order[2] * 0x10);
-    g_saved_game.bytes[FIELD_GOLEM_DISPLAY_ORDER] = packed_order;
-    if (FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS) == 3)
+    FIELD_PAD.golem_display_order = packed_order;
+    if (FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS) == FIELD_GOLEM_SLOT_EMPTY)
     {
         if (order[0] == 0)
         {
-            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS) = 4;
+            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS) = FIELD_GOLEM_SLOT_POSITION(0);
         }
         if (order[1] == 0)
         {
-            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS) = 5;
+            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS) = FIELD_GOLEM_SLOT_POSITION(1);
         }
         if (order[2] == 0)
         {
-            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS) = 6;
+            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS) = FIELD_GOLEM_SLOT_POSITION(2);
         }
     }
-    if (FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 1) == 3)
+    if (FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 1) == FIELD_GOLEM_SLOT_EMPTY)
     {
         if (order[0] == 1)
         {
-            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 1) = 4;
+            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 1) = FIELD_GOLEM_SLOT_POSITION(0);
         }
         if (order[1] == 1)
         {
-            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 1) = 5;
+            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 1) = FIELD_GOLEM_SLOT_POSITION(1);
         }
         if (order[2] == 1)
         {
-            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 1) = 6;
+            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 1) = FIELD_GOLEM_SLOT_POSITION(2);
         }
     }
-    if (FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 2) == 3)
+    if (FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 2) == FIELD_GOLEM_SLOT_EMPTY)
     {
         if (order[0] == 2)
         {
-            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 2) = 4;
+            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 2) = FIELD_GOLEM_SLOT_POSITION(0);
         }
         if (order[1] == 2)
         {
-            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 2) = 5;
+            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 2) = FIELD_GOLEM_SLOT_POSITION(1);
         }
         if (order[2] == 2)
         {
-            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 2) = 6;
+            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 2) = FIELD_GOLEM_SLOT_POSITION(2);
         }
     }
-    selected_index = FIELD_PAD.large_history_index;
-    if (selected_index < 3)
+    selected_index = FIELD_PAD.joined_golem;
+    if (selected_index < GOLEM_RECORD_COUNT)
     {
-        if (FIELD_PAD.large_history_order[0] == selected_index)
+        if (FIELD_PAD.golem_order[0] == selected_index)
         {
-            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS) = 3;
+            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS) = FIELD_GOLEM_SLOT_EMPTY;
         }
-        if (FIELD_PAD.large_history_order[1] == selected_index)
+        if (FIELD_PAD.golem_order[1] == selected_index)
         {
-            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 1) = 3;
+            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 1) = FIELD_GOLEM_SLOT_EMPTY;
         }
-        if (FIELD_PAD.large_history_order[2] == selected_index)
+        if (FIELD_PAD.golem_order[2] == selected_index)
         {
-            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 2) = 3;
+            FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 2) = FIELD_GOLEM_SLOT_EMPTY;
         }
     }
     active_index = D_80122C00.golem.slot;
-    for (i = 0; i < 3; i++)
+    for (i = 0; i < GOLEM_RECORD_COUNT; i++)
     {
         if (order[i] == active_index)
         {
             FIELD_LOCAL_HALF(FIELD_GOLEM_ACTIVE_POSITION) = i;
         }
     }
-    FIELD_LOCAL_HALF(FIELD_GOLEM_ACTIVE_RECORD) = FIELD_PAD.large_history_index;
+    FIELD_LOCAL_HALF(FIELD_GOLEM_ACTIVE_RECORD) = FIELD_PAD.joined_golem;
 }
 
 /**
@@ -980,9 +937,9 @@ void field_menu_publish_golem_items(void)
     count = 0;
     for (i = 0; i < 4; i++)
     {
-        if (FIELD_PAD.large_history_records[FIELD_PAD.large_history_order[D_80122C00.golem.slot]].unknown_0x4C[i << 6] != 0)
+        if (FIELD_PAD.golem_records[FIELD_PAD.golem_order[D_80122C00.golem.slot]].source_items[i].name[0] != 0)
         {
-            field_set_text_macro(count, &FIELD_PAD.large_history_records[FIELD_PAD.large_history_order[D_80122C00.golem.slot]].unknown_0x4C[i << 6], 0xFF);
+            field_set_text_macro(count, FIELD_PAD.golem_records[FIELD_PAD.golem_order[D_80122C00.golem.slot]].source_items[i].name, 0xFF);
             count += 1;
         }
     }
@@ -1173,8 +1130,8 @@ void field_menu_set_golem_palette(void)
     {
         clamped = 0;
     }
-    record_index = FIELD_PAD.large_history_order[D_80122C00.golem.slot];
-    FIELD_PAD.large_history_records[record_index].unknown_0x48 = clamped;
+    record_index = FIELD_PAD.golem_order[D_80122C00.golem.slot];
+    FIELD_PAD.golem_records[record_index].palette = clamped;
     field_upload_golem_palettes();
 }
 
@@ -1186,7 +1143,7 @@ void field_menu_set_active_golem(void)
     s32 status = D_80122C06;
 
     g_game_diagnostic_status = status;
-    FIELD_PAD.large_history_index = status;
+    FIELD_PAD.joined_golem = status;
 }
 
 /**
@@ -1227,41 +1184,41 @@ void func_800C68A4(void)
  */
 void field_menu_swap_golem_order(void)
 {
-    s32 order[3];
+    s32 order[GOLEM_RECORD_COUNT];
     s32 selected_position;
     s32 active_slot;
     s32 packed_order;
     s32 selected_slot;
     s8 active_record;
 
-    packed_order = g_saved_game.bytes[FIELD_GOLEM_DISPLAY_ORDER];
-    selected_position = 3;
-    active_slot = 3;
+    packed_order = FIELD_PAD.golem_display_order;
+    selected_position = FIELD_GOLEM_NO_RECORD;
+    active_slot = FIELD_GOLEM_NO_RECORD;
     order[0] = packed_order & 3;
     order[1] = (packed_order >> 2) & 3;
     order[2] = (packed_order >> 4) & 3;
-    active_record = FIELD_PAD.large_history_index;
+    active_record = FIELD_PAD.joined_golem;
     selected_slot = D_80122C00.golem.slot;
-    if (FIELD_PAD.large_history_order[selected_slot] != active_record)
+    if (FIELD_PAD.golem_order[selected_slot] != active_record)
     {
         s32 i;
         s32 swap_position;
 
-        for (i = 0; i < 3; i++)
+        for (i = 0; i < GOLEM_RECORD_COUNT; i++)
         {
-            if (active_record == FIELD_PAD.large_history_order[i])
+            if (active_record == FIELD_PAD.golem_order[i])
             {
                 active_slot = i;
             }
         }
-        for (i = 0; i < 3; i++)
+        for (i = 0; i < GOLEM_RECORD_COUNT; i++)
         {
             if (order[i] == active_slot)
             {
                 swap_position = i;
             }
         }
-        for (i = 0; i < 3; i++)
+        for (i = 0; i < GOLEM_RECORD_COUNT; i++)
         {
             if (order[i] == selected_slot)
             {
@@ -1271,7 +1228,7 @@ void field_menu_swap_golem_order(void)
         order[swap_position] = selected_slot;
         order[selected_position] = active_slot;
         packed_order = order[0] + (order[1] * 4) + (order[2] * 0x10);
-        g_saved_game.bytes[FIELD_GOLEM_DISPLAY_ORDER] = packed_order;
+        FIELD_PAD.golem_display_order = packed_order;
     }
     FIELD_MENU_SWAP->selected_position = selected_position;
     FIELD_MENU_SWAP->active_slot = active_slot;
@@ -1282,7 +1239,7 @@ void field_menu_swap_golem_order(void)
  */
 void field_menu_publish_inventory_item(void)
 {
-    field_set_text_macro(0, (u8*)&FIELD_PAD.inventory[D_80122C10], 0xFF);
+    field_set_text_macro(0, FIELD_PAD.inventory[D_80122C10].name, 0xFF);
 }
 
 /**
@@ -1300,7 +1257,7 @@ void field_menu_count_inventory_kind(void)
     {
         if (FIELD_PAD.inventory[i].name[0] != 0)
         {
-            if (((FIELD_PAD.inventory[i].attributes.packed >> 8) & 3) == kind)
+            if (INVENTORY_KIND(FIELD_PAD.inventory[i].attributes.packed) == kind)
             {
                 count++;
             }
@@ -1320,7 +1277,7 @@ void field_menu_fill_free_inventory(void)
     {
         field_copy_inventory_record(field_find_free_inventory_record(), (u8*)FIELD_PAD.inventory);
     }
-    g_saved_game.bytes[FIELD_GOLEM_CREATED] += 9;
+    FIELD_PAD.golems_created += 9;
 }
 
 /**
@@ -1338,33 +1295,29 @@ void field_menu_set_golem_class(void)
     s32 i;
     s32 active_record;
     s32 golem_class;
-    u32 word;
     s32 block_class;
-    PadContext* shifted;
-    s32 placed;
 
     class_table = D_80051CE4;
     unused_table = D_80051DCC;
 
     ctx = &FIELD_PAD;
-    active_record = ctx->large_history_index;
+    active_record = ctx->joined_golem;
     golem_class = D_80122C1C;
-    if (active_record < 3)
+    if (active_record < GOLEM_RECORD_COUNT)
     {
-        /* The pad context shifted by active_record records: record 0 is the active golem. */
-        shifted = (PadContext*)((u8*)ctx + active_record * sizeof(LargeHistoryRecord));
         g_saved_game.bytes[FIELD_ACTIVE_GOLEM_CLASS] = (u8)D_80122C1C;
-        *(s32*)&shifted->large_history_records[0].unknown_0x44 = (*(s32*)&shifted->large_history_records[0].unknown_0x44 & ~0xF) | ((u8)D_80122C1C & 0xF);
+        /* The class nibble is updated with a word read-modify-write of bytes 0x44-0x47. */
+        *(s32*)&ctx->golem_records[active_record].logic_layout =
+            (*(s32*)&ctx->golem_records[active_record].logic_layout & ~GOLEM_LOGIC_CLASS_MASK) | ((u8)D_80122C1C & GOLEM_LOGIC_CLASS_MASK);
         for (i = 0; i < ctx->logic_block_count; i++)
         {
-            word = ctx->logic_blocks[i].word;
-            placed = (word >> 16) & 1;
-            if (placed == 1 && (word & 3) == active_record)
+            if (ctx->logic_blocks[i].f.placed == 1 && ctx->logic_blocks[i].f.logic_type == active_record)
             {
-                block_class = class_table.classes[(word >> 2) & 0x3F];
+                block_class = class_table.classes[ctx->logic_blocks[i].f.id];
                 if (block_class != 0 && block_class != golem_class)
                 {
-                    ctx->logic_blocks[i].word = (word & 0xFFFEFFFF) | 3;
+                    ctx->logic_blocks[i].f.placed = 0;
+                    ctx->logic_blocks[i].f.logic_type = LOGIC_BLOCK_UNASSIGNED;
                 }
             }
         }
@@ -1575,52 +1528,52 @@ void field_menu_publish_object_text(void)
 }
 
 /**
- * @brief Decode the gosub-selected small history record into a display id and mode.
+ * @brief Decode the gosub-selected pet into a display id and mode.
  *
- * A blocked record shows id 0x53 + its byte at 0x16 in mode 0; otherwise it
- * shows 0x12 + its byte at 0x15, in mode 1 when selection is restricted. The
- * record at the small-history index shows 0xFE. Also stores the result count.
+ * An egg shows id 0x53 + its egg species in mode 0; a hatched pet shows
+ * 0x12 + its species, in mode 1 while it is grazing. The pet in the party
+ * shows 0xFE. Also stores the result count.
  */
-void field_menu_describe_selected_history(void)
+void field_menu_describe_selected_pet(void)
 {
     s32 index;
-    SmallHistorySelection flags;
-    s32 restricted;
+    PetStatusFlags flags;
+    s32 grazing;
 
     if (g_gosub_result_count != 0)
     {
         index = g_gosub_result_values[0];
-        if (index < SMALL_HISTORY_RECORD_COUNT)
+        if (index < PET_RECORD_COUNT)
         {
-            flags = FIELD_PAD.small_history_records[index].selection_flags;
-            if (flags.selection_blocked)
+            flags = FIELD_PAD.pet_records[index].status;
+            if (flags.egg)
             {
-                FIELD_MENU_RECORD->display_id = FIELD_PAD.small_history_records[index].unknown_0x16 + 0x53;
+                FIELD_MENU_RECORD->display_id = FIELD_PAD.pet_records[index].egg_species + 0x53;
                 FIELD_MENU_RECORD->mode = 0;
             }
             else
             {
-                restricted = flags.selection_restricted;
-                FIELD_MENU_RECORD->display_id = FIELD_PAD.small_history_records[index].unknown_0x15 + 0x12;
-                FIELD_MENU_RECORD->mode = restricted;
+                grazing = flags.grazing;
+                FIELD_MENU_RECORD->display_id = FIELD_PAD.pet_records[index].species + 0x12;
+                FIELD_MENU_RECORD->mode = grazing;
             }
-            if (index == FIELD_PAD.small_history_index)
+            if (index == FIELD_PAD.joined_pet)
             {
                 FIELD_MENU_RECORD->display_id = 0xFE;
             }
         }
         else
         {
-            record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_DESCRIBE_SELECTED_HISTORY, index, 0);
+            record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_DESCRIBE_SELECTED_PET, index, 0);
         }
     }
     D_80122C16 = g_gosub_result_count;
 }
 
 /**
- * @brief Count the occupied small history records whose selection is restricted.
+ * @brief Count the grazing pets into D_80122C16.
  */
-void field_menu_count_restricted_history(void)
+void field_menu_count_grazing_pets(void)
 {
     s32 count;
     s32 i;
@@ -1628,9 +1581,9 @@ void field_menu_count_restricted_history(void)
     if (g_gosub_result_count != 0)
     {
         count = 0;
-        for (i = 0; i < SMALL_HISTORY_RECORD_COUNT; i++)
+        for (i = 0; i < PET_RECORD_COUNT; i++)
         {
-            if (FIELD_PAD.small_history_records[i].name[0] != 0 && FIELD_PAD.small_history_records[i].selection_flags.selection_restricted == 1)
+            if (FIELD_PAD.pet_records[i].name[0] != 0 && FIELD_PAD.pet_records[i].status.grazing == 1)
             {
                 count++;
             }
@@ -1640,20 +1593,20 @@ void field_menu_count_restricted_history(void)
 }
 
 /**
- * @brief Restrict selection of the gosub-selected small history record.
+ * @brief Leave the gosub-selected pet grazing at the ranch.
  */
-void field_menu_restrict_selected_history(void)
+void field_menu_send_selected_pet_grazing(void)
 {
     s32 index;
 
     index = g_gosub_result_values[0];
-    if (index < SMALL_HISTORY_RECORD_COUNT)
+    if (index < PET_RECORD_COUNT)
     {
-        FIELD_PAD.small_history_records[index].selection_flags.selection_restricted = 1;
+        FIELD_PAD.pet_records[index].status.grazing = 1;
     }
     else
     {
-        record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_RESTRICT_SELECTED_HISTORY, index, 0);
+        record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_SEND_SELECTED_PET_GRAZING, index, 0);
     }
 }
 
@@ -1693,25 +1646,25 @@ void func_800C72A4(void)
 }
 
 /**
- * @brief Store the selected small history record and publish its name to a text macro.
+ * @brief Store the gosub-selected pet and publish its name to a text macro.
  *
  * The text macro index comes from the variable at D_80122C02.
  */
-void field_menu_publish_selected_history_name(void)
+void field_menu_publish_selected_pet_name(void)
 {
     s32 index;
 
     FIELD_MENU_NAMED->index = index = g_gosub_result_values[0];
     FIELD_MENU_NAMED->count = g_gosub_result_count;
-    field_set_text_macro(FIELD_MENU_NAMED->macro_index, FIELD_PAD.small_history_records[index].name, 0xFF);
+    field_set_text_macro(FIELD_MENU_NAMED->macro_index, FIELD_PAD.pet_records[index].name, 0xFF);
 }
 
 /**
- * @brief Publish the selected small history record's extra slot texts and its name.
+ * @brief Publish pet D_80122C10's extra slot texts and its name.
  * @note Unused slots (0xFE/0xFF) are skipped; the number published goes to D_80122C16.
  * @note Selections of five or greater record a diagnostic instead.
  */
-void field_menu_publish_history_slots(void)
+void field_menu_publish_pet_slots(void)
 {
     s32 selection;
     s32 slot;
@@ -1719,12 +1672,12 @@ void field_menu_publish_history_slots(void)
     u8 entry;
 
     selection = D_80122C10;
-    if (selection < SMALL_HISTORY_RECORD_COUNT)
+    if (selection < PET_RECORD_COUNT)
     {
         count = 0;
         for (slot = 0; slot < 3; slot++)
         {
-            entry = FIELD_MENU_HISTORY->small_history_records[selection].extra_slots[slot];
+            entry = FIELD_MENU_PETS->pet_records[selection].extra_slots[slot];
             /* Two separate tests; && folds them into one range check. */
             if (entry != 0xFF)
             {
@@ -1735,30 +1688,30 @@ void field_menu_publish_history_slots(void)
                 }
             }
         }
-        field_set_text_macro(3, FIELD_PAD.small_history_records[selection].name, 0xFF);
+        field_set_text_macro(3, FIELD_PAD.pet_records[selection].name, 0xFF);
         D_80122C16 = count;
         return;
     }
-    record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_PUBLISH_HISTORY_SLOTS, selection, 0);
+    record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_PUBLISH_PET_SLOTS, selection, 0);
 }
 
-/** @brief Clear pad-context byte 0xC06 and the active large history record's 0x46 byte. */
+/** @brief Clear pad-context byte 0xC06 and the joined golem's 0x46 byte. */
 void func_800C745C(void)
 {
     PadContext* ctx;
     s32 index;
 
     ctx = &FIELD_PAD;
-    index = ctx->large_history_index;
+    index = ctx->joined_golem;
     g_saved_game.bytes[0xC06] = 0;
-    ctx->large_history_records[index].unknown_0x46 = 0;
+    ctx->golem_records[index].unknown_0x46 = 0;
 }
 
 /**
- * @brief Store D_80122C12 in the first unused extra slot of small history record D_80122C10.
+ * @brief Store D_80122C12 in the first unused extra slot of pet D_80122C10.
  * @note Selections of five or greater record a diagnostic instead.
  */
-void field_menu_add_history_slot(void)
+void field_menu_add_pet_slot(void)
 {
     s32 selection;
     s32 value;
@@ -1767,79 +1720,79 @@ void field_menu_add_history_slot(void)
 
     selection = FIELD_MENU_RECORD->display_id;
     value = FIELD_MENU_RECORD->mode;
-    if (selection < SMALL_HISTORY_RECORD_COUNT)
+    if (selection < PET_RECORD_COUNT)
     {
         for (slot = 0; slot < 3; slot++)
         {
-            entry = FIELD_MENU_HISTORY->small_history_records[selection].extra_slots[slot];
+            entry = FIELD_MENU_PETS->pet_records[selection].extra_slots[slot];
             if (entry == 0xFE || entry == 0xFF)
             {
-                FIELD_MENU_HISTORY->small_history_records[selection].extra_slots[slot] = value;
+                FIELD_MENU_PETS->pet_records[selection].extra_slots[slot] = value;
                 return;
             }
         }
         return;
     }
-    record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_ADD_HISTORY_SLOT, selection, 0);
+    record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_ADD_PET_SLOT, selection, 0);
 }
 
-/** @brief Replace the small history index in D_80122C10 with that record's entry id. */
-void field_menu_history_entry_id(void)
+/** @brief Replace the pet record index in D_80122C10 with that pet's species. */
+void field_menu_load_pet_species(void)
 {
-    D_80122C10 = FIELD_PAD.small_history_records[D_80122C10].unknown_0x15;
+    D_80122C10 = FIELD_PAD.pet_records[D_80122C10].species;
 }
 
 /**
- * @brief Lift the selection restriction of the current small history record.
+ * @brief Bring the pet in the party back from grazing.
  * @note Indices of five or greater record a diagnostic instead.
  */
-void field_menu_unrestrict_current_history(void)
+void field_menu_recall_joined_pet(void)
 {
     s32 index;
 
-    index = FIELD_PAD.small_history_index;
-    if (index < SMALL_HISTORY_RECORD_COUNT)
+    index = FIELD_PAD.joined_pet;
+    if (index < PET_RECORD_COUNT)
     {
-        FIELD_PAD.small_history_records[index].selection_flags.selection_restricted = 0;
+        FIELD_PAD.pet_records[index].status.grazing = 0;
     }
     else
     {
-        record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_UNRESTRICT_CURRENT_HISTORY, index, 0);
+        record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_RECALL_JOINED_PET, index, 0);
     }
 }
 
 /**
- * @brief Lift the selection restriction of the gosub-selected small history record.
+ * @brief Bring the gosub-selected pet back from grazing.
  * @note Indices of five or greater record a diagnostic instead, under menu
- *       op 0x32 (field_menu_unrestrict_current_history's number), not 0x33.
+ *       op 0x32 (field_menu_recall_joined_pet's number), not 0x33.
  */
-void field_menu_unrestrict_selected_history(void)
+void field_menu_recall_selected_pet(void)
 {
     s32 index;
 
     index = g_gosub_result_values[0];
-    if (index < SMALL_HISTORY_RECORD_COUNT)
+    if (index < PET_RECORD_COUNT)
     {
-        FIELD_PAD.small_history_records[index].selection_flags.selection_restricted = 0;
+        FIELD_PAD.pet_records[index].status.grazing = 0;
     }
     else
     {
-        record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_UNRESTRICT_CURRENT_HISTORY, index, 0);
+        record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_RECALL_JOINED_PET, index, 0);
     }
 }
 
 /**
- * @brief Load the gosub-selected small history record's 0x5A halfword into D_80122C00.
+ * @brief Load the gosub-selected pet's 0x5A halfword into D_80122C00.
  * @note Does nothing when the gosub returned no selection.
  */
-void field_menu_load_history_value(void)
+void field_menu_load_pet_value(void)
 {
     s32 index;
 
     if (g_gosub_result_count != 0)
     {
         index = g_gosub_result_values[0];
-        D_80122C00.words[0] = FIELD_MENU_HISTORY->small_history_records[index].unknown_0x5A;
+        D_80122C00.words[0] = FIELD_MENU_PETS->pet_records[index].unknown_0x5A;
     }
 }
 
@@ -2493,23 +2446,23 @@ void field_menu_restore_field_mode(void)
 }
 
 /**
- * @brief List the occupied small history records whose selection is restricted.
- * @note Stores each listed record's entry id from D_80122C00 and its index from
+ * @brief List the grazing pets.
+ * @note Stores each listed pet's species from D_80122C00 and its index from
  *       D_80122C1D, and publishes its name to macro 0, 1, ... in order.
  */
-void field_menu_list_restricted_history(void)
+void field_menu_list_grazing_pets(void)
 {
     s32 count;
     s32 i;
 
     count = 0;
-    for (i = 0; i < SMALL_HISTORY_RECORD_COUNT; i++)
+    for (i = 0; i < PET_RECORD_COUNT; i++)
     {
-        if (FIELD_PAD.small_history_records[i].name[0] != 0 && FIELD_PAD.small_history_records[i].selection_flags.selection_restricted == 1)
+        if (FIELD_PAD.pet_records[i].name[0] != 0 && FIELD_PAD.pet_records[i].status.grazing == 1)
         {
-            FIELD_LOCAL_BYTE(count) = FIELD_PAD.small_history_records[i].unknown_0x15;
+            FIELD_LOCAL_BYTE(count) = FIELD_PAD.pet_records[i].species;
             FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT_TABLE + count) = i;
-            field_set_text_macro(count, FIELD_PAD.small_history_records[i].name, 0xFF);
+            field_set_text_macro(count, FIELD_PAD.pet_records[i].name, 0xFF);
             count++;
         }
     }
@@ -2837,51 +2790,51 @@ void field_reset_music_track_index(void)
 }
 
 /**
- * @brief Clear the restriction flag of the small history record picked by the cursor slot.
+ * @brief Bring the grazing pet picked by the cursor slot back from grazing.
  *
  * The record index comes from the cursor slot table at D_80122C19; an index
  * of five or more is reported as a diagnostic.
  */
-void field_menu_unrestrict_cursor_history(void)
+void field_menu_recall_cursor_pet(void)
 {
     s32 index;
 
-    index = FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT_TABLE + FIELD_LOCAL_BYTE(FIELD_UNRESTRICT_SLOT));
-    if (index < SMALL_HISTORY_RECORD_COUNT)
+    index = FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT_TABLE + FIELD_LOCAL_BYTE(FIELD_RECALL_SLOT));
+    if (index < PET_RECORD_COUNT)
     {
-        FIELD_PAD.small_history_records[index].selection_flags.selection_restricted = 0;
+        FIELD_PAD.pet_records[index].status.grazing = 0;
     }
     else
     {
-        record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_UNRESTRICT_CURSOR_HISTORY, index, 0);
+        record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_RECALL_CURSOR_PET, index, 0);
     }
 }
 
 /**
- * @brief Store an entry id in the selected small history record and lift its restriction.
+ * @brief Hatch an egg: store the hatched species in the selected pet and clear its egg flag.
  *
- * An unnamed record gets the name 'A' (0x41). An index of five or more is
+ * An unnamed pet gets the name 'A' (0x41). An index of five or more is
  * reported as a diagnostic.
  */
-void field_menu_set_history_entry(void)
+void field_menu_hatch_pet(void)
 {
     s32 index;
-    u8 entry_id;
+    u8 species;
 
-    entry_id = FIELD_LOCAL_BYTE(FIELD_HISTORY_ENTRY_ID);
-    index = FIELD_LOCAL_BYTE(FIELD_HISTORY_INDEX);
-    if (index < SMALL_HISTORY_RECORD_COUNT)
+    species = FIELD_LOCAL_BYTE(FIELD_HATCH_SPECIES);
+    index = FIELD_LOCAL_BYTE(FIELD_HATCH_PET_INDEX);
+    if (index < PET_RECORD_COUNT)
     {
-        FIELD_MENU_HISTORY->small_history_records[index].entry_id = entry_id;
-        FIELD_PAD.small_history_records[index].selection_flags.selection_blocked = 0;
-        if (FIELD_PAD.small_history_records[index].name[0] == 0)
+        FIELD_MENU_PETS->pet_records[index].species = species;
+        FIELD_PAD.pet_records[index].status.egg = 0;
+        if (FIELD_PAD.pet_records[index].name[0] == 0)
         {
-            FIELD_PAD.small_history_records[index].name[0] = 0x41;
+            FIELD_PAD.pet_records[index].name[0] = 0x41;
         }
     }
     else
     {
-        record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_SET_HISTORY_ENTRY, index, 0);
+        record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_HATCH_PET, index, 0);
     }
 }
 
@@ -3323,14 +3276,14 @@ void field_menu_copy_resource_item(void)
 }
 
 /**
- * @brief Swap the current small history record into the cursor slot and restrict it.
+ * @brief Swap the pet in the party with the grazing pet in the cursor slot.
  *
- * Returns the record the cursor slot (local 0x1C) held as the gosub
- * result, puts the current small history index in that slot, stores the
- * record's entry id in local halfword 0xA, restricts its selection and
+ * Returns the pet the cursor slot (local 0x1C) held as the gosub
+ * result, puts the joined pet's index in that slot, stores its species
+ * in local halfword 0xA, leaves it grazing and
  * publishes its name to the text macro named by local 0x1C.
  */
-void field_menu_swap_cursor_history(void)
+void field_menu_swap_joined_pet(void)
 {
     s32 slot;
     u8* entry;
@@ -3342,40 +3295,40 @@ void field_menu_swap_cursor_history(void)
     entry = &FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT_TABLE + slot);
     previous = *entry;
     g_gosub_result_count = 1;
-    index = FIELD_PAD.small_history_index;
+    index = FIELD_PAD.joined_pet;
     g_gosub_result_values[0] = previous;
-    if (index < SMALL_HISTORY_RECORD_COUNT)
+    if (index < PET_RECORD_COUNT)
     {
         *entry = index;
-        FIELD_LOCAL_HALF(FIELD_CURSOR_ENTRY_ID) = FIELD_MENU_HISTORY->small_history_records[index].entry_id;
-        FIELD_PAD.small_history_records[index].selection_flags.selection_restricted = 1;
-        field_set_text_macro(slot, FIELD_PAD.small_history_records[index].name, 0xFF);
+        FIELD_LOCAL_HALF(FIELD_CURSOR_SPECIES) = FIELD_MENU_PETS->pet_records[index].species;
+        FIELD_PAD.pet_records[index].status.grazing = 1;
+        field_set_text_macro(slot, FIELD_PAD.pet_records[index].name, 0xFF);
     }
 }
 
 /**
- * @brief Publish the name of the small history record in the cursor slot to text macro 3.
+ * @brief Publish the name of the pet in the cursor slot to text macro 3.
  * @note Local 0x1C is replaced by the record's extra slot id at 0x48.
  */
-void field_menu_publish_cursor_history(void)
+void field_menu_publish_cursor_pet(void)
 {
     s32 index;
 
     index = FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT_TABLE + FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT));
-    FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT) = FIELD_MENU_HISTORY->small_history_records[index].unknown_0x48[0];
-    field_set_text_macro(3, FIELD_PAD.small_history_records[index].name, 0xFF);
+    FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT) = FIELD_MENU_PETS->pet_records[index].unknown_0x48[0];
+    field_set_text_macro(3, FIELD_PAD.pet_records[index].name, 0xFF);
 }
 
-/** @brief Count the occupied small history records into D_80122C16. */
-void field_menu_count_history_records(void)
+/** @brief Count the pets (occupied pet records) into D_80122C16. */
+void field_menu_count_pets(void)
 {
     s32 i;
     s32 count;
 
     count = 0;
-    for (i = 0; i < SMALL_HISTORY_RECORD_COUNT; i++)
+    for (i = 0; i < PET_RECORD_COUNT; i++)
     {
-        if (FIELD_PAD.small_history_records[i].name[0] != 0)
+        if (FIELD_PAD.pet_records[i].name[0] != 0)
         {
             count++;
         }
@@ -3393,11 +3346,11 @@ void func_800C9D84(void)
 }
 
 /**
- * @brief Store the high nibble of D_800459AC into D_80122C12.
+ * @brief Store the golem that last left the party (high nibble of golem_count) into D_80122C12.
  */
 void field_menu_load_golem_saved_group(void)
 {
-    D_80122C12 = g_saved_game.bytes[FIELD_GOLEM_COUNTS] >> 4;
+    D_80122C12 = FIELD_PAD.golem_count >> 4;
 }
 
 /**

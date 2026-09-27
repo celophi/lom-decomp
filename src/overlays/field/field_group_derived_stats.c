@@ -63,7 +63,6 @@ typedef struct
 /** @brief The golem name text table. */
 #define GOLEM_NAME_TEXT ((GolemNameText*)field_find_resource(FIELD_RESOURCE_GOLEM_NAME_TEXT))
 
-extern u8* field_find_resource(s32 resource_id);
 extern GolemWeaponClassTable D_80051C50;
 extern s8 D_800F0C38[];
 extern s32 g_gosub_result_count;
@@ -208,7 +207,7 @@ void field_golem_build_group_record(s32 group)
             work[3] += item->derived.values[3];
         }
     }
-    for (i = 0; i < HISTORY_RECORD_STAT_COUNT; i++)
+    for (i = 0; i < COMPANION_STAT_COUNT; i++)
     {
         work[i] = work[i] < 0 ? 0 : work[i] > GOLEM_EQUIPMENT_TOTAL_MAX ? GOLEM_EQUIPMENT_TOTAL_MAX : work[i];
         GOLEM.group_records[group].equipment_totals[i] = work[i];
@@ -383,7 +382,7 @@ void field_golem_build_group_record(s32 group)
     work[0] = work[0] < 0 ? 0 : work[0] > 50 ? 50 : work[0];
     GOLEM.group_records[group].unknown_0x46 = work[0];
     GOLEM.group_records[group].unknown_0x47 = 0;
-    GOLEM.group_records[group].unknown_0x48 = 0;
+    GOLEM.group_records[group].palette = 0;
 
     work[0] = GOLEM.group_records[group].power;
     work[1] = GOLEM.group_records[group].equipment_totals[0];

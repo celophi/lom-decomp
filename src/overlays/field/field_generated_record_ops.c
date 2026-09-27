@@ -45,8 +45,6 @@ typedef struct FieldItemNameTable
 
 extern FieldGameState* g_field_game_state;
 
-void* field_find_resource(s32 table_id);
-
 static void field_build_item_name(s32 type_entry, s32 material_entry, u8* dest);
 
 /**
