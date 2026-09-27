@@ -6,20 +6,14 @@
 #include "display.h"
 #include "gpu_packet.h"
 #include "sdk/libgpu.h"
+#include "tim.h"
+#include "render_context.h"
 
 /*
  * Encyclopedia overlay UI, entry navigation, resource loading and rendering.
  */
 
 /* Overlay data types. */
-
-typedef struct
-{
-    s16 x;
-    s16 y;
-    s16 w;
-    s16 h;
-} ZukanRect;
 
 typedef struct
 {
@@ -62,20 +56,6 @@ typedef struct
     s16 x1, y1;
     s16 x2, y2;
 } ZukanPolyF3;
-
-/**
- * @brief Persistent draw state used while rendering the encyclopedia screen.
- */
-typedef struct
-{
-    u8 pad0[0x30];
-    s32 list_ordering_table;
-    s32 detail_ordering_table;
-    u8 pad38[0x4008];
-    void* prim_cursor;
-    s16 unk4044;
-    s16 frame_flag;
-} ZukanDrawState;
 
 /**
  * @brief 2D short position passed to the number/text drawing helpers.
@@ -126,6 +106,20 @@ typedef struct
 #define ZUKAN_FADE_ADDITIVE_DRAW_MODE 0x25
 #define ZUKAN_FADE_SUBTRACTIVE_DRAW_MODE 0x45
 #define ZUKAN_NEXT_FADE_PRIMITIVE(primitive, type) ((ZukanFadePrimitive*)((u8*)(primitive) + sizeof(type)))
+
+/* Ordering-table slots used in the in-game RenderContext. NAV_SPRITES holds UI sprites 0-5
+ * (the previous/next/return controls tinted during transitions), UI_SPRITES the remaining ones. */
+#define ZUKAN_LAYER_NAV_SPRITES 10
+#define ZUKAN_LAYER_FADE 11
+#define ZUKAN_LAYER_LIST 12
+#define ZUKAN_LAYER_DETAIL 13
+#define ZUKAN_LAYER_UI_SPRITES 15
+
+/* Scrolling list viewport, relative to the active draw buffer. */
+#define ZUKAN_LIST_VIEW_X 0x48
+#define ZUKAN_LIST_VIEW_Y 0x36
+#define ZUKAN_LIST_VIEW_WIDTH 0xB8
+#define ZUKAN_LIST_VIEW_HEIGHT 0x80
 
 #define ZUKAN_VIEW_DETAIL 0
 #define ZUKAN_VIEW_LIST 1
@@ -188,31 +182,35 @@ extern s32 g_zukan_next_resource_id;
  * byte-oriented declarations private to this overlay implementation.
  */
 
-/* Shared menu helper. */
+/* FIELD routines that stay resident while this overlay is loaded. */
 void play_menu_sfx(s32 sfx_id, s32 volume);
+void* func_800A88A0(void* packet_cursor, u_long* ordering_table, u8* text, s32 color, s32 x, s32 y, s32 flags);
+void* func_800A8B04(u_long* ordering_table, void* packet_cursor, s32 value, s32 color, ZukanPos* position, s32 flags);
+void* func_800AD208(u_long* ordering_table, void* packet_cursor, s32 value, s32 digit_count, ZukanPos* position, s32 flags);
+void* func_800AD524(void* packet_cursor, u_long* ordering_table, s32 glyph, ZukanPos* position, s32 flags);
 
 /* Helper routines. */
 void zukan_upload_ui_images(s32 work_buffer);
-s32 zukan_upload_tim(ZukanImageDestination* destinations, u8* tim);
+s32 zukan_upload_tim(ZukanImageDestination* destinations, TimPrefix* tim);
 s32 zukan_handle_input(void);
 void zukan_scroll_to_selection(void);
 static s32 zukan_emit_draw_mode_5(s32 packet_cursor, s32 ordering_table);
 static s32 zukan_emit_draw_mode_1d(s32 packet_cursor, s32 ordering_table);
 static s32 zukan_emit_texture_draw_mode(s32 packet_cursor, s32 ordering_table);
-void zukan_render_ui(u8* frame_context);
-s32 zukan_emit_ui_sprite(s32 packet_cursor, s32* ordering_table, u32 sprite_index, s32 x, s32 y, s32 variant);
+void zukan_render_ui(RenderContext* render_ctx);
+u8* zukan_emit_ui_sprite(u8* packet_cursor, u_long* ordering_table, u32 sprite_index, s32 x, s32 y, s32 variant);
 void zukan_start_next_entry_transition(void);
 void zukan_start_previous_entry_transition(void);
-void zukan_update_transition(u8* frame_context);
-void zukan_render_content(ZukanDrawState* ctx);
+void zukan_update_transition(RenderContext* render_ctx);
+void zukan_render_content(RenderContext* render_ctx);
 static ZukanLinePacket* zukan_emit_panel_outline(ZukanLinePacket* packet, s32* ordering_table, s32 x, s32 y, s32 width, s32 height, s32 color);
 void zukan_set_fade_target(s16 red, s16 green, s16 blue, s16 steps);
 ZukanFadePrimitive* zukan_render_fade(ZukanFadePrimitive* primitive, u_long* ordering_table_tag);
 void zukan_build_entry_list(s32 category);
 void zukan_load_entry(s32 index);
 void zukan_load_related_entry(s32 resource_id);
-s32 zukan_render_detail_text(s32 packet_cursor, s32 ordering_table);
-void* zukan_render_detail_sprites(SPRT* sprite, s32* ordering_table);
+u8* zukan_render_detail_text(u8* packet_cursor, u_long* ordering_table);
+void* zukan_render_detail_sprites(SPRT* sprite, u_long* ordering_table);
 void zukan_commit_loaded_entry(void);
 
 /**
@@ -260,13 +258,13 @@ void zukan_upload_ui_images(s32 work_buffer)
     destinations.y = 0x100;
     destinations.clut_x = 0;
     destinations.clut_y = 0x1F2;
-    zukan_upload_tim(&destinations, archive + *(s32*)(archive + 8));
+    zukan_upload_tim(&destinations, (TimPrefix*)(archive + *(s32*)(archive + 8)));
 
     destinations.x = 0x140;
     destinations.y = 0;
     destinations.clut_x = 0;
     destinations.clut_y = 0x1F2;
-    zukan_upload_tim(&destinations, archive + *(s32*)(archive + 4));
+    zukan_upload_tim(&destinations, (TimPrefix*)(archive + *(s32*)(archive + 4)));
 }
 
 /**
@@ -275,43 +273,43 @@ void zukan_upload_ui_images(s32 work_buffer)
  * @param tim TIM image data.
  * @return The TIM pixel-mode bits from the flags word.
  */
-s32 zukan_upload_tim(ZukanImageDestination* destinations, u8* tim)
+s32 zukan_upload_tim(ZukanImageDestination* destinations, TimPrefix* tim)
 {
-    ZukanRect upload_rect;
+    RECT upload_rect;
     s32 flags;
     s32 clut_block_size;
-    u16* pixel_dimensions;
+    TimDimensions* pixel_dimensions;
     s32 mode;
 
-    flags = *(s32*)(tim + 4);
-    clut_block_size = *(s32*)(tim + 8);
+    flags = tim->flags;
+    clut_block_size = tim->clut_block.bnum;
     mode = flags & 7;
 
-    if (flags & 8)
+    if (flags & TIM_FLAG_HAS_CLUT)
     {
-        setRECT(&upload_rect, destinations->clut_x, destinations->clut_y, 0x100, 1);
-        LoadImage(&upload_rect, tim + 0x14);
-        pixel_dimensions = (u16*)(clut_block_size - (-(s32)tim) + 0x10);
+        setRECT(&upload_rect, destinations->clut_x, destinations->clut_y, CLUT_ENTRY_COUNT, 1);
+        LoadImage(&upload_rect, (u_long*)tim->clut_data);
+        pixel_dimensions = &TIM_PIXEL_BLOCK(tim, clut_block_size)->dimensions;
     }
     else
     {
-        pixel_dimensions = (u16*)(tim + 0x10);
+        pixel_dimensions = &tim->clut_block.dimensions;
     }
 
-    setRECT(&upload_rect, destinations->x, destinations->y, pixel_dimensions[0], pixel_dimensions[1]);
-    LoadImage(&upload_rect, clut_block_size - (-(s32)tim) + 0x14);
+    setRECT(&upload_rect, destinations->x, destinations->y, pixel_dimensions->width, pixel_dimensions->height);
+    LoadImage(&upload_rect, (u_long*)(TIM_PIXEL_BLOCK(tim, clut_block_size) + 1));
     return mode;
 }
 
 /**
  * @brief Build the current frame and advance the encyclopedia transition state.
- * @param frame_context Render context for the current frame.
+ * @param render_ctx Render context for the current frame.
  */
-void zukan_update_frame(s32 frame_context)
+void zukan_update_frame(RenderContext* render_ctx)
 {
-    zukan_render_ui(frame_context);
-    zukan_update_transition(frame_context);
-    zukan_render_content(frame_context);
+    zukan_render_ui(render_ctx);
+    zukan_update_transition(render_ctx);
+    zukan_render_content(render_ctx);
     g_frame_counter += 1;
     zukan_handle_input();
 
@@ -568,26 +566,26 @@ static s32 zukan_emit_texture_draw_mode(s32 packet_cursor, s32 ordering_table)
 
 /**
  * @brief Emit the fixed encyclopedia UI sprites and fade overlay.
- * @param frame_context Render context for the current frame.
+ * @param render_ctx Render context for the current frame.
  */
-void zukan_render_ui(u8* frame_context)
+void zukan_render_ui(RenderContext* render_ctx)
 {
-    u8* ordering_table;
+    u_long* ordering_table;
     s32 i;
-    s32 packet_cursor;
+    u8* packet_cursor;
     s32 detail_flag;
     s32 unused_scratch[2]; /* never used, but the compiled frame size depends on it */
 
-    ordering_table = frame_context + 0x28;
+    ordering_table = &render_ctx->ot[ZUKAN_LAYER_NAV_SPRITES];
     i = 0;
-    packet_cursor = *(s32*)(frame_context + 0x4040);
+    packet_cursor = render_ctx->prim_cursor;
     do
     {
         packet_cursor = zukan_emit_ui_sprite(packet_cursor, ordering_table, i, g_zukan_ui_sprites[i].x, g_zukan_ui_sprites[i].y, 0);
         i++;
     } while (i < 6);
 
-    ordering_table = frame_context + 0x3C;
+    ordering_table = &render_ctx->ot[ZUKAN_LAYER_UI_SPRITES];
     i = 6;
     detail_flag = 1;
     do
@@ -596,7 +594,7 @@ void zukan_render_ui(u8* frame_context)
         i++;
     } while (i < 0x15);
 
-    *(s32*)(frame_context + 0x4040) = zukan_render_fade(packet_cursor, frame_context + 0x2C);
+    render_ctx->prim_cursor = zukan_render_fade((ZukanFadePrimitive*)packet_cursor, &render_ctx->ot[ZUKAN_LAYER_FADE]);
 }
 
 /**
@@ -609,7 +607,7 @@ void zukan_render_ui(u8* frame_context)
  * @param variant Sprite-group selector supplied by the caller.
  * @return Primitive-buffer address after the emitted packets.
  */
-s32 zukan_emit_ui_sprite(s32 packet_cursor, s32* ordering_table, u32 sprite_index, s32 x, s32 y, s32 variant)
+u8* zukan_emit_ui_sprite(u8* packet_cursor, u_long* ordering_table, u32 sprite_index, s32 x, s32 y, s32 variant)
 {
     ZukanUiSpriteRecord* sprite_record;
     DR_TPAGE* draw_mode;
@@ -699,15 +697,15 @@ void zukan_start_previous_entry_transition(void)
 
 /**
  * @brief Advance an active list/detail or entry-change transition.
- * @param frame_context Render context whose primitive cursor is preserved.
+ * @param render_ctx Render context whose primitive cursor is preserved.
  */
-void zukan_update_transition(u8* frame_context)
+void zukan_update_transition(RenderContext* render_ctx)
 {
-    s32 saved_packet_cursor;
+    void* saved_packet_cursor;
     s32 unused_scratch[2]; /* never used, but the compiled frame size depends on it */
     if (g_zukan_transition_state != 0)
     {
-        saved_packet_cursor = *(s32*)(frame_context + 0x4040);
+        saved_packet_cursor = render_ctx->prim_cursor;
         switch (g_zukan_transition_state)
         {
         case ZUKAN_TRANSITION_NEXT_FADE_OUT:
@@ -773,25 +771,25 @@ void zukan_update_transition(u8* frame_context)
             break;
         }
         }
-        *(s32*)(frame_context + 0x4040) = saved_packet_cursor;
+        render_ctx->prim_cursor = saved_packet_cursor;
     }
 }
 
 /**
  * @brief Draw the encyclopedia entry-list or detail view.
- * @param ctx Encyclopedia draw state whose primitive cursor is advanced in place.
+ * @param render_ctx Render context whose primitive cursor is advanced in place.
  */
-void zukan_render_content(ZukanDrawState* ctx)
+void zukan_render_content(RenderContext* render_ctx)
 {
     s32 unused_scratch[2]; /* never used, but the compiled frame size depends on it */
-    u8 draw_env[0x60];
+    DRAWENV draw_env;
     ZukanPos pos;
     u8* packet_cursor;
-    s32* ordering_table;
+    u_long* ordering_table;
     s32 entry_index;
     s32 row_y;
 
-    packet_cursor = ctx->prim_cursor;
+    packet_cursor = render_ctx->prim_cursor;
 
     if (g_zukan_view_mode != 0)
     {
@@ -799,11 +797,11 @@ void zukan_render_content(ZukanDrawState* ctx)
         TILE* tile;
         u8* env_prim;
 
-        ordering_table = &ctx->list_ordering_table;
+        ordering_table = &render_ctx->ot[ZUKAN_LAYER_LIST];
 
         {
             u8* archive = g_zukan_resource_archive;
-            packet_cursor = (u8*)func_800A88A0(packet_cursor, ordering_table, ZUKAN_ARCHIVE_TEXT(archive, 0x10, g_zukan_category), 0xA, 0xA0, 0x22, 2);
+            packet_cursor = func_800A88A0(packet_cursor, ordering_table, ZUKAN_ARCHIVE_TEXT(archive, 0x10, g_zukan_category), 0xA, 0xA0, 0x22, 2);
         }
 
         if (g_zukan_scroll_y != 0)
@@ -836,17 +834,17 @@ void zukan_render_content(ZukanDrawState* ctx)
             packet_cursor += sizeof(ZukanPolyF3);
         }
 
-        if (ctx->frame_flag != 8)
+        if (render_ctx->clear_rect.y != VRAM_BACK_DRAW_Y)
         {
-            SetDefDrawEnv(draw_env, 0, 0xF0, 0x140, 0xE0);
+            SetDefDrawEnv(&draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
         }
         else
         {
-            SetDefDrawEnv(draw_env, 0, 8, 0x140, 0xE0);
+            SetDefDrawEnv(&draw_env, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
         }
-        SetDrawEnv(packet_cursor, draw_env);
+        SetDrawEnv((DR_ENV*)packet_cursor, &draw_env);
         addPrim(ordering_table, packet_cursor);
-        packet_cursor += 0x40;
+        packet_cursor += sizeof(DR_ENV);
 
         for (entry_index = 0; entry_index < g_zukan_entry_count; entry_index++)
         {
@@ -858,16 +856,16 @@ void zukan_render_content(ZukanDrawState* ctx)
 
             pos.x = 0;
             pos.y = row_y;
-            packet_cursor = (u8*)func_800A8B04(ordering_table, packet_cursor, entry_index + 1, 0, &pos, 0);
+            packet_cursor = func_800A8B04(ordering_table, packet_cursor, entry_index + 1, 0, &pos, 0);
             if (g_zukan_list_entries[entry_index].resource_flags >> 15)
             {
                 u8* archive = g_zukan_resource_archive;
-                packet_cursor = (u8*)func_800A88A0(packet_cursor, ordering_table,
-                                                   ZUKAN_ARCHIVE_TEXT(archive, 0xC, g_zukan_list_entries[entry_index].glyph_index), 0, 0x66, row_y, 2);
+                packet_cursor = func_800A88A0(packet_cursor, ordering_table, ZUKAN_ARCHIVE_TEXT(archive, 0xC, g_zukan_list_entries[entry_index].glyph_index), 0,
+                                              0x66, row_y, 2);
             }
             else
             {
-                packet_cursor = (u8*)func_800A88A0(packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3E0, 14), 0, 0x66, row_y, 2);
+                packet_cursor = func_800A88A0(packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3E0, 14), 0, 0x66, row_y, 2);
             }
         }
 
@@ -891,38 +889,38 @@ void zukan_render_content(ZukanDrawState* ctx)
         packet_cursor += sizeof(TILE);
 
         env_prim = packet_cursor;
-        if (ctx->frame_flag != 8)
+        if (render_ctx->clear_rect.y != VRAM_BACK_DRAW_Y)
         {
-            SetDefDrawEnv(draw_env, 0x48, 0x126, 0xB8, 0x80);
+            SetDefDrawEnv(&draw_env, ZUKAN_LIST_VIEW_X, SCREEN_HEIGHT + ZUKAN_LIST_VIEW_Y, ZUKAN_LIST_VIEW_WIDTH, ZUKAN_LIST_VIEW_HEIGHT);
         }
         else
         {
-            SetDefDrawEnv(draw_env, 0x48, 0x3E, 0xB8, 0x80);
+            SetDefDrawEnv(&draw_env, ZUKAN_LIST_VIEW_X, VRAM_BACK_DRAW_Y + ZUKAN_LIST_VIEW_Y, ZUKAN_LIST_VIEW_WIDTH, ZUKAN_LIST_VIEW_HEIGHT);
         }
-        SetDrawEnv(env_prim, draw_env);
+        SetDrawEnv((DR_ENV*)env_prim, &draw_env);
         addPrim(ordering_table, env_prim);
-        packet_cursor = env_prim + 0x40;
+        packet_cursor = env_prim + sizeof(DR_ENV);
     }
     else
     {
-        ordering_table = &ctx->detail_ordering_table;
-        packet_cursor = (u8*)zukan_render_detail_text(packet_cursor, ordering_table);
-        packet_cursor = (u8*)zukan_render_detail_sprites(packet_cursor, ordering_table);
+        ordering_table = &render_ctx->ot[ZUKAN_LAYER_DETAIL];
+        packet_cursor = zukan_render_detail_text(packet_cursor, ordering_table);
+        packet_cursor = zukan_render_detail_sprites((SPRT*)packet_cursor, ordering_table);
 
         pos.x = 0x106;
         pos.y = 0xBD;
-        packet_cursor = (u8*)func_800AD524(packet_cursor, ordering_table, 0xB, &pos, 1);
+        packet_cursor = func_800AD524(packet_cursor, ordering_table, 0xB, &pos, 1);
 
         pos.x = 0xEE;
         pos.y = 0xBD;
-        packet_cursor = (u8*)func_800AD208(ordering_table, packet_cursor, g_zukan_displayed_entry + 1, 3, &pos, 0);
+        packet_cursor = func_800AD208(ordering_table, packet_cursor, g_zukan_displayed_entry + 1, 3, &pos, 0);
 
         pos.x = 0x10E;
         pos.y = 0xBD;
-        packet_cursor = (u8*)func_800AD208(ordering_table, packet_cursor, g_zukan_entry_count, 3, &pos, 0);
+        packet_cursor = func_800AD208(ordering_table, packet_cursor, g_zukan_entry_count, 3, &pos, 0);
     }
 
-    ctx->prim_cursor = packet_cursor;
+    render_ctx->prim_cursor = packet_cursor;
 }
 
 /**
@@ -1085,8 +1083,8 @@ ZukanFadePrimitive* zukan_render_fade(ZukanFadePrimitive* primitive, u_long* ord
  */
 void zukan_build_entry_list(s32 category)
 {
-    u32 resource_ids[0x200];
-    u16 glyph_indices[0x400];
+    s32 resource_ids[0x200];
+    s32 glyph_indices[0x200];
     s32 count;
     s32 i;
     s32 entry_count;
@@ -1104,7 +1102,7 @@ void zukan_build_entry_list(s32 category)
                 g_zukan_list_entries[i].resource_flags |= ZUKAN_ENTRY_AVAILABLE_FLAG;
                 g_zukan_list_entries[i].resource_flags =
                     (g_zukan_list_entries[i].resource_flags & ZUKAN_ENTRY_AVAILABLE_FLAG) | ((u16)resource_ids[i] & ZUKAN_RESOURCE_ID_MASK);
-                g_zukan_list_entries[i].glyph_index = glyph_indices[i * 2];
+                g_zukan_list_entries[i].glyph_index = glyph_indices[i];
             }
             else
             {
@@ -1131,7 +1129,7 @@ void zukan_load_entry(s32 index)
  */
 void zukan_load_related_entry(s32 resource_id)
 {
-    s32 resource_buffer = g_zukan_resource_buffer;
+    u8* resource_buffer = g_zukan_resource_buffer;
 
     cdrom_queue_read((resource_id + ZUKAN_ENTRY_RESOURCE_BASE) & 0xFFFF, resource_buffer);
 }
@@ -1142,7 +1140,7 @@ void zukan_load_related_entry(s32 resource_id)
  * @param ordering_table Ordering table receiving text primitives.
  * @return Primitive-buffer address after the text primitives.
  */
-s32 zukan_render_detail_text(s32 packet_cursor, s32 ordering_table)
+u8* zukan_render_detail_text(u8* packet_cursor, u_long* ordering_table)
 {
     s32 i;
     s32 line_y;
@@ -1185,7 +1183,7 @@ s32 zukan_render_detail_text(s32 packet_cursor, s32 ordering_table)
  * @param ordering_table Ordering table receiving the sprite packets.
  * @return Primitive-buffer address after the emitted sprites and draw mode.
  */
-void* zukan_render_detail_sprites(SPRT* sprite, s32* ordering_table)
+void* zukan_render_detail_sprites(SPRT* sprite, u_long* ordering_table)
 {
     s32 command;
     u8* resource_data = g_zukan_work_buffer;
@@ -1243,17 +1241,17 @@ void* zukan_render_detail_sprites(SPRT* sprite, s32* ordering_table)
 void zukan_commit_loaded_entry(void)
 {
     ZukanImageDestination destinations;
-    ZukanRect upload_rect;
+    RECT upload_rect;
     ZukanImageDestination* layout;
-    ZukanRect* rect;
+    RECT* rect;
     ZukanEntryResourceHeader* resource_header;
     u8* src;
     u8* dst;
     u8* end;
-    u8* tim;
+    TimPrefix* tim;
     s32 flags;
     s32 clut_block_size;
-    u16* pixel_dimensions;
+    TimDimensions* pixel_dimensions;
     s32 mode;
 
     cdrom_wait_queue_empty();
@@ -1277,26 +1275,26 @@ void zukan_commit_loaded_entry(void)
 
     rect = &upload_rect;
     layout = &destinations;
-    tim = g_zukan_resource_buffer + ((ZukanEntryResourceHeader*)g_zukan_resource_buffer)->size;
-    flags = *(s32*)(tim + 4);
-    clut_block_size = *(s32*)(tim + 8);
+    tim = (TimPrefix*)(g_zukan_resource_buffer + ((ZukanEntryResourceHeader*)g_zukan_resource_buffer)->size);
+    flags = tim->flags;
+    clut_block_size = tim->clut_block.bnum;
     mode = flags & 7;
 
-    if (flags & 8)
+    if (flags & TIM_FLAG_HAS_CLUT)
     {
         upload_rect.x = layout->clut_x;
         upload_rect.y = layout->clut_y;
-        setWH(rect, 0x100, 1);
-        LoadImage(rect, tim + 0x14);
-        pixel_dimensions = (u16*)(clut_block_size + (s32)tim + 0x10);
+        setWH(rect, CLUT_ENTRY_COUNT, 1);
+        LoadImage(rect, (u_long*)tim->clut_data);
+        pixel_dimensions = &TIM_PIXEL_BLOCK(tim, clut_block_size)->dimensions;
     }
     else
     {
-        pixel_dimensions = (u16*)(tim + 0x10);
+        pixel_dimensions = &tim->clut_block.dimensions;
     }
 
-    setRECT(&upload_rect, layout->x, layout->y, pixel_dimensions[0], pixel_dimensions[1]);
-    LoadImage(&upload_rect, clut_block_size + (s32)tim + 0x14);
+    setRECT(&upload_rect, layout->x, layout->y, pixel_dimensions->width, pixel_dimensions->height);
+    LoadImage(&upload_rect, (u_long*)(TIM_PIXEL_BLOCK(tim, clut_block_size) + 1));
 
     {
         ZukanEntryResourceHeader* resource = (ZukanEntryResourceHeader*)g_zukan_resource_buffer;
@@ -1311,7 +1309,7 @@ void zukan_commit_loaded_entry(void)
  */
 void zukan_load_ui_resource(void)
 {
-    ZukanRect rect;
+    RECT rect;
     s32 packed_dimensions;
     s32 dimension;
     s16 width;
@@ -1330,5 +1328,5 @@ void zukan_load_ui_resource(void)
     dimension = packed_dimensions >> 16;
     rect.h = dimension;
 
-    LoadImage(&rect, archive + 4);
+    LoadImage(&rect, (u_long*)(archive + 4));
 }
