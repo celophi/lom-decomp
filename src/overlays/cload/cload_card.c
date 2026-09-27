@@ -760,7 +760,7 @@ s32 cload_advance_load_sequence(void)
             g_cload_file_handle = open(g_cload_selected_card_path, 0x8001);
             cload_release_primary_handles();
             _card_wait(g_cload_card_slot);
-            if (read(g_cload_file_handle, &g_cload_save_blob, 0x4000) != -1)
+            if (read(g_cload_file_handle, &g_cload_save_blob, sizeof(g_cload_save_blob)) != -1)
             {
                 g_cload_load_step++;
                 break;

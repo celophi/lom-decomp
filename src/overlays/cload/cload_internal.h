@@ -172,6 +172,7 @@ typedef union
 #define CLOAD_DIRECTORY_ENTRY_BYTES 0x28
 #define CLOAD_MEMORY_CARD_BLOCK_BYTES 8192
 #define CLOAD_SAVE_PAYLOAD_BYTES 0x33E0
+#define CLOAD_SAVE_FILE_BYTES (2 * CLOAD_MEMORY_CARD_BLOCK_BYTES)
 #define CLOAD_SAVE_MAGIC 0x00414E41
 #define CLOAD_SAVE_CHECKSUM_BIAS 0x0414E410
 #define CLOAD_ENTRY_ROW_HEIGHT 14
@@ -213,12 +214,13 @@ typedef struct
 #define CLOAD_DIR_ENTRY(card, index) \
     (((CloadDirEntry (*)[CLOAD_ENTRIES_PER_CARD])g_cload_entries)[(card)][(index)])
 
-/** @brief Serialized save payload followed by its checksum and format marker. */
+/** @brief A save file read from the card: payload, its checksum and format marker, then the rest of the file. */
 typedef struct
 {
     u8 payload[CLOAD_SAVE_PAYLOAD_BYTES];
     s32 checksum;
     s32 magic;
+    u8 unused[CLOAD_SAVE_FILE_BYTES - CLOAD_SAVE_PAYLOAD_BYTES - 2 * sizeof(s32)];
 } CloadSaveBlob;
 
 /**
@@ -305,7 +307,6 @@ extern s32 g_cload_exit_requested;
 extern CloadElement g_cload_element_pool[CLOAD_ELEMENT_COUNT];
 extern s32 g_cload_card_slot;
 extern CloadRenderBuffer g_cload_render_buffers[CLOAD_CARD_COUNT];
-extern s16 D_8014EA38;
 extern s32 g_cload_io_busy;
 extern u8 *g_cload_icon_resource;
 extern s32 g_cload_scroll_y;
@@ -354,7 +355,7 @@ extern u16 g_cload_text_load;
 extern u16 g_cload_text_number_prefix;
 extern u16 g_cload_text_load_prompt;
 extern u16 g_cload_text_loading;
-extern u8 g_cload_save_blob[];
+extern CloadSaveBlob g_cload_save_blob;
 
 extern s32 g_playtime_vsync_origin;
 extern s32 g_cload_progress_bar_active;
