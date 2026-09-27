@@ -386,15 +386,11 @@ lom-decomp/
 - `config/<version>/symbols/` - 判明している関数 / グローバルのアドレス。
 - `config/<version>/relocations/` - splatがシンボリック参照を正しく復元できない場合に使用するrelocation override。
 - `mk/overlay-registry.mk` - オーバーレイごとのソース / ツールチェーン割り当て。
-- `docs/decompilation/` - このプロジェクト固有のマッチング作業メモ。
 
 ## ドキュメント
 
 プロジェクト固有の資料として、次のドキュメントがあります。
 
-- [`docs/decompilation/gcc-272-matching-techniques.md`](docs/decompilation/gcc-272-matching-techniques.md)
-- [`docs/decompilation/splat-reloc-overrides.md`](docs/decompilation/splat-reloc-overrides.md)
-- [`docs/decompilation/psyq-gpu-primitives.md`](docs/decompilation/psyq-gpu-primitives.md)
 - [`tools/compressor/README.md`](tools/compressor/README.md)
 
 ## トラブルシューティング

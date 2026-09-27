@@ -1,5 +1,7 @@
 # Disc Layout
 
+[English documentation](../../README.md)
+
 This document describes the contents of the files on the disc, and how the game addresses data during the runtime.
 Right now, it's only written to describe SLUS-01013 since that is the NTSC-U version of the game.
 
@@ -37,15 +39,15 @@ consists of an array structure where each element is a `CdResourceEntry`.
 - `CdResourceEntry` = `{ CdlLOCRaw location; s32 data_size; }` (8 bytes each):
   a 4-byte disc location (BCD minute/second/frame + a mode byte) plus a
   little-endian byte size. The mode byte is `0xFF` on every live entry and
-  `0x00` on the null slots. See [src/cdrom.c](../src/cdrom.c).
+  `0x00` on the null slots. See [src/cdrom.c](../../../../src/cdrom.c).
 - The table lives in RAM at `CD_RESOURCE_ENTRIES = 0x801ED998`.
 - You can use this file and convert `CdlLOC` entries into LBA with math:
 `(((minute * 60) + second) * 75) + sector - 150 = LBA`
 - Game code then calls `cdrom_queue_read(resource_index, dst)` and the CD
   subsystem resolves index -> `CdResourceEntry` -> LBA. See
-  [cd-system-architecture.md](cd-system-architecture.md).
+  [CD-ROM subsystem architecture](../architecture/cdrom.md).
 
-Named indices are in [include/cd_resources.h](../include/cd_resources.h). The
+Named indices are in [include/cd_resources.h](../../../../include/cd_resources.h). The
 first entries (all confirmed against the parsed table):
 
 | Idx | File | Idx | File |
@@ -100,7 +102,7 @@ The first four bytes `90 b9 8c 95` are Shift-JIS for "聖剣" (seiken), followed
 ### Overlays (`BIN`)
 
 The 17 `.BIN` files are the game-mode overlays. 
-Each one corresponds 1:1 to a folder under [src/overlays/](../src/overlays/) and carries a 4-byte module-ID prefix before its code
+Each one corresponds 1:1 to a folder under [src/overlays/](../../../../src/overlays/) and carries a 4-byte module-ID prefix before its code
 (see [overlay-id-prefix.md](overlay-id-prefix.md)). Load addresses and IDs are documented there. 
 Some of the overlays are easy to recognize if you know Japanese.
 Mapping:
@@ -155,7 +157,7 @@ Split into five bucket folders `MAP0`..`MAP4` plus `FDATA`. These are two on-dis
   (`GIRA.DAT`/`GIRA.STR`, `KAJU.DAT`/`KAJU.STR`), plus boss-intro audio
   (`*_BSS*.DAT`). Content is raw ADPCM-style sample data, not MDEC.
 
-Played by the `movie` overlay / `MOVIE.BIN` through the streaming path in [cdrom.c](../src/cdrom.c).
+Played by the `movie` overlay / `MOVIE.BIN` through the streaming path in [cdrom.c](../../../../src/cdrom.c).
 
 ### Object graphics (`ANA`)
 
@@ -243,6 +245,5 @@ Three sequence pools plus effect banks:
 
 ## See also
 
-- [cd-system-architecture.md](cd-system-architecture.md) - how reads are queued, streamed, validated, and recovered at runtime.
+- [CD-ROM subsystem architecture](../architecture/cdrom.md) - how reads are queued, streamed, validated, and recovered at runtime.
 - [overlay-id-prefix.md](overlay-id-prefix.md) - overlay module IDs and load addresses.
-- [handling-copyrighted-data.md](handling-copyrighted-data.md).

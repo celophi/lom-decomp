@@ -2,6 +2,6 @@
 
 /**
  * @brief Overlay header word for GOLEM.BIN.
- * @note See docs/overlay-id-prefix.md.
+ * @note See docs/en/technical/reference/overlay-id-prefix.md.
  */
 const s32 g_golem_overlay_id = 9;
