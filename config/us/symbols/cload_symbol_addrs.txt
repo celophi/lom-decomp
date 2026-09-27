@@ -162,7 +162,7 @@ g_cload_text_card_insert_error           = 0x80145EDC;
 g_cload_text_version_error               = 0x80145EF0;
 
 // CLOAD data/BSS symbols named from their observed roles.
-g_cload_render_buffers                   = 0x8014A988;
+g_cload_render_buffers                   = 0x8014A988; // size:0xF988 allow_addend:True
 g_cload_primitive_buffers                = 0x8015A350;
 g_cload_exit_requested                   = 0x80146918;
 g_cload_element_pool                     = 0x801468B8;

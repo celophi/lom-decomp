@@ -1,4 +1,5 @@
 #include "cload_internal.h"
+#include "display.h"
 
 /**
  * @brief Card slot label layout: window width, label text X and the two window Xs.
@@ -132,31 +133,20 @@ void cload_run_menu_loop(void)
  */
 void cload_init_display(void)
 {
-    u8 *display_rect;
-    s16 *second_display_rect;
-
     /* Preserve GCC 2.7.2's original stack-frame bucket without a dead call. */
     s32 stack_frame_pad[2];
     SetGeomScreen(0x5DC);
     SetGeomOffset(0xA0, 0x78);
-    D_8014EA38 = 0;
-    display_rect = (u8 *)&D_8014EA38;
-    second_display_rect = (s16 *)(display_rect + 0x7CC4);
-    *(s16 *)(display_rect + 0x2) = 0;
-    *(s16 *)(display_rect + 0x4) = 0x140;
-    *(s16 *)(display_rect + 0x6) = 0xF0;
-    *(s16 *)(display_rect + 0x7CC4) = 0;
-    second_display_rect[1] = 0xE8;
-    second_display_rect[2] = 0x140;
-    second_display_rect[3] = 0xF0;
+    setRECT(&g_cload_render_buffers[0].clear_rect, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    setRECT(&g_cload_render_buffers[1].clear_rect, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
     DrawSync(0);
     VSync(0);
-    SetDefDispEnv(display_rect - 0x70, 0, 0, 0x140, 0xF0);
-    SetDefDispEnv(display_rect + 0x7C54, 0, 0xE8, 0x140, 0xF0);
-    SetDefDrawEnv(display_rect - 0x5C, 0, 0xF0, 0x140, 0xE0);
-    SetDefDrawEnv(display_rect + 0x7C68, 0, 0x8, 0x140, 0xE0);
-    display_rect[0x7C7E] = 0;
-    display_rect[-0x46] = 0;
+    SetDefDispEnv(&g_cload_render_buffers[0].disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&g_cload_render_buffers[1].disp_env, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDrawEnv(&g_cload_render_buffers[0].draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv(&g_cload_render_buffers[1].draw_env, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    g_cload_render_buffers[1].draw_env.dtd = 0;
+    g_cload_render_buffers[0].draw_env.dtd = 0;
     field_reset_fade_state();
     field_set_fade_target(0x100, 0x100, 0x100, 0x14);
 }
