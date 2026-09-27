@@ -17,14 +17,14 @@
 /** @brief Largest derived value an item record can hold. */
 #define FIELD_DERIVED_VALUE_MAX 999
 
-/** @brief Resource id (func_800C1E40) of the item name table. */
+/** @brief Resource id (field_find_resource) of the item name table. */
 #define FIELD_ITEM_NAME_TABLE 8
 
 /** @brief Name table entries per item category: the type names of one category. */
 #define FIELD_TYPE_NAMES_PER_CATEGORY 16
 
-/** @brief First name entry of the item subtypes in the item name table. */
-#define FIELD_SUBTYPE_NAME_BASE 36
+/** @brief First name entry of the materials in the item name table. */
+#define FIELD_MATERIAL_NAME_BASE 36
 
 /** @brief First control code (0x1D-0x1F) that carries one argument byte in item names. */
 #define FIELD_TEXT_ARG_CODE_MIN 0x1D
@@ -44,17 +44,15 @@ typedef struct FieldItemNameTable
 } FieldItemNameTable;
 
 extern FieldGameState* g_field_game_state;
-extern FieldItemStaging* D_80123FC4;
-extern FieldItemTables* D_80123FC0;
 
-void* func_800C1E40(s32 table_id);
+void* field_find_resource(s32 table_id);
 
-static void field_build_item_name(s32 type_entry, s32 subtype_entry, u8* dest);
+static void field_build_item_name(s32 type_entry, s32 material_entry, u8* dest);
 
 /**
  * @brief Write the staged item back into its item record.
  *
- * A record without a name gets a serial and the name "<subtype> <type>";
+ * A record without a name gets a serial and the name "<material> <type>";
  * a named record without a serial only gets the serial. Then the identity,
  * level, stat modifier and slot fields are copied from the staging block.
  * @note JP changes this function; the JP build takes it from assembly.
@@ -67,113 +65,107 @@ void field_write_staged_item(void)
     s32 i;
     FieldItemRecord* record;
 
-    record = D_80123FC4->record;
-    if (record->kind == 0)
+    record = g_field_item_staging->record;
+    if (record->name[0] == 0)
     {
         field_generate_item_key(g_field_game_state->unkD8, &record->key);
-        field_build_item_name(D_80123FC4->category * FIELD_TYPE_NAMES_PER_CATEGORY + D_80123FC4->item_type, D_80123FC4->item_subtype + FIELD_SUBTYPE_NAME_BASE,
-                              (u8*)D_80123FC4->record);
+        field_build_item_name(g_field_item_staging->category * FIELD_TYPE_NAMES_PER_CATEGORY + g_field_item_staging->item_type,
+                              g_field_item_staging->material + FIELD_MATERIAL_NAME_BASE, g_field_item_staging->record->name);
     }
     else if (record->key.first == 0 && record->key.second == 0)
     {
         field_generate_item_key(g_field_game_state->unkD8, &record->key);
     }
 
-    D_80123FC4->record->info.bits.category = D_80123FC4->category;
-    D_80123FC4->record->info.bits.item_type = D_80123FC4->item_type;
-    D_80123FC4->record->info.bits.item_subtype = D_80123FC4->item_subtype;
+    g_field_item_staging->record->info.bits.category = g_field_item_staging->category;
+    g_field_item_staging->record->info.bits.item_type = g_field_item_staging->item_type;
+    g_field_item_staging->record->info.bits.material = g_field_item_staging->material;
 
-    D_80123FC4->record->bonus_nibbles.bits.n0 = FIELD_CLAMP_LEVEL(D_80123FC4->levels[0].level);
-    D_80123FC4->record->bonus_nibbles.bits.n1 = FIELD_CLAMP_LEVEL(D_80123FC4->levels[1].level);
-    D_80123FC4->record->bonus_nibbles.bits.n2 = FIELD_CLAMP_LEVEL(D_80123FC4->levels[2].level);
-    D_80123FC4->record->bonus_nibbles.bits.n3 = FIELD_CLAMP_LEVEL(D_80123FC4->levels[3].level);
-    D_80123FC4->record->bonus_nibbles.bits.n4 = FIELD_CLAMP_LEVEL(D_80123FC4->levels[4].level);
-    D_80123FC4->record->bonus_nibbles.bits.n5 = FIELD_CLAMP_LEVEL(D_80123FC4->levels[5].level);
-    D_80123FC4->record->bonus_nibbles.bits.n6 = FIELD_CLAMP_LEVEL(D_80123FC4->levels[6].level);
-    D_80123FC4->record->bonus_nibbles.bits.n7 = FIELD_CLAMP_LEVEL(D_80123FC4->levels[7].level);
+    g_field_item_staging->record->bonus_nibbles.bits.n0 = FIELD_CLAMP_LEVEL(g_field_item_staging->levels[0].level);
+    g_field_item_staging->record->bonus_nibbles.bits.n1 = FIELD_CLAMP_LEVEL(g_field_item_staging->levels[1].level);
+    g_field_item_staging->record->bonus_nibbles.bits.n2 = FIELD_CLAMP_LEVEL(g_field_item_staging->levels[2].level);
+    g_field_item_staging->record->bonus_nibbles.bits.n3 = FIELD_CLAMP_LEVEL(g_field_item_staging->levels[3].level);
+    g_field_item_staging->record->bonus_nibbles.bits.n4 = FIELD_CLAMP_LEVEL(g_field_item_staging->levels[4].level);
+    g_field_item_staging->record->bonus_nibbles.bits.n5 = FIELD_CLAMP_LEVEL(g_field_item_staging->levels[5].level);
+    g_field_item_staging->record->bonus_nibbles.bits.n6 = FIELD_CLAMP_LEVEL(g_field_item_staging->levels[6].level);
+    g_field_item_staging->record->bonus_nibbles.bits.n7 = FIELD_CLAMP_LEVEL(g_field_item_staging->levels[7].level);
 
-    D_80123FC4->record->stat_nibbles.bits.n0 = D_80123FC4->stats.bytes[0];
-    D_80123FC4->record->stat_nibbles.bits.n1 = D_80123FC4->stats.words[0].modifier1;
-    D_80123FC4->record->stat_nibbles.bits.n2 = D_80123FC4->stats.words[0].modifier2;
-    D_80123FC4->record->stat_nibbles.bits.n3 = D_80123FC4->stats.words[0].modifier3;
-    D_80123FC4->record->stat_nibbles.bits.n4 = D_80123FC4->stats.bytes[4];
-    D_80123FC4->record->stat_nibbles.bits.n5 = D_80123FC4->stats.words[1].modifier1;
-    D_80123FC4->record->stat_nibbles.bits.n6 = D_80123FC4->stats.words[1].modifier2;
-    D_80123FC4->record->stat_nibbles.bits.n7 = D_80123FC4->stats.words[1].modifier3;
+    g_field_item_staging->record->stat_nibbles.bits.n0 = g_field_item_staging->stats.bytes[0];
+    g_field_item_staging->record->stat_nibbles.bits.n1 = g_field_item_staging->stats.words[0].modifier1;
+    g_field_item_staging->record->stat_nibbles.bits.n2 = g_field_item_staging->stats.words[0].modifier2;
+    g_field_item_staging->record->stat_nibbles.bits.n3 = g_field_item_staging->stats.words[0].modifier3;
+    g_field_item_staging->record->stat_nibbles.bits.n4 = g_field_item_staging->stats.bytes[4];
+    g_field_item_staging->record->stat_nibbles.bits.n5 = g_field_item_staging->stats.words[1].modifier1;
+    g_field_item_staging->record->stat_nibbles.bits.n6 = g_field_item_staging->stats.words[1].modifier2;
+    g_field_item_staging->record->stat_nibbles.bits.n7 = g_field_item_staging->stats.words[1].modifier3;
 
     for (i = 0; i < 3; i++)
     {
-        D_80123FC4->record->special_ids[i] = D_80123FC4->slots[i + 2];
+        g_field_item_staging->record->special_ids[i] = g_field_item_staging->slots[i + 2];
     }
-    D_80123FC4->record->special_ids[3] = D_80123FC4->slots[1];
-    D_80123FC4->record->value = 0;
+    g_field_item_staging->record->special_ids[3] = g_field_item_staging->slots[1];
+    g_field_item_staging->record->value = 0;
 }
 #endif
 
 /**
- * @brief Build an item name from a subtype name followed by a type name.
+ * @brief Build an item name from a material name followed by a type name.
  * @param type_entry Name table entry of the item type.
- * @param subtype_entry Name table entry of the item subtype.
+ * @param material_entry Name table entry of the material.
  * @param dest Destination buffer; receives the terminated name.
  */
-static void field_build_item_name(s32 type_entry, s32 subtype_entry, u8* dest)
+static void field_build_item_name(s32 type_entry, s32 material_entry, u8* dest)
 {
     FieldItemNameTable* table;
     u8* src;
 
-    table = func_800C1E40(FIELD_ITEM_NAME_TABLE);
+    table = field_find_resource(FIELD_ITEM_NAME_TABLE);
 
-    src = &table->body.text[table->body.offsets[subtype_entry]];
-    if (*src != 0)
+    src = &table->body.text[table->body.offsets[material_entry]];
+    while (*src != 0)
     {
         s32 code;
 
-        do
+        code = *src;
+        if (code < FIELD_TEXT_CODE_LIMIT)
         {
-            code = *src;
-            if (code < FIELD_TEXT_CODE_LIMIT)
+            if (code >= FIELD_TEXT_ARG_CODE_MIN)
             {
-                if (code >= FIELD_TEXT_ARG_CODE_MIN)
-                {
-                    *dest = code;
-                    src++;
-                    dest++;
-                }
+                *dest = code;
+                src++;
+                dest++;
             }
-            *dest++ = *src++;
-        } while (*src != 0);
+        }
+        *dest++ = *src++;
     }
 
     src = &table->body.text[table->body.offsets[type_entry]];
-    if (*src != 0)
+    while (*src != 0)
     {
         s32 code;
 
-        do
+        code = *src;
+        if (code < FIELD_TEXT_CODE_LIMIT)
         {
-            code = *src;
-            if (code < FIELD_TEXT_CODE_LIMIT)
+            if (code >= FIELD_TEXT_ARG_CODE_MIN)
             {
-                if (code >= FIELD_TEXT_ARG_CODE_MIN)
-                {
-                    *dest = code;
-                    src++;
-                    dest++;
-                }
+                *dest = code;
+                src++;
+                dest++;
             }
-            *dest++ = *src++;
-        } while (*src != 0);
+        }
+        *dest++ = *src++;
     }
 
     *dest = 0;
 }
 
 /**
- * @brief Derive the category 0 values of an item record from the staging block.
+ * @brief Derive a weapon's attack power and other values from the staging block.
  *
- * The power is the type/subtype weight product scaled by the summed levels,
+ * The power is the type/material weight product scaled by the summed levels,
  * capped at FIELD_DERIVED_VALUE_MAX; properties, flags and the effect index
- * are copied and the four factors are scaled by the subtype multipliers.
+ * are copied and the four factors are scaled by the material multipliers.
  *
  * @param record Item record to update.
  * @note JP does not cap the power at FIELD_DERIVED_VALUE_MAX.
@@ -190,15 +182,15 @@ void field_derive_weapon_values(FieldItemRecord* record)
 
     for (i = 0, weight = 0; i < FIELD_STAGING_FACTOR_COUNT; i++)
     {
-        weight += D_80123FC0->item.types[D_80123FC4->item_type].weights[i] * D_80123FC4->weights[i];
+        weight += g_field_item_tables->item.weapon_types[g_field_item_staging->item_type].weights[i] * g_field_item_staging->weights[i];
     }
 
     for (i = 0, levels = 0; i < FIELD_STAGING_LEVEL_COUNT; i++)
     {
-        levels += D_80123FC4->levels[i].level;
+        levels += g_field_item_staging->levels[i].level;
     }
 
-    divisor = D_80123FC0->item.subtypes[D_80123FC4->item_subtype].divisor;
+    divisor = g_field_item_tables->item.materials[g_field_item_staging->material].divisor;
 #if defined(VERSION_JP)
     record->derived.weapon.power = (weight * (levels + divisor) / divisor) >> 7;
 #else
@@ -212,19 +204,20 @@ void field_derive_weapon_values(FieldItemRecord* record)
 
     for (i = 0; i < FIELD_STAGING_PROPERTY_COUNT; i++)
     {
-        record->derived.weapon.stats[i] = D_80123FC4->properties[i];
+        record->derived.weapon.stats[i] = g_field_item_staging->properties[i];
     }
-    record->flags2C = D_80123FC4->flags2C;
-    record->effect_index = D_80123FC4->effect_index;
+    record->status_flags = g_field_item_staging->power_flags;
+    record->effect_index = g_field_item_staging->effect_index;
 
     for (i = 0; i < FIELD_STAGING_FACTOR_COUNT; i++)
     {
-        record->attributes[i] = (D_80123FC0->item.types[D_80123FC4->item_type].factors[i] * D_80123FC4->multipliers[i]) >> 6;
+        record->attributes[i] =
+            (g_field_item_tables->item.weapon_types[g_field_item_staging->item_type].factors[i] * g_field_item_staging->multipliers[i]) >> 6;
     }
 }
 
 /**
- * @brief Derive the category 1 values of an item record from the staging block.
+ * @brief Derive a piece of armor's defense values from the staging block.
  * @param record Item record to update.
  * @note JP does not cap the derived values at FIELD_DERIVED_VALUE_MAX.
  */
@@ -238,19 +231,20 @@ void field_derive_armor_values(FieldItemRecord* record)
     for (i = 0; i < FIELD_STAGING_FACTOR_COUNT; i++)
     {
 #if defined(VERSION_JP)
-        record->derived.values[i] = (D_80123FC0->item.alternate_types[D_80123FC4->item_type].weights[i] * D_80123FC4->multipliers[i]) >> 6;
+        record->derived.values[i] =
+            (g_field_item_tables->item.armor_types[g_field_item_staging->item_type].weights[i] * g_field_item_staging->multipliers[i]) >> 6;
 #else
-        value = (D_80123FC0->item.alternate_types[D_80123FC4->item_type].weights[i] * D_80123FC4->multipliers[i]) >> 6;
+        value = (g_field_item_tables->item.armor_types[g_field_item_staging->item_type].weights[i] * g_field_item_staging->multipliers[i]) >> 6;
         record->derived.values[i] = value;
         if (value >= 1000)
         {
             record->derived.values[i] = FIELD_DERIVED_VALUE_MAX;
         }
 #endif
-        record->attributes[i] = (D_80123FC0->item.alternate_types[D_80123FC4->item_type].factors[i] * D_80123FC4->multipliers[i]) >> 6;
+        record->attributes[i] = (g_field_item_tables->item.armor_types[g_field_item_staging->item_type].factors[i] * g_field_item_staging->multipliers[i]) >> 6;
     }
 
-    record->flags2C = D_80123FC4->alternate_flags2C;
-    record->flags2D = D_80123FC4->flags2D;
-    record->effect_index = D_80123FC4->effect_index;
+    record->status_flags = g_field_item_staging->immunity_flags;
+    record->element_flags = g_field_item_staging->element_flags;
+    record->effect_index = g_field_item_staging->effect_index;
 }

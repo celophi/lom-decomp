@@ -43,13 +43,6 @@
  */
 #define SHOP_ARCHIVE_TEXT(archive, offset, index) ((u8*)((offset) + (*(u16*)((index) + (offset) + (u32)(archive)) + (u32)(archive))))
 
-/** @brief Item kind (bits 9:8) of a packed InventoryAttributes word. */
-#define INVENTORY_KIND(packed) (((packed) >> 8) & 0x3)
-/** @brief Category (bits 15:10) of a packed InventoryAttributes word. */
-#define INVENTORY_CATEGORY(packed) (((packed) >> 10) & 0x3F)
-/** @brief Mask of InventoryAttributes.halves.high selecting the material name. */
-#define INVENTORY_MATERIAL_MASK 0x3F
-
 /** @brief Kind whose details are its first stat and the change against the equipped weapon. */
 #define INVENTORY_KIND_WEAPON 0
 /** @brief Kind whose details are the sum of its four stats. */

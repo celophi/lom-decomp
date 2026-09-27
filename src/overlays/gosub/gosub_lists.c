@@ -1,160 +1,159 @@
 #include "gosub_internal.h"
 
 /**
- * @brief Build screen 15's rows from nonempty inventory slots 0x60-0x84.
+ * @brief List the color materials held, each with its color.
  */
-void gosub_build_screen_15_item_list(void)
+void gosub_build_color_material_list(void)
 {
     s32 i;
     s32 count;
 
     count = 0;
-    for (i = 0x60; i < 0x85; i++)
+    for (i = GOSUB_COLOR_MATERIAL_FIRST; i < GOSUB_COLOR_MATERIAL_END; i++)
     {
         if (g_pad_ctx->item_counts[i] != 0)
         {
             GosubListRow* row = &g_gosub_rows[count];
-            row->name = ARCHIVE_ENTRY(g_gosub_text_archive_offsets_1[0], i);
-            row->desc = ARCHIVE_ENTRY(g_gosub_text_archive_offsets_0[12], g_gosub_item_metadata[i]);
+            row->name = GOSUB_TEXT(GOSUB_TEXT_ITEM_NAMES, i);
+            row->desc = GOSUB_TEXT(GOSUB_TEXT_COLOR_NAMES, g_gosub_item_colors[i]);
             row->value = g_pad_ctx->item_counts[i];
-            row->text_color = 4;
+            row->text_color = GOSUB_TEXT_COLOR_NORMAL;
             row->index = i;
             count++;
         }
     }
     g_gosub_row_count = count;
-    g_gosub_visible_row_count = 8;
-    g_gosub_row_height = 0x10;
-    g_gosub_window_width = 0xE8;
-    g_gosub_window_height = 0x84;
-    g_gosub_title_text = GOSUB_MSG_PTR(0x3A);
+    g_gosub_visible_row_count = GOSUB_ITEM_VISIBLE_ROWS;
+    g_gosub_row_height = GOSUB_ITEM_ROW_HEIGHT;
+    g_gosub_window_width = GOSUB_LIST_PANEL_WIDTH;
+    g_gosub_window_height = GOSUB_ITEM_WINDOW_HEIGHT;
+    g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_COLOR_MATERIAL);
 }
 
 /**
- * @brief Build screen 19's rows from nonempty inventory slots 0x60-0x8F.
+ * @brief List the produce held (fruit, vegetables and meat), with descriptions.
  */
-void gosub_build_screen_19_item_list(void)
+void gosub_build_produce_list(void)
 {
     s32 i;
     s32 count;
 
     count = 0;
-    for (i = 0x60; i < 0x90; i++)
+    for (i = GOSUB_PRODUCE_FIRST; i < GOSUB_PRODUCE_END; i++)
     {
         if (g_pad_ctx->item_counts[i] != 0)
         {
             GosubListRow* row = &g_gosub_rows[count];
-            row->name = ARCHIVE_ENTRY(g_gosub_text_archive_offsets_1[0], i);
-            row->desc = ARCHIVE_ENTRY(g_gosub_text_archive_offsets_0[2], i);
+            row->name = GOSUB_TEXT(GOSUB_TEXT_ITEM_NAMES, i);
+            row->desc = GOSUB_TEXT(GOSUB_TEXT_ITEM_DESCRIPTIONS, i);
             row->value = g_pad_ctx->item_counts[i];
-            row->text_color = 4;
+            row->text_color = GOSUB_TEXT_COLOR_NORMAL;
             row->index = i;
             count++;
         }
     }
     g_gosub_row_count = count;
-    g_gosub_visible_row_count = 8;
-    g_gosub_row_height = 0x10;
-    g_gosub_window_width = 0xE8;
-    g_gosub_window_height = 0x84;
-    g_gosub_title_text = GOSUB_MSG_PTR(0x4A);
+    g_gosub_visible_row_count = GOSUB_ITEM_VISIBLE_ROWS;
+    g_gosub_row_height = GOSUB_ITEM_ROW_HEIGHT;
+    g_gosub_window_width = GOSUB_LIST_PANEL_WIDTH;
+    g_gosub_window_height = GOSUB_ITEM_WINDOW_HEIGHT;
+    g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_PRODUCE);
 }
 
 /**
- * @brief Build screen 16's rows from nonempty inventory slots 0x40-0x4F.
+ * @brief List the elemental coins held.
  */
-void gosub_build_screen_16_item_list(void)
+void gosub_build_elemental_coin_list(void)
 {
     s32 i;
     s32 count;
 
     count = 0;
-    for (i = 0x40; i < 0x50; i++)
+    for (i = GOSUB_ELEMENTAL_COIN_FIRST; i < GOSUB_ELEMENTAL_COIN_END; i++)
     {
         if (g_pad_ctx->item_counts[i] != 0)
         {
             GosubListRow* row = &g_gosub_rows[count];
-            row->name = ARCHIVE_ENTRY(g_gosub_text_archive_offsets_1[0], i);
+            row->name = GOSUB_TEXT(GOSUB_TEXT_ITEM_NAMES, i);
             row->value = g_pad_ctx->item_counts[i];
-            row->text_color = 4;
+            row->text_color = GOSUB_TEXT_COLOR_NORMAL;
             row->index = i;
             count++;
         }
     }
     g_gosub_row_count = count;
-    g_gosub_visible_row_count = 8;
-    g_gosub_row_height = 0x10;
-    g_gosub_window_width = 0xE8;
-    g_gosub_window_height = 0x84;
-    g_gosub_title_text = GOSUB_MSG_PTR(0x38);
+    g_gosub_visible_row_count = GOSUB_ITEM_VISIBLE_ROWS;
+    g_gosub_row_height = GOSUB_ITEM_ROW_HEIGHT;
+    g_gosub_window_width = GOSUB_LIST_PANEL_WIDTH;
+    g_gosub_window_height = GOSUB_ITEM_WINDOW_HEIGHT;
+    g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_ELEMENTAL_COIN);
 }
 
 /**
- * @brief Build screen 1's rows from nonempty inventory slots 0x40-0xFE.
+ * @brief List the secondary materials held: every item kind from GOSUB_SECONDARY_MATERIAL_FIRST up.
  */
-void gosub_build_screen_1_item_list(void)
+void gosub_build_secondary_material_list(void)
 {
     s32 i;
     s32 count;
 
     count = 0;
-    for (i = 0x40; i < 0xFF; i++)
+    for (i = GOSUB_SECONDARY_MATERIAL_FIRST; i < GOSUB_SECONDARY_MATERIAL_END; i++)
     {
         if (g_pad_ctx->item_counts[i] != 0)
         {
             GosubListRow* row = &g_gosub_rows[count];
-            row->name = ARCHIVE_ENTRY(g_gosub_text_archive_offsets_1[0], i);
-            row->desc = ARCHIVE_ENTRY(g_gosub_text_archive_offsets_0[2], i);
+            row->name = GOSUB_TEXT(GOSUB_TEXT_ITEM_NAMES, i);
+            row->desc = GOSUB_TEXT(GOSUB_TEXT_ITEM_DESCRIPTIONS, i);
             row->value = g_pad_ctx->item_counts[i];
-            row->text_color = 4;
+            row->text_color = GOSUB_TEXT_COLOR_NORMAL;
             row->index = i;
             count++;
         }
     }
     g_gosub_row_count = count;
-    g_gosub_visible_row_count = 8;
-    g_gosub_row_height = 0x10;
-    g_gosub_window_width = 0xE8;
-    g_gosub_window_height = 0x84;
-    g_gosub_title_text = GOSUB_MSG_PTR(0x14);
+    g_gosub_visible_row_count = GOSUB_ITEM_VISIBLE_ROWS;
+    g_gosub_row_height = GOSUB_ITEM_ROW_HEIGHT;
+    g_gosub_window_width = GOSUB_LIST_PANEL_WIDTH;
+    g_gosub_window_height = GOSUB_ITEM_WINDOW_HEIGHT;
+    g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_SECONDARY_MATERIAL);
 }
 
 /**
- * @brief Build screen 0's rows from nonempty inventory slots 0x00-0x3F.
+ * @brief List the primary materials held (metals, woods, hides and so on).
  */
-void gosub_build_screen_0_item_list(void)
+void gosub_build_primary_material_list(void)
 {
     s32 i;
     s32 count;
 
     count = 0;
-    for (i = 0; i < 0x40; i++)
+    for (i = GOSUB_PRIMARY_MATERIAL_FIRST; i < GOSUB_PRIMARY_MATERIAL_END; i++)
     {
         if (g_pad_ctx->item_counts[i] != 0)
         {
             GosubListRow* row = &g_gosub_rows[count];
-            row->name = ARCHIVE_ENTRY(g_gosub_text_archive_offsets_1[0], i);
-            row->desc = ARCHIVE_ENTRY(g_gosub_text_archive_offsets_0[2], i);
+            row->name = GOSUB_TEXT(GOSUB_TEXT_ITEM_NAMES, i);
+            row->desc = GOSUB_TEXT(GOSUB_TEXT_ITEM_DESCRIPTIONS, i);
             row->value = g_pad_ctx->item_counts[i];
-            row->text_color = 4;
+            row->text_color = GOSUB_TEXT_COLOR_NORMAL;
             row->index = i;
             count++;
         }
     }
     g_gosub_row_count = count;
-    g_gosub_visible_row_count = 8;
-    g_gosub_row_height = 0x10;
-    g_gosub_window_width = 0xE8;
-    g_gosub_window_height = 0x84;
-    g_gosub_title_text = GOSUB_MSG_PTR(0x12);
+    g_gosub_visible_row_count = GOSUB_ITEM_VISIBLE_ROWS;
+    g_gosub_row_height = GOSUB_ITEM_ROW_HEIGHT;
+    g_gosub_window_width = GOSUB_LIST_PANEL_WIDTH;
+    g_gosub_window_height = GOSUB_ITEM_WINDOW_HEIGHT;
+    g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_PRIMARY_MATERIAL);
 }
 
 /**
- * @brief Build the logic-block list for the gosub screen entered by arm 11.
- * @note Bit 2 of the row flag word is cleared only for blocks that have
- *       placed clear and are fully ready; every other block sets it.
+ * @brief Build the logic-block list: name and level, description, and shape of every block.
+ * @note A block counts as in use while it is placed on a golem's grid or owned by a golem.
  */
-void gosub_build_packed_record_list(void)
+void gosub_build_logic_block_list(void)
 {
     s32 i;
     u8* row_name;
@@ -164,61 +163,61 @@ void gosub_build_packed_record_list(void)
     {
         g_gosub_rows[i].detail_group = g_pad_ctx->logic_blocks[i].f.id;
         g_gosub_rows[i].detail_id = g_pad_ctx->logic_blocks[i].f.quantity;
-        row_name = g_gosub_text_buffers + i * 0x50;
-        gosub_copy_encoded_string(row_name, ARCHIVE_ENTRY(g_gosub_text_archive_offsets_3[0], g_gosub_rows[i].detail_group));
+        row_name = g_gosub_text_buffers[i];
+        gosub_copy_encoded_string(row_name, GOSUB_TEXT(GOSUB_TEXT_LOGIC_BLOCK_NAMES, g_gosub_rows[i].detail_group));
         if (g_gosub_rows[i].detail_id != 0)
         {
-            gosub_append_encoded_string(row_name, D_800EC3DA - 0x16 + D_800EC3DA[0] + (D_800EC3DA[1] << 8));
-            func_800A8B90(number_text, g_gosub_rows[i].detail_id, 1);
+            gosub_append_encoded_string(row_name, FIELD_UI_TEXT_AT(D_800EC3DA, FIELD_UI_TEXT_PLUS));
+            field_format_number(number_text, g_gosub_rows[i].detail_id, 1);
             gosub_append_encoded_string(row_name, number_text);
         }
         g_gosub_rows[i].name = row_name;
-        g_gosub_rows[i].desc = ARCHIVE_ENTRY(g_gosub_text_archive_offsets_0[7], g_gosub_rows[i].detail_group);
-        g_gosub_rows[i].value = -2;
+        g_gosub_rows[i].desc = GOSUB_TEXT(GOSUB_TEXT_LOGIC_BLOCK_DESCRIPTIONS, g_gosub_rows[i].detail_group);
+        g_gosub_rows[i].value = GOSUB_ROW_LOGIC_BLOCK;
         g_gosub_rows[i].detail_variant = g_pad_ctx->logic_blocks[i].f.shape;
-        if (g_pad_ctx->logic_blocks[i].f.placed != 0 ||
-            g_pad_ctx->logic_blocks[i].f.logic_type != LOGIC_BLOCK_UNASSIGNED)
+        if (g_pad_ctx->logic_blocks[i].f.placed != 0 || g_pad_ctx->logic_blocks[i].f.logic_type != LOGIC_BLOCK_UNASSIGNED)
         {
-            g_gosub_rows[i].flags.word |= 4;
+            g_gosub_rows[i].flags.block.in_use = 1;
         }
         else
         {
-            g_gosub_rows[i].flags.word &= ~4;
+            g_gosub_rows[i].flags.block.in_use = 0;
         }
         g_gosub_rows[i].index = i;
-        g_gosub_rows[i].text_color = 4;
+        g_gosub_rows[i].text_color = GOSUB_TEXT_COLOR_NORMAL;
     }
     g_gosub_row_count = g_pad_ctx->logic_block_count;
     g_gosub_visible_row_count = 4;
-    g_gosub_row_height = 0x20;
-    g_gosub_window_width = 0x120;
-    g_gosub_window_height = 0x84;
-    g_gosub_title_text = GOSUB_MSG_PTR(0x18);
+    g_gosub_row_height = 32;
+    g_gosub_window_width = GOSUB_LOGIC_BLOCK_PANEL_WIDTH;
+    g_gosub_window_height = 4 * 32 + GOSUB_LIST_PANEL_PADDING;
+    g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_GOLEM_LOGIC_BLOCKS);
 }
 
 /**
- * @brief Build a roster list for gosub screens 12-14 and 17-18.
- * @param mode Which blocks to emit: 1 = second only, 2 = first only, otherwise
- *             both. Also picks the screen's title message.
+ * @brief Build the golem and pet list: golems in their display order, then the pets.
+ * @param mode GosubCompanionFilter; also selects the title message.
+ * @note In the mixed list a golem row's index is its record index ANDed with
+ *       0x80, which is always 0; the flag was probably meant to be ORed in.
  */
-void gosub_build_roster_list(s32 mode)
+void gosub_build_companion_list(s32 mode)
 {
-    s32 large_ref_index;
+    s32 order_index;
     s32 stat_index;
     s32 row_count;
     s32 record_index;
     s32 slot;
-    u8 unused_name_buf[32]; /* Unused; sets the original 0x20-byte frame. */
+    u8 unused[32]; /* never used, but the original stack frame has room for it */
 
     row_count = 0;
-    if (mode != 1)
+    if (mode != GOSUB_COMPANIONS_PETS)
     {
-        for (large_ref_index = 0; large_ref_index < LARGE_HISTORY_RECORD_COUNT; large_ref_index++)
+        for (order_index = 0; order_index < LARGE_HISTORY_RECORD_COUNT; order_index++)
         {
-            record_index = g_pad_ctx->large_history_order[large_ref_index];
+            record_index = g_pad_ctx->large_history_order[order_index];
             if (record_index < LARGE_HISTORY_RECORD_COUNT)
             {
-                if (mode == 0)
+                if (mode == GOSUB_COMPANIONS_ALL)
                 {
                     g_gosub_rows[row_count].index = record_index & 0x80;
                 }
@@ -226,8 +225,8 @@ void gosub_build_roster_list(s32 mode)
                 {
                     g_gosub_rows[row_count].index = record_index;
                 }
-                g_gosub_rows[row_count].value = -3;
-                g_gosub_rows[row_count].flags.f.alternate_format = 0;
+                g_gosub_rows[row_count].value = GOSUB_ROW_COMPANION;
+                g_gosub_rows[row_count].flags.companion.pet = 0;
                 if (g_pad_ctx->large_history_index == record_index)
                 {
                     g_gosub_rows[row_count].detail_group = 1;
@@ -236,10 +235,11 @@ void gosub_build_roster_list(s32 mode)
                 {
                     g_gosub_rows[row_count].detail_group = 0;
                 }
-                g_gosub_rows[row_count].flags.f.selection_blocked = 0;
-                g_gosub_rows[row_count].flags.f.selection_restricted = 0;
-                g_gosub_rows[row_count].text_color = 4;
+                g_gosub_rows[row_count].flags.companion.egg = 0;
+                g_gosub_rows[row_count].flags.companion.grazing = 0;
+                g_gosub_rows[row_count].text_color = GOSUB_TEXT_COLOR_NORMAL;
                 g_gosub_rows[row_count].name = g_pad_ctx->large_history_records[record_index].name;
+                /* The golem's type and palette. */
                 g_gosub_rows[row_count].detail_id = g_pad_ctx->large_history_records[record_index].unknown_0x44 & 0xF;
                 g_gosub_rows[row_count].detail_variant = g_pad_ctx->large_history_records[record_index].unknown_0x48;
                 g_gosub_rows[row_count].primary_value = g_pad_ctx->large_history_records[record_index].primary_value;
@@ -252,15 +252,15 @@ void gosub_build_roster_list(s32 mode)
             }
         }
     }
-    if (mode != 2)
+    if (mode != GOSUB_COMPANIONS_GOLEMS)
     {
         for (slot = 0; slot < SMALL_HISTORY_RECORD_COUNT; slot++)
         {
             if (g_pad_ctx->small_history_records[slot].name[0] != 0)
             {
                 g_gosub_rows[row_count].index = slot;
-                g_gosub_rows[row_count].value = -3;
-                g_gosub_rows[row_count].flags.f.alternate_format = 1;
+                g_gosub_rows[row_count].value = GOSUB_ROW_COMPANION;
+                g_gosub_rows[row_count].flags.companion.pet = 1;
                 if (g_pad_ctx->small_history_index == slot)
                 {
                     g_gosub_rows[row_count].detail_group = 1;
@@ -269,27 +269,29 @@ void gosub_build_roster_list(s32 mode)
                 {
                     g_gosub_rows[row_count].detail_group = 0;
                 }
-                g_gosub_rows[row_count].text_color = 4;
+                g_gosub_rows[row_count].text_color = GOSUB_TEXT_COLOR_NORMAL;
                 g_gosub_rows[row_count].name = g_pad_ctx->small_history_records[slot].name;
+                /* The pet's species and level. */
                 g_gosub_rows[row_count].detail_id = g_pad_ctx->small_history_records[slot].unknown_0x15;
                 g_gosub_rows[row_count].primary_value = g_pad_ctx->small_history_records[slot].primary_value;
-                g_gosub_rows[row_count].flags.f.selection_blocked = g_pad_ctx->small_history_records[slot].selection_flags.selection_blocked;
-                g_gosub_rows[row_count].flags.f.selection_restricted = g_pad_ctx->small_history_records[slot].selection_flags.selection_restricted;
+                g_gosub_rows[row_count].flags.companion.egg = g_pad_ctx->small_history_records[slot].selection_flags.selection_blocked;
+                g_gosub_rows[row_count].flags.companion.grazing = g_pad_ctx->small_history_records[slot].selection_flags.selection_restricted;
                 g_gosub_rows[row_count].detail_variant = g_pad_ctx->small_history_records[slot].unknown_0x18;
                 if (g_gosub_rows[row_count].flags.half & 1)
                 {
-                    g_gosub_rows[row_count].detail_id = g_pad_ctx->small_history_records[slot].unknown_0x16 + 0x48;
-                    if (g_pad_ctx->small_history_records[slot].unknown_0x42 < 6)
+                    /* An egg shows its egg portrait and how long it still needs to hatch. */
+                    g_gosub_rows[row_count].detail_id = g_pad_ctx->small_history_records[slot].unknown_0x16 + GOSUB_EGG_PORTRAIT_FIRST;
+                    if (g_pad_ctx->small_history_records[slot].unknown_0x42 < GOSUB_EGG_ANY_TIME_BELOW)
                     {
-                        g_gosub_rows[row_count].detail_variant = 0;
+                        g_gosub_rows[row_count].detail_variant = GOSUB_EGG_HATCH_ANY_TIME;
                     }
-                    else if (g_pad_ctx->small_history_records[slot].unknown_0x42 < 0x1F)
+                    else if (g_pad_ctx->small_history_records[slot].unknown_0x42 < GOSUB_EGG_ALMOST_READY_BELOW)
                     {
-                        g_gosub_rows[row_count].detail_variant = 1;
+                        g_gosub_rows[row_count].detail_variant = GOSUB_EGG_HATCH_ALMOST_READY;
                     }
                     else
                     {
-                        g_gosub_rows[row_count].detail_variant = 2;
+                        g_gosub_rows[row_count].detail_variant = GOSUB_EGG_HATCH_NEEDS_TIME;
                     }
                 }
                 for (stat_index = 0; stat_index < HISTORY_RECORD_STAT_COUNT; stat_index++)
@@ -303,8 +305,8 @@ void gosub_build_roster_list(s32 mode)
     }
     g_gosub_row_count = row_count;
     g_gosub_visible_row_count = 3;
-    g_gosub_row_height = 0x30;
-    g_gosub_window_width = 0x120;
-    g_gosub_window_height = 0x94;
-    g_gosub_title_text = GOSUB_MSG_PTR(mode * 2 + 0x2C);
+    g_gosub_row_height = 48;
+    g_gosub_window_width = GOSUB_LOGIC_BLOCK_PANEL_WIDTH;
+    g_gosub_window_height = 3 * 48 + GOSUB_LIST_PANEL_PADDING;
+    g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_PET_OR_GOLEM + mode);
 }

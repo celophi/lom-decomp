@@ -26,7 +26,7 @@ typedef struct FieldKeyedList
  * @param size Byte count; only complete 32-bit words are processed.
  * @return Pointer to the first destination word after the processed range.
  */
-s32* func_800C1EC8(s32* src, s32* dest, s32 size)
+s32* field_copy_words(s32* src, s32* dest, s32 size)
 {
     s32 count;
 

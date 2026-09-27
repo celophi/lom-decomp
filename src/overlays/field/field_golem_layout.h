@@ -16,6 +16,7 @@
 #include "main.h"
 #include "saved_game.h"
 #include "field_records.h"
+#include "golem_shape.h"
 
 /** @brief Length of a golem name (group record and companion record). */
 #define GOLEM_NAME_LENGTH 21
@@ -28,49 +29,6 @@
 
 /** @brief Number of source items (weapons and armor) kept in a group record. */
 #define GOLEM_SOURCE_ITEM_COUNT 4
-
-/** @brief Number of logic-block shapes. */
-#define GOLEM_SHAPE_COUNT 11
-/** @brief Number of rotations of a logic-block shape. */
-#define GOLEM_SHAPE_ROTATION_COUNT 4
-/** @brief Number of parts listed per rotation after its origin point. */
-#define GOLEM_SHAPE_PART_COUNT 4
-
-/** @brief One cell of a rotated shape, relative to the block origin. */
-typedef struct
-{
-    s8 x;
-    s8 y;
-    s16 glyph_id; /**< Icon glyph the GOLEM editor draws in the cell. */
-} GolemShapePoint;
-
-/** @brief One rotation of a shape: its origin point and the cells it covers. */
-typedef struct
-{
-    GolemShapePoint origin;
-    GolemShapePoint parts[GOLEM_SHAPE_PART_COUNT];
-} GolemShapeRotation;
-
-/**
- * @brief Golem logic-block shape: cell count and the four rotated layouts.
- * @note Same layout as GolemCompositeIconRow in the GOLEM overlay.
- */
-typedef struct
-{
-    u8 count; /**< Number of parts per rotation that cover a grid cell. */
-    u8 reserved;
-    u8 grid_width;
-    u8 grid_height;
-    s16 origin_x;
-    s16 origin_y;
-    GolemShapeRotation rotations[GOLEM_SHAPE_ROTATION_COUNT];
-} GolemShape;
-
-/** @brief Table of the logic-block shapes. */
-typedef struct
-{
-    GolemShape shapes[GOLEM_SHAPE_COUNT];
-} GolemShapeTable;
 
 /**
  * @brief Golem group record: the golem built from a set of weapons and armor.
@@ -89,9 +47,9 @@ typedef struct
     FieldNibbles weapon_bonus;                        /**< Summed weapon bonus nibbles, 0-9. */
     FieldNibbles armor_bonus;                         /**< Summed armor bonus nibbles, 0-9. */
     FieldStat stats[FIELD_CHARACTER_STAT_COUNT];      /**< Effective value 20-99, base 0. */
-    u8 armor_flags;                                   /**< OR of the armor items' flags2C. */
-    u8 weapon_flags;                                  /**< OR of the weapon items' flags2C. */
-    u8 armor_flags2;                                  /**< OR of the armor items' flags2D. */
+    u8 armor_flags;                                   /**< OR of the armor items' status_flags. */
+    u8 weapon_flags;                                  /**< OR of the weapon items' status_flags. */
+    u8 armor_flags2;                                  /**< OR of the armor items' element_flags. */
     u8 unknown_0x3F;
     u32 unknown_0x40;
     u8 logic_class : 4;                               /**< Logic class a class-bound logic block must match. */

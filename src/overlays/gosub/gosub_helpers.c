@@ -7,10 +7,10 @@ void gosub_upload_ui_image(void)
 {
     GosubImageVramLayout destinations;
 
-    destinations.pixel_x = 0x140;
+    destinations.pixel_x = GOSUB_UI_IMAGE_X;
     destinations.pixel_y = 0;
     destinations.clut_x = 0;
-    destinations.clut_y = 0x1F2;
+    destinations.clut_y = GOSUB_GLYPH_CLUT_Y;
     gosub_upload_image_archive(&destinations, &g_gosub_image_archive);
 }
 
@@ -18,6 +18,8 @@ void gosub_upload_ui_image(void)
  * @brief Upload a TIM's optional CLUT and pixel data to selected VRAM positions.
  * @param destinations VRAM destinations for the pixel and CLUT blocks.
  * @param tim TIM resource to upload.
+ * @note The pixel data is always taken from after a CLUT block, so a TIM
+ *       without one would upload the wrong bytes; every GOSUB image has one.
  */
 void gosub_upload_image_archive(GosubImageVramLayout* destinations, TimPrefix* tim)
 {
@@ -29,11 +31,11 @@ void gosub_upload_image_archive(GosubImageVramLayout* destinations, TimPrefix* t
     flags = tim->flags;
     clut_block_size = tim->clut_block.bnum;
 
-    if (flags & GOSUB_TIM_HAS_CLUT)
+    if (flags & TIM_FLAG_HAS_CLUT)
     {
         setRECT(&upload_rect, destinations->clut_x, destinations->clut_y, CLUT_ENTRY_COUNT, 1);
         LoadImage(&upload_rect, (u_long*)tim->clut_data);
-        pixel_dimensions = &((TimBlock*)(clut_block_size + (s32)tim + TIM_HEADER_SIZE))->dimensions;
+        pixel_dimensions = &TIM_PIXEL_BLOCK(tim, clut_block_size)->dimensions;
     }
     else
     {
@@ -41,60 +43,43 @@ void gosub_upload_image_archive(GosubImageVramLayout* destinations, TimPrefix* t
     }
 
     setRECT(&upload_rect, destinations->pixel_x, destinations->pixel_y, pixel_dimensions->width, pixel_dimensions->height);
-    LoadImage(&upload_rect, (u_long*)(((TimBlock*)(clut_block_size + (s32)tim + TIM_HEADER_SIZE)) + 1));
+    LoadImage(&upload_rect, (u_long*)(TIM_PIXEL_BLOCK(tim, clut_block_size) + 1));
 }
 
 /**
- * @brief Draw a composite icon from its base glyph and positioned parts.
- * @param initial_packet Next free GPU packet.
- * @param ordering_table Ordering table to receive the glyph packets.
- * @param x Base screen x coordinate.
- * @param y Base screen y coordinate.
- * @param icon_id Icon identifier used for the base glyph and part CLUT.
- * @param layout_index Composite layout index.
+ * @brief Draw a logic block's icon: its base glyph and one glyph per cell of the shape.
+ * @param packet Next free GPU packet.
+ * @param ot Ordering table to receive the glyph packets.
+ * @param x Icon left edge.
+ * @param y Icon top edge.
+ * @param block_id Logic-block id; selects the base glyph and the cell CLUT.
+ * @param shape Index into g_golem_shape_table; rotation 0 is drawn.
  * @return Packet cursor after closing the glyph run.
  */
-s32 gosub_draw_composite_icon(s32 initial_packet, s32* ordering_table, s32 x, s32 y, s32 icon_id, s32 layout_index)
+s32 gosub_draw_composite_icon(s32 packet, s32* ot, s32 x, s32 y, s32 block_id, s32 shape)
 {
-    GosubCompositeIconView layout_view;
     s32 clut;
-    s16 layout_x;
-    s16 layout_y;
-    s8 base_glyph_x;
-    s8 base_glyph_y;
+    GolemShape* shapes;
+    GolemShape* layout;
     s32 icon_x;
     s32 icon_y;
-    GosubCompositeIconView part_view;
-    s32 part_index;
-    s32 packet_cursor;
-    u8* table_bytes;
+    s32 i;
 
-    clut = D_800F2180[icon_id];
-    table_bytes = D_800F1CD0;
-    layout_view.bytes = (u8*)(layout_index * (s32)sizeof(GosubCompositeIconLayout) + (s32)table_bytes);
-    layout_x = layout_view.layout->origin_x;
-    layout_y = layout_view.layout->origin_y;
-    base_glyph_x = layout_view.layout->base_x;
-    base_glyph_y = layout_view.layout->base_y;
-    icon_x = x + layout_x * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE;
-    icon_y = y + layout_y * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE;
-    packet_cursor = gosub_emit_glyph(initial_packet, ordering_table, icon_id + GOSUB_COMPOSITE_ICON_BASE_GLYPH_OFFSET,
-                                     base_glyph_x * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE + icon_x, base_glyph_y * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE + icon_y,
-                                     GOSUB_COMPOSITE_ICON_BASE_CLUT);
-
-    /* The part count is byte zero of the packed layout. */
-    layout_y = 0;
-    for (part_index = layout_y; part_index < layout_view.bytes[layout_y]; part_index++)
+    clut = g_golem_logic_block_icons[block_id];
+    shapes = g_golem_shape_table;
+    layout = &shapes[shape];
+    icon_x = x + layout->origin_x * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE;
+    icon_y = y + layout->origin_y * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE;
+    packet = gosub_emit_glyph(packet, ot, block_id + GOSUB_COMPOSITE_ICON_BASE_GLYPH_OFFSET,
+                              layout->rotations[0].origin.x * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE + icon_x,
+                              layout->rotations[0].origin.y * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE + icon_y, GOSUB_COMPOSITE_ICON_BASE_CLUT);
+    for (i = 0; i < g_golem_shape_table[shape].count; i++)
     {
-        u8* loop_base = &D_800F1CD0[layout_y];
-
-        part_view.bytes = (u8*)(layout_index * (s32)sizeof(GosubCompositeIconLayout) + part_index * (s32)sizeof(GosubCompositeIconPart) + (s32)loop_base);
-        /* The shifted layout view exposes the current tuple as parts[0]. */
-        packet_cursor = gosub_emit_glyph(packet_cursor, ordering_table, part_view.layout->parts[0].glyph_id,
-                                         part_view.layout->parts[0].x * GOSUB_COMPOSITE_ICON_PART_CELL_SIZE + icon_x,
-                                         part_view.layout->parts[0].y * GOSUB_COMPOSITE_ICON_PART_CELL_SIZE + icon_y, clut);
+        packet = gosub_emit_glyph(packet, ot, g_golem_shape_table[shape].rotations[0].parts[i].glyph_id,
+                                  g_golem_shape_table[shape].rotations[0].parts[i].x * GOSUB_COMPOSITE_ICON_PART_CELL_SIZE + icon_x,
+                                  g_golem_shape_table[shape].rotations[0].parts[i].y * GOSUB_COMPOSITE_ICON_PART_CELL_SIZE + icon_y, clut);
     }
-    return gosub_finish_glyph_run(packet_cursor, ordering_table);
+    return gosub_finish_glyph_run(packet, ot);
 }
 
 /**
@@ -141,17 +126,16 @@ s32 gosub_emit_glyph(s32 packet_cursor, s32* ordering_table, s32 glyph_id, s32 x
 }
 
 /**
- * @brief Delete one packed logic-block record and close the gap.
- *
- * @param record_index Index of the record to remove.
+ * @brief Discard a logic block and close the gap in the block list.
+ * @param record_index Index of the block to remove.
  */
-void gosub_delete_packed_record(s32 record_index)
+void gosub_delete_logic_block(s32 record_index)
 {
     s32 shift_index;
 
     for (shift_index = record_index; shift_index < g_pad_ctx->logic_block_count - 1; shift_index++)
     {
-        gosub_copy_packed_record(&g_pad_ctx->logic_blocks[shift_index], &g_pad_ctx->logic_blocks[shift_index + 1]);
+        gosub_copy_logic_block(&g_pad_ctx->logic_blocks[shift_index], &g_pad_ctx->logic_blocks[shift_index + 1]);
     }
     g_pad_ctx->logic_block_count--;
 }
@@ -189,21 +173,20 @@ void gosub_delete_list_row(s32 row)
  * @param dst Destination record.
  * @param src Source record.
  */
-inline void gosub_copy_packed_record(void* dst, void* src)
+inline void gosub_copy_logic_block(void* dst, void* src)
 {
     u8* dst_bytes;
     u8* src_bytes;
-    u32 byte_index;
+    u32 i;
 
     dst_bytes = (u8*)dst;
     src_bytes = (u8*)src;
-    for (byte_index = 0; byte_index < sizeof(LogicBlock);)
+    i = 0;
+    do
     {
-        byte_index++;
-        *dst_bytes = *src_bytes;
-        src_bytes += 1;
-        dst_bytes += 1;
-    }
+        i++;
+        *dst_bytes++ = *src_bytes++;
+    } while (i < sizeof(LogicBlock));
 }
 
 /**
@@ -216,30 +199,27 @@ inline void gosub_copy_list_row(void* dst, void* src)
 {
     u8* dst_bytes;
     u8* src_bytes;
-    u32 byte_index;
+    u32 i;
 
     dst_bytes = (u8*)dst;
     src_bytes = (u8*)src;
-    for (byte_index = 0; byte_index < sizeof(GosubListRow);)
+    i = 0;
+    do
     {
-        byte_index++;
-        *dst_bytes = *src_bytes;
-        src_bytes += 1;
-        dst_bytes += 1;
-    }
+        i++;
+        *dst_bytes++ = *src_bytes++;
+    } while (i < sizeof(GosubListRow));
 }
 
 /**
- * @brief Sort the gosub row list, carrying each row's backing record with it.
+ * @brief Sort the logic blocks, and their rows, by type, level or shape.
  *
- * An insertion sort first builds a row permutation. The packed records and
- * display rows are then snapshotted and rewritten through that permutation.
- * Rebuilding the list last refreshes its derived names and fields.
+ * An insertion sort builds the new order, then the blocks and rows are
+ * copied back in that order and the list is rebuilt.
  *
- * @param sort_mode Encoded type, power, or shape key and sort direction.
- *
+ * @param sort_mode GosubSortKey in the low nibble; GOSUB_SORT_ASCENDING_MASK bits reverse the order.
  */
-void gosub_sort_rows(s32 sort_mode)
+void gosub_sort_logic_blocks(s32 sort_mode)
 {
     GosubSortWorkspace workspace;
     s32 row_index;
@@ -250,7 +230,7 @@ void gosub_sort_rows(s32 sort_mode)
     {
         for (insertion_index = 0; insertion_index < row_index; insertion_index++)
         {
-            if (gosub_compare_rows(sort_mode, row_index, workspace.row_order[insertion_index]) == 0)
+            if (gosub_compare_logic_blocks(sort_mode, row_index, workspace.row_order[insertion_index]) == 0)
             {
                 break;
             }
@@ -265,16 +245,16 @@ void gosub_sort_rows(s32 sort_mode)
         workspace.row_order[insertion_index] = row_index;
     }
 
-    bcopy(g_pad_ctx->logic_blocks, workspace.packed_records, sizeof(workspace.packed_records));
-    bcopy(g_gosub_rows, workspace.rows, sizeof(workspace.rows));
+    bcopy((u8*)g_pad_ctx->logic_blocks, (u8*)workspace.blocks, sizeof(workspace.blocks));
+    bcopy((u8*)g_gosub_rows, (u8*)workspace.rows, sizeof(workspace.rows));
 
     for (row_index = 0; row_index < g_gosub_row_count; row_index++)
     {
-        gosub_copy_packed_record(&g_pad_ctx->logic_blocks[row_index], &workspace.packed_records[workspace.row_order[row_index]]);
+        gosub_copy_logic_block(&g_pad_ctx->logic_blocks[row_index], &workspace.blocks[workspace.row_order[row_index]]);
         gosub_copy_list_row(&g_gosub_rows[row_index], &workspace.rows[workspace.row_order[row_index]]);
     }
 
-    gosub_build_packed_record_list();
+    gosub_build_logic_block_list();
 }
 
 /**
@@ -285,7 +265,7 @@ void gosub_sort_rows(s32 sort_mode)
  * @param right_row_index Second row index before the optional direction swap.
  * @return 1 when the left operand sorts before the right, otherwise 0.
  */
-s32 gosub_compare_rows(s32 mode, s32 left_row_index, s32 right_row_index)
+s32 gosub_compare_logic_blocks(s32 mode, s32 left_row_index, s32 right_row_index)
 {
     s32 swapped_row_index;
 
@@ -322,8 +302,8 @@ s32 gosub_compare_rows(s32 mode, s32 left_row_index, s32 right_row_index)
 /**
  * @brief Upload the gosub font CLUT and texture strip to their fixed VRAM slots.
  *
- * @note The 0x200-byte texture transfer continues through the first 0x5C bytes
- *       of g_gosub_item_metadata; its live metadata begins at index 0x60.
+ * @note The texture transfer reads past the font data into the start of
+ *       g_gosub_item_colors, whose entries below GOSUB_COLOR_MATERIAL_FIRST are unused.
  */
 void gosub_upload_font_texture(void)
 {
@@ -352,7 +332,7 @@ void gosub_upload_font_texture(void)
  * @param h    Panel height.
  * @return Packet cursor past the draw-mode packet.
  */
-GosubGpuPacket* gosub_emit_panel_corners(SPRT* prim, s32* ot, s32 x, s32 y, s32 w, s32 h)
+GosubTilePacket* gosub_emit_panel_corners(SPRT* prim, s32* ot, s32 x, s32 y, s32 w, s32 h)
 {
     DR_TPAGE* draw_tpage;
     s32 x0;
@@ -405,5 +385,5 @@ GosubGpuPacket* gosub_emit_panel_corners(SPRT* prim, s32* ot, s32 x, s32 y, s32 
     draw_tpage = (DR_TPAGE*)prim;
     setDrawTPage(draw_tpage, 0, 0, GOSUB_FONT_TPAGE);
     addPrim(ot, draw_tpage);
-    return (GosubGpuPacket*)(draw_tpage + 1);
+    return (GosubTilePacket*)(draw_tpage + 1);
 }

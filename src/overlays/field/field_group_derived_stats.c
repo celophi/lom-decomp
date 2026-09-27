@@ -9,7 +9,7 @@
 #include "field_golem_layout.h"
 #include "field_records.h"
 
-/** @brief func_800C1E40 id of the golem name text table. */
+/** @brief field_find_resource id of the golem name text table. */
 #define FIELD_RESOURCE_GOLEM_NAME_TEXT 0x100
 /** @brief Name text entry appended after the golem number (entries 0-9 are the digits). */
 #define GOLEM_NAME_TEXT_SUFFIX 10
@@ -61,9 +61,9 @@ typedef struct
 /** @brief The game state viewed as FIELD's record layout. */
 #define GAME_STATE ((FieldGameState*)g_saved_game.bytes)
 /** @brief The golem name text table. */
-#define GOLEM_NAME_TEXT ((GolemNameText*)func_800C1E40(FIELD_RESOURCE_GOLEM_NAME_TEXT))
+#define GOLEM_NAME_TEXT ((GolemNameText*)field_find_resource(FIELD_RESOURCE_GOLEM_NAME_TEXT))
 
-extern u8* func_800C1E40(s32 resource_id);
+extern u8* field_find_resource(s32 resource_id);
 extern GolemWeaponClassTable D_80051C50;
 extern s8 D_800F0C38[];
 extern s32 g_gosub_result_count;
@@ -318,7 +318,7 @@ void field_golem_build_group_record(s32 group)
         {
             FieldItemRecord* item = &GAME_STATE->items[index];
 
-            work[0] |= item->flags2C;
+            work[0] |= item->status_flags;
         }
     }
     GOLEM.group_records[group].armor_flags = work[0];
@@ -330,7 +330,7 @@ void field_golem_build_group_record(s32 group)
         {
             FieldItemRecord* item = &GAME_STATE->items[index];
 
-            work[0] |= item->flags2C;
+            work[0] |= item->status_flags;
         }
     }
     GOLEM.group_records[group].weapon_flags = work[0];
@@ -342,7 +342,7 @@ void field_golem_build_group_record(s32 group)
         {
             FieldItemRecord* item = &GAME_STATE->items[index];
 
-            work[0] |= item->flags2D;
+            work[0] |= item->element_flags;
         }
     }
     GOLEM.group_records[group].armor_flags2 = work[0];

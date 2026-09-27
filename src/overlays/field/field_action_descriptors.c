@@ -136,7 +136,7 @@ FieldActionDescriptor *field_select_action_descriptor(void)
     else
     {
         weapon = &g_field_game_state->characters[attacker->meta.bytes.id].equipment[0];
-        g_field_battle->power_flags = weapon->flags2C;
+        g_field_battle->power_flags = weapon->status_flags;
         selector = g_field_battle->action->action_id;
         switch (selector)
         {

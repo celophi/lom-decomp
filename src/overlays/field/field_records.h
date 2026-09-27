@@ -78,6 +78,9 @@
 /* Game state (g_field_game_state)                                                  */
 /* ------------------------------------------------------------------------ */
 
+/** @brief Length of the encoded name at the start of a FieldItemRecord. */
+#define FIELD_ITEM_NAME_LENGTH 0x14
+
 /** @brief Item category: bits 8-9 of FieldItemRecord.info. */
 #define FIELD_ITEM_CATEGORY(info) (((info) >> 8) & 3)
 
@@ -149,7 +152,8 @@ typedef struct FieldItemInfo
     unsigned unk0 : 8;
     unsigned category : 2;
     unsigned item_type : 6;
-    unsigned item_subtype : 6;
+    /** @brief Material the item was made from (an item kind below FIELD_SECONDARY_ITEM_FIRST). */
+    unsigned material : 6;
     unsigned unk22 : 10;
 } FieldItemInfo;
 
@@ -162,8 +166,8 @@ typedef struct FieldItemKey
 
 typedef struct FieldItemRecord
 {
-    u8 kind;
-    u8 pad01[0x13];
+    /** @brief Encoded item name; an empty name marks a free record. */
+    u8 name[FIELD_ITEM_NAME_LENGTH];
     /** @brief Bits 8-9 category, 10-15 item type, 16-21 item subtype. */
     union
     {
@@ -196,6 +200,13 @@ typedef struct FieldItemRecord
             u16 power;
             u8 stats[6];
         } weapon;
+        /** @brief Instrument: summoned spirit, spell (a cell of the instrument grid) and power. */
+        struct
+        {
+            u8 spirit;
+            u8 spell;
+            u8 power;
+        } instrument;
         /** @brief Golem companion (party slot 2, unk150[0]): GolemGroupRecord bytes 0x44-0x4B. */
         struct
         {
@@ -205,8 +216,10 @@ typedef struct FieldItemRecord
             s32 unknown_0x48;
         } golem;
     } derived;
-    u8 flags2C;
-    u8 flags2D;
+    /** @brief Weapon: power flags used in battle. Armor: status immunities. */
+    u8 status_flags;
+    /** @brief Armor: element resistances. */
+    u8 element_flags;
     u16 effect_index;
     u8 attributes[4];
     /** @brief Cached item value (field_get_item_value); 0 until computed. */
@@ -598,7 +611,7 @@ typedef struct FieldGameState
 } FieldGameState;
 
 /* ------------------------------------------------------------------------ */
-/* Item record staging (D_80123FC4) and its generation tables (D_80123FC0)  */
+/* Item record staging (g_field_item_staging) and its generation tables (g_field_item_tables) */
 /* ------------------------------------------------------------------------ */
 
 #define FIELD_STAGING_LEVEL_COUNT 8
@@ -613,8 +626,14 @@ typedef struct FieldGameState
 /** @brief Largest four-bit level a staged level entry can reach. */
 #define FIELD_STAGING_LEVEL_MAX 0xF
 
-/** @brief Bias subtracted from FieldItemStaging::command_index before indexing a table. */
-#define FIELD_STAGING_COMMAND_BASE 0x40
+/**
+ * @brief First item kind of the secondary materials (tempering items); the
+ *        generation tables index them from this bias.
+ */
+#define FIELD_SECONDARY_ITEM_FIRST 0x40
+
+/** @brief FieldItemStaging::secondary_item of an item made without one. */
+#define FIELD_NO_SECONDARY_ITEM 0xFF
 
 /** @brief One staged level: its base cost and current four-bit level. */
 typedef struct FieldStagingLevel
@@ -648,10 +667,10 @@ typedef struct FieldItemStaging
     u8 category;
     /** @brief Item type (FieldItemRecord::info bits 10-15). */
     u8 item_type;
-    /** @brief Item subtype (FieldItemRecord::info bits 16-21). */
-    u8 item_subtype;
-    /** @brief Command selector, biased by FIELD_STAGING_COMMAND_BASE. */
-    u8 command_index;
+    /** @brief Material (FieldItemRecord::info bits 16-21). */
+    u8 material;
+    /** @brief Secondary material or tempering item kind, or FIELD_NO_SECONDARY_ITEM. */
+    u8 secondary_item;
     /** @brief Pool that pays for level increases. */
     s32 pool;
     FieldStagingLevel levels[FIELD_STAGING_LEVEL_COUNT];
@@ -666,19 +685,23 @@ typedef struct FieldItemStaging
     /** @brief Slot values, FIELD_STAGING_SLOT_EMPTY when unused. */
     u8 slots[FIELD_STAGING_SLOT_COUNT];
     u8 properties[FIELD_STAGING_PROPERTY_COUNT];
-    u8 flags2C;
-    u8 flags2D;
-    u8 alternate_flags2C;
+    /** @brief Weapon power flags, rebuilt from power_flag_mask and the levels. */
+    u8 power_flags;
+    /** @brief Armor element resistances, rebuilt from element_flag_mask. */
+    u8 element_flags;
+    /** @brief Armor status immunities, kept from the item being tempered. */
+    u8 immunity_flags;
     u8 pad37[3];
-    u16 unk3A;
+    /** @brief Subtype divisor applied to the summed levels (FieldItemMaterialEntry::divisor). */
+    u16 divisor;
     u8 weights[FIELD_STAGING_FACTOR_COUNT];
     u8 multipliers[FIELD_STAGING_FACTOR_COUNT];
     /** @brief Level increases still to be applied, per level entry. */
     u8 pending_levels[FIELD_STAGING_LEVEL_COUNT];
-    /** @brief Levels whose nonzero value sets the matching bit of flags2C. */
-    u8 flags2C_mask;
-    /** @brief Bits copied into flags2D. */
-    u8 flags2D_mask;
+    /** @brief Levels whose nonzero value sets the matching bit of power_flags. */
+    u8 power_flag_mask;
+    /** @brief Bits copied into element_flags. */
+    u8 element_flag_mask;
     u8 pad4E[2];
     /** @brief Stat modifier index competing with the low nibble of each stats byte. */
     u8 base_stats[FIELD_STAGING_STAT_COUNT];
@@ -709,7 +732,7 @@ typedef struct FieldItemStaging
  */
 #define FIELD_STAGING_AT(staging, bytes) ((FieldItemStaging*)((u8*)(staging) + (bytes)))
 
-/** @brief Per-type entry of FieldItemTable (0xC bytes). */
+/** @brief Per-weapon-type or per-armor-type entry of FieldItemTable (0xC bytes). */
 typedef struct FieldItemTypeEntry
 {
     u16 scripts[2];
@@ -717,23 +740,23 @@ typedef struct FieldItemTypeEntry
     u8 factors[4];
 } FieldItemTypeEntry;
 
-/** @brief Per-subtype entry of FieldItemTable (0x14 bytes). */
-typedef struct FieldItemSubtypeEntry
+/** @brief Per-material entry of FieldItemTable (0x14 bytes). */
+typedef struct FieldItemMaterialEntry
 {
     u16 script;
     u16 divisor;
     u8 weights[4];
     u8 multipliers[4];
     u8 costs[FIELD_STAGING_LEVEL_COUNT];
-} FieldItemSubtypeEntry;
+} FieldItemMaterialEntry;
 
-/** @brief Per-command entry of FieldItemTable (4 bytes). */
-typedef struct FieldItemCommandEntry
+/** @brief Per-secondary-material entry of FieldItemTable (4 bytes), indexed from FIELD_SECONDARY_ITEM_FIRST. */
+typedef struct FieldItemSecondaryEntry
 {
     u8 pool_bonus;
     u8 pad1;
     u16 script;
-} FieldItemCommandEntry;
+} FieldItemSecondaryEntry;
 
 /** @brief Per-slot-value entry of FieldItemTable: one script per slot position. */
 typedef struct FieldItemSlotEntry
@@ -742,31 +765,34 @@ typedef struct FieldItemSlotEntry
 } FieldItemSlotEntry;
 
 /**
- * @brief Item generation table (func_800C1E40(4)) for categories 0 and 1.
+ * @brief Item generation table (field_find_resource(4)) for weapons and armor.
  */
 typedef struct FieldItemTable
 {
     u32 header;
-    FieldItemTypeEntry types[16];
-    FieldItemTypeEntry alternate_types[16];
-    FieldItemSubtypeEntry subtypes[64];
-    FieldItemCommandEntry commands[192];
+    FieldItemTypeEntry weapon_types[16];
+    FieldItemTypeEntry armor_types[16];
+    FieldItemMaterialEntry materials[64];
+    FieldItemSecondaryEntry secondary_items[192];
     FieldItemSlotEntry slot_values[160];
 } FieldItemTable;
 
 /**
- * @brief Item generation table (func_800C1E40(0xF)) for category 2.
+ * @brief Item generation table (field_find_resource(0xF)) for instruments.
  */
 typedef struct FieldItemGridTable
 {
     u32 header;
+    /** @brief Spell index of each (row, column) cell. */
     u8 grid[8][8];
+    /** @brief Per material and instrument type: packed column/row start and power. */
     u8 pairs[64][4][2];
-    u16 commands[192];
+    /** @brief Script of each secondary material, indexed from FIELD_SECONDARY_ITEM_FIRST. */
+    u16 secondary_scripts[192];
 } FieldItemGridTable;
 
 /**
- * @brief Generation table currently loaded into D_80123FC0.
+ * @brief Generation table currently loaded into g_field_item_tables.
  * @note Script offsets passed to field_run_item_script are relative to @c bytes.
  */
 typedef union FieldItemTables
@@ -775,6 +801,12 @@ typedef union FieldItemTables
     FieldItemTable item;
     FieldItemGridTable grid;
 } FieldItemTables;
+
+/** @brief Staging block of the item being created or tempered. */
+extern FieldItemStaging* g_field_item_staging;
+
+/** @brief Generation table currently loaded by field_find_resource. */
+extern FieldItemTables* g_field_item_tables;
 
 /* ------------------------------------------------------------------------ */
 /* Field runtime context (g_field_runtime)                                       */
@@ -934,7 +966,7 @@ typedef struct FieldRuntimeContext
     s32 triggered_regions;
     s32 frame_count;
     u8 pad0C0[0x104 - 0xC0];
-    /** @brief Staging block of the item commands (D_80123FC4 points here while they run). */
+    /** @brief Staging block of the item commands (g_field_item_staging points here while they run). */
     FieldItemStaging item_staging;
     u8 pad164[0x400 - 0x164];
     union

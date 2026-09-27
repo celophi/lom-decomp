@@ -54,7 +54,7 @@ typedef struct
     u16 special_values[1];
 } FieldItemValueTables;
 
-void* func_800C1E40(s32 resource_id);
+void* field_find_resource(s32 resource_id);
 s32 rand(void);
 
 extern FieldGameState* g_field_game_state;
@@ -294,7 +294,7 @@ static s32 field_is_item_key_used(FieldItemKey* key)
 
     for (i = 0; i < FIELD_ITEM_COUNT; i++)
     {
-        if ((g_field_game_state->items[i].kind != 0) && (g_field_game_state->items[i].key.first == first) &&
+        if ((g_field_game_state->items[i].name[0] != 0) && (g_field_game_state->items[i].key.first == first) &&
             (g_field_game_state->items[i].key.second == second))
         {
             return 1;
@@ -303,7 +303,7 @@ static s32 field_is_item_key_used(FieldItemKey* key)
 
     for (i = 0; i < FIELD_HERO_ITEM_RECORD_COUNT; i++)
     {
-        if ((g_field_game_state->characters[FIELD_PARTY_HERO].equipment[i].kind != 0) &&
+        if ((g_field_game_state->characters[FIELD_PARTY_HERO].equipment[i].name[0] != 0) &&
             (g_field_game_state->characters[FIELD_PARTY_HERO].equipment[i].key.first == first) &&
             (g_field_game_state->characters[FIELD_PARTY_HERO].equipment[i].key.second == second))
         {
@@ -393,7 +393,7 @@ s32 field_get_item_value(FieldItemRecord* item)
     s32 value;
     u32 i;
 
-    tables = func_800C1E40(FIELD_RESOURCE_ITEM_VALUES);
+    tables = field_find_resource(FIELD_RESOURCE_ITEM_VALUES);
     i = 0;
     info = item->info.word;
     value =
@@ -417,7 +417,7 @@ void field_cache_inventory_values(void)
 
     for (i = 0; i < FIELD_ITEM_COUNT; i++)
     {
-        if (g_field_game_state->items[i].kind != 0 && g_field_game_state->items[i].value == 0)
+        if (g_field_game_state->items[i].name[0] != 0 && g_field_game_state->items[i].value == 0)
         {
             g_field_game_state->items[i].value = field_get_item_value(&g_field_game_state->items[i]);
         }

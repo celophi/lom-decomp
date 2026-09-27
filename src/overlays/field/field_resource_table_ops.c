@@ -34,7 +34,7 @@ typedef struct
 
 static s32 field_discard_all_items(void);
 
-void* func_800C1E40(s32 resource_id);
+void* field_find_resource(s32 resource_id);
 FieldItemRecord* field_find_free_inventory_record(void);
 
 extern FieldGameState* g_field_game_state;
@@ -109,7 +109,7 @@ s32 field_add_template_item(s32 index)
     FieldItemRecord* item_template;
     FieldItemRecord* record;
 
-    table = func_800C1E40(FIELD_RESOURCE_ITEM_TEMPLATES);
+    table = field_find_resource(FIELD_RESOURCE_ITEM_TEMPLATES);
     if (table == NULL)
     {
         record_game_diagnostic(DIAG_ERROR, DIAG_BAD_ITEM_TEMPLATE, index, 0);
@@ -140,7 +140,7 @@ void field_discard_item(s32 index)
 {
     if (index < FIELD_ITEM_COUNT)
     {
-        g_field_game_state->items[index].kind = 0;
+        g_field_game_state->items[index].name[0] = 0;
         field_compact_inventory();
     }
     else
@@ -159,7 +159,7 @@ static s32 field_discard_all_items(void)
 
     for (i = 0; i < FIELD_ITEM_COUNT; i++)
     {
-        g_field_game_state->items[i].kind = 0;
+        g_field_game_state->items[i].name[0] = 0;
     }
     field_compact_inventory();
     return -1;

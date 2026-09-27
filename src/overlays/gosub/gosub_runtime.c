@@ -31,13 +31,11 @@ void gosub_update_screen(GosubRenderContext* render_context)
  */
 s32 gosub_handle_input(void)
 {
-    GosubElement* elements;
     s32 steps_remaining;
     s32 restored_row;
     s32 max_scroll_y;
 
-    elements = g_gosub_elements;
-    if ((elements[1].attr.word & 7) == 0 && (elements[0].attr.word & 7) == 0)
+    if (g_gosub_elements[1].attr.f.state == GOSUB_ELEMENT_STATE_INACTIVE && g_gosub_elements[0].attr.f.state == GOSUB_ELEMENT_STATE_INACTIVE)
     {
         g_gosub_finished = 1;
         return;
@@ -48,19 +46,19 @@ s32 gosub_handle_input(void)
         return;
     }
 
-    if ((g_gosub_elements[0].attr.word & 7) == 2)
+    if (g_gosub_elements[0].attr.f.state == GOSUB_ELEMENT_STATE_ACTIVE)
     {
         if (g_gosub_dialog_accepting_input != 0)
         {
-            if ((g_pad_input & 0x260) == 0)
+            if ((g_pad_input & GOSUB_BUTTONS_DISMISS) == 0)
             {
                 return;
             }
             if (g_gosub_suppress_dialog_sound == 0)
             {
-                func_800A3938(0x7D, 0x80);
-                func_80067F28();
-                gosub_start_element_exit();
+                play_menu_sfx(GOSUB_SFX_CURSOR, GOSUB_SFX_VOLUME);
+                field_restore_fade_target();
+                gosub_close_elements();
                 return;
             }
             g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_INACTIVE;
@@ -68,31 +66,31 @@ s32 gosub_handle_input(void)
             return;
         }
 
-        if (g_pad_input & 0x9000)
+        if (g_pad_input & GOSUB_BUTTONS_PREVIOUS)
         {
-            func_800A3938(0x7D, 0x80);
+            play_menu_sfx(GOSUB_SFX_CURSOR, GOSUB_SFX_VOLUME);
             g_gosub_dialog_choice -= 1;
             if (g_gosub_dialog_choice < 0)
             {
-                g_gosub_dialog_choice = 0xB;
+                g_gosub_dialog_choice = GOSUB_DIALOG_CHOICE_COUNT - 1;
             }
             return;
         }
 
-        if (g_pad_input & 0x6000)
+        if (g_pad_input & GOSUB_BUTTONS_NEXT)
         {
-            func_800A3938(0x7D, 0x80);
+            play_menu_sfx(GOSUB_SFX_CURSOR, GOSUB_SFX_VOLUME);
             g_gosub_dialog_choice += 1;
-            if (g_gosub_dialog_choice == 0xC)
+            if (g_gosub_dialog_choice == GOSUB_DIALOG_CHOICE_COUNT)
             {
                 g_gosub_dialog_choice = 0;
             }
             return;
         }
 
-        if (g_pad_input & 0x220)
+        if (g_pad_input & GOSUB_BUTTONS_CONFIRM)
         {
-            func_800A3938(0x7D, 0x80);
+            play_menu_sfx(GOSUB_SFX_CURSOR, GOSUB_SFX_VOLUME);
             if (g_gosub_dialog_handler == 0)
             {
                 return;
@@ -101,14 +99,14 @@ s32 gosub_handle_input(void)
             {
                 return;
             }
-            func_80067F28();
-            gosub_start_element_exit();
+            field_restore_fade_target();
+            gosub_close_elements();
             return;
         }
 
-        if (g_pad_input & 0x40)
+        if (g_pad_input & GOSUB_BUTTON_CANCEL)
         {
-            func_800A3938(0x7D, 0x80);
+            play_menu_sfx(GOSUB_SFX_CURSOR, GOSUB_SFX_VOLUME);
             if (g_gosub_dialog_handler == 0)
             {
                 return;
@@ -117,8 +115,8 @@ s32 gosub_handle_input(void)
             {
                 return;
             }
-            func_80067F28();
-            gosub_start_element_exit();
+            field_restore_fade_target();
+            gosub_close_elements();
             return;
         }
 
@@ -131,22 +129,22 @@ s32 gosub_handle_input(void)
     }
 
     steps_remaining = 1;
-    if (g_pad_input & 8)
+    if (g_pad_input & GOSUB_BUTTON_PAGE_DOWN)
     {
         steps_remaining = g_gosub_visible_row_count;
-        g_pad_input = 0x4000;
+        g_pad_input = PAD_BTN_DOWN;
     }
-    if (g_pad_input & 4)
+    if (g_pad_input & GOSUB_BUTTON_PAGE_UP)
     {
         steps_remaining = g_gosub_visible_row_count;
-        g_pad_input = 0x1000;
+        g_pad_input = PAD_BTN_UP;
     }
 
     if (steps_remaining != 0)
     {
         do
         {
-            if (g_pad_input & 0x1000)
+            if (g_pad_input & PAD_BTN_UP)
             {
                 g_gosub_cursor_row -= 1;
                 if (g_gosub_cursor_row == 0)
@@ -159,7 +157,7 @@ s32 gosub_handle_input(void)
                     steps_remaining = 1;
                 }
             }
-            if (g_pad_input & 0x4000)
+            if (g_pad_input & PAD_BTN_DOWN)
             {
                 g_gosub_cursor_row += 1;
                 if (g_gosub_cursor_row == g_gosub_row_count - 1)
@@ -176,17 +174,17 @@ s32 gosub_handle_input(void)
         } while (steps_remaining != 0);
     }
 
-    if (g_pad_input & 0x5000)
+    if (g_pad_input & (PAD_BTN_UP | PAD_BTN_DOWN))
     {
-        func_800A3938(0x7D, 0x80);
+        play_menu_sfx(GOSUB_SFX_CURSOR, GOSUB_SFX_VOLUME);
         gosub_scroll_to_cursor();
         return;
     }
 
-    if (g_pad_input & 0x220)
+    if (g_pad_input & GOSUB_BUTTONS_CONFIRM)
     {
-        func_800A3938(0x7D, 0x80);
-        if ((g_gosub_rows[g_gosub_cursor_row].text_color & 0xF) != 4)
+        play_menu_sfx(GOSUB_SFX_CURSOR, GOSUB_SFX_VOLUME);
+        if (g_gosub_rows[g_gosub_cursor_row].text_color != GOSUB_TEXT_COLOR_NORMAL)
         {
             return;
         }
@@ -204,8 +202,8 @@ s32 gosub_handle_input(void)
                 {
                     return;
                 }
-                func_80067F28();
-                gosub_start_element_exit();
+                field_restore_fade_target();
+                gosub_close_elements();
                 return;
             }
             if (g_gosub_selection_count != g_gosub_required_selection_count)
@@ -224,8 +222,8 @@ s32 gosub_handle_input(void)
             {
                 return;
             }
-            func_80067F28();
-            gosub_start_element_exit();
+            field_restore_fade_target();
+            gosub_close_elements();
             return;
         }
         if (g_gosub_select_handler == 0)
@@ -240,14 +238,14 @@ s32 gosub_handle_input(void)
         {
             return;
         }
-        func_80067F28();
-        gosub_start_element_exit();
+        field_restore_fade_target();
+        gosub_close_elements();
         return;
     }
 
-    if (g_pad_input & 0x800)
+    if (g_pad_input & GOSUB_BUTTON_FINISH)
     {
-        func_800A3938(0x7D, 0x80);
+        play_menu_sfx(GOSUB_SFX_CURSOR, GOSUB_SFX_VOLUME);
         if (g_gosub_finish_handler != 0)
         {
             if (g_gosub_finish_handler() == 0)
@@ -258,25 +256,25 @@ s32 gosub_handle_input(void)
             {
                 return;
             }
-            func_80067F28();
-            gosub_start_element_exit();
+            field_restore_fade_target();
+            gosub_close_elements();
             return;
         }
         if (gosub_advance_screen_sequence() == 0)
         {
             return;
         }
-        func_80067F28();
-        gosub_start_element_exit();
+        field_restore_fade_target();
+        gosub_close_elements();
         return;
     }
 
-    if ((g_pad_input & 0x40) == 0)
+    if ((g_pad_input & GOSUB_BUTTON_CANCEL) == 0)
     {
         return;
     }
 
-    func_800A3938(0x7F, 0x80);
+    play_menu_sfx(GOSUB_SFX_CANCEL, GOSUB_SFX_VOLUME);
 
     if (g_gosub_selection_count != 0)
     {
@@ -313,8 +311,8 @@ s32 gosub_handle_input(void)
     }
 
     g_gosub_result_count = 0;
-    func_80067F28();
-    gosub_start_element_exit();
+    field_restore_fade_target();
+    gosub_close_elements();
 }
 
 /**
@@ -331,14 +329,14 @@ void gosub_scroll_to_cursor(void)
 
     if ((g_gosub_window_height - g_gosub_row_height) < cursor_offset)
     {
-        g_gosub_scroll_frames_remaining = 4;
+        g_gosub_scroll_frames_remaining = GOSUB_SCROLL_FRAMES;
         g_gosub_scroll_target_y = (g_gosub_cursor_row - (g_gosub_visible_row_count - 1)) * g_gosub_row_height;
     }
 
     if (cursor_offset < 0)
     {
         g_gosub_scroll_target_y = cursor_y;
-        g_gosub_scroll_frames_remaining = 4;
+        g_gosub_scroll_frames_remaining = GOSUB_SCROLL_FRAMES;
     }
 }
 
@@ -380,8 +378,6 @@ s32 gosub_toggle_cursor_selection(void)
  */
 s32 gosub_advance_screen_sequence(void)
 {
-    GosubElement* element;
-
     g_gosub_screen_sequence_index += 1;
 
     if (g_gosub_screen_sequence[g_gosub_screen_sequence_index] == GOSUB_SCREEN_SEQUENCE_END)
@@ -391,16 +387,7 @@ s32 gosub_advance_screen_sequence(void)
 
     if (g_gosub_screen_sequence[g_gosub_screen_sequence_index] == GOSUB_SCREEN_SEQUENCE_DIALOG)
     {
-        element = &g_gosub_elements[0];
-        element->draw_handler = (void*)&gosub_draw_confirmation_prompt;
-        g_gosub_dialog_choice = 0;
-        element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
-        element->attr.f.transition_step = 1;
-        element->attr.f.x = 0x20;
-        element->attr.f.y = 0x70;
-        element->geometry.f.width_high = 1;
-        element->geometry.f.height = 0x24;
-        SET_ELEMENT_WIDTH_LOW(element, 0);
+        gosub_open_confirmation_dialog();
     }
     else
     {
@@ -421,7 +408,6 @@ s32 gosub_are_elements_idle(void)
     s32 i;
 
     element = g_gosub_elements;
-
     for (i = 0; i < GOSUB_ELEMENT_COUNT; i++)
     {
         if (element->attr.f.state == GOSUB_ELEMENT_STATE_ENTERING || element->attr.f.state == GOSUB_ELEMENT_STATE_EXITING)

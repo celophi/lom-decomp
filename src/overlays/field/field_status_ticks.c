@@ -130,7 +130,7 @@ void field_rebuild_equipment_status_flags(FieldStatusRecord* record)
     for (i = 0; i < FIELD_EQUIPMENT_SLOT_COUNT; i++)
     {
         item = &g_field_game_state->characters[record->meta.bytes.id].equipment[i];
-        if (item->kind != 0)
+        if (item->name[0] != 0)
         {
             record->status_flags |= g_field_equipment_status_flags[item->effect_index];
         }

@@ -3,6 +3,13 @@
 
 #include "common.h"
 
+/** @brief FIELD UI string table indexes (entry N is at 0x800EC3C4 + N * 2). */
+#define FIELD_UI_TEXT_PLUS 11
+#define FIELD_UI_TEXT_SPACE 15
+#define FIELD_UI_TEXT_ATTACK_POWER 21
+#define FIELD_UI_TEXT_TOTAL_DEFENSE 22
+#define FIELD_UI_TEXT_POWER 23
+
 /**
  * @brief Address of FIELD UI string @p index, given its two-byte offset entry @p entry.
  *

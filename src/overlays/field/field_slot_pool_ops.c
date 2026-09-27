@@ -19,11 +19,11 @@
 /** @brief Slot values at or above this have no slot script. */
 #define FIELD_SLOT_SCRIPT_LIMIT 0xA0
 
-/** @brief Pool cost JP checks before setting a staged flags2C/flags2D bit. */
+/** @brief Pool cost JP checks before setting a staged power or element flag. */
 #define FIELD_STAGED_FLAG_COST 0x10
 
-/** @brief Pool price JP deducts for each flags2C bit it sets. */
-#define FIELD_STAGED_FLAG2C_PRICE 8
+/** @brief Pool price JP deducts for each power flag it sets. */
+#define FIELD_STAGED_POWER_FLAG_PRICE 8
 
 /** @brief Slot whose values may be pinned by the staging flags. */
 #define FIELD_PINNED_SLOT 4
@@ -33,8 +33,6 @@
 #define STAGED_STAT_LIMITS_MASK 0xF0
 #define STAGED_STAT_LIMITS_SHIFT 4
 
-extern FieldItemStaging* D_80123FC4;
-extern FieldItemTables* D_80123FC0;
 extern s8 D_800F0C38[];
 /** @brief Lowest and highest modifier index a stat may have, per limits row. */
 extern u8 g_field_stat_modifier_limits[][2];
@@ -43,8 +41,8 @@ void field_script_run(FieldScriptContext* context);
 
 static s32 field_shift_slot_chain(s32 slot);
 static void field_clamp_staged_stats(void);
-static void field_apply_flags2c_mask(void);
-static void field_apply_flags2d_mask(void);
+static void field_apply_power_flags(void);
+static void field_apply_element_flags(void);
 
 /**
  * @brief Queue a script from the item generation table on the active script context.
@@ -66,7 +64,7 @@ void field_run_item_script(s32 offset)
         g_field_script->active_record = depth + 1;
     }
     context = g_field_script;
-    FIELD_SCRIPT_RECORD_STATE(context->active_record)->pc = D_80123FC0->bytes + (offset & 0xFFFF);
+    FIELD_SCRIPT_RECORD_STATE(context->active_record)->pc = g_field_item_tables->bytes + (offset & 0xFFFF);
     FIELD_SCRIPT_RECORD_STATE(context->active_record)->wait.bits.resume = 0;
     FIELD_SCRIPT_RECORD_STATE(context->active_record)->wait.bits.frames = 0;
     field_write_script_var(context->status.owner_id, FIELD_VAR_EVENT_ARGUMENT << 16, 0);
@@ -81,24 +79,24 @@ void field_run_slot_scripts(void)
     s32 slot;
 
     field_shift_slot_chain(0);
-    if (D_80123FC4->slots[5] < FIELD_SLOT_SCRIPT_LIMIT)
+    if (g_field_item_staging->slots[5] < FIELD_SLOT_SCRIPT_LIMIT)
     {
-        field_run_item_script(D_80123FC0->item.slot_values[D_80123FC4->slots[5]].scripts[3]);
+        field_run_item_script(g_field_item_tables->item.slot_values[g_field_item_staging->slots[5]].scripts[3]);
     }
     for (slot = 4; slot >= 3; slot--)
     {
-        if (D_80123FC4->slots[slot] < FIELD_SLOT_SCRIPT_LIMIT)
+        if (g_field_item_staging->slots[slot] < FIELD_SLOT_SCRIPT_LIMIT)
         {
-            field_run_item_script(D_80123FC0->item.slot_values[D_80123FC4->slots[slot]].scripts[2]);
+            field_run_item_script(g_field_item_tables->item.slot_values[g_field_item_staging->slots[slot]].scripts[2]);
         }
     }
-    if (D_80123FC4->slots[2] < FIELD_SLOT_SCRIPT_LIMIT)
+    if (g_field_item_staging->slots[2] < FIELD_SLOT_SCRIPT_LIMIT)
     {
-        field_run_item_script(D_80123FC0->item.slot_values[D_80123FC4->slots[2]].scripts[1]);
+        field_run_item_script(g_field_item_tables->item.slot_values[g_field_item_staging->slots[2]].scripts[1]);
     }
-    if (D_80123FC4->slots[1] < FIELD_SLOT_SCRIPT_LIMIT)
+    if (g_field_item_staging->slots[1] < FIELD_SLOT_SCRIPT_LIMIT)
     {
-        field_run_item_script(D_80123FC0->item.slot_values[D_80123FC4->slots[1]].scripts[0]);
+        field_run_item_script(g_field_item_tables->item.slot_values[g_field_item_staging->slots[1]].scripts[0]);
     }
 }
 
@@ -115,18 +113,18 @@ static s32 field_shift_slot_chain(s32 slot)
 {
     s32 next;
 
-    if (D_80123FC4->slots[slot] == FIELD_STAGING_SLOT_EMPTY)
+    if (g_field_item_staging->slots[slot] == FIELD_STAGING_SLOT_EMPTY)
     {
         return -1;
     }
 
     if (slot == FIELD_PINNED_SLOT)
     {
-        if (FIELD_SLOT_IS_HIGH_CLASS(D_80123FC4->slots[FIELD_PINNED_SLOT]) && !D_80123FC4->flags.bits.release_high_slot)
+        if (FIELD_SLOT_IS_HIGH_CLASS(g_field_item_staging->slots[FIELD_PINNED_SLOT]) && !g_field_item_staging->flags.bits.release_high_slot)
         {
             return 0;
         }
-        if (FIELD_SLOT_IS_LOW_CLASS(D_80123FC4->slots[slot]) && D_80123FC4->flags.bits.keep_low_slot)
+        if (FIELD_SLOT_IS_LOW_CLASS(g_field_item_staging->slots[slot]) && g_field_item_staging->flags.bits.keep_low_slot)
         {
             return 0;
         }
@@ -135,16 +133,16 @@ static s32 field_shift_slot_chain(s32 slot)
     next = slot + 1;
     if (field_shift_slot_chain(next) != 0)
     {
-        D_80123FC4->slots[next] = D_80123FC4->slots[slot];
-        D_80123FC4->slots[slot] = FIELD_STAGING_SLOT_EMPTY;
+        g_field_item_staging->slots[next] = g_field_item_staging->slots[slot];
+        g_field_item_staging->slots[slot] = FIELD_STAGING_SLOT_EMPTY;
         return -1;
     }
 
-    if (FIELD_SLOT_IS_HIGH_CLASS(D_80123FC4->slots[slot]) && !D_80123FC4->flags.bits.release_high_slot)
+    if (FIELD_SLOT_IS_HIGH_CLASS(g_field_item_staging->slots[slot]) && !g_field_item_staging->flags.bits.release_high_slot)
     {
         return 0;
     }
-    if (FIELD_SLOT_IS_LOW_CLASS(D_80123FC4->slots[slot]) && D_80123FC4->flags.bits.keep_low_slot)
+    if (FIELD_SLOT_IS_LOW_CLASS(g_field_item_staging->slots[slot]) && g_field_item_staging->flags.bits.keep_low_slot)
     {
         return 0;
     }
@@ -167,9 +165,9 @@ s32 field_replace_slot_value(s32 cost, s32 value, s32 replacement)
     {
         for (slot = 4; slot >= 2; slot--)
         {
-            if (D_80123FC4->slots[slot] == value)
+            if (g_field_item_staging->slots[slot] == value)
             {
-                D_80123FC4->slots[slot] = replacement;
+                g_field_item_staging->slots[slot] = replacement;
                 return slot;
             }
         }
@@ -187,8 +185,8 @@ void field_finish_staged_item(void)
 #if defined(VERSION_JP)
     field_apply_pending_levels();
 #endif
-    field_apply_flags2c_mask();
-    field_apply_flags2d_mask();
+    field_apply_power_flags();
+    field_apply_element_flags();
     field_clamp_staged_stats();
 }
 
@@ -202,21 +200,18 @@ void field_finish_staged_item(void)
 static void field_clamp_staged_stats(void)
 {
     s32 i;
-    s32 modifier;
-    s32 base_modifier;
-    s32 own_modifier;
-    s32 maximum;
-    u8 result;
-    s8* modifier_values;
-    u8* limits;
-    FieldItemStaging* entry;
 
     for (i = 0; i < FIELD_STAGING_STAT_COUNT; i++)
     {
-        /* set inside the loop: hoisting it changes the loop preheader order */
-        modifier_values = D_800F0C38;
-        base_modifier = D_80123FC4->base_stats[i];
-        own_modifier = D_80123FC4->stats.bytes[i] & STAGED_STAT_MODIFIER_MASK;
+        s8* modifier_values = D_800F0C38;
+        s32 base_modifier = g_field_item_staging->base_stats[i];
+        s32 own_modifier = g_field_item_staging->stats.bytes[i] & STAGED_STAT_MODIFIER_MASK;
+        s32 modifier;
+        FieldItemStaging* entry;
+        u8* limits;
+        s32 maximum;
+        u8 result;
+
         if (abs(modifier_values[own_modifier]) < abs(modifier_values[base_modifier]))
         {
             modifier = base_modifier;
@@ -226,8 +221,7 @@ static void field_clamp_staged_stats(void)
             modifier = own_modifier;
         }
 
-        /* the clamp works through a shifted view; indexing stats.bytes[i] again changes register use */
-        entry = FIELD_STAGING_AT(D_80123FC4, i);
+        entry = FIELD_STAGING_AT(g_field_item_staging, i);
         limits = g_field_stat_modifier_limits[entry->stats.bytes[0] >> STAGED_STAT_LIMITS_SHIFT];
         result = limits[0];
         if (modifier >= result)
@@ -252,10 +246,10 @@ void field_apply_pending_levels(void)
 
     for (i = 0; i < FIELD_STAGING_LEVEL_COUNT; i++)
     {
-        while (D_80123FC4->pending_levels[i] != 0)
+        while (g_field_item_staging->pending_levels[i] != 0)
         {
             field_raise_staged_level(i);
-            D_80123FC4->pending_levels[i]--;
+            g_field_item_staging->pending_levels[i]--;
         }
     }
 }
@@ -278,7 +272,7 @@ void field_raise_staged_level(s32 index)
 
     /* price first holds the entry's byte offset; the original reuses the variable */
     price = index * sizeof(FieldStagingLevel);
-    staging = D_80123FC4;
+    staging = g_field_item_staging;
     entry = FIELD_STAGING_AT(staging, price);
     price = 1;
     if (entry->levels[0].cost != 0)
@@ -301,11 +295,11 @@ void field_raise_staged_level(s32 index)
 }
 
 /**
- * @brief Set the flags2C bits whose mask bit is set and whose level is nonzero.
- * @note JP sets only bits not set yet, and each costs FIELD_STAGED_FLAG2C_PRICE
+ * @brief Set the power flags whose mask bit is set and whose level is nonzero.
+ * @note JP sets only bits not set yet, and each costs FIELD_STAGED_POWER_FLAG_PRICE
  *       from the pool (after a FIELD_STAGED_FLAG_COST check).
  */
-static void field_apply_flags2c_mask(void)
+static void field_apply_power_flags(void)
 {
     s32 mask;
     s32 i;
@@ -313,40 +307,41 @@ static void field_apply_flags2c_mask(void)
     for (i = 0, mask = 1; i < FIELD_STAGING_LEVEL_COUNT; i++, mask <<= 1)
     {
 #if defined(VERSION_JP)
-        if ((mask & D_80123FC4->flags2C_mask) && !(mask & D_80123FC4->flags2C) && field_can_pay_staged_cost(FIELD_STAGED_FLAG_COST) &&
-            D_80123FC4->pool >= FIELD_STAGED_FLAG2C_PRICE && D_80123FC4->levels[i].level != 0)
+        if ((mask & g_field_item_staging->power_flag_mask) && !(mask & g_field_item_staging->power_flags) &&
+            field_can_pay_staged_cost(FIELD_STAGED_FLAG_COST) && g_field_item_staging->pool >= FIELD_STAGED_POWER_FLAG_PRICE &&
+            g_field_item_staging->levels[i].level != 0)
         {
-            D_80123FC4->pool -= FIELD_STAGED_FLAG2C_PRICE;
-            D_80123FC4->flags2C |= mask;
+            g_field_item_staging->pool -= FIELD_STAGED_POWER_FLAG_PRICE;
+            g_field_item_staging->power_flags |= mask;
         }
 #else
-        if ((mask & D_80123FC4->flags2C_mask) && D_80123FC4->levels[i].level != 0)
+        if ((mask & g_field_item_staging->power_flag_mask) && g_field_item_staging->levels[i].level != 0)
         {
-            D_80123FC4->flags2C |= mask;
+            g_field_item_staging->power_flags |= mask;
         }
 #endif
     }
 }
 
 /**
- * @brief Rebuild flags2D from the bits of flags2D_mask.
+ * @brief Rebuild the element flags from the bits of element_flag_mask.
  * @note JP sets a bit only when the pool can pay FIELD_STAGED_FLAG_COST.
  */
-static void field_apply_flags2d_mask(void)
+static void field_apply_element_flags(void)
 {
     s32 mask;
     s32 i;
 
-    D_80123FC4->flags2D = 0;
+    g_field_item_staging->element_flags = 0;
     for (i = 0, mask = 1; i < 8; i++, mask <<= 1)
     {
 #if defined(VERSION_JP)
-        if ((D_80123FC4->flags2D_mask & mask) && field_can_pay_staged_cost(FIELD_STAGED_FLAG_COST))
+        if ((g_field_item_staging->element_flag_mask & mask) && field_can_pay_staged_cost(FIELD_STAGED_FLAG_COST))
 #else
-        if (D_80123FC4->flags2D_mask & mask)
+        if (g_field_item_staging->element_flag_mask & mask)
 #endif
         {
-            D_80123FC4->flags2D |= mask;
+            g_field_item_staging->element_flags |= mask;
         }
     }
 }
@@ -359,11 +354,11 @@ void field_lower_staged_level(s32 index)
 {
     u8 level;
 
-    level = D_80123FC4->levels[index].level;
+    level = g_field_item_staging->levels[index].level;
     if (level != 0)
     {
-        D_80123FC4->levels[index].level = level - 1;
-        D_80123FC4->pool += D_80123FC4->levels[index].cost << D_80123FC4->levels[index].level;
+        g_field_item_staging->levels[index].level = level - 1;
+        g_field_item_staging->pool += g_field_item_staging->levels[index].cost << g_field_item_staging->levels[index].level;
     }
 }
 
@@ -376,7 +371,7 @@ s32 field_can_pay_staged_cost(s32 cost)
 {
     FieldItemStaging* staging;
 
-    staging = D_80123FC4;
+    staging = g_field_item_staging;
     if (staging->flags.bits.slot_class == 0)
     {
         cost = 0;

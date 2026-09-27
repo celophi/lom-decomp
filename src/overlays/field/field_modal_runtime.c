@@ -262,7 +262,7 @@ extern s32 g_field_scene_mode_bit;
 /* Modal overlays. */
 extern s32 g_field_modal_state;
 extern s32 g_field_gosub_phase;
-extern s32 D_801227F0;
+extern s32 g_field_gosub_state;
 extern s32 g_field_shop_active;
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values;
@@ -725,12 +725,12 @@ void field_compact_inventory(void)
     read_record = write_record;
     do
     {
-        if (read_record->kind != 0)
+        if (read_record->name[0] != 0)
         {
             if (read_record != write_record)
             {
                 bcopy(read_record, write_record, sizeof(*read_record));
-                read_record->kind = 0;
+                read_record->name[0] = 0;
             }
             write_record++;
         }
@@ -739,7 +739,7 @@ void field_compact_inventory(void)
     } while (record_index < FIELD_ITEM_COUNT);
     while (write_record < &g_pad_ctx->items[FIELD_ITEM_COUNT])
     {
-        write_record->kind = 0;
+        write_record->name[0] = 0;
         write_record++;
     }
 }
@@ -756,7 +756,7 @@ FieldItemRecord* field_find_free_inventory_record(void)
     record = g_pad_ctx->items;
     for (record_index = 0; record_index < FIELD_ITEM_COUNT; record_index++)
     {
-        if (record->kind == 0)
+        if (record->name[0] == 0)
         {
             return record;
         }
@@ -1797,7 +1797,7 @@ void field_rebuild_party_actions(s32 refresh_only)
                 do
                 {
                     equipment = (FieldGameState*)((u8*)g_pad_ctx + equipment_offset);
-                    if (equipment->characters[0].equipment[0].kind != 0)
+                    if (equipment->characters[0].equipment[0].name[0] != 0)
                     {
                         equipment_info = equipment->characters[0].equipment[0].info.word;
                         if ((FIELD_ITEM_CATEGORY(equipment_info) == FIELD_ITEM_CATEGORY_ARMOR) && !FIELD_ITEM_TYPE(equipment_info))
@@ -1963,7 +1963,7 @@ void field_open_gosub_screen_sequence(void* screen_sequence)
 {
     if (g_field_modal_state == FIELD_MODAL_NONE)
     {
-        D_801227F0 = 1;
+        g_field_gosub_state = 1;
         g_gosub_result_count = 0;
         field_reset_actor_resources();
         cdrom_stream(CD_RES_GOSUB_BIN, FIELD_SUBOVERLAY_ADDRESS);
@@ -1989,7 +1989,7 @@ void field_open_shop_mode_0(s32 shop_options)
         count = 0;
         for (i = 0; i < FIELD_ITEM_COUNT; i++)
         {
-            if (g_pad_ctx->items[0].kind != 0)
+            if (g_pad_ctx->items[0].name[0] != 0)
             {
                 count++;
                 break;
@@ -2077,7 +2077,7 @@ void field_update_modal(FieldRenderHalf* render)
             {
                 DrawSync(0);
                 field_text_reset_windows();
-                D_801227F0 = 2;
+                g_field_gosub_state = 2;
                 g_field_modal_state = FIELD_MODAL_NONE;
                 g_field_gosub_phase = FIELD_GOSUB_IDLE;
                 return;
@@ -2113,7 +2113,7 @@ void field_update_modal(FieldRenderHalf* render)
                 break;
             }
             g_gosub_result_count = 1;
-            D_801227F0 = 2;
+            g_field_gosub_state = 2;
             g_field_card_overlay_mode = 0;
             g_field_modal_state = FIELD_MODAL_NONE;
             return;

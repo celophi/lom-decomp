@@ -290,7 +290,7 @@ void func_800C1E08(void)
  * @param resource_id Resource id to look for.
  * @return The record, or NULL after reporting the failed lookup.
  */
-u16* func_800C1E40(s32 resource_id)
+u16* field_find_resource(s32 resource_id)
 {
     u32* base;
     u16* record;

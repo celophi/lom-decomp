@@ -157,7 +157,7 @@
 #define FIELD_CURSOR_SLOT_TABLE 0x1D  /**< Small history index shown in each cursor slot. */
 
 /** @brief Text resource @p id. */
-#define FIELD_TEXT_RESOURCE(id) ((FieldTextResource*)func_800C1E40(id))
+#define FIELD_TEXT_RESOURCE(id) ((FieldTextResource*)field_find_resource(id))
 
 /** @brief Offset of text @p index in text resource @p id; reads the resource twice. */
 #define FIELD_TEXT_OFFSET(id, index) (FIELD_TEXT_RESOURCE(id)->texts[(index) * 2] + (FIELD_TEXT_RESOURCE(id)->texts[(index) * 2 + 1] << 8))
@@ -431,7 +431,7 @@ typedef struct
 } FieldElementTable;
 
 /**
- * @brief A text resource (func_800C1E40): a 4-byte header, then the texts.
+ * @brief A text resource (field_find_resource): a 4-byte header, then the texts.
  * @note The texts start with a table of little-endian 16-bit offsets, one per
  *       text, relative to the start of the texts.
  */
@@ -470,7 +470,7 @@ extern FieldGosubSequence D_80051EB4;
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
 extern void (*g_field_menu_ops[])(s32 arg0);
-extern s32 D_801227F0;
+extern s32 g_field_gosub_state;
 extern FieldGosubSequence D_800F19AC;
 extern FieldGosubSequence D_800F19B8;
 extern FieldGosubSequence D_800F19C4;
@@ -478,7 +478,7 @@ extern FieldPaletteSlotTable D_80051CBC;
 extern FieldGosubSequence D_800F19CC;
 extern FieldLogicClassTable D_80051CE4;
 extern FieldLogicClassTable D_80051DCC;
-u8* func_800C1E40(s32 arg0);
+u8* field_find_resource(s32 arg0);
 extern FieldGosubSequence D_80051EC0;
 extern FieldGosubSequence D_80051ECC;
 extern u8 D_800F0E98[];
@@ -542,7 +542,7 @@ void field_menu_classify_golem_slot(void)
  */
 void field_menu_clear_gosub_request(void)
 {
-    D_801227F0 = 0;
+    g_field_gosub_state = 0;
 }
 
 /**
@@ -623,7 +623,7 @@ void field_menu_create_golem(void)
         {
             field_copy_inventory_record(&FIELD_PAD.large_history_records[FIELD_PAD.large_history_order[D_80122C00.golem.slot]].unknown_0x4C[i << 6],
                                         (u8*)&FIELD_PAD.inventory[g_gosub_result_values[i]]);
-            FIELD_PAD.inventory[g_gosub_result_values[i]].active = 0;
+            FIELD_PAD.inventory[g_gosub_result_values[i]].name[0] = 0;
         }
         field_compact_inventory();
         for (i = g_gosub_result_count; i < 4; i++)
@@ -1002,7 +1002,7 @@ void field_menu_count_missing_inventory_space(void)
     free_count = 0;
     for (i = 0; i < INVENTORY_RECORD_COUNT; i++)
     {
-        if (FIELD_PAD.inventory[i].active == 0)
+        if (FIELD_PAD.inventory[i].name[0] == 0)
         {
             free_count++;
         }
@@ -1298,7 +1298,7 @@ void field_menu_count_inventory_kind(void)
     count = 0;
     for (i = 0; i < INVENTORY_RECORD_COUNT; i++)
     {
-        if (FIELD_PAD.inventory[i].active != 0)
+        if (FIELD_PAD.inventory[i].name[0] != 0)
         {
             if (((FIELD_PAD.inventory[i].attributes.packed >> 8) & 3) == kind)
             {
@@ -1547,12 +1547,12 @@ void field_menu_lookup_object_value(void)
     {
         if (FIELD_MENU_OBJECT->variant == 0)
         {
-            resource = func_800C1E40(0x102);
+            resource = field_find_resource(0x102);
             offset = object_id * 4;
         }
         else
         {
-            resource = func_800C1E40(0x102);
+            resource = field_find_resource(0x102);
             offset = object_id * 4;
             offset = offset | 2;
         }
@@ -1675,7 +1675,7 @@ void field_menu_store_gosub_result(void)
 {
     s32 index;
 
-    D_801227F0 = 0;
+    g_field_gosub_state = 0;
     index = g_gosub_result_values[0];
     FIELD_MENU_RESULT->index = index;
     FIELD_MENU_RESULT->count = g_gosub_result_count;
@@ -3317,8 +3317,8 @@ void field_menu_copy_resource_item(void)
     if (field_find_free_inventory_record() != 0)
     {
         free_record = field_find_free_inventory_record();
-        field_copy_inventory_record(free_record, func_800C1E40(FIELD_ITEM_RECORD_RESOURCE) + (offset = FIELD_RESOURCE_RECORD_OFFSET(index)));
-        field_set_text_macro(0, func_800C1E40(FIELD_ITEM_RECORD_RESOURCE) + offset, 0xFF);
+        field_copy_inventory_record(free_record, field_find_resource(FIELD_ITEM_RECORD_RESOURCE) + (offset = FIELD_RESOURCE_RECORD_OFFSET(index)));
+        field_set_text_macro(0, field_find_resource(FIELD_ITEM_RECORD_RESOURCE) + offset, 0xFF);
     }
 }
 

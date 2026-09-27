@@ -107,7 +107,7 @@ static u8* shop_build_sell_list(u8* work_end)
     record = g_pad_ctx->inventory;
     for (count = 0; count < INVENTORY_RECORD_COUNT; count++, record++)
     {
-        if (record->active == 0)
+        if (record->name[0] == 0)
         {
             break;
         }

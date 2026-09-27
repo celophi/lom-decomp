@@ -340,11 +340,6 @@ make diff-text
 - 内容を理解できたバイナリ形式は、バイト単位で正確なextractor / builderを使用できます。
 - 未解析のデータや創作性のあるデータは、名前を付けたローカルの `databin` / `rodatabin` アセットとして残し、`.incbin` で参照できます。
 
-詳細:
-
-- [`docs/handling-copyrighted-data.md`](docs/handling-copyrighted-data.md)
-- [`docs/asset-data-architecture.md`](docs/asset-data-architecture.md)
-
 ## バージョン構成
 
 1つのCソースツリーで、すべてのリージョン版をビルドします。特定のディスクに由来するものはバージョンごとのフォルダに置き、`make` のコマンドラインに `VERSION=<name>` を付けてビルドするバージョンを選びます。

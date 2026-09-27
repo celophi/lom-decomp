@@ -122,6 +122,13 @@ typedef struct
 #define INVENTORY_RECORD_COUNT 100
 #define ITEM_TYPE_COUNT 256
 
+/** @brief Item kind (bits 9:8) of a packed InventoryAttributes word: weapon, armor or instrument. */
+#define INVENTORY_KIND(packed) (((packed) >> 8) & 0x3)
+/** @brief Category (bits 15:10) of a packed InventoryAttributes word: the weapon, armor or instrument type. */
+#define INVENTORY_CATEGORY(packed) (((packed) >> 10) & 0x3F)
+/** @brief Mask of InventoryAttributes.halves.high selecting the material (an item name index). */
+#define INVENTORY_MATERIAL_MASK 0x3F
+
 /** @brief Packed item kind, category, and name index of an inventory record. */
 typedef union
 {
@@ -133,17 +140,19 @@ typedef union
     } halves;
 } InventoryAttributes;
 
+/** @brief Length of the encoded name at the start of an InventoryRecord. */
+#define INVENTORY_NAME_LENGTH 0x14
+
 /** @brief One 0x40-byte equipment/inventory record. */
 typedef struct
 {
-    u8 active; /**< Zero marks an empty slot. */
-    u8 unknown_0x01[0x13];
+    u8 name[INVENTORY_NAME_LENGTH]; /**< Encoded item name; an empty name marks a free slot. */
     InventoryAttributes attributes;
     u8 unknown_0x18[0xC];
     union
     {
-        u16 values[4]; /**< Equipment stats. */
-        u8 bytes[8];   /**< Byte view used by kinds that store small fields here. */
+        u16 values[4]; /**< Weapon power (values[0]) or the four armor stats. */
+        u8 bytes[8];   /**< Instrument: spell group, spell index within the group, power. */
     } stats;
     u8 unknown_0x2c[8];
     s32 price;

@@ -1,7 +1,12 @@
 /**
  * @file field_record_setup_ops.c
- * @brief Item creation and tempering: fill the staging block for a new or
+ * @brief Forge, workshop and tempering: fill the staging block for a new or
  *        existing item, run the generation scripts and write the result back.
+ *
+ * The GOSUB selection screens queue their choices in g_gosub_result_values:
+ * a weapon or armor is made from an item type and a material, an instrument
+ * from an instrument type, a material and a secondary material, and tempering
+ * takes an inventory index and a tempering item.
  */
 
 #include "common.h"
@@ -9,10 +14,10 @@
 #include "field_records.h"
 #include "field_script.h"
 
-/** @brief func_800C1E40 id of the weapon and armor generation table. */
+/** @brief field_find_resource id of the weapon and armor generation table. */
 #define FIELD_ITEM_TABLE 4
 
-/** @brief func_800C1E40 id of the instrument generation table. */
+/** @brief field_find_resource id of the instrument generation table. */
 #define FIELD_ITEM_GRID_TABLE 0xF
 
 /** @brief Script variable that receives the created item's inventory index. */
@@ -21,14 +26,11 @@
 /** @brief Inventory index reported when the inventory is full. */
 #define FIELD_ITEM_RESULT_FULL 0xFE
 
-/** @brief Inventory index reported when no gosub result was queued. */
+/** @brief Inventory index reported when the GOSUB screens were cancelled. */
 #define FIELD_ITEM_RESULT_NONE 0xFF
 
 /** @brief field_create_item_from_gosub kind that tempers an existing inventory item. */
 #define FIELD_CREATE_KIND_TEMPER 3
-
-/** @brief Command selector of a new weapon or armor: no tempering item. */
-#define FIELD_ITEM_COMMAND_NONE 0xFF
 
 /** @brief Default stat modifier index written to every staged stat. */
 #define FIELD_DEFAULT_STAT_MODIFIER 4
@@ -45,24 +47,22 @@
 /** @brief Largest row or column of the instrument grid. */
 #define FIELD_GRID_MAX 7
 
-extern s32 D_801227F0;
+extern s32 g_field_gosub_state;
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
 extern FieldGameState* g_field_game_state;
 extern FieldRuntimeContext* g_field_runtime;
-extern FieldItemStaging* D_80123FC4;
-extern FieldItemTables* D_80123FC0;
 
 FieldItemRecord* field_find_free_inventory_record(void);
-s32* func_800C1EC8(s32* src, s32* dest, s32 size);
-void* func_800C1E40(s32 table_id);
+s32* field_copy_words(s32* src, s32* dest, s32 size);
+void* field_find_resource(s32 table_id);
 
-static void field_create_instrument_item(FieldItemRecord* record, s32 category, s32 item_type, s32 row, s32 command_index);
+static void field_create_instrument_item(FieldItemRecord* record, s32 category, s32 item_type, s32 material, s32 secondary_item);
 static void field_generate_staged_item(void);
-static void field_load_staged_subtype(void);
+static void field_load_staged_material(void);
 
 /**
- * @brief Create or temper an item from the queued gosub results.
+ * @brief Create or temper an item from the queued GOSUB results.
  *
  * FIELD_ITEM_CATEGORY_INSTRUMENT creates an instrument,
  * FIELD_CREATE_KIND_TEMPER tempers the inventory item named by the first
@@ -76,8 +76,8 @@ void field_create_item_from_gosub(s32 kind)
 {
     FieldItemRecord* record;
 
-    D_801227F0 = 0;
-    func_800C1EC8(NULL, (s32*)D_80123FC4, sizeof(FieldItemStaging));
+    g_field_gosub_state = 0;
+    field_copy_words(NULL, (s32*)g_field_item_staging, sizeof(FieldItemStaging));
 
     if (g_gosub_result_count != 0)
     {
@@ -121,96 +121,101 @@ void field_create_item_from_gosub(s32 kind)
 }
 
 /**
- * @brief Create a new weapon or armor, consuming one of its material item, and generate it.
+ * @brief Create a new weapon or armor, consuming one of its material, and generate it.
  * @param record Item record that receives the item.
  * @param category FIELD_ITEM_CATEGORY_WEAPON or FIELD_ITEM_CATEGORY_ARMOR.
- * @param item_type Item type.
- * @param item_subtype Item subtype; also the item kind of the material consumed.
+ * @param item_type Weapon or armor type.
+ * @param material Material item kind; one is consumed.
  */
-void field_create_equipment_item(FieldItemRecord* record, s32 category, s32 item_type, s32 item_subtype)
+void field_create_equipment_item(FieldItemRecord* record, s32 category, s32 item_type, s32 material)
 {
     s32 i;
 
-    field_consume_item(item_subtype);
+    field_consume_item(material);
 
-    D_80123FC4->record = record;
-    D_80123FC4->category = category;
-    D_80123FC4->item_type = item_type;
-    D_80123FC4->item_subtype = item_subtype;
-    D_80123FC4->command_index = FIELD_ITEM_COMMAND_NONE;
+    g_field_item_staging->record = record;
+    g_field_item_staging->category = category;
+    g_field_item_staging->item_type = item_type;
+    g_field_item_staging->material = material;
+    g_field_item_staging->secondary_item = FIELD_NO_SECONDARY_ITEM;
 
     for (i = 0; i < FIELD_STAGING_STAT_COUNT; i++)
     {
-        D_80123FC4->stats.bytes[i] = (D_80123FC4->stats.bytes[i] & FIELD_STAGING_BOUNDS_MASK) | FIELD_DEFAULT_STAT_MODIFIER;
-        D_80123FC4->base_stats[i] = FIELD_DEFAULT_STAT_MODIFIER;
+        g_field_item_staging->stats.bytes[i] = (g_field_item_staging->stats.bytes[i] & FIELD_STAGING_BOUNDS_MASK) | FIELD_DEFAULT_STAT_MODIFIER;
+        g_field_item_staging->base_stats[i] = FIELD_DEFAULT_STAT_MODIFIER;
     }
 
     for (i = 0; i < FIELD_STAGING_SLOT_COUNT; i++)
     {
-        D_80123FC4->slots[i] = FIELD_STAGING_SLOT_EMPTY;
+        g_field_item_staging->slots[i] = FIELD_STAGING_SLOT_EMPTY;
     }
 
-    D_80123FC4->properties[0] = D_80123FC4->item_type << 4;
-    D_80123FC4->properties[1] = (D_80123FC4->item_type << 4) + 0xC;
-    D_80123FC4->properties[2] = (D_80123FC4->item_type << 4) + 0xD;
-    D_80123FC4->properties[3] = (D_80123FC4->item_type << 4) + 0xE;
-    D_80123FC4->properties[4] = (D_80123FC4->item_type << 4) + 0xF;
-    D_80123FC4->properties[5] = 0xFF;
+    g_field_item_staging->properties[0] = g_field_item_staging->item_type << 4;
+    g_field_item_staging->properties[1] = (g_field_item_staging->item_type << 4) + 0xC;
+    g_field_item_staging->properties[2] = (g_field_item_staging->item_type << 4) + 0xD;
+    g_field_item_staging->properties[3] = (g_field_item_staging->item_type << 4) + 0xE;
+    g_field_item_staging->properties[4] = (g_field_item_staging->item_type << 4) + 0xF;
+    g_field_item_staging->properties[5] = 0xFF;
 
     field_generate_staged_item();
 }
 
 /**
- * @brief Create a new instrument, consuming its two ingredient items, and store its grid values.
+ * @brief Create a new instrument from a material and a secondary material, and pick its spell.
+ *
+ * The material and instrument type give the start cell and power; the
+ * secondary material's script moves the cell, which is clamped to the grid
+ * and selects the spell.
+ *
  * @param record Item record that receives the item.
  * @param category Item category (FIELD_ITEM_CATEGORY_INSTRUMENT).
- * @param item_type Item type.
- * @param row Row of the grid table pairs; also the item subtype and the first ingredient's item kind.
- * @param command_index Item kind of the second ingredient; selects the command script.
+ * @param item_type Instrument type.
+ * @param material Material item kind; one is consumed.
+ * @param secondary_item Secondary material item kind; one is consumed.
  */
-static void field_create_instrument_item(FieldItemRecord* record, s32 category, s32 item_type, s32 row, s32 command_index)
+static void field_create_instrument_item(FieldItemRecord* record, s32 category, s32 item_type, s32 material, s32 secondary_item)
 {
     FieldScriptContext* saved_script;
     s32 column;
     s32 grid_row;
     s32 i;
 
-    field_consume_item(row);
-    field_consume_item(command_index);
-    D_80123FC4->record = record;
-    D_80123FC4->category = category;
-    D_80123FC4->item_type = item_type;
-    D_80123FC4->item_subtype = row;
-    D_80123FC4->command_index = command_index;
+    field_consume_item(material);
+    field_consume_item(secondary_item);
+    g_field_item_staging->record = record;
+    g_field_item_staging->category = category;
+    g_field_item_staging->item_type = item_type;
+    g_field_item_staging->material = material;
+    g_field_item_staging->secondary_item = secondary_item;
 
     for (i = 0; i < FIELD_STAGING_STAT_COUNT; i++)
     {
-        D_80123FC4->stats.bytes[i] = (D_80123FC4->stats.bytes[i] & FIELD_STAGING_BOUNDS_MASK) | FIELD_DEFAULT_STAT_MODIFIER;
+        g_field_item_staging->stats.bytes[i] = (g_field_item_staging->stats.bytes[i] & FIELD_STAGING_BOUNDS_MASK) | FIELD_DEFAULT_STAT_MODIFIER;
     }
     for (i = 0; i < FIELD_STAGING_SLOT_COUNT; i++)
     {
-        D_80123FC4->slots[i] = FIELD_STAGING_SLOT_EMPTY;
+        g_field_item_staging->slots[i] = FIELD_STAGING_SLOT_EMPTY;
     }
 
-    D_80123FC0 = func_800C1E40(FIELD_ITEM_GRID_TABLE);
-    D_80123FC4->properties[1] = D_80123FC0->grid.pairs[row][item_type][0] & 7;
-    D_80123FC4->properties[2] = D_80123FC0->grid.pairs[row][item_type][0] >> 3;
-    D_80123FC4->properties[3] = D_80123FC0->grid.pairs[row][item_type][1];
+    g_field_item_tables = field_find_resource(FIELD_ITEM_GRID_TABLE);
+    g_field_item_staging->properties[1] = g_field_item_tables->grid.pairs[material][item_type][0] & 7;
+    g_field_item_staging->properties[2] = g_field_item_tables->grid.pairs[material][item_type][0] >> 3;
+    g_field_item_staging->properties[3] = g_field_item_tables->grid.pairs[material][item_type][1];
 
     saved_script = g_field_script;
     g_field_script = (FieldScriptContext*)&g_field_runtime->events[0].script;
-    field_run_item_script(D_80123FC0->grid.commands[command_index - FIELD_STAGING_COMMAND_BASE]);
+    field_run_item_script(g_field_item_tables->grid.secondary_scripts[secondary_item - FIELD_SECONDARY_ITEM_FIRST]);
     g_field_script = saved_script;
     field_write_staged_item();
 
-    record->derived.bytes[0] = D_80123FC4->properties[0];
+    record->derived.instrument.spirit = g_field_item_staging->properties[0];
 
-    if ((s8)D_80123FC4->properties[1] >= 0)
+    if ((s8)g_field_item_staging->properties[1] >= 0)
     {
         column = FIELD_GRID_MAX;
-        if (D_80123FC4->properties[1] <= FIELD_GRID_MAX)
+        if (g_field_item_staging->properties[1] <= FIELD_GRID_MAX)
         {
-            column = D_80123FC4->properties[1];
+            column = g_field_item_staging->properties[1];
         }
     }
     else
@@ -218,12 +223,12 @@ static void field_create_instrument_item(FieldItemRecord* record, s32 category, 
         column = 0;
     }
 
-    if ((s8)D_80123FC4->properties[2] >= 0)
+    if ((s8)g_field_item_staging->properties[2] >= 0)
     {
         grid_row = FIELD_GRID_MAX;
-        if (D_80123FC4->properties[2] <= FIELD_GRID_MAX)
+        if (g_field_item_staging->properties[2] <= FIELD_GRID_MAX)
         {
-            grid_row = D_80123FC4->properties[2];
+            grid_row = g_field_item_staging->properties[2];
         }
     }
     else
@@ -231,77 +236,77 @@ static void field_create_instrument_item(FieldItemRecord* record, s32 category, 
         grid_row = 0;
     }
 
-    record->derived.bytes[1] = D_80123FC0->grid.grid[grid_row][column];
-    record->derived.bytes[2] = D_80123FC4->properties[3];
+    record->derived.instrument.spell = g_field_item_tables->grid.grid[grid_row][column];
+    record->derived.instrument.power = g_field_item_staging->properties[3];
 }
 
 /**
  * @brief Temper an existing weapon or armor with one more item and regenerate it.
  * @param record Item record to temper.
- * @param command_index Item kind of the tempering item; selects the command entry.
+ * @param secondary_item Tempering item kind; one is consumed.
  * @note JP changes this function; the JP build takes it from assembly.
  */
 #if defined(VERSION_JP)
 INCLUDE_ASM("overlays/field/nonmatchings/field_record_setup_ops", field_temper_item);
 #else
-void field_temper_item(FieldItemRecord* record, s32 command_index)
+void field_temper_item(FieldItemRecord* record, s32 secondary_item)
 {
     s32 i;
 
-    D_80123FC0 = func_800C1E40(FIELD_ITEM_TABLE);
-    field_consume_item(command_index);
+    g_field_item_tables = field_find_resource(FIELD_ITEM_TABLE);
+    field_consume_item(secondary_item);
 
-    D_80123FC4->record = record;
-    D_80123FC4->category = record->info.bits.category;
-    D_80123FC4->item_type = record->info.bits.item_type;
-    D_80123FC4->item_subtype = record->info.bits.item_subtype;
-    D_80123FC4->command_index = command_index;
-    D_80123FC4->pool += D_80123FC0->item.commands[command_index - FIELD_STAGING_COMMAND_BASE].pool_bonus;
+    g_field_item_staging->record = record;
+    g_field_item_staging->category = record->info.bits.category;
+    g_field_item_staging->item_type = record->info.bits.item_type;
+    g_field_item_staging->material = record->info.bits.material;
+    g_field_item_staging->secondary_item = secondary_item;
+    g_field_item_staging->pool += g_field_item_tables->item.secondary_items[secondary_item - FIELD_SECONDARY_ITEM_FIRST].pool_bonus;
 
-    D_80123FC4->levels[0].level = record->bonus_nibbles.bits.n0;
-    D_80123FC4->levels[1].level = record->bonus_nibbles.bits.n1;
-    D_80123FC4->levels[2].level = record->bonus_nibbles.bits.n2;
-    D_80123FC4->levels[3].level = record->bonus_nibbles.bits.n3;
-    D_80123FC4->levels[4].level = record->bonus_nibbles.bits.n4;
-    D_80123FC4->levels[5].level = record->bonus_nibbles.bits.n5;
-    D_80123FC4->levels[6].level = record->bonus_nibbles.bits.n6;
-    D_80123FC4->levels[7].level = record->bonus_nibbles.bits.n7;
-    D_80123FC4->effect_index = record->effect_index;
+    g_field_item_staging->levels[0].level = record->bonus_nibbles.bits.n0;
+    g_field_item_staging->levels[1].level = record->bonus_nibbles.bits.n1;
+    g_field_item_staging->levels[2].level = record->bonus_nibbles.bits.n2;
+    g_field_item_staging->levels[3].level = record->bonus_nibbles.bits.n3;
+    g_field_item_staging->levels[4].level = record->bonus_nibbles.bits.n4;
+    g_field_item_staging->levels[5].level = record->bonus_nibbles.bits.n5;
+    g_field_item_staging->levels[6].level = record->bonus_nibbles.bits.n6;
+    g_field_item_staging->levels[7].level = record->bonus_nibbles.bits.n7;
+    g_field_item_staging->effect_index = record->effect_index;
 
-    D_80123FC4->stats.words[0].modifier0 = record->stat_nibbles.bits.n0;
-    D_80123FC4->stats.words[0].modifier1 = record->stat_nibbles.bits.n1;
-    D_80123FC4->stats.words[0].modifier2 = record->stat_nibbles.bits.n2;
-    D_80123FC4->stats.words[0].modifier3 = record->stat_nibbles.bits.n3;
-    D_80123FC4->stats.words[1].modifier0 = record->stat_nibbles.bits.n4;
-    D_80123FC4->stats.words[1].modifier1 = record->stat_nibbles.bits.n5;
-    D_80123FC4->stats.words[1].modifier2 = record->stat_nibbles.bits.n6;
-    D_80123FC4->stats.words[1].modifier3 = record->stat_nibbles.bits.n7;
+    g_field_item_staging->stats.words[0].modifier0 = record->stat_nibbles.bits.n0;
+    g_field_item_staging->stats.words[0].modifier1 = record->stat_nibbles.bits.n1;
+    g_field_item_staging->stats.words[0].modifier2 = record->stat_nibbles.bits.n2;
+    g_field_item_staging->stats.words[0].modifier3 = record->stat_nibbles.bits.n3;
+    g_field_item_staging->stats.words[1].modifier0 = record->stat_nibbles.bits.n4;
+    g_field_item_staging->stats.words[1].modifier1 = record->stat_nibbles.bits.n5;
+    g_field_item_staging->stats.words[1].modifier2 = record->stat_nibbles.bits.n6;
+    g_field_item_staging->stats.words[1].modifier3 = record->stat_nibbles.bits.n7;
 
     for (i = 0; i < FIELD_STAGING_STAT_COUNT; i++)
     {
-        D_80123FC4->base_stats[i] = FIELD_DEFAULT_STAT_MODIFIER;
+        g_field_item_staging->base_stats[i] = FIELD_DEFAULT_STAT_MODIFIER;
     }
 
-    D_80123FC4->slots[0] = FIELD_STAGING_SLOT_EMPTY;
-    D_80123FC4->slots[1] = record->special_ids[3];
+    g_field_item_staging->slots[0] = FIELD_STAGING_SLOT_EMPTY;
+    g_field_item_staging->slots[1] = record->special_ids[3];
     for (i = 0; i < FIELD_ITEM_SPECIAL_COUNT - 1; i++)
     {
-        D_80123FC4->slots[i + 2] = record->special_ids[i];
+        g_field_item_staging->slots[i + 2] = record->special_ids[i];
     }
-    D_80123FC4->slots[5] = FIELD_STAGING_SLOT_EMPTY;
+    g_field_item_staging->slots[5] = FIELD_STAGING_SLOT_EMPTY;
 
-    switch (D_80123FC4->category)
+    switch (g_field_item_staging->category)
     {
     case FIELD_ITEM_CATEGORY_WEAPON:
         for (i = 0; i < FIELD_STAGING_PROPERTY_COUNT; i++)
         {
-            D_80123FC4->properties[i] = record->derived.weapon.stats[i];
+            g_field_item_staging->properties[i] = record->derived.weapon.stats[i];
         }
-        D_80123FC4->flags2C = 0;
+        g_field_item_staging->power_flags = 0;
         break;
     case FIELD_ITEM_CATEGORY_ARMOR:
-        D_80123FC4->flags2D = 0;
-        D_80123FC4->alternate_flags2C = record->flags2C;
+        g_field_item_staging->element_flags = 0;
+        g_field_item_staging->immunity_flags = record->status_flags;
         break;
     }
 
@@ -312,7 +317,7 @@ void field_temper_item(FieldItemRecord* record, s32 command_index)
 /**
  * @brief Run the generation scripts of the staged item and write it back.
  *
- * The type, subtype, command and slot scripts run on the event script
+ * The type, material, secondary material and slot scripts run on the event script
  * context; pending levels, flags and stat clamping are applied, the item is
  * written back and its weapon or armor derived values are computed.
  * @note JP applies the pending levels in field_finish_staged_item instead.
@@ -323,74 +328,74 @@ static void field_generate_staged_item(void)
 
     saved_script = g_field_script;
     g_field_script = (FieldScriptContext*)&g_field_runtime->events[0].script;
-    field_load_staged_subtype();
-    if (D_80123FC4->category == FIELD_ITEM_CATEGORY_WEAPON)
+    field_load_staged_material();
+    if (g_field_item_staging->category == FIELD_ITEM_CATEGORY_WEAPON)
     {
-        field_run_item_script(D_80123FC0->item.types[D_80123FC4->item_type].scripts[0]);
+        field_run_item_script(g_field_item_tables->item.weapon_types[g_field_item_staging->item_type].scripts[0]);
     }
     else
     {
-        field_run_item_script(D_80123FC0->item.alternate_types[D_80123FC4->item_type].scripts[0]);
+        field_run_item_script(g_field_item_tables->item.armor_types[g_field_item_staging->item_type].scripts[0]);
     }
-    field_run_item_script(D_80123FC0->item.subtypes[D_80123FC4->item_subtype].script);
-    field_run_item_script(D_80123FC0->item.commands[D_80123FC4->command_index - FIELD_STAGING_COMMAND_BASE].script);
+    field_run_item_script(g_field_item_tables->item.materials[g_field_item_staging->material].script);
+    field_run_item_script(g_field_item_tables->item.secondary_items[g_field_item_staging->secondary_item - FIELD_SECONDARY_ITEM_FIRST].script);
     field_run_slot_scripts();
 #if !defined(VERSION_JP)
     field_apply_pending_levels();
 #endif
-    if (D_80123FC4->category == FIELD_ITEM_CATEGORY_WEAPON)
+    if (g_field_item_staging->category == FIELD_ITEM_CATEGORY_WEAPON)
     {
-        field_run_item_script(D_80123FC0->item.types[D_80123FC4->item_type].scripts[1]);
+        field_run_item_script(g_field_item_tables->item.weapon_types[g_field_item_staging->item_type].scripts[1]);
     }
     else
     {
-        field_run_item_script(D_80123FC0->item.alternate_types[D_80123FC4->item_type].scripts[1]);
+        field_run_item_script(g_field_item_tables->item.armor_types[g_field_item_staging->item_type].scripts[1]);
     }
     field_finish_staged_item();
     g_field_script = saved_script;
     field_write_staged_item();
 
-    switch (D_80123FC4->category)
+    switch (g_field_item_staging->category)
     {
     case FIELD_ITEM_CATEGORY_WEAPON:
-        field_derive_weapon_values(D_80123FC4->record);
+        field_derive_weapon_values(g_field_item_staging->record);
         return;
     case FIELD_ITEM_CATEGORY_ARMOR:
-        field_derive_armor_values(D_80123FC4->record);
+        field_derive_armor_values(g_field_item_staging->record);
         return;
     }
 }
 
 /**
- * @brief Load the item table and copy the staged subtype's entry into the staging block.
+ * @brief Load the item table and copy the staged material's entry into the staging block.
  */
-static void field_load_staged_subtype(void)
+static void field_load_staged_material(void)
 {
     s32 i;
 
-    D_80123FC0 = func_800C1E40(FIELD_ITEM_TABLE);
-    D_80123FC4->unk3A = D_80123FC0->item.subtypes[D_80123FC4->item_subtype].divisor;
+    g_field_item_tables = field_find_resource(FIELD_ITEM_TABLE);
+    g_field_item_staging->divisor = g_field_item_tables->item.materials[g_field_item_staging->material].divisor;
     for (i = 0; i < FIELD_STAGING_FACTOR_COUNT; i++)
     {
-        D_80123FC4->weights[i] = D_80123FC0->item.subtypes[D_80123FC4->item_subtype].weights[i];
+        g_field_item_staging->weights[i] = g_field_item_tables->item.materials[g_field_item_staging->material].weights[i];
     }
     for (i = 0; i < FIELD_STAGING_FACTOR_COUNT; i++)
     {
-        D_80123FC4->multipliers[i] = D_80123FC0->item.subtypes[D_80123FC4->item_subtype].multipliers[i];
+        g_field_item_staging->multipliers[i] = g_field_item_tables->item.materials[g_field_item_staging->material].multipliers[i];
     }
     for (i = 0; i < FIELD_STAGING_LEVEL_COUNT; i++)
     {
-        D_80123FC4->levels[i].cost = D_80123FC0->item.subtypes[D_80123FC4->item_subtype].costs[i];
-        D_80123FC4->pending_levels[i] = 0;
+        g_field_item_staging->levels[i].cost = g_field_item_tables->item.materials[g_field_item_staging->material].costs[i];
+        g_field_item_staging->pending_levels[i] = 0;
     }
 
     /* Slots 0 and 5 never hold a slot value. */
-    D_80123FC4->flags.bits.slot_class = FIELD_SLOT_CLASS_NONE;
+    g_field_item_staging->flags.bits.slot_class = FIELD_SLOT_CLASS_NONE;
     for (i = 1; i < FIELD_STAGING_SLOT_COUNT - 1; i++)
     {
-        if (D_80123FC4->slots[i] < FIELD_SLOT_CLASS_LIMIT)
+        if (g_field_item_staging->slots[i] < FIELD_SLOT_CLASS_LIMIT)
         {
-            D_80123FC4->flags.bits.slot_class = D_80123FC4->slots[i];
+            g_field_item_staging->flags.bits.slot_class = g_field_item_staging->slots[i];
         }
     }
 }

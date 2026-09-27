@@ -16,7 +16,7 @@
 /** @brief FieldGameState.lands viewed as FieldLandWords. */
 #define FIELD_LAND_WORDS ((FieldLandWords*)g_field_game_state->lands)
 
-/** @brief func_800C1E40 resources read by the opcodes. */
+/** @brief field_find_resource resources read by the opcodes. */
 #define FIELD_RESOURCE_ITEM_TEMPLATES 5
 #define FIELD_RESOURCE_TRIGGERS 6
 #define FIELD_RESOURCE_SHOP_LISTS 0xA
@@ -133,7 +133,7 @@ typedef struct
 } FieldShopList;
 
 /**
- * @brief A text resource (func_800C1E40): a 4-byte header, then the texts.
+ * @brief A text resource (field_find_resource): a 4-byte header, then the texts.
  * @note The texts start with a table of 16-bit offsets, one per text, relative to the start of the texts.
  */
 typedef struct
@@ -146,7 +146,7 @@ typedef struct
     } texts;
 } FieldTextResource;
 
-/** @brief Resource 5 (func_800C1E40): the item records a shop can generate. */
+/** @brief Resource 5 (field_find_resource): the item records a shop can generate. */
 typedef struct
 {
     u32 header;
@@ -161,9 +161,8 @@ extern FieldDispatchFn g_field_script_pair_op_table[];
 extern FieldRuntimeContext* g_field_runtime;
 extern FieldGameState* g_field_game_state;
 extern FieldBattleContext* g_field_battle;
-extern FieldItemStaging* D_80123FC4;
 extern s32 D_8011F428;
-extern s32 D_801227F0;
+extern s32 g_field_gosub_state;
 extern s32 g_field_interaction_active;
 extern s32 g_field_hide_actor_panels, g_field_duel_mode, g_field_pair_indicators_disabled, D_80122980;
 extern s32 g_gosub_result_count, g_gosub_result_values;
@@ -186,8 +185,8 @@ s32 field_queue_actor_event(s32 owner_id, s32 event_id, s32 argument);
 s32 field_face_actor(s32 source_key, s32 target_key);
 s32 field_set_actor_position(s32 key, s32 x, s32 y, s32 z);
 s32 field_spawn_targeted_animation_actor(s32 key, s32 resource_index, s32 target_keys, s32* targets);
-u16* func_800C1E40(s32 resource_id);
-s32* func_800C1EC8(s32* src, s32* dest, s32 size);
+u16* field_find_resource(s32 resource_id);
+s32* field_copy_words(s32* src, s32* dest, s32 size);
 s32 field_start_actor_turn(s32 key);
 s32 field_toggle_actor_hidden(s32 key);
 /* Local: field_contact_geometry.c calls it with a third argument, so it stays out of field_calls.h. */
@@ -655,7 +654,7 @@ void field_script_op_0c(void)
         base = field_find_actor_record_or_default(target_index);
         break;
     case 3:
-        base = D_80123FC4;
+        base = g_field_item_staging;
         break;
     case 4:
         base = g_field_battle;
@@ -904,7 +903,7 @@ void field_script_op_14(void)
         wait = field_is_battle_active();
         break;
     case 2:
-        wait = D_801227F0 != 2;
+        wait = g_field_gosub_state != 2;
         break;
     case 3:
         wait = D_8011F428 == 1;
@@ -1591,10 +1590,10 @@ void field_script_op_37(void)
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_0(descriptor), operands + 2, &list_index);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_1(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc, &price_scale);
 
-    offsets = (u32*)func_800C1E40(FIELD_RESOURCE_SHOP_LISTS);
+    offsets = (u32*)field_find_resource(FIELD_RESOURCE_SHOP_LISTS);
     list = (FieldShopList*)((u8*)offsets + offsets[list_index + 1]);
 
-    items = (FieldItemResource*)func_800C1E40(FIELD_RESOURCE_ITEM_TEMPLATES);
+    items = (FieldItemResource*)field_find_resource(FIELD_RESOURCE_ITEM_TEMPLATES);
     for (index = 0; index < list->count; index++)
     {
         item = list->entries[index].bits.item;
@@ -1708,11 +1707,11 @@ void field_script_op_0f(void)
         field_battle_setup(1);
         break;
     case 3:
-        g_field_runtime->trigger_table = (FieldTriggerTable*)func_800C1E40(FIELD_RESOURCE_TRIGGERS);
+        g_field_runtime->trigger_table = (FieldTriggerTable*)field_find_resource(FIELD_RESOURCE_TRIGGERS);
         FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
         return;
     case 4:
-        func_800C1EC8(NULL, g_field_game_state->words, sizeof(g_field_game_state->words));
+        field_copy_words(NULL, g_field_game_state->words, sizeof(g_field_game_state->words));
         FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
         return;
     case 5:
@@ -2060,9 +2059,9 @@ void field_script_op_44(u32 command, s32 operand)
     case 0x4E:
         /* New game: clear the variables, the flags and the lands, then place the starting land. */
         g_field_game_state->options.word |= SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3;
-        func_800C1EC8(NULL, g_field_game_state->words, sizeof(g_field_game_state->words));
-        func_800C1EC8(NULL, (s32*)&g_field_game_state->control,
-                      sizeof(g_field_game_state->control) + sizeof(g_field_game_state->flag_bits) + sizeof(g_field_game_state->lands));
+        field_copy_words(NULL, g_field_game_state->words, sizeof(g_field_game_state->words));
+        field_copy_words(NULL, (s32*)&g_field_game_state->control,
+                         sizeof(g_field_game_state->control) + sizeof(g_field_game_state->flag_bits) + sizeof(g_field_game_state->lands));
         g_field_game_state->control.fields.placed_land_count = 1;
         g_field_game_state->flag_bits[0] |= 0x10000000;
         for (index = 0; index < FIELD_LAND_COUNT; index++)
@@ -2335,9 +2334,9 @@ void field_script_op_4f(s32 list_index, s32 price_scale)
     u32 scaled;
     FieldItemRecord* item;
 
-    offsets = (u32*)func_800C1E40(FIELD_RESOURCE_SHOP_LISTS);
+    offsets = (u32*)field_find_resource(FIELD_RESOURCE_SHOP_LISTS);
     list = (FieldShopList*)((u8*)offsets + offsets[list_index + 1]);
-    items = (FieldItemResource*)func_800C1E40(FIELD_RESOURCE_ITEM_TEMPLATES);
+    items = (FieldItemResource*)field_find_resource(FIELD_RESOURCE_ITEM_TEMPLATES);
     for (index = 0; index < list->count; index++)
     {
         if (list->entries[index].bits.generated)
@@ -2735,7 +2734,7 @@ void field_script_op_85(s32 scene_id, s32 object_id, s32 audio, s32 spawn_id)
 /**
  * @brief Opcode 0x86: set a text macro to an entry of a text resource.
  * @param slot Text macro slot.
- * @param resource_id Resource read with func_800C1E40.
+ * @param resource_id Resource read with field_find_resource.
  * @param entry_index Entry of the resource's offset table.
  * @param character_limit Character budget of the macro.
  */
@@ -2744,7 +2743,7 @@ void field_script_op_86(s32 slot, s32 resource_id, s32 entry_index, s32 characte
     FieldTextResource* resource;
     u16 offset;
 
-    resource = (FieldTextResource*)func_800C1E40(resource_id);
+    resource = (FieldTextResource*)field_find_resource(resource_id);
     if (resource != NULL)
     {
         offset = resource->texts.offsets[entry_index];
