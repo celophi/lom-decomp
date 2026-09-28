@@ -441,9 +441,9 @@ No original game executable, overlay binaries, artwork, audio, or other copyrigh
 
 ## Thanks
 
-A heartfelt thank you to Squaresoft and to everyone who had a hand in creating *Legend of Mana*. The game is full of imagination, experimentation, unusual ideas, beautiful artwork and music, and technical choices that still make it fascinating to study decades later. Projects like this exist because the original developers, artists, musicians, designers, writers, and support staff took chances and created something distinctive enough that people still care about understanding and preserving it today.
+Thanks to Squaresoft and everyone who worked on *Legend of Mana*. The art, the music, and all the strange little ideas make this a game worth coming back to. You can tell the team was willing to try things, and that's a big part of what makes it interesting.
 
-This decompilation is, above all, an expression of appreciation for that work. Thank you for making such a beautiful and memorable game, and for being willing to try something different.
+Figuring out how it all works has been a lot of fun. There's still plenty to understand, but hopefully this project helps preserve that work and gives other people a chance to explore it too.
 
 ## Tools and acknowledgements
 
