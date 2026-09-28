@@ -1311,8 +1311,9 @@ void akao_flush_voice_updates(s32 sfx_update_mask)
 
     work_mask = g_akao_seq_channel0->masks.active_mask & g_akao_seq_channel0->note_on_mask &
                 ~(g_akao_seq_channel0->masks.static_voice_mask & (secondary_static_voice_mask | reserved_voice_mask));
-    primary_static_voice_mask = work_mask & g_akao_seq_channel0->masks.static_voice_mask & ~(secondary_static_voice_mask | reserved_voice_mask);
+    primary_static_voice_mask = g_akao_seq_channel0->masks.static_voice_mask;
     primary_low_voice_mask = work_mask & g_akao_seq_channel0->masks.voice_alloc_low_mask;
+    primary_static_voice_mask = work_mask & primary_static_voice_mask & ~(secondary_static_voice_mask | reserved_voice_mask);
     if (primary_low_voice_mask != 0)
     {
         akao_process_sequence_voice_updates(g_akao_seq_channels, primary_low_voice_mask, primary_static_voice_mask, &key_on_voice_mask);
@@ -1340,10 +1341,7 @@ void akao_flush_voice_updates(s32 sfx_update_mask)
     work_mask = g_akao_sfx_control.active_mask & g_akao_sfx_control.note_on_mask;
     if (work_mask != 0)
     {
-        do
-        {
-            primary_static_voice_mask = AKAO_SFX_FIRST_CHANNEL_BIT;
-        } while (0);
+        primary_static_voice_mask = AKAO_SFX_FIRST_CHANNEL_BIT;
         sfx_channel = g_sfx_channels;
         key_on_voice_mask |= g_akao_sfx_control.key_on_mask;
         do
