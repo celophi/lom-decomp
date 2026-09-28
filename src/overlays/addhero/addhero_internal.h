@@ -20,18 +20,17 @@
 #include "field_ui_text.h"
 #include "encoded_text.h"
 #include "save_file.h"
+#include "glyph_cache.h"
+#include "card_events.h"
+#include "card_directory.h"
 
 /* Declarations shared by ADDHERO implementation files. */
 
-#define ADDHERO_DIRECTORY_ENTRY_COUNT 20
-#define ADDHERO_DIRECTORY_ENTRY_BYTES sizeof(struct DIRENTRY)
-#define ADDHERO_CARD_DIRECTORY_BYTES (ADDHERO_DIRECTORY_ENTRY_COUNT * ADDHERO_DIRECTORY_ENTRY_BYTES)
 #define ADDHERO_CARD_BLOCK_BYTES 8192
 
 /** @brief Save files a memory card holds (its 15 data blocks). */
 #define ADDHERO_CARD_SAVE_SLOTS 15
 #define ADDHERO_USED_BLOCK_LIMIT 14
-#define ADDHERO_SAVE_FILENAME_PREFIX_LENGTH 12
 #define ADDHERO_NEW_SAVE_FILENAME_PREFIX_LENGTH 8
 #define ADDHERO_LOAD_RESULT_NONE 0
 #define ADDHERO_LOAD_RESULT_ABORT 2
@@ -40,7 +39,7 @@
 #define ADDHERO_LOAD_RESULT_CARD_ERROR 5
 
 /**
- * @brief g_addhero_entry_state values.
+ * @brief g_card_entry_state values.
  *
  * Below ADDHERO_ENTRY_COUNT_LIMIT the value is the number of save entries
  * read from the current card (a card holds 15). From 0xF3 up it is a status
@@ -59,17 +58,6 @@
 #define ADDHERO_ENTRY_STATE_NO_CARD 0xFD            /**< No card answers: an event error or the retries ran out. */
 #define ADDHERO_ENTRY_STATE_BLANK 0xFE              /**< Shows nothing; ADDHERO never sets it. */
 #define ADDHERO_ENTRY_STATE_CHECKING_CARD 0xFF      /**< The card is being checked; no entries yet. */
-
-/** @brief Result returned when consuming a software or hardware card event. */
-typedef enum
-{
-    ADDHERO_CARD_EVENT_NONE = -1,
-    ADDHERO_CARD_EVENT_COMPLETE = 0,
-    ADDHERO_CARD_EVENT_ERROR = 1,
-    ADDHERO_CARD_EVENT_TIMEOUT = 2,
-    ADDHERO_CARD_EVENT_NEW_CARD = 3,
-    ADDHERO_CARD_EVENT_COUNT = 4
-} AddheroCardEvent;
 
 /** @brief Memory-card device prefix, such as "bu00", stored with word alignment. */
 typedef union
@@ -90,15 +78,12 @@ typedef struct
     u8 suffix[4];
 } AddheroCardPathTemplate;
 
-extern struct DIRENTRY g_addhero_entries[][ADDHERO_DIRECTORY_ENTRY_COUNT];
+extern struct DIRENTRY g_card_entries[][CARD_DIRECTORY_ENTRY_COUNT];
 extern AddheroCardPathTemplate g_addhero_file_template;
-extern u8* g_addhero_load_step;
 extern s32 g_addhero_scroll_y;
 extern s32 g_addhero_progress_active;
 extern s32 g_addhero_scroll_target_y;
 extern s32 g_addhero_mode;
-extern s32 g_addhero_entry_state;
-extern s32 g_addhero_card_slot;
 extern s32 g_addhero_selected_row;
 extern s32 g_addhero_selection_status;
 extern s32 g_addhero_scroll_frames;
@@ -108,13 +93,11 @@ extern s32 g_addhero_progress_start_tick;
 extern s32 g_addhero_entry_scan_active;
 extern s32 g_addhero_write_in_progress;
 extern s32 g_addhero_rank_count;
-extern s32 g_addhero_entry_suffix_values[];
 extern s32 g_addhero_entry_ranks[];
 extern s32 g_addhero_selected_entry_extended;
 extern s32 g_addhero_entry_value_limit;
 extern s32 g_addhero_has_free_entry_space;
 extern u8 g_addhero_loadseq_start;
-extern u8 g_addhero_loadseq_card[];
 /** @brief Save file read or written by the load and save sequences. */
 extern SaveFile g_addhero_save_file;
 /**
@@ -123,7 +106,6 @@ extern SaveFile g_addhero_save_file;
  */
 extern SaveFile g_addhero_entry_file;
 extern char g_addhero_save_file_path[];
-extern char g_lom_save_filename_prefix[];
 /** @brief File name prefix of the PocketStation mini-game (Ring Ring Land) save. */
 extern char g_lom_pocketstation_filename_prefix[];
 extern char g_new_save_entry_prefix[];
@@ -138,20 +120,9 @@ s32 addhero_rank_entries(void);
 s32 addhero_has_known_entry_type(void);
 s32 addhero_begin_entry_scan(s32 page);
 s32 addhero_scan_next_entry(s32 page);
-void addhero_clear_software_card_events(void);
-void addhero_clear_hardware_card_events(void);
-s32 addhero_poll_software_card_events(void);
-s32 addhero_poll_hardware_card_events(void);
 void addhero_sort_entries_by_type(void);
-void addhero_shutdown_card_events(void);
-void addhero_begin_glyph_cache_frame(void);
-void addhero_evict_unused_glyphs(void);
-void addhero_reset_glyph_cache(void);
 void addhero_init_card_events(void);
-void addhero_restart_load_sequence(void);
-s32 addhero_poll_and_retry_card_info(void);
 void addhero_commit_selected_entry(void);
-void* addhero_draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s32 palette, s32 alignment);
 s32 addhero_advance_load_sequence(void);
 
 /** @brief Element pool size and AddheroElement.attr.bits.state values. */
@@ -174,9 +145,6 @@ s32 addhero_advance_load_sequence(void);
 
 /** @brief Frames a closed element stays in ADDHERO_ELEMENT_STATE_FINISHING before it is freed. */
 #define ADDHERO_ELEMENT_FINISH_FRAMES 3
-
-/** @brief Codes below this end the text drawn by addhero_draw_cached_text. */
-#define ADDHERO_TEXT_FIRST_PRINTABLE 0x20
 
 /** @brief Height of one entry-list row and of one message line, in pixels. */
 #define ADDHERO_ENTRY_ROW_HEIGHT 14
@@ -257,9 +225,6 @@ s32 addhero_advance_load_sequence(void);
 
 /** @brief Frames of the fade back to the host screen when the overlay exits. */
 #define ADDHERO_EXIT_FADE_FRAMES 8
-
-/** @brief Memory-card channel of card slot @p slot (port in the high nibble). */
-#define ADDHERO_CARD_CHANNEL(slot) ((slot) * 0x10)
 
 /**
  * @brief ADDHERO text table indexes.
@@ -411,13 +376,6 @@ typedef struct
     void* prim_cursor;
 } AddheroDrawState;
 
-/** @brief Three double-byte overflow glyphs and their string terminator. */
-typedef struct
-{
-    s8 data[7];
-} AddheroOverflowGlyphString;
-
-extern AddheroOverflowGlyphString g_addhero_decimal_overflow_glyphs;
 extern AddheroElement g_addhero_element_pool[ADDHERO_ELEMENT_COUNT];
 extern AddheroElement g_addhero_element1;
 
@@ -443,7 +401,6 @@ extern s32 g_addhero_icon_palette;
 extern s32 g_addhero_frame_parity;
 extern s32 g_addhero_dialog_state;
 extern s32 g_addhero_icon_image_table[];
-extern s32 g_addhero_entry_fields[][ADDHERO_DIRECTORY_ENTRY_COUNT];
 extern u8 g_addhero_loadseq_abort[];
 extern u8 g_addhero_loadseq_load_begin[];
 extern u8 g_addhero_loadseq_load_progress[];
@@ -512,12 +469,10 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
 void* addhero_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 width, s32 icon, s32 index, s32 row);
 void addhero_enable_choice_toggle(void);
 void* addhero_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y);
-s8* addhero_format_decimal(s8* out, s32 value);
 s32 addhero_entry_blocks_reach_limit(void);
 void addhero_erase_placeholder_files(void);
 
 void addhero_reset_entry_ranks(void);
-s32 addhero_parse_entry_fields(void);
 
 /* FIELD functions used by ADDHERO; FIELD stays resident while the overlay runs. */
 void* field_draw_text(void* prim, u_long* ot, u8* text, s32 text_color, s32 x, s32 y, s32 flags);

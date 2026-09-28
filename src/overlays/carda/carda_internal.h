@@ -17,6 +17,9 @@
 #include "field_ui_text.h"
 #include "encoded_text.h"
 #include "save_file.h"
+#include "glyph_cache.h"
+#include "card_events.h"
+#include "card_directory.h"
 
 /**
  * @brief Draw callback of a CARDA UI element: emits the element's content at
@@ -123,7 +126,7 @@ typedef struct CardaElement
 #define CARDA_RESULT_RETURN_PET_CANCELLED 7 /**< Also set when the ranch has no free pet slot. */
 
 /**
- * @brief g_carda_entry_state values.
+ * @brief g_card_entry_state values.
  *
  * Below CARDA_ENTRY_COUNT_LIMIT the value is the number of directory entries
  * read from the current card. From 0xE9 up it is a status whose message the
@@ -161,7 +164,7 @@ typedef struct CardaElement
 #define CARDA_ENTRY_COUNT_INPUT_LIMIT 0x12
 
 /**
- * @brief Commands in the card sequence bytecode that g_carda_card_step walks.
+ * @brief Commands in the card sequence bytecode that g_card_step walks.
  * @note Opcodes without a case (7, 14) are no-ops that hold the sequence in place.
  */
 typedef enum CardaCardStep
@@ -233,12 +236,6 @@ typedef enum CardaSequenceResult
 
 /** @brief Buttons that move a yes/no choice. */
 #define CARDA_CHOICE_BUTTON_MASK (PAD_BTN_RIGHT | PAD_BTN_LEFT)
-
-/** @brief Memory-card channel of card slot @p slot (port in the high nibble). */
-#define CARDA_CARD_CHANNEL(slot) ((slot) * 0x10)
-
-/** @brief Length of the Legend of Mana file name prefix before the hex serial ("BASLUS-01013"). */
-#define CARDA_SAVE_FILENAME_PREFIX_LENGTH 12
 
 /** @brief Length of the new-save placeholder entry name ("AKIdummy"). */
 #define CARDA_NEW_SAVE_ENTRY_NAME_LENGTH 8
@@ -386,31 +383,11 @@ typedef enum CardaSequenceResult
 /** @brief Address of CARDA text @p index in the u16 offset table starting at @p table. */
 #define CARDA_TEXT(table, index) ((u8*)(table) + (table)[index])
 
-/** @brief Memory-card directory entry; layout matches Psy-Q struct DIRENTRY. */
-typedef struct CardaDirEntry
-{
-    /* 0x00 */ char name[20];
-    /* 0x14 */ s32 attr;
-    /* 0x18 */ s32 size;
-    /* 0x1C */ void* next;
-    /* 0x20 */ s32 head;
-    /* 0x24 */ char system[4];
-} CardaDirEntry;
-
 /** @brief Height in pixels of one row of the save-file list. */
 #define CARDA_ENTRY_ROW_HEIGHT 14
 
-/** @brief Number of directory entries per memory card. */
-#define CARDA_ENTRIES_PER_CARD 20
-
 /** @brief Number of suffix groups the directory sort buckets saves into. */
 #define CARDA_ENTRY_GROUP_COUNT 8
-
-/** @brief Byte size of one card's directory listing in g_carda_entries. */
-#define CARDA_CARD_DIRECTORY_BYTES 0x320
-
-/** @brief Byte size of one directory entry. */
-#define CARDA_DIRECTORY_ENTRY_BYTES 0x28
 
 /** @brief Byte size of one memory-card block. */
 #define CARDA_MEMORY_CARD_BLOCK_BYTES 8192
@@ -453,12 +430,6 @@ typedef union
     u32 align[2];
 } CardaCardPathTemplate;
 
-/** @brief Three two-byte overflow glyphs and their string terminator. */
-typedef struct
-{
-    s8 data[7];
-} CardaDecimalOverflow;
-
 /** @brief One Shift-JIS character plus its terminator, copied whole into the save title. */
 typedef struct
 {
@@ -497,30 +468,6 @@ typedef struct CardaSaveData
  */
 #define CARDA_SAVE_DATA ((CardaSaveData*)g_carda_save_blob)
 
-/**
- * @brief One 4-byte glyph-cache slot: the cached character code plus per-frame
- *        usage flags, also read as a single word when scanning for a free slot.
- */
-typedef union
-{
-    u32 raw;
-    struct
-    {
-        u16 code;
-        u16 flags;
-    } data;
-} CardaGlyphCacheEntry;
-
-/**
- * @brief 0x14-byte glyph packet: a Psy-Q SPRT_16 plus the trailing word that
- *        keeps consecutive cached-glyph packets 20 bytes apart.
- */
-typedef struct
-{
-    SPRT_16 packet;
-    u32 padding;
-} CardaGlyphSprite;
-
 /* FIELD / main-executable globals used by this overlay. */
 extern s32 g_save_compatibility_tag;
 extern s32 g_playtime_vsync_origin;
@@ -534,7 +481,6 @@ extern s32 g_menu_element_counter;
 extern u8 g_field_ui_text_cant_hold_more[];
 extern u8 g_text_time_separator_offset_bytes[2];
 extern u8 g_text_choice_glyph_offsets;
-extern char g_lom_save_filename_prefix[];
 extern char g_lom_pocketstation_filename_prefix[];
 extern char g_lom_save_dummy_filename[];
 extern char g_lom_pocketstation_dummy_filename[];
@@ -544,7 +490,6 @@ extern char g_card_full_entry_name[];
 /* CARDA read-only data. */
 extern CardaSjisChar g_carda_title_dash;
 extern CardaSjisChar g_carda_title_colon;
-extern const CardaDecimalOverflow g_carda_decimal_overflow_text;
 extern const CardaFileHeaderScratch g_carda_save_card_path_prefix;
 extern const CardaCardPathTemplate g_carda_card_path_prefix;
 extern const CardaCardPathTemplate g_carda_card_search_path;
@@ -608,11 +553,9 @@ extern u8 g_carda_bad_title_template[];
 extern s32 g_carda_save_icon_offsets[];
 extern u16 g_carda_location_names[];
 extern s32 g_carda_icon_image_offsets[];
-extern u8 g_carda_char_page_base[];
 
-/* Card-sequence step scripts (g_carda_card_step points into these). */
+/* Card-sequence step scripts (g_card_step points into these). */
 extern u8 g_carda_steps_initial_scan[];
-extern u8 g_carda_steps_idle[];
 extern u8 g_carda_steps_refresh_entries[];
 extern u8 g_carda_steps_card_reset[];
 extern u8 g_carda_steps_write_save[];
@@ -625,11 +568,8 @@ extern u8 g_carda_steps_card_check[];
 extern u8 g_carda_steps_initial_scan_check_type[];
 extern u8 g_carda_steps_read_save_prefix[];
 extern u8 g_carda_steps_overwrite_alt_save[];
-extern u8 g_carda_single_byte_char_table[];
 
 /* CARDA state. */
-extern u16 g_carda_decimal_glyphs[];
-extern u16 g_carda_hex_glyphs[];
 extern s32 g_carda_scroll_target_y;
 extern s32 g_carda_new_save_file;
 extern s32 g_carda_growth_delta;
@@ -640,7 +580,6 @@ extern CardaElement g_carda_element1_state;
 extern s32 g_carda_exit_requested;
 extern s32 g_carda_dialog_state;
 extern s32 g_carda_received_item_count;
-extern s32 g_carda_entry_state;
 extern u8* g_carda_save_blob;
 extern s32 g_carda_selected_row;
 extern s32 g_carda_choice_toggle;
@@ -654,52 +593,31 @@ extern s32 g_carda_progress_active;
 extern s32 g_carda_format_frames;
 extern s32 g_carda_mode;
 extern u8 g_carda_icon_context[];
-extern s32 g_carda_card_slot;
 extern s32 g_carda_format_declined;
 extern s32 g_carda_selection_status;
 /** @brief The saved game's item records (g_saved_game_ctx->items). */
 extern FieldItemRecord* g_carda_items;
 extern s32 g_carda_scroll_y;
-extern s32 g_carda_hardware_event_io_complete;
-extern s32 g_carda_hardware_event_error;
-extern s32 g_carda_hardware_event_timeout;
-extern s32 g_carda_hardware_event_new_card;
 extern s32 g_carda_save_in_progress;
 /**
  * @brief Start of the selected entry's save file: only the card header and the
  *        first 0x100 bytes of the saved game are read (CARDA_ENTRY_READ_BYTES).
  */
 extern SaveFile g_carda_selected_file;
-extern u8* g_carda_card_step;
 extern s32 g_carda_file_handle;
 extern s32 g_carda_entry_ranks[];
 extern CardaFileHeaderScratch g_carda_selected_card_path;
 extern s32 g_carda_rank_count;
 extern s32 g_carda_retry_count;
-extern CardaDirEntry g_carda_entries[2][CARDA_ENTRIES_PER_CARD]; /**< Directory listing of both cards. */
-extern s32 g_carda_entry_suffix_values[];
 extern s32 g_carda_selected_entry_extended;
 extern s32 g_carda_primary_poll_countdown;
 extern s32 g_carda_next_save_serial;
 extern s32 g_carda_progress_bar_active;
 extern s32 g_carda_entry_scan_active;
-extern s32 g_carda_entry_fields[2][CARDA_ENTRIES_PER_CARD];
 extern s32 g_carda_preserve_old_save;
 extern s32 g_carda_progress_start_tick;
 extern s32 g_carda_secondary_poll_countdown;
-extern s32 g_carda_software_event_io_complete;
-extern s32 g_carda_software_event_error;
-extern s32 g_carda_software_event_timeout;
-extern s32 g_carda_software_event_new_card;
 extern u8 g_carda_temp_card_path[];
-extern CardaGlyphCacheEntry g_carda_glyph_cache[];
-extern s32 g_carda_glyph_cursor_x;
-extern s32 g_carda_glyph_cursor_y;
-extern s32 g_carda_text_line_start_x;
-extern s32 g_carda_glyph_upload_x;
-extern s32 g_carda_glyph_upload_y;
-extern u8* g_carda_glyph_raster_cursor;
-extern u8 g_carda_glyph_raster_buffer[];
 
 /*
  * External callees.  The ones declared with an empty parameter list were
@@ -802,8 +720,6 @@ void carda_open_item_list(void);
 s32 carda_draw_item_list_header(s32* ot, s32 prim, s32 x_offset, s32 y_offset);
 s32 carda_draw_item_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset);
 void carda_apply_save_items(void);
-s8* carda_format_decimal(s8* out, s32 value);
-s32 carda_parse_entry_fields(void);
 s32 carda_rank_entries(void);
 void carda_reset_entry_ranks(void);
 s32 carda_has_known_entry_type(void);
@@ -811,26 +727,10 @@ s32 carda_card_lacks_free_blocks(void);
 void carda_erase_placeholder_files(void);
 s32 carda_advance_card_sequence();
 void carda_reset_to_new_save_entry(void);
-void carda_restart_card_sequence();
-s32 carda_poll_and_retry_card_info(void);
 void carda_init_card_events(void);
-void carda_shutdown_card_events(void);
 s32 carda_begin_entry_scan(s32 page);
 s32 carda_scan_next_entry(s32 page);
 void carda_commit_selected_entry(void);
-void carda_clear_software_card_events(void);
-void carda_clear_hardware_card_events(void);
-s32 carda_poll_software_card_events(void);
-s32 carda_poll_hardware_card_events(void);
 void carda_sort_entries_by_type(void);
-void* carda_draw_signed_decimal(void* prim, u_long* ot, s32 value, s32 x, s32 y, s32 palette, s32 alignment);
-void carda_draw_hex_byte(void* prim, u_long* ot, s32 value, s32 x, s32 y, s32 alignment);
-void* carda_draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s32 palette, s32 alignment);
-void* carda_render_cached_glyph(void* prim, u_long* ot, u16 code, s32 palette);
-void* carda_emit_glyph_sprite(CardaGlyphSprite* sprite, u_long* ot, s32 cache_slot, s32 palette);
-void carda_begin_glyph_cache_frame(void);
-void carda_evict_unused_glyphs(void);
-void carda_reset_glyph_cache(void);
-void carda_expand_text_glyph_codes(u8* out, u8* in);
 
 #endif /* CARDA_INTERNAL_H */

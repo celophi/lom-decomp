@@ -43,17 +43,17 @@ s32 cload_main(void)
 {
     RECT rect;
 
-    g_cload_entry_state = 0xFF;
-    g_cload_card_slot = 0;
+    g_card_entry_state = 0xFF;
+    g_card_slot = 0;
     cload_reset_entry_ranks();
     cload_load_icon_resources();
     cload_init_display();
     g_cload_result = 0;
-    cload_init_stream_handles();
+    cload_init_card_events();
     g_cload_icon_phase = 0;
     setRECT(&rect, 0x140, 0, 0x40, 0x100);
     ClearImage(&rect, 0, 0, 0);
-    cload_reset_glyph_cache();
+    reset_glyph_cache();
     D_80162370 = 0;
     g_cload_progress_active = 0;
     g_cload_selection_status = 0;
@@ -160,15 +160,15 @@ s32 cload_update_frame(CloadRenderBuffer *frame)
 {
     if (g_cload_exit_requested != 0)
     {
-        cload_shutdown_stream_handles();
+        shutdown_card_events();
         field_text_reset_windows();
         DrawSync(0);
         return 1;
     }
     field_text_reset_scratch();
-    cload_begin_glyph_cache_frame();
+    begin_glyph_cache_frame();
     cload_update_menu(frame);
-    cload_evict_unused_glyphs();
+    evict_unused_glyphs();
     field_text_upload_immediate_cache();
     g_cload_frame_parity ^= 1;
     return 0;
@@ -287,7 +287,7 @@ void cload_update_load_sequence(void)
 {
     s32 phase;
 
-    if (g_cload_entry_state >= 0x10)
+    if (g_card_entry_state >= 0x10)
     {
         if (g_cload_load_step == NULL)
         {
@@ -308,7 +308,7 @@ void cload_update_load_sequence(void)
     }
     if (phase == 5)
     {
-        g_cload_entry_state = 0xF9;
+        g_card_entry_state = 0xF9;
         g_cload_load_step = g_cload_steps_card_reset;
     }
 }
@@ -345,7 +345,7 @@ s32 cload_handle_input(void)
     {
         return;
     }
-    pending = g_cload_entry_state;
+    pending = g_card_entry_state;
     if (pending == 0xFF)
     {
         return;
@@ -378,9 +378,9 @@ s32 cload_handle_input(void)
         g_cload_scroll_y = 0;
         g_cload_selected_row = 0;
         g_cload_load_step = NULL;
-        g_cload_entry_state = 0xFF;
+        g_card_entry_state = 0xFF;
         g_cload_selection_status = 0;
-        g_cload_card_slot ^= 1;
+        g_card_slot ^= 1;
         cload_reset_entry_ranks();
         return;
     }
@@ -406,13 +406,13 @@ s32 cload_handle_input(void)
             g_cload_selected_row -= 1;
             if (g_cload_selected_row < 0)
             {
-                g_cload_selected_row = g_cload_entry_state - 1;
+                g_cload_selected_row = g_card_entry_state - 1;
             }
         }
         if (g_pad_input & 0x4000)
         {
             g_cload_selected_row += 1;
-            if (g_cload_selected_row >= g_cload_entry_state)
+            if (g_cload_selected_row >= g_card_entry_state)
             {
                 g_cload_selected_row = 0;
             }
@@ -428,7 +428,7 @@ s32 cload_handle_input(void)
     }
     if (g_pad_input & 0x220)
     {
-        if (strncmp(g_lom_save_filename_prefix, CLOAD_DIR_ENTRY(g_cload_card_slot, g_cload_selected_row).name, 0xC) != 0)
+        if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_cload_selected_row].name, 0xC) != 0)
         {
             sfx_id = 0x78;
         }
@@ -517,7 +517,7 @@ void cload_update_elements(CloadRenderBuffer *frame)
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
  * @note Menu string/glyph-row drawing callback (state-dispatched TILE + text
- *       renderer). The row loop is a `do { } while (i < g_cload_entry_state)`
+ *       renderer). The row loop is a `do { } while (i < g_card_entry_state)`
  *       guarded by `if (state > 0)` with `row_y`/`i` hoisted to the default
  *       block, the rank-marker glyph offsets are materialized through a `u16
  *       misc_glyph` intermediate, and entry comparisons use strncmp - the
@@ -525,7 +525,7 @@ void cload_update_elements(CloadRenderBuffer *frame)
  */
 void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
 {
-    s32 state = g_cload_entry_state;
+    s32 state = g_card_entry_state;
 
     switch (state)
     {
@@ -583,7 +583,7 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
             off = i;
             base_x = -x_offset;
             text_table = &g_cload_text_check_memory_card;
-            entry = g_cload_entries;
+            entry = (char*)g_card_entries;
             off = i;
             do
             {
@@ -595,7 +595,8 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
                     {
                         pos.vx = base_x + CLOAD_ENTRY_VALUE_X;
                         pos.vy = row_y;
-                        prim = func_800A88A0(func_800A8A78(ot, prim, *(s32 *)((u8 *)g_cload_entry_suffix_values + off), 1, &pos, 0), ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_number_prefix), 1, base_x + 0x70, row_y, 0);
+                        prim = func_800A88A0(func_800A8A78(ot, prim, *(s32*)((u8*)g_card_entry_suffix_values + off), 1, &pos, 0), ot,
+                                             CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_number_prefix), 1, base_x + 0x70, row_y, 0);
                         if ((g_cload_rank_count - 1) == *flag_ptr)
                         {
                             marker_offset = text_table[27];
@@ -606,20 +607,20 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
                             marker_offset = text_table[28];
                             prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, marker_offset), 1, base_x + CLOAD_ENTRY_MARKER_X, row_y, 0);
                         }
-                        if (*skip_hex_digits((u8*)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry + 0xC)) == 0x2B)
+                        if (*skip_hex_digits((u8*)((g_card_slot * CARD_DIRECTORY_BYTES) + (s32)entry + 0xC)) == 0x2B)
                         {
                             prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_plus_marker), 1, 0xF8 - x_offset, row_y, 1);
                         }
                     }
-                    if (strncmp(g_lom_save_filename_prefix, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
+                    if (strncmp(g_lom_save_filename_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
                     {
                         prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_mana), 1, base_x, row_y, 0);
                     }
-                    else if (strncmp(g_lom_pocketstation_filename_prefix, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
+                    else if (strncmp(g_lom_pocketstation_filename_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
                     {
                         prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_alt_save), 1, base_x, row_y, 0);
                     }
-                    else if (strncmp(g_new_save_entry_prefix, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 8) == 0)
+                    else if (strncmp(g_new_save_entry_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + (s32)entry), 8) == 0)
                     {
                         prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_new_save), 1, base_x, row_y, 0);
                     }
@@ -628,10 +629,10 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
                         prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_other_game), 1, base_x, row_y, 0);
                     }
                 }
-                entry += CLOAD_DIRECTORY_ENTRY_BYTES;
+                entry += CARD_DIRECTORY_ENTRY_BYTES;
                 off += 4;
                 i++;
-            } while (i < g_cload_entry_state);
+            } while (i < g_card_entry_state);
         }
             row_y = ((g_cload_selected_row * CLOAD_ENTRY_ROW_HEIGHT) - y_offset) - g_cload_scroll_y;
 
@@ -688,7 +689,7 @@ void *cload_draw_card_slot0_label(u_long *ot, void *prim, s32 x_offset, s32 y_of
 
     color = 1;
     text = CLOAD_TEXT_AT(g_cload_text_card_slot_1, 6);
-    if (g_cload_card_slot != 0)
+    if (g_card_slot != 0)
     {
         color = 3;
     }
@@ -711,7 +712,7 @@ void *cload_draw_card_slot1_label(u_long *ot, void *prim, s32 x_offset, s32 y_of
 
     color = 1;
     text = CLOAD_TEXT_AT(g_cload_text_card_slot_2, 7);
-    if (g_cload_card_slot == 0)
+    if (g_card_slot == 0)
     {
         color = 3;
     }
@@ -753,7 +754,7 @@ void *cload_draw_selected_entry_details(u_long *ot, void *prim, s32 x_offset, s3
     {
         return result;
     }
-    if (g_cload_selection_status != 3 && g_cload_entry_state < 0x10)
+    if (g_cload_selection_status != 3 && g_card_entry_state < 0x10)
     {
         if (g_cload_selection_status == 2)
         {
@@ -766,7 +767,7 @@ void *cload_draw_selected_entry_details(u_long *ot, void *prim, s32 x_offset, s3
         }
         else
         {
-            if (strncmp(g_lom_save_filename_prefix, CLOAD_DIR_ENTRY(g_cload_card_slot, g_cload_selected_row).name, 0xC) == 0)
+            if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_cload_selected_row].name, 0xC) == 0)
             {
                 SavedGameLayout* save = &g_cload_selected_file.saved_game;
 
@@ -896,14 +897,14 @@ void *cload_draw_selected_entry_details(u_long *ot, void *prim, s32 x_offset, s3
                                 name[j] = *(header->title[0] + j);
                             }
                     name[j] = 0;
-                    result = cload_draw_cached_text(result, ot, name, -x_offset, -y_offset, 1, 0);
+                    result = draw_cached_text(result, ot, name, -x_offset, -y_offset, 1, 0);
 
                     for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
                     {
                         name[j] = g_cload_selected_file.header.title[1][j];
                     }
                     name[j] = 0;
-                        result = cload_draw_cached_text(result, ot, name, -x_offset, -y_offset + 0x10, 1, 0);
+                    result = draw_cached_text(result, ot, name, -x_offset, -y_offset + 0x10, 1, 0);
                         } while (0);
                         } while (0);
                         } while (0);
@@ -980,9 +981,9 @@ void cload_update_and_draw_elements(CloadRenderBuffer *frame)
     arrow_prim = frame->prim_cursor;
     ot = frame->ordering_table;
 
-    if ((g_cload_entry_state < 0x10) && ((g_cload_element1_state & CLOAD_ELEMENT_STATE_MASK) == 2))
+    if ((g_card_entry_state < 0x10) && ((g_cload_element1_state & CLOAD_ELEMENT_STATE_MASK) == 2))
     {
-        if ((g_cload_entry_state * CLOAD_ENTRY_ROW_HEIGHT) > (g_cload_scroll_y + 0x49))
+        if ((g_card_entry_state * CLOAD_ENTRY_ROW_HEIGHT) > (g_cload_scroll_y + 0x49))
         {
             arrow_prim = cload_emit_scroll_arrow(arrow_prim, ot, 0x114, 0x87, 0);
         }

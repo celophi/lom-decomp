@@ -30,7 +30,7 @@ void terminate_multibyte_text(void* text)
             }
             return;
         }
-        if (*p >= SAVE_FILE_TITLE_SJIS_LEAD_MIN)
+        if (*p >= SJIS_LEAD_MIN)
         {
             p += 2;
             i += 2;

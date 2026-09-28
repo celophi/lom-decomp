@@ -19,10 +19,10 @@ IN_BLOB = ("locations", "icon_offsets", "card_steps", "chart", "decimal_glyphs",
 
 # Each Python constant, and the C #define it mirrors.
 C_CONSTANTS = (
-    ("CHART_ROW_BYTES", "src/overlays/addhero/addhero_glyph.c", "ADDHERO_CHAR_TABLE_ROW_BYTES"),
-    ("CHART_COLUMNS", "src/overlays/addhero/addhero_glyph.c", "ADDHERO_CHAR_TABLE_COLUMNS"),
-    ("CHART_PAGE_BYTES", "src/overlays/addhero/addhero_glyph.c", "ADDHERO_CHAR_TABLE_PAGE_BYTES"),
-    ("CHART_FIRST_CODE", "src/overlays/addhero/addhero_internal.h", "ADDHERO_TEXT_FIRST_PRINTABLE"),
+    ("CHART_ROW_BYTES", "include/glyph_cache.h", "GLYPH_CHART_ROW_BYTES"),
+    ("CHART_COLUMNS", "include/glyph_cache.h", "GLYPH_CHART_COLUMNS"),
+    ("CHART_PAGE_BYTES", "include/glyph_cache.h", "GLYPH_CHART_PAGE_BYTES"),
+    ("CHART_FIRST_CODE", "include/glyph_cache.h", "GLYPH_TEXT_FIRST_PRINTABLE"),
     ("ICON_HERO_COUNT", "include/saved_game.h", "SAVE_ICON_HERO_COUNT"),
     ("ICON_PET_BASE", "include/saved_game.h", "SAVE_ICON_PET_BASE"),
     ("ICON_GOLEM_BASE", "include/saved_game.h", "SAVE_ICON_GOLEM_BASE"),

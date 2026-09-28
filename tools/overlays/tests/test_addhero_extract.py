@@ -59,20 +59,20 @@ class FakeOverlay:
 
         names["g_addhero_loadseq_start"] = len(blob)
         blob += bytes([1, 2, 0, 0])
-        names["g_addhero_loadseq_card"] = len(blob)
+        names["g_card_steps_idle"] = len(blob)
         blob += bytes([14, 0, 0, 0])
 
-        names["g_addhero_single_byte_char_table"] = len(blob)
+        names["g_glyph_single_byte_chart"] = len(blob)
         row = FULL_WIDTH_A * addhero.CHART_COLUMNS + b"\n"
         blob += row * (0x10 - (addhero.CHART_FIRST_CODE >> 4))
         pad(blob)
         # Put the two-byte pages past the chart, so no page falls inside it.
-        names["g_addhero_char_page_base"] = 0x10000
+        names["g_glyph_chart_page_base"] = 0x10000
 
-        names["g_addhero_decimal_glyphs"] = len(blob)
+        names["g_glyph_decimal_digits"] = len(blob)
         blob += "０１２３４５６７８９".encode("shift_jis") + b"\x00\x00"
         pad(blob, 8)
-        names["g_addhero_hex_glyphs"] = len(blob)
+        names["g_glyph_hex_digits"] = len(blob)
         blob += "０１２３４５６７８９ＡＢＣＤＥＦ".encode("shift_jis") + b"\x00\x00"
         pad(blob, 8)
         names["g_addhero_icon_phase"] = len(blob)  # first variable
@@ -81,9 +81,9 @@ class FakeOverlay:
         self.small, self.pattern, self.blob = small, pattern, bytes(blob)
         self.blob_address = ADDRESS + len(small) + len(pattern)
         self.symbols = {name: self.blob_address + offset for name, offset in names.items()}
-        page_base = names["g_addhero_char_page_base"]
-        self.symbols["g_addhero_char_page_base"] = self.blob_address + page_base
-        self.symbols["g_addhero_decimal_overflow_glyphs"] = ADDRESS
+        page_base = names["g_glyph_chart_page_base"]
+        self.symbols["g_glyph_chart_page_base"] = self.blob_address + page_base
+        self.symbols["g_decimal_overflow_text"] = ADDRESS
         self.symbols["g_addhero_file_template"] = ADDRESS + 8
         self.symbols["g_addhero_entry_header_template"] = ADDRESS + len(small)
 

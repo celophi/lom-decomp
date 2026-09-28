@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "saved_game.h"
+#include "sjis.h"
 
 /**
  * @file save_file.h

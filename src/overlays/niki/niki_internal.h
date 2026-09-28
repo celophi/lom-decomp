@@ -10,6 +10,12 @@
 #include "sdk/libmcx.h"
 #include "encoded_text.h"
 #include "save_file.h"
+#include "glyph_cache.h"
+#include "card_events.h"
+#include "card_directory.h"
+#include "sdk/strings.h"
+#include "controller.h"
+#include "sdk/libapi.h"
 
 #define NIKI_SJIS_FULLWIDTH_ZERO 0x4F82
 #define NIKI_SJIS_MINUS 0x5B81
@@ -22,13 +28,10 @@
 #define NIKI_ELEMENT_WORD_STRIDE 3
 #define NIKI_ELEMENT_STATE_MASK 7
 #define NIKI_ELEMENT_PHASE_MASK 0x78
-#define NIKI_CARD_DIRECTORY_BYTES 0x320
-#define NIKI_DIRECTORY_ENTRY_BYTES 0x28
 #define NIKI_MEMORY_CARD_BLOCK_BYTES 8192
 #define NIKI_SET_ELEMENT_WIDTH_LOW(e, c) ((e)->attr.word = ((e)->attr.word & 0x00FFFFFF) | ((u32)(c) << 24))
 #define GLYPH_SYM(sym, off) ((void*)(((u8*)&(sym) - (off)) + (sym)))
 #define GLYPH_OFF(base, off) ((void*)((base) + *(u16*)((base) + (off))))
-#define NIKI_DIRECTORY_ENTRY_COUNT 20
 #define GLYPH_CACHE_SLOTS 0x100
 #define GLYPH_CACHE_COLUMNS 16
 #define GLYPH_CACHE_ROW_MASK 0xF0
@@ -96,26 +99,12 @@ typedef union
     u8 bytes[SAVE_FILE_BYTES];
 } NikiSaveBuffer;
 
-/** @brief Three two-byte overflow glyphs and their string terminator. */
-typedef struct
-{
-    s8 data[7];
-} NikiDecimalOverflow;
-
 /** @brief Sixteen-color palette followed by a 48-by-48 four-bit icon raster. */
 typedef struct
 {
     u16 palette[16];
     u16 pixels[48][12];
 } NikiIcon;
-
-typedef struct
-{
-    s16 x;
-    s16 y;
-    s16 w;
-    s16 h;
-} RECT;
 
 /**
  * @brief Packed window position, dimensions, animation state, and draw callback.
@@ -153,17 +142,6 @@ typedef struct NikiElement
     } dimensions;
     s32 (*draw)(s32* ot, s32 prim, s32 x_offset, s32 y_offset);
 } NikiElement;
-
-/** @brief Memory-card directory entry; layout matches Psy-Q DIRENTRY. */
-typedef struct NikiDirEntry
-{
-    char name[20];
-    s32 attr;
-    s32 size;
-    void* next;
-    s32 head;
-    char system[4];
-} NikiDirEntry;
 
 /** @brief Bytes read to show an entry: the card header and the first 0x100 bytes of the saved game. */
 #define NIKI_ENTRY_READ_BYTES 0x280
@@ -259,14 +237,6 @@ typedef struct
     s16 y3;
 } NikiPolyG4Packet;
 
-typedef struct
-{
-    u32 tag;
-    u8 r0, g0, b0, code;
-    s16 x0, y0;
-    s16 w, h;
-} TILE;
-
 /** @brief Textured quadrilateral used to display a save-file icon. */
 typedef struct
 {
@@ -328,15 +298,6 @@ typedef struct
 
 typedef struct
 {
-    u32 tag;
-    u8 r0, g0, b0, code;
-    s16 x0, y0;
-    u8 u0, v0;
-    u16 clut;
-} NikiSprt16;
-
-typedef struct
-{
     unsigned addr : 24;
     unsigned len : 8;
     u8 r0, g0, b0, code;
@@ -348,22 +309,6 @@ typedef struct
     u32 tag;
     u32 command;
 } NikiDrawModePacket;
-
-typedef union
-{
-    u32 raw;
-    struct
-    {
-        u16 code;
-        u16 flags;
-    } data;
-} NikiGlyphCacheEntry;
-
-typedef struct
-{
-    NikiSprt16 packet;
-    u32 padding;
-} NikiGlyphSprite;
 
 /** @brief Two bytes of a Shift-JIS character in the glyph lookup tables. */
 typedef struct NikiSjisCode
@@ -385,15 +330,12 @@ typedef struct NikiSjisPage
     NikiSjisRow rows[NIKI_SJIS_ROWS_PER_PAGE];
 } NikiSjisPage;
 
-extern const NikiDecimalOverflow g_niki_decimal_overflow_text;
 extern s32 g_niki_io_busy;
 extern s32 g_niki_icon_phase;
 extern s32 g_niki_confirm_latch;
 extern s32 D_80164AE4;
 extern s32 g_niki_mode;
-extern s32 g_niki_card_slot;
 extern s32 g_niki_exit_requested;
-extern s32 g_niki_entry_state;
 extern s32 g_niki_selection_status;
 extern s32 g_niki_frame_parity;
 extern s32 g_niki_progress_active;
@@ -413,10 +355,7 @@ extern u8 g_niki_rescan_sequence[];
 extern u8 g_niki_card_info_sequence[];
 extern NikiElement g_niki_element_pool[NIKI_ELEMENT_COUNT];
 extern s32 g_niki_entry_scan_active;
-extern u8* g_niki_load_step;
 extern s32 g_field_niki_addhero_state;
-extern char D_800ECF7C[];
-extern NikiDirEntry g_niki_entries[][NIKI_DIRECTORY_ENTRY_COUNT];
 extern s32 g_save_compatibility_tag;
 extern s32 g_niki_icon_palette;
 extern s32 g_niki_dialog_state;
@@ -470,7 +409,6 @@ extern u16 D_8014713A;
 extern u16 D_801471A8;
 extern s32 g_niki_entry_ranks[];
 extern s32 g_niki_rank_count;
-extern s32 g_niki_entry_suffix_values[];
 extern s32 g_niki_icon_offsets[];
 extern u8 g_niki_icon_context[];
 extern u16 D_8014713C;
@@ -485,7 +423,6 @@ extern u16 D_8014716A;
 extern u8 g_niki_read_saved_copy_sequence[];
 /** @brief Reset retries and write the replacement save. */
 extern u8 g_niki_write_save_sequence[];
-extern s32 g_niki_entry_fields[][NIKI_DIRECTORY_ENTRY_COUNT];
 extern s32 g_niki_entry_value_limit;
 extern const char g_niki_file_template[8] __attribute__((aligned(4)));
 extern char D_800ECF9C[];
@@ -500,30 +437,9 @@ extern s32 g_niki_preserve_old_save;
 /** @brief Path written before renaming the replacement to the selected save path. */
 extern u8 g_niki_temporary_save_path[];
 /** @brief Hold at unhandled command 14 until the menu chooses another sequence. */
-extern u8 g_niki_idle_sequence[];
-extern s32 g_niki_primary_handle0;
-extern s32 g_niki_primary_handle1;
-extern s32 g_niki_primary_handle2;
-extern s32 g_niki_primary_handle3;
-extern s32 g_niki_secondary_handle0;
-extern s32 g_niki_secondary_handle1;
-extern s32 g_niki_secondary_handle2;
-extern s32 g_niki_secondary_handle3;
 extern const char g_niki_entry_header_template[7] __attribute__((aligned(4)));
 /** @brief Read and poll the selected entry's preview header. */
 extern u8 g_niki_preview_sequence[];
-extern u16 g_niki_decimal_glyphs[];
-extern u16 g_niki_hex_glyphs[];
-extern s32 g_niki_glyph_cursor_x;
-extern s32 g_niki_text_line_start_x;
-extern s32 g_niki_glyph_cursor_y;
-extern NikiGlyphCacheEntry g_niki_glyph_cache[];
-extern u8* g_niki_glyph_raster_cursor;
-extern s32 g_niki_glyph_upload_x;
-extern s32 g_niki_glyph_upload_y;
-extern u8 g_niki_glyph_raster_buffer[];
-extern NikiSjisPage g_niki_double_byte_char_table[];
-extern NikiSjisRow g_niki_single_byte_char_table[];
 
 void niki_update_elements(NikiFrameState* frame);
 void niki_update_and_draw_elements(NikiFrameState* frame);
@@ -535,7 +451,6 @@ s32 niki_draw_card_slot0_label(s32* ot, s32 prim, s32 arg2, s32 arg3);
 s32 niki_draw_card_slot1_label(s32* ot, s32 prim, s32 arg2, s32 arg3);
 s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 arg2, s32 arg3);
 s32 niki_draw_icon_highlight(s32 prim, s32* ot, s32 x, s32 y, s32 width, s32 icon_index, s32 texture_slot, s32 palette_mode);
-s32 niki_draw_cached_text(s32 prim, s32* ot, u8* text, s32 x, s32 y, s32 palette, s32 alignment);
 s32 niki_draw_footer_label(s32* ot, s32 prim, s32 arg2, s32 arg3);
 s32 niki_draw_state_page(s32* ot, s32 prim, s32 arg2, s32 arg3);
 void niki_clear_elements();
@@ -547,18 +462,14 @@ void niki_close_all_elements();
 void niki_switch_card_slot();
 void niki_commit_selected_entry(void);
 void niki_scroll_to_selection();
-s32 func_8001714C(void*, void*, s32);
 NikiElement* niki_alloc_element();
 void niki_enable_choice_toggle();
-void niki_restart_load_sequence();
 s32 niki_draw_save_confirm_dialog(s32* ot, s32 prim, s32 arg2, s32 arg3);
 s32 niki_draw_confirm_prompt(s32* ot, s32 prim, s32 arg2, s32 arg3);
 s32 func_800A88A0(s32 prim, s32* ot, void* glyph, s32 a3, s32 x, s32 y, s32 mode);
 s32 func_800A8A78(s32* ot, s32 prim, s32 ch, s32 a3, Vec2s* pos, s32 mode);
-void func_80019A34(RECT* rect, void* str);
 void func_800A55E4(void* buf, s32 arg1);
 void func_800A5638(void* buf, s32 arg1);
-s32 niki_parse_entry_fields();
 void niki_sort_entries_by_type();
 void niki_reset_entry_ranks(void);
 s32 niki_rank_entries(void);
@@ -570,36 +481,14 @@ s32 func_8001682C(s32, void*, s32);
 s32 func_8001683C(s32);
 s32 func_8001685C(void*, void*);
 s32 func_800170BC(void*, void*, ...);
-s32 func_8001724C(s32);
 s32 func_8001725C(s32);
-s32 func_8001729C(s32);
 s32 func_800172AC(s32);
 s32 niki_begin_entry_scan(s32);
 s32 niki_scan_next_entry(s32);
-void niki_release_primary_handles(void);
-void niki_release_secondary_handles(void);
-s32 niki_poll_primary_handle_group(void);
-s32 niki_poll_secondary_handle_group(void);
 void niki_open_status_dialog(s32);
 void niki_open_secondary_status_dialog(s32);
-void func_800158E0(void);
-s32 func_800167AC(s32, s32, s32, s32);
-void func_800167DC(s32);
-void func_800167EC(void);
-void func_800167FC(void);
-void func_800167BC(s32);
-s32 func_800167CC(s32);
 void func_80016E7C();
-s32 func_8001687C(s32);
-void func_80019788(s32);
-s32 niki_render_cached_glyph(s32 prim, s32* ot, s32 character_code, s32 palette);
-s32 niki_emit_glyph_sprite(NikiGlyphSprite* sprite, s32* ot, s32 cache_slot, s32 palette);
 void niki_build_ui_elements(void);
 void niki_update_menu(NikiFrameState* frame);
-void niki_init_stream_handles(void);
-void niki_shutdown_stream_handles(void);
-void niki_begin_glyph_cache_frame(void);
-void niki_evict_unused_glyphs(void);
-void niki_reset_glyph_cache(void);
 
 #endif

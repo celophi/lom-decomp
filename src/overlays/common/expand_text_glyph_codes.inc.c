@@ -1,35 +1,19 @@
-/* CLOAD's copy of the shared glyph-cache text drawing (see include/glyph_cache.h). */
-#include "cload_internal.h"
-
-/**
- * @brief g_glyph_chart_page_base as CLOAD reaches it.
- * @note CLOAD's page base address falls inside cload_load_icon_resources (in JP,
- *       0x70 bytes into cload_emit_icon_highlight_strip), where no data symbol can
- *       sit, so the target relocation is named after that function and CLOAD
- *       keeps its own copy of expand_text_glyph_codes that spells the base from it.
+/*
+ * Shared glyph-cache function; see include/glyph_cache.h. Included by each
+ * overlay that has it, at the point where it sits in that overlay's binary.
  */
-#if defined(VERSION_JP)
-#define CLOAD_GLYPH_CHART_PAGE_BASE ((u8*)cload_emit_icon_highlight_strip + 0x70)
-#else
-#define CLOAD_GLYPH_CHART_PAGE_BASE ((u8*)cload_load_icon_resources + 0x2C)
-#endif
-
-#include "../common/draw_signed_decimal.inc.c"
-#include "../common/draw_hex_byte.inc.c"
-#include "../common/draw_cached_text.inc.c"
-#include "../common/render_cached_glyph.inc.c"
-#include "../common/emit_glyph_sprite.inc.c"
-#include "../common/begin_glyph_cache_frame.inc.c"
-#include "../common/evict_unused_glyphs.inc.c"
-#include "../common/reset_glyph_cache.inc.c"
+#include "glyph_cache.h"
 
 /**
- * @brief Translate a string into Shift-JIS through the character chart, two
- *        output bytes per character, and null-terminate the result.
- * @param out Destination buffer.
- * @param in Null-terminated source string.
- * @note Same code as the shared expand_text_glyph_codes, with the page base
- *       spelled as CLOAD_GLYPH_CHART_PAGE_BASE.
+ * @brief Translate a source string into internal glyph codes via the single-
+ *        and double-byte character tables, writing two output bytes per input
+ *        character and null-terminating the result.
+ * @param out Destination glyph-code buffer.
+ * @param in  Null-terminated source string.
+ * @note Lead bytes 0x19-0x1F start a two-byte code whose second byte's nibbles
+ *       pick the row and column of one 16-row page of the double-byte table;
+ *       bytes above GLYPH_TEXT_FIRST_PRINTABLE index the single-byte table by their offset from it; any other
+ *       byte becomes the table's first (blank) glyph.
  */
 void expand_text_glyph_codes(u8* out, u8* in)
 {
@@ -54,7 +38,7 @@ void expand_text_glyph_codes(u8* out, u8* in)
             column = in[1];
             row = column >> 4;
             column &= 0xF;
-            first_byte = CLOAD_GLYPH_CHART_PAGE_BASE + column * 2;
+            first_byte = g_glyph_chart_page_base + column * 2;
             first_byte += row * GLYPH_CHART_ROW_BYTES;
             lead = *in;
             first_byte += lead * GLYPH_CHART_PAGE_BYTES;
@@ -63,7 +47,7 @@ void expand_text_glyph_codes(u8* out, u8* in)
             column = in[1];
             row = column >> 4;
             column &= 0xF;
-            second_byte = CLOAD_GLYPH_CHART_PAGE_BASE + 1 + column * 2;
+            second_byte = g_glyph_chart_page_base + 1 + column * 2;
             second_byte += row * GLYPH_CHART_ROW_BYTES;
             lead = *in;
             second_byte += lead * GLYPH_CHART_PAGE_BYTES;

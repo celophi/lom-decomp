@@ -63,8 +63,8 @@ void addhero_init(s32 work_base, s32 mode)
     RECT rect;
 
     g_addhero_mode = mode;
-    g_addhero_entry_state = ADDHERO_ENTRY_STATE_CHECKING_CARD;
-    g_addhero_card_slot = 0;
+    g_card_entry_state = ADDHERO_ENTRY_STATE_CHECKING_CARD;
+    g_card_slot = 0;
 
     addhero_reset_entry_ranks();
     g_addhero_result = ADDHERO_RESULT_CANCELLED;
@@ -75,7 +75,7 @@ void addhero_init(s32 work_base, s32 mode)
     setRECT(&rect, OVERLAY_INIT_CLEAR_VRAM_X, OVERLAY_INIT_CLEAR_VRAM_Y, OVERLAY_INIT_CLEAR_VRAM_W, OVERLAY_INIT_CLEAR_VRAM_H);
 
     ClearImage(&rect, 0, 0, 0);
-    addhero_reset_glyph_cache();
+    reset_glyph_cache();
 
     g_addhero_write_in_progress = 0;
     g_addhero_progress_active = 0;
@@ -99,16 +99,16 @@ s32 addhero_state_step(AddheroDrawState* draw_state)
 {
     if (g_addhero_exit_requested != 0)
     {
-        addhero_shutdown_card_events();
+        shutdown_card_events();
         field_text_reset_windows();
         DrawSync(0);
         return g_addhero_exit_requested;
     }
 
     field_text_reset_scratch();
-    addhero_begin_glyph_cache_frame();
+    begin_glyph_cache_frame();
     addhero_update_state(draw_state);
-    addhero_evict_unused_glyphs();
+    evict_unused_glyphs();
     field_text_upload_immediate_cache();
     g_addhero_frame_parity ^= 1;
     return 0;
@@ -251,11 +251,11 @@ s32 addhero_update_load_sequence(void)
 {
     s32 result;
 
-    if (g_addhero_entry_state >= ADDHERO_ENTRY_COUNT_LIMIT)
+    if (g_card_entry_state >= ADDHERO_ENTRY_COUNT_LIMIT)
     {
-        if (g_addhero_load_step == NULL)
+        if (g_card_step == NULL)
         {
-            g_addhero_load_step = &g_addhero_loadseq_start;
+            g_card_step = &g_addhero_loadseq_start;
         }
     }
 
@@ -268,13 +268,13 @@ s32 addhero_update_load_sequence(void)
     {
         if (g_addhero_mode == 0)
         {
-            g_addhero_entry_state = ADDHERO_ENTRY_STATE_BROWSER_READ_ERROR;
+            g_card_entry_state = ADDHERO_ENTRY_STATE_BROWSER_READ_ERROR;
         }
         else
         {
-            g_addhero_entry_state = ADDHERO_ENTRY_STATE_NO_GAME_DATA;
+            g_card_entry_state = ADDHERO_ENTRY_STATE_NO_GAME_DATA;
         }
-        g_addhero_load_step = g_addhero_loadseq_abort;
+        g_card_step = g_addhero_loadseq_abort;
     }
     else
     {
@@ -283,21 +283,21 @@ s32 addhero_update_load_sequence(void)
         case ADDHERO_LOAD_RESULT_NONE:
             break;
         case ADDHERO_LOAD_RESULT_COMPLETE:
-            g_addhero_load_step = g_addhero_loadseq_done;
+            g_card_step = g_addhero_loadseq_done;
             g_addhero_load_flow_active = 0;
             break;
         case ADDHERO_LOAD_RESULT_CARD_ERROR:
             if (g_addhero_mode == 0)
             {
-                g_addhero_entry_state = ADDHERO_ENTRY_STATE_BROWSER_READ_ERROR;
+                g_card_entry_state = ADDHERO_ENTRY_STATE_BROWSER_READ_ERROR;
             }
             else
             {
-                g_addhero_entry_state = ADDHERO_ENTRY_STATE_NO_GAME_DATA;
+                g_card_entry_state = ADDHERO_ENTRY_STATE_NO_GAME_DATA;
             }
             /* fallthrough */
         case ADDHERO_LOAD_RESULT_ABORT:
-            g_addhero_load_step = g_addhero_loadseq_abort;
+            g_card_step = g_addhero_loadseq_abort;
             break;
         }
     }
@@ -334,7 +334,7 @@ s32 addhero_handle_input(void)
         return;
     }
 
-    entry_count = g_addhero_entry_state;
+    entry_count = g_card_entry_state;
     if (entry_count == ADDHERO_ENTRY_STATE_CHECKING_CARD)
     {
         return;
@@ -347,7 +347,7 @@ s32 addhero_handle_input(void)
     {
         return;
     }
-    if (*g_addhero_load_step >= ADDHERO_STEP_SCAN_ENTRIES && *g_addhero_load_step <= ADDHERO_STEP_SCAN_DONE)
+    if (*g_card_step >= ADDHERO_STEP_SCAN_ENTRIES && *g_card_step <= ADDHERO_STEP_SCAN_DONE)
     {
         return;
     }
@@ -394,13 +394,13 @@ s32 addhero_handle_input(void)
             g_addhero_selected_row--;
             if (g_addhero_selected_row < 0)
             {
-                g_addhero_selected_row = g_addhero_entry_state - 1;
+                g_addhero_selected_row = g_card_entry_state - 1;
             }
         }
         if (g_pad_input & PAD_BTN_DOWN)
         {
             g_addhero_selected_row++;
-            if (g_addhero_selected_row >= g_addhero_entry_state)
+            if (g_addhero_selected_row >= g_card_entry_state)
             {
                 g_addhero_selected_row = 0;
             }
@@ -417,8 +417,8 @@ s32 addhero_handle_input(void)
 
     if (g_pad_input & ADDHERO_CONFIRM_BUTTON_MASK)
     {
-        selected_entry = &g_addhero_entries[g_addhero_card_slot][g_addhero_selected_row];
-        if (strncmp(g_lom_save_filename_prefix, selected_entry->name, ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) == 0)
+        selected_entry = &g_card_entries[g_card_slot][g_addhero_selected_row];
+        if (strncmp(g_lom_save_filename_prefix, selected_entry->name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
         {
             entry = &g_addhero_entry_file.saved_game;
             if ((entry->identity.ids.game_id != g_saved_game_ctx->identity.ids.game_id) &&
@@ -433,7 +433,7 @@ s32 addhero_handle_input(void)
                 ADDHERO_SET_ELEMENT_WIDTH_LOW(prompt, ADDHERO_MESSAGE_WIDTH);
                 addhero_enable_choice_toggle();
                 prompt->draw_handler = addhero_draw_load_prompt;
-                addhero_restart_load_sequence();
+                restart_card_sequence();
                 field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
                 return;
             }
@@ -449,14 +449,14 @@ s32 addhero_handle_input(void)
 void addhero_reset_state(void)
 {
     g_addhero_load_flow_active = 0;
-    g_addhero_load_step = NULL;
-    g_addhero_entry_state = ADDHERO_ENTRY_STATE_CHECKING_CARD;
+    g_card_step = NULL;
+    g_card_entry_state = ADDHERO_ENTRY_STATE_CHECKING_CARD;
     g_addhero_scroll_frames = 0;
     g_addhero_scroll_target_y = 0;
     g_addhero_scroll_y = 0;
     g_addhero_selected_row = 0;
     g_addhero_selection_status = ADDHERO_SELECTION_NONE;
-    g_addhero_card_slot ^= 1;
+    g_card_slot ^= 1;
     addhero_reset_entry_ranks();
     field_reset_input_repeat();
     g_pad_input = 0;
@@ -529,7 +529,7 @@ void addhero_update_elements(AddheroDrawState* draw_state)
  */
 void* addhero_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    s32 entry_state = g_addhero_entry_state;
+    s32 entry_state = g_card_entry_state;
 
     switch (entry_state)
     {
@@ -614,7 +614,7 @@ void* addhero_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset
                         value_pos.vx = list_x + ADDHERO_ENTRY_VALUE_X;
                         value_pos.vy = row_y;
                         prim = field_draw_text(
-                            field_draw_number(ot, prim, g_addhero_entry_suffix_values[entry_index], FIELD_TEXT_COLOR_NORMAL, &value_pos, FIELD_TEXT_ALIGN_LEFT),
+                            field_draw_number(ot, prim, g_card_entry_suffix_values[entry_index], FIELD_TEXT_COLOR_NORMAL, &value_pos, FIELD_TEXT_ALIGN_LEFT),
                             ot, ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_text_number_label), FIELD_TEXT_COLOR_NORMAL, list_x + ADDHERO_ENTRY_NUMBER_LABEL_X,
                             row_y, FIELD_TEXT_ALIGN_LEFT);
                         if ((g_addhero_rank_count - 1) == g_addhero_entry_ranks[entry_index])
@@ -629,25 +629,23 @@ void* addhero_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset
                             prim = field_draw_text(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, marker_offset), FIELD_TEXT_COLOR_NORMAL,
                                                    list_x + ADDHERO_ENTRY_MARKER_X, row_y, FIELD_TEXT_ALIGN_LEFT);
                         }
-                        if (*skip_hex_digits(&g_addhero_entries[g_addhero_card_slot][entry_index].name[ADDHERO_SAVE_FILENAME_PREFIX_LENGTH]) == '+')
+                        if (*skip_hex_digits(&g_card_entries[g_card_slot][entry_index].name[CARD_SAVE_FILENAME_PREFIX_LENGTH]) == '+')
                         {
                             prim = field_draw_text(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_text_plus_marker), FIELD_TEXT_COLOR_NORMAL,
                                                    ADDHERO_ENTRY_PLUS_RIGHT_X - x_offset, row_y, FIELD_TEXT_ALIGN_RIGHT);
                         }
                     }
-                    if (strncmp(g_lom_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name, ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) == 0)
+                    if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][entry_index].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
                     {
                         prim = field_draw_text(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_text_mana_label), FIELD_TEXT_COLOR_NORMAL,
                                                ADDHERO_ENTRY_LABEL_X - x_offset, row_y, FIELD_TEXT_ALIGN_LEFT);
                     }
-                    else if (strncmp(g_lom_pocketstation_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name,
-                                     ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) == 0)
+                    else if (strncmp(g_lom_pocketstation_filename_prefix, g_card_entries[g_card_slot][entry_index].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
                     {
                         prim = field_draw_text(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_text_ring_ring_land_label), FIELD_TEXT_COLOR_NORMAL,
                                                ADDHERO_ENTRY_LABEL_X - x_offset, row_y, FIELD_TEXT_ALIGN_LEFT);
                     }
-                    else if (strncmp(g_new_save_entry_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name,
-                                     ADDHERO_NEW_SAVE_FILENAME_PREFIX_LENGTH) == 0)
+                    else if (strncmp(g_new_save_entry_prefix, g_card_entries[g_card_slot][entry_index].name, ADDHERO_NEW_SAVE_FILENAME_PREFIX_LENGTH) == 0)
                     {
                         prim = field_draw_text(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_text_new_save_label), FIELD_TEXT_COLOR_NORMAL,
                                                ADDHERO_ENTRY_LABEL_X - x_offset, row_y, FIELD_TEXT_ALIGN_LEFT);
@@ -659,7 +657,7 @@ void* addhero_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset
                     }
                 }
                 entry_index++;
-            } while (entry_index < g_addhero_entry_state);
+            } while (entry_index < g_card_entry_state);
         }
         row_y = ((g_addhero_selected_row * ADDHERO_ENTRY_ROW_HEIGHT) - y_offset) - g_addhero_scroll_y;
 
@@ -721,7 +719,7 @@ void* addhero_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_
     RECT unused; /* never used, but the original stack frame reserves it */
     TILE* tile;
 
-    if (g_addhero_card_slot != 0)
+    if (g_card_slot != 0)
     {
         tile = (TILE*)prim;
         *(u32*)&tile->r0 = ADDHERO_INACTIVE_LABEL_COLOR;
@@ -750,7 +748,7 @@ void* addhero_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_
     RECT unused; /* never used, but the original stack frame reserves it */
     TILE* tile;
 
-    if (g_addhero_card_slot == 0)
+    if (g_card_slot == 0)
     {
         tile = (TILE*)prim;
         *(u32*)&tile->r0 = ADDHERO_INACTIVE_LABEL_COLOR;
@@ -795,7 +793,7 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
     {
         return result;
     }
-    if (g_addhero_selection_status != ADDHERO_SELECTION_EMPTY_CARD && g_addhero_entry_state < ADDHERO_ENTRY_COUNT_LIMIT)
+    if (g_addhero_selection_status != ADDHERO_SELECTION_EMPTY_CARD && g_card_entry_state < ADDHERO_ENTRY_COUNT_LIMIT)
     {
         if (g_addhero_selection_status == ADDHERO_SELECTION_NEW_SAVE)
         {
@@ -810,8 +808,7 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
         }
         else
         {
-            if (strncmp(g_lom_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][g_addhero_selected_row].name, ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) ==
-                0)
+            if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_addhero_selected_row].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
             {
                 if (g_save_compatibility_tag == SAVE_TAG_ANY || g_addhero_entry_file.saved_game.compatibility_tag == g_save_compatibility_tag)
                 {
@@ -942,22 +939,22 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
 
                 terminate_multibyte_text(g_addhero_entry_file.header.title);
                 header = &g_addhero_entry_file.header;
-                if (header->title[1][0] == 0 || header->title[1][0] >= SAVE_FILE_TITLE_SJIS_LEAD_MIN)
+                if (header->title[1][0] == 0 || header->title[1][0] >= SJIS_LEAD_MIN)
                 {
                     for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
                     {
                         name[j] = *(header->title[0] + j);
                     }
                     name[j] = 0;
-                    result = addhero_draw_cached_text(result, ot, name, -x_offset, -y_offset, FIELD_TEXT_COLOR_NORMAL, FIELD_TEXT_ALIGN_LEFT);
+                    result = draw_cached_text(result, ot, name, -x_offset, -y_offset, FIELD_TEXT_COLOR_NORMAL, FIELD_TEXT_ALIGN_LEFT);
 
                     for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
                     {
                         name[j] = g_addhero_entry_file.header.title[1][j];
                     }
                     name[j] = 0;
-                    result = addhero_draw_cached_text(result, ot, name, -x_offset, -y_offset + ADDHERO_DETAILS_LINE_HEIGHT, FIELD_TEXT_COLOR_NORMAL,
-                                                      FIELD_TEXT_ALIGN_LEFT);
+                    result =
+                        draw_cached_text(result, ot, name, -x_offset, -y_offset + ADDHERO_DETAILS_LINE_HEIGHT, FIELD_TEXT_COLOR_NORMAL, FIELD_TEXT_ALIGN_LEFT);
                 }
             }
         }
@@ -1026,10 +1023,10 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
     prim = draw_state->prim_cursor;
     ot = &draw_state->ot;
 
-    if ((g_addhero_entry_state < ADDHERO_ENTRY_COUNT_LIMIT) && (g_addhero_element_pool[ADDHERO_ELEMENT_MAIN].attr.bits.state == ADDHERO_ELEMENT_STATE_ACTIVE) &&
+    if ((g_card_entry_state < ADDHERO_ENTRY_COUNT_LIMIT) && (g_addhero_element_pool[ADDHERO_ELEMENT_MAIN].attr.bits.state == ADDHERO_ELEMENT_STATE_ACTIVE) &&
         (g_addhero_element_pool[ADDHERO_ELEMENT_MAIN].size.bits.scrollable != 0))
     {
-        if ((g_addhero_entry_state * ADDHERO_ENTRY_ROW_HEIGHT) > (g_addhero_scroll_y + ADDHERO_LIST_HEIGHT))
+        if ((g_card_entry_state * ADDHERO_ENTRY_ROW_HEIGHT) > (g_addhero_scroll_y + ADDHERO_LIST_HEIGHT))
         {
             prim = field_draw_menu_scroll_arrow(prim, ot, ADDHERO_SCROLL_ARROW_X, ADDHERO_SCROLL_ARROW_DOWN_Y, FIELD_MENU_ARROW_DOWN);
         }

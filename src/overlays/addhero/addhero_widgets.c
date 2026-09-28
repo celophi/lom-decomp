@@ -49,15 +49,15 @@ void* addhero_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
                                                         FIELD_TEXT_COLOR_NORMAL, x, -y_offset, FIELD_TEXT_ALIGN_CENTER),
                                         ot, x, ADDHERO_TEXT_LINE_HEIGHT - y_offset);
 
-    status = addhero_poll_and_retry_card_info();
-    if (status == ADDHERO_CARD_EVENT_ERROR || status == ADDHERO_CARD_EVENT_TIMEOUT)
+    status = poll_and_retry_card_info();
+    if (status == CARD_EVENT_ERROR || status == CARD_EVENT_TIMEOUT)
     {
         g_addhero_element_pool[ADDHERO_ELEMENT_MODAL].attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
         field_reset_input_repeat();
         field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
-        g_addhero_entry_state = ADDHERO_ENTRY_STATE_CHECKING_CARD;
+        g_card_entry_state = ADDHERO_ENTRY_STATE_CHECKING_CARD;
         addhero_reset_entry_ranks();
-        g_addhero_load_step = NULL;
+        g_card_step = NULL;
     }
     else
     {
@@ -66,7 +66,7 @@ void* addhero_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
             g_addhero_element_pool[ADDHERO_ELEMENT_MODAL].attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
             field_reset_input_repeat();
             field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
-            g_addhero_load_step = g_addhero_loadseq_abort;
+            g_card_step = g_addhero_loadseq_abort;
         }
         else if (g_pad_input & ADDHERO_CONFIRM_BUTTON_MASK)
         {
@@ -75,13 +75,13 @@ void* addhero_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
                 g_addhero_element_pool[ADDHERO_ELEMENT_MODAL].attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
                 field_reset_input_repeat();
                 field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
-                g_addhero_load_step = g_addhero_loadseq_abort;
+                g_card_step = g_addhero_loadseq_abort;
             }
             else
             {
                 field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
                 g_addhero_progress_active = 1;
-                g_addhero_load_step = g_addhero_loadseq_load_begin;
+                g_card_step = g_addhero_loadseq_load_begin;
                 p = &g_addhero_element_pool[ADDHERO_ELEMENT_MODAL];
                 p->draw_handler = addhero_draw_load_progress;
                 p->attr.bits.transition_step = 1;
@@ -224,9 +224,9 @@ void addhero_open_status_dialog(s32 message_id)
     g_addhero_progress_active = 0;
     g_addhero_selection_status = ADDHERO_SELECTION_NONE;
     g_addhero_io_busy = 0;
-    g_addhero_entry_state = ADDHERO_ENTRY_STATE_CHECKING_CARD;
+    g_card_entry_state = ADDHERO_ENTRY_STATE_CHECKING_CARD;
     addhero_reset_entry_ranks();
-    g_addhero_load_step = NULL;
+    g_card_step = NULL;
     g_addhero_dialog_state = message_id;
 }
 
@@ -252,7 +252,7 @@ void addhero_open_exit_dialog(s32 message_id)
     g_addhero_selection_status = ADDHERO_SELECTION_NONE;
     g_addhero_io_busy = 0;
     addhero_reset_entry_ranks();
-    g_addhero_load_step = NULL;
+    g_card_step = NULL;
     g_addhero_dialog_state = message_id;
 }
 
@@ -363,7 +363,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
 {
     RECT unused; /* never used, but the original stack frame reserves it */
 
-    switch (g_addhero_entry_state)
+    switch (g_card_entry_state)
     {
     case ADDHERO_ENTRY_STATE_NO_GAME_DATA:
         prim = field_draw_text(prim, ot, ADDHERO_TEXT_AT(g_addhero_text_no_game_save_data, ADDHERO_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
@@ -470,14 +470,14 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
                 g_addhero_selection_status = ADDHERO_SELECTION_NONE;
                 g_addhero_io_busy = 0;
                 g_addhero_progress_active = 0;
-                g_addhero_entry_state = ADDHERO_ENTRY_STATE_CHECKING_CARD;
+                g_card_entry_state = ADDHERO_ENTRY_STATE_CHECKING_CARD;
                 addhero_reset_entry_ranks();
-                g_addhero_load_step = NULL;
+                g_card_step = NULL;
                 g_addhero_dialog_state = message_id;
                 return prim;
             }
             field_play_sound(FIELD_SOUND_LOAD_DONE, FIELD_SOUND_PAN_CENTRE);
-            g_addhero_entry_state = ADDHERO_ENTRY_STATE_SAVE_CONFIRM;
+            g_card_entry_state = ADDHERO_ENTRY_STATE_SAVE_CONFIRM;
             addhero_enable_choice_toggle();
             field_reset_input_repeat();
         }
@@ -497,7 +497,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
         {
             field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
             addhero_enable_choice_toggle();
-            g_addhero_entry_state = ADDHERO_ENTRY_STATE_SAVE_CONFIRM;
+            g_card_entry_state = ADDHERO_ENTRY_STATE_SAVE_CONFIRM;
             field_reset_input_repeat();
         }
         else if (g_pad_input & ADDHERO_CONFIRM_BUTTON_MASK)
@@ -506,7 +506,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
             {
                 field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
                 addhero_enable_choice_toggle();
-                g_addhero_entry_state = ADDHERO_ENTRY_STATE_SAVE_CONFIRM;
+                g_card_entry_state = ADDHERO_ENTRY_STATE_SAVE_CONFIRM;
                 field_reset_input_repeat();
             }
             else
@@ -542,7 +542,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
         if (g_pad_input & PAD_BTN_CIRCLE)
         {
             addhero_enable_choice_toggle();
-            g_addhero_entry_state = ADDHERO_ENTRY_STATE_CONFIRM_NO_SAVE;
+            g_card_entry_state = ADDHERO_ENTRY_STATE_CONFIRM_NO_SAVE;
             field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
             field_reset_input_repeat();
         }
@@ -551,7 +551,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
             if (g_addhero_choice_toggle != 0)
             {
                 addhero_enable_choice_toggle();
-                g_addhero_entry_state = ADDHERO_ENTRY_STATE_CONFIRM_NO_SAVE;
+                g_card_entry_state = ADDHERO_ENTRY_STATE_CONFIRM_NO_SAVE;
                 field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
                 field_reset_input_repeat();
             }
@@ -566,8 +566,8 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
                 ((SaveFile*)buffer)->magic = SAVE_FILE_MAGIC;
                 ((SaveFile*)buffer)->checksum = checksum;
                 g_addhero_write_in_progress = 1;
-                g_addhero_load_step = g_addhero_loadseq_save_begin;
-                g_addhero_entry_state = ADDHERO_ENTRY_STATE_SAVE_PROGRESS;
+                g_card_step = g_addhero_loadseq_save_begin;
+                g_card_entry_state = ADDHERO_ENTRY_STATE_SAVE_PROGRESS;
             }
         }
     }
@@ -653,24 +653,23 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
             {
                 return prim;
             }
-            if (*g_addhero_load_step >= ADDHERO_STEP_SCAN_ENTRIES && *g_addhero_load_step <= ADDHERO_STEP_SCAN_DONE)
+            if (*g_card_step >= ADDHERO_STEP_SCAN_ENTRIES && *g_card_step <= ADDHERO_STEP_SCAN_DONE)
             {
                 return prim;
             }
-            if ((strncmp(g_lom_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][g_addhero_selected_row].name,
-                         ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) != 0) ||
+            if ((strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_addhero_selected_row].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) != 0) ||
                 (g_addhero_entry_file.saved_game.identity.word != g_saved_game_ctx->guest_origin.word))
             {
                 g_addhero_selected_row++;
-                if (g_addhero_selected_row >= g_addhero_entry_state)
+                if (g_addhero_selected_row >= g_card_entry_state)
                 {
-                    if (g_addhero_entry_state != 0)
+                    if (g_card_entry_state != 0)
                     {
-                        g_addhero_entry_state = ADDHERO_ENTRY_STATE_NO_LOAD_FILE;
+                        g_card_entry_state = ADDHERO_ENTRY_STATE_NO_LOAD_FILE;
                     }
                     else
                     {
-                        g_addhero_entry_state = ADDHERO_ENTRY_STATE_NO_GAME_DATA;
+                        g_card_entry_state = ADDHERO_ENTRY_STATE_NO_GAME_DATA;
                     }
                 }
                 else
@@ -694,8 +693,8 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
             {
                 g_addhero_progress_start_tick = VSync(-1);
                 g_addhero_progress_active = 1;
-                g_addhero_load_step = g_addhero_loadseq_load_progress;
-                g_addhero_entry_state = ADDHERO_ENTRY_STATE_LOAD_PROGRESS;
+                g_card_step = g_addhero_loadseq_load_progress;
+                g_card_entry_state = ADDHERO_ENTRY_STATE_LOAD_PROGRESS;
             }
         }
     }
@@ -708,19 +707,19 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
     {
         return prim;
     }
-    if (g_addhero_entry_state == ADDHERO_ENTRY_STATE_LOAD_PROGRESS)
+    if (g_card_entry_state == ADDHERO_ENTRY_STATE_LOAD_PROGRESS)
     {
         return prim;
     }
-    if (g_addhero_entry_state == ADDHERO_ENTRY_STATE_SAVE_PROGRESS)
+    if (g_card_entry_state == ADDHERO_ENTRY_STATE_SAVE_PROGRESS)
     {
         return prim;
     }
-    if (g_addhero_entry_state == ADDHERO_ENTRY_STATE_SAVE_CONFIRM)
+    if (g_card_entry_state == ADDHERO_ENTRY_STATE_SAVE_CONFIRM)
     {
         return prim;
     }
-    if (g_addhero_entry_state == ADDHERO_ENTRY_STATE_CONFIRM_NO_SAVE)
+    if (g_card_entry_state == ADDHERO_ENTRY_STATE_CONFIRM_NO_SAVE)
     {
         return prim;
     }
@@ -745,23 +744,23 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
         return prim;
     }
 
-    if ((g_pad_input & ADDHERO_CARD_SWITCH_BUTTON_MASK) && (g_addhero_entry_state != ADDHERO_ENTRY_STATE_CHECKING_CARD))
+    if ((g_pad_input & ADDHERO_CARD_SWITCH_BUTTON_MASK) && (g_card_entry_state != ADDHERO_ENTRY_STATE_CHECKING_CARD))
     {
         field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
         g_addhero_load_flow_active = 0;
-        g_addhero_load_step = NULL;
+        g_card_step = NULL;
         g_addhero_scroll_frames = 0;
         g_addhero_scroll_target_y = 0;
         g_addhero_scroll_y = 0;
         g_addhero_selected_row = 0;
-        g_addhero_entry_state = ADDHERO_ENTRY_STATE_CHECKING_CARD;
+        g_card_entry_state = ADDHERO_ENTRY_STATE_CHECKING_CARD;
         g_addhero_selection_status = ADDHERO_SELECTION_NONE;
-        g_addhero_card_slot ^= 1;
+        g_card_slot ^= 1;
         addhero_reset_entry_ranks();
         field_reset_input_repeat();
         g_addhero_progress_bar_active = 0;
         g_pad_input = 0;
-        g_addhero_load_step = &g_addhero_loadseq_start;
+        g_card_step = &g_addhero_loadseq_start;
     }
     return prim;
 }

@@ -71,10 +71,10 @@ static inline CardaElement *carda_save_alloc_element(void)
  * @param x_offset Horizontal transition offset.
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
- * @note Dispatches on g_carda_entry_state (g_carda_entry_state): below CARDA_ENTRY_STATE_PET_ALREADY_ON_RANCH
+ * @note Dispatches on g_card_entry_state (g_card_entry_state): below CARDA_ENTRY_STATE_PET_ALREADY_ON_RANCH
  *       it holds the directory entry count while the card is searched for an existing
  *       save; above it, the dialog currently shown. Dialog states also read the pad,
- *       move to the next state and start card sequences through g_carda_card_step.
+ *       move to the next state and start card sequences through g_card_step.
  * @note JP changes this function; the JP build takes it from assembly.
  */
 #if defined(VERSION_JP)
@@ -88,7 +88,7 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     if (g_carda_element_pool[0].attr.bits.state != 0)
     {
         /* The message states draw nothing while element 0 is active. */
-        switch (g_carda_entry_state)
+        switch (g_card_entry_state)
         {
         case CARDA_ENTRY_STATE_PET_ALREADY_ON_RANCH:
         case CARDA_ENTRY_STATE_FORMAT_FAILED:
@@ -108,7 +108,7 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         }
     }
 
-    switch (g_carda_entry_state)
+    switch (g_card_entry_state)
     {
     case CARDA_ENTRY_STATE_NO_GAME_DATA:
         prim = carda_draw_mode3_notice(prim, ot, x_offset, y_offset, 0xE);
@@ -170,7 +170,7 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         if (g_carda_mode == 3)
         {
             prim = carda_draw_mode3_notice(prim, ot, x_offset, y_offset, 0x10);
-            g_carda_entry_state = CARDA_ENTRY_STATE_CARD_FULL;
+            g_card_entry_state = CARDA_ENTRY_STATE_CARD_FULL;
         }
         else
         {
@@ -185,8 +185,8 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             if (g_pad_input & CARDA_CONFIRM_BUTTON_MASK)
             {
                 field_play_sound(0x7D, 0x80);
-                g_carda_entry_state = CARDA_ENTRY_STATE_SELECT_SLOT;
-                g_carda_choice_toggle = g_carda_card_slot;
+                g_card_entry_state = CARDA_ENTRY_STATE_SELECT_SLOT;
+                g_carda_choice_toggle = g_card_slot;
                 field_reset_input_repeat();
             }
         }
@@ -291,8 +291,8 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         if (g_pad_input & PAD_BTN_CIRCLE)
         {
             field_play_sound(0x7D, 0x80);
-            g_carda_choice_toggle = g_carda_card_slot;
-            g_carda_entry_state = CARDA_ENTRY_STATE_SELECT_SLOT;
+            g_carda_choice_toggle = g_card_slot;
+            g_card_entry_state = CARDA_ENTRY_STATE_SELECT_SLOT;
             field_reset_input_repeat();
             break;
         }
@@ -301,8 +301,8 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             if (g_carda_choice_toggle != 0)
             {
                 field_play_sound(0x7D, 0x80);
-                g_carda_choice_toggle = g_carda_card_slot;
-                g_carda_entry_state = CARDA_ENTRY_STATE_SELECT_SLOT;
+                g_carda_choice_toggle = g_card_slot;
+                g_card_entry_state = CARDA_ENTRY_STATE_SELECT_SLOT;
                 field_reset_input_repeat();
                 break;
             }
@@ -310,8 +310,8 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             g_carda_new_save_file = 0;
             g_carda_progress_start_tick = VSync(-1);
             g_carda_progress_active = 1;
-            g_carda_card_step = g_carda_steps_read_save_prefix;
-            g_carda_entry_state = CARDA_ENTRY_STATE_UPLOADING;
+            g_card_step = g_carda_steps_read_save_prefix;
+            g_card_entry_state = CARDA_ENTRY_STATE_UPLOADING;
         }
         break;
     }
@@ -336,7 +336,7 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             break;
         }
         field_play_sound(0x7B, 0x80);
-        g_carda_entry_state = CARDA_ENTRY_STATE_CONFIRM_DOWNLOAD;
+        g_card_entry_state = CARDA_ENTRY_STATE_CONFIRM_DOWNLOAD;
         g_carda_pet_already_on_ranch = 0;
         save_id = CARDA_SAVE_DATA->record.unique_id;
         for (i = 0; i < PET_RECORD_COUNT; i++)
@@ -349,8 +349,8 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         }
         if (g_carda_pet_already_on_ranch != 0)
         {
-            g_carda_entry_state = CARDA_ENTRY_STATE_PET_ALREADY_ON_RANCH;
-            g_carda_card_step = NULL;
+            g_card_entry_state = CARDA_ENTRY_STATE_PET_ALREADY_ON_RANCH;
+            g_card_step = NULL;
             break;
         }
         if (g_carda_mode == 3)
@@ -380,9 +380,9 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             carda_restore_active_record();
             g_carda_selected_card_path = g_carda_save_card_path_prefix;
             g_gosub_result_values = g_field_card_pet_slot;
-            g_carda_selected_card_path.raw[2] += (u8)g_carda_card_slot;
+            g_carda_selected_card_path.raw[2] += (u8)g_card_slot;
             strcat(&g_carda_selected_card_path, g_lom_pocketstation_filename_prefix);
-            _card_wait(g_carda_card_slot);
+            _card_wait(g_card_slot);
             erase(&g_carda_selected_card_path);
             if (g_carda_received_item_count == 0)
             {
@@ -502,8 +502,8 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         if ((g_pad_input & PAD_BTN_CIRCLE) || ((g_pad_input & CARDA_CONFIRM_BUTTON_MASK) && g_carda_choice_toggle != 0))
         {
             field_play_sound(0x7D, 0x80);
-            g_carda_entry_state = CARDA_ENTRY_STATE_SELECT_SLOT;
-            g_carda_choice_toggle = g_carda_card_slot;
+            g_card_entry_state = CARDA_ENTRY_STATE_SELECT_SLOT;
+            g_carda_choice_toggle = g_card_slot;
             field_reset_input_repeat();
         }
         else if (g_pad_input & CARDA_CONFIRM_BUTTON_MASK)
@@ -521,8 +521,8 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             }
             carda_store_active_record();
             g_carda_save_in_progress = 1;
-            g_carda_card_step = g_carda_steps_overwrite_alt_save;
-            g_carda_entry_state = CARDA_ENTRY_STATE_DOWNLOADING;
+            g_card_step = g_carda_steps_overwrite_alt_save;
+            g_card_entry_state = CARDA_ENTRY_STATE_DOWNLOADING;
         }
         break;
     }
@@ -580,27 +580,27 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         prim = field_draw_text(prim, ot, CARDA_TEXT(text_table, 0x3D), 4, x, 0xE - y_offset, 2);
         prim = field_draw_text(prim, ot, CARDA_TEXT(text_table, 0x59), 4, x, 0x1C - y_offset, 2);
         /* Search one entry per frame, unless a directory scan (opcode 6 or 7) is running. */
-        if (g_carda_entry_scan_active == 0 && g_carda_io_busy == 0 && (u32)(*g_carda_card_step - CARDA_STEP_SCAN_ENTRIES) >= 2U)
+        if (g_carda_entry_scan_active == 0 && g_carda_io_busy == 0 && (u32)(*g_card_step - CARDA_STEP_SCAN_ENTRIES) >= 2U)
         {
-            if (strncmp(g_lom_pocketstation_filename_prefix, &g_carda_entries[g_carda_card_slot][g_carda_selected_row], 0xC) != 0)
+            if (strncmp(g_lom_pocketstation_filename_prefix, &g_card_entries[g_card_slot][g_carda_selected_row], 0xC) != 0)
             {
                 s32 row_y;
                 s32 delta;
 
                 g_carda_selected_row++;
-                if (g_carda_selected_row >= g_carda_entry_state)
+                if (g_carda_selected_row >= g_card_entry_state)
                 {
                     if (g_carda_mode == 3)
                     {
-                        g_carda_entry_state = CARDA_ENTRY_STATE_NO_GAME_DATA;
+                        g_card_entry_state = CARDA_ENTRY_STATE_NO_GAME_DATA;
                         break;
                     }
                     g_carda_selected_card_path = g_carda_save_card_path_prefix;
                     g_carda_new_save_file = 1;
-                    g_carda_selected_card_path.raw[2] += (u8)g_carda_card_slot;
+                    g_carda_selected_card_path.raw[2] += (u8)g_card_slot;
                     strcat(&g_carda_selected_card_path, g_lom_pocketstation_filename_prefix);
                     carda_store_active_record();
-                    g_carda_entry_state = CARDA_ENTRY_STATE_CONFIRM_DOWNLOAD;
+                    g_card_entry_state = CARDA_ENTRY_STATE_CONFIRM_DOWNLOAD;
                     g_carda_choice_toggle = 1;
                     field_reset_input_repeat();
                     break;
@@ -626,15 +626,15 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                 g_carda_new_save_file = 0;
                 g_carda_progress_start_tick = VSync(-1);
                 g_carda_progress_active = 1;
-                g_carda_entry_state = CARDA_ENTRY_STATE_CONFIRM_RETURN;
+                g_card_entry_state = CARDA_ENTRY_STATE_CONFIRM_RETURN;
             }
             else
             {
                 g_carda_new_save_file = 0;
                 g_carda_progress_start_tick = VSync(-1);
                 g_carda_progress_active = 1;
-                g_carda_card_step = g_carda_steps_read_save_prefix;
-                g_carda_entry_state = CARDA_ENTRY_STATE_UPLOADING;
+                g_card_step = g_carda_steps_read_save_prefix;
+                g_card_entry_state = CARDA_ENTRY_STATE_UPLOADING;
             }
         }
         break;
@@ -685,8 +685,8 @@ s32 carda_draw_slot_prompt(s32 prim, s32 *ot, s32 x, s32 y)
 
     if (g_pad_input & 0xA000)
     {
-        g_carda_entry_state = 0xF1;
-        g_carda_card_slot ^= 1;
+        g_card_entry_state = 0xF1;
+        g_card_slot ^= 1;
         field_play_sound(0x7D, 0x80);
         return result;
     }
@@ -723,24 +723,24 @@ s32 carda_draw_slot_prompt(s32 prim, s32 *ot, s32 x, s32 y)
         s32 slot;
 
         field_play_sound(0x7D, 0x80);
-        slot = g_carda_card_slot;
+        slot = g_card_slot;
         g_carda_format_declined = 0;
-        g_carda_card_step = 0;
-        g_carda_entry_state = 0xFF;
+        g_card_step = 0;
+        g_card_entry_state = 0xFF;
         g_carda_scroll_frames = 0;
         g_carda_scroll_target_y = 0;
         g_carda_scroll_y = 0;
         g_carda_selected_row = 0;
-        g_carda_card_slot ^= 1;
+        g_card_slot ^= 1;
         g_carda_selection_status = 0;
         /* Same reset as switching cards, but stay on the current slot. */
-        g_carda_card_slot = slot;
+        g_card_slot = slot;
         carda_reset_entry_ranks();
-        carda_clear_hardware_card_events();
-        carda_clear_software_card_events();
+        clear_hardware_card_events();
+        clear_software_card_events();
         g_carda_progress_bar_active = 0;
-        g_carda_entry_state = 0xFF;
-        g_carda_card_step = g_carda_steps_initial_scan;
+        g_card_entry_state = 0xFF;
+        g_card_step = g_carda_steps_initial_scan;
     }
 
     return result;
@@ -760,7 +760,7 @@ void carda_open_save_status_dialog(s32 dialog_state)
     g_carda_selection_status = 0;
     g_carda_io_busy = 0;
     carda_reset_entry_ranks();
-    g_carda_card_step = 0;
+    g_card_step = 0;
     g_carda_dialog_state = dialog_state;
 
     if (g_carda_mode == 2 || g_carda_mode == 3)
@@ -768,25 +768,25 @@ void carda_open_save_status_dialog(s32 dialog_state)
         switch (dialog_state)
         {
         case 0:
-            g_carda_entry_state = 0xF0;
+            g_card_entry_state = 0xF0;
             break;
         case 1:
-            g_carda_entry_state = 0xEF;
+            g_card_entry_state = 0xEF;
             break;
         case 2:
-            g_carda_entry_state = 0xEE;
+            g_card_entry_state = 0xEE;
             break;
         case 3:
-            g_carda_entry_state = 0xED;
+            g_card_entry_state = 0xED;
             break;
         case 4:
-            g_carda_entry_state = 0xEC;
+            g_card_entry_state = 0xEC;
             break;
         case 5:
-            g_carda_entry_state = 0xEB;
+            g_card_entry_state = 0xEB;
             break;
         }
-        g_carda_card_step = 0;
+        g_card_step = 0;
         return;
     }
 
