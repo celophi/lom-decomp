@@ -15,6 +15,7 @@
 #include "field_runtime.h"
 #include "field_sound.h"
 #include "field_ui_text.h"
+#include "encoded_text.h"
 
 /**
  * @brief Draw callback of a CARDA UI element: emits the element's content at
@@ -778,9 +779,6 @@ void carda_clear_elements(void);
 CardaElement* carda_alloc_element(void);
 void carda_update_and_draw_elements(FieldRenderHalf* render);
 void carda_deactivate_primary_element(void);
-void carda_text_append(u8* dest, u8* src);
-s32 carda_text_byte_length(u8* text);
-void carda_text_copy(u8* dest, u8* src);
 void carda_build_save_file(void);
 u8* carda_skip_hex_digits(u8* text);
 s32 carda_test_option_flag_2(void);

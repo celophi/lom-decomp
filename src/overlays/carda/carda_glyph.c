@@ -379,7 +379,7 @@ void carda_expand_text_glyph_codes(u8* out, u8* in)
         {
             break;
         }
-        if (c >= 0x19 && c <= 0x1F)
+        if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(c))
         {
             u32 column;
             s32 row;

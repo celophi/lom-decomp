@@ -8,6 +8,7 @@
 #include "sdk/kernel.h"
 #include "sdk/libetc.h"
 #include "sdk/libmcx.h"
+#include "encoded_text.h"
 
 #define NIKI_SJIS_FULLWIDTH_ZERO 0x4F82
 #define NIKI_SJIS_MINUS 0x5B81

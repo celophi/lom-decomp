@@ -93,9 +93,9 @@ gosub_draw_confirmation_prompt           = 0x80145F4C;
 gosub_draw_row_description               = 0x8014609C;
 gosub_draw_equipment_details             = 0x80146144;
 gosub_draw_title                         = 0x801463E4;
-gosub_append_encoded_string              = 0x80146434;
-gosub_encoded_string_length              = 0x801464B8;
-gosub_copy_encoded_string                = 0x80146504;
+encoded_text_append              = 0x80146434;
+encoded_text_byte_length              = 0x801464B8;
+encoded_text_copy                = 0x80146504;
 
 // Image, glyph, row, and packet helpers
 gosub_upload_ui_image                    = 0x80146588;

@@ -1,5 +1,5 @@
 #include "shop_render.h"
-#include "shop_text.h"
+#include "encoded_text.h"
 #include "sdk/libgpu.h"
 
 /**
@@ -386,13 +386,13 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
 
             material = record->info.halves[1] & FIELD_ITEM_MATERIAL_MASK;
             archive = &g_shop_text_archive;
-            shop_text_copy(dst, SHOP_ARCHIVE_TEXT(archive, *material_offsets, material * 2));
+            encoded_text_copy(dst, SHOP_ARCHIVE_TEXT(archive, *material_offsets, material * 2));
             /* FIELD UI string 15, read as a little-endian offset relative to the table start */
             ui_entry = D_800EC3E2;
             ui_text_table = ui_entry - 15 * 2;
             low = *ui_entry++;
             high = *ui_entry;
-            shop_text_append(name_text, (u8*)(low + ((high << 8) + (s32)ui_text_table)));
+            encoded_text_append(name_text, (u8*)(low + ((high << 8) + (s32)ui_text_table)));
 
             attributes = SHOP_SELECTED_RECORD()->info.word;
             switch (FIELD_ITEM_CATEGORY(attributes))
@@ -404,7 +404,7 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
                 s32 y;
                 s32 difference;
 
-                shop_text_append(name_text, SHOP_ARCHIVE_TEXT(archive, category_offset, (FIELD_ITEM_TYPE(attributes) + WEAPON_CATEGORY_FIRST) * 2));
+                encoded_text_append(name_text, SHOP_ARCHIVE_TEXT(archive, category_offset, (FIELD_ITEM_TYPE(attributes) + WEAPON_CATEGORY_FIRST) * 2));
                 y = 18 - y_inset;
                 prim = func_800A88A0(prim, ot, FIELD_UI_TEXT(ui_text_table, 21), SHOP_TEXT_COLOR_NORMAL, 16 - x_inset, y, 0);
                 x = 112 - x_inset;
@@ -412,14 +412,14 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
                 position.y = y;
                 prim = func_800A8A78(ot, prim, SHOP_SELECTED_RECORD()->derived.values[0], SHOP_TEXT_COLOR_NORMAL, &position, 1);
                 difference = SHOP_SELECTED_RECORD()->derived.values[0] - g_saved_game_ctx->characters[FIELD_PARTY_HERO].equipment[0].derived.values[0];
-                shop_text_copy(difference_text, FIELD_UI_TEXT(ui_text_table, 31));
+                encoded_text_copy(difference_text, FIELD_UI_TEXT(ui_text_table, 31));
                 if (difference >= 0)
                 {
-                    shop_text_append(difference_text, FIELD_UI_TEXT(ui_text_table, 11));
+                    encoded_text_append(difference_text, FIELD_UI_TEXT(ui_text_table, 11));
                 }
                 func_800A8B90(number_text, difference, 0);
-                shop_text_append(difference_text, number_text);
-                shop_text_append(difference_text, FIELD_UI_TEXT(ui_text_table, 32));
+                encoded_text_append(difference_text, number_text);
+                encoded_text_append(difference_text, FIELD_UI_TEXT(ui_text_table, 32));
                 position.x = x;
                 position.y = y;
                 prim = func_800A88A0(prim, ot, difference_text, SHOP_TEXT_COLOR_NORMAL, position.x, position.y, 0);
@@ -433,7 +433,7 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
                 u16 offset;
 
                 offset = *(u16*)((u8*)&g_shop_text_archive + (FIELD_ITEM_TYPE(attributes) * 2 + category_offset) + ARMOR_CATEGORY_FIRST * 2);
-                shop_text_append(name_text, (u8*)(category_offset + (offset + (u32)archive)));
+                encoded_text_append(name_text, (u8*)(category_offset + (offset + (u32)archive)));
                 y = 18 - y_inset;
                 prim = func_800A88A0(prim, ot, FIELD_UI_TEXT(ui_text_table, 22), SHOP_TEXT_COLOR_NORMAL, 16 - x_inset, y, 0);
                 position.x = 116 - x_inset;
@@ -458,7 +458,7 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
                                  OTHER_CATEGORY_FIRST * 2);
                 text_archive = &g_shop_text_archive;
                 text = (u8*)(*category_offsets + (offset + (u32)text_archive));
-                shop_text_append(name_text, text);
+                encoded_text_append(name_text, text);
                 prim = func_800A88A0(prim, ot, FIELD_UI_TEXT_AT(D_800EC3F2, 23), SHOP_TEXT_COLOR_NORMAL, 16 - x_inset, 18 - y_inset, 0);
                 position.x = 66 - x_inset;
                 position.y = 18 - y_inset;

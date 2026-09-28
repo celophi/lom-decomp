@@ -12,6 +12,7 @@
 
 #include "common.h"
 #include "main.h"
+#include "encoded_text.h"
 #include "display.h"
 #include "gpu_packet.h"
 #include "field_calls.h"
@@ -76,10 +77,6 @@
 
 #define FIELD_SOUND_CURSOR 0x7D
 #define FIELD_SOUND_PAN_CENTRE 0x80
-
-/** @brief Glyph codes 0x19-0x1F take a second byte. */
-#define TEXT_TWO_BYTE_FIRST 0x19
-#define TEXT_TWO_BYTE_LAST 0x1F
 
 /** @brief The frame palettes followed by the frame artwork. */
 typedef struct
@@ -555,7 +552,7 @@ s32 field_count_text_glyphs(u8* text)
 
     for (count = 0; *text != 0; count++)
     {
-        if (*text >= TEXT_TWO_BYTE_FIRST && *text <= TEXT_TWO_BYTE_LAST)
+        if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(*text))
         {
             text += 2;
         }

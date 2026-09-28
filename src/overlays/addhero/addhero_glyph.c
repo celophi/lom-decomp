@@ -436,7 +436,7 @@ void addhero_expand_text_glyph_codes(u8* out, u8* in)
         {
             break;
         }
-        if (FIELD_TEXT_IS_DOUBLE_BYTE_LEAD(c))
+        if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(c))
         {
             u32 column;
             s32 row;

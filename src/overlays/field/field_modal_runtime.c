@@ -8,6 +8,7 @@
  */
 
 #include "field_text.h"
+#include "encoded_text.h"
 #include "akao_cmd.h"
 #include "common.h"
 #include "field_actor_routes.h"
@@ -32,8 +33,6 @@
 #include "display.h"
 #include "game_state.h"
 
-/** @brief Text lead bytes 0x19 to 0x1F start a two-byte glyph. */
-#define IS_DBCS_LEAD_BYTE(byte) (((byte) >= 0x19) && ((byte) <= 0x1F))
 #define NAME_GLYPH_SIZE_SINGLE 1
 #define NAME_GLYPH_SIZE_DOUBLE 2
 /** @brief Lead byte of the double-byte digit glyphs (followed by the digit value). */
@@ -565,7 +564,7 @@ s32 field_name_byte_length(u8* name)
     {
         do
         {
-            if (IS_DBCS_LEAD_BYTE(character))
+            if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(character))
             {
                 name += NAME_GLYPH_SIZE_DOUBLE;
                 count += NAME_GLYPH_SIZE_DOUBLE;
@@ -596,7 +595,7 @@ void field_copy_name(u8* destination, u8* source)
     byte_count = 0;
     while (*cursor != 0)
     {
-        if (IS_DBCS_LEAD_BYTE(*cursor))
+        if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(*cursor))
         {
             cursor += NAME_GLYPH_SIZE_DOUBLE;
             byte_count += NAME_GLYPH_SIZE_DOUBLE;
@@ -615,7 +614,7 @@ void field_copy_name(u8* destination, u8* source)
 }
 
 /**
- * @brief Append a NUL-terminated name onto another, honouring DBCS glyph widths.
+ * @brief Append a NUL-terminated name onto another, honouring two-byte codes.
  * @param destination Existing name; the source is appended after its last glyph.
  * @param source Name to append.
  */
@@ -632,7 +631,7 @@ inline void field_append_name(u8* destination, const u8* source)
     destination_byte_count = 0;
     while (*destination_cursor)
     {
-        if (IS_DBCS_LEAD_BYTE(*destination_cursor))
+        if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(*destination_cursor))
         {
             destination_cursor += NAME_GLYPH_SIZE_DOUBLE;
             destination_byte_count += NAME_GLYPH_SIZE_DOUBLE;
@@ -649,7 +648,7 @@ inline void field_append_name(u8* destination, const u8* source)
     append_offset = destination_byte_count;
     while (*source_cursor)
     {
-        if (IS_DBCS_LEAD_BYTE(*source_cursor))
+        if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(*source_cursor))
         {
             source_cursor += NAME_GLYPH_SIZE_DOUBLE;
             source_byte_count += NAME_GLYPH_SIZE_DOUBLE;

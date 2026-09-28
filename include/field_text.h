@@ -9,19 +9,6 @@ typedef struct FieldTextConfig FieldTextConfig;
 
 extern FieldTextConfig* g_field_text_saved_configs;
 
-/**
- * @brief First byte the save-screen text helpers (ADDHERO, CARDA, NIKI, SHOP) count as a two-byte sequence.
- * @note In the US renderer only 0x19 (a two-byte character) and 0x1F (an extended dictionary entry)
- *       take a second byte; 0x1A-0x1E are one-byte dictionary entries.
- */
-#define FIELD_TEXT_DOUBLE_BYTE_LEAD_FIRST 0x19
-
-/** @brief Last byte the save-screen text helpers count as a two-byte sequence. */
-#define FIELD_TEXT_DOUBLE_BYTE_LEAD_LAST 0x1F
-
-/** @brief True when the save-screen text helpers treat @p code as the first of two bytes. */
-#define FIELD_TEXT_IS_DOUBLE_BYTE_LEAD(code) ((code) >= FIELD_TEXT_DOUBLE_BYTE_LEAD_FIRST && (code) <= FIELD_TEXT_DOUBLE_BYTE_LEAD_LAST)
-
 /** @brief field_draw_text / field_draw_number alignment, in the FIELD_TEXT_ALIGN_MASK bits of their flags. */
 #define FIELD_TEXT_ALIGN_LEFT 0   /**< x is the left edge. */
 #define FIELD_TEXT_ALIGN_RIGHT 1  /**< x is the right edge. */

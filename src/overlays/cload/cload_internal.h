@@ -9,6 +9,7 @@
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 #include "sdk/libmcx.h"
+#include "encoded_text.h"
 
 /**
  * @brief Draw callback of a CLOAD UI element: emits the element's content at
@@ -430,10 +431,7 @@ void *cload_draw_selected_entry_details(u_long *ot, void *prim, s32 x_offset, s3
 void cload_terminate_multibyte_text(void *text);
 void cload_clear_elements(void);
 CloadElement *cload_alloc_element(void);
-void cload_update_and_draw_elements(CloadRenderBuffer *frame);
-void cload_text_append(u8 *dest, u8 *src);
-s32 cload_text_byte_length(u8 *text);
-void cload_text_copy(u8 *dest, u8 *src);
+void cload_update_and_draw_elements(CloadRenderBuffer* frame);
 CloadGpuPacket *cload_emit_window_frame(CloadGpuPacket *prim, u_long *ot, s32 x, s32 y, s32 w, s32 h, s32 flag, s32 draw_fill);
 CloadGpuPacket *cload_emit_rect_outline(LINE_F2 *line, u_long *ot, s32 x, s32 y, s32 w, s32 h, s32 color);
 CloadGpuPacket *cload_emit_scroll_arrow(SPRT *sprite, u_long *ot, s32 x, s32 y, s32 flag);

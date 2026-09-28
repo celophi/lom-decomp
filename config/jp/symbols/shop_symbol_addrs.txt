@@ -34,9 +34,9 @@ shop_draw_detail_window = 0x801419D4;
 shop_draw_title_window = 0x801420AC;
 
 // shop_text.c
-shop_text_append = 0x80142124;
-shop_text_length = 0x801421A8;
-shop_text_copy = 0x801421F4;
+encoded_text_append = 0x80142124;
+encoded_text_byte_length = 0x801421A8;
+encoded_text_copy = 0x801421F4;
 
 // shop_trade.c
 shop_draw_notice_window = 0x80142278;

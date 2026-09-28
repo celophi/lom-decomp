@@ -1,5 +1,6 @@
 #include "field_text.h"
 #include "gname.h"
+#include "encoded_text.h"
 
 #include "cdrom.h"
 #include "common.h"
@@ -32,8 +33,7 @@ enum
 /* Null-terminated variable-width name encoding. */
 #define NAME_BYTE_SPACE 0x20
 #define NAME_BYTE_ALT_BLANK 0x80
-#define IS_DBCS_LEAD_BYTE(byte) (((byte) >= 0x19) && ((byte) <= 0x1F))
-#define MAKE_DBCS_GLYPH(lead_byte, trail_byte) (u16)(((u16)(trail_byte) << 8) | (u16)(lead_byte))
+#define MAKE_DOUBLE_BYTE_GLYPH(lead_byte, trail_byte) (u16)(((u16)(trail_byte) << 8) | (u16)(lead_byte))
 #define LOW_BYTE(value) ((value) & 0xFFU)
 #define HIGH_BYTE(value) ((value) >> 8)
 #define NAME_GLYPH_SIZE_SINGLE 1
@@ -500,11 +500,9 @@ static void* emit_draw_mode_prim(DR_TPAGE* packet, u_long* ot_entry);
 static void* emit_glyph_sprt(void* packet_start, u_long* ot_entry, s32 glyph_id, s32 base_x, s32 base_y, s32 shadow_offset, s32 activation_adjust,
                              s32 use_blue_overlay);
 static void render_layout_sprite_batch(RenderContext* render_ctx);
-static s32 name_byte_length(const u8* name_buf);
 static inline s32 name_glyph_count(const u8* name_buf);
 static void name_append(u8* destination, const u8* source);
 static s32 name_pop_last_glyph(u8* name_buf);
-static void name_copy(u8* destination, const u8* source);
 static void recalc_name_width(void);
 static void name_prepend_glyph(u8* name_buf, u16 glyph);
 static s32 name_pop_first_glyph(u8* name_buf);
@@ -919,7 +917,7 @@ static void reset_run_state(void)
     g_name_clipboard[NAME_GLYPH_LEAD_INDEX] = 0;
     g_cursor_x = g_cursor_x_target;
     g_cursor_y = g_cursor_y_target;
-    name_copy(g_active_name, g_initial_name);
+    encoded_text_copy(g_active_name, g_initial_name);
     g_strip_width = 0;
     recalc_name_width();
     g_strip_width_steps = NAME_STRIP_LERP_STEPS;
@@ -979,36 +977,36 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                     if (g_name_source_mode == GNAME_SRC_RAND_PRIMARY)
                     {
                         g_name_clipboard[0] = 0;
-                        name_copy(g_active_name, RANDOM_NAME(rand() % RANDOM_NAME_COUNT));
+                        encoded_text_copy(g_active_name, RANDOM_NAME(rand() % RANDOM_NAME_COUNT));
                     }
                     else if (g_name_source_mode == GNAME_SRC_RAND_ALT)
                     {
                         g_name_clipboard[0] = 0;
-                        name_copy(g_active_name, RANDOM_NAME((rand() % RANDOM_NAME_COUNT) + RANDOM_NAME_COUNT));
+                        encoded_text_copy(g_active_name, RANDOM_NAME((rand() % RANDOM_NAME_COUNT) + RANDOM_NAME_COUNT));
                     }
                     else if (g_name_source_mode == GNAME_SRC_HISTORY)
                     {
                         g_name_clipboard[0] = 0;
                         if (g_history_name_idx >= HISTORY_NAME_INDEX_LIMIT)
                         {
-                            name_copy(g_active_name, g_initial_name);
+                            encoded_text_copy(g_active_name, g_initial_name);
                         }
                         else
                         {
-                            name_copy(g_active_name, HISTORY_NAME(g_history_name_idx));
+                            encoded_text_copy(g_active_name, HISTORY_NAME(g_history_name_idx));
                             name_append(g_active_name, HISTORY_SUFFIX((rand() % RANDOM_NAME_COUNT) + HISTORY_SUFFIX_INDEX_BASE));
                         }
                     }
                     else if (g_name_source_mode == GNAME_SRC_CUSTOM)
                     {
                         g_name_clipboard[0] = 0;
-                        name_copy(g_active_name, g_custom_name_buf);
+                        encoded_text_copy(g_active_name, g_custom_name_buf);
                     }
                     else
                     {
                         play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
                         g_name_clipboard[0] = 0;
-                        name_copy(g_active_name, g_initial_name);
+                        encoded_text_copy(g_active_name, g_initial_name);
                     }
                     recalc_name_width();
                     g_strip_width_steps = NAME_STRIP_LERP_STEPS;
@@ -1017,7 +1015,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                 case GNAME_MODE_ACTION_DEFAULT:
                     play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
                     g_name_clipboard[0] = 0;
-                    name_copy(g_active_name, g_initial_name);
+                    encoded_text_copy(g_active_name, g_initial_name);
                     recalc_name_width();
                     g_strip_width_steps = NAME_STRIP_LERP_STEPS;
                     break;
@@ -1872,36 +1870,7 @@ static void render_layout_sprite_batch(RenderContext* render_ctx)
     render_ctx->prim_cursor = draw_mode_packet + 1;
 }
 
-/**
- * @brief Count the encoded bytes in a name buffer.
- * @param name_buf Null-terminated name buffer.
- * @return Number of bytes excluding the terminator.
- * @see https://decomp.me/scratch/2QgjW (100%)
- */
-static s32 name_byte_length(const u8* name_buf)
-{
-    const u8* scan_cursor;
-    s32 byte_count;
-
-    scan_cursor = name_buf;
-    byte_count = 0;
-
-    while (*scan_cursor)
-    {
-        if (IS_DBCS_LEAD_BYTE(*scan_cursor))
-        {
-            scan_cursor += NAME_GLYPH_SIZE_DOUBLE;
-            byte_count += NAME_GLYPH_SIZE_DOUBLE;
-        }
-        else
-        {
-            scan_cursor += NAME_GLYPH_SIZE_SINGLE;
-            byte_count += NAME_GLYPH_SIZE_SINGLE;
-        }
-    }
-
-    return byte_count;
-}
+#include "../common/encoded_text_byte_length.inc.c"
 
 /**
  * @brief Count the glyphs in a name buffer.
@@ -1917,7 +1886,7 @@ static inline s32 name_glyph_count(const u8* name_buf)
 
     while (*name_buf)
     {
-        if (IS_DBCS_LEAD_BYTE(*name_buf))
+        if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(*name_buf))
         {
             name_buf += NAME_GLYPH_SIZE_DOUBLE;
         }
@@ -1950,7 +1919,7 @@ static void name_append(u8* destination, const u8* source)
 
     while (*scan_cursor)
     {
-        if (IS_DBCS_LEAD_BYTE(*scan_cursor))
+        if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(*scan_cursor))
         {
             scan_cursor += NAME_GLYPH_SIZE_DOUBLE;
             destination_byte_count += NAME_GLYPH_SIZE_DOUBLE;
@@ -1968,7 +1937,7 @@ static void name_append(u8* destination, const u8* source)
 
     while (*scan_cursor)
     {
-        if (IS_DBCS_LEAD_BYTE(*scan_cursor))
+        if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(*scan_cursor))
         {
             scan_cursor += NAME_GLYPH_SIZE_DOUBLE;
             source_byte_count += NAME_GLYPH_SIZE_DOUBLE;
@@ -2006,7 +1975,7 @@ static s32 name_pop_last_glyph(u8* name_buf)
     while (*scan_cursor)
     {
         last_glyph_cursor = scan_cursor;
-        if (IS_DBCS_LEAD_BYTE(*scan_cursor))
+        if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(*scan_cursor))
         {
             scan_cursor += NAME_GLYPH_SIZE_DOUBLE;
         }
@@ -2016,7 +1985,7 @@ static s32 name_pop_last_glyph(u8* name_buf)
         }
     }
 
-    packed_glyph = MAKE_DBCS_GLYPH(last_glyph_cursor[0], last_glyph_cursor[1]);
+    packed_glyph = MAKE_DOUBLE_BYTE_GLYPH(last_glyph_cursor[0], last_glyph_cursor[1]);
 
     if (last_glyph_cursor != scan_cursor)
     {
@@ -2026,42 +1995,7 @@ static s32 name_pop_last_glyph(u8* name_buf)
     return packed_glyph;
 }
 
-/**
- * @brief Copy a null-terminated name buffer.
- * @param destination Destination buffer with sufficient capacity.
- * @param source Null-terminated source buffer.
- * @see https://decomp.me/scratch/UeYRe (100%)
- */
-static void name_copy(u8* destination, const u8* source)
-{
-    const u8* scan_cursor;
-    s32 byte_index;
-    s32 byte_count;
-
-    scan_cursor = source;
-    byte_count = 0;
-
-    while (*scan_cursor)
-    {
-        if (IS_DBCS_LEAD_BYTE(*scan_cursor))
-        {
-            scan_cursor += NAME_GLYPH_SIZE_DOUBLE;
-            byte_count += NAME_GLYPH_SIZE_DOUBLE;
-        }
-        else
-        {
-            scan_cursor += NAME_GLYPH_SIZE_SINGLE;
-            byte_count += NAME_GLYPH_SIZE_SINGLE;
-        }
-    }
-
-    for (byte_index = 0; byte_index < byte_count; byte_index++)
-    {
-        destination[byte_index] = source[byte_index];
-    }
-
-    destination[byte_index] = 0;
-}
+#include "../common/encoded_text_copy.inc.c"
 
 /**
  * @brief Recalculate the active name and strip widths.
@@ -2111,7 +2045,7 @@ static void name_prepend_glyph(u8* name_buf, u16 glyph)
         return;
     }
 
-    if (IS_DBCS_LEAD_BYTE(LOW_BYTE(glyph)))
+    if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(LOW_BYTE(glyph)))
     {
         glyph_size = NAME_GLYPH_SIZE_DOUBLE;
     }
@@ -2125,7 +2059,7 @@ static void name_prepend_glyph(u8* name_buf, u16 glyph)
 
     while (*scan_cursor != '\0')
     {
-        if (IS_DBCS_LEAD_BYTE(*scan_cursor))
+        if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(*scan_cursor))
         {
             scan_cursor += NAME_GLYPH_SIZE_DOUBLE;
             byte_count += NAME_GLYPH_SIZE_DOUBLE;
@@ -2175,9 +2109,9 @@ static s32 name_pop_first_glyph(u8* name_buf)
         return 0;
     }
 
-    if (IS_DBCS_LEAD_BYTE(first_byte))
+    if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(first_byte))
     {
-        first_glyph = MAKE_DBCS_GLYPH(name_buf[0], name_buf[1]);
+        first_glyph = MAKE_DOUBLE_BYTE_GLYPH(name_buf[0], name_buf[1]);
         glyph_size = NAME_GLYPH_SIZE_DOUBLE;
     }
     else
@@ -2191,7 +2125,7 @@ static s32 name_pop_first_glyph(u8* name_buf)
 
     while (*tail_cursor != '\0')
     {
-        if (IS_DBCS_LEAD_BYTE(*tail_cursor))
+        if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(*tail_cursor))
         {
             tail_cursor += NAME_GLYPH_SIZE_DOUBLE;
             tail_byte_count += NAME_GLYPH_SIZE_DOUBLE;

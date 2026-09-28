@@ -1184,92 +1184,9 @@ void niki_deactivate_primary_element(void)
     g_niki_element_pool[0].attr.word &= ~7;
 }
 
-/**
- * @brief Append an encoded NIKI string and terminate the result.
- * @param dst Destination string with room for the appended bytes and terminator.
- * @param src Encoded string to append.
- */
-void niki_text_append(u8* dst, u8* src)
-{
-    s32 dst_length;
-    s32 src_length;
-    s32 byte_index;
-
-    dst_length = niki_text_byte_length(dst);
-    src_length = niki_text_byte_length(src);
-    for (byte_index = 0; byte_index < src_length; byte_index++)
-    {
-        dst[dst_length + byte_index] = src[byte_index];
-    }
-    dst[dst_length + byte_index] = 0;
-}
-
-/**
- * @brief Measure an encoded NIKI string, skipping trail bytes of extended characters.
- * @param text Encoded string to measure.
- * @return Length in bytes, excluding the terminator.
- */
-s32 niki_text_byte_length(u8* text)
-{
-    u8* cursor;
-    u8 lead_byte;
-    s32 byte_length;
-
-    cursor = text;
-    lead_byte = *cursor;
-    byte_length = 0;
-    while (lead_byte != 0)
-    {
-        if ((u32)(lead_byte - NIKI_TEXT_EXTENDED_LEAD_FIRST) < NIKI_TEXT_EXTENDED_PAGE_COUNT)
-        {
-            cursor += 2;
-            byte_length += 2;
-        }
-        else
-        {
-            cursor += 1;
-            byte_length += 1;
-        }
-        lead_byte = *cursor;
-    }
-    return byte_length;
-}
-
-/**
- * @brief Copy an encoded NIKI string and append its terminator.
- * @param dst Destination buffer with room for the string and terminator.
- * @param src Encoded string to copy.
- */
-void niki_text_copy(u8* dst, u8* src)
-{
-    u8* cursor;
-    s32 byte_length;
-    s32 byte_index;
-
-    cursor = src;
-    byte_length = 0;
-
-    while (*cursor != 0)
-    {
-        if ((*cursor >= NIKI_TEXT_EXTENDED_LEAD_FIRST) && (*cursor < NIKI_TEXT_EXTENDED_LEAD_FIRST + NIKI_TEXT_EXTENDED_PAGE_COUNT))
-        {
-            cursor += 2;
-            byte_length += 2;
-        }
-        else
-        {
-            cursor++;
-            byte_length++;
-        }
-    }
-
-    for (byte_index = 0; byte_index < byte_length; byte_index++)
-    {
-        dst[byte_index] = src[byte_index];
-    }
-
-    dst[byte_index] = 0;
-}
+#include "../common/encoded_text_append.inc.c"
+#include "../common/encoded_text_byte_length.inc.c"
+#include "../common/encoded_text_copy.inc.c"
 
 /**
  * @brief Draw the load confirmation choice and dispatch acceptance or cancellation.

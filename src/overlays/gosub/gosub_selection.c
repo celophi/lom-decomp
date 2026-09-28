@@ -381,9 +381,9 @@ void gosub_build_equipment_list(u32 item_kind)
             {
                 g_gosub_rows[row_count].name = g_saved_game_ctx->items[item_index].name;
 
-                gosub_copy_encoded_string(g_gosub_text_buffers[row_count],
-                                          GOSUB_TEXT(GOSUB_TEXT_ITEM_NAMES, g_saved_game_ctx->items[item_index].info.halves[1] & FIELD_ITEM_MATERIAL_MASK));
-                gosub_append_encoded_string(g_gosub_text_buffers[row_count], FIELD_UI_TEXT_AT(D_800EC3E2, FIELD_UI_TEXT_SPACE));
+                encoded_text_copy(g_gosub_text_buffers[row_count],
+                                  GOSUB_TEXT(GOSUB_TEXT_ITEM_NAMES, g_saved_game_ctx->items[item_index].info.halves[1] & FIELD_ITEM_MATERIAL_MASK));
+                encoded_text_append(g_gosub_text_buffers[row_count], FIELD_UI_TEXT_AT(D_800EC3E2, FIELD_UI_TEXT_SPACE));
 
                 g_gosub_rows[row_count].equipment_kind = FIELD_ITEM_CATEGORY(g_saved_game_ctx->items[item_index].info.word);
                 attributes = g_saved_game_ctx->items[item_index].info.word;
@@ -391,13 +391,13 @@ void gosub_build_equipment_list(u32 item_kind)
                 switch (FIELD_ITEM_CATEGORY(attributes))
                 {
                 case GOSUB_EQUIPMENT_KIND_WEAPON:
-                    gosub_append_encoded_string(g_gosub_text_buffers[row_count],
-                                                GOSUB_TEXT(GOSUB_TEXT_EQUIPMENT_TYPES, GOSUB_WEAPON_TYPE_FIRST + FIELD_ITEM_TYPE(attributes)));
+                    encoded_text_append(g_gosub_text_buffers[row_count],
+                                        GOSUB_TEXT(GOSUB_TEXT_EQUIPMENT_TYPES, GOSUB_WEAPON_TYPE_FIRST + FIELD_ITEM_TYPE(attributes)));
                     g_gosub_rows[row_count].primary_value = GOSUB_INVENTORY_RECORD(item_index)->derived.values[0];
                     break;
                 case GOSUB_EQUIPMENT_KIND_ARMOR:
-                    gosub_append_encoded_string(g_gosub_text_buffers[row_count],
-                                                GOSUB_TEXT(GOSUB_TEXT_EQUIPMENT_TYPES, FIELD_ITEM_TYPE(attributes) + GOSUB_ARMOR_TYPE_FIRST));
+                    encoded_text_append(g_gosub_text_buffers[row_count],
+                                        GOSUB_TEXT(GOSUB_TEXT_EQUIPMENT_TYPES, FIELD_ITEM_TYPE(attributes) + GOSUB_ARMOR_TYPE_FIRST));
                     for (stat_index = 0; stat_index < COMPANION_STAT_COUNT; stat_index++)
                     {
                         g_gosub_rows[row_count].stats[stat_index] = GOSUB_INVENTORY_RECORD(item_index)->derived.values[stat_index];
@@ -407,7 +407,7 @@ void gosub_build_equipment_list(u32 item_kind)
                     g_gosub_rows[row_count].primary_value = GOSUB_INVENTORY_RECORD(item_index)->derived.bytes[2];
                     g_gosub_rows[row_count].stats[0] =
                         GOSUB_INVENTORY_RECORD(item_index)->derived.bytes[1] + (GOSUB_INVENTORY_RECORD(item_index)->derived.bytes[0] * 14);
-                    gosub_append_encoded_string(
+                    encoded_text_append(
                         g_gosub_text_buffers[row_count],
                         GOSUB_TEXT(GOSUB_TEXT_EQUIPMENT_TYPES, FIELD_ITEM_TYPE(g_saved_game_ctx->items[item_index].info.word) + GOSUB_INSTRUMENT_TYPE_FIRST));
                     break;

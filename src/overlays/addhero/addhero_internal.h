@@ -18,6 +18,7 @@
 #include "field_menu_window.h"
 #include "field_sound.h"
 #include "field_ui_text.h"
+#include "encoded_text.h"
 
 /* Declarations shared by ADDHERO implementation files. */
 
@@ -506,9 +507,6 @@ void addhero_clear_elements(void);
 AddheroElement* addhero_alloc_element(void);
 void addhero_update_and_draw_elements(AddheroDrawState* draw_state);
 void addhero_deactivate_primary_element(void);
-void addhero_text_append(u8* dst, u8* src);
-s32 addhero_text_byte_length(u8* text);
-void addhero_text_copy(u8* dst, u8* src);
 void* addhero_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* addhero_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* addhero_draw_progress_bar(POLY_G4* quad, u_long* ot);
