@@ -48,7 +48,7 @@ easier to see.
 | Name | Meaning |
 |---|---|
 | `BASLUS-01013...` | A normal US save |
-| `BASLUSP01013...` | A second kind of save the game recognizes; we don't know what creates it yet |
+| `BASLUSP01013...` | The PocketStation mini-game's save (*Ring Ring Land*); the US release doesn't use it |
 | `BASLUS-01013DUMMY` | Temporary file used while a save is being written |
 | `AKIdummy` | The empty "New Save" slot shown in the list (*aki* is Japanese for empty) |
 
@@ -80,6 +80,16 @@ The title is Shift-JIS, which is the Japanese text encoding the BIOS uses. It is
 not the same encoding as the game's own text; see [text tables](text-tables.md)
 for that.
 
+A finished save's title starts with `MANA--No.` and goes on with the save
+number, play time and hero name, all in full-width characters. When option bit 2
+is set, a musical note sign replaces the second dash; it's the same flag that
+puts `+` in the file name.
+
+While the game is writing a save, the title says `MANA-BAD.` instead. Its last
+step is to put the real title back. So if you find a save still titled
+`MANA-BAD.`, the save was interrupted, and its checksum won't match either,
+because the checksum was worked out with the real title.
+
 ## The saved game
 
 The saved game starts at `0x0180`. The first part is a short summary. The save
@@ -92,6 +102,8 @@ happens in the game.
 | Offset | Size | Contents |
 |---|---|---|
 | `0x0180` | 21 | Hero name, copied from the hero's character record when you save |
+| `0x0195` | 1 | Hero level, copied when you save |
+| `0x0196` | 1 | A byte from the hero's weapon (the first of its item values), copied when you save |
 | `0x0197` | 1 | Number of in-use summary records (see `0x32E0`) |
 | `0x0198` | 4 | Spawn point of the current scene (low 25 bits) and the first party icon (top 7 bits) |
 | `0x019C` | 2 | Sound bank of the current scene |
@@ -113,8 +125,8 @@ The load screen doesn't store the location name. It uses the music track at
 together.
 
 A party icon of `0x7F` means the slot is empty. Icons 0 and 1 are the two
-heroes, values from `0x0E` are pets and values from `0x4F` are golems. We
-haven't mapped the values in between yet.
+heroes, 2 to `0x0D` are the other characters who can join the party, values
+from `0x0E` are pets and values from `0x4F` are golems.
 
 ### Skills
 
@@ -131,7 +143,7 @@ Every game has an identity, and it matters for the 2P hero feature.
 
 | Offset | Size | Contents |
 |---|---|---|
-| `0x024F` | 1 | Called the save slot in the code; the 2P screen treats a mismatch as a wrong version |
+| `0x024F` | 1 | Compatibility tag; `0xFF` in ordinary saves (see below) |
 | `0x0254` | 2 | Game id, a random number picked when you start a new game |
 | `0x0256` | 2 | Save id, a random number picked each time you save |
 | `0x0258` | 4 | Game id and save id of the save your current guest hero came from |
@@ -144,6 +156,13 @@ Later, when they save the guest back, the screen looks for the save whose game
 id and save id match `0x0258`. That's how it finds your file again even if the
 card has other Legend of Mana saves on it. If you edit these values, the guest
 can't go home.
+
+The byte at `0x024F` is a compatibility tag, even though the code calls it the
+save slot. Starting a new game sets the running game's tag to `0xFF`, loading a
+save takes the tag from that save, and saving writes the current tag back. So
+ordinary saves all carry `0xFF`. The load screens refuse a save whose tag
+doesn't match the running game's, unless one of the two is `0xFF`; that's where
+"Save Data version is wrong" comes from.
 
 ### World state
 
@@ -171,12 +190,17 @@ Inside a character record:
 | Offset in record | Size | Contents |
 |---|---|---|
 | `0x00` | 24 | Name; an empty name means the slot is empty |
-| `0x18` | 1 | Character type in the low 7 bits; bit 7 is a control flag |
+| `0x18` | 1 | Character type in the low 7 bits; bit 7 is set when a controller drives the character |
 | `0x50` | ... | Equipment |
 
-A golem companion has type 4. The control flag is kept as-is when a friend
-loads a hero into the guest slot, and it's set on the hero when the guest is
-saved back.
+A golem companion has type 4.
+
+Bit 7 decides who moves the character. When it's set, a player's controller
+drives it; when it's clear, the game moves it as a computer-controlled
+companion. When a friend loads a hero into the guest slot, the game keeps the
+guest slot's bit, so the guest stays under the same control. When the guest is
+saved back, the bit is set, because that hero goes back to being the other
+player's own hero.
 
 ### Items
 
@@ -251,20 +275,18 @@ for example, is at `0x80043004` in the US release.
 
 ## What we don't know yet
 
-- **The byte at `0x024F`.** The code calls it the save slot, but the 2P screen
-  shows "Save Data version is wrong" when it doesn't match the running game.
-- **The `+` saves and `BASLUSP` files.** We know which flag controls the `+`
-  and that the game recognizes the second prefix, but not what they mean to the
-  player.
-- **The control flag in character records.** We know when it's set, but not
-  exactly how the game uses it for a guest hero.
+- **Where a tag other than `0xFF` comes from.** The game sets its tag to 7
+  when it starts up, in both releases, but ordinary play replaces that with
+  `0xFF` or a loaded save's tag. We haven't found what writes any other value.
+- **The `+` saves.** We know which flag controls the `+`, but not what it
+  means to the player.
 - **Byte 3 of a land record.** The code stores the placement order there, but
   we haven't checked every place that reads it, so it may hold more than that.
 - **The rest of a pet's status word.** Only bit 31, the egg flag, is mapped.
   The other bytes at `0x44` in a pet record aren't named yet.
-- **The gaps.** A few ranges, such as `0x0195` to `0x0196`, `0x0250` to
-  `0x0253`, `0x025C` to `0x025D`, and the space around the menu data between
-  the item counts and the golem data, aren't mapped yet.
+- **The gaps.** A few ranges, such as `0x0250` to `0x0253`, `0x025C` to
+  `0x025D`, and the space around the menu data between the item counts and the
+  golem data, aren't mapped yet.
 
 The C definitions behind this page are in
 [saved_game.h](../../../../include/saved_game.h), if you'd rather read the

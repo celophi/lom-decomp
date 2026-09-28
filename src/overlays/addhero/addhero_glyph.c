@@ -62,7 +62,12 @@ extern s32 g_addhero_text_line_start_x;
 extern s32 g_addhero_glyph_upload_x;
 extern s32 g_addhero_glyph_upload_y;
 extern u8 g_addhero_single_byte_char_table[];
-extern u8 g_addhero_double_byte_char_table[];
+/**
+ * @brief Base the two-byte character pages are reached from: page @c lead starts at
+ *        this address + lead * ADDHERO_CHAR_TABLE_PAGE_BYTES, inside the character chart.
+ * @note Not a table of its own; the address itself falls inside the icon set.
+ */
+extern u8 g_addhero_char_page_base[];
 extern u8 g_addhero_glyph_raster_buffer[];
 extern u16 g_addhero_decimal_glyphs[];
 extern u16 g_addhero_hex_glyphs[];
@@ -441,7 +446,7 @@ void addhero_expand_text_glyph_codes(u8* out, u8* in)
             column = in[1];
             row = column >> 4;
             column &= 0xF;
-            first_byte = g_addhero_double_byte_char_table + column * 2;
+            first_byte = g_addhero_char_page_base + column * 2;
             first_byte += row * ADDHERO_CHAR_TABLE_ROW_BYTES;
             lead = *in;
             first_byte += lead * ADDHERO_CHAR_TABLE_PAGE_BYTES;
@@ -450,7 +455,7 @@ void addhero_expand_text_glyph_codes(u8* out, u8* in)
             column = in[1];
             row = column >> 4;
             column &= 0xF;
-            second_byte = g_addhero_double_byte_char_table + 1 + column * 2;
+            second_byte = g_addhero_char_page_base + 1 + column * 2;
             second_byte += row * ADDHERO_CHAR_TABLE_ROW_BYTES;
             lead = *in;
             second_byte += lead * ADDHERO_CHAR_TABLE_PAGE_BYTES;

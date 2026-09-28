@@ -425,7 +425,7 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             g_carda_selected_card_path = g_carda_save_card_path_prefix;
             g_gosub_result_values = D_801227C4;
             g_carda_selected_card_path.raw[2] += (u8)g_carda_card_slot;
-            strcat(&g_carda_selected_card_path, g_lom_alt_save_filename_prefix);
+            strcat(&g_carda_selected_card_path, g_lom_pocketstation_filename_prefix);
             _card_wait(g_carda_card_slot);
             erase(&g_carda_selected_card_path);
             if (g_carda_received_item_count == 0)
@@ -626,7 +626,7 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         /* Search one entry per frame, unless a directory scan (opcode 6 or 7) is running. */
         if (g_carda_entry_scan_active == 0 && g_carda_io_busy == 0 && (u32)(*g_carda_save_step - CARDA_STEP_SCAN_ENTRIES) >= 2U)
         {
-            if (strncmp(g_lom_alt_save_filename_prefix, &g_carda_entries[g_carda_card_slot][g_carda_selected_row], 0xC) != 0)
+            if (strncmp(g_lom_pocketstation_filename_prefix, &g_carda_entries[g_carda_card_slot][g_carda_selected_row], 0xC) != 0)
             {
                 s32 row_y;
                 s32 delta;
@@ -642,7 +642,7 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                     g_carda_selected_card_path = g_carda_save_card_path_prefix;
                     g_carda_new_save_file = 1;
                     g_carda_selected_card_path.raw[2] += (u8)g_carda_card_slot;
-                    strcat(&g_carda_selected_card_path, g_lom_alt_save_filename_prefix);
+                    strcat(&g_carda_selected_card_path, g_lom_pocketstation_filename_prefix);
                     carda_store_active_record();
                     g_carda_entry_state = CARDA_SAVE_STATE_CONFIRM_SAVE;
                     g_carda_choice_toggle = 1;

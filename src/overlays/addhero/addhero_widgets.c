@@ -278,8 +278,8 @@ void* addhero_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_off
         prim = field_draw_text(prim, ot, ADDHERO_TEXT_AT(g_addhero_text_card_not_inserted, ADDHERO_TEXT_CARD_NOT_INSERTED), FIELD_TEXT_COLOR_NORMAL,
                                -x_offset + ADDHERO_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
-    case ADDHERO_DIALOG_CARD_TYPE_ERROR:
-        prim = field_draw_text(prim, ot, ADDHERO_TEXT_AT(g_addhero_text_card_type_error, ADDHERO_TEXT_CARD_TYPE_ERROR), FIELD_TEXT_COLOR_NORMAL,
+    case ADDHERO_DIALOG_NOT_POCKETSTATION:
+        prim = field_draw_text(prim, ot, ADDHERO_TEXT_AT(g_addhero_text_not_pocketstation, ADDHERO_TEXT_NOT_POCKETSTATION), FIELD_TEXT_COLOR_NORMAL,
                                -x_offset + ADDHERO_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case ADDHERO_DIALOG_LOAD_FAILED:
@@ -321,8 +321,8 @@ void* addhero_draw_exit_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offse
         prim = field_draw_text(prim, ot, ADDHERO_TEXT_AT(g_addhero_text_card_not_inserted, ADDHERO_TEXT_CARD_NOT_INSERTED), FIELD_TEXT_COLOR_NORMAL,
                                -x_offset + ADDHERO_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
-    case ADDHERO_DIALOG_CARD_TYPE_ERROR:
-        prim = field_draw_text(prim, ot, ADDHERO_TEXT_AT(g_addhero_text_card_type_error, ADDHERO_TEXT_CARD_TYPE_ERROR), FIELD_TEXT_COLOR_NORMAL,
+    case ADDHERO_DIALOG_NOT_POCKETSTATION:
+        prim = field_draw_text(prim, ot, ADDHERO_TEXT_AT(g_addhero_text_not_pocketstation, ADDHERO_TEXT_NOT_POCKETSTATION), FIELD_TEXT_COLOR_NORMAL,
                                -x_offset + ADDHERO_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case ADDHERO_DIALOG_LOAD_FAILED:

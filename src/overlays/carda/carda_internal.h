@@ -288,9 +288,9 @@ extern u8 D_800EC3D0[];
 extern u8 g_text_time_separator_offset_bytes[2];
 extern u8 g_text_choice_glyph_offsets;
 extern char g_lom_save_filename_prefix[];
-extern char g_lom_alt_save_filename_prefix[];
+extern char g_lom_pocketstation_filename_prefix[];
 extern char g_lom_save_dummy_filename[];
-extern char g_lom_alt_save_dummy_filename[];
+extern char g_lom_pocketstation_dummy_filename[];
 extern char g_new_save_entry_prefix[];
 extern char D_800ECFD0[];
 

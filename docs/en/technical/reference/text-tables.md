@@ -14,6 +14,12 @@ first one we decoded completely.
 
 ## Finding a table
 
+If you only want to read ADDHERO's text, there's a shortcut. After `make splat`,
+`make extract-addhero` writes every message and location name to YAML files,
+along with the party icons as PNGs. See the
+[overlay resource extractor](../../../../tools/overlays/README.md) for the
+details. The rest of this section is for working with the bytes directly.
+
 Overlays are stored compressed on the disc. The first byte of the disc file is
 a format tag, and the compressed data starts right after it. The project's
 decoder unpacks it:
@@ -98,9 +104,15 @@ a byte doesn't behave the way this table says.
 
 ### Japanese text
 
-The Japanese release uses the same table layout, but nearly every character is
-a two-byte code, so you can't read it in a hex editor the same way. We haven't
-written up the Japanese character codes.
+The Japanese release uses the same table layout, but its characters aren't
+ASCII. A byte from `0x20` up is one character, mostly kana. A byte from `0x19`
+to `0x1F` plus the next byte is a kanji: the first byte picks one of seven pages
+of 256 characters, and the second byte picks the character.
+
+The overlays that write memory card titles carry the whole character set as a
+chart, because they convert names to Shift-JIS. ADDHERO has a copy too, and
+`make extract-addhero VERSION=jp` uses it to print the Japanese messages as
+real text. The chart itself ends up in `tables/text_conversion.yaml`.
 
 ### Memory card titles are different
 

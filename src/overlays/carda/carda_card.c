@@ -449,7 +449,7 @@ void carda_reset_entry_ranks(void)
 
 /**
  * @brief Check whether the current card holds a save this mode can use.
- * @return 1 if an entry matches g_lom_save_filename_prefix or g_lom_alt_save_filename_prefix (only g_lom_alt_save_filename_prefix in mode 2), otherwise 0.
+ * @return 1 if an entry matches g_lom_save_filename_prefix or g_lom_pocketstation_filename_prefix (only g_lom_pocketstation_filename_prefix in mode 2), otherwise 0.
  */
 s32 carda_has_known_entry_type(void)
 {
@@ -460,12 +460,12 @@ s32 carda_has_known_entry_type(void)
         if (g_carda_mode != 2)
         {
             if (strncmp(g_lom_save_filename_prefix, g_carda_entries[g_carda_card_slot][entry_index].name, 0xC) == 0 ||
-                strncmp(g_lom_alt_save_filename_prefix, g_carda_entries[g_carda_card_slot][entry_index].name, 0xC) == 0)
+                strncmp(g_lom_pocketstation_filename_prefix, g_carda_entries[g_carda_card_slot][entry_index].name, 0xC) == 0)
             {
                 return 1;
             }
         }
-        if (g_carda_mode == 2 && strncmp(g_lom_alt_save_filename_prefix, g_carda_entries[g_carda_card_slot][entry_index].name, 0xC) == 0)
+        if (g_carda_mode == 2 && strncmp(g_lom_pocketstation_filename_prefix, g_carda_entries[g_carda_card_slot][entry_index].name, 0xC) == 0)
         {
             return 1;
         }
@@ -512,7 +512,7 @@ inline void carda_erase_fixed_card_files(void)
 
     memcpy(&card_path, &g_carda_card_path_prefix, 6);
     card_path.bytes[2] += (u8)g_carda_card_slot;
-    strcat(&card_path, g_lom_alt_save_dummy_filename);
+    strcat(&card_path, g_lom_pocketstation_dummy_filename);
     erase(&card_path);
     carda_release_primary_handles();
     carda_release_secondary_handles();
@@ -545,13 +545,13 @@ typedef enum CardaSaveStep
     CARDA_STEP_POLL_HEADER_READ = 18,       /**< Wait for the header read to finish. */
     CARDA_STEP_READ_SAVE = 19,              /**< Open the selected save and start reading the blob. */
     CARDA_STEP_POLL_SAVE_READ = 20,         /**< Wait for the blob read to finish. */
-    CARDA_STEP_CREATE_ALT_SAVE = 21,        /**< Create the six-block alternate save file. */
-    CARDA_STEP_WRITE_ALT_SAVE = 22,         /**< Start writing the alternate save file. */
-    CARDA_STEP_POLL_ALT_SAVE_WRITE = 23,    /**< Wait for the alternate save write and finalize the file. */
-    CARDA_STEP_CHECK_CARD_TYPE = 24,        /**< Wait for a card and check its status. */
+    CARDA_STEP_CREATE_POCKETSTATION_SAVE = 21,        /**< Create the six-block PocketStation (Ring Ring Land) save file. */
+    CARDA_STEP_WRITE_POCKETSTATION_SAVE = 22,         /**< Start writing the PocketStation save file. */
+    CARDA_STEP_POLL_POCKETSTATION_SAVE_WRITE = 23,    /**< Wait for the PocketStation save write and finalize the file. */
+    CARDA_STEP_CHECK_POCKETSTATION = 24,        /**< Check that the card is a PocketStation (McxCardType). */
     CARDA_STEP_POLL_CARD_PRESENT = 25,      /**< Wait for the _card_info result; report a failure. */
-    CARDA_STEP_WRITE_TEMP_ALT_SAVE = 26,    /**< Create the alternate dummy file and start writing it. */
-    CARDA_STEP_POLL_TEMP_ALT_SAVE_WRITE = 27, /**< Wait for the write and rename it over the selected save. */
+    CARDA_STEP_WRITE_TEMP_POCKETSTATION_SAVE = 26,    /**< Create the PocketStation dummy file and start writing it. */
+    CARDA_STEP_POLL_TEMP_POCKETSTATION_SAVE_WRITE = 27, /**< Wait for the write and rename it over the selected save. */
     CARDA_STEP_READ_SAVE_PREFIX = 28,       /**< Open the selected save and start reading its first 1 KiB. */
     CARDA_STEP_POLL_SAVE_PREFIX_READ = 29,  /**< Wait for the 1 KiB read to finish. */
     CARDA_STEP_ARM_RETRIES = 30             /**< Arm the file operation retry counter. */
@@ -599,8 +599,8 @@ typedef enum CardaSaveResult
 /** @brief Size of the main save blob (two memory-card blocks). */
 #define CARDA_SAVE_BYTES 0x4000
 
-/** @brief Size of the alternate save file (six memory-card blocks). */
-#define CARDA_ALT_SAVE_BYTES 0xC000
+/** @brief Size of the PocketStation (Ring Ring Land) save file: six memory-card blocks. */
+#define CARDA_POCKETSTATION_SAVE_BYTES 0xC000
 
 /** @brief Leading part of a save read back by CARDA_STEP_READ_SAVE_PREFIX. */
 #define CARDA_SAVE_PREFIX_BYTES 0x400
@@ -1023,7 +1023,7 @@ s32 carda_advance_save_sequence(void)
             }
             break;
 
-        case CARDA_STEP_CREATE_ALT_SAVE:
+        case CARDA_STEP_CREATE_POCKETSTATION_SAVE:
             g_carda_progress_bar_active = 1;
             g_carda_progress_start_tick = VSync(-1);
             if (strncmp(g_new_save_entry_prefix, g_carda_entries[g_carda_card_slot][g_carda_selected_row].name, 8) != 0)
@@ -1040,7 +1040,7 @@ s32 carda_advance_save_sequence(void)
                 carda_release_secondary_handles();
             }
             strcpy(&card_path, &device_path);
-            strcat(&card_path, g_lom_alt_save_filename_prefix);
+            strcat(&card_path, g_lom_pocketstation_filename_prefix);
             _card_wait(g_carda_card_slot);
             g_carda_file_handle = open(&card_path, CARDA_FILE_CREATE | CARDA_FILE_BLOCKS(6));
             if (g_carda_file_handle == -1)
@@ -1059,11 +1059,11 @@ s32 carda_advance_save_sequence(void)
             g_carda_save_step++;
             break;
 
-        case CARDA_STEP_WRITE_ALT_SAVE:
+        case CARDA_STEP_WRITE_POCKETSTATION_SAVE:
             _card_wait(g_carda_card_slot);
             g_carda_file_handle = open(g_carda_temp_card_path, CARDA_FILE_ASYNC | CARDA_FILE_WRITE);
             _card_wait(g_carda_card_slot);
-            if (write(g_carda_file_handle, g_carda_save_blob, CARDA_ALT_SAVE_BYTES) == -1)
+            if (write(g_carda_file_handle, g_carda_save_blob, CARDA_POCKETSTATION_SAVE_BYTES) == -1)
             {
                 func_80033E7C(g_carda_card_slot * 0x10);
                 close(g_carda_file_handle);
@@ -1077,7 +1077,7 @@ s32 carda_advance_save_sequence(void)
                 g_carda_retry_count--;
                 if (g_carda_retry_count != 0)
                 {
-                    /* Rewind to CARDA_STEP_CREATE_ALT_SAVE and try again. */
+                    /* Rewind to CARDA_STEP_CREATE_POCKETSTATION_SAVE and try again. */
                     g_carda_save_step--;
                     break;
                 }
@@ -1089,7 +1089,7 @@ s32 carda_advance_save_sequence(void)
             g_carda_save_step++;
             break;
 
-        case CARDA_STEP_POLL_ALT_SAVE_WRITE:
+        case CARDA_STEP_POLL_POCKETSTATION_SAVE_WRITE:
             switch (carda_poll_primary_handle_group())
             {
             case CARDA_CARD_EVENT_READY:
@@ -1147,7 +1147,7 @@ s32 carda_advance_save_sequence(void)
                 g_carda_retry_count--;
                 if (g_carda_retry_count != 0)
                 {
-                    /* Rewind to CARDA_STEP_CREATE_ALT_SAVE and try again. */
+                    /* Rewind to CARDA_STEP_CREATE_POCKETSTATION_SAVE and try again. */
                     close(g_carda_file_handle);
                     for (attempts = 0; attempts < CARDA_FILE_OP_ATTEMPTS; attempts++)
                     {
@@ -1294,7 +1294,7 @@ s32 carda_advance_save_sequence(void)
             }
             break;
 
-        case CARDA_STEP_CHECK_CARD_TYPE:
+        case CARDA_STEP_CHECK_POCKETSTATION:
             for (check_attempts = 0; check_attempts < 20; check_attempts++)
             {
                 for (attempts = 0; attempts < 120; attempts++)
@@ -1367,7 +1367,7 @@ s32 carda_advance_save_sequence(void)
             g_carda_save_step++;
             break;
 
-        case CARDA_STEP_WRITE_TEMP_ALT_SAVE:
+        case CARDA_STEP_WRITE_TEMP_POCKETSTATION_SAVE:
             if (g_carda_preserve_old_save == 0)
             {
                 for (attempts = 0; attempts < CARDA_FILE_OP_ATTEMPTS; attempts++)
@@ -1378,7 +1378,7 @@ s32 carda_advance_save_sequence(void)
                     }
                 }
             }
-            strcat(&card_path, g_lom_alt_save_dummy_filename);
+            strcat(&card_path, g_lom_pocketstation_dummy_filename);
             _card_wait(g_carda_card_slot);
             g_carda_file_handle = open(&card_path, CARDA_FILE_CREATE | CARDA_FILE_BLOCKS(6));
             if (g_carda_file_handle == -1)
@@ -1407,7 +1407,7 @@ s32 carda_advance_save_sequence(void)
             g_carda_progress_start_tick = VSync(-1);
             g_carda_progress_bar_active = 1;
             _card_wait(g_carda_card_slot);
-            if (write(g_carda_file_handle, g_carda_save_blob, CARDA_ALT_SAVE_BYTES) == -1)
+            if (write(g_carda_file_handle, g_carda_save_blob, CARDA_POCKETSTATION_SAVE_BYTES) == -1)
             {
                 close(g_carda_file_handle);
                 for (attempts = 0; attempts < CARDA_FILE_OP_ATTEMPTS; attempts++)
@@ -1428,7 +1428,7 @@ s32 carda_advance_save_sequence(void)
             g_carda_save_step++;
             break;
 
-        case CARDA_STEP_POLL_TEMP_ALT_SAVE_WRITE:
+        case CARDA_STEP_POLL_TEMP_POCKETSTATION_SAVE_WRITE:
             switch (carda_poll_primary_handle_group())
             {
             case CARDA_CARD_EVENT_READY:
@@ -1468,7 +1468,7 @@ s32 carda_advance_save_sequence(void)
                     carda_open_save_status_dialog(0);
                     return phase_result;
                 }
-                /* Rewind to CARDA_STEP_WRITE_TEMP_ALT_SAVE and try again. */
+                /* Rewind to CARDA_STEP_WRITE_TEMP_POCKETSTATION_SAVE and try again. */
                 close(g_carda_file_handle);
                 g_carda_save_step--;
                 break;
@@ -1814,7 +1814,7 @@ s32 carda_poll_secondary_handle_group(void)
 
 /**
  * @brief Reorder the current card's directory by save type and suffix byte.
- * @note g_lom_save_filename_prefix saves come first, then g_lom_alt_save_filename_prefix saves (each by suffix group),
+ * @note g_lom_save_filename_prefix saves come first, then g_lom_pocketstation_filename_prefix saves (each by suffix group),
  *       then the placeholder entries, then everything else.
  */
 void carda_sort_entries_by_type(void)
@@ -1840,7 +1840,7 @@ void carda_sort_entries_by_type(void)
     {
         for (entry_index = 0; entry_index < g_carda_entry_state; entry_index++)
         {
-            if (g_carda_entry_suffix_values[entry_index] == group && strncmp(g_lom_alt_save_filename_prefix, g_carda_entries[g_carda_card_slot][entry_index].name, 0xC) == 0)
+            if (g_carda_entry_suffix_values[entry_index] == group && strncmp(g_lom_pocketstation_filename_prefix, g_carda_entries[g_carda_card_slot][entry_index].name, 0xC) == 0)
             {
                 bcopy(&g_carda_entries[g_carda_card_slot][entry_index], &sorted_entries[output_count], sizeof(CardaDirEntry));
                 output_count++;
@@ -1861,7 +1861,7 @@ void carda_sort_entries_by_type(void)
     for (entry_index = 0; entry_index < g_carda_entry_state; entry_index++)
     {
         if (strncmp(g_lom_save_filename_prefix, g_carda_entries[g_carda_card_slot][entry_index].name, 0xC) != 0 &&
-            strncmp(g_lom_alt_save_filename_prefix, g_carda_entries[g_carda_card_slot][entry_index].name, 0xC) != 0 &&
+            strncmp(g_lom_pocketstation_filename_prefix, g_carda_entries[g_carda_card_slot][entry_index].name, 0xC) != 0 &&
             strncmp(g_new_save_entry_prefix, g_carda_entries[g_carda_card_slot][entry_index].name, 8) != 0 &&
             strncmp(D_800ECFD0, g_carda_entries[g_carda_card_slot][entry_index].name, 9) != 0)
         {

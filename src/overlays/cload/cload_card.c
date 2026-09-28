@@ -23,7 +23,7 @@ typedef enum CloadLoadStep
     CLOAD_STEP_POLL_HEADER_READ = 18,  /**< Wait for the header read to finish. */
     CLOAD_STEP_READ_SAVE = 19,         /**< Open the selected save and start reading the blob. */
     CLOAD_STEP_POLL_SAVE_READ = 20,    /**< Wait for the blob read to finish, retrying. */
-    CLOAD_STEP_CHECK_CARD_TYPE = 24,   /**< Wait for a card and check its status. */
+    CLOAD_STEP_CHECK_POCKETSTATION = 24,   /**< Check that the card is a PocketStation (McxCardType). */
     CLOAD_STEP_ARM_SAVE_RETRIES = 30   /**< Arm the save read retry counter. */
 } CloadLoadStep;
 
@@ -460,7 +460,7 @@ void cload_reset_entry_ranks(void)
 /**
  * @brief Scan up to g_cload_entry_state entries of the g_cload_entries table (row
  *        selected by g_cload_card_slot, stride 0x28) and report whether any entry
- *        matches one of the two known-type patterns g_lom_save_filename_prefix / g_lom_alt_save_filename_prefix.
+ *        matches one of the two known-type patterns g_lom_save_filename_prefix / g_lom_pocketstation_filename_prefix.
  * @return 1 on the first entry that matches either pattern (strncmp returns 0
  *         on a match), 0 if no entry matches.
  */
@@ -471,7 +471,7 @@ s32 cload_has_known_entry_type(void)
     for (entry_index = 0; entry_index < g_cload_entry_state; entry_index++)
     {
         if (strncmp(g_lom_save_filename_prefix, CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index).name, 0xC) == 0 ||
-            strncmp(g_lom_alt_save_filename_prefix, CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index).name, 0xC) == 0)
+            strncmp(g_lom_pocketstation_filename_prefix, CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index).name, 0xC) == 0)
         {
             return 1;
         }
@@ -516,7 +516,7 @@ inline void cload_erase_fixed_card_files(void)
 
     memcpy(&card_path, &g_cload_card_path_prefix, 6);
     card_path.bytes[2] += (u8)g_cload_card_slot;
-    strcat(card_path.bytes, g_lom_alt_save_dummy_filename);
+    strcat(card_path.bytes, g_lom_pocketstation_dummy_filename);
     erase(&card_path);
 }
 
@@ -798,7 +798,7 @@ s32 cload_advance_load_sequence(void)
             }
             break;
 
-        case CLOAD_STEP_CHECK_CARD_TYPE:
+        case CLOAD_STEP_CHECK_POCKETSTATION:
             for (wait_attempts = 0; wait_attempts < 0x14; wait_attempts++)
             {
                 if (McxCardType(g_cload_card_slot * 0x10) == MCX_COMMAND_ISSUED)
@@ -1125,7 +1125,7 @@ s32 cload_poll_secondary_handle_group(void)
 
 /**
  * @brief Collate the g_cload_entries page records, ordering them by pattern class.
- * @note Five passes bucket records matching g_lom_save_filename_prefix, then g_lom_alt_save_filename_prefix, then
+ * @note Five passes bucket records matching g_lom_save_filename_prefix, then g_lom_pocketstation_filename_prefix, then
  *       g_new_save_entry_prefix, then the remainder, copying each 0x28-byte record with
  *       bcopy before writing the ordered set back to the page.
  */
@@ -1154,7 +1154,7 @@ void cload_sort_entries_by_type(void)
         for (entry_index = 0; entry_index < g_cload_entry_state; entry_index++)
         {
             if (g_cload_entry_suffix_values[entry_index] == group &&
-                strncmp(g_lom_alt_save_filename_prefix, CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index).name, 0xC) == 0)
+                strncmp(g_lom_pocketstation_filename_prefix, CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index).name, 0xC) == 0)
             {
                 bcopy(&CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index), &sorted_entries[output_count], sizeof(CloadDirEntry));
                 output_count++;
@@ -1174,7 +1174,7 @@ void cload_sort_entries_by_type(void)
     for (entry_index = 0; entry_index < g_cload_entry_state; entry_index++)
     {
         if (strncmp(g_lom_save_filename_prefix, CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index).name, 0xC) != 0 &&
-            strncmp(g_lom_alt_save_filename_prefix, CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index).name, 0xC) != 0 &&
+            strncmp(g_lom_pocketstation_filename_prefix, CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index).name, 0xC) != 0 &&
             strncmp(g_new_save_entry_prefix, CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index).name, 8) != 0)
         {
             bcopy(&CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index), &sorted_entries[output_count], sizeof(CloadDirEntry));

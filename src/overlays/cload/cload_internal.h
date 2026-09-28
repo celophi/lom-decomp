@@ -304,7 +304,7 @@ extern s32 g_save_slot_index;
 extern char g_lom_save_filename_prefix[];
 extern char g_cload_entries[];
 extern s32 g_cload_entry_scan_active;
-extern char g_lom_alt_save_filename_prefix[];
+extern char g_lom_pocketstation_filename_prefix[];
 extern char g_new_save_entry_prefix[];
 extern u16 g_cload_text_check_memory_card;
 extern u16 g_cload_text_not_enough_blocks;
@@ -345,7 +345,7 @@ extern u16 g_cload_location_names[];
 /* Globals used by the memory-card I/O, load-state, and glyph-cache block. */
 extern u8 g_text_choice_glyph_offsets[];
 extern char g_lom_save_dummy_filename[];
-extern char g_lom_alt_save_dummy_filename[];
+extern char g_lom_pocketstation_dummy_filename[];
 extern u8 g_cload_steps_idle[];
 extern u8 g_cload_steps_read_selected_header[];
 extern char g_cload_selected_card_path[0x40];

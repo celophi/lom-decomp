@@ -711,7 +711,7 @@ void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                     {
                         prim = func_800A88A0(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, g_carda_text_mana), color, label_x, row_y, 0);
                     }
-                    else if (strncmp(g_lom_alt_save_filename_prefix, g_carda_entries[g_carda_card_slot][i].name, 0xC) == 0)
+                    else if (strncmp(g_lom_pocketstation_filename_prefix, g_carda_entries[g_carda_card_slot][i].name, 0xC) == 0)
                     {
                         prim = func_800A88A0(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, g_carda_text_alt_save), color, label_x, row_y, 0);
                     }

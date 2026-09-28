@@ -226,9 +226,9 @@ g_cload_entry_value_limit                = 0x80162D74;
 
 // Shared save/card constants named from their contents and CLOAD usage.
 g_lom_save_filename_prefix              = 0x800ECF7C;
-g_lom_alt_save_filename_prefix          = 0x800ECF8C;
+g_lom_pocketstation_filename_prefix          = 0x800ECF8C;
 g_lom_save_dummy_filename               = 0x800ECF9C;
-g_lom_alt_save_dummy_filename           = 0x800ECFB0;
+g_lom_pocketstation_dummy_filename           = 0x800ECFB0;
 g_new_save_entry_prefix                 = 0x800ECFC4;
 g_playtime_vsync_origin                 = 0x80042FB4;
 g_text_time_separator_offset_bytes      = 0x800EC3F6;
