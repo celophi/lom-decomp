@@ -171,16 +171,14 @@ void* addhero_draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s
     count = 0;
     if (*cursor >= ADDHERO_TEXT_FIRST_PRINTABLE)
     {
-        scan = cursor;
-        do
+        for (scan = cursor; *scan >= ADDHERO_TEXT_FIRST_PRINTABLE; scan++)
         {
             if (*scan >= ADDHERO_SJIS_LEAD_MIN)
             {
                 scan++;
             }
-            scan++;
             count++;
-        } while (*scan >= ADDHERO_TEXT_FIRST_PRINTABLE);
+        }
     }
 
     switch (alignment)
