@@ -22,22 +22,23 @@ a new destination directory. The files are generated and ignored by Git.
 | `header.bin` | The 40-byte section-offset header |
 | `textures/000.tim`, etc. | Whole TIM assets in file order |
 | `portraits/000.bin`, etc. | Whole portrait records, including palette and pixels |
-| `chests/<layout-index>.bin` | Recognized 48-byte chest records from the layout section |
+| `chests/<layout-index>.yaml` | Chest details and original record bytes |
 | `unknown/<offset>.bin` | Data not extracted as a recognized asset |
 
 Each YAML entry covers one range of bytes. `offset` is its hexadecimal position
 in the original IMG, and `size` is its byte count. The range ends at
-`offset + size`, exclusive. `file` is relative to the output directory and holds
-exactly those bytes, starting at byte zero.
+`offset + size`, exclusive. `file` is relative to the output directory. For a
+chest, `size` is the original 48-byte record size, not the YAML file's length.
 
 TIMs, portraits and recognized chest records each get one entry. Repeated
-references to the same TIM produce one extracted file. The other ranges are labeled `unknown_data`; this
-includes scripts, text, geometry and container tables. Some of their fields are
+references to the same TIM produce one extracted file. The other ranges are
+labeled `unknown_data`; this includes scripts, text, geometry and container tables. Some of their fields are
 understood, but this tool leaves them as raw bytes.
 
-Concatenating the files in YAML order reconstructs the original IMG exactly.
-There are no overlapping copies. Chest entries include a few decoded fields;
-TIMs and portraits are kept whole.
+Chest details live in their own YAML files, so the byte map only records where
+each asset belongs. Other assets and unknown data remain binary. To recover the
+original IMG, decode each chest's `record_bytes` hex string and concatenate it
+with the other files in byte-map order.
 
 ## Chest records
 
@@ -47,13 +48,15 @@ A chest uses the same record structure as other actors. The extractor recognizes
 the common chest resource selector and initializer script before labeling a
 record as `chest`.
 
-Its YAML entry shows `x`, `z`, `item_id`, `collection_flag` and `alternate_facing`.
+Its YAML file shows `x`, `z`, `item_id`, `collection_flag` and `alternate_facing`.
 The item comes from `scripts[4]`. The collection flag uses bits 0-14 of
-`scripts[5]`, and bit 15 selects the alternate facing. The extracted file retains
-the complete original record, including its other fields and script references.
+`scripts[5]`, and bit 15 selects the alternate facing. `record_bytes` keeps the
+complete original record as hex, including the other fields and script references.
+The decoded fields describe that saved record; editing them does not change
+`record_bytes`.
 
 For example, `WAL_B020.IMG` has a chest at `(395, 180)` with item `0x96` and
-collection flag `0x0BC0`. It is exported as `chests/002.bin` because it is layout
+collection flag `0x0BC0`. It is exported as `chests/002.yaml` because it is layout
 record 2. The event scripts remain in the unknown data; the tool doesn't execute
 them or resolve item names. Records using other initializers stay raw until we
 understand them.

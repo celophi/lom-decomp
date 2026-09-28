@@ -18,8 +18,9 @@ python3 -m tools.scenes.field_scene /path/to/scene.IMG output/scenes/example
 
 The tool checks the section offsets and extracts whole TIMs, portraits and
 recognized chest records. It saves the remaining bytes as unknown data.
-`byte-map.yaml` lists each file's offset and size, plus the position, item ID
-and collection flag for common chests. All bytes are preserved once.
+`byte-map.yaml` lists each asset's original offset and size. Chest details go
+in `chests/<layout-index>.yaml`, with the original record bytes saved as hex.
+Other assets and unknown data are copied unchanged.
 
 Run from the repository root with Python 3.10 or newer. The destination must be
 new; the tool won't overwrite an existing directory. Generated files are ignored

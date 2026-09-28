@@ -2,7 +2,8 @@
 """Extract complete assets and common chest records from ANA/INFO_* scene IMGs.
 
 The header locates the scene sections. Each section parser returns byte ranges;
-extraction copies those ranges unchanged and saves the gaps as unknown data.
+extraction writes chest records as YAML, copies other assets unchanged, and
+saves the gaps as unknown data.
 """
 
 from __future__ import annotations
@@ -133,12 +134,26 @@ class LayoutRecord:
         return event_scripts[script_offset:].startswith(COMMON_CHEST_INITIALIZER)
 
 
+    def chest_yaml(self, record_bytes: bytes) -> str:
+        """Write chest details and retain the original record for byte recovery."""
+        lines = [
+            f"x: {self.position & 0xFFFF}",
+            f"z: {(self.position >> 16) & 0x7FF}",
+            f"item_id: 0x{self.scripts[4]:04X}",
+            f"collection_flag: 0x{self.scripts[5] & 0x7FFF:04X}",
+            f"alternate_facing: {'true' if self.scripts[5] & 0x8000 else 'false'}",
+            "# Original 48 bytes, including fields not shown above.",
+            f'record_bytes: "{record_bytes.hex()}"',
+        ]
+        return "\n".join(lines) + "\n"
+
+
 @dataclass(frozen=True)
 class AssetRange:
-    """An extraction result, not a disk structure. Each file holds one exact range.
+    """An extraction result, not a disk structure. Each file represents one IMG range.
 
     offset is absolute in the IMG; size is in bytes. chest is present only when
-    a layout record has been recognized as a common chest.
+    a layout record has been recognized as a common chest and is written as YAML.
     """
 
     name: str
@@ -163,7 +178,7 @@ def read_chests(data: bytes, header: SceneHeader) -> list[AssetRange]:
         record = LayoutRecord.parse(data, offset)
         if record.is_common_chest(event_scripts):
             chests.append(AssetRange(
-                "chest", offset, LAYOUT_RECORD.size, f"chests/{index:03d}.bin", record,
+                "chest", offset, LAYOUT_RECORD.size, f"chests/{index:03d}.yaml", record,
             ))
     return chests
 
@@ -249,7 +264,7 @@ def split_scene(data: bytes) -> list[AssetRange]:
 
 
 def extract(source: Path, output: Path) -> None:
-    """Validate the IMG, then copy its ranges and write a YAML map in a new directory."""
+    """Validate the IMG, then write its assets and byte map in a new directory."""
     data = source.read_bytes()
     assets = split_scene(data)
     output.mkdir(parents=True, exist_ok=False)
@@ -258,18 +273,13 @@ def extract(source: Path, output: Path) -> None:
     for asset in assets:
         path = output / asset.filename
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(data[asset.offset:asset.offset + asset.size])
+        payload = data[asset.offset:asset.offset + asset.size]
+        if asset.chest is not None:
+            path.write_text(asset.chest.chest_yaml(payload), encoding="ascii")
+        else:
+            path.write_bytes(payload)
         lines.extend([f"  - name: {asset.name}", f"    offset: 0x{asset.offset:X}",
                       f"    size: {asset.size}", f"    file: {asset.filename}"])
-        if asset.chest is not None:
-            record = asset.chest
-            lines.extend([
-                f"    x: {record.position & 0xFFFF}",
-                f"    z: {(record.position >> 16) & 0x7FF}",
-                f"    item_id: 0x{record.scripts[4]:04X}",
-                f"    collection_flag: 0x{record.scripts[5] & 0x7FFF:04X}",
-                f"    alternate_facing: {'true' if record.scripts[5] & 0x8000 else 'false'}",
-            ])
     (output / "byte-map.yaml").write_text("\n".join(lines) + "\n", encoding="ascii")
 
 
