@@ -1,6 +1,6 @@
 # Disc Layout
 
-[English documentation](../../README.md)
+[English documentation](../../README.md) | [日本語](../../../jp/technical/reference/disc-layout.md)
 
 This document describes the contents of the files on the disc, and how the game addresses data during the runtime.
 Right now, it's only written to describe SLUS-01013 since that is the NTSC-U version of the game.

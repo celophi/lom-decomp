@@ -1,6 +1,6 @@
 # Scene IMG extractor
 
-[English documentation](../../README.md) | [Scene tools](../../../../tools/scenes/README.md) | [Scene layouts and conditions](../architecture/scene-layouts.md)
+[English documentation](../../README.md) | [日本語](../../../jp/technical/reference/scene-extractor.md) | [Scene tools](../../../../tools/scenes/README.md) | [Scene layouts and conditions](../architecture/scene-layouts.md)
 
 The extractor reads the game's `ANA/INFO_*/*.IMG` scene files. It checks their
 section offsets, extracts recognized assets and saves the remaining bytes as

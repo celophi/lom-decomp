@@ -1,6 +1,6 @@
 # How scene layouts decide what appears
 
-[English documentation](../../README.md) | [Scene extractor](../reference/scene-extractor.md)
+[English documentation](../../README.md) | [日本語](../../../jp/technical/architecture/scene-layouts.md) | [Scene extractor](../reference/scene-extractor.md)
 
 When we look at a chest in Legend of Mana, we can see where it is and whether
 we've opened it. Looking at the extracted data takes a little more work. We
