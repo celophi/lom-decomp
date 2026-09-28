@@ -104,7 +104,7 @@ sequenceDiagram
     UI->>Card: Read the header and summary of the selected save
     UI->>UI: Show party icons, play time, name, location
     Player->>UI: Confirm the save
-    UI->>UI: Check file name, game identity, version byte
+    UI->>UI: Check file name, game identity, compatibility tag
     UI->>Player: Ask "Load?"
     Player->>UI: Yes
     UI->>Card: Read the whole save file
@@ -122,18 +122,19 @@ A few checks happen before anything is copied:
 - **It can't be your own game.** Every save has a random 16-bit game id that is
   created when a new game starts. If the save's game id matches the running
   game, the details window says the same hero data can't be used.
-- **The version byte has to agree.** The save stores a byte that ADDHERO
-  compares with the running game's value. When they differ, and the running
-  value isn't `0xFF`, ADDHERO shows its "version is wrong" message. See the
-  open questions below.
+- **The compatibility tag has to agree.** Every save stores a tag byte, and so
+  does the running game. A new game uses `0xFF`, which matches anything, and
+  loading a save adopts that save's tag. When the two differ and neither is
+  `0xFF`, ADDHERO shows its "version is wrong" message.
 - **The full file has to validate.** After the whole file is read, the checksum
   and the `ANA` magic have to match. A file that fails shows the load-failed
   dialog and nothing is copied.
 
 Only then does ADDHERO copy the save's hero (`characters[0]` in the file) into
 the running game's guest slot (`characters[1]`). It keeps the guest slot's
-existing control bit (bit 7 of the character info byte) rather than taking the
-one from the file. It also stores the file's identity in `guest_origin` and sets
+existing control bit (bit 7 of the character info byte, set when a controller
+drives the character) rather than taking the one from the file, so the guest
+stays under the same control. It also stores the file's identity in `guest_origin` and sets
 `guest_loaded`, which is how mode 1 finds the same file later.
 
 The browser only reads the first 0x280 bytes of each save while you're moving
@@ -278,13 +279,10 @@ and defaults:
 These are the parts we don't understand yet. They don't block using the
 overlay, but they matter if you want to change how it behaves.
 
-- **The version byte.** The game stores a byte at offset `0xCF` of the saved
-  game and names it the save slot. ADDHERO shows "Save Data version is wrong"
-  when it differs from the running game's value, and `0xFF` accepts anything.
-  Whether this is a slot number, a version, or both hasn't been confirmed.
-- **The control bit.** Bit 7 of a character's info byte is kept on import and
-  set on export. The code treats it as who controls the character in battle,
-  but we haven't confirmed how the game uses it for a guest.
+- **Tags other than `0xFF`.** The game starts up with a compatibility tag of
+  7, in both releases, but a new game or a loaded save replaces it. We haven't
+  found what produces a save with any tag other than `0xFF`, which is the only
+  case where the version check can refuse one.
 - **A write-only FIELD word.** ADDHERO stores 3 at `0x80122718` when the
   browser is cancelled with Circle. Nothing in the main executable or any
   overlay reads that address.
