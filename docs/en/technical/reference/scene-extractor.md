@@ -1,6 +1,6 @@
 # Scene IMG extractor
 
-[English documentation](../../README.md) | [Scene tools](../../../../tools/scenes/README.md)
+[English documentation](../../README.md) | [Scene tools](../../../../tools/scenes/README.md) | [Scene layouts and conditions](../architecture/scene-layouts.md)
 
 The extractor reads the game's `ANA/INFO_*/*.IMG` scene files. It checks their
 section offsets, extracts recognized assets and saves the remaining bytes as
@@ -62,10 +62,13 @@ A chest uses the same record structure as other actors. The extractor recognizes
 the common chest resource selector and initializer script before labeling a
 record as `chest`.
 
-Its YAML file shows `x`, `z`, `item_id`, `collection_flag` and `alternate_facing`.
-The item comes from `scripts[4]`. The collection flag uses bits 0-14 of
+Its YAML file shows every layout field, including the condition variable and
+its minimum and maximum, decoded control and position fields, the resource
+selector, enabled events, and all 16 script/parameter slots. It also shows the
+chest settings `x`, `z`, `item_id`, `collection_flag` and `alternate_facing`.
+The item comes from `scripts[4]`. The collection reference uses bits 0-14 of
 `scripts[5]`, and bit 15 selects the alternate facing. `record_bytes` keeps the
-complete original record as hex, including the other fields and script references.
+complete original record as hex.
 The decoded fields describe that saved record; editing them does not change
 `record_bytes`.
 

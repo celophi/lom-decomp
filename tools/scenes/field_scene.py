@@ -133,18 +133,65 @@ class LayoutRecord:
             return False
         return event_scripts[script_offset:].startswith(COMMON_CHEST_INITIALIZER)
 
-
     def chest_yaml(self, record_bytes: bytes) -> str:
-        """Write chest details and retain the original record for byte recovery."""
+        """Show every layout field, plus decoded chest settings and packed bits.
+
+        Script slots contain both references and parameters. Their comments
+        describe the common chest template, not a rule for other actor kinds.
+        The original record remains the source for byte-preserving recovery.
+        """
+        slot_roles = {
+            0: "interaction script",
+            1: "interaction script",
+            4: "item ID",
+            5: "collection-variable reference and alternate-facing bit",
+            8: "idle script",
+            15: "initialization script",
+        }
         lines = [
             f"x: {self.position & 0xFFFF}",
             f"z: {(self.position >> 16) & 0x7FF}",
             f"item_id: 0x{self.scripts[4]:04X}",
+            "# Reference to a collection variable, not its current saved value.",
             f"collection_flag: 0x{self.scripts[5] & 0x7FFF:04X}",
             f"alternate_facing: {'true' if self.scripts[5] & 0x8000 else 'false'}",
-            "# Original 48 bytes, including fields not shown above.",
-            f'record_bytes: "{record_bytes.hex()}"',
+            "# The current variable value must be within this inclusive range.",
+            "condition:",
+            f"  variable: 0x{self.condition_variable:04X}",
+            f"  minimum: {self.condition_minimum}",
+            f"  maximum: {self.condition_maximum}",
+            "# Fields of the original FieldActionRequest, before installation.",
+            "control:",
+            f"  raw: 0x{self.control:08X}",
+            f"  trigger_group: {self.control & 0xF}",
+            f"  kind: {(self.control >> 4) & 0xF}",
+            f"  selector: {(self.control >> 8) & 0xFF}",
+            f"  local_variable_count: {(self.control >> 16) & 0xFF}",
+            f"  palette: {(self.control >> 24) & 0xF}",
+            f"  group: {(self.control >> 28) & 3}",
+            f"  hidden: {'true' if self.control & 0x40000000 else 'false'}",
+            f"  active: {'true' if self.control & 0x80000000 else 'false'}",
+            "position:",
+            f"  raw: 0x{self.position:08X}",
+            f"  x: {self.position & 0xFFFF}",
+            f"  z: {(self.position >> 16) & 0x7FF}",
+            f"  unknown_bits_27_29: {(self.position >> 27) & 7}",
+            f"  y: {(self.position >> 30) & 3}",
+            "source:",
+            f"  raw: 0x{self.source:04X}",
+            f"  resource_selector: {self.source & 7}",
+            f"enabled_events: 0x{self.enabled_events:04X}",
+            "# Zero-based slots; 0xFFFF means no script in script-reference slots.",
+            "scripts:",
         ]
+        for index, value in enumerate(self.scripts):
+            role = slot_roles.get(index)
+            comment = f"[{index}]" + (f" {role}" if role else "")
+            lines.append(f"  - 0x{value:04X}  # {comment}")
+        lines.extend([
+            "# Original 48 bytes, retained for byte-preserving recovery.",
+            f'record_bytes: "{record_bytes.hex()}"',
+        ])
         return "\n".join(lines) + "\n"
 
 
