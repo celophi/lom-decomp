@@ -3,7 +3,7 @@
 
 import unittest
 
-from u8_sequence import U8Sequence, U8SequenceError
+from tools.assets.u8_sequence import U8Sequence, U8SequenceError
 
 
 class U8SequenceTests(unittest.TestCase):

@@ -3,7 +3,7 @@
 
 import unittest
 
-from uv_rect_table import UvRectTable, UvRectTableError
+from tools.assets.uv_rect_table import UvRectTable, UvRectTableError
 
 
 class UvRectTableTests(unittest.TestCase):

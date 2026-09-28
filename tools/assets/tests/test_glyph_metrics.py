@@ -5,7 +5,7 @@ import unittest
 
 import yaml
 
-from glyph_metrics import (
+from tools.assets.glyph_metrics import (
     FORMAT_NAME,
     FORMAT_VERSION,
     GlyphMetrics,

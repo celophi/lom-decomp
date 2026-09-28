@@ -1018,7 +1018,7 @@ field_find_object_state = 0x80087F0C;
 field_get_actor_position = 0x80087F44;
 field_set_actor_control_mode = 0x80087FC0;
 
-// Cross-file FIELD globals and functions named in the humanize sweep.
+// Shared FIELD globals and functions.
 g_field_camera_offset_x               = 0x800F2278;
 g_field_camera_offset_y               = 0x800F227C;
 g_field_camera_offset_z               = 0x800F2280;
@@ -1052,7 +1052,7 @@ field_count_chain_hit = 0x8008C4A8;
 field_end_actor_chain = 0x8008C620;
 g_field_weapon_chain_limits = 0x800EB068;
 
-// field_actor_resource_unpack.c (humanize lane hu18).
+// Actor resource loading (field_actor_resource_unpack.c).
 field_check_marker_contact            = 0x8009A2A4;
 field_request_resource_read           = 0x8009A364;
 field_clear_resource_queue            = 0x8009A384;

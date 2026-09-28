@@ -4,7 +4,7 @@
 import struct
 import unittest
 
-from tim_upload_table import TimUploadTable, TimUploadTableError
+from tools.assets.tim_upload_table import TimUploadTable, TimUploadTableError
 
 
 class TimUploadTableTests(unittest.TestCase):

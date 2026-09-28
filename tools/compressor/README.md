@@ -95,17 +95,22 @@ python3 tools/compressor/verify_exact_bins.py GOVER MOVIE GNAME CHECKPS
 `FIELD`, `TITLE`, `WMAP` and `WSEL` are the large ones and dominate the runtime
 of a full sweep.
 
-This check must stay green after any change to `compressor.py`. It is stricter
-than the build's own check, because it covers all 17 overlays rather than only
-the ones that currently link.
+This check must stay green after any change to `compressor.py`. It checks all
+17 US overlays directly from the disc files. `make verify-bins` also covers all
+17, using the rebuilt images as compressor input.
 
 ## Where the build uses this
 
-`mk/verification.mk` compresses each fully-linked overlay's raw image, prepends
-the `0x01` tag, and SHA1-compares the result against `disc/us/BIN/<NAME>.BIN`. On
-a match the overlay is recorded in `build/complete_overlays.txt`, which the
-objdiff config generator reads to stamp those units complete. Run it with:
+`mk/verification.mk` compresses each supported overlay's rebuilt raw image,
+prepends the `0x01` tag, and compares its SHA-1 against
+`disc/<version>/BIN/<NAME>.BIN`. Successful comparisons are recorded in
+`build/<version>/complete_overlays.txt`, which the objdiff config generator
+uses to mark those modules complete. Run it with:
 
 ```bash
 make verify-bins
 ```
+
+For JP, use `make verify-bins VERSION=jp`. FIELD, GNAME, GOSUB and TITLE
+are checked against their decompressed images because their compressed streams
+are not yet reproduced. These raw-only checks do not mark modules complete.

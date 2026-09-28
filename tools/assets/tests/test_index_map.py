@@ -5,7 +5,7 @@ import unittest
 
 import yaml
 
-from index_map import (
+from tools.assets.index_map import (
     FORMAT_NAME,
     FORMAT_VERSION,
     IndexMap,

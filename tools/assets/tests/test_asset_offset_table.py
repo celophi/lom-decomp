@@ -4,7 +4,7 @@
 import struct
 import unittest
 
-from asset_offset_table import AssetOffsetTable, AssetOffsetTableError
+from tools.assets.asset_offset_table import AssetOffsetTable, AssetOffsetTableError
 
 
 class AssetOffsetTableTests(unittest.TestCase):

@@ -4,7 +4,7 @@
 import struct
 import unittest
 
-from save_layout_table import SaveLayoutTable, SaveLayoutTableError
+from tools.assets.save_layout_table import SaveLayoutTable, SaveLayoutTableError
 
 
 class SaveLayoutTableTests(unittest.TestCase):

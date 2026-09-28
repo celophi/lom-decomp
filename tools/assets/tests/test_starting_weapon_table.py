@@ -4,7 +4,7 @@
 import struct
 import unittest
 
-from starting_weapon_table import StartingWeaponTable, StartingWeaponTableError
+from tools.assets.starting_weapon_table import StartingWeaponTable, StartingWeaponTableError
 
 
 class StartingWeaponTableTests(unittest.TestCase):

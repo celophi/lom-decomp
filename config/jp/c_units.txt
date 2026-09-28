@@ -1,7 +1,7 @@
 # C translation units whose JP code differs from US but builds from the shared
 # C anyway: the differences are `#if defined(VERSION_JP)` values in the source.
-# tools/versions/port_us_layout.py keeps these as C instead of listing them in
-# asm_units.txt. Add a unit here only after `make VERSION=jp verify-bins` passes.
+# These units must not also appear in asm_units.txt. Add a unit here only
+# after `make VERSION=jp verify-bins` passes.
 src/field_runtime.c
 src/overlays/addhero/addhero.c
 src/overlays/addhero/addhero_widgets.c

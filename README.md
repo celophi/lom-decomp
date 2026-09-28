@@ -345,7 +345,7 @@ One C source tree builds every regional release. Anything that comes from a part
 | `VERSION` | Release | Status |
 |---|---|---|
 | `us` (default) | North America, `SLUS-01013` | Fully linked |
-| `jp` | Japan, `SLPS-02170` | In progress - all 18 binaries rebuild byte-exact. The main executable and 12 overlays build from the shared C sources, except the units whose JP code differs; CARDA, CLOAD, GNAME, TITLE and WSEL still link from first-pass splat assembly |
+| `jp` | Japan, `SLPS-02170` | In progress - the main executable and all 17 overlays use the shared C layout, with assembly retained for some units and functions. All 18 raw images match; FIELD, GNAME, GOSUB and TITLE are not yet verified as compressed disc files |
 
 | Shared by all versions | Per version |
 |---|---|
@@ -392,6 +392,7 @@ project references. Useful starting points include:
 
 - [CD-ROM subsystem architecture](docs/en/technical/architecture/cdrom.md)
 - [MOVIE overlay architecture](docs/en/technical/architecture/movie.md)
+- [Tools index](tools/README.md) - asset tools, scene extraction and test commands.
 - [`tools/compressor/README.md`](tools/compressor/README.md)
 
 ## Troubleshooting
@@ -440,9 +441,9 @@ No original game executable, overlay binaries, artwork, audio, or other copyrigh
 
 ## Thanks
 
-A heartfelt thank you to Squaresoft and to everyone who had a hand in creating *Legend of Mana*. The game is full of imagination, experimentation, unusual ideas, beautiful artwork and music, and technical choices that still make it fascinating to study decades later. Projects like this exist because the original developers, artists, musicians, designers, writers, and support staff took chances and created something distinctive enough that people still care about understanding and preserving it today.
+Thanks to Squaresoft and everyone who worked on *Legend of Mana*. The art, the music, and all the strange little ideas make this a game worth coming back to. You can tell the team was willing to try things, and that's a big part of what makes it interesting.
 
-This decompilation is, above all, an expression of appreciation for that work. Thank you for making such a beautiful and memorable game, and for being willing to try something different.
+Figuring out how it all works has been a lot of fun. There's still plenty to understand, but hopefully this project helps preserve that work and gives other people a chance to explore it too.
 
 ## Tools and acknowledgements
 

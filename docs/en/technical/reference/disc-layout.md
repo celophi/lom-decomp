@@ -163,7 +163,10 @@ Played by the `movie` overlay / `MOVIE.BIN` through the streaming path in [cdrom
 
 Extensions and roles:
 
-- `.IMG` - custom Square sprite/animation banks (header is a table of 32-bit offsets to frames/parts, not a fixed magic).
+- `.IMG` - custom Square resources with several layouts. `ANA/INFO_*` files are
+  scene containers with actors, scripts, text, geometry and textures; see the
+  [scene extractor](scene-extractor.md). Other families include sprite/animation
+  banks. Offset tables are common, not a universal magic signature.
 - `.DAT` - generic companion data blobs paired with the `.IMG` banks (`.IMG` graphics + `.DAT` control data is the common pairing).
 - `.STV` - **battle-effect animation scripts**, all under `EFFECT/*` sub-folders (`BAT_EF*`, `RENEF*`). 
   Companion forms in the same folders: `.SV` (7, a variant) and `.ST` (1, `JYO_SET.ST`, an effect-set index).
@@ -229,7 +232,7 @@ Three sequence pools plus effect banks:
 | `.EFF` | offset table | AKAO sample bank (SFX) |
 | `.TIM` | `10 00 00 00` | Standard PSX TIM texture |
 | `.CLT` | `10 00 00 00` | TIM CLUT (palette) |
-| `.IMG` | offset table | Square sprite/animation bank |
+| `.IMG` | offset table (layout varies) | Square scene containers and sprite/animation resources |
 | `.STV` / `.SV` | `xx xx 01 00 ...` | Battle-effect animation script (`ANA/EFFECT`) |
 | `.BTP` | offset table | World-map effect graphics |
 | `.PIM` | `01 00 10 f0 ...` | Compressed world-map tile image |

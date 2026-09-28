@@ -766,7 +766,6 @@ void golem_reset_block_position(void)
  * @param packet_cursor Packet cursor, threaded through the marker emitters.
  * @param ordering_table Ordering-table tag for the marker packets.
  * @return Packet cursor after the marker run.
- * @see working/func_80140DEC/
  */
 u8* golem_draw_grid_markers(u8* packet_cursor, u_long* ordering_table)
 {
@@ -976,7 +975,6 @@ void golem_render(GolemRenderContext* render_context)
  * @param packet_buffer Next free GPU packet.
  * @param render_context Frame buffer and block-list ordering table.
  * @return Packet cursor after the icons and viewport commands.
- * @see working/func_80141478/code.c
  */
 u8* golem_draw_block_list(u8* packet_buffer, GolemRenderContext* render_context)
 {
@@ -1035,7 +1033,6 @@ u8* golem_draw_block_list(u8* packet_buffer, GolemRenderContext* render_context)
  * @param packet_cursor Next free GPU packet.
  * @param render_context Frame buffer and grid ordering table.
  * @return Packet cursor after the icons, dividers, and viewport commands.
- * @see working/func_801416C8/code.c
  */
 u8* golem_draw_logic_grid(u8* packet_cursor, GolemRenderContext* render_context)
 {
@@ -1134,7 +1131,6 @@ u8* golem_draw_logic_grid(u8* packet_cursor, GolemRenderContext* render_context)
  * @param width Total panel width in pixels.
  * @param height Total panel height in pixels.
  * @return Packet cursor after the panel packets.
- * @see working/func_80141AD0_golem/
  */
 u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index, s32 x, s32 y, s32 width, s32 height)
 {
@@ -1277,7 +1273,6 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
  * @param use_origin When 1, offset x/y by the layout row's origin fields.
  * @param style      Style flags forwarded to golem_emit_glyph for each part.
  * @return Packet cursor past the trailing draw-mode packet.
- * @see working/func_80141EB4_golem/
  */
 u8* golem_draw_composite_icon(u8* packet_cursor, u_long* ordering_table, s32 block_index, s32 rotation, s32 x, s32 y, s32 clut, s32 use_origin, s32 style)
 {

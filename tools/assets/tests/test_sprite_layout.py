@@ -7,7 +7,7 @@ from pathlib import Path
 
 import yaml
 
-from sprite_layout import (
+from tools.assets.sprite_layout import (
     FORMAT_NAME,
     FORMAT_VERSION,
     SpriteLayout,

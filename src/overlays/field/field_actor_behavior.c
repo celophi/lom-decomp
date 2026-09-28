@@ -424,8 +424,8 @@ void field_refresh_party_routes(void)
  * @param target Actor at the end of the path; also the heading reference.
  * @param heading_offset First entry of g_field_route_animation_history to write.
  * @param unused_limit Unused.
- * @note The pinned assembler inserts one extra nop; see
- *       docs/decompilation/maspsx-division-register-hazard.md.
+ * @note Division hazard detection must distinguish $2 from $20 to avoid
+ *       inserting an extra load-delay nop.
  */
 static void field_sample_actor_route(FieldRoutePoint* points, s32 remaining, FieldActor* actor, FieldActor* target, s32 heading_offset, s32 unused_limit)
 {

@@ -4,7 +4,7 @@
 import struct
 import unittest
 
-from game_state_template import GameStateTemplate, GameStateTemplateError
+from tools.assets.game_state_template import GameStateTemplate, GameStateTemplateError
 
 
 class GameStateTemplateTests(unittest.TestCase):
