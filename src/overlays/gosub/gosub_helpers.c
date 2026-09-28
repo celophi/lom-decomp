@@ -133,11 +133,11 @@ void gosub_delete_logic_block(s32 record_index)
 {
     s32 shift_index;
 
-    for (shift_index = record_index; shift_index < g_pad_ctx->logic_block_count - 1; shift_index++)
+    for (shift_index = record_index; shift_index < g_saved_game_ctx->logic_block_count - 1; shift_index++)
     {
-        gosub_copy_logic_block(&g_pad_ctx->logic_blocks[shift_index], &g_pad_ctx->logic_blocks[shift_index + 1]);
+        gosub_copy_logic_block(&g_saved_game_ctx->logic_blocks[shift_index], &g_saved_game_ctx->logic_blocks[shift_index + 1]);
     }
-    g_pad_ctx->logic_block_count--;
+    g_saved_game_ctx->logic_block_count--;
 }
 
 /**
@@ -245,12 +245,12 @@ void gosub_sort_logic_blocks(s32 sort_mode)
         workspace.row_order[insertion_index] = row_index;
     }
 
-    bcopy((u8*)g_pad_ctx->logic_blocks, (u8*)workspace.blocks, sizeof(workspace.blocks));
+    bcopy((u8*)g_saved_game_ctx->logic_blocks, (u8*)workspace.blocks, sizeof(workspace.blocks));
     bcopy((u8*)g_gosub_rows, (u8*)workspace.rows, sizeof(workspace.rows));
 
     for (row_index = 0; row_index < g_gosub_row_count; row_index++)
     {
-        gosub_copy_logic_block(&g_pad_ctx->logic_blocks[row_index], &workspace.blocks[workspace.row_order[row_index]]);
+        gosub_copy_logic_block(&g_saved_game_ctx->logic_blocks[row_index], &workspace.blocks[workspace.row_order[row_index]]);
         gosub_copy_list_row(&g_gosub_rows[row_index], &workspace.rows[workspace.row_order[row_index]]);
     }
 

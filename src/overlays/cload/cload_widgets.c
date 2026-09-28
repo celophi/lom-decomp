@@ -257,7 +257,7 @@ void *cload_draw_load_progress(u_long *ot, void *prim, s32 x_offset, s32 y_offse
 
     if (g_cload_progress_active == 0)
     {
-        if (cload_validate_save_blob(&g_cload_save_blob) == 0)
+        if (cload_validate_save_file(&g_cload_save_file) == 0)
         {
             cload_open_status_dialog(4);
         }
@@ -265,8 +265,8 @@ void *cload_draw_load_progress(u_long *ot, void *prim, s32 x_offset, s32 y_offse
         {
             play_menu_sfx(0x7B, 0x80);
             g_cload_element_pool[0].attr.f.state = CLOAD_ELEMENT_FREE;
-            bcopy(g_cload_save_blob.payload + CLOAD_SAVE_DATA_OFFSET, g_saved_game.bytes, SAVED_GAME_DATA_SIZE);
-            g_save_slot_index = g_saved_game.bytes[CLOAD_SAVE_SLOT_ID_OFFSET];
+            bcopy((u8*)&g_cload_save_file.saved_game, g_saved_game.bytes, SAVED_GAME_DATA_SIZE);
+            g_save_slot_index = g_saved_game.layout.save_slot;
             g_playtime_vsync_origin = VSync(-1);
             g_cload_exit_requested = 1;
         }
@@ -421,7 +421,7 @@ void *cload_draw_icon_highlight(POLY_FT4 *quad, u_long *ot, s32 x, s32 y, s32 wi
     s32 column;
     u8 u;
 
-    if (icon == CLOAD_NO_ICON)
+    if (icon == SAVE_NO_ICON)
     {
         return quad;
     }

@@ -39,7 +39,7 @@
 /** @brief Pending effect slots of a stored companion record. */
 #define FIELD_REGION_PENDING_EFFECT_COUNT 3
 
-/** @brief FieldRegionRecord::status bits 24-26: pending effects already applied. */
+/** @brief PetRecord::status bits 24-26: pending effects already applied. */
 #define FIELD_REGION_APPLIED_SHIFT 24
 #define FIELD_REGION_APPLIED_MASK 7
 
@@ -91,10 +91,8 @@ typedef struct
     u8 threshold_indexes[FIELD_EFFECT_COUNT][FIELD_MENU_SLOT_COUNTER_COUNT];
 } FieldEffectThresholdTable;
 
-extern FieldGameState* g_field_game_state;
-
 static s32 field_classify_menu_slot(s32 group_index, s32 slot_index, FieldEffectThresholdTable* table);
-static void field_apply_region_effect(FieldRegionRecord* record, s32 effect, FieldRegionEffectTable* table);
+static void field_apply_region_effect(PetRecord* record, s32 effect, FieldRegionEffectTable* table);
 
 /**
  * @brief Roll a random effect for a menu slot from the items of its group and reset the slot's counters.
@@ -237,27 +235,27 @@ void field_apply_pending_region_effects(void)
     u32 status;
     u32 value;
     s32 applied;
-    FieldRegionRecord* record;
+    PetRecord* record;
 
     table = field_find_resource(FIELD_RESOURCE_REGION_EFFECTS);
-    for (record_index = 0; record_index < FIELD_REGION_COUNT; record_index++)
+    for (record_index = 0; record_index < PET_RECORD_COUNT; record_index++)
     {
-        if (g_field_game_state->regions[record_index].name[0] != 0)
+        if (g_field_game_state->pets[record_index].name[0] != 0)
         {
             for (effect_index = 0; effect_index < FIELD_REGION_PENDING_EFFECT_COUNT; effect_index++)
             {
-                value = g_field_game_state->regions[record_index].status.effects[effect_index];
+                value = g_field_game_state->pets[record_index].status.effects[effect_index];
                 if (value != FIELD_NO_EFFECT)
                 {
-                    status = g_field_game_state->regions[record_index].status.word;
+                    status = g_field_game_state->pets[record_index].status.word;
                     applied = (status >> FIELD_REGION_APPLIED_SHIFT) & FIELD_REGION_APPLIED_MASK;
                     if (!((applied >> effect_index) & 1))
                     {
-                        record = &g_field_game_state->regions[record_index];
+                        record = &g_field_game_state->pets[record_index];
                         value = (status & ~(FIELD_REGION_APPLIED_MASK << FIELD_REGION_APPLIED_SHIFT)) |
                                 (((applied | (1 << effect_index)) & FIELD_REGION_APPLIED_MASK) << FIELD_REGION_APPLIED_SHIFT);
-                        g_field_game_state->regions[record_index].status.word = value;
-                        field_apply_region_effect(record, g_field_game_state->regions[record_index].status.effects[effect_index], table);
+                        g_field_game_state->pets[record_index].status.word = value;
+                        field_apply_region_effect(record, g_field_game_state->pets[record_index].status.effects[effect_index], table);
                     }
                 }
             }
@@ -275,7 +273,7 @@ void field_apply_pending_region_effects(void)
 #if defined(VERSION_JP)
 INCLUDE_ASM("overlays/field/nonmatchings/field_record_effect_ops", field_apply_region_effect);
 #else
-static void field_apply_region_effect(FieldRegionRecord* record, s32 effect, FieldRegionEffectTable* table)
+static void field_apply_region_effect(PetRecord* record, s32 effect, FieldRegionEffectTable* table)
 {
     s32 i;
     s32 value;
@@ -284,14 +282,14 @@ static void field_apply_region_effect(FieldRegionRecord* record, s32 effect, Fie
     u8 total_delta;
     s32 kind;
     s32 amount;
-    FieldRegionRecord* view;
+    PetRecord* view;
 
     if ((u32)(effect - FIELD_EFFECT_ID_BASE) < FIELD_EFFECT_COUNT)
     {
         effect -= FIELD_EFFECT_ID_BASE;
         for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
         {
-            view = FIELD_REGION_AT(record, i);
+            view = FIELD_PET_AT(record, i);
             value = view->stat_growth[0].byte;
             stat_delta = table->rows[effect].stat_deltas[i];
             value = ((u32)value >> 4) + (stat_delta & 0xF) - (stat_delta >> 4);
@@ -311,7 +309,7 @@ static void field_apply_region_effect(FieldRegionRecord* record, s32 effect, Fie
         }
         for (i = 0; i < 4; i++)
         {
-            view = FIELD_REGION_AT(record, i);
+            view = FIELD_PET_AT(record, i);
             value = view->total_growth[0].byte;
             total_delta = table->rows[effect].total_deltas[i];
             value = ((u32)value >> 4) + (total_delta & 0xF) - (total_delta >> 4);

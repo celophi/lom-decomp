@@ -111,7 +111,7 @@ typedef struct
 #define SHOP_SELECTED_ENTRY() ((ShopEntry*)(g_shop_cursor * sizeof(ShopEntry) + (u32)g_shop_entries))
 
 extern ShopTextArchive g_shop_text_archive;
-extern u16 g_shop_item_sell_prices[ITEM_TYPE_COUNT];
+extern u16 g_shop_item_sell_prices[FIELD_ITEM_KIND_COUNT];
 
 extern s32 g_shop_title_text_id;
 extern s32 g_shop_frame_index;
@@ -125,7 +125,7 @@ extern ShopWindow g_shop_windows[SHOP_WINDOW_COUNT];
 extern s32 g_shop_notice_active;
 extern s32 g_shop_notice_id;
 extern s32 g_shop_quantity;
-extern InventoryRecord* g_shop_item_records;
+extern FieldItemRecord* g_shop_item_records;
 extern s32 g_shop_scroll_y;
 extern s32 g_shop_scroll_target;
 extern ShopEntry* g_shop_entries;
@@ -169,8 +169,8 @@ void field_set_default_fade_target(void);
 void field_restore_fade_target(void);
 void field_reset_input_repeat(void);
 void field_compact_inventory(void);
-InventoryRecord* field_find_free_inventory_record(void);
-void field_copy_inventory_record(InventoryRecord* dst, InventoryRecord* src);
+FieldItemRecord* field_find_free_inventory_record(void);
+void field_copy_inventory_record(FieldItemRecord* dst, FieldItemRecord* src);
 u8* func_800A88A0(u8* prim, u32* ot, u8* text, s32 color, s32 x, s32 y, s32 mode);
 u8* func_800A8A78(u32* ot, u8* prim, s32 value, s32 color, Vec2s* position, s32 mode);
 void func_800A8B90(u8* dst, s32 value, s32 mode);

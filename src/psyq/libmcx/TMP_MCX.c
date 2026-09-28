@@ -26,7 +26,7 @@ INCLUDE_ASM("nonmatchings/psyq/libmcx/TMP_MCX", func_80031F3C);
 
 INCLUDE_ASM("nonmatchings/psyq/libmcx/TMP_MCX", _mcxSioRW);
 
-INCLUDE_ASM("nonmatchings/psyq/libmcx/TMP_MCX", func_80032174);
+INCLUDE_ASM("nonmatchings/psyq/libmcx/TMP_MCX", McxSync);
 
 INCLUDE_ASM("nonmatchings/psyq/libmcx/TMP_MCX", func_800322D8);
 
@@ -44,7 +44,7 @@ INCLUDE_ASM("nonmatchings/psyq/libmcx/TMP_MCX", func_800327AC);
 
 INCLUDE_ASM("nonmatchings/psyq/libmcx/TMP_MCX", _mcxRxRestLen);
 
-INCLUDE_ASM("nonmatchings/psyq/libmcx/TMP_MCX", func_80032888);
+INCLUDE_ASM("nonmatchings/psyq/libmcx/TMP_MCX", McxGetTime);
 
 INCLUDE_ASM("nonmatchings/psyq/libmcx/TMP_MCX", func_80032928);
 

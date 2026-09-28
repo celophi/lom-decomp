@@ -8,6 +8,7 @@
  */
 
 #include "common.h"
+#include "saved_game.h"
 #include "controller_internal.h"
 #include "field_actor_tables.h"
 #include "field_calls.h"
@@ -51,7 +52,6 @@ extern s32 g_field_duel_mode;
 extern s32 g_field_money_snapshot;
 extern s32 D_8012291C;
 extern u32 g_field_experience_snapshot[];
-extern u8* g_pad_ctx;
 
 void akao_release_all_sfx(void);
 void field_clear_actor_slots(void);
@@ -86,10 +86,9 @@ void field_set_battle_group(s32 mode, void* actor_data)
     FieldObjectState* state;
     s32 animation;
     s32 index;
-    u32 buttons;
+    u32 progress;
     u8 animation_flags;
-    u8* pad_record;
-    u8* pad_context;
+    SavedGameLayout* saved_game;
 
     field_clear_actor_texts();
     if (mode == 0)
@@ -126,18 +125,17 @@ void field_set_battle_group(s32 mode, void* actor_data)
 
     for (index = 0; index < FIELD_PARTY_COUNT; index++)
     {
-        pad_record = g_pad_ctx + index * 0x250;
-        buttons = *(u32*)(pad_record + 0x610);
-        g_field_experience_snapshot[index] = buttons >> 8;
+        progress = g_saved_game_ctx->characters[index].progress.word;
+        g_field_experience_snapshot[index] = progress >> 8;
         g_field_player_records[index].unk25D = 0;
         g_field_player_records[index].unk25C = 0;
         g_field_player_records[index].unk25B = 0;
         g_field_player_records[index].unk25A = 0;
     }
 
-    pad_context = g_pad_ctx;
+    saved_game = g_saved_game_ctx;
     D_8012291C = 1;
-    g_field_money_snapshot = *(s32*)(pad_context + 0x2C);
+    g_field_money_snapshot = saved_game->money;
     field_begin_battle_entry();
 
     g_field_actors[0].animation_active = g_field_actors[0].animation_state = 1;

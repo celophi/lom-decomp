@@ -139,7 +139,7 @@ s32 equipment_combination_quantity(s32* record_indices)
  */
 s32 equipment_pair_has_classes(s32 class_a, s32 class_b, s32* record_indices)
 {
-    FieldGameState* state;
+    SavedGameLayout* state;
     s32 classes[EQUIPMENT_PAIR_SIZE];
     s32 item_type;
     s32 i;
@@ -147,7 +147,7 @@ s32 equipment_pair_has_classes(s32 class_a, s32 class_b, s32* record_indices)
 
     for (i = 0; i < EQUIPMENT_PAIR_SIZE; i++)
     {
-        state = (FieldGameState*)&g_saved_game;
+        state = (SavedGameLayout*)&g_saved_game;
         item_type = FIELD_ITEM_TYPE((state->items + record_indices[i])->info.word);
         classes[i] = item_type;
         if (FIELD_ITEM_CATEGORY((state->items + record_indices[i])->info.word) == FIELD_ITEM_CATEGORY_ARMOR)
@@ -221,11 +221,11 @@ s32 equipment_combination_find(s32* record_indices, s32* quantity, s32* variant)
  */
 s32 equipment_combination_variant(s32* record_indices)
 {
-    FieldGameState* state;
+    SavedGameLayout* state;
     FieldItemRecord* first;
     FieldItemRecord* second;
 
-    state = (FieldGameState*)&g_saved_game;
+    state = (SavedGameLayout*)&g_saved_game;
     first = &state->items[record_indices[0]];
     second = &state->items[record_indices[1]];
     return ((first->info.halves[1] & EQUIPMENT_SUBTYPE_MASK) + (second->info.halves[1] & EQUIPMENT_SUBTYPE_MASK)) %

@@ -59,7 +59,7 @@ typedef struct
 } GolemWeaponClassTable;
 
 /** @brief The game state viewed as FIELD's record layout. */
-#define GAME_STATE ((FieldGameState*)g_saved_game.bytes)
+#define GAME_STATE ((SavedGameLayout*)g_saved_game.bytes)
 /** @brief The golem name text table. */
 #define GOLEM_NAME_TEXT ((GolemNameText*)field_find_resource(FIELD_RESOURCE_GOLEM_NAME_TEXT))
 

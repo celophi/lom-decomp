@@ -116,7 +116,6 @@ enum
 #define FIELD_PLAYER_RECORD_COUNT 2
 
 extern FieldBattleContext* g_field_battle;
-extern FieldGameState* g_field_game_state;
 
 FieldActionDescriptor* field_select_action_descriptor(void);
 s32 field_get_actor_animation(s32 key);

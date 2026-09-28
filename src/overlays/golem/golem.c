@@ -26,9 +26,9 @@
 #define GOLEM_SOUND_REJECT 0x78
 #define GOLEM_SOUND_PICK_UP 0x7E
 #define GOLEM_SOUND_PLACE 0x120
-/** @brief The pad context, addressed directly through the saved-game buffer it aliases. */
-#define GOLEM_PAD_CTX ((PadContext*)g_saved_game.bytes)
-#define GOLEM_LOGIC_BLOCK(index) (GOLEM_PAD_CTX->logic_blocks[(index)].word)
+/** @brief The saved game, addressed directly through g_saved_game rather than g_saved_game_ctx. */
+#define GOLEM_SAVED_GAME ((SavedGameLayout*)g_saved_game.bytes)
+#define GOLEM_LOGIC_BLOCK(index) (GOLEM_SAVED_GAME->logic_blocks[(index)].word)
 #define GOLEM_PANEL_BEHAVIOR_SHIFT 3
 #define GOLEM_PANEL_FLASH_SHIFT 7
 #define GOLEM_PANEL_FLASH_MASK (0xF << GOLEM_PANEL_FLASH_SHIFT)
@@ -380,13 +380,13 @@ u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel)
     s32 slot_index;
     s32 logic_type;
     s32 selected_logic_type;
-    PadContext* menu_data;
+    SavedGameLayout* menu_data;
     s32 stack_pad[2]; /* never used, but the original frame size needs it */
 
     g_golem_restore_slot_on_cancel = restore_slot_on_cancel;
     if (restore_slot_on_cancel != 0)
     {
-        menu_data = GOLEM_PAD_CTX;
+        menu_data = GOLEM_SAVED_GAME;
         selected_logic_type = menu_data->joined_golem;
         g_golem_saved_logic_type_slot = D_80122C00;
         D_80122C00 = 0;
@@ -400,7 +400,7 @@ u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel)
     }
 
     g_golem_grid_size_class = func_800CB758() - 4;
-    logic_type = GOLEM_PAD_CTX->golem_order[D_80122C00];
+    logic_type = GOLEM_SAVED_GAME->golem_order[D_80122C00];
     g_golem_block_rotation = 0;
     g_golem_block_y = 0;
     g_golem_block_x = 0;
@@ -612,7 +612,7 @@ void golem_handle_input(void)
             g_golem_is_placing_block = 0;
             golem_reset_cursor_motion();
             func_800A3938(GOLEM_SOUND_REJECT, 0x80);
-            GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.logic_type = LOGIC_BLOCK_UNASSIGNED;
+            GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.logic_type = LOGIC_BLOCK_UNASSIGNED;
         }
         return;
     }
@@ -667,7 +667,7 @@ void golem_handle_input(void)
                     block_index = 0;
                 }
                 repeat_count++;
-                if (GOLEM_PAD_CTX->logic_blocks[block_index].f.logic_type == g_golem_active_logic_type)
+                if (GOLEM_SAVED_GAME->logic_blocks[block_index].f.logic_type == g_golem_active_logic_type)
                 {
                     break;
                 }
@@ -689,7 +689,7 @@ void golem_handle_input(void)
                 {
                     block_index = g_golem_logic_block_count - 1;
                 }
-                if (GOLEM_PAD_CTX->logic_blocks[block_index].f.logic_type == g_golem_active_logic_type)
+                if (GOLEM_SAVED_GAME->logic_blocks[block_index].f.logic_type == g_golem_active_logic_type)
                 {
                     break;
                 }
@@ -706,11 +706,11 @@ void golem_handle_input(void)
             if (g_golem_block_status[g_golem_selected_block].is_unavailable == 0)
             {
                 g_golem_is_placing_block = 1;
-                if (GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.logic_type == g_golem_active_logic_type)
+                if (GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.logic_type == g_golem_active_logic_type)
                 {
-                    g_golem_block_x = GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.grid_x;
-                    g_golem_block_y = GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.grid_y;
-                    g_golem_block_rotation = GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.rotation;
+                    g_golem_block_x = GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.grid_x;
+                    g_golem_block_y = GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.grid_y;
+                    g_golem_block_rotation = GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.rotation;
                 }
                 else
                 {
@@ -746,8 +746,8 @@ void golem_reset_block_position(void)
 {
     if (g_golem_grid_size_class == 0)
     {
-        g_golem_block_x = g_golem_composite_icon_rows[GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.shape].header.grid_width - 1;
-        g_golem_block_y = g_golem_composite_icon_rows[GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.shape].header.grid_height - 1;
+        g_golem_block_x = g_golem_composite_icon_rows[GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.shape].header.grid_width - 1;
+        g_golem_block_y = g_golem_composite_icon_rows[GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.shape].header.grid_height - 1;
         return;
     }
     if (g_golem_grid_size_class < 0)
@@ -756,8 +756,8 @@ void golem_reset_block_position(void)
     }
     if (g_golem_grid_size_class < 3)
     {
-        g_golem_block_x = g_golem_composite_icon_rows[GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.shape].header.grid_width;
-        g_golem_block_y = g_golem_composite_icon_rows[GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.shape].header.grid_height;
+        g_golem_block_x = g_golem_composite_icon_rows[GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.shape].header.grid_width;
+        g_golem_block_y = g_golem_composite_icon_rows[GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.shape].header.grid_height;
     }
 }
 
@@ -954,10 +954,10 @@ void golem_render(GolemRenderContext* render_context)
         name_index = (u8)GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 2;
         archive = &g_golem_text_archive;
         golem_copy_encoded_string(name_text, GOLEM_ARCHIVE_TEXT(archive, names_offset, name_index));
-        if (GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.quantity)
+        if (GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.quantity)
         {
             golem_append_encoded_string(name_text, FIELD_UI_TEXT_AT(D_800EC3DA, GOLEM_SHARED_PLUS_TEXT_INDEX));
-            func_800A8B90(number_text, GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.quantity, 1);
+            func_800A8B90(number_text, GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.quantity, 1);
             golem_append_encoded_string(name_text, number_text);
         }
         packet_cursor = func_800A88A0(packet_cursor, panel_ordering_table, name_text, 0, 0xA0, 0xA0, 2);
@@ -1058,10 +1058,10 @@ u8* golem_draw_logic_grid(u8* packet_cursor, GolemRenderContext* render_context)
         next_packet = golem_draw_composite_icon(cursor, ordering_table, g_golem_selected_block, g_golem_block_rotation, g_golem_block_x * GOLEM_GRID_CELL_SIZE,
                                                 g_golem_block_y * GOLEM_GRID_CELL_SIZE, g_golem_block_status[g_golem_selected_block].clut, 0, 3);
         cursor_target_x =
-            g_golem_composite_icon_rows[GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.shape].rotations[g_golem_block_rotation].origin.x * 8 +
+            g_golem_composite_icon_rows[GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.shape].rotations[g_golem_block_rotation].origin.x * 8 +
             g_golem_block_x * GOLEM_GRID_CELL_SIZE - g_golem_grid_size_class * 8 + 0x3C;
         cursor_target_y =
-            g_golem_composite_icon_rows[GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.shape].rotations[g_golem_block_rotation].origin.y * 8 +
+            g_golem_composite_icon_rows[GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.shape].rotations[g_golem_block_rotation].origin.y * 8 +
             g_golem_block_y * GOLEM_GRID_CELL_SIZE - g_golem_grid_size_class * 8 + 0x3C;
         if ((cursor_target_x != g_golem_cursor_x || cursor_target_y != g_golem_cursor_y) && g_golem_cursor_steps == 0)
         {
@@ -1075,13 +1075,13 @@ u8* golem_draw_logic_grid(u8* packet_cursor, GolemRenderContext* render_context)
 
     for (block_index = 0; block_index < g_golem_logic_block_count; block_index++)
     {
-        logic_block = GOLEM_PAD_CTX->logic_blocks[block_index];
+        logic_block = GOLEM_SAVED_GAME->logic_blocks[block_index];
         if (logic_block.f.logic_type == g_golem_active_logic_type)
         {
             next_packet =
                 golem_draw_composite_icon(next_packet, ordering_table, block_index, logic_block.f.rotation, logic_block.f.grid_x * GOLEM_GRID_CELL_SIZE,
-                                          GOLEM_PAD_CTX->logic_blocks[block_index].f.grid_y * GOLEM_GRID_CELL_SIZE, g_golem_block_status[block_index].clut, 0,
-                                          block_index == g_golem_selected_block ? (g_golem_is_placing_block ? 0x80 : 2) : 0);
+                                          GOLEM_SAVED_GAME->logic_blocks[block_index].f.grid_y * GOLEM_GRID_CELL_SIZE, g_golem_block_status[block_index].clut,
+                                          0, block_index == g_golem_selected_block ? (g_golem_is_placing_block ? 0x80 : 2) : 0);
         }
     }
 
@@ -1281,7 +1281,7 @@ u8* golem_draw_composite_icon(u8* packet_cursor, u_long* ordering_table, s32 blo
     DR_TPAGE* draw_mode;
     s32 part_index;
 
-    logic_block = GOLEM_PAD_CTX->logic_blocks[block_index];
+    logic_block = GOLEM_SAVED_GAME->logic_blocks[block_index];
     layout_index = logic_block.f.shape;
     if (use_origin == 1)
     {

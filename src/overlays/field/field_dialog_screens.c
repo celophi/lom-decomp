@@ -31,8 +31,6 @@
 #include "game_state.h"
 #include "sdk/memory.h"
 
-/* main.h declares this as PadContext *; FIELD reads the same saved game through FieldGameState. */
-extern FieldGameState* g_pad_ctx;
 extern u8* g_field_cd_buffer;
 
 /* ---- Timed panels (0x800A5638 .. 0x800A6204) ---- */
@@ -724,7 +722,7 @@ void field_start_actor_text(s32 index, s32 text_id)
             if (text_id < 0)
             {
                 /* Bits 16-23 pick a party character, bits 0-7 one of its 64-byte records. */
-                g_field_actor_texts[index].text = (u8 *)&g_pad_ctx->characters[((u32)text_id >> 16) & 0xFF].unk150[text_id & 0xFF];
+                g_field_actor_texts[index].text = (u8*)&g_saved_game_ctx->characters[((u32)text_id >> 16) & 0xFF].unk150[text_id & 0xFF];
             }
             else
             {
@@ -971,7 +969,7 @@ void field_advance_ability_progression(void)
     s32 technique_index;
     FieldTechniqueUnlockRule* technique_base;
     FieldTechniqueUnlockRule* active_rule;
-    FieldGameState* context;
+    SavedGameLayout* context;
     FieldAbilityUnlockRule* ability_rule;
     FieldTechniqueUnlockRule* technique_rule;
     s32 technique_mask;
@@ -993,49 +991,55 @@ void field_advance_ability_progression(void)
     {
         if (g_field_player_records[party_index].head.bytes.flags & FIELD_PLAYER_ACTIVE)
         {
-            if ((u32)(g_pad_ctx->characters[party_index].info.actions.type & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
+            if ((u32)(g_saved_game_ctx->characters[party_index].info.actions.type & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
             {
-                weapon_category = (g_pad_ctx->characters[party_index].equipment[FIELD_WEAPON_SLOT].info.word >> FIELD_WEAPON_CATEGORY_SHIFT) & FIELD_WEAPON_CATEGORY_MASK;
+                weapon_category = (g_saved_game_ctx->characters[party_index].equipment[FIELD_WEAPON_SLOT].info.word >> FIELD_WEAPON_CATEGORY_SHIFT) &
+                                  FIELD_WEAPON_CATEGORY_MASK;
                 if (weapon_category < FIELD_WEAPON_CATEGORY_COUNT)
                 {
-                    weapon_proficiency = g_pad_ctx->weapon_proficiency[weapon_category];
+                    weapon_proficiency = g_saved_game_ctx->weapon_proficiency[weapon_category];
                     if (weapon_proficiency < FIELD_PROFICIENCY_MAX)
                     {
                         if (D_80115890 != 0)
                         {
-                            g_pad_ctx->weapon_proficiency[weapon_category] = weapon_proficiency + FIELD_PROFICIENCY_BONUS;
+                            g_saved_game_ctx->weapon_proficiency[weapon_category] = weapon_proficiency + FIELD_PROFICIENCY_BONUS;
 
-                            if (g_pad_ctx->weapon_proficiency[((g_pad_ctx->characters[party_index].equipment[FIELD_WEAPON_SLOT].info.word >> FIELD_WEAPON_CATEGORY_SHIFT) &
-                                                               FIELD_WEAPON_CATEGORY_MASK)] > FIELD_PROFICIENCY_MAX)
+                            if (g_saved_game_ctx->weapon_proficiency[(
+                                    (g_saved_game_ctx->characters[party_index].equipment[FIELD_WEAPON_SLOT].info.word >> FIELD_WEAPON_CATEGORY_SHIFT) &
+                                    FIELD_WEAPON_CATEGORY_MASK)] > FIELD_PROFICIENCY_MAX)
                             {
-                                g_pad_ctx->weapon_proficiency[((g_pad_ctx->characters[party_index].equipment[FIELD_WEAPON_SLOT].info.word >> FIELD_WEAPON_CATEGORY_SHIFT) &
-                                                               FIELD_WEAPON_CATEGORY_MASK)] = FIELD_PROFICIENCY_MAX;
+                                g_saved_game_ctx->weapon_proficiency[(
+                                    (g_saved_game_ctx->characters[party_index].equipment[FIELD_WEAPON_SLOT].info.word >> FIELD_WEAPON_CATEGORY_SHIFT) &
+                                    FIELD_WEAPON_CATEGORY_MASK)] = FIELD_PROFICIENCY_MAX;
                             }
                         }
                         else
                         {
-                            g_pad_ctx->weapon_proficiency[weapon_category] = weapon_proficiency + 1;
+                            g_saved_game_ctx->weapon_proficiency[weapon_category] = weapon_proficiency + 1;
                         }
                     }
                 }
                 for (ability = 0; ability < FIELD_EQUIPPED_ABILITY_COUNT; ability++)
                 {
-                    ability_proficiency = g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].info.actions.commands[ability]];
+                    ability_proficiency = g_saved_game_ctx->ability_proficiency[g_saved_game_ctx->characters[party_index].info.actions.commands[ability]];
                     if (ability_proficiency < FIELD_PROFICIENCY_MAX)
                     {
                         if (D_80115890 != 0)
                         {
-                            g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].info.actions.commands[ability]] =
+                            g_saved_game_ctx->ability_proficiency[g_saved_game_ctx->characters[party_index].info.actions.commands[ability]] =
                                 ability_proficiency + FIELD_PROFICIENCY_BONUS;
 
-                            if (g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].info.actions.commands[ability]] > FIELD_PROFICIENCY_MAX)
+                            if (g_saved_game_ctx->ability_proficiency[g_saved_game_ctx->characters[party_index].info.actions.commands[ability]] >
+                                FIELD_PROFICIENCY_MAX)
                             {
-                                g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].info.actions.commands[ability]] = FIELD_PROFICIENCY_MAX;
+                                g_saved_game_ctx->ability_proficiency[g_saved_game_ctx->characters[party_index].info.actions.commands[ability]] =
+                                    FIELD_PROFICIENCY_MAX;
                             }
                         }
                         else
                         {
-                            g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].info.actions.commands[ability]] = ability_proficiency + 1;
+                            g_saved_game_ctx->ability_proficiency[g_saved_game_ctx->characters[party_index].info.actions.commands[ability]] =
+                                ability_proficiency + 1;
                         }
                     }
                 }
@@ -1043,7 +1047,7 @@ void field_advance_ability_progression(void)
         }
         party_index++;
     } while (party_index < FIELD_PARTY_SIZE);
-    context = g_pad_ctx;
+    context = g_saved_game_ctx;
     /* Ability rules require each nonempty prerequisite to be learned and trained. */
     ability_index = 0;
     ability_base = g_field_ability_unlock_rules;
@@ -1076,7 +1080,7 @@ void field_advance_ability_progression(void)
         }
         ability_index++;
     } while ((s32)&ability_base[ability_index] < (s32)&ability_base[FIELD_ABILITY_UNLOCK_RULE_COUNT]);
-    context = g_pad_ctx;
+    context = g_saved_game_ctx;
     /* Techniques additionally require an active player with the matching weapon. */
     technique_index = 0;
     technique_base = g_field_technique_unlock_rules;
@@ -1195,7 +1199,7 @@ typedef struct
 #define FIELD_TEXT_AT(bank, low, high) ((u8 *)((low) + (((high) << 8) + (s32)(bank))))
 
 /** @brief Experience a party member gained since g_field_experience_snapshot was sampled. */
-#define FIELD_EXPERIENCE_GAIN(index) ((s32)((g_pad_ctx->characters[index].progress.word >> 8) - g_field_experience_snapshot[index]))
+#define FIELD_EXPERIENCE_GAIN(index) ((s32)((g_saved_game_ctx->characters[index].progress.word >> 8) - g_field_experience_snapshot[index]))
 
 /** @brief One entry of the dialog text bank's offset table (little-endian, read bytewise). */
 typedef struct PackedOffset
@@ -1272,7 +1276,7 @@ static void* field_draw_animated_marker(s32* ordering_table, POLY_FT4* prim, s32
  */
 void field_save_retry_snapshot(void)
 {
-    bcopy((u8*)g_pad_ctx, g_field_retry_snapshot, SAVED_GAME_DATA_SIZE);
+    bcopy((u8*)g_saved_game_ctx, g_field_retry_snapshot, SAVED_GAME_DATA_SIZE);
 }
 
 /**
@@ -1301,10 +1305,10 @@ void field_handle_return_to_title_prompt(void)
                 g_pending_game_state = GAME_STATE_TITLE;
                 return;
             }
-            bcopy(g_field_retry_snapshot, (u8*)g_pad_ctx, SAVED_GAME_DATA_SIZE);
-            if (g_pad_ctx->retry_count != -1)
+            bcopy(g_field_retry_snapshot, (u8*)g_saved_game_ctx, SAVED_GAME_DATA_SIZE);
+            if (g_saved_game_ctx->retry_count != -1)
             {
-                g_pad_ctx->retry_count++;
+                g_saved_game_ctx->retry_count++;
             }
             controller->ports[1].small_motor_command = 0;
             controller->ports[0].small_motor_command = 0;
@@ -1660,7 +1664,7 @@ static void* field_draw_party_totals(void* ot, void* cursor, s32 x_offset, s32 y
     total_y = i;
     for (; i < 3; i++)
     {
-        if (g_pad_ctx->characters[i].name[0] != 0)
+        if (g_saved_game_ctx->characters[i].name[0] != 0)
         {
             total_x += g_field_player_records[i].unk25C;
             total_y += g_field_player_records[i].unk25D;
@@ -1690,7 +1694,7 @@ static void* field_draw_party_totals(void* ot, void* cursor, s32 x_offset, s32 y
         4, 0x80 - x_offset, position.y, 0);
 
     position.x = 0xD0 - x_offset;
-    handle = field_draw_number(ot, handle, g_pad_ctx->money - g_field_money_snapshot, 4, &position, 1);
+    handle = field_draw_number(ot, handle, g_saved_game_ctx->money - g_field_money_snapshot, 4, &position, 1);
     return field_draw_text(handle, ot,
         FIELD_TEXT_AT(text_base, text_base[0], text_base[1]),
         4, 0xF0 - x_offset, position.y, 1);
@@ -1724,7 +1728,7 @@ static void* field_draw_experience_ranking(void* ordering_table, void* cursor, s
     count = 0;
     for (i = 0; i < 3; i++)
     {
-        if (g_pad_ctx->characters[i].name[0] != 0)
+        if (g_saved_game_ctx->characters[i].name[0] != 0)
         {
             pos = 0;
             for (; pos < count; pos++)
@@ -1756,7 +1760,7 @@ static void* field_draw_experience_ranking(void* ordering_table, void* cursor, s
         text = text_base - 0x16;
         for (row = 0; i < count; i++)
         {
-            if (g_pad_ctx->characters[work.order[i]].name[0] != 0)
+            if (g_saved_game_ctx->characters[work.order[i]].name[0] != 0)
             {
                 work.position.x = 0x18 - x_offset;
                 y = y_offset - 0x10;

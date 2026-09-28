@@ -211,7 +211,7 @@ typedef struct
     s32 unk1C;
 } FieldEvasionRequest;
 
-/** @brief Saved-game counters kept past the mapped part of PadContext. */
+/** @brief Saved-game counters kept past the mapped part of SavedGameLayout. */
 typedef struct
 {
     u8 unk0[0x3154];
@@ -1742,10 +1742,10 @@ s32 field_register_actor_hit(s32 key, s32 guard)
     }
     if (actor->object_index == 0)
     {
-        hit_count = ((FieldSaveCounters*)g_pad_ctx)->player_hits;
+        hit_count = ((FieldSaveCounters*)g_saved_game_ctx)->player_hits;
         if (hit_count != FIELD_COUNTER_MAX)
         {
-            ((FieldSaveCounters*)g_pad_ctx)->player_hits = hit_count + 1;
+            ((FieldSaveCounters*)g_saved_game_ctx)->player_hits = hit_count + 1;
         }
     }
     states = g_field_object_states;
@@ -1850,10 +1850,10 @@ s32 field_start_actor_defeat_by_key(s32 key, s32 value)
     }
     if (actor->object_index >= FIELD_PARTY_COUNT)
     {
-        defeat_count = ((FieldSaveCounters*)g_pad_ctx)->enemies_defeated;
+        defeat_count = ((FieldSaveCounters*)g_saved_game_ctx)->enemies_defeated;
         if (defeat_count != FIELD_COUNTER_MAX)
         {
-            ((FieldSaveCounters*)g_pad_ctx)->enemies_defeated = defeat_count + 1;
+            ((FieldSaveCounters*)g_saved_game_ctx)->enemies_defeated = defeat_count + 1;
         }
     }
     field_start_actor_defeat(actor, value);

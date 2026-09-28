@@ -71,7 +71,7 @@ void carda_build_ui_elements(void)
     g_carda_scroll_y = 0;
     g_carda_selected_row = 0;
     g_carda_selection_status = 0;
-    D_80166100 = g_pad_ctx + 0xCE0;
+    g_carda_items = g_saved_game_ctx->items;
     carda_clear_elements();
     D_801660F8 = 0;
 
@@ -434,7 +434,7 @@ s32 carda_handle_input(void)
         {
             if (strncmp(g_lom_save_filename_prefix, g_carda_entries[g_carda_card_slot][g_carda_selected_row].name, 0xC) == 0)
             {
-                if (g_save_slot_index == 0xFF || g_carda_selected_save_slot_id == g_save_slot_index)
+                if (g_save_slot_index == 0xFF || g_carda_selected_file.saved_game.save_slot == g_save_slot_index)
                 {
                     element = carda_alloc_element();
                     element->attr.f.phase = 1;
@@ -889,9 +889,10 @@ void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
         {
             if (strncmp(g_lom_save_filename_prefix, g_carda_entries[g_carda_card_slot][g_carda_selected_row].name, 0xC) == 0)
             {
-                if (g_save_slot_index == 0xFF || g_carda_selected_save_slot_id == g_save_slot_index || g_carda_selected_save_slot_id == 0xFF)
+                if (g_save_slot_index == 0xFF || g_carda_selected_file.saved_game.save_slot == g_save_slot_index ||
+                    g_carda_selected_file.saved_game.save_slot == 0xFF)
                 {
-                    CardaSaveMetadata* save = &g_carda_selected_save_metadata;
+                    SavedGameLayout* save = &g_carda_selected_file.saved_game;
                     s32 present_count;
                     s32 i;
                     s32 j;
@@ -904,15 +905,15 @@ void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
                     s32 time_val;
 
                     total = 0;
-                    party_icon[0] = save->party_icon_0;
-                    party_icon[1] = save->party_icon_1;
-                    party_icon[2] = save->party_icon_2;
+                    party_icon[0] = save->spawn.bits.party_icon_0;
+                    party_icon[1] = save->track.bits.party_icon_1;
+                    party_icon[2] = save->track.bits.party_icon_2;
                     g_carda_icon_palette = save->icon_palette;
 
                     present_count = 0;
                     for (i = 0; i < 3; i++)
                     {
-                        if (party_icon[i] != CARDA_NO_ICON)
+                        if (party_icon[i] != SAVE_NO_ICON)
                         {
                             present_count += 1;
                         }
@@ -948,7 +949,7 @@ void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
                     {
                         base_y = i * half_step;
                         base_x = base_y + half_step;
-                        if (party_icon[j] != CARDA_NO_ICON)
+                        if (party_icon[j] != SAVE_NO_ICON)
                         {
                             s32 adjust = step;
                             s32 rem;
@@ -968,11 +969,11 @@ void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
                     }
 
                     {
-                        CardaSaveMetadata* shown_save = &g_carda_selected_save_metadata;
+                        SavedGameLayout* shown_save = &g_carda_selected_file.saved_game;
                         s32 x = -x_offset;
                         s32 y = -y_offset;
 
-                        base_y = shown_save->playtime;
+                        base_y = shown_save->play_time;
 
                         pos.vx = (s16)(x + 0x70);
                         pos.vy = (s16)y;
@@ -988,8 +989,9 @@ void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
                         }
                         pos.vx = (s16)(x + 0x85);
                         pos.vy = (s16)y;
-                        result = func_800A88A0(func_800A88A0(func_800A8A78(ot, result, base_y, 4, &pos, 1), ot, shown_save->title, 4, x + 0x54, y + 0x10, 0),
-                                               ot, CARDA_TEXT(g_carda_location_names, shown_save->location), 4, x + 0x54, y + 0x20, 0);
+                        result =
+                            func_800A88A0(func_800A88A0(func_800A8A78(ot, result, base_y, 4, &pos, 1), ot, shown_save->summary_name, 4, x + 0x54, y + 0x10, 0),
+                                          ot, CARDA_TEXT(g_carda_location_names, shown_save->track.bits.music_track), 4, x + 0x54, y + 0x20, 0);
                     }
                 }
                 else
@@ -1002,26 +1004,25 @@ void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
                 s32 j;
 
                 {
-                    u8* text_base;
-                    carda_terminate_multibyte_text(D_80166124);
-                    text_base = D_80166124;
-                    text_base -= 4;
-                    if (text_base[0x24] == 0 || text_base[0x24] >= 0x80)
+                    SaveFileHeader* header;
+                    carda_terminate_multibyte_text(g_carda_selected_file.header.title);
+                    header = &g_carda_selected_file.header;
+                    if (header->title[1][0] == 0 || header->title[1][0] >= 0x80)
                     {
                         do
                         {
                             do
                             {
-                                for (j = 0; j < 0x20; j++)
+                                for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
                                 {
-                                    name[j] = text_base[j + 4];
+                                    name[j] = *(header->title[0] + j);
                                 }
                                 name[j] = 0;
                                 result = carda_draw_cached_text(result, ot, name, -x_offset, -y_offset, 4, 0);
 
-                                for (j = 0; j < 0x20; j++)
+                                for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
                                 {
-                                    name[j] = g_carda_selected_file_header.title_line_2[j];
+                                    name[j] = g_carda_selected_file.header.title[1][j];
                                 }
                                 name[j] = 0;
                                 result = carda_draw_cached_text(result, ot, name, -x_offset, -y_offset + 0x10, 4, 0);

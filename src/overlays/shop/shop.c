@@ -29,7 +29,7 @@
 #define SHOP_SCROLL_FRAMES 4
 
 static u8* shop_build_sell_list(u8* work_end);
-static u8* shop_build_buy_list(u8* work_end, s32 entry_count, ShopEntry* entries, InventoryRecord* item_records);
+static u8* shop_build_buy_list(u8* work_end, s32 entry_count, ShopEntry* entries, FieldItemRecord* item_records);
 static void shop_run_frame(ShopFrameContext* ctx, ShopPacketBuffer* buffer);
 static s32 shop_handle_list_input(void);
 static void shop_open_notice(s32 notice_id);
@@ -46,7 +46,7 @@ static ShopWindow* shop_alloc_window(void);
  * @param item_records Inventory records that record-type buy entries index.
  * @param title_text_id FIELD UI string shown in the title window.
  */
-void shop_init(u8* work, s32 is_buying, s32 entry_count, ShopEntry* entries, InventoryRecord* item_records, s32 title_text_id)
+void shop_init(u8* work, s32 is_buying, s32 entry_count, ShopEntry* entries, FieldItemRecord* item_records, s32 title_text_id)
 {
     g_shop_work_buffer = (ShopPacketBuffer*)work;
     work += 2 * sizeof(ShopPacketBuffer);
@@ -98,14 +98,14 @@ static u8* shop_build_sell_list(u8* work_end)
 {
     ShopWindow* window;
     Vec2s unused_position; /* never used, but the compiled frame size depends on it */
-    InventoryRecord* record;
+    FieldItemRecord* record;
     s32 count;
     s32 i;
 
     g_shop_prompt_active = 0;
     g_shop_confirm_choice = 0;
-    record = g_pad_ctx->inventory;
-    for (count = 0; count < INVENTORY_RECORD_COUNT; count++, record++)
+    record = g_saved_game_ctx->items;
+    for (count = 0; count < FIELD_ITEM_COUNT; count++, record++)
     {
         if (record->name[0] == 0)
         {
@@ -113,15 +113,15 @@ static u8* shop_build_sell_list(u8* work_end)
         }
         g_shop_entry_buffer[count].id = count + SHOP_ENTRY_RECORD_FLAG;
         g_shop_entry_buffer[count].count = 1;
-        g_shop_entry_buffer[count].price = record->price;
+        g_shop_entry_buffer[count].price = record->value;
     }
 
-    for (i = 0; i < ITEM_TYPE_COUNT; i++)
+    for (i = 0; i < FIELD_ITEM_KIND_COUNT; i++)
     {
-        if (g_pad_ctx->item_counts[i] != 0)
+        if (g_saved_game_ctx->item_counts[i] != 0)
         {
             g_shop_entry_buffer[count].id = i;
-            g_shop_entry_buffer[count].count = g_pad_ctx->item_counts[i];
+            g_shop_entry_buffer[count].count = g_saved_game_ctx->item_counts[i];
             g_shop_entry_buffer[count].price = g_shop_item_sell_prices[i];
             count++;
         }
@@ -134,7 +134,7 @@ static u8* shop_build_sell_list(u8* work_end)
     g_shop_scroll_y = 0;
     g_shop_quantity = 1;
     g_shop_cursor = 0;
-    g_shop_item_records = g_pad_ctx->inventory;
+    g_shop_item_records = g_saved_game_ctx->items;
     shop_reset_windows();
 
     /* Keep the popup slot out of shop_alloc_window's reach while the fixed windows open. */
@@ -188,7 +188,7 @@ static u8* shop_build_sell_list(u8* work_end)
  * @param item_records Inventory records that record-type entries index.
  * @return @p work_end; the list lives in overlay data.
  */
-static u8* shop_build_buy_list(u8* work_end, s32 entry_count, ShopEntry* entries, InventoryRecord* item_records)
+static u8* shop_build_buy_list(u8* work_end, s32 entry_count, ShopEntry* entries, FieldItemRecord* item_records)
 {
     ShopWindow* window;
     Vec2s unused_position; /* never used, but the compiled frame size depends on it */
@@ -422,7 +422,7 @@ static s32 shop_handle_list_input(void)
         {
             if (g_shop_is_buying != 0)
             {
-                if (g_pad_ctx->money >= (u32)(entry->price * g_shop_quantity))
+                if (g_saved_game_ctx->money >= (u32)(entry->price * g_shop_quantity))
                 {
                     if (entry->id & SHOP_ENTRY_RECORD_FLAG)
                     {
@@ -436,7 +436,7 @@ static s32 shop_handle_list_input(void)
                             shop_open_buy_prompt();
                         }
                     }
-                    else if (g_pad_ctx->item_counts[entry->id] >= SHOP_MAX_ITEM_COUNT)
+                    else if (g_saved_game_ctx->item_counts[entry->id] >= SHOP_MAX_ITEM_COUNT)
                     {
                         play_menu_sfx(SHOP_SFX_ERROR, SHOP_SFX_VOLUME);
                         shop_open_notice(SHOP_NOTICE_CANNOT_CARRY);

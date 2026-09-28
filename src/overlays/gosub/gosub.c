@@ -271,7 +271,7 @@ void gosub_enter_screen(s32 screen_id)
         g_gosub_finish_handler = gosub_publish_block_components;
         g_gosub_dialog_handler = gosub_handle_make_block_dialog;
         gosub_build_block_components_elements();
-        if (g_pad_ctx->logic_block_count >= LOGIC_BLOCK_CAPACITY)
+        if (g_saved_game_ctx->logic_block_count >= LOGIC_BLOCK_CAPACITY)
         {
             gosub_close_elements();
             gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_LOGIC_BLOCKS_FULL));
@@ -287,7 +287,7 @@ void gosub_enter_screen(s32 screen_id)
         g_gosub_finish_handler = gosub_publish_selection;
         g_gosub_allow_duplicate_selection = 1;
         gosub_build_logic_block_list_elements();
-        if (g_pad_ctx->logic_block_count == 0)
+        if (g_saved_game_ctx->logic_block_count == 0)
         {
             gosub_close_elements();
             gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_LOGIC_BLOCKS));

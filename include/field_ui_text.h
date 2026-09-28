@@ -9,6 +9,9 @@
 #define FIELD_UI_TEXT_ATTACK_POWER 21
 #define FIELD_UI_TEXT_TOTAL_DEFENSE 22
 #define FIELD_UI_TEXT_POWER 23
+#define FIELD_UI_TEXT_TIME_SEPARATOR 25
+#define FIELD_UI_TEXT_YES 27
+#define FIELD_UI_TEXT_NO 28
 
 /**
  * @brief Address of FIELD UI string @p index, given its two-byte offset entry @p entry.

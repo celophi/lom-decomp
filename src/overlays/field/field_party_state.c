@@ -95,7 +95,6 @@ typedef struct FieldBattleResource
     s32 rewards_offset;
 } FieldBattleResource;
 
-extern FieldGameState* g_field_game_state;
 extern FieldBattleContext* g_field_battle;
 extern FieldBattleContext g_field_battle_context;
 extern FieldActionBank* g_field_action_bank;
@@ -881,9 +880,9 @@ static s32 field_build_party_records(void)
  */
 static void field_publish_companion_flags(void)
 {
-    if (g_field_game_state->region_index < 0 || g_field_game_state->region_index >= FIELD_REGION_COUNT)
+    if (g_field_game_state->joined_pet < 0 || g_field_game_state->joined_pet >= PET_RECORD_COUNT)
     {
-        record_game_diagnostic(DIAG_ERROR, DIAG_BAD_REGION_INDEX, g_field_game_state->region_index, 0);
+        record_game_diagnostic(DIAG_ERROR, DIAG_BAD_REGION_INDEX, g_field_game_state->joined_pet, 0);
     }
-    field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_COMPANION_FLAGS, g_field_game_state->regions[g_field_game_state->region_index].unk48.word);
+    field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_COMPANION_FLAGS, g_field_game_state->pets[g_field_game_state->joined_pet].unk48.word);
 }

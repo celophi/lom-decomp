@@ -2,6 +2,7 @@
 #define ADDHERO_INTERNAL_H
 
 #include "common.h"
+#include "saved_game.h"
 #include "pad.h"
 #include "vector.h"
 #include "display.h"
@@ -9,6 +10,14 @@
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 #include "sdk/kernel.h"
+#include "sdk/libapi.h"
+#include "sdk/libetc.h"
+#include "sdk/strings.h"
+#include "sdk/libmcx.h"
+#include "controller.h"
+#include "field_menu_window.h"
+#include "field_sound.h"
+#include "field_ui_text.h"
 
 /* Declarations shared by ADDHERO implementation files. */
 
@@ -16,36 +25,38 @@
 #define ADDHERO_DIRECTORY_ENTRY_BYTES sizeof(struct DIRENTRY)
 #define ADDHERO_CARD_DIRECTORY_BYTES (ADDHERO_DIRECTORY_ENTRY_COUNT * ADDHERO_DIRECTORY_ENTRY_BYTES)
 #define ADDHERO_CARD_BLOCK_BYTES 8192
+
+/** @brief Save files a memory card holds (its 15 data blocks). */
+#define ADDHERO_CARD_SAVE_SLOTS 15
 #define ADDHERO_USED_BLOCK_LIMIT 14
 #define ADDHERO_SAVE_FILENAME_PREFIX_LENGTH 12
 #define ADDHERO_NEW_SAVE_FILENAME_PREFIX_LENGTH 8
+#define ADDHERO_LOAD_RESULT_NONE 0
 #define ADDHERO_LOAD_RESULT_ABORT 2
 #define ADDHERO_LOAD_RESULT_CONTINUE 3
 #define ADDHERO_LOAD_RESULT_COMPLETE 4
 #define ADDHERO_LOAD_RESULT_CARD_ERROR 5
 
-/*
- * g_addhero_entry_state is dual-purpose:
+/**
+ * @brief g_addhero_entry_state values.
  *
- *   0x00-0x0F  Number of save entries loaded from the current card. A PSX
- *              memory card holds 15 directory blocks, so the count never
- *              reaches 0x10; the value is used directly as a count/index
- *              while scanning and browsing the entry list.
- *   0xF3-0xFF  Modal state-machine sentinel. The `state >= 0x10` test tells a
- *              sentinel apart from a live entry count.
- *
- * Only the sentinels whose role is unambiguous from the control flow are named
- * below. The remaining sentinels are message/status screens whose exact meaning
- * depends on the (binary-resident) message resource each one draws, so they are
- * left as raw values until identified:
- *   0xF7  drawn when the selected entry is not found while advancing the list
- *   0xF8/0xF9  mode-dependent card read/scan failure notice
- *   0xFB/0xFC  status/result notices
- *   0xFE  no-op (draws nothing)
+ * Below ADDHERO_ENTRY_COUNT_LIMIT the value is the number of save entries
+ * read from the current card (a card holds 15). From 0xF3 up it is a status
+ * whose message the list or transfer window shows instead of the entries.
  */
-#define ADDHERO_ENTRY_STATE_CARD_FULL 0xFA     /* no known save entry and insufficient free blocks */
-#define ADDHERO_ENTRY_STATE_CARD_IO_ERROR 0xFD /* card event error or exhausted timeout retries */
-#define ADDHERO_ENTRY_STATE_IDLE 0xFF          /* browsing / reset; no operation active */
+#define ADDHERO_ENTRY_STATE_CONFIRM_NO_SAVE 0xF3    /**< Asks whether to leave without saving the 2P data. */
+#define ADDHERO_ENTRY_STATE_SAVE_CONFIRM 0xF4       /**< A load file was found; asks whether to overwrite the 2P data. */
+#define ADDHERO_ENTRY_STATE_SAVE_PROGRESS 0xF5      /**< Writing the save; progress bar. */
+#define ADDHERO_ENTRY_STATE_LOAD_PROGRESS 0xF6      /**< Reading the selected save; progress bar. */
+#define ADDHERO_ENTRY_STATE_NO_LOAD_FILE 0xF7       /**< The selected entry is not a load file. */
+#define ADDHERO_ENTRY_STATE_NO_GAME_DATA 0xF8       /**< The card holds no Legend of Mana save data. */
+#define ADDHERO_ENTRY_STATE_BROWSER_READ_ERROR 0xF9 /**< Card error while browsing; shows the no-game-data message. */
+#define ADDHERO_ENTRY_STATE_CARD_FULL 0xFA          /**< Not enough free blocks for a new save. */
+#define ADDHERO_ENTRY_STATE_ACCESS_FAILED 0xFB      /**< The card could not be accessed. */
+#define ADDHERO_ENTRY_STATE_NO_SAVE_DATA 0xFC       /**< The card holds no save data. */
+#define ADDHERO_ENTRY_STATE_NO_CARD 0xFD            /**< No card answers: an event error or the retries ran out. */
+#define ADDHERO_ENTRY_STATE_BLANK 0xFE              /**< Shows nothing; ADDHERO never sets it. */
+#define ADDHERO_ENTRY_STATE_CHECKING_CARD 0xFF      /**< The card is being checked; no entries yet. */
 
 /** @brief Result returned when consuming a software or hardware card event. */
 typedef enum
@@ -77,13 +88,6 @@ typedef struct
     u8 suffix[4];
 } AddheroCardPathTemplate;
 
-/** @brief Card path used to remove a placeholder save file. */
-typedef struct
-{
-    AddheroCardDevice device;
-    u8 suffix[28];
-} AddheroProbeFilePath;
-
 extern struct DIRENTRY g_addhero_entries[][ADDHERO_DIRECTORY_ENTRY_COUNT];
 extern AddheroCardPathTemplate g_addhero_file_template;
 extern u8* g_addhero_load_step;
@@ -109,9 +113,14 @@ extern s32 g_addhero_entry_value_limit;
 extern s32 g_addhero_has_free_entry_space;
 extern u8 g_addhero_loadseq_start;
 extern u8 g_addhero_loadseq_card[];
-extern u8 g_addhero_save_blob[];
-extern u8 g_addhero_entry_read_buffer;
-extern u8 g_addhero_save_file_path[];
+/** @brief Save file read or written by the load and save sequences. */
+extern SaveFile g_addhero_save_file;
+/**
+ * @brief Start of the selected entry's save file: only the card header and the
+ *        first 0x100 bytes of the saved game are read (ADDHERO_ENTRY_READ_BYTES).
+ */
+extern SaveFile g_addhero_entry_file;
+extern char g_addhero_save_file_path[];
 extern char g_lom_save_filename_prefix[];
 extern char g_lom_alt_save_filename_prefix[];
 extern char g_new_save_entry_prefix[];
@@ -130,10 +139,6 @@ void addhero_clear_hardware_card_events(void);
 s32 addhero_poll_software_card_events(void);
 s32 addhero_poll_hardware_card_events(void);
 void addhero_sort_entries_by_type(void);
-s32 strncmp(void* a, void* b, s32 n);
-void field_reset_input_repeat(void);
-s32 VSync(s32 arg0);
-void bcopy(void* dst, void* src, s32 len);
 void addhero_shutdown_card_events(void);
 void addhero_begin_glyph_cache_frame(void);
 void addhero_evict_unused_glyphs(void);
@@ -144,18 +149,8 @@ s32 addhero_poll_and_retry_card_info(void);
 void addhero_commit_selected_entry(void);
 void* addhero_draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s32 palette, s32 alignment);
 s32 addhero_advance_load_sequence(void);
-s32 strcat(void* a, void* b);
-s32 read(s32 a, void* b, s32 c);
-s32 write(s32 a, void* b, s32 c);
-s32 close(s32 a);
-s32 erase(void* a);
-s32 strcpy(void* a, void* b);
-s32 _card_info(s32 a);
-s32 _card_wait(s32 a);
 
-
-/* Moved from addhero.c when it was split into addhero.c and addhero_widgets.c. */
-/* UI states and memory-card limits. */
+/** @brief Element pool size and AddheroElement.attr.bits.state values. */
 #define ADDHERO_ELEMENT_COUNT 8
 #define ADDHERO_ELEMENT_STATE_MASK 7
 #define ADDHERO_ELEMENT_STATE_INACTIVE 0
@@ -163,22 +158,175 @@ s32 _card_wait(s32 a);
 #define ADDHERO_ELEMENT_STATE_ACTIVE 2
 #define ADDHERO_ELEMENT_STATE_CLOSING 3
 #define ADDHERO_ELEMENT_STATE_FINISHING 4
-#define ADDHERO_ENTRY_ROW_HEIGHT 14
-#define ADDHERO_ENTRY_COUNT_LIMIT 0x10
-#define ADDHERO_NO_ICON 0x7F
 
-/* Return codes produced by addhero_advance_load_sequence. */
-#define ADDHERO_LOAD_RESULT_NONE 0
-#define ADDHERO_ENTRY_STATE_LOAD_PROGRESS 0xF6  /* importing a matched entry; progress bar */
-#define ADDHERO_ENTRY_STATE_SAVE_PROGRESS 0xF5  /* write in progress; progress bar */
-#define ADDHERO_ENTRY_STATE_SAVE_CONFIRM 0xF4   /* confirm dialog; accepting writes the save */
-#define ADDHERO_ENTRY_STATE_CONFIRM_PROMPT 0xF3 /* companion choice prompt for save/exit flow */
+/** @brief Element pool slot of the modal window (dialogs, load progress), drawn with the bright frame; the builders hold it while allocating. */
+#define ADDHERO_ELEMENT_MODAL 0
+
+/** @brief Element pool slot of the first allocated window: the entry list or the transfer status. */
+#define ADDHERO_ELEMENT_MAIN 1
+
+/** @brief Frames an element takes to open or close; its window scales by transition_step / this. */
+#define ADDHERO_ELEMENT_TRANSITION_STEPS 8
+
+/** @brief Frames a closed element stays in ADDHERO_ELEMENT_STATE_FINISHING before it is freed. */
+#define ADDHERO_ELEMENT_FINISH_FRAMES 3
+
+/** @brief Card header titles are Shift-JIS: bytes from this value up lead a two-byte character. */
+#define ADDHERO_SJIS_LEAD_MIN 0x80
+
+/** @brief Codes below this end the text drawn by addhero_draw_cached_text. */
+#define ADDHERO_TEXT_FIRST_PRINTABLE 0x20
+
+/** @brief Height of one entry-list row and of one message line, in pixels. */
+#define ADDHERO_ENTRY_ROW_HEIGHT 14
+#define ADDHERO_TEXT_LINE_HEIGHT 14
+
+/** @brief Entry-state values below this are entry counts; see ADDHERO_ENTRY_STATE_CHECKING_CARD. */
+#define ADDHERO_ENTRY_COUNT_LIMIT 0x10
+
+/** @brief Entry-list window of the browser layout (mode 0). */
+#define ADDHERO_LIST_X 28
+#define ADDHERO_LIST_Y 50
+#define ADDHERO_LIST_WIDTH 264
+#define ADDHERO_LIST_HEIGHT 88
+
+/** @brief Rows that fit in the entry list, and the top of the last one. */
+#define ADDHERO_LIST_VISIBLE_ROWS (ADDHERO_LIST_HEIGHT / ADDHERO_ENTRY_ROW_HEIGHT)
+#define ADDHERO_LIST_LAST_ROW_Y ((ADDHERO_LIST_VISIBLE_ROWS - 1) * ADDHERO_ENTRY_ROW_HEIGHT)
+
+/** @brief Frames a list scroll takes to reach its target. */
+#define ADDHERO_SCROLL_FRAMES 4
+
+/** @brief Scroll arrows, inset from the entry list's right edge, top and bottom. */
+#define ADDHERO_SCROLL_ARROW_X (ADDHERO_LIST_X + ADDHERO_LIST_WIDTH - 16)
+#define ADDHERO_SCROLL_ARROW_UP_Y (ADDHERO_LIST_Y + 8)
+#define ADDHERO_SCROLL_ARROW_DOWN_Y (ADDHERO_LIST_Y + ADDHERO_LIST_HEIGHT - 8)
+
+/** @brief Title window of the browser layout. */
+#define ADDHERO_TITLE_X 36
+#define ADDHERO_TITLE_Y 10
+#define ADDHERO_TITLE_WIDTH 240
+#define ADDHERO_TITLE_HEIGHT 16
+
+/** @brief Card-slot label windows; slot 0 sits at ADDHERO_CARD_SLOT0_LABEL_X. */
+#define ADDHERO_CARD_SLOT1_LABEL_X 160
+#define ADDHERO_CARD_LABEL_HEIGHT 16
+#define ADDHERO_CARD_LABEL_BROWSER_Y 30  /**< Browser layout. */
+#define ADDHERO_CARD_LABEL_TRANSFER_Y 77 /**< Transfer layout. */
+
+/** @brief Details window of the browser layout. */
+#define ADDHERO_DETAILS_X 30
+#define ADDHERO_DETAILS_Y 142
+#define ADDHERO_DETAILS_WIDTH 260
+#define ADDHERO_DETAILS_HEIGHT 52
+
+/** @brief Message window: the transfer layout's status and the load prompt. */
+#define ADDHERO_MESSAGE_X 16
+#define ADDHERO_MESSAGE_Y 97
+#define ADDHERO_MESSAGE_WIDTH 288
+#define ADDHERO_MESSAGE_HEIGHT 44 /**< Three lines. */
+#define ADDHERO_PROMPT_HEIGHT 30  /**< Two lines. */
+
+/** @brief Dialog window. */
+#define ADDHERO_DIALOG_X 32
+#define ADDHERO_DIALOG_Y 112
+#define ADDHERO_DIALOG_WIDTH 256
+#define ADDHERO_DIALOG_HEIGHT 20
+
+/** @brief g_addhero_dialog_state messages. */
+#define ADDHERO_DIALOG_SAVE_FAILED 0
+#define ADDHERO_DIALOG_LOAD_FAILED 1
+#define ADDHERO_DIALOG_CARD_NOT_INSERTED 2
+#define ADDHERO_DIALOG_CARD_TYPE_ERROR 3 /**< Its US text is empty. */
+#define ADDHERO_DIALOG_INVALID_SAVE 4    /**< Shows the load-failed message. */
+
+/** @brief g_addhero_selection_status values. */
+#define ADDHERO_SELECTION_NONE 0       /**< Nothing to show yet. */
+#define ADDHERO_SELECTION_ENTRY_READ 1 /**< The selected entry's header has been read. */
+#define ADDHERO_SELECTION_NEW_SAVE 2   /**< The new-save placeholder is selected. */
+#define ADDHERO_SELECTION_EMPTY_CARD 3 /**< The card has no entries. */
+
+/** @brief g_addhero_result values, reported to the host when the overlay exits. */
+#define ADDHERO_RESULT_LOADED 1
+#define ADDHERO_RESULT_SAVED 2
+#define ADDHERO_RESULT_CANCELLED 3
+
+/** @brief Ticks a progress bar takes to fill the message window. */
+#define ADDHERO_PROGRESS_FULL_TICKS 256
+
+/** @brief Frames of the fade back to the host screen when the overlay exits. */
+#define ADDHERO_EXIT_FADE_FRAMES 8
+
+/** @brief Memory-card channel of card slot @p slot (port in the high nibble). */
+#define ADDHERO_CARD_CHANNEL(slot) ((slot) * 0x10)
+
+/**
+ * @brief ADDHERO text table indexes.
+ * @note ADDHERO_TEXT_AT needs the index of the entry symbol it is given.
+ */
+#define ADDHERO_TEXT_CHECKING_CARD 0
+#define ADDHERO_TEXT_NOT_ENOUGH_BLOCKS 1
+#define ADDHERO_TEXT_NO_CARD 2
+#define ADDHERO_TEXT_CARD_SLOT0_LABEL 6
+#define ADDHERO_TEXT_CARD_SLOT1_LABEL 7
+#define ADDHERO_TEXT_CARD_ACCESS_FAILED 8
+#define ADDHERO_TEXT_NO_SAVE_DATA 9
+#define ADDHERO_TEXT_SAVING 14
+#define ADDHERO_TEXT_DO_NOT_REMOVE_CARD 15 /**< Second line of the card-access messages. */
+#define ADDHERO_TEXT_NEW_SAVE_TITLE 20
+#define ADDHERO_TEXT_USES_TWO_BLOCKS 21
+#define ADDHERO_TEXT_LOAD_PROMPT 24
+#define ADDHERO_TEXT_LOADING 25
+#define ADDHERO_TEXT_NO_GAME_SAVE_DATA 26
+#define ADDHERO_TEXT_NEWEST 27
+#define ADDHERO_TEXT_OLDEST 28
+#define ADDHERO_TEXT_SAVE_FAILED 30
+#define ADDHERO_TEXT_LOAD_FAILED 31
+#define ADDHERO_TEXT_CARD_NOT_INSERTED 32
+#define ADDHERO_TEXT_CARD_TYPE_ERROR 33
+#define ADDHERO_TEXT_SELECT_SAVE_DATA 34
+#define ADDHERO_TEXT_SELECT_ITEM 35
+#define ADDHERO_TEXT_SAME_HERO_DATA 40
+#define ADDHERO_TEXT_WRONG_VERSION 42
+#define ADDHERO_TEXT_NO_LOAD_FILE 52
+#define ADDHERO_TEXT_FOUND_LOAD_FILE 53
+#define ADDHERO_TEXT_OVERWRITE_2P_DATA 54
+#define ADDHERO_TEXT_2P_DATA_NOT_SAVED 55
+#define ADDHERO_TEXT_CARD_OR_CONTROLLER 89 /**< Third line of the card-access messages. */
+
+/**
+ * @brief Commands in the card load/save sequence bytecode.
+ * @note Opcodes without a case are no-ops.
+ */
+typedef enum
+{
+    ADDHERO_STEP_DONE = 0,                  /**< End of a step table; report ADDHERO_LOAD_RESULT_ABORT. */
+    ADDHERO_STEP_CARD_INFO = 1,             /**< Issue _card_info on the current slot. */
+    ADDHERO_STEP_POLL_CARD_INFO = 2,        /**< Wait for the _card_info result. */
+    ADDHERO_STEP_CLEAR_SOFTWARE_EVENTS = 3, /**< Clear the software card events. */
+    ADDHERO_STEP_POLL_HARDWARE_EVENTS = 4,  /**< Wait for and check the hardware card events. */
+    ADDHERO_STEP_CLEAR_HARDWARE_EVENTS = 5, /**< Clear the hardware card events. */
+    ADDHERO_STEP_SCAN_ENTRIES = 6,          /**< Erase the placeholder files and scan the card directory. */
+    ADDHERO_STEP_SCAN_DONE = 7,             /**< No-op after the scan; input stays blocked on this step and the scan. */
+    ADDHERO_STEP_CLEAR_CARD = 8,            /**< Issue _card_clear on the current slot. */
+    ADDHERO_STEP_LOAD_CARD = 9,             /**< Issue _card_load and arm the poll countdowns. */
+    ADDHERO_STEP_ERASE_ENTRY = 10,          /**< Erase the selected directory entry. */
+    ADDHERO_STEP_POLL_CARD_LOAD = 15,       /**< Wait for the _card_clear/_card_load result, retrying. */
+    ADDHERO_STEP_WAIT_HARDWARE_EVENTS = 16, /**< Wait for any hardware card event. */
+    ADDHERO_STEP_READ_ENTRY = 17,           /**< Open the selected save and start reading its header. */
+    ADDHERO_STEP_POLL_ENTRY_READ = 18,      /**< Wait for the header read to finish. */
+    ADDHERO_STEP_READ_SAVE = 19,            /**< Open the selected save and start reading the blob. */
+    ADDHERO_STEP_POLL_SAVE_READ = 20,       /**< Wait for the blob read to finish, retrying. */
+    ADDHERO_STEP_CHECK_CARD_TYPE = 24,      /**< Wait for a card and check its status. */
+    ADDHERO_STEP_WRITE_SAVE = 25,           /**< Create the placeholder file and start writing the save blob. */
+    ADDHERO_STEP_POLL_SAVE_WRITE = 26,      /**< Wait for the write and rename it over the selected save. */
+    ADDHERO_STEP_READ_BEFORE_WRITE = 27,    /**< Open the selected save and read the blob before writing. */
+    ADDHERO_STEP_POLL_PREWRITE_READ = 28,   /**< Wait for that read to finish, retrying. */
+    ADDHERO_STEP_INIT_RETRIES = 30          /**< Arm the read/write retry counter. */
+} AddheroCardStep;
+
 #define ADDHERO_CONFIRM_BUTTON_MASK (PAD_BTN_CROSS | PAD_BTN_L3)
 #define ADDHERO_CARD_SWITCH_BUTTON_MASK (PAD_BTN_SELECT | PAD_BTN_RIGHT | PAD_BTN_LEFT)
-#define ADDHERO_INPUT_INJECTION_ENABLED 0x80
-#define ADDHERO_SAVE_MAGIC 0x414E41
-#define ADDHERO_SAVE_CHECKSUM_BYTES 0x33E0
-#define ADDHERO_SAVE_CHECKSUM_BIAS 0x0414E410
 
 /** @brief Bit position of the width's low byte inside AddheroElement.attr.word. */
 #define ADDHERO_ELEMENT_WIDTH_SHIFT 24
@@ -208,18 +356,6 @@ s32 _card_wait(s32 a);
 
 /** @brief Address of ADDHERO text @p index in the u16 offset table starting at @p table. */
 #define ADDHERO_TEXT(table, index) ((u8*)(table) + (table)[index])
-
-/**
- * @brief Address of FIELD UI string @p index, given its two-byte offset entry @p entry.
- * @note The table start is derived back from the entry symbol, as in FIELD's own lookups.
- */
-#define FIELD_UI_TEXT_AT(entry, index) ((entry) - (index) * 2 + (entry)[0] + ((entry)[1] << 8))
-
-/**
- * @brief Address of FIELD UI string @p index, given the start of the offset table in @p table.
- * @note Summed as integers, offset bytes first, like FIELD's own string lookups.
- */
-#define FIELD_UI_TEXT(table, index) ((u8*)((table)[(index) * 2] + (((table)[(index) * 2 + 1] << 8) + (s32)(table))))
 
 /** @brief Draw an element at its current animation offset and return the packet cursor. */
 typedef void* (*AddheroElementDrawFunc)(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
@@ -259,54 +395,6 @@ typedef struct AddheroElement
     AddheroElementDrawFunc draw_handler;
 } AddheroElement;
 
-/** @brief Saved character metadata displayed in the card browser. */
-typedef struct AddheroRecord
-{
-    u8 name[23];
-    u8 marker_17;
-    u32 unknown_18 : 25;
-    u32 first_icon : 7;
-    u8 _pad1c[3];
-    u8 icon_palette;
-    u32 entry_label : 18;
-    u32 second_icon : 7;
-    u32 third_icon : 7;
-    u8 _pad24[12];
-    s32 play_time_frames;
-    u8 _pad34[0xCF - 0x34];
-    u8 owner_id;
-    u8 _padd0[4];
-    u16 hero_id;
-    u16 reserved_d6;
-    s32 identity;
-} AddheroRecord;
-
-/** @brief Alternate title text in a loaded card-entry record. */
-typedef struct AddheroFallbackText
-{
-    u8 pad[0x24];
-    u8 text[0x20];
-} AddheroFallbackText;
-
-/** @brief Saved context block copied between the live game state and the save image. */
-typedef struct
-{
-    u8 inject_enable;
-    u8 _pad01[0x17];
-    u32 inject_flags;
-    u8 _pad1c[0x234];
-} AddheroSaveContextBlock;
-
-/** @brief Portion of the ADDHERO save image whose layout is used by this overlay. */
-typedef struct
-{
-    u8 _pad0000[0x770];
-    AddheroSaveContextBlock context;
-    u8 _pad09c0[0x2A20];
-    s32 checksum;
-    s32 magic;
-} AddheroSaveBlob;
-
 /**
  * @brief Frame context the host passes to ADDHERO each frame: its first word is
  *        the ordering-table entry, followed later by the display-buffer index
@@ -330,18 +418,20 @@ typedef struct
 extern AddheroOverflowGlyphString g_addhero_decimal_overflow_glyphs;
 extern AddheroElement g_addhero_element_pool[ADDHERO_ELEMENT_COUNT];
 extern AddheroElement g_addhero_element1;
-extern AddheroRecord g_addhero_entry_metadata;
 
-/* Shared controller/game context (main.h PadContext); addressed here as a byte
-   buffer for the save-blob copies and metadata reads. */
-extern u8* g_pad_ctx;
 extern s32 g_save_slot_index;
+
+/**
+ * @brief FIELD data word next to D_80122714; ADDHERO stores 3 into it when Circle cancels the browser.
+ * @note TODO: purpose unknown; no code in the main executable or any overlay reads it.
+ */
 extern s32 D_80122718;
 extern s32 g_pad_input;
 extern s32 g_menu_element_counter;
 extern u8 g_addhero_loadseq_done[];
 extern s32 g_addhero_icon_phase;
-extern u8* g_addhero_pad_work_ptr;
+/** @brief The saved game's item records (g_saved_game_ctx->items). */
+extern FieldItemRecord* g_addhero_items;
 extern s32 g_addhero_result;
 extern s32 g_addhero_work_ram_base;
 extern s32 g_addhero_exit_requested;
@@ -350,7 +440,6 @@ extern s32 g_addhero_load_flow_active;
 extern s32 g_addhero_icon_palette;
 extern s32 g_addhero_frame_parity;
 extern s32 g_addhero_dialog_state;
-extern s32 g_addhero_entry_identity;
 extern s32 g_addhero_icon_image_table[];
 extern s32 g_addhero_entry_fields[][ADDHERO_DIRECTORY_ENTRY_COUNT];
 extern u8 g_addhero_loadseq_abort[];
@@ -358,40 +447,38 @@ extern u8 g_addhero_loadseq_load_begin[];
 extern u8 g_addhero_loadseq_load_progress[];
 extern u8 g_addhero_loadseq_save_begin[];
 extern u8 g_addhero_icon_context[];
-extern u8 g_addhero_entry_record;
-extern u8 g_addhero_entry_owner_id;
 extern u8 g_text_time_separator_offset_bytes[2];
 extern u8 g_text_choice_glyph_offsets[];
-extern u16 g_addhero_glyph_table;
-extern u16 g_addhero_glyph_status_fa;
-extern u16 g_addhero_glyph_status_fd;
-extern u16 g_addhero_glyph_save_entry_label;
-extern u16 g_addhero_glyph_default_entry_label;
-extern u16 g_addhero_glyph_card_slot0_label;
-extern u16 g_addhero_glyph_card_slot1_label;
-extern u16 g_addhero_glyph_status_fb;
-extern u16 g_addhero_glyph_status_fc;
-extern u16 g_addhero_glyph_new_entry_label;
-extern u16 g_addhero_glyph_save_progress;
-extern u16 g_addhero_glyph_details_status2_msg;
-extern u16 g_addhero_glyph_entry_value_label;
-extern u16 g_addhero_glyph_load_prompt;
-extern u16 g_addhero_glyph_load_progress;
-extern u16 g_addhero_glyph_status_f8;
-extern u16 g_addhero_glyph_alt_save_entry_label;
-extern u16 g_addhero_glyph_dialog_msg0;
-extern u16 g_addhero_glyph_dialog_msg1;
-extern u16 g_addhero_glyph_dialog_msg2;
-extern u16 g_addhero_glyph_dialog_msg3;
-extern u16 g_addhero_glyph_mode0;
-extern u16 g_addhero_glyph_mode1;
-extern u16 g_addhero_glyph_current_hero_marker;
-extern u16 g_addhero_glyph_owner_mismatch_msg;
-extern u16 g_addhero_glyph_status_f3;
-extern u16 g_addhero_glyph_status_f7;
-extern u16 g_addhero_glyph_save_confirm_msg;
-extern u16 g_addhero_glyph_plus_marker;
-extern u16 g_addhero_entry_glyph_table[];
+extern u16 g_addhero_text_table;
+extern u16 g_addhero_text_not_enough_blocks;
+extern u16 g_addhero_text_no_card;
+extern u16 g_addhero_text_mana_label;
+extern u16 g_addhero_text_other_game_label;
+extern u16 g_addhero_text_card_slot0_label;
+extern u16 g_addhero_text_card_slot1_label;
+extern u16 g_addhero_text_card_access_failed;
+extern u16 g_addhero_text_no_save_data;
+extern u16 g_addhero_text_new_save_label;
+extern u16 g_addhero_text_saving;
+extern u16 g_addhero_text_new_save_title;
+extern u16 g_addhero_text_number_label;
+extern u16 g_addhero_text_load_prompt;
+extern u16 g_addhero_text_loading;
+extern u16 g_addhero_text_no_game_save_data;
+extern u16 g_addhero_text_alt_save_label;
+extern u16 g_addhero_text_save_failed;
+extern u16 g_addhero_text_load_failed;
+extern u16 g_addhero_text_card_not_inserted;
+extern u16 g_addhero_text_card_type_error;
+extern u16 g_addhero_text_select_save_data;
+extern u16 g_addhero_text_select_item;
+extern u16 g_addhero_text_same_hero_data;
+extern u16 g_addhero_text_wrong_version;
+extern u16 g_addhero_text_2p_data_not_saved;
+extern u16 g_addhero_text_no_load_file;
+extern u16 g_addhero_text_found_load_file;
+extern u16 g_addhero_text_plus_marker;
+extern u16 g_addhero_location_text_table[];
 
 /* Overlay function declarations. */
 void addhero_init(s32 work_base, s32 mode);
@@ -415,7 +502,7 @@ AddheroElement* addhero_alloc_element(void);
 void addhero_update_and_draw_elements(AddheroDrawState* draw_state);
 void addhero_deactivate_primary_element(void);
 void addhero_text_append(u8* dst, u8* src);
-s32 addhero_text_byte_length(u8* str);
+s32 addhero_text_byte_length(u8* text);
 void addhero_text_copy(u8* dst, u8* src);
 void* addhero_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* addhero_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
@@ -426,7 +513,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
 void* addhero_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 width, s32 icon, s32 index, s32 row);
 void addhero_enable_choice_toggle(void);
 void* addhero_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y);
-s32 addhero_validate_save_blob(u8* base);
+s32 addhero_validate_save_file(SaveFile* file);
 s32 addhero_compute_save_checksum(u8* data);
 s8* addhero_format_decimal(s8* out, s32 value);
 void addhero_format_hex(s8* out, s32 value, s32 max_chars);
@@ -436,31 +523,18 @@ s32 addhero_parse_hex_suffix_byte(u8* text);
 s32 addhero_entry_blocks_reach_limit(void);
 void addhero_erase_placeholder_files(void);
 
-/* Game and SDK function declarations. */
-void* func_800A88A0(void* prim, u_long* ot, u8* text, s32 color, s32 x, s32 y, s32 mode);
-void* func_800A8A78(u_long* ot, void* prim, s32 value, s32 color, DVECTOR* pos, s32 mode);
-void play_menu_sfx(s32 sfx_id, s32 volume);
+void addhero_reset_entry_ranks(void);
+s32 addhero_parse_entry_fields(void);
+
+/* FIELD functions used by ADDHERO; FIELD stays resident while the overlay runs. */
+void* field_draw_text(void* prim, u_long* ot, u8* text, s32 text_color, s32 x, s32 y, s32 flags);
+void* field_draw_number(u_long* ot, void* prim, s32 value, s32 text_color, DVECTOR* position, s32 flags);
+void field_copy_portrait_palette(void* dest, s32 index);
+void field_copy_golem_portrait_palette(u8* destination, s32 palette);
+void field_flag_known_save(char* file_name);
+void field_reset_input_repeat(void);
 void field_restore_fade_target(void);
 void field_set_default_fade_target(void);
-void field_restore_fade_target_with_duration(s32 arg0);
-
-void func_800A55E4(void* buf, s32 arg1);
-void func_800A5638(void* buf, s32 arg1);
-void* func_800AD850(void* prim, u_long* ot, s32 x, s32 y, s32 width, s32 height, s32 display_buffer_index, s32 is_popup);
-void* func_800AE76C(void* prim, u_long* ot, s32 x, s32 y, s32 direction);
-
-
-void addhero_reset_entry_ranks(void);
-
-/* Functions defined in addhero.c that other translation units use. */
-s8* addhero_format_decimal();
-void addhero_format_hex();
-void addhero_hex_nibble_to_ascii();
-u32 addhero_parse_hex();
-s32 addhero_parse_hex_suffix_byte();
-s32 addhero_parse_entry_fields(void);
-void addhero_reset_entry_ranks();
-s32 addhero_entry_blocks_reach_limit();
-void addhero_erase_placeholder_files();
+void field_restore_fade_target_with_duration(s16 duration);
 
 #endif

@@ -430,15 +430,13 @@ s32 akao_seq_tick_channels(AkaoChannelState* channels, s32 is_secondary)
  * dispatch), ticks fade envelopes every 4th frame, and updates the
  * @c g_akao_irq_timing timing ring used for profiling.
  *
+ * @return Root-counter ticks elapsed during this callback.
  * @see decomp.me (100%) https://decomp.me/scratch/ICO2k
  */
-void akao_irq_handler(void)
+long akao_irq_handler(void)
 {
     s32 ticks;
     s32 active;
-    s32 prev_sample;
-    s32 total;
-    s32 sample;
     AkaoChannelState* channel;
     u32 bit;
 
@@ -541,33 +539,18 @@ void akao_irq_handler(void)
         akao_tick_fades();
     }
 
-    ticks = (prev_sample = GetRCnt(RCntCNT2)) - ticks;
+    ticks = GetRCnt(RCntCNT2) - ticks;
     if (ticks <= 0)
     {
         ticks += AKAO_TICK_PERIOD;
     }
 
-    {
-        s32 d4 = g_akao_irq_timing.samples[1];
-        s32 d8 = g_akao_irq_timing.samples[2];
-        do
-        {
-            prev_sample = g_akao_irq_timing.samples[3];
-            do
-            {
-                do
-                {
-                    sample = (ticks & prev_sample) | (ticks & ~prev_sample);
-                    g_akao_irq_timing.samples[3] = sample;
-                } while (0);
-            } while (0);
-            g_akao_irq_timing.samples[0] = d4;
-            total = d4 + d8 + prev_sample;
-        } while (0);
-        g_akao_irq_timing.samples[1] = d8;
-        g_akao_irq_timing.samples[2] = prev_sample;
-        g_akao_irq_timing_total = total + sample;
-    }
+    g_akao_irq_timing.samples[0] = g_akao_irq_timing.samples[1];
+    g_akao_irq_timing.samples[1] = g_akao_irq_timing.samples[2];
+    g_akao_irq_timing.samples[2] = g_akao_irq_timing.samples[3];
+    g_akao_irq_timing.samples[3] = ticks;
+    g_akao_irq_timing_total = g_akao_irq_timing.samples[0] + g_akao_irq_timing.samples[1] + g_akao_irq_timing.samples[2] + g_akao_irq_timing.samples[3];
+    return ticks;
 }
 
 /**

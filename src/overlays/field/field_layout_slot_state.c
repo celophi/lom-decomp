@@ -9,7 +9,7 @@
 #include "field_records.h"
 
 /** @brief g_saved_game viewed as FIELD's game state. */
-#define FIELD_SAVED_GAME ((FieldGameState *)&g_saved_game)
+#define FIELD_SAVED_GAME ((SavedGameLayout*)&g_saved_game)
 
 /**
  * @brief Place a land on the map without any checks and record its placement order.
@@ -18,7 +18,7 @@
  */
 void field_place_land(s32 land_index)
 {
-    FieldGameState *game = FIELD_SAVED_GAME;
+    SavedGameLayout* game = FIELD_SAVED_GAME;
 
     game->control.fields.placed_land_count++;
     game->lands[land_index].flags |= FIELD_LAND_PLACED;
@@ -33,7 +33,7 @@ void field_place_land(s32 land_index)
  */
 void field_reset_lands(void)
 {
-    FieldGameState *game;
+    SavedGameLayout* game;
     s32 i;
 
     FIELD_SAVED_GAME->control.fields.placed_land_count = 0;

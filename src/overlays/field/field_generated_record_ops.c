@@ -43,8 +43,6 @@ typedef struct FieldItemNameTable
     } body;
 } FieldItemNameTable;
 
-extern FieldGameState* g_field_game_state;
-
 static void field_build_item_name(s32 type_entry, s32 material_entry, u8* dest);
 
 /**
@@ -66,13 +64,13 @@ void field_write_staged_item(void)
     record = g_field_item_staging->record;
     if (record->name[0] == 0)
     {
-        field_generate_item_key(g_field_game_state->unkD8, &record->key);
+        field_generate_item_key(g_field_game_state->guest_origin.ids.game_id, &record->key);
         field_build_item_name(g_field_item_staging->category * FIELD_TYPE_NAMES_PER_CATEGORY + g_field_item_staging->item_type,
                               g_field_item_staging->material + FIELD_MATERIAL_NAME_BASE, g_field_item_staging->record->name);
     }
     else if (record->key.first == 0 && record->key.second == 0)
     {
-        field_generate_item_key(g_field_game_state->unkD8, &record->key);
+        field_generate_item_key(g_field_game_state->guest_origin.ids.game_id, &record->key);
     }
 
     g_field_item_staging->record->info.bits.category = g_field_item_staging->category;

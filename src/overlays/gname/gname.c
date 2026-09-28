@@ -115,7 +115,7 @@ enum
 #define GNAME_FADE_IN_FRAMES 20
 #define GNAME_STARTUP_DELAY_FRAMES 40
 #define GNAME_NAME_BUFFER_SIZE 48
-#define GNAME_COMPANION_IS_GOLEM(ctx) (((ctx)->companion_info & COMPANION_KIND_MASK) == COMPANION_KIND_GOLEM)
+#define GNAME_COMPANION_IS_GOLEM(ctx) (((ctx)->characters[FIELD_PARTY_COMPANION].info.word & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GOLEM)
 
 #define NAME_MAX_GLYPHS 10
 
@@ -623,22 +623,22 @@ s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_
     field_reset_input_repeat();
 
     /* Renaming the party companion also renames its golem or pet record. */
-    if ((source_mode == GNAME_SRC_HISTORY) && (active_name == g_pad_ctx->companion_name))
+    if ((source_mode == GNAME_SRC_HISTORY) && (active_name == g_saved_game_ctx->characters[FIELD_PARTY_COMPANION].name))
     {
         name_byte_index = 0;
-        if (GNAME_COMPANION_IS_GOLEM(g_pad_ctx))
+        if (GNAME_COMPANION_IS_GOLEM(g_saved_game_ctx))
         {
-            while (name_byte_index < (s32)sizeof(g_pad_ctx->golem_records[0].name))
+            while (name_byte_index < (s32)sizeof(g_saved_game_ctx->golem_records[0].name))
             {
-                g_pad_ctx->golem_records[g_pad_ctx->joined_golem].name[name_byte_index] = active_name[name_byte_index];
+                g_saved_game_ctx->golem_records[g_saved_game_ctx->joined_golem].name[name_byte_index] = active_name[name_byte_index];
                 name_byte_index++;
             }
         }
         else
         {
-            while (name_byte_index < (s32)sizeof(g_pad_ctx->pet_records[0].name))
+            while (name_byte_index < (s32)sizeof(g_saved_game_ctx->pets[0].name))
             {
-                g_pad_ctx->pet_records[g_pad_ctx->joined_pet].name[name_byte_index] = active_name[name_byte_index];
+                g_saved_game_ctx->pets[g_saved_game_ctx->joined_pet].name[name_byte_index] = active_name[name_byte_index];
                 name_byte_index++;
             }
         }

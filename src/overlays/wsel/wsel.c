@@ -1106,7 +1106,7 @@ static void wsel_update_input(void)
             g_wsel_state = WSEL_STATE_ZOOM_IN;
             return;
         }
-        /* D_80043000 is g_saved_game.layout.option_flags, which the original addresses directly. */
+        /* D_80043000 is g_saved_game.layout.options.word, which the original addresses directly. */
         if ((g_wsel_buttons_pressed & WSEL_CANCEL_BUTTONS) && !((D_80043000 >> WSEL_OPTION_FLAG_3_BIT) & 1))
         {
             wsel_play_sfx(WSEL_SFX_CANCEL, WSEL_SFX_PAN_CENTER);
@@ -1221,7 +1221,7 @@ static void wsel_update_input(void)
             row = WSEL_CURSOR_CELL_ROW();
             g_saved_game.layout.world_map_cell = column + row * WSEL_MAP_CELLS;
             g_wsel_exit_state = WSEL_EXIT_CELL_CHOSEN;
-            g_saved_game.layout.option_flags &= ~SAVED_OPTION_FLAG_3;
+            g_saved_game.layout.options.word &= ~SAVED_OPTION_FLAG_3;
             return;
         }
         if (g_wsel_buttons_pressed & WSEL_CANCEL_BUTTONS)

@@ -83,15 +83,15 @@ typedef enum CloadLoadResult
 const CloadCardPathTemplate g_cload_card_path_prefix = {"bu00:"};
 
 /**
- * @brief Validate a loaded save blob against its trailing checksum and magic.
- * @param blob Loaded save blob; its payload is summed by cload_compute_save_checksum.
- * @return 1 if the stored checksum matches and the magic equals CLOAD_SAVE_MAGIC, otherwise 0.
+ * @brief Validate a loaded save file against its trailing checksum and magic.
+ * @param file Loaded save file; the bytes before its checksum are summed by cload_compute_save_checksum.
+ * @return 1 if the stored checksum matches and the magic equals SAVE_FILE_MAGIC, otherwise 0.
  */
-s32 cload_validate_save_blob(CloadSaveBlob *blob)
+s32 cload_validate_save_file(SaveFile* file)
 {
-    if (blob->checksum == cload_compute_save_checksum(blob->payload))
+    if (file->checksum == cload_compute_save_checksum((u8*)file))
     {
-        if (blob->magic == CLOAD_SAVE_MAGIC)
+        if (file->magic == SAVE_FILE_MAGIC)
         {
             return 1;
         }
@@ -99,11 +99,10 @@ s32 cload_validate_save_blob(CloadSaveBlob *blob)
     return 0;
 }
 
-
 /**
  * @brief Compute the additive checksum used to validate a loaded save payload.
- * @param data Start of the CLOAD_SAVE_PAYLOAD_BYTES-byte save payload.
- * @return Twice the byte sum plus CLOAD_SAVE_CHECKSUM_BIAS.
+ * @param data Start of the save file; SAVE_FILE_CHECKSUM_BYTES bytes are summed.
+ * @return Twice the byte sum plus SAVE_FILE_CHECKSUM_BIAS.
  */
 s32 cload_compute_save_checksum(u8 *data)
 {
@@ -119,8 +118,8 @@ s32 cload_compute_save_checksum(u8 *data)
         byte_index++;
         sum += *cursor;
         cursor++;
-    } while (byte_index < CLOAD_SAVE_PAYLOAD_BYTES);
-    return sum * 2 + CLOAD_SAVE_CHECKSUM_BIAS;
+    } while (byte_index < SAVE_FILE_CHECKSUM_BYTES);
+    return sum * 2 + SAVE_FILE_CHECKSUM_BIAS;
 }
 
 
@@ -533,8 +532,8 @@ inline void cload_erase_fixed_card_files(void)
 s32 cload_advance_load_sequence(void)
 {
     CloadLoadScratch card_path;
-    s32 status0;
-    s32 status1;
+    long status0;
+    long status1;
     s32 phase_result;
     s32 scan_attempts;
     s32 wait_attempts;
@@ -718,8 +717,8 @@ s32 cload_advance_load_sequence(void)
             }
             cload_release_primary_handles();
             _card_wait(g_cload_card_slot);
-            if (read(g_cload_file_handle, g_cload_selected_file_header,
-                     g_cload_selected_entry_extended != 0 ? 0x280 : 0x80) != -1)
+            if (read(g_cload_file_handle, &g_cload_selected_file,
+                     g_cload_selected_entry_extended != 0 ? CLOAD_ENTRY_READ_BYTES : CLOAD_ENTRY_TITLE_READ_BYTES) != -1)
             {
                 g_cload_load_step++;
             }
@@ -760,7 +759,7 @@ s32 cload_advance_load_sequence(void)
             g_cload_file_handle = open(g_cload_selected_card_path, 0x8001);
             cload_release_primary_handles();
             _card_wait(g_cload_card_slot);
-            if (read(g_cload_file_handle, &g_cload_save_blob, sizeof(g_cload_save_blob)) != -1)
+            if (read(g_cload_file_handle, &g_cload_save_file, sizeof(g_cload_save_file)) != -1)
             {
                 g_cload_load_step++;
                 break;
@@ -802,7 +801,7 @@ s32 cload_advance_load_sequence(void)
         case CLOAD_STEP_CHECK_CARD_TYPE:
             for (wait_attempts = 0; wait_attempts < 0x14; wait_attempts++)
             {
-                if (McxCardType(g_cload_card_slot * 0x10) == 1)
+                if (McxCardType(g_cload_card_slot * 0x10) == MCX_COMMAND_ISSUED)
                 {
                     break;
                 }
@@ -810,8 +809,8 @@ s32 cload_advance_load_sequence(void)
             }
             if (wait_attempts != 0x14)
             {
-                func_80032174(0, &status0, &status1);
-                if (status1 == 0)
+                McxSync(MCX_SYNC_WAIT, &status0, &status1);
+                if (status1 == McxErrSuccess)
                 {
                     g_cload_load_step++;
                     break;

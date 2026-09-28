@@ -23,8 +23,8 @@ static inline void niki_erase_placeholder_paths(void)
 s32 niki_advance_load_sequence(void)
 {
     NikiSequencePath path;
-    s32 card_command;
-    s32 card_result;
+    long card_command;
+    long card_result;
     s32 phase_result;
     s32 wait_attempts;
     s32 poll_result;
@@ -246,7 +246,7 @@ s32 niki_advance_load_sequence(void)
         }
         niki_release_primary_handles();
         func_8001729C(g_niki_card_slot);
-        if (func_8001681C(g_niki_file_handle, &g_niki_entry_preview, g_niki_selected_entry_extended != 0 ? sizeof(NikiEntryPreview) : 0x80) == -1)
+        if (func_8001681C(g_niki_file_handle, &g_niki_entry_file, g_niki_selected_entry_extended != 0 ? NIKI_ENTRY_READ_BYTES : 0x80) == -1)
         {
             func_8001683C(g_niki_file_handle);
             break;
@@ -277,7 +277,7 @@ s32 niki_advance_load_sequence(void)
     case NIKI_COMMAND_READ_SAVE:
         g_niki_confirm_latch = 1;
         g_niki_progress_bar_active = 1;
-        g_niki_progress_start_tick = func_8002054C(-1);
+        g_niki_progress_start_tick = VSync(-1);
         func_8001729C(g_niki_card_slot);
         g_niki_file_handle = func_8001680C(g_niki_selected_save_path, 0x8001);
         niki_release_primary_handles();
@@ -326,17 +326,17 @@ s32 niki_advance_load_sequence(void)
         wait_attempts = 0;
         do
         {
-            if (func_800342CC(g_niki_card_slot * 0x10) == 1)
+            if (McxCardType(g_niki_card_slot * 0x10) == MCX_COMMAND_ISSUED)
             {
                 break;
             }
-            func_8002054C(0);
+            VSync(0);
             wait_attempts = wait_attempts + 1;
         } while (wait_attempts < 20);
         if (wait_attempts != 20)
         {
-            func_80032174(0, &card_command, &card_result);
-            if (card_result == 0)
+            McxSync(MCX_SYNC_WAIT, &card_command, &card_result);
+            if (card_result == McxErrSuccess)
             {
                 g_niki_load_step = g_niki_load_step + 1;
                 break;
@@ -348,7 +348,7 @@ s32 niki_advance_load_sequence(void)
     case NIKI_COMMAND_READ_SAVED_COPY:
         g_niki_confirm_latch = 1;
         g_niki_progress_bar_active = 1;
-        g_niki_progress_start_tick = func_8002054C(-1);
+        g_niki_progress_start_tick = VSync(-1);
         func_8001729C(g_niki_card_slot);
         g_niki_file_handle = func_8001680C(g_niki_selected_save_path, 0x8001);
         niki_release_primary_handles();
@@ -445,7 +445,7 @@ s32 niki_advance_load_sequence(void)
         g_niki_file_handle = func_8001680C(g_niki_temporary_save_path, 0x8002);
         niki_release_primary_handles();
         g_niki_progress_bar_active = 1;
-        g_niki_progress_start_tick = func_8002054C(-1);
+        g_niki_progress_start_tick = VSync(-1);
         func_8001729C(g_niki_card_slot);
         if (func_8001682C(g_niki_file_handle, g_niki_save_blob.bytes, NIKI_SAVE_FILE_BYTES) == -1)
         {

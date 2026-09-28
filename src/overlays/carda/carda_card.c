@@ -648,8 +648,8 @@ s32 carda_advance_save_sequence(void)
     s32 rank_fill;
     s32 poll_result;
     s32 phase_result;
-    s32 status0;
-    s32 status1;
+    long status0;
+    long status1;
     s32 nibble;
     s32 started;
     s32 serial;
@@ -1232,7 +1232,8 @@ s32 carda_advance_save_sequence(void)
             {
                 carda_release_primary_handles();
                 _card_wait(g_carda_card_slot);
-                if (read(g_carda_file_handle, &g_carda_selected_file_header, g_carda_selected_entry_extended != 0 ? 0x280 : 0x80) == -1)
+                if (read(g_carda_file_handle, &g_carda_selected_file,
+                         g_carda_selected_entry_extended != 0 ? CARDA_ENTRY_READ_BYTES : CARDA_ENTRY_TITLE_READ_BYTES) == -1)
                 {
                     close(g_carda_file_handle);
                     return phase_result;
@@ -1298,7 +1299,7 @@ s32 carda_advance_save_sequence(void)
             {
                 for (attempts = 0; attempts < 120; attempts++)
                 {
-                    if (McxCardType(g_carda_card_slot * 0x10) == 1)
+                    if (McxCardType(g_carda_card_slot * 0x10) == MCX_COMMAND_ISSUED)
                     {
                         break;
                     }
@@ -1308,13 +1309,13 @@ s32 carda_advance_save_sequence(void)
                 /* The wait above allows 120 frames, but only 20 counts as a timeout. */
                 if (attempts != 20)
                 {
-                    func_80032174(0, &status0, &status1);
+                    McxSync(MCX_SYNC_WAIT, &status0, &status1);
                     switch (status1)
                     {
-                    case 0:
+                    case McxErrSuccess:
                         g_carda_save_step++;
                         return phase_result;
-                    case 1:
+                    case McxErrNoCard:
                         g_carda_entry_state = 0xFD;
                         g_carda_save_step = NULL;
                         return phase_result;

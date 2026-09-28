@@ -72,7 +72,7 @@ typedef struct
 } FieldSavedParty;
 
 /** @brief The live saved game, viewed through FieldSavedParty. */
-#define FIELD_SAVED_PARTY ((FieldSavedParty*)g_pad_ctx)
+#define FIELD_SAVED_PARTY ((FieldSavedParty*)g_saved_game_ctx)
 
 /** @brief One action command map: eleven actor command words and their disable flags. */
 typedef struct

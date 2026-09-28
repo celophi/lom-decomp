@@ -8,6 +8,7 @@
 #include "gpu_packet.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
+#include "sdk/libmcx.h"
 
 /**
  * @brief Draw callback of a CLOAD UI element: emits the element's content at
@@ -171,12 +172,11 @@ typedef union
 #define CLOAD_CARD_DIRECTORY_BYTES 0x320
 #define CLOAD_DIRECTORY_ENTRY_BYTES 0x28
 #define CLOAD_MEMORY_CARD_BLOCK_BYTES 8192
-#define CLOAD_SAVE_PAYLOAD_BYTES 0x33E0
-#define CLOAD_SAVE_FILE_BYTES (2 * CLOAD_MEMORY_CARD_BLOCK_BYTES)
-#define CLOAD_SAVE_MAGIC 0x00414E41
-#define CLOAD_SAVE_CHECKSUM_BIAS 0x0414E410
+/** @brief Bytes read to show an entry: the card header and the first 0x100 bytes of the saved game. */
+#define CLOAD_ENTRY_READ_BYTES 0x280
+/** @brief Bytes read to show an entry that is not a Legend of Mana save: its card header title and CLUT. */
+#define CLOAD_ENTRY_TITLE_READ_BYTES 0x80
 #define CLOAD_ENTRY_ROW_HEIGHT 14
-#define CLOAD_NO_ICON 0x7F
 #define CLOAD_GLYPH_CACHE_SLOTS 0x100
 #define CLOAD_GLYPH_CACHE_COLUMNS 16
 #define CLOAD_GLYPH_CACHE_ROW_MASK 0xF0
@@ -185,43 +185,8 @@ typedef union
 #define CLOAD_GLYPH_RASTER_BUFFER_BYTES 0x8000
 #define CLOAD_COLOR_WHITE 0xFFFFFF
 
-/* Offset of the SAVED_GAME_DATA_SIZE-byte saved game inside a LOM save file. */
-#define CLOAD_SAVE_DATA_OFFSET 0x180
-
-/* Offset of the save-slot id inside the saved game (CloadSaveMetadata.save_slot_id). */
-#define CLOAD_SAVE_SLOT_ID_OFFSET 0xCF
-
-/**
- * @brief The parts of a saved game (CLOAD_SAVE_DATA_OFFSET bytes into a LOM
- *        save file) that the file-select screen shows.
- */
-typedef struct
-{
-    u8 title[0x18];
-    u32 unknown_0x18 : 25;
-    u32 party_icon_0 : 7;
-    u8 unknown_0x1c[3];
-    u8 icon_palette;
-    u32 location : 18; /**< Index into the location-name text table. */
-    u32 party_icon_1 : 7;
-    u32 party_icon_2 : 7;
-    u8 unknown_0x24[0x30 - 0x24];
-    s32 playtime; /**< Play time in 1/60 s ticks. */
-    u8 unknown_0x34[CLOAD_SAVE_SLOT_ID_OFFSET - 0x34];
-    u8 save_slot_id;
-} CloadSaveMetadata;
-
 #define CLOAD_DIR_ENTRY(card, index) \
     (((CloadDirEntry (*)[CLOAD_ENTRIES_PER_CARD])g_cload_entries)[(card)][(index)])
-
-/** @brief A save file read from the card: payload, its checksum and format marker, then the rest of the file. */
-typedef struct
-{
-    u8 payload[CLOAD_SAVE_PAYLOAD_BYTES];
-    s32 checksum;
-    s32 magic;
-    u8 unused[CLOAD_SAVE_FILE_BYTES - CLOAD_SAVE_PAYLOAD_BYTES - 2 * sizeof(s32)];
-} CloadSaveBlob;
 
 /**
  * @brief Address of CLOAD text @p index, reached through its own u16 offset-table entry @p entry.
@@ -323,9 +288,11 @@ extern s32 g_cload_scroll_frames;
 extern s32 g_cload_selection_status;
 extern s32 g_cload_frame_parity;
 extern s32 D_80162370;
-extern u8 g_cload_selected_file_header[];
-extern u8 g_cload_selected_file_title[];
-extern CloadSaveMetadata g_cload_selected_save_metadata;
+/**
+ * @brief Start of the selected entry's save file: only the card header and the
+ *        first 0x100 bytes of the saved game are read (CLOAD_ENTRY_READ_BYTES).
+ */
+extern SaveFile g_cload_selected_file;
 extern s32 g_cload_element1_state;
 extern u8 g_cload_steps_initial_scan[];
 extern u8 g_cload_steps_refresh_entries[];
@@ -336,7 +303,6 @@ extern u8 *g_cload_load_step;
 extern s32 g_save_slot_index;
 extern char g_lom_save_filename_prefix[];
 extern char g_cload_entries[];
-extern u8 g_cload_selected_save_slot_id;
 extern s32 g_cload_entry_scan_active;
 extern char g_lom_alt_save_filename_prefix[];
 extern char g_new_save_entry_prefix[];
@@ -355,7 +321,8 @@ extern u16 g_cload_text_load;
 extern u16 g_cload_text_number_prefix;
 extern u16 g_cload_text_load_prompt;
 extern u16 g_cload_text_loading;
-extern CloadSaveBlob g_cload_save_blob;
+/** @brief Save file read by the load sequence. */
+extern SaveFile g_cload_save_file;
 
 extern s32 g_playtime_vsync_origin;
 extern s32 g_cload_progress_bar_active;
@@ -426,8 +393,6 @@ s32 _card_info(s32);
 s32 _card_load(s32);
 s32 _card_wait(s32);
 s32 _card_clear(s32);
-s32 func_80032174(s32, void *, s32 *);
-s32 McxCardType(s32);
 void EnterCriticalSection(void);
 void func_800A55E4(void *clut, s32 palette);
 u8 *Krom2RawAdd(u16 sjis_code);
@@ -443,20 +408,6 @@ s32 TestEvent(s32);
 s32 firstfile(void *, void *);
 s32 nextfile(void *);
 char *strcpy(char *, const char *);
-
-/**
- * @brief Text-bearing prefix of a PSX memory-card file header.
- *
- * CLOAD reads the first 0x80 or 0x280 bytes of the selected file into the
- * buffer at g_cload_selected_file_header.  Its encoded title starts at +0x4
- * and spans two 0x20-byte lines; the second line therefore begins at +0x24.
- */
-typedef struct
-{
-    /* 0x00 */ u8 header[4];
-    /* 0x04 */ u8 title_line_1[0x20];
-    /* 0x24 */ u8 title_line_2[0x20];
-} CloadCardHeaderText;
 
 /* Functions shared across the CLOAD translation units. */
 s32 cload_main(void);
@@ -497,7 +448,7 @@ void cload_load_icon_resources(void);
 CloadGpuPacket *cload_emit_icon_highlight_strip(SPRT *sprite, u_long *ot);
 s32 cload_enable_choice_toggle(void);
 void *cload_draw_choice_prompt(void *prim, u_long *ot, s32 x, s32 y);
-s32 cload_validate_save_blob(CloadSaveBlob *blob);
+s32 cload_validate_save_file(SaveFile* file);
 s32 cload_compute_save_checksum(u8 *data);
 void cload_format_hex(s8 *out, s32 value, s32 max_chars);
 void cload_hex_nibble_to_ascii(s8 *out, s32 nibble);

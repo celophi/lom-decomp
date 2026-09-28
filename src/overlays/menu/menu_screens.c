@@ -26,7 +26,7 @@ extern inline s32 menu_focus_active_content_item(void)
 /** @brief Return the party-sort order record for the active reorder screen. */
 static inline MenuPartyOrder* menu_sort_order_record(void)
 {
-    u8* base = (u8*)g_pad_ctx;
+    u8* base = (u8*)g_saved_game_ctx;
     s32 off = (g_menu_scene_type == 0x1F) ? 0 : 0x250;
 
     return (MenuPartyOrder*)(base + off);
@@ -368,7 +368,7 @@ s32 menu_handle_input(s32 process_actions)
                     if (g_menu_char_slot == 0)
                     {
                         {
-                            u8* pad_base0 = (u8*)g_pad_ctx;
+                            u8* pad_base0 = (u8*)g_saved_game_ctx;
                             item_flag = *(pad_base0 + content_type + 0x609);
                         }
                         if ((item_flag != MENU_NONE) && (item_flag & 0x80))
@@ -382,7 +382,7 @@ s32 menu_handle_input(s32 process_actions)
                         submenu_slot = menu_slot_alloc(3, &rect);
                         submenu_slot->content_cb = (s32 * (*)()) & menu_subtype_action_callback;
                         {
-                            u8* pad_base = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
+                            u8* pad_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * 0x250);
                             item_flag = *(pad_base + content_type + 0x609);
                         }
                         if ((item_flag != MENU_NONE) && (item_flag & 0x80))
@@ -401,7 +401,7 @@ s32 menu_handle_input(s32 process_actions)
                             u8* equipped_item;
                             s32* active_equipped_item = &g_menu_active_equipped_item;
 
-                            equipped_item = (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((content_type << 6) + 0x90);
+                            equipped_item = (u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((content_type << 6) + 0x90);
                             *active_equipped_item = (s32)equipped_item;
                             g_menu_item_ptr = (s32)equipped_item;
                             g_menu_saved_category0_item = g_menu_item_ptr;
@@ -430,7 +430,7 @@ s32 menu_handle_input(s32 process_actions)
                             u8* equipped_item;
                             s32* active_equipped_item = &g_menu_active_equipped_item;
 
-                            equipped_item = (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((content_type << 6) - 0x170);
+                            equipped_item = (u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((content_type << 6) - 0x170);
                             *active_equipped_item = (s32)equipped_item;
                             g_menu_saved_category0_item = (s32)equipped_item;
                             g_menu_saved_category1_item = (s32)equipped_item;
@@ -518,7 +518,7 @@ s32 menu_handle_input(s32 process_actions)
                         s32 count;
                         u8* slot_base;
 
-                        slot_base = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
+                        slot_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * 0x250);
                         if (slot_base[0x5F0] != 0)
                         {
                             if ((slot_base[0x608] & 0x7F) == 4)
@@ -529,11 +529,11 @@ s32 menu_handle_input(s32 process_actions)
                             {
                                 D_801229F4 = slot_base[0x609];
                             }
-                            field_copy_name(&D_801226F0, (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0));
+                            field_copy_name(&D_801226F0, (u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0));
                             count = 0;
                             idx = 0;
                             rec = (u8*)&g_field_player_records;
-                            D_801227D4 = (void*)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0));
+                            D_801227D4 = (void*)((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0));
                             for (; idx < 3; idx++)
                             {
                                 if (idx == g_menu_char_slot)
@@ -554,20 +554,20 @@ s32 menu_handle_input(s32 process_actions)
                     break;
 
                     case 6:
-                        g_pad_ctx->menu_option_flags |= MENU_OPTION_AUDIO_ENABLED;
+                        g_saved_game_ctx->options.word |= MENU_OPTION_AUDIO_ENABLED;
                         akao_set_mono_output(0);
                         break;
 
                     case 7:
-                        g_pad_ctx->menu_option_flags &= ~MENU_OPTION_AUDIO_ENABLED;
+                        g_saved_game_ctx->options.word &= ~MENU_OPTION_AUDIO_ENABLED;
                         akao_set_mono_output(1);
                         break;
 
                     case 8:
-                        g_pad_ctx->menu_option_flags |= MENU_OPTION_VIBRATION_ENABLED;
+                        g_saved_game_ctx->options.word |= MENU_OPTION_VIBRATION_ENABLED;
                         actuator_state->ports[0].small_motor_command = 1;
                         actuator_state->ports[0].large_motor_command = MENU_SE_VOLUME;
-                        if (g_pad_ctx->inject_flags & MENU_PAD_INJECT_ENABLED)
+                        if (g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & MENU_PAD_INJECT_ENABLED)
                         {
                             actuator_state->ports[1].small_motor_command = 1;
                             actuator_state->ports[1].large_motor_command = MENU_SE_VOLUME;
@@ -575,7 +575,7 @@ s32 menu_handle_input(s32 process_actions)
                         break;
 
                     case 9:
-                        g_pad_ctx->menu_option_flags &= ~MENU_OPTION_VIBRATION_ENABLED;
+                        g_saved_game_ctx->options.word &= ~MENU_OPTION_VIBRATION_ENABLED;
                         actuator_state->ports[0].small_motor_command = 0;
                         actuator_state->ports[1].small_motor_command = 0;
                         break;
@@ -590,7 +590,7 @@ s32 menu_handle_input(s32 process_actions)
                         }
                         else
                         {
-                            inject_flags = &g_pad_ctx->inject_flags;
+                            inject_flags = &g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word;
                             *inject_flags |= MENU_PAD_INJECT_ENABLED;
                             g_menu_companion_node = 0x2B;
                             menu_set_active_node();
@@ -598,7 +598,7 @@ s32 menu_handle_input(s32 process_actions)
                         break;
 
                     case 11:
-                        inject_flags = &g_pad_ctx->inject_flags;
+                        inject_flags = &g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word;
                         *inject_flags &= ~MENU_PAD_INJECT_ENABLED;
                         g_menu_companion_node = MENU_NONE;
                         menu_set_active_node();
@@ -889,7 +889,7 @@ s32 menu_build_spell_nav_entries(void)
     u32 entry_with_previous;
 
     item_count = 0;
-    presence_rows = (u8*)g_pad_ctx + MENU_SPELL_GRID_OFFSET;
+    presence_rows = (u8*)g_saved_game_ctx + MENU_SPELL_GRID_OFFSET;
 
     for (row = MENU_SPELL_GRID_ROW_COUNT - 1; row >= 0; row--)
     {
@@ -962,7 +962,7 @@ s32 menu_build_special_technique_nav_entries(void)
     selected_index = MENU_NONE;
     group_index = 0;
     none_index = selected_index;
-    group_flags_ptr = (s32*)((u8*)g_pad_ctx + MENU_SPECIAL_TECHNIQUE_FLAGS_OFFSET);
+    group_flags_ptr = (s32*)((u8*)g_saved_game_ctx + MENU_SPECIAL_TECHNIQUE_FLAGS_OFFSET);
     do
     {
         bit_mask = 1;
@@ -1040,7 +1040,7 @@ s32 menu_build_inventory_nav_entries(s32 item_kind)
 
     entry_index = 0;
     item_count = 0;
-    item = (MenuItemEntry*)((u8*)g_pad_ctx + MENU_ITEM_TABLE_OFFSET);
+    item = (MenuItemEntry*)((u8*)g_saved_game_ctx + MENU_ITEM_TABLE_OFFSET);
     for (; entry_index < MENU_ITEM_TABLE_COUNT; entry_index++, item++)
     {
         u8 active = item->active;
@@ -1091,7 +1091,7 @@ s32 menu_build_inventory_nav_entries(s32 item_kind)
  * @param index Golem record index.
  * @return Selected golem record.
  */
-static inline GolemRecord* menu_golem_record(PadContext* context, s32 index)
+static inline GolemRecord* menu_golem_record(SavedGameLayout* context, s32 index)
 {
     u8* records = (u8*)context->golem_records;
     return (GolemRecord*)(records + index * sizeof(GolemRecord));
@@ -1103,7 +1103,7 @@ static inline GolemRecord* menu_golem_record(PadContext* context, s32 index)
  * @param index Value index, 0 through 7.
  * @return Packed value; the character panel displays its high seven bits.
  */
-static inline u16 menu_active_character_value(PadContext* context, s32 index)
+static inline u16 menu_active_character_value(SavedGameLayout* context, s32 index)
 {
     s32 offset = index * sizeof(u16);
     offset += g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
@@ -1115,7 +1115,7 @@ static inline u16 menu_active_character_value(PadContext* context, s32 index)
  * @param context Context containing the character records.
  * @return Active character record.
  */
-static inline MenuCharacterRecord* menu_active_character(PadContext* context)
+static inline MenuCharacterRecord* menu_active_character(SavedGameLayout* context)
 {
     s32 offset = g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
     return (MenuCharacterRecord*)((u8*)context + offset + MENU_CHARACTER_RECORD_OFFSET);
@@ -1175,8 +1175,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
             u8* character_equipment_area;
             MenuItemEntry* equipped_items;
             g_menu_equipment_base =
-                (u32)(equipped_items = (MenuItemEntry*)((character_equipment_area =
-                                                             (u8*)g_pad_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE + MENU_CHARACTER_RECORD_OFFSET)) +
+                (u32)(equipped_items = (MenuItemEntry*)((character_equipment_area = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE +
+                                                                                                             MENU_CHARACTER_RECORD_OFFSET)) +
                                                         MENU_CHARACTER_ITEMS_OFFSET));
             D_80168C30 = (u8*)equipped_items;
             D_80168C20 = (u8*)equipped_items;
@@ -1333,7 +1333,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 s = content_item->action_type;
                                 for (idx = 0; idx < 8; idx++)
                                 {
-                                    u8* pad = (u8*)g_pad_ctx;
+                                    u8* pad = (u8*)g_saved_game_ctx;
                                     s32 character_offset = g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
                                     if (*(u8*)(pad + character_offset + idx + 0x638) == s - 0x2A)
                                     {
@@ -1398,7 +1398,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             else if ((u8)sub == 0x55)
                             {
                                 t0 = 0xFF;
-                                if (((g_pad_ctx->menu_option_flags >> 1) & 1) != 0)
+                                if (((g_saved_game_ctx->options.word >> 1) & 1) != 0)
                                 {
                                     t0 = 0x6A;
                                 }
@@ -1409,7 +1409,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 if (sub == 0x56)
                                 {
                                     t0 = 0x6A;
-                                    if (((g_pad_ctx->menu_option_flags >> 1) & 1) != 0)
+                                    if (((g_saved_game_ctx->options.word >> 1) & 1) != 0)
                                     {
                                         t0 = 0xFF;
                                     }
@@ -1417,7 +1417,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 else if (sub == 0x57)
                                 {
                                     t0 = 0xFF;
-                                    if ((g_pad_ctx->menu_option_flags & 1) != 0)
+                                    if ((g_saved_game_ctx->options.word & 1) != 0)
                                     {
                                         t0 = 0x6A;
                                     }
@@ -1425,7 +1425,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 else if (sub == 0x58)
                                 {
                                     t0 = 0x6A;
-                                    if ((g_pad_ctx->menu_option_flags & 1) != 0)
+                                    if ((g_saved_game_ctx->options.word & 1) != 0)
                                     {
                                         t0 = 0xFF;
                                     }
@@ -1433,7 +1433,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 else if (sub == 0x59)
                                 {
                                     t0 = 0xFF;
-                                    if ((g_pad_ctx->inject_flags & 0x80) != 0)
+                                    if ((g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & 0x80) != 0)
                                     {
                                         t0 = 0x6A;
                                     }
@@ -1441,7 +1441,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 else if (sub == 0x5A)
                                 {
                                     t0 = 0x6A;
-                                    if ((g_pad_ctx->inject_flags & 0x80) != 0)
+                                    if ((g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & 0x80) != 0)
                                     {
                                         t0 = 0xFF;
                                     }
@@ -1957,7 +1957,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             break;
                             case 0x2:
                             {
-                                u8* call_base = (u8*)g_pad_ctx;
+                                u8* call_base = (u8*)g_saved_game_ctx;
                                 s32 off = g_menu_char_slot * 0x250 + 0x5F0;
                                 packet_cursor = func_800A88A0(packet_cursor, ot_entry, call_base + off, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
                                                               content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
@@ -1966,7 +1966,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             break;
                             case 0x3:
                             {
-                                PadContext* context = g_pad_ctx;
+                                SavedGameLayout* context = g_saved_game_ctx;
                                 u8 v = menu_active_character(context)->progression.fields.level;
                                 packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, v, 1, &pos,
                                                                          ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
@@ -1980,7 +1980,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             break;
                             case 0x5:
                             {
-                                PadContext* context = g_pad_ctx;
+                                SavedGameLayout* context = g_saved_game_ctx;
                                 u16 v = menu_active_character(context)->unknown_0x24;
                                 packet_cursor = func_800A8A78(ot_entry, packet_cursor, v, 1, &pos,
                                                               ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
@@ -1988,7 +1988,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             break;
                             case 0x6:
                             {
-                                PadContext* context = g_pad_ctx;
+                                SavedGameLayout* context = g_saved_game_ctx;
                                 u32 v = menu_active_character(context)->progression.packed;
                                 packet_cursor = func_800A8A78(ot_entry, packet_cursor, (v >> 8), 1, &pos,
                                                               ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
@@ -2003,10 +2003,10 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             case 0xD:
                             case 0xE:
                             {
-                                void* base = (void*)g_pad_ctx;
+                                void* base = (void*)g_saved_game_ctx;
                                 s32 idx = content_index - 7;
                                 packet_cursor =
-                                    menu_draw_clamped_number(ot_entry, packet_cursor, menu_active_character_value((PadContext*)base, idx) >> 9, 1, &pos,
+                                    menu_draw_clamped_number(ot_entry, packet_cursor, menu_active_character_value((SavedGameLayout*)base, idx) >> 9, 1, &pos,
                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                             }
                             break;
@@ -2095,7 +2095,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 u8 idx;
                                 draw_packet_cursor = packet_cursor;
                                 base_a2_6 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x10));
-                                base = (void*)g_pad_ctx;
+                                base = (void*)g_saved_game_ctx;
                                 {
                                     u8* idxp = (u8*)base + g_menu_char_slot * 0x250 + content_index + 0x5F3;
                                     idx = *idxp;
@@ -2111,7 +2111,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             case 0x19:
                             {
                                 s32 v = func_800B607C(g_menu_char_slot);
-                                PadContext* context = g_pad_ctx;
+                                SavedGameLayout* context = g_saved_game_ctx;
                                 u32 shift = menu_active_character(context)->progression.packed >> 8;
                                 packet_cursor = func_800A8A78(ot_entry, packet_cursor, v - shift, 1, &pos,
                                                               ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
@@ -2122,7 +2122,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             case 0x1D:
                             case 0x1E:
                             {
-                                void* base = (void*)g_pad_ctx;
+                                void* base = (void*)g_saved_game_ctx;
                                 u8* ptr;
                                 u8 val;
                                 ptr = (u8*)base + g_menu_char_slot * 0x250;
@@ -2134,7 +2134,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     draw_packet_cursor = packet_cursor;
                                     if (val & 0x80)
                                     {
-                                        u16* lvar_v1_2 = (u16*)g_pad_ctx;
+                                        u16* lvar_v1_2 = (u16*)g_saved_game_ctx;
                                         void* lvar_a2 = (void*)((u8*)lvar_v1_2 + (g_menu_char_slot * 0x250 + 0x5F0));
                                         void* a2_2 = (void*)((u8*)lvar_a2 + ((((MenuNameSelection*)(ptr + 0x5F1))->fields.index << 6) + 0x150));
                                         packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
@@ -2167,7 +2167,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 u8 idx;
                                 draw_packet_cursor = packet_cursor;
                                 base_a2_8 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x4C));
-                                base = (void*)g_pad_ctx;
+                                base = (void*)g_saved_game_ctx;
                                 {
                                     u8* idxp = (u8*)base + g_menu_char_slot * 0x250 + 0x609;
                                     idx = *idxp;
@@ -2399,7 +2399,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 u8 idx;
                                 draw_packet_cursor = packet_cursor;
                                 base_a2_9 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x74));
-                                base = (void*)g_pad_ctx;
+                                base = (void*)g_saved_game_ctx;
                                 {
                                     u8* idxp = (u8*)base + g_menu_char_slot * 0x250 + 0x633;
                                     idx = *idxp;
@@ -2414,10 +2414,10 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             break;
                             case 0x4A:
                             {
-                                s8 golem_index = g_pad_ctx->joined_golem;
+                                s8 golem_index = g_saved_game_ctx->joined_golem;
                                 if (golem_index >= 0)
                                 {
-                                    PadContext* context = g_pad_ctx;
+                                    SavedGameLayout* context = g_saved_game_ctx;
                                     u8 v = menu_golem_record(context, golem_index)->logic_layout & GOLEM_LOGIC_CLASS_MASK;
                                     void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x80));
                                     packet_cursor = func_800A88A0(packet_cursor, ot_entry, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), 1,
@@ -2428,10 +2428,10 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             break;
                             case 0x4B:
                             {
-                                s8 golem_index = g_pad_ctx->joined_golem;
+                                s8 golem_index = g_saved_game_ctx->joined_golem;
                                 if (golem_index >= 0)
                                 {
-                                    PadContext* context = g_pad_ctx;
+                                    SavedGameLayout* context = g_saved_game_ctx;
                                     u8 v = menu_golem_record(context, golem_index)->logic_layout >> GOLEM_GRID_BOUND_SHIFT;
                                     void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x7C));
                                     packet_cursor = func_800A88A0(packet_cursor, ot_entry, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), 1,
@@ -2442,10 +2442,10 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             break;
                             case 0x4C:
                             {
-                                s8 golem_index = g_pad_ctx->joined_golem;
+                                s8 golem_index = g_saved_game_ctx->joined_golem;
                                 if (golem_index >= 0)
                                 {
-                                    PadContext* context = g_pad_ctx;
+                                    SavedGameLayout* context = g_saved_game_ctx;
                                     u8 v = menu_golem_record(context, golem_index)->unknown_0x46;
                                     packet_cursor = func_800A8A78(ot_entry, packet_cursor, v, 1, &pos,
                                                                   ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
@@ -2454,14 +2454,14 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             break;
                             case 0x4D:
                             {
-                                s8 golem_index = g_pad_ctx->joined_golem;
+                                s8 golem_index = g_saved_game_ctx->joined_golem;
                                 if (golem_index >= 0)
                                 {
-                                    PadContext* context;
+                                    SavedGameLayout* context;
                                     s32 idx;
                                     draw_packet_cursor = packet_cursor;
                                     base_a2_10 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x70));
-                                    context = g_pad_ctx;
+                                    context = g_saved_game_ctx;
                                     idx = menu_golem_record(context, golem_index)->palette;
                                     {
                                         void* a2_2 = (void*)((u8*)base_a2_10 + *(u16*)((u8*)base_a2_10 + (idx * 2)));
@@ -2485,34 +2485,34 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 switch (content_index)
                                 {
                                 case 0x4E:
-                                    display_value = menu_equipped_item(g_pad_ctx, 0)->display_nibbles.packed & 0xF;
+                                    display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed & 0xF;
                                     break;
                                 case 0x4F:
-                                    display_value = menu_equipped_item(g_pad_ctx, 0)->display_nibbles.bytes[0];
+                                    display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.bytes[0];
                                     display_value >>= 4;
                                     break;
                                 case 0x50:
-                                    display_value = menu_equipped_item(g_pad_ctx, 0)->display_nibbles.packed >> 8;
+                                    display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed >> 8;
                                     display_value &= 0xF;
                                     break;
                                 case 0x51:
-                                    display_value = menu_equipped_item(g_pad_ctx, 0)->display_nibbles.packed >> 12;
+                                    display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed >> 12;
                                     display_value &= 0xF;
                                     break;
                                 case 0x52:
-                                    display_value = menu_equipped_item(g_pad_ctx, 0)->display_nibbles.halfwords[1];
+                                    display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.halfwords[1];
                                     display_value &= 0xF;
                                     break;
                                 case 0x53:
-                                    display_value = menu_equipped_item(g_pad_ctx, 0)->display_nibbles.packed >> 20;
+                                    display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed >> 20;
                                     display_value &= 0xF;
                                     break;
                                 case 0x54:
-                                    display_value = menu_equipped_item(g_pad_ctx, 0)->display_nibbles.bytes[3];
+                                    display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.bytes[3];
                                     display_value &= 0xF;
                                     break;
                                 case 0x55:
-                                    display_value = menu_equipped_item(g_pad_ctx, 0)->display_nibbles.packed >> 28;
+                                    display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed >> 28;
                                     break;
                                 }
                                 packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, display_value, 1, &pos,
@@ -2531,14 +2531,14 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             switch (shared_s0)
                             {
                             case 1:
-                                if (*(u32*)((void*)g_pad_ctx + 0x2C) > 0x989680U)
+                                if (*(u32*)((void*)g_saved_game_ctx + 0x2C) > 0x989680U)
                                 {
                                     packet_cursor = func_800A8A78(ot_entry, packet_cursor, 0x989680U, 1, &pos,
                                                                   ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 else
                                 {
-                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, *(u32*)((void*)g_pad_ctx + 0x2C), 1, &pos,
+                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, *(u32*)((void*)g_saved_game_ctx + 0x2C), 1, &pos,
                                                                   ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
@@ -2559,7 +2559,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     pos.x -= 0x19;
                                     break;
                                 }
-                                v1 = *(s32*)((void*)g_pad_ctx + 0x30) + VSync(-1);
+                                v1 = *(s32*)((void*)g_saved_game_ctx + 0x30) + VSync(-1);
                                 shared_s0 = v1 - D_80042FB4;
                                 pos.x += 0x14;
                                 s2 = shared_s0 / 216000;
@@ -2591,7 +2591,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             {
                             case 1:
                             {
-                                void* base = (void*)g_pad_ctx + g_menu_char_slot * 0x250;
+                                void* base = (void*)g_saved_game_ctx + g_menu_char_slot * 0x250;
                                 if ((*(u8*)((u8*)base + 0x608) & 0x7F) != two_outer || ((*(u8*)((u8*)base + 0x609) != 5) && (*(u8*)((u8*)base + 0x609) != 8)))
                                 {
                                     draw_packet_cursor = packet_cursor;
@@ -2607,7 +2607,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             break;
                             case 2:
                             {
-                                void* base = (void*)g_pad_ctx + g_menu_char_slot * 0x250;
+                                void* base = (void*)g_saved_game_ctx + g_menu_char_slot * 0x250;
                                 if ((*(u8*)((u8*)base + 0x608) & 0x7F) != 2 || ((*(u8*)((u8*)base + 0x609) != 5) && (*(u8*)((u8*)base + 0x609) != 8)))
                                 {
                                     draw_packet_cursor = packet_cursor;
@@ -3155,7 +3155,7 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
             case 2:
             {
                 u8* text_table = menu_text_table_base(MENU_TEXT_SPELL_HELP);
-                u8* character_base = (u8*)g_pad_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
+                u8* character_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
                 u8 entry_index = *(character_base + action_type + 0x609);
 
                 prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(text_table, entry_index));
@@ -3166,7 +3166,7 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
             case 5:
             case 6:
             {
-                u8* pad_base = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
+                u8* pad_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * 0x250);
                 u8* flag_addr = pad_base + action_type;
                 u8 flag = ((MenuNameSelection*)(flag_addr + 0x609))->packed;
                 if (flag != MENU_NONE)
@@ -3198,12 +3198,12 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
             case 10:
                 if (g_menu_char_slot < 2)
                 {
-                    PadContext* context = g_pad_ctx;
+                    SavedGameLayout* context = g_saved_game_ctx;
                     if (menu_equipped_item(context, action_type - MENU_EQUIPMENT_SUBTYPE_BASE)->active != 0)
                     {
                         if (menu_item_is_nondefault(&menu_character_record(context, g_menu_char_slot)->items[action_type - MENU_EQUIPMENT_SUBTYPE_BASE]) != 0)
                         {
-                            s32 name_index = menu_equipped_item(g_pad_ctx, action_type - MENU_EQUIPMENT_SUBTYPE_BASE)->attributes.halves.high & 0x3F;
+                            s32 name_index = menu_equipped_item(g_saved_game_ctx, action_type - MENU_EQUIPMENT_SUBTYPE_BASE)->attributes.halves.high & 0x3F;
                             u16 name_offset = *(u16*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_KEY_ITEM_NAMES] +
                                                       name_index * 2);
                             u8* message_table = (u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES];
@@ -3218,7 +3218,7 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
                             item_name_buffer[0] = 0;
                         }
                         {
-                            PadContext* context = g_pad_ctx;
+                            SavedGameLayout* context = g_saved_game_ctx;
                             u32 item_attributes = menu_equipped_item(context, action_type - MENU_EQUIPMENT_SUBTYPE_BASE)->attributes.packed;
                             u32 kind = (item_attributes >> 8) & 3;
                             switch (kind)
@@ -3250,7 +3250,7 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
                             default:
                             {
                                 s32* category_help_offset = &((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_CATEGORY_HELP];
-                                PadContext* context = g_pad_ctx;
+                                SavedGameLayout* context = g_saved_game_ctx;
                                 u32 reloaded_item_attributes = menu_equipped_item(context, action_type - MENU_EQUIPMENT_SUBTYPE_BASE)->attributes.packed;
                                 u32 idx = (reloaded_item_attributes >> 9) & 0x7E;
                                 u8* category_help_table = (u8*)g_menu_state_ptr + *category_help_offset;
@@ -3271,7 +3271,7 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
             case 12:
             case 13:
             {
-                u8* char_base = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
+                u8* char_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * 0x250);
                 if (*(char_base + 0x640) != 0)
                 {
                     text_index = (s32) * (char_base + action_type + 0x65D);
@@ -3282,7 +3282,7 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
             case 14:
             {
                 u8* text_table = menu_text_table_base(17);
-                u8* character_base = (u8*)g_pad_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
+                u8* character_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
                 u8 entry_index = character_base[0x609];
 
                 prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(text_table, entry_index));
@@ -3342,7 +3342,7 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
             case 25:
             {
                 u8* text_table = menu_text_table_base(29);
-                u8* character_base = (u8*)g_pad_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
+                u8* character_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
                 u8 entry_index = character_base[0x633];
 
                 prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(text_table, entry_index));

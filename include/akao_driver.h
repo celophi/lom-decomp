@@ -194,7 +194,6 @@ extern s32 akao_submit_bank(AkaoBankHeader* bank, s32 wait_for_completion);
 extern s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_base);
 void akao_spu_write(void* source, s32 byte_count);
 void akao_spu_read(void* destination, s32 byte_count);
-extern void akao_irq_handler(void);
-
+extern long akao_irq_handler(void);
 
 #endif

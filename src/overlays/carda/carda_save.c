@@ -1,27 +1,5 @@
 #include "carda_internal.h"
 
-/**
- * @brief Size of one stored record in the g_pad_ctx block.
- * @note Record @c i lives at g_pad_ctx + i * CARDA_RECORD_SIZE; the CARDA_RECORD_*_OFFSET
- *       values are byte offsets from that address.
- */
-#define CARDA_RECORD_SIZE 0x60
-
-/** @brief Number of stored records. */
-#define CARDA_RECORD_COUNT 5
-
-/** @brief Offset of a record's data; its first byte is non-zero while the record is in use. */
-#define CARDA_RECORD_ARRAY_OFFSET 0x2EF4
-
-/** @brief Offset of a record's growth word (low byte kept, upper bits accumulate). */
-#define CARDA_RECORD_GROWTH_OFFSET 0x2F0C
-
-/** @brief Offset of a record's identifier word, compared against the save blob. */
-#define CARDA_RECORD_ID_OFFSET 0x2F50
-
-/** @brief Byte offset of the identifier word in the save blob at g_carda_save_blob. */
-#define CARDA_SAVE_BLOB_ID_OFFSET 0x3B4
-
 /** @brief Left edge of the save window text, before the transition offset. */
 #define CARDA_SAVE_TEXT_X 0x90
 
@@ -404,13 +382,10 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         play_menu_sfx(0x7B, 0x80);
         g_carda_entry_state = CARDA_SAVE_STATE_CONFIRM_SAVE;
         D_80165F7C = 0;
-        save_id = *(s32*)(g_carda_save_blob + CARDA_SAVE_BLOB_ID_OFFSET);
-        for (i = 0; i < CARDA_RECORD_COUNT; i++)
+        save_id = CARDA_SAVE_DATA->record.unique_id;
+        for (i = 0; i < PET_RECORD_COUNT; i++)
         {
-            u8* record;
-
-            record = g_pad_ctx + i * CARDA_RECORD_SIZE;
-            if (record[CARDA_RECORD_ARRAY_OFFSET] != 0 && *(s32*)(record + CARDA_RECORD_ID_OFFSET) == save_id)
+            if (g_saved_game_ctx->pets[i].name[0] != 0 && g_saved_game_ctx->pets[i].unique_id == save_id)
             {
                 D_80165F7C = 1;
                 break;
@@ -424,18 +399,15 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         }
         if (g_carda_mode == 3)
         {
-            for (D_801227C4 = 0; D_801227C4 < CARDA_RECORD_COUNT; D_801227C4++)
+            for (D_801227C4 = 0; D_801227C4 < PET_RECORD_COUNT; D_801227C4++)
             {
-                u8* record;
-
-                record = g_pad_ctx + D_801227C4 * CARDA_RECORD_SIZE;
-                if (record[CARDA_RECORD_ARRAY_OFFSET] == 0)
+                if (g_saved_game_ctx->pets[D_801227C4].name[0] == 0)
                 {
                     break;
                 }
             }
             g_field_card_overlay_mode = 5;
-            if (D_801227C4 == CARDA_RECORD_COUNT)
+            if (D_801227C4 == PET_RECORD_COUNT)
             {
                 g_field_card_overlay_mode = 7;
                 g_menu_element_counter = 0x20;
@@ -589,7 +561,7 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             }
             else
             {
-                g_gosub_result_values = CARDA_RECORD_COUNT;
+                g_gosub_result_values = PET_RECORD_COUNT;
             }
             carda_store_active_record();
             g_carda_save_in_progress = 1;
@@ -616,12 +588,9 @@ s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         {
             g_field_card_overlay_mode = 4;
             play_menu_sfx(0x7A, 0x80);
-            if (g_gosub_result_values == CARDA_RECORD_COUNT)
+            if (g_gosub_result_values == PET_RECORD_COUNT)
             {
-                u8* record;
-
-                record = g_pad_ctx + D_801227C4 * CARDA_RECORD_SIZE;
-                record[CARDA_RECORD_ARRAY_OFFSET] = 0;
+                g_saved_game_ctx->pets[D_801227C4].name[0] = 0;
             }
             else
             {
@@ -729,7 +698,7 @@ void carda_store_active_record(void)
 {
     cdrom_queue_read(0x5E2, g_carda_save_blob);
     cdrom_wait_queue_empty();
-    card_resource_noop_hook(g_carda_save_blob, &CARDA_GAME_STATE->records[D_801227C4]);
+    card_resource_noop_hook(g_carda_save_blob, &g_saved_game_ctx->pets[D_801227C4]);
 }
 
 /**
@@ -737,8 +706,8 @@ void carda_store_active_record(void)
  */
 void carda_restore_active_record(void)
 {
-    bcopy(g_carda_saved_record_copy, &CARDA_GAME_STATE->records[D_801227C4], sizeof(CardaSaveRecord));
-    CARDA_GAME_STATE->records[D_801227C4].growth += g_carda_growth_delta;
+    bcopy(g_carda_saved_record_copy, (u8*)&g_saved_game_ctx->pets[D_801227C4], sizeof(PetRecord));
+    g_saved_game_ctx->pets[D_801227C4].progress.bits.experience += g_carda_growth_delta;
     func_800C1230(D_801227C4);
 }
 
@@ -1030,15 +999,15 @@ void carda_apply_save_items(void)
     save = CARDA_SAVE_DATA;
     list = &save->items;
     g_carda_received_item_count = 0;
-    bcopy(&save->record, g_carda_saved_record_copy, sizeof(CardaSaveRecord));
+    bcopy((u8*)&save->record, g_carda_saved_record_copy, sizeof(PetRecord));
     g_carda_received_item_count = 0;
     g_carda_growth_delta = list->growth_delta;
     for (i = 0; i < list->count; i++)
     {
-        count = CARDA_GAME_STATE->item_counts[list->ids[i]];
+        count = g_saved_game_ctx->item_counts[list->ids[i]];
         if (count < CARDA_ITEM_COUNT_MAX)
         {
-            CARDA_GAME_STATE->item_counts[list->ids[i]] = count + 1;
+            g_saved_game_ctx->item_counts[list->ids[i]] = count + 1;
             g_carda_received_item_ids[g_carda_received_item_count] = list->ids[i];
             g_carda_received_item_count++;
         }

@@ -11,12 +11,12 @@ void gosub_build_color_material_list(void)
     count = 0;
     for (i = GOSUB_COLOR_MATERIAL_FIRST; i < GOSUB_COLOR_MATERIAL_END; i++)
     {
-        if (g_pad_ctx->item_counts[i] != 0)
+        if (g_saved_game_ctx->item_counts[i] != 0)
         {
             GosubListRow* row = &g_gosub_rows[count];
             row->name = GOSUB_TEXT(GOSUB_TEXT_ITEM_NAMES, i);
             row->desc = GOSUB_TEXT(GOSUB_TEXT_COLOR_NAMES, g_gosub_item_colors[i]);
-            row->value = g_pad_ctx->item_counts[i];
+            row->value = g_saved_game_ctx->item_counts[i];
             row->text_color = GOSUB_TEXT_COLOR_NORMAL;
             row->index = i;
             count++;
@@ -41,12 +41,12 @@ void gosub_build_produce_list(void)
     count = 0;
     for (i = GOSUB_PRODUCE_FIRST; i < GOSUB_PRODUCE_END; i++)
     {
-        if (g_pad_ctx->item_counts[i] != 0)
+        if (g_saved_game_ctx->item_counts[i] != 0)
         {
             GosubListRow* row = &g_gosub_rows[count];
             row->name = GOSUB_TEXT(GOSUB_TEXT_ITEM_NAMES, i);
             row->desc = GOSUB_TEXT(GOSUB_TEXT_ITEM_DESCRIPTIONS, i);
-            row->value = g_pad_ctx->item_counts[i];
+            row->value = g_saved_game_ctx->item_counts[i];
             row->text_color = GOSUB_TEXT_COLOR_NORMAL;
             row->index = i;
             count++;
@@ -71,11 +71,11 @@ void gosub_build_elemental_coin_list(void)
     count = 0;
     for (i = GOSUB_ELEMENTAL_COIN_FIRST; i < GOSUB_ELEMENTAL_COIN_END; i++)
     {
-        if (g_pad_ctx->item_counts[i] != 0)
+        if (g_saved_game_ctx->item_counts[i] != 0)
         {
             GosubListRow* row = &g_gosub_rows[count];
             row->name = GOSUB_TEXT(GOSUB_TEXT_ITEM_NAMES, i);
-            row->value = g_pad_ctx->item_counts[i];
+            row->value = g_saved_game_ctx->item_counts[i];
             row->text_color = GOSUB_TEXT_COLOR_NORMAL;
             row->index = i;
             count++;
@@ -100,12 +100,12 @@ void gosub_build_secondary_material_list(void)
     count = 0;
     for (i = GOSUB_SECONDARY_MATERIAL_FIRST; i < GOSUB_SECONDARY_MATERIAL_END; i++)
     {
-        if (g_pad_ctx->item_counts[i] != 0)
+        if (g_saved_game_ctx->item_counts[i] != 0)
         {
             GosubListRow* row = &g_gosub_rows[count];
             row->name = GOSUB_TEXT(GOSUB_TEXT_ITEM_NAMES, i);
             row->desc = GOSUB_TEXT(GOSUB_TEXT_ITEM_DESCRIPTIONS, i);
-            row->value = g_pad_ctx->item_counts[i];
+            row->value = g_saved_game_ctx->item_counts[i];
             row->text_color = GOSUB_TEXT_COLOR_NORMAL;
             row->index = i;
             count++;
@@ -130,12 +130,12 @@ void gosub_build_primary_material_list(void)
     count = 0;
     for (i = GOSUB_PRIMARY_MATERIAL_FIRST; i < GOSUB_PRIMARY_MATERIAL_END; i++)
     {
-        if (g_pad_ctx->item_counts[i] != 0)
+        if (g_saved_game_ctx->item_counts[i] != 0)
         {
             GosubListRow* row = &g_gosub_rows[count];
             row->name = GOSUB_TEXT(GOSUB_TEXT_ITEM_NAMES, i);
             row->desc = GOSUB_TEXT(GOSUB_TEXT_ITEM_DESCRIPTIONS, i);
-            row->value = g_pad_ctx->item_counts[i];
+            row->value = g_saved_game_ctx->item_counts[i];
             row->text_color = GOSUB_TEXT_COLOR_NORMAL;
             row->index = i;
             count++;
@@ -159,10 +159,10 @@ void gosub_build_logic_block_list(void)
     u8* row_name;
     u8 number_text[32];
 
-    for (i = 0; i < g_pad_ctx->logic_block_count; i++)
+    for (i = 0; i < g_saved_game_ctx->logic_block_count; i++)
     {
-        g_gosub_rows[i].detail_group = g_pad_ctx->logic_blocks[i].f.id;
-        g_gosub_rows[i].detail_id = g_pad_ctx->logic_blocks[i].f.quantity;
+        g_gosub_rows[i].detail_group = g_saved_game_ctx->logic_blocks[i].f.id;
+        g_gosub_rows[i].detail_id = g_saved_game_ctx->logic_blocks[i].f.quantity;
         row_name = g_gosub_text_buffers[i];
         gosub_copy_encoded_string(row_name, GOSUB_TEXT(GOSUB_TEXT_LOGIC_BLOCK_NAMES, g_gosub_rows[i].detail_group));
         if (g_gosub_rows[i].detail_id != 0)
@@ -174,8 +174,8 @@ void gosub_build_logic_block_list(void)
         g_gosub_rows[i].name = row_name;
         g_gosub_rows[i].desc = GOSUB_TEXT(GOSUB_TEXT_LOGIC_BLOCK_DESCRIPTIONS, g_gosub_rows[i].detail_group);
         g_gosub_rows[i].value = GOSUB_ROW_LOGIC_BLOCK;
-        g_gosub_rows[i].detail_variant = g_pad_ctx->logic_blocks[i].f.shape;
-        if (g_pad_ctx->logic_blocks[i].f.placed != 0 || g_pad_ctx->logic_blocks[i].f.logic_type != LOGIC_BLOCK_UNASSIGNED)
+        g_gosub_rows[i].detail_variant = g_saved_game_ctx->logic_blocks[i].f.shape;
+        if (g_saved_game_ctx->logic_blocks[i].f.placed != 0 || g_saved_game_ctx->logic_blocks[i].f.logic_type != LOGIC_BLOCK_UNASSIGNED)
         {
             g_gosub_rows[i].flags.block.in_use = 1;
         }
@@ -186,7 +186,7 @@ void gosub_build_logic_block_list(void)
         g_gosub_rows[i].index = i;
         g_gosub_rows[i].text_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    g_gosub_row_count = g_pad_ctx->logic_block_count;
+    g_gosub_row_count = g_saved_game_ctx->logic_block_count;
     g_gosub_visible_row_count = 4;
     g_gosub_row_height = 32;
     g_gosub_window_width = GOSUB_LOGIC_BLOCK_PANEL_WIDTH;
@@ -214,7 +214,7 @@ void gosub_build_companion_list(s32 mode)
     {
         for (order_index = 0; order_index < GOLEM_RECORD_COUNT; order_index++)
         {
-            record_index = g_pad_ctx->golem_order[order_index];
+            record_index = g_saved_game_ctx->golem_order[order_index];
             if (record_index < GOLEM_RECORD_COUNT)
             {
                 if (mode == GOSUB_COMPANIONS_ALL)
@@ -227,7 +227,7 @@ void gosub_build_companion_list(s32 mode)
                 }
                 g_gosub_rows[row_count].value = GOSUB_ROW_COMPANION;
                 g_gosub_rows[row_count].flags.companion.pet = 0;
-                if (g_pad_ctx->joined_golem == record_index)
+                if (g_saved_game_ctx->joined_golem == record_index)
                 {
                     g_gosub_rows[row_count].detail_group = 1;
                 }
@@ -238,16 +238,16 @@ void gosub_build_companion_list(s32 mode)
                 g_gosub_rows[row_count].flags.companion.egg = 0;
                 g_gosub_rows[row_count].flags.companion.grazing = 0;
                 g_gosub_rows[row_count].text_color = GOSUB_TEXT_COLOR_NORMAL;
-                g_gosub_rows[row_count].name = g_pad_ctx->golem_records[record_index].name;
+                g_gosub_rows[row_count].name = g_saved_game_ctx->golem_records[record_index].name;
                 /* The golem's type and palette. */
-                g_gosub_rows[row_count].detail_id = g_pad_ctx->golem_records[record_index].logic_layout & GOLEM_LOGIC_CLASS_MASK;
-                g_gosub_rows[row_count].detail_variant = g_pad_ctx->golem_records[record_index].palette;
-                g_gosub_rows[row_count].primary_value = g_pad_ctx->golem_records[record_index].primary_value;
+                g_gosub_rows[row_count].detail_id = g_saved_game_ctx->golem_records[record_index].logic_layout & GOLEM_LOGIC_CLASS_MASK;
+                g_gosub_rows[row_count].detail_variant = g_saved_game_ctx->golem_records[record_index].palette;
+                g_gosub_rows[row_count].primary_value = g_saved_game_ctx->golem_records[record_index].primary_value;
                 for (stat_index = 0; stat_index < COMPANION_STAT_COUNT; stat_index++)
                 {
-                    g_gosub_rows[row_count].stats[stat_index] = g_pad_ctx->golem_records[record_index].stats[stat_index];
+                    g_gosub_rows[row_count].stats[stat_index] = g_saved_game_ctx->golem_records[record_index].stats[stat_index];
                 }
-                g_gosub_rows[row_count].secondary_value = g_pad_ctx->golem_records[record_index].secondary_value;
+                g_gosub_rows[row_count].secondary_value = g_saved_game_ctx->golem_records[record_index].secondary_value;
                 row_count++;
             }
         }
@@ -256,12 +256,12 @@ void gosub_build_companion_list(s32 mode)
     {
         for (slot = 0; slot < PET_RECORD_COUNT; slot++)
         {
-            if (g_pad_ctx->pet_records[slot].name[0] != 0)
+            if (g_saved_game_ctx->pets[slot].name[0] != 0)
             {
                 g_gosub_rows[row_count].index = slot;
                 g_gosub_rows[row_count].value = GOSUB_ROW_COMPANION;
                 g_gosub_rows[row_count].flags.companion.pet = 1;
-                if (g_pad_ctx->joined_pet == slot)
+                if (g_saved_game_ctx->joined_pet == slot)
                 {
                     g_gosub_rows[row_count].detail_group = 1;
                 }
@@ -270,22 +270,22 @@ void gosub_build_companion_list(s32 mode)
                     g_gosub_rows[row_count].detail_group = 0;
                 }
                 g_gosub_rows[row_count].text_color = GOSUB_TEXT_COLOR_NORMAL;
-                g_gosub_rows[row_count].name = g_pad_ctx->pet_records[slot].name;
+                g_gosub_rows[row_count].name = g_saved_game_ctx->pets[slot].name;
                 /* The pet's species and level. */
-                g_gosub_rows[row_count].detail_id = g_pad_ctx->pet_records[slot].species;
-                g_gosub_rows[row_count].primary_value = g_pad_ctx->pet_records[slot].primary_value;
-                g_gosub_rows[row_count].flags.companion.egg = g_pad_ctx->pet_records[slot].status.egg;
-                g_gosub_rows[row_count].flags.companion.grazing = g_pad_ctx->pet_records[slot].status.grazing;
-                g_gosub_rows[row_count].detail_variant = g_pad_ctx->pet_records[slot].level;
+                g_gosub_rows[row_count].detail_id = g_saved_game_ctx->pets[slot].species;
+                g_gosub_rows[row_count].primary_value = g_saved_game_ctx->pets[slot].power;
+                g_gosub_rows[row_count].flags.companion.egg = g_saved_game_ctx->pets[slot].status.bits.egg;
+                g_gosub_rows[row_count].flags.companion.grazing = g_saved_game_ctx->pets[slot].status.bits.grazing;
+                g_gosub_rows[row_count].detail_variant = g_saved_game_ctx->pets[slot].progress.level;
                 if (g_gosub_rows[row_count].flags.half & 1)
                 {
                     /* An egg shows its egg portrait and how long it still needs to hatch. */
-                    g_gosub_rows[row_count].detail_id = g_pad_ctx->pet_records[slot].egg_species + GOSUB_EGG_PORTRAIT_FIRST;
-                    if (g_pad_ctx->pet_records[slot].hatch_counter < GOSUB_EGG_ANY_TIME_BELOW)
+                    g_gosub_rows[row_count].detail_id = g_saved_game_ctx->pets[slot].egg_species + GOSUB_EGG_PORTRAIT_FIRST;
+                    if (g_saved_game_ctx->pets[slot].hatch_counter < GOSUB_EGG_ANY_TIME_BELOW)
                     {
                         g_gosub_rows[row_count].detail_variant = GOSUB_EGG_HATCH_ANY_TIME;
                     }
-                    else if (g_pad_ctx->pet_records[slot].hatch_counter < GOSUB_EGG_ALMOST_READY_BELOW)
+                    else if (g_saved_game_ctx->pets[slot].hatch_counter < GOSUB_EGG_ALMOST_READY_BELOW)
                     {
                         g_gosub_rows[row_count].detail_variant = GOSUB_EGG_HATCH_ALMOST_READY;
                     }
@@ -296,9 +296,9 @@ void gosub_build_companion_list(s32 mode)
                 }
                 for (stat_index = 0; stat_index < COMPANION_STAT_COUNT; stat_index++)
                 {
-                    g_gosub_rows[row_count].stats[stat_index] = g_pad_ctx->pet_records[slot].stats[stat_index];
+                    g_gosub_rows[row_count].stats[stat_index] = g_saved_game_ctx->pets[slot].equipment_totals[stat_index];
                 }
-                g_gosub_rows[row_count].secondary_value = g_pad_ctx->pet_records[slot].secondary_value;
+                g_gosub_rows[row_count].secondary_value = g_saved_game_ctx->pets[slot].hp;
                 row_count++;
             }
         }

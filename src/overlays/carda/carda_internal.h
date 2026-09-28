@@ -3,10 +3,12 @@
 
 #include "field_text.h"
 #include "common.h"
+#include "saved_game.h"
 #include "vector.h"
 #include "gpu_packet.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
+#include "sdk/libmcx.h"
 
 /**
  * @brief Draw callback of a CARDA UI element: emits the element's content at
@@ -210,30 +212,14 @@ typedef struct
     s8 text[3];
 } CardaSjisChar;
 
-/** @brief Number of save records in the game state's record table. */
-#define CARDA_SAVE_RECORD_COUNT 5
+/** @brief Bytes read to show an entry: the card header and the first 0x100 bytes of the saved game. */
+#define CARDA_ENTRY_READ_BYTES 0x280
+
+/** @brief Bytes read to show an entry that is not a Legend of Mana save: its card header title and CLUT. */
+#define CARDA_ENTRY_TITLE_READ_BYTES 0x80
 
 /** @brief Highest count an item stack can reach. */
 #define CARDA_ITEM_COUNT_MAX 99
-
-/** @brief One 0x60-byte record of the game state's record table. */
-typedef struct CardaSaveRecord
-{
-    u8 active; /**< Nonzero when the slot holds a record. */
-    u8 unk1[0x17];
-    u32 unk18 : 8;
-    u32 growth : 24; /**< Accumulates the save's growth delta. */
-    u8 unk1C[0x40];
-    s32 id; /**< Identifier matched when looking for a duplicate record. */
-} CardaSaveRecord;
-
-/** @brief The parts of the FIELD game state (g_pad_ctx) that CARDA reads and writes. */
-typedef struct CardaGameState
-{
-    u8 unk0[0x25E0];
-    u8 item_counts[0x914]; /**< Owned count of each item id. */
-    CardaSaveRecord records[CARDA_SAVE_RECORD_COUNT];
-} CardaGameState;
 
 /** @brief Item list stored in a memory-card save. */
 typedef struct CardaSaveItemList
@@ -248,15 +234,14 @@ typedef struct CardaSaveData
 {
     u8 unk0[0x300];
     CardaSaveItemList items;
-    CardaSaveRecord record; /**< Record restored into the game state. */
+    PetRecord record; /**< Pet restored into the saved game. */
 } CardaSaveData;
 
 /**
- * @brief Typed views of the game state and save buffer.
- * @note g_pad_ctx and g_carda_save_blob are still declared as byte pointers because
- *       carda_draw_save_flow indexes them with raw offsets.
+ * @brief The pet-transfer file in the save buffer.
+ * @note g_carda_save_blob is a byte pointer because the buffer holds either a
+ *       save file (SaveFile) or a pet-transfer file (CardaSaveData).
  */
-#define CARDA_GAME_STATE ((CardaGameState *)g_pad_ctx)
 #define CARDA_SAVE_DATA ((CardaSaveData *)g_carda_save_blob)
 
 /**
@@ -283,44 +268,6 @@ typedef struct
     u32 padding;
 } CardaGlyphSprite;
 
-/** @brief Glyph index marking an empty party-icon slot in CardaSaveMetadata. */
-#define CARDA_NO_ICON 0x7F
-
-/* Offset of the save-slot id inside the saved game (CardaSaveMetadata.save_slot_id). */
-#define CARDA_SAVE_SLOT_ID_OFFSET 0xCF
-
-/**
- * @brief The parts of the selected save file's saved game that the file-select
- *        screen shows.
- */
-typedef struct
-{
-    u8 title[0x18];
-    u32 unknown_0x18 : 25;
-    u32 party_icon_0 : 7;
-    u8 unknown_0x1c[3];
-    u8 icon_palette;
-    u32 location : 18; /**< Index into the location-name text table. */
-    u32 party_icon_1 : 7;
-    u32 party_icon_2 : 7;
-    u8 unknown_0x24[0x30 - 0x24];
-    s32 playtime; /**< Play time in 1/60 s ticks. */
-    u8 unknown_0x34[CARDA_SAVE_SLOT_ID_OFFSET - 0x34];
-    u8 save_slot_id;
-} CardaSaveMetadata;
-
-/**
- * @brief Text-bearing prefix of a PSX memory-card file header.
- *
- * The encoded title starts at +0x4 and spans two 0x20-byte lines.
- */
-typedef struct
-{
-    u8 header[4];
-    u8 title_line_1[0x20];
-    u8 title_line_2[0x20];
-} CardaCardHeaderText;
-
 /**
  * @brief Address of FIELD UI string @p index, given its two-byte offset entry @p entry.
  * @note The table start is derived back from the entry symbol, as in FIELD's own lookups.
@@ -330,7 +277,6 @@ typedef struct
 /* FIELD / main-executable globals used by this overlay. */
 extern s32 g_save_slot_index;
 extern s32 g_playtime_vsync_origin;
-extern u8 *g_pad_ctx;
 extern s32 D_801227C4;
 extern s32 g_pad_input;
 extern s32 g_gosub_result_values;
@@ -464,17 +410,19 @@ extern u8 g_carda_icon_context[];
 extern s32 g_carda_card_slot;
 extern s32 D_801660F8;
 extern s32 g_carda_selection_status;
-extern u8 *D_80166100;
+/** @brief The saved game's item records (g_saved_game_ctx->items). */
+extern FieldItemRecord* g_carda_items;
 extern s32 g_carda_scroll_y;
 extern s32 D_80166108;
 extern s32 D_8016610C;
 extern s32 D_80166110;
 extern s32 D_80166114;
 extern s32 g_carda_save_in_progress;
-extern CardaCardHeaderText g_carda_selected_file_header;
-extern u8 D_80166124[];
-extern CardaSaveMetadata g_carda_selected_save_metadata;
-extern u8 g_carda_selected_save_slot_id;
+/**
+ * @brief Start of the selected entry's save file: only the card header and the
+ *        first 0x100 bytes of the saved game are read (CARDA_ENTRY_READ_BYTES).
+ */
+extern SaveFile g_carda_selected_file;
 extern u8 *g_carda_save_step;
 extern s32 g_carda_file_handle;
 extern s32 g_carda_entry_ranks[];
@@ -543,9 +491,7 @@ s32 _card_wait(s32);
 s32 _card_clear(s32);
 s32 _card_format();
 s32 VSync(s32);
-s32 func_80032174(s32, void *, s32 *);
 s32 func_80033E7C(s32);
-s32 McxCardType(s32);
 s32 func_80034648(s32, s32, s32);
 s32 field_set_fade_target();
 void field_restore_fade_target(void);

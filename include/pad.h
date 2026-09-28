@@ -33,6 +33,9 @@ typedef enum
     PAD_BTN_LEFT = 0x8000
 } PadButton;
 
+/** @brief Input word with every button set; menus treat it as an invalid controller read and clear it. */
+#define PAD_ALL_BUTTONS 0xFFFF
+
 /** @brief Signed and unsigned views of one raw controller axis sample. */
 typedef union
 {

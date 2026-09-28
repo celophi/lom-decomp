@@ -195,8 +195,8 @@ void field_command_history_record(s32 player, s32 age_sequence)
                     }
                 }
                 count = &g_field_command_history_count[player];
-                /* g_pad_ctx points at the saved game, the block FieldGameState describes. */
-                slot = ((FieldGameState *)g_pad_ctx)->characters[player].button_actions[g_field_hint_button_map[button_index]];
+                /* g_saved_game_ctx points at the saved game, the block SavedGameLayout describes. */
+                slot = ((SavedGameLayout*)g_saved_game_ctx)->characters[player].button_actions[g_field_hint_button_map[button_index]];
                 g_field_command_history[player][*count] = g_field_action_command_codes[slot];
                 if (*count < FIELD_HISTORY_LENGTH - 1)
                 {

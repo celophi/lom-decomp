@@ -68,7 +68,7 @@ static u8* shop_draw_buy_prompt(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
     Vec2s unused_position; /* never used, but the compiled frame size depends on it */
     ShopEntry* entry;
     ShopEntry* stock;
-    InventoryRecord* record;
+    FieldItemRecord* record;
     s32 reduced;
     s32 i;
     s32 free_records;
@@ -94,7 +94,7 @@ static u8* shop_draw_buy_prompt(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
             entry = SHOP_SELECTED_ENTRY();
             if (entry->id & SHOP_ENTRY_RECORD_FLAG)
             {
-                free_records = &g_pad_ctx->inventory[INVENTORY_RECORD_COUNT] - record;
+                free_records = &g_saved_game_ctx->items[FIELD_ITEM_COUNT] - record;
                 if (free_records < g_shop_quantity)
                 {
                     g_shop_quantity = free_records;
@@ -106,7 +106,7 @@ static u8* shop_draw_buy_prompt(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
                 }
                 play_menu_sfx(SHOP_SFX_TRADE, SHOP_SFX_VOLUME);
                 stock = SHOP_SELECTED_ENTRY();
-                g_pad_ctx->money -= stock->price * g_shop_quantity;
+                g_saved_game_ctx->money -= stock->price * g_shop_quantity;
                 if (stock->count != 0)
                 {
                     stock->count -= g_shop_quantity;
@@ -118,16 +118,16 @@ static u8* shop_draw_buy_prompt(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
             }
             else
             {
-                room = SHOP_MAX_ITEM_COUNT - g_pad_ctx->item_counts[entry->id];
+                room = SHOP_MAX_ITEM_COUNT - g_saved_game_ctx->item_counts[entry->id];
                 if (room < g_shop_quantity)
                 {
                     g_shop_quantity = room;
                     reduced = 1;
                 }
-                g_pad_ctx->item_counts[entry->id] += g_shop_quantity;
+                g_saved_game_ctx->item_counts[entry->id] += g_shop_quantity;
                 play_menu_sfx(SHOP_SFX_TRADE, SHOP_SFX_VOLUME);
                 stock = SHOP_SELECTED_ENTRY();
-                g_pad_ctx->money -= stock->price * g_shop_quantity;
+                g_saved_game_ctx->money -= stock->price * g_shop_quantity;
                 if (stock->count != 0)
                 {
                     stock->count -= g_shop_quantity;
@@ -261,20 +261,20 @@ static u8* shop_draw_sell_prompt(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
             }
             else
             {
-                g_pad_ctx->item_counts[entry->id] -= g_shop_quantity;
+                g_saved_game_ctx->item_counts[entry->id] -= g_shop_quantity;
                 stock = SHOP_SELECTED_ENTRY();
                 stock->count -= g_shop_quantity;
-                if (g_pad_ctx->item_counts[stock->id] == 0)
+                if (g_saved_game_ctx->item_counts[stock->id] == 0)
                 {
                     stock->id = SHOP_ENTRY_EMPTY;
                 }
             }
             play_menu_sfx(SHOP_SFX_TRADE, SHOP_SFX_VOLUME);
-            money = g_pad_ctx->money + SHOP_SELECTED_ENTRY()->price * g_shop_quantity;
-            g_pad_ctx->money = money;
+            money = g_saved_game_ctx->money + SHOP_SELECTED_ENTRY()->price * g_shop_quantity;
+            g_saved_game_ctx->money = money;
             if (money > SHOP_MAX_MONEY)
             {
-                g_pad_ctx->money = SHOP_MAX_MONEY;
+                g_saved_game_ctx->money = SHOP_MAX_MONEY;
             }
             g_shop_quantity = 1;
             g_shop_prompt_active = 0;

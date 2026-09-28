@@ -27,7 +27,7 @@
 /** @brief Unique-id bits taken from the random value. */
 #define FIELD_RANDOM_VALUE_MASK 0xFF00FF00
 
-/** @brief Unique-id bits taken from the game-state words at unkD4/unkD6. */
+/** @brief Unique-id bits taken from the saved game identity (game_id, save_id). */
 #define FIELD_FIXED_VALUE_MASK 0x00FF00FF
 
 /** @brief Companion status bit 30: the companion gains experience. */
@@ -48,10 +48,9 @@ typedef struct
 {
     u16 unk0;
     u16 count;
-    FieldRegionRecord templates[1];
+    PetRecord templates[1];
 } FieldCompanionTemplateTable;
 
-extern FieldGameState* g_field_game_state;
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
 extern s32 g_field_gosub_state;
@@ -59,12 +58,12 @@ extern s32 g_field_gosub_state;
 /**
  * @brief Copy a companion template into the first free stored record and give it a unique id.
  * @param template_index Index of the template in resource 7.
- * @return Record index, FIELD_REGION_COUNT when every record is in use, or FIELD_COMPANION_NONE when resource 7 is not loaded.
+ * @return Record index, PET_RECORD_COUNT when every record is in use, or FIELD_COMPANION_NONE when resource 7 is not loaded.
  */
 s32 field_add_stored_companion(s32 template_index)
 {
     FieldCompanionTemplateTable* table;
-    FieldRegionRecord* companion_template;
+    PetRecord* companion_template;
     s32 slot;
     s32 scan;
     s32 retry;
@@ -79,32 +78,32 @@ s32 field_add_stored_companion(s32 template_index)
     }
 
     companion_template = &table->templates[template_index];
-    field_set_text_macro(1, companion_template->name, FIELD_COMPANION_NAME_LENGTH);
+    field_set_text_macro(1, companion_template->name, PET_NAME_LENGTH);
 
-    for (slot = 0; slot < FIELD_REGION_COUNT; slot++)
+    for (slot = 0; slot < PET_RECORD_COUNT; slot++)
     {
-        if (g_field_game_state->regions[slot].name[0] == 0)
+        if (g_field_game_state->pets[slot].name[0] == 0)
         {
-            field_copy_words(companion_template, &g_field_game_state->regions[slot], sizeof(FieldRegionRecord));
+            field_copy_words(companion_template, &g_field_game_state->pets[slot], sizeof(PetRecord));
             retry = -1;
             do
             {
                 random_high = rand();
                 unique_id = (((random_high << 16) + rand()) & FIELD_RANDOM_VALUE_MASK) |
-                            ((g_field_game_state->unkD4 + (g_field_game_state->unkD6 << 16)) & FIELD_FIXED_VALUE_MASK);
+                            ((g_field_game_state->identity.ids.game_id + (g_field_game_state->identity.ids.save_id << 16)) & FIELD_FIXED_VALUE_MASK);
                 if (unique_id != 0)
                 {
                     retry = 0;
                 }
-                for (scan = 0; scan < FIELD_REGION_COUNT; scan++)
+                for (scan = 0; scan < PET_RECORD_COUNT; scan++)
                 {
-                    if (g_field_game_state->regions[scan].name[0] != 0 && g_field_game_state->regions[scan].unique_id == unique_id)
+                    if (g_field_game_state->pets[scan].name[0] != 0 && g_field_game_state->pets[scan].unique_id == unique_id)
                     {
                         retry = -1;
                     }
                 }
             } while (retry != 0);
-            g_field_game_state->regions[slot].unique_id = unique_id;
+            g_field_game_state->pets[slot].unique_id = unique_id;
             return slot;
         }
     }
@@ -113,7 +112,7 @@ s32 field_add_stored_companion(s32 template_index)
 
 /**
  * @brief Release the stored companion named by the first gosub result.
- * @return The released index, FIELD_REGION_COUNT when it is the active companion, or FIELD_COMPANION_NONE.
+ * @return The released index, PET_RECORD_COUNT when it is the active companion, or FIELD_COMPANION_NONE.
  */
 s32 field_release_stored_companion(void)
 {
@@ -123,16 +122,16 @@ s32 field_release_stored_companion(void)
     if (g_gosub_result_count != 0)
     {
         index = g_gosub_result_values[0];
-        if (index < FIELD_REGION_COUNT)
+        if (index < PET_RECORD_COUNT)
         {
-            field_set_text_macro(0, g_field_game_state->regions[index].name, FIELD_COMPANION_NAME_LENGTH);
+            field_set_text_macro(0, g_field_game_state->pets[index].name, PET_NAME_LENGTH);
             index = g_gosub_result_values[0];
-            if (index != g_field_game_state->region_index)
+            if (index != g_field_game_state->joined_pet)
             {
-                g_field_game_state->regions[index].name[0] = 0;
+                g_field_game_state->pets[index].name[0] = 0;
                 return g_gosub_result_values[0];
             }
-            return FIELD_REGION_COUNT;
+            return PET_RECORD_COUNT;
         }
         record_game_diagnostic(DIAG_ERROR, DIAG_BAD_COMPANION, index, 0);
     }
@@ -148,23 +147,23 @@ s32 field_get_stored_companion_status(s32 index)
 {
     s32 status;
 
-    if (index >= FIELD_REGION_COUNT)
+    if (index >= PET_RECORD_COUNT)
     {
         record_game_diagnostic(DIAG_ERROR, DIAG_BAD_COMPANION_STATUS, index, 0);
     }
     else
     {
-        if (g_field_game_state->regions[index].name[0] != 0)
+        if (g_field_game_state->pets[index].name[0] != 0)
         {
-            field_set_text_macro(0, g_field_game_state->regions[index].name, FIELD_COMPANION_NAME_LENGTH);
-            status = g_field_game_state->regions[index].status.word;
+            field_set_text_macro(0, g_field_game_state->pets[index].name, PET_NAME_LENGTH);
+            status = g_field_game_state->pets[index].status.word;
             if (status < 0)
             {
-                if (g_field_game_state->regions[index].unk42 != 0)
+                if (g_field_game_state->pets[index].hatch_counter != 0)
                 {
                     return FIELD_COMPANION_STATUS_NEW_HELD;
                 }
-                g_field_game_state->regions[index].status.word = status & ~FIELD_COMPANION_NEW;
+                g_field_game_state->pets[index].status.word = status & ~PET_STATUS_EGG;
                 return FIELD_COMPANION_STATUS_NEW;
             }
             if (((u32)status >> FIELD_COMPANION_GAINS_EXPERIENCE_BIT) & 1)
@@ -183,14 +182,14 @@ s32 field_get_stored_companion_status(s32 index)
  */
 void field_rename_stored_companion(s32 index)
 {
-    FieldRegionRecord* companion;
+    PetRecord* companion;
 
-    if (index >= FIELD_REGION_COUNT)
+    if (index >= PET_RECORD_COUNT)
     {
         record_game_diagnostic(DIAG_ERROR, DIAG_BAD_COMPANION_RENAME, index, 0);
         return;
     }
-    field_set_text_macro(0, g_field_game_state->regions[index].name, FIELD_COMPANION_NAME_LENGTH);
-    companion = &g_field_game_state->regions[index];
-    field_run_name_entry(companion->name, companion->name, FIELD_NAME_SOURCE_COMPANION, g_field_game_state->regions[index].unk15, 0);
+    field_set_text_macro(0, g_field_game_state->pets[index].name, PET_NAME_LENGTH);
+    companion = &g_field_game_state->pets[index];
+    field_run_name_entry(companion->name, companion->name, FIELD_NAME_SOURCE_COMPANION, g_field_game_state->pets[index].species, 0);
 }

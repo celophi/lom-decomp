@@ -56,14 +56,6 @@
 
 /** @brief Ordering table entry of the field text; the selected label goes one entry in front. */
 #define FIELD_TEXT_OT_INDEX 15
-/** @brief field_draw_text alignment flags and the flag that adds the glyph shadow pass. */
-#define FIELD_TEXT_ALIGN_MASK 0x7F
-#define FIELD_TEXT_ALIGN_RIGHT 1
-#define FIELD_TEXT_ALIGN_CENTER 2
-#define FIELD_TEXT_SHADOW 0x80
-/** @brief field_draw_text text colours. */
-#define FIELD_TEXT_COLOR_NORMAL 4
-#define FIELD_TEXT_COLOR_DIM 5
 
 /** @brief Scale given to the part of the selected label's actor (0x40 is full size). */
 #define FIELD_LABEL_SELECTED_SCALE 0x80
@@ -211,10 +203,9 @@ extern u8 g_field_instrument_icons[];
 
 /*
  * Saved game (g_saved_game) as FIELD reads it; main.h declares the same
- * pointer as PadContext, so this file does not include main.h and declares
+ * pointer as SavedGameLayout, so this file does not include main.h and declares
  * the main executable globals it uses itself.
  */
-extern FieldGameState* g_pad_ctx;
 extern s32 g_pad_input;
 extern s32 g_pad_input_inject;
 extern s32 g_save_slot_index;
@@ -517,7 +508,7 @@ inline void field_format_number(u8* text, s32 number, s32 wide_request)
  */
 void field_bind_saved_game_context(void)
 {
-    g_pad_ctx = (FieldGameState*)g_saved_game.bytes;
+    g_saved_game_ctx = (SavedGameLayout*)g_saved_game.bytes;
 }
 
 /**
@@ -531,14 +522,14 @@ void field_bind_saved_game_context(void)
  */
 void field_store_entry_settings(s16 scene_id, s8 object_id, s8 music_id, s32 spawn_id, s32 sound_bank_id, s32 secondary_music_id)
 {
-    g_pad_ctx->scene_id = scene_id;
-    g_pad_ctx->object_id = object_id;
-    g_pad_ctx->music_id = music_id;
-    g_pad_ctx->spawn_id = spawn_id;
-    g_pad_ctx->sound_bank_id = sound_bank_id;
-    g_pad_ctx->secondary_music_id = secondary_music_id;
-    g_pad_ctx->music_track = g_music_track_index;
-    g_pad_ctx->save_slot = g_save_slot_index;
+    g_saved_game_ctx->scene_id = scene_id;
+    g_saved_game_ctx->object_id = object_id;
+    g_saved_game_ctx->music_id = music_id;
+    g_saved_game_ctx->spawn.bits.id = spawn_id;
+    g_saved_game_ctx->sound_bank_id = sound_bank_id;
+    g_saved_game_ctx->secondary_music_id = secondary_music_id;
+    g_saved_game_ctx->track.bits.music_track = g_music_track_index;
+    g_saved_game_ctx->save_slot = g_save_slot_index;
 }
 
 /**
@@ -721,7 +712,7 @@ void field_compact_inventory(void)
     FieldItemRecord* read_record;
 
     record_index = 0;
-    write_record = g_pad_ctx->items;
+    write_record = g_saved_game_ctx->items;
     read_record = write_record;
     do
     {
@@ -737,7 +728,7 @@ void field_compact_inventory(void)
         record_index += 1;
         read_record++;
     } while (record_index < FIELD_ITEM_COUNT);
-    while (write_record < &g_pad_ctx->items[FIELD_ITEM_COUNT])
+    while (write_record < &g_saved_game_ctx->items[FIELD_ITEM_COUNT])
     {
         write_record->name[0] = 0;
         write_record++;
@@ -753,7 +744,7 @@ FieldItemRecord* field_find_free_inventory_record(void)
     s32 record_index;
     FieldItemRecord* record;
 
-    record = g_pad_ctx->items;
+    record = g_saved_game_ctx->items;
     for (record_index = 0; record_index < FIELD_ITEM_COUNT; record_index++)
     {
         if (record->name[0] == 0)
@@ -925,7 +916,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
             bank = (s32)D_800EC3C4;
             record_offset = index * sizeof(FieldCharacterRecord);
             raw_buttons = port->published_sample.held_buttons;
-            record_base_offset = index * sizeof(FieldCharacterRecord) + FIELD_OFFSET_OF(FieldGameState, characters);
+            record_base_offset = index * sizeof(FieldCharacterRecord) + FIELD_OFFSET_OF(SavedGameLayout, characters);
             work = ((raw_buttons << 8) & 0xFF00) | (raw_buttons >> 8);
             work = (((u32)(work & 0x40) >> 1) | ((work & 0x20) * 2) | ((u32)(work & 0x80) >> 3) | ((work & 0x10) * 8) | (work & 0xFF0F));
             do
@@ -933,8 +924,8 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
                 if (work & bit_or_actor)
                 {
                     /* characters[0] of this shifted base is characters[index]; indexing directly changes the loop hoisting. */
-                    work = (s32)g_pad_ctx + record_offset;
-                    action = ((FieldGameState*)work)->characters[0].button_actions[g_field_hint_button_map[button_or_x]];
+                    work = (s32)g_saved_game_ctx + record_offset;
+                    action = ((SavedGameLayout*)work)->characters[0].button_actions[g_field_hint_button_map[button_or_x]];
                     switch (action)
                     {
                     case FIELD_COMMAND_BUTTON_ACTION: /* The two commands: resource action slots 0 and 1. */
@@ -948,8 +939,8 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
                         break;
 
                     case 0: /* Guests 5 and 8 have no attack or guard. */
-                        if (((((FieldGameState*)work)->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GUEST) &&
-                            ((secondary_action = ((FieldGameState*)work)->characters[0].info.bytes[1], (secondary_action == 5)) || (secondary_action == 8)))
+                        if (((((SavedGameLayout*)work)->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GUEST) &&
+                            ((secondary_action = ((SavedGameLayout*)work)->characters[0].info.bytes[1], (secondary_action == 5)) || (secondary_action == 8)))
                         {
                             text_offset = D_800EC3E0.high << 8;
                             text_part = text_offset + bank;
@@ -968,8 +959,8 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
 
                         break;
                     case 1:
-                        if (((((FieldGameState*)work)->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GUEST) &&
-                            ((secondary_action_alt = ((FieldGameState*)work)->characters[0].info.bytes[1], (secondary_action_alt == 5)) ||
+                        if (((((SavedGameLayout*)work)->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GUEST) &&
+                            ((secondary_action_alt = ((SavedGameLayout*)work)->characters[0].info.bytes[1], (secondary_action_alt == 5)) ||
                              (secondary_action_alt == 8)))
                         {
                             text_offset = D_800EC3E0.high << 8;
@@ -989,7 +980,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
                     default:
                         /* Dead store (overwritten below); without it the technique bank's high half is not hoisted as in the original. */
                         text_value = (s32)g_field_technique_names;
-                        work = ((FieldGameState*)((u8*)g_pad_ctx + record_offset))->characters[0].info.bytes[action];
+                        work = ((SavedGameLayout*)((u8*)g_saved_game_ctx + record_offset))->characters[0].info.bytes[action];
                         if (work == FIELD_SKILL_NONE)
                         {
                             text_offset = D_800EC3E0.high << 8;
@@ -1002,7 +993,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
                             if (work & FIELD_SKILL_INSTRUMENT)
                             {
                                 text_offset = work & ~FIELD_SKILL_INSTRUMENT;
-                                text_or_state = (s32) & ((FieldCharacterRecord*)((u8*)g_pad_ctx + record_base_offset))->unk150[text_offset];
+                                text_or_state = (s32) & ((FieldCharacterRecord*)((u8*)g_saved_game_ctx + record_base_offset))->unk150[text_offset];
                             }
                             else
                             {
@@ -1173,8 +1164,8 @@ void field_merge_dialog_items(void)
 static void field_update_text_session(void)
 {
     if ((g_field_text_session_cd_error && !cdrom_get_error_status()) ||
-        (!g_field_text_session_cd_error && (g_pad_input == PADh || ((g_pad_ctx->characters[1].info.word & FIELD_CHARACTER_AI) &&
-                                                                    g_pad_ctx->characters[1].name[0] && g_pad_input_inject == PADh))))
+        (!g_field_text_session_cd_error && (g_pad_input == PADh || ((g_saved_game_ctx->characters[1].info.word & FIELD_CHARACTER_AI) &&
+                                                                    g_saved_game_ctx->characters[1].name[0] && g_pad_input_inject == PADh))))
     {
         g_field_draw_count = 0;
         g_field_text_session_active = 0;
@@ -1439,8 +1430,8 @@ void field_process_input(FieldRenderHalf* render)
             {
                 if (field_is_scene_fading() == 0)
                 {
-                    if (g_pad_input == PADh ||
-                        ((g_pad_ctx->characters[1].info.word & FIELD_CHARACTER_AI) && g_pad_ctx->characters[1].name[0] && g_pad_input_inject == PADh))
+                    if (g_pad_input == PADh || ((g_saved_game_ctx->characters[1].info.word & FIELD_CHARACTER_AI) && g_saved_game_ctx->characters[1].name[0] &&
+                                                g_pad_input_inject == PADh))
                     {
                         field_run_menu(FIELD_MENU_RENDER_BUFFERS, 0);
                     }
@@ -1449,7 +1440,7 @@ void field_process_input(FieldRenderHalf* render)
             else
             {
                 if (g_pad_input == PADh || g_pad_input == PADRup ||
-                    ((g_pad_ctx->characters[1].info.word & FIELD_CHARACTER_AI) && g_pad_ctx->characters[1].name[0] &&
+                    ((g_saved_game_ctx->characters[1].info.word & FIELD_CHARACTER_AI) && g_saved_game_ctx->characters[1].name[0] &&
                      (g_pad_input_inject == PADh || g_pad_input_inject == PADRup)))
                 {
                     field_run_menu(FIELD_MENU_RENDER_BUFFERS, 0);
@@ -1636,7 +1627,7 @@ static void field_update_modal_text_session(FieldRenderHalf* render)
  * @param refresh_only Nonzero keeps the party membership and HP; zero also reloads them from the saved game.
  * @note Action slots 0-1 are the two commands, 4-7 the skills: a technique, an instrument
  *       (FIELD_SKILL_INSTRUMENT plus an item record) or none (FIELD_SKILL_NONE).
- * @note The FieldGameState pointers here are g_pad_ctx advanced by a character's offset, so their
+ * @note The SavedGameLayout pointers here are g_saved_game_ctx advanced by a character's offset, so their
  *       characters[0] is that character, the way the original addresses the per-character data.
  */
 void field_rebuild_party_actions(s32 refresh_only)
@@ -1654,7 +1645,7 @@ void field_rebuild_party_actions(s32 refresh_only)
     s32 skill_empty;
     u8* animation_params;
     u8* parameter_params;
-    FieldGameState* command_save;
+    SavedGameLayout* command_save;
     s32 character_kind;
     s32 controllers_or_is_player;
     s32 equipment_offset;
@@ -1678,23 +1669,23 @@ void field_rebuild_party_actions(s32 refresh_only)
     FieldActionSlot* command_action;
     FieldItemRecord* instrument;
     FieldActionSlot* technique_action;
-    FieldGameState* player_save;
+    SavedGameLayout* player_save;
     FieldActionSlot* instrument_action;
-    FieldGameState* skills_start;
+    SavedGameLayout* skills_start;
     FieldActionSlot* empty_action;
-    FieldGameState* member_save;
+    SavedGameLayout* member_save;
     FieldObjectState* health;
-    FieldGameState* equipment;
-    FieldGameState* command_view;
-    FieldGameState* skill_cursor;
+    SavedGameLayout* equipment;
+    SavedGameLayout* command_view;
+    SavedGameLayout* skill_cursor;
 
-    akao_set_mono_output(g_pad_ctx->options.bits.mono_sound ^ 1);
-    cdrom_set_audio_volume(0x7F, g_pad_ctx->options.bits.mono_sound);
+    akao_set_mono_output(g_saved_game_ctx->options.bits.mono_sound ^ 1);
+    cdrom_set_audio_volume(0x7F, g_saved_game_ctx->options.bits.mono_sound);
     controllers_or_is_player = (s32)CONTROLLER_STATE;
-    ((ControllerState*)controllers_or_is_player)->ports[0].actuators_enabled = g_pad_ctx->options.bits.vibration;
-    if ((g_pad_ctx->characters[1].info.word & FIELD_CHARACTER_AI) && (g_pad_ctx->characters[1].name[0] != 0))
+    ((ControllerState*)controllers_or_is_player)->ports[0].actuators_enabled = g_saved_game_ctx->options.bits.vibration;
+    if ((g_saved_game_ctx->characters[1].info.word & FIELD_CHARACTER_AI) && (g_saved_game_ctx->characters[1].name[0] != 0))
     {
-        ((ControllerState*)controllers_or_is_player)->ports[1].actuators_enabled = g_pad_ctx->options.bits.vibration;
+        ((ControllerState*)controllers_or_is_player)->ports[1].actuators_enabled = g_saved_game_ctx->options.bits.vibration;
     }
     else
     {
@@ -1708,10 +1699,10 @@ void field_rebuild_party_actions(s32 refresh_only)
             member_offset = player_index * sizeof(FieldCharacterRecord);
             member = &g_field_player_records[player_index];
 
-            if (((FieldGameState*)((u8*)g_pad_ctx + member_offset))->characters[0].name[0] != 0)
+            if (((SavedGameLayout*)((u8*)g_saved_game_ctx + member_offset))->characters[0].name[0] != 0)
             {
                 member->head.bytes.weapon_type = FIELD_WEAPON_TYPE_UNSET;
-                member_save = (FieldGameState*)((u8*)g_pad_ctx + member_offset);
+                member_save = (SavedGameLayout*)((u8*)g_saved_game_ctx + member_offset);
                 member->head.bits.active = 1;
                 slot_or_type = member_save->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK;
                 character_kind = slot_or_type;
@@ -1763,7 +1754,7 @@ void field_rebuild_party_actions(s32 refresh_only)
         {
             actor_base = g_field_actors;
             actor = (FieldActor*)((actor_words + player_index) * 4 + (u8*)actor_base);
-            player_save = (FieldGameState*)((u8*)g_pad_ctx + character_offset);
+            player_save = (SavedGameLayout*)((u8*)g_saved_game_ctx + character_offset);
             actor->control.word = ((actor->control.word & ~FIELD_CONTROL_MODE_MASK) | ((player_save->characters[0].info.bytes[0] >> 7) ^ 1));
             weapon_type = FIELD_ITEM_TYPE(player_save->characters[0].equipment[FIELD_WEAPON_SLOT].info.word);
             controllers_or_is_player = player_index < FIELD_PLAYER_COUNT;
@@ -1777,7 +1768,7 @@ void field_rebuild_party_actions(s32 refresh_only)
                 if (refresh_only == 0)
                 {
                     health = &g_field_object_states[player_index];
-                    hp = ((FieldGameState*)((u8*)g_pad_ctx + character_offset))->characters[0].hp;
+                    hp = ((SavedGameLayout*)((u8*)g_saved_game_ctx + character_offset))->characters[0].hp;
                     health->unk8.word = (health->unk8.word & 0xFF000000) | hp;
                     health->unk0 = hp;
                     health->unk4.word = hp;
@@ -1796,7 +1787,7 @@ void field_rebuild_party_actions(s32 refresh_only)
                 equipment_offset = character_offset + sizeof(FieldItemRecord);
                 do
                 {
-                    equipment = (FieldGameState*)((u8*)g_pad_ctx + equipment_offset);
+                    equipment = (SavedGameLayout*)((u8*)g_saved_game_ctx + equipment_offset);
                     if (equipment->characters[0].equipment[0].name[0] != 0)
                     {
                         equipment_info = equipment->characters[0].equipment[0].info.word;
@@ -1818,11 +1809,11 @@ void field_rebuild_party_actions(s32 refresh_only)
                 slot_or_type = 0;
                 animation_params = g_field_action_animation_parameters;
                 parameter_params = g_field_action_animation_parameters + 1;
-                command_save = (FieldGameState*)((u8*)g_pad_ctx + character_offset);
+                command_save = (SavedGameLayout*)((u8*)g_saved_game_ctx + character_offset);
                 command_action_offset = row_offset;
                 do
                 {
-                    command_view = (FieldGameState*)((u8*)command_save + slot_or_type);
+                    command_view = (SavedGameLayout*)((u8*)command_save + slot_or_type);
                     command_action = (FieldActionSlot*)(command_action_offset + (u32)g_field_resource_actions);
                     command_action->command = command_view->characters[0].info.actions.commands[0];
                     command_action->animation = animation_params[command_view->characters[0].info.actions.commands[0] * 2];
@@ -1833,8 +1824,8 @@ void field_rebuild_party_actions(s32 refresh_only)
                 skill_character_offset = character_offset;
                 skill_none = FIELD_SKILL_NONE;
                 skill_row_offset = row_offset;
-                save_base = (u8*)g_pad_ctx;
-                skills_start = (FieldGameState*)(save_base + skill_character_offset);
+                save_base = (u8*)g_saved_game_ctx;
+                skills_start = (SavedGameLayout*)(save_base + skill_character_offset);
                 skill_action_offset = FIELD_SKILL_ACTION_BASE * sizeof(FieldActionSlot);
                 skill_cursor = skills_start;
                 do
@@ -1848,12 +1839,12 @@ void field_rebuild_party_actions(s32 refresh_only)
                     skill_row_offset = (~(u32)skill_row_offset);
                     skill_none = (~(u32)skill_none);
                     skill_none = (~(u32)skill_none);
-                    skills_start = (FieldGameState*)(~(u32)skills_start);
-                    skills_start = (FieldGameState*)(~(u32)skills_start);
+                    skills_start = (SavedGameLayout*)(~(u32)skills_start);
+                    skills_start = (SavedGameLayout*)(~(u32)skills_start);
                     save_base = (u8*)(~(u32)save_base);
                     save_base = (u8*)(~(u32)save_base);
-                    skill_cursor = (FieldGameState*)(~(u32)skill_cursor);
-                    skill_cursor = (FieldGameState*)(~(u32)skill_cursor);
+                    skill_cursor = (SavedGameLayout*)(~(u32)skill_cursor);
+                    skill_cursor = (SavedGameLayout*)(~(u32)skill_cursor);
                     skill_empty = skill_cursor->characters[0].info.actions.skills[0] == skill_none;
                     if (skill_empty)
                     {
@@ -1873,7 +1864,7 @@ void field_rebuild_party_actions(s32 refresh_only)
                             instrument_action = (FieldActionSlot*)(skill_action_offset + skill_row_offset + (u32)g_field_resource_actions);
                             instrument_action->command = 0;
                             instrument_action->flags.instrument = 1;
-                            instrument = (FieldItemRecord*)(save_base + (skill_character_offset + FIELD_OFFSET_OF(FieldGameState, characters)) +
+                            instrument = (FieldItemRecord*)(save_base + (skill_character_offset + FIELD_OFFSET_OF(SavedGameLayout, characters)) +
                                                             (((skill & ~FIELD_SKILL_INSTRUMENT) << 6) + FIELD_OFFSET_OF(FieldCharacterRecord, unk150)));
                             instrument_action->flags.target_filter = instrument->derived.bytes[1] >> 1;
                             instrument_icons = g_field_instrument_icons;
@@ -1906,7 +1897,7 @@ void field_rebuild_party_actions(s32 refresh_only)
                                 (((skill + FIELD_TECHNIQUE_SEQUENCE_BASE) | ~FIELD_ACTION_TECHNIQUE_MASK) + (weapon_type * FIELD_TECHNIQUES_PER_WEAPON));
                         }
                     }
-                    skill_cursor = (FieldGameState*)((u8*)skill_cursor + 1);
+                    skill_cursor = (SavedGameLayout*)((u8*)skill_cursor + 1);
                     skill_action_offset += sizeof(FieldActionSlot);
                 } while ((s32)skill_cursor < (s32)((u8*)skills_start + FIELD_SKILL_SLOT_COUNT));
             }
@@ -1989,7 +1980,7 @@ void field_open_shop_mode_0(s32 shop_options)
         count = 0;
         for (i = 0; i < FIELD_ITEM_COUNT; i++)
         {
-            if (g_pad_ctx->items[0].name[0] != 0)
+            if (g_saved_game_ctx->items[0].name[0] != 0)
             {
                 count++;
                 break;
@@ -1997,7 +1988,7 @@ void field_open_shop_mode_0(s32 shop_options)
         }
         for (i = 0; i < FIELD_ITEM_KIND_COUNT; i++)
         {
-            if (g_pad_ctx->item_counts[i] != 0)
+            if (g_saved_game_ctx->item_counts[i] != 0)
             {
                 count++;
                 break;
@@ -2097,9 +2088,9 @@ void field_update_modal(FieldRenderHalf* render)
                     g_field_player_records[index].resource_id = 0;
                     g_field_player_records[index].portrait_index = FIELD_PORTRAIT_NONE;
                 }
-                g_music_track_index = g_pad_ctx->music_track;
-                field_set_scene_parameters(g_pad_ctx->scene_id, g_pad_ctx->object_id, g_pad_ctx->spawn_id, g_pad_ctx->music_id,
-                                           g_pad_ctx->sound_bank_id, g_pad_ctx->secondary_music_id);
+                g_music_track_index = g_saved_game_ctx->track.bits.music_track;
+                field_set_scene_parameters(g_saved_game_ctx->scene_id, g_saved_game_ctx->object_id, g_saved_game_ctx->spawn.bits.id, g_saved_game_ctx->music_id,
+                                           g_saved_game_ctx->sound_bank_id, g_saved_game_ctx->secondary_music_id);
                 field_set_fade_target_only(FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL, 8);
                 break;
             case 6:
@@ -2136,7 +2127,7 @@ void field_update_modal(FieldRenderHalf* render)
             {
             case 1:
                 g_field_player_records[1].head.bits.active = 0;
-                g_field_player_records[1].head.bits.alt_appearance = g_pad_ctx->characters[1].info.bytes[0] & 1;
+                g_field_player_records[1].head.bits.alt_appearance = g_saved_game_ctx->characters[1].info.bytes[0] & 1;
                 g_field_player_records[1].character_kind = FIELD_PLAYER_KIND_HERO;
                 field_activate_actor_resource_slot(-2, 0, 0);
                 field_reset_actor_resources();
@@ -2263,19 +2254,19 @@ void field_begin_duel_result(void)
     if ((g_field_actors[0].animation & FIELD_ANIMATION_INDEX_MASK) == FIELD_ANIMATION_DUEL_LOST)
     {
         g_field_duel_winner = 1;
-        g_pad_ctx->characters[0].duel_losses = g_pad_ctx->characters[0].duel_losses + 1;
-        if ((u32)(g_pad_ctx->characters[1].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
+        g_saved_game_ctx->characters[0].duel_losses = g_saved_game_ctx->characters[0].duel_losses + 1;
+        if ((u32)(g_saved_game_ctx->characters[1].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
         {
-            g_pad_ctx->characters[1].duel_wins = g_pad_ctx->characters[1].duel_wins + 1;
+            g_saved_game_ctx->characters[1].duel_wins = g_saved_game_ctx->characters[1].duel_wins + 1;
         }
     }
     else
     {
         g_field_duel_winner = 0;
-        g_pad_ctx->characters[0].duel_wins = g_pad_ctx->characters[0].duel_wins + 1;
-        if ((u32)(g_pad_ctx->characters[1].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
+        g_saved_game_ctx->characters[0].duel_wins = g_saved_game_ctx->characters[0].duel_wins + 1;
+        if ((u32)(g_saved_game_ctx->characters[1].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
         {
-            g_pad_ctx->characters[1].duel_losses = g_pad_ctx->characters[1].duel_losses + 1;
+            g_saved_game_ctx->characters[1].duel_losses = g_saved_game_ctx->characters[1].duel_losses + 1;
         }
     }
 }
@@ -2329,12 +2320,12 @@ static s32 field_draw_duel_intro(FieldRenderHalf* render)
     }
 
     packet_cursor = field_draw_player_icon(packet_cursor, ot, 0, g_field_duel_panel_offset + 50, 34, 1);
-    packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, g_pad_ctx->characters[0].name, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 108, 50, 0, 5, 384,
-                                  384, -4, FIELD_DUEL_PANEL_MOVING);
+    packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, g_saved_game_ctx->characters[0].name, FIELD_TEXT_COLOR_NORMAL,
+                                                g_field_duel_panel_offset + 108, 50, 0, 5, 384, 384, -4, FIELD_DUEL_PANEL_MOVING);
 
-    field_format_number(record_text, g_pad_ctx->characters[0].duel_wins, 0);
+    field_format_number(record_text, g_saved_game_ctx->characters[0].duel_wins, 0);
     field_append_dialog_text(record_text, &D_800EC408, 34);
-    field_format_number(loss_text, g_pad_ctx->characters[0].duel_losses, 0);
+    field_format_number(loss_text, g_saved_game_ctx->characters[0].duel_losses, 0);
     field_append_name(record_text, loss_text);
     field_append_dialog_text(record_text, &D_800EC40A, 35);
 
@@ -2343,14 +2334,15 @@ static s32 field_draw_duel_intro(FieldRenderHalf* render)
     packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, field_dialog_text(&D_800EC406, 33), FIELD_TEXT_COLOR_NORMAL, 160, 100, 2, 7, FIELD_DUEL_TEXT_SCALE,
                                   FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
     packet_cursor = field_draw_player_icon(packet_cursor, ot, 1, 222 - g_field_duel_panel_offset, 134, 0);
-    packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, g_pad_ctx->characters[1].name, FIELD_TEXT_COLOR_NORMAL, 212 - g_field_duel_panel_offset, 150, 1, 8,
-                                  FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
+    packet_cursor =
+        field_text_draw_scaled_quad(packet_cursor, ot, g_saved_game_ctx->characters[1].name, FIELD_TEXT_COLOR_NORMAL, 212 - g_field_duel_panel_offset, 150, 1,
+                                    8, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
 
-    if ((u32)(g_pad_ctx->characters[1].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
+    if ((u32)(g_saved_game_ctx->characters[1].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
     {
-        field_format_number(record_text, g_pad_ctx->characters[1].duel_wins, 0);
+        field_format_number(record_text, g_saved_game_ctx->characters[1].duel_wins, 0);
         field_append_dialog_text(record_text, &D_800EC408, 34);
-        field_format_number(loss_text, g_pad_ctx->characters[1].duel_losses, 0);
+        field_format_number(loss_text, g_saved_game_ctx->characters[1].duel_losses, 0);
         field_append_name(record_text, loss_text);
         field_append_dialog_text(record_text, &D_800EC40A, 35);
         packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, 212 - g_field_duel_panel_offset, 166, 1, 9,
@@ -2413,14 +2405,15 @@ static s32 field_draw_duel_result(FieldRenderHalf* render)
     packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, field_dialog_text(&D_800EC40C, 36), FIELD_TEXT_COLOR_NORMAL, 160, 52, 2, 5, FIELD_DUEL_TITLE_SCALE,
                                   FIELD_DUEL_TITLE_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
     packet_cursor = field_draw_player_icon(packet_cursor, ot, g_field_duel_winner, g_field_duel_panel_offset + 50, 84, 1);
-    packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, g_pad_ctx->characters[g_field_duel_winner].name, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 108,
-                                  100, 0, 6, FIELD_DUEL_WINNER_SCALE, FIELD_DUEL_WINNER_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
+    packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, g_saved_game_ctx->characters[g_field_duel_winner].name, FIELD_TEXT_COLOR_NORMAL,
+                                                g_field_duel_panel_offset + 108, 100, 0, 6, FIELD_DUEL_WINNER_SCALE, FIELD_DUEL_WINNER_SCALE,
+                                                FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
 
-    if ((u32)(g_pad_ctx->characters[g_field_duel_winner].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
+    if ((u32)(g_saved_game_ctx->characters[g_field_duel_winner].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
     {
-        field_format_number(record_text, g_pad_ctx->characters[g_field_duel_winner].duel_wins, 0);
+        field_format_number(record_text, g_saved_game_ctx->characters[g_field_duel_winner].duel_wins, 0);
         field_append_dialog_text(record_text, &D_800EC408, 34);
-        field_format_number(loss_text, g_pad_ctx->characters[g_field_duel_winner].duel_losses, 0);
+        field_format_number(loss_text, g_saved_game_ctx->characters[g_field_duel_winner].duel_losses, 0);
         field_append_name(record_text, loss_text);
         field_append_dialog_text(record_text, &D_800EC40A, 35);
         packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 140, 132, 0, 7,

@@ -4,7 +4,7 @@
  * @brief Inventory record @p index.
  * @note Summed as integers, index first, as the original stat reads do.
  */
-#define GOSUB_INVENTORY_RECORD(index) ((InventoryRecord*)((index) * sizeof(InventoryRecord) + (u32)g_pad_ctx->inventory))
+#define GOSUB_INVENTORY_RECORD(index) ((FieldItemRecord*)((index) * sizeof(FieldItemRecord) + (u32)g_saved_game_ctx->items))
 
 /**
  * @brief Select the pet or golem under the cursor to take along; eggs and grazing pets are refused.
@@ -104,10 +104,10 @@ s32 gosub_select_logic_block(void)
     }
     if (g_gosub_selected_rows[0] != g_gosub_selected_rows[1])
     {
-        gosub_copy_logic_block(&saved_block, &g_pad_ctx->logic_blocks[g_gosub_rows[g_gosub_selected_rows[0]].index]);
-        gosub_copy_logic_block(&g_pad_ctx->logic_blocks[g_gosub_rows[g_gosub_selected_rows[0]].index],
-                               &g_pad_ctx->logic_blocks[g_gosub_rows[g_gosub_selected_rows[1]].index]);
-        gosub_copy_logic_block(&g_pad_ctx->logic_blocks[g_gosub_rows[g_gosub_selected_rows[1]].index], &saved_block);
+        gosub_copy_logic_block(&saved_block, &g_saved_game_ctx->logic_blocks[g_gosub_rows[g_gosub_selected_rows[0]].index]);
+        gosub_copy_logic_block(&g_saved_game_ctx->logic_blocks[g_gosub_rows[g_gosub_selected_rows[0]].index],
+                               &g_saved_game_ctx->logic_blocks[g_gosub_rows[g_gosub_selected_rows[1]].index]);
+        gosub_copy_logic_block(&g_saved_game_ctx->logic_blocks[g_gosub_rows[g_gosub_selected_rows[1]].index], &saved_block);
         gosub_copy_list_row(&saved_row, &g_gosub_rows[g_gosub_selected_rows[0]]);
         gosub_copy_list_row(&g_gosub_rows[g_gosub_selected_rows[0]], &g_gosub_rows[g_gosub_selected_rows[1]]);
         gosub_copy_list_row(&g_gosub_rows[g_gosub_selected_rows[1]], &saved_row);
@@ -226,24 +226,24 @@ s32 gosub_handle_make_block_dialog(s32 dialog_result)
 
     if (dialog_result == 0 && (g_gosub_dialog_choice & GOSUB_CONFIRMATION_CHOICE_MASK) == 0)
     {
-        count = g_pad_ctx->logic_block_count;
+        count = g_saved_game_ctx->logic_block_count;
         if (count < LOGIC_BLOCK_CAPACITY)
         {
-            g_pad_ctx->logic_blocks[count].f.id = g_gosub_block_id;
-            g_pad_ctx->logic_blocks[count].f.quantity = g_gosub_block_level;
-            g_pad_ctx->logic_blocks[count].f.shape = g_gosub_block_shape;
-            g_pad_ctx->logic_blocks[count].f.logic_type = LOGIC_BLOCK_UNASSIGNED;
-            g_pad_ctx->logic_blocks[count].f.placed = 0;
-            g_pad_ctx->logic_blocks[count].f.rotation = 0;
-            g_pad_ctx->logic_blocks[count].f.grid_x = 0;
-            g_pad_ctx->logic_blocks[count].f.grid_y = 0;
-            g_pad_ctx->logic_blocks[count].f.unknown_bits = 0;
-            g_pad_ctx->logic_block_count = g_pad_ctx->logic_block_count + 1;
-            g_pad_ctx->inventory[g_gosub_result_values[0]].name[0] = 0;
-            g_pad_ctx->inventory[g_gosub_result_values[1]].name[0] = 0;
+            g_saved_game_ctx->logic_blocks[count].f.id = g_gosub_block_id;
+            g_saved_game_ctx->logic_blocks[count].f.quantity = g_gosub_block_level;
+            g_saved_game_ctx->logic_blocks[count].f.shape = g_gosub_block_shape;
+            g_saved_game_ctx->logic_blocks[count].f.logic_type = LOGIC_BLOCK_UNASSIGNED;
+            g_saved_game_ctx->logic_blocks[count].f.placed = 0;
+            g_saved_game_ctx->logic_blocks[count].f.rotation = 0;
+            g_saved_game_ctx->logic_blocks[count].f.grid_x = 0;
+            g_saved_game_ctx->logic_blocks[count].f.grid_y = 0;
+            g_saved_game_ctx->logic_blocks[count].f.unknown_bits = 0;
+            g_saved_game_ctx->logic_block_count = g_saved_game_ctx->logic_block_count + 1;
+            g_saved_game_ctx->items[g_gosub_result_values[0]].name[0] = 0;
+            g_saved_game_ctx->items[g_gosub_result_values[1]].name[0] = 0;
             field_compact_inventory();
         }
-        if (g_pad_ctx->logic_block_count >= LOGIC_BLOCK_CAPACITY)
+        if (g_saved_game_ctx->logic_block_count >= LOGIC_BLOCK_CAPACITY)
         {
             gosub_close_elements();
             g_field_gosub_state = 0;
@@ -371,45 +371,45 @@ void gosub_build_equipment_list(u32 item_kind)
     g_gosub_show_row_details = 1;
     row_count = 0;
 
-    for (item_index = 0; item_index < INVENTORY_RECORD_COUNT; item_index++)
+    for (item_index = 0; item_index < FIELD_ITEM_COUNT; item_index++)
     {
-        if (g_pad_ctx->inventory[item_index].name[0] != 0)
+        if (g_saved_game_ctx->items[item_index].name[0] != 0)
         {
-            if ((item_kind == GOSUB_EQUIPMENT_KIND_ANY) || (INVENTORY_KIND(g_pad_ctx->inventory[item_index].attributes.packed) == item_kind) ||
+            if ((item_kind == GOSUB_EQUIPMENT_KIND_ANY) || (FIELD_ITEM_CATEGORY(g_saved_game_ctx->items[item_index].info.word) == item_kind) ||
                 ((item_kind == GOSUB_EQUIPMENT_KIND_GOLEM_PARTS) &&
-                 (INVENTORY_KIND(g_pad_ctx->inventory[item_index].attributes.packed) != GOSUB_EQUIPMENT_KIND_INSTRUMENT)))
+                 (FIELD_ITEM_CATEGORY(g_saved_game_ctx->items[item_index].info.word) != GOSUB_EQUIPMENT_KIND_INSTRUMENT)))
             {
-                g_gosub_rows[row_count].name = g_pad_ctx->inventory[item_index].name;
+                g_gosub_rows[row_count].name = g_saved_game_ctx->items[item_index].name;
 
                 gosub_copy_encoded_string(g_gosub_text_buffers[row_count],
-                                          GOSUB_TEXT(GOSUB_TEXT_ITEM_NAMES, g_pad_ctx->inventory[item_index].attributes.halves.high & INVENTORY_MATERIAL_MASK));
+                                          GOSUB_TEXT(GOSUB_TEXT_ITEM_NAMES, g_saved_game_ctx->items[item_index].info.halves[1] & FIELD_ITEM_MATERIAL_MASK));
                 gosub_append_encoded_string(g_gosub_text_buffers[row_count], FIELD_UI_TEXT_AT(D_800EC3E2, FIELD_UI_TEXT_SPACE));
 
-                g_gosub_rows[row_count].equipment_kind = INVENTORY_KIND(g_pad_ctx->inventory[item_index].attributes.packed);
-                attributes = g_pad_ctx->inventory[item_index].attributes.packed;
+                g_gosub_rows[row_count].equipment_kind = FIELD_ITEM_CATEGORY(g_saved_game_ctx->items[item_index].info.word);
+                attributes = g_saved_game_ctx->items[item_index].info.word;
 
-                switch (INVENTORY_KIND(attributes))
+                switch (FIELD_ITEM_CATEGORY(attributes))
                 {
                 case GOSUB_EQUIPMENT_KIND_WEAPON:
                     gosub_append_encoded_string(g_gosub_text_buffers[row_count],
-                                                GOSUB_TEXT(GOSUB_TEXT_EQUIPMENT_TYPES, GOSUB_WEAPON_TYPE_FIRST + INVENTORY_CATEGORY(attributes)));
-                    g_gosub_rows[row_count].primary_value = GOSUB_INVENTORY_RECORD(item_index)->stats.values[0];
+                                                GOSUB_TEXT(GOSUB_TEXT_EQUIPMENT_TYPES, GOSUB_WEAPON_TYPE_FIRST + FIELD_ITEM_TYPE(attributes)));
+                    g_gosub_rows[row_count].primary_value = GOSUB_INVENTORY_RECORD(item_index)->derived.values[0];
                     break;
                 case GOSUB_EQUIPMENT_KIND_ARMOR:
                     gosub_append_encoded_string(g_gosub_text_buffers[row_count],
-                                                GOSUB_TEXT(GOSUB_TEXT_EQUIPMENT_TYPES, INVENTORY_CATEGORY(attributes) + GOSUB_ARMOR_TYPE_FIRST));
+                                                GOSUB_TEXT(GOSUB_TEXT_EQUIPMENT_TYPES, FIELD_ITEM_TYPE(attributes) + GOSUB_ARMOR_TYPE_FIRST));
                     for (stat_index = 0; stat_index < COMPANION_STAT_COUNT; stat_index++)
                     {
-                        g_gosub_rows[row_count].stats[stat_index] = GOSUB_INVENTORY_RECORD(item_index)->stats.values[stat_index];
+                        g_gosub_rows[row_count].stats[stat_index] = GOSUB_INVENTORY_RECORD(item_index)->derived.values[stat_index];
                     }
                     break;
                 default:
-                    g_gosub_rows[row_count].primary_value = GOSUB_INVENTORY_RECORD(item_index)->stats.bytes[2];
+                    g_gosub_rows[row_count].primary_value = GOSUB_INVENTORY_RECORD(item_index)->derived.bytes[2];
                     g_gosub_rows[row_count].stats[0] =
-                        GOSUB_INVENTORY_RECORD(item_index)->stats.bytes[1] + (GOSUB_INVENTORY_RECORD(item_index)->stats.bytes[0] * 14);
-                    gosub_append_encoded_string(g_gosub_text_buffers[row_count],
-                                                GOSUB_TEXT(GOSUB_TEXT_EQUIPMENT_TYPES, INVENTORY_CATEGORY(g_pad_ctx->inventory[item_index].attributes.packed) +
-                                                                                           GOSUB_INSTRUMENT_TYPE_FIRST));
+                        GOSUB_INVENTORY_RECORD(item_index)->derived.bytes[1] + (GOSUB_INVENTORY_RECORD(item_index)->derived.bytes[0] * 14);
+                    gosub_append_encoded_string(
+                        g_gosub_text_buffers[row_count],
+                        GOSUB_TEXT(GOSUB_TEXT_EQUIPMENT_TYPES, FIELD_ITEM_TYPE(g_saved_game_ctx->items[item_index].info.word) + GOSUB_INSTRUMENT_TYPE_FIRST));
                     break;
                 }
 

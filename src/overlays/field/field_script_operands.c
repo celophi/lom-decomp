@@ -9,7 +9,7 @@
  * the variable inside its word, bits 5-11 the word index and bits 12-14 the
  * variable kind, which selects the bit width (g_field_script_var_widths).
  * Kinds below FIELD_SCRIPT_VAR_LOCAL_KIND are game-state variables in
- * FieldGameState::words and are saved with the game; the others are words at
+ * SavedGameLayout::words and are saved with the game; the others are words at
  * the start of the field runtime context. Bit 15 makes a local reference
  * relative to the owner actor's local variable base.
  */
@@ -40,7 +40,6 @@ enum
 /** @brief Bit width of each variable kind. */
 extern u8 g_field_script_var_widths[8];
 
-extern FieldGameState* g_field_game_state;
 extern FieldRuntimeContext* g_field_runtime;
 
 void field_script_op_00(void);
@@ -150,7 +149,7 @@ u8* field_script_read_u16(u8* data, u16* value)
  * @param var_ref Variable reference.
  * @param word_index Receives the word index from the variable base.
  * @param bit_shift Receives the bit position inside the word.
- * @return The variable base: FieldGameState::words or the field runtime context.
+ * @return The variable base: SavedGameLayout::words or the field runtime context.
  */
 static u32* field_resolve_script_var(s32 owner_id, FieldScriptVariableRef var_ref, s32* word_index, s32* bit_shift)
 {

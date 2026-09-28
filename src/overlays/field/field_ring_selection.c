@@ -632,17 +632,18 @@ void field_upload_golem_palettes(void)
 
     for (i = 0; i < GOLEM_RECORD_COUNT; i++)
     {
-        if (g_pad_ctx->golem_records[i].name[0] != 0)
+        if (g_saved_game_ctx->golem_records[i].name[0] != 0)
         {
-            if ((u32)g_pad_ctx->golem_records[i].palette < FIELD_GOLEM_BANK_PALETTES)
+            if ((u32)g_saved_game_ctx->golem_records[i].palette < FIELD_GOLEM_BANK_PALETTES)
             {
                 setRECT(&rect, FIELD_GOLEM_CLUT_X, FIELD_GOLEM_CLUT_Y + i, FIELD_CLUT_COLORS, 1);
-                LoadImage(&rect, (u_long*)&g_field_golem_palettes[0][g_pad_ctx->golem_records[i].palette * FIELD_CLUT_COLORS]);
+                LoadImage(&rect, (u_long*)&g_field_golem_palettes[0][g_saved_game_ctx->golem_records[i].palette * FIELD_CLUT_COLORS]);
             }
             else
             {
                 setRECT(&rect, FIELD_GOLEM_CLUT_X, FIELD_GOLEM_CLUT_Y + i, FIELD_CLUT_COLORS, 1);
-                LoadImage(&rect, (u_long*)&g_field_golem_palettes[1][(g_pad_ctx->golem_records[i].palette - FIELD_GOLEM_BANK_PALETTES) * FIELD_CLUT_COLORS]);
+                LoadImage(&rect,
+                          (u_long*)&g_field_golem_palettes[1][(g_saved_game_ctx->golem_records[i].palette - FIELD_GOLEM_BANK_PALETTES) * FIELD_CLUT_COLORS]);
             }
         }
     }

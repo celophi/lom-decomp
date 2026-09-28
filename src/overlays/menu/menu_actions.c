@@ -236,30 +236,32 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
             handle = field_find_free_inventory_record();
             if (handle != 0)
             {
-                if (menu_item_is_nondefault((const MenuItemEntry*)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((g_menu_active_subtype << 6) - 0x170))) != 0)
+                if (menu_item_is_nondefault(
+                        (const MenuItemEntry*)(((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((g_menu_active_subtype << 6) - 0x170))) != 0)
                 {
-                    field_copy_inventory_record(handle, (s32)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((g_menu_active_subtype << 6) - 0x170)));
+                    field_copy_inventory_record(handle,
+                                                (s32)(((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((g_menu_active_subtype << 6) - 0x170)));
                     switch (g_menu_active_subtype)
                     {
                     case 7:
                         g_menu_active_equipped_item = 0;
                         g_menu_saved_category0_item = 0;
                         character_offset = g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
-                        ctx = (u8*)g_pad_ctx;
+                        ctx = (u8*)g_saved_game_ctx;
                         lhs_shift = ((MenuCharacterRecord*)(ctx + character_offset + MENU_CHARACTER_RECORD_OFFSET))->items[0].attributes.packed >> 10;
                         cmp_shift = ((MenuItemEntry*)(cmp_tbl = D_800F0BF8))->attributes.packed >> 10;
                         if ((lhs_shift & 0x3F) == (cmp_shift & 0x3F))
                         {
-                            field_copy_inventory_record(&menu_character_record((PadContext*)ctx, g_menu_char_slot)->items[0], cmp_tbl);
+                            field_copy_inventory_record(&menu_character_record((SavedGameLayout*)ctx, g_menu_char_slot)->items[0], cmp_tbl);
                             break;
                         }
-                        field_copy_inventory_record(&menu_character_record((PadContext*)ctx, g_menu_char_slot)->items[0], cmp_tbl);
+                        field_copy_inventory_record(&menu_character_record((SavedGameLayout*)ctx, g_menu_char_slot)->items[0], cmp_tbl);
 
                         i9 = 1;
                         do
                         {
                             off = i9 << 6;
-                            pad_item = (u8*)g_pad_ctx + (off + (g_menu_char_slot * 0x250));
+                            pad_item = (u8*)g_saved_game_ctx + (off + (g_menu_char_slot * 0x250));
                             if (pad_item[0x640] != 0)
                             {
                                 if ((((*(u32*)(pad_item + 0x654)) >> 10) & 0x3F) == 0)
@@ -267,12 +269,13 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                                     handle2 = field_find_free_inventory_record();
                                     if (handle2 != 0)
                                     {
-                                        field_copy_inventory_record(handle2, (s32)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + (off + 0x50)));
-                                        menu_equipped_item(g_pad_ctx, i9)->active = 0;
+                                        field_copy_inventory_record(handle2,
+                                                                    (s32)(((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + (off + 0x50)));
+                                        menu_equipped_item(g_saved_game_ctx, i9)->active = 0;
                                         field_compact_inventory();
                                         break;
                                     }
-                                    field_copy_inventory_record(((g_menu_char_slot * 0x250) + (s32)g_pad_ctx) + 0x640, handle);
+                                    field_copy_inventory_record(((g_menu_char_slot * 0x250) + (s32)g_saved_game_ctx) + 0x640, handle);
                                     *(u8*)handle = 0;
                                     g_menu_message_line1 = (void*)menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 86);
                                     menu_clear_slots();
@@ -300,7 +303,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                         {
                             s32 equipment_subtype;
                             equipment_subtype = g_menu_active_subtype;
-                            equipment_ctx = (u8*)g_pad_ctx;
+                            equipment_ctx = (u8*)g_saved_game_ctx;
                             equipment_offset = ((equipment_subtype - MENU_EQUIPMENT_SUBTYPE_BASE) << 6) + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
                             *(equipment_ctx + equipment_offset + 0x640) = 0;
                             field_compact_inventory();
@@ -365,18 +368,20 @@ s32 menu_equipment_compare_callback(s32* ot, ScrollListState* state, s32 prim_bu
                     item = (s32)g_item_slot_data[i];
                     if (item != 0)
                     {
-                        menu_swap_item_records((MenuItemEntry*)item, (MenuItemEntry*)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((i << 6) + 0x50)));
+                        menu_swap_item_records((MenuItemEntry*)item,
+                                               (MenuItemEntry*)(((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((i << 6) + 0x50)));
                     }
                     else if (i == 0)
                     {
-                        field_copy_inventory_record(field_find_free_inventory_record(), (s32)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx + 0x640));
-                        field_copy_inventory_record((s32)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx + 0x640), D_800F0BF8);
+                        field_copy_inventory_record(field_find_free_inventory_record(), (s32)((g_menu_char_slot * 0x250) + (s32)g_saved_game_ctx + 0x640));
+                        field_copy_inventory_record((s32)((g_menu_char_slot * 0x250) + (s32)g_saved_game_ctx + 0x640), D_800F0BF8);
                     }
                     else
                     {
-                        field_copy_inventory_record(field_find_free_inventory_record(), (s32)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((i << 6) + 0x50)));
+                        field_copy_inventory_record(field_find_free_inventory_record(),
+                                                    (s32)(((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((i << 6) + 0x50)));
                         slot_off = g_menu_char_slot * 0x250;
-                        *((u8*)g_pad_ctx + ((i << 6) + slot_off) + 0x640) = 0;
+                        *((u8*)g_saved_game_ctx + ((i << 6) + slot_off) + 0x640) = 0;
                     }
                 }
                 i += 1;
@@ -516,7 +521,7 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s3
     selected_technique = -1;
     list_y = 0;
     group_index = 0;
-    group_flags_ptr = (s32*)((u8*)g_pad_ctx + MENU_SPECIAL_TECHNIQUE_FLAGS_OFFSET);
+    group_flags_ptr = (s32*)((u8*)g_saved_game_ctx + MENU_SPECIAL_TECHNIQUE_FLAGS_OFFSET);
     do
     {
         technique_index = 0;
@@ -544,7 +549,7 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s3
         if ((selected_technique / MENU_SPECIAL_TECHNIQUES_PER_GROUP) ==
             (s32)(((u32)(((MenuItemEntry*)g_menu_equipment_base)->attributes.packed) >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK))
         {
-            u8* assignment_ptr = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
+            u8* assignment_ptr = (u8*)g_saved_game_ctx + (g_menu_char_slot * 0x250);
             u8* character_ctx;
 
             assignment_ptr += g_menu_active_subtype;
@@ -558,9 +563,10 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s3
                     {
                         s32 slot_offset;
 
-                        field_copy_inventory_record(item_handle, (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) + 0x90));
+                        field_copy_inventory_record(item_handle,
+                                                    (u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) + 0x90));
                         slot_offset = ((g_menu_active_subtype + 1) << 6) + (g_menu_char_slot * 0x250);
-                        *((u8*)g_pad_ctx + slot_offset + 0x640) = 0;
+                        *((u8*)g_saved_game_ctx + slot_offset + 0x640) = 0;
                         field_compact_inventory();
                     }
                     else
@@ -580,7 +586,7 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s3
                     }
                 }
             }
-            character_ctx = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
+            character_ctx = (u8*)g_saved_game_ctx + (g_menu_char_slot * 0x250);
             character_ctx += g_menu_active_subtype;
             *(character_ctx + 0x609) = selected_technique % MENU_SPECIAL_TECHNIQUES_PER_GROUP;
             menu_play_se(MENU_SE_SELECT, MENU_SE_VOLUME);
@@ -597,7 +603,7 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s3
     selected_technique = -1;
     list_y = 0;
     group_index = 0;
-    group_flags_ptr = (s32*)((u8*)g_pad_ctx + MENU_SPECIAL_TECHNIQUE_FLAGS_OFFSET);
+    group_flags_ptr = (s32*)((u8*)g_saved_game_ctx + MENU_SPECIAL_TECHNIQUE_FLAGS_OFFSET);
     scroll_y = state->scroll_y;
     do
     {
@@ -874,7 +880,7 @@ s32 menu_build_equipment_nav_entries(void)
     entry_mask = MENU_EQUIPMENT_GRID_ENTRY_MASK;
     do
     {
-        row_entries = *(u32*)((u8*)g_pad_ctx + (row * 4) + MENU_EQUIPMENT_GRID_OFFSET);
+        row_entries = *(u32*)((u8*)g_saved_game_ctx + (row * 4) + MENU_EQUIPMENT_GRID_OFFSET);
         column = MENU_EQUIPMENT_GRID_COLUMN_COUNT - 1;
         do
         {
@@ -938,8 +944,8 @@ s32 menu_build_key_item_nav_entries(void)
     u8* quantity;
 
     item_count = 0;
-    ((u8*)g_pad_ctx)[MENU_KEY_ITEM_TABLE_OFFSET + MENU_KEY_ITEM_SENTINEL_INDEX] = 0;
-    quantity = (u8*)g_pad_ctx + MENU_KEY_ITEM_TABLE_OFFSET;
+    ((u8*)g_saved_game_ctx)[MENU_KEY_ITEM_TABLE_OFFSET + MENU_KEY_ITEM_SENTINEL_INDEX] = 0;
+    quantity = (u8*)g_saved_game_ctx + MENU_KEY_ITEM_TABLE_OFFSET;
     remaining_entries = MENU_KEY_ITEM_TABLE_COUNT - 1;
     do
     {
@@ -1001,7 +1007,7 @@ s32 menu_build_ability_nav_entries(void)
     MenuAbilityEntry* ability;
 
     item_count = 0;
-    ability = (MenuAbilityEntry*)((u8*)g_pad_ctx + MENU_ABILITY_TABLE_OFFSET);
+    ability = (MenuAbilityEntry*)((u8*)g_saved_game_ctx + MENU_ABILITY_TABLE_OFFSET);
     remaining = MENU_ABILITY_COUNT - 1;
     do
     {
@@ -1060,17 +1066,17 @@ s32 menu_stage_best_equipment_for_slot0(void)
     candidate = menu_find_best_equipment_for_slot0();
     if (candidate != 0)
     {
-        slot_record = (MenuItemEntry*)((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + (s32)g_pad_ctx + 0x640);
+        slot_record = (MenuItemEntry*)((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + (s32)g_saved_game_ctx + 0x640);
         records_differ = menu_item_is_nondefault(slot_record);
         if (records_differ == 0)
         {
-            field_copy_inventory_record(&menu_character_record(g_pad_ctx, g_menu_char_slot)->items[0], candidate);
+            field_copy_inventory_record(&menu_character_record(g_saved_game_ctx, g_menu_char_slot)->items[0], candidate);
             candidate->active = 0;
             g_item_slot_data[0] = 0;
         }
         else
         {
-            slot_buffer = (MenuItemEntry*)((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + (s32)g_pad_ctx + 0x640);
+            slot_buffer = (MenuItemEntry*)((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + (s32)g_saved_game_ctx + 0x640);
             menu_swap_item_records(slot_buffer, candidate);
             g_item_slot_data[0] = (u32)candidate;
         }
@@ -1095,12 +1101,12 @@ MenuItemEntry* menu_find_best_equipment_for_slot0(void)
     MenuItemEntry* best_item;
 
     best_value = 0;
-    best_item = &menu_character_record(g_pad_ctx, g_menu_char_slot)->items[0];
+    best_item = &menu_character_record(g_saved_game_ctx, g_menu_char_slot)->items[0];
     if (best_item->active != 0)
     {
         best_value = best_item->stat_values[0];
     }
-    item = (MenuItemEntry*)((u8*)g_pad_ctx + MENU_ITEM_TABLE_OFFSET);
+    item = (MenuItemEntry*)((u8*)g_saved_game_ctx + MENU_ITEM_TABLE_OFFSET);
     best_item = 0;
     category_mask = menu_get_equipment_ability_mask(0);
     for (item_index = 0; item_index < MENU_ITEM_TABLE_COUNT; item_index++, item++)
@@ -1131,7 +1137,7 @@ s32 menu_stage_best_equipment_for_active_slot(void)
 {
     MenuItemEntry* candidate;
     u32* slot_data;
-    PadContext* pad_context;
+    SavedGameLayout* pad_context;
     s32 subtype_index;
     s32 slot_index;
     if (0)
@@ -1143,7 +1149,7 @@ s32 menu_stage_best_equipment_for_active_slot(void)
     {
         slot_index = 1;
         subtype_index = g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE;
-        pad_context = g_pad_ctx;
+        pad_context = g_saved_game_ctx;
         if (menu_equipped_item(pad_context, subtype_index)->active == 0)
         {
             slot_data = &g_item_slot_data[0];
@@ -1151,11 +1157,11 @@ s32 menu_stage_best_equipment_for_active_slot(void)
             {
                 if ((u32)candidate == slot_data[slot_index])
                 {
-                    slot_data[slot_index] = (u32)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170));
+                    slot_data[slot_index] = (u32)((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170));
                     break;
                 }
             }
-            field_copy_inventory_record((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170), candidate);
+            field_copy_inventory_record((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170), candidate);
             candidate->active = 0;
             g_item_slot_data[g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE] = 0;
         }
@@ -1166,11 +1172,12 @@ s32 menu_stage_best_equipment_for_active_slot(void)
             {
                 if ((u32)candidate == slot_data[slot_index])
                 {
-                    slot_data[slot_index] = (u32)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170));
+                    slot_data[slot_index] = (u32)((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170));
                     break;
                 }
             }
-            menu_swap_item_records((MenuItemEntry*)((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + (s32)g_pad_ctx + (g_menu_active_subtype << 6) + 0x480), candidate);
+            menu_swap_item_records(
+                (MenuItemEntry*)((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + (s32)g_saved_game_ctx + (g_menu_active_subtype << 6) + 0x480), candidate);
             g_item_slot_data[g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE] = (u32)candidate;
         }
         g_item_slot_flags[g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE] = 1;
@@ -1193,7 +1200,7 @@ MenuItemEntry* menu_find_best_equipment_for_active_slot(void)
     MenuItemEntry* item;
     MenuItemEntry* best_item;
 
-    best_item = &menu_character_record(g_pad_ctx, g_menu_char_slot)->items[g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE];
+    best_item = &menu_character_record(g_saved_game_ctx, g_menu_char_slot)->items[g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE];
     if (best_item->active == 0)
     {
         best_value = 0;
@@ -1203,7 +1210,7 @@ MenuItemEntry* menu_find_best_equipment_for_active_slot(void)
         best_value = best_item->stat_values[0] + best_item->stat_values[1] + best_item->stat_values[2] + best_item->stat_values[3];
     }
     best_item = 0;
-    item = (MenuItemEntry*)((u8*)g_pad_ctx + MENU_ITEM_TABLE_OFFSET);
+    item = (MenuItemEntry*)((u8*)g_saved_game_ctx + MENU_ITEM_TABLE_OFFSET);
     excluded_categories = menu_get_equipment_ability_mask(g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE);
     for (item_index = 0; item_index < MENU_ITEM_TABLE_COUNT; item_index++, item++)
     {
@@ -1249,7 +1256,7 @@ s32 menu_count_inventory_items(void)
     s32 count;
     MenuItemEntry* item;
 
-    item = (MenuItemEntry*)((u8*)g_pad_ctx + MENU_ITEM_TABLE_OFFSET);
+    item = (MenuItemEntry*)((u8*)g_saved_game_ctx + MENU_ITEM_TABLE_OFFSET);
     for (count = 0; count < MENU_ITEM_TABLE_COUNT; count++)
     {
         if (item->active == 0)

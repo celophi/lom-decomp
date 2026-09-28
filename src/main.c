@@ -26,7 +26,6 @@
 
 #define SECONDARY_OVERLAY_LOAD_ADDR ((void*)0x80140000)
 
-#define FIELD_SPAWN_LOAD_GAME 6
 #define SPAWN_ID_FLAGS_MASK 0xFE000000U
 #define NAME_SOURCE_MASK 0x7F
 #define CD_RESOURCE_TABLE_LBA 24
@@ -181,9 +180,9 @@ void main_game_loop(void)
             field_restore_entry_music();
             field_scene_reset(0);
             g_field_audio_timer = 0;
-            player_name = g_saved_game.layout.player.name;
+            player_name = g_saved_game.layout.characters[0].name;
             g_game_state = gname_run((RenderContext*)GNAME_RENDER_ADDRESS, player_name, player_name,
-                                     (g_saved_game.layout.player.name_source_flags & NAME_SOURCE_MASK) + 4, 0, player_name, 1);
+                                     (g_saved_game.layout.characters[0].info.bytes[0] & NAME_SOURCE_MASK) + 4, 0, player_name, 1);
             DrawSync(0);
             VSync(0);
             g_previous_game_state = GAME_STATE_GNAME;
@@ -215,18 +214,18 @@ void main_game_loop(void)
             }
             else
             {
-                saved_spawn_id = (g_saved_game.layout.spawn_id & SPAWN_ID_FLAGS_MASK) | FIELD_SPAWN_LOAD_GAME;
+                saved_spawn_id = (g_saved_game.layout.spawn.word & SPAWN_ID_FLAGS_MASK) | FIELD_SPAWN_LOAD_GAME;
                 *spawn_id = FIELD_SPAWN_LOAD_GAME;
-                g_saved_game.layout.spawn_id = saved_spawn_id;
+                g_saved_game.layout.spawn.word = saved_spawn_id;
                 g_field_scene_id = g_saved_game.layout.scene_id;
                 g_field_object_id = g_saved_game.layout.object_id;
                 g_field_music_id = g_saved_game.layout.music_id;
                 g_field_sound_bank_id = g_saved_game.layout.sound_bank_id;
                 g_field_secondary_music_id = g_saved_game.layout.secondary_music_id;
-                g_saved_game.layout.spawn_id = saved_spawn_id;
-                music_track = g_saved_game.layout.music_track;
+                g_saved_game.layout.spawn.word = saved_spawn_id;
+                music_track = g_saved_game.layout.track.word;
                 g_music_track_index = music_track;
-                if ((g_saved_game.layout.option_flags & (SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3)) == (SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3))
+                if ((g_saved_game.layout.options.word & (SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3)) == (SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3))
                 {
                     g_game_state = GAME_STATE_WORLD_SELECT;
                 }

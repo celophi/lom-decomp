@@ -56,7 +56,6 @@ typedef struct
 
 s32 rand(void);
 
-extern FieldGameState* g_field_game_state;
 /** @brief Item kind given by field_place_lands when no land could be placed, by land distance. */
 extern u8 g_field_land_distance_items[];
 extern u16 g_music_track_index;
@@ -233,7 +232,7 @@ s32 field_get_land_distance(s32 land_index)
     u8* base;
     u8* land;
     u8* land_address;
-    FieldGameState** state_ptr;
+    SavedGameLayout** state_ptr;
 
     do
     {

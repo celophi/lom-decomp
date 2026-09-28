@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "addhero_internal.h"
 
 /* Shift-JIS glyph pairs as stored in the little-endian u16 digit tables. */
@@ -10,6 +11,7 @@
 
 /* Glyph code tables: 33-byte rows of 16 two-byte glyphs plus a terminator. */
 #define ADDHERO_CHAR_TABLE_ROW_BYTES 33
+#define ADDHERO_CHAR_TABLE_COLUMNS 16
 #define ADDHERO_CHAR_TABLE_PAGE_BYTES (16 * ADDHERO_CHAR_TABLE_ROW_BYTES)
 
 #define ADDHERO_GLYPH_CACHE_SLOTS 0x100
@@ -18,6 +20,21 @@
 #define ADDHERO_GLYPH_RASTER_BYTES 0x80
 #define ADDHERO_GLYPH_RASTER_BUFFER_BYTES 0x8000
 #define ADDHERO_GLYPH_CACHE_USED 0x10000
+#define ADDHERO_GLYPH_CACHE_CODE_MASK 0xFFFF
+
+/** @brief Glyph cell: ADDHERO_GLYPH_SIZE square on screen, ADDHERO_GLYPH_ROWS rows of Kanji ROM bitmap. */
+#define ADDHERO_GLYPH_SIZE 16
+#define ADDHERO_GLYPH_ROWS 15
+
+/** @brief VRAM x of the glyph cache (4-bit texels, so a glyph is ADDHERO_GLYPH_SIZE / 4 halfwords wide). */
+#define ADDHERO_GLYPH_VRAM_X 320
+
+/** @brief CLUT the cached glyphs are drawn with: FIELD's text CLUT. */
+#define ADDHERO_GLYPH_CLUT_X 304
+#define ADDHERO_GLYPH_CLUT_Y 511
+
+/** @brief Pen x at which cached text wraps to the next line. */
+#define ADDHERO_TEXT_WRAP_X 640
 
 /** @brief Cached character code and flags recording use in the current frame. */
 typedef union
@@ -55,7 +72,6 @@ void addhero_draw_hex_byte(void* prim, u_long* ot, s32 value, s32 x, s32 y, s32 
 void* addhero_render_cached_glyph(void* prim, u_long* ot, u16 code, s32 palette);
 void* addhero_emit_glyph_sprite(AddheroGlyphSprite* sprite, u_long* ot, s32 cache_slot, s32 palette);
 void addhero_expand_text_glyph_codes(u8* out, u8* in);
-u8* Krom2RawAdd(u16 sjis_code);
 
 /**
  * @brief Render a signed decimal value as cached-glyph text, suppressing
@@ -140,7 +156,7 @@ void addhero_draw_hex_byte(void* prim, u_long* ot, s32 value, s32 x, s32 y, s32 
  * @param x         X position (interpreted per @p alignment).
  * @param y         Y baseline.
  * @param palette   Glyph palette index.
- * @param alignment 0 left, 1 right (16px/char), 2 right (8px/char).
+ * @param alignment FIELD_TEXT_ALIGN_LEFT, FIELD_TEXT_ALIGN_RIGHT or FIELD_TEXT_ALIGN_CENTER; every glyph is ADDHERO_GLYPH_SIZE wide.
  * @return The updated primitive cursor past the terminator.
  */
 void* addhero_draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s32 palette, s32 alignment)
@@ -153,29 +169,27 @@ void* addhero_draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s
 
     cursor = text;
     count = 0;
-    if (*cursor >= 0x20)
+    if (*cursor >= ADDHERO_TEXT_FIRST_PRINTABLE)
     {
-        scan = cursor;
-        do
+        for (scan = cursor; *scan >= ADDHERO_TEXT_FIRST_PRINTABLE; scan++)
         {
-            if (*scan >= 0x80)
+            if (*scan >= ADDHERO_SJIS_LEAD_MIN)
             {
                 scan++;
             }
-            scan++;
             count++;
-        } while (*scan >= 0x20);
+        }
     }
 
     switch (alignment)
     {
-    case 1:
-        x -= count * 16;
+    case FIELD_TEXT_ALIGN_RIGHT:
+        x -= count * ADDHERO_GLYPH_SIZE;
         break;
-    case 2:
-        x -= count * 8;
+    case FIELD_TEXT_ALIGN_CENTER:
+        x -= count * (ADDHERO_GLYPH_SIZE / 2);
         break;
-    case 0:
+    case FIELD_TEXT_ALIGN_LEFT:
     default:
         break;
     }
@@ -188,10 +202,10 @@ void* addhero_draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s
         if (*cursor == ' ')
         {
             cursor++;
-            g_addhero_glyph_cursor_x += 16;
+            g_addhero_glyph_cursor_x += ADDHERO_GLYPH_SIZE;
             continue;
         }
-        if (*cursor >= 0x80)
+        if (*cursor >= ADDHERO_SJIS_LEAD_MIN)
         {
             code = cursor[0];
             code = (code << 8) | cursor[1];
@@ -199,11 +213,11 @@ void* addhero_draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s
         }
         else
         {
-            if (*cursor < 0x20)
+            if (*cursor < ADDHERO_TEXT_FIRST_PRINTABLE)
             {
                 break;
             }
-            if (*cursor >= '0' && *cursor < 0x80)
+            if (*cursor >= '0' && *cursor < ADDHERO_SJIS_LEAD_MIN)
             {
                 code = *cursor + ADDHERO_SJIS_ALNUM_OFFSET;
                 cursor++;
@@ -218,7 +232,7 @@ void* addhero_draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s
     }
 
     draw_mode = prim;
-    setDrawTPage(draw_mode, 0, 0, getTPage(0, 0, 320, 0));
+    setDrawTPage(draw_mode, 0, 0, getTPage(0, 0, ADDHERO_GLYPH_VRAM_X, 0));
     addPrim(ot, draw_mode);
     return draw_mode + 1;
 }
@@ -253,7 +267,7 @@ void* addhero_render_cached_glyph(void* prim, u_long* ot, u16 code, s32 palette)
         }
     }
 
-    font_data = Krom2RawAdd(code);
+    font_data = (u8*)Krom2RawAdd(code);
     if (font_data == (u8*)-1)
     {
         return prim;
@@ -263,7 +277,7 @@ void* addhero_render_cached_glyph(void* prim, u_long* ot, u16 code, s32 palette)
     row = 0;
     color_index = (palette + 1) * 2;
     high_nibble_color = color_index * 16;
-    for (; row < 15; row++)
+    for (; row < ADDHERO_GLYPH_ROWS; row++)
     {
         for (source_byte = 0; source_byte < 2; source_byte++)
         {
@@ -295,11 +309,11 @@ void* addhero_render_cached_glyph(void* prim, u_long* ot, u16 code, s32 palette)
     g_addhero_glyph_cache[i].raw = code;
     prim = addhero_emit_glyph_sprite(prim, ot, i, palette);
 
-    g_addhero_glyph_upload_x = (i % ADDHERO_GLYPH_CACHE_COLUMNS) * 4;
+    g_addhero_glyph_upload_x = (i % ADDHERO_GLYPH_CACHE_COLUMNS) * (ADDHERO_GLYPH_SIZE / 4);
     g_addhero_glyph_upload_y = i & ADDHERO_GLYPH_CACHE_ROW_MASK;
 
-    setWH(&rect, 4, 15);
-    rect.x = g_addhero_glyph_upload_x + 320;
+    setWH(&rect, ADDHERO_GLYPH_SIZE / 4, ADDHERO_GLYPH_ROWS);
+    rect.x = g_addhero_glyph_upload_x + ADDHERO_GLYPH_VRAM_X;
     rect.y = g_addhero_glyph_upload_y;
 
     LoadImage(&rect, (u_long*)g_addhero_glyph_raster_cursor);
@@ -327,16 +341,16 @@ void* addhero_emit_glyph_sprite(AddheroGlyphSprite* sprite, u_long* ot, s32 cach
     sprite->packet.b0 = 0x80;
     sprite->packet.r0 = 0x80;
     setXY0(&sprite->packet, g_addhero_glyph_cursor_x, g_addhero_glyph_cursor_y);
-    setUV0(&sprite->packet, (cache_slot % ADDHERO_GLYPH_CACHE_COLUMNS) * 16, cache_slot & ADDHERO_GLYPH_CACHE_ROW_MASK);
-    sprite->packet.clut = getClut(304, 511);
+    setUV0(&sprite->packet, (cache_slot % ADDHERO_GLYPH_CACHE_COLUMNS) * ADDHERO_GLYPH_SIZE, cache_slot & ADDHERO_GLYPH_CACHE_ROW_MASK);
+    sprite->packet.clut = getClut(ADDHERO_GLYPH_CLUT_X, ADDHERO_GLYPH_CLUT_Y);
     addPrim(ot, &sprite->packet);
     sprite++;
 
-    g_addhero_glyph_cursor_x += 16;
-    if (g_addhero_glyph_cursor_x + 16 >= 640)
+    g_addhero_glyph_cursor_x += ADDHERO_GLYPH_SIZE;
+    if (g_addhero_glyph_cursor_x + ADDHERO_GLYPH_SIZE >= ADDHERO_TEXT_WRAP_X)
     {
         g_addhero_glyph_cursor_x = g_addhero_text_line_start_x;
-        g_addhero_glyph_cursor_y += 16;
+        g_addhero_glyph_cursor_y += ADDHERO_GLYPH_SIZE;
     }
 
     return sprite;
@@ -353,7 +367,7 @@ void addhero_begin_glyph_cache_frame(void)
     g_addhero_glyph_raster_cursor = g_addhero_glyph_raster_buffer;
     for (i = 0; i < ADDHERO_GLYPH_CACHE_SLOTS; i++)
     {
-        g_addhero_glyph_cache[i].raw &= 0xFFFF;
+        g_addhero_glyph_cache[i].raw &= ADDHERO_GLYPH_CACHE_CODE_MASK;
     }
 }
 
@@ -399,9 +413,9 @@ void addhero_reset_glyph_cache(void)
  *        character and null-terminating the result.
  * @param out Destination glyph-code buffer.
  * @param in  Null-terminated source string.
- * @note Lead bytes 0x19..0x1F start a two-byte code whose second byte's nibbles
+ * @note Lead bytes 0x19-0x1F start a two-byte code whose second byte's nibbles
  *       pick the row and column of one 16-row page of the double-byte table;
- *       bytes from 0x21 index the single-byte table by (c - 0x20); any other
+ *       bytes above ADDHERO_TEXT_FIRST_PRINTABLE index the single-byte table by their offset from it; any other
  *       byte becomes the table's first (blank) glyph.
  */
 void addhero_expand_text_glyph_codes(u8* out, u8* in)
@@ -417,7 +431,7 @@ void addhero_expand_text_glyph_codes(u8* out, u8* in)
         {
             break;
         }
-        if (c >= 0x19 && c <= 0x1F)
+        if (FIELD_TEXT_IS_DOUBLE_BYTE_LEAD(c))
         {
             u32 column;
             s32 row;
@@ -444,15 +458,17 @@ void addhero_expand_text_glyph_codes(u8* out, u8* in)
             out++;
             in += 2;
         }
-        else if (c >= 0x21)
+        else if (c > ADDHERO_TEXT_FIRST_PRINTABLE)
         {
             lead = *in;
-            index = lead - 0x20;
-            *out = g_addhero_single_byte_char_table[(index / 16) * ADDHERO_CHAR_TABLE_ROW_BYTES + (index & 0xF) * 2];
+            index = lead - ADDHERO_TEXT_FIRST_PRINTABLE;
+            *out = g_addhero_single_byte_char_table[(index / ADDHERO_CHAR_TABLE_COLUMNS) * ADDHERO_CHAR_TABLE_ROW_BYTES +
+                                                    (index & (ADDHERO_CHAR_TABLE_COLUMNS - 1)) * 2];
             out++;
             lead = *in;
-            index = lead - 0x20;
-            *out = g_addhero_single_byte_char_table[(index / 16) * ADDHERO_CHAR_TABLE_ROW_BYTES + (index & 0xF) * 2 + 1];
+            index = lead - ADDHERO_TEXT_FIRST_PRINTABLE;
+            *out = g_addhero_single_byte_char_table[(index / ADDHERO_CHAR_TABLE_COLUMNS) * ADDHERO_CHAR_TABLE_ROW_BYTES +
+                                                    (index & (ADDHERO_CHAR_TABLE_COLUMNS - 1)) * 2 + 1];
             out++;
             in += 1;
         }

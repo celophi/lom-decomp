@@ -77,7 +77,6 @@
 
 extern FieldBattleContext* g_field_battle;
 extern FieldRuntimeContext* g_field_runtime;
-extern FieldGameState* g_field_game_state;
 /** @brief Status flag bits granted by each equipment effect index. */
 extern u16 g_field_equipment_status_flags[];
 

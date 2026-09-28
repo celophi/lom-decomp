@@ -231,10 +231,10 @@ void field_open_item_drop_menu(void)
     item_count = 0;
     for (item_id = FIELD_DROP_ITEM_FIRST; item_id < FIELD_DROP_ITEM_LIMIT; item_id++)
     {
-        if (g_pad_ctx->item_counts[item_id] != 0)
+        if (g_saved_game_ctx->item_counts[item_id] != 0)
         {
             g_field_item_list[item_count].item_id = item_id;
-            g_field_item_list[item_count].count = g_pad_ctx->item_counts[item_id];
+            g_field_item_list[item_count].count = g_saved_game_ctx->item_counts[item_id];
             item_count++;
         }
     }
@@ -430,7 +430,7 @@ static s32 field_update_item_drop_menu(FieldMenuElement *window)
         field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
         reset_menu_elements();
         D_80122714 = 0;
-        g_pad_ctx->item_counts[g_field_item_list[g_field_item_list_cursor].item_id]--;
+        g_saved_game_ctx->item_counts[g_field_item_list[g_field_item_list_cursor].item_id]--;
         drop_selected_item();
         return;
     }
@@ -508,7 +508,7 @@ void field_pick_up_item_actor(s32 actor_index)
 {
     FieldActor *actor;
     FieldObjectState *state;
-    PadContext *save = g_pad_ctx;
+    SavedGameLayout* save = g_saved_game_ctx;
     FieldActor *actors = g_field_actors;
 
     actor = &actors[actor_index];

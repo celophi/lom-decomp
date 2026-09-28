@@ -26,8 +26,11 @@
 /** @brief Psy-Q open() mode: number of 8 KiB blocks to allocate on create. */
 #define ADDHERO_FILE_BLOCKS(count) ((count) << 16)
 
-/** @brief Size of the save blob (two memory-card blocks). */
-#define ADDHERO_SAVE_BYTES 0x4000
+/** @brief Bytes read to show an entry: the card header and the first 0x100 bytes of the saved game. */
+#define ADDHERO_ENTRY_READ_BYTES 0x280
+
+/** @brief Bytes read to show an entry that is not a Legend of Mana save: its card header title and CLUT. */
+#define ADDHERO_ENTRY_TITLE_READ_BYTES 0x80
 
 /** @brief Attempts made at a synchronous card file operation before giving up. */
 #define ADDHERO_FILE_OP_ATTEMPTS 20
@@ -35,62 +38,51 @@
 /** @brief Retries of a failed asynchronous save read or write (ADDHERO_STEP_INIT_RETRIES). */
 #define ADDHERO_SAVE_RETRIES 5
 
+/** @brief Shift-JIS full-width digit zero; digits 1-9 follow it. */
+#define ADDHERO_SJIS_DIGIT_ZERO 0x824F
+
+/** @brief Retries of _card_load, counted separately for errors and for a newly inserted card. */
+#define ADDHERO_CARD_LOAD_RETRIES 16
+
+/** @brief Bytes of the "bu00:" device prefix copied from g_addhero_file_template, with its terminator. */
+#define ADDHERO_CARD_DEVICE_BYTES sizeof("bu00:")
+
+/** @brief Bytes of the "bu00:*" directory pattern copied from g_addhero_entry_header_template, with its terminator. */
+#define ADDHERO_CARD_PATTERN_BYTES sizeof("bu00:*")
+
 /** @brief Card-path workspace retained while advancing a load/save sequence. */
-typedef struct
+typedef union
 {
     AddheroCardDevice device;
-    u8 suffix[100];
+    char text[104];
 } AddheroSequenceFilePath;
 
-/**
- * @brief Commands in the card load/save sequence bytecode.
- * @note Opcodes without a case are no-ops.
- */
-typedef enum
-{
-    ADDHERO_STEP_DONE = 0,                   /**< End of a step table; report ADDHERO_LOAD_RESULT_ABORT. */
-    ADDHERO_STEP_CARD_INFO = 1,              /**< Issue _card_info on the current slot. */
-    ADDHERO_STEP_POLL_CARD_INFO = 2,         /**< Wait for the _card_info result. */
-    ADDHERO_STEP_CLEAR_SOFTWARE_EVENTS = 3,  /**< Clear the software card events. */
-    ADDHERO_STEP_POLL_HARDWARE_EVENTS = 4,   /**< Wait for and check the hardware card events. */
-    ADDHERO_STEP_CLEAR_HARDWARE_EVENTS = 5,  /**< Clear the hardware card events. */
-    ADDHERO_STEP_SCAN_ENTRIES = 6,           /**< Erase the placeholder files and scan the card directory. */
-    ADDHERO_STEP_CLEAR_CARD = 8,             /**< Issue _card_clear on the current slot. */
-    ADDHERO_STEP_LOAD_CARD = 9,              /**< Issue _card_load and arm the poll countdowns. */
-    ADDHERO_STEP_ERASE_ENTRY = 10,           /**< Erase the selected directory entry. */
-    ADDHERO_STEP_POLL_CARD_LOAD = 15,        /**< Wait for the _card_clear/_card_load result, retrying. */
-    ADDHERO_STEP_WAIT_HARDWARE_EVENTS = 16,  /**< Wait for any hardware card event. */
-    ADDHERO_STEP_READ_ENTRY = 17,            /**< Open the selected save and start reading its header. */
-    ADDHERO_STEP_POLL_ENTRY_READ = 18,       /**< Wait for the header read to finish. */
-    ADDHERO_STEP_READ_SAVE = 19,             /**< Open the selected save and start reading the blob. */
-    ADDHERO_STEP_POLL_SAVE_READ = 20,        /**< Wait for the blob read to finish, retrying. */
-    ADDHERO_STEP_CHECK_CARD_TYPE = 24,       /**< Wait for a card and check its status. */
-    ADDHERO_STEP_WRITE_SAVE = 25,            /**< Create the placeholder file and start writing the save blob. */
-    ADDHERO_STEP_POLL_SAVE_WRITE = 26,       /**< Wait for the write and rename it over the selected save. */
-    ADDHERO_STEP_READ_BEFORE_WRITE = 27,     /**< Open the selected save and read the blob before writing. */
-    ADDHERO_STEP_POLL_PREWRITE_READ = 28,    /**< Wait for that read to finish, retrying. */
-    ADDHERO_STEP_INIT_RETRIES = 30           /**< Arm the read/write retry counter. */
-} AddheroCardStep;
-
-/** @brief Directory search pattern, including the card device and wildcard. */
-typedef struct
+/** @brief Card path used to remove a placeholder save file. */
+typedef union
 {
     AddheroCardDevice device;
-    u8 suffix[12];
+    char text[32];
+} AddheroProbeFilePath;
+
+/** @brief Directory search pattern, including the card device and wildcard. */
+typedef union
+{
+    AddheroCardDevice device;
+    char text[16];
 } AddheroDirectoryPattern;
 
 /** @brief Buffer for the selected save file's complete card path. */
-typedef struct
+typedef union
 {
     AddheroCardDevice device;
-    u8 suffix[252];
+    char text[256];
 } AddheroSelectedFilePath;
 
 extern s32 g_addhero_retry_count;
 extern s32 g_addhero_primary_poll_countdown;
 extern s32 g_addhero_secondary_poll_countdown;
 extern s32 g_addhero_file_handle;
-extern u8 g_addhero_target_file_path[];
+extern char g_addhero_target_file_path[];
 extern AddheroCardPathTemplate g_addhero_entry_header_template;
 extern s32 g_addhero_software_event_io_complete;
 extern s32 g_addhero_software_event_error;
@@ -101,23 +93,6 @@ extern s32 g_addhero_hardware_event_error;
 extern s32 g_addhero_hardware_event_timeout;
 extern s32 g_addhero_hardware_event_new_card;
 extern u8 g_addhero_loadseq_file_ready[];
-
-s32 open(void* a, s32 b);
-s32 rename(void* a, void* b);
-s32 _card_load(s32 a);
-s32 _card_clear(s32 a);
-s32 func_80032174(s32 a, void* b, s32* c);
-s32 McxCardType(s32 a);
-s32 firstfile(void* a, void* b);
-void func_800B0170(void* a);
-s32 nextfile(void* a);
-void reset_controller_vsync_state(void);
-s32 OpenEvent(s32 a, s32 b, s32 c, s32 d);
-void CloseEvent(s32 a);
-s32 TestEvent(s32 a);
-void EnableEvent(s32 a);
-void EnterCriticalSection(void);
-void ExitCriticalSection(void);
 
 /**
  * @brief Format @p value as a big-endian double-byte decimal glyph string,
@@ -138,17 +113,17 @@ s8* addhero_format_decimal(s8* out, s32 value)
     if (value >= divisor * 10)
     {
         *(AddheroOverflowGlyphString*)p = g_addhero_decimal_overflow_glyphs;
-        return p + 6;
+        return p + sizeof(AddheroOverflowGlyphString) - 1;
     }
 
     started = 0;
-    do
+    for (;; divisor /= 10)
     {
         digit = value / divisor;
         if (digit != 0 || started != 0)
         {
-            *p++ = (digit + 0x824F) >> 8;
-            *p++ = digit + 0x4F;
+            *p++ = (digit + ADDHERO_SJIS_DIGIT_ZERO) >> 8;
+            *p++ = digit + (ADDHERO_SJIS_DIGIT_ZERO & 0xFF);
             started = 1;
         }
         if (divisor == 1)
@@ -160,8 +135,7 @@ s8* addhero_format_decimal(s8* out, s32 value)
             started = 1;
         }
         value -= digit * divisor;
-        divisor /= 10;
-    } while (1);
+    }
     *p = 0;
     return p;
 }
@@ -181,29 +155,26 @@ void addhero_format_hex(s8* out, s32 value, s32 max_chars)
 
     shift_index = 7;
     started = 0;
-    if (max_chars != 0)
+    while (max_chars != 0)
     {
-        do
+        nibble = (value >> (shift_index * 4)) & 0xF;
+        if (nibble != 0 || started != 0)
         {
-            nibble = (value >> (shift_index * 4)) & 0xF;
-            if (nibble != 0 || started != 0)
-            {
-                addhero_hex_nibble_to_ascii(out, nibble);
-                out++;
-                max_chars--;
-                started = 1;
-                value -= nibble << (shift_index * 4);
-            }
-            shift_index--;
-            if (shift_index == -1)
-            {
-                break;
-            }
-            if (shift_index == 0)
-            {
-                started = 1;
-            }
-        } while (max_chars);
+            addhero_hex_nibble_to_ascii(out, nibble);
+            out++;
+            max_chars--;
+            started = 1;
+            value -= nibble << (shift_index * 4);
+        }
+        shift_index--;
+        if (shift_index == -1)
+        {
+            break;
+        }
+        if (shift_index == 0)
+        {
+            started = 1;
+        }
     }
     *out = 0;
 }
@@ -346,9 +317,8 @@ s32 addhero_parse_entry_fields(void)
     u32 lowercase_base;
     s32 suffix_value;
 
-    entry_index = 0;
-    max_suffix = entry_index;
-    while (entry_index < g_addhero_entry_state)
+    max_suffix = 0;
+    for (entry_index = 0; entry_index < g_addhero_entry_state; entry_index++)
     {
         if (strncmp(g_lom_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name, ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) == 0)
         {
@@ -394,7 +364,6 @@ s32 addhero_parse_entry_fields(void)
             g_addhero_entry_fields[g_addhero_card_slot][entry_index] = -1;
             g_addhero_entry_suffix_values[entry_index] = 0;
         }
-        entry_index++;
     }
     return max_suffix;
 }
@@ -471,7 +440,7 @@ s32 addhero_rank_entries(void)
 }
 
 /**
- * @brief Reset the 15 per-entry rank slots to -1 and the rank count to 0x28.
+ * @brief Reset the per-entry rank slots to -1 and the rank count to 0x28.
  */
 void addhero_reset_entry_ranks(void)
 {
@@ -480,7 +449,7 @@ void addhero_reset_entry_ranks(void)
 
     g_addhero_rank_count = 0x28;
     val = -1;
-    for (i = 14; i >= 0; i--)
+    for (i = ADDHERO_CARD_SAVE_SLOTS - 1; i >= 0; i--)
     {
         g_addhero_entry_ranks[i] = val;
     }
@@ -509,7 +478,7 @@ s32 addhero_has_known_entry_type(void)
 /**
  * @brief Sum the block usage of the active card's entries and test whether it
  *        has reached the card's capacity.
- * @return 1 when total used blocks are >= 0xE, 0 otherwise.
+ * @return 1 when the used blocks reach ADDHERO_USED_BLOCK_LIMIT, 0 otherwise.
  * @note Inlined into addhero_scan_next_entry.
  */
 inline s32 addhero_entry_blocks_reach_limit(void)
@@ -533,15 +502,15 @@ inline void addhero_erase_placeholder_files(void)
 {
     AddheroProbeFilePath buf;
 
-    memcpy(&buf, &g_addhero_file_template, 6);
+    memcpy(&buf, &g_addhero_file_template, ADDHERO_CARD_DEVICE_BYTES);
     buf.device.characters.slot += (u8)g_addhero_card_slot;
-    strcat(&buf, g_lom_save_dummy_filename);
-    erase(&buf);
+    strcat(buf.text, g_lom_save_dummy_filename);
+    erase(buf.text);
 
-    memcpy(&buf, &g_addhero_file_template, 6);
+    memcpy(&buf, &g_addhero_file_template, ADDHERO_CARD_DEVICE_BYTES);
     buf.device.characters.slot += (u8)g_addhero_card_slot;
-    strcat(&buf, g_lom_alt_save_dummy_filename);
-    erase(&buf);
+    strcat(buf.text, g_lom_alt_save_dummy_filename);
+    erase(buf.text);
 }
 
 /**
@@ -554,15 +523,15 @@ inline void addhero_erase_placeholder_files(void)
 s32 addhero_advance_load_sequence(void)
 {
     AddheroSequenceFilePath card_path;
-    s32 card_status0;
-    s32 card_status1;
+    long card_command;
+    long card_result;
     s32 result;
     s32 attempts;
     s32 poll_status;
     s32 entry_index;
     s32 empty_rank;
 
-    memcpy(&card_path, &g_addhero_file_template, 6);
+    memcpy(&card_path, &g_addhero_file_template, ADDHERO_CARD_DEVICE_BYTES);
     result = ADDHERO_LOAD_RESULT_PENDING;
     card_path.device.characters.slot += (u8)g_addhero_card_slot;
 
@@ -573,7 +542,7 @@ s32 addhero_advance_load_sequence(void)
         case ADDHERO_STEP_CARD_INFO:
             result = ADDHERO_LOAD_RESULT_CONTINUE;
             _card_wait(g_addhero_card_slot);
-            _card_info(g_addhero_card_slot * 0x10);
+            _card_info(ADDHERO_CARD_CHANNEL(g_addhero_card_slot));
             g_addhero_load_step++;
             break;
 
@@ -586,18 +555,18 @@ s32 addhero_advance_load_sequence(void)
             case ADDHERO_CARD_EVENT_ERROR:
             case ADDHERO_CARD_EVENT_TIMEOUT:
                 result = ADDHERO_LOAD_RESULT_COMPLETE;
-                g_addhero_selection_status = 0;
-                g_addhero_entry_state = ADDHERO_ENTRY_STATE_CARD_IO_ERROR;
+                g_addhero_selection_status = ADDHERO_SELECTION_NONE;
+                g_addhero_entry_state = ADDHERO_ENTRY_STATE_NO_CARD;
                 g_addhero_load_step++;
                 break;
             case ADDHERO_CARD_EVENT_NEW_CARD:
                 g_addhero_rank_count = 0x28;
                 empty_rank = -1;
-                for (entry_index = 14; entry_index >= 0; entry_index--)
+                for (entry_index = ADDHERO_CARD_SAVE_SLOTS - 1; entry_index >= 0; entry_index--)
                 {
                     g_addhero_entry_ranks[entry_index] = empty_rank;
                 }
-                g_addhero_entry_state = ADDHERO_ENTRY_STATE_IDLE;
+                g_addhero_entry_state = ADDHERO_ENTRY_STATE_CHECKING_CARD;
                 g_addhero_load_step = &g_addhero_loadseq_start;
                 break;
             }
@@ -622,8 +591,8 @@ s32 addhero_advance_load_sequence(void)
             case ADDHERO_CARD_EVENT_TIMEOUT:
             case ADDHERO_CARD_EVENT_NEW_CARD:
                 result = ADDHERO_LOAD_RESULT_COMPLETE;
-                g_addhero_selection_status = 0;
-                g_addhero_entry_state = ADDHERO_ENTRY_STATE_CARD_IO_ERROR;
+                g_addhero_selection_status = ADDHERO_SELECTION_NONE;
+                g_addhero_entry_state = ADDHERO_ENTRY_STATE_NO_CARD;
                 break;
             }
             break;
@@ -640,7 +609,7 @@ s32 addhero_advance_load_sequence(void)
             {
                 result = ADDHERO_LOAD_RESULT_ABORT;
                 g_addhero_load_step = NULL;
-                g_addhero_entry_state = 0xF8;
+                g_addhero_entry_state = ADDHERO_ENTRY_STATE_NO_GAME_DATA;
                 g_addhero_entry_scan_active = 0;
                 break;
             }
@@ -654,7 +623,7 @@ s32 addhero_advance_load_sequence(void)
                         g_addhero_selected_row = 0;
                     }
                     g_addhero_entry_scan_active = 0;
-                    if (g_addhero_entry_state != 0xF8 && g_addhero_entry_state != ADDHERO_ENTRY_STATE_CARD_FULL)
+                    if (g_addhero_entry_state != ADDHERO_ENTRY_STATE_NO_GAME_DATA && g_addhero_entry_state != ADDHERO_ENTRY_STATE_CARD_FULL)
                     {
                         addhero_commit_selected_entry();
                     }
@@ -666,16 +635,16 @@ s32 addhero_advance_load_sequence(void)
         case ADDHERO_STEP_CLEAR_CARD:
             result = ADDHERO_LOAD_RESULT_CONTINUE;
             _card_wait(g_addhero_card_slot);
-            _card_clear(g_addhero_card_slot * 0x10);
+            _card_clear(ADDHERO_CARD_CHANNEL(g_addhero_card_slot));
             g_addhero_load_step++;
             break;
 
         case ADDHERO_STEP_LOAD_CARD:
             result = ADDHERO_LOAD_RESULT_CONTINUE;
             _card_wait(g_addhero_card_slot);
-            _card_load(g_addhero_card_slot * 0x10);
-            g_addhero_primary_poll_countdown = 0x10;
-            g_addhero_secondary_poll_countdown = 0x10;
+            _card_load(ADDHERO_CARD_CHANNEL(g_addhero_card_slot));
+            g_addhero_primary_poll_countdown = ADDHERO_CARD_LOAD_RETRIES;
+            g_addhero_secondary_poll_countdown = ADDHERO_CARD_LOAD_RETRIES;
             g_addhero_load_step++;
             break;
 
@@ -685,10 +654,10 @@ s32 addhero_advance_load_sequence(void)
             break;
 
         case ADDHERO_STEP_ERASE_ENTRY:
-            strcat(&card_path, g_addhero_entries[g_addhero_card_slot][g_addhero_selected_row].name);
+            strcat(card_path.text, g_addhero_entries[g_addhero_card_slot][g_addhero_selected_row].name);
             for (attempts = 0; attempts < ADDHERO_FILE_OP_ATTEMPTS; attempts++)
             {
-                if (erase(&card_path) != 0)
+                if (erase(card_path.text) != 0)
                 {
                     break;
                 }
@@ -708,15 +677,15 @@ s32 addhero_advance_load_sequence(void)
                 if (g_addhero_secondary_poll_countdown != 0)
                 {
                     _card_wait(g_addhero_card_slot);
-                    _card_clear(g_addhero_card_slot * 0x10);
+                    _card_clear(ADDHERO_CARD_CHANNEL(g_addhero_card_slot));
                     _card_wait(g_addhero_card_slot);
-                    _card_load(g_addhero_card_slot * 0x10);
+                    _card_load(ADDHERO_CARD_CHANNEL(g_addhero_card_slot));
                 }
                 else
                 {
                     result = ADDHERO_LOAD_RESULT_COMPLETE;
-                    g_addhero_selection_status = 0;
-                    g_addhero_entry_state = ADDHERO_ENTRY_STATE_CARD_IO_ERROR;
+                    g_addhero_selection_status = ADDHERO_SELECTION_NONE;
+                    g_addhero_entry_state = ADDHERO_ENTRY_STATE_NO_CARD;
                 }
                 break;
             case ADDHERO_CARD_EVENT_NEW_CARD:
@@ -724,14 +693,14 @@ s32 addhero_advance_load_sequence(void)
                 if (g_addhero_primary_poll_countdown != 0)
                 {
                     _card_wait(g_addhero_card_slot);
-                    _card_clear(g_addhero_card_slot * 0x10);
+                    _card_clear(ADDHERO_CARD_CHANNEL(g_addhero_card_slot));
                     _card_wait(g_addhero_card_slot);
-                    _card_load(g_addhero_card_slot * 0x10);
+                    _card_load(ADDHERO_CARD_CHANNEL(g_addhero_card_slot));
                 }
                 else
                 {
                     result = ADDHERO_LOAD_RESULT_CARD_ERROR;
-                    g_addhero_entry_state = 0xFC;
+                    g_addhero_entry_state = ADDHERO_ENTRY_STATE_NO_SAVE_DATA;
                     g_addhero_load_step = g_addhero_loadseq_card;
                 }
                 break;
@@ -748,7 +717,7 @@ s32 addhero_advance_load_sequence(void)
 
         case ADDHERO_STEP_READ_ENTRY:
             g_addhero_io_busy = 1;
-            g_addhero_selection_status = 0;
+            g_addhero_selection_status = ADDHERO_SELECTION_NONE;
             _card_wait(g_addhero_card_slot);
             g_addhero_file_handle = open(g_addhero_save_file_path, ADDHERO_FILE_ASYNC | ADDHERO_FILE_READ);
             if (g_addhero_file_handle == -1)
@@ -757,7 +726,8 @@ s32 addhero_advance_load_sequence(void)
             }
             addhero_clear_software_card_events();
             _card_wait(g_addhero_card_slot);
-            if (read(g_addhero_file_handle, &g_addhero_entry_read_buffer, g_addhero_selected_entry_extended != 0 ? 0x280 : 0x80) == -1)
+            if (read(g_addhero_file_handle, &g_addhero_entry_file,
+                     g_addhero_selected_entry_extended != 0 ? ADDHERO_ENTRY_READ_BYTES : ADDHERO_ENTRY_TITLE_READ_BYTES) == -1)
             {
                 close(g_addhero_file_handle);
                 break;
@@ -772,13 +742,13 @@ s32 addhero_advance_load_sequence(void)
                 if (poll_status == ADDHERO_CARD_EVENT_COMPLETE)
                 {
                     g_addhero_io_busy = 0;
-                    g_addhero_selection_status = 1;
+                    g_addhero_selection_status = ADDHERO_SELECTION_ENTRY_READ;
                     close(g_addhero_file_handle);
                 }
                 else if (poll_status != ADDHERO_CARD_EVENT_NONE)
                 {
                     close(g_addhero_file_handle);
-                    g_addhero_entry_state = ADDHERO_ENTRY_STATE_IDLE;
+                    g_addhero_entry_state = ADDHERO_ENTRY_STATE_CHECKING_CARD;
                     g_addhero_load_step = &g_addhero_loadseq_start;
                 }
             }
@@ -796,13 +766,13 @@ s32 addhero_advance_load_sequence(void)
             g_addhero_file_handle = open(g_addhero_save_file_path, ADDHERO_FILE_ASYNC | ADDHERO_FILE_READ);
             addhero_clear_software_card_events();
             _card_wait(g_addhero_card_slot);
-            if (read(g_addhero_file_handle, g_addhero_save_blob, ADDHERO_SAVE_BYTES) == -1)
+            if (read(g_addhero_file_handle, &g_addhero_save_file, SAVE_FILE_BYTES) == -1)
             {
                 close(g_addhero_file_handle);
                 g_addhero_retry_count--;
                 if (g_addhero_retry_count == 0)
                 {
-                    addhero_open_status_dialog(1);
+                    addhero_open_status_dialog(ADDHERO_DIALOG_LOAD_FAILED);
                     return result;
                 }
                 break;
@@ -826,7 +796,7 @@ s32 addhero_advance_load_sequence(void)
                 if (g_addhero_retry_count == 0)
                 {
                     g_addhero_progress_bar_active = 0;
-                    addhero_open_status_dialog(1);
+                    addhero_open_status_dialog(ADDHERO_DIALOG_LOAD_FAILED);
                     return result;
                 }
                 /* Rewind to ADDHERO_STEP_READ_SAVE and try again. */
@@ -838,7 +808,7 @@ s32 addhero_advance_load_sequence(void)
         case ADDHERO_STEP_CHECK_CARD_TYPE:
             for (attempts = 0; attempts < ADDHERO_FILE_OP_ATTEMPTS; attempts++)
             {
-                if (McxCardType(g_addhero_card_slot * 0x10) == 1)
+                if (McxCardType(ADDHERO_CARD_CHANNEL(g_addhero_card_slot)) == MCX_COMMAND_ISSUED)
                 {
                     break;
                 }
@@ -846,14 +816,14 @@ s32 addhero_advance_load_sequence(void)
             }
             if (attempts != ADDHERO_FILE_OP_ATTEMPTS)
             {
-                func_80032174(0, &card_status0, &card_status1);
-                if (card_status1 == 0)
+                McxSync(MCX_SYNC_WAIT, &card_command, &card_result);
+                if (card_result == McxErrSuccess)
                 {
                     g_addhero_load_step++;
                     break;
                 }
             }
-            addhero_open_status_dialog(3);
+            addhero_open_status_dialog(ADDHERO_DIALOG_CARD_TYPE_ERROR);
             break;
 
         case ADDHERO_STEP_INIT_RETRIES:
@@ -869,13 +839,13 @@ s32 addhero_advance_load_sequence(void)
             g_addhero_file_handle = open(g_addhero_save_file_path, ADDHERO_FILE_ASYNC | ADDHERO_FILE_READ);
             addhero_clear_software_card_events();
             _card_wait(g_addhero_card_slot);
-            if (read(g_addhero_file_handle, g_addhero_save_blob, ADDHERO_SAVE_BYTES) == -1)
+            if (read(g_addhero_file_handle, &g_addhero_save_file, SAVE_FILE_BYTES) == -1)
             {
                 close(g_addhero_file_handle);
                 g_addhero_retry_count--;
                 if (g_addhero_retry_count == 0)
                 {
-                    addhero_open_exit_dialog(1);
+                    addhero_open_exit_dialog(ADDHERO_DIALOG_LOAD_FAILED);
                     return result;
                 }
                 break;
@@ -898,7 +868,7 @@ s32 addhero_advance_load_sequence(void)
                 if (g_addhero_retry_count == 0)
                 {
                     g_addhero_progress_bar_active = 0;
-                    addhero_open_exit_dialog(1);
+                    addhero_open_exit_dialog(ADDHERO_DIALOG_LOAD_FAILED);
                     return result;
                 }
                 /* Rewind to ADDHERO_STEP_READ_BEFORE_WRITE and try again. */
@@ -920,15 +890,15 @@ s32 addhero_advance_load_sequence(void)
                     }
                 }
             }
-            strcat(&card_path, g_lom_save_dummy_filename);
+            strcat(card_path.text, g_lom_save_dummy_filename);
             _card_wait(g_addhero_card_slot);
-            g_addhero_file_handle = open(&card_path, ADDHERO_FILE_CREATE | ADDHERO_FILE_BLOCKS(2));
+            g_addhero_file_handle = open(card_path.text, ADDHERO_FILE_CREATE | ADDHERO_FILE_BLOCKS(2));
             if (g_addhero_file_handle == -1)
             {
                 close(-1);
                 for (attempts = 0; attempts < ADDHERO_FILE_OP_ATTEMPTS; attempts++)
                 {
-                    if (erase(&card_path) != 0)
+                    if (erase(card_path.text) != 0)
                     {
                         break;
                     }
@@ -936,20 +906,20 @@ s32 addhero_advance_load_sequence(void)
                 g_addhero_retry_count--;
                 if (g_addhero_retry_count == 0)
                 {
-                    addhero_open_exit_dialog(0);
+                    addhero_open_exit_dialog(ADDHERO_DIALOG_SAVE_FAILED);
                     return result;
                 }
                 break;
             }
             close(g_addhero_file_handle);
-            strcpy(g_addhero_target_file_path, &card_path);
+            strcpy(g_addhero_target_file_path, card_path.text);
             _card_wait(g_addhero_card_slot);
             g_addhero_file_handle = open(g_addhero_target_file_path, ADDHERO_FILE_ASYNC | ADDHERO_FILE_WRITE);
             addhero_clear_software_card_events();
             g_addhero_progress_start_tick = VSync(-1);
             g_addhero_progress_bar_active = 1;
             _card_wait(g_addhero_card_slot);
-            if (write(g_addhero_file_handle, g_addhero_save_blob, ADDHERO_SAVE_BYTES) == -1)
+            if (write(g_addhero_file_handle, &g_addhero_save_file, SAVE_FILE_BYTES) == -1)
             {
                 close(g_addhero_file_handle);
                 for (attempts = 0; attempts < ADDHERO_FILE_OP_ATTEMPTS; attempts++)
@@ -962,7 +932,7 @@ s32 addhero_advance_load_sequence(void)
                 g_addhero_retry_count--;
                 if (g_addhero_retry_count == 0)
                 {
-                    addhero_open_exit_dialog(0);
+                    addhero_open_exit_dialog(ADDHERO_DIALOG_SAVE_FAILED);
                     return result;
                 }
                 break;
@@ -1004,7 +974,7 @@ s32 addhero_advance_load_sequence(void)
                 if (g_addhero_retry_count == 0)
                 {
                     g_addhero_progress_bar_active = 0;
-                    addhero_open_exit_dialog(0);
+                    addhero_open_exit_dialog(ADDHERO_DIALOG_SAVE_FAILED);
                     return result;
                 }
                 /* Rewind to ADDHERO_STEP_WRITE_SAVE and try again. */
@@ -1026,7 +996,7 @@ void addhero_restart_load_sequence(void)
 {
     _card_wait(g_addhero_card_slot);
     addhero_clear_software_card_events();
-    _card_info(g_addhero_card_slot * 0x10);
+    _card_info(ADDHERO_CARD_CHANNEL(g_addhero_card_slot));
     g_addhero_load_step = g_addhero_loadseq_card;
 }
 
@@ -1043,7 +1013,7 @@ s32 addhero_poll_and_retry_card_info(void)
     if (event_status != ADDHERO_CARD_EVENT_NONE)
     {
         _card_wait(g_addhero_card_slot);
-        _card_info(g_addhero_card_slot * 0x10);
+        _card_info(ADDHERO_CARD_CHANNEL(g_addhero_card_slot));
     }
     return event_status;
 }
@@ -1105,16 +1075,16 @@ s32 addhero_begin_entry_scan(s32 page)
 {
     AddheroDirectoryPattern buf;
 
-    memcpy(&buf, &g_addhero_entry_header_template, 7);
+    memcpy(&buf, &g_addhero_entry_header_template, ADDHERO_CARD_PATTERN_BYTES);
     g_addhero_selected_row = 0;
     g_addhero_scroll_frames = 0;
     g_addhero_scroll_target_y = 0;
     g_addhero_scroll_y = 0;
     g_addhero_entry_state = 0;
     buf.device.characters.slot += page;
-    if (firstfile(&buf, &g_addhero_entries[page][0]) != 0)
+    if (firstfile(buf.text, &g_addhero_entries[page][0]) != 0)
     {
-        func_800B0170(&g_addhero_entries[page][g_addhero_entry_state]);
+        field_flag_known_save(g_addhero_entries[page][g_addhero_entry_state].name);
         g_addhero_entry_state += 1;
         return 1;
     }
@@ -1132,7 +1102,7 @@ s32 addhero_scan_next_entry(s32 page)
 
     if (nextfile(&g_addhero_entries[page][g_addhero_entry_state]) != 0)
     {
-        func_800B0170(&g_addhero_entries[page][g_addhero_entry_state]);
+        field_flag_known_save(g_addhero_entries[page][g_addhero_entry_state].name);
         g_addhero_entry_state += 1;
         return 1;
     }
@@ -1140,7 +1110,7 @@ s32 addhero_scan_next_entry(s32 page)
     field_reset_input_repeat();
     if ((g_addhero_mode == 0) && (addhero_has_known_entry_type() == 0))
     {
-        g_addhero_entry_state = 0xF8;
+        g_addhero_entry_state = ADDHERO_ENTRY_STATE_NO_GAME_DATA;
     }
     else
     {
@@ -1197,19 +1167,19 @@ void addhero_commit_selected_entry(void)
 
     if (g_addhero_entry_state == 0)
     {
-        g_addhero_selection_status = 3;
+        g_addhero_selection_status = ADDHERO_SELECTION_EMPTY_CARD;
         return;
     }
     if (strncmp(g_new_save_entry_prefix, g_addhero_entries[g_addhero_card_slot][g_addhero_selected_row].name, ADDHERO_NEW_SAVE_FILENAME_PREFIX_LENGTH) == 0)
     {
-        g_addhero_selection_status = 2;
+        g_addhero_selection_status = ADDHERO_SELECTION_NEW_SAVE;
         return;
     }
-    memcpy(&path, &g_addhero_file_template, 6);
-    strcat(&path, g_addhero_entries[g_addhero_card_slot][g_addhero_selected_row].name);
+    memcpy(&path, &g_addhero_file_template, ADDHERO_CARD_DEVICE_BYTES);
+    strcat(path.text, g_addhero_entries[g_addhero_card_slot][g_addhero_selected_row].name);
     path.device.characters.slot += (u8)g_addhero_card_slot;
-    g_addhero_selection_status = 0;
-    strcpy(g_addhero_save_file_path, &path);
+    g_addhero_selection_status = ADDHERO_SELECTION_NONE;
+    strcpy(g_addhero_save_file_path, path.text);
     g_addhero_load_step = g_addhero_loadseq_file_ready;
     if (strncmp(g_lom_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][g_addhero_selected_row].name, ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) == 0)
     {
@@ -1313,7 +1283,7 @@ void addhero_sort_entries_by_type(void)
             if (g_addhero_entry_suffix_values[entry_index] == suffix &&
                 strncmp(g_lom_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name, ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) == 0)
             {
-                bcopy(&g_addhero_entries[g_addhero_card_slot][entry_index], &sorted[output_index], sizeof(struct DIRENTRY));
+                bcopy((u8*)&g_addhero_entries[g_addhero_card_slot][entry_index], (u8*)&sorted[output_index], sizeof(struct DIRENTRY));
                 output_index++;
             }
         }
@@ -1326,7 +1296,7 @@ void addhero_sort_entries_by_type(void)
             if (g_addhero_entry_suffix_values[entry_index] == suffix &&
                 strncmp(g_lom_alt_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name, ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) == 0)
             {
-                bcopy(&g_addhero_entries[g_addhero_card_slot][entry_index], &sorted[output_index], sizeof(struct DIRENTRY));
+                bcopy((u8*)&g_addhero_entries[g_addhero_card_slot][entry_index], (u8*)&sorted[output_index], sizeof(struct DIRENTRY));
                 output_index++;
             }
         }
@@ -1336,7 +1306,7 @@ void addhero_sort_entries_by_type(void)
     {
         if (strncmp(g_new_save_entry_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name, ADDHERO_NEW_SAVE_FILENAME_PREFIX_LENGTH) == 0)
         {
-            bcopy(&g_addhero_entries[g_addhero_card_slot][entry_index], &sorted[output_index], sizeof(struct DIRENTRY));
+            bcopy((u8*)&g_addhero_entries[g_addhero_card_slot][entry_index], (u8*)&sorted[output_index], sizeof(struct DIRENTRY));
             output_index++;
         }
     }
@@ -1347,13 +1317,13 @@ void addhero_sort_entries_by_type(void)
             strncmp(g_lom_alt_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name, ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) != 0 &&
             strncmp(g_new_save_entry_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name, ADDHERO_NEW_SAVE_FILENAME_PREFIX_LENGTH) != 0)
         {
-            bcopy(&g_addhero_entries[g_addhero_card_slot][entry_index], &sorted[output_index], sizeof(struct DIRENTRY));
+            bcopy((u8*)&g_addhero_entries[g_addhero_card_slot][entry_index], (u8*)&sorted[output_index], sizeof(struct DIRENTRY));
             output_index++;
         }
     }
 
     for (entry_index = 0; entry_index < g_addhero_entry_state; entry_index++)
     {
-        bcopy(&sorted[entry_index], &g_addhero_entries[g_addhero_card_slot][entry_index], sizeof(struct DIRENTRY));
+        bcopy((u8*)&sorted[entry_index], (u8*)&g_addhero_entries[g_addhero_card_slot][entry_index], sizeof(struct DIRENTRY));
     }
 }
