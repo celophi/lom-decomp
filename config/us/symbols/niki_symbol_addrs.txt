@@ -202,3 +202,7 @@ g_saved_game_ctx                            = 0x8012271C;
 McxSync                                    = 0x80032174;
 VSync                                      = 0x8002054C;
 McxCardType                                = 0x800342CC;
+g_save_compatibility_tag                    = 0x8003EC9C;
+
+// FIELD UI string entry used by this overlay.
+g_field_ui_text_cant_hold_more = 0x800EC3D0;

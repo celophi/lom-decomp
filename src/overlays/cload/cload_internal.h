@@ -300,7 +300,7 @@ extern u8 g_cload_steps_card_reset[];
 extern u8 g_cload_steps_load_selected_save[];
 extern s32 g_cload_choice_toggle;
 extern u8 *g_cload_load_step;
-extern s32 g_save_slot_index;
+extern s32 g_save_compatibility_tag;
 extern char g_lom_save_filename_prefix[];
 extern char g_cload_entries[];
 extern s32 g_cload_entry_scan_active;

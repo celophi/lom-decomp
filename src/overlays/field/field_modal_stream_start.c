@@ -20,7 +20,7 @@
 extern s32 g_field_modal_state;
 extern s32 g_field_card_overlay_mode;
 extern s32 g_field_niki_addhero_state;
-extern s32 g_field_card_save_slot;
+extern s32 g_field_card_pet_slot;
 extern s32 g_field_gosub_state;
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
@@ -44,7 +44,7 @@ void field_open_carda(s32 mode)
         g_field_gosub_state = 1;
         g_gosub_result_count = 0;
         g_field_modal_state = FIELD_MODAL_CARDA;
-        g_field_card_save_slot = g_gosub_result_values[0];
+        g_field_card_pet_slot = g_gosub_result_values[0];
         carda_init(FIELD_MODAL_WORK_BUFFER, mode);
     }
 }

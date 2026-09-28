@@ -422,7 +422,7 @@ extern AddheroOverflowGlyphString g_addhero_decimal_overflow_glyphs;
 extern AddheroElement g_addhero_element_pool[ADDHERO_ELEMENT_COUNT];
 extern AddheroElement g_addhero_element1;
 
-extern s32 g_save_slot_index;
+extern s32 g_save_compatibility_tag;
 
 /**
  * @brief FIELD data word next to D_80122714; ADDHERO stores 3 into it when Circle cancels the browser.

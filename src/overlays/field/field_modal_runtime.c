@@ -208,7 +208,7 @@ extern u8 g_field_instrument_icons[];
  */
 extern s32 g_pad_input;
 extern s32 g_pad_input_inject;
-extern s32 g_save_slot_index;
+extern s32 g_save_compatibility_tag;
 extern u16 g_music_track_index;
 extern s32 g_frame_counter;
 extern s32 g_pending_game_state;
@@ -285,7 +285,7 @@ s32 func_801400C4(FieldRenderHalf* render);
 s32 func_801400D4(FieldRenderHalf* render);
 s32 func_801401F0(FieldRenderHalf* render);
 s32 func_801401F8(FieldRenderHalf* render);
-s32 func_80140370(FieldRenderHalf* render);
+s32 carda_update_frame(FieldRenderHalf* render);
 s32 func_801405B0(s32 render_buffers);
 void func_80140080(void* work, void* screen_sequence);
 void func_80140E00(void* work, s32 context);
@@ -529,7 +529,7 @@ void field_store_entry_settings(s16 scene_id, s8 object_id, s8 music_id, s32 spa
     g_saved_game_ctx->sound_bank_id = sound_bank_id;
     g_saved_game_ctx->secondary_music_id = secondary_music_id;
     g_saved_game_ctx->track.bits.music_track = g_music_track_index;
-    g_saved_game_ctx->save_slot = g_save_slot_index;
+    g_saved_game_ctx->compatibility_tag = g_save_compatibility_tag;
 }
 
 /**
@@ -1164,7 +1164,7 @@ void field_merge_dialog_items(void)
 static void field_update_text_session(void)
 {
     if ((g_field_text_session_cd_error && !cdrom_get_error_status()) ||
-        (!g_field_text_session_cd_error && (g_pad_input == PADh || ((g_saved_game_ctx->characters[1].info.word & FIELD_CHARACTER_AI) &&
+        (!g_field_text_session_cd_error && (g_pad_input == PADh || ((g_saved_game_ctx->characters[1].info.word & FIELD_CHARACTER_PAD_CONTROLLED) &&
                                                                     g_saved_game_ctx->characters[1].name[0] && g_pad_input_inject == PADh))))
     {
         g_field_draw_count = 0;
@@ -1430,8 +1430,8 @@ void field_process_input(FieldRenderHalf* render)
             {
                 if (field_is_scene_fading() == 0)
                 {
-                    if (g_pad_input == PADh || ((g_saved_game_ctx->characters[1].info.word & FIELD_CHARACTER_AI) && g_saved_game_ctx->characters[1].name[0] &&
-                                                g_pad_input_inject == PADh))
+                    if (g_pad_input == PADh || ((g_saved_game_ctx->characters[1].info.word & FIELD_CHARACTER_PAD_CONTROLLED) &&
+                                                g_saved_game_ctx->characters[1].name[0] && g_pad_input_inject == PADh))
                     {
                         field_run_menu(FIELD_MENU_RENDER_BUFFERS, 0);
                     }
@@ -1440,7 +1440,7 @@ void field_process_input(FieldRenderHalf* render)
             else
             {
                 if (g_pad_input == PADh || g_pad_input == PADRup ||
-                    ((g_saved_game_ctx->characters[1].info.word & FIELD_CHARACTER_AI) && g_saved_game_ctx->characters[1].name[0] &&
+                    ((g_saved_game_ctx->characters[1].info.word & FIELD_CHARACTER_PAD_CONTROLLED) && g_saved_game_ctx->characters[1].name[0] &&
                      (g_pad_input_inject == PADh || g_pad_input_inject == PADRup)))
                 {
                     field_run_menu(FIELD_MENU_RENDER_BUFFERS, 0);
@@ -1683,7 +1683,7 @@ void field_rebuild_party_actions(s32 refresh_only)
     cdrom_set_audio_volume(0x7F, g_saved_game_ctx->options.bits.mono_sound);
     controllers_or_is_player = (s32)CONTROLLER_STATE;
     ((ControllerState*)controllers_or_is_player)->ports[0].actuators_enabled = g_saved_game_ctx->options.bits.vibration;
-    if ((g_saved_game_ctx->characters[1].info.word & FIELD_CHARACTER_AI) && (g_saved_game_ctx->characters[1].name[0] != 0))
+    if ((g_saved_game_ctx->characters[1].info.word & FIELD_CHARACTER_PAD_CONTROLLED) && (g_saved_game_ctx->characters[1].name[0] != 0))
     {
         ((ControllerState*)controllers_or_is_player)->ports[1].actuators_enabled = g_saved_game_ctx->options.bits.vibration;
     }
@@ -2076,7 +2076,7 @@ void field_update_modal(FieldRenderHalf* render)
         }
         return;
     case FIELD_MODAL_CARDA:
-        if ((g_field_card_overlay_mode != 0) && (func_80140370(render) != 0))
+        if ((g_field_card_overlay_mode != 0) && (carda_update_frame(render) != 0))
         {
             field_reset_actor_resources();
             switch (g_field_card_overlay_mode)

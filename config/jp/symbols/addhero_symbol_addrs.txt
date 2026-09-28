@@ -226,7 +226,7 @@ field_set_default_fade_target              = 0x80067C44;
 field_play_sound                                 = 0x800A37E8;
 
 // Shared main-executable data globals referenced from addhero
-g_save_slot_index                          = 0x8003EE08;
+g_save_compatibility_tag                          = 0x8003EE08;
 g_text_time_separator_offset_bytes         = 0x800EBFC2;
 g_text_choice_glyph_offsets                = 0x800EBFC6;
 g_lom_save_filename_prefix                 = 0x800ECAE8;

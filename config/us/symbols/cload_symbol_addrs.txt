@@ -52,7 +52,7 @@ SetGeomOffset                       = 0x8001D58C;
 SetGeomScreen                       = 0x8001D5AC;
 VSync                               = 0x8002054C;
 McxCardType                         = 0x800342CC;
-g_save_slot_index                   = 0x8003EC9C;
+g_save_compatibility_tag                   = 0x8003EC9C;
 g_saved_game                        = 0x80042FD8; // size:0x4000 allow_addend:True
 play_menu_sfx                       = 0x800A3938;
 

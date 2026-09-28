@@ -85,7 +85,7 @@ void main_game_loop(void)
     g_field_secondary_music_id = -1;
     g_field_sound_bank_id = -1;
     g_field_scene_id = 0;
-    g_save_slot_index = 7;
+    g_save_compatibility_tag = SAVE_TAG_STARTUP;
     g_script_pair_value_49 = 0;
     D_8003EC8C = 11;
     D_80042FD0 = 19;
@@ -207,7 +207,7 @@ void main_game_loop(void)
             cdrom_wait_queue_empty();
             field_scene_reset(0);
             spawn_id = &g_field_spawn_id;
-            g_save_slot_index = 7;
+            g_save_compatibility_tag = SAVE_TAG_STARTUP;
             if (cload_main() != 0)
             {
                 g_game_state = GAME_STATE_TITLE;

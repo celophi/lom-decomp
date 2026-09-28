@@ -434,7 +434,8 @@ s32 cload_handle_input(void)
         }
         else
         {
-            if ((g_cload_selected_file.saved_game.save_slot == g_save_slot_index) || (g_cload_selected_file.saved_game.save_slot == 0xFF))
+            if ((g_cload_selected_file.saved_game.compatibility_tag == g_save_compatibility_tag) ||
+                (g_cload_selected_file.saved_game.compatibility_tag == SAVE_TAG_ANY))
             {
                 prompt = cload_alloc_element();
                 prompt->draw = cload_draw_load_prompt;
@@ -782,7 +783,7 @@ void *cload_draw_selected_entry_details(u_long *ot, void *prim, s32 x_offset, s3
             {
                 SavedGameLayout* save = &g_cload_selected_file.saved_game;
 
-                if (save->save_slot == 0xFF || save->save_slot == g_save_slot_index)
+                if (save->compatibility_tag == SAVE_TAG_ANY || save->compatibility_tag == g_save_compatibility_tag)
                 {
                     s32 present_count;
                     s32 i;

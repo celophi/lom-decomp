@@ -427,7 +427,7 @@ extern u8* g_niki_load_step;
 extern s32 g_field_niki_addhero_state;
 extern char D_800ECF7C[];
 extern NikiDirEntry g_niki_entries[][NIKI_DIRECTORY_ENTRY_COUNT];
-extern s32 D_8003EC9C;
+extern s32 g_save_compatibility_tag;
 extern s32 g_niki_icon_palette;
 extern s32 g_niki_dialog_state;
 /**
@@ -442,7 +442,7 @@ extern u16 D_8014714C;
 extern u16 D_801475C4[];
 extern u8 D_800EC3F6[2];
 extern u8 D_800EC3FA[];
-extern u8 D_800EC3D0[];
+extern u8 g_field_ui_text_cant_hold_more[];
 extern s32 g_menu_element_counter;
 extern u16 D_80147128;
 extern s32 g_niki_choice_toggle;

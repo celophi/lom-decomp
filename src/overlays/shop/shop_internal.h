@@ -144,7 +144,7 @@ extern s32 g_shop_scroll_frames;
  * the table starting at D_800EC3C4 lies at D_800EC3C4 + offset.
  */
 extern u8 D_800EC3C4[];
-extern u8 D_800EC3D0[];
+extern u8 g_field_ui_text_cant_hold_more[];
 extern u8 D_800EC3DC[];
 extern u8 D_800EC3E0[];
 extern u8 D_800EC3E2[];

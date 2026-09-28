@@ -363,7 +363,7 @@ void carda_reset_glyph_cache(void)
  *       pick the row and column of one 16-row page of the double-byte table;
  *       bytes from 0x21 index the single-byte table by (c - 0x20); any other
  *       byte becomes the table's first (blank) glyph.
- * @note D_801629D0 is the double-byte table indexed by the raw lead byte: the
+ * @note g_carda_char_page_base is the double-byte table indexed by the raw lead byte: the
  *       table start minus 0x19 * CARDA_CHAR_TABLE_PAGE_BYTES.
  */
 void carda_expand_text_glyph_codes(u8* out, u8* in)
@@ -389,7 +389,7 @@ void carda_expand_text_glyph_codes(u8* out, u8* in)
             column = in[1];
             row = column >> 4;
             column &= 0xF;
-            first_byte = D_801629D0 + column * 2;
+            first_byte = g_carda_char_page_base + column * 2;
             first_byte += row * CARDA_CHAR_TABLE_ROW_BYTES;
             lead = *in;
             first_byte += lead * CARDA_CHAR_TABLE_PAGE_BYTES;
@@ -398,7 +398,7 @@ void carda_expand_text_glyph_codes(u8* out, u8* in)
             column = in[1];
             row = column >> 4;
             column &= 0xF;
-            second_byte = D_801629D0 + 1 + column * 2;
+            second_byte = g_carda_char_page_base + 1 + column * 2;
             second_byte += row * CARDA_CHAR_TABLE_ROW_BYTES;
             lead = *in;
             second_byte += lead * CARDA_CHAR_TABLE_PAGE_BYTES;

@@ -6,9 +6,7 @@
 #define TITLE_MENU_ITEM_NEW_GAME 0
 #define TITLE_MENU_ITEM_CONTINUE 1
 
-/* Value g_titleSelectedItem holds when the idle countdown expires. The same
- * value marks g_save_slot_index as having no selected slot on the fallback
- * field-entry path. */
+/* Value g_titleSelectedItem holds when the idle countdown expires. */
 #define TITLE_SELECTION_SENTINEL 0xFF
 
 /**
@@ -132,7 +130,7 @@ s32 run_title(TitleMenuContext* menu_context)
         {
             akao_fade_song_volume(0, TITLE_SELECTION_SFX_ID, 0);
             load_menu_layout(-1);
-            g_save_slot_index = TITLE_SELECTION_SENTINEL;
+            g_save_compatibility_tag = SAVE_TAG_ANY;
             random_low = rand();
             random_high = rand();
             g_saved_game.layout.identity.ids.game_id = random_low | (random_high << TITLE_RNG_HIGH_SHIFT);

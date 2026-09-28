@@ -1389,7 +1389,7 @@ field_run_golem                       = 0x800AD0C8;
 field_modal_frame_stub                = 0x800AD118;
 field_open_niki                       = 0x800AD120;
 field_open_addhero                    = 0x800AD194;
-g_field_card_save_slot                = 0x801227C4;
+g_field_card_pet_slot                = 0x801227C4;
 field_update_pair_indicators          = 0x800A2E40;
 field_draw_pair_indicator             = 0x800A32A8;
 g_field_pair_indicator_count          = 0x80117EC0;
@@ -1547,3 +1547,6 @@ g_field_item_tables = 0x80123FC0;
 g_field_item_staging = 0x80123FC4;
 
 g_field_item_name_table = 0x800F0E98;
+
+// CARDA entry point called by the card modal.
+carda_update_frame = 0x80140370;

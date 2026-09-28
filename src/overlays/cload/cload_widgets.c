@@ -266,7 +266,7 @@ void *cload_draw_load_progress(u_long *ot, void *prim, s32 x_offset, s32 y_offse
             play_menu_sfx(0x7B, 0x80);
             g_cload_element_pool[0].attr.f.state = CLOAD_ELEMENT_FREE;
             bcopy((u8*)&g_cload_save_file.saved_game, g_saved_game.bytes, SAVED_GAME_DATA_SIZE);
-            g_save_slot_index = g_saved_game.layout.save_slot;
+            g_save_compatibility_tag = g_saved_game.layout.compatibility_tag;
             g_playtime_vsync_origin = VSync(-1);
             g_cload_exit_requested = 1;
         }

@@ -115,7 +115,7 @@ void* addhero_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_off
     void* result;
     s32 x;
     s32 i;
-    u32 ai_controlled;
+    u32 pad_controlled;
 
     x = -x_offset + ADDHERO_MESSAGE_WIDTH / 2;
     result = field_draw_text(prim, ot, ADDHERO_TEXT_AT(g_addhero_text_loading, ADDHERO_TEXT_LOADING), FIELD_TEXT_COLOR_NORMAL, x, -y_offset,
@@ -138,10 +138,11 @@ void* addhero_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_off
         }
 
         field_play_sound(FIELD_SOUND_LOAD_DONE, FIELD_SOUND_PAN_CENTRE);
-        ai_controlled = g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.bytes[0] >> FIELD_CHARACTER_AI_SHIFT;
+        pad_controlled = g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.bytes[0] >> FIELD_CHARACTER_PAD_CONTROLLED_SHIFT;
         bcopy((u8*)&file->saved_game.characters[FIELD_PARTY_HERO], (u8*)&g_saved_game_ctx->characters[FIELD_PARTY_GUEST], sizeof(FieldCharacterRecord));
         g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word =
-            (g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & ~FIELD_CHARACTER_AI) | (ai_controlled << FIELD_CHARACTER_AI_SHIFT);
+            (g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & ~FIELD_CHARACTER_PAD_CONTROLLED) |
+            (pad_controlled << FIELD_CHARACTER_PAD_CONTROLLED_SHIFT);
         g_saved_game_ctx->guest_origin.ids.game_id = file->saved_game.identity.ids.game_id;
         g_saved_game_ctx->guest_origin.ids.save_id = file->saved_game.identity.ids.save_id;
         g_saved_game_ctx->guest_loaded = 1;
@@ -560,7 +561,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
                 buffer = (u8*)&g_addhero_save_file;
                 bcopy((u8*)&g_saved_game_ctx->characters[FIELD_PARTY_GUEST], (u8*)&((SaveFile*)buffer)->saved_game.characters[FIELD_PARTY_HERO],
                       sizeof(FieldCharacterRecord));
-                ((SaveFile*)buffer)->saved_game.characters[FIELD_PARTY_HERO].info.word |= FIELD_CHARACTER_AI;
+                ((SaveFile*)buffer)->saved_game.characters[FIELD_PARTY_HERO].info.word |= FIELD_CHARACTER_PAD_CONTROLLED;
                 checksum = addhero_compute_save_checksum(buffer);
                 ((SaveFile*)buffer)->magic = SAVE_FILE_MAGIC;
                 ((SaveFile*)buffer)->checksum = checksum;

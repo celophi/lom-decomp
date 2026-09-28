@@ -422,7 +422,7 @@ s32 addhero_handle_input(void)
         {
             entry = &g_addhero_entry_file.saved_game;
             if ((entry->identity.ids.game_id != g_saved_game_ctx->identity.ids.game_id) &&
-                ((g_save_slot_index == 0xFF) || (entry->save_slot == g_save_slot_index)))
+                ((g_save_compatibility_tag == SAVE_TAG_ANY) || (entry->compatibility_tag == g_save_compatibility_tag)))
             {
                 prompt = addhero_alloc_element();
                 prompt->attr.bits.transition_step = 1;
@@ -813,7 +813,7 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
             if (strncmp(g_lom_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][g_addhero_selected_row].name, ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) ==
                 0)
             {
-                if (g_save_slot_index == 0xFF || g_addhero_entry_file.saved_game.save_slot == g_save_slot_index)
+                if (g_save_compatibility_tag == SAVE_TAG_ANY || g_addhero_entry_file.saved_game.compatibility_tag == g_save_compatibility_tag)
                 {
                     s32 present_count;
                     s32 i;
@@ -824,7 +824,6 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
                     s32 base_y;
                     s32 total;
                     s32 hours;
-                    s32 time_val;
 
                     {
                         SavedGameLayout* entry = &g_addhero_entry_file.saved_game;
@@ -847,24 +846,19 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
                     switch (present_count)
                     {
                     case 2:
-                        step = 0x20;
-                        half_step = 0x10;
-                        time_val = g_addhero_icon_phase;
-                        if (g_addhero_icon_phase < 0)
-                        {
-                            time_val = g_addhero_icon_phase + 0x1F;
-                        }
-                        g_addhero_icon_phase -= (time_val >> 5) << 5;
+                        step = 32;
+                        half_step = 16;
+                        g_addhero_icon_phase %= 32;
                         break;
                     case 3:
-                        step = 0x10;
-                        half_step = 0x20;
-                        g_addhero_icon_phase %= 0x60;
+                        step = 16;
+                        half_step = 32;
+                        g_addhero_icon_phase %= 96;
                         break;
                     default:
-                        step = 0x10;
-                        half_step = 0x20;
-                        g_addhero_icon_phase = 0x1F;
+                        step = 16;
+                        half_step = 32;
+                        g_addhero_icon_phase = 31;
                         break;
                     }
 

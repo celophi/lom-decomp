@@ -78,9 +78,17 @@
 /** @brief Character type of a golem companion in party slot 2. */
 #define FIELD_CHARACTER_GOLEM 4
 
-/** @brief Character info bit 7: the character is AI-controlled. */
-#define FIELD_CHARACTER_AI 0x80
-#define FIELD_CHARACTER_AI_SHIFT 7
+/** @brief Character info bit 7: a player's controller drives the character; clear for a computer-controlled companion. */
+#define FIELD_CHARACTER_PAD_CONTROLLED 0x80
+#define FIELD_CHARACTER_PAD_CONTROLLED_SHIFT 7
+
+/**
+ * @brief SavedGameLayout::compatibility_tag values.
+ * @note A new game uses SAVE_TAG_ANY, loading a save adopts its tag, and saving writes the
+ *       current tag; the load screens refuse a save whose tag differs unless one is SAVE_TAG_ANY.
+ */
+#define SAVE_TAG_ANY 0xFF  /**< Matches every save; what new games use. */
+#define SAVE_TAG_STARTUP 7 /**< Set at startup, before a new game or a load replaces it. */
 
 /**
  * @brief Identity of a saved game.
@@ -262,7 +270,7 @@ typedef struct FieldItemRecord
 typedef struct FieldCharacterRecord
 {
     u8 name[24];
-    /** @brief Byte 0: bits 0-6 character type, bit 7 set while the slot is AI-controlled. */
+    /** @brief Byte 0: bits 0-6 character type, bit 7 FIELD_CHARACTER_PAD_CONTROLLED. */
     union
     {
         u32 word;
@@ -270,7 +278,7 @@ typedef struct FieldCharacterRecord
         struct
         {
             u8 type : 7;
-            /** @brief Same bit as FIELD_CHARACTER_AI; set members get pad control (mode 0) in battle. */
+            /** @brief FIELD_CHARACTER_PAD_CONTROLLED: the member is driven by a controller, not scripted. */
             u8 pad_controlled : 1;
         } bits;
         struct
@@ -669,8 +677,8 @@ typedef struct SavedGameLayout
     u8 ability_proficiency[FIELD_ABILITY_COUNT];
     /** @brief Training level of each weapon category, 0 to 100. */
     u8 weapon_proficiency[FIELD_WEAPON_CATEGORY_COUNT];
-    /** @brief Memory card slot the game was last saved to. */
-    u8 save_slot;
+    /** @brief Save compatibility tag (SAVE_TAG_ANY in ordinary saves); not a slot number. */
+    u8 compatibility_tag;
     u8 padD0[0xD4 - 0xD0];
     SaveIdentity identity;
     /** @brief Identity of the save the guest hero in characters[1] was loaded from (ADDHERO). */

@@ -380,7 +380,7 @@ s32 niki_handle_input(void)
         {
             SavedGameLayout* metadata = &g_niki_entry_file.saved_game;
             if ((metadata->identity.ids.game_id != g_saved_game_ctx->identity.ids.game_id) && (metadata->summary_slot_count != 0) &&
-                ((D_8003EC9C == 0xFF) || (metadata->save_slot == D_8003EC9C)))
+                ((g_save_compatibility_tag == SAVE_TAG_ANY) || (metadata->compatibility_tag == g_save_compatibility_tag)))
             {
                 element = niki_alloc_element();
                 element->attr.f.phase = 1;
@@ -771,7 +771,7 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
         {
             if (func_8001714C(D_800ECF7C, g_niki_entries[g_niki_card_slot][g_niki_selected_row].name, 0xC) == 0)
             {
-                if (D_8003EC9C == 0xFF || g_niki_entry_file.saved_game.save_slot == D_8003EC9C)
+                if (g_save_compatibility_tag == SAVE_TAG_ANY || g_niki_entry_file.saved_game.compatibility_tag == g_save_compatibility_tag)
                 {
                     s32 icon_count;
                     s32 visible_icon_index;
@@ -976,7 +976,7 @@ void niki_terminate_multibyte_text(void* text)
 /**
  * @brief Draw the niki footer glyph, anchored to the right edge of the panel.
  *
- * Resolves the glyph pointer from the D_800EC3D0 header (a 16-bit offset stored
+ * Resolves the glyph pointer from the g_field_ui_text_cant_hold_more header (a 16-bit offset stored
  * across bytes [0] and [1], added to the header base less 0xC), then submits it
  * at x = 0x80 - arg2, y = -arg3.
  *
@@ -990,7 +990,7 @@ s32 niki_draw_footer_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
 
-    return func_800A88A0(prim, ot, (void*)((u8*)D_800EC3D0 - 0xC + D_800EC3D0[0] + (D_800EC3D0[1] << 8)), 5, 0x80 - x_offset, -y_offset, 2);
+    return func_800A88A0(prim, ot, (void*)((u8*)g_field_ui_text_cant_hold_more - 0xC + g_field_ui_text_cant_hold_more[0] + (g_field_ui_text_cant_hold_more[1] << 8)), 5, 0x80 - x_offset, -y_offset, 2);
 }
 
 /**
