@@ -89,13 +89,7 @@ make test-scenes
 
 ## Evidence and related research
 
-Our implementation follows the [scene loader](../../../../src/overlays/field/field_scene_transition.c),
+This implementation follows the [scene loader](../../../../src/overlays/field/field_scene_transition.c),
 [layout records](../../../../include/field_interaction_start.h),
 [event lookup](../../../../src/overlays/field/field_actor_key_ops.c) and
 [portrait representation](../../../../src/overlays/field/field_text.c).
-
-Rufas Wan independently researched these files in Web2D_Games. Its
-[portrait extractor](https://github.com/rufaswan/Web2D_Games/blob/master/riptools/_tmp/mana_ana_info_img.php)
-and [sprite extractor](https://github.com/rufaswan/Web2D_Games/blob/master/riptools/_tmp/quad_mana_ana_objinfo_img.php)
-corroborate the graphics-related structure. They were consulted for format
-comparison after our extractor was written; their code is not incorporated here.
