@@ -1158,86 +1158,84 @@ void addhero_deactivate_primary_element(void)
 }
 
 /**
- * @brief Append the multibyte string @p src onto the end of @p dst and
- *        null-terminate the result.
- * @param dst Destination string; appended to in place.
- * @param src Source string copied onto the end of @p dst.
+ * @brief Append an encoded string to another and null-terminate the result.
+ * @param dst Null-terminated encoded string to extend; must have room for @p src.
+ * @param src Null-terminated encoded string to append.
  */
 void addhero_text_append(u8* dst, u8* src)
 {
-    s32 dst_len;
-    s32 src_len;
+    s32 dst_length;
+    s32 src_length;
     s32 i;
 
-    dst_len = addhero_text_byte_length(dst);
-    src_len = addhero_text_byte_length(src);
-    for (i = 0; i < src_len; i++)
+    dst_length = addhero_text_byte_length(dst);
+    src_length = addhero_text_byte_length(src);
+    for (i = 0; i < src_length; i++)
     {
-        dst[dst_len + i] = src[i];
+        dst[dst_length + i] = src[i];
     }
-    dst[dst_len + i] = 0;
+    dst[dst_length + i] = 0;
 }
 
 /**
- * @brief Measure the byte length of a string, counting characters in the
- *        0x19-0x1F lead range as two bytes.
- * @param str Null-terminated string to measure.
+ * @brief Measure an encoded string, counting a two-byte glyph code as two bytes.
+ * @param text Null-terminated encoded string.
  * @return Length in bytes, excluding the terminator.
  */
-s32 addhero_text_byte_length(u8* str)
+s32 addhero_text_byte_length(u8* text)
 {
-    u8* p;
-    u8 c;
-    s32 len;
+    u8* cursor;
+    u8 code;
+    s32 byte_length;
 
-    p = str;
-    c = *p;
-    len = 0;
-    while (c != 0)
+    cursor = text;
+    code = *cursor;
+    byte_length = 0;
+    while (code != 0)
     {
-        if (c >= 0x19 && c <= 0x1F)
+        if (FIELD_TEXT_IS_DOUBLE_BYTE_LEAD(code))
         {
-            p += 2;
-            len += 2;
+            cursor += 2;
+            byte_length += 2;
         }
         else
         {
-            p += 1;
-            len += 1;
+            cursor++;
+            byte_length++;
         }
-        c = *p;
+        code = *cursor;
     }
-    return len;
+    return byte_length;
 }
 
 /**
- * @brief Copy a multibyte string, counting 0x19-0x1F lead bytes as two-byte
- *        characters when computing its length, and null-terminate the result.
- * @param dst Destination buffer.
- * @param src Source string to copy.
+ * @brief Copy an encoded string and null-terminate the copy.
+ * @param dst Destination buffer with room for the string and its terminator.
+ * @param src Null-terminated encoded string.
+ * @note Measures @p src with its own loop (re-reading the byte at the cursor) instead of calling addhero_text_byte_length.
  */
 void addhero_text_copy(u8* dst, u8* src)
 {
-    u8* p;
-    s32 len;
+    u8* cursor;
+    s32 byte_length;
     s32 i;
 
-    p = src;
-    len = 0;
-    while (*p != 0)
+    cursor = src;
+    byte_length = 0;
+    while (*cursor != 0)
     {
-        if (*p >= 0x19 && *p <= 0x1F)
+        if (FIELD_TEXT_IS_DOUBLE_BYTE_LEAD(*cursor))
         {
-            p += 2;
-            len += 2;
+            cursor += 2;
+            byte_length += 2;
         }
         else
         {
-            p += 1;
-            len += 1;
+            cursor++;
+            byte_length++;
         }
     }
-    for (i = 0; i < len; i++)
+    for (i = 0; i < byte_length; i++)
     {
         dst[i] = src[i];
     }

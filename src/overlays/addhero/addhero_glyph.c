@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "addhero_internal.h"
 
 /* Shift-JIS glyph pairs as stored in the little-endian u16 digit tables. */
@@ -398,7 +399,7 @@ void addhero_reset_glyph_cache(void)
  *        character and null-terminating the result.
  * @param out Destination glyph-code buffer.
  * @param in  Null-terminated source string.
- * @note Lead bytes 0x19..0x1F start a two-byte code whose second byte's nibbles
+ * @note Lead bytes 0x19-0x1F start a two-byte code whose second byte's nibbles
  *       pick the row and column of one 16-row page of the double-byte table;
  *       bytes from 0x21 index the single-byte table by (c - 0x20); any other
  *       byte becomes the table's first (blank) glyph.
@@ -416,7 +417,7 @@ void addhero_expand_text_glyph_codes(u8* out, u8* in)
         {
             break;
         }
-        if (c >= 0x19 && c <= 0x1F)
+        if (FIELD_TEXT_IS_DOUBLE_BYTE_LEAD(c))
         {
             u32 column;
             s32 row;
