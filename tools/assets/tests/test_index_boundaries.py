@@ -5,7 +5,7 @@ import unittest
 
 import yaml
 
-from index_boundaries import (
+from tools.assets.index_boundaries import (
     FORMAT_NAME,
     FORMAT_VERSION,
     IndexBoundaries,

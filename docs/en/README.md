@@ -14,6 +14,8 @@ ownership, timing, and known limitations. Source links accompany the details.
 
 ## Technical reference
 
+- [Tools index](../../tools/README.md) - asset conversion, scene extraction and tests.
+- [Scene extractor](technical/reference/scene-extractor.md) - FIELD scene sections, textures and chest parameters.
 - [Disc layout](technical/reference/disc-layout.md) - disc organization and resource tables.
 - [Overlay ID prefix](technical/reference/overlay-id-prefix.md) - overlay identification and
   binary layout.

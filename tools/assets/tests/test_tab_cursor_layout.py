@@ -5,7 +5,7 @@ import unittest
 
 import yaml
 
-from tab_cursor_layout import (
+from tools.assets.tab_cursor_layout import (
     FORMAT_NAME,
     FORMAT_VERSION,
     TabCursorLayout,

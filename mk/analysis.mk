@@ -6,7 +6,7 @@
 
 # Disassemble every compiled .o in build/<version>/ and write a matching .s
 # alongside it. Run this after a build to get compiler output for the
-# find_idioms.py tool.
+# tools/idioms/find_idioms.py tool.
 #   make dump-objs
 # The .s files end up at e.g. build/us/src/cdrom.s,
 # build/us/overlays/gname/gname.s etc.

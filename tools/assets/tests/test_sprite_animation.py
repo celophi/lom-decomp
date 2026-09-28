@@ -5,7 +5,7 @@ import unittest
 
 import yaml
 
-from sprite_animation import (
+from tools.assets.sprite_animation import (
     FORMAT_NAME,
     FORMAT_VERSION,
     SpriteAnimation,

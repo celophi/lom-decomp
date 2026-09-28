@@ -4,7 +4,7 @@
 import struct
 import unittest
 
-from psx_tim import (
+from tools.assets.psx_tim import (
     TIM_MAGIC,
     TimFormatError,
     build_embedded_tim,

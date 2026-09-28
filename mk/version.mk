@@ -37,10 +37,9 @@ endif
 # Modules whose code is split into C translation units, per version: `main`
 # for the main executable, overlay names for overlays, or `all`. The source
 # lists in mk/main.mk and the routing in mk/overlay-registry.mk describe this
-# layout, and a module listed here must use it in its config/<version>/ yaml
-# (tools/versions/port_us_layout.py ports the US yamls). A module not listed
-# builds no C objects: it links from splat assembly alone and its
-# objdiff/progress units are that assembly (0% matched).
+# layout, and a module listed here must use it in its config/<version>/ yaml.
+# A module not listed builds no C objects: it links from splat assembly alone,
+# and its objdiff/progress units are that assembly (0% matched).
 TU_LAYOUT_us := all
 TU_LAYOUT_jp := main golem gover zukan menu shop checkps movie niki gosub wmap field addhero gname title wsel cload carda
 

@@ -6,7 +6,7 @@ import unittest
 
 import yaml
 
-from name_entry_resource import (
+from tools.assets.name_entry_resource import (
     FORMAT_NAME,
     FORMAT_VERSION,
     NameEntryResource,
