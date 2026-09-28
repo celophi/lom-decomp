@@ -7,13 +7,10 @@
  * a program already resident in SPU RAM (0xED, staged by
  * akao_upload_xa_program) and a CD-fed ring of blocks (0xE8). All of them
  * share one state block, g_akao_xa_tracker.
- *
- * akao_driver.h is not included: its AkaoXaTracker only describes the fields
- * akao_cmd.c needs. The full layout is defined below.
  */
 #include "common.h"
 #include "sdk/libspu.h"
-#include "akao.h"
+#include "akao_driver.h"
 
 /* Voice mask of SPU voices 22 and 23, the highest pair the stream may use. */
 #define XA_TOP_VOICE_PAIR_MASK 0xC00000
@@ -24,17 +21,6 @@
 
 /* "AKAO" in little-endian. */
 #define XA_AKAO_MAGIC 0x4F414B41
-
-/* g_akao_driver_flags.unk8: reverb/noise/pitch-mod voice masks need rewriting. */
-#define AKAO_EFFECT_MASKS_UPDATE_PENDING 0x100
-
-/* D_8004F754 (g_akao_driver_flags.unk4) value selecting mono output. */
-#define AKAO_SOUND_MODE_MONO 2
-
-/* XA program flags (AkaoXaProgramHeader.flags, AkaoXaTracker.unk8). */
-#define XA_FLAG_STEREO 0x1
-#define XA_FLAG_LOOP 0x2
-#define XA_FLAG_RING_STREAM 0x1000000
 
 /* SPU addresses of the double-buffered streaming area. */
 #define XA_SPU_SILENCE 0x1030
@@ -47,117 +33,7 @@
 #define XA_RING_HEADER_OFFSET 0x80
 #define XA_RING_DATA_OFFSET 0xD0
 
-/** @brief SFX channel control block (mirrors SfxControl in akao_driver.h). */
-typedef struct
-{
-    u32 unk0; /* active-channel bitmask */
-    s32 unk4;
-    u32 unk8;
-    u32 unkC;
-    u32 unk10;
-    u8 _pad14[2];
-    u16 unk16; /* tick step */
-    u32 unk18; /* tick accumulator */
-    u32 reverb_mask;
-    u32 noise_mask;
-    u32 pitch_mod_mask;
-    u16 unk28;
-} SfxControl;
-
-/** @brief AKAO driver state flags (mirrors AkaoDriverFlags in akao_driver.h). */
-typedef struct
-{
-    u32 unk0;
-    u32 unk4;
-    u32 unk8; /* pending driver/SPU hardware update flags */
-} AkaoDriverFlags;
-
-/**
- * @brief Header of an XA program (0x40 bytes); the ADPCM data follows it.
- *
- * The same header prefixes a program in a RAM buffer, the copy staged by
- * akao_upload_xa_program, and each block of a CD ring stream (at
- * XA_RING_HEADER_OFFSET).
- */
-typedef struct
-{
-    u32 magic;
-    u32 unk4;
-    u8 _pad08[8];
-    u32 sample_size;
-    u32 loop_offset;
-    u32 flags;
-    u16 pitch;
-    u8 _pad1E[2];
-    u32 unk20;
-    u32 right_offset;
-    s32 fade_in_ticks;
-    u8 _pad2C[0x14];
-} AkaoXaProgramHeader;
-
-/**
- * @brief Streamed-voice playback state (g_akao_xa_tracker).
- *
- * unk0 is the next RAM block to upload, unk4 the loop restart address,
- * unk8 the program flags, unkC the voice mask of the stream's voice pair
- * (0 when idle), unk10 its first voice and unk14 the bytes still to upload.
- * unk40 is the Q8 volume (with unk44/unk48 the fade step and ticks), unk4C
- * the Q8 pan and unk58 the SPU pitch. unk20..unk3C are the CD ring counters
- * that akao_cmd.c also drives.
- */
-typedef struct
-{
-    u8* unk0;
-    u8* unk4;
-    u32 unk8;
-    s32 unkC;
-    s32 unk10;
-    u32 unk14;
-    s32 unk18;
-    u32 unk1C;
-    s32 unk20;
-    s32 unk24;
-    s32 unk28;
-    union
-    {
-        s32 spu_addr;  /* one-shot programs: SPU base address */
-        u8* ring_base; /* CD ring streams: first ring block */
-    } unk2C;
-    u32 unk30;
-    u32 unk34;
-    u32 unk38;
-    u32 unk3C;
-    s32 unk40;
-    s32 unk44;
-    s32 unk48;
-    s32 unk4C;
-    u8 _pad50[8];
-    s32 unk58;
-} AkaoXaTracker;
-
-extern SfxControl g_akao_sfx_control;
-extern AkaoDriverFlags g_akao_driver_flags;
-extern AkaoChannelState* g_akao_seq_channel0;
-extern AkaoXaTracker g_akao_xa_tracker;
-extern AkaoXaProgramHeader g_akao_xa_program_staging;
-extern volatile s32 g_akao_spu_xfer_pending;
-/*
- * Declared as unknown-size arrays on purpose: under -G4 a plain `extern s32`
- * (size <= 4) is treated as small-data, so gcc emits a single-register
- * symbolic load that maspsx expands into a same-register `lui/lw` pair. The
- * target uses large-data %hi/%lo addressing with a compiler-split high
- * register, which the unknown-size array form reproduces.
- *
- * g_akao_xa_pan_current, D_8004F76C and D_8004F7B8 are the addresses of
- * g_akao_xa_tracker.unk40, .unkC and .unk58. The original code addressed
- * them through these separate symbols, so they are kept distinct.
- */
-extern s32 g_akao_xa_pan_current[];
-extern u32 D_8004F76C[];
-extern u32 D_8004F7B8[];
-extern s16 D_8003D47C[];
-extern u32 D_8004F754;
-extern s16 D_8003D37C[];
+extern AkaoXaProgramStaging g_akao_xa_program_staging;
 
 void akao_release_channels(AkaoChannelState* channel, u32 release_mask);
 void akao_sfx_stop_channels(s32 arg0, s32 arg1);
@@ -174,17 +50,17 @@ void spu_set_voice_sustain_mode(s32 voice, s32 sustain_bits, u32 mode_bits);
 void spu_set_voice_release_mode(s32 voice, s32 release_shift, u32 mode_bit);
 void akao_spu_arm_xfer(void);
 void akao_spu_write(void* source, s32 byte_count);
-s32 akao_cmd_e5(s32 value0, s32 value1);
+s32 akao_fade_xa_volume(s32 value0, s32 value1);
 
-void func_8002D764(void);
-void func_8002D7C8(void);
-void func_8002D978(void);
-void func_8002D9A8(void);
-void func_8002D9D8(void);
-void func_8002DA08(void);
-void func_8002E540(void);
-void func_8002E6FC(void);
-void func_8002E72C(void);
+void akao_xa_begin_mono_buffer(void);
+void akao_xa_begin_stereo_buffer(void);
+void akao_xa_refill_mono_a(void);
+void akao_xa_refill_mono_b(void);
+void akao_xa_refill_stereo_a(void);
+void akao_xa_refill_stereo_b(void);
+void akao_xa_begin_ring(void);
+void akao_xa_refill_ring_a(void);
+void akao_xa_refill_ring_b(void);
 
 /**
  * @brief Extended opcode FE 1E: obey the reserved-voice window for this channel.
@@ -196,14 +72,14 @@ void func_8002E72C(void);
  */
 void akao_seq_op_obey_voice_reserve(AkaoChannelState* channel, s32 channel_mask)
 {
-    g_akao_seq_channel0->w04.song.voice_alloc_low_mask &= ~channel_mask;
+    g_akao_seq_channel0->masks.voice_alloc_low_mask &= ~channel_mask;
 }
 
 /**
  * @brief Opcode 0xE1: set the pitch-jitter depth from one operand byte.
  *        Stores the byte into pitch_scale (0xDA), the depth of the table-driven
  *        pitch perturbation akao_seq_step_opcode applies per note (indexes the
- *        256-entry jitter table D_8003D27C by the free-running modulation tick).
+ *        256-entry jitter table g_akao_pitch_jitter_table by the free-running modulation tick).
  * @param channel Channel whose bytecode cursor is advanced past the depth byte.
  * @note Named by mechanism; the authoring-tool term is unconfirmed.
  */
@@ -239,16 +115,16 @@ void akao_seq_op_finish_channel(AkaoChannelState* channel, u32 channel_mask)
  * marks the stream idle.
  *
  */
-void func_8002D140(void)
+void akao_xa_stop(void)
 {
-    if (g_akao_xa_tracker.unkC != 0)
+    if (g_akao_xa_tracker.voice_mask != 0)
     {
-        SpuSetIRQ(0);
-        SpuSetIRQCallback(0);
-        spu_set_key_off(g_akao_xa_tracker.unkC);
-        g_akao_sfx_control.noise_mask &= ~g_akao_xa_tracker.unkC;
-        g_akao_xa_tracker.unkC = 0;
-        g_akao_driver_flags.unk8 |= AKAO_EFFECT_MASKS_UPDATE_PENDING;
+        SpuSetIRQ(SPU_OFF);
+        SpuSetIRQCallback(NULL);
+        spu_set_key_off(g_akao_xa_tracker.voice_mask);
+        g_akao_sfx_control.reverb_mask &= ~g_akao_xa_tracker.voice_mask;
+        g_akao_xa_tracker.voice_mask = 0;
+        g_akao_driver_flags.update_flags |= AKAO_EFFECT_MASKS_UPDATE_PENDING;
     }
 }
 
@@ -261,7 +137,7 @@ void func_8002D140(void)
  *
  * @return First voice of the free pair, or -1 when none could be freed.
  */
-s32 func_8002D1C4(void)
+s32 akao_xa_alloc_voice_pair(void)
 {
     u32 busy_voices;
     s32 pair;
@@ -271,7 +147,7 @@ s32 func_8002D1C4(void)
     {
         pair_mask = XA_TOP_VOICE_PAIR_MASK;
         pair = XA_VOICE_PAIR_COUNT;
-        busy_voices = g_akao_sfx_control.unk0 | g_akao_sfx_control.unk10;
+        busy_voices = g_akao_sfx_control.active_mask | g_akao_sfx_control.paused_mask;
         while (1)
         {
             if ((busy_voices & pair_mask) == 0)
@@ -290,7 +166,7 @@ s32 func_8002D1C4(void)
             return pair + XA_FIRST_VOICE_BIAS;
         }
         akao_sfx_stop_channels(0, 0x40000000);
-        if (busy_voices == (g_akao_sfx_control.unk0 | g_akao_sfx_control.unk10))
+        if (busy_voices == (g_akao_sfx_control.active_mask | g_akao_sfx_control.paused_mask))
         {
             return -1;
         }
@@ -300,12 +176,12 @@ s32 func_8002D1C4(void)
 /**
  * @brief SPU transfer callback: upload the second mono block of a RAM buffer.
  */
-void func_8002D254(void)
+void akao_xa_upload_mono_block_b(void)
 {
-    u8* addr = g_akao_xa_tracker.unk0 + 0x800;
+    u8* addr = g_akao_xa_tracker.data_cursor + 0x800;
 
     SpuSetTransferStartAddr(XA_SPU_BLOCK_B);
-    SpuSetTransferCallback(func_8002D764);
+    SpuSetTransferCallback(akao_xa_begin_mono_buffer);
     SpuWrite(addr, 0x800);
 }
 
@@ -317,9 +193,9 @@ void func_8002D254(void)
  *
  * @param buffer XA program header; the ADPCM data follows it.
  * @param pan Q8 pan.
- * @param use_noise Non-zero to route the voices through the noise generator.
+ * @param use_reverb Non-zero to send the voices through reverb.
  */
-void func_8002D29C(void* buffer, s32 pan, s32 use_noise)
+void akao_xa_start_buffer(void* buffer, s32 pan, s32 use_reverb)
 {
     AkaoXaProgramHeader* program;
     s32 voice;
@@ -327,45 +203,44 @@ void func_8002D29C(void* buffer, s32 pan, s32 use_noise)
     u8* loop_start;
     s32 size;
     s32 loop_bytes;
-    /* Three separate pointers to g_akao_xa_tracker, as in the original code. */
     AkaoXaTracker* xa;
     AkaoXaTracker* stream;
     AkaoXaTracker* stereo_stream;
 
-    voice = func_8002D1C4();
+    voice = akao_xa_alloc_voice_pair();
     if (voice == -1)
     {
         return;
     }
 
-    g_akao_xa_tracker.unk4C = pan;
-    SpuSetIRQ(0);
-    SpuSetIRQCallback(0);
+    g_akao_xa_tracker.pan = pan;
+    SpuSetIRQ(SPU_OFF);
+    SpuSetIRQCallback(NULL);
 
     program = buffer;
-    g_akao_xa_tracker.unk0 = (u8*)(program + 1);
-    g_akao_xa_tracker.unk14 = program->sample_size;
+    g_akao_xa_tracker.data_cursor = (u8*)(program + 1);
+    g_akao_xa_tracker.bytes_remaining = program->sample_size;
     voice_mask = (1 << voice) | (1 << (voice + 1));
 
-    g_akao_xa_tracker.unk18 = program->unk20;
-    g_akao_xa_tracker.unk10 = voice;
-    g_akao_xa_tracker.unkC = voice_mask;
+    g_akao_xa_tracker.unk18 = program->spu_addr;
+    g_akao_xa_tracker.first_voice = voice;
+    g_akao_xa_tracker.voice_mask = voice_mask;
     spu_set_key_off(voice_mask);
-    g_akao_xa_tracker.unk8 = program->flags;
+    g_akao_xa_tracker.flags = program->flags;
 
-    g_akao_xa_tracker.unk58 = program->pitch;
-    g_akao_xa_tracker.unk10 = voice;
-    g_akao_xa_tracker.unkC = voice_mask;
+    g_akao_xa_tracker.pitch = program->pitch;
+    g_akao_xa_tracker.first_voice = voice;
+    g_akao_xa_tracker.voice_mask = voice_mask;
     spu_set_key_off(voice_mask);
 
-    SpuSetTransferMode(0);
+    SpuSetTransferMode(SPU_TRANSFER_BY_DMA);
     SpuSetTransferStartAddr(XA_SPU_BLOCK_A);
     g_akao_spu_xfer_pending = 1;
     xa = &g_akao_xa_tracker;
 
-    if (g_akao_xa_tracker.unk8 & XA_FLAG_LOOP)
+    if (g_akao_xa_tracker.flags & XA_FLAG_LOOP)
     {
-        loop_start = g_akao_xa_tracker.unk0 + program->loop_offset;
+        loop_start = g_akao_xa_tracker.data_cursor + program->loop_offset;
     }
     else
     {
@@ -373,52 +248,52 @@ void func_8002D29C(void* buffer, s32 pan, s32 use_noise)
     }
 
     stream = &g_akao_xa_tracker;
-    xa->unk4 = loop_start;
+    xa->loop_cursor = loop_start;
 
-    if (stream->unk8 & XA_FLAG_STEREO)
+    if (stream->flags & XA_FLAG_STEREO)
     {
         stereo_stream = stream;
-        if (stream->unk8 & XA_FLAG_LOOP)
+        if (stream->flags & XA_FLAG_LOOP)
         {
-            loop_bytes = stream->unk14 - (program->loop_offset >> 1);
+            loop_bytes = stream->bytes_remaining - (program->loop_offset >> 1);
         }
         else
         {
             loop_bytes = 0;
         }
-        stereo_stream->unk1C = loop_bytes;
-        SpuSetTransferCallback(func_8002D7C8);
+        stereo_stream->loop_bytes = loop_bytes;
+        SpuSetTransferCallback(akao_xa_begin_stereo_buffer);
         size = 0x2000;
     }
     else
     {
-        if (stream->unk8 & XA_FLAG_LOOP)
+        if (stream->flags & XA_FLAG_LOOP)
         {
-            loop_bytes = stream->unk14 - program->loop_offset;
+            loop_bytes = stream->bytes_remaining - program->loop_offset;
         }
         else
         {
             loop_bytes = 0;
         }
-        stream->unk1C = loop_bytes;
-        SpuSetTransferCallback(func_8002D254);
+        stream->loop_bytes = loop_bytes;
+        SpuSetTransferCallback(akao_xa_upload_mono_block_b);
         size = 0x800;
     }
 
-    SpuWrite(g_akao_xa_tracker.unk0, size);
+    SpuWrite(g_akao_xa_tracker.data_cursor, size);
 
-    if (use_noise != 0)
+    if (use_reverb != 0)
     {
-        g_akao_sfx_control.noise_mask |= g_akao_xa_tracker.unkC;
+        g_akao_sfx_control.reverb_mask |= g_akao_xa_tracker.voice_mask;
     }
     else
     {
-        g_akao_sfx_control.noise_mask &= ~g_akao_xa_tracker.unkC;
+        g_akao_sfx_control.reverb_mask &= ~g_akao_xa_tracker.voice_mask;
     }
 
-    g_akao_sfx_control.pitch_mod_mask &= ~D_8004F76C[0];
-    g_akao_sfx_control.reverb_mask &= ~D_8004F76C[0];
-    g_akao_driver_flags.unk8 |= AKAO_EFFECT_MASKS_UPDATE_PENDING;
+    g_akao_sfx_control.pitch_mod_mask &= ~g_akao_xa_tracker.voice_mask;
+    g_akao_sfx_control.noise_mask &= ~g_akao_xa_tracker.voice_mask;
+    g_akao_driver_flags.update_flags |= AKAO_EFFECT_MASKS_UPDATE_PENDING;
 }
 
 /**
@@ -428,44 +303,44 @@ void func_8002D29C(void* buffer, s32 pan, s32 use_noise)
  * @param start SPU start address.
  * @param end SPU repeat address.
  */
-void func_8002D4D8(s32 voice, s32 mode, u32 start, u32 end)
+void akao_xa_setup_voice(s32 voice, s32 mode, u32 start, u32 end)
 {
     s16 volume_left;
     s16 volume_right;
 
-    if (D_8004F754 & AKAO_SOUND_MODE_MONO)
+    if (g_akao_driver_flags.output_mode & AKAO_OUTPUT_MONO)
     {
-        s32 volume = (g_akao_xa_pan_current[0] * D_8003D47C[0]) >> 16;
+        s32 volume = (g_akao_xa_tracker.volume * g_akao_pan_gain_table[AKAO_PAN_CENTER]) >> 16;
         volume_right = volume;
         volume_left = volume;
     }
     else if (mode == 1)
     {
         volume_right = 0;
-        volume_left = (u32)g_akao_xa_pan_current[0] >> 1;
+        volume_left = (u32)g_akao_xa_tracker.volume >> 1;
     }
     else if (mode == 2)
     {
         volume_left = 0;
-        volume_right = (u32)g_akao_xa_pan_current[0] >> 1;
+        volume_right = (u32)g_akao_xa_tracker.volume >> 1;
     }
     else if (mode == 3)
     {
-        s32 volume = (g_akao_xa_pan_current[0] >> 1) << 16;
+        s32 volume = (g_akao_xa_tracker.volume >> 1) << 16;
         volume_right = (volume >> 17) + (volume >> 18);
         volume_left = volume_right;
     }
     else
     {
-        s32 pan = (g_akao_xa_tracker.unk4C >> 8) & 0xFF;
-        s32 level = g_akao_xa_tracker.unk40;
-        volume_left = (u32)(level * D_8003D37C[pan]) >> 16;
+        s32 pan = (g_akao_xa_tracker.pan >> 8) & 0xFF;
+        s32 level = g_akao_xa_tracker.volume;
+        volume_left = (u32)(level * g_akao_pan_gain_table[pan]) >> 16;
         pan ^= 0xFF;
-        volume_right = (u32)(level * D_8003D37C[pan]) >> 16;
+        volume_right = (u32)(level * g_akao_pan_gain_table[pan]) >> 16;
     }
 
     spu_set_voice_volume(voice, volume_left, volume_right, 0);
-    spu_set_voice_pitch(voice, D_8004F7B8[0]);
+    spu_set_voice_pitch(voice, g_akao_xa_tracker.pitch);
     spu_set_voice_start_addr(voice, start);
     spu_set_voice_repeat_addr(voice, end);
     spu_set_voice_attack(voice, 0, 1);
@@ -481,48 +356,48 @@ void func_8002D4D8(s32 voice, s32 mode, u32 start, u32 end)
  * @param irq_addr SPU address whose playback raises the next IRQ.
  * @param next_cb SPU IRQ callback that uploads the next block.
  */
-void func_8002D694(s32 uploaded, s32 irq_addr, SpuIRQCallbackProc next_cb)
+void akao_xa_key_on_buffer(s32 uploaded, s32 irq_addr, SpuIRQCallbackProc next_cb)
 {
-    if (g_akao_xa_tracker.unkC != 0)
+    if (g_akao_xa_tracker.voice_mask != 0)
     {
-        SpuSetTransferCallback(0);
+        SpuSetTransferCallback(NULL);
         g_akao_spu_xfer_pending = 0;
-        if (g_akao_xa_tracker.unk14 > 0x1000)
+        if (g_akao_xa_tracker.bytes_remaining > 0x1000)
         {
-            g_akao_xa_tracker.unk14 -= 0x1000;
-            g_akao_xa_tracker.unk0 += uploaded;
+            g_akao_xa_tracker.bytes_remaining -= 0x1000;
+            g_akao_xa_tracker.data_cursor += uploaded;
             SpuSetIRQCallback(next_cb);
         }
         else
         {
-            SpuSetIRQCallback(func_8002D140);
+            SpuSetIRQCallback(akao_xa_stop);
             irq_addr = XA_SPU_SILENCE;
-            g_akao_xa_tracker.unk14 = 0;
+            g_akao_xa_tracker.bytes_remaining = 0;
         }
         SpuSetIRQAddr(irq_addr + 8);
-        spu_set_key_on(D_8004F76C[0]);
-        SpuSetIRQ(1);
+        spu_set_key_on(g_akao_xa_tracker.voice_mask);
+        SpuSetIRQ(SPU_ON);
     }
 }
 
 /**
  * @brief SPU transfer callback: start a mono RAM-buffer stream.
  */
-void func_8002D764(void)
+void akao_xa_begin_mono_buffer(void)
 {
-    func_8002D4D8(g_akao_xa_tracker.unk10, 0, XA_SPU_BLOCK_A, XA_SPU_BLOCK_B);
-    func_8002D4D8(g_akao_xa_tracker.unk10 + 1, 0, XA_SPU_BLOCK_A, XA_SPU_BLOCK_B);
-    func_8002D694(0x1000, XA_SPU_BLOCK_B, func_8002D978);
+    akao_xa_setup_voice(g_akao_xa_tracker.first_voice, 0, XA_SPU_BLOCK_A, XA_SPU_BLOCK_B);
+    akao_xa_setup_voice(g_akao_xa_tracker.first_voice + 1, 0, XA_SPU_BLOCK_A, XA_SPU_BLOCK_B);
+    akao_xa_key_on_buffer(0x1000, XA_SPU_BLOCK_B, akao_xa_refill_mono_a);
 }
 
 /**
  * @brief SPU transfer callback: start a stereo RAM-buffer stream.
  */
-void func_8002D7C8(void)
+void akao_xa_begin_stereo_buffer(void)
 {
-    func_8002D4D8(g_akao_xa_tracker.unk10, 1, XA_SPU_BLOCK_A, XA_SPU_BLOCK_B);
-    func_8002D4D8(g_akao_xa_tracker.unk10 + 1, 2, XA_SPU_BLOCK_A_RIGHT, XA_SPU_BLOCK_B_RIGHT);
-    func_8002D694(0x2000, XA_SPU_BLOCK_B, func_8002D9D8);
+    akao_xa_setup_voice(g_akao_xa_tracker.first_voice, 1, XA_SPU_BLOCK_A, XA_SPU_BLOCK_B);
+    akao_xa_setup_voice(g_akao_xa_tracker.first_voice + 1, 2, XA_SPU_BLOCK_A_RIGHT, XA_SPU_BLOCK_B_RIGHT);
+    akao_xa_key_on_buffer(0x2000, XA_SPU_BLOCK_B, akao_xa_refill_stereo_a);
 }
 
 /**
@@ -532,113 +407,113 @@ void func_8002D7C8(void)
  * @param size Bytes to upload.
  * @param cb SPU IRQ callback for the following block.
  */
-void func_8002D82C(u32 start, u32 end, u32 size, SpuIRQCallbackProc cb)
+void akao_xa_refill_buffer(u32 start, u32 end, u32 size, SpuIRQCallbackProc cb)
 {
-    if (g_akao_xa_tracker.unkC == 0)
+    if (g_akao_xa_tracker.voice_mask == 0)
     {
         return;
     }
-    if (g_akao_xa_tracker.unk14 == 0)
+    if (g_akao_xa_tracker.bytes_remaining == 0)
     {
         return;
     }
 
     SpuSetTransferStartAddr(start);
     akao_spu_arm_xfer();
-    SpuWrite(g_akao_xa_tracker.unk0, size);
-    SpuSetIRQ(0);
+    SpuWrite(g_akao_xa_tracker.data_cursor, size);
+    SpuSetIRQ(SPU_OFF);
 
-    if (g_akao_xa_tracker.unk14 > 0x800)
+    if (g_akao_xa_tracker.bytes_remaining > 0x800)
     {
         SpuSetIRQCallback(cb);
-        g_akao_xa_tracker.unk14 -= 0x800;
-        g_akao_xa_tracker.unk0 += size;
+        g_akao_xa_tracker.bytes_remaining -= 0x800;
+        g_akao_xa_tracker.data_cursor += size;
     }
-    else if (g_akao_xa_tracker.unk4 != 0)
+    else if (g_akao_xa_tracker.loop_cursor != 0)
     {
         SpuSetIRQCallback(cb);
-        g_akao_xa_tracker.unk0 = g_akao_xa_tracker.unk4;
-        g_akao_xa_tracker.unk14 = g_akao_xa_tracker.unk1C;
+        g_akao_xa_tracker.data_cursor = g_akao_xa_tracker.loop_cursor;
+        g_akao_xa_tracker.bytes_remaining = g_akao_xa_tracker.loop_bytes;
     }
     else
     {
-        SpuSetIRQCallback(func_8002D140);
+        SpuSetIRQCallback(akao_xa_stop);
         end = XA_SPU_SILENCE;
         start = end;
-        g_akao_xa_tracker.unk14 = 0;
+        g_akao_xa_tracker.bytes_remaining = 0;
     }
 
-    spu_set_voice_repeat_addr(g_akao_xa_tracker.unk10, start);
-    spu_set_voice_repeat_addr(g_akao_xa_tracker.unk10 + 1, end);
+    spu_set_voice_repeat_addr(g_akao_xa_tracker.first_voice, start);
+    spu_set_voice_repeat_addr(g_akao_xa_tracker.first_voice + 1, end);
     SpuSetIRQAddr(start + 8);
-    SpuSetIRQ(1);
+    SpuSetIRQ(SPU_ON);
 }
 
 /**
  * @brief SPU IRQ callback: refill mono block A.
  */
-void func_8002D978(void)
+void akao_xa_refill_mono_a(void)
 {
-    func_8002D82C(XA_SPU_BLOCK_A, XA_SPU_BLOCK_A, 0x800, func_8002D9A8);
+    akao_xa_refill_buffer(XA_SPU_BLOCK_A, XA_SPU_BLOCK_A, 0x800, akao_xa_refill_mono_b);
 }
 
 /**
  * @brief SPU IRQ callback: refill mono block B.
  */
-void func_8002D9A8(void)
+void akao_xa_refill_mono_b(void)
 {
-    func_8002D82C(XA_SPU_BLOCK_B, XA_SPU_BLOCK_B, 0x800, func_8002D978);
+    akao_xa_refill_buffer(XA_SPU_BLOCK_B, XA_SPU_BLOCK_B, 0x800, akao_xa_refill_mono_a);
 }
 
 /**
  * @brief SPU IRQ callback: refill stereo block A.
  */
-void func_8002D9D8(void)
+void akao_xa_refill_stereo_a(void)
 {
-    func_8002D82C(XA_SPU_BLOCK_A, XA_SPU_BLOCK_A_RIGHT, 0x1000, func_8002DA08);
+    akao_xa_refill_buffer(XA_SPU_BLOCK_A, XA_SPU_BLOCK_A_RIGHT, 0x1000, akao_xa_refill_stereo_b);
 }
 
 /**
  * @brief SPU IRQ callback: refill stereo block B.
  */
-void func_8002DA08(void)
+void akao_xa_refill_stereo_b(void)
 {
-    func_8002D82C(XA_SPU_BLOCK_B, XA_SPU_BLOCK_B_RIGHT, 0x1000, func_8002D9D8);
+    akao_xa_refill_buffer(XA_SPU_BLOCK_B, XA_SPU_BLOCK_B_RIGHT, 0x1000, akao_xa_refill_stereo_a);
 }
 
 /**
  * @brief Command 0xE0: play an XA program from a RAM buffer.
  * @param params Queued command parameters: buffer, Q8 pan, noise flag.
  */
-void func_8002DA38(s32* params)
+void akao_xa_cmd_play_buffer(s32* params)
 {
-    func_8002D29C((void*)params[0], params[1], params[2]);
-    g_akao_sfx_control.unk0 &= ~D_8004F76C[0];
+    akao_xa_start_buffer((void*)params[0], params[1], params[2]);
+    g_akao_sfx_control.active_mask &= ~g_akao_xa_tracker.voice_mask;
 }
 
 /**
  * @brief Command 0xE2: stop the streamed voice pair.
  */
-void func_8002DA80(void)
+void akao_xa_cmd_stop(void)
 {
-    func_8002D140();
+    akao_xa_stop();
 }
 
 /**
  * @brief Command 0xE4: set the streamed voice volume immediately.
  * @param params Queued command parameters: Q8 volume.
  */
-void func_8002DAA0(s32* params)
+void akao_xa_cmd_set_volume(s32* params)
 {
     AkaoXaTracker* xa = &g_akao_xa_tracker;
     s32 val = params[0];
 
-    xa->unk48 = 0;
-    xa->unk40 = val;
-    if (xa->unkC != 0)
+    xa->volume_fade_ticks = 0;
+    xa->volume = val;
+    if (xa->voice_mask != 0)
     {
-        spu_set_voice_volume(xa->unk10, (val << 15) >> 16, 0, 0);
-        spu_set_voice_volume(xa->unk10 + 1, 0, (xa->unk40 << 15) >> 16, 0);
+        spu_set_voice_volume(xa->first_voice, (val << 15) >> 16, 0, 0);
+        spu_set_voice_volume(xa->first_voice + 1, 0, (xa->volume << 15) >> 16, 0);
     }
 }
 
@@ -646,7 +521,7 @@ void func_8002DAA0(s32* params)
  * @brief Command 0xE5: fade the streamed voice volume.
  * @param params Queued command parameters: fade ticks (0 means 1), Q8 target volume.
  */
-void func_8002DB10(s32* params)
+void akao_xa_cmd_fade_volume(s32* params)
 {
     s16 ticks;
     s16 delta;
@@ -656,16 +531,16 @@ void func_8002DB10(s32* params)
     {
         ticks = params[0];
     }
-    delta = (u16)params[1] - (u16)g_akao_xa_tracker.unk40;
-    g_akao_xa_tracker.unk44 = (s16)(delta / ticks);
-    g_akao_xa_tracker.unk48 = ticks;
+    delta = (u16)params[1] - (u16)g_akao_xa_tracker.volume;
+    g_akao_xa_tracker.volume_step = (s16)(delta / ticks);
+    g_akao_xa_tracker.volume_fade_ticks = ticks;
 }
 
 /**
  * @brief Command 0xE6: set the streamed voice pan.
  * @param params Queued command parameters: Q8 pan.
  */
-void func_8002DB90(s32* params)
+void akao_xa_cmd_set_pan(s32* params)
 {
     AkaoXaTracker* xa;
     s32 pan_word;
@@ -676,31 +551,31 @@ void func_8002DB90(s32* params)
 
     xa = &g_akao_xa_tracker;
     pan_word = params[0];
-    xa->unk4C = pan_word;
-    if (xa->unkC != 0)
+    xa->pan = pan_word;
+    if (xa->voice_mask != 0)
     {
-        if (D_8004F754 & AKAO_SOUND_MODE_MONO)
+        if (g_akao_driver_flags.output_mode & AKAO_OUTPUT_MONO)
         {
-            volume = (xa->unk40 * D_8003D47C[0]) >> 16;
-            spu_set_voice_volume(xa->unk10, volume, volume, 0);
-            spu_set_voice_volume(xa->unk10 + 1, volume, volume, 0);
+            volume = (xa->volume * g_akao_pan_gain_table[AKAO_PAN_CENTER]) >> 16;
+            spu_set_voice_volume(xa->first_voice, volume, volume, 0);
+            spu_set_voice_volume(xa->first_voice + 1, volume, volume, 0);
         }
-        else if (xa->unk8 & XA_FLAG_STEREO)
+        else if (xa->flags & XA_FLAG_STEREO)
         {
-            volume = xa->unk40;
+            volume = xa->volume;
             volume <<= 15;
             volume >>= 16;
-            spu_set_voice_volume(xa->unk10, volume, 0, 0);
-            spu_set_voice_volume(xa->unk10 + 1, 0, volume, 0);
+            spu_set_voice_volume(xa->first_voice, volume, 0, 0);
+            spu_set_voice_volume(xa->first_voice + 1, 0, volume, 0);
         }
         else
         {
             pan = (pan_word >> 8) & 0xFF;
-            volume_left = (xa->unk40 * D_8003D37C[pan]) >> 16;
+            volume_left = (xa->volume * g_akao_pan_gain_table[pan]) >> 16;
             pan ^= 0xFF;
-            volume_right = (xa->unk40 * D_8003D37C[pan]) >> 16;
-            spu_set_voice_volume(xa->unk10, volume_left, volume_right, 0);
-            spu_set_voice_volume(xa->unk10 + 1, volume_left, volume_right, 0);
+            volume_right = (xa->volume * g_akao_pan_gain_table[pan]) >> 16;
+            spu_set_voice_volume(xa->first_voice, volume_left, volume_right, 0);
+            spu_set_voice_volume(xa->first_voice + 1, volume_left, volume_right, 0);
         }
     }
 }
@@ -708,36 +583,36 @@ void func_8002DB90(s32* params)
 /**
  * @brief SPU IRQ callback: a one-shot program reached its end; stop at the silence block.
  */
-void func_8002DCDC(void)
+void akao_xa_end_one_shot(void)
 {
     SpuSetIRQAddr(XA_SPU_SILENCE + 8);
-    SpuSetIRQCallback(func_8002D140);
+    SpuSetIRQCallback(akao_xa_stop);
 }
 
 /**
  * @brief SPU transfer callback: finish a one-shot upload and key the voices on.
  */
-void func_8002DD08(void)
+void akao_xa_key_on_one_shot(void)
 {
     s32 addr;
 
-    if (g_akao_xa_tracker.unk14 > 0x2000)
+    if (g_akao_xa_tracker.bytes_remaining > 0x2000)
     {
-        SpuSetTransferStartAddr(g_akao_xa_tracker.unk2C.spu_addr + 0x2000);
-        akao_spu_write(g_akao_xa_tracker.unk0, g_akao_xa_tracker.unk14 - 0x2000);
-        addr = g_akao_xa_tracker.unk2C.spu_addr + 0x1FF8;
+        SpuSetTransferStartAddr(g_akao_xa_tracker.source.spu_addr + 0x2000);
+        akao_spu_write(g_akao_xa_tracker.data_cursor, g_akao_xa_tracker.bytes_remaining - 0x2000);
+        addr = g_akao_xa_tracker.source.spu_addr + 0x1FF8;
     }
     else
     {
-        addr = g_akao_xa_tracker.unk2C.spu_addr + (g_akao_xa_tracker.unk14 >> 1) + 8;
+        addr = g_akao_xa_tracker.source.spu_addr + (g_akao_xa_tracker.bytes_remaining >> 1) + 8;
     }
 
-    func_8002D4D8(g_akao_xa_tracker.unk10, 0, g_akao_xa_tracker.unk2C.spu_addr, XA_SPU_SILENCE);
-    func_8002D4D8(g_akao_xa_tracker.unk10 + 1, 0, g_akao_xa_tracker.unk2C.spu_addr, XA_SPU_SILENCE);
+    akao_xa_setup_voice(g_akao_xa_tracker.first_voice, 0, g_akao_xa_tracker.source.spu_addr, XA_SPU_SILENCE);
+    akao_xa_setup_voice(g_akao_xa_tracker.first_voice + 1, 0, g_akao_xa_tracker.source.spu_addr, XA_SPU_SILENCE);
     SpuSetIRQAddr(addr);
-    SpuSetIRQCallback(func_8002DCDC);
-    spu_set_key_on(g_akao_xa_tracker.unkC);
-    SpuSetIRQ(1);
+    SpuSetIRQCallback(akao_xa_end_one_shot);
+    spu_set_key_on(g_akao_xa_tracker.voice_mask);
+    SpuSetIRQ(SPU_ON);
 }
 
 /**
@@ -745,129 +620,130 @@ void func_8002DD08(void)
  * @param program XA program header; the ADPCM data follows it.
  * @param pan Q8 pan.
  * @param spu_addr SPU destination address.
- * @param use_noise Non-zero to route the voices through the noise generator.
+ * @param use_reverb Non-zero to send the voices through reverb.
  */
-void func_8002DDDC(AkaoXaProgramHeader* program, s32 pan, s32 spu_addr, s32 use_noise)
+void akao_xa_start_one_shot(AkaoXaProgramHeader* program, s32 pan, s32 spu_addr, s32 use_reverb)
 {
     s32 voice;
     AkaoXaTracker* xa;
     s32 voice_mask;
-    u32 value; /* old voice mask, then the first chunk size; one variable in the original */
+    u32 value;
 
-    voice = func_8002D1C4();
+    voice = akao_xa_alloc_voice_pair();
     if (voice == -1)
     {
         return;
     }
 
-    SpuSetIRQ(0);
-    SpuSetIRQCallback(0);
+    SpuSetIRQ(SPU_OFF);
+    SpuSetIRQCallback(NULL);
 
     xa = &g_akao_xa_tracker;
-    value = xa->unkC;
-    xa->unk4C = pan;
-    xa->unk0 = (u8*)(program + 1);
-    xa->unk14 = program->sample_size;
+    value = xa->voice_mask;
+    xa->pan = pan;
+    xa->data_cursor = (u8*)(program + 1);
+    xa->bytes_remaining = program->sample_size;
     voice_mask = (1 << voice) | (1 << (voice + 1));
-    xa->unk18 = program->unk20;
-    xa->unk10 = voice;
-    xa->unkC = voice_mask;
+    xa->unk18 = program->spu_addr;
+    xa->first_voice = voice;
+    xa->voice_mask = voice_mask;
     spu_set_key_off(voice_mask | value);
-    xa->unk8 = program->flags;
-    xa->unk58 = program->pitch;
-    xa->unk2C.spu_addr = spu_addr;
-    SpuSetTransferMode(0);
+    xa->flags = program->flags;
+    xa->pitch = program->pitch;
+    xa->source.spu_addr = spu_addr;
+    SpuSetTransferMode(SPU_TRANSFER_BY_DMA);
     SpuSetTransferStartAddr(spu_addr);
     g_akao_spu_xfer_pending = 1;
-    SpuSetTransferCallback(func_8002DD08);
+    SpuSetTransferCallback(akao_xa_key_on_one_shot);
 
-    value = xa->unk14;
+    value = xa->bytes_remaining;
     if (value > 0x2000)
     {
         value = 0x2000;
     }
-    SpuWrite(xa->unk0, value);
-    xa->unk0 += value;
+    SpuWrite(xa->data_cursor, value);
+    xa->data_cursor += value;
 
-    if (use_noise != 0)
+    if (use_reverb != 0)
     {
-        g_akao_sfx_control.noise_mask |= xa->unkC;
+        g_akao_sfx_control.reverb_mask |= xa->voice_mask;
     }
     else
     {
-        g_akao_sfx_control.noise_mask &= ~xa->unkC;
+        g_akao_sfx_control.reverb_mask &= ~xa->voice_mask;
     }
-    g_akao_sfx_control.pitch_mod_mask &= ~D_8004F76C[0];
-    g_akao_sfx_control.reverb_mask &= ~D_8004F76C[0];
-    g_akao_driver_flags.unk8 |= AKAO_EFFECT_MASKS_UPDATE_PENDING;
+    g_akao_sfx_control.pitch_mod_mask &= ~g_akao_xa_tracker.voice_mask;
+    g_akao_sfx_control.noise_mask &= ~g_akao_xa_tracker.voice_mask;
+    g_akao_driver_flags.update_flags |= AKAO_EFFECT_MASKS_UPDATE_PENDING;
 }
 
 /**
  * @brief Play the XA program staged in SPU RAM by akao_upload_xa_program.
  * @param pan Q8 pan; not used.
- * @param use_noise Non-zero to route the voices through the noise generator.
+ * @param use_reverb Non-zero to send the voices through reverb.
  */
-void func_8002DFA4(s32 pan, s32 use_noise)
+void akao_xa_start_staged(s32 pan, s32 use_reverb)
 {
     s32 voice;
     s32 old_mask;
     s32 voice_mask;
     AkaoXaProgramHeader* program;
 
-    if (g_akao_xa_program_staging.unk20 != 0)
+    if (g_akao_xa_program_staging.header.spu_addr != 0)
     {
-        voice = func_8002D1C4();
+        voice = akao_xa_alloc_voice_pair();
         if (voice != -1)
         {
-            SpuSetIRQ(0);
-            SpuSetIRQCallback(0);
-            old_mask = g_akao_xa_tracker.unkC;
+            SpuSetIRQ(SPU_OFF);
+            SpuSetIRQCallback(NULL);
+            old_mask = g_akao_xa_tracker.voice_mask;
             voice_mask = (1 << voice) | (1 << (voice + 1));
-            g_akao_xa_tracker.unk10 = voice;
-            g_akao_xa_tracker.unkC = voice_mask;
+            g_akao_xa_tracker.first_voice = voice;
+            g_akao_xa_tracker.voice_mask = voice_mask;
             spu_set_key_off(voice_mask | old_mask);
-            program = &g_akao_xa_program_staging;
-            g_akao_xa_tracker.unk8 = program->flags;
-            g_akao_xa_tracker.unk58 = program->pitch;
-            if (use_noise != 0)
+            program = &g_akao_xa_program_staging.header;
+            g_akao_xa_tracker.flags = program->flags;
+            g_akao_xa_tracker.pitch = program->pitch;
+            if (use_reverb != 0)
             {
-                g_akao_sfx_control.noise_mask |= g_akao_xa_tracker.unkC;
+                g_akao_sfx_control.reverb_mask |= g_akao_xa_tracker.voice_mask;
             }
             else
             {
-                g_akao_sfx_control.noise_mask &= ~g_akao_xa_tracker.unkC;
+                g_akao_sfx_control.reverb_mask &= ~g_akao_xa_tracker.voice_mask;
             }
-            g_akao_sfx_control.pitch_mod_mask &= ~g_akao_xa_tracker.unkC;
-            g_akao_sfx_control.reverb_mask &= ~g_akao_xa_tracker.unkC;
-            g_akao_driver_flags.unk8 |= AKAO_EFFECT_MASKS_UPDATE_PENDING;
-            SpuSetIRQAddr(program->unk20 + (program->sample_size >> 1) + 8);
-            SpuSetIRQCallback(func_8002DCDC);
+            g_akao_sfx_control.pitch_mod_mask &= ~g_akao_xa_tracker.voice_mask;
+            g_akao_sfx_control.noise_mask &= ~g_akao_xa_tracker.voice_mask;
+            g_akao_driver_flags.update_flags |= AKAO_EFFECT_MASKS_UPDATE_PENDING;
+            SpuSetIRQAddr(program->spu_addr + (program->sample_size >> 1) + 8);
+            SpuSetIRQCallback(akao_xa_end_one_shot);
 
             if (program->flags & XA_FLAG_STEREO)
             {
                 if (program->flags & XA_FLAG_LOOP)
                 {
-                    func_8002D4D8(g_akao_xa_tracker.unk10, 1, program->unk20, program->unk20 + program->loop_offset);
-                    func_8002D4D8(g_akao_xa_tracker.unk10 + 1, 2, program->unk20 + program->right_offset, (program->unk20 + program->right_offset) + program->loop_offset);
+                    akao_xa_setup_voice(g_akao_xa_tracker.first_voice, 1, program->spu_addr, program->spu_addr + program->loop_offset);
+                    akao_xa_setup_voice(g_akao_xa_tracker.first_voice + 1, 2, program->spu_addr + program->right_offset,
+                                        (program->spu_addr + program->right_offset) + program->loop_offset);
                 }
                 else
                 {
-                    func_8002D4D8(g_akao_xa_tracker.unk10, 1, program->unk20, XA_SPU_SILENCE);
-                    func_8002D4D8(g_akao_xa_tracker.unk10 + 1, 2, program->unk20 + program->right_offset, XA_SPU_SILENCE);
+                    akao_xa_setup_voice(g_akao_xa_tracker.first_voice, 1, program->spu_addr, XA_SPU_SILENCE);
+                    akao_xa_setup_voice(g_akao_xa_tracker.first_voice + 1, 2, program->spu_addr + program->right_offset, XA_SPU_SILENCE);
                 }
             }
             else if (program->flags & XA_FLAG_LOOP)
             {
-                func_8002D4D8(g_akao_xa_tracker.unk10, 3, program->unk20, program->unk20 + program->loop_offset);
-                func_8002D4D8(g_akao_xa_tracker.unk10 + 1, 3, program->unk20, program->unk20 + program->loop_offset);
+                akao_xa_setup_voice(g_akao_xa_tracker.first_voice, 3, program->spu_addr, program->spu_addr + program->loop_offset);
+                akao_xa_setup_voice(g_akao_xa_tracker.first_voice + 1, 3, program->spu_addr, program->spu_addr + program->loop_offset);
             }
             else
             {
-                func_8002D4D8(g_akao_xa_tracker.unk10, 3, program->unk20, XA_SPU_SILENCE);
-                func_8002D4D8(g_akao_xa_tracker.unk10 + 1, 3, program->unk20, XA_SPU_SILENCE);
+                akao_xa_setup_voice(g_akao_xa_tracker.first_voice, 3, program->spu_addr, XA_SPU_SILENCE);
+                akao_xa_setup_voice(g_akao_xa_tracker.first_voice + 1, 3, program->spu_addr, XA_SPU_SILENCE);
             }
-            spu_set_key_on(D_8004F76C[0]);
-            SpuSetIRQ(1);
+            spu_set_key_on(g_akao_xa_tracker.voice_mask);
+            SpuSetIRQ(SPU_ON);
         }
     }
 }
@@ -876,20 +752,20 @@ void func_8002DFA4(s32 pan, s32 use_noise)
  * @brief Command 0xEC: upload an XA program to SPU RAM and play it once.
  * @param params Queued command parameters: buffer, Q8 pan, SPU address, noise flag.
  */
-void func_8002E204(s32* params)
+void akao_xa_cmd_play_one_shot(s32* params)
 {
-    func_8002DDDC((AkaoXaProgramHeader*)params[0], params[1], params[2], params[3]);
-    g_akao_sfx_control.unk0 &= ~D_8004F76C[0];
+    akao_xa_start_one_shot((AkaoXaProgramHeader*)params[0], params[1], params[2], params[3]);
+    g_akao_sfx_control.active_mask &= ~g_akao_xa_tracker.voice_mask;
 }
 
 /**
  * @brief Command 0xED: play the program staged in SPU RAM.
  * @param params Queued command parameters: Q8 pan, noise flag.
  */
-void func_8002E250(s32* params)
+void akao_xa_cmd_play_staged(s32* params)
 {
-    func_8002DFA4(params[0], params[1]);
-    g_akao_sfx_control.unk0 &= ~D_8004F76C[0];
+    akao_xa_start_staged(params[0], params[1]);
+    g_akao_sfx_control.active_mask &= ~g_akao_xa_tracker.voice_mask;
 }
 
 /**
@@ -897,11 +773,11 @@ void func_8002E250(s32* params)
  * @param block_index Block index to advance.
  * @return The new block index.
  */
-s32 func_8002E294(u32* block_index)
+s32 akao_xa_next_ring_block(u32* block_index)
 {
-    g_akao_xa_tracker.unk28++;
+    g_akao_xa_tracker.uploaded_blocks++;
     (*block_index)++;
-    if (*block_index > g_akao_xa_tracker.unk3C - 1)
+    if (*block_index > g_akao_xa_tracker.ring_block_count - 1)
     {
         *block_index = 0;
     }
@@ -911,53 +787,53 @@ s32 func_8002E294(u32* block_index)
 /**
  * @brief Start playing a CD ring stream from its first block.
  */
-void func_8002E2E8(void)
+void akao_xa_start_ring_stream(void)
 {
     s32 voice;
     AkaoXaProgramHeader* program;
     s32 voice_mask;
 
-    voice = func_8002D1C4();
+    voice = akao_xa_alloc_voice_pair();
     if (voice == -1)
     {
         return;
     }
 
-    SpuSetIRQ(0);
-    SpuSetIRQCallback(0);
+    SpuSetIRQ(SPU_OFF);
+    SpuSetIRQCallback(NULL);
 
-    program = (AkaoXaProgramHeader*)(g_akao_xa_tracker.unk2C.ring_base + XA_RING_HEADER_OFFSET);
+    program = (AkaoXaProgramHeader*)(g_akao_xa_tracker.source.ring_base + XA_RING_HEADER_OFFSET);
 
-    if (program->fade_in_ticks != 0 && g_akao_xa_tracker.unk48 == 0)
+    if (program->fade_in_ticks != 0 && g_akao_xa_tracker.volume_fade_ticks == 0)
     {
-        s32 volume = g_akao_xa_tracker.unk40;
-        g_akao_xa_tracker.unk40 = 0;
-        akao_cmd_e5(program->fade_in_ticks, volume >> 8);
+        s32 volume = g_akao_xa_tracker.volume;
+        g_akao_xa_tracker.volume = 0;
+        akao_fade_xa_volume(program->fade_in_ticks, volume >> 8);
     }
 
-    g_akao_xa_tracker.unk0 = g_akao_xa_tracker.unk2C.ring_base;
-    g_akao_xa_tracker.unk14 = program->sample_size;
-    g_akao_xa_tracker.unk18 = program->unk20;
-    g_akao_xa_tracker.unk10 = voice;
+    g_akao_xa_tracker.data_cursor = g_akao_xa_tracker.source.ring_base;
+    g_akao_xa_tracker.bytes_remaining = program->sample_size;
+    g_akao_xa_tracker.unk18 = program->spu_addr;
+    g_akao_xa_tracker.first_voice = voice;
     voice_mask = (1 << voice) | (1 << (voice + 1));
-    g_akao_xa_tracker.unkC = voice_mask;
-    g_akao_xa_tracker.unk34 = 0;
+    g_akao_xa_tracker.voice_mask = voice_mask;
+    g_akao_xa_tracker.upload_block = 0;
     spu_set_key_off(voice_mask);
-    g_akao_xa_tracker.unk8 = program->flags;
-    g_akao_xa_tracker.unk58 = program->pitch;
-    SpuSetTransferMode(0);
+    g_akao_xa_tracker.flags = program->flags;
+    g_akao_xa_tracker.pitch = program->pitch;
+    SpuSetTransferMode(SPU_TRANSFER_BY_DMA);
     SpuSetTransferStartAddr(XA_SPU_BLOCK_A);
     g_akao_spu_xfer_pending = 1;
-    SpuSetTransferCallback(func_8002E540);
-    SpuWrite(g_akao_xa_tracker.unk0 + XA_RING_DATA_OFFSET, 0x2000);
+    SpuSetTransferCallback(akao_xa_begin_ring);
+    SpuWrite(g_akao_xa_tracker.data_cursor + XA_RING_DATA_OFFSET, 0x2000);
 
-    g_akao_sfx_control.noise_mask &= ~g_akao_xa_tracker.unkC;
-    g_akao_sfx_control.pitch_mod_mask &= ~g_akao_xa_tracker.unkC;
-    g_akao_sfx_control.reverb_mask &= ~g_akao_xa_tracker.unkC;
-    g_akao_driver_flags.unk8 |= AKAO_EFFECT_MASKS_UPDATE_PENDING;
+    g_akao_sfx_control.reverb_mask &= ~g_akao_xa_tracker.voice_mask;
+    g_akao_sfx_control.pitch_mod_mask &= ~g_akao_xa_tracker.voice_mask;
+    g_akao_sfx_control.noise_mask &= ~g_akao_xa_tracker.voice_mask;
+    g_akao_driver_flags.update_flags |= AKAO_EFFECT_MASKS_UPDATE_PENDING;
 
-    func_8002E294(&g_akao_xa_tracker.unk34);
-    func_8002E294(&g_akao_xa_tracker.unk34);
+    akao_xa_next_ring_block(&g_akao_xa_tracker.upload_block);
+    akao_xa_next_ring_block(&g_akao_xa_tracker.upload_block);
 }
 
 /**
@@ -966,36 +842,36 @@ void func_8002E2E8(void)
  * @param irq_addr SPU address whose playback raises the next IRQ.
  * @param next_cb SPU IRQ callback that uploads the next block.
  */
-void func_8002E478(s32 uploaded, s32 irq_addr, SpuIRQCallbackProc next_cb)
+void akao_xa_key_on_ring(s32 uploaded, s32 irq_addr, SpuIRQCallbackProc next_cb)
 {
-    if (g_akao_xa_tracker.unkC != 0)
+    if (g_akao_xa_tracker.voice_mask != 0)
     {
-        SpuSetTransferCallback(0);
+        SpuSetTransferCallback(NULL);
         g_akao_spu_xfer_pending = 0;
-        if (g_akao_xa_tracker.unk14 >= 0xE61)
+        if (g_akao_xa_tracker.bytes_remaining >= 0xE61)
         {
-            g_akao_xa_tracker.unk0 += uploaded;
+            g_akao_xa_tracker.data_cursor += uploaded;
             SpuSetIRQCallback(next_cb);
         }
         else
         {
-            SpuSetIRQCallback(func_8002D140);
+            SpuSetIRQCallback(akao_xa_stop);
             irq_addr = XA_SPU_SILENCE;
         }
         SpuSetIRQAddr(irq_addr + 8);
-        spu_set_key_on(D_8004F76C[0]);
-        SpuSetIRQ(1);
+        spu_set_key_on(g_akao_xa_tracker.voice_mask);
+        SpuSetIRQ(SPU_ON);
     }
 }
 
 /**
  * @brief SPU transfer callback: start a CD ring stream.
  */
-void func_8002E540(void)
+void akao_xa_begin_ring(void)
 {
-    func_8002D4D8(g_akao_xa_tracker.unk10, 1, XA_SPU_BLOCK_A, XA_SPU_BLOCK_B);
-    func_8002D4D8(g_akao_xa_tracker.unk10 + 1, 2, XA_SPU_BLOCK_A_RIGHT, XA_SPU_BLOCK_B_RIGHT);
-    func_8002E478(0x2000, XA_SPU_BLOCK_B, func_8002E6FC);
+    akao_xa_setup_voice(g_akao_xa_tracker.first_voice, 1, XA_SPU_BLOCK_A, XA_SPU_BLOCK_B);
+    akao_xa_setup_voice(g_akao_xa_tracker.first_voice + 1, 2, XA_SPU_BLOCK_A_RIGHT, XA_SPU_BLOCK_B_RIGHT);
+    akao_xa_key_on_ring(0x2000, XA_SPU_BLOCK_B, akao_xa_refill_ring_a);
 }
 
 /**
@@ -1005,43 +881,43 @@ void func_8002E540(void)
  * @param block_size Ring block size in bytes.
  * @param cb SPU IRQ callback for the following block.
  */
-void func_8002E5A4(s32 start, s32 end, s32 block_size, SpuIRQCallbackProc cb)
+void akao_xa_refill_ring(s32 start, s32 end, s32 block_size, SpuIRQCallbackProc cb)
 {
     u8* base;
     AkaoXaProgramHeader* hdr;
 
-    if (g_akao_xa_tracker.unkC != 0)
+    if (g_akao_xa_tracker.voice_mask != 0)
     {
-        base = g_akao_xa_tracker.unk0;
+        base = g_akao_xa_tracker.data_cursor;
         hdr = (AkaoXaProgramHeader*)(base + XA_RING_HEADER_OFFSET);
         if (hdr->magic == XA_AKAO_MAGIC)
         {
-            SpuSetIRQ(0);
+            SpuSetIRQ(SPU_OFF);
             SpuSetTransferStartAddr(start);
             akao_spu_arm_xfer();
-            func_8002E294(&g_akao_xa_tracker.unk34);
-            SpuWrite(g_akao_xa_tracker.unk0 + XA_RING_DATA_OFFSET, block_size - XA_RING_DATA_OFFSET);
-            g_akao_xa_tracker.unk20 = hdr->unk4;
-            g_akao_xa_tracker.unk18 = hdr->unk20;
-            if (hdr->sample_size > hdr->unk20)
+            akao_xa_next_ring_block(&g_akao_xa_tracker.upload_block);
+            SpuWrite(g_akao_xa_tracker.data_cursor + XA_RING_DATA_OFFSET, block_size - XA_RING_DATA_OFFSET);
+            g_akao_xa_tracker.unk20 = hdr->key;
+            g_akao_xa_tracker.unk18 = hdr->spu_addr;
+            if (hdr->sample_size > hdr->spu_addr)
             {
                 SpuSetIRQCallback(cb);
-                g_akao_xa_tracker.unk0 += block_size;
-                if (g_akao_xa_tracker.unk34 == 0)
+                g_akao_xa_tracker.data_cursor += block_size;
+                if (g_akao_xa_tracker.upload_block == 0)
                 {
-                    g_akao_xa_tracker.unk0 = g_akao_xa_tracker.unk2C.ring_base;
+                    g_akao_xa_tracker.data_cursor = g_akao_xa_tracker.source.ring_base;
                 }
             }
             else
             {
-                SpuSetIRQCallback(func_8002D140);
+                SpuSetIRQCallback(akao_xa_stop);
                 end = XA_SPU_SILENCE;
                 start = XA_SPU_SILENCE;
             }
-            spu_set_voice_repeat_addr(g_akao_xa_tracker.unk10, start);
-            spu_set_voice_repeat_addr(g_akao_xa_tracker.unk10 + 1, end);
+            spu_set_voice_repeat_addr(g_akao_xa_tracker.first_voice, start);
+            spu_set_voice_repeat_addr(g_akao_xa_tracker.first_voice + 1, end);
             SpuSetIRQAddr(start + 8);
-            SpuSetIRQ(1);
+            SpuSetIRQ(SPU_ON);
         }
     }
 }
@@ -1049,27 +925,27 @@ void func_8002E5A4(s32 start, s32 end, s32 block_size, SpuIRQCallbackProc cb)
 /**
  * @brief SPU IRQ callback: refill ring block A.
  */
-void func_8002E6FC(void)
+void akao_xa_refill_ring_a(void)
 {
-    func_8002E5A4(XA_SPU_BLOCK_A, XA_SPU_BLOCK_A_RIGHT, 0x1000, func_8002E72C);
+    akao_xa_refill_ring(XA_SPU_BLOCK_A, XA_SPU_BLOCK_A_RIGHT, 0x1000, akao_xa_refill_ring_b);
 }
 
 /**
  * @brief SPU IRQ callback: refill ring block B.
  */
-void func_8002E72C(void)
+void akao_xa_refill_ring_b(void)
 {
-    func_8002E5A4(XA_SPU_BLOCK_B, XA_SPU_BLOCK_B_RIGHT, 0x1000, func_8002E6FC);
+    akao_xa_refill_ring(XA_SPU_BLOCK_B, XA_SPU_BLOCK_B_RIGHT, 0x1000, akao_xa_refill_ring_a);
 }
 
 /**
  * @brief Command 0xE8: prepare a CD ring stream.
  * @param params Queued command parameters: first ring block, ring size.
  */
-void func_8002E75C(s32* params)
+void akao_xa_cmd_prepare_ring(s32* params)
 {
-    func_8002D140();
-    g_akao_xa_tracker.unk8 = XA_FLAG_RING_STREAM;
-    g_akao_xa_tracker.unk2C.ring_base = (u8*)params[0];
-    g_akao_xa_tracker.unk30 = params[1];
+    akao_xa_stop();
+    g_akao_xa_tracker.flags = XA_FLAG_RING_STREAM;
+    g_akao_xa_tracker.source.ring_base = (u8*)params[0];
+    g_akao_xa_tracker.ring_size = params[1];
 }

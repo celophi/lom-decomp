@@ -20,13 +20,14 @@
 #include "sdk/libgpu.h"
 #include "sdk/libapi.h"
 #include "sdk/libetc.h"
+#include "sdk/libmcx.h"
 #include "sdk/libspu.h"
 #include "sdk/rand.h"
 
 #define SECONDARY_OVERLAY_LOAD_ADDR ((void*)0x80140000)
 
-#define FIELD_ENTRY_MODE_RESUME 6
-#define FIELD_CONFIG_FLAGS_MASK 0xFE000000U
+#define FIELD_SPAWN_LOAD_GAME 6
+#define SPAWN_ID_FLAGS_MASK 0xFE000000U
 #define NAME_SOURCE_MASK 0x7F
 #define CD_RESOURCE_TABLE_LBA 24
 #define CD_RESOURCE_TABLE_SIZE 46488
@@ -41,7 +42,6 @@ extern s32 D_8003EC8C;
 extern s32 D_80042FD0;
 
 void __main(void);
-void McxStartCom(void);
 
 SavedGame g_saved_game;
 
@@ -52,9 +52,9 @@ SavedGame g_saved_game;
 void main_game_loop(void)
 {
     RECT rect;
-    u32* entry_config;
+    u32* spawn_id;
     u8* player_name;
-    u32 field_config;
+    u32 saved_spawn_id;
     u32 music_track;
     TitleMenuContext* title_menu_buffers;
 
@@ -82,10 +82,10 @@ void main_game_loop(void)
     cdrom_stream(CD_RES_FIELD_FONT, FIELD_FONT_LOAD_ADDRESS);
     initialize_controller_vsync();
     srand(1);
-    g_layout_flag = 0;
-    g_layout_sub_mode = -1;
-    g_layout_option = -1;
-    g_scene_mode = 0;
+    g_field_music_id = 0;
+    g_field_secondary_music_id = -1;
+    g_field_sound_bank_id = -1;
+    g_field_scene_id = 0;
     g_save_slot_index = 7;
     g_script_pair_value_49 = 0;
     D_8003EC8C = 11;
@@ -116,24 +116,24 @@ void main_game_loop(void)
                 cdrom_wait_queue_empty();
                 if (g_game_state == GAME_STATE_ATTRACT_1)
                 {
-                    movie_play(1);
+                    movie_play(MOVIE_INDEX_ATTRACT_1);
                 }
                 else
                 {
-                    movie_play(2);
-                    movie_play(3);
-                    movie_play(4);
+                    movie_play(MOVIE_INDEX_ATTRACT_2_PART_1);
+                    movie_play(MOVIE_INDEX_ATTRACT_2_PART_2);
+                    movie_play(MOVIE_INDEX_ATTRACT_2_PART_3);
                 }
             }
             else
             {
                 cdrom_wait_queue_empty();
             }
-            g_field_entry_flag = 0;
-            g_field_scene_config = 0;
+            g_field_object_id = 0;
+            g_field_spawn_id = 0;
             g_game_state = run_field_scene();
-            akao_cmd_f0();
-            akao_cmd_f1();
+            akao_stop_all_songs();
+            akao_release_all_sfx();
             akao_set_song_volume(0, AKAO_VOLUME_MAX);
             g_previous_game_state = GAME_STATE_FIELD;
             break;
@@ -146,17 +146,17 @@ void main_game_loop(void)
             ClearImage(&rect, 0, 0, 0);
             DrawSync(0);
             VSync(0);
-            akao_cmd_f0();
-            akao_cmd_f1();
+            akao_stop_all_songs();
+            akao_release_all_sfx();
             cdrom_wait_queue_empty();
             g_game_state = run_world_map();
-            akao_cmd_f0();
-            akao_cmd_f1();
+            akao_stop_all_songs();
+            akao_release_all_sfx();
             if ((g_game_state != GAME_STATE_TITLE) && (g_game_state != GAME_STATE_ATTRACT_1) && (g_game_state != GAME_STATE_ATTRACT_2))
             {
                 load_and_play_song(g_music_track_table[g_music_track_index]);
             }
-            g_layout_sub_mode = -1;
+            g_field_secondary_music_id = -1;
             g_previous_game_state = GAME_STATE_WORLD_MAP;
             break;
 
@@ -207,7 +207,7 @@ void main_game_loop(void)
             screen_transition(0);
             cdrom_wait_queue_empty();
             field_scene_reset(0);
-            entry_config = &g_field_scene_config;
+            spawn_id = &g_field_spawn_id;
             g_save_slot_index = 7;
             if (cload_main() != 0)
             {
@@ -215,15 +215,15 @@ void main_game_loop(void)
             }
             else
             {
-                field_config = (g_saved_game.layout.field_entry_config & FIELD_CONFIG_FLAGS_MASK) | FIELD_ENTRY_MODE_RESUME;
-                *entry_config = FIELD_ENTRY_MODE_RESUME;
-                g_saved_game.layout.field_entry_config = field_config;
-                g_scene_mode = g_saved_game.layout.scene_mode;
-                g_field_entry_flag = g_saved_game.layout.field_flags;
-                g_layout_flag = g_saved_game.layout.layout_flags;
-                g_layout_option = g_saved_game.layout.option_id;
-                g_layout_sub_mode = g_saved_game.layout.sub_mode;
-                g_saved_game.layout.field_entry_config = field_config;
+                saved_spawn_id = (g_saved_game.layout.spawn_id & SPAWN_ID_FLAGS_MASK) | FIELD_SPAWN_LOAD_GAME;
+                *spawn_id = FIELD_SPAWN_LOAD_GAME;
+                g_saved_game.layout.spawn_id = saved_spawn_id;
+                g_field_scene_id = g_saved_game.layout.scene_id;
+                g_field_object_id = g_saved_game.layout.object_id;
+                g_field_music_id = g_saved_game.layout.music_id;
+                g_field_sound_bank_id = g_saved_game.layout.sound_bank_id;
+                g_field_secondary_music_id = g_saved_game.layout.secondary_music_id;
+                g_saved_game.layout.spawn_id = saved_spawn_id;
                 music_track = g_saved_game.layout.music_track;
                 g_music_track_index = music_track;
                 if ((g_saved_game.layout.option_flags & (SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3)) == (SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3))
@@ -246,7 +246,7 @@ void main_game_loop(void)
             cdrom_stream(CD_RES_MOVIE_BIN, SECONDARY_OVERLAY_LOAD_ADDR);
             screen_transition(0);
             cdrom_wait_queue_empty();
-            movie_play(0);
+            movie_play(MOVIE_INDEX_INTRO);
             g_game_state = GAME_STATE_TITLE;
             DrawSync(0);
             VSync(0);

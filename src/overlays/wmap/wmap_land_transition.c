@@ -151,7 +151,7 @@ extern const s16 g_wmap_carousel_faces[];
 extern WmapPoint g_wmap_artifact_positions[WMAP_ARTIFACT_SLOTS];
 extern VECTOR g_wmap_carousel_translation;
 
-s32 akao_cmd_c2(s32 value0, s32 value1, s32 value2, s32 value3);
+s32 akao_fade_song_volume_from(s32 value0, s32 value1, s32 value2, s32 value3);
 s32 wmap_begin_land_placement(s32 initialize);
 
 /**
@@ -300,7 +300,7 @@ void wmap_update_artifact_selection(void)
                 D_8011D52C = 1;
                 g_wmap_buttons_repeat = 0;
                 D_8013B208 = 1;
-                akao_cmd_c2(0, 60, 127, 1);
+                akao_fade_song_volume_from(0, 60, 127, 1);
                 func_800591A8(D_8011D4FC);
                 artifact_id = D_8011D4FC;
                 if (artifact_id == 22)

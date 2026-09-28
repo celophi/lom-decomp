@@ -525,18 +525,18 @@ typedef struct
 typedef struct FieldGameState
 {
     u8 pad000[0x18];
-    /** @brief Entry configuration of the current field scene. */
-    u32 entry_config : 25;
+    /** @brief Spawn record of the current field scene. */
+    u32 spawn_id : 25;
     u32 unk18_25 : 7;
-    s16 option_id;
-    s8 sub_mode;
+    s16 sound_bank_id;
+    s8 secondary_music_id;
     u8 pad1F;
     /** @brief Music track of the current field scene. */
     u32 music_track : 18;
     u32 unk20_18 : 14;
-    u16 scene_mode;
-    u8 field_flags;
-    u8 layout_flags;
+    u16 scene_id;
+    u8 object_id;
+    u8 music_id;
     /** @brief Config menu options (SavedGameLayout::option_flags): controller vibration, mono sound, SAVED_OPTION_FLAG_*. */
     union
     {

@@ -355,7 +355,7 @@ extern u8 D_800DCEF4[4];
 extern u8 D_80123538[];
 extern s32 D_801B2E40;
 extern s32 D_801B2E44;
-extern void akao_cmd_c2(s32, s32, s32, s32);
+extern void akao_fade_song_volume_from(s32, s32, s32, s32);
 
     s32 i;
     WmapConfigA *actor;
@@ -385,7 +385,7 @@ extern void akao_cmd_c2(s32, s32, s32, s32);
             D_801AFD60[i].field_0E = 0;
         }
     }
-    akao_cmd_c2(0, 30, 127, 48);
+    akao_fade_song_volume_from(0, 30, 127, 48);
     if (D_800DCEF4[3] & (D_800DCEF4[2] & (D_800DCEF4[0] & D_800DCEF4[1])))
     {
         wmap_play_sound(49, 128);
@@ -1273,7 +1273,7 @@ extern s32 D_801B2E44;
 
     if (!(D_800DCEF4[3] & (D_800DCEF4[2] & (D_800DCEF4[0] & D_800DCEF4[1]))))
     {
-        akao_cmd_f1();
+        akao_release_all_sfx();
     }
     for (i = 0; i < 4; i++)
     {
@@ -1346,7 +1346,7 @@ extern s32 D_801B2E44;
 /** @brief Start audio, compute the coordinate delta, and advance the sequence. */
 void func_800A7AF4(void)
 {
-extern void akao_cmd_c2(s32, s32, s32, s32);
+extern void akao_fade_song_volume_from(s32, s32, s32, s32);
 extern s32 g_wmap_saved_view[];
 extern s32 g_wmap_view_scroll_mode;
 extern s32 g_wmap_view[];
@@ -1354,7 +1354,7 @@ extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
 extern s32 D_801B2E40;
 
-    akao_cmd_c2(0, 0x1E, 0x30, 0x7F);
+    akao_fade_song_volume_from(0, 0x1E, 0x30, 0x7F);
     g_wmap_view_scroll_mode = 2;
     g_wmap_scroll_remaining_x = g_wmap_saved_view[0] - g_wmap_view[0];
     g_wmap_scroll_remaining_y = g_wmap_saved_view[1] - g_wmap_view[1];
@@ -2033,7 +2033,7 @@ void func_800A861C(void)
 extern s32 D_801B2E58;
 extern s32 D_801B2E5C;
 
-    akao_cmd_f1();
+    akao_release_all_sfx();
     D_801B2E5C = 60;
     D_801B2E58 += 1;
 }

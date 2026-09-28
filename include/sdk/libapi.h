@@ -35,7 +35,7 @@ extern void FlushCache(void);
 extern void ReturnFromException(void);
 extern int EnterCriticalSection(void);
 extern void ExitCriticalSection(void);
-extern long SetConf(unsigned long event, unsigned long stack, unsigned long mode);
+extern long SetConf(unsigned long ev, unsigned long tcb, unsigned long sp);
 extern void SetMem(long size);
 extern long Krom2RawAdd(unsigned long sjis);
 extern void _96_remove(void);

@@ -21,7 +21,7 @@
  * @param count     Number of entries to relocate (must be > 0; do-while shape).
  *
  * @see AkaoArticulation
- * @see https://decomp.me/scratch/CJTY6 (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/CJTY6
  */
 void akao_relocate_articulations(AkaoArticulation* src, AkaoArticulation* dst, s32 spu_base, s32 count)
 {
@@ -47,7 +47,7 @@ void akao_relocate_articulations(AkaoArticulation* src, AkaoArticulation* dst, s
  *
  * @return 0 if the magic matches; otherwise (header->magic - AKAO_MAGIC).
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/scY8u
+ * @see decomp.me (100%) https://decomp.me/scratch/scY8u
  */
 s32 akao_check_magic(AkaoHeader* header)
 {
@@ -62,11 +62,11 @@ s32 akao_check_magic(AkaoHeader* header)
  * callback (passes NULL back to libspu) and clears the in-flight flag so
  * akao_spu_wait can release.
  *
- * @see https://decomp.me/scratch/qI6jZ (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/qI6jZ
  */
 void akao_spu_xfer_done_cb(void)
 {
-    SpuSetTransferCallback(0);
+    SpuSetTransferCallback(NULL);
     g_akao_spu_xfer_pending = 0;
 }
 
@@ -77,7 +77,7 @@ void akao_spu_xfer_done_cb(void)
  * akao_spu_xfer_done_cb as the libspu transfer-callback. Used as the prelude
  * to either akao_spu_write or akao_spu_read.
  *
- * @see https://decomp.me/scratch/oy7T9 (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/oy7T9
  */
 void akao_spu_arm_xfer(void)
 {
@@ -94,7 +94,7 @@ void akao_spu_arm_xfer(void)
  * @param source     Source buffer in main RAM.
  * @param byte_count Number of bytes to upload.
  *
- * @see https://decomp.me/scratch/D2YiT (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/D2YiT
  */
 void akao_spu_write(void* source, s32 byte_count)
 {
@@ -112,7 +112,7 @@ void akao_spu_write(void* source, s32 byte_count)
  * @param destination Destination buffer in main RAM.
  * @param byte_count Number of bytes to read back from the SPU.
  *
- * @see https://decomp.me/scratch/lLOqn (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/lLOqn
  */
 void akao_spu_read(void* destination, s32 byte_count)
 {
@@ -127,7 +127,7 @@ void akao_spu_read(void* destination, s32 byte_count)
  * clears it. Used wherever the AKAO upload paths need to synchronize before
  * issuing the next SPU operation.
  *
- * @see https://decomp.me/scratch/fqPPO (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/fqPPO
  */
 void akao_spu_wait(void)
 {
@@ -191,14 +191,14 @@ s32 akao_submit_bank(AkaoBankHeader* bank, s32 wait_for_completion)
  *
  * @return 0 on success, -1 on AKAO magic mismatch.
  *
- * @see https://decomp.me/scratch/Awfhy (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/Awfhy
  */
 s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_base)
 {
     AkaoBankHeader* header;
     AkaoArticulation* articulations;
     s32 result;
-    s32 header_address; /* magic check result, then the bank address; one variable in the original */
+    s32 header_address;
 
     akao_spu_wait();
     if ((header_address = akao_check_magic(bank)) == 0)
@@ -209,9 +209,7 @@ s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_b
         bank = header + 1;
         articulations = bank;
         akao_spu_write(&articulations[header->articulation_count], header->sample_size);
-        akao_relocate_articulations(articulations,
-                                   &((AkaoArticulation*)g_akao_articulation_slots)[bank_id],
-                                   spu_base, header->articulation_count);
+        akao_relocate_articulations(articulations, &((AkaoArticulation*)g_akao_articulation_slots)[bank_id], spu_base, header->articulation_count);
         if (wait_for_completion != 0)
         {
             akao_spu_wait();

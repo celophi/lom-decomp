@@ -12,8 +12,13 @@ typedef union
     VSyncCallbackFn handler;
 } ControllerVSyncCallback;
 
-extern u8 g_controller_vsync_sample_count;
-extern u8 g_controller_vsync_counter;
+/*
+ * Linker-placed names for single ControllerState fields (pending_sample_count,
+ * vsync_accumulation_count and previous_vsync_callback). Some functions address
+ * these fields by symbol rather than through CONTROLLER_STATE.
+ */
+extern u8 g_controller_pending_sample_count;
+extern u8 g_controller_vsync_accumulation_count;
 extern ControllerVSyncCallback g_previous_controller_vsync_callback;
 
 /**

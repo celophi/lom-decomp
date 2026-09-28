@@ -5,14 +5,13 @@
 #include "sdk/libpress.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
-#include "akao.h"
+#include "akao_cmd.h"
 #include "movie.h"
 #include "movie_state.h"
 
 #define CD_BYTES_PER_WORD 4
 #define CD_BYTES_PER_WORD_SHIFT 2
 #define CD_STREAM_TIMEOUT_FRAMES 30
-#define CD_STREAM_DECOMPRESS_GUARD_SIZE 280
 #define CD_STREAM_DIRECT_MODE 0x1000
 #define CD_STREAM_CHUNK_GUARD_SIZE 1048
 #define CD_STREAM_STAGING_START ((u8*)0x801DA000)
@@ -39,7 +38,7 @@
 #define CD_SECTOR_HEADER_WORDS 3
 #define CD_SECTOR_POSITION_MASK 0x00FFFFFF
 #define CD_DISC_VALIDATION_WORDS 8
-#define CD_IS_MULTIBYTE_ID_CHAR(character) (((character) >= 0x80 && (character) <= 0x9F) || ((character) >= 0xE0 && (character) <= 0xEF))
+#define CD_IS_SJIS_LEAD_BYTE(character) (((character) >= 0x80 && (character) <= 0x9F) || ((character) >= 0xE0 && (character) <= 0xEF))
 #define CD_DATA_SECTOR_WORDS (CD_DATA_SECTOR_SIZE / CD_BYTES_PER_WORD)
 #define CD_BYTES_TO_WORDS(size) (((size) + (CD_BYTES_PER_WORD - 1)) >> CD_BYTES_PER_WORD_SHIFT)
 #define CD_RECOVERY_SECTOR_RETRY_LIMIT 17
@@ -54,7 +53,7 @@
 #define CD_SYSTEM_ADDRESS 0x801ED800
 #define CD_SYSTEM (*(struct CdSystem*)CD_SYSTEM_ADDRESS)
 #define CD_RESOURCE_ENTRIES ((CdResourceEntry*)0x801ED998)
-#define CD_SCRATCHPAD_BUFFER ((CdResourceEntry*)0x1F800000)
+#define CD_SCRATCHPAD_BUFFER ((CdResourceEntry*)getScratchAddr(0))
 
 /** @brief A CD position as MSF fields, a packed word, or command bytes. */
 typedef union
@@ -259,8 +258,12 @@ typedef struct CdSystem
     CdResourceEntry default_cd_resource;
 } CdSystem;
 
-extern CdlCB g_cd_sync_callback_result;
-extern CdlCB g_cd_ready_callback_result;
+/*
+ * Linker-placed names for single CdSystem fields and one resource-table entry.
+ * Some functions address these by symbol rather than through CD_SYSTEM.
+ */
+extern CdlCB g_cd_previous_sync_callback;
+extern CdlCB g_cd_previous_ready_callback;
 extern s32 g_cd_vsync_timestamp;
 extern u8 g_cd_audio_enabled;
 extern u8 g_cd_playback_state;
@@ -272,7 +275,6 @@ extern u8 g_cd_pending_queue_count;
 extern CdSystem g_cd_system;
 extern const u8 g_disc_validation_id[21];
 
-s32 cdrom_recover(void);
 static void cdrom_complete_command(u8 intr, u8* result);
 static void cdrom_handle_recovery_sync(u8 intr, u8* result);
 static void cdrom_handle_ready_intr(u8 intr, u8* result);
@@ -280,8 +282,6 @@ static void cdrom_process_sector(s32 deferred);
 static void cdrom_run_command(u8 command, u8* sector_buffer, s32 execution_mode);
 static void cdrom_verify_disc(u8 interrupt, u8* result);
 static void cdrom_handle_sync_error(void);
-void cdrom_restore_callbacks(void);
-s32 cdrom_enter_recovery_mode(void);
 
 /**
  * @brief Initializes the CD-ROM hardware and command system.
@@ -289,7 +289,7 @@ s32 cdrom_enter_recovery_mode(void);
  * Saves and clears the libcd callbacks, resets command state, and configures
  * double-speed reads with 2340-byte sectors. Blocks until the drive is ready.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/DBYkw
+ * @see decomp.me (100%) https://decomp.me/scratch/DBYkw
  */
 void cdrom_init(void)
 {
@@ -303,8 +303,8 @@ void cdrom_init(void)
 
     CdSetDebug(0);
 
-    g_cd_sync_callback_result = CdSyncCallback(NULL);
-    g_cd_ready_callback_result = CdReadyCallback(NULL);
+    g_cd_previous_sync_callback = CdSyncCallback(NULL);
+    g_cd_previous_ready_callback = CdReadyCallback(NULL);
 
     status_flags = &CD_SYSTEM.status_flags;
 
@@ -318,7 +318,7 @@ void cdrom_init(void)
     CD_SYSTEM.current_data_size = 0;
     CD_SYSTEM.target_data_size = 0;
     CD_SYSTEM.sync_complete = FALSE;
-    CD_SYSTEM.init_state = 0;
+    CD_SYSTEM.init_state = CD_RECOVERY_STATE_IDLE;
     CD_SYSTEM.current_command = CD_COMMAND_NONE;
     CD_SYSTEM.init_command = CD_SYNC_COMMAND_NONE;
     CD_SYSTEM.retry_count = 0;
@@ -383,7 +383,7 @@ void cdrom_init(void)
  * Stops active CD audio, clears libcd callbacks, blocks until the drive pauses,
  * then resets and flushes the command queue.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/M39vT
+ * @see decomp.me (100%) https://decomp.me/scratch/M39vT
  */
 void cdrom_stop(void)
 {
@@ -440,7 +440,7 @@ void cdrom_stop(void)
  *
  * @return Number of decompressed bytes written.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/SvWOg
+ * @see decomp.me (100%) https://decomp.me/scratch/SvWOg
  */
 s32 cdrom_stream(s32 resource_index, u8* destination)
 {
@@ -567,7 +567,7 @@ s32 cdrom_stream(s32 resource_index, u8* destination)
  * @param get_buffer     Returns the next output buffer and its capacity.
  * @param chunk_done     Called after each completed or final chunk.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/aZWx6
+ * @see decomp.me (100%) https://decomp.me/scratch/aZWx6
  */
 void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buffer, CdStreamChunkDoneCallback chunk_done)
 {
@@ -685,8 +685,6 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
                             {
                                 source_word = *(u32*)source_ptr;
                                 source_ptr += CD_STREAM_COPY_WORD_SIZE;
-
-                                /* TODO: Need to figure out how to replace this cast. */
                                 *((u32*)destination)++ = source_word;
                             }
                         }
@@ -796,7 +794,7 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
  *
  * @return Resource size, or a negative CdQueueCommandError.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/izXP3
+ * @see decomp.me (100%) https://decomp.me/scratch/izXP3
  */
 s32 cdrom_queue_command(u8 command, s32 resource_id, void* dst_buffer, CdCommandCallback callback)
 {
@@ -858,7 +856,7 @@ s32 cdrom_queue_command(u8 command, s32 resource_id, void* dst_buffer, CdCommand
 
         active_command = CD_SYSTEM.current_command;
 
-        if ((active_command != 0) || (CD_SYSTEM.init_command != CD_SYNC_COMMAND_NONE))
+        if ((active_command != CD_COMMAND_NONE) || (CD_SYSTEM.init_command != CD_SYNC_COMMAND_NONE))
         {
             return resource_entry->data_size;
         }
@@ -892,7 +890,7 @@ s32 cdrom_queue_command(u8 command, s32 resource_id, void* dst_buffer, CdCommand
  *
  * @return Number of queued commands, or zero while explicit recovery is pending.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/xxcgW
+ * @see decomp.me (100%) https://decomp.me/scratch/xxcgW
  */
 u32 cdrom_process_state(void)
 {
@@ -922,7 +920,7 @@ u32 cdrom_process_state(void)
 
         CD_SYSTEM.pending_queue_count = pending_count;
 
-        if (CD_SYSTEM.init_state == 0)
+        if (CD_SYSTEM.init_state == CD_RECOVERY_STATE_IDLE)
         {
             CD_SYSTEM.init_state = recovery_state;
 
@@ -937,7 +935,7 @@ u32 cdrom_process_state(void)
             {
                 if (g_movie_use_cd_audio != 0)
                 {
-                    akao_cmd_99_9b_9d_9f(3);
+                    akao_pause_audio(AKAO_AUDIO_XA);
                 }
             }
 
@@ -1127,7 +1125,7 @@ u32 cdrom_process_state(void)
         saw_sync_completion = 0;
         current_command = CD_SYSTEM.current_command;
 
-        if ((current_command != 0) || (CD_SYSTEM.init_command != CD_SYNC_COMMAND_NONE))
+        if ((current_command != CD_COMMAND_NONE) || (CD_SYSTEM.init_command != CD_SYNC_COMMAND_NONE))
         {
             // Resample until no completion arrives while the queue state is read.
             while (TRUE)
@@ -1262,7 +1260,7 @@ u32 cdrom_process_state(void)
  *
  * @return Zero while reconfiguring, otherwise one.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/IvxZG
+ * @see decomp.me (100%) https://decomp.me/scratch/IvxZG
  */
 s32 cdrom_recover(void)
 {
@@ -1360,7 +1358,7 @@ s32 cdrom_recover(void)
 /**
  * @brief Validates sector position while recovering an interrupted read.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/iWEyM
+ * @see decomp.me (100%) https://decomp.me/scratch/iWEyM
  */
 void cdrom_verify_recovery(void)
 {
@@ -1371,7 +1369,7 @@ void cdrom_verify_recovery(void)
         return;
     }
 
-    if (cd_system->audio_enabled != g_cd_data_ready_pending)
+    if (cd_system->audio_enabled != TRUE)
     {
         while (CdGetSector(CD_SYSTEM.sector_header_buffer, CD_SECTOR_HEADER_WORDS) == 0)
         {
@@ -1417,7 +1415,7 @@ void cdrom_verify_recovery(void)
  * @param intr   CD-ROM interrupt status.
  * @param result CD-ROM result bytes.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/BXisc
+ * @see decomp.me (100%) https://decomp.me/scratch/BXisc
  */
 static void cdrom_complete_command(u8 intr, u8* result)
 {
@@ -1548,7 +1546,7 @@ static void cdrom_complete_command(u8 intr, u8* result)
  * @param intr   CD-ROM interrupt status.
  * @param result CD-ROM result bytes.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/0Dz2i
+ * @see decomp.me (100%) https://decomp.me/scratch/0Dz2i
  */
 static void cdrom_handle_recovery_sync(u8 intr, u8* result)
 {
@@ -1625,7 +1623,7 @@ static void cdrom_handle_recovery_sync(u8 intr, u8* result)
             break;
         case CD_RECONFIGURE_STEP_COMPLETE:
             CdSyncCallback(NULL);
-            CD_SYSTEM.init_state = 0;
+            CD_SYSTEM.init_state = CD_RECOVERY_STATE_IDLE;
             CD_SYSTEM.init_command = CD_SYNC_COMMAND_NONE;
             CD_SYSTEM.status_flags.word &= ~CD_STATUS_RECOVERY_PENDING;
             break;
@@ -1641,7 +1639,7 @@ static void cdrom_handle_recovery_sync(u8 intr, u8* result)
             break;
         case CD_RECOVERY_COMMAND_COMPLETE:
             CD_SYSTEM.init_command = CD_SYNC_COMMAND_NONE;
-            CD_SYSTEM.init_state = 0;
+            CD_SYSTEM.init_state = CD_RECOVERY_STATE_IDLE;
 
             status.word = CD_SYSTEM.status_flags.word;
 
@@ -1738,7 +1736,7 @@ static void cdrom_handle_recovery_sync(u8 intr, u8* result)
  * @param intr   CD-ROM interrupt status.
  * @param result CD-ROM result bytes (unused).
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/kgBY4
+ * @see decomp.me (100%) https://decomp.me/scratch/kgBY4
  */
 static void cdrom_handle_ready_intr(u8 intr, u8* result)
 {
@@ -1829,7 +1827,7 @@ static void cdrom_handle_ready_intr(u8 intr, u8* result)
  *
  * @param deferred TRUE when servicing a sector deferred by the ready callback.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/43gwj
+ * @see decomp.me (100%) https://decomp.me/scratch/43gwj
  */
 static void cdrom_process_sector(s32 deferred)
 {
@@ -1943,7 +1941,7 @@ static void cdrom_process_sector(s32 deferred)
  * @param sector_buffer Sector destination used by synchronous modes.
  * @param execution_mode Dispatch order defined by CdExecutionMode.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/KM6id
+ * @see decomp.me (100%) https://decomp.me/scratch/KM6id
  */
 static void cdrom_run_command(u8 command, u8* sector_buffer, s32 execution_mode)
 {
@@ -2089,7 +2087,7 @@ static void cdrom_run_command(u8 command, u8* sector_buffer, s32 execution_mode)
  * @param interrupt CD-ROM ready callback reason.
  * @param result Drive result buffer; unused by this callback.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/XrcPe
+ * @see decomp.me (100%) https://decomp.me/scratch/XrcPe
  */
 static void cdrom_verify_disc(u8 interrupt, u8* result)
 {
@@ -2119,8 +2117,8 @@ static void cdrom_verify_disc(u8 interrupt, u8* result)
 
             while (expected_character != '\0')
             {
-                // Multibyte ID characters must match both encoded bytes.
-                if (CD_IS_MULTIBYTE_ID_CHAR(expected_character))
+                // Shift-JIS characters must match both encoded bytes.
+                if (CD_IS_SJIS_LEAD_BYTE(expected_character))
                 {
                     disc_character = *disc_id++;
                     if (expected_character == disc_character)
@@ -2164,7 +2162,7 @@ static void cdrom_verify_disc(u8 interrupt, u8* result)
 /**
  * @brief Processes CD-ROM state once per frame until the command queue is empty.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/rE8hd
+ * @see decomp.me (100%) https://decomp.me/scratch/rE8hd
  */
 void cdrom_wait_queue_empty(void)
 {
@@ -2177,7 +2175,7 @@ void cdrom_wait_queue_empty(void)
 /**
  * @brief Clears callbacks and resets CD command state after a sync failure.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/lU7lO
+ * @see decomp.me (100%) https://decomp.me/scratch/lU7lO
  */
 static void cdrom_handle_sync_error(void)
 {
@@ -2201,7 +2199,7 @@ static void cdrom_handle_sync_error(void)
  * @param mix_mode Zero routes CD left to both SPU outputs; nonzero routes both
  *                  CD inputs to the SPU-left output.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/lwzx1
+ * @see decomp.me (100%) https://decomp.me/scratch/lwzx1
  */
 void cdrom_set_audio_volume(u8 volume, s32 mix_mode)
 {
@@ -2228,7 +2226,7 @@ void cdrom_set_audio_volume(u8 volume, s32 mix_mode)
 /**
  * @brief Stops CD/XA playback and resets command and callback state.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/fnucZ
+ * @see decomp.me (100%) https://decomp.me/scratch/fnucZ
  */
 void cdrom_reset(void)
 {
@@ -2246,7 +2244,7 @@ void cdrom_reset(void)
 
     if (g_movie_use_cd_audio != FALSE)
     {
-        akao_cmd_e2();
+        akao_stop_xa();
     }
 
     CD_SYSTEM.audio_enabled = FALSE;
@@ -2267,7 +2265,7 @@ void cdrom_reset(void)
  * @param resource_index Resource index to search for.
  * @return TRUE when absent; FALSE when already queued.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/l4HlL
+ * @see decomp.me (100%) https://decomp.me/scratch/l4HlL
  */
 s32 cdrom_can_queue_resource(s32 resource_index)
 {
@@ -2290,7 +2288,7 @@ s32 cdrom_can_queue_resource(s32 resource_index)
             return FALSE;
         }
 
-        // The original scan wraps before incrementing and skips slot zero after slot 15.
+        // The index wraps before it is incremented, so slot zero is skipped after slot 15.
         scan_index &= CD_COMMAND_QUEUE_MASK;
         scan_index++;
     }
@@ -2304,7 +2302,7 @@ s32 cdrom_can_queue_resource(s32 resource_index)
  * @param lba Logical block address of the resource table.
  * @param data_size_bytes Resource table size in bytes.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/Y9z7y
+ * @see decomp.me (100%) https://decomp.me/scratch/Y9z7y
  */
 void cdrom_load_resource_table(s32 lba, s32 data_size_bytes)
 {
@@ -2341,7 +2339,7 @@ void cdrom_load_resource_table(s32 lba, s32 data_size_bytes)
  *
  * @return Resource size, or a negative queue error.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/OxunQ
+ * @see decomp.me (100%) https://decomp.me/scratch/OxunQ
  */
 s32 cdrom_queue_read(s32 resource_index, void* dst_buffer)
 {
@@ -2356,7 +2354,7 @@ s32 cdrom_queue_read(s32 resource_index, void* dst_buffer)
  *
  * @return Resource size, or a negative queue error.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/5M5cV
+ * @see decomp.me (100%) https://decomp.me/scratch/5M5cV
  */
 s32 cdrom_queue_read_with_callback(s32 resource_index, CdCommandCallback callback)
 {
@@ -2370,7 +2368,7 @@ s32 cdrom_queue_read_with_callback(s32 resource_index, CdCommandCallback callbac
  *
  * @return Resource size, or a negative queue error.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/iUUQh
+ * @see decomp.me (100%) https://decomp.me/scratch/iUUQh
  */
 s32 cdrom_queue_seek(s32 resource_index)
 {
@@ -2383,7 +2381,7 @@ s32 cdrom_queue_seek(s32 resource_index)
  * @param resource_index Resource table index.
  * @return Resource size in bytes.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/SGZF5
+ * @see decomp.me (100%) https://decomp.me/scratch/SGZF5
  */
 s32 cdrom_get_resource_size(s32 resource_index)
 {
@@ -2398,7 +2396,7 @@ s32 cdrom_get_resource_size(s32 resource_index)
  *
  * @return CdErrorStatus value.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/vfLUw
+ * @see decomp.me (100%) https://decomp.me/scratch/vfLUw
  */
 s32 cdrom_get_error_status(void)
 {
@@ -2437,7 +2435,7 @@ s32 cdrom_get_error_status(void)
 /**
  * @brief Restores saved callbacks, pauses the drive, and clears CD state.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/HSXMR
+ * @see decomp.me (100%) https://decomp.me/scratch/HSXMR
  */
 void cdrom_restore_callbacks(void)
 {
@@ -2477,7 +2475,7 @@ void cdrom_restore_callbacks(void)
  *
  * @return TRUE if recovery is active or entered; FALSE if the subsystem is busy.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/gsUc3
+ * @see decomp.me (100%) https://decomp.me/scratch/gsUc3
  */
 s32 cdrom_enter_recovery_mode(void)
 {
@@ -2509,7 +2507,7 @@ s32 cdrom_enter_recovery_mode(void)
 /**
  * @brief Defers CD data-ready processing until the flag is cleared.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/9bgSH
+ * @see decomp.me (100%) https://decomp.me/scratch/9bgSH
  */
 void cdrom_defer_data_ready(void)
 {

@@ -256,7 +256,7 @@ void wmap_update_travelers(void)
         }
         if (g_wmap_party_moving != g_wmap_travel_sound_active && g_wmap_party_moving == 0)
         {
-            akao_cmd_f1();
+            akao_release_all_sfx();
             g_wmap_travel_sound_active = g_wmap_party_moving;
         }
     }

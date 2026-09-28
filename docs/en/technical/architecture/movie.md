@@ -357,7 +357,7 @@ Sources: [VLC and MDEC input](../../../../src/overlays/movie/movie.c),
 ## Audio pipeline and synchronization
 
 Several function and field names say "XA" or "CD audio," but the enabled movie
-stream follows a RAM-to-SPU path. `akao_cmd_e8_start_xa_stream()` registers the
+stream follows a RAM-to-SPU path. `akao_start_xa_stream()` registers the
 32 KiB audio ring. AKAO's stream implementation selects an SPU voice pair,
 transfers data with `SpuWrite()`, and uses callbacks to refill its SPU buffers.
 The MOVIE audio ring is not merely handing sectors to the drive's XA decoder.

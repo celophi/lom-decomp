@@ -53,7 +53,7 @@ extern s32 D_8012291C;
 extern u32 g_field_experience_snapshot[];
 extern u8* g_pad_ctx;
 
-void akao_cmd_f1(void);
+void akao_release_all_sfx(void);
 void field_clear_actor_slots(void);
 void field_clear_actor_effects(FieldActorSlot* slot);
 s32 field_find_active_special_attack_actor(void);
@@ -331,7 +331,7 @@ void field_update_battle_end(void)
             g_field_camera_offset_x = 0;
             g_field_active_group = g_field_restore_group;
             func_80068028();
-            akao_cmd_f1();
+            akao_release_all_sfx();
             field_reset_global_color_scale();
             field_set_color_scale(-1, FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL);
             field_clear_actor_texts();

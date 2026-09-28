@@ -4,6 +4,7 @@
 #include "display.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
+#include "sdk/libetc.h"
 
 #define TRANSITION_OT_SIZE 4
 #define TRANSITION_PACKET_WORDS 64
@@ -12,22 +13,11 @@
 #define TRANSITION_BLEND_SUBTRACT 2
 #define TRANSITION_SUBTRACT_TPAGE getTPage(0, TRANSITION_BLEND_SUBTRACT, 0, 0)
 
-/** @brief GPU command space used to darken one frame. */
-typedef union
-{
-    u32 words[TRANSITION_PACKET_WORDS];
-    struct
-    {
-        TILE tile;
-        DR_TPAGE draw_page;
-    } fade;
-} TransitionPackets;
-
 /** @brief Rendering workspace for one half of the screen transition. */
 typedef struct
 {
     u_long ot[TRANSITION_OT_SIZE];
-    TransitionPackets packets;
+    u_long packets[TRANSITION_PACKET_WORDS];
     DISPENV display;
     DRAWENV draw;
     RECT display_rect;
@@ -75,8 +65,7 @@ void screen_transition(s32 skip_fade)
     for (frame = 0; frame < TRANSITION_FRAME_COUNT; frame++)
     {
         ClearOTagR(current->ot, TRANSITION_OT_SIZE);
-
-        packet = &current->packets.fade.tile;
+        packet = current->packets;
 
         if (skip_fade == 0)
         {
@@ -90,7 +79,7 @@ void screen_transition(s32 skip_fade)
             setSemiTrans(tile, 1);
             addPrim(&current->ot[0], tile);
 
-            packet = &current->packets.fade.draw_page;
+            packet = tile + 1;
             setDrawTPage(packet, 0, 0, TRANSITION_SUBTRACT_TPAGE);
             addPrim(&current->ot[0], packet);
         }

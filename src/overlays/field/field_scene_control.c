@@ -486,7 +486,7 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
                             channel_mask = 0;
                             sfx_id = key->sfx_id & FIELD_SFX_ID_MASK;
                         }
-                        akao_cmd_21(sfx_id, channel_mask);
+                        akao_stop_sfx(sfx_id, channel_mask);
                     }
                 }
             }

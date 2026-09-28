@@ -1,9 +1,7 @@
 #include "cdrom_decompress.h"
 #include "cdrom_internal.h"
 
-#define CD_STREAM_BUFFER_START ((u8*)0x801DC000)
-#define CD_STREAM_PAYLOAD_START ((u8*)0x801DC001)
-#define CD_STREAM_BUFFER_LIMIT ((u8*)0x801DE000)
+#define CD_STREAM_PAYLOAD_START (CD_STREAM_BUFFER_START + 1)
 #define CD_DECOMPRESS_LOW_NIBBLE_MASK 0x0F
 #define CD_DECOMPRESS_HIGH_NIBBLE_MASK 0xF0
 #define CD_DECOMPRESS_COPY_8_BIT_BASE_LENGTH 0x14
@@ -46,7 +44,7 @@ typedef enum CdDecompressOpcode
  *
  * @return FALSE at the end marker; TRUE when a buffer bound pauses decoding.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/1Feag
+ * @see decomp.me (100%) https://decomp.me/scratch/1Feag
  */
 s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst_end)
 {
@@ -83,7 +81,7 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
             pattern_first = source[1];
 
             source += 2;
-            iterations = (pattern_first & 0xf) + 3;
+            iterations = (pattern_first & CD_DECOMPRESS_LOW_NIBBLE_MASK) + 3;
             pattern_first = pattern_first >> 4;
 
             do
@@ -112,7 +110,7 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
             source += 3;
             iterations = count_byte + 2;
             value_high = pattern_first >> 4;
-            pattern_first = pattern_first & 0xf;
+            pattern_first = pattern_first & CD_DECOMPRESS_LOW_NIBBLE_MASK;
 
             do
             {
@@ -321,7 +319,7 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
             pattern_first = source[1];
 
             source += 2;
-            iterations = (pattern_first & 0xF) + 3;
+            iterations = (pattern_first & CD_DECOMPRESS_LOW_NIBBLE_MASK) + 3;
             copy_source = destination - ((pattern_first & CD_DECOMPRESS_HIGH_NIBBLE_MASK) >> 1);
 
             do
@@ -335,7 +333,7 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
         case CD_DECOMPRESS_END:
             *src_cursor = &source[1];
             *dst_cursor = destination;
-            return 0;
+            return FALSE;
 
         default:
             source++;
@@ -353,7 +351,7 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
     }
 
     *dst_cursor = destination;
-    return 1;
+    return TRUE;
 }
 
 /**
@@ -367,7 +365,7 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
  *
  * @return Next sector destination, or NULL when the sector must be retried.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/UDwSD
+ * @see decomp.me (100%) https://decomp.me/scratch/UDwSD
  */
 u8* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
 {
@@ -385,7 +383,6 @@ u8* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
     u8* wrapped_read_ptr;
     u8* linear_read_ptr;
     u8* current_read_ptr;
-    u32 previous_wrap_overflow;
     u8* aligned_buffer_start;
     u32 transfer_size;
     u8* next_sector_dst;
@@ -429,9 +426,8 @@ u8* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
                 wrapped_source.bytes += CD_STREAM_COPY_WORD_SIZE;
                 destination.bytes += CD_STREAM_COPY_WORD_SIZE;
             }
-            previous_wrap_overflow = CD_STREAM_STATE.wrap_overflow;
-            CD_STREAM_STATE.wrap_overflow = 0U;
-            destination.bytes = destination.bytes + previous_wrap_overflow;
+            destination.bytes += CD_STREAM_STATE.wrap_overflow;
+            CD_STREAM_STATE.wrap_overflow = 0;
         }
         else
         {
@@ -496,7 +492,7 @@ u8* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
  * @param source Compressed stream including its one-byte header.
  * @param destination Output buffer.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/JFLMN
+ * @see decomp.me (100%) https://decomp.me/scratch/JFLMN
  */
 void cdrom_decompress_buffer(u8* source, u8* destination)
 {
@@ -507,11 +503,11 @@ void cdrom_decompress_buffer(u8* source, u8* destination)
 }
 
 /**
- * @brief Clears the stream data-ready flag through volatile access.
+ * @brief Clear a stream flag shared with the CD sector callback.
  *
  * @param data_ready Flag to clear.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/Y4pUH
+ * @see decomp.me (100%) https://decomp.me/scratch/Y4pUH
  */
 void cdrom_clear_data_ready(volatile u8* data_ready)
 {

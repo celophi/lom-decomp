@@ -1247,7 +1247,7 @@ extern s32 g_frame_counter;
 extern s32 g_field_pending_spawn_id, g_field_pending_music_id, g_field_pending_secondary_music_id, g_field_pending_scene_id, g_field_pending_object_id, g_field_pending_sound_bank_id;
 
 extern void field_reset_input_repeat(void);
-extern void akao_cmd_f1(void);
+extern void akao_release_all_sfx(void);
 /* Defined in field_resource_load.c. */
 extern s32 field_party_reload_reading(void);
 /* Defined in field_modal_runtime.c and field_actor_hud_effects.c. */
@@ -1537,7 +1537,7 @@ void field_setup_return_to_title_prompt(void)
     rec->attr.word = (rec->attr.word & ~FIELD_MENU_ATTR_WIDTH_LOW) | (160 << FIELD_MENU_ATTR_WIDTH_LOW_SHIFT);
 
     field_select_coordinate_labels();
-    akao_cmd_f1();
+    akao_release_all_sfx();
 
     g_field_return_to_title_prompt_delay = 0x3C;
     g_field_return_to_title_prompt_state = 3;

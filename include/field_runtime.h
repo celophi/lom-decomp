@@ -22,4 +22,10 @@ typedef struct FieldRenderHalf
 s32 run_field_scene(void);
 void field_init_text_renderer(FieldRenderHalf* render_buffers);
 
+/* FIELD overlay entry points called from the main executable. */
+void field_scene_reset();
+void field_draw_frame(s32 alternate_half, FieldRenderHalf* buffer, s32 update_mode, s32 force_unscaled);
+void field_clear_node_accumulators(s32 update_mode, s32 force_unscaled);
+void field_restore_entry_music(void);
+
 #endif

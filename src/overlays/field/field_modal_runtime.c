@@ -282,9 +282,9 @@ extern s32 g_field_rename_item_category;
 extern u8* g_field_rename_target;
 extern s32 g_field_rename_source;
 
-void akao_stop_sfx_by_id(s32 id);
-void akao_cmd_99_9b_9d_9f(s32 arg0);
-void akao_set_paused(s32 mode);
+void akao_play_sound(s32 id);
+void akao_pause_audio(s32 arg0);
+void akao_set_mono_output(s32 mode);
 
 /* Sub-overlay entry points, valid once their overlay is loaded at FIELD_SUBOVERLAY_ADDRESS. */
 /* GNAME and SHOP share this entry address but have different parameter lists. */
@@ -522,21 +522,21 @@ void field_bind_saved_game_context(void)
 
 /**
  * @brief Save the field entry settings, music track, and current save slot.
- * @param scene_mode Scene entry mode.
- * @param field_flags Field entry flags.
- * @param layout_flags Field layout flags.
- * @param entry_config Packed entry configuration; only the low 25 bits are replaced.
- * @param option_id Entry option identifier.
- * @param sub_mode Entry submode.
+ * @param scene_id Scene to re-enter.
+ * @param object_id Field object selected for the render context.
+ * @param music_id Primary music resource.
+ * @param spawn_id Spawn record; only the low 25 bits are replaced.
+ * @param sound_bank_id Sound-bank resource.
+ * @param secondary_music_id Secondary music resource.
  */
-void field_store_entry_settings(s16 scene_mode, s8 field_flags, s8 layout_flags, s32 entry_config, s32 option_id, s32 sub_mode)
+void field_store_entry_settings(s16 scene_id, s8 object_id, s8 music_id, s32 spawn_id, s32 sound_bank_id, s32 secondary_music_id)
 {
-    g_pad_ctx->scene_mode = scene_mode;
-    g_pad_ctx->field_flags = field_flags;
-    g_pad_ctx->layout_flags = layout_flags;
-    g_pad_ctx->entry_config = entry_config;
-    g_pad_ctx->option_id = option_id;
-    g_pad_ctx->sub_mode = sub_mode;
+    g_pad_ctx->scene_id = scene_id;
+    g_pad_ctx->object_id = object_id;
+    g_pad_ctx->music_id = music_id;
+    g_pad_ctx->spawn_id = spawn_id;
+    g_pad_ctx->sound_bank_id = sound_bank_id;
+    g_pad_ctx->secondary_music_id = secondary_music_id;
     g_pad_ctx->music_track = g_music_track_index;
     g_pad_ctx->save_slot = g_save_slot_index;
 }
@@ -793,7 +793,7 @@ inline void field_restore_label_actor_parts(void)
     s32 index;
     FieldObjectPart* part;
 
-    akao_stop_sfx_by_id(FIELD_SOUND_SELECT);
+    akao_play_sound(FIELD_SOUND_SELECT);
     for (index = 0; index < g_field_label_actor_count; index++)
     {
         part = &g_field_object_parts[g_field_label_actor_indices[index]];
@@ -812,9 +812,9 @@ static void field_init_actor_labels(void)
     s32 actor_index;
 
     field_reset_input_repeat();
-    akao_cmd_99_9b_9d_9f(2);
+    akao_pause_audio(2);
     field_fade_song(0, 60, 0);
-    akao_stop_sfx_by_id(FIELD_SOUND_SELECT);
+    akao_play_sound(FIELD_SOUND_SELECT);
     actor = &g_field_actors[FIELD_PARTY_COUNT];
     actor_index = FIELD_PARTY_COUNT;
     state = &g_field_object_states[FIELD_PARTY_COUNT];
@@ -1191,12 +1191,12 @@ static void field_update_text_session(void)
             if (g_pad_input & (PADLup | PADLleft))
             {
                 g_field_selected_actor_label = g_field_selected_actor_label ? g_field_selected_actor_label - 1 : g_field_label_actor_count - 1;
-                akao_stop_sfx_by_id(FIELD_SOUND_CURSOR);
+                akao_play_sound(FIELD_SOUND_CURSOR);
             }
             else if (g_pad_input & (PADLdown | PADLright))
             {
                 g_field_selected_actor_label = g_field_selected_actor_label == g_field_label_actor_count - 1 ? 0 : g_field_selected_actor_label + 1;
-                akao_stop_sfx_by_id(FIELD_SOUND_CURSOR);
+                akao_play_sound(FIELD_SOUND_CURSOR);
             }
         }
     }
@@ -1384,7 +1384,7 @@ void field_process_input(FieldRenderHalf* render)
         ports[0].actuator_control.fields.large_motor_command = 0;
         ports[1].small_motor_command = 0;
         ports[1].actuator_control.fields.large_motor_command = 0;
-        akao_cmd_98_9a_9c_9e(0);
+        akao_resume_audio(0);
         field_fade_song(0, 60, 127);
         return;
     }
@@ -1626,7 +1626,7 @@ static void field_update_modal_text_session(FieldRenderHalf* render)
             return;
         }
         field_text_reset_windows();
-        akao_cmd_98_9a_9c_9e(2);
+        akao_resume_audio(2);
         field_fade_song(0, 60, 127);
     }
 }
@@ -1688,7 +1688,7 @@ void field_rebuild_party_actions(s32 refresh_only)
     FieldGameState* command_view;
     FieldGameState* skill_cursor;
 
-    akao_set_paused(g_pad_ctx->options.bits.mono_sound ^ 1);
+    akao_set_mono_output(g_pad_ctx->options.bits.mono_sound ^ 1);
     cdrom_set_audio_volume(0x7F, g_pad_ctx->options.bits.mono_sound);
     controllers_or_is_player = (s32)CONTROLLER_STATE;
     ((ControllerState*)controllers_or_is_player)->ports[0].actuators_enabled = g_pad_ctx->options.bits.vibration;
@@ -2098,8 +2098,8 @@ void field_update_modal(FieldRenderHalf* render)
                     g_field_player_records[index].portrait_index = FIELD_PORTRAIT_NONE;
                 }
                 g_music_track_index = g_pad_ctx->music_track;
-                field_set_scene_parameters(g_pad_ctx->scene_mode, g_pad_ctx->field_flags, g_pad_ctx->entry_config, g_pad_ctx->layout_flags,
-                                           g_pad_ctx->option_id, g_pad_ctx->sub_mode);
+                field_set_scene_parameters(g_pad_ctx->scene_id, g_pad_ctx->object_id, g_pad_ctx->spawn_id, g_pad_ctx->music_id,
+                                           g_pad_ctx->sound_bank_id, g_pad_ctx->secondary_music_id);
                 field_set_fade_target_only(FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL, 8);
                 break;
             case 6:

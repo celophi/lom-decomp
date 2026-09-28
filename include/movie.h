@@ -4,11 +4,25 @@
 #include "common.h"
 
 /**
+ * @brief Cinematic indices selected by the main game-state dispatcher.
+ *
+ * GAME_STATE_ATTRACT_2 plays its three stream segments consecutively.
+ */
+typedef enum
+{
+    MOVIE_INDEX_INTRO = 0,
+    MOVIE_INDEX_ATTRACT_1 = 1,
+    MOVIE_INDEX_ATTRACT_2_PART_1 = 2,
+    MOVIE_INDEX_ATTRACT_2_PART_2 = 3,
+    MOVIE_INDEX_ATTRACT_2_PART_3 = 4
+} MovieIndex;
+
+/**
  * @brief Play one of the MDEC cinematics.
  *
- * @param movie_index Cinematic to play (0..4).
+ * @param movie_index Cinematic to play, a @ref MovieIndex.
  *
- * @see https://decomp.me/scratch/gkEWm (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/gkEWm
  */
 void movie_play(s32 movie_index);
 

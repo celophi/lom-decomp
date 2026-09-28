@@ -865,11 +865,11 @@ unsigned short upload_save_layout_textures(void)
  * @brief Load one of the two full game-state templates into g_saved_game.bytes.
  *
  * Copies a MENU_LAYOUT_WORDS-word (~13 KB) game-state template over the working
- * g_saved_game.bytes and sets the companion mode field g_scene_mode.
+ * g_saved_game.bytes and sets the companion mode field g_field_scene_id.
  *
  * @param use_alt Zero selects the new-game template (g_newGameStateTemplate,
- *                g_scene_mode = 0xD); non-zero selects the alternate template
- *                (g_menuLayoutTemplateAlt, g_scene_mode = 0).
+ *                g_field_scene_id = 0xD); non-zero selects the alternate template
+ *                (g_menuLayoutTemplateAlt, g_field_scene_id = 0).
  *
  * @note The copy is an explicit word loop, not a struct assignment, so it
  *       reproduces the original codegen; SavedGameLayout is only partially mapped.
@@ -884,16 +884,16 @@ void load_menu_layout(s32 use_alt)
     if (use_alt == 0)
     {
         src = (s32*)&g_newGameStateTemplate;
-        g_scene_mode = 0xD;
+        g_field_scene_id = 0xD;
         g_music_track_index = 0;
-        g_layout_flag = 0;
+        g_field_music_id = 0;
     }
     else
     {
         src = (s32*)&g_menuLayoutTemplateAlt;
-        g_scene_mode = 0;
+        g_field_scene_id = 0;
         g_music_track_index = 0;
-        g_layout_flag = 0;
+        g_field_music_id = 0;
     }
     i = 0;
     dst = g_saved_game.words;

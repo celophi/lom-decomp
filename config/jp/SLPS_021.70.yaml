@@ -69,7 +69,8 @@ segments:
       - [0x844, .rodata, cdrom]              # jtbl -> cdrom
       - [0xA50, .rodata, cdrom_decompress]
       - [0xA90, .rodata, controller]         # jtbl -> controller
-      - [0xAAC, rodata, rodata_data1]        # g_overlayLoadAddress + data
+      - [0xAAC, .rodata, field_runtime]
+      - [0xAB0, rodata, rodata_data1]        # g_hex_digit_table + psyq/data constants
       - [0xB44, .rodata, psyq/libc2/PRNT]    # jtbl -> PRNT
       - [0xD34, rodata, rodata_data2]        # psyq/data constants
       - [0x1134, .rodata, psyq/libcd/BIOS]   # jtbl -> BIOS

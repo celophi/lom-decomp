@@ -8,7 +8,7 @@
 
 void akao_sfx_stop_channels(s32 sfx_id, s32 mode);
 void akao_sfx_play(AkaoCommandParam* params, u8* seq_data0, u8* seq_data1, s32 skip_stop);
-void akao_seq_flag_volume_update(AkaoChannelState* song, AkaoChannelState* channels);
+void akao_seq_flag_volume_update(AkaoSongState* song, AkaoChannelState* channels);
 void akao_apply_reverb_type(s32 reverb_type);
 
 #endif

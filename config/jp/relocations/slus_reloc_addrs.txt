@@ -2,7 +2,7 @@
 rom:0x13A80 reloc:MIPS_NONE symbol:g_akao_seq_channel0
 rom:0x13A84 reloc:MIPS_NONE symbol:g_akao_seq_channel0
 
-// Prevent assigning a symbol in akao_cmd_ec
+// Prevent assigning a symbol in akao_play_xa_one_shot
 rom:0x13B98 reloc:MIPS_NONE symbol:g_akao_seq_channel0
 rom:0x13B9C reloc:MIPS_NONE symbol:g_akao_seq_channel0
 
@@ -34,9 +34,9 @@ rom:0x1970 reloc:MIPS_LO16 symbol:g_overlay_load_address
 rom:0x1A08 reloc:MIPS_LO16 symbol:g_overlay_load_address
 
 // Shared field configuration address retained across main_game_loop.
-// JP not found: rom:0x15D4 reloc:MIPS_HI16 symbol:g_field_scene_config
-rom:0x1780 reloc:MIPS_LO16 symbol:g_field_scene_config
-rom:0x1A58 reloc:MIPS_LO16 symbol:g_field_scene_config
+// JP not found: rom:0x15D4 reloc:MIPS_HI16 symbol:g_field_spawn_id
+rom:0x1780 reloc:MIPS_LO16 symbol:g_field_spawn_id
+rom:0x1A58 reloc:MIPS_LO16 symbol:g_field_spawn_id
 
 // Preserve array and struct references within the AKAO bank objects.
 rom:0x1379C reloc:MIPS_HI16 symbol:g_akao_bank_slot_keys addend:0x4
@@ -61,3 +61,102 @@ rom:0x1B90 reloc:MIPS_HI16 symbol:g_transition_frames addend:0x180
 rom:0x1BC8 reloc:MIPS_HI16 symbol:g_transition_frames addend:0x180
 rom:0x1BCC reloc:MIPS_LO16 symbol:g_transition_frames addend:0x180
 rom:0x1BEC reloc:MIPS_LO16 symbol:g_transition_frames addend:0x180
+
+// AKAO driver fields and table entries referenced by address; the C accesses them
+// as members of their containing struct or array.
+rom:0x134D0 reloc:MIPS_HI16 symbol:g_akao_streaming_state addend:0x4
+rom:0x134D4 reloc:MIPS_LO16 symbol:g_akao_streaming_state addend:0x4
+rom:0x136A8 reloc:MIPS_HI16 symbol:g_akao_streaming_state addend:0x8
+rom:0x136AC reloc:MIPS_LO16 symbol:g_akao_streaming_state addend:0x8
+rom:0x136B8 reloc:MIPS_HI16 symbol:g_akao_streaming_state addend:0x8
+rom:0x136D0 reloc:MIPS_HI16 symbol:g_akao_streaming_state addend:0x8
+rom:0x136D4 reloc:MIPS_LO16 symbol:g_akao_streaming_state addend:0x8
+rom:0x1388C reloc:MIPS_HI16 symbol:g_akao_driver_flags addend:0x4
+rom:0x13890 reloc:MIPS_LO16 symbol:g_akao_driver_flags addend:0x4
+rom:0x13CF0 reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0x34
+rom:0x13D04 reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0x34
+rom:0x13D10 reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0x34
+rom:0x13D14 reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0x34
+rom:0x13D28 reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0x34
+rom:0x13D2C reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0x34
+rom:0x16C44 reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x16C50 reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x17600 reloc:MIPS_HI16 symbol:g_sfx_channels addend:0xC08
+rom:0x17604 reloc:MIPS_LO16 symbol:g_sfx_channels addend:0xC08
+rom:0x176B4 reloc:MIPS_HI16 symbol:g_sfx_channels addend:0xC08
+rom:0x1796C reloc:MIPS_HI16 symbol:g_akao_suspended_song addend:0x2C
+rom:0x17974 reloc:MIPS_LO16 symbol:g_akao_suspended_song addend:0x2C
+rom:0x17A7C reloc:MIPS_HI16 symbol:g_akao_suspended_song addend:0x5E
+rom:0x17A88 reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x17A90 reloc:MIPS_LO16 symbol:g_akao_suspended_song addend:0x5E
+rom:0x17AA0 reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x17B08 reloc:MIPS_HI16 symbol:g_akao_bank_slot_keys addend:0x14
+rom:0x17B0C reloc:MIPS_LO16 symbol:g_akao_bank_slot_keys addend:0x14
+rom:0x19294 reloc:MIPS_HI16 symbol:g_akao_driver_flags addend:0x4
+rom:0x192AC reloc:MIPS_LO16 symbol:g_akao_driver_flags addend:0x4
+rom:0x192F8 reloc:MIPS_HI16 symbol:g_akao_driver_flags addend:0x4
+rom:0x19310 reloc:MIPS_LO16 symbol:g_akao_driver_flags addend:0x4
+rom:0x193D4 reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x193DC reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x1965C reloc:MIPS_HI16 symbol:g_akao_sfx_control addend:0x10
+rom:0x19660 reloc:MIPS_LO16 symbol:g_akao_sfx_control addend:0x10
+rom:0x1A4B0 reloc:MIPS_HI16 symbol:g_akao_driver_flags addend:0x4
+rom:0x1A4B4 reloc:MIPS_LO16 symbol:g_akao_driver_flags addend:0x4
+rom:0x1A530 reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0x40
+rom:0x1A538 reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0x40
+rom:0x1AAF8 reloc:MIPS_HI16 symbol:g_akao_sfx_control addend:0xC
+rom:0x1AAFC reloc:MIPS_LO16 symbol:g_akao_sfx_control addend:0xC
+rom:0x1AB48 reloc:MIPS_HI16 symbol:g_akao_driver_flags addend:0x8
+rom:0x1AB58 reloc:MIPS_HI16 symbol:g_akao_driver_flags addend:0x8
+rom:0x1AB68 reloc:MIPS_HI16 symbol:g_akao_sfx_control addend:0x8
+rom:0x1AB8C reloc:MIPS_HI16 symbol:g_akao_driver_flags addend:0x8
+rom:0x1ABC8 reloc:MIPS_HI16 symbol:g_akao_driver_flags addend:0x8
+rom:0x1ABCC reloc:MIPS_HI16 symbol:g_akao_sfx_control addend:0x8
+rom:0x1ABD8 reloc:MIPS_LO16 symbol:g_akao_driver_flags addend:0x8
+rom:0x1ABE0 reloc:MIPS_LO16 symbol:g_akao_sfx_control addend:0x8
+rom:0x1D0A4 reloc:MIPS_HI16 symbol:g_akao_sfx_control addend:0x28
+rom:0x1D0A8 reloc:MIPS_LO16 symbol:g_akao_sfx_control addend:0x28
+rom:0x1574C reloc:MIPS_HI16 symbol:g_akao_driver_flags addend:0x4
+rom:0x15750 reloc:MIPS_LO16 symbol:g_akao_driver_flags addend:0x4
+rom:0x15BBC reloc:MIPS_HI16 symbol:g_akao_driver_flags addend:0x4
+rom:0x15BC0 reloc:MIPS_LO16 symbol:g_akao_driver_flags addend:0x4
+rom:0x1626C reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x16270 reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x164FC reloc:MIPS_HI16 symbol:g_akao_sfx_control addend:0x4
+rom:0x16500 reloc:MIPS_LO16 symbol:g_akao_sfx_control addend:0x4
+rom:0x16738 reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x1673C reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x168FC reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x16900 reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x1DDE8 reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x1DDF4 reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x1DE48 reloc:MIPS_HI16 symbol:g_akao_driver_flags addend:0x4
+rom:0x1DE4C reloc:MIPS_LO16 symbol:g_akao_driver_flags addend:0x4
+rom:0x1DE78 reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0x40
+rom:0x1DE84 reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0x40
+rom:0x1DEB0 reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0x40
+rom:0x1DEB4 reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0x40
+rom:0x1DECC reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0x40
+rom:0x1DED0 reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0x40
+rom:0x1DEE4 reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0x40
+rom:0x1DEE8 reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0x40
+rom:0x1DF7C reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0x58
+rom:0x1DF80 reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0x58
+rom:0x1E09C reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x1E0A0 reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x1E3CC reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x1E3D0 reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x1E530 reloc:MIPS_HI16 symbol:g_akao_driver_flags addend:0x4
+rom:0x1E534 reloc:MIPS_LO16 symbol:g_akao_driver_flags addend:0x4
+rom:0x1E8B0 reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x1E8BC reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x1EB40 reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x1EB44 reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x1EB9C reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x1EBA0 reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x1EBE0 reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x1EBE4 reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x1EE78 reloc:MIPS_HI16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x1EE7C reloc:MIPS_LO16 symbol:g_akao_xa_tracker addend:0xC
+rom:0x165BC reloc:MIPS_HI16 symbol:g_akao_effect_voice_masks addend:0x4
+rom:0x165C0 reloc:MIPS_LO16 symbol:g_akao_effect_voice_masks addend:0x4
