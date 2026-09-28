@@ -56,14 +56,6 @@
 
 /** @brief Ordering table entry of the field text; the selected label goes one entry in front. */
 #define FIELD_TEXT_OT_INDEX 15
-/** @brief field_draw_text alignment flags and the flag that adds the glyph shadow pass. */
-#define FIELD_TEXT_ALIGN_MASK 0x7F
-#define FIELD_TEXT_ALIGN_RIGHT 1
-#define FIELD_TEXT_ALIGN_CENTER 2
-#define FIELD_TEXT_SHADOW 0x80
-/** @brief field_draw_text text colours. */
-#define FIELD_TEXT_COLOR_NORMAL 4
-#define FIELD_TEXT_COLOR_DIM 5
 
 /** @brief Scale given to the part of the selected label's actor (0x40 is full size). */
 #define FIELD_LABEL_SELECTED_SCALE 0x80

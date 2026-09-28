@@ -28,6 +28,17 @@
 /** @brief Save-browser party icon of an empty party slot. */
 #define SAVE_NO_ICON 0x7F
 
+/** @brief Save-browser party icons: the two hero portraits come first, then pets and golems. */
+#define SAVE_ICON_HERO_COUNT 2
+#define SAVE_ICON_PET_BASE 0x0E
+#define SAVE_ICON_GOLEM_BASE 0x4F
+
+/** @brief SavedGameLayout::play_time ticks in one minute (60 ticks per second). */
+#define SAVED_PLAY_TIME_TICKS_PER_MINUTE 3600
+
+/** @brief SavedGameLayout::play_time ticks in one hour. */
+#define SAVED_PLAY_TIME_TICKS_PER_HOUR (SAVED_PLAY_TIME_TICKS_PER_MINUTE * 60)
+
 #define FIELD_PARTY_SIZE 3
 /** @brief Party slot of the hero. */
 #define FIELD_PARTY_HERO 0
@@ -69,6 +80,7 @@
 
 /** @brief Character info bit 7: the character is AI-controlled. */
 #define FIELD_CHARACTER_AI 0x80
+#define FIELD_CHARACTER_AI_SHIFT 7
 
 /**
  * @brief Identity of a saved game.
@@ -647,7 +659,7 @@ typedef struct SavedGameLayout
     } options;
     /** @brief Money, saturated at 10,000,000. */
     u32 money;
-    /** @brief Play time in 1/60 s ticks. */
+    /** @brief Play time in 1/60 s ticks (SAVED_PLAY_TIME_TICKS_PER_MINUTE). */
     s32 play_time;
     /** @brief Learned techniques: one bit mask per weapon category (bit = technique index). */
     u32 technique_bits[FIELD_WEAPON_CATEGORY_COUNT];

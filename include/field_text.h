@@ -18,6 +18,19 @@ extern FieldTextConfig* g_field_text_saved_configs;
 /** @brief True when @p code is a lead byte followed by one trail byte. */
 #define FIELD_TEXT_IS_DOUBLE_BYTE_LEAD(code) ((code) >= FIELD_TEXT_DOUBLE_BYTE_LEAD_FIRST && (code) <= FIELD_TEXT_DOUBLE_BYTE_LEAD_LAST)
 
+/** @brief field_draw_text / field_draw_number alignment, in the FIELD_TEXT_ALIGN_MASK bits of their flags. */
+#define FIELD_TEXT_ALIGN_LEFT 0   /**< x is the left edge. */
+#define FIELD_TEXT_ALIGN_RIGHT 1  /**< x is the right edge. */
+#define FIELD_TEXT_ALIGN_CENTER 2 /**< x is the centre. */
+#define FIELD_TEXT_ALIGN_MASK 0x7F
+
+/** @brief field_draw_text / field_draw_number flag that adds the black glyph outline. */
+#define FIELD_TEXT_SHADOW 0x80
+
+/** @brief field_draw_text / field_draw_number text colours. */
+#define FIELD_TEXT_COLOR_NORMAL 4
+#define FIELD_TEXT_COLOR_DIM 5
+
 /** @brief Number of text window slots. */
 #define FIELD_TEXT_WINDOW_SLOTS 4
 

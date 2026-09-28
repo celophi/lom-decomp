@@ -135,6 +135,15 @@
 #define SET_SPRT_CLUT(p, _clut) \
     (*(u16*)((u8*)(p) + 0x0E) = (u16)(_clut))
 
+/** @brief GPU command code of a POLY_G4 (Gouraud-shaded quad), as setPolyG4 sets it. */
+#define GPU_CODE_POLY_G4 0x38
+
+/** @brief GPU command code of a TILE (variable-size rectangle), as setTile sets it. */
+#define GPU_CODE_TILE 0x60
+
+/** @brief Command-code bit that makes a primitive semi-transparent, as setSemiTrans sets it. */
+#define GPU_CODE_SEMI_TRANS 0x02
+
 /*
  * Size of a GPU packet type T in u_long words, for advancing a u_long*
  * primitive cursor one packet at a time: `prim += PRIM_WORDS(SPRT);`.
