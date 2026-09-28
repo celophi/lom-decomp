@@ -867,6 +867,7 @@ typedef struct FieldActorRecord
     u8 event_argument;
     /** @brief Bit n set when scripts[n] may run. */
     u16 enabled_events;
+    /** @brief Event scripts and actor parameters copied from FieldActionRequest::scripts. */
     u16 scripts[FIELD_ACTOR_SCRIPT_COUNT];
     FieldScriptState script;
     union

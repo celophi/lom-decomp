@@ -97,7 +97,8 @@ void field_bind_builtin_animations(void)
 }
 
 /**
- * @brief Upload the common effect texture and its CLUT rows from the loaded TIM.
+ * @brief Upload the common FIELD texture and its CLUT rows from the loaded TIM.
+ * @note This texture includes the closed and open chest sprites.
  */
 void field_upload_common_texture(void)
 {

@@ -65,6 +65,11 @@ typedef struct
         s16 result_type;
     } source;
     u16 enabled_events;
+    /**
+     * @brief Event scripts and parameters interpreted by the actor's scripts.
+     * Common chests use [4] for the item ID and [5] for the collection-variable
+     * reference, with bit 15 selecting the alternate facing.
+     */
     u16 scripts[FIELD_ACTION_SCRIPT_COUNT];
 } FieldActionRequest;
 

@@ -190,7 +190,7 @@ typedef struct
     s32 key;
     /** @brief Event bits the object's scripts react to (FieldActionRequest::enabled_events). */
     u16 enabled_events;
-    /** @brief Script offsets copied from the object's FieldActionRequest. */
+    /** @brief Event scripts and actor parameters copied from FieldActionRequest::scripts. */
     u16 scripts[16];
     u8 unk3A[2];
     s32 action_parameter;

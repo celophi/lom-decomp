@@ -705,7 +705,7 @@ g_field_text_macros = 0x80122B80;
 g_field_text_saved_configs = 0x801ED004;
 
 field_seek_scene_resource = 0x8009AFBC;
-field_reset_fallback_resource = 0x8009BCAC;
+field_setup_chest_resource = 0x8009BCAC;
 field_upload_actor_image = 0x8009BCF8;
 field_copy_scene_geometry = 0x8009BDD4;
 field_load_scene_actors = 0x8009BE1C;
@@ -724,7 +724,7 @@ g_field_render_context = 0x800F22B0;
 g_field_actors = 0x800FDF58;
 g_field_scene_actors = 0x800FE054;
 g_field_loaded_actor_count = 0x800FE774;
-g_field_fallback_geometry = 0x800EB274;
+g_field_chest_geometry = 0x800EB274;
 g_field_party_palettes = 0x800EB2B4;
 g_field_transition_tiles = 0x800EB2D4;
 g_field_transition_tiles_alt = 0x800EBAD4;

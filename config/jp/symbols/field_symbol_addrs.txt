@@ -572,7 +572,7 @@ g_field_text_macros = 0x8011F608;
 g_field_text_saved_configs = 0x801ED004;
 
 field_seek_scene_resource = 0x8009AEF4;
-field_reset_fallback_resource = 0x8009BBE4;
+field_setup_chest_resource = 0x8009BBE4;
 field_upload_actor_image = 0x8009BC30;
 field_copy_scene_geometry = 0x8009BD0C;
 field_load_scene_actors = 0x8009BD54;
@@ -1517,7 +1517,7 @@ func_800C9894    = 0x800C9460; // type:func size:0x40
 func_800C9D84    = 0x800C9950; // type:func size:0x30
 field_select_distance_bucket = 0x800C9AA0; // type:func size:0x2CC
 g_field_pixel_lookup_tables       = 0x800CBB10;
-g_field_fallback_geometry = 0x800EAE40;
+g_field_chest_geometry = 0x800EAE40;
 g_field_party_palettes = 0x800EAE80;
 g_field_transition_tiles = 0x800EAEA0;
 g_field_transition_tiles_alt = 0x800EB6A0;

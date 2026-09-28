@@ -46,10 +46,10 @@
 #define FIELD_ACTOR_IMAGE_END 0xFF
 /** @brief Bytes of one scene portrait. */
 #define FIELD_SCENE_PORTRAIT_SIZE 1184
-/** @brief Resource entry of the built-in fallback geometry. */
-#define FIELD_FALLBACK_RESOURCE 8
-/** @brief VRAM slot of the fallback resource. */
-#define FIELD_FALLBACK_SLOT 7
+/** @brief Shared chest resource; scene actor selector 5 follows the three party entries. */
+#define FIELD_CHEST_RESOURCE 8
+/** @brief Texture slot containing the chest sprites in the common FIELD texture. */
+#define FIELD_CHEST_TEXTURE_SLOT 7
 /** @brief Number of party palettes in g_field_party_palettes. */
 #define FIELD_PARTY_PALETTE_COUNT 6
 /** @brief First texture slot handed to the scene actors' images. */
@@ -268,8 +268,8 @@ extern FieldActionRow g_field_resource_actions[];
 extern s32 g_field_direction_animation_modes[];
 extern FieldDirectionOffset g_field_direction_offsets[];
 extern FieldTransitionFade g_field_fade_target;
-/** @brief Built-in geometry of the fallback resource. */
-extern u8 g_field_fallback_geometry[0x3C];
+/** @brief Built-in geometry for the closed and open chest sprites. */
+extern u8 g_field_chest_geometry[0x3C];
 /** @brief CLUT row of the hero per party palette index. */
 extern u16 g_field_party_palettes[FIELD_PARTY_PALETTE_COUNT];
 /** @brief Transition tile images; field_prepare_transition_tiles recolours the first. */
@@ -322,7 +322,7 @@ extern s32 g_layout_flag;
 extern s32 g_layout_option;
 extern s32 g_layout_sub_mode;
 
-static void field_reset_fallback_resource(void);
+static void field_setup_chest_resource(void);
 static void field_upload_actor_image(FieldTimData* image, s32 image_slot, s32 actor_index, s32 upload_palette);
 static void field_copy_scene_geometry(s32* src, s32* end);
 static void field_load_scene_actors(FieldSceneLayout* layout);
@@ -573,7 +573,7 @@ void field_update_scene(void)
         top_image_slot = FIELD_FIRST_IMAGE_SLOT;
         D_80115890 = 0;
         action_base = (u8*)g_field_resource_actions;
-        field_reset_fallback_resource();
+        field_setup_chest_resource();
         i = 0;
         if ((actor_end - FIELD_PARTY_COUNT) > 0)
         {
@@ -835,18 +835,21 @@ void field_update_scene(void)
 }
 
 /**
- * @brief Reset the fallback actor resource to the built-in geometry.
+ * @brief Set up the shared chest sprites for the scene.
+ *
+ * The common FIELD texture supplies the closed and open images. Scene scripts
+ * select the image and handle the reward and saved collection flag.
  */
-static void field_reset_fallback_resource(void)
+static void field_setup_chest_resource(void)
 {
-    g_field_resource_entries[FIELD_FALLBACK_RESOURCE].slot_index = FIELD_FALLBACK_SLOT;
-    g_field_resource_entries[FIELD_FALLBACK_RESOURCE].start = g_field_fallback_geometry;
-    g_field_resource_entries[FIELD_FALLBACK_RESOURCE].end = g_field_fallback_geometry + sizeof(g_field_fallback_geometry);
-    g_field_resource_entries[FIELD_FALLBACK_RESOURCE].flags &= ~FIELD_RESOURCE_HAS_ACTIONS;
-    g_field_resource_entries[FIELD_FALLBACK_RESOURCE].palette = 0;
-    g_field_resource_entries[FIELD_FALLBACK_RESOURCE].unk8 = 0;
-    g_field_resource_entries[FIELD_FALLBACK_RESOURCE].unkE = 0;
-    g_field_resource_entries[FIELD_FALLBACK_RESOURCE].flags |= FIELD_RESOURCE_LOADED;
+    g_field_resource_entries[FIELD_CHEST_RESOURCE].slot_index = FIELD_CHEST_TEXTURE_SLOT;
+    g_field_resource_entries[FIELD_CHEST_RESOURCE].start = g_field_chest_geometry;
+    g_field_resource_entries[FIELD_CHEST_RESOURCE].end = g_field_chest_geometry + sizeof(g_field_chest_geometry);
+    g_field_resource_entries[FIELD_CHEST_RESOURCE].flags &= ~FIELD_RESOURCE_HAS_ACTIONS;
+    g_field_resource_entries[FIELD_CHEST_RESOURCE].palette = 0;
+    g_field_resource_entries[FIELD_CHEST_RESOURCE].unk8 = 0;
+    g_field_resource_entries[FIELD_CHEST_RESOURCE].unkE = 0;
+    g_field_resource_entries[FIELD_CHEST_RESOURCE].flags |= FIELD_RESOURCE_LOADED;
 }
 
 /**
