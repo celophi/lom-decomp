@@ -438,7 +438,7 @@ s32 field_set_actor_control_mode(s32 key, s32 mode)
         actor->unk10 = 0;
         if (object_index == FIELD_SECOND_MEMBER)
         {
-            if (!(g_pad_ctx->menu_option_flags & FIELD_OPTION_VIBRATION))
+            if (!(g_saved_game_ctx->options.word & FIELD_OPTION_VIBRATION))
             {
                 controller->ports[1].actuators_enabled = 0;
             }

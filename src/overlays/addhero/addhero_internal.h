@@ -2,6 +2,7 @@
 #define ADDHERO_INTERNAL_H
 
 #include "common.h"
+#include "saved_game.h"
 #include "pad.h"
 #include "vector.h"
 #include "display.h"
@@ -9,6 +10,11 @@
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 #include "sdk/kernel.h"
+#include "sdk/libapi.h"
+#include "sdk/libetc.h"
+#include "sdk/strings.h"
+#include "sdk/libmcx.h"
+#include "controller.h"
 
 /* Declarations shared by ADDHERO implementation files. */
 
@@ -77,13 +83,6 @@ typedef struct
     u8 suffix[4];
 } AddheroCardPathTemplate;
 
-/** @brief Card path used to remove a placeholder save file. */
-typedef struct
-{
-    AddheroCardDevice device;
-    u8 suffix[28];
-} AddheroProbeFilePath;
-
 extern struct DIRENTRY g_addhero_entries[][ADDHERO_DIRECTORY_ENTRY_COUNT];
 extern AddheroCardPathTemplate g_addhero_file_template;
 extern u8* g_addhero_load_step;
@@ -109,9 +108,14 @@ extern s32 g_addhero_entry_value_limit;
 extern s32 g_addhero_has_free_entry_space;
 extern u8 g_addhero_loadseq_start;
 extern u8 g_addhero_loadseq_card[];
-extern u8 g_addhero_save_blob[];
-extern u8 g_addhero_entry_read_buffer;
-extern u8 g_addhero_save_file_path[];
+/** @brief Save file read or written by the load and save sequences. */
+extern SaveFile g_addhero_save_file;
+/**
+ * @brief Start of the selected entry's save file: only the card header and the
+ *        first 0x100 bytes of the saved game are read (ADDHERO_ENTRY_READ_BYTES).
+ */
+extern SaveFile g_addhero_entry_file;
+extern char g_addhero_save_file_path[];
 extern char g_lom_save_filename_prefix[];
 extern char g_lom_alt_save_filename_prefix[];
 extern char g_new_save_entry_prefix[];
@@ -130,10 +134,6 @@ void addhero_clear_hardware_card_events(void);
 s32 addhero_poll_software_card_events(void);
 s32 addhero_poll_hardware_card_events(void);
 void addhero_sort_entries_by_type(void);
-s32 strncmp(void* a, void* b, s32 n);
-void field_reset_input_repeat(void);
-s32 VSync(s32 arg0);
-void bcopy(void* dst, void* src, s32 len);
 void addhero_shutdown_card_events(void);
 void addhero_begin_glyph_cache_frame(void);
 void addhero_evict_unused_glyphs(void);
@@ -144,17 +144,7 @@ s32 addhero_poll_and_retry_card_info(void);
 void addhero_commit_selected_entry(void);
 void* addhero_draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s32 palette, s32 alignment);
 s32 addhero_advance_load_sequence(void);
-s32 strcat(void* a, void* b);
-s32 read(s32 a, void* b, s32 c);
-s32 write(s32 a, void* b, s32 c);
-s32 close(s32 a);
-s32 erase(void* a);
-s32 strcpy(void* a, void* b);
-s32 _card_info(s32 a);
-s32 _card_wait(s32 a);
 
-
-/* Moved from addhero.c when it was split into addhero.c and addhero_widgets.c. */
 /* UI states and memory-card limits. */
 #define ADDHERO_ELEMENT_COUNT 8
 #define ADDHERO_ELEMENT_STATE_MASK 7
@@ -175,10 +165,6 @@ s32 _card_wait(s32 a);
 #define ADDHERO_ENTRY_STATE_CONFIRM_PROMPT 0xF3 /* companion choice prompt for save/exit flow */
 #define ADDHERO_CONFIRM_BUTTON_MASK (PAD_BTN_CROSS | PAD_BTN_L3)
 #define ADDHERO_CARD_SWITCH_BUTTON_MASK (PAD_BTN_SELECT | PAD_BTN_RIGHT | PAD_BTN_LEFT)
-#define ADDHERO_INPUT_INJECTION_ENABLED 0x80
-#define ADDHERO_SAVE_MAGIC 0x414E41
-#define ADDHERO_SAVE_CHECKSUM_BYTES 0x33E0
-#define ADDHERO_SAVE_CHECKSUM_BIAS 0x0414E410
 
 /** @brief Bit position of the width's low byte inside AddheroElement.attr.word. */
 #define ADDHERO_ELEMENT_WIDTH_SHIFT 24
@@ -259,54 +245,6 @@ typedef struct AddheroElement
     AddheroElementDrawFunc draw_handler;
 } AddheroElement;
 
-/** @brief Saved character metadata displayed in the card browser. */
-typedef struct AddheroRecord
-{
-    u8 name[23];
-    u8 marker_17;
-    u32 unknown_18 : 25;
-    u32 first_icon : 7;
-    u8 _pad1c[3];
-    u8 icon_palette;
-    u32 entry_label : 18;
-    u32 second_icon : 7;
-    u32 third_icon : 7;
-    u8 _pad24[12];
-    s32 play_time_frames;
-    u8 _pad34[0xCF - 0x34];
-    u8 owner_id;
-    u8 _padd0[4];
-    u16 hero_id;
-    u16 reserved_d6;
-    s32 identity;
-} AddheroRecord;
-
-/** @brief Alternate title text in a loaded card-entry record. */
-typedef struct AddheroFallbackText
-{
-    u8 pad[0x24];
-    u8 text[0x20];
-} AddheroFallbackText;
-
-/** @brief Saved context block copied between the live game state and the save image. */
-typedef struct
-{
-    u8 inject_enable;
-    u8 _pad01[0x17];
-    u32 inject_flags;
-    u8 _pad1c[0x234];
-} AddheroSaveContextBlock;
-
-/** @brief Portion of the ADDHERO save image whose layout is used by this overlay. */
-typedef struct
-{
-    u8 _pad0000[0x770];
-    AddheroSaveContextBlock context;
-    u8 _pad09c0[0x2A20];
-    s32 checksum;
-    s32 magic;
-} AddheroSaveBlob;
-
 /**
  * @brief Frame context the host passes to ADDHERO each frame: its first word is
  *        the ordering-table entry, followed later by the display-buffer index
@@ -330,18 +268,20 @@ typedef struct
 extern AddheroOverflowGlyphString g_addhero_decimal_overflow_glyphs;
 extern AddheroElement g_addhero_element_pool[ADDHERO_ELEMENT_COUNT];
 extern AddheroElement g_addhero_element1;
-extern AddheroRecord g_addhero_entry_metadata;
 
-/* Shared controller/game context (main.h PadContext); addressed here as a byte
-   buffer for the save-blob copies and metadata reads. */
-extern u8* g_pad_ctx;
 extern s32 g_save_slot_index;
+
+/**
+ * @brief FIELD data word next to D_80122714; ADDHERO stores 3 into it when Circle cancels the browser.
+ * @note TODO: purpose unknown; no code in the main executable or any overlay reads it.
+ */
 extern s32 D_80122718;
 extern s32 g_pad_input;
 extern s32 g_menu_element_counter;
 extern u8 g_addhero_loadseq_done[];
 extern s32 g_addhero_icon_phase;
-extern u8* g_addhero_pad_work_ptr;
+/** @brief The saved game's item records (g_saved_game_ctx->items). */
+extern FieldItemRecord* g_addhero_items;
 extern s32 g_addhero_result;
 extern s32 g_addhero_work_ram_base;
 extern s32 g_addhero_exit_requested;
@@ -350,7 +290,6 @@ extern s32 g_addhero_load_flow_active;
 extern s32 g_addhero_icon_palette;
 extern s32 g_addhero_frame_parity;
 extern s32 g_addhero_dialog_state;
-extern s32 g_addhero_entry_identity;
 extern s32 g_addhero_icon_image_table[];
 extern s32 g_addhero_entry_fields[][ADDHERO_DIRECTORY_ENTRY_COUNT];
 extern u8 g_addhero_loadseq_abort[];
@@ -358,8 +297,6 @@ extern u8 g_addhero_loadseq_load_begin[];
 extern u8 g_addhero_loadseq_load_progress[];
 extern u8 g_addhero_loadseq_save_begin[];
 extern u8 g_addhero_icon_context[];
-extern u8 g_addhero_entry_record;
-extern u8 g_addhero_entry_owner_id;
 extern u8 g_text_time_separator_offset_bytes[2];
 extern u8 g_text_choice_glyph_offsets[];
 extern u16 g_addhero_glyph_table;
@@ -426,7 +363,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
 void* addhero_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 width, s32 icon, s32 index, s32 row);
 void addhero_enable_choice_toggle(void);
 void* addhero_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y);
-s32 addhero_validate_save_blob(u8* base);
+s32 addhero_validate_save_file(SaveFile* file);
 s32 addhero_compute_save_checksum(u8* data);
 s8* addhero_format_decimal(s8* out, s32 value);
 void addhero_format_hex(s8* out, s32 value, s32 max_chars);
@@ -436,31 +373,21 @@ s32 addhero_parse_hex_suffix_byte(u8* text);
 s32 addhero_entry_blocks_reach_limit(void);
 void addhero_erase_placeholder_files(void);
 
-/* Game and SDK function declarations. */
-void* func_800A88A0(void* prim, u_long* ot, u8* text, s32 color, s32 x, s32 y, s32 mode);
-void* func_800A8A78(u_long* ot, void* prim, s32 value, s32 color, DVECTOR* pos, s32 mode);
-void play_menu_sfx(s32 sfx_id, s32 volume);
+void addhero_reset_entry_ranks(void);
+s32 addhero_parse_entry_fields(void);
+
+/* FIELD functions used by ADDHERO; FIELD stays resident while the overlay runs. */
+void* field_draw_text(void* prim, u_long* ot, u8* text, s32 text_color, s32 x, s32 y, s32 flags);
+void* field_draw_number(u_long* ot, void* prim, s32 value, s32 text_color, DVECTOR* position, s32 flags);
+void* field_draw_menu_frame(void* prim, u_long* ot, s32 x, s32 y, s32 width, s32 height, s32 display_y, s32 bright);
+void* field_draw_menu_scroll_arrow(void* prim, u_long* ot, s32 x, s32 y, s32 up);
+void field_copy_portrait_palette(void* dest, s32 index);
+void field_copy_golem_portrait_palette(u8* destination, s32 palette);
+void field_flag_known_save(char* file_name);
+void field_reset_input_repeat(void);
 void field_restore_fade_target(void);
 void field_set_default_fade_target(void);
-void field_restore_fade_target_with_duration(s32 arg0);
-
-void func_800A55E4(void* buf, s32 arg1);
-void func_800A5638(void* buf, s32 arg1);
-void* func_800AD850(void* prim, u_long* ot, s32 x, s32 y, s32 width, s32 height, s32 display_buffer_index, s32 is_popup);
-void* func_800AE76C(void* prim, u_long* ot, s32 x, s32 y, s32 direction);
-
-
-void addhero_reset_entry_ranks(void);
-
-/* Functions defined in addhero.c that other translation units use. */
-s8* addhero_format_decimal();
-void addhero_format_hex();
-void addhero_hex_nibble_to_ascii();
-u32 addhero_parse_hex();
-s32 addhero_parse_hex_suffix_byte();
-s32 addhero_parse_entry_fields(void);
-void addhero_reset_entry_ranks();
-s32 addhero_entry_blocks_reach_limit();
-void addhero_erase_placeholder_files();
+void field_restore_fade_target_with_duration(s16 duration);
+void play_menu_sfx(s32 sfx_id, s32 volume);
 
 #endif

@@ -33,7 +33,7 @@
 
 /* Fixed-address accesses used by run_title. */
 
-/* High rand() value placement in SavedGameLayout::rng_seed. */
+/* High rand() value placement in SavedGameLayout::identity.ids.game_id. */
 #define TITLE_RNG_HIGH_SHIFT 15
 
 /* AKAO sound command used before the fallback field-entry path. */
@@ -135,7 +135,7 @@ s32 run_title(TitleMenuContext* menu_context)
             g_save_slot_index = TITLE_SELECTION_SENTINEL;
             random_low = rand();
             random_high = rand();
-            g_saved_game.layout.rng_seed = (s16)(random_low | (random_high << TITLE_RNG_HIGH_SHIFT));
+            g_saved_game.layout.identity.ids.game_id = random_low | (random_high << TITLE_RNG_HIGH_SHIFT);
             return GAME_STATE_FIELD;
         }
     }

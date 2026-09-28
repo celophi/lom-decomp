@@ -32,8 +32,6 @@
 
 static void field_set_item_name_macro(s32 kind);
 
-extern FieldGameState* g_field_game_state;
-
 /**
  * @brief Set one of the game flag bits.
  * @param bit_index Bit to set; bit n lives in word n / 32.

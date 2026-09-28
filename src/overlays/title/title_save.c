@@ -929,14 +929,14 @@ void load_sub_menu_layout(s32 is_continue)
     if (is_continue != 0)
     {
         src = g_subMenuLayoutContinue;
-        g_saved_game.layout.mode_flags |= 1;
+        g_saved_game.layout.words[SAVED_GAME_WORD_MODE_FLAGS] |= 1;
     }
     else
     {
         src = g_subMenuLayoutDefault;
     }
 
-    dst = (s32*)&g_saved_game.layout.player;
+    dst = (s32*)&g_saved_game.layout.characters[0];
 
     for (i = 0; i < SUB_MENU_LAYOUT_WORDS; i++)
     {

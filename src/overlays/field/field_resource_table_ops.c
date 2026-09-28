@@ -36,8 +36,6 @@ static s32 field_discard_all_items(void);
 
 FieldItemRecord* field_find_free_inventory_record(void);
 
-extern FieldGameState* g_field_game_state;
-
 /**
  * @brief Return an event script of a party member.
  * @param page Party member (script page index).

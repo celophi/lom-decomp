@@ -121,7 +121,7 @@
 #define MENU_EQUIPMENT_SUBTYPE_BASE 7
 /** @brief Number of 0x40-byte records in the inventory item table. */
 #define MENU_ITEM_TABLE_COUNT 100
-/** @brief Byte offset of the inventory item table within g_pad_ctx. */
+/** @brief Byte offset of the inventory item table within g_saved_game_ctx. */
 #define MENU_ITEM_TABLE_OFFSET 0xCE0
 /** @brief Size in bytes of one inventory/equipment item record. */
 #define MENU_ITEM_RECORD_SIZE 0x40
@@ -143,17 +143,17 @@
 #define MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK 0xFF803FFF
 /** @brief Clears the packed next-index field while preserving all other bits. */
 #define MENU_ITEM_NAV_NEXT_CLEAR_MASK 0x007FFFFF
-/** @brief Offset of the 12-row spell-presence bitmap in g_pad_ctx. */
+/** @brief Offset of the 12-row spell-presence bitmap in g_saved_game_ctx. */
 #define MENU_SPELL_GRID_OFFSET 0x60
 #define MENU_SPELL_GRID_ROW_COUNT 12
 #define MENU_SPELL_GRID_COLUMN_COUNT 8
-/** @brief Offset of the packed 16-row equipment availability grid in g_pad_ctx. */
+/** @brief Offset of the packed 16-row equipment availability grid in g_saved_game_ctx. */
 #define MENU_EQUIPMENT_GRID_OFFSET 0x104
 #define MENU_EQUIPMENT_GRID_ROW_COUNT 16
 #define MENU_EQUIPMENT_GRID_COLUMN_COUNT 8
 #define MENU_EQUIPMENT_GRID_ENTRY_MASK 0xF
 #define MENU_EQUIPMENT_GRID_FIRST_VALID 2
-/** @brief Offset and size of the 256-byte key-item quantity table in g_pad_ctx. */
+/** @brief Offset and size of the 256-byte key-item quantity table in g_saved_game_ctx. */
 #define MENU_KEY_ITEM_TABLE_OFFSET 0x25E0
 #define MENU_KEY_ITEM_TABLE_COUNT 256
 #define MENU_KEY_ITEM_SENTINEL_INDEX (MENU_KEY_ITEM_TABLE_COUNT - 1)
@@ -192,11 +192,11 @@
 #define MENU_REDRAW_NAVIGATE 6
 /** @brief g_menu_redraw_state: layout pass completed (position change or first run). */
 #define MENU_REDRAW_LAYOUT 8
-/** @brief g_pad_ctx->inject_flags bit enabling injected menu input. */
+/** @brief g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word bit enabling injected menu input. */
 #define MENU_PAD_INJECT_ENABLED 0x80
-/** @brief Enables vibration feedback in g_pad_ctx->menu_option_flags. */
+/** @brief Enables vibration feedback in g_saved_game_ctx->options.word. */
 #define MENU_OPTION_VIBRATION_ENABLED 0x01
-/** @brief Enables menu audio in g_pad_ctx->menu_option_flags. */
+/** @brief Enables menu audio in g_saved_game_ctx->options.word. */
 #define MENU_OPTION_AUDIO_ENABLED 0x02
 /** @brief Number of directional links stored by each content item. */
 #define MENU_CONTENT_DIRECTION_COUNT 4
@@ -223,14 +223,14 @@
 /** @brief Full volume level for all menu sound effects (128). */
 #define MENU_SE_VOLUME 0x80
 
-/** @brief Byte offset of the learned Special Technique bitsets in PadContext. */
+/** @brief Byte offset of the learned Special Technique bitsets in SavedGameLayout. */
 #define MENU_SPECIAL_TECHNIQUE_FLAGS_OFFSET 0x34
 /** @brief Number of Special Technique category bitsets. */
 #define MENU_SPECIAL_TECHNIQUE_GROUP_COUNT 11
 /** @brief Number of Special Technique bits and names in each category. */
 #define MENU_SPECIAL_TECHNIQUES_PER_GROUP 24
 
-/** @brief Byte offset of the ability-record table in PadContext. */
+/** @brief Byte offset of the ability-record table in SavedGameLayout. */
 #define MENU_ABILITY_TABLE_OFFSET 0x2F0
 /** @brief Number of fixed-size ability records. */
 #define MENU_ABILITY_COUNT 64
@@ -721,7 +721,7 @@ extern u32 g_item_slot_data[MENU_EQUIPMENT_SLOT_COUNT];
 /** @brief Nonzero for slots with a pending comparison change. */
 extern u8 g_item_slot_flags[MENU_EQUIPMENT_SLOT_COUNT];
 
-/** @brief Pointer into g_pad_ctx item data for the current category; null = no items. */
+/** @brief Pointer into g_saved_game_ctx item data for the current category; null = no items. */
 extern s32 g_menu_item_ptr;
 extern s32 g_menu_category0_item;
 extern s32 g_menu_category1_item;
@@ -892,7 +892,7 @@ static inline void menu_relink_pair(void)
  * @param equipment_slot Index within the character's equipment array.
  * @return Address of the equipped item record.
  */
-static inline MenuItemEntry* menu_equipped_item(PadContext* context, s32 equipment_slot)
+static inline MenuItemEntry* menu_equipped_item(SavedGameLayout* context, s32 equipment_slot)
 {
     s32 offset = equipment_slot * MENU_ITEM_RECORD_SIZE;
     offset += g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
@@ -905,7 +905,7 @@ static inline MenuItemEntry* menu_equipped_item(PadContext* context, s32 equipme
  * @param character_slot Character record index.
  * @return Character record, including its equipped items.
  */
-static inline MenuCharacterRecord* menu_character_record(PadContext* context, s32 character_slot)
+static inline MenuCharacterRecord* menu_character_record(SavedGameLayout* context, s32 character_slot)
 {
     return (MenuCharacterRecord*)((u8*)context + (character_slot * MENU_CHARACTER_BLOCK_SIZE + MENU_CHARACTER_RECORD_OFFSET));
 }

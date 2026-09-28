@@ -40,7 +40,7 @@
 #define FIELD_GOLEM_VARIANT_BASE 65
 
 /** @brief Bytes of a stored companion name copied into the party record. */
-#define FIELD_COMPANION_NAME_LENGTH 21
+#define PET_NAME_LENGTH 21
 
 /** @brief Bit position of FIELD_CHARACTER_AI. */
 #define FIELD_CHARACTER_AI_SHIFT 7
@@ -86,7 +86,6 @@ typedef struct
     FieldItemRecord templates[1];
 } FieldItemTemplateTable;
 
-extern FieldGameState* g_field_game_state;
 /** @brief Experience needed to reach each level; entry n is for level n + 1. */
 extern s32 g_field_level_experience[FIELD_LEVEL_EXPERIENCE_COUNT];
 extern s32 g_gosub_result_count;
@@ -183,11 +182,11 @@ s32 field_join_companion(void)
     if (g_gosub_result_count != 0)
     {
         index = g_gosub_result_values[0];
-        if (index < FIELD_REGION_COUNT)
+        if (index < PET_RECORD_COUNT)
         {
-            if (g_field_game_state->regions[index].name[0] != 0)
+            if (g_field_game_state->pets[index].name[0] != 0)
             {
-                g_field_game_state->region_index = index;
+                g_field_game_state->joined_pet = index;
                 field_set_script_var(0, FIELD_VARIABLE_COMPANION, g_gosub_result_values[0]);
                 field_load_companion(g_gosub_result_values[0]);
                 return g_field_game_state->characters[FIELD_PARTY_COMPANION].info.bytes[1];
@@ -207,9 +206,9 @@ s32 field_rejoin_companion(void)
     s32 index = field_get_script_var(0, FIELD_VARIABLE_COMPANION);
     s32 result;
 
-    if ((u32)index < FIELD_REGION_COUNT)
+    if ((u32)index < PET_RECORD_COUNT)
     {
-        g_field_game_state->region_index = index;
+        g_field_game_state->joined_pet = index;
         field_load_companion(index);
         result = g_field_game_state->characters[FIELD_PARTY_COMPANION].info.bytes[1];
     }
@@ -228,37 +227,38 @@ s32 field_rejoin_companion(void)
 static void field_load_companion(s32 companion_index)
 {
     FieldItemTemplateTable* table;
-    FieldGameState* state;
+    SavedGameLayout* state;
     FieldItemRecord* item;
     u32 scaled;
     s32 i;
 
-    for (i = 0; i < FIELD_COMPANION_NAME_LENGTH; i++)
+    for (i = 0; i < PET_NAME_LENGTH; i++)
     {
-        g_field_game_state->characters[FIELD_PARTY_COMPANION].name[i] = g_field_game_state->regions[companion_index].name[i];
+        g_field_game_state->characters[FIELD_PARTY_COMPANION].name[i] = g_field_game_state->pets[companion_index].name[i];
     }
     g_field_game_state->characters[FIELD_PARTY_COMPANION].info.word =
         ((g_field_game_state->characters[FIELD_PARTY_COMPANION].info.word & ~FIELD_CHARACTER_TYPE_MASK) | FIELD_CHARACTER_COMPANION) & ~FIELD_CHARACTER_AI;
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].info.bytes[1] = g_field_game_state->regions[companion_index].unk15;
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].progress.bits.level = g_field_game_state->regions[companion_index].progress.bits.level;
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].progress.bits.experience = g_field_game_state->regions[companion_index].progress.bits.experience;
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].hp = g_field_game_state->regions[companion_index].hp;
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].unk26 = g_field_game_state->regions[companion_index].unk1E;
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].info.bytes[1] = g_field_game_state->pets[companion_index].species;
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].progress.bits.level = g_field_game_state->pets[companion_index].progress.bits.level;
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].progress.bits.experience = g_field_game_state->pets[companion_index].progress.bits.experience;
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].hp = g_field_game_state->pets[companion_index].hp;
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].unk26 = g_field_game_state->pets[companion_index].power;
     for (i = 0; i < FIELD_EQUIPMENT_TOTAL_COUNT; i++)
     {
-        g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment_totals[i] = g_field_game_state->regions[companion_index].equipment_totals[i];
+        g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment_totals[i] = g_field_game_state->pets[companion_index].equipment_totals[i];
     }
     for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
     {
-        scaled = g_field_game_state->regions[companion_index].stats[i] & FIELD_STAT_SCALED_MASK;
+        scaled = g_field_game_state->pets[companion_index].stats[i] & FIELD_STAT_SCALED_MASK;
         g_field_game_state->characters[FIELD_PARTY_COMPANION].stats[i] = (g_field_game_state->characters[FIELD_PARTY_COMPANION].stats[i] & ~FIELD_STAT_SCALED_MASK) | scaled;
-        g_field_game_state->characters[FIELD_PARTY_COMPANION].stats[i] = (g_field_game_state->characters[FIELD_PARTY_COMPANION].stats[i] & FIELD_STAT_SCALED_MASK) |
-                                                                 (g_field_game_state->regions[companion_index].stats[i] & ~FIELD_STAT_SCALED_MASK);
+        g_field_game_state->characters[FIELD_PARTY_COMPANION].stats[i] =
+            (g_field_game_state->characters[FIELD_PARTY_COMPANION].stats[i] & FIELD_STAT_SCALED_MASK) |
+            (g_field_game_state->pets[companion_index].stats[i] & ~FIELD_STAT_SCALED_MASK);
     }
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].unk40 = g_field_game_state->regions[companion_index].unk38[0];
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].unk41 = g_field_game_state->regions[companion_index].unk38[1];
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].unk42 = g_field_game_state->regions[companion_index].unk38[2];
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].unk43 = g_field_game_state->regions[companion_index].unk38[3];
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].unk40 = g_field_game_state->pets[companion_index].unk38[0];
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].unk41 = g_field_game_state->pets[companion_index].unk38[1];
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].unk42 = g_field_game_state->pets[companion_index].unk38[2];
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].unk43 = g_field_game_state->pets[companion_index].unk38[3];
     for (i = 0; i < FIELD_CHARACTER_ORDER_COUNT; i++)
     {
         g_field_game_state->characters[FIELD_PARTY_COMPANION].button_actions[i] = i;
@@ -266,16 +266,16 @@ static void field_load_companion(s32 companion_index)
     table = field_find_resource(FIELD_RESOURCE_WEAPON_TEMPLATES);
     if (table != NULL)
     {
-        field_copy_words(&table->templates[g_field_game_state->regions[companion_index].weapon_id],
+        field_copy_words(&table->templates[g_field_game_state->pets[companion_index].weapon_id],
                          &g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_WEAPON_SLOT], sizeof(FieldItemRecord));
     }
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_WEAPON_SLOT].derived.values[0] = g_field_game_state->regions[companion_index].unk1E;
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_WEAPON_SLOT].derived.values[0] = g_field_game_state->pets[companion_index].power;
     table = field_find_resource(FIELD_RESOURCE_ARMOR_TEMPLATES);
     if (table != NULL)
     {
         for (i = 0; i < FIELD_ARMOR_SLOT_COUNT; i++)
         {
-            field_copy_words(&table->templates[g_field_game_state->regions[companion_index].armor_ids[i]],
+            field_copy_words(&table->templates[g_field_game_state->pets[companion_index].armor_ids[i]],
                              &g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT + i], sizeof(FieldItemRecord));
         }
     }
@@ -283,10 +283,10 @@ static void field_load_companion(s32 companion_index)
     item = &state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT];
     for (i = 0; i < FIELD_EQUIPMENT_TOTAL_COUNT; i++)
     {
-        item->derived.values[i] = state->regions[companion_index].equipment_totals[i];
+        item->derived.values[i] = state->pets[companion_index].equipment_totals[i];
     }
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT].status_flags = g_field_game_state->regions[companion_index].unk38[0];
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT].element_flags = g_field_game_state->regions[companion_index].unk38[2];
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT].status_flags = g_field_game_state->pets[companion_index].unk38[0];
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT].element_flags = g_field_game_state->pets[companion_index].unk38[2];
     field_refresh_party_member(FIELD_PARTY_COMPANION);
 }
 
@@ -323,7 +323,7 @@ void field_leave_party(s32 companion)
         if ((g_field_game_state->characters[FIELD_PARTY_COMPANION].info.word & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_COMPANION)
         {
             field_store_companion();
-            g_field_game_state->region_index = FIELD_REGION_COUNT;
+            g_field_game_state->joined_pet = PET_RECORD_COUNT;
         }
         else
         {
@@ -343,16 +343,18 @@ static void field_store_companion(void)
 {
     s32 i;
 
-    if ((u32)g_field_game_state->region_index < FIELD_REGION_COUNT)
+    if ((u32)g_field_game_state->joined_pet < PET_RECORD_COUNT)
     {
-        for (i = 0; i < FIELD_COMPANION_NAME_LENGTH; i++)
+        for (i = 0; i < PET_NAME_LENGTH; i++)
         {
-            g_field_game_state->regions[g_field_game_state->region_index].name[i] = g_field_game_state->characters[FIELD_PARTY_COMPANION].name[i];
+            g_field_game_state->pets[g_field_game_state->joined_pet].name[i] = g_field_game_state->characters[FIELD_PARTY_COMPANION].name[i];
         }
-        g_field_game_state->regions[g_field_game_state->region_index].progress.bits.level = g_field_game_state->characters[FIELD_PARTY_COMPANION].progress.bits.level;
-        g_field_game_state->regions[g_field_game_state->region_index].progress.bits.experience = g_field_game_state->characters[FIELD_PARTY_COMPANION].progress.bits.experience;
-        g_field_game_state->regions[g_field_game_state->region_index].hp = g_field_game_state->characters[FIELD_PARTY_COMPANION].hp;
-        field_copy_words(g_field_game_state->characters[FIELD_PARTY_COMPANION].stats, g_field_game_state->regions[g_field_game_state->region_index].stats,
+        g_field_game_state->pets[g_field_game_state->joined_pet].progress.bits.level =
+            g_field_game_state->characters[FIELD_PARTY_COMPANION].progress.bits.level;
+        g_field_game_state->pets[g_field_game_state->joined_pet].progress.bits.experience =
+            g_field_game_state->characters[FIELD_PARTY_COMPANION].progress.bits.experience;
+        g_field_game_state->pets[g_field_game_state->joined_pet].hp = g_field_game_state->characters[FIELD_PARTY_COMPANION].hp;
+        field_copy_words(g_field_game_state->characters[FIELD_PARTY_COMPANION].stats, g_field_game_state->pets[g_field_game_state->joined_pet].stats,
                          sizeof(g_field_game_state->characters[FIELD_PARTY_COMPANION].stats));
     }
 }

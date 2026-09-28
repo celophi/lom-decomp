@@ -6,7 +6,7 @@
  * @brief FIELD view of the golem logic-block layout kept in g_saved_game.
  *
  * The logic blocks, their placement grid and the three golem group records
- * live in the same buffer that main.h maps as PadContext. PadContext does not
+ * live in the same buffer that main.h maps as SavedGameLayout. SavedGameLayout does not
  * map the header word at 0x29D4 or the grid at 0x2A7C yet, so FIELD reads the
  * region through GolemLayoutView, built from the main.h element types. Each
  * group record (GolemRecord in main.h) is read through GolemGroupRecord.
@@ -60,7 +60,7 @@ typedef struct
 
 /**
  * @brief Golem logic-block state inside the shared game-state buffer.
- * @note Same bytes as PadContext (main.h): companion starts at companion_name,
+ * @note Same bytes as SavedGameLayout (main.h): companion starts at companion_name,
  *       header byte 2 is logic_block_count, header byte 3 is
  *       joined_golem, group_order is golem_order, group_records
  *       is golem_records.
@@ -68,7 +68,7 @@ typedef struct
 typedef struct
 {
     u8 pad_0000[0xA90];
-    FieldCharacterRecord companion; /**< Party slot 2 (FieldGameState characters[2]). */
+    FieldCharacterRecord companion; /**< Party slot 2 (SavedGameLayout characters[2]). */
     u8 pad_0CE0[0x29D4 - 0xCE0];
     union
     {

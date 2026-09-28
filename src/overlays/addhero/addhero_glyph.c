@@ -55,7 +55,6 @@ void addhero_draw_hex_byte(void* prim, u_long* ot, s32 value, s32 x, s32 y, s32 
 void* addhero_render_cached_glyph(void* prim, u_long* ot, u16 code, s32 palette);
 void* addhero_emit_glyph_sprite(AddheroGlyphSprite* sprite, u_long* ot, s32 cache_slot, s32 palette);
 void addhero_expand_text_glyph_codes(u8* out, u8* in);
-u8* Krom2RawAdd(u16 sjis_code);
 
 /**
  * @brief Render a signed decimal value as cached-glyph text, suppressing
@@ -253,7 +252,7 @@ void* addhero_render_cached_glyph(void* prim, u_long* ot, u16 code, s32 palette)
         }
     }
 
-    font_data = Krom2RawAdd(code);
+    font_data = (u8*)Krom2RawAdd(code);
     if (font_data == (u8*)-1)
     {
         return prim;

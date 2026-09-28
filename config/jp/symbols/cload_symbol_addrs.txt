@@ -108,7 +108,7 @@ cload_load_icon_resources                = 0x80143320;
 cload_emit_icon_highlight_strip          = 0x801433E8;
 cload_enable_choice_toggle               = 0x8014350C;
 cload_draw_choice_prompt                 = 0x80143518;
-cload_validate_save_blob                 = 0x80143640;
+cload_validate_save_file                 = 0x80143640;
 cload_compute_save_checksum              = 0x80143694;
 cload_format_hex                         = 0x801436CC;
 cload_hex_nibble_to_ascii                = 0x80143794;
@@ -218,7 +218,7 @@ g_cload_decimal_glyphs                   = 0x8014765C;
 g_cload_hex_glyphs                       = 0x80147674;
 g_cload_double_byte_char_table           = 0x801467E8;
 g_cload_single_byte_char_table           = 0x80146618;
-g_cload_save_blob                        = 0x80147700;
+g_cload_save_file                        = 0x80147700;
 g_cload_card_path_prefix                 = 0x80140038;
 g_cload_card_search_path                 = 0x801400BC;
 jtbl_80140040                             = 0x80140040;
@@ -227,7 +227,6 @@ g_cload_primary_poll_countdown           = 0x80163B50;
 g_cload_secondary_poll_countdown         = 0x80163BB4;
 g_cload_selected_entry_extended          = 0x80163BAC;
 g_cload_entry_value_limit                = 0x80163B54;
-g_cload_selected_save_metadata           = 0x80163970;
 
 // Shared save/card constants named from their contents and CLOAD usage.
 g_lom_save_filename_prefix              = 0x800ECAE8;
@@ -248,9 +247,7 @@ g_cload_steps_read_selected_header      = 0x8014660C;
 g_cload_steps_load_selected_save        = 0x80146610;
 
 // Selected memory-card file/header buffer and derived views.
-g_cload_selected_file_header            = 0x801637F0;
-g_cload_selected_file_title             = 0x801637F4;
-g_cload_selected_save_slot_id           = 0x80163A3F;
+g_cload_selected_file            = 0x801637F0;
 g_cload_selected_card_path              = 0x80163A70;
 g_cload_overlay_id = 0x80140000;
 
@@ -265,7 +262,7 @@ g_cload_text_plus_marker                 = 0x80145F44;
 // JP unverified: g_cload_location_names                   = 0x80146478;
 
 // US ELF names not listed above (splat placeholders shared with the C sources).
-func_80032174 = 0x800322E4;
+McxSync = 0x800322E4;
 func_800A55E4 = 0x800A5494;
 func_800A5638 = 0x800A54E8;
 func_800A88A0 = 0x800A8750;

@@ -134,7 +134,7 @@
 #define FIELD_ACTION_SOURCE_ACTOR_MASK 7
 #define FIELD_ACTION_SOURCE_SHIFT 3
 
-/** @brief Number of menu slot groups (FieldGameState.menu_slots). */
+/** @brief Number of menu slot groups (SavedGameLayout.menu_slots). */
 #define FIELD_MENU_GROUP_COUNT 2
 
 /** @brief First item entry index of a FIELD_MENU_SLOT_ITEM slot. */
@@ -168,7 +168,6 @@ typedef struct
     u16 z;
 } FieldMapPoint;
 
-extern FieldGameState* g_field_game_state;
 extern FieldRuntimeContext* g_field_runtime;
 extern SceneState* g_field_scene_state;
 extern FieldRuntimeContext D_80122C00;
@@ -246,7 +245,7 @@ static void field_runtime_init(void)
 /** @brief Bind the game-state, runtime-context and camera pointers. */
 static void field_bind_runtime_pointers(void)
 {
-    g_field_game_state = (FieldGameState*)&g_saved_game;
+    g_field_game_state = (SavedGameLayout*)&g_saved_game;
     g_field_runtime = &D_80122C00;
     g_field_scene_state = SCENE_STATE;
 }
@@ -438,7 +437,7 @@ void field_install_actor_action(FieldLayoutRecord* layout_record, s32 record_ind
             action_index = 0;
             if (layout_record->control.bits.group == 0)
             {
-                layout_record->control.bits.group = (g_field_game_state->default_group >> 4) + 1;
+                layout_record->control.bits.group = (g_field_game_state->golem_count >> 4) + 1;
             }
             layout_record->source.actor &= FIELD_ACTION_SOURCE_ACTOR_MASK;
             break;

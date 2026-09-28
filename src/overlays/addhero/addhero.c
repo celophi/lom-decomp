@@ -110,7 +110,7 @@ void addhero_build_ui_elements(void)
     g_addhero_scroll_y = 0;
     g_addhero_selected_row = 0;
     g_addhero_selection_status = 0;
-    g_addhero_pad_work_ptr = g_pad_ctx + 0xCE0;
+    g_addhero_items = g_saved_game_ctx->items;
     addhero_clear_elements();
     g_addhero_load_flow_active = 0;
     if (g_addhero_mode != 0)
@@ -226,7 +226,7 @@ void addhero_update_state(AddheroDrawState* draw_state)
 /**
  * @brief Drive the card load/scan state machine one frame, mapping its result
  *        code onto the next load step and any error entry-state sentinel.
- * @return Unspecified; callers ignore the return value.
+ * @return Nothing: the original is declared int but returns no value, and its caller ignores it.
  */
 s32 addhero_update_load_sequence(void)
 {
@@ -286,7 +286,7 @@ s32 addhero_update_load_sequence(void)
 
 /**
  * @brief Handle browser input, entry navigation, and load confirmation.
- * @return Unspecified; callers ignore the return value.
+ * @return Nothing: the original is declared int but returns no value, and its caller ignores it.
  */
 s32 addhero_handle_input(void)
 {
@@ -295,6 +295,7 @@ s32 addhero_handle_input(void)
     s32 move_count;
     AddheroElement* prompt;
     struct DIRENTRY* selected_entry;
+    SavedGameLayout* entry;
 
     if (g_addhero_element_pool[1].attr.bits.state == ADDHERO_ELEMENT_STATE_INACTIVE)
     {
@@ -401,8 +402,9 @@ s32 addhero_handle_input(void)
         selected_entry = &g_addhero_entries[g_addhero_card_slot][g_addhero_selected_row];
         if (strncmp(g_lom_save_filename_prefix, selected_entry->name, 0xC) == 0)
         {
-            if ((g_addhero_entry_metadata.hero_id != ((AddheroRecord*)g_pad_ctx)->hero_id) &&
-                ((g_save_slot_index == 0xFF) || (g_addhero_entry_metadata.owner_id == g_save_slot_index)))
+            entry = &g_addhero_entry_file.saved_game;
+            if ((entry->identity.ids.game_id != g_saved_game_ctx->identity.ids.game_id) &&
+                ((g_save_slot_index == 0xFF) || (entry->save_slot == g_save_slot_index)))
             {
                 prompt = addhero_alloc_element();
                 prompt->attr.bits.transition_step = 1;
@@ -514,22 +516,22 @@ void* addhero_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset
     switch (entry_state)
     {
     case 0xF8:
-        prim = func_800A88A0(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_status_f8, 26), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_status_f8, 26), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xF9:
-        prim = func_800A88A0(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_status_f8, 26), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_status_f8, 26), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case ADDHERO_ENTRY_STATE_CARD_FULL:
-        prim = func_800A88A0(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_status_fa, 1), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_status_fa, 1), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case ADDHERO_ENTRY_STATE_CARD_IO_ERROR:
-        prim = func_800A88A0(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_status_fd, 2), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_status_fd, 2), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFB:
-        prim = func_800A88A0(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_status_fb, 8), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_status_fb, 8), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFC:
-        prim = func_800A88A0(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_status_fc, 9), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_status_fc, 9), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFE:
         break;
@@ -540,9 +542,9 @@ void* addhero_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset
 
         message_x = -x_offset + 0x84;
         text_table = &g_addhero_glyph_table;
-        prim = func_800A88A0(prim, ot, ADDHERO_TEXT(text_table, 0), 4, message_x, -y_offset, 2);
-        prim = func_800A88A0(prim, ot, ADDHERO_TEXT(text_table, 15), 4, message_x, ADDHERO_ENTRY_ROW_HEIGHT - y_offset, 2);
-        prim = func_800A88A0(prim, ot, ADDHERO_TEXT(text_table, 89), 4, message_x, (ADDHERO_ENTRY_ROW_HEIGHT * 2) - y_offset, 2);
+        prim = field_draw_text(prim, ot, ADDHERO_TEXT(text_table, 0), 4, message_x, -y_offset, 2);
+        prim = field_draw_text(prim, ot, ADDHERO_TEXT(text_table, 15), 4, message_x, ADDHERO_ENTRY_ROW_HEIGHT - y_offset, 2);
+        prim = field_draw_text(prim, ot, ADDHERO_TEXT(text_table, 89), 4, message_x, (ADDHERO_ENTRY_ROW_HEIGHT * 2) - y_offset, 2);
     }
     break;
     default:
@@ -557,9 +559,9 @@ void* addhero_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset
 
             message_x = -x_offset + 0x84;
             text_table = &g_addhero_glyph_table;
-            prim = func_800A88A0(prim, ot, ADDHERO_TEXT(text_table, 0), 4, message_x, -y_offset, 2);
-            prim = func_800A88A0(prim, ot, ADDHERO_TEXT(text_table, 15), 4, message_x, ADDHERO_ENTRY_ROW_HEIGHT - y_offset, 2);
-            prim = func_800A88A0(prim, ot, ADDHERO_TEXT(text_table, 89), 4, message_x, (ADDHERO_ENTRY_ROW_HEIGHT * 2) - y_offset, 2);
+            prim = field_draw_text(prim, ot, ADDHERO_TEXT(text_table, 0), 4, message_x, -y_offset, 2);
+            prim = field_draw_text(prim, ot, ADDHERO_TEXT(text_table, 15), 4, message_x, ADDHERO_ENTRY_ROW_HEIGHT - y_offset, 2);
+            prim = field_draw_text(prim, ot, ADDHERO_TEXT(text_table, 89), 4, message_x, (ADDHERO_ENTRY_ROW_HEIGHT * 2) - y_offset, 2);
             break;
         }
         entry_index = 0;
@@ -581,40 +583,40 @@ void* addhero_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset
                     {
                         value_pos.vx = list_x + ADDHERO_ENTRY_VALUE_X;
                         value_pos.vy = row_y;
-                        prim = func_800A88A0(func_800A8A78(ot, prim, g_addhero_entry_suffix_values[entry_index], 4, &value_pos, 0), ot,
-                                             ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_glyph_entry_value_label), 4, list_x + 0x70, row_y, 0);
+                        prim = field_draw_text(field_draw_number(ot, prim, g_addhero_entry_suffix_values[entry_index], 4, &value_pos, 0), ot,
+                                               ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_glyph_entry_value_label), 4, list_x + 0x70, row_y, 0);
                         if ((g_addhero_rank_count - 1) == g_addhero_entry_ranks[entry_index])
                         {
                             marker_offset = text_table[27];
-                            prim = func_800A88A0(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, marker_offset), 4, list_x + ADDHERO_ENTRY_MARKER_X, row_y, 0);
+                            prim = field_draw_text(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, marker_offset), 4, list_x + ADDHERO_ENTRY_MARKER_X, row_y, 0);
                         }
                         else if (g_addhero_entry_ranks[entry_index] < 2)
                         {
                             marker_offset = text_table[28];
-                            prim = func_800A88A0(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, marker_offset), 4, list_x + ADDHERO_ENTRY_MARKER_X, row_y, 0);
+                            prim = field_draw_text(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, marker_offset), 4, list_x + ADDHERO_ENTRY_MARKER_X, row_y, 0);
                         }
                         if (*addhero_skip_hex_digits(&g_addhero_entries[g_addhero_card_slot][entry_index].name[ADDHERO_SAVE_FILENAME_PREFIX_LENGTH]) == '+')
                         {
-                            prim = func_800A88A0(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_glyph_plus_marker), 4, 0xF2 - x_offset, row_y, 1);
+                            prim = field_draw_text(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_glyph_plus_marker), 4, 0xF2 - x_offset, row_y, 1);
                         }
                     }
                     if (strncmp(g_lom_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name, ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_glyph_save_entry_label), 4, 1 - x_offset, row_y, 0);
+                        prim = field_draw_text(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_glyph_save_entry_label), 4, 1 - x_offset, row_y, 0);
                     }
                     else if (strncmp(g_lom_alt_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name,
                                      ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_glyph_alt_save_entry_label), 4, 1 - x_offset, row_y, 0);
+                        prim = field_draw_text(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_glyph_alt_save_entry_label), 4, 1 - x_offset, row_y, 0);
                     }
                     else if (strncmp(g_new_save_entry_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name,
                                      ADDHERO_NEW_SAVE_FILENAME_PREFIX_LENGTH) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_glyph_new_entry_label), 4, 1 - x_offset, row_y, 0);
+                        prim = field_draw_text(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_glyph_new_entry_label), 4, 1 - x_offset, row_y, 0);
                     }
                     else
                     {
-                        prim = func_800A88A0(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_glyph_default_entry_label), 4, 1 - x_offset, row_y, 0);
+                        prim = field_draw_text(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_glyph_default_entry_label), 4, 1 - x_offset, row_y, 0);
                     }
                 }
                 entry_index++;
@@ -655,11 +657,11 @@ void* addhero_draw_mode_glyph(u_long* ot, void* prim, s32 x_offset, s32 y_offset
 
     if (g_addhero_mode == 1)
     {
-        prim = func_800A88A0(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_mode1, 35), 4, -x_offset + 0x78, -y_offset, 2);
+        prim = field_draw_text(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_mode1, 35), 4, -x_offset + 0x78, -y_offset, 2);
     }
     else
     {
-        prim = func_800A88A0(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_mode0, 34), 4, -x_offset + 0x78, -y_offset, 2);
+        prim = field_draw_text(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_mode0, 34), 4, -x_offset + 0x78, -y_offset, 2);
     }
     return prim;
 }
@@ -689,7 +691,7 @@ void* addhero_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_
         addPrim(ot, tile);
         prim = tile + 1;
     }
-    return func_800A88A0(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_card_slot0_label, 6), 4, -x_offset + ADDHERO_CARD_LABEL_TEXT_X, -y_offset, 2);
+    return field_draw_text(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_card_slot0_label, 6), 4, -x_offset + ADDHERO_CARD_LABEL_TEXT_X, -y_offset, 2);
 }
 
 /**
@@ -717,7 +719,7 @@ void* addhero_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_
         addPrim(ot, tile);
         prim = tile + 1;
     }
-    return func_800A88A0(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_card_slot1_label, 7), 4, -x_offset + ADDHERO_CARD_LABEL_TEXT_X, -y_offset, 2);
+    return field_draw_text(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_card_slot1_label, 7), 4, -x_offset + ADDHERO_CARD_LABEL_TEXT_X, -y_offset, 2);
 }
 
 /**
@@ -757,16 +759,16 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
             s32 x = -x_offset;
             u16* text_table;
 
-            result = func_800A88A0(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_details_status2_msg, 20), 4, x, -y_offset, 0);
+            result = field_draw_text(prim, ot, ADDHERO_TEXT_AT(g_addhero_glyph_details_status2_msg, 20), 4, x, -y_offset, 0);
             text_table = ADDHERO_TEXT_TABLE(g_addhero_glyph_details_status2_msg, 20);
-            return func_800A88A0(result, ot, ADDHERO_TEXT(text_table, 21), 4, x, 0x10 - y_offset, 0);
+            return field_draw_text(result, ot, ADDHERO_TEXT(text_table, 21), 4, x, 0x10 - y_offset, 0);
         }
         else
         {
             if (strncmp(g_lom_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][g_addhero_selected_row].name, ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) ==
                 0)
             {
-                if (g_save_slot_index == 0xFF || g_addhero_entry_owner_id == g_save_slot_index)
+                if (g_save_slot_index == 0xFF || g_addhero_entry_file.saved_game.save_slot == g_save_slot_index)
                 {
                     s32 present_count;
                     s32 i;
@@ -780,11 +782,11 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
                     s32 time_val;
 
                     {
-                        AddheroRecord* record = &g_addhero_entry_metadata;
-                        slot[0] = record->first_icon;
-                        slot[1] = record->second_icon;
-                        slot[2] = record->third_icon;
-                        g_addhero_icon_palette = record->icon_palette;
+                        SavedGameLayout* entry = &g_addhero_entry_file.saved_game;
+                        slot[0] = entry->spawn.bits.party_icon_0;
+                        slot[1] = entry->track.bits.party_icon_1;
+                        slot[2] = entry->track.bits.party_icon_2;
+                        g_addhero_icon_palette = entry->icon_palette;
                     }
 
                     total = 0;
@@ -847,66 +849,66 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
                     }
 
                     {
-                        AddheroRecord* record = &g_addhero_entry_metadata;
+                        SavedGameLayout* entry = &g_addhero_entry_file.saved_game;
                         s32 x = -x_offset;
                         s32 y = -y_offset;
 
-                        base_y = record->play_time_frames;
+                        base_y = entry->play_time;
                         pos.vx = (s16)(x + 0x70);
                         pos.vy = (s16)y;
                         hours = base_y / 216000;
-                        result = func_800A8A78(ot, result, hours, 4, &pos, 1);
-                        result = func_800A88A0(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, 25), 4, x + 0x6F, y, 0);
+                        result = field_draw_number(ot, result, hours, 4, &pos, 1);
+                        result = field_draw_text(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, 25), 4, x + 0x6F, y, 0);
                         base_y = (base_y / 3600) - (hours * 0x3C);
                         if (base_y < 0xA)
                         {
                             pos.vx = (s16)(x + 0x7D);
                             pos.vy = (s16)y;
-                            result = func_800A8A78(ot, result, 0, 4, &pos, 1);
+                            result = field_draw_number(ot, result, 0, 4, &pos, 1);
                         }
                         pos.vx = (s16)(x + 0x85);
                         pos.vy = (s16)y;
-                        result = func_800A8A78(ot, result, base_y, 4, &pos, 1);
-                        result = func_800A88A0(result, ot, record->name, 4, x + 0x54, y + 0x10, 0);
+                        result = field_draw_number(ot, result, base_y, 4, &pos, 1);
+                        result = field_draw_text(result, ot, entry->summary_name, 4, x + 0x54, y + 0x10, 0);
 
-                        if (record->hero_id == ((AddheroRecord*)g_pad_ctx)->hero_id)
+                        if (entry->identity.ids.game_id == g_saved_game_ctx->identity.ids.game_id)
                         {
                             do
                             {
-                                result = func_800A88A0(result, ot, ADDHERO_TEXT_AT(g_addhero_glyph_current_hero_marker, 40), 4, x + 0x54, y + 0x20, 0);
+                                result = field_draw_text(result, ot, ADDHERO_TEXT_AT(g_addhero_glyph_current_hero_marker, 40), 4, x + 0x54, y + 0x20, 0);
                             } while (0);
                         }
                         else
                         {
-                            result = func_800A88A0(result, ot, ADDHERO_TEXT(g_addhero_entry_glyph_table, record->entry_label), 4, x + 0x54, y + 0x20, 0);
+                            result =
+                                field_draw_text(result, ot, ADDHERO_TEXT(g_addhero_entry_glyph_table, entry->track.bits.music_track), 4, x + 0x54, y + 0x20, 0);
                         }
                     }
                 }
                 else
                 {
-                    result = func_800A88A0(result, ot, ADDHERO_TEXT_AT(g_addhero_glyph_owner_mismatch_msg, 42), 4, -x_offset, -y_offset, 0);
+                    result = field_draw_text(result, ot, ADDHERO_TEXT_AT(g_addhero_glyph_owner_mismatch_msg, 42), 4, -x_offset, -y_offset, 0);
                 }
             }
             else
             {
                 s32 j;
-                u8* record;
+                SaveFileHeader* header;
 
-                addhero_terminate_multibyte_text(&g_addhero_entry_record);
-                record = &g_addhero_entry_record;
-                record -= 4;
-                if (record[0x24] == 0 || record[0x24] >= 0x80)
+                addhero_terminate_multibyte_text(g_addhero_entry_file.header.title);
+                header = &g_addhero_entry_file.header;
+                if (header->title[1][0] == 0 || header->title[1][0] >= 0x80)
                 {
-                    for (j = 0; j < 0x20; j++)
+                    for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
                     {
-                        name[j] = record[4 + j];
+                        name[j] = *(header->title[0] + j);
                     }
                     name[j] = 0;
                     result = addhero_draw_cached_text(result, ot, name, -x_offset, -y_offset, 4, 0);
 
-                    for (j = 0; j < 0x20; j++)
+                    for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
                     {
-                        name[j] = ((AddheroFallbackText*)&g_addhero_entry_read_buffer)->text[j];
+                        name[j] = g_addhero_entry_file.header.title[1][j];
                     }
                     name[j] = 0;
                     result = addhero_draw_cached_text(result, ot, name, -x_offset, -y_offset + 0x10, 4, 0);
@@ -1038,11 +1040,11 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
     {
         if ((g_addhero_entry_state * ADDHERO_ENTRY_ROW_HEIGHT) > (g_addhero_scroll_y + 0x58))
         {
-            prim = func_800AE76C(prim, ot, 0x114, 0x82, 0);
+            prim = field_draw_menu_scroll_arrow(prim, ot, 0x114, 0x82, 0);
         }
         if (g_addhero_scroll_y != 0)
         {
-            prim = func_800AE76C(prim, ot, 0x114, 0x3A, 1);
+            prim = field_draw_menu_scroll_arrow(prim, ot, 0x114, 0x3A, 1);
         }
     }
 
@@ -1080,9 +1082,9 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
                     s32 x = element->attr.bits.x;
                     u32 width_low = ADDHERO_ELEMENT_WIDTH_LOW(element);
 
-                    prim = func_800AD850(prim, ot, x + (ADDHERO_ELEMENT_WIDTH(element, width_low) - scaled_width) / 2,
-                                         element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
-                                         draw_state->display_buffer_index, i == 0);
+                    prim = field_draw_menu_frame(prim, ot, x + (ADDHERO_ELEMENT_WIDTH(element, width_low) - scaled_width) / 2,
+                                                 element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
+                                                 draw_state->display_buffer_index, i == 0);
                 }
                 element->attr.bits.transition_step++;
                 if (element->attr.bits.transition_step == 8)
@@ -1097,8 +1099,8 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
                 {
                     u32 width_low = ADDHERO_ELEMENT_WIDTH_LOW(element);
 
-                    prim = func_800AD850(prim, ot, element->attr.bits.x, element->attr.bits.y, ADDHERO_ELEMENT_WIDTH(element, width_low),
-                                         element->size.bits.height, draw_state->display_buffer_index, i == 0);
+                    prim = field_draw_menu_frame(prim, ot, element->attr.bits.x, element->attr.bits.y, ADDHERO_ELEMENT_WIDTH(element, width_low),
+                                                 element->size.bits.height, draw_state->display_buffer_index, i == 0);
                 }
                 if (element->attr.bits.transition_step != 0)
                 {
@@ -1120,9 +1122,9 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
                     s32 x = element->attr.bits.x;
                     u32 width_low = ADDHERO_ELEMENT_WIDTH_LOW(element);
 
-                    prim = func_800AD850(prim, ot, x + (ADDHERO_ELEMENT_WIDTH(element, width_low) - scaled_width) / 2,
-                                         element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
-                                         draw_state->display_buffer_index, i == 0);
+                    prim = field_draw_menu_frame(prim, ot, x + (ADDHERO_ELEMENT_WIDTH(element, width_low) - scaled_width) / 2,
+                                                 element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
+                                                 draw_state->display_buffer_index, i == 0);
                 }
                 element->attr.bits.transition_step--;
                 if (element->attr.bits.transition_step == 0)

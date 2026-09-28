@@ -15,7 +15,7 @@
 #include "field_records.h"
 #include "shop.h"
 
-/** @brief FieldGameState.lands viewed as FieldLandWords. */
+/** @brief SavedGameLayout.lands viewed as FieldLandWords. */
 #define FIELD_LAND_WORDS ((FieldLandWords*)g_field_game_state->lands)
 
 /** @brief field_find_resource resources read by the opcodes. */
@@ -262,7 +262,6 @@ extern void (*g_field_script_op_table[])();
 extern FieldDispatchFn g_field_script_pair_op_table[];
 
 extern FieldRuntimeContext* g_field_runtime;
-extern FieldGameState* g_field_game_state;
 extern FieldBattleContext* g_field_battle;
 extern s32 D_8011F428;
 extern s32 g_field_gosub_state;
@@ -1823,10 +1822,10 @@ void field_script_op_0f(void)
         field_apply_region_level_ups(4);
         break;
     case 6:
-        for (i = 0; i < FIELD_REGION_COUNT; i++)
+        for (i = 0; i < PET_RECORD_COUNT; i++)
         {
-            g_field_game_state->regions[i].unk42 = 0;
-            g_field_game_state->regions[i].status.word &= ~FIELD_COMPANION_NEW;
+            g_field_game_state->pets[i].hatch_counter = 0;
+            g_field_game_state->pets[i].status.word &= ~PET_STATUS_EGG;
         }
         break;
     case 7:

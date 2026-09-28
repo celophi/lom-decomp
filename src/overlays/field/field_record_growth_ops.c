@@ -18,10 +18,10 @@
 /** @brief Progress word with the maximum experience and a zero level byte. */
 #define FIELD_EXPERIENCE_MAX_WORD ((u32)FIELD_EXPERIENCE_MAX << 8)
 
-/** @brief Largest counter value in FieldGameState::words. */
+/** @brief Largest counter value in SavedGameLayout::words. */
 #define FIELD_COUNTER_MAX 9999999
 
-/** @brief First FieldGameState::words entry of the per-character counters. */
+/** @brief First SavedGameLayout::words entry of the per-character counters. */
 #define FIELD_CHARACTER_COUNTER_BASE 0x68
 
 /** @brief Largest base stat value (FIELD_STAT_BASE_MASK bits of a stat halfword). */
@@ -33,10 +33,10 @@
 /** @brief FieldStatusRecord::status_flags bit: the recipient shares its experience with the party. */
 #define FIELD_RECORD_FLAG_SHARE_EXPERIENCE 0x4
 
-/** @brief FieldRegionRecord::status bit 30: the stored companion gains experience. */
+/** @brief PetRecord::status bit 30: the stored companion gains experience. */
 #define FIELD_REGION_GAINS_EXPERIENCE_SHIFT 30
 
-/** @brief FieldRegionRecord::status bits 24-26: pending effects already applied. */
+/** @brief PetRecord::status bits 24-26: pending effects already applied. */
 #define FIELD_REGION_APPLIED_MASK 0x07000000
 
 /** @brief Pending effect slots of a stored companion record. */
@@ -68,8 +68,6 @@
 /** @brief Diagnostic codes of this file. */
 #define DIAG_BAD_COMPANION_SLOT 0x79   /**< The active stored companion index is out of range. */
 #define DIAG_BAD_REGION_SLOT 0x1F3     /**< A stored companion level-up names a slot out of range. */
-
-extern FieldGameState* g_field_game_state;
 
 /** @brief Per item type: eight four-bit stat increases applied on a level-up. */
 extern u32 g_field_item_type_stat_growth[];
@@ -186,7 +184,7 @@ void field_award_experience(s32 record_index, s32 amount)
  */
 static void field_add_guest_counter(s32 amount)
 {
-    FieldGameState* state;
+    SavedGameLayout* state;
 
     state = g_field_game_state;
     state->words[state->characters[FIELD_PARTY_GUEST].info.bytes[1] + FIELD_CHARACTER_COUNTER_BASE] += amount;
@@ -205,20 +203,20 @@ static void field_award_region_experience(u32 amount)
     u32 region_index;
     u32 packed_value;
     u32 updated_value;
-    FieldGameState* state;
+    SavedGameLayout* state;
 
     amount >>= FIELD_REGION_EXPERIENCE_SHIFT;
     state = g_field_game_state;
-    for (region_index = 0; region_index < FIELD_REGION_COUNT; region_index++)
+    for (region_index = 0; region_index < PET_RECORD_COUNT; region_index++)
     {
-        if ((state->regions[region_index].name[0] != 0) && ((state->regions[region_index].status.word >> FIELD_REGION_GAINS_EXPERIENCE_SHIFT) & 1))
+        if ((state->pets[region_index].name[0] != 0) && ((state->pets[region_index].status.word >> FIELD_REGION_GAINS_EXPERIENCE_SHIFT) & 1))
         {
-            packed_value = state->regions[region_index].progress.word;
+            packed_value = state->pets[region_index].progress.word;
             updated_value = (packed_value & 0xFF) | (((packed_value >> 8) + amount) << 8);
-            state->regions[region_index].progress.word = updated_value;
+            state->pets[region_index].progress.word = updated_value;
             if ((s32)(updated_value >> 8) > FIELD_EXPERIENCE_MAX)
             {
-                state->regions[region_index].progress.word = (updated_value & 0xFF) | FIELD_EXPERIENCE_MAX_WORD;
+                state->pets[region_index].progress.word = (updated_value & 0xFF) | FIELD_EXPERIENCE_MAX_WORD;
             }
         }
     }
@@ -238,7 +236,7 @@ void field_apply_character_level_ups(s32 index, s32 notify)
 
 /**
  * @brief Apply every level-up a stored companion record's experience allows.
- * @param slot Companion record index (below FIELD_REGION_COUNT).
+ * @param slot Companion record index (below PET_RECORD_COUNT).
  * @note Each level adds the stat growth accumulators, rebuilds the effective stat
  *       bits, carries the total accumulators, recomputes hp and clears the
  *       pending effects.
@@ -258,14 +256,14 @@ void field_apply_region_level_ups(s32 slot)
     u32 threshold;
     u32 next_level;
     u32 experience;
-    FieldRegionRecord* record;
+    PetRecord* record;
 
-    if (slot >= FIELD_REGION_COUNT)
+    if (slot >= PET_RECORD_COUNT)
     {
         record_game_diagnostic(DIAG_ERROR, DIAG_BAD_REGION_SLOT, slot, 0);
         return;
     }
-    record = &g_field_game_state->regions[slot];
+    record = &g_field_game_state->pets[slot];
     pending = -1;
     if (record->name[0] != 0)
     {
@@ -305,7 +303,7 @@ void field_apply_region_level_ups(s32 slot)
                     record->total_growth[i].bits.accumulator &= FIELD_GROWTH_ACCUMULATOR_KEEP;
                     record->total_growth[i].bits.accumulator += record->total_growth[i].bits.rate;
                 }
-                record->unk1E += record->extra_growth.bytes[0] >> FIELD_GROWTH_CARRY_SHIFT;
+                record->power += record->extra_growth.bytes[0] >> FIELD_GROWTH_CARRY_SHIFT;
                 record->extra_growth.growth.accumulator &= FIELD_GROWTH_ACCUMULATOR_KEEP;
                 record->extra_growth.growth.accumulator += record->extra_growth.growth.rate;
                 record->hp = field_add_stat_increase(record->hp, (u32)(record->stats[FIELD_STAT_HP_GROWTH] & FIELD_STAT_BASE_MASK) >> 2,
@@ -411,15 +409,15 @@ static void field_grow_companion_stats(FieldCharacterRecord* character)
     u16 total;
     u32 slot;
 
-    slot = g_field_game_state->region_index;
-    if (slot >= FIELD_REGION_COUNT)
+    slot = g_field_game_state->joined_pet;
+    if (slot >= PET_RECORD_COUNT)
     {
         record_game_diagnostic(DIAG_ERROR, DIAG_BAD_COMPANION_SLOT, slot, 0);
     }
     for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
     {
         stat = character->stats[i];
-        low = g_field_game_state->regions[g_field_game_state->region_index].stat_growth[i].bits.accumulator + (stat & FIELD_STAT_BASE_MASK);
+        low = g_field_game_state->pets[g_field_game_state->joined_pet].stat_growth[i].bits.accumulator + (stat & FIELD_STAT_BASE_MASK);
         low &= FIELD_STAT_BASE_MASK;
         stat &= FIELD_STAT_EFFECTIVE_MASK;
         stat |= low;
@@ -428,35 +426,35 @@ static void field_grow_companion_stats(FieldCharacterRecord* character)
         {
             character->stats[i] = (stat & FIELD_STAT_EFFECTIVE_MASK) | FIELD_STAT_MAX;
         }
-        g_field_game_state->regions[g_field_game_state->region_index].stat_growth[i].bits.accumulator =
-            g_field_game_state->regions[g_field_game_state->region_index].stat_growth[i].bits.rate;
+        g_field_game_state->pets[g_field_game_state->joined_pet].stat_growth[i].bits.accumulator =
+            g_field_game_state->pets[g_field_game_state->joined_pet].stat_growth[i].bits.rate;
     }
-    total = character->unk26 + (g_field_game_state->regions[g_field_game_state->region_index].extra_growth.bytes[0] >> FIELD_GROWTH_CARRY_SHIFT);
+    total = character->unk26 + (g_field_game_state->pets[g_field_game_state->joined_pet].extra_growth.bytes[0] >> FIELD_GROWTH_CARRY_SHIFT);
     character->unk26 = total;
-    g_field_game_state->regions[g_field_game_state->region_index].unk1E = total;
+    g_field_game_state->pets[g_field_game_state->joined_pet].power = total;
     character->equipment[FIELD_WEAPON_SLOT].derived.values[0] = character->unk26;
-    g_field_game_state->regions[g_field_game_state->region_index].extra_growth.growth.accumulator &= FIELD_GROWTH_ACCUMULATOR_KEEP;
-    g_field_game_state->regions[g_field_game_state->region_index].extra_growth.growth.accumulator +=
-        g_field_game_state->regions[g_field_game_state->region_index].extra_growth.growth.rate;
+    g_field_game_state->pets[g_field_game_state->joined_pet].extra_growth.growth.accumulator &= FIELD_GROWTH_ACCUMULATOR_KEEP;
+    g_field_game_state->pets[g_field_game_state->joined_pet].extra_growth.growth.accumulator +=
+        g_field_game_state->pets[g_field_game_state->joined_pet].extra_growth.growth.rate;
     for (i = 0; i < 4; i++)
     {
-        total = character->equipment_totals[i] + (g_field_game_state->regions[g_field_game_state->region_index].total_growth[i].byte >> FIELD_GROWTH_CARRY_SHIFT);
+        total = character->equipment_totals[i] + (g_field_game_state->pets[g_field_game_state->joined_pet].total_growth[i].byte >> FIELD_GROWTH_CARRY_SHIFT);
         character->equipment_totals[i] = total;
-        g_field_game_state->regions[g_field_game_state->region_index].equipment_totals[i] = total;
+        g_field_game_state->pets[g_field_game_state->joined_pet].equipment_totals[i] = total;
         /* Pointer form: indexing equipment[1] lets loop.c fold this store into the equipment_totals walker. */
         (character->equipment + 1)->derived.values[i] = character->equipment_totals[i];
-        g_field_game_state->regions[g_field_game_state->region_index].total_growth[i].bits.accumulator &= FIELD_GROWTH_ACCUMULATOR_KEEP;
-        g_field_game_state->regions[g_field_game_state->region_index].total_growth[i].bits.accumulator +=
-            g_field_game_state->regions[g_field_game_state->region_index].total_growth[i].bits.rate;
+        g_field_game_state->pets[g_field_game_state->joined_pet].total_growth[i].bits.accumulator &= FIELD_GROWTH_ACCUMULATOR_KEEP;
+        g_field_game_state->pets[g_field_game_state->joined_pet].total_growth[i].bits.accumulator +=
+            g_field_game_state->pets[g_field_game_state->joined_pet].total_growth[i].bits.rate;
     }
     character->hp = field_add_stat_increase(character->hp, (u32)(character->stats[FIELD_STAT_HP_GROWTH] & FIELD_STAT_BASE_MASK) >> 2,
                                             FIELD_INCREASE_DAMPED | FIELD_INCREASE_CAPPED);
-    g_field_game_state->regions[g_field_game_state->region_index].progress.level = character->progress.level;
-    g_field_game_state->regions[g_field_game_state->region_index].hp = character->hp;
-    g_field_game_state->regions[g_field_game_state->region_index].status.word &= ~FIELD_REGION_APPLIED_MASK;
+    g_field_game_state->pets[g_field_game_state->joined_pet].progress.level = character->progress.level;
+    g_field_game_state->pets[g_field_game_state->joined_pet].hp = character->hp;
+    g_field_game_state->pets[g_field_game_state->joined_pet].status.word &= ~FIELD_REGION_APPLIED_MASK;
     for (i = 0; i < FIELD_REGION_PENDING_EFFECT_COUNT; i++)
     {
-        g_field_game_state->regions[g_field_game_state->region_index].status.effects[i] = FIELD_NO_EFFECT;
+        g_field_game_state->pets[g_field_game_state->joined_pet].status.effects[i] = FIELD_NO_EFFECT;
     }
 }
 

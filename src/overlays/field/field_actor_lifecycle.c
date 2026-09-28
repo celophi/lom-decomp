@@ -38,7 +38,6 @@
 #define FIELD_DIAGNOSTIC_ERROR 0x8001
 #define FIELD_DIAGNOSTIC_NO_TEMPLATE 0x67
 
-extern FieldGameState* g_field_game_state;
 extern FieldRuntimeContext* g_field_runtime;
 extern FieldBattleContext* g_field_battle;
 extern s32 g_field_duel_mode;

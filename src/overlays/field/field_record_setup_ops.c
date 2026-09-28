@@ -50,7 +50,6 @@
 extern s32 g_field_gosub_state;
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
-extern FieldGameState* g_field_game_state;
 extern FieldRuntimeContext* g_field_runtime;
 
 FieldItemRecord* field_find_free_inventory_record(void);

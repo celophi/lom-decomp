@@ -1,15 +1,6 @@
 #include "carda_internal.h"
 #include "saved_game.h"
 
-/** @brief Byte size of the checksummed part of a CARDA save file. */
-#define CARDA_SAVE_PAYLOAD_BYTES 0x33E0
-
-/** @brief Format marker stored after the checksum of a CARDA save file. */
-#define CARDA_SAVE_MAGIC 0x00414E41
-
-/** @brief Constant added to the doubled byte sum by carda_compute_save_checksum. */
-#define CARDA_SAVE_CHECKSUM_BIAS 0x0414E410
-
 /** @brief Byte size of a standard memory-card file header (title frame plus three icon frames). */
 #define CARDA_CARD_HEADER_BYTES 0x200
 
@@ -22,111 +13,15 @@
 /** @brief Number of save icons in the built-in save-icon table. */
 #define CARDA_SAVE_ICON_COUNT 10
 
-/** @brief Icon id that draws no save icon. */
-#define CARDA_NO_ICON 0x7F
+/** @brief First icon id of the golem icons, drawn with a generated CLUT (see carda_draw_icon_highlight). */
+#define CARDA_GOLEM_ICON_BASE 0x4F
 
-/** @brief Character icon id whose summary icon palette comes from a saved record. */
-#define CARDA_RECORD_ICON 4
-
-/** @brief First icon id of the generated-CLUT icons (see carda_draw_icon_highlight). */
-#define CARDA_RECORD_ICON_BASE 0x4F
-
-/** @brief First save-icon id of the variant character icons. */
-#define CARDA_VARIANT_ICON_BASE 0x0E
+/** @brief First save-icon id of the pet icons. */
+#define CARDA_PET_ICON_BASE 0x0E
 
 /** @brief Play-time ticks (1/60 s) per minute and per hour. */
 #define CARDA_TICKS_PER_MINUTE 3600
 #define CARDA_TICKS_PER_HOUR 216000
-
-/** @brief A character slot of the live saved game. */
-typedef struct
-{
-    u8 name[0x18];
-    u8 icon : 7;
-    u8 unknown_0x18_7 : 1;
-    u8 icon_variant;
-    u8 unknown_0x1a[6];
-    u8 unknown_0x20;
-    u8 unknown_0x21[0x74 - 0x21];
-    u8 unknown_0x74;
-    u8 unknown_0x75[0x250 - 0x75];
-} CardaSavedCharacter;
-
-/** @brief A 0x14C-byte record of the live saved game; only its first byte is used here. */
-typedef struct
-{
-    u8 icon_palette;
-    u8 unknown_0x01[0x14C - 1];
-} CardaSavedRecord;
-
-/** @brief A 0x40-byte slot of the live saved game; a nonzero first byte counts it as in use. */
-typedef struct
-{
-    u8 in_use;
-    u8 unknown_0x01[0x3F];
-} CardaSavedSlot;
-
-/**
- * @brief The parts of the saved game that the save-file builder reads and
- *        updates; the leading summary is what the file-select screen shows.
- * @note The struct stops 8 bytes short of SAVED_GAME_DATA_SIZE: a save file
- *       stores the checksum and marker over the last 8 bytes of the copy.
- */
-typedef struct
-{
-    u8 summary_name[21];
-    u8 summary_0x15;
-    u8 summary_0x16;
-    u8 summary_slot_count;
-    u32 unknown_0x18 : 25;
-    u32 party_icon_0 : 7;
-    u8 unknown_0x1c[3];
-    u8 icon_palette;
-    u32 location : 18;
-    u32 party_icon_1 : 7;
-    u32 party_icon_2 : 7;
-    u8 unknown_0x24[4];
-    u32 option_unknown_0 : 2;
-    u32 option_flag_2 : 1; /**< SAVED_OPTION_FLAG_2: marks the save title and gates carda_test_option_flag_2. */
-    u32 option_unknown_3 : 29;
-    u8 unknown_0x2c[4];
-    s32 playtime; /**< Play time in 1/60 s ticks. */
-    u8 unknown_0x34[0xD6 - 0x34];
-    s16 unknown_0xd6;
-    u8 unknown_0xd8[0x2E4 - 0xD8];
-    u8 unknown_0x2e4; /**< Scaled by 9 / 26 to pick one of the CARDA_SAVE_ICON_COUNT save icons. */
-    u8 unknown_0x2e5[0x5F0 - 0x2E5];
-    CardaSavedCharacter characters[3];
-    u8 unknown_0xce0[0x29D7 - 0xCE0];
-    s8 record_index;
-    u8 unknown_0x29d8[0x2B54 - 0x29D8];
-    CardaSavedRecord records[4];
-    u8 unknown_0x3084[0x3160 - 0x3084];
-    CardaSavedSlot slots[4];
-} CardaSavedGame;
-
-/** @brief The live saved game, viewed through CardaSavedGame. */
-#define CARDA_SAVED_GAME ((CardaSavedGame*)g_pad_ctx)
-
-/** @brief Standard memory-card file header as far as a CARDA save uses it. */
-typedef struct
-{
-    char magic[2];
-    u8 icon_flags;
-    u8 block_count;
-    u8 title[0x5C];
-    u8 clut[0x20];
-    u8 icon_frames[2][0x80];
-} CardaCardFileHeader;
-
-/** @brief A CARDA save file: card header, saved game, checksum and format marker. */
-typedef struct
-{
-    CardaCardFileHeader header;
-    CardaSavedGame saved_game;
-    s32 checksum;
-    s32 magic;
-} CardaSaveBlob;
 
 /** @brief One save icon: a 16-color CLUT followed by two 16x16 4-bit frames. */
 typedef struct
@@ -157,7 +52,7 @@ typedef struct
 #define CARDA_ICON_IMAGE(icon) ((CardaIconImage*)((u8*)&D_8014CC54 - 4 + D_8014CC54[icon]))
 
 /* Only referenced here; its blob type is private to this file. */
-s32 carda_validate_save_blob(CardaSaveBlob* blob);
+s32 carda_validate_save_file(SaveFile* file);
 
 /**
  * @brief Build the save file for the live saved game in g_carda_save_blob: card
@@ -167,7 +62,7 @@ s32 carda_validate_save_blob(CardaSaveBlob* blob);
  */
 void carda_build_save_file(void)
 {
-    CardaSaveBlob* blob;
+    SaveFile* blob;
     u8* cursor;
     u8* src;
     u8* title_text;
@@ -187,7 +82,7 @@ void carda_build_save_file(void)
     }
 
     /* Header: magic, icon format and size, then clear the rest of the standard card header. */
-    blob = (CardaSaveBlob*)g_carda_save_blob;
+    blob = (SaveFile*)g_carda_save_blob;
     cursor = (u8*)blob + CARDA_CARD_HEADER_BYTES - 5;
     blob->header.magic[0] = 'S';
     blob->header.magic[1] = 'C';
@@ -199,7 +94,7 @@ void carda_build_save_file(void)
         cursor--;
     }
 
-    icon = CARDA_SAVED_GAME->unknown_0x2e4 * 9 / 26;
+    icon = g_saved_game_ctx->control.fields.placed_land_count * 9 / 26;
     i = 0;
     if (icon >= CARDA_SAVE_ICON_COUNT)
     {
@@ -226,16 +121,16 @@ void carda_build_save_file(void)
     } while (count < 2);
 
     /* Title: template text, optional marker, save number, play time and the player's name. */
-    strcpy(blob->header.title, &g_carda_save_title_template);
-    if (CARDA_SAVED_GAME->option_flag_2)
+    strcpy(blob->header.title[0], &g_carda_save_title_template);
+    if (g_saved_game_ctx->options.bits.flag_2)
     {
-        blob->header.title[8] = 0x81;
-        blob->header.title[9] = 0xF4;
+        blob->header.title[0][8] = 0x81;
+        blob->header.title[0][9] = 0xF4;
     }
-    time = CARDA_SAVED_GAME->playtime + VSync(-1) - g_playtime_vsync_origin;
-    CARDA_SAVED_GAME->playtime = time;
+    time = g_saved_game_ctx->play_time + VSync(-1) - g_playtime_vsync_origin;
+    g_saved_game_ctx->play_time = time;
     g_playtime_vsync_origin = VSync(-1);
-    text = carda_format_decimal((s8*)&blob->header.title[0x12], g_carda_entry_suffix_values[g_carda_selected_row]);
+    text = carda_format_decimal((s8*)&blob->header.title[0][0x12], g_carda_entry_suffix_values[g_carda_selected_row]);
     *(CardaSjisChar*)text = D_8014008C;
     hours = time / CARDA_TICKS_PER_HOUR;
     text = carda_format_decimal(text + 2, hours);
@@ -246,68 +141,68 @@ void carda_build_save_file(void)
     {
         text = carda_format_decimal(text, 0);
     }
-    carda_expand_text_glyph_codes((u8*)carda_format_decimal(text, time), CARDA_SAVED_GAME->characters[0].name);
+    carda_expand_text_glyph_codes((u8*)carda_format_decimal(text, time), g_saved_game_ctx->characters[FIELD_PARTY_HERO].name);
 
     /* File-select summary in the live saved game. */
-    CARDA_SAVED_GAME->party_icon_0 = CARDA_SAVED_GAME->characters[0].icon;
-    if (CARDA_SAVED_GAME->characters[1].name[0] != 0)
+    g_saved_game_ctx->spawn.bits.party_icon_0 = g_saved_game_ctx->characters[FIELD_PARTY_HERO].info.bits.type;
+    if (g_saved_game_ctx->characters[FIELD_PARTY_GUEST].name[0] != 0)
     {
-        party_icon = CARDA_SAVED_GAME->characters[1].icon;
+        party_icon = g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.bits.type;
         if (party_icon < 2)
         {
-            CARDA_SAVED_GAME->party_icon_1 = party_icon;
+            g_saved_game_ctx->track.bits.party_icon_1 = party_icon;
         }
         else
         {
-            CARDA_SAVED_GAME->party_icon_1 = CARDA_SAVED_GAME->characters[1].icon_variant + 2;
+            g_saved_game_ctx->track.bits.party_icon_1 = g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.bytes[1] + 2;
         }
     }
     else
     {
-        CARDA_SAVED_GAME->party_icon_1 = CARDA_NO_ICON;
+        g_saved_game_ctx->track.bits.party_icon_1 = SAVE_NO_ICON;
     }
-    if (CARDA_SAVED_GAME->characters[2].name[0] != 0)
+    if (g_saved_game_ctx->characters[FIELD_PARTY_COMPANION].name[0] != 0)
     {
-        if (CARDA_SAVED_GAME->characters[2].icon == CARDA_RECORD_ICON)
+        if (g_saved_game_ctx->characters[FIELD_PARTY_COMPANION].info.bits.type == FIELD_CHARACTER_GOLEM)
         {
-            CARDA_SAVED_GAME->party_icon_2 = CARDA_SAVED_GAME->characters[2].icon_variant + CARDA_RECORD_ICON_BASE;
-            CARDA_SAVED_GAME->icon_palette = CARDA_SAVED_GAME->records[CARDA_SAVED_GAME->record_index].icon_palette;
+            g_saved_game_ctx->track.bits.party_icon_2 = g_saved_game_ctx->characters[FIELD_PARTY_COMPANION].info.bytes[1] + CARDA_GOLEM_ICON_BASE;
+            g_saved_game_ctx->icon_palette = g_saved_game_ctx->golem_records[g_saved_game_ctx->joined_golem].palette;
         }
         else
         {
-            CARDA_SAVED_GAME->party_icon_2 = CARDA_SAVED_GAME->characters[2].icon_variant + CARDA_VARIANT_ICON_BASE;
+            g_saved_game_ctx->track.bits.party_icon_2 = g_saved_game_ctx->characters[FIELD_PARTY_COMPANION].info.bytes[1] + CARDA_PET_ICON_BASE;
         }
     }
     else
     {
-        CARDA_SAVED_GAME->party_icon_2 = CARDA_NO_ICON;
+        g_saved_game_ctx->track.bits.party_icon_2 = SAVE_NO_ICON;
     }
     for (i = 0; i < 21; i++)
     {
-        CARDA_SAVED_GAME->summary_name[i] = CARDA_SAVED_GAME->characters[0].name[i];
+        g_saved_game_ctx->summary_name[i] = g_saved_game_ctx->characters[FIELD_PARTY_HERO].name[i];
     }
-    CARDA_SAVED_GAME->summary_0x15 = CARDA_SAVED_GAME->characters[0].unknown_0x20;
-    CARDA_SAVED_GAME->summary_0x16 = CARDA_SAVED_GAME->characters[0].unknown_0x74;
+    g_saved_game_ctx->unk15 = g_saved_game_ctx->characters[FIELD_PARTY_HERO].progress.level;
+    g_saved_game_ctx->unk16 = g_saved_game_ctx->characters[FIELD_PARTY_HERO].equipment[FIELD_WEAPON_SLOT].derived.bytes[0];
     count = 0;
     for (i = 0; i < 4; i++)
     {
-        if (CARDA_SAVED_GAME->slots[i].in_use != 0)
+        if (g_saved_game_ctx->summary_records[i].in_use != 0)
         {
             count++;
         }
     }
-    CARDA_SAVED_GAME->summary_slot_count = count;
+    g_saved_game_ctx->summary_slot_count = count;
 
     /* The copy runs 8 bytes past saved_game; the checksum and marker overwrite them. */
-    bcopy(g_pad_ctx, &blob->saved_game, SAVED_GAME_DATA_SIZE);
-    blob->saved_game.unknown_0x18 = 6;
+    bcopy((u8*)g_saved_game_ctx, (u8*)&blob->saved_game, SAVED_GAME_DATA_SIZE);
+    blob->saved_game.spawn.bits.id = FIELD_SPAWN_LOAD_GAME;
     seed = rand();
-    blob->saved_game.unknown_0xd6 = seed | (rand() << 15);
+    blob->saved_game.identity.ids.save_id = seed | (rand() << 15);
     blob->checksum = carda_compute_save_checksum(blob);
-    blob->magic = CARDA_SAVE_MAGIC;
+    blob->magic = SAVE_FILE_MAGIC;
 
     /* Replace the start of the title with its final text. */
-    src = blob->header.title;
+    src = blob->header.title[0];
     title_text = D_8014BEE4;
     count = 0;
     do
@@ -340,7 +235,7 @@ u8* carda_skip_hex_digits(u8* text)
  */
 s32 carda_test_option_flag_2(void)
 {
-    if (g_carda_mode == 0 && CARDA_SAVED_GAME->option_flag_2)
+    if (g_carda_mode == 0 && g_saved_game_ctx->options.bits.flag_2)
     {
         return 1;
     }
@@ -349,14 +244,14 @@ s32 carda_test_option_flag_2(void)
 
 /**
  * @brief Validate a save blob against its trailing checksum and magic.
- * @param blob Save blob; its first CARDA_SAVE_PAYLOAD_BYTES bytes are summed by carda_compute_save_checksum.
- * @return 1 if the stored checksum matches and the magic equals CARDA_SAVE_MAGIC, otherwise 0.
+ * @param file Save file; its first SAVE_FILE_CHECKSUM_BYTES bytes are summed by carda_compute_save_checksum.
+ * @return 1 if the stored checksum matches and the magic equals SAVE_FILE_MAGIC, otherwise 0.
  */
-s32 carda_validate_save_blob(CardaSaveBlob* blob)
+s32 carda_validate_save_file(SaveFile* file)
 {
-    if (blob->checksum == carda_compute_save_checksum(blob))
+    if (file->checksum == carda_compute_save_checksum(file))
     {
-        if (blob->magic == CARDA_SAVE_MAGIC)
+        if (file->magic == SAVE_FILE_MAGIC)
         {
             return 1;
         }
@@ -366,8 +261,8 @@ s32 carda_validate_save_blob(CardaSaveBlob* blob)
 
 /**
  * @brief Compute the additive checksum of a save payload.
- * @param data Start of the CARDA_SAVE_PAYLOAD_BYTES-byte save payload.
- * @return Twice the byte sum plus CARDA_SAVE_CHECKSUM_BIAS.
+ * @param data Start of the save file; SAVE_FILE_CHECKSUM_BYTES bytes are summed.
+ * @return Twice the byte sum plus SAVE_FILE_CHECKSUM_BIAS.
  */
 s32 carda_compute_save_checksum(void* data)
 {
@@ -383,8 +278,8 @@ s32 carda_compute_save_checksum(void* data)
         byte_index++;
         sum += *cursor;
         cursor++;
-    } while (byte_index < CARDA_SAVE_PAYLOAD_BYTES);
-    return sum * 2 + CARDA_SAVE_CHECKSUM_BIAS;
+    } while (byte_index < SAVE_FILE_CHECKSUM_BYTES);
+    return sum * 2 + SAVE_FILE_CHECKSUM_BIAS;
 }
 
 /**
@@ -475,7 +370,7 @@ void* carda_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 void* carda_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     s32 unused[2]; /* never used, but the original stack frame reserves it */
-    CardaSaveBlob* blob;
+    SaveFile* blob;
     CardaElement* element;
     CardaElement* cursor;
     void* result;
@@ -494,14 +389,14 @@ void* carda_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_offse
 
     if (g_carda_progress_active == 0)
     {
-        blob = (CardaSaveBlob*)g_carda_save_blob;
+        blob = (SaveFile*)g_carda_save_blob;
         element = g_carda_element_pool;
         element->attr.f.state = CARDA_ELEMENT_FREE;
         checksum = carda_compute_save_checksum(blob);
         valid = 0;
         if (blob->checksum == checksum)
         {
-            valid = blob->magic == CARDA_SAVE_MAGIC;
+            valid = blob->magic == SAVE_FILE_MAGIC;
         }
         if (valid == 0)
         {
@@ -510,7 +405,7 @@ void* carda_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_offse
         }
 
         play_menu_sfx(0x7B, 0x80);
-        bcopy(&blob->saved_game, g_pad_ctx, SAVED_GAME_DATA_SIZE);
+        bcopy((u8*)&blob->saved_game, (u8*)g_saved_game_ctx, SAVED_GAME_DATA_SIZE);
         g_playtime_vsync_origin = VSync(-1);
         field_restore_fade_target();
 
@@ -1199,11 +1094,11 @@ void* carda_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offse
  * @param x Quad left edge.
  * @param y Quad top edge.
  * @param width Quad width.
- * @param icon Icon id; CARDA_NO_ICON draws nothing, ids below 2 in row 1 and ids from
+ * @param icon Icon id; SAVE_NO_ICON draws nothing, ids below 2 in row 1 and ids from
  *             0x4F up get a generated CLUT (func_800A5638 / func_800A55E4).
  * @param index VRAM icon slot; selects the CLUT row entry and the texture column.
  * @param row Entry row; row 1 uses the generated CLUT for icons 0 and 1.
- * @return Primitive-buffer cursor after the quad, or @p quad unchanged for CARDA_NO_ICON.
+ * @return Primitive-buffer cursor after the quad, or @p quad unchanged for SAVE_NO_ICON.
  */
 void* carda_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 width, s32 icon, s32 index, s32 row)
 {
@@ -1211,7 +1106,7 @@ void* carda_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 wi
     s32 column;
     u8 u;
 
-    if (icon == CARDA_NO_ICON)
+    if (icon == SAVE_NO_ICON)
     {
         return quad;
     }
@@ -1223,7 +1118,7 @@ void* carda_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 wi
         LoadImage(&rect, g_carda_icon_context);
         DrawSync(0);
     }
-    else if (icon >= CARDA_RECORD_ICON_BASE)
+    else if (icon >= CARDA_GOLEM_ICON_BASE)
     {
         func_800A55E4(g_carda_icon_context, g_carda_icon_palette);
         LoadImage(&rect, g_carda_icon_context);

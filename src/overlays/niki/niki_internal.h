@@ -2,9 +2,12 @@
 #define LOM_NIKI_INTERNAL_H
 
 #include "common.h"
+#include "saved_game.h"
 #include "vector.h"
 #include "display.h"
 #include "sdk/kernel.h"
+#include "sdk/libetc.h"
+#include "sdk/libmcx.h"
 
 #define NIKI_SJIS_FULLWIDTH_ZERO 0x4F82
 #define NIKI_SJIS_MINUS 0x5B81
@@ -161,24 +164,6 @@ typedef struct NikiElement
     s32 (*draw)(s32* ot, s32 prim, s32 x_offset, s32 y_offset);
 } NikiElement;
 
-/** @brief Save-entry preview, packed party icons, playtime, and comparison fields. */
-typedef struct
-{
-    u8 text[0x17];
-    u8 status;
-    s32 first_icon_word;
-    u8 unknown_0x1c[3];
-    u8 icon_palette;
-    s32 party_word;
-    u8 unknown_0x24[12];
-    s32 playtime_frames;
-    u8 unknown_0x34[0xCF - 0x34];
-    u8 unknown_0xcf;
-    u8 unknown_0xd0[4];
-    u16 identifier;
-    u16 unknown_0xd6;
-} NikiEntryMetadata;
-
 /** @brief Memory-card directory entry; layout matches Psy-Q DIRENTRY. */
 typedef struct NikiDirEntry
 {
@@ -189,6 +174,9 @@ typedef struct NikiDirEntry
     s32 head;
     char system[4];
 } NikiDirEntry;
+
+/** @brief Bytes read to show an entry: the card header and the first 0x100 bytes of the saved game. */
+#define NIKI_ENTRY_READ_BYTES 0x280
 
 /** @brief Linked-list tag shared by GPU packets of different sizes. */
 typedef struct
@@ -280,20 +268,6 @@ typedef struct
     s16 x3;
     s16 y3;
 } NikiPolyG4Packet;
-
-/** @brief Preview transfer buffer with a two-line title and extended save metadata. */
-typedef struct
-{
-    u8 header[4];
-    union
-    {
-        u8 text[64];
-        u8 lines[2][32];
-    } title;
-    u8 unknown_0x44[0x180 - 0x44];
-    NikiEntryMetadata metadata;
-    u8 unknown_0x258[0x280 - 0x258];
-} NikiEntryPreview;
 
 typedef struct
 {
@@ -433,7 +407,8 @@ extern s32 g_niki_entry_state;
 extern s32 g_niki_selection_status;
 extern s32 g_niki_frame_parity;
 extern s32 g_niki_progress_active;
-extern s32 D_80164ADC;
+/** @brief The saved game's item records (g_saved_game_ctx->items). */
+extern FieldItemRecord* g_niki_items;
 extern s32 g_niki_selected_row;
 extern s32 g_pad_input;
 extern s32 g_niki_scroll_frames;
@@ -452,11 +427,14 @@ extern u8* g_niki_load_step;
 extern s32 g_field_niki_addhero_state;
 extern char D_800ECF7C[];
 extern NikiDirEntry g_niki_entries[][NIKI_DIRECTORY_ENTRY_COUNT];
-extern NikiEntryMetadata* D_8012271C;
 extern s32 D_8003EC9C;
 extern s32 g_niki_icon_palette;
 extern s32 g_niki_dialog_state;
-extern NikiEntryPreview g_niki_entry_preview;
+/**
+ * @brief Start of the selected entry's save file: only the card header and the
+ *        first 0x100 bytes of the saved game are read (NIKI_ENTRY_READ_BYTES).
+ */
+extern SaveFile g_niki_entry_file;
 extern u16 D_80147120;
 extern u16 D_80147146;
 extern u16 D_80147148;
@@ -612,9 +590,6 @@ s32 func_8001724C(s32);
 s32 func_8001725C(s32);
 s32 func_8001729C(s32);
 s32 func_800172AC(s32);
-s32 func_8002054C(s32);
-s32 func_80032174(s32, void*, s32*);
-s32 func_800342CC(s32);
 s32 niki_begin_entry_scan(s32);
 s32 niki_scan_next_entry(s32);
 void niki_release_primary_handles(void);

@@ -93,7 +93,7 @@ void niki_build_ui_elements(void)
     g_niki_scroll_y = 0;
     g_niki_selected_row = 0;
     g_niki_selection_status = 0;
-    D_80164ADC = (s32)D_8012271C + 0xCE0;
+    g_niki_items = g_saved_game_ctx->items;
     if (0)
     {
         niki_clear_elements(0, 0, 0, 0, 0);
@@ -378,8 +378,9 @@ s32 niki_handle_input(void)
         }
         if (func_8001714C(D_800ECF7C, g_niki_entries[g_niki_card_slot][g_niki_selected_row].name, 0xC) == 0)
         {
-            NikiEntryMetadata* metadata = &g_niki_entry_preview.metadata;
-            if ((metadata->identifier != D_8012271C->identifier) && (metadata->status != 0) && ((D_8003EC9C == 0xFF) || (metadata->unknown_0xcf == D_8003EC9C)))
+            SavedGameLayout* metadata = &g_niki_entry_file.saved_game;
+            if ((metadata->identity.ids.game_id != g_saved_game_ctx->identity.ids.game_id) && (metadata->summary_slot_count != 0) &&
+                ((D_8003EC9C == 0xFF) || (metadata->save_slot == D_8003EC9C)))
             {
                 element = niki_alloc_element();
                 element->attr.f.phase = 1;
@@ -770,7 +771,7 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
         {
             if (func_8001714C(D_800ECF7C, g_niki_entries[g_niki_card_slot][g_niki_selected_row].name, 0xC) == 0)
             {
-                if (D_8003EC9C == 0xFF || g_niki_entry_preview.metadata.unknown_0xcf == D_8003EC9C)
+                if (D_8003EC9C == 0xFF || g_niki_entry_file.saved_game.save_slot == D_8003EC9C)
                 {
                     s32 icon_count;
                     s32 visible_icon_index;
@@ -785,10 +786,10 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
                     s32 wrapped_phase;
 
                     {
-                        NikiEntryMetadata* record = &g_niki_entry_preview.metadata;
-                        icons[0] = (u32)(record->first_icon_word) >> 0x19;
-                        icons[1] = ((u32)(record->party_word) >> 0x12) & 0x7F;
-                        icons[2] = (u32)(record->party_word) >> 0x19;
+                        SavedGameLayout* record = &g_niki_entry_file.saved_game;
+                        icons[0] = (u32)(record->spawn.word) >> 0x19;
+                        icons[1] = (record->track.word >> 0x12) & 0x7F;
+                        icons[2] = record->track.word >> 0x19;
                         g_niki_icon_palette = (s32)record->icon_palette;
                     }
 
@@ -861,12 +862,12 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
                     }
 
                     {
-                        NikiEntryMetadata* preview = &g_niki_entry_preview.metadata;
+                        SavedGameLayout* preview = &g_niki_entry_file.saved_game;
                         s32 x = -x_offset;
                         s32 y = -y_offset;
                         s32 playtime;
 
-                        playtime = preview->playtime_frames;
+                        playtime = preview->play_time;
                         pos.x = (s16)(x + 0x70);
                         pos.y = (s16)y;
                         hours = playtime / 216000;
@@ -882,19 +883,19 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
                         pos.x = (s16)(x + 0x85);
                         pos.y = (s16)y;
                         result = func_800A8A78(ot, result, playtime, 4, &pos, 1);
-                        result = func_800A88A0(result, ot, preview->text, 4, x + 0x54, y + 0x10, 0);
+                        result = func_800A88A0(result, ot, preview->summary_name, 4, x + 0x54, y + 0x10, 0);
 
-                        if (preview->identifier == D_8012271C->identifier)
+                        if (preview->identity.ids.game_id == g_saved_game_ctx->identity.ids.game_id)
                         {
                             result = func_800A88A0(result, ot, GLYPH_SYM(D_80147148, 0x50), 4, x + 0x54, y + 0x20, 0);
                         }
-                        else if (preview->status == 0)
+                        else if (preview->summary_slot_count == 0)
                         {
                             result = func_800A88A0(result, ot, GLYPH_SYM(D_80147146, 0x4E), 4, x + 0x54, y + 0x20, 0);
                         }
                         else
                         {
-                            result = func_800A88A0(result, ot, GLYPH_OFF((u8*)D_801475C4, (preview->party_word & 0x3FFFF) * 2), 4, x + 0x54, y + 0x20, 0);
+                            result = func_800A88A0(result, ot, GLYPH_OFF((u8*)D_801475C4, (preview->track.word & 0x3FFFF) * 2), 4, x + 0x54, y + 0x20, 0);
                         }
                     }
                 }
@@ -906,22 +907,22 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
             else
             {
                 s32 slot_index;
-                NikiEntryPreview* record;
+                SaveFileHeader* header;
 
-                niki_terminate_multibyte_text(g_niki_entry_preview.title.text);
-                record = &g_niki_entry_preview;
-                if ((u32)(record->title.lines[1][0] - 1) >= 0x7FU)
+                niki_terminate_multibyte_text(g_niki_entry_file.header.title);
+                header = &g_niki_entry_file.header;
+                if ((u32)(header->title[1][0] - 1) >= 0x7FU)
                 {
                     for (slot_index = 0; slot_index < 0x20; slot_index++)
                     {
-                        name[slot_index] = *(record->title.lines[0] + slot_index);
+                        name[slot_index] = *(header->title[0] + slot_index);
                     }
                     name[slot_index] = 0;
                     result = niki_draw_cached_text(result, ot, name, -x_offset, -y_offset, 4, 0);
 
                     for (slot_index = 0; slot_index < 0x20; slot_index++)
                     {
-                        name[slot_index] = g_niki_entry_preview.title.lines[1][slot_index];
+                        name[slot_index] = g_niki_entry_file.header.title[1][slot_index];
                     }
                     name[slot_index] = 0;
                     result = niki_draw_cached_text(result, ot, name, -x_offset, -y_offset + 0x10, 4, 0);
@@ -1420,7 +1421,7 @@ s32 niki_draw_progress_bar(s32 prim, s32* ot)
     bar = (NikiPolyG4Packet*)prim;
     if (g_niki_progress_bar_active != 0)
     {
-        elapsed = func_8002054C(-1) - g_niki_progress_start_tick;
+        elapsed = VSync(-1) - g_niki_progress_start_tick;
         if (elapsed >= NIKI_PROGRESS_DURATION + 1)
         {
             elapsed = NIKI_PROGRESS_DURATION;
@@ -1727,9 +1728,9 @@ s32 niki_draw_choice_prompt(s32 prim, s32* ot, s32 x, s32 y)
  * @brief Access the extended metadata in the preview transfer buffer.
  * @return Preview metadata record.
  */
-static inline NikiEntryMetadata* niki_preview_metadata(void)
+static inline SavedGameLayout* niki_preview_metadata(void)
 {
-    return &g_niki_entry_preview.metadata;
+    return &g_niki_entry_file.saved_game;
 }
 
 /**
@@ -1804,7 +1805,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         bar = (NikiPolyG4Packet*)prim;
         if (g_niki_progress_bar_active != 0)
         {
-            elapsed = func_8002054C(-1) - g_niki_progress_start_tick;
+            elapsed = VSync(-1) - g_niki_progress_start_tick;
             if (elapsed >= NIKI_PROGRESS_DURATION + 1)
             {
                 elapsed = NIKI_PROGRESS_DURATION;
@@ -2047,7 +2048,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         bar = (NikiPolyG4Packet*)prim;
         if (g_niki_progress_bar_active != 0)
         {
-            elapsed = func_8002054C(-1) - g_niki_progress_start_tick;
+            elapsed = VSync(-1) - g_niki_progress_start_tick;
             if (elapsed >= NIKI_PROGRESS_DURATION + 1)
             {
                 elapsed = NIKI_PROGRESS_DURATION;
@@ -2116,7 +2117,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                 return prim;
             }
             if ((func_8001714C(D_800ECF7C, g_niki_entries[g_niki_card_slot][g_niki_selected_row].name, 0xC) != 0) ||
-                (niki_preview_metadata()->identifier != D_801227CC) || (niki_preview_metadata()->unknown_0xd6 != D_801227F4))
+                (niki_preview_metadata()->identity.ids.game_id != D_801227CC) || (niki_preview_metadata()->identity.ids.save_id != D_801227F4))
             {
                 g_niki_selected_row++;
                 if (g_niki_selected_row >= g_niki_entry_state)
@@ -2149,7 +2150,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             }
             else
             {
-                g_niki_progress_start_tick = func_8002054C(-1);
+                g_niki_progress_start_tick = VSync(-1);
                 g_niki_confirm_latch = 1;
                 g_niki_load_step = g_niki_read_saved_copy_sequence;
                 g_niki_entry_state = 0xF6;

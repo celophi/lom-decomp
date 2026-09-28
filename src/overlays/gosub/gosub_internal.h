@@ -61,7 +61,7 @@ typedef struct GosubTilePacket GosubTilePacket;
 /** @brief Number of choices the dialog cursor cycles through. */
 #define GOSUB_DIALOG_CHOICE_COUNT 12
 
-/** @brief Item kind ranges (PadContext::item_counts) listed by the item screens. */
+/** @brief Item kind ranges (SavedGameLayout::item_counts) listed by the item screens. */
 #define GOSUB_PRIMARY_MATERIAL_FIRST 0x00
 #define GOSUB_PRIMARY_MATERIAL_END 0x40
 #define GOSUB_SECONDARY_MATERIAL_FIRST 0x40

@@ -364,7 +364,7 @@ void field_draw_object_ground_effect(FieldMotionRecord* actor, u32 kind)
     draw = 1;
     if (actor->source_object_index == COMPANION_OBJECT_INDEX)
     {
-        if ((g_pad_ctx->companion_info & COMPANION_KIND_MASK) == COMPANION_KIND_GOLEM)
+        if ((g_saved_game_ctx->characters[FIELD_PARTY_COMPANION].info.word & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GOLEM)
         {
             draw = 0;
         }

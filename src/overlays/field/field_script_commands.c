@@ -305,7 +305,6 @@ typedef void (*FieldRecordQuery)(FieldRecordDistanceList* list, FieldStatusRecor
 extern FieldCommandHandler g_field_script_commands[FIELD_SCRIPT_COMMAND_COUNT];
 extern FieldRecordQuery g_field_record_queries[];
 
-extern FieldGameState* g_field_game_state;
 extern FieldRuntimeContext* g_field_runtime;
 extern FieldBattleContext* g_field_battle;
 extern SceneState* g_field_scene_state;

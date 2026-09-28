@@ -6,6 +6,7 @@
 #include "field_calls.h"
 #include "sdk/libetc.h"
 #include "sdk/memory.h"
+#include "sdk/libmcx.h"
 
 /** @brief Frames per second of the field clock. */
 #define FRAMES_PER_SECOND 60
@@ -31,21 +32,6 @@
 /** @brief Memory-card port the clock is read from. */
 #define CARD_CLOCK_PORT 0
 
-/** @brief func_80032174() mode that waits for the pending command to finish. */
-#define MCX_SYNC_WAIT 0
-
-/** @brief McxCardType() result for a PocketStation. */
-#define MCX_CARD_POCKETSTATION 1
-
-/** @brief McxSync() result: the last command succeeded. */
-#define MCX_RESULT_SUCCESS 0
-
-/** @brief McxSync() result: a new card was inserted. */
-#define MCX_RESULT_NEW_CARD 3
-
-/** @brief McxGetTime() return value when the command was issued. */
-#define MCX_COMMAND_ISSUED 1
-
 /** @brief Raw McxGetTime() snapshot, all values packed BCD. */
 typedef struct
 {
@@ -69,10 +55,6 @@ typedef struct FieldCardClock
     u8 minute;
     u8 second;
 } FieldCardClock;
-
-s32 McxCardType(s32 port);
-s32 func_80032174(s32 mode, s32* command, s32* result);
-s32 func_80032888(s32 port, FieldCardClockBcd* time);
 
 /** @brief Clock snapshot read from the PocketStation. */
 extern FieldCardClockBcd g_field_card_clock_snapshot;
@@ -119,28 +101,28 @@ s32 field_get_card_clock(FieldCardClock* clock)
  */
 void field_capture_card_clock(void)
 {
-    s32 card_type;
-    s32 command;
-    s32 result;
+    s32 status;
+    long command;
+    long result;
     FieldCardClockBcd time;
 
     if (g_field_card_clock_valid == 0)
     {
-        card_type = McxCardType(CARD_CLOCK_PORT);
-        if (card_type == MCX_CARD_POCKETSTATION)
+        status = McxCardType(CARD_CLOCK_PORT);
+        if (status == MCX_COMMAND_ISSUED)
         {
-            func_80032174(MCX_SYNC_WAIT, &command, &result);
-            if (result == MCX_RESULT_SUCCESS || result == MCX_RESULT_NEW_CARD)
+            McxSync(MCX_SYNC_WAIT, &command, &result);
+            if (result == McxErrSuccess || result == McxErrNewCard)
             {
-                if (func_80032888(CARD_CLOCK_PORT, &time) == MCX_COMMAND_ISSUED)
+                if (McxGetTime(CARD_CLOCK_PORT, (u8*)&time) == MCX_COMMAND_ISSUED)
                 {
-                    func_80032174(MCX_SYNC_WAIT, &command, &result);
+                    McxSync(MCX_SYNC_WAIT, &command, &result);
                 }
-                if (result == MCX_RESULT_SUCCESS)
+                if (result == McxErrSuccess)
                 {
                     bcopy((u8*)&time, (u8*)&g_field_card_clock_snapshot, sizeof(time));
                     g_field_card_clock_vsync = VSync(-1);
-                    g_field_card_clock_valid = card_type;
+                    g_field_card_clock_valid = status;
                 }
             }
         }

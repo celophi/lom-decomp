@@ -31,7 +31,7 @@ typedef struct ShopEntry
     s32 price;
 } ShopEntry;
 
-void shop_init(u8* work, s32 is_buying, s32 entry_count, ShopEntry* entries, InventoryRecord* item_records, s32 title_text_id);
+void shop_init(u8* work, s32 is_buying, s32 entry_count, ShopEntry* entries, FieldItemRecord* item_records, s32 title_text_id);
 s32 shop_update(ShopFrameContext* ctx);
 
 #endif

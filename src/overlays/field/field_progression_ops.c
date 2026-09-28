@@ -13,8 +13,6 @@
 /** @brief Base value (quarter units) each stat is reset to before replaying its level-ups. */
 #define FIELD_RESET_STAT 20
 
-extern FieldGameState* g_field_game_state;
-
 /**
  * @brief Return the experience a party character needs for its next level.
  * @param index Party character index.

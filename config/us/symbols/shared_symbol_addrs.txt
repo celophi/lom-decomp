@@ -1070,7 +1070,7 @@ equipment_combination_find          = 0x800CA480;
 // Shared input / frame / script state (main executable .bss)
 g_frame_counter                     = 0x800F22AC;
 g_prim_rect_buf                     = 0x800FE778;
-g_pad_ctx                           = 0x8012271C;
+g_saved_game_ctx                           = 0x8012271C;
 g_script_repeat_count               = 0x80122730;
 g_active_script                     = 0x801228C8;
 g_gosub_result_count                = 0x801228F0;
@@ -1312,3 +1312,5 @@ g_akao_pitch_jitter_table           = 0x8003D27C;
 g_akao_seq_sfx_params               = 0x8004D3A0;
 g_akao_dispatch_params              = 0x8004D340;
 g_akao_silent_sequence              = 0x8003D248;
+McxSync                             = 0x80032174;
+McxGetTime                          = 0x80032888;

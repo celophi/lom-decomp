@@ -178,7 +178,7 @@ void menu_tick(RenderContext* render_ctx)
     field_update_input_repeat();
 
     /* Merge externally injected input when enabled by the pad context. */
-    if ((g_pad_ctx->inject_flags & MENU_PAD_INJECT_ENABLED) && g_pad_ctx->inject_enable)
+    if ((g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & MENU_PAD_INJECT_ENABLED) && g_saved_game_ctx->characters[FIELD_PARTY_GUEST].name[0])
     {
         g_pad_input |= g_pad_input_inject;
     }
@@ -1340,7 +1340,7 @@ void menu_node_tree_init(void)
     }
     if (D_800FDCE8 & 1)
     {
-        if ((g_pad_ctx->companion_info & COMPANION_KIND_MASK) == COMPANION_KIND_GOLEM)
+        if ((g_saved_game_ctx->characters[FIELD_PARTY_COMPANION].info.word & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GOLEM)
         {
             g_menu_nodes[0xF].u2.bits.active = 1;
         }
@@ -1349,7 +1349,7 @@ void menu_node_tree_init(void)
             g_menu_nodes[9].u2.bits.active = 1;
         }
     }
-    if ((g_pad_ctx->inject_flags & 0x80) && g_pad_ctx->inject_enable)
+    if ((g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & 0x80) && g_saved_game_ctx->characters[FIELD_PARTY_GUEST].name[0])
     {
         g_menu_companion_node = 0x2B;
     }

@@ -47,7 +47,7 @@ void akao_driver_init(void)
 
     do
     {
-        event = OpenEvent(RCntCNT2, EvSpINT, EvMdINTR, (long (*)())akao_irq_handler);
+        event = OpenEvent(RCntCNT2, EvSpINT, EvMdINTR, akao_irq_handler);
         g_akao_rcnt2_event = event;
     } while (event == -1);
 

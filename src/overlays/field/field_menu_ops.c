@@ -7,20 +7,13 @@
 #include "main.h"
 #include "sdk/abs.h"
 
-/**
- * @brief The game-state workspace viewed as the pad context that main.h maps.
- * @note An object (not a pointer) view: indexed arrays in it are summed index
- *       first, like arrays of a global.
- */
-#define FIELD_PAD (*(PadContext*)&g_saved_game)
-
-/** @brief Value at which PadContext.golems_created saturates. */
+/** @brief Value at which SavedGameLayout::golems_created saturates. */
 #define FIELD_GOLEMS_CREATED_MAX 200
 
 /** @brief golem_order and joined_golem value for no golem record. */
 #define FIELD_GOLEM_NO_RECORD 3
 
-/** @brief Offset of the joined golem's class, byte 1 of PadContext.companion_info. */
+/** @brief Offset of the joined golem's class, byte 1 of characters[2].info. */
 #define FIELD_ACTIVE_GOLEM_CLASS 0xAA9
 
 /** @brief The object-menu variables, which start at D_80122C0C. */
@@ -101,7 +94,7 @@
 /** @brief Size of a land record (field_records.h FieldLandRecord). */
 #define FIELD_LAND_RECORD_SIZE 12
 
-/** @brief Game-state offset of land 0's element levels (FieldGameState lands[0].levels). */
+/** @brief Game-state offset of land 0's element levels (SavedGameLayout lands[0].levels). */
 #define FIELD_LAND_LEVELS_OFFSET 0x2F4
 
 /** @brief Weight of each element in field_menu_draw_land_element's uniform mode (3^4). */
@@ -172,7 +165,7 @@
 #define FIELD_ITEM_RECORD_RESOURCE 5
 
 /** @brief Byte offset of 0x40-byte record @p index in a resource with a 4-byte header. */
-#define FIELD_RESOURCE_RECORD_OFFSET(index) ((index) * sizeof(InventoryRecord) + 4)
+#define FIELD_RESOURCE_RECORD_OFFSET(index) ((index) * sizeof(FieldItemRecord) + 4)
 
 /** @brief Largest value field_menu_apply_affinity stores. */
 #define FIELD_AFFINITY_VALUE_MAX 0x7FFF
@@ -360,12 +353,21 @@ typedef struct
     u32 amount;  /**< Item value. */
 } FieldMenuItemInfoVars;
 
-/** @brief 0x40-byte item record (main.h InventoryRecord) with its identity words. */
+/** @brief 0x40-byte item record (FieldItemRecord) viewed with its identity words. */
 typedef struct
 {
     u8 active; /**< Zero marks an empty record. */
     u8 unknown_0x01[0x13];
-    InventoryAttributes attributes; /**< 0x14: item kind, category and name index. */
+    /** @brief Item kind, category and name index (FieldItemRecord::info). */
+    union
+    {
+        u32 packed;
+        struct
+        {
+            u16 low;
+            u16 high;
+        } halves;
+    } attributes;
     u32 nibbles[2];                 /**< 0x18: sixteen 4-bit values. */
     u8 saved_active;                /**< 0x20: active byte kept while the record is set aside. */
     u8 unknown_0x21[3];
@@ -382,14 +384,14 @@ typedef struct
 /**
  * @brief Pad context view of the item records.
  * @note The equipment block at 0x640 is scanned as eight records, twice
- *       main.h's PLAYER_EQUIPMENT_SLOT_COUNT.
+ *       FIELD_EQUIPMENT_SLOT_COUNT.
  */
 typedef struct
 {
     u8 _pad0000[0x640];
     FieldMenuItemRecord equipment[8];
     u8 _pad0840[0xCE0 - 0x840];
-    FieldMenuItemRecord inventory[INVENTORY_RECORD_COUNT];
+    FieldMenuItemRecord inventory[FIELD_ITEM_COUNT];
     u8 _pad25E0[0x3160 - 0x25E0];
     FieldMenuItemRecord pending[4];
 } FieldMenuItemData;
@@ -512,9 +514,9 @@ void field_run_menu_op(s32 op)
  */
 void field_menu_classify_golem_slot(void)
 {
-    PadContext* ctx;
+    SavedGameLayout* ctx;
 
-    ctx = &FIELD_PAD;
+    ctx = &g_saved_game.layout;
     if (ctx->golem_order[D_80122C00.golem.slot] == FIELD_GOLEM_NO_RECORD)
     {
         if ((u8)ctx->joined_golem >= GOLEM_RECORD_COUNT)
@@ -573,7 +575,7 @@ void field_menu_create_golem(void)
         candidate = i;
         for (slot = 0; slot < GOLEM_RECORD_COUNT; slot++)
         {
-            if (FIELD_PAD.golem_order[slot] == i)
+            if (g_saved_game.layout.golem_order[slot] == i)
             {
                 candidate = FIELD_GOLEM_NO_RECORD;
             }
@@ -586,47 +588,48 @@ void field_menu_create_golem(void)
     if (free_record != FIELD_GOLEM_NO_RECORD)
     {
         field_golem_build_group_record(free_record);
-        count = FIELD_PAD.golems_created + 1;
-        FIELD_PAD.golems_created = count;
+        count = g_saved_game.layout.golems_created + 1;
+        g_saved_game.layout.golems_created = count;
         if (count > FIELD_GOLEMS_CREATED_MAX)
         {
-            FIELD_PAD.golems_created = FIELD_GOLEMS_CREATED_MAX;
+            g_saved_game.layout.golems_created = FIELD_GOLEMS_CREATED_MAX;
         }
         /* A golem already in the slot moves to the first empty slot. */
-        previous = FIELD_PAD.golem_order[D_80122C00.golem.slot];
+        previous = g_saved_game.layout.golem_order[D_80122C00.golem.slot];
         if (previous != FIELD_GOLEM_NO_RECORD)
         {
-            if (FIELD_PAD.golem_order[0] == FIELD_GOLEM_NO_RECORD)
+            if (g_saved_game.layout.golem_order[0] == FIELD_GOLEM_NO_RECORD)
             {
-                FIELD_PAD.golem_order[0] = previous;
+                g_saved_game.layout.golem_order[0] = previous;
             }
-            else if (FIELD_PAD.golem_order[1] == FIELD_GOLEM_NO_RECORD)
+            else if (g_saved_game.layout.golem_order[1] == FIELD_GOLEM_NO_RECORD)
             {
-                FIELD_PAD.golem_order[1] = previous;
+                g_saved_game.layout.golem_order[1] = previous;
             }
-            else if (FIELD_PAD.golem_order[2] == FIELD_GOLEM_NO_RECORD)
+            else if (g_saved_game.layout.golem_order[2] == FIELD_GOLEM_NO_RECORD)
             {
-                FIELD_PAD.golem_order[2] = previous;
+                g_saved_game.layout.golem_order[2] = previous;
             }
         }
-        FIELD_PAD.golem_order[D_80122C00.golem.slot] = free_record;
+        g_saved_game.layout.golem_order[D_80122C00.golem.slot] = free_record;
         /* The count nibble is updated with word read-modify-writes. */
-        packed_counts = (*(s32*)&FIELD_PAD.golem_count & ~GOLEM_COUNT_MASK) | (((FIELD_PAD.golem_count & GOLEM_COUNT_MASK) + 1) & GOLEM_COUNT_MASK);
-        *(s32*)&FIELD_PAD.golem_count = packed_counts;
-        if ((FIELD_PAD.golem_count & GOLEM_COUNT_MASK) > GOLEM_RECORD_COUNT)
+        packed_counts =
+            (*(s32*)&g_saved_game.layout.golem_count & ~GOLEM_COUNT_MASK) | (((g_saved_game.layout.golem_count & GOLEM_COUNT_MASK) + 1) & GOLEM_COUNT_MASK);
+        *(s32*)&g_saved_game.layout.golem_count = packed_counts;
+        if ((g_saved_game.layout.golem_count & GOLEM_COUNT_MASK) > GOLEM_RECORD_COUNT)
         {
-            *(s32*)&FIELD_PAD.golem_count = (packed_counts & ~GOLEM_COUNT_MASK) | GOLEM_RECORD_COUNT;
+            *(s32*)&g_saved_game.layout.golem_count = (packed_counts & ~GOLEM_COUNT_MASK) | GOLEM_RECORD_COUNT;
         }
         for (i = 0; i < g_gosub_result_count; i++)
         {
-            field_copy_inventory_record(FIELD_PAD.golem_records[FIELD_PAD.golem_order[D_80122C00.golem.slot]].source_items[i].name,
-                                        (u8*)&FIELD_PAD.inventory[g_gosub_result_values[i]]);
-            FIELD_PAD.inventory[g_gosub_result_values[i]].name[0] = 0;
+            field_copy_inventory_record(g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.golem.slot]].source_items[i].name,
+                                        (u8*)&g_saved_game.layout.items[g_gosub_result_values[i]]);
+            g_saved_game.layout.items[g_gosub_result_values[i]].name[0] = 0;
         }
         field_compact_inventory();
         for (i = g_gosub_result_count; i < GOLEM_SOURCE_ITEM_COUNT; i++)
         {
-            FIELD_PAD.golem_records[FIELD_PAD.golem_order[D_80122C00.golem.slot]].source_items[i].name[0] = 0;
+            g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.golem.slot]].source_items[i].name[0] = 0;
         }
         field_upload_golem_palettes();
     }
@@ -661,10 +664,10 @@ void func_800C5AF0(void)
  */
 void field_menu_load_golem_class(void)
 {
-    PadContext* ctx;
+    SavedGameLayout* ctx;
     s32 record_index;
 
-    ctx = &FIELD_PAD;
+    ctx = &g_saved_game.layout;
     record_index = ctx->golem_order[D_80122C00.golem.slot];
     D_80122C00.golem.slot_status[0] = record_index;
     D_80122C00.golem.detail = ctx->golem_records[record_index].logic_layout & GOLEM_LOGIC_CLASS_MASK;
@@ -679,15 +682,15 @@ void field_menu_load_golem_class(void)
  */
 void field_menu_check_golem_creation(void)
 {
-    if ((u8)FIELD_PAD.joined_golem > FIELD_GOLEM_NO_RECORD)
+    if ((u8)g_saved_game.layout.joined_golem > FIELD_GOLEM_NO_RECORD)
     {
-        FIELD_PAD.joined_golem = FIELD_GOLEM_NO_RECORD;
+        g_saved_game.layout.joined_golem = FIELD_GOLEM_NO_RECORD;
     }
-    if ((FIELD_PAD.companion_info & COMPANION_KIND_MASK) == 3)
+    if ((g_saved_game.layout.characters[FIELD_PARTY_COMPANION].info.word & FIELD_CHARACTER_TYPE_MASK) == 3)
     {
         D_80122C00.golem.result = 2;
     }
-    else if (FIELD_PAD.joined_golem == FIELD_GOLEM_NO_RECORD)
+    else if (g_saved_game.layout.joined_golem == FIELD_GOLEM_NO_RECORD)
     {
         D_80122C00.golem.result = 0;
     }
@@ -709,31 +712,31 @@ void field_menu_dismiss_golem(void)
     s32 i;
     u32 word;
 
-    for (i = 0; i < FIELD_PAD.logic_block_count; i++)
+    for (i = 0; i < g_saved_game.layout.logic_block_count; i++)
     {
-        if (FIELD_PAD.logic_blocks[i].f.logic_type == FIELD_PAD.golem_order[D_80122C00.golem.slot])
+        if (g_saved_game.layout.logic_blocks[i].f.logic_type == g_saved_game.layout.golem_order[D_80122C00.golem.slot])
         {
-            FIELD_PAD.logic_blocks[i].f.logic_type = LOGIC_BLOCK_UNASSIGNED;
-            FIELD_PAD.logic_blocks[i].f.placed = 0;
+            g_saved_game.layout.logic_blocks[i].f.logic_type = LOGIC_BLOCK_UNASSIGNED;
+            g_saved_game.layout.logic_blocks[i].f.placed = 0;
         }
     }
     for (i = 0; i < GOLEM_SOURCE_ITEM_COUNT; i++)
     {
-        if (FIELD_PAD.golem_records[FIELD_PAD.golem_order[D_80122C00.golem.slot]].source_items[i].name[0] != 0)
+        if (g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.golem.slot]].source_items[i].name[0] != 0)
         {
             if (field_find_free_inventory_record() != 0)
             {
                 field_copy_inventory_record(field_find_free_inventory_record(),
-                                            FIELD_PAD.golem_records[FIELD_PAD.golem_order[D_80122C00.golem.slot]].source_items[i].name);
+                                            g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.golem.slot]].source_items[i].name);
             }
         }
     }
-    FIELD_PAD.golem_records[FIELD_PAD.golem_order[D_80122C00.golem.slot]].name[0] = 0;
-    FIELD_PAD.golem_order[D_80122C00.golem.slot] = FIELD_GOLEM_NO_RECORD;
-    word = *(u32*)&FIELD_PAD.golem_count;
+    g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.golem.slot]].name[0] = 0;
+    g_saved_game.layout.golem_order[D_80122C00.golem.slot] = FIELD_GOLEM_NO_RECORD;
+    word = *(u32*)&g_saved_game.layout.golem_count;
     if ((word & GOLEM_COUNT_MASK) != 0)
     {
-        *(u32*)&FIELD_PAD.golem_count = (word & ~GOLEM_COUNT_MASK) | (((FIELD_PAD.golem_count & GOLEM_COUNT_MASK) - 1) & GOLEM_COUNT_MASK);
+        *(u32*)&g_saved_game.layout.golem_count = (word & ~GOLEM_COUNT_MASK) | (((g_saved_game.layout.golem_count & GOLEM_COUNT_MASK) - 1) & GOLEM_COUNT_MASK);
     }
 }
 
@@ -742,9 +745,9 @@ void field_menu_dismiss_golem(void)
  */
 void field_menu_publish_golem_name(void)
 {
-    u8 record_index = FIELD_PAD.golem_order[D_80122C00.golem.slot];
+    u8 record_index = g_saved_game.layout.golem_order[D_80122C00.golem.slot];
 
-    field_set_text_macro(0, FIELD_PAD.golem_records[record_index].name, 0xFF);
+    field_set_text_macro(0, g_saved_game.layout.golem_records[record_index].name, 0xFF);
 }
 
 /**
@@ -774,19 +777,19 @@ void field_menu_refresh_golem_order(void)
     FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS) = FIELD_GOLEM_SLOT_EMPTY;
     FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 1) = FIELD_GOLEM_SLOT_EMPTY;
     FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 2) = FIELD_GOLEM_SLOT_EMPTY;
-    if (FIELD_PAD.golem_order[0] != FIELD_PAD.joined_golem)
+    if (g_saved_game.layout.golem_order[0] != g_saved_game.layout.joined_golem)
     {
-        FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS) = FIELD_PAD.golem_order[0];
+        FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS) = g_saved_game.layout.golem_order[0];
     }
-    if (FIELD_PAD.golem_order[1] != FIELD_PAD.joined_golem)
+    if (g_saved_game.layout.golem_order[1] != g_saved_game.layout.joined_golem)
     {
-        FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 1) = FIELD_PAD.golem_order[1];
+        FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 1) = g_saved_game.layout.golem_order[1];
     }
-    if (FIELD_PAD.golem_order[2] != FIELD_PAD.joined_golem)
+    if (g_saved_game.layout.golem_order[2] != g_saved_game.layout.joined_golem)
     {
-        FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 2) = FIELD_PAD.golem_order[2];
+        FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 2) = g_saved_game.layout.golem_order[2];
     }
-    packed_order = FIELD_PAD.golem_display_order;
+    packed_order = g_saved_game.layout.golem_display_order;
     order[0] = packed_order & 3;
     order[1] = (packed_order >> 2) & 3;
     order[2] = (packed_order >> 4) & 3;
@@ -830,7 +833,7 @@ void field_menu_refresh_golem_order(void)
         }
     }
     packed_order = order[0] + (order[1] * 4) + (order[2] * 0x10);
-    FIELD_PAD.golem_display_order = packed_order;
+    g_saved_game.layout.golem_display_order = packed_order;
     if (FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS) == FIELD_GOLEM_SLOT_EMPTY)
     {
         if (order[0] == 0)
@@ -876,18 +879,18 @@ void field_menu_refresh_golem_order(void)
             FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 2) = FIELD_GOLEM_SLOT_POSITION(2);
         }
     }
-    selected_index = FIELD_PAD.joined_golem;
+    selected_index = g_saved_game.layout.joined_golem;
     if (selected_index < GOLEM_RECORD_COUNT)
     {
-        if (FIELD_PAD.golem_order[0] == selected_index)
+        if (g_saved_game.layout.golem_order[0] == selected_index)
         {
             FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS) = FIELD_GOLEM_SLOT_EMPTY;
         }
-        if (FIELD_PAD.golem_order[1] == selected_index)
+        if (g_saved_game.layout.golem_order[1] == selected_index)
         {
             FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 1) = FIELD_GOLEM_SLOT_EMPTY;
         }
-        if (FIELD_PAD.golem_order[2] == selected_index)
+        if (g_saved_game.layout.golem_order[2] == selected_index)
         {
             FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 2) = FIELD_GOLEM_SLOT_EMPTY;
         }
@@ -900,7 +903,7 @@ void field_menu_refresh_golem_order(void)
             FIELD_LOCAL_HALF(FIELD_GOLEM_ACTIVE_POSITION) = i;
         }
     }
-    FIELD_LOCAL_HALF(FIELD_GOLEM_ACTIVE_RECORD) = FIELD_PAD.joined_golem;
+    FIELD_LOCAL_HALF(FIELD_GOLEM_ACTIVE_RECORD) = g_saved_game.layout.joined_golem;
 }
 
 /**
@@ -908,7 +911,7 @@ void field_menu_refresh_golem_order(void)
  */
 void field_menu_check_logic_blocks_full(void)
 {
-    if (FIELD_PAD.logic_block_count >= LOGIC_BLOCK_CAPACITY)
+    if (g_saved_game.layout.logic_block_count >= LOGIC_BLOCK_CAPACITY)
     {
         D_80122C10 = 1;
     }
@@ -937,9 +940,9 @@ void field_menu_publish_golem_items(void)
     count = 0;
     for (i = 0; i < 4; i++)
     {
-        if (FIELD_PAD.golem_records[FIELD_PAD.golem_order[D_80122C00.golem.slot]].source_items[i].name[0] != 0)
+        if (g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.golem.slot]].source_items[i].name[0] != 0)
         {
-            field_set_text_macro(count, FIELD_PAD.golem_records[FIELD_PAD.golem_order[D_80122C00.golem.slot]].source_items[i].name, 0xFF);
+            field_set_text_macro(count, g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.golem.slot]].source_items[i].name, 0xFF);
             count += 1;
         }
     }
@@ -957,9 +960,9 @@ void field_menu_count_missing_inventory_space(void)
     s16* requested;
 
     free_count = 0;
-    for (i = 0; i < INVENTORY_RECORD_COUNT; i++)
+    for (i = 0; i < FIELD_ITEM_COUNT; i++)
     {
-        if (FIELD_PAD.inventory[i].name[0] == 0)
+        if (g_saved_game.layout.items[i].name[0] == 0)
         {
             free_count++;
         }
@@ -1130,8 +1133,8 @@ void field_menu_set_golem_palette(void)
     {
         clamped = 0;
     }
-    record_index = FIELD_PAD.golem_order[D_80122C00.golem.slot];
-    FIELD_PAD.golem_records[record_index].palette = clamped;
+    record_index = g_saved_game.layout.golem_order[D_80122C00.golem.slot];
+    g_saved_game.layout.golem_records[record_index].palette = clamped;
     field_upload_golem_palettes();
 }
 
@@ -1143,7 +1146,7 @@ void field_menu_set_active_golem(void)
     s32 status = D_80122C06;
 
     g_game_diagnostic_status = status;
-    FIELD_PAD.joined_golem = status;
+    g_saved_game.layout.joined_golem = status;
 }
 
 /**
@@ -1191,22 +1194,22 @@ void field_menu_swap_golem_order(void)
     s32 selected_slot;
     s8 active_record;
 
-    packed_order = FIELD_PAD.golem_display_order;
+    packed_order = g_saved_game.layout.golem_display_order;
     selected_position = FIELD_GOLEM_NO_RECORD;
     active_slot = FIELD_GOLEM_NO_RECORD;
     order[0] = packed_order & 3;
     order[1] = (packed_order >> 2) & 3;
     order[2] = (packed_order >> 4) & 3;
-    active_record = FIELD_PAD.joined_golem;
+    active_record = g_saved_game.layout.joined_golem;
     selected_slot = D_80122C00.golem.slot;
-    if (FIELD_PAD.golem_order[selected_slot] != active_record)
+    if (g_saved_game.layout.golem_order[selected_slot] != active_record)
     {
         s32 i;
         s32 swap_position;
 
         for (i = 0; i < GOLEM_RECORD_COUNT; i++)
         {
-            if (active_record == FIELD_PAD.golem_order[i])
+            if (active_record == g_saved_game.layout.golem_order[i])
             {
                 active_slot = i;
             }
@@ -1228,7 +1231,7 @@ void field_menu_swap_golem_order(void)
         order[swap_position] = selected_slot;
         order[selected_position] = active_slot;
         packed_order = order[0] + (order[1] * 4) + (order[2] * 0x10);
-        FIELD_PAD.golem_display_order = packed_order;
+        g_saved_game.layout.golem_display_order = packed_order;
     }
     FIELD_MENU_SWAP->selected_position = selected_position;
     FIELD_MENU_SWAP->active_slot = active_slot;
@@ -1239,7 +1242,7 @@ void field_menu_swap_golem_order(void)
  */
 void field_menu_publish_inventory_item(void)
 {
-    field_set_text_macro(0, FIELD_PAD.inventory[D_80122C10].name, 0xFF);
+    field_set_text_macro(0, g_saved_game.layout.items[D_80122C10].name, 0xFF);
 }
 
 /**
@@ -1253,11 +1256,11 @@ void field_menu_count_inventory_kind(void)
 
     kind = D_80122C10;
     count = 0;
-    for (i = 0; i < INVENTORY_RECORD_COUNT; i++)
+    for (i = 0; i < FIELD_ITEM_COUNT; i++)
     {
-        if (FIELD_PAD.inventory[i].name[0] != 0)
+        if (g_saved_game.layout.items[i].name[0] != 0)
         {
-            if (INVENTORY_KIND(FIELD_PAD.inventory[i].attributes.packed) == kind)
+            if (FIELD_ITEM_CATEGORY(g_saved_game.layout.items[i].info.word) == kind)
             {
                 count++;
             }
@@ -1275,9 +1278,9 @@ void field_menu_fill_free_inventory(void)
 {
     while (field_find_free_inventory_record() != 0)
     {
-        field_copy_inventory_record(field_find_free_inventory_record(), (u8*)FIELD_PAD.inventory);
+        field_copy_inventory_record(field_find_free_inventory_record(), (u8*)g_saved_game.layout.items);
     }
-    FIELD_PAD.golems_created += 9;
+    g_saved_game.layout.golems_created += 9;
 }
 
 /**
@@ -1291,7 +1294,7 @@ void field_menu_set_golem_class(void)
 {
     FieldLogicClassTable class_table;
     FieldLogicClassTable unused_table;
-    PadContext* ctx;
+    SavedGameLayout* ctx;
     s32 i;
     s32 active_record;
     s32 golem_class;
@@ -1300,7 +1303,7 @@ void field_menu_set_golem_class(void)
     class_table = D_80051CE4;
     unused_table = D_80051DCC;
 
-    ctx = &FIELD_PAD;
+    ctx = &g_saved_game.layout;
     active_record = ctx->joined_golem;
     golem_class = D_80122C1C;
     if (active_record < GOLEM_RECORD_COUNT)
@@ -1339,18 +1342,18 @@ void field_menu_add_logic_block(void)
 
     if (id == FIELD_NEW_BLOCK_CLEAR)
     {
-        FIELD_PAD.logic_block_count = 0;
+        g_saved_game.layout.logic_block_count = 0;
         return;
     }
 
-    if (FIELD_PAD.logic_block_count < LOGIC_BLOCK_CAPACITY)
+    if (g_saved_game.layout.logic_block_count < LOGIC_BLOCK_CAPACITY)
     {
-        FIELD_PAD.logic_blocks[FIELD_PAD.logic_block_count].f.id = id;
-        FIELD_PAD.logic_blocks[FIELD_PAD.logic_block_count].f.quantity = quantity;
-        FIELD_PAD.logic_blocks[FIELD_PAD.logic_block_count].f.shape = shape;
-        FIELD_PAD.logic_blocks[FIELD_PAD.logic_block_count].f.logic_type = LOGIC_BLOCK_UNASSIGNED;
-        FIELD_PAD.logic_blocks[FIELD_PAD.logic_block_count].f.placed = 0;
-        FIELD_PAD.logic_block_count++;
+        g_saved_game.layout.logic_blocks[g_saved_game.layout.logic_block_count].f.id = id;
+        g_saved_game.layout.logic_blocks[g_saved_game.layout.logic_block_count].f.quantity = quantity;
+        g_saved_game.layout.logic_blocks[g_saved_game.layout.logic_block_count].f.shape = shape;
+        g_saved_game.layout.logic_blocks[g_saved_game.layout.logic_block_count].f.logic_type = LOGIC_BLOCK_UNASSIGNED;
+        g_saved_game.layout.logic_blocks[g_saved_game.layout.logic_block_count].f.placed = 0;
+        g_saved_game.layout.logic_block_count++;
     }
 }
 
@@ -1396,7 +1399,7 @@ void field_menu_item_name_row(void)
     s32 row;
 
     index = D_80122C10;
-    attributes = FIELD_PAD.inventory[index].attributes.packed;
+    attributes = g_saved_game.layout.items[index].info.word;
     kind = (attributes >> 8) & 3;
     if (kind == 0)
     {
@@ -1435,9 +1438,9 @@ void field_menu_remove_record_cards(void)
     s16 card;
 
     index = D_80122C10;
-    first = FIELD_PAD.inventory[index].unknown_0x18[8];
-    second = FIELD_PAD.inventory[index].unknown_0x18[9];
-    third = FIELD_PAD.inventory[index].unknown_0x18[10];
+    first = g_saved_game.layout.items[index].special_ids[0];
+    second = g_saved_game.layout.items[index].special_ids[1];
+    third = g_saved_game.layout.items[index].special_ids[2];
     for (i = 0; i < 3; i++)
     {
         card = D_80122C00.cards.card_ids[i];
@@ -1473,9 +1476,9 @@ void field_menu_load_record_cards(void)
     s32 index;
 
     index = g_gosub_result_values[0];
-    D_80122C00.cards.card_ids[0] = FIELD_PAD.inventory[index].unknown_0x18[8];
-    D_80122C00.cards.card_ids[1] = FIELD_PAD.inventory[index].unknown_0x18[9];
-    D_80122C00.cards.card_ids[2] = FIELD_PAD.inventory[index].unknown_0x18[10];
+    D_80122C00.cards.card_ids[0] = g_saved_game.layout.items[index].special_ids[0];
+    D_80122C00.cards.card_ids[1] = g_saved_game.layout.items[index].special_ids[1];
+    D_80122C00.cards.card_ids[2] = g_saved_game.layout.items[index].special_ids[2];
 }
 
 /**
@@ -1545,19 +1548,19 @@ void field_menu_describe_selected_pet(void)
         index = g_gosub_result_values[0];
         if (index < PET_RECORD_COUNT)
         {
-            flags = FIELD_PAD.pet_records[index].status;
+            flags = g_saved_game.layout.pets[index].status.bits;
             if (flags.egg)
             {
-                FIELD_MENU_RECORD->display_id = FIELD_PAD.pet_records[index].egg_species + 0x53;
+                FIELD_MENU_RECORD->display_id = g_saved_game.layout.pets[index].egg_species + 0x53;
                 FIELD_MENU_RECORD->mode = 0;
             }
             else
             {
                 grazing = flags.grazing;
-                FIELD_MENU_RECORD->display_id = FIELD_PAD.pet_records[index].species + 0x12;
+                FIELD_MENU_RECORD->display_id = g_saved_game.layout.pets[index].species + 0x12;
                 FIELD_MENU_RECORD->mode = grazing;
             }
-            if (index == FIELD_PAD.joined_pet)
+            if (index == g_saved_game.layout.joined_pet)
             {
                 FIELD_MENU_RECORD->display_id = 0xFE;
             }
@@ -1583,7 +1586,7 @@ void field_menu_count_grazing_pets(void)
         count = 0;
         for (i = 0; i < PET_RECORD_COUNT; i++)
         {
-            if (FIELD_PAD.pet_records[i].name[0] != 0 && FIELD_PAD.pet_records[i].status.grazing == 1)
+            if (g_saved_game.layout.pets[i].name[0] != 0 && g_saved_game.layout.pets[i].status.bits.grazing == 1)
             {
                 count++;
             }
@@ -1602,7 +1605,7 @@ void field_menu_send_selected_pet_grazing(void)
     index = g_gosub_result_values[0];
     if (index < PET_RECORD_COUNT)
     {
-        FIELD_PAD.pet_records[index].status.grazing = 1;
+        g_saved_game.layout.pets[index].status.bits.grazing = 1;
     }
     else
     {
@@ -1656,7 +1659,7 @@ void field_menu_publish_selected_pet_name(void)
 
     FIELD_MENU_NAMED->index = index = g_gosub_result_values[0];
     FIELD_MENU_NAMED->count = g_gosub_result_count;
-    field_set_text_macro(FIELD_MENU_NAMED->macro_index, FIELD_PAD.pet_records[index].name, 0xFF);
+    field_set_text_macro(FIELD_MENU_NAMED->macro_index, g_saved_game.layout.pets[index].name, 0xFF);
 }
 
 /**
@@ -1688,7 +1691,7 @@ void field_menu_publish_pet_slots(void)
                 }
             }
         }
-        field_set_text_macro(3, FIELD_PAD.pet_records[selection].name, 0xFF);
+        field_set_text_macro(3, g_saved_game.layout.pets[selection].name, 0xFF);
         D_80122C16 = count;
         return;
     }
@@ -1698,10 +1701,10 @@ void field_menu_publish_pet_slots(void)
 /** @brief Clear pad-context byte 0xC06 and the joined golem's 0x46 byte. */
 void func_800C745C(void)
 {
-    PadContext* ctx;
+    SavedGameLayout* ctx;
     s32 index;
 
-    ctx = &FIELD_PAD;
+    ctx = &g_saved_game.layout;
     index = ctx->joined_golem;
     g_saved_game.bytes[0xC06] = 0;
     ctx->golem_records[index].unknown_0x46 = 0;
@@ -1739,7 +1742,7 @@ void field_menu_add_pet_slot(void)
 /** @brief Replace the pet record index in D_80122C10 with that pet's species. */
 void field_menu_load_pet_species(void)
 {
-    D_80122C10 = FIELD_PAD.pet_records[D_80122C10].species;
+    D_80122C10 = g_saved_game.layout.pets[D_80122C10].species;
 }
 
 /**
@@ -1750,10 +1753,10 @@ void field_menu_recall_joined_pet(void)
 {
     s32 index;
 
-    index = FIELD_PAD.joined_pet;
+    index = g_saved_game.layout.joined_pet;
     if (index < PET_RECORD_COUNT)
     {
-        FIELD_PAD.pet_records[index].status.grazing = 0;
+        g_saved_game.layout.pets[index].status.bits.grazing = 0;
     }
     else
     {
@@ -1773,7 +1776,7 @@ void field_menu_recall_selected_pet(void)
     index = g_gosub_result_values[0];
     if (index < PET_RECORD_COUNT)
     {
-        FIELD_PAD.pet_records[index].status.grazing = 0;
+        g_saved_game.layout.pets[index].status.bits.grazing = 0;
     }
     else
     {
@@ -1820,7 +1823,7 @@ void field_menu_prepare_action_items(void)
     count = 0;
     for (i = 0; i < 8; i++)
     {
-        counts[i] = FIELD_PAD.item_counts[FIELD_ACTION_ITEM_BASE + i];
+        counts[i] = g_saved_game.layout.item_counts[FIELD_ACTION_ITEM_BASE + i];
         if (counts[i] != 0)
         {
             count++;
@@ -2034,7 +2037,7 @@ void field_menu_fill_action_slots(void)
         item = FIELD_MENU_ACTIONS.groups[group].item_slots[i];
         if (item < 0xFF)
         {
-            FIELD_PAD.item_counts[item]--;
+            g_saved_game.layout.item_counts[item]--;
         }
     }
     field_menu_clear_item_slots();
@@ -2166,7 +2169,7 @@ void field_menu_release_action_slot(void)
     slot -= 4;
     group = FIELD_MENU_ACTION_SLOT->group;
     item = FIELD_MENU_ACTIONS.groups[group].slots[slot].entry.item_index;
-    count = FIELD_PAD.item_counts[item];
+    count = g_saved_game.layout.item_counts[item];
     count += 1;
     if (count >= 0)
     {
@@ -2181,7 +2184,7 @@ void field_menu_release_action_slot(void)
         clamped = 0;
     }
 
-    FIELD_PAD.item_counts[item] = clamped;
+    g_saved_game.layout.item_counts[item] = clamped;
     FIELD_MENU_ACTIONS.groups[group].slots[slot].handle = 0;
     FIELD_MENU_ACTIONS.groups[group].slots[slot].entry.item_index = 0xFF;
     FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[0] = 0;
@@ -2458,11 +2461,11 @@ void field_menu_list_grazing_pets(void)
     count = 0;
     for (i = 0; i < PET_RECORD_COUNT; i++)
     {
-        if (FIELD_PAD.pet_records[i].name[0] != 0 && FIELD_PAD.pet_records[i].status.grazing == 1)
+        if (g_saved_game.layout.pets[i].name[0] != 0 && g_saved_game.layout.pets[i].status.bits.grazing == 1)
         {
-            FIELD_LOCAL_BYTE(count) = FIELD_PAD.pet_records[i].species;
+            FIELD_LOCAL_BYTE(count) = g_saved_game.layout.pets[i].species;
             FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT_TABLE + count) = i;
-            field_set_text_macro(count, FIELD_PAD.pet_records[i].name, 0xFF);
+            field_set_text_macro(count, g_saved_game.layout.pets[i].name, 0xFF);
             count++;
         }
     }
@@ -2509,7 +2512,7 @@ void field_menu_describe_shared_item(void)
     }
 
     duplicate_found = 0;
-    for (i = 0; i < INVENTORY_RECORD_COUNT; i++)
+    for (i = 0; i < FIELD_ITEM_COUNT; i++)
     {
         if (FIELD_MENU_ITEMS->inventory[i].active != 0 && FIELD_MENU_ITEMS->inventory[i].identity[0] == g_field_shared_items[selected].identity[0] &&
             FIELD_MENU_ITEMS->inventory[i].identity[1] == g_field_shared_items[selected].identity[1])
@@ -2734,7 +2737,7 @@ void field_menu_describe_pending_item(void)
     }
 
     duplicate_found = 0;
-    for (i = 0; i < INVENTORY_RECORD_COUNT; i++)
+    for (i = 0; i < FIELD_ITEM_COUNT; i++)
     {
         if (FIELD_MENU_ITEMS->inventory[i].active != 0 && FIELD_MENU_ITEMS->inventory[i].identity[0] == FIELD_MENU_ITEMS->pending[selected].identity[0] &&
             FIELD_MENU_ITEMS->inventory[i].identity[1] == FIELD_MENU_ITEMS->pending[selected].identity[1])
@@ -2802,7 +2805,7 @@ void field_menu_recall_cursor_pet(void)
     index = FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT_TABLE + FIELD_LOCAL_BYTE(FIELD_RECALL_SLOT));
     if (index < PET_RECORD_COUNT)
     {
-        FIELD_PAD.pet_records[index].status.grazing = 0;
+        g_saved_game.layout.pets[index].status.bits.grazing = 0;
     }
     else
     {
@@ -2826,10 +2829,10 @@ void field_menu_hatch_pet(void)
     if (index < PET_RECORD_COUNT)
     {
         FIELD_MENU_PETS->pet_records[index].species = species;
-        FIELD_PAD.pet_records[index].status.egg = 0;
-        if (FIELD_PAD.pet_records[index].name[0] == 0)
+        g_saved_game.layout.pets[index].status.bits.egg = 0;
+        if (g_saved_game.layout.pets[index].name[0] == 0)
         {
-            FIELD_PAD.pet_records[index].name[0] = 0x41;
+            g_saved_game.layout.pets[index].name[0] = 0x41;
         }
     }
     else
@@ -2887,7 +2890,7 @@ void field_menu_count_free_inventory(void)
     s32 count;
 
     count = 0;
-    for (i = 0; i < INVENTORY_RECORD_COUNT; i++)
+    for (i = 0; i < FIELD_ITEM_COUNT; i++)
     {
         if (FIELD_MENU_ITEMS->inventory[i].active == 0)
         {
@@ -2961,7 +2964,7 @@ void func_800C94F4(void)
 /** @brief Set field state 0x2F08 from the pending mode flag. */
 void func_800C963C(void)
 {
-    if (FIELD_PAD.inject_enable != 0)
+    if (g_saved_game.layout.characters[FIELD_PARTY_GUEST].name[0] != 0)
     {
         field_set_script_var(0, 0x2F08, 0x80);
     }
@@ -3295,14 +3298,14 @@ void field_menu_swap_joined_pet(void)
     entry = &FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT_TABLE + slot);
     previous = *entry;
     g_gosub_result_count = 1;
-    index = FIELD_PAD.joined_pet;
+    index = g_saved_game.layout.joined_pet;
     g_gosub_result_values[0] = previous;
     if (index < PET_RECORD_COUNT)
     {
         *entry = index;
         FIELD_LOCAL_HALF(FIELD_CURSOR_SPECIES) = FIELD_MENU_PETS->pet_records[index].species;
-        FIELD_PAD.pet_records[index].status.grazing = 1;
-        field_set_text_macro(slot, FIELD_PAD.pet_records[index].name, 0xFF);
+        g_saved_game.layout.pets[index].status.bits.grazing = 1;
+        field_set_text_macro(slot, g_saved_game.layout.pets[index].name, 0xFF);
     }
 }
 
@@ -3316,7 +3319,7 @@ void field_menu_publish_cursor_pet(void)
 
     index = FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT_TABLE + FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT));
     FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT) = FIELD_MENU_PETS->pet_records[index].unknown_0x48[0];
-    field_set_text_macro(3, FIELD_PAD.pet_records[index].name, 0xFF);
+    field_set_text_macro(3, g_saved_game.layout.pets[index].name, 0xFF);
 }
 
 /** @brief Count the pets (occupied pet records) into D_80122C16. */
@@ -3328,7 +3331,7 @@ void field_menu_count_pets(void)
     count = 0;
     for (i = 0; i < PET_RECORD_COUNT; i++)
     {
-        if (FIELD_PAD.pet_records[i].name[0] != 0)
+        if (g_saved_game.layout.pets[i].name[0] != 0)
         {
             count++;
         }
@@ -3350,7 +3353,7 @@ void func_800C9D84(void)
  */
 void field_menu_load_golem_saved_group(void)
 {
-    D_80122C12 = FIELD_PAD.golem_count >> 4;
+    D_80122C12 = g_saved_game.layout.golem_count >> 4;
 }
 
 /**
