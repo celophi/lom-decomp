@@ -322,7 +322,7 @@ s32 niki_advance_load_sequence(void)
         g_niki_load_step = g_niki_load_step - 1;
         break;
 
-    case NIKI_COMMAND_CHECK_CARD_TYPE:
+    case NIKI_COMMAND_CHECK_POCKETSTATION:
         wait_attempts = 0;
         do
         {

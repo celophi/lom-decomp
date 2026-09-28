@@ -467,7 +467,7 @@ s32 addhero_has_known_entry_type(void)
     for (entry_index = 0; entry_index < g_addhero_entry_state; entry_index++)
     {
         if (strncmp(g_lom_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name, ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) == 0 ||
-            strncmp(g_lom_alt_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name, ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) == 0)
+            strncmp(g_lom_pocketstation_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name, ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) == 0)
         {
             return 1;
         }
@@ -509,7 +509,7 @@ inline void addhero_erase_placeholder_files(void)
 
     memcpy(&buf, &g_addhero_file_template, ADDHERO_CARD_DEVICE_BYTES);
     buf.device.characters.slot += (u8)g_addhero_card_slot;
-    strcat(buf.text, g_lom_alt_save_dummy_filename);
+    strcat(buf.text, g_lom_pocketstation_dummy_filename);
     erase(buf.text);
 }
 
@@ -805,7 +805,7 @@ s32 addhero_advance_load_sequence(void)
             }
             break;
 
-        case ADDHERO_STEP_CHECK_CARD_TYPE:
+        case ADDHERO_STEP_CHECK_POCKETSTATION:
             for (attempts = 0; attempts < ADDHERO_FILE_OP_ATTEMPTS; attempts++)
             {
                 if (McxCardType(ADDHERO_CARD_CHANNEL(g_addhero_card_slot)) == MCX_COMMAND_ISSUED)
@@ -823,7 +823,7 @@ s32 addhero_advance_load_sequence(void)
                     break;
                 }
             }
-            addhero_open_status_dialog(ADDHERO_DIALOG_CARD_TYPE_ERROR);
+            addhero_open_status_dialog(ADDHERO_DIALOG_NOT_POCKETSTATION);
             break;
 
         case ADDHERO_STEP_INIT_RETRIES:
@@ -1294,7 +1294,7 @@ void addhero_sort_entries_by_type(void)
         for (entry_index = 0; entry_index < g_addhero_entry_state; entry_index++)
         {
             if (g_addhero_entry_suffix_values[entry_index] == suffix &&
-                strncmp(g_lom_alt_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name, ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) == 0)
+                strncmp(g_lom_pocketstation_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name, ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) == 0)
             {
                 bcopy((u8*)&g_addhero_entries[g_addhero_card_slot][entry_index], (u8*)&sorted[output_index], sizeof(struct DIRENTRY));
                 output_index++;
@@ -1314,7 +1314,7 @@ void addhero_sort_entries_by_type(void)
     for (entry_index = 0; entry_index < g_addhero_entry_state; entry_index++)
     {
         if (strncmp(g_lom_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name, ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) != 0 &&
-            strncmp(g_lom_alt_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name, ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) != 0 &&
+            strncmp(g_lom_pocketstation_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name, ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) != 0 &&
             strncmp(g_new_save_entry_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name, ADDHERO_NEW_SAVE_FILENAME_PREFIX_LENGTH) != 0)
         {
             bcopy((u8*)&g_addhero_entries[g_addhero_card_slot][entry_index], (u8*)&sorted[output_index], sizeof(struct DIRENTRY));

@@ -48,7 +48,7 @@ easier to see.
 | Name | Meaning |
 |---|---|
 | `BASLUS-01013...` | A normal US save |
-| `BASLUSP01013...` | A second kind of save the game recognizes; we don't know what creates it yet |
+| `BASLUSP01013...` | The PocketStation mini-game's save (*Ring Ring Land*); the US release doesn't use it |
 | `BASLUS-01013DUMMY` | Temporary file used while a save is being written |
 | `AKIdummy` | The empty "New Save" slot shown in the list (*aki* is Japanese for empty) |
 
@@ -79,6 +79,16 @@ file. The save screens erase those before they read the card.
 The title is Shift-JIS, which is the Japanese text encoding the BIOS uses. It is
 not the same encoding as the game's own text; see [text tables](text-tables.md)
 for that.
+
+A finished save's title starts with `MANA--No.` and goes on with the save
+number, play time and hero name, all in full-width characters. When option bit 2
+is set, a musical note sign replaces the second dash; it's the same flag that
+puts `+` in the file name.
+
+While the game is writing a save, the title says `MANA-BAD.` instead. Its last
+step is to put the real title back. So if you find a save still titled
+`MANA-BAD.`, the save was interrupted, and its checksum won't match either,
+because the checksum was worked out with the real title.
 
 ## The saved game
 
@@ -113,8 +123,8 @@ The load screen doesn't store the location name. It uses the music track at
 together.
 
 A party icon of `0x7F` means the slot is empty. Icons 0 and 1 are the two
-heroes, values from `0x0E` are pets and values from `0x4F` are golems. We
-haven't mapped the values in between yet.
+heroes, 2 to `0x0D` are the other characters who can join the party, values
+from `0x0E` are pets and values from `0x4F` are golems.
 
 ### Skills
 
@@ -253,9 +263,8 @@ for example, is at `0x80043004` in the US release.
 
 - **The byte at `0x024F`.** The code calls it the save slot, but the 2P screen
   shows "Save Data version is wrong" when it doesn't match the running game.
-- **The `+` saves and `BASLUSP` files.** We know which flag controls the `+`
-  and that the game recognizes the second prefix, but not what they mean to the
-  player.
+- **The `+` saves.** We know which flag controls the `+`, but not what it
+  means to the player.
 - **The control flag in character records.** We know when it's set, but not
   exactly how the game uses it for a guest hero.
 - **Byte 3 of a land record.** The code stores the placement order there, but

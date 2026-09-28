@@ -122,10 +122,12 @@ extern SaveFile g_addhero_save_file;
 extern SaveFile g_addhero_entry_file;
 extern char g_addhero_save_file_path[];
 extern char g_lom_save_filename_prefix[];
-extern char g_lom_alt_save_filename_prefix[];
+/** @brief File name prefix of the PocketStation mini-game (Ring Ring Land) save. */
+extern char g_lom_pocketstation_filename_prefix[];
 extern char g_new_save_entry_prefix[];
 extern char g_lom_save_dummy_filename[];
-extern char g_lom_alt_save_dummy_filename[];
+/** @brief Temporary file name used while a PocketStation save is written. */
+extern char g_lom_pocketstation_dummy_filename[];
 
 void addhero_scroll_to_selection(void);
 void addhero_open_status_dialog(s32 message_id);
@@ -237,7 +239,7 @@ s32 addhero_advance_load_sequence(void);
 #define ADDHERO_DIALOG_SAVE_FAILED 0
 #define ADDHERO_DIALOG_LOAD_FAILED 1
 #define ADDHERO_DIALOG_CARD_NOT_INSERTED 2
-#define ADDHERO_DIALOG_CARD_TYPE_ERROR 3 /**< Its US text is empty. */
+#define ADDHERO_DIALOG_NOT_POCKETSTATION 3 /**< The card is not a PocketStation; the US release has no text for it. */
 #define ADDHERO_DIALOG_INVALID_SAVE 4    /**< Shows the load-failed message. */
 
 /** @brief g_addhero_selection_status values. */
@@ -283,7 +285,7 @@ s32 addhero_advance_load_sequence(void);
 #define ADDHERO_TEXT_SAVE_FAILED 30
 #define ADDHERO_TEXT_LOAD_FAILED 31
 #define ADDHERO_TEXT_CARD_NOT_INSERTED 32
-#define ADDHERO_TEXT_CARD_TYPE_ERROR 33
+#define ADDHERO_TEXT_NOT_POCKETSTATION 33
 #define ADDHERO_TEXT_SELECT_SAVE_DATA 34
 #define ADDHERO_TEXT_SELECT_ITEM 35
 #define ADDHERO_TEXT_SAME_HERO_DATA 40
@@ -307,17 +309,18 @@ typedef enum
     ADDHERO_STEP_POLL_HARDWARE_EVENTS = 4,  /**< Wait for and check the hardware card events. */
     ADDHERO_STEP_CLEAR_HARDWARE_EVENTS = 5, /**< Clear the hardware card events. */
     ADDHERO_STEP_SCAN_ENTRIES = 6,          /**< Erase the placeholder files and scan the card directory. */
-    ADDHERO_STEP_SCAN_DONE = 7,             /**< No-op after the scan; input stays blocked on this step and the scan. */
+    ADDHERO_STEP_SCAN_DONE = 7,             /**< No case: the sequence waits here after the scan; input stays blocked on this step and the scan. */
     ADDHERO_STEP_CLEAR_CARD = 8,            /**< Issue _card_clear on the current slot. */
     ADDHERO_STEP_LOAD_CARD = 9,             /**< Issue _card_load and arm the poll countdowns. */
     ADDHERO_STEP_ERASE_ENTRY = 10,          /**< Erase the selected directory entry. */
+    ADDHERO_STEP_WAIT = 14,                 /**< No case: the sequence waits here until other code replaces it. */
     ADDHERO_STEP_POLL_CARD_LOAD = 15,       /**< Wait for the _card_clear/_card_load result, retrying. */
     ADDHERO_STEP_WAIT_HARDWARE_EVENTS = 16, /**< Wait for any hardware card event. */
     ADDHERO_STEP_READ_ENTRY = 17,           /**< Open the selected save and start reading its header. */
     ADDHERO_STEP_POLL_ENTRY_READ = 18,      /**< Wait for the header read to finish. */
     ADDHERO_STEP_READ_SAVE = 19,            /**< Open the selected save and start reading the blob. */
     ADDHERO_STEP_POLL_SAVE_READ = 20,       /**< Wait for the blob read to finish, retrying. */
-    ADDHERO_STEP_CHECK_CARD_TYPE = 24,      /**< Wait for a card and check its status. */
+    ADDHERO_STEP_CHECK_POCKETSTATION = 24,  /**< Check that the card is a PocketStation (McxCardType); no ADDHERO sequence uses it. */
     ADDHERO_STEP_WRITE_SAVE = 25,           /**< Create the placeholder file and start writing the save blob. */
     ADDHERO_STEP_POLL_SAVE_WRITE = 26,      /**< Wait for the write and rename it over the selected save. */
     ADDHERO_STEP_READ_BEFORE_WRITE = 27,    /**< Open the selected save and read the blob before writing. */
@@ -465,11 +468,13 @@ extern u16 g_addhero_text_number_label;
 extern u16 g_addhero_text_load_prompt;
 extern u16 g_addhero_text_loading;
 extern u16 g_addhero_text_no_game_save_data;
-extern u16 g_addhero_text_alt_save_label;
+/** @brief List label of a PocketStation (Ring Ring Land) save; empty in the US release. */
+extern u16 g_addhero_text_ring_ring_land_label;
 extern u16 g_addhero_text_save_failed;
 extern u16 g_addhero_text_load_failed;
 extern u16 g_addhero_text_card_not_inserted;
-extern u16 g_addhero_text_card_type_error;
+/** @brief "Not a PocketStation" dialog text; empty in the US release. */
+extern u16 g_addhero_text_not_pocketstation;
 extern u16 g_addhero_text_select_save_data;
 extern u16 g_addhero_text_select_item;
 extern u16 g_addhero_text_same_hero_data;

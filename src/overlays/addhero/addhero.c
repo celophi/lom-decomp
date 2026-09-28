@@ -640,10 +640,10 @@ void* addhero_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset
                         prim = field_draw_text(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_text_mana_label), FIELD_TEXT_COLOR_NORMAL,
                                                ADDHERO_ENTRY_LABEL_X - x_offset, row_y, FIELD_TEXT_ALIGN_LEFT);
                     }
-                    else if (strncmp(g_lom_alt_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name,
+                    else if (strncmp(g_lom_pocketstation_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name,
                                      ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) == 0)
                     {
-                        prim = field_draw_text(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_text_alt_save_label), FIELD_TEXT_COLOR_NORMAL,
+                        prim = field_draw_text(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_text_ring_ring_land_label), FIELD_TEXT_COLOR_NORMAL,
                                                ADDHERO_ENTRY_LABEL_X - x_offset, row_y, FIELD_TEXT_ALIGN_LEFT);
                     }
                     else if (strncmp(g_new_save_entry_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name,

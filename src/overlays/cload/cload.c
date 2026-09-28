@@ -614,7 +614,7 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
                     {
                         prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_mana), 1, base_x, row_y, 0);
                     }
-                    else if (strncmp(g_lom_alt_save_filename_prefix, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
+                    else if (strncmp(g_lom_pocketstation_filename_prefix, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
                     {
                         prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_alt_save), 1, base_x, row_y, 0);
                     }
