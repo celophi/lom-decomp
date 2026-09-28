@@ -1,6 +1,6 @@
 # Overlay ID Prefix
 
-[English documentation](../../README.md)
+[English documentation](../../README.md) | [日本語](../../../jp/technical/reference/overlay-id-prefix.md)
 
 Status: implemented. Every overlay with C sources in the build carries its
 header word in a dedicated `overlay_header.c` translation unit that is linked

@@ -389,8 +389,9 @@ lom-decomp/
 
 ## ドキュメント
 
-プロジェクト固有の資料として、次のドキュメントがあります。
+[日本語ドキュメント一覧](docs/jp/README.md)に、ゲームの仕組みの解説と関連資料をまとめています。
 
+- [シーンのレイアウトと出現条件](docs/jp/technical/architecture/scene-layouts.md)
 - [`tools/compressor/README.md`](tools/compressor/README.md)
 
 ## トラブルシューティング
