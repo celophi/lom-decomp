@@ -120,7 +120,7 @@
 /** @brief Actor ids below this are real actors; larger ids are talk-only speakers. */
 #define FIELD_ACTOR_ID_LIMIT 0x80
 
-/** @brief Trigger group bits of FieldActionRequest control flags. */
+/** @brief Trigger group bits of FieldLayoutRecord control flags. */
 #define FIELD_ACTION_TRIGGER_GROUP_MASK 0xF
 
 /** @brief FieldActorRecord flags bit set for records that only run scripts. */
@@ -130,7 +130,7 @@
 #define FIELD_ACTOR_SOURCE_SHIFT 4
 #define FIELD_ACTOR_SOURCE_MASK 0x3FF
 
-/** @brief Party slot bits of FieldActionRequest.source.actor; the bits above hold the record's source. */
+/** @brief Party slot bits of FieldLayoutRecord.source.actor; the bits above hold the record's source. */
 #define FIELD_ACTION_SOURCE_ACTOR_MASK 7
 #define FIELD_ACTION_SOURCE_SHIFT 3
 
@@ -148,7 +148,7 @@
  */
 #define FIELD_OFFSET_TABLE_TEXT(table, index) ((u8*)(table) + *(s16*)((index) * 2 + (s32)(table)))
 
-/** @brief Destination and activation policy encoded in an action request. */
+/** @brief Destination and activation policy encoded in a layout record. */
 typedef enum
 {
     FIELD_ACTION_ACTOR = 0,
@@ -205,7 +205,7 @@ static void field_init_text_macros(void);
 static void field_init_party_actors(void);
 static void field_init_event_records(void);
 static void field_init_script_variables(void);
-static s32 field_install_menu_action(FieldActionRequest* request, FieldActorRecord** entry_out, s32 request_index, s32* action_index);
+static s32 field_install_menu_action(FieldLayoutRecord* layout_record, FieldActorRecord** entry_out, s32 record_index, s32* action_index);
 static void field_leave_scene(void);
 static void field_update_scene_transition(void);
 static void field_update_triggers(void);
@@ -381,12 +381,12 @@ static void field_init_script_variables(void)
 
 /**
  * @brief Install a conditional actor action and initialize its event scripts.
- * @param request Packed action definition, updated with activation and source state.
- * @param request_index Index in the load list; zero resets the action subsystem.
+ * @param layout_record Scene layout record, updated with activation and source state.
+ * @param record_index Index in the scene layout; zero resets the action subsystem.
  * @note FIELD_ACTION_PARTY_1 activates the previous (possibly uninitialized) entry
  *       instead of party actor 1, as the original code does.
  */
-void field_install_actor_action(FieldActionRequest* request, s32 request_index)
+void field_install_actor_action(FieldLayoutRecord* layout_record, s32 record_index)
 {
     s32 action_index;
     FieldActorRecord* entry;
@@ -394,31 +394,31 @@ void field_install_actor_action(FieldActionRequest* request, s32 request_index)
     s32 script_index;
     FieldActorRecord* flag_entry;
 
-    if (request_index == 0)
+    if (record_index == 0)
     {
         field_runtime_init();
     }
-    value = field_read_script_var(0, request->condition.variable << 16);
-    if ((value >= request->condition.minimum) && (value <= request->condition.maximum))
+    value = field_read_script_var(0, layout_record->condition.variable_ref << 16);
+    if ((value >= layout_record->condition.minimum) && (value <= layout_record->condition.maximum))
     {
-        switch (request->control.bits.kind)
+        switch (layout_record->control.bits.kind)
         {
         case FIELD_ACTION_ACTOR:
         {
             u16 count;
             FieldActorRecord* record;
 
-            request->control.bits.active = 1;
+            layout_record->control.bits.active = 1;
             count = g_field_runtime->state.actor_count++;
             record = &g_field_runtime->actors[count];
             entry = record;
-            record->id = request_index + FIELD_ACTION_ID_BASE;
+            record->id = record_index + FIELD_ACTION_ID_BASE;
             record->flags.bits.active = 1;
-            entry->flags.bits.trigger_group = request->control.flags;
-            request->control.flags &= ~FIELD_ACTION_TRIGGER_GROUP_MASK;
-            entry->flags.bits.source = request->source.actor >> FIELD_ACTION_SOURCE_SHIFT;
+            entry->flags.bits.trigger_group = layout_record->control.flags;
+            layout_record->control.flags &= ~FIELD_ACTION_TRIGGER_GROUP_MASK;
+            entry->flags.bits.source = layout_record->source.actor >> FIELD_ACTION_SOURCE_SHIFT;
             action_index = 0;
-            request->source.actor &= FIELD_ACTION_SOURCE_ACTOR_MASK;
+            layout_record->source.actor &= FIELD_ACTION_SOURCE_ACTOR_MASK;
             break;
         }
         case FIELD_ACTION_GROUP_ACTOR:
@@ -426,21 +426,21 @@ void field_install_actor_action(FieldActionRequest* request, s32 request_index)
             u16 count;
             FieldActorRecord* record;
 
-            request->control.bits.active = 1;
+            layout_record->control.bits.active = 1;
             count = g_field_runtime->state.actor_count++;
             record = &g_field_runtime->actors[count];
             entry = record;
-            record->id = request_index + FIELD_ACTION_ID_BASE;
+            record->id = record_index + FIELD_ACTION_ID_BASE;
             record->flags.bits.active = 1;
-            entry->flags.bits.trigger_group = request->control.flags;
-            entry->flags.bits.source = request->source.actor >> FIELD_ACTION_SOURCE_SHIFT;
-            request->control.flags &= ~FIELD_ACTION_TRIGGER_GROUP_MASK;
+            entry->flags.bits.trigger_group = layout_record->control.flags;
+            entry->flags.bits.source = layout_record->source.actor >> FIELD_ACTION_SOURCE_SHIFT;
+            layout_record->control.flags &= ~FIELD_ACTION_TRIGGER_GROUP_MASK;
             action_index = 0;
-            if (request->control.bits.group == 0)
+            if (layout_record->control.bits.group == 0)
             {
-                request->control.bits.group = (g_field_game_state->default_group >> 4) + 1;
+                layout_record->control.bits.group = (g_field_game_state->default_group >> 4) + 1;
             }
-            request->source.actor &= FIELD_ACTION_SOURCE_ACTOR_MASK;
+            layout_record->source.actor &= FIELD_ACTION_SOURCE_ACTOR_MASK;
             break;
         }
         case FIELD_ACTION_SCRIPT:
@@ -450,14 +450,14 @@ void field_install_actor_action(FieldActionRequest* request, s32 request_index)
             s32 flags;
             s32 flags_to_set;
 
-            request->control.bits.active = 0;
+            layout_record->control.bits.active = 0;
             count = g_field_runtime->state.actor_count++;
             record = &g_field_runtime->actors[count];
             entry = record;
-            record->id = request_index + FIELD_ACTION_ID_BASE;
+            record->id = record_index + FIELD_ACTION_ID_BASE;
             action_index = 0;
             record->flags.bits.active = 1;
-            flags_to_set = (entry->flags.word & ~FIELD_ACTION_TRIGGER_GROUP_MASK) | (request->control.flags & FIELD_ACTION_TRIGGER_GROUP_MASK);
+            flags_to_set = (entry->flags.word & ~FIELD_ACTION_TRIGGER_GROUP_MASK) | (layout_record->control.flags & FIELD_ACTION_TRIGGER_GROUP_MASK);
             /* The loop notes keep this store ahead of the flags copy below; without them sched2 sinks it. */
             do
             {
@@ -472,13 +472,13 @@ void field_install_actor_action(FieldActionRequest* request, s32 request_index)
         }
         case FIELD_ACTION_PARTY_0:
             action_index = 0;
-            request->control.bits.active = 0;
+            layout_record->control.bits.active = 0;
             entry = &g_field_runtime->actors[0];
             entry->flags.bits.active = 1;
             break;
         case FIELD_ACTION_PARTY_1:
             action_index = 0;
-            request->control.bits.active = 0;
+            layout_record->control.bits.active = 0;
             /* The original activates the previous entry, not party actor 1 (flag_entry is shared with the script case). */
             flag_entry = entry;
             entry = &g_field_runtime->actors[1];
@@ -486,7 +486,7 @@ void field_install_actor_action(FieldActionRequest* request, s32 request_index)
             break;
         case FIELD_ACTION_PARTY_2:
             action_index = 0;
-            request->control.bits.active = 0;
+            layout_record->control.bits.active = 0;
             entry = &g_field_runtime->actors[2];
             entry->flags.bits.active = 1;
             break;
@@ -494,42 +494,42 @@ void field_install_actor_action(FieldActionRequest* request, s32 request_index)
         {
             FieldActorRecord* event;
 
-            request->control.bits.active = 0;
-            if (request->control.bits.selector < FIELD_MENU_GROUP_COUNT)
+            layout_record->control.bits.active = 0;
+            if (layout_record->control.bits.selector < FIELD_MENU_GROUP_COUNT)
             {
-                field_classify_menu_slots(request->control.bits.selector);
+                field_classify_menu_slots(layout_record->control.bits.selector);
             }
             event = &g_field_runtime->events[0];
             event->flags.bits.active = 1;
             g_field_runtime->state.flags |= FIELD_STATE_PARTY_MODE_MASK;
             action_index = 0;
             entry = event;
-            field_start_interaction(FIELD_EVENT_OWNER, request->scripts[FIELD_EVENT_START]);
-            request->scripts[FIELD_EVENT_START] = FIELD_NO_SCRIPT;
+            field_start_interaction(FIELD_EVENT_OWNER, layout_record->scripts[FIELD_EVENT_START]);
+            layout_record->scripts[FIELD_EVENT_START] = FIELD_NO_SCRIPT;
             field_begin_party_script_control(FIELD_PARTY_MODE_EVENT);
             break;
         }
         case FIELD_ACTION_MENU:
-            request->control.bits.active = field_install_menu_action(request, &entry, request_index, &action_index);
+            layout_record->control.bits.active = field_install_menu_action(layout_record, &entry, record_index, &action_index);
             break;
         }
         if (entry != NULL)
         {
-            entry->selector = request->control.bits.selector;
+            entry->selector = layout_record->control.bits.selector;
             entry->event = FIELD_NO_EVENT;
-            entry->enabled_events = request->enabled_events;
+            entry->enabled_events = layout_record->enabled_events;
             for (script_index = 0; script_index < FIELD_ACTION_SCRIPT_COUNT; script_index++)
             {
-                entry->scripts[script_index] = request->scripts[script_index];
+                entry->scripts[script_index] = layout_record->scripts[script_index];
             }
             entry->script.status.bits.local_base = g_field_runtime->local_variable_base;
-            g_field_runtime->local_variable_base += request->control.bits.local_variable_count;
+            g_field_runtime->local_variable_base += layout_record->control.bits.local_variable_count;
             field_queue_actor_event(entry->id, FIELD_EVENT_START, (u8)action_index);
         }
     }
     else
     {
-        request->control.bits.active = 0;
+        layout_record->control.bits.active = 0;
     }
 }
 
@@ -604,13 +604,13 @@ void field_end_party_script_control(void)
 
 /**
  * @brief Resolve a menu action slot and append an actor record when it is in use.
- * @param request Action request containing the packed slot selection; receives the result type.
+ * @param layout_record Layout record containing the packed slot selection; receives the result type.
  * @param entry_out Receives the appended actor record, or NULL when no record is appended.
- * @param request_index Request index; the record id is request_index + FIELD_ACTION_ID_BASE.
+ * @param record_index Layout record index; the record id is record_index + FIELD_ACTION_ID_BASE.
  * @param action_index Receives the selected action index when the slot kind needs one.
  * @return -1 when a record is appended, or 0 when the slot is unused or empty.
  */
-static s32 field_install_menu_action(FieldActionRequest* request, FieldActorRecord** entry_out, s32 request_index, s32* action_index)
+static s32 field_install_menu_action(FieldLayoutRecord* layout_record, FieldActorRecord** entry_out, s32 record_index, s32* action_index)
 {
     FieldActorRecord* entry;
     u32 group;
@@ -618,7 +618,7 @@ static s32 field_install_menu_action(FieldActionRequest* request, FieldActorReco
     u16 count;
     u8 slot;
 
-    slot = request->control.bits.selector;
+    slot = layout_record->control.bits.selector;
     group = slot >> 7;
     slot &= 7;
 
@@ -633,17 +633,17 @@ static s32 field_install_menu_action(FieldActionRequest* request, FieldActorReco
 
         case FIELD_MENU_SLOT_PLAIN:
             *action_index = 0;
-            request->source.result_type = 2;
+            layout_record->source.result_type = 2;
             break;
 
         case FIELD_MENU_SLOT_ITEM:
             *action_index = g_field_game_state->menu_slots[group].slots[slot].entry.index - FIELD_MENU_ITEM_BASE;
-            request->source.result_type = g_field_game_state->menu_slots[group].slots[slot].entry.bits.result_type;
+            layout_record->source.result_type = g_field_game_state->menu_slots[group].slots[slot].entry.bits.result_type;
             break;
 
         case FIELD_MENU_SLOT_INDEXED:
             *action_index = g_field_game_state->menu_slots[group].slots[slot].entry.index;
-            request->source.result_type = g_field_game_state->menu_slots[group].slots[slot].entry.bits.result_type;
+            layout_record->source.result_type = g_field_game_state->menu_slots[group].slots[slot].entry.bits.result_type;
             break;
 
         default:
@@ -654,9 +654,9 @@ static s32 field_install_menu_action(FieldActionRequest* request, FieldActorReco
         entry = &g_field_runtime->actors[count];
         *entry_out = entry;
         entry->flags.bits.active = 1;
-        (*entry_out)->id = request_index + FIELD_ACTION_ID_BASE;
-        (*entry_out)->flags.bits.trigger_group = request->control.flags;
-        request->control.flags &= ~FIELD_ACTION_TRIGGER_GROUP_MASK;
+        (*entry_out)->id = record_index + FIELD_ACTION_ID_BASE;
+        (*entry_out)->flags.bits.trigger_group = layout_record->control.flags;
+        layout_record->control.flags &= ~FIELD_ACTION_TRIGGER_GROUP_MASK;
         return -1;
     }
 

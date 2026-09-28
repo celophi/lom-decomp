@@ -5,7 +5,7 @@
 
 #define FIELD_ACTION_SCRIPT_COUNT 16
 
-/** @brief Packed actor/action definition loaded from a field resource. */
+/** @brief Scene layout record describing a conditional actor or action. */
 typedef struct
 {
     union
@@ -39,7 +39,8 @@ typedef struct
     } control;
     struct
     {
-        u16 variable;
+        /** @brief Encoded script-variable reference tested against the inclusive range. */
+        u16 variable_ref;
         u8 minimum;
         u8 maximum;
     } condition;
@@ -71,8 +72,8 @@ typedef struct
      * reference, with bit 15 selecting the alternate facing.
      */
     u16 scripts[FIELD_ACTION_SCRIPT_COUNT];
-} FieldActionRequest;
+} FieldLayoutRecord;
 
-void field_install_actor_action(FieldActionRequest* request, s32 request_index);
+void field_install_actor_action(FieldLayoutRecord* layout_record, s32 record_index);
 
 #endif

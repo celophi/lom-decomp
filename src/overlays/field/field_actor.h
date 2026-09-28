@@ -64,7 +64,7 @@ typedef union
     struct
     {
         u32 unk0 : 16;
-        /** @brief Actor group of a layout actor (FieldActionRequest group bits). */
+        /** @brief Actor group of a layout actor (FieldLayoutRecord group bits). */
         u32 group : 2;
         u32 unk18 : 1;
         /** @brief CLUT column of the actor's sprite palette. */

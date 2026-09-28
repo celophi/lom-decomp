@@ -28,10 +28,10 @@ Scene IMG
         ...
 ```
 
-In our C code, one of these records is called `FieldActionRequest`. The name
-fits what the record is asking the game to do: install an actor or action with
-these settings, if its condition passes. This is the name used in the
-reconstructed code. We don't know the original developers' name for it.
+We call this a layout record throughout the code and documentation. Both the
+C code and the Python extractor name the type `FieldLayoutRecord`. In C,
+`FieldSceneLayout.records` holds the layout records. These are names used in
+the reconstructed code; we don't know the original developers' names.
 
 Each record is 48 bytes long. It describes the kind of action, its condition,
 position, resource settings, and the scripts and parameters used to control
@@ -43,7 +43,7 @@ has three fields:
 
 | Field | What it tells the game |
 | --- | --- |
-| `variable` | Which stored value to read |
+| `variable_ref` | Reference identifying which stored value to read |
 | `minimum` | The lowest value that passes |
 | `maximum` | The highest value that passes |
 
@@ -55,8 +55,8 @@ record.
 In C, the comparison looks like this:
 
 ```c
-if ((value >= request->condition.minimum) &&
-    (value <= request->condition.maximum))
+if ((value >= layout_record->condition.minimum) &&
+    (value <= layout_record->condition.maximum))
 ```
 
 Here, `value` is what the game just read from memory. The minimum and maximum
@@ -67,8 +67,9 @@ which values are allowed. The current value lives elsewhere, in the game's
 memory. The same scene file can therefore produce a different result depending
 on the player's progress.
 
-The `variable` field is an encoded reference. It describes where to read and
-how much to read. Some references select saved-game variables. Others select
+The `variable_ref` field is an encoded reference. The `_ref` suffix means
+"reference": it identifies a stored value rather than containing its current
+value. It describes where to read and how much to read. Some references select saved-game variables. Others select
 values in the current field runtime. Some select a single bit, which can only
 be 0 or 1; others select a larger value. We shouldn't assume every condition
 is a checkbox, or that every condition reads saved-game data.
@@ -91,10 +92,10 @@ among others:
 x: 395
 z: 180
 item_id: 0x0096
-collection_flag: 0x0BC0
+collection_variable_ref: 0x0BC0
 alternate_facing: false
 condition:
-  variable: 0x0BC0
+  variable_ref: 0x0BC0
   minimum: 0
   maximum: 0
 ```
@@ -104,7 +105,7 @@ the item and facing settings alone and follow the condition.
 
 `0x0BC0` tells the game which stored value to read. The `0x` prefix means the
 number is written in hexadecimal, or base 16. In ordinary decimal notation,
-`0x0BC0` is 3008. It isn't the current value of the collection flag.
+`0x0BC0` is 3008. It isn't the current value of the collection variable.
 
 For this particular reference, the game selects one bit in its saved-game
 variable array, `g_field_game_state->words`. Each entry in that array holds
@@ -145,7 +146,7 @@ We can also see the condition in the original record bytes:
 
 ```text
 C0 0B         00          00
-variable      minimum     maximum
+variable_ref  minimum     maximum
 0x0BC0        0           0
 ```
 
@@ -154,14 +155,14 @@ The two bytes of the variable are stored with the low byte first, which is why
 They aren't part of `0x0BC0`. The extractor now shows all three fields directly
 under `condition`, so we don't need to decode `record_bytes` to find them.
 
-There's another detail in the YAML: `collection_flag` and `condition.variable`
-both contain `0x0BC0`. This chest really does store that reference twice, for
+There's another detail in the YAML: `collection_variable_ref` and
+`condition.variable_ref` both contain `0x0BC0`. This chest really does store that reference twice, for
 two different uses.
 
-The loader reads `condition.variable` to decide whether to install the chest.
+The loader reads `condition.variable_ref` to decide whether to install the chest.
 The chest's script gets its collection reference from slot 5 of the record's
-`scripts` array. The extractor displays that parameter as `collection_flag`.
-The script needs to know which saved bit belongs to the treasure, too.
+`scripts` array. The extractor displays that parameter as
+`collection_variable_ref`. The script needs to know which saved bit belongs to the treasure, too.
 
 That array contains 16 entries. Some identify scripts to run, while others
 provide data those scripts use. For the ordinary chest template:
@@ -205,6 +206,6 @@ If you want to follow this in the source, these are the places to start:
   `field_read_script_var()` calls `field_resolve_script_var()` to locate the
   value, then reads it.
 - [field_interaction_start.h](../../../../include/field_interaction_start.h):
-  `FieldActionRequest` defines the layout record and its fields.
-- [field_scene.py](../../../../tools/scenes/field_scene.py): `LayoutRecord.chest_yaml()`
+  `FieldLayoutRecord` defines the layout record and its fields.
+- [field_scene.py](../../../../tools/scenes/field_scene.py): `FieldLayoutRecord.chest_yaml()`
   turns the chest's layout fields into the readable YAML used in this example.

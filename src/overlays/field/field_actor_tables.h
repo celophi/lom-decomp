@@ -188,9 +188,9 @@ typedef struct
     u32 flags;
     s32 group_flags;
     s32 key;
-    /** @brief Event bits the object's scripts react to (FieldActionRequest::enabled_events). */
+    /** @brief Event bits the object's scripts react to (FieldLayoutRecord::enabled_events). */
     u16 enabled_events;
-    /** @brief Event scripts and actor parameters copied from FieldActionRequest::scripts. */
+    /** @brief Event scripts and actor parameters copied from FieldLayoutRecord::scripts. */
     u16 scripts[16];
     u8 unk3A[2];
     s32 action_parameter;
