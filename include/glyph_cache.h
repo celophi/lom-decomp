@@ -17,7 +17,7 @@
  * to a free cache slot in VRAM and drawn as a 16x16 sprite. Slots not drawn
  * during a frame are freed at its end.
  *
- * Each overlay includes these functions from src/overlays/common/<function>.inc.c
+ * Each overlay includes these functions from src/common/glyph_cache/<function>.inc.c
  * at the point where they sit in its binary and maps the globals below to its
  * own data, so every overlay still links its own copy.
  */

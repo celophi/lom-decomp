@@ -29,7 +29,7 @@ extern const SjisDecimalOverflowText g_decimal_overflow_text;
  * @param out Destination buffer.
  * @param value Value to format.
  * @return Pointer to the terminator.
- * @note Compiled into ADDHERO, CARDA and NIKI from src/overlays/common/format_decimal.inc.c.
+ * @note Compiled into ADDHERO, CARDA and NIKI from src/common/sjis/format_decimal.inc.c.
  */
 s8* format_decimal(s8* out, s32 value);
 

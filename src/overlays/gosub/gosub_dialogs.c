@@ -500,6 +500,6 @@ s32 gosub_draw_title(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y
     return packet_cursor;
 }
 
-#include "../common/encoded_text_append.inc.c"
-#include "../common/encoded_text_byte_length.inc.c"
-#include "../common/encoded_text_copy.inc.c"
+#include "../../common/encoded_text/encoded_text_append.inc.c"
+#include "../../common/encoded_text/encoded_text_byte_length.inc.c"
+#include "../../common/encoded_text/encoded_text_copy.inc.c"

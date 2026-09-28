@@ -211,7 +211,7 @@ void carda_build_save_file(void)
     } while (count < 18);
 }
 
-#include "../common/skip_hex_digits.inc.c"
+#include "../../common/save_file/skip_hex_digits.inc.c"
 
 /**
  * @brief Test SAVED_OPTION_FLAG_2 of the live saved game in overlay mode 0.
@@ -226,8 +226,8 @@ s32 carda_test_option_flag_2(void)
     return 0;
 }
 
-#include "../common/validate_save_file.inc.c"
-#include "../common/compute_save_checksum.inc.c"
+#include "../../common/save_file/validate_save_file.inc.c"
+#include "../../common/save_file/compute_save_checksum.inc.c"
 
 /**
  * @brief Draw the load confirmation prompt and handle its input: a card

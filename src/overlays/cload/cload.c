@@ -656,7 +656,7 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
     return prim;
 }
 
-#include "../common/skip_hex_digits.inc.c"
+#include "../../common/save_file/skip_hex_digits.inc.c"
 
 /**
  * @brief Draw the fixed CLOAD header label.
@@ -917,7 +917,7 @@ void *cload_draw_selected_entry_details(u_long *ot, void *prim, s32 x_offset, s3
 }
 #endif
 
-#include "../common/terminate_multibyte_text.inc.c"
+#include "../../common/save_file/terminate_multibyte_text.inc.c"
 
 /**
  * @brief Mark all eight UI elements as inactive.
@@ -1095,6 +1095,6 @@ void cload_update_and_draw_elements(CloadRenderBuffer *frame)
     frame->prim_cursor = cload_emit_icon_highlight_strip(prim, ot);
 }
 
-#include "../common/encoded_text_append.inc.c"
-#include "../common/encoded_text_byte_length.inc.c"
-#include "../common/encoded_text_copy.inc.c"
+#include "../../common/encoded_text/encoded_text_append.inc.c"
+#include "../../common/encoded_text/encoded_text_byte_length.inc.c"
+#include "../../common/encoded_text/encoded_text_copy.inc.c"

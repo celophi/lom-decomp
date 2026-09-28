@@ -1526,6 +1526,6 @@ u8* golem_render_fade(u8* packet_cursor, u_long* ordering_table_tag)
     return packet_cursor;
 }
 
-#include "../common/encoded_text_append.inc.c"
-#include "../common/encoded_text_byte_length.inc.c"
-#include "../common/encoded_text_copy.inc.c"
+#include "../../common/encoded_text/encoded_text_append.inc.c"
+#include "../../common/encoded_text/encoded_text_byte_length.inc.c"
+#include "../../common/encoded_text/encoded_text_copy.inc.c"

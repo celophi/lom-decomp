@@ -963,8 +963,8 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
 }
 #endif
 
-#include "../common/skip_hex_digits.inc.c"
-#include "../common/terminate_multibyte_text.inc.c"
+#include "../../common/save_file/skip_hex_digits.inc.c"
+#include "../../common/save_file/terminate_multibyte_text.inc.c"
 
 /**
  * @brief Clear the element pool: drop each element's scroll flag and free it,
@@ -1145,6 +1145,6 @@ void addhero_deactivate_primary_element(void)
     g_addhero_element_pool[ADDHERO_ELEMENT_MODAL].attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
 }
 
-#include "../common/encoded_text_append.inc.c"
-#include "../common/encoded_text_byte_length.inc.c"
-#include "../common/encoded_text_copy.inc.c"
+#include "../../common/encoded_text/encoded_text_append.inc.c"
+#include "../../common/encoded_text/encoded_text_byte_length.inc.c"
+#include "../../common/encoded_text/encoded_text_copy.inc.c"

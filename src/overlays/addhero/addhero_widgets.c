@@ -891,5 +891,5 @@ void* addhero_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y)
     return prim;
 }
 
-#include "../common/validate_save_file.inc.c"
-#include "../common/compute_save_checksum.inc.c"
+#include "../../common/save_file/validate_save_file.inc.c"
+#include "../../common/save_file/compute_save_checksum.inc.c"

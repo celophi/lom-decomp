@@ -14,14 +14,14 @@
 #define CLOAD_GLYPH_CHART_PAGE_BASE ((u8*)cload_load_icon_resources + 0x2C)
 #endif
 
-#include "../common/draw_signed_decimal.inc.c"
-#include "../common/draw_hex_byte.inc.c"
-#include "../common/draw_cached_text.inc.c"
-#include "../common/render_cached_glyph.inc.c"
-#include "../common/emit_glyph_sprite.inc.c"
-#include "../common/begin_glyph_cache_frame.inc.c"
-#include "../common/evict_unused_glyphs.inc.c"
-#include "../common/reset_glyph_cache.inc.c"
+#include "../../common/glyph_cache/draw_signed_decimal.inc.c"
+#include "../../common/glyph_cache/draw_hex_byte.inc.c"
+#include "../../common/glyph_cache/draw_cached_text.inc.c"
+#include "../../common/glyph_cache/render_cached_glyph.inc.c"
+#include "../../common/glyph_cache/emit_glyph_sprite.inc.c"
+#include "../../common/glyph_cache/begin_glyph_cache_frame.inc.c"
+#include "../../common/glyph_cache/evict_unused_glyphs.inc.c"
+#include "../../common/glyph_cache/reset_glyph_cache.inc.c"
 
 /**
  * @brief Translate a string into Shift-JIS through the character chart, two

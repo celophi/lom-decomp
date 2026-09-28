@@ -1142,7 +1142,7 @@ void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
 }
 #endif
 
-#include "../common/terminate_multibyte_text.inc.c"
+#include "../../common/save_file/terminate_multibyte_text.inc.c"
 
 /**
  * @brief Draw FIELD's "Can't hold any more." notice, centred in a 256-pixel window.
@@ -1358,6 +1358,6 @@ void carda_deactivate_primary_element(void)
     g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state = CARDA_ELEMENT_FREE;
 }
 
-#include "../common/encoded_text_append.inc.c"
-#include "../common/encoded_text_byte_length.inc.c"
-#include "../common/encoded_text_copy.inc.c"
+#include "../../common/encoded_text/encoded_text_append.inc.c"
+#include "../../common/encoded_text/encoded_text_byte_length.inc.c"
+#include "../../common/encoded_text/encoded_text_copy.inc.c"

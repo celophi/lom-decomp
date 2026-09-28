@@ -40,13 +40,13 @@
 /** @brief Offset of the title in a memory-card title frame. */
 #define CARDA_TITLE_OFFSET 4
 
-#include "../common/format_decimal.inc.c"
-#include "../common/format_hex.inc.c"
-#include "../common/hex_nibble_to_ascii.inc.c"
-#include "../common/parse_hex.inc.c"
-#include "../common/parse_hex_suffix_byte.inc.c"
+#include "../../common/sjis/format_decimal.inc.c"
+#include "../../common/save_file/format_hex.inc.c"
+#include "../../common/save_file/hex_nibble_to_ascii.inc.c"
+#include "../../common/save_file/parse_hex.inc.c"
+#include "../../common/save_file/parse_hex_suffix_byte.inc.c"
 
-#include "../common/parse_entry_fields.inc.c"
+#include "../../common/card_directory/parse_entry_fields.inc.c"
 
 /**
  * @brief Sort and rank the current card's entries and number the new-save entry.
@@ -1151,8 +1151,8 @@ void carda_reset_to_new_save_entry(void)
     strcpy(g_card_entries[g_card_slot], g_new_save_entry_prefix);
 }
 
-#include "../common/restart_card_sequence.inc.c"
-#include "../common/poll_and_retry_card_info.inc.c"
+#include "../../common/card_events/restart_card_sequence.inc.c"
+#include "../../common/card_events/poll_and_retry_card_info.inc.c"
 
 /**
  * @brief Open and enable the software and hardware memory-card events.
@@ -1183,7 +1183,7 @@ void carda_init_card_events(void)
     g_carda_entry_scan_active = 0;
 }
 
-#include "../common/shutdown_card_events.inc.c"
+#include "../../common/card_events/shutdown_card_events.inc.c"
 
 /**
  * @brief Reset the list view and read the first directory entry of a card.
@@ -1350,10 +1350,10 @@ void carda_commit_selected_entry(void)
     }
 }
 
-#include "../common/clear_software_card_events.inc.c"
-#include "../common/clear_hardware_card_events.inc.c"
-#include "../common/poll_software_card_events.inc.c"
-#include "../common/poll_hardware_card_events.inc.c"
+#include "../../common/card_events/clear_software_card_events.inc.c"
+#include "../../common/card_events/clear_hardware_card_events.inc.c"
+#include "../../common/card_events/poll_software_card_events.inc.c"
+#include "../../common/card_events/poll_hardware_card_events.inc.c"
 
 /**
  * @brief Reorder the current card's directory by save type and suffix byte.

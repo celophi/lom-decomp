@@ -1870,7 +1870,7 @@ static void render_layout_sprite_batch(RenderContext* render_ctx)
     render_ctx->prim_cursor = draw_mode_packet + 1;
 }
 
-#include "../common/encoded_text_byte_length.inc.c"
+#include "../../common/encoded_text/encoded_text_byte_length.inc.c"
 
 /**
  * @brief Count the glyphs in a name buffer.
@@ -1995,7 +1995,7 @@ static s32 name_pop_last_glyph(u8* name_buf)
     return packed_glyph;
 }
 
-#include "../common/encoded_text_copy.inc.c"
+#include "../../common/encoded_text/encoded_text_copy.inc.c"
 
 /**
  * @brief Recalculate the active name and strip widths.

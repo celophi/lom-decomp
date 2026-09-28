@@ -10,7 +10,7 @@
  *
  * Each of these overlays reads both cards' directories into g_card_entries and
  * parses the hex serial in each Legend of Mana file name with
- * parse_entry_fields, compiled in from src/overlays/common/parse_entry_fields.inc.c.
+ * parse_entry_fields, compiled in from src/common/card_directory/parse_entry_fields.inc.c.
  * The globals below map to each overlay's own data.
  */
 

@@ -537,8 +537,8 @@ s32 niki_advance_load_sequence(void)
 /** @brief Wildcard matching all files on memory-card slot zero. */
 const char g_niki_entry_header_template[7] __attribute__((aligned(4))) = "bu00:*";
 
-#include "../common/restart_card_sequence.inc.c"
-#include "../common/poll_and_retry_card_info.inc.c"
+#include "../../common/card_events/restart_card_sequence.inc.c"
+#include "../../common/card_events/poll_and_retry_card_info.inc.c"
 
 /**
  * @brief Open and enable software and hardware memory-card events for polling.
@@ -568,7 +568,7 @@ void niki_init_card_events(void)
     g_niki_entry_scan_active = 0;
 }
 
-#include "../common/shutdown_card_events.inc.c"
+#include "../../common/card_events/shutdown_card_events.inc.c"
 
 /**
  * @brief Reset the browser and read the selected card's first directory entry.
@@ -711,10 +711,10 @@ void niki_commit_selected_entry(void)
     g_niki_io_busy = 1;
 }
 
-#include "../common/clear_software_card_events.inc.c"
-#include "../common/clear_hardware_card_events.inc.c"
-#include "../common/poll_software_card_events.inc.c"
-#include "../common/poll_hardware_card_events.inc.c"
+#include "../../common/card_events/clear_software_card_events.inc.c"
+#include "../../common/card_events/clear_hardware_card_events.inc.c"
+#include "../../common/card_events/poll_software_card_events.inc.c"
+#include "../../common/card_events/poll_hardware_card_events.inc.c"
 
 /**
  * @brief Group recognized save-file types by suffix, then append other entries.
@@ -778,14 +778,14 @@ void niki_sort_entries_by_type(void)
     }
 }
 
-#include "../common/draw_signed_decimal.inc.c"
-#include "../common/draw_hex_byte.inc.c"
-#include "../common/draw_cached_text.inc.c"
-#include "../common/render_cached_glyph.inc.c"
-#include "../common/emit_glyph_sprite.inc.c"
-#include "../common/begin_glyph_cache_frame.inc.c"
-#include "../common/evict_unused_glyphs.inc.c"
-#include "../common/reset_glyph_cache.inc.c"
+#include "../../common/glyph_cache/draw_signed_decimal.inc.c"
+#include "../../common/glyph_cache/draw_hex_byte.inc.c"
+#include "../../common/glyph_cache/draw_cached_text.inc.c"
+#include "../../common/glyph_cache/render_cached_glyph.inc.c"
+#include "../../common/glyph_cache/emit_glyph_sprite.inc.c"
+#include "../../common/glyph_cache/begin_glyph_cache_frame.inc.c"
+#include "../../common/glyph_cache/evict_unused_glyphs.inc.c"
+#include "../../common/glyph_cache/reset_glyph_cache.inc.c"
 
 /*
  * The extended table linker symbol is biased backwards by 0x19 pages.  This
@@ -793,4 +793,4 @@ void niki_sort_entries_by_type(void)
  * (0x19..0x1F) instead of subtracting NIKI_TEXT_EXTENDED_LEAD_FIRST first.
  */
 
-#include "../common/expand_text_glyph_codes.inc.c"
+#include "../../common/glyph_cache/expand_text_glyph_codes.inc.c"

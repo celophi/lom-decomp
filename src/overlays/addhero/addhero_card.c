@@ -76,13 +76,13 @@ extern char g_addhero_target_file_path[];
 extern AddheroCardPathTemplate g_addhero_entry_header_template;
 extern u8 g_addhero_loadseq_file_ready[];
 
-#include "../common/format_decimal.inc.c"
-#include "../common/format_hex.inc.c"
-#include "../common/hex_nibble_to_ascii.inc.c"
-#include "../common/parse_hex.inc.c"
-#include "../common/parse_hex_suffix_byte.inc.c"
+#include "../../common/sjis/format_decimal.inc.c"
+#include "../../common/save_file/format_hex.inc.c"
+#include "../../common/save_file/hex_nibble_to_ascii.inc.c"
+#include "../../common/save_file/parse_hex.inc.c"
+#include "../../common/save_file/parse_hex_suffix_byte.inc.c"
 
-#include "../common/parse_entry_fields.inc.c"
+#include "../../common/card_directory/parse_entry_fields.inc.c"
 
 /**
  * @brief Rank the current card's entries by parsed field value, tag "full"
@@ -703,8 +703,8 @@ s32 addhero_advance_load_sequence(void)
     return result;
 }
 
-#include "../common/restart_card_sequence.inc.c"
-#include "../common/poll_and_retry_card_info.inc.c"
+#include "../../common/card_events/restart_card_sequence.inc.c"
+#include "../../common/card_events/poll_and_retry_card_info.inc.c"
 
 /**
  * @brief Register and enable software and hardware memory-card events, then
@@ -735,7 +735,7 @@ void addhero_init_card_events(void)
     g_addhero_entry_scan_active = 0;
 }
 
-#include "../common/shutdown_card_events.inc.c"
+#include "../../common/card_events/shutdown_card_events.inc.c"
 
 /**
  * @brief Reset browser state and read the first directory entry of the given
@@ -864,10 +864,10 @@ void addhero_commit_selected_entry(void)
     g_addhero_io_busy = 1;
 }
 
-#include "../common/clear_software_card_events.inc.c"
-#include "../common/clear_hardware_card_events.inc.c"
-#include "../common/poll_software_card_events.inc.c"
-#include "../common/poll_hardware_card_events.inc.c"
+#include "../../common/card_events/clear_software_card_events.inc.c"
+#include "../../common/card_events/clear_hardware_card_events.inc.c"
+#include "../../common/card_events/poll_software_card_events.inc.c"
+#include "../../common/card_events/poll_hardware_card_events.inc.c"
 
 /**
  * @brief Reorder the active card's directory entries into a stable grouping:

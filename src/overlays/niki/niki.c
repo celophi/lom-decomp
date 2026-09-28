@@ -934,7 +934,7 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
 }
 #endif
 
-#include "../common/terminate_multibyte_text.inc.c"
+#include "../../common/save_file/terminate_multibyte_text.inc.c"
 
 /**
  * @brief Draw the niki footer glyph, anchored to the right edge of the panel.
@@ -1147,9 +1147,9 @@ void niki_deactivate_primary_element(void)
     g_niki_element_pool[0].attr.word &= ~7;
 }
 
-#include "../common/encoded_text_append.inc.c"
-#include "../common/encoded_text_byte_length.inc.c"
-#include "../common/encoded_text_copy.inc.c"
+#include "../../common/encoded_text/encoded_text_append.inc.c"
+#include "../../common/encoded_text/encoded_text_byte_length.inc.c"
+#include "../../common/encoded_text/encoded_text_copy.inc.c"
 
 /**
  * @brief Draw the load confirmation choice and dispatch acceptance or cancellation.
@@ -2107,19 +2107,19 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 }
 #endif
 
-#include "../common/skip_hex_digits.inc.c"
+#include "../../common/save_file/skip_hex_digits.inc.c"
 
 /** @brief Full-width MAX text used when a decimal value exceeds five digits. */
 const SjisDecimalOverflowText g_decimal_overflow_text __attribute__((aligned(4))) = {{0x82, 0x6C, 0x82, 0x60, 0x82, 0x77, 0}};
 
-#include "../common/validate_save_file.inc.c"
-#include "../common/compute_save_checksum.inc.c"
-#include "../common/format_decimal.inc.c"
-#include "../common/format_hex.inc.c"
-#include "../common/hex_nibble_to_ascii.inc.c"
-#include "../common/parse_hex.inc.c"
-#include "../common/parse_hex_suffix_byte.inc.c"
-#include "../common/parse_entry_fields.inc.c"
+#include "../../common/save_file/validate_save_file.inc.c"
+#include "../../common/save_file/compute_save_checksum.inc.c"
+#include "../../common/sjis/format_decimal.inc.c"
+#include "../../common/save_file/format_hex.inc.c"
+#include "../../common/save_file/hex_nibble_to_ascii.inc.c"
+#include "../../common/save_file/parse_hex.inc.c"
+#include "../../common/save_file/parse_hex_suffix_byte.inc.c"
+#include "../../common/card_directory/parse_entry_fields.inc.c"
 
 /**
  * @brief Rank recognized entries and select the entry with the greatest field value.

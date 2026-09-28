@@ -82,13 +82,13 @@ typedef enum CloadLoadResult
 /** @brief Memory-card device path prefix for card files. */
 const CloadCardPathTemplate g_cload_card_path_prefix = {"bu00:"};
 
-#include "../common/validate_save_file.inc.c"
-#include "../common/compute_save_checksum.inc.c"
-#include "../common/format_hex.inc.c"
-#include "../common/hex_nibble_to_ascii.inc.c"
-#include "../common/parse_hex.inc.c"
-#include "../common/parse_hex_suffix_byte.inc.c"
-#include "../common/parse_entry_fields.inc.c"
+#include "../../common/save_file/validate_save_file.inc.c"
+#include "../../common/save_file/compute_save_checksum.inc.c"
+#include "../../common/save_file/format_hex.inc.c"
+#include "../../common/save_file/hex_nibble_to_ascii.inc.c"
+#include "../../common/save_file/parse_hex.inc.c"
+#include "../../common/save_file/parse_hex_suffix_byte.inc.c"
+#include "../../common/card_directory/parse_entry_fields.inc.c"
 
 /**
  * @brief Rank the current page's entries and select the highest-scoring slot.
@@ -557,7 +557,7 @@ void cload_restart_load_sequence(void)
     g_cload_load_step = g_cload_steps_idle;
 }
 
-#include "../common/poll_and_retry_card_info.inc.c"
+#include "../../common/card_events/poll_and_retry_card_info.inc.c"
 
 /**
  * @brief Allocate and register the eight streaming buffers for this overlay.
@@ -591,7 +591,7 @@ void cload_init_card_events(void)
     g_cload_progress_bar_active = 0;
 }
 
-#include "../common/shutdown_card_events.inc.c"
+#include "../../common/card_events/shutdown_card_events.inc.c"
 
 /**
  * @brief Begin streaming the page's first g_card_entries record.
@@ -709,10 +709,10 @@ void cload_commit_selected_entry(void)
     g_cload_selected_entry_extended = 0;
 }
 
-#include "../common/clear_software_card_events.inc.c"
-#include "../common/clear_hardware_card_events.inc.c"
-#include "../common/poll_software_card_events.inc.c"
-#include "../common/poll_hardware_card_events.inc.c"
+#include "../../common/card_events/clear_software_card_events.inc.c"
+#include "../../common/card_events/clear_hardware_card_events.inc.c"
+#include "../../common/card_events/poll_software_card_events.inc.c"
+#include "../../common/card_events/poll_hardware_card_events.inc.c"
 
 /**
  * @brief Collate the g_card_entries page records, ordering them by pattern class.

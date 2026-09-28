@@ -13,7 +13,7 @@
  *
  * The functions were compiled into every overlay that edits names or builds
  * messages. Each overlay includes the ones it has from
- * src/overlays/common/encoded_text_*.inc.c at the point where they sit in its
+ * src/common/encoded_text/<function>.inc.c at the point where they sit in its
  * binary, so every overlay still links its own copy.
  *
  * FIELD's resident copies (field_name_byte_length, field_copy_name) keep their

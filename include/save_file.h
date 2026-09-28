@@ -11,7 +11,7 @@
  *
  * They check a save file's checksum, zero-fill its card title after the text,
  * and read and write the hex serial in its file name. Each overlay includes them from
- * src/overlays/common/<function>.inc.c at the point where they sit in its
+ * src/common/save_file/<function>.inc.c at the point where they sit in its
  * binary, so every overlay still links its own copy.
  */
 
