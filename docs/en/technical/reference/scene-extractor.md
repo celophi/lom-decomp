@@ -1,6 +1,6 @@
 # Scene IMG extractor
 
-[English documentation](../../README.md) | [Scene tools](../../../../tools/scenes/README.md)
+[English documentation](../../README.md) | [Scene tools](../../../../tools/scenes/README.md) | [Scene layouts and conditions](../architecture/scene-layouts.md)
 
 The extractor reads the game's `ANA/INFO_*/*.IMG` scene files. It checks their
 section offsets, extracts recognized assets and saves the remaining bytes as
@@ -57,20 +57,23 @@ with the other files in byte-map order.
 ## Chest records
 
 The layout section starts with a u32 count followed by 48-byte
-[`FieldActionRequest`](../../../../include/field_interaction_start.h) records.
+[`FieldLayoutRecord`](../../../../include/field_interaction_start.h) records.
 A chest uses the same record structure as other actors. The extractor recognizes
 the common chest resource selector and initializer script before labeling a
 record as `chest`.
 
-Its YAML file shows `x`, `z`, `item_id`, `collection_flag` and `alternate_facing`.
-The item comes from `scripts[4]`. The collection flag uses bits 0-14 of
+Its YAML file shows every layout field, including `condition.variable_ref` and
+its minimum and maximum, decoded control and position fields, the resource
+selector, enabled events, and all 16 script/parameter slots. It also shows the
+chest settings `x`, `z`, `item_id`, `collection_variable_ref` and `alternate_facing`.
+The item comes from `scripts[4]`. The collection reference uses bits 0-14 of
 `scripts[5]`, and bit 15 selects the alternate facing. `record_bytes` keeps the
-complete original record as hex, including the other fields and script references.
+complete original record as hex.
 The decoded fields describe that saved record; editing them does not change
 `record_bytes`.
 
 For example, `WAL_B020.IMG` has a chest at `(395, 180)` with item `0x96` and
-collection flag `0x0BC0`. It is exported as `chests/002.yaml` because it is layout
+collection-variable reference `0x0BC0`. It is exported as `chests/002.yaml` because it is layout
 record 2. The event scripts remain in the unknown data; the tool doesn't execute
 them or resolve item names. Records using other initializers stay raw until we
 understand them.
@@ -93,6 +96,6 @@ and [portrait representation](../../../../src/overlays/field/field_text.c) for
 the code that reads these resources.
 
 The Python code follows these structures: `SceneHeader` documents the header
-fields and `LayoutRecord` documents the actor record. `read_chests()`,
+fields and `FieldLayoutRecord` documents the layout record. `read_chests()`,
 `read_textures()` and `read_portraits()` handle their respective sections.
 `AssetRange` describes an extracted byte range; it isn't a disk structure.

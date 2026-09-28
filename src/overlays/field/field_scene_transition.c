@@ -214,11 +214,11 @@ typedef struct
     s16 dz;
 } FieldDirectionOffset;
 
-/** @brief Actor layout of a scene file: a count and the actors' action requests. */
+/** @brief Scene layout: a count followed by actor and action records. */
 typedef struct
 {
     s32 count;
-    FieldActionRequest requests[1];
+    FieldLayoutRecord records[1];
 } FieldSceneLayout;
 
 /** @brief Mover handed to field_collision_move_mover (same layout as in field_collision.c). */
@@ -914,9 +914,9 @@ static void field_copy_scene_geometry(s32* src, s32* end)
 }
 
 /**
- * @brief Install the scene's layout actions and place its active actors.
- * @param layout Actor layout of the scene file.
- * @note Active entries fill consecutive actor records from FIELD_PARTY_COUNT on.
+ * @brief Install the scene's layout records and place its active actors.
+ * @param layout Scene layout containing actor and action records.
+ * @note Active layout records fill consecutive actor records from FIELD_PARTY_COUNT on.
  * @note JP changes this function; the JP build takes it from assembly.
  */
 #if defined(VERSION_JP)
@@ -926,7 +926,7 @@ static void field_load_scene_actors(FieldSceneLayout* layout)
 {
     FieldActor* actor = &g_field_actors[FIELD_PARTY_COUNT];
     FieldObjectState* state = &g_field_object_states[FIELD_PARTY_COUNT];
-    FieldActionRequest* entry = layout->requests;
+    FieldLayoutRecord* layout_record = layout->records;
     s32 loaded_count = 0;
     s32 index = 0;
     s32 count = layout->count;
@@ -935,14 +935,14 @@ static void field_load_scene_actors(FieldSceneLayout* layout)
     u32 base_value;
 
     g_field_loaded_actor_count = FIELD_PARTY_COUNT;
-    for (; index < count; index++, entry++)
+    for (; index < count; index++, layout_record++)
     {
         state->unk8.word &= 0x7FFFFFFF;
-        field_install_actor_action(entry, index);
-        if (entry->control.bits.active)
+        field_install_actor_action(layout_record, index);
+        if (layout_record->control.bits.active)
         {
-            field_initialize_actor_record(loaded_count + FIELD_PARTY_COUNT, entry->source.actor + FIELD_PARTY_COUNT);
-            if (entry->control.bits.hidden)
+            field_initialize_actor_record(loaded_count + FIELD_PARTY_COUNT, layout_record->source.actor + FIELD_PARTY_COUNT);
+            if (layout_record->control.bits.hidden)
             {
                 actor->presence = FIELD_ACTOR_HIDDEN;
             }
@@ -950,15 +950,15 @@ static void field_load_scene_actors(FieldSceneLayout* layout)
             {
                 actor->presence = 0;
             }
-            actor->control.bits.group = entry->control.bits.group;
+            actor->control.bits.group = layout_record->control.bits.group;
             if ((g_field_pending_scene_id & FIELD_SCENE_ID_MASK) == FIELD_SCENE_NO_LAYOUT_GROUPS)
             {
                 actor->control.bits.group = 0;
             }
-            actor->control.bits.palette = entry->control.bits.palette;
-            actor->x = entry->position.bits.x << FIELD_POSITION_SHIFT;
-            actor->z = entry->position.bits.z << FIELD_POSITION_SHIFT;
-            actor->y = entry->position.bits.y << FIELD_POSITION_SHIFT;
+            actor->control.bits.palette = layout_record->control.bits.palette;
+            actor->x = layout_record->position.bits.x << FIELD_POSITION_SHIFT;
+            actor->z = layout_record->position.bits.z << FIELD_POSITION_SHIFT;
+            actor->y = layout_record->position.bits.y << FIELD_POSITION_SHIFT;
             state->contact.bits.flag6 = 0;
             state->contact.bits.flag7 = 0;
             state->movement.word &= ~FIELD_MOVEMENT_TINT_FLASH;
@@ -974,11 +974,11 @@ static void field_load_scene_actors(FieldSceneLayout* layout)
             base_value = state->unk0;
             state->key = index + FIELD_PARTY_COUNT;
             state->unk4.word = base_value & 0xFFFFFF;
-            state->enabled_events = entry->enabled_events;
-            state->group_flags = entry->control.flags;
+            state->enabled_events = layout_record->enabled_events;
+            state->group_flags = layout_record->control.flags;
             for (i = 0; i < FIELD_ACTION_SCRIPT_COUNT; i++)
             {
-                state->scripts[i] = entry->scripts[i];
+                state->scripts[i] = layout_record->scripts[i];
             }
             field_restart_actor_animation(actor);
             state++;

@@ -7,6 +7,8 @@
 These guides begin with a high-level explanation, then cover implementation,
 ownership, timing, and known limitations. Source links accompany the details.
 
+- [Scene layouts and conditions](technical/architecture/scene-layouts.md) - how scene
+  records decide what appears, with an ordinary chest as a worked example.
 - [CD-ROM subsystem](technical/architecture/cdrom.md) - resource requests,
   command queueing, streaming, decompression, and drive recovery.
 - [MOVIE overlay](technical/architecture/movie.md) - video decoding, audio
