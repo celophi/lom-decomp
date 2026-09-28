@@ -1,1 +1,1 @@
-"""Standalone FIELD scene inspection tools."""
+"""Scene IMG asset extraction."""
