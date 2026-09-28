@@ -1,95 +1,98 @@
-# FIELD scene extractor
+# Scene IMG extractor
 
 [English documentation](../../README.md) | [Scene tools](../../../../tools/scenes/README.md)
 
-The scene extractor reads the original game's `ANA/INFO_*/*.IMG` files. These
-are Square scene containers, holding actor layouts, scripts, text, geometry and
-textures. This tool operates on a file already extracted from the disc; it is
-not a disc-image extractor or graphical scene viewer.
-
-Run from the repository root with Python 3.10 or newer. No extra packages or
-compiled game binaries are needed.
+The extractor reads the game's `ANA/INFO_*/*.IMG` scene files. It checks their
+section offsets, extracts recognized assets and saves the remaining bytes as
+unknown data. The input file is never modified.
 
 ```sh
-python3 -m tools.scenes.field_scene info /path/to/ANA/INFO_PRT/WAL_B020.IMG
-python3 -m tools.scenes.field_scene info /path/to/ANA/INFO_PRT/WAL_B020.IMG --json
-python3 -m tools.scenes.field_scene extract /path/to/ANA/INFO_PRT/WAL_B020.IMG output/scenes/WAL_B020
-python3 -m tools.scenes.field_scene validate /path/to/ANA/INFO_PRT/*.IMG
+make extract-scene SCENE=/path/to/ANA/INFO_PRT/WAL_B020.IMG
 ```
 
-The input is never modified. Extraction requires a new destination directory;
-it refuses existing paths. Keep extracted assets in the ignored `output/` tree
-or outside the repository.
+Output goes to `assets/exports/us/scenes/WAL_B020/`. `VERSION=jp` selects the JP
+output folder, and `SCENE_OUTPUT` changes the parent directory. Extraction needs
+a new destination directory. The files are generated and ignored by Git.
+
+For all supported scenes in an extracted ANA directory:
+
+```sh
+make extract-scenes ANA=/path/to/ANA
+```
+
+The batch target reads `INFO_*/*.IMG`. Output keeps the group and scene names,
+for example `assets/exports/us/scenes/INFO_PRT/WAL_B020/`. Use `VERSION=jp` with a
+Japanese ANA directory. `SCENE_OUTPUT` also applies to batch extraction.
+
+Every scene destination must be new. The tool checks for existing destinations
+before starting. Invalid scenes stop the batch with a filename; files already
+extracted remain in place. Other IMG families aren't included.
 
 ## Output
 
 | File | Contents |
 | --- | --- |
-| `summary.txt` | Section boundaries, layout/texture counts and chest candidates |
-| `manifest.json` | Versioned metadata, source hash, section hashes, layout fields and TIM metadata |
-| `header.bin` | Original 40-byte section-offset header |
-| `sections/00_layout.bin` through `sections/09_group_bounds.bin` | All ten complete sections in original order |
-| `textures/000.tim`, etc. | Individual TIMs in image-table index order |
+| `byte-map.yaml` | Original IMG offsets, sizes and extracted filenames |
+| `header.bin` | The 40-byte section-offset header |
+| `textures/000.tim`, etc. | Whole TIM assets in file order |
+| `portraits/000.bin`, etc. | Whole portrait records, including palette and pixels |
+| `chests/<layout-index>.yaml` | Chest details and original record bytes |
+| `unknown/<offset>.bin` | Data not extracted as a recognized asset |
 
-The header followed by all ten section files reconstructs the input exactly.
-Texture files are additional copies; they do not replace the raw image section.
-Manifest offsets are absolute byte offsets into the source file, numeric values
-are decimal, and output paths are relative to the extraction directory.
-`info --json` describes the same paths without writing them.
+Each YAML entry covers one range of bytes. `offset` is its hexadecimal position
+in the original IMG, and `size` is its byte count. The range ends at
+`offset + size`, exclusive. `file` is relative to the output directory. For a
+chest, `size` is the original 48-byte record size, not the YAML file's length.
 
-The textures are sprite sheets. Rendering an assembled scene requires sprite
-geometry, animation state and separate background resources. The common chest's
-closed/open images also live in FIELD's shared resources, outside the scene IMG.
+TIMs, portraits and recognized chest records each get one entry. Repeated
+references to the same TIM produce one extracted file. The other ranges are
+labeled `unknown_data`; this includes scripts, text, geometry and container tables. Some of their fields are
+understood, but this tool leaves them as raw bytes.
 
-## Decoded fields
+Chest details live in their own YAML files, so the byte map only records where
+each asset belongs. Other assets and unknown data remain binary. To recover the
+original IMG, decode each chest's `record_bytes` hex string and concatenate it
+with the other files in byte-map order.
 
-`layout_entries` contains all `FieldActionRequest` records, including actions
-that are not visible actors. Raw control, position and source values are retained
-alongside the understood bit fields, installation condition, event mask and
-sixteen `scripts_and_parameters` values. The `active` flag describes the stored
-bit; it does not evaluate the condition against a save.
+## Chest records
 
-Actor/action kinds 0 and 7 with source-selector low bits equal to 5 are marked
-as chest graphics candidates. Only a recognized initialization-event prefix
-produces `common_chest` metadata:
+The layout section starts with a u32 count followed by 48-byte
+[`FieldActionRequest`](../../../../include/field_interaction_start.h) records.
+A chest uses the same record structure as other actors. The extractor recognizes
+the common chest resource selector and initializer script before labeling a
+record as `chest`.
 
-- Entry `[4]` supplies the item ID.
-- Bits 0-14 of `[5]` supply the collection-variable reference.
-- Bit 15 of `[5]` selects alternate facing.
+Its YAML file shows `x`, `z`, `item_id`, `collection_flag` and `alternate_facing`.
+The item comes from `scripts[4]`. The collection flag uses bits 0-14 of
+`scripts[5]`, and bit 15 selects the alternate facing. `record_bytes` keeps the
+complete original record as hex, including the other fields and script references.
+The decoded fields describe that saved record; editing them does not change
+`record_bytes`.
 
-Other candidates retain `common_chest: null`. Recognition is not script execution
-or proof that the chest can be reached. Item names are not resolved, keeping the
-tool independent of regional FIELD binaries.
+For example, `WAL_B020.IMG` has a chest at `(395, 180)` with item `0x96` and
+collection flag `0x0BC0`. It is exported as `chests/002.yaml` because it is layout
+record 2. The event scripts remain in the unknown data; the tool doesn't execute
+them or resolve item names. Records using other initializers stay raw until we
+understand them.
 
-## Format boundaries
+## Supported format
 
-The header is ten little-endian u32 offsets: layout, event scripts, strings,
-actor scripts, records, actor descriptions, geometry, images, portraits and
-group bounds. The first offset is 40 (`0x28`), not a magic identifier.
+The header contains ten little-endian u32 offsets: layout, event scripts,
+strings, actor scripts, records, actors, geometry, images, portraits and group
+bounds. The first section starts at byte 40. Offsets must be aligned, in order
+and within the file.
 
-The parser validates section ordering and bounds, fixed-size record counts, image
-offsets and TIM payloads. Layout entries are 48 bytes. Portrait records are
-1,184 bytes: a 32-byte palette and 48-by-48 pixels at 4 bits per pixel. Portraits
-are preserved in their raw section; they are not TIMs. Original TIM flag words,
-including any nonzero upper bytes, are preserved.
+The images section has an offset table followed by TIMs, checked with the
+existing TIM parser. The portraits section has a count followed by 1,184-byte
+records: a 32-byte palette and 48-by-48 pixels at 4 bits per pixel. Portraits
+aren't TIMs.
 
-Scripts, strings, general records, actor descriptions and geometry are not fully
-decoded or semantically validated. Event-script offsets are not assumed to be
-sorted, and the first script offset is not a table count. Text is not assumed to
-be ASCII. Other IMG families and compressed files are outside the supported scope.
+This supports the scene IMG layout, not every IMG family or compressed file.
+See the [scene loader](../../../../src/overlays/field/field_scene_transition.c)
+and [portrait representation](../../../../src/overlays/field/field_text.c) for
+the code that reads these resources.
 
-The extractor has been checked against 847 US and 847 Japanese scenes, including
-byte-exact section reconstruction and TIM round trips. Those sets contain 1,727
-and 1,725 TIMs respectively. Each has 161 common chest records and seven additional
-chest graphics candidates; these are not counts of distinct obtainable chests.
-
-```sh
-make test-scenes
-```
-
-## Evidence and related research
-
-This implementation follows the [scene loader](../../../../src/overlays/field/field_scene_transition.c),
-[layout records](../../../../include/field_interaction_start.h),
-[event lookup](../../../../src/overlays/field/field_actor_key_ops.c) and
-[portrait representation](../../../../src/overlays/field/field_text.c).
+The Python code follows these structures: `SceneHeader` documents the header
+fields and `LayoutRecord` documents the actor record. `read_chests()`,
+`read_textures()` and `read_portraits()` handle their respective sections.
+`AssetRange` describes an extracted byte range; it isn't a disk structure.

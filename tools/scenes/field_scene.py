@@ -1,32 +1,29 @@
 #!/usr/bin/env python3
-"""Inspect and extract Legend of Mana FIELD scene IMG files (ANA/INFO_*)."""
+"""Extract complete assets and common chest records from ANA/INFO_* scene IMGs.
+
+The header locates the scene sections. Each section parser returns byte ranges;
+extraction writes chest records as YAML, copies other assets unchanged, and
+saves the gaps as unknown data.
+"""
 
 from __future__ import annotations
 
 import argparse
-import hashlib
-import json
-import struct
-import sys
 from dataclasses import dataclass
+import json
 from pathlib import Path
+import struct
+from typing import NamedTuple
 
-from tools.assets.psx_tim import TimFormatError, TimImage
+from tools.assets.psx_tim import TimImage
 
 
-SECTION_NAMES = (
-    "layout", "event_scripts", "strings", "actor_scripts", "records",
-    "actors", "geometry", "images", "portraits", "group_bounds",
-)
-HEADER_SIZE = 40
-LAYOUT_ENTRY_SIZE = 48
+SCENE_HEADER = struct.Struct("<10I")
+LAYOUT_RECORD = struct.Struct("<IHBBIHH16H")
 PORTRAIT_SIZE = 1184
-FORMAT_NAME = "lom_field_scene"
-FORMAT_VERSION = 1
 
-# The common initializer sets a local flag, then reads scripts[4] and scripts[5]
-# into owner-relative variables E040 and E050. This recognizes a known script
-# prefix; it does not decode arbitrary scripts or prove reachability.
+# The common chest initializer sets local state, then reads layout parameters
+# scripts[4] and scripts[5]. Other actors using the chest graphics can differ.
 COMMON_CHEST_INITIALIZER = bytes.fromhex(
     "40 84 20 c0 "
     "0c 01 02 ff 10 00 08 40 40 e0 "
@@ -34,308 +31,297 @@ COMMON_CHEST_INITIALIZER = bytes.fromhex(
 )
 
 
-class SceneFormatError(ValueError):
-    """A file does not satisfy the supported FIELD scene layout."""
-
-
 @dataclass(frozen=True)
 class SceneSection:
-    """One contiguous section with its absolute source-file offset."""
+    """A named section's absolute IMG byte range; end is exclusive."""
 
-    index: int
-    offset: int
-    data: bytes
-
-    @property
-    def name(self) -> str:
-        return SECTION_NAMES[self.index]
-
-    @property
-    def filename(self) -> str:
-        return f"sections/{self.index:02d}_{self.name}.bin"
-
-    def metadata(self) -> dict[str, object]:
-        """Describe the section using absolute source offsets and relative output paths."""
-        return {
-            "name": self.name,
-            "offset": self.offset,
-            "size": len(self.data),
-            "sha256": hashlib.sha256(self.data).hexdigest(),
-            "file": self.filename,
-        }
+    name: str
+    start: int
+    end: int
 
 
-@dataclass(frozen=True)
-class SceneTexture:
-    """One TIM referenced by the scene's image-offset table."""
+class SceneHeader(NamedTuple):
+    """The 40-byte disk header: ten little-endian u32 offsets from IMG byte zero.
 
-    index: int
-    offset: int
-    data: bytes
-    image: TimImage
+    Each section ends where the next begins. Equal offsets mean an empty section.
+    These fields follow FIELD_SCENE_* in field_scene_transition.c.
+    """
 
-    @property
-    def filename(self) -> str:
-        return f"textures/{self.index:03d}.tim"
-
-    def metadata(self) -> dict[str, object]:
-        """Describe the TIM and its absolute offset in the scene file."""
-        return {
-            "index": self.index,
-            "offset": self.offset,
-            "size": len(self.data),
-            "file": self.filename,
-            "tim": self.image.metadata(),
-        }
-
-
-def read_counted_records(data: bytes, record_size: int, label: str) -> int:
-    """Validate a u32 count followed by exactly that many fixed-size records."""
-    if len(data) < 4:
-        raise SceneFormatError(f"{label}: missing record count")
-    count = struct.unpack_from("<I", data)[0]
-    expected = 4 + count * record_size
-    if len(data) != expected:
-        raise SceneFormatError(
-            f"{label}: {count} records require {expected} bytes, got {len(data)}"
-        )
-    return count
-
-
-def parse_textures(section: SceneSection) -> tuple[SceneTexture, ...]:
-    """Return validated TIMs in image-table order, including repeated references."""
-    data = section.data
-    if not data:
-        return ()
-    if len(data) < 4:
-        raise SceneFormatError("images: missing offset table")
-    table_size = struct.unpack_from("<I", data)[0]
-    if table_size < 4 or table_size % 4 or table_size > len(data):
-        raise SceneFormatError("images: invalid offset table size")
-    offsets = struct.unpack_from(f"<{table_size // 4}I", data)
-    if any(offset < table_size or offset >= len(data) for offset in offsets):
-        raise SceneFormatError("images: texture offset outside image payload")
-    # Repeated offsets may refer to the same image. Preserve every table index.
-    boundaries = sorted(set(offsets)) + [len(data)]
-    ends = dict(zip(boundaries, boundaries[1:]))
-    textures = []
-    for index, offset in enumerate(offsets):
-        payload = data[offset:ends[offset]]
-        try:
-            image = TimImage.parse(payload)
-        except TimFormatError as error:
-            raise SceneFormatError(f"images[{index}]: {error}") from error
-        textures.append(SceneTexture(index, section.offset + offset, payload, image))
-    return tuple(textures)
-
-
-def common_chest_parameters(
-    source: int, kind: int, scripts: tuple[int, ...], events: SceneSection
-) -> dict[str, object] | None:
-    """Return chest parameters for a recognized initializer prefix, otherwise None."""
-    if kind not in (0, 7) or (source & 7) != 5:
-        return None
-    initializer = scripts[15]
-    if initializer == 0xFFFF or not (initializer & 0x8000):
-        return None
-    index = initializer & 0x7FFF
-    if index * 2 + 2 > len(events.data):
-        return None
-    offset = struct.unpack_from("<H", events.data, index * 2)[0]
-    # Event-script offsets are section-relative; entry zero is not a count.
-    if offset < index * 2 + 2:
-        return None
-    if not events.data[offset:].startswith(COMMON_CHEST_INITIALIZER):
-        return None
-    return {
-        "recognition": "common_initializer_prefix",
-        "item_id": scripts[4],
-        "collection_variable": scripts[5] & 0x7FFF,
-        "alternate_facing": bool(scripts[5] & 0x8000),
-        "initializer_script_id": index,
-        "initializer_file_offset": events.offset + offset,
-        "graphics_resource": "FIELD shared chest geometry and texture",
-    }
-
-
-def parse_layout(
-    section: SceneSection, events: SceneSection
-) -> tuple[dict[str, object], ...]:
-    """Decode all layout records, including actions that are not visible actors."""
-    count = read_counted_records(section.data, LAYOUT_ENTRY_SIZE, "layout")
-    entries = []
-    for index in range(count):
-        offset = 4 + index * LAYOUT_ENTRY_SIZE
-        control, variable, minimum, maximum, position, source, enabled = (
-            struct.unpack_from("<IHBBIHH", section.data, offset)
-        )
-        scripts = struct.unpack_from("<16H", section.data, offset + 16)
-        kind = (control >> 4) & 15
-        chest = common_chest_parameters(source, kind, scripts, events)
-        entries.append({
-            "index": index,
-            "file_offset": section.offset + offset,
-            "control_raw": control,
-            "control": {
-                "trigger_group": control & 15,
-                "kind": kind,
-                "selector": (control >> 8) & 255,
-                "local_variable_count": (control >> 16) & 255,
-                "palette": (control >> 24) & 15,
-                "group": (control >> 28) & 3,
-                "hidden": bool(control & 0x40000000),
-                "active": bool(control & 0x80000000),
-            },
-            "condition": {"variable": variable, "minimum": minimum, "maximum": maximum},
-            "position_raw": position,
-            "position_bits": {
-                "x": position & 0xFFFF,
-                "z": (position >> 16) & 0x7FF,
-                "unknown_bits_27_29": (position >> 27) & 7,
-                "y": position >> 30,
-            },
-            "source_raw": source,
-            "enabled_events": enabled,
-            "scripts_and_parameters": list(scripts),
-            "chest_graphics_candidate": kind in (0, 7) and (source & 7) == 5,
-            "common_chest": chest,
-        })
-    return tuple(entries)
-
-
-@dataclass(frozen=True)
-class FieldScene:
-    """Validated scene sections and interpreted metadata; source bytes are retained."""
-
-    data: bytes
-    sections: tuple[SceneSection, ...]
-    layout: tuple[dict[str, object], ...]
-    textures: tuple[SceneTexture, ...]
-    portrait_count: int
-    group_bounds_count: int
+    layout: int          # 0x00: count and 48-byte actor/action records
+    event_scripts: int   # 0x04: u16 offsets followed by event bytecode
+    strings: int         # 0x08: scene text
+    actor_scripts: int   # 0x0C: actor animation scripts
+    records: int         # 0x10: general records
+    actors: int          # 0x14: actor descriptions
+    geometry: int        # 0x18: scene geometry
+    images: int          # 0x1C: u32 offset table followed by TIM files
+    portraits: int       # 0x20: count followed by palette-and-pixel records
+    group_bounds: int    # 0x24: final section, extending to end of file
 
     @classmethod
-    def parse(cls, data: bytes) -> FieldScene:
-        """Parse a ten-section FIELD scene, raising SceneFormatError for invalid input."""
-        if len(data) < HEADER_SIZE:
-            raise SceneFormatError("truncated scene header (expected ten u32 offsets)")
-        offsets = struct.unpack_from("<10I", data)
-        if offsets[0] != HEADER_SIZE:
-            raise SceneFormatError(
-                "unsupported IMG: FIELD scene layout must start at byte 40"
-            )
-        if any(offset % 4 or offset > len(data) for offset in offsets):
-            raise SceneFormatError("section offsets must be aligned and within the file")
-        if tuple(sorted(offsets)) != offsets:
-            raise SceneFormatError("section offsets must be nondecreasing")
-        ends = offsets[1:] + (len(data),)
-        sections = tuple(
-            SceneSection(index, start, data[start:end])
-            for index, (start, end) in enumerate(zip(offsets, ends))
-        )
-        layout = parse_layout(sections[0], sections[1])
-        textures = parse_textures(sections[7])
-        portraits = read_counted_records(sections[8].data, PORTRAIT_SIZE, "portraits")
-        bounds = read_counted_records(sections[9].data, 4, "group_bounds")
-        return cls(data, sections, layout, textures, portraits, bounds)
+    def parse(cls, data: bytes) -> SceneHeader:
+        """Read the header and check that its section boundaries fit the IMG."""
+        if len(data) < SCENE_HEADER.size:
+            raise ValueError("truncated scene header")
+        header = cls(*SCENE_HEADER.unpack_from(data))
+        if header.layout != SCENE_HEADER.size:
+            raise ValueError("unsupported IMG: expected an ANA/INFO_* scene")
+        if any(offset % 4 or offset > len(data) for offset in header):
+            raise ValueError("section offsets must be aligned and within the file")
+        if tuple(header) != tuple(sorted(header)):
+            raise ValueError("section offsets must be in file order")
+        return header
 
-    def manifest(self, source_name: str) -> dict[str, object]:
-        """Build JSON metadata with absolute input offsets and relative output paths."""
-        return {
-            "format": FORMAT_NAME,
-            "version": FORMAT_VERSION,
-            "source": source_name,
-            "size": len(self.data),
-            "sha256": hashlib.sha256(self.data).hexdigest(),
-            "header_file": "header.bin",
-            "sections": [section.metadata() for section in self.sections],
-            "layout_entries": self.layout,
-            "textures": [texture.metadata() for texture in self.textures],
-            "portrait_count": self.portrait_count,
-            "group_bounds_count": self.group_bounds_count,
-            "notes": [
-                "Only the ANA/INFO_* FIELD scene layout is supported, not every IMG format.",
-                "Script, string, geometry and other undecoded data remain in raw sections.",
-                "Common chests are recognized by initializer prefix, not runtime simulation.",
-                "Chest artwork is external to this file, in FIELD's shared resources.",
-            ],
-        }
-
-    def summary(self, source_name: str) -> str:
-        lines = [
-            f"{source_name}: {len(self.data)} bytes, {len(self.layout)} layout entries, "
-            f"{len(self.textures)} TIM textures",
-            "",
-            "Section           File offset     Size",
+    def sections(self, file_size: int) -> list[SceneSection]:
+        """Pair each section start with its following boundary."""
+        return [
+            SceneSection("layout", self.layout, self.event_scripts),
+            SceneSection("event_scripts", self.event_scripts, self.strings),
+            SceneSection("strings", self.strings, self.actor_scripts),
+            SceneSection("actor_scripts", self.actor_scripts, self.records),
+            SceneSection("records", self.records, self.actors),
+            SceneSection("actors", self.actors, self.geometry),
+            SceneSection("geometry", self.geometry, self.images),
+            SceneSection("images", self.images, self.portraits),
+            SceneSection("portraits", self.portraits, self.group_bounds),
+            SceneSection("group_bounds", self.group_bounds, file_size),
         ]
-        for section in self.sections:
-            lines.append(f"{section.name:17} 0x{section.offset:08X}  {len(section.data):7}")
-        lines.extend(["", "Chest graphics candidates:"])
-        candidates = [entry for entry in self.layout if entry["chest_graphics_candidate"]]
-        if not candidates:
-            lines.append("  None")
-        for entry in candidates:
-            position = entry["position_bits"]
-            label = f"  Layout {entry['index']}: x={position['x']}, z={position['z']}"
-            chest = entry["common_chest"]
-            if chest is None:
-                lines.append(label + "; initializer unrecognized (reward not inferred)")
-            else:
-                lines.append(
-                    label + f"; item=0x{chest['item_id']:04X}, "
-                    f"collection=0x{chest['collection_variable']:04X}, "
-                    f"alternate facing={chest['alternate_facing']}"
-                )
-        lines.extend(["", "Scripts and strings are raw; chest artwork comes from FIELD."])
+
+
+@dataclass(frozen=True)
+class LayoutRecord:
+    """One 48-byte FieldActionRequest, all multi-byte values little-endian.
+
+    The layout section starts with a u32 count, followed by these records.
+    See include/field_interaction_start.h. scripts[15] selects the initializer;
+    for the common chest script, scripts[4] is the item and scripts[5] holds the
+    collection flag, with bit 15 selecting the alternate facing.
+    """
+
+    control: int             # 0x00: u32; bits 4-7 select the action kind
+    condition_variable: int  # 0x04: u16 saved-variable reference
+    condition_minimum: int   # 0x06: u8
+    condition_maximum: int   # 0x07: u8
+    position: int            # 0x08: u32; X in bits 0-15, Z in bits 16-26
+    source: int              # 0x0C: u16; low three bits select actor resources
+    enabled_events: int      # 0x0E: u16 event mask
+    scripts: tuple[int, ...]  # 0x10: sixteen u16 script references or parameters
+
+    @classmethod
+    def parse(cls, data: bytes, offset: int) -> LayoutRecord:
+        """Read one record at an absolute IMG offset, after validating its section."""
+        control, variable, minimum, maximum, position, source, events, *scripts = (
+            LAYOUT_RECORD.unpack_from(data, offset)
+        )
+        return cls(control, variable, minimum, maximum, position, source, events, tuple(scripts))
+
+    def is_common_chest(self, event_scripts: bytes) -> bool:
+        """Require both the chest resource selector and the known initializer."""
+        kind = (self.control >> 4) & 0xF
+        # Actor and grouped-actor records use resource selector 5 for chest graphics.
+        if kind not in (0, 7) or (self.source & 7) != 5:
+            return False
+        initializer = self.scripts[15]
+        if initializer == 0xFFFF or (initializer & 0x8000) == 0:
+            return False
+        table_offset = (initializer & 0x7FFF) * 2
+        if table_offset + 2 > len(event_scripts):
+            return False
+        script_offset = struct.unpack_from("<H", event_scripts, table_offset)[0]
+        # Script offsets are section-relative. Entry zero is not a script count.
+        if script_offset < table_offset + 2:
+            return False
+        return event_scripts[script_offset:].startswith(COMMON_CHEST_INITIALIZER)
+
+
+    def chest_yaml(self, record_bytes: bytes) -> str:
+        """Write chest details and retain the original record for byte recovery."""
+        lines = [
+            f"x: {self.position & 0xFFFF}",
+            f"z: {(self.position >> 16) & 0x7FF}",
+            f"item_id: 0x{self.scripts[4]:04X}",
+            f"collection_flag: 0x{self.scripts[5] & 0x7FFF:04X}",
+            f"alternate_facing: {'true' if self.scripts[5] & 0x8000 else 'false'}",
+            "# Original 48 bytes, including fields not shown above.",
+            f'record_bytes: "{record_bytes.hex()}"',
+        ]
         return "\n".join(lines) + "\n"
 
-    def extract(self, output: Path, source_name: str) -> None:
-        """Write sections, TIMs and metadata; the output directory must not exist."""
-        manifest = json.dumps(self.manifest(source_name), indent=2) + "\n"
-        output.mkdir(parents=True, exist_ok=False)
-        (output / "sections").mkdir()
-        (output / "textures").mkdir()
-        (output / "header.bin").write_bytes(self.data[:HEADER_SIZE])
-        for section in self.sections:
-            (output / section.filename).write_bytes(section.data)
-        for texture in self.textures:
-            (output / texture.filename).write_bytes(texture.data)
-        (output / "manifest.json").write_text(manifest, encoding="ascii")
-        (output / "summary.txt").write_text(self.summary(source_name), encoding="utf-8")
+
+@dataclass(frozen=True)
+class AssetRange:
+    """An extraction result, not a disk structure. Each file represents one IMG range.
+
+    offset is absolute in the IMG; size is in bytes. chest is present only when
+    a layout record has been recognized as a common chest and is written as YAML.
+    """
+
+    name: str
+    offset: int
+    size: int
+    filename: str
+    chest: LayoutRecord | None = None
 
 
-def main() -> int:
+def read_chests(data: bytes, header: SceneHeader) -> list[AssetRange]:
+    """Extract recognized chest records from the counted layout array."""
+    layout = data[header.layout:header.event_scripts]
+    if len(layout) < 4:
+        raise ValueError("missing layout record count")
+    count = struct.unpack_from("<I", layout)[0]
+    if len(layout) != 4 + count * LAYOUT_RECORD.size:
+        raise ValueError("layout count does not match the section size")
+    event_scripts = data[header.event_scripts:header.strings]
+    chests = []
+    for index in range(count):
+        offset = header.layout + 4 + index * LAYOUT_RECORD.size
+        record = LayoutRecord.parse(data, offset)
+        if record.is_common_chest(event_scripts):
+            chests.append(AssetRange(
+                "chest", offset, LAYOUT_RECORD.size, f"chests/{index:03d}.yaml", record,
+            ))
+    return chests
+
+
+def read_textures(data: bytes, header: SceneHeader) -> list[AssetRange]:
+    """Read the image section's u32 offset table and validate each complete TIM.
+
+    Offsets are relative to this section. The first offset also gives the table
+    size; there is no separate count. Repeated references share one TIM asset.
+    """
+    images = data[header.images:header.portraits]
+    if not images:
+        return []
+    table_size = struct.unpack_from("<I", images)[0]
+    if table_size < 4 or table_size % 4 or table_size > len(images):
+        raise ValueError("invalid image-offset table size")
+    offsets = struct.unpack_from(f"<{table_size // 4}I", images)
+    if any(offset < table_size or offset >= len(images) for offset in offsets):
+        raise ValueError("TIM offset outside the image section")
+    boundaries = sorted(set(offsets)) + [len(images)]
+    textures = []
+    for index, (start, end) in enumerate(zip(boundaries, boundaries[1:])):
+        TimImage.parse(images[start:end])
+        textures.append(AssetRange(
+            "tim", header.images + start, end - start, f"textures/{index:03d}.tim",
+        ))
+    return textures
+
+
+def read_portraits(data: bytes, header: SceneHeader) -> list[AssetRange]:
+    """Read a u32 count followed by 1,184-byte portrait records.
+
+    Each record has 16 little-endian BGR555 colors at 0x00 and 48x48 packed 4bpp
+    pixels at 0x20. It has no TIM header and is extracted as a whole record.
+    """
+    portraits = data[header.portraits:header.group_bounds]
+    if len(portraits) < 4:
+        raise ValueError("missing portrait count")
+    count = struct.unpack_from("<I", portraits)[0]
+    if len(portraits) != 4 + count * PORTRAIT_SIZE:
+        raise ValueError("portrait count does not match the section size")
+    result = []
+    for index in range(count):
+        offset = header.portraits + 4 + index * PORTRAIT_SIZE
+        result.append(AssetRange(
+            "portrait", offset, PORTRAIT_SIZE, f"portraits/{index:03d}.bin",
+        ))
+    return result
+
+
+def cover_section(section: SceneSection, assets: list[AssetRange]) -> list[AssetRange]:
+    """Keep known assets in file order and preserve the data between them."""
+    result = []
+    cursor = section.start
+    for asset in assets:
+        if asset.offset < cursor or asset.offset + asset.size > section.end:
+            raise ValueError(f"invalid asset range in {section.name}")
+        if cursor < asset.offset:
+            result.append(AssetRange(
+                "unknown_data", cursor, asset.offset - cursor, f"unknown/{cursor:08X}.bin",
+            ))
+        result.append(asset)
+        cursor = asset.offset + asset.size
+    if cursor < section.end:
+        result.append(AssetRange(
+            "unknown_data", cursor, section.end - cursor, f"unknown/{cursor:08X}.bin",
+        ))
+    return result
+
+
+def split_scene(data: bytes) -> list[AssetRange]:
+    """Parse the container and return a complete map of its original bytes."""
+    header = SceneHeader.parse(data)
+    assets_by_section = {
+        "layout": read_chests(data, header),
+        "images": read_textures(data, header),
+        "portraits": read_portraits(data, header),
+    }
+    result = [AssetRange("header", 0, SCENE_HEADER.size, "header.bin")]
+    for section in header.sections(len(data)):
+        result.extend(cover_section(section, assets_by_section.get(section.name, [])))
+    return result
+
+
+def extract(source: Path, output: Path) -> None:
+    """Validate the IMG, then write its assets and byte map in a new directory."""
+    data = source.read_bytes()
+    assets = split_scene(data)
+    output.mkdir(parents=True, exist_ok=False)
+    lines = [f"source: {json.dumps(source.name)}",
+             "# Offsets and sizes are bytes in the original IMG.", "sections:"]
+    for asset in assets:
+        path = output / asset.filename
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = data[asset.offset:asset.offset + asset.size]
+        if asset.chest is not None:
+            path.write_text(asset.chest.chest_yaml(payload), encoding="ascii")
+        else:
+            path.write_bytes(payload)
+        lines.extend([f"  - name: {asset.name}", f"    offset: 0x{asset.offset:X}",
+                      f"    size: {asset.size}", f"    file: {asset.filename}"])
+    (output / "byte-map.yaml").write_text("\n".join(lines) + "\n", encoding="ascii")
+
+
+def extract_all(ana_directory: Path, output: Path) -> int:
+    """Extract ANA/INFO_* scenes, keeping their group and scene directories."""
+    if not ana_directory.is_dir():
+        raise ValueError(f"ANA directory not found: {ana_directory}")
+    scenes = sorted(path for path in ana_directory.glob("INFO_*/*.IMG") if path.is_file())
+    if not scenes:
+        raise ValueError(f"No INFO_*/*.IMG scenes found under {ana_directory}")
+
+    # Check every destination before starting, so an existing export stops the batch early.
+    for scene in scenes:
+        destination = output / scene.parent.name / scene.stem
+        if destination.exists():
+            raise FileExistsError(f"Output already exists: {destination}")
+    for scene in scenes:
+        destination = output / scene.parent.name / scene.stem
+        try:
+            extract(scene, destination)
+        except (OSError, ValueError) as error:
+            raise ValueError(f"{scene}: {error}") from error
+    return len(scenes)
+
+
+def main() -> None:
+    """Extract one scene, or all supported scenes under an ANA directory."""
     parser = argparse.ArgumentParser(description=__doc__)
-    commands = parser.add_subparsers(dest="command", required=True)
-    info = commands.add_parser("info", help="show section and chest metadata")
-    info.add_argument("source", type=Path)
-    info.add_argument("--json", action="store_true", help="print the full manifest")
-    extract = commands.add_parser("extract", help="extract into a new directory")
-    extract.add_argument("source", type=Path)
-    extract.add_argument("output", type=Path)
-    validate = commands.add_parser("validate", help="validate one or more scene files")
-    validate.add_argument("sources", type=Path, nargs="+")
+    parser.add_argument("source", type=Path, help="scene IMG, or ANA directory with --all")
+    parser.add_argument("--all", action="store_true", help="extract every INFO_*/*.IMG scene")
+    parser.add_argument("output", type=Path)
     args = parser.parse_args()
     try:
-        if args.command == "validate":
-            for source in args.sources:
-                scene = FieldScene.parse(source.read_bytes())
-                print(f"{source}: valid ({len(scene.layout)} entries, {len(scene.textures)} textures)")
+        if args.all:
+            count = extract_all(args.source, args.output)
+            print(f"Extracted {count} scenes to {args.output}")
         else:
-            scene = FieldScene.parse(args.source.read_bytes())
-            if args.command == "extract":
-                scene.extract(args.output, args.source.name)
-                print(scene.summary(args.source.name), end="")
-                print(f"Extracted to {args.output}")
-            elif args.json:
-                print(json.dumps(scene.manifest(args.source.name), indent=2))
-            else:
-                print(scene.summary(args.source.name), end="")
-    except (OSError, SceneFormatError) as error:
-        print(f"error: {error}", file=sys.stderr)
-        return 1
-    return 0
+            extract(args.source, args.output)
+            print(f"Extracted to {args.output}")
+    except (OSError, ValueError) as error:
+        parser.exit(1, f"{error}\n")
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
