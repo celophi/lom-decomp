@@ -881,7 +881,7 @@ s32 wmap_next_land_event(void)
         {
             if (g_wmap_event_cursor == 0)
             {
-                g_layout_sub_mode = 31;
+                g_field_secondary_music_id = 31;
             }
             if ((u32)(g_wmap_event_cursor - 2) >= 2U && g_wmap_event_cursor != 22 && g_wmap_event_cursor != 23 && g_wmap_event_cursor != 9 &&
                 g_wmap_event_cursor != 10 && g_wmap_event_cursor != 11 && g_wmap_event_cursor != 12 && g_wmap_event_cursor != 13 && g_wmap_event_cursor != 14 &&

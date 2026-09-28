@@ -257,7 +257,7 @@ typedef struct
     s16 duration;
 } FieldTransitionFade;
 
-s32 akao_cmd_c1(s32 song_handle, s32 frames, s32 volume);
+s32 akao_fade_song_volume(s32 song_handle, s32 frames, s32 volume);
 void* field_header_record_at(s32 index);
 void field_restart_actor_animation(FieldActor* actor);
 /* Unprototyped on purpose: the (s16, s8, s8, ...) definition would narrow the arguments here. */
@@ -316,11 +316,11 @@ extern u8* g_field_scene_portraits;
 extern u8* g_field_scene_strings;
 extern s32 g_field_dialog_item_count;
 extern s32 g_field_audio_timer;
-/* Declared here, not through main.h: FIELD reads and writes g_scene_mode as a whole word. */
-extern s32 g_scene_mode;
-extern s32 g_layout_flag;
-extern s32 g_layout_option;
-extern s32 g_layout_sub_mode;
+/* Declared here, not through main.h: FIELD reads and writes g_field_scene_id as a whole word. */
+extern s32 g_field_scene_id;
+extern s32 g_field_music_id;
+extern s32 g_field_sound_bank_id;
+extern s32 g_field_secondary_music_id;
 
 static void field_setup_chest_resource(void);
 static void field_upload_actor_image(FieldTimData* image, s32 image_slot, s32 actor_index, s32 upload_palette);
@@ -442,7 +442,7 @@ void field_update_scene(void)
             if (g_field_pending_music_id == FIELD_MUSIC_KEEP)
             {
                 field_play_song();
-                akao_cmd_c1(0, 1, g_field_song_volume);
+                akao_fade_song_volume(0, 1, g_field_song_volume);
             }
             g_field_audio_timer = 0;
         }
@@ -461,7 +461,7 @@ void field_update_scene(void)
         {
             if (g_field_preserve_entry_music == 0)
             {
-                akao_cmd_c1(0, FIELD_MUSIC_FADE_FRAMES, 0);
+                akao_fade_song_volume(0, FIELD_MUSIC_FADE_FRAMES, 0);
             }
         }
         scene_file = FIELD_SCENE_FILE;
@@ -469,12 +469,12 @@ void field_update_scene(void)
         i = 0;
         cdrom_wait_queue_empty();
         field_upload_transition_tiles();
-        g_scene_mode = scene_id;
+        g_field_scene_id = scene_id;
         g_field_active_group = 0;
         g_field_duel_mode = 0;
         field_reset_battle_entry();
         field_clear_actor_texts();
-        akao_cmd_f1();
+        akao_release_all_sfx();
         field_initialize_actor_system();
         field_upload_transition_tiles();
         for (; i < FIELD_PARTY_COUNT; i++)
@@ -730,16 +730,16 @@ void field_update_scene(void)
             {
                 field_load_fixed_song();
             }
-            g_layout_flag = g_field_pending_music_id;
+            g_field_music_id = g_field_pending_music_id;
         }
         else
         {
-            akao_cmd_c1(0, FIELD_MUSIC_FADE_FRAMES, g_field_song_volume);
+            akao_fade_song_volume(0, FIELD_MUSIC_FADE_FRAMES, g_field_song_volume);
         }
         if (g_field_pending_secondary_music_id != FIELD_MUSIC_KEEP)
         {
             field_load_song(g_field_pending_secondary_music_id, 1);
-            g_layout_sub_mode = g_field_pending_secondary_music_id;
+            g_field_secondary_music_id = g_field_pending_secondary_music_id;
         }
         field_upload_transition_tiles();
         if (g_field_preserve_entry_music != 0)
@@ -810,7 +810,7 @@ void field_update_scene(void)
         g_field_camera_follow_x = g_field_camera_target_x;
         g_field_camera_follow_z = g_field_camera_target_z;
         field_load_sfx_tables(sound_bank_id);
-        g_layout_option = sound_bank_id;
+        g_field_sound_bank_id = sound_bank_id;
         field_upload_transition_tiles();
         g_field_scene_contact_latched = 0;
         field_initialize_actor_slots();
@@ -819,12 +819,12 @@ void field_update_scene(void)
         field_reset_actor_resources();
         field_command_history_reset();
         field_clear_fade_prims();
-        saved_scene_id = g_scene_mode;
+        saved_scene_id = g_field_scene_id;
         if (g_field_scene_mode_bit != 0)
         {
             saved_scene_id += FIELD_SCENE_MODE_FLAG;
         }
-        field_store_entry_settings(saved_scene_id, object_id, g_layout_flag, spawn_id, g_layout_option, g_layout_sub_mode);
+        field_store_entry_settings(saved_scene_id, object_id, g_field_music_id, spawn_id, g_field_sound_bank_id, g_field_secondary_music_id);
         field_upload_golem_palettes();
         field_refresh_party_routes();
         field_pair_indicators_reset();

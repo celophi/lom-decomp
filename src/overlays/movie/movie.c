@@ -60,20 +60,6 @@
 #define STANDARD_VLC_INPUT_BYTES 81920
 #define STANDARD_MDEC_OUTPUT_BYTES 11520
 
-/**
- * @brief Cinematic indices selected by the main game-state dispatcher.
- *
- * GAME_STATE_ATTRACT_2 plays its three stream segments consecutively.
- */
-typedef enum
-{
-    MOVIE_INDEX_INTRO = 0,
-    MOVIE_INDEX_ATTRACT_1 = 1,
-    MOVIE_INDEX_ATTRACT_2_PART_1 = 2,
-    MOVIE_INDEX_ATTRACT_2_PART_2 = 3,
-    MOVIE_INDEX_ATTRACT_2_PART_3 = 4
-} MovieIndex;
-
 /** @brief Full-screen video, audio and decoder storage in the movie arena. */
 typedef struct
 {
@@ -292,7 +278,7 @@ void movie_play(s32 movie_index)
         /* A skip fades the streamed audio before leaving playback. */
         if ((g_movie_use_cd_audio != 0) && (audio_fade_vol != AUDIO_FADE_DISARMED))
         {
-            akao_cmd_e4_set_cd_volume(audio_fade_vol);
+            akao_set_xa_volume(audio_fade_vol);
 
             if (audio_fade_vol == 0)
             {
@@ -440,13 +426,13 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
     /* Configure audio for streamed or non-streamed playback. */
     if (state->use_cd_audio != 0)
     {
-        akao_cmd_e8_start_xa_stream((s32)state->audio_data_base, state->audio_ring_capacity * sizeof(AudioSector));
-        akao_cmd_e4_set_cd_volume(AKAO_CD_VOLUME_MAX);
+        akao_start_xa_stream((s32)state->audio_data_base, state->audio_ring_capacity * sizeof(AudioSector));
+        akao_set_xa_volume(AKAO_CD_VOLUME_MAX);
     }
     else
     {
-        akao_cmd_c8(MOVIE_AKAO_C8_INIT_VALUE);
-        akao_xa_setup_panning(MOVIE_NONSTREAMED_CD_MIX_VOLUME);
+        akao_set_cd_volume(MOVIE_AKAO_C8_INIT_VALUE);
+        akao_set_cd_mix(MOVIE_NONSTREAMED_CD_MIX_VOLUME);
     }
 
     /* Queue the first streaming-sector read. */
@@ -587,7 +573,7 @@ void movie_update(void)
 
             if (MOVIE_STATE->audio_buffered_count >= (audio_ring_capacity >> 1))
             {
-                akao_cmd_98_9a_9c_9e(AKAO_COMMAND_SELECTOR_9E);
+                akao_resume_audio(AKAO_COMMAND_SELECTOR_9E);
                 MOVIE_STATE->audio_stream_state = AUDIO_STREAM_STATE_IDLE;
             }
         }

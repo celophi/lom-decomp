@@ -192,7 +192,7 @@ FieldActorRecord* field_find_actor_record();
 FieldActorRecord* field_find_actor_record_or_default(u32 actor_id, FieldRuntimeContext* context);
 void field_stop_actor_script(s32 actor_id, s32 flags);
 void field_script_run(FieldScriptState* state);
-s32 akao_cmd_c1(s32 arg0, s32 arg1, s32 arg2);
+s32 akao_fade_song_volume(s32 arg0, s32 arg1, s32 arg2);
 
 /* Public functions of this file that other files call without a prototype. */
 void field_begin_party_script_control(s32 mode);
@@ -698,14 +698,14 @@ static void field_leave_scene(void)
     case FIELD_SCENE_TITLE:
         g_pending_game_state = GAME_STATE_RETURN_TO_TITLE;
         g_field_runtime->scene_entry = 0xFFFF;
-        g_layout_sub_mode = -1;
-        g_layout_option = -1;
+        g_field_secondary_music_id = -1;
+        g_field_sound_bank_id = -1;
         return;
     case FIELD_SCENE_WORLD_MAP:
         g_field_runtime->scene_entry = scene_id;
         g_pending_game_state = GAME_STATE_WORLD_MAP;
-        g_layout_sub_mode = -1;
-        g_layout_option = -1;
+        g_field_secondary_music_id = -1;
+        g_field_sound_bank_id = -1;
         if (field_get_script_var(0, FIELD_VAR_WORLD_MAP_REDIRECT) != 0)
         {
             g_pending_game_state = GAME_STATE_FIELD;
@@ -749,8 +749,8 @@ static void field_update_scene_transition(void)
 
             if (g_field_runtime->transition.fields.scene_id == FIELD_SCENE_WORLD_MAP)
             {
-                g_layout_option = -1;
-                akao_cmd_c1(0, g_field_runtime->fade_timer * 4, 0);
+                g_field_sound_bank_id = -1;
+                akao_fade_song_volume(0, g_field_runtime->fade_timer * 4, 0);
             }
 
             g_field_runtime->fade_timer++;

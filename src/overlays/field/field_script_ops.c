@@ -2128,7 +2128,7 @@ void field_script_misc_command(u32 command, s32 operand)
         akao_stop_song(0);
         return;
     case FIELD_SCRIPT_CMD_AUDIO_F1:
-        akao_cmd_f1();
+        akao_release_all_sfx();
         return;
     case FIELD_SCRIPT_CMD_RESET_PARTY_LEVEL:
         field_reset_party_to_level(operand);
@@ -2757,7 +2757,7 @@ void field_script_op_84(s32 actor_id, s32 animation, s32 builtin_animation, s32 
  * @param object_id Field object of the new scene (transition.fields.object_id).
  * @param audio Bytes 0-2: sound bank, music and secondary music; 0xFE and 0xFF select the keep
  *        and clear values of field_set_scene_parameters, and the current sound bank or music
- *        (g_layout_option, g_layout_flag) is kept as well.
+ *        (g_field_sound_bank_id, g_field_music_id) is kept as well.
  * @param spawn_id Spawn point in the new scene.
  */
 void field_script_op_85(s32 scene_id, s32 object_id, s32 audio, s32 spawn_id)
@@ -2780,11 +2780,11 @@ void field_script_op_85(s32 scene_id, s32 object_id, s32 audio, s32 spawn_id)
         g_field_runtime->scene_argument1 = -2;
         break;
     case 0xFF:
-        g_layout_option = -1;
+        g_field_sound_bank_id = -1;
         g_field_runtime->scene_argument1 = -1;
         break;
     default:
-        if (sound_bank == g_layout_option)
+        if (sound_bank == g_field_sound_bank_id)
         {
             g_field_runtime->scene_argument1 = -2;
         }
@@ -2803,7 +2803,7 @@ void field_script_op_85(s32 scene_id, s32 object_id, s32 audio, s32 spawn_id)
         g_field_runtime->scene_entry = -1;
         break;
     default:
-        if (music == g_layout_flag)
+        if (music == g_field_music_id)
         {
             g_field_runtime->scene_entry = -1;
         }
@@ -2886,8 +2886,8 @@ void field_script_op_88(s32 image_resource_index, s32 music_resource_index, s32 
 {
     music_resource_index = (music_resource_index == 0xFF) ? -1 : music_resource_index;
     audio_clip_index = (audio_clip_index == 0xFF) ? -1 : audio_clip_index;
-    g_layout_option = -1;
-    g_layout_sub_mode = -1;
+    g_field_sound_bank_id = -1;
+    g_field_secondary_music_id = -1;
     field_begin_gover_transition(image_resource_index, music_resource_index, audio_clip_index);
 }
 
@@ -2904,7 +2904,7 @@ void field_script_op_89(s32 unused0, s32 unused1, s32 value, s32 value2)
     {
         value = 1;
     }
-    akao_cmd_a9(value, value2);
+    akao_fade_all_sfx_volume(value, value2);
 }
 
 /**

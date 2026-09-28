@@ -2,6 +2,16 @@
 #define SDK_LIBSPU_H
 
 /* Only the SPU data contracts and entry points referenced by Legend of Mana. */
+
+#define SPU_OFF 0
+#define SPU_ON 1
+
+#define SPU_TRANSFER_BY_DMA 0L
+#define SPU_TRANSFER_BY_IO 1L
+
+#define SPU_ALLCH 0xFFFFFFL
+
+#define SPU_REV_MODE_CLEAR_WA 0x100
 typedef struct {
     short left;
     short right;

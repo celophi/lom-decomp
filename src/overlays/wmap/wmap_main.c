@@ -119,15 +119,15 @@ typedef struct
     u8 pad_02[0x12];
 } WmapMotion;
 
-s32 akao_cmd_f0();
-s32 akao_cmd_f1();
+s32 akao_stop_all_songs();
+s32 akao_release_all_sfx();
 extern void func_8005909C(void);
 s32 func_8005B548();
 s32 akao_play_sfx_from_buffer(s32, s32, s32, s32);
 void cdrom_queue_read();
 s32 cdrom_wait_queue_empty();
 extern s32 func_800BFD18(s32 initialize);
-extern void akao_cmd_c2(s32, s32, s32, s32);
+extern void akao_fade_song_volume_from(s32, s32, s32, s32);
 
 extern s32 g_wmap_script_button_mask;
 extern s32 g_wmap_script_word;
@@ -323,14 +323,14 @@ s32 run_world_map(void)
     RECT clear_rect;
 
     clear_rect = D_80051A80;
-    akao_cmd_f0();
-    akao_cmd_f1();
+    akao_stop_all_songs();
+    akao_release_all_sfx();
     wmap_init_frame_buffers();
     g_wmap_frames[0].draw_env.isbg = 0;
     g_wmap_frames[1].draw_env.isbg = 0;
     D_800D0550 = wmap_run_loop();
-    akao_cmd_f0();
-    akao_cmd_f1();
+    akao_stop_all_songs();
+    akao_release_all_sfx();
     if (D_800D0550 == 2)
     {
         DrawSync(0);
@@ -1567,8 +1567,8 @@ s32 wmap_run_loop(void)
     if (D_801ADB90 != 0)
     {
         akao_play_song(&D_8013B2A0);
-        akao_cmd_d0(0);
-        akao_cmd_c2(0, 0x1E, 1, 0x7F);
+        akao_set_master_pan(0);
+        akao_fade_song_volume_from(0, 0x1E, 1, 0x7F);
     }
     {
         u8* data;
@@ -1952,7 +1952,7 @@ s32 wmap_run_loop(void)
             {
                 if (D_8013B294 == 0xB)
                 {
-                    akao_cmd_c2(0, 0x5A, 0x7F, 0);
+                    akao_fade_song_volume_from(0, 0x5A, 0x7F, 0);
                     if (D_80139228 == 0)
                     {
                         akao_play_sfx_from_buffer(D_800CB248, 0, 0x80, 0x7F);
@@ -2365,7 +2365,7 @@ void wmap_reset_after_transition(void)
     g_wmap_menu_selection = 1;
     g_wmap_loaded_menu_page = -1;
     g_wmap_map_button_mask = -1;
-    akao_cmd_c2(0, 0x1E, 1, 0x7F);
+    akao_fade_song_volume_from(0, 0x1E, 1, 0x7F);
     D_801ADAFC = 1;
     g_wmap_tint_speed = 4;
     D_80182E3C = -1;

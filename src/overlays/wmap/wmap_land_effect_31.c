@@ -507,7 +507,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -1100,7 +1100,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -1694,7 +1694,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -2291,7 +2291,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -2888,7 +2888,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -3529,7 +3529,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -4126,7 +4126,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -4823,7 +4823,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -5430,7 +5430,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -6037,7 +6037,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -6644,7 +6644,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -7241,7 +7241,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -7838,7 +7838,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -8435,7 +8435,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -9032,7 +9032,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -9629,7 +9629,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -10226,7 +10226,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -10823,7 +10823,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -11496,7 +11496,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -12117,7 +12117,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -12708,7 +12708,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -13287,7 +13287,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -13868,7 +13868,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -14452,7 +14452,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -15035,7 +15035,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -15619,7 +15619,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -16199,7 +16199,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -16791,7 +16791,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -17370,7 +17370,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -17952,7 +17952,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -18537,7 +18537,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -19117,7 +19117,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -19702,7 +19702,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -20282,7 +20282,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -20867,7 +20867,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -21449,7 +21449,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -22034,7 +22034,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -22614,7 +22614,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -23199,7 +23199,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -23781,7 +23781,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -24366,7 +24366,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -24947,7 +24947,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -25532,7 +25532,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -26113,7 +26113,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -26698,7 +26698,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -27283,7 +27283,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -27868,7 +27868,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -28460,7 +28460,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -29045,7 +29045,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -29630,7 +29630,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -30221,7 +30221,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -30806,7 +30806,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -31386,7 +31386,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -31971,7 +31971,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -32551,7 +32551,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -33136,7 +33136,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -33716,7 +33716,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -34301,7 +34301,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -34881,7 +34881,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -35466,7 +35466,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -36059,7 +36059,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -36644,7 +36644,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -37229,7 +37229,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -37813,7 +37813,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -38398,7 +38398,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -38983,7 +38983,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -39562,7 +39562,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -40154,7 +40154,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -40733,7 +40733,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -41320,7 +41320,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -41901,7 +41901,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -42490,7 +42490,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -43068,7 +43068,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -43660,7 +43660,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -44239,7 +44239,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -44827,7 +44827,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -45416,7 +45416,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -45994,7 +45994,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -46586,7 +46586,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -47165,7 +47165,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -47753,7 +47753,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -48342,7 +48342,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -48925,7 +48925,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -49520,7 +49520,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -50098,7 +50098,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -50690,7 +50690,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -51269,7 +51269,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -51852,7 +51852,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -52432,7 +52432,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -53010,7 +53010,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -53602,7 +53602,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -54181,7 +54181,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -54769,7 +54769,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -55358,7 +55358,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -55947,7 +55947,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -56525,7 +56525,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -57117,7 +57117,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -57696,7 +57696,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -58283,7 +58283,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -58864,7 +58864,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -59452,7 +59452,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -60030,7 +60030,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -60622,7 +60622,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -61201,7 +61201,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -61785,7 +61785,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -62363,7 +62363,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -62955,7 +62955,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -63534,7 +63534,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -64118,7 +64118,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -64696,7 +64696,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -65288,7 +65288,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -65867,7 +65867,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -66451,7 +66451,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -67029,7 +67029,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -67621,7 +67621,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -68200,7 +68200,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -68783,7 +68783,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -69363,7 +69363,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -69941,7 +69941,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -70533,7 +70533,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -71112,7 +71112,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -71695,7 +71695,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -72275,7 +72275,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -72853,7 +72853,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -73445,7 +73445,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -74024,7 +74024,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -74607,7 +74607,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -75187,7 +75187,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -75765,7 +75765,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -76357,7 +76357,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -76936,7 +76936,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -77519,7 +77519,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -78099,7 +78099,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -78677,7 +78677,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -79269,7 +79269,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -79848,7 +79848,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -80431,7 +80431,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -81011,7 +81011,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -81589,7 +81589,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -82181,7 +82181,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -82760,7 +82760,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -83341,7 +83341,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -83935,7 +83935,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -84515,7 +84515,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -85109,7 +85109,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -85687,7 +85687,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -86279,7 +86279,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -86858,7 +86858,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -87439,7 +87439,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -88033,7 +88033,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -88613,7 +88613,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -89207,7 +89207,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -89785,7 +89785,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -90377,7 +90377,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -90956,7 +90956,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -91544,7 +91544,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -92134,7 +92134,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -92712,7 +92712,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -93304,7 +93304,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -93922,7 +93922,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -94511,7 +94511,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -95093,7 +95093,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -95683,7 +95683,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -96261,7 +96261,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -96853,7 +96853,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -97432,7 +97432,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -98020,7 +98020,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -98610,7 +98610,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -99192,7 +99192,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -99782,7 +99782,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -100360,7 +100360,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -100952,7 +100952,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -101531,7 +101531,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -102118,7 +102118,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -102705,7 +102705,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
@@ -103292,7 +103292,7 @@ extern s32 D_801B3230;
 extern s32 D_801B3238;
 extern s32 D_801B323C;
 
-extern void akao_cmd_a9(s32, s32);
+extern void akao_fade_all_sfx_volume(s32, s32);
 
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);

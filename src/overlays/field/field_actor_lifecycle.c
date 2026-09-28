@@ -46,7 +46,7 @@ extern s32 g_field_duel_mode;
 extern FieldStatusState* field_find_object_state(s32 actor_id);
 extern s32 field_set_actor_control_mode(s32 party_index, s32 mode);
 extern void field_stop_actor_script(s32 actor_id, s32 flags);
-extern s32 akao_cmd_c1(s32 song, s32 fade_ticks, s32 volume);
+extern s32 akao_fade_song_volume(s32 song, s32 fade_ticks, s32 volume);
 
 /**
  * @brief Look up the object state of every non-party actor record.
@@ -177,7 +177,7 @@ void field_battle_end(void)
     }
     else
     {
-        switch (g_layout_flag)
+        switch (g_field_music_id)
         {
         case 3:
         case 34:
@@ -187,7 +187,7 @@ void field_battle_end(void)
         case 45:
         case 46:
         case 47:
-            akao_cmd_c1(0, FIELD_BATTLE_MUSIC_FADE_TICKS, 0);
+            akao_fade_song_volume(0, FIELD_BATTLE_MUSIC_FADE_TICKS, 0);
             break;
         }
     }

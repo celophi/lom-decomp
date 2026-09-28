@@ -275,8 +275,8 @@ void func_80140004(s32 work_address, s32 image_resource_index, s32 music_resourc
 void field_reset_input_repeat();
 void field_draw_dialog_windows(s32);
 void field_merge_dialog_items(void);
-void akao_cmd_c1(s32, s32, s32);
-void akao_cmd_a9(s32, s32);
+void akao_fade_song_volume(s32, s32, s32);
+void akao_fade_all_sfx_volume(s32, s32);
 FieldActor* field_lookup_actor(s32 key);
 
 static void field_relocate_resource_buffer(s32 resource_index);
@@ -472,8 +472,8 @@ void field_begin_gover_transition(s32 image_resource_index, s32 music_resource_i
         g_field_fade_target.duration = fade_time;
         cdrom_queue_seek(CD_RES_GOVER_BIN);
         g_field_gover_load_countdown = fade_time;
-        akao_cmd_c1(0, FIELD_GOVER_MUSIC_FADE, 0);
-        akao_cmd_a9(FIELD_GOVER_MUSIC_FADE, 0);
+        akao_fade_song_volume(0, FIELD_GOVER_MUSIC_FADE, 0);
+        akao_fade_all_sfx_volume(FIELD_GOVER_MUSIC_FADE, 0);
     }
 }
 

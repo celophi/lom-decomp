@@ -203,9 +203,9 @@ void gover_show_screen(Tim* image_buffer, s32 image_index, s32 music_index, s32 
 
     gover_load_image_from_cd(image_index + GOVER_IMAGE_RESOURCE_BASE, (TimUploadDestinations*)&vram_rect, image_buffer);
 
-    akao_cmd_f0();
-    akao_cmd_f1();
-    akao_cmd_a8(AKAO_VOLUME_MAX);
+    akao_stop_all_songs();
+    akao_release_all_sfx();
+    akao_set_all_sfx_volume(AKAO_VOLUME_MAX);
 
     if (sfx_bank_index != GOVER_SFX_DISABLED)
     {
@@ -268,7 +268,7 @@ static void gover_run(void)
         if ((g_fade_level == GOVER_FADE_FULL) && (g_pad_input & GOVER_DISMISS_BUTTON_MASK))
         {
             // Fade out the music while reversing the screen fade.
-            akao_cmd_c1(0, GOVER_MUSIC_FADE_OUT_DURATION, 0);
+            akao_fade_song_volume(0, GOVER_MUSIC_FADE_OUT_DURATION, 0);
             g_fade_step = -GOVER_FADE_STEP;
         }
 
@@ -296,11 +296,11 @@ static void gover_run(void)
     DrawSync(0);
     VSync(0);
     reset_controller_vsync_state();
-    akao_cmd_f0();
-    akao_cmd_f1();
+    akao_stop_all_songs();
+    akao_release_all_sfx();
     SetDispMask(0);
     /* GOVER clears the whole 32-bit slot, not just the u16 scene mode. */
-    *(u32*)&g_scene_mode = 0;
+    *(u32*)&g_field_scene_id = 0;
     field_reset_input_repeat();
     g_pending_game_state = 1;
 }

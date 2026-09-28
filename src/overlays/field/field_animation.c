@@ -1217,8 +1217,8 @@ static void field_update_animation_sfx(FieldAnimDef* def, FieldAnim* anim)
                     }
                     else
                     {
-                        akao_cmd_a1(sfx_id, channel_mask, anim->timer * 2, volume);
-                        akao_cmd_a3(sfx_id, channel_mask, anim->timer * 2, pan);
+                        akao_fade_sfx_volume(sfx_id, channel_mask, anim->timer * 2, volume);
+                        akao_fade_sfx_pan(sfx_id, channel_mask, anim->timer * 2, pan);
                     }
                 }
                 else
@@ -1229,7 +1229,7 @@ static void field_update_animation_sfx(FieldAnimDef* def, FieldAnim* anim)
         }
         else
         {
-            akao_cmd_21(sfx_id, channel_mask);
+            akao_stop_sfx(sfx_id, channel_mask);
         }
     }
 }

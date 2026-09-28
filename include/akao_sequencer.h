@@ -2,29 +2,26 @@
 #define _AKAO_SEQUENCER_H
 
 #include "common.h"
-#include "akao_driver.h" /* provides AkaoChannelState, AkaoDriverFlags, SfxControl and most externs */
+#include "akao_driver.h"
+#include "sdk/libapi.h"
 
-extern long GetRCnt(unsigned long spec);
+void akao_copy_bytes(s32* src, s32* dst, u32 num_bytes);
+void akao_apply_cdvol_to_spu(void);
 
 /* Externs not covered by akao_driver.h */
 extern s16 g_akao_cdvol_current;
 extern s32 g_akao_cdvol_step;
-extern s32 D_8004F754[];
-extern s16 D_8003D47C[];
-extern s32 g_akao_xa_pan_current[];
 extern s32 g_akao_masterpan_step;
 extern s32 g_akao_mastervol_step;
 
-/** @brief 4-sample ring buffer of timer deltas used for profiling. */
+/** @brief Root-counter ticks taken by the last four driver ticks, oldest first. */
 typedef struct
 {
-    s32 unk0;  /* 0x00 */
-    s32 unk4;  /* 0x04 */
-    s32 unk8;  /* 0x08 */
-    s32 unkC;  /* 0x0C */
+    s32 samples[4];
 } TimingRing;
 
-extern TimingRing D_8003D160;
+/** @brief Driver tick timing history kept by akao_irq_handler. */
+extern TimingRing g_akao_irq_timing;
 extern u8 g_akao_master_vol_scalar;
 
 #endif

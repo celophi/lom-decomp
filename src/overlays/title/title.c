@@ -130,7 +130,7 @@ s32 run_title(TitleMenuContext* menu_context)
         }
         else
         {
-            akao_cmd_c1(0, TITLE_SELECTION_SFX_ID, 0);
+            akao_fade_song_volume(0, TITLE_SELECTION_SFX_ID, 0);
             load_menu_layout(-1);
             g_save_slot_index = TITLE_SELECTION_SENTINEL;
             random_low = rand();
@@ -300,7 +300,7 @@ void init_title_display(TitleMenuContext* ctx_base)
     hw[0x140] = 0;
     hw[0x92] = 0;
 
-    akao_set_paused(0);
+    akao_set_mono_output(0);
     SetGeomScreen(0x5DC);
     SetGeomOffset(0xA0, 0x78);
 

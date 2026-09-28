@@ -2,31 +2,97 @@
 #define _AKAO_CMD_H
 
 #include "common.h"
+#include "akao.h"
+
+/** @brief Playback groups selected by akao_pause_audio and akao_resume_audio. */
+typedef enum AkaoAudioTarget
+{
+    AKAO_AUDIO_ALL = 0,
+    AKAO_AUDIO_SONG = 1,
+    AKAO_AUDIO_SFX = 2,
+    AKAO_AUDIO_XA = 3
+} AkaoAudioTarget;
+
+/*
+ * Game-facing AKAO driver interface. Each wrapper stores its arguments in
+ * g_akao_cmd_params and queues one driver command. akao_register_bank,
+ * akao_play_song, akao_set_song_volume and akao_upload_bank_blocking are
+ * declared in akao.h.
+ */
 
 s32 akao_init(void);
 s32 akao_shutdown(void);
-s32 akao_streaming_upload_tick(u8* source, u32 avail, s32 wait_for_spu);
 
-s32 akao_cmd_f0(void);
-s32 akao_cmd_f1(void);
-s32 akao_cmd_a8(s32 arg0);
-
+/* Songs */
 void akao_stop_song(s32 stop_mode);
-void akao_play_sfx(s32 sound_id, s32 parameter, s32 pan, s32 volume);
-void akao_cmd_21(s32 value0, s32 value1);
-void akao_cmd_a1(s32 value0, s32 value1, s32 value2, s32 value3);
-void akao_cmd_a3(s32 value0, s32 value1, s32 value2, s32 value3);
-void akao_cmd_a9(s32 value0, s32 value1);
+void akao_suspend_song(void);
+void akao_start_song_channels(s32 sequence, s32 channel_mask);
+s32 akao_switch_song(s32 sequence, s32 volume);
+void akao_play_song_with_ticks(s32 sequence, s32 ticks);
+s32 akao_fade_song_volume(s32 song_handle, s32 ticks, s32 volume);
+s32 akao_fade_song_volume_from(s32 song_handle, s32 ticks, s32 start_volume, s32 volume);
+void akao_mute_song_channels(s32 channel_mask);
+void akao_set_song_condition(s32 value);
+s32 akao_stop_all_songs(void);
 
-/**
- * @brief Dispatch one of the four AKAO playback control commands.
- * @param mode Selects command 0x98, 0x9A, 0x9C or 0x9E (0..3).
- */
-void akao_cmd_98_9a_9c_9e(u32 mode);
-s32 akao_cmd_c8(s32 value0);
-s32 akao_xa_setup_panning(s32 volume);
-s32 akao_cmd_e4_set_cd_volume(s32 value0);
-s32 akao_cmd_e8_start_xa_stream(s32 stream_id, u32 byte_count);
+/* Sound effects */
+void akao_play_sfx(s32 sound_id, s32 tag, s32 pan, s32 volume);
+s32 akao_play_sfx_from_buffer(s32 buffer_address, s32 tag, s32 pan, s32 volume);
+void akao_play_sound(s32 sound_id);
+void akao_stop_sfx(s32 sound_id, s32 tag_mask);
+s32 akao_get_active_sfx_ids(void);
+s32 akao_is_sfx_playing(s32 sound_id);
+void akao_set_sfx_volume(s32 sound_id, s32 tag_mask, s32 volume);
+void akao_fade_sfx_volume(s32 sound_id, s32 tag_mask, s32 ticks, s32 volume);
+void akao_set_sfx_pan(s32 sound_id, s32 tag_mask, s32 pan);
+void akao_fade_sfx_pan(s32 sound_id, s32 tag_mask, s32 ticks, s32 pan);
+s32 akao_set_sfx_pitch_bend(s32 sound_id, s32 tag_mask, s32 bend);
+s32 akao_fade_sfx_pitch_bend(s32 sound_id, s32 tag_mask, s32 ticks, s32 bend);
+s32 akao_set_all_sfx_volume(s32 volume);
+void akao_fade_all_sfx_volume(s32 ticks, s32 volume);
+void akao_set_all_sfx_pan(s32 pan);
+void akao_fade_all_sfx_pan(s32 ticks, s32 pan);
+void akao_set_all_sfx_pitch_bend(s32 bend);
+void akao_fade_all_sfx_pitch_bend(s32 ticks, s32 bend);
+s32 akao_release_all_sfx(void);
+
+/* Output, pause and master controls */
+void akao_set_mono_output(s32 mono);
+void akao_pause_audio(u32 target);
+void akao_resume_audio(u32 target);
+s32 akao_set_cd_volume(s32 volume);
+s32 akao_fade_cd_volume(s32 ticks, s32 volume);
+s32 akao_fade_cd_volume_from(s32 ticks, s32 start_volume, s32 volume);
+s32 akao_set_master_pan(s32 pan);
+s32 akao_fade_master_pan(s32 ticks, s32 pan);
+s32 akao_fade_master_pan_from(s32 ticks, s32 start_pan, s32 pan);
+s32 akao_set_master_volume(s32 volume);
+s32 akao_fade_master_volume(s32 ticks, s32 volume);
+void akao_fade_master_volume_from(s32 ticks, s32 start_volume, s32 volume);
+s32 akao_set_master_pan_and_volume(s32 value);
+s32 akao_fade_master_pan_and_volume(s32 ticks, s32 value);
+s32 akao_fade_master_pan_and_volume_from(s32 ticks, s32 start_value, s32 value);
+s32 akao_set_cd_mix(s32 volume);
+
+/* Instrument banks */
+s32 akao_get_xfer_state(void);
+s32 akao_reset_xfer_state(void);
+s32 akao_streaming_upload_tick(u8* source, u32 avail, s32 wait_for_spu);
+s32 akao_load_bank(AkaoBankHeader* bank, s32 wait_for_completion);
+s32 akao_upload_bank_slot(void* bank, s32 slot, s32 wait_for_completion);
+s32 akao_load_bank_slot(void* bank, s32 slot, s32 wait_for_completion);
+s32 akao_load_upper_bank_slot(void* bank, s32 slot, s32 wait_for_completion);
+
+/* Streamed (XA program) voices */
+void akao_play_xa_buffer(AkaoHeader* buffer, s32 pan, s32 use_reverb);
+s32 akao_stop_xa(void);
+s32 akao_set_xa_volume(s32 volume);
+s32 akao_fade_xa_volume(s32 ticks, s32 volume);
+s32 akao_set_xa_pan(s32 pan);
+s32 akao_upload_xa_program(void* buffer, s32 upper_slot);
+s32 akao_play_staged_xa(s32 pan, s32 use_reverb);
+void akao_play_xa_one_shot(void* buf, s32 pan, s32 upper_slot, s32 use_reverb);
+s32 akao_start_xa_stream(s32 ring_base, u32 byte_count);
 s32 akao_xa_advance_frame(void);
 s32 akao_xa_get_position(void);
 

@@ -41,13 +41,12 @@ extern void field_build_frame_commands(FieldRenderHalf*, s32);
 extern void field_initialize_subsystems(FieldRenderHalf*);
 extern void field_flush_vram_uploads(void);
 extern void field_load_vram_resource(s32, s16*);
-extern void field_restore_entry_music(void);
-extern s32 g_scene_mode;
-extern s32 g_field_entry_flag;
-extern u32 g_field_scene_config;
-extern s32 g_layout_flag;
-extern s32 g_layout_option;
-extern s32 g_layout_sub_mode;
+extern s32 g_field_scene_id;
+extern s32 g_field_object_id;
+extern u32 g_field_spawn_id;
+extern s32 g_field_music_id;
+extern s32 g_field_sound_bank_id;
+extern s32 g_field_secondary_music_id;
 extern s32 g_pending_game_state;
 extern s32 g_field_scene_request_pending;
 extern FieldRenderHalf* g_field_current_render_half;
@@ -57,10 +56,9 @@ extern s32 g_field_draw_count;
 extern s32 g_text_clut_base;
 extern s32 g_text_cursor_x;
 extern s32 g_text_cursor_y;
+extern u8 g_overlay_load_base;
 
-void field_scene_reset();
-void field_draw_frame(s32 alternate_half, FieldRenderHalf* render_half, s32 draw_count, s32 force_two_primitives);
-void field_clear_node_accumulators(s32 draw_count, s32 force_two_primitives);
+void* const g_overlay_load_address = &g_overlay_load_base;
 
 void field_run_frame_loop(FieldRenderHalf* render_buffers);
 void field_init_display(FieldRenderHalf* render_buffers);
@@ -87,13 +85,13 @@ s32 run_field_scene(void)
     {
         next_state = FIELD_ENTRY_FADE_FRAMES;
         g_field_scene_request_pending = 0;
-        field_set_scene_parameters(g_scene_mode, g_field_entry_flag, g_field_scene_config, g_layout_flag, g_layout_option, g_layout_sub_mode);
+        field_set_scene_parameters(g_field_scene_id, g_field_object_id, g_field_spawn_id, g_field_music_id, g_field_sound_bank_id, g_field_secondary_music_id);
         field_set_fade_target(FIELD_FADE_NEUTRAL, FIELD_FADE_NEUTRAL, FIELD_FADE_NEUTRAL, next_state);
         field_run_frame_loop(render_buffers);
     } while (g_pending_game_state == 0);
     field_stop_song();
-    akao_cmd_f0();
-    akao_cmd_f1();
+    akao_stop_all_songs();
+    akao_release_all_sfx();
     next_state = g_pending_game_state;
     if (next_state < GAME_STATE_WORLD_SELECT)
     {
@@ -170,8 +168,8 @@ void field_run_frame_loop(FieldRenderHalf* render_buffers)
     controllers->ports[1].actuators_enabled = 0;
     controllers->ports[0].actuators_enabled = 0;
     reset_controller_vsync_state();
-    akao_cmd_f0();
-    akao_cmd_f1();
+    akao_stop_all_songs();
+    akao_release_all_sfx();
     DrawSync(0);
     VSync(0);
     SetDispMask(0);

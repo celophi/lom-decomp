@@ -1,5 +1,5 @@
 #include "game_audio.h"
-#include "akao.h"
+#include "akao_cmd.h"
 #include "cdrom.h"
 #include "cd_resources.h"
 #include "sdk/memory.h"
@@ -29,7 +29,7 @@ extern s16 g_game_diagnostic_arg1;
  */
 void fade_out_current_song(void)
 {
-    akao_cmd_c1(g_current_song_handle, SONG_FADE_OUT_TICKS, 0);
+    akao_fade_song_volume(g_current_song_handle, SONG_FADE_OUT_TICKS, 0);
 }
 
 /**

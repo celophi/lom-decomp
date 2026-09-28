@@ -41,5 +41,8 @@ s32 cdrom_queue_seek(s32 resource_index);
 s32 cdrom_get_resource_size(s32 resource_index);
 s32 cdrom_get_error_status(void);
 void cdrom_defer_data_ready(void);
+s32 cdrom_recover(void);
+void cdrom_restore_callbacks(void);
+s32 cdrom_enter_recovery_mode(void);
 
 #endif

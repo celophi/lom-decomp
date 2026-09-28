@@ -555,12 +555,12 @@ s32 menu_handle_input(s32 process_actions)
 
                     case 6:
                         g_pad_ctx->menu_option_flags |= MENU_OPTION_AUDIO_ENABLED;
-                        akao_set_paused(0);
+                        akao_set_mono_output(0);
                         break;
 
                     case 7:
                         g_pad_ctx->menu_option_flags &= ~MENU_OPTION_AUDIO_ENABLED;
-                        akao_set_paused(1);
+                        akao_set_mono_output(1);
                         break;
 
                     case 8:

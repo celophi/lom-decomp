@@ -1,7 +1,7 @@
 #include "akao_cmd.h"
-#include "akao.h"
-#include "akao_driver.h"
+#include "akao_sequencer.h"
 #include "sdk/libcd.h"
+#include "sdk/libspu.h"
 
 /**
  * @brief Pending articulation and sample bytes for a streaming bank upload.
@@ -13,10 +13,10 @@
  */
 typedef struct
 {
-    u8* articulation_dst;      /* 0x00: current destination in the articulation table */
-    u32 spu_addr;              /* 0x04: next SPU write address; zero marks the first tick */
-    u32 sample_remaining;      /* 0x08: sample bytes still to upload */
-    u32 articulation_remaining; /* 0x0C: articulation bytes still to copy */
+    u8* articulation_dst;       /**< Current destination in the articulation table. */
+    u32 spu_addr;               /**< Next SPU write address; zero marks the first tick. */
+    u32 sample_remaining;       /**< Sample bytes still to upload. */
+    u32 articulation_remaining; /**< Articulation bytes still to copy. */
 } AkaoStreamingState;
 
 /** @brief Bank identity prefix; the key combines the header's id and length. */
@@ -26,48 +26,19 @@ typedef struct
     s32 key;
 } AkaoBankIdentity;
 
-/** @brief XA program header preceding the sample data at offset 0x40. */
-typedef struct
-{
-    AkaoHeader header;
-    u32 sample_size;       /* 0x10: bytes uploaded to the SPU */
-    u8 unknown_0x14[0x0C];
-    u32 cached_spu_addr;   /* 0x20: selected SPU upload address */
-    u8 unknown_0x24[0x1C];
-} AkaoXaProgramHeader;
-
-/** @brief Staged XA header and the first 16 bytes of its sample data. */
-typedef struct
-{
-    AkaoXaProgramHeader header;
-    u8 sample_prefix[0x10];
-} AkaoXaProgramStaging;
-
-extern s32 D_8004F794;
 extern AkaoXaProgramStaging g_akao_xa_program_staging;
 extern CdlATV g_akao_cdmix;
-extern s32 D_8004F754;
-extern s32 D_8004F824;
-extern s32 D_8004F828;
 extern AkaoStreamingState g_akao_streaming_state;
 extern AkaoBankHeader g_akao_bank_staging;
 
-/* Number of SPU bank slots (entries of g_akao_bank_slot_keys). */
+/** @brief Number of SPU bank slots (entries of g_akao_bank_slot_keys). */
 #define AKAO_BANK_SLOT_COUNT 6
 
-/* AKAO XA tracker flag: the program is fed from a CD ring of blocks. */
-#define AKAO_XA_FLAG_RING_STREAM 0x01000000
-
-/*
- * g_akao_seq_channel0, read through its fixed address. This file is built with
- * -G0, where the symbol form loads the %hi part into a different register than
- * the original code; the constant address reproduces the original load pair.
- * The symbol sits at 0x8003EDCC in JP.
- */
+/* g_akao_seq_channel0, read through its fixed address. */
 #if defined(VERSION_JP)
-#define AKAO_CHANNEL_STATE (*(AkaoChannelState**)0x8003EDCC)
+#define AKAO_PRIMARY_SONG (*(AkaoSongState**)0x8003EDCC)
 #else
-#define AKAO_CHANNEL_STATE (*(AkaoChannelState**)0x8003EC5C)
+#define AKAO_PRIMARY_SONG (*(AkaoSongState**)0x8003EC5C)
 #endif
 
 /**
@@ -85,13 +56,13 @@ extern AkaoBankHeader g_akao_bank_staging;
  *         most callers otherwise.
  */
 s32 akao_send_command(u32 opcode);
-void func_8002E2E8(void);
+void akao_xa_start_ring_stream(void);
 
 /**
  * @brief Public init entry - wraps akao_driver_init and returns 0.
  * @return 0 after initialization.
  *
- * @see https://decomp.me/scratch/hDNyF (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/hDNyF
  */
 s32 akao_init(void)
 {
@@ -103,7 +74,7 @@ s32 akao_init(void)
  * @brief Public shutdown entry - wraps akao_driver_shutdown and returns 0.
  * @return 0 after shutdown.
  *
- * @see https://decomp.me/scratch/z7ZEh (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/z7ZEh
  */
 s32 akao_shutdown(void)
 {
@@ -125,7 +96,7 @@ s32 akao_shutdown(void)
  * @return 0 if the magic matched and the bank was registered; otherwise the
  *         non-zero delta (bank->magic - AKAO_MAGIC) from akao_check_magic.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/0q180
+ * @see decomp.me (100%) https://decomp.me/scratch/0q180
  */
 s32 akao_register_bank(AkaoHeader* bank)
 {
@@ -150,7 +121,7 @@ s32 akao_register_bank(AkaoHeader* bank)
  *                      as @c &D_8003ECA0 in TITLE.
  * @return Song handle returned by the AKAO command dispatcher.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/iVOOb
+ * @see decomp.me (100%) https://decomp.me/scratch/iVOOb
  */
 s32 akao_play_song(AkaoHeader* sequence_data)
 {
@@ -167,7 +138,7 @@ s32 akao_play_song(AkaoHeader* sequence_data)
  *
  * @param stop_mode  Stop-modifier parameter; observed value is 0 in all callers.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/9M4hF
+ * @see decomp.me (100%) https://decomp.me/scratch/9M4hF
  */
 void akao_stop_song(s32 stop_mode)
 {
@@ -176,112 +147,91 @@ void akao_stop_song(s32 stop_mode)
 }
 
 /**
- * @brief AKAO command 0x40 - global stop / driver halt.
- *
- * Zero-argument command. Observed callers in cdrom.c and others use this to
- * silence everything (sequences and active SFX) when entering loading screens
- * or other audio-quiescent states.
- *
- * @see https://decomp.me/scratch/4GVez (100%)
+ * @brief Queue command 0x40: back up the playing song so it can be resumed later.
+ * @see akao_seq_suspend_song
+ * @see decomp.me (100%) https://decomp.me/scratch/4GVez
  */
-void akao_cmd_40(void)
+void akao_suspend_song(void)
 {
-    akao_send_command(AKAO_CMD_GLOBAL_STOP);
+    akao_send_command(AKAO_CMD_SUSPEND_SONG);
 }
 
 /**
- * @brief AKAO command 0x14 - three args, third slot forced 0; semantics TBD.
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; semantics unknown.
- *
- * @see https://decomp.me/scratch/c2C3m (100%)
+ * @brief Queue command 0x14: start a sequence on a subset of its channels.
+ * @param sequence AKAO sequence to start.
+ * @param channel_mask Channels to start; 0 starts every channel.
+ * @see decomp.me (100%) https://decomp.me/scratch/c2C3m
  */
-void akao_cmd_14(s32 value0, s32 value1)
+void akao_start_song_channels(s32 sequence, s32 channel_mask)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = value1;
+    g_akao_cmd_params[0].value = sequence;
+    g_akao_cmd_params[1].value = channel_mask;
     g_akao_cmd_params[2].value = 0;
-    akao_send_command(AKAO_CMD_14);
+    akao_send_command(AKAO_CMD_START_SONG_CHANNELS);
 }
 
 /**
- * @brief Combo: dispatch AKAO command 0x19 (a) then 0xC0 (b masked to 7 bits).
+ * @brief Queue command 0x19 to switch to a new song, then set its volume (0xC0).
  *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; semantics unknown.
- * @return Current transfer or position latch.
+ * The song that was playing keeps running as the secondary song.
  *
- * @see https://decomp.me/scratch/d6xXt (100%)
+ * @param sequence AKAO sequence to switch to.
+ * @param volume Master volume of the new song; only the low 7 bits are used.
+ * @return Id of the new sequence, 0 if it was already playing, or -1 for a bad header.
+ * @see decomp.me (100%) https://decomp.me/scratch/d6xXt
  */
-s32 akao_cmd_19_c0(s32 value0, s32 value1)
+s32 akao_switch_song(s32 sequence, s32 volume)
 {
     s32 result;
 
-    g_akao_cmd_params[0].value = value0;
-    result = akao_send_command(AKAO_CMD_19);
-    g_akao_cmd_params[0].value = (value1 & 0x7F);
+    g_akao_cmd_params[0].value = sequence;
+    result = akao_send_command(AKAO_CMD_SWITCH_SONG);
+    g_akao_cmd_params[0].value = (volume & 0x7F);
     g_akao_cmd_params[3].value = 0;
     akao_send_command(AKAO_CMD_SET_SONG_VOLUME);
     return result;
 }
 
 /**
- * @brief AKAO command 0x12 - two unmasked args; semantics TBD.
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; semantics unknown.
- *
- * @see https://decomp.me/scratch/jigab (100%)
+ * @brief Queue command 0x12: play a sequence and seed its pending tick count.
+ * @param sequence AKAO sequence to play.
+ * @param ticks Initial pending tick count; 0 leaves no ticks pending.
+ * @see decomp.me (100%) https://decomp.me/scratch/jigab
  */
-void akao_cmd_12(s32 value0, s32 value1)
+void akao_play_song_with_ticks(s32 sequence, s32 ticks)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = value1;
-    akao_send_command(AKAO_CMD_12);
+    g_akao_cmd_params[0].value = sequence;
+    g_akao_cmd_params[1].value = ticks;
+    akao_send_command(AKAO_CMD_PLAY_SONG_WITH_TICKS);
 }
 
 /**
- * @brief AKAO command 0x20 - play a sound effect.
- *
- * Packs four caller-supplied values into the AKAO command parameter buffer,
- * each masked to the bit-width the driver expects, then dispatches the
- * "play SFX" command. The mask widths suggest:
- *   sound_id (10 bits) - sound id / SFX index
- *   parameter (24 bits) - wider opaque parameter (possibly pitch/frequency)
- *   pan ( 8 bits) - byte-sized parameter (possibly pan)
- *   volume ( 7 bits) - volume (0-127)
- * Caller in TITLE: play_title_sfx(sound_id, _, pan, 0x7F).
- *
- * @param sound_id  Sound id (lower 10 bits used).
- * @param parameter  24-bit packed parameter.
- * @param pan  8-bit parameter.
- * @param volume  Volume (0-127).
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/9AZZL
+ * @brief Queue command 0x20: play a sound effect from the loaded banks.
+ * @param sound_id Sound id; only the low 10 bits are used.
+ * @param tag Caller tag stored with the channels, used to select them later; low 24 bits.
+ * @param pan Pan; only the low 8 bits are used.
+ * @param volume Volume; only the low 7 bits are used.
+ * @see decomp.me (100%) https://decomp.me/scratch/9AZZL
  */
-void akao_play_sfx(s32 sound_id, s32 parameter, s32 pan, s32 volume)
+void akao_play_sfx(s32 sound_id, s32 tag, s32 pan, s32 volume)
 {
     g_akao_cmd_params[0].value = (sound_id & 0x3FF);
-    g_akao_cmd_params[1].value = (parameter & 0xFFFFFF);
+    g_akao_cmd_params[1].value = (tag & 0xFFFFFF);
     g_akao_cmd_params[2].value = (pan & 0xFF);
     g_akao_cmd_params[3].value = (volume & 0x7F);
     akao_send_command(AKAO_CMD_PLAY_SFX);
 }
 
 /**
- * @brief AKAO command 0x24 - play SFX from a caller-supplied AKAO buffer (magic-checked); same arg shape as
- * akao_play_sfx (24/8/7-bit).
- *
+ * @brief Queue command 0x24: play the sound effect list in an AKAO buffer.
  * @param buffer_address Address of an AKAO-tagged sound buffer.
- * @param parameter Packed parameter; only the low 24 bits are used.
- * @param pan Pan parameter; only the low 8 bits are used.
+ * @param tag Caller tag stored with the channels; only the low 24 bits are used.
+ * @param pan Pan; only the low 8 bits are used.
  * @param volume Volume; only the low 7 bits are used.
- * @return Current transfer or position latch.
- *
- * @see https://decomp.me/scratch/FFGei (100%)
+ * @return @p buffer_address, or the akao_check_magic result for a bad header.
+ * @see decomp.me (100%) https://decomp.me/scratch/FFGei
  */
-s32 akao_play_sfx_from_buffer(s32 buffer_address, s32 parameter, s32 pan, s32 volume)
+s32 akao_play_sfx_from_buffer(s32 buffer_address, s32 tag, s32 pan, s32 volume)
 {
     s32 result = akao_check_magic((AkaoHeader*)buffer_address);
 
@@ -291,53 +241,50 @@ s32 akao_play_sfx_from_buffer(s32 buffer_address, s32 parameter, s32 pan, s32 vo
     }
 
     g_akao_cmd_params[0].buffer = (void*)buffer_address;
-    g_akao_cmd_params[1].value = parameter & 0xFFFFFF;
+    g_akao_cmd_params[1].value = tag & 0xFFFFFF;
     g_akao_cmd_params[2].value = pan & 0xFF;
     g_akao_cmd_params[3].value = volume & 0x7F;
-    akao_send_command(AKAO_CMD_PLAY_SFX_FROM_BUF);
+    akao_send_command(AKAO_CMD_PLAY_SFX_LIST);
 
     return buffer_address;
 }
 
 /**
- * @brief AKAO command 0x21 - (id, p24) sound id plus 24-bit param.
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; only the low 24 bits are used.
- *
- * @see https://decomp.me/scratch/lu9nS (100%)
+ * @brief Queue command 0x21: stop sound effects.
+ * @param sound_id Sound id to stop when @p tag_mask is 0.
+ * @param tag_mask Stop every channel whose tag shares a bit with this mask; low 24 bits.
+ * @see akao_sfx_stop_channels
+ * @see decomp.me (100%) https://decomp.me/scratch/lu9nS
  */
-void akao_cmd_21(s32 value0, s32 value1)
+void akao_stop_sfx(s32 sound_id, s32 tag_mask)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = (value1 & 0xFFFFFF);
-    akao_send_command(AKAO_CMD_21);
+    g_akao_cmd_params[0].value = sound_id;
+    g_akao_cmd_params[1].value = (tag_mask & 0xFFFFFF);
+    akao_send_command(AKAO_CMD_STOP_SFX);
 }
 
 /**
- * @brief AKAO command 0x30 - stop SFX whose 10-bit sound id matches @p sound_id.
- *
- * @param sound_id Sound identifier; only the low 10 bits are used.
- *
- * @see https://decomp.me/scratch/0mLzI (100%)
+ * @brief Queue command 0x30: play a sound effect with the default pan and volume.
+ * @param sound_id Sound id; only the low 10 bits are used.
+ * @see decomp.me (100%) https://decomp.me/scratch/0mLzI
  */
-void akao_stop_sfx_by_id(s32 sound_id)
+void akao_play_sound(s32 sound_id)
 {
     g_akao_cmd_params[0].value = sound_id & 0x3FF;
-    akao_send_command(AKAO_CMD_STOP_SFX_BY_ID);
+    akao_send_command(AKAO_CMD_PLAY_SOUND);
 }
 
 /**
- * @brief Scans active SFX channels and ORs together their offset-0x28 fields.
+ * @brief Scans active SFX channels and ORs together their sfx_tag values.
  *
- * Iterates over the 12 SFX-channel slots in @c g_sfx_channels (each 0x118 bytes),
- * gated by the bitmap in @c g_akao_sfx_control (one bit per channel starting at
- * 0x1000); returns the bitwise-OR of the 32-bit value at offset 0x28 of every
- * active slot, masked to 24 bits.
+ * Walks the AKAO_SFX_CHANNEL_COUNT channels in @c g_sfx_channels, gated by
+ * @c g_akao_sfx_control.active_mask (one bit per channel from
+ * AKAO_SFX_FIRST_CHANNEL_BIT), and ORs together the @c sfx_tag of every active
+ * channel, masked to 24 bits.
  *
  * @return Bitwise OR of active channel identifiers, masked to 24 bits.
  *
- * @see https://decomp.me/scratch/yZloM (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/yZloM
  */
 s32 akao_get_active_sfx_ids(void)
 {
@@ -346,19 +293,19 @@ s32 akao_get_active_sfx_ids(void)
     s32 active_ids;
     u32 channel_bit;
 
-    active_channels = g_akao_sfx_control.unk0;
+    active_channels = g_akao_sfx_control.active_mask;
     if (active_channels == 0)
     {
         return 0;
     }
-    channel = (AkaoChannelState*)g_sfx_channels;
+    channel = g_sfx_channels;
     active_ids = 0;
-    channel_bit = 0x1000;
+    channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
     do
     {
         if (active_channels & channel_bit)
         {
-            active_ids |= channel->tempo_acc;
+            active_ids |= channel->sfx_tag;
         }
         channel_bit <<= 1;
         channel++;
@@ -368,16 +315,15 @@ s32 akao_get_active_sfx_ids(void)
 }
 
 /**
- * @brief Returns 1 if any active SFX channel's offset-0x28 field equals @p sound_id.
+ * @brief Returns 1 if any active SFX channel's @c sfx_tag equals @p sound_id.
  *
- * Same iteration shape as @c akao_get_active_sfx_ids over @c g_sfx_channels / @c g_akao_sfx_control,
- * but compares each active channel's offset-0x28 value to @p sound_id; returns
- * 1 on first match, 0 otherwise.
+ * Same walk as @c akao_get_active_sfx_ids, but compares each active channel's
+ * @c sfx_tag to @p sound_id; returns 1 on the first match, 0 otherwise.
  *
  * @param sound_id  Sound id / handle to look for.
  * @return 1 if a matching active channel exists, 0 otherwise.
  *
- * @see https://decomp.me/scratch/OvqYq (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/OvqYq
  */
 s32 akao_is_sfx_playing(s32 sound_id)
 {
@@ -389,16 +335,16 @@ s32 akao_is_sfx_playing(s32 sound_id)
     {
         return 0;
     }
-    active_channels = g_akao_sfx_control.unk0;
+    active_channels = g_akao_sfx_control.active_mask;
     if (active_channels == 0)
     {
         return 0;
     }
-    channel = (AkaoChannelState*)g_sfx_channels;
-    channel_bit = 0x1000;
+    channel = g_sfx_channels;
+    channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
     do
     {
-        if ((active_channels & channel_bit) && sound_id == channel->tempo_acc)
+        if ((active_channels & channel_bit) && sound_id == channel->sfx_tag)
         {
             return 1;
         }
@@ -409,79 +355,66 @@ s32 akao_is_sfx_playing(s32 sound_id)
 }
 
 /**
- * @brief AKAO command 0x80 / 0x81 - pause or resume the active sequence.
- *
- * Picks opcode 0x81 when @p mode == 1 (resume) and 0x80 otherwise (pause),
- * then dispatches with no parameter buffer payload. Used by TITLE.OVL to
- * pause music while the title screen is dismissed.
- *
- * @param mode  1 = resume (0x81); any other value = pause (0x80).
- *
- * @see https://decomp.me/scratch/9qTjH (100%)
+ * @brief Queue command 0x81 (mono) or 0x80 (stereo) to select the sound output mode.
+ * @param mono 1 selects mono output; any other value selects stereo.
+ * @see decomp.me (100%) https://decomp.me/scratch/9qTjH
  */
-void akao_set_paused(s32 mode)
+void akao_set_mono_output(s32 mono)
 {
-    if (mode == 1)
+    if (mono == 1)
     {
-        mode = AKAO_CMD_RESUME;
+        akao_send_command(AKAO_CMD_SELECT_MONO);
     }
     else
     {
-        mode = AKAO_CMD_PAUSE;
+        akao_send_command(AKAO_CMD_SELECT_STEREO);
     }
-    akao_send_command(mode);
 }
 
 /**
- * @brief AKAO command 0x90 - single unmasked arg; semantics TBD.
- *
- * @param value0 Value for command slot 0; semantics unknown.
- *
- * @see https://decomp.me/scratch/x94md (100%)
+ * @brief Queue command 0x90: silence song channels without stopping them.
+ * @param channel_mask Channels of the primary song to silence; 0 unmutes all.
+ * @see decomp.me (100%) https://decomp.me/scratch/x94md
  */
-void akao_cmd_90(s32 value0)
+void akao_mute_song_channels(s32 channel_mask)
 {
-    g_akao_cmd_params[0].value = value0;
-    akao_send_command(AKAO_CMD_90);
+    g_akao_cmd_params[0].value = channel_mask;
+    akao_send_command(AKAO_CMD_MUTE_SONG_CHANNELS);
 }
 
 /**
- * @brief AKAO command 0x92 - single unmasked arg; semantics TBD.
- *
- * @param value0 Value for command slot 0; semantics unknown.
- *
- * @see https://decomp.me/scratch/y9TAf (100%)
+ * @brief Queue command 0x92: set the value tested by the conditional-jump opcode.
+ * @param value New condition value for the primary song.
+ * @see decomp.me (100%) https://decomp.me/scratch/y9TAf
  */
-void akao_cmd_92(s32 value0)
+void akao_set_song_condition(s32 value)
 {
-    g_akao_cmd_params[0].value = value0;
-    akao_send_command(AKAO_CMD_92);
+    g_akao_cmd_params[0].value = value;
+    akao_send_command(AKAO_CMD_SET_SONG_CONDITION);
 }
 
 /**
- * @brief Dispatch one of AKAO commands 0x99/0x9B/0x9D/0x9F (zero-arg) selected by @p mode (1/2/3/default).
- *
- * @param mode Selects one of the command family members; 1, 2, and 3 have dedicated commands.
- *
- * @see https://decomp.me/scratch/qqSuG (100%)
+ * @brief Pause audio playback (commands 0x99, 0x9B, 0x9D and 0x9F).
+ * @param target AKAO_AUDIO_SONG, AKAO_AUDIO_SFX or AKAO_AUDIO_XA; any other value selects all three.
+ * @see decomp.me (100%) https://decomp.me/scratch/qqSuG
  */
-void akao_cmd_99_9b_9d_9f(u32 mode)
+void akao_pause_audio(u32 target)
 {
     s32 opcode;
 
-    switch (mode)
+    switch (target)
     {
-    case 1:
-        opcode = AKAO_CMD_9B;
+    case AKAO_AUDIO_SONG:
+        opcode = AKAO_CMD_PAUSE_SONG;
         break;
-    case 2:
-        opcode = AKAO_CMD_9D;
+    case AKAO_AUDIO_SFX:
+        opcode = AKAO_CMD_PAUSE_SFX;
         break;
-    case 3:
-        opcode = AKAO_CMD_9F;
+    case AKAO_AUDIO_XA:
+        opcode = AKAO_CMD_PAUSE_XA;
         break;
     default:
-        opcode = AKAO_CMD_99;
+        opcode = AKAO_CMD_PAUSE_ALL;
         break;
     }
 
@@ -489,29 +422,27 @@ void akao_cmd_99_9b_9d_9f(u32 mode)
 }
 
 /**
- * @brief Dispatch one of AKAO commands 0x98/0x9A/0x9C/0x9E (zero-arg) selected by @p mode (1/2/3/default).
- *
- * @param mode Selects one of the command family members; 1, 2, and 3 have dedicated commands.
- *
- * @see https://decomp.me/scratch/iREFc (100%)
+ * @brief Resume audio playback (commands 0x98, 0x9A, 0x9C and 0x9E).
+ * @param target AKAO_AUDIO_SONG, AKAO_AUDIO_SFX or AKAO_AUDIO_XA; any other value selects all three.
+ * @see decomp.me (100%) https://decomp.me/scratch/iREFc
  */
-void akao_cmd_98_9a_9c_9e(u32 mode)
+void akao_resume_audio(u32 target)
 {
     s32 opcode;
 
-    switch (mode)
+    switch (target)
     {
-    case 1:
-        opcode = AKAO_CMD_9A;
+    case AKAO_AUDIO_SONG:
+        opcode = AKAO_CMD_RESUME_SONG;
         break;
-    case 2:
-        opcode = AKAO_CMD_9C;
+    case AKAO_AUDIO_SFX:
+        opcode = AKAO_CMD_RESUME_SFX;
         break;
-    case 3:
-        opcode = AKAO_CMD_9E;
+    case AKAO_AUDIO_XA:
+        opcode = AKAO_CMD_RESUME_XA;
         break;
     default:
-        opcode = AKAO_CMD_98;
+        opcode = AKAO_CMD_RESUME_ALL;
         break;
     }
 
@@ -519,198 +450,174 @@ void akao_cmd_98_9a_9c_9e(u32 mode)
 }
 
 /**
- * @brief AKAO command 0xA8 - global counterpart of 0xA0; takes a 7-bit value.
- *
- * @param value0 Value for command slot 0; only the low 7 bits are used.
+ * @brief Queue command 0xA8: set the volume scale of every SFX channel not marked AKAO_SFX_FLAG_SUPPRESS.
+ * @param volume Volume scale; only the low 7 bits are used.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/VTGCB (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/VTGCB
  */
-s32 akao_cmd_a8(s32 value0)
+s32 akao_set_all_sfx_volume(s32 volume)
 {
-    g_akao_cmd_params[0].value = value0 & 0x7F;
-    return akao_send_command(AKAO_CMD_A8);
+    g_akao_cmd_params[0].value = volume & 0x7F;
+    return akao_send_command(AKAO_CMD_SET_ALL_SFX_VOLUME);
 }
 
 /**
- * @brief AKAO command 0xA9 - global counterpart of 0xA1; (a, 7-bit value).
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; only the low 7 bits are used.
- *
- * @see https://decomp.me/scratch/03hNO (100%)
+ * @brief Queue command 0xA9: fade the volume scale of every SFX channel not marked AKAO_SFX_FLAG_SUPPRESS.
+ * @param ticks Fade length in driver ticks; 0 is treated as 1.
+ * @param volume Target volume scale; only the low 7 bits are used.
+ * @see decomp.me (100%) https://decomp.me/scratch/03hNO
  */
-void akao_cmd_a9(s32 value0, s32 value1)
+void akao_fade_all_sfx_volume(s32 ticks, s32 volume)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = (value1 & 0x7F);
-    akao_send_command(AKAO_CMD_A9);
+    g_akao_cmd_params[0].value = ticks;
+    g_akao_cmd_params[1].value = (volume & 0x7F);
+    akao_send_command(AKAO_CMD_FADE_ALL_SFX_VOLUME);
 }
 
 /**
- * @brief AKAO command 0xA0 - per-channel: (channel, 24-bit fade duration, 7-bit target value).
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; only the low 24 bits are used.
- * @param value2 Value for command slot 2; only the low 7 bits are used.
- *
- * @see https://decomp.me/scratch/C8UTP (100%)
+ * @brief Queue command 0xA0: set the volume scale of selected SFX channels.
+ * @param sound_id Sound id to match when @p tag_mask is 0.
+ * @param tag_mask Select channels whose tag shares a bit with this mask; low 24 bits, 0 matches by id.
+ * @param volume Volume scale; only the low 7 bits are used.
+ * @see decomp.me (100%) https://decomp.me/scratch/C8UTP
  */
-void akao_cmd_a0(s32 value0, s32 value1, s32 value2)
+void akao_set_sfx_volume(s32 sound_id, s32 tag_mask, s32 volume)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = (value1 & 0xFFFFFF);
-    g_akao_cmd_params[2].value = (value2 & 0x7F);
-    akao_send_command(AKAO_CMD_A0);
+    g_akao_cmd_params[0].value = sound_id;
+    g_akao_cmd_params[1].value = (tag_mask & 0xFFFFFF);
+    g_akao_cmd_params[2].value = (volume & 0x7F);
+    akao_send_command(AKAO_CMD_SET_SFX_VOLUME);
 }
 
 /**
- * @brief AKAO command 0xA1 - per-channel: (channel, 24-bit fade duration, p, 7-bit target value).
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; only the low 24 bits are used.
- * @param value2 Value for command slot 2; semantics unknown.
- * @param value3 Value for command slot 3; only the low 7 bits are used.
- *
- * @see https://decomp.me/scratch/xMNn0 (100%)
+ * @brief Queue command 0xA1: fade the volume scale of selected SFX channels.
+ * @param sound_id Sound id to match when @p tag_mask is 0.
+ * @param tag_mask Select channels whose tag shares a bit with this mask; low 24 bits, 0 matches by id.
+ * @param ticks Fade length in driver ticks; 0 is treated as 1.
+ * @param volume Target volume scale; only the low 7 bits are used.
+ * @see decomp.me (100%) https://decomp.me/scratch/xMNn0
  */
-void akao_cmd_a1(s32 value0, s32 value1, s32 value2, s32 value3)
+void akao_fade_sfx_volume(s32 sound_id, s32 tag_mask, s32 ticks, s32 volume)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = (value1 & 0xFFFFFF);
-    g_akao_cmd_params[2].value = value2;
-    g_akao_cmd_params[3].value = (value3 & 0x7F);
-    akao_send_command(AKAO_CMD_A1);
+    g_akao_cmd_params[0].value = sound_id;
+    g_akao_cmd_params[1].value = (tag_mask & 0xFFFFFF);
+    g_akao_cmd_params[2].value = ticks;
+    g_akao_cmd_params[3].value = (volume & 0x7F);
+    akao_send_command(AKAO_CMD_FADE_SFX_VOLUME);
 }
 
 /**
- * @brief AKAO command 0xAA - global counterpart of 0xA2; takes an 8-bit value.
- *
- * @param value0 Value for command slot 0; only the low 8 bits are used.
- *
- * @see https://decomp.me/scratch/AuyLX (100%)
+ * @brief Queue command 0xAA: set the pan bias of every SFX channel not marked AKAO_SFX_FLAG_SUPPRESS.
+ * @param pan Pan bias; only the low 8 bits are used.
+ * @see decomp.me (100%) https://decomp.me/scratch/AuyLX
  */
-void akao_cmd_aa(s32 value0)
+void akao_set_all_sfx_pan(s32 pan)
 {
-    g_akao_cmd_params[0].value = value0 & 0xFF;
-    akao_send_command(AKAO_CMD_AA);
+    g_akao_cmd_params[0].value = pan & 0xFF;
+    akao_send_command(AKAO_CMD_SET_ALL_SFX_PAN);
 }
 
 /**
- * @brief AKAO command 0xAB - global counterpart of 0xA3; (a, 8-bit value).
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; only the low 8 bits are used.
- *
- * @see https://decomp.me/scratch/IaBX9 (100%)
+ * @brief Queue command 0xAB: fade the pan bias of every SFX channel not marked AKAO_SFX_FLAG_SUPPRESS.
+ * @param ticks Fade length in driver ticks; 0 is treated as 1.
+ * @param pan Target pan bias; only the low 8 bits are used.
+ * @see decomp.me (100%) https://decomp.me/scratch/IaBX9
  */
-void akao_cmd_ab(s32 value0, s32 value1)
+void akao_fade_all_sfx_pan(s32 ticks, s32 pan)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = (value1 & 0xFF);
-    akao_send_command(AKAO_CMD_AB);
+    g_akao_cmd_params[0].value = ticks;
+    g_akao_cmd_params[1].value = (pan & 0xFF);
+    akao_send_command(AKAO_CMD_FADE_ALL_SFX_PAN);
 }
 
 /**
- * @brief AKAO command 0xA2 - per-channel: (channel, 24-bit fade duration, 8-bit target value).
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; only the low 24 bits are used.
- * @param value2 Value for command slot 2; only the low 8 bits are used.
- *
- * @see https://decomp.me/scratch/LhoLV (100%)
+ * @brief Queue command 0xA2: set the pan bias of selected SFX channels.
+ * @param sound_id Sound id to match when @p tag_mask is 0.
+ * @param tag_mask Select channels whose tag shares a bit with this mask; low 24 bits, 0 matches by id.
+ * @param pan Pan bias; only the low 8 bits are used.
+ * @see decomp.me (100%) https://decomp.me/scratch/LhoLV
  */
-void akao_cmd_a2(s32 value0, s32 value1, s32 value2)
+void akao_set_sfx_pan(s32 sound_id, s32 tag_mask, s32 pan)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = (value1 & 0xFFFFFF);
-    g_akao_cmd_params[2].value = (value2 & 0xFF);
-    akao_send_command(AKAO_CMD_A2);
+    g_akao_cmd_params[0].value = sound_id;
+    g_akao_cmd_params[1].value = (tag_mask & 0xFFFFFF);
+    g_akao_cmd_params[2].value = (pan & 0xFF);
+    akao_send_command(AKAO_CMD_SET_SFX_PAN);
 }
 
 /**
- * @brief AKAO command 0xA3 - per-channel: (channel, 24-bit fade duration, p, 8-bit target value).
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; only the low 24 bits are used.
- * @param value2 Value for command slot 2; semantics unknown.
- * @param value3 Value for command slot 3; only the low 8 bits are used.
- *
- * @see https://decomp.me/scratch/Al5YT (100%)
+ * @brief Queue command 0xA3: fade the pan bias of selected SFX channels.
+ * @param sound_id Sound id to match when @p tag_mask is 0.
+ * @param tag_mask Select channels whose tag shares a bit with this mask; low 24 bits, 0 matches by id.
+ * @param ticks Fade length in driver ticks; 0 is treated as 1.
+ * @param pan Target pan bias; only the low 8 bits are used.
+ * @see decomp.me (100%) https://decomp.me/scratch/Al5YT
  */
-void akao_cmd_a3(s32 value0, s32 value1, s32 value2, s32 value3)
+void akao_fade_sfx_pan(s32 sound_id, s32 tag_mask, s32 ticks, s32 pan)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = (value1 & 0xFFFFFF);
-    g_akao_cmd_params[2].value = value2;
-    g_akao_cmd_params[3].value = (value3 & 0xFF);
-    akao_send_command(AKAO_CMD_A3);
+    g_akao_cmd_params[0].value = sound_id;
+    g_akao_cmd_params[1].value = (tag_mask & 0xFFFFFF);
+    g_akao_cmd_params[2].value = ticks;
+    g_akao_cmd_params[3].value = (pan & 0xFF);
+    akao_send_command(AKAO_CMD_FADE_SFX_PAN);
 }
 
 /**
- * @brief AKAO command 0xAC - global counterpart of 0xA4; takes an 8-bit value.
- *
- * @param value0 Value for command slot 0; only the low 8 bits are used.
- *
- * @see https://decomp.me/scratch/e4D90 (100%)
+ * @brief Queue command 0xAC: set the pitch bend of every SFX channel not marked AKAO_SFX_FLAG_SUPPRESS.
+ * @param bend Pitch bend; only the low 8 bits are used.
+ * @see decomp.me (100%) https://decomp.me/scratch/e4D90
  */
-void akao_cmd_ac(s32 value0)
+void akao_set_all_sfx_pitch_bend(s32 bend)
 {
-    g_akao_cmd_params[0].value = value0 & 0xFF;
-    akao_send_command(AKAO_CMD_AC);
+    g_akao_cmd_params[0].value = bend & 0xFF;
+    akao_send_command(AKAO_CMD_SET_ALL_SFX_PITCH_BEND);
 }
 
 /**
- * @brief AKAO command 0xAD - global counterpart of 0xA5; (a, 8-bit value).
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; only the low 8 bits are used.
- *
- * @see https://decomp.me/scratch/Fw2d9 (100%)
+ * @brief Queue command 0xAD: fade the pitch bend of every SFX channel not marked AKAO_SFX_FLAG_SUPPRESS.
+ * @param ticks Fade length in driver ticks; 0 is treated as 1.
+ * @param bend Target pitch bend; only the low 8 bits are used.
+ * @see decomp.me (100%) https://decomp.me/scratch/Fw2d9
  */
-void akao_cmd_ad(s32 value0, s32 value1)
+void akao_fade_all_sfx_pitch_bend(s32 ticks, s32 bend)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = (value1 & 0xFF);
-    akao_send_command(AKAO_CMD_AD);
+    g_akao_cmd_params[0].value = ticks;
+    g_akao_cmd_params[1].value = (bend & 0xFF);
+    akao_send_command(AKAO_CMD_FADE_ALL_SFX_PITCH_BEND);
 }
 
 /**
- * @brief AKAO command 0xA4 - per-channel: (channel, 24-bit fade duration, 8-bit target value).
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; only the low 24 bits are used.
- * @param value2 Value for command slot 2; only the low 8 bits are used.
+ * @brief Queue command 0xA4: set the pitch bend of selected SFX channels.
+ * @param sound_id Sound id to match when @p tag_mask is 0.
+ * @param tag_mask Select channels whose tag shares a bit with this mask; low 24 bits, 0 matches by id.
+ * @param bend Pitch bend; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/vHMVZ (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/vHMVZ
  */
-s32 akao_cmd_a4(s32 value0, s32 value1, s32 value2)
+s32 akao_set_sfx_pitch_bend(s32 sound_id, s32 tag_mask, s32 bend)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = (value1 & 0xFFFFFF);
-    g_akao_cmd_params[2].value = (value2 & 0xFF);
-    return akao_send_command(AKAO_CMD_A4);
+    g_akao_cmd_params[0].value = sound_id;
+    g_akao_cmd_params[1].value = (tag_mask & 0xFFFFFF);
+    g_akao_cmd_params[2].value = (bend & 0xFF);
+    return akao_send_command(AKAO_CMD_SET_SFX_PITCH_BEND);
 }
 
 /**
- * @brief AKAO command 0xA5 - per-channel: (channel, 24-bit fade duration, p, 8-bit target value).
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; only the low 24 bits are used.
- * @param value2 Value for command slot 2; semantics unknown.
- * @param value3 Value for command slot 3; only the low 8 bits are used.
+ * @brief Queue command 0xA5: fade the pitch bend of selected SFX channels.
+ * @param sound_id Sound id to match when @p tag_mask is 0.
+ * @param tag_mask Select channels whose tag shares a bit with this mask; low 24 bits, 0 matches by id.
+ * @param ticks Fade length in driver ticks; 0 is treated as 1.
+ * @param bend Target pitch bend; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/exTVG (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/exTVG
  */
-s32 akao_cmd_a5(s32 value0, s32 value1, s32 value2, s32 value3)
+s32 akao_fade_sfx_pitch_bend(s32 sound_id, s32 tag_mask, s32 ticks, s32 bend)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = (value1 & 0xFFFFFF);
-    g_akao_cmd_params[2].value = value2;
-    g_akao_cmd_params[3].value = (value3 & 0xFF);
-    return akao_send_command(AKAO_CMD_A5);
+    g_akao_cmd_params[0].value = sound_id;
+    g_akao_cmd_params[1].value = (tag_mask & 0xFFFFFF);
+    g_akao_cmd_params[2].value = ticks;
+    g_akao_cmd_params[3].value = (bend & 0xFF);
+    return akao_send_command(AKAO_CMD_FADE_SFX_PITCH_BEND);
 }
 
 /**
@@ -730,256 +637,224 @@ s32 akao_set_song_volume(s32 song_handle, s32 volume)
 }
 
 /**
- * @brief AKAO command 0xC1 - 0xC0 with extra middle parameter: (a, b, 7-bit value).
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; semantics unknown.
- * @param value2 Value for command slot 2; only the low 7 bits are used.
+ * @brief Queue command 0xC1: fade a song's master volume.
+ * @param song_handle Song handle returned by akao_play_song, or 0 for the primary song.
+ * @param ticks Fade length in driver ticks; 0 is treated as 1.
+ * @param volume Target volume; only the low 7 bits are used.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/cSIwP (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/cSIwP
  */
-s32 akao_cmd_c1(s32 value0, s32 value1, s32 value2)
+s32 akao_fade_song_volume(s32 song_handle, s32 ticks, s32 volume)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = value1;
-    g_akao_cmd_params[2].value = (value2 & 0x7F);
-    return akao_send_command(AKAO_CMD_C1);
+    g_akao_cmd_params[0].value = song_handle;
+    g_akao_cmd_params[1].value = ticks;
+    g_akao_cmd_params[2].value = (volume & 0x7F);
+    return akao_send_command(AKAO_CMD_FADE_SONG_VOLUME);
 }
 
 /**
- * @brief AKAO command 0xC2 - 0xC0 with two trailing 7-bit values: (a, b, 7-bit, 7-bit).
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; semantics unknown.
- * @param value2 Value for command slot 2; only the low 7 bits are used.
- * @param value3 Value for command slot 3; only the low 7 bits are used.
+ * @brief Queue command 0xC2: fade a song's master volume from an explicit start level.
+ * @param song_handle Song handle returned by akao_play_song, or 0 for the primary song.
+ * @param ticks Fade length in driver ticks; 0 is treated as 1.
+ * @param start_volume Start volume; only the low 7 bits are used.
+ * @param volume Target volume; only the low 7 bits are used.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/PbMJC (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/PbMJC
  */
-s32 akao_cmd_c2(s32 value0, s32 value1, s32 value2, s32 value3)
+s32 akao_fade_song_volume_from(s32 song_handle, s32 ticks, s32 start_volume, s32 volume)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = value1;
-    g_akao_cmd_params[2].value = (value2 & 0x7F);
-    g_akao_cmd_params[3].value = (value3 & 0x7F);
-    return akao_send_command(AKAO_CMD_C2);
+    g_akao_cmd_params[0].value = song_handle;
+    g_akao_cmd_params[1].value = ticks;
+    g_akao_cmd_params[2].value = (start_volume & 0x7F);
+    g_akao_cmd_params[3].value = (volume & 0x7F);
+    return akao_send_command(AKAO_CMD_FADE_SONG_VOLUME_FROM);
 }
 
 /**
- * @brief AKAO command 0xC8 - single unmasked arg; semantics TBD.
- *
- * @param value0 Value for command slot 0; semantics unknown.
+ * @brief Queue command 0xC8: set the CD audio volume.
+ * @param volume CD audio volume (0x7FFF is full volume).
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/BeJR1 (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/BeJR1
  */
-s32 akao_cmd_c8(s32 value0)
+s32 akao_set_cd_volume(s32 volume)
 {
-    g_akao_cmd_params[0].value = value0;
-    return akao_send_command(AKAO_CMD_C8);
+    g_akao_cmd_params[0].value = volume;
+    return akao_send_command(AKAO_CMD_SET_CD_VOLUME);
 }
 
 /**
- * @brief AKAO command 0xC9 - two unmasked args; semantics TBD.
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; semantics unknown.
+ * @brief Queue command 0xC9: fade the CD audio volume.
+ * @param ticks Fade length in driver ticks; 0 is treated as 1.
+ * @param volume Target CD audio volume.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/yo40G (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/yo40G
  */
-s32 akao_cmd_c9(s32 value0, s32 value1)
+s32 akao_fade_cd_volume(s32 ticks, s32 volume)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = value1;
-    return akao_send_command(AKAO_CMD_C9);
+    g_akao_cmd_params[0].value = ticks;
+    g_akao_cmd_params[1].value = volume;
+    return akao_send_command(AKAO_CMD_FADE_CD_VOLUME);
 }
 
 /**
- * @brief AKAO command 0xCA - three unmasked args; semantics TBD.
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; semantics unknown.
- * @param value2 Value for command slot 2; semantics unknown.
+ * @brief Queue command 0xCA: fade the CD audio volume from an explicit start level.
+ * @param ticks Fade length in driver ticks; 0 is treated as 1.
+ * @param start_volume Start CD audio volume.
+ * @param volume Target CD audio volume.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/pLMBi (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/pLMBi
  */
-s32 akao_cmd_ca(s32 value0, s32 value1, s32 value2)
+s32 akao_fade_cd_volume_from(s32 ticks, s32 start_volume, s32 volume)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = value1;
-    g_akao_cmd_params[2].value = value2;
-    return akao_send_command(AKAO_CMD_CA);
+    g_akao_cmd_params[0].value = ticks;
+    g_akao_cmd_params[1].value = start_volume;
+    g_akao_cmd_params[2].value = volume;
+    return akao_send_command(AKAO_CMD_FADE_CD_VOLUME_FROM);
 }
 
 /**
- * @brief AKAO command 0xD0 - (8-bit value).
- *
- * @param value0 Value for command slot 0; only the low 8 bits are used.
+ * @brief Queue command 0xD0: set the driver master pan.
+ * @param pan Signed master pan; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/klUxi (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/klUxi
  */
-s32 akao_cmd_d0(s32 value0)
+s32 akao_set_master_pan(s32 pan)
 {
-    g_akao_cmd_params[0].value = value0 & 0xFF;
-    return akao_send_command(AKAO_CMD_D0);
+    g_akao_cmd_params[0].value = pan & 0xFF;
+    return akao_send_command(AKAO_CMD_SET_MASTER_PAN);
 }
 
 /**
- * @brief AKAO command 0xD1 - (a, 8-bit value).
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; only the low 8 bits are used.
+ * @brief Queue command 0xD1: fade the driver master pan.
+ * @param ticks Fade length in driver ticks; 0 is treated as 1.
+ * @param pan Signed target pan; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/XXHwt (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/XXHwt
  */
-s32 akao_cmd_d1(s32 value0, s32 value1)
+s32 akao_fade_master_pan(s32 ticks, s32 pan)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = (value1 & 0xFF);
-    return akao_send_command(AKAO_CMD_D1);
+    g_akao_cmd_params[0].value = ticks;
+    g_akao_cmd_params[1].value = (pan & 0xFF);
+    return akao_send_command(AKAO_CMD_FADE_MASTER_PAN);
 }
 
 /**
- * @brief AKAO command 0xD2 - (a, 8-bit value, 8-bit value).
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; only the low 8 bits are used.
- * @param value2 Value for command slot 2; only the low 8 bits are used.
+ * @brief Queue command 0xD2: fade the driver master pan from an explicit start level.
+ * @param ticks Fade length in driver ticks; 0 is treated as 1.
+ * @param start_pan Signed start pan; only the low 8 bits are used.
+ * @param pan Signed target pan; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/074UT (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/074UT
  */
-s32 akao_cmd_d2(s32 value0, s32 value1, s32 value2)
+s32 akao_fade_master_pan_from(s32 ticks, s32 start_pan, s32 pan)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = (value1 & 0xFF);
-    g_akao_cmd_params[2].value = (value2 & 0xFF);
-    return akao_send_command(AKAO_CMD_D2);
+    g_akao_cmd_params[0].value = ticks;
+    g_akao_cmd_params[1].value = (start_pan & 0xFF);
+    g_akao_cmd_params[2].value = (pan & 0xFF);
+    return akao_send_command(AKAO_CMD_FADE_MASTER_PAN_FROM);
 }
 
 /**
- * @brief AKAO command 0xD4 - (8-bit value).
- *
- * @param value0 Value for command slot 0; only the low 8 bits are used.
+ * @brief Queue command 0xD4: set the driver master volume.
+ * @param volume Master volume; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/yJdLv (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/yJdLv
  */
-s32 akao_cmd_d4(s32 value0)
+s32 akao_set_master_volume(s32 volume)
 {
-    g_akao_cmd_params[0].value = value0 & 0xFF;
-    return akao_send_command(AKAO_CMD_D4);
+    g_akao_cmd_params[0].value = volume & 0xFF;
+    return akao_send_command(AKAO_CMD_SET_MASTER_VOLUME);
 }
 
 /**
- * @brief AKAO command 0xD5 - (a, 8-bit value).
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; only the low 8 bits are used.
+ * @brief Queue command 0xD5: fade the driver master volume.
+ * @param ticks Fade length in driver ticks; 0 is treated as 1.
+ * @param volume Target master volume; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/u6Eys (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/u6Eys
  */
-s32 akao_cmd_d5(s32 value0, s32 value1)
+s32 akao_fade_master_volume(s32 ticks, s32 volume)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = (value1 & 0xFF);
-    return akao_send_command(AKAO_CMD_D5);
+    g_akao_cmd_params[0].value = ticks;
+    g_akao_cmd_params[1].value = (volume & 0xFF);
+    return akao_send_command(AKAO_CMD_FADE_MASTER_VOLUME);
 }
 
 /**
- * @brief AKAO command 0xD6 - (a, 8-bit value, 8-bit value).
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; only the low 8 bits are used.
- * @param value2 Value for command slot 2; only the low 8 bits are used.
- *
- * @see https://decomp.me/scratch/ITNFU (100%)
+ * @brief Queue command 0xD6: fade the driver master volume from an explicit start level.
+ * @param ticks Fade length in driver ticks; 0 is treated as 1.
+ * @param start_volume Start master volume; only the low 8 bits are used.
+ * @param volume Target master volume; only the low 8 bits are used.
+ * @see decomp.me (100%) https://decomp.me/scratch/ITNFU
  */
-void akao_cmd_d6(s32 value0, s32 value1, s32 value2)
+void akao_fade_master_volume_from(s32 ticks, s32 start_volume, s32 volume)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = (value1 & 0xFF);
-    g_akao_cmd_params[2].value = (value2 & 0xFF);
-    akao_send_command(AKAO_CMD_D6);
+    g_akao_cmd_params[0].value = ticks;
+    g_akao_cmd_params[1].value = (start_volume & 0xFF);
+    g_akao_cmd_params[2].value = (volume & 0xFF);
+    akao_send_command(AKAO_CMD_FADE_MASTER_VOLUME_FROM);
 }
 
 /**
- * @brief AKAO command 0xD8 - (8-bit value).
- *
- * @param value0 Value for command slot 0; only the low 8 bits are used.
+ * @brief Queue command 0xD8: set the driver master pan and master volume to one value (0xD0 then 0xD4).
+ * @param value Pan and volume; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/JS2nD (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/JS2nD
  */
-s32 akao_cmd_d8(s32 value0)
+s32 akao_set_master_pan_and_volume(s32 value)
 {
-    g_akao_cmd_params[0].value = value0 & 0xFF;
-    return akao_send_command(AKAO_CMD_D8);
+    g_akao_cmd_params[0].value = value & 0xFF;
+    return akao_send_command(AKAO_CMD_SET_MASTER_PAN_AND_VOLUME);
 }
 
 /**
- * @brief AKAO command 0xD9 - (a, 8-bit value).
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; only the low 8 bits are used.
+ * @brief Queue command 0xD9: fade the driver master pan and master volume (0xD1 then 0xD5).
+ * @param ticks Fade length in driver ticks; 0 is treated as 1.
+ * @param value Target pan and volume; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/YD6rZ (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/YD6rZ
  */
-s32 akao_cmd_d9(s32 value0, s32 value1)
+s32 akao_fade_master_pan_and_volume(s32 ticks, s32 value)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = (value1 & 0xFF);
-    return akao_send_command(AKAO_CMD_D9);
+    g_akao_cmd_params[0].value = ticks;
+    g_akao_cmd_params[1].value = (value & 0xFF);
+    return akao_send_command(AKAO_CMD_FADE_MASTER_PAN_AND_VOLUME);
 }
 
 /**
- * @brief AKAO command 0xDA - (a, 8-bit value, 8-bit value).
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; only the low 8 bits are used.
- * @param value2 Value for command slot 2; only the low 8 bits are used.
+ * @brief Queue command 0xDA: fade the driver master pan and master volume from a start level (0xD2 then 0xD6).
+ * @param ticks Fade length in driver ticks; 0 is treated as 1.
+ * @param start_value Start pan and volume; only the low 8 bits are used.
+ * @param value Target pan and volume; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/jzW0l (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/jzW0l
  */
-s32 akao_cmd_da(s32 value0, s32 value1, s32 value2)
+s32 akao_fade_master_pan_and_volume_from(s32 ticks, s32 start_value, s32 value)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = (value1 & 0xFF);
-    g_akao_cmd_params[2].value = (value2 & 0xFF);
-    return akao_send_command(AKAO_CMD_DA);
+    g_akao_cmd_params[0].value = ticks;
+    g_akao_cmd_params[1].value = (start_value & 0xFF);
+    g_akao_cmd_params[2].value = (value & 0xFF);
+    return akao_send_command(AKAO_CMD_FADE_MASTER_PAN_AND_VOLUME_FROM);
 }
 
 /**
- * @brief AKAO command 0xF0 - zero-arg query; return value consumed by caller.
- *
+ * @brief Queue command 0xF0: stop the primary and secondary songs and release their voices.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/dgbnE (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/dgbnE
  */
-s32 akao_cmd_f0(void)
+s32 akao_stop_all_songs(void)
 {
-    return akao_send_command(AKAO_CMD_F0);
+    return akao_send_command(AKAO_CMD_STOP_ALL_SONGS);
 }
 
 /**
- * @brief AKAO command 0xF1 - zero-arg query; return value consumed by caller.
- *
+ * @brief Queue command 0xF1: release every SFX channel.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/IMYAL (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/IMYAL
  */
-s32 akao_cmd_f1(void)
+s32 akao_release_all_sfx(void)
 {
-    return akao_send_command(AKAO_CMD_F1);
+    return akao_send_command(AKAO_CMD_RELEASE_ALL_SFX);
 }
 
 /**
@@ -991,11 +866,11 @@ s32 akao_cmd_f1(void)
  * @param bank Pointer to an AKAO instrument bank in main RAM.
  * @param wait_for_completion Non-zero to wait for the SPU DMA to complete.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/Mz7yX
+ * @see decomp.me (100%) https://decomp.me/scratch/Mz7yX
  */
 void akao_upload_bank_blocking(AkaoBankHeader* bank, s32 wait_for_completion)
 {
-    g_akao_driver_flags.unk0 &= ~1;
+    g_akao_driver_flags.upload_flags &= ~1;
     while (akao_submit_bank(bank, wait_for_completion) == 1)
     {
     }
@@ -1006,7 +881,7 @@ void akao_upload_bank_blocking(AkaoBankHeader* bank, s32 wait_for_completion)
  *
  * @return Current transfer or position latch.
  *
- * @see https://decomp.me/scratch/ecQHb (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/ecQHb
  */
 s32 akao_get_xfer_state(void)
 {
@@ -1016,17 +891,17 @@ s32 akao_get_xfer_state(void)
 /**
  * @brief Restart the streaming bank upload and mark it pending.
  *
- * Clears the next SPU address (D_8004F824, g_akao_streaming_state.spu_addr),
+ * Clears the next SPU address (g_akao_streaming_state.spu_addr, g_akao_streaming_state.spu_addr),
  * so the next akao_streaming_upload_tick treats its input as a new bank.
  *
  * @return 0 after the operation completes.
  *
- * @see https://decomp.me/scratch/qBE70 (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/qBE70
  */
 s32 akao_reset_xfer_state(void)
 {
-    D_8004F824 = 0;
-    g_akao_driver_flags.unk0 |= 1;
+    g_akao_streaming_state.spu_addr = 0;
+    g_akao_driver_flags.upload_flags |= 1;
     return 0;
 }
 
@@ -1073,7 +948,7 @@ s32 akao_reset_xfer_state(void)
  * @param wait_for_spu Non-zero means block on @c akao_spu_wait after the SPU
  *                     write completes.
  *
- * @return Sample bytes still to upload (@c D_8004F828, the address of
+ * @return Sample bytes still to upload (@c g_akao_streaming_state.sample_remaining, the address of
  *         g_akao_streaming_state.sample_remaining).
  *
  * @see decomp.me (100%) https://decomp.me/scratch/0IPqT
@@ -1085,13 +960,13 @@ s32 akao_streaming_upload_tick(u8* source, u32 avail, s32 wait_for_spu)
     u32 sample_chunk;
     AkaoArticulation* articulations;
 
-    if (g_akao_driver_flags.unk0 & 1)
+    if (g_akao_driver_flags.upload_flags & 1)
     {
         if (g_akao_streaming_state.spu_addr == 0)
         {
             if (akao_check_magic((AkaoHeader*)source) == 0)
             {
-                akao_copy_bytes(source, &g_akao_bank_staging, sizeof(AkaoBankHeader));
+                akao_copy_bytes((s32*)source, (s32*)&g_akao_bank_staging, sizeof(AkaoBankHeader));
                 source = (u8*)((AkaoBankHeader*)source + 1);
                 avail -= sizeof(AkaoBankHeader);
                 g_akao_streaming_state.spu_addr = g_akao_bank_staging.spu_dest_addr;
@@ -1115,7 +990,7 @@ s32 akao_streaming_upload_tick(u8* source, u32 avail, s32 wait_for_spu)
                 {
                     articulation_chunk = avail;
                 }
-                akao_copy_bytes(source, g_akao_streaming_state.articulation_dst, articulation_chunk);
+                akao_copy_bytes((s32*)source, (s32*)g_akao_streaming_state.articulation_dst, articulation_chunk);
                 copied_bytes = (articulation_chunk >> 2) * 4;
                 source += copied_bytes;
                 avail -= articulation_chunk;
@@ -1130,7 +1005,7 @@ s32 akao_streaming_upload_tick(u8* source, u32 avail, s32 wait_for_spu)
         }
         if (avail != 0 && g_akao_streaming_state.sample_remaining == 0)
         {
-            g_akao_driver_flags.unk0 &= ~1;
+            g_akao_driver_flags.upload_flags &= ~1;
         }
         else
         {
@@ -1151,13 +1026,13 @@ s32 akao_streaming_upload_tick(u8* source, u32 avail, s32 wait_for_spu)
                     akao_spu_wait();
                 }
             }
-            if (D_8004F828 == 0)
+            if (g_akao_streaming_state.sample_remaining == 0)
             {
-                g_akao_driver_flags.unk0 &= ~1;
+                g_akao_driver_flags.upload_flags &= ~1;
             }
         }
     }
-    return D_8004F828;
+    return g_akao_streaming_state.sample_remaining;
 }
 
 /**
@@ -1166,7 +1041,7 @@ s32 akao_streaming_upload_tick(u8* source, u32 avail, s32 wait_for_spu)
  * @param wait_for_completion Non-zero to wait for the SPU DMA to complete.
  * @return 0 after the upload call returns.
  *
- * @see https://decomp.me/scratch/0f3IK (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/0f3IK
  */
 s32 akao_load_bank(AkaoBankHeader* bank, s32 wait_for_completion)
 {
@@ -1182,13 +1057,13 @@ s32 akao_load_bank(AkaoBankHeader* bank, s32 wait_for_completion)
  * @param wait_for_completion Non-zero to wait for the SPU transfer.
  * @return 0 after the operation completes.
  *
- * @see https://decomp.me/scratch/FWcdy (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/FWcdy
  */
 s32 akao_upload_bank_slot(void* bank, s32 slot, s32 wait_for_completion)
 {
     s32 articulation_index;
     s32* slot_key;
-    u32 spu_base; /* also the slot counter of the eviction loop, as in the original */
+    u32 spu_base;
     AkaoBankIdentity* identity = bank;
 
     for (spu_base = 0, slot_key = g_akao_bank_slot_keys; spu_base < AKAO_BANK_SLOT_COUNT; spu_base++, slot_key++)
@@ -1250,9 +1125,9 @@ s32 akao_upload_bank_slot(void* bank, s32 slot, s32 wait_for_completion)
  * @param wait_for_completion Non-zero to wait for the SPU transfer.
  * @return 0 after the operation completes.
  *
- * @see https://decomp.me/scratch/sa1fh (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/sa1fh
  */
-s32 func_80022ED8(void* bank, s32 slot, s32 wait_for_completion)
+s32 akao_load_bank_slot(void* bank, s32 slot, s32 wait_for_completion)
 {
     akao_upload_bank_slot(bank, slot, wait_for_completion);
     return 0;
@@ -1267,31 +1142,27 @@ s32 func_80022ED8(void* bank, s32 slot, s32 wait_for_completion)
  * @param wait_for_completion Non-zero to wait for the SPU transfer.
  * @return 0 after the operation completes.
  *
- * @see https://decomp.me/scratch/PnDWc (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/PnDWc
  */
-s32 func_80022EF8(void* bank, s32 slot, s32 wait_for_completion)
+s32 akao_load_upper_bank_slot(void* bank, s32 slot, s32 wait_for_completion)
 {
     akao_upload_bank_slot(bank, slot + 3, wait_for_completion);
     return 0;
 }
 
 /**
- * @brief Programs the CD/XA mix volume registers (@c CdMix on @c g_akao_cdmix).
+ * @brief Program the CD audio mix for the current output mode.
  *
- * If bit 1 of @c D_8004F754 is set, all four CdlATV slots get
- * @c (volume * 0xB570) >> 0x11 - a 16-bit-fixed-point scale of @p volume across
- * a stereo pair. Otherwise only the two "main" slots get @p volume and the
- * "side" slots are zeroed.
+ * Stereo routes CD left to SPU left and CD right to SPU right. Mono sends both
+ * CD channels to both outputs, each scaled by 0xB570 / 0x20000 (about -3 dB).
  *
- * @param volume  Target CD volume (0-127 expected).
- *
- * @return 0 after the operation completes.
- *
- * @see https://decomp.me/scratch/hcfmi (100%)
+ * @param volume CD mix volume (0-127).
+ * @return 0.
+ * @see decomp.me (100%) https://decomp.me/scratch/hcfmi
  */
-s32 akao_xa_setup_panning(s32 volume)
+s32 akao_set_cd_mix(s32 volume)
 {
-    if (D_8004F754 & 2)
+    if (g_akao_driver_flags.output_mode & 2)
     {
         g_akao_cdmix.val3 = (u32)(volume * 0xB570) >> 17;
         g_akao_cdmix.val1 = (u32)(volume * 0xB570) >> 17;
@@ -1310,84 +1181,69 @@ s32 akao_xa_setup_panning(s32 volume)
 }
 
 /**
- * @brief AKAO command 0xE0 - magic-checks @p value0 (AKAO buffer) then dispatches with (buf*, 16-bit packed, c).
- *
- * @param buffer AKAO-tagged XA program in main RAM.
- * @param value1 Value for command slot 1; only the low 8 bits are used.
- * @param value2 Value for command slot 2; semantics unknown.
- *
- * @see https://decomp.me/scratch/vw9QX (100%)
+ * @brief Queue command 0xE0: stream an XA program from a RAM buffer.
+ * @param buffer AKAO-tagged XA program in main RAM; ignored if the magic does not match.
+ * @param pan Pan; only the low 8 bits are used.
+ * @param use_reverb Non-zero to send the stream voices through reverb.
+ * @see decomp.me (100%) https://decomp.me/scratch/vw9QX
  */
-void akao_cmd_e0(AkaoHeader* buffer, s32 value1, s32 value2)
+void akao_play_xa_buffer(AkaoHeader* buffer, s32 pan, s32 use_reverb)
 {
     if (akao_check_magic(buffer) == 0)
     {
         g_akao_cmd_params[0].buffer = buffer;
-        g_akao_cmd_params[1].value = ((value1 & 0xFF) << 8);
-        g_akao_cmd_params[2].value = value2;
-        akao_send_command(AKAO_CMD_E0);
+        g_akao_cmd_params[1].value = ((pan & 0xFF) << 8);
+        g_akao_cmd_params[2].value = use_reverb;
+        akao_send_command(AKAO_CMD_PLAY_XA_BUFFER);
     }
 }
 
 /**
- * @brief AKAO command 0xE2 - zero-arg.
- *
+ * @brief Queue command 0xE2: stop the streamed voice pair.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/kd4bK (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/kd4bK
  */
-s32 akao_cmd_e2(void)
+s32 akao_stop_xa(void)
 {
-    return akao_send_command(AKAO_CMD_E2);
+    return akao_send_command(AKAO_CMD_STOP_XA);
 }
 
 /**
- * @brief AKAO command 0xE4 - set the CD/XA channel mix volume.
- *
- * Packs the 7-bit volume (0-127) into the high byte of slot 0
- * (@c (value0 & 0x7F) << 8) per the AKAO 16-bit-packed-param convention,
- * then dispatches.
- *
- * @param value0  Target CD/XA volume (0-127).
- *
+ * @brief Queue command 0xE4: set the streamed voice volume.
+ * @param volume Volume; only the low 7 bits are used.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/3oPkP (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/3oPkP
  */
-s32 akao_cmd_e4_set_cd_volume(s32 value0)
+s32 akao_set_xa_volume(s32 volume)
 {
-    g_akao_cmd_params[0].value = (value0 & 0x7F) << 8;
-    return akao_send_command(AKAO_CMD_E4_SET_CD_VOLUME);
+    g_akao_cmd_params[0].value = (volume & 0x7F) << 8;
+    return akao_send_command(AKAO_CMD_SET_XA_VOLUME);
 }
 
 /**
- * @brief AKAO command 0xE5 - (a, 7-bit value packed into <<8).
- *
- * @param value0 Value for command slot 0; semantics unknown.
- * @param value1 Value for command slot 1; only the low 7 bits are used.
+ * @brief Queue command 0xE5: fade the streamed voice volume.
+ * @param ticks Fade length in driver ticks; 0 is treated as 1.
+ * @param volume Target volume; only the low 7 bits are used.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/7PxF8 (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/7PxF8
  */
-s32 akao_cmd_e5(s32 value0, s32 value1)
+s32 akao_fade_xa_volume(s32 ticks, s32 volume)
 {
-    g_akao_cmd_params[0].value = value0;
-    g_akao_cmd_params[1].value = ((value1 & 0x7F) << 8);
-    return akao_send_command(AKAO_CMD_E5);
+    g_akao_cmd_params[0].value = ticks;
+    g_akao_cmd_params[1].value = ((volume & 0x7F) << 8);
+    return akao_send_command(AKAO_CMD_FADE_XA_VOLUME);
 }
 
 /**
- * @brief AKAO command 0xE6 - (8-bit value packed into <<8).
- *
- * @param value0 Value for command slot 0; only the low 8 bits are used.
+ * @brief Queue command 0xE6: set the streamed voice pan.
+ * @param pan Pan; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/XeUon (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/XeUon
  */
-s32 akao_cmd_e6(s32 value0)
+s32 akao_set_xa_pan(s32 pan)
 {
-    g_akao_cmd_params[0].value = (value0 & 0xFF) << 8;
-    return akao_send_command(AKAO_CMD_E6);
+    g_akao_cmd_params[0].value = (pan & 0xFF) << 8;
+    return akao_send_command(AKAO_CMD_SET_XA_PAN);
 }
 
 /**
@@ -1398,16 +1254,16 @@ s32 akao_cmd_e6(s32 value0)
  * @c 0x30000 when channel 0's song-state bit 0x40 is set with any in-flight
  * activity. Programs @c SpuSetTransferStartAddr, kicks off the sample upload
  * (akao_spu_write), caches the SPU base back into the buffer's
- * @c cached_spu_addr field, then copies the header and first 16 sample bytes
+ * @c spu_addr field, then copies the header and first 16 sample bytes
  * to @c g_akao_xa_program_staging.
  *
  * @param buffer  Pointer to an AKAO buffer in main RAM.
  * @param upper_slot  Selects the upper SPU slot (non-zero) vs the lower slot.
  *
  * @return 0 on success; the akao_check_magic delta on failure (also clears
- *         @c g_akao_xa_program_staging.header.cached_spu_addr).
+ *         @c g_akao_xa_program_staging.header.spu_addr).
  *
- * @see https://decomp.me/scratch/C06sg (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/C06sg
  */
 s32 akao_upload_xa_program(void* buffer, s32 upper_slot)
 {
@@ -1424,9 +1280,8 @@ s32 akao_upload_xa_program(void* buffer, s32 upper_slot)
         {
             spu_base = 0x43100;
         }
-        /* A song is loaded (running or suspended) AND its 0x40 state bit is set.
-         * seq_cursor is the song-role flag word here, not a bytecode cursor. */
-        if (((AKAO_CHANNEL_STATE->w04.song.active_mask | AKAO_CHANNEL_STATE->unk1C) != 0) && ((u32)AKAO_CHANNEL_STATE->seq_cursor & 0x40))
+        /* A song is loaded (running or suspended) and has song flag 0x40 set. */
+        if (((AKAO_PRIMARY_SONG->masks.active_mask | AKAO_PRIMARY_SONG->parked_mask) != 0) && (AKAO_PRIMARY_SONG->flags & 0x40))
         {
             spu_base -= 0x30000;
         }
@@ -1434,49 +1289,42 @@ s32 akao_upload_xa_program(void* buffer, s32 upper_slot)
         buffer = program + 1;
         SpuSetTransferStartAddr(spu_base);
         akao_spu_write(buffer, program->sample_size);
-        program->cached_spu_addr = spu_base;
-        akao_copy_bytes(program, &g_akao_xa_program_staging, sizeof(g_akao_xa_program_staging));
+        program->spu_addr = spu_base;
+        akao_copy_bytes((s32*)program, (s32*)&g_akao_xa_program_staging, sizeof(g_akao_xa_program_staging));
         return result;
     }
 
-    g_akao_xa_program_staging.header.cached_spu_addr = 0;
+    g_akao_xa_program_staging.header.spu_addr = 0;
     return result;
 }
 
 /**
- * @brief AKAO command 0xED - (8-bit value packed into <<8, b).
- *
- * @param value0 Value for command slot 0; only the low 8 bits are used.
- * @param value1 Value for command slot 1; semantics unknown.
+ * @brief Queue command 0xED: play the XA program staged by akao_upload_xa_program.
+ * @param pan Pan; only the low 8 bits are used.
+ * @param use_reverb Non-zero to send the stream voices through reverb.
  * @return Result returned by the AKAO command dispatcher.
- *
- * @see https://decomp.me/scratch/ULEGL (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/ULEGL
  */
-s32 akao_cmd_ed(s32 value0, s32 value1)
+s32 akao_play_staged_xa(s32 pan, s32 use_reverb)
 {
-    g_akao_cmd_params[0].value = ((value0 & 0xFF) << 8);
-    g_akao_cmd_params[1].value = value1;
-    return akao_send_command(AKAO_CMD_ED);
+    g_akao_cmd_params[0].value = ((pan & 0xFF) << 8);
+    g_akao_cmd_params[1].value = use_reverb;
+    return akao_send_command(AKAO_CMD_PLAY_STAGED_XA);
 }
 
 /**
- * @brief AKAO command 0xEC - magic-checked AKAO buffer with mode flags.
+ * @brief Queue command 0xEC: upload an XA program to SPU RAM and play it once.
  *
- * Picks a hardcoded SPU base (@c 0x50900 if @p upper_slot != 0, else
- * @c 0x43100), subtracts @c 0x30000 when a loaded song has state bit 0x40 set,
- * then dispatches with (buf, 8-bit packed into <<8, spu_base, value3).
+ * The program goes to the lower (0x43100) or upper (0x50900) XA area, both
+ * moved down by 0x30000 while a loaded song has song flag 0x40 set.
  *
- * @param buf        Pointer to an AKAO buffer in main RAM (validated via
- *                   akao_check_magic).
- * @param value1       8-bit value packed into bits 8..15 of slot 1. TODO:
- *                   meaning unknown.
- * @param upper_slot Selects the upper SPU slot (non-zero) vs the lower slot.
- * @param value3       Passed through verbatim into slot 3. TODO: meaning
- *                   unknown.
- *
+ * @param buf AKAO-tagged XA program in main RAM; ignored if the magic does not match.
+ * @param pan Pan; only the low 8 bits are used.
+ * @param upper_slot Non-zero selects the upper SPU area.
+ * @param use_reverb Non-zero to send the stream voices through reverb.
  * @see decomp.me (100%) https://decomp.me/scratch/SgcFo
  */
-void akao_cmd_ec(void* buf, s32 value1, s32 upper_slot, s32 value3)
+void akao_play_xa_one_shot(void* buf, s32 pan, s32 upper_slot, s32 use_reverb)
 {
     s32 spu_base;
 
@@ -1487,90 +1335,87 @@ void akao_cmd_ec(void* buf, s32 value1, s32 upper_slot, s32 value3)
 
     spu_base = upper_slot == 0 ? 0x43100 : 0x50900;
 
-    if (((AKAO_CHANNEL_STATE->w04.song.active_mask | AKAO_CHANNEL_STATE->unk1C) != 0) && ((u32)AKAO_CHANNEL_STATE->seq_cursor & 0x40))
+    if (((AKAO_PRIMARY_SONG->masks.active_mask | AKAO_PRIMARY_SONG->parked_mask) != 0) && (AKAO_PRIMARY_SONG->flags & 0x40))
     {
         spu_base -= 0x30000;
     }
 
     g_akao_cmd_params[0].buffer = buf;
-    g_akao_cmd_params[1].value = ((value1 & 0xFF) << 8);
+    g_akao_cmd_params[1].value = ((pan & 0xFF) << 8);
     g_akao_cmd_params[2].value = spu_base;
-    g_akao_cmd_params[3].value = value3;
-    akao_send_command(AKAO_CMD_EC);
+    g_akao_cmd_params[3].value = use_reverb;
+    akao_send_command(AKAO_CMD_PLAY_XA_ONE_SHOT);
 }
 
 /**
- * @brief AKAO command 0xE8 - begin XA-streamed AKAO playback.
+ * @brief Queue command 0xE8: prepare a CD-fed XA ring stream.
  *
- * Validates @p byte_count != 0, disables SPU IRQ, primes the XA tracker
- * (@c g_akao_xa_tracker) for a stream of @c byte_count / 0x1000 frames, and dispatches.
+ * The ring holds @p byte_count / 0x1000 blocks. The caller fills it and
+ * reports each block with akao_xa_advance_frame.
  *
- * @param stream_id  Stream identifier / control word in slot 0.
- * @param byte_count  Total stream byte length (frame count = byte_count >> 12).
- *
+ * @param ring_base First ring block in main RAM.
+ * @param byte_count Ring size in bytes.
  * @return 0 on success, -1 if @p byte_count is 0.
- *
- * @see https://decomp.me/scratch/bRIJX (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/bRIJX
  */
-s32 akao_cmd_e8_start_xa_stream(s32 stream_id, u32 byte_count)
+s32 akao_start_xa_stream(s32 ring_base, u32 byte_count)
 {
     if (byte_count == 0)
     {
         return -1;
     }
-    SpuSetIRQ(0);
+    SpuSetIRQ(SPU_OFF);
     SpuSetIRQAddr(0);
-    g_akao_cmd_params[0].value = stream_id;
+    g_akao_cmd_params[0].value = ring_base;
     g_akao_cmd_params[1].value = byte_count;
-    g_akao_xa_tracker.unk34 = -1;
+    g_akao_xa_tracker.upload_block = -1;
     g_akao_xa_tracker.unk20 = 0;
-    g_akao_xa_tracker.unk24 = 0;
-    g_akao_xa_tracker.unk28 = 0;
-    g_akao_xa_tracker.unk38 = 0;
-    g_akao_xa_tracker.unk3C = byte_count >> 12;
-    akao_send_command(AKAO_CMD_E8_START_XA_STREAM);
+    g_akao_xa_tracker.filled_blocks = 0;
+    g_akao_xa_tracker.uploaded_blocks = 0;
+    g_akao_xa_tracker.fill_block = 0;
+    g_akao_xa_tracker.ring_block_count = byte_count >> 12;
+    akao_send_command(AKAO_CMD_PREPARE_XA_RING);
     return 0;
 }
 
 /**
- * @brief Advances one frame of an in-flight XA-streamed AKAO sequence.
+ * @brief Report that the CD reader has filled one more XA ring block.
  *
- * Increments @c g_akao_xa_tracker.unk24 (frame count) and the per-frame index
- * @c .unk38, wrapping at @c .unk3C - 1; once two frames have streamed and
- * bit 0x01000000 of @c .unk8 is set, calls @c func_8002E2E8 to refill the
- * SPU ring buffer.
+ * Increments @c g_akao_xa_tracker.filled_blocks and advances @c fill_block,
+ * wrapping after the last ring block. For a ring stream (XA_FLAG_RING_STREAM),
+ * once the reader has moved past the first two blocks, calls
+ * akao_xa_start_ring_stream so the SPU upload can begin.
  *
- * @return Current ring block index (@c D_8004F794, the address of
- *         g_akao_xa_tracker.unk34).
+ * @return Index of the next ring block the SPU upload will read.
  *
- * @see https://decomp.me/scratch/gKZ5G (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/gKZ5G
  */
 s32 akao_xa_advance_frame(void)
 {
     u32 next_frame;
 
-    g_akao_xa_tracker.unk24 = g_akao_xa_tracker.unk24 + 1;
-    next_frame = g_akao_xa_tracker.unk38 + 1;
-    g_akao_xa_tracker.unk38 = next_frame;
-    if (next_frame > g_akao_xa_tracker.unk3C - 1)
+    g_akao_xa_tracker.filled_blocks = g_akao_xa_tracker.filled_blocks + 1;
+    next_frame = g_akao_xa_tracker.fill_block + 1;
+    g_akao_xa_tracker.fill_block = next_frame;
+    if (next_frame > g_akao_xa_tracker.ring_block_count - 1)
     {
-        g_akao_xa_tracker.unk38 = 0;
+        g_akao_xa_tracker.fill_block = 0;
     }
-    if ((g_akao_xa_tracker.unk8 & AKAO_XA_FLAG_RING_STREAM) && ((u32)g_akao_xa_tracker.unk38 >= 2))
+    if ((g_akao_xa_tracker.flags & XA_FLAG_RING_STREAM) && (g_akao_xa_tracker.fill_block >= 2))
     {
-        func_8002E2E8();
+        akao_xa_start_ring_stream();
     }
-    return D_8004F794;
+    return g_akao_xa_tracker.upload_block;
 }
 
 /**
  * @brief Returns the current XA ring block index.
  *
- * @return @c D_8004F794, the address of g_akao_xa_tracker.unk34.
+ * @return Index of the next ring block the SPU upload will read.
  *
- * @see https://decomp.me/scratch/2DiS3 (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/2DiS3
  */
 s32 akao_xa_get_position(void)
 {
-    return D_8004F794;
+    return g_akao_xa_tracker.upload_block;
 }

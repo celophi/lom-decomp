@@ -2,12 +2,23 @@
 #define CDROM_INTERNAL_H
 
 #include "cdrom.h"
+#include "sdk/libetc.h"
 
-#define CD_STREAM_WRAP_START ((u8*)0x801DC118)
+#define CD_DATA_SECTOR_SIZE 2048
+
+/*
+ * Streamed resources are received into a four-sector ring. The first
+ * CD_STREAM_DECOMPRESS_GUARD_SIZE bytes are kept free so an unread tail can be
+ * moved in front of a wrapped sector.
+ */
+#define CD_STREAM_BUFFER_START ((u8*)0x801DC000)
+#define CD_STREAM_BUFFER_SECTORS 4
+#define CD_STREAM_BUFFER_LIMIT (CD_STREAM_BUFFER_START + (CD_STREAM_BUFFER_SECTORS * CD_DATA_SECTOR_SIZE))
+#define CD_STREAM_DECOMPRESS_GUARD_SIZE 280
+#define CD_STREAM_WRAP_START (CD_STREAM_BUFFER_START + CD_STREAM_DECOMPRESS_GUARD_SIZE)
 #define CD_DECOMPRESS_UNBOUNDED_END ((u8*)0xFFFFFFFCU)
 #define CD_STREAM_COPY_WORD_SIZE 4
 #define CD_STREAM_COPY_WORD_MASK 3
-#define CD_DATA_SECTOR_SIZE 2048
 
 /** @brief Byte and word views of an aligned stream-copy cursor. */
 typedef union
@@ -24,7 +35,7 @@ typedef struct
 {
     volatile u8 data_ready;
     volatile u8 input_complete;
-    u8 pad[2];
+    u8 _pad02[2];
     u8* buffer_start;
     u8* input_cursor;
     s32 bytes_buffered;
@@ -33,7 +44,7 @@ typedef struct
     s32 deferred_sectors;
 } CdStreamState;
 
-#define CD_STREAM_STATE (*(CdStreamState*)0x1F800000)
+#define CD_STREAM_STATE (*(CdStreamState*)getScratchAddr(0))
 
 s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst_end);
 u8* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining);

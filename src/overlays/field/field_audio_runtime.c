@@ -25,18 +25,18 @@
  * (include/akao_cmd.h is used by every overlay, some with other local
  * declarations of these commands).
  */
-s32 akao_cmd_14(u8 *sequence, s32 param1, s32 param2);
-s32 akao_cmd_19_c0(s32 value0, s32 value1);
-void akao_cmd_21(s32 value0, s32 value1);
-s32 akao_cmd_c1(s32 song_handle, s32 frames, s32 volume);
-s32 akao_cmd_d0(s32 value0);
-s32 akao_cmd_d4(s32 value0);
+s32 akao_start_song_channels(u8 *sequence, s32 param1, s32 param2);
+s32 akao_switch_song(s32 value0, s32 value1);
+void akao_stop_sfx(s32 value0, s32 value1);
+s32 akao_fade_song_volume(s32 song_handle, s32 frames, s32 volume);
+s32 akao_set_master_pan(s32 value0);
+s32 akao_set_master_volume(s32 value0);
 s32 akao_is_sfx_playing(s32 voice_mask);
 s32 akao_play_sfx_from_buffer(s32 buffer_address, s32 voice_mask, s32 pan, s32 volume);
 s32 akao_get_xfer_state(void);
 s32 akao_reset_xfer_state(void);
-s32 func_80022ED8(void *bank, s32 slot, s32 wait_for_completion);
-s32 func_80022EF8(void *bank, s32 slot, s32 wait_for_completion);
+s32 akao_load_bank_slot(void *bank, s32 slot, s32 wait_for_completion);
+s32 akao_load_upper_bank_slot(void *bank, s32 slot, s32 wait_for_completion);
 
 /** @brief Scratch buffer the CD layer loads song containers into. */
 #define FIELD_AUDIO_LOAD_BUFFER 0x80180000
@@ -221,7 +221,7 @@ void field_restore_entry_music(void)
  */
 s32 field_load_instrument_bank(s32 bank_index)
 {
-    akao_cmd_f1();
+    akao_release_all_sfx();
     g_field_instrument_bank = (AkaoHeader *)FIELD_INSTRUMENT_BANK_ADDRESS;
     cdrom_queue_read((bank_index + FIELD_INSTRUMENT_BANK_RESOURCE_BASE) & 0xFFFF, (void *)FIELD_INSTRUMENT_BANK_ADDRESS);
     cdrom_wait_queue_empty();
@@ -336,8 +336,8 @@ inline void field_play_song(void)
     song_handle = akao_play_song((AkaoHeader *)D_8003ECA0);
     g_field_song_handles[FIELD_SONG_MAIN] = song_handle;
     akao_set_song_volume(song_handle, g_field_song_volume);
-    akao_cmd_d4(0);
-    akao_cmd_d0(0);
+    akao_set_master_volume(0);
+    akao_set_master_pan(0);
 }
 
 /**
@@ -350,7 +350,7 @@ void field_play_song_section(s32 section_index, s32 param1)
     s32 song_handle;
 
     /* D_8003ECA0 + offsets[section_index], with the base formed from the offset table address. */
-    song_handle = akao_cmd_14((u8 *)&D_8003ECA4 - 4 + D_8003ECA4[section_index], param1, 0);
+    song_handle = akao_start_song_channels((u8 *)&D_8003ECA4 - 4 + D_8003ECA4[section_index], param1, 0);
     g_field_song_handles[FIELD_SONG_MAIN] = song_handle;
     if (song_handle == -1)
     {
@@ -363,9 +363,9 @@ void field_play_song_section(s32 section_index, s32 param1)
     else
     {
         akao_set_song_volume(0, g_field_song_volume);
-        akao_cmd_d4(0);
+        akao_set_master_volume(0);
     }
-    akao_cmd_d0(0);
+    akao_set_master_pan(0);
 }
 
 /**
@@ -373,7 +373,7 @@ void field_play_song_section(s32 section_index, s32 param1)
  */
 void field_play_second_song(void)
 {
-    g_field_song_handles[FIELD_SONG_SECOND] = akao_cmd_19_c0((s32)g_field_second_song, g_field_song_volume);
+    g_field_song_handles[FIELD_SONG_SECOND] = akao_switch_song((s32)g_field_second_song, g_field_song_volume);
 }
 
 /**
@@ -384,7 +384,7 @@ void field_play_second_song(void)
  */
 void field_fade_song(s32 song, s32 frames, s32 volume)
 {
-    akao_cmd_c1(g_field_song_handles[song], frames, volume);
+    akao_fade_song_volume(g_field_song_handles[song], frames, volume);
 }
 
 /**
@@ -513,9 +513,9 @@ void field_release_sfx_group(s32 channel_group)
         channel_group = FIELD_SFX_GROUP_COUNT - 1;
     }
     bit = channel_group * FIELD_SFX_GROUP_VOICES;
-    akao_cmd_21(0, 1 << bit);
-    akao_cmd_21(0, 1 << (bit + 1));
-    akao_cmd_21(0, 1 << (bit + 2));
+    akao_stop_sfx(0, 1 << bit);
+    akao_stop_sfx(0, 1 << (bit + 1));
+    akao_stop_sfx(0, 1 << (bit + 2));
 }
 
 /**
@@ -581,7 +581,7 @@ void field_load_sfx_tables(s32 set_id)
             akao_upload_bank_blocking((AkaoBankHeader *)table_end, 1);
             return;
         }
-        func_80022EF8(table_end, i, 1);
+        akao_load_upper_bank_slot(table_end, i, 1);
         entry++;
     }
 }
@@ -618,7 +618,7 @@ void field_load_weapon_sfx_table(s32 slot, s32 weapon_type)
             {
                 *dst_cursor++ = *src++;
             }
-            func_80022ED8(end, slot, 1);
+            akao_load_bank_slot(end, slot, 1);
         }
     }
 }

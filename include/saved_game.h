@@ -23,14 +23,14 @@ typedef struct
 typedef struct
 {
     u8 unknown_0x000[0x18];
-    s32 field_entry_config;
-    s16 option_id;
-    s8 sub_mode;
+    s32 spawn_id; /**< Field spawn record; the top seven bits are unrelated flags. */
+    s16 sound_bank_id;
+    s8 secondary_music_id;
     u8 unknown_0x01f;
     u32 music_track;
-    u16 scene_mode;
-    u8 field_flags;
-    u8 layout_flags;
+    u16 scene_id;
+    u8 object_id;
+    u8 music_id;
     u32 option_flags;
     u8 unknown_0x02c[0x34 - 0x2C];
     u32 weapon_category_masks[11];
