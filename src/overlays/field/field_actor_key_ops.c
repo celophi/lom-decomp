@@ -8,6 +8,7 @@
  */
 
 #include "common.h"
+#include "field_actor_key_ops.h"
 #include "controller_internal.h"
 #include "main.h"
 #include "vector.h"
@@ -274,7 +275,7 @@ FieldActor* field_lookup_actor(s32 key)
  * @param script_index Script to run from its first command.
  * @return 0 when the script was started, or -1 when absent or in a non-interruptible command.
  */
-s32 field_start_actor_script(s32 key, u8 script_index)
+s32 field_start_actor_script(s32 key, s32 script_index)
 {
     FieldActor* actor;
     s16 command;

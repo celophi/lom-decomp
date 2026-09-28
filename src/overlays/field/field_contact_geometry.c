@@ -101,7 +101,7 @@
 #define FIELD_MOVEMENT_OUTSIDE_BOUNDS 0x2000
 #define FIELD_MOVEMENT_OVERLAPPING 0x4000
 
-/** @brief Object-state interaction_flags bits. */
+/** @brief Object-state enabled_events bits. */
 #define FIELD_INTERACTION_FLAG_ENABLED 0x01   /**< Touching the object starts its interaction. */
 #define FIELD_INTERACTION_FLAG_TRIGGERED 0x02 /**< The action button starts the object's interaction. */
 
@@ -1188,7 +1188,7 @@ void field_start_actor_contact_interaction(FieldActor* actor, s32 object_index)
     states = g_field_object_states;
     /* object_index * sizeof(FieldObjectRuntime), spelled as shifts: the target starts it before the command test. */
     state = (FieldObjectRuntime*)((u8*)states + ((((object_index_x8 + object_index) << 4) - object_index) << 2));
-    if ((state->interaction_flags & FIELD_INTERACTION_FLAG_ENABLED) == 0)
+    if ((state->enabled_events & FIELD_INTERACTION_FLAG_ENABLED) == 0)
     {
         return;
     }
@@ -1250,7 +1250,7 @@ void field_probe_actor_interaction(FieldActor* actor)
             field_pick_up_item_actor(object_index);
             return;
         }
-        if (state->interaction_flags & FIELD_INTERACTION_FLAG_TRIGGERED)
+        if (state->enabled_events & FIELD_INTERACTION_FLAG_TRIGGERED)
         {
             field_dispatch_object_state_entry(&g_field_actors[object_index], 0);
             actor->command = FIELD_ACTOR_COMMAND_STEP;
@@ -1274,14 +1274,14 @@ void field_probe_actor_interaction(FieldActor* actor)
 /**
  * @brief Run one of an object's state entries through the object script dispatcher.
  * @param actor Object whose state entry runs.
- * @param entry_index Entry of FieldObjectRuntime::state_entries to run.
+ * @param entry_index Entry of FieldObjectRuntime::scripts to run.
  */
 static void field_dispatch_object_state_entry(FieldActor* actor, s32 entry_index)
 {
     FieldObjectRuntime* state;
 
     state = &g_field_object_states[actor->object_index];
-    field_start_interaction(state->record_id, state->state_entries[entry_index], g_field_object_states);
+    field_start_interaction(state->record_id, state->scripts[entry_index], g_field_object_states);
 }
 /**
  * @brief Hit every new object whose projected bounds contain an effect's position.

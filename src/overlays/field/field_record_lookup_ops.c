@@ -48,7 +48,6 @@ FieldActorRecord* field_find_actor_record(s32 id);
 
 extern FieldRuntimeContext* g_field_runtime;
 extern FieldBattleContext* g_field_battle;
-extern u16 D_800F0E98[];
 
 /**
  * @brief Hand an actor's pickup to the party: an item from the reward table or a counter.
@@ -137,7 +136,7 @@ void field_grant_actor_pickup(void* unused, s32 owner_id)
     }
     /* The original passes the actor as a second argument, which field_receive_item ignores. */
     ((void (*)(s32, FieldActorRecord*))field_receive_item)(index, actor);
-    field_append_dialog_item((s32)((u8*)D_800F0E98 + D_800F0E98[index]), 1);
+    field_append_dialog_item((s32)(g_field_item_name_table.bytes + g_field_item_name_table.offsets[index]), 1);
 }
 #endif
 

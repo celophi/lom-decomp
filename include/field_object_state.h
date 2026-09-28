@@ -2,6 +2,7 @@
 #define FIELD_OBJECT_STATE_H
 
 #include "field_types.h"
+#include "field_interaction_start.h"
 
 #define FIELD_OBJECT_COUNT 13
 #define FIELD_OBJECT_HISTORY_COUNT 48
@@ -71,9 +72,11 @@ typedef struct FieldObjectRuntime
     u32 object_flags;
     u32 group_flags;
     s32 record_id;
-    u16 interaction_flags;
-    u16 state_entries[2];
-    u8 pad_0x1e[0x3C - 0x1E];
+    /** @brief Event mask; the low two bits also enable touch and action-button interactions. */
+    u16 enabled_events;
+    /** @brief Interaction scripts, event scripts and actor parameters copied from the layout. */
+    u16 scripts[FIELD_ACTION_SCRIPT_COUNT];
+    u8 reserved_scripts[2];
     s32 sequence_command;
     s32 current_sequence_animation;
     s32 sequence_cursor;
