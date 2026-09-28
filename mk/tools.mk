@@ -26,4 +26,4 @@ ADDHERO_OUTPUT ?= assets/exports/$(VERSION)/overlays/addhero
 
 extract-addhero:
 	@test -f "$(ASSETS_DIR)/addhero_data.databin.bin" || { echo 'Run make splat first to extract $(ASSETS_DIR)/addhero_data.databin.bin'; exit 1; }
-	python3 -m tools.overlays.addhero --version $(VERSION) "$(ASSETS_DIR)/addhero_data.databin.bin" "config/$(VERSION)/symbols/addhero_symbol_addrs.txt" "$(ADDHERO_OUTPUT)"
+	python3 -m tools.overlays.addhero --version $(VERSION) "$(ADDHERO_OUTPUT)"

@@ -58,17 +58,43 @@ The last 53 KB of the blob is ADDHERO's own variables and buffers. It's all
 zeros on the disc, so the tool lists it in `byte-map.yaml` and skips it. Any
 bytes the tool doesn't recognize are saved in `unknown/`, named by address.
 
-## How it finds things
+## How it's put together
 
-The tool looks up table addresses in the version's symbol file
-(`config/<version>/symbols/addhero_symbol_addrs.txt`), so the US and Japanese
-blobs work the same way. The card step names are read from
-`src/overlays/addhero/addhero_internal.h`, so they always match the code.
+`addhero.py` reads the blob the way you'd read its byte map, top to bottom.
+`read_blob` calls one `read_*` function per part, in address order. Each one
+parses its bytes into a small dataclass and returns a `Part` that says where the
+bytes are and what they hold. `cover_gaps` then fills whatever lies between the
+parts, and a `write_part` function for each kind of content writes its file.
+Nothing is written until everything has been read, and the output goes into a
+temporary folder that's moved into place at the end, so a failed run leaves
+nothing behind.
 
-Run the tests with:
+The tool never hard-codes an address or a file name. It finds the blob and the
+two small data files through the overlay's splat config, and every address
+through the version's symbol file.
+
+Common changes:
+
+| If you... | Change |
+|---|---|
+| rename a symbol the tool uses | its entry in `SYMBOL_NAMES` in `addhero.py` |
+| change a value the tool copies from C | the matching constant at the top of `addhero.py` |
+| find out what a new part of the blob is | add a dataclass, a `read_*` function called from `read_blob`, and a `write_part` writer |
+| add or rename a card step | nothing; the names are read from `addhero_internal.h` |
+
+The shared readers (`text_table.py`, `icon_set.py`, `png.py`, `symbols.py` and
+`splat_config.py`) don't know anything about ADDHERO, so the other card
+overlays can use them too.
+
+## Tests
 
 ```sh
 make test-overlay-tools
 ```
 
-They use made-up data, not game files.
+`test_addhero_sources.py` checks the tool against this repository's config and
+C sources: every symbol it needs exists in both versions, and every constant it
+copies still matches its `#define`. If you rename something in C and forget the
+tool, this is the test that tells you what to update. `test_addhero_extract.py`
+runs the whole extractor on a small made-up overlay. None of the tests read game
+files.

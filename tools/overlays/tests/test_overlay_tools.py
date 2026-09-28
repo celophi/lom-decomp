@@ -78,7 +78,8 @@ class PngTest(unittest.TestCase):
         self.assertEqual((width, height), (2, 1))
         start = data.index(b"IDAT") + 4
         length = struct.unpack(">I", data[start - 8 : start - 4])[0]
-        self.assertEqual(zlib.decompress(data[start : start + length]), b"\x00\x01\x02\x03\x04\x05\x06\x07\x08")
+        pixels = zlib.decompress(data[start : start + length])
+        self.assertEqual(pixels, b"\x00\x01\x02\x03\x04\x05\x06\x07\x08")
 
     def test_rejects_the_wrong_pixel_count(self):
         with self.assertRaises(ValueError):
