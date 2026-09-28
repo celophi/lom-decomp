@@ -8,9 +8,7 @@ options:
   
   platform: psx
   compiler: PSYQ
-  # include/include_asm.h, macro.inc, labels.inc and gte_macros.inc are
-  # project-owned (include_asm.h prefixes the per-version asm directory),
-  # so splat must not regenerate them.
+  # Keep project-owned assembly macros, including versioned INCLUDE_ASM paths.
   generate_asm_macros_files: False
 
   asm_path: asm/us
@@ -64,7 +62,7 @@ segments:
     align: 4
     section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
     subsegments:
-      - [0x800, rodata, rodata_data0]        # D_80010000 boot-path string (referenced by unk8)
+      - [0x800, rodata, rodata_data0]        # D_80010000 boot-path string
       - [0x818, .rodata, main]               # jtbl -> main
       - [0x844, .rodata, cdrom]              # jtbl -> cdrom
       - [0xA50, .rodata, cdrom_decompress]
@@ -77,8 +75,7 @@ segments:
       - [0x1314, .rodata, akao_cmd]          # jtbl -> akao_cmd
       - [0x1328, rodata, rodata_data4]       # data constants
       - [0x1358, .rodata, akao_sequencer]    # jtbl -> akao_sequencer
-      - [0x1458, .rodata, psyq/libpad/PADENTRY]  # jtbl_80010C58 -> PadInfoAct; merged into
-                                              # its module object so the .L local labels resolve
+      - [0x1458, .rodata, psyq/libpad/PADENTRY]  # PadInfoAct jump table; local labels require the PADENTRY object
       - [0x1478, .rodata, psyq/libmcx/TMP_MCX]  # jtbl_80010C78/C98/CC0/CD8 -> LIBMCX funcs
       - [0x1558, c, main]
       - [0x1B58, c, screen_transition]
@@ -89,7 +86,7 @@ segments:
       - [0x6418, c, overlay_memory]
       - [0x6458, c, field_runtime]
       - [0x695C, c, field_runtime_text]
-      - [0x6DCC, c, field_runtime_glyph]           # original glyph assembly maintained in C asm blocks
+      - [0x6DCC, c, field_runtime_glyph]           # Original glyph assembly
       - [0x6F64, c, card_callbacks]
       - [0x6F6C, c, psyq/libcard/C112]               # psyq: version undetermined (debug/variant build)
       - [0x6F84, c, psyq/libapi/C114]                # psyq: version-agnostic
@@ -214,8 +211,8 @@ segments:
       - [0x13D08, c, psyq/libspu/S_SIA]              # psyq 4.1-4.6
       - [0x13D48, c, psyq/libspu/S_STSA]             # psyq 4.1-4.6
       - [0x13DA8, c, akao_driver]
-      - [0x14030, c, akao_driver_init_state] # -G4  isolated: scalar-u8 global decls for 100% (see file header)
-      - [0x142D0, c, akao_driver_boot]       # -G4  akao_driver_init / set_bank_data_ptrs / shutdown
+      - [0x14030, c, akao_driver_init_state] # -G4; separate scalar-u8 declarations (see source)
+      - [0x142D0, c, akao_driver_boot]       # -G4; driver startup/shutdown
       - [0x14480, c, psyq/libapi/A13]                # psyq: version-agnostic
       - [0x14490, c, psyq/libapi/A32]                # psyq: version-agnostic
       - [0x144A0, c, psyq/libapi/COUNTER]            # psyq 4.1-4.6
@@ -240,17 +237,16 @@ segments:
       - [0x1A1CC, c, psyq/libapi/A10]                # psyq: version-agnostic
       - [0x1A1DC, c, psyq/libspu/S_GRMT]             # psyq 4.1-4.6
       - [0x1A1EC, c, akao_sequencer]
-      - [0x1D8DC, c, akao_xa_stream] # -G4  AKAO XA/SFX driver (36 funcs 0x8002D0DC..0x8002E7A8)
-      - [0x1EFA8, c, psyq/libsn/SNMAIN]       # SN Systems LIBSN SNMAIN.OBJ: __SN_ENTRY_POINT (0x8002E7A8, raw sp/gp/fp bootstrap + EXE header Initial PC), __main (0x8002E850, ctor runner), __do_global_dtors (0x8002E8C0)
-      - [0x1F128, c, psyq/libapi/C57]         # Psy-Q BIOS A(0x39) InitHeap stub (0x8002E928); archive member C57.OBJ
-      - [0x1F138, c, psyq/libpad/PADENTRY]          # LIBPAD PADENTRY.OBJ: Pad* public wrappers # psyq 4.4-4.5 (PDMAIN2 in 4.6)
-      - [0x1F5F8, c, psyq/libpad/PADMAIN]           # LIBPAD PADMAIN.OBJ: PadEnableCom + _pad* internals # psyq 4.4-4.5
-      - [0x203C8, c, psyq/libpad/PADCMD]            # LIBPAD PADCMD.OBJ: _padSetAct/_padCmdParaMode + loadinfo # psyq 4.4-4.5
-      - [0x20FC8, c, psyq/libpad/PADIF]             # LIBPAD PADIF.OBJ: pad interface polling (all-static: SendAuto/SioRW) # psyq 4.4-4.5
-      - [0x215F8, c, psyq/libpad/PADPORTD]          # LIBPAD PADPORTD.OBJ: PadInitDirect + statics # psyq 4.4-4.5
-      - [0x21C58, c, psyq/libpad/PADSEQD]           # LIBPAD PADSEQD.OBJ: _padInitDirSeq / _dirFailAuto + statics # psyq 4.4-4.5
-      - [0x22118, c, psyq/libmcx/TMP_MCX]     # LIBMCX block: variant SDK build; 21 confident exports
-                                              # named, rest func_* (not carved into per-object modules)
+      - [0x1D8DC, c, akao_xa_stream] # -G4; XA/SFX driver
+      - [0x1EFA8, c, psyq/libsn/SNMAIN]       # SN Systems startup (__SN_ENTRY_POINT), constructors and destructors
+      - [0x1F128, c, psyq/libapi/C57]         # BIOS A(0x39) InitHeap stub
+      - [0x1F138, c, psyq/libpad/PADENTRY]          # psyq 4.4-4.5 (PDMAIN2 in 4.6); public Pad* wrappers
+      - [0x1F5F8, c, psyq/libpad/PADMAIN]           # psyq 4.4-4.5; PadEnableCom and internal routines
+      - [0x203C8, c, psyq/libpad/PADCMD]            # psyq 4.4-4.5; _padSetAct, _padCmdParaMode and loadinfo
+      - [0x20FC8, c, psyq/libpad/PADIF]             # psyq 4.4-4.5; SendAuto/SioRW polling
+      - [0x215F8, c, psyq/libpad/PADPORTD]          # psyq 4.4-4.5; PadInitDirect
+      - [0x21C58, c, psyq/libpad/PADSEQD]           # psyq 4.4-4.5; _padInitDirSeq and _dirFailAuto
+      - [0x22118, c, psyq/libmcx/TMP_MCX]     # LIBMCX variant SDK build
       - [0x25990, data, initialized]
 
   - name: sdata
