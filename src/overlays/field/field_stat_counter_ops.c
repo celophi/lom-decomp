@@ -5,6 +5,7 @@
 
 #include "game_audio.h"
 #include "common.h"
+#include "field_stat_counter_ops.h"
 #include "field_calls.h"
 #include "field_records.h"
 
@@ -32,8 +33,6 @@
 static void field_set_item_name_macro(s32 kind);
 
 extern FieldGameState* g_field_game_state;
-/** @brief Item name texts: a table of offsets from the table start, one per item kind. */
-extern u16 D_800F0E98[];
 
 /**
  * @brief Set one of the game flag bits.
@@ -56,7 +55,7 @@ s32 field_set_game_flag(s32 bit_index)
  * @param kind Item kind, or FIELD_ITEM_KIND_LIMIT and above to report an invalid kind.
  * @return The item count, or 0 for an invalid kind.
  */
-u8 field_get_item_count(s32 kind)
+s32 field_get_item_count(s32 kind)
 {
     if (kind < FIELD_ITEM_KIND_LIMIT)
     {
@@ -113,9 +112,9 @@ void field_consume_item(s32 kind)
 
 /**
  * @brief Put the name of an item kind in text macro 0.
- * @param kind Item kind; selects an offset in D_800F0E98.
+ * @param kind Item kind; selects an offset in g_field_item_name_table.
  */
 static void field_set_item_name_macro(s32 kind)
 {
-    field_set_text_macro(0, (u8*)D_800F0E98 + D_800F0E98[kind], FIELD_ITEM_NAME_LENGTH);
+    field_set_text_macro(0, g_field_item_name_table.bytes + g_field_item_name_table.offsets[kind], FIELD_ITEM_NAME_LENGTH);
 }

@@ -7,6 +7,7 @@
 #include "scene_state.h"
 #include "sdk/rand.h"
 #include "common.h"
+#include "field_actor_key_ops.h"
 #include "field_calls.h"
 #include "field_script.h"
 #include "field_interaction_start.h"
@@ -180,7 +181,6 @@ extern FieldMapPoint g_field_player_map_position;
 
 /* Functions of other FIELD files without a shared prototype. */
 s32 field_read_script_var(s32 owner_id, s32 variable);
-void field_start_actor_script(s32 actor_id, s32 mode);
 u8* field_get_event_script(s32 script_id);
 s32 field_get_actor_position(s32 key, Vec3i* position);
 void field_set_actor_control_mode(s32 party_index, s32 mode);

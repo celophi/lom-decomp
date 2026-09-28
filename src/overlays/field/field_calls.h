@@ -20,6 +20,7 @@
  */
 
 #include "common.h"
+#include "field_stat_counter_ops.h"
 #include "field_effect_dispatch.h"
 #include "vector.h"
 
@@ -490,12 +491,6 @@ void field_apply_pending_levels(void);
 void field_raise_staged_level(s32 index);
 void field_lower_staged_level(s32 index);
 s32 field_can_pay_staged_cost(s32 cost);
-
-/* field_stat_counter_ops.c */
-s32 field_set_game_flag(s32 bit_index);
-u8 field_get_item_count(s32 index);
-void field_receive_item(s32 index);
-void field_consume_item(s32 index);
 
 /* field_status_ticks.c */
 void field_count_revived_record(s32 key);

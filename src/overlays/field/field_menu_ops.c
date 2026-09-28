@@ -181,10 +181,11 @@
 #define FIELD_MENU_PETS ((FieldMenuPetData*)g_saved_game.bytes)
 
 /**
- * @brief Text @p id of the menu text table at D_800F0E98.
+ * @brief Text @p id of the menu text table at g_field_item_name_table.
  * @note The table starts with little-endian 16-bit offsets relative to itself.
  */
-#define FIELD_MENU_TEXT(id) (D_800F0E98[(id) * 2] + (D_800F0E98[(id) * 2 + 1] << 8) + D_800F0E98)
+#define FIELD_MENU_TEXT(id)                                                                                                                                    \
+    (g_field_item_name_table.bytes[(id) * sizeof(u16)] + (g_field_item_name_table.bytes[(id) * sizeof(u16) + 1] << 8) + g_field_item_name_table.bytes)
 
 /** @brief Item id of the first of the eight menu action items. */
 #define FIELD_ACTION_ITEM_BASE 0x58
@@ -477,7 +478,6 @@ extern FieldLogicClassTable D_80051CE4;
 extern FieldLogicClassTable D_80051DCC;
 extern FieldGosubSequence D_80051EC0;
 extern FieldGosubSequence D_80051ECC;
-extern u8 D_800F0E98[];
 extern void field_menu_clear_item_slots(void);
 extern s32 rand(void);
 s32 field_get_actor_facing(s32 arg0);

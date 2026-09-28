@@ -5,7 +5,7 @@
 // the JP table's 33-byte rows start there.
 g_cload_double_byte_char_table = 0x801467E8;
 
-// field_script_op_44 calls it (jal 0x800B5CE0 at JP 0x800BBC64); JP
+// field_script_misc_command calls it (jal 0x800B5CE0 at JP 0x800BBC64); JP
 // field_get_next_level_experience is 0xC bytes longer, so the next function
 // starts there.
 field_reset_party_to_level = 0x800B5CE0;

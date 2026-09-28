@@ -4,12 +4,14 @@
 #include "field_text.h"
 #include "main.h"
 #include "common.h"
+#include "field_actor_key_ops.h"
 #include "field_actor_runtime.h"
 #include "field_calls.h"
 #include "field_scene_internal.h"
 #include "field_actor_tables.h"
 
 #include "field_script.h"
+#include "field_script_ops.h"
 #include "field_records.h"
 #include "shop.h"
 
@@ -20,6 +22,10 @@
 #define FIELD_RESOURCE_ITEM_TEMPLATES 5
 #define FIELD_RESOURCE_TRIGGERS 6
 #define FIELD_RESOURCE_SHOP_LISTS 0xA
+
+/** @brief Animation operand bit selecting the actor-bound resource table. */
+#define FIELD_SCRIPT_ANIMATION_BOUND 0x8000
+#define FIELD_SCRIPT_ANIMATION_ID_MASK 0x7FFF
 
 /** @brief Half extent (x and z) of the stored-position test of opcode 0x43. */
 #define FIELD_STORED_POSITION_RANGE 0x1100
@@ -62,6 +68,103 @@
 #define FIELD_TALK_SPEAKER_PORTRAIT 0xFF
 /** @brief Window layout that opcode 0x11 always shows without a portrait. */
 #define FIELD_TALK_LAYOUT_NO_PORTRAIT 7
+
+/** @brief Record bases addressed by opcodes 0x0C and 0x0D. */
+enum
+{
+    FIELD_SCRIPT_RECORD_OBJECT = 0,
+    FIELD_SCRIPT_RECORD_RUNTIME = 1,
+    FIELD_SCRIPT_RECORD_ACTOR = 2,
+    FIELD_SCRIPT_RECORD_ITEM = 3,
+    FIELD_SCRIPT_RECORD_BATTLE = 4,
+    FIELD_SCRIPT_RECORD_STATUS = 5,
+    FIELD_SCRIPT_RECORD_CHARACTER = 6,
+    FIELD_SCRIPT_RECORD_GAME = 7
+};
+
+#define FIELD_SCRIPT_READ_RECORD 0x0C
+
+/** @brief Subcommands of the miscellaneous script opcode (0x44). */
+enum
+{
+    FIELD_SCRIPT_CMD_RETURN_TO_TITLE = 0x00,
+    FIELD_SCRIPT_CMD_START_TIMED_PANEL = 0x01,
+    FIELD_SCRIPT_CMD_SET_GAME_FLAG = 0x02,
+    FIELD_SCRIPT_CMD_STOP_ACTOR = 0x03,
+    FIELD_SCRIPT_CMD_EFFECT_ANIMATION_1 = 0x04,
+    FIELD_SCRIPT_CMD_EFFECT_ANIMATION_0 = 0x05,
+    FIELD_SCRIPT_CMD_SET_LAND_FLAG_04 = 0x06,
+    FIELD_SCRIPT_CMD_RESTART_TILE_ANIMATION = 0x07,
+    FIELD_SCRIPT_CMD_FINISH_TILE_ANIMATION = 0x08,
+    FIELD_SCRIPT_CMD_STOP_SECOND_SONG = 0x09,
+    FIELD_SCRIPT_CMD_OPEN_ENCYCLOPEDIA = 0x0A,
+    FIELD_SCRIPT_CMD_MENU = 0x0B,
+    FIELD_SCRIPT_CMD_SCREEN_SEQUENCE = 0x0C,
+    FIELD_SCRIPT_CMD_CREATE_ITEM = 0x0D,
+    FIELD_SCRIPT_CMD_PLAY_SECOND_SONG = 0x0E,
+    FIELD_SCRIPT_CMD_MAKE_LAND_AVAILABLE = 0x0F,
+    FIELD_SCRIPT_CMD_LEAVE_PARTY = 0x10,
+    FIELD_SCRIPT_CMD_STOP_ACTOR_SCRIPT = 0x11,
+    FIELD_SCRIPT_CMD_GET_ITEM_COUNT = 0x12,
+    FIELD_SCRIPT_CMD_RECEIVE_ITEM = 0x13,
+    FIELD_SCRIPT_CMD_CONSUME_ITEM = 0x14,
+    FIELD_SCRIPT_CMD_GET_LAND_STATE = 0x15,
+    FIELD_SCRIPT_CMD_TOGGLE_ACTOR_HIDDEN = 0x16,
+    FIELD_SCRIPT_CMD_TURN_ACTOR = 0x17,
+    FIELD_SCRIPT_CMD_ADD_COMPANION = 0x18,
+    FIELD_SCRIPT_CMD_RELEASE_COMPANION = 0x19,
+    FIELD_SCRIPT_CMD_SET_SCRIPT_ONLY = 0x1A,
+    FIELD_SCRIPT_CMD_START_INTERACTION = 0x1B,
+    FIELD_SCRIPT_CMD_RESTART_PALETTE_ANIMATION = 0x1C,
+    FIELD_SCRIPT_CMD_STOP_PALETTE_ANIMATION = 0x1D,
+    FIELD_SCRIPT_CMD_RESTART_TINT_ANIMATION = 0x1E,
+    FIELD_SCRIPT_CMD_STOP_TINT_ANIMATION = 0x1F,
+    FIELD_SCRIPT_CMD_ENABLE_NODE = 0x20,
+    FIELD_SCRIPT_CMD_DISABLE_NODE = 0x21,
+    FIELD_SCRIPT_CMD_ADD_TEMPLATE_ITEM = 0x22,
+    FIELD_SCRIPT_CMD_SELECT_GOLEM_CELL = 0x23,
+    FIELD_SCRIPT_CMD_PUBLISH_GOLEM_CELL = 0x24,
+    FIELD_SCRIPT_CMD_RAISE_COMPANION_INTENSITY = 0x25,
+    FIELD_SCRIPT_CMD_DISCARD_ITEM = 0x26,
+    FIELD_SCRIPT_CMD_STOP_NON_SCRIPT_ACTORS = 0x27,
+    FIELD_SCRIPT_CMD_UNKNOWN_28 = 0x28,
+    FIELD_SCRIPT_CMD_UNLOCK_ENCYCLOPEDIA = 0x29,
+    FIELD_SCRIPT_CMD_OPEN_CARDA = 0x2A,
+    FIELD_SCRIPT_CMD_SET_VARIABLE = 0x2B,
+    FIELD_SCRIPT_CMD_CLEAR_SCRIPT_ONLY = 0x2C,
+    FIELD_SCRIPT_CMD_GET_COMPANION_STATUS = 0x2D,
+    FIELD_SCRIPT_CMD_RENAME_COMPANION = 0x2E,
+    FIELD_SCRIPT_CMD_PIXEL_LOOKUP_2F = 0x2F,
+    FIELD_SCRIPT_CMD_UNKNOWN_32 = 0x32,
+    FIELD_SCRIPT_CMD_DISABLE_PAIR_INDICATORS = 0x33,
+    FIELD_SCRIPT_CMD_FIND_FACED_ITEM = 0x34,
+    FIELD_SCRIPT_CMD_SEQUENCE_0 = 0x35,
+    FIELD_SCRIPT_CMD_SEQUENCE_1 = 0x36,
+    FIELD_SCRIPT_CMD_SHOW_TIMED_TEXT = 0x37,
+    FIELD_SCRIPT_CMD_DEFEAT_ACTOR = 0x38,
+    FIELD_SCRIPT_CMD_RECEIVE_MONEY = 0x39,
+    FIELD_SCRIPT_CMD_SPEND_MONEY = 0x3A,
+    FIELD_SCRIPT_CMD_SET_MUSIC_TRACK_INDEX = 0x3B,
+    FIELD_SCRIPT_CMD_ADVANCE_WEEKDAY = 0x3C,
+    FIELD_SCRIPT_CMD_HIDE_ACTOR_PANELS = 0x3D,
+    FIELD_SCRIPT_CMD_OPEN_SHOP = 0x3E,
+    FIELD_SCRIPT_CMD_CACHE_INVENTORY_VALUES = 0x3F,
+    FIELD_SCRIPT_CMD_STOP_OWNER_ACTOR = 0x40,
+    FIELD_SCRIPT_CMD_APPLY_REGION_EFFECTS = 0x41,
+    FIELD_SCRIPT_CMD_FADE_OUT = 0x42,
+    FIELD_SCRIPT_CMD_PIXEL_LOOKUP_43 = 0x43,
+    FIELD_SCRIPT_CMD_SET_DUEL_MODE = 0x44,
+    FIELD_SCRIPT_CMD_STOP_SONG = 0x45,
+    FIELD_SCRIPT_CMD_AUDIO_F1 = 0x46,
+    FIELD_SCRIPT_CMD_RESET_PARTY_LEVEL = 0x47,
+    FIELD_SCRIPT_CMD_APPLY_REGION_LEVEL_UPS = 0x48,
+    FIELD_SCRIPT_CMD_UNKNOWN_49 = 0x49,
+    FIELD_SCRIPT_CMD_WAIT = 0x4A,
+    FIELD_SCRIPT_CMD_SET_GOSUB_RESULT = 0x4B,
+    FIELD_SCRIPT_CMD_SET_MONEY = 0x4C,
+    FIELD_SCRIPT_CMD_OPEN_CARDA_SCENE = 0x4D,
+    FIELD_SCRIPT_CMD_NEW_GAME = 0x4E
+};
 
 /** @brief Operand types of pair and extended opcodes, one per descriptor nibble. */
 enum
@@ -522,7 +625,7 @@ void field_script_op_07(void)
  * @brief Opcode 0x08: set the condition flag when a script variable lies within an inclusive range.
  * @note Operands are a halfword variable reference followed by the low and high bounds.
  */
-void field_script_op_08(void)
+void field_script_test_range(void)
 {
     FieldScriptVariableRef var_ref;
     s32 low;
@@ -552,7 +655,7 @@ void field_script_op_08(void)
  * @note The entries that follow are three bytes each (a key byte and a branch halfword); the scan
  *       stops at the key equal to the operand or at the 0xFF default entry.
  */
-void field_script_op_09(void)
+void field_script_switch(void)
 {
     s32 value;
     u8* pc;
@@ -621,7 +724,7 @@ void field_script_op_0b(void)
  * @note Operands: descriptor, base selector (0 to 7), record index, field spec, then the
  *       destination variable (0x0C) or the value to write (0x0D).
  */
-void field_script_op_0c(void)
+void field_script_record_bits(void)
 {
     s32 value;
     FieldScriptVariableRef destination_ref;
@@ -640,34 +743,34 @@ void field_script_op_0c(void)
     operand_type >>= 2;
     switch (base_selector)
     {
-    case 0:
+    case FIELD_SCRIPT_RECORD_OBJECT:
         base = field_find_object_state(target_index);
         break;
     default:
         break;
-    case 1:
+    case FIELD_SCRIPT_RECORD_RUNTIME:
         base = &g_field_runtime->state;
         break;
-    case 2:
+    case FIELD_SCRIPT_RECORD_ACTOR:
         base = field_find_actor_record_or_default(target_index);
         break;
-    case 3:
+    case FIELD_SCRIPT_RECORD_ITEM:
         base = g_field_item_staging;
         break;
-    case 4:
+    case FIELD_SCRIPT_RECORD_BATTLE:
         base = g_field_battle;
         break;
-    case 5:
+    case FIELD_SCRIPT_RECORD_STATUS:
         base = field_find_status_record(target_index);
         break;
-    case 6:
+    case FIELD_SCRIPT_RECORD_CHARACTER:
         base = &g_field_game_state->characters[target_index];
         break;
-    case 7:
+    case FIELD_SCRIPT_RECORD_GAME:
         base = g_field_game_state;
         break;
     }
-    if (opcode == 0xC)
+    if (opcode == FIELD_SCRIPT_READ_RECORD)
     {
         value = field_read_bits(field.bits.width, base, field.bits.index, field.bits.shift, field.bits.bit_count);
         FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_u16(FIELD_SCRIPT_ACTIVE_RECORD()->pc, &destination_ref.value);
@@ -928,7 +1031,7 @@ void field_script_op_14(void)
  *       FIELD_TALK_PLANE_NO_FACING set the opcode only waits, otherwise it waits for the window
  *       to close and then stores its choice in FIELD_VAR_RESULT.
  */
-void field_script_op_15(void)
+void field_script_wait_text_window(void)
 {
     s32 window;
     s32 slot;
@@ -958,9 +1061,9 @@ void field_script_op_15(void)
 /**
  * @brief Opcode 0x16: wait until an actor is idle, skipping absent party members.
  * @note The byte operand is the actor (0xFF for the owner). A party slot that is empty, or
- *       AI-controlled while g_field_interaction_active is clear, is skipped at once.
+ *       pad-controlled while g_field_interaction_active is clear, is skipped at once.
  */
-void field_script_op_16(void)
+void field_script_wait_actor_idle(void)
 {
     FieldScriptRecord* rec;
     u8* pc;
@@ -1081,7 +1184,7 @@ void field_script_op_1b(void)
  * @note The descriptor holds the two operand types (bits 0-1 and 2-3) and the FieldScriptCalcOp
  *       (bits 4-7); the destination variable reference follows the operands.
  */
-void field_script_op_1c(void)
+void field_script_calculate(void)
 {
     s32 left;
     s32 right;
@@ -1471,7 +1574,7 @@ void field_script_op_31(void)
  * @note Operands: speaker (0xFF for the owner), plane, portrait and window layout, each resolved
  *       by field_resolve_talk_window (FIELD_TALK_AUTO picks the value from the scene).
  */
-void field_script_op_32(void)
+void field_script_open_text_window(void)
 {
     s32 layout;
     s32 portrait;
@@ -1496,7 +1599,7 @@ void field_script_op_32(void)
  * @note Operands: window slot (FIELD_TALK_AUTO for the current talk plane), string index and
  *       the options of field_set_text_window_string.
  */
-void field_script_op_33(void)
+void field_script_show_text(void)
 {
     s32 options;
     s32 string_index;
@@ -1741,7 +1844,7 @@ void field_script_op_0f(void)
  * @param variable Variable reference passed to field_set_script_var.
  * @param value Value to store.
  */
-void field_script_op_40(s32 variable, s32 value)
+void field_script_set_variable(s32 variable, s32 value)
 {
     field_set_script_var(g_field_script->status.owner_id, variable, value);
 }
@@ -1798,7 +1901,7 @@ void field_script_op_43(s32 mode, s32 actor)
  * @param command Command number, 0x00 to 0x4E.
  * @param operand Command argument; commands that take an actor treat 0xFF as the script owner.
  */
-void field_script_op_44(u32 command, s32 operand)
+void field_script_misc_command(u32 command, s32 operand)
 {
     s32 index; /* The resolved actor id; command 0x4E reuses it as its land index. */
     FieldScriptRecordState* rec;
@@ -1813,178 +1916,177 @@ void field_script_op_44(u32 command, s32 operand)
     }
     switch (command)
     {
-    case 0x0:
+    case FIELD_SCRIPT_CMD_RETURN_TO_TITLE:
         field_request_return_to_title(operand);
         return;
-    case 0x1:
+    case FIELD_SCRIPT_CMD_START_TIMED_PANEL:
         field_start_timed_panel(operand);
         return;
-    case 0x2:
+    case FIELD_SCRIPT_CMD_SET_GAME_FLAG:
         field_set_game_flag(operand);
         return;
-    case 0x3:
+    case FIELD_SCRIPT_CMD_STOP_ACTOR:
         field_stop_actor(operand);
         return;
-    case 0x4:
+    case FIELD_SCRIPT_CMD_EFFECT_ANIMATION_1:
         field_play_effect_animation(operand, 1);
         return;
-    case 0x5:
+    case FIELD_SCRIPT_CMD_EFFECT_ANIMATION_0:
         field_play_effect_animation(operand, 0);
         return;
-    case 0x6:
+    case FIELD_SCRIPT_CMD_SET_LAND_FLAG_04:
         g_field_game_state->lands[operand].flags |= FIELD_LAND_FLAG_04;
         return;
-    case 0x7:
+    case FIELD_SCRIPT_CMD_RESTART_TILE_ANIMATION:
         field_control_animation(FIELD_LIST_TILE_ANIMS, operand, 0, FIELD_ANIM_OP_RESTART);
         return;
-    case 0x8:
+    case FIELD_SCRIPT_CMD_FINISH_TILE_ANIMATION:
         field_control_animation(FIELD_LIST_TILE_ANIMS, operand, FIELD_KEYFRAME_NONE, FIELD_ANIM_OP_FINISH_LOOP);
         return;
-    case 0x9:
+    case FIELD_SCRIPT_CMD_STOP_SECOND_SONG:
         field_stop_second_song();
         return;
-    case 0xA:
+    case FIELD_SCRIPT_CMD_OPEN_ENCYCLOPEDIA:
         field_run_zukan(operand);
         return;
-    case 0xB:
+    case FIELD_SCRIPT_CMD_MENU:
         field_run_menu_op(operand);
         return;
-    case 0xC:
+    case FIELD_SCRIPT_CMD_SCREEN_SEQUENCE:
         /* The screen sequence starts at runtime script variable word @p operand. */
         field_open_gosub_screen_sequence((s32*)g_field_runtime + operand);
         return;
-    case 0xD:
+    case FIELD_SCRIPT_CMD_CREATE_ITEM:
         field_create_item_from_gosub(operand);
         return;
-    case 0xE:
+    case FIELD_SCRIPT_CMD_PLAY_SECOND_SONG:
         g_field_runtime->scene_entry |= 0x8000;
         field_play_second_song();
         return;
-    case 0xF:
+    case FIELD_SCRIPT_CMD_MAKE_LAND_AVAILABLE:
         field_make_land_available(operand);
         return;
-    case 0x10:
+    case FIELD_SCRIPT_CMD_LEAVE_PARTY:
         field_leave_party(operand);
         return;
-    case 0x11:
+    case FIELD_SCRIPT_CMD_STOP_ACTOR_SCRIPT:
         field_stop_actor_script(index, 0);
         return;
-    case 0x12:
-        /* Called as returning int: the original does not mask the u8 result. */
-        field_set_script_var(0, FIELD_VAR_RESULT, ((s32 (*)(s32))field_get_item_count)(operand));
+    case FIELD_SCRIPT_CMD_GET_ITEM_COUNT:
+        field_set_script_var(0, FIELD_VAR_RESULT, field_get_item_count(operand));
         return;
-    case 0x13:
+    case FIELD_SCRIPT_CMD_RECEIVE_ITEM:
         field_receive_item(operand);
         return;
-    case 0x14:
+    case FIELD_SCRIPT_CMD_CONSUME_ITEM:
         field_consume_item(operand);
         return;
-    case 0x15:
+    case FIELD_SCRIPT_CMD_GET_LAND_STATE:
         field_set_script_var(0, FIELD_VAR_RESULT, field_get_land_state(operand));
         return;
-    case 0x16:
+    case FIELD_SCRIPT_CMD_TOGGLE_ACTOR_HIDDEN:
         field_toggle_actor_hidden(index);
         return;
-    case 0x17:
+    case FIELD_SCRIPT_CMD_TURN_ACTOR:
         field_start_actor_turn(index);
         return;
-    case 0x18:
+    case FIELD_SCRIPT_CMD_ADD_COMPANION:
         field_set_script_var(0, FIELD_VAR_RESULT, field_add_stored_companion(operand));
         return;
-    case 0x19:
+    case FIELD_SCRIPT_CMD_RELEASE_COMPANION:
         field_set_script_var(0, FIELD_VAR_RESULT, field_release_stored_companion());
         return;
-    case 0x1A:
+    case FIELD_SCRIPT_CMD_SET_SCRIPT_ONLY:
         field_set_actor_record_script_only(index, 2);
         return;
-    case 0x1B:
+    case FIELD_SCRIPT_CMD_START_INTERACTION:
         field_start_interaction(FIELD_EVENT_ACTOR_ID_BASE, operand & 0xFFFF);
         return;
-    case 0x1C:
+    case FIELD_SCRIPT_CMD_RESTART_PALETTE_ANIMATION:
         field_control_animation(FIELD_LIST_PALETTE_ANIMS, operand, 0, FIELD_ANIM_OP_RESTART);
         return;
-    case 0x1D:
+    case FIELD_SCRIPT_CMD_STOP_PALETTE_ANIMATION:
         field_control_animation(FIELD_LIST_PALETTE_ANIMS, operand, FIELD_KEYFRAME_NONE, FIELD_ANIM_OP_STOP);
         return;
-    case 0x1E:
+    case FIELD_SCRIPT_CMD_RESTART_TINT_ANIMATION:
         field_control_animation(FIELD_LIST_TINT_ANIMS, operand, 0, FIELD_ANIM_OP_RESTART);
         return;
-    case 0x1F:
+    case FIELD_SCRIPT_CMD_STOP_TINT_ANIMATION:
         field_control_animation(FIELD_LIST_TINT_ANIMS, operand, FIELD_KEYFRAME_NONE, FIELD_ANIM_OP_STOP);
         return;
-    case 0x20:
+    case FIELD_SCRIPT_CMD_ENABLE_NODE:
         field_set_node_enabled(operand, 1);
         return;
-    case 0x21:
+    case FIELD_SCRIPT_CMD_DISABLE_NODE:
         field_set_node_enabled(operand, 0);
         return;
-    case 0x22:
+    case FIELD_SCRIPT_CMD_ADD_TEMPLATE_ITEM:
         field_set_script_var(0, FIELD_VAR_RESULT, field_add_template_item(operand));
         return;
-    case 0x23:
+    case FIELD_SCRIPT_CMD_SELECT_GOLEM_CELL:
         field_golem_select_logic_cell(index);
         return;
-    case 0x24:
+    case FIELD_SCRIPT_CMD_PUBLISH_GOLEM_CELL:
         field_golem_publish_logic_cell(operand);
         return;
-    case 0x25:
+    case FIELD_SCRIPT_CMD_RAISE_COMPANION_INTENSITY:
         field_raise_companion_intensity(operand);
         return;
-    case 0x26:
+    case FIELD_SCRIPT_CMD_DISCARD_ITEM:
         field_discard_item(operand);
         return;
-    case 0x27:
+    case FIELD_SCRIPT_CMD_STOP_NON_SCRIPT_ACTORS:
         field_stop_non_script_actors();
         return;
-    case 0x28:
+    case FIELD_SCRIPT_CMD_UNKNOWN_28:
         func_800C1E08();
         return;
-    case 0x29:
+    case FIELD_SCRIPT_CMD_UNLOCK_ENCYCLOPEDIA:
         field_unlock_encyclopedia_entry(operand);
         return;
-    case 0x2A:
+    case FIELD_SCRIPT_CMD_OPEN_CARDA:
         field_open_carda(operand);
         return;
-    case 0x2B:
+    case FIELD_SCRIPT_CMD_SET_VARIABLE:
         field_set_script_var(0, operand, 1);
         return;
-    case 0x2C:
+    case FIELD_SCRIPT_CMD_CLEAR_SCRIPT_ONLY:
         field_clear_actor_record_script_only(index);
         return;
-    case 0x2D:
+    case FIELD_SCRIPT_CMD_GET_COMPANION_STATUS:
         field_set_script_var(0, FIELD_VAR_RESULT, field_get_stored_companion_status(operand));
         return;
-    case 0x2E:
+    case FIELD_SCRIPT_CMD_RENAME_COMPANION:
         field_rename_stored_companion(operand);
         return;
-    case 0x32:
+    case FIELD_SCRIPT_CMD_UNKNOWN_32:
         D_80122980 = operand;
         return;
-    case 0x33:
+    case FIELD_SCRIPT_CMD_DISABLE_PAIR_INDICATORS:
         g_field_pair_indicators_disabled = operand;
         return;
-    case 0x34:
+    case FIELD_SCRIPT_CMD_FIND_FACED_ITEM:
         field_set_script_var(0, FIELD_VAR_RESULT, field_find_nearest_faced_item(operand));
         return;
-    case 0x35:
+    case FIELD_SCRIPT_CMD_SEQUENCE_0:
         field_control_sequence(operand, 0);
         return;
-    case 0x36:
+    case FIELD_SCRIPT_CMD_SEQUENCE_1:
         field_control_sequence(operand, 1);
         return;
-    case 0x37:
+    case FIELD_SCRIPT_CMD_SHOW_TIMED_TEXT:
         field_show_timed_text(operand);
         return;
-    case 0x38:
+    case FIELD_SCRIPT_CMD_DEFEAT_ACTOR:
         field_battle_defeat_record(index);
         return;
-    case 0x39:
+    case FIELD_SCRIPT_CMD_RECEIVE_MONEY:
         field_set_script_var(0, FIELD_VAR_RESULT, field_receive_money(operand));
         return;
-    case 0x3A:
+    case FIELD_SCRIPT_CMD_SPEND_MONEY:
         field_set_script_var(0, FIELD_VAR_RESULT, field_spend_money(operand));
         return;
-    case 0x3B:
+    case FIELD_SCRIPT_CMD_SET_MUSIC_TRACK_INDEX:
         if (operand >= FIELD_MUSIC_TRACK_COUNT)
         {
             record_game_diagnostic(DIAG_ERROR, 1, 0x2C, operand);
@@ -1992,69 +2094,69 @@ void field_script_op_44(u32 command, s32 operand)
         }
         g_music_track_index = operand;
         return;
-    case 0x3C:
+    case FIELD_SCRIPT_CMD_ADVANCE_WEEKDAY:
         /* Advance the day of the week. */
         g_field_game_state->control.bits.weekday++;
         g_field_game_state->control.bits.weekday %= 6U;
         return;
-    case 0x3D:
+    case FIELD_SCRIPT_CMD_HIDE_ACTOR_PANELS:
         g_field_hide_actor_panels = operand;
         return;
-    case 0x3E:
+    case FIELD_SCRIPT_CMD_OPEN_SHOP:
         field_open_shop_mode_0(operand);
         return;
-    case 0x3F:
+    case FIELD_SCRIPT_CMD_CACHE_INVENTORY_VALUES:
         field_cache_inventory_values();
         return;
-    case 0x40:
+    case FIELD_SCRIPT_CMD_STOP_OWNER_ACTOR:
         field_stop_actor(index);
         return;
-    case 0x41:
+    case FIELD_SCRIPT_CMD_APPLY_REGION_EFFECTS:
         field_apply_pending_region_effects();
         return;
-    case 0x42:
+    case FIELD_SCRIPT_CMD_FADE_OUT:
         field_begin_scene_fade_out();
         return;
-    case 0x2F:
-    case 0x43:
+    case FIELD_SCRIPT_CMD_PIXEL_LOOKUP_2F:
+    case FIELD_SCRIPT_CMD_PIXEL_LOOKUP_43:
         field_set_pixel_lookup(operand);
         return;
-    case 0x44:
+    case FIELD_SCRIPT_CMD_SET_DUEL_MODE:
         g_field_duel_mode = operand;
         return;
-    case 0x45:
+    case FIELD_SCRIPT_CMD_STOP_SONG:
         akao_stop_song(0);
         return;
-    case 0x46:
+    case FIELD_SCRIPT_CMD_AUDIO_F1:
         akao_cmd_f1();
         return;
-    case 0x47:
+    case FIELD_SCRIPT_CMD_RESET_PARTY_LEVEL:
         field_reset_party_to_level(operand);
         return;
-    case 0x48:
+    case FIELD_SCRIPT_CMD_APPLY_REGION_LEVEL_UPS:
         field_apply_region_level_ups(operand);
         return;
-    case 0x49:
+    case FIELD_SCRIPT_CMD_UNKNOWN_49:
         g_script_pair_value_49 = operand;
         return;
-    case 0x4A:
+    case FIELD_SCRIPT_CMD_WAIT:
         rec = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
         rec->wait.bits.frames = operand;
         g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
         return;
-    case 0x4B:
+    case FIELD_SCRIPT_CMD_SET_GOSUB_RESULT:
         g_gosub_result_count = 1;
         g_gosub_result_values = operand;
         return;
-    case 0x4C:
+    case FIELD_SCRIPT_CMD_SET_MONEY:
         g_field_game_state->money = operand;
         return;
-    case 0x4D:
+    case FIELD_SCRIPT_CMD_OPEN_CARDA_SCENE:
         g_music_track_index = 0;
         field_open_carda(0);
         field_script_op_85(0xFFFE, 0, 0, 0);
         return;
-    case 0x4E:
+    case FIELD_SCRIPT_CMD_NEW_GAME:
         /* New game: clear the variables, the flags and the lands, then place the starting land. */
         g_field_game_state->options.word |= SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3;
         field_copy_words(NULL, g_field_game_state->words, sizeof(g_field_game_state->words));
@@ -2214,12 +2316,12 @@ void field_script_op_49(s32 actor_id, s32 logic_type)
 }
 
 /**
- * @brief Opcode 0x4A: start an actor's event script and end the step loop.
+ * @brief Opcode 0x4A: start an actor's action script and yield until the next update.
  * @note During a battle a party actor runs the script from its private script page instead.
  * @param actor_id Actor id, or 0xFF for the script owner.
- * @param entry Private script entry of a party actor.
+ * @param entry Scene actor-script index, or a party private-script entry during battle.
  */
-void field_script_op_4a(s32 actor_id, s32 entry)
+void field_script_start_actor_script(s32 actor_id, s32 entry)
 {
     s32 actor;
     u32 party_index;
@@ -2236,9 +2338,9 @@ void field_script_op_4a(s32 actor_id, s32 entry)
     }
     else
     {
-        field_start_actor_script(actor & 0xFF);
+        field_start_actor_script(actor & 0xFF, entry);
     }
-    g_field_script->status.word = g_field_script->status.word & ~FIELD_SCRIPT_RUNNING;
+    g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
 /**
@@ -2298,16 +2400,16 @@ void field_script_op_4d(s32 actor_id, s32 height)
  * @param resource With bit 15 set, the low 15 bits name a bound animation (field_load_bound_animation);
  *        otherwise a shared animation actor resource (field_spawn_shared_animation_actor).
  */
-void field_script_op_4e(s32 actor_id, s32 resource)
+void field_script_start_animation(s32 actor_id, s32 resource)
 {
     if (actor_id == FIELD_SCRIPT_OWNER)
     {
         actor_id = g_field_script->status.owner_id;
     }
 
-    if (resource & 0x8000)
+    if (resource & FIELD_SCRIPT_ANIMATION_BOUND)
     {
-        field_load_bound_animation(actor_id, resource & 0x7FFF);
+        field_load_bound_animation(actor_id, resource & FIELD_SCRIPT_ANIMATION_ID_MASK);
     }
     else
     {
@@ -2488,7 +2590,7 @@ void field_script_op_57(s32 actor_id, s32 resource_entry_index)
  * @param sound_id Sound id.
  * @param pan Pan.
  */
-void field_script_op_58(s32 sound_id, s32 pan)
+void field_script_play_sound(s32 sound_id, s32 pan)
 {
     field_play_sound(sound_id, pan);
 }
