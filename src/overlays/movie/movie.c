@@ -190,7 +190,7 @@ void movie_play(s32 movie_index)
     retry_exhausted_status = CD_ERROR_STATUS_RETRIES_EXHAUSTED;
     state = MOVIE_STATE;
 
-    while (TRUE)
+    while (1)
     {
         /* Service transient CD errors before advancing playback. */
         error_status = cdrom_get_error_status();
@@ -209,7 +209,7 @@ void movie_play(s32 movie_index)
         {
             update_poll_budget = MOVIE_UPDATE_POLL_LIMIT;
 
-            while (TRUE)
+            while (1)
             {
                 movie_update();
 

@@ -586,7 +586,7 @@ s32 niki_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                             marker_offset = *(u16*)(glyph_table + 0x38);
                             prim = func_800A88A0(prim, ot, (void*)((s32)marker_offset + (s32)glyph_table), 4, base_x + NIKI_ENTRY_MARKER_X, row_y, 0);
                         }
-                        if (*niki_skip_hex_digits(&g_niki_entries[g_niki_card_slot][entry_index].name[12]) == '+')
+                        if (*skip_hex_digits(&g_niki_entries[g_niki_card_slot][entry_index].name[12]) == '+')
                         {
                             prim = func_800A88A0(prim, ot, (void*)((s32)D_801471A8 + (s32)glyph_table), 4, 0xF2 - x_offset, row_y, 1);
                         }
@@ -909,7 +909,7 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
                 s32 slot_index;
                 SaveFileHeader* header;
 
-                niki_terminate_multibyte_text(g_niki_entry_file.header.title);
+                terminate_multibyte_text(g_niki_entry_file.header.title);
                 header = &g_niki_entry_file.header;
                 if ((u32)(header->title[1][0] - 1) >= 0x7FU)
                 {
@@ -934,44 +934,7 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
 }
 #endif
 
-/**
- * @brief Zero-fill a 64-byte text field from its first character-boundary terminator.
- * @param text Text field to scan; bytes with the high bit set begin two-byte characters.
- */
-void niki_terminate_multibyte_text(void* text)
-{
-    u8* cursor;
-    s32 byte_index;
-
-    cursor = (u8*)text;
-    for (byte_index = 0;;)
-    {
-        if (byte_index >= 64)
-        {
-            return;
-        }
-        if (*cursor == 0)
-        {
-            while (byte_index < 64)
-            {
-                *cursor = 0;
-                byte_index++;
-                cursor++;
-            }
-            return;
-        }
-        if (*cursor >= 0x80)
-        {
-            cursor += 2;
-            byte_index += 2;
-        }
-        else
-        {
-            cursor += 1;
-            byte_index += 1;
-        }
-    }
-}
+#include "../common/terminate_multibyte_text.inc.c"
 
 /**
  * @brief Draw the niki footer glyph, anchored to the right edge of the panel.
@@ -1292,7 +1255,7 @@ s32 niki_draw_save_confirm_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         resource = &g_niki_save_blob;
         element = g_niki_element_pool;
         element->attr.f.state = 0;
-        if (niki_validate_save_blob(&resource->save) == 0)
+        if (validate_save_file(&resource->save) == 0)
         {
             niki_open_status_dialog(4);
             return result;
@@ -1755,7 +1718,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 
         if (g_niki_confirm_latch == 0)
         {
-            if (niki_validate_save_blob(&g_niki_save_blob.save) == 0)
+            if (validate_save_file(&g_niki_save_blob.save) == 0)
             {
                 func_800A3938(0x78, 0x80);
                 g_niki_element_pool[0].draw = niki_draw_status_dialog;
@@ -1934,8 +1897,8 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                 }
             }
             resource->loaded.trailing_record_count = record_count;
-            checksum = niki_compute_save_checksum(resource->save.payload);
-            resource->save.magic = NIKI_SAVE_MAGIC;
+            checksum = compute_save_checksum(&resource->save);
+            resource->save.magic = SAVE_FILE_MAGIC;
             resource->save.checksum = checksum;
             g_niki_progress_active = 1;
             g_niki_load_step = g_niki_write_save_sequence;
@@ -2144,65 +2107,13 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 }
 #endif
 
-/**
- * @brief Advance past a run of ASCII hexadecimal-digit characters.
- * @param text Pointer to the start of the scan.
- * @return Pointer to the first byte that is not a hex digit
- *         (@c '0'-'9', @c 'a'-'f' or @c 'A'-'F').
- */
-u8* niki_skip_hex_digits(void* text)
-{
-    u8* cursor = text;
-
-    while ((u32)(*cursor - '0') < 10 || (u32)(*cursor - 'a') < 6 || (u32)(*cursor - 'A') < 6)
-    {
-        cursor++;
-    }
-    return cursor;
-}
+#include "../common/skip_hex_digits.inc.c"
 
 /** @brief Full-width MAX text used when a decimal value exceeds five digits. */
 const NikiDecimalOverflow g_niki_decimal_overflow_text __attribute__((aligned(4))) = {{0x82, 0x6C, 0x82, 0x60, 0x82, 0x77, 0}};
 
-/**
- * @brief Validate the save payload checksum and format marker.
- * @param blob Serialized save data to validate.
- * @return One when both checks pass, otherwise zero.
- */
-s32 niki_validate_save_blob(NikiSaveBlob* blob)
-{
-    if (blob->checksum == niki_compute_save_checksum(blob->payload))
-    {
-        if (blob->magic == NIKI_SAVE_MAGIC)
-        {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-/**
- * @brief Sum the save payload bytes and apply the checksum scale and bias.
- * @param data Start of the fixed-size save payload.
- * @return Twice the byte sum plus NIKI_SAVE_CHECKSUM_BIAS.
- */
-s32 niki_compute_save_checksum(u8* data)
-{
-    s32 sum;
-    u32 byte_index;
-    u8* cursor;
-
-    cursor = data;
-    sum = 0;
-    byte_index = 0;
-    do
-    {
-        byte_index++;
-        sum += *cursor;
-        cursor++;
-    } while (byte_index < NIKI_SAVE_PAYLOAD_BYTES);
-    return sum * 2 + NIKI_SAVE_CHECKSUM_BIAS;
-}
+#include "../common/validate_save_file.inc.c"
+#include "../common/compute_save_checksum.inc.c"
 
 /**
  * @brief Format up to six decimal digits as full-width Shift-JIS characters.
@@ -2251,165 +2162,10 @@ s8* niki_format_decimal(s8* out, s32 value)
     return cursor;
 }
 
-/**
- * @brief Format a hexadecimal string with leading zeroes suppressed.
- * @param out Destination character buffer.
- * @param value Number to format.
- * @param max_chars Maximum number of digits to emit, excluding the terminator.
- */
-void niki_format_hex(s8* out, s32 value, s32 max_chars)
-{
-    s32 nibble;
-    s32 shift_index;
-    s32 started;
-
-    shift_index = 7;
-    started = 0;
-    if (max_chars != 0)
-    {
-        do
-        {
-            nibble = (value >> (shift_index * 4)) & 0xF;
-            if (nibble != 0 || started != 0)
-            {
-                niki_hex_nibble_to_ascii(out, nibble);
-                out++;
-                max_chars--;
-                started = 1;
-                value -= nibble << (shift_index * 4);
-            }
-            shift_index--;
-            if (shift_index == -1)
-            {
-                break;
-            }
-            if (shift_index == 0)
-            {
-                started = 1;
-            }
-        } while (max_chars);
-    }
-    *out = 0;
-}
-
-/**
- * @brief Convert a 0-15 value to its ASCII hexadecimal digit.
- * @param out Destination byte.
- * @param value Nibble value; 0-9 -> '0'-'9', 10-15 -> 'A'-'F', else '_'.
- * @return None.
- */
-void niki_hex_nibble_to_ascii(s8* out, s32 value)
-{
-    if (value < 10)
-    {
-        *out = value + 0x30;
-    }
-    else if (value < 16)
-    {
-        *out = value + 0x37;
-    }
-    else
-    {
-        *out = 0x5F;
-    }
-}
-
-/**
- * @brief Parse a bounded run of ASCII hexadecimal digits.
- * @param text First digit to parse.
- * @param digits_left Maximum number of digits to consume.
- * @return Accumulated value; parsing stops at the digit limit or first non-hex byte.
- */
-u32 niki_parse_hex(u8* text, s32 digits_left)
-{
-    u32 result;
-
-    result = 0;
-    while (((u8)(*text - '0') < 10) || ((u8)(*text - 'a') < 6) || ((u8)(*text - 'A') < 6))
-    {
-        if (digits_left == 0)
-        {
-            break;
-        }
-        result <<= 4;
-        if ((u8)(*text - '0') < 10)
-        {
-            u32 decimal_base;
-
-            decimal_base = result - '0';
-            result = decimal_base + *text;
-        }
-        else if ((u8)(*text - 'A') < 6)
-        {
-            u32 uppercase_base;
-
-            uppercase_base = result - ('A' - 10);
-            result = uppercase_base + *text;
-        }
-        else if ((u8)(*text - 'a') < 6)
-        {
-            u32 lowercase_base;
-
-            lowercase_base = result - ('a' - 10);
-            result = lowercase_base + *text;
-        }
-        text++;
-        digits_left--;
-    }
-    return result;
-}
-
-/**
- * @brief Skip a hexadecimal run and its separator, then parse up to two hex digits.
- * @param text Start of the leading hexadecimal run.
- * @return Parsed suffix byte.
- */
-s32 niki_parse_hex_suffix_byte(u8* text)
-{
-    s32 digits_left;
-    u32 result;
-
-    while ((u32)(*text - '0') < 10 || (u32)(*text - 'a') < 6 || (u32)(*text - 'A') < 6)
-    {
-        text++;
-    }
-
-    text++;
-    digits_left = 2;
-    result = 0;
-    while (((u8)(*text - '0') < 10) || ((u8)(*text - 'a') < 6) || ((u8)(*text - 'A') < 6))
-    {
-        if (digits_left == 0)
-        {
-            break;
-        }
-        result <<= 4;
-        if ((u8)(*text - '0') < 10)
-        {
-            u32 decimal_base;
-
-            decimal_base = result - '0';
-            result = decimal_base + *text;
-        }
-        else if ((u8)(*text - 'A') < 6)
-        {
-            u32 uppercase_base;
-
-            uppercase_base = result - ('A' - 10);
-            result = uppercase_base + *text;
-        }
-        else if ((u8)(*text - 'a') < 6)
-        {
-            u32 lowercase_base;
-
-            lowercase_base = result - ('a' - 10);
-            result = lowercase_base + *text;
-        }
-        text++;
-        digits_left--;
-    }
-    return result;
-}
+#include "../common/format_hex.inc.c"
+#include "../common/hex_nibble_to_ascii.inc.c"
+#include "../common/parse_hex.inc.c"
+#include "../common/parse_hex_suffix_byte.inc.c"
 
 /**
  * @brief Parse field values and suffix bytes from recognized save-file names.
@@ -2469,7 +2225,7 @@ s32 niki_parse_entry_fields(void)
                 s32* fields = g_niki_entry_fields[g_niki_card_slot];
                 fields[entry_index] = value;
             }
-            suffix_value = niki_parse_hex_suffix_byte(suffix);
+            suffix_value = parse_hex_suffix_byte(suffix);
             g_niki_entry_suffix_values[entry_index] = suffix_value;
             if (max_suffix < suffix_value)
             {

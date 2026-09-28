@@ -765,6 +765,9 @@ typedef struct SavedGameLayout
 /** @brief Length of one of the two lines of SaveFileHeader::title. */
 #define SAVE_FILE_TITLE_LINE_BYTES 0x20
 
+/** @brief SaveFileHeader::title is Shift-JIS: bytes from this value up lead a two-byte character. */
+#define SAVE_FILE_TITLE_SJIS_LEAD_MIN 0x80
+
 /** @brief Standard PSX memory-card file header (0x180 bytes): title and icon. */
 typedef struct
 {

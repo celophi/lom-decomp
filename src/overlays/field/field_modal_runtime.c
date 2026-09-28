@@ -1526,7 +1526,7 @@ static void field_run_menu(void* render_buffers, s32 controller)
 
     g_active_script = 0;
 
-    for (;;)
+    while (1)
     {
         cdrom_stream(CD_RES_MENU_BIN, FIELD_SUBOVERLAY_ADDRESS);
         cdrom_wait_queue_empty();

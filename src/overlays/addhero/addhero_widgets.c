@@ -131,7 +131,7 @@ void* addhero_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_off
     {
         file = &g_addhero_save_file;
         g_addhero_element_pool[ADDHERO_ELEMENT_MODAL].attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
-        if (addhero_validate_save_file(file) == 0)
+        if (validate_save_file(file) == 0)
         {
             addhero_open_status_dialog(ADDHERO_DIALOG_INVALID_SAVE);
             return result;
@@ -452,7 +452,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
         prim = bar;
         if (g_addhero_progress_active == 0)
         {
-            if (addhero_validate_save_file(&g_addhero_save_file) == 0)
+            if (validate_save_file(&g_addhero_save_file) == 0)
             {
                 s32 message_id = ADDHERO_DIALOG_INVALID_SAVE;
 
@@ -562,7 +562,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
                 bcopy((u8*)&g_saved_game_ctx->characters[FIELD_PARTY_GUEST], (u8*)&((SaveFile*)buffer)->saved_game.characters[FIELD_PARTY_HERO],
                       sizeof(FieldCharacterRecord));
                 ((SaveFile*)buffer)->saved_game.characters[FIELD_PARTY_HERO].info.word |= FIELD_CHARACTER_PAD_CONTROLLED;
-                checksum = addhero_compute_save_checksum(buffer);
+                checksum = compute_save_checksum(buffer);
                 ((SaveFile*)buffer)->magic = SAVE_FILE_MAGIC;
                 ((SaveFile*)buffer)->checksum = checksum;
                 g_addhero_write_in_progress = 1;
@@ -892,40 +892,5 @@ void* addhero_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y)
     return prim;
 }
 
-/**
- * @brief Validate a loaded save file by checking its stored checksum and the
- *        "ANA" magic tag.
- * @param file Save file to check.
- * @return 1 when the checksum and magic both match, 0 otherwise.
- */
-s32 addhero_validate_save_file(SaveFile* file)
-{
-    if (file->checksum == addhero_compute_save_checksum((u8*)file))
-    {
-        if (file->magic == SAVE_FILE_MAGIC)
-        {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-/**
- * @brief Compute a save file's checksum over its first SAVE_FILE_CHECKSUM_BYTES bytes.
- * @param data Start of the save file.
- * @return Twice the byte sum plus ADDHERO_SAVE_CHECKSUM_BIAS.
- */
-s32 addhero_compute_save_checksum(u8* data)
-{
-    s32 sum;
-    u32 bytes_read;
-
-    sum = 0;
-    bytes_read = 0;
-    do
-    {
-        bytes_read++;
-        sum += *data++;
-    } while (bytes_read < SAVE_FILE_CHECKSUM_BYTES);
-    return (sum * 2) + SAVE_FILE_CHECKSUM_BIAS;
-}
+#include "../common/validate_save_file.inc.c"
+#include "../common/compute_save_checksum.inc.c"

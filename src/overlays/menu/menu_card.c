@@ -178,7 +178,7 @@ void memory_card_write_test_save(void)
  */
 s32 memory_card_wait_software_event(void)
 {
-    for (;;)
+    while (1)
     {
         if (TestEvent(g_card_sw_io_event) == 1)
         {
@@ -216,7 +216,7 @@ void memory_card_clear_software_events(void)
  */
 s32 memory_card_wait_hardware_event(void)
 {
-    for (;;)
+    while (1)
     {
         if (TestEvent(g_card_hw_io_event) == 1)
         {
@@ -294,7 +294,7 @@ s32 memory_card_check_formatted(s32 channel)
     _new_card();
     _card_read(channel, 0, header);
 
-    for (;;)
+    while (1)
     {
         io_event = &g_card_hw_io_event;
         event_ready = 1;

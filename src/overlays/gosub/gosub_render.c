@@ -626,7 +626,7 @@ GosubTilePacket* gosub_draw_item_list(s32* ot, s32 initial_prim, s32 x_off, s32 
     tile = (GosubTilePacket*)prim;
     cursor_color = 0xF080F0;
     addr_mask = 0xFFFFFF;
-    for (;;)
+    while (1)
     {
         cursor_p = &g_gosub_cursor_row;
         height_p = &g_gosub_row_height;

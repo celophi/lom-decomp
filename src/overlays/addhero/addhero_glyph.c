@@ -178,7 +178,7 @@ void* addhero_draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s
     {
         for (scan = cursor; *scan >= ADDHERO_TEXT_FIRST_PRINTABLE; scan++)
         {
-            if (*scan >= ADDHERO_SJIS_LEAD_MIN)
+            if (*scan >= SAVE_FILE_TITLE_SJIS_LEAD_MIN)
             {
                 scan++;
             }
@@ -210,7 +210,7 @@ void* addhero_draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s
             g_addhero_glyph_cursor_x += ADDHERO_GLYPH_SIZE;
             continue;
         }
-        if (*cursor >= ADDHERO_SJIS_LEAD_MIN)
+        if (*cursor >= SAVE_FILE_TITLE_SJIS_LEAD_MIN)
         {
             code = cursor[0];
             code = (code << 8) | cursor[1];
@@ -222,7 +222,7 @@ void* addhero_draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s
             {
                 break;
             }
-            if (*cursor >= '0' && *cursor < ADDHERO_SJIS_LEAD_MIN)
+            if (*cursor >= '0' && *cursor < SAVE_FILE_TITLE_SJIS_LEAD_MIN)
             {
                 code = *cursor + ADDHERO_SJIS_ALNUM_OFFSET;
                 cursor++;

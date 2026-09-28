@@ -19,6 +19,7 @@
 #include "field_sound.h"
 #include "field_ui_text.h"
 #include "encoded_text.h"
+#include "save_file.h"
 
 /* Declarations shared by ADDHERO implementation files. */
 
@@ -173,9 +174,6 @@ s32 addhero_advance_load_sequence(void);
 
 /** @brief Frames a closed element stays in ADDHERO_ELEMENT_STATE_FINISHING before it is freed. */
 #define ADDHERO_ELEMENT_FINISH_FRAMES 3
-
-/** @brief Card header titles are Shift-JIS: bytes from this value up lead a two-byte character. */
-#define ADDHERO_SJIS_LEAD_MIN 0x80
 
 /** @brief Codes below this end the text drawn by addhero_draw_cached_text. */
 #define ADDHERO_TEXT_FIRST_PRINTABLE 0x20
@@ -501,8 +499,6 @@ void* addhero_draw_mode_glyph(u_long* ot, void* prim, s32 x_offset, s32 y_offset
 void* addhero_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* addhero_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-u8* addhero_skip_hex_digits(u8* text);
-void addhero_terminate_multibyte_text(void* buffer);
 void addhero_clear_elements(void);
 AddheroElement* addhero_alloc_element(void);
 void addhero_update_and_draw_elements(AddheroDrawState* draw_state);
@@ -516,13 +512,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
 void* addhero_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 width, s32 icon, s32 index, s32 row);
 void addhero_enable_choice_toggle(void);
 void* addhero_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y);
-s32 addhero_validate_save_file(SaveFile* file);
-s32 addhero_compute_save_checksum(u8* data);
 s8* addhero_format_decimal(s8* out, s32 value);
-void addhero_format_hex(s8* out, s32 value, s32 max_chars);
-void addhero_hex_nibble_to_ascii(s8* out, s32 value);
-u32 addhero_parse_hex(u8* s, s32 len);
-s32 addhero_parse_hex_suffix_byte(u8* text);
 s32 addhero_entry_blocks_reach_limit(void);
 void addhero_erase_placeholder_files(void);
 

@@ -572,7 +572,7 @@ s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_
     field_reset_input_repeat();
 
     /* Render and submit frames until the overlay reports a final result. */
-    while (TRUE)
+    while (1)
     {
         draw_buffer = next_buffer;
         ClearOTagR(draw_buffer->ot, GNAME_OT_ENTRY_COUNT);
@@ -1677,7 +1677,7 @@ static void render_char_panel(RenderContext* render_ctx, s32 panel_index)
     /* Walk the range row-major, emitting only glyphs inside the visible window. */
     grid_row = 0;
     grid_column = grid_row;
-    while (TRUE)
+    while (1)
     {
         glyph_y = (grid_row * NAME_GRID_CELL_SIZE) - g_scroll_pos;
         if (NAME_GRID_ROW_VISIBLE(glyph_y))

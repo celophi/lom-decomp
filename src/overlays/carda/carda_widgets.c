@@ -51,9 +51,6 @@ typedef struct
  */
 #define CARDA_ICON_IMAGE(icon) ((CardaIconImage*)((u8*)&g_carda_icon_image_offsets - 4 + g_carda_icon_image_offsets[icon]))
 
-/* Only referenced here; its blob type is private to this file. */
-s32 carda_validate_save_file(SaveFile* file);
-
 /**
  * @brief Build the save file for the live saved game in g_carda_save_blob: card
  *        header with title and icon, updated file-select summary, a copy of
@@ -198,7 +195,7 @@ void carda_build_save_file(void)
     blob->saved_game.spawn.bits.id = FIELD_SPAWN_LOAD_GAME;
     seed = rand();
     blob->saved_game.identity.ids.save_id = seed | (rand() << 15);
-    blob->checksum = carda_compute_save_checksum(blob);
+    blob->checksum = compute_save_checksum(blob);
     blob->magic = SAVE_FILE_MAGIC;
 
     /* Replace the start of the title with its final text. */
@@ -214,20 +211,7 @@ void carda_build_save_file(void)
     } while (count < 18);
 }
 
-/**
- * @brief Advance a pointer past a run of hex-digit characters ('0'-'9',
- *        'a'-'f', 'A'-'F').
- * @param text Pointer to the first character to test.
- * @return Pointer to the first character that is not a hex digit.
- */
-u8* carda_skip_hex_digits(u8* text)
-{
-    while ((*text >= '0' && *text <= '9') || (*text >= 'a' && *text <= 'f') || (*text >= 'A' && *text <= 'F'))
-    {
-        text++;
-    }
-    return text;
-}
+#include "../common/skip_hex_digits.inc.c"
 
 /**
  * @brief Test SAVED_OPTION_FLAG_2 of the live saved game in overlay mode 0.
@@ -242,45 +226,8 @@ s32 carda_test_option_flag_2(void)
     return 0;
 }
 
-/**
- * @brief Validate a save blob against its trailing checksum and magic.
- * @param file Save file; its first SAVE_FILE_CHECKSUM_BYTES bytes are summed by carda_compute_save_checksum.
- * @return 1 if the stored checksum matches and the magic equals SAVE_FILE_MAGIC, otherwise 0.
- */
-s32 carda_validate_save_file(SaveFile* file)
-{
-    if (file->checksum == carda_compute_save_checksum(file))
-    {
-        if (file->magic == SAVE_FILE_MAGIC)
-        {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-/**
- * @brief Compute the additive checksum of a save payload.
- * @param data Start of the save file; SAVE_FILE_CHECKSUM_BYTES bytes are summed.
- * @return Twice the byte sum plus SAVE_FILE_CHECKSUM_BIAS.
- */
-s32 carda_compute_save_checksum(void* data)
-{
-    s32 sum;
-    u32 byte_index;
-    u8* cursor;
-
-    cursor = data;
-    sum = 0;
-    byte_index = 0;
-    do
-    {
-        byte_index++;
-        sum += *cursor;
-        cursor++;
-    } while (byte_index < SAVE_FILE_CHECKSUM_BYTES);
-    return sum * 2 + SAVE_FILE_CHECKSUM_BIAS;
-}
+#include "../common/validate_save_file.inc.c"
+#include "../common/compute_save_checksum.inc.c"
 
 /**
  * @brief Draw the load confirmation prompt and handle its input: a card
@@ -392,7 +339,7 @@ void* carda_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_offse
         blob = (SaveFile*)g_carda_save_blob;
         element = g_carda_element_pool;
         element->attr.bits.state = CARDA_ELEMENT_FREE;
-        checksum = carda_compute_save_checksum(blob);
+        checksum = compute_save_checksum(blob);
         valid = 0;
         if (blob->checksum == checksum)
         {

@@ -82,222 +82,19 @@ typedef enum CloadLoadResult
 /** @brief Memory-card device path prefix for card files. */
 const CloadCardPathTemplate g_cload_card_path_prefix = {"bu00:"};
 
-/**
- * @brief Validate a loaded save file against its trailing checksum and magic.
- * @param file Loaded save file; the bytes before its checksum are summed by cload_compute_save_checksum.
- * @return 1 if the stored checksum matches and the magic equals SAVE_FILE_MAGIC, otherwise 0.
- */
-s32 cload_validate_save_file(SaveFile* file)
-{
-    if (file->checksum == cload_compute_save_checksum((u8*)file))
-    {
-        if (file->magic == SAVE_FILE_MAGIC)
-        {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-/**
- * @brief Compute the additive checksum used to validate a loaded save payload.
- * @param data Start of the save file; SAVE_FILE_CHECKSUM_BYTES bytes are summed.
- * @return Twice the byte sum plus SAVE_FILE_CHECKSUM_BIAS.
- */
-s32 cload_compute_save_checksum(u8 *data)
-{
-    s32 sum;
-    u32 byte_index;
-    u8 *cursor;
-
-    cursor = data;
-    sum = 0;
-    byte_index = 0;
-    do
-    {
-        byte_index++;
-        sum += *cursor;
-        cursor++;
-    } while (byte_index < SAVE_FILE_CHECKSUM_BYTES);
-    return sum * 2 + SAVE_FILE_CHECKSUM_BIAS;
-}
-
-
-/**
- * @brief Render the hex nibbles of @p value to ASCII, suppressing leading zeros.
- * @param out Destination buffer; receives the ASCII digits and a terminating 0.
- * @param value Value whose nibbles (most-significant first) are emitted.
- * @param max_chars Maximum number of characters to emit.
- * @note Each nibble is converted by cload_hex_nibble_to_ascii; a leading run of zero nibbles
- *       is skipped until the first non-zero digit is seen.
- */
-void cload_format_hex(s8 *out, s32 value, s32 max_chars)
-{
-    s32 nibble;
-    s32 shift_index;
-    s32 started;
-
-    shift_index = 7;
-    started = 0;
-    if (max_chars != 0)
-    {
-        do
-        {
-            nibble = (value >> (shift_index * 4)) & 0xF;
-            if (nibble != 0 || started != 0)
-            {
-                cload_hex_nibble_to_ascii(out, nibble);
-                out++;
-                max_chars--;
-                started = 1;
-                value -= nibble << (shift_index * 4);
-            }
-            shift_index--;
-            if (shift_index == -1)
-            {
-                break;
-            }
-            if (shift_index == 0)
-            {
-                started = 1;
-            }
-        } while (max_chars);
-    }
-    *out = 0;
-}
-
-
-/**
- * @brief Convert a 4-bit value to its ASCII hex digit and store it.
- *
- * Writes '0'-'9' for @p nibble 0-9, 'A'-'F' for 10-15, and '_' (0x5F) for any
- * value >= 16, storing the single character byte at @p out.
- *
- * @param out Destination byte written with the ASCII character.
- * @param nibble Value to convert; expected range 0-15.
- */
-void cload_hex_nibble_to_ascii(s8 *out, s32 nibble)
-{
-    if (nibble < 0xA)
-    {
-        *out = nibble + 0x30;
-        return;
-    }
-    if (nibble < 0x10)
-    {
-        *out = nibble + 0x37;
-        return;
-    }
-    *out = 0x5F;
-}
-
-
-/**
- * @brief Parse an ASCII hex string into a 32-bit value.
- * @param text Pointer to the hex text (0-9, A-F, a-f).
- * @param digits_left Maximum number of characters to consume.
- * @return The accumulated big-endian value of the hex digits read.
- */
-u32 cload_parse_hex(u8 *text, s32 digits_left)
-{
-    u32 result;
-
-    result = 0;
-    while (((u8)(*text - '0') < 10) || ((u8)(*text - 'a') < 6) || ((u8)(*text - 'A') < 6))
-    {
-        if (digits_left == 0)
-        {
-            break;
-        }
-        result <<= 4;
-        if ((u8)(*text - '0') < 10)
-        {
-            u32 decimal_base;
-
-            decimal_base = result - '0';
-            result = decimal_base + *text;
-        }
-        else if ((u8)(*text - 'A') < 6)
-        {
-            u32 uppercase_base;
-
-            uppercase_base = result - ('A' - 10);
-            result = uppercase_base + *text;
-        }
-        else if ((u8)(*text - 'a') < 6)
-        {
-            u32 lowercase_base;
-
-            lowercase_base = result - ('a' - 10);
-            result = lowercase_base + *text;
-        }
-        text++;
-        digits_left--;
-    }
-    return result;
-}
-
-
-/**
- * @brief Skip a leading run of hex characters and one separator, then parse up
- *        to two hex digits into an integer value.
- * @param text Pointer to the ASCII text to scan.
- * @return The value of the (at most two) hex digits found after the separator.
- */
-s32 cload_parse_hex_suffix_byte(u8 *text)
-{
-    s32 digits_left;
-    u32 result;
-
-    while ((u32)(*text - '0') < 10 || (u32)(*text - 'a') < 6 || (u32)(*text - 'A') < 6)
-    {
-        text++;
-    }
-
-    text++;
-    digits_left = 2;
-    result = 0;
-    while (((u8)(*text - '0') < 10) || ((u8)(*text - 'a') < 6) || ((u8)(*text - 'A') < 6))
-    {
-        if (digits_left == 0)
-        {
-            break;
-        }
-        result <<= 4;
-        if ((u8)(*text - '0') < 10)
-        {
-            u32 decimal_base;
-
-            decimal_base = result - '0';
-            result = decimal_base + *text;
-        }
-        else if ((u8)(*text - 'A') < 6)
-        {
-            u32 uppercase_base;
-
-            uppercase_base = result - ('A' - 10);
-            result = uppercase_base + *text;
-        }
-        else if ((u8)(*text - 'a') < 6)
-        {
-            u32 lowercase_base;
-
-            lowercase_base = result - ('a' - 10);
-            result = lowercase_base + *text;
-        }
-        text++;
-        digits_left--;
-    }
-    return result;
-}
-
+#include "../common/validate_save_file.inc.c"
+#include "../common/compute_save_checksum.inc.c"
+#include "../common/format_hex.inc.c"
+#include "../common/hex_nibble_to_ascii.inc.c"
+#include "../common/parse_hex.inc.c"
+#include "../common/parse_hex_suffix_byte.inc.c"
 
 /**
  * @brief Parse the hex-string field of each recognized directory entry and record the results.
  *
  * Entries whose name starts with g_lom_save_filename_prefix have up to five hex
  * digits at name offset 0xC parsed into g_cload_entry_fields; the suffix byte
- * after that run is parsed by @ref cload_parse_hex_suffix_byte into
+ * after that run is parsed by @ref parse_hex_suffix_byte into
  * g_cload_entry_suffix_values. Unrecognized entries store -1 / 0 instead.
  *
  * @return The largest suffix byte among the recognized entries (0 if none).
@@ -351,7 +148,7 @@ s32 cload_parse_entry_fields(void)
             }
             suffix = (u8 *)&CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index).name[0xC];
             g_cload_entry_fields[g_cload_card_slot][entry_index] = value;
-            suffix_value = cload_parse_hex_suffix_byte(suffix);
+            suffix_value = parse_hex_suffix_byte(suffix);
             g_cload_entry_suffix_values[entry_index] = suffix_value;
             if (max_suffix < suffix_value)
             {

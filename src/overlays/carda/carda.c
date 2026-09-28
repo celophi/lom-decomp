@@ -796,7 +796,7 @@ void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                             prim = field_draw_text(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, marker_offset), color, marker_x_bits >> 16, row_y,
                                                    FIELD_TEXT_ALIGN_LEFT);
                         }
-                        if (*carda_skip_hex_digits(&g_carda_entries[g_carda_card_slot][i].name[CARDA_SAVE_FILENAME_PREFIX_LENGTH]) == '+')
+                        if (*skip_hex_digits(&g_carda_entries[g_carda_card_slot][i].name[CARDA_SAVE_FILENAME_PREFIX_LENGTH]) == '+')
                         {
                             prim = field_draw_text(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, g_carda_text_plus_marker), color,
                                                    CARDA_ENTRY_PLUS_RIGHT_X - x_offset, row_y, FIELD_TEXT_ALIGN_RIGHT);
@@ -1109,9 +1109,9 @@ void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
                 s32 j;
                 SaveFileHeader* header;
 
-                carda_terminate_multibyte_text(g_carda_selected_file.header.title);
+                terminate_multibyte_text(g_carda_selected_file.header.title);
                 header = &g_carda_selected_file.header;
-                if (header->title[1][0] == 0 || header->title[1][0] >= CARDA_SJIS_LEAD_MIN)
+                if (header->title[1][0] == 0 || header->title[1][0] >= SAVE_FILE_TITLE_SJIS_LEAD_MIN)
                 {
                     /*
                      * TODO: this single-iteration loop stands in for an unknown
@@ -1142,44 +1142,7 @@ void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
 }
 #endif
 
-/**
- * @brief Zero-fill a card header title from its first null byte onward,
- *        walking Shift-JIS characters two bytes at a time.
- * @param text Start of the title (SaveFileHeader::title, two lines).
- */
-void carda_terminate_multibyte_text(void* text)
-{
-    u8* p;
-    s32 i;
-
-    p = (u8*)text;
-    i = 0;
-    for (;;)
-    {
-        if (i >= SAVE_FILE_TITLE_LINE_BYTES * 2)
-        {
-            return;
-        }
-        if (*p == 0)
-        {
-            for (; i < SAVE_FILE_TITLE_LINE_BYTES * 2; i++, p++)
-            {
-                *p = 0;
-            }
-            return;
-        }
-        if (*p >= CARDA_SJIS_LEAD_MIN)
-        {
-            p += 2;
-            i += 2;
-        }
-        else
-        {
-            p += 1;
-            i += 1;
-        }
-    }
-}
+#include "../common/terminate_multibyte_text.inc.c"
 
 /**
  * @brief Draw FIELD's "Can't hold any more." notice, centred in a 256-pixel window.

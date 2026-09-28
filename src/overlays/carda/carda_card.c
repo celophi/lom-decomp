@@ -109,171 +109,17 @@ s8 *carda_format_decimal(s8 *out, s32 value)
     return cursor;
 }
 
-/**
- * @brief Format a hexadecimal string with leading zeroes suppressed.
- * @param out Destination character buffer; receives the digits and a terminator.
- * @param value Number to format.
- * @param max_chars Maximum number of digits to emit, excluding the terminator.
- */
-void carda_format_hex(s8 *out, s32 value, s32 max_chars)
-{
-    s32 nibble;
-    s32 shift_index;
-    s32 started;
-
-    shift_index = 7;
-    started = 0;
-    if (max_chars != 0)
-    {
-        do
-        {
-            nibble = (value >> (shift_index * 4)) & 0xF;
-            if (nibble != 0 || started != 0)
-            {
-                carda_hex_nibble_to_ascii(out, nibble);
-                out++;
-                max_chars--;
-                started = 1;
-                value -= nibble << (shift_index * 4);
-            }
-            shift_index--;
-            if (shift_index == -1)
-            {
-                break;
-            }
-            if (shift_index == 0)
-            {
-                started = 1;
-            }
-        } while (max_chars);
-    }
-    *out = 0;
-}
-
-/**
- * @brief Convert a 0-15 value to its ASCII hexadecimal digit.
- * @param out Destination byte.
- * @param value Nibble value; 0-9 give '0'-'9', 10-15 give 'A'-'F', anything else '_'.
- */
-void carda_hex_nibble_to_ascii(s8 *out, s32 value)
-{
-    if (value < 10)
-    {
-        *out = value + 0x30;
-    }
-    else if (value < 16)
-    {
-        *out = value + 0x37;
-    }
-    else
-    {
-        *out = 0x5F;
-    }
-}
-
-/**
- * @brief Parse a bounded run of ASCII hexadecimal digits.
- * @param text First digit to parse.
- * @param digits_left Maximum number of digits to consume.
- * @return Accumulated value; parsing stops at the digit limit or the first non-hex byte.
- */
-u32 carda_parse_hex(u8 *text, s32 digits_left)
-{
-    u32 result;
-
-    result = 0;
-    while (((u8)(*text - '0') < 10) || ((u8)(*text - 'a') < 6) || ((u8)(*text - 'A') < 6))
-    {
-        if (digits_left == 0)
-        {
-            break;
-        }
-        result <<= 4;
-        if ((u8)(*text - '0') < 10)
-        {
-            u32 decimal_base;
-
-            decimal_base = result - '0';
-            result = decimal_base + *text;
-        }
-        else if ((u8)(*text - 'A') < 6)
-        {
-            u32 uppercase_base;
-
-            uppercase_base = result - ('A' - 10);
-            result = uppercase_base + *text;
-        }
-        else if ((u8)(*text - 'a') < 6)
-        {
-            u32 lowercase_base;
-
-            lowercase_base = result - ('a' - 10);
-            result = lowercase_base + *text;
-        }
-        text++;
-        digits_left--;
-    }
-    return result;
-}
-
-/**
- * @brief Skip a hexadecimal run and its separator, then parse up to two hex digits.
- * @param text Start of the leading hexadecimal run.
- * @return Parsed suffix byte.
- */
-s32 carda_parse_hex_suffix_byte(u8 *text)
-{
-    s32 digits_left;
-    u32 result;
-
-    while ((u32)(*text - '0') < 10 || (u32)(*text - 'a') < 6 || (u32)(*text - 'A') < 6)
-    {
-        text++;
-    }
-
-    text++;
-    digits_left = 2;
-    result = 0;
-    while (((u8)(*text - '0') < 10) || ((u8)(*text - 'a') < 6) || ((u8)(*text - 'A') < 6))
-    {
-        if (digits_left == 0)
-        {
-            break;
-        }
-        result <<= 4;
-        if ((u8)(*text - '0') < 10)
-        {
-            u32 decimal_base;
-
-            decimal_base = result - '0';
-            result = decimal_base + *text;
-        }
-        else if ((u8)(*text - 'A') < 6)
-        {
-            u32 uppercase_base;
-
-            uppercase_base = result - ('A' - 10);
-            result = uppercase_base + *text;
-        }
-        else if ((u8)(*text - 'a') < 6)
-        {
-            u32 lowercase_base;
-
-            lowercase_base = result - ('a' - 10);
-            result = lowercase_base + *text;
-        }
-        text++;
-        digits_left--;
-    }
-    return result;
-}
+#include "../common/format_hex.inc.c"
+#include "../common/hex_nibble_to_ascii.inc.c"
+#include "../common/parse_hex.inc.c"
+#include "../common/parse_hex_suffix_byte.inc.c"
 
 /**
  * @brief Parse the field value and suffix byte of every recognized save-file name.
  *
  * Entries whose name starts with g_lom_save_filename_prefix have up to five hex digits at name
  * offset 0xC parsed into g_carda_entry_fields; the suffix byte after that run is parsed
- * by carda_parse_hex_suffix_byte into g_carda_entry_suffix_values. Other entries store -1 / 0 instead.
+ * by parse_hex_suffix_byte into g_carda_entry_suffix_values. Other entries store -1 / 0 instead.
  *
  * @return Largest suffix byte among the recognized entries (0 if none).
  */
@@ -326,7 +172,7 @@ s32 carda_parse_entry_fields(void)
             }
             suffix = (u8 *)&g_carda_entries[g_carda_card_slot][entry_index].name[0xC];
             g_carda_entry_fields[g_carda_card_slot][entry_index] = value;
-            suffix_value = carda_parse_hex_suffix_byte(suffix);
+            suffix_value = parse_hex_suffix_byte(suffix);
             g_carda_entry_suffix_values[entry_index] = suffix_value;
             if (max_suffix < suffix_value)
             {
@@ -411,7 +257,7 @@ s32 carda_rank_entries(void)
             }
             suffix = (u8 *)&g_carda_entries[g_carda_card_slot][entry_index].name[0xC];
             g_carda_entry_fields[g_carda_card_slot][entry_index] = value;
-            g_carda_entry_suffix_values[entry_index] = carda_parse_hex_suffix_byte(suffix);
+            g_carda_entry_suffix_values[entry_index] = parse_hex_suffix_byte(suffix);
             suffix_used[g_carda_entry_suffix_values[entry_index]] = 1;
             if (max_suffix < g_carda_entry_suffix_values[entry_index])
             {
@@ -854,7 +700,7 @@ s32 carda_advance_card_sequence(void)
                     nibble = (serial >> (digit_index * 4)) & 0xF;
                     if (nibble != 0 || started != 0)
                     {
-                        carda_hex_nibble_to_ascii(digit_out, nibble);
+                        hex_nibble_to_ascii(digit_out, nibble);
                         digit_out++;
                         digits_left--;
                         started = 1;

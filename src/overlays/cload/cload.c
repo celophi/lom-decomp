@@ -606,7 +606,7 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
                             marker_offset = text_table[28];
                             prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, marker_offset), 1, base_x + CLOAD_ENTRY_MARKER_X, row_y, 0);
                         }
-                        if (*cload_skip_hex_digits((u8 *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry + 0xC)) == 0x2B)
+                        if (*skip_hex_digits((u8*)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry + 0xC)) == 0x2B)
                         {
                             prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_plus_marker), 1, 0xF8 - x_offset, row_y, 1);
                         }
@@ -655,20 +655,7 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
     return prim;
 }
 
-/**
- * @brief Advance a pointer past a run of hex-digit characters ('0'-'9',
- *        'a'-'f', 'A'-'F').
- * @param text Pointer to the first character to test.
- * @return Pointer to the first character that is not a hex digit.
- */
-u8 *cload_skip_hex_digits(u8 *text)
-{
-    while ((*text >= '0' && *text <= '9') || (*text >= 'a' && *text <= 'f') || (*text >= 'A' && *text <= 'F'))
-    {
-        text++;
-    }
-    return text;
-}
+#include "../common/skip_hex_digits.inc.c"
 
 /**
  * @brief Draw the fixed CLOAD header label.
@@ -896,7 +883,7 @@ void *cload_draw_selected_entry_details(u_long *ot, void *prim, s32 x_offset, s3
 
                 {
                     SaveFileHeader* header;
-                    cload_terminate_multibyte_text(g_cload_selected_file.header.title);
+                    terminate_multibyte_text(g_cload_selected_file.header.title);
                     header = &g_cload_selected_file.header;
                     if (header->title[1][0] == 0 || header->title[1][0] >= 0x80)
                     {
@@ -929,45 +916,7 @@ void *cload_draw_selected_entry_details(u_long *ot, void *prim, s32 x_offset, s3
 }
 #endif
 
-/**
- * @brief Zero-fill a 64-byte text buffer after its encoded terminator.
- * @param text Encoded text buffer.
- */
-void cload_terminate_multibyte_text(void *text)
-{
-    u8 *p;
-    s32 i;
-
-    p = (u8 *)text;
-    i = 0;
-    for (;;)
-    {
-        if (i >= 0x40)
-        {
-            return;
-        }
-        if (*p == 0)
-        {
-            while (i < 0x40)
-            {
-                *p = 0;
-                i++;
-                p++;
-            }
-            return;
-        }
-        if (*p >= 0x80)
-        {
-            p += 2;
-            i += 2;
-        }
-        else
-        {
-            p += 1;
-            i += 1;
-        }
-    }
-}
+#include "../common/terminate_multibyte_text.inc.c"
 
 /**
  * @brief Mark all eight UI elements as inactive.

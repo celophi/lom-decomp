@@ -10,6 +10,7 @@
 #include "sdk/libgpu.h"
 #include "sdk/libmcx.h"
 #include "encoded_text.h"
+#include "save_file.h"
 
 /**
  * @brief Draw callback of a CLOAD UI element: emits the element's content at
@@ -381,8 +382,7 @@ extern u16 g_cload_hex_glyphs[];
 
 extern int strncmp(char *, char *, int);
 void *func_800A88A0(void *prim, u_long *ot, u8 *text, s32 color, s32 x, s32 y, s32 mode);
-void *func_800A8A78(u_long *ot, void *prim, s32 value, s32 color, DVECTOR *pos, s32 mode);
-void cload_terminate_multibyte_text(void *text);
+void* func_800A8A78(u_long* ot, void* prim, s32 value, s32 color, DVECTOR* pos, s32 mode);
 
 /* External callees used by the memory-card I/O/load-state block. */
 /* strncmp is declared above with the original visible signature. */
@@ -422,13 +422,11 @@ s32 cload_handle_input(void);
 void cload_close_all_elements(void);
 void cload_scroll_to_selection(void);
 void cload_update_elements(CloadRenderBuffer *frame);
-void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
-u8 *cload_skip_hex_digits(u8 *text);
+void* cload_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void *cload_draw_header_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
 void *cload_draw_card_slot0_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
 void *cload_draw_card_slot1_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
-void *cload_draw_selected_entry_details(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
-void cload_terminate_multibyte_text(void *text);
+void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void cload_clear_elements(void);
 CloadElement *cload_alloc_element(void);
 void cload_update_and_draw_elements(CloadRenderBuffer* frame);
@@ -445,13 +443,7 @@ void cload_deactivate_primary_element(void);
 void cload_load_icon_resources(void);
 CloadGpuPacket *cload_emit_icon_highlight_strip(SPRT *sprite, u_long *ot);
 s32 cload_enable_choice_toggle(void);
-void *cload_draw_choice_prompt(void *prim, u_long *ot, s32 x, s32 y);
-s32 cload_validate_save_file(SaveFile* file);
-s32 cload_compute_save_checksum(u8 *data);
-void cload_format_hex(s8 *out, s32 value, s32 max_chars);
-void cload_hex_nibble_to_ascii(s8 *out, s32 nibble);
-u32 cload_parse_hex(u8 *text, s32 digits_left);
-s32 cload_parse_hex_suffix_byte(u8 *text);
+void* cload_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y);
 s32 cload_parse_entry_fields(void);
 s32 cload_rank_entries(void);
 void cload_reset_entry_ranks();

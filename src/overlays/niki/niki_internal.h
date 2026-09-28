@@ -9,16 +9,13 @@
 #include "sdk/libetc.h"
 #include "sdk/libmcx.h"
 #include "encoded_text.h"
+#include "save_file.h"
 
 #define NIKI_SJIS_FULLWIDTH_ZERO 0x4F82
 #define NIKI_SJIS_MINUS 0x5B81
 #define NIKI_PROGRESS_DURATION 256
 #define NIKI_PROGRESS_WIDTH 288
 #define NIKI_PROGRESS_HEIGHT 44
-#define NIKI_SAVE_PAYLOAD_BYTES 0x33E0
-#define NIKI_SAVE_FILE_BYTES 0x4000
-#define NIKI_SAVE_MAGIC 0x00414E41
-#define NIKI_SAVE_CHECKSUM_BIAS 0x0414E410
 #define NIKI_CONFIRM_INPUT_MASK 0x220
 #define NIKI_CANCEL_INPUT_MASK 0x40
 #define NIKI_ELEMENT_COUNT 8
@@ -79,14 +76,6 @@ typedef enum
 } NikiLoadCommand;
 #define NIKI_SJIS_ROW_SHIFT 4
 
-/** @brief Serialized save payload followed by its checksum and format marker. */
-typedef struct
-{
-    u8 payload[NIKI_SAVE_PAYLOAD_BYTES];
-    s32 checksum;
-    s32 magic;
-} NikiSaveBlob;
-
 /** @brief Fields restored from a loaded save before returning to the game. */
 typedef struct
 {
@@ -102,9 +91,9 @@ typedef struct
 /** @brief Memory-card transfer buffer with serialized and loaded-payload views. */
 typedef union
 {
-    NikiSaveBlob save;
+    SaveFile save;
     NikiLoadedSavePayload loaded;
-    u8 bytes[NIKI_SAVE_FILE_BYTES];
+    u8 bytes[SAVE_FILE_BYTES];
 } NikiSaveBuffer;
 
 /** @brief Three two-byte overflow glyphs and their string terminator. */
@@ -536,9 +525,6 @@ extern u8 g_niki_glyph_raster_buffer[];
 extern NikiSjisPage g_niki_double_byte_char_table[];
 extern NikiSjisRow g_niki_single_byte_char_table[];
 
-s32 niki_validate_save_blob(NikiSaveBlob* blob);
-s32 niki_compute_save_checksum(u8* data);
-
 void niki_update_elements(NikiFrameState* frame);
 void niki_update_and_draw_elements(NikiFrameState* frame);
 s32 niki_update_load_sequence(void);
@@ -550,7 +536,6 @@ s32 niki_draw_card_slot1_label(s32* ot, s32 prim, s32 arg2, s32 arg3);
 s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 arg2, s32 arg3);
 s32 niki_draw_icon_highlight(s32 prim, s32* ot, s32 x, s32 y, s32 width, s32 icon_index, s32 texture_slot, s32 palette_mode);
 s32 niki_draw_cached_text(s32 prim, s32* ot, u8* text, s32 x, s32 y, s32 palette, s32 alignment);
-void niki_terminate_multibyte_text(void* arg0);
 s32 niki_draw_footer_label(s32* ot, s32 prim, s32 arg2, s32 arg3);
 s32 niki_draw_state_page(s32* ot, s32 prim, s32 arg2, s32 arg3);
 void niki_clear_elements();
@@ -570,11 +555,9 @@ s32 niki_draw_save_confirm_dialog(s32* ot, s32 prim, s32 arg2, s32 arg3);
 s32 niki_draw_confirm_prompt(s32* ot, s32 prim, s32 arg2, s32 arg3);
 s32 func_800A88A0(s32 prim, s32* ot, void* glyph, s32 a3, s32 x, s32 y, s32 mode);
 s32 func_800A8A78(s32* ot, s32 prim, s32 ch, s32 a3, Vec2s* pos, s32 mode);
-u8* niki_skip_hex_digits(void* text);
 void func_80019A34(RECT* rect, void* str);
 void func_800A55E4(void* buf, s32 arg1);
 void func_800A5638(void* buf, s32 arg1);
-s32 niki_parse_hex_suffix_byte();
 s32 niki_parse_entry_fields();
 void niki_sort_entries_by_type();
 void niki_reset_entry_ranks(void);
@@ -613,7 +596,6 @@ s32 niki_render_cached_glyph(s32 prim, s32* ot, s32 character_code, s32 palette)
 s32 niki_emit_glyph_sprite(NikiGlyphSprite* sprite, s32* ot, s32 cache_slot, s32 palette);
 void niki_build_ui_elements(void);
 void niki_update_menu(NikiFrameState* frame);
-void niki_hex_nibble_to_ascii(s8* out, s32 value);
 void niki_init_stream_handles(void);
 void niki_shutdown_stream_handles(void);
 void niki_begin_glyph_cache_frame(void);

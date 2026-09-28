@@ -1,5 +1,5 @@
 /*
- * Shared encoded-text helper; see include/encoded_text.h. Included by each
+ * Shared encoded-text function; see include/encoded_text.h. Included by each
  * overlay that has it, at the point where it sits in that overlay's binary.
  */
 #include "encoded_text.h"

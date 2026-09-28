@@ -257,7 +257,7 @@ void *cload_draw_load_progress(u_long *ot, void *prim, s32 x_offset, s32 y_offse
 
     if (g_cload_progress_active == 0)
     {
-        if (cload_validate_save_file(&g_cload_save_file) == 0)
+        if (validate_save_file(&g_cload_save_file) == 0)
         {
             cload_open_status_dialog(4);
         }

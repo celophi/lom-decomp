@@ -16,6 +16,7 @@
 #include "field_sound.h"
 #include "field_ui_text.h"
 #include "encoded_text.h"
+#include "save_file.h"
 
 /**
  * @brief Draw callback of a CARDA UI element: emits the element's content at
@@ -244,9 +245,6 @@ typedef enum CardaSequenceResult
 
 /** @brief Length of the full-card placeholder entry name ("Fulldummy"). */
 #define CARDA_CARD_FULL_ENTRY_NAME_LENGTH 9
-
-/** @brief Card header titles are Shift-JIS: bytes from this value up lead a two-byte character. */
-#define CARDA_SJIS_LEAD_MIN 0x80
 
 /** @brief Height of one entry-list row and of one message line, in pixels. */
 #define CARDA_TEXT_LINE_HEIGHT 14
@@ -773,16 +771,13 @@ void* carda_draw_title(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* carda_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* carda_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void carda_terminate_multibyte_text(void* text);
 void* carda_draw_cant_hold_more(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void carda_clear_elements(void);
 CardaElement* carda_alloc_element(void);
 void carda_update_and_draw_elements(FieldRenderHalf* render);
 void carda_deactivate_primary_element(void);
 void carda_build_save_file(void);
-u8* carda_skip_hex_digits(u8* text);
 s32 carda_test_option_flag_2(void);
-s32 carda_compute_save_checksum(void* data);
 void* carda_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* carda_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* carda_draw_progress_bar(POLY_G4* quad, u_long* ot);
@@ -808,10 +803,6 @@ s32 carda_draw_item_list_header(s32* ot, s32 prim, s32 x_offset, s32 y_offset);
 s32 carda_draw_item_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset);
 void carda_apply_save_items(void);
 s8* carda_format_decimal(s8* out, s32 value);
-void carda_format_hex(s8* out, s32 value, s32 max_chars);
-void carda_hex_nibble_to_ascii(s8* out, s32 value);
-u32 carda_parse_hex(u8* s, s32 len);
-s32 carda_parse_hex_suffix_byte(u8* text);
 s32 carda_parse_entry_fields(void);
 s32 carda_rank_entries(void);
 void carda_reset_entry_ranks(void);

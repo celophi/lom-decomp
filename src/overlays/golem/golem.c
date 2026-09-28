@@ -330,7 +330,7 @@ void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel)
     PutDispEnv(&next_buffer->display_env);
     update_controllers();
 
-    for (;;)
+    while (1)
     {
         draw_buffer = next_buffer;
         ClearOTagR(draw_buffer->ordering_table, GOLEM_ORDERING_TABLE_SIZE);

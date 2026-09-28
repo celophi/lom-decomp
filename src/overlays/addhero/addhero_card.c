@@ -140,163 +140,10 @@ s8* addhero_format_decimal(s8* out, s32 value)
     return p;
 }
 
-/**
- * @brief Format @p value as an ASCII hex string of up to @p max_chars digits,
- *        suppressing leading zeros, and null-terminate it.
- * @param out       Destination character buffer.
- * @param value     Value to format.
- * @param max_chars Maximum number of hex digits to emit.
- */
-void addhero_format_hex(s8* out, s32 value, s32 max_chars)
-{
-    s32 nibble;
-    s32 shift_index;
-    s32 started;
-
-    shift_index = 7;
-    started = 0;
-    while (max_chars != 0)
-    {
-        nibble = (value >> (shift_index * 4)) & 0xF;
-        if (nibble != 0 || started != 0)
-        {
-            addhero_hex_nibble_to_ascii(out, nibble);
-            out++;
-            max_chars--;
-            started = 1;
-            value -= nibble << (shift_index * 4);
-        }
-        shift_index--;
-        if (shift_index == -1)
-        {
-            break;
-        }
-        if (shift_index == 0)
-        {
-            started = 1;
-        }
-    }
-    *out = 0;
-}
-
-/**
- * @brief Write one nibble as its ASCII hex digit ('0'-'9', 'A'-'F'), or '_' for
- *        out-of-range values.
- * @param out   Destination byte.
- * @param value Nibble value to convert.
- */
-void addhero_hex_nibble_to_ascii(s8* out, s32 value)
-{
-    if (value < 10)
-    {
-        *out = value + '0';
-    }
-    else if (value < 16)
-    {
-        *out = value + ('A' - 10);
-    }
-    else
-    {
-        *out = '_';
-    }
-}
-
-/**
- * @brief Parse up to @p len leading hex digits from @p s into an integer.
- * @param s   Text to parse.
- * @param len Maximum number of hex digits to consume.
- * @return The parsed value; 0 when no hex digits are present.
- */
-u32 addhero_parse_hex(u8* s, s32 len)
-{
-    u32 result;
-
-    result = 0;
-    while (((u8)(*s - '0') < 10) || ((u8)(*s - 'a') < 6) || ((u8)(*s - 'A') < 6))
-    {
-        if (len == 0)
-        {
-            break;
-        }
-        result <<= 4;
-        if ((u8)(*s - '0') < 10)
-        {
-            u32 decimal_base;
-
-            decimal_base = result - '0';
-            result = decimal_base + *s;
-        }
-        else if ((u8)(*s - 'A') < 6)
-        {
-            u32 uppercase_base;
-
-            uppercase_base = result - ('A' - 10);
-            result = uppercase_base + *s;
-        }
-        else if ((u8)(*s - 'a') < 6)
-        {
-            u32 lowercase_base;
-
-            lowercase_base = result - ('a' - 10);
-            result = lowercase_base + *s;
-        }
-        s++;
-        len--;
-    }
-    return result;
-}
-
-/**
- * @brief Skip the leading hex-digit run of a field, then parse the next two hex
- *        digits (the suffix byte) that follow it.
- * @param text Field text to scan.
- * @return The parsed two-digit suffix byte value.
- */
-s32 addhero_parse_hex_suffix_byte(u8* text)
-{
-    s32 count;
-    u32 result;
-
-    while ((*text >= '0' && *text <= '9') || (*text >= 'a' && *text <= 'f') || (*text >= 'A' && *text <= 'F'))
-    {
-        text++;
-    }
-    text++;
-    count = 2;
-    result = 0;
-    while (((u8)(*text - '0') < 10) || ((u8)(*text - 'a') < 6) || ((u8)(*text - 'A') < 6))
-    {
-        if (count == 0)
-        {
-            break;
-        }
-        result <<= 4;
-        if ((u8)(*text - '0') < 10)
-        {
-            u32 decimal_base;
-
-            decimal_base = result - '0';
-            result = decimal_base + *text;
-        }
-        else if ((u8)(*text - 'A') < 6)
-        {
-            u32 uppercase_base;
-
-            uppercase_base = result - ('A' - 10);
-            result = uppercase_base + *text;
-        }
-        else if ((u8)(*text - 'a') < 6)
-        {
-            u32 lowercase_base;
-
-            lowercase_base = result - ('a' - 10);
-            result = lowercase_base + *text;
-        }
-        text++;
-        count--;
-    }
-    return result;
-}
+#include "../common/format_hex.inc.c"
+#include "../common/hex_nibble_to_ascii.inc.c"
+#include "../common/parse_hex.inc.c"
+#include "../common/parse_hex_suffix_byte.inc.c"
 
 /**
  * @brief Parse the hex value suffix of every "SD"-tagged directory entry on the
@@ -352,7 +199,7 @@ s32 addhero_parse_entry_fields(void)
             }
             suffix = (u8*)&g_addhero_entries[g_addhero_card_slot][entry_index].name[ADDHERO_SAVE_FILENAME_PREFIX_LENGTH];
             g_addhero_entry_fields[g_addhero_card_slot][entry_index] = value;
-            suffix_value = addhero_parse_hex_suffix_byte(suffix);
+            suffix_value = parse_hex_suffix_byte(suffix);
             g_addhero_entry_suffix_values[entry_index] = suffix_value;
             if (max_suffix < suffix_value)
             {

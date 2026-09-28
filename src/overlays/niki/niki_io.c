@@ -282,7 +282,7 @@ s32 niki_advance_load_sequence(void)
         g_niki_file_handle = func_8001680C(g_niki_selected_save_path, 0x8001);
         niki_release_primary_handles();
         func_8001729C(g_niki_card_slot);
-        if (func_8001681C(g_niki_file_handle, g_niki_save_blob.bytes, NIKI_SAVE_FILE_BYTES) == -1)
+        if (func_8001681C(g_niki_file_handle, g_niki_save_blob.bytes, SAVE_FILE_BYTES) == -1)
         {
             g_niki_retry_count = g_niki_retry_count - 1;
             if (g_niki_retry_count == 0)
@@ -353,7 +353,7 @@ s32 niki_advance_load_sequence(void)
         g_niki_file_handle = func_8001680C(g_niki_selected_save_path, 0x8001);
         niki_release_primary_handles();
         func_8001729C(g_niki_card_slot);
-        if (func_8001681C(g_niki_file_handle, g_niki_save_blob.bytes, NIKI_SAVE_FILE_BYTES) == -1)
+        if (func_8001681C(g_niki_file_handle, g_niki_save_blob.bytes, SAVE_FILE_BYTES) == -1)
         {
             func_8001683C(g_niki_file_handle);
             g_niki_retry_count = g_niki_retry_count - 1;
@@ -447,7 +447,7 @@ s32 niki_advance_load_sequence(void)
         g_niki_progress_bar_active = 1;
         g_niki_progress_start_tick = VSync(-1);
         func_8001729C(g_niki_card_slot);
-        if (func_8001682C(g_niki_file_handle, g_niki_save_blob.bytes, NIKI_SAVE_FILE_BYTES) == -1)
+        if (func_8001682C(g_niki_file_handle, g_niki_save_blob.bytes, SAVE_FILE_BYTES) == -1)
         {
             func_8001683C(g_niki_file_handle);
             wait_attempts = 0;
@@ -1289,7 +1289,7 @@ void niki_expand_text_glyph_codes(u8* dst_sjis, const u8* src_text)
     s32 glyph_index;
     s16 lead_byte;
 
-    for (;;)
+    while (1)
     {
         source_byte = *src_text;
         if ((u8)source_byte != 0)

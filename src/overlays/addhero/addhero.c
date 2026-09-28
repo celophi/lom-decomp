@@ -629,7 +629,7 @@ void* addhero_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset
                             prim = field_draw_text(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, marker_offset), FIELD_TEXT_COLOR_NORMAL,
                                                    list_x + ADDHERO_ENTRY_MARKER_X, row_y, FIELD_TEXT_ALIGN_LEFT);
                         }
-                        if (*addhero_skip_hex_digits(&g_addhero_entries[g_addhero_card_slot][entry_index].name[ADDHERO_SAVE_FILENAME_PREFIX_LENGTH]) == '+')
+                        if (*skip_hex_digits(&g_addhero_entries[g_addhero_card_slot][entry_index].name[ADDHERO_SAVE_FILENAME_PREFIX_LENGTH]) == '+')
                         {
                             prim = field_draw_text(prim, ot, ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_text_plus_marker), FIELD_TEXT_COLOR_NORMAL,
                                                    ADDHERO_ENTRY_PLUS_RIGHT_X - x_offset, row_y, FIELD_TEXT_ALIGN_RIGHT);
@@ -940,9 +940,9 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
                 s32 j;
                 SaveFileHeader* header;
 
-                addhero_terminate_multibyte_text(g_addhero_entry_file.header.title);
+                terminate_multibyte_text(g_addhero_entry_file.header.title);
                 header = &g_addhero_entry_file.header;
-                if (header->title[1][0] == 0 || header->title[1][0] >= ADDHERO_SJIS_LEAD_MIN)
+                if (header->title[1][0] == 0 || header->title[1][0] >= SAVE_FILE_TITLE_SJIS_LEAD_MIN)
                 {
                     for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
                     {
@@ -966,61 +966,8 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
 }
 #endif
 
-/**
- * @brief Advance past a run of hex digit characters (0-9, a-f, A-F) and return
- *        the pointer to the first non-hex byte.
- * @param text Start of the text to scan.
- * @return Pointer to the first byte that is not a hex digit.
- */
-u8* addhero_skip_hex_digits(u8* text)
-{
-    u8* cursor = text;
-
-    while ((*cursor >= '0' && *cursor <= '9') || (*cursor >= 'a' && *cursor <= 'f') || (*cursor >= 'A' && *cursor <= 'F'))
-    {
-        cursor++;
-    }
-    return cursor;
-}
-
-/**
- * @brief Zero-fill a card header title from its first null byte onward,
- *        walking Shift-JIS characters two bytes at a time.
- * @param buffer Start of the title (SaveFileHeader::title, two lines).
- */
-void addhero_terminate_multibyte_text(void* buffer)
-{
-    u8* p;
-    s32 i;
-
-    p = (u8*)buffer;
-    i = 0;
-    for (;;)
-    {
-        if (i >= SAVE_FILE_TITLE_LINE_BYTES * 2)
-        {
-            return;
-        }
-        if (*p == 0)
-        {
-            for (; i < SAVE_FILE_TITLE_LINE_BYTES * 2; i++, p++)
-            {
-                *p = 0;
-            }
-            return;
-        }
-        if (*p >= ADDHERO_SJIS_LEAD_MIN)
-        {
-            p += 2;
-            i += 2;
-        }
-        else
-        {
-            p += 1;
-            i += 1;
-        }
-    }
-}
+#include "../common/skip_hex_digits.inc.c"
+#include "../common/terminate_multibyte_text.inc.c"
 
 /**
  * @brief Clear the element pool: drop each element's scroll flag and free it,

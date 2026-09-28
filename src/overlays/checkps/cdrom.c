@@ -207,7 +207,7 @@ s32 run_cd_integrity_check(s32 single_step)
         &&pause_done,
     };
 
-    for (;;)
+    while (1)
     {
         switch (g_checkps_state)
         {

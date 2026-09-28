@@ -1013,7 +1013,7 @@ static void* wsel_draw_sprite(SPRT* prim, u_long* ot, s32 index)
             {
                 strip_width = width_left;
             }
-            for (;;)
+            while (1)
             {
                 setSprt(prim);
                 prim->r0 = prim->g0 = prim->b0 = brightness;
