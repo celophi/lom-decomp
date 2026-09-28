@@ -16,10 +16,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 def make_scene(chest: bool = True) -> bytes:
-    """@brief Assemble a synthetic scene with an indexed TIM and one entry.
-    @param chest Whether to include the recognized initializer instructions.
-    @return Scene bytes with valid section boundaries and counts.
-    """
+    """Build one layout entry and an indexed TIM, optionally with a chest initializer."""
     initializer = bytes([0x40, 0x84, 0x20, 0xC0])
     for field_index, destination in ((8, 0xE040), (9, 0xE050)):
         initializer += bytes([0x0C, 1, 2, 0xFF, 0x10, 0, field_index, 0x40])
@@ -49,10 +46,7 @@ def make_scene(chest: bool = True) -> bytes:
 
 
 class FieldSceneTests(unittest.TestCase):
-    """Exercise decoded fields, lossless output and rejection of bad input."""
-
     def test_decodes_chest_without_external_game_files(self):
-        """@brief Decode packed bit fields and a recognized chest."""
         scene = FieldScene.parse(make_scene())
         entry = scene.layout[0]
         self.assertEqual(entry["position_bits"], {
@@ -67,13 +61,11 @@ class FieldSceneTests(unittest.TestCase):
         self.assertEqual(scene.group_bounds_count, 1)
 
     def test_does_not_assign_reward_to_unknown_chest_script(self):
-        """@brief Keep a graphics candidate distinct from a recognized reward."""
         scene = FieldScene.parse(make_scene(chest=False))
         self.assertTrue(scene.layout[0]["chest_graphics_candidate"])
         self.assertIsNone(scene.layout[0]["common_chest"])
 
     def test_invalid_initializer_reference_does_not_invent_reward(self):
-        """@brief Preserve raw records when an initializer cannot be resolved."""
         for reference in (0xFFFF, 1, 0xFFFE):
             data = bytearray(make_scene())
             struct.pack_into("<H", data, 40 + 4 + 46, reference)
@@ -81,7 +73,6 @@ class FieldSceneTests(unittest.TestCase):
                 self.assertIsNone(FieldScene.parse(bytes(data)).layout[0]["common_chest"])
 
     def test_extract_preserves_every_byte_and_refuses_overwrite(self):
-        """@brief Reassemble extracted sections and check independent TIM output."""
         source = make_scene()
         scene = FieldScene.parse(source)
         with tempfile.TemporaryDirectory() as directory:
@@ -108,7 +99,6 @@ class FieldSceneTests(unittest.TestCase):
             )
 
     def test_rejects_invalid_header_offsets_and_counts(self):
-        """@brief Reject truncated, reversed, unaligned and oversized ranges."""
         source = make_scene()
         variants = [source[:39], source[:-1]]
         offsets = struct.unpack_from("<10I", source)
@@ -126,7 +116,6 @@ class FieldSceneTests(unittest.TestCase):
                     FieldScene.parse(data)
 
     def test_rejects_bad_texture_table_and_tim(self):
-        """@brief Reject invalid image references and malformed TIM payloads."""
         source = make_scene()
         image_offset = struct.unpack_from("<I", source, 28)[0]
         for relative_offset, value in ((0, 0), (0, 5), (0, 0xFFFFFFFC), (4, 0x99), (12, 4)):
@@ -137,7 +126,6 @@ class FieldSceneTests(unittest.TestCase):
                     FieldScene.parse(bytes(data))
 
     def test_cli_invalid_input_creates_no_output(self):
-        """@brief Fail malformed input cleanly through the package entry point."""
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "bad.IMG"
             source.write_bytes(b"not a scene")
@@ -153,7 +141,6 @@ class FieldSceneTests(unittest.TestCase):
             self.assertFalse(output.exists())
 
     def test_cli_extract_and_info(self):
-        """@brief Exercise package imports, JSON output and successful extraction."""
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "synthetic.IMG"
             source.write_bytes(make_scene())

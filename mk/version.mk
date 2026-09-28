@@ -24,7 +24,7 @@
 #
 # Supported versions:
 #   us - North America, SLUS-01013 (default)
-#   jp - Japan, SLPS-02170 (in progress: see docs/jp-version-port.md)
+#   jp - Japan, SLPS-02170 (in progress: see README.md, Version layout)
 
 SUPPORTED_VERSIONS := us jp
 

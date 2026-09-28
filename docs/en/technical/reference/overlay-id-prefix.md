@@ -4,7 +4,7 @@
 
 Status: implemented. Every overlay with C sources in the build carries its
 header word in a dedicated `overlay_header.c` translation unit that is linked
-first. The nine verified overlays reproduce their disc SHA1s under this layout.
+first. All 17 US overlays reproduce their disc SHA-1s under this layout.
 
 ## Summary
 
@@ -115,7 +115,7 @@ offset 4.
 | Layout tried | Result |
 |--------------|--------|
 | Plain `const s32` in the same C file as the jump table (GOLEM) | 4 bytes of padding inserted after the word, every later address shifts, SHA1 mismatch |
-| Separate C file holding only the const, linked first | byte-exact on all nine verified overlays |
+| Separate C file holding only the const, linked first | byte-exact on all 17 US overlays |
 | `rodatabin` blob for the word (GOSUB, before conversion) | byte-exact |
 | `__attribute__((section(".sdata")))` on the const, `.sdata` first in section order (GOLEM, NIKI, ADDHERO, before conversion) | byte-exact |
 | Plain const, `-G4` on a `-G0` overlay (ADDHERO) | word moves to `.sdata` but 159 instructions of the text change, mismatch |

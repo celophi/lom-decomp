@@ -16,7 +16,7 @@
 # complete.
 #
 # The compressor reproduces the original 1999 encoder byte for byte on all 17
-# disc overlays, so any overlay that links to an exact raw image can be
+# US disc overlays, so any US overlay that links to an exact raw image can be
 # verified this way. See tools/compressor/README.md.
 
 # Overlays whose linked ELF reproduces the original decompressed image, and so

@@ -48,22 +48,14 @@ class SceneSection:
 
     @property
     def name(self) -> str:
-        """@brief Get the section name used by the FIELD loader.
-        @return Section name.
-        """
         return SECTION_NAMES[self.index]
 
     @property
     def filename(self) -> str:
-        """@brief Get the section's extraction filename.
-        @return Path relative to the extraction directory.
-        """
         return f"sections/{self.index:02d}_{self.name}.bin"
 
     def metadata(self) -> dict[str, object]:
-        """@brief Describe section boundaries and source-byte digest.
-        @return JSON-serializable section metadata.
-        """
+        """Describe the section using absolute source offsets and relative output paths."""
         return {
             "name": self.name,
             "offset": self.offset,
@@ -84,15 +76,10 @@ class SceneTexture:
 
     @property
     def filename(self) -> str:
-        """@brief Get the texture's extraction filename.
-        @return Path relative to the extraction directory.
-        """
         return f"textures/{self.index:03d}.tim"
 
     def metadata(self) -> dict[str, object]:
-        """@brief Describe the TIM and its absolute source-file offset.
-        @return JSON-serializable texture metadata.
-        """
+        """Describe the TIM and its absolute offset in the scene file."""
         return {
             "index": self.index,
             "offset": self.offset,
@@ -103,12 +90,7 @@ class SceneTexture:
 
 
 def read_counted_records(data: bytes, record_size: int, label: str) -> int:
-    """@brief Validate a u32 count followed by fixed-size records.
-    @param data Complete section bytes.
-    @param record_size Byte size of one record.
-    @param label Section name used in errors.
-    @return Validated record count.
-    """
+    """Validate a u32 count followed by exactly that many fixed-size records."""
     if len(data) < 4:
         raise SceneFormatError(f"{label}: missing record count")
     count = struct.unpack_from("<I", data)[0]
@@ -121,10 +103,7 @@ def read_counted_records(data: bytes, record_size: int, label: str) -> int:
 
 
 def parse_textures(section: SceneSection) -> tuple[SceneTexture, ...]:
-    """@brief Extract TIM ranges using the image section's u32 offset table.
-    @param section Complete images section.
-    @return Validated textures in image-index order.
-    """
+    """Return validated TIMs in image-table order, including repeated references."""
     data = section.data
     if not data:
         return ()
@@ -153,13 +132,7 @@ def parse_textures(section: SceneSection) -> tuple[SceneTexture, ...]:
 def common_chest_parameters(
     source: int, kind: int, scripts: tuple[int, ...], events: SceneSection
 ) -> dict[str, object] | None:
-    """@brief Recognize the common chest initializer without executing it.
-    @param source Raw scene source selector.
-    @param kind Layout action kind.
-    @param scripts Sixteen script/parameter halfwords.
-    @param events Event-script section used to resolve the initializer.
-    @return Chest parameters with supporting offsets, or None if unrecognized.
-    """
+    """Return chest parameters for a recognized initializer prefix, otherwise None."""
     if kind not in (0, 7) or (source & 7) != 5:
         return None
     initializer = scripts[15]
@@ -188,11 +161,7 @@ def common_chest_parameters(
 def parse_layout(
     section: SceneSection, events: SceneSection
 ) -> tuple[dict[str, object], ...]:
-    """@brief Decode layout records while retaining raw words and parameters.
-    @param section Counted FieldActionRequest records.
-    @param events Event scripts used for conservative chest recognition.
-    @return Layout entries, including actions that are not visible actors.
-    """
+    """Decode all layout records, including actions that are not visible actors."""
     count = read_counted_records(section.data, LAYOUT_ENTRY_SIZE, "layout")
     entries = []
     for index in range(count):
@@ -247,10 +216,7 @@ class FieldScene:
 
     @classmethod
     def parse(cls, data: bytes) -> FieldScene:
-        """@brief Parse the supported ten-section FIELD scene format.
-        @param data Complete, unmodified scene IMG contents.
-        @return Validated scene, or raise SceneFormatError for unsupported input.
-        """
+        """Parse a ten-section FIELD scene, raising SceneFormatError for invalid input."""
         if len(data) < HEADER_SIZE:
             raise SceneFormatError("truncated scene header (expected ten u32 offsets)")
         offsets = struct.unpack_from("<10I", data)
@@ -274,10 +240,7 @@ class FieldScene:
         return cls(data, sections, layout, textures, portraits, bounds)
 
     def manifest(self, source_name: str) -> dict[str, object]:
-        """@brief Describe extraction files and the understood scene fields.
-        @param source_name Source filename for display, not a path to write.
-        @return JSON-serializable manifest with absolute byte offsets.
-        """
+        """Build JSON metadata with absolute input offsets and relative output paths."""
         return {
             "format": FORMAT_NAME,
             "version": FORMAT_VERSION,
@@ -299,10 +262,6 @@ class FieldScene:
         }
 
     def summary(self, source_name: str) -> str:
-        """@brief Format a concise scene and chest inspection report.
-        @param source_name Source filename displayed above the section listing.
-        @return Section listing and recognized chest parameters.
-        """
         lines = [
             f"{source_name}: {len(self.data)} bytes, {len(self.layout)} layout entries, "
             f"{len(self.textures)} TIM textures",
@@ -331,10 +290,7 @@ class FieldScene:
         return "\n".join(lines) + "\n"
 
     def extract(self, output: Path, source_name: str) -> None:
-        """@brief Write raw sections, TIM files and metadata to a new directory.
-        @param output Destination directory; existing paths are never overwritten.
-        @param source_name Source filename to record in the manifest and summary.
-        """
+        """Write sections, TIMs and metadata; the output directory must not exist."""
         manifest = json.dumps(self.manifest(source_name), indent=2) + "\n"
         output.mkdir(parents=True, exist_ok=False)
         (output / "sections").mkdir()
@@ -349,9 +305,6 @@ class FieldScene:
 
 
 def main() -> int:
-    """@brief Run scene inspection, validation or extraction.
-    @return Zero on success, one for invalid input or filesystem errors.
-    """
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     info = commands.add_parser("info", help="show section and chest metadata")

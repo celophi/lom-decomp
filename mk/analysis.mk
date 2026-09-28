@@ -5,8 +5,8 @@
 .PHONY: dump-objs target-objects base-objects objdiff-objects objdiff-config
 
 # Disassemble every compiled .o in build/<version>/ and write a matching .s
-# alongside it. Run this after a build to get compiler output for the
-# tools/idioms/find_idioms.py tool.
+# alongside it. Run this after a build to get compiler output for
+# assembly comparisons.
 #   make dump-objs
 # The .s files end up at e.g. build/us/src/cdrom.s,
 # build/us/overlays/gname/gname.s etc.

@@ -2483,7 +2483,6 @@ void akao_sfx_resume_and_apply_pending_voices(void)
 
 /**
  * @brief Zero the pitch of the streamed XA voice pair while a stream is active.
- * @note 100% match (lom-dev-mcp diff tool; no decomp.me scratch created).
  */
 void akao_xa_silence_voice_pitch(void)
 {
@@ -2497,7 +2496,6 @@ void akao_xa_silence_voice_pitch(void)
 /**
  * @brief Restore the streamed XA voice pair's pitch to the tracker's cached
  *        value while a stream is active.
- * @note 100% match (lom-dev-mcp diff tool; no decomp.me scratch created).
  */
 void akao_xa_restore_voice_pitch(void)
 {
@@ -2510,7 +2508,6 @@ void akao_xa_restore_voice_pitch(void)
 
 /**
  * @brief Empty function; body is a bare return.
- * @note 100% match (lom-dev-mcp diff tool; no decomp.me scratch created).
  */
 void func_80028E2C(void)
 {
@@ -2521,7 +2518,6 @@ void func_80028E2C(void)
  *        currently active one; brackets the change with reverb off/on so the
  *        SPU does not glitch mid-update.
  * @param reverb_type New reverb mode (an @c AkaoHeader::reverb_type value).
- * @note 100% match (lom-dev-mcp diff tool; no decomp.me scratch created).
  */
 void akao_apply_reverb_type(s32 reverb_type)
 {

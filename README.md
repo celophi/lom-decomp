@@ -345,7 +345,7 @@ One C source tree builds every regional release. Anything that comes from a part
 | `VERSION` | Release | Status |
 |---|---|---|
 | `us` (default) | North America, `SLUS-01013` | Fully linked |
-| `jp` | Japan, `SLPS-02170` | In progress - all 18 binaries rebuild byte-exact. The main executable and 12 overlays build from the shared C sources, except the units whose JP code differs; CARDA, CLOAD, GNAME, TITLE and WSEL still link from first-pass splat assembly |
+| `jp` | Japan, `SLPS-02170` | In progress - the main executable and all 17 overlays use the shared C layout, with assembly retained for some units and functions. All 18 raw images match; FIELD, GNAME, GOSUB and TITLE are not yet verified as compressed disc files |
 
 | Shared by all versions | Per version |
 |---|---|
