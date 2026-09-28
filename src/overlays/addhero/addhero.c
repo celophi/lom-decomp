@@ -387,7 +387,7 @@ s32 addhero_handle_input(void)
         move_count = 1;
     }
 
-    while (move_count != 0)
+    for (; move_count != 0; move_count--)
     {
         if (g_pad_input & PAD_BTN_UP)
         {
@@ -405,7 +405,6 @@ s32 addhero_handle_input(void)
                 g_addhero_selected_row = 0;
             }
         }
-        move_count--;
     }
 
     if (g_pad_input & (PAD_BTN_UP | PAD_BTN_DOWN))
@@ -1010,11 +1009,9 @@ void addhero_terminate_multibyte_text(void* buffer)
         }
         if (*p == 0)
         {
-            while (i < SAVE_FILE_TITLE_LINE_BYTES * 2)
+            for (; i < SAVE_FILE_TITLE_LINE_BYTES * 2; i++, p++)
             {
                 *p = 0;
-                i++;
-                p++;
             }
             return;
         }

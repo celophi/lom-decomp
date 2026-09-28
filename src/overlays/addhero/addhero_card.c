@@ -117,7 +117,7 @@ s8* addhero_format_decimal(s8* out, s32 value)
     }
 
     started = 0;
-    do
+    for (;; divisor /= 10)
     {
         digit = value / divisor;
         if (digit != 0 || started != 0)
@@ -135,8 +135,7 @@ s8* addhero_format_decimal(s8* out, s32 value)
             started = 1;
         }
         value -= digit * divisor;
-        divisor /= 10;
-    } while (1);
+    }
     *p = 0;
     return p;
 }
@@ -156,29 +155,26 @@ void addhero_format_hex(s8* out, s32 value, s32 max_chars)
 
     shift_index = 7;
     started = 0;
-    if (max_chars != 0)
+    while (max_chars != 0)
     {
-        do
+        nibble = (value >> (shift_index * 4)) & 0xF;
+        if (nibble != 0 || started != 0)
         {
-            nibble = (value >> (shift_index * 4)) & 0xF;
-            if (nibble != 0 || started != 0)
-            {
-                addhero_hex_nibble_to_ascii(out, nibble);
-                out++;
-                max_chars--;
-                started = 1;
-                value -= nibble << (shift_index * 4);
-            }
-            shift_index--;
-            if (shift_index == -1)
-            {
-                break;
-            }
-            if (shift_index == 0)
-            {
-                started = 1;
-            }
-        } while (max_chars);
+            addhero_hex_nibble_to_ascii(out, nibble);
+            out++;
+            max_chars--;
+            started = 1;
+            value -= nibble << (shift_index * 4);
+        }
+        shift_index--;
+        if (shift_index == -1)
+        {
+            break;
+        }
+        if (shift_index == 0)
+        {
+            started = 1;
+        }
     }
     *out = 0;
 }
@@ -321,9 +317,8 @@ s32 addhero_parse_entry_fields(void)
     u32 lowercase_base;
     s32 suffix_value;
 
-    entry_index = 0;
-    max_suffix = entry_index;
-    while (entry_index < g_addhero_entry_state)
+    max_suffix = 0;
+    for (entry_index = 0; entry_index < g_addhero_entry_state; entry_index++)
     {
         if (strncmp(g_lom_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name, ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) == 0)
         {
@@ -369,7 +364,6 @@ s32 addhero_parse_entry_fields(void)
             g_addhero_entry_fields[g_addhero_card_slot][entry_index] = -1;
             g_addhero_entry_suffix_values[entry_index] = 0;
         }
-        entry_index++;
     }
     return max_suffix;
 }
