@@ -14,6 +14,20 @@ Output goes to `assets/exports/us/scenes/WAL_B020/`. `VERSION=jp` selects the JP
 output folder, and `SCENE_OUTPUT` changes the parent directory. Extraction needs
 a new destination directory. The files are generated and ignored by Git.
 
+For all supported scenes in an extracted ANA directory:
+
+```sh
+make extract-scenes ANA=/path/to/ANA
+```
+
+The batch target reads `INFO_*/*.IMG`. Output keeps the group and scene names,
+for example `assets/exports/us/scenes/INFO_PRT/WAL_B020/`. Use `VERSION=jp` with a
+Japanese ANA directory. `SCENE_OUTPUT` also applies to batch extraction.
+
+Every scene destination must be new. The tool checks for existing destinations
+before starting. Invalid scenes stop the batch with a filename; files already
+extracted remain in place. Other IMG families aren't included.
+
 ## Output
 
 | File | Contents |

@@ -26,6 +26,9 @@ make test-tools
 # Extract an IMG scene and its asset byte map.
 make extract-scene SCENE=/path/to/scene.IMG
 
+# Extract all supported scenes from an ANA directory.
+make extract-scenes ANA=/path/to/ANA
+
 # Choose an exact output directory.
 python3 -m tools.scenes.field_scene /path/to/scene.IMG output/scenes/example
 

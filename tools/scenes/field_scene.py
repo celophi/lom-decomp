@@ -283,17 +283,44 @@ def extract(source: Path, output: Path) -> None:
     (output / "byte-map.yaml").write_text("\n".join(lines) + "\n", encoding="ascii")
 
 
+def extract_all(ana_directory: Path, output: Path) -> int:
+    """Extract ANA/INFO_* scenes, keeping their group and scene directories."""
+    if not ana_directory.is_dir():
+        raise ValueError(f"ANA directory not found: {ana_directory}")
+    scenes = sorted(path for path in ana_directory.glob("INFO_*/*.IMG") if path.is_file())
+    if not scenes:
+        raise ValueError(f"No INFO_*/*.IMG scenes found under {ana_directory}")
+
+    # Check every destination before starting, so an existing export stops the batch early.
+    for scene in scenes:
+        destination = output / scene.parent.name / scene.stem
+        if destination.exists():
+            raise FileExistsError(f"Output already exists: {destination}")
+    for scene in scenes:
+        destination = output / scene.parent.name / scene.stem
+        try:
+            extract(scene, destination)
+        except (OSError, ValueError) as error:
+            raise ValueError(f"{scene}: {error}") from error
+    return len(scenes)
+
+
 def main() -> None:
-    """Extract one scene into a new output directory."""
+    """Extract one scene, or all supported scenes under an ANA directory."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("source", type=Path)
+    parser.add_argument("source", type=Path, help="scene IMG, or ANA directory with --all")
+    parser.add_argument("--all", action="store_true", help="extract every INFO_*/*.IMG scene")
     parser.add_argument("output", type=Path)
     args = parser.parse_args()
     try:
-        extract(args.source, args.output)
+        if args.all:
+            count = extract_all(args.source, args.output)
+            print(f"Extracted {count} scenes to {args.output}")
+        else:
+            extract(args.source, args.output)
+            print(f"Extracted to {args.output}")
     except (OSError, ValueError) as error:
         parser.exit(1, f"{error}\n")
-    print(f"Extracted to {args.output}")
 
 
 if __name__ == "__main__":

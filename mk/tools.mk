@@ -1,5 +1,5 @@
 # Host-side Python tests; no disc files or historical toolchain required.
-.PHONY: test-tools test-assets extract-scene
+.PHONY: test-tools test-assets extract-scene extract-scenes
 
 test-tools: test-assets
 
@@ -13,3 +13,7 @@ extract-scene:
 	@test -n "$(SCENE)" || { echo 'Usage: make extract-scene SCENE=/path/to/scene.IMG'; exit 1; }
 	scene_name=$$(basename -- "$(SCENE)" .IMG); \
 	python3 -m tools.scenes.field_scene "$(SCENE)" "$(SCENE_OUTPUT)/$$scene_name"
+
+extract-scenes:
+	@test -n "$(ANA)" || { echo 'Usage: make extract-scenes ANA=/path/to/ANA'; exit 1; }
+	python3 -m tools.scenes.field_scene --all "$(ANA)" "$(SCENE_OUTPUT)"
