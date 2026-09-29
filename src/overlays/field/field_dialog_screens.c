@@ -678,7 +678,7 @@ extern s32 g_field_actor_text_count;
 
 static void field_draw_actor_text(FieldRenderHalf* render, FieldActorText* text);
 static void* field_draw_tinted_text(SPRT* sprite_cursor, s32* ordering_table, u8* text, s32 text_color, s32 x, s32 y, s32 alignment, s32 color);
-SPRT* func_800AD658(s32* ordering_table, SPRT* sprite_cursor, s32 count);
+SPRT* field_add_sprite_outline(s32* ordering_table, SPRT* sprite_cursor, s32 count);
 
 /**
  * @brief Clear the countdown of every actor text.
@@ -904,7 +904,7 @@ static void* field_draw_tinted_text(SPRT* sprite_cursor, s32* ordering_table, u8
         } while (count != 0);
     }
 
-    sprite_cursor = func_800AD658(ordering_table, sprite_cursor, n);
+    sprite_cursor = field_add_sprite_outline(ordering_table, sprite_cursor, n);
 
     tpage = (DR_TPAGE*)sprite_cursor;
     setDrawTPage(tpage, 0, 0, 0x3F);

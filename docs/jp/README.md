@@ -14,6 +14,7 @@
 ## 関連資料
 
 - [シーン抽出ツール](technical/reference/scene-extractor.md) - シーンIMGの抽出方法、YAMLの項目、元のバイト列の保持について。
+- [FIELDのリソース](technical/reference/field-resources.md) - 常駐する画像、テキスト、アニメーションデータ、ゲーム用テーブルの抽出。
 - [CLOADのリソース](technical/reference/cload-resources.md) - ロード画面のテキスト、カード処理シーケンス、文字表の抽出。
 - [ディスクの構成](technical/reference/disc-layout.md) - 北米版のファイル構成、リソース番号、ディスク上の位置の指定方法。
 - [オーバーレイのIDプレフィックス](technical/reference/overlay-id-prefix.md) - 先頭の4バイトの意味、配置の根拠、復元したコードでの実装。

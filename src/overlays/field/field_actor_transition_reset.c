@@ -60,7 +60,7 @@ void field_restart_actor_animation(FieldActor* actor);
 void field_set_color_scale(s32 object_index, s32 red, s32 green, s32 blue);
 s32 field_is_scene_fading(void);
 void field_reset_draw_state(void);
-void func_80068028(void);
+void field_show_battle_results(void);
 void field_update_object_effects(s32 object_index);
 void field_route_actor_to_object(FieldActor* actor, s32 arg1, s32 arg2);
 void field_camera_select_scroll_limits(void);
@@ -325,7 +325,7 @@ void field_update_battle_end(void)
             g_field_camera_offset_y = 0;
             g_field_camera_offset_x = 0;
             g_field_active_group = g_field_restore_group;
-            func_80068028();
+            field_show_battle_results();
             akao_release_all_sfx();
             field_reset_global_color_scale();
             field_set_color_scale(-1, FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL);

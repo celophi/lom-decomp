@@ -127,7 +127,7 @@ enum
     FIELD_SCRIPT_CMD_RAISE_COMPANION_INTENSITY = 0x25,
     FIELD_SCRIPT_CMD_DISCARD_ITEM = 0x26,
     FIELD_SCRIPT_CMD_STOP_NON_SCRIPT_ACTORS = 0x27,
-    FIELD_SCRIPT_CMD_UNKNOWN_28 = 0x28,
+    FIELD_SCRIPT_CMD_ACTOR_LOOP_STUB = 0x28,
     FIELD_SCRIPT_CMD_UNLOCK_ENCYCLOPEDIA = 0x29,
     FIELD_SCRIPT_CMD_OPEN_CARDA = 0x2A,
     FIELD_SCRIPT_CMD_SET_VARIABLE = 0x2B,
@@ -293,7 +293,7 @@ s32 field_toggle_actor_hidden(s32 key);
 s32 field_start_interaction(s32 actor_id, s32 script);
 void field_stop_actor_script(s32 actor_id, s32 flags);
 void field_stop_non_script_actors(void);
-void func_800C1E08(void);
+void field_actor_loop_stub(void);
 s32 field_load_bound_animation(s32 key, s32 resource_id);
 s32 field_spawn_shared_animation_actor(s32 key, s32 resource_index);
 s32 field_retire_actor(s32 key, s32 resource_index);
@@ -2036,8 +2036,8 @@ void field_script_misc_command(u32 command, s32 operand)
     case FIELD_SCRIPT_CMD_STOP_NON_SCRIPT_ACTORS:
         field_stop_non_script_actors();
         return;
-    case FIELD_SCRIPT_CMD_UNKNOWN_28:
-        func_800C1E08();
+    case FIELD_SCRIPT_CMD_ACTOR_LOOP_STUB:
+        field_actor_loop_stub();
         return;
     case FIELD_SCRIPT_CMD_UNLOCK_ENCYCLOPEDIA:
         field_unlock_encyclopedia_entry(operand);

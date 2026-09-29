@@ -51,7 +51,7 @@ enum
 };
 
 static SPRT* field_draw_digit(SPRT* sprite, u_long* ordering_table, s32 digit, u16* position, s32 flags);
-SPRT* func_800AD658(u_long* ordering_table, SPRT* sprite_cursor, s32 sprite_count);
+SPRT* field_add_sprite_outline(u_long* ordering_table, SPRT* sprite_cursor, s32 sprite_count);
 
 /**
  * @brief Set the palette of a digit sprite from its style flags.
@@ -87,7 +87,7 @@ static inline void field_set_digit_clut(SPRT* sprite, s32 flags)
  * @param flags Digit style and FIELD_DIGIT_OUTLINE, passed to each digit.
  * @return First free primitive-buffer address after the emitted primitives.
  */
-void* func_800AD208(u_long* ordering_table, void* packet_cursor, s32 value, s32 digit_count, u16* position, s32 flags)
+void* field_draw_sprite_number(u_long* ordering_table, void* packet_cursor, s32 value, s32 digit_count, u16* position, s32 flags)
 {
     s32 base_x;
     s32 digit;
@@ -157,7 +157,7 @@ static SPRT* field_draw_digit(SPRT* sprite, u_long* ordering_table, s32 digit, u
     sprite++;
     if (flags & FIELD_DIGIT_OUTLINE)
     {
-        sprite = func_800AD658(ordering_table, sprite, 1);
+        sprite = field_add_sprite_outline(ordering_table, sprite, 1);
     }
     return sprite;
 }
@@ -171,7 +171,7 @@ static SPRT* field_draw_digit(SPRT* sprite, u_long* ordering_table, s32 digit, u
  * @param flags Digit style in the low seven bits; FIELD_DIGIT_OUTLINE adds the outline sprites.
  * @return First free sprite after the emitted primitives.
  */
-SPRT* func_800AD524(SPRT* sprite, u_long* ordering_table, s32 glyph, u16* position, s32 flags)
+SPRT* field_draw_sprite_glyph(SPRT* sprite, u_long* ordering_table, s32 glyph, u16* position, s32 flags)
 {
     s16 u;
 
@@ -193,7 +193,7 @@ SPRT* func_800AD524(SPRT* sprite, u_long* ordering_table, s32 glyph, u16* positi
     sprite++;
     if (flags & FIELD_DIGIT_OUTLINE)
     {
-        sprite = func_800AD658(ordering_table, sprite, 1);
+        sprite = field_add_sprite_outline(ordering_table, sprite, 1);
     }
     return sprite;
 }
@@ -205,7 +205,7 @@ SPRT* func_800AD524(SPRT* sprite, u_long* ordering_table, s32 glyph, u16* positi
  * @param sprite_count Number of sprites in the template group.
  * @return First free sprite after the four copied groups.
  */
-SPRT* func_800AD658(u_long* ordering_table, SPRT* sprite_cursor, s32 sprite_count)
+SPRT* field_add_sprite_outline(u_long* ordering_table, SPRT* sprite_cursor, s32 sprite_count)
 {
     SPRT* template_end;
     s32 direction;

@@ -8,9 +8,9 @@ much help if you just want to see what's in it. This tool opens the blob up and
 writes out files you can look at.
 
 The extractors handle ADDHERO, the 2P hero screen; CARDA, the save and load
-screen; CHECKPS, the startup screen and CD check; and CLOAD, the load screen. Extract the version's
-assets with `make splat` or
-`make splat VERSION=jp` first, then run:
+screen; CHECKPS, the startup screen and CD check; CLOAD, the load screen; and
+FIELD, the resident field runtime. Extract the version's assets with
+`make splat` or `make splat VERSION=jp` first, then run:
 
 ```sh
 make extract-addhero
@@ -21,14 +21,16 @@ make extract-checkps
 make extract-checkps VERSION=jp
 make extract-cload
 make extract-cload VERSION=jp
+make extract-field
+make extract-field VERSION=jp
 ```
 
 `assets/` keeps two kinds of data apart. `assets/us/` and `assets/jp/` hold what
 splat extracts for the build. `assets/exports/` holds data converted into
 formats people can read. The output goes to
 `assets/exports/<version>/overlays/<overlay>/`. Set `ADDHERO_OUTPUT`,
-`CARDA_OUTPUT`, `CHECKPS_OUTPUT` or `CLOAD_OUTPUT` to pick another folder. The destination must
-be new; the tool won't overwrite an existing folder.
+`CARDA_OUTPUT`, `CHECKPS_OUTPUT`, `CLOAD_OUTPUT` or `FIELD_OUTPUT` to pick another
+folder. The destination must be new; the tool won't overwrite an existing folder.
 
 ## What you get
 
@@ -161,13 +163,54 @@ export needs an `unknown/` folder. Unrecognized nonzero bytes would still be
 saved there. See the [CLOAD resource notes](../../docs/en/technical/reference/cload-resources.md)
 ([Japanese](../../docs/jp/technical/reference/cload-resources.md)) for the layout.
 
+FIELD writes:
+
+```text
+field/
+    byte-map.yaml          all data ranges, plus the source of the JP character chart
+    images/
+        common/            original TIM and 64 palette previews of the common texture
+        transition/        original 16-bit TIM containing both fade tiles, plus a PNG
+        menu_frame/        original frame data and previews through both palettes
+    palettes/              golem and portrait palettes, their headers and color swatches
+    text/                  UI messages, techniques, commands, item names, weekdays and save filenames
+    animations/            built-in animation directory and definitions, plus the original resource
+    actions/               four action descriptor tables and the original bank
+    tables/                HUD, input, progression, script dispatch, window and golem tables
+    unknown/               gaps the readers haven't identified, preserved by RAM address
+```
+
+The common texture is 512 x 256, with 64 stored 16-color palettes. Each PNG
+shows the whole texture through one palette; the game chooses palettes for
+individual sprites. The transition TIM holds two 32 x 32 tiles stacked
+vertically. These are embedded FIELD resources. Scene-specific images and
+scripts still come from scene IMGs and use `make extract-scene`.
+
+The text export includes two item-name tables. US uses compact names in one
+and spaced names in the other; JP carries identical copies. JP text decoding
+also reads `cload_data.databin.bin` and its symbol/config files from the same
+version. `make splat VERSION=jp` extracts both blobs. The byte map records
+CLOAD as the chart source, so it isn't mistaken for data embedded in FIELD.
+
+The animation directory and its 202 definitions are decoded, but the part,
+curve and frame payload stays in the original resource. There is no animation
+player here. Dispatch tables keep their numeric values and attach symbol names
+when an address is known; some tables mix function pointers and resource ids.
+
+Both versions have five gaps saved under `unknown/`: 188 bytes in US and 189
+in JP. That counts the gaps, not the undecoded payload inside a known resource.
+The runtime variables are all zero on disc: 204,144 bytes in US and 191,824 in
+JP, listed in the byte map without another output file. More details are in
+[FIELD resources](../../docs/en/technical/reference/field-resources.md)
+([Japanese](../../docs/jp/technical/reference/field-resources.md)).
+
 ## How it's put together
 
-`addhero.py`, `carda.py`, `checkps.py` and `cload.py` read each blob the way you'd read its
-byte map, top to bottom. `read_blob` calls one `read_*` function per part, in address order. Each one
-parses its bytes into a small dataclass and returns a `Part` that says where the
-bytes are and what they hold. `cover_gaps` then fills whatever lies between the
-parts, and a `write_part` function for each kind of content writes its file.
+`addhero.py`, `carda.py`, `checkps.py`, `cload.py` and `field.py` use one reader
+per resource format. Each reader parses its bytes into a small dataclass and
+returns a `Part` that says where the bytes are and what they hold. `read_blob`
+collects the parts in address order, and `cover_gaps` fills whatever lies
+between them. A `write_part` function for each kind of content writes its file.
 Nothing is written until everything has been read, and the output goes into a
 temporary folder that's moved into place at the end, so a failed run leaves
 nothing behind.
@@ -189,8 +232,11 @@ Common changes:
 
 `card_data.py` holds the character chart, decoded-content dataclasses, common
 readers and writers used by the card overlays. `resources.py` supplies the
-blob, part, byte-map and output helpers all four extractors share. The smaller modules (`text_table.py`, `icon_set.py`, `png.py`,
-`symbols.py` and `splat_config.py`) handle the underlying file formats.
+blob, part, byte-map and output helpers all five extractors share. The smaller
+modules (`text_table.py`, `icon_set.py`, `png.py`, `symbols.py` and
+`splat_config.py`) handle the underlying file formats.
+`field_tables.py` lists FIELD's small array layouts; its larger resources have
+separate readers in `field.py`.
 
 ## Tests
 
@@ -219,3 +265,8 @@ The CLOAD tests cover both regional configs, the chart base used by the C
 text decoder, complete byte coverage, shared sequence tails and Japanese codes
 with a zero second byte. Missing inputs, bad boundaries and failed writes must
 leave no partial output.
+
+The FIELD tests check PNG pixels, TIM boundaries, Japanese decoding through
+CLOAD, animation and action offsets, palette headers, complete byte coverage
+and failed-write cleanup. Source tests check both regional layouts and the
+counts copied from C. Like the other extractor tests, they use made-up data.

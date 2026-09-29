@@ -62,12 +62,12 @@
 #define FIELD_LABEL_MAX_Y 176
 /** @brief Half width of one label glyph in pixels. */
 #define FIELD_LABEL_GLYPH_HALF_WIDTH 6
-/** @brief Glyphs of the brackets drawn around the selected label (func_800AD524). */
+/** @brief Glyphs of the brackets drawn around the selected label (field_draw_sprite_glyph). */
 #define FIELD_LABEL_LEFT_BRACKET 12
 #define FIELD_LABEL_RIGHT_BRACKET 13
 /** @brief Smallest gap between a label and the left screen edge. */
 #define FIELD_LABEL_MARGIN 8
-/** @brief func_800AD524 / func_800AD208 flags of the label glyphs: outline plus palette 1 or 2. */
+/** @brief field_draw_sprite_glyph / field_draw_sprite_number flags of the label glyphs: outline plus palette 1 or 2. */
 #define FIELD_LABEL_SELECTED_DIGITS (FIELD_TEXT_SHADOW | 1)
 #define FIELD_LABEL_NORMAL_DIGITS (FIELD_TEXT_SHADOW | 2)
 /** @brief Screen row of the field origin (actors are drawn relative to it). */
@@ -279,21 +279,21 @@ void akao_set_mono_output(s32 mode);
 /* Sub-overlay entry points, valid once their overlay is loaded at FIELD_SUBOVERLAY_ADDRESS. */
 /* GNAME and SHOP share this entry address but have different parameter lists. */
 void func_80140004();
-void func_80140024(u32 work, s32 mode);
-s32 func_801400C4(FieldRenderHalf* render);
-s32 func_801400D4(FieldRenderHalf* render);
-s32 func_801401F0(FieldRenderHalf* render);
-s32 func_801401F8(FieldRenderHalf* render);
+void golem_run(u32 work, s32 mode);
+s32 gosub_update_frame(FieldRenderHalf* render);
+s32 shop_update(FieldRenderHalf* render);
+s32 niki_update_frame(FieldRenderHalf* render);
+s32 addhero_state_step(FieldRenderHalf* render);
 s32 carda_update_frame(FieldRenderHalf* render);
 s32 func_801405B0(s32 render_buffers);
-void func_80140080(void* work, void* screen_sequence);
-void func_80140E00(void* work, s32 context);
+void gosub_open_screen_sequence(void* work, void* screen_sequence);
+void zukan_run(void* work, s32 context);
 
 s32 field_party_reload_reading(void);
 void* field_emit_actor_portrait(SPRT* cursor, u32* ot, s32 index, u32* position);
-void* func_800AD208(s32* ot, void* cursor, s32 value, s32 digits, u16* position, s32 flags);
-void* func_800AD524(u8* cursor, s32* ot, s32 glyph, s32* position, s32 flags);
-SPRT* func_800AD658(s32* ot, SPRT* sprite_cursor, s32 count);
+void* field_draw_sprite_number(s32* ot, void* cursor, s32 value, s32 digits, u16* position, s32 flags);
+void* field_draw_sprite_glyph(u8* cursor, s32* ot, s32 glyph, s32* position, s32 flags);
+SPRT* field_add_sprite_outline(s32* ot, SPRT* sprite_cursor, s32 count);
 s32 field_draw_player_icon(s32 packet_cursor, u_long* ot, s32 player, s32 x, s32 y, s32 flip);
 s32 field_text_draw_scaled_quad(s32 packet_cursor, u_long* ot, u8* text, s32 color, s32 x, s32 y, s32 align, s32 slot, s32 scale_x, s32 scale_y, s32 arg10, s32 visible);
 
@@ -395,7 +395,7 @@ void* field_draw_text(SPRT* sprite_cursor, s32* ot, u8* text, s32 text_color, s3
 
     if (flags & FIELD_TEXT_SHADOW)
     {
-        sprite_cursor = func_800AD658(ot, sprite_cursor, glyph_count);
+        sprite_cursor = field_add_sprite_outline(ot, sprite_cursor, glyph_count);
     }
 
     tpage = (DR_TPAGE*)sprite_cursor;
@@ -1076,7 +1076,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
             {
                 left_glyph_ot = ot - sizeof(u_long);
             }
-            cursor = (s32)func_800AD524((u8*)cursor, (s32*)left_glyph_ot, FIELD_LABEL_LEFT_BRACKET, (s32*)&point,
+            cursor = (s32)field_draw_sprite_glyph((u8*)cursor, (s32*)left_glyph_ot, FIELD_LABEL_LEFT_BRACKET, (s32*)&point,
                                         g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
             right_glyph_ot = ot;
             point.vx = (u16)point.vx + 8;
@@ -1084,7 +1084,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
             {
                 right_glyph_ot = ot - sizeof(u_long);
             }
-            cursor = (s32)func_800AD524((u8*)cursor, (s32*)right_glyph_ot, FIELD_LABEL_RIGHT_BRACKET, (s32*)&point,
+            cursor = (s32)field_draw_sprite_glyph((u8*)cursor, (s32*)right_glyph_ot, FIELD_LABEL_RIGHT_BRACKET, (s32*)&point,
                                         g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
             number_ot = ot;
             point.vx = (u16)point.vx + 8;
@@ -1092,7 +1092,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
             {
                 number_ot -= sizeof(u_long);
             }
-            cursor = (s32)func_800AD208((s32*)number_ot, (void*)cursor, ((FieldObjectState*)text_or_state)->hud.bytes.flags >> 1, 2, (u16*)&point,
+            cursor = (s32)field_draw_sprite_number((s32*)number_ot, (void*)cursor, ((FieldObjectState*)text_or_state)->hud.bytes.flags >> 1, 2, (u16*)&point,
                                         g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
             if ((g_field_selected_actor_label == index) && (((FieldObjectState*)text_or_state)->unk8.word >= 0))
             {
@@ -1538,7 +1538,7 @@ static void field_run_menu(void* render_buffers, s32 controller)
             field_rebuild_party_actions(1);
             cdrom_stream(CD_RES_GOLEM_BIN, FIELD_SUBOVERLAY_ADDRESS);
             cdrom_wait_queue_empty();
-            func_80140024(FIELD_GOLEM_WORK_BUFFER, 1);
+            golem_run(FIELD_GOLEM_WORK_BUFFER, 1);
             field_golem_rebuild_current_grid();
             field_reset_actor_resources();
             field_text_reset_windows();
@@ -1934,7 +1934,7 @@ void field_run_zukan(s32 context)
     field_reset_actor_resources();
     cdrom_stream(CD_RES_ZUKAN_BIN, FIELD_SUBOVERLAY_ADDRESS);
     cdrom_wait_queue_empty();
-    func_80140E00(FIELD_GNAME_WORK_BUFFER, context);
+    zukan_run(FIELD_GNAME_WORK_BUFFER, context);
     field_reset_actor_resources();
 }
 
@@ -1956,7 +1956,7 @@ void field_open_gosub_screen_sequence(void* screen_sequence)
         cdrom_wait_queue_empty();
         g_field_modal_state = FIELD_MODAL_GOSUB;
         g_field_gosub_phase = FIELD_GOSUB_RUNNING;
-        func_80140080(FIELD_GOSUB_WORK_BUFFER, screen_sequence);
+        gosub_open_screen_sequence(FIELD_GOSUB_WORK_BUFFER, screen_sequence);
     }
 }
 
@@ -2037,7 +2037,7 @@ void field_update_modal(FieldRenderHalf* render)
     switch (g_field_modal_state)
     {
     case FIELD_MODAL_SHOP:
-        if ((g_field_shop_active != 0) && (func_801400D4(render) != 0))
+        if ((g_field_shop_active != 0) && (shop_update(render) != 0))
         {
             g_field_shop_active = 0;
             g_field_modal_state = FIELD_MODAL_NONE;
@@ -2051,7 +2051,7 @@ void field_update_modal(FieldRenderHalf* render)
         {
             if (g_field_gosub_phase >= FIELD_GOSUB_RUNNING)
             {
-                if (func_801400C4(render) != 0)
+                if (gosub_update_frame(render) != 0)
                 {
                     DrawSync(0);
                     g_field_gosub_phase = FIELD_GOSUB_CLOSING;
@@ -2106,7 +2106,7 @@ void field_update_modal(FieldRenderHalf* render)
         }
         return;
     case FIELD_MODAL_NIKI:
-        if ((g_field_niki_addhero_state != 0) && (func_801401F0(render) != 0))
+        if ((g_field_niki_addhero_state != 0) && (niki_update_frame(render) != 0))
         {
             field_reset_actor_resources();
             g_field_niki_addhero_state = 0;
@@ -2117,7 +2117,7 @@ void field_update_modal(FieldRenderHalf* render)
     case FIELD_MODAL_ADDHERO:
         if (g_field_niki_addhero_state != 0)
         {
-            result = func_801401F8(render);
+            result = addhero_state_step(render);
             switch (result)
             {
             case 1:

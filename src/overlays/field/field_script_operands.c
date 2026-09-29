@@ -48,7 +48,7 @@ FieldActorRecord* field_find_actor_record_or_default(s32 id);
 s32 field_read_script_var(s32 owner_id, FieldScriptVariableRef var_ref);
 void field_write_script_var(s32 owner_id, FieldScriptVariableRef var_ref, s32 value);
 static u32* field_resolve_script_var(s32 owner_id, FieldScriptVariableRef var_ref, s32* word_index, s32* bit_shift);
-static void func_800BD4A8(s32 owner_id, FieldScriptVariableRef var_ref, s32 value);
+static void field_write_script_var_keep_top_bit(s32 owner_id, FieldScriptVariableRef var_ref, s32 value);
 
 /**
  * @brief Apply a relative jump to the active record's program counter.
@@ -221,12 +221,12 @@ void field_write_script_var(s32 owner_id, FieldScriptVariableRef var_ref, s32 va
 }
 
 /**
- * @brief Write a script variable using one bit less than its kind's width.
+ * @brief Write a script variable but leave its top bit unchanged.
  * @param owner_id Actor whose local variable base applies to owner-relative references.
  * @param var_ref Variable reference.
- * @param value Value to store.
+ * @param value Value to store; only the bits below the variable's top bit are written.
  */
-static void func_800BD4A8(s32 owner_id, FieldScriptVariableRef var_ref, s32 value)
+static void field_write_script_var_keep_top_bit(s32 owner_id, FieldScriptVariableRef var_ref, s32 value)
 {
     s32 word_index;
     s32 bit_shift;
@@ -239,7 +239,7 @@ static void func_800BD4A8(s32 owner_id, FieldScriptVariableRef var_ref, s32 valu
 /**
  * @brief Write a script variable given as a plain integer.
  * @param owner_id Actor whose local variable base applies to owner-relative references.
- * @param variable Variable reference in the low 16 bits; a value above 0xFFFF writes one bit less (func_800BD4A8).
+ * @param variable Variable reference in the low 16 bits; a value above 0xFFFF leaves the variable's top bit unchanged.
  * @param value Value to store.
  */
 void field_set_script_var(s32 owner_id, u32 variable, s32 value)
@@ -252,7 +252,7 @@ void field_set_script_var(s32 owner_id, u32 variable, s32 value)
         field_write_script_var(owner_id, var_ref, value);
         return;
     }
-    func_800BD4A8(owner_id, var_ref, value);
+    field_write_script_var_keep_top_bit(owner_id, var_ref, value);
 }
 
 /**

@@ -237,7 +237,7 @@ extern u16 g_field_resource_version;
  * Main-executable number renderer (ot, cursor, value, digits, position,
  * flags).
  */
-void* func_800AD208();
+void* field_draw_sprite_number();
 
 static void field_prepare_animation_definitions(FieldAnimDef* def, s32 handler_group);
 static void field_build_animation_list(FieldAnimDef* def, u8** arena, FieldAnim** tail);
@@ -2116,7 +2116,7 @@ static void field_draw_marker_overlay(u8** cursor, u_long* ot)
             {
                 digits = 1;
             }
-            prim = func_800AD208(label_ot, prim, label, digits, label_pos);
+            prim = field_draw_sprite_number(label_ot, prim, label, digits, label_pos);
             marker = marker->next;
         } while (marker != NULL);
     }
@@ -2832,13 +2832,13 @@ void field_flush_vram_uploads(void)
 /**
  * @brief Empty function; nothing references it.
  */
-void func_800569F4(void)
+void field_scene_stub_0(void)
 {
 }
 
 /**
  * @brief Empty function; nothing references it.
  */
-void func_800569FC(void)
+void field_scene_stub_1(void)
 {
 }

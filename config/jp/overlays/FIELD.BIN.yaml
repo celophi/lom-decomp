@@ -191,17 +191,6 @@ segments:
       - [0x79F95, c, field_layout_slot_state]
       - [0x7A07D, c, field_equipment_combination_rules]
       - [0x7B475, c, field_golem_logic_blocks]
-      - [0x7BD39, data, data]
-      - start: 0x7BD79
-        type: tim
-        name: field_resource
-        dir: field
-        trailing_duplicate_word: true
-      - [0x8C59D, databin, field_resource_blob]      # g_field_resource_blob: word 1 is the payload length (see func_80083948)
-      - [0x9ADCD, data, data_b]
-      - [0x9DC61, databin, clut_800EDED8]            # 512 BGR555 entries
-      - [0x9E061, databin, clut_800EE2D8]            # 256 BGR555 entries
-      - [0x9E261, data, data_c]
-      - [0x9F385, databin, rect_table_800EF64C]      # 64 RECTs (x, y, w, h halfwords)
-      - [0x9F585, data, data_d]
+      - [0x7BD39, databin, field_data]
+
   - [0xD0C89]

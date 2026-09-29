@@ -185,8 +185,8 @@ extern s32 g_zukan_next_resource_id;
 void play_menu_sfx(s32 sfx_id, s32 volume);
 void* func_800A88A0(void* packet_cursor, u_long* ordering_table, u8* text, s32 color, s32 x, s32 y, s32 flags);
 void* func_800A8B04(u_long* ordering_table, void* packet_cursor, s32 value, s32 color, ZukanPos* position, s32 flags);
-void* func_800AD208(u_long* ordering_table, void* packet_cursor, s32 value, s32 digit_count, ZukanPos* position, s32 flags);
-void* func_800AD524(void* packet_cursor, u_long* ordering_table, s32 glyph, ZukanPos* position, s32 flags);
+void* field_draw_sprite_number(u_long* ordering_table, void* packet_cursor, s32 value, s32 digit_count, ZukanPos* position, s32 flags);
+void* field_draw_sprite_glyph(void* packet_cursor, u_long* ordering_table, s32 glyph, ZukanPos* position, s32 flags);
 
 /* Helper routines. */
 void zukan_upload_ui_images(s32 work_buffer);
@@ -908,15 +908,15 @@ void zukan_render_content(RenderContext* render_ctx)
 
         pos.x = 0x106;
         pos.y = 0xBD;
-        packet_cursor = func_800AD524(packet_cursor, ordering_table, 0xB, &pos, 1);
+        packet_cursor = field_draw_sprite_glyph(packet_cursor, ordering_table, 0xB, &pos, 1);
 
         pos.x = 0xEE;
         pos.y = 0xBD;
-        packet_cursor = func_800AD208(ordering_table, packet_cursor, g_zukan_displayed_entry + 1, 3, &pos, 0);
+        packet_cursor = field_draw_sprite_number(ordering_table, packet_cursor, g_zukan_displayed_entry + 1, 3, &pos, 0);
 
         pos.x = 0x10E;
         pos.y = 0xBD;
-        packet_cursor = func_800AD208(ordering_table, packet_cursor, g_zukan_entry_count, 3, &pos, 0);
+        packet_cursor = field_draw_sprite_number(ordering_table, packet_cursor, g_zukan_entry_count, 3, &pos, 0);
     }
 
     render_ctx->prim_cursor = packet_cursor;

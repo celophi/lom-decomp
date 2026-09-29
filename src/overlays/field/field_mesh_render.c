@@ -173,7 +173,6 @@ s32 field_update_actor_palette_animation(FieldActorState *actor)
  * @param row Palette row to rotate.
  * @param count Number of cells in the row.
  * @param rotate_right Nonzero to rotate right; zero to rotate left.
- * @see decomp.me (100%) https://decomp.me/scratch (func_800801F8)
  */
 static void field_rotate_palette_row(u16 *row, s32 count, s32 rotate_right)
 {
