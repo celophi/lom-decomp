@@ -155,7 +155,7 @@ segments:
       - [0x646D9, c, field_status_ticks]
       - [0x64ED9, c, field_action_descriptors]
       - [0x65355, c, field_action_setup]
-      - [0x65E9D, asm, field_progression_ops]  # JP: differs from US, kept as assembly
+      - [0x65E9D, c, field_progression_ops]
       - [0x66001, c, field_action_modifiers]
       - [0x677BD, c, field_record_stat_ops]
 

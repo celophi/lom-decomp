@@ -15,6 +15,7 @@
 
 #include "common.h"
 #include "field_stat_counter_ops.h"
+#include "field_progression_ops.h"
 #include "field_effect_dispatch.h"
 #include "vector.h"
 
@@ -337,9 +338,6 @@ void field_open_addhero(s32 mode);
 
 /* field_pair_indicators.c */
 void field_update_pair_indicators(struct FieldRenderHalf *render_half);
-
-/* field_progression_ops.c */
-void field_reset_party_to_level(s32 level);
 
 /* field_record_effect_ops.c */
 void field_roll_menu_slot_effect(s32 group_index, s32 slot_index);

@@ -3,7 +3,7 @@
  * @brief Party level queries: experience to the next level and replaying level-ups.
  */
 
-#include "common.h"
+#include "field_progression_ops.h"
 #include "field_calls.h"
 #include "field_records.h"
 
@@ -40,15 +40,13 @@ void field_reset_party_to_level(s32 level)
 {
     s32 i;
     s32 j;
-    s32 experience;
 
     level--;
-    experience = field_level_threshold(level) << 8;
     for (i = 0; i < FIELD_PARTY_SIZE; i++)
     {
         g_field_game_state->characters[i].progress.level = 1;
         g_field_game_state->characters[i].hp = FIELD_RESET_HP;
-        g_field_game_state->characters[i].progress.word = g_field_game_state->characters[i].progress.level | experience;
+        g_field_game_state->characters[i].progress.word = g_field_game_state->characters[i].progress.level | (field_level_threshold(level) << 8);
 
         for (j = 0; j < FIELD_CHARACTER_STAT_COUNT; j++)
         {

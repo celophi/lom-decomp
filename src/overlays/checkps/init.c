@@ -1,6 +1,12 @@
 #include "init.h"
+#include "include_asm.h"
 
 #include "checkps_internal.h"
+
+#if defined(VERSION_JP)
+#include <cdrom.h>
+#include "cdrom.h"
+#endif
 
 #include "font.h"
 #include "akao.h"
@@ -53,12 +59,12 @@
 #define CHECKPS_NEXT_IMAGE_PRIMITIVE(primitive, type) ((CheckPSImagePrimitive*)((u8*)(primitive) + sizeof(type)))
 
 /**
- * @brief Conditions that end the CHECKPS display loop.
+ * @brief Exit state of the CHECKPS display loop.
  */
 typedef enum
 {
     CHECKPS_EXIT_NONE = 0,
-    CHECKPS_EXIT_IMAGE_TIMEOUT = 2,
+    CHECKPS_EXIT_COMPLETE = 2,
 } CheckPSExitReason;
 
 /**
@@ -117,6 +123,26 @@ struct CheckPSRenderState
     CheckPSFrame frames[2];
 };
 
+#if defined(VERSION_JP)
+/** @brief Steps from CD-driver handoff through the completed disc check. */
+typedef enum
+{
+    CHECKPS_STARTUP_ENTER_RECOVERY,
+    CHECKPS_STARTUP_BEGIN_CHECK,
+    CHECKPS_STARTUP_WAIT_CHECK,
+    CHECKPS_STARTUP_RESTORE_DRIVE
+} CheckPSStartupStep;
+
+/** @brief VRAM destinations for an image and its palette. */
+typedef struct
+{
+    u16 pixel_x;
+    u16 pixel_y;
+    u16 clut_x;
+    u16 clut_y;
+} CheckPSImageDestinations;
+#endif
+
 extern AkaoContainerHeader g_embedded_checkps_akao;
 extern TimPrefix g_checkps_image_asset;
 
@@ -129,9 +155,22 @@ static void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count);
 static void update_checkps_input_and_timeout(void);
 static void draw_checkps_image(CheckPSFrame* frame);
 static void load_checkps_image(void);
+#if defined(VERSION_JP)
+static u32 checkps_upload_image_to_vram(TimPrefix* tim, CheckPSImageDestinations* destinations);
+#endif
+#if !defined(VERSION_JP)
 static void process_controller_input(void);
 static void update_controller_input(void);
+#endif
 
+#if defined(VERSION_JP)
+extern CheckPSExitReason g_checkps_exit_reason;
+extern CheckPSFadeState g_fade_target;
+extern CheckPSFadeState g_fade_current;
+extern u8 g_checkps_song_buffer[CHECKPS_SONG_BUFFER_SIZE];
+extern AkaoHeader* g_checkps_akao_bank;
+extern s32 g_checkps_startup_step;
+#else
 /* Nonzero ends the CHECKPS display loop; value 2 is used for image timeout. */
 CheckPSExitReason g_checkps_exit_reason;
 
@@ -173,6 +212,8 @@ s32 g_input_repeat_timer;
  */
 s32 g_checkps_reserved_bss[CHECKPS_RESERVED_BSS_WORDS];
 
+#endif
+
 /**
  * @brief Run the CHECKPS startup screen until it requests exit.
  * @param render_state Double-buffered render workspace.
@@ -194,6 +235,9 @@ s32 run_checkps(CheckPSRenderState* render_state)
  * @brief Render and update CHECKPS frames until an exit condition is reached.
  * @param render_state Double-buffered render workspace.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/checkps/nonmatchings/init", run_checkps_display_loop);
+#else
 static void run_checkps_display_loop(CheckPSRenderState* render_state)
 {
     RECT rect;
@@ -248,11 +292,15 @@ static void run_checkps_display_loop(CheckPSRenderState* render_state)
     reset_controller_vsync_state();
     VSync(0);
 }
+#endif
 
 /**
  * @brief Configure CHECKPS display buffers and reset renderer state.
  * @param render_state Double-buffered render workspace to initialize.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/checkps/nonmatchings/init", init_checkps_display);
+#else
 static void init_checkps_display(CheckPSRenderState* render_state)
 {
     RECT rect;
@@ -287,6 +335,7 @@ static void init_checkps_display(CheckPSRenderState* render_state)
     g_checkps_exit_reason = CHECKPS_EXIT_NONE;
     update_controller_input();
 }
+#endif
 
 /**
  * @brief Register the embedded CHECKPS program data and upload its sample bank.
@@ -392,6 +441,9 @@ static void reset_fade_state(void)
  * @brief Advance the fade interpolation and emit its fullscreen GPU packets.
  * @param frame Frame receiving the fade primitives.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/checkps/nonmatchings/init", update_and_draw_fade);
+#else
 static void update_and_draw_fade(CheckPSFrame* frame)
 {
     s32 red_step;
@@ -471,6 +523,7 @@ static void update_and_draw_fade(CheckPSFrame* frame)
     }
     frame->primitive_cursor = primitive;
 }
+#endif
 
 /**
  * @brief Set the RGB fade target and interpolation duration.
@@ -488,8 +541,39 @@ static void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count)
 }
 
 /**
- * @brief Update controller debounce state and the CHECKPS image timeout.
+ * @brief Advance the JP disc check or the US input and image timer.
  */
+#if defined(VERSION_JP)
+static void update_checkps_input_and_timeout(void)
+{
+    switch (g_checkps_startup_step)
+    {
+    case CHECKPS_STARTUP_ENTER_RECOVERY:
+        if (cdrom_enter_recovery_mode() != 0)
+        {
+            g_checkps_startup_step = CHECKPS_STARTUP_BEGIN_CHECK;
+        }
+        break;
+    case CHECKPS_STARTUP_BEGIN_CHECK:
+        start_cd_integrity_check();
+        run_cd_integrity_check(1);
+        g_checkps_startup_step = CHECKPS_STARTUP_WAIT_CHECK;
+        break;
+    case CHECKPS_STARTUP_WAIT_CHECK:
+        if (run_cd_integrity_check(1) == 0)
+        {
+            g_checkps_startup_step = CHECKPS_STARTUP_RESTORE_DRIVE;
+        }
+        break;
+    case CHECKPS_STARTUP_RESTORE_DRIVE:
+        if (cdrom_recover() != 0)
+        {
+            g_checkps_exit_reason = CHECKPS_EXIT_COMPLETE;
+        }
+        break;
+    }
+}
+#else
 static void update_checkps_input_and_timeout(void)
 {
     process_controller_input();
@@ -497,14 +581,18 @@ static void update_checkps_input_and_timeout(void)
 
     if (g_checkps_image_frames_remaining == 0)
     {
-        g_checkps_exit_reason = CHECKPS_EXIT_IMAGE_TIMEOUT;
+        g_checkps_exit_reason = CHECKPS_EXIT_COMPLETE;
     }
 }
+#endif
 
 /**
  * @brief Emit the CHECKPS image sprite and draw-mode packets.
  * @param frame Frame receiving the image primitives.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/checkps/nonmatchings/init", draw_checkps_image);
+#else
 static void draw_checkps_image(CheckPSFrame* frame)
 {
     CheckPSImagePrimitive* primitive;
@@ -533,10 +621,14 @@ static void draw_checkps_image(CheckPSFrame* frame)
     primitive = CHECKPS_NEXT_IMAGE_PRIMITIVE(primitive, DR_TPAGE);
     frame->primitive_cursor = primitive;
 }
+#endif
 
 /**
  * @brief Upload the embedded CHECKPS CLUT and image pixels to VRAM.
  */
+#if defined(VERSION_JP)
+INCLUDE_ASM("overlays/checkps/nonmatchings/init", load_checkps_image);
+#else
 static void load_checkps_image(void)
 {
     RECT image_destination;
@@ -568,6 +660,32 @@ static void load_checkps_image(void)
     pixel_size++;
     LoadImage(&upload_rect, (u_long*)pixel_size);
 }
+#endif
+
+#if defined(VERSION_JP)
+/**
+ * @brief Upload a TIM palette and image to the supplied VRAM destinations.
+ * @param tim Image resource with a palette block before its pixel block.
+ * @param destinations VRAM coordinates for the pixels and palette.
+ * @return Image width in VRAM words, rounded up to a 64-word boundary.
+ */
+static u32 checkps_upload_image_to_vram(TimPrefix* tim, CheckPSImageDestinations* destinations)
+{
+    RECT upload_rect;
+    TimBlock* pixel_block;
+    u32 clut_block_length = tim->clut_block.bnum;
+
+    setRECT(&upload_rect, destinations->clut_x, destinations->clut_y, tim->clut_block.dimensions.width * tim->clut_block.dimensions.height, 1);
+    LoadImage(&upload_rect, (u_long*)tim->clut_data);
+
+    pixel_block = TIM_PIXEL_BLOCK(tim, clut_block_length);
+
+    setRECT(&upload_rect, destinations->pixel_x, destinations->pixel_y, pixel_block->dimensions.width, pixel_block->dimensions.height);
+    LoadImage(&upload_rect, (u_long*)(pixel_block + 1));
+
+    return ALIGN64(pixel_block->dimensions.width);
+}
+#endif
 
 /**
  * @brief Read and normalize the current controller sample.
@@ -587,7 +705,9 @@ s32 poll_input_device(void)
 
     /* Convert the controller protocol bits to the game's logical layout. */
     input_mask = (regs->held_buttons >> 8) | (regs->held_buttons << 8);
+#if !defined(VERSION_JP)
     input_mask = PAD_REMAP_FACE_BITS(input_mask);
+#endif
     if (regs->device_type != 0)
     {
         /* Convert signed analog-axis thresholds to digital directions. */
@@ -616,6 +736,7 @@ s32 poll_input_device(void)
     return input_mask;
 }
 
+#if !defined(VERSION_JP)
 /**
  * @brief Apply CHECKPS debounce and key-repeat behavior to controller input.
  */
@@ -752,3 +873,4 @@ static void update_controller_input(void)
     g_last_input_state = input_state;
     g_input_repeat_timer = CHECKPS_INITIAL_REPEAT_DELAY;
 }
+#endif
