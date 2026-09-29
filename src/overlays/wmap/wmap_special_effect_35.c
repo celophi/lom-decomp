@@ -107,6 +107,8 @@ typedef struct
 
 /** @brief Sequence step handler. */
 typedef void (*WmapHandler)(void);
+/** @brief Stored address of a WmapHandler, as the disc table holds it. */
+typedef PS1_CODE(WmapHandler) WmapHandlerSlot;
 
 extern WmapSpriteActor D_800D9268[];
 extern WmapAnimationSlot D_80139988[];
@@ -115,24 +117,24 @@ extern s32 D_800DBE70;
 extern s32 g_wmap_vehicle_cell_x;
 extern s32 g_wmap_vehicle_cell_y;
 extern s32 D_800DCF18[];
-extern WmapHandler g_wmap_effect35_drop_a_steps[WMAP_EFFECT35_DROP_STEPS];
-extern WmapHandler g_wmap_effect35_drop_b_steps[WMAP_EFFECT35_DROP_STEPS];
-extern WmapHandler g_wmap_effect35_sprite_a_steps[WMAP_EFFECT35_SPRITE_STEPS];
-extern WmapHandler g_wmap_effect35_sprite_b_steps[WMAP_EFFECT35_SPRITE_STEPS];
-extern WmapHandler g_wmap_effect35_sprite_c_steps[WMAP_EFFECT35_SPRITE_STEPS];
-extern WmapHandler g_wmap_effect35_spin_a_steps[WMAP_EFFECT35_SPIN_STEPS];
-extern WmapHandler g_wmap_effect35_spin_b_steps[WMAP_EFFECT35_SPIN_STEPS];
-extern WmapHandler g_wmap_effect35_orbiter_1_steps[WMAP_EFFECT35_ORBITER_STEPS];
-extern WmapHandler g_wmap_effect35_orbiter_2_steps[WMAP_EFFECT35_ORBITER_STEPS];
-extern WmapHandler g_wmap_effect35_orbiter_3_steps[WMAP_EFFECT35_ORBITER_STEPS];
-extern WmapHandler g_wmap_effect35_orbiter_4_steps[WMAP_EFFECT35_ORBITER_STEPS];
-extern WmapHandler g_wmap_effect35_orbiter_5_steps[WMAP_EFFECT35_ORBITER_STEPS];
-extern WmapHandler g_wmap_effect35_orbiter_6_steps[WMAP_EFFECT35_ORBITER_STEPS];
-extern WmapHandler g_wmap_effect35_orbiter_7_steps[WMAP_EFFECT35_ORBITER_STEPS];
-extern WmapHandler g_wmap_effect35_emitter_a_steps[WMAP_EFFECT35_EMITTER_STEPS];
-extern WmapHandler g_wmap_effect35_emitter_b_steps[WMAP_EFFECT35_EMITTER_STEPS];
-extern WmapHandler g_wmap_effect35_timeline_steps[WMAP_EFFECT35_TIMELINE_STEPS];
-extern WmapHandler g_wmap_effect35_steps[WMAP_EFFECT35_MAIN_STEPS];
+extern WmapHandlerSlot g_wmap_effect35_drop_a_steps[WMAP_EFFECT35_DROP_STEPS];
+extern WmapHandlerSlot g_wmap_effect35_drop_b_steps[WMAP_EFFECT35_DROP_STEPS];
+extern WmapHandlerSlot g_wmap_effect35_sprite_a_steps[WMAP_EFFECT35_SPRITE_STEPS];
+extern WmapHandlerSlot g_wmap_effect35_sprite_b_steps[WMAP_EFFECT35_SPRITE_STEPS];
+extern WmapHandlerSlot g_wmap_effect35_sprite_c_steps[WMAP_EFFECT35_SPRITE_STEPS];
+extern WmapHandlerSlot g_wmap_effect35_spin_a_steps[WMAP_EFFECT35_SPIN_STEPS];
+extern WmapHandlerSlot g_wmap_effect35_spin_b_steps[WMAP_EFFECT35_SPIN_STEPS];
+extern WmapHandlerSlot g_wmap_effect35_orbiter_1_steps[WMAP_EFFECT35_ORBITER_STEPS];
+extern WmapHandlerSlot g_wmap_effect35_orbiter_2_steps[WMAP_EFFECT35_ORBITER_STEPS];
+extern WmapHandlerSlot g_wmap_effect35_orbiter_3_steps[WMAP_EFFECT35_ORBITER_STEPS];
+extern WmapHandlerSlot g_wmap_effect35_orbiter_4_steps[WMAP_EFFECT35_ORBITER_STEPS];
+extern WmapHandlerSlot g_wmap_effect35_orbiter_5_steps[WMAP_EFFECT35_ORBITER_STEPS];
+extern WmapHandlerSlot g_wmap_effect35_orbiter_6_steps[WMAP_EFFECT35_ORBITER_STEPS];
+extern WmapHandlerSlot g_wmap_effect35_orbiter_7_steps[WMAP_EFFECT35_ORBITER_STEPS];
+extern WmapHandlerSlot g_wmap_effect35_emitter_a_steps[WMAP_EFFECT35_EMITTER_STEPS];
+extern WmapHandlerSlot g_wmap_effect35_emitter_b_steps[WMAP_EFFECT35_EMITTER_STEPS];
+extern WmapHandlerSlot g_wmap_effect35_timeline_steps[WMAP_EFFECT35_TIMELINE_STEPS];
+extern WmapHandlerSlot g_wmap_effect35_steps[WMAP_EFFECT35_MAIN_STEPS];
 extern s32 g_wmap_focus_screen_position;
 extern s32 D_8011D500;
 extern u8_ptr D_8011CF1C;
@@ -1050,7 +1052,7 @@ s32 wmap_effect35_run(s32 reset)
     {
         return 0;
     }
-    g_wmap_effect35_steps[g_wmap_effect35_step]();
+    PS1_CALL(g_wmap_effect35_steps[g_wmap_effect35_step])();
     return 1;
 }
 
@@ -1122,7 +1124,7 @@ static s32 wmap_effect35_run_timeline(s32 reset)
         return 0;
     }
 
-    g_wmap_effect35_timeline_steps[g_wmap_effect35_timeline_step]();
+    PS1_CALL(g_wmap_effect35_timeline_steps[g_wmap_effect35_timeline_step])();
     return 1;
 }
 
@@ -1535,7 +1537,7 @@ static s32 wmap_effect35_run_drop_a(s32 reset)
         return 0;
     }
 
-    g_wmap_effect35_drop_a_steps[g_wmap_effect35_drop_a_step]();
+    PS1_CALL(g_wmap_effect35_drop_a_steps[g_wmap_effect35_drop_a_step])();
     return 1;
 }
 
@@ -1588,7 +1590,7 @@ static s32 wmap_effect35_run_drop_b(s32 reset)
         return 0;
     }
 
-    g_wmap_effect35_drop_b_steps[g_wmap_effect35_drop_b_step]();
+    PS1_CALL(g_wmap_effect35_drop_b_steps[g_wmap_effect35_drop_b_step])();
     return 1;
 }
 
@@ -1641,7 +1643,7 @@ static s32 wmap_effect35_run_sprite_a(s32 reset)
         return 0;
     }
 
-    g_wmap_effect35_sprite_a_steps[g_wmap_effect35_sprite_a_step]();
+    PS1_CALL(g_wmap_effect35_sprite_a_steps[g_wmap_effect35_sprite_a_step])();
     return 1;
 }
 
@@ -1741,7 +1743,7 @@ static s32 wmap_effect35_run_sprite_b(s32 reset)
         return 0;
     }
 
-    g_wmap_effect35_sprite_b_steps[g_wmap_effect35_sprite_b_step]();
+    PS1_CALL(g_wmap_effect35_sprite_b_steps[g_wmap_effect35_sprite_b_step])();
     return 1;
 }
 
@@ -1842,7 +1844,7 @@ static s32 wmap_effect35_run_sprite_c(s32 reset)
         return 0;
     }
 
-    g_wmap_effect35_sprite_c_steps[g_wmap_effect35_sprite_c_step]();
+    PS1_CALL(g_wmap_effect35_sprite_c_steps[g_wmap_effect35_sprite_c_step])();
     return 1;
 }
 
@@ -1942,7 +1944,7 @@ static s32 wmap_effect35_run_spin_a(s32 reset)
         return 0;
     }
 
-    g_wmap_effect35_spin_a_steps[g_wmap_effect35_spin_a_step]();
+    PS1_CALL(g_wmap_effect35_spin_a_steps[g_wmap_effect35_spin_a_step])();
     return 1;
 }
 
@@ -2005,7 +2007,7 @@ static s32 wmap_effect35_run_spin_b(s32 reset)
         return 0;
     }
 
-    g_wmap_effect35_spin_b_steps[g_wmap_effect35_spin_b_step]();
+    PS1_CALL(g_wmap_effect35_spin_b_steps[g_wmap_effect35_spin_b_step])();
     return 1;
 }
 
@@ -2068,7 +2070,7 @@ static s32 wmap_effect35_run_orbiter_1(s32 reset)
         return 0;
     }
 
-    g_wmap_effect35_orbiter_1_steps[g_wmap_effect35_orbiter_1_step]();
+    PS1_CALL(g_wmap_effect35_orbiter_1_steps[g_wmap_effect35_orbiter_1_step])();
     return 1;
 }
 
@@ -2134,7 +2136,7 @@ static s32 wmap_effect35_run_orbiter_2(s32 reset)
         return 0;
     }
 
-    g_wmap_effect35_orbiter_2_steps[g_wmap_effect35_orbiter_2_step]();
+    PS1_CALL(g_wmap_effect35_orbiter_2_steps[g_wmap_effect35_orbiter_2_step])();
     return 1;
 }
 
@@ -2200,7 +2202,7 @@ static s32 wmap_effect35_run_orbiter_3(s32 reset)
         return 0;
     }
 
-    g_wmap_effect35_orbiter_3_steps[g_wmap_effect35_orbiter_3_step]();
+    PS1_CALL(g_wmap_effect35_orbiter_3_steps[g_wmap_effect35_orbiter_3_step])();
     return 1;
 }
 
@@ -2266,7 +2268,7 @@ static s32 wmap_effect35_run_orbiter_4(s32 reset)
         return 0;
     }
 
-    g_wmap_effect35_orbiter_4_steps[g_wmap_effect35_orbiter_4_step]();
+    PS1_CALL(g_wmap_effect35_orbiter_4_steps[g_wmap_effect35_orbiter_4_step])();
     return 1;
 }
 
@@ -2332,7 +2334,7 @@ static s32 wmap_effect35_run_orbiter_5(s32 reset)
         return 0;
     }
 
-    g_wmap_effect35_orbiter_5_steps[g_wmap_effect35_orbiter_5_step]();
+    PS1_CALL(g_wmap_effect35_orbiter_5_steps[g_wmap_effect35_orbiter_5_step])();
     return 1;
 }
 
@@ -2398,7 +2400,7 @@ static s32 wmap_effect35_run_orbiter_6(s32 reset)
         return 0;
     }
 
-    g_wmap_effect35_orbiter_6_steps[g_wmap_effect35_orbiter_6_step]();
+    PS1_CALL(g_wmap_effect35_orbiter_6_steps[g_wmap_effect35_orbiter_6_step])();
     return 1;
 }
 
@@ -2464,7 +2466,7 @@ static s32 wmap_effect35_run_orbiter_7(s32 reset)
         return 0;
     }
 
-    g_wmap_effect35_orbiter_7_steps[g_wmap_effect35_orbiter_7_step]();
+    PS1_CALL(g_wmap_effect35_orbiter_7_steps[g_wmap_effect35_orbiter_7_step])();
     return 1;
 }
 
@@ -2530,7 +2532,7 @@ static s32 wmap_effect35_run_emitter_a(s32 reset)
         return 0;
     }
 
-    g_wmap_effect35_emitter_a_steps[g_wmap_effect35_emitter_a_step]();
+    PS1_CALL(g_wmap_effect35_emitter_a_steps[g_wmap_effect35_emitter_a_step])();
     return 1;
 }
 
@@ -2605,7 +2607,7 @@ static s32 wmap_effect35_run_emitter_b(s32 reset)
         return 0;
     }
 
-    g_wmap_effect35_emitter_b_steps[g_wmap_effect35_emitter_b_step]();
+    PS1_CALL(g_wmap_effect35_emitter_b_steps[g_wmap_effect35_emitter_b_step])();
     return 1;
 }
 

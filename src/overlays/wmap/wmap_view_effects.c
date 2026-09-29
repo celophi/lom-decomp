@@ -152,7 +152,7 @@ typedef union
 
 extern u32 g_wmap_view_sequence_step;
 extern s32 g_wmap_view_sequence_timer;
-extern void (*g_wmap_view_sequence_steps[])(void);
+extern WmapStepHandlerSlot g_wmap_view_sequence_steps[];
 extern s32 D_80182D88;
 
 extern s32 g_wmap_map_shadow_level;
@@ -222,7 +222,7 @@ s32 wmap_run_view_sequence(s32 initialize)
 
     if (g_wmap_view_sequence_step < 2)
     {
-        g_wmap_view_sequence_steps[g_wmap_view_sequence_step]();
+        PS1_CALL(g_wmap_view_sequence_steps[g_wmap_view_sequence_step])();
         result = 1;
     }
     else

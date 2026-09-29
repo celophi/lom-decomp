@@ -300,10 +300,14 @@ typedef struct FieldSpawnParams
 } FieldSpawnParams;
 
 typedef void (*FieldCommandHandler)(s32 command, void* params);
+/** @brief Stored address of a FieldCommandHandler, as the disc table holds it. */
+typedef PS1_CODE(FieldCommandHandler) FieldCommandHandlerSlot;
 typedef void (*FieldRecordQuery)(FieldRecordDistanceList* list, FieldStatusRecord* source, FieldRecordQueryParams* params);
+/** @brief Stored address of a FieldRecordQuery, as the disc table holds it. */
+typedef PS1_CODE(FieldRecordQuery) FieldRecordQuerySlot;
 
-extern FieldCommandHandler g_field_script_commands[FIELD_SCRIPT_COMMAND_COUNT];
-extern FieldRecordQuery g_field_record_queries[];
+extern FieldCommandHandlerSlot g_field_script_commands[FIELD_SCRIPT_COMMAND_COUNT];
+extern FieldRecordQuerySlot g_field_record_queries[];
 
 extern FieldRuntimeContextPtr g_field_runtime;
 extern FieldBattleContextPtr g_field_battle;
@@ -335,7 +339,7 @@ void field_script_command(s32 command, void* params)
 {
     if (command < FIELD_SCRIPT_COMMAND_COUNT)
     {
-        g_field_script_commands[command](command, params);
+        PS1_CALL(g_field_script_commands[command])(command, params);
         return;
     }
     record_game_diagnostic(DIAG_ERROR, DIAG_BAD_SCRIPT_COMMAND, command, 0);
@@ -656,7 +660,7 @@ void field_command_query_records(s32 command, FieldRecordQueryParams* params)
     {
         source = field_find_status_record(g_field_script->status.owner_id);
     }
-    g_field_record_queries[params->query & FIELD_RECORD_QUERY_INDEX_MASK](&list, source, params);
+    PS1_CALL(g_field_record_queries[params->query & FIELD_RECORD_QUERY_INDEX_MASK])(&list, source, params);
 
     if (list.count != 0)
     {

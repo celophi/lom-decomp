@@ -35,6 +35,8 @@ typedef struct
 
 /** @brief Predicate for a source actor, candidate actor and caller argument. */
 typedef s32 (*FieldTargetFilter)(FieldActor* source, FieldActor* candidate, s32 argument);
+/** @brief Stored address of a FieldTargetFilter, as the disc table holds it. */
+typedef PS1_CODE(FieldTargetFilter) FieldTargetFilterSlot;
 
 /** @brief Binding state and its owning actor in a 0x1C-byte record. */
 typedef struct
@@ -45,7 +47,7 @@ typedef struct
     u8 pad10[12];
 } FieldTargetBinding;
 
-extern FieldTargetFilter g_field_target_filters[];
+extern FieldTargetFilterSlot g_field_target_filters[];
 extern s32 g_field_active_group;
 extern FieldTargetBinding g_field_actor_bindings[];
 extern s32 g_field_duel_mode;
@@ -367,7 +369,7 @@ s32 field_collect_action_targets(s32 source_index, FieldTargetSpec* spec, s32 gr
         {
             continue;
         }
-        if (g_field_target_filters[spec->filter](&g_field_actors[source_index], &g_field_actors[index], filter_arg) != 0)
+        if (PS1_CALL(g_field_target_filters[spec->filter])(&g_field_actors[source_index], &g_field_actors[index], filter_arg) != 0)
         {
             for (prior = 0; prior < count; prior++)
             {

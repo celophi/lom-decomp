@@ -39,10 +39,12 @@
 
 /** @brief Drop handler (g_field_drop_handlers): returns the FieldPickupAction the defeated monster leaves. */
 typedef s32 (*FieldDropHandler)(s32 handler, s32 value, FieldStatusRecord* record);
+/** @brief Stored address of a FieldDropHandler, as the disc table holds it. */
+typedef PS1_CODE(FieldDropHandler) FieldDropHandlerSlot;
 
 FieldActorRecord* field_find_actor_record_or_default(s32 id);
 
-extern FieldDropHandler g_field_drop_handlers[FIELD_DROP_HANDLER_COUNT];
+extern FieldDropHandlerSlot g_field_drop_handlers[FIELD_DROP_HANDLER_COUNT];
 /** @brief Drop slots taking part in the drop roll, per 16 monster levels. */
 extern u8 g_field_drop_slots_by_level[];
 extern FieldBattleContextPtr g_field_battle;
@@ -92,7 +94,7 @@ s32 field_roll_defeat_drop(FieldStatusRecord* record)
     template = record->template;
     if (template->drops[slot].handler < FIELD_DROP_HANDLER_COUNT)
     {
-        return g_field_drop_handlers[template->drops[slot].handler](template->drops[slot].handler, template->drops[slot].value, record);
+        return PS1_CALL(g_field_drop_handlers[template->drops[slot].handler])(template->drops[slot].handler, template->drops[slot].value, record);
     }
     return -1;
 }

@@ -76,7 +76,7 @@ extern s32 D_8013B20C;
 extern u32 g_wmap_land_entry_step;
 extern u32 g_wmap_land_focus_step;
 extern s32 g_wmap_land_focus_timer;
-extern void (*g_wmap_land_focus_steps[WMAP_LAND_FOCUS_STEPS])(void);
+extern WmapStepHandlerSlot g_wmap_land_focus_steps[WMAP_LAND_FOCUS_STEPS];
 extern s32 D_8011D4FC;
 extern s32 D_80182E34;
 extern s32 D_800DBE70;
@@ -107,10 +107,10 @@ extern VECTOR D_8011CF60;
 extern WmapCoordinatePair g_wmap_focus_screen_position;
 extern SVECTOR g_wmap_camera_rotation;
 extern s32 g_wmap_land_entry_timer;
-extern void (*g_wmap_land_entry_steps[WMAP_LAND_ENTRY_STEPS])(void);
+extern WmapStepHandlerSlot g_wmap_land_entry_steps[WMAP_LAND_ENTRY_STEPS];
 extern u32 g_wmap_land_return_step;
 extern s32 g_wmap_land_return_timer;
-extern void (*g_wmap_land_return_steps[WMAP_LAND_RETURN_STEPS])(void);
+extern WmapStepHandlerSlot g_wmap_land_return_steps[WMAP_LAND_RETURN_STEPS];
 extern s32 g_wmap_vehicle_cell_x;
 extern s32 g_wmap_vehicle_cell_y;
 extern s32 g_wmap_view_scroll_mode;
@@ -193,7 +193,7 @@ s32 wmap_run_land_focus(s32 reset)
 
     if (g_wmap_land_focus_step < WMAP_LAND_FOCUS_STEPS)
     {
-        g_wmap_land_focus_steps[g_wmap_land_focus_step]();
+        PS1_CALL(g_wmap_land_focus_steps[g_wmap_land_focus_step])();
         result = 1;
     }
     else
@@ -617,7 +617,7 @@ s32 wmap_run_land_entry(s32 reset)
 
     if (g_wmap_land_entry_step < WMAP_LAND_ENTRY_STEPS)
     {
-        g_wmap_land_entry_steps[g_wmap_land_entry_step]();
+        PS1_CALL(g_wmap_land_entry_steps[g_wmap_land_entry_step])();
         result = 1;
     }
     else
@@ -674,7 +674,7 @@ static s32 wmap_run_land_return(s32 reset)
 
     if (g_wmap_land_return_step < WMAP_LAND_RETURN_STEPS)
     {
-        g_wmap_land_return_steps[g_wmap_land_return_step]();
+        PS1_CALL(g_wmap_land_return_steps[g_wmap_land_return_step])();
         result = 1;
     }
     else

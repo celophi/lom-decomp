@@ -24,6 +24,38 @@ void field_script_op_00(void)
 
 void akao_seq_op_set_pitch_jitter_depth(AkaoChannelState* channel);
 
+/** @brief Test handler reached through a stored code address. */
+typedef s32 (*TestCalcOp)(s32 left, s32 right);
+/** @brief Stored address of a TestCalcOp. */
+typedef PS1_CODE(TestCalcOp) TestCalcOpSlot;
+
+/** @brief PS1 address the test resolver maps to test_calc_add. */
+#define TEST_CALC_ADD_ADDRESS 0x800BFD18U
+
+static u32 g_test_resolved_address;
+
+/**
+ * @brief Add two values; the target of the test slot.
+ * @param left First value.
+ * @param right Second value.
+ * @return The sum.
+ */
+static s32 test_calc_add(s32 left, s32 right)
+{
+    return left + right;
+}
+
+/**
+ * @brief Test resolver: map the one known address, and record what was asked.
+ * @param address PS1 code address read from a slot.
+ * @return The host function, or null for an unknown address.
+ */
+Ps1CodeFunc ps1_resolve_code(u32 address)
+{
+    g_test_resolved_address = address;
+    return address == TEST_CALC_ADD_ADDRESS ? (Ps1CodeFunc)test_calc_add : 0;
+}
+
 /**
  * @brief Test implicit widening, storage, arithmetic, tables and game consumers.
  * @param storage Writable mapped RAM whose address has bit 31 set.
@@ -40,6 +72,7 @@ int ps1_test_pointer_ops(void* storage)
     FieldScriptRecordState* frame = (FieldScriptRecordState*)(bytes + 0x200);
     AkaoChannelState* channel = (AkaoChannelState*)(bytes + 0x300);
     AkaoCommandParam command;
+    TestCalcOpSlot code_table[2] = {{0x80010000U}, {TEST_CALC_ADD_ADDRESS}};
     __UINTPTR_TYPE__ address = (__UINTPTR_TYPE__)bytes;
 
     CHECK(address >= 0x80000000U && address < 0xFFFFF000U);
@@ -95,6 +128,10 @@ int ps1_test_pointer_ops(void* storage)
     field_script_branch(1);
     CHECK(frame->pc == bytes + 3);
     CHECK(frame->flags == 0xA5A55A5A && frame->wait.word == 0x12345678);
+
+    CHECK(sizeof(code_table) == 8);
+    CHECK(PS1_CALL(code_table[1])(20, 22) == 42);
+    CHECK(g_test_resolved_address == TEST_CALC_ADD_ADDRESS);
 
     channel->seq_cursor = bytes;
     channel->loop_cursor[0] = bytes + 8;

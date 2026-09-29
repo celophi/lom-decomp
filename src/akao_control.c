@@ -24,7 +24,12 @@
 extern s32 D_8003EC34[];
 extern u8 g_akao_silent_sequence[];
 extern AkaoCommandParam g_akao_dispatch_params[6];
-extern void (*g_akao_command_handlers[256])(AkaoCommandParam*);
+/** @brief Handler of one AKAO command, indexed by opcode. */
+typedef void (*AkaoCommandHandler)(AkaoCommandParam* params);
+/** @brief Stored address of a AkaoCommandHandler, as the disc table holds it. */
+typedef PS1_CODE(AkaoCommandHandler) AkaoCommandHandlerSlot;
+
+extern AkaoCommandHandlerSlot g_akao_command_handlers[256];
 
 void akao_channel_set_articulation(AkaoChannelState* channel, s32 articulation_index);
 u32 akao_collect_voice_mask(AkaoChannelState* channels, s32 channel_mask);
@@ -2580,14 +2585,14 @@ s32 akao_send_command(u32 opcode)
 
     case 0xD8:
         params[0].value = g_akao_cmd_params[0].value;
-        g_akao_command_handlers[0xD0](params);
+        PS1_CALL(g_akao_command_handlers[0xD0])(params);
         opcode = 0xD4;
         break;
 
     case 0xD9:
         params[0].value = g_akao_cmd_params[0].value;
         params[1].value = g_akao_cmd_params[1].value;
-        g_akao_command_handlers[0xD1](params);
+        PS1_CALL(g_akao_command_handlers[0xD1])(params);
         opcode = 0xD5;
         break;
 
@@ -2595,19 +2600,19 @@ s32 akao_send_command(u32 opcode)
         params[0].value = g_akao_cmd_params[0].value;
         params[1].value = g_akao_cmd_params[1].value;
         params[2].value = g_akao_cmd_params[2].value;
-        g_akao_command_handlers[0xD2](params);
+        PS1_CALL(g_akao_command_handlers[0xD2])(params);
         opcode = 0xD6;
         break;
 
     case 0x99:
-        g_akao_command_handlers[0x9B](params);
-        g_akao_command_handlers[0x9D](params);
+        PS1_CALL(g_akao_command_handlers[0x9B])(params);
+        PS1_CALL(g_akao_command_handlers[0x9D])(params);
         opcode = 0x9F;
         break;
 
     case 0x98:
-        g_akao_command_handlers[0x9A](params);
-        g_akao_command_handlers[0x9C](params);
+        PS1_CALL(g_akao_command_handlers[0x9A])(params);
+        PS1_CALL(g_akao_command_handlers[0x9C])(params);
         opcode = 0x9E;
         break;
 
@@ -2621,7 +2626,7 @@ s32 akao_send_command(u32 opcode)
         break;
     }
 
-    g_akao_command_handlers[opcode](params);
+    PS1_CALL(g_akao_command_handlers[opcode])(params);
     EnableEvent(g_akao_rcnt2_event);
     return result;
 }

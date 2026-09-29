@@ -34,6 +34,7 @@ the assembly macros.
 | `u_long_ptr` | Psy-Q `u_long` |
 | `<Type>Ptr` | A structure, declared next to the type it points at |
 | `<Type>TablePtr` | A stored address of a table of `<Type>Ptr` slots |
+| `<Type>Slot` | A stored PS1 code address of a `<Type>` function |
 
 With the PS1 compiler, each of these is just the original pointer type.
 
@@ -145,6 +146,49 @@ on the PS1, and the host's pointer width on a native build. Use it for this
 kind of arithmetic instead of `s32`. If a field or table really just holds an
 address, give it one of the stored-pointer types instead of an integer.
 
+### Tables of function addresses
+
+The game also keeps tables of functions to call: script opcode handlers, AKAO
+sequence commands, WMAP sequence steps and so on. Those tables come from the
+disc, so what they hold are PS1 code addresses. A native build can't jump to
+`0x800BFD18`; it has to look up which of its own functions that address means.
+
+Each function type gets a `Slot` typedef right after it, built with
+`PS1_CODE(type)`. The table is declared with the slot type, and
+`PS1_CALL(slot)` calls through an entry:
+
+```c
+typedef s32 (*FieldScriptCalcOp)(s32 left, s32 right);
+typedef PS1_CODE(FieldScriptCalcOp) FieldScriptCalcOpSlot;
+
+extern FieldScriptCalcOpSlot g_field_script_calc_ops[FIELD_SCRIPT_CALC_OP_COUNT];
+
+return PS1_CALL(g_field_script_calc_ops[op])(left, right);
+```
+
+That keeps `PS1_CODE` out of the declarations, the same way the `<Type>Ptr`
+aliases keep `PS1_PTR32` out of them. The name ends in `Slot` rather than
+`Ptr` because on a native build it isn't a pointer you can call; it's a PS1
+address waiting to be looked up.
+
+For the PS1 compiler, `PS1_CODE(type)` is just `type` and `PS1_CALL` is just
+the slot, so this is exactly the original declaration and call. With
+`PS1_32BIT_STORAGE` the slot becomes a four-byte PS1 address, and the call goes
+through `ps1_resolve_code(address)`, which the native build has to provide. It
+should map every address it knows to a host function, and fail loudly on one it
+doesn't, instead of quietly skipping the call.
+
+The native slot also remembers its function type, so `PS1_CALL` doesn't need
+to be told what it's calling. The arguments are checked against the handler's
+real prototype, and handing `PS1_CALL` something that isn't a slot, like a
+plain function pointer, is a compile error. One catch: every `PS1_CODE`
+expansion is a separate type on a native build, so if a table is declared in
+two places, both have to use the same `Slot` typedef.
+
+Only use these for tables whose contents come from the disc. A table the C
+code fills in itself, like WMAP's `g_wmap_callbacks`, holds real function
+pointers on any build.
+
 ## What this covers, and what it doesn't
 
 So far the stored pointers in AKAO, FIELD (scripts, text, actors and
@@ -171,8 +215,15 @@ A few things the types can't do for you:
 
 Roughly, the pieces are:
 
-1. Build the game sources with Clang, `-DPS1_32BIT_STORAGE` and
-   `-fms-extensions`.
+1. Build the game sources with Clang and these flags:
+
+   | Flag | Why |
+   | --- | --- |
+   | `-DPS1_32BIT_STORAGE -fms-extensions` | Keeps stored pointers four bytes, as described above. |
+   | `-std=gnu89` (or `-fgnu89-inline` with a newer standard) | The code follows GCC 2.x's `inline` rules, and C99/C11 reverse them. Under C11, a plain `inline` function defined in a `.c` file never gets an out-of-line copy (callers in other files fail to link), and an `extern inline` header copy becomes a real definition. The JP build's `field_get_held_action_buttons`, for example, has an inline copy in `field_held_action_buttons.h` and a normal one in `field_actor_input_actions.c`; C11 would see two definitions. |
+   | `-fno-strict-aliasing` | The game reads the same memory through different types all over the place (a word read of a packed record, byte access to a struct). Strict aliasing lets the optimizer reorder or drop those accesses. |
+   | `-fno-builtin` | The Psy-Q libraries bring their own versions of standard functions such as `memcpy`, and the game calls those. |
+
 2. Make sure `ps1_types.h` is included everywhere. If your build replaces
    `common.h` with its own shim (for example by defining `_COMMON_H`), you lose
    the include that comes with it, so force-include `ps1_types.h` instead.

@@ -190,6 +190,8 @@ enum
 
 /** @brief Handler of a pair opcode: the two decoded operands. */
 typedef void (*FieldDispatchFn)(s32, s32);
+/** @brief Stored address of a FieldDispatchFn, as the disc table holds it. */
+typedef PS1_CODE(FieldDispatchFn) FieldDispatchFnSlot;
 
 /** @brief Decoded operands of opcode 0x1D. */
 typedef struct
@@ -257,9 +259,14 @@ typedef struct
 } FieldItemResource;
 
 /* Opcodes below 0x40 dispatch through this table, indexed by opcode. */
-extern void (*g_field_script_op_table[])();
+/** @brief Handler of one script opcode. */
+typedef void (*FieldScriptOp)();
+/** @brief Stored address of a FieldScriptOp, as the disc table holds it. */
+typedef PS1_CODE(FieldScriptOp) FieldScriptOpSlot;
+
+extern FieldScriptOpSlot g_field_script_op_table[];
 /* Opcodes 0x40 to 0x5F dispatch through this table, indexed by opcode - 0x40. */
-extern FieldDispatchFn g_field_script_pair_op_table[];
+extern FieldDispatchFnSlot g_field_script_pair_op_table[];
 
 extern FieldRuntimeContextPtr g_field_runtime;
 extern FieldBattleContextPtr g_field_battle;
@@ -363,7 +370,7 @@ void field_script_run(FieldScriptContext* context)
                 opcode = *pc;
                 if (opcode < FIELD_SCRIPT_PAIR_OP_BASE)
                 {
-                    g_field_script_op_table[*pc]();
+                    PS1_CALL(g_field_script_op_table[*pc])();
                 }
                 else if (opcode >= FIELD_SCRIPT_PAIR_OP_BASE && opcode < FIELD_SCRIPT_EXT_OP_BASE)
                 {
@@ -415,7 +422,7 @@ static void field_script_dispatch_pair_op(void)
     second_type = types >> 4;
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_decode_operand(types & 0xF, pc + 2, &first);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_decode_operand(second_type, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &second);
-    g_field_script_pair_op_table[index](first, second);
+    PS1_CALL(g_field_script_pair_op_table[index])(first, second);
 }
 
 /**
@@ -447,7 +454,7 @@ static void field_script_dispatch_ext_op(void)
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_decode_operand(type1, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &operand1);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_decode_operand(type2, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &operand2);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_decode_operand(type3, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &operand3);
-    g_field_script_ext_op_table[index](operand0, operand1, operand2, operand3);
+    PS1_CALL(g_field_script_ext_op_table[index])(operand0, operand1, operand2, operand3);
 }
 
 /**

@@ -57,6 +57,16 @@ def main() -> int:
         if missing_flag.returncode == 0 or "requires -fms-extensions" not in missing_flag.stderr:
             raise RuntimeError("The missing -fms-extensions diagnostic was not produced")
 
+        # PS1_CALL must refuse anything that isn't a code slot, such as a plain
+        # function pointer, instead of calling it as if it were resolved.
+        not_a_slot = subprocess.run(
+            [clang, "-fms-extensions", "-DPS1_32BIT_STORAGE", "-Iinclude", "-x", "c", "-fsyntax-only", "-"],
+            cwd=ROOT, text=True, capture_output=True,
+            input='#include "ps1_types.h"\nvoid f(void (*handler)(void)) { PS1_CALL(handler)(); }\n',
+        )
+        if not_a_slot.returncode == 0:
+            raise RuntimeError("PS1_CALL accepted a plain function pointer")
+
         with tempfile.TemporaryDirectory(prefix="lom-ps1-types-") as directory:
             work = Path(directory)
             # These callers pass the address of a stored cursor through the

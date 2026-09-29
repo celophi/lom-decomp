@@ -38,7 +38,12 @@
 /** @brief Per-rule multiplier applied to the pair's quantity step. */
 extern u8 g_equipment_combination_quantity_scale[];
 /** @brief One test per combined item; index = combined item id. */
-extern s32 (*g_equipment_combination_rule_table[])(s32*);
+/** @brief One equipment combination rule; nonzero when the records combine. */
+typedef s32 (*EquipmentCombinationRule)(s32* record_indices);
+/** @brief Stored address of a EquipmentCombinationRule, as the disc table holds it. */
+typedef PS1_CODE(EquipmentCombinationRule) EquipmentCombinationRuleSlot;
+
+extern EquipmentCombinationRuleSlot g_equipment_combination_rule_table[];
 
 s32 equipment_pair_has_classes(s32 class_a, s32 class_b, s32* record_indices);
 s32 equipment_combination_variant(s32* record_indices);
@@ -184,7 +189,7 @@ s32 equipment_combination_find(s32* record_indices, s32* quantity, s32* variant)
 
     for (index = 0; index < EQUIPMENT_COMBINATION_RULE_COUNT; index++)
     {
-        if (g_equipment_combination_rule_table[index](record_indices) != 0)
+        if (PS1_CALL(g_equipment_combination_rule_table[index])(record_indices) != 0)
         {
             value = equipment_combination_variant(record_indices);
             *variant = value;

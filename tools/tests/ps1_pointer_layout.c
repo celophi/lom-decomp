@@ -31,6 +31,8 @@ CHECK_SIZE(u32_ptr, 4);
 CHECK_SIZE(s32_ptr, 4);
 CHECK_SIZE(u_long_ptr, 4);
 CHECK_SIZE(void*, 8);
+CHECK_SIZE(FieldScriptExtOpSlot, 4);
+CHECK_SIZE(g_field_script_ext_op_table, 64);
 CHECK_SIZE(g_field_script, 4);
 CHECK_SIZE(g_field_text_saved_configs, 4);
 CHECK_SIZE(g_wmap_current_frame, 4);

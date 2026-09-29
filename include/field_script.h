@@ -96,7 +96,12 @@ typedef struct
 extern FieldScriptContextPtr g_field_script;
 
 /* Opcodes 0x80 and above dispatch through this table, indexed by opcode - 0x80. */
-extern void (*g_field_script_ext_op_table[16])();
+/** @brief Handler of one extended script opcode; takes up to four operands. */
+typedef void (*FieldScriptExtOp)();
+/** @brief Stored address of a FieldScriptExtOp, as the disc table holds it. */
+typedef PS1_CODE(FieldScriptExtOp) FieldScriptExtOpSlot;
+
+extern FieldScriptExtOpSlot g_field_script_ext_op_table[16];
 
 #define FIELD_SCRIPT_RECORD(index) ((FieldScriptRecord*)((u8*)g_field_script + ((index) * 3 << 2)))
 #define FIELD_SCRIPT_RECORD_STATE(index) ((FieldScriptRecordState*)((u8*)g_field_script + ((index) * 3 << 2)))

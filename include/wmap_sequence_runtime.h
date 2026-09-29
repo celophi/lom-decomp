@@ -7,6 +7,11 @@
 /** @brief Sequence callback: nonzero initializes; zero advances one update. */
 typedef s32 (*WmapSequenceCallback)(s32 initialize);
 
+/** @brief One step of a staged sequence, run once per frame while it is current. */
+typedef void (*WmapStepHandler)(void);
+/** @brief Stored address of a WmapStepHandler, as the disc table holds it. */
+typedef PS1_CODE(WmapStepHandler) WmapStepHandlerSlot;
+
 s32 wmap_run_land_focus(s32 reset);
 void wmap_update_sequences(void);
 void wmap_start_sequence(WmapSequenceCallback callback);
