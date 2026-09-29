@@ -1357,8 +1357,8 @@ typedef struct
     u8* dst = D_800D9370 + 0x2C;
     u8* tbl = D_80139988;
 
-    *(u8**)&tbl[0x34] = D_8011F538;
-    *(u8**)&tbl[0x3C] = D_8011F538;
+    *(u8_ptr*)&tbl[0x34] = D_8011F538;
+    *(u8_ptr*)&tbl[0x3C] = D_8011F538;
     src[0x6] = 0xF;
     *(s16*)&src[0xE] = 2;
     *(s16*)&src[0x10] = -1;
@@ -1483,8 +1483,8 @@ typedef struct
     u8* dst = D_800D93C8 + 0x2C;
     u8* tbl = D_80139988;
 
-    *(u8**)&tbl[0x44] = D_8011F538;
-    *(u8**)&tbl[0x4C] = D_8011F538;
+    *(u8_ptr*)&tbl[0x44] = D_8011F538;
+    *(u8_ptr*)&tbl[0x4C] = D_8011F538;
     src[0x6] = 0xF;
     *(s16*)&src[0xE] = 2;
     *(s16*)&src[0x10] = -1;
@@ -1605,8 +1605,8 @@ typedef struct
     u8* dst = D_800D9420 + 0x2C;
     u8* tbl = D_80139988;
 
-    *(u8**)&tbl[0x54] = D_8011F538;
-    *(u8**)&tbl[0x5C] = D_8011F538;
+    *(u8_ptr*)&tbl[0x54] = D_8011F538;
+    *(u8_ptr*)&tbl[0x5C] = D_8011F538;
     src[0x6] = 0xF;
     *(s16*)&src[0xE] = 2;
     *(s16*)&src[0x10] = -1;
@@ -1727,8 +1727,8 @@ typedef struct
     u8* dst = D_800D9478 + 0x2C;
     u8* tbl = D_80139988;
 
-    *(u8**)&tbl[0x64] = D_8011F538;
-    *(u8**)&tbl[0x6C] = D_8011F538;
+    *(u8_ptr*)&tbl[0x64] = D_8011F538;
+    *(u8_ptr*)&tbl[0x6C] = D_8011F538;
     src[0x6] = 0xF;
     *(s16*)&src[0xE] = 2;
     *(s16*)&src[0x10] = -1;

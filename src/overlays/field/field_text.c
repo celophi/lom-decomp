@@ -139,7 +139,7 @@
 /**
  * @brief Address of the cache word at @p byte_offset within a cache @p row.
  */
-#define FIELD_TEXT_CACHE_WORD(row, byte_offset) ((u16*)((byte_offset) + (s32)(row)))
+#define FIELD_TEXT_CACHE_WORD(row, byte_offset) ((u16*)((byte_offset) + (host_uintptr)(row)))
 
 /** @brief Modes in the low three bits of a runtime window's flags. */
 typedef enum

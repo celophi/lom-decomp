@@ -71,7 +71,6 @@ typedef struct ItemActionRow
 } ItemActionRow;
 
 extern FieldBattleContextPtr g_field_battle;
-extern FieldActionBank* g_field_action_bank;
 
 static FieldActionDescriptor *field_command_action_descriptor(s32 command);
 

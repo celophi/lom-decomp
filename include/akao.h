@@ -134,6 +134,9 @@ typedef struct AkaoHeader
     AkaoTimeStamp timestamp;
 } AkaoHeader;
 
+/** @brief Stored pointer to an AkaoHeader. */
+typedef AkaoHeader* PS1_PTR32 AkaoHeaderPtr;
+
 /**
  * @brief Header of an AKAO instrument bank (e.g. the EFFECT.SET fragments).
  *
@@ -305,9 +308,9 @@ typedef struct AkaoChannelState
     u8_ptr loop_cursor[4];         /**< Loop start of each loop-stack level. */
     u8_ptr return_cursor;          /**< Return address of a subroutine call (ext ops FE 0E/0F). */
     u32 key_map;                /**< Selected key-to-articulation map (ext op FE 14). */
-    s32 pitch_lfo_cursor;       /**< Pitch LFO waveform position. */
-    u32 volume_lfo_cursor;      /**< Volume LFO waveform position. */
-    s32 pan_lfo_cursor;         /**< Pan LFO waveform position. */
+    u8_ptr pitch_lfo_cursor;    /**< Pitch LFO waveform position. */
+    u8_ptr volume_lfo_cursor;   /**< Volume LFO waveform position. */
+    u8_ptr pan_lfo_cursor;      /**< Pan LFO waveform position. */
     u32 sfx_tag;                /**< SFX: caller tag given to akao_play_sfx; also holds AKAO_SFX_FLAG_SUPPRESS. */
     s32 pitch;                  /**< Current SPU pitch (akao_compute_pitch result). */
     s32 pitch_slide_acc;        /**< Fractional part of the pitch slide. */

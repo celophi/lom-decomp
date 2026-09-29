@@ -660,13 +660,13 @@ void akao_update_sequence_channel_voice(AkaoChannelState* channel, s32 channel_m
                     lfo_cursor = (AkaoLfoSample*)channel->pitch_lfo_cursor;
                     if ((lfo_cursor->sample == 0) && (lfo_cursor->marker == 0))
                     {
-                        channel->pitch_lfo_cursor = (s32)(((u8*)lfo_cursor) + (lfo_cursor->relative_offset * 2));
+                        channel->pitch_lfo_cursor = (u8*)lfo_cursor + lfo_cursor->relative_offset * 2;
                     }
 
                     lfo_samples = (s16*)channel->pitch_lfo_cursor;
                     waveform_sample = *lfo_samples++;
                     effect_value = (channel->pitch_lfo_depth_scaled * waveform_sample) >> 16;
-                    channel->pitch_lfo_cursor = (s32)lfo_samples;
+                    channel->pitch_lfo_cursor = (u8*)lfo_samples;
                 }
                 if (effect_value != channel->pitch_lfo_value)
                 {
@@ -696,14 +696,14 @@ void akao_update_sequence_channel_voice(AkaoChannelState* channel, s32 channel_m
                     lfo_cursor = (AkaoLfoSample*)channel->volume_lfo_cursor;
                     if ((lfo_cursor->sample == 0) && (lfo_cursor->marker == 0))
                     {
-                        channel->volume_lfo_cursor = (u32)(((u8*)lfo_cursor) + (lfo_cursor->relative_offset * 2));
+                        channel->volume_lfo_cursor = (u8*)lfo_cursor + lfo_cursor->relative_offset * 2;
                     }
 
                     effect_value = (scaled_volume * (channel->volume_lfo_depth >> 8) << 9) >> 16;
                     lfo_samples = (s16*)channel->volume_lfo_cursor;
                     waveform_sample = *lfo_samples++;
                     effect_value = (effect_value * waveform_sample) >> 15;
-                    channel->volume_lfo_cursor = (u32)lfo_samples;
+                    channel->volume_lfo_cursor = (u8*)lfo_samples;
                 }
                 if (effect_value != channel->volume_lfo_value)
                 {
@@ -727,13 +727,13 @@ void akao_update_sequence_channel_voice(AkaoChannelState* channel, s32 channel_m
                 lfo_cursor = (AkaoLfoSample*)channel->pan_lfo_cursor;
                 if ((lfo_cursor->sample == 0) && (lfo_cursor->marker == 0))
                 {
-                    channel->pan_lfo_cursor = (s32)(((u8*)lfo_cursor) + (lfo_cursor->relative_offset * 2));
+                    channel->pan_lfo_cursor = (u8*)lfo_cursor + lfo_cursor->relative_offset * 2;
                 }
 
                 lfo_samples = (s16*)channel->pan_lfo_cursor;
                 waveform_sample = *lfo_samples++;
                 effect_value = ((channel->pan_lfo_depth >> 8) * waveform_sample) >> 15;
-                channel->pan_lfo_cursor = (s32)lfo_samples;
+                channel->pan_lfo_cursor = (u8*)lfo_samples;
             }
             if (effect_value != channel->pan_lfo_value)
             {
@@ -839,13 +839,13 @@ void akao_update_sfx_channel_voice(AkaoChannelState* channel, s32 channel_mask)
                 lfo_cursor = (AkaoLfoSample*)channel->pitch_lfo_cursor;
                 if ((lfo_cursor->sample == 0) && (lfo_cursor->marker == 0))
                 {
-                    channel->pitch_lfo_cursor = (s32)(((u8*)lfo_cursor) + (lfo_cursor->relative_offset * 2));
+                    channel->pitch_lfo_cursor = (u8*)lfo_cursor + lfo_cursor->relative_offset * 2;
                 }
 
                 lfo_samples = (s16*)channel->pitch_lfo_cursor;
                 waveform_sample = *lfo_samples++;
                 effect_value = (channel->pitch_lfo_depth_scaled * waveform_sample) >> 16;
-                channel->pitch_lfo_cursor = (s32)lfo_samples;
+                channel->pitch_lfo_cursor = (u8*)lfo_samples;
             }
             if (effect_value != channel->pitch_lfo_value)
             {
@@ -872,14 +872,14 @@ void akao_update_sfx_channel_voice(AkaoChannelState* channel, s32 channel_mask)
                 lfo_cursor = (AkaoLfoSample*)channel->volume_lfo_cursor;
                 if ((lfo_cursor->sample == 0) && (lfo_cursor->marker == 0))
                 {
-                    channel->volume_lfo_cursor = (u32)(((u8*)lfo_cursor) + (lfo_cursor->relative_offset * 2));
+                    channel->volume_lfo_cursor = (u8*)lfo_cursor + lfo_cursor->relative_offset * 2;
                 }
 
                 effect_value = (scaled_volume * (channel->volume_lfo_depth >> 8) << 9) >> 16;
                 lfo_samples = (s16*)channel->volume_lfo_cursor;
                 waveform_sample = *lfo_samples++;
                 effect_value = (effect_value * waveform_sample) >> 15;
-                channel->volume_lfo_cursor = (u32)lfo_samples;
+                channel->volume_lfo_cursor = (u8*)lfo_samples;
             }
             if (effect_value != channel->volume_lfo_value)
             {
@@ -902,13 +902,13 @@ void akao_update_sfx_channel_voice(AkaoChannelState* channel, s32 channel_mask)
                 lfo_cursor = (AkaoLfoSample*)channel->pan_lfo_cursor;
                 if ((lfo_cursor->sample == 0) && (lfo_cursor->marker == 0))
                 {
-                    channel->pan_lfo_cursor = (s32)(((u8*)lfo_cursor) + (lfo_cursor->relative_offset * 2));
+                    channel->pan_lfo_cursor = (u8*)lfo_cursor + lfo_cursor->relative_offset * 2;
                 }
 
                 lfo_samples = (s16*)channel->pan_lfo_cursor;
                 waveform_sample = *lfo_samples++;
                 effect_value = ((channel->pan_lfo_depth >> 8) * waveform_sample) >> 15;
-                channel->pan_lfo_cursor = (s32)lfo_samples;
+                channel->pan_lfo_cursor = (u8*)lfo_samples;
             }
             if (effect_value != channel->pan_lfo_value)
             {

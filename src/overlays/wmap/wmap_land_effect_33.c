@@ -792,7 +792,7 @@ void func_800B7420(void);
         config_offset += 0x14;
         index++;
         *config_entry = 0;
-        *(u8**)(screen_entry + 4) = resource;
+        *(u8_ptr*)(screen_entry + 4) = resource;
     } while (index < 34);
 
     D_801B31FC = 102;
@@ -1439,7 +1439,7 @@ void func_800B7420(void);
         config_offset += 0x14;
         index++;
         *config_entry = 0;
-        *(u8**)(screen_entry + 4) = resource;
+        *(u8_ptr*)(screen_entry + 4) = resource;
     } while (index < 40);
 
     D_801B3204 = 120;

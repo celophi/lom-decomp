@@ -36,11 +36,19 @@ typedef signed short s16;
 #define PS1_PTR32 __ptr32 __uptr
 typedef unsigned int u_long;
 typedef int Ps1Long;
+typedef __UINTPTR_TYPE__ host_uintptr;
 #else
 #define PS1_PTR32
 typedef unsigned long u_long;
 typedef long Ps1Long;
+typedef u32 host_uintptr;
 #endif
+
+/*
+ * host_uintptr is an unsigned integer as wide as an ordinary pointer: u32 on
+ * the PS1, the host's pointer width on native builds. Use it where the code
+ * does address arithmetic on an integer, instead of narrowing through s32.
+ */
 
 /** @brief Stored pointers; native loads zero-extend the four-byte address. */
 typedef void* PS1_PTR32 void_ptr;

@@ -618,6 +618,12 @@ typedef struct FieldActionBank
     s32 table_offsets[4];
 } FieldActionBank;
 
+/** @brief Stored pointer to a FieldActionBank. */
+typedef FieldActionBank* PS1_PTR32 FieldActionBankPtr;
+
+/** @brief Action bank in use; points at g_field_default_action_bank. */
+extern FieldActionBankPtr g_field_action_bank;
+
 /** @brief Size of one party member's script page. */
 #define FIELD_PARTY_SCRIPT_PAGE_SIZE 0x1000
 

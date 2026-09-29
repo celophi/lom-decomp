@@ -132,6 +132,19 @@ the caller passes the address of `FieldRenderHalf.primitive_cursor`, which is a
 stored field. Their local packet pointers are still plain `u8*`, and the
 allocation helpers that take the address of a local cursor still use `u8**`.
 
+### Addresses held in integers
+
+Some code does its address arithmetic on integers. The FIELD text cache, for
+example, adds a byte offset to a row address. On the PS1 an `s32` is as wide as
+a pointer, but on a 64-bit build casting a pointer to `s32` cuts it in half,
+and casting a negative `s32` back sign-extends it. PS1 addresses start at
+`0x80000000`, so every one of them is negative as an `s32`.
+
+`host_uintptr` is an unsigned integer as wide as an ordinary pointer: a `u32`
+on the PS1, and the host's pointer width on a native build. Use it for this
+kind of arithmetic instead of `s32`. If a field or table really just holds an
+address, give it one of the stored-pointer types instead of an integer.
+
 ## What this covers, and what it doesn't
 
 So far the stored pointers in AKAO, FIELD (scripts, text, actors and

@@ -247,7 +247,7 @@ void func_8006A2FC(void* arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4_value, s32
                     break;
                 }
                 resource_offset = i * 8;
-                offsets = *(s16**)(resource_offset + arg1 + 4);
+                offsets = *(s16_ptr*)(resource_offset + arg1 + 4);
                 data = (u8*)offsets;
                 if (actor->previous_sequence != actor->sequence)
                 {
@@ -400,8 +400,8 @@ void func_8006A9C4(s32 actor_address, s32 resource_address, s32 first, s32 end, 
                     sequence_offset = *(s16 *)((M2C_FIELD(actor, s16 *, 0xE) * 2) + animation_address);
                     M2C_FIELD(actor, s16 *, 0x20) = 1;
                     sequence_cursor = animation_address + sequence_offset;
-                    M2C_FIELD(actor, void **, 0x18) = sequence_cursor;
-                    M2C_FIELD(actor, void **, 0x14) = sequence_cursor;
+                    M2C_FIELD(actor, void_ptr *, 0x18) = sequence_cursor;
+                    M2C_FIELD(actor, void_ptr *, 0x14) = sequence_cursor;
                 }
                 if (M2C_FIELD(actor, s16 *, 0x20) != sequence_end)
                 {
@@ -409,17 +409,17 @@ void func_8006A9C4(s32 actor_address, s32 resource_address, s32 first, s32 end, 
                 }
                 if (M2C_FIELD(actor, s16 *, 0x20) == 0)
                 {
-                    cursor = M2C_FIELD(actor, void **, 0x14);
+                    cursor = M2C_FIELD(actor, void_ptr *, 0x14);
                     animation_frame = M2C_FIELD(cursor, u8 *, 0);
                     M2C_FIELD(actor, s16 *, 0x20) = (s16) M2C_FIELD(cursor, u8 *, 1);
                     if (animation_frame == sequence_end)
                     {
-                        sequence_start = M2C_FIELD(actor, void **, 0x18);
-                        M2C_FIELD(actor, void **, 0x14) = sequence_start;
+                        sequence_start = M2C_FIELD(actor, void_ptr *, 0x18);
+                        M2C_FIELD(actor, void_ptr *, 0x14) = sequence_start;
                         animation_frame = M2C_FIELD(sequence_start, u8 *, 0);
                         M2C_FIELD(actor, s16 *, 0x20) = (s16) M2C_FIELD(sequence_start, u8 *, 1);
                     }
-                    M2C_FIELD(actor, void **, 0x14) = (void *) (M2C_FIELD(actor, void **, 0x14) + 4);
+                    M2C_FIELD(actor, void_ptr *, 0x14) = (void *) (M2C_FIELD(actor, void_ptr *, 0x14) + 4);
                     M2C_FIELD(actor, s32 *, 0x1C) = (s32) (animation_address + M2C_FIELD(((animation_frame * 2) + animation_address), s16 *, 0x40));
                 }
                 wmap_draw_actor_sprite(actor, screen_position, frame, 0xA, 0);
@@ -693,8 +693,8 @@ void func_8006B328(s32 first, s32 end, s32 spawn_interval, s32 scale_override, s
                     sequence_offset = *(s16 *)((M2C_FIELD(actor, s16 *, 0xE) * 2) + address);
                     M2C_FIELD(actor, s16 *, 0x20) = 1;
                     sequence_cursor = address + sequence_offset;
-                    M2C_FIELD(actor, void **, 0x18) = sequence_cursor;
-                    M2C_FIELD(actor, void **, 0x14) = sequence_cursor;
+                    M2C_FIELD(actor, void_ptr *, 0x18) = sequence_cursor;
+                    M2C_FIELD(actor, void_ptr *, 0x14) = sequence_cursor;
                 }
                 if (M2C_FIELD(actor, s16 *, 0x20) != sequence_end)
                 {
@@ -702,17 +702,17 @@ void func_8006B328(s32 first, s32 end, s32 spawn_interval, s32 scale_override, s
                 }
                 if (M2C_FIELD(actor, s16 *, 0x20) == 0)
                 {
-                    cursor = M2C_FIELD(actor, void **, 0x14);
+                    cursor = M2C_FIELD(actor, void_ptr *, 0x14);
                     animation_frame = M2C_FIELD(cursor, u8 *, 0);
                     M2C_FIELD(actor, s16 *, 0x20) = (s16) M2C_FIELD(cursor, u8 *, 1);
                     if (animation_frame == sequence_end)
                     {
-                        sequence_start = M2C_FIELD(actor, void **, 0x18);
-                        M2C_FIELD(actor, void **, 0x14) = sequence_start;
+                        sequence_start = M2C_FIELD(actor, void_ptr *, 0x18);
+                        M2C_FIELD(actor, void_ptr *, 0x14) = sequence_start;
                         animation_frame = M2C_FIELD(sequence_start, u8 *, 0);
                         M2C_FIELD(actor, s16 *, 0x20) = (s16) M2C_FIELD(sequence_start, u8 *, 1);
                     }
-                    M2C_FIELD(actor, void **, 0x14) = (void *) (M2C_FIELD(actor, void **, 0x14) + 4);
+                    M2C_FIELD(actor, void_ptr *, 0x14) = (void *) (M2C_FIELD(actor, void_ptr *, 0x14) + 4);
                     M2C_FIELD(actor, s32 *, 0x1C) = (s32) (address + M2C_FIELD(((animation_frame * 2) + address), s16 *, 0x40));
                 }
                 gte_stsxy(&screen_position);

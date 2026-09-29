@@ -36,9 +36,9 @@ extern AkaoBankHeader g_akao_bank_staging;
 
 /* g_akao_seq_channel0, read through its fixed address. */
 #if defined(VERSION_JP)
-#define AKAO_PRIMARY_SONG (*(AkaoSongState**)0x8003EDCC)
+#define AKAO_PRIMARY_SONG (*(AkaoSongStatePtr*)0x8003EDCC)
 #else
-#define AKAO_PRIMARY_SONG (*(AkaoSongState**)0x8003EC5C)
+#define AKAO_PRIMARY_SONG (*(AkaoSongStatePtr*)0x8003EC5C)
 #endif
 
 /**

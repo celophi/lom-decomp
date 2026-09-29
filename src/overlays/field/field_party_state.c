@@ -97,7 +97,6 @@ typedef struct FieldBattleResource
 
 extern FieldBattleContextPtr g_field_battle;
 extern FieldBattleContext g_field_battle_context;
-extern FieldActionBank* g_field_action_bank;
 extern FieldActionBank g_field_default_action_bank;
 extern s32 g_field_duel_mode;
 

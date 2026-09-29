@@ -166,7 +166,7 @@ extern FieldSfxTableBuffer g_field_sfx_tables;
 extern u8 g_field_sound_tables[];
 
 /** @brief Registered AKAO instrument bank. */
-extern AkaoHeader *g_field_instrument_bank;
+extern AkaoHeaderPtr g_field_instrument_bank;
 
 /** @brief Song handles, indexed by FIELD_SONG_MAIN / FIELD_SONG_SECOND. */
 extern s32 g_field_song_handles[2];

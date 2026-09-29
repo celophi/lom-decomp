@@ -9545,7 +9545,7 @@ extern void func_800B5BBC(void);
     do
     {
         *slot = 0;
-        *(void **)(resource_cursor + 4) = resource;
+        *(void_ptr*)(resource_cursor + 4) = resource;
         resource_cursor += 8;
         index += 1;
         slot += 0xA;

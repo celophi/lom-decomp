@@ -226,7 +226,7 @@ s32 field_get_land_distance(s32 land_index)
     u8* base;
     u8* land;
     u8* land_address;
-    SavedGameLayout** state_ptr;
+    SavedGameLayoutPtr* state_ptr;
 
     do
     {

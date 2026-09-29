@@ -11714,7 +11714,7 @@ extern void func_800B4748(void);
         config_offset += 0x14;
         index++;
         *config_entry = 0;
-        *(u8**)(screen_entry + 4) = resource;
+        *(u8_ptr*)(screen_entry + 4) = resource;
     } while (index < 0x28);
 
     D_801B30F4 = 0x64;
