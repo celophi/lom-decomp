@@ -1,4 +1,5 @@
 /* CARDA's copy of the shared glyph-cache text drawing (see include/glyph_cache.h). */
+#include "carda_glyph.h"
 #include "carda_internal.h"
 
 #include "../../common/glyph_cache/draw_signed_decimal.inc.c"

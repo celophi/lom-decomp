@@ -1,3 +1,5 @@
+#include "pattern.h"
+
 #include "checkps_internal.h"
 
 #include "display.h"

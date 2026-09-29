@@ -1,3 +1,5 @@
+#include "font.h"
+
 #include "checkps_internal.h"
 
 #include "display.h"
@@ -11,7 +13,7 @@
 #define CHECKPS_GLYPH_CLUT_Y (VRAM_HEIGHT - 1)
 #define CHECKPS_GLYPH_WIDTH 16
 #define CHECKPS_GLYPH_VRAM_WORD_WIDTH 4
-#define CHECKPS_GLYPH_RASTER_SLOT_SIZE 0x80
+#define CHECKPS_GLYPH_RASTER_SLOT_SIZE 128
 #define CHECKPS_GLYPH_RASTER_BUFFER_SIZE (CHECKPS_GLYPH_CACHE_ENTRY_COUNT * CHECKPS_GLYPH_RASTER_SLOT_SIZE)
 #define CHECKPS_GLYPH_V_COORD_MASK 0xF0
 #define CHECKPS_GLYPH_SOURCE_MSB 0x80
@@ -55,8 +57,8 @@ typedef union
 /**
  * @brief CPU packet-buffer slot used to draw one cached 16-by-16 glyph.
  *
- * The GPU consumes only the sprite. The trailing word preserves the original
- * 20-byte spacing between consecutive glyph packets in the CPU buffer.
+ * The GPU consumes only the sprite. Each CPU buffer slot includes a
+ * trailing word after the GPU sprite packet.
  */
 typedef struct
 {
@@ -74,17 +76,14 @@ extern u16 g_decimal_glyph_table[12];
  */
 extern u16 g_hex_glyph_table[18];
 
-void* draw_signed_decimal(void* primitive, u_long* ot_tag, s32 value, s32 x, s32 y, s32 palette, s32 alignment);
-void draw_hex_byte(void* primitive, u_long* ot_tag, s32 value, s32 x, s32 y, s32 alignment);
-void* draw_cached_text(void* primitive, u_long* ot_tag, const u8* text, s32 x, s32 y, s32 palette, s32 alignment);
-void* render_cached_glyph(void* primitive, u_long* ot_tag, u16 character_code, s32 palette);
-CheckPSGlyphPacket* emit_glyph_sprite(CheckPSGlyphPacket* packet, u_long* ot_tag, s32 cache_slot);
+static void* render_cached_glyph(void* primitive, u_long* ot_tag, u16 character_code, s32 palette);
+static CheckPSGlyphPacket* emit_glyph_sprite(CheckPSGlyphPacket* packet, u_long* ot_tag, s32 cache_slot);
 
 /**
  * @brief Initialized prefix of the 16-color glyph CLUT.
  *
  * LoadImage reads 16 entries starting here. The remaining entries come from
- * adjacent zero-initialized overlay storage, preserving the target layout.
+ * adjacent zero-initialized overlay storage.
  */
 extern u_long g_glyph_clut_prefix[3];
 
@@ -283,7 +282,7 @@ void* draw_cached_text(void* primitive, u_long* ot_tag, const u8* text, s32 x, s
  * @param palette Glyph palette index.
  * @return Updated primitive-buffer cursor.
  */
-void* render_cached_glyph(void* primitive, u_long* ot_tag, u16 character_code, s32 palette)
+static void* render_cached_glyph(void* primitive, u_long* ot_tag, u16 character_code, s32 palette)
 {
     u8* font_data;
     u8* raster;
@@ -367,7 +366,7 @@ void* render_cached_glyph(void* primitive, u_long* ot_tag, u16 character_code, s
  * @param cache_slot Glyph-cache slot index.
  * @return Pointer to the next primitive-buffer packet.
  */
-CheckPSGlyphPacket* emit_glyph_sprite(CheckPSGlyphPacket* packet, u_long* ot_tag, s32 cache_slot)
+static CheckPSGlyphPacket* emit_glyph_sprite(CheckPSGlyphPacket* packet, u_long* ot_tag, s32 cache_slot)
 {
     g_glyph_cache[cache_slot].raw |= CHECKPS_GLYPH_CACHE_USED_FLAG;
 

@@ -1,5 +1,8 @@
+#include "init.h"
+
 #include "checkps_internal.h"
 
+#include "font.h"
 #include "akao.h"
 #include "cd_resources.h"
 #include "display.h"
@@ -12,9 +15,9 @@
 #include "sdk/libgpu.h"
 #include "sdk/memory.h"
 
-#define CHECKPS_ORDERING_TABLE_LENGTH 0x1000
-#define CHECKPS_PRIMITIVE_BUFFER_SIZE 0x4000
-#define CHECKPS_SONG_BUFFER_SIZE 0x4000
+#define CHECKPS_ORDERING_TABLE_LENGTH 4096
+#define CHECKPS_PRIMITIVE_BUFFER_SIZE 16384
+#define CHECKPS_SONG_BUFFER_SIZE 16384
 #define CHECKPS_RESERVED_BSS_WORDS 32769
 
 #define CHECKPS_FRAME_VSYNC_INTERVAL 2
@@ -22,7 +25,7 @@
 #define CHECKPS_FADE_SUBTRACTIVE_DRAW_MODE 0x45
 #define CHECKPS_IMAGE_TPAGE 5
 #define CHECKPS_GEOMETRY_SCREEN_DISTANCE 1500
-#define CHECKPS_FADE_NEUTRAL 0x100
+#define CHECKPS_FADE_NEUTRAL 256
 #define CHECKPS_FADE_ADDITIVE_THRESHOLD (CHECKPS_FADE_NEUTRAL + 1)
 #define CHECKPS_DEFAULT_FADE_STEPS 20
 #define CHECKPS_IMAGE_DISPLAY_FRAMES 120
@@ -42,6 +45,12 @@
 #define CHECKPS_DPAD_MASK (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT)
 #define CHECKPS_NON_REPEAT_BUTTON_MASK                                                                                                                         \
     (PAD_BTN_L2 | PAD_BTN_R2 | PAD_BTN_L1 | PAD_BTN_R1 | PAD_BTN_CROSS | PAD_BTN_CIRCLE | PAD_BTN_SELECT | PAD_BTN_L3 | PAD_BTN_START)
+
+/** Advance a fade packet cursor by the concrete packet just emitted. */
+#define CHECKPS_NEXT_FADE_PRIMITIVE(primitive, type) ((CheckPSFadePrimitive*)((u8*)(primitive) + sizeof(type)))
+
+/** Advance an image packet cursor by the concrete packet just emitted. */
+#define CHECKPS_NEXT_IMAGE_PRIMITIVE(primitive, type) ((CheckPSImagePrimitive*)((u8*)(primitive) + sizeof(type)))
 
 /**
  * @brief Conditions that end the CHECKPS display loop.
@@ -70,18 +79,12 @@ typedef union
     DR_TPAGE draw_mode;
 } CheckPSFadePrimitive;
 
-/** Advance a fade packet cursor by the concrete packet just emitted. */
-#define CHECKPS_NEXT_FADE_PRIMITIVE(primitive, type) ((CheckPSFadePrimitive*)((u8*)(primitive) + sizeof(type)))
-
 /** @brief Packet view for a CHECKPS image sprite or draw-mode command. */
 typedef union
 {
     SPRT sprite;
     DR_TPAGE draw_mode;
 } CheckPSImagePrimitive;
-
-/** Advance an image packet cursor by the concrete packet just emitted. */
-#define CHECKPS_NEXT_IMAGE_PRIMITIVE(primitive, type) ((CheckPSImagePrimitive*)((u8*)(primitive) + sizeof(type)))
 
 /**
  * @brief GPU environments and clear rectangle for one display buffer.
@@ -117,17 +120,17 @@ struct CheckPSRenderState
 extern AkaoContainerHeader g_embedded_checkps_akao;
 extern TimPrefix g_checkps_image_asset;
 
-void run_checkps_display_loop(CheckPSRenderState* render_state);
-void init_checkps_display(CheckPSRenderState* render_state);
-void load_embedded_checkps_audio(void);
-void reset_fade_state(void);
-void update_and_draw_fade(CheckPSFrame* frame);
-void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count);
-void update_checkps_input_and_timeout(void);
-void draw_checkps_image(CheckPSFrame* frame);
-void load_checkps_image(void);
-void process_controller_input(void);
-void update_controller_input(void);
+static void run_checkps_display_loop(CheckPSRenderState* render_state);
+static void init_checkps_display(CheckPSRenderState* render_state);
+static void load_embedded_checkps_audio(void);
+static void reset_fade_state(void);
+static void update_and_draw_fade(CheckPSFrame* frame);
+static void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count);
+static void update_checkps_input_and_timeout(void);
+static void draw_checkps_image(CheckPSFrame* frame);
+static void load_checkps_image(void);
+static void process_controller_input(void);
+static void update_controller_input(void);
 
 /* Nonzero ends the CHECKPS display loop; value 2 is used for image timeout. */
 CheckPSExitReason g_checkps_exit_reason;
@@ -191,7 +194,7 @@ s32 run_checkps(CheckPSRenderState* render_state)
  * @brief Render and update CHECKPS frames until an exit condition is reached.
  * @param render_state Double-buffered render workspace.
  */
-void run_checkps_display_loop(CheckPSRenderState* render_state)
+static void run_checkps_display_loop(CheckPSRenderState* render_state)
 {
     RECT rect;
     u_long* drawn_ordering_table;
@@ -250,7 +253,7 @@ void run_checkps_display_loop(CheckPSRenderState* render_state)
  * @brief Configure CHECKPS display buffers and reset renderer state.
  * @param render_state Double-buffered render workspace to initialize.
  */
-void init_checkps_display(CheckPSRenderState* render_state)
+static void init_checkps_display(CheckPSRenderState* render_state)
 {
     RECT rect;
     SetGeomScreen(CHECKPS_GEOMETRY_SCREEN_DISTANCE);
@@ -289,7 +292,7 @@ void init_checkps_display(CheckPSRenderState* render_state)
  * @brief Register the embedded CHECKPS program data and upload its sample bank.
  * @details The embedded container stores both resources behind byte offsets.
  */
-void load_embedded_checkps_audio(void)
+static void load_embedded_checkps_audio(void)
 {
     u8* bank_data;
     u8* upload_bank_data;
@@ -305,7 +308,7 @@ void load_embedded_checkps_audio(void)
 
     g_checkps_akao_bank = CHECKPS_AUDIO_BANK_ADDRESS;
 
-    /* The offset table follows the section count. */
+    /* The section offsets immediately follow the container header word. */
     section_offsets = &g_embedded_checkps_akao.section_count;
     section_offsets++;
 
@@ -374,7 +377,7 @@ void play_checkps_sfx(u32 sound_id, u32 volume, u32 pan)
 /**
  * @brief Reset the current and target fade colors to black.
  */
-void reset_fade_state(void)
+static void reset_fade_state(void)
 {
     g_fade_current.red = 0;
     g_fade_current.green = 0;
@@ -389,7 +392,7 @@ void reset_fade_state(void)
  * @brief Advance the fade interpolation and emit its fullscreen GPU packets.
  * @param frame Frame receiving the fade primitives.
  */
-void update_and_draw_fade(CheckPSFrame* frame)
+static void update_and_draw_fade(CheckPSFrame* frame)
 {
     s32 red_step;
     s32 green_step;
@@ -476,7 +479,7 @@ void update_and_draw_fade(CheckPSFrame* frame)
  * @param blue Target blue level.
  * @param step_count Number of interpolation steps.
  */
-void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count)
+static void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count)
 {
     g_fade_target.red = red;
     g_fade_target.green = green;
@@ -487,7 +490,7 @@ void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count)
 /**
  * @brief Update controller debounce state and the CHECKPS image timeout.
  */
-void update_checkps_input_and_timeout(void)
+static void update_checkps_input_and_timeout(void)
 {
     process_controller_input();
     g_checkps_image_frames_remaining--;
@@ -502,7 +505,7 @@ void update_checkps_input_and_timeout(void)
  * @brief Emit the CHECKPS image sprite and draw-mode packets.
  * @param frame Frame receiving the image primitives.
  */
-void draw_checkps_image(CheckPSFrame* frame)
+static void draw_checkps_image(CheckPSFrame* frame)
 {
     CheckPSImagePrimitive* primitive;
     s32 width_words;
@@ -534,7 +537,7 @@ void draw_checkps_image(CheckPSFrame* frame)
 /**
  * @brief Upload the embedded CHECKPS CLUT and image pixels to VRAM.
  */
-void load_checkps_image(void)
+static void load_checkps_image(void)
 {
     RECT image_destination;
     RECT upload_rect;
@@ -551,7 +554,8 @@ void load_checkps_image(void)
     setRECT(&upload_rect, 0, CHECKPS_IMAGE_CLUT_Y, image_asset->clut_block.dimensions.width * image_asset->clut_block.dimensions.height, 1);
 
     clut_block_size = image_asset->clut_block.bnum;
-    LoadImage(&upload_rect, image_asset->clut_data);
+    /* LoadImage transfers the packed 16-bit CLUT entries as words. */
+    LoadImage(&upload_rect, (u_long*)image_asset->clut_data);
 
     pixel_block = TIM_PIXEL_BLOCK(image_asset, clut_block_size);
     pixel_size = &pixel_block->dimensions;
@@ -560,7 +564,7 @@ void load_checkps_image(void)
     g_checkps_image_width_words = pixel_size->width;
     g_checkps_image_height = pixel_size->height;
 
-    /* The pixel payload follows the block's dimensions. */
+    /* The pixel payload follows the block dimensions. */
     pixel_size++;
     LoadImage(&upload_rect, (u_long*)pixel_size);
 }
@@ -615,7 +619,7 @@ s32 poll_input_device(void)
 /**
  * @brief Apply CHECKPS debounce and key-repeat behavior to controller input.
  */
-void process_controller_input(void)
+static void process_controller_input(void)
 {
     SCDRegs* controller_regs;
     u32 buttons;
@@ -698,7 +702,7 @@ void process_controller_input(void)
 /**
  * @brief Seed the CHECKPS controller snapshot and repeat timer.
  */
-void update_controller_input(void)
+static void update_controller_input(void)
 {
     SCDRegs* regs;
     u32 buttons;
