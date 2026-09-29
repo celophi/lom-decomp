@@ -6,7 +6,7 @@
 struct FieldActorSlot;
 
 void field_update_dialog_runtime(s32 update_mode);
-void func_80068028(void);
+void field_show_battle_results(void);
 void field_close_dialog_screen(void);
 void field_request_return_to_title(s32 command_value);
 void field_begin_gover_transition(s32 image_resource_index, s32 music_resource_index, s32 audio_clip_index);

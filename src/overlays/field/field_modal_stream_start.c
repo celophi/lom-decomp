@@ -26,7 +26,7 @@ extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
 
 void carda_init(void* work, s32 mode);
-void func_80140024(void* render_buffers, s32 restore_slot_on_cancel);
+void golem_run(void* render_buffers, s32 restore_slot_on_cancel);
 void niki_addhero_init(void* work, s32 mode);
 
 /**
@@ -57,7 +57,7 @@ void field_run_golem(void)
     field_reset_actor_resources();
     cdrom_stream(CD_RES_GOLEM_BIN, FIELD_SUBOVERLAY_ADDRESS);
     cdrom_wait_queue_empty();
-    func_80140024(FIELD_GOLEM_RENDER_BUFFERS, 0);
+    golem_run(FIELD_GOLEM_RENDER_BUFFERS, 0);
     field_golem_rebuild_current_grid();
     field_reset_actor_resources();
 }

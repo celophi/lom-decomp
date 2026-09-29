@@ -1,5 +1,5 @@
 # Host-side Python tests; no disc files or historical toolchain required.
-.PHONY: test-tools test-assets test-overlay-tools extract-scene extract-scenes extract-addhero extract-carda extract-checkps extract-cload
+.PHONY: test-tools test-assets test-overlay-tools extract-scene extract-scenes extract-addhero extract-carda extract-checkps extract-cload extract-field
 
 test-tools: test-assets test-overlay-tools
 
@@ -48,3 +48,10 @@ CLOAD_OUTPUT ?= assets/exports/$(VERSION)/overlays/cload
 extract-cload:
 	@test -f "$(ASSETS_DIR)/cload_data.databin.bin" || { echo 'Run make splat first to extract $(ASSETS_DIR)/cload_data.databin.bin'; exit 1; }
 	python3 -m tools.overlays.cload --version $(VERSION) "$(CLOAD_OUTPUT)"
+
+# FIELD exports its resident resources; scene IMGs use extract-scene instead.
+FIELD_OUTPUT ?= assets/exports/$(VERSION)/overlays/field
+
+extract-field:
+	@test -f "$(ASSETS_DIR)/field_data.databin.bin" || { echo 'Run make splat first to extract $(ASSETS_DIR)/field_data.databin.bin'; exit 1; }
+	python3 -m tools.overlays.field --version $(VERSION) "$(FIELD_OUTPUT)"

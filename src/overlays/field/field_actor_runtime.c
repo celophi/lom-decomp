@@ -376,9 +376,10 @@ void field_update_dialog_runtime(s32 update_mode)
 }
 
 /**
- * @brief Restore the standard field fade and refresh the active dialog/menu state.
+ * @brief Fade the field back in after a battle and open its results screen.
+ * @note Duel mode opens the duel results instead of merging drops and ability progress.
  */
-void func_80068028(void)
+void field_show_battle_results(void)
 {
     field_reset_input_repeat();
     g_field_fade_target.red = FIELD_FADE_NORMAL_LEVEL;

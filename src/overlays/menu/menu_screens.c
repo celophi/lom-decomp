@@ -2674,18 +2674,18 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                 pos.y = 0x28;
                 if (g_menu_page_count != 0)
                 {
-                    ltemp = func_800AD208(ot_entry, packet_cursor, g_script_repeat_last + 1, 3, &pos, 0);
+                    ltemp = field_draw_sprite_number(ot_entry, packet_cursor, g_script_repeat_last + 1, 3, &pos, 0);
                 }
                 else
                 {
-                    ltemp = func_800AD208(ot_entry, packet_cursor, 0, 3, &pos, 0);
+                    ltemp = field_draw_sprite_number(ot_entry, packet_cursor, 0, 3, &pos, 0);
                 }
-                ltemp = func_800AD524(ltemp, ot_entry, 0xB, &pos, 0);
+                ltemp = field_draw_sprite_glyph(ltemp, ot_entry, 0xB, &pos, 0);
                 pos.x += 8;
-                ltemp = func_800AD208(ot_entry, ltemp, g_menu_page_count, 3, &pos, 0);
-                ltemp = func_800AD524(ltemp, ot_entry, 0xB, &pos, 0);
+                ltemp = field_draw_sprite_number(ot_entry, ltemp, g_menu_page_count, 3, &pos, 0);
+                ltemp = field_draw_sprite_glyph(ltemp, ot_entry, 0xB, &pos, 0);
                 pos.x += 8;
-                packet_cursor = func_800AD208(ot_entry, ltemp, menu_count_inventory_items(), 3, &pos, 0);
+                packet_cursor = field_draw_sprite_number(ot_entry, ltemp, menu_count_inventory_items(), 3, &pos, 0);
             }
             break;
             default:

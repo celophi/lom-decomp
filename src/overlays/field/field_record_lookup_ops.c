@@ -270,10 +270,9 @@ void field_stop_non_script_actors(void)
 }
 
 /**
- * @brief Loop over the actor records with an empty body (script command 0x28).
- * @note The body was compiled away in the original build.
+ * @brief Script command 0x28: walk the actor records without touching them.
  */
-void func_800C1E08(void)
+void field_actor_loop_stub(void)
 {
     s32 i;
 

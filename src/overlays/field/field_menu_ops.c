@@ -4,6 +4,7 @@
 #include "field_calls.h"
 #include "field_script.h"
 #include "field_menu_vars.h"
+#include "field_records.h"
 #include "main.h"
 #include "sdk/abs.h"
 
@@ -15,6 +16,9 @@
 
 /** @brief Offset of the joined golem's class, byte 1 of characters[2].info. */
 #define FIELD_ACTIVE_GOLEM_CLASS 0xAA9
+
+/** @brief FIELD_VARIABLE_GUEST_VARIANT value meaning a guest hero is loaded. */
+#define FIELD_GUEST_PRESENT 0x80
 
 /** @brief The object-menu variables, which start at D_80122C0C. */
 #define FIELD_MENU_OBJECT ((FieldMenuObjectVars*)&D_80122C0C)
@@ -544,9 +548,10 @@ void field_menu_clear_gosub_request(void)
 }
 
 /**
- * @brief Open the gosub screen sequence described by D_800F19AC.
+ * @brief Open the GOSUB golem parts screen, then its confirmation dialog.
+ * @note field_menu_create_golem reads the chosen items from the GOSUB results.
  */
-void func_800C57E0(void)
+void field_menu_choose_golem_parts(void)
 {
     field_open_gosub_screen_sequence(&D_800F19AC);
 }
@@ -636,25 +641,26 @@ void field_menu_create_golem(void)
 }
 
 /**
- * @brief Open the gosub screen sequence described by D_800F19B8.
+ * @brief Open the GOSUB block components screen, then its confirmation dialog.
  */
-void func_800C5AA8(void)
+void field_menu_choose_block_components(void)
 {
     field_open_gosub_screen_sequence(&D_800F19B8);
 }
 
 /**
- * @brief Open the gosub screen sequence described by D_800F19C4.
+ * @brief Open the GOSUB logic blocks screen.
  */
-void func_800C5ACC(void)
+void field_menu_choose_logic_blocks(void)
 {
     field_open_gosub_screen_sequence(&D_800F19C4);
 }
 
 /**
- * @brief Run field_run_golem as a menu operation.
+ * @brief Open the GOLEM logic-block editor at the end of golem creation.
+ * @note Identical to field_menu_edit_golem_logic; this op follows the creation ops 0x02-0x05.
  */
-void func_800C5AF0(void)
+void field_menu_edit_new_golem_logic(void)
 {
     field_run_golem();
 }
@@ -922,9 +928,10 @@ void field_menu_check_logic_blocks_full(void)
 }
 
 /**
- * @brief Run field_run_golem as a menu operation.
+ * @brief Open the GOLEM logic-block editor for an existing golem.
+ * @note Identical to field_menu_edit_new_golem_logic.
  */
-void func_800C6208(void)
+void field_menu_edit_golem_logic(void)
 {
     field_run_golem();
 }
@@ -1171,9 +1178,9 @@ void field_menu_read_ring_selection(void)
 }
 
 /**
- * @brief Open the gosub screen sequence described by D_800F19CC.
+ * @brief Open the GOSUB color material screen, then its confirmation dialog.
  */
-void func_800C68A4(void)
+void field_menu_choose_color_material(void)
 {
     field_open_gosub_screen_sequence(&D_800F19CC);
 }
@@ -1357,17 +1364,18 @@ void field_menu_add_logic_block(void)
 }
 
 /**
- * @brief Pass the variable at D_80122C1C to field_select_distance_bucket.
+ * @brief Run field_select_distance_bucket for the actor in D_80122C1C.
+ * @note The selected bucket is discarded, so the only effect is the random draw.
  */
-void func_800C6DA0(void)
+void field_menu_select_distance_bucket(void)
 {
     field_select_distance_bucket(D_80122C1C);
 }
 
 /**
- * @brief Open the gosub screen sequence described by D_80051EB4.
+ * @brief Open the GOSUB equipment screen, then its confirmation dialog.
  */
-void func_800C6DC8(void)
+void field_menu_choose_equipment(void)
 {
     FieldGosubSequence sequence;
 
@@ -1376,9 +1384,9 @@ void func_800C6DC8(void)
 }
 
 /**
- * @brief Run field_open_carda with argument 0.
+ * @brief Open CARDA to save the game.
  */
-void func_800C6E08(void)
+void field_menu_open_save_screen(void)
 {
     field_open_carda(0);
 }
@@ -1613,9 +1621,9 @@ void field_menu_send_selected_pet_grazing(void)
 }
 
 /**
- * @brief Open the gosub screen sequence described by D_80051EC0.
+ * @brief Open the GOSUB produce screen, then its confirmation dialog.
  */
-void func_800C7238(void)
+void field_menu_choose_produce(void)
 {
     FieldGosubSequence sequence;
 
@@ -1637,9 +1645,9 @@ void field_menu_store_gosub_result(void)
 }
 
 /**
- * @brief Open the gosub screen sequence described by D_80051ECC.
+ * @brief Open the GOSUB pet screen, then its confirmation dialog.
  */
-void func_800C72A4(void)
+void field_menu_choose_pet(void)
 {
     FieldGosubSequence sequence;
 
@@ -1696,15 +1704,18 @@ void field_menu_publish_pet_slots(void)
     record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_PUBLISH_PET_SLOTS, selection, 0);
 }
 
-/** @brief Clear pad-context byte 0xC06 and the joined golem's 0x46 byte. */
-void func_800C745C(void)
+/**
+ * @brief Set the joined golem's random-action chance to zero.
+ * @note Clears both the golem record and the companion's copy (byte 2 of its golem data).
+ */
+void field_menu_clear_golem_random_chance(void)
 {
     SavedGameLayout* ctx;
     s32 index;
 
     ctx = &g_saved_game.layout;
     index = ctx->joined_golem;
-    g_saved_game.bytes[0xC06] = 0;
+    g_saved_game.layout.characters[FIELD_PARTY_COMPANION].unk150[0].derived.bytes[2] = 0;
     ctx->golem_records[index].unknown_0x46 = 0;
 }
 
@@ -2269,8 +2280,11 @@ void field_menu_add_pending_record(void)
     }
 }
 
-/** @brief Open the pending-record selection screen sequence. */
-void func_800C8220(void)
+/**
+ * @brief Open the GOSUB equipment screen, then its confirmation dialog.
+ * @note Identical to field_menu_choose_equipment; this op sits with the pending-record ops.
+ */
+void field_menu_choose_pending_equipment(void)
 {
     FieldGosubSequence sequence;
 
@@ -2840,27 +2854,31 @@ void field_menu_hatch_pet(void)
 }
 
 /**
- * @brief Checks field state 0x2F08 and performs the corresponding update.
+ * @brief Open ADDHERO for the guest state set by field_menu_publish_guest_presence.
+ * @note A guest already present opens mode 1, no guest opens mode 0 (load a hero).
  */
-void func_800C93B4(void)
+void field_menu_open_addhero(void)
 {
-    if (field_get_script_var(0, 0x2F08) == 0x80)
+    if (field_get_script_var(0, FIELD_VARIABLE_GUEST_VARIANT) == FIELD_GUEST_PRESENT)
     {
         field_open_addhero(1);
     }
-    else if (field_get_script_var(0, 0x2F08) == 0xFF)
+    else if (field_get_script_var(0, FIELD_VARIABLE_GUEST_VARIANT) == FIELD_NO_VARIANT)
     {
         field_open_addhero(0);
     }
 }
 
-/** @brief Dispatch the nonempty menu record at buffer offset 0x840. */
-void func_800C9404(void)
+/**
+ * @brief Store the guest hero's first name byte in local 0 and publish the name.
+ * @note The name goes to text macro 0 only when a guest is present.
+ */
+void field_menu_publish_guest_name(void)
 {
-    D_80122C00.bytes[0] = g_saved_game.bytes[0x840];
+    D_80122C00.bytes[0] = g_saved_game.layout.characters[FIELD_PARTY_GUEST].name[0];
     if (D_80122C00.bytes[0] != 0)
     {
-        field_set_text_macro(0, &g_saved_game.bytes[0x840], 0xFF);
+        field_set_text_macro(0, g_saved_game.layout.characters[FIELD_PARTY_GUEST].name, 0xFF);
     }
 }
 
@@ -2912,9 +2930,14 @@ void field_menu_clear_shared_items(void)
 }
 
 /**
- * @brief Apply the pending field mode transition to the four shared records.
+ * @brief Update the four shared item records for the mode NIKI finished in.
+ *
+ * D_80122C1E holds the mode the script requested and D_8011F428 the mode NIKI
+ * left. Going from 1 to 0 moves every set-aside record with a value back into
+ * the inventory; going from 0 to 1 gives every active record a value of at
+ * least 1. D_80122C1E then takes NIKI's mode.
  */
-void func_800C94F4(void)
+void field_menu_sync_shared_items(void)
 {
     s32 mode;
     s32 i;
@@ -2959,16 +2982,16 @@ void func_800C94F4(void)
     D_80122C1E = D_8011F428;
 }
 
-/** @brief Set field state 0x2F08 from the pending mode flag. */
-void func_800C963C(void)
+/** @brief Set FIELD_VARIABLE_GUEST_VARIANT to FIELD_GUEST_PRESENT when a guest hero is loaded, else FIELD_NO_VARIANT. */
+void field_menu_publish_guest_presence(void)
 {
     if (g_saved_game.layout.characters[FIELD_PARTY_GUEST].name[0] != 0)
     {
-        field_set_script_var(0, 0x2F08, 0x80);
+        field_set_script_var(0, FIELD_VARIABLE_GUEST_VARIANT, FIELD_GUEST_PRESENT);
     }
     else
     {
-        field_set_script_var(0, 0x2F08, 0xFF);
+        field_set_script_var(0, FIELD_VARIABLE_GUEST_VARIANT, FIELD_NO_VARIANT);
     }
 }
 
@@ -3098,8 +3121,8 @@ store_uniform:
     FIELD_LOCAL_BYTE(FIELD_UNIFORM_ELEMENT) = work.element;
 }
 
-/** @brief Open the attribute selection screen sequence. */
-void func_800C9894(void)
+/** @brief Open the GOSUB instrument screen, then its confirmation dialog. */
+void field_menu_choose_instrument(void)
 {
     FieldGosubSequence local;
 
@@ -3336,9 +3359,9 @@ void field_menu_count_pets(void)
 }
 
 /**
- * @brief Forward D_80122C01 to field_open_carda after the common menu prologue.
+ * @brief Clear the GOSUB request and open CARDA in the mode held in D_80122C01.
  */
-void func_800C9D84(void)
+void field_menu_open_carda(void)
 {
     field_menu_clear_gosub_request();
     field_open_carda(D_80122C01);

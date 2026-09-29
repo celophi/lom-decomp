@@ -302,9 +302,9 @@ static s32 field_get_route_heading_animation(FieldActor* destination, FieldActor
 static s32 field_filter_action_targets();
 
 /**
- * @brief Route hook with an empty body.
+ * @brief Empty function at the start of the actor route code; nothing calls it.
  */
-void func_8008C728(void)
+void field_route_stub(void)
 {
 }
 

@@ -53,3 +53,5 @@ g_zukan_work_buffer = 0x80157D6C;
 g_zukan_scroll_y = 0x80157D70;
 g_zukan_scroll_target_y = 0x80157D74;
 g_zukan_next_resource_id = 0x80157D78;
+field_draw_sprite_number = 0x800AD208;
+field_draw_sprite_glyph = 0x800AD524;

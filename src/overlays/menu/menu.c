@@ -775,15 +775,15 @@ void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect,
             title_pos.y = (u16)rect->y;
             if (slot->navigation.packed & MENU_LIST_COUNT_MASK)
             {
-                packet_cursor = (u_long*)func_800AD208(ot_entry, packet_cursor, slot->navigation.fields.selected_index + 1, 3, &title_pos, 0);
+                packet_cursor = (u_long*)field_draw_sprite_number(ot_entry, packet_cursor, slot->navigation.fields.selected_index + 1, 3, &title_pos, 0);
             }
             else
             {
-                packet_cursor = (u_long*)func_800AD208(ot_entry, packet_cursor, 0, 3, &title_pos, 0);
+                packet_cursor = (u_long*)field_draw_sprite_number(ot_entry, packet_cursor, 0, 3, &title_pos, 0);
             }
-            packet_cursor = func_800AD524((s32)packet_cursor, ot_entry, 0xB, &title_pos, 0);
+            packet_cursor = field_draw_sprite_glyph((s32)packet_cursor, ot_entry, 0xB, &title_pos, 0);
             title_pos.x += 8;
-            packet_cursor = (u_long*)func_800AD208(ot_entry, packet_cursor, slot->navigation.fields.count_and_ot & MENU_ITEM_NAV_INDEX_MASK, 3, &title_pos, 0);
+            packet_cursor = (u_long*)field_draw_sprite_number(ot_entry, packet_cursor, slot->navigation.fields.count_and_ot & MENU_ITEM_NAV_INDEX_MASK, 3, &title_pos, 0);
             switch (g_menu_scene_type)
             {
             case 1:
@@ -791,9 +791,9 @@ void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect,
             case 19:
             case 22:
             case 25:
-                packet_cursor = func_800AD524((s32)packet_cursor, ot_entry, 0xB, &title_pos, 0);
+                packet_cursor = field_draw_sprite_glyph((s32)packet_cursor, ot_entry, 0xB, &title_pos, 0);
                 title_pos.x += 8;
-                packet_cursor = (u_long*)func_800AD208(ot_entry, packet_cursor, menu_count_inventory_items(), 3, &title_pos, 0);
+                packet_cursor = (u_long*)field_draw_sprite_number(ot_entry, packet_cursor, menu_count_inventory_items(), 3, &title_pos, 0);
                 break;
             }
             packet_cursor = menu_emit_slot_scroll_arrows((SPRT*)packet_cursor, ot_entry, slot);

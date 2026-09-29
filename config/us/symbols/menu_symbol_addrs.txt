@@ -203,3 +203,5 @@ g_menu_companion_node  = 0x80169324;
 
 // Field dialogue/text renderer exports used by this overlay.
 field_text_build_sprites             = 0x800644FC;
+field_draw_sprite_number = 0x800AD208;
+field_draw_sprite_glyph = 0x800AD524;
