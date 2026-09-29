@@ -22,7 +22,7 @@ typedef struct
 typedef struct
 {
     s32 field_00;
-    void *resource;
+    voidptr resource;
 } WmapResource;
 
 void func_80072644();

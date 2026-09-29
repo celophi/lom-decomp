@@ -7,7 +7,10 @@ struct SPRT;
 typedef struct FieldOrderingTags FieldOrderingTags;
 typedef struct FieldTextConfig FieldTextConfig;
 
-extern FieldTextConfig* g_field_text_saved_configs;
+/** @brief Four-byte pointer to FieldTextConfig in PS1 storage. */
+typedef FieldTextConfig* PS1_PTR32 FieldTextConfigPtr;
+
+extern FieldTextConfigPtr g_field_text_saved_configs;
 
 /** @brief field_draw_text / field_draw_number alignment, in the FIELD_TEXT_ALIGN_MASK bits of their flags. */
 #define FIELD_TEXT_ALIGN_LEFT 0   /**< x is the left edge. */
@@ -30,7 +33,7 @@ typedef struct
 {
     u8 character_limit;
     u8 _pad1[3];
-    u8* text;
+    u8ptr text;
 } FieldTextMacro;
 
 extern FieldTextMacro g_field_text_macros[];
@@ -42,7 +45,7 @@ void field_text_reset_scratch(void);
 s32 field_text_build_sprites(struct SPRT* prim, u8* text, s32 text_style);
 void field_text_open_packed_window(s32 window_index);
 void field_text_open_fixed_window(s32 window_index);
-void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count);
+void field_text_update(u8ptr* packet_cursor, FieldOrderingTags* ot, s32 draw_count);
 void field_text_set_string(s32 window_index, u8* text, s32 text_options);
 void field_text_start_timed_window(u8* text);
 void field_text_set_position(s32 slot, s16 x, s16 y);

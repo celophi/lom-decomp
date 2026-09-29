@@ -95,7 +95,7 @@ typedef struct FieldBattleResource
     s32 rewards_offset;
 } FieldBattleResource;
 
-extern FieldBattleContext* g_field_battle;
+extern FieldBattleContextPtr g_field_battle;
 extern FieldBattleContext g_field_battle_context;
 extern FieldActionBank* g_field_action_bank;
 extern FieldActionBank g_field_default_action_bank;

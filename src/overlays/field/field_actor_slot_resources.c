@@ -63,6 +63,9 @@ typedef union
     FieldBuiltinEntry entries[1];
 } FieldBuiltinResource;
 
+/** @brief Four-byte pointer to FieldBuiltinResource in PS1 storage. */
+typedef FieldBuiltinResource* PS1_PTR32 FieldBuiltinResourcePtr;
+
 /** @brief Definition index of each built-in animation, then the definitions. */
 typedef struct
 {
@@ -73,14 +76,14 @@ typedef struct
 extern FieldBuiltinResource g_field_resource_blob;
 extern u8 g_field_resource_buffer[];
 /** @brief Frame data of the built-in animations. */
-extern u8* g_field_builtin_track_data;
+extern u8ptr g_field_builtin_track_data;
 /** @brief Built-in animation resource in use. */
-extern FieldBuiltinResource* g_field_builtin_animations;
+extern FieldBuiltinResourcePtr g_field_builtin_animations;
 extern s32 g_field_camera_offset_x;
 extern s32 g_field_camera_offset_y;
 extern s32 g_field_camera_offset_z;
 extern s32 D_8010CFD4;
-extern u8* g_field_actor_heap;
+extern u8ptr g_field_actor_heap;
 extern s32 g_field_boss_hud_shake_frame;
 
 void field_clear_actor_effects(FieldActorSlot* slot);

@@ -55,7 +55,7 @@ s32 field_distance_xz(Vec3i* first, Vec3i* second);
 s32 field_get_actor_position(s32 key, Vec3i* position);
 s32 field_set_actor_position(s32 key, s32 x, s32 y, s32 z);
 
-extern FieldRuntimeContext* g_field_runtime;
+extern FieldRuntimeContextPtr g_field_runtime;
 
 /**
  * @brief Spawn the actor record of a dropped item and run its spawn event, or release it.

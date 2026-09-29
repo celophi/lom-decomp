@@ -43,7 +43,7 @@ typedef struct
 {
     s32 unk0;
     s32 unk4;
-    u8* pc;
+    u8ptr pc;
 } FieldScriptRecord;
 
 /**
@@ -54,7 +54,7 @@ typedef struct
 {
     s32 unk0;
     s32 unk4;
-    u8* pc;
+    u8ptr pc;
     u32 flags;
     union
     {
@@ -81,8 +81,11 @@ typedef struct
         u8 owner_id;
     } status;
     s32 active_record;
-    u8* pc;
+    u8ptr pc;
 } FieldScriptContext;
+
+/** @brief Four-byte pointer to script context in PS1 storage. */
+typedef FieldScriptContext* PS1_PTR32 FieldScriptContextPtr;
 
 /** @brief Packed 16-bit reference used by field-script variable helpers. */
 typedef struct
@@ -90,7 +93,7 @@ typedef struct
     u16 value;
 } FieldScriptVariableRef;
 
-extern FieldScriptContext* g_field_script;
+extern FieldScriptContextPtr g_field_script;
 
 /* Opcodes 0x80 and above dispatch through this table, indexed by opcode - 0x80. */
 extern void (*g_field_script_ext_op_table[16])();

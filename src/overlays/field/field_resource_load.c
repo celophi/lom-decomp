@@ -79,8 +79,8 @@ extern s32 D_80122B20;
 extern FieldBattleEntryChange g_field_battle_entry_changes[FIELD_BATTLE_ENTRY_CHANGE_COUNT];
 extern s32 g_field_party_reload_resource_ids[FIELD_PLAYER_COUNT];
 extern s32 g_field_active_group;
-extern u8* g_field_cd_buffer;
-extern void* g_field_resource_cursor;
+extern u8ptr g_field_cd_buffer;
+extern voidptr g_field_resource_cursor;
 
 /** @brief Cancel the battle entry: drop the queued changes and the pending party reloads. */
 void field_reset_battle_entry(void)

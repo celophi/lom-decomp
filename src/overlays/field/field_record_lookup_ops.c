@@ -46,8 +46,8 @@ void field_append_dialog_item(s32 text, u8 quantity);
 FieldActorRecord* field_find_actor_record_or_default(s32 id);
 FieldActorRecord* field_find_actor_record(s32 id);
 
-extern FieldRuntimeContext* g_field_runtime;
-extern FieldBattleContext* g_field_battle;
+extern FieldRuntimeContextPtr g_field_runtime;
+extern FieldBattleContextPtr g_field_battle;
 
 /**
  * @brief Hand an actor's pickup to the party: an item from the reward table or a counter.

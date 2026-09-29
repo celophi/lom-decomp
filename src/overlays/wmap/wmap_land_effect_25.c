@@ -105,7 +105,7 @@ extern VECTOR D_801B2478;
 extern SVECTOR D_801B24A8;
 extern VECTOR D_8011CF60;
 extern s32 D_80182DEC;
-extern u8* D_8011CF1C;
+extern u8ptr D_8011CF1C;
 extern s32 D_801B2F1C;
 extern s32 D_801B2F18;
 
@@ -144,7 +144,7 @@ extern VECTOR D_80139870;
 extern SVECTOR D_8013B238;
 extern VECTOR D_8011CF60;
 extern s32 D_80182DF0;
-extern u8* D_8011CF24;
+extern u8ptr D_8011CF24;
 extern s32 D_801B2F24;
 extern s32 D_801B2F20;
 
@@ -185,7 +185,7 @@ void func_800ADDD4(void)
 
 extern u8 g_wmap_camera_translation[];
 extern u8 D_801B2498[];
-extern s32* D_8011CF28;
+extern s32ptr D_8011CF28;
 extern s32 D_80182DE4;
 extern s32 D_801B2F2C;
 extern s32 D_801B2F28;
@@ -221,7 +221,7 @@ void func_800ADEB0(void)
 
 extern u8 g_wmap_camera_translation[];
 extern u8 D_801B2498[];
-extern s32* D_8011CF28;
+extern s32ptr D_8011CF28;
 extern s32 D_80182DE4;
 extern s32 D_801B2F2C;
 extern s32 D_801B2F28;
@@ -257,7 +257,7 @@ void func_800ADF80(void)
 
 extern u8 g_wmap_camera_translation[];
 extern u8 D_8013B240[];
-extern s32* D_8011CF2C;
+extern s32ptr D_8011CF2C;
 extern s32 D_80182DF4;
 extern s32 D_801B2F34;
 extern s32 D_801B2F30;
@@ -293,7 +293,7 @@ void func_800AE05C(void)
 
 extern u8 g_wmap_camera_translation[];
 extern u8 D_8013B240[];
-extern s32* D_8011CF2C;
+extern s32ptr D_8011CF2C;
 extern s32 D_80182DF4;
 extern s32 D_801B2F34;
 extern s32 D_801B2F30;
@@ -332,7 +332,7 @@ typedef struct
     s16 field_06;
 } WmapVector;
 
-extern u8* D_8011CF30;
+extern u8ptr D_8011CF30;
 extern s32 D_80139234;
 extern WmapVector D_801B2670;
 extern s32 g_wmap_camera_translation[];
@@ -373,7 +373,7 @@ typedef struct
     s16 field_06;
 } WmapVector;
 
-extern u8* D_8011CF30;
+extern u8ptr D_8011CF30;
 extern s32 D_80139234;
 extern WmapVector D_801B2670;
 extern s32 g_wmap_camera_translation[];
@@ -414,7 +414,7 @@ typedef struct
     s16 field_06;
 } WmapVector;
 
-extern u8* D_8011CF34;
+extern u8ptr D_8011CF34;
 extern s32 D_8013923C;
 extern WmapVector D_801B2678;
 extern s32 g_wmap_camera_translation[];
@@ -455,7 +455,7 @@ typedef struct
     s16 field_06;
 } WmapVector;
 
-extern u8* D_8011CF34;
+extern u8ptr D_8011CF34;
 extern s32 D_8013923C;
 extern WmapVector D_801B2678;
 extern s32 g_wmap_camera_translation[];
@@ -526,7 +526,7 @@ typedef struct
 extern WmapConfigA D_800D95D8[];
 extern WmapMotion D_801AFD60[];
 extern WmapResource D_80139988[];
-extern s32 *D_80139280;
+extern s32ptr D_80139280;
 extern u8 D_80123538[];
 extern s32 D_801B0FD0;
 extern s32 D_801B2F58;
@@ -616,7 +616,7 @@ typedef struct
 extern WmapConfigA D_800D9B00[];
 extern WmapMotion D_801AFFB8[];
 extern WmapResource D_80139988[];
-extern s32 *D_80139280;
+extern s32ptr D_80139280;
 extern u8 D_80123538[];
 extern s32 D_801B0FD0;
 extern s32 D_801B2F60;
@@ -681,7 +681,7 @@ typedef struct
     u8 pad_02[0x12];
 } WmapSlot14;
 
-extern s32 *D_80139280;
+extern s32ptr D_80139280;
 extern WmapSlot8 D_80139988[];
 extern WmapSlot14 D_801AFBD0[];
 extern s32 D_801B2F68;
@@ -731,7 +731,7 @@ typedef struct
     u8 pad_02[0x12];
 } WmapSlot14;
 
-extern s32 *D_80139280;
+extern s32ptr D_80139280;
 extern WmapSlot8 D_80139988[];
 extern WmapSlot14 D_801AFBD0[];
 extern u8 D_80123538[];
@@ -3036,7 +3036,7 @@ void func_800B0DB4(void)
 {
 extern u8 D_800DAFA0[];
 extern u8 D_80139ED8[];
-extern s32* D_80139280;
+extern s32ptr D_80139280;
 extern s32 D_801B2F74;
 extern s32 D_801B2F70;
 
@@ -3053,7 +3053,7 @@ extern s32 D_801B2F70;
  */
 void func_800B0E3C(void)
 {
-extern s32* D_80139280;
+extern s32ptr D_80139280;
 extern s32 D_801B2F74;
 extern s32 D_801B2F70;
 
@@ -3070,7 +3070,7 @@ void func_800B0E84(void)
 {
 extern u8 D_800DAFA0[];
 extern u8 D_80139ED8[];
-extern s32* D_80139280;
+extern s32ptr D_80139280;
 extern s32 D_801B2F74;
 extern s32 D_801B2F70;
 

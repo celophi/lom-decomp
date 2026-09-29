@@ -1,0 +1,57 @@
+#ifndef PS1_TYPES_H
+#define PS1_TYPES_H
+
+/**
+ * @file ps1_types.h
+ * @brief Scalar types and four-byte object pointers used in PS1 storage.
+ *
+ * LOM_NATIVE selects Clang's pointer-width extensions (-fms-extensions).
+ * Stored addresses must refer to mapped memory below 4 GiB. These types do
+ * not translate addresses, resolve callbacks, or decode tagged GPU links.
+ * Ordinary local pointers and function parameters retain the host ABI.
+ */
+
+typedef unsigned char u_char;
+typedef unsigned short u_short;
+typedef unsigned int u_int;
+
+typedef int s32;
+typedef unsigned int u32;
+typedef unsigned char u8;
+typedef signed char s8;
+typedef unsigned short u16;
+typedef signed short s16;
+
+#if defined(LOM_NATIVE)
+#if !defined(__clang__)
+#error LOM_NATIVE requires Clang with -fms-extensions
+#elif __is_identifier(__ptr32) || __is_identifier(__uptr)
+#error LOM_NATIVE requires -fms-extensions for four-byte pointers
+#endif
+
+/** @brief Qualifier used when defining a stored object-pointer typedef. */
+#define PS1_PTR32 __ptr32 __uptr
+typedef unsigned int u_long;
+typedef int Ps1Long;
+#else
+#define PS1_PTR32
+typedef unsigned long u_long;
+typedef long Ps1Long;
+#endif
+
+/** @brief Stored pointers; native loads zero-extend the four-byte address. */
+typedef void* PS1_PTR32 voidptr;
+typedef u8* PS1_PTR32 u8ptr;
+typedef s8* PS1_PTR32 s8ptr;
+typedef u16* PS1_PTR32 u16ptr;
+typedef s16* PS1_PTR32 s16ptr;
+typedef u32* PS1_PTR32 u32ptr;
+typedef s32* PS1_PTR32 s32ptr;
+typedef u_long* PS1_PTR32 ulongptr;
+
+#if defined(LOM_NATIVE)
+_Static_assert(sizeof(voidptr) == 4, "PS1 address slots must remain four bytes");
+_Static_assert(sizeof(u_long) == 4 && sizeof(Ps1Long) == 4, "PS1 long storage must remain four bytes");
+#endif
+
+#endif

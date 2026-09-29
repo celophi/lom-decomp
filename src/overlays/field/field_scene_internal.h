@@ -103,6 +103,9 @@ typedef struct
     u8 color_index;
 } FieldTileDesc;
 
+/** @brief Four-byte pointer to FieldTileDesc in PS1 storage. */
+typedef FieldTileDesc* PS1_PTR32 FieldTileDescPtr;
+
 /**
  * @brief Overlapping view of FieldObj's word at 0x0C.
  *
@@ -127,9 +130,23 @@ typedef union
 } FieldObjFlags;
 
 typedef struct FieldPartDef FieldPartDef;
+
+/** @brief Four-byte pointer to FieldPartDef in PS1 storage. */
+typedef FieldPartDef* PS1_PTR32 FieldPartDefPtr;
+/** @brief Stored address of a table of four-byte FieldPartDef pointers. */
+typedef FieldPartDefPtr* PS1_PTR32 FieldPartDefTablePtr;
 typedef struct FieldNodeDef FieldNodeDef;
+
+/** @brief Four-byte pointer to FieldNodeDef in PS1 storage. */
+typedef FieldNodeDef* PS1_PTR32 FieldNodeDefPtr;
 typedef struct FieldMarkerDef FieldMarkerDef;
+
+/** @brief Four-byte pointer to FieldMarkerDef in PS1 storage. */
+typedef FieldMarkerDef* PS1_PTR32 FieldMarkerDefPtr;
 typedef struct FieldAnimDef FieldAnimDef;
+
+/** @brief Four-byte pointer to FieldAnimDef in PS1 storage. */
+typedef FieldAnimDef* PS1_PTR32 FieldAnimDefPtr;
 
 /**
  * @brief Per-object definition record.
@@ -137,7 +154,7 @@ typedef struct FieldAnimDef FieldAnimDef;
 typedef struct
 {
     /** 0x00 null-terminated list of the object's part definitions. */
-    FieldPartDef** part_defs;
+    FieldPartDefTablePtr part_defs;
     /** 0x04 shared-source handle; two defs with the same one are compatible. */
     s32 shared_source;
     u8 _pad1[0xC - 8];
@@ -177,6 +194,11 @@ typedef struct
     } motion;
 } FieldObjDef;
 
+/** @brief Four-byte pointer to FieldObjDef in PS1 storage. */
+typedef FieldObjDef* PS1_PTR32 FieldObjDefPtr;
+/** @brief Stored address of a table of four-byte FieldObjDef pointers. */
+typedef FieldObjDefPtr* PS1_PTR32 FieldObjDefTablePtr;
+
 /** FieldObjDef::flags bit: the object ignores the camera scroll. */
 #define FIELD_OBJ_DEF_SCREEN_FIXED 2
 
@@ -194,7 +216,7 @@ struct FieldPartDef
      * 0x00 packed tile descriptors, one 4-byte entry per grid cell; also the
      * identity key field_find_shareable_part matches parts on.
      */
-    FieldTileDesc* tiles;
+    FieldTileDescPtr tiles;
     u8 _pad0[8 - 4];
     union
     {
@@ -360,9 +382,12 @@ struct FieldObj
  *       which is read there as four halfwords.
  */
 typedef struct FieldHeaderRec FieldHeaderRec;
+
+/** @brief Four-byte pointer to FieldHeaderRec in PS1 storage. */
+typedef FieldHeaderRec* PS1_PTR32 FieldHeaderRecPtr;
 struct FieldHeaderRec
 {
-    FieldHeaderRec* next; /* 0x00 */
+    FieldHeaderRecPtr next; /* 0x00 */
     s32 body;             /* 0x04 first word of the record proper */
 };
 
@@ -376,11 +401,11 @@ struct FieldHeaderRec
 typedef struct FieldSceneHeader
 {
     u8 _pad0[4];
-    u16* pixel_data; /* 0x04 strip pixel-source base */
+    u16ptr pixel_data; /* 0x04 strip pixel-source base */
     u8 _pad1[0x10 - 8];
     /** 0x10 head of the record list indexed by field_header_record_at; null when the
         scene carries no records. */
-    FieldHeaderRec* records;
+    FieldHeaderRecPtr records;
     u8 _pad2[0x28 - 0x14];
     u16 pixel_stride; /* 0x28 source stride, in halfwords */
     u8 _pad3[0x2C - 0x2A];
@@ -404,7 +429,7 @@ typedef struct FieldSceneHeader
  */
 struct FieldMarkerDef
 {
-    FieldMarkerDef* next; /* 0x00 next definition in the scene resource */
+    FieldMarkerDefPtr next; /* 0x00 next definition in the scene resource */
     /** 0x04 first point, horizontal. */
     u16 x0;
     /** 0x06 first point, vertical (halved before use). */
@@ -517,7 +542,7 @@ struct FieldAnimDef
     } head;
     FieldAnimDefFlags flags; /* 0x04 */
     /** 0x08 next definition in the same scene list. */
-    FieldAnimDef* next;
+    FieldAnimDefPtr next;
     union
     {
         /** Tile and image handlers (lists 0 and 3). */
@@ -528,7 +553,7 @@ struct FieldAnimDef
             u8 rect_width;  /* 0x0E rectangle width */
             u8 rect_height; /* 0x0F rectangle height */
             /** 0x10 tile grid whose runtime cel list the handler drives. */
-            FieldPartDef* grid;
+            FieldPartDefPtr grid;
         } tile;
         /** Palette handlers (list 1). */
         struct
@@ -557,10 +582,10 @@ struct FieldAnimDef
             u8 slot_count; /* 0x0D number of colour slots rewritten */
             u8 _pad1[2];
             /** 0x10 tile grid whose runtime cel list is tinted (kind 0). */
-            FieldPartDef* grid;
+            FieldPartDefPtr grid;
         } tint;
     } u;
-    u8* data; /* 0x14 handler-specific data */
+    u8ptr data; /* 0x14 handler-specific data */
 };
 
 /**
@@ -599,7 +624,7 @@ typedef struct
 {
     u8 _pad0[4];
     /** 0x04 count halfword followed by the palette entries themselves. */
-    u16* data;
+    u16ptr data;
 } FieldTintPal;
 
 /**
@@ -826,6 +851,9 @@ typedef struct
     u16 end_delay;
 } FieldSeqDef;
 
+/** @brief Four-byte pointer to FieldSeqDef in PS1 storage. */
+typedef FieldSeqDef* PS1_PTR32 FieldSeqDefPtr;
+
 /** @brief Element of the scene's sequence list (0x14). */
 typedef struct FieldSeq FieldSeq;
 struct FieldSeq
@@ -892,7 +920,7 @@ typedef struct
  */
 struct FieldNodeDef
 {
-    FieldNodeDef* next; /* 0x00 next definition in the scene resource */
+    FieldNodeDefPtr next; /* 0x00 next definition in the scene resource */
     /** 0x04 flag word. Bit 2 excludes the node from the group scan; the low
         two bits select the group mode (0 = single, 1 = pair). field_collision_collect_groups
         reads the whole word for the bit-2 test and only the low byte for the
@@ -999,16 +1027,16 @@ typedef union
 typedef struct
 {
     /** NULL-terminated array of object definitions. */
-    FieldObjDef** object_defs;
+    FieldObjDefTablePtr object_defs;
     /** Texture and CLUT image uploaded to VRAM; also the key field_load_map deduplicates on. */
-    u_long* image;
+    ulongptr image;
     /** Head of the node definition list. */
-    FieldNodeDef* node_defs;
+    FieldNodeDefPtr node_defs;
     /** Head of the edge definition list. */
-    FieldMarkerDef* edge_defs;
+    FieldMarkerDefPtr edge_defs;
     u8 _pad0[4];
     /** Heads of the four animation definition lists, one per handler group. */
-    FieldAnimDef* anim_defs[4];
+    FieldAnimDefPtr anim_defs[4];
     u8 _pad1[2];
     /** Set once the render records are built; cleared at every map load. */
     u16 built;
@@ -1022,7 +1050,12 @@ typedef struct
     u16 depth;
 } FieldMapObject;
 
-extern FieldMapObject** g_field_objects;
+/** @brief Four-byte pointer to FieldMapObject in PS1 storage. */
+typedef FieldMapObject* PS1_PTR32 FieldMapObjectPtr;
+/** @brief Stored address of a table of four-byte FieldMapObject pointers. */
+typedef FieldMapObjectPtr* PS1_PTR32 FieldMapObjectTablePtr;
+
+extern FieldMapObjectTablePtr g_field_objects;
 
 void field_build_render_records(FieldMapObject* object, u16 object_index);
 void field_collision_rebuild_spans(void);
@@ -1039,10 +1072,10 @@ typedef struct
     u16 format_version; /* 0x08 */
     u8 _pad1[0x10 - 0xA];
     s32 seq_count;         /* 0x10 number of FieldSeqDef entries */
-    FieldScene* scene;     /* 0x14 */
-    FieldSeqDef* seq_defs; /* 0x18 sequence command table */
+    FieldScenePtr scene;     /* 0x14 */
+    FieldSeqDefPtr seq_defs; /* 0x18 sequence command table */
     /** 0x1C points referenced by FieldNodeRun. */
-    DVECTOR* points;
+    DVECTORPtr points;
 } FieldResource;
 
 /** The scene resource block; the scene's runtime records follow it. */
@@ -1101,7 +1134,7 @@ extern s32 g_field_camera_y;
 extern s32 g_field_camera_z;
 /** @brief Pixel lookup table field_load_map applies to the next map, plus one; 0 for none. */
 extern s32 g_field_pixel_lookup_selector;
-extern s16* g_field_node_angle_table;
+extern s16ptr g_field_node_angle_table;
 
 s32 rcos(s32);
 s32 rsin(s32);

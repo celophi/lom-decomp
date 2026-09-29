@@ -419,7 +419,7 @@ s32 field_get_stored_companion_status(s32 index);
 void field_rename_stored_companion(s32 index);
 
 /* field_scene_build.c */
-void field_draw_scene_objects(u8* *cursor, u_long *ot, s32 update_mode);
+void field_draw_scene_objects(u8ptr* cursor, u_long *ot, s32 update_mode);
 void field_size_work_buffer(void);
 
 /* field_scene_control.c */

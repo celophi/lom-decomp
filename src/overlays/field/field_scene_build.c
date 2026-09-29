@@ -243,11 +243,11 @@ static void field_prepare_animation_definitions(FieldAnimDef* def, s32 handler_g
 static void field_build_animation_list(FieldAnimDef* def, u8** arena, FieldAnim** tail);
 static void field_build_sprite_tile_record(FieldTileDesc* desc, FieldTileRec* record, s32 texture_depth, s32 record_flags);
 static void field_build_quad_tile_record(FieldTileDesc* desc, FieldTileRec* record, s32 texture_depth, s32 record_flags);
-static void field_draw_marker_overlay(u8** cursor, u_long* ot);
-static void field_emit_sprite_grid(FieldPart* part, u8** cursor_ptr, FieldViewport* origin, u_long* ot);
-static void field_emit_rotated_sprite_grid(FieldPart* part, u8** cursor_ptr, FieldViewport* origin, u_long* ot);
+static void field_draw_marker_overlay(u8ptr* cursor, u_long* ot);
+static void field_emit_sprite_grid(FieldPart* part, u8ptr* cursor_ptr, FieldViewport* origin, u_long* ot);
+static void field_emit_rotated_sprite_grid(FieldPart* part, u8ptr* cursor_ptr, FieldViewport* origin, u_long* ot);
 static FieldPart* field_find_shareable_part(FieldScene* scene, FieldObj* obj, FieldPart* part, FieldTileDesc* tiles);
-static void field_draw_part(FieldPart* part, u8** cursor, FieldViewport* origin, u_long* ot);
+static void field_draw_part(FieldPart* part, u8ptr* cursor, FieldViewport* origin, u_long* ot);
 
 /**
  * @brief Clamp a depth-offset CLUT id to the valid range.
@@ -303,7 +303,7 @@ void field_build_render_records(FieldMapObject* map, u16 object_index)
     FieldObj* obj;
     FieldLink* tail;
     FieldPart* prev_part;
-    FieldPartDef** part_defs;
+    FieldPartDefPtr* part_defs;
     DVECTOR* points;
     s32 intercept_a;
     u8* vlc_table;
@@ -348,7 +348,7 @@ void field_build_render_records(FieldMapObject* map, u16 object_index)
     u8 mask;
     FieldObjDef* obj_def;
     u8* cursor;
-    FieldObjDef** obj_defs;
+    FieldObjDefPtr* obj_defs;
 
     mem = FIELD_MEM_STATE;
     tpage = 0;
@@ -1839,7 +1839,7 @@ void field_size_work_buffer(void)
 #if defined(VERSION_JP)
 INCLUDE_ASM("overlays/field/nonmatchings/field_scene_build", field_draw_scene_objects);
 #else
-void field_draw_scene_objects(u8** cursor, u_long* ot, s32 update_mode)
+void field_draw_scene_objects(u8ptr* cursor, u_long* ot, s32 update_mode)
 {
     FieldViewport viewport;
     FieldObj* obj;
@@ -2059,7 +2059,7 @@ void field_draw_scene_objects(u8** cursor, u_long* ot, s32 update_mode)
  * @param cursor Primitive-buffer cursor; advanced past everything emitted.
  * @param ot Ordering table; the run is linked into @p ot[-1].
  */
-static void field_draw_marker_overlay(u8** cursor, u_long* ot)
+static void field_draw_marker_overlay(u8ptr* cursor, u_long* ot)
 {
     s16 label_pos[2];
     FieldScene* scene;
@@ -2141,7 +2141,7 @@ static void field_draw_marker_overlay(u8** cursor, u_long* ot)
  * @param origin Screen position of the grid's top-left cell.
  * @param ot Ordering table with one two-word entry per CLUT id.
  */
-static void field_emit_sprite_grid(FieldPart* part, u8** cursor_ptr, FieldViewport* origin, u_long* ot)
+static void field_emit_sprite_grid(FieldPart* part, u8ptr* cursor_ptr, FieldViewport* origin, u_long* ot)
 {
     s32 uv_clut;
     s32 tpage_word;
@@ -2439,7 +2439,7 @@ static void field_emit_sprite_grid(FieldPart* part, u8** cursor_ptr, FieldViewpo
  * @param origin Screen placement; its width and camera words place the pivot.
  * @param ot Ordering table with one two-word entry per CLUT id.
  */
-static void field_emit_rotated_sprite_grid(FieldPart* part, u8** cursor_ptr, FieldViewport* origin, u_long* ot)
+static void field_emit_rotated_sprite_grid(FieldPart* part, u8ptr* cursor_ptr, FieldViewport* origin, u_long* ot)
 {
     u8* record;
     s32* bit_words;
@@ -2795,7 +2795,7 @@ static FieldPart* field_find_shareable_part(FieldScene* scene, FieldObj* obj, Fi
  * @param origin Screen placement of the part.
  * @param ot Ordering table with one two-word entry per CLUT id.
  */
-static void field_draw_part(FieldPart* part, u8** cursor, FieldViewport* origin, u_long* ot)
+static void field_draw_part(FieldPart* part, u8ptr* cursor, FieldViewport* origin, u_long* ot)
 {
     switch (part->kind)
     {

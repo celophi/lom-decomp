@@ -84,6 +84,9 @@ typedef struct
     s32 spawning;
 } WmapEffectEmitter;
 
+/** @brief Four-byte pointer to WmapEffectEmitter in PS1 storage. */
+typedef WmapEffectEmitter* PS1_PTR32 WmapEffectEmitterPtr;
+
 
 /** @brief Map scroll position and projection scale (see wmap_view_effects.c). */
 typedef struct
@@ -132,16 +135,16 @@ extern WmapHandler g_wmap_effect35_timeline_steps[WMAP_EFFECT35_TIMELINE_STEPS];
 extern WmapHandler g_wmap_effect35_steps[WMAP_EFFECT35_MAIN_STEPS];
 extern s32 g_wmap_focus_screen_position;
 extern s32 D_8011D500;
-extern u8* D_8011CF1C;
-extern u8* D_8011CF24;
-extern u8* D_8011CF28;
+extern u8ptr D_8011CF1C;
+extern u8ptr D_8011CF24;
+extern u8ptr D_8011CF28;
 extern u8 D_8011D538[];
 extern s32 D_80139228;
 extern s32 D_80139244;
 extern s32 D_8013923C;
 extern SVECTOR D_80139258;
 extern s32 D_80139260;
-extern WmapEffectEmitter* D_80139280;
+extern WmapEffectEmitterPtr D_80139280;
 extern s32 g_wmap_view_mode;
 extern s32 g_wmap_view_scroll_mode;
 extern WmapView g_wmap_view;

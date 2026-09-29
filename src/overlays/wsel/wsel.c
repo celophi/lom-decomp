@@ -224,7 +224,7 @@ extern u8 g_wsel_cell_edges[WSEL_MAP_CELLS * WSEL_MAP_CELLS][WSEL_SUBCELLS * WSE
 extern WselSprite g_wsel_sprites[WSEL_SPRITE_COUNT];
 extern WselIndicatorFrame g_wsel_indicator_frame_default;
 extern WselIndicatorFrame g_wsel_indicator_frame_alternate;
-extern WselRenderBuffer* g_wsel_render_context;
+extern WselRenderBufferPtr g_wsel_render_context;
 extern u8 g_wsel_sound_bank;
 extern WselFadeTarget g_wsel_fade_target;
 extern WselFadeCurrent g_wsel_fade_current;

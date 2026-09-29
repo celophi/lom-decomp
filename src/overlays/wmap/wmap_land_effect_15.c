@@ -46,8 +46,8 @@ void func_8007D394(void);
 void func_8007B0D8(s32 color_mask)
 {
 extern u8 D_800DCF18[];
-extern u8 *D_8011CF1C;
-extern u8 *D_8011CF24;
+extern u8ptr D_8011CF1C;
+extern u8ptr D_8011CF24;
 extern s32 D_80139234;
 extern s32 D_8013923C;
 

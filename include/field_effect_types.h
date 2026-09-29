@@ -157,6 +157,9 @@ typedef struct FieldActorPartDef
     s16 unknown_0x46;
 } FieldActorPartDef;
 
+/** @brief Four-byte pointer to FieldActorPartDef in PS1 storage. */
+typedef FieldActorPartDef* PS1_PTR32 FieldActorPartDefPtr;
+
 /** @brief FieldActorAnimationDef::flags: the definition carries its extension fields (unknown_0x12 onward). */
 #define FIELD_ANIMATION_HAS_EXTENSION 0x8000
 /** @brief FieldActorAnimationDef::flags: two alternate definitions and a three-halfword tail follow. */
@@ -181,6 +184,9 @@ typedef struct FieldActorAnimationDef
     u16 sync_parts;
 } FieldActorAnimationDef;
 
+/** @brief Four-byte pointer to FieldActorAnimationDef in PS1 storage. */
+typedef FieldActorAnimationDef* PS1_PTR32 FieldActorAnimationDefPtr;
+
 /**
  * @brief Actor-local part definitions, per-track counters, and object bindings.
  * @note actor_index identifies this actor in g_field_actor_slots; object indices
@@ -188,14 +194,14 @@ typedef struct FieldActorAnimationDef
  */
 typedef struct FieldActorState
 {
-    FieldActorPartDef* parts;
-    u8* link_records;        /* six-byte records */
-    u8* link_record_indices; /* halfword index table */
-    FieldActorAnimationDef* animation;
-    FieldActorAnimationDef* animations;
-    u8* track_data;
-    u8* mesh_data;
-    u8* sound_data[2]; /* sound-effect sections of the resource */
+    FieldActorPartDefPtr parts;
+    u8ptr link_records;        /* six-byte records */
+    u8ptr link_record_indices; /* halfword index table */
+    FieldActorAnimationDefPtr animation;
+    FieldActorAnimationDefPtr animations;
+    u8ptr track_data;
+    u8ptr mesh_data;
+    u8ptr sound_data[2]; /* sound-effect sections of the resource */
     u8 is_active;
     u8 part_count;
     u8 hit_reaction; /* reaction selector applied to collected targets */
@@ -221,7 +227,7 @@ typedef struct FieldActorState
     u8 active_track_mask;
     u8 unknown_0x23b;
     u8 pad23C[0x240 - 0x23C];
-    u16* unknown_0x240;
+    u16ptr unknown_0x240;
 } FieldActorState;
 
 /**

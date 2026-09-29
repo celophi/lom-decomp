@@ -187,7 +187,7 @@ extern WmapConfigBytes D_801B2490;
 extern WmapConfigA D_800D9268[];
 extern WmapMotion D_801AFBD0[];
 extern WmapResource D_80139988[];
-extern s32 *D_80139280;
+extern s32ptr D_80139280;
 extern u8 D_8011F538[];
 extern s32 D_801B2C18;
 extern s32 D_801B2C1C;
@@ -337,7 +337,7 @@ typedef struct
     u8 pad_02[0x12];
 } WmapSlot14;
 
-extern s32 *D_80139280;
+extern s32ptr D_80139280;
 extern WmapSlot8 D_80139988[];
 extern WmapSlot14 D_801AFBD0[];
 extern s32 D_801B0FD0;
@@ -1471,7 +1471,7 @@ extern void (*D_800D6488[])(void);
 /** @brief World-map step: kick off a descriptor animation, then tick the sub-counter. */
 void func_80098CD8(void)
 {
-extern void *D_80139280;
+extern voidptr D_80139280;
 extern s32 D_801B2C1C;
 extern s32 D_801B2C18;
 
@@ -1503,7 +1503,7 @@ typedef struct
 } WmapConfigA;
 
 extern WmapConfigA D_800D9268[];
-extern s32 *D_80139280;
+extern s32ptr D_80139280;
 extern s32 D_801B2C18;
 extern s32 D_801B2C1C;
 
@@ -1525,7 +1525,7 @@ extern s32 D_801B2C1C;
 /** @brief World-map step: kick off a descriptor animation, then tick the sub-counter. */
 void func_80098DB4(void)
 {
-extern void *D_80139280;
+extern voidptr D_80139280;
 extern s32 D_801B2C1C;
 extern s32 D_801B2C18;
 
@@ -2105,7 +2105,7 @@ extern s32 D_80139280;
  */
 void func_80099668(void)
 {
-extern s32* D_80139280;
+extern s32ptr D_80139280;
 extern s32 D_801B2C44;
 extern s32 D_801B2C40;
 extern u8 D_800DB578[];
@@ -2123,7 +2123,7 @@ extern u8 D_80139FE8[];
 void func_800996B0(void)
 {
 extern void func_800996B0(void);
-extern s32* D_80139280;
+extern s32ptr D_80139280;
 extern s32 D_801B2C44;
 extern s32 D_801B2C40;
 extern u8 D_800DB578[];

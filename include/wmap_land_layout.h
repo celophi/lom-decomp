@@ -4,9 +4,9 @@
 #include "common.h"
 
 /** @brief Per-land field scene identifiers from the current layout file. */
-extern u16* g_wmap_land_scenes;
+extern u16ptr g_wmap_land_scenes;
 /** @brief Per-land field entry flags from the current layout file. */
-extern u8* g_wmap_land_entry_flags;
+extern u8ptr g_wmap_land_entry_flags;
 /** @brief Packed saved status of the replacement land. */
 extern u32 g_wmap_replacement_land_status;
 

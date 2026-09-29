@@ -45,7 +45,7 @@ FieldActorRecord* field_find_actor_record_or_default(s32 id);
 extern FieldDropHandler g_field_drop_handlers[FIELD_DROP_HANDLER_COUNT];
 /** @brief Drop slots taking part in the drop roll, per 16 monster levels. */
 extern u8 g_field_drop_slots_by_level[];
-extern FieldBattleContext* g_field_battle;
+extern FieldBattleContextPtr g_field_battle;
 
 /**
  * @brief Roll the drop of a defeated monster and run the drop slot's handler.

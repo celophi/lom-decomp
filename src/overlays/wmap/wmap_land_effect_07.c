@@ -1862,7 +1862,7 @@ extern s32 D_801B27D8;
 void func_80080D2C(void)
 {
 extern u8 D_800DA448[];
-extern s32 *D_80139280;
+extern s32ptr D_80139280;
 extern u8 D_80139CC8[];
 extern s32 D_801B24B4;
 extern s32 D_801B27D8;

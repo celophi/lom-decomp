@@ -48,10 +48,13 @@ typedef struct
     s16 group_counters[10];
 } FieldScene;
 
+/** @brief Four-byte pointer to FieldScene in PS1 storage. */
+typedef FieldScene* PS1_PTR32 FieldScenePtr;
+
 /** @brief Active scene pointer in the loaded FIELD resource. */
 typedef struct
 {
-    FieldScene* scene;
+    FieldScenePtr scene;
 } FieldSceneGlobals;
 
 /** @brief Active FIELD scene. */

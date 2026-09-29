@@ -146,7 +146,7 @@ extern s32 g_wmap_backdrop_scroll;
 extern s32 g_wmap_small_motor;
 extern s32 g_wmap_large_motor;
 
-extern ControllerPortState* D_800D0454;
+extern ControllerPortStatePtr D_800D0454;
 extern s32 D_800DCEDC;
 
 extern RECT D_80051A80;
@@ -188,7 +188,7 @@ extern s32 D_80139228;
 extern s32 D_80139244;
 extern s32 D_80139248;
 extern SVECTOR g_wmap_camera_rotation;
-extern s32* D_80139280;
+extern s32ptr D_80139280;
 extern s32 g_wmap_tint_blending;
 extern s32 D_801398B8;
 extern s32 D_801398BC;
@@ -240,7 +240,7 @@ extern SPRT D_800D06E4;
 extern WmapMenuTriangle g_wmap_menu_triangles[WMAP_MENU_TRIANGLE_COUNT];
 extern u8 D_8019D6E0;
 extern s32 D_80182DE0;
-extern s16* g_wmap_input_scripts[];
+extern s16ptr g_wmap_input_scripts[];
 extern WmapTile D_80139290[6][6];
 extern s32 D_800CB248;
 extern u8 D_800D0A08[];

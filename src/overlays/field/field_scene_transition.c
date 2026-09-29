@@ -260,7 +260,7 @@ void* field_header_record_at(s32 index);
 void field_restart_actor_animation(FieldActor* actor);
 void field_store_entry_settings();
 
-extern FieldRenderHalf* g_field_render_context;
+extern FieldRenderHalfPtr g_field_render_context;
 extern FieldActionRow g_field_resource_actions[];
 extern s32 g_field_direction_animation_modes[];
 extern FieldDirectionOffset g_field_direction_offsets[];
@@ -278,7 +278,7 @@ extern s32 g_field_transition_tile_bank;
 extern s32 g_field_loaded_actor_count;
 /* TODO: Multiple-image resource flag also raises ability growth from 1 to 4. */
 extern s32 D_80115890;
-extern void* g_field_resource_cursor;
+extern voidptr g_field_resource_cursor;
 
 extern s32 g_field_pending_spawn_id;
 extern s32 g_field_pending_music_id;
@@ -291,9 +291,9 @@ extern s32 g_field_scene_data_size;
 extern s32 g_field_active_group;
 extern u32 g_field_group_bounds[];
 extern s32 g_field_group_bounds_count;
-extern u16* g_field_event_scripts;
-extern u16* g_field_actor_scripts;
-extern u32* g_field_scene_record_table;
+extern u16ptr g_field_event_scripts;
+extern u16ptr g_field_actor_scripts;
+extern u32ptr g_field_scene_record_table;
 extern s32 g_field_hide_actor_panels;
 extern s32 g_field_camera_target_x;
 extern s32 g_field_camera_target_z;
@@ -309,8 +309,8 @@ extern s32 g_field_scene_mode_bit;
 extern s32 g_field_previous_song_volume;
 extern s32 g_field_party_palette_index;
 extern u32 g_field_scene_portrait_count;
-extern u8* g_field_scene_portraits;
-extern u8* g_field_scene_strings;
+extern u8ptr g_field_scene_portraits;
+extern u8ptr g_field_scene_strings;
 extern s32 g_field_dialog_item_count;
 extern s32 g_field_audio_timer;
 /* Declared here, not through main.h: FIELD reads and writes g_field_scene_id as a whole word. */

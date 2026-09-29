@@ -47,6 +47,9 @@ typedef struct
     u16 value;
 } WmapValueHeader;
 
+/** @brief Four-byte pointer to WmapValueHeader in PS1 storage. */
+typedef WmapValueHeader* PS1_PTR32 WmapValueHeaderPtr;
+
 extern u8 D_800DCF18[];
 extern s32 D_801ADAFC;
 extern void akao_play_sfx_from_buffer(s32, s32, s32, s32);
@@ -56,7 +59,7 @@ extern RECT D_80051A88;
 
 extern WmapInitResource D_800D9268[];
 extern WmapInitDisplay D_801AFBD0[];
-extern WmapValueHeader* D_800D0454;
+extern WmapValueHeaderPtr D_800D0454;
 
 /**
  * @brief Empty world-map handler (no operation).

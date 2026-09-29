@@ -78,7 +78,7 @@ extern WmapConfigBytes D_801B2490;
 extern WmapConfigA D_800D9268[];
 extern WmapMotion D_801AFBD0[];
 extern WmapResource D_80139988[];
-extern s32 *D_80139280;
+extern s32ptr D_80139280;
 extern u8 D_80121538[];
 extern s32 D_801B24E8;
 extern s32 D_801B24EC;

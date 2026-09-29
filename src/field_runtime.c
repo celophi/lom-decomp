@@ -25,10 +25,10 @@
 /** @brief Field allocation cursor, text state, and primitive-buffer bases. */
 typedef struct
 {
-    u8* allocation_cursor;
-    void* text_window_configs;
-    u8* timed_text;
-    u8* primitive_buffers[2];
+    u8ptr allocation_cursor;
+    voidptr text_window_configs;
+    u8ptr timed_text;
+    u8ptr primitive_buffers[2];
 } FieldWorkspace;
 
 #define FIELD_WORKSPACE ((FieldWorkspace*)0x801ED000)
@@ -49,8 +49,8 @@ extern s32 g_field_sound_bank_id;
 extern s32 g_field_secondary_music_id;
 extern s32 g_pending_game_state;
 extern s32 g_field_scene_request_pending;
-extern FieldRenderHalf* g_field_current_render_half;
-extern void* g_field_primitive_cursor;
+extern FieldRenderHalfPtr g_field_current_render_half;
+extern voidptr g_field_primitive_cursor;
 extern s32 g_field_force_two_primitives;
 extern s32 g_field_draw_count;
 extern s32 g_text_clut_base;

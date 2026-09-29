@@ -139,7 +139,7 @@ extern s32 D_801B25FC;
 /** @brief Move the effect toward the camera while fading it and advancing its countdown. */
 void func_80076DBC(void)
 {
-extern void *D_8011CF1C;
+extern voidptr D_8011CF1C;
 extern s32 D_801B2474;
 extern VECTOR D_801B2478;
 extern SVECTOR D_801B24A8;
@@ -180,7 +180,7 @@ extern s32 D_801B2604;
 /** @brief Draw and fade the transformed effect, then advance its countdown. */
 void func_80076EB4(void)
 {
-extern void *D_8011CF24;
+extern voidptr D_8011CF24;
 extern VECTOR D_80139870;
 extern VECTOR D_8011CF60;
 extern SVECTOR D_8013B238;

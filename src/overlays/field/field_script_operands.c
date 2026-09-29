@@ -40,7 +40,7 @@ enum
 /** @brief Bit width of each variable kind. */
 extern u8 g_field_script_var_widths[8];
 
-extern FieldRuntimeContext* g_field_runtime;
+extern FieldRuntimeContextPtr g_field_runtime;
 
 void field_script_op_00(void);
 FieldActorRecord* field_find_actor_record_or_default(s32 id);

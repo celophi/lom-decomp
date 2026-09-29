@@ -216,7 +216,7 @@ typedef struct
     s32 target_z;
     u8 unk5C[0x64 - 0x5C];
     /** @brief Display name of the object, NULL when it has no label. */
-    u8* name;
+    u8ptr name;
     s32 unk68;
     FieldRoutePoint route_history[FIELD_ROUTE_HISTORY_LENGTH];
     FieldCollisionWord collision;
@@ -226,7 +226,7 @@ typedef struct
     s16 unk144;
     s16 unk146;
     u8 unk148[0x168 - 0x148];
-    u8* script;
+    u8ptr script;
     s8 unk16C;
     /** @brief Effect record the object's HUD panel follows while it is bound to an animation actor. */
     u8 linked_effect_index;
@@ -337,6 +337,9 @@ typedef struct
     u8 unk38[0x48 - 0x38];
 } FieldObjectPart;
 
+/** @brief Four-byte pointer to FieldObjectPart in PS1 storage. */
+typedef FieldObjectPart* PS1_PTR32 FieldObjectPartPtr;
+
 /** @brief FieldObjectPart::flags bit 23: the object ignores map collision. */
 #define FIELD_PART_IGNORE_MAP_COLLISION 0x800000
 
@@ -445,6 +448,9 @@ typedef struct
     u8 unk1A[2];
 } FieldAnimationDef;
 
+/** @brief Four-byte pointer to FieldAnimationDef in PS1 storage. */
+typedef FieldAnimationDef* PS1_PTR32 FieldAnimationDefPtr;
+
 /** @brief Parameter curve count of an animation (curve selectors are four bits). */
 #define FIELD_CURVE_COUNT 16
 /** @brief Curve selector of an unused render-state track. */
@@ -494,6 +500,9 @@ typedef struct
     s16 start_value;
 } FieldParameterCurve;
 
+/** @brief Four-byte pointer to FieldParameterCurve in PS1 storage. */
+typedef FieldParameterCurve* PS1_PTR32 FieldParameterCurvePtr;
+
 /** @brief Status word of an animation actor slot. */
 typedef union
 {
@@ -535,12 +544,12 @@ typedef struct
 /** @brief Animation actor slot (0x244 bytes). */
 typedef struct FieldActorSlot
 {
-    FieldObjectPart* parts;
-    FieldParameterCurve* curves;
+    FieldObjectPartPtr parts;
+    FieldParameterCurvePtr curves;
     /** @brief Curve segments: ten-bit length in frames, six-bit value. */
-    u16* curve_segments;
-    FieldAnimationDef* animation;
-    FieldAnimationDef* default_animation;
+    u16ptr curve_segments;
+    FieldAnimationDefPtr animation;
+    FieldAnimationDefPtr default_animation;
     u8 unk14[0x1C - 0x14];
     /** @brief Values played by kind 2 sound commands. */
     s32 sound_params[2];
@@ -577,14 +586,14 @@ typedef struct FieldActorSlot
     u8 pending_track_mask;
     u8 unk23C[4];
     /** @brief Per animation, the mask of parts it drives. */
-    u16* part_masks;
+    u16ptr part_masks;
 } FieldActorSlot;
 
 /** @brief Resource table entry selected by an actor's resource index (0x14 bytes). */
 typedef struct
 {
-    u8* start;
-    u8* end;
+    u8ptr start;
+    u8ptr end;
     u8 unk8;
     u8 slot_index;
     /** @brief CLUT row of the resource's images (field_set_party_palettes, field_update_scene). */

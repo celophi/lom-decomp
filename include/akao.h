@@ -7,7 +7,7 @@
 typedef union
 {
     s32 value;
-    void* buffer;
+    voidptr buffer;
 } AkaoCommandParam;
 
 extern AkaoCommandParam g_akao_cmd_params[];
@@ -288,6 +288,9 @@ typedef struct AkaoSongState
     u8 _pad6E[2];
 } AkaoSongState;
 
+/** @brief Four-byte pointer to AkaoSongState in PS1 storage. */
+typedef AkaoSongState* PS1_PTR32 AkaoSongStatePtr;
+
 /**
  * @brief State of one sequencer channel (a song track or an SFX channel).
  *
@@ -298,9 +301,9 @@ typedef struct AkaoSongState
  */
 typedef struct AkaoChannelState
 {
-    u8* seq_cursor;             /**< Next bytecode byte. */
-    u8* loop_cursor[4];         /**< Loop start of each loop-stack level. */
-    u8* return_cursor;          /**< Return address of a subroutine call (ext ops FE 0E/0F). */
+    u8ptr seq_cursor;             /**< Next bytecode byte. */
+    u8ptr loop_cursor[4];         /**< Loop start of each loop-stack level. */
+    u8ptr return_cursor;          /**< Return address of a subroutine call (ext ops FE 0E/0F). */
     u32 key_map;                /**< Selected key-to-articulation map (ext op FE 14). */
     s32 pitch_lfo_cursor;       /**< Pitch LFO waveform position. */
     u32 volume_lfo_cursor;      /**< Volume LFO waveform position. */
@@ -402,5 +405,8 @@ typedef struct AkaoChannelState
     s16 spu_volume_left;
     s16 spu_volume_right;
 } AkaoChannelState;
+
+/** @brief Four-byte pointer to AkaoChannelState in PS1 storage. */
+typedef AkaoChannelState* PS1_PTR32 AkaoChannelStatePtr;
 
 #endif

@@ -75,8 +75,8 @@
 /** @brief Animation that regenerates at REGEN_MULTIPLIER_REST. */
 #define REGEN_ANIMATION_REST 0x31
 
-extern FieldBattleContext* g_field_battle;
-extern FieldRuntimeContext* g_field_runtime;
+extern FieldBattleContextPtr g_field_battle;
+extern FieldRuntimeContextPtr g_field_runtime;
 /** @brief Status flag bits granted by each equipment effect index. */
 extern u16 g_field_equipment_status_flags[];
 

@@ -392,6 +392,7 @@ project references. Useful starting points include:
 
 - [CD-ROM subsystem architecture](docs/en/technical/architecture/cdrom.md)
 - [MOVIE overlay architecture](docs/en/technical/architecture/movie.md)
+- [PS1 storage types and native compilation](docs/en/technical/reference/ps1-storage-types.md)
 - [Tools index](tools/README.md) - asset tools, scene extraction and test commands.
 - [`tools/compressor/README.md`](tools/compressor/README.md)
 

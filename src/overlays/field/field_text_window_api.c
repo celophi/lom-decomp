@@ -87,18 +87,18 @@ typedef union
 /** @brief Pending configuration copied into a field text-window state. */
 struct FieldTextConfig
 {
-    u8* portrait;
+    u8ptr portrait;
     u16 x;
     u16 y;
     u16 width;
     u16 height;
     FieldTextAnchorWord anchor;
     FieldTextFlags flags;
-    u8* text;
+    u8ptr text;
 };
 
-extern u8* g_field_scene_portraits;
-extern u8* g_field_scene_strings;
+extern u8ptr g_field_scene_portraits;
+extern u8ptr g_field_scene_strings;
 extern FieldTextWindowRect g_field_text_window_layouts[][FIELD_TEXT_WINDOW_SLOTS];
 
 /**

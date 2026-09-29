@@ -261,8 +261,8 @@ extern void (*g_field_script_op_table[])();
 /* Opcodes 0x40 to 0x5F dispatch through this table, indexed by opcode - 0x40. */
 extern FieldDispatchFn g_field_script_pair_op_table[];
 
-extern FieldRuntimeContext* g_field_runtime;
-extern FieldBattleContext* g_field_battle;
+extern FieldRuntimeContextPtr g_field_runtime;
+extern FieldBattleContextPtr g_field_battle;
 extern s32 D_8011F428;
 extern s32 g_field_gosub_state;
 extern s32 g_field_interaction_active;
@@ -659,7 +659,7 @@ void field_script_switch(void)
     s32 value;
     u8* pc;
     u8 op;
-    u8** pc_slot;
+    u8ptr* pc_slot;
 
     pc = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(pc[1] & 3, pc + 2, &value);

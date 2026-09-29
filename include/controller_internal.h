@@ -191,6 +191,9 @@ typedef struct ControllerPortState
     u8 port_id;
 } ControllerPortState;
 
+/** @brief Four-byte pointer to ControllerPortState in PS1 storage. */
+typedef ControllerPortState* PS1_PTR32 ControllerPortStatePtr;
+
 /**
  * @brief State for both controller ports and their LIBPAD receive buffers.
  */

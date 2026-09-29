@@ -144,9 +144,9 @@
 #define FIELD_COLLISION_SLIDE_NONE -2
 
 /** FieldCollisionMover::collision_node value asking for a fresh floor search. */
-#define FIELD_COLLISION_NODE_SEARCH ((FieldCollisionNode*)-1)
+#define FIELD_COLLISION_NODE_SEARCH ((FieldCollisionNodePtr)-1)
 /** FieldCollisionMover::collision_node value for a mover not tied to any floor node. */
-#define FIELD_COLLISION_NODE_DETACHED ((FieldCollisionNode*)-2)
+#define FIELD_COLLISION_NODE_DETACHED ((FieldCollisionNodePtr)-2)
 
 /** FieldCollisionMover::flags bit: the mover stands on the node its footprint centre is over. */
 #define FIELD_COLLISION_MOVER_SETTLED 0x1
@@ -474,6 +474,9 @@ typedef struct FieldCollisionNode
     s32 offset_z;
 } FieldCollisionNode;
 
+/** @brief Four-byte pointer to FieldCollisionNode in PS1 storage. */
+typedef FieldCollisionNode* PS1_PTR32 FieldCollisionNodePtr;
+
 /**
  * @brief Actor/mover state resolved by field_collision_move_mover.
  * @note Positions are 24.8 fixed point; heights grow downwards (a floor at
@@ -497,7 +500,7 @@ typedef struct FieldCollisionMover
     /** 0x18 height of the highest floor under the footprint centre, negated. */
     s32 resolved_height;
     /** 0x1C floor node, or FIELD_COLLISION_NODE_SEARCH / FIELD_COLLISION_NODE_DETACHED. */
-    FieldCollisionNode* collision_node;
+    FieldCollisionNodePtr collision_node;
     /** 0x20 FIELD_COLLISION_MOVER_SETTLED plus caller bits. */
     s32 flags;
     /** 0x24 footprint width along x, in cells. */

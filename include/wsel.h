@@ -17,9 +17,12 @@ typedef struct
     DRAWENV draw_env;
     RECT clear_rect;
     u_long packets[WSEL_PACKET_WORDS];
-    u_long* prim_cursor;
+    ulongptr prim_cursor;
     u8 unknown_0x80bc[0x10];
 } WselRenderBuffer;
+
+/** @brief Four-byte pointer to WselRenderBuffer in PS1 storage. */
+typedef WselRenderBuffer* PS1_PTR32 WselRenderBufferPtr;
 
 /**
  * @brief Run world selection until the player chooses an exit state.

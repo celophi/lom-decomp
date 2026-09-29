@@ -141,6 +141,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -264,14 +267,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -296,7 +299,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -734,6 +737,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -857,14 +863,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -889,7 +895,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -1328,6 +1334,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -1451,14 +1460,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -1483,7 +1492,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -1925,6 +1934,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -2048,14 +2060,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -2080,7 +2092,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -2522,6 +2534,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -2645,14 +2660,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -2677,7 +2692,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -3046,7 +3061,7 @@ typedef struct
     u8 pad_02[0x12];
 } WmapSlot14;
 
-extern s32 *D_80139280;
+extern s32ptr D_80139280;
 extern WmapSlot8 D_80139988[];
 extern WmapSlot14 D_801AFBD0[];
 extern s32 D_801B0FD0;
@@ -3162,6 +3177,9 @@ typedef struct
     s32 field_48;
     s32 tail_state;
 } WmapState;
+
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
 
 typedef union
 {
@@ -3286,14 +3304,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -3318,7 +3336,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -3760,6 +3778,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -3883,14 +3904,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -3915,7 +3936,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -4289,7 +4310,7 @@ typedef struct
     void *data;
 } WmapResource;
 
-extern s32 *D_80139280;
+extern s32ptr D_80139280;
 extern WmapTransform D_80139258;
 extern WmapTransform D_801B3120;
 extern WmapResource D_80139988[];
@@ -4340,7 +4361,7 @@ typedef struct
     u8 pad_02[0x12];
 } WmapSlot14;
 
-extern s32 *D_80139280;
+extern s32ptr D_80139280;
 extern WmapSlot8 D_80139988[];
 extern WmapSlot14 D_801AFBD0[];
 extern s32 D_801B0FD0;
@@ -4456,6 +4477,9 @@ typedef struct
     s32 field_48;
     s32 tail_state;
 } WmapState;
+
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
 
 typedef union
 {
@@ -4580,14 +4604,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -4612,7 +4636,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -5064,6 +5088,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -5187,14 +5214,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -5219,7 +5246,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -5671,6 +5698,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -5794,14 +5824,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -5826,7 +5856,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -6278,6 +6308,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -6401,14 +6434,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -6433,7 +6466,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -6875,6 +6908,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -6998,14 +7034,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -7030,7 +7066,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -7472,6 +7508,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -7595,14 +7634,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -7627,7 +7666,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -8069,6 +8108,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -8192,14 +8234,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -8224,7 +8266,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -8666,6 +8708,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -8789,14 +8834,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -8821,7 +8866,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -9263,6 +9308,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -9386,14 +9434,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -9418,7 +9466,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -9860,6 +9908,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -9983,14 +10034,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -10015,7 +10066,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -10457,6 +10508,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -10580,14 +10634,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -10612,7 +10666,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -10978,7 +11032,7 @@ void func_800B6FEC(void)
         s16 field_06;
     } WmapPair;
 
-    extern s32* D_8011CF40;
+    extern s32ptr D_8011CF40;
     extern s32 D_80139268;
     extern s32 D_801B25DC;
     extern WmapPair D_801B2678;
@@ -11016,7 +11070,7 @@ void func_800B70CC(void)
         s16 field_06;
     } WmapPair;
 
-    extern s32* D_8011CF40;
+    extern s32ptr D_8011CF40;
     extern s32 D_80139268;
     extern s32 D_801B25DC;
     extern WmapPair D_801B2678;
@@ -11129,6 +11183,9 @@ typedef struct
     s32 field_48;
     s32 tail_state;
 } WmapState;
+
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
 
 typedef union
 {
@@ -11253,14 +11310,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -11285,7 +11342,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -11751,6 +11808,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -11874,14 +11934,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -11906,7 +11966,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -12342,6 +12402,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -12465,14 +12528,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -12497,7 +12560,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -12921,6 +12984,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -13044,14 +13110,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -13076,7 +13142,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -13502,6 +13568,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -13625,14 +13694,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -13657,7 +13726,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -14086,6 +14155,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -14209,14 +14281,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -14241,7 +14313,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -14669,6 +14741,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -14792,14 +14867,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -14824,7 +14899,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -15253,6 +15328,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -15376,14 +15454,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -15408,7 +15486,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -15833,6 +15911,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -15956,14 +16037,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -15988,7 +16069,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -16425,6 +16506,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -16548,14 +16632,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -16580,7 +16664,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -17004,6 +17088,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -17127,14 +17214,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -17159,7 +17246,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -17586,6 +17673,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -17709,14 +17799,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -17741,7 +17831,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -18171,6 +18261,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -18294,14 +18387,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -18326,7 +18419,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -18751,6 +18844,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -18874,14 +18970,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -18906,7 +19002,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -19336,6 +19432,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -19459,14 +19558,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -19491,7 +19590,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -19916,6 +20015,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -20039,14 +20141,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -20071,7 +20173,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -20501,6 +20603,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -20624,14 +20729,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -20656,7 +20761,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -21083,6 +21188,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -21206,14 +21314,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -21238,7 +21346,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -21668,6 +21776,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -21791,14 +21902,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -21823,7 +21934,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -22248,6 +22359,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -22371,14 +22485,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -22403,7 +22517,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -22833,6 +22947,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -22956,14 +23073,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -22988,7 +23105,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -23415,6 +23532,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -23538,14 +23658,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -23570,7 +23690,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -24000,6 +24120,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -24123,14 +24246,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -24155,7 +24278,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -24581,6 +24704,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -24704,14 +24830,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -24736,7 +24862,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -25166,6 +25292,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -25289,14 +25418,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -25321,7 +25450,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -25747,6 +25876,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -25870,14 +26002,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -25902,7 +26034,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -26332,6 +26464,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -26455,14 +26590,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -26487,7 +26622,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -26917,6 +27052,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -27040,14 +27178,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -27072,7 +27210,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -27502,6 +27640,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -27625,14 +27766,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -27657,7 +27798,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -28094,6 +28235,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -28217,14 +28361,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -28249,7 +28393,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -28679,6 +28823,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -28802,14 +28949,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -28834,7 +28981,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -29264,6 +29411,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -29387,14 +29537,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -29419,7 +29569,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -29855,6 +30005,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -29978,14 +30131,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -30010,7 +30163,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -30440,6 +30593,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -30563,14 +30719,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -30595,7 +30751,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -31020,6 +31176,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -31143,14 +31302,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -31175,7 +31334,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -31605,6 +31764,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -31728,14 +31890,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -31760,7 +31922,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -32185,6 +32347,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -32308,14 +32473,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -32340,7 +32505,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -32770,6 +32935,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -32893,14 +33061,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -32925,7 +33093,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -33350,6 +33518,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -33473,14 +33644,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -33505,7 +33676,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -33935,6 +34106,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -34058,14 +34232,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -34090,7 +34264,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -34515,6 +34689,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -34638,14 +34815,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -34670,7 +34847,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -35100,6 +35277,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -35223,14 +35403,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -35255,7 +35435,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -35693,6 +35873,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -35816,14 +35999,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -35848,7 +36031,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -36278,6 +36461,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -36401,14 +36587,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -36433,7 +36619,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -36863,6 +37049,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -36986,14 +37175,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -37018,7 +37207,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -37447,6 +37636,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -37570,14 +37762,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -37602,7 +37794,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -38032,6 +38224,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -38155,14 +38350,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -38187,7 +38382,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -38617,6 +38812,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -38740,14 +38938,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -38772,7 +38970,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -39196,6 +39394,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -39319,14 +39520,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -39351,7 +39552,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -39788,6 +39989,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -39911,14 +40115,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -39943,7 +40147,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -40367,6 +40571,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -40490,14 +40697,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -40522,7 +40729,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -40954,6 +41161,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -41077,14 +41287,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -41109,7 +41319,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -41535,6 +41745,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -41658,14 +41871,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -41690,7 +41903,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -42124,6 +42337,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -42247,14 +42463,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -42279,7 +42495,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -42702,6 +42918,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -42825,14 +43044,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -42857,7 +43076,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -43294,6 +43513,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -43417,14 +43639,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -43449,7 +43671,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -43873,6 +44095,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -43996,14 +44221,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -44028,7 +44253,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -44461,6 +44686,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -44584,14 +44812,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -44616,7 +44844,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -45050,6 +45278,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -45173,14 +45404,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -45205,7 +45436,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -45628,6 +45859,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -45751,14 +45985,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -45783,7 +46017,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -46220,6 +46454,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -46343,14 +46580,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -46375,7 +46612,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -46799,6 +47036,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -46922,14 +47162,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -46954,7 +47194,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -47387,6 +47627,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -47510,14 +47753,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -47542,7 +47785,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -47976,6 +48219,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -48099,14 +48345,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -48131,7 +48377,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -48559,6 +48805,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -48682,14 +48931,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -48714,7 +48963,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -49154,6 +49403,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -49277,14 +49529,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -49309,7 +49561,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -49732,6 +49984,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -49855,14 +50110,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -49887,7 +50142,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -50324,6 +50579,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -50447,14 +50705,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -50479,7 +50737,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -50903,6 +51161,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -51026,14 +51287,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -51058,7 +51319,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -51486,6 +51747,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -51609,14 +51873,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -51641,7 +51905,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -52066,6 +52330,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -52189,14 +52456,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -52221,7 +52488,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -52644,6 +52911,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -52767,14 +53037,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -52799,7 +53069,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -53236,6 +53506,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -53359,14 +53632,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -53391,7 +53664,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -53815,6 +54088,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -53938,14 +54214,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -53970,7 +54246,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -54403,6 +54679,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -54526,14 +54805,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -54558,7 +54837,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -54992,6 +55271,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -55115,14 +55397,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -55147,7 +55429,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -55581,6 +55863,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -55704,14 +55989,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -55736,7 +56021,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -56159,6 +56444,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -56282,14 +56570,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -56314,7 +56602,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -56751,6 +57039,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -56874,14 +57165,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -56906,7 +57197,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -57330,6 +57621,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -57453,14 +57747,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -57485,7 +57779,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -57917,6 +58211,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -58040,14 +58337,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -58072,7 +58369,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -58498,6 +58795,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -58621,14 +58921,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -58653,7 +58953,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -59086,6 +59386,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -59209,14 +59512,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -59241,7 +59544,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -59664,6 +59967,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -59787,14 +60093,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -59819,7 +60125,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -60256,6 +60562,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -60379,14 +60688,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -60411,7 +60720,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -60835,6 +61144,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -60958,14 +61270,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -60990,7 +61302,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -61419,6 +61731,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -61542,14 +61857,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -61574,7 +61889,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -61997,6 +62312,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -62120,14 +62438,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -62152,7 +62470,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -62589,6 +62907,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -62712,14 +63033,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -62744,7 +63065,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -63168,6 +63489,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -63291,14 +63615,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -63323,7 +63647,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -63752,6 +64076,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -63875,14 +64202,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -63907,7 +64234,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -64330,6 +64657,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -64453,14 +64783,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -64485,7 +64815,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -64922,6 +65252,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -65045,14 +65378,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -65077,7 +65410,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -65501,6 +65834,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -65624,14 +65960,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -65656,7 +65992,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -66085,6 +66421,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -66208,14 +66547,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -66240,7 +66579,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -66663,6 +67002,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -66786,14 +67128,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -66818,7 +67160,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -67255,6 +67597,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -67378,14 +67723,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -67410,7 +67755,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -67834,6 +68179,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -67957,14 +68305,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -67989,7 +68337,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -68417,6 +68765,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -68540,14 +68891,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -68572,7 +68923,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -68997,6 +69348,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -69120,14 +69474,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -69152,7 +69506,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -69575,6 +69929,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -69698,14 +70055,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -69730,7 +70087,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -70167,6 +70524,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -70290,14 +70650,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -70322,7 +70682,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -70746,6 +71106,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -70869,14 +71232,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -70901,7 +71264,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -71329,6 +71692,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -71452,14 +71818,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -71484,7 +71850,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -71909,6 +72275,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -72032,14 +72401,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -72064,7 +72433,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -72487,6 +72856,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -72610,14 +72982,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -72642,7 +73014,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -73079,6 +73451,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -73202,14 +73577,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -73234,7 +73609,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -73658,6 +74033,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -73781,14 +74159,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -73813,7 +74191,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -74241,6 +74619,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -74364,14 +74745,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -74396,7 +74777,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -74821,6 +75202,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -74944,14 +75328,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -74976,7 +75360,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -75399,6 +75783,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -75522,14 +75909,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -75554,7 +75941,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -75991,6 +76378,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -76114,14 +76504,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -76146,7 +76536,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -76570,6 +76960,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -76693,14 +77086,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -76725,7 +77118,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -77153,6 +77546,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -77276,14 +77672,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -77308,7 +77704,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -77733,6 +78129,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -77856,14 +78255,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -77888,7 +78287,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -78311,6 +78710,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -78434,14 +78836,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -78466,7 +78868,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -78903,6 +79305,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -79026,14 +79431,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -79058,7 +79463,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -79482,6 +79887,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -79605,14 +80013,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -79637,7 +80045,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -80065,6 +80473,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -80188,14 +80599,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -80220,7 +80631,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -80645,6 +81056,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -80768,14 +81182,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -80800,7 +81214,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -81223,6 +81637,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -81346,14 +81763,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -81378,7 +81795,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -81815,6 +82232,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -81938,14 +82358,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -81970,7 +82390,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -82394,6 +82814,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -82517,14 +82940,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -82549,7 +82972,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -82975,6 +83398,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -83098,14 +83524,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -83130,7 +83556,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -83569,6 +83995,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -83692,14 +84121,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -83724,7 +84153,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -84149,6 +84578,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -84272,14 +84704,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -84304,7 +84736,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -84743,6 +85175,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -84866,14 +85301,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -84898,7 +85333,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -85321,6 +85756,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -85444,14 +85882,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -85476,7 +85914,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -85913,6 +86351,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -86036,14 +86477,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -86068,7 +86509,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -86492,6 +86933,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -86615,14 +87059,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -86647,7 +87091,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -87073,6 +87517,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -87196,14 +87643,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -87228,7 +87675,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -87667,6 +88114,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -87790,14 +88240,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -87822,7 +88272,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -88247,6 +88697,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -88370,14 +88823,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -88402,7 +88855,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -88841,6 +89294,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -88964,14 +89420,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -88996,7 +89452,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -89419,6 +89875,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -89542,14 +90001,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -89574,7 +90033,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -90011,6 +90470,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -90134,14 +90596,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -90166,7 +90628,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -90590,6 +91052,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -90713,14 +91178,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -90745,7 +91210,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -91178,6 +91643,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -91301,14 +91769,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -91333,7 +91801,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -91768,6 +92236,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -91891,14 +92362,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -91923,7 +92394,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -92346,6 +92817,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -92469,14 +92943,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -92501,7 +92975,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -92938,6 +93412,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -93061,14 +93538,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -93093,7 +93570,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -93556,6 +94033,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -93679,14 +94159,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -93711,7 +94191,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -94145,6 +94625,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -94268,14 +94751,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -94300,7 +94783,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -94727,6 +95210,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -94850,14 +95336,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -94882,7 +95368,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -95317,6 +95803,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -95440,14 +95929,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -95472,7 +95961,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -95895,6 +96384,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -96018,14 +96510,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -96050,7 +96542,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -96487,6 +96979,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -96610,14 +97105,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -96642,7 +97137,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -97066,6 +97561,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -97189,14 +97687,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -97221,7 +97719,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -97654,6 +98152,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -97777,14 +98278,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -97809,7 +98310,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -98244,6 +98745,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -98367,14 +98871,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -98399,7 +98903,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -98826,6 +99330,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -98949,14 +99456,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -98981,7 +99488,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -99416,6 +99923,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -99539,14 +100049,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -99571,7 +100081,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -99994,6 +100504,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -100117,14 +100630,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -100149,7 +100662,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -100586,6 +101099,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -100709,14 +101225,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -100741,7 +101257,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -101165,6 +101681,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -101288,14 +101807,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -101320,7 +101839,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -101752,6 +102271,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -101875,14 +102397,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -101907,7 +102429,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -102339,6 +102861,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -102462,14 +102987,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -102494,7 +103019,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;
@@ -102926,6 +103451,9 @@ typedef struct
     s32 tail_state;
 } WmapState;
 
+/** @brief Four-byte pointer to WmapState in PS1 storage. */
+typedef WmapState* PS1_PTR32 WmapStatePtr;
+
 typedef union
 {
     struct
@@ -103049,14 +103577,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
-extern s32* D_8011CF30;
-extern s32* D_8011CF34;
-extern s32* D_8011CF38;
-extern s32* D_8011CF3C;
+extern s32ptr D_8011CF1C;
+extern s32ptr D_8011CF24;
+extern s32ptr D_8011CF28;
+extern s32ptr D_8011CF2C;
+extern s32ptr D_8011CF30;
+extern s32ptr D_8011CF34;
+extern s32ptr D_8011CF38;
+extern s32ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -103081,7 +103609,7 @@ extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapState* D_80139280;
+extern WmapStatePtr D_80139280;
 extern WmapCell D_80139290[][6];
 extern VECTOR D_80139870;
 extern s32 g_wmap_view_mode;

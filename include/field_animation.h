@@ -8,11 +8,14 @@ struct FieldAnim;
 struct FieldAnimDef;
 /** @brief Pending image upload and its inline VRAM destination rectangle. */
 typedef struct FieldImageReq FieldImageReq;
+
+/** @brief Four-byte pointer to FieldImageReq in PS1 storage. */
+typedef FieldImageReq* PS1_PTR32 FieldImageReqPtr;
 struct FieldImageReq
 {
-    FieldImageReq* next;
+    FieldImageReqPtr next;
     RECT rect;
-    u_long* data;
+    ulongptr data;
 };
 struct FieldPart;
 struct FieldTintSrc;

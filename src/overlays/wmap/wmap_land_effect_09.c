@@ -145,7 +145,7 @@ typedef struct
     u8 pad_02[0x12];
 } WmapSlot14;
 
-extern s32 *D_80139280;
+extern s32ptr D_80139280;
 extern WmapSlot8 D_80139988[];
 extern WmapSlot14 D_801AFBD0[];
 extern s32 D_801B0FD0;
@@ -342,7 +342,7 @@ typedef struct
     u8 pad_02[0x12];
 } WmapSlot14;
 
-extern s32 *D_80139280;
+extern s32ptr D_80139280;
 extern WmapSlot8 D_80139988[];
 extern WmapSlot14 D_801AFBD0[];
 extern s32 D_801B0FD0;
@@ -390,7 +390,7 @@ typedef struct
     u8 pad_02[0x12];
 } WmapSlot14;
 
-extern s32 *D_80139280;
+extern s32ptr D_80139280;
 extern WmapSlot8 D_80139988[];
 extern WmapSlot14 D_801AFBD0[];
 extern s32 D_801B0FD0;
@@ -1282,7 +1282,7 @@ extern s32 D_801B2BB8;
  */
 void func_80096C54(void)
 {
-extern s32* D_80139280;
+extern s32ptr D_80139280;
 extern s32 D_801B2BBC;
 extern s32 D_801B2BB8;
 
@@ -1639,7 +1639,7 @@ extern s32 D_80139280;
  */
 void func_80097348(void)
 {
-extern s32* D_80139280;
+extern s32ptr D_80139280;
 extern s32 D_801B2BD4;
 extern s32 D_801B2BD0;
 extern u8 D_800D9688[];
@@ -1657,7 +1657,7 @@ extern u8 D_80139A48[];
 void func_80097390(void)
 {
 extern void func_80097390(void);
-extern s32* D_80139280;
+extern s32ptr D_80139280;
 extern s32 D_801B2BD4;
 extern s32 D_801B2BD0;
 extern u8 D_800D9688[];
@@ -1733,7 +1733,7 @@ void func_800974BC(void)
 {
 extern u8 D_800DA448[];
 extern u8 D_80139CC8[];
-extern s32* D_80139280;
+extern s32ptr D_80139280;
 extern s32 D_801B2BD8;
 extern s32 D_801B2BDC;
 
@@ -1749,7 +1749,7 @@ extern s32 D_801B2BDC;
  */
 void func_80097540(void)
 {
-extern s32* D_80139280;
+extern s32ptr D_80139280;
 extern s32 D_801B2BDC;
 extern s32 D_801B2BD8;
 
@@ -1767,7 +1767,7 @@ void func_80097588(void)
 {
 extern u8 D_800DA448[];
 extern u8 D_80139CC8[];
-extern s32* D_80139280;
+extern s32ptr D_80139280;
 extern s32 D_801B2BD8;
 extern s32 D_801B2BDC;
 

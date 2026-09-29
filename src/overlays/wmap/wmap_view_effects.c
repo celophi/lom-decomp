@@ -133,7 +133,7 @@ typedef struct
 typedef struct
 {
     s32 unknown_00;
-    u8* data;
+    u8ptr data;
 } WmapAnimationSlot;
 
 /** @brief Screen-space offset of a cursor cell. */

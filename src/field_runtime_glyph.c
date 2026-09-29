@@ -221,12 +221,15 @@ typedef struct FieldGlyphPrimitive
     u32 size;
 } FieldGlyphPrimitive;
 
+/** @brief Four-byte pointer to FieldGlyphPrimitive in PS1 storage. */
+typedef FieldGlyphPrimitive* PS1_PTR32 FieldGlyphPrimitivePtr;
+
 extern s32 g_text_cursor_x;
 extern s32 g_text_cursor_y;
 extern s32 g_text_clut_base;
 extern u8 g_hex_digit_table[17];
-extern FieldGlyphPrimitive* g_field_primitive_cursor;
-extern FieldRenderHalf* g_field_current_render_half;
+extern FieldGlyphPrimitivePtr g_field_primitive_cursor;
+extern FieldRenderHalfPtr g_field_current_render_half;
 
 /**
  * @brief C reference for glyph emission and cursor advancement.

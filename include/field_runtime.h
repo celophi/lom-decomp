@@ -14,10 +14,13 @@ typedef struct FieldRenderHalf
     DISPENV disp_env;
     DRAWENV draw_env;
     RECT display_rect;
-    u8* primitive_cursor;
+    u8ptr primitive_cursor;
     u8 primitive_arena[FIELD_PRIMITIVE_ARENA_SIZE];
     DR_TPAGE draw_mode;
 } FieldRenderHalf;
+
+/** @brief Four-byte pointer to FieldRenderHalf in PS1 storage. */
+typedef FieldRenderHalf* PS1_PTR32 FieldRenderHalfPtr;
 
 s32 run_field_scene(void);
 void field_init_text_renderer(FieldRenderHalf* render_buffers);

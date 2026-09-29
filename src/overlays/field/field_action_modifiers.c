@@ -150,7 +150,7 @@ typedef struct FieldOnHitStatus
     u8 duration;
 } FieldOnHitStatus;
 
-extern FieldBattleContext* g_field_battle;
+extern FieldBattleContextPtr g_field_battle;
 
 /** @brief Nonzero while a guest is in the party; selects the coordinate panel icon. */
 extern s32 g_field_party_has_guest;

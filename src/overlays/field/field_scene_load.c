@@ -55,7 +55,7 @@ typedef struct
     u32 texture_bytes;
     u8 _pad1[4];
     /** Texture image uploaded to VRAM column by column. */
-    u8* texture;
+    u8ptr texture;
 } FieldMapHeader;
 
 #define FIELD_MAP_HEADER ((FieldMapHeader*)FIELD_MAP_LOAD_ADDRESS)
@@ -211,7 +211,7 @@ void field_clear_node_accumulators(s32 update_mode, s32 force_unscaled)
 void field_init_with_fmv(void* unused, FieldRenderHalf* buffers)
 {
     u16 object_index;
-    u8** front_cursor;
+    u8ptr* front_cursor;
     SceneState* state = SCENE_STATE;
 
     DrawSync(0);
@@ -243,7 +243,7 @@ void field_init_with_fmv(void* unused, FieldRenderHalf* buffers)
 void field_init_with_fmv_alloc(void)
 {
     u16 object_index;
-    u8** front_cursor;
+    u8ptr* front_cursor;
     FieldRenderHalf* buffers;
 
     buffers = get_field_render_buffers();
@@ -288,7 +288,7 @@ void field_load_map(u16 map_id)
     u8* texture;
     FieldMapObject* object;
     u_long* image;
-    FieldMapObject** objects;
+    FieldMapObjectPtr* objects;
 
     DrawSync(0);
     if (map_id < FIELD_MAP_QUEUED_READ_LIMIT)
@@ -359,7 +359,7 @@ void field_load_map(u16 map_id)
  */
 static void field_select_object(u16 object_index, FieldRenderHalf* buffers)
 {
-    FieldMapObject** objects = g_field_objects;
+    FieldMapObjectPtr* objects = g_field_objects;
     FieldMapBounds* bounds = FIELD_MAP_BOUNDS;
     u16 remaining = object_index;
     FieldMapObject* object;

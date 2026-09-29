@@ -4,8 +4,8 @@
 #include "field_script.h"
 #include "field_records.h"
 
-extern FieldBattleContext *g_field_battle;
-extern FieldRuntimeContext *g_field_runtime;
+extern FieldBattleContextPtr g_field_battle;
+extern FieldRuntimeContextPtr g_field_runtime;
 
 /** @brief Runtime actor flag bits holding the trigger group. */
 #define FIELD_TRIGGER_GROUP_MASK 0xF

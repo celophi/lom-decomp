@@ -80,7 +80,7 @@ void func_80070844(void);
 /** @brief Compose the effect transform, draw it, and advance its rotation and countdown. */
 void func_8006D918(void)
 {
-extern void *D_8011CF24;
+extern voidptr D_8011CF24;
 extern VECTOR D_8011CF60;
 extern SVECTOR g_wmap_camera_rotation;
 extern VECTOR g_wmap_camera_translation;
@@ -116,7 +116,7 @@ extern s32 D_801B2414;
 /** @brief Draw and fade the transformed effect, then advance its countdown. */
 void func_8006DA24(void)
 {
-extern void *D_8011CF24;
+extern voidptr D_8011CF24;
 extern VECTOR D_8011CF60;
 extern SVECTOR g_wmap_camera_rotation;
 extern VECTOR g_wmap_camera_translation;
@@ -163,7 +163,7 @@ extern s32 D_801B24B4;
 /** @brief Draw and brighten two rotating layers, then advance their shared countdown. */
 void func_8006DB68(void)
 {
-extern void *D_8011CF1C;
+extern voidptr D_8011CF1C;
 extern VECTOR g_wmap_camera_translation;
 extern SVECTOR D_801B2490;
 extern SVECTOR D_801B2498;
@@ -199,7 +199,7 @@ extern s32 D_801B241C;
 /** @brief Draw two rotating effect layers and advance their shared countdown. */
 void func_8006DC98(void)
 {
-extern void *D_8011CF1C;
+extern voidptr D_8011CF1C;
 extern VECTOR g_wmap_camera_translation;
 extern SVECTOR D_801B2490;
 extern SVECTOR D_801B2498;
@@ -240,7 +240,7 @@ extern s32 D_801B241C;
 /** @brief Draw two rotating effect layers and advance their shared countdown. */
 void func_8006DDEC(void)
 {
-extern void *D_8011CF1C;
+extern voidptr D_8011CF1C;
 extern VECTOR g_wmap_camera_translation;
 extern SVECTOR D_801B2490;
 extern SVECTOR D_801B2498;
@@ -269,7 +269,7 @@ extern s32 D_801B241C;
 /** @brief Draw and fade two rotating layers, then advance their shared countdown. */
 void func_8006DEFC(void)
 {
-extern void *D_8011CF1C;
+extern voidptr D_8011CF1C;
 extern VECTOR g_wmap_camera_translation;
 extern SVECTOR D_801B2490;
 extern SVECTOR D_801B2498;
@@ -305,7 +305,7 @@ extern s32 D_801B241C;
 /** @brief Draw the effect at successive depths and advance its countdown. */
 void func_8006E024(void)
 {
-extern u8 *D_8011CF24;
+extern u8ptr D_8011CF24;
 extern VECTOR D_8011CF60;
 extern SVECTOR g_wmap_camera_rotation;
 extern VECTOR D_80139870;
@@ -356,7 +356,7 @@ extern s32 D_801B2488;
 /** @brief Compose the effect transform, draw it at alternating depths, and advance its countdown. */
 void func_8006E190(void)
 {
-extern u8 *D_8011CF24;
+extern u8ptr D_8011CF24;
 extern s32 D_8011CF74;
 extern s32 D_80139878;
 extern VECTOR D_8011CF60;
@@ -401,7 +401,7 @@ extern s32 D_801B2424;
 /** @brief Compose the effect transform, draw it at alternating depths, and advance its countdown. */
 void func_8006E2B0(void)
 {
-extern u8 *D_8011CF24;
+extern u8ptr D_8011CF24;
 extern s32 D_8011CF74;
 extern s32 D_80139878;
 extern VECTOR D_8011CF60;
@@ -448,7 +448,7 @@ extern s32 D_801B2424;
 /** @brief Advance the effect depth, fade its intensity, and update the countdown. */
 void func_8006E3E4(void)
 {
-extern u8 *D_8011CF24;
+extern u8ptr D_8011CF24;
 extern VECTOR D_8011CF60;
 extern SVECTOR g_wmap_camera_rotation;
 extern s32 D_80182DC8;
@@ -504,7 +504,7 @@ extern SVECTOR D_801B24A8;
 /** @brief Advance the effect depth, fade its intensity, and update the countdown. */
 void func_8006E544(void)
 {
-extern u8 *D_8011CF24;
+extern u8ptr D_8011CF24;
 extern VECTOR D_8011CF60;
 extern SVECTOR g_wmap_camera_rotation;
 extern s32 D_80182DC8;
@@ -813,7 +813,7 @@ extern u8 D_8011F538[];
 /** @brief Compose the effect transform, draw and brighten it, and advance its countdown. */
 void func_8006ECC0(void)
 {
-extern u8 *D_8011CF24;
+extern u8ptr D_8011CF24;
 extern s32 D_80182DE4;
 extern VECTOR D_8011CF60;
 extern SVECTOR g_wmap_camera_rotation;
@@ -868,7 +868,7 @@ extern s32 D_801B2464;
 /** @brief Compose the effect transform, draw and fade it, and advance its countdown. */
 void func_8006EDF4(void)
 {
-extern u8 *D_8011CF24;
+extern u8ptr D_8011CF24;
 extern s32 D_80182DE4;
 extern VECTOR D_8011CF60;
 extern SVECTOR g_wmap_camera_rotation;

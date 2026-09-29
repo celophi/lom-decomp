@@ -20,7 +20,7 @@
 #include "field_state_ops.h"
 
 /** @brief g_saved_game.layout, bound by field_bind_runtime_pointers. */
-extern SavedGameLayout* g_field_game_state;
+extern SavedGameLayoutPtr g_field_game_state;
 
 #define FIELD_ACTOR_RECORD_COUNT 16
 #define FIELD_EVENT_RECORD_COUNT 2
@@ -114,7 +114,7 @@ typedef struct FieldStagingStats
  */
 typedef struct FieldItemStaging
 {
-    FieldItemRecord* record;
+    FieldItemRecordPtr record;
     /** @brief Item category (FieldItemRecord::info bits 8-9). */
     u8 category;
     /** @brief Item type (FieldItemRecord::info bits 10-15). */
@@ -265,7 +265,7 @@ extern FieldItemTables* g_field_item_tables;
 /** @brief One nested script frame (0xC bytes). */
 typedef struct FieldScriptFrame
 {
-    u8* pc;
+    u8ptr pc;
     /** @brief Bit 0 holds the result of the last comparison. */
     u32 flags;
     /** @brief Remaining wait frames; bit 0 lets the frame resume after a return. */
@@ -372,6 +372,9 @@ typedef struct FieldTriggerTable
     u16 count;
     FieldTriggerRegion regions[1];
 } FieldTriggerTable;
+
+/** @brief Four-byte pointer to FieldTriggerTable in PS1 storage. */
+typedef FieldTriggerTable* PS1_PTR32 FieldTriggerTablePtr;
 
 /** @brief Runtime state flag: party actors take event scripts from their resource pages. */
 #define FIELD_STATE_PARTY_PAGE_SCRIPTS 0x10000
@@ -497,8 +500,11 @@ typedef struct FieldRuntimeContext
     FieldActorRecord actors[FIELD_ACTOR_RECORD_COUNT];
     FieldActorRecord events[FIELD_EVENT_RECORD_COUNT];
     FieldScriptState script;
-    FieldTriggerTable* trigger_table;
+    FieldTriggerTablePtr trigger_table;
 } FieldRuntimeContext;
+
+/** @brief Four-byte pointer to FieldRuntimeContext in PS1 storage. */
+typedef FieldRuntimeContext* PS1_PTR32 FieldRuntimeContextPtr;
 
 /* ------------------------------------------------------------------------ */
 /* Field battle context (g_field_battle)                                        */
@@ -668,6 +674,9 @@ typedef struct FieldBattleContext
     u8 power_flags;
     u8 pad4A3;
 } FieldBattleContext;
+
+/** @brief Four-byte pointer to FieldBattleContext in PS1 storage. */
+typedef FieldBattleContext* PS1_PTR32 FieldBattleContextPtr;
 
 /** @brief FIELD diagnostic codes passed to record_game_diagnostic. */
 #define DIAG_SCRIPT_FRAME_OVERFLOW 2 /**< A script pushed past its last frame. */

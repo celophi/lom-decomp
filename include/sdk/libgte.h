@@ -1,18 +1,20 @@
 #ifndef SDK_LIBGTE_H
 #define SDK_LIBGTE_H
 
+#include "ps1_types.h"
+
 #define ONE 4096
 
 typedef struct {
     short m[3][3];
-    long t[3];
+    Ps1Long t[3];
 } MATRIX;
 
 typedef struct {
-    long vx;
-    long vy;
-    long vz;
-    long pad;
+    Ps1Long vx;
+    Ps1Long vy;
+    Ps1Long vz;
+    Ps1Long pad;
 } VECTOR;
 
 typedef struct {
@@ -22,10 +24,16 @@ typedef struct {
     short pad;
 } SVECTOR;
 
+/** @brief Four-byte pointer to SVECTOR in PS1 storage. */
+typedef SVECTOR* PS1_PTR32 SVECTORPtr;
+
 typedef struct {
     short vx;
     short vy;
 } DVECTOR;
+
+/** @brief Four-byte pointer to DVECTOR in PS1 storage. */
+typedef DVECTOR* PS1_PTR32 DVECTORPtr;
 
 /** @brief Psy-Q color vector, including its primitive command byte. */
 typedef struct {

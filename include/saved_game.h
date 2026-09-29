@@ -263,6 +263,9 @@ typedef struct FieldItemRecord
     FieldItemKey key;
 } FieldItemRecord;
 
+/** @brief Four-byte pointer to FieldItemRecord in PS1 storage. */
+typedef FieldItemRecord* PS1_PTR32 FieldItemRecordPtr;
+
 /**
  * @brief Party character record in the game state (0x250 bytes).
  * @note A character slot is in use when the first byte of its name is nonzero.
@@ -749,6 +752,9 @@ typedef struct SavedGameLayout
         u8 unk01[0x3F];
     } summary_records[4];
 } SavedGameLayout;
+
+/** @brief Four-byte pointer to SavedGameLayout in PS1 storage. */
+typedef SavedGameLayout* PS1_PTR32 SavedGameLayoutPtr;
 
 /** @brief Size of a Legend of Mana save file: two 8 KiB memory-card blocks. */
 #define SAVE_FILE_BYTES 0x4000

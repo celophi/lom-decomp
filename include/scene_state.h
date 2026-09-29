@@ -14,6 +14,9 @@ typedef struct
     u32 pixel_lookup_selector;
 } SceneState;
 
+/** @brief Four-byte pointer to SceneState in PS1 storage. */
+typedef SceneState* PS1_PTR32 SceneStatePtr;
+
 /** @brief Scene state block kept at a fixed RAM address across overlays. */
 #define SCENE_STATE ((SceneState*)0x801ED480)
 

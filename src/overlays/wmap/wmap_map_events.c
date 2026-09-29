@@ -344,7 +344,7 @@ typedef struct
 typedef struct
 {
     s32 field_00;
-    void *resource;
+    voidptr resource;
 } WmapResource;
 
 extern WmapConfigA D_800D95D8[];
@@ -435,7 +435,7 @@ typedef struct
 typedef struct
 {
     s32 field_00;
-    void *resource;
+    voidptr resource;
 } WmapResource;
 
 extern WmapConfigA D_800D95D8[];
@@ -503,7 +503,7 @@ typedef struct
 typedef struct
 {
     s32 field_00;
-    void *resource;
+    voidptr resource;
 } WmapResource;
 
 extern WmapConfigA D_800D9268[];
