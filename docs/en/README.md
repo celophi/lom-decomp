@@ -24,6 +24,7 @@ ownership, timing, and known limitations. Source links accompany the details.
 
 - [Tools index](../../tools/README.md) - asset conversion, scene extraction and tests.
 - [Scene extractor](technical/reference/scene-extractor.md) - scene IMG assets and byte maps.
+- [CLOAD resources](technical/reference/cload-resources.md) - load-screen text, card steps and character charts.
 - [Disc layout](technical/reference/disc-layout.md) - disc organization and resource tables.
 - [Save file format](technical/reference/save-file.md) - what's inside a memory card save
   and how to fix its checksum.

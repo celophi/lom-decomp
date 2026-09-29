@@ -1,5 +1,5 @@
 # Host-side Python tests; no disc files or historical toolchain required.
-.PHONY: test-tools test-assets test-overlay-tools extract-scene extract-scenes extract-addhero extract-carda extract-checkps
+.PHONY: test-tools test-assets test-overlay-tools extract-scene extract-scenes extract-addhero extract-carda extract-checkps extract-cload
 
 test-tools: test-assets test-overlay-tools
 
@@ -41,3 +41,10 @@ CHECKPS_OUTPUT ?= assets/exports/$(VERSION)/overlays/checkps
 extract-checkps:
 	@test -f "$(ASSETS_DIR)/checkps_data.databin.bin" || { echo 'Run make splat first to extract $(ASSETS_DIR)/checkps_data.databin.bin'; exit 1; }
 	python3 -m tools.overlays.checkps --version $(VERSION) "$(CHECKPS_OUTPUT)"
+
+# CLOAD carries text and tables; its icons are loaded from a separate CD resource.
+CLOAD_OUTPUT ?= assets/exports/$(VERSION)/overlays/cload
+
+extract-cload:
+	@test -f "$(ASSETS_DIR)/cload_data.databin.bin" || { echo 'Run make splat first to extract $(ASSETS_DIR)/cload_data.databin.bin'; exit 1; }
+	python3 -m tools.overlays.cload --version $(VERSION) "$(CLOAD_OUTPUT)"
