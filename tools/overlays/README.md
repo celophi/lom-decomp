@@ -7,8 +7,9 @@ build links that blob as-is, which is great for matching the original but not
 much help if you just want to see what's in it. This tool opens the blob up and
 writes out files you can look at.
 
-The extractors handle ADDHERO, the 2P hero screen, and CARDA, the save and load
-screen. Extract the version's assets with `make splat` or
+The extractors handle ADDHERO, the 2P hero screen; CARDA, the save and load
+screen; and CHECKPS, the startup screen and CD check. Extract the version's
+assets with `make splat` or
 `make splat VERSION=jp` first, then run:
 
 ```sh
@@ -16,15 +17,16 @@ make extract-addhero
 make extract-addhero VERSION=jp
 make extract-carda
 make extract-carda VERSION=jp
+make extract-checkps
+make extract-checkps VERSION=jp
 ```
 
 `assets/` keeps two kinds of data apart. `assets/us/` and `assets/jp/` hold what
 splat extracts for the build. `assets/exports/` holds data converted into
 formats people can read. The output goes to
-`assets/exports/<version>/overlays/addhero/` or
-`assets/exports/<version>/overlays/carda/`. Set `ADDHERO_OUTPUT` or `CARDA_OUTPUT`
-to pick another folder. The destination must be new; the tool won't overwrite an
-existing folder.
+`assets/exports/<version>/overlays/<overlay>/`. Set `ADDHERO_OUTPUT`,
+`CARDA_OUTPUT` or `CHECKPS_OUTPUT` to pick another folder. The destination must
+be new; the tool won't overwrite an existing folder.
 
 ## What you get
 
@@ -67,7 +69,8 @@ CARDA's step table has several entry points inside other sequences. The export
 follows each named entry to `CARDA_STEP_DONE`, so a shorter sequence can share
 the end of a longer one. The byte map counts the table's bytes only once.
 
-US text is shown as ASCII, with anything else written as a code in braces.
+The card overlays' US text is shown as ASCII, with anything else written as a
+code in braces.
 `{16}` is a one-byte code, and `{1F 00}` is a code with its second byte.
 Japanese text is decoded with the game's own character chart, so it reads as
 Japanese. The raw bytes are next to each string too, so nothing is lost. The
@@ -79,17 +82,60 @@ transparent, like on the PlayStation. The guest hero and the golems are drawn
 with palettes the game builds at runtime, so the golem icons all look the same
 here.
 
-Both blobs end with the overlay's variables and buffers. They're all zeros on
+CARDA and ADDHERO end with their own variables and buffers. They're all zeros on
 the disc, so the tools list that range in `byte-map.yaml` and skip exporting
 it. Any bytes the tools don't recognize are saved in `unknown/`, named by
 address. The byte map covers the whole blob, including padding and the repeated
 words after the icon sets.
 
+CHECKPS writes:
+
+```text
+checkps/
+    byte-map.yaml          every range in the data blob and warning rodata
+    image/
+        image.tim          the original TIM, without its trailing bytes
+        image.yaml         image dimensions, stored layout and palettes
+        palette_00.png ... the texture rendered once for each stored palette
+    audio/
+        container.yaml     section offsets and program header
+        program.akao       the resident program data, unchanged
+        bank.akao          the uploadable instrument bank, unchanged
+        bank.yaml          bank header and articulation entries
+        samples.adpcm      the bank's original SPU sample data
+    text/warning.yaml      the Japanese warning, decoded with its original bytes
+    tables/
+        cd_commands.yaml   command opcodes, transfer counts and IRQ sums
+        cd_registers.yaml  the four CD register pointers
+        cd_state.yaml      initial buffers and check state
+        pattern_sizes.yaml the warning pattern's width/height pairs
+        pattern_signs.yaml the signs that reflect it into four quadrants
+        digit_glyphs.yaml  Shift-JIS decimal and hexadecimal glyphs
+        glyph_clut.yaml    the six stored colors at the start of the glyph CLUT
+    unknown/               trailing bytes whose purpose is still unknown
+```
+
+US has a 256 x 48 image and one palette. JP has a 256 x 256 texture and 16
+palettes. Each PNG shows the whole stored texture through one palette; the JP
+animation chooses parts of that texture at runtime. Palette value zero is
+transparent, and the other colors are shown opaque. The TIM and YAML keep the
+original palette words, including their transparency flags.
+
+The audio export describes the container and its 32 articulation entries.
+Program bytecode and ADPCM samples stay in their original formats; the tool
+doesn't synthesize sound effects. The warning's actual glyph bitmaps come from
+the console's BIOS Kanji ROM, so they aren't embedded in CHECKPS.
+
+CHECKPS's `checkps_data` blob ends where BSS begins. Its runtime buffers remain
+with the C or assembly units that define them. The warning and quadrant signs
+stay in a small `rodatabin` before the code. Both extracted files have complete
+byte maps. There are eight unidentified trailing bytes in US and twelve in JP;
+those bytes are saved in `unknown/`.
+
 ## How it's put together
 
-`addhero.py` and `carda.py` read each blob the way you'd read its byte map,
-top to bottom.
-`read_blob` calls one `read_*` function per part, in address order. Each one
+`addhero.py`, `carda.py` and `checkps.py` read each blob the way you'd read its
+byte map, top to bottom. `read_blob` calls one `read_*` function per part, in address order. Each one
 parses its bytes into a small dataclass and returns a `Part` that says where the
 bytes are and what they hold. `cover_gaps` then fills whatever lies between the
 parts, and a `write_part` function for each kind of content writes its file.
@@ -109,11 +155,11 @@ Common changes:
 | rename a symbol the tool uses | its entry in `SYMBOL_NAMES` in the overlay's Python module |
 | change a value the tool copies from C | the matching constant in `card_data.py` or the overlay's module |
 | find out what a new part of the blob is | add a dataclass, a `read_*` function called from `read_blob`, and a `write_part` writer |
-| add or rename a card step | nothing; the names are read from the overlay's internal header |
+| add or rename a card step | nothing; the names are read from the overlay's C source or internal header |
 
 `card_data.py` holds the character chart, decoded-content dataclasses, common
-readers and writers. Both overlays use it for text, party icons, digit glyphs
-and byte maps. The smaller modules (`text_table.py`, `icon_set.py`, `png.py`,
+readers and writers used by the two card overlays. `resources.py` supplies the
+blob, part, byte-map and output helpers all three extractors share. The smaller modules (`text_table.py`, `icon_set.py`, `png.py`,
 `symbols.py` and `splat_config.py`) handle the underlying file formats.
 
 ## Tests
@@ -132,3 +178,9 @@ files.
 The CARDA tests check both regional configs and run a synthetic overlay through
 the exporter. They cover Japanese character codes, both icon frames, sequence
 entry points, complete byte coverage, and cleanup after a failed write.
+
+The CHECKPS tests exercise both palettes of a synthetic TIM, the AKAO section
+boundaries, decoded warning and tables, and complete byte coverage of both
+input files. They also check that truncated or invalid resources leave no
+partial export behind. Source tests keep the regional layouts and copied C
+constants in step with the extractor.

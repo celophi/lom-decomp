@@ -180,6 +180,34 @@ Sources: [warning and exit path](../../../../src/overlays/checkps/cdrom.c),
 [diagnostic pattern](../../../../src/overlays/checkps/pattern.c),
 [BIOS exit wrapper](../../../../src/psyq/libc2/exit.c).
 
+## Looking at the embedded resources
+
+Each version's splat YAML keeps the initialized data in one `checkps_data`
+blob. The warning text and quadrant signs are in a small `rodatabin` before
+the code, while the runtime buffers stay in BSS. To see what's stored there,
+run `make splat` for the version you want, then:
+
+```sh
+make extract-checkps
+make extract-checkps VERSION=jp
+```
+
+The output goes under `assets/exports/<version>/overlays/checkps/`. It includes
+the original TIM and a PNG for each palette, the decoded warning, and YAML
+for the CD commands, register pointers, initial state, pattern tables and
+digit glyphs. The US image is 256 x 48 with one palette; JP has a 256 x 256
+texture with 16 palettes. The JP PNGs show the stored texture, before the
+animation selects and moves its pieces.
+
+The AKAO container and bank headers are decoded too, including the bank's 32
+articulation entries. The program and ADPCM samples are preserved as binary
+files; the extractor doesn't play or synthesize them. `byte-map.yaml` covers
+both input files, including padding and the few trailing bytes that remain
+unidentified. The build continues to link the original bytes.
+
+See the [extractor guide](../../../../tools/overlays/README.md) for the file
+layout and output options.
+
 ## Reading the regional sources
 
 Most of CHECKPS now has shared C, including the CD check. JP's `init.c` and the

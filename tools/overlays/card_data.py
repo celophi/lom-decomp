@@ -8,13 +8,12 @@ from __future__ import annotations
 
 import codecs
 from dataclasses import dataclass
-from functools import singledispatch
 from pathlib import Path
-from typing import Generic, TypeVar
-
-import yaml
 
 from tools.overlays import icon_set, png, text_table
+from tools.overlays.resources import (
+    Blob, Part, dump_yaml, hex_address, write_part,
+)
 
 
 # Shared C values checked by tests/test_addhero_sources.py.
@@ -76,44 +75,6 @@ class CardSymbols:
         return {
             name: address for name, address in self.named.items() if name.startswith(prefix)
         }
-
-
-SymbolTable = TypeVar("SymbolTable", bound=CardSymbols)
-
-
-@dataclass(frozen=True)
-class Blob(Generic[SymbolTable]):
-    """The data blob and where it sits in memory."""
-
-    data: bytes
-    address: int  # memory address of data[0]
-    file_name: str
-    version: str
-    symbols: SymbolTable
-
-    def offset(self, address: int) -> int:
-        """Blob offset of a memory address."""
-        return address - self.address
-
-    @property
-    def two_byte_codes(self) -> frozenset[int]:
-        return text_table.TWO_BYTE_CODES[self.version]
-
-
-@dataclass(frozen=True)
-class Part:
-    """One range of the blob; end is exclusive.
-
-    content is what gets written for the part, or None when the byte map entry
-    and its note are all there is. file is where the content goes.
-    """
-
-    name: str
-    start: int
-    end: int
-    file: str | None = None
-    content: object | None = None
-    note: str | None = None
 
 
 @dataclass(frozen=True)
@@ -194,7 +155,7 @@ def read_text_list(blob: Blob, chart: Chart, table: int, prefix: str) -> tuple[T
     in the offset table.
     """
     start = blob.offset(table)
-    parsed = text_table.parse(blob.data, start, blob.two_byte_codes)
+    parsed = text_table.parse(blob.data, start, text_table.TWO_BYTE_CODES[blob.version])
     slots_end = table + parsed.entries[0].offset
     names = {
         (address - table) // 2: name
@@ -247,28 +208,6 @@ def variables_start(blob: Blob) -> int:
         if blob.symbols.hex_glyphs < address < blob_end
     ]
     return blob.offset(min(later))
-
-
-def cover_gaps(blob: Blob, parts: list[Part]) -> list[Part]:
-    """Add the bytes between parts: zero padding, or unknown data saved as-is."""
-    result = []
-    cursor = 0
-    for part in parts + [Part("end", len(blob.data), len(blob.data))]:
-        if not 0 <= part.start <= part.end <= len(blob.data):
-            raise ValueError(f"{part.name} is outside the data blob")
-        if part.start < cursor:
-            raise ValueError(f"{part.name} overlaps the part before it")
-        if cursor < part.start:
-            raw = blob.data[cursor : part.start]
-            if any(raw):
-                file = f"unknown/{blob.address + cursor:08X}.bin"
-                result.append(Part("unknown", cursor, part.start, file, raw))
-            else:
-                result.append(Part("padding", cursor, part.start, note="zero bytes"))
-        if part.name != "end":
-            result.append(part)
-        cursor = part.end
-    return result
 
 
 # ---------------------------------------------------------------------------
@@ -340,7 +279,7 @@ class Chart:
         index = 0
         while index < len(raw):
             code = raw[index]
-            if code in self.blob.two_byte_codes and index + 1 < len(raw):
+            if code in text_table.TWO_BYTE_CODES[self.blob.version] and index + 1 < len(raw):
                 offset = self.two_byte_offset(code, raw[index + 1])
                 index += 2
             elif code >= CHART_FIRST_CODE:
@@ -386,16 +325,6 @@ class Chart:
 # Writing
 
 
-def hex_address(address: int) -> str:
-    return f"0x{address:08X}"
-
-
-def dump_yaml(path: Path, document: object, header: str = "") -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    body = yaml.safe_dump(document, sort_keys=False, allow_unicode=True, width=120)
-    path.write_text(header + body, encoding="utf-8")
-
-
 def icon_group(index: int) -> str:
     """What kind of character a save-screen party icon id shows."""
     if index < ICON_HERO_COUNT:
@@ -405,18 +334,6 @@ def icon_group(index: int) -> str:
     if index >= ICON_PET_BASE:
         return "pet"
     return "character"
-
-
-@singledispatch
-def write_part(content: object, path: Path) -> None:
-    """Write one part's content to @p path. Each content type registers its own writer."""
-    raise TypeError(f"no writer for {type(content).__name__}")
-
-
-@write_part.register
-def _write_bytes(content: bytes, path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(content)
 
 
 @write_part.register
@@ -496,17 +413,3 @@ def _write_digit_glyphs(content: DigitGlyphs, path: Path) -> None:
         },
     }
     dump_yaml(path, document)
-
-
-def byte_map_entry(blob: Blob, part: Part) -> dict[str, str]:
-    entry = {
-        "name": part.name,
-        "address": hex_address(blob.address + part.start),
-        "offset": f"0x{part.start:X}",
-        "size": f"0x{part.end - part.start:X}",
-    }
-    if part.file:
-        entry["file"] = part.file
-    if part.note:
-        entry["note"] = part.note
-    return entry
