@@ -39,13 +39,6 @@
 /** @brief Land entered without a screen fade. */
 #define WMAP_NO_FADE_LAND 31
 
-/** @brief Resource slot containing the animation data block. */
-typedef struct
-{
-    s32 unknown_00;
-    u8* data;
-} WmapAnimationResource;
-
 /** @brief Map scroll position and projection scale (see wmap_view_effects.c). */
 typedef struct
 {
@@ -85,7 +78,7 @@ extern s32 D_8013B208;
 extern s32 g_wmap_callback_active[];
 extern WmapSequenceCallback g_wmap_callbacks[];
 extern WmapSpriteActor D_800D9268[];
-extern WmapAnimationResource D_80139988[];
+extern WmapAnimationSlot D_80139988[];
 
 extern s32 D_8011D510;
 extern s32 D_8011D530;
@@ -368,7 +361,7 @@ void wmap_install_callback(WmapSequenceCallback callback)
 s32 wmap_step_actor_animation(void* actor_data, void* resource_data)
 {
     WmapSpriteActor* actor = actor_data;
-    WmapAnimationResource* resource = resource_data;
+    WmapAnimationSlot* resource = resource_data;
     u8* data;
     s16* offsets;
     u8* cursor;

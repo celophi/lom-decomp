@@ -50,13 +50,6 @@
 /** @brief Size of one effect animation bank in D_8011D538. */
 #define WMAP_EFFECT_BANK_SIZE 0x2000
 
-/** @brief Animation resource slot of a sprite actor. */
-typedef struct
-{
-    s32 unknown_00;
-    u8* data;
-} WmapAnimationSlot;
-
 /** @brief Orbit particle motion: angle and radius around the screen center, inward speed. */
 typedef struct
 {

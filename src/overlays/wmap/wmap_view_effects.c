@@ -129,26 +129,12 @@ typedef struct
     s32 unknown_10;
 } WmapBurstParticle;
 
-/** @brief Animation resource slot of a sprite actor. */
-typedef struct
-{
-    s32 unknown_00;
-    u8* data;
-} WmapAnimationSlot;
-
 /** @brief Screen-space offset of a cursor cell. */
 typedef struct
 {
     s16 x;
     s16 y;
 } WmapPoint;
-
-/** @brief GTE screen coordinate, read as one packed word or as two halves. */
-typedef union
-{
-    s32 packed;
-    WmapPoint point;
-} WmapScreenPosition;
 
 extern u32 g_wmap_view_sequence_step;
 extern s32 g_wmap_view_sequence_timer;

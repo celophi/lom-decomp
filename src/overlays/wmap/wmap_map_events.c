@@ -64,6 +64,144 @@ void func_800A87B0(void);
 void func_800A88A4(void);
 void func_800A89A8(void);
 
+/** @brief Per-actor motion and animation parameters. */
+typedef struct
+{
+    s16 state;
+    s16 angle;
+    s32 x;
+    s32 z;
+    s16 scale;
+    s16 field_0E;
+    WmapScreenPosition screen;
+} WmapMotion;
+
+/** @brief Animation resource slot. */
+typedef struct
+{
+    s32 field_00;
+    void *resource;
+} WmapResource;
+
+typedef struct { s32 w[4]; } WmapBlk16;
+
+extern s32 D_800D9224;
+extern u8 D_800DCEF4[4];
+extern s32 D_8011CF20;
+extern s32 g_wmap_sequence_count;
+extern s32 D_8011D4F8;
+extern u8 D_80129538;
+extern s32 D_80129540;
+extern s32 D_8012954C;
+extern s32 D_80139238;
+extern s32 D_80139248;
+extern s32 D_80139834;
+extern s32 D_80139900;
+extern s32 D_8013997C;
+extern s32 D_8013B288;
+extern s32 D_8018222C;
+extern s32 D_80182DD4;
+extern s32 D_801ADAF0;
+extern s8 D_800DCEF5;
+extern s8 D_800DCEF6;
+extern s8 D_800DCEF7;
+extern s32 rand(void);
+extern s32 D_80139234;
+extern s32 g_wmap_view_scroll_mode;
+extern s32 D_8013B208;
+extern s32 g_wmap_scroll_remaining_x;
+extern s32 g_wmap_scroll_remaining_y;
+extern s32 D_801B2E44;
+extern WmapResource D_80139A28[];
+extern s32 D_8011CF74;
+extern u8 D_800DCA98[];
+extern s32 D_8011D510;
+extern s32 D_8011D530;
+extern s32 D_800DBE70;
+extern s32 D_80139224;
+extern s32 D_80139978;
+extern s32 D_801B2E74;
+extern void (*D_800D6D34[])(void);
+extern u8 *D_8013A184;
+extern void wmap_draw_vehicle(void);
+extern void wmap_finish_vehicle_turn(void);
+extern s32 g_wmap_vehicle_phase;
+extern s32 g_wmap_vehicle_screen_position;
+extern u8 g_wmap_vehicle_animation[];
+extern void (*D_800D6C14[])(void);
+extern s32 D_800DCEC0;
+extern s32 D_801B2E4C;
+extern void (*D_800D6C54[])(void);
+extern u8 D_800D92EC[];
+extern s16 D_800D930E;
+extern s32 D_801B2E54;
+extern void (*D_800D6C94[])(void);
+extern s32 D_801B2E5C;
+extern void (*D_800D6CD4[])(void);
+extern s32 D_801B2E64;
+extern void (*D_800D6D14[])(void);
+extern s32 D_801B2E6C;
+extern void (*D_800D6D24[])(void);
+
+/** @brief World-map actor configuration. */
+typedef struct
+{
+    s16 field_00;
+    s16 field_02;
+    u8 pad_04[2];
+    u8 field_06;
+    u8 pad_07[7];
+    s16 field_0E;
+    s16 field_10;
+    u8 pad_12[0x10];
+    s16 field_22;
+    s16 field_24;
+    s16 field_26;
+    u8 pad_28[4];
+} __attribute__((aligned(4))) WmapConfigA;
+
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
+extern u8 D_8011D538[];
+extern u8 D_80123538[];
+extern u32 D_801B2E40;
+extern WmapConfigA D_800D95D8[];
+extern u32 D_801B2E50;
+extern u32 D_801B2E58;
+extern u32 D_801B2E60;
+extern u32 D_801B2E68;
+extern u32 D_801B2E70;
+extern s8 *wmap_turn_vehicle(s32 arg0);
+extern void func_800591A8(s32 arg0);
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
+extern s32 g_wmap_view_scroll_mode;
+extern s32 D_8013B208;
+extern s32 g_wmap_scroll_remaining_x;
+extern s32 g_wmap_scroll_remaining_y;
+extern u32 D_801B2E48;
+extern u8 D_800DCA98[];
+
+/** @brief Map scroll position (map units) and projection scale. */
+typedef struct
+{
+    s32 x;
+    s32 y;
+    s32 projection_scale;
+    s32 unknown_0c;
+} WmapView;
+
+extern WmapView g_wmap_view;
+extern WmapView g_wmap_saved_view;
+
+extern WmapSpriteActor D_800D9268[];
+extern WmapSpriteActor g_wmap_vehicle_actor;
+
+extern WmapAnimationSlot D_80139988[];
+
+extern WmapMotion D_801AFBD0[];
+extern WmapMotion D_801AFD60[];
+
 static inline s32 tile_exists(s32 x, s32 y)
 {
     if (x < 0 || y < 0 || x >= 6 || y >= 6)
@@ -76,27 +214,6 @@ static inline s32 tile_exists(s32 x, s32 y)
 /** @brief Dispatch the first pending map event and consume one event tick. */
 void func_800A5DFC(void)
 {
-    extern s32 D_800D9224;
-    extern u8 D_800DCEF4[4];
-    extern u8 g_wmap_vehicle_cell_x;
-    extern u8 g_wmap_vehicle_cell_y;
-    extern s32 D_8011CF20;
-    extern s32 g_wmap_sequence_count;
-    extern s32 D_8011D4F8;
-    extern u8 D_8011D538;
-    extern u8 D_80123538;
-    extern u8 D_80129538;
-    extern s32 D_80129540;
-    extern s32 D_8012954C;
-    extern s32 D_80139238;
-    extern s32 D_80139248;
-    extern s32 D_80139834;
-    extern s32 D_80139900;
-    extern s32 D_8013997C;
-    extern s32 D_8013B288;
-    extern s32 D_8018222C;
-    extern s32 D_80182DD4;
-    extern s32 D_801ADAF0;
     s32 wmap_run_special_travel(s32 initialize);
     s32 wmap_run_special_return(s32 initialize);
     s32 func_800AB850(s32 initialize);
@@ -233,15 +350,6 @@ void func_800A5DFC(void)
 /** @brief Select the first occupied neighbor, or a random direction when isolated. */
 void func_800A61BC(s32 tile)
 {
-extern u8 D_800DCEF4[4];
-extern s8 D_800DCEF5;
-extern s8 D_800DCEF6;
-extern s8 D_800DCEF7;
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
-extern s32 D_8018222C;
-extern s32 rand(void);
-
     wmap_find_land_cell(tile, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     D_8018222C = 0;
     D_800DCEF4[3] = 0;
@@ -274,27 +382,6 @@ extern s32 rand(void);
 /** @brief Save the projection state and set the next effect's map-relative position. */
 void func_800A643C(void)
 {
-/** @brief Four-word world-map transform state. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 z;
-    s32 pad;
-} WmapTransform;
-
-extern WmapTransform g_wmap_saved_view;
-extern WmapTransform g_wmap_view;
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
-extern s32 D_80139234;
-extern s32 g_wmap_view_scroll_mode;
-extern s32 D_8013B208;
-extern s32 D_8013B288;
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
-extern s32 D_801B2E40;
-
     D_8013B288 = 0;
     D_80139234 = 0;
     g_wmap_input_locked = 1;
@@ -311,66 +398,20 @@ extern s32 D_801B2E40;
 /** @brief Initialize active directional actors and play the transition sound. */
 void func_800A6540(void)
 {
-/** @brief World-map actor configuration. */
-typedef struct
-{
-    s16 field_00;
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[4];
-} WmapConfigA;
-
-/** @brief Per-actor motion and animation parameters. */
-typedef struct
-{
-    s16 state;
-    s16 angle;
-    s32 x;
-    s32 z;
-    s16 scale;
-    s16 field_0E;
-    s32 field_10;
-} WmapMotion;
-
-/** @brief Animation resource slot. */
-typedef struct
-{
-    s32 field_00;
-    void *resource;
-} WmapResource;
-
-extern WmapConfigA D_800D95D8[];
-extern WmapMotion D_801AFBD0[];
-extern WmapMotion D_801AFD60[];
-extern WmapResource D_80139988[];
-extern u8 D_800DCEF4[4];
-extern u8 D_80123538[];
-extern s32 D_801B2E40;
-extern s32 D_801B2E44;
-extern void akao_fade_song_volume_from(s32, s32, s32, s32);
-
     s32 i;
     WmapConfigA *actor;
 
     for (i = 40; i < 120; i++)
     {
         D_801AFBD0[i].state = 0;
-        D_80139988[i].resource = D_80123538;
+        D_80139988[i].data = D_80123538;
     }
     for (i = 0; i < 4; i++)
     {
         actor = &D_800D95D8[i];
         if (D_800DCEF4[i] != 0)
         {
-            D_80139988[i + 20].resource = D_80123538;
+            D_80139988[i + 20].data = D_80123538;
             actor->field_06 = 15;
             actor->field_0E = i + 1;
             actor->field_10 = -1;
@@ -402,46 +443,6 @@ extern void akao_fade_song_volume_from(s32, s32, s32, s32);
 /** @brief Project four rotating effect actors and update their draw depths. */
 void func_800A66C0(void)
 {
-/** @brief World-map actor configuration. */
-typedef struct
-{
-    s16 field_00;
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[4];
-} WmapConfigA;
-
-/** @brief Per-actor motion and animation parameters. */
-typedef struct
-{
-    s16 state;
-    s16 angle;
-    s32 x;
-    s32 z;
-    s16 scale;
-    s16 field_0E;
-    s32 field_10;
-} WmapMotion;
-
-/** @brief Animation resource slot. */
-typedef struct
-{
-    s32 field_00;
-    void *resource;
-} WmapResource;
-
-extern WmapConfigA D_800D95D8[];
-extern WmapResource D_80139A28[];
-extern WmapMotion D_801AFD60[];
-
     SVECTOR position;
     s32 depth;
     s32 draw_depth;
@@ -459,10 +460,10 @@ extern WmapMotion D_801AFD60[];
         gte_ldv0(&position);
         gte_rtps();
         wmap_step_actor_animation(actor, &D_80139A28[i]);
-        gte_stsxy(&motion->field_10);
+        gte_stsxy(&motion->screen);
         gte_stszotz(&depth);
         draw_depth = (7057 - depth) / 4 + 42;
-        wmap_draw_actor_sprite(actor, motion->field_10, 3, draw_depth, 0x400);
+        wmap_draw_actor_sprite(actor, motion->screen.packed, 3, draw_depth, 0x400);
         motion->scale = draw_depth;
     }
 }
@@ -470,49 +471,6 @@ extern WmapMotion D_801AFD60[];
 /** @brief Draw active trail actors and periodically copy four new trail samples. */
 void func_800A6800(void)
 {
-/** @brief World-map actor configuration. */
-typedef struct
-{
-    s16 field_00;
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[4];
-} __attribute__((aligned(4))) WmapConfigA;
-
-/** @brief Per-actor motion and animation parameters. */
-typedef struct
-{
-    s16 state;
-    s16 angle;
-    s32 x;
-    s32 z;
-    s16 scale;
-    s16 field_0E;
-    s32 field_10;
-} WmapMotion;
-
-/** @brief Animation resource slot. */
-typedef struct
-{
-    s32 field_00;
-    void *resource;
-} WmapResource;
-
-extern WmapConfigA D_800D9268[];
-extern WmapMotion D_801AFBD0[];
-extern WmapResource D_80139988[];
-extern s32 D_8018222C;
-extern s32 D_8011CF74;
-extern s32 D_80139234;
-
     s32 i;
     s32 destination;
     WmapConfigA *actor;
@@ -527,7 +485,7 @@ extern s32 D_80139234;
             {
                 actor = &D_800D9268[i];
                 wmap_step_actor_animation(actor, &D_80139988[i]);
-                wmap_draw_actor_sprite(actor, motion->field_10, 3, motion->scale + 1, 0x400);
+                wmap_draw_actor_sprite(actor, motion->screen.packed, 3, motion->scale + 1, 0x400);
             }
         }
         if (D_8011CF74 % 10 == 0)
@@ -539,8 +497,8 @@ extern s32 D_80139234;
                     destination = i + D_80139234 * 4 + 40;
                     D_801AFBD0[destination] = D_801AFBD0[i + 20];
                     D_800D9268[destination] = D_800D9268[i + 20];
-                    D_800D9268[destination].field_22 = 0;
-                    D_800D9268[destination].field_26 = 2;
+                    D_800D9268[destination].target_shade = 0;
+                    D_800D9268[destination].shade_step = 2;
                 }
                 D_80139234 = (D_80139234 + 1) & 15;
             }
@@ -549,40 +507,20 @@ extern s32 D_80139234;
 }
 
 /** @brief Load resources and set the effect's map-relative position. */
-    void func_800A6A20(void)
-    {
-/** @brief Four-word world-map transform state. */
-typedef struct
+void func_800A6A20(void)
 {
-    s32 x;
-    s32 y;
-    s32 z;
-    s32 pad;
-    } WmapTransform;
-
-    extern WmapTransform g_wmap_saved_view;
-    extern WmapTransform g_wmap_view;
-    extern s32 g_wmap_vehicle_cell_x;
-    extern s32 g_wmap_vehicle_cell_y;
-    extern s32 g_wmap_view_scroll_mode;
-    extern s32 D_8013B208;
-    extern s32 g_wmap_scroll_remaining_x;
-    extern s32 g_wmap_scroll_remaining_y;
-    extern s32 D_801B2E48;
-    extern u8 D_800DCA98[];
-
-        g_wmap_saved_view = g_wmap_view;
-        D_8013B208 = 1;
-        wmap_find_land_cell(12, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
-        cdrom_queue_read(0x10E2, D_800DCA98);
-        func_80064F64(0x10E3);
-        wmap_set_traveler_position(3, g_wmap_vehicle_cell_x, g_wmap_vehicle_cell_y);
-        g_wmap_view_scroll_mode = 2;
-        g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * 48) - g_wmap_view.x;
-        g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * 48) - g_wmap_view.y;
-        D_801B2E48++;
-        func_800A7C78();
-    }
+    g_wmap_saved_view = g_wmap_view;
+    D_8013B208 = 1;
+    wmap_find_land_cell(12, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
+    cdrom_queue_read(0x10E2, D_800DCA98);
+    func_80064F64(0x10E3);
+    wmap_set_traveler_position(3, g_wmap_vehicle_cell_x, g_wmap_vehicle_cell_y);
+    g_wmap_view_scroll_mode = 2;
+    g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * 48) - g_wmap_view.x;
+    g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * 48) - g_wmap_view.y;
+    D_801B2E48++;
+    func_800A7C78();
+}
 
 /**
  * @brief World-map step handler: seed a pathfinding move for the actor, populate its
@@ -590,10 +528,6 @@ typedef struct
  */
 void func_800A6B34(void)
 {
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
-extern s32 D_801B2E48;
-
     u8* base;
     u16 a;
     u16 b;
@@ -623,28 +557,15 @@ extern s32 D_801B2E48;
  */
 void func_800A6C24(void)
 {
-typedef struct { s32 w[4]; } WmapBlk16;
-
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
-extern s32 g_wmap_saved_view[];
-extern s32 g_wmap_view[];
-extern u8 D_800DCA98[];
-extern s32 D_8013B208;
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
-extern s32 D_801B2E50;
-
-    *(WmapBlk16*)g_wmap_saved_view = *(WmapBlk16*)g_wmap_view;
+    *(WmapBlk16*)&g_wmap_saved_view = *(WmapBlk16*)&g_wmap_view;
     D_8013B208 = 1;
     wmap_find_land_cell(1, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     cdrom_queue_read(0x10E0, D_800DCA98);
     func_80064F64(0x10E1);
     wmap_set_traveler_position(3, g_wmap_vehicle_cell_x, g_wmap_vehicle_cell_y);
     g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * 0x30 - g_wmap_view[0];
-    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * 0x30 - g_wmap_view[1];
+    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * 0x30 - g_wmap_view.x;
+    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * 0x30 - g_wmap_view.y;
     D_801B2E50 += 1;
     func_800A8060();
 }
@@ -655,10 +576,6 @@ extern s32 D_801B2E50;
  */
 void func_800A6D38(void)
 {
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
-extern s32 D_801B2E50;
-
     u8* base;
     u16 a;
     u16 b;
@@ -688,28 +605,15 @@ extern s32 D_801B2E50;
  */
 void func_800A6E28(void)
 {
-typedef struct { s32 w[4]; } WmapBlk16;
-
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
-extern s32 g_wmap_saved_view[];
-extern s32 g_wmap_view[];
-extern u8 D_800DCA98[];
-extern s32 D_8013B208;
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
-extern s32 D_801B2E58;
-
-    *(WmapBlk16*)g_wmap_saved_view = *(WmapBlk16*)g_wmap_view;
+    *(WmapBlk16*)&g_wmap_saved_view = *(WmapBlk16*)&g_wmap_view;
     D_8013B208 = 1;
     wmap_find_land_cell(1, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     cdrom_queue_read(0x1216, D_800DCA98);
     func_80064F64(0x1217);
     wmap_set_traveler_position(3, g_wmap_vehicle_cell_x, g_wmap_vehicle_cell_y);
     g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * 0x30 - g_wmap_view[0];
-    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * 0x30 - g_wmap_view[1];
+    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * 0x30 - g_wmap_view.x;
+    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * 0x30 - g_wmap_view.y;
     D_801B2E58 += 1;
     func_800A8448();
 }
@@ -719,10 +623,6 @@ extern s32 D_801B2E58;
  */
 void func_800A6F3C(void)
 {
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
-extern s32 D_801B2E58;
-
     u8* base;
     u16 cell_x;
     u16 cell_y;
@@ -755,24 +655,14 @@ extern s32 D_801B2E58;
 /** @brief World-map step: seed the scroll target from the current cell, then advance. */
 void func_800A703C(void)
 {
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
-extern s32 D_8011D510;
-extern s32 D_8011D530;
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_view[];
-extern s32 g_wmap_scroll_remaining_y;
-extern s32 D_801B2E60;
-
     func_8006D8F0(1);
     func_8006D870(1);
     wmap_find_land_cell(0x10, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_view_scroll_mode = 2;
     D_8011D510 = g_wmap_vehicle_cell_x;
     D_8011D530 = g_wmap_vehicle_cell_y;
-    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * 0x30 - g_wmap_view[0];
-    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * 0x30 - g_wmap_view[1];
+    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * 0x30 - g_wmap_view.x;
+    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * 0x30 - g_wmap_view.y;
     D_801B2E60 += 1;
     func_800A8864();
 }
@@ -780,24 +670,14 @@ extern s32 D_801B2E60;
 /** @brief World-map step: seed the scroll target from the current cell, then advance. */
 void func_800A7108(void)
 {
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
-extern s32 D_8011D510;
-extern s32 D_8011D530;
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_view[];
-extern s32 g_wmap_scroll_remaining_y;
-extern s32 D_801B2E68;
-
     func_8006D8F0(1);
     func_8006D870(1);
     wmap_find_land_cell(0x17, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_view_scroll_mode = 2;
     D_8011D510 = g_wmap_vehicle_cell_x;
     D_8011D530 = g_wmap_vehicle_cell_y;
-    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * 0x30 - g_wmap_view[0];
-    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * 0x30 - g_wmap_view[1];
+    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * 0x30 - g_wmap_view.x;
+    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * 0x30 - g_wmap_view.y;
     D_801B2E68 += 1;
     func_800A8968();
 }
@@ -805,28 +685,6 @@ extern s32 D_801B2E68;
 /** @brief Set the map-relative effect position, load resources, and advance the sequence. */
 void func_800A71D4(void)
 {
-extern s32 D_800DBE70;
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
-extern s32 D_8011D510;
-extern s32 D_8011D530;
-extern s32 D_80139224;
-extern s32 g_wmap_view_scroll_mode;
-/** @brief Four-word world-map transform state. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 z;
-    s32 pad;
-} WmapTransform;
-
-extern WmapTransform g_wmap_view;
-extern s32 D_80139978;
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
-extern s32 D_801B2E70;
-
     D_80139224 = 0;
     D_80139978 = 0x18;
     D_800DBE70 = 0;
@@ -846,17 +704,11 @@ extern s32 D_801B2E70;
  */
 void func_800A72B8(void)
 {
-extern s8 *wmap_turn_vehicle(s32 arg0);
-extern u8 D_801AFBD0[];
-extern s32 D_8011CF74;
-extern s32 D_801B2E70;
-extern s32 D_801B2E74;
-
     s8 *obj;
     u8 *base;
 
     obj = wmap_turn_vehicle(1);
-    base = D_801AFBD0;
+    base = (u8*)D_801AFBD0;
     if (*(s16 *)(base + 0xE) < 100)
     {
         *(s16 *)(base + 0xE) += 1;
@@ -885,11 +737,6 @@ extern s32 D_801B2E74;
  */
 s32 func_800A7370(s32 arg0)
 {
-extern u32 D_801B2E70;
-extern s32 D_801B2E74;
-extern void (*D_800D6D34[])(void);
-extern s32 g_wmap_view_scroll_mode;
-
     s32 result;
 
     if (arg0 != 0)
@@ -916,11 +763,6 @@ extern s32 g_wmap_view_scroll_mode;
  */
 void func_800A73E8(void)
 {
-extern u32 D_801B2E70;
-extern s32 D_801B2E74;
-extern void (*D_800D6D34[])(void);
-extern s32 g_wmap_view_scroll_mode;
-
     D_801B2E70 = 1;
     D_801B2E74 = 1;
 }
@@ -930,11 +772,6 @@ extern s32 g_wmap_view_scroll_mode;
  */
 void func_800A7400(void)
 {
-extern u32 D_801B2E70;
-extern s32 D_801B2E74;
-extern void (*D_800D6D34[])(void);
-extern s32 g_wmap_view_scroll_mode;
-
     if (g_wmap_view_scroll_mode != 2)
     {
         D_801B2E70 += 1;
@@ -945,58 +782,20 @@ extern s32 g_wmap_view_scroll_mode;
 /** @brief Initialize the actor, register its callback, and start the sequence delay. */
 void func_800A7440(void)
 {
-/** @brief World-map actor configuration. */
-typedef struct
-{
-    s16 field_00;
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[4];
-} WmapConfigA;
-
-/** @brief Auxiliary callback state. */
-typedef struct
-{
-    s16 field_00;
-    s16 field_02;
-    s32 field_04;
-    s32 field_08;
-    s16 unknown_0c;
-    s16 field_0E;
-    s16 field_10;
-} WmapAuxState;
-
-extern void func_800591A8(s32);
-extern WmapConfigA g_wmap_vehicle_actor;
-extern u8 D_8011D538[];
-extern u8 *D_8013A184;
-extern WmapAuxState D_801AFBD0;
-extern s32 D_801B2E70;
-extern s32 D_801B2E74;
-extern void wmap_draw_vehicle(void);
-
     D_8013A184 = D_8011D538;
-    g_wmap_vehicle_actor.field_10 = -1;
-    g_wmap_vehicle_actor.field_02 = 0;
-    g_wmap_vehicle_actor.field_06 = 0;
-    g_wmap_vehicle_actor.field_0E = 0;
-    g_wmap_vehicle_actor.field_26 = 0;
-    g_wmap_vehicle_actor.field_22 = 0x80;
-    g_wmap_vehicle_actor.field_24 = 0x80;
-    D_801AFBD0.field_00 = 1;
-    D_801AFBD0.field_08 = 0xC8;
-    D_801AFBD0.field_0E = 0xA;
-    D_801AFBD0.field_10 = 0x3C;
-    D_801AFBD0.field_02 = 0;
-    D_801AFBD0.field_04 = 2;
+    g_wmap_vehicle_actor.previous_sequence = -1;
+    g_wmap_vehicle_actor.unknown_02 = 0;
+    g_wmap_vehicle_actor.scale_index = 0;
+    g_wmap_vehicle_actor.sequence = 0;
+    g_wmap_vehicle_actor.shade_step = 0;
+    g_wmap_vehicle_actor.target_shade = 0x80;
+    g_wmap_vehicle_actor.shade = 0x80;
+    D_801AFBD0[0].state = 1;
+    D_801AFBD0[0].z = 0xC8;
+    D_801AFBD0[0].field_0E = 0xA;
+    D_801AFBD0[0].screen.point.x = 0x3C;
+    D_801AFBD0[0].angle = 0;
+    D_801AFBD0[0].x = 2;
     wmap_install_callback(&wmap_draw_vehicle);
     func_800591A8(0x21);
     D_801B2E74 = 0x16E;
@@ -1007,10 +806,6 @@ extern void wmap_draw_vehicle(void);
 /** @brief World-map step handler: install a callback, advance the step counter, chain to the next step. */
 void func_800A74FC(void)
 {
-extern void wmap_finish_vehicle_turn(void);
-extern s32 g_wmap_vehicle_phase;
-extern s32 D_801B2E70;
-
     g_wmap_vehicle_phase = 1;
     wmap_start_sequence(wmap_finish_vehicle_turn);
     D_801B2E70 += 1;
@@ -1022,9 +817,6 @@ extern s32 D_801B2E70;
  */
 void func_800A7544(void)
 {
-extern s32 g_wmap_vehicle_phase;
-extern s32 D_801B2E70;
-
     if (g_wmap_vehicle_phase == 0)
     {
         D_801B2E70 += 1;
@@ -1037,11 +829,7 @@ extern s32 D_801B2E70;
  */
 void func_800A7580(void)
 {
-extern u16 D_801AFBD0;
-extern s32 D_801B2E70;
-extern s32 D_801B2E74;
-
-    D_801AFBD0 = 0;
+    D_801AFBD0[0].state = 0;
     D_801B2E74 = 0x78;
     D_801B2E70 += 1;
     func_800A75C0();
@@ -1050,15 +838,8 @@ extern s32 D_801B2E74;
 /** @brief Draw the sprite, move its packed coordinate, and update the countdown. */
 void func_800A75C0(void)
 {
-extern void wmap_turn_vehicle(s32);
-extern u8 g_wmap_vehicle_actor[];
-extern s32 g_wmap_vehicle_screen_position;
-extern u8 g_wmap_vehicle_animation[];
-extern s32 D_801B2E70;
-extern s32 D_801B2E74;
-
     s32 remaining_ticks;
-    u8 *sprite = g_wmap_vehicle_actor;
+    u8 *sprite = (u8*)&g_wmap_vehicle_actor;
 
     wmap_turn_vehicle(0);
     wmap_step_actor_animation(sprite, &g_wmap_vehicle_animation);
@@ -1077,8 +858,6 @@ extern s32 D_801B2E74;
  */
 void func_800A7650(void)
 {
-extern s32 D_801B2E70;
-
     D_801B2E70 += 1;
 }
 
@@ -1089,11 +868,6 @@ extern s32 D_801B2E70;
  */
 s32 func_800A7668(s32 arg0)
 {
-extern u32 D_801B2E40;
-extern s32 D_801B2E44;
-extern void (*D_800D6C14[])(void);
-extern s32 g_wmap_view_scroll_mode;
-
     s32 result;
 
     if (arg0 != 0)
@@ -1120,11 +894,6 @@ extern s32 g_wmap_view_scroll_mode;
  */
 void func_800A76E0(void)
 {
-extern u32 D_801B2E40;
-extern s32 D_801B2E44;
-extern void (*D_800D6C14[])(void);
-extern s32 g_wmap_view_scroll_mode;
-
     D_801B2E40 = 1;
     D_801B2E44 = 1;
 }
@@ -1134,11 +903,6 @@ extern s32 g_wmap_view_scroll_mode;
  */
 void func_800A76F8(void)
 {
-extern u32 D_801B2E40;
-extern s32 D_801B2E44;
-extern void (*D_800D6C14[])(void);
-extern s32 g_wmap_view_scroll_mode;
-
     if (g_wmap_view_scroll_mode != 2)
     {
         D_801B2E40 += 1;
@@ -1149,9 +913,6 @@ extern s32 g_wmap_view_scroll_mode;
 /** @brief World-map step: run the two sub-steps, then advance after the timer. */
 void func_800A7738(void)
 {
-extern s32 D_801B2E40;
-extern s32 D_801B2E44;
-
     func_8006AEE0();
     func_800A66C0();
     if (--D_801B2E44 == 0)
@@ -1165,10 +926,6 @@ extern s32 D_801B2E44;
  */
 void func_800A778C(void)
 {
-extern s32 D_800DCEC0;
-extern s32 D_801B2E44;
-extern s32 D_801B2E40;
-
     D_800DCEC0 = 0;
     D_801B2E44 = 0x1E;
     D_801B2E40 += 1;
@@ -1178,10 +935,6 @@ extern s32 D_801B2E40;
 /** @brief Step the world-map particle set, decaying each slot's velocity field. */
 void func_800A77CC(void)
 {
-extern u8 D_801AFBD0[];
-extern s32 D_801B2E40;
-extern s32 D_801B2E44;
-
     s32 i;
     u8* p;
 
@@ -1190,7 +943,7 @@ extern s32 D_801B2E44;
     func_800A6800();
     for (i = 0; i < 4; i++)
     {
-        p = D_801AFBD0 + (0x14 + i) * 0x14;
+        p = (u8*)D_801AFBD0 + (0x14 + i) * 0x14;
         *(s32*)(p + 0x8) -= *(s32*)(p + 0x4);
     }
     if (--D_801B2E44 == 0)
@@ -1202,10 +955,6 @@ extern s32 D_801B2E44;
 /** @brief Set up the effect, select its delay, and run the next sequence step. */
 void func_800A785C(void)
 {
-extern s32 D_8018222C;
-extern s32 D_801B2E40;
-extern s32 D_801B2E44;
-
     s32 delay;
 
     func_8005FF88(-1);
@@ -1222,10 +971,6 @@ extern s32 D_801B2E44;
 /** @brief Step the world-map particle set, decaying each slot's velocity field. */
 void func_800A78B0(void)
 {
-extern u8 D_801AFBD0[];
-extern s32 D_801B2E40;
-extern s32 D_801B2E44;
-
     s32 i;
     u8* p;
 
@@ -1234,7 +979,7 @@ extern s32 D_801B2E44;
     func_800A6800();
     for (i = 0; i < 4; i++)
     {
-        p = D_801AFBD0 + (0x14 + i) * 0x14;
+        p = (u8*)D_801AFBD0 + (0x14 + i) * 0x14;
         *(s32*)(p + 0x8) -= *(s32*)(p + 0x4);
     }
     if (--D_801B2E44 == 0)
@@ -1246,29 +991,6 @@ extern s32 D_801B2E44;
 /** @brief Clear four actor states and start the next timed sequence step. */
 void func_800A7940(void)
 {
-/** @brief World-map actor configuration. */
-typedef struct
-{
-    s16 field_00;
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[4];
-} WmapConfigA;
-
-extern u8 D_800DCEF4[4];
-extern WmapConfigA D_800D9268[];
-extern s32 D_80139234;
-extern s32 D_801B2E40;
-extern s32 D_801B2E44;
-
     s32 i;
 
     if (!(D_800DCEF4[3] & (D_800DCEF4[2] & (D_800DCEF4[0] & D_800DCEF4[1]))))
@@ -1277,7 +999,7 @@ extern s32 D_801B2E44;
     }
     for (i = 0; i < 4; i++)
     {
-        D_800D9268[i + 20].field_0E = 0;
+        D_800D9268[i + 20].sequence = 0;
     }
     D_80139234 = -1;
     D_801B2E44 = 0x28;
@@ -1288,9 +1010,6 @@ extern s32 D_801B2E44;
 /** @brief Run three drawing updates and advance when the countdown expires. */
 void func_800A79E4(void)
 {
-extern s32 D_801B2E40;
-extern s32 D_801B2E44;
-
     s32 remaining_ticks;
 
     func_8006AEE0();
@@ -1307,22 +1026,10 @@ extern s32 D_801B2E44;
 /** @brief Clear four resource fields and start a 64-tick sequence step. */
 void func_800A7A40(void)
 {
-/** @brief Resource record with the field cleared by this sequence step. */
-typedef struct
-{
-    u8 unknown_0[0x22];
-    s16 value;
-    u8 unknown_24[8];
-} WmapResourceValue;
-
-extern WmapResourceValue D_800D9268[];
-extern s32 D_801B2E40;
-extern s32 D_801B2E44;
-
     s32 index;
     for (index = 0; index < 4; index++)
     {
-        D_800D9268[index + 20].value = 0;
+        D_800D9268[index + 20].target_shade = 0;
     }
     D_801B2E44 = 64;
     D_801B2E40 += 1;
@@ -1332,9 +1039,6 @@ extern s32 D_801B2E44;
 /** @brief World-map step: run the two sub-steps, then advance after the timer. */
 void func_800A7AA0(void)
 {
-extern s32 D_801B2E40;
-extern s32 D_801B2E44;
-
     func_8006AEE0();
     func_800A66C0();
     if (--D_801B2E44 == 0)
@@ -1346,18 +1050,10 @@ extern s32 D_801B2E44;
 /** @brief Start audio, compute the coordinate delta, and advance the sequence. */
 void func_800A7AF4(void)
 {
-extern void akao_fade_song_volume_from(s32, s32, s32, s32);
-extern s32 g_wmap_saved_view[];
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_view[];
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
-extern s32 D_801B2E40;
-
     akao_fade_song_volume_from(0, 0x1E, 0x30, 0x7F);
     g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = g_wmap_saved_view[0] - g_wmap_view[0];
-    g_wmap_scroll_remaining_y = g_wmap_saved_view[1] - g_wmap_view[1];
+    g_wmap_scroll_remaining_x = g_wmap_saved_view.x - g_wmap_view.x;
+    g_wmap_scroll_remaining_y = g_wmap_saved_view.y - g_wmap_view.y;
     D_801B2E40 += 1;
     func_800A7B78();
 }
@@ -1367,9 +1063,6 @@ extern s32 D_801B2E40;
  */
 void func_800A7B78(void)
 {
-extern s32 g_wmap_view_scroll_mode;
-extern s32 D_801B2E40;
-
     if (g_wmap_view_scroll_mode != 2)
     {
         D_801B2E40 += 1;
@@ -1380,10 +1073,6 @@ extern s32 D_801B2E40;
 /** @brief Reset two world-map values, set the enable flag, and advance the state. */
 void func_800A7BB8(void)
 {
-extern s32 D_800DCEC0;
-extern s32 D_8013B208;
-extern s32 D_801B2E40;
-
     g_wmap_input_locked = 0;
     D_8013B208 = 0;
     D_800DCEC0 = 1;
@@ -1397,11 +1086,6 @@ extern s32 D_801B2E40;
  */
 s32 func_800A7BE8(s32 arg0)
 {
-extern u32 D_801B2E48;
-extern s32 D_801B2E4C;
-extern void (*D_800D6C54[])(void);
-extern s32 g_wmap_view_scroll_mode;
-
     s32 result;
 
     if (arg0 != 0)
@@ -1428,11 +1112,6 @@ extern s32 g_wmap_view_scroll_mode;
  */
 void func_800A7C60(void)
 {
-extern u32 D_801B2E48;
-extern s32 D_801B2E4C;
-extern void (*D_800D6C54[])(void);
-extern s32 g_wmap_view_scroll_mode;
-
     D_801B2E48 = 1;
     D_801B2E4C = 1;
 }
@@ -1442,11 +1121,6 @@ extern s32 g_wmap_view_scroll_mode;
  */
 void func_800A7C78(void)
 {
-extern u32 D_801B2E48;
-extern s32 D_801B2E4C;
-extern void (*D_800D6C54[])(void);
-extern s32 g_wmap_view_scroll_mode;
-
     if (g_wmap_view_scroll_mode != 2)
     {
         D_801B2E48 += 1;
@@ -1457,10 +1131,6 @@ extern s32 g_wmap_view_scroll_mode;
 /** @brief Reset a world-map HUD sprite record, then bump its shared refcount. */
 void func_800A7CB8(void)
 {
-extern u8 D_800D92EC[];
-extern s32 D_801B2E48;
-extern s32 D_801B2E4C;
-
     D_800D92EC[0x6] = 0xF;
     *(s16*)&D_800D92EC[0x10] = -1;
     *(s16*)&D_800D92EC[0x22] = 0x80;
@@ -1477,9 +1147,6 @@ extern s32 D_801B2E4C;
  */
 void func_800A7D0C(void)
 {
-extern s32 D_801B2E4C;
-extern s32 D_801B2E48;
-
     if (--D_801B2E4C == 0)
     {
         D_801B2E48 += 1;
@@ -1491,9 +1158,6 @@ extern s32 D_801B2E48;
  */
 void func_800A7D40(void)
 {
-extern s32 D_801B2E4C;
-extern s32 D_801B2E48;
-
     if (g_wmap_scripted_travel_active == 0)
     {
         D_801B2E48 += 1;
@@ -1507,17 +1171,9 @@ extern s32 D_801B2E48;
  */
 void func_800A7D7C(void)
 {
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
-extern s32 g_wmap_view[];
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
-extern s32 D_801B2E48;
-
     g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * 0x30 - g_wmap_view[0];
-    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * 0x30 - g_wmap_view[1];
+    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * 0x30 - g_wmap_view.x;
+    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * 0x30 - g_wmap_view.y;
     D_801B2E48 += 1;
     func_800A7E0C();
 }
@@ -1527,9 +1183,6 @@ extern s32 D_801B2E48;
  */
 void func_800A7E0C(void)
 {
-extern s32 g_wmap_view_scroll_mode;
-extern s32 D_801B2E48;
-
     if (g_wmap_view_scroll_mode != 2)
     {
         D_801B2E48 += 1;
@@ -1542,9 +1195,6 @@ extern s32 D_801B2E48;
  */
 void func_800A7E4C(void)
 {
-extern s32 D_801B2E48;
-extern s32 D_801B2E4C;
-
     D_801B2E4C = 0x3C;
     D_801B2E48 += 1;
 }
@@ -1554,9 +1204,6 @@ extern s32 D_801B2E4C;
  */
 void func_800A7E6C(void)
 {
-extern s32 D_801B2E4C;
-extern s32 D_801B2E48;
-
     if (--D_801B2E4C == 0)
     {
         D_801B2E48 += 1;
@@ -1566,10 +1213,6 @@ extern s32 D_801B2E48;
 /** @brief World-map step handler: clear a flag and advance the step. */
 void func_800A7EA0(void)
 {
-extern s16 D_800D930E;
-extern s32 D_801B2E48;
-extern s32 D_801B2E4C;
-
     D_800D930E = 0;
     D_801B2E4C = 0x1E;
     D_801B2E48 += 1;
@@ -1580,9 +1223,6 @@ extern s32 D_801B2E4C;
  */
 void func_800A7EC8(void)
 {
-extern s32 D_801B2E4C;
-extern s32 D_801B2E48;
-
     if (--D_801B2E4C == 0)
     {
         D_801B2E48 += 1;
@@ -1595,16 +1235,9 @@ extern s32 D_801B2E48;
  */
 void func_800A7EFC(void)
 {
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_saved_view[];
-extern s32 g_wmap_view[];
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
-extern s32 D_801B2E48;
-
     g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = g_wmap_saved_view[0] - g_wmap_view[0];
-    g_wmap_scroll_remaining_y = g_wmap_saved_view[1] - g_wmap_view[1];
+    g_wmap_scroll_remaining_x = g_wmap_saved_view.x - g_wmap_view.x;
+    g_wmap_scroll_remaining_y = g_wmap_saved_view.y - g_wmap_view.y;
     D_801B2E48 += 1;
     func_800A7F6C();
 }
@@ -1614,9 +1247,6 @@ extern s32 D_801B2E48;
  */
 void func_800A7F6C(void)
 {
-extern s32 g_wmap_view_scroll_mode;
-extern s32 D_801B2E48;
-
     if (g_wmap_view_scroll_mode != 2)
     {
         D_801B2E48 += 1;
@@ -1627,9 +1257,6 @@ extern s32 D_801B2E48;
 /** @brief World-map step handler: clear two flags and advance the step counter. */
 void func_800A7FAC(void)
 {
-extern s32 D_8013B208;
-extern s32 D_801B2E48;
-
     g_wmap_input_locked = 0;
     D_8013B208 = 0;
     D_801B2E48 += 1;
@@ -1642,11 +1269,6 @@ extern s32 D_801B2E48;
  */
 s32 func_800A7FD0(s32 arg0)
 {
-extern u32 D_801B2E50;
-extern s32 D_801B2E54;
-extern void (*D_800D6C94[])(void);
-extern s32 g_wmap_view_scroll_mode;
-
     s32 result;
 
     if (arg0 != 0)
@@ -1673,11 +1295,6 @@ extern s32 g_wmap_view_scroll_mode;
  */
 void func_800A8048(void)
 {
-extern u32 D_801B2E50;
-extern s32 D_801B2E54;
-extern void (*D_800D6C94[])(void);
-extern s32 g_wmap_view_scroll_mode;
-
     D_801B2E50 = 1;
     D_801B2E54 = 1;
 }
@@ -1687,11 +1304,6 @@ extern s32 g_wmap_view_scroll_mode;
  */
 void func_800A8060(void)
 {
-extern u32 D_801B2E50;
-extern s32 D_801B2E54;
-extern void (*D_800D6C94[])(void);
-extern s32 g_wmap_view_scroll_mode;
-
     if (g_wmap_view_scroll_mode != 2)
     {
         D_801B2E50 += 1;
@@ -1702,10 +1314,6 @@ extern s32 g_wmap_view_scroll_mode;
 /** @brief Reset a world-map HUD sprite record, then bump its shared refcount. */
 void func_800A80A0(void)
 {
-extern u8 D_800D92EC[];
-extern s32 D_801B2E50;
-extern s32 D_801B2E54;
-
     D_800D92EC[0x6] = 0xF;
     *(s16*)&D_800D92EC[0x10] = -1;
     *(s16*)&D_800D92EC[0x22] = 0x80;
@@ -1722,9 +1330,6 @@ extern s32 D_801B2E54;
  */
 void func_800A80F4(void)
 {
-extern s32 D_801B2E54;
-extern s32 D_801B2E50;
-
     if (--D_801B2E54 == 0)
     {
         D_801B2E50 += 1;
@@ -1736,9 +1341,6 @@ extern s32 D_801B2E50;
  */
 void func_800A8128(void)
 {
-extern s32 D_801B2E54;
-extern s32 D_801B2E50;
-
     if (g_wmap_scripted_travel_active == 0)
     {
         D_801B2E50 += 1;
@@ -1752,17 +1354,9 @@ extern s32 D_801B2E50;
  */
 void func_800A8164(void)
 {
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
-extern s32 g_wmap_view[];
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
-extern s32 D_801B2E50;
-
     g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * 0x30 - g_wmap_view[0];
-    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * 0x30 - g_wmap_view[1];
+    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * 0x30 - g_wmap_view.x;
+    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * 0x30 - g_wmap_view.y;
     D_801B2E50 += 1;
     func_800A81F4();
 }
@@ -1772,9 +1366,6 @@ extern s32 D_801B2E50;
  */
 void func_800A81F4(void)
 {
-extern s32 g_wmap_view_scroll_mode;
-extern s32 D_801B2E50;
-
     if (g_wmap_view_scroll_mode != 2)
     {
         D_801B2E50 += 1;
@@ -1787,9 +1378,6 @@ extern s32 D_801B2E50;
  */
 void func_800A8234(void)
 {
-extern s32 D_801B2E50;
-extern s32 D_801B2E54;
-
     D_801B2E54 = 0x3C;
     D_801B2E50 += 1;
 }
@@ -1799,9 +1387,6 @@ extern s32 D_801B2E54;
  */
 void func_800A8254(void)
 {
-extern s32 D_801B2E54;
-extern s32 D_801B2E50;
-
     if (--D_801B2E54 == 0)
     {
         D_801B2E50 += 1;
@@ -1811,10 +1396,6 @@ extern s32 D_801B2E50;
 /** @brief World-map step handler: clear a flag and advance the step. */
 void func_800A8288(void)
 {
-extern s16 D_800D930E;
-extern s32 D_801B2E50;
-extern s32 D_801B2E54;
-
     D_800D930E = 0;
     D_801B2E54 = 0x1E;
     D_801B2E50 += 1;
@@ -1825,9 +1406,6 @@ extern s32 D_801B2E54;
  */
 void func_800A82B0(void)
 {
-extern s32 D_801B2E54;
-extern s32 D_801B2E50;
-
     if (--D_801B2E54 == 0)
     {
         D_801B2E50 += 1;
@@ -1840,16 +1418,9 @@ extern s32 D_801B2E50;
  */
 void func_800A82E4(void)
 {
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_saved_view[];
-extern s32 g_wmap_view[];
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
-extern s32 D_801B2E50;
-
     g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = g_wmap_saved_view[0] - g_wmap_view[0];
-    g_wmap_scroll_remaining_y = g_wmap_saved_view[1] - g_wmap_view[1];
+    g_wmap_scroll_remaining_x = g_wmap_saved_view.x - g_wmap_view.x;
+    g_wmap_scroll_remaining_y = g_wmap_saved_view.y - g_wmap_view.y;
     D_801B2E50 += 1;
     func_800A8354();
 }
@@ -1859,9 +1430,6 @@ extern s32 D_801B2E50;
  */
 void func_800A8354(void)
 {
-extern s32 g_wmap_view_scroll_mode;
-extern s32 D_801B2E50;
-
     if (g_wmap_view_scroll_mode != 2)
     {
         D_801B2E50 += 1;
@@ -1872,9 +1440,6 @@ extern s32 D_801B2E50;
 /** @brief World-map step handler: clear two flags and advance the step counter. */
 void func_800A8394(void)
 {
-extern s32 D_8013B208;
-extern s32 D_801B2E50;
-
     g_wmap_input_locked = 0;
     D_8013B208 = 0;
     D_801B2E50 += 1;
@@ -1887,11 +1452,6 @@ extern s32 D_801B2E50;
  */
 s32 func_800A83B8(s32 arg0)
 {
-extern u32 D_801B2E58;
-extern s32 D_801B2E5C;
-extern void (*D_800D6CD4[])(void);
-extern s32 g_wmap_view_scroll_mode;
-
     s32 result;
 
     if (arg0 != 0)
@@ -1918,11 +1478,6 @@ extern s32 g_wmap_view_scroll_mode;
  */
 void func_800A8430(void)
 {
-extern u32 D_801B2E58;
-extern s32 D_801B2E5C;
-extern void (*D_800D6CD4[])(void);
-extern s32 g_wmap_view_scroll_mode;
-
     D_801B2E58 = 1;
     D_801B2E5C = 1;
 }
@@ -1932,11 +1487,6 @@ extern s32 g_wmap_view_scroll_mode;
  */
 void func_800A8448(void)
 {
-extern u32 D_801B2E58;
-extern s32 D_801B2E5C;
-extern void (*D_800D6CD4[])(void);
-extern s32 g_wmap_view_scroll_mode;
-
     if (g_wmap_view_scroll_mode != 2)
     {
         D_801B2E58 += 1;
@@ -1947,10 +1497,6 @@ extern s32 g_wmap_view_scroll_mode;
 /** @brief Reset a world-map HUD sprite record, then bump its shared refcount. */
 void func_800A8488(void)
 {
-extern u8 D_800D92EC[];
-extern s32 D_801B2E58;
-extern s32 D_801B2E5C;
-
     D_800D92EC[0x6] = 0xF;
     *(s16*)&D_800D92EC[0x10] = -1;
     *(s16*)&D_800D92EC[0x22] = 0x80;
@@ -1967,9 +1513,6 @@ extern s32 D_801B2E5C;
  */
 void func_800A84DC(void)
 {
-extern s32 D_801B2E5C;
-extern s32 D_801B2E58;
-
     if (--D_801B2E5C == 0)
     {
         D_801B2E58 += 1;
@@ -1981,9 +1524,6 @@ extern s32 D_801B2E58;
  */
 void func_800A8510(void)
 {
-extern s32 D_801B2E5C;
-extern s32 D_801B2E58;
-
     if (g_wmap_scripted_travel_active == 0)
     {
         D_801B2E58 += 1;
@@ -1997,17 +1537,9 @@ extern s32 D_801B2E58;
  */
 void func_800A854C(void)
 {
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
-extern s32 g_wmap_view[];
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
-extern s32 D_801B2E58;
-
     g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * 0x30 - g_wmap_view[0];
-    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * 0x30 - g_wmap_view[1];
+    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * 0x30 - g_wmap_view.x;
+    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * 0x30 - g_wmap_view.y;
     D_801B2E58 += 1;
     func_800A85DC();
 }
@@ -2017,9 +1549,6 @@ extern s32 D_801B2E58;
  */
 void func_800A85DC(void)
 {
-extern s32 g_wmap_view_scroll_mode;
-extern s32 D_801B2E58;
-
     if (g_wmap_view_scroll_mode != 2)
     {
         D_801B2E58 += 1;
@@ -2030,9 +1559,6 @@ extern s32 D_801B2E58;
 /** @brief Issue audio command F1, start a 60-tick delay, and advance the state. */
 void func_800A861C(void)
 {
-extern s32 D_801B2E58;
-extern s32 D_801B2E5C;
-
     akao_release_all_sfx();
     D_801B2E5C = 60;
     D_801B2E58 += 1;
@@ -2043,9 +1569,6 @@ extern s32 D_801B2E5C;
  */
 void func_800A8654(void)
 {
-extern s32 D_801B2E5C;
-extern s32 D_801B2E58;
-
     if (--D_801B2E5C == 0)
     {
         D_801B2E58 += 1;
@@ -2055,10 +1578,6 @@ extern s32 D_801B2E58;
 /** @brief Play sound 57, clear its field, and start a 30-tick delay. */
 void func_800A8688(void)
 {
-extern s16 D_800D930E;
-extern s32 D_801B2E58;
-extern s32 D_801B2E5C;
-
     wmap_play_sound(0x39, 0x80);
     D_800D930E = 0;
     D_801B2E5C = 0x1E;
@@ -2070,9 +1589,6 @@ extern s32 D_801B2E5C;
  */
 void func_800A86CC(void)
 {
-extern s32 D_801B2E5C;
-extern s32 D_801B2E58;
-
     if (--D_801B2E5C == 0)
     {
         D_801B2E58 += 1;
@@ -2085,16 +1601,9 @@ extern s32 D_801B2E58;
  */
 void func_800A8700(void)
 {
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_saved_view[];
-extern s32 g_wmap_view[];
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
-extern s32 D_801B2E58;
-
     g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = g_wmap_saved_view[0] - g_wmap_view[0];
-    g_wmap_scroll_remaining_y = g_wmap_saved_view[1] - g_wmap_view[1];
+    g_wmap_scroll_remaining_x = g_wmap_saved_view.x - g_wmap_view.x;
+    g_wmap_scroll_remaining_y = g_wmap_saved_view.y - g_wmap_view.y;
     D_801B2E58 += 1;
     func_800A8770();
 }
@@ -2104,9 +1613,6 @@ extern s32 D_801B2E58;
  */
 void func_800A8770(void)
 {
-extern s32 g_wmap_view_scroll_mode;
-extern s32 D_801B2E58;
-
     if (g_wmap_view_scroll_mode != 2)
     {
         D_801B2E58 += 1;
@@ -2117,9 +1623,6 @@ extern s32 D_801B2E58;
 /** @brief World-map step handler: clear two flags and advance the step counter. */
 void func_800A87B0(void)
 {
-extern s32 D_8013B208;
-extern s32 D_801B2E58;
-
     g_wmap_input_locked = 0;
     D_8013B208 = 0;
     D_801B2E58 += 1;
@@ -2132,11 +1635,6 @@ extern s32 D_801B2E58;
  */
 s32 func_800A87D4(s32 arg0)
 {
-extern u32 D_801B2E60;
-extern s32 D_801B2E64;
-extern void (*D_800D6D14[])(void);
-extern s32 g_wmap_view_scroll_mode;
-
     s32 result;
 
     if (arg0 != 0)
@@ -2163,11 +1661,6 @@ extern s32 g_wmap_view_scroll_mode;
  */
 void func_800A884C(void)
 {
-extern u32 D_801B2E60;
-extern s32 D_801B2E64;
-extern void (*D_800D6D14[])(void);
-extern s32 g_wmap_view_scroll_mode;
-
     D_801B2E60 = 1;
     D_801B2E64 = 1;
 }
@@ -2177,11 +1670,6 @@ extern s32 g_wmap_view_scroll_mode;
  */
 void func_800A8864(void)
 {
-extern u32 D_801B2E60;
-extern s32 D_801B2E64;
-extern void (*D_800D6D14[])(void);
-extern s32 g_wmap_view_scroll_mode;
-
     if (g_wmap_view_scroll_mode != 2)
     {
         D_801B2E60 += 1;
@@ -2192,9 +1680,6 @@ extern s32 g_wmap_view_scroll_mode;
 /** @brief World-map step handler: kick two sub-tasks and expire the step counter. */
 void func_800A88A4(void)
 {
-extern s32 D_801B2E60;
-extern void func_800591A8(s32 arg0);
-
     func_800A89DC(0x17);
     func_800591A8(0x17);
     D_801B2E60 += 1;
@@ -2207,11 +1692,6 @@ extern void func_800591A8(s32 arg0);
  */
 s32 func_800A88D8(s32 arg0)
 {
-extern u32 D_801B2E68;
-extern s32 D_801B2E6C;
-extern void (*D_800D6D24[])(void);
-extern s32 g_wmap_view_scroll_mode;
-
     s32 result;
 
     if (arg0 != 0)
@@ -2238,11 +1718,6 @@ extern s32 g_wmap_view_scroll_mode;
  */
 void func_800A8950(void)
 {
-extern u32 D_801B2E68;
-extern s32 D_801B2E6C;
-extern void (*D_800D6D24[])(void);
-extern s32 g_wmap_view_scroll_mode;
-
     D_801B2E68 = 1;
     D_801B2E6C = 1;
 }
@@ -2252,11 +1727,6 @@ extern s32 g_wmap_view_scroll_mode;
  */
 void func_800A8968(void)
 {
-extern u32 D_801B2E68;
-extern s32 D_801B2E6C;
-extern void (*D_800D6D24[])(void);
-extern s32 g_wmap_view_scroll_mode;
-
     if (g_wmap_view_scroll_mode != 2)
     {
         D_801B2E68 += 1;
@@ -2267,9 +1737,6 @@ extern s32 g_wmap_view_scroll_mode;
 /** @brief World-map step handler: kick two sub-tasks and expire the step counter. */
 void func_800A89A8(void)
 {
-extern s32 D_801B2E68;
-extern void func_800591A8(s32 arg0);
-
     func_800A89DC(0x16);
     func_800591A8(0x16);
     D_801B2E68 += 1;

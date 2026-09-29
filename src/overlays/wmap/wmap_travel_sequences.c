@@ -82,24 +82,6 @@ typedef struct
     s16 unknown_12;
 } WmapVehicleMotion;
 
-/** @brief Animation resource slot of a sprite actor. */
-typedef struct
-{
-    s32 unknown_00;
-    u8* data;
-} WmapAnimationSlot;
-
-/** @brief GTE screen coordinate, read as one packed word or as two halves. */
-typedef union
-{
-    s32 packed;
-    struct
-    {
-        s16 x;
-        s16 y;
-    } point;
-} WmapScreenPosition;
-
 /** @brief Map scroll position and projection scale (see wmap_view_effects.c). */
 typedef struct
 {
