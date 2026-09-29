@@ -164,12 +164,12 @@ void gosub_build_logic_block_list(void)
         g_gosub_rows[i].detail_group = g_saved_game_ctx->logic_blocks[i].f.id;
         g_gosub_rows[i].detail_id = g_saved_game_ctx->logic_blocks[i].f.quantity;
         row_name = g_gosub_text_buffers[i];
-        gosub_copy_encoded_string(row_name, GOSUB_TEXT(GOSUB_TEXT_LOGIC_BLOCK_NAMES, g_gosub_rows[i].detail_group));
+        encoded_text_copy(row_name, GOSUB_TEXT(GOSUB_TEXT_LOGIC_BLOCK_NAMES, g_gosub_rows[i].detail_group));
         if (g_gosub_rows[i].detail_id != 0)
         {
-            gosub_append_encoded_string(row_name, FIELD_UI_TEXT_AT(D_800EC3DA, FIELD_UI_TEXT_PLUS));
+            encoded_text_append(row_name, FIELD_UI_TEXT_AT(D_800EC3DA, FIELD_UI_TEXT_PLUS));
             field_format_number(number_text, g_gosub_rows[i].detail_id, 1);
-            gosub_append_encoded_string(row_name, number_text);
+            encoded_text_append(row_name, number_text);
         }
         g_gosub_rows[i].name = row_name;
         g_gosub_rows[i].desc = GOSUB_TEXT(GOSUB_TEXT_LOGIC_BLOCK_DESCRIPTIONS, g_gosub_rows[i].detail_group);

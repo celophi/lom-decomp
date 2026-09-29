@@ -143,7 +143,7 @@ s32 akao_xa_alloc_voice_pair(void)
     s32 pair;
     u32 pair_mask;
 
-    for (;;)
+    while (1)
     {
         pair_mask = XA_TOP_VOICE_PAIR_MASK;
         pair = XA_VOICE_PAIR_COUNT;

@@ -42,9 +42,6 @@
 /** @brief Bytes of a stored companion name copied into the party record. */
 #define PET_NAME_LENGTH 21
 
-/** @brief Bit position of FIELD_CHARACTER_AI. */
-#define FIELD_CHARACTER_AI_SHIFT 7
-
 /** @brief Number of equipment_totals values in a character or stored companion record. */
 #define FIELD_EQUIPMENT_TOTAL_COUNT 4
 
@@ -105,7 +102,7 @@ s32 field_join_guest(s32 guest_id)
     FieldGuestTemplateTable* table;
     FieldCharacterRecord* bank;
     u32 progress;
-    u32 ai_flag;
+    u32 pad_controlled;
     s32 level_index;
     s32 i;
     u8 hero_level;
@@ -118,7 +115,7 @@ s32 field_join_guest(s32 guest_id)
             if (table->guests[i].id == guest_id)
             {
                 hero_level = g_field_game_state->control.fields.hero_level;
-                ai_flag = g_field_game_state->characters[FIELD_PARTY_GUEST].info.bytes[0] >> FIELD_CHARACTER_AI_SHIFT;
+                pad_controlled = g_field_game_state->characters[FIELD_PARTY_GUEST].info.bytes[0] >> FIELD_CHARACTER_PAD_CONTROLLED_SHIFT;
                 if (hero_level < FIELD_GUEST_BANK_LEVELS)
                 {
                     bank = &table->guests[i].banks[0];
@@ -137,7 +134,8 @@ s32 field_join_guest(s32 guest_id)
                 }
                 field_copy_words(bank, &g_field_game_state->characters[FIELD_PARTY_GUEST], sizeof(FieldCharacterRecord));
                 g_field_game_state->characters[FIELD_PARTY_GUEST].info.word =
-                    (g_field_game_state->characters[FIELD_PARTY_GUEST].info.word & ~FIELD_CHARACTER_AI) | (ai_flag << FIELD_CHARACTER_AI_SHIFT);
+                    (g_field_game_state->characters[FIELD_PARTY_GUEST].info.word & ~FIELD_CHARACTER_PAD_CONTROLLED) |
+                    (pad_controlled << FIELD_CHARACTER_PAD_CONTROLLED_SHIFT);
                 if (g_field_game_state->control.fields.hero_level < FIELD_LEVEL_EXPERIENCE_COUNT)
                 {
                     level_index = g_field_game_state->control.fields.hero_level - 1;
@@ -237,7 +235,8 @@ static void field_load_companion(s32 companion_index)
         g_field_game_state->characters[FIELD_PARTY_COMPANION].name[i] = g_field_game_state->pets[companion_index].name[i];
     }
     g_field_game_state->characters[FIELD_PARTY_COMPANION].info.word =
-        ((g_field_game_state->characters[FIELD_PARTY_COMPANION].info.word & ~FIELD_CHARACTER_TYPE_MASK) | FIELD_CHARACTER_COMPANION) & ~FIELD_CHARACTER_AI;
+        ((g_field_game_state->characters[FIELD_PARTY_COMPANION].info.word & ~FIELD_CHARACTER_TYPE_MASK) | FIELD_CHARACTER_COMPANION) &
+        ~FIELD_CHARACTER_PAD_CONTROLLED;
     g_field_game_state->characters[FIELD_PARTY_COMPANION].info.bytes[1] = g_field_game_state->pets[companion_index].species;
     g_field_game_state->characters[FIELD_PARTY_COMPANION].progress.bits.level = g_field_game_state->pets[companion_index].progress.bits.level;
     g_field_game_state->characters[FIELD_PARTY_COMPANION].progress.bits.experience = g_field_game_state->pets[companion_index].progress.bits.experience;

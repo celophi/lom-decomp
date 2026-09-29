@@ -23,7 +23,7 @@ u8* shop_draw_notice_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
     switch (g_shop_notice_id)
     {
     case SHOP_NOTICE_CANNOT_CARRY:
-        prim = func_800A88A0(prim, ot, FIELD_UI_TEXT_AT(D_800EC3D0, 6), SHOP_TEXT_COLOR_NOTICE, 128 - x_inset, -y_inset, 2);
+        prim = func_800A88A0(prim, ot, FIELD_UI_TEXT_AT(g_field_ui_text_cant_hold_more, 6), SHOP_TEXT_COLOR_NOTICE, 128 - x_inset, -y_inset, 2);
         break;
     case SHOP_NOTICE_QUANTITY_REDUCED:
         prim = func_800A88A0(prim, ot, FIELD_UI_TEXT_AT(D_800EC3FE, 29), SHOP_TEXT_COLOR_NOTICE, 128 - x_inset, -y_inset, 2);

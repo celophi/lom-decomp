@@ -1,5 +1,6 @@
 #include "main.h"
 #include "field_text.h"
+#include "encoded_text.h"
 #include "saved_game.h"
 #include "common.h"
 #include "cdrom.h"
@@ -40,7 +41,6 @@
 #define GOLEM_FADE_ADDITIVE_THRESHOLD (GOLEM_FADE_NEUTRAL + 1)
 #define GOLEM_FADE_ADDITIVE_DRAW_MODE 0x25
 #define GOLEM_FADE_SUBTRACTIVE_DRAW_MODE 0x45
-#define IS_DBCS_LEAD_BYTE(byte) (((byte) >= 0x19) && ((byte) <= 0x1F))
 /**
  * @brief Address of string @p index in the archive section @p offset bytes into @p archive.
  * @note Summed as integers, index first, to match the original address arithmetic.
@@ -290,9 +290,6 @@ u8* golem_emit_glyph(u8* packet_cursor, u_long* ordering_table, s32 glyph_id, s3
 LINE_F2* golem_emit_panel_outline(LINE_F2* packet, u_long* ordering_table, s32 x, s32 y, s32 width, s32 height, s32 color);
 void golem_set_fade_target(s16 red, s16 green, s16 blue, s16 steps);
 u8* golem_render_fade(u8* packet_cursor, u_long* ordering_table_tag);
-void golem_append_encoded_string(u8* dest, u8* src);
-s32 golem_encoded_string_length(u8* text);
-void golem_copy_encoded_string(u8* dst, u8* src);
 
 /**
  * @brief Run the golem logic-grid editor until the user exits.
@@ -333,7 +330,7 @@ void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel)
     PutDispEnv(&next_buffer->display_env);
     update_controllers();
 
-    for (;;)
+    while (1)
     {
         draw_buffer = next_buffer;
         ClearOTagR(draw_buffer->ordering_table, GOLEM_ORDERING_TABLE_SIZE);
@@ -953,12 +950,12 @@ void golem_render(GolemRenderContext* render_context)
         /* The id is bits 7:2 of the block word, read through its low byte. */
         name_index = (u8)GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 2;
         archive = &g_golem_text_archive;
-        golem_copy_encoded_string(name_text, GOLEM_ARCHIVE_TEXT(archive, names_offset, name_index));
+        encoded_text_copy(name_text, GOLEM_ARCHIVE_TEXT(archive, names_offset, name_index));
         if (GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.quantity)
         {
-            golem_append_encoded_string(name_text, FIELD_UI_TEXT_AT(D_800EC3DA, GOLEM_SHARED_PLUS_TEXT_INDEX));
+            encoded_text_append(name_text, FIELD_UI_TEXT_AT(D_800EC3DA, GOLEM_SHARED_PLUS_TEXT_INDEX));
             func_800A8B90(number_text, GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.quantity, 1);
-            golem_append_encoded_string(name_text, number_text);
+            encoded_text_append(name_text, number_text);
         }
         packet_cursor = func_800A88A0(packet_cursor, panel_ordering_table, name_text, 0, 0xA0, 0xA0, 2);
         descriptions_offset = archive->sections.descriptions_offset;
@@ -1529,88 +1526,6 @@ u8* golem_render_fade(u8* packet_cursor, u_long* ordering_table_tag)
     return packet_cursor;
 }
 
-/**
- * @brief Append the encoded string @p src to the end of @p dest.
- * @param dest Destination encoded-text buffer (null-terminated).
- * @param src  Source encoded-text buffer (null-terminated).
- */
-void golem_append_encoded_string(u8* dest, u8* src)
-{
-    s32 dst_len;
-    s32 src_len;
-    s32 i;
-
-    dst_len = golem_encoded_string_length(dest);
-    src_len = golem_encoded_string_length(src);
-    for (i = 0; i < src_len; i++)
-    {
-        dest[dst_len + i] = src[i];
-    }
-    dest[dst_len + i] = 0;
-}
-
-/**
- * @brief Measure an encoded string's length in bytes: lead bytes 0x19..0x1F
- *        start a two-byte character, everything else is one byte.
- * @param text Null-terminated encoded-text buffer.
- * @return Length in bytes, excluding the terminator.
- */
-s32 golem_encoded_string_length(u8* text)
-{
-    u8* cursor;
-    s32 byte_count;
-
-    cursor = text;
-    byte_count = 0;
-    while (*cursor != 0)
-    {
-        if (IS_DBCS_LEAD_BYTE(*cursor))
-        {
-            cursor += 2;
-            byte_count += 2;
-        }
-        else
-        {
-            cursor += 1;
-            byte_count += 1;
-        }
-    }
-    return byte_count;
-}
-
-/**
- * @brief Copy the encoded string @p src to @p dst, honoring two-byte
- *        characters, and null-terminate the destination.
- * @param dst Destination buffer.
- * @param src Source encoded-text buffer (null-terminated).
- */
-void golem_copy_encoded_string(u8* dst, u8* src)
-{
-    const u8* scan_cursor;
-    s32 byte_count;
-    s32 i;
-
-    scan_cursor = src;
-    byte_count = 0;
-
-    while (*scan_cursor)
-    {
-        if (IS_DBCS_LEAD_BYTE(*scan_cursor))
-        {
-            scan_cursor += 2;
-            byte_count += 2;
-        }
-        else
-        {
-            scan_cursor += 1;
-            byte_count += 1;
-        }
-    }
-
-    for (i = 0; i < byte_count; i++)
-    {
-        dst[i] = src[i];
-    }
-
-    dst[i] = 0;
-}
+#include "../../common/encoded_text/encoded_text_append.inc.c"
+#include "../../common/encoded_text/encoded_text_byte_length.inc.c"
+#include "../../common/encoded_text/encoded_text_copy.inc.c"

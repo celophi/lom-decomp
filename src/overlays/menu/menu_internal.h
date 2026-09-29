@@ -931,7 +931,7 @@ static inline void* menu_emit_content_label(void* packet_cursor, s32* ot, void* 
  */
 static inline void menu_copy_encoded_pair(u8* destination, const u8* first, const u8* second)
 {
-    for (;;)
+    while (1)
     {
         u8 character = *first;
         if (character == 0)
@@ -950,7 +950,7 @@ static inline void menu_copy_encoded_pair(u8* destination, const u8* first, cons
             first++;
         }
     }
-    for (;;)
+    while (1)
     {
         u8 character = *second;
         if (character == 0)

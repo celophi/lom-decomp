@@ -38,10 +38,10 @@ void niki_init(s32 context_value, s32 mode)
     RECT rect;
 
     g_niki_mode = mode;
-    g_niki_entry_state = 0xFF;
-    g_niki_card_slot = 0;
+    g_card_entry_state = 0xFF;
+    g_card_slot = 0;
     niki_reset_entry_ranks();
-    niki_init_stream_handles();
+    niki_init_card_events();
     g_niki_icon_phase = 0;
     func_80067F8C();
     rect.x = OVERLAY_INIT_CLEAR_VRAM_X;
@@ -49,7 +49,7 @@ void niki_init(s32 context_value, s32 mode)
     rect.w = OVERLAY_INIT_CLEAR_VRAM_W;
     rect.h = OVERLAY_INIT_CLEAR_VRAM_H;
     func_8001990C(&rect, 0, 0, 0);
-    niki_reset_glyph_cache();
+    reset_glyph_cache();
     g_niki_progress_active = 0;
     g_niki_confirm_latch = 0;
     g_niki_selection_status = 0;
@@ -70,15 +70,15 @@ s32 niki_update_frame(NikiFrameState* frame)
 {
     if (g_niki_exit_requested != 0)
     {
-        niki_shutdown_stream_handles();
+        shutdown_card_events();
         field_text_reset_windows();
-        func_80019788(0);
+        DrawSync(0);
         return 1;
     }
     field_text_reset_scratch();
-    niki_begin_glyph_cache_frame();
+    begin_glyph_cache_frame();
     niki_update_menu(frame);
-    niki_evict_unused_glyphs();
+    evict_unused_glyphs();
     field_text_upload_immediate_cache();
     g_niki_frame_parity ^= 1;
     return 0;
@@ -221,11 +221,11 @@ s32 niki_update_load_sequence(void)
 {
     s32 result;
 
-    if (g_niki_entry_state >= 0x10)
+    if (g_card_entry_state >= 0x10)
     {
-        if (g_niki_load_step == NULL)
+        if (g_card_step == NULL)
         {
-            g_niki_load_step = g_niki_card_setup_sequence;
+            g_card_step = g_niki_card_setup_sequence;
         }
     }
 
@@ -236,8 +236,8 @@ s32 niki_update_load_sequence(void)
 
     if ((D_80164B80 != 0) && (g_pad_input & 0x220))
     {
-        g_niki_entry_state = 0xF8;
-        g_niki_load_step = g_niki_card_info_sequence;
+        g_card_entry_state = 0xF8;
+        g_card_step = g_niki_card_info_sequence;
     }
     else
     {
@@ -246,14 +246,14 @@ s32 niki_update_load_sequence(void)
         case 0:
             break;
         case 4:
-            g_niki_load_step = g_niki_rescan_sequence;
+            g_card_step = g_niki_rescan_sequence;
             D_80164B80 = 0;
             break;
         case 5:
-            g_niki_entry_state = 0xF8;
+            g_card_entry_state = 0xF8;
             /* fallthrough */
         case 2:
-            g_niki_load_step = g_niki_card_info_sequence;
+            g_card_step = g_niki_card_info_sequence;
             break;
         }
     }
@@ -288,7 +288,7 @@ s32 niki_handle_input(void)
     {
         return;
     }
-    entry_count = g_niki_entry_state;
+    entry_count = g_card_entry_state;
     if (entry_count == 0xFF)
     {
         return;
@@ -301,7 +301,7 @@ s32 niki_handle_input(void)
     {
         return;
     }
-    if ((u32)(*g_niki_load_step - 6) < 2U)
+    if ((u32)(*g_card_step - 6) < 2U)
     {
         return;
     }
@@ -348,13 +348,13 @@ s32 niki_handle_input(void)
             g_niki_selected_row -= 1;
             if (g_niki_selected_row < 0)
             {
-                g_niki_selected_row = g_niki_entry_state - 1;
+                g_niki_selected_row = g_card_entry_state - 1;
             }
         }
         if (g_pad_input & 0x4000)
         {
             g_niki_selected_row += 1;
-            if (g_niki_selected_row >= g_niki_entry_state)
+            if (g_niki_selected_row >= g_card_entry_state)
             {
                 g_niki_selected_row = 0;
             }
@@ -376,11 +376,11 @@ s32 niki_handle_input(void)
         {
             return;
         }
-        if (func_8001714C(D_800ECF7C, g_niki_entries[g_niki_card_slot][g_niki_selected_row].name, 0xC) == 0)
+        if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_niki_selected_row].name, 0xC) == 0)
         {
             SavedGameLayout* metadata = &g_niki_entry_file.saved_game;
             if ((metadata->identity.ids.game_id != g_saved_game_ctx->identity.ids.game_id) && (metadata->summary_slot_count != 0) &&
-                ((D_8003EC9C == 0xFF) || (metadata->save_slot == D_8003EC9C)))
+                ((g_save_compatibility_tag == SAVE_TAG_ANY) || (metadata->compatibility_tag == g_save_compatibility_tag)))
             {
                 element = niki_alloc_element();
                 element->attr.f.phase = 1;
@@ -391,7 +391,7 @@ s32 niki_handle_input(void)
                 NIKI_SET_ELEMENT_WIDTH_LOW(element, 0x20);
                 niki_enable_choice_toggle();
                 element->draw = niki_draw_confirm_prompt;
-                niki_restart_load_sequence();
+                restart_card_sequence();
                 func_800A3938(0x7E, 0x80);
                 return;
             }
@@ -403,14 +403,14 @@ s32 niki_handle_input(void)
 void niki_switch_card_slot(void)
 {
     D_80164B80 = 0;
-    g_niki_load_step = 0;
-    g_niki_entry_state = 0xFF;
+    g_card_step = 0;
+    g_card_entry_state = 0xFF;
     g_niki_scroll_frames = 0;
     g_niki_scroll_target_y = 0;
     g_niki_scroll_y = 0;
     g_niki_selected_row = 0;
     g_niki_selection_status = 0;
-    g_niki_card_slot ^= 1;
+    g_card_slot ^= 1;
     niki_reset_entry_ranks();
 }
 
@@ -505,7 +505,7 @@ static inline s32 niki_draw_scan_message(s32* ot, s32 prim, s32 x_offset, s32 y_
 
 /**
  * @brief Render the niki row/status list: per-entry glyphs, markers and the
- *        highlight tile, dispatched by the g_niki_entry_state list-state selector.
+ *        highlight tile, dispatched by the g_card_entry_state list-state selector.
  * @param ot Ordering-table pointer.
  * @param prim Primitive-buffer write cursor.
  * @param x_offset Horizontal scroll offset (subtracted from every x).
@@ -514,7 +514,7 @@ static inline s32 niki_draw_scan_message(s32* ot, s32 prim, s32 x_offset, s32 y_
  */
 s32 niki_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
-    s32 state = g_niki_entry_state;
+    s32 state = g_card_entry_state;
 
     switch (state)
     {
@@ -574,7 +574,7 @@ s32 niki_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                     {
                         pos.x = base_x + NIKI_ENTRY_VALUE_X;
                         pos.y = row_y;
-                        prim = func_800A8A78(ot, prim, g_niki_entry_suffix_values[entry_index], 4, &pos, 0);
+                        prim = func_800A8A78(ot, prim, g_card_entry_suffix_values[entry_index], 4, &pos, 0);
                         prim = func_800A88A0(prim, ot, (void*)((s32)D_80147126 + (s32)glyph_table), 4, base_x + 0x70, row_y, 0);
                         if ((g_niki_rank_count - 1) == *rank)
                         {
@@ -586,20 +586,20 @@ s32 niki_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                             marker_offset = *(u16*)(glyph_table + 0x38);
                             prim = func_800A88A0(prim, ot, (void*)((s32)marker_offset + (s32)glyph_table), 4, base_x + NIKI_ENTRY_MARKER_X, row_y, 0);
                         }
-                        if (*niki_skip_hex_digits(&g_niki_entries[g_niki_card_slot][entry_index].name[12]) == '+')
+                        if (*skip_hex_digits(&g_card_entries[g_card_slot][entry_index].name[12]) == '+')
                         {
                             prim = func_800A88A0(prim, ot, (void*)((s32)D_801471A8 + (s32)glyph_table), 4, 0xF2 - x_offset, row_y, 1);
                         }
                     }
-                    if (func_8001714C(D_800ECF7C, g_niki_entries[g_niki_card_slot][entry_index].name, 0xC) == 0)
+                    if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][entry_index].name, 0xC) == 0)
                     {
                         prim = func_800A88A0(prim, ot, glyph_table + D_801470FE, 4, 1 - x_offset, row_y, 0);
                     }
-                    else if (func_8001714C(D_800ECF8C, g_niki_entries[g_niki_card_slot][entry_index].name, 0xC) == 0)
+                    else if (strncmp(D_800ECF8C, g_card_entries[g_card_slot][entry_index].name, 0xC) == 0)
                     {
                         prim = func_800A88A0(prim, ot, (void*)((s32)D_80147132 + (s32)glyph_table), 4, 1 - x_offset, row_y, 0);
                     }
-                    else if (func_8001714C(D_800ECFC4, g_niki_entries[g_niki_card_slot][entry_index].name, 8) == 0)
+                    else if (strncmp(D_800ECFC4, g_card_entries[g_card_slot][entry_index].name, 8) == 0)
                     {
                         prim = func_800A88A0(prim, ot, glyph_table + D_8014710C, 4, 1 - x_offset, row_y, 0);
                     }
@@ -609,7 +609,7 @@ s32 niki_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                     }
                 }
                 entry_index++;
-            } while (entry_index < g_niki_entry_state);
+            } while (entry_index < g_card_entry_state);
         }
         row_y = ((g_niki_selected_row * 14) - y_offset) - g_niki_scroll_y;
 
@@ -670,7 +670,7 @@ s32 niki_draw_card_slot0_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     RECT pos;
     NikiTile* tile;
 
-    if (g_niki_card_slot != 0)
+    if (g_card_slot != 0)
     {
         tile = (NikiTile*)prim;
         tile->color.word = 0x101010;
@@ -700,7 +700,7 @@ s32 niki_draw_card_slot1_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     RECT pos;
     NikiTile* tile;
 
-    if (g_niki_card_slot == 0)
+    if (g_card_slot == 0)
     {
         tile = (NikiTile*)prim;
         tile->color.word = 0x101010;
@@ -756,7 +756,7 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
     {
         return result;
     }
-    if (g_niki_selection_status != 3 && g_niki_entry_state < 0x10)
+    if (g_niki_selection_status != 3 && g_card_entry_state < 0x10)
     {
         if (g_niki_selection_status == 2)
         {
@@ -769,9 +769,9 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
         }
         else
         {
-            if (func_8001714C(D_800ECF7C, g_niki_entries[g_niki_card_slot][g_niki_selected_row].name, 0xC) == 0)
+            if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_niki_selected_row].name, 0xC) == 0)
             {
-                if (D_8003EC9C == 0xFF || g_niki_entry_file.saved_game.save_slot == D_8003EC9C)
+                if (g_save_compatibility_tag == SAVE_TAG_ANY || g_niki_entry_file.saved_game.compatibility_tag == g_save_compatibility_tag)
                 {
                     s32 icon_count;
                     s32 visible_icon_index;
@@ -909,7 +909,7 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
                 s32 slot_index;
                 SaveFileHeader* header;
 
-                niki_terminate_multibyte_text(g_niki_entry_file.header.title);
+                terminate_multibyte_text(g_niki_entry_file.header.title);
                 header = &g_niki_entry_file.header;
                 if ((u32)(header->title[1][0] - 1) >= 0x7FU)
                 {
@@ -918,14 +918,14 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
                         name[slot_index] = *(header->title[0] + slot_index);
                     }
                     name[slot_index] = 0;
-                    result = niki_draw_cached_text(result, ot, name, -x_offset, -y_offset, 4, 0);
+                    result = draw_cached_text(result, ot, name, -x_offset, -y_offset, 4, 0);
 
                     for (slot_index = 0; slot_index < 0x20; slot_index++)
                     {
                         name[slot_index] = g_niki_entry_file.header.title[1][slot_index];
                     }
                     name[slot_index] = 0;
-                    result = niki_draw_cached_text(result, ot, name, -x_offset, -y_offset + 0x10, 4, 0);
+                    result = draw_cached_text(result, ot, name, -x_offset, -y_offset + 0x10, 4, 0);
                 }
             }
         }
@@ -934,49 +934,12 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
 }
 #endif
 
-/**
- * @brief Zero-fill a 64-byte text field from its first character-boundary terminator.
- * @param text Text field to scan; bytes with the high bit set begin two-byte characters.
- */
-void niki_terminate_multibyte_text(void* text)
-{
-    u8* cursor;
-    s32 byte_index;
-
-    cursor = (u8*)text;
-    for (byte_index = 0;;)
-    {
-        if (byte_index >= 64)
-        {
-            return;
-        }
-        if (*cursor == 0)
-        {
-            while (byte_index < 64)
-            {
-                *cursor = 0;
-                byte_index++;
-                cursor++;
-            }
-            return;
-        }
-        if (*cursor >= 0x80)
-        {
-            cursor += 2;
-            byte_index += 2;
-        }
-        else
-        {
-            cursor += 1;
-            byte_index += 1;
-        }
-    }
-}
+#include "../../common/save_file/terminate_multibyte_text.inc.c"
 
 /**
  * @brief Draw the niki footer glyph, anchored to the right edge of the panel.
  *
- * Resolves the glyph pointer from the D_800EC3D0 header (a 16-bit offset stored
+ * Resolves the glyph pointer from the g_field_ui_text_cant_hold_more header (a 16-bit offset stored
  * across bytes [0] and [1], added to the header base less 0xC), then submits it
  * at x = 0x80 - arg2, y = -arg3.
  *
@@ -990,7 +953,7 @@ s32 niki_draw_footer_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
 
-    return func_800A88A0(prim, ot, (void*)((u8*)D_800EC3D0 - 0xC + D_800EC3D0[0] + (D_800EC3D0[1] << 8)), 5, 0x80 - x_offset, -y_offset, 2);
+    return func_800A88A0(prim, ot, (void*)((u8*)g_field_ui_text_cant_hold_more - 0xC + g_field_ui_text_cant_hold_more[0] + (g_field_ui_text_cant_hold_more[1] << 8)), 5, 0x80 - x_offset, -y_offset, 2);
 }
 
 /**
@@ -1087,7 +1050,7 @@ void niki_update_and_draw_elements(NikiFrameState* frame_arg)
     {
         if (element->attr.f.state != 0)
         {
-            entry_count = g_niki_entry_state;
+            entry_count = g_card_entry_state;
             if ((entry_count < 16) && (element->draw == niki_draw_entry_list) && (g_niki_element_pool[1].attr.f.state == 2))
             {
                 if (entry_count * 14 > g_niki_scroll_y + 88)
@@ -1184,92 +1147,9 @@ void niki_deactivate_primary_element(void)
     g_niki_element_pool[0].attr.word &= ~7;
 }
 
-/**
- * @brief Append an encoded NIKI string and terminate the result.
- * @param dst Destination string with room for the appended bytes and terminator.
- * @param src Encoded string to append.
- */
-void niki_text_append(u8* dst, u8* src)
-{
-    s32 dst_length;
-    s32 src_length;
-    s32 byte_index;
-
-    dst_length = niki_text_byte_length(dst);
-    src_length = niki_text_byte_length(src);
-    for (byte_index = 0; byte_index < src_length; byte_index++)
-    {
-        dst[dst_length + byte_index] = src[byte_index];
-    }
-    dst[dst_length + byte_index] = 0;
-}
-
-/**
- * @brief Measure an encoded NIKI string, skipping trail bytes of extended characters.
- * @param text Encoded string to measure.
- * @return Length in bytes, excluding the terminator.
- */
-s32 niki_text_byte_length(u8* text)
-{
-    u8* cursor;
-    u8 lead_byte;
-    s32 byte_length;
-
-    cursor = text;
-    lead_byte = *cursor;
-    byte_length = 0;
-    while (lead_byte != 0)
-    {
-        if ((u32)(lead_byte - NIKI_TEXT_EXTENDED_LEAD_FIRST) < NIKI_TEXT_EXTENDED_PAGE_COUNT)
-        {
-            cursor += 2;
-            byte_length += 2;
-        }
-        else
-        {
-            cursor += 1;
-            byte_length += 1;
-        }
-        lead_byte = *cursor;
-    }
-    return byte_length;
-}
-
-/**
- * @brief Copy an encoded NIKI string and append its terminator.
- * @param dst Destination buffer with room for the string and terminator.
- * @param src Encoded string to copy.
- */
-void niki_text_copy(u8* dst, u8* src)
-{
-    u8* cursor;
-    s32 byte_length;
-    s32 byte_index;
-
-    cursor = src;
-    byte_length = 0;
-
-    while (*cursor != 0)
-    {
-        if ((*cursor >= NIKI_TEXT_EXTENDED_LEAD_FIRST) && (*cursor < NIKI_TEXT_EXTENDED_LEAD_FIRST + NIKI_TEXT_EXTENDED_PAGE_COUNT))
-        {
-            cursor += 2;
-            byte_length += 2;
-        }
-        else
-        {
-            cursor++;
-            byte_length++;
-        }
-    }
-
-    for (byte_index = 0; byte_index < byte_length; byte_index++)
-    {
-        dst[byte_index] = src[byte_index];
-    }
-
-    dst[byte_index] = 0;
-}
+#include "../../common/encoded_text/encoded_text_append.inc.c"
+#include "../../common/encoded_text/encoded_text_byte_length.inc.c"
+#include "../../common/encoded_text/encoded_text_copy.inc.c"
 
 /**
  * @brief Draw the load confirmation choice and dispatch acceptance or cancellation.
@@ -1291,14 +1171,14 @@ s32 niki_draw_confirm_prompt(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     x = -x_offset + 0x90;
     result = niki_draw_choice_prompt(func_800A88A0(prim, ot, (u8*)&D_80147128 + D_80147128 - 0x30, 4, x, -y_offset, 2), ot, x, 0xE - y_offset);
 
-    if ((u32)(niki_poll_and_rewind_primary_handles() - 1) < 2U)
+    if ((u32)(poll_and_retry_card_info() - 1) < 2U)
     {
         g_niki_element_pool[0].attr.f.state = 0;
         field_reset_input_repeat();
         func_800A3938(0x78, 0x80);
-        g_niki_entry_state = 0xFF;
+        g_card_entry_state = 0xFF;
         niki_reset_entry_ranks();
-        g_niki_load_step = 0;
+        g_card_step = 0;
     }
     else
     {
@@ -1308,7 +1188,7 @@ s32 niki_draw_confirm_prompt(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             g_niki_element_pool[0].attr.f.state = 0;
             field_reset_input_repeat();
             func_800A3938(0x78, 0x80);
-            g_niki_load_step = g_niki_card_info_sequence;
+            g_card_step = g_niki_card_info_sequence;
         }
         else if (status & NIKI_CONFIRM_INPUT_MASK)
         {
@@ -1317,13 +1197,13 @@ s32 niki_draw_confirm_prompt(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                 g_niki_element_pool[0].attr.f.state = 0;
                 field_reset_input_repeat();
                 func_800A3938(0x78, 0x80);
-                g_niki_load_step = g_niki_card_info_sequence;
+                g_card_step = g_niki_card_info_sequence;
             }
             else
             {
                 func_800A3938(0x7E, 0x80);
                 g_niki_confirm_latch = 1;
-                g_niki_load_step = g_niki_load_save_sequence;
+                g_card_step = g_niki_load_save_sequence;
                 element = g_niki_element_pool;
                 element->draw = niki_draw_save_confirm_dialog;
                 element->attr.f.phase = 1;
@@ -1375,7 +1255,7 @@ s32 niki_draw_save_confirm_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         resource = &g_niki_save_blob;
         element = g_niki_element_pool;
         element->attr.f.state = 0;
-        if (niki_validate_save_blob(&resource->save) == 0)
+        if (validate_save_file(&resource->save) == 0)
         {
             niki_open_status_dialog(4);
             return result;
@@ -1385,7 +1265,7 @@ s32 niki_draw_save_confirm_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         D_8011F428 = 1;
         D_801227CC = resource->loaded.unknown_0x254;
         D_801227F4 = resource->loaded.unknown_0x256;
-        D_8011F418 = g_niki_card_slot;
+        D_8011F418 = g_card_slot;
         func_800170BC(D_8011F3D8, g_niki_selected_save_path);
         func_80016E7C(resource->loaded.trailing_data, D_80122A08, sizeof(resource->loaded.trailing_data));
         func_80067F28();
@@ -1473,9 +1353,9 @@ void niki_open_status_dialog(s32 dialog_state)
     g_niki_confirm_latch = 0;
     g_niki_selection_status = 0;
     g_niki_io_busy = 0;
-    g_niki_entry_state = 0xFF;
+    g_card_entry_state = 0xFF;
     niki_reset_entry_ranks();
-    g_niki_load_step = 0;
+    g_card_step = 0;
     g_niki_dialog_state = dialog_state;
 }
 
@@ -1504,7 +1384,7 @@ void niki_open_secondary_status_dialog(s32 dialog_state)
     g_niki_selection_status = 0;
     g_niki_io_busy = 0;
     niki_reset_entry_ranks();
-    g_niki_load_step = 0;
+    g_card_step = 0;
     g_niki_dialog_state = dialog_state;
 }
 
@@ -1619,18 +1499,18 @@ s32 niki_draw_icon_highlight(s32 prim, s32* ot, s32 x, s32 y, s32 width, s32 ico
     if ((palette_mode == 1) && (icon_index < 2))
     {
         func_800A5638(g_niki_icon_context, icon_index);
-        func_80019A34(&rect, g_niki_icon_context);
-        func_80019788(0);
+        LoadImage(&rect, g_niki_icon_context);
+        DrawSync(0);
     }
     else if (icon_index >= 0x4F)
     {
         func_800A55E4(g_niki_icon_context, g_niki_icon_palette);
-        func_80019A34(&rect, g_niki_icon_context);
-        func_80019788(0);
+        LoadImage(&rect, g_niki_icon_context);
+        DrawSync(0);
     }
     else
     {
-        func_80019A34(&rect, ((NikiIcon*)((u8*)g_niki_icon_offsets - sizeof(s32) + g_niki_icon_offsets[icon_index]))->palette);
+        LoadImage(&rect, ((NikiIcon*)((u8*)g_niki_icon_offsets - sizeof(s32) + g_niki_icon_offsets[icon_index]))->palette);
     }
 
     texture_column = texture_slot * 3;
@@ -1638,7 +1518,7 @@ s32 niki_draw_icon_highlight(s32 prim, s32* ot, s32 x, s32 y, s32 width, s32 ico
     rect.y = 0xD0;
     rect.w = 0xC;
     rect.h = 0x30;
-    func_80019A34(&rect, ((NikiIcon*)((u8*)g_niki_icon_offsets - sizeof(s32) + g_niki_icon_offsets[icon_index]))->pixels);
+    LoadImage(&rect, ((NikiIcon*)((u8*)g_niki_icon_offsets - sizeof(s32) + g_niki_icon_offsets[icon_index]))->pixels);
     quad = (NikiTexturedQuad*)prim;
     quad->color.word = 0x808080;
     quad->tag.bytes.length = 9;
@@ -1749,7 +1629,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
     s32 dispatch;
-    dispatch = g_niki_entry_state;
+    dispatch = g_card_entry_state;
     switch (dispatch)
     {
     case 0xf8:
@@ -1838,7 +1718,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 
         if (g_niki_confirm_latch == 0)
         {
-            if (niki_validate_save_blob(&g_niki_save_blob.save) == 0)
+            if (validate_save_file(&g_niki_save_blob.save) == 0)
             {
                 func_800A3938(0x78, 0x80);
                 g_niki_element_pool[0].draw = niki_draw_status_dialog;
@@ -1854,15 +1734,15 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                 g_niki_selection_status = 0;
                 g_niki_io_busy = 0;
                 g_niki_confirm_latch = 0;
-                g_niki_entry_state = 0xFF;
+                g_card_entry_state = 0xFF;
                 niki_reset_entry_ranks();
                 dialog_state = 4;
-                g_niki_load_step = 0;
+                g_card_step = 0;
                 g_niki_dialog_state = dialog_state;
                 return prim;
             }
             func_800A3938(0x7B, 0x80);
-            g_niki_entry_state = 0xF4;
+            g_card_entry_state = 0xF4;
             g_niki_choice_toggle = 1;
             field_reset_input_repeat();
         }
@@ -1915,7 +1795,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         {
             func_800A3938(0x78, 0x80);
             g_niki_choice_toggle = 1;
-            g_niki_entry_state = 0xF4;
+            g_card_entry_state = 0xF4;
             field_reset_input_repeat();
         }
         else if (g_pad_input & NIKI_CONFIRM_INPUT_MASK)
@@ -1924,7 +1804,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             {
                 func_800A3938(0x78, 0x80);
                 g_niki_choice_toggle = 1;
-                g_niki_entry_state = 0xF4;
+                g_card_entry_state = 0xF4;
                 field_reset_input_repeat();
             }
             else
@@ -1998,7 +1878,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         if ((g_pad_input & NIKI_CANCEL_INPUT_MASK) || ((g_pad_input & NIKI_CONFIRM_INPUT_MASK) && g_niki_choice_toggle != 0))
         {
             g_niki_choice_toggle = one;
-            g_niki_entry_state = 0xF3;
+            g_card_entry_state = 0xF3;
             func_800A3938(0x78, 0x80);
             field_reset_input_repeat();
         }
@@ -2017,12 +1897,12 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                 }
             }
             resource->loaded.trailing_record_count = record_count;
-            checksum = niki_compute_save_checksum(resource->save.payload);
-            resource->save.magic = NIKI_SAVE_MAGIC;
+            checksum = compute_save_checksum(&resource->save);
+            resource->save.magic = SAVE_FILE_MAGIC;
             resource->save.checksum = checksum;
             g_niki_progress_active = 1;
-            g_niki_load_step = g_niki_write_save_sequence;
-            g_niki_entry_state = 0xF5;
+            g_card_step = g_niki_write_save_sequence;
+            g_card_entry_state = 0xF5;
         }
     }
     break;
@@ -2112,23 +1992,23 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             {
                 return prim;
             }
-            if ((u32)(*g_niki_load_step - 6) < 2U)
+            if ((u32)(*g_card_step - 6) < 2U)
             {
                 return prim;
             }
-            if ((func_8001714C(D_800ECF7C, g_niki_entries[g_niki_card_slot][g_niki_selected_row].name, 0xC) != 0) ||
+            if ((strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_niki_selected_row].name, 0xC) != 0) ||
                 (niki_preview_metadata()->identity.ids.game_id != D_801227CC) || (niki_preview_metadata()->identity.ids.save_id != D_801227F4))
             {
                 g_niki_selected_row++;
-                if (g_niki_selected_row >= g_niki_entry_state)
+                if (g_niki_selected_row >= g_card_entry_state)
                 {
-                    if (g_niki_entry_state != 0)
+                    if (g_card_entry_state != 0)
                     {
-                        g_niki_entry_state = 0xF7;
+                        g_card_entry_state = 0xF7;
                     }
                     else
                     {
-                        g_niki_entry_state = 0xF8;
+                        g_card_entry_state = 0xF8;
                     }
                 }
                 else
@@ -2152,8 +2032,8 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             {
                 g_niki_progress_start_tick = VSync(-1);
                 g_niki_confirm_latch = 1;
-                g_niki_load_step = g_niki_read_saved_copy_sequence;
-                g_niki_entry_state = 0xF6;
+                g_card_step = g_niki_read_saved_copy_sequence;
+                g_card_entry_state = 0xF6;
             }
         }
     }
@@ -2166,19 +2046,19 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     {
         return prim;
     }
-    if (g_niki_entry_state == 0xF6)
+    if (g_card_entry_state == 0xF6)
     {
         return prim;
     }
-    if (g_niki_entry_state == 0xF5)
+    if (g_card_entry_state == 0xF5)
     {
         return prim;
     }
-    if (g_niki_entry_state == 0xF4)
+    if (g_card_entry_state == 0xF4)
     {
         return prim;
     }
-    if (g_niki_entry_state == 0xF3)
+    if (g_card_entry_state == 0xF3)
     {
         return prim;
     }
@@ -2206,369 +2086,40 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         return prim;
     }
 
-    if ((g_pad_input & 0xA100) && (g_niki_entry_state != 0xFF))
+    if ((g_pad_input & 0xA100) && (g_card_entry_state != 0xFF))
     {
         func_800A3938(0x7D, 0x80);
         D_80164B80 = 0;
-        g_niki_load_step = 0;
+        g_card_step = 0;
         g_niki_scroll_frames = 0;
         g_niki_scroll_target_y = 0;
         g_niki_scroll_y = 0;
         g_niki_selected_row = 0;
-        g_niki_entry_state = 0xFF;
+        g_card_entry_state = 0xFF;
         g_niki_selection_status = 0;
-        g_niki_card_slot ^= 1;
+        g_card_slot ^= 1;
         niki_reset_entry_ranks();
         g_niki_progress_bar_active = 0;
-        g_niki_load_step = g_niki_card_setup_sequence;
+        g_card_step = g_niki_card_setup_sequence;
     }
 
     return prim;
 }
 #endif
 
-/**
- * @brief Advance past a run of ASCII hexadecimal-digit characters.
- * @param text Pointer to the start of the scan.
- * @return Pointer to the first byte that is not a hex digit
- *         (@c '0'-'9', @c 'a'-'f' or @c 'A'-'F').
- */
-u8* niki_skip_hex_digits(void* text)
-{
-    u8* cursor = text;
-
-    while ((u32)(*cursor - '0') < 10 || (u32)(*cursor - 'a') < 6 || (u32)(*cursor - 'A') < 6)
-    {
-        cursor++;
-    }
-    return cursor;
-}
+#include "../../common/save_file/skip_hex_digits.inc.c"
 
 /** @brief Full-width MAX text used when a decimal value exceeds five digits. */
-const NikiDecimalOverflow g_niki_decimal_overflow_text __attribute__((aligned(4))) = {{0x82, 0x6C, 0x82, 0x60, 0x82, 0x77, 0}};
+const SjisDecimalOverflowText g_decimal_overflow_text __attribute__((aligned(4))) = {{0x82, 0x6C, 0x82, 0x60, 0x82, 0x77, 0}};
 
-/**
- * @brief Validate the save payload checksum and format marker.
- * @param blob Serialized save data to validate.
- * @return One when both checks pass, otherwise zero.
- */
-s32 niki_validate_save_blob(NikiSaveBlob* blob)
-{
-    if (blob->checksum == niki_compute_save_checksum(blob->payload))
-    {
-        if (blob->magic == NIKI_SAVE_MAGIC)
-        {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-/**
- * @brief Sum the save payload bytes and apply the checksum scale and bias.
- * @param data Start of the fixed-size save payload.
- * @return Twice the byte sum plus NIKI_SAVE_CHECKSUM_BIAS.
- */
-s32 niki_compute_save_checksum(u8* data)
-{
-    s32 sum;
-    u32 byte_index;
-    u8* cursor;
-
-    cursor = data;
-    sum = 0;
-    byte_index = 0;
-    do
-    {
-        byte_index++;
-        sum += *cursor;
-        cursor++;
-    } while (byte_index < NIKI_SAVE_PAYLOAD_BYTES);
-    return sum * 2 + NIKI_SAVE_CHECKSUM_BIAS;
-}
-
-/**
- * @brief Format up to six decimal digits as full-width Shift-JIS characters.
- * @param out Destination byte buffer.
- * @param value Number to format.
- * @return Pointer to the terminator, or six bytes past the start for the overflow string.
- * @note Values at least 1000000 use the fixed overflow string; leading zeroes are suppressed.
- */
-s8* niki_format_decimal(s8* out, s32 value)
-{
-    s32 digit;
-    s32 divisor;
-    s32 started;
-    s8* cursor;
-
-    cursor = out;
-    divisor = 100000;
-    if (value >= divisor * 10)
-    {
-        *(NikiDecimalOverflow*)cursor = g_niki_decimal_overflow_text;
-        return cursor + 6;
-    }
-
-    started = 0;
-    do
-    {
-        digit = value / divisor;
-        if (digit != 0 || started != 0)
-        {
-            *cursor++ = (digit + 0x824F) >> 8;
-            *cursor++ = digit + 0x4F;
-            started = 1;
-        }
-        if (divisor == 1)
-        {
-            break;
-        }
-        if (divisor == 10)
-        {
-            started = 1;
-        }
-        value -= digit * divisor;
-        divisor /= 10;
-    } while (1);
-    *cursor = 0;
-    return cursor;
-}
-
-/**
- * @brief Format a hexadecimal string with leading zeroes suppressed.
- * @param out Destination character buffer.
- * @param value Number to format.
- * @param max_chars Maximum number of digits to emit, excluding the terminator.
- */
-void niki_format_hex(s8* out, s32 value, s32 max_chars)
-{
-    s32 nibble;
-    s32 shift_index;
-    s32 started;
-
-    shift_index = 7;
-    started = 0;
-    if (max_chars != 0)
-    {
-        do
-        {
-            nibble = (value >> (shift_index * 4)) & 0xF;
-            if (nibble != 0 || started != 0)
-            {
-                niki_hex_nibble_to_ascii(out, nibble);
-                out++;
-                max_chars--;
-                started = 1;
-                value -= nibble << (shift_index * 4);
-            }
-            shift_index--;
-            if (shift_index == -1)
-            {
-                break;
-            }
-            if (shift_index == 0)
-            {
-                started = 1;
-            }
-        } while (max_chars);
-    }
-    *out = 0;
-}
-
-/**
- * @brief Convert a 0-15 value to its ASCII hexadecimal digit.
- * @param out Destination byte.
- * @param value Nibble value; 0-9 -> '0'-'9', 10-15 -> 'A'-'F', else '_'.
- * @return None.
- */
-void niki_hex_nibble_to_ascii(s8* out, s32 value)
-{
-    if (value < 10)
-    {
-        *out = value + 0x30;
-    }
-    else if (value < 16)
-    {
-        *out = value + 0x37;
-    }
-    else
-    {
-        *out = 0x5F;
-    }
-}
-
-/**
- * @brief Parse a bounded run of ASCII hexadecimal digits.
- * @param text First digit to parse.
- * @param digits_left Maximum number of digits to consume.
- * @return Accumulated value; parsing stops at the digit limit or first non-hex byte.
- */
-u32 niki_parse_hex(u8* text, s32 digits_left)
-{
-    u32 result;
-
-    result = 0;
-    while (((u8)(*text - '0') < 10) || ((u8)(*text - 'a') < 6) || ((u8)(*text - 'A') < 6))
-    {
-        if (digits_left == 0)
-        {
-            break;
-        }
-        result <<= 4;
-        if ((u8)(*text - '0') < 10)
-        {
-            u32 decimal_base;
-
-            decimal_base = result - '0';
-            result = decimal_base + *text;
-        }
-        else if ((u8)(*text - 'A') < 6)
-        {
-            u32 uppercase_base;
-
-            uppercase_base = result - ('A' - 10);
-            result = uppercase_base + *text;
-        }
-        else if ((u8)(*text - 'a') < 6)
-        {
-            u32 lowercase_base;
-
-            lowercase_base = result - ('a' - 10);
-            result = lowercase_base + *text;
-        }
-        text++;
-        digits_left--;
-    }
-    return result;
-}
-
-/**
- * @brief Skip a hexadecimal run and its separator, then parse up to two hex digits.
- * @param text Start of the leading hexadecimal run.
- * @return Parsed suffix byte.
- */
-s32 niki_parse_hex_suffix_byte(u8* text)
-{
-    s32 digits_left;
-    u32 result;
-
-    while ((u32)(*text - '0') < 10 || (u32)(*text - 'a') < 6 || (u32)(*text - 'A') < 6)
-    {
-        text++;
-    }
-
-    text++;
-    digits_left = 2;
-    result = 0;
-    while (((u8)(*text - '0') < 10) || ((u8)(*text - 'a') < 6) || ((u8)(*text - 'A') < 6))
-    {
-        if (digits_left == 0)
-        {
-            break;
-        }
-        result <<= 4;
-        if ((u8)(*text - '0') < 10)
-        {
-            u32 decimal_base;
-
-            decimal_base = result - '0';
-            result = decimal_base + *text;
-        }
-        else if ((u8)(*text - 'A') < 6)
-        {
-            u32 uppercase_base;
-
-            uppercase_base = result - ('A' - 10);
-            result = uppercase_base + *text;
-        }
-        else if ((u8)(*text - 'a') < 6)
-        {
-            u32 lowercase_base;
-
-            lowercase_base = result - ('a' - 10);
-            result = lowercase_base + *text;
-        }
-        text++;
-        digits_left--;
-    }
-    return result;
-}
-
-/**
- * @brief Parse field values and suffix bytes from recognized save-file names.
- * @return Largest suffix byte among the recognized entries.
- */
-s32 niki_parse_entry_fields(void)
-{
-    s32 entry_index;
-    s32 max_suffix;
-    u8* cursor;
-    u8* suffix;
-    s32 digits_left;
-    s32 value;
-    u32 decimal_base;
-    u32 uppercase_base;
-    u32 lowercase_base;
-    s32 suffix_value;
-
-    entry_index = 0;
-    max_suffix = entry_index;
-    while (entry_index < g_niki_entry_state)
-    {
-        u8* pattern;
-        pattern = (u8*)&D_800ECF7C;
-        if (func_8001714C(pattern, g_niki_entries[g_niki_card_slot][entry_index].name, 0xC) == 0)
-        {
-            digits_left = 5;
-            cursor = (u8*)(g_niki_card_slot * NIKI_CARD_DIRECTORY_BYTES + entry_index * NIKI_DIRECTORY_ENTRY_BYTES + (s32)g_niki_entries + 0xC);
-            value = 0;
-            while (((u8)(*cursor - '0') < 10) || ((u8)(*cursor - 'a') < 6) || ((u8)(*cursor - 'A') < 6))
-            {
-                if (digits_left == 0)
-                {
-                    break;
-                }
-                value <<= 4;
-                if ((u8)(*cursor - '0') < 10)
-                {
-                    decimal_base = value - '0';
-                    value = decimal_base + *cursor;
-                }
-                else if ((u8)(*cursor - 'A') < 6)
-                {
-                    uppercase_base = value - ('A' - 10);
-                    value = uppercase_base + *cursor;
-                }
-                else if ((u8)(*cursor - 'a') < 6)
-                {
-                    lowercase_base = value - ('a' - 10);
-                    value = lowercase_base + *cursor;
-                }
-                cursor++;
-                digits_left--;
-            }
-            suffix = &g_niki_entries[g_niki_card_slot][entry_index].name[0xC];
-            {
-                s32* fields = g_niki_entry_fields[g_niki_card_slot];
-                fields[entry_index] = value;
-            }
-            suffix_value = niki_parse_hex_suffix_byte(suffix);
-            g_niki_entry_suffix_values[entry_index] = suffix_value;
-            if (max_suffix < suffix_value)
-            {
-                max_suffix = suffix_value;
-            }
-        }
-        else
-        {
-            s32* fields = g_niki_entry_fields[g_niki_card_slot];
-            fields[entry_index] = -1;
-            g_niki_entry_suffix_values[entry_index] = 0;
-        }
-        entry_index++;
-    }
-    return max_suffix;
-}
+#include "../../common/save_file/validate_save_file.inc.c"
+#include "../../common/save_file/compute_save_checksum.inc.c"
+#include "../../common/sjis/format_decimal.inc.c"
+#include "../../common/save_file/format_hex.inc.c"
+#include "../../common/save_file/hex_nibble_to_ascii.inc.c"
+#include "../../common/save_file/parse_hex.inc.c"
+#include "../../common/save_file/parse_hex_suffix_byte.inc.c"
+#include "../../common/card_directory/parse_entry_fields.inc.c"
 
 /**
  * @brief Rank recognized entries and select the entry with the greatest field value.
@@ -2583,20 +2134,20 @@ s32 niki_rank_entries(void)
     s32 maximum;
     s32 max_suffix;
 
-    niki_parse_entry_fields();
+    parse_entry_fields();
     maximum = -1;
     niki_sort_entries_by_type();
-    max_suffix = niki_parse_entry_fields();
+    max_suffix = parse_entry_fields();
     niki_reset_entry_ranks();
     next_rank = 1;
-    for (entry_index = 0; entry_index < g_niki_entry_state; entry_index++)
+    for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
     {
-        if (g_niki_entry_fields[g_niki_card_slot][entry_index] >= 0)
+        if (g_card_entry_fields[g_card_slot][entry_index] >= 0)
         {
-            if (g_niki_entry_fields[g_niki_card_slot][entry_index] >= maximum)
+            if (g_card_entry_fields[g_card_slot][entry_index] >= maximum)
             {
                 g_niki_entry_ranks[entry_index] = next_rank;
-                maximum = g_niki_entry_fields[g_niki_card_slot][entry_index];
+                maximum = g_card_entry_fields[g_card_slot][entry_index];
                 next_rank++;
             }
             else
@@ -2604,7 +2155,7 @@ s32 niki_rank_entries(void)
                 higher_count = 0;
                 for (previous_index = 0; previous_index < entry_index; previous_index++)
                 {
-                    if (g_niki_entry_fields[g_niki_card_slot][entry_index] < g_niki_entry_fields[g_niki_card_slot][previous_index])
+                    if (g_card_entry_fields[g_card_slot][entry_index] < g_card_entry_fields[g_card_slot][previous_index])
                     {
                         higher_count++;
                         g_niki_entry_ranks[previous_index]++;
@@ -2619,20 +2170,20 @@ s32 niki_rank_entries(void)
     /* Reuse next_rank as the running maximum and maximum as its index. */
     next_rank = -1;
     maximum = 0;
-    for (entry_index = 0; entry_index < g_niki_entry_state; entry_index++)
+    for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
     {
-        if (next_rank < g_niki_entry_fields[g_niki_card_slot][entry_index])
+        if (next_rank < g_card_entry_fields[g_card_slot][entry_index])
         {
-            next_rank = g_niki_entry_fields[g_niki_card_slot][entry_index];
+            next_rank = g_card_entry_fields[g_card_slot][entry_index];
             maximum = entry_index;
         }
     }
     g_niki_entry_value_limit = next_rank + 1;
-    for (entry_index = 0; entry_index < g_niki_entry_state; entry_index++)
+    for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
     {
-        if (func_8001714C(&D_800ECFC4[0], g_niki_entries[g_niki_card_slot][entry_index].name, 8) == 0)
+        if (strncmp(&D_800ECFC4[0], g_card_entries[g_card_slot][entry_index].name, 8) == 0)
         {
-            g_niki_entry_suffix_values[entry_index] = max_suffix + 1;
+            g_card_entry_suffix_values[entry_index] = max_suffix + 1;
             break;
         }
     }
@@ -2661,10 +2212,10 @@ s32 niki_has_known_entry_type(void)
 {
     s32 entry_index;
 
-    for (entry_index = 0; entry_index < g_niki_entry_state; entry_index++)
+    for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
     {
-        if (func_8001714C(D_800ECF7C, g_niki_entries[g_niki_card_slot][entry_index].name, 12) == 0 ||
-            func_8001714C(D_800ECF8C, g_niki_entries[g_niki_card_slot][entry_index].name, 12) == 0)
+        if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][entry_index].name, 12) == 0 ||
+            strncmp(D_800ECF8C, g_card_entries[g_card_slot][entry_index].name, 12) == 0)
         {
             return 1;
         }
@@ -2682,9 +2233,9 @@ s32 niki_entry_blocks_reach_limit(void)
     s32 total_blocks;
 
     total_blocks = 0;
-    for (entry_index = 0; entry_index < g_niki_entry_state; entry_index++)
+    for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
     {
-        total_blocks += g_niki_entries[g_niki_card_slot][entry_index].size / NIKI_MEMORY_CARD_BLOCK_BYTES;
+        total_blocks += g_card_entries[g_card_slot][entry_index].size / NIKI_MEMORY_CARD_BLOCK_BYTES;
     }
     return total_blocks >= 14;
 }
@@ -2695,12 +2246,12 @@ void niki_remove_placeholder_saves(void)
     NikiPlaceholderPath path;
 
     memcpy(&path, &g_niki_file_template, 6);
-    path.device.characters.slot += (u8)g_niki_card_slot;
+    path.device.characters.slot += (u8)g_card_slot;
     func_80016F9C(&path, &D_800ECF9C);
     func_8001686C(&path);
 
     memcpy(&path, &g_niki_file_template, 6);
-    path.device.characters.slot += (u8)g_niki_card_slot;
+    path.device.characters.slot += (u8)g_card_slot;
     func_80016F9C(&path, &D_800ECFB0);
     func_8001686C(&path);
 }

@@ -626,7 +626,7 @@ GosubTilePacket* gosub_draw_item_list(s32* ot, s32 initial_prim, s32 x_off, s32 
     tile = (GosubTilePacket*)prim;
     cursor_color = 0xF080F0;
     addr_mask = 0xFFFFFF;
-    for (;;)
+    while (1)
     {
         cursor_p = &g_gosub_cursor_row;
         height_p = &g_gosub_row_height;
@@ -763,12 +763,12 @@ s32 gosub_draw_block_preview(s32* ot, s32 initial_prim, s32 x_off, s32 y_off)
     {
         prim = gosub_draw_composite_icon(prim, ot, 0xC - x_off, -y_off, g_gosub_block_id, g_gosub_block_shape);
         name_cursor = result_name;
-        gosub_copy_encoded_string(name_cursor, GOSUB_TEXT(GOSUB_TEXT_LOGIC_BLOCK_NAMES, g_gosub_block_id));
+        encoded_text_copy(name_cursor, GOSUB_TEXT(GOSUB_TEXT_LOGIC_BLOCK_NAMES, g_gosub_block_id));
         if (g_gosub_block_level != 0)
         {
-            gosub_append_encoded_string(name_cursor, FIELD_UI_TEXT_AT(D_800EC3DA, FIELD_UI_TEXT_PLUS));
+            encoded_text_append(name_cursor, FIELD_UI_TEXT_AT(D_800EC3DA, FIELD_UI_TEXT_PLUS));
             field_format_number(number_text, g_gosub_block_level, 1);
-            gosub_append_encoded_string(name_cursor, number_text);
+            encoded_text_append(name_cursor, number_text);
         }
         prim = field_draw_text(prim, ot, name_cursor, 4, 0x4C - x_off, 0xA - y_off, 0);
     }

@@ -281,7 +281,7 @@ static void field_init_text_macros(void)
     g_field_text_macros[FIELD_TEXT_MACRO_WEEKDAY].text = FIELD_OFFSET_TABLE_TEXT(g_field_weekday_names, g_field_game_state->control.fields.weekday & FIELD_WEEKDAY_MASK);
 
 #if !defined(VERSION_JP)
-    if ((field_get_script_var(0, FIELD_VAR_UNKA02) != 0) || ((g_field_game_state->characters[1].info.word & FIELD_CHARACTER_AI) != 0))
+    if ((field_get_script_var(0, FIELD_VAR_UNKA02) != 0) || ((g_field_game_state->characters[1].info.word & FIELD_CHARACTER_PAD_CONTROLLED) != 0))
     {
         field_set_script_var(0, FIELD_VAR_UNKA03, 1);
     }

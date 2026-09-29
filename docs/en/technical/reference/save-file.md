@@ -157,8 +157,8 @@ id and save id match `0x0258`. That's how it finds your file again even if the
 card has other Legend of Mana saves on it. If you edit these values, the guest
 can't go home.
 
-The byte at `0x024F` is a compatibility tag, even though the code calls it the
-save slot. Starting a new game sets the running game's tag to `0xFF`, loading a
+The byte at `0x024F` is a compatibility tag (`compatibility_tag` in the code).
+Starting a new game sets the running game's tag to `0xFF`, loading a
 save takes the tag from that save, and saving writes the current tag back. So
 ordinary saves all carry `0xFF`. The load screens refuse a save whose tag
 doesn't match the running game's, unless one of the two is `0xFF`; that's where

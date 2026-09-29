@@ -54,7 +54,7 @@ s32 func_801405B0(RenderContext* render_buffers)
     {
         D_80168C08 = 2;
     }
-    for (;;)
+    while (1)
     {
         draw_buffer = next_buffer;
         ClearOTagR(draw_buffer->ot, MENU_OT_ENTRY_COUNT);

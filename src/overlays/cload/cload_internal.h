@@ -9,6 +9,11 @@
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 #include "sdk/libmcx.h"
+#include "encoded_text.h"
+#include "save_file.h"
+#include "glyph_cache.h"
+#include "card_events.h"
+#include "card_directory.h"
 
 /**
  * @brief Draw callback of a CLOAD UI element: emits the element's content at
@@ -113,17 +118,6 @@ typedef struct
     s32 unused;
 } CloadPromptElement;
 
-/** @brief Memory-card directory entry; layout matches Psy-Q struct DIRENTRY. */
-typedef struct
-{
-    /* 0x00 */ char name[20];
-    /* 0x14 */ s32 attr;
-    /* 0x18 */ s32 size;
-    /* 0x1C */ void *next;
-    /* 0x20 */ s32 head;
-    /* 0x24 */ char system[4];
-} CloadDirEntry;
-
 /**
  * @brief 0x20-byte, word-aligned memory-card path scratch buffer.
  * The first six bytes are initialized from the "bu00:" device prefix before a
@@ -166,11 +160,8 @@ typedef union
 /* CLOAD layout/state constants. */
 #define CLOAD_ELEMENT_COUNT 8
 #define CLOAD_CARD_COUNT 2
-#define CLOAD_ENTRIES_PER_CARD 20
 #define CLOAD_ELEMENT_STATE_MASK 7
 #define CLOAD_ENTRY_GROUP_COUNT 8
-#define CLOAD_CARD_DIRECTORY_BYTES 0x320
-#define CLOAD_DIRECTORY_ENTRY_BYTES 0x28
 #define CLOAD_MEMORY_CARD_BLOCK_BYTES 8192
 /** @brief Bytes read to show an entry: the card header and the first 0x100 bytes of the saved game. */
 #define CLOAD_ENTRY_READ_BYTES 0x280
@@ -184,9 +175,6 @@ typedef union
 #define CLOAD_GLYPH_CACHE_USED 0x10000
 #define CLOAD_GLYPH_RASTER_BUFFER_BYTES 0x8000
 #define CLOAD_COLOR_WHITE 0xFFFFFF
-
-#define CLOAD_DIR_ENTRY(card, index) \
-    (((CloadDirEntry (*)[CLOAD_ENTRIES_PER_CARD])g_cload_entries)[(card)][(index)])
 
 /**
  * @brief Address of CLOAD text @p index, reached through its own u16 offset-table entry @p entry.
@@ -241,36 +229,9 @@ typedef struct
     /* 0x40BC */ u8 trailing[0x3C08];
 } CloadRenderBuffer;
 
-/**
- * @brief One 4-byte glyph-cache slot: the cached character code plus per-frame
- *        usage flags, also read as a single word when scanning for a free slot.
- */
-typedef union
-{
-    /* 0x0 */ u32 raw;
-    struct
-    {
-        /* 0x0 */ u16 code;
-        /* 0x2 */ u16 flags;
-    } data;
-} CloadGlyphCacheEntry;
-
-extern CloadGlyphCacheEntry g_cload_glyph_cache[];
-
-/**
- * @brief 0x14-byte glyph packet: a Psy-Q SPRT_16 plus the trailing word that
- *        keeps consecutive cached-glyph packets 20 bytes apart.
- */
-typedef struct
-{
-    /* 0x00 */ SPRT_16 packet;
-    /* 0x10 */ u32 padding;
-} CloadGlyphSprite;
-
 extern s32 g_pad_input;
 extern s32 g_cload_exit_requested;
 extern CloadElement g_cload_element_pool[CLOAD_ELEMENT_COUNT];
-extern s32 g_cload_card_slot;
 extern CloadRenderBuffer g_cload_render_buffers[CLOAD_CARD_COUNT];
 extern s32 g_cload_io_busy;
 extern u8 *g_cload_icon_resource;
@@ -281,7 +242,6 @@ extern s32 g_cload_scroll_target_y;
 extern s32 g_cload_icon_phase;
 extern u_long g_cload_icon_context[8];
 extern u8 g_cload_primitive_buffers[CLOAD_CARD_COUNT][0x4000];
-extern s32 g_cload_entry_state;
 extern s32 g_cload_selected_row;
 extern s32 g_cload_result;
 extern s32 g_cload_scroll_frames;
@@ -300,9 +260,7 @@ extern u8 g_cload_steps_card_reset[];
 extern u8 g_cload_steps_load_selected_save[];
 extern s32 g_cload_choice_toggle;
 extern u8 *g_cload_load_step;
-extern s32 g_save_slot_index;
-extern char g_lom_save_filename_prefix[];
-extern char g_cload_entries[];
+extern s32 g_save_compatibility_tag;
 extern s32 g_cload_entry_scan_active;
 extern char g_lom_pocketstation_filename_prefix[];
 extern char g_new_save_entry_prefix[];
@@ -338,7 +296,6 @@ extern u16 g_cload_text_version_error;
 extern u16 g_cload_text_plus_marker;
 extern s32 g_cload_rank_count;
 extern s32 g_cload_entry_ranks[];
-extern s32 g_cload_entry_suffix_values[];
 extern u8 g_text_time_separator_offset_bytes[2];
 extern u16 g_cload_location_names[];
 
@@ -351,37 +308,16 @@ extern u8 g_cload_steps_read_selected_header[];
 extern char g_cload_selected_card_path[0x40];
 extern const CloadCardPathTemplate g_cload_card_path_prefix;
 extern const CloadCardPathTemplate g_cload_card_search_path;
-extern s32 g_cload_entry_fields[CLOAD_CARD_COUNT][CLOAD_ENTRIES_PER_CARD];
 extern s32 g_cload_retry_count;
 extern s32 g_cload_primary_poll_countdown;
 extern s32 g_cload_entry_value_limit;
 extern s32 g_cload_selected_entry_extended;
 extern s32 g_cload_secondary_poll_countdown;
-extern s32 g_cload_primary_handle0;
-extern s32 g_cload_primary_handle1;
-extern s32 g_cload_primary_handle2;
-extern s32 g_cload_primary_handle3;
-extern s32 g_cload_secondary_handle0;
-extern s32 g_cload_secondary_handle1;
-extern s32 g_cload_secondary_handle2;
-extern s32 g_cload_secondary_handle3;
 extern s32 g_cload_file_handle;
-extern s32 g_cload_text_line_start_x;
-extern s32 g_cload_glyph_upload_x;
-extern s32 g_cload_glyph_upload_y;
-extern u8 *g_cload_glyph_raster_cursor;
-extern u8 g_cload_glyph_raster_buffer[];
-extern u8 g_cload_double_byte_char_table[];
-extern u8 g_cload_single_byte_char_table[];
-extern s32 g_cload_glyph_cursor_x;
-extern s32 g_cload_glyph_cursor_y;
-extern u16 g_cload_decimal_glyphs[];
-extern u16 g_cload_hex_glyphs[];
 
 extern int strncmp(char *, char *, int);
 void *func_800A88A0(void *prim, u_long *ot, u8 *text, s32 color, s32 x, s32 y, s32 mode);
-void *func_800A8A78(u_long *ot, void *prim, s32 value, s32 color, DVECTOR *pos, s32 mode);
-void cload_terminate_multibyte_text(void *text);
+void* func_800A8A78(u_long* ot, void* prim, s32 value, s32 color, DVECTOR* pos, s32 mode);
 
 /* External callees used by the memory-card I/O/load-state block. */
 /* strncmp is declared above with the original visible signature. */
@@ -421,19 +357,14 @@ s32 cload_handle_input(void);
 void cload_close_all_elements(void);
 void cload_scroll_to_selection(void);
 void cload_update_elements(CloadRenderBuffer *frame);
-void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
-u8 *cload_skip_hex_digits(u8 *text);
+void* cload_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void *cload_draw_header_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
 void *cload_draw_card_slot0_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
 void *cload_draw_card_slot1_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
-void *cload_draw_selected_entry_details(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
-void cload_terminate_multibyte_text(void *text);
+void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void cload_clear_elements(void);
 CloadElement *cload_alloc_element(void);
-void cload_update_and_draw_elements(CloadRenderBuffer *frame);
-void cload_text_append(u8 *dest, u8 *src);
-s32 cload_text_byte_length(u8 *text);
-void cload_text_copy(u8 *dest, u8 *src);
+void cload_update_and_draw_elements(CloadRenderBuffer* frame);
 CloadGpuPacket *cload_emit_window_frame(CloadGpuPacket *prim, u_long *ot, s32 x, s32 y, s32 w, s32 h, s32 flag, s32 draw_fill);
 CloadGpuPacket *cload_emit_rect_outline(LINE_F2 *line, u_long *ot, s32 x, s32 y, s32 w, s32 h, s32 color);
 CloadGpuPacket *cload_emit_scroll_arrow(SPRT *sprite, u_long *ot, s32 x, s32 y, s32 flag);
@@ -447,14 +378,7 @@ void cload_deactivate_primary_element(void);
 void cload_load_icon_resources(void);
 CloadGpuPacket *cload_emit_icon_highlight_strip(SPRT *sprite, u_long *ot);
 s32 cload_enable_choice_toggle(void);
-void *cload_draw_choice_prompt(void *prim, u_long *ot, s32 x, s32 y);
-s32 cload_validate_save_file(SaveFile* file);
-s32 cload_compute_save_checksum(u8 *data);
-void cload_format_hex(s8 *out, s32 value, s32 max_chars);
-void cload_hex_nibble_to_ascii(s8 *out, s32 nibble);
-u32 cload_parse_hex(u8 *text, s32 digits_left);
-s32 cload_parse_hex_suffix_byte(u8 *text);
-s32 cload_parse_entry_fields(void);
+void* cload_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y);
 s32 cload_rank_entries(void);
 void cload_reset_entry_ranks();
 s32 cload_has_known_entry_type(void);
@@ -462,25 +386,9 @@ s32 cload_entry_blocks_reach_limit(void);
 void cload_erase_fixed_card_files(void);
 s32 cload_advance_load_sequence(void);
 void cload_restart_load_sequence();
-s32 cload_poll_and_rewind_primary_handles();
-void cload_init_stream_handles();
-void cload_shutdown_stream_handles();
 s32 cload_begin_entry_scan();
 s32 cload_scan_next_entry();
 void cload_commit_selected_entry();
-void cload_release_primary_handles();
-void cload_release_secondary_handles();
-s32 cload_poll_primary_handle_group(void);
-s32 cload_poll_secondary_handle_group(void);
 void cload_sort_entries_by_type();
-void *cload_draw_signed_decimal(void *prim, u_long *ot, s32 value, s32 x, s32 y, s32 palette, s32 alignment);
-void cload_draw_hex_byte(void *prim, u_long *ot, s32 value, s32 x, s32 y, s32 alignment);
-void *cload_draw_cached_text(void *prim, u_long *ot, u8 *text, s32 x, s32 y, s32 palette, s32 alignment);
-void *cload_render_cached_glyph(void *prim, u_long *ot, u16 code, s32 palette);
-void *cload_emit_glyph_sprite(CloadGlyphSprite *sprite, u_long *ot, s32 cache_slot, s32 palette);
-void cload_begin_glyph_cache_frame(void);
-void cload_evict_unused_glyphs(void);
-void cload_reset_glyph_cache(void);
-void cload_expand_text_glyph_codes(u8 *out, u8 *in);
 
 #endif /* CLOAD_INTERNAL_H */

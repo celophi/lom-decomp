@@ -9,6 +9,7 @@
 #include "tim.h"
 #include "main.h"
 #include "field_ui_text.h"
+#include "encoded_text.h"
 #include "display.h"
 #include "pad.h"
 #include "golem_shape.h"
@@ -657,9 +658,6 @@ extern u32 g_golem_logic_block_icons[];
  */
 #define GOSUB_SET_ELEMENT_WIDTH_LOW(element, width) ((element)->attr.word = ((element)->attr.word & 0x00FFFFFF) | ((u32)((width) & 0xFF) << 24))
 
-/** @brief Test whether a byte begins a two-byte encoded character. */
-#define IS_DBCS_LEAD_BYTE(byte) (((byte) >= 0x19) && ((byte) <= 0x1F))
-
 /* External and forward function declarations. */
 
 /* FIELD exports with no project header. FIELD stays resident while GOSUB runs. */
@@ -715,9 +713,6 @@ s32 gosub_draw_block_components_header(s32* ordering_table, s32 packet_cursor, s
 s32 gosub_draw_golem_parts_header(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset);
 s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset);
 s32 gosub_draw_row_description(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset);
-void gosub_append_encoded_string(u8* dst, u8* src);
-void gosub_copy_encoded_string(u8* dst, u8* src);
-s32 gosub_encoded_string_length(const u8* text);
 GosubElement* gosub_allocate_element(void);
 void* gosub_emit_scroll_marker(GosubScrollMarkerPacket* prim, s32* ot, s32 x, s32 y, s32 flag);
 GosubTilePacket* gosub_emit_panel(GosubTilePacket* prim, s32* ot, s32 x, s32 y, s32 w, s32 h, s32 flag);

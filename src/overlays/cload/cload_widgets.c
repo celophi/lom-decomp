@@ -184,13 +184,13 @@ void *cload_draw_load_prompt(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
     x = -x_offset + 0x90;
     result = cload_draw_choice_prompt(func_800A88A0(prim, ot, CLOAD_TEXT_AT(g_cload_text_load_prompt, 24), 4, x, -y_offset, 2), ot, x, 0xE - y_offset);
 
-    status = cload_poll_and_rewind_primary_handles();
+    status = poll_and_retry_card_info();
     if (status == 1 || status == 2)
     {
         g_cload_element_pool[0].attr.f.state = CLOAD_ELEMENT_FREE;
         field_reset_input_repeat();
         play_menu_sfx(0x78, 0x80);
-        g_cload_entry_state = 0xFF;
+        g_card_entry_state = 0xFF;
         cload_reset_entry_ranks();
         g_cload_load_step = 0;
     }
@@ -257,7 +257,7 @@ void *cload_draw_load_progress(u_long *ot, void *prim, s32 x_offset, s32 y_offse
 
     if (g_cload_progress_active == 0)
     {
-        if (cload_validate_save_file(&g_cload_save_file) == 0)
+        if (validate_save_file(&g_cload_save_file) == 0)
         {
             cload_open_status_dialog(4);
         }
@@ -266,7 +266,7 @@ void *cload_draw_load_progress(u_long *ot, void *prim, s32 x_offset, s32 y_offse
             play_menu_sfx(0x7B, 0x80);
             g_cload_element_pool[0].attr.f.state = CLOAD_ELEMENT_FREE;
             bcopy((u8*)&g_cload_save_file.saved_game, g_saved_game.bytes, SAVED_GAME_DATA_SIZE);
-            g_save_slot_index = g_saved_game.layout.save_slot;
+            g_save_compatibility_tag = g_saved_game.layout.compatibility_tag;
             g_playtime_vsync_origin = VSync(-1);
             g_cload_exit_requested = 1;
         }
@@ -348,7 +348,7 @@ void cload_open_status_dialog(s32 dialog_state)
     g_cload_progress_active = 0;
     g_cload_selection_status = 0;
     g_cload_io_busy = 0;
-    g_cload_entry_state = 0xFF;
+    g_card_entry_state = 0xFF;
     cload_reset_entry_ranks();
     g_cload_load_step = 0;
     g_cload_dialog_state = dialog_state;

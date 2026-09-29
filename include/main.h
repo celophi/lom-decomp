@@ -24,8 +24,8 @@ extern u16 g_field_scene_id;
 extern s32 g_field_sound_bank_id;
 /** @brief Countdown timer for delayed music/SFX trigger on field entry. */
 extern s32 g_field_audio_timer;
-/** @brief Selected save slot index (7 = init, 0xFF = no save selected). */
-extern s32 g_save_slot_index;
+/** @brief The running game's save compatibility tag (see SAVE_TAG_ANY in saved_game.h). */
+extern s32 g_save_compatibility_tag;
 /** @brief Primary music resource of the current field. */
 extern s32 g_field_music_id;
 /** @brief Field object selected for the render context on field entry. */

@@ -34,9 +34,9 @@ golem_emit_glyph                     = 0x801420CC;
 golem_emit_panel_outline             = 0x801422BC;
 golem_set_fade_target                = 0x80142418;
 golem_render_fade                    = 0x80142434;
-golem_append_encoded_string          = 0x80142728;
-golem_encoded_string_length          = 0x801427AC;
-golem_copy_encoded_string            = 0x801427F8;
+encoded_text_append          = 0x80142728;
+encoded_text_byte_length          = 0x801427AC;
+encoded_text_copy            = 0x801427F8;
 
 // Golem resources and editor state.
 g_golem_ui_image                     = 0x8014287C;

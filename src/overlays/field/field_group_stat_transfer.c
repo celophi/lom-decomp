@@ -35,7 +35,7 @@ void field_golem_build_companion(s32 group, FieldCharacterRecord* record)
     {
         record->name[i] = GOLEM.group_records[group].name[i];
     }
-    record->info.word = ((record->info.word & ~FIELD_CHARACTER_TYPE_MASK) | FIELD_CHARACTER_GOLEM) & ~FIELD_CHARACTER_AI;
+    record->info.word = ((record->info.word & ~FIELD_CHARACTER_TYPE_MASK) | FIELD_CHARACTER_GOLEM) & ~FIELD_CHARACTER_PAD_CONTROLLED;
     record->info.actions.unk19 = GOLEM.group_records[group].logic_class;
     for (i = 0; i < FIELD_COMMAND_SLOT_COUNT; i++)
     {

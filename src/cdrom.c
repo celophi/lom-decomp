@@ -473,7 +473,7 @@ s32 cdrom_stream(s32 resource_index, u8* destination)
     remaining_size = cdrom_queue_command(CdlReadN, (u16)resource_index, NULL, cdrom_handle_stream_data) - 1;
     timestamp = VSync(-1);
 
-    while (TRUE)
+    while (1)
     {
         if (VSync(-1) < (timestamp + CD_STREAM_TIMEOUT_FRAMES))
         {
@@ -625,7 +625,7 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
     timestamp = VSync(-1);
     stream_state = &CD_STREAM_STATE;
 
-    while (TRUE)
+    while (1)
     {
         if (VSync(-1) < timestamp + CD_STREAM_TIMEOUT_FRAMES)
         {
@@ -1128,7 +1128,7 @@ u32 cdrom_process_state(void)
         if ((current_command != CD_COMMAND_NONE) || (CD_SYSTEM.init_command != CD_SYNC_COMMAND_NONE))
         {
             // Resample until no completion arrives while the queue state is read.
-            while (TRUE)
+            while (1)
             {
                 if (CD_SYSTEM.sync_complete == TRUE)
                 {

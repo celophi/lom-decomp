@@ -45,10 +45,10 @@ STEP_HEADER = REPO_ROOT / "src/overlays/addhero/addhero_internal.h"
 
 # Values copied from the C sources. tests/test_addhero_sources.py checks each
 # one against its #define, so a change in C shows up as a failing test.
-CHART_ROW_BYTES = 33  # ADDHERO_CHAR_TABLE_ROW_BYTES, addhero_glyph.c
-CHART_COLUMNS = 16  # ADDHERO_CHAR_TABLE_COLUMNS, addhero_glyph.c
-CHART_ROWS_PER_PAGE = 16  # ADDHERO_CHAR_TABLE_PAGE_BYTES is 16 rows, addhero_glyph.c
-CHART_FIRST_CODE = 0x20  # ADDHERO_TEXT_FIRST_PRINTABLE, addhero_internal.h
+CHART_ROW_BYTES = 33  # GLYPH_CHART_ROW_BYTES, include/glyph_cache.h
+CHART_COLUMNS = 16  # GLYPH_CHART_COLUMNS, include/glyph_cache.h
+CHART_ROWS_PER_PAGE = 16  # GLYPH_CHART_PAGE_BYTES is 16 rows, include/glyph_cache.h
+CHART_FIRST_CODE = 0x20  # GLYPH_TEXT_FIRST_PRINTABLE, include/glyph_cache.h
 ICON_HERO_COUNT = 2  # SAVE_ICON_HERO_COUNT, saved_game.h
 ICON_PET_BASE = 0x0E  # SAVE_ICON_PET_BASE, saved_game.h
 ICON_GOLEM_BASE = 0x4F  # SAVE_ICON_GOLEM_BASE, saved_game.h
@@ -118,7 +118,7 @@ class AddheroSymbols(NamedTuple):
         addresses = {key: named[name] for key, name in SYMBOL_NAMES.items()}
         return cls(**addresses, named=named)
 
-    def with_prefix(self, prefix: str) -> dict[str, int]:
+    def with_prefix(self, prefix: str | tuple[str, ...]) -> dict[str, int]:
         """Symbols whose names start with @p prefix, such as each card step sequence."""
         return {
             name: address for name, address in self.named.items() if name.startswith(prefix)
@@ -130,17 +130,18 @@ SYMBOL_NAMES = {
     "locations": "g_addhero_location_text_table",
     "icon_offsets": "g_addhero_icon_image_table",
     "card_steps": "g_addhero_loadseq_start",
-    "chart": "g_addhero_single_byte_char_table",
-    "chart_pages": "g_addhero_char_page_base",
-    "decimal_glyphs": "g_addhero_decimal_glyphs",
-    "hex_glyphs": "g_addhero_hex_glyphs",
-    "overflow_text": "g_addhero_decimal_overflow_glyphs",
+    "chart": "g_glyph_single_byte_chart",
+    "chart_pages": "g_glyph_chart_page_base",
+    "decimal_glyphs": "g_glyph_decimal_digits",
+    "hex_glyphs": "g_glyph_hex_digits",
+    "overflow_text": "g_decimal_overflow_text",
     "file_template": "g_addhero_file_template",
     "directory_pattern": "g_addhero_entry_header_template",
 }
 MESSAGE_SYMBOL_PREFIX = "g_addhero_text_"
 LOCATION_SYMBOL_PREFIX = "g_addhero_location_text_table"
-CARD_STEP_SYMBOL_PREFIX = "g_addhero_loadseq_"
+# The idle table has the shared name every card overlay uses (include/card_events.h).
+CARD_STEP_SYMBOL_PREFIX = ("g_addhero_loadseq_", "g_card_steps_")
 
 
 @dataclass(frozen=True)

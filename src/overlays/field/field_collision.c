@@ -46,7 +46,7 @@
                     tile_ptr = tile_base + x_span;                                                                                                             \
                 }                                                                                                                                              \
                 n = row_span;                                                                                                                                  \
-                for (;;)                                                                                                                                       \
+                while (1)                                                                                                                                       \
                 {                                                                                                                                              \
                     FIELD_COLLISION_TRACE_TILE(tile_ptr);                                                                                                      \
                     if (n == 0)                                                                                                                                \
@@ -73,7 +73,7 @@
             case 3:                                                                                                                                            \
                 tile_ptr = tile_base;                                                                                                                          \
                 n = row_span;                                                                                                                                  \
-                for (;;)                                                                                                                                       \
+                while (1)                                                                                                                                       \
                 {                                                                                                                                              \
                     scan_ptr = tile_ptr;                                                                                                                       \
                     m = x_span;                                                                                                                                \
