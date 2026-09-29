@@ -57,7 +57,7 @@ segments:
       # pattern.o .rodata, extracted as a raw asset: the Shift-JIS warning text,
       # the vertex signs, and the 12 zero bytes GNU as pads the section with.
       - [0x55, rodatabin, checkps_pattern_rodata]
-      - [0xA5, asm, init]  # JP: differs from US, kept as assembly
+      - [0xA5, c, init]
       - [0x10B9, c, cdrom]
       - [0x1DE5, c, kanji]
       - [0x1FD9, c, pattern]
