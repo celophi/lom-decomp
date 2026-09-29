@@ -239,7 +239,7 @@ typedef struct
     u8 pad_02[0x12];
 } WmapSlot14;
 
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern WmapSlot8 D_80139988[];
 extern WmapSlot14 D_801AFBD0[];
 extern s32 D_801B0FD0;
@@ -312,7 +312,7 @@ typedef struct
 extern WmapConfigA D_800D95D8[];
 extern WmapMotion D_801AFD60[];
 extern WmapResource D_80139988[];
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B0FD0;
 extern u8 D_8011D538[];
 extern s32 D_801B2A98;
@@ -463,7 +463,7 @@ extern s32 D_801B2AA8;
 void func_8008F630(void)
 {
 extern s8 D_80051B4C[];
-extern voidptr D_8011CF24;
+extern void_ptr D_8011CF24;
 extern VECTOR g_wmap_camera_translation;
 extern s32 D_80182DE4;
 extern s32 D_801B2468;
@@ -507,7 +507,7 @@ extern s32 D_801B2ABC;
 void func_8008F7D4(void)
 {
 extern s8 D_80051B4C[];
-extern voidptr D_8011CF24;
+extern void_ptr D_8011CF24;
 extern VECTOR g_wmap_camera_translation;
 extern s32 D_80182DE4;
 extern s32 D_801B2468;
@@ -740,7 +740,7 @@ typedef struct
     u8 pad_02[0x12];
 } WmapSlot14;
 
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern WmapSlot8 D_80139988[];
 extern WmapSlot14 D_801AFBD0[];
 extern s32 D_801B0FD0;
@@ -1730,7 +1730,7 @@ extern s32 D_80139280;
  */
 void func_80090C08(void)
 {
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B2A94;
 extern s32 D_801B2A90;
 extern u8 D_800D99F8[];
@@ -1748,7 +1748,7 @@ extern u8 D_80139AE8[];
 void func_80090C50(void)
 {
 extern void func_80090C50(void);
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B2A94;
 extern s32 D_801B2A90;
 extern u8 D_800D99F8[];
@@ -1846,7 +1846,7 @@ extern s32 D_80139280;
  */
 void func_80090E00(void)
 {
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B2A9C;
 extern s32 D_801B2A98;
 extern u8 D_800D95D8[];
@@ -1864,7 +1864,7 @@ extern u8 D_80139A28[];
 void func_80090E48(void)
 {
 extern void func_80090E48(void);
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B2A9C;
 extern s32 D_801B2A98;
 extern u8 D_800D95D8[];
@@ -2379,7 +2379,7 @@ extern void (*D_800D6018[])(void);
 void func_800915C8(void)
 {
 extern WmapSparkParticlePtr D_8011CF28;
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B2AC8;
 extern s32 D_801B2ACC;
 

@@ -46,12 +46,12 @@ def main() -> int:
         parser.error(f"Clang not found: {args.clang}")
 
     includes = ["-Iinclude", "-Iinclude/sdk", "-Isrc/overlays/field"]
-    common = [clang, "-fms-extensions", "-DLOM_NATIVE", "-DM2CTX", "-fno-builtin",
+    common = [clang, "-fms-extensions", "-DPS1_32BIT_STORAGE", "-DM2CTX", "-fno-builtin",
               "-Werror", "-Wno-deprecated-non-prototype", *includes]
     try:
         # Explicitly disable extensions: Windows Clang enables them by default.
         missing_flag = subprocess.run(
-            [clang, "-fno-ms-extensions", "-DLOM_NATIVE", "-Iinclude", "-x", "c", "-fsyntax-only", "-"],
+            [clang, "-fno-ms-extensions", "-DPS1_32BIT_STORAGE", "-Iinclude", "-x", "c", "-fsyntax-only", "-"],
             cwd=ROOT, input='#include "ps1_types.h"\n', text=True, capture_output=True,
         )
         if missing_flag.returncode == 0 or "requires -fms-extensions" not in missing_flag.stderr:

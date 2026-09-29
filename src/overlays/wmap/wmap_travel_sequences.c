@@ -86,7 +86,7 @@ typedef struct
 typedef struct
 {
     s32 unknown_00;
-    u8ptr data;
+    u8_ptr data;
 } WmapAnimationSlot;
 
 /** @brief GTE screen coordinate, read as one packed word or as two halves. */

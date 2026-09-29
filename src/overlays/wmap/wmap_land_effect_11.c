@@ -307,8 +307,8 @@ extern s32 D_801B28E8;
 /** @brief Draw and brighten two rotating effect layers and advance their shared countdown. */
 void func_80085818(void)
 {
-extern voidptr D_8011CF24;
-extern voidptr D_8011CF28;
+extern void_ptr D_8011CF24;
+extern void_ptr D_8011CF28;
 extern VECTOR g_wmap_camera_translation;
 extern SVECTOR D_801B2490;
 extern SVECTOR D_801B2498;
@@ -344,8 +344,8 @@ extern s32 D_801B28FC;
 /** @brief Draw two rotating effect layers and advance their shared countdown. */
 void func_80085950(void)
 {
-extern voidptr D_8011CF24;
-extern voidptr D_8011CF28;
+extern void_ptr D_8011CF24;
+extern void_ptr D_8011CF28;
 extern VECTOR g_wmap_camera_translation;
 extern SVECTOR D_801B2490;
 extern SVECTOR D_801B2498;
@@ -1016,7 +1016,7 @@ extern s32 D_801B28D4;
  */
 void func_80086464(void)
 {
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B28D4;
 extern s32 D_801B28D0;
 
@@ -1229,7 +1229,7 @@ extern s32 D_80139280;
  */
 void func_800867FC(void)
 {
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B28E4;
 extern s32 D_801B28E0;
 extern u8 D_800DA448[];
@@ -1247,7 +1247,7 @@ extern u8 D_80139CC8[];
 void func_80086844(void)
 {
 extern void func_80086844(void);
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B28E4;
 extern s32 D_801B28E0;
 extern u8 D_800DA448[];

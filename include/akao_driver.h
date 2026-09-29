@@ -105,8 +105,8 @@ typedef struct
  */
 typedef struct
 {
-    u8ptr data_cursor;       /**< Next block of RAM data to upload. */
-    u8ptr loop_cursor;       /**< Data restart point of a looping program, or 0. */
+    u8_ptr data_cursor;       /**< Next block of RAM data to upload. */
+    u8_ptr loop_cursor;       /**< Data restart point of a looping program, or 0. */
     u32 flags;             /**< XA_FLAG_* bits. */
     s32 voice_mask;        /**< Voice mask of the stream's voice pair; 0 when idle. */
     s32 first_voice;       /**< First voice of the pair. */
@@ -119,7 +119,7 @@ typedef struct
     union
     {
         s32 spu_addr;      /**< One-shot programs: SPU base address. */
-        u8ptr ring_base;     /**< CD ring streams: first ring block. */
+        u8_ptr ring_base;     /**< CD ring streams: first ring block. */
     } source;
     u32 ring_size;         /**< Ring size in bytes. */
     u32 upload_block;      /**< Index of the next ring block to upload. */

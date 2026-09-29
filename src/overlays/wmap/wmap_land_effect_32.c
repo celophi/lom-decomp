@@ -411,7 +411,7 @@ extern s32 D_801B26B8;
 /** @brief Draw and fade the transformed effect, then advance its countdown. */
 void func_80079680(void)
 {
-extern voidptr D_8011CF1C;
+extern void_ptr D_8011CF1C;
 extern VECTOR D_8011CF60;
 extern SVECTOR g_wmap_camera_rotation;
 extern s32 D_80182DF4;

@@ -45,10 +45,10 @@ extern s32 g_wmap_vehicle_cell_x;
 extern s32 g_wmap_vehicle_cell_y;
 extern u8 D_800DEF18[];
 extern u8 D_8011D538[];
-extern u8ptr D_8011CF1C;
-extern u8ptr D_8011CF24;
-extern u8ptr D_8011CF28;
-extern u8ptr D_8011CF2C;
+extern u8_ptr D_8011CF1C;
+extern u8_ptr D_8011CF24;
+extern u8_ptr D_8011CF28;
+extern u8_ptr D_8011CF2C;
 extern s32 g_wmap_view_scroll_mode;
 extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
@@ -90,7 +90,7 @@ typedef struct
 extern u8 D_80139988[];
 extern void *D_80121538;
 extern s16 D_801AFBD0;
-extern u8ptr D_80139280;
+extern u8_ptr D_80139280;
 extern s32 D_801B2FB8;
 extern s32 D_801B2FBC;
 extern void func_800B2D78(void);
@@ -188,7 +188,7 @@ void func_800B1A74(void)
 
 extern u8 g_wmap_camera_translation[];
 extern u8 D_801B2498[];
-extern s32ptr D_8011CF1C;
+extern s32_ptr D_8011CF1C;
 extern s32 D_8013923C;
 extern s32 D_80182DE4;
 extern s32 D_801B2FC8;
@@ -226,7 +226,7 @@ void func_800B1B78(void)
 
 extern u8 g_wmap_camera_translation[];
 extern u8 D_801B2498[];
-extern s32ptr D_8011CF1C;
+extern s32_ptr D_8011CF1C;
 extern s32 D_8013923C;
 extern s32 D_80182DE4;
 extern s32 D_801B2FC8;
@@ -264,7 +264,7 @@ void func_800B1C78(void)
 
 extern u8 g_wmap_camera_translation[];
 extern u8 D_801B24A0[];
-extern s32ptr D_8011CF24;
+extern s32_ptr D_8011CF24;
 extern s32 D_80139240;
 extern s32 D_80182DE8;
 extern s32 D_801B2FD0;
@@ -302,7 +302,7 @@ void func_800B1D7C(void)
 
 extern u8 g_wmap_camera_translation[];
 extern u8 D_801B24A0[];
-extern s32ptr D_8011CF24;
+extern s32_ptr D_8011CF24;
 extern s32 D_80139240;
 extern s32 D_80182DE8;
 extern s32 D_801B2FD0;
@@ -340,7 +340,7 @@ void func_800B1E7C(void)
 
 extern u8 g_wmap_camera_translation[];
 extern u8 D_801B24A8[];
-extern s32ptr D_8011CF28;
+extern s32_ptr D_8011CF28;
 extern s32 D_8013924C;
 extern s32 D_80182DEC;
 extern s32 D_801B2FD8;
@@ -378,7 +378,7 @@ void func_800B1F80(void)
 
 extern u8 g_wmap_camera_translation[];
 extern u8 D_801B24A8[];
-extern s32ptr D_8011CF28;
+extern s32_ptr D_8011CF28;
 extern s32 D_8013924C;
 extern s32 D_80182DEC;
 extern s32 D_801B2FD8;
@@ -1264,7 +1264,7 @@ extern void func_8008ECF8(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
  */
 void func_800B2DF0(void)
 {
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B2FBC;
 extern s32 D_801B2FB8;
 
@@ -1838,14 +1838,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32ptr D_8011CF1C;
-extern s32ptr D_8011CF24;
-extern s32ptr D_8011CF28;
-extern s32ptr D_8011CF2C;
-extern s32ptr D_8011CF30;
-extern s32ptr D_8011CF34;
-extern s32ptr D_8011CF38;
-extern s32ptr D_8011CF3C;
+extern s32_ptr D_8011CF1C;
+extern s32_ptr D_8011CF24;
+extern s32_ptr D_8011CF28;
+extern s32_ptr D_8011CF2C;
+extern s32_ptr D_8011CF30;
+extern s32_ptr D_8011CF34;
+extern s32_ptr D_8011CF38;
+extern s32_ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -2479,14 +2479,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32ptr D_8011CF1C;
-extern s32ptr D_8011CF24;
-extern s32ptr D_8011CF28;
-extern s32ptr D_8011CF2C;
-extern s32ptr D_8011CF30;
-extern s32ptr D_8011CF34;
-extern s32ptr D_8011CF38;
-extern s32ptr D_8011CF3C;
+extern s32_ptr D_8011CF1C;
+extern s32_ptr D_8011CF24;
+extern s32_ptr D_8011CF28;
+extern s32_ptr D_8011CF2C;
+extern s32_ptr D_8011CF30;
+extern s32_ptr D_8011CF34;
+extern s32_ptr D_8011CF38;
+extern s32_ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;
@@ -3117,14 +3117,14 @@ extern s32 D_800D9158;
 extern s32 D_800D9228;
 extern WmapConfigA D_800D9268[];
 extern WmapPair16 g_wmap_focus_screen_position;
-extern s32ptr D_8011CF1C;
-extern s32ptr D_8011CF24;
-extern s32ptr D_8011CF28;
-extern s32ptr D_8011CF2C;
-extern s32ptr D_8011CF30;
-extern s32ptr D_8011CF34;
-extern s32ptr D_8011CF38;
-extern s32ptr D_8011CF3C;
+extern s32_ptr D_8011CF1C;
+extern s32_ptr D_8011CF24;
+extern s32_ptr D_8011CF28;
+extern s32_ptr D_8011CF2C;
+extern s32_ptr D_8011CF30;
+extern s32_ptr D_8011CF34;
+extern s32_ptr D_8011CF38;
+extern s32_ptr D_8011CF3C;
 extern s32 D_8011D4FC;
 extern s32 D_8011D500;
 extern s32 D_8011D510;

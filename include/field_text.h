@@ -33,7 +33,7 @@ typedef struct
 {
     u8 character_limit;
     u8 _pad1[3];
-    u8ptr text;
+    u8_ptr text;
 } FieldTextMacro;
 
 extern FieldTextMacro g_field_text_macros[];
@@ -45,7 +45,7 @@ void field_text_reset_scratch(void);
 s32 field_text_build_sprites(struct SPRT* prim, u8* text, s32 text_style);
 void field_text_open_packed_window(s32 window_index);
 void field_text_open_fixed_window(s32 window_index);
-void field_text_update(u8ptr* packet_cursor, FieldOrderingTags* ot, s32 draw_count);
+void field_text_update(u8_ptr* packet_cursor, FieldOrderingTags* ot, s32 draw_count);
 void field_text_set_string(s32 window_index, u8* text, s32 text_options);
 void field_text_start_timed_window(u8* text);
 void field_text_set_position(s32 slot, s16 x, s16 y);

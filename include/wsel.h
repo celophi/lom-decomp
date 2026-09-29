@@ -17,7 +17,7 @@ typedef struct
     DRAWENV draw_env;
     RECT clear_rect;
     u_long packets[WSEL_PACKET_WORDS];
-    ulongptr prim_cursor;
+    u_long_ptr prim_cursor;
     u8 unknown_0x80bc[0x10];
 } WselRenderBuffer;
 

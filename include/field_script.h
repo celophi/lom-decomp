@@ -43,7 +43,7 @@ typedef struct
 {
     s32 unk0;
     s32 unk4;
-    u8ptr pc;
+    u8_ptr pc;
 } FieldScriptRecord;
 
 /**
@@ -54,7 +54,7 @@ typedef struct
 {
     s32 unk0;
     s32 unk4;
-    u8ptr pc;
+    u8_ptr pc;
     u32 flags;
     union
     {
@@ -81,7 +81,7 @@ typedef struct
         u8 owner_id;
     } status;
     s32 active_record;
-    u8ptr pc;
+    u8_ptr pc;
 } FieldScriptContext;
 
 /** @brief Four-byte pointer to script context in PS1 storage. */

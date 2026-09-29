@@ -265,7 +265,7 @@ extern FieldItemTables* g_field_item_tables;
 /** @brief One nested script frame (0xC bytes). */
 typedef struct FieldScriptFrame
 {
-    u8ptr pc;
+    u8_ptr pc;
     /** @brief Bit 0 holds the result of the last comparison. */
     u32 flags;
     /** @brief Remaining wait frames; bit 0 lets the frame resume after a return. */

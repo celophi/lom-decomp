@@ -43,7 +43,7 @@
 typedef struct
 {
     s32 unknown_00;
-    u8ptr data;
+    u8_ptr data;
 } WmapAnimationResource;
 
 /** @brief Map scroll position and projection scale (see wmap_view_effects.c). */
@@ -91,7 +91,7 @@ extern s32 D_8011D510;
 extern s32 D_8011D530;
 extern WmapView g_wmap_view;
 extern s32 D_800D923C;
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_80139234;
 extern s32 D_8013923C;
 extern s32 D_80139240;

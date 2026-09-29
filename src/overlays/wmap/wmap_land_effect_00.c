@@ -257,7 +257,7 @@ void func_80091B24(void)
 typedef struct
 {
     s32 field_00;
-    voidptr field_04;
+    void_ptr field_04;
 } WmapSlot8;
 
 /** @brief World-map 0x14-byte slot: only the leading halfword is cleared here. */
@@ -267,7 +267,7 @@ typedef struct
     u8 pad_02[0x12];
 } WmapSlot14;
 
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern WmapSlot8 D_80139988[];
 extern WmapSlot14 D_801AFBD0[];
 extern s32 D_801B0FD0;
@@ -1597,7 +1597,7 @@ extern s32 D_80139280;
  */
 void func_800930F8(void)
 {
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B2B1C;
 extern s32 D_801B2B18;
 extern u8 D_800D9688[];
@@ -1615,7 +1615,7 @@ extern u8 D_80139A48[];
 void func_80093140(void)
 {
 extern void func_80093140(void);
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B2B1C;
 extern s32 D_801B2B18;
 extern u8 D_800D9688[];

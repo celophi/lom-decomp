@@ -65,7 +65,7 @@ typedef struct
 typedef struct
 {
     s32 unknown_00;
-    u8ptr data;
+    u8_ptr data;
 } WmapTravelAnimation;
 
 /** @brief Map-cell identity and the flags used to select a destination. */

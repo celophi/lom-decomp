@@ -507,7 +507,7 @@ extern WmapConfigA D_800D94FC[];
 extern WmapMotion D_801AFBD0[];
 extern WmapMotion D_801AFCFC[];
 extern WmapResource D_80139988[];
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern u8 D_80125538[];
 extern s32 D_8013B264;
 extern s32 D_8013B270;
@@ -601,7 +601,7 @@ extern WmapMotion D_801AFBD0[];
 extern WmapResource D_80139988[];
 extern WmapResource D_80139A00;
 extern s32 D_8011CF74;
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B2860;
 extern s32 D_801B2864;
 

@@ -10,7 +10,7 @@ typedef struct
     u8 pad0[0x40];
     u32 ordering_table;
     u8 pad44[0x40B8 - 0x44];
-    s32ptr packet_cursor;
+    s32_ptr packet_cursor;
 } FieldRenderContext;
 
 /** @brief Render half being built this frame. */

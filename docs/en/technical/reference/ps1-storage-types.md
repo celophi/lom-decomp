@@ -14,11 +14,11 @@ typedefs preserve the four-byte slot and ordinary pointer expressions.
 
 | Type | Pointee |
 | --- | --- |
-| `voidptr` | `void` |
-| `u8ptr`, `s8ptr` | Unsigned or signed byte |
-| `u16ptr`, `s16ptr` | Unsigned or signed halfword |
-| `u32ptr`, `s32ptr` | Unsigned or signed word |
-| `ulongptr` | Psy-Q `u_long` |
+| `void_ptr` | `void` |
+| `u8_ptr`, `s8_ptr` | Unsigned or signed byte |
+| `u16_ptr`, `s16_ptr` | Unsigned or signed halfword |
+| `u32_ptr`, `s32_ptr` | Unsigned or signed word |
+| `u_long_ptr` | Psy-Q `u_long` |
 | `<Type>Ptr` | A structure, declared beside its owning type |
 | `<Type>TablePtr` | A stored address of a table of `<Type>Ptr` slots |
 
@@ -29,7 +29,7 @@ or generated assembly are patched.
 A native consumer enables the types with:
 
 ```text
--DLOM_NATIVE -fms-extensions
+-DPS1_32BIT_STORAGE -fms-extensions
 ```
 
 This selects Clang's `__ptr32 __uptr` pointer representation. `__ptr32` keeps
@@ -50,7 +50,7 @@ checked separately.
 ```c
 typedef struct FieldScriptFrame
 {
-    u8ptr pc;
+    u8_ptr pc;
     u32 flags;
     u32 wait_frames;
 } FieldScriptFrame;
@@ -88,9 +88,9 @@ FieldPartDefPtr* table_cursor = stored_table;
 
 The stored table address and each entry occupy four bytes. The local table
 cursor has the host's normal pointer width and advances by four bytes per
-entry. Likewise, `u8ptr*` can point at a stored byte-pointer slot, while `u8**`
+entry. Likewise, `u8_ptr*` can point at a stored byte-pointer slot, while `u8**`
 points at a normal working pointer. Do not interchange these on native builds.
-The FIELD scene/text packet-cursor APIs take `u8ptr*` because their caller passes
+The FIELD scene/text packet-cursor APIs take `u8_ptr*` because their caller passes
 the address of `FieldRenderHalf.primitive_cursor`. Their ordinary local packet
 pointers remain `u8*`; allocation helpers that take an ordinary local arena
 cursor still use `u8**`.
@@ -117,7 +117,7 @@ An integer field used as an address may still need an explicit conversion.
 The `lom-native` submodule pin and patch series are unchanged by this work.
 Adopting this revision there requires the following dependency update:
 
-1. Enable `LOM_NATIVE` and `-fms-extensions` for the relevant native game units.
+1. Enable `PS1_32BIT_STORAGE` and `-fms-extensions` for the relevant native game units.
 2. Include `ps1_types.h` in native compilation shims. Existing shims that define
    `_COMMON_H` suppress `common.h`, so its transitive include is not sufficient;
    the native build can explicitly force-include `ps1_types.h` instead.

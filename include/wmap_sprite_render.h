@@ -14,10 +14,10 @@ typedef struct
     s16 sequence;
     s16 previous_sequence;
     u8 unknown_12[2];
-    u8ptr cursor;
-    u8ptr sequence_start;
+    u8_ptr cursor;
+    u8_ptr sequence_start;
     /** @brief Current animation frame: a part count followed by WmapSpritePart records. */
-    u8ptr frame_data;
+    u8_ptr frame_data;
     s16 remaining;
     s16 target_shade;
     s16 shade;

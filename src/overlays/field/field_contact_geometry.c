@@ -202,7 +202,7 @@ typedef struct
 } FieldContactScanWorkspace;
 
 extern u8 g_field_actor_sequence_data[FIELD_SEQUENCE_BANK_COUNT][FIELD_SEQUENCE_ROW_COUNT][FIELD_SEQUENCE_ROW_SIZE];
-extern u8ptr g_field_cd_buffer;
+extern u8_ptr g_field_cd_buffer;
 extern FieldMoveObject g_field_object_parts[];
 extern s32 g_field_active_group;
 extern FieldGroupBounds g_field_group_bounds[];

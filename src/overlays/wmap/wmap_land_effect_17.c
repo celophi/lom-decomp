@@ -177,7 +177,7 @@ typedef struct
 extern WmapConfigA D_800D95D8[];
 extern WmapMotion D_801AFD60[];
 extern WmapResource D_80139988[];
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B0FD0;
 extern u8 D_8011D538[];
 extern s32 D_801B29D8;
@@ -262,7 +262,7 @@ typedef struct
 extern WmapConfigA D_800D9B00[];
 extern WmapMotion D_801AFFB8[];
 extern WmapResource D_80139988[];
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B0FD0;
 extern u8 D_8011D538[];
 extern s32 D_801B29E0;
@@ -425,7 +425,7 @@ typedef struct
 extern WmapConfigA D_800D9B00[];
 extern WmapMotion D_801AFFB8[];
 extern WmapResource D_80139988[];
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern u8 D_80121538[];
 extern s32 D_801B0FD0;
 extern s32 D_801B29F0;
@@ -528,7 +528,7 @@ typedef struct
 extern WmapConfigA D_800D95D8[];
 extern WmapMotion D_801AFD60[];
 extern WmapResource D_80139988[];
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern u8 D_80121538[];
 extern s32 D_801B0FD0;
 extern s32 D_801B29F8;

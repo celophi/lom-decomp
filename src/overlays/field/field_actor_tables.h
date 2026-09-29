@@ -216,7 +216,7 @@ typedef struct
     s32 target_z;
     u8 unk5C[0x64 - 0x5C];
     /** @brief Display name of the object, NULL when it has no label. */
-    u8ptr name;
+    u8_ptr name;
     s32 unk68;
     FieldRoutePoint route_history[FIELD_ROUTE_HISTORY_LENGTH];
     FieldCollisionWord collision;
@@ -226,7 +226,7 @@ typedef struct
     s16 unk144;
     s16 unk146;
     u8 unk148[0x168 - 0x148];
-    u8ptr script;
+    u8_ptr script;
     s8 unk16C;
     /** @brief Effect record the object's HUD panel follows while it is bound to an animation actor. */
     u8 linked_effect_index;
@@ -547,7 +547,7 @@ typedef struct FieldActorSlot
     FieldObjectPartPtr parts;
     FieldParameterCurvePtr curves;
     /** @brief Curve segments: ten-bit length in frames, six-bit value. */
-    u16ptr curve_segments;
+    u16_ptr curve_segments;
     FieldAnimationDefPtr animation;
     FieldAnimationDefPtr default_animation;
     u8 unk14[0x1C - 0x14];
@@ -586,14 +586,14 @@ typedef struct FieldActorSlot
     u8 pending_track_mask;
     u8 unk23C[4];
     /** @brief Per animation, the mask of parts it drives. */
-    u16ptr part_masks;
+    u16_ptr part_masks;
 } FieldActorSlot;
 
 /** @brief Resource table entry selected by an actor's resource index (0x14 bytes). */
 typedef struct
 {
-    u8ptr start;
-    u8ptr end;
+    u8_ptr start;
+    u8_ptr end;
     u8 unk8;
     u8 slot_index;
     /** @brief CLUT row of the resource's images (field_set_party_palettes, field_update_scene). */

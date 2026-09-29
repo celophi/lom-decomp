@@ -110,7 +110,7 @@ extern s32 D_801B2A2C;
 void func_8008C8C4(void)
 {
 extern s8 D_80051B4C[];
-extern voidptr D_8011CF24;
+extern void_ptr D_8011CF24;
 extern VECTOR g_wmap_camera_translation;
 extern SVECTOR D_801B2490;
 extern SVECTOR D_801B2498;
@@ -154,7 +154,7 @@ extern s32 D_801B2A34;
 void func_8008CA70(void)
 {
 extern s8 D_80051B4C[];
-extern voidptr D_8011CF24;
+extern void_ptr D_8011CF24;
 extern VECTOR g_wmap_camera_translation;
 extern SVECTOR D_801B2490;
 extern SVECTOR D_801B2498;
@@ -389,7 +389,7 @@ extern s32 D_801B2A4C;
 /** @brief Draw the fading effect and advance its countdown. */
 void func_8008D0F8(void)
 {
-extern voidptr D_8011CF30;
+extern void_ptr D_8011CF30;
 extern VECTOR D_801B2660;
 extern SVECTOR D_801B2678;
 extern s32 D_801B25DC;

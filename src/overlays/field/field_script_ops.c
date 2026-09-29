@@ -659,7 +659,7 @@ void field_script_switch(void)
     s32 value;
     u8* pc;
     u8 op;
-    u8ptr* pc_slot;
+    u8_ptr* pc_slot;
 
     pc = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(pc[1] & 3, pc + 2, &value);

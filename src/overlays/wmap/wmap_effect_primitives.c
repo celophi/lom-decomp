@@ -19,9 +19,9 @@ typedef struct
     s16 sequence;
     s16 previous_sequence;
     u8 pad_12[2];
-    u8ptr cursor;
-    u8ptr sequence_start;
-    u8ptr frame_data;
+    u8_ptr cursor;
+    u8_ptr sequence_start;
+    u8_ptr frame_data;
     s16 remaining;
     u8 pad_22[10];
 } WmapActor;
@@ -39,7 +39,7 @@ typedef struct
 typedef struct
 {
     s32 field_00;
-    u8ptr data;
+    u8_ptr data;
 } WmapResource;
 
 /** @brief Position and velocity records, also used for particle bounds. */
@@ -93,9 +93,9 @@ typedef struct
     u8 pad07[7];
     s16 sequence, previous_sequence;
     u8 pad12[2];
-    u8ptr cursor;
-    u8ptr sequence_start;
-    u8ptr frame_data;
+    u8_ptr cursor;
+    u8_ptr sequence_start;
+    u8_ptr frame_data;
     s16 remaining, target_shade, shade, shade_step;
     u8 pad28[4];
 } WmapParticleActor;

@@ -153,7 +153,7 @@ typedef struct
 extern u8 D_8003ECA0[];
 extern s32 D_8003ECA4[];
 
-extern u8ptr g_field_cd_buffer;
+extern u8_ptr g_field_cd_buffer;
 extern s32 g_field_song_volume;
 
 /** @brief Second song area (FIELD-resident), played through AKAO command 0x19. */

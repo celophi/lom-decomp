@@ -7,7 +7,7 @@
 typedef union
 {
     s32 value;
-    voidptr buffer;
+    void_ptr buffer;
 } AkaoCommandParam;
 
 extern AkaoCommandParam g_akao_cmd_params[];
@@ -301,9 +301,9 @@ typedef AkaoSongState* PS1_PTR32 AkaoSongStatePtr;
  */
 typedef struct AkaoChannelState
 {
-    u8ptr seq_cursor;             /**< Next bytecode byte. */
-    u8ptr loop_cursor[4];         /**< Loop start of each loop-stack level. */
-    u8ptr return_cursor;          /**< Return address of a subroutine call (ext ops FE 0E/0F). */
+    u8_ptr seq_cursor;             /**< Next bytecode byte. */
+    u8_ptr loop_cursor[4];         /**< Loop start of each loop-stack level. */
+    u8_ptr return_cursor;          /**< Return address of a subroutine call (ext ops FE 0E/0F). */
     u32 key_map;                /**< Selected key-to-articulation map (ext op FE 14). */
     s32 pitch_lfo_cursor;       /**< Pitch LFO waveform position. */
     u32 volume_lfo_cursor;      /**< Volume LFO waveform position. */

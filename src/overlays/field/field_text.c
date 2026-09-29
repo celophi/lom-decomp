@@ -232,11 +232,11 @@ typedef union
  */
 typedef struct
 {
-    u8ptr text_cursor;
-    u8ptr macro_cursor;
+    u8_ptr text_cursor;
+    u8_ptr macro_cursor;
 #if !defined(VERSION_JP)
     /* JP has no glyph cursor, so every later field sits 4 bytes lower. */
-    u8ptr glyph_cursor;
+    u8_ptr glyph_cursor;
 #endif
     FieldTextPortraitPtr portrait;
     FieldTextFlags flags;
@@ -303,7 +303,7 @@ struct FieldTextConfig
     u16 height;
     FieldTextAnchorWord anchor;
     FieldTextFlags flags;
-    u8ptr text;
+    u8_ptr text;
 };
 
 /** @brief Field text renderer globals and four runtime window slots. */
@@ -311,7 +311,7 @@ typedef struct
 {
     u8 _pad00[4];
     FieldTextConfigPtr configs;
-    u8ptr timed_text;
+    u8_ptr timed_text;
     u8 _pad0C[0x14 - 0xC];
     u32 draw_mode0;
     u32 draw_mode1;
@@ -401,14 +401,14 @@ static s32 field_text_advance_line(FieldTextState* state);
 static void field_text_clear_window(FieldTextState* state);
 static void field_text_apply_config(FieldTextState* state);
 static void field_text_build_transition_quad(FieldTextState* state, FieldTextQuad* out, s32 frame);
-static void field_text_build_window_packets(FieldTextState* state, u8ptr* cursor, FieldOrderingTags* ot);
-static void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* quad, u8ptr* cursor, FieldOrderingTags* ot);
+static void field_text_build_window_packets(FieldTextState* state, u8_ptr* cursor, FieldOrderingTags* ot);
+static void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* quad, u8_ptr* cursor, FieldOrderingTags* ot);
 static void field_text_scroll_cache(FieldTextState* state);
-static void field_text_queue_uploads(FieldTextState* state, u8ptr* cursor);
+static void field_text_queue_uploads(FieldTextState* state, u8_ptr* cursor);
 static void field_text_save_config(u16 slot);
 static void field_text_close(FieldTextState* state, s32 animate);
-static void field_text_render_window(FieldTextState* state, u8ptr* cursor, FieldOrderingTags* ot);
-static void field_text_queue_portrait_upload(FieldTextPortrait* image, u8ptr* cursor, s32 slot, s32 mirror);
+static void field_text_render_window(FieldTextState* state, u8_ptr* cursor, FieldOrderingTags* ot);
+static void field_text_queue_portrait_upload(FieldTextPortrait* image, u8_ptr* cursor, s32 slot, s32 mirror);
 static void field_text_restore_window(u16 slot, s32 placement_mode);
 
 extern s16 g_field_text_portrait_slots;
@@ -2240,7 +2240,7 @@ static inline void field_text_start_closing(FieldTextState* state)
  * @param ot Ordering-table base address.
  * @param draw_count Current field draw count; 1 selects the render-only path.
  */
-void field_text_update(u8ptr* packet_cursor, FieldOrderingTags* ot, s32 draw_count)
+void field_text_update(u8_ptr* packet_cursor, FieldOrderingTags* ot, s32 draw_count)
 {
     FieldInputState* input = FIELD_TEXT_INPUT;
     FieldTextState* state = FIELD_TEXT_WINDOWS;
@@ -2548,7 +2548,7 @@ static inline s32 field_text_portrait_y_word(s32 y, s32 h)
  * @param cursor In/out render-packet cursor.
  * @param ot Ordering-table slot.
  */
-static void field_text_build_window_packets(FieldTextState* state, u8ptr* cursor, FieldOrderingTags* ot)
+static void field_text_build_window_packets(FieldTextState* state, u8_ptr* cursor, FieldOrderingTags* ot)
 {
     FieldTextSystem* text_system = FIELD_TEXT_SYSTEM;
     FieldTextPacket* prim;
@@ -2909,7 +2909,7 @@ static void field_text_build_window_packets(FieldTextState* state, u8ptr* cursor
  * @note The frame, cached text spans, and portrait share a scratchpad mesh.
  *       Its vertices are mapped into the transition quad with integer bilinear interpolation.
  */
-static void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* quad, u8ptr* cursor, FieldOrderingTags* ot)
+static void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* quad, u8_ptr* cursor, FieldOrderingTags* ot)
 {
     FieldTextSystem* text_system = FIELD_TEXT_SYSTEM;
     FieldTextVertex* vertex;
@@ -3605,7 +3605,7 @@ static void field_text_scroll_cache(FieldTextState* state)
  * @param state Text-window state.
  * @param cursor In/out packet cursor used for upload requests and staging data.
  */
-static void field_text_queue_uploads(FieldTextState* state, u8ptr* cursor)
+static void field_text_queue_uploads(FieldTextState* state, u8_ptr* cursor)
 {
     FieldImageReq* req;
     u16* cur;
@@ -3795,7 +3795,7 @@ static void field_text_close(FieldTextState* state, s32 animate)
  * @param cursor In/out render-packet cursor.
  * @param ot Ordering-table slot.
  */
-static void field_text_render_window(FieldTextState* state, u8ptr* cursor, FieldOrderingTags* ot)
+static void field_text_render_window(FieldTextState* state, u8_ptr* cursor, FieldOrderingTags* ot)
 {
     FieldTextQuad quad;
 
@@ -3834,7 +3834,7 @@ static void field_text_render_window(FieldTextState* state, u8ptr* cursor, Field
  * @param slot Portrait VRAM slot.
  * @param mirror Non-zero mirrors the portrait horizontally before upload.
  */
-static void field_text_queue_portrait_upload(FieldTextPortrait* image, u8ptr* cursor, s32 slot, s32 mirror)
+static void field_text_queue_portrait_upload(FieldTextPortrait* image, u8_ptr* cursor, s32 slot, s32 mirror)
 {
     FieldImageReq* req;
     u8* packet_cursor;

@@ -122,7 +122,7 @@ typedef struct
 } FieldThumbnailQuad;
 
 extern Vec2s g_field_screen_scroll;
-extern u8ptr g_field_cd_buffer;
+extern u8_ptr g_field_cd_buffer;
 extern FieldActionRow g_field_resource_actions[];
 /** @brief Golem sprite CLUTs, two banks of 16. */
 extern u16 g_field_golem_palettes[2][FIELD_GOLEM_BANK_PALETTES * FIELD_CLUT_COLORS];

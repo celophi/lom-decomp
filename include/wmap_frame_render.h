@@ -17,7 +17,7 @@ typedef struct
     DRAWENV draw_env;
     DISPENV disp_env;
     u_long ordering_table[WMAP_OT_COUNT];
-    u8ptr packet_cursor;
+    u8_ptr packet_cursor;
     union
     {
         POLY_FT4 flat[WMAP_MAP_TILES * WMAP_MAP_TILES];

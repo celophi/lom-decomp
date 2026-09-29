@@ -330,7 +330,7 @@ extern s32 g_field_camera_offset_z;
 extern u8 g_field_resource_buffer[];
 extern FieldAnimationDef g_field_object_default_animation;
 extern s32 g_field_loaded_actor_count;
-extern voidptr g_field_resource_cursor;
+extern void_ptr g_field_resource_cursor;
 extern s32 g_field_scene_mode_bit;
 extern FieldDirectionOffset g_field_direction_offsets[];
 extern s32 g_field_active_group;
@@ -1918,7 +1918,7 @@ static void field_relocate_resource_buffer(s32 resource_index)
     u32 resource_size;
     FieldActor* actor;
     u8* old_start;
-    voidptr* cursor_ref;
+    void_ptr* cursor_ref;
     u8* source_base;
     u8* buffer_base;
 

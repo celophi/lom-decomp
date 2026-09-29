@@ -14,7 +14,7 @@ typedef struct FieldRenderHalf
     DISPENV disp_env;
     DRAWENV draw_env;
     RECT display_rect;
-    u8ptr primitive_cursor;
+    u8_ptr primitive_cursor;
     u8 primitive_arena[FIELD_PRIMITIVE_ARENA_SIZE];
     DR_TPAGE draw_mode;
 } FieldRenderHalf;

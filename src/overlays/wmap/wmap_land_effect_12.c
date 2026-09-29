@@ -160,7 +160,7 @@ typedef struct
     u8 pad_02[0x12];
 } WmapSlot14;
 
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern WmapSlot8 D_80139988[];
 extern WmapSlot14 D_801AFBD0[];
 extern s32 D_801B0FD0;
@@ -208,7 +208,7 @@ typedef struct
     u8 pad_02[0x12];
 } WmapSlot14;
 
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern WmapSlot8 D_80139988[];
 extern WmapSlot14 D_801AFBD0[];
 extern s32 D_801B0FD0;
@@ -1245,7 +1245,7 @@ extern s32 D_80139280;
  */
 void func_8008518C(void)
 {
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B28A4;
 extern s32 D_801B28A0;
 extern u8 D_800D95D8[];
@@ -1263,7 +1263,7 @@ extern u8 D_80139A28[];
 void func_800851D4(void)
 {
 extern void func_800851D4(void);
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B28A4;
 extern s32 D_801B28A0;
 extern u8 D_800D95D8[];

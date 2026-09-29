@@ -55,7 +55,7 @@ typedef struct
     u32 texture_bytes;
     u8 _pad1[4];
     /** Texture image uploaded to VRAM column by column. */
-    u8ptr texture;
+    u8_ptr texture;
 } FieldMapHeader;
 
 #define FIELD_MAP_HEADER ((FieldMapHeader*)FIELD_MAP_LOAD_ADDRESS)
@@ -219,7 +219,7 @@ void field_clear_node_accumulators(s32 update_mode, s32 force_unscaled)
 void field_init_with_fmv(void* unused, FieldRenderHalf* buffers)
 {
     u16 object_index;
-    u8ptr* front_cursor;
+    u8_ptr* front_cursor;
     SceneState* state = SCENE_STATE;
 
     DrawSync(0);
@@ -251,7 +251,7 @@ void field_init_with_fmv(void* unused, FieldRenderHalf* buffers)
 void field_init_with_fmv_alloc(void)
 {
     u16 object_index;
-    u8ptr* front_cursor;
+    u8_ptr* front_cursor;
     FieldRenderHalf* buffers;
 
     buffers = get_field_render_buffers();

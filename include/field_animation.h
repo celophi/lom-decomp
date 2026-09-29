@@ -15,7 +15,7 @@ struct FieldImageReq
 {
     FieldImageReqPtr next;
     RECT rect;
-    ulongptr data;
+    u_long_ptr data;
 };
 struct FieldPart;
 struct FieldTintSrc;

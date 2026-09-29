@@ -166,7 +166,7 @@ extern s32 D_80122B20;
 extern u8 g_field_pair_indicator_list[];
 extern u8 D_800FDCEA;
 extern u16 D_800FE01E;
-extern u8ptr g_field_cd_buffer;
+extern u8_ptr g_field_cd_buffer;
 
 /* ---- Object flag handlers and fading primitives ---------------------------- */
 
@@ -276,7 +276,7 @@ extern FieldScreenMotion g_field_screen_scroll;
 extern POLY_FT4 g_field_fade_prims[FIELD_FADE_PRIM_COUNT];
 extern u16 g_field_fade_prim_depths[FIELD_FADE_PRIM_COUNT];
 extern FieldActor* g_field_updating_actor;
-extern u32ptr g_field_scene_record_table;
+extern u32_ptr g_field_scene_record_table;
 
 static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* render_half, u32 hp_per_bar);
 static u8* field_emit_hud_status_line(u8* packet, FieldRenderHalf* render_half, CVECTOR* colors, s32 intensity, s32 x, s32 y);

@@ -48,8 +48,8 @@ typedef struct FieldMeshResource
 /** @brief Vertices a mesh can transform at once (size of the shared mesh work buffers). */
 #define FIELD_MESH_VERTEX_MAX 768
 
-extern s16ptr g_field_mesh_screen_vertices;
+extern s16_ptr g_field_mesh_screen_vertices;
 extern SVECTORPtr g_field_mesh_transformed_normals;
-extern s32ptr g_field_mesh_depth_offsets;
+extern s32_ptr g_field_mesh_depth_offsets;
 
 #endif

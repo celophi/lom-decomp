@@ -146,7 +146,7 @@ typedef struct
     u8 pad_02[0x12];
 } WmapSlot14;
 
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern WmapSlot8 D_80139988[];
 extern WmapSlot14 D_801AFBD0[];
 extern s32 D_801B0FD0;
@@ -194,7 +194,7 @@ typedef struct
     u8 pad_02[0x12];
 } WmapSlot14;
 
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern WmapSlot8 D_80139988[];
 extern WmapSlot14 D_801AFBD0[];
 extern s32 D_801B0FD0;
@@ -310,7 +310,7 @@ typedef struct
     u8 pad_02[0x12];
 } WmapSlot14;
 
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern WmapSlot8 D_80139988[];
 extern WmapSlot14 D_801AFBD0[];
 extern s32 D_801B0FD0;
@@ -1203,7 +1203,7 @@ extern s32 D_801B293C;
  */
 void func_80088270(void)
 {
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B293C;
 extern s32 D_801B2938;
 
@@ -1316,7 +1316,7 @@ extern s32 D_80139280;
  */
 void func_80088464(void)
 {
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B2944;
 extern s32 D_801B2940;
 extern u8 D_800D9F20[];
@@ -1334,7 +1334,7 @@ extern u8 D_80139BD8[];
 void func_800884AC(void)
 {
 extern void func_800884AC(void);
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B2944;
 extern s32 D_801B2940;
 extern u8 D_800D9F20[];
@@ -1432,7 +1432,7 @@ extern s32 D_80139280;
  */
 void func_8008865C(void)
 {
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B294C;
 extern s32 D_801B2948;
 extern u8 D_800DA7B8[];
@@ -1450,7 +1450,7 @@ extern u8 D_80139D68[];
 void func_800886A4(void)
 {
 extern void func_800886A4(void);
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B294C;
 extern s32 D_801B2948;
 extern u8 D_800DA7B8[];
@@ -1548,7 +1548,7 @@ extern s32 D_80139280;
  */
 void func_80088854(void)
 {
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B2954;
 extern s32 D_801B2950;
 extern u8 D_800DB050[];
@@ -1566,7 +1566,7 @@ extern u8 D_80139EF8[];
 void func_8008889C(void)
 {
 extern void func_8008889C(void);
-extern s32ptr D_80139280;
+extern s32_ptr D_80139280;
 extern s32 D_801B2954;
 extern s32 D_801B2950;
 extern u8 D_800DB050[];

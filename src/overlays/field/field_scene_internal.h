@@ -401,7 +401,7 @@ struct FieldHeaderRec
 typedef struct FieldSceneHeader
 {
     u8 _pad0[4];
-    u16ptr pixel_data; /* 0x04 strip pixel-source base */
+    u16_ptr pixel_data; /* 0x04 strip pixel-source base */
     u8 _pad1[0x10 - 8];
     /** 0x10 head of the record list indexed by field_header_record_at; null when the
         scene carries no records. */
@@ -585,7 +585,7 @@ struct FieldAnimDef
             FieldPartDefPtr grid;
         } tint;
     } u;
-    u8ptr data; /* 0x14 handler-specific data */
+    u8_ptr data; /* 0x14 handler-specific data */
 };
 
 /**
@@ -624,7 +624,7 @@ typedef struct
 {
     u8 _pad0[4];
     /** 0x04 count halfword followed by the palette entries themselves. */
-    u16ptr data;
+    u16_ptr data;
 } FieldTintPal;
 
 /**
@@ -1029,7 +1029,7 @@ typedef struct
     /** NULL-terminated array of object definitions. */
     FieldObjDefTablePtr object_defs;
     /** Texture and CLUT image uploaded to VRAM; also the key field_load_map deduplicates on. */
-    ulongptr image;
+    u_long_ptr image;
     /** Head of the node definition list. */
     FieldNodeDefPtr node_defs;
     /** Head of the edge definition list. */
@@ -1134,7 +1134,7 @@ extern s32 g_field_camera_y;
 extern s32 g_field_camera_z;
 /** @brief Pixel lookup table field_load_map applies to the next map, plus one; 0 for none. */
 extern s32 g_field_pixel_lookup_selector;
-extern s16ptr g_field_node_angle_table;
+extern s16_ptr g_field_node_angle_table;
 
 s32 rcos(s32);
 s32 rsin(s32);

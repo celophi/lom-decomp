@@ -22,14 +22,14 @@
 #define CHECK_SIZE(type, bytes) _Static_assert(sizeof(type) == (bytes), #type " size")
 #define CHECK_OFFSET(type, member, bytes) _Static_assert(__builtin_offsetof(type, member) == (bytes), #type "." #member " offset")
 
-CHECK_SIZE(voidptr, 4);
-CHECK_SIZE(u8ptr, 4);
-CHECK_SIZE(s8ptr, 4);
-CHECK_SIZE(u16ptr, 4);
-CHECK_SIZE(s16ptr, 4);
-CHECK_SIZE(u32ptr, 4);
-CHECK_SIZE(s32ptr, 4);
-CHECK_SIZE(ulongptr, 4);
+CHECK_SIZE(void_ptr, 4);
+CHECK_SIZE(u8_ptr, 4);
+CHECK_SIZE(s8_ptr, 4);
+CHECK_SIZE(u16_ptr, 4);
+CHECK_SIZE(s16_ptr, 4);
+CHECK_SIZE(u32_ptr, 4);
+CHECK_SIZE(s32_ptr, 4);
+CHECK_SIZE(u_long_ptr, 4);
 CHECK_SIZE(void*, 8);
 CHECK_SIZE(g_field_script, 4);
 CHECK_SIZE(g_field_text_saved_configs, 4);

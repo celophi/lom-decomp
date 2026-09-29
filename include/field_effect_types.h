@@ -195,13 +195,13 @@ typedef FieldActorAnimationDef* PS1_PTR32 FieldActorAnimationDefPtr;
 typedef struct FieldActorState
 {
     FieldActorPartDefPtr parts;
-    u8ptr link_records;        /* six-byte records */
-    u8ptr link_record_indices; /* halfword index table */
+    u8_ptr link_records;        /* six-byte records */
+    u8_ptr link_record_indices; /* halfword index table */
     FieldActorAnimationDefPtr animation;
     FieldActorAnimationDefPtr animations;
-    u8ptr track_data;
-    u8ptr mesh_data;
-    u8ptr sound_data[2]; /* sound-effect sections of the resource */
+    u8_ptr track_data;
+    u8_ptr mesh_data;
+    u8_ptr sound_data[2]; /* sound-effect sections of the resource */
     u8 is_active;
     u8 part_count;
     u8 hit_reaction; /* reaction selector applied to collected targets */
@@ -227,7 +227,7 @@ typedef struct FieldActorState
     u8 active_track_mask;
     u8 unknown_0x23b;
     u8 pad23C[0x240 - 0x23C];
-    u16ptr unknown_0x240;
+    u16_ptr unknown_0x240;
 } FieldActorState;
 
 /**

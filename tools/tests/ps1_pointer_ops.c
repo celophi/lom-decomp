@@ -32,10 +32,10 @@ void akao_seq_op_set_pitch_jitter_depth(AkaoChannelState* channel);
 int ps1_test_pointer_ops(void* storage)
 {
     u8* bytes = storage;
-    u8ptr cursor;
-    u8ptr table[3];
-    u8ptr* slot;
-    u16ptr halfwords;
+    u8_ptr cursor;
+    u8_ptr table[3];
+    u8_ptr* slot;
+    u16_ptr halfwords;
     FieldImageReq* images = (FieldImageReq*)(bytes + 0x100);
     FieldScriptRecordState* frame = (FieldScriptRecordState*)(bytes + 0x200);
     AkaoChannelState* channel = (AkaoChannelState*)(bytes + 0x300);
@@ -74,7 +74,7 @@ int ps1_test_pointer_ops(void* storage)
     CHECK((u8*)images[0].data == bytes);
     command.buffer = bytes;
     CHECK((u32)command.value == (u32)address);
-    cursor = (u8ptr)-1;
+    cursor = (u8_ptr)-1;
     CHECK((__UINTPTR_TYPE__)cursor == 0xFFFFFFFFU);
 
     g_field_script = (FieldScriptContext*)frame;

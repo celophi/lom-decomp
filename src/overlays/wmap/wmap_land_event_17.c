@@ -55,8 +55,8 @@ typedef struct
 } WmapTransform;
 
 extern u8 D_800DEF18[];
-extern u8ptr D_8011CF1C;
-extern u8ptr D_8011CF24;
+extern u8_ptr D_8011CF1C;
+extern u8_ptr D_8011CF24;
 extern s16 g_wmap_focus_screen_position[];
 extern s32 D_8013B258;
 extern s32 g_wmap_vehicle_cell_x;
@@ -84,8 +84,8 @@ extern s32 D_801B2E78;
 void func_800AAB18(void)
 {
 extern u8 D_800DCF18[];
-extern u8ptr D_8011CF1C;
-extern u8ptr D_8011CF24;
+extern u8_ptr D_8011CF1C;
+extern u8_ptr D_8011CF24;
 extern u8 D_8011D538[];
 extern s32 D_8013B208;
 extern u8 D_80182E40[];
@@ -422,7 +422,7 @@ void func_800AB55C(void)
 extern s32 D_801B2478[];
 extern SVECTOR D_801B24A8;
 extern VECTOR D_8011CF60;
-extern s32ptr D_8011CF1C;
+extern s32_ptr D_8011CF1C;
 extern s32 D_80182DEC;
 extern s32 D_801B2ED8;
 extern s32 D_801B2EDC;
@@ -472,7 +472,7 @@ void func_800AB674(void)
 extern s32 D_80139870[];
 extern SVECTOR D_8013B238;
 extern VECTOR D_8011CF60;
-extern s32ptr D_8011CF24;
+extern s32_ptr D_8011CF24;
 extern s32 D_80182DF0;
 extern s32 D_801B2EE0;
 extern s32 D_801B2EE4;
