@@ -1121,7 +1121,6 @@ static void field_update_animation_sfx(FieldAnimDef* def, FieldAnim* anim)
                     columns = geometry_definition->u.b.cols;
                     position = object->x + part->x;
                     grid_x_offset = columns * 8;
-                    /* Without both wrappers and the volatile reload the reload, load order and temporaries change. */
                     do
                     {
                         mid = x + position / 256;

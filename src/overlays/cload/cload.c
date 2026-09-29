@@ -31,7 +31,6 @@
 
 /**
  * @brief Address of the CLOAD text whose table offset is @p offset.
- * @note Summed as integers, offset first, like the original list drawing code.
  */
 #define CLOAD_TEXT_BY_OFFSET(table, offset) ((u8 *)((s32)(offset) + (s32)(table)))
 
@@ -133,7 +132,6 @@ void cload_run_menu_loop(void)
  */
 void cload_init_display(void)
 {
-    /* Preserve GCC 2.7.2's original stack-frame bucket without a dead call. */
     s32 stack_frame_pad[2];
     SetGeomScreen(0x5DC);
     SetGeomOffset(0xA0, 0x78);
@@ -180,7 +178,7 @@ s32 cload_update_frame(CloadRenderBuffer *frame)
 void cload_build_ui_elements(void)
 {
     CloadElement *element;
-    s32 unused[2]; /* never used, but the compiled code only matches the original with it */
+    s32 unused[2];
 
     g_cload_scroll_frames = 0;
     g_cload_scroll_target_y = 0;
@@ -316,9 +314,6 @@ void cload_update_load_sequence(void)
 /**
  * @brief Handle CLOAD menu navigation, confirm, and cancel input.
  * @return Input-handler status used by the caller.
- * @note The up/down navigation reads g_pad_input directly inside the count
- *       loop, so the selected-row arithmetic materializes in the target's
- *       registers.
  */
 s32 cload_handle_input(void)
 {
@@ -516,12 +511,6 @@ void cload_update_elements(CloadRenderBuffer *frame)
  * @param x_offset Horizontal transition offset.
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
- * @note Menu string/glyph-row drawing callback (state-dispatched TILE + text
- *       renderer). The row loop is a `do { } while (i < g_card_entry_state)`
- *       guarded by `if (state > 0)` with `row_y`/`i` hoisted to the default
- *       block, the rank-marker glyph offsets are materialized through a `u16
- *       misc_glyph` intermediate, and entry comparisons use strncmp - the
- *       shapes the target's register assignment requires.
  */
 void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
 {
@@ -668,7 +657,7 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
  */
 void *cload_draw_header_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
 {
-    RECT unused; /* never used, but the original stack frame reserves it */
+    RECT unused;
 
     return func_800A88A0(prim, ot, CLOAD_TEXT_AT(g_cload_text_load, 22), 1, -x_offset + 0x50, -y_offset, 2);
 }
@@ -685,7 +674,7 @@ void *cload_draw_card_slot0_label(u_long *ot, void *prim, s32 x_offset, s32 y_of
 {
     s32 color;
     u8 *text;
-    RECT unused; /* never used, but the original stack frame reserves it */
+    RECT unused;
 
     color = 1;
     text = CLOAD_TEXT_AT(g_cload_text_card_slot_1, 6);
@@ -708,7 +697,7 @@ void *cload_draw_card_slot1_label(u_long *ot, void *prim, s32 x_offset, s32 y_of
 {
     s32 color;
     u8 *text;
-    RECT unused; /* never used, but the original stack frame reserves it */
+    RECT unused;
 
     color = 1;
     text = CLOAD_TEXT_AT(g_cload_text_card_slot_2, 7);
@@ -729,10 +718,7 @@ void *cload_draw_card_slot1_label(u_long *ot, void *prim, s32 x_offset, s32 y_of
  * @note Save-slot HUD callback: draws either the elapsed-play-time display
  *       (hours:minutes plus a 3-memcard-icon highlight strip) when the slot
  *       name matches the empty-slot marker, or the slot's save-file name
- *       otherwise. The icon-highlight loop keeps the "entries seen so far"
- *       count (i) and the raw slot index (j) as two separate locals, and the
- *       fallback-text branch wraps its two copy loops in the target's nested
- *       do/while(0) cross-jump shells.
+ *       otherwise.
  * @note JP changes this function; the JP build takes it from assembly.
  */
 #if defined(VERSION_JP)
@@ -969,7 +955,7 @@ CloadElement *cload_alloc_element(void)
  */
 void cload_update_and_draw_elements(CloadRenderBuffer *frame)
 {
-    void *arrow_prim; /* separate cursor for the arrows; one shared cursor does not match the original */
+    void *arrow_prim;
     void *prim;
     u_long *ot;
     CloadElement *element;

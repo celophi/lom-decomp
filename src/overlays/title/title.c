@@ -829,11 +829,6 @@ void render_title_menu_items(void* ctx)
  * shaded; the texture page is fixed at 5 and the CLUT y is fixed at 480
  * (the packed 0x7800), with @p clut_index choosing the CLUT x.
  *
- * Uses setPolyFT4 for the tag; the remaining fields are written as raw
- * byte/halfword stores rather than setUV4/setXY4/setRGB0/setClut/addPrim,
- * because the original interleaves them in a non-canonical order (and hoists
- * the OT-link load) that those bulk macros would reorder, breaking the match.
- *
  * @param ot_head    OT entry to link this primitive in front of.
  * @param prim       Destination primitive buffer (>= 0x28 bytes).
  * @param tex_row    Texture row index; selects V = tex_row*16 (top) .. +16.
@@ -1035,9 +1030,7 @@ void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y)
  * computed bitmap directly instead of writing it into @p g_lastInputState
  * and resetting @p g_inputRepeatTimer.
  *
- * @note No callers exist in the linked binary - dead code preserved by
- *       the original build. Kept here so the address-stable layout of
- *       the TITLE overlay is reproduced byte-for-byte.
+ * @note No callers exist in the linked binary.
  *
  * @return Remapped button bitmap, or 0 if the pad is not present
  *         (g_controller_device_type >= TITLE_PAD_UNAVAILABLE).

@@ -425,13 +425,11 @@ s32 g_strip_width;
 s32 g_navigation_mode;
 /** Current frame index into g_glyph_append_anim_frames. */
 u8 g_glyph_append_anim_frame;
-/** Explicit GCC 2.7.2 BSS alignment padding. */
 u8 pad_8014F8B1[3];
 /** Current vertical scroll position of the character grid in pixels. */
 s32 g_scroll_pos;
 /** Render ticks until the next append-animation frame. */
 u8 g_glyph_append_anim_timer;
-/** Explicit GCC 2.7.2 BSS alignment padding. */
 u8 pad_8014F8B9[3];
 /** Target name-strip width in pixels for the width lerp. */
 s32 g_strip_width_target;
@@ -480,7 +478,6 @@ void field_update_audio_timer(void);
 void field_update_input_repeat(void);
 void field_reset_input_repeat(void);
 
-/* Static forward declarations retain the original function order. */
 static void reset_fade_state(void);
 static void render_fade_overlay(RenderContext* render_ctx);
 static void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count);
@@ -1588,7 +1585,7 @@ static void render_name_strip(RenderContext* render_ctx, u8* name, s32 strip_wid
     s32 backing_y;
     s32 backing_x;
     DRAWENV* strip_env;
-    u8 stack_padding[8]; /* Unused; keeps the original stack frame layout. */
+    u8 stack_padding[8];
     DRAWENV strip_draw_env;
 
     ot_entry = &render_ctx->ot[GNAME_OT_NAME_STRIP];
@@ -1632,7 +1629,7 @@ static void render_name_strip(RenderContext* render_ctx, u8* name, s32 strip_wid
 static void render_char_panel(RenderContext* render_ctx, s32 panel_index)
 {
     u_long* ot_entry;
-    u8 stack_padding[8]; /* Preserve the packet scratch frame size. */
+    u8 stack_padding[8];
     GridDrawEnvScratch grid_draw_scratch;
     DR_ENV* packet_cursor;
     void* glyph_packet_cursor;
@@ -1877,8 +1874,6 @@ static void render_layout_sprite_batch(RenderContext* render_ctx)
  * @param name_buf Null-terminated name buffer.
  * @return Number of encoded glyphs.
  * @see https://decomp.me/scratch/c8fPe (100%)
- * @note Inline: calls before this definition stay calls, and the JP
- *       recalc_name_width after it gets the loop inlined.
  */
 static inline s32 name_glyph_count(const u8* name_buf)
 {

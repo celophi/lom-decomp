@@ -113,7 +113,6 @@ extern u8 g_field_monster_level_by_rank[FIELD_LEVEL_RANK_COUNT];
 
 s32 field_get_actor_facing(s32 actor_id);
 s32 field_get_actor_position(s32 actor_id, Vec3i* position);
-/* Declared without parameters: field_revive_status_record passes only the key. */
 s32 field_revive_actor();
 FieldStatusState* field_find_object_state(s32 actor_id);
 s32 field_spawn_shared_animation_actor(s32 key, s32 resource_index);
@@ -226,7 +225,6 @@ void field_apply_status_effect(FieldStatusRecord* source, FieldStatusRecord* tar
     attack = field_get_status_stat(source, g_field_status_duration_stats[effect_index] >> 4);
     defense = field_get_status_stat(target, g_field_status_duration_stats[effect_index] & 0xF);
     scaled_duration = duration * attack / defense;
-    /* A shifted record, not &status_timers[effect_index]: the original forms this address before the clamp. */
     timer_record = (FieldStatusRecord*)((u8*)target + effect_index * sizeof(u16));
     if (scaled_duration > FIELD_STATUS_MAX_DURATION)
     {
@@ -482,7 +480,7 @@ void field_clear_status_effect(FieldStatusRecord* record, u32 effect_index)
 void field_golem_select_logic_cell(s32 actor_id)
 {
     u32 chance;
-    u8 unused[32]; /* never used; the original stack frame reserves it */
+    u8 unused[32];
     u32 grid_bound;
     u32 column;
     u32 row;
@@ -787,7 +785,6 @@ static s32 field_build_party_records(void)
                 g_field_battle->records[party_index].equipment_stats[stat_index] = 0;
                 g_field_battle->records[party_index].equipment_attributes[stat_index] =
                     g_field_game_state->characters[party_index].equipment->attributes[stat_index];
-                /* The armor slots are read as (equipment + index)->; equipment[index]. changes the address arithmetic. */
                 for (index = 1; index < FIELD_EQUIPMENT_SLOT_COUNT; index++)
                 {
                     if (g_field_game_state->characters[party_index].equipment[index].name[0] != 0)

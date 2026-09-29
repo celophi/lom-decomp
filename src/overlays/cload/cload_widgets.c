@@ -175,7 +175,7 @@ CloadGpuPacket *cload_emit_scroll_arrow(SPRT *sprite, u_long *ot, s32 x, s32 y, 
  */
 void *cload_draw_load_prompt(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
 {
-    s32 unused[2]; /* never used, but the original stack frame reserves it */
+    s32 unused[2];
     void *result;
     s32 x;
     s32 status;
@@ -243,7 +243,7 @@ void *cload_draw_load_prompt(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
  */
 void *cload_draw_load_progress(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
 {
-    s32 unused[2]; /* never used, but the original stack frame reserves it */
+    s32 unused[2];
     s32 x;
     void *result;
     u16 *text_table;
@@ -364,7 +364,7 @@ void cload_open_status_dialog(s32 dialog_state)
  */
 void *cload_draw_status_dialog(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
 {
-    s32 unused[2]; /* never used, but the original stack frame reserves it */
+    s32 unused[2];
     u16 *text_table;
 
     switch (g_cload_dialog_state)

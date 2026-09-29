@@ -1180,7 +1180,7 @@ s32 carda_advance_card_sequence(void)
  */
 void carda_reset_to_new_save_entry(void)
 {
-    s32 unused[4]; /* never used, but the original stack frame reserves it */
+    s32 unused[4];
     s32 attempt;
 
     for (attempt = 0; attempt < CARDA_FILE_OP_ATTEMPTS; attempt++)

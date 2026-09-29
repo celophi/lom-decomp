@@ -97,7 +97,7 @@ s32 gosub_update_frame(GosubRenderContext* render_context)
 void gosub_load_screen_sequence(s32* screen_sequence)
 {
     s32 screen_count;
-    s32 unused[2]; /* never used, but the original stack frame has room for it */
+    s32 unused[2];
 
     gosub_upload_ui_image();
     g_gosub_scroll_frames_remaining = 0;

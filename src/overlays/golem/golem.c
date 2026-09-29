@@ -43,7 +43,6 @@
 #define GOLEM_FADE_SUBTRACTIVE_DRAW_MODE 0x45
 /**
  * @brief Address of string @p index in the archive section @p offset bytes into @p archive.
- * @note Summed as integers, index first, to match the original address arithmetic.
  */
 #define GOLEM_ARCHIVE_TEXT(archive, offset, index) ((u8*)((offset) + (*(u16*)((index) * 2 + (offset) + (u32)(archive)) + (u32)(archive))))
 /** @brief Address of the FIELD UI string whose offset pair is @p entry, the @p index-th table entry. */
@@ -378,7 +377,7 @@ u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel)
     s32 logic_type;
     s32 selected_logic_type;
     SavedGameLayout* menu_data;
-    s32 stack_pad[2]; /* never used, but the original frame size needs it */
+    s32 stack_pad[2];
 
     g_golem_restore_slot_on_cancel = restore_slot_on_cancel;
     if (restore_slot_on_cancel != 0)
@@ -911,7 +910,7 @@ u8* golem_draw_cursor(u8* packet_cursor, GolemRenderContext* render_context)
  */
 void golem_render(GolemRenderContext* render_context)
 {
-    s32 stack_pad[2]; /* never used, but the original frame size needs it */
+    s32 stack_pad[2];
     u8 name_buffer[0x100];
     u8* name_text;
     u8 number_text[0x100];
@@ -1144,7 +1143,7 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
     s32 packet_code;
     s32 bottom_texture_height;
     DR_TPAGE* draw_mode;
-    u8 unused[16]; /* never used, but the original stack frame reserves it */
+    u8 unused[16];
 
     tint = GPU_TINT_NEUTRAL;
 
@@ -1223,7 +1222,6 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
             setlen(sprite, 4);
             
 
-            /* need to figure out how to remove this hack */ 
             do
             {
                 do

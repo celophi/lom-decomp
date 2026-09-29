@@ -111,7 +111,7 @@ Mapping:
 |---|---|---|
 | `ADDHERO.BIN` | `addhero` | Character add screen |
 | `CARDA.BIN` | `carda` | Card |
-| `CHECKPS.BIN` | `checkps` | Debugging and initialization routines |
+| `CHECKPS.BIN` | `checkps` | [Startup screen and CD checks](../architecture/checkps.md); JP runs the integrity check |
 | `CLOAD.BIN` | `cload` | Load screen |
 | `FIELD.BIN` | `field` | Main field engine |
 | `GNAME.BIN` | `gname` | Name entry |

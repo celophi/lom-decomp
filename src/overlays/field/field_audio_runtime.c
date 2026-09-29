@@ -259,7 +259,6 @@ void field_load_song(s32 music_index, s32 second_song)
         off = (u32 *)FIELD_AUDIO_LOAD_OFFSETS;
 
         count = off[1] - off[0];
-        /* The offset is the first addu operand here, so the sum is written int first. */
         src = (u8 *)(off[0] + FIELD_AUDIO_LOAD_BUFFER);
 
         if (second_song != 0)
@@ -290,7 +289,6 @@ void field_load_fixed_song(void)
     cdrom_wait_queue_empty();
 
     dst = D_8003ECA0;
-    /* count holds the container address before its section count; reading the count directly changes the code. */
     count = FIELD_AUDIO_LOAD_BUFFER;
     count = *(u32 *)count;
     off_end = (u32 *)FIELD_AUDIO_LOAD_OFFSETS + count;
@@ -327,7 +325,6 @@ void field_stop_second_song(void)
 /**
  * @brief Play the song in D_8003ECA0 at the field song volume.
  * @note GOVER calls this after staging its own song with field_load_song.
- * @note Declared inline so field_update_music_stream gets its own copy, as in the original.
  */
 inline void field_play_song(void)
 {
@@ -476,7 +473,6 @@ void field_play_weapon_sfx(s32 sfx_index, s32 pan, s32 table_index)
 
     if (table_index < FIELD_WEAPON_SFX_TABLE_COUNT)
     {
-        /* Taking the table base into a local first keeps the original instruction order. */
         p = g_field_sound_tables;
         table = (s32 *)(p + table_index * FIELD_WEAPON_SFX_TABLE_SIZE);
         if (table[0] != 0)
@@ -527,7 +523,6 @@ void field_release_sfx_group(s32 channel_group)
  */
 void field_load_sfx_tables(s32 set_id)
 {
-    /* A separate copy of the set id for the slot-flag lookup; using set_id there changes register allocation. */
     s32 set_index = set_id;
     FieldSfxTableBuffer *tables;
     u8 *base;
@@ -564,7 +559,6 @@ void field_load_sfx_tables(s32 set_id)
     {
         /* Word-aligned offset of the table about to be copied. */
         tables->active_table_offset = ((cursor - base) >> 2) * 4;
-        /* The offset is loaded into table first; adding blob + table directly swaps the addu operands. */
         table = (u8 *)blob + (s32)(table = (u8 *)*entry);
         table_end = table + ((s32 *)table)[*(s32 *)table];
         {
@@ -602,7 +596,6 @@ void field_load_weapon_sfx_table(s32 slot, s32 weapon_type)
 
     if (weapon_type != FIELD_SFX_SET_KEEP)
     {
-        /* Taking the table base into a local first keeps the original instruction order. */
         base = g_field_sound_tables;
         dst = base + slot * FIELD_WEAPON_SFX_TABLE_SIZE;
         *(s32 *)dst = 0;
@@ -654,7 +647,6 @@ s32 field_play_sfx_buffer(s32 buffer, s32 pan, s32 channel_group)
 
 /**
  * @brief Reset the music stream state.
- * @note Declared inline so field_start_music_stream gets its own copy, as in the original.
  */
 inline void field_reset_music_stream(void)
 {

@@ -20,7 +20,6 @@
 #define CHECKPS_WARNING_SCANLINE_HEIGHT 1
 #define CHECKPS_WARNING_PRIMARY_COLOR 0xFFFF
 #define CHECKPS_WARNING_SHADOW_COLOR 0x8000
-/* Volatile changes GNU as address expansion and adds an instruction. */
 #define CHECKPS_SPU_CONTROL_REGISTER ((u16*)0x1F801DAA)
 
 /* These mirror CdlDiskError/CdlStatShellOpen; libcd.h is not GCC 2.7.2-clean. */
@@ -47,11 +46,6 @@
 #define CHECKPS_SECONDS_PER_MINUTE 60
 #define CHECKPS_POINTER_IDENTITY_MAGIC 0x88888889U
 
-/*
- * GNU as 2.7 pads the standard .text section to a 16-byte boundary.  Keeping
- * this translation unit's code in a custom section avoids synthetic tail
- * bytes; the build renames the section back to .text with objcopy.
- */
 #define CHECKPS_GNU_TEXT __attribute__((section(".text.cdrom")))
 
 /**
@@ -138,7 +132,6 @@ typedef enum
     CHECKPS_CD_POLL_COMPLETE = 1,
 } CheckPSCdPollResult;
 
-/** @brief Alternate call view required by the original state-machine shape. */
 typedef s32 (*CheckPSWarningExitFunction)(void);
 
 extern s32 g_checkps_state;
@@ -167,10 +160,6 @@ static s32 g_cd_last_track_bcd;
 /** @brief Seek target (BCD minute, second, ...) derived from the TOC. */
 static u8 g_cd_seek_position_bcd[8];
 
-/*
- * Keep the section attribute on declarations so Splat can discover each
- * function definition normally while GNU as emits this unit into .text.cdrom.
- */
 static CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command) CHECKPS_GNU_TEXT;
 static void send_cd_command(CheckPSCdCommandIndex command) CHECKPS_GNU_TEXT;
 static void show_hardware_modification_warning_and_exit(void) CHECKPS_GNU_TEXT;
@@ -190,7 +179,6 @@ void start_cd_integrity_check(void)
  */
 s32 run_cd_integrity_check(s32 single_step)
 {
-    /* GCC shares this temporary between restart-state stores and VSync samples. */
     s32 restart_state_or_vsync;
     s32 step_result = CHECKPS_STATE_IDLE;
     static void* compiler_label_anchors[] = {
@@ -335,8 +323,6 @@ s32 run_cd_integrity_check(s32 single_step)
                                 u32 midpoint_second_tens;
                                 u32 encoded_minute_tens;
 
-                                /* These cancelling operations preserve the original pointer
-                                   expression emitted by GCC 2.7.2. */
                                 address_mixer = ((u32)CHECKPS_POINTER_IDENTITY_MAGIC + (u32)single_step) - (u32)single_step;
                                 toc_time_bcd = (u8*)((u32)g_cd_response_payload + (address_mixer ^ (u32)CHECKPS_POINTER_IDENTITY_MAGIC));
                                 toc_minutes_bcd = toc_time_bcd[0];
@@ -350,8 +336,6 @@ s32 run_cd_integrity_check(s32 single_step)
                                 midpoint_minutes = midpoint_total_seconds / CHECKPS_SECONDS_PER_MINUTE;
                                 midpoint_seconds = midpoint_total_seconds % CHECKPS_SECONDS_PER_MINUTE;
 
-                                /* Volatile stores prevent GCC from forwarding these writes;
-                                   the following plain reads are also required for the match. */
                                 midpoint_minutes_store_index = 0;
                                 *(volatile u8*)&g_cd_seek_position_bcd[midpoint_minutes_store_index] = midpoint_minutes;
                                 midpoint_minutes_read_index = 0;
@@ -388,8 +372,6 @@ s32 run_cd_integrity_check(s32 single_step)
             {
             case CHECKPS_CD_POLL_DISK_ERROR:
             {
-                /* The post-increment is intentional: it makes both response-byte
-                   reads use one base register in the original code shape. */
                 u8* response_cursor = g_cd_response.bytes;
                 u8* response_base = response_cursor;
                 if (response_base[0] & CHECKPS_CD_STATUS_ERROR)
@@ -467,7 +449,6 @@ s32 run_cd_integrity_check(s32 single_step)
                 command_params[2] = 0;
                 *command_params++ = seek_minute_bcd;
                 *command_params = seek_second_bcd;
-                /* This cancels to SETLOC; preserve the expression shape for GCC 2.7.2 register allocation. */
                 send_cd_command(CHECKPS_CD_CMD_SETLOC + ((step_result ^ single_step) ^ step_result ^ single_step));
                 g_checkps_state = CHECKPS_STATE_WAIT_SETLOC;
             }
@@ -985,7 +966,6 @@ static CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command)
                 g_cd_irq_code_sum = 0;
                 if (irq_code == CHECKPS_CD_IRQ_DISK_ERROR)
                 {
-                    /* The one-pass loop keeps both response bytes on one base register. */
                     while (1)
                     {
                         g_cd_response.fields.status = *g_cd_response_register;
@@ -1014,7 +994,6 @@ static CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command)
                 *g_cd_data_register = CHECKPS_CD_IRQ_ACK_MASK;
                 if (command != CHECKPS_CD_CMD_TEST_05)
                 {
-                    /* A plain shell-open test allocates the status byte to $v0, not $v1. */
                     response_index = 0;
                     while (1)
                     {

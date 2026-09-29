@@ -127,12 +127,10 @@ extern SfxTableBuffer g_sfx_table_buffer;
 /** Locates the first nested offset table within the staged resource. */
 #define GOVER_SFX_TABLE_OFFSET (*(u32*)0x80180004)
 
-/** Unreferenced BSS word retained for the original overlay layout. */
 s32 D_80140704;
 
 s32 g_fade_step;
 
-/** Unreferenced BSS word retained for the original overlay layout. */
 s32 D_8014070C;
 
 /* Target-visible storage for the contiguous pair of Game Over frames. */
@@ -239,7 +237,6 @@ static void gover_run(void)
     GoverFrameHalf* current_frame;
     GoverFrameHalf* drawing_frame;
     GoverFrameHalf* next_frame;
-    // Required to preserve the original stack frame.
     u8 stack_padding[8];
 
     // Prime both ordering tables before enabling display output.
@@ -383,7 +380,6 @@ static void gover_build_otag(u8* frame_buffer)
  */
 static void gover_load_image_from_cd(s32 resource_index, TimUploadDestinations* destinations, Tim* image_buffer)
 {
-    // Required to preserve the original stack frame.
     u8 padding[8];
     cdrom_queue_read((u16)resource_index, image_buffer);
     cdrom_wait_queue_empty();

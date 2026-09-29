@@ -44,8 +44,6 @@
 
 /**
  * @brief Address of element @p index of @p base, summed as integers.
- * @note The original adds the scaled index before the base address; pointer
- *       arithmetic in this unit emits the base first.
  */
 #define FIELD_ELEMENT_AT(base, index) ((void*)((index) * sizeof(*(base)) + (u32)(base)))
 

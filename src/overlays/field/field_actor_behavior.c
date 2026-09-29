@@ -223,8 +223,6 @@
 
 /**
  * @brief Action @p index of resource @p resource in g_field_resource_actions.
- * @note The target adds the row offset to the entry address (row offset first);
- *       only subtracting the negated address reproduces that operand order.
  */
 #define FIELD_RESOURCE_ACTION(resource, index) \
     ((FieldResourceAction*)((resource) * (s32)sizeof(g_field_resource_actions[0]) - -(s32)&g_field_resource_actions[0][(index)]))
@@ -301,7 +299,6 @@ static s32 field_actor_action_is_charging(FieldActor* actor);
 static s32 field_start_action_animation(s32 object_index, s32 target_count, u8* targets, s32 request);
 static void field_sample_actor_route(FieldRoutePoint* points, s32 remaining, FieldActor* actor, FieldActor* target, s32 heading_offset, s32 unused_limit);
 static s32 field_get_route_heading_animation(FieldActor* destination, FieldActor* source);
-/* Unprototyped: the original call passes a third argument (the bound actor slot) that the function ignores. */
 static s32 field_filter_action_targets();
 
 /**
@@ -490,7 +487,6 @@ static void field_sample_actor_route(FieldRoutePoint* points, s32 remaining, Fie
     }
     initial_heading = field_get_route_heading_animation(actor, target);
     points->x = actor->x / 256;
-    /* The rounding division is written out here and below; "/ 256" schedules differently. */
     initial_z = actor->z;
     if (initial_z < 0)
     {
@@ -1165,7 +1161,6 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
             probe->x = mover->x;
             probe->y = movement_actor->y;
             probe->z = mover->z;
-            /* field_collision_hit_markers is called as returning int: the original compares the s16 result unextended. */
             if ((g_field_active_group != 0) && (((s32(*)(struct FieldCollisionQuery*))field_collision_hit_markers)(probe) != FIELD_MARKER_NONE))
             {
                 work.motion.vx = movement_actor->x;
@@ -2471,7 +2466,6 @@ static s32 field_filter_action_targets(s32 count, s32* indices)
                             if ((state->collision.word != 0) && !(state->flags & FIELD_OBJECT_UNTARGETABLE_FLAGS))
                             {
                                 action_contact = state->contact.word;
-                                /* The flag test goes through the low byte; testing the word changes the code. */
                                 if (!(action_contact & FIELD_CONTACT_UNK20) && !((u8)action_contact & FIELD_CONTACT_TARGETED) && !(state->movement.word & FIELD_MOVEMENT_TECHNIQUE))
                                 {
                                     accepted_count += 1;

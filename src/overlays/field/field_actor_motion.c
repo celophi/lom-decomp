@@ -78,7 +78,7 @@ INCLUDE_ASM("overlays/field/nonmatchings/field_actor_motion", field_update_actor
 s32 field_update_actor_action(FieldActor* actor, s32 update_action)
 {
     Vec3i* displacement = FIELD_SCRATCH_DISPLACEMENT;
-    s32 unused[2]; /* never used, but the original stack frame reserves it */
+    s32 unused[2];
     s32 animation;
     s32 step;
     FieldObjectPart* part;

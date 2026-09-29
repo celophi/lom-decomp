@@ -166,7 +166,7 @@ INCLUDE_ASM("overlays/carda/nonmatchings/carda", carda_build_ui_elements);
 #else
 static void carda_build_ui_elements(void)
 {
-    s32 unused[2]; /* never used, but the original stack frame reserves it */
+    s32 unused[2];
     CardaElement* element;
 
     g_carda_scroll_frames = 0;
@@ -883,7 +883,7 @@ static void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_o
  */
 static void* carda_draw_title(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    RECT unused; /* never used, but the original stack frame reserves it */
+    RECT unused;
 
     if (CARDA_IS_POCKETSTATION_MODE(g_carda_mode))
     {
@@ -914,7 +914,7 @@ static void* carda_draw_title(u_long* ot, void* prim, s32 x_offset, s32 y_offset
  */
 static void* carda_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    RECT unused; /* never used, but the original stack frame reserves it */
+    RECT unused;
     TILE* tile;
 
     if (g_card_slot != 0)
@@ -942,7 +942,7 @@ static void* carda_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s
  */
 static void* carda_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    RECT unused; /* never used, but the original stack frame reserves it */
+    RECT unused;
     TILE* tile;
 
     if (g_card_slot == 0)
@@ -1182,7 +1182,7 @@ static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_off
  */
 void* carda_draw_cant_hold_more(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    RECT unused; /* never used, but the original stack frame reserves it */
+    RECT unused;
 
     return field_draw_text(prim, ot, FIELD_UI_TEXT_AT(g_field_ui_text_cant_hold_more, FIELD_UI_TEXT_CANT_HOLD_MORE), FIELD_TEXT_COLOR_DIM,
                            CARDA_ITEM_LIST_WIDTH / 2 - x_offset, -y_offset, FIELD_TEXT_ALIGN_CENTER);

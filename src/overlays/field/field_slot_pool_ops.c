@@ -270,7 +270,6 @@ void field_raise_staged_level(s32 index)
     s32 price;
     s32 pool;
 
-    /* price first holds the entry's byte offset; the original reuses the variable */
     price = index * sizeof(FieldStagingLevel);
     staging = g_field_item_staging;
     entry = FIELD_STAGING_AT(staging, price);

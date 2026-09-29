@@ -177,8 +177,6 @@ void field_start_timed_panel(s32 index)
  * @brief Count down the timed panel, fade it in and out and draw it.
  * @param render Render half receiving the panel primitives.
  * @note Confirm skips ahead to the fade-out while the panel is fully shown.
- * @note timer is a u16 (a halfword pseudo), so CSE does not match it against
- *       the zero-extended timer read in the fade-in arm, which reloads it.
  */
 void field_update_timed_panel(FieldRenderHalf* render)
 {
@@ -253,8 +251,6 @@ void field_update_timed_panel(FieldRenderHalf* render)
 /**
  * @brief Recover a transition descriptor from a pointer to its flags field.
  * @param flags_ptr Address of the descriptor's flags member.
- * @note The loop walks descriptors through this flags pointer; addressing every
- *       other field relative to it reproduces the original induction variables.
  */
 #define QUAD_OF_FLAGS(flags_ptr) ((FieldTransitionQuad *)((u8 *)(flags_ptr) - 10))
 
@@ -266,11 +262,6 @@ void field_update_timed_panel(FieldRenderHalf* render)
  * @return First unused primitive.
  * @note The effect bits select a zoom (0, 4), a slide (1), a spin (2) or a flash (3),
  *       all driven by the panel brightness.
- * @note The do/while(0) blocks around the two width products in the spin case
- *       give width the loop weight that keeps it in a saved register (UNSOLVED lever).
- * @note bottom_1 is a u16 screen coordinate: its sum is done on halfword reads,
- *       which CSE does not share with the zero-extended height read of the
- *       following product, so height is read twice as in the original.
  */
 static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_table, s32 index)
 {
@@ -555,8 +546,6 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
  * @param prim Primitive to fill.
  * @param ordering_table Ordering table receiving the quad.
  * @return Next free primitive.
- * @note The value0..value5 locals are reused on purpose: their reassignments
- *       order the scheduler the way the target is laid out.
  */
 static POLY_FT4* field_draw_timed_panel_image(POLY_FT4 *prim, u_long *ordering_table)
 {
@@ -593,7 +582,6 @@ static POLY_FT4* field_draw_timed_panel_image(POLY_FT4 *prim, u_long *ordering_t
     prim->x0 = value0;
     value0 = value4 * 4;
     value0 += 0xA0;
-    /* The loop notes keep sched1 from moving this subtract into the load delay slot (UNSOLVED lever). */
     do
     {
         value0 -= value1;
@@ -707,8 +695,6 @@ void field_clear_actor_texts(void)
  * @param index Player (actor and text slot) index; other actors are ignored.
  * @param text_id Technique name index, or negative: bits 16-23 party character and
  *        bits 0-7 record index of a name stored in the saved character.
- * @note The actor terms are (s16) screen coordinates; the casts also keep fold
- *       from moving the 160/112 screen-centre constants onto the view offsets.
  */
 void field_start_actor_text(s32 index, s32 text_id)
 {
@@ -838,7 +824,6 @@ static void field_draw_actor_text(FieldRenderHalf* render, FieldActorText* text)
     tint = FIELD_TEXT_TINT_NEUTRAL;
     cursor = render->primitive_cursor;
     state = text->state;
-    /* Shift and mask by hand: the bitfield read reuses one register for both steps. */
     countdown = (state.word >> 17) & 0x3F;
     ot = &render->ordering_table[FIELD_TEXT_OT_DEPTH];
     if (countdown < FIELD_ACTOR_TEXT_FADE_FRAMES)
@@ -1194,7 +1179,6 @@ typedef struct
 
 /**
  * @brief Address of a string in a text bank that starts with little-endian u16 offsets.
- * @note The integer sum keeps the low byte as the first addu operand.
  */
 #define FIELD_TEXT_AT(bank, low, high) ((u8 *)((low) + (((high) << 8) + (s32)(bank))))
 
@@ -1318,7 +1302,6 @@ void field_handle_return_to_title_prompt(void)
             field_set_scene_parameters(g_field_pending_scene_id, g_field_pending_object_id, g_field_pending_spawn_id, g_field_pending_music_id, g_field_pending_sound_bank_id,
                                        g_field_pending_secondary_music_id);
             actor_index = 0;
-            /* The mask locals set the order of the hoisted loop constants. */
             hp_mask = 0xFFFFFF;
             status_mask = 0xFF000000;
             full_gauge = 0xFF;
@@ -1510,7 +1493,6 @@ void field_open_duel_results(void)
 
 /**
  * @brief Open the return-to-title prompt windows (coordinate panel and yes/no choice).
- * @note The mixed word and bitfield updates preserve the original store widths.
  */
 void field_setup_return_to_title_prompt(void)
 {
@@ -1708,8 +1690,6 @@ static void* field_draw_party_totals(void* ot, void* cursor, s32 x_offset, s32 y
  * @param y_offset Vertical drawing origin subtracted from each row position.
  * @return Primitive-buffer address after the final emitted element.
  * @note Equal gains keep party order during the insertion sort.
- * @note The draw guard repeats the loop test `i < count` so CSE folds the
- *       rotated loop entry test away.
  */
 static void* field_draw_experience_ranking(void* ordering_table, void* cursor, s32 x_offset, s32 y_offset)
 {
@@ -1800,7 +1780,7 @@ static void* field_draw_item_list(void* ot, void* prim, s32 x_offset, s32 y_offs
 {
     s32 i;
     Vec2s pos;
-    u8 pad[0x84]; /* never used; the original frame reserves it */
+    u8 pad[0x84];
     s32 row;
     s32 low;
     s32 offset;
@@ -1833,12 +1813,10 @@ static void* field_draw_item_list(void* ot, void* prim, s32 x_offset, s32 y_offs
  * @param scroll_y Vertical scroll offset.
  * @param viewport_height Bottom clipping boundary.
  * @return Primitive buffer cursor after drawing the visible text.
- * @note The guard repeats the loop test so CSE folds the rotated entry test;
- *       the count is re-read on every pass because the loop calls out.
  */
 static void* field_draw_unlock_list(void* ordering_table, void* cursor, s32 scroll_x, s32 scroll_y, s32 viewport_height)
 {
-    u8 pad[8]; /* never used; the original frame reserves it */
+    u8 pad[8];
     u8* ability_names;
     u8* technique_names;
     s32 header_x;

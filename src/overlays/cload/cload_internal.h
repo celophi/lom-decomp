@@ -320,7 +320,6 @@ void *func_800A88A0(void *prim, u_long *ot, u8 *text, s32 color, s32 x, s32 y, s
 void* func_800A8A78(u_long* ot, void* prim, s32 value, s32 color, DVECTOR* pos, s32 mode);
 
 /* External callees used by the memory-card I/O/load-state block. */
-/* strncmp is declared above with the original visible signature. */
 s32 open(void *, s32);
 s32 read(s32, void *, s32);
 s32 close(s32);

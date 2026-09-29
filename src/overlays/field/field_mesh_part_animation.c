@@ -106,8 +106,6 @@ void field_animate_mesh_textures(FieldActorState* actor, FieldActorPartDef* part
  * @param actor Actor that owns the mesh; its owner slot selects the VRAM page.
  * @param shift Number of rows or columns moved to the opposite edge.
  * @return Nothing meaningful; callers ignore it.
- * @note Declared int without a return statement: as void, v0 is dead at the
- *       exit and the loop branch gets a different delay slot.
  */
 static s32 field_scroll_mesh_texture(s32 mesh_index, s32 direction, FieldActorState* actor, s32 shift)
 {

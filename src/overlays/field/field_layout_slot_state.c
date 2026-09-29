@@ -59,7 +59,6 @@ void field_reset_lands(void)
     {
         FIELD_SAVED_GAME->lands[i].flags |= FIELD_LAND_FLAG_04;
     }
-    /* Through a local pointer; the direct form folds the offset into the symbol address. */
     game = FIELD_SAVED_GAME;
     ((FieldLandWords *)game->lands)[24].word &= ~FIELD_LAND_FLAG_04;
 }

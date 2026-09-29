@@ -79,7 +79,6 @@ void field_grant_actor_pickup(void* unused, s32 owner_id)
         s32 key;
 
         table = (FieldRewardEntry*)g_field_battle->resources;
-        /* The do/while(0) blocks weight the table, count and key registers for the allocator. */
         do
         {
             found = NULL;
@@ -134,7 +133,6 @@ void field_grant_actor_pickup(void* unused, s32 owner_id)
         field_append_dialog_item((s32)handle, 0);
         return;
     }
-    /* The original passes the actor as a second argument, which field_receive_item ignores. */
     ((void (*)(s32, FieldActorRecord*))field_receive_item)(index, actor);
     field_append_dialog_item((s32)(g_field_item_name_table.bytes + g_field_item_name_table.offsets[index]), 1);
 }

@@ -97,7 +97,7 @@ s32 shop_update(ShopFrameContext* ctx)
 static u8* shop_build_sell_list(u8* work_end)
 {
     ShopWindow* window;
-    Vec2s unused_position; /* never used, but the compiled frame size depends on it */
+    Vec2s unused_position;
     FieldItemRecord* record;
     s32 count;
     s32 i;
@@ -191,7 +191,7 @@ static u8* shop_build_sell_list(u8* work_end)
 static u8* shop_build_buy_list(u8* work_end, s32 entry_count, ShopEntry* entries, FieldItemRecord* item_records)
 {
     ShopWindow* window;
-    Vec2s unused_position; /* never used, but the compiled frame size depends on it */
+    Vec2s unused_position;
     s32 i;
 
     g_shop_prompt_active = 0;

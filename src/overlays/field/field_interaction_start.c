@@ -144,7 +144,6 @@
  * @brief Text in a table that starts with s16 offsets relative to the table base.
  * @param table Table base; entry @p index holds the text offset.
  * @param index Text index.
- * @note The integer sum emits the index before the table base, as in the original.
  */
 #define FIELD_OFFSET_TABLE_TEXT(table, index) ((u8*)(table) + *(s16*)((index) * 2 + (s32)(table)))
 
@@ -186,7 +185,6 @@ void field_set_actor_control_mode(s32 party_index, s32 mode);
 s32 field_get_actor_facing(s32 actor_id);
 /* Int parameters on purpose: with the (s32, u8, s8) definition the calls would narrow their arguments. */
 s32 field_queue_actor_event(s32 owner_id, s32 event_id, s32 argument);
-/* Declared without a prototype: field_update_actor_record forwards its own a0. */
 FieldActorRecord* field_find_actor_record();
 FieldActorRecord* field_find_actor_record_or_default(u32 actor_id, FieldRuntimeContext* context);
 void field_stop_actor_script(s32 actor_id, s32 flags);
@@ -457,12 +455,10 @@ void field_install_actor_action(FieldLayoutRecord* layout_record, s32 record_ind
             action_index = 0;
             record->flags.bits.active = 1;
             flags_to_set = (entry->flags.word & ~FIELD_ACTION_TRIGGER_GROUP_MASK) | (layout_record->control.flags & FIELD_ACTION_TRIGGER_GROUP_MASK);
-            /* The loop notes keep this store ahead of the flags copy below; without them sched2 sinks it. */
             do
             {
                 entry->flags.word = flags_to_set;
             } while (0);
-            /* flag_entry keeps flow from deleting the store above; reusing flags_to_set keeps the copy of its value. */
             flag_entry = entry;
             flags = flag_entry->flags.word;
             flags_to_set = FIELD_ACTOR_SCRIPT_ONLY;
@@ -743,7 +739,6 @@ static void field_update_scene_transition(void)
                 field_seek_scene_resource(scene_id & FIELD_SCENE_ID_MASK);
             }
 
-            /* Int arguments on purpose: the original loads the whole fade_timer word. */
             ((void (*)(s32, s32, s32, s32))field_set_fade_target)(g_field_runtime->fade_color.bits.red, g_field_runtime->fade_color.bits.green, g_field_runtime->fade_color.bits.blue, g_field_runtime->fade_timer);
 
             if (g_field_runtime->transition.fields.scene_id == FIELD_SCENE_WORLD_MAP)
@@ -885,7 +880,7 @@ static void field_update_event_records(void)
 
 /**
  * @brief Update a spawned actor: deliver its pending event, its on-screen event and its script.
- * @param actor_id Actor id; also passed through to field_find_actor_record in a0.
+ * @param actor_id Actor id.
  * @param unused Unused.
  */
 void field_update_actor_record(s32 actor_id, void* unused)

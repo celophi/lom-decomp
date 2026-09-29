@@ -115,7 +115,6 @@
 
 /**
  * @brief Column and row of the land grid cell under the cursor.
- * @note The map scroll must be read first (negated) to reproduce the original load order.
  */
 #define WSEL_CURSOR_CELL_COLUMN() ((-g_wsel_map_scroll.x + g_wsel_cursor.x - WSEL_CELL_SIZE) / WSEL_CELL_SIZE)
 #define WSEL_CURSOR_CELL_ROW() ((-g_wsel_map_scroll.y + g_wsel_cursor.y - WSEL_CELL_SIZE) / WSEL_CELL_SIZE)
@@ -248,7 +247,6 @@ extern s32 g_wsel_map_scroll_frames;
 extern s32 g_wsel_cursor_frames;
 
 static void wsel_run_loop(WselRenderBuffer* buffers);
-/* Declared without a prototype: wsel_main calls it without an argument (see there). */
 static void wsel_init();
 static void wsel_load_sound_bank(s32 seq_variant);
 static void wsel_stop_music(void);
@@ -281,11 +279,10 @@ static void wsel_init_pad_repeat(void);
 s32 wsel_main(WselRenderBuffer* buffers)
 {
     SceneState* scene_state = SCENE_STATE;
-    WselRenderBuffer* context; /* chained assignment through it sets the target schedule */
+    WselRenderBuffer* context;
 
     g_wsel_render_context = context = buffers;
     g_wsel_buffer_index = 0;
-    /* The original passes no argument; @p buffers is still in the first argument register. */
     wsel_init();
 
     scene_state->map_id = 0;
@@ -311,7 +308,7 @@ static void wsel_run_loop(WselRenderBuffer* buffers)
 {
     WselRenderBuffer* buffer;
     u_long* ot;
-    RECT unused_rect; /* never used, but the compiled frame size depends on it */
+    RECT unused_rect;
 
     buffer = buffers;
     ClearOTagR(buffers[0].ot, WSEL_OT_LENGTH);
@@ -1280,7 +1277,6 @@ static POLY_FT4* wsel_draw_indicator(POLY_FT4* poly, u_long* ot, s32 which)
     poly->x2 = poly->x0 = sprite->x;
     poly->y1 = poly->y0 = sprite->y + WSEL_INDICATOR_LABEL_Y;
     sprite = &g_wsel_sprites[6];
-    /* setPolyFT4 split in two: the original stores the color word between setlen and setcode. */
     setlen(poly, 9);
     SET_BGR0_PACKED(poly, GPU_TINT_NEUTRAL);
     setcode(poly, 0x2C);
@@ -1337,7 +1333,7 @@ static void wsel_reset_scroll(void)
 static void wsel_upload_tim(u8* tim_data, s32 index)
 {
     RECT rect;
-    WselSprite* sprites = g_wsel_sprites; /* separate base local keeps the target address order */
+    WselSprite* sprites = g_wsel_sprites;
     WselSprite* sprite;
     Tim* tim;
     TimBlock* pixel_block;
@@ -1475,7 +1471,6 @@ static void wsel_update_pad_repeat(void)
         }
         sampled_buttons = buttons;
     }
-    /* A separate variable from sampled_buttons; merging them drops a register copy. */
     input_state = sampled_buttons;
 
     g_wsel_buttons_held = input_state;

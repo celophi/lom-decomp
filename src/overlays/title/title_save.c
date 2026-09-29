@@ -792,15 +792,8 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
  * SaveLayoutTex; the source blob's internal TIM-style block layout is only
  * partially understood, so it is still walked with raw byte offsets.
  *
- * @return Not explicitly set on any path (matches original codegen); callers
+ * @return Not explicitly set on any path; callers
  *         should not rely on the return value.
- *
- * @note @p data_ptr and @p block_ptr are kept as two distinct pointers that
- *       both start out holding the source blob: @p data_ptr is the working
- *       cursor (advanced past the header, used for the CLUT upload) while
- *       @p block_ptr is reused to point at the pixel block. Merging them into a
- *       single variable changes gcc 2.7's register allocation and drops the
- *       match, so the pair is required to match.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/lzJHa
  */
@@ -870,9 +863,6 @@ unsigned short upload_save_layout_textures(void)
  * @param use_alt Zero selects the new-game template (g_newGameStateTemplate,
  *                g_field_scene_id = 0xD); non-zero selects the alternate template
  *                (g_menuLayoutTemplateAlt, g_field_scene_id = 0).
- *
- * @note The copy is an explicit word loop, not a struct assignment, so it
- *       reproduces the original codegen; SavedGameLayout is only partially mapped.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/aPcbW
  */

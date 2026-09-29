@@ -1212,7 +1212,7 @@ void field_script_op_1d(void)
 {
     Vec3i position;
     FieldScriptPositionOperands operands;
-    s32 unused[4]; /* Never used, but the original frame has room for it. */
+    s32 unused[4];
     u16 location;
     u32 kind;
     u32 relative;
@@ -1230,7 +1230,6 @@ void field_script_op_1d(void)
     relative = kind >> 15;
     kind &= 0x7000;
     y_ref = relative << 15;
-    /* The same bit again; a plain copy of y_ref swaps the registers of y_ref and z_ref. */
     z_ref = (relative & 1) << 15;
 
     location &= 0xFFF;
@@ -2846,7 +2845,6 @@ void field_script_op_86(s32 slot, s32 resource_id, s32 entry_index, s32 characte
     if (resource != NULL)
     {
         offset = resource->texts.offsets[entry_index];
-        /* Int limit on purpose: the original passes character_limit without narrowing it to u8. */
         ((void (*)(s32, u8*, s32))field_set_text_macro)(slot, &resource->texts.bytes[offset], character_limit);
     }
 }

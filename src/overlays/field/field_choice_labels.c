@@ -55,7 +55,7 @@ void field_draw_return_to_title_choices(s32* ot, void* prim, s32 scroll_x, s32 s
     s32 second_color;
     s32 x;
     void* cursor;
-    s32 unused[2]; /* never used, but the stack frame only matches the original with it */
+    s32 unused[2];
 
     cursor = prim;
     first_text = FIELD_UI_TEXT_AT(g_field_title_choice_text_entry, FIELD_TITLE_CHOICE_FIRST_TEXT);

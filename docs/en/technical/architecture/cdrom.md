@@ -31,7 +31,7 @@ Three properties matter at the architectural level:
 
 This is an implementation description of [the main CD module](../../../../src/cdrom.c)
 and [its decompressor](../../../../src/cdrom_decompress.c). The separate CD implementation
-inside CHECKPS is outside this document's scope. The architecture and known
+inside CHECKPS is covered by the [CHECKPS guide](checkps.md). The architecture and known
 limitations below describe the matching code, including behavior retained from
 the original executable.
 
@@ -436,9 +436,13 @@ Setfilter, then completion of Demute and Pause through
 `cdrom_handle_recovery_sync()`. Completion clears the pending bit.
 
 These routines share `init_state` and `init_command` with automatic recovery,
-but interpret different state/command families. No C call sites for the
-explicit entry/service pair were found in the inspected tree. Their integration
-should not be inferred from their names or treated as a normal startup step.
+but interpret different state/command families. JP's CHECKPS startup is a
+confirmed caller: it enters recovery mode, runs its own register-level CD
+check, then services `cdrom_recover()` before leaving. That caller is still
+assembly, which is why a search of the C sources doesn't find it. The US
+CHECKPS startup uses a timed display and doesn't perform that handoff. See
+[CHECKPS](checkps.md#jp-takes-control-of-the-drive-then-gives-it-back) for the
+regional flow and source locations.
 
 ## Timing and failure behavior
 

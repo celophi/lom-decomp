@@ -145,7 +145,6 @@ s32 field_join_guest(s32 guest_id)
                     level_index = FIELD_LEVEL_EXPERIENCE_COUNT - 1;
                 }
                 progress = g_field_game_state->characters[FIELD_PARTY_GUEST].progress.level;
-                /* Without the net-zero level_index terms, loop.c hoists the word index out of the search loop. */
                 progress |= (g_field_game_state->words[FIELD_GUEST_EXPERIENCE_WORD + guest_id + level_index - level_index] + g_field_level_experience[level_index])
                             << 8;
                 g_field_game_state->characters[FIELD_PARTY_GUEST].progress.word = progress;

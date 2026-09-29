@@ -441,7 +441,6 @@ static void field_grow_companion_stats(FieldCharacterRecord* character)
         total = character->equipment_totals[i] + (g_field_game_state->pets[g_field_game_state->joined_pet].total_growth[i].byte >> FIELD_GROWTH_CARRY_SHIFT);
         character->equipment_totals[i] = total;
         g_field_game_state->pets[g_field_game_state->joined_pet].equipment_totals[i] = total;
-        /* Pointer form: indexing equipment[1] lets loop.c fold this store into the equipment_totals walker. */
         (character->equipment + 1)->derived.values[i] = character->equipment_totals[i];
         g_field_game_state->pets[g_field_game_state->joined_pet].total_growth[i].bits.accumulator &= FIELD_GROWTH_ACCUMULATOR_KEEP;
         g_field_game_state->pets[g_field_game_state->joined_pet].total_growth[i].bits.accumulator +=

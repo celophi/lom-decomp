@@ -110,7 +110,6 @@ INCLUDE_ASM("overlays/field/nonmatchings/field_command_history", field_command_h
 void field_command_history_record(s32 player, s32 age_sequence)
 {
     s16 axis;
-    /* Remapped buttons, later the idle counter: with a separate idle local, cse folds the copy into buttons. */
     s32 value;
     s32 buttons;
     u16 raw_buttons;
@@ -121,7 +120,6 @@ void field_command_history_record(s32 player, s32 age_sequence)
     u8 slot;
     s32 *count;
     ControllerPortState *ports = CONTROLLER_STATE->ports;
-    /* Two port pointers: sharing one moves the reloaded port base out of v0. */
     ControllerPortState *stick_x_port;
     ControllerPortState *stick_y_port;
 
@@ -330,9 +328,6 @@ s32 field_command_history_match(s32 player, s32 unused, s32 peek)
                                     {
                                         if (peek == 0)
                                         {
-                                            /* Step past the finish button first: with the increment
-                                             * below the count, direction_end and pattern_length
-                                             * swap registers. */
                                             direction_end++;
                                             dst = 0;
                                             consume_count = direction_end;

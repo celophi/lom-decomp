@@ -18,7 +18,7 @@ static u8* shop_draw_sell_prompt(u32* ot, u8* prim, s32 x_inset, s32 y_inset);
  */
 u8* shop_draw_notice_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
 {
-    Vec2s unused_position; /* never used, but the compiled frame size depends on it */
+    Vec2s unused_position;
 
     switch (g_shop_notice_id)
     {
@@ -65,7 +65,7 @@ void shop_open_buy_prompt(void)
 static u8* shop_draw_buy_prompt(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
 {
     s32 confirm_mask;
-    Vec2s unused_position; /* never used, but the compiled frame size depends on it */
+    Vec2s unused_position;
     ShopEntry* entry;
     ShopEntry* stock;
     FieldItemRecord* record;
@@ -231,7 +231,7 @@ void shop_open_sell_prompt(void)
  */
 static u8* shop_draw_sell_prompt(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
 {
-    Vec2s unused_position; /* never used, but the compiled frame size depends on it */
+    Vec2s unused_position;
     ShopEntry* entry;
     ShopEntry* stock;
     u32 money;

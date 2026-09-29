@@ -3,10 +3,6 @@
 
 /**
  * @brief g_glyph_chart_page_base as CLOAD reaches it.
- * @note CLOAD's page base address falls inside cload_load_icon_resources (in JP,
- *       0x70 bytes into cload_emit_icon_highlight_strip), where no data symbol can
- *       sit, so the target relocation is named after that function and CLOAD
- *       keeps its own copy of expand_text_glyph_codes that spells the base from it.
  */
 #if defined(VERSION_JP)
 #define CLOAD_GLYPH_CHART_PAGE_BASE ((u8*)cload_emit_icon_highlight_strip + 0x70)

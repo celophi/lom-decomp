@@ -88,7 +88,6 @@ static void field_rotate_palette_row(u16 *row, s32 count, s32 rotate_right);
  * @brief Advance an actor's palette animation and upload the changed CLUT row to VRAM.
  * @param actor Actor whose current animation carries the palette animation word.
  * @return Nothing meaningful; callers ignore it.
- * @note Declared int with bare returns; as void it compiles differently (v0 is dead at the returns).
  */
 s32 field_update_actor_palette_animation(FieldActorState *actor)
 {
@@ -308,7 +307,7 @@ static inline void* add_mesh_prim(s32* ot, FieldMotionRecord* effect, s32* depth
  */
 s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *packet_cursor, s32 *ordering_table)
 {
-    s32 unused[2]; /* never used; the original stack frame reserves it */
+    s32 unused[2];
     MATRIX transform;
     MATRIX base_matrix;
     CVECTOR base_color;
@@ -540,7 +539,7 @@ s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *pa
  */
 s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *buffer, s32 *ordering_table)
 {
-    s32 unused[2]; /* never used; the original stack frame reserves it */
+    s32 unused[2];
     s32 *write_cursor;
     MATRIX transform;
     MATRIX base_matrix;

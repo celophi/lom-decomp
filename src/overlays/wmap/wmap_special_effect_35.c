@@ -368,8 +368,6 @@ static void wmap_effect35_update_emitter(WmapEffectEmitter* emitter)
         walker = (WmapEffectMotion*)((index * sizeof(WmapEffectMotion)) + (s32)motion_base);
         for (; index < emitter->end; index++)
         {
-            /* Net-zero index pair and dead data_base store below: without them the reads stop going
-               through a per-iteration copy of the walker and the registers change. */
             motion = (WmapEffectMotion*)((u32)walker + index);
             motion = (WmapEffectMotion*)((u32)motion - index);
             if (motion->active != 0)

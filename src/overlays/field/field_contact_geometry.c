@@ -18,7 +18,7 @@
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
 
-/** @brief Object state @p index of @p base; the original adds the scaled index before the base. */
+/** @brief Object state @p index of @p base. */
 #define FIELD_OBJECT_STATE_AT(base, index) ((FieldObjectRuntime*)((index) * sizeof(FieldObjectRuntime) + (s32)(base)))
 
 /** @brief CD resource holding the actor sequence bytecode banks. */
@@ -110,7 +110,6 @@
 /** @brief Scale of the depth distance tested against an effect hit radius. */
 #define FIELD_PROJECTED_DEPTH_SCALE 384
 
-/* Map dimensions are addressed by a literal LUI/ORI pair in the original. */
 #define FIELD_MAP_BOUNDS_ADDRESS 0x801ED400
 #define FIELD_MOVE_REQUEST_ADDRESS 0x1F800010
 #define FIELD_MOVE_QUERY_ADDRESS 0x1F800080
@@ -213,12 +212,10 @@ extern s32 g_field_duel_mode;
 /** @brief Last field_find_actor_overlap result: zero, or the object index plus FIELD_CONTACT_RESULT_PRESENT. */
 extern s32 g_field_last_actor_contact;
 
-/* Defined as (s32, s32) in field_interaction_start.c; the original call also loads the state table into $a2. */
 void field_start_interaction(s32 value, u16 entry, FieldObjectRuntime* states);
 s32 field_resolve_contact_hit(s32 source_index, s32 target_index);
 s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action);
 void field_release_object_link(FieldActor* actor);
-/* Defined as (FieldActor*) in field_actor_runtime.c; the calls here also pass the resource start in $a1. */
 void field_restart_actor_animation();
 
 static s32 field_intersect_screen_segments(Vec2s* first_start, Vec2s* first_end, Vec2s* second_start, Vec2s* second_end);
@@ -526,7 +523,6 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
  * @param b1 End of the second segment.
  * @return The point packed as x | (y << 16), or FIELD_NO_SEGMENT_INTERSECTION.
  * @note Overlapping collinear segments return the start of the first segment.
- * @note The endpoint coordinates are kept in one local per use: the loads and their order follow the original.
  */
 static s32 field_intersect_screen_segments(Vec2s* a0, Vec2s* a1, Vec2s* b0, Vec2s* b1)
 {
@@ -625,7 +621,7 @@ static s32 field_intersect_screen_segments(Vec2s* a0, Vec2s* a1, Vec2s* b0, Vec2
         {
             b1_coordinate = b1->x;
             b0_x_value_vertical = b0->x;
-            y_shift = 16; /* The shift held in a local: a literal 16 changes the schedule. */
+            y_shift = 16;
             b_dx_vertical = b1_coordinate - b0_x_value_vertical;
             x = a0_x;
             if (b_dx_vertical == 0)
@@ -813,7 +809,6 @@ s32 field_resolve_actor_movement(FieldActor* actor, s32* position, s32 mode)
     {
         actor->x += position[0];
         actor->y += position[1];
-        /* position[2] through a stepped pointer: a direct index swaps two saved registers. */
         position += 2;
         actor->z += position[0];
         return 1;
@@ -879,7 +874,6 @@ s32 field_resolve_actor_movement(FieldActor* actor, s32* position, s32 mode)
         query->x = mover->x;
         query->y = position[1] + actor->y;
         query->z = mover->z;
-        /* field_collision_hit_markers is called as returning int: the original compares the s16 result unextended. */
         if (((g_field_active_group == 0) || (actor->control.word & FIELD_CONTROL_MODE_MASK) ||
              (((s32 (*)(struct FieldCollisionQuery*))field_collision_hit_markers)(query) == -1)) &&
             ((((u16)actor->command >= FIELD_ACTOR_COMMAND_WALK_PATH) && ((u16)actor->command <= FIELD_ACTOR_COMMAND_RUN_PATH)) ||
@@ -983,7 +977,6 @@ static s32 field_is_outside_group_bounds(FieldActor* actor, s32* position)
     {
         return 0;
     }
-    /* Indexing g_field_group_bounds[g_field_active_group - 1] directly changes the codegen. */
     group_bounds = g_field_group_bounds;
     group_index = g_field_active_group - 1;
     bounds = &group_bounds[group_index];
@@ -1131,7 +1124,6 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
 
                                 if (((FieldSequenceBinding*)(bindings + owner_binding_offset))->state != 0)
                                 {
-                                    /* A return here would be its own return-0 copy and change which copy jump.c keeps. */
                                     goto no_contact;
                                 }
                             }
@@ -1241,7 +1233,6 @@ void field_probe_actor_interaction(FieldActor* actor)
     if (result_or_state != 0)
     {
         states = g_field_object_states;
-        /* One local holds the overlap result and then the state address; a direct pointer changes the allocation. */
         result_or_state = (s32)&states[object_index];
         state = (FieldObjectRuntime*)result_or_state;
         if (state->interaction_kind != 0)

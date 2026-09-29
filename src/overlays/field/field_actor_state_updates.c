@@ -10,7 +10,6 @@
 #include "field_types.h"
 #include "field_actor.h"
 #include "sdk/inline_c.h"
-/* Apply the matching GTE instruction encodings after the SDK macros. */
 #include "sdk/gte_dmpsx_compat.h"
 #include "sdk/memory.h"
 #include "field_actor_runtime.h"
@@ -105,11 +104,9 @@ s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action);
 s32 field_roll_object_evasion(s32 source_index, s32 target_index);
 void field_release_object_link(FieldActor* actor);
 void field_prepare_actor_action(FieldActor* actor);
-/* Called with one or two arguments (the second is ignored), so it stays unprototyped. */
 void field_resolve_collected_hits();
 void field_stop_actor_animations_for_object(FieldActor* actor, s32 force);
 void field_restart_actor_animation_reverse(FieldActor* actor);
-/* Defined as returning u8; the original caller tests the unmasked int result. */
 s32 field_get_next_animation_frame_count(FieldActor* actor);
 void field_update_actor_movement_animation(FieldActor* actor, s32 delta_x, s32 delta_z);
 
@@ -123,7 +120,6 @@ void field_update_actor_movement_animation(FieldActor* actor, s32 delta_x, s32 d
 
 /**
  * @brief Program the chain action slot of @p actor's resource action row.
- * @note A macro: as an inline function the constants are loaded early and the code changes.
  */
 #define FIELD_SET_CHAIN_ACTION(actor, action_command, action_animation, action_parameter)                                                                      \
     g_field_resource_actions[(actor)->object_index].chain_slot.flags.word &= ~FIELD_ACTION_FLAG_INSTRUMENT;                                                    \
@@ -159,7 +155,6 @@ void field_update_actor_movement_animation(FieldActor* actor, s32 delta_x, s32 d
 
 /**
  * @brief Runtime state of object @p index in @p states, addressed as index-first byte arithmetic.
- * @note The original adds the scaled index before the table base.
  */
 #define FIELD_OBJECT_STATE_AT(states, index) ((FieldObjectRuntime*)((index) * sizeof(FieldObjectRuntime) + (u32)(states)))
 
@@ -318,7 +313,6 @@ s32 field_update_actor_action_chain(FieldActor* actor)
         tmp = actor->animation & 0x7F;
         if (tmp == 0x3D)
         {
-            /* Called as returning int: the original uses the u16 result unmasked. */
             anim = ((s32 (*)(FieldActor*, s32))field_resolve_action_command)(actor, actor->object_index);
             if (g_field_resource_actions[actor->object_index].slots[1].command == tmp && anim == FIELD_ACTION_COMMAND(1))
             {
@@ -735,7 +729,6 @@ static inline u8 field_sequence_byte(s32 sequence_index, s32 object_index, s32 c
  * @param actor Actor whose sequence cursor and motion remainder are advanced.
  * @param sequence_index Script row within the actor's selected bank.
  * @note Command 0xF1 advances the cursor; 0xEF handles sequence completion.
- * @note The loop-wrapped row computations are scheduling levers.
  */
 void field_update_technique_command(FieldActor* actor, s32 sequence_index)
 {
@@ -1213,7 +1206,6 @@ void field_update_timed_walk(FieldActor* actor, s32 dx, s32 dz)
             mover->mode.bits.step = 6;
         }
         mover->depth = 16;
-        /* Two separate bitfield clears, as in the original. */
         mover->mode.bits.bit17 = 0;
         mover->mode.bits.bit16 = 0;
         mover->contact = g_field_object_states[actor->object_index].contact_index;
@@ -1360,7 +1352,7 @@ void field_restart_idle_animation(FieldActor* actor)
 /**
  * @brief Resume the actor's idle animation once its reserved actor slot is free.
  * @param actor Actor whose index selects the reserved slot at g_field_actor_slots[64 + index].
- * @return Unspecified; the return register is left live but no caller reads it.
+ * @return Unspecified; no caller reads it.
  */
 s32 field_update_defeated(FieldActor* actor)
 {

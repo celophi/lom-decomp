@@ -223,9 +223,6 @@ typedef struct
 
 /**
  * @brief Object state viewed from its target position onwards (0x23C stride).
- * @note Only the target stores in field_route_actor_to_object go through this view: the original
- *       code loads &g_field_object_states[0].target_x as one constant and gcc then
- *       derives the plain table base from it for the later path stores.
  */
 typedef struct
 {
@@ -259,7 +256,6 @@ extern s32 g_field_boss_hud_shake_frame;
 
 s32 field_collision_find_path(FieldCollisionQuery* start, FieldCollisionQuery* goal, FieldPathPoint* path, s32 mode);
 void field_collision_dilate_query(FieldCollisionQuery* query);
-/* Declared without parameters: the 0xB9 spawn passes the control word as an extra argument. */
 void field_restart_actor_animation();
 void field_restart_actor_animation_reverse(FieldActor* actor);
 s32 field_get_next_animation_frame_count(FieldActor* actor);
@@ -267,7 +263,6 @@ s32 field_get_next_animation_frame_count(FieldActor* actor);
 s32 field_count_free_actor_slots();
 void field_start_actor_hit_reaction(FieldActor* actor, s32 guard);
 void field_knock_down_actor(FieldActor* actor, s32 clear_recovery);
-/* Declared without parameters: the definition takes s8 values and these calls pass them unconverted. */
 void field_start_actor_jump();
 void field_start_actor_defeat();
 void field_count_chain_hit(s32 object_index);
@@ -368,7 +363,7 @@ static void field_run_actor_script_command(FieldActor* actor)
     s32 goal_z;
     s32 contact_or_z; /* contact word in 0xB9, actor z in 0xB0/0xB1 */
     s32 index_or_count; /* spawn slot (0xB9), track count (0x9F), path length (0xB0/0xB1) */
-    s32 one; /* the constant 1 kept in a register (0xB9, 0xBC) */
+    s32 one;
     s32 animation_binding_offset;
     s32 technique_binding_offset;
     s32 load_check_offset;
@@ -458,7 +453,7 @@ static void field_run_actor_script_command(FieldActor* actor)
         actor->script_offset += 2;
         return;
     case FIELD_SCRIPT_OP_SPAWN_ATTACHED:
-        /* Spawn into the highest free actor record. A for or while loop here gets its constants hoisted. */
+        /* Spawn into the highest free actor record. */
         do
         {
             do
@@ -587,7 +582,6 @@ static void field_run_actor_script_command(FieldActor* actor)
             actor->command = FIELD_ACTOR_COMMAND_NONE;
             return;
         }
-        /* A plain 4 <= action <= 7 test compiles differently on the u8 field. */
         if (g_field_actions_limited != 0 && (u32)(precheck_state->action - FIELD_ACTION_LIMITED_FIRST) < FIELD_ACTION_LIMITED_COUNT)
         {
             actor->command = FIELD_ACTOR_COMMAND_NONE;
@@ -653,7 +647,6 @@ static void field_run_actor_script_command(FieldActor* actor)
                 {
                     animation_binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
                 }
-                /* A byte offset: indexing animation_slots[] directly changes the address sum. */
                 animation_slot_offset = ((FieldActorBinding*)&animation_bindings[animation_binding_offset])->slot * sizeof(FieldActorSlot);
                 ((FieldActorSlot*)((u8*)animation_slots + animation_slot_offset))->actor_type = g_field_object_states[actor->object_index].action;
             }
@@ -912,7 +905,6 @@ static void field_run_actor_script_command(FieldActor* actor)
             {
                 load_binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
             }
-            /* A byte offset: indexing load_slots[] directly changes the address sum. */
             load_slot_offset = ((FieldActorBinding*)&load_bindings[load_binding_offset])->slot * sizeof(FieldActorSlot);
             ((FieldActorSlot*)((u8*)load_slots + load_slot_offset))->actor_type = action_or_index;
             load_state->action = action_or_index;
@@ -1583,7 +1575,6 @@ void field_resolve_collected_hits(s32 object_index)
     i = 0;
     if (source->contact.bytes.target_count != 0)
     {
-        /* The copies and the per-pass index8 keep the source address inside the loop; an indexed for loop hoists it. */
         loop_states = states;
         saved_source = source;
         index8 = object_index * 8;

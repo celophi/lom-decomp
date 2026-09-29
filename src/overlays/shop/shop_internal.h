@@ -106,7 +106,6 @@ typedef struct
 
 /**
  * @brief The list entry under the cursor.
- * @note Summed as integers, index first, as every original use site does.
  */
 #define SHOP_SELECTED_ENTRY() ((ShopEntry*)(g_shop_cursor * sizeof(ShopEntry) + (u32)g_shop_entries))
 

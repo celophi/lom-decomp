@@ -4,8 +4,7 @@
 /**
  * @file wmap_pathfinding.c
  * @brief World-map node reachability, queued node-swap state updates, and BFS
- *        route building. This is the overlay's -O0 island (built with
- *        gcc280_g0_o0_builtin); all three functions are contiguous in ROM.
+ *        route building.
  */
 
 #define WMAP_NODE_RECORD_SIZE 12
@@ -113,7 +112,6 @@ void func_8005DBB8(void)
  *
  * @param arg0 World-map cursor X coordinate passed to wmap_get_land_at_cell.
  * @param arg1 World-map cursor Y coordinate passed to wmap_get_land_at_cell.
- * @note Built with gcc280_g0_o0_builtin (-O0); matched 100% via MCP diff.
  */
 void func_8005DF50(s32 arg0, s32 arg1)
 {

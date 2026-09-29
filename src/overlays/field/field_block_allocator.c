@@ -62,7 +62,7 @@ static inline void field_block_release(FieldBlockHeader* block)
 void field_block_pool_init(void* pool, u32 size)
 {
     FieldBlockHeader* end;
-    s32 unused[6]; /* never used; the original stack frame reserves it */
+    s32 unused[6];
 
     size &= FIELD_BLOCK_SIZE_MASK & ~3;
     /* One word store: a free block with tag 0 spanning all but two headers. */

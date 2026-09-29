@@ -207,7 +207,7 @@ void gosub_build_companion_list(s32 mode)
     s32 row_count;
     s32 record_index;
     s32 slot;
-    u8 unused[32]; /* never used, but the original stack frame has room for it */
+    u8 unused[32];
 
     row_count = 0;
     if (mode != GOSUB_COMPANIONS_PETS)

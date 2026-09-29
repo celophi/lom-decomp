@@ -126,7 +126,6 @@ s32 field_place_lands(s32 first_land, s32 second_land, s32* placed)
         i = field_get_land_distance(g_music_track_index);
         field_receive_item(g_field_land_distance_items[i]);
 #else
-        /* i doubles as the distance: a separate local changes the register allocation. */
         i = field_get_land_distance(g_music_track_index);
         table_index = FIELD_LAND_DISTANCE_MAX;
         if (i <= FIELD_LAND_DISTANCE_MAX)
@@ -188,7 +187,6 @@ s32 field_get_land_state(s32 land_index)
 
     if (land_index < FIELD_LAND_COUNT)
     {
-        /* A single flags variable loses the andi 0xFF the original applies to the copy. */
         flags = g_field_game_state->lands[land_index].flags;
         bits = flags;
         if ((bits >> 3) & 1)
@@ -219,10 +217,6 @@ s32 field_get_land_state(s32 land_index)
  * @brief Map grid distance from land 0 to a land, plus the land's unk2 byte.
  * @param land_index Land to measure.
  * @return |dx| + |dz| between the two lands' grid cells plus the land's unk2 byte.
- * @note Reads the land's cell byte (low nibble x, high nibble z) and unk2 by
- *       byte offset and lands[0] as one word. TODO: typed lands[] access
- *       compiles to a different register allocation; the index chain in one
- *       variable and the one-pass do-while wrappers reproduce the original.
  */
 s32 field_get_land_distance(s32 land_index)
 {

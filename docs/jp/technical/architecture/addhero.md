@@ -1,6 +1,6 @@
 # ADDHEROオーバーレイの構成
 
-[日本語ドキュメント](../../README.md) | [English](../../../en/technical/architecture/addhero.md) | [セーブファイルの形式](../reference/save-file.md)
+[日本語ドキュメント](../../README.md) | [English](../../../en/technical/architecture/addhero.md) | [CARDAオーバーレイ](carda.md) | [セーブファイルの形式](../reference/save-file.md)
 
 ## 概要
 

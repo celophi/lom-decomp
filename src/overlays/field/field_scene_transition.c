@@ -119,7 +119,6 @@
 
 /**
  * @brief Form a typed pointer from a byte offset plus a base address.
- * @note The integer sum keeps the offset as the first addu operand; pointer + int would not.
  */
 #define OFFSET_FIRST_PTR(type, offset, base) ((type*)((offset) + (s32)(base)))
 
@@ -146,7 +145,6 @@ enum
 
 /**
  * @brief Section of scene file @p file whose byte offset is stored in header word @p entry.
- * @note The header is read as plain words; reads through a header struct would be scheduled above the stores in between.
  */
 #define FIELD_SCENE_SECTION(file, entry) ((file) + *(s32*)((file) + (entry)))
 
@@ -260,7 +258,6 @@ typedef struct
 s32 akao_fade_song_volume(s32 song_handle, s32 frames, s32 volume);
 void* field_header_record_at(s32 index);
 void field_restart_actor_animation(FieldActor* actor);
-/* Unprototyped on purpose: the (s16, s8, s8, ...) definition would narrow the arguments here. */
 void field_store_entry_settings();
 
 extern FieldRenderHalf* g_field_render_context;
@@ -654,7 +651,6 @@ void field_update_scene(void)
                     rect.x = 0;
                     rect.h = 1;
                     MoveImage(&rect, 0, i + FIELD_ACTOR_CLUT_VRAM_Y + FIELD_PARTY_COUNT);
-                    /* A byte offset: &g_field_resource_entries[i + 2] folds the + 2 into the base address. */
                     previous_resource = (FieldResourceEntry*)((u8*)g_field_resource_entries + (i + FIELD_PARTY_COUNT - 1) * sizeof(FieldResourceEntry));
                     resource_base = (u8*)g_field_resource_entries;
                     inherited_resource = OFFSET_FIRST_PTR(FieldResourceEntry, resource_offset, resource_base);
@@ -699,7 +695,6 @@ void field_update_scene(void)
                     image_count--;
                     image_index++;
                 }
-                /* Through a temporary: a plain i++ changes how the loop's offsets are reduced. */
                 next_i = i + 1;
                 geometry_offsets++;
                 resource_offset += sizeof(FieldResourceEntry);

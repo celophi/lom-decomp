@@ -109,7 +109,7 @@ STACK = 801FFFF0
 |---|---|---|
 | `ADDHERO.BIN` | `addhero` | キャラクター追加画面 |
 | `CARDA.BIN` | `carda` | カード |
-| `CHECKPS.BIN` | `checkps` | デバッグ・初期化処理 |
+| `CHECKPS.BIN` | `checkps` | [起動画面とCDのチェック](../architecture/checkps.md)。日本版では整合性チェックも実行する |
 | `CLOAD.BIN` | `cload` | ロード画面 |
 | `FIELD.BIN` | `field` | フィールドの主要処理 |
 | `GNAME.BIN` | `gname` | 名前入力 |

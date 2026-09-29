@@ -134,7 +134,6 @@ s32 gosub_handle_sort_dialog(s32 dialog_result)
 {
     if (dialog_result == 0)
     {
-        /* Called without a prototype, as in the original: the implicit int return changes the code. */
         gosub_sort_logic_blocks((g_gosub_sort_ascending << GOSUB_SORT_ASCENDING_SHIFT) + (g_gosub_dialog_choice % GOSUB_SORT_KEY_COUNT));
         g_gosub_selection_count = 0;
         g_gosub_sort_ascending ^= 1;
@@ -205,7 +204,7 @@ s32 gosub_draw_block_action_dialog(s32* ordering_table, s32 initial_packet, s32 
     s32 delete_color;
     s32 sort_color;
     s32 packet_cursor;
-    s32 unused[14]; /* never used, but the original stack frame has room for it */
+    s32 unused[14];
 
     packet_cursor = initial_packet;
     sort_text = GOSUB_MESSAGE(GOSUB_MSG_SORT);
@@ -246,7 +245,7 @@ s32 gosub_draw_sort_dialog(s32* ordering_table, s32 initial_packet, s32 x_offset
     s32 type_color;
     s32 packet_cursor;
     s32 selected_sort_key;
-    s32 unused[14]; /* never used, but the original stack frame has room for it */
+    s32 unused[14];
 
     packet_cursor = initial_packet;
     type_text = GOSUB_MESSAGE(GOSUB_MSG_SORT_BY_TYPE);
@@ -316,7 +315,7 @@ void gosub_open_message_dialog(u8* message_text)
  */
 s32 gosub_draw_message_dialog(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
-    s32 unused[14]; /* never used, but the original stack frame has room for it */
+    s32 unused[14];
 
     packet_cursor = field_draw_text(packet_cursor, ordering_table, g_gosub_dialog_text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_MESSAGE_DIALOG_TEXT_X - x_offset,
                                     GOSUB_MESSAGE_DIALOG_TEXT_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
@@ -334,7 +333,7 @@ s32 gosub_draw_message_dialog(s32* ordering_table, s32 packet_cursor, s32 x_offs
 s32 gosub_draw_block_components_header(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
     void* text;
-    s32 unused[14]; /* never used, but the original stack frame has room for it */
+    s32 unused[14];
 
     text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_BLOCK_COMPONENTS);
     packet_cursor = field_draw_text(packet_cursor, ordering_table, text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_DETAIL_HEADER_X - x_offset,
@@ -357,7 +356,7 @@ s32 gosub_draw_block_components_header(s32* ordering_table, s32 packet_cursor, s
 s32 gosub_draw_golem_parts_header(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
     void* text;
-    s32 unused[14]; /* never used, but the original stack frame has room for it */
+    s32 unused[14];
 
     text = GOSUB_MESSAGE(GOSUB_MSG_SELECT_GOLEM_PARTS);
     packet_cursor = field_draw_text(packet_cursor, ordering_table, text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_TWO_LINE_HEADER_X - x_offset,
@@ -382,7 +381,7 @@ s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x
 {
     void* text;
     s32 text_color;
-    s32 unused[14]; /* never used, but the original stack frame has room for it */
+    s32 unused[14];
 
     text = GOSUB_MESSAGE(GOSUB_MSG_IS_THIS_OKAY);
     packet_cursor = field_draw_text(packet_cursor, ordering_table, text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_CONFIRMATION_TITLE_X - x_offset,
@@ -419,7 +418,7 @@ s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x
  */
 s32 gosub_draw_row_description(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
-    s32 unused[12]; /* never used, but the original stack frame has room for it */
+    s32 unused[12];
 
     packet_cursor = field_draw_text(packet_cursor, ordering_table, g_gosub_rows[g_gosub_cursor_row].desc, GOSUB_TEXT_COLOR_NORMAL,
                                     GOSUB_ROW_DESCRIPTION_X - x_offset, GOSUB_ROW_DESCRIPTION_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
@@ -493,7 +492,7 @@ s32 gosub_draw_equipment_details(s32 packet_cursor, s32* ordering_table, s32 x_o
  */
 s32 gosub_draw_title(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
-    s32 unused[14]; /* never used, but the original stack frame has room for it */
+    s32 unused[14];
 
     packet_cursor = field_draw_text(packet_cursor, ordering_table, g_gosub_title_text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_TEXT_PANEL_WIDTH / 2 - x_offset,
                                     2 - y_offset, GOSUB_TEXT_ALIGN_CENTER);

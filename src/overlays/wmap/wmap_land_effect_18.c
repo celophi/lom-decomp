@@ -817,7 +817,6 @@ extern u8 *D_8011CF24;
 extern s32 D_80182DE4;
 extern VECTOR D_8011CF60;
 extern SVECTOR g_wmap_camera_rotation;
-/** @brief Translation whose depth read is retained by the original draw routine. */
 typedef struct
 {
     s32 vx;
@@ -836,7 +835,6 @@ extern s32 D_801B2464;
     s32 remaining;
     s32 intensity;
 
-    /* Preserve the original depth read before installing the transform. */
     (void)D_80139888.vz;
     PushMatrix();
     RotMatrix(&g_wmap_camera_rotation, &base);
@@ -874,7 +872,6 @@ extern u8 *D_8011CF24;
 extern s32 D_80182DE4;
 extern VECTOR D_8011CF60;
 extern SVECTOR g_wmap_camera_rotation;
-/** @brief Translation whose depth read is retained by the original draw routine. */
 typedef struct
 {
     s32 vx;
@@ -893,7 +890,6 @@ extern s32 D_801B2464;
     s32 remaining;
     s32 intensity;
 
-    /* Preserve the original depth read before installing the transform. */
     (void)D_80139888.vz;
     PushMatrix();
     RotMatrix(&g_wmap_camera_rotation, &base);

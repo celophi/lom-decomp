@@ -7,6 +7,8 @@
 ## ゲームの仕組み
 
 - [シーンのレイアウトと出現条件](technical/architecture/scene-layouts.md) - シーン、レイアウト、レコードの関係と、宝箱を例にした条件の読み方。
+- [CHECKPSオーバーレイ](technical/architecture/checkps.md) - 起動画面、日本版のCDチェック、ドライブの引き継ぎと改造の警告。
+- [CARDAオーバーレイ](technical/architecture/carda.md) - セーブ、ロード、PocketStationとのペットのやり取り。カード画面からFIELDへ戻るまでの流れ。
 - [ADDHEROオーバーレイ](technical/architecture/addhero.md) - 2Pの主人公の画面。友達の主人公をメモリーカードから読み込み、書き戻す仕組み。
 
 ## 関連資料

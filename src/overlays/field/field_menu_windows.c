@@ -456,7 +456,6 @@ void field_draw_menu_elements(FieldRenderHalf* render_half)
                 {
                     s32 width_low;
 
-                    /* frame_width is the blink offset here; a separate local takes packet's register. */
                     frame_width = 0;
                     if (!(g_frame_counter & MENU_BLINK_FRAME_BIT))
                     {

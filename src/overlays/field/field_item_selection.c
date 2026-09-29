@@ -86,7 +86,6 @@
  * @brief Text of an item name in g_field_item_names.
  * @param table Offset table (one halfword per item id) followed by the names.
  * @param item Item id.
- * @note Written as an integer sum so the offset stays the first addu operand.
  */
 #define FIELD_ITEM_NAME(table, item) ((u8 *)((table)[item] + (u32)(table)))
 
@@ -94,7 +93,6 @@
  * @brief Facing offset of one of the eight facings.
  * @param table Facing offset table.
  * @param facing Facing index, 0 to 7.
- * @note Written as an integer sum so the index stays the first addu operand.
  */
 #define FIELD_FACING_OFFSET(table, facing) ((FieldFacingOffset *)((facing) * sizeof(FieldFacingOffset) + (u32)(table)))
 
@@ -316,7 +314,6 @@ static u8 *field_draw_item_drop_list(u32 *ot, u8 *cursor, s32 scroll_x, s32 scro
 
     for (i = 0; i < g_field_item_list_count; i++)
     {
-        /* Read inside the loop; a table pointer set before the loop allocates differently. */
         names = g_field_item_names;
         count_x = FIELD_ITEM_COUNT_X - scroll_x;
         entry = &g_field_item_list[i];
@@ -360,7 +357,6 @@ static inline void drop_selected_item(void)
     s32 leader_animation;
     s32 animation_slot;
 
-    /* Initialized in this order outside the for statement; folding them into it reorders the setup. */
     actor_index = FIELD_ACTOR_COUNT - 1;
     offsets = g_field_direction_offsets;
     for (; actor_index >= FIELD_PARTY_COUNT; actor_index--)

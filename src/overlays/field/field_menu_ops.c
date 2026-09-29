@@ -1161,7 +1161,6 @@ void field_menu_read_ring_selection(void)
     if (result < 0)
     {
         FIELD_LOCAL_HALF(FIELD_RING_BUSY) = 1;
-        /* Called as an int function (no prototype in the original), so the byte is not masked. */
         FIELD_LOCAL_HALF(FIELD_RING_ENTRY) = ((s32 (*)(void))field_get_ring_cursor_entry)();
     }
     else
@@ -1681,7 +1680,6 @@ void field_menu_publish_pet_slots(void)
         for (slot = 0; slot < 3; slot++)
         {
             entry = FIELD_MENU_PETS->pet_records[selection].extra_slots[slot];
-            /* Two separate tests; && folds them into one range check. */
             if (entry != 0xFF)
             {
                 if (entry != 0xFE)
@@ -3005,8 +3003,6 @@ void field_menu_set_aside_shared_item(void)
  * offset, one level more for the favored element. Mode 0 (local 0) draws by
  * weight and stores the element in local 5; any other mode draws uniformly
  * and stores it in local 6. 0xFF means no element was drawn.
- * @note Written with gotos: both loops must stay out of loop.c's reach, as
- *       the original's did (a structured loop hoists the table addresses).
  */
 void field_menu_draw_land_element(void)
 {

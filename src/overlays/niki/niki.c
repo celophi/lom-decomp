@@ -1002,7 +1002,6 @@ NikiElement* niki_alloc_element(void)
 
 /**
  * @brief Low byte of an element's 9-bit width, read from the whole attribute word.
- * @note Reading the width_low bitfield instead compiles to a byte load.
  */
 #define NIKI_ELEMENT_WIDTH_LOW_BYTE(element) ((s32)((element)->attr.word >> 24))
 /** @brief Join an element's width high bit with an already-read low byte @p low. */
@@ -1011,9 +1010,6 @@ NikiElement* niki_alloc_element(void)
 /**
  * @brief Animate element windows and append their content and borders to the frame.
  * @param frame_arg Draw context supplying the clip variant and primitive cursor.
- * @note Each case reads the width low byte into its own local before the inset
- *       product, and the x position and low byte again before each
- *       func_800AD850 call; the compiled evaluation order needs both.
  */
 void niki_update_and_draw_elements(NikiFrameState* frame_arg)
 {

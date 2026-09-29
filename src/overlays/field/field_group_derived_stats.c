@@ -304,7 +304,6 @@ void field_golem_build_group_record(s32 group)
     {
         work[i] = work[i] * 5 + GOLEM_STAT_MIN;
         work[i] = work[i] < GOLEM_STAT_MIN ? GOLEM_STAT_MIN : work[i] > GOLEM_STAT_MAX ? GOLEM_STAT_MAX : work[i];
-        /* The base clear is overwritten by the full store below; both stores are in the original. */
         GOLEM.group_records[group].stats[i].bits.base = 0;
         GOLEM.group_records[group].stats[i].value = work[i] << FIELD_STAT_EFFECTIVE_SHIFT;
     }
@@ -389,7 +388,6 @@ void field_golem_build_group_record(s32 group)
     work[2] = GOLEM.group_records[group].equipment_totals[1];
     work[3] = GOLEM.group_records[group].equipment_totals[2];
     work[4] = GOLEM.group_records[group].equipment_totals[3];
-    /* The name length local doubles as the stat total; a separate local changes the register allocation. */
     length = work[0] + work[1] + work[2] + work[3] + work[4];
     length = length * 5 >> 1;
     max_hp = length < GOLEM_MAX_HP_MIN ? GOLEM_MAX_HP_MIN : length > GOLEM_MAX_HP_MAX ? GOLEM_MAX_HP_MAX : length;

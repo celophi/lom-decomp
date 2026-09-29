@@ -33,8 +33,6 @@
 
 /**
  * @brief Address of element @p index in an array of @p type starting at @p base.
- * @note An integer sum: the original adds the scaled index before the base, and a
- *       pointer + int expression always emits the base first.
  */
 #define FIELD_ELEMENT_AT(type, base, index) ((type *) ((index) * (s32) sizeof(type) + (s32) (base)))
 
@@ -1595,7 +1593,7 @@ static s32 field_roll_effect_rotation(FieldActorState *actor, FieldActorPartDef 
 void field_swap_effect_position_source(FieldMotionRecord *effect, FieldActorPartDef *part)
 {
     VECTOR source_position;
-    s32 unused[2]; /* Required by the original stack layout. */
+    s32 unused[2];
 
     if (effect->color_position.fields.position_source != FIELD_POSITION_NONE)
     {
@@ -2550,7 +2548,6 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
                     position_x = mover->x;
                     query->width = FIELD_EFFECT_COLLISION_WIDTH;
                     query->height_tolerance = FIELD_EFFECT_COLLISION_HEIGHT;
-                    /* The loop notes weight this use of 8, so it takes s0 before the width/height constants. */
                     do
                     {
                         query->depth = FIELD_EFFECT_COLLISION_DEPTH;
@@ -3554,7 +3551,6 @@ static s32 *field_render_effect_sprite_frames(FieldMotionRecord *effect, s32 *pa
                     }
                     else
                     {
-                        /* Integer address sum: the array form lets loop.c hoist the address. */
                         value0 = texture_slot;
                         value0 <<= 1;
                         value0 += (s32) texture_slot_flags;
@@ -3716,9 +3712,6 @@ static inline FieldSequenceBinding *field_get_object_binding(s32 object_index)
  *       or reacts to contacts, 2 queues ground-shadow corners, 4 and 6 set the attachment
  *       points and start the bound animation, 5 plays the resource's sound cue.
  * @note Sibling of field_render_effect_frame16, which handles 11/17-byte records with 16-bit deltas.
- * @note Matching requires maspsx to keep consecutive labels before an
- *       inserted load-delay NOP, as original ASPSX 2.67 does. Fixed upstream
- *       in maspsx #143 (tools/maspsx at 3629944 or later).
  */
 s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32 flag, FieldActorPartDef *part)
 {
@@ -3948,7 +3941,6 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                             s32 page_x;
                             s32 page_abr;
 
-                            /* Stepwise: a single expression lets fold-const reassociate the 0x340. */
                             page_x = item[7];
                             page_x &= 3;
                             page_x <<= 6;
@@ -4354,7 +4346,6 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
 
                                     field_resolve_contact_hit(actor->owner_object_index, contact.index);
                                     attach_x = contact.x - sxy->x;
-                                    /* layer doubles as the mask: a separate local moves the tpage layer to another register. */
                                     layer = ~0x1800;
                                     placement_flags = slot->movement.word & layer;
                                     slot->attachment_points[3].x = attach_x;
@@ -4486,7 +4477,6 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                                 slot->sequence_command = 0x75;
                                                 break;
                                             default:
-                                                /* Self-assignment: the original keeps the dead reload of 0x3C here. */
                                                 slot->sequence_command = slot->sequence_command;
                                                 break;
                                             }
@@ -4790,7 +4780,6 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
     slot = &g_field_object_states[rec->source_object_index];
     actor = &g_field_actor_slots[rec->actor_index];
     slot->collision.word = 0;
-    /* layer doubles as the clear counter: a separate local re-colours 6 registers. */
     for (layer = 7; layer >= 0; layer--)
     {
         slot->effect_vertices.words[layer] = 0;
@@ -4935,7 +4924,6 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
                         s32 page_x;
                         s32 page_abr;
 
-                        /* Stepwise: a single expression lets fold-const reassociate the 0x340. */
                         page_x = item[7];
                         page_x &= 3;
                         page_x <<= 6;
@@ -5164,7 +5152,6 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
                                         actor->track_offsets[actor->track_count].y = (s16) (contact.y - target_screen->y);
                                         actor->track_count = (u8) (actor->track_count + 1);
                                         field_resolve_contact_hit(actor->owner_object_index, contact.index);
-                                        /* The loop notes weight slot's references; without them slot and dir swap registers. */
                                         do
                                         {
                                             do
@@ -5501,8 +5488,6 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
 
 /**
  * @brief addPrim with the GPU address and length masks passed in, so callers can keep them in locals.
- * @note The ring and fan loops hold the masks in locals set before the loop; addPrim's own
- *       constants are hoisted after the other loop-entry stores instead.
  */
 #define FIELD_LINK_PACKET(entry, packet, address_mask, length_mask)                          \
     ((packet)->tag = ((packet)->tag & (length_mask)) | (*(entry) & (address_mask)),          \
@@ -5865,7 +5850,7 @@ u8* field_render_effect_fan(FieldMotionRecord* effect, u8* packet_cursor, s32* o
     s32 outer_last_segment;
     s32 mask_low;
     s32 mask_high;
-    u16 segment_count; /* u16: a u8 local reuses the range-tested byte instead of re-reading it. */
+    u16 segment_count;
     FieldGouraudTriangle* third_triangle;
     FieldGouraudTriangle* fourth_triangle;
     FieldGouraudTriangle* second_triangle;
@@ -5910,7 +5895,6 @@ u8* field_render_effect_fan(FieldMotionRecord* effect, u8* packet_cursor, s32* o
     half_angle = angle_short;
     angle = 0;
     next_angle = angle_step;
-    /* Goto-built loop: in a real loop, loop.c hoists the four segment_count - 1 tests. */
 next_segment:
 {
     /* Copy the two screen coordinates as one GPU word. */

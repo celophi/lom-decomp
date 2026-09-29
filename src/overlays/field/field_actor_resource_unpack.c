@@ -109,7 +109,6 @@ typedef union
 
 /**
  * @brief Link record at byte offset @p offset of @p actor's link records.
- * @note The sum is written offset-first so the addu emits the offset operand first.
  */
 #define FIELD_ACTOR_LINK_RECORD(actor, offset) ((FieldActorLinkRecord*)((offset) + (u32)(actor)->link_records))
 
@@ -175,7 +174,6 @@ void field_check_marker_contact(Vec3i* position)
         probe.width = FIELD_CONTACT_PROBE_WIDTH;
         probe.height_tolerance = FIELD_CONTACT_PROBE_HEIGHT;
         probe.depth = FIELD_CONTACT_PROBE_DEPTH;
-        /* Called as returning int: the original uses the s16 result without extending it. */
         label = ((s32(*)(struct FieldCollisionQuery*))field_collision_hit_markers)(&probe);
         if (label != -1)
         {
@@ -375,7 +373,6 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
     cursor = (u8*)((u32)(cursor + 5) & ~3);
     if (has_tracks != 0)
     {
-        /* The block boundary keeps the owner reload after this halfword load. */
         do
         {
             track_offset = *(u16*)cursor;
@@ -532,7 +529,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
                         }
                         j += 1;
                         texture++;
-                    } while (0); /* Its loop depth sets the s0/s1 allocation. */
+                    } while (0);
                 } while (j < (s32)mesh_fields->texture_part_count);
             }
             i += 1;

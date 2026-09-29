@@ -1,6 +1,6 @@
 # Save file format
 
-[English documentation](../../README.md) | [日本語](../../../jp/technical/reference/save-file.md) | [ADDHERO overlay](../architecture/addhero.md) | [Text tables](text-tables.md)
+[English documentation](../../README.md) | [日本語](../../../jp/technical/reference/save-file.md) | [CARDA overlay](../architecture/carda.md) | [ADDHERO overlay](../architecture/addhero.md) | [Text tables](text-tables.md)
 
 Legend of Mana keeps each save as one file on the memory card. If you've ever
 opened a card in an emulator's memory card manager, you've seen these files as
@@ -15,8 +15,10 @@ header in front, skip it first; the save file itself starts with the letters
 
 ## The big picture
 
-A save is always 16 KiB, which is exactly two 8 KiB memory card blocks. It has
-four parts:
+An ordinary game save is 16 KiB, exactly two 8 KiB memory card blocks.
+Ring Ring Land uses a separate six-block transfer file, covered by the
+[CARDA guide](../architecture/carda.md#sending-and-returning-pets).
+The ordinary save has four parts:
 
 | Offset | Size | What it is |
 |---|---|---|

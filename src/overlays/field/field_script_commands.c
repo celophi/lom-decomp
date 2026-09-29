@@ -460,7 +460,6 @@ void field_command_end_interaction(void)
  */
 void field_command_set_fade(s32 command, FieldFadeParams* params)
 {
-    /* Int arguments on purpose: the original passes the words without narrowing them to s16. */
     ((void (*)(s32, s32, s32, s32))field_set_fade_target)(params->red, params->green, params->blue, params->duration);
 }
 
@@ -498,7 +497,6 @@ void field_command_test_area(s32 command, FieldAreaTestParams* params)
         bottom = params->area.centered.center_z + params->area.centered.half_height;
         break;
     case FIELD_AREA_ACTOR:
-        /* x holds the actor id until the position is known; a separate local changes the register allocation. */
         if (params->x != FIELD_SCRIPT_OWNER)
         {
             x = params->x;
