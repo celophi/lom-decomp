@@ -1,3 +1,5 @@
+#include "kanji.h"
+
 #include "checkps_internal.h"
 
 #include "sdk/libapi.h"
@@ -11,7 +13,7 @@
 /* GP0(A0h): copy a rectangle from CPU to VRAM. */
 #define CHECKPS_GPU_LOAD_IMAGE_COMMAND 0xA0000000
 
-void draw_kanji_glyph(KanjiDrawState* draw_state, u8* bitmap, s32 color);
+static void draw_kanji_glyph(KanjiDrawState* draw_state, u8* bitmap, s32 color);
 
 /**
  * @brief Draw a Shift-JIS string using glyphs from the PS1 Kanji ROM.
@@ -22,42 +24,28 @@ void draw_kanji_glyph(KanjiDrawState* draw_state, u8* bitmap, s32 color);
 void draw_kanji_string(const char* text, KanjiDrawState* draw_state, s32 color)
 {
     const u8* cursor;
-    const u8* end;
-    const u8* loop_end;
-    s32 is_newline;
+    s32 length;
     s32 line_start_x;
-    s32 high_byte;
-    s32 glyph_color;
     u16 character_code;
-    s32 newline;
+    s32 newline = '\n';
+    s32 glyph_color = color;
 
-    glyph_color = color;
-    end = (const u8*)text + strlen(text);
-    newline = '\n';
-    cursor = (const u8*)text;
+    length = strlen(text);
     line_start_x = draw_state->position.coord.x;
-    /* The color, newline and loop_end copies reproduce the original register usage. */
-    if (cursor < end)
+    for (cursor = (const u8*)text; cursor < (const u8*)text + length; cursor++)
     {
-        loop_end = end;
-        do
+        if (*cursor == newline)
         {
-            is_newline = *cursor == newline;
-            if (is_newline)
-            {
-                draw_state->position.coord.x = line_start_x;
-                draw_state->position.coord.y += CHECKPS_KANJI_LINE_HEIGHT;
-            }
-            else
-            {
-                high_byte = *cursor;
-                cursor++;
-                character_code = (high_byte << 8) | *cursor;
-                draw_kanji_glyph(draw_state, (u8*)Krom2RawAdd(character_code), glyph_color);
-                draw_state->position.coord.x += CHECKPS_KANJI_ADVANCE;
-            }
-            cursor++;
-        } while (cursor < loop_end);
+            draw_state->position.coord.x = line_start_x;
+            draw_state->position.coord.y += CHECKPS_KANJI_LINE_HEIGHT;
+        }
+        else
+        {
+            character_code = *cursor++ << 8;
+            character_code |= *cursor;
+            draw_kanji_glyph(draw_state, (u8*)Krom2RawAdd(character_code), glyph_color);
+            draw_state->position.coord.x += CHECKPS_KANJI_ADVANCE;
+        }
     }
 }
 
@@ -67,7 +55,7 @@ void draw_kanji_string(const char* text, KanjiDrawState* draw_state, s32 color)
  * @param bitmap Raw 1bpp glyph bitmap.
  * @param color Foreground pixel value.
  */
-void draw_kanji_glyph(KanjiDrawState* draw_state, u8* bitmap, s32 color)
+static void draw_kanji_glyph(KanjiDrawState* draw_state, u8* bitmap, s32 color)
 {
     struct
     {

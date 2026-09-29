@@ -1,4 +1,9 @@
+#include "cdrom.h"
+
 #include "checkps_internal.h"
+
+#include "kanji.h"
+#include "pattern.h"
 
 #include "display.h"
 #include "sdk/libapi.h"
@@ -9,8 +14,8 @@
 #define CHECKPS_GPU_MASK_BIT_COMMAND 0xE6000002
 
 #define CHECKPS_WARNING_DRAW_PASS_COUNT 2
-#define CHECKPS_WARNING_TEXT_X 0x50
-#define CHECKPS_WARNING_TEXT_Y 0x5C
+#define CHECKPS_WARNING_TEXT_X 80
+#define CHECKPS_WARNING_TEXT_Y 92
 #define CHECKPS_WARNING_GLYPH_WIDTH 16
 #define CHECKPS_WARNING_SCANLINE_HEIGHT 1
 #define CHECKPS_WARNING_PRIMARY_COLOR 0xFFFF
@@ -21,6 +26,8 @@
 /* These mirror CdlDiskError/CdlStatShellOpen; libcd.h is not GCC 2.7.2-clean. */
 #define CHECKPS_CD_IRQ_DISK_ERROR 5
 #define CHECKPS_CD_STATUS_SHELL_OPEN 0x10
+#define CHECKPS_CD_STATUS_ERROR 0x01
+#define CHECKPS_CD_ERROR_INVALID_COMMAND 0x40
 #define CHECKPS_CD_SEEK_DELAY_FRAMES 3
 #define CHECKPS_CD_TEST_DELAY_FRAMES 200
 #define CHECKPS_CD_PAUSE_DELAY_FRAMES 10
@@ -39,6 +46,13 @@
 #define CHECKPS_DECIMAL_RADIX 10
 #define CHECKPS_SECONDS_PER_MINUTE 60
 #define CHECKPS_POINTER_IDENTITY_MAGIC 0x88888889U
+
+/*
+ * GNU as 2.7 pads the standard .text section to a 16-byte boundary.  Keeping
+ * this translation unit's code in a custom section avoids synthetic tail
+ * bytes; the build renames the section back to .text with objcopy.
+ */
+#define CHECKPS_GNU_TEXT __attribute__((section(".text.cdrom")))
 
 /**
  * @brief Named and indexed views of the CD controller response buffer.
@@ -154,21 +168,12 @@ static s32 g_cd_last_track_bcd;
 static u8 g_cd_seek_position_bcd[8];
 
 /*
- * GNU as 2.7 pads the standard .text section to a 16-byte boundary.  Keeping
- * this translation unit's code in a custom section avoids synthetic tail
- * bytes; the build renames the section back to .text with objcopy.
- */
-#define CHECKPS_GNU_TEXT __attribute__((section(".text.cdrom")))
-
-/*
  * Keep the section attribute on declarations so Splat can discover each
  * function definition normally while GNU as emits this unit into .text.cdrom.
  */
-void start_cd_integrity_check(void) CHECKPS_GNU_TEXT;
-s32 run_cd_integrity_check(s32 single_step) CHECKPS_GNU_TEXT;
-CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command) CHECKPS_GNU_TEXT;
-void send_cd_command(CheckPSCdCommandIndex command) CHECKPS_GNU_TEXT;
-void show_hardware_modification_warning_and_exit(void) CHECKPS_GNU_TEXT;
+static CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command) CHECKPS_GNU_TEXT;
+static void send_cd_command(CheckPSCdCommandIndex command) CHECKPS_GNU_TEXT;
+static void show_hardware_modification_warning_and_exit(void) CHECKPS_GNU_TEXT;
 
 /**
  * @brief Initialize the CHECKPS CD integrity state machine.
@@ -189,22 +194,10 @@ s32 run_cd_integrity_check(s32 single_step)
     s32 restart_state_or_vsync;
     s32 step_result = CHECKPS_STATE_IDLE;
     static void* compiler_label_anchors[] = {
-        &&init_poll_result,
-        &&get_td_poll_result,
-        &&setloc_poll_result,
-        &&setmode_poll_result,
-        &&seek_p_poll_result,
-        &&mute_poll_result,
-        &&play_poll_result,
-        &&test_04_poll_result,
-        &&test_05_poll_result,
-        &&failure_nop_poll_result,
-        &&recovery_nop_poll_result,
-        &&pause_poll_result,
-        &&get_id_apply_seek_position,
-        &&test_05_check_response,
-        &&pause_command_error,
-        &&pause_done,
+        &&init_poll_result,           &&get_td_poll_result,      &&setloc_poll_result,       &&setmode_poll_result,
+        &&seek_p_poll_result,         &&mute_poll_result,        &&play_poll_result,         &&test_04_poll_result,
+        &&test_05_poll_result,        &&failure_nop_poll_result, &&recovery_nop_poll_result, &&pause_poll_result,
+        &&get_id_apply_seek_position, &&test_05_check_response,  &&pause_command_error,      &&pause_done,
     };
 
     while (1)
@@ -280,8 +273,7 @@ s32 run_cd_integrity_check(s32 single_step)
                     {
                         if (step_result == CHECKPS_CD_POLL_COMPLETE)
                         {
-                            g_cd_command_parameters[0] =
-                                (g_cd_last_track_bcd >= CHECKPS_CD_FIRST_AUDIO_TRACK) ? CHECKPS_CD_FIRST_AUDIO_TRACK : 0;
+                            g_cd_command_parameters[0] = (g_cd_last_track_bcd >= CHECKPS_CD_FIRST_AUDIO_TRACK) ? CHECKPS_CD_FIRST_AUDIO_TRACK : 0;
                             send_cd_command(CHECKPS_CD_CMD_GET_TD);
                             g_checkps_state = CHECKPS_STATE_WAIT_GET_TD;
                         }
@@ -350,10 +342,10 @@ s32 run_cd_integrity_check(s32 single_step)
                                 toc_minutes_bcd = toc_time_bcd[0];
                                 toc_seconds_bcd = toc_time_bcd[1];
 
-                                toc_minutes = ((toc_minutes_bcd >> CHECKPS_BCD_DIGIT_SHIFT) * CHECKPS_DECIMAL_RADIX) +
-                                              (toc_minutes_bcd & CHECKPS_BCD_DIGIT_MASK);
-                                toc_seconds = ((toc_seconds_bcd >> CHECKPS_BCD_DIGIT_SHIFT) * CHECKPS_DECIMAL_RADIX) +
-                                              (toc_seconds_bcd & CHECKPS_BCD_DIGIT_MASK);
+                                toc_minutes =
+                                    ((toc_minutes_bcd >> CHECKPS_BCD_DIGIT_SHIFT) * CHECKPS_DECIMAL_RADIX) + (toc_minutes_bcd & CHECKPS_BCD_DIGIT_MASK);
+                                toc_seconds =
+                                    ((toc_seconds_bcd >> CHECKPS_BCD_DIGIT_SHIFT) * CHECKPS_DECIMAL_RADIX) + (toc_seconds_bcd & CHECKPS_BCD_DIGIT_MASK);
                                 midpoint_total_seconds = ((toc_minutes * CHECKPS_SECONDS_PER_MINUTE) + toc_seconds) >> 1;
                                 midpoint_minutes = midpoint_total_seconds / CHECKPS_SECONDS_PER_MINUTE;
                                 midpoint_seconds = midpoint_total_seconds % CHECKPS_SECONDS_PER_MINUTE;
@@ -377,8 +369,7 @@ s32 run_cd_integrity_check(s32 single_step)
                                 midpoint_second_tens = midpoint_seconds_value / CHECKPS_DECIMAL_RADIX;
                                 encoded_minute_tens = encoded_minutes / CHECKPS_DECIMAL_RADIX;
                                 g_cd_seek_position_bcd[1] =
-                                    (midpoint_second_tens << CHECKPS_BCD_DIGIT_SHIFT) |
-                                    (encoded_minutes - encoded_minute_tens * CHECKPS_DECIMAL_RADIX);
+                                    (midpoint_second_tens << CHECKPS_BCD_DIGIT_SHIFT) | (encoded_minutes - encoded_minute_tens * CHECKPS_DECIMAL_RADIX);
 
                                 send_cd_command(CHECKPS_CD_CMD_READ_TOC);
                                 g_checkps_state = CHECKPS_STATE_WAIT_READ_TOC;
@@ -401,17 +392,16 @@ s32 run_cd_integrity_check(s32 single_step)
                    reads use one base register in the original code shape. */
                 u8* response_cursor = g_cd_response.bytes;
                 u8* response_base = response_cursor;
-                if (response_base[0] & 1)
+                if (response_base[0] & CHECKPS_CD_STATUS_ERROR)
                 {
-                    if (*++response_cursor & 0x40)
+                    if (*++response_cursor & CHECKPS_CD_ERROR_INVALID_COMMAND)
                     {
                         u8 seek_minute_bcd = g_cd_seek_position_bcd[0];
                         u8 seek_second_bcd = g_cd_seek_position_bcd[1];
                         u8* command_params;
                         u32 command_params_address;
                         step_result = CHECKPS_STATE_WAIT_READ_TOC;
-                        command_params_address =
-                            ((u32)g_cd_command_parameters + (u32)single_step) - (u32)single_step;
+                        command_params_address = ((u32)g_cd_command_parameters + (u32)single_step) - (u32)single_step;
                         command_params = (u8*)command_params_address;
                         command_params[2] = 0;
                         *command_params++ = seek_minute_bcd;
@@ -472,8 +462,7 @@ s32 run_cd_integrity_check(s32 single_step)
             get_id_apply_seek_position:
                 seek_minute_bcd = g_cd_seek_position_bcd[0];
                 seek_second_bcd = g_cd_seek_position_bcd[1];
-                command_params_address =
-                    ((u32)g_cd_command_parameters + (u32)single_step) - (u32)single_step;
+                command_params_address = ((u32)g_cd_command_parameters + (u32)single_step) - (u32)single_step;
                 command_params = (u8*)command_params_address;
                 command_params[2] = 0;
                 *command_params++ = seek_minute_bcd;
@@ -966,7 +955,7 @@ s32 run_cd_integrity_check(s32 single_step)
  * @param command Command whose response is expected.
  * @return Poll status describing completion, pending state, or hardware error.
  */
-CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command)
+static CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command)
 {
     u8 irq_code_sum_target;
     s32 irq_sample;
@@ -1052,7 +1041,7 @@ CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command)
  * @brief Write a CHECKPS command and its parameters to the CD controller.
  * @param command Command descriptor index to send.
  */
-void send_cd_command(CheckPSCdCommandIndex command)
+static void send_cd_command(CheckPSCdCommandIndex command)
 {
     s32 delay_counter;
     s32 parameter_index;
@@ -1070,19 +1059,16 @@ void send_cd_command(CheckPSCdCommandIndex command)
     *g_cd_data_register = CHECKPS_CD_PARAMETER_MODE;
     *g_cd_status_register = 0;
 
-    /*
-     * The parameter count is read through a precomputed byte offset; indexing
-     * g_cd_command_table[command] in the loop adds a hoisted copy of the index.
-     */
+    /* Each descriptor occupies one fixed-size record in the command table. */
     descriptor_offset = command * sizeof(CheckPSCdCommandDescriptor);
     parameter_index = 0;
-    if ((&g_cd_command_table->parameter_count)[descriptor_offset] != 0)
+    if (((CheckPSCdCommandDescriptor*)((u8*)g_cd_command_table + descriptor_offset))->parameter_count != 0)
     {
         do
         {
             *g_cd_data_register = g_cd_command_parameters[parameter_index];
             parameter_index++;
-        } while (parameter_index < (&g_cd_command_table->parameter_count)[descriptor_offset]);
+        } while (parameter_index < ((CheckPSCdCommandDescriptor*)((u8*)g_cd_command_table + descriptor_offset))->parameter_count);
     }
 
     *g_cd_status_register = 0;
@@ -1092,7 +1078,7 @@ void send_cd_command(CheckPSCdCommandIndex command)
 /**
  * @brief Display the hardware-modification warning and terminate execution.
  */
-void show_hardware_modification_warning_and_exit(void)
+static void show_hardware_modification_warning_and_exit(void)
 {
     DRAWENV draw_env;
     DISPENV disp_env;

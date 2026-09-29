@@ -1,3 +1,4 @@
+#include "carda.h"
 #include "carda_internal.h"
 
 /**
@@ -39,9 +40,9 @@
  * @note JP moves it right.
  */
 #if defined(VERSION_JP)
-#define CARDA_ENTRY_VALUE_X 0x94
+#define CARDA_ENTRY_VALUE_X 148
 #else
-#define CARDA_ENTRY_VALUE_X 0x86
+#define CARDA_ENTRY_VALUE_X 134
 #endif
 
 /** @brief Entry list columns shared by both versions: the file label, number label, rank marker and "+" marker (right edge). */
@@ -66,9 +67,29 @@
 
 /**
  * @brief Address of the CARDA text whose table offset is @p offset.
- * @note Summed as integers, offset first, like the original list drawing code.
  */
 #define CARDA_TEXT_BY_OFFSET(table, offset) ((u8*)((s32)(offset) + (s32)(table)))
+
+#if defined(VERSION_JP)
+/* JP supplies these implementations from assembly. */
+void carda_build_ui_elements(void);
+void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+#else
+static void carda_build_ui_elements(void);
+static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+#endif
+
+static void carda_update_menu(FieldRenderHalf* render);
+static s32 carda_update_card_sequence(void);
+static s32 carda_handle_input(void);
+static void carda_switch_card(void);
+static void carda_close_all_elements(void);
+static void carda_update_elements(FieldRenderHalf* render);
+static void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+static void* carda_draw_title(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+static void* carda_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+static void* carda_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+static void carda_update_and_draw_elements(FieldRenderHalf* render);
 
 /**
  * @brief Reset the overlay state, clear the icon and glyph VRAM and build the windows.
@@ -143,10 +164,10 @@ s32 carda_update_frame(FieldRenderHalf* render)
 #if defined(VERSION_JP)
 INCLUDE_ASM("overlays/carda/nonmatchings/carda", carda_build_ui_elements);
 #else
-void carda_build_ui_elements(void)
+static void carda_build_ui_elements(void)
 {
-    CardaElement* element;
     s32 unused[2]; /* never used, but the original stack frame reserves it */
+    CardaElement* element;
 
     g_carda_scroll_frames = 0;
     g_carda_scroll_target_y = 0;
@@ -252,7 +273,7 @@ void carda_build_ui_elements(void)
  *        sequence once the main window is open, handle input and step the scroll.
  * @param render FIELD render buffer being built this frame.
  */
-void carda_update_menu(FieldRenderHalf* render)
+static void carda_update_menu(FieldRenderHalf* render)
 {
     carda_update_elements(render);
     g_carda_icon_phase += 2;
@@ -267,7 +288,8 @@ void carda_update_menu(FieldRenderHalf* render)
     carda_handle_input();
     if (g_carda_scroll_frames != 0)
     {
-        g_carda_scroll_y += (g_carda_scroll_target_y - g_carda_scroll_y) / g_carda_scroll_frames--;
+        g_carda_scroll_y += (g_carda_scroll_target_y - g_carda_scroll_y) / g_carda_scroll_frames;
+        g_carda_scroll_frames--;
     }
     else
     {
@@ -283,9 +305,9 @@ void carda_update_menu(FieldRenderHalf* render)
  * format prompt when the player confirms after declining it, and maps the
  * sequence result onto the next step table or the unformatted-card prompt.
  *
- * @return Nothing: the original is declared int but returns no value, and its caller ignores it.
+ * @return Unspecified; callers use the updated card state.
  */
-s32 carda_update_card_sequence(void)
+static s32 carda_update_card_sequence(void)
 {
     s32 result;
     CardaElement* prompt;
@@ -398,9 +420,9 @@ s32 carda_update_card_sequence(void)
 
 /**
  * @brief Handle browser input: cancel, card switch, entry navigation and confirm.
- * @return Nothing: the original is declared int but returns no value, and its caller ignores it.
+ * @return Unspecified; callers use the updated menu state.
  */
-s32 carda_handle_input(void)
+static s32 carda_handle_input(void)
 {
     s32 entry_count;
     s32 input;
@@ -571,7 +593,7 @@ s32 carda_handle_input(void)
 /**
  * @brief Switch to the other card slot and restart its directory scan.
  */
-void carda_switch_card(void)
+static void carda_switch_card(void)
 {
     g_carda_format_declined = 0;
     g_card_step = NULL;
@@ -590,7 +612,7 @@ void carda_switch_card(void)
 /**
  * @brief Restore the field fade target and start closing every open window.
  */
-void carda_close_all_elements(void)
+static void carda_close_all_elements(void)
 {
     CardaElement* element;
     s32 i;
@@ -633,7 +655,7 @@ void carda_scroll_to_selection(void)
  * @brief Run the window update and draw pass.
  * @param render FIELD render buffer being built this frame.
  */
-void carda_update_elements(FieldRenderHalf* render)
+static void carda_update_elements(FieldRenderHalf* render)
 {
     carda_update_and_draw_elements(render);
 }
@@ -647,7 +669,7 @@ void carda_update_elements(FieldRenderHalf* render)
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
  */
-void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
+static void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     /* A prompt or dialog covers the status messages, except the blank one. */
     if (g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state != CARDA_ELEMENT_FREE)
@@ -759,13 +781,13 @@ void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
             DVECTOR value_pos;
             u16* text_table;
             s32 marker_x;
-            s32 marker_x_bits;
+            s32 marker_text_x;
             s32 color;
             s32 label_x;
 
             text_table = &g_carda_text_checking_card;
             list_x = -x_offset;
-            do
+            for (; i < g_card_entry_state; i++)
             {
                 color = FIELD_TEXT_COLOR_NORMAL;
                 marker_x = list_x + CARDA_ENTRY_MARKER_X;
@@ -785,16 +807,16 @@ void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                         if ((g_carda_rank_count - 1) == g_carda_entry_ranks[i])
                         {
                             marker_offset = text_table[CARDA_TEXT_NEWEST];
-                            marker_x_bits = marker_x << 16;
-                            prim = field_draw_text(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, marker_offset), color, marker_x_bits >> 16, row_y,
-                                                   FIELD_TEXT_ALIGN_LEFT);
+                            marker_text_x = (s16)marker_x;
+                            prim =
+                                field_draw_text(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, marker_offset), color, marker_text_x, row_y, FIELD_TEXT_ALIGN_LEFT);
                         }
                         else if (g_carda_entry_ranks[i] < 2)
                         {
                             marker_offset = text_table[CARDA_TEXT_OLDEST];
-                            marker_x_bits = marker_x << 16;
-                            prim = field_draw_text(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, marker_offset), color, marker_x_bits >> 16, row_y,
-                                                   FIELD_TEXT_ALIGN_LEFT);
+                            marker_text_x = (s16)marker_x;
+                            prim =
+                                field_draw_text(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, marker_offset), color, marker_text_x, row_y, FIELD_TEXT_ALIGN_LEFT);
                         }
                         if (*skip_hex_digits(&g_card_entries[g_card_slot][i].name[CARD_SAVE_FILENAME_PREFIX_LENGTH]) == '+')
                         {
@@ -828,8 +850,7 @@ void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                                                FIELD_TEXT_ALIGN_LEFT);
                     }
                 }
-                i++;
-            } while (i < g_card_entry_state);
+            }
         }
 
         row_y = ((g_carda_selected_row * CARDA_ENTRY_ROW_HEIGHT) - y_offset) - g_carda_scroll_y;
@@ -860,7 +881,7 @@ void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
  */
-void* carda_draw_title(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
+static void* carda_draw_title(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     RECT unused; /* never used, but the original stack frame reserves it */
 
@@ -891,7 +912,7 @@ void* carda_draw_title(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
  */
-void* carda_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
+static void* carda_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     RECT unused; /* never used, but the original stack frame reserves it */
     TILE* tile;
@@ -919,7 +940,7 @@ void* carda_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_of
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
  */
-void* carda_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
+static void* carda_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     RECT unused; /* never used, but the original stack frame reserves it */
     TILE* tile;
@@ -956,13 +977,13 @@ void* carda_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_of
 #if defined(VERSION_JP)
 INCLUDE_ASM("overlays/carda/nonmatchings/carda", carda_draw_selected_entry_details);
 #else
-void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
+static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     void* result;
     DVECTOR pos;
-    u8 name[0x100];
+    u8 name[256];
     s32 party_icon[FIELD_PARTY_SIZE];
-    DVECTOR unused; /* never used, but the original stack frame reserves it */
+    DVECTOR unused;
 
     result = prim;
     if (g_carda_selection_status == CARDA_SELECTION_NONE)
@@ -1055,13 +1076,22 @@ void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
                             s32 adjust = step;
                             s32 rem;
                             s32 hi;
-                            s32 delta;
 
-                            if ((g_carda_icon_phase >= base_y && g_carda_icon_phase < base_x && (delta = g_carda_icon_phase - base_y, 1)) ||
-                                (rem = base_x % (half_step * present_count),
-                                 g_carda_icon_phase >= rem && g_carda_icon_phase < (hi = rem + half_step) && (delta = hi - g_carda_icon_phase, 1)))
+                            if (g_carda_icon_phase >= base_y && g_carda_icon_phase < base_x)
                             {
-                                adjust += delta;
+                                adjust += g_carda_icon_phase - base_y;
+                            }
+                            else
+                            {
+                                rem = base_x % (half_step * present_count);
+                                if (g_carda_icon_phase >= rem)
+                                {
+                                    hi = rem + half_step;
+                                    if (g_carda_icon_phase < hi)
+                                    {
+                                        adjust += hi - g_carda_icon_phase;
+                                    }
+                                }
                             }
                             result = carda_draw_icon_highlight(result, ot, total - x_offset, -y_offset, adjust, party_icon[j], i, j);
                             total += adjust;
@@ -1113,10 +1143,7 @@ void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
                 header = &g_carda_selected_file.header;
                 if (header->title[1][0] == 0 || header->title[1][0] >= SJIS_LEAD_MIN)
                 {
-                    /*
-                     * TODO: this single-iteration loop stands in for an unknown
-                     * source shape (the same open lever as ADDHERO's details panel).
-                     */
+                    /* TODO: recover a structured form for this title block. */
                     do
                     {
                         for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
@@ -1209,7 +1236,7 @@ CardaElement* carda_alloc_element(void)
  *
  * @param render FIELD render buffer; its primitive cursor is read on entry and written back on exit.
  */
-void carda_update_and_draw_elements(FieldRenderHalf* render)
+static void carda_update_and_draw_elements(FieldRenderHalf* render)
 {
     void* prim;
     u_long* ot;

@@ -20,6 +20,14 @@
 #include "glyph_cache.h"
 #include "card_events.h"
 #include "card_directory.h"
+#include "cdrom.h"
+#include "controller.h"
+#include "sdk/strings.h"
+#include "sdk/libetc.h"
+#include "carda.h"
+#include "carda_widgets.h"
+#include "carda_save.h"
+#include "carda_card.h"
 
 /**
  * @brief Draw callback of a CARDA UI element: emits the element's content at
@@ -63,7 +71,7 @@ typedef struct CardaElement
     CardaElementDrawFunc draw;
 } CardaElement;
 
-/** @brief CardaElement.attr.f.state values. */
+/** @brief CardaElement.attr.bits.state values. */
 #define CARDA_ELEMENT_FREE 0
 #define CARDA_ELEMENT_OPENING 1
 #define CARDA_ELEMENT_OPEN 2
@@ -398,44 +406,6 @@ typedef struct
     u8 raw[6];
 } CardaFileHeaderScratch;
 
-/**
- * @brief 0x20-byte, word-aligned memory-card path scratch buffer.
- * The first six bytes are initialized from the "bu00:" device prefix before a
- * filename suffix is appended.
- */
-typedef union
-{
-    u8 bytes[0x20];
-    u32 align;
-} CardaLoadScratch;
-
-/** @brief 0x100-byte, word-aligned memory-card path buffer. */
-typedef union
-{
-    u8 bytes[0x100];
-    u32 align;
-} CardaCardPathBuffer;
-
-/** @brief 0x10-byte, word-aligned buffer initialized from the "bu00:*" search path. */
-typedef union
-{
-    u8 bytes[0x10];
-    u32 align;
-} CardaCardSearchPath;
-
-/** @brief Eight-byte, word-aligned memory-card path template ("bu00:"). */
-typedef union
-{
-    char text[8];
-    u32 align[2];
-} CardaCardPathTemplate;
-
-/** @brief One Shift-JIS character plus its terminator, copied whole into the save title. */
-typedef struct
-{
-    s8 text[3];
-} CardaSjisChar;
-
 /** @brief Bytes read to show an entry: the card header and the first 0x100 bytes of the saved game. */
 #define CARDA_ENTRY_READ_BYTES 0x280
 
@@ -444,29 +414,6 @@ typedef struct
 
 /** @brief Highest count an item stack can reach. */
 #define CARDA_ITEM_COUNT_MAX 99
-
-/** @brief Item list stored in a memory-card save. */
-typedef struct CardaSaveItemList
-{
-    s32 growth_delta; /**< Added to the restored record's growth counter. */
-    u32 count;        /**< Number of valid entries in ids. */
-    u8 ids[0x50];
-} CardaSaveItemList;
-
-/** @brief The parts of the memory-card save buffer (g_carda_save_blob) that CARDA reads. */
-typedef struct CardaSaveData
-{
-    u8 unk0[0x300];
-    CardaSaveItemList items;
-    PetRecord record; /**< Pet restored into the saved game. */
-} CardaSaveData;
-
-/**
- * @brief The pet-transfer file in the save buffer.
- * @note g_carda_save_blob is a byte pointer because the buffer holds either a
- *       save file (SaveFile) or a pet-transfer file (CardaSaveData).
- */
-#define CARDA_SAVE_DATA ((CardaSaveData*)g_carda_save_blob)
 
 /* FIELD / main-executable globals used by this overlay. */
 extern s32 g_save_compatibility_tag;
@@ -488,11 +435,7 @@ extern char g_new_save_entry_prefix[];
 extern char g_card_full_entry_name[];
 
 /* CARDA read-only data. */
-extern CardaSjisChar g_carda_title_dash;
-extern CardaSjisChar g_carda_title_colon;
 extern const CardaFileHeaderScratch g_carda_save_card_path_prefix;
-extern const CardaCardPathTemplate g_carda_card_path_prefix;
-extern const CardaCardPathTemplate g_carda_card_search_path;
 
 /* CARDA text offset-table entries. */
 extern u16 g_carda_text_checking_card;
@@ -592,7 +535,7 @@ extern s32 g_carda_icon_palette;
 extern s32 g_carda_progress_active;
 extern s32 g_carda_format_frames;
 extern s32 g_carda_mode;
-extern u8 g_carda_icon_context[];
+extern u_long g_carda_icon_context[];
 extern s32 g_carda_format_declined;
 extern s32 g_carda_selection_status;
 /** @brief The saved game's item records (g_saved_game_ctx->items). */
@@ -619,14 +562,8 @@ extern s32 g_carda_progress_start_tick;
 extern s32 g_carda_secondary_poll_countdown;
 extern u8 g_carda_temp_card_path[];
 
-/*
- * External callees.  The ones declared with an empty parameter list were
- * called without a prototype in the original sources and must stay that way.
- */
+/* FIELD entry points and library calls used by CARDA. */
 void field_reset_input_repeat(void);
-s32 cdrom_wait_queue_empty();
-s32 cdrom_queue_read();
-s32 reset_controller_vsync_state();
 s32 card_resource_noop_hook();
 s32 OpenEvent(s32, s32, s32, s32);
 void CloseEvent(s32);
@@ -643,11 +580,7 @@ s32 rename(void*, void*);
 s32 erase(void*);
 u8* Krom2RawAdd(u16 sjis_code);
 s32 firstfile();
-void bcopy();
 s32 rand();
-s32 strcat(void*, void*);
-s32 strcpy(void*, void*, ...);
-s32 strncmp();
 s32 _card_info(s32);
 s32 _card_load(s32);
 s32 _card_write(s32, s32, void*);
@@ -655,7 +588,6 @@ s32 _card_read(s32, s32, void*);
 s32 _card_wait(s32);
 s32 _card_clear(s32);
 s32 _card_format();
-s32 VSync(s32);
 s32 func_80033E7C(s32);
 s32 func_80034648(s32, s32, s32);
 s32 field_set_fade_target();
@@ -668,69 +600,5 @@ void* field_draw_text(void* prim, u_long* ot, u8* text, s32 color, s32 x, s32 y,
 void* field_draw_number(u_long* ot, void* prim, s32 value, s32 color, DVECTOR* pos, s32 mode);
 void field_flag_known_save();
 void field_apply_region_level_ups(s32 slot);
-
-/*
- * CARDA functions.  The ones declared with an empty parameter list are called
- * before their definition with arguments that do not match it (or used to size
- * the outgoing-argument area), so they must not get a prototype here.
- */
-void carda_init(void* work, s32 mode);
-s32 carda_update_frame(FieldRenderHalf* render);
-void carda_build_ui_elements(void);
-void carda_update_menu(FieldRenderHalf* render);
-s32 carda_update_card_sequence(void);
-s32 carda_handle_input(void);
-void carda_switch_card(void);
-void carda_close_all_elements(void);
-void carda_scroll_to_selection(void);
-void carda_update_elements(FieldRenderHalf* render);
-void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void* carda_draw_title(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void* carda_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void* carda_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void* carda_draw_cant_hold_more(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void carda_clear_elements(void);
-CardaElement* carda_alloc_element(void);
-void carda_update_and_draw_elements(FieldRenderHalf* render);
-void carda_deactivate_primary_element(void);
-void carda_build_save_file(void);
-s32 carda_test_option_flag_2(void);
-void* carda_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void* carda_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void* carda_draw_progress_bar(POLY_G4* quad, u_long* ot);
-void* carda_draw_save_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void* carda_draw_overwrite_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void* carda_draw_save_progress(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void* carda_draw_save_complete(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void* carda_draw_format_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void* carda_draw_format_progress(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void carda_open_status_dialog(s32 dialog_state);
-void* carda_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void* carda_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 width, s32 icon, s32 index, s32 row);
-void carda_enable_choice_toggle(void);
-void* carda_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y);
-s32 carda_draw_save_flow(s32* ot, s32 prim, s32 x_offset, s32 y_offset);
-void carda_store_active_record(void);
-void carda_restore_active_record(void);
-s32 carda_draw_slot_prompt(s32 prim, s32* ot, s32 x, s32 y);
-void carda_open_save_status_dialog(s32 dialog_state);
-s32 carda_draw_save_status_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_offset);
-void carda_open_item_list(void);
-s32 carda_draw_item_list_header(s32* ot, s32 prim, s32 x_offset, s32 y_offset);
-s32 carda_draw_item_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset);
-void carda_apply_save_items(void);
-s32 carda_rank_entries(void);
-void carda_reset_entry_ranks(void);
-s32 carda_has_known_entry_type(void);
-s32 carda_card_lacks_free_blocks(void);
-void carda_erase_placeholder_files(void);
-s32 carda_advance_card_sequence();
-void carda_reset_to_new_save_entry(void);
-void carda_init_card_events(void);
-s32 carda_begin_entry_scan(s32 page);
-s32 carda_scan_next_entry(s32 page);
-void carda_commit_selected_entry(void);
-void carda_sort_entries_by_type(void);
 
 #endif /* CARDA_INTERNAL_H */
