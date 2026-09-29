@@ -35,13 +35,14 @@ typedef struct
 #endif
 
 /**
- * @brief Initialize the pet-transfer resource for the Japanese release.
+ * @brief Fill the PocketStation pet-transfer resource: the pet record, cleared
+ *        rewards, and the placed-land and maxed-mana masks.
  * @param resource Loaded CARD resource containing the transfer state.
  * @param pet Pet to copy into the resource.
  * @see decomp.me (100%) https://decomp.me/scratch/LO4aD
  * @note The US release leaves the resource unchanged.
  */
-void card_resource_noop_hook(u8* resource, PetRecord* pet)
+void card_prepare_pet_transfer(u8* resource, PetRecord* pet)
 {
 #if defined(VERSION_JP)
     CardPetTransfer* transfer;

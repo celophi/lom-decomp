@@ -76,7 +76,7 @@ field_draw_hex_byte_clamped         = 0x800163A0;
 field_draw_hex_word                 = 0x8001649C;
 field_draw_glyph                    = 0x800165B8;
 field_draw_hex_byte_masked          = 0x800166B4;
-card_resource_noop_hook             = 0x80016750;
+card_prepare_pet_transfer             = 0x80016750;
 
 // src/psyq/libcard/C112
 _bu_init                            = 0x800168DC;

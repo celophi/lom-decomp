@@ -715,7 +715,7 @@ void carda_store_active_record(void)
 {
     cdrom_queue_read(0x5E2, g_carda_save_blob);
     cdrom_wait_queue_empty();
-    card_resource_noop_hook(g_carda_save_blob, &g_saved_game_ctx->pets[g_field_card_pet_slot]);
+    card_prepare_pet_transfer(g_carda_save_blob, &g_saved_game_ctx->pets[g_field_card_pet_slot]);
 }
 
 /**

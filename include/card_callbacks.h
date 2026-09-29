@@ -5,6 +5,6 @@
 
 struct PetRecord;
 
-void card_resource_noop_hook(u8* resource, struct PetRecord* pet);
+void card_prepare_pet_transfer(u8* resource, struct PetRecord* pet);
 
 #endif
