@@ -1,5 +1,5 @@
 # Host-side Python tests; no disc files or historical toolchain required.
-.PHONY: test-tools test-assets test-overlay-tools extract-scene extract-scenes extract-addhero extract-carda extract-checkps extract-cload extract-field
+.PHONY: test-tools test-assets test-overlay-tools extract-scene extract-scenes extract-addhero extract-carda extract-checkps extract-cload extract-field extract-gname
 
 test-tools: test-assets test-overlay-tools
 
@@ -55,3 +55,10 @@ FIELD_OUTPUT ?= assets/exports/$(VERSION)/overlays/field
 extract-field:
 	@test -f "$(ASSETS_DIR)/field_data.databin.bin" || { echo 'Run make splat first to extract $(ASSETS_DIR)/field_data.databin.bin'; exit 1; }
 	python3 -m tools.overlays.field --version $(VERSION) "$(FIELD_OUTPUT)"
+
+# GNAME keeps its name-entry resources together; BSS stays with gname.c.
+GNAME_OUTPUT ?= assets/exports/$(VERSION)/overlays/gname
+
+extract-gname:
+	@test -f "$(ASSETS_DIR)/gname_data.databin.bin" || { echo 'Run make splat first to extract $(ASSETS_DIR)/gname_data.databin.bin'; exit 1; }
+	python3 -m tools.overlays.gname --version $(VERSION) "$(GNAME_OUTPUT)"

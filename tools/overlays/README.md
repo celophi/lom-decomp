@@ -9,7 +9,8 @@ writes out files you can look at.
 
 The extractors handle ADDHERO, the 2P hero screen; CARDA, the save and load
 screen; CHECKPS, the startup screen and CD check; CLOAD, the load screen; and
-FIELD, the resident field runtime. Extract the version's assets with
+FIELD, the resident field runtime; and GNAME, the name-entry screen.
+Extract the version's assets with
 `make splat` or `make splat VERSION=jp` first, then run:
 
 ```sh
@@ -23,13 +24,15 @@ make extract-cload
 make extract-cload VERSION=jp
 make extract-field
 make extract-field VERSION=jp
+make extract-gname
+make extract-gname VERSION=jp
 ```
 
 `assets/` keeps two kinds of data apart. `assets/us/` and `assets/jp/` hold what
 splat extracts for the build. `assets/exports/` holds data converted into
 formats people can read. The output goes to
 `assets/exports/<version>/overlays/<overlay>/`. Set `ADDHERO_OUTPUT`,
-`CARDA_OUTPUT`, `CHECKPS_OUTPUT`, `CLOAD_OUTPUT` or `FIELD_OUTPUT` to pick another
+`CARDA_OUTPUT`, `CHECKPS_OUTPUT`, `CLOAD_OUTPUT`, `FIELD_OUTPUT` or `GNAME_OUTPUT` to pick another
 folder. The destination must be new; the tool won't overwrite an existing folder.
 
 ## What you get
@@ -204,9 +207,47 @@ JP, listed in the byte map without another output file. More details are in
 [FIELD resources](../../docs/en/technical/reference/field-resources.md)
 ([Japanese](../../docs/jp/technical/reference/field-resources.md)).
 
+GNAME writes:
+
+```text
+gname/
+    byte-map.yaml          every data range, plus the source of the JP character chart
+    image/
+        image.tim          original 256 x 256 texture
+        image.yaml         stored layout, palette words and sprite coordinates
+        palette_00.png ... whole texture through each of its 16 palettes
+        glyphs/00.png ...  39 UI sprites, each cropped with its own palette
+    text/
+        resource.bin       original name-record archive
+        resource.yaml      header and table offsets
+        panel_records.yaml labels, help text and selectable characters
+        kanji_records.yaml the full 2,698-entry kanji table
+        history_names.yaml 256 history-name records
+        random_names.yaml  two sets of 128 random names
+    tables/                panel boundaries, category map, glyph metrics, cursors,
+                           background sprite positions and append animation frames
+```
+
+US has 138 panel records; JP has 498. Both carry the same kanji table, though
+US has only ten category slots and all are unmapped. US kanji entries stay as
+glyph codes because its character chart lacks those mappings. JP decodes text
+through the same version's CLOAD blob, like FIELD. The chart's source is listed
+in the byte map. English dictionary fragments in panel help text are expanded.
+All text keeps its original bytes, including terminators and padding.
+
+The cropped PNGs show each UI sprite with its stored palette. They don't apply
+runtime shadows or tinting. The full-texture previews use one palette each;
+color zero is transparent and other colors are opaque. The TIM stays unchanged.
+
+The blob ends where GNAME's existing BSS begins. US has four padding bytes
+after the append animation; JP has none. Both exports account for every byte
+without needing an `unknown/` folder. See [GNAME resources](../../docs/en/technical/reference/gname-resources.md)
+([Japanese](../../docs/jp/technical/reference/gname-resources.md)) for the layout
+and the difference between stored and runtime texture placement.
+
 ## How it's put together
 
-`addhero.py`, `carda.py`, `checkps.py`, `cload.py` and `field.py` use one reader
+`addhero.py`, `carda.py`, `checkps.py`, `cload.py`, `field.py` and `gname.py` use one reader
 per resource format. Each reader parses its bytes into a small dataclass and
 returns a `Part` that says where the bytes are and what they hold. `read_blob`
 collects the parts in address order, and `cover_gaps` fills whatever lies
@@ -232,11 +273,12 @@ Common changes:
 
 `card_data.py` holds the character chart, decoded-content dataclasses, common
 readers and writers used by the card overlays. `resources.py` supplies the
-blob, part, byte-map and output helpers all five extractors share. The smaller
+blob, part, byte-map and output helpers all six extractors share. The smaller
 modules (`text_table.py`, `icon_set.py`, `png.py`, `symbols.py` and
 `splat_config.py`) handle the underlying file formats.
 `field_tables.py` lists FIELD's small array layouts; its larger resources have
-separate readers in `field.py`.
+separate readers in `field.py`. GNAME reuses the typed format readers in
+`tools/assets/` for its tables, name-record archive and TIM.
 
 ## Tests
 
@@ -270,3 +312,8 @@ The FIELD tests check PNG pixels, TIM boundaries, Japanese decoding through
 CLOAD, animation and action offsets, palette headers, complete byte coverage
 and failed-write cleanup. Source tests check both regional layouts and the
 counts copied from C. Like the other extractor tests, they use made-up data.
+
+The GNAME tests cover both regional layouts, dictionary text, JP chart decoding,
+palette previews, sprite crops, signed layout coordinates and complete byte
+coverage. Bad resource offsets, invalid sprite bounds, missing inputs and
+failed writes must leave no partial export.
