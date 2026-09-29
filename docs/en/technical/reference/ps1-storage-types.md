@@ -1,58 +1,88 @@
 # PS1 storage types
 
-`include/ps1_types.h` defines the scalar types and stored object-pointer types
-shared by the matching build and native consumers. `common.h` includes it.
-The header can also be included independently, without the assembly macros.
+On the PlayStation, a pointer is four bytes. Legend of Mana stores a lot of
+them inside its data: a script frame keeps its program counter in a field,
+resource headers point at tables, tables point at more tables. If you compile
+that same C for a 64-bit PC, every one of those fields quietly becomes eight
+bytes. Offsets move, arrays get a different stride, and the data the game loads
+from the disc no longer lines up with the structs that read it.
 
-The native port previously rewrote many pointer fields and globals to `u32`
-and inserted casts at their uses. The original slots are four bytes, while
-ordinary pointers on a 64-bit host are eight bytes. Changing the slot size
-would move adjacent fields and change array strides. The stored-pointer
-typedefs preserve the four-byte slot and ordinary pointer expressions.
+There is no native PC build of Legend of Mana in this project, and the
+decompilation itself doesn't need one. But if someone wants to try getting
+this code running on a 64-bit system, that pointer-size problem is one of the
+first walls they'll hit. The usual fix is to rewrite every stored pointer as a
+`u32` and add casts wherever it's used, which is a lot of churn and makes the
+code harder to read.
 
-## Names and build selection
+`include/ps1_types.h` is there so nobody has to do that. It gives the stored
+pointers their own types that stay four bytes on a 64-bit build, while the PS1
+build compiles exactly as it always has. The matching build is still 100%
+byte-for-byte; these types expand to plain pointers for the historical
+compiler, so nothing about the original code generation changes.
 
-| Type | Pointee |
+`common.h` includes the header, and it can also be included on its own without
+the assembly macros.
+
+## The types
+
+| Type | Points at |
 | --- | --- |
 | `void_ptr` | `void` |
 | `u8_ptr`, `s8_ptr` | Unsigned or signed byte |
 | `u16_ptr`, `s16_ptr` | Unsigned or signed halfword |
 | `u32_ptr`, `s32_ptr` | Unsigned or signed word |
 | `u_long_ptr` | Psy-Q `u_long` |
-| `<Type>Ptr` | A structure, declared beside its owning type |
+| `<Type>Ptr` | A structure, declared next to the type it points at |
 | `<Type>TablePtr` | A stored address of a table of `<Type>Ptr` slots |
 
-With the historical compiler, each alias is the original pointer type. No
-native flags are added to the PS1 toolchain, and no instructions, registers,
-or generated assembly are patched.
+With the PS1 compiler, each of these is just the original pointer type.
 
-A native consumer enables the types with:
+## Turning them on for a 64-bit build
+
+Compile with Clang and pass:
 
 ```text
 -DPS1_32BIT_STORAGE -fms-extensions
 ```
 
-This selects Clang's `__ptr32 __uptr` pointer representation. `__ptr32` keeps
-storage at four bytes; `__uptr` widens an address with zero extension. In
-particular, `0x80000000` must become `0x0000000080000000`, not a sign-extended
-host address. The header rejects native builds without the required compiler
-extensions and asserts the stored pointer width.
+`PS1_32BIT_STORAGE` switches the typedefs over to Clang's `__ptr32 __uptr`
+pointers. `__ptr32` keeps the pointer four bytes wide in storage, and `__uptr`
+zero-extends it when it's loaded into a normal pointer. That second part
+matters: PS1 addresses start at `0x80000000`, and that has to come out as
+`0x0000000080000000`, not a sign-extended address somewhere near the top of
+memory.
 
-The same header gives `u_long` a four-byte unsigned representation on native
-builds. `Ps1Long` preserves the historical `long` type in matching builds and
-uses a four-byte signed integer in native builds. The SDK `MATRIX` and `VECTOR`
-data fields use it; the scalar SDK function declarations still use their
-original `long` signatures. Data layout and the native SDK's call ABI must be
-checked separately.
+The header refuses to compile with the flag on unless the compiler actually
+supports these extensions, and it asserts that the stored types really are
+four bytes. If something is set up wrong, you find out at compile time instead
+of at runtime.
 
-## Declarations and access
+`long` gets the same treatment. On a 64-bit Linux or macOS build `long` is
+eight bytes, so with the flag on `u_long` becomes a four-byte unsigned int, and
+`Ps1Long` becomes a four-byte signed int (it stays a plain `long` for the PS1).
+The SDK's `MATRIX` and `VECTOR` fields use `Ps1Long`. The SDK function
+declarations still use their original `long` parameters, so whatever provides
+those functions on a native build needs to agree with that separately.
+
+## Using them
+
+A stored pointer goes in the struct; the code that works with it keeps using a
+normal pointer:
 
 ```c
 typedef struct FieldScriptFrame
 {
     u8_ptr pc;
     u32 flags;
-    u32 wait_frames;
+    union
+    {
+        u32 word;
+        struct
+        {
+            u32 resume : 1;
+            u32 frames : 31;
+        } bits;
+    } wait;
 } FieldScriptFrame;
 
 u8* cursor = frame->pc;
@@ -60,23 +90,27 @@ frame->pc = cursor + 2;
 opcode = *frame->pc++;
 ```
 
-The local `cursor` is an ordinary working pointer. Clang inserts width
-conversions at the field accesses. No `TO_PTR` or `FROM_PTR` macros are needed
-for these object pointers.
+`cursor` is an ordinary pointer at whatever width the host uses. Clang handles
+the conversion at each field access, so there's no `TO_PTR`/`FROM_PTR` macro
+dance and no casts.
 
-Define a structure-specific alias after its forward declaration or definition:
+For a pointer to a structure, declare its alias right after the structure's
+forward declaration or definition:
 
 ```c
 typedef struct FieldImageReq FieldImageReq;
 typedef FieldImageReq* PS1_PTR32 FieldImageReqPtr;
 ```
 
-`PS1_PTR32` is a qualifier used in typedef definitions, not a function-like
-wrapper around every declaration. It expands to nothing for the historical
-compiler. A typedef for a function-local structure must be declared in that
-same scope; another function's typedef of the same name is a separate type.
+`PS1_PTR32` is a qualifier for typedefs like this one, not something to wrap
+around every declaration. It expands to nothing for the PS1 compiler. If the
+structure is local to a function, its alias has to be declared in that same
+scope; a typedef with the same name in another function is a different type.
 
-Pointer tables need care at both levels:
+### Tables of pointers
+
+Tables need care at both levels, because the table's own address is stored and
+so is every entry:
 
 ```c
 typedef FieldPartDef* PS1_PTR32 FieldPartDefPtr;
@@ -86,78 +120,85 @@ FieldPartDefTablePtr stored_table;
 FieldPartDefPtr* table_cursor = stored_table;
 ```
 
-The stored table address and each entry occupy four bytes. The local table
-cursor has the host's normal pointer width and advances by four bytes per
-entry. Likewise, `u8_ptr*` can point at a stored byte-pointer slot, while `u8**`
-points at a normal working pointer. Do not interchange these on native builds.
-The FIELD scene/text packet-cursor APIs take `u8_ptr*` because their caller passes
-the address of `FieldRenderHalf.primitive_cursor`. Their ordinary local packet
-pointers remain `u8*`; allocation helpers that take an ordinary local arena
-cursor still use `u8**`.
+The stored table address and each entry are four bytes. `table_cursor` is a
+normal host pointer, and it steps four bytes per entry because that's the size
+of a `FieldPartDefPtr`.
 
-## Scope and remaining native work
+The same idea applies one level down: `u8_ptr*` points at a stored byte-pointer
+slot, and `u8**` points at an ordinary working pointer. They're the same thing
+on the PS1 and very different things on a 64-bit build, so don't mix them up.
+For example, the FIELD scene and text drawing functions take `u8_ptr*`, because
+the caller passes the address of `FieldRenderHalf.primitive_cursor`, which is a
+stored field. Their local packet pointers are still plain `u8*`, and the
+allocation helpers that take the address of a local cursor still use `u8**`.
 
-The initial migration covers the object-pointer storage identified by the
-native patches in AKAO, FIELD scripts/text/actors/resources, WMAP resources and
-rendering, and WSEL. Matching declarations of those globals were updated across
-their consumers. WMAP repeats many extern declarations and private types inside
-functions, so the declaration count is much larger than the distinct type count.
+## What this covers, and what it doesn't
 
-This is not a conversion of every pointer in the game. Runtime scene records
-that the native port allocates with host layouts retain their existing pointer
-types. Locals, call parameters, native callbacks, encoded GPU links, and numeric
-fields that sometimes hold addresses require their own representation review.
+So far the stored pointers in AKAO, FIELD (scripts, text, actors and
+resources), WMAP (resources and rendering) and WSEL use these types. WMAP
+repeats a lot of `extern` declarations and private types inside functions, so
+you'll see far more declarations than distinct types there.
 
-Stored pointers require a valid mapped address below 4 GiB. Assigning an
-ordinary host allocation outside that range truncates the address. The typedefs
-do not allocate low memory, map PS1 RAM, resolve retail code addresses to native
-callbacks, decode tagged links, or fix integer-to-pointer arithmetic elsewhere.
-An integer field used as an address may still need an explicit conversion.
+This isn't every pointer in the game. Locals, function parameters, callbacks,
+the tagged GPU ordering-table links, and integer fields that sometimes hold an
+address all keep their current types and would each need their own look on a
+native build.
 
-The `lom-native` submodule pin and patch series are unchanged by this work.
-Adopting this revision there requires the following dependency update:
+A few things the types can't do for you:
 
-1. Enable `PS1_32BIT_STORAGE` and `-fms-extensions` for the relevant native game units.
-2. Include `ps1_types.h` in native compilation shims. Existing shims that define
-   `_COMMON_H` suppress `common.h`, so its transitive include is not sufficient;
-   the native build can explicitly force-include `ps1_types.h` instead.
-3. Retire matching width-only patch hunks and their redundant conversion casts.
-   Mixed-purpose patches still need their platform or behavioral changes.
-4. Verify the prepared native sources, SDK ABI, optimized regressions, and
-   gameplay routes before removing any downstream patch permanently.
+- A stored pointer can only hold an address below 4 GiB. Assigning an ordinary
+  host allocation above that silently truncates it, so the memory the game
+  works in has to be mapped low.
+- They don't map the PS1's RAM, turn retail code addresses into native
+  callbacks, decode tagged links, or fix integer-to-pointer arithmetic
+  elsewhere. An integer field used as an address may still need an explicit
+  conversion.
 
-The original `INCLUDE_ASM` and platform service adaptations remain native build
-responsibilities. There is no automatic patch refresh or native pin update.
+## If you want to try a native build
 
-## Verification
+Roughly, the pieces are:
 
-Run native type checks on the host:
+1. Build the game sources with Clang, `-DPS1_32BIT_STORAGE` and
+   `-fms-extensions`.
+2. Make sure `ps1_types.h` is included everywhere. If your build replaces
+   `common.h` with its own shim (for example by defining `_COMMON_H`), you lose
+   the include that comes with it, so force-include `ps1_types.h` instead.
+3. Provide everything the PS1 build still takes from assembly. That's the
+   Psy-Q SDK libraries now - all of the game's own code is C - plus the
+   platform services the SDK stands for: graphics, CD-ROM, sound and
+   controllers.
+4. Keep the matching build green while you go. Any change to shared headers
+   should still pass `make verify-bins` for both versions.
+
+## Checking the types
+
+To check the native side on your machine:
 
 ```sh
 python3 tools/verify_ps1_types.py
 ```
 
-The checks compile the real shared headers for Linux, Windows, and macOS on
-x86-64 and ARM64, for both US and JP definitions. The two existing FIELD actor
-views are checked in separate translation units because their shared symbols
-have different C declarations. The checks assert layouts, offsets, global slot
-widths, and pointer-table widths, and emit object code that uses the pointers.
+This compiles the real shared headers for Linux, Windows and macOS on x86-64
+and ARM64, for both the US and JP definitions. It asserts struct layouts,
+offsets, the widths of stored globals and pointer tables, and emits object code
+that actually uses the pointers. The two FIELD actor views are checked in
+separate translation units, since their shared symbols have different C
+declarations.
 
-On Linux, runtime checks map RAM at `0x81000000` and run at `-O0` and `-O2`.
-They cover zero extension, assignment, dereferencing, incrementing, typed
-arithmetic, pointer-table stride, linked records, union storage, nulls, and
-negative sentinel representation. They also compile the original
-`field_script_branch` and `akao_seq_op_set_pitch_jitter_depth` consumers and
-execute their reads/writes while checking adjacent fields. Unused functions
-from those translation units are discarded at link time. No game functions are
-copied into the tests.
+On Linux it also runs code. It maps memory at `0x81000000` and checks zero
+extension, assignment, dereferencing, incrementing, pointer arithmetic, table
+stride, linked records, unions, nulls and negative sentinels, at both `-O0` and
+`-O2`. It then compiles two real game functions, `field_script_branch` and
+`akao_seq_op_set_pitch_jitter_depth`, and runs their reads and writes while
+checking the fields around them.
 
-Use `--clang PATH` to select a compiler. `--no-runtime` performs only the
-SDK-free cross-target checks. Windows/macOS results establish compilation and
-layout with the tested upstream Clang, not linked applications, platform
-memory-mapping behavior, or a test of Apple's separately shipped compiler.
+Use `--clang PATH` to pick a compiler, and `--no-runtime` for only the
+cross-target compile checks. The Windows and macOS results tell you that the
+code compiles with the right layout on upstream Clang. They aren't linked
+programs, and they don't test Apple's own Clang.
 
-For matching verification, stage before starting the parallel build:
+The PS1 side is covered by the normal matching check. Run it for both versions
+after touching these types:
 
 ```sh
 docker exec lom-mcp make recopy VERSION=us
@@ -166,25 +207,11 @@ docker exec lom-mcp make recopy VERSION=jp
 docker exec lom-mcp make -j6 verify-bins VERSION=jp
 ```
 
-Baseline and final verification for this migration both passed on 2026-09-28:
+## What we don't know yet
 
-| Check | Result |
-| --- | --- |
-| US executable and all 17 overlays | Exact original disc bytes |
-| JP executable and 13 overlays | Exact original disc bytes |
-| JP FIELD, GNAME, GOSUB, TITLE | Exact decompressed original images |
-| Clang 22.1.8, six platform/architecture targets | Real layout assertions and object generation pass |
-| Linux runtime at `-O0` and `-O2` | Stored-pointer and original game-consumer checks pass |
-
-Representative real-source assembly diffs also retained their baseline match:
-
-| Function | Baseline | Final |
-| --- | --- | --- |
-| `field_script_branch` | 100% | 100% |
-| `akao_seq_op_set_pitch_jitter_depth` | 100% | 100% |
-| `func_80064AF8` (WMAP frame rendering) | 100% | 100% |
-
-JP's four raw-image checks retain the existing compressor limitation. Whole
-binary matching covers all PS1 consumers, including data and section layout;
-native tests cover the declared contracts and selected consumers, not the full
-native game.
+- TODO: which of the remaining pointer-like fields (integers holding addresses,
+  GPU ordering-table links) should get their own storage types, and which are
+  better left to a native build's own code.
+- TODO: whether the SDK's `long` parameters line up with what a native
+  replacement for those functions would expect; the types above only fix the
+  data layout.
