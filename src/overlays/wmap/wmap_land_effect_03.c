@@ -31,16 +31,108 @@ void func_800884AC(void);
 void func_800886A4(void);
 void func_8008889C(void);
 
+/** @brief World-map 0x14-byte slot: only the leading halfword is cleared here. */
+typedef struct
+{
+    s16 field_00;
+    u8 pad_02[0x12];
+} WmapSlot14;
+
+/** @brief First word of a 40-byte world-map cell. */
+typedef struct
+{
+    s32 value;
+    u8 unknown_04[36];
+} WmapValueRecord;
+
+extern s32 D_8011CF1C;
+extern s32 D_80182DF0;
+extern s32 D_801B292C;
+extern VECTOR D_8011CF60;
+extern s32 D_80182DE8;
+extern u8 D_800DCF18[];
+extern s32 D_801B2934;
+extern s32 D_801B0FD0;
+extern s32 D_801B293C;
+extern s32 D_801B2944;
+extern s32 D_801B294C;
+extern s32 D_801B2954;
+extern s32 D_801B290C;
+extern void (*D_800D5A60[])(void);
+extern s32 D_8013B20C;
+extern void func_800876AC(void);
+extern void func_8008772C(void);
+extern s32 D_801B2914;
+extern void (*D_800D5A78[])(void);
+extern s32 D_8013B208;
+extern s32 D_801ADAE0;
+extern WmapValueRecord D_80139290[][6];
+extern s32 D_8011D530;
+extern s32 D_8011D510;
+extern u32 D_8011D4FC;
+extern s32 D_801B291C;
+extern void (*D_800D5AB8[])(void);
+extern u8 D_8011D538[];
+extern u8* D_801399AC;
+extern void func_80087C9C(void);
+extern s32 D_801B2924;
+extern void (*D_800D5AC8[])(void);
+extern u8 D_8011F538[];
+extern u8* D_801399B4;
+extern void func_80087E3C(void);
+extern void (*D_800D5AD8[])(void);
+extern void (*D_800D5AF0[])(void);
+extern void (*D_800D5B00[])(void);
+extern u8 D_800D9688[];
+extern u8 D_80139A48[];
+extern void (*D_800D5B18[])(void);
+extern u8 D_800D9F20[];
+extern u8 D_80139BD8[];
+extern void func_800884AC(void);
+extern void (*D_800D5B30[])(void);
+extern u8 D_800DA7B8[];
+extern u8 D_80139D68[];
+extern void func_800886A4(void);
+extern void (*D_800D5B48[])(void);
+extern u8 D_800DB050[];
+extern u8 D_80139EF8[];
+extern void func_8008889C(void);
+
+extern u32 D_801B2928;
+extern u32 D_801B2930;
+extern u32 D_801B2938;
+extern u8 D_80121538[];
+extern u32 D_801B2940;
+extern u32 D_801B2948;
+extern u32 D_801B2950;
+extern u32 D_801B2908;
+extern u32 D_801B2910;
+extern u32 D_801B2918;
+extern u32 D_801B2920;
+
+extern VECTOR g_wmap_camera_translation;
+extern VECTOR D_801B2650;
+
+extern SVECTOR D_80139258;
+extern SVECTOR D_801B24A0;
+extern SVECTOR D_801B2490;
+
+extern WmapSpriteActor D_800D9318;
+extern WmapSpriteActor D_800D9344;
+
+extern WmapAnimationSlot D_80139988[];
+extern WmapAnimationSlot D_801399A8;
+extern WmapAnimationSlot D_801399B0;
+
+extern WmapScreenPosition g_wmap_focus_screen_position;
+
+extern s32* D_80139280;
+
+extern WmapSlot14 D_801AFBD0[];
+
 /** @brief Draw the rotating effect, increase its scale, and update the sequence timer. */
 void func_80086F48(void)
 {
-extern VECTOR g_wmap_camera_translation;
-extern SVECTOR D_801B2490;
-extern s32 D_8011CF1C;
-extern s32 D_80182DF0;
-extern s32 D_801B2928;
-extern s32 D_801B292C;
-
     PushMatrix();
     wmap_set_model_transform(&g_wmap_camera_translation, &D_801B2490);
     wmap_draw_model_default(D_8011CF1C, 0, 4, 0x35, 0x7800, 1, D_80182DF0);
@@ -60,13 +152,6 @@ extern s32 D_801B292C;
 /** @brief Draw the rotating effect, reduce its scale, and update the sequence timer. */
 void func_8008701C(void)
 {
-extern VECTOR g_wmap_camera_translation;
-extern SVECTOR D_801B2490;
-extern s32 D_8011CF1C;
-extern s32 D_80182DF0;
-extern s32 D_801B2928;
-extern s32 D_801B292C;
-
     PushMatrix();
     wmap_set_model_transform(&g_wmap_camera_translation, &D_801B2490);
     wmap_draw_model_default(D_8011CF1C, 0, 4, 0x35, 0x7800, 1, D_80182DF0);
@@ -88,22 +173,14 @@ extern s32 D_801B292C;
  */
 void func_800870E8(void)
 {
-extern s32 D_801B2650[];
-extern SVECTOR D_801B24A0;
-extern VECTOR D_8011CF60;
-extern s32 D_80182DE8;
-extern u8 D_800DCF18[];
-extern s32 D_801B2934;
-extern s32 D_801B2930;
-
     MATRIX m;
     s32 x;
 
-    x = D_801B2650[2] - 0xDAC;
-    D_801B2650[2] = x;
+    x = D_801B2650.vz - 0xDAC;
+    D_801B2650.vz = x;
     if (x < 0x2710)
     {
-        D_801B2650[2] = 0x2710;
+        D_801B2650.vz = 0x2710;
     }
 
     PushMatrix();
@@ -132,28 +209,6 @@ extern s32 D_801B2930;
 /** @brief Configure the effect, reset its resource slots, and advance the sequence. */
 void func_800871E8(void)
 {
-/** @brief World-map 8-byte slot: only the +4 pointer field is written here. */
-typedef struct
-{
-    s32 field_00;
-    void *field_04;
-} WmapSlot8;
-
-/** @brief World-map 0x14-byte slot: only the leading halfword is cleared here. */
-typedef struct
-{
-    s16 field_00;
-    u8 pad_02[0x12];
-} WmapSlot14;
-
-extern s32 *D_80139280;
-extern WmapSlot8 D_80139988[];
-extern WmapSlot14 D_801AFBD0[];
-extern s32 D_801B0FD0;
-extern s32 D_801B2938;
-extern s32 D_801B293C;
-extern u8 D_80121538[];
-
     s32 i;
 
     D_801B0FD0 = 50;
@@ -170,7 +225,7 @@ extern u8 D_80121538[];
     for (i = 0; i < 50; i++)
     {
         D_801AFBD0[i + D_80139280[0x7]].field_00 = 0;
-        D_80139988[i + 24].field_04 = D_80121538;
+        D_80139988[i + 24].data = D_80121538;
     }
     D_801B293C = 144;
     D_801B2938++;
@@ -180,28 +235,6 @@ extern u8 D_80121538[];
 /** @brief Configure the effect, reset its resource slots, and advance the sequence. */
 void func_800872D4(void)
 {
-/** @brief World-map 8-byte slot: only the +4 pointer field is written here. */
-typedef struct
-{
-    s32 field_00;
-    void *field_04;
-} WmapSlot8;
-
-/** @brief World-map 0x14-byte slot: only the leading halfword is cleared here. */
-typedef struct
-{
-    s16 field_00;
-    u8 pad_02[0x12];
-} WmapSlot14;
-
-extern s32 *D_80139280;
-extern WmapSlot8 D_80139988[];
-extern WmapSlot14 D_801AFBD0[];
-extern s32 D_801B0FD0;
-extern u8 D_80121538[];
-extern s32 D_801B2940;
-extern s32 D_801B2944;
-
     s32 i;
 
     D_801B0FD0 = 50;
@@ -218,7 +251,7 @@ extern s32 D_801B2944;
     for (i = 0; i < 50; i++)
     {
         D_801AFBD0[i + D_80139280[0x11]].field_00 = 0;
-        D_80139988[i + 74].field_04 = D_80121538;
+        D_80139988[i + 74].data = D_80121538;
     }
     D_801B2944 = 144;
     D_801B2940++;
@@ -228,62 +261,23 @@ extern s32 D_801B2944;
 /** @brief World-map step: fill spawn descriptor slot 1, clear its slot run, then advance. */
 void func_800873C0(void)
 {
-/** @brief World-map 8-byte slot: only the +4 pointer field is written here. */
-typedef struct
-{
-    s32 field_00;
-    void *field_04;
-} WmapSlot8;
-
-/** @brief World-map 0x14-byte slot: only the leading halfword is cleared here. */
-typedef struct
-{
-    s16 field_00;
-    u8 pad_02[0x12];
-} WmapSlot14;
-
-/** @brief World-map spawn descriptor; a 0x50-byte record addressed via D_80139280. */
-typedef struct
-{
-    s32 field_00;
-    s32 field_04;
-    s32 field_08;
-    s32 field_0C;
-    s32 field_10;
-    s32 field_14;
-    s32 field_18;
-    s32 field_1C;
-    s32 field_20;
-    s32 field_24;
-    s32 field_28;
-    u8 pad_2C[0x24];
-} WmapConfig;
-
-extern s32 D_801B0FD0;
-extern WmapConfig *D_80139280;
-extern WmapSlot14 D_801AFBD0[];
-extern WmapSlot8 D_80139988[];
-extern s32 D_80121538;
-extern s32 D_801B294C;
-extern s32 D_801B2948;
-
     s32 i;
 
     D_801B0FD0 = 0x32;
-    D_80139280[1].field_04 = 2;
-    D_80139280[1].field_08 = 1;
-    D_80139280[1].field_0C = 0x14;
-    D_80139280[1].field_10 = 0x1E;
-    D_80139280[1].field_14 = 2;
-    D_80139280[1].field_18 = 0x5DC;
-    D_80139280[1].field_1C = 0x78;
-    D_80139280[1].field_20 = 0x13;
-    D_80139280[1].field_24 = 2;
-    D_80139280[1].field_28 = 0x2710;
+    D_80139280[21] = 2;
+    D_80139280[22] = 1;
+    D_80139280[23] = 0x14;
+    D_80139280[24] = 0x1E;
+    D_80139280[25] = 2;
+    D_80139280[26] = 0x5DC;
+    D_80139280[27] = 0x78;
+    D_80139280[28] = 0x13;
+    D_80139280[29] = 2;
+    D_80139280[30] = 0x2710;
     for (i = 0; i < 0x32; i++)
     {
-        D_801AFBD0[i + D_80139280[1].field_1C].field_00 = 0;
-        D_80139988[i + 0x7C].field_04 = &D_80121538;
+        D_801AFBD0[i + D_80139280[27]].field_00 = 0;
+        D_80139988[i + 0x7C].data = &D_80121538;
     }
     D_801B294C = 0x90;
     D_801B2948 += 1;
@@ -293,28 +287,6 @@ extern s32 D_801B2948;
 /** @brief Configure the effect, reset its resource slots, and advance the sequence. */
 void func_800874AC(void)
 {
-/** @brief World-map 8-byte slot: only the +4 pointer field is written here. */
-typedef struct
-{
-    s32 field_00;
-    void *field_04;
-} WmapSlot8;
-
-/** @brief World-map 0x14-byte slot: only the leading halfword is cleared here. */
-typedef struct
-{
-    s16 field_00;
-    u8 pad_02[0x12];
-} WmapSlot14;
-
-extern s32 *D_80139280;
-extern WmapSlot8 D_80139988[];
-extern WmapSlot14 D_801AFBD0[];
-extern s32 D_801B0FD0;
-extern u8 D_80121538[];
-extern s32 D_801B2950;
-extern s32 D_801B2954;
-
     s32 i;
 
     D_801B0FD0 = 50;
@@ -331,7 +303,7 @@ extern s32 D_801B2954;
     for (i = 0; i < 50; i++)
     {
         D_801AFBD0[i + D_80139280[0x25]].field_00 = 0;
-        D_80139988[i + 174].field_04 = D_80121538;
+        D_80139988[i + 174].data = D_80121538;
     }
     D_801B2954 = 144;
     D_801B2950++;
@@ -345,11 +317,6 @@ extern s32 D_801B2954;
  */
 s32 func_8008759C(s32 arg0)
 {
-extern u32 D_801B2908;
-extern s32 D_801B290C;
-extern void (*D_800D5A60[])(void);
-extern s32 D_8013B20C;
-
     s32 result;
 
     if (arg0 != 0)
@@ -376,11 +343,6 @@ extern s32 D_8013B20C;
  */
 void func_80087614(void)
 {
-extern u32 D_801B2908;
-extern s32 D_801B290C;
-extern void (*D_800D5A60[])(void);
-extern s32 D_8013B20C;
-
     D_801B2908 = 1;
     D_801B290C = 1;
 }
@@ -390,11 +352,6 @@ extern s32 D_8013B20C;
  */
 void func_8008762C(void)
 {
-extern u32 D_801B2908;
-extern s32 D_801B290C;
-extern void (*D_800D5A60[])(void);
-extern s32 D_8013B20C;
-
     wmap_start_sequence(wmap_run_land_focus);
     D_8013B20C = 1;
     D_801B2908 += 1;
@@ -406,9 +363,6 @@ extern s32 D_8013B20C;
  */
 void func_80087670(void)
 {
-extern s32 D_8013B20C;
-extern s32 D_801B2908;
-
     if (D_8013B20C == 0)
     {
         D_801B2908 += 1;
@@ -421,10 +375,6 @@ extern s32 D_801B2908;
  */
 void func_800876AC(void)
 {
-extern s32 D_8013B20C;
-extern s32 D_801B2908;
-extern void func_800876AC(void);
-
     wmap_start_sequence(func_80087744);
     D_8013B20C = 1;
     D_801B2908 += 1;
@@ -436,9 +386,6 @@ extern void func_800876AC(void);
  */
 void func_800876F0(void)
 {
-extern s32 D_801B2908;
-extern s32 D_8013B20C;
-
     if (D_8013B20C == 0)
     {
         D_801B2908 += 1;
@@ -451,10 +398,6 @@ extern s32 D_8013B20C;
  */
 void func_8008772C(void)
 {
-extern s32 D_801B2908;
-extern s32 D_8013B20C;
-extern void func_8008772C(void);
-
     D_801B2908 += 1;
 }
 
@@ -465,10 +408,6 @@ extern void func_8008772C(void);
  */
 s32 func_80087744(s32 arg0)
 {
-extern u32 D_801B2910;
-extern s32 D_801B2914;
-extern void (*D_800D5A78[])(void);
-
     s32 result;
 
     if (arg0 != 0)
@@ -495,10 +434,6 @@ extern void (*D_800D5A78[])(void);
  */
 void func_800877BC(void)
 {
-extern u32 D_801B2910;
-extern s32 D_801B2914;
-extern void (*D_800D5A78[])(void);
-
     D_801B2910 = 1;
     D_801B2914 = 1;
 }
@@ -506,10 +441,6 @@ extern void (*D_800D5A78[])(void);
 /** @brief World-map step handler: kick two jobs and advance the step. */
 void func_800877D4(void)
 {
-extern s32 D_8013B208;
-extern s32 D_801B2910;
-extern s32 D_801B2914;
-
     D_8013B208 = 1;
     wmap_start_map_tint(0x802028);
     g_wmap_backdrop_target_level = 4;
@@ -523,9 +454,6 @@ extern s32 D_801B2914;
  */
 void func_80087834(void)
 {
-extern s32 D_801B2914;
-extern s32 D_801B2910;
-
     if (--D_801B2914 == 0)
     {
         D_801B2910 += 1;
@@ -537,9 +465,6 @@ extern s32 D_801B2910;
  */
 void func_80087868(void)
 {
-extern s32 D_801B2914;
-extern s32 D_801B2910;
-
     wmap_start_sequence(func_80088740);
     wmap_start_sequence(func_80088548);
     wmap_start_sequence(func_80087B90);
@@ -552,9 +477,6 @@ extern s32 D_801B2910;
  */
 void func_800878BC(void)
 {
-extern s32 D_801B2914;
-extern s32 D_801B2910;
-
     if (--D_801B2914 == 0)
     {
         D_801B2910 += 1;
@@ -566,9 +488,6 @@ extern s32 D_801B2910;
  */
 void func_800878F0(void)
 {
-extern s32 D_801B2914;
-extern s32 D_801B2910;
-
     wmap_start_sequence(func_80088350);
     D_801B2914 = 0x10;
     D_801B2910 += 1;
@@ -579,9 +498,6 @@ extern s32 D_801B2910;
  */
 void func_8008792C(void)
 {
-extern s32 D_801B2914;
-extern s32 D_801B2910;
-
     if (--D_801B2914 == 0)
     {
         D_801B2910 += 1;
@@ -593,9 +509,6 @@ extern s32 D_801B2910;
  */
 void func_80087960(void)
 {
-extern s32 D_801B2914;
-extern s32 D_801B2910;
-
     wmap_start_sequence(func_80088160);
     D_801B2914 = 0x8;
     D_801B2910 += 1;
@@ -606,9 +519,6 @@ extern s32 D_801B2910;
  */
 void func_8008799C(void)
 {
-extern s32 D_801B2914;
-extern s32 D_801B2910;
-
     if (--D_801B2914 == 0)
     {
         D_801B2910 += 1;
@@ -620,10 +530,6 @@ extern s32 D_801B2910;
  */
 void func_800879D0(void)
 {
-extern s32 D_801ADAE0;
-extern s32 D_801B2914;
-extern s32 D_801B2910;
-
     D_801ADAE0 = 1;
     wmap_start_sequence(func_80087ED0);
     D_801B2914 = 0x3C;
@@ -635,9 +541,6 @@ extern s32 D_801B2910;
  */
 void func_80087A18(void)
 {
-extern s32 D_801B2914;
-extern s32 D_801B2910;
-
     if (--D_801B2914 == 0)
     {
         D_801B2910 += 1;
@@ -649,9 +552,6 @@ extern s32 D_801B2910;
  */
 void func_80087A4C(void)
 {
-extern s32 D_801B2914;
-extern s32 D_801B2910;
-
     wmap_start_sequence(func_80088008);
     D_801B2914 = 0x8;
     D_801B2910 += 1;
@@ -662,9 +562,6 @@ extern s32 D_801B2910;
  */
 void func_80087A88(void)
 {
-extern s32 D_801B2914;
-extern s32 D_801B2910;
-
     if (--D_801B2914 == 0)
     {
         D_801B2910 += 1;
@@ -676,9 +573,6 @@ extern s32 D_801B2910;
  */
 void func_80087ABC(void)
 {
-extern s32 D_801B2914;
-extern s32 D_801B2910;
-
     wmap_start_sequence(func_80087D30);
     D_801B2914 = 0x8A;
     D_801B2910 += 1;
@@ -689,9 +583,6 @@ extern s32 D_801B2910;
  */
 void func_80087AF8(void)
 {
-extern s32 D_801B2914;
-extern s32 D_801B2910;
-
     if (--D_801B2914 == 0)
     {
         D_801B2910 += 1;
@@ -700,20 +591,6 @@ extern s32 D_801B2910;
 
 void func_80087B2C(void)
 {
-/** @brief First word of a 40-byte world-map cell. */
-typedef struct
-{
-    s32 value;
-    u8 unknown_04[36];
-} WmapValueRecord;
-
-extern s32 D_8013B20C;
-extern WmapValueRecord D_80139290[][6];
-extern s32 D_8011D530;
-extern s32 D_8011D510;
-extern u32 D_8011D4FC;
-extern s32 D_801B2910;
-
     D_8013B20C = 0;
     D_80139290[D_8011D510][D_8011D530].value = D_8011D4FC | 0x100;
     D_801B2910 += 1;
@@ -726,15 +603,6 @@ extern s32 D_801B2910;
  */
 s32 func_80087B90(s32 arg0)
 {
-extern u32 D_801B2918;
-extern s32 D_801B291C;
-extern void (*D_800D5AB8[])(void);
-extern u8 D_8011D538[];
-extern u8* D_801399AC;
-extern u8 D_800D9318[];
-extern u8 D_801399A8[];
-extern s32 g_wmap_focus_screen_position;
-
     s32 result;
 
     if (arg0 != 0)
@@ -761,15 +629,6 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_80087C08(void)
 {
-extern u32 D_801B2918;
-extern s32 D_801B291C;
-extern void (*D_800D5AB8[])(void);
-extern u8 D_8011D538[];
-extern u8* D_801399AC;
-extern u8 D_800D9318[];
-extern u8 D_801399A8[];
-extern s32 g_wmap_focus_screen_position;
-
     D_801B2918 = 1;
     D_801B291C = 1;
 }
@@ -779,23 +638,14 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_80087C20(void)
 {
-extern u32 D_801B2918;
-extern s32 D_801B291C;
-extern void (*D_800D5AB8[])(void);
-extern u8 D_8011D538[];
-extern u8* D_801399AC;
-extern u8 D_800D9318[];
-extern u8 D_801399A8[];
-extern s32 g_wmap_focus_screen_position;
-
     D_801399AC = D_8011D538;
-    D_800D9318[0x6] = 0xF;
-    *(s16*)&D_800D9318[0x10] = -1;
-    *(s16*)&D_800D9318[0x26] = 2;
-    *(s16*)&D_800D9318[0x2] = 0;
-    *(s16*)&D_800D9318[0xE] = 0;
-    *(s16*)&D_800D9318[0x22] = 0x80;
-    *(s16*)&D_800D9318[0x24] = 0;
+    D_800D9318.scale_index = 0xF;
+    D_800D9318.previous_sequence = -1;
+    D_800D9318.shade_step = 2;
+    D_800D9318.unknown_02 = 0;
+    D_800D9318.sequence = 0;
+    D_800D9318.target_shade = 0x80;
+    D_800D9318.shade = 0;
     D_801B291C = 0x7C;
     D_801B2918 += 1;
     func_80087C9C();
@@ -806,18 +656,8 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_80087C9C(void)
 {
-extern u32 D_801B2918;
-extern s32 D_801B291C;
-extern void (*D_800D5AB8[])(void);
-extern void func_80087C9C(void);
-extern u8 D_8011D538[];
-extern u8* D_801399AC;
-extern u8 D_800D9318[];
-extern u8 D_801399A8[];
-extern s32 g_wmap_focus_screen_position;
-
-    wmap_step_actor_animation(D_800D9318, D_801399A8);
-    wmap_draw_actor_sprite(D_800D9318, g_wmap_focus_screen_position, 0x13, 0xA, 0);
+    wmap_step_actor_animation(&D_800D9318, &D_801399A8);
+    wmap_draw_actor_sprite(&D_800D9318, g_wmap_focus_screen_position.packed, 0x13, 0xA, 0);
     if (--D_801B291C == 0)
     {
         D_801B2918 += 1;
@@ -829,8 +669,6 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_80087D18(void)
 {
-extern s32 D_801B2918;
-
     D_801B2918 += 1;
 }
 
@@ -841,15 +679,6 @@ extern s32 D_801B2918;
  */
 s32 func_80087D30(s32 arg0)
 {
-extern u32 D_801B2920;
-extern s32 D_801B2924;
-extern void (*D_800D5AC8[])(void);
-extern u8 D_8011F538[];
-extern u8* D_801399B4;
-extern u8 D_800D9344[];
-extern u8 D_801399B0[];
-extern s32 g_wmap_focus_screen_position;
-
     s32 result;
 
     if (arg0 != 0)
@@ -876,15 +705,6 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_80087DA8(void)
 {
-extern u32 D_801B2920;
-extern s32 D_801B2924;
-extern void (*D_800D5AC8[])(void);
-extern u8 D_8011F538[];
-extern u8* D_801399B4;
-extern u8 D_800D9344[];
-extern u8 D_801399B0[];
-extern s32 g_wmap_focus_screen_position;
-
     D_801B2920 = 1;
     D_801B2924 = 1;
 }
@@ -894,23 +714,14 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_80087DC0(void)
 {
-extern u32 D_801B2920;
-extern s32 D_801B2924;
-extern void (*D_800D5AC8[])(void);
-extern u8 D_8011F538[];
-extern u8* D_801399B4;
-extern u8 D_800D9344[];
-extern u8 D_801399B0[];
-extern s32 g_wmap_focus_screen_position;
-
     D_801399B4 = D_8011F538;
-    D_800D9344[0x6] = 0xF;
-    *(s16*)&D_800D9344[0x10] = -1;
-    *(s16*)&D_800D9344[0x26] = 8;
-    *(s16*)&D_800D9344[0x2] = 0;
-    *(s16*)&D_800D9344[0xE] = 0;
-    *(s16*)&D_800D9344[0x22] = 0x80;
-    *(s16*)&D_800D9344[0x24] = 0;
+    D_800D9344.scale_index = 0xF;
+    D_800D9344.previous_sequence = -1;
+    D_800D9344.shade_step = 8;
+    D_800D9344.unknown_02 = 0;
+    D_800D9344.sequence = 0;
+    D_800D9344.target_shade = 0x80;
+    D_800D9344.shade = 0;
     D_801B2924 = 0x8C;
     D_801B2920 += 1;
     func_80087E3C();
@@ -921,18 +732,8 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_80087E3C(void)
 {
-extern u32 D_801B2920;
-extern s32 D_801B2924;
-extern void (*D_800D5AC8[])(void);
-extern void func_80087E3C(void);
-extern u8 D_8011F538[];
-extern u8* D_801399B4;
-extern u8 D_800D9344[];
-extern u8 D_801399B0[];
-extern s32 g_wmap_focus_screen_position;
-
-    wmap_step_actor_animation(D_800D9344, D_801399B0);
-    wmap_draw_actor_sprite(D_800D9344, g_wmap_focus_screen_position, 0x1A, 0xA, 0);
+    wmap_step_actor_animation(&D_800D9344, &D_801399B0);
+    wmap_draw_actor_sprite(&D_800D9344, g_wmap_focus_screen_position.packed, 0x1A, 0xA, 0);
     if (--D_801B2924 == 0)
     {
         D_801B2920 += 1;
@@ -944,8 +745,6 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_80087EB8(void)
 {
-extern s32 D_801B2920;
-
     D_801B2920 += 1;
 }
 
@@ -956,10 +755,6 @@ extern s32 D_801B2920;
  */
 s32 func_80087ED0(s32 arg0)
 {
-extern u32 D_801B2928;
-extern s32 D_801B292C;
-extern void (*D_800D5AD8[])(void);
-
     s32 result;
 
     if (arg0 != 0)
@@ -986,10 +781,6 @@ extern void (*D_800D5AD8[])(void);
  */
 void func_80087F48(void)
 {
-extern u32 D_801B2928;
-extern s32 D_801B292C;
-extern void (*D_800D5AD8[])(void);
-
     D_801B2928 = 1;
     D_801B292C = 1;
 }
@@ -997,11 +788,6 @@ extern void (*D_800D5AD8[])(void);
 /** @brief Clear the rotation vector, set the flag, and start a 128-tick sequence step. */
 void func_80087F60(void)
 {
-extern s32 D_80182DF0;
-extern SVECTOR D_801B2490;
-extern s32 D_801B2928;
-extern s32 D_801B292C;
-
     D_80182DF0 = 1;
     D_801B2490.vx = 0;
     D_801B2490.vy = 0;
@@ -1016,9 +802,6 @@ extern s32 D_801B292C;
  */
 void func_80087FB8(void)
 {
-extern s32 D_801B2928;
-extern s32 D_801B292C;
-
     D_801B292C = 0x10;
     D_801B2928 += 1;
     func_8008701C();
@@ -1029,9 +812,6 @@ extern s32 D_801B292C;
  */
 void func_80087FF0(void)
 {
-extern s32 D_801B2928;
-extern s32 D_801B292C;
-
     D_801B2928 += 1;
 }
 
@@ -1042,18 +822,6 @@ extern s32 D_801B292C;
  */
 s32 func_80088008(s32 arg0)
 {
-typedef struct { unsigned char b[8]; } WmapBlk8;
-typedef struct { int w[4]; } WmapBlk16;
-
-extern u32 D_801B2930;
-extern s32 D_801B2934;
-extern void (*D_800D5AF0[])(void);
-extern WmapBlk8 D_80139258;
-extern WmapBlk8 D_801B24A0;
-extern WmapBlk16 g_wmap_camera_translation;
-extern WmapBlk16 D_801B2650;
-extern s32 D_80182DE8;
-
     s32 result;
 
     if (arg0 != 0)
@@ -1080,18 +848,6 @@ extern s32 D_80182DE8;
  */
 void func_80088080(void)
 {
-typedef struct { unsigned char b[8]; } WmapBlk8;
-typedef struct { int w[4]; } WmapBlk16;
-
-extern u32 D_801B2930;
-extern s32 D_801B2934;
-extern void (*D_800D5AF0[])(void);
-extern WmapBlk8 D_80139258;
-extern WmapBlk8 D_801B24A0;
-extern WmapBlk16 g_wmap_camera_translation;
-extern WmapBlk16 D_801B2650;
-extern s32 D_80182DE8;
-
     D_801B2930 = 1;
     D_801B2934 = 1;
 }
@@ -1101,22 +857,10 @@ extern s32 D_80182DE8;
  */
 void func_80088098(void)
 {
-typedef struct { unsigned char b[8]; } WmapBlk8;
-typedef struct { int w[4]; } WmapBlk16;
-
-extern u32 D_801B2930;
-extern s32 D_801B2934;
-extern void (*D_800D5AF0[])(void);
-extern WmapBlk8 D_80139258;
-extern WmapBlk8 D_801B24A0;
-extern WmapBlk16 g_wmap_camera_translation;
-extern WmapBlk16 D_801B2650;
-extern s32 D_80182DE8;
-
     D_801B24A0 = D_80139258;
     D_801B2650 = g_wmap_camera_translation;
     D_80182DE8 = 0x80;
-    D_801B2650.w[2] = 0xAFC8;
+    D_801B2650.vz = 0xAFC8;
     D_801B2934 = 0x40;
     D_801B2930 += 1;
     func_800870E8();
@@ -1127,8 +871,6 @@ extern s32 D_80182DE8;
  */
 void func_80088148(void)
 {
-extern s32 D_801B2930;
-
     D_801B2930 += 1;
 }
 
@@ -1139,10 +881,6 @@ extern s32 D_801B2930;
  */
 s32 func_80088160(s32 arg0)
 {
-extern u32 D_801B2938;
-extern s32 D_801B293C;
-extern void (*D_800D5B00[])(void);
-
     s32 result;
 
     if (arg0 != 0)
@@ -1169,10 +907,6 @@ extern void (*D_800D5B00[])(void);
  */
 void func_800881D8(void)
 {
-extern u32 D_801B2938;
-extern s32 D_801B293C;
-extern void (*D_800D5B00[])(void);
-
     D_801B2938 = 1;
     D_801B293C = 1;
 }
@@ -1182,13 +916,7 @@ extern void (*D_800D5B00[])(void);
  */
 void func_800881F0(void)
 {
-extern u8 D_800D9688[];
-extern u8 D_80139A48[];
-extern s32 D_80139280;
-extern s32 D_801B2938;
-extern s32 D_801B293C;
-
-    func_8006A2FC(D_800D9688, D_80139A48, 0x32, 0, 0x7F, 0x2, 0, D_80139280);
+    func_8006A2FC(D_800D9688, D_80139A48, 0x32, 0, 0x7F, 0x2, 0, (s32)D_80139280);
     if (--D_801B293C == 0)
     {
         D_801B2938 += 1;
@@ -1200,10 +928,6 @@ extern s32 D_801B293C;
  */
 void func_80088270(void)
 {
-extern s32* D_80139280;
-extern s32 D_801B293C;
-extern s32 D_801B2938;
-
     D_801B293C = 0x20;
     D_80139280[5] = -1;
     D_801B2938 += 1;
@@ -1215,13 +939,7 @@ extern s32 D_801B2938;
  */
 void func_800882B8(void)
 {
-extern u8 D_800D9688[];
-extern u8 D_80139A48[];
-extern s32 D_80139280;
-extern s32 D_801B2938;
-extern s32 D_801B293C;
-
-    func_8006A2FC(D_800D9688, D_80139A48, 0x32, 0, 0x7F, 0x2, 0, D_80139280);
+    func_8006A2FC(D_800D9688, D_80139A48, 0x32, 0, 0x7F, 0x2, 0, (s32)D_80139280);
     if (--D_801B293C == 0)
     {
         D_801B2938 += 1;
@@ -1233,8 +951,6 @@ extern s32 D_801B293C;
  */
 void func_80088338(void)
 {
-extern s32 D_801B2938;
-
     D_801B2938 += 1;
 }
 
@@ -1245,13 +961,6 @@ extern s32 D_801B2938;
  */
 s32 func_80088350(s32 arg0)
 {
-extern u32 D_801B2940;
-extern s32 D_801B2944;
-extern void (*D_800D5B18[])(void);
-extern u8 D_800D9F20[];
-extern u8 D_80139BD8[];
-extern s32 D_80139280;
-
     s32 result;
 
     if (arg0 != 0)
@@ -1278,13 +987,6 @@ extern s32 D_80139280;
  */
 void func_800883C8(void)
 {
-extern u32 D_801B2940;
-extern s32 D_801B2944;
-extern void (*D_800D5B18[])(void);
-extern u8 D_800D9F20[];
-extern u8 D_80139BD8[];
-extern s32 D_80139280;
-
     D_801B2940 = 1;
     D_801B2944 = 1;
 }
@@ -1294,13 +996,6 @@ extern s32 D_80139280;
  */
 void func_800883E0(void)
 {
-extern u32 D_801B2940;
-extern s32 D_801B2944;
-extern void (*D_800D5B18[])(void);
-extern u8 D_800D9F20[];
-extern u8 D_80139BD8[];
-extern s32 D_80139280;
-
     func_8006A2FC(D_800D9F20, D_80139BD8, 0x32, 0, 0x7F, 0x2, 0, (s32)((u8*)D_80139280 + 0x28));
     if (--D_801B2944 == 0)
     {
@@ -1313,12 +1008,6 @@ extern s32 D_80139280;
  */
 void func_80088464(void)
 {
-extern s32* D_80139280;
-extern s32 D_801B2944;
-extern s32 D_801B2940;
-extern u8 D_800D9F20[];
-extern u8 D_80139BD8[];
-
     D_801B2944 = 0x20;
     D_80139280[15] = -1;
     D_801B2940 += 1;
@@ -1330,13 +1019,6 @@ extern u8 D_80139BD8[];
  */
 void func_800884AC(void)
 {
-extern void func_800884AC(void);
-extern s32* D_80139280;
-extern s32 D_801B2944;
-extern s32 D_801B2940;
-extern u8 D_800D9F20[];
-extern u8 D_80139BD8[];
-
     func_8006A2FC(D_800D9F20, D_80139BD8, 0x32, 0, 0x7F, 0x2, 0, (s32)((u8*)D_80139280 + 0x28));
     if (--D_801B2944 == 0)
     {
@@ -1349,8 +1031,6 @@ extern u8 D_80139BD8[];
  */
 void func_80088530(void)
 {
-extern s32 D_801B2940;
-
     D_801B2940 += 1;
 }
 
@@ -1361,13 +1041,6 @@ extern s32 D_801B2940;
  */
 s32 func_80088548(s32 arg0)
 {
-extern u32 D_801B2948;
-extern s32 D_801B294C;
-extern void (*D_800D5B30[])(void);
-extern u8 D_800DA7B8[];
-extern u8 D_80139D68[];
-extern s32 D_80139280;
-
     s32 result;
 
     if (arg0 != 0)
@@ -1394,13 +1067,6 @@ extern s32 D_80139280;
  */
 void func_800885C0(void)
 {
-extern u32 D_801B2948;
-extern s32 D_801B294C;
-extern void (*D_800D5B30[])(void);
-extern u8 D_800DA7B8[];
-extern u8 D_80139D68[];
-extern s32 D_80139280;
-
     D_801B2948 = 1;
     D_801B294C = 1;
 }
@@ -1410,13 +1076,6 @@ extern s32 D_80139280;
  */
 void func_800885D8(void)
 {
-extern u32 D_801B2948;
-extern s32 D_801B294C;
-extern void (*D_800D5B30[])(void);
-extern u8 D_800DA7B8[];
-extern u8 D_80139D68[];
-extern s32 D_80139280;
-
     func_8006A2FC(D_800DA7B8, D_80139D68, 0x32, 0, 0x7F, 0x2, 0, (s32)((u8*)D_80139280 + 0x50));
     if (--D_801B294C == 0)
     {
@@ -1429,12 +1088,6 @@ extern s32 D_80139280;
  */
 void func_8008865C(void)
 {
-extern s32* D_80139280;
-extern s32 D_801B294C;
-extern s32 D_801B2948;
-extern u8 D_800DA7B8[];
-extern u8 D_80139D68[];
-
     D_801B294C = 0x20;
     D_80139280[25] = -1;
     D_801B2948 += 1;
@@ -1446,13 +1099,6 @@ extern u8 D_80139D68[];
  */
 void func_800886A4(void)
 {
-extern void func_800886A4(void);
-extern s32* D_80139280;
-extern s32 D_801B294C;
-extern s32 D_801B2948;
-extern u8 D_800DA7B8[];
-extern u8 D_80139D68[];
-
     func_8006A2FC(D_800DA7B8, D_80139D68, 0x32, 0, 0x7F, 0x2, 0, (s32)((u8*)D_80139280 + 0x50));
     if (--D_801B294C == 0)
     {
@@ -1465,8 +1111,6 @@ extern u8 D_80139D68[];
  */
 void func_80088728(void)
 {
-extern s32 D_801B2948;
-
     D_801B2948 += 1;
 }
 
@@ -1477,13 +1121,6 @@ extern s32 D_801B2948;
  */
 s32 func_80088740(s32 arg0)
 {
-extern u32 D_801B2950;
-extern s32 D_801B2954;
-extern void (*D_800D5B48[])(void);
-extern u8 D_800DB050[];
-extern u8 D_80139EF8[];
-extern s32 D_80139280;
-
     s32 result;
 
     if (arg0 != 0)
@@ -1510,13 +1147,6 @@ extern s32 D_80139280;
  */
 void func_800887B8(void)
 {
-extern u32 D_801B2950;
-extern s32 D_801B2954;
-extern void (*D_800D5B48[])(void);
-extern u8 D_800DB050[];
-extern u8 D_80139EF8[];
-extern s32 D_80139280;
-
     D_801B2950 = 1;
     D_801B2954 = 1;
 }
@@ -1526,13 +1156,6 @@ extern s32 D_80139280;
  */
 void func_800887D0(void)
 {
-extern u32 D_801B2950;
-extern s32 D_801B2954;
-extern void (*D_800D5B48[])(void);
-extern u8 D_800DB050[];
-extern u8 D_80139EF8[];
-extern s32 D_80139280;
-
     func_8006A2FC(D_800DB050, D_80139EF8, 0x32, 0, 0x7F, 0x2, 0, (s32)((u8*)D_80139280 + 0x78));
     if (--D_801B2954 == 0)
     {
@@ -1545,12 +1168,6 @@ extern s32 D_80139280;
  */
 void func_80088854(void)
 {
-extern s32* D_80139280;
-extern s32 D_801B2954;
-extern s32 D_801B2950;
-extern u8 D_800DB050[];
-extern u8 D_80139EF8[];
-
     D_801B2954 = 0x20;
     D_80139280[35] = -1;
     D_801B2950 += 1;
@@ -1562,13 +1179,6 @@ extern u8 D_80139EF8[];
  */
 void func_8008889C(void)
 {
-extern void func_8008889C(void);
-extern s32* D_80139280;
-extern s32 D_801B2954;
-extern s32 D_801B2950;
-extern u8 D_800DB050[];
-extern u8 D_80139EF8[];
-
     func_8006A2FC(D_800DB050, D_80139EF8, 0x32, 0, 0x7F, 0x2, 0, (s32)((u8*)D_80139280 + 0x78));
     if (--D_801B2954 == 0)
     {
@@ -1581,14 +1191,5 @@ extern u8 D_80139EF8[];
  */
 void func_80088920(void)
 {
-extern s32 D_801B2950;
-extern s32 D_801B2650[];
-extern SVECTOR D_801B24A0;
-extern VECTOR D_8011CF60;
-extern s32 D_80182DE8;
-extern u8 D_800DCF18[];
-extern s32 D_801B297C;
-extern s32 D_801B2978;
-
     D_801B2950 += 1;
 }

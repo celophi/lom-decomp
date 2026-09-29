@@ -18,6 +18,7 @@
 #include "sdk/libetc.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
+#include "akao_cmd.h"
 
 #define WMAP_GRID_SIZE 6
 #define WMAP_PLACEMENT_DELAY 30
@@ -151,7 +152,6 @@ extern const s16 g_wmap_carousel_faces[];
 extern WmapPoint g_wmap_artifact_positions[WMAP_ARTIFACT_SLOTS];
 extern VECTOR g_wmap_carousel_translation;
 
-s32 akao_fade_song_volume_from(s32 value0, s32 value1, s32 value2, s32 value3);
 s32 wmap_begin_land_placement(s32 initialize);
 
 /**

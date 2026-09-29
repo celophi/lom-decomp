@@ -29,9 +29,6 @@ void func_80071C58(void);
 void func_80071E00(void);
 void func_80071FA0(void);
 
-/** @brief Initialize four effect actors and their angular spacing. */
-void func_8007085C(void)
-{
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -61,28 +58,130 @@ typedef struct
     s32 field_10;
 } WmapMotion;
 
-/** @brief Animation resource slot. */
+/** @brief World-map orbiting star: polar position, spin angle, and radius. */
 typedef struct
 {
-    s32 field_00;
-    void *resource;
-} WmapResource;
+    s16 unk00;
+    s16 angle;
+    u16 delta;
+    s16 unk06;
+    s32 radius;
+    s16 unk0C;
+    u16 unk0E;
+    s16 unk10;
+    s16 unk12;
+} WmapStar;
 
-/** @brief Byte-aligned configuration copied into the effect state. */
+/** @brief World-map draw record; only used opaquely by the primitive helpers. */
 typedef struct
 {
-    u8 bytes[8];
-} WmapConfigBytes;
-extern WmapConfigBytes D_80139258;
-extern WmapConfigBytes D_801B2490;
-extern WmapConfigA D_800D9268[];
-extern WmapMotion D_801AFBD0[];
-extern WmapResource D_80139988[];
-extern s32 *D_80139280;
+    u8 pad[0x2C];
+} WmapDraw;
+
+/** @brief First word of a 40-byte world-map cell. */
+typedef struct
+{
+    s32 value;
+    u8 unknown_04[36];
+} WmapValueRecord;
+
 extern u8 D_80121538[];
-extern s32 D_801B24E8;
 extern s32 D_801B24EC;
+extern u8 D_800DCF18[];
+extern s32 D_801B2468;
+extern s32 D_801B24F4;
+extern VECTOR D_8011CF60;
+extern s32 D_80182DE8;
+extern s32 D_8011CF1C;
+extern s32 D_801B24FC;
+extern s32 D_80182DEC;
+extern s32 D_8011CF24;
+extern s32 D_801B2504;
+extern s32 D_801B250C;
+extern s32 rand(void);
+extern s32 ccos(s32);
+extern void func_80070FF8(void);
+extern s32 D_801B24BC;
+extern void (*D_800D4DD0[])(void);
+extern s32 D_8013B20C;
+extern void func_800713D0(void);
+extern void func_80071450(void);
+extern s32 D_801B24C4;
+extern void (*D_800D4DE8[])(void);
+extern s32 D_8013B208;
+extern s32 D_80139244;
+extern s32 D_801ADAE0;
+extern s32 D_8011D4FC;
+extern s32 D_8011D510;
+extern s32 D_8011D530;
+extern WmapValueRecord D_80139290[][6];
+extern s32 D_801B24CC;
+extern void (*D_800D4E38[])(void);
+extern u8 D_8011F538[];
+extern u8* D_801399AC;
+extern void func_80071AB4(void);
+extern s32 D_801B24D4;
+extern void (*D_800D4E48[])(void);
+extern u8* D_801399BC;
+extern void func_80071C58(void);
+extern s32 D_801B24DC;
+extern void (*D_800D4E58[])(void);
+extern u8* D_801399C4;
+extern s32 D_801B24E4;
+extern void (*D_800D4E68[])(void);
+extern u8 D_8011D538[];
+extern u8* D_801399B4;
+extern void func_80071FA0(void);
+extern void (*D_800D4E78[])(void);
+extern void (*D_800D4E88[])(void);
+extern s32 D_801B24B0;
+extern void (*D_800D4EA0[])(void);
+extern void (*D_800D4EB0[])(void);
+extern void (*D_800D4EC0[])(void);
+extern u32 D_801B24E8;
 
+extern u32 D_801B24F0;
+extern u32 D_801B24F8;
+extern u32 D_801B2500;
+extern u32 D_801B2508;
+extern u32 D_801B24B8;
+extern u32 D_801B24C0;
+extern u32 D_801B24C8;
+extern u32 D_801B24D0;
+extern u32 D_801B24D8;
+extern u32 D_801B24E0;
+
+extern VECTOR g_wmap_camera_translation;
+extern VECTOR D_801B2650;
+extern VECTOR D_801B2478;
+
+extern SVECTOR D_80139258;
+extern SVECTOR D_801B2498;
+extern SVECTOR D_801B24A0;
+extern SVECTOR D_801B2490;
+extern SVECTOR D_801B24A8;
+
+extern WmapSpriteActor D_800D9268[];
+extern WmapSpriteActor D_800D9318;
+extern WmapSpriteActor D_800D9344;
+extern WmapSpriteActor D_800D9370;
+extern WmapSpriteActor D_800D939C;
+
+extern WmapAnimationSlot D_80139988[];
+extern WmapAnimationSlot D_801399A8;
+extern WmapAnimationSlot D_801399B0;
+extern WmapAnimationSlot D_801399B8;
+extern WmapAnimationSlot D_801399C0;
+
+extern WmapScreenPosition g_wmap_focus_screen_position;
+
+extern s32* D_80139280;
+
+extern WmapMotion D_801AFBD0[];
+
+/** @brief Initialize four effect actors and their angular spacing. */
+void func_8007085C(void)
+{
     s32 i;
     s32 *descriptor;
     WmapConfigA *actor;
@@ -106,7 +205,7 @@ extern s32 D_801B24EC;
     for (i = 20; i < 80; i += 15)
     {
         actor = &D_800D9268[i];
-        D_80139988[i].resource = D_80121538;
+        D_80139988[i].data = D_80121538;
         actor->field_06 = 15;
         actor->field_10 = -1;
         actor->field_02 = 0;
@@ -128,14 +227,6 @@ extern s32 D_801B24EC;
 /** @brief Draw and brighten two rotating layers, then advance their shared countdown. */
 void func_800709E8(void)
 {
-extern u8 D_800DCF18[];
-extern VECTOR g_wmap_camera_translation;
-extern SVECTOR D_801B2490;
-extern SVECTOR D_801B2498;
-extern s32 D_801B2468;
-extern s32 D_801B24F0;
-extern s32 D_801B24F4;
-
     s32 remaining;
     s32 intensity;
 
@@ -164,14 +255,6 @@ extern s32 D_801B24F4;
 /** @brief Draw and fade two rotating layers, then advance their shared countdown. */
 void func_80070B28(void)
 {
-extern u8 D_800DCF18[];
-extern VECTOR g_wmap_camera_translation;
-extern SVECTOR D_801B2490;
-extern SVECTOR D_801B2498;
-extern s32 D_801B2468;
-extern s32 D_801B24F0;
-extern s32 D_801B24F4;
-
     s32 remaining;
     s32 intensity;
 
@@ -202,22 +285,14 @@ extern s32 D_801B24F4;
  */
 void func_80070C60(void)
 {
-extern s32 D_801B2650[];
-extern SVECTOR D_801B24A0;
-extern VECTOR D_8011CF60;
-extern s32 D_80182DE8;
-extern s32 D_8011CF1C;
-extern s32 D_801B24FC;
-extern s32 D_801B24F8;
-
     MATRIX m;
     s32 x;
 
-    x = D_801B2650[2] - 0xDAC;
-    D_801B2650[2] = x;
+    x = D_801B2650.vz - 0xDAC;
+    D_801B2650.vz = x;
     if (x < 0x2710)
     {
-        D_801B2650[2] = 0x2710;
+        D_801B2650.vz = 0x2710;
     }
 
     PushMatrix();
@@ -248,22 +323,14 @@ extern s32 D_801B24F8;
  */
 void func_80070D60(void)
 {
-extern s32 D_801B2478[];
-extern SVECTOR D_801B24A8;
-extern VECTOR D_8011CF60;
-extern s32 D_80182DEC;
-extern s32 D_8011CF24;
-extern s32 D_801B2504;
-extern s32 D_801B2500;
-
     MATRIX m;
     s32 x;
 
-    x = D_801B2478[2] - 0xDAC;
-    D_801B2478[2] = x;
+    x = D_801B2478.vz - 0xDAC;
+    D_801B2478.vz = x;
     if (x < 0x2710)
     {
-        D_801B2478[2] = 0x2710;
+        D_801B2478.vz = 0x2710;
     }
 
     PushMatrix();
@@ -292,52 +359,6 @@ extern s32 D_801B2500;
 /** @brief Initialize randomized actors along a cosine depth curve. */
 void func_80070E60(void)
 {
-    /** @brief World-map actor configuration. */
-    typedef struct
-    {
-        s16 field_00;
-        s16 field_02;
-        u8 pad_04[2];
-        u8 field_06;
-        u8 pad_07[7];
-        s16 field_0E;
-        s16 field_10;
-        u8 pad_12[0x10];
-        s16 field_22;
-        s16 field_24;
-        s16 field_26;
-        u8 pad_28[4];
-    } WmapConfigA;
-
-    /** @brief Per-actor motion and animation parameters. */
-    typedef struct
-    {
-        s16 state;
-        s16 angle;
-        s32 x;
-        s32 z;
-        s16 scale;
-        s16 field_0E;
-        s32 field_10;
-    } WmapMotion;
-
-    /** @brief Animation resource slot. */
-    typedef struct
-    {
-        s32 field_00;
-        void *resource;
-    } WmapResource;
-
-    extern WmapConfigA D_800D9268[];
-    extern WmapMotion D_801AFBD0[];
-    extern WmapResource D_80139988[];
-    extern u8 D_80121538[];
-    extern s32 D_801B2508;
-    extern s32 D_801B250C;
-    extern s32 rand(void);
-    extern s32 ccos(s32);
-    extern void func_80070FF8(void);
-
     s32 i;
     WmapConfigA *actor;
     WmapMotion *motion;
@@ -346,7 +367,7 @@ void func_80070E60(void)
     do
     {
         actor = &D_800D9268[i];
-        D_80139988[i].resource = D_80121538;
+        D_80139988[i].data = D_80121538;
         actor->field_06 = 15;
         actor->field_0E = 2;
         actor->field_10 = -1;
@@ -371,32 +392,6 @@ void func_80070E60(void)
  */
 void func_80070FF8(void)
 {
-/** @brief World-map orbiting star: polar position, spin angle, and radius. */
-typedef struct
-{
-    s16 unk00;
-    s16 angle;
-    u16 delta;
-    s16 unk06;
-    s32 radius;
-    s16 unk0C;
-    u16 unk0E;
-    s16 unk10;
-    s16 unk12;
-} WmapStar;
-
-/** @brief World-map draw record; only used opaquely by the primitive helpers. */
-typedef struct
-{
-    u8 pad[0x2C];
-} WmapDraw;
-
-extern WmapStar D_801AFBD0[];
-extern WmapDraw D_800D9268[];
-extern u8 D_80139988[];
-extern s32 D_801B2508;
-extern s32 D_801B250C;
-
     SVECTOR position;
     s32 screen;
     WmapStar* star;
@@ -412,7 +407,7 @@ extern s32 D_801B250C;
         position.vz = star->unk0E;
         gte_ldv0(&position);
         gte_rtps();
-        wmap_step_actor_animation(draw, &D_80139988[i * 8]);
+        wmap_step_actor_animation(draw, &D_80139988[i]);
         gte_stsxy(&screen);
         if (star->angle != 0)
         {
@@ -435,32 +430,6 @@ extern s32 D_801B250C;
  */
 void func_8007115C(void)
 {
-/** @brief World-map orbiting star: polar position, spin angle, and radius. */
-typedef struct
-{
-    s16 unk00;
-    s16 angle;
-    u16 delta;
-    s16 unk06;
-    s32 radius;
-    s16 unk0C;
-    u16 unk0E;
-    s16 unk10;
-    s16 unk12;
-} WmapStar;
-
-/** @brief World-map draw record; only used opaquely by the primitive helpers. */
-typedef struct
-{
-    u8 pad[0x2C];
-} WmapDraw;
-
-extern WmapStar D_801AFBD0[];
-extern WmapDraw D_800D9268[];
-extern u8 D_80139988[];
-extern s32 D_801B2508;
-extern s32 D_801B250C;
-
     SVECTOR position;
     s32 screen;
     WmapStar* star;
@@ -476,7 +445,7 @@ extern s32 D_801B250C;
         position.vz = star->unk0E;
         gte_ldv0(&position);
         gte_rtps();
-        wmap_step_actor_animation(draw, &D_80139988[i * 8]);
+        wmap_step_actor_animation(draw, &D_80139988[i]);
         gte_stsxy(&screen);
         if (star->angle != 0)
         {
@@ -501,11 +470,6 @@ extern s32 D_801B250C;
  */
 s32 func_800712C0(s32 arg0)
 {
-extern u32 D_801B24B8;
-extern s32 D_801B24BC;
-extern void (*D_800D4DD0[])(void);
-extern s32 D_8013B20C;
-
     s32 result;
 
     if (arg0 != 0)
@@ -532,11 +496,6 @@ extern s32 D_8013B20C;
  */
 void func_80071338(void)
 {
-extern u32 D_801B24B8;
-extern s32 D_801B24BC;
-extern void (*D_800D4DD0[])(void);
-extern s32 D_8013B20C;
-
     D_801B24B8 = 1;
     D_801B24BC = 1;
 }
@@ -546,11 +505,6 @@ extern s32 D_8013B20C;
  */
 void func_80071350(void)
 {
-extern u32 D_801B24B8;
-extern s32 D_801B24BC;
-extern void (*D_800D4DD0[])(void);
-extern s32 D_8013B20C;
-
     wmap_start_sequence(wmap_run_land_focus);
     D_8013B20C = 1;
     D_801B24B8 += 1;
@@ -562,9 +516,6 @@ extern s32 D_8013B20C;
  */
 void func_80071394(void)
 {
-extern s32 D_8013B20C;
-extern s32 D_801B24B8;
-
     if (D_8013B20C == 0)
     {
         D_801B24B8 += 1;
@@ -577,10 +528,6 @@ extern s32 D_801B24B8;
  */
 void func_800713D0(void)
 {
-extern s32 D_8013B20C;
-extern s32 D_801B24B8;
-extern void func_800713D0(void);
-
     wmap_start_sequence(func_80071468);
     D_8013B20C = 1;
     D_801B24B8 += 1;
@@ -592,9 +539,6 @@ extern void func_800713D0(void);
  */
 void func_80071414(void)
 {
-extern s32 D_801B24B8;
-extern s32 D_8013B20C;
-
     if (D_8013B20C == 0)
     {
         D_801B24B8 += 1;
@@ -607,10 +551,6 @@ extern s32 D_8013B20C;
  */
 void func_80071450(void)
 {
-extern s32 D_801B24B8;
-extern s32 D_8013B20C;
-extern void func_80071450(void);
-
     D_801B24B8 += 1;
 }
 
@@ -621,10 +561,6 @@ extern void func_80071450(void);
  */
 s32 func_80071468(s32 arg0)
 {
-extern u32 D_801B24C0;
-extern s32 D_801B24C4;
-extern void (*D_800D4DE8[])(void);
-
     s32 result;
 
     if (arg0 != 0)
@@ -651,10 +587,6 @@ extern void (*D_800D4DE8[])(void);
  */
 void func_800714E0(void)
 {
-extern u32 D_801B24C0;
-extern s32 D_801B24C4;
-extern void (*D_800D4DE8[])(void);
-
     D_801B24C0 = 1;
     D_801B24C4 = 1;
 }
@@ -662,10 +594,6 @@ extern void (*D_800D4DE8[])(void);
 /** @brief World-map step handler: kick a sub-task and advance the step counter. */
 void func_800714F8(void)
 {
-extern s32 D_8013B208;
-extern s32 D_801B24C0;
-extern s32 D_801B24C4;
-
     D_8013B208 = 1;
     wmap_start_map_tint(0x701040);
     g_wmap_backdrop_target_level = 4;
@@ -678,9 +606,6 @@ extern s32 D_801B24C4;
  */
 void func_8007154C(void)
 {
-extern s32 D_801B24C4;
-extern s32 D_801B24C0;
-
     if (--D_801B24C4 == 0)
     {
         D_801B24C0 += 1;
@@ -690,9 +615,6 @@ extern s32 D_801B24C0;
 /** @brief World-map step handler: register a callback and advance the step counter. */
 void func_80071580(void)
 {
-extern s32 D_801B24C0;
-extern s32 D_801B24C4;
-
     wmap_play_sound(0x24, 0x80);
     wmap_start_sequence(func_80071CEC);
     D_801B24C4 = 4;
@@ -704,9 +626,6 @@ extern s32 D_801B24C4;
  */
 void func_800715C8(void)
 {
-extern s32 D_801B24C4;
-extern s32 D_801B24C0;
-
     if (--D_801B24C4 == 0)
     {
         D_801B24C0 += 1;
@@ -718,9 +637,6 @@ extern s32 D_801B24C0;
  */
 void func_800715FC(void)
 {
-extern s32 D_801B24C4;
-extern s32 D_801B24C0;
-
     wmap_start_sequence(func_80072034);
     D_801B24C4 = 0x1E;
     D_801B24C0 += 1;
@@ -731,9 +647,6 @@ extern s32 D_801B24C0;
  */
 void func_80071638(void)
 {
-extern s32 D_801B24C4;
-extern s32 D_801B24C0;
-
     if (--D_801B24C4 == 0)
     {
         D_801B24C0 += 1;
@@ -743,11 +656,6 @@ extern s32 D_801B24C0;
 /** @brief Register two callbacks, set sequence flags, and begin a one-tick delay. */
 void func_8007166C(void)
 {
-extern s32 D_80139244;
-extern s32 D_801ADAE0;
-extern s32 D_801B24C0;
-extern s32 D_801B24C4;
-
     wmap_start_sequence(&func_8007228C);
     g_wmap_backdrop_target_level = 2;
     D_80139244 = 1;
@@ -762,9 +670,6 @@ extern s32 D_801B24C4;
  */
 void func_800716D8(void)
 {
-extern s32 D_801B24C4;
-extern s32 D_801B24C0;
-
     if (--D_801B24C4 == 0)
     {
         D_801B24C0 += 1;
@@ -776,9 +681,6 @@ extern s32 D_801B24C0;
  */
 void func_8007170C(void)
 {
-extern s32 D_801B24C4;
-extern s32 D_801B24C0;
-
     wmap_start_sequence(func_80072138);
     D_801B24C4 = 0x3;
     D_801B24C0 += 1;
@@ -789,9 +691,6 @@ extern s32 D_801B24C0;
  */
 void func_80071748(void)
 {
-extern s32 D_801B24C4;
-extern s32 D_801B24C0;
-
     if (--D_801B24C4 == 0)
     {
         D_801B24C0 += 1;
@@ -803,9 +702,6 @@ extern s32 D_801B24C0;
  */
 void func_8007177C(void)
 {
-extern s32 D_801B24C4;
-extern s32 D_801B24C0;
-
     wmap_start_sequence(func_800719A8);
     D_801B24C4 = 0x18;
     D_801B24C0 += 1;
@@ -816,9 +712,6 @@ extern s32 D_801B24C0;
  */
 void func_800717B8(void)
 {
-extern s32 D_801B24C4;
-extern s32 D_801B24C0;
-
     if (--D_801B24C4 == 0)
     {
         D_801B24C0 += 1;
@@ -830,9 +723,6 @@ extern s32 D_801B24C0;
  */
 void func_800717EC(void)
 {
-extern s32 D_801B24C4;
-extern s32 D_801B24C0;
-
     wmap_start_sequence(func_80072538);
     D_801B24C4 = 0x1E;
     D_801B24C0 += 1;
@@ -843,9 +733,6 @@ extern s32 D_801B24C0;
  */
 void func_80071828(void)
 {
-extern s32 D_801B24C4;
-extern s32 D_801B24C0;
-
     if (--D_801B24C4 == 0)
     {
         D_801B24C0 += 1;
@@ -857,9 +744,6 @@ extern s32 D_801B24C0;
  */
 void func_8007185C(void)
 {
-extern s32 D_801B24C4;
-extern s32 D_801B24C0;
-
     wmap_start_sequence(func_80071E94);
     D_801B24C4 = 0x3C;
     D_801B24C0 += 1;
@@ -870,9 +754,6 @@ extern s32 D_801B24C0;
  */
 void func_80071898(void)
 {
-extern s32 D_801B24C4;
-extern s32 D_801B24C0;
-
     if (--D_801B24C4 == 0)
     {
         D_801B24C0 += 1;
@@ -882,21 +763,6 @@ extern s32 D_801B24C0;
 /** @brief Register a callback, update the selected map cell, and begin a 68-tick delay. */
 void func_800718CC(void)
 {
-/** @brief First word of a 40-byte world-map cell. */
-typedef struct
-{
-    s32 value;
-    u8 unknown_04[36];
-} WmapValueRecord;
-
-extern s32 D_8011D4FC;
-extern s32 D_8011D510;
-extern s32 D_8011D530;
-extern s32 D_80139244;
-extern WmapValueRecord D_80139290[][6];
-extern s32 D_801B24C0;
-extern s32 D_801B24C4;
-
     wmap_start_sequence(&func_800723E0);
     D_80139244 = 0;
     D_801B24C4 = 0x44;
@@ -909,9 +775,6 @@ extern s32 D_801B24C4;
  */
 void func_80071958(void)
 {
-extern s32 D_801B24C4;
-extern s32 D_801B24C0;
-
     if (--D_801B24C4 == 0)
     {
         D_801B24C0 += 1;
@@ -923,9 +786,6 @@ extern s32 D_801B24C0;
  */
 void func_8007198C(void)
 {
-extern s32 D_801B24C0;
-extern s32 D_8013B20C;
-
     D_8013B20C = 0;
     D_801B24C0 += 1;
 }
@@ -937,15 +797,6 @@ extern s32 D_8013B20C;
  */
 s32 func_800719A8(s32 arg0)
 {
-extern u32 D_801B24C8;
-extern s32 D_801B24CC;
-extern void (*D_800D4E38[])(void);
-extern u8 D_8011F538[];
-extern u8* D_801399AC;
-extern u8 D_800D9318[];
-extern u8 D_801399A8[];
-extern s32 g_wmap_focus_screen_position;
-
     s32 result;
 
     if (arg0 != 0)
@@ -972,38 +823,20 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_80071A20(void)
 {
-extern u32 D_801B24C8;
-extern s32 D_801B24CC;
-extern void (*D_800D4E38[])(void);
-extern u8 D_8011F538[];
-extern u8* D_801399AC;
-extern u8 D_800D9318[];
-extern u8 D_801399A8[];
-extern s32 g_wmap_focus_screen_position;
-
     D_801B24C8 = 1;
     D_801B24CC = 1;
 }
 
 void func_80071A38(void)
 {
-extern u32 D_801B24C8;
-extern s32 D_801B24CC;
-extern void (*D_800D4E38[])(void);
-extern u8 D_8011F538[];
-extern u8* D_801399AC;
-extern u8 D_800D9318[];
-extern u8 D_801399A8[];
-extern s32 g_wmap_focus_screen_position;
-
     D_801399AC = D_8011F538;
-    D_800D9318[0x6] = 0xF;
-    *(s16*)&D_800D9318[0x10] = -1;
-    *(s16*)&D_800D9318[0x26] = 8;
-    *(s16*)&D_800D9318[0x2] = 0;
-    *(s16*)&D_800D9318[0xE] = 0;
-    *(s16*)&D_800D9318[0x22] = 0x80;
-    *(s16*)&D_800D9318[0x24] = 0;
+    D_800D9318.scale_index = 0xF;
+    D_800D9318.previous_sequence = -1;
+    D_800D9318.shade_step = 8;
+    D_800D9318.unknown_02 = 0;
+    D_800D9318.sequence = 0;
+    D_800D9318.target_shade = 0x80;
+    D_800D9318.shade = 0;
     D_801B24CC = 0x7C;
     D_801B24C8 += 1;
     func_80071AB4();
@@ -1014,18 +847,8 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_80071AB4(void)
 {
-extern u32 D_801B24C8;
-extern s32 D_801B24CC;
-extern void (*D_800D4E38[])(void);
-extern void func_80071AB4(void);
-extern u8 D_8011F538[];
-extern u8* D_801399AC;
-extern u8 D_800D9318[];
-extern u8 D_801399A8[];
-extern s32 g_wmap_focus_screen_position;
-
-    wmap_step_actor_animation(D_800D9318, D_801399A8);
-    wmap_draw_actor_sprite(D_800D9318, g_wmap_focus_screen_position, 0xB, 0x9, 0);
+    wmap_step_actor_animation(&D_800D9318, &D_801399A8);
+    wmap_draw_actor_sprite(&D_800D9318, g_wmap_focus_screen_position.packed, 0xB, 0x9, 0);
     if (--D_801B24CC == 0)
     {
         D_801B24C8 += 1;
@@ -1037,8 +860,6 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_80071B30(void)
 {
-extern s32 D_801B24C8;
-
     D_801B24C8 += 1;
 }
 
@@ -1049,15 +870,6 @@ extern s32 D_801B24C8;
  */
 s32 func_80071B48(s32 arg0)
 {
-extern u32 D_801B24D0;
-extern s32 D_801B24D4;
-extern void (*D_800D4E48[])(void);
-extern u8 D_8011F538[];
-extern u8* D_801399BC;
-extern u8 D_800D9370[];
-extern u8 D_801399B8[];
-extern s32 g_wmap_focus_screen_position;
-
     s32 result;
 
     if (arg0 != 0)
@@ -1084,15 +896,6 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_80071BC0(void)
 {
-extern u32 D_801B24D0;
-extern s32 D_801B24D4;
-extern void (*D_800D4E48[])(void);
-extern u8 D_8011F538[];
-extern u8* D_801399BC;
-extern u8 D_800D9370[];
-extern u8 D_801399B8[];
-extern s32 g_wmap_focus_screen_position;
-
     D_801B24D0 = 1;
     D_801B24D4 = 1;
 }
@@ -1102,25 +905,16 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_80071BD8(void)
 {
-extern u32 D_801B24D0;
-extern s32 D_801B24D4;
-extern void (*D_800D4E48[])(void);
-extern u8 D_8011F538[];
-extern u8* D_801399BC;
-extern u8 D_800D9370[];
-extern u8 D_801399B8[];
-extern s32 g_wmap_focus_screen_position;
-
     s32 one = 1;
 
     D_801399BC = D_8011F538;
-    D_800D9370[0x6] = 0xF;
-    *(s16*)&D_800D9370[0xE] = 1;
-    *(s16*)&D_800D9370[0x10] = -one;
-    *(s16*)&D_800D9370[0x26] = 2;
-    *(s16*)&D_800D9370[0x2] = 0;
-    *(s16*)&D_800D9370[0x22] = 0x81;
-    *(s16*)&D_800D9370[0x24] = 1;
+    D_800D9370.scale_index = 0xF;
+    D_800D9370.sequence = 1;
+    D_800D9370.previous_sequence = -one;
+    D_800D9370.shade_step = 2;
+    D_800D9370.unknown_02 = 0;
+    D_800D9370.target_shade = 0x81;
+    D_800D9370.shade = 1;
     D_801B24D4 = 0x7C;
     D_801B24D0 += one;
     func_80071C58();
@@ -1131,18 +925,8 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_80071C58(void)
 {
-extern u32 D_801B24D0;
-extern s32 D_801B24D4;
-extern void (*D_800D4E48[])(void);
-extern void func_80071C58(void);
-extern u8 D_8011F538[];
-extern u8* D_801399BC;
-extern u8 D_800D9370[];
-extern u8 D_801399B8[];
-extern s32 g_wmap_focus_screen_position;
-
-    wmap_step_actor_animation(D_800D9370, D_801399B8);
-    wmap_draw_actor_sprite(D_800D9370, g_wmap_focus_screen_position, 0xB, 0xA, 0);
+    wmap_step_actor_animation(&D_800D9370, &D_801399B8);
+    wmap_draw_actor_sprite(&D_800D9370, g_wmap_focus_screen_position.packed, 0xB, 0xA, 0);
     if (--D_801B24D4 == 0)
     {
         D_801B24D0 += 1;
@@ -1154,8 +938,6 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_80071CD4(void)
 {
-extern s32 D_801B24D0;
-
     D_801B24D0 += 1;
 }
 
@@ -1166,10 +948,6 @@ extern s32 D_801B24D0;
  */
 s32 func_80071CEC(s32 arg0)
 {
-extern u32 D_801B24D8;
-extern s32 D_801B24DC;
-extern void (*D_800D4E58[])(void);
-
     s32 result;
 
     if (arg0 != 0)
@@ -1196,10 +974,6 @@ extern void (*D_800D4E58[])(void);
  */
 void func_80071D64(void)
 {
-extern u32 D_801B24D8;
-extern s32 D_801B24DC;
-extern void (*D_800D4E58[])(void);
-
     D_801B24D8 = 1;
     D_801B24DC = 1;
 }
@@ -1209,20 +983,14 @@ extern void (*D_800D4E58[])(void);
  */
 void func_80071D7C(void)
 {
-extern u8* D_801399C4;
-extern u8 D_8011F538[];
-extern u8 D_800D939C[];
-extern s32 D_801B24D8;
-extern s32 D_801B24DC;
-
     D_801399C4 = D_8011F538;
-    D_800D939C[0x6] = 0xF;
-    *(s16*)&D_800D939C[0xE] = 2;
-    *(s16*)&D_800D939C[0x10] = -1;
-    *(s16*)&D_800D939C[0x26] = 0x10;
-    *(s16*)&D_800D939C[0x22] = 0x81;
-    *(s16*)&D_800D939C[0x2] = 0;
-    *(s16*)&D_800D939C[0x24] = 1;
+    D_800D939C.scale_index = 0xF;
+    D_800D939C.sequence = 2;
+    D_800D939C.previous_sequence = -1;
+    D_800D939C.shade_step = 0x10;
+    D_800D939C.target_shade = 0x81;
+    D_800D939C.unknown_02 = 0;
+    D_800D939C.shade = 1;
     D_801B24DC = 0x28;
     D_801B24D8 += 1;
     func_80071E00();
@@ -1233,14 +1001,8 @@ extern s32 D_801B24DC;
  */
 void func_80071E00(void)
 {
-extern s32 D_801B24D8;
-extern u8 D_800D939C[];
-extern u8 D_801399C0[];
-extern s32 g_wmap_focus_screen_position;
-extern s32 D_801B24DC;
-
-    wmap_step_actor_animation(D_800D939C, D_801399C0);
-    wmap_draw_actor_sprite(D_800D939C, g_wmap_focus_screen_position, 0xB, 0x2, 0);
+    wmap_step_actor_animation(&D_800D939C, &D_801399C0);
+    wmap_draw_actor_sprite(&D_800D939C, g_wmap_focus_screen_position.packed, 0xB, 0x2, 0);
     if (--D_801B24DC == 0)
     {
         D_801B24D8 += 1;
@@ -1252,12 +1014,6 @@ extern s32 D_801B24DC;
  */
 void func_80071E7C(void)
 {
-extern s32 D_801B24D8;
-extern u8 D_800D939C[];
-extern u8 D_801399C0[];
-extern s32 g_wmap_focus_screen_position;
-extern s32 D_801B24DC;
-
     D_801B24D8 += 1;
 }
 
@@ -1268,15 +1024,6 @@ extern s32 D_801B24DC;
  */
 s32 func_80071E94(s32 arg0)
 {
-extern u32 D_801B24E0;
-extern s32 D_801B24E4;
-extern void (*D_800D4E68[])(void);
-extern u8 D_8011D538[];
-extern u8* D_801399B4;
-extern u8 D_800D9344[];
-extern u8 D_801399B0[];
-extern s32 g_wmap_focus_screen_position;
-
     s32 result;
 
     if (arg0 != 0)
@@ -1303,15 +1050,6 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_80071F0C(void)
 {
-extern u32 D_801B24E0;
-extern s32 D_801B24E4;
-extern void (*D_800D4E68[])(void);
-extern u8 D_8011D538[];
-extern u8* D_801399B4;
-extern u8 D_800D9344[];
-extern u8 D_801399B0[];
-extern s32 g_wmap_focus_screen_position;
-
     D_801B24E0 = 1;
     D_801B24E4 = 1;
 }
@@ -1321,23 +1059,14 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_80071F24(void)
 {
-extern u32 D_801B24E0;
-extern s32 D_801B24E4;
-extern void (*D_800D4E68[])(void);
-extern u8 D_8011D538[];
-extern u8* D_801399B4;
-extern u8 D_800D9344[];
-extern u8 D_801399B0[];
-extern s32 g_wmap_focus_screen_position;
-
     D_801399B4 = D_8011D538;
-    D_800D9344[0x6] = 0xF;
-    *(s16*)&D_800D9344[0x10] = -1;
-    *(s16*)&D_800D9344[0x26] = 8;
-    *(s16*)&D_800D9344[0x2] = 0;
-    *(s16*)&D_800D9344[0xE] = 0;
-    *(s16*)&D_800D9344[0x22] = 0x80;
-    *(s16*)&D_800D9344[0x24] = 0;
+    D_800D9344.scale_index = 0xF;
+    D_800D9344.previous_sequence = -1;
+    D_800D9344.shade_step = 8;
+    D_800D9344.unknown_02 = 0;
+    D_800D9344.sequence = 0;
+    D_800D9344.target_shade = 0x80;
+    D_800D9344.shade = 0;
     D_801B24E4 = 0x3D;
     D_801B24E0 += 1;
     func_80071FA0();
@@ -1348,18 +1077,8 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_80071FA0(void)
 {
-extern u32 D_801B24E0;
-extern s32 D_801B24E4;
-extern void (*D_800D4E68[])(void);
-extern void func_80071FA0(void);
-extern u8 D_8011D538[];
-extern u8* D_801399B4;
-extern u8 D_800D9344[];
-extern u8 D_801399B0[];
-extern s32 g_wmap_focus_screen_position;
-
-    wmap_step_actor_animation(D_800D9344, D_801399B0);
-    wmap_draw_actor_sprite(D_800D9344, g_wmap_focus_screen_position, 0x1C, 0x8, 0);
+    wmap_step_actor_animation(&D_800D9344, &D_801399B0);
+    wmap_draw_actor_sprite(&D_800D9344, g_wmap_focus_screen_position.packed, 0x1C, 0x8, 0);
     if (--D_801B24E4 == 0)
     {
         D_801B24E0 += 1;
@@ -1371,8 +1090,6 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_8007201C(void)
 {
-extern s32 D_801B24E0;
-
     D_801B24E0 += 1;
 }
 
@@ -1383,10 +1100,6 @@ extern s32 D_801B24E0;
  */
 s32 func_80072034(s32 arg0)
 {
-extern u32 D_801B24E8;
-extern s32 D_801B24EC;
-extern void (*D_800D4E78[])(void);
-
     s32 result;
 
     if (arg0 != 0)
@@ -1413,10 +1126,6 @@ extern void (*D_800D4E78[])(void);
  */
 void func_800720AC(void)
 {
-extern u32 D_801B24E8;
-extern s32 D_801B24EC;
-extern void (*D_800D4E78[])(void);
-
     D_801B24E8 = 1;
     D_801B24EC = 1;
 }
@@ -1424,10 +1133,6 @@ extern void (*D_800D4E78[])(void);
 /** @brief Draw the sequence effect and advance when its countdown expires. */
 void func_800720C4(void)
 {
-extern s32 D_80139280;
-extern s32 D_801B24E8;
-extern s32 D_801B24EC;
-
     s32 remaining_ticks;
 
     func_8006BC44(0x14, 0x3C, D_80139280, 0);
@@ -1444,8 +1149,6 @@ extern s32 D_801B24EC;
  */
 void func_80072120(void)
 {
-extern s32 D_801B24E8;
-
     D_801B24E8 += 1;
 }
 
@@ -1456,10 +1159,6 @@ extern s32 D_801B24E8;
  */
 s32 func_80072138(s32 arg0)
 {
-extern u32 D_801B24F0;
-extern s32 D_801B24F4;
-extern void (*D_800D4E88[])(void);
-
     s32 result;
 
     if (arg0 != 0)
@@ -1486,10 +1185,6 @@ extern void (*D_800D4E88[])(void);
  */
 void func_800721B0(void)
 {
-extern u32 D_801B24F0;
-extern s32 D_801B24F4;
-extern void (*D_800D4E88[])(void);
-
     D_801B24F0 = 1;
     D_801B24F4 = 1;
 }
@@ -1497,21 +1192,14 @@ extern void (*D_800D4E88[])(void);
 /** @brief World-map step: reset counters and advance to the next handler. */
 void func_800721C8(void)
 {
-extern s32 D_801B24B0;
-extern s32 D_801B2468;
-extern s16 D_801B2490[];
-extern s16 D_801B2498[];
-extern s32 D_801B24F0;
-extern s32 D_801B24F4;
-
     D_801B24B0 = 0;
     D_801B2468 = 1;
-    D_801B2490[0] = 0;
-    D_801B2490[1] = 0;
-    D_801B2490[2] = 0;
-    D_801B2498[0] = 0;
-    D_801B2498[1] = 0;
-    D_801B2498[2] = 0;
+    D_801B2490.vx = 0;
+    D_801B2490.vy = 0;
+    D_801B2490.vz = 0;
+    D_801B2498.vx = 0;
+    D_801B2498.vy = 0;
+    D_801B2498.vz = 0;
     D_801B24F4 = 0x54;
     D_801B24F0 += 1;
     func_800709E8();
@@ -1522,9 +1210,6 @@ extern s32 D_801B24F4;
  */
 void func_8007223C(void)
 {
-extern s32 D_801B24F0;
-extern s32 D_801B24F4;
-
     D_801B24F4 = 0x20;
     D_801B24F0 += 1;
     func_80070B28();
@@ -1535,9 +1220,6 @@ extern s32 D_801B24F4;
  */
 void func_80072274(void)
 {
-extern s32 D_801B24F0;
-extern s32 D_801B24F4;
-
     D_801B24F0 += 1;
 }
 
@@ -1548,10 +1230,6 @@ extern s32 D_801B24F4;
  */
 s32 func_8007228C(s32 arg0)
 {
-extern u32 D_801B24F8;
-extern s32 D_801B24FC;
-extern void (*D_800D4EA0[])(void);
-
     s32 result;
 
     if (arg0 != 0)
@@ -1578,10 +1256,6 @@ extern void (*D_800D4EA0[])(void);
  */
 void func_80072304(void)
 {
-extern u32 D_801B24F8;
-extern s32 D_801B24FC;
-extern void (*D_800D4EA0[])(void);
-
     D_801B24F8 = 1;
     D_801B24FC = 1;
 }
@@ -1591,21 +1265,10 @@ extern void (*D_800D4EA0[])(void);
  */
 void func_8007231C(void)
 {
-typedef struct { unsigned char b[8]; } WmapBlk8;
-typedef struct { int w[4]; } WmapBlk16;
-
-extern WmapBlk8 D_80139258;
-extern WmapBlk8 D_801B24A0;
-extern WmapBlk16 g_wmap_camera_translation;
-extern WmapBlk16 D_801B2650;
-extern s32 D_80182DE8;
-extern s32 D_801B24FC;
-extern u32 D_801B24F8;
-
     D_801B24A0 = D_80139258;
     D_801B2650 = g_wmap_camera_translation;
     D_80182DE8 = 0x80;
-    D_801B2650.w[2] = 0xAFC8;
+    D_801B2650.vz = 0xAFC8;
     D_801B24FC = 0x80;
     D_801B24F8 += 1;
     func_80070C60();
@@ -1616,8 +1279,6 @@ extern u32 D_801B24F8;
  */
 void func_800723C8(void)
 {
-extern s32 D_801B24F8;
-
     D_801B24F8 += 1;
 }
 
@@ -1628,18 +1289,6 @@ extern s32 D_801B24F8;
  */
 s32 func_800723E0(s32 arg0)
 {
-typedef struct { unsigned char b[8]; } WmapBlk8;
-typedef struct { int w[4]; } WmapBlk16;
-
-extern u32 D_801B2500;
-extern s32 D_801B2504;
-extern void (*D_800D4EB0[])(void);
-extern WmapBlk8 D_80139258;
-extern WmapBlk8 D_801B24A8;
-extern WmapBlk16 g_wmap_camera_translation;
-extern WmapBlk16 D_801B2478;
-extern s32 D_80182DEC;
-
     s32 result;
 
     if (arg0 != 0)
@@ -1666,40 +1315,16 @@ extern s32 D_80182DEC;
  */
 void func_80072458(void)
 {
-typedef struct { unsigned char b[8]; } WmapBlk8;
-typedef struct { int w[4]; } WmapBlk16;
-
-extern u32 D_801B2500;
-extern s32 D_801B2504;
-extern void (*D_800D4EB0[])(void);
-extern WmapBlk8 D_80139258;
-extern WmapBlk8 D_801B24A8;
-extern WmapBlk16 g_wmap_camera_translation;
-extern WmapBlk16 D_801B2478;
-extern s32 D_80182DEC;
-
     D_801B2500 = 1;
     D_801B2504 = 1;
 }
 
 void func_80072470(void)
 {
-typedef struct { unsigned char b[8]; } WmapBlk8;
-typedef struct { int w[4]; } WmapBlk16;
-
-extern u32 D_801B2500;
-extern s32 D_801B2504;
-extern void (*D_800D4EB0[])(void);
-extern WmapBlk8 D_80139258;
-extern WmapBlk8 D_801B24A8;
-extern WmapBlk16 g_wmap_camera_translation;
-extern WmapBlk16 D_801B2478;
-extern s32 D_80182DEC;
-
     D_801B24A8 = D_80139258;
     D_801B2478 = g_wmap_camera_translation;
     D_80182DEC = 0x80;
-    D_801B2478.w[2] = 0xAFC8;
+    D_801B2478.vz = 0xAFC8;
     D_801B2504 = 0x40;
     D_801B2500 += 1;
     func_80070D60();
@@ -1710,8 +1335,6 @@ extern s32 D_80182DEC;
  */
 void func_80072520(void)
 {
-extern s32 D_801B2500;
-
     D_801B2500 += 1;
 }
 
@@ -1722,10 +1345,6 @@ extern s32 D_801B2500;
  */
 s32 func_80072538(s32 arg0)
 {
-extern u32 D_801B2508;
-extern s32 D_801B250C;
-extern void (*D_800D4EC0[])(void);
-
     s32 result;
 
     if (arg0 != 0)
@@ -1752,10 +1371,6 @@ extern void (*D_800D4EC0[])(void);
  */
 void func_800725B0(void)
 {
-extern u32 D_801B2508;
-extern s32 D_801B250C;
-extern void (*D_800D4EC0[])(void);
-
     D_801B2508 = 1;
     D_801B250C = 1;
 }
@@ -1765,32 +1380,12 @@ extern void (*D_800D4EC0[])(void);
  */
 void func_800725C8(void)
 {
-typedef struct
-{
-    s16 field_00;
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[4];
-} WmapConfigA;
-
-extern WmapConfigA D_800D9268[];
-extern s32 D_801B2508;
-extern s32 D_801B250C;
-
     s32 i;
 
     for (i = 0x64; i < 0x82; i++)
     {
-        D_800D9268[i].field_22 = 0;
-        D_800D9268[i].field_26 = 2;
+        D_800D9268[i].target_shade = 0;
+        D_800D9268[i].shade_step = 2;
     }
     D_801B250C = 0x40;
     D_801B2508 += 1;
@@ -1802,7 +1397,5 @@ extern s32 D_801B250C;
  */
 void func_8007262C(void)
 {
-extern s32 D_801B2508;
-
     D_801B2508 += 1;
 }

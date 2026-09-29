@@ -30,11 +30,6 @@ void func_8007E6A0(void);
 void func_8007EAB8(void);
 void func_8007EBA8(void);
 
-/**
- * @brief Initialize world-map globals and four per-entry state records.
- */
-void func_8007D428(void)
-{
 typedef struct
 {
     s16 unk0;
@@ -51,203 +46,6 @@ typedef struct
     u8 unk28[4];
 } WmapD94Entry;
 
-typedef struct
-{
-    s16 unk0;
-    s16 unk2;
-    s32 unk4;
-    s32 unk8;
-    s16 unkC;
-    s16 unkE;
-    s32 unk10;
-} WmapAfcEntry;
-
-typedef struct
-{
-    s32 unk0;
-    void *unk4;
-} WmapPair;
-
-extern WmapD94Entry D_800D94D0[];
-extern s32 D_8011D538[];
-extern s32 D_80139240;
-extern s32 D_8013924C;
-extern s32 D_80139250;
-extern s32 D_80139260;
-extern s32 D_80139264;
-extern s32 D_80139268;
-extern s32 D_8013926C;
-extern s32 D_80139284;
-extern WmapPair D_80139988[];
-extern s32 D_8013B264;
-extern s32 D_8013B270;
-extern s32 D_8013B278;
-extern s32 D_8013B280;
-extern s32 D_80182DEC;
-extern WmapAfcEntry D_801AFC98[];
-extern s32 D_801B0FD0;
-extern s32 D_801B2760;
-extern s32 D_801B2764;
-
-extern s32 D_801B2738;
-extern s32 D_80139888[];
-extern SVECTOR D_8013B240;
-extern VECTOR D_8011CF60;
-extern s32 D_80182DE8;
-extern u8 D_800DCF18[];
-extern s32 D_801B276C;
-extern s32 D_801B2768;
-
-    s32 i;
-    s16 shift;
-    WmapD94Entry *entry;
-
-    i = 0;
-    D_801B0FD0 = 4;
-    D_80182DEC = 0x7F;
-    D_80139240 = 0x50;
-    D_8013924C = 2;
-    D_80139250 = -1;
-    D_80139260 = 0x7D0;
-    D_80139264 = 0xA;
-    D_80139268 = 8;
-    D_8013926C = 1;
-    D_80139284 = 0;
-    D_8013B264 = 0x28;
-    D_8013B270 = 0x50;
-    D_8013B278 = 0x14;
-    D_8013B280 = 1;
-
-    do
-    {
-        entry = &D_800D94D0[i];
-        D_80139988[i + 14].unk4 = D_8011D538;
-        shift = i << 10;
-        entry->unk6 = 0xF;
-        entry->unk10 = -1;
-        entry->unk26 = 4;
-        entry->unk2 = 0;
-        entry->unk22 = 0x81;
-        entry->unk24 = 0x81;
-        entry->unkE = D_8013926C;
-        D_801AFC98[i].unk0 = 1;
-        D_801AFC98[i].unk8 = D_80139284;
-        D_801AFC98[i].unkC = 0x50;
-        D_801AFC98[i].unk2 = shift;
-        D_801AFC98[i].unk4 = 0;
-        D_801AFC98[i].unkE = 0;
-        i++;
-    } while (i < 4);
-
-    D_801B2764 = 0x3C;
-    D_801B2760++;
-    func_8007E510();
-}
-
-/**
- * @brief Advance a world-map model's spin, draw it while active, then countdown-advance the step.
- */
-void func_8007D5A4(void)
-{
-typedef struct
-{
-    s16 unk0;
-    s16 unk2;
-    u8 unk4[2];
-    u8 unk6;
-    u8 unk7[7];
-    s16 unkE;
-    s16 unk10;
-    u8 unk12[0x10];
-    s16 unk22;
-    s16 unk24;
-    s16 unk26;
-    u8 unk28[4];
-} WmapD94Entry;
-
-typedef struct
-{
-    s16 unk0;
-    s16 unk2;
-    s32 unk4;
-    s32 unk8;
-    s16 unkC;
-    s16 unkE;
-    s32 unk10;
-} WmapAfcEntry;
-
-typedef struct
-{
-    s32 unk0;
-    void *unk4;
-} WmapPair;
-
-extern WmapD94Entry D_800D94D0[];
-extern s32 D_8011D538[];
-extern s32 D_80139240;
-extern s32 D_8013924C;
-extern s32 D_80139250;
-extern s32 D_80139260;
-extern s32 D_80139264;
-extern s32 D_80139268;
-extern s32 D_8013926C;
-extern s32 D_80139284;
-extern WmapPair D_80139988[];
-extern s32 D_8013B264;
-extern s32 D_8013B270;
-extern s32 D_8013B278;
-extern s32 D_8013B280;
-extern s32 D_80182DEC;
-extern WmapAfcEntry D_801AFC98[];
-extern s32 D_801B0FD0;
-extern s32 D_801B2760;
-extern s32 D_801B2764;
-
-extern s32 D_801B2738;
-extern s32 D_80139888[];
-extern SVECTOR D_8013B240;
-extern VECTOR D_8011CF60;
-extern s32 D_80182DE8;
-extern u8 D_800DCF18[];
-extern s32 D_801B276C;
-extern s32 D_801B2768;
-
-    MATRIX m;
-    s32 x;
-
-    x = D_80139888[2] - 0xDAC;
-    D_80139888[2] = x;
-    if (x < 0x2710)
-    {
-        D_80139888[2] = 0x2710;
-    }
-
-    PushMatrix();
-    RotMatrix(&D_8013B240, &m);
-    TransMatrix(&m, &D_8011CF60);
-    SetRotMatrix(&m);
-    SetTransMatrix(&m);
-
-    if (D_80182DE8 != 0)
-    {
-        wmap_draw_model_default((s32)D_800DCF18, 0, 0x4, 0x35, 0x7800, 0x1, D_80182DE8);
-        D_80182DE8 -= 0x2;
-        if (D_80182DE8 < 0)
-        {
-            D_80182DE8 = 0;
-        }
-    }
-
-    PopMatrix();
-    if (--D_801B276C == 0)
-    {
-        D_801B2768 += 1;
-    }
-}
-
-/** @brief Initialize four equally spaced actors and start the effect. */
-void func_8007D6A4(void)
-{
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -265,80 +63,6 @@ typedef struct
     u8 pad_28[4];
 } WmapConfigA;
 
-/** @brief Per-actor motion and animation parameters. */
-typedef struct
-{
-    s16 state;
-    s16 angle;
-    s32 x;
-    s32 z;
-    s16 scale;
-    s16 field_0E;
-    s32 field_10;
-} WmapMotion;
-
-/** @brief Animation resource slot. */
-typedef struct
-{
-    s32 field_00;
-    void *resource;
-} WmapResource;
-
-/** @brief Unaligned eight-byte configuration copy. */
-typedef struct
-{
-    u8 bytes[8];
-} WmapConfigBytes;
-extern WmapConfigA D_800D9268[];
-extern WmapMotion D_801AFBD0[];
-extern WmapResource D_80139988[];
-extern WmapConfigBytes D_80139258;
-extern WmapConfigBytes D_801B2490;
-extern u8 D_8011D538[];
-extern s32 D_80139234;
-extern s32 D_8013923C;
-extern s32 D_80139240;
-extern s32 D_801B2770;
-extern s32 D_801B2774;
-
-    s32 i;
-    WmapConfigA *actor;
-
-    D_801B2490 = D_80139258;
-    D_80139234 = 1;
-    D_8013923C = 2;
-    D_80139240 = 0;
-    for (i = 20; i < 80; i++)
-    {
-        D_801AFBD0[i].state = 0;
-    }
-    for (i = 20; i < 80; i += 15)
-    {
-        actor = &D_800D9268[i];
-        D_80139988[i].resource = D_8011D538;
-        actor->field_06 = 15;
-        actor->field_10 = -1;
-        actor->field_26 = 2;
-        actor->field_02 = 0;
-        actor->field_0E = 0;
-        actor->field_22 = 1;
-        actor->field_24 = 129;
-        D_801AFBD0[i].state = 1;
-        D_801AFBD0[i].z = 150000;
-        D_801AFBD0[i].field_0E = 0;
-        D_801AFBD0[i].angle = D_80139240;
-        D_80139240 += 1024;
-    }
-    D_801B2774 = 32;
-    D_801B2770++;
-    func_8007D7FC();
-}
-
-/**
- * @brief Advance the orbiting effect records, duplicate active state, render active slots, and tick the sequence timer.
- */
-void func_8007D7FC(void)
-{
 typedef union
 {
     struct
@@ -384,14 +108,234 @@ typedef struct
     void *resource;
 } WmapEffect02Resource;
 
-extern WmapEffect02Config D_800D9268[];
-extern WmapEffect02Motion D_801AFBD0[];
-extern WmapEffect02Resource D_80139988[];
+typedef struct
+{
+    s32 value;
+    u8 unknown_04[36];
+} WmapValueRecord;
+
+typedef struct
+{
+    u8 pad0[0x22];
+    s16 f22;
+    u8 pad1[2];
+    s16 f26;
+    u8 pad2[4];
+} WmapEntry;
+
+extern s32 D_80139240;
+extern s32 D_8013924C;
+extern s32 D_80139250;
+extern s32 D_80139260;
+extern s32 D_80139264;
+extern s32 D_80139268;
+extern s32 D_8013926C;
+extern s32 D_80139284;
+extern s32 D_8013B264;
+extern s32 D_8013B270;
+extern s32 D_8013B278;
+extern s32 D_8013B280;
+extern s32 D_80182DEC;
+extern s32 D_801B0FD0;
+extern s32 D_801B2764;
+extern VECTOR D_8011CF60;
+extern s32 D_80182DE8;
+extern u8 D_800DCF18[];
+extern s32 D_801B276C;
 extern s32 D_80139234;
 extern s32 D_8013923C;
-extern s32 D_801B2770;
 extern s32 D_801B2774;
+extern s32 D_800D9150;
+extern s32 D_800DCEA8;
+extern s32 D_801B25D8;
+extern s32 D_801B277C;
+extern s32 D_801B2744;
+extern void (*D_800D54F0[])(void);
+extern s32 D_8013B20C;
+extern void func_8007DD24(void);
+extern void func_8007DDA4(void);
+extern s32 D_801B274C;
+extern void (*D_800D5508[])(void);
+extern s32 D_8013B208;
+extern s32 D_801ADAE0;
+extern WmapValueRecord D_80139290[][6];
+extern s32 D_8011D530;
+extern s32 D_8011D510;
+extern s32 D_8011D4FC;
+extern s32 D_801B2754;
+extern void (*D_800D5538[])(void);
+extern u8* D_801399AC;
+extern u8 D_8011F538[];
+extern s32 D_801B275C;
+extern void (*D_800D5548[])(void);
+extern u8* D_801399B4;
+extern void func_8007E3EC(void);
+extern void (*D_800D5558[])(void);
+extern u8 D_801399F8[];
+extern void (*D_800D5578[])(void);
+extern void (*D_800D5588[])(void);
+extern void (*D_800D5598[])(void);
+extern WmapEntry D_800D94D0[];
+extern u8 D_8011D538[];
+extern u32 D_801B2760;
+extern u32 D_801B2768;
+extern u32 D_801B2770;
+extern u32 D_801B2778;
+extern u32 D_801B2740;
+extern u32 D_801B2748;
+extern u32 D_801B2750;
+extern u32 D_801B2758;
 
+extern VECTOR g_wmap_camera_translation;
+extern VECTOR D_80139888;
+
+extern SVECTOR D_80139258;
+extern SVECTOR D_8013B240;
+extern SVECTOR D_801B2490;
+
+extern WmapSpriteActor D_800D9268[];
+extern WmapSpriteActor D_800D9318;
+extern WmapSpriteActor D_800D9344;
+
+extern WmapAnimationSlot D_80139988[];
+extern WmapAnimationSlot D_801399A8;
+extern WmapAnimationSlot D_801399B0;
+
+extern WmapScreenPosition g_wmap_focus_screen_position;
+
+extern WmapEffect02Motion D_801AFBD0[];
+extern WmapEffect02Motion D_801AFC98[];
+
+/**
+ * @brief Initialize world-map globals and four per-entry state records.
+ */
+void func_8007D428(void)
+{
+    s32 i;
+    s16 shift;
+    WmapD94Entry *entry;
+
+    i = 0;
+    D_801B0FD0 = 4;
+    D_80182DEC = 0x7F;
+    D_80139240 = 0x50;
+    D_8013924C = 2;
+    D_80139250 = -1;
+    D_80139260 = 0x7D0;
+    D_80139264 = 0xA;
+    D_80139268 = 8;
+    D_8013926C = 1;
+    D_80139284 = 0;
+    D_8013B264 = 0x28;
+    D_8013B270 = 0x50;
+    D_8013B278 = 0x14;
+    D_8013B280 = 1;
+
+    do
+    {
+        entry = &D_800D94D0[i];
+        D_80139988[i + 14].data = D_8011D538;
+        shift = i << 10;
+        entry->unk6 = 0xF;
+        entry->unk10 = -1;
+        entry->unk26 = 4;
+        entry->unk2 = 0;
+        entry->unk22 = 0x81;
+        entry->unk24 = 0x81;
+        entry->unkE = D_8013926C;
+        D_801AFC98[i].state = 1;
+        D_801AFC98[i].z = D_80139284;
+        D_801AFC98[i].scale = 0x50;
+        D_801AFC98[i].angle = shift;
+        D_801AFC98[i].x = 0;
+        D_801AFC98[i].field_0E = 0;
+        i++;
+    } while (i < 4);
+
+    D_801B2764 = 0x3C;
+    D_801B2760++;
+    func_8007E510();
+}
+
+/**
+ * @brief Advance a world-map model's spin, draw it while active, then countdown-advance the step.
+ */
+void func_8007D5A4(void)
+{
+    MATRIX m;
+    s32 x;
+
+    x = D_80139888.vz - 0xDAC;
+    D_80139888.vz = x;
+    if (x < 0x2710)
+    {
+        D_80139888.vz = 0x2710;
+    }
+
+    PushMatrix();
+    RotMatrix(&D_8013B240, &m);
+    TransMatrix(&m, &D_8011CF60);
+    SetRotMatrix(&m);
+    SetTransMatrix(&m);
+
+    if (D_80182DE8 != 0)
+    {
+        wmap_draw_model_default((s32)D_800DCF18, 0, 0x4, 0x35, 0x7800, 0x1, D_80182DE8);
+        D_80182DE8 -= 0x2;
+        if (D_80182DE8 < 0)
+        {
+            D_80182DE8 = 0;
+        }
+    }
+
+    PopMatrix();
+    if (--D_801B276C == 0)
+    {
+        D_801B2768 += 1;
+    }
+}
+
+/** @brief Initialize four equally spaced actors and start the effect. */
+void func_8007D6A4(void)
+{
+    s32 i;
+    WmapConfigA *actor;
+
+    D_801B2490 = D_80139258;
+    D_80139234 = 1;
+    D_8013923C = 2;
+    D_80139240 = 0;
+    for (i = 20; i < 80; i++)
+    {
+        D_801AFBD0[i].state = 0;
+    }
+    for (i = 20; i < 80; i += 15)
+    {
+        actor = &D_800D9268[i];
+        D_80139988[i].data = D_8011D538;
+        actor->field_06 = 15;
+        actor->field_10 = -1;
+        actor->field_26 = 2;
+        actor->field_02 = 0;
+        actor->field_0E = 0;
+        actor->field_22 = 1;
+        actor->field_24 = 129;
+        D_801AFBD0[i].state = 1;
+        D_801AFBD0[i].z = 150000;
+        D_801AFBD0[i].field_0E = 0;
+        D_801AFBD0[i].angle = D_80139240;
+        D_80139240 += 1024;
+    }
+    D_801B2774 = 32;
+    D_801B2770++;
+    func_8007D7FC();
+}
+
+/**
+ * @brief Advance the orbiting effect records, duplicate active state, render active slots, and tick the sequence timer.
+ */
+void func_8007D7FC(void)
+{
     SVECTOR position;
     u32 screen_position;
     s32 i;
@@ -416,8 +360,8 @@ extern s32 D_801B2774;
             D_800D9268[i + D_80139234] = D_800D9268[i];
             D_801AFBD0[i + D_80139234] = D_801AFBD0[i];
             D_80139988[i + D_80139234] = D_80139988[i];
-            D_800D9268[i + D_80139234].f.field_26 = 8;
-            D_800D9268[i + D_80139234].f.field_22 = 1;
+            D_800D9268[i + D_80139234].shade_step = 8;
+            D_800D9268[i + D_80139234].target_shade = 1;
         }
     }
 
@@ -472,49 +416,6 @@ extern s32 D_801B2774;
  */
 void func_8007DB50(void)
 {
-typedef struct
-{
-    s16 unk0;
-    s16 unk2;
-    u8 unk4[2];
-    u8 unk6;
-    u8 unk7[7];
-    s16 unkE;
-    s16 unk10;
-    u8 unk12[0x10];
-    s16 unk22;
-    s16 unk24;
-    s16 unk26;
-    u8 unk28[4];
-} WmapD94Entry;
-
-typedef struct
-{
-    s32 unk0;
-    void *unk4;
-} WmapPair;
-
-typedef struct
-{
-    s16 unk0;
-    s16 unk2;
-    s32 unk4;
-    s32 unk8;
-    s16 unkC;
-    s16 unkE;
-    s32 unk10;
-} WmapAfcEntry;
-
-extern WmapD94Entry D_800D9268[];
-extern s32 D_8011D538[];
-extern WmapPair D_80139988[];
-extern WmapAfcEntry D_801AFBD0[];
-extern s32 D_800D9150;
-extern s32 D_800DCEA8;
-extern s32 D_801B25D8;
-extern s32 D_801B2778;
-extern s32 D_801B277C;
-
     s32 i;
     WmapD94Entry *entry;
 
@@ -524,8 +425,8 @@ extern s32 D_801B277C;
 
     do
     {
-        D_801AFBD0[i].unk0 = 0;
-        D_80139988[i].unk4 = D_8011D538;
+        D_801AFBD0[i].state = 0;
+        D_80139988[i].data = D_8011D538;
         entry = &D_800D9268[i];
         entry->unk2 = 0;
         entry->unk6 = 0xF;
@@ -547,11 +448,6 @@ extern s32 D_801B277C;
  */
 s32 func_8007DC14(s32 arg0)
 {
-extern u32 D_801B2740;
-extern s32 D_801B2744;
-extern void (*D_800D54F0[])(void);
-extern s32 D_8013B20C;
-
     s32 result;
 
     if (arg0 != 0)
@@ -578,11 +474,6 @@ extern s32 D_8013B20C;
  */
 void func_8007DC8C(void)
 {
-extern u32 D_801B2740;
-extern s32 D_801B2744;
-extern void (*D_800D54F0[])(void);
-extern s32 D_8013B20C;
-
     D_801B2740 = 1;
     D_801B2744 = 1;
 }
@@ -592,11 +483,6 @@ extern s32 D_8013B20C;
  */
 void func_8007DCA4(void)
 {
-extern u32 D_801B2740;
-extern s32 D_801B2744;
-extern void (*D_800D54F0[])(void);
-extern s32 D_8013B20C;
-
     wmap_start_sequence(wmap_run_land_focus);
     D_8013B20C = 1;
     D_801B2740 += 1;
@@ -608,9 +494,6 @@ extern s32 D_8013B20C;
  */
 void func_8007DCE8(void)
 {
-extern s32 D_8013B20C;
-extern s32 D_801B2740;
-
     if (D_8013B20C == 0)
     {
         D_801B2740 += 1;
@@ -623,10 +506,6 @@ extern s32 D_801B2740;
  */
 void func_8007DD24(void)
 {
-extern s32 D_8013B20C;
-extern s32 D_801B2740;
-extern void func_8007DD24(void);
-
     wmap_start_sequence(func_8007DDBC);
     D_8013B20C = 1;
     D_801B2740 += 1;
@@ -638,9 +517,6 @@ extern void func_8007DD24(void);
  */
 void func_8007DD68(void)
 {
-extern s32 D_801B2740;
-extern s32 D_8013B20C;
-
     if (D_8013B20C == 0)
     {
         D_801B2740 += 1;
@@ -653,10 +529,6 @@ extern s32 D_8013B20C;
  */
 void func_8007DDA4(void)
 {
-extern s32 D_801B2740;
-extern s32 D_8013B20C;
-extern void func_8007DDA4(void);
-
     D_801B2740 += 1;
 }
 
@@ -667,10 +539,6 @@ extern void func_8007DDA4(void);
  */
 s32 func_8007DDBC(s32 arg0)
 {
-extern u32 D_801B2748;
-extern s32 D_801B274C;
-extern void (*D_800D5508[])(void);
-
     s32 result;
 
     if (arg0 != 0)
@@ -697,10 +565,6 @@ extern void (*D_800D5508[])(void);
  */
 void func_8007DE34(void)
 {
-extern u32 D_801B2748;
-extern s32 D_801B274C;
-extern void (*D_800D5508[])(void);
-
     D_801B2748 = 1;
     D_801B274C = 1;
 }
@@ -710,10 +574,6 @@ extern void (*D_800D5508[])(void);
  */
 void func_8007DE4C(void)
 {
-extern s32 D_8013B208;
-extern s32 D_801B2748;
-extern s32 D_801B274C;
-
     D_8013B208 = 1;
     wmap_start_map_tint(0x102045);
     g_wmap_backdrop_target_level = 4;
@@ -728,9 +588,6 @@ extern s32 D_801B274C;
  */
 void func_8007DEB8(void)
 {
-extern s32 D_801B274C;
-extern s32 D_801B2748;
-
     if (--D_801B274C == 0)
     {
         D_801B2748 += 1;
@@ -742,9 +599,6 @@ extern s32 D_801B2748;
  */
 void func_8007DEEC(void)
 {
-extern s32 D_801B274C;
-extern s32 D_801B2748;
-
     wmap_start_sequence(func_8007E480);
     D_801B274C = 0x50;
     D_801B2748 += 1;
@@ -755,9 +609,6 @@ extern s32 D_801B2748;
  */
 void func_8007DF28(void)
 {
-extern s32 D_801B274C;
-extern s32 D_801B2748;
-
     if (--D_801B274C == 0)
     {
         D_801B2748 += 1;
@@ -769,9 +620,6 @@ extern s32 D_801B2748;
  */
 void func_8007DF5C(void)
 {
-extern s32 D_801B274C;
-extern s32 D_801B2748;
-
     wmap_start_sequence(func_8007E88C);
     D_801B274C = 0x1E;
     D_801B2748 += 1;
@@ -782,9 +630,6 @@ extern s32 D_801B2748;
  */
 void func_8007DF98(void)
 {
-extern s32 D_801B274C;
-extern s32 D_801B2748;
-
     if (--D_801B274C == 0)
     {
         D_801B2748 += 1;
@@ -794,10 +639,6 @@ extern s32 D_801B2748;
 /** @brief Register a callback, set world-map state and color, and begin a two-tick delay. */
 void func_8007DFCC(void)
 {
-extern s32 D_801ADAE0;
-extern s32 D_801B2748;
-extern s32 D_801B274C;
-
     wmap_start_sequence(&func_8007E734);
     D_801ADAE0 = 1;
     g_wmap_backdrop_target_level = 8;
@@ -811,9 +652,6 @@ extern s32 D_801B274C;
  */
 void func_8007E02C(void)
 {
-extern s32 D_801B274C;
-extern s32 D_801B2748;
-
     if (--D_801B274C == 0)
     {
         D_801B2748 += 1;
@@ -825,9 +663,6 @@ extern s32 D_801B2748;
  */
 void func_8007E060(void)
 {
-extern s32 D_801B274C;
-extern s32 D_801B2748;
-
     wmap_start_sequence(func_8007E934);
     wmap_start_sequence(func_8007E140);
     D_801B274C = 0x7F;
@@ -839,9 +674,6 @@ extern s32 D_801B2748;
  */
 void func_8007E0A8(void)
 {
-extern s32 D_801B274C;
-extern s32 D_801B2748;
-
     if (--D_801B274C == 0)
     {
         D_801B2748 += 1;
@@ -853,19 +685,6 @@ extern s32 D_801B2748;
  */
 void func_8007E0DC(void)
 {
-typedef struct
-{
-    s32 value;
-    u8 unknown_04[36];
-} WmapValueRecord;
-
-extern WmapValueRecord D_80139290[][6];
-extern s32 D_8013B20C;
-extern s32 D_8011D530;
-extern s32 D_8011D510;
-extern s32 D_8011D4FC;
-extern s32 D_801B2748;
-
     D_8013B20C = 0;
     D_80139290[D_8011D510][D_8011D530].value = D_8011D4FC | 0x100;
     D_801B2748 += 1;
@@ -878,10 +697,6 @@ extern s32 D_801B2748;
  */
 s32 func_8007E140(s32 arg0)
 {
-extern u32 D_801B2750;
-extern s32 D_801B2754;
-extern void (*D_800D5538[])(void);
-
     s32 result;
 
     if (arg0 != 0)
@@ -908,10 +723,6 @@ extern void (*D_800D5538[])(void);
  */
 void func_8007E1B8(void)
 {
-extern u32 D_801B2750;
-extern s32 D_801B2754;
-extern void (*D_800D5538[])(void);
-
     D_801B2750 = 1;
     D_801B2754 = 1;
 }
@@ -921,20 +732,14 @@ extern void (*D_800D5538[])(void);
  */
 void func_8007E1D0(void)
 {
-extern u8* D_801399AC;
-extern u8 D_8011F538[];
-extern u8 D_800D9318[];
-extern s32 D_801B2750;
-extern s32 D_801B2754;
-
     D_801399AC = D_8011F538;
-    D_800D9318[0x6] = 0xF;
-    *(s16*)&D_800D9318[0x10] = -1;
-    *(s16*)&D_800D9318[0x2] = 0;
-    *(s16*)&D_800D9318[0xE] = 0;
-    *(s16*)&D_800D9318[0x26] = 0;
-    *(s16*)&D_800D9318[0x22] = 0x80;
-    *(s16*)&D_800D9318[0x24] = 0x80;
+    D_800D9318.scale_index = 0xF;
+    D_800D9318.previous_sequence = -1;
+    D_800D9318.unknown_02 = 0;
+    D_800D9318.sequence = 0;
+    D_800D9318.shade_step = 0;
+    D_800D9318.target_shade = 0x80;
+    D_800D9318.shade = 0x80;
     D_801B2754 = 0x82;
     D_801B2750 += 1;
     func_8007E248();
@@ -945,14 +750,8 @@ extern s32 D_801B2754;
  */
 void func_8007E248(void)
 {
-extern s32 D_801B2750;
-extern u8 D_800D9318[];
-extern u8 D_801399A8[];
-extern s32 g_wmap_focus_screen_position;
-extern s32 D_801B2754;
-
-    wmap_step_actor_animation(D_800D9318, D_801399A8);
-    wmap_draw_actor_sprite(D_800D9318, g_wmap_focus_screen_position, 0xF, 0x1E, 0);
+    wmap_step_actor_animation(&D_800D9318, &D_801399A8);
+    wmap_draw_actor_sprite(&D_800D9318, g_wmap_focus_screen_position.packed, 0xF, 0x1E, 0);
     if (--D_801B2754 == 0)
     {
         D_801B2750 += 1;
@@ -964,12 +763,6 @@ extern s32 D_801B2754;
  */
 void func_8007E2C4(void)
 {
-extern s32 D_801B2750;
-extern u8 D_800D9318[];
-extern u8 D_801399A8[];
-extern s32 g_wmap_focus_screen_position;
-extern s32 D_801B2754;
-
     D_801B2750 += 1;
 }
 
@@ -980,15 +773,6 @@ extern s32 D_801B2754;
  */
 s32 func_8007E2DC(s32 arg0)
 {
-extern u32 D_801B2758;
-extern s32 D_801B275C;
-extern void (*D_800D5548[])(void);
-extern u8 D_8011D538[];
-extern u8* D_801399B4;
-extern u8 D_800D9344[];
-extern u8 D_801399B0[];
-extern s32 g_wmap_focus_screen_position;
-
     s32 result;
 
     if (arg0 != 0)
@@ -1015,15 +799,6 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_8007E354(void)
 {
-extern u32 D_801B2758;
-extern s32 D_801B275C;
-extern void (*D_800D5548[])(void);
-extern u8 D_8011D538[];
-extern u8* D_801399B4;
-extern u8 D_800D9344[];
-extern u8 D_801399B0[];
-extern s32 g_wmap_focus_screen_position;
-
     D_801B2758 = 1;
     D_801B275C = 1;
 }
@@ -1033,23 +808,14 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_8007E36C(void)
 {
-extern u32 D_801B2758;
-extern s32 D_801B275C;
-extern void (*D_800D5548[])(void);
-extern u8 D_8011D538[];
-extern u8* D_801399B4;
-extern u8 D_800D9344[];
-extern u8 D_801399B0[];
-extern s32 g_wmap_focus_screen_position;
-
     D_801399B4 = D_8011D538;
-    D_800D9344[0x6] = 0xF;
-    *(s16*)&D_800D9344[0x10] = -1;
-    *(s16*)&D_800D9344[0x26] = 4;
-    *(s16*)&D_800D9344[0x22] = 0x81;
-    *(s16*)&D_800D9344[0x2] = 0;
-    *(s16*)&D_800D9344[0xE] = 0;
-    *(s16*)&D_800D9344[0x24] = 1;
+    D_800D9344.scale_index = 0xF;
+    D_800D9344.previous_sequence = -1;
+    D_800D9344.shade_step = 4;
+    D_800D9344.target_shade = 0x81;
+    D_800D9344.unknown_02 = 0;
+    D_800D9344.sequence = 0;
+    D_800D9344.shade = 1;
     D_801B275C = 0x8E;
     D_801B2758 += 1;
     func_8007E3EC();
@@ -1060,18 +826,8 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_8007E3EC(void)
 {
-extern u32 D_801B2758;
-extern s32 D_801B275C;
-extern void (*D_800D5548[])(void);
-extern void func_8007E3EC(void);
-extern u8 D_8011D538[];
-extern u8* D_801399B4;
-extern u8 D_800D9344[];
-extern u8 D_801399B0[];
-extern s32 g_wmap_focus_screen_position;
-
-    wmap_step_actor_animation(D_800D9344, D_801399B0);
-    wmap_draw_actor_sprite(D_800D9344, g_wmap_focus_screen_position, 0x8, 0x1, 0);
+    wmap_step_actor_animation(&D_800D9344, &D_801399B0);
+    wmap_draw_actor_sprite(&D_800D9344, g_wmap_focus_screen_position.packed, 0x8, 0x1, 0);
     if (--D_801B275C == 0)
     {
         D_801B2758 += 1;
@@ -1083,8 +839,6 @@ extern s32 g_wmap_focus_screen_position;
  */
 void func_8007E468(void)
 {
-extern s32 D_801B2758;
-
     D_801B2758 += 1;
 }
 
@@ -1095,10 +849,6 @@ extern s32 D_801B2758;
  */
 s32 func_8007E480(s32 arg0)
 {
-extern u32 D_801B2760;
-extern s32 D_801B2764;
-extern void (*D_800D5558[])(void);
-
     s32 result;
 
     if (arg0 != 0)
@@ -1125,10 +875,6 @@ extern void (*D_800D5558[])(void);
  */
 void func_8007E4F8(void)
 {
-extern u32 D_801B2760;
-extern s32 D_801B2764;
-extern void (*D_800D5558[])(void);
-
     D_801B2760 = 1;
     D_801B2764 = 1;
 }
@@ -1138,12 +884,6 @@ extern void (*D_800D5558[])(void);
  */
 void func_8007E510(void)
 {
-extern u8 D_800D94D0[];
-extern u8 D_801399F8[];
-extern s32 D_80182DEC;
-extern s32 D_801B2760;
-extern s32 D_801B2764;
-
     func_8006D014(D_800D94D0, D_801399F8, 4, 1, D_80182DEC, 8, 2);
     if (--D_801B2764 == 0)
     {
@@ -1156,9 +896,6 @@ extern s32 D_801B2764;
  */
 void func_8007E58C(void)
 {
-extern s32 D_801B2764;
-extern s32 D_801B2760;
-
     D_801B2764 = 0x14;
     D_801B2760 += 1;
     func_8007E5C4();
@@ -1169,12 +906,6 @@ extern s32 D_801B2760;
  */
 void func_8007E5C4(void)
 {
-extern u8 D_800D94D0[];
-extern u8 D_801399F8[];
-extern s32 D_80182DEC;
-extern s32 D_801B2760;
-extern s32 D_801B2764;
-
     func_8006D014(D_800D94D0, D_801399F8, 4, 1, D_80182DEC, 8, 2);
     if (--D_801B2764 == 0)
     {
@@ -1185,19 +916,6 @@ extern s32 D_801B2764;
 /** @brief World-map step handler: clear a small entry table, set the timer, advance the step. */
 void func_8007E640(void)
 {
-typedef struct
-{
-    u8 pad0[0x22];
-    s16 f22;
-    u8 pad1[2];
-    s16 f26;
-    u8 pad2[4];
-} WmapEntry;
-
-extern WmapEntry D_800D94D0[];
-extern s32 D_801B2760;
-extern s32 D_801B2764;
-
     s32 i;
 
     for (i = 0; i < 4; i++)
@@ -1216,12 +934,6 @@ extern s32 D_801B2764;
  */
 void func_8007E6A0(void)
 {
-extern u8 D_800D94D0[];
-extern u8 D_801399F8[];
-extern s32 D_80182DEC;
-extern s32 D_801B2760;
-extern s32 D_801B2764;
-
     func_8006D014(D_800D94D0, D_801399F8, 4, 1, D_80182DEC, 8, 2);
     if (--D_801B2764 == 0)
     {
@@ -1234,8 +946,6 @@ extern s32 D_801B2764;
  */
 void func_8007E71C(void)
 {
-extern s32 D_801B2760;
-
     D_801B2760 += 1;
 }
 
@@ -1246,18 +956,6 @@ extern s32 D_801B2760;
  */
 s32 func_8007E734(s32 arg0)
 {
-typedef struct { unsigned char b[8]; } WmapBlk8;
-typedef struct { int w[4]; } WmapBlk16;
-
-extern u32 D_801B2768;
-extern s32 D_801B276C;
-extern void (*D_800D5578[])(void);
-extern WmapBlk8 D_80139258;
-extern WmapBlk8 D_8013B240;
-extern WmapBlk16 g_wmap_camera_translation;
-extern WmapBlk16 D_80139888;
-extern s32 D_80182DE8;
-
     s32 result;
 
     if (arg0 != 0)
@@ -1284,18 +982,6 @@ extern s32 D_80182DE8;
  */
 void func_8007E7AC(void)
 {
-typedef struct { unsigned char b[8]; } WmapBlk8;
-typedef struct { int w[4]; } WmapBlk16;
-
-extern u32 D_801B2768;
-extern s32 D_801B276C;
-extern void (*D_800D5578[])(void);
-extern WmapBlk8 D_80139258;
-extern WmapBlk8 D_8013B240;
-extern WmapBlk16 g_wmap_camera_translation;
-extern WmapBlk16 D_80139888;
-extern s32 D_80182DE8;
-
     D_801B2768 = 1;
     D_801B276C = 1;
 }
@@ -1305,22 +991,10 @@ extern s32 D_80182DE8;
  */
 void func_8007E7C4(void)
 {
-typedef struct { unsigned char b[8]; } WmapBlk8;
-typedef struct { int w[4]; } WmapBlk16;
-
-extern u32 D_801B2768;
-extern s32 D_801B276C;
-extern void (*D_800D5578[])(void);
-extern WmapBlk8 D_80139258;
-extern WmapBlk8 D_8013B240;
-extern WmapBlk16 g_wmap_camera_translation;
-extern WmapBlk16 D_80139888;
-extern s32 D_80182DE8;
-
     D_8013B240 = D_80139258;
     D_80139888 = g_wmap_camera_translation;
     D_80182DE8 = 0x80;
-    D_80139888.w[2] = 0xAFC8;
+    D_80139888.vz = 0xAFC8;
     D_801B276C = 0x40;
     D_801B2768 += 1;
     func_8007D5A4();
@@ -1331,8 +1005,6 @@ extern s32 D_80182DE8;
  */
 void func_8007E874(void)
 {
-extern s32 D_801B2768;
-
     D_801B2768 += 1;
 }
 
@@ -1343,10 +1015,6 @@ extern s32 D_801B2768;
  */
 s32 func_8007E88C(s32 arg0)
 {
-extern u32 D_801B2770;
-extern s32 D_801B2774;
-extern void (*D_800D5588[])(void);
-
     s32 result;
 
     if (arg0 != 0)
@@ -1373,10 +1041,6 @@ extern void (*D_800D5588[])(void);
  */
 void func_8007E904(void)
 {
-extern u32 D_801B2770;
-extern s32 D_801B2774;
-extern void (*D_800D5588[])(void);
-
     D_801B2770 = 1;
     D_801B2774 = 1;
 }
@@ -1386,10 +1050,6 @@ extern void (*D_800D5588[])(void);
  */
 void func_8007E91C(void)
 {
-extern u32 D_801B2770;
-extern s32 D_801B2774;
-extern void (*D_800D5588[])(void);
-
     D_801B2770 += 1;
 }
 
@@ -1400,10 +1060,6 @@ extern void (*D_800D5588[])(void);
  */
 s32 func_8007E934(s32 arg0)
 {
-extern u32 D_801B2778;
-extern s32 D_801B277C;
-extern void (*D_800D5598[])(void);
-
     s32 result;
 
     if (arg0 != 0)
@@ -1430,10 +1086,6 @@ extern void (*D_800D5598[])(void);
  */
 void func_8007E9AC(void)
 {
-extern u32 D_801B2778;
-extern s32 D_801B277C;
-extern void (*D_800D5598[])(void);
-
     D_801B2778 = 1;
     D_801B277C = 1;
 }
@@ -1441,10 +1093,6 @@ extern void (*D_800D5598[])(void);
 /** @brief Draw the sequence effect, grow its scale, and update the countdown. */
 void func_8007E9C4(void)
 {
-extern s32 D_801B25D8;
-extern s32 D_801B2778;
-extern s32 D_801B277C;
-
     s32 remaining;
 
     func_8006B328(0x64, 0xC8, 2, -1, 5, 5, 0x15E, 8, -0xC8, 0x190, -0xFA, 0x1F4, 0x32, 0x81, 0x81, 8, 0);
@@ -1462,9 +1110,6 @@ extern s32 D_801B277C;
  */
 void func_8007EA80(void)
 {
-extern s32 D_801B277C;
-extern s32 D_801B2778;
-
     D_801B277C = 0x40;
     D_801B2778 += 1;
     func_8007EAB8();
@@ -1473,9 +1118,6 @@ extern s32 D_801B2778;
 /** @brief World-map step: spawn an effect object then count down a timer. */
 void func_8007EAB8(void)
 {
-extern s32 D_801B2778;
-extern s32 D_801B277C;
-
     func_8006B328(0x64, 0xC8, 2, -1, 5, 5, 0x15E, 8, -0xC8, 0x190, -0xFA,
                   0x1F4, 0x32, 0x81, 0x81, 8, 0);
     if (--D_801B277C == 0)
@@ -1489,10 +1131,6 @@ extern s32 D_801B277C;
  */
 void func_8007EB68(void)
 {
-extern s32 D_800DCEA8;
-extern s32 D_801B277C;
-extern s32 D_801B2778;
-
     D_800DCEA8 = 0;
     D_801B277C = 0x40;
     D_801B2778 += 1;
@@ -1502,9 +1140,6 @@ extern s32 D_801B2778;
 /** @brief World-map step: spawn an effect object then count down a timer. */
 void func_8007EBA8(void)
 {
-extern s32 D_801B2778;
-extern s32 D_801B277C;
-
     func_8006B328(0x64, 0xC8, 2, -1, 5, 5, 0x15E, 8, -0xC8, 0x190, -0xFA,
                   0x1F4, 0x32, 0x81, 0x81, 8, 0);
     if (--D_801B277C == 0)
@@ -1518,7 +1153,5 @@ extern s32 D_801B277C;
  */
 void func_8007EC58(void)
 {
-extern s32 D_801B2778;
-
     D_801B2778 += 1;
 }

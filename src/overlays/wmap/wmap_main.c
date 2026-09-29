@@ -20,6 +20,7 @@
 #include "pad.h"
 #include "tim.h"
 #include "controller_internal.h"
+#include "akao_cmd.h"
 
 #define WMAP_GRID_SIZE 6
 #define WMAP_MAP_CELL_SIZE 48
@@ -127,7 +128,6 @@ s32 akao_play_sfx_from_buffer(s32, s32, s32, s32);
 void cdrom_queue_read();
 s32 cdrom_wait_queue_empty();
 extern s32 func_800BFD18(s32 initialize);
-extern void akao_fade_song_volume_from(s32, s32, s32, s32);
 
 extern s32 g_wmap_script_button_mask;
 extern s32 g_wmap_script_word;
