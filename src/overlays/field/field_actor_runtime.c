@@ -346,8 +346,7 @@ extern FieldActionCommandMap g_field_action_command_maps[];
 
 /*
  * Retail addresses of g_field_resource_entries[3].unk8, g_field_player_records[1]'s flag
- * word, weapon_type and character_kind, and g_field_player_records[2].character_id. They
- * stay separate symbols because the rebuilt overlay lays its data out differently.
+ * word, weapon_type and character_kind, and g_field_player_records[2].character_id.
  */
 extern u8 D_800FF59C;
 extern u16 D_800FDA80;
@@ -424,7 +423,6 @@ void field_close_dialog_screen(void)
             g_field_actors[i].control.word &= ~FIELD_CONTROL_MODE_MASK;
             g_field_actors[i].animation = (g_field_actors[i].animation & FIELD_ANIMATION_FACING) + 0x12;
             g_field_object_states[i].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
-            /* Unprototyped call: the mask is still in $a1 and the target passes it along. */
             field_restart_actor_animation(&g_field_actors[i], (void*)~FIELD_CONTROL_MODE_MASK);
         }
     }
@@ -714,7 +712,6 @@ s32 field_evaluate_parameter_track(FieldActorSlot* slot, s32 curve_index)
         current_frame = slot->track_frames[g_field_track_index];
         do
         {
-            /* Empty test: without it the loop is laid out differently. */
             if (!slot)
             {
             }
@@ -947,7 +944,6 @@ u32 field_evaluate_parameter_track_at_time(FieldActorSlot* slot, s32 curve_index
 
         segment_word = *segment;
         interpolated_delta = ((((value_range * (segment_word >> FIELD_SEGMENT_VALUE_SHIFT)) >> 5) - start_delta) * (sample_frame - segment_start_frame)) / (segment_word & segment_mask_copy);
-        /* The unused second computation of the scaled delta keeps the target's register use. */
         randomized_result = curve->start_value + (((start_delta + interpolated_delta) * random_value) >> 15);
         result = ((start_delta + interpolated_delta) * random_value) >> 15;
         return randomized_result;
@@ -1430,7 +1426,6 @@ static void field_reset_actor_track_mask(FieldActorSlot* slot)
     s32 i;
     u16 track_interval = slot->track_interval;
 
-    /* Without this increment/decrement pair the lhu and the constant 1 swap registers. */
     track_interval++;
     track_interval--;
 
@@ -1907,7 +1902,6 @@ void field_initialize_actor_system(void)
         }
     }
 
-    /* Unprototyped call: the four loop registers are passed along in $a0-$a3. */
     field_refresh_actor_portraits(table_cursor, row_cursor, column_offset, byte_cursor);
 }
 
@@ -1925,12 +1919,10 @@ static void field_relocate_resource_buffer(s32 resource_index)
     u8* buffer_base;
 
     buffer_base = g_field_resource_buffer;
-    /* Without this increment/decrement pair the buffer base is not kept in its own register. */
     buffer_base++;
     buffer_base--;
     source_base = FIELD_RESOURCE_BACKUP;
     cursor_ref = &g_field_resource_cursor;
-    /* A no-op store the target performs (a word load and store of the entry start). */
     *(u32*)&g_field_resource_entries[resource_index].start += 0;
     bcopy((void*)(source_base - (u32)buffer_base + (u32)g_field_resource_entries[resource_index].start), *cursor_ref,
           g_field_resource_entries[resource_index].end - g_field_resource_entries[resource_index].start);
@@ -1944,7 +1936,6 @@ static void field_relocate_resource_buffer(s32 resource_index)
     g_field_resource_entries[resource_index].flags |= FIELD_RESOURCE_LOADED;
     g_field_resource_cursor = g_field_resource_entries[resource_index].end;
     actor = &g_field_actors[resource_index];
-    /* Unprototyped call: the old start is still in $a1 and the target passes it along. */
     field_restart_actor_animation(actor, old_start);
 }
 
@@ -2037,7 +2028,6 @@ static void field_load_actor_resource_slot(s32 resource_index, s32 slot_index, s
     g_field_resource_entries[resource_index].unk8 = 0;
     g_field_resource_entries[resource_index].flags = (g_field_resource_entries[resource_index].flags & ~FIELD_RESOURCE_HAS_ACTIONS) | (alternate_layout & 1);
     g_field_resource_entries[resource_index].start = g_field_resource_cursor;
-    /* Unprototyped call with a fourth argument the definition does not take. */
     field_load_resource_package(resource_id, slot_index, resource_index, alternate_layout & 1);
     g_field_actors[slot_index].animation &= FIELD_ANIMATION_FACING;
     field_restart_actor_animation(&g_field_actors[slot_index]);
@@ -2791,7 +2781,6 @@ void field_update_actor_objects(void)
                         {
                             if (!(state->flags & FIELD_OBJECT_CONTROL_BLOCKED))
                             {
-                                /* Unprototyped call: the third value rides along in $a2. */
                                 field_follow_leader_route(actor, follower_index, 0x600 + (follower_index * 0x400));
                                 actor->control.word &= ~FIELD_CONTROL_PLAY_ONCE;
                             }
@@ -3250,7 +3239,6 @@ u8 field_get_next_animation_frame_count(FieldActor* actor)
     u8* entry;
     s32 animation_index;
 
-    /* The target loads the resource start in a block of its own; a plain assignment schedules differently. */
     do
     {
         resource_base = g_field_resource_entries[actor->resource_index].start;
@@ -3263,7 +3251,6 @@ u8 field_get_next_animation_frame_count(FieldActor* actor)
     }
     entry = entry + (animation_index * 2 + 2);
     entry = resource_base + entry[0] + ((entry[1] & 0x7F) << 8);
-    /* The frame count goes back through the actor register; returning entry[0] directly allocates differently. */
     actor = (FieldActor*)(u32)entry[0];
     return (u32)actor;
 }

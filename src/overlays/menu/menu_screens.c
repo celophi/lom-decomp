@@ -1,6 +1,5 @@
 #include "menu_internal.h"
 
-/* Preserve the inline view available to the original input-handler callers. */
 extern inline s32 menu_focus_active_content_item(void)
 {
     MenuContentItem* content_items;
@@ -755,7 +754,6 @@ s32 menu_item_has_action(void)
             {
                 if (item_subtype == 15)
                 {
-                    /* Shared return-1 block: two predecessors keep jump.c from folding either test into a store-flag. */
                     goto success;
                 }
                 return 0;

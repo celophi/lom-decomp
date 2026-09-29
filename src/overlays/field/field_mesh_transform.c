@@ -267,7 +267,6 @@ void field_transform_mesh_normals(FieldActorState *actor, FieldMotionRecord *rec
  * @param matrix Destination matrix initialized and updated by this function.
  * @param base_matrix Matrix passed to the base-transform composition helper.
  * @return Nothing meaningful; callers ignore it.
- * @note Declared int without a return statement; as void it compiles differently.
  */
 s32 field_build_part_matrix(FieldActorState *actor, FieldMotionRecord *record, FieldActorPartDef *part,
                    MATRIX *matrix, MATRIX *base_matrix)
@@ -296,7 +295,6 @@ s32 field_build_part_matrix(FieldActorState *actor, FieldMotionRecord *record, F
     /* Identity rotation and zero translation, written as words. */
     ((s32 *)matrix)[4] = ONE;
     ((s32 *)matrix)[2] = ONE;
-    /* The loop notes keep the ONE constant after the prologue; without them it is scheduled one slot earlier. */
     do
     {
         ((s32 *)matrix)[0] = ONE;
@@ -322,7 +320,6 @@ s32 field_build_part_matrix(FieldActorState *actor, FieldMotionRecord *record, F
             break;
         case 2:
             RotMatrixX(ONE / 4, matrix);
-            /* Pairs with the loop above; without it record and matrix swap registers. */
             do
             {
                 rotation = record->heading;

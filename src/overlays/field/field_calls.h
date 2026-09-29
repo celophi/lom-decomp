@@ -10,13 +10,7 @@
  * (include/field_*.h) are declared there instead. Pointer parameters of
  * tagged record types use the struct tag, so callers need not include the
  * header that defines the record.
- *
- * A caller whose original code treats a call differently (an extra argument
- * left in a register, or a narrow result used unmasked) calls through a cast
- * to the function type it used, with a comment at the call. GCC 2.7.2
- * rejects a cast that changes the argument count, so a function that such a
- * file calls with extra or missing arguments stays out of this header and
- * keeps a commented local declaration in its callers.
+
  */
 
 #include "common.h"

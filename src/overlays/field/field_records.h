@@ -43,8 +43,7 @@ extern SavedGameLayout* g_field_game_state;
 /**
  * @brief View of a pet record shifted by @p bytes bytes.
  * @note Element 0 of a byte array member of the view is element @p bytes of the real
- *       record. The original code walks the parallel growth arrays from one shifted base
- *       like this; indexing each array separately does not produce the same code.
+ *       record.
  */
 #define FIELD_PET_AT(record, bytes) ((PetRecord*)((u8*)(record) + (bytes)))
 
@@ -179,9 +178,7 @@ typedef struct FieldItemStaging
 /**
  * @brief View of a staging block shifted by @p bytes bytes.
  * @note Element 0 of a byte array member of the view is element @p bytes of
- *       the real block. The original code reaches several parallel arrays
- *       from one shifted base like this; indexing each array separately does
- *       not produce the same code.
+ *       the real block.
  */
 #define FIELD_STAGING_AT(staging, bytes) ((FieldItemStaging*)((u8*)(staging) + (bytes)))
 

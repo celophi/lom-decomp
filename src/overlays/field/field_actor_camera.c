@@ -200,7 +200,7 @@ void field_camera_track_party(void)
             else
             {
                 s32 value;
-                s32* follow = &g_field_camera_follow_x; /* storing through the global directly changes the codegen */
+                s32* follow = &g_field_camera_follow_x;
 
                 if (delta < 0)
                 {
@@ -230,7 +230,7 @@ void field_camera_track_party(void)
             else
             {
                 s32 value;
-                s32* follow = &g_field_camera_follow_z; /* storing through the global directly changes the codegen */
+                s32* follow = &g_field_camera_follow_z;
 
                 if (delta < 0)
                 {
@@ -363,7 +363,6 @@ void field_camera_select_scroll_limits(void)
         return;
     }
 
-    /* indexing g_field_group_bounds[group - 1] directly changes the codegen */
     group_bounds = g_field_group_bounds;
     entry_index = group - 1;
     entry = &group_bounds[entry_index];

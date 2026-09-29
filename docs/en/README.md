@@ -13,6 +13,8 @@ ownership, timing, and known limitations. Source links accompany the details.
   command queueing, streaming, decompression, and drive recovery.
 - [MOVIE overlay](technical/architecture/movie.md) - video decoding, audio
   streaming, buffer ownership, callbacks, and FIELD integration.
+- [CARDA overlay](technical/architecture/carda.md) - saving, loading and
+  PocketStation pet transfers, from the card screen back to FIELD.
 - [ADDHERO overlay](technical/architecture/addhero.md) - the 2P hero screen:
   loading a friend's hero from a memory card and saving it back.
 

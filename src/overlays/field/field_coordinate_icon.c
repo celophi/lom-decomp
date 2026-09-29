@@ -78,7 +78,7 @@ extern u8* g_field_coordinate_labels[];
 s32 field_draw_coordinate_panel(void* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     s32 cursor;
-    s32 unused[2]; /* never used; the original stack frame reserves it */
+    s32 unused[2];
 
     cursor = field_draw_player_icon((POLY_FT4*)prim, ot, g_field_party_has_guest, FIELD_COORDINATE_ICON_X - x_offset, -y_offset, 1);
     if (g_field_coordinate_labels[0] != NULL)
@@ -147,7 +147,7 @@ s32 field_draw_player_icon(POLY_FT4* handle, u_long* ordering_table, s32 selecto
 
     icon = handle;
     prim = handle;
-    prim++; /* net-zero step: keeps the texture half in its own pointer (icon/prim register split) */
+    prim++;
     prim--;
     SET_BGR0_PACKED(icon, GPU_TINT_NEUTRAL);
     icon->x0 = x;

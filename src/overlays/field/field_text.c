@@ -134,7 +134,6 @@
 #define FIELD_TEXT_GLYPH_RUNS ((u8*)0x801E2780)
 /**
  * @brief Address of the cache word at @p byte_offset within a cache @p row.
- * @note The offset is added before the row address; a pointer sum would swap the addu operands.
  */
 #define FIELD_TEXT_CACHE_WORD(row, byte_offset) ((u16*)((byte_offset) + (s32)(row)))
 
@@ -1495,7 +1494,6 @@ void field_text_reset_scratch(void)
     {
         field_text_close(FIELD_TEXT_WINDOWS, 0);
     }
-    /* Without the loop scope the state pointer and the flag masks swap registers. */
     do
     {
         FieldTextState* state = FIELD_TEXT_IMMEDIATE_STATE;

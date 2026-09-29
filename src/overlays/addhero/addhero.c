@@ -3,7 +3,6 @@
 
 /**
  * @brief Address of the ADDHERO text whose table offset is @p offset.
- * @note Summed as integers, offset first, like the original list drawing code.
  */
 #define ADDHERO_TEXT_BY_OFFSET(table, offset) ((u8*)((s32)(offset) + (s32)(table)))
 
@@ -122,7 +121,7 @@ s32 addhero_state_step(AddheroDrawState* draw_state)
 void addhero_build_ui_elements(void)
 {
     AddheroElement* element;
-    s32 unused[2]; /* never used, but the original stack frame reserves it */
+    s32 unused[2];
 
     g_addhero_scroll_frames = 0;
     g_addhero_scroll_target_y = 0;
@@ -491,7 +490,6 @@ void addhero_scroll_to_selection(void)
     s32 row_y;
     s32 relative_y;
 
-    /* row * ADDHERO_ENTRY_ROW_HEIGHT; the original multiplies by 7 and doubles. */
     row_y = (g_addhero_selected_row * 7) << 1;
     relative_y = row_y - g_addhero_scroll_y;
 
@@ -690,7 +688,7 @@ void* addhero_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset
  */
 void* addhero_draw_mode_glyph(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    RECT unused; /* never used, but the original stack frame reserves it */
+    RECT unused;
 
     if (g_addhero_mode == 1)
     {
@@ -716,7 +714,7 @@ void* addhero_draw_mode_glyph(u_long* ot, void* prim, s32 x_offset, s32 y_offset
  */
 void* addhero_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    RECT unused; /* never used, but the original stack frame reserves it */
+    RECT unused;
     TILE* tile;
 
     if (g_card_slot != 0)
@@ -745,7 +743,7 @@ void* addhero_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_
  */
 void* addhero_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    RECT unused; /* never used, but the original stack frame reserves it */
+    RECT unused;
     TILE* tile;
 
     if (g_card_slot == 0)

@@ -255,7 +255,6 @@ void func_8006454C(void)
     SetTransMatrix(&sp18);
     project_panels(&sp38, &sp48, &sp58, &sp68, &sp78, &sp88);
     quad = (WmapQuad*)g_wmap_current_frame->packet_cursor;
-    /* Keep the frame load ahead of packet-mask setup during scheduling. */
     g_wmap_current_frame->packet_cursor += 0;
     width = 0x140;
     quad->x3 = width;

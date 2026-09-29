@@ -130,8 +130,6 @@
 /**
  * @brief Rotate (@p _radius, 0, 0) by @p matrix and store position +/- the result in work.world.
  * @note Uses the locals work, matrix, position and facing of field_build_effect_spiral.
- * @note Each arm of the facing test sets the whole world vector; setting only
- *       vx there changes the scheduling and register allocation.
  */
 #define STRIP_POINT(_radius)                                                                                                                                   \
     work.input.vx = (_radius);                                                                                                                                 \
@@ -198,8 +196,6 @@ extern s32 g_field_effect_angle;
  * @param actor Actor whose object gets the effect.
  * @param kind Effect kind (GroundEffectKind).
  * @note The radius starts at the kind's minimum (see field_get_ground_effect_radius_limits).
- * @note GROUND_EFFECT_DOME and GROUND_EFFECT_CURVES have separate, identical
- *       bodies; merging them changes the register allocation.
  */
 void field_start_object_ground_effect(FieldMotionRecord* actor, u32 kind)
 {
@@ -550,7 +546,6 @@ void field_draw_object_ground_effect(FieldMotionRecord* actor, u32 kind)
  * @param radius Dome radius.
  * @return First free byte after the appended primitives.
  * @note The dome is rotated by the effect angle in g_field_effect_angle.
- * @note v[3] is never used; it sizes the stack frame.
  */
 static u8* field_build_effect_dome(u_long* ordering_table, u8* packet, VECTOR* position, s32 radius)
 {
@@ -767,7 +762,6 @@ static u8* field_build_effect_dome(u_long* ordering_table, u8* packet, VECTOR* p
  * @param position World-space center in fixed-point coordinates.
  * @param radius Radius used to construct the strips.
  * @return First free byte after the appended primitives.
- * @note unused_matrix and the unused v[] entries size the stack frame.
  */
 static u8* field_build_effect_strips(u_long* ordering_table, u8* packet, VECTOR* position, s32 radius)
 {
@@ -896,8 +890,6 @@ static u8* field_build_effect_strips(u_long* ordering_table, u8* packet, VECTOR*
  * @param forward Nonzero runs toward positive X; zero toward negative X.
  * @return First byte after the emitted primitives and draw-page command.
  * @note Emits at least one strip and at most four, with nine quads per strip.
- * @note Each arm of the forward test sets the whole world vector; setting
- *       only vx there changes the scheduling and register allocation.
  */
 static u8* field_build_effect_curves(u_long* ordering_table, u8* packet, VECTOR* position, s32 extent, s32 forward)
 {

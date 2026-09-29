@@ -112,7 +112,7 @@ INCLUDE_ASM("overlays/carda/nonmatchings/carda_save", carda_draw_save_flow);
 #else
 void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    s32 unused[2]; /* never used, but the original stack frame reserves it */
+    s32 unused[2];
     s32 counter;
 
     if (g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state != CARDA_ELEMENT_FREE)
@@ -876,7 +876,7 @@ void carda_open_save_status_dialog(s32 dialog_state)
  */
 static void* carda_draw_save_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    s32 unused[2]; /* never used, but the original stack frame reserves it */
+    s32 unused[2];
 
     switch (g_carda_dialog_state)
     {
@@ -950,7 +950,7 @@ static void carda_open_item_list(void)
  */
 static void* carda_draw_item_list_header(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    s32 unused[2]; /* never used, but the original stack frame reserves it */
+    s32 unused[2];
     return field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_received_items, CARDA_TEXT_RECEIVED_ITEMS), FIELD_TEXT_COLOR_NORMAL,
                            -x_offset + CARDA_ITEM_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
 }
@@ -965,7 +965,7 @@ static void* carda_draw_item_list_header(u_long* ot, void* prim, s32 x_offset, s
  */
 void* carda_draw_item_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    s32 unused[2]; /* never used, but the original stack frame reserves it */
+    s32 unused[2];
     s32 row_y;
     s32 i;
     void* result;

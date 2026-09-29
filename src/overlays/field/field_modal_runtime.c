@@ -672,7 +672,6 @@ inline void field_append_name(u8* destination, const u8* source)
  * @param destination Name to extend.
  * @param entry Bank entry of the string.
  * @param index Position of @p entry in the bank.
- * @note Adds the offset before the bank start, unlike field_dialog_text; the other order changes the generated code.
  */
 static inline void field_append_dialog_text(u8* destination, FieldTextOffset* entry, s32 index)
 {
@@ -834,7 +833,7 @@ static void field_draw_cd_error_text(FieldRenderHalf* render)
 {
     SPRT* primitive;
     u_long* ordering_table;
-    Vec2s unused[2]; /* Never used; the original frame has room for it. */
+    Vec2s unused[2];
 
     primitive = (SPRT*)render->primitive_cursor;
     ordering_table = &render->ordering_table[FIELD_TEXT_OT_INDEX];
@@ -922,7 +921,6 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
             {
                 if (work & bit_or_actor)
                 {
-                    /* characters[0] of this shifted base is characters[index]; indexing directly changes the loop hoisting. */
                     work = (s32)g_saved_game_ctx + record_offset;
                     action = ((SavedGameLayout*)work)->characters[0].button_actions[g_field_hint_button_map[button_or_x]];
                     switch (action)
@@ -977,7 +975,6 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
                         }
                         break;
                     default:
-                        /* Dead store (overwritten below); without it the technique bank's high half is not hoisted as in the original. */
                         text_value = (s32)g_field_technique_names;
                         work = ((SavedGameLayout*)((u8*)g_saved_game_ctx + record_offset))->characters[0].info.bytes[action];
                         if (work == FIELD_SKILL_NONE)
@@ -1473,7 +1470,7 @@ void field_process_input(FieldRenderHalf* render)
 
 /**
  * @brief Play the low-HP warning for each player below a quarter of their maximum HP.
- * @return Undefined: declared s32 but falls off the end (v0 stays live at the exit, which keeps the delay slots empty).
+ * @return Undefined: declared s32 but falls off the end.
  * @note The two players' warnings alternate every sixteen frames; player 2 only warns while pad controlled.
  */
 static s32 field_play_low_hp_warning(void)
@@ -1829,7 +1826,6 @@ void field_rebuild_party_actions(s32 refresh_only)
                 skill_cursor = skills_start;
                 do
                 {
-                    /* Net-zero writes: they keep loop.c from hoisting and strength-reducing these offsets, which the original loop does not do. */
                     skill_character_offset = ~skill_character_offset;
                     skill_character_offset = ~skill_character_offset;
                     skill_action_offset = (~(u32)skill_action_offset);

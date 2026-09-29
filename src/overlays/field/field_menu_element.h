@@ -94,7 +94,6 @@ typedef union FieldMenuSize
 #define FIELD_MENU_X(element) ((element)->attr.bits.x)
 /**
  * @brief Width low byte of @p element, read from the whole attribute word.
- * @note The width_low bitfield compiles to a byte load instead.
  */
 #define FIELD_MENU_WIDTH_LOW(element) ((element)->attr.word >> FIELD_MENU_ATTR_WIDTH_LOW_SHIFT)
 /** @brief Join the width high bit of @p element with an already-read low byte @p low. */

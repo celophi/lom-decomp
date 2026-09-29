@@ -11,9 +11,6 @@
 /**
  * @brief Halve a signed value, rounding toward zero.
  *
- * Written as a conditional; gcc 2.8 expands a plain `/ 2` without the branch
- * the original code has.
- *
  * @param v Signed value to halve.
  * @return @p v divided by two, rounded toward zero.
  */
@@ -62,8 +59,6 @@
  * A 4bpp CLUT contains 16 colors, so its low four reference bits select a
  * 16-pixel X slot. Reference bit 4 selects VRAM row 472 or 473. An 8bpp CLUT
  * consumes a complete 256-color row, so all five bits select its Y offset.
- *
- * Keep these as macros: their expansion preserves the matched mask/shift order.
  */
 #define FIELD_TILE_4BIT_CLUT_X(ref) (((ref) & FIELD_TILE_CLUT_X_SLOT_MASK) << 4)
 #define FIELD_TILE_4BIT_CLUT_Y(ref) (FIELD_TILE_CLUT_VRAM_Y + (((ref) & FIELD_TILE_CLUT_MASK) >> 4))
@@ -1087,8 +1082,6 @@ typedef struct
 
 /*
  * Words of the allocator block that the code also reaches as plain globals.
- * The original mixes both spellings; each compiles differently (one lui per
- * global access, a shared base register through FIELD_MEM_STATE).
  */
 /** @brief Top of the allocated region (FieldMemState.top). */
 extern s32 g_field_mem_top;
@@ -1102,8 +1095,6 @@ extern s32 g_field_scene_fade_mode;
 extern s32 g_field_marker_overlay_enabled[2];
 /*
  * Standalone symbols for SCENE_STATE->camera_x/y/z (scene_state.h, 0x801ED484..0x801ED48C).
- * field_draw_scene_objects uses both forms; the choice selects the addressing mode and is
- * required to match.
  */
 extern s32 g_field_camera_x;
 extern s32 g_field_camera_y;

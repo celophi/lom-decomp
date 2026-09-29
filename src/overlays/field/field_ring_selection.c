@@ -438,7 +438,7 @@ static void field_draw_ring_menu(FieldRenderHalf* render_half)
     s32 index;
     s32 columns;
     s32 icon;
-    s32 u_or_angle; /* texture u, then the entry's ring angle: separate locals change the register allocation */
+    s32 u_or_angle;
     s32 v_or_width; /* texture v, then the icon width, for the same reason */
     s32 height;
 
@@ -476,7 +476,6 @@ static void field_draw_ring_menu(FieldRenderHalf* render_half)
         if (FIELD_RING_DEPTH(u_or_angle) <= 0)
         {
             addPrim(ot - FIELD_RING_DEPTH(u_or_angle), prim);
-            /* Called with an int depth: the original passes it without narrowing to s16. */
             ((void (*)(const void*, s32))field_add_fade_prim)(prim, -FIELD_RING_DEPTH(u_or_angle) + FIELD_RING_OT_FRONT);
             prim++;
         }
@@ -507,7 +506,6 @@ void field_load_party_script_page(s32 party_slot, s32 resource_id)
     action_count = action_table[0];
     if (party_slot == 2)
     {
-        /* Through a local: a constant &g_field_resource_actions[2] changes the address code. */
         action_rows = g_field_resource_actions;
         bcopy((u8*)actions, (u8*)&action_rows[2], action_count * sizeof(FieldActionSlot));
     }
@@ -568,7 +566,6 @@ static void field_draw_frame_thumbnail(FieldRenderHalf* render_half, s32 frame)
         }
         /* Rows 8-231 of the top page. */
         {
-            /* Constants, link masks and the reused value local: literals and addPrim change the loop's register use. */
             u32 address_mask;
             u32 tag_mask;
             s32 color;

@@ -235,8 +235,7 @@ extern u16 g_field_resource_version;
 
 /*
  * Main-executable number renderer (ot, cursor, value, digits, position,
- * flags). This file calls it without the trailing flags argument, so it is
- * declared without a prototype.
+ * flags).
  */
 void* func_800AD208();
 
@@ -1007,7 +1006,6 @@ static void field_prepare_animation_definitions(FieldAnimDef* def, s32 handler_g
         {
             continue;
         }
-        /* Kept apart from def for the rectangle reads; one pointer allocates differently. */
         tile_def = def;
         grid = def->u.tile.grid;
         cel = field_find_grid_part(grid, NULL);
@@ -1276,7 +1274,6 @@ static void field_build_animation_list(FieldAnimDef* def, u8** arena, FieldAnim*
         switch (def->flags.b.handler_group)
         {
         case FIELD_ANIM_GROUP_TILE:
-            /* A second pointer to the definition; reading through def alone allocates differently. */
             tile_def = def;
             switch (tile_def->flags.b.kind_flags & FIELD_ANIM_KIND_MASK)
             {
@@ -2331,7 +2328,6 @@ static void field_emit_sprite_grid(FieldPart* part, u8** cursor_ptr, FieldViewpo
                 {
                     if (interpolate != 0)
                     {
-                        /* Two statements: `done = width - col` allocates differently. */
                         done = width;
                         done -= col;
                         if (clut_left != clut_right)

@@ -375,7 +375,6 @@ s32 field_start_builtin_animation(s32 object_index, s32 slot_index, s32 animatio
     slot->status.parts.animation_id = animation_id;
 
     definition_index = table->definition_index[animation_id - FIELD_BUILTIN_FIRST_ANIMATION];
-    /* The definitions follow the index array; the original adds that offset last. */
     animation = (FieldAnimationDef*)((u8*)table + definition_index * sizeof(FieldAnimationDef) + sizeof(table->definition_index));
     slot->animation = animation;
     if (animation->flags & FIELD_ANIM_OWN_DURATION)

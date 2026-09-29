@@ -511,7 +511,7 @@ static void draw_checkps_image(CheckPSFrame* frame)
     s32 width_words;
     s32 height;
     u_long* ordering_table;
-    s32 unused[2]; /* Never used, but the original stack frame reserves it. */
+    s32 unused[2];
 
     primitive = frame->primitive_cursor;
     ordering_table = frame->ordering_table;

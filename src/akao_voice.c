@@ -8,7 +8,6 @@
 
 /**
  * @brief One register of SPU voice @p voice, addressed as voice 0's register plus the block stride.
- * @note The fixed register address is folded into one constant before the voice offset is added.
  */
 #define SPU_VOICE_REG(voice, field) (*(u16*)((u8*)&SPU_VOICE_REGS[0].field + (voice) * sizeof(SpuVoiceRegisters)))
 

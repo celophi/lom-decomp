@@ -38,7 +38,7 @@ typedef struct
  */
 void* addhero_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    RECT unused; /* never used, but the original stack frame reserves it */
+    RECT unused;
     void* result;
     s32 x;
     s32 status;
@@ -108,7 +108,7 @@ void* addhero_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
  */
 void* addhero_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    RECT unused; /* never used, but the original stack frame reserves it */
+    RECT unused;
     u16* text_table;
     SaveFile* file;
     AddheroElement* element;
@@ -267,7 +267,7 @@ void addhero_open_exit_dialog(s32 message_id)
  */
 void* addhero_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    RECT unused; /* never used, but the original stack frame reserves it */
+    RECT unused;
 
     switch (g_addhero_dialog_state)
     {
@@ -308,7 +308,7 @@ void* addhero_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_off
  */
 void* addhero_draw_exit_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    RECT unused; /* never used, but the original stack frame reserves it */
+    RECT unused;
     AddheroElement* p;
     s32 i;
 
@@ -361,7 +361,7 @@ void* addhero_draw_exit_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offse
  */
 void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    RECT unused; /* never used, but the original stack frame reserves it */
+    RECT unused;
 
     switch (g_card_entry_state)
     {

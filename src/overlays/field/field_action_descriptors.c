@@ -205,7 +205,6 @@ static FieldActionDescriptor *field_command_action_descriptor(s32 command)
     switch (command)
     {
     case 0x33:
-        /* field_battle_run_party_event takes no arguments; the original call still passes the attacker id. */
         field_battle_run_party_event(g_field_battle->attacker->meta.bytes.id);
         descriptor += 16;
         break;

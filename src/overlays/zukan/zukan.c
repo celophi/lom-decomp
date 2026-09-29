@@ -146,7 +146,6 @@ extern u8 D_800EC3E0[];
 
 /**
  * @brief Address of string @p index in the archive text table whose offset word is at @p table_word.
- * @note Summed as integers, index first, to match the original address arithmetic.
  */
 #define ZUKAN_ARCHIVE_TEXT(archive, table_word, index)                                                                                                         \
     ((u8*)(*(s32*)((archive) + (table_word)) + (*(u16*)((index) * 2 + *(s32*)((archive) + (table_word)) + (archive)) + (s32)(archive))))
@@ -222,7 +221,7 @@ void zukan_commit_loaded_entry(void);
 s32 zukan_initialize_state(s32 work_buffer, s32 category)
 {
     s32 next_buffer;
-    s32 unused_scratch[2]; /* never used, but the compiled frame size depends on it */
+    s32 unused_scratch[2];
 
     g_zukan_category = category;
     g_zukan_work_buffer = (u8*)((work_buffer + 3) & ~3);
@@ -574,7 +573,7 @@ void zukan_render_ui(RenderContext* render_ctx)
     s32 i;
     u8* packet_cursor;
     s32 detail_flag;
-    s32 unused_scratch[2]; /* never used, but the compiled frame size depends on it */
+    s32 unused_scratch[2];
 
     ordering_table = &render_ctx->ot[ZUKAN_LAYER_NAV_SPRITES];
     i = 0;
@@ -702,7 +701,7 @@ void zukan_start_previous_entry_transition(void)
 void zukan_update_transition(RenderContext* render_ctx)
 {
     void* saved_packet_cursor;
-    s32 unused_scratch[2]; /* never used, but the compiled frame size depends on it */
+    s32 unused_scratch[2];
     if (g_zukan_transition_state != 0)
     {
         saved_packet_cursor = render_ctx->prim_cursor;
@@ -781,7 +780,7 @@ void zukan_update_transition(RenderContext* render_ctx)
  */
 void zukan_render_content(RenderContext* render_ctx)
 {
-    s32 unused_scratch[2]; /* never used, but the compiled frame size depends on it */
+    s32 unused_scratch[2];
     DRAWENV draw_env;
     ZukanPos pos;
     u8* packet_cursor;
@@ -1147,7 +1146,7 @@ u8* zukan_render_detail_text(u8* packet_cursor, u_long* ordering_table)
     u16* offsets;
     u16* line_offsets;
     u8* text;
-    u8 unused_text_buffer[0x100]; /* never used, but the compiled frame size depends on it */
+    u8 unused_text_buffer[0x100];
 
     line_offsets = (u16*)(g_zukan_work_buffer + *(s32*)(g_zukan_work_buffer + 8));
     offsets = line_offsets;
@@ -1317,7 +1316,7 @@ void zukan_load_ui_resource(void)
 
     cdrom_queue_read(ZUKAN_UI_RESOURCE_ID, archive);
 
-    packed_dimensions = *(volatile s32*)archive; /* need to remove volatile somehow */
+    packed_dimensions = *(volatile s32*)archive;
     width = packed_dimensions;
     dimension = width;
 

@@ -68,7 +68,6 @@ typedef struct
 extern u16 g_field_pixel_lookup_tables[][32];
 
 static void field_start_animation(FieldSeq* seq);
-/* Not in field_calls.h: field_actor_runtime.c calls it undeclared, and its code changes with the prototype. */
 void field_set_color_scale(s16 index, u16 red_scale, u16 green_scale, u16 blue_scale);
 static void field_tint_part_cells(FieldPart* part);
 static void field_tint_animation_frames(FieldPart* cel, FieldAnim* anim);
@@ -424,7 +423,6 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
     case FIELD_LIST_PALETTE_ANIMS:
         anim = scene->strips;
         break;
-        /* Unreachable: its loop note keeps cse from carrying the scene load into the next arm (CSE-11). */
         do
         {
         } while (0);
@@ -648,7 +646,6 @@ void field_begin_scene_fade_in(void)
 
     scene = g_field_scene.scene;
     g_field_scene_fade_mode = FIELD_FADE_IN;
-    /* Read through a pointer: as scene->objects gcc moves the load above the store before it. */
     list = &scene->objects;
     obj = *list;
     obj->flags.word &= ~FIELD_OBJ_VISIBLE;
@@ -799,7 +796,6 @@ void field_set_color_scale(s16 index, u16 red_scale, u16 green_scale, u16 blue_s
  * tinted.
  *
  * @param part Part to re-tint.
- * @note The case 0 and case 2..5 bodies are the same code written twice.
  */
 static void field_tint_part_cells(FieldPart* part)
 {
@@ -1002,7 +998,6 @@ s32 field_get_animation_state(s32 list_kind, s32 index)
     case FIELD_LIST_PALETTE_ANIMS:
         anim = scene->strips;
         break;
-        /* Unreachable: its loop note keeps cse from carrying the scene load into the next arm (CSE-11). */
         do
         {
         } while (0);
@@ -1318,7 +1313,6 @@ void field_set_tint_primitive_code(u8 format, s32 count, u8* primitive_code)
  *
  * @param cel Cel whose kind and shared words set the record stride.
  * @param anim Animation whose frame records to re-tint.
- * @note The case 0 and case 2..5 bodies are the same code written twice.
  */
 static void field_tint_animation_frames(FieldPart* cel, FieldAnim* anim)
 {

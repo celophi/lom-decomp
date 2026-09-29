@@ -490,7 +490,6 @@ s32 field_action_damage_status(void)
     status = params;
     field_compute_attack(params.status.attack_stat, &attack);
     field_compute_defense(params.status.defense_stat, &defense);
-    /* Word shift, not the element_mask bitfield, which schedules the call setup differently. */
     element_mask = (params.word >> 8) & 0xFF;
     field_apply_element_modifiers(0, element_mask, &attack, &defense);
     damage = field_apply_damage(attack, defense);
@@ -891,8 +890,6 @@ s32 field_apply_damage(u32 attack, u32 defense)
 
     if ((field_count_status_slots(g_field_battle->attacker, FIELD_STATUS_ID_DRAIN) != 0) && (FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor) < FIELD_ACTION_KIND_ELEMENTAL))
     {
-        /* Open-coded attack / 4; value holds the state pointer because the
-           target keeps it in the divisor's register. */
         attacker = g_field_battle->attacker;
         if ((s32)attack < 0)
         {
@@ -1005,7 +1002,6 @@ void field_apply_on_hit_statuses(void)
         {
             if (field_count_status_slots(g_field_battle->attacker, status) != 0)
             {
-                /* Indexing the table directly folds the -0xA0 bias into the address. */
                 table = g_field_on_hit_statuses;
                 entry = &table[status - FIELD_STATUS_ID_ON_HIT_FIRST];
                 field_apply_status_effect(g_field_battle->attacker, g_field_battle->target, 0, status - FIELD_STATUS_ID_ON_HIT_FIRST, entry->chance, entry->duration * 16);

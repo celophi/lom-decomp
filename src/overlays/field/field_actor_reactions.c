@@ -300,7 +300,6 @@ void field_start_actor_defeat(FieldActor* actor, s8 value)
  * @brief Knock a defeated actor down and start its defeat animation.
  * @param actor Actor to update.
  * @return Unspecified; callers do not use the value.
- * @note Declared s32 without a return statement: a void function fills the final branch delay slot differently.
  */
 s32 field_collapse_defeated_actor(FieldActor* actor)
 {

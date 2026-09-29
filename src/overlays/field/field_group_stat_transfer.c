@@ -52,7 +52,6 @@ void field_golem_build_companion(s32 group, FieldCharacterRecord* record)
     for (i = 0; i < COMPANION_STAT_COUNT; i++)
     {
         record->equipment_totals[i] = GOLEM.group_records[group].equipment_totals[i];
-        /* Through the slot address: an indexed equipment[] store shares the totals address and changes the loop. */
         (&record->equipment[GOLEM_ARMOR_SLOT])->derived.values[i] = record->equipment_totals[i];
     }
     for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)

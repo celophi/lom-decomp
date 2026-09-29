@@ -2,7 +2,6 @@
 
 /**
  * @brief Inventory record @p index.
- * @note Summed as integers, index first, as the original stat reads do.
  */
 #define GOSUB_INVENTORY_RECORD(index) ((FieldItemRecord*)((index) * sizeof(FieldItemRecord) + (u32)g_saved_game_ctx->items))
 
@@ -453,7 +452,6 @@ void gosub_build_equipment_list(u32 item_kind)
  * @brief List the weapon, armor or instrument types that can be made.
  *
  * @param group GosubEquipmentKind category (weapon, armor or instrument).
- * @note Each name is looked up and stored twice, as in the original.
  */
 void gosub_build_equipment_type_list(s32 group)
 {

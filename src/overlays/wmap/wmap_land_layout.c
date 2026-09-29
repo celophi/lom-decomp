@@ -572,7 +572,6 @@ s32 wmap_can_place_land(u32 x, s32 y, s32 land)
  */
 void wmap_place_land(s32 x, s32 y, s32 index)
 {
-    /* The original routine reserves an unused eight-byte local. */
     u8 unused_spirits[WMAP_SPIRIT_COUNT];
     s32 record;
     s32 field;

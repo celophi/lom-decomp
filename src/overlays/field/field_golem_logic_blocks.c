@@ -238,7 +238,7 @@ u8 golem_fill_logic_block_status(GolemLogicBlockStatus* results)
 void golem_remove_logic_block(s32 index)
 {
     s32 i;
-    s32 unused[2]; /* never used, but without it the 8-byte stack frame is lost */
+    s32 unused[2];
 
     GOLEM.logic_blocks[index].f.placed = 0;
     for (i = 0; i < GOLEM_GRID_CELL_COUNT; i++)

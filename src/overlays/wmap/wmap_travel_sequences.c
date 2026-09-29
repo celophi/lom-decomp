@@ -495,7 +495,6 @@ static s32 wmap_start_vehicle_flight(s32 initialize)
             if (delta != 0)
             {
                 sign = -1;
-                /* dx is reused for the test; a separate temporary changes the register allocation. */
                 dx = delta > 0;
                 if (dx)
                 {

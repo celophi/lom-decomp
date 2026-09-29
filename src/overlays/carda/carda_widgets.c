@@ -247,7 +247,7 @@ s32 carda_test_option_flag_2(void)
  */
 void* carda_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    s32 unused[2]; /* never used, but the original stack frame reserves it */
+    s32 unused[2];
     void* result;
     s32 x;
     s32 status;
@@ -324,7 +324,7 @@ void* carda_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
  */
 static void* carda_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    s32 unused[2]; /* never used, but the original stack frame reserves it */
+    s32 unused[2];
     SaveFile* blob;
     CardaElement* element;
     CardaElement* cursor;
@@ -460,7 +460,7 @@ void* carda_draw_progress_bar(POLY_G4* quad, u_long* ot)
  */
 void* carda_draw_save_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    s32 unused[2]; /* never used, but the original stack frame reserves it */
+    s32 unused[2];
     void* result;
     s32 x;
     s32 status;
@@ -539,7 +539,7 @@ void* carda_draw_save_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
  */
 void* carda_draw_overwrite_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    s32 unused[2]; /* never used, but the original stack frame reserves it */
+    s32 unused[2];
     void* result;
     s32 x;
     s32 status;
@@ -622,7 +622,7 @@ static void* carda_draw_save_progress(u_long* ot, void* prim, s32 x_offset, s32 
     void* result;
     u16* text_table;
     CardaElement* message;
-    s32 unused[2]; /* never used, but the original stack frame reserves it */
+    s32 unused[2];
 
     x = -x_offset + CARDA_MESSAGE_WIDTH / 2;
     result = field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_saving, CARDA_TEXT_SAVING), FIELD_TEXT_COLOR_NORMAL, x, -y_offset, FIELD_TEXT_ALIGN_CENTER);
@@ -661,7 +661,7 @@ static void* carda_draw_save_progress(u_long* ot, void* prim, s32 x_offset, s32 
  */
 static void* carda_draw_save_complete(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    s32 unused[2]; /* never used, but the original stack frame reserves it */
+    s32 unused[2];
     void* result;
 
     result = field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_saved, CARDA_TEXT_SAVED), FIELD_TEXT_COLOR_NORMAL, -x_offset + CARDA_MESSAGE_WIDTH / 2,
@@ -695,7 +695,7 @@ INCLUDE_ASM("overlays/carda/nonmatchings/carda_widgets", carda_draw_format_promp
 #else
 void* carda_draw_format_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    s32 unused[2]; /* never used, but the original stack frame reserves it */
+    s32 unused[2];
     s32 x;
     s32 status;
     u32 attr;
@@ -810,7 +810,7 @@ void* carda_draw_format_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
  */
 static void* carda_draw_format_progress(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    s32 unused[2]; /* never used, but the original stack frame reserves it */
+    s32 unused[2];
 
     if (g_carda_format_frames >= 13)
     {
@@ -1001,7 +1001,7 @@ void carda_open_status_dialog(s32 dialog_state)
  */
 static void* carda_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    s32 unused[2]; /* never used, but the original stack frame reserves it */
+    s32 unused[2];
     u16* text_table;
 
     switch (g_carda_dialog_state)

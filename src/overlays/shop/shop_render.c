@@ -4,7 +4,6 @@
 
 /**
  * @brief Low byte of a window's 9-bit width, read from the whole frame word.
- * @note Reading the width_low bitfield instead compiles to a byte load.
  */
 #define SHOP_WINDOW_WIDTH_LOW_BYTE(window) ((s32)((window)->frame.word >> 24))
 /** @brief Join a window's width high bit with an already-read low byte @p low. */
@@ -54,8 +53,6 @@
  * @brief Draw every active window and advance its open or close animation.
  * @param ctx Host frame context; its ordering-table entry receives every packet.
  * @param buffer Packet buffer for this frame.
- * @note The x position and width low byte of each frame are read into locals
- *       before each func_800AD850 call; the compiled evaluation order needs it.
  */
 void shop_draw_windows(ShopFrameContext* ctx, ShopPacketBuffer* buffer)
 {
@@ -500,7 +497,7 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
  */
 u8* shop_draw_title_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
 {
-    Vec2s unused_position; /* never used, but the compiled frame size depends on it */
+    Vec2s unused_position;
     s32 entry;
 
     entry = g_shop_title_text_id * 2;

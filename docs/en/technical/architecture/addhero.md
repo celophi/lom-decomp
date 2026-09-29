@@ -1,6 +1,6 @@
 # ADDHERO overlay architecture
 
-[English documentation](../../README.md) | [日本語](../../../jp/technical/architecture/addhero.md) | [Save file reference](../reference/save-file.md)
+[English documentation](../../README.md) | [日本語](../../../jp/technical/architecture/addhero.md) | [CARDA overlay](carda.md) | [Save file reference](../reference/save-file.md)
 
 ## High-level overview
 

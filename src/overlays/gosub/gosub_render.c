@@ -151,7 +151,6 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                 content_height = g_gosub_row_count * g_gosub_row_height;
                 if ((g_gosub_scroll_y + element_height) < content_height)
                 {
-                    /* Uses the words read at the top of the loop, as the original does. */
                     u32 x = (element_word >> 7) & 0x1FF;
                     u32 width_low = element_word >> 24;
 
@@ -176,7 +175,6 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                     packet_cursor->w = 6;
                     element_height_calc = (element->geometry.word >> 1) & 0xFF;
                     {
-                        /* The volatile pointer is required: the original reloads h after storing it. */
                         volatile u16* bar_height;
                         s32 initial_height;
 
@@ -365,7 +363,6 @@ void* gosub_emit_scroll_marker(GosubScrollMarkerPacket* prim, s32* ot, s32 x, s3
     addr_mask = 0xFFFFFF;
     source_bytes = (u8*)prim;
     fill_packet = (GosubScrollFillPacket*)(prim + 1);
-    /* prim doubles as the copy's destination cursor; a separate local changes register allocation. */
     prim = (GosubScrollMarkerPacket*)fill_packet;
     setaddr(source_bytes, getaddr(ot) & addr_mask);
     i = 0;
@@ -424,7 +421,6 @@ GosubTilePacket* gosub_emit_panel(GosubTilePacket* prim, s32* ot, s32 x, s32 y, 
     outline = gosub_emit_panel_outline(outline, ot, x, y, w, h, 0xFFFFFF);
     outline = gosub_emit_panel_outline(outline, ot, x + 1, y + 1, w - 2, h - 2, 0);
     outline = gosub_emit_panel_outline(outline, ot, x - 1, y - 1, w + 2, h + 2, 0);
-    /* Reusing the clip-y slot for the fill pointer and the do/while(0) barrier are both required to match. */
     do
     {
         working_value = (s32)outline;
@@ -741,7 +737,7 @@ s32 gosub_draw_portrait(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
  */
 s32 gosub_draw_block_preview(s32* ot, s32 initial_prim, s32 x_off, s32 y_off)
 {
-    s32 unused[2]; /* never used, but the original stack frame has room for it */
+    s32 unused[2];
     u8 result_name[0x50];
     u8 number_text[0x50];
     s32 pair[3];

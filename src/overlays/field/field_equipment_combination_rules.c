@@ -68,12 +68,6 @@ s32 equipment_combination_quantity(s32* record_indices)
     s32 result;
     s32 armor;
 
-    /*
-     * Integer walk over the inventory (items at 0xCE0, 0x40 bytes each; info
-     * word at +0x14, derived values at +0x24). The natural indexed for loop
-     * with an if/else-if chain differs only in that loop.c hoists the
-     * constant 2 of the instrument test, which the target keeps in the loop.
-     */
     entry = (s32)record_indices;
     total_quantity = 0;
     saved_base = (s32)g_saved_game.bytes;

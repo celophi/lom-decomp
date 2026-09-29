@@ -123,8 +123,6 @@
 
 /**
  * @brief HP and gauge words at the start of FieldObjectState, as the panel reads them.
- * @note The panel re-reads the HP words after every primitive store; without volatile the
- *       compiler keeps them in registers and the code no longer matches.
  */
 typedef struct
 {
@@ -371,7 +369,6 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
     {
         if (g_field_actors[i].presence != unused_presence && (g_field_player_records[i].head.bytes.flags & FIELD_PLAYER_ACTIVE))
         {
-            /* each command goes through the local; comparing the constants directly changes the code */
             command = FIELD_ACTOR_COMMAND_ACTION;
             if (g_field_actors[i].command != command)
             {
@@ -604,7 +601,7 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
     u32 partial_bar_count;
     u32 boss_flag;
     u32 full_palette_level;
-    u32 hp_or_bar_count; /* full bar count, later the current HP; two locals change the register allocation */
+    u32 hp_or_bar_count;
     u32 rising_current;
     u32 rising_wrapped_current;
     u32 falling_current;
@@ -1352,7 +1349,7 @@ void field_update_object_effects(s32 index)
     {
         if (slot->active == 0)
         {
-            do /* a loop statement here lets loop.c hoist the callback argument out of the search */
+            do
             {
                 bit_mask = 0x8000;
                 bit_index = FIELD_OBJECT_HANDLER_COUNT - 1;

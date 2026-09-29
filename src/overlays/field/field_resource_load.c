@@ -71,7 +71,6 @@ typedef struct
 s32 field_party_reload_reading(void);
 FieldActor* field_lookup_actor(s32 key);
 void field_restart_actor_animation(FieldActor* actor);
-/* Defined as (void) in field_actor_runtime.c; the original call still loads 1 into $a0. */
 void field_restore_default_action_animation_mappings(s32);
 
 extern s32 g_field_battle_entry_change_count;

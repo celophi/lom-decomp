@@ -113,7 +113,7 @@ s32 func_801405B0(RenderContext* render_buffers)
  */
 void menu_init(void)
 {
-    u8 unused_padding[4]; /* never used, but the compiled frame size depends on it */
+    u8 unused_padding[4];
     menu_upload_graphics();
     menu_state_init();
     menu_reset_slots();

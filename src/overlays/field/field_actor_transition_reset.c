@@ -22,9 +22,6 @@
 
 /**
  * @brief View of the data page at 0x80100000 that holds g_field_object_states.
- * @note field_cancel_animation_bindings reaches the object states through this page once; the
- *       page base in a register plus the member offset is the original codegen
- *       (the plain g_field_object_states symbol schedules its %hi late).
  * @note The object states sit 0x558 bytes lower in JP (0x80105588).
  */
 typedef struct

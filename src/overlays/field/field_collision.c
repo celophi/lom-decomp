@@ -109,7 +109,7 @@
 
 /**
  * @brief Convert a 24.8 fixed-point coordinate to whole collision cells.
- * @note Rounds toward zero; the explicit branch is the original's spelling of @c v / 256.
+ * @note Rounds toward zero.
  */
 #define FIELD_COLLISION_CELL(v) (((v) < 0) ? (((v) + 0xFF) >> 8) : ((v) >> 8))
 
@@ -333,14 +333,10 @@
 #define FIELD_COLLISION_PATH_BUCKET_LEN 0x400
 /**
  * Length slot `ring` of the bucket length array, seen through a u32 pointer.
- * @note An integer sum: `lens[ring]` and `lens + ring` put the index first in
- *       the addu and do not match.
  */
 #define FIELD_COLLISION_PATH_LEN_SLOT(lens, ring) (*(u32*)((u32)(lens) + ((ring) << 2)))
 /**
  * Path column entry `n` places after `p`.
- * @note An integer sum with the byte offset first: `p + n` puts the pointer
- *       first in the addu and does not match.
  */
 #define FIELD_COLLISION_PATH_AHEAD(p, n) ((s32*)((n) * (s32)sizeof(s32) + (s32)(p)))
 /**
@@ -543,10 +539,6 @@ typedef struct FieldCollisionEdgePoint
 
 /**
  * @brief One horizontal span on a scanline: the inclusive x range it covers.
- * @note Declared as a union so the struct is 4-byte aligned. A plain
- *       two-s16 struct assignment compiles to lwl/lwr; the original uses
- *       lw/sw, so the whole-span copies in the bubble sort go through
- *       @c word.
  */
 typedef union FieldCollisionRasterSpan
 {
@@ -684,10 +676,6 @@ s16 field_collision_hit_markers(FieldCollisionQuery* query)
     s32 edge_start;
     s32 edge_end;
 
-    /*
-     * Each edge is computed inside both arms: jump2 cross-jumps the tails
-     * after scheduling, so the next axis's loads stay out of them.
-     */
     scene = g_field_scene.scene;
     half_x = (s16)query->width / 2;
     if (query->x >= 0)
@@ -1003,7 +991,6 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
             node = nodes;
             cell = coord >> 8;
             probe.z = cell;
-            /* span doubles as the cell x: the value must share span's register; an int local lands in v1. */
             span = (FieldCollisionSpan*)(u32)(u16)probe.x;
             first_cell_x = (s32)span;
             scratch = (u16)probe.z;
@@ -1124,7 +1111,6 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
                 }
                 if (surface->flags & FIELD_COLLISION_SURFACE_SLOW)
                 {
-                    /* delta_x/delta_z carry the halving; x / 2 expands without the branch and does not match. */
                     delta_x = mover->move_x;
                     mover->move_x = (delta_x >= 0) ? (delta_x >> 1) : ((delta_x + 1) >> 1);
                     delta_z = mover->move_z;
@@ -1965,7 +1951,6 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
     }
     probe.x = ground_x;
     probe.z = FIELD_COLLISION_CELL(mover->z);
-    /* span doubles as the cell x: the value must share span's register; an int local lands in v1. */
     span = (FieldCollisionSpan*)(u32)(u16)probe.x;
     cell_x = (s32)span;
     scratch = (u16)probe.z;
@@ -2264,7 +2249,6 @@ static void field_collision_classify_nodes(FieldCollisionMoveProbe* probe, Field
                     shift_x = (s32)(node->offset_x << 8) >> 16;
                     if (((node->min_x + shift_x) < x_end) && ((node->max_x + shift_x) >= x_start))
                     {
-                        /* Widened copies of the s16 bounds; using z_end/z_start directly changes the register allocation. */
                         z_limit = z_end;
                         row_first = node->min_z + (s16)shift_z;
                         if (row_first < z_limit)
@@ -2331,7 +2315,6 @@ static void field_collision_classify_nodes(FieldCollisionMoveProbe* probe, Field
                                 {
                                     while (--count != -1)
                                     {
-                                        /* value doubles as the shift copy; using shift_x changes the register allocation. */
                                         value = shift_x;
                                         if (((span->min_x + value) < x_end) && ((span->max_x + value) >= x_start))
                                         {
@@ -2617,7 +2600,6 @@ static s32 field_collision_slide_angle(FieldCollisionSurfaceDef* surface, s32 ed
     s32 dx;
     s32 dy;
     s32 opposite_delta;
-    /* "Have a previous point" flag in the walk, then the opposite wall angle; two locals change the walk's registers. */
     s32 work;
     s32 wrapped_angle;
 
@@ -3057,7 +3039,6 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, s32* alloc)
     /* Closing edge: back to the first run's first point. */
     closing_open = 0;
     run = def->runs;
-    /* y0 briefly holds the open bit; testing run->count directly changes the register allocation. */
     y0 = run->count & FIELD_COLLISION_RUN_OPEN;
     if (y0)
     {
@@ -3184,7 +3165,6 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, s32* alloc)
             err = -(s16)dy;
             for (j = (s16)dy; j != -1; j--)
             {
-                /* Net-zero pairs: without them dy loses $a0 to a closing-edge temp. */
                 dy++;
                 dy--;
                 dy++;
@@ -3387,8 +3367,6 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, s32* alloc)
  *       when the scan overflows or more than FIELD_COLLISION_GROUP_MAX ids
  *       survive. The empty-scene path leaves @c group_count = 0 instead, which is
  *       how callers tell "no nodes" from "too many groups".
- * @note field_collision_rasterize_groups is called through its unprototyped declaration with the
- *       three arguments the original passes; it reads only the second.
  */
 void field_collision_collect_groups(s32* alloc)
 {
@@ -3403,7 +3381,6 @@ void field_collision_collect_groups(s32* alloc)
     s32 seen;
     s32 seen2;
     s32 k;
-    /* "Id not listed yet" flag during the scan, then the scene width; two locals change the register allocation. */
     s32 width;
     s32 height;
     s32 shift;
@@ -3623,7 +3600,6 @@ void field_collision_collect_groups(s32* alloc)
     j = i * count4;
     *alloc += j;
     scene->group_work_end = *alloc;
-    /* field_collision_rasterize_groups takes (s32, FieldNode *); the original passes the allocator, a null clip and the size. */
     ((void (*)(s32 *, s32, s32))field_collision_rasterize_groups)(alloc, 0, i);
     return;
 
@@ -3659,12 +3635,6 @@ overflow:
  *
  * @note Fails with @c group_work = 0 and a FIELD_COLLISION_GROUP_ERROR_* code in
  *       @c group_count when a node or span list overflows.
- * @note The @c -1 locals (countdown_end, collect_end, ...) keep loop.c from
- *       hoisting the end mark of each countdown loop the way a literal does.
- * @note The three do/while(0) wrappers (run fetch, compaction x0 load,
- *       intersection work/dst step) each add one loop level of weight to one
- *       pseudo; without them src, x0 and dst lose t6/t8/t6 in a global-alloc
- *       priority tie. No natural shape supplying that weight is known yet.
  */
 void field_collision_rasterize_groups(s32 unused, FieldNode* clip)
 {
@@ -3808,9 +3778,7 @@ void field_collision_rasterize_groups(s32 unused, FieldNode* clip)
         return;
     }
 
-    /* -1 end mark of the countdown loops and all-ones mask; a literal -1 is hoisted differently by loop.c. */
     countdown_end = -1;
-    /* Indexing runs directly swaps two spill slots. */
     runs_base = runs;
     do
     {
@@ -3907,7 +3875,6 @@ void field_collision_rasterize_groups(s32 unused, FieldNode* clip)
         if (rows != countdown_end)
         {
             signed_id = (s16)id;
-            /* Byte offset into list, read through def; list[j] changes the loop's induction variables. */
             list_offset = 0;
             do
             {
@@ -4477,14 +4444,6 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
     row_words = ((s32)(cols + 0x1F) >> 5) * 2;
     ring_row_words = (((s32)(cols - 3) >> 5) + 1) * 3;
     reach = footprint_width - 1;
-    /*
-     * The word loop at loop_38 is a label and a jump back: any real loop
-     * (do/while, while, for) makes loop.c hoist the second switch's
-     * jump-table base out of it (threshold 55 * savings 2 * life 3 = 330
-     * >= the loop's 291 insns). The do/while(0) blocks lift footprint_depth
-     * (+3 refs, to 33) and ring_bytes/ring_row_bytes (+1 each, to 16) over
-     * their floor_log2 priority boundaries, giving s5/s6/s7/s8 in target order.
-     */
     do
     {
         if (footprint_depth >= 3)
@@ -4502,7 +4461,7 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
     } while (0);
     src_row = (u32*)scene->group_work;
     group_count = scene->group_count;
-    groups_left = (s32)group_count; /* dead, but the spilled counter's store is real */
+    groups_left = (s32)group_count;
     out = (u8*)scene->group_tiles;
     last_group = group_count - 1;
     groups_left = last_group;
@@ -5043,12 +5002,6 @@ static s32 field_collision_mark_footprint(FieldCollisionQuery* margins, FieldCol
         col_shift = 2;
     }
 
-    /*
-     * The x edge is computed in each arm and the z edge after the join: jump2
-     * cross-jumps the two x tails after scheduling, so the z loads cannot be
-     * scheduled into them. query->x/z are read directly (a shared coord local
-     * is set twice and sched1 then hoists its load).
-     */
     half = ((s16)query->width) >> 1;
     margin = (s16)margins->width - 1;
     if (query->x >= 0)
@@ -5079,7 +5032,6 @@ static s32 field_collision_mark_footprint(FieldCollisionQuery* margins, FieldCol
     ncol = (((left & col_mask) + (s16)margins->width + ((s16)query->width) + col_mask) - 1) >> col_shift;
     row_mask = (tile * 2) - 1;
     nrow = (((top & row_mask) + (s16)margins->depth + ((s16)query->depth) + row_mask) - 1) >> row_shift;
-    /* Loop-depth weight on cols: it must take $v1 before the cols - 1 / rows - 1 temps do. */
     do
     {
         cols = scene->tile_cols;
@@ -5177,7 +5129,6 @@ static s32 field_collision_mark_footprint(FieldCollisionQuery* margins, FieldCol
  */
 s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_query, FieldCollisionPathPoint* output_path, s32 mode)
 {
-    /* Separate local for &path[0][0]; assigning read directly changes the register allocation. */
     s32* path_base;
     s32 via_x;
     s32 raw_depth;
@@ -5206,7 +5157,6 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
     s32 goal_z;
     u8 try_quarter;
     u32 quarter_x;
-    /* quarter_x - dx + dx keeps dx live; `via_x = quarter_x` changes the register allocation. */
     u32 restored_x_offset;
     s32* buckets;
     u32* bucket_lens;
@@ -5226,10 +5176,6 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
     s32 goal_height;
     u8 goal_groups;
     s16 goal_group_id;
-    /*
-     * Goal tile, BFS neighbour, walk step and the smoothing's third tile: one
-     * local (splitting any role changes the register allocation).
-     */
     u8* near_tile;
     s32 start_height;
     u8 start_groups;
@@ -6130,11 +6076,6 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                     start_row = path[2][0];
                     path_end = &path[0][queue_len];
                     path_end[0] = *read;
-                    /*
-                     * Reused as the tile column base, like next_out and
-                     * deferred_out below; a separate pointer drops read's
-                     * weight below ok's and moves via_x off $s8.
-                     */
                     read = &path[0][0];
                     path_end[FIELD_COLLISION_PATH_BUCKET_LEN] = *next_out;
                     next_out = &path[1][0];
@@ -6318,7 +6259,6 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                         step += 1;
                         count -= 1;
                         out->x = (point_x + ((s16)start_query->width >> 1)) << 8;
-                        /* Shift through route_value; a literal << 8 changes the register allocation. */
                         route_value = 8;
                         raw_depth = start_query->depth;
                         point_z = *deferred_out;
@@ -6683,8 +6623,6 @@ static s32 field_collision_trace_line(FieldCollisionTraceRequest* request)
  *
  * @param surface Collision surface definition supplying the edge and its heights.
  * @param movement Movement vector rescaled in place; movement[0] is x and movement[1] is z.
- *
- * @note dx and dz are reused for their squares; separate locals change the register allocation.
  */
 static void field_collision_slope_scale_move(FieldCollisionSurfaceDef* surface, s32* movement)
 {

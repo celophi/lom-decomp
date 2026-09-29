@@ -1,6 +1,6 @@
 # セーブファイルの形式
 
-[日本語ドキュメント](../../README.md) | [English](../../../en/technical/reference/save-file.md) | [ADDHEROオーバーレイ](../architecture/addhero.md) | [テキストテーブル](text-tables.md)
+[日本語ドキュメント](../../README.md) | [English](../../../en/technical/reference/save-file.md) | [CARDAオーバーレイ](../architecture/carda.md) | [ADDHEROオーバーレイ](../architecture/addhero.md) | [テキストテーブル](text-tables.md)
 
 『聖剣伝説 LEGEND OF MANA』は、1つのセーブをメモリーカード上の1つのファイルとして保存します。
 エミュレーターのメモリーカード管理画面を開いたことがあれば、小さなアニメーションのアイコンと主人公の名前が付いた、2ブロックのエントリーとして見たことがあるはずです。
@@ -12,8 +12,9 @@
 
 ## 全体の構成
 
-セーブは常に16 KiBで、これはメモリーカードの8 KiBのブロックちょうど2つ分です。
-次の4つの部分に分かれています。
+通常のゲームのセーブは16 KiBで、メモリーカードの8 KiBのブロックちょうど2つ分です。
+リング・りんぐ・ランドには、別の6ブロックの転送ファイルがあります。[CARDAの解説](../architecture/carda.md)で扱っています。
+通常のセーブは、次の4つの部分に分かれています。
 
 | オフセット | サイズ | 内容 |
 |---|---|---|

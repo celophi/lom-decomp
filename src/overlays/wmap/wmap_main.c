@@ -493,8 +493,6 @@ void wmap_init_state(void)
 
 /**
  * @brief A CVECTOR read back as the packed word a packet's color slot holds.
- * @note Reading through this member keeps each copy ordered after the strip's
- *       vertex stores, so the word is reloaded from the stack for every packet.
  */
 typedef union
 {
@@ -1720,12 +1718,6 @@ s32 wmap_run_loop(void)
         g_wmap_land_image_cache[16].resource_id = 0x1F;
         g_wmap_land_image_cache[16].loaded_frame = 0xFFFF;
         g_wmap_land_image_cache[16].busy = 0;
-        /*
-         * Redundant in the original source: CSE makes this store reuse the
-         * first store's constant register and jump2 deletes it after reload,
-         * but the second use is what schedules `li a2, 16` ahead of the other
-         * stores. Removing it breaks the match.
-         */
         g_wmap_land_image_cache[16].slot_index = 0x10;
         {
             u8* data;

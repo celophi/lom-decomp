@@ -1,10 +1,5 @@
 #include "menu_internal.h"
 
-/*
- * GCC 2.8.0 inlined this helper into the action routines when MENU was one
- * translation unit. Keep an extern-inline view here while menu_screens.c emits
- * the standalone symbol at its original address.
- */
 extern inline s32 menu_get_equipment_ability_mask(s32 excluded_slot)
 {
     s32 equipment_index;

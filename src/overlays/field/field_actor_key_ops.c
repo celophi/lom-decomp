@@ -179,7 +179,6 @@ s32 field_get_actor_binding_state(s32 key)
     {
         return -1;
     }
-    /* The binding is looked up again at each use; caching it changes the code. */
     if (field_actor_binding(actor)->state == FIELD_BINDING_IDLE)
     {
         return FIELD_BINDING_QUERY_NONE;
@@ -235,7 +234,6 @@ s32 field_reload_actor(s32 key, s32 resource_entry_index, s32 resource_slot_id, 
     field_load_resource_entry(resource_slot_id, resource_base, resource_entry_index);
     field_initialize_actor_record(actor->object_index, resource_entry_index);
     field_initialize_actor_part(actor->object_index, 0);
-    /* A direct &g_field_resource_entries[i] changes the code. */
     resources = g_field_resource_entries;
     resource = &resources[resource_entry_index];
     resource->flags = (resource->flags & ~FIELD_RESOURCE_HAS_ACTIONS) | (has_actions & FIELD_RESOURCE_HAS_ACTIONS);
