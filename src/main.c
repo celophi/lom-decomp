@@ -37,8 +37,10 @@
 #define WSEL_RENDER_ADDRESS 0x80170000
 #define BIOS_STACK_ADDRESS 0x801FFF00
 
+#if !defined(VERSION_JP)
 extern s32 D_8003EC8C;
 extern s32 D_80042FD0;
+#endif
 
 void __main(void);
 
@@ -60,13 +62,20 @@ void main_game_loop(void)
     __main();
     SetMem(2);
     SetConf(16, 4, BIOS_STACK_ADDRESS);
+#if !defined(VERSION_JP)
     ResetGraph(0);
     SetGraphDebug(0);
     SetDispMask(0);
+#endif
     _96_remove();
     ResetCallback();
     SetVideoMode(0);
     SpuInit();
+#if defined(VERSION_JP)
+    ResetGraph(0);
+    SetGraphDebug(0);
+    SetDispMask(0);
+#endif
     get_overlay_load_base();
     cdrom_init();
     InitGeom();
@@ -77,7 +86,9 @@ void main_game_loop(void)
     ChangeClearPAD(0);
     initialize_controllers(0);
     cdrom_load_resource_table(CD_RESOURCE_TABLE_LBA, CD_RESOURCE_TABLE_SIZE);
+#if !defined(VERSION_JP)
     akao_init();
+#endif
     cdrom_stream(CD_RES_FIELD_FONT, FIELD_FONT_LOAD_ADDRESS);
     initialize_controller_vsync();
     srand(1);
@@ -87,6 +98,9 @@ void main_game_loop(void)
     g_field_scene_id = 0;
     g_save_compatibility_tag = SAVE_TAG_STARTUP;
     g_script_pair_value_49 = 0;
+#if defined(VERSION_JP)
+    g_game_state = GAME_STATE_CHECKPS;
+#else
     D_8003EC8C = 11;
     D_80042FD0 = 19;
     g_game_state = GAME_STATE_INTRO_MOVIE;
@@ -96,6 +110,7 @@ void main_game_loop(void)
     run_checkps((CheckPSRenderState*)CHECKPS_RENDER_ADDRESS);
     DrawSync(0);
     VSync(0);
+#endif
     g_previous_game_state = GAME_STATE_NONE;
     while (1)
     {
@@ -199,6 +214,20 @@ void main_game_loop(void)
             g_previous_game_state = GAME_STATE_WORLD_SELECT;
             break;
 
+#if defined(VERSION_JP)
+        case GAME_STATE_CHECKPS:
+            akao_init();
+            get_field_render_buffers();
+            cdrom_stream(CD_RES_CHECKPS_BIN, g_overlay_load_address);
+            screen_transition(0);
+            cdrom_wait_queue_empty();
+            g_game_state = run_checkps((CheckPSRenderState*)CHECKPS_RENDER_ADDRESS);
+            DrawSync(0);
+            VSync(0);
+            g_previous_game_state = GAME_STATE_CHECKPS;
+            break;
+
+#endif
         case GAME_STATE_MENU_LOAD:
             get_field_render_buffers();
             cdrom_stream(CD_RES_FIELD_BIN, g_overlay_load_address);

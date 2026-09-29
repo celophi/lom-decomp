@@ -600,6 +600,7 @@ typedef struct
 #define FIELD_RESOURCE_LOADED 2
 
 extern FieldObjectState g_field_object_states[];
+extern FieldObjectState g_field_scene_object_states[];
 extern FieldActorBinding g_field_actor_bindings[];
 extern FieldActorSlot g_field_actor_slots[];
 extern FieldResourceEntry g_field_resource_entries[];

@@ -19,6 +19,7 @@
 #include "save_file.h"
 #include "glyph_cache.h"
 #include "card_events.h"
+#include "card_callbacks.h"
 #include "card_directory.h"
 #include "cdrom.h"
 #include "controller.h"
@@ -564,7 +565,6 @@ extern u8 g_carda_temp_card_path[];
 
 /* FIELD entry points and library calls used by CARDA. */
 void field_reset_input_repeat(void);
-s32 card_resource_noop_hook();
 s32 OpenEvent(s32, s32, s32, s32);
 void CloseEvent(s32);
 s32 TestEvent(s32);

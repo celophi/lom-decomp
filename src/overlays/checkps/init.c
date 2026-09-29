@@ -20,6 +20,7 @@
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 #include "sdk/memory.h"
+#include "sdk/rand.h"
 
 #define CHECKPS_ORDERING_TABLE_LENGTH 4096
 #define CHECKPS_PRIMITIVE_BUFFER_SIZE 16384
@@ -35,6 +36,18 @@
 #define CHECKPS_FADE_ADDITIVE_THRESHOLD (CHECKPS_FADE_NEUTRAL + 1)
 #define CHECKPS_DEFAULT_FADE_STEPS 20
 #define CHECKPS_IMAGE_DISPLAY_FRAMES 120
+#define CHECKPS_IMAGE_COUNT 100
+#define CHECKPS_IMAGE_INITIAL_Y 112
+#define CHECKPS_IMAGE_HIDDEN_FRAME 15
+#define CHECKPS_IMAGE_FRAME_DELAY 2
+#define CHECKPS_IMAGE_SPEED 4
+#define CHECKPS_IMAGE_TINT 128
+#define CHECKPS_IMAGE_WIDTH 32
+#define CHECKPS_IMAGE_HEIGHT 64
+#define CHECKPS_IMAGE_ANIMATION_FRAMES 7
+#define CHECKPS_IMAGE_SOUND_COUNT 10
+#define CHECKPS_IMAGE_SOUND 0xB2
+
 #define CHECKPS_IMAGE_CLUT_Y 480
 #define CHECKPS_GLYPH_VRAM_WIDTH 64
 #define CHECKPS_GLYPH_VRAM_HEIGHT 256
@@ -133,6 +146,30 @@ typedef enum
     CHECKPS_STARTUP_RESTORE_DRIVE
 } CheckPSStartupStep;
 
+/** @brief Position, color and animation state of a CHECKPS image. */
+typedef struct
+{
+    u8 red;
+    u8 green;
+    u8 blue;
+    u8 reserved;
+    s16 x;
+    s16 y : 12;
+    s16 frame_delay : 4;
+    union
+    {
+        u16 word;
+        struct
+        {
+            u16 frame : 4;
+            u16 speed : 4;
+            u16 frame_timer : 7;
+            u16 moving_right : 1;
+        } bits;
+        u8 bytes[2];
+    } animation;
+} CheckPSImage;
+
 /** @brief VRAM destinations for an image and its palette. */
 typedef struct
 {
@@ -170,6 +207,8 @@ extern CheckPSFadeState g_fade_current;
 extern u8 g_checkps_song_buffer[CHECKPS_SONG_BUFFER_SIZE];
 extern AkaoHeader* g_checkps_akao_bank;
 extern s32 g_checkps_startup_step;
+extern CheckPSImage g_checkps_images[CHECKPS_IMAGE_COUNT];
+extern s32 g_checkps_image_burst_active;
 #else
 /* Nonzero ends the CHECKPS display loop; value 2 is used for image timeout. */
 CheckPSExitReason g_checkps_exit_reason;
@@ -235,9 +274,6 @@ s32 run_checkps(CheckPSRenderState* render_state)
  * @brief Render and update CHECKPS frames until an exit condition is reached.
  * @param render_state Double-buffered render workspace.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/checkps/nonmatchings/init", run_checkps_display_loop);
-#else
 static void run_checkps_display_loop(CheckPSRenderState* render_state)
 {
     RECT rect;
@@ -259,7 +295,9 @@ static void run_checkps_display_loop(CheckPSRenderState* render_state)
     ClearOTagR(frame->ordering_table, CHECKPS_ORDERING_TABLE_LENGTH);
     ClearOTagR(render_state->frames[1].ordering_table, CHECKPS_ORDERING_TABLE_LENGTH);
     PutDispEnv(&frame->display.disp);
+#if !defined(VERSION_JP)
     update_controllers();
+#endif
     SetDispMask(1);
     do
     {
@@ -272,7 +310,9 @@ static void run_checkps_display_loop(CheckPSRenderState* render_state)
         update_checkps_input_and_timeout();
         evict_unused_glyphs();
         DrawSync(0);
+#if !defined(VERSION_JP)
         set_controller_vsync_interval(CHECKPS_FRAME_VSYNC_INTERVAL);
+#endif
         VSync(CHECKPS_FRAME_VSYNC_INTERVAL);
         ClearImage(&frame->display.clear_rect, 0, 0, 0);
         next_frame = &render_state->frames[0];
@@ -285,22 +325,20 @@ static void run_checkps_display_loop(CheckPSRenderState* render_state)
         PutDrawEnv(&frame->display.draw);
         DrawOTag(&drawn_ordering_table[CHECKPS_ORDERING_TABLE_LENGTH - 1]);
 
+#if !defined(VERSION_JP)
         update_controllers();
         cdrom_process_state();
+#endif
     } while (g_checkps_exit_reason == CHECKPS_EXIT_NONE);
 
     reset_controller_vsync_state();
     VSync(0);
 }
-#endif
 
 /**
  * @brief Configure CHECKPS display buffers and reset renderer state.
  * @param render_state Double-buffered render workspace to initialize.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/checkps/nonmatchings/init", init_checkps_display);
-#else
 static void init_checkps_display(CheckPSRenderState* render_state)
 {
     RECT rect;
@@ -333,9 +371,12 @@ static void init_checkps_display(CheckPSRenderState* render_state)
     set_fade_target(CHECKPS_FADE_NEUTRAL, CHECKPS_FADE_NEUTRAL, CHECKPS_FADE_NEUTRAL, CHECKPS_DEFAULT_FADE_STEPS);
     load_checkps_image();
     g_checkps_exit_reason = CHECKPS_EXIT_NONE;
+#if defined(VERSION_JP)
+    cdrom_enter_recovery_mode();
+#else
     update_controller_input();
-}
 #endif
+}
 
 /**
  * @brief Register the embedded CHECKPS program data and upload its sample bank.
@@ -441,9 +482,6 @@ static void reset_fade_state(void)
  * @brief Advance the fade interpolation and emit its fullscreen GPU packets.
  * @param frame Frame receiving the fade primitives.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/checkps/nonmatchings/init", update_and_draw_fade);
-#else
 static void update_and_draw_fade(CheckPSFrame* frame)
 {
     s32 red_step;
@@ -523,7 +561,6 @@ static void update_and_draw_fade(CheckPSFrame* frame)
     }
     frame->primitive_cursor = primitive;
 }
-#endif
 
 /**
  * @brief Set the RGB fade target and interpolation duration.
@@ -587,11 +624,119 @@ static void update_checkps_input_and_timeout(void)
 #endif
 
 /**
- * @brief Emit the CHECKPS image sprite and draw-mode packets.
+ * @brief Emit the CHECKPS image primitives.
+ * @note JP animates a swarm of mirrored images; US displays one centered sprite.
  * @param frame Frame receiving the image primitives.
  */
 #if defined(VERSION_JP)
-INCLUDE_ASM("overlays/checkps/nonmatchings/init", draw_checkps_image);
+static void draw_checkps_image(CheckPSFrame* frame)
+{
+    POLY_FT4* primitive;
+    u_long* ordering_table;
+    CheckPSImage* image;
+    s32 i;
+    s32 delay;
+    s32 volume;
+    CheckPSImage* images;
+    s32 timer;
+
+    primitive = frame->primitive_cursor;
+    ordering_table = frame->ordering_table;
+    if (g_checkps_image_burst_active != 0 && g_checkps_images[CHECKPS_IMAGE_COUNT - 1].animation.bits.frame == CHECKPS_IMAGE_HIDDEN_FRAME)
+    {
+        for (i = 1; i < CHECKPS_IMAGE_COUNT; i++)
+        {
+            image = &g_checkps_images[i];
+            image->red = (rand() & 0x7F) + 0x40;
+            image->green = (rand() & 0x7F) + 0x40;
+            image->blue = (rand() & 0x7F) + 0x40;
+            image->x = -CHECKPS_IMAGE_WIDTH - (rand() >> 9);
+            image->y = rand() & 0xFF;
+            image->animation.bits.frame = 0;
+            delay = (rand() & 1) + 1;
+            image->frame_delay = delay;
+            image->animation.bits.frame_timer = delay;
+            image->animation.bits.moving_right = 1;
+            image->animation.bits.speed = (rand() & 0xF) + 1;
+        }
+    }
+    images = g_checkps_images;
+    i = 0;
+    do
+    {
+        image = &images[i];
+        if ((image->animation.bytes[0] & 0xF) != CHECKPS_IMAGE_HIDDEN_FRAME)
+        {
+            timer = (image->animation.word >> 8) & 0x7F;
+            if (timer != 0)
+            {
+                --image->animation.bits.frame_timer;
+                timer = (image->animation.word >> 8) & 0x7F;
+            }
+            if (timer == 0)
+            {
+                image->animation.bits.frame_timer = image->frame_delay;
+                if (image->animation.word >> 15)
+                {
+                    image->x += image->animation.bits.speed;
+                    if (image->x >= SCREEN_WIDTH)
+                    {
+                        image->animation.bits.moving_right = 0;
+                        image->animation.bits.frame = CHECKPS_IMAGE_ANIMATION_FRAMES - 1;
+                    }
+                }
+                else
+                {
+                    image->x -= image->animation.bits.speed;
+                    if (image->x < -(CHECKPS_IMAGE_WIDTH - 1))
+                    {
+                        g_checkps_image_burst_active = 1;
+                        image->animation.bits.moving_right = 1;
+                        image->animation.bits.frame = CHECKPS_IMAGE_ANIMATION_FRAMES - 1;
+                    }
+                }
+                image->animation.bits.frame = (image->animation.bytes[0] & 0xF) + 1;
+                if ((image->animation.bytes[0] & 0xF) == CHECKPS_IMAGE_ANIMATION_FRAMES)
+                {
+                    if ((s32)image < (s32)&images[CHECKPS_IMAGE_SOUND_COUNT])
+                    {
+                        volume = 0x7F;
+                        if (g_checkps_image_burst_active != 0)
+                        {
+                            volume = 0x3F;
+                        }
+                        play_checkps_sfx(CHECKPS_IMAGE_SOUND, 0x80, volume);
+                    }
+                    image->animation.bits.frame = 0;
+                }
+            }
+            setPolyFT4(primitive);
+            setRGB0(primitive, image->red, image->green, image->blue);
+            primitive->x2 = primitive->x0 = image->x;
+            primitive->y1 = primitive->y0 = image->y - CHECKPS_IMAGE_WIDTH;
+            primitive->x3 = primitive->x1 = image->x + CHECKPS_IMAGE_WIDTH - 1;
+            primitive->y3 = primitive->y2 = image->y + CHECKPS_IMAGE_WIDTH - 1;
+            if (image->animation.word >> 15)
+            {
+                primitive->u3 = primitive->u1 = (image->animation.bytes[0] & 0xF) * CHECKPS_IMAGE_WIDTH;
+                primitive->u2 = primitive->u0 = (image->animation.bytes[0] & 0xF) * CHECKPS_IMAGE_WIDTH + CHECKPS_IMAGE_WIDTH - 1;
+            }
+            else
+            {
+                primitive->u2 = primitive->u0 = (image->animation.bytes[0] & 0xF) * CHECKPS_IMAGE_WIDTH;
+                primitive->u3 = primitive->u1 = (image->animation.bytes[0] & 0xF) * CHECKPS_IMAGE_WIDTH + CHECKPS_IMAGE_WIDTH - 1;
+            }
+            primitive->v3 = primitive->v2 = CHECKPS_IMAGE_HEIGHT - 1;
+            setClut(primitive, 0, CHECKPS_IMAGE_CLUT_Y);
+            primitive->v1 = primitive->v0 = 0;
+            primitive->tpage = CHECKPS_IMAGE_TPAGE;
+            addPrim(ordering_table - (image->y - CHECKPS_ORDERING_TABLE_LENGTH), primitive);
+            primitive++;
+        }
+        i++;
+    } while ((s32)&images[i] < (s32)&images[CHECKPS_IMAGE_COUNT]);
+    frame->primitive_cursor = primitive;
+}
 #else
 static void draw_checkps_image(CheckPSFrame* frame)
 {
@@ -627,7 +772,37 @@ static void draw_checkps_image(CheckPSFrame* frame)
  * @brief Upload the embedded CHECKPS CLUT and image pixels to VRAM.
  */
 #if defined(VERSION_JP)
-INCLUDE_ASM("overlays/checkps/nonmatchings/init", load_checkps_image);
+static void load_checkps_image(void)
+{
+    CheckPSImageDestinations destinations;
+    s32 i;
+
+    g_checkps_startup_step = 0;
+    g_checkps_image_burst_active = 0;
+    for (i = 0; i < CHECKPS_IMAGE_COUNT; i++)
+    {
+        g_checkps_images[i].red = g_checkps_images[i].green = g_checkps_images[i].blue = CHECKPS_IMAGE_TINT;
+        g_checkps_images[i].x = SCREEN_WIDTH;
+        g_checkps_images[i].y = CHECKPS_IMAGE_INITIAL_Y;
+        g_checkps_images[i].animation.bits.frame = CHECKPS_IMAGE_HIDDEN_FRAME;
+        g_checkps_images[i].animation.bits.frame_timer = CHECKPS_IMAGE_FRAME_DELAY;
+        g_checkps_images[i].animation.bits.moving_right = 0;
+        g_checkps_images[i].frame_delay = CHECKPS_IMAGE_FRAME_DELAY;
+        g_checkps_images[i].animation.bits.speed = CHECKPS_IMAGE_SPEED;
+    }
+    g_checkps_images[0].x = SCREEN_WIDTH;
+    g_checkps_images[0].y = CHECKPS_IMAGE_INITIAL_Y;
+    g_checkps_images[0].animation.bits.frame = 0;
+    g_checkps_images[0].animation.bits.frame_timer = CHECKPS_IMAGE_FRAME_DELAY;
+    g_checkps_images[0].animation.bits.moving_right = 0;
+    g_checkps_images[0].frame_delay = CHECKPS_IMAGE_FRAME_DELAY;
+    g_checkps_images[0].animation.bits.speed = CHECKPS_IMAGE_SPEED;
+    destinations.pixel_x = SCREEN_WIDTH;
+    destinations.pixel_y = 0;
+    destinations.clut_x = 0;
+    destinations.clut_y = CHECKPS_IMAGE_CLUT_Y;
+    checkps_upload_image_to_vram(&g_checkps_image_asset, &destinations);
+}
 #else
 static void load_checkps_image(void)
 {

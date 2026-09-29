@@ -24,7 +24,7 @@ typedef enum
  *
  * @see decomp.me (100%) https://decomp.me/scratch/gkEWm
  */
-void movie_play(s32 movie_index);
+void movie_play(u16 movie_index);
 
 /**
  * @brief Initialize a cinematic or a movie drawn into the FIELD scene.

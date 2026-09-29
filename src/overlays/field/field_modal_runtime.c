@@ -145,6 +145,12 @@
 #define FIELD_DUEL_TEXT_SCALE 0x180
 #define FIELD_DUEL_TITLE_SCALE 0x200
 #define FIELD_DUEL_WINNER_SCALE 0x1C0
+/** @brief JP duel records use the double-byte digit glyphs. */
+#if defined(VERSION_JP)
+#define FIELD_DUEL_WIDE_NUMBERS 1
+#else
+#define FIELD_DUEL_WIDE_NUMBERS 0
+#endif
 #define FIELD_DUEL_TEXT_SLANT (-4)
 #define FIELD_DUEL_PANEL_HOLD_FRAMES 90
 #define FIELD_DUEL_PANEL_START_OFFSET 500
@@ -180,10 +186,10 @@ extern FieldTextOffset D_800EC3D2;
 extern FieldTextOffset D_800EC3D4;
 extern FieldTextOffset D_800EC3E4;
 extern FieldTextOffset D_800EC400;
-extern FieldTextOffset D_800EC406;
-extern FieldTextOffset D_800EC408;
-extern FieldTextOffset D_800EC40A;
-extern FieldTextOffset D_800EC40C;
+extern FieldTextOffset g_field_duel_versus_text_offset;
+extern FieldTextOffset g_field_duel_wins_text_offset;
+extern FieldTextOffset g_field_duel_losses_text_offset;
+extern FieldTextOffset g_field_duel_winner_text_offset;
 extern FieldTextOffset D_800EC3E0;
 extern FieldTextOffset D_800EC3E6;
 extern FieldTextOffset D_800EC3E8;
@@ -273,7 +279,6 @@ extern u8* g_field_rename_target;
 extern s32 g_field_rename_source;
 
 void akao_play_sound(s32 id);
-void akao_pause_audio(s32 arg0);
 void akao_set_mono_output(s32 mode);
 
 /* Sub-overlay entry points, valid once their overlay is loaded at FIELD_SUBOVERLAY_ADDRESS. */
@@ -432,7 +437,7 @@ void* field_draw_number(s32* ot, SPRT* sprite_cursor, s32 value, s32 text_color,
  * @param position X and y of the text.
  * @param flags field_draw_text alignment and shadow flags.
  * @return First free primitive after the text.
- * @note field_format_number ignores the request, so the digits come out as in field_draw_number.
+ * @note JP uses double-byte digits; US uses the same digits as field_draw_number.
  */
 void* field_draw_number_wide(s32* ot, SPRT* sprite_cursor, s32 value, s32 text_color, s16* position, s32 flags)
 {
@@ -450,6 +455,49 @@ void* field_draw_number_wide(s32* ot, SPRT* sprite_cursor, s32 value, s32 text_c
  * @note The US double-byte branch tests a local that is always zero, so the digits are always single-byte.
  *       JP honours @p wide_request.
  */
+#if defined(VERSION_JP)
+inline void field_format_number(u8* text, s32 number, s32 wide_request)
+{
+    u8* minus;
+    s32 divisor;
+    s32 started;
+    s32 digit;
+
+    if (number < 0)
+    {
+        number = -number;
+        minus = field_dialog_text(&D_800EC3E4, 16);
+        field_copy_name(text, minus);
+        text += field_name_byte_length(minus);
+    }
+    divisor = 10000000;
+    started = 0;
+    do
+    {
+        digit = number / divisor;
+        if (digit != 0)
+        {
+            started = 1;
+        }
+        if (started || divisor == 1)
+        {
+            if (wide_request)
+            {
+                *text++ = FIELD_TEXT_DIGIT_LEAD;
+                *text = digit;
+            }
+            else
+            {
+                *text = digit + '0';
+            }
+            text++;
+            number -= (number / divisor) * divisor;
+        }
+        divisor /= 10;
+    } while (divisor != 0);
+    *text = 0;
+}
+#else
 inline void field_format_number(u8* text, s32 number, s32 wide_request)
 {
     u8* cursor;
@@ -462,11 +510,7 @@ inline void field_format_number(u8* text, s32 number, s32 wide_request)
 
     cursor = text;
     value = number;
-#if defined(VERSION_JP)
-    double_byte = wide_request;
-#else
     double_byte = 0;
-#endif
     if (value < 0)
     {
         value = -value;
@@ -501,6 +545,7 @@ inline void field_format_number(u8* text, s32 number, s32 wide_request)
     } while (divisor != 0);
     *cursor = 0;
 }
+#endif
 
 /**
  * @brief Bind the field input and inventory context to the loaded saved game.
@@ -1345,11 +1390,8 @@ inline void field_reset_input_repeat(void)
  * @brief Handle the soft reset, the text session, and the menu, CD error and item-drop buttons.
  * @param render Render half; the text session draws into it.
  * @note Unplugging a controller opens the menu for that controller.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP uses the physical face-button order; US remaps opposite face buttons.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_modal_runtime", field_process_input);
-#else
 void field_process_input(FieldRenderHalf* render)
 {
     ControllerPortState* ports = CONTROLLER_STATE->ports;
@@ -1359,7 +1401,9 @@ void field_process_input(FieldRenderHalf* render)
 
     buttons = ports[0].published_sample.held_buttons;
     buttons = (buttons >> 8) | ((buttons & 0xFF) << 8);
+#if !defined(VERSION_JP)
     buttons = ((buttons & 0x40) >> 1) | ((buttons & 0x20) << 1) | ((buttons & 0x80) >> 3) | ((buttons & 0x10) << 3) | (buttons & 0xFF0F);
+#endif
     if (g_field_modal_state != 0)
     {
         return;
@@ -1466,7 +1510,6 @@ void field_process_input(FieldRenderHalf* render)
         }
     }
 }
-#endif
 
 /**
  * @brief Play the low-HP warning for each player below a quarter of their maximum HP.
@@ -2270,11 +2313,7 @@ void field_begin_duel_result(void)
  * @brief Animate and draw the opposing players and their duel records.
  * @param render Render half receiving the panels.
  * @return Nonzero after the panels have slid out.
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_modal_runtime", field_draw_duel_intro);
-#else
 static s32 field_draw_duel_intro(FieldRenderHalf* render)
 {
     u8 record_text[56];
@@ -2318,16 +2357,16 @@ static s32 field_draw_duel_intro(FieldRenderHalf* render)
     packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, g_saved_game_ctx->characters[0].name, FIELD_TEXT_COLOR_NORMAL,
                                                 g_field_duel_panel_offset + 108, 50, 0, 5, 384, 384, -4, FIELD_DUEL_PANEL_MOVING);
 
-    field_format_number(record_text, g_saved_game_ctx->characters[0].duel_wins, 0);
-    field_append_dialog_text(record_text, &D_800EC408, 34);
-    field_format_number(loss_text, g_saved_game_ctx->characters[0].duel_losses, 0);
+    field_format_number(record_text, g_saved_game_ctx->characters[0].duel_wins, FIELD_DUEL_WIDE_NUMBERS);
+    field_append_dialog_text(record_text, &g_field_duel_wins_text_offset, 34);
+    field_format_number(loss_text, g_saved_game_ctx->characters[0].duel_losses, FIELD_DUEL_WIDE_NUMBERS);
     field_append_name(record_text, loss_text);
-    field_append_dialog_text(record_text, &D_800EC40A, 35);
+    field_append_dialog_text(record_text, &g_field_duel_losses_text_offset, 35);
 
-    packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 108, 66, 0, 6, FIELD_DUEL_TEXT_SCALE,
-                                  FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
-    packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, field_dialog_text(&D_800EC406, 33), FIELD_TEXT_COLOR_NORMAL, 160, 100, 2, 7, FIELD_DUEL_TEXT_SCALE,
-                                  FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
+    packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 108, 66, 0, 6,
+                                                FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
+    packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, field_dialog_text(&g_field_duel_versus_text_offset, 33), FIELD_TEXT_COLOR_NORMAL, 160, 100,
+                                                2, 7, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
     packet_cursor = field_draw_player_icon(packet_cursor, ot, 1, 222 - g_field_duel_panel_offset, 134, 0);
     packet_cursor =
         field_text_draw_scaled_quad(packet_cursor, ot, g_saved_game_ctx->characters[1].name, FIELD_TEXT_COLOR_NORMAL, 212 - g_field_duel_panel_offset, 150, 1,
@@ -2335,29 +2374,24 @@ static s32 field_draw_duel_intro(FieldRenderHalf* render)
 
     if ((u32)(g_saved_game_ctx->characters[1].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
     {
-        field_format_number(record_text, g_saved_game_ctx->characters[1].duel_wins, 0);
-        field_append_dialog_text(record_text, &D_800EC408, 34);
-        field_format_number(loss_text, g_saved_game_ctx->characters[1].duel_losses, 0);
+        field_format_number(record_text, g_saved_game_ctx->characters[1].duel_wins, FIELD_DUEL_WIDE_NUMBERS);
+        field_append_dialog_text(record_text, &g_field_duel_wins_text_offset, 34);
+        field_format_number(loss_text, g_saved_game_ctx->characters[1].duel_losses, FIELD_DUEL_WIDE_NUMBERS);
         field_append_name(record_text, loss_text);
-        field_append_dialog_text(record_text, &D_800EC40A, 35);
+        field_append_dialog_text(record_text, &g_field_duel_losses_text_offset, 35);
         packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, 212 - g_field_duel_panel_offset, 166, 1, 9,
-                                      FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
+                                                    FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
     }
 
     render->primitive_cursor = (u8*)packet_cursor;
     return 0;
 }
-#endif
 
 /**
  * @brief Animate and draw the winner and their duel record.
  * @param render Render half receiving the panels.
  * @return Nonzero after the panel has slid out.
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_modal_runtime", field_draw_duel_result);
-#else
 static s32 field_draw_duel_result(FieldRenderHalf* render)
 {
     u8 record_text[56];
@@ -2397,8 +2431,8 @@ static s32 field_draw_duel_result(FieldRenderHalf* render)
         return 1;
     }
 
-    packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, field_dialog_text(&D_800EC40C, 36), FIELD_TEXT_COLOR_NORMAL, 160, 52, 2, 5, FIELD_DUEL_TITLE_SCALE,
-                                  FIELD_DUEL_TITLE_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
+    packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, field_dialog_text(&g_field_duel_winner_text_offset, 36), FIELD_TEXT_COLOR_NORMAL, 160, 52, 2,
+                                                5, FIELD_DUEL_TITLE_SCALE, FIELD_DUEL_TITLE_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
     packet_cursor = field_draw_player_icon(packet_cursor, ot, g_field_duel_winner, g_field_duel_panel_offset + 50, 84, 1);
     packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, g_saved_game_ctx->characters[g_field_duel_winner].name, FIELD_TEXT_COLOR_NORMAL,
                                                 g_field_duel_panel_offset + 108, 100, 0, 6, FIELD_DUEL_WINNER_SCALE, FIELD_DUEL_WINNER_SCALE,
@@ -2406,16 +2440,15 @@ static s32 field_draw_duel_result(FieldRenderHalf* render)
 
     if ((u32)(g_saved_game_ctx->characters[g_field_duel_winner].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
     {
-        field_format_number(record_text, g_saved_game_ctx->characters[g_field_duel_winner].duel_wins, 0);
-        field_append_dialog_text(record_text, &D_800EC408, 34);
-        field_format_number(loss_text, g_saved_game_ctx->characters[g_field_duel_winner].duel_losses, 0);
+        field_format_number(record_text, g_saved_game_ctx->characters[g_field_duel_winner].duel_wins, FIELD_DUEL_WIDE_NUMBERS);
+        field_append_dialog_text(record_text, &g_field_duel_wins_text_offset, 34);
+        field_format_number(loss_text, g_saved_game_ctx->characters[g_field_duel_winner].duel_losses, FIELD_DUEL_WIDE_NUMBERS);
         field_append_name(record_text, loss_text);
-        field_append_dialog_text(record_text, &D_800EC40A, 35);
+        field_append_dialog_text(record_text, &g_field_duel_losses_text_offset, 35);
         packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 140, 132, 0, 7,
-                                      FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
+                                                    FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
     }
 
     render->primitive_cursor = (u8*)packet_cursor;
     return 0;
 }
-#endif

@@ -16,6 +16,7 @@
 #define GAME_STATE_GNAME 3           /**< Enter GNAME overlay (name entry within field). */
 #define GAME_STATE_RETURN_TO_TITLE 4 /**< Redirect to the title screen. */
 #define GAME_STATE_WORLD_SELECT 5    /**< Enter world select overlay (WSEL.BIN). */
+#define GAME_STATE_CHECKPS 6         /**< Run the JP startup disc check. */
 #define GAME_STATE_MENU_LOAD 7       /**< Enter menu/load overlay (save or continue). */
 #define GAME_STATE_INTRO_MOVIE 8     /**< Play intro movie, then transition to title. */
 #define GAME_STATE_ATTRACT_1 9       /**< Play attract movie 1, then enter field. */

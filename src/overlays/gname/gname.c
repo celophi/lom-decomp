@@ -1427,11 +1427,7 @@ static u_long* emit_cursor_glyph(u_long* packet_cursor, u_long* ot_entry, s16 x,
  * @brief Render the interactive name-entry elements for one frame.
  * @param render_ctx Render context whose ordering table and packet cursor are updated.
  * @see decomp.me (100%) https://decomp.me/scratch/a0Oye
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/gname/nonmatchings/gname", gname_render);
-#else
 static void gname_render(RenderContext* render_ctx)
 {
     s32 selection_index;
@@ -1451,12 +1447,15 @@ static void gname_render(RenderContext* render_ctx)
     /* Emit the action and panel-selection glyphs. */
     for (selection_index = GNAME_SELECTION_ENTRY_FIRST; selection_index < GNAME_SELECTION_ENTRY_END_EXCLUSIVE; selection_index++, selection_entry++)
     {
-        if (selection_index != GNAME_SELECTION_ENTRY_HIDDEN)
+#if !defined(VERSION_JP)
+        if (selection_index == GNAME_SELECTION_ENTRY_HIDDEN)
         {
-            packet_cursor = emit_glyph_sprt(packet_cursor, &ordering_ctx->ot[GNAME_OT_CHAR_GRID], selection_entry->glyph, selection_entry->x,
-                                            selection_entry->y - GNAME_SELECTION_ENTRY_Y_BIAS, GNAME_SELECTION_SHADOW_OFFSET,
-                                            (selection_index - GNAME_SELECTION_ENTRY_FIRST) == g_activated_entry, FALSE);
+            continue;
         }
+#endif
+        packet_cursor = emit_glyph_sprt(packet_cursor, &ordering_ctx->ot[GNAME_OT_CHAR_GRID], selection_entry->glyph, selection_entry->x,
+                                        selection_entry->y - GNAME_SELECTION_ENTRY_Y_BIAS, GNAME_SELECTION_SHADOW_OFFSET,
+                                        (selection_index - GNAME_SELECTION_ENTRY_FIRST) == g_activated_entry, FALSE);
     }
 
     /* Render the append indicator, its animation, and the current panel tab. */
@@ -1506,7 +1505,6 @@ static void gname_render(RenderContext* render_ctx)
     render_char_panel(render_ctx, g_char_panel);
     render_name_strip(render_ctx, g_active_name, g_strip_width);
 }
-#endif
 
 /**
  * @brief Emit the tab sprite for the current navigation mode.

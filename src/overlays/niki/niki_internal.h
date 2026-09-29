@@ -368,7 +368,7 @@ extern u16 D_80147120;
 extern u16 D_80147146;
 extern u16 D_80147148;
 extern u16 D_8014714C;
-extern u16 D_801475C4[];
+extern u16 g_niki_location_names[];
 extern u8 D_800EC3F6[2];
 extern u8 D_800EC3FA[];
 extern u8 g_field_ui_text_cant_hold_more[];

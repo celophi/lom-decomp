@@ -661,7 +661,7 @@ static void field_collision_slope_scale_move(FieldCollisionSurfaceDef* surface, 
  * @param query Probe position, footprint dimensions, and vertical tolerance.
  * @return The first overlapping marker's value, or -1 when none overlaps.
  */
-s16 field_collision_hit_markers(FieldCollisionQuery* query)
+s32 field_collision_hit_markers(FieldCollisionQuery* query)
 {
     FieldScene* scene;
     s32 half_x;
@@ -770,7 +770,7 @@ s16 field_collision_hit_markers(FieldCollisionQuery* query)
                 {
                     if (!((((node->edge_hi < (start_z - edge_start)) && (node->edge_hi < (end_z - edge_start))) && (node->edge_hi < (start_z - edge_end))) && (node->edge_hi < (end_z - edge_end))))
                     {
-                        return def->label;
+                        return (s16)def->label;
                     }
                 }
             }
@@ -778,7 +778,7 @@ s16 field_collision_hit_markers(FieldCollisionQuery* query)
             {
                 if (node->edge_hi >= start_x)
                 {
-                    return def->label;
+                    return (s16)def->label;
                 }
             }
         }

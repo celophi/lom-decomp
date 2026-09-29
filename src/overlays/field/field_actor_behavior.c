@@ -926,11 +926,7 @@ void field_follow_leader_route(FieldActor* actor, s32 follower_index)
  * @param actor Controlled actor.
  * @param pad_index Controller port.
  * @return The two FieldActor::control movement bits (bit 0 = moving), or 0 when input is blocked.
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_actor_behavior", field_update_actor_input);
-#else
 s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
 {
     /** @brief Pad direction, requested position and applied displacement. */
@@ -979,9 +975,11 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
         held = ports[buttons_port].published_sample.held_buttons;
         g_field_pad_buttons = ((held << 8) & 0xFF00) | (held >> 8);
     }
+#if !defined(VERSION_JP)
     /* Swap the up/left and right/down face buttons. */
     g_field_pad_buttons = ((u32)(g_field_pad_buttons & PADRdown) >> 1) | ((g_field_pad_buttons & PADRright) * 2) | ((u32)(g_field_pad_buttons & PADRleft) >> 3) |
                           ((g_field_pad_buttons & PADRup) * 8) | (g_field_pad_buttons & ~(PADRup | PADRright | PADRdown | PADRleft));
+#endif
     command = actor->command;
     record_input = 0;
     if (command != FIELD_ACTOR_COMMAND_RECOVER)
@@ -1161,7 +1159,7 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
             probe->x = mover->x;
             probe->y = movement_actor->y;
             probe->z = mover->z;
-            if ((g_field_active_group != 0) && (((s32(*)(struct FieldCollisionQuery*))field_collision_hit_markers)(probe) != FIELD_MARKER_NONE))
+            if ((g_field_active_group != 0) && (field_collision_hit_markers(probe) != FIELD_MARKER_NONE))
             {
                 work.motion.vx = movement_actor->x;
                 work.motion.vz = movement_actor->z;
@@ -1230,7 +1228,6 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
     }
     return (movement_actor->control.word >> FIELD_CONTROL_MOVEMENT_SHIFT) & 3;
 }
-#endif
 
 /**
  * @brief Validate the action requested by a FIELD_ACTOR_COMMAND_ACTION command and start it.

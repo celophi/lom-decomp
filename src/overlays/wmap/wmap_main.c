@@ -500,15 +500,17 @@ typedef union
     u_long word;
 } WmapPackedColor;
 
+#if defined(VERSION_JP)
+#define WMAP_BACKDROP_COLOR_WORD(color) (*(u_long*)&(color))
+#else
+#define WMAP_BACKDROP_COLOR_WORD(color) (((WmapPackedColor*)&(color))->word)
+#endif
+
 /**
  * @brief Fade and scroll the textured backdrop, or draw its color gradient.
  * @param initialize Callback initialization flag; unused.
  * @return One to keep the callback active.
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/wmap/nonmatchings/wmap_main", wmap_draw_backdrop);
-#else
 s32 wmap_draw_backdrop(s32 initialize)
 {
     CVECTOR color;
@@ -557,7 +559,7 @@ s32 wmap_draw_backdrop(s32 initialize)
                 wrapped_x = (front_x + g_wmap_backdrop_scroll) % WMAP_BACKDROP_WRAP_WIDTH;
                 packet->x0 = packet->x2 = wrapped_x - SCREEN_WIDTH;
                 packet->x1 = packet->x3 = wrapped_x - WMAP_BACKDROP_QUAD_WIDTH;
-                SET_BGR0_PACKED(packet, ((WmapPackedColor*)&color)->word);
+                SET_BGR0_PACKED(packet, WMAP_BACKDROP_COLOR_WORD(color));
                 packet->code |= 2;
                 addPrim(&g_wmap_current_frame->ordering_table[177], g_wmap_current_frame->packet_cursor);
                 if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
@@ -570,7 +572,7 @@ s32 wmap_draw_backdrop(s32 initialize)
                 wrapped_x = (packet->x0 + g_wmap_backdrop_scroll) % WMAP_BACKDROP_WRAP_WIDTH;
                 packet->x0 = packet->x2 = wrapped_x - SCREEN_WIDTH;
                 packet->x1 = packet->x3 = wrapped_x - WMAP_BACKDROP_QUAD_WIDTH;
-                SET_BGR0_PACKED(packet, ((WmapPackedColor*)&color)->word);
+                SET_BGR0_PACKED(packet, WMAP_BACKDROP_COLOR_WORD(color));
                 packet->code |= 2;
                 addPrim(&g_wmap_current_frame->ordering_table[177], g_wmap_current_frame->packet_cursor);
                 if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
@@ -592,7 +594,7 @@ s32 wmap_draw_backdrop(s32 initialize)
             wrapped_x = (back_x - g_wmap_backdrop_scroll) % WMAP_BACKDROP_WRAP_WIDTH;
             packet->x0 = packet->x2 = wrapped_x - SCREEN_WIDTH;
             packet->x1 = packet->x3 = wrapped_x - WMAP_BACKDROP_QUAD_WIDTH;
-            SET_BGR0_PACKED(packet, ((WmapPackedColor*)&color)->word);
+            SET_BGR0_PACKED(packet, WMAP_BACKDROP_COLOR_WORD(color));
             addPrim(&g_wmap_current_frame->ordering_table[177], g_wmap_current_frame->packet_cursor);
             if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
             {
@@ -605,7 +607,7 @@ s32 wmap_draw_backdrop(s32 initialize)
             wrapped_x = (wrapped_back_x - g_wmap_backdrop_scroll) % WMAP_BACKDROP_WRAP_WIDTH;
             packet->x0 = packet->x2 = wrapped_x - SCREEN_WIDTH;
             packet->x1 = packet->x3 = wrapped_x - WMAP_BACKDROP_QUAD_WIDTH;
-            SET_BGR0_PACKED(packet, ((WmapPackedColor*)&color)->word);
+            SET_BGR0_PACKED(packet, WMAP_BACKDROP_COLOR_WORD(color));
             addPrim(&g_wmap_current_frame->ordering_table[177], g_wmap_current_frame->packet_cursor);
             if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
             {
@@ -613,152 +615,160 @@ s32 wmap_draw_backdrop(s32 initialize)
                 g_wmap_current_frame->packet_cursor += sizeof(POLY_FT4);
             }
         }
+#if !defined(VERSION_JP)
         return 1;
+#endif
     }
-    /* The gradient takes over once the textured backdrop has faded away. */
-    if (D_80182D74.r != D_800D9240.r0)
+#if defined(VERSION_JP)
+    else
     {
-        if (D_800D9240.r0 >= D_80182D74.r)
+#endif
+        /* The gradient takes over once the textured backdrop has faded away. */
+        if (D_80182D74.r != D_800D9240.r0)
         {
-            D_800D9240.r0 -= WMAP_BACKDROP_COLOR_STEP;
+            if (D_800D9240.r0 >= D_80182D74.r)
+            {
+                D_800D9240.r0 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.r0 += WMAP_BACKDROP_COLOR_STEP;
+            }
         }
-        else
+        if (D_80182D74.g != D_800D9240.g0)
         {
-            D_800D9240.r0 += WMAP_BACKDROP_COLOR_STEP;
+            if (D_800D9240.g0 >= D_80182D74.g)
+            {
+                D_800D9240.g0 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.g0 += WMAP_BACKDROP_COLOR_STEP;
+            }
         }
+        if (D_80182D74.b != D_800D9240.b0)
+        {
+            if (D_800D9240.b0 >= D_80182D74.b)
+            {
+                D_800D9240.b0 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.b0 += WMAP_BACKDROP_COLOR_STEP;
+            }
+        }
+        if (D_80182D80.r != D_800D9240.r1)
+        {
+            if (D_800D9240.r1 >= D_80182D80.r)
+            {
+                D_800D9240.r1 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.r1 += WMAP_BACKDROP_COLOR_STEP;
+            }
+        }
+        if (D_80182D80.g != D_800D9240.g1)
+        {
+            if (D_800D9240.g1 >= D_80182D80.g)
+            {
+                D_800D9240.g1 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.g1 += WMAP_BACKDROP_COLOR_STEP;
+            }
+        }
+        if (D_80182D80.b != D_800D9240.b1)
+        {
+            if (D_800D9240.b1 >= D_80182D80.b)
+            {
+                D_800D9240.b1 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.b1 += WMAP_BACKDROP_COLOR_STEP;
+            }
+        }
+        if (D_80182D8C.r != D_800D9240.r2)
+        {
+            if (D_800D9240.r2 >= D_80182D8C.r)
+            {
+                D_800D9240.r2 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.r2 += WMAP_BACKDROP_COLOR_STEP;
+            }
+        }
+        if (D_80182D8C.g != D_800D9240.g2)
+        {
+            if (D_800D9240.g2 >= D_80182D8C.g)
+            {
+                D_800D9240.g2 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.g2 += WMAP_BACKDROP_COLOR_STEP;
+            }
+        }
+        if (D_80182D8C.b != D_800D9240.b2)
+        {
+            if (D_800D9240.b2 >= D_80182D8C.b)
+            {
+                D_800D9240.b2 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.b2 += WMAP_BACKDROP_COLOR_STEP;
+            }
+        }
+        if (D_80182D94.r != D_800D9240.r3)
+        {
+            if (D_800D9240.r3 >= D_80182D94.r)
+            {
+                D_800D9240.r3 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.r3 += WMAP_BACKDROP_COLOR_STEP;
+            }
+        }
+        if (D_80182D94.g != D_800D9240.g3)
+        {
+            if (D_800D9240.g3 >= D_80182D94.g)
+            {
+                D_800D9240.g3 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.g3 += WMAP_BACKDROP_COLOR_STEP;
+            }
+        }
+        if (D_80182D94.b != D_800D9240.b3)
+        {
+            if (D_800D9240.b3 >= D_80182D94.b)
+            {
+                D_800D9240.b3 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.b3 += WMAP_BACKDROP_COLOR_STEP;
+            }
+        }
+        gradient = (POLY_G4*)g_wmap_current_frame->packet_cursor;
+        *gradient = D_800D9240;
+        addPrim(&g_wmap_current_frame->ordering_table[177], g_wmap_current_frame->packet_cursor);
+        if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
+        {
+            g_wmap_packet_bytes += sizeof(POLY_G4);
+            g_wmap_current_frame->packet_cursor += sizeof(POLY_G4);
+        }
+#if defined(VERSION_JP)
     }
-    if (D_80182D74.g != D_800D9240.g0)
-    {
-        if (D_800D9240.g0 >= D_80182D74.g)
-        {
-            D_800D9240.g0 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.g0 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    if (D_80182D74.b != D_800D9240.b0)
-    {
-        if (D_800D9240.b0 >= D_80182D74.b)
-        {
-            D_800D9240.b0 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.b0 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    if (D_80182D80.r != D_800D9240.r1)
-    {
-        if (D_800D9240.r1 >= D_80182D80.r)
-        {
-            D_800D9240.r1 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.r1 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    if (D_80182D80.g != D_800D9240.g1)
-    {
-        if (D_800D9240.g1 >= D_80182D80.g)
-        {
-            D_800D9240.g1 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.g1 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    if (D_80182D80.b != D_800D9240.b1)
-    {
-        if (D_800D9240.b1 >= D_80182D80.b)
-        {
-            D_800D9240.b1 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.b1 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    if (D_80182D8C.r != D_800D9240.r2)
-    {
-        if (D_800D9240.r2 >= D_80182D8C.r)
-        {
-            D_800D9240.r2 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.r2 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    if (D_80182D8C.g != D_800D9240.g2)
-    {
-        if (D_800D9240.g2 >= D_80182D8C.g)
-        {
-            D_800D9240.g2 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.g2 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    if (D_80182D8C.b != D_800D9240.b2)
-    {
-        if (D_800D9240.b2 >= D_80182D8C.b)
-        {
-            D_800D9240.b2 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.b2 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    if (D_80182D94.r != D_800D9240.r3)
-    {
-        if (D_800D9240.r3 >= D_80182D94.r)
-        {
-            D_800D9240.r3 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.r3 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    if (D_80182D94.g != D_800D9240.g3)
-    {
-        if (D_800D9240.g3 >= D_80182D94.g)
-        {
-            D_800D9240.g3 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.g3 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    if (D_80182D94.b != D_800D9240.b3)
-    {
-        if (D_800D9240.b3 >= D_80182D94.b)
-        {
-            D_800D9240.b3 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.b3 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    gradient = (POLY_G4*)g_wmap_current_frame->packet_cursor;
-    *gradient = D_800D9240;
-    addPrim(&g_wmap_current_frame->ordering_table[177], g_wmap_current_frame->packet_cursor);
-    if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
-    {
-        g_wmap_packet_bytes += sizeof(POLY_G4);
-        g_wmap_current_frame->packet_cursor += sizeof(POLY_G4);
-    }
+#endif
     return 1;
 }
-#endif
 
 /**
  * @brief Advance the screen-covering fade and submit its polygon.

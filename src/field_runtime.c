@@ -105,11 +105,7 @@ s32 run_field_scene(void)
  *        requested via g_pending_game_state.
  * @param render_buffers Both field render buffers.
  * @see decomp.me (100%) https://decomp.me/scratch/ViJdW
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("nonmatchings/field_runtime", field_run_frame_loop);
-#else
 void field_run_frame_loop(FieldRenderHalf* render_buffers)
 {
     RECT vram_rect;
@@ -145,13 +141,21 @@ void field_run_frame_loop(FieldRenderHalf* render_buffers)
             primitive_cursor = field_heap->primitive_buffers[1];
         }
         draw_half->primitive_cursor = primitive_cursor;
+#if defined(VERSION_JP)
+        field_clear_node_accumulators(g_field_draw_count);
+#else
         field_clear_node_accumulators(g_field_draw_count, g_field_force_two_primitives);
+#endif
         is_alt_half = draw_half != render_buffers;
         field_build_frame_commands(draw_half, is_alt_half);
         if (g_pending_game_state == 0)
         {
             VSync(1);
+#if defined(VERSION_JP)
+            field_draw_frame(is_alt_half, draw_half, g_field_draw_count);
+#else
             field_draw_frame(is_alt_half, draw_half, g_field_draw_count, g_field_force_two_primitives);
+#endif
             VSync(1);
             DrawSync(0);
             set_controller_vsync_interval(2);
@@ -174,7 +178,6 @@ void field_run_frame_loop(FieldRenderHalf* render_buffers)
     VSync(0);
     SetDispMask(0);
 }
-#endif
 
 /**
  * @brief Field overlay one-time init: projection geometry, double-buffer

@@ -23,7 +23,11 @@
 
 /** @brief Skip-cinematic gating used by movie_play. */
 #define MOVIE_FIRST_UNSKIPPABLE_INDEX MOVIE_INDEX_ATTRACT_2_PART_1
+#if defined(VERSION_JP)
+#define MOVIE_INTRO_SKIP_MASK (PAD_BTN_R2 | PAD_BTN_R1 | PAD_BTN_RIGHT)
+#else
 #define MOVIE_INTRO_SKIP_MASK ((u16) ~(PAD_BTN_SQUARE | PAD_BTN_CROSS | PAD_BTN_CIRCLE | PAD_BTN_TRIANGLE))
+#endif
 #define MOVIE_ATTRACT_1_SKIP_MASK (PAD_BTN_R2 | PAD_BTN_R1 | PAD_BTN_DOWN)
 #define SCD_VALID_DEVICE_TYPE_COUNT 3 /**< digital, analog joystick, analog controller */
 
@@ -31,7 +35,6 @@
 #define MOVIE_RESOURCE_BASE 0x16A0
 #define MOVIE_INIT_GPU_MODE_MASK 0x7F
 #define MOVIE_INIT_USE_CD_AUDIO 0x80
-#define MOVIE_INDEX_MASK 0xFFFF
 
 /**
  * @brief Audio fade-out ramp during a skip-triggered exit.
@@ -106,14 +109,10 @@ typedef union
 
 /**
  * @brief Play the selected MDEC cinematic.
- * @param movie_index Cinematic index (0..4) in the low halfword.
+ * @param movie_index Cinematic index (0..4).
  * @see https://decomp.me/scratch/gkEWm (100%)
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/movie/nonmatchings/movie", movie_play);
-#else
-void movie_play(s32 movie_index)
+void movie_play(u16 movie_index)
 {
     DISPENV display_envs[2];
     DISPENV* display_env;
@@ -122,10 +121,14 @@ void movie_play(s32 movie_index)
     s32 retry_exhausted_status;
     s32 error_status;
     s32 update_poll_budget;
+#if !defined(VERSION_JP)
     u16 movie_index_low;
+#endif
     u16 buttons;
     s32 frame_count;
+#if !defined(VERSION_JP)
     u32 movie_index_value;
+#endif
     s32 resource_index;
     s32 init_flags;
 
@@ -136,7 +139,7 @@ void movie_play(s32 movie_index)
     VSync(0);
     update_controllers();
     cdrom_process_state();
-    if ((((movie_index & MOVIE_INDEX_MASK) == MOVIE_INDEX_INTRO) && ((SCD_REGS)->device_type < SCD_VALID_DEVICE_TYPE_COUNT)) &&
+    if (((movie_index == MOVIE_INDEX_INTRO) && ((SCD_REGS)->device_type < SCD_VALID_DEVICE_TYPE_COUNT)) &&
         (((SCD_REGS)->held_buttons & MOVIE_INTRO_SKIP_MASK) != 0))
     {
         return;
@@ -151,7 +154,7 @@ void movie_play(s32 movie_index)
     display_envs[0].isrgb24 = 1;
 
     /* Select the stream length; movie resources are contiguous by index. */
-    switch (movie_index & MOVIE_INDEX_MASK)
+    switch (movie_index)
     {
     case MOVIE_INDEX_INTRO:
         frame_count = MOVIE_INTRO_TOTAL_FRAMES;
@@ -182,7 +185,7 @@ void movie_play(s32 movie_index)
     }
 
     /* Stage the selected stream and initialize playback state. */
-    resource_index = (movie_index & MOVIE_INDEX_MASK) + MOVIE_RESOURCE_BASE;
+    resource_index = movie_index + MOVIE_RESOURCE_BASE;
     movie_init(resource_index, init_flags, frame_count, 0);
     VSync(0);
     update_controllers();
@@ -228,9 +231,10 @@ void movie_play(s32 movie_index)
                     return;
                 }
 
+                update_poll_budget--;
                 movie_service_video_ops();
 
-                if (--update_poll_budget == 0)
+                if (update_poll_budget == 0)
                 {
                     break;
                 }
@@ -245,7 +249,9 @@ void movie_play(s32 movie_index)
         /* Present the completed buffer and process skip input. */
         state->frame_ready = 0;
         set_controller_vsync_interval(MOVIE_FRAME_VSYNC_INTERVAL);
-        movie_index_low = movie_index & MOVIE_INDEX_MASK;
+#if !defined(VERSION_JP)
+        movie_index_low = movie_index;
+#endif
         VSync(0);
         display_env = &display_envs[0];
         if (state->chunk_idx == 0)
@@ -257,13 +263,25 @@ void movie_play(s32 movie_index)
         update_controllers();
         cdrom_process_state();
 
+#if defined(VERSION_JP)
+        if ((movie_index < MOVIE_FIRST_UNSKIPPABLE_INDEX) && ((SCD_REGS)->device_type < SCD_VALID_DEVICE_TYPE_COUNT))
+#else
         movie_index_value = movie_index_low;
         if ((movie_index_value < MOVIE_FIRST_UNSKIPPABLE_INDEX) && ((SCD_REGS)->device_type < SCD_VALID_DEVICE_TYPE_COUNT))
+#endif
         {
             buttons = (SCD_REGS)->pressed_buttons;
+#if defined(VERSION_JP)
+            if ((buttons & MOVIE_INTRO_SKIP_MASK) != 0)
+#else
             if (movie_index_value != MOVIE_INDEX_INTRO ? (buttons & MOVIE_ATTRACT_1_SKIP_MASK) != 0 : (buttons & MOVIE_INTRO_SKIP_MASK) != 0)
+#endif
             {
+#if defined(VERSION_JP)
+                if (state->use_cd_audio == 0)
+#else
                 if (g_movie_use_cd_audio == 0)
+#endif
                 {
                     break;
                 }
@@ -301,7 +319,6 @@ void movie_play(s32 movie_index)
     VSync(0);
     SetDispMask(0);
 }
-#endif
 
 /**
  * @brief Initialize movie buffers and streaming state.

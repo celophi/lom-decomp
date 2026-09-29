@@ -1621,11 +1621,7 @@ s32 field_text_build_sprites(SPRT* prim, u8* text, s32 text_style)
  * @brief Open a text window after the cache region used by earlier active slots.
  * @param slot Window slot index; only the low 16 bits are used.
  * @note Old-style definition: callers pass a word and the body works on a u16.
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_open_packed_window);
-#else
 void field_text_open_packed_window(slot) u16 slot;
 {
     FieldTextSystem* system = FIELD_TEXT_SYSTEM;
@@ -1713,7 +1709,6 @@ void field_text_open_packed_window(slot) u16 slot;
     state->dirty_end_v = y;
     state->region_end_v = y;
 }
-#endif
 
 /**
  * @brief Open a text window in its fixed cache region.
