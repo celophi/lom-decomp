@@ -1,5 +1,5 @@
 # Host-side Python tests; no disc files or historical toolchain required.
-.PHONY: test-tools test-assets test-overlay-tools extract-scene extract-scenes extract-addhero extract-carda extract-checkps extract-cload extract-field extract-gname
+.PHONY: test-tools test-assets test-overlay-tools extract-scene extract-scenes extract-addhero extract-carda extract-checkps extract-cload extract-field extract-gname extract-golem extract-gosub
 
 test-tools: test-assets test-overlay-tools
 
@@ -62,3 +62,17 @@ GNAME_OUTPUT ?= assets/exports/$(VERSION)/overlays/gname
 extract-gname:
 	@test -f "$(ASSETS_DIR)/gname_data.databin.bin" || { echo 'Run make splat first to extract $(ASSETS_DIR)/gname_data.databin.bin'; exit 1; }
 	python3 -m tools.overlays.gname --version $(VERSION) "$(GNAME_OUTPUT)"
+
+# GOLEM exports the logic-grid editor's artwork, text and packed panel records.
+GOLEM_OUTPUT ?= assets/exports/$(VERSION)/overlays/golem
+
+extract-golem:
+	@test -f "$(ASSETS_DIR)/golem_data.databin.bin" || { echo 'Run make splat first to extract $(ASSETS_DIR)/golem_data.databin.bin'; exit 1; }
+	python3 -m tools.overlays.golem --version $(VERSION) "$(GOLEM_OUTPUT)"
+
+# GOSUB's data blob and equipment rodata are separate from its runtime BSS.
+GOSUB_OUTPUT ?= assets/exports/$(VERSION)/overlays/gosub
+
+extract-gosub:
+	@test -f "$(ASSETS_DIR)/gosub_data.databin.bin" || { echo 'Run make splat first to extract $(ASSETS_DIR)/gosub_data.databin.bin'; exit 1; }
+	python3 -m tools.overlays.gosub --version $(VERSION) "$(GOSUB_OUTPUT)"
