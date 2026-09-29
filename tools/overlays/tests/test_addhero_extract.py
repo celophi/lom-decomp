@@ -12,7 +12,7 @@ from pathlib import Path
 
 import yaml
 
-from tools.overlays import addhero, icon_set
+from tools.overlays import addhero, card_data, icon_set
 
 ADDRESS = 0x80100000  # where the fake overlay's first data file sits in memory
 FULL_WIDTH_A = "Ａ".encode("shift_jis")
@@ -63,8 +63,8 @@ class FakeOverlay:
         blob += bytes([14, 0, 0, 0])
 
         names["g_glyph_single_byte_chart"] = len(blob)
-        row = FULL_WIDTH_A * addhero.CHART_COLUMNS + b"\n"
-        blob += row * (0x10 - (addhero.CHART_FIRST_CODE >> 4))
+        row = FULL_WIDTH_A * card_data.CHART_COLUMNS + b"\n"
+        blob += row * (0x10 - (card_data.CHART_FIRST_CODE >> 4))
         pad(blob)
         # Put the two-byte pages past the chart, so no page falls inside it.
         names["g_glyph_chart_page_base"] = 0x10000
