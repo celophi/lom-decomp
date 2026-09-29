@@ -24,6 +24,7 @@ ownership, timing, and known limitations. Source links accompany the details.
 
 - [Tools index](../../tools/README.md) - asset conversion, scene extraction and tests.
 - [Scene extractor](technical/reference/scene-extractor.md) - scene IMG assets and byte maps.
+- [GNAME resources](technical/reference/gname-resources.md) - name-entry artwork, character panels, name lists and layout tables.
 - [FIELD resources](technical/reference/field-resources.md) - resident images, text, animation data and gameplay tables.
 - [CLOAD resources](technical/reference/cload-resources.md) - load-screen text, card steps and character charts.
 - [Disc layout](technical/reference/disc-layout.md) - disc organization and resource tables.
