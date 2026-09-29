@@ -14,6 +14,8 @@
 ## 関連資料
 
 - [シーン抽出ツール](technical/reference/scene-extractor.md) - シーンIMGの抽出方法、YAMLの項目、元のバイト列の保持について。
+- [GOSUBのリソース](technical/reference/gosub-resources.md) - 作成・育成画面のテキスト、ポートレート、UIグリフ、装備分類テーブルの抽出。
+- [GOLEMのリソース](technical/reference/golem-resources.md) - ロジックグリッドの画像、ブロック名と説明、グリフ、パネルレコードの抽出。
 - [GNAMEのリソース](technical/reference/gname-resources.md) - 名前入力画面の画像、文字パネル、名前リスト、配置テーブルの抽出。
 - [FIELDのリソース](technical/reference/field-resources.md) - 常駐する画像、テキスト、アニメーションデータ、ゲーム用テーブルの抽出。
 - [CLOADのリソース](technical/reference/cload-resources.md) - ロード画面のテキスト、カード処理シーケンス、文字表の抽出。

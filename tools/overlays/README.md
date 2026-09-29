@@ -8,10 +8,10 @@ much help if you just want to see what's in it. This tool opens the blob up and
 writes out files you can look at.
 
 The extractors handle ADDHERO, the 2P hero screen; CARDA, the save and load
-screen; CHECKPS, the startup screen and CD check; CLOAD, the load screen; and
-FIELD, the resident field runtime; and GNAME, the name-entry screen.
-Extract the version's assets with
-`make splat` or `make splat VERSION=jp` first, then run:
+screen; CHECKPS, the startup screen and CD check; CLOAD, the load screen;
+FIELD, the resident field runtime; GNAME, the name-entry screen; GOLEM, the
+logic-grid editor; and GOSUB, the workshop and companion-list screens. Extract
+the version's assets with `make splat` or `make splat VERSION=jp` first, then run:
 
 ```sh
 make extract-addhero
@@ -26,14 +26,19 @@ make extract-field
 make extract-field VERSION=jp
 make extract-gname
 make extract-gname VERSION=jp
+make extract-golem
+make extract-golem VERSION=jp
+make extract-gosub
+make extract-gosub VERSION=jp
 ```
 
 `assets/` keeps two kinds of data apart. `assets/us/` and `assets/jp/` hold what
 splat extracts for the build. `assets/exports/` holds data converted into
 formats people can read. The output goes to
 `assets/exports/<version>/overlays/<overlay>/`. Set `ADDHERO_OUTPUT`,
-`CARDA_OUTPUT`, `CHECKPS_OUTPUT`, `CLOAD_OUTPUT`, `FIELD_OUTPUT` or `GNAME_OUTPUT` to pick another
-folder. The destination must be new; the tool won't overwrite an existing folder.
+`CARDA_OUTPUT`, `CHECKPS_OUTPUT`, `CLOAD_OUTPUT`, `FIELD_OUTPUT`, `GNAME_OUTPUT`,
+`GOLEM_OUTPUT` or `GOSUB_OUTPUT` to pick another folder. The destination must be
+new; the tool won't overwrite an existing folder.
 
 ## What you get
 
@@ -245,11 +250,80 @@ without needing an `unknown/` folder. See [GNAME resources](../../docs/en/techni
 ([Japanese](../../docs/jp/technical/reference/gname-resources.md)) for the layout
 and the difference between stored and runtime texture placement.
 
+GOLEM writes:
+
+```text
+golem/
+    byte-map.yaml          every data range, plus the source of the JP character chart
+    image/
+        image.tim          original 256 x 256 texture and its 16 palettes
+        image.yaml         stored layout, palette words and glyph preview details
+        palette_00.png ... whole texture through each palette
+        glyphs/01.png ...  79 glyph previews, each through all 16 palettes
+    text/
+        archive.bin        original two-section text archive
+        archive.yaml       section offsets
+        names.yaml         58 logic-block names
+        descriptions.yaml  58 descriptions, using the same indices
+    tables/
+        glyph_metrics.yaml all 82 records, including three empty entries
+        panels.yaml        154 packed panel records, decoded alongside the original bytes
+```
+
+A glyph's palette is supplied by the caller. Each glyph PNG therefore shows
+all 16 palettes in a four-by-four grid, ordered left to right, then top to
+bottom. Empty records 0, 20 and 53 keep their indices but have no PNG. Previews
+show source colors without the game's tinting or blending. Composite block
+shapes come from FIELD; they aren't another embedded GOLEM resource.
+
+The texture and layout tables are identical in US and JP. JP text uses CLOAD's
+character chart, and the byte map records that source. US dictionary and
+control codes stay in braces. The final 292 bytes of both blobs are zero-filled
+editor state, listed without another output file. Neither version has unknown
+gaps. See [GOLEM resources](../../docs/en/technical/reference/golem-resources.md)
+([Japanese](../../docs/jp/technical/reference/golem-resources.md)) for the packed
+panel fields and texture upload details.
+
+GOSUB writes:
+
+```text
+gosub/
+    byte-map.yaml          every data and equipment-rodata range
+    image/                 original UI TIM, 16 palette previews and 79 glyph previews
+    text/
+        archive.bin        original twelve-section text archive
+        archive.yaml       section offsets
+        *.yaml             item, spirit and block text, messages, species, spells and colors
+    portraits/
+        archive.bin        original count, offsets and 84 portraits
+        portraits.yaml     indices, groups and stored palettes
+        00.png ...         65 pet, seven golem and twelve egg portraits
+    font/                  complete 64 x 16 TIM, PNG and layout
+    tables/
+        glyph_metrics.yaml all 82 UI glyph records
+        item_colors.yaml   color-name indices for 37 color-material item ids
+        equipment_groups.yaml first indices and counts for weapons, armor and instruments
+```
+
+The UI texture and glyph records are exact copies of GOLEM's. Both extractors
+use the same palette-grid previews. JP text uses CLOAD's character chart; US
+dictionary and control codes stay in braces. All twelve text sections keep
+their original indices, including empty entries.
+
+The portrait symbol points four bytes past its count, and the font symbol
+points twenty bytes into a TIM. The font's pixels also extend into the unused
+prefix of the item-color table. The extractor follows the complete resources
+across those old boundaries, then exports the active color entries separately.
+BSS stays with `gosub.c`. Both byte maps are complete, with no unknown gaps.
+See [GOSUB resources](../../docs/en/technical/reference/gosub-resources.md)
+([Japanese](../../docs/jp/technical/reference/gosub-resources.md)) for the text
+counts, resource boundaries and texture placement.
+
 ## How it's put together
 
-`addhero.py`, `carda.py`, `checkps.py`, `cload.py`, `field.py` and `gname.py` use one reader
-per resource format. Each reader parses its bytes into a small dataclass and
-returns a `Part` that says where the bytes are and what they hold. `read_blob`
+`addhero.py`, `carda.py`, `checkps.py`, `cload.py`, `field.py`, `gname.py`,
+`golem.py` and `gosub.py` use one reader per resource format. Each reader parses its bytes
+into a small dataclass and returns a `Part` that says where the bytes are and what they hold. `read_blob`
 collects the parts in address order, and `cover_gaps` fills whatever lies
 between them. A `write_part` function for each kind of content writes its file.
 Nothing is written until everything has been read, and the output goes into a
@@ -273,12 +347,14 @@ Common changes:
 
 `card_data.py` holds the character chart, decoded-content dataclasses, common
 readers and writers used by the card overlays. `resources.py` supplies the
-blob, part, byte-map and output helpers all six extractors share. The smaller
+blob, part, byte-map and output helpers all eight extractors share. The smaller
 modules (`text_table.py`, `icon_set.py`, `png.py`, `symbols.py` and
 `splat_config.py`) handle the underlying file formats.
 `field_tables.py` lists FIELD's small array layouts; its larger resources have
 separate readers in `field.py`. GNAME reuses the typed format readers in
-`tools/assets/` for its tables, name-record archive and TIM.
+`tools/assets/` for its tables, name-record archive and TIM. `glyph_texture.py`
+holds the eight-byte glyph format and palette-grid writer shared by GOLEM and
+GOSUB.
 
 ## Tests
 
@@ -317,3 +393,14 @@ The GNAME tests cover both regional layouts, dictionary text, JP chart decoding,
 palette previews, sprite crops, signed layout coordinates and complete byte
 coverage. Bad resource offsets, invalid sprite bounds, missing inputs and
 failed writes must leave no partial export.
+
+The GOLEM tests cover packed panel fields, the split cell-height bits, glyph
+palette grids, empty records, JP decoding through CLOAD and complete byte
+coverage. Bad offsets, invalid image rectangles and failed writes leave no
+partial output. Source tests check both regional maps and the C record layouts.
+
+The GOSUB tests cover all twelve text sections, portrait count boundaries,
+font pixels that cross into the color-table prefix, active color indices and
+complete byte coverage of both inputs. They check PNG pixels, JP decoding,
+invalid offsets and cleanup after a failed write. Source tests keep both
+regional layouts and copied C constants in step with the extractor.
