@@ -27,7 +27,7 @@ options:
   undefined_funcs_auto_path: linker/jp/overlays/checkps/undefined_funcs_auto.txt
   undefined_syms_auto_path: linker/jp/overlays/checkps/undefined_syms_auto.txt
 
-  symbol_addrs_path:    
+  symbol_addrs_path:
     - config/jp/symbols/shared_symbol_addrs.txt
     - config/jp/symbols/checkps_symbol_addrs.txt
 
@@ -56,32 +56,13 @@ segments:
       - [0x5, .rodata, cdrom]
       # pattern.o .rodata, extracted as a raw asset: the Shift-JIS warning text,
       # the vertex signs, and the 12 zero bytes GNU as pads the section with.
-      - start: 0x55
-        type: rodatabin
-        name: pattern_rodata
-        dir: checkps
+      - [0x55, rodatabin, checkps_pattern_rodata]
       - [0xA5, asm, init]  # JP: differs from US, kept as assembly
       - [0x10B9, c, cdrom]
       - [0x1DE5, c, kanji]
       - [0x1FD9, c, pattern]
       - [0x2169, c, font]
-      - start: 0x29DD
-        type: databin
-        name: embedded_akao
-        dir: checkps
-      - start: 0xBCFD
-        type: databin
-        name: image_asset
-        dir: checkps
-      # cdrom.o .data (CD command table, register pointers, state) followed by
-      # the pattern ring size table and 6 zero bytes; kept as assembly.
-      - [0x13F29, data, table]
-      # font.o .data, extracted as a raw asset: the Shift-JIS decimal and hex
-      # digit tables and the glyph CLUT prefix.
-      - start: 0x13FB1
-        type: databin
-        name: font_data
-        dir: checkps
+      - [0x29DD, databin, checkps_data]
       - [0x13FF9, bss, init]  # JP: differs from US, kept as assembly
       - [0x38431, .bss, cdrom]
       - [0x38441, .bss, font]

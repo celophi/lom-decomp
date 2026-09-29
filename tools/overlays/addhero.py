@@ -34,24 +34,21 @@ import tempfile
 
 from tools.overlays import splat_config, symbols, text_table
 from tools.overlays.card_data import (
-    Blob,
     CARD_TITLE_NOTES,
     CardSteps,
     CardSymbols,
     CardTitle,
     CardTitles,
     Chart,
-    Part,
     StepSequence,
-    byte_map_entry,
-    cover_gaps,
-    dump_yaml,
-    hex_address,
     read_digit_glyphs,
     read_icons,
     read_text_list,
     variables_start,
-    write_part,
+)
+
+from tools.overlays.resources import (
+    Blob, Part, byte_map_entry, cover_gaps, dump_yaml, hex_address, write_part,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
