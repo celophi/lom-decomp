@@ -8,7 +8,7 @@ much help if you just want to see what's in it. This tool opens the blob up and
 writes out files you can look at.
 
 The extractors handle ADDHERO, the 2P hero screen; CARDA, the save and load
-screen; and CHECKPS, the startup screen and CD check. Extract the version's
+screen; CHECKPS, the startup screen and CD check; and CLOAD, the load screen. Extract the version's
 assets with `make splat` or
 `make splat VERSION=jp` first, then run:
 
@@ -19,13 +19,15 @@ make extract-carda
 make extract-carda VERSION=jp
 make extract-checkps
 make extract-checkps VERSION=jp
+make extract-cload
+make extract-cload VERSION=jp
 ```
 
 `assets/` keeps two kinds of data apart. `assets/us/` and `assets/jp/` hold what
 splat extracts for the build. `assets/exports/` holds data converted into
 formats people can read. The output goes to
 `assets/exports/<version>/overlays/<overlay>/`. Set `ADDHERO_OUTPUT`,
-`CARDA_OUTPUT` or `CHECKPS_OUTPUT` to pick another folder. The destination must
+`CARDA_OUTPUT`, `CHECKPS_OUTPUT` or `CLOAD_OUTPUT` to pick another folder. The destination must
 be new; the tool won't overwrite an existing folder.
 
 ## What you get
@@ -132,9 +134,36 @@ stay in a small `rodatabin` before the code. Both extracted files have complete
 byte maps. There are eight unidentified trailing bytes in US and twelve in JP;
 those bytes are saved in `unknown/`.
 
+CLOAD writes:
+
+```text
+cload/
+    byte-map.yaml          every range in the original data blob
+    text/
+        messages.yaml      the card-screen messages, with codes and raw bytes
+        locations.yaml     the 63 location entries selected by music track
+    tables/
+        card_steps.yaml    the six load sequences, named from the C enum
+        digit_glyphs.yaml  full-width decimal and hexadecimal digits
+        text_conversion.yaml   the character chart and its Shift-JIS mappings
+```
+
+It carries the same message and location tables as ADDHERO and CARDA: 91
+messages in US, 90 in JP. This includes messages CLOAD doesn't use. The party
+icons come from CD resource `0x5E4`, loaded by `cload_load_icon_resources`, so
+there is no embedded icon set to export here. The card path strings remain
+with the C code that defines them.
+
+Both CLOAD YAMLs already use one `databin`. Its final 149,920 bytes are
+zero-filled variables and buffers, recorded in the byte map without writing
+another file. All remaining gaps are zero padding in both versions; neither
+export needs an `unknown/` folder. Unrecognized nonzero bytes would still be
+saved there. See the [CLOAD resource notes](../../docs/en/technical/reference/cload-resources.md)
+([Japanese](../../docs/jp/technical/reference/cload-resources.md)) for the layout.
+
 ## How it's put together
 
-`addhero.py`, `carda.py` and `checkps.py` read each blob the way you'd read its
+`addhero.py`, `carda.py`, `checkps.py` and `cload.py` read each blob the way you'd read its
 byte map, top to bottom. `read_blob` calls one `read_*` function per part, in address order. Each one
 parses its bytes into a small dataclass and returns a `Part` that says where the
 bytes are and what they hold. `cover_gaps` then fills whatever lies between the
@@ -145,7 +174,8 @@ nothing behind.
 
 Each tool finds its input files through the overlay's splat config, and every
 address through the version's symbol file. The YAML has one `databin` for the
-data after the code. Short strings before the code remain in `rodatabin` files.
+data after the code. Short strings before the code stay with their existing
+C definitions or `rodatabin` files.
 The export is a readable copy; editing it doesn't change what the build links.
 
 Common changes:
@@ -158,8 +188,8 @@ Common changes:
 | add or rename a card step | nothing; the names are read from the overlay's C source or internal header |
 
 `card_data.py` holds the character chart, decoded-content dataclasses, common
-readers and writers used by the two card overlays. `resources.py` supplies the
-blob, part, byte-map and output helpers all three extractors share. The smaller modules (`text_table.py`, `icon_set.py`, `png.py`,
+readers and writers used by the card overlays. `resources.py` supplies the
+blob, part, byte-map and output helpers all four extractors share. The smaller modules (`text_table.py`, `icon_set.py`, `png.py`,
 `symbols.py` and `splat_config.py`) handle the underlying file formats.
 
 ## Tests
@@ -184,3 +214,8 @@ boundaries, decoded warning and tables, and complete byte coverage of both
 input files. They also check that truncated or invalid resources leave no
 partial export behind. Source tests keep the regional layouts and copied C
 constants in step with the extractor.
+
+The CLOAD tests cover both regional configs, the chart base used by the C
+text decoder, complete byte coverage, shared sequence tails and Japanese codes
+with a zero second byte. Missing inputs, bad boundaries and failed writes must
+leave no partial output.
