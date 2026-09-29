@@ -912,22 +912,16 @@ static void field_copy_scene_geometry(s32* src, s32* end)
  * @brief Install the scene's layout records and place its active actors.
  * @param layout Scene layout containing actor and action records.
  * @note Active layout records fill consecutive actor records from FIELD_PARTY_COUNT on.
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_scene_transition", field_load_scene_actors);
-#else
 static void field_load_scene_actors(FieldSceneLayout* layout)
 {
-    FieldActor* actor = &g_field_actors[FIELD_PARTY_COUNT];
-    FieldObjectState* state = &g_field_object_states[FIELD_PARTY_COUNT];
+    FieldActor* actor = g_field_scene_actors;
+    FieldObjectState* state = g_field_scene_object_states;
     FieldLayoutRecord* layout_record = layout->records;
     s32 loaded_count = 0;
     s32 index = 0;
     s32 count = layout->count;
     s32 i;
-    u32 value_word;
-    u32 base_value;
 
     g_field_loaded_actor_count = FIELD_PARTY_COUNT;
     for (; index < count; index++, layout_record++)
@@ -946,10 +940,12 @@ static void field_load_scene_actors(FieldSceneLayout* layout)
                 actor->presence = 0;
             }
             actor->control.bits.group = layout_record->control.bits.group;
+#if !defined(VERSION_JP)
             if ((g_field_pending_scene_id & FIELD_SCENE_ID_MASK) == FIELD_SCENE_NO_LAYOUT_GROUPS)
             {
                 actor->control.bits.group = 0;
             }
+#endif
             actor->control.bits.palette = layout_record->control.bits.palette;
             actor->x = layout_record->position.bits.x << FIELD_POSITION_SHIFT;
             actor->z = layout_record->position.bits.z << FIELD_POSITION_SHIFT;
@@ -962,13 +958,11 @@ static void field_load_scene_actors(FieldSceneLayout* layout)
             state->tint_blue = g_field_object_parts[actor->object_index].tint_blue;
             state->tint_timer = 0;
             state->interaction_kind = 0;
-            value_word = state->unk8.word & 0x80FFFFFF;
             state->contact.bits.flag5 = 0;
-            state->unk8.word = value_word;
-            state->unk8.word = (value_word & 0xFF000000) | (state->unk0 & 0xFFFFFF);
-            base_value = state->unk0;
+            state->unk8.bits.unk24 = 0;
+            state->unk8.bits.value = state->unk0;
+            state->unk4.word = state->unk0 & 0xFFFFFF;
             state->key = index + FIELD_PARTY_COUNT;
-            state->unk4.word = base_value & 0xFFFFFF;
             state->enabled_events = layout_record->enabled_events;
             state->group_flags = layout_record->control.flags;
             for (i = 0; i < FIELD_ACTION_SCRIPT_COUNT; i++)
@@ -983,7 +977,6 @@ static void field_load_scene_actors(FieldSceneLayout* layout)
         }
     }
 }
-#endif
 
 /**
  * @brief Settle every present field actor on the map collision.

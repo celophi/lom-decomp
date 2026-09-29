@@ -19,6 +19,7 @@
 #include "save_file.h"
 #include "glyph_cache.h"
 #include "card_events.h"
+#include "card_callbacks.h"
 #include "card_directory.h"
 #include "cdrom.h"
 #include "controller.h"
@@ -245,6 +246,20 @@ typedef enum CardaSequenceResult
 /** @brief Buttons that move a yes/no choice. */
 #define CARDA_CHOICE_BUTTON_MASK (PAD_BTN_RIGHT | PAD_BTN_LEFT)
 
+/** @brief g_carda_choice_toggle values: the selected choice of a yes/no prompt. */
+#define CARDA_CHOICE_YES 0
+#define CARDA_CHOICE_NO 1
+
+/**
+ * @brief Choice a yes/no prompt starts on.
+ * @note JP starts on yes, US on no.
+ */
+#if defined(VERSION_JP)
+#define CARDA_CHOICE_DEFAULT CARDA_CHOICE_YES
+#else
+#define CARDA_CHOICE_DEFAULT CARDA_CHOICE_NO
+#endif
+
 /** @brief Length of the new-save placeholder entry name ("AKIdummy"). */
 #define CARDA_NEW_SAVE_ENTRY_NAME_LENGTH 8
 
@@ -317,6 +332,7 @@ typedef enum CardaSequenceResult
 #define CARDA_TEXT_SAVING 14
 #define CARDA_TEXT_DO_NOT_REMOVE_CARD 15
 #define CARDA_TEXT_SAVED 16
+#define CARDA_TEXT_MEMORY_CARD_IS 17 /**< JP only: subject line "The memory card is". */
 #define CARDA_TEXT_NOT_FORMATTED 18 /**< Second line after a subject such as CARDA_TEXT_POCKETSTATION_IS. */
 #define CARDA_TEXT_FORMAT_PROMPT 19
 #define CARDA_TEXT_NEW_SAVE_TITLE 20
@@ -490,6 +506,9 @@ extern u16 g_carda_text_downloading;
 extern u16 g_carda_text_pet_already_on_ranch;
 extern u16 g_carda_text_plus_marker;
 extern u16 g_carda_text_card_unformatted;
+#if defined(VERSION_JP)
+extern u16 g_carda_text_memory_card_is;
+#endif
 extern u16 g_carda_item_names[];
 extern u8 g_carda_save_title_template[];
 extern u8 g_carda_bad_title_template[];
@@ -564,7 +583,6 @@ extern u8 g_carda_temp_card_path[];
 
 /* FIELD entry points and library calls used by CARDA. */
 void field_reset_input_repeat(void);
-s32 card_resource_noop_hook();
 s32 OpenEvent(s32, s32, s32, s32);
 void CloseEvent(s32);
 s32 TestEvent(s32);

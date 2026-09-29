@@ -174,7 +174,7 @@ void field_check_marker_contact(Vec3i* position)
         probe.width = FIELD_CONTACT_PROBE_WIDTH;
         probe.height_tolerance = FIELD_CONTACT_PROBE_HEIGHT;
         probe.depth = FIELD_CONTACT_PROBE_DEPTH;
-        label = ((s32(*)(struct FieldCollisionQuery*))field_collision_hit_markers)(&probe);
+        label = field_collision_hit_markers(&probe);
         if (label != -1)
         {
             if (g_field_scene_request_pending == 0)

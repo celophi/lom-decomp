@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Regression verifier for the byte-exact Legend of Mana BIN compressor.
 
-Each reference overlay in ``disc/us/BIN`` is decompressed with the project's
+Each reference overlay in ``disc/<version>/BIN`` is decompressed with the project's
 reference decoder (``tools/splat_ext/decompress.py``), recompressed with
 ``tools/compressor/compressor.py``, and compared byte-for-byte against the
 original disc stream.  This exercises exactly the transformation the build
@@ -19,6 +19,7 @@ so the decoder is fed ``data[1:]`` and the encoder's output is compared against
 Usage:
     python3 tools/compressor/verify_exact_bins.py             # all overlays
     python3 tools/compressor/verify_exact_bins.py GOVER MOVIE # a named subset
+    python3 tools/compressor/verify_exact_bins.py --version jp  # JP overlays
 """
 
 from __future__ import annotations
@@ -30,7 +31,7 @@ from pathlib import Path
 from types import ModuleType
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_BIN_DIR = REPO_ROOT / "disc" / "us" / "BIN"
+DISC_DIR = REPO_ROOT / "disc"
 COMPRESSOR_PATH = Path(__file__).resolve().parent / "compressor.py"
 DECOMPRESSOR_PATH = REPO_ROOT / "tools" / "splat_ext" / "decompress.py"
 
@@ -81,10 +82,15 @@ def main() -> int:
         help="overlay names to check (default: every *.BIN in the BIN directory)",
     )
     parser.add_argument(
+        "--version",
+        default="us",
+        help="game version whose disc/<version>/BIN overlays are checked (default: us)",
+    )
+    parser.add_argument(
         "--bin-dir",
         type=Path,
-        default=DEFAULT_BIN_DIR,
-        help=f"directory holding the original *.BIN overlays (default: {DEFAULT_BIN_DIR})",
+        default=None,
+        help="directory holding the original *.BIN overlays (overrides --version)",
     )
     parser.add_argument(
         "--compressor",
@@ -99,6 +105,8 @@ def main() -> int:
         help="reference decompressor module",
     )
     args = parser.parse_args()
+    if args.bin_dir is None:
+        args.bin_dir = DISC_DIR / args.version / "BIN"
 
     if not args.bin_dir.is_dir():
         parser.error(f"BIN directory not found: {args.bin_dir}")

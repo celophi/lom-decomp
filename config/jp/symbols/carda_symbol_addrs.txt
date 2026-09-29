@@ -197,6 +197,7 @@ g_carda_text_no_lom_save_data = 0x8014B040;
 g_carda_text_ring_ring_land_label = 0x8014B046;
 g_carda_text_wrong_version = 0x8014B060;
 g_carda_text_plus_marker = 0x8014B0BC;
+g_carda_text_memory_card_is = 0x8014B02E;
 g_carda_text_card_unformatted = 0x8014B030;
 
 // Main-executable / FIELD / SDK symbols used by this overlay.
@@ -216,7 +217,7 @@ g_carda_title_colon = 0x80140090;
 cdrom_wait_queue_empty = 0x80013F2C;
 cdrom_queue_read = 0x800141EC;
 reset_controller_vsync_state = 0x800158E0;
-card_resource_noop_hook = 0x80016750;
+card_prepare_pet_transfer = 0x80016750;
 OpenEvent = 0x8001691C;
 CloseEvent = 0x8001692C;
 TestEvent = 0x8001693C;

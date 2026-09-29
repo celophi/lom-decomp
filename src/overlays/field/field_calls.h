@@ -245,7 +245,7 @@ extern s32 g_field_return_to_title_choice;
 void field_draw_return_to_title_choices(s32 *ot, void *prim, s32 scroll_x, s32 scroll_y);
 
 /* field_collision.c */
-s16 field_collision_hit_markers(struct FieldCollisionQuery *query);
+s32 field_collision_hit_markers(struct FieldCollisionQuery *query);
 s32 field_collision_move_mover(struct FieldCollisionMover *mover);
 void field_collision_rasterize_groups(s32 unused, struct FieldNode *clip);
 

@@ -287,17 +287,15 @@ for output options and the Python layout.
 
 ## Regional coverage and what still needs work
 
-The shared C explains the ordinary card I/O and much of the transfer flow.
-JP still takes four CARDA functions from assembly: window construction, the
-selected-entry details window, the format prompt and the main PocketStation
-window (`carda_draw_save_flow`). The pet-copy, item-addition and deletion order
-described above is also present in that JP transfer window.
+The shared C explains the ordinary card I/O and the transfer flow for both
+releases. The pet-copy, item-addition and deletion order described above is the
+same in the JP transfer window (`carda_draw_save_flow`).
 
-The name `card_resource_noop_hook` needs care. It describes the empty US
-implementation. JP takes this unit from assembly, and its implementation
-copies the pet record into the transfer resource and fills additional game
-state. The retained US transfer branches therefore don't establish a working
-US Ring Ring Land feature. Its PocketStation messages are also left empty.
+`card_prepare_pet_transfer` fills the transfer resource. In JP it copies the
+pet record, clears the reward list, and records which lands are placed and
+which have fully raised mana. In US the function is empty. The retained US
+transfer branches therefore don't establish a working US Ring Ring Land
+feature. Its PocketStation messages are also left empty.
 
 The shared Yes/No initializer selects No in US and Yes in JP. Some transfer
 prompts set their choice directly, so that isn't a rule for every prompt.

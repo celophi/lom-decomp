@@ -1,0 +1,35 @@
+// menu_draw_scene_content keeps %hi(g_saved_game_ctx) in fp.
+// The loads below all address 0x80120000 - 0xE3C = 0x8011F1C4.
+rom:0x5A45 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x5BDD reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x5C09 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x5C31 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x5C51 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x5C71 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x5C9D reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x6BF5 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x6C1D reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x6CC9 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x6D21 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x6D85 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x6F89 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x6FED reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x7031 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x7115 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x783D reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x786D reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x78F5 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x797D reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x79E1 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x7A91 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x7AC5 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x7AF9 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x7B35 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x7B71 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x7BA5 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x7BE1 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x7C15 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x7C79 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x7D45 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x7EC5 reloc:MIPS_LO16 symbol:g_saved_game_ctx
+rom:0x7F3D reloc:MIPS_LO16 symbol:g_saved_game_ctx

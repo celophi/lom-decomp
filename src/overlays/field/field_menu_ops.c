@@ -353,7 +353,12 @@ typedef struct
 {
     u8 kind;     /**< Item kind, bits 9:8 of the attributes. */
     u8 category; /**< Category with the kind's table offset added. */
+#if defined(VERSION_JP)
+    u8 value;    /**< Displayed stat value. */
+    u8 special;  /**< Special-item flag or instrument spirit. */
+#else
     u16 value;   /**< Displayed stat value; bit 15 marks a special item. */
+#endif
     u32 amount;  /**< Item value. */
 } FieldMenuItemInfoVars;
 
@@ -2490,11 +2495,8 @@ void field_menu_list_grazing_pets(void)
  * inventory, equipment or pending record sets status 2. Otherwise the name,
  * name text, kind, category, stat value and item value go to the script
  * variables, with the value's digit count at D_80122C0C.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP returns a byte stat value and a separate special-item byte.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_menu_ops", field_menu_describe_shared_item);
-#else
 void field_menu_describe_shared_item(void)
 {
     s32 i;
@@ -2604,10 +2606,14 @@ void field_menu_describe_shared_item(void)
         info->category = category;
         field_set_text_macro(1, FIELD_MENU_TEXT(name_index), 0xFF);
         info->value = value;
+#if defined(VERSION_JP)
+        info->special = special;
+#else
         if (special != 0)
         {
             info->value = value - 0x8000;
         }
+#endif
         info->amount = amount;
         digits = 0;
         do
@@ -2622,7 +2628,6 @@ void field_menu_describe_shared_item(void)
     D_80122C03 = 2;
     field_set_text_macro(0, &g_field_shared_items[selected].active, 0xFF);
 }
-#endif
 
 /**
  * @brief Drop spent pending item records and compact the four-entry pending table.

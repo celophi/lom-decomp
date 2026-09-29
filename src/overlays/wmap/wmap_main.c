@@ -500,15 +500,17 @@ typedef union
     u_long word;
 } WmapPackedColor;
 
+#if defined(VERSION_JP)
+#define WMAP_BACKDROP_COLOR_WORD(color) (*(u_long*)&(color))
+#else
+#define WMAP_BACKDROP_COLOR_WORD(color) (((WmapPackedColor*)&(color))->word)
+#endif
+
 /**
  * @brief Fade and scroll the textured backdrop, or draw its color gradient.
  * @param initialize Callback initialization flag; unused.
  * @return One to keep the callback active.
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/wmap/nonmatchings/wmap_main", wmap_draw_backdrop);
-#else
 s32 wmap_draw_backdrop(s32 initialize)
 {
     CVECTOR color;
@@ -557,7 +559,7 @@ s32 wmap_draw_backdrop(s32 initialize)
                 wrapped_x = (front_x + g_wmap_backdrop_scroll) % WMAP_BACKDROP_WRAP_WIDTH;
                 packet->x0 = packet->x2 = wrapped_x - SCREEN_WIDTH;
                 packet->x1 = packet->x3 = wrapped_x - WMAP_BACKDROP_QUAD_WIDTH;
-                SET_BGR0_PACKED(packet, ((WmapPackedColor*)&color)->word);
+                SET_BGR0_PACKED(packet, WMAP_BACKDROP_COLOR_WORD(color));
                 packet->code |= 2;
                 addPrim(&g_wmap_current_frame->ordering_table[177], g_wmap_current_frame->packet_cursor);
                 if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
@@ -570,7 +572,7 @@ s32 wmap_draw_backdrop(s32 initialize)
                 wrapped_x = (packet->x0 + g_wmap_backdrop_scroll) % WMAP_BACKDROP_WRAP_WIDTH;
                 packet->x0 = packet->x2 = wrapped_x - SCREEN_WIDTH;
                 packet->x1 = packet->x3 = wrapped_x - WMAP_BACKDROP_QUAD_WIDTH;
-                SET_BGR0_PACKED(packet, ((WmapPackedColor*)&color)->word);
+                SET_BGR0_PACKED(packet, WMAP_BACKDROP_COLOR_WORD(color));
                 packet->code |= 2;
                 addPrim(&g_wmap_current_frame->ordering_table[177], g_wmap_current_frame->packet_cursor);
                 if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
@@ -592,7 +594,7 @@ s32 wmap_draw_backdrop(s32 initialize)
             wrapped_x = (back_x - g_wmap_backdrop_scroll) % WMAP_BACKDROP_WRAP_WIDTH;
             packet->x0 = packet->x2 = wrapped_x - SCREEN_WIDTH;
             packet->x1 = packet->x3 = wrapped_x - WMAP_BACKDROP_QUAD_WIDTH;
-            SET_BGR0_PACKED(packet, ((WmapPackedColor*)&color)->word);
+            SET_BGR0_PACKED(packet, WMAP_BACKDROP_COLOR_WORD(color));
             addPrim(&g_wmap_current_frame->ordering_table[177], g_wmap_current_frame->packet_cursor);
             if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
             {
@@ -605,7 +607,7 @@ s32 wmap_draw_backdrop(s32 initialize)
             wrapped_x = (wrapped_back_x - g_wmap_backdrop_scroll) % WMAP_BACKDROP_WRAP_WIDTH;
             packet->x0 = packet->x2 = wrapped_x - SCREEN_WIDTH;
             packet->x1 = packet->x3 = wrapped_x - WMAP_BACKDROP_QUAD_WIDTH;
-            SET_BGR0_PACKED(packet, ((WmapPackedColor*)&color)->word);
+            SET_BGR0_PACKED(packet, WMAP_BACKDROP_COLOR_WORD(color));
             addPrim(&g_wmap_current_frame->ordering_table[177], g_wmap_current_frame->packet_cursor);
             if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
             {
@@ -613,152 +615,160 @@ s32 wmap_draw_backdrop(s32 initialize)
                 g_wmap_current_frame->packet_cursor += sizeof(POLY_FT4);
             }
         }
+#if !defined(VERSION_JP)
         return 1;
+#endif
     }
-    /* The gradient takes over once the textured backdrop has faded away. */
-    if (D_80182D74.r != D_800D9240.r0)
+#if defined(VERSION_JP)
+    else
     {
-        if (D_800D9240.r0 >= D_80182D74.r)
+#endif
+        /* The gradient takes over once the textured backdrop has faded away. */
+        if (D_80182D74.r != D_800D9240.r0)
         {
-            D_800D9240.r0 -= WMAP_BACKDROP_COLOR_STEP;
+            if (D_800D9240.r0 >= D_80182D74.r)
+            {
+                D_800D9240.r0 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.r0 += WMAP_BACKDROP_COLOR_STEP;
+            }
         }
-        else
+        if (D_80182D74.g != D_800D9240.g0)
         {
-            D_800D9240.r0 += WMAP_BACKDROP_COLOR_STEP;
+            if (D_800D9240.g0 >= D_80182D74.g)
+            {
+                D_800D9240.g0 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.g0 += WMAP_BACKDROP_COLOR_STEP;
+            }
         }
+        if (D_80182D74.b != D_800D9240.b0)
+        {
+            if (D_800D9240.b0 >= D_80182D74.b)
+            {
+                D_800D9240.b0 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.b0 += WMAP_BACKDROP_COLOR_STEP;
+            }
+        }
+        if (D_80182D80.r != D_800D9240.r1)
+        {
+            if (D_800D9240.r1 >= D_80182D80.r)
+            {
+                D_800D9240.r1 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.r1 += WMAP_BACKDROP_COLOR_STEP;
+            }
+        }
+        if (D_80182D80.g != D_800D9240.g1)
+        {
+            if (D_800D9240.g1 >= D_80182D80.g)
+            {
+                D_800D9240.g1 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.g1 += WMAP_BACKDROP_COLOR_STEP;
+            }
+        }
+        if (D_80182D80.b != D_800D9240.b1)
+        {
+            if (D_800D9240.b1 >= D_80182D80.b)
+            {
+                D_800D9240.b1 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.b1 += WMAP_BACKDROP_COLOR_STEP;
+            }
+        }
+        if (D_80182D8C.r != D_800D9240.r2)
+        {
+            if (D_800D9240.r2 >= D_80182D8C.r)
+            {
+                D_800D9240.r2 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.r2 += WMAP_BACKDROP_COLOR_STEP;
+            }
+        }
+        if (D_80182D8C.g != D_800D9240.g2)
+        {
+            if (D_800D9240.g2 >= D_80182D8C.g)
+            {
+                D_800D9240.g2 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.g2 += WMAP_BACKDROP_COLOR_STEP;
+            }
+        }
+        if (D_80182D8C.b != D_800D9240.b2)
+        {
+            if (D_800D9240.b2 >= D_80182D8C.b)
+            {
+                D_800D9240.b2 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.b2 += WMAP_BACKDROP_COLOR_STEP;
+            }
+        }
+        if (D_80182D94.r != D_800D9240.r3)
+        {
+            if (D_800D9240.r3 >= D_80182D94.r)
+            {
+                D_800D9240.r3 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.r3 += WMAP_BACKDROP_COLOR_STEP;
+            }
+        }
+        if (D_80182D94.g != D_800D9240.g3)
+        {
+            if (D_800D9240.g3 >= D_80182D94.g)
+            {
+                D_800D9240.g3 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.g3 += WMAP_BACKDROP_COLOR_STEP;
+            }
+        }
+        if (D_80182D94.b != D_800D9240.b3)
+        {
+            if (D_800D9240.b3 >= D_80182D94.b)
+            {
+                D_800D9240.b3 -= WMAP_BACKDROP_COLOR_STEP;
+            }
+            else
+            {
+                D_800D9240.b3 += WMAP_BACKDROP_COLOR_STEP;
+            }
+        }
+        gradient = (POLY_G4*)g_wmap_current_frame->packet_cursor;
+        *gradient = D_800D9240;
+        addPrim(&g_wmap_current_frame->ordering_table[177], g_wmap_current_frame->packet_cursor);
+        if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
+        {
+            g_wmap_packet_bytes += sizeof(POLY_G4);
+            g_wmap_current_frame->packet_cursor += sizeof(POLY_G4);
+        }
+#if defined(VERSION_JP)
     }
-    if (D_80182D74.g != D_800D9240.g0)
-    {
-        if (D_800D9240.g0 >= D_80182D74.g)
-        {
-            D_800D9240.g0 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.g0 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    if (D_80182D74.b != D_800D9240.b0)
-    {
-        if (D_800D9240.b0 >= D_80182D74.b)
-        {
-            D_800D9240.b0 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.b0 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    if (D_80182D80.r != D_800D9240.r1)
-    {
-        if (D_800D9240.r1 >= D_80182D80.r)
-        {
-            D_800D9240.r1 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.r1 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    if (D_80182D80.g != D_800D9240.g1)
-    {
-        if (D_800D9240.g1 >= D_80182D80.g)
-        {
-            D_800D9240.g1 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.g1 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    if (D_80182D80.b != D_800D9240.b1)
-    {
-        if (D_800D9240.b1 >= D_80182D80.b)
-        {
-            D_800D9240.b1 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.b1 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    if (D_80182D8C.r != D_800D9240.r2)
-    {
-        if (D_800D9240.r2 >= D_80182D8C.r)
-        {
-            D_800D9240.r2 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.r2 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    if (D_80182D8C.g != D_800D9240.g2)
-    {
-        if (D_800D9240.g2 >= D_80182D8C.g)
-        {
-            D_800D9240.g2 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.g2 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    if (D_80182D8C.b != D_800D9240.b2)
-    {
-        if (D_800D9240.b2 >= D_80182D8C.b)
-        {
-            D_800D9240.b2 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.b2 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    if (D_80182D94.r != D_800D9240.r3)
-    {
-        if (D_800D9240.r3 >= D_80182D94.r)
-        {
-            D_800D9240.r3 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.r3 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    if (D_80182D94.g != D_800D9240.g3)
-    {
-        if (D_800D9240.g3 >= D_80182D94.g)
-        {
-            D_800D9240.g3 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.g3 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    if (D_80182D94.b != D_800D9240.b3)
-    {
-        if (D_800D9240.b3 >= D_80182D94.b)
-        {
-            D_800D9240.b3 -= WMAP_BACKDROP_COLOR_STEP;
-        }
-        else
-        {
-            D_800D9240.b3 += WMAP_BACKDROP_COLOR_STEP;
-        }
-    }
-    gradient = (POLY_G4*)g_wmap_current_frame->packet_cursor;
-    *gradient = D_800D9240;
-    addPrim(&g_wmap_current_frame->ordering_table[177], g_wmap_current_frame->packet_cursor);
-    if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
-    {
-        g_wmap_packet_bytes += sizeof(POLY_G4);
-        g_wmap_current_frame->packet_cursor += sizeof(POLY_G4);
-    }
+#endif
     return 1;
 }
-#endif
 
 /**
  * @brief Advance the screen-covering fade and submit its polygon.
@@ -1258,11 +1268,9 @@ static inline void wmap_load_pixel_block(TimBlock* block)
 /**
  * @brief Load world-map resources and run frames until the map exits.
  * @return Two for the controller reset chord, or zero after the exit effect.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP handles land events 4-8 inside the event switch and keeps reading the
+ *       queue; US stops at the first of them and drains the rest.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/wmap/nonmatchings/wmap_main", wmap_run_loop);
-#else
 s32 wmap_run_loop(void)
 {
     u8* palette_color;
@@ -1318,190 +1326,192 @@ s32 wmap_run_loop(void)
     {
         event = wmap_next_land_event();
         D_801398F8 = event;
-        if (event != -1U)
+        if (event == -1U)
         {
-            D_800D9224 += 1;
-            if ((u32)(event - 4) < 5U)
-            {
-                D_80182DD8 = event;
-                g_wmap_input_locked = 1;
-                g_wmap_buttons_held = 0;
-                g_wmap_buttons_repeat = 0;
-                D_800D9224 = 1;
-                {
-                    s32 drain_event;
-
-                    do
-                    {
-                        drain_event = wmap_next_land_event();
-                    } while (drain_event != -1);
-                }
-                wmap_install_callback(&func_800BFD18);
-                break;
-            }
-            else
-            {
-                switch (event)
-                {
-                case 0:
-                    g_wmap_input_script = 1;
-                    g_wmap_party_visible = 0;
-                    D_80182228 = 1;
-                    break;
-                case 1:
-                    g_wmap_input_script = 2;
-                    break;
-                case 28:
-                    g_wmap_input_script = 3;
-                    g_wmap_party_visible = 0;
-                    D_80182228 = 1;
-                    break;
-                case 25:
-                    D_80129538[0] = 1;
-                    break;
-                case 17:
-                    D_80129538[1] = 1;
-                    break;
-                case 18:
-                    D_80129538[2] = 1;
-                    break;
-                case 19:
-                    D_80129538[3] = 1;
-                    break;
-                case 20:
-                    D_80129538[4] = 1;
-                    break;
-                case 22:
-                    D_80182E1C = 1;
-                    break;
-                case 23:
-                    D_801398B8 = 1;
-                    break;
-                case 21:
-                    D_80129540 = 1;
-                    break;
-                case 16:
-                    D_80139248 = 1;
-                    break;
-                case 11:
-                    show_loading_image = 0;
-                    D_801ADB90 = 0;
-                    D_8011D4F8 = 1;
-                    break;
-                case 15:
-                    D_80139900 = 1;
-                    break;
-                case 12:
-                    show_loading_image = 0;
-                    func_8006D8F0(1);
-                    func_8006D870(1);
-                    D_80182E34 = 3;
-                    D_800DBE78 = 3;
-                    g_wmap_screen_fade_mode = 3;
-                    g_wmap_spirit_target_brightness = 0;
-                    D_801ADB90 = 0;
-                    g_wmap_party_visible = 0;
-                    g_wmap_spirit_brightness = 0;
-                    D_8013B208 = 1;
-                    D_801ADB90 = 0;
-                    D_80182D5C = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
-                    D_80139834 = 1;
-                    D_8013B208 = 1;
-                    break;
-                case 13:
-                    show_loading_image = 0;
-                    func_8006D8F0(1);
-                    func_8006D870(1);
-                    D_80182E34 = 3;
-                    D_800DBE78 = 3;
-                    g_wmap_screen_fade_mode = 3;
-                    g_wmap_spirit_target_brightness = 0;
-                    D_801ADB90 = 0;
-                    g_wmap_party_visible = 0;
-                    g_wmap_spirit_brightness = 0;
-                    D_8013B208 = 1;
-                    D_80182D5C = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
-                    D_80139238 = 1;
-                    D_8013B208 = 1;
-                    break;
-                case 9:
-                    show_loading_image = 0;
-                    func_8006D8F0(1);
-                    func_8006D870(1);
-                    D_8011D500 = 0xFF;
-                    D_800D9228 = 0xFF;
-                    D_80182E38 = 1;
-                    D_801ADB90 = 0;
-                    D_80182E00 = 0;
-                    wmap_install_callback(&func_80064D64);
-                    D_80139244 = 1;
-                    D_800DBE78 = 3;
-                    D_80182E34 = 3;
-                    g_wmap_spirit_target_brightness = 0;
-                    g_wmap_spirit_brightness = 0;
-                    g_wmap_screen_fade_mode = 3;
-                    D_8013B208 = 1;
-                    g_wmap_party_visible = 0;
-                    D_8012954C = 1;
-                    break;
-                case 10:
-                    show_loading_image = 0;
-                    func_8006D8F0(1);
-                    func_8006D870(1);
-                    D_8011D500 = 0xFF;
-                    D_800D9228 = 0xFF;
-                    D_80182E38 = 1;
-                    D_801ADB90 = 0;
-                    g_wmap_party_visible = 0;
-                    D_8013B208 = 1;
-                    D_80182E00 = 0;
-                    wmap_install_callback(&func_80064D64);
-                    D_80139244 = 1;
-                    D_80182E34 = 3;
-                    D_800DBE78 = 3;
-                    g_wmap_spirit_target_brightness = 0;
-                    g_wmap_spirit_brightness = 0;
-                    g_wmap_screen_fade_mode = 3;
-                    D_801ADAF0 = 1;
-                    break;
-                case 24:
-                    show_loading_image = 0;
-                    func_8006D8F0(1);
-                    func_8006D870(1);
-                    D_80182E34 = 3;
-                    D_800DBE78 = 3;
-                    g_wmap_screen_fade_mode = 3;
-                    g_wmap_spirit_target_brightness = 0;
-                    g_wmap_spirit_brightness = 0;
-                    D_801ADB90 = 0;
-                    g_wmap_party_visible = 0;
-                    D_8013B208 = 1;
-                    D_8013997C = 1;
-                    break;
-                case 27:
-                    show_loading_image = 0;
-                    func_8006D8F0(1);
-                    func_8006D870(1);
-                    D_8011D500 = 0;
-                    D_800D9228 = 0;
-                    wmap_install_callback(&func_80064D64);
-                    D_80182DD4 = 1;
-                    D_80182E34 = 3;
-                    D_800DBE78 = 3;
-                    g_wmap_screen_fade_mode = 3;
-                    g_wmap_spirit_target_brightness = 0;
-                    g_wmap_spirit_brightness = 0;
-                    D_801ADB90 = 0;
-                    g_wmap_party_visible = 0;
-                    D_8013B208 = 1;
-                    D_80182240 = 1;
-                    break;
-                }
-                continue;
-            }
+            break;
         }
-        else
+        D_800D9224 += 1;
+#if !defined(VERSION_JP)
+        if ((u32)(event - 4) < 5U)
         {
+            D_80182DD8 = event;
+            g_wmap_input_locked = 1;
+            g_wmap_buttons_held = 0;
+            g_wmap_buttons_repeat = 0;
+            D_800D9224 = 1;
+            {
+                s32 drain_event;
+
+                do
+                {
+                    drain_event = wmap_next_land_event();
+                } while (drain_event != -1);
+            }
+            wmap_install_callback(&func_800BFD18);
+            break;
+        }
+#endif
+        switch (event)
+        {
+        case 0:
+            g_wmap_input_script = 1;
+            g_wmap_party_visible = 0;
+            D_80182228 = 1;
+            break;
+        case 1:
+            g_wmap_input_script = 2;
+            break;
+        case 28:
+            g_wmap_input_script = 3;
+            g_wmap_party_visible = 0;
+            D_80182228 = 1;
+            break;
+        case 25:
+            D_80129538[0] = 1;
+            break;
+        case 17:
+            D_80129538[1] = 1;
+            break;
+        case 18:
+            D_80129538[2] = 1;
+            break;
+        case 19:
+            D_80129538[3] = 1;
+            break;
+        case 20:
+            D_80129538[4] = 1;
+            break;
+        case 22:
+            D_80182E1C = 1;
+            break;
+        case 23:
+            D_801398B8 = 1;
+            break;
+        case 21:
+            D_80129540 = 1;
+            break;
+        case 16:
+            D_80139248 = 1;
+            break;
+        case 11:
+            show_loading_image = 0;
+            D_801ADB90 = 0;
+            D_8011D4F8 = 1;
+            break;
+        case 15:
+            D_80139900 = 1;
+            break;
+        case 12:
+            show_loading_image = 0;
+            func_8006D8F0(1);
+            func_8006D870(1);
+            D_801ADB90 = 0;
+            g_wmap_party_visible = 0;
+            D_80182E34 = 3;
+            D_800DBE78 = 3;
+            g_wmap_screen_fade_mode = 3;
+            g_wmap_spirit_brightness = g_wmap_spirit_target_brightness = 0;
+            D_8013B208 = 1;
+            D_801ADB90 = 0;
+            D_80182D5C = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
+            D_80139834 = 1;
+            D_8013B208 = 1;
+            break;
+        case 13:
+            show_loading_image = 0;
+            func_8006D8F0(1);
+            func_8006D870(1);
+            D_801ADB90 = 0;
+            g_wmap_party_visible = 0;
+            D_80182E34 = 3;
+            D_800DBE78 = 3;
+            g_wmap_screen_fade_mode = 3;
+            g_wmap_spirit_brightness = g_wmap_spirit_target_brightness = 0;
+            D_8013B208 = 1;
+            D_80182D5C = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
+            D_80139238 = 1;
+            D_8013B208 = 1;
+            break;
+        case 9:
+            show_loading_image = 0;
+            func_8006D8F0(1);
+            func_8006D870(1);
+            D_8011D500 = 0xFF;
+            D_800D9228 = 0xFF;
+            D_80182E38 = 1;
+            D_801ADB90 = 0;
+            D_80182E00 = 0;
+            wmap_install_callback(&func_80064D64);
+            D_80139244 = 1;
+            D_8013B208 = 1;
+            g_wmap_party_visible = 0;
+            D_800DBE78 = 3;
+            D_80182E34 = 3;
+            g_wmap_spirit_brightness = g_wmap_spirit_target_brightness = 0;
+            g_wmap_screen_fade_mode = 3;
+            D_8012954C = 1;
+            break;
+        case 10:
+            show_loading_image = 0;
+            func_8006D8F0(1);
+            func_8006D870(1);
+            D_8011D500 = 0xFF;
+            D_800D9228 = 0xFF;
+            D_80182E38 = 1;
+            D_801ADB90 = 0;
+            g_wmap_party_visible = 0;
+            D_8013B208 = 1;
+            D_80182E00 = 0;
+            wmap_install_callback(&func_80064D64);
+            D_80139244 = 1;
+            D_80182E34 = 3;
+            D_800DBE78 = 3;
+            g_wmap_spirit_brightness = g_wmap_spirit_target_brightness = 0;
+            g_wmap_screen_fade_mode = 3;
+            D_801ADAF0 = 1;
+            break;
+        case 24:
+            show_loading_image = 0;
+            func_8006D8F0(1);
+            func_8006D870(1);
+            D_801ADB90 = 0;
+            g_wmap_party_visible = 0;
+            D_80182E34 = 3;
+            D_800DBE78 = 3;
+            g_wmap_screen_fade_mode = 3;
+            g_wmap_spirit_brightness = g_wmap_spirit_target_brightness = 0;
+            D_8013B208 = 1;
+            D_8013997C = 1;
+            break;
+#if defined(VERSION_JP)
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+        case 8:
+            g_wmap_input_locked = 1;
+            g_wmap_buttons_held = 0;
+            g_wmap_buttons_repeat = 0;
+            D_80182DD8 = D_801398F8;
+            wmap_install_callback(&func_800BFD18);
+            break;
+#endif
+        case 27:
+            show_loading_image = 0;
+            func_8006D8F0(1);
+            func_8006D870(1);
+            D_8011D500 = 0;
+            D_800D9228 = 0;
+            wmap_install_callback(&func_80064D64);
+            D_80182DD4 = 1;
+            D_801ADB90 = 0;
+            g_wmap_party_visible = 0;
+            D_80182E34 = 3;
+            D_800DBE78 = 3;
+            g_wmap_screen_fade_mode = 3;
+            g_wmap_spirit_brightness = g_wmap_spirit_target_brightness = 0;
+            D_8013B208 = 1;
+            D_80182240 = 1;
             break;
         }
     }
@@ -1520,8 +1530,12 @@ s32 wmap_run_loop(void)
             {
                 wmap_load_image_block((TimBlock*)data);
                 data += *(s32*)data;
+                wmap_load_pixel_block((TimBlock*)data);
             }
-            wmap_load_pixel_block((TimBlock*)data);
+            else
+            {
+                wmap_load_pixel_block((TimBlock*)data);
+            }
         }
         D_800D0A08[6] = 0x20;
         D_800D0A08[5] = 0x20;
@@ -2160,7 +2174,6 @@ s32 wmap_run_loop(void)
         return 0;
     }
 }
-#endif
 
 /**
  * @brief Read controller buttons, generate analog repeats, and apply input masks.

@@ -11,12 +11,12 @@
 [JP Progress]: https://decomp.dev/celophi/lom-decomp/SLPS_021.70.svg?mode=shield&measure=code&label=JP%20Progress
 [jp progress site]: https://decomp.dev/celophi/lom-decomp/SLPS_021.70
 
-A **matching decompilation** of the PlayStation game **Legend of Mana**. The North American release is **100% matched**; the Japanese release is in progress.
+A **matching decompilation** of the PlayStation game **Legend of Mana**. Both the North American and the Japanese releases are **100% matched**.
 
 The project reconstructs readable C source code that compiles down to the original MIPS machine code that exists on the disc, byte-for-byte. Two regional releases are targeted:
 
 - **North America** - `SLUS_010.13` (disc serial **SLUS-01013**). Complete: all 18 binaries are fully linked.
-- **Japan** - `SLPS_021.70` (disc serial **SLPS-02170**). In progress: all 18 binaries rebuild byte-exact, and most of the code builds from the shared C sources.
+- **Japan** - `SLPS_021.70` (disc serial **SLPS-02170**). Complete: all 18 binaries are fully linked, built from the same C sources as the North American version.
 
 Unless a section says otherwise, the build instructions, targets, and file names below refer to the North American version.
 
@@ -26,16 +26,16 @@ The primary motivation for this project is to preserve the original game's logic
 
 ## Fully linked
 
-For the North American version, every module - the main executable and all 17 overlays - is **fully linked**. A module is fully linked when two conditions hold:
+For both versions, every module - the main executable and all 17 overlays - is **fully linked**. A module is fully linked when two conditions hold:
 
 1. The build produces an **ELF whose bytes match the original decompressed file**, and
 2. Running the project's compressor on that ELF (stripped to a raw binary) **reproduces an exact replica of the `.BIN` file as it appears on the disc**.
 
 In other words, the round-trip `original .BIN -> decompress -> C source -> compile -> ELF -> compress -> .BIN` is bit-identical.
-The main executable is not compressed, so for `SLUS_010.13` condition 1 is the whole check: the linked ELF, converted to a raw binary, equals the disc file.
+The main executable is not compressed, so for `SLUS_010.13` and `SLPS_021.70` condition 1 is the whole check: the linked ELF, converted to a raw binary, equals the disc file.
 *(Check out the compressor! It's honestly really amazing that it is **bit identical** and kind of extraneous, but cool nonetheless!)*
 
-Run `make verify-bins` to check every module. The Japanese version (`make verify-bins VERSION=jp`) matches byte-for-byte too, but is not fully linked yet: the compressor cannot reproduce four of its `.BIN` streams (FIELD, GNAME, GOSUB, TITLE), so those are checked against the decompressed image only.
+Run `make verify-bins` to check every module, or `make verify-bins VERSION=jp` for the Japanese version.
 
 ## Roadmap
 
@@ -43,7 +43,7 @@ Run `make verify-bins` to check every module. The Japanese version (`make verify
 
 2. 🚧 **Cleanup and documentation** - *in progress.* Remove decompilation artifacts and document functionality.
 
-3. 🚧 **NTSC-J version** - *in progress.* Support the original Japanese release (`SLPS-02170`) alongside the North American one.
+3. ✅ **NTSC-J version** - *done.* The original Japanese release (`SLPS-02170`) builds from the same source tree as the North American one, and all 18 of its binaries are fully linked too.
 
 4. 💤 **Modding and source port** - build on the reconstructed source to make modding practical and to enable ports to other platforms.
 
@@ -51,7 +51,7 @@ Run `make verify-bins` to check every module. The Japanese version (`make verify
 
 | Item | North America | Japan |
 |---|---|---|
-| Status | ✅ Fully linked | 🚧 In progress |
+| Status | ✅ Fully linked | ✅ Fully linked |
 | Disc serial | `SLUS-01013` | `SLPS-02170` |
 | Main executable | `SLUS_010.13` | `SLPS_021.70` |
 | Main executable SHA-1 | `d11dfdd50d412ac3fa3e2eb80fbde138da118f27` | `b067188a92e4de9a4db7bb7e5343c757e9884bfa` |
@@ -280,7 +280,7 @@ For that reason, do not bypass the build system and invoke the old compiler dire
 | `make validate-assets` | Round-trip and validate format-aware assets. |
 | `make verify-main` | Check that the linked main executable equals `disc/us/SLUS_010.13` (`verify-slus` is an alias). |
 | `make verify-bins` | Run `verify-main` and all registered whole-overlay SHA-1 checks. |
-| `make verify-compressor` | Verify the compressor against all 17 original overlay files. |
+| `make verify-compressor` | Verify the compressor against the 17 original overlay files of the selected version. |
 | `make recopy` | Force source/config files to be copied to `/staging` again. |
 | `make clean` | Remove build output and `/staging`. |
 
@@ -345,7 +345,7 @@ One C source tree builds every regional release. Anything that comes from a part
 | `VERSION` | Release | Status |
 |---|---|---|
 | `us` (default) | North America, `SLUS-01013` | Fully linked |
-| `jp` | Japan, `SLPS-02170` | In progress - the main executable and all 17 overlays use the shared C layout, with assembly retained for some units and functions. All 18 raw images match; FIELD, GNAME, GOSUB and TITLE are not yet verified as compressed disc files |
+| `jp` | Japan, `SLPS-02170` | Fully linked |
 
 | Shared by all versions | Per version |
 |---|---|
@@ -353,7 +353,7 @@ One C source tree builds every regional release. Anything that comes from a part
 
 Where the code differs between releases, the shared C source uses `#if defined(VERSION_JP)` / `#if defined(VERSION_US)` blocks; the build defines exactly one of them (see [`mk/version.mk`](mk/version.mk) and [`include/version.h`](include/version.h)). Symbol names are shared, but addresses are not, so each version has its own `config/<version>/symbols/` files.
 
-Each version gets its own objdiff progress report, and CI builds both (`SLUS_010.13_report` and `SLPS_021.70_report`). For JP, the modules listed in `TU_LAYOUT_jp` in [`mk/version.mk`](mk/version.mk) build from the shared C sources, minus the files in `config/jp/asm_units.txt`, which JP takes from assembly because their code differs. The JP report counts that assembly, and the modules not yet ported, as unmatched code.
+Each version gets its own objdiff progress report, and CI builds both (`SLUS_010.13_report` and `SLPS_021.70_report`). Every module builds from the shared C sources in both versions. `config/jp/asm_units.txt` can still route a file to assembly for JP only, for example while porting a unit whose code differs, but it's empty now.
 
 ## Repository layout
 

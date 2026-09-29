@@ -53,6 +53,10 @@
 #define FIELD_TEXT_SPACE_WIDTH 5
 #define FIELD_TEXT_WIDE_WIDTH 12
 #define FIELD_TEXT_DOUBLE_BYTE_WIDTH 9
+/** JP glyph advance of digits, '-' and the narrow space FIELD_TEXT_JP_NARROW_SPACE. */
+#define FIELD_TEXT_JP_NARROW_WIDTH 8
+/** JP two-byte code of the narrow space. */
+#define FIELD_TEXT_JP_NARROW_SPACE 0x200
 /** Added in 16 bits: commands 0x19-0x1F select the high byte (1-7) of a two-byte code. */
 #define FIELD_TEXT_DOUBLE_BYTE_BIAS 0xFFE8
 /* Lead byte of the JP two-byte digit glyphs; the digit value (0-9) follows it. */
@@ -466,10 +470,274 @@ void field_text_upload_immediate_cache(void)
  * @brief Decode text commands and draw glyphs until the character budget or a prompt stops the step.
  * @param state Window and nested text cursors to advance.
  * @param budget Character budget; zero draws without a limit.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP has no word wrapping or glyph runs, and gives digits, '-' and the narrow
+ *       space FIELD_TEXT_JP_NARROW_WIDTH.
  */
 #if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_typeset);
+static void field_text_typeset(FieldTextState* state, s32 budget)
+{
+    u8* cursor;
+    s32 remaining;
+    s8 advance;
+    s32 new_line;
+    s32 first_character;
+    u16 code;
+    u16 width;
+    u16 y;
+    u32 x;
+    s16 aligned_u;
+    u8 opcode;
+
+    remaining = budget;
+    width = 0;
+    advance = 0;
+    first_character = 1;
+    y = state->cursor_v;
+    x = (state->cursor_u + state->width) - state->remaining_width;
+    while (x >= FIELD_TEXT_CACHE_WIDTH)
+    {
+        x -= FIELD_TEXT_CACHE_WIDTH;
+        y += state->line_height;
+    }
+    aligned_u = x & 0xFFFC;
+    state->dirty_end_u = aligned_u;
+    state->dirty_start_u = aligned_u;
+    state->dirty_end_v = y;
+    state->dirty_start_v = y;
+    new_line = state->width == state->remaining_width;
+
+    while (1)
+    {
+        cursor = state->macro_cursor;
+        if (cursor == NULL)
+        {
+            cursor = state->text_cursor;
+        }
+        code = 0;
+        do
+        {
+            if (state->pending_spaces != 0)
+            {
+                code = ' ';
+                width = FIELD_TEXT_WIDE_WIDTH;
+                advance = 0;
+                state->pending_spaces = state->pending_spaces - 1;
+            }
+            else
+            {
+                opcode = *cursor;
+                cursor++;
+                if (opcode < FIELD_TEXT_CMD_WIDE_CHARACTER)
+                {
+                    switch (opcode)
+                    {
+                    case FIELD_TEXT_CMD_END:
+                        if (state->macro_cursor != NULL)
+                        {
+                            cursor = state->text_cursor;
+                            state->macro_cursor = NULL;
+                            break;
+                        }
+                        if (state->choice_count != 0)
+                        {
+                            goto set_choice;
+                        }
+                        state->flow_code = FIELD_TEXT_FLOW_END;
+                        goto set_prompt;
+                    case FIELD_TEXT_CMD_FINISH:
+                        if (state->macro_cursor != NULL)
+                        {
+                            cursor = state->text_cursor;
+                            state->macro_cursor = NULL;
+                            break;
+                        }
+                        state->text_cursor = NULL;
+                        if (state->flags.word & FIELD_TEXT_AUTO_CLOSE)
+                        {
+                            field_text_close(state, 1);
+                        }
+                        return;
+                    case FIELD_TEXT_CMD_NEWLINE:
+                        if (field_text_advance_line(state) == 1)
+                        {
+                            goto store_cursor;
+                        }
+                        new_line = 1;
+                        break;
+                    case FIELD_TEXT_CMD_WAIT_NEWLINE:
+                        state->flow_code = FIELD_TEXT_FLOW_NEWLINE;
+                        goto set_prompt;
+                    case FIELD_TEXT_CMD_WAIT_CLEAR:
+                        state->flow_code = FIELD_TEXT_FLOW_CLEAR;
+                        goto set_prompt;
+                    case FIELD_TEXT_CMD_CLEAR:
+                        if (first_character == 0)
+                        {
+                            return;
+                        }
+                        field_text_clear_window(state);
+                        goto store_cursor;
+                    case FIELD_TEXT_CMD_WAIT:
+                        state->flow_code = FIELD_TEXT_FLOW_WAIT;
+                        goto set_prompt;
+                    case FIELD_TEXT_CMD_CHOICE:
+                        if (state->choice_count == 0)
+                        {
+                            state->choice_start_line = state->line_count;
+                        }
+                        state->choice_count = state->choice_count + 1;
+                        break;
+                    case FIELD_TEXT_CMD_TWO_SPACES:
+                        state->pending_spaces = 2;
+                        break;
+                    case FIELD_TEXT_CMD_THREE_SPACES:
+                        state->pending_spaces = 3;
+                        break;
+                    case FIELD_TEXT_CMD_FOUR_SPACES:
+                        state->pending_spaces = 4;
+                        break;
+                    case FIELD_TEXT_CMD_SPACES:
+                        state->pending_spaces = *cursor;
+                        cursor++;
+                        break;
+                    case FIELD_TEXT_CMD_SHORT_DELAY:
+                        state->char_delay = FIELD_TEXT_SHORT_DELAY;
+                        goto store_cursor;
+                    case FIELD_TEXT_CMD_DELAY:
+                        state->char_delay = *cursor;
+                        cursor++;
+                        goto store_cursor;
+                    case FIELD_TEXT_CMD_MACRO:
+                        opcode = *cursor;
+                        cursor++;
+                        state->text_cursor = cursor;
+                        state->macro_cursor = g_field_text_macros[opcode].text;
+                        cursor = state->macro_cursor;
+                        state->macro_remaining = g_field_text_macros[opcode].character_limit;
+                        break;
+                    case FIELD_TEXT_CMD_INLINE_TEXT:
+                        state->text_cursor = cursor;
+                        state->macro_cursor = state->inline_text;
+                        cursor = state->inline_text;
+                        state->macro_remaining = -1;
+                        break;
+                    case FIELD_TEXT_CMD_COLOR:
+                        state->text_color = *cursor;
+                        cursor++;
+                        break;
+                    case FIELD_TEXT_CMD_DEFAULT_COLOR:
+                        state->text_color = 0;
+                        break;
+                    case FIELD_TEXT_CMD_INDENT:
+                        if (new_line != 0)
+                        {
+                            code = FIELD_TEXT_CODE_INDENT;
+                            width = FIELD_TEXT_WIDE_WIDTH;
+                            advance = 1;
+                        }
+                        break;
+                    case FIELD_TEXT_CMD_PREFIXED_GLYPH_RUN:
+                        opcode = *cursor;
+                        cursor++;
+                        if (opcode == 0)
+                        {
+                            code = ' ';
+                            width = FIELD_TEXT_JP_NARROW_WIDTH;
+                            advance = 2;
+                        }
+                        break;
+                    }
+                }
+                else
+                {
+                    if (opcode >= FIELD_TEXT_FIRST_PRINTABLE)
+                    {
+                        code = opcode;
+                        advance = 1;
+                    }
+                    else
+                    {
+                        code = *cursor | ((opcode + FIELD_TEXT_DOUBLE_BYTE_BIAS) << 8);
+                        cursor++;
+                        advance = 2;
+                    }
+                    if ((u16)(code - '0') < 10 || code == '-' || code == FIELD_TEXT_JP_NARROW_SPACE)
+                    {
+                        width = FIELD_TEXT_JP_NARROW_WIDTH;
+                    }
+                    else
+                    {
+                        width = FIELD_TEXT_WIDE_WIDTH;
+                    }
+                }
+            }
+        } while (code == 0);
+        if (state->remaining_width < width)
+        {
+            if (field_text_advance_line(state) == 1)
+            {
+                return;
+            }
+            new_line = 1;
+        }
+        if (state->macro_cursor != NULL)
+        {
+            if (state->macro_remaining != -1)
+            {
+                state->macro_remaining -= advance;
+                if (state->macro_remaining <= 0)
+                {
+                    cursor = NULL;
+                }
+            }
+            state->macro_cursor = cursor;
+        }
+        else
+        {
+            state->text_cursor = cursor;
+        }
+        if (code == FIELD_TEXT_CODE_INDENT)
+        {
+            code = ' ';
+            width = FIELD_TEXT_WIDE_WIDTH;
+            if ((state->portrait == NULL) || (state->flags.word & FIELD_TEXT_PORTRAIT_MASK))
+            {
+                field_text_blit_glyph(state, ' ', FIELD_TEXT_WIDE_WIDTH);
+            }
+        }
+        field_text_blit_glyph(state, code, width);
+        if ((remaining != 0) && !(state->flags.word & FIELD_TEXT_INSTANT) && ((new_line == 0) || (code != ' ')))
+        {
+            first_character = 0;
+            remaining--;
+            new_line = 0;
+            if (remaining == 0)
+            {
+                break;
+            }
+        }
+    }
+    return;
+
+set_choice:
+    state->flow_code = FIELD_TEXT_FLOW_CHOICE;
+    state->prompt_frame = 0;
+    state->prompt_timer = FIELD_TEXT_CHOICE_BLINK_FRAMES;
+    state->choice_index = 0;
+    goto store_cursor;
+
+set_prompt:
+    state->prompt_frame = 0;
+    state->prompt_timer = FIELD_TEXT_PROMPT_BLINK_FRAMES;
+
+store_cursor:
+    if (state->macro_cursor != NULL)
+    {
+        state->macro_cursor = cursor;
+        return;
+    }
+    state->text_cursor = cursor;
+}
 #else
 static void field_text_typeset(FieldTextState* state, s32 budget)
 {
@@ -1624,11 +1892,7 @@ s32 field_text_build_sprites(SPRT* prim, u8* text, s32 text_style)
  * @brief Open a text window after the cache region used by earlier active slots.
  * @param slot Window slot index; only the low 16 bits are used.
  * @note Old-style definition: callers pass a word and the body works on a u16.
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_text", field_text_open_packed_window);
-#else
 void field_text_open_packed_window(slot) u16 slot;
 {
     FieldTextSystem* system = FIELD_TEXT_SYSTEM;
@@ -1716,7 +1980,6 @@ void field_text_open_packed_window(slot) u16 slot;
     state->dirty_end_v = y;
     state->region_end_v = y;
 }
-#endif
 
 /**
  * @brief Open a text window in its fixed cache region.

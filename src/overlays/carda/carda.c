@@ -12,8 +12,15 @@
 #endif
 #define CARDA_CARD_LABEL_HEIGHT 16
 
-/** @brief Card-slot label window positions: slot 0 and slot 1 X, and Y by layout. */
+/**
+ * @brief Card-slot label window positions: slot 0 and slot 1 X, and Y by layout.
+ * @note JP moves the narrower slot 0 label right.
+ */
+#if defined(VERSION_JP)
+#define CARDA_CARD_SLOT0_LABEL_X 44
+#else
 #define CARDA_CARD_SLOT0_LABEL_X 28
+#endif
 #define CARDA_CARD_SLOT1_LABEL_X 164
 #define CARDA_CARD_LABEL_BROWSER_Y 30
 #define CARDA_CARD_LABEL_POCKETSTATION_Y 58
@@ -57,27 +64,32 @@
 /** @brief Colour of the semi-transparent tile that dims the inactive card slot's label. */
 #define CARDA_INACTIVE_LABEL_COLOR GPU_COLOR_WORD(0x10, 0x10, 0x10)
 
-/** @brief Details window text: second column, line spacing and the play-time digits (right edges). */
-#define CARDA_DETAILS_TEXT_X 84
+/**
+ * @brief Details window text: second column, line spacing and the play-time digits (right edges).
+ * @note JP moves the columns left.
+ */
 #define CARDA_DETAILS_LINE_HEIGHT 16
+#if defined(VERSION_JP)
+#define CARDA_DETAILS_TEXT_X 80
+#define CARDA_DETAILS_HOURS_RIGHT_X 100
+#define CARDA_DETAILS_TIME_SEPARATOR_X 100
+#define CARDA_DETAILS_MINUTES_TENS_RIGHT_X 120
+#define CARDA_DETAILS_MINUTES_RIGHT_X 130
+#else
+#define CARDA_DETAILS_TEXT_X 84
 #define CARDA_DETAILS_HOURS_RIGHT_X 112
 #define CARDA_DETAILS_TIME_SEPARATOR_X 111
 #define CARDA_DETAILS_MINUTES_TENS_RIGHT_X 125
 #define CARDA_DETAILS_MINUTES_RIGHT_X 133
+#endif
 
 /**
  * @brief Address of the CARDA text whose table offset is @p offset.
  */
 #define CARDA_TEXT_BY_OFFSET(table, offset) ((u8*)((s32)(offset) + (s32)(table)))
 
-#if defined(VERSION_JP)
-/* JP supplies these implementations from assembly. */
-void carda_build_ui_elements(void);
-void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-#else
-static void carda_build_ui_elements(void);
 static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-#endif
+static void carda_build_ui_elements(void);
 
 static void carda_update_menu(FieldRenderHalf* render);
 static s32 carda_update_card_sequence(void);
@@ -159,11 +171,7 @@ s32 carda_update_frame(FieldRenderHalf* render)
  * The PocketStation modes get the transfer window, both card-slot labels and
  * the title; the save and load modes get the save-file browser: entry list,
  * title, both card-slot labels and the details window.
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/carda/nonmatchings/carda", carda_build_ui_elements);
-#else
 static void carda_build_ui_elements(void)
 {
     s32 unused[2];
@@ -266,7 +274,6 @@ static void carda_build_ui_elements(void)
     }
     g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state = CARDA_ELEMENT_FREE;
 }
-#endif
 
 /**
  * @brief Run one frame of overlay logic: update the windows, advance the card
@@ -972,11 +979,8 @@ static void* carda_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s
  * @param x_offset Horizontal transition offset.
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note The JP layout places the time and name columns farther left.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/carda/nonmatchings/carda", carda_draw_selected_entry_details);
-#else
 static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     void* result;
@@ -994,180 +998,182 @@ static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_off
     {
         return result;
     }
-    if (g_carda_selection_status != CARDA_SELECTION_EMPTY_CARD && g_card_entry_state != CARDA_ENTRY_STATE_CARD_FULL &&
-        g_card_entry_state < CARDA_ENTRY_COUNT_LIMIT)
+    if (g_carda_selection_status == CARDA_SELECTION_EMPTY_CARD)
     {
-        if (g_carda_selection_status == CARDA_SELECTION_NEW_SAVE)
-        {
-            s32 x = -x_offset;
-            u16* text_table;
+        return result;
+    }
+    if (g_card_entry_state == CARDA_ENTRY_STATE_CARD_FULL)
+    {
+        return result;
+    }
+    if (g_card_entry_state >= CARDA_ENTRY_COUNT_LIMIT)
+    {
+        return result;
+    }
+    if (g_carda_selection_status == CARDA_SELECTION_NEW_SAVE)
+    {
+        s32 x = -x_offset;
+        u16* text_table;
 
-            result = field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_new_save_title, CARDA_TEXT_NEW_SAVE_TITLE), FIELD_TEXT_COLOR_NORMAL, x, -y_offset,
-                                     FIELD_TEXT_ALIGN_LEFT);
-            text_table = CARDA_TEXT_TABLE(g_carda_text_new_save_title, CARDA_TEXT_NEW_SAVE_TITLE);
-            return field_draw_text(result, ot, CARDA_TEXT(text_table, CARDA_TEXT_USES_TWO_BLOCKS), FIELD_TEXT_COLOR_NORMAL, x,
-                                   CARDA_DETAILS_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_LEFT);
-        }
-        else if (g_carda_selection_status == CARDA_SELECTION_CARD_FULL)
+        result = field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_new_save_title, CARDA_TEXT_NEW_SAVE_TITLE), FIELD_TEXT_COLOR_NORMAL, x, -y_offset,
+                                 FIELD_TEXT_ALIGN_LEFT);
+        text_table = CARDA_TEXT_TABLE(g_carda_text_new_save_title, CARDA_TEXT_NEW_SAVE_TITLE);
+        return field_draw_text(result, ot, CARDA_TEXT(text_table, CARDA_TEXT_USES_TWO_BLOCKS), FIELD_TEXT_COLOR_NORMAL, x, CARDA_DETAILS_LINE_HEIGHT - y_offset,
+                               FIELD_TEXT_ALIGN_LEFT);
+    }
+    else if (g_carda_selection_status == CARDA_SELECTION_CARD_FULL)
+    {
+        return field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_needs_two_blocks, CARDA_TEXT_NEEDS_TWO_BLOCKS), FIELD_TEXT_COLOR_NORMAL, -x_offset,
+                               -y_offset, FIELD_TEXT_ALIGN_LEFT);
+    }
+    else
+    {
+        if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_carda_selected_row].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
         {
-            return field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_needs_two_blocks, CARDA_TEXT_NEEDS_TWO_BLOCKS), FIELD_TEXT_COLOR_NORMAL, -x_offset,
-                                   -y_offset, FIELD_TEXT_ALIGN_LEFT);
-        }
-        else
-        {
-            if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_carda_selected_row].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
+            if (g_save_compatibility_tag == SAVE_TAG_ANY || g_carda_selected_file.saved_game.compatibility_tag == g_save_compatibility_tag ||
+                g_carda_selected_file.saved_game.compatibility_tag == SAVE_TAG_ANY)
             {
-                if (g_save_compatibility_tag == SAVE_TAG_ANY || g_carda_selected_file.saved_game.compatibility_tag == g_save_compatibility_tag ||
-                    g_carda_selected_file.saved_game.compatibility_tag == SAVE_TAG_ANY)
+                SavedGameLayout* save = &g_carda_selected_file.saved_game;
+                s32 present_count;
+                s32 i;
+                s32 j;
+                s32 step;
+                s32 half_step;
+                s32 base_x;
+                s32 base_y;
+                s32 total;
+                s32 hours;
+
+                total = 0;
+                party_icon[0] = save->spawn.bits.party_icon_0;
+                party_icon[1] = save->track.bits.party_icon_1;
+                party_icon[2] = save->track.bits.party_icon_2;
+                g_carda_icon_palette = save->icon_palette;
+
+                present_count = 0;
+                for (i = 0; i < FIELD_PARTY_SIZE; i++)
                 {
-                    SavedGameLayout* save = &g_carda_selected_file.saved_game;
-                    s32 present_count;
-                    s32 i;
-                    s32 j;
-                    s32 step;
-                    s32 half_step;
-                    s32 base_x;
-                    s32 base_y;
-                    s32 total;
-                    s32 hours;
-
-                    total = 0;
-                    party_icon[0] = save->spawn.bits.party_icon_0;
-                    party_icon[1] = save->track.bits.party_icon_1;
-                    party_icon[2] = save->track.bits.party_icon_2;
-                    g_carda_icon_palette = save->icon_palette;
-
-                    present_count = 0;
-                    for (i = 0; i < FIELD_PARTY_SIZE; i++)
+                    if (party_icon[i] != SAVE_NO_ICON)
                     {
-                        if (party_icon[i] != SAVE_NO_ICON)
-                        {
-                            present_count += 1;
-                        }
-                    }
-
-                    switch (present_count)
-                    {
-                    case 2:
-                        step = 32;
-                        half_step = 16;
-                        g_carda_icon_phase %= 32;
-                        break;
-                    case 3:
-                        step = 16;
-                        half_step = 32;
-                        g_carda_icon_phase %= 96;
-                        break;
-                    default:
-                        step = 16;
-                        half_step = 32;
-                        g_carda_icon_phase = 31;
-                        break;
-                    }
-
-                    i = 0;
-                    j = i;
-                    for (; j < FIELD_PARTY_SIZE; j++)
-                    {
-                        base_y = i * half_step;
-                        base_x = base_y + half_step;
-                        if (party_icon[j] != SAVE_NO_ICON)
-                        {
-                            s32 adjust = step;
-                            s32 rem;
-                            s32 hi;
-
-                            if (g_carda_icon_phase >= base_y && g_carda_icon_phase < base_x)
-                            {
-                                adjust += g_carda_icon_phase - base_y;
-                            }
-                            else
-                            {
-                                rem = base_x % (half_step * present_count);
-                                if (g_carda_icon_phase >= rem)
-                                {
-                                    hi = rem + half_step;
-                                    if (g_carda_icon_phase < hi)
-                                    {
-                                        adjust += hi - g_carda_icon_phase;
-                                    }
-                                }
-                            }
-                            result = carda_draw_icon_highlight(result, ot, total - x_offset, -y_offset, adjust, party_icon[j], i, j);
-                            total += adjust;
-                            i += 1;
-                        }
-                    }
-
-                    {
-                        SavedGameLayout* shown_save = &g_carda_selected_file.saved_game;
-                        s32 x = -x_offset;
-                        s32 y = -y_offset;
-
-                        base_y = shown_save->play_time;
-
-                        pos.vx = x + CARDA_DETAILS_HOURS_RIGHT_X;
-                        pos.vy = y;
-                        hours = base_y / SAVED_PLAY_TIME_TICKS_PER_HOUR;
-                        result = field_draw_number(ot, result, hours, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
-                        result = field_draw_text(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, FIELD_UI_TEXT_TIME_SEPARATOR),
-                                                 FIELD_TEXT_COLOR_NORMAL, x + CARDA_DETAILS_TIME_SEPARATOR_X, y, FIELD_TEXT_ALIGN_LEFT);
-                        base_y = (base_y / SAVED_PLAY_TIME_TICKS_PER_MINUTE) - (hours * 60);
-                        if (base_y < 10)
-                        {
-                            pos.vx = x + CARDA_DETAILS_MINUTES_TENS_RIGHT_X;
-                            pos.vy = y;
-                            result = field_draw_number(ot, result, 0, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
-                        }
-                        pos.vx = x + CARDA_DETAILS_MINUTES_RIGHT_X;
-                        pos.vy = y;
-                        result = field_draw_number(ot, result, base_y, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
-                        result = field_draw_text(result, ot, shown_save->summary_name, FIELD_TEXT_COLOR_NORMAL, x + CARDA_DETAILS_TEXT_X,
-                                                 y + CARDA_DETAILS_LINE_HEIGHT, FIELD_TEXT_ALIGN_LEFT);
-                        result = field_draw_text(result, ot, CARDA_TEXT(g_carda_location_names, shown_save->track.bits.music_track), FIELD_TEXT_COLOR_NORMAL,
-                                                 x + CARDA_DETAILS_TEXT_X, y + CARDA_DETAILS_LINE_HEIGHT * 2, FIELD_TEXT_ALIGN_LEFT);
+                        present_count += 1;
                     }
                 }
-                else
+
+                switch (present_count)
                 {
-                    result = field_draw_text(result, ot, CARDA_TEXT_AT(g_carda_text_wrong_version, CARDA_TEXT_WRONG_VERSION), FIELD_TEXT_COLOR_NORMAL,
-                                             -x_offset, -y_offset, FIELD_TEXT_ALIGN_LEFT);
+                case 2:
+                    step = 32;
+                    half_step = 16;
+                    g_carda_icon_phase %= 32;
+                    break;
+                case 3:
+                    step = 16;
+                    half_step = 32;
+                    g_carda_icon_phase %= 96;
+                    break;
+                default:
+                    step = 16;
+                    half_step = 32;
+                    g_carda_icon_phase = 31;
+                    break;
+                }
+
+                i = 0;
+                j = i;
+                for (; j < FIELD_PARTY_SIZE; j++)
+                {
+                    base_y = i * half_step;
+                    base_x = base_y + half_step;
+                    if (party_icon[j] != SAVE_NO_ICON)
+                    {
+                        s32 adjust = step;
+                        s32 rem;
+                        s32 hi;
+
+                        if (g_carda_icon_phase >= base_y && g_carda_icon_phase < base_x)
+                        {
+                            adjust += g_carda_icon_phase - base_y;
+                        }
+                        else
+                        {
+                            rem = base_x % (half_step * present_count);
+                            if (g_carda_icon_phase >= rem)
+                            {
+                                hi = rem + half_step;
+                                if (g_carda_icon_phase < hi)
+                                {
+                                    adjust += hi - g_carda_icon_phase;
+                                }
+                            }
+                        }
+                        result = carda_draw_icon_highlight(result, ot, total - x_offset, -y_offset, adjust, party_icon[j], i, j);
+                        total += adjust;
+                        i += 1;
+                    }
+                }
+
+                {
+                    SavedGameLayout* shown_save = &g_carda_selected_file.saved_game;
+                    s32 x = -x_offset;
+                    s32 y = -y_offset;
+
+                    base_y = shown_save->play_time;
+
+                    pos.vx = x + CARDA_DETAILS_HOURS_RIGHT_X;
+                    pos.vy = y;
+                    hours = base_y / SAVED_PLAY_TIME_TICKS_PER_HOUR;
+                    result = field_draw_number(ot, result, hours, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
+                    result = field_draw_text(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, FIELD_UI_TEXT_TIME_SEPARATOR),
+                                             FIELD_TEXT_COLOR_NORMAL, x + CARDA_DETAILS_TIME_SEPARATOR_X, y, FIELD_TEXT_ALIGN_LEFT);
+                    base_y = (base_y / SAVED_PLAY_TIME_TICKS_PER_MINUTE) - (hours * 60);
+                    if (base_y < 10)
+                    {
+                        pos.vx = x + CARDA_DETAILS_MINUTES_TENS_RIGHT_X;
+                        pos.vy = y;
+                        result = field_draw_number(ot, result, 0, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
+                    }
+                    pos.vx = x + CARDA_DETAILS_MINUTES_RIGHT_X;
+                    pos.vy = y;
+                    result = field_draw_number(ot, result, base_y, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
+                    result = field_draw_text(result, ot, shown_save->summary_name, FIELD_TEXT_COLOR_NORMAL, x + CARDA_DETAILS_TEXT_X,
+                                             y + CARDA_DETAILS_LINE_HEIGHT, FIELD_TEXT_ALIGN_LEFT);
+                    result = field_draw_text(result, ot, CARDA_TEXT(g_carda_location_names, shown_save->track.bits.music_track), FIELD_TEXT_COLOR_NORMAL,
+                                             x + CARDA_DETAILS_TEXT_X, y + CARDA_DETAILS_LINE_HEIGHT * 2, FIELD_TEXT_ALIGN_LEFT);
                 }
             }
             else
             {
-                s32 j;
-                SaveFileHeader* header;
+                result = field_draw_text(result, ot, CARDA_TEXT_AT(g_carda_text_wrong_version, CARDA_TEXT_WRONG_VERSION), FIELD_TEXT_COLOR_NORMAL, -x_offset,
+                                         -y_offset, FIELD_TEXT_ALIGN_LEFT);
+            }
+        }
+        else
+        {
+            s32 j;
+            SaveFileHeader* header;
 
-                terminate_multibyte_text(g_carda_selected_file.header.title);
-                header = &g_carda_selected_file.header;
-                if (header->title[1][0] == 0 || header->title[1][0] >= SJIS_LEAD_MIN)
+            terminate_multibyte_text(g_carda_selected_file.header.title);
+            header = &g_carda_selected_file.header;
+            if (header->title[1][0] == 0 || header->title[1][0] >= SJIS_LEAD_MIN)
+            {
+                for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
                 {
-                    /* TODO: recover a structured form for this title block. */
-                    do
-                    {
-                        for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
-                        {
-                            name[j] = *(header->title[0] + j);
-                        }
-                        name[j] = 0;
-                        result = draw_cached_text(result, ot, name, -x_offset, -y_offset, FIELD_TEXT_COLOR_NORMAL, FIELD_TEXT_ALIGN_LEFT);
-
-                        for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
-                        {
-                            name[j] = g_carda_selected_file.header.title[1][j];
-                        }
-                        name[j] = 0;
-                        result = draw_cached_text(result, ot, name, -x_offset, -y_offset + CARDA_DETAILS_LINE_HEIGHT, FIELD_TEXT_COLOR_NORMAL,
-                                                  FIELD_TEXT_ALIGN_LEFT);
-                    } while (0);
+                    name[j] = *(header->title[0] + j);
                 }
+                name[j] = 0;
+                result = draw_cached_text(result, ot, name, -x_offset, -y_offset, FIELD_TEXT_COLOR_NORMAL, FIELD_TEXT_ALIGN_LEFT);
+
+                for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
+                {
+                    name[j] = g_carda_selected_file.header.title[1][j];
+                }
+                name[j] = 0;
+                result = draw_cached_text(result, ot, name, -x_offset, -y_offset + CARDA_DETAILS_LINE_HEIGHT, FIELD_TEXT_COLOR_NORMAL, FIELD_TEXT_ALIGN_LEFT);
             }
         }
     }
     return result;
 }
-#endif
 
 #include "../../common/save_file/terminate_multibyte_text.inc.c"
 

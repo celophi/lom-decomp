@@ -1,7 +1,7 @@
 # Overlay compressor
 
 Legend of Mana stores its overlays on the disc in a compressed form
-(`disc/us/BIN/*.BIN`) using a proprietary LZ + pattern-opcode scheme. This
+(`disc/<version>/BIN/*.BIN`) using a proprietary LZ + pattern-opcode scheme. This
 directory holds the encoder that reproduces those streams **byte for byte**.
 
 Reproducing the exact byte stream matters because many different encodings
@@ -57,8 +57,8 @@ copying `opcode + 1` bytes verbatim. The rest are:
 
 The original compressor's source does not exist. Its *selection* rules - which
 opcode wins when several apply, how ties break, and the quirks in its scan
-limits - were recovered by comparing candidate output against all 17 reference
-overlays opcode by opcode. Those rules are documented inline in
+limits - were recovered by comparing candidate output against all 34 reference
+overlays (17 US, 17 JP) opcode by opcode. Those rules are documented inline in
 `compressor.py`; several are deliberate compatibility behaviour rather than
 anything the format requires, and they are marked as such.
 
@@ -80,10 +80,11 @@ stream = compress(raw_bytes)
 ## Verifying
 
 Check every overlay round-trips exactly (no build or toolchain needed - it
-works straight from `disc/us/BIN`):
+works straight from `disc/<version>/BIN`):
 
 ```bash
 python3 tools/compressor/verify_exact_bins.py
+python3 tools/compressor/verify_exact_bins.py --version jp
 ```
 
 Or a subset, which is much faster while iterating:
@@ -95,8 +96,9 @@ python3 tools/compressor/verify_exact_bins.py GOVER MOVIE GNAME CHECKPS
 `FIELD`, `TITLE`, `WMAP` and `WSEL` are the large ones and dominate the runtime
 of a full sweep.
 
-This check must stay green after any change to `compressor.py`. It checks all
-17 US overlays directly from the disc files. `make verify-bins` also covers all
+This check must stay green for both versions after any change to
+`compressor.py`. It checks the 17 overlays of a version directly from the disc
+files. `make verify-bins` (and `make verify-bins VERSION=jp`) also covers all
 17, using the rebuilt images as compressor input.
 
 ## Where the build uses this
@@ -111,6 +113,5 @@ uses to mark those modules complete. Run it with:
 make verify-bins
 ```
 
-For JP, use `make verify-bins VERSION=jp`. FIELD, GNAME, GOSUB and TITLE
-are checked against their decompressed images because their compressed streams
-are not yet reproduced. These raw-only checks do not mark modules complete.
+For JP, use `make verify-bins VERSION=jp`; every JP overlay is verified as a
+compressed stream too.

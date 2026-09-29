@@ -29,6 +29,20 @@
 #define CLOAD_ENTRY_MARKER_X 0xC2
 #endif
 
+#if defined(VERSION_JP)
+#define CLOAD_DETAILS_HOURS_X 100
+#define CLOAD_DETAILS_SEPARATOR_X 100
+#define CLOAD_DETAILS_ZERO_X 120
+#define CLOAD_DETAILS_MINUTES_X 130
+#define CLOAD_DETAILS_NAME_X 80
+#else
+#define CLOAD_DETAILS_HOURS_X 112
+#define CLOAD_DETAILS_SEPARATOR_X 111
+#define CLOAD_DETAILS_ZERO_X 125
+#define CLOAD_DETAILS_MINUTES_X 133
+#define CLOAD_DETAILS_NAME_X 84
+#endif
+
 /**
  * @brief Address of the CLOAD text whose table offset is @p offset.
  */
@@ -715,18 +729,13 @@ void *cload_draw_card_slot1_label(u_long *ot, void *prim, s32 x_offset, s32 y_of
  * @param x_offset Horizontal transition offset.
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
- * @note Save-slot HUD callback: draws either the elapsed-play-time display
- *       (hours:minutes plus a 3-memcard-icon highlight strip) when the slot
- *       name matches the empty-slot marker, or the slot's save-file name
- *       otherwise.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note Draws party icons, play time, player name and location for compatible
+ *       Legend of Mana saves. Other games use their memory-card title.
+ *       The JP layout places the time and name columns farther left.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/cload/nonmatchings/cload", cload_draw_selected_entry_details);
-#else
-void *cload_draw_selected_entry_details(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
+void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
-    void *result;
+    void* result;
     DVECTOR pos;
     u8 name[0x100];
     s32 party_icon[3];
@@ -740,168 +749,173 @@ void *cload_draw_selected_entry_details(u_long *ot, void *prim, s32 x_offset, s3
     {
         return result;
     }
-    if (g_cload_selection_status != 3 && g_card_entry_state < 0x10)
+    if (g_cload_selection_status == 3)
     {
-        if (g_cload_selection_status == 2)
-        {
-            s32 x = -x_offset;
-            u16 *text_table;
+        return result;
+    }
+    if (g_card_entry_state >= 0x10)
+    {
+        return result;
+    }
+    if (g_cload_selection_status == 2)
+    {
+        s32 x = -x_offset;
+        u16* text_table;
 
-            result = func_800A88A0(prim, ot, CLOAD_TEXT_AT(g_cload_text_new_save_prompt, 20), 1, x, -y_offset, 0);
-            text_table = CLOAD_TEXT_TABLE(g_cload_text_new_save_prompt, 20);
-            return func_800A88A0(result, ot, CLOAD_TEXT(text_table, 21), 1, x, 0x10 - y_offset, 0);
-        }
-        else
+        result = func_800A88A0(prim, ot, CLOAD_TEXT_AT(g_cload_text_new_save_prompt, 20), 1, x, -y_offset, 0);
+        text_table = CLOAD_TEXT_TABLE(g_cload_text_new_save_prompt, 20);
+        return func_800A88A0(result, ot, CLOAD_TEXT(text_table, 21), 1, x, 0x10 - y_offset, 0);
+    }
+    else
+    {
+        if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_cload_selected_row].name, 0xC) == 0)
         {
-            if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_cload_selected_row].name, 0xC) == 0)
+            SavedGameLayout* save = &g_cload_selected_file.saved_game;
+
+            if (save->compatibility_tag == SAVE_TAG_ANY || save->compatibility_tag == g_save_compatibility_tag)
             {
-                SavedGameLayout* save = &g_cload_selected_file.saved_game;
+                s32 present_count;
+                s32 i;
+                s32 j;
+                s32 step;
+                s32 half_step;
+                s32 base_x;
+                s32 base_y;
+                s32 total;
+                s32 hours;
 
-                if (save->compatibility_tag == SAVE_TAG_ANY || save->compatibility_tag == g_save_compatibility_tag)
+                total = 0;
+                party_icon[0] = save->spawn.bits.party_icon_0;
+                party_icon[1] = save->track.bits.party_icon_1;
+                party_icon[2] = save->track.bits.party_icon_2;
+                g_cload_icon_palette = save->icon_palette;
+
+                present_count = 0;
+                for (i = 0; i < 3; i++)
                 {
-                    s32 present_count;
-                    s32 i;
-                    s32 j;
-                    s32 step;
-                    s32 half_step;
-                    s32 base_x;
-                    s32 base_y;
-                    s32 total;
-                    s32 hours;
-                    s32 time_val;
-
-                    total = 0;
-                    party_icon[0] = save->spawn.bits.party_icon_0;
-                    party_icon[1] = save->track.bits.party_icon_1;
-                    party_icon[2] = save->track.bits.party_icon_2;
-                    g_cload_icon_palette = save->icon_palette;
-
-                    present_count = 0;
-                    for (i = 0; i < 3; i++)
+                    if (party_icon[i] != SAVE_NO_ICON)
                     {
-                        if (party_icon[i] != SAVE_NO_ICON)
-                        {
-                            present_count += 1;
-                        }
-                    }
-
-                    switch (present_count)
-                    {
-                    case 2:
-                        step = 0x20;
-                        half_step = 0x10;
-                        time_val = g_cload_icon_phase;
-                        if (g_cload_icon_phase < 0)
-                        {
-                            time_val = g_cload_icon_phase + 0x1F;
-                        }
-                        g_cload_icon_phase -= (time_val >> 5) << 5;
-                        break;
-                    case 3:
-                        step = 0x10;
-                        half_step = 0x20;
-                        g_cload_icon_phase %= 0x60;
-                        break;
-                    default:
-                        step = 0x10;
-                        half_step = 0x20;
-                        g_cload_icon_phase = 0x1F;
-                        break;
-                    }
-
-                    i = 0;
-                    j = i;
-                    for (; j < 3; j++)
-                    {
-                        base_y = i * half_step;
-                        base_x = base_y + half_step;
-                        if (party_icon[j] != SAVE_NO_ICON)
-                        {
-                            s32 adjust = step;
-                            s32 rem;
-                            s32 hi;
-                            s32 delta;
-
-                            if ((g_cload_icon_phase >= base_y && g_cload_icon_phase < base_x && (delta = g_cload_icon_phase - base_y, 1))
-                                || (rem = base_x % (half_step * present_count), g_cload_icon_phase >= rem && g_cload_icon_phase < (hi = rem + half_step) && (delta = hi - g_cload_icon_phase, 1)))
-                            {
-                                adjust += delta;
-                            }
-                            result = cload_draw_icon_highlight(result, ot, total - x_offset, -y_offset, adjust, party_icon[j], i, j);
-                            total += adjust;
-                            i += 1;
-                        }
-                    }
-
-                    {
-                        SavedGameLayout* shown_save = &g_cload_selected_file.saved_game;
-                        s32 x = -x_offset;
-                        s32 y = -y_offset;
-
-                        base_y = shown_save->play_time;
-
-                        pos.vx = (s16)(x + 0x70);
-                        pos.vy = (s16)y;
-                        hours = base_y / 216000;
-                        result = func_800A8A78(ot, result, hours, 1, &pos, 1);
-                        result = func_800A88A0(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, 25), 1, x + 0x6F, y, 0);
-                        base_y = (base_y / 3600) - (hours * 0x3C);
-                        if (base_y < 0xA)
-                        {
-                            pos.vx = (s16)(x + 0x7D);
-                            pos.vy = (s16)y;
-                            result = func_800A8A78(ot, result, 0, 1, &pos, 1);
-                        }
-                        pos.vx = (s16)(x + 0x85);
-                        pos.vy = (s16)y;
-                        result =
-                            func_800A88A0(func_800A88A0(func_800A8A78(ot, result, base_y, 1, &pos, 1), ot, shown_save->summary_name, 1, x + 0x54, y + 0x10, 0),
-                                          ot, CLOAD_TEXT(g_cload_location_names, shown_save->track.bits.music_track), 1, x + 0x54, y + 0x20, 0);
+                        present_count += 1;
                     }
                 }
-                else
+
+                switch (present_count)
                 {
-                    result = func_800A88A0(result, ot, CLOAD_TEXT_AT(g_cload_text_version_error, 42), 1, -x_offset, -y_offset, 0);
+                case 2:
+                    step = 0x20;
+                    half_step = 0x10;
+                    g_cload_icon_phase %= 0x20;
+                    break;
+                case 3:
+                    step = 0x10;
+                    half_step = 0x20;
+                    g_cload_icon_phase %= 0x60;
+                    break;
+                default:
+                    step = 0x10;
+                    half_step = 0x20;
+                    g_cload_icon_phase = 0x1F;
+                    break;
+                }
+
+                i = 0;
+                j = i;
+                for (; j < 3; j++)
+                {
+                    base_y = i * half_step;
+                    base_x = base_y + half_step;
+                    if (party_icon[j] != SAVE_NO_ICON)
+                    {
+                        s32 adjust = step;
+                        s32 rem;
+                        s32 hi;
+
+                        if (g_cload_icon_phase >= base_y && g_cload_icon_phase < base_x)
+                        {
+                            adjust += g_cload_icon_phase - base_y;
+                        }
+                        else
+                        {
+                            rem = base_x % (half_step * present_count);
+                            if (g_cload_icon_phase >= rem)
+                            {
+                                hi = rem + half_step;
+                                if (g_cload_icon_phase < hi)
+                                {
+                                    adjust += hi - g_cload_icon_phase;
+                                }
+                            }
+                        }
+                        result = cload_draw_icon_highlight(result, ot, total - x_offset, -y_offset, adjust, party_icon[j], i, j);
+                        total += adjust;
+                        i += 1;
+                    }
+                }
+
+                {
+                    SavedGameLayout* shown_save = &g_cload_selected_file.saved_game;
+                    s32 x = -x_offset;
+                    s32 y = -y_offset;
+                    s32 time_x = x + CLOAD_DETAILS_HOURS_X;
+
+                    base_y = shown_save->play_time;
+
+                    pos.vx = time_x;
+                    pos.vy = (s16)y;
+                    hours = base_y / 216000;
+                    result = func_800A8A78(ot, result, hours, 1, &pos, 1);
+                    result = func_800A88A0(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, 25), 1, x + CLOAD_DETAILS_SEPARATOR_X, y, 0);
+                    base_y = (base_y / 3600) - (hours * 0x3C);
+                    if (base_y < 0xA)
+                    {
+                        pos.vx = (s16)(x + CLOAD_DETAILS_ZERO_X);
+                        pos.vy = (s16)y;
+                        result = func_800A8A78(ot, result, 0, 1, &pos, 1);
+                    }
+                    pos.vx = (s16)(x + CLOAD_DETAILS_MINUTES_X);
+                    pos.vy = (s16)y;
+                    result = func_800A8A78(ot, result, base_y, 1, &pos, 1);
+                    result = func_800A88A0(result, ot, shown_save->summary_name, 1, x + CLOAD_DETAILS_NAME_X, y + 0x10, 0);
+                    result = func_800A88A0(result, ot, CLOAD_TEXT(g_cload_location_names, shown_save->track.bits.music_track), 1, x + CLOAD_DETAILS_NAME_X,
+                                           y + 0x20, 0);
                 }
             }
             else
             {
-                s32 j;
+                result = func_800A88A0(result, ot, CLOAD_TEXT_AT(g_cload_text_version_error, 42), 1, -x_offset, -y_offset, 0);
+            }
+        }
+        else
+        {
+            s32 j;
 
+            {
+                SaveFileHeader* header;
+                terminate_multibyte_text(g_cload_selected_file.header.title);
+                header = &g_cload_selected_file.header;
+                if (header->title[1][0] != 0 && header->title[1][0] < 0x80)
                 {
-                    SaveFileHeader* header;
-                    terminate_multibyte_text(g_cload_selected_file.header.title);
-                    header = &g_cload_selected_file.header;
-                    if (header->title[1][0] == 0 || header->title[1][0] >= 0x80)
-                    {
-                        do {
-                        do {
-                        do {
-
-                            for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
-                            {
-                                name[j] = *(header->title[0] + j);
-                            }
-                    name[j] = 0;
-                    result = draw_cached_text(result, ot, name, -x_offset, -y_offset, 1, 0);
-
-                    for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
-                    {
-                        name[j] = g_cload_selected_file.header.title[1][j];
-                    }
-                    name[j] = 0;
-                    result = draw_cached_text(result, ot, name, -x_offset, -y_offset + 0x10, 1, 0);
-                        } while (0);
-                        } while (0);
-                        } while (0);
-                    }
+                    return result;
                 }
+
+                for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
+                {
+                    name[j] = *(header->title[0] + j);
+                }
+                name[j] = 0;
+                result = draw_cached_text(result, ot, name, -x_offset, -y_offset, 1, 0);
+
+                for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
+                {
+                    name[j] = g_cload_selected_file.header.title[1][j];
+                }
+                name[j] = 0;
+                result = draw_cached_text(result, ot, name, -x_offset, -y_offset + 0x10, 1, 0);
             }
         }
     }
     return result;
 }
-#endif
 
 #include "../../common/save_file/terminate_multibyte_text.inc.c"
 

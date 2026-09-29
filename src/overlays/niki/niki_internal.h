@@ -368,13 +368,27 @@ extern u16 D_80147120;
 extern u16 D_80147146;
 extern u16 D_80147148;
 extern u16 D_8014714C;
-extern u16 D_801475C4[];
+extern u16 g_niki_location_names[];
 extern u8 D_800EC3F6[2];
 extern u8 D_800EC3FA[];
 extern u8 g_field_ui_text_cant_hold_more[];
 extern s32 g_menu_element_counter;
 extern u16 D_80147128;
 extern s32 g_niki_choice_toggle;
+
+/** @brief g_niki_choice_toggle values: the selected choice of a confirmation prompt. */
+#define NIKI_CHOICE_YES 0
+#define NIKI_CHOICE_NO 1
+
+/**
+ * @brief Choice a confirmation prompt starts on.
+ * @note JP starts on yes, US on no.
+ */
+#if defined(VERSION_JP)
+#define NIKI_CHOICE_DEFAULT NIKI_CHOICE_YES
+#else
+#define NIKI_CHOICE_DEFAULT NIKI_CHOICE_NO
+#endif
 /** @brief Reset retries and read the selected save into the transfer buffer. */
 extern u8 g_niki_load_save_sequence[];
 extern u16 D_8014712A;

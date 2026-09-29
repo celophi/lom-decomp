@@ -875,7 +875,7 @@ s32 field_resolve_actor_movement(FieldActor* actor, s32* position, s32 mode)
         query->y = position[1] + actor->y;
         query->z = mover->z;
         if (((g_field_active_group == 0) || (actor->control.word & FIELD_CONTROL_MODE_MASK) ||
-             (((s32 (*)(struct FieldCollisionQuery*))field_collision_hit_markers)(query) == -1)) &&
+             (field_collision_hit_markers(query) == -1)) &&
             ((((u16)actor->command >= FIELD_ACTOR_COMMAND_WALK_PATH) && ((u16)actor->command <= FIELD_ACTOR_COMMAND_RUN_PATH)) ||
              (actor->command == FIELD_ACTOR_COMMAND_LEAVE_PATH) || (g_field_active_group == 0) || (field_move_leaves_screen(actor, &delta) == 0)))
         {

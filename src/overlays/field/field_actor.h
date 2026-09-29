@@ -201,5 +201,6 @@ enum
 #define FIELD_ACTION_COMMAND(action) (((action) << 8) | FIELD_ACTOR_COMMAND_ACTION)
 
 extern FieldActor g_field_actors[];
+extern FieldActor g_field_scene_actors[];
 
 #endif

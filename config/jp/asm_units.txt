@@ -2,5 +2,3 @@
 # because their code or data differs from the US release. mk/version.mk
 # excludes them from the JP C build. When promoting a unit to C, update
 # its subsegments in config/jp/ and remove its entry here.
-src/card_callbacks.c
-src/main.c

@@ -65,7 +65,7 @@ segments:
     section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
     subsegments:
       - [0x800, rodata, rodata_data0]        # D_80010000 boot-path string (referenced by unk8)
-      - [0x818, rodata, main]               # jtbl -> main
+      - [0x818, .rodata, main]               # jtbl -> main
       - [0x844, .rodata, cdrom]              # jtbl -> cdrom
       - [0xA50, .rodata, cdrom_decompress]
       - [0xA90, .rodata, controller]         # jtbl -> controller
@@ -81,7 +81,7 @@ segments:
       - [0x1458, .rodata, psyq/libpad/PADENTRY]  # jtbl_80010C58 -> PadInfoAct; merged into
                                               # its module object so the .L local labels resolve
       - [0x1478, .rodata, psyq/libmcx/TMP_MCX]  # jtbl_80010C78/C98/CC0/CD8 -> LIBMCX funcs
-      - [0x1558, asm, main]  # JP: differs from US, kept as assembly
+      - [0x1558, c, main]
       - [0x1B58, c, screen_transition]
       - [0x1E0C, c, game_audio]
       - [0x1F10, c, cdrom]
@@ -91,7 +91,7 @@ segments:
       - [0x6458, c, field_runtime]
       - [0x6948, c, field_runtime_text]
       - [0x6DB8, c, field_runtime_glyph]           # original glyph assembly maintained in C asm blocks
-      - [0x6F50, asm, card_callbacks]  # JP: differs from US, kept as assembly
+      - [0x6F50, c, card_callbacks]  # gcc280_g0
       - [0x70DC, c, psyq/libcard/C112]               # psyq: version undetermined (debug/variant build)
       - [0x70F4, c, psyq/libapi/C114]                # psyq: version-agnostic
       - [0x710C, c, psyq/libapi/C159]                # psyq: version-agnostic
@@ -275,5 +275,5 @@ segments:
     bss_size: 0x4000
     bss_contains_common: True
     subsegments:
-      - [0x2F800, bss, main]  # JP: differs from US, kept as assembly
+      - [0x2F800, .bss, main]
   - [0x2F800]

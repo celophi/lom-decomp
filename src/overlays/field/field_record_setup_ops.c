@@ -241,16 +241,15 @@ static void field_create_instrument_item(FieldItemRecord* record, s32 category, 
  * @brief Temper an existing weapon or armor with one more item and regenerate it.
  * @param record Item record to temper.
  * @param secondary_item Tempering item kind; one is consumed.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP reuses the current generation table and retains the saved power and element flags.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_record_setup_ops", field_temper_item);
-#else
 void field_temper_item(FieldItemRecord* record, s32 secondary_item)
 {
     s32 i;
 
+#if !defined(VERSION_JP)
     g_field_item_tables = field_find_resource(FIELD_ITEM_TABLE);
+#endif
     field_consume_item(secondary_item);
 
     g_field_item_staging->record = record;
@@ -299,17 +298,24 @@ void field_temper_item(FieldItemRecord* record, s32 secondary_item)
         {
             g_field_item_staging->properties[i] = record->derived.weapon.stats[i];
         }
+#if defined(VERSION_JP)
+        g_field_item_staging->power_flags = record->status_flags;
+#else
         g_field_item_staging->power_flags = 0;
+#endif
         break;
     case FIELD_ITEM_CATEGORY_ARMOR:
+#if defined(VERSION_JP)
+        g_field_item_staging->element_flags = record->element_flags;
+#else
         g_field_item_staging->element_flags = 0;
+#endif
         g_field_item_staging->immunity_flags = record->status_flags;
         break;
     }
 
     field_generate_staged_item();
 }
-#endif
 
 /**
  * @brief Run the generation scripts of the staged item and write it back.
