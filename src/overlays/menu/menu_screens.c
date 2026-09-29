@@ -1,5 +1,20 @@
 #include "menu_internal.h"
 
+/**
+ * @brief Play-time display: hours/minutes separator text and the pen advances after
+ *        the separator and before the minutes.
+ * @note JP uses a comma and wider advances.
+ */
+#if defined(VERSION_JP)
+#define MENU_PLAYTIME_SEPARATOR ","
+#define MENU_PLAYTIME_SEPARATOR_ADVANCE 8
+#define MENU_PLAYTIME_MINUTES_ADVANCE 20
+#else
+#define MENU_PLAYTIME_SEPARATOR ":"
+#define MENU_PLAYTIME_SEPARATOR_ADVANCE 7
+#define MENU_PLAYTIME_MINUTES_ADVANCE 16
+#endif
+
 extern inline s32 menu_focus_active_content_item(void)
 {
     MenuContentItem* content_items;
@@ -1126,11 +1141,9 @@ static inline MenuCharacterRecord* menu_active_character(SavedGameLayout* contex
  * @param packet_cursor GPU packet cursor advanced as primitives are emitted.
  * @param ot_entry Ordering-table entry passed to render helpers.
  * @return Updated GPU packet cursor after drawing.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP tests the category 0 item's effect flags for actions 0x22-0x29 without
+ *       first checking that the item exists.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/menu/nonmatchings/menu_screens", menu_draw_scene_content);
-#else
 void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
 {
     u8 text_buffer[0x40];
@@ -1313,6 +1326,18 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             }
                             else if ((u32)(sub - 0x22) < 8)
                             {
+#if defined(VERSION_JP)
+                                s32 s;
+                                s = content_item->action_type;
+                                if (((((MenuItemEntry*)g_menu_category0_item)->effect_flags[0] >> (s - 0x22)) & 1) != 0)
+                                {
+                                    t0 = s + 0x13;
+                                }
+                                else
+                                {
+                                    t0 = 0x21;
+                                }
+#else
                                 t0 = 0x21;
                                 if (g_menu_category0_item != 0)
                                 {
@@ -1323,6 +1348,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                         t0 = s + 0x13;
                                     }
                                 }
+#endif
                             }
                             else if ((u32)(sub - 0x2A) < 8)
                             {
@@ -2565,16 +2591,16 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 packet_cursor = (void*)func_800A8A78(ot_entry, packet_cursor, s2, one, &pos, one);
                                 if ((g_frame_counter / 15) & 1)
                                 {
-                                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, ":", one, pos.x, pos.y, 0);
+                                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, MENU_PLAYTIME_SEPARATOR, one, pos.x, pos.y, 0);
                                 }
-                                pos.x += 7;
+                                pos.x += MENU_PLAYTIME_SEPARATOR_ADVANCE;
                                 split_tmp = s2 * 0x3C;
                                 shared_s0 = (shared_s0 / 3600) - split_tmp;
                                 if (shared_s0 < 0xA)
                                 {
                                     packet_cursor = (void*)func_800A8A78(ot_entry, packet_cursor, 0U, 1, &pos, 0);
                                 }
-                                pos.x += 0x10;
+                                pos.x += MENU_PLAYTIME_MINUTES_ADVANCE;
                                 packet_cursor = (void*)func_800A8A78(ot_entry, packet_cursor, shared_s0, 1, &pos, one);
                             }
                             break;
@@ -2696,7 +2722,6 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
 
     return packet_cursor;
 }
-#endif
 
 /**
  * @brief Build the equipped-item ability mask while excluding one equipment slot.

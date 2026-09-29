@@ -839,7 +839,7 @@ field_poll_leader_interaction = 0x80091318;
 field_resolve_action_command = 0x800913A0;
 field_update_actor_run_button = 0x80091554;
 g_field_binding_buttons = 0x800EAE08;
-g_field_action_binding_codes = 0x800EAE10;
+g_field_action_binding_codes = 0x800EAE10; // size:0x8 allow_addend:True
 
 // Battle start/suspend/end and monster template lookup (field_actor_lifecycle.c).
 field_battle_scan_actor_objects = 0x800B3F88;

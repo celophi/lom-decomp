@@ -240,11 +240,8 @@ void field_apply_character_level_ups(s32 index, s32 notify)
  * @note Each level adds the stat growth accumulators, rebuilds the effective stat
  *       bits, carries the total accumulators, recomputes hp and clears the
  *       pending effects.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP differs only in field_level_threshold().
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_record_growth_ops", field_apply_region_level_ups);
-#else
 void field_apply_region_level_ups(s32 slot)
 {
     s32 level;
@@ -322,7 +319,6 @@ void field_apply_region_level_ups(s32 slot)
         } while (pending != 0);
     }
 }
-#endif
 
 /**
  * @brief Advance a party member one level when its experience reaches the threshold.

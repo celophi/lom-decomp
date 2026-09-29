@@ -66,3 +66,20 @@ rom:0x12AF5 reloc:MIPS_LO16 symbol:D_8013B208
 rom:0x12B91 reloc:MIPS_LO16 symbol:D_801ADB90
 rom:0x12B95 reloc:MIPS_LO16 symbol:g_wmap_party_visible
 rom:0x12BA1 reloc:MIPS_LO16 symbol:D_8013B208
+
+// wmap_run_loop hoists %hi(D_80182E34) into s7 and %hi(g_wmap_spirit_brightness)
+// into s6 before its land-event loop; Splat loses both pairs across the switch.
+rom:0x127C1 reloc:MIPS_HI16 symbol:D_80182E34
+rom:0x127C5 reloc:MIPS_HI16 symbol:g_wmap_spirit_brightness
+rom:0x12915 reloc:MIPS_LO16 symbol:D_80182E34
+rom:0x1291D reloc:MIPS_LO16 symbol:g_wmap_spirit_brightness
+rom:0x12981 reloc:MIPS_LO16 symbol:D_80182E34
+rom:0x12989 reloc:MIPS_LO16 symbol:g_wmap_spirit_brightness
+rom:0x12A21 reloc:MIPS_LO16 symbol:D_80182E34
+rom:0x12A25 reloc:MIPS_LO16 symbol:g_wmap_spirit_brightness
+rom:0x12AA5 reloc:MIPS_LO16 symbol:D_80182E34
+rom:0x12AA9 reloc:MIPS_LO16 symbol:g_wmap_spirit_brightness
+rom:0x12AED reloc:MIPS_LO16 symbol:D_80182E34
+rom:0x12AF1 reloc:MIPS_LO16 symbol:g_wmap_spirit_brightness
+rom:0x12B99 reloc:MIPS_LO16 symbol:D_80182E34
+rom:0x12B9D reloc:MIPS_LO16 symbol:g_wmap_spirit_brightness

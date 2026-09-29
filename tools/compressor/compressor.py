@@ -2,7 +2,8 @@
 
 This module reproduces the original late-1990s compressor's output, not just
 the decompression format.  Several selection and scan rules below are therefore
-intentional compatibility behavior recovered from the 17 known BIN streams.
+intentional compatibility behavior recovered from the 34 known BIN streams
+(17 US and 17 JP overlays).
 
 The implementation is kept dependency-free so it can be used both as a library
 (`compress(data)`) and as a command-line tool.
@@ -66,7 +67,6 @@ NIBBLE_STEP = 0x10
 SIGNED_BYTE_MIN = -128
 SIGNED_BYTE_MAX = 127
 SIGNED_WORD_MAX = 32767
-SIGNED_BYTE_HIGH_BIT = 0x80
 
 F0_MIN_RUN = 3
 F0_MAX_RUN = 18
@@ -561,6 +561,24 @@ def _scan_f6_structure(src: bytes, start: int, n: int) -> F6Scan | None:
             break
         triple_count += 1
 
+    # A structure that ends on a triple whose varying byte repeats the first
+    # fixed byte, followed by that byte once more, is stopped before that
+    # triple; the reference covers those four bytes with LZ (JP GNAME).
+    structure_ended = not (
+        start + triple_count * 3 + 2 < n
+        and src[start + triple_count * 3] == first_fixed
+        and src[start + triple_count * 3 + 1] == second_fixed
+    )
+    if (
+        first_fixed != second_fixed
+        and triple_count < limit
+        and structure_ended
+        and src[start + (triple_count - 1) * 3 + 2] == first_fixed
+        and start + triple_count * 3 < n
+        and src[start + triple_count * 3] == first_fixed
+    ):
+        triple_count -= 1
+
     if triple_count < F6_MIN_TRIPLES:
         return None
 
@@ -746,8 +764,13 @@ def _f5_base_candidate_allowed(
     if scan.scanned_pairs < F5_MIN_PAIRS:
         return False
 
-    # Odd degeneracy after a five-pair strict prefix is never emitted as F5.
-    if scan.strict_prefix_pairs == 5 and (scan.structural_degenerate_pairs & 1):
+    # Odd degeneracy after a five-pair zero-fixed strict prefix is never
+    # emitted as F5 (GOLEM tables); JP GOSUB emits the nonzero-fixed form.
+    if (
+        scan.fixed_byte == 0
+        and scan.strict_prefix_pairs == 5
+        and (scan.structural_degenerate_pairs & 1)
+    ):
         return False
 
     if scan.strict_prefix_pairs == 4 and scan.structural_degenerate_pairs == 3:
@@ -836,7 +859,7 @@ def _f5_emission_candidate_allowed(
 
     The F5 wire format itself is simple; most complexity here comes from the
     original compressor's qualification and lazy-start policy.  These branches
-    are intentionally retained because they are required for 17/17 byte-exact
+    are intentionally retained because they are required for 34/34 byte-exact
     reproduction of the known BIN corpus.
     """
     if not _f5_base_candidate_allowed(src, start, n, scan):
@@ -887,17 +910,16 @@ def _f5_emission_candidate_allowed(
     ):
         return False
 
-    # GNAME's only natural-end q2/deg2/cnt4 false start has both strict
-    # varying bytes below 0x80; the corresponding FIELD reference forms have
-    # the high bit set.  This narrow signed-byte-looking discriminator remains
-    # because it is observable in the original output.
+    # GNAME's only natural-end q2/deg2/cnt4 false start leaves the F5 to a
+    # back-reference that begins at the second strict varying byte.  The
+    # accepted FIELD/WMAP forms (US and JP) all have an earlier match or none
+    # at that byte.
     if (
         fixed_byte == 0
         and pair_count == 4
         and strict_pairs == 2
         and degenerate_pairs == 2
-        and src[start + 1] < SIGNED_BYTE_HIGH_BIT
-        and src[start + 3] < SIGNED_BYTE_HIGH_BIT
+        and _backref_starts_at_second_strict_byte(src, start, n)
     ):
         return False
 
@@ -920,9 +942,14 @@ def _f5_emission_candidate_allowed(
 
     # Final clean-boundary rule recovered from WMAP: at a clean token
     # boundary the broader F5 family is admitted regardless of structural
-    # tail; with pending literals it is limited to a short tail.
+    # tail; with pending literals it is limited to a short tail, unless the
+    # F5 ends on a strict pair (JP GNAME; the rejected GNAME table stops all
+    # end on a degenerate pair).
+    terminal_is_strict = src[start + pair_count * 2 - 1] != fixed_byte
     clean_boundary_or_short_tail = (
-        pending_literals == 0 or structural_tail <= F5_SHORT_TAIL_PAIRS
+        pending_literals == 0
+        or structural_tail <= F5_SHORT_TAIL_PAIRS
+        or terminal_is_strict
     )
     if not clean_boundary_or_short_tail:
         return False
@@ -935,6 +962,19 @@ def _f5_emission_candidate_allowed(
         and scan.structural_degenerate_pairs == 3
     )
     return not nonzero_q2_deg3_exception
+
+
+def _backref_starts_at_second_strict_byte(src: bytes, start: int, n: int) -> bool:
+    """Return whether LZ takes over at the second varying byte of a short F5.
+
+    A back-reference saving at least two bytes starts at ``start + 3`` and none
+    starts one byte earlier.
+    """
+    earlier = _find_best_backref(src, start + 2, n)
+    if earlier is not None:
+        return False
+    at_second = _find_best_backref(src, start + 3, n)
+    return at_second is not None and at_second.savings >= 2
 
 
 def _best_pattern_savings(src: bytes, i: int, n: int) -> int:
@@ -1387,6 +1427,21 @@ def _select_encoding(
                    if c.opcode == OP_FA and c.advance == FA_MAX_RUN and c.encoded[3] != 0), None)
     if max_fa is not None:
         pattern_candidates = [max_fa]
+
+    # An alternating x, x + 0x80 run is at once an F3 pair run, a zero-delta
+    # FB word run and an FA run with step 0x80.  The reference always takes
+    # FA when it covers at least as many bytes; it never emits F3 or FB over
+    # such a run of six or more bytes.
+    fa_candidate = next((c for c in pattern_candidates if c.opcode == OP_FA), None)
+    if fa_candidate is not None:
+        pattern_candidates = [
+            c
+            for c in pattern_candidates
+            if not (
+                (c.opcode == OP_F3 or (c.opcode == OP_FB and c.encoded[4] == 0))
+                and c.advance <= fa_candidate.advance
+            )
+        ]
 
     # When F5 is viable, the reference compressor prefers it over F7 even
     # when F7 yields more raw savings (confirmed at MENU dec=1115). Drop F7

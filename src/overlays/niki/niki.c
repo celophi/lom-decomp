@@ -1555,16 +1555,11 @@ s32 niki_draw_icon_highlight(s32 prim, s32* ot, s32 x, s32 y, s32 width, s32 ico
 }
 
 /**
- * @brief Select the cancellation choice when opening a confirmation prompt.
- * @note JP selects the first choice instead.
+ * @brief Select the default choice (NIKI_CHOICE_DEFAULT) when opening a confirmation prompt.
  */
 void niki_enable_choice_toggle(void)
 {
-#if defined(VERSION_JP)
-    g_niki_choice_toggle = 0;
-#else
-    g_niki_choice_toggle = 1;
-#endif
+    g_niki_choice_toggle = NIKI_CHOICE_DEFAULT;
 }
 
 /**
@@ -1626,11 +1621,7 @@ static inline SavedGameLayout* niki_preview_metadata(void)
  * @param x_offset Horizontal displacement subtracted from glyph positions.
  * @param y_offset Vertical displacement subtracted from glyph positions.
  * @return Advanced GPU packet cursor.
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/niki/nonmatchings/niki", niki_draw_state_page);
-#else
 s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
@@ -1749,7 +1740,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             }
             func_800A3938(0x7B, 0x80);
             g_card_entry_state = 0xF4;
-            g_niki_choice_toggle = 1;
+            g_niki_choice_toggle = NIKI_CHOICE_DEFAULT;
             field_reset_input_repeat();
         }
     }
@@ -1800,7 +1791,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         if (g_pad_input & NIKI_CANCEL_INPUT_MASK)
         {
             func_800A3938(0x78, 0x80);
-            g_niki_choice_toggle = 1;
+            g_niki_choice_toggle = NIKI_CHOICE_DEFAULT;
             g_card_entry_state = 0xF4;
             field_reset_input_repeat();
         }
@@ -1809,7 +1800,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             if (g_niki_choice_toggle != 0)
             {
                 func_800A3938(0x78, 0x80);
-                g_niki_choice_toggle = 1;
+                g_niki_choice_toggle = NIKI_CHOICE_DEFAULT;
                 g_card_entry_state = 0xF4;
                 field_reset_input_repeat();
             }
@@ -1833,7 +1824,6 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     {
         s32 x;
         s32 result;
-        s32 one;
         s32 y;
         u8* caption_table;
         u8* p;
@@ -1863,8 +1853,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         {
             palette = 5;
         }
-        one = 1;
-        result = func_800A88A0(prim, ot, (void*)first_caption, palette, x + 0x80, y, one);
+        result = func_800A88A0(prim, ot, (void*)first_caption, palette, x + 0x80, y, 1);
         palette = 4;
         second_caption = base[0x38] + ((base[0x39] << 8) + (s32)base);
         if (g_niki_choice_toggle == 0)
@@ -1883,7 +1872,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 
         if ((g_pad_input & NIKI_CANCEL_INPUT_MASK) || ((g_pad_input & NIKI_CONFIRM_INPUT_MASK) && g_niki_choice_toggle != 0))
         {
-            g_niki_choice_toggle = one;
+            g_niki_choice_toggle = NIKI_CHOICE_DEFAULT;
             g_card_entry_state = 0xF3;
             func_800A3938(0x78, 0x80);
             field_reset_input_repeat();
@@ -2111,7 +2100,6 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 
     return prim;
 }
-#endif
 
 #include "../../common/save_file/skip_hex_digits.inc.c"
 

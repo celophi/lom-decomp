@@ -900,18 +900,15 @@ static void field_draw_cd_error_text(FieldRenderHalf* render)
  * @brief Draw each player's held-button action hint and the labels of the selectable actors.
  * @param render Render half receiving the text.
  * @note A player's hint shows the action bound to the first held button among the eight hint buttons.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP reads the face buttons without the US cross/circle and square/triangle swap.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_modal_runtime", field_draw_actor_labels);
-#else
 static void field_draw_actor_labels(FieldRenderHalf* render)
 {
     DVECTOR point;
     FieldTextOffset* bank_entry;
     s32 text_color;
     u16 text_offset;
-    s32 work;          /* Held buttons, then the player's save base, then a text index or skill. */
+    s32 work; /* Text index or skill; in JP also the character info byte of case 0. */
     s32 text_or_state; /* Hint text in the first loop, the label actor's object state in the second. */
     s32 bank;
     s32 record_offset;
@@ -943,6 +940,8 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
     s32 text_part;
     ControllerPortState* ports;
     s32 record_base_offset;
+    s32 held_buttons;      /* The player's held buttons, bytes swapped. */
+    SavedGameLayout* save; /* The player's save record base. */
 
     cursor = (s32)render->primitive_cursor;
     ot = (s32)&render->ordering_table[FIELD_TEXT_OT_INDEX];
@@ -960,14 +959,17 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
             record_offset = index * sizeof(FieldCharacterRecord);
             raw_buttons = port->published_sample.held_buttons;
             record_base_offset = index * sizeof(FieldCharacterRecord) + FIELD_OFFSET_OF(SavedGameLayout, characters);
-            work = ((raw_buttons << 8) & 0xFF00) | (raw_buttons >> 8);
-            work = (((u32)(work & 0x40) >> 1) | ((work & 0x20) * 2) | ((u32)(work & 0x80) >> 3) | ((work & 0x10) * 8) | (work & 0xFF0F));
+            held_buttons = ((raw_buttons << 8) & 0xFF00) | (raw_buttons >> 8);
+#if !defined(VERSION_JP)
+            held_buttons = (((u32)(held_buttons & 0x40) >> 1) | ((held_buttons & 0x20) * 2) | ((u32)(held_buttons & 0x80) >> 3) | ((held_buttons & 0x10) * 8) |
+                            (held_buttons & 0xFF0F));
+#endif
             do
             {
-                if (work & bit_or_actor)
+                if (held_buttons & bit_or_actor)
                 {
-                    work = (s32)g_saved_game_ctx + record_offset;
-                    action = ((SavedGameLayout*)work)->characters[0].button_actions[g_field_hint_button_map[button_or_x]];
+                    save = (SavedGameLayout*)((u8*)g_saved_game_ctx + record_offset);
+                    action = save->characters[0].button_actions[g_field_hint_button_map[button_or_x]];
                     switch (action)
                     {
                     case FIELD_COMMAND_BUTTON_ACTION: /* The two commands: resource action slots 0 and 1. */
@@ -981,8 +983,13 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
                         break;
 
                     case 0: /* Guests 5 and 8 have no attack or guard. */
-                        if (((((SavedGameLayout*)work)->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GUEST) &&
-                            ((secondary_action = ((SavedGameLayout*)work)->characters[0].info.bytes[1], (secondary_action == 5)) || (secondary_action == 8)))
+#if defined(VERSION_JP)
+                        work = save->characters[0].info.bytes[0];
+                        if (((work & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GUEST) &&
+#else
+                        if (((save->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GUEST) &&
+#endif
+                            ((secondary_action = save->characters[0].info.bytes[1], (secondary_action == 5)) || (secondary_action == 8)))
                         {
                             text_offset = D_800EC3E0.high << 8;
                             text_part = text_offset + bank;
@@ -1001,8 +1008,8 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
 
                         break;
                     case 1:
-                        if (((((SavedGameLayout*)work)->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GUEST) &&
-                            ((secondary_action_alt = ((SavedGameLayout*)work)->characters[0].info.bytes[1], (secondary_action_alt == 5)) ||
+                        if (((save->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GUEST) &&
+                            ((secondary_action_alt = save->characters[0].info.bytes[1], (secondary_action_alt == 5)) ||
                              (secondary_action_alt == 8)))
                         {
                             text_offset = D_800EC3E0.high << 8;
@@ -1156,7 +1163,6 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
     }
     render->primitive_cursor = (u8*)cursor;
 }
-#endif
 
 /**
  * @brief Combine quantities for repeated dialog text entries and close the gaps.

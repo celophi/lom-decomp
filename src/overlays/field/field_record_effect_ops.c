@@ -63,7 +63,7 @@ typedef struct
 {
     /** @brief High nibble subtracted, low nibble added to each stat growth accumulator. */
     u8 stat_deltas[FIELD_CHARACTER_STAT_COUNT];
-    /** @brief Same for the four total growth accumulators. */
+    /** @brief Same for the four total growth accumulators; JP adds both nibbles. */
     u8 total_deltas[4];
     /** @brief Pairs of (kind, value): a flag bit and its chance, or a FIELD_EFFECT_KIND_* and an equipment id. */
     u8 effects[4][2];
@@ -268,11 +268,8 @@ void field_apply_pending_region_effects(void)
  * @param record Companion record to update.
  * @param effect Effect id; ids without an effect table row are ignored. Turned into the row index.
  * @param table Effect table (resource 0x12).
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP adds both nibbles of a total growth delta; US subtracts the high nibble.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_record_effect_ops", field_apply_region_effect);
-#else
 static void field_apply_region_effect(PetRecord* record, s32 effect, FieldRegionEffectTable* table)
 {
     s32 i;
@@ -312,7 +309,11 @@ static void field_apply_region_effect(PetRecord* record, s32 effect, FieldRegion
             view = FIELD_PET_AT(record, i);
             value = view->total_growth[0].byte;
             total_delta = table->rows[effect].total_deltas[i];
+#if defined(VERSION_JP)
+            value = ((u32)value >> 4) + (total_delta & 0xF) + (total_delta >> 4);
+#else
             value = ((u32)value >> 4) + (total_delta & 0xF) - (total_delta >> 4);
+#endif
             if (value >= 0)
             {
                 clamped = FIELD_GROWTH_ACCUMULATOR_MAX;
@@ -362,4 +363,3 @@ static void field_apply_region_effect(PetRecord* record, s32 effect, FieldRegion
         }
     }
 }
-#endif

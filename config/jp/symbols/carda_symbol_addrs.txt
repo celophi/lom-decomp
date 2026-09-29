@@ -197,6 +197,7 @@ g_carda_text_no_lom_save_data = 0x8014B040;
 g_carda_text_ring_ring_land_label = 0x8014B046;
 g_carda_text_wrong_version = 0x8014B060;
 g_carda_text_plus_marker = 0x8014B0BC;
+g_carda_text_memory_card_is = 0x8014B02E;
 g_carda_text_card_unformatted = 0x8014B030;
 
 // Main-executable / FIELD / SDK symbols used by this overlay.
