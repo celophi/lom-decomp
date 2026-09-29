@@ -263,6 +263,28 @@ an ordinary two-block game save.
 Sources: [transfer flow and item handling](../../../../src/overlays/carda/carda_save.c),
 [transfer I/O](../../../../src/overlays/carda/carda_card.c).
 
+## Looking at the data
+
+The overlay's data after the code is kept in one `carda_data` blob in each
+version's splat YAML. The build links those bytes unchanged. To read the text
+and see the icons, extract that version with `make splat` first, then run:
+
+```sh
+make extract-carda
+make extract-carda VERSION=jp
+```
+
+The files go under `assets/exports/<version>/overlays/carda/`. Messages, item
+names, locations, title templates and card steps become YAML. Party icons
+become 48 x 48 PNGs. The ten memory card icons go in `save_icons/`, with two
+16 x 16 PNGs per icon for their animation frames. Japanese text uses the
+overlay's character chart; the original text bytes are kept beside it.
+
+`byte-map.yaml` accounts for the whole blob, including padding and the zeroed
+runtime buffers. These exports are for inspection; the build still uses the
+original blob. See the [extractor guide](../../../../tools/overlays/README.md)
+for output options and the Python layout.
+
 ## Regional coverage and what still needs work
 
 The shared C explains the ordinary card I/O and much of the transfer flow.

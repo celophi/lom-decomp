@@ -1,5 +1,5 @@
 # Host-side Python tests; no disc files or historical toolchain required.
-.PHONY: test-tools test-assets test-overlay-tools extract-scene extract-scenes extract-addhero
+.PHONY: test-tools test-assets test-overlay-tools extract-scene extract-scenes extract-addhero extract-carda
 
 test-tools: test-assets test-overlay-tools
 
@@ -27,3 +27,10 @@ ADDHERO_OUTPUT ?= assets/exports/$(VERSION)/overlays/addhero
 extract-addhero:
 	@test -f "$(ASSETS_DIR)/addhero_data.databin.bin" || { echo 'Run make splat first to extract $(ASSETS_DIR)/addhero_data.databin.bin'; exit 1; }
 	python3 -m tools.overlays.addhero --version $(VERSION) "$(ADDHERO_OUTPUT)"
+
+# CARDA follows the same export path; the build still reads its original data blob.
+CARDA_OUTPUT ?= assets/exports/$(VERSION)/overlays/carda
+
+extract-carda:
+	@test -f "$(ASSETS_DIR)/carda_data.databin.bin" || { echo 'Run make splat first to extract $(ASSETS_DIR)/carda_data.databin.bin'; exit 1; }
+	python3 -m tools.overlays.carda --version $(VERSION) "$(CARDA_OUTPUT)"

@@ -9,7 +9,7 @@ import re
 import unittest
 from pathlib import Path
 
-from tools.overlays import addhero, splat_config
+from tools.overlays import addhero, card_data, splat_config
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 VERSIONS = ("us", "jp")
@@ -83,10 +83,10 @@ class CSourceTest(unittest.TestCase):
             with self.subTest(constant=attribute):
                 expected = c_define(REPO_ROOT / source, define)
                 self.assertEqual(
-                    getattr(addhero, attribute),
+                    getattr(card_data, attribute),
                     expected,
                     f"{define} in {source} is {expected}; "
-                    f"update {attribute} in tools/overlays/addhero.py",
+                    f"update {attribute} in tools/overlays/card_data.py",
                 )
 
     def test_card_step_names_come_from_the_header(self):

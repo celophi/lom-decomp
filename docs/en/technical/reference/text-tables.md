@@ -16,7 +16,9 @@ first one we decoded completely.
 
 If you only want to read ADDHERO's text, there's a shortcut. After `make splat`,
 `make extract-addhero` writes every message and location name to YAML files,
-along with the party icons as PNGs. See the
+along with the party icons as PNGs. `make extract-carda` does the same for the
+save screen, including its item names and memory card icons. Add `VERSION=jp`
+to either command for the Japanese data. See the
 [overlay resource extractor](../../../../tools/overlays/README.md) for the
 details. The rest of this section is for working with the bytes directly.
 
