@@ -6,6 +6,7 @@
  */
 #include "common.h"
 #include "field_calls.h"
+#include "field_held_action_buttons.h"
 #include "vector.h"
 #include "field_types.h"
 #include "field_actor.h"
@@ -291,13 +292,14 @@ void field_play_object_animation(FieldActor* actor, s32 animation_id)
  * @brief Chain the actor's held action buttons into a follow-up action.
  * @param actor Player actor; its animation selects which actions can follow.
  * @return Unspecified; callers ignore it.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP expands field_get_held_action_buttons inline, and a recovering actor
+ *       resolves its action command only once the resource slot matches.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_actor_state_updates", field_update_actor_action_chain);
-#else
 s32 field_update_actor_action_chain(FieldActor* actor)
 {
+#if defined(VERSION_JP)
+    s32 animation_index;
+#endif
     s32 targets;
     s32 tmp;
     s32 anim;
@@ -310,11 +312,19 @@ s32 field_update_actor_action_chain(FieldActor* actor)
     }
     if (actor->command == FIELD_ACTOR_COMMAND_RECOVER)
     {
+#if defined(VERSION_JP)
+        animation_index = actor->animation & 0x7F;
+        if (animation_index == 0x3D)
+        {
+            if (g_field_resource_actions[actor->object_index].slots[1].command == animation_index &&
+                (anim = ((s32 (*)(FieldActor*, s32))field_resolve_action_command)(actor, actor->object_index)) == FIELD_ACTION_COMMAND(1))
+#else
         tmp = actor->animation & 0x7F;
         if (tmp == 0x3D)
         {
             anim = ((s32 (*)(FieldActor*, s32))field_resolve_action_command)(actor, actor->object_index);
             if (g_field_resource_actions[actor->object_index].slots[1].command == tmp && anim == FIELD_ACTION_COMMAND(1))
+#endif
             {
                 actor->command = anim;
                 actor->y -= FIELD_STEP_OFFSET(actor);
@@ -323,7 +333,13 @@ s32 field_update_actor_action_chain(FieldActor* actor)
                 actor->command = FIELD_ACTOR_COMMAND_9B;
                 return;
             }
+#if defined(VERSION_JP)
+            else if ((animation_index = actor->animation & 0x7F) == 0x3D &&
+                     g_field_resource_actions[actor->object_index].slots[0].command == animation_index &&
+                     (anim = ((s32 (*)(FieldActor*, s32))field_resolve_action_command)(actor, actor->object_index)) == FIELD_ACTION_COMMAND(0))
+#else
             else if (g_field_resource_actions[actor->object_index].slots[0].command == 0x3D && anim == FIELD_ACTION_COMMAND(0))
+#endif
             {
                 actor->command = anim;
                 actor->y -= FIELD_STEP_OFFSET(actor);
@@ -535,7 +551,6 @@ s32 field_update_actor_action_chain(FieldActor* actor)
         }
     }
 }
-#endif
 
 /* field_actor_action_runtime: Validate pending actions, clear completed state, and advance actor sequences. */
 

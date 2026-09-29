@@ -16,8 +16,8 @@
 # complete.
 #
 # The compressor reproduces the original 1999 encoder byte for byte on all 17
-# US disc overlays, so any US overlay that links to an exact raw image can be
-# verified this way. See tools/compressor/README.md.
+# disc overlays of both the US and JP releases, so any overlay that links to an
+# exact raw image can be verified this way. See tools/compressor/README.md.
 
 # Overlays whose linked ELF reproduces the original decompressed image, and so
 # can be compressed back into an exact replica of the disc file.
@@ -27,7 +27,7 @@
 # invisible to it. Add a name here only once `make verify-<name>` actually
 # passes.
 VERIFIED_OVERLAYS_us := gover movie gname checkps title gosub golem niki addhero menu cload zukan carda shop wsel field wmap
-VERIFIED_OVERLAYS_jp := gover movie checkps golem niki addhero menu cload zukan carda shop wsel wmap
+VERIFIED_OVERLAYS_jp := gover movie gname checkps title gosub golem niki addhero menu cload zukan carda shop wsel field wmap
 VERIFIED_OVERLAYS := $(VERIFIED_OVERLAYS_$(VERSION))
 
 # Overlays whose linked ELF reproduces the original decompressed image, but
@@ -36,7 +36,7 @@ VERIFIED_OVERLAYS := $(VERIFIED_OVERLAYS_$(VERSION))
 # level only: the linked ELF against the decompressed disc file. Move a name to
 # VERIFIED_OVERLAYS_<version> once `make verify-compressor` passes for it.
 RAW_VERIFIED_OVERLAYS_us :=
-RAW_VERIFIED_OVERLAYS_jp := field gname gosub title
+RAW_VERIFIED_OVERLAYS_jp :=
 RAW_VERIFIED_OVERLAYS := $(RAW_VERIFIED_OVERLAYS_$(VERSION))
 
 # Make has no upper-case function; overlay BINs are named in upper case.

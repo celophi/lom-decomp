@@ -131,10 +131,14 @@ void field_scene_reset(void)
  * @param update_mode Update mode for the scene objects and text windows (1 while a text session pauses the field).
  * @param force_unscaled Non-zero draws the scene objects with the unscaled camera offsets (update mode 2).
  * @see decomp.me (100%) https://decomp.me/scratch/lg9gw
- * @note JP ignores @p force_unscaled and reads both audio checks through
+ * @note JP omits @p force_unscaled and reads both audio checks through
  *       cd_system (US reads the first through g_cd_audio_enabled, the same byte).
  */
+#if defined(VERSION_JP)
+void field_draw_frame(s32 alternate_half, FieldRenderHalf* buffer, s32 update_mode)
+#else
 void field_draw_frame(s32 alternate_half, FieldRenderHalf* buffer, s32 update_mode, s32 force_unscaled)
+#endif
 {
     FieldCdSystem* cd_system;
 
@@ -174,10 +178,14 @@ void field_draw_frame(s32 alternate_half, FieldRenderHalf* buffer, s32 update_mo
  * the scene animations.
  *
  * @param update_mode Field update mode; non-zero skips the animation update.
- * @param force_unscaled Non-zero skips the animation update (US only; JP ignores it).
+ * @param force_unscaled Non-zero skips the animation update (US only).
  * @see decomp.me (100%) https://decomp.me/scratch/KyLZb
  */
+#if defined(VERSION_JP)
+void field_clear_node_accumulators(s32 update_mode)
+#else
 void field_clear_node_accumulators(s32 update_mode, s32 force_unscaled)
+#endif
 {
     FieldNode* node;
 

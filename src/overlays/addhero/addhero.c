@@ -45,12 +45,20 @@
 #define ADDHERO_INACTIVE_LABEL_COLOR GPU_COLOR_WORD(0x10, 0x10, 0x10)
 
 /** @brief Details window text: second column, line spacing and the play-time digits (right edges). */
-#define ADDHERO_DETAILS_TEXT_X 84
 #define ADDHERO_DETAILS_LINE_HEIGHT 16
+#if defined(VERSION_JP)
+#define ADDHERO_DETAILS_TEXT_X 80
+#define ADDHERO_DETAILS_HOURS_RIGHT_X 100
+#define ADDHERO_DETAILS_TIME_SEPARATOR_X 100
+#define ADDHERO_DETAILS_MINUTES_TENS_RIGHT_X 120
+#define ADDHERO_DETAILS_MINUTES_RIGHT_X 130
+#else
+#define ADDHERO_DETAILS_TEXT_X 84
 #define ADDHERO_DETAILS_HOURS_RIGHT_X 112
 #define ADDHERO_DETAILS_TIME_SEPARATOR_X 111
 #define ADDHERO_DETAILS_MINUTES_TENS_RIGHT_X 125
 #define ADDHERO_DETAILS_MINUTES_RIGHT_X 133
+#endif
 
 /**
  * @brief Reset overlay state and build the initial UI elements.
@@ -770,11 +778,7 @@ void* addhero_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_
  * @param x_offset Horizontal offset; screen X is derived from it.
  * @param y_offset Vertical offset.
  * @return The updated primitive pointer.
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/addhero/nonmatchings/addhero", addhero_draw_selected_entry_details);
-#else
 void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     void* result;
@@ -791,175 +795,180 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
     {
         return result;
     }
-    if (g_addhero_selection_status != ADDHERO_SELECTION_EMPTY_CARD && g_card_entry_state < ADDHERO_ENTRY_COUNT_LIMIT)
+    if (g_addhero_selection_status == ADDHERO_SELECTION_EMPTY_CARD || g_card_entry_state >= ADDHERO_ENTRY_COUNT_LIMIT)
     {
-        if (g_addhero_selection_status == ADDHERO_SELECTION_NEW_SAVE)
-        {
-            s32 x = -x_offset;
-            u16* text_table;
+        return result;
+    }
+    if (g_addhero_selection_status == ADDHERO_SELECTION_NEW_SAVE)
+    {
+        s32 x = -x_offset;
+        u16* text_table;
 
-            result = field_draw_text(prim, ot, ADDHERO_TEXT_AT(g_addhero_text_new_save_title, ADDHERO_TEXT_NEW_SAVE_TITLE), FIELD_TEXT_COLOR_NORMAL, x,
-                                     -y_offset, FIELD_TEXT_ALIGN_LEFT);
-            text_table = ADDHERO_TEXT_TABLE(g_addhero_text_new_save_title, ADDHERO_TEXT_NEW_SAVE_TITLE);
-            return field_draw_text(result, ot, ADDHERO_TEXT(text_table, ADDHERO_TEXT_USES_TWO_BLOCKS), FIELD_TEXT_COLOR_NORMAL, x,
-                                   ADDHERO_DETAILS_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_LEFT);
-        }
-        else
+        result = field_draw_text(prim, ot, ADDHERO_TEXT_AT(g_addhero_text_new_save_title, ADDHERO_TEXT_NEW_SAVE_TITLE), FIELD_TEXT_COLOR_NORMAL, x, -y_offset,
+                                 FIELD_TEXT_ALIGN_LEFT);
+        text_table = ADDHERO_TEXT_TABLE(g_addhero_text_new_save_title, ADDHERO_TEXT_NEW_SAVE_TITLE);
+        return field_draw_text(result, ot, ADDHERO_TEXT(text_table, ADDHERO_TEXT_USES_TWO_BLOCKS), FIELD_TEXT_COLOR_NORMAL, x,
+                               ADDHERO_DETAILS_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_LEFT);
+    }
+    else
+    {
+        if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_addhero_selected_row].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
         {
-            if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_addhero_selected_row].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
+            if (g_save_compatibility_tag == SAVE_TAG_ANY || g_addhero_entry_file.saved_game.compatibility_tag == g_save_compatibility_tag)
             {
-                if (g_save_compatibility_tag == SAVE_TAG_ANY || g_addhero_entry_file.saved_game.compatibility_tag == g_save_compatibility_tag)
+                s32 present_count;
+                s32 i;
+                s32 j;
+                s32 step;
+                s32 half_step;
+                s32 base_x;
+                s32 base_y;
+                s32 total;
+                s32 hours;
+
                 {
-                    s32 present_count;
-                    s32 i;
-                    s32 j;
-                    s32 step;
-                    s32 half_step;
-                    s32 base_x;
-                    s32 base_y;
-                    s32 total;
-                    s32 hours;
+                    SavedGameLayout* entry = &g_addhero_entry_file.saved_game;
+                    slot[0] = entry->spawn.bits.party_icon_0;
+                    slot[1] = entry->track.bits.party_icon_1;
+                    slot[2] = entry->track.bits.party_icon_2;
+                    g_addhero_icon_palette = entry->icon_palette;
+                }
 
+                total = 0;
+                present_count = 0;
+                for (i = 0; i < FIELD_PARTY_SIZE; i++)
+                {
+                    if (slot[i] != SAVE_NO_ICON)
                     {
-                        SavedGameLayout* entry = &g_addhero_entry_file.saved_game;
-                        slot[0] = entry->spawn.bits.party_icon_0;
-                        slot[1] = entry->track.bits.party_icon_1;
-                        slot[2] = entry->track.bits.party_icon_2;
-                        g_addhero_icon_palette = entry->icon_palette;
+                        present_count += 1;
                     }
+                }
 
-                    total = 0;
-                    present_count = 0;
-                    for (i = 0; i < FIELD_PARTY_SIZE; i++)
+                switch (present_count)
+                {
+                case 2:
+                    step = 32;
+                    half_step = 16;
+                    g_addhero_icon_phase %= 32;
+                    break;
+                case 3:
+                    step = 16;
+                    half_step = 32;
+                    g_addhero_icon_phase %= 96;
+                    break;
+                default:
+                    step = 16;
+                    half_step = 32;
+                    g_addhero_icon_phase = 31;
+                    break;
+                }
+
+                i = 0;
+                j = i;
+                for (; j < FIELD_PARTY_SIZE; j++)
+                {
+                    base_y = i * half_step;
+                    base_x = base_y + half_step;
+                    if (slot[j] != SAVE_NO_ICON)
                     {
-                        if (slot[i] != SAVE_NO_ICON)
+                        s32 adjust = step;
+                        s32 rem;
+                        s32 hi;
+
+                        if (g_addhero_icon_phase >= base_y && g_addhero_icon_phase < base_x)
                         {
-                            present_count += 1;
-                        }
-                    }
-
-                    switch (present_count)
-                    {
-                    case 2:
-                        step = 32;
-                        half_step = 16;
-                        g_addhero_icon_phase %= 32;
-                        break;
-                    case 3:
-                        step = 16;
-                        half_step = 32;
-                        g_addhero_icon_phase %= 96;
-                        break;
-                    default:
-                        step = 16;
-                        half_step = 32;
-                        g_addhero_icon_phase = 31;
-                        break;
-                    }
-
-                    i = 0;
-                    j = i;
-                    for (; j < FIELD_PARTY_SIZE; j++)
-                    {
-                        base_y = i * half_step;
-                        base_x = base_y + half_step;
-                        if (slot[j] != SAVE_NO_ICON)
-                        {
-                            s32 adjust = step;
-                            s32 rem;
-                            s32 hi;
-                            s32 delta;
-
-                            if ((g_addhero_icon_phase >= base_y && g_addhero_icon_phase < base_x && (delta = g_addhero_icon_phase - base_y, 1)) ||
-                                (rem = base_x % (half_step * present_count),
-                                 g_addhero_icon_phase >= rem && g_addhero_icon_phase < (hi = rem + half_step) && (delta = hi - g_addhero_icon_phase, 1)))
-                            {
-                                adjust += delta;
-                            }
-                            result = addhero_draw_icon_highlight(result, ot, total - x_offset, -y_offset, adjust, slot[j], i, j);
-                            i += 1;
-                            total += adjust;
-                        }
-                    }
-
-                    {
-                        SavedGameLayout* entry = &g_addhero_entry_file.saved_game;
-                        s32 x = -x_offset;
-                        s32 y = -y_offset;
-
-                        base_y = entry->play_time;
-                        pos.vx = (s16)(x + ADDHERO_DETAILS_HOURS_RIGHT_X);
-                        pos.vy = (s16)y;
-                        hours = base_y / SAVED_PLAY_TIME_TICKS_PER_HOUR;
-                        result = field_draw_number(ot, result, hours, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
-                        result = field_draw_text(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, FIELD_UI_TEXT_TIME_SEPARATOR),
-                                                 FIELD_TEXT_COLOR_NORMAL, x + ADDHERO_DETAILS_TIME_SEPARATOR_X, y, FIELD_TEXT_ALIGN_LEFT);
-                        base_y = (base_y / SAVED_PLAY_TIME_TICKS_PER_MINUTE) - (hours * 60);
-                        if (base_y < 10)
-                        {
-                            pos.vx = (s16)(x + ADDHERO_DETAILS_MINUTES_TENS_RIGHT_X);
-                            pos.vy = (s16)y;
-                            result = field_draw_number(ot, result, 0, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
-                        }
-                        pos.vx = (s16)(x + ADDHERO_DETAILS_MINUTES_RIGHT_X);
-                        pos.vy = (s16)y;
-                        result = field_draw_number(ot, result, base_y, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
-                        result = field_draw_text(result, ot, entry->summary_name, FIELD_TEXT_COLOR_NORMAL, x + ADDHERO_DETAILS_TEXT_X,
-                                                 y + ADDHERO_DETAILS_LINE_HEIGHT, FIELD_TEXT_ALIGN_LEFT);
-
-                        if (entry->identity.ids.game_id == g_saved_game_ctx->identity.ids.game_id)
-                        {
-                            do
-                            {
-                                result = field_draw_text(result, ot, ADDHERO_TEXT_AT(g_addhero_text_same_hero_data, ADDHERO_TEXT_SAME_HERO_DATA),
-                                                         FIELD_TEXT_COLOR_NORMAL, x + ADDHERO_DETAILS_TEXT_X, y + ADDHERO_DETAILS_LINE_HEIGHT * 2,
-                                                         FIELD_TEXT_ALIGN_LEFT);
-                            } while (0);
+                            adjust += g_addhero_icon_phase - base_y;
                         }
                         else
                         {
-                            result =
-                                field_draw_text(result, ot, ADDHERO_TEXT(g_addhero_location_text_table, entry->track.bits.music_track), FIELD_TEXT_COLOR_NORMAL,
-                                                x + ADDHERO_DETAILS_TEXT_X, y + ADDHERO_DETAILS_LINE_HEIGHT * 2, FIELD_TEXT_ALIGN_LEFT);
+                            rem = base_x % (half_step * present_count);
+                            if (g_addhero_icon_phase >= rem)
+                            {
+                                hi = rem + half_step;
+                                if (g_addhero_icon_phase < hi)
+                                {
+                                    adjust += hi - g_addhero_icon_phase;
+                                }
+                            }
                         }
+                        result = addhero_draw_icon_highlight(result, ot, total - x_offset, -y_offset, adjust, slot[j], i, j);
+                        i += 1;
+                        total += adjust;
                     }
                 }
-                else
+
                 {
-                    result = field_draw_text(result, ot, ADDHERO_TEXT_AT(g_addhero_text_wrong_version, ADDHERO_TEXT_WRONG_VERSION), FIELD_TEXT_COLOR_NORMAL,
-                                             -x_offset, -y_offset, FIELD_TEXT_ALIGN_LEFT);
+                    SavedGameLayout* entry = &g_addhero_entry_file.saved_game;
+                    s32 x = -x_offset;
+                    s32 y = -y_offset;
+
+                    base_y = entry->play_time;
+                    pos.vx = (s16)(x + ADDHERO_DETAILS_HOURS_RIGHT_X);
+                    pos.vy = (s16)y;
+                    hours = base_y / SAVED_PLAY_TIME_TICKS_PER_HOUR;
+                    result = field_draw_number(ot, result, hours, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
+                    result = field_draw_text(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, FIELD_UI_TEXT_TIME_SEPARATOR),
+                                             FIELD_TEXT_COLOR_NORMAL, x + ADDHERO_DETAILS_TIME_SEPARATOR_X, y, FIELD_TEXT_ALIGN_LEFT);
+                    base_y = (base_y / SAVED_PLAY_TIME_TICKS_PER_MINUTE) - (hours * 60);
+                    if (base_y < 10)
+                    {
+                        pos.vx = (s16)(x + ADDHERO_DETAILS_MINUTES_TENS_RIGHT_X);
+                        pos.vy = (s16)y;
+                        result = field_draw_number(ot, result, 0, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
+                    }
+                    pos.vx = (s16)(x + ADDHERO_DETAILS_MINUTES_RIGHT_X);
+                    pos.vy = (s16)y;
+                    result = field_draw_number(ot, result, base_y, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
+                    result = field_draw_text(result, ot, entry->summary_name, FIELD_TEXT_COLOR_NORMAL, x + ADDHERO_DETAILS_TEXT_X,
+                                             y + ADDHERO_DETAILS_LINE_HEIGHT, FIELD_TEXT_ALIGN_LEFT);
+
+                    if (entry->identity.ids.game_id == g_saved_game_ctx->identity.ids.game_id)
+                    {
+                        result =
+                            field_draw_text(result, ot, ADDHERO_TEXT_AT(g_addhero_text_same_hero_data, ADDHERO_TEXT_SAME_HERO_DATA), FIELD_TEXT_COLOR_NORMAL,
+                                            x + ADDHERO_DETAILS_TEXT_X, y + ADDHERO_DETAILS_LINE_HEIGHT * 2, FIELD_TEXT_ALIGN_LEFT);
+                    }
+                    else
+                    {
+                        result =
+                            field_draw_text(result, ot, ADDHERO_TEXT(g_addhero_location_text_table, entry->track.bits.music_track), FIELD_TEXT_COLOR_NORMAL,
+                                            x + ADDHERO_DETAILS_TEXT_X, y + ADDHERO_DETAILS_LINE_HEIGHT * 2, FIELD_TEXT_ALIGN_LEFT);
+                    }
                 }
             }
             else
             {
-                s32 j;
-                SaveFileHeader* header;
+                result = field_draw_text(result, ot, ADDHERO_TEXT_AT(g_addhero_text_wrong_version, ADDHERO_TEXT_WRONG_VERSION), FIELD_TEXT_COLOR_NORMAL,
+                                         -x_offset, -y_offset, FIELD_TEXT_ALIGN_LEFT);
+            }
+        }
+        else
+        {
+            s32 j;
+            SaveFileHeader* header;
 
-                terminate_multibyte_text(g_addhero_entry_file.header.title);
-                header = &g_addhero_entry_file.header;
-                if (header->title[1][0] == 0 || header->title[1][0] >= SJIS_LEAD_MIN)
+            terminate_multibyte_text(g_addhero_entry_file.header.title);
+            header = &g_addhero_entry_file.header;
+            if (header->title[1][0] == 0 || header->title[1][0] >= SJIS_LEAD_MIN)
+            {
+                for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
                 {
-                    for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
-                    {
-                        name[j] = *(header->title[0] + j);
-                    }
-                    name[j] = 0;
-                    result = draw_cached_text(result, ot, name, -x_offset, -y_offset, FIELD_TEXT_COLOR_NORMAL, FIELD_TEXT_ALIGN_LEFT);
-
-                    for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
-                    {
-                        name[j] = g_addhero_entry_file.header.title[1][j];
-                    }
-                    name[j] = 0;
-                    result =
-                        draw_cached_text(result, ot, name, -x_offset, -y_offset + ADDHERO_DETAILS_LINE_HEIGHT, FIELD_TEXT_COLOR_NORMAL, FIELD_TEXT_ALIGN_LEFT);
+                    name[j] = *(header->title[0] + j);
                 }
+                name[j] = 0;
+                result = draw_cached_text(result, ot, name, -x_offset, -y_offset, FIELD_TEXT_COLOR_NORMAL, FIELD_TEXT_ALIGN_LEFT);
+
+                for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
+                {
+                    name[j] = g_addhero_entry_file.header.title[1][j];
+                }
+                name[j] = 0;
+                result = draw_cached_text(result, ot, name, -x_offset, -y_offset + ADDHERO_DETAILS_LINE_HEIGHT, FIELD_TEXT_COLOR_NORMAL, FIELD_TEXT_ALIGN_LEFT);
             }
         }
     }
     return result;
 }
-#endif
 
 #include "../../common/save_file/skip_hex_digits.inc.c"
 #include "../../common/save_file/terminate_multibyte_text.inc.c"

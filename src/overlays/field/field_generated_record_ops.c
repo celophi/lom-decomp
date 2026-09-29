@@ -11,8 +11,12 @@
 /** @brief Staged levels at or above this are written as FIELD_STAGING_LEVEL_MAX. */
 #define FIELD_LEVEL_LIMIT 0x10
 
-/** @brief Clamp a staged level to four bits. */
-#define FIELD_CLAMP_LEVEL(level) ((level) >= FIELD_LEVEL_LIMIT ? FIELD_STAGING_LEVEL_MAX : (level))
+/** @brief Level written to a four-bit record field; JP truncates, US saturates. */
+#if defined(VERSION_JP)
+#define FIELD_RECORD_LEVEL(level) (level)
+#else
+#define FIELD_RECORD_LEVEL(level) ((level) >= FIELD_LEVEL_LIMIT ? FIELD_STAGING_LEVEL_MAX : (level))
+#endif
 
 /** @brief Largest derived value an item record can hold. */
 #define FIELD_DERIVED_VALUE_MAX 999
@@ -33,7 +37,7 @@
 #define FIELD_TEXT_CODE_LIMIT 0x20
 
 /** @brief Item name table: a header word, then per-entry offsets relative to @c text. */
-typedef struct FieldItemNameTable
+typedef struct FieldGeneratedItemNameTable
 {
     u32 header;
     union
@@ -41,7 +45,7 @@ typedef struct FieldItemNameTable
         u16 offsets[1];
         u8 text[1];
     } body;
-} FieldItemNameTable;
+} FieldGeneratedItemNameTable;
 
 static void field_build_item_name(s32 type_entry, s32 material_entry, u8* dest);
 
@@ -51,11 +55,8 @@ static void field_build_item_name(s32 type_entry, s32 material_entry, u8* dest);
  * A record without a name gets a serial and the name "<material> <type>";
  * a named record without a serial only gets the serial. Then the identity,
  * level, stat modifier and slot fields are copied from the staging block.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP stores the low four bits of each level; US caps levels at 15.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_generated_record_ops", field_write_staged_item);
-#else
 void field_write_staged_item(void)
 {
     s32 i;
@@ -77,14 +78,14 @@ void field_write_staged_item(void)
     g_field_item_staging->record->info.bits.item_type = g_field_item_staging->item_type;
     g_field_item_staging->record->info.bits.material = g_field_item_staging->material;
 
-    g_field_item_staging->record->bonus_nibbles.bits.n0 = FIELD_CLAMP_LEVEL(g_field_item_staging->levels[0].level);
-    g_field_item_staging->record->bonus_nibbles.bits.n1 = FIELD_CLAMP_LEVEL(g_field_item_staging->levels[1].level);
-    g_field_item_staging->record->bonus_nibbles.bits.n2 = FIELD_CLAMP_LEVEL(g_field_item_staging->levels[2].level);
-    g_field_item_staging->record->bonus_nibbles.bits.n3 = FIELD_CLAMP_LEVEL(g_field_item_staging->levels[3].level);
-    g_field_item_staging->record->bonus_nibbles.bits.n4 = FIELD_CLAMP_LEVEL(g_field_item_staging->levels[4].level);
-    g_field_item_staging->record->bonus_nibbles.bits.n5 = FIELD_CLAMP_LEVEL(g_field_item_staging->levels[5].level);
-    g_field_item_staging->record->bonus_nibbles.bits.n6 = FIELD_CLAMP_LEVEL(g_field_item_staging->levels[6].level);
-    g_field_item_staging->record->bonus_nibbles.bits.n7 = FIELD_CLAMP_LEVEL(g_field_item_staging->levels[7].level);
+    g_field_item_staging->record->bonus_nibbles.bits.n0 = FIELD_RECORD_LEVEL(g_field_item_staging->levels[0].level);
+    g_field_item_staging->record->bonus_nibbles.bits.n1 = FIELD_RECORD_LEVEL(g_field_item_staging->levels[1].level);
+    g_field_item_staging->record->bonus_nibbles.bits.n2 = FIELD_RECORD_LEVEL(g_field_item_staging->levels[2].level);
+    g_field_item_staging->record->bonus_nibbles.bits.n3 = FIELD_RECORD_LEVEL(g_field_item_staging->levels[3].level);
+    g_field_item_staging->record->bonus_nibbles.bits.n4 = FIELD_RECORD_LEVEL(g_field_item_staging->levels[4].level);
+    g_field_item_staging->record->bonus_nibbles.bits.n5 = FIELD_RECORD_LEVEL(g_field_item_staging->levels[5].level);
+    g_field_item_staging->record->bonus_nibbles.bits.n6 = FIELD_RECORD_LEVEL(g_field_item_staging->levels[6].level);
+    g_field_item_staging->record->bonus_nibbles.bits.n7 = FIELD_RECORD_LEVEL(g_field_item_staging->levels[7].level);
 
     g_field_item_staging->record->stat_nibbles.bits.n0 = g_field_item_staging->stats.bytes[0];
     g_field_item_staging->record->stat_nibbles.bits.n1 = g_field_item_staging->stats.words[0].modifier1;
@@ -102,7 +103,6 @@ void field_write_staged_item(void)
     g_field_item_staging->record->special_ids[3] = g_field_item_staging->slots[1];
     g_field_item_staging->record->value = 0;
 }
-#endif
 
 /**
  * @brief Build an item name from a material name followed by a type name.
@@ -112,7 +112,7 @@ void field_write_staged_item(void)
  */
 static void field_build_item_name(s32 type_entry, s32 material_entry, u8* dest)
 {
-    FieldItemNameTable* table;
+    FieldGeneratedItemNameTable* table;
     u8* src;
 
     table = field_find_resource(FIELD_ITEM_NAME_TABLE);

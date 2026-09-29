@@ -203,6 +203,12 @@ ASM_SRCS := \
 	$(ASM_DIR)/data/rodata_data4.rodata.s
 
 
+# JP contains the pet-transfer implementation; the US unit is a compatibility stub.
+ifeq ($(VERSION),jp)
+SRCS_GCC_260_G0 := $(filter-out src/card_callbacks.c,$(SRCS_GCC_260_G0))
+SRCS_G0 += src/card_callbacks.c
+endif
+
 # The lists above are the translation-unit layout of the main executable.
 # A version whose main executable does not use it yet (see TU_LAYOUT_<version>
 # in mk/version.mk) builds no C objects; its main executable links purely from

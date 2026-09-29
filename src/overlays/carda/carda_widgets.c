@@ -688,11 +688,9 @@ static void* carda_draw_save_complete(u_long* ot, void* prim, s32 x_offset, s32 
  * @param x_offset Horizontal transition offset.
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP names the card type on the first line and puts "not formatted" on the
+ *       second line for both card types.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/carda/nonmatchings/carda_widgets", carda_draw_format_prompt);
-#else
 void* carda_draw_format_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     s32 unused[2];
@@ -708,18 +706,33 @@ void* carda_draw_format_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
     {
         prim = field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_pocketstation_is, CARDA_TEXT_POCKETSTATION_IS), FIELD_TEXT_COLOR_NORMAL,
                                -x_offset + CARDA_MESSAGE_WIDTH / 2, -y, FIELD_TEXT_ALIGN_CENTER);
+#if !defined(VERSION_JP)
         text_table = CARDA_TEXT_TABLE(g_carda_text_pocketstation_is, CARDA_TEXT_POCKETSTATION_IS);
         prim = field_draw_text(prim, ot, CARDA_TEXT(text_table, CARDA_TEXT_NOT_FORMATTED), FIELD_TEXT_COLOR_NORMAL, -x_offset + CARDA_MESSAGE_WIDTH / 2,
                                CARDA_TEXT_LINE_HEIGHT - y, FIELD_TEXT_ALIGN_CENTER);
+#endif
     }
     else
     {
+#if defined(VERSION_JP)
+        prim = field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_memory_card_is, CARDA_TEXT_MEMORY_CARD_IS), FIELD_TEXT_COLOR_NORMAL,
+                               -x_offset + CARDA_MESSAGE_WIDTH / 2, -y, FIELD_TEXT_ALIGN_CENTER);
+#else
         prim = field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_card_unformatted, CARDA_TEXT_CARD_UNFORMATTED), FIELD_TEXT_COLOR_NORMAL,
                                -x_offset + CARDA_MESSAGE_WIDTH / 2, -y, FIELD_TEXT_ALIGN_CENTER);
+#endif
     }
     x = -x_offset + CARDA_MESSAGE_WIDTH / 2;
+#if defined(VERSION_JP)
+    prim = field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_card_unformatted, CARDA_TEXT_CARD_UNFORMATTED), FIELD_TEXT_COLOR_NORMAL, x,
+                           CARDA_TEXT_LINE_HEIGHT - y, FIELD_TEXT_ALIGN_CENTER);
+    text_table = CARDA_TEXT_TABLE(g_carda_text_card_unformatted, CARDA_TEXT_CARD_UNFORMATTED);
+    prim = field_draw_text(prim, ot, CARDA_TEXT(text_table, CARDA_TEXT_FORMAT_PROMPT), FIELD_TEXT_COLOR_NORMAL, x,
+                           CARDA_TEXT_LINE_HEIGHT * 2 - y, FIELD_TEXT_ALIGN_CENTER);
+#else
     prim = field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_format_prompt, CARDA_TEXT_FORMAT_PROMPT), FIELD_TEXT_COLOR_NORMAL, x,
                            CARDA_TEXT_LINE_HEIGHT * 2 - y, FIELD_TEXT_ALIGN_CENTER);
+#endif
     prim = carda_draw_choice_prompt(prim, ot, x, CARDA_TEXT_LINE_HEIGHT * 3 - y);
 
     status = poll_and_retry_card_info();
@@ -796,7 +809,6 @@ void* carda_draw_format_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
     }
     return prim;
 }
-#endif
 
 /**
  * @brief Draw the formatting message (or, once done, the saving message);
@@ -1145,16 +1157,11 @@ void* carda_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 wi
 }
 
 /**
- * @brief Preselect the second choice of the two-choice prompt.
- * @note JP preselects the first choice instead.
+ * @brief Preselect the default choice (CARDA_CHOICE_DEFAULT) of the two-choice prompt.
  */
 void carda_enable_choice_toggle(void)
 {
-#if defined(VERSION_JP)
-    g_carda_choice_toggle = 0;
-#else
-    g_carda_choice_toggle = 1;
-#endif
+    g_carda_choice_toggle = CARDA_CHOICE_DEFAULT;
 }
 
 /**

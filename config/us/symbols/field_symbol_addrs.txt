@@ -1586,3 +1586,9 @@ shop_update = 0x801400D4;
 niki_update_frame = 0x801401F0;
 addhero_state_step = 0x801401F8;
 zukan_run = 0x80140E00;
+
+// Text-bank entries used by the duel panels.
+g_field_duel_wins_text_offset = 0x800EC408;
+g_field_duel_losses_text_offset = 0x800EC40A;
+g_field_duel_winner_text_offset = 0x800EC40C;
+g_field_duel_versus_text_offset = 0x800EC406;

@@ -315,11 +315,7 @@ inline void field_get_ground_effect_radius_limits(s32 kind, s32* min_radius, s32
  * @param kind Effect kind (GroundEffectKind).
  * @note The aimed dome moves with the d-pad or left stick of the object's
  *       controller, but not past the screen edge.
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_actor_effects", field_draw_object_ground_effect);
-#else
 void field_draw_object_ground_effect(FieldMotionRecord* actor, u32 kind)
 {
     struct
@@ -489,8 +485,12 @@ void field_draw_object_ground_effect(FieldMotionRecord* actor, u32 kind)
                 held = controller->ports[actor->source_object_index].published_sample.held_buttons;
                 raw_buttons = (held << 8) | (held >> 8);
             }
+#if defined(VERSION_JP)
+            buttons = raw_buttons;
+#else
             buttons = ((u32)(raw_buttons & PAD_BTN_CIRCLE) >> 1) | ((raw_buttons & PAD_BTN_CROSS) * 2) | ((u32)(raw_buttons & PAD_BTN_TRIANGLE) >> 3) |
                       ((raw_buttons & PAD_BTN_SQUARE) * 8) | (raw_buttons & 0xFF0F);
+#endif
             work.point.vz = 0;
             work.point.vy = 0;
             work.point.vx = 0;
@@ -536,7 +536,6 @@ void field_draw_object_ground_effect(FieldMotionRecord* actor, u32 kind)
     }
     g_field_render_half->primitive_cursor = packet;
 }
-#endif
 
 /**
  * @brief Append a rotating dome of arched quads around a position.

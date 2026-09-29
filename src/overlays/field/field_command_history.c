@@ -102,11 +102,8 @@ void field_command_history_reset(void)
  * @param player Controller port; ports at or above two are ignored.
  * @param age_sequence Nonzero to advance the idle counter and drop an idle history.
  * @note A new button also records the direction held with it first.
- * @note JP changes this function; the JP build takes it from assembly.
+ * @note JP keeps the physical face-button order; US swaps opposite face buttons.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/field/nonmatchings/field_command_history", field_command_history_record);
-#else
 void field_command_history_record(s32 player, s32 age_sequence)
 {
     s16 axis;
@@ -134,21 +131,23 @@ void field_command_history_record(s32 player, s32 age_sequence)
             raw_buttons = ports[player].published_sample.held_buttons;
             buttons = (raw_buttons << 8) | (raw_buttons >> 8);
         }
+#if !defined(VERSION_JP)
         /* Swap the up/left and right/down face buttons. */
         value = ((u32)(buttons & PADRdown) >> 1) | ((buttons & PADRright) * 2) | ((u32)(buttons & PADRleft) >> 3) |
                 ((buttons & PADRup) * 8) | (buttons & (u16)~(PADRup | PADRright | PADRdown | PADRleft));
         buttons = value;
+#endif
         stick_x_port = ports + player;
         if (stick_x_port->published_sample.device_type != CONTROLLER_DEVICE_DIGITAL)
         {
             axis = stick_x_port->published_sample.left_stick_x;
             if (axis < 0)
             {
-                buttons = value | PADLleft;
+                buttons |= PADLleft;
             }
             else if (axis > 0)
             {
-                buttons = value | PADLright;
+                buttons |= PADLright;
             }
             stick_y_port = ports + player;
             axis = stick_y_port->published_sample.left_stick_y;
@@ -222,7 +221,6 @@ void field_command_history_record(s32 player, s32 age_sequence)
         }
     }
 }
-#endif
 
 /**
  * @brief Drop the oldest entry of a player's full history row.

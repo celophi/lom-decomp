@@ -10,9 +10,8 @@
 #include "field_actor_tables.h"
 #include "field_calls.h"
 #include "field_text.h"
-
-/** @brief Number of action buttons a player can bind (four face buttons, four shoulder buttons). */
-#define FIELD_BUTTON_BINDING_COUNT 8
+#define FIELD_HELD_ACTION_BUTTONS_OUT_OF_LINE
+#include "field_held_action_buttons.h"
 
 /** @brief Number of actions with an entry in an action command map. */
 #define FIELD_ACTION_MAP_ENTRY_COUNT 11
@@ -82,10 +81,6 @@ typedef struct
     u8 pad;
 } FieldActionMap;
 
-/** @brief Pad button mask of each bindable button, in binding order. */
-extern u8 g_field_binding_buttons[FIELD_BUTTON_BINDING_COUNT];
-/** @brief Action binding code of each action. */
-extern u8 g_field_action_binding_codes[];
 extern s32 g_field_active_group;
 extern s32 g_field_dialog_screen_mode;
 extern s32 g_field_interaction_active;

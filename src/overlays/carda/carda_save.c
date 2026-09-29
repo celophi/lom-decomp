@@ -105,11 +105,7 @@ static inline CardaElement* carda_save_alloc_element(void)
  *       it holds the directory entry count while the card is searched for an existing
  *       save; above it, the dialog currently shown. Dialog states also read the pad,
  *       move to the next state and start card sequences through g_card_step.
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/carda/nonmatchings/carda_save", carda_draw_save_flow);
-#else
 void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     s32 unused[2];
@@ -456,7 +452,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
             carda_open_item_list();
             break;
         }
-        g_carda_choice_toggle = 1;
+        g_carda_choice_toggle = CARDA_CHOICE_DEFAULT;
         field_reset_input_repeat();
         break;
     }
@@ -667,7 +663,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                     strcat(g_carda_selected_card_path.raw, g_lom_pocketstation_filename_prefix);
                     carda_store_active_record();
                     g_card_entry_state = CARDA_ENTRY_STATE_CONFIRM_DOWNLOAD;
-                    g_carda_choice_toggle = 1;
+                    g_carda_choice_toggle = CARDA_CHOICE_DEFAULT;
                     field_reset_input_repeat();
                     break;
                 }
@@ -688,7 +684,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
             }
             if (g_carda_mode == CARDA_MODE_RETURN_PET)
             {
-                g_carda_choice_toggle = 1;
+                g_carda_choice_toggle = CARDA_CHOICE_DEFAULT;
                 g_carda_new_save_file = 0;
                 g_carda_progress_start_tick = VSync(-1);
                 g_carda_progress_active = 1;
@@ -711,7 +707,6 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
     }
     return prim;
 }
-#endif
 
 /**
  * @brief Serialize the game state into the save buffer and copy the active record into it.
@@ -720,7 +715,7 @@ void carda_store_active_record(void)
 {
     cdrom_queue_read(0x5E2, g_carda_save_blob);
     cdrom_wait_queue_empty();
-    card_resource_noop_hook(g_carda_save_blob, &g_saved_game_ctx->pets[g_field_card_pet_slot]);
+    card_prepare_pet_transfer(g_carda_save_blob, &g_saved_game_ctx->pets[g_field_card_pet_slot]);
 }
 
 /**

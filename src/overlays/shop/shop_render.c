@@ -31,6 +31,17 @@
 #endif
 #define SHOP_MONEY_VALUE_X 48
 
+/** @brief Numeric stat positions in the detail window. */
+#if defined(VERSION_JP)
+#define SHOP_WEAPON_VALUE_X 96
+#define SHOP_ARMOR_VALUE_X 96
+#define SHOP_OTHER_VALUE_X 48
+#else
+#define SHOP_WEAPON_VALUE_X 112
+#define SHOP_ARMOR_VALUE_X 116
+#define SHOP_OTHER_VALUE_X 66
+#endif
+
 /** @brief Inventory record named by record entry id @p id, summed as integers, index first. */
 #define SHOP_ENTRY_RECORD(id) ((FieldItemRecord*)(((id) & SHOP_ENTRY_RECORD_INDEX_MASK) * sizeof(FieldItemRecord) + (u32)g_shop_item_records))
 /** @brief Inventory record of the list entry under the cursor. */
@@ -350,11 +361,7 @@ u8* shop_draw_list_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
  * @param x_inset Horizontal offset subtracted from every x coordinate.
  * @param y_inset Vertical offset subtracted from every y coordinate.
  * @return Next free primitive after the window's contents.
- * @note JP changes this function; the JP build takes it from assembly.
  */
-#if defined(VERSION_JP)
-INCLUDE_ASM("overlays/shop/nonmatchings/shop_render", shop_draw_detail_window);
-#else
 u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
 {
     Vec2s position;
@@ -404,7 +411,7 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
                 encoded_text_append(name_text, SHOP_ARCHIVE_TEXT(archive, category_offset, (FIELD_ITEM_TYPE(attributes) + WEAPON_CATEGORY_FIRST) * 2));
                 y = 18 - y_inset;
                 prim = func_800A88A0(prim, ot, FIELD_UI_TEXT(ui_text_table, 21), SHOP_TEXT_COLOR_NORMAL, 16 - x_inset, y, 0);
-                x = 112 - x_inset;
+                x = SHOP_WEAPON_VALUE_X - x_inset;
                 position.x = x;
                 position.y = y;
                 prim = func_800A8A78(ot, prim, SHOP_SELECTED_RECORD()->derived.values[0], SHOP_TEXT_COLOR_NORMAL, &position, 1);
@@ -417,7 +424,11 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
                 func_800A8B90(number_text, difference, 0);
                 encoded_text_append(difference_text, number_text);
                 encoded_text_append(difference_text, FIELD_UI_TEXT(ui_text_table, 32));
+#if defined(VERSION_JP)
+                position.x = 112 - x_inset;
+#else
                 position.x = x;
+#endif
                 position.y = y;
                 prim = func_800A88A0(prim, ot, difference_text, SHOP_TEXT_COLOR_NORMAL, position.x, position.y, 0);
                 break;
@@ -433,7 +444,7 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
                 encoded_text_append(name_text, (u8*)(category_offset + (offset + (u32)archive)));
                 y = 18 - y_inset;
                 prim = func_800A88A0(prim, ot, FIELD_UI_TEXT(ui_text_table, 22), SHOP_TEXT_COLOR_NORMAL, 16 - x_inset, y, 0);
-                position.x = 116 - x_inset;
+                position.x = SHOP_ARMOR_VALUE_X - x_inset;
                 position.y = y;
                 selected = SHOP_SELECTED_RECORD();
                 prim = func_800A8A78(ot, prim,
@@ -457,7 +468,7 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
                 text = (u8*)(*category_offsets + (offset + (u32)text_archive));
                 encoded_text_append(name_text, text);
                 prim = func_800A88A0(prim, ot, FIELD_UI_TEXT_AT(D_800EC3F2, 23), SHOP_TEXT_COLOR_NORMAL, 16 - x_inset, 18 - y_inset, 0);
-                position.x = 66 - x_inset;
+                position.x = SHOP_OTHER_VALUE_X - x_inset;
                 position.y = 18 - y_inset;
                 prim = func_800A8A78(ot, prim, SHOP_SELECTED_RECORD()->derived.bytes[2], SHOP_TEXT_COLOR_NORMAL, &position, 0);
                 detail_offset = text_archive->section_offsets[3];
@@ -485,7 +496,6 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
     }
     return prim;
 }
-#endif
 
 /**
  * @brief Draw the title window with the FIELD UI string chosen by shop_init.
