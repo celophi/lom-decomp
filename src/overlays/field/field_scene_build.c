@@ -955,7 +955,7 @@ void field_build_render_records(FieldMapObject* map, u16 object_index)
     if (scene->vlc_table != 0)
     {
         vlc_table = arena.cur;
-        scene->vlc_table = (s32)vlc_table;
+        scene->vlc_table = (u8*)vlc_table;
         arena.cur = vlc_table + FIELD_VLC_TABLE_BYTES;
         DecDCTReset(0);
         DecDCTvlcBuild((u_short*)scene->vlc_table);

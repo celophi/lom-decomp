@@ -265,7 +265,7 @@ typedef struct AkaoSongState
     u32 tempo_acc;                     /**< Tick accumulator; a carry out of the low half advances one tick. */
     s32 song_data;                     /**< Address of the song descriptor in RAM. */
     s32 key_map_base;                  /**< Key-to-articulation map table of the song (ext op FE 14). */
-    s32 note_table;                    /**< Note/articulation table used by drum-mode channels. */
+    u8* note_table;                    /**< Note/articulation table used by drum-mode channels. */
     s32 voice_alloc_base;              /**< First voice the sequencer may allocate. */
     u32 noise_mask;                    /**< Channels enabled in the SPU noise bitmap. */
     u32 reverb_mask;                   /**< Channels enabled in the SPU reverb bitmap. */
@@ -301,7 +301,7 @@ typedef struct AkaoChannelState
     u8* seq_cursor;             /**< Next bytecode byte. */
     u8* loop_cursor[4];         /**< Loop start of each loop-stack level. */
     u8* return_cursor;          /**< Return address of a subroutine call (ext ops FE 0E/0F). */
-    u32 key_map;                /**< Selected key-to-articulation map (ext op FE 14). */
+    u8* key_map;                /**< Selected key-to-articulation map (ext op FE 14). */
     s16* pitch_lfo_cursor;      /**< Pitch LFO waveform position. */
     s16* volume_lfo_cursor;     /**< Volume LFO waveform position. */
     s16* pan_lfo_cursor;        /**< Pan LFO waveform position. */

@@ -20,14 +20,14 @@ typedef struct
     /** base of the per-group tile bitmask rows, or 0 when no groups
         are active (then group_count holds a FIELD_COLLISION_GROUP_ERROR_*
         code); field_set_node_enabled gates its field_collision_rasterize_groups call on this. */
-    s32 group_work;
+    u8* group_work;
     /** base of the per-group byte tile maps. */
     s32 group_tiles;
     /** end of the per-group work area. */
     s32 group_work_end;
     struct FieldImageReq* uploads; /* head of the pending upload list */
     /** set by a movie animation while the scene builds, then the MDEC VLC table it gets. */
-    s32 vlc_table;
+    u8* vlc_table;
     /** cleared by the scene build. */
     s32 unk3C;
     /** tile edge in pixels, 4 or 8. */

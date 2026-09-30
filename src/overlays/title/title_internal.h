@@ -66,7 +66,7 @@ extern s32 g_titleMenuExitState;
  * (always 0x8013C000). Passed to akao_register_bank to register it with the
  * audio driver.
  */
-extern s32 g_titleAudioBankBase;
+extern u8* g_titleAudioBankBase;
 extern unsigned char D_8003ECA0;
 extern s32 g_titleIdleCountdown;
 /** @brief g_controller_device_type values at or above this mean no controller is connected. */

@@ -27,7 +27,8 @@ checks that for both versions. `verify-data-as-c` removes the data objects
 before and after, including the copies the overlay targets make in the
 project's own `build/`, so a normal build never picks up generated ones.
 data2c also refuses an object that was built from its own output. The
-generated C goes to `build/<version>/**/datac/`. It needs libclang (`libclang`
+generated C goes to `datac/build/<version>/` in the staging area, outside the build
+tree, so it is never copied into the project. It needs libclang (`libclang`
 in requirements.txt); the unit tests also need `clang` and a host `cc`.
 
 ## Host output

@@ -629,7 +629,7 @@ s32 field_get_track_counter_modulo(FieldActorSlot* slot, s32 divisor)
  * @param output Destination for the 16 interpolated colours.
  * @see decomp.me (100%) https://decomp.me/scratch/X9uyL
  */
-void field_interpolate_palette_track(FieldActorSlot* slot, s32 palette_sequence, s32 palette_table, s16* output)
+void field_interpolate_palette_track(FieldActorSlot* slot, s32 palette_sequence, u8* palette_table, s16* output)
 {
     s32 segment_start_frame = 0;
     s32 selector_shift = FIELD_PALETTE_SELECTOR_BITS;
@@ -1471,7 +1471,7 @@ static void field_reset_actor_track_mask(FieldActorSlot* slot)
  * @param unused Forwarded to field_build_actor_render_commands().
  * @see decomp.me (100%) https://decomp.me/scratch/hvTSS
  */
-void field_prepare_actor_render_commands(s32 render_context, s32 unused)
+void field_prepare_actor_render_commands(u8* render_context, s32 unused)
 {
     field_render_effects((FieldRenderContext*)render_context);
     field_build_actor_render_commands((FieldRenderContext*)render_context, unused);
@@ -3443,7 +3443,7 @@ void field_unpack_resource_package(FieldCdBuffer* buf, s32 size, s32 slot_index,
 static void field_upload_resource_texture(FieldCdBuffer* buf, s32 slot_index, s32 texture_index, s32 palette_row)
 {
     RECT rect;
-    s32 image_offset;
+    u8* image_offset;
 
     image_offset = buf->offsets[2];
 

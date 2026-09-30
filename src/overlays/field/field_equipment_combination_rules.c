@@ -61,7 +61,7 @@ s32 equipment_combination_quantity(s32* record_indices)
     s32 saved_base;
     s32 items_base;
     s32 end;
-    s32 item_offset;
+    u8* item_offset;
     s16 category;
     s32 value;
     s32 j;

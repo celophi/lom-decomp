@@ -653,7 +653,7 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s3
     {
         u8* name_table = g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_TECHNIQUE_HELP];
 
-        g_menu_help_text = (s32)(name_table + ((u16*)name_table)[selected_technique]);
+        g_menu_help_text = (u8*)(name_table + ((u16*)name_table)[selected_technique]);
     }
     return prim;
 }
@@ -1278,7 +1278,7 @@ s32 menu_count_inventory_items(void)
  * @param style Renderer style, passed through unchanged.
  * @return Updated primitive write cursor.
  */
-s32 menu_draw_clamped_number(s32* ot_entry, s32 packet_cursor, s32 value, s32 format, Vec2s* origin, s32 style)
+s32 menu_draw_clamped_number(s32* ot_entry, u8* packet_cursor, s32 value, s32 format, Vec2s* origin, s32 style)
 {
     if (value >= 100)
     {

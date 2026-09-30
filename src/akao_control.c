@@ -203,7 +203,7 @@ void akao_seq_start_song(u8* song_data, s32 start_mask)
     song_data += 0x40;
     silence_ptr = g_akao_silent_sequence;
 
-    song_tables->note_table = (s32)table;
+    song_tables->note_table = (u8*)table;
     song_tables->voice_alloc_base = 0;
     do
     {

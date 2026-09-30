@@ -450,7 +450,7 @@ void reset_save_slot_panel(void)
     }
     {
         u32 low_addr = (u32)(&g_saveLayoutTable);
-        u32 ptr = g_slotSlideX + low_addr;
+        u8* ptr = g_slotSlideX + low_addr;
         *((u16*)(ptr + 0xC)) = SAVE_SLOT_HOME_V;
         *((u16*)(ptr + 0xE)) = 0;
     }

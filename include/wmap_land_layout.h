@@ -33,7 +33,7 @@ s32 wmap_get_selected_artifact(void);
 s32 wmap_get_spirit_sprite(s32 row, s32 column);
 s32 wmap_has_growth_blocking_event(void);
 s32 wmap_has_persistent_land_event(void);
-void wmap_add_artifact_influence(s32 table_row, s32 output_row, s32 output_address);
+void wmap_add_artifact_influence(s32 table_row, s32 output_row, u8* output_address);
 void wmap_add_saved_land_influence(s32 record_index, s32 other_index, s32 unused, s32* values);
 
 void func_8005D46C(void);

@@ -797,8 +797,8 @@ void menu_cursor_up(void)
  */
 void render_title_menu_items(void* ctx)
 {
-    s32 ot_head;
-    s32 prim;
+    u8* ot_head;
+    u8* prim;
     s32 slot;
     s32 visible_index;
     s32 item_y;
@@ -809,7 +809,7 @@ void render_title_menu_items(void* ctx)
     s32 result;
     u8 anim;
 
-    ot_head = (s32)(((u8*)ctx) + 0x40);
+    ot_head = (u8*)(((u8*)ctx) + 0x40);
     first_prim = *((s32*)(((u8*)ctx) + 0x80B8));
     prim = emit_menu_item_quad(ot_head, first_prim, 0, TITLE_MENU_HEADER_X, 0xC8, 0, 0x80, 1);
     item_x = 0x88;
@@ -822,7 +822,7 @@ void render_title_menu_items(void* ctx)
         item_visible = (*flag_ptr) != 0;
         if (item_visible)
         {
-            prim = (s32)emit_menu_item_quad(ot_head, prim, slot + 1, item_x, item_y, 0, 0x80, (g_titleVisibleItemRank == visible_index) ? 1 : 2);
+            prim = (u8*)emit_menu_item_quad(ot_head, prim, slot + 1, item_x, item_y, 0, 0x80, (g_titleVisibleItemRank == visible_index) ? 1 : 2);
             item_y += 0xC;
             visible_index++;
             prim += 0x28;

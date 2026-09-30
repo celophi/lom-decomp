@@ -22,7 +22,7 @@ void field_start_actor_animation(s32 slot_index, int target_count, u8* targets);
 s32 field_is_actor_animation_active(s32 slot_index);
 s32 field_find_active_special_attack_actor(void);
 void field_update_actor_animations(void);
-void field_prepare_actor_render_commands(s32 render_context, s32 unused);
+void field_prepare_actor_render_commands(u8* render_context, s32 unused);
 void field_reset_global_color_scale(void);
 void field_reset_actor_resource_slots(void);
 void field_initialize_actor_system(void);

@@ -927,7 +927,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
     s32 right_glyph_ot;
     s32 button_or_x; /* Hint button index in the first loop; camera x in pixels, then the label x, in the second. */
     s32 index;
-    s32 cursor;
+    u8* cursor;
     s32 action_offset;
     s32 label_y;
     u16 raw_buttons;
@@ -946,7 +946,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
     s32 held_buttons;      /* The player's held buttons, bytes swapped. */
     SavedGameLayout* save; /* The player's save record base. */
 
-    cursor = (s32)render->primitive_cursor;
+    cursor = (u8*)render->primitive_cursor;
     ot = (s32)&render->ordering_table[FIELD_TEXT_OT_INDEX];
     index = 0;
     ports = CONTROLLER_STATE->ports;
@@ -1066,8 +1066,8 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
                     point.vx = FIELD_HINT_PORTRAIT_X;
                     label_y <<= 5;
                     point.vy = label_y + FIELD_HINT_PORTRAIT_Y;
-                    cursor = (s32)field_emit_actor_portrait((SPRT*)cursor, (u32*)ot, index, (u32*)&point);
-                    cursor = (s32)field_draw_text((SPRT*)cursor, (s32*)ot, (u8*)text_or_state, FIELD_TEXT_COLOR_NORMAL, FIELD_HINT_TEXT_X,
+                    cursor = (u8*)field_emit_actor_portrait((SPRT*)cursor, (u32*)ot, index, (u32*)&point);
+                    cursor = (u8*)field_draw_text((SPRT*)cursor, (s32*)ot, (u8*)text_or_state, FIELD_TEXT_COLOR_NORMAL, FIELD_HINT_TEXT_X,
                                                   label_y + FIELD_HINT_TEXT_Y, FIELD_TEXT_SHADOW);
                     break;
                 }
@@ -1123,7 +1123,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
             {
                 text_color = FIELD_TEXT_COLOR_NORMAL;
             }
-            cursor = (s32)field_draw_text((SPRT*)cursor, (s32*)text_ot, ((FieldObjectState*)text_or_state)->name, text_color, button_or_x, (s32)point.vy,
+            cursor = (u8*)field_draw_text((SPRT*)cursor, (s32*)text_ot, ((FieldObjectState*)text_or_state)->name, text_color, button_or_x, (s32)point.vy,
                                           FIELD_TEXT_SHADOW | FIELD_TEXT_ALIGN_CENTER);
             left_glyph_ot = ot;
             point.vy = (u16)point.vy - 8;
@@ -1131,7 +1131,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
             {
                 left_glyph_ot = ot - sizeof(u_long);
             }
-            cursor = (s32)field_draw_sprite_glyph((u8*)cursor, (s32*)left_glyph_ot, FIELD_LABEL_LEFT_BRACKET, (s32*)&point,
+            cursor = (u8*)field_draw_sprite_glyph((u8*)cursor, (s32*)left_glyph_ot, FIELD_LABEL_LEFT_BRACKET, (s32*)&point,
                                         g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
             right_glyph_ot = ot;
             point.vx = (u16)point.vx + 8;
@@ -1139,7 +1139,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
             {
                 right_glyph_ot = ot - sizeof(u_long);
             }
-            cursor = (s32)field_draw_sprite_glyph((u8*)cursor, (s32*)right_glyph_ot, FIELD_LABEL_RIGHT_BRACKET, (s32*)&point,
+            cursor = (u8*)field_draw_sprite_glyph((u8*)cursor, (s32*)right_glyph_ot, FIELD_LABEL_RIGHT_BRACKET, (s32*)&point,
                                         g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
             number_ot = ot;
             point.vx = (u16)point.vx + 8;
@@ -1147,7 +1147,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
             {
                 number_ot -= sizeof(u_long);
             }
-            cursor = (s32)field_draw_sprite_number((s32*)number_ot, (void*)cursor, ((FieldObjectState*)text_or_state)->hud.bytes.flags >> 1, 2, (u16*)&point,
+            cursor = (u8*)field_draw_sprite_number((s32*)number_ot, (void*)cursor, ((FieldObjectState*)text_or_state)->hud.bytes.flags >> 1, 2, (u16*)&point,
                                         g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
             if ((g_field_selected_actor_label == index) && (((FieldObjectState*)text_or_state)->hp_display.word >= 0))
             {
@@ -1695,7 +1695,7 @@ void field_rebuild_party_actions(s32 refresh_only)
     u8* parameter_params;
     SavedGameLayout* command_save;
     s32 character_kind;
-    s32 controllers_or_is_player;
+    u8* controllers_or_is_player;
     s32 equipment_offset;
     s32 equipment_index;
     s32 slot_or_type;
@@ -1729,7 +1729,7 @@ void field_rebuild_party_actions(s32 refresh_only)
 
     akao_set_mono_output(g_saved_game_ctx->options.bits.mono_sound ^ 1);
     cdrom_set_audio_volume(0x7F, g_saved_game_ctx->options.bits.mono_sound);
-    controllers_or_is_player = (s32)CONTROLLER_STATE;
+    controllers_or_is_player = (u8*)CONTROLLER_STATE;
     ((ControllerState*)controllers_or_is_player)->ports[0].actuators_enabled = g_saved_game_ctx->options.bits.vibration;
     if ((g_saved_game_ctx->characters[1].info.word & FIELD_CHARACTER_PAD_CONTROLLED) && (g_saved_game_ctx->characters[1].name[0] != 0))
     {

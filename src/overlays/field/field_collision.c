@@ -627,7 +627,7 @@ typedef struct
 /** Outgoing parameter block for field_collision_trace_line, built at sp+0x4020. */
 typedef struct
 {
-    s32 tile_base;
+    u8* tile_base;
     s32 goal_tile;
     s32 start_x;
     s32 start_z;
@@ -4428,7 +4428,7 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
     u32 carry_touch;
     u32 carry_solid;
     s32 bits_left;
-    u32 ring_inner;
+    u8* ring_inner;
     u32 entry_touch;
     u32 entry_solid;
     u32 entry_inner;
@@ -5366,7 +5366,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
             rec.start_z = goal_z;
             rec.end_x = start_x;
             path[0][0] = (s32)tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIRS_ALL);
-            rec.tile_base = (s32)near_tile;
+            rec.tile_base = (u8*)near_tile;
             rec.end_z = start_z;
             rec.footprint_width = (s16)start_query->width;
             rec.footprint_depth = (s16)start_query->depth;
@@ -5811,7 +5811,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                         route_offset -= plane_size;
                     }
                     rec.start_x = goal_x;
-                    rec.tile_base = (s32)tile;
+                    rec.tile_base = (u8*)tile;
                     rec.stamp = 4;
                     rec.start_z = goal_z;
                     rec.end_x = ((route_offset % columns) - 2) << col_shift;
@@ -6044,7 +6044,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                         if (count != 0)
                         {
                             step = count;
-                            rec.tile_base = (s32)tile;
+                            rec.tile_base = (u8*)tile;
                             rec.start_x = start_x;
                             rec.start_z = start_z;
                             do
@@ -6088,7 +6088,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                     goal_col = next_out[2];
                     goal_row = deferred_out[2];
                     rec.start_x = start_col;
-                    rec.tile_base = (s32)tile;
+                    rec.tile_base = (u8*)tile;
                     rec.start_z = start_row;
                     mid_x = (via_x + goal_col) / 2;
                     rec.end_x = mid_x;
@@ -6096,7 +6096,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                     rec.end_z = mid_z;
                     if (field_collision_trace_line(&rec) != 0)
                     {
-                        rec.tile_base = (s32)near_tile;
+                        rec.tile_base = (u8*)near_tile;
                         rec.start_x = goal_col;
                         rec.start_z = goal_row;
                         if (field_collision_trace_line(&rec) != 0)
@@ -6106,7 +6106,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                             count = mid_z;
                             rec.start_x = start_col;
                             try_quarter = 0;
-                            rec.tile_base = (s32)tile;
+                            rec.tile_base = (u8*)tile;
                             rec.start_z = start_row;
                             mid2_x = (via_x + goal_col) / 2;
                             mid2_z = (count + goal_row) / 2;
@@ -6114,7 +6114,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                             rec.end_z = mid2_z;
                             if (field_collision_trace_line(&rec) != 0)
                             {
-                                rec.tile_base = (s32)near_tile;
+                                rec.tile_base = (u8*)near_tile;
                                 rec.start_x = goal_col;
                                 rec.start_z = goal_row;
                                 if (field_collision_trace_line(&rec) != 0)
@@ -6129,7 +6129,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                     {
                         deferred_out = (s32*)(goal_col - via_x);
                         quarter_dx = ((s32)deferred_out);
-                        rec.tile_base = (s32)tile;
+                        rec.tile_base = (u8*)tile;
                         rec.start_x = start_col;
                         rec.start_z = start_row;
                         if (((s32)deferred_out) < 0)
@@ -6148,7 +6148,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                         rec.end_z = ((s32)next_out);
                         if (field_collision_trace_line(&rec) != 0)
                         {
-                            rec.tile_base = (s32)near_tile;
+                            rec.tile_base = (u8*)near_tile;
                             rec.start_x = goal_col;
                             rec.start_z = goal_row;
                             if (field_collision_trace_line(&rec) != 0)
@@ -6162,7 +6162,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                     }
                     try_quarter = 1;
                     rec.start_x = goal_col;
-                    rec.tile_base = (s32)near_tile;
+                    rec.tile_base = (u8*)near_tile;
                     rec.start_z = goal_row;
                     back_mid_x = (via_x + start_col) / 2;
                     back_mid_z = (count + start_row) / 2;
@@ -6170,7 +6170,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                     rec.end_z = back_mid_z;
                     if (field_collision_trace_line(&rec) != 0)
                     {
-                        rec.tile_base = (s32)tile;
+                        rec.tile_base = (u8*)tile;
                         rec.start_x = start_col;
                         rec.start_z = start_row;
                         if (field_collision_trace_line(&rec) != 0)
@@ -6180,7 +6180,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                             count = back_mid_z;
                             rec.start_x = goal_col;
                             try_quarter = 0;
-                            rec.tile_base = (s32)near_tile;
+                            rec.tile_base = (u8*)near_tile;
                             rec.start_z = goal_row;
                             back_mid2_x = (via_x + start_col) / 2;
                             back_mid2_z = (count + start_row) / 2;
@@ -6188,7 +6188,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                             rec.end_z = back_mid2_z;
                             if (field_collision_trace_line(&rec) != 0)
                             {
-                                rec.tile_base = (s32)tile;
+                                rec.tile_base = (u8*)tile;
                                 rec.start_x = start_col;
                                 rec.start_z = start_row;
                                 if (field_collision_trace_line(&rec) != 0)
@@ -6203,7 +6203,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                     {
                         step = start_col - via_x;
                         back_quarter_dx = step;
-                        rec.tile_base = (s32)near_tile;
+                        rec.tile_base = (u8*)near_tile;
                         rec.start_x = goal_col;
                         rec.start_z = goal_row;
                         if (step < 0)
@@ -6222,7 +6222,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                         rec.end_z = ((s32)deferred_out);
                         if (field_collision_trace_line(&rec) != 0)
                         {
-                            rec.tile_base = (s32)tile;
+                            rec.tile_base = (u8*)tile;
                             rec.start_x = start_col;
                             rec.start_z = start_row;
                             if (field_collision_trace_line(&rec) != 0)

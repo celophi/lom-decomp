@@ -76,7 +76,7 @@ extern u8* g_field_coordinate_labels[];
  * @param y_offset Vertical offset subtracted from the panel position.
  * @return Primitive-buffer cursor after all enabled rows.
  */
-s32 field_draw_coordinate_panel(void* ot, s32 prim, s32 x_offset, s32 y_offset)
+s32 field_draw_coordinate_panel(void* ot, u8* prim, s32 x_offset, s32 y_offset)
 {
     s32 cursor;
     s32 unused[2];

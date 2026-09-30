@@ -42,7 +42,7 @@ u8* field_advance_actor_part_animation_frame();
 void field_play_object_animation();
 void field_grant_reward(s32 recipient, s32 owner, u32 kind);
 s32 field_collision_hit_markers(FieldCollisionQuery* query);
-void field_interpolate_palette_track(FieldActorSlot* slot, s32 palette_sequence, s32 palette_table, s16* output);
+void field_interpolate_palette_track(FieldActorSlot* slot, s32 palette_sequence, u8* palette_table, s16* output);
 void field_dispatch_actor_audio_event();
 void field_restart_actor_animation();
 u8* field_begin_actor_animation_forward();
@@ -3253,7 +3253,7 @@ void field_render_effects(FieldRenderContext *render_context)
     s32 frame_result;
     s32 object_index;
     s32 actor_or_object_index;
-    s32 actor_address;
+    u8* actor_address;
     FieldActorSlot *actor;
     s32 part_offset;
     s32 value;
@@ -3383,7 +3383,7 @@ void field_render_effects(FieldRenderContext *render_context)
 
                 case FIELD_EFFECT_RENDER_TRACK_SPRITE:
                     value = effect->actor_index;
-                    actor_address = (s32) &g_field_actor_slots[value];
+                    actor_address = (u8*) &g_field_actor_slots[value];
                     value = effect->part_index;
                     part = &((FieldActorSlot *) actor_address)->parts[value];
                     value = effect->track_index;

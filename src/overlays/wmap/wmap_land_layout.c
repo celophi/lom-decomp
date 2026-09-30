@@ -1664,7 +1664,7 @@ s32 wmap_has_persistent_land_event(void)
  * @param output_row Destination row, or WMAP_NO_LAND to skip.
  * @param output_address Byte address of the destination spirit-level table.
  */
-void wmap_add_artifact_influence(s32 table_row, s32 output_row, s32 output_address)
+void wmap_add_artifact_influence(s32 table_row, s32 output_row, u8* output_address)
 {
     wmap_adjust_neighbor_spirits(table_row, output_row, (s32(*)[8])output_address);
 }

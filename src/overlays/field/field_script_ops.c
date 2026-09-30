@@ -2704,7 +2704,7 @@ void field_script_op_81(s32 mode, s32 red, s32 green, s32 blue)
  * @param resource_slot_id Forwarded to field_reload_actor.
  * @param resource_base Forwarded to field_reload_actor.
  */
-void field_script_op_82(s32 key, s32 resource_entry_index, s32 resource_slot_id, s32 resource_base)
+void field_script_op_82(s32 key, s32 resource_entry_index, s32 resource_slot_id, u8* resource_base)
 {
     s32 actor;
     s32 resource_flag;

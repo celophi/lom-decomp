@@ -458,7 +458,7 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
                 ShopTextArchive* text_archive;
                 FieldItemRecord* selected;
                 u8* text;
-                u32 detail_offset;
+                u8* detail_offset;
                 u16 offset;
 
                 category_offsets = &g_shop_text_archive.section_offsets[2];
