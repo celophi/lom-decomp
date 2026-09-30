@@ -52,18 +52,11 @@ typedef struct
 extern WmapQuad D_800D043C;
 
 extern u32 D_800D9238;
-extern VECTOR D_80139870;
-extern VECTOR D_80139888;
-extern SVECTOR D_8013B238;
-extern SVECTOR D_8013B240;
-extern VECTOR D_801B2478;
 extern SVECTOR D_801B2490;
-extern SVECTOR D_801B24A8;
 extern s32 D_800DBE7C;
 extern s32 D_800DCEDC;
 extern u8 D_8010CF18[];
 extern u8 D_80114F18[];
-extern s32 D_8011CF74;
 extern s32 D_80182E00;
 extern s32 D_800D9228;
 extern s32 D_8011D500;
@@ -232,25 +225,25 @@ void func_8006454C(void)
     WmapQuad* quad;
     WmapTexturedTriangle* triangle;
 
-    D_8013B238.vz = (u16)(D_8013B238.vz + D_801B24A8.vz);
-    D_8013B238.vy = (u16)(D_8013B238.vy + D_801B24A8.vy);
-    D_8013B238.vx = (u16)(D_8013B238.vx + D_801B24A8.vx);
-    D_80139870.vz = (s32)(D_80139870.vz + D_801B2478.vz);
-    D_80139870.vy = (s32)(D_80139870.vy + D_801B2478.vy);
-    D_80139870.vx = (s32)(D_80139870.vx + D_801B2478.vx);
-    RotMatrix(&D_8013B238, &sp18);
-    TransMatrix(&sp18, &D_80139870);
+    g_wmap_effect_model_c_rotation.vz = (u16)(g_wmap_effect_model_c_rotation.vz + g_wmap_effect_model_b_rotation.vz);
+    g_wmap_effect_model_c_rotation.vy = (u16)(g_wmap_effect_model_c_rotation.vy + g_wmap_effect_model_b_rotation.vy);
+    g_wmap_effect_model_c_rotation.vx = (u16)(g_wmap_effect_model_c_rotation.vx + g_wmap_effect_model_b_rotation.vx);
+    g_wmap_effect_model_c_position.vz = (s32)(g_wmap_effect_model_c_position.vz + g_wmap_effect_model_b_position.vz);
+    g_wmap_effect_model_c_position.vy = (s32)(g_wmap_effect_model_c_position.vy + g_wmap_effect_model_b_position.vy);
+    g_wmap_effect_model_c_position.vx = (s32)(g_wmap_effect_model_c_position.vx + g_wmap_effect_model_b_position.vx);
+    RotMatrix(&g_wmap_effect_model_c_rotation, &sp18);
+    TransMatrix(&sp18, &g_wmap_effect_model_c_position);
     SetRotMatrix(&sp18);
     SetTransMatrix(&sp18);
     project_panels(&sp38, &sp48, &sp58, &sp68, &sp78, &sp88);
-    D_8013B240.vz = (u16)(D_8013B240.vz - D_801B24A8.vz);
-    D_8013B240.vy = (u16)(D_8013B240.vy - D_801B24A8.vy);
-    D_8013B240.vx = (u16)(D_8013B240.vx - D_801B24A8.vx);
-    D_80139888.vz = (s32)(D_80139888.vz - D_801B2478.vz);
-    D_80139888.vy = (s32)(D_80139888.vy - D_801B2478.vy);
-    D_80139888.vx = (s32)(D_80139888.vx - D_801B2478.vx);
-    RotMatrix(&D_8013B240, &sp18);
-    TransMatrix(&sp18, &D_80139888);
+    g_wmap_effect_model_d_rotation.vz = (u16)(g_wmap_effect_model_d_rotation.vz - g_wmap_effect_model_b_rotation.vz);
+    g_wmap_effect_model_d_rotation.vy = (u16)(g_wmap_effect_model_d_rotation.vy - g_wmap_effect_model_b_rotation.vy);
+    g_wmap_effect_model_d_rotation.vx = (u16)(g_wmap_effect_model_d_rotation.vx - g_wmap_effect_model_b_rotation.vx);
+    g_wmap_effect_model_d_position.vz = (s32)(g_wmap_effect_model_d_position.vz - g_wmap_effect_model_b_position.vz);
+    g_wmap_effect_model_d_position.vy = (s32)(g_wmap_effect_model_d_position.vy - g_wmap_effect_model_b_position.vy);
+    g_wmap_effect_model_d_position.vx = (s32)(g_wmap_effect_model_d_position.vx - g_wmap_effect_model_b_position.vx);
+    RotMatrix(&g_wmap_effect_model_d_rotation, &sp18);
+    TransMatrix(&sp18, &g_wmap_effect_model_d_position);
     SetRotMatrix(&sp18);
     SetTransMatrix(&sp18);
     project_panels(&sp38, &sp48, &sp58, &sp68, &sp78, &sp88);
@@ -292,7 +285,7 @@ void func_8006454C(void)
 /** @brief Select the back buffer, run effects, and submit a world-map frame. */
 void func_80064AF8(void)
 {
-    if (D_8011CF74 & 1)
+    if (g_wmap_frame_count & 1)
     {
         g_wmap_frames[0].packet_cursor = D_8010CF18;
         g_wmap_current_frame = &g_wmap_frames[0];
@@ -305,7 +298,7 @@ void func_80064AF8(void)
     g_wmap_packet_bytes = 0;
     ClearOTagR(g_wmap_current_frame->ordering_table, 179);
     D_800DBE7C = 0;
-    D_8011CF74++;
+    g_wmap_frame_count++;
     wmap_update_callbacks();
     DrawSync(0);
     VSync(4);

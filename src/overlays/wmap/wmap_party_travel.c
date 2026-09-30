@@ -79,15 +79,13 @@ typedef union
     } point;
 } WmapTravelScreen;
 
-extern WmapSpriteActor D_800D9268[];
-extern WmapTravelAnimation D_80139988[];
-extern WmapTravelCell D_80139290[WMAP_GRID_SIZE][WMAP_GRID_SIZE];
+extern WmapTravelAnimation g_wmap_actor_animations[];
+extern WmapTravelCell g_wmap_cells[WMAP_GRID_SIZE][WMAP_GRID_SIZE];
 extern WmapTravelProjection g_wmap_view;
 extern const WmapTravelScreen D_8004FD04[];
 extern u8 D_800DBE98[];
 extern u8 D_800DC298[];
 extern u8 D_800DC698[];
-extern s16 D_800D926A;
 extern s16 D_800D9296;
 extern s16 D_800D92C2;
 extern s32 D_800D9224;
@@ -192,7 +190,7 @@ void wmap_update_travelers(void)
             else
             {
                 traveler->moving = 0;
-                D_800D9268[i].sequence = WMAP_TRAVEL_IDLE;
+                g_wmap_sprite_actors[i].sequence = WMAP_TRAVEL_IDLE;
                 if (i == WMAP_SCRIPTED_TRAVELER && g_wmap_scripted_travel_active != 0)
                 {
                     g_wmap_scripted_travel_active = 0;
@@ -207,11 +205,11 @@ void wmap_update_travelers(void)
                 position_y = traveler->position_y;
                 if (target_y > position_y)
                 {
-                    D_800D9268[i].sequence = WMAP_TRAVEL_DOWN;
+                    g_wmap_sprite_actors[i].sequence = WMAP_TRAVEL_DOWN;
                 }
                 else if (target_y < position_y)
                 {
-                    D_800D9268[i].sequence = WMAP_TRAVEL_UP;
+                    g_wmap_sprite_actors[i].sequence = WMAP_TRAVEL_UP;
                 }
             }
             if (traveler->target_y == traveler->position_y)
@@ -220,11 +218,11 @@ void wmap_update_travelers(void)
                 position_x = traveler->position_x;
                 if (target_x > position_x)
                 {
-                    D_800D9268[i].sequence = WMAP_TRAVEL_RIGHT;
+                    g_wmap_sprite_actors[i].sequence = WMAP_TRAVEL_RIGHT;
                 }
                 else if (target_x < position_x)
                 {
-                    D_800D9268[i].sequence = WMAP_TRAVEL_LEFT;
+                    g_wmap_sprite_actors[i].sequence = WMAP_TRAVEL_LEFT;
                 }
             }
         }
@@ -274,10 +272,10 @@ void wmap_update_party_travel(void)
         i = 0;
         do
         {
-            sprite = &D_800D9268[i];
+            sprite = &g_wmap_sprite_actors[i];
             if (sprite->resource_index != -1)
             {
-                wmap_step_actor_animation(sprite, &D_80139988[i]);
+                wmap_step_actor_animation(sprite, &g_wmap_actor_animations[i]);
                 if (g_wmap_view_mode == 0)
                 {
                     screen.point.x = g_wmap_travelers[i].position_x;
@@ -324,7 +322,7 @@ void wmap_update_party_travel(void)
     {
         selected_x = g_wmap_view.x / WMAP_CELL_SPACING + g_wmap_cursor_column;
         selected_y = g_wmap_view.y / WMAP_CELL_SPACING + g_wmap_cursor_row;
-        if (D_80139290[selected_x][selected_y].traversable != 0 && g_wmap_view_mode == 0 && D_8011CF18 == 0)
+        if (g_wmap_cells[selected_x][selected_y].traversable != 0 && g_wmap_view_mode == 0 && D_8011CF18 == 0)
         {
             if (selected_x != g_wmap_travelers[0].cell_x || (at_destination = 1, selected_y != g_wmap_travelers[0].cell_y))
             {
@@ -333,7 +331,7 @@ void wmap_update_party_travel(void)
             D_8013B294 = at_destination;
             if (at_destination == 0)
             {
-                if (D_80139290[selected_x][selected_y].land_id == WMAP_SPECIAL_TRAVEL_LAND)
+                if (g_wmap_cells[selected_x][selected_y].land_id == WMAP_SPECIAL_TRAVEL_LAND)
                 {
                     wmap_start_sequence(wmap_run_special_travel);
                 }
@@ -377,7 +375,7 @@ void wmap_init_party_travel(void)
     cdrom_queue_read(WMAP_TRAVEL_ANIMATION_RESOURCE, D_800DBE98);
     cdrom_wait_queue_empty();
     resource = D_800DBE98;
-    D_800D9268[0].resource_index = 0;
+    g_wmap_sprite_actors[0].resource_index = 0;
     for (i = 0; i < WMAP_TRAVELER_COUNT; i++)
     {
         traveler = &g_wmap_travelers[i];
@@ -392,16 +390,16 @@ void wmap_init_party_travel(void)
         traveler->position_y = 0;
         traveler->position_x = 0;
         traveler->moving = 0;
-        sprite = &D_800D9268[i];
+        sprite = &g_wmap_sprite_actors[i];
         sprite->scale_index = WMAP_TRAVEL_SCALE_INDEX;
         sprite->previous_sequence = -1;
         sprite->target_shade = WMAP_TRAVEL_SHADE;
         sprite->shade = WMAP_TRAVEL_SHADE;
-        D_80139988[i].data = resource + i * WMAP_TRAVEL_ANIMATION_BYTES;
+        g_wmap_actor_animations[i].data = resource + i * WMAP_TRAVEL_ANIMATION_BYTES;
     }
     D_80182D5C = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
     wmap_set_traveler_position(0, g_wmap_travelers[0].cell_x, g_wmap_travelers[0].cell_y);
-    if (D_80139290[g_wmap_travelers[0].cell_x][g_wmap_travelers[0].cell_y].land_id == WMAP_SPECIAL_TRAVEL_LAND)
+    if (g_wmap_cells[g_wmap_travelers[0].cell_x][g_wmap_travelers[0].cell_y].land_id == WMAP_SPECIAL_TRAVEL_LAND)
     {
         g_wmap_input_locked = 1;
         g_wmap_buttons_held = 0;
@@ -409,7 +407,7 @@ void wmap_init_party_travel(void)
         D_80182E34 = 3;
         D_800DBE78 = 3;
         D_8011CF20 = 1;
-        D_800D926A = -1;
+        g_wmap_sprite_actors[0].resource_index = -1;
         D_800D9224++;
     }
     resource_id = WMAP_TRAVEL_SPRITE_RESOURCE;

@@ -16,13 +16,13 @@ rom:0x19C89 reloc:MIPS_LO16 symbol:g_wmap_current_frame
 rom:0x19CED reloc:MIPS_LO16 symbol:g_wmap_current_frame
 rom:0x1A465 reloc:MIPS_LO16 symbol:g_wmap_current_frame
 
-// func_800A5DFC hoists %hi(D_80123538) before its switch. Each case
+// func_800A5DFC hoists %hi(g_wmap_animation_bank_3) before its switch. Each case
 // adds the same low half; Splat loses the association after case zero.
 // All 960 linked bytes independently match decompressed retail WMAP.BIN.
-rom:0x56475 reloc:MIPS_LO16 symbol:D_80123538
-rom:0x56499 reloc:MIPS_LO16 symbol:D_80123538
-rom:0x564BD reloc:MIPS_LO16 symbol:D_80123538
-rom:0x564E1 reloc:MIPS_LO16 symbol:D_80123538
+rom:0x56475 reloc:MIPS_LO16 symbol:g_wmap_animation_bank_3
+rom:0x56499 reloc:MIPS_LO16 symbol:g_wmap_animation_bank_3
+rom:0x564BD reloc:MIPS_LO16 symbol:g_wmap_animation_bank_3
+rom:0x564E1 reloc:MIPS_LO16 symbol:g_wmap_animation_bank_3
 
 // func_8006A2FC retains the particle globals in s6/s5 across switch paths.
 rom:0x1A6D9 reloc:MIPS_HI16 symbol:D_8013B264
@@ -39,7 +39,7 @@ rom:0x1A9E5 reloc:MIPS_LO16 symbol:D_8013B270
 rom:0x127BD reloc:MIPS_HI16 symbol:g_wmap_input_script
 rom:0x127C1 reloc:MIPS_HI16 symbol:g_wmap_party_visible
 rom:0x127D1 reloc:MIPS_HI16 symbol:D_801ADB90
-rom:0x127D5 reloc:MIPS_HI16 symbol:D_8013B208
+rom:0x127D5 reloc:MIPS_HI16 symbol:g_wmap_event_active
 rom:0x12889 reloc:MIPS_LO16 symbol:g_wmap_input_script
 rom:0x12895 reloc:MIPS_LO16 symbol:g_wmap_input_script
 rom:0x1289D reloc:MIPS_LO16 symbol:g_wmap_input_script
@@ -47,22 +47,22 @@ rom:0x128A1 reloc:MIPS_LO16 symbol:g_wmap_party_visible
 rom:0x12911 reloc:MIPS_LO16 symbol:D_801ADB90
 rom:0x1296D reloc:MIPS_LO16 symbol:D_801ADB90
 rom:0x12971 reloc:MIPS_LO16 symbol:g_wmap_party_visible
-rom:0x12979 reloc:MIPS_LO16 symbol:D_8013B208
+rom:0x12979 reloc:MIPS_LO16 symbol:g_wmap_event_active
 rom:0x12981 reloc:MIPS_LO16 symbol:D_801ADB90
-rom:0x12999 reloc:MIPS_LO16 symbol:D_8013B208
+rom:0x12999 reloc:MIPS_LO16 symbol:g_wmap_event_active
 rom:0x129E1 reloc:MIPS_LO16 symbol:D_801ADB90
 rom:0x129E5 reloc:MIPS_LO16 symbol:g_wmap_party_visible
-rom:0x129F1 reloc:MIPS_LO16 symbol:D_8013B208
-rom:0x12A09 reloc:MIPS_LO16 symbol:D_8013B208
+rom:0x129F1 reloc:MIPS_LO16 symbol:g_wmap_event_active
+rom:0x12A09 reloc:MIPS_LO16 symbol:g_wmap_event_active
 rom:0x12A49 reloc:MIPS_LO16 symbol:D_801ADB90
-rom:0x12A89 reloc:MIPS_LO16 symbol:D_8013B208
+rom:0x12A89 reloc:MIPS_LO16 symbol:g_wmap_event_active
 rom:0x12A8D reloc:MIPS_LO16 symbol:g_wmap_party_visible
 rom:0x12AD5 reloc:MIPS_LO16 symbol:D_801ADB90
 rom:0x12AD9 reloc:MIPS_LO16 symbol:g_wmap_party_visible
-rom:0x12ADD reloc:MIPS_LO16 symbol:D_8013B208
+rom:0x12ADD reloc:MIPS_LO16 symbol:g_wmap_event_active
 rom:0x12B65 reloc:MIPS_LO16 symbol:D_801ADB90
 rom:0x12B69 reloc:MIPS_LO16 symbol:g_wmap_party_visible
-rom:0x12B6D reloc:MIPS_LO16 symbol:D_8013B208
+rom:0x12B6D reloc:MIPS_LO16 symbol:g_wmap_event_active
 rom:0x12BDD reloc:MIPS_LO16 symbol:D_801ADB90
 rom:0x12BE1 reloc:MIPS_LO16 symbol:g_wmap_party_visible
-rom:0x12BE5 reloc:MIPS_LO16 symbol:D_8013B208
+rom:0x12BE5 reloc:MIPS_LO16 symbol:g_wmap_event_active

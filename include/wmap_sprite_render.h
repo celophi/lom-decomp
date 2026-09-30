@@ -46,4 +46,7 @@ typedef union
 
 void wmap_draw_actor_sprite(WmapSpriteActor* actor, s32 screen_position, s32 texture_index, s32 ot_index, s32 variant);
 
+/** @brief Sprite actor pool (256 actors); actor i animates from g_wmap_actor_animations[i]. */
+extern WmapSpriteActor g_wmap_sprite_actors[];
+
 #endif

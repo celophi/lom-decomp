@@ -84,7 +84,7 @@
 #define WMAP_BURST_ACTOR_SHADE 129
 #define WMAP_BURST_SEQUENCE_LARGE 3
 #define WMAP_BURST_OT_INDEX 4
-/** @brief Spawns per frame and particle slots scanned, per unit of D_801B0FD0. */
+/** @brief Spawns per frame and particle slots scanned, per unit of g_wmap_particle_intensity. */
 #define WMAP_BURST_SPAWNS_PER_UNIT 3
 #define WMAP_BURST_SLOTS_PER_UNIT 70
 /** @brief Shortest particle lifetime. */
@@ -160,26 +160,21 @@ extern s16 g_wmap_grid_vertex_indices[];
 extern s32 D_800DBE70;
 extern s32 D_800DBE78;
 extern WmapView g_wmap_saved_view;
-extern s32 D_8011D4FC;
+extern s32 g_wmap_selected_artifact;
 extern WmapView g_wmap_zoom_view;
 extern WmapView g_wmap_zoom_step;
 extern s32 D_80139288;
-extern WmapSpriteActor D_800D9268[];
-extern WmapBurstParticle D_801AFBD0[];
-extern WmapAnimationSlot D_80139988[];
+extern WmapBurstParticle g_wmap_actor_motions[];
+extern WmapAnimationSlot g_wmap_actor_animations[];
 extern s32 g_wmap_burst_spawning;
-extern s32 D_801B0FD0;
-extern u8 D_8011D538[];
+extern u8 g_wmap_animation_bank_0[];
 extern WmapPoint g_wmap_cell_focus_offsets[][3];
 extern SVECTOR g_wmap_camera_rotation;
 extern VECTOR g_wmap_camera_translation;
-extern s32 D_8013B20C;
 extern s32 g_wmap_focus_origin_x;
 extern s32 g_wmap_focus_origin_y;
 extern s32 g_wmap_land_focus_step;
 extern s32 g_wmap_land_focus_timer;
-extern s32 D_8011D510;
-extern s32 D_8011D530;
 extern s32 g_wmap_focus_screen_position;
 
 static s32 wmap_update_map_tint(s32 initialize);
@@ -834,7 +829,7 @@ void wmap_update_view_zoom(void)
     switch (mode)
     {
     case WMAP_VIEW_MODE_MAP:
-        if ((g_wmap_buttons_repeat & PADRup) && (D_8011CF18 == 0) && (D_8011D4FC == -1))
+        if ((g_wmap_buttons_repeat & PADRup) && (D_8011CF18 == 0) && (g_wmap_selected_artifact == -1))
         {
             g_wmap_view_mode = WMAP_VIEW_MODE_ZOOM_OUT;
             func_8005FF88(-1);
@@ -855,7 +850,7 @@ void wmap_update_view_zoom(void)
         if (g_wmap_buttons_repeat & (PADRup | WMAP_PAD_CANCEL))
         {
             g_wmap_view_mode = WMAP_VIEW_MODE_ZOOM_IN;
-            D_800D9268[0].target_shade = WMAP_ACTOR_SHADE_NEUTRAL;
+            g_wmap_sprite_actors[0].target_shade = WMAP_ACTOR_SHADE_NEUTRAL;
             wmap_play_sound(WMAP_SOUND_ZOOM_IN, WMAP_PAN_CENTER);
             g_wmap_map_button_mask = -1;
             g_wmap_buttons_held = 0;
@@ -959,28 +954,28 @@ s32 wmap_update_burst_particles(void)
     s32 actor_index;
 
     active = 0;
-    remaining = D_801B0FD0 * WMAP_BURST_SPAWNS_PER_UNIT;
-    for (i = 0; i < D_801B0FD0 * WMAP_BURST_SLOTS_PER_UNIT; i++)
+    remaining = g_wmap_particle_intensity * WMAP_BURST_SPAWNS_PER_UNIT;
+    for (i = 0; i < g_wmap_particle_intensity * WMAP_BURST_SLOTS_PER_UNIT; i++)
     {
         actor_index = i + WMAP_BURST_ACTOR_FIRST;
-        particle = &D_801AFBD0[i];
+        particle = &g_wmap_actor_motions[i];
         if (particle->active == 0)
         {
-            actor = &D_800D9268[actor_index];
+            actor = &g_wmap_sprite_actors[actor_index];
             if (g_wmap_burst_spawning != 0)
             {
                 actor->resource_index = 0;
                 actor->scale_index = WMAP_BURST_ACTOR_SCALE;
-                actor->sequence = ((rand() * D_801B0FD0) >> 15) + 1;
+                actor->sequence = ((rand() * g_wmap_particle_intensity) >> 15) + 1;
                 actor->previous_sequence = -1;
                 actor->target_shade = WMAP_BURST_ACTOR_SHADE;
                 actor->shade = WMAP_BURST_ACTOR_SHADE;
                 particle->active = 1;
                 particle->angle = (u32)rand() >> 3;
                 particle->distance = 0;
-                particle->speed = rand() * D_801B0FD0;
+                particle->speed = rand() * g_wmap_particle_intensity;
                 random_value = rand();
-                particle->lifetime = ((random_value * ((D_801B0FD0 * 5) << 2)) >> 15) + WMAP_BURST_LIFETIME_MIN;
+                particle->lifetime = ((random_value * ((g_wmap_particle_intensity * 5) << 2)) >> 15) + WMAP_BURST_LIFETIME_MIN;
                 if (--remaining == 0)
                 {
                     break;
@@ -990,15 +985,15 @@ s32 wmap_update_burst_particles(void)
     }
     for (i = 0; i < WMAP_BURST_PARTICLES; i++)
     {
-        particle = &D_801AFBD0[i];
-        actor = &D_800D9268[WMAP_BURST_ACTOR_FIRST + i];
+        particle = &g_wmap_actor_motions[i];
+        actor = &g_wmap_sprite_actors[WMAP_BURST_ACTOR_FIRST + i];
         if (particle->active != 0)
         {
             particle->distance += particle->speed;
             screen.point.x = ((particle->distance * ccos(particle->angle)) >> 24) + WMAP_BURST_CENTER_X;
             screen.point.y = ((particle->distance * csin(particle->angle)) >> 24) + WMAP_BURST_CENTER_Y;
-            wmap_step_actor_animation(actor, &D_80139988[WMAP_BURST_ACTOR_FIRST + i]);
-            if (D_800D9268[i + WMAP_BURST_ACTOR_FIRST].sequence == WMAP_BURST_SEQUENCE_LARGE)
+            wmap_step_actor_animation(actor, &g_wmap_actor_animations[WMAP_BURST_ACTOR_FIRST + i]);
+            if (g_wmap_sprite_actors[i + WMAP_BURST_ACTOR_FIRST].sequence == WMAP_BURST_SEQUENCE_LARGE)
             {
                 wmap_draw_actor_sprite(actor, screen.packed, WMAP_BURST_TEXTURE_LARGE, WMAP_BURST_OT_INDEX, 0);
             }
@@ -1024,10 +1019,10 @@ void wmap_init_burst_particles(void)
 
     for (i = 0; i < WMAP_BURST_PARTICLES; i++)
     {
-        D_801AFBD0[i].active = 0;
-        D_80139988[WMAP_BURST_ACTOR_FIRST + i].data = D_8011D538;
+        g_wmap_actor_motions[i].active = 0;
+        g_wmap_actor_animations[WMAP_BURST_ACTOR_FIRST + i].data = g_wmap_animation_bank_0;
     }
-    D_801B0FD0 = 1;
+    g_wmap_particle_intensity = 1;
     g_wmap_burst_spawning = 1;
 }
 
@@ -1039,7 +1034,7 @@ void wmap_begin_cell_focus(void)
     MATRIX matrix;
     WmapScreenPosition screen;
 
-    D_8013B20C = 1;
+    g_wmap_sequence_busy = 1;
     func_8006D8F0(1);
     func_8006D870(1);
     g_wmap_view_scroll_mode = 2;
@@ -1057,7 +1052,7 @@ void wmap_begin_cell_focus(void)
     gte_stsxy(&screen);
     screen_y = screen.point.y;
     D_800DBE70 = 1;
-    D_800D9268[0].target_shade = 0;
+    g_wmap_sprite_actors[0].target_shade = 0;
     g_wmap_land_focus_timer = 4;
     g_wmap_focus_origin_x = screen.point.x;
     g_wmap_focus_origin_y = screen_y;
@@ -1075,11 +1070,11 @@ void wmap_project_focus_position(void)
     SetRotMatrix(&matrix);
     SetTransMatrix(&matrix);
     position.vz = 0;
-    position.vx = (((D_8011D510 - 1) * WMAP_CELL_SIZE - g_wmap_view.x * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale;
-    position.vy = (((D_8011D530 - 1) * WMAP_CELL_SIZE - g_wmap_view.y * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale;
+    position.vx = (((g_wmap_focus_cell_x - 1) * WMAP_CELL_SIZE - g_wmap_view.x * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale;
+    position.vy = (((g_wmap_focus_cell_y - 1) * WMAP_CELL_SIZE - g_wmap_view.y * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale;
     gte_ldv0(&position);
     gte_rtps();
     gte_stsxy(&g_wmap_focus_screen_position);
-    D_8013B20C = 0;
+    g_wmap_sequence_busy = 0;
     g_wmap_land_focus_step++;
 }

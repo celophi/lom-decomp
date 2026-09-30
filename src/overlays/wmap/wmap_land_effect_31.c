@@ -9,51 +9,52 @@
 #include "wmap_effect_resources.h"
 #include "cdrom.h"
 #include "sdk/libgte.h"
+#include "wmap_step_sequence.h"
 
-void func_800BA108(void);
-void func_800BA1BC(void);
-void func_800B9F1C(void);
-void func_800B9FE4(void);
-void func_800B8794(void);
-void func_800B8988(void);
-void func_800B95CC(void);
-void func_800B96B8(void);
-void func_800B9850(void);
-void func_800B9938(void);
-void func_800B9B08(void);
-void func_800B9D74(void);
-s32 func_800B7438(s32 reset);
-s32 func_800B7E7C(s32 reset);
-s32 func_800B8084(s32 reset);
-s32 func_800B822C(s32 reset);
-s32 func_800B8B80(s32 reset);
-s32 func_800B8CD8(s32 reset);
-s32 func_800B8E30(s32 reset);
-s32 func_800B8F8C(s32 reset);
-s32 func_800B90E8(s32 reset);
-s32 func_800B9244(s32 reset);
-s32 func_800B99F8(s32 reset);
-s32 func_800B9B9C(s32 reset);
-s32 func_800BA078(s32 reset);
-s32 func_800B84D0(s32 reset);
-s32 func_800B862C(s32 reset);
-s32 func_800B8824(s32 reset);
-s32 func_800B8A2C(s32 reset);
-s32 func_800B93A0(s32 reset);
-s32 func_800B94FC(s32 reset);
-s32 func_800B977C(s32 reset);
-s32 func_800B9E08(s32 reset);
-void func_800B7FE0(void);
-void func_800B8198(void);
-void func_800B8338(void);
-void func_800B840C(void);
-void func_800B7364(void);
-void func_800B73A0(void);
-void func_800B73E4(void);
-void func_800B7420(void);
-void func_800B7F0C(void);
-void func_800B86BC(void);
-void func_800B88B4(void);
+void wmap_land_effect_31_sequence_20_step_02(void);
+void wmap_land_effect_31_sequence_20_step_04(void);
+void wmap_land_effect_31_sequence_19_step_02(void);
+void wmap_land_effect_31_sequence_19_step_04(void);
+void wmap_land_effect_31_sequence_5_step_04(void);
+void wmap_land_effect_31_sequence_6_step_04(void);
+void wmap_land_effect_31_sequence_15_step_02(void);
+void wmap_land_effect_31_sequence_15_step_04(void);
+void wmap_land_effect_31_sequence_16_step_02(void);
+void wmap_land_effect_31_sequence_16_step_04(void);
+void wmap_land_effect_31_sequence_17_step_02(void);
+void wmap_land_effect_31_sequence_18_step_04(void);
+s32 wmap_land_effect_31_run_timeline(s32 reset);
+s32 wmap_land_effect_31_run_sequence_1(s32 reset);
+s32 wmap_land_effect_31_run_sequence_2(s32 reset);
+s32 wmap_land_effect_31_run_sequence_3(s32 reset);
+s32 wmap_land_effect_31_run_sequence_8(s32 reset);
+s32 wmap_land_effect_31_run_sequence_9(s32 reset);
+s32 wmap_land_effect_31_run_sequence_10(s32 reset);
+s32 wmap_land_effect_31_run_sequence_11(s32 reset);
+s32 wmap_land_effect_31_run_sequence_12(s32 reset);
+s32 wmap_land_effect_31_run_sequence_13(s32 reset);
+s32 wmap_land_effect_31_run_sequence_17(s32 reset);
+s32 wmap_land_effect_31_run_sequence_18(s32 reset);
+s32 wmap_land_effect_31_run_sequence_20(s32 reset);
+s32 wmap_land_effect_31_run_sequence_4(s32 reset);
+s32 wmap_land_effect_31_run_sequence_5(s32 reset);
+s32 wmap_land_effect_31_run_sequence_6(s32 reset);
+s32 wmap_land_effect_31_run_sequence_7(s32 reset);
+s32 wmap_land_effect_31_run_sequence_14(s32 reset);
+s32 wmap_land_effect_31_run_sequence_15(s32 reset);
+s32 wmap_land_effect_31_run_sequence_16(s32 reset);
+s32 wmap_land_effect_31_run_sequence_19(s32 reset);
+void wmap_land_effect_31_sequence_1_step_04(void);
+void wmap_land_effect_31_sequence_2_step_02(void);
+void wmap_land_effect_31_sequence_3_step_02(void);
+void wmap_land_effect_31_sequence_3_step_04(void);
+void wmap_land_effect_31_step_02(void);
+void wmap_land_effect_31_step_03(void);
+void wmap_land_effect_31_step_04(void);
+void wmap_land_effect_31_step_05(void);
+void wmap_land_effect_31_sequence_1_step_02(void);
+void wmap_land_effect_31_sequence_5_step_02(void);
+void wmap_land_effect_31_sequence_6_step_02(void);
 
 typedef struct
 {
@@ -155,150 +156,134 @@ extern u8 D_800D9D68[];
 extern WmapBlock36 D_800D06BC;
 extern WmapBlock36 D_800D9240;
 extern WmapShort3 D_800DCEB8;
-extern s32 D_800DCF18[];
-extern s32* D_8011CF1C;
-extern s32* D_8011CF24;
-extern s32* D_8011CF28;
+extern s32 g_wmap_load_buffer[];
+extern s32* g_wmap_effect_model_pack_1;
+extern s32* g_wmap_effect_model_pack_2;
+extern s32* g_wmap_effect_model_pack_3;
 extern s32* D_8011CF2C;
 extern s32* D_8011CF30;
 extern s32* D_8011CF34;
 extern s32* D_8011CF38;
 extern s32* D_8011CF3C;
-extern s32 D_8011D4FC;
-extern s32 D_8011D510;
-extern s32 D_8011D530;
-extern u8 D_8011D538;
-extern u8 D_80121538;
+extern s32 g_wmap_selected_artifact;
+extern u8 g_wmap_animation_bank_0;
+extern u8 g_wmap_animation_bank_2;
 extern s32 D_80139234;
 extern WmapInt3 D_80139200;
 extern WmapShort3 D_80139210;
 extern s32 D_8013923C;
 extern s32 D_80139240;
-extern s32 D_80139244;
 extern s32 D_8013924C;
 extern s32 D_80139260;
 extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
-extern WmapCell D_80139290[][6];
+extern WmapCell g_wmap_cells[][6];
 extern s32 g_wmap_view_mode;
 extern u8 D_80139B88[];
 extern WmapInt3 D_80139968;
-extern void* D_801399B4;
-extern void* D_801399BC;
-extern void* D_801399C4;
-extern void* D_801399CC;
-extern void* D_801399D4;
-extern s32 D_8013B20C;
-extern s32 D_8013B208;
 extern s32 D_8013B29C;
 extern WmapColor3 D_80182D74;
 extern WmapColor3 D_80182D80;
 extern WmapColor3 D_80182D8C;
 extern WmapColor3 D_80182D94;
 extern s32 D_80182DE4;
-extern s32 D_80182DE8;
-extern s32 D_80182DEC;
-extern s32 D_80182DF0;
-extern s32 D_80182DF4;
-extern s32 D_801ADAE0;
 extern s32 D_801B24B4;
 extern s32 D_801B25D8;
 extern s32 D_801B25DC;
 extern s32 D_801B25E0;
-extern s32 D_801B3048;
-extern s32 D_801B304C;
-extern s32 D_801B3050;
-extern s32 D_801B3054;
-extern s32 D_801B3058;
-extern s32 D_801B305C;
-extern s32 D_801B3060;
-extern s32 D_801B3064;
-extern s32 D_801B3068;
-extern s32 D_801B306C;
-extern s32 D_801B3070;
-extern s32 D_801B3074;
-extern s32 D_801B3078;
-extern s32 D_801B307C;
-extern s32 D_801B3080;
-extern s32 D_801B3084;
-extern s32 D_801B3088;
-extern s32 D_801B308C;
-extern s32 D_801B3090;
-extern s32 D_801B3094;
-extern s32 D_801B3098;
-extern s32 D_801B309C;
-extern s32 D_801B30A0;
-extern s32 D_801B30A4;
-extern s32 D_801B30A8;
-extern s32 D_801B30AC;
-extern s32 D_801B30B0;
-extern s32 D_801B30B4;
-extern s32 D_801B30B8;
-extern s32 D_801B30BC;
-extern s32 D_801B30C0;
-extern s32 D_801B30C4;
-extern s32 D_801B30C8;
-extern s32 D_801B30CC;
-extern s32 D_801B30D0;
-extern s32 D_801B30D4;
-extern s32 D_801B30D8;
-extern s32 D_801B30DC;
-extern s32 D_801B30E0;
-extern s32 D_801B30E4;
-extern s32 D_801B30E8;
-extern s32 D_801B30EC;
-extern s32 D_801B30F0;
-extern s32 D_801B30F4;
-extern s32 D_801B0FD0;
-extern void func_800B619C(void);
-extern void func_800B6284(void);
-extern void func_800B6558(void);
-extern void func_800B6644(void);
-extern void func_800B6730(void);
-extern void func_800B681C(void);
-extern void func_800B6918(void);
-extern void func_800B6A10(void);
-extern void func_800B6B0C(void);
-extern void func_800B6C04(void);
-extern void func_800B6D00(void);
-extern void func_800B6DF8(void);
-extern void func_800B6EF4(void);
+extern u32 g_wmap_land_effect_31_step;
+extern s32 g_wmap_land_effect_31_timer;
+extern u32 g_wmap_land_effect_31_timeline_step;
+extern s32 g_wmap_land_effect_31_timeline_timer;
+extern u32 g_wmap_land_effect_31_sequence_1_step;
+extern s32 g_wmap_land_effect_31_sequence_1_timer;
+extern u32 g_wmap_land_effect_31_sequence_2_step;
+extern s32 g_wmap_land_effect_31_sequence_2_timer;
+extern u32 g_wmap_land_effect_31_sequence_3_step;
+extern s32 g_wmap_land_effect_31_sequence_3_timer;
+extern u32 g_wmap_land_effect_31_sequence_4_step;
+extern s32 g_wmap_land_effect_31_sequence_4_timer;
+extern u32 g_wmap_land_effect_31_sequence_5_step;
+extern s32 g_wmap_land_effect_31_sequence_5_timer;
+extern u32 g_wmap_land_effect_31_sequence_6_step;
+extern s32 g_wmap_land_effect_31_sequence_6_timer;
+extern u32 g_wmap_land_effect_31_sequence_7_step;
+extern s32 g_wmap_land_effect_31_sequence_7_timer;
+extern u32 g_wmap_land_effect_31_sequence_8_step;
+extern s32 g_wmap_land_effect_31_sequence_8_timer;
+extern u32 g_wmap_land_effect_31_sequence_9_step;
+extern s32 g_wmap_land_effect_31_sequence_9_timer;
+extern u32 g_wmap_land_effect_31_sequence_10_step;
+extern s32 g_wmap_land_effect_31_sequence_10_timer;
+extern u32 g_wmap_land_effect_31_sequence_11_step;
+extern s32 g_wmap_land_effect_31_sequence_11_timer;
+extern u32 g_wmap_land_effect_31_sequence_12_step;
+extern s32 g_wmap_land_effect_31_sequence_12_timer;
+extern u32 g_wmap_land_effect_31_sequence_13_step;
+extern s32 g_wmap_land_effect_31_sequence_13_timer;
+extern u32 g_wmap_land_effect_31_sequence_14_step;
+extern s32 g_wmap_land_effect_31_sequence_14_timer;
+extern u32 g_wmap_land_effect_31_sequence_15_step;
+extern s32 g_wmap_land_effect_31_sequence_15_timer;
+extern u32 g_wmap_land_effect_31_sequence_16_step;
+extern s32 g_wmap_land_effect_31_sequence_16_timer;
+extern u32 g_wmap_land_effect_31_sequence_17_step;
+extern s32 g_wmap_land_effect_31_sequence_17_timer;
+extern u32 g_wmap_land_effect_31_sequence_18_step;
+extern s32 g_wmap_land_effect_31_sequence_18_timer;
+extern u32 g_wmap_land_effect_31_sequence_19_step;
+extern s32 g_wmap_land_effect_31_sequence_19_timer;
+extern u32 g_wmap_land_effect_31_sequence_20_step;
+extern s32 g_wmap_land_effect_31_sequence_20_timer;
+extern void wmap_land_effect_31_sequence_4_step_02(void);
+extern void wmap_land_effect_31_sequence_4_step_04(void);
+extern void wmap_land_effect_31_sequence_7_step_02(void);
+extern void wmap_land_effect_31_sequence_8_step_02(void);
+extern void wmap_land_effect_31_sequence_9_step_02(void);
+extern void wmap_land_effect_31_sequence_10_step_02(void);
+extern void wmap_land_effect_31_sequence_10_step_04(void);
+extern void wmap_land_effect_31_sequence_11_step_02(void);
+extern void wmap_land_effect_31_sequence_11_step_04(void);
+extern void wmap_land_effect_31_sequence_12_step_02(void);
+extern void wmap_land_effect_31_sequence_12_step_04(void);
+extern void wmap_land_effect_31_sequence_13_step_02(void);
+extern void wmap_land_effect_31_sequence_13_step_04(void);
 extern s32* D_8011CF40;
-extern s32 func_800B7438(s32);
-extern s32 func_800B7E7C(s32);
-extern s32 func_800B8084(s32);
-extern s32 func_800B822C(s32);
-extern s32 func_800B84D0(s32);
-extern s32 func_800B862C(s32);
-extern void func_800B8794(void);
-extern s32 func_800B8824(s32);
-extern void func_800B8988(void);
-extern s32 func_800B8A2C(s32);
-extern s32 func_800B8B80(s32);
-extern s32 func_800B8CD8(s32);
-extern s32 func_800B8E30(s32);
-extern s32 func_800B8F8C(s32);
-extern s32 func_800B90E8(s32);
-extern s32 func_800B9244(s32);
-extern s32 func_800B93A0(s32);
-extern s32 func_800B94FC(s32);
-extern void func_800B95CC(void);
-extern void func_800B96B8(void);
-extern s32 func_800B977C(s32);
-extern void func_800B9850(void);
-extern void func_800B9938(void);
-extern s32 func_800B99F8(s32);
-extern void func_800B9B08(void);
-extern s32 func_800B9B9C(s32);
-extern void func_800B9CAC(void);
-extern void func_800B9D74(void);
-extern s32 func_800B9E08(s32);
-extern void func_800B9F1C();
-extern void func_800B9FE4();
-extern s32 func_800BA078(s32);
-extern void func_800BA108(void);
-extern void func_800BA1BC();
+extern s32 wmap_land_effect_31_run_timeline(s32);
+extern s32 wmap_land_effect_31_run_sequence_1(s32);
+extern s32 wmap_land_effect_31_run_sequence_2(s32);
+extern s32 wmap_land_effect_31_run_sequence_3(s32);
+extern s32 wmap_land_effect_31_run_sequence_4(s32);
+extern s32 wmap_land_effect_31_run_sequence_5(s32);
+extern void wmap_land_effect_31_sequence_5_step_04(void);
+extern s32 wmap_land_effect_31_run_sequence_6(s32);
+extern void wmap_land_effect_31_sequence_6_step_04(void);
+extern s32 wmap_land_effect_31_run_sequence_7(s32);
+extern s32 wmap_land_effect_31_run_sequence_8(s32);
+extern s32 wmap_land_effect_31_run_sequence_9(s32);
+extern s32 wmap_land_effect_31_run_sequence_10(s32);
+extern s32 wmap_land_effect_31_run_sequence_11(s32);
+extern s32 wmap_land_effect_31_run_sequence_12(s32);
+extern s32 wmap_land_effect_31_run_sequence_13(s32);
+extern s32 wmap_land_effect_31_run_sequence_14(s32);
+extern s32 wmap_land_effect_31_run_sequence_15(s32);
+extern void wmap_land_effect_31_sequence_15_step_02(void);
+extern void wmap_land_effect_31_sequence_15_step_04(void);
+extern s32 wmap_land_effect_31_run_sequence_16(s32);
+extern void wmap_land_effect_31_sequence_16_step_02(void);
+extern void wmap_land_effect_31_sequence_16_step_04(void);
+extern s32 wmap_land_effect_31_run_sequence_17(s32);
+extern void wmap_land_effect_31_sequence_17_step_02(void);
+extern s32 wmap_land_effect_31_run_sequence_18(s32);
+extern void wmap_land_effect_31_sequence_18_step_02(void);
+extern void wmap_land_effect_31_sequence_18_step_04(void);
+extern s32 wmap_land_effect_31_run_sequence_19(s32);
+extern void wmap_land_effect_31_sequence_19_step_02();
+extern void wmap_land_effect_31_sequence_19_step_04();
+extern s32 wmap_land_effect_31_run_sequence_20(s32);
+extern void wmap_land_effect_31_sequence_20_step_02(void);
+extern void wmap_land_effect_31_sequence_20_step_04();
 
 typedef struct
 {
@@ -325,45 +310,33 @@ typedef struct
 } WmapConfigA;
 
 extern WmapConfigA D_800DB4C8[];
-extern u8 D_8011F538[];
+extern u8 g_wmap_animation_bank_1[];
 extern WmapPair D_801B3118;
 
 extern VECTOR g_wmap_camera_translation;
-extern VECTOR D_801B2650;
-extern VECTOR D_801B2478;
-extern VECTOR D_80139870;
 
-extern WmapSpriteActor D_800D9344;
-extern WmapSpriteActor D_800D9370;
 extern WmapSpriteActor D_800D939C;
 extern WmapSpriteActor D_800D93C8;
 extern WmapSpriteActor D_800D93F4;
 
-extern WmapAnimationSlot D_80139988[];
-extern WmapAnimationSlot D_801399B0;
-extern WmapAnimationSlot D_801399B8;
+extern WmapAnimationSlot g_wmap_actor_animations[];
 extern WmapAnimationSlot D_801399C0;
 extern WmapAnimationSlot D_801399C8;
 extern WmapAnimationSlot D_801399D0;
 
 extern WmapScreenPosition g_wmap_focus_screen_position;
 
-extern s32* D_80139280;
+extern s32* g_wmap_effect_params;
 
-extern WmapSlot14 D_801AFBD0[];
+extern WmapSlot14 g_wmap_actor_motions[];
 
-extern SVECTOR D_80139258;
 extern SVECTOR D_801B2498;
-extern SVECTOR D_8013B240;
-extern SVECTOR D_801B24A0;
-extern SVECTOR D_8013B238;
 extern SVECTOR D_801B2490;
 extern SVECTOR D_801B2670;
-extern SVECTOR D_801B24A8;
 extern SVECTOR D_801B2678;
 extern SVECTOR D_801B3120;
 
-void func_800B5D0C(void)
+void wmap_land_effect_31_timeline_step_17(void)
 {
     g_wmap_view_mode = -1;
     g_wmap_backdrop_target_level = 0;
@@ -379,14 +352,14 @@ void func_800B5D0C(void)
     D_80182D94.field_00 = 0xB4;
     D_80182D94.field_01 = 0;
     D_80182D94.field_02 = 0x96;
-    D_801B3054 = 0x38;
-    D_801B3050++;
+    g_wmap_land_effect_31_timeline_timer = 0x38;
+    g_wmap_land_effect_31_timeline_step++;
 }
 
-void func_800B5D98(void)
+void wmap_land_effect_31_timeline_step_19(void)
 {
-    D_80139244 = 1;
-    wmap_start_sequence(func_800B8A2C);
+    g_wmap_transition_mesh_hidden = 1;
+    wmap_start_sequence(wmap_land_effect_31_run_sequence_7);
     g_wmap_backdrop_target_level = 0;
     D_80182D74.field_00 = 0xC8;
     D_80182D74.field_01 = 0xC8;
@@ -400,17 +373,17 @@ void func_800B5D98(void)
     D_80182D94.field_00 = 0xC8;
     D_80182D94.field_01 = 0xC8;
     D_80182D94.field_02 = 0xC8;
-    D_801B3054 = 0xF;
-    D_801B3050++;
+    g_wmap_land_effect_31_timeline_timer = 0xF;
+    g_wmap_land_effect_31_timeline_step++;
 }
 
-void func_800B5E3C(void)
+void wmap_land_effect_31_timeline_step_23(void)
 {
-    wmap_start_sequence(func_800B94FC);
-    wmap_start_sequence(func_800B977C);
-    wmap_start_sequence(func_800B93A0);
-    wmap_start_sequence(func_800B862C);
-    wmap_start_sequence(func_800B84D0);
+    wmap_start_sequence(wmap_land_effect_31_run_sequence_15);
+    wmap_start_sequence(wmap_land_effect_31_run_sequence_16);
+    wmap_start_sequence(wmap_land_effect_31_run_sequence_14);
+    wmap_start_sequence(wmap_land_effect_31_run_sequence_5);
+    wmap_start_sequence(wmap_land_effect_31_run_sequence_4);
     g_wmap_backdrop_target_level = 0;
     D_80182D74.field_00 = 0x60;
     D_80182D74.field_01 = 0xC;
@@ -424,11 +397,11 @@ void func_800B5E3C(void)
     D_80182D94.field_00 = 0xA0;
     D_80182D94.field_01 = 0xA0;
     D_80182D94.field_02 = 0xA0;
-    D_801B3054 = 0x14;
-    D_801B3050++;
+    g_wmap_land_effect_31_timeline_timer = 0x14;
+    g_wmap_land_effect_31_timeline_step++;
 }
 
-void func_800B5F10(void)
+void wmap_land_effect_31_timeline_step_37(void)
 {
     g_wmap_backdrop_target_level = 0;
     D_80182D74.field_00 = 0;
@@ -447,14 +420,14 @@ void func_800B5F10(void)
     wmap_start_map_tint(0x701050);
     g_wmap_view_mode = 0;
     g_wmap_backdrop_target_level = 0;
-    wmap_start_sequence(func_800B9E08);
-    D_801B3054 = 0x58;
-    D_801B3050++;
+    wmap_start_sequence(wmap_land_effect_31_run_sequence_19);
+    g_wmap_land_effect_31_timeline_timer = 0x58;
+    g_wmap_land_effect_31_timeline_step++;
 }
 
-void func_800B5FD4(void)
+void wmap_land_effect_31_timeline_step_41(void)
 {
-    wmap_start_sequence(func_800B8824);
+    wmap_start_sequence(wmap_land_effect_31_run_sequence_6);
     D_80182D74.field_00 = 0;
     D_80182D74.field_01 = 0;
     D_80182D74.field_02 = 0;
@@ -468,43 +441,43 @@ void func_800B5FD4(void)
     D_80182D94.field_01 = 0;
     D_80182D94.field_02 = 0;
     D_800D9240 = D_800D06BC;
-    D_801B3054 = 0x78;
-    D_801B3050++;
+    g_wmap_land_effect_31_timeline_timer = 0x78;
+    g_wmap_land_effect_31_timeline_step++;
 }
 
 /** @brief Configure the effect, reset its resource slots, and advance the sequence. */
-void func_800B60AC(void)
+void wmap_land_effect_31_sequence_1_step_01(void)
 {
     s32 i;
 
-    D_801B0FD0 = 40;
-    D_80139280[0x1F] = -8;
-    D_80139280[0x20] = 20;
-    D_80139280[0x21] = 20;
-    D_80139280[0x22] = 30;
-    D_80139280[0x23] = 1;
-    D_80139280[0x24] = 3900;
-    D_80139280[0x25] = 60;
-    D_80139280[0x26] = 15;
-    D_80139280[0x27] = 2;
-    D_80139280[0x28] = 10000;
+    g_wmap_particle_intensity = 40;
+    g_wmap_effect_params[0x1F] = -8;
+    g_wmap_effect_params[0x20] = 20;
+    g_wmap_effect_params[0x21] = 20;
+    g_wmap_effect_params[0x22] = 30;
+    g_wmap_effect_params[0x23] = 1;
+    g_wmap_effect_params[0x24] = 3900;
+    g_wmap_effect_params[0x25] = 60;
+    g_wmap_effect_params[0x26] = 15;
+    g_wmap_effect_params[0x27] = 2;
+    g_wmap_effect_params[0x28] = 10000;
     for (i = 0; i < 40; i++)
     {
-        D_801AFBD0[i + D_80139280[0x25]].field_00 = 0;
-        D_80139988[i + 64].data = D_8011F538;
+        g_wmap_actor_motions[i + g_wmap_effect_params[0x25]].field_00 = 0;
+        g_wmap_actor_animations[i + 64].data = g_wmap_animation_bank_1;
     }
-    D_801B305C = 40;
-    D_801B3058++;
-    func_800B7F0C();
+    g_wmap_land_effect_31_sequence_1_timer = 40;
+    g_wmap_land_effect_31_sequence_1_step++;
+    wmap_land_effect_31_sequence_1_step_02();
 }
 
-void func_800B619C(void)
+void wmap_land_effect_31_sequence_4_step_02(void)
 {
     s32 value;
     s32 timer;
 
     func_8006AEE0();
-    wmap_draw_model(D_8011CF1C, (D_80139234 / 0x10) & 3, 0xA, 0x36, 0x7940, 0x1001, D_801B24B4, 0, 0, -1);
+    wmap_draw_model(g_wmap_effect_model_pack_1, (D_80139234 / 0x10) & 3, 0xA, 0x36, 0x7940, 0x1001, D_801B24B4, 0, 0, -1);
     D_80139234 += 0x10;
     value = D_801B24B4 + 2;
     D_801B24B4 = value;
@@ -513,22 +486,22 @@ void func_800B619C(void)
         D_801B24B4 = 0x81;
     }
     ((WmapShort4*)&D_801B2490)->field_04 += 0x40;
-    timer = D_801B3074 - 1;
-    D_801B3074 = timer;
+    timer = g_wmap_land_effect_31_sequence_4_timer - 1;
+    g_wmap_land_effect_31_sequence_4_timer = timer;
     if (timer == 0)
     {
-        D_801B3070++;
+        g_wmap_land_effect_31_sequence_4_step++;
     }
 }
 
-void func_800B6284(void)
+void wmap_land_effect_31_sequence_4_step_04(void)
 {
     s32 value;
     s32 timer;
     WmapShort4* position;
 
     func_8006AEE0();
-    wmap_draw_model(D_8011CF1C, (D_80139234 / 0x10) & 3, 0xA, 0x36, 0x7940, 0x1001, D_801B24B4, 0, 0, -1);
+    wmap_draw_model(g_wmap_effect_model_pack_1, (D_80139234 / 0x10) & 3, 0xA, 0x36, 0x7940, 0x1001, D_801B24B4, 0, 0, -1);
     value = D_801B24B4 - 2;
     D_801B24B4 = value;
     if (value < 0)
@@ -537,176 +510,176 @@ void func_800B6284(void)
     }
     position = (WmapShort4*)&D_801B2490;
     D_80139234 += 0x10;
-    timer = D_801B3074 - 1;
-    D_801B3074 = timer;
+    timer = g_wmap_land_effect_31_sequence_4_timer - 1;
+    g_wmap_land_effect_31_sequence_4_timer = timer;
     position->field_04 += 0x40;
     if (timer == 0)
     {
-        D_801B3070++;
+        g_wmap_land_effect_31_sequence_4_step++;
     }
 }
 
 /** @brief Configure the effect and its resource slots, then advance the sequence. */
-void func_800B6368(void)
+void wmap_land_effect_31_sequence_5_step_01(void)
 {
     s32 i;
 
-    D_80139280[0] = 40;
-    D_80139280[1] = 20;
-    D_80139280[2] = -210;
-    D_80139280[3] = 420;
-    D_80139280[4] = -210;
-    D_80139280[5] = 420;
-    D_80139280[6] = 0;
-    D_80139280[7] = 80;
-    D_80139280[8] = 129;
-    D_80139280[9] = 1;
-    D_80139280[10] = 8;
-    D_80139280[11] = 80;
-    D_80139280[12] = 15;
-    D_80139280[13] = 0;
-    D_801B3120 = D_80139258;
+    g_wmap_effect_params[0] = 40;
+    g_wmap_effect_params[1] = 20;
+    g_wmap_effect_params[2] = -210;
+    g_wmap_effect_params[3] = 420;
+    g_wmap_effect_params[4] = -210;
+    g_wmap_effect_params[5] = 420;
+    g_wmap_effect_params[6] = 0;
+    g_wmap_effect_params[7] = 80;
+    g_wmap_effect_params[8] = 129;
+    g_wmap_effect_params[9] = 1;
+    g_wmap_effect_params[10] = 8;
+    g_wmap_effect_params[11] = 80;
+    g_wmap_effect_params[12] = 15;
+    g_wmap_effect_params[13] = 0;
+    D_801B3120 = g_wmap_zero_rotation;
     for (i = 0; i < 40; i++)
     {
-        D_80139988[i + 20].data = D_8011F538;
+        g_wmap_actor_animations[i + 20].data = g_wmap_animation_bank_1;
     }
-    D_801B307C = 204;
-    D_801B3078++;
-    func_800B86BC();
+    g_wmap_land_effect_31_sequence_5_timer = 204;
+    g_wmap_land_effect_31_sequence_5_step++;
+    wmap_land_effect_31_sequence_5_step_02();
 }
 
 /** @brief Configure the effect, reset its resource slots, and advance the sequence. */
-void func_800B6468(void)
+void wmap_land_effect_31_sequence_6_step_01(void)
 {
     s32 i;
 
-    D_801B0FD0 = 32;
-    D_80139280[0x15] = -3;
-    D_80139280[0x16] = 8;
-    D_80139280[0x17] = 20;
-    D_80139280[0x18] = 30;
-    D_80139280[0x19] = 1;
-    D_80139280[0x1A] = 1500;
-    D_80139280[0x1B] = 60;
-    D_80139280[0x1C] = 15;
-    D_80139280[0x1D] = 1;
-    D_80139280[0x1E] = 10000;
+    g_wmap_particle_intensity = 32;
+    g_wmap_effect_params[0x15] = -3;
+    g_wmap_effect_params[0x16] = 8;
+    g_wmap_effect_params[0x17] = 20;
+    g_wmap_effect_params[0x18] = 30;
+    g_wmap_effect_params[0x19] = 1;
+    g_wmap_effect_params[0x1A] = 1500;
+    g_wmap_effect_params[0x1B] = 60;
+    g_wmap_effect_params[0x1C] = 15;
+    g_wmap_effect_params[0x1D] = 1;
+    g_wmap_effect_params[0x1E] = 10000;
     for (i = 0; i < 32; i++)
     {
-        D_801AFBD0[i + D_80139280[0x1B]].field_00 = 0;
-        D_80139988[i + 64].data = D_8011F538;
+        g_wmap_actor_motions[i + g_wmap_effect_params[0x1B]].field_00 = 0;
+        g_wmap_actor_animations[i + 64].data = g_wmap_animation_bank_1;
     }
-    D_801B3084 = 32;
-    D_801B3080++;
-    func_800B88B4();
+    g_wmap_land_effect_31_sequence_6_timer = 32;
+    g_wmap_land_effect_31_sequence_6_step++;
+    wmap_land_effect_31_sequence_6_step_02();
 }
 
-void func_800B6558(void)
+void wmap_land_effect_31_sequence_7_step_02(void)
 {
     s32 value;
     s32 fade;
     s32 timer;
 
-    value = D_801B2650.vz - 0xDAC;
-    D_801B2650.vz = value;
+    value = g_wmap_effect_model_a_position.vz - 0xDAC;
+    g_wmap_effect_model_a_position.vz = value;
     if (value < 0x2710)
     {
-        D_801B2650.vz = 0x2710;
+        g_wmap_effect_model_a_position.vz = 0x2710;
     }
     PushMatrix();
-    wmap_set_map_rotation(&D_801B24A0);
-    if (D_80182DE8 != 0)
+    wmap_set_map_rotation(&g_wmap_effect_model_a_rotation);
+    if (g_wmap_effect_fade_a != 0)
     {
-        wmap_draw_model(D_8011CF34, 0, 4, 0x35, 0x7800, 1, D_80182DE8, 0, 0, -1);
-        fade = D_80182DE8 - 1;
-        D_80182DE8 = fade;
+        wmap_draw_model(D_8011CF34, 0, 4, 0x35, 0x7800, 1, g_wmap_effect_fade_a, 0, 0, -1);
+        fade = g_wmap_effect_fade_a - 1;
+        g_wmap_effect_fade_a = fade;
         if (fade < 0)
         {
-            D_80182DE8 = 0;
+            g_wmap_effect_fade_a = 0;
         }
     }
     PopMatrix();
-    timer = D_801B308C - 1;
-    D_801B308C = timer;
+    timer = g_wmap_land_effect_31_sequence_7_timer - 1;
+    g_wmap_land_effect_31_sequence_7_timer = timer;
     if (timer == 0)
     {
-        D_801B3088++;
+        g_wmap_land_effect_31_sequence_7_step++;
     }
 }
 
-void func_800B6644(void)
+void wmap_land_effect_31_sequence_8_step_02(void)
 {
     s32 value;
     s32 fade;
     s32 timer;
 
-    value = D_801B2478.vz - 0xDAC;
-    D_801B2478.vz = value;
+    value = g_wmap_effect_model_b_position.vz - 0xDAC;
+    g_wmap_effect_model_b_position.vz = value;
     if (value < 0x2710)
     {
-        D_801B2478.vz = 0x2710;
+        g_wmap_effect_model_b_position.vz = 0x2710;
     }
     PushMatrix();
-    wmap_set_map_rotation(&D_801B24A8);
-    if (D_80182DEC != 0)
+    wmap_set_map_rotation(&g_wmap_effect_model_b_rotation);
+    if (g_wmap_effect_fade_b != 0)
     {
-        wmap_draw_model(D_8011CF3C, 0, 4, 0x35, 0x7800, 1, D_80182DEC, 0, 0, -1);
-        fade = D_80182DEC - 4;
-        D_80182DEC = fade;
+        wmap_draw_model(D_8011CF3C, 0, 4, 0x35, 0x7800, 1, g_wmap_effect_fade_b, 0, 0, -1);
+        fade = g_wmap_effect_fade_b - 4;
+        g_wmap_effect_fade_b = fade;
         if (fade < 0)
         {
-            D_80182DEC = 0;
+            g_wmap_effect_fade_b = 0;
         }
     }
     PopMatrix();
-    timer = D_801B3094 - 1;
-    D_801B3094 = timer;
+    timer = g_wmap_land_effect_31_sequence_8_timer - 1;
+    g_wmap_land_effect_31_sequence_8_timer = timer;
     if (timer == 0)
     {
-        D_801B3090++;
+        g_wmap_land_effect_31_sequence_8_step++;
     }
 }
 
-void func_800B6730(void)
+void wmap_land_effect_31_sequence_9_step_02(void)
 {
     s32 value;
     s32 fade;
     s32 timer;
 
-    value = D_80139870.vz - 0xDAC;
-    D_80139870.vz = value;
+    value = g_wmap_effect_model_c_position.vz - 0xDAC;
+    g_wmap_effect_model_c_position.vz = value;
     if (value < 0x2710)
     {
-        D_80139870.vz = 0x2710;
+        g_wmap_effect_model_c_position.vz = 0x2710;
     }
     PushMatrix();
-    wmap_set_map_rotation(&D_8013B238);
-    if (D_80182DF0 != 0)
+    wmap_set_map_rotation(&g_wmap_effect_model_c_rotation);
+    if (g_wmap_effect_fade_c != 0)
     {
-        wmap_draw_model(D_8011CF2C, 0, 4, 0x35, 0x7800, 1, D_80182DF0, 0, 0, -1);
-        fade = D_80182DF0 - 2;
-        D_80182DF0 = fade;
+        wmap_draw_model(D_8011CF2C, 0, 4, 0x35, 0x7800, 1, g_wmap_effect_fade_c, 0, 0, -1);
+        fade = g_wmap_effect_fade_c - 2;
+        g_wmap_effect_fade_c = fade;
         if (fade < 0)
         {
-            D_80182DF0 = 0;
+            g_wmap_effect_fade_c = 0;
         }
     }
     PopMatrix();
-    timer = D_801B309C - 1;
-    D_801B309C = timer;
+    timer = g_wmap_land_effect_31_sequence_9_timer - 1;
+    g_wmap_land_effect_31_sequence_9_timer = timer;
     if (timer == 0)
     {
-        D_801B3098++;
+        g_wmap_land_effect_31_sequence_9_step++;
     }
 }
 
-void func_800B681C(void)
+void wmap_land_effect_31_sequence_10_step_02(void)
 {
     s32 value;
     s32 timer;
 
     wmap_set_map_rotation(&D_801B2498);
-    wmap_draw_model(D_800DCF18, (D_8013923C / 0x10) & 7, 0xA, 0x36, 0x7880, 0x1001, D_80182DE4, 6, -0x18, -1);
+    wmap_draw_model(g_wmap_load_buffer, (D_8013923C / 0x10) & 7, 0xA, 0x36, 0x7880, 0x1001, D_80182DE4, 6, -0x18, -1);
     D_8013923C += 0x10;
     value = D_80182DE4 + 4;
     D_80182DE4 = value;
@@ -715,21 +688,21 @@ void func_800B681C(void)
         D_80182DE4 = 0x81;
     }
     D_801B2498.vz += 0x10;
-    timer = D_801B30A4 - 1;
-    D_801B30A4 = timer;
+    timer = g_wmap_land_effect_31_sequence_10_timer - 1;
+    g_wmap_land_effect_31_sequence_10_timer = timer;
     if (timer == 0)
     {
-        D_801B30A0++;
+        g_wmap_land_effect_31_sequence_10_step++;
     }
 }
 
-void func_800B6918(void)
+void wmap_land_effect_31_sequence_10_step_04(void)
 {
     s32 value;
     s32 timer;
 
     wmap_set_map_rotation(&D_801B2498);
-    wmap_draw_model(D_800DCF18, (D_8013923C / 0x10) & 7, 0xA, 0x36, 0x7880, 0x1001, D_80182DE4, 6, -0x18, -1);
+    wmap_draw_model(g_wmap_load_buffer, (D_8013923C / 0x10) & 7, 0xA, 0x36, 0x7880, 0x1001, D_80182DE4, 6, -0x18, -1);
     value = D_80182DE4 - 0x10;
     D_80182DE4 = value;
     if (value < 0)
@@ -737,22 +710,22 @@ void func_800B6918(void)
         D_80182DE4 = 0;
     }
     D_8013923C += 0x10;
-    timer = D_801B30A4 - 1;
-    D_801B30A4 = timer;
+    timer = g_wmap_land_effect_31_sequence_10_timer - 1;
+    g_wmap_land_effect_31_sequence_10_timer = timer;
     D_801B2498.vz += 0x10;
     if (timer == 0)
     {
-        D_801B30A0++;
+        g_wmap_land_effect_31_sequence_10_step++;
     }
 }
 
-void func_800B6A10(void)
+void wmap_land_effect_31_sequence_11_step_02(void)
 {
     s32 value;
     s32 timer;
 
     wmap_set_map_rotation(&D_801B3118);
-    wmap_draw_model(D_800DCF18, (D_8013926C / 0x10) & 7, 0xA, 0x36, 0x7880, 0x1001, D_801B25E0, 4, -0x14, -1);
+    wmap_draw_model(g_wmap_load_buffer, (D_8013926C / 0x10) & 7, 0xA, 0x36, 0x7880, 0x1001, D_801B25E0, 4, -0x14, -1);
     D_8013926C -= 0x10;
     value = D_801B25E0 + 2;
     D_801B25E0 = value;
@@ -761,21 +734,21 @@ void func_800B6A10(void)
         D_801B25E0 = 0x81;
     }
     ((u16*)&D_801B3118)[2] += 0x10;
-    timer = D_801B30AC - 1;
-    D_801B30AC = timer;
+    timer = g_wmap_land_effect_31_sequence_11_timer - 1;
+    g_wmap_land_effect_31_sequence_11_timer = timer;
     if (timer == 0)
     {
-        D_801B30A8++;
+        g_wmap_land_effect_31_sequence_11_step++;
     }
 }
 
-void func_800B6B0C(void)
+void wmap_land_effect_31_sequence_11_step_04(void)
 {
     s32 value;
     s32 timer;
 
     wmap_set_map_rotation(&D_801B3118);
-    wmap_draw_model(D_800DCF18, (D_8013926C / 0x10) & 7, 0xA, 0x36, 0x7880, 0x1001, D_801B25E0, 4, -0x14, -1);
+    wmap_draw_model(g_wmap_load_buffer, (D_8013926C / 0x10) & 7, 0xA, 0x36, 0x7880, 0x1001, D_801B25E0, 4, -0x14, -1);
     value = D_801B25E0 - 0x80;
     D_801B25E0 = value;
     if (value < 0)
@@ -783,62 +756,62 @@ void func_800B6B0C(void)
         D_801B25E0 = 0;
     }
     D_8013926C -= 0x10;
-    timer = D_801B30AC - 1;
-    D_801B30AC = timer;
+    timer = g_wmap_land_effect_31_sequence_11_timer - 1;
+    g_wmap_land_effect_31_sequence_11_timer = timer;
     ((u16*)&D_801B3118)[2] += 0x10;
     if (timer == 0)
     {
-        D_801B30A8++;
+        g_wmap_land_effect_31_sequence_11_step++;
     }
 }
 
-void func_800B6C04(void)
+void wmap_land_effect_31_sequence_12_step_02(void)
 {
     s32 value;
     s32 timer;
 
-    wmap_set_map_rotation(&D_8013B240);
-    wmap_draw_model(D_8011CF28, (D_80139260 / 0x10) & 3, 0xA, 0x36, 0x7900, 0x1001, D_80182DF4, 4, -0x14, -1);
+    wmap_set_map_rotation(&g_wmap_effect_model_d_rotation);
+    wmap_draw_model(g_wmap_effect_model_pack_3, (D_80139260 / 0x10) & 3, 0xA, 0x36, 0x7900, 0x1001, g_wmap_effect_fade_d, 4, -0x14, -1);
     D_80139260 -= 0x20;
-    value = D_80182DF4 + 2;
-    D_80182DF4 = value;
+    value = g_wmap_effect_fade_d + 2;
+    g_wmap_effect_fade_d = value;
     if (value >= 0x82)
     {
-        D_80182DF4 = 0x81;
+        g_wmap_effect_fade_d = 0x81;
     }
-    D_8013B240.vz += 0x90;
-    timer = D_801B30B4 - 1;
-    D_801B30B4 = timer;
+    g_wmap_effect_model_d_rotation.vz += 0x90;
+    timer = g_wmap_land_effect_31_sequence_12_timer - 1;
+    g_wmap_land_effect_31_sequence_12_timer = timer;
     if (timer == 0)
     {
-        D_801B30B0++;
+        g_wmap_land_effect_31_sequence_12_step++;
     }
 }
 
-void func_800B6D00(void)
+void wmap_land_effect_31_sequence_12_step_04(void)
 {
     s32 value;
     s32 timer;
 
-    wmap_set_map_rotation(&D_8013B240);
-    wmap_draw_model(D_8011CF28, (D_80139260 / 0x10) & 3, 0xA, 0x36, 0x7900, 0x1001, D_80182DF4, 4, -0x14, -1);
-    value = D_80182DF4 - 8;
-    D_80182DF4 = value;
+    wmap_set_map_rotation(&g_wmap_effect_model_d_rotation);
+    wmap_draw_model(g_wmap_effect_model_pack_3, (D_80139260 / 0x10) & 3, 0xA, 0x36, 0x7900, 0x1001, g_wmap_effect_fade_d, 4, -0x14, -1);
+    value = g_wmap_effect_fade_d - 8;
+    g_wmap_effect_fade_d = value;
     if (value < 0)
     {
-        D_80182DF4 = 0;
+        g_wmap_effect_fade_d = 0;
     }
     D_80139260 -= 0x20;
-    timer = D_801B30B4 - 1;
-    D_801B30B4 = timer;
-    D_8013B240.vz += 0x90;
+    timer = g_wmap_land_effect_31_sequence_12_timer - 1;
+    g_wmap_land_effect_31_sequence_12_timer = timer;
+    g_wmap_effect_model_d_rotation.vz += 0x90;
     if (timer == 0)
     {
-        D_801B30B0++;
+        g_wmap_land_effect_31_sequence_12_step++;
     }
 }
 
-void func_800B6DF8(void)
+void wmap_land_effect_31_sequence_13_step_02(void)
 {
     s32 value;
     s32 timer;
@@ -853,15 +826,15 @@ void func_800B6DF8(void)
         D_801B25D8 = 0x81;
     }
     D_801B2670.vz += 0x60;
-    timer = D_801B30BC - 1;
-    D_801B30BC = timer;
+    timer = g_wmap_land_effect_31_sequence_13_timer - 1;
+    g_wmap_land_effect_31_sequence_13_timer = timer;
     if (timer == 0)
     {
-        D_801B30B8++;
+        g_wmap_land_effect_31_sequence_13_step++;
     }
 }
 
-void func_800B6EF4(void)
+void wmap_land_effect_31_sequence_13_step_04(void)
 {
     s32 value;
     s32 timer;
@@ -875,16 +848,16 @@ void func_800B6EF4(void)
         D_801B25D8 = 0;
     }
     D_80139264 += 0x10;
-    timer = D_801B30BC - 1;
-    D_801B30BC = timer;
+    timer = g_wmap_land_effect_31_sequence_13_timer - 1;
+    g_wmap_land_effect_31_sequence_13_timer = timer;
     D_801B2670.vz += 0x60;
     if (timer == 0)
     {
-        D_801B30B8++;
+        g_wmap_land_effect_31_sequence_13_step++;
     }
 }
 
-void func_800B6FEC(void)
+void wmap_land_effect_31_sequence_14_step_02(void)
 {
     s32 value;
     s32 timer;
@@ -899,15 +872,15 @@ void func_800B6FEC(void)
         D_801B25DC = 0x81;
     }
     D_801B2678.vz += 0;
-    timer = D_801B30C4 - 1;
-    D_801B30C4 = timer;
+    timer = g_wmap_land_effect_31_sequence_14_timer - 1;
+    g_wmap_land_effect_31_sequence_14_timer = timer;
     if (timer == 0)
     {
-        D_801B30C0++;
+        g_wmap_land_effect_31_sequence_14_step++;
     }
 }
 
-void func_800B70CC(void)
+void wmap_land_effect_31_sequence_14_step_04(void)
 {
     s32 value;
     s32 timer;
@@ -922,15 +895,15 @@ void func_800B70CC(void)
     }
     D_80139268 += 8;
     D_801B2678.vz += 0;
-    timer = D_801B30C4 - 1;
-    D_801B30C4 = timer;
+    timer = g_wmap_land_effect_31_sequence_14_timer - 1;
+    g_wmap_land_effect_31_sequence_14_timer = timer;
     if (timer == 0)
     {
-        D_801B30C0++;
+        g_wmap_land_effect_31_sequence_14_step++;
     }
 }
 
-void func_800B71A8(void)
+void wmap_land_effect_31_sequence_20_step_01(void)
 {
     s32 index;
     s32 config_offset;
@@ -942,25 +915,25 @@ void func_800B71A8(void)
     s16* config_entry;
 
     index = 0;
-    config_base = D_801AFBD0;
-    screen_base = (u8*)D_80139988;
-    resource = &D_80121538;
+    config_base = g_wmap_actor_motions;
+    screen_base = (u8*)g_wmap_actor_animations;
+    resource = &g_wmap_animation_bank_2;
     screen_offset = 0x640;
     config_offset = 0xFA0;
-    D_80139280[40] = 0x28;
-    D_80139280[41] = 0xC8;
-    D_80139280[42] = -0x136;
-    D_80139280[43] = 0x28;
-    D_80139280[44] = -0x64;
-    D_80139280[45] = 0x28;
-    D_80139280[46] = 0;
-    D_80139280[47] = 0x2D;
-    D_80139280[48] = 0x81;
-    D_80139280[49] = 1;
-    D_80139280[50] = 0x20;
-    D_80139280[51] = 4;
-    D_80139280[52] = 0xF;
-    D_80139280[53] = 0;
+    g_wmap_effect_params[40] = 0x28;
+    g_wmap_effect_params[41] = 0xC8;
+    g_wmap_effect_params[42] = -0x136;
+    g_wmap_effect_params[43] = 0x28;
+    g_wmap_effect_params[44] = -0x64;
+    g_wmap_effect_params[45] = 0x28;
+    g_wmap_effect_params[46] = 0;
+    g_wmap_effect_params[47] = 0x2D;
+    g_wmap_effect_params[48] = 0x81;
+    g_wmap_effect_params[49] = 1;
+    g_wmap_effect_params[50] = 0x20;
+    g_wmap_effect_params[51] = 4;
+    g_wmap_effect_params[52] = 0xF;
+    g_wmap_effect_params[53] = 0;
 
     do
     {
@@ -973,291 +946,106 @@ void func_800B71A8(void)
         *(u8**)(screen_entry + 4) = resource;
     } while (index < 0x28);
 
-    D_801B30F4 = 0x64;
-    D_801B30F0++;
-    func_800BA108();
+    g_wmap_land_effect_31_sequence_20_timer = 0x64;
+    g_wmap_land_effect_31_sequence_20_step++;
+    wmap_land_effect_31_sequence_20_step_02();
 }
 
-s32 func_800B7290(s32 reset)
-{
-    if (reset != 0)
-    {
-        D_801B3048 = 1;
-        D_801B304C = 1;
-        return 1;
-    }
+WMAP_STEP_RUNNER(wmap_land_effect_31_run, D_800D7474, 6, g_wmap_land_effect_31_step, g_wmap_land_effect_31_timer)
 
-    if ((u32)D_801B3048 >= 6)
-    {
-        return 0;
-    }
+WMAP_STEP_RESET(wmap_land_effect_31_reset, g_wmap_land_effect_31_step, g_wmap_land_effect_31_timer)
 
-    D_800D7474[D_801B3048]();
-    return 1;
-}
+WMAP_STEP_START_BLOCKING(wmap_land_effect_31_step_01, g_wmap_land_effect_31_step, wmap_run_land_focus, wmap_land_effect_31_step_02)
 
-void func_800B7308(void)
-{
-    D_801B3048 = 1;
-    D_801B304C = 1;
-}
+WMAP_STEP_WAIT_IDLE(wmap_land_effect_31_step_02, g_wmap_land_effect_31_step, wmap_land_effect_31_step_03)
 
-void func_800B7320(void)
-{
-    wmap_start_sequence(wmap_run_land_focus);
-    D_8013B20C = 1;
-    D_801B3048++;
-    func_800B7364();
-}
+WMAP_STEP_START_BLOCKING(wmap_land_effect_31_step_03, g_wmap_land_effect_31_step, wmap_land_effect_31_run_timeline, wmap_land_effect_31_step_04)
 
-void func_800B7364(void)
-{
-void func_800B7364(void);
+WMAP_STEP_WAIT_IDLE(wmap_land_effect_31_step_04, g_wmap_land_effect_31_step, wmap_land_effect_31_step_05)
 
-    if (D_8013B20C == 0)
-    {
-        D_801B3048++;
-        func_800B73A0();
-    }
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_31_step_05, g_wmap_land_effect_31_step)
 
-void func_800B73A0(void)
-{
-void func_800B73A0(void);
+WMAP_STEP_RUNNER(wmap_land_effect_31_run_timeline, D_800D748C, 0x2C, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
 
-    wmap_start_sequence(func_800B7438);
-    D_8013B20C = 1;
-    D_801B3048++;
-    func_800B73E4();
-}
+WMAP_STEP_RESET(wmap_land_effect_31_timeline_reset, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
 
-void func_800B73E4(void)
-{
-void func_800B73E4(void);
-
-    if (D_8013B20C == 0)
-    {
-        D_801B3048++;
-        func_800B7420();
-    }
-}
-
-void func_800B7420(void)
-{
-void func_800B7420(void);
-
-    D_801B3048++;
-}
-
-s32 func_800B7438(s32 reset)
-{
-    if (reset != 0)
-    {
-        D_801B3050 = 1;
-        D_801B3054 = 1;
-        return 1;
-    }
-
-    if ((u32)D_801B3050 >= 0x2C)
-    {
-        return 0;
-    }
-
-    D_800D748C[D_801B3050]();
-    return 1;
-}
-
-void func_800B74B0(void)
-{
-    D_801B3050 = 1;
-    D_801B3054 = 1;
-}
-
-void func_800B74C8(void)
+void wmap_land_effect_31_timeline_step_01(void)
 {
     wmap_play_sound(0x34, 0x80);
-    D_8013B208 = 1;
-    wmap_start_sequence(func_800B9B9C);
-    D_801B3054 = 0xF;
-    D_801B3050++;
+    g_wmap_event_active = 1;
+    wmap_start_sequence(wmap_land_effect_31_run_sequence_18);
+    g_wmap_land_effect_31_timeline_timer = 0xF;
+    g_wmap_land_effect_31_timeline_step++;
 }
 
-void func_800B751C(void)
+WMAP_STEP_WAIT(wmap_land_effect_31_timeline_step_02, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
+
+WMAP_STEP_START_AND_WAIT(wmap_land_effect_31_timeline_step_03, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer,
+                         wmap_land_effect_31_run_sequence_20, 0xF)
+
+WMAP_STEP_WAIT(wmap_land_effect_31_timeline_step_04, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
+
+WMAP_STEP_START_AND_WAIT(wmap_land_effect_31_timeline_step_05, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer,
+                         wmap_land_effect_31_run_sequence_2, 0x16)
+
+WMAP_STEP_WAIT(wmap_land_effect_31_timeline_step_06, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
+
+void wmap_land_effect_31_timeline_step_07(void)
 {
-    s32 timer;
-
-    timer = D_801B3054 - 1;
-    D_801B3054 = timer;
-    if (timer == 0)
-    {
-        D_801B3050++;
-    }
-}
-
-void func_800B7550(void)
-{
-    wmap_start_sequence(func_800BA078);
-    D_801B3054 = 0xF;
-    D_801B3050++;
-}
-
-void func_800B758C(void)
-{
-    s32 timer;
-
-    timer = D_801B3054 - 1;
-    D_801B3054 = timer;
-    if (timer == 0)
-    {
-        D_801B3050++;
-    }
-}
-
-void func_800B75C0(void)
-{
-    wmap_start_sequence(func_800B8084);
-    D_801B3054 = 0x16;
-    D_801B3050++;
-}
-
-void func_800B75FC(void)
-{
-    s32 timer;
-
-    timer = D_801B3054 - 1;
-    D_801B3054 = timer;
-    if (timer == 0)
-    {
-        D_801B3050++;
-    }
-}
-
-void func_800B7630(void)
-{
-    wmap_start_sequence(func_800B9244);
+    wmap_start_sequence(wmap_land_effect_31_run_sequence_13);
     g_wmap_backdrop_target_level = 0xC;
     wmap_start_map_tint(0x704060);
-    D_801B3054 = 0xB;
-    D_801B3050++;
+    g_wmap_land_effect_31_timeline_timer = 0xB;
+    g_wmap_land_effect_31_timeline_step++;
 }
 
-void func_800B7684(void)
-{
-    s32 timer;
+WMAP_STEP_WAIT(wmap_land_effect_31_timeline_step_08, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
 
-    timer = D_801B3054 - 1;
-    D_801B3054 = timer;
-    if (timer == 0)
-    {
-        D_801B3050++;
-    }
+void wmap_land_effect_31_timeline_step_09(void)
+{
+    g_wmap_placement_overlay_hidden = 1;
+    g_wmap_land_effect_31_timeline_timer = 0x28;
+    g_wmap_land_effect_31_timeline_step++;
 }
 
-void func_800B76B8(void)
-{
-    D_801ADAE0 = 1;
-    D_801B3054 = 0x28;
-    D_801B3050++;
-}
+WMAP_STEP_WAIT(wmap_land_effect_31_timeline_step_10, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
 
-void func_800B76E4(void)
+void wmap_land_effect_31_timeline_step_11(void)
 {
-    s32 timer;
-
-    timer = D_801B3054 - 1;
-    D_801B3054 = timer;
-    if (timer == 0)
-    {
-        D_801B3050++;
-    }
-}
-
-void func_800B7718(void)
-{
-    wmap_start_sequence(func_800B99F8);
+    wmap_start_sequence(wmap_land_effect_31_run_sequence_17);
     wmap_start_map_tint(0x352030);
-    wmap_start_sequence(func_800B8E30);
-    D_801B3054 = 0xA;
-    D_801B3050++;
+    wmap_start_sequence(wmap_land_effect_31_run_sequence_10);
+    g_wmap_land_effect_31_timeline_timer = 0xA;
+    g_wmap_land_effect_31_timeline_step++;
 }
 
-void func_800B776C(void)
-{
-    s32 timer;
+WMAP_STEP_WAIT(wmap_land_effect_31_timeline_step_12, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
 
-    timer = D_801B3054 - 1;
-    D_801B3054 = timer;
-    if (timer == 0)
-    {
-        D_801B3050++;
-    }
-}
-
-void func_800B77A0(void)
+void wmap_land_effect_31_timeline_step_13(void)
 {
     g_wmap_screen_fade_mode = 2;
     D_8013B29C = 1;
-    D_801B3054 = 4;
-    D_801B3050++;
+    g_wmap_land_effect_31_timeline_timer = 4;
+    g_wmap_land_effect_31_timeline_step++;
 }
 
-void func_800B77D8(void)
-{
-    s32 timer;
+WMAP_STEP_WAIT(wmap_land_effect_31_timeline_step_14, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
 
-    timer = D_801B3054 - 1;
-    D_801B3054 = timer;
-    if (timer == 0)
-    {
-        D_801B3050++;
-    }
-}
-
-void func_800B780C(void)
+void wmap_land_effect_31_timeline_step_15(void)
 {
     wmap_start_map_tint(0);
     g_wmap_backdrop_target_level = 1;
-    D_801B3054 = 0xF;
-    D_801B3050++;
+    g_wmap_land_effect_31_timeline_timer = 0xF;
+    g_wmap_land_effect_31_timeline_step++;
 }
 
-void func_800B7850(void)
-{
-    s32 timer;
+WMAP_STEP_WAIT(wmap_land_effect_31_timeline_step_16, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
 
-    timer = D_801B3054 - 1;
-    D_801B3054 = timer;
-    if (timer == 0)
-    {
-        D_801B3050++;
-    }
-}
+WMAP_STEP_WAIT(wmap_land_effect_31_timeline_step_18, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
 
-void func_800B7884(void)
-{
-    s32 timer;
+WMAP_STEP_WAIT(wmap_land_effect_31_timeline_step_20, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
 
-    timer = D_801B3054 - 1;
-    D_801B3054 = timer;
-    if (timer == 0)
-    {
-        D_801B3050++;
-    }
-}
-
-void func_800B78B8(void)
-{
-    s32 timer;
-
-    timer = D_801B3054 - 1;
-    D_801B3054 = timer;
-    if (timer == 0)
-    {
-        D_801B3050++;
-    }
-}
-
-void func_800B78EC(void)
+void wmap_land_effect_31_timeline_step_21(void)
 {
     wmap_install_callback(func_8006C0EC);
     D_80139210.field_00 = 0x132;
@@ -1272,35 +1060,15 @@ void func_800B78EC(void)
     D_80139200.field_00 = 0x26C;
     D_80139200.field_04 = 0;
     D_80139200.field_08 = 0;
-    D_801B3054 = 0xA;
-    D_801B3050++;
+    g_wmap_land_effect_31_timeline_timer = 0xA;
+    g_wmap_land_effect_31_timeline_step++;
 }
 
-void func_800B7988(void)
-{
-    s32 timer;
+WMAP_STEP_WAIT(wmap_land_effect_31_timeline_step_22, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
 
-    timer = D_801B3054 - 1;
-    D_801B3054 = timer;
-    if (timer == 0)
-    {
-        D_801B3050++;
-    }
-}
+WMAP_STEP_WAIT(wmap_land_effect_31_timeline_step_24, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
 
-void func_800B79BC(void)
-{
-    s32 timer;
-
-    timer = D_801B3054 - 1;
-    D_801B3054 = timer;
-    if (timer == 0)
-    {
-        D_801B3050++;
-    }
-}
-
-void func_800B79F0(void)
+void wmap_land_effect_31_timeline_step_25(void)
 {
     D_80139210.field_00 = 0;
     D_80139210.field_02 = 0;
@@ -1314,101 +1082,35 @@ void func_800B79F0(void)
     D_80139200.field_00 = 0;
     D_80139200.field_04 = 0;
     D_80139200.field_08 = 0;
-    D_801B3054 = 0x1E;
-    D_801B3050++;
+    g_wmap_land_effect_31_timeline_timer = 0x1E;
+    g_wmap_land_effect_31_timeline_step++;
 }
 
-void func_800B7A64(void)
+WMAP_STEP_WAIT(wmap_land_effect_31_timeline_step_26, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
+
+WMAP_STEP_START_AND_WAIT(wmap_land_effect_31_timeline_step_27, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer,
+                         wmap_land_effect_31_run_sequence_3, 0xA0)
+
+WMAP_STEP_WAIT(wmap_land_effect_31_timeline_step_28, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
+
+WMAP_STEP_START_AND_WAIT(wmap_land_effect_31_timeline_step_29, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer,
+                         wmap_land_effect_31_run_sequence_8, 7)
+
+WMAP_STEP_WAIT(wmap_land_effect_31_timeline_step_30, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
+
+WMAP_STEP_START_AND_WAIT(wmap_land_effect_31_timeline_step_31, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer,
+                         wmap_land_effect_31_run_sequence_11, 0x14)
+
+WMAP_STEP_WAIT(wmap_land_effect_31_timeline_step_32, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
+
+WMAP_STEP_START_AND_WAIT(wmap_land_effect_31_timeline_step_33, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer,
+                         wmap_land_effect_31_run_sequence_1, 0x28)
+
+WMAP_STEP_WAIT(wmap_land_effect_31_timeline_step_34, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
+
+void wmap_land_effect_31_timeline_step_35(void)
 {
-    s32 timer;
-
-    timer = D_801B3054 - 1;
-    D_801B3054 = timer;
-    if (timer == 0)
-    {
-        D_801B3050++;
-    }
-}
-
-void func_800B7A98(void)
-{
-    wmap_start_sequence(func_800B822C);
-    D_801B3054 = 0xA0;
-    D_801B3050++;
-}
-
-void func_800B7AD4(void)
-{
-    s32 timer;
-
-    timer = D_801B3054 - 1;
-    D_801B3054 = timer;
-    if (timer == 0)
-    {
-        D_801B3050++;
-    }
-}
-
-void func_800B7B08(void)
-{
-    wmap_start_sequence(func_800B8B80);
-    D_801B3054 = 7;
-    D_801B3050++;
-}
-
-void func_800B7B44(void)
-{
-    s32 timer;
-
-    timer = D_801B3054 - 1;
-    D_801B3054 = timer;
-    if (timer == 0)
-    {
-        D_801B3050++;
-    }
-}
-
-void func_800B7B78(void)
-{
-    wmap_start_sequence(func_800B8F8C);
-    D_801B3054 = 0x14;
-    D_801B3050++;
-}
-
-void func_800B7BB4(void)
-{
-    s32 timer;
-
-    timer = D_801B3054 - 1;
-    D_801B3054 = timer;
-    if (timer == 0)
-    {
-        D_801B3050++;
-    }
-}
-
-void func_800B7BE8(void)
-{
-    wmap_start_sequence(func_800B7E7C);
-    D_801B3054 = 0x28;
-    D_801B3050++;
-}
-
-void func_800B7C24(void)
-{
-    s32 timer;
-
-    timer = D_801B3054 - 1;
-    D_801B3054 = timer;
-    if (timer == 0)
-    {
-        D_801B3050++;
-    }
-}
-
-void func_800B7C58(void)
-{
-    wmap_start_sequence(func_800B90E8);
+    wmap_start_sequence(wmap_land_effect_31_run_sequence_12);
     g_wmap_backdrop_target_level = 0;
     D_80182D74.field_00 = 0;
     D_80182D74.field_01 = 0;
@@ -1422,380 +1124,222 @@ void func_800B7C58(void)
     D_80182D94.field_00 = 0;
     D_80182D94.field_01 = 0;
     D_80182D94.field_02 = 0;
-    D_801B3054 = 0x1E;
-    D_801B3050++;
+    g_wmap_land_effect_31_timeline_timer = 0x1E;
+    g_wmap_land_effect_31_timeline_step++;
 }
 
-void func_800B7CEC(void)
+WMAP_STEP_WAIT(wmap_land_effect_31_timeline_step_36, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
+
+WMAP_STEP_WAIT(wmap_land_effect_31_timeline_step_38, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
+
+void wmap_land_effect_31_timeline_step_39(void)
 {
-    s32 timer;
-
-    timer = D_801B3054 - 1;
-    D_801B3054 = timer;
-    if (timer == 0)
-    {
-        D_801B3050++;
-    }
-}
-
-void func_800B7D20(void)
-{
-    s32 timer;
-
-    timer = D_801B3054 - 1;
-    D_801B3054 = timer;
-    if (timer == 0)
-    {
-        D_801B3050++;
-    }
-}
-
-void func_800B7D54(void)
-{
-    wmap_start_sequence(func_800B8CD8);
+    wmap_start_sequence(wmap_land_effect_31_run_sequence_9);
     wmap_start_map_tint(0x808080);
     g_wmap_backdrop_target_level = 0x10;
-    D_80139244 = 0;
-    D_801B3054 = 0x1C;
-    D_80139290[D_8011D510][D_8011D530].value = D_8011D4FC | 0x100;
-    D_801B3050++;
+    g_wmap_transition_mesh_hidden = 0;
+    g_wmap_land_effect_31_timeline_timer = 0x1C;
+    g_wmap_cells[g_wmap_focus_cell_x][g_wmap_focus_cell_y].value = g_wmap_selected_artifact | 0x100;
+    g_wmap_land_effect_31_timeline_step++;
 }
 
-void func_800B7DF8(void)
+WMAP_STEP_WAIT(wmap_land_effect_31_timeline_step_40, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
+
+WMAP_STEP_WAIT(wmap_land_effect_31_timeline_step_42, g_wmap_land_effect_31_timeline_step, g_wmap_land_effect_31_timeline_timer)
+
+void wmap_land_effect_31_timeline_finish(void)
 {
-    s32 timer;
-
-    timer = D_801B3054 - 1;
-    D_801B3054 = timer;
-    if (timer == 0)
-    {
-        D_801B3050++;
-    }
+    g_wmap_sequence_busy = 0;
+    g_wmap_land_effect_31_timeline_step++;
 }
 
-void func_800B7E2C(void)
-{
-    s32 timer;
+WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_1, D_800D753C, 6, g_wmap_land_effect_31_sequence_1_step, g_wmap_land_effect_31_sequence_1_timer)
 
-    timer = D_801B3054 - 1;
-    D_801B3054 = timer;
-    if (timer == 0)
-    {
-        D_801B3050++;
-    }
-}
+WMAP_STEP_RESET(wmap_land_effect_31_sequence_1_reset, g_wmap_land_effect_31_sequence_1_step, g_wmap_land_effect_31_sequence_1_timer)
 
-void func_800B7E60(void)
-{
-    D_8013B20C = 0;
-    D_801B3050++;
-}
-
-s32 func_800B7E7C(s32 reset)
-{
-    if (reset != 0)
-    {
-        D_801B3058 = 1;
-        D_801B305C = 1;
-        return 1;
-    }
-
-    if ((u32)D_801B3058 >= 6)
-    {
-        return 0;
-    }
-
-    D_800D753C[D_801B3058]();
-    return 1;
-}
-
-void func_800B7EF4(void)
-{
-    D_801B3058 = 1;
-    D_801B305C = 1;
-}
-
-void func_800B7F0C(void)
+void wmap_land_effect_31_sequence_1_step_02(void)
 {
     s32 timer;
 
     func_8006AEE0();
-    func_8006A2FC(D_800D9D68, D_80139B88, 0x28, 0, 0x7F, 4, 0, (u8*)D_80139280 + 0x78);
-    timer = D_801B305C - 1;
-    D_801B305C = timer;
+    func_8006A2FC(D_800D9D68, D_80139B88, 0x28, 0, 0x7F, 4, 0, (u8*)g_wmap_effect_params + 0x78);
+    timer = g_wmap_land_effect_31_sequence_1_timer - 1;
+    g_wmap_land_effect_31_sequence_1_timer = timer;
     if (timer == 0)
     {
-        D_801B3058++;
+        g_wmap_land_effect_31_sequence_1_step++;
     }
 }
 
-void func_800B7F98(void)
+void wmap_land_effect_31_sequence_1_step_03(void)
 {
-    D_801B305C = 0x20;
-    D_80139280[35] = -1;
-    D_801B3058++;
-    func_800B7FE0();
+    g_wmap_land_effect_31_sequence_1_timer = 0x20;
+    g_wmap_effect_params[35] = -1;
+    g_wmap_land_effect_31_sequence_1_step++;
+    wmap_land_effect_31_sequence_1_step_04();
 }
 
-void func_800B7FE0(void)
+void wmap_land_effect_31_sequence_1_step_04(void)
 {
-void func_800B7FE0(void);
-
     s32 timer;
 
     func_8006AEE0();
-    func_8006A2FC(D_800D9D68, D_80139B88, 0x28, 0, 0x7F, 4, 0, (u8*)D_80139280 + 0x78);
-    timer = D_801B305C - 1;
-    D_801B305C = timer;
+    func_8006A2FC(D_800D9D68, D_80139B88, 0x28, 0, 0x7F, 4, 0, (u8*)g_wmap_effect_params + 0x78);
+    timer = g_wmap_land_effect_31_sequence_1_timer - 1;
+    g_wmap_land_effect_31_sequence_1_timer = timer;
     if (timer == 0)
     {
-        D_801B3058++;
+        g_wmap_land_effect_31_sequence_1_step++;
     }
 }
 
-void func_800B806C(void)
+WMAP_STEP_ADVANCE(wmap_land_effect_31_sequence_1_end, g_wmap_land_effect_31_sequence_1_step)
+
+WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_2, D_800D7554, 4, g_wmap_land_effect_31_sequence_2_step, g_wmap_land_effect_31_sequence_2_timer)
+
+WMAP_STEP_RESET(wmap_land_effect_31_sequence_2_reset, g_wmap_land_effect_31_sequence_2_step, g_wmap_land_effect_31_sequence_2_timer)
+
+void wmap_land_effect_31_sequence_2_step_01(void)
 {
-    D_801B3058++;
+    WmapSpriteActor* actor = &g_wmap_sprite_actors[5];
+
+    g_wmap_actor_animations[5].data = g_wmap_animation_bank_1;
+    actor->scale_index = 0xF;
+    actor->sequence = 3;
+    actor->previous_sequence = -1;
+    actor->shade_step = 8;
+    actor->target_shade = 0x81;
+    actor->resource_index = 0;
+    actor->shade = 1;
+    g_wmap_land_effect_31_sequence_2_timer = 0x64;
+    g_wmap_land_effect_31_sequence_2_step++;
+    wmap_land_effect_31_sequence_2_step_02();
 }
 
-s32 func_800B8084(s32 reset)
+void wmap_land_effect_31_sequence_2_step_02(void)
 {
-    if (reset != 0)
-    {
-        D_801B3060 = 1;
-        D_801B3064 = 1;
-        return 1;
-    }
-
-    if ((u32)D_801B3060 >= 4)
-    {
-        return 0;
-    }
-
-    D_800D7554[D_801B3060]();
-    return 1;
-}
-
-void func_800B80FC(void)
-{
-    D_801B3060 = 1;
-    D_801B3064 = 1;
-}
-
-void func_800B8114(void)
-{
-    D_801399B4 = &D_8011F538;
-    D_800D9344.scale_index = 0xF;
-    D_800D9344.sequence = 3;
-    D_800D9344.previous_sequence = -1;
-    D_800D9344.shade_step = 8;
-    D_800D9344.target_shade = 0x81;
-    D_800D9344.resource_index = 0;
-    D_800D9344.shade = 1;
-    D_801B3064 = 0x64;
-    D_801B3060++;
-    func_800B8198();
-}
-
-void func_800B8198(void)
-{
-void func_800B8198(void);
-
     s32 timer;
 
-    wmap_step_actor_animation(&D_800D9344, &D_801399B0);
-    wmap_draw_actor_sprite(&D_800D9344, g_wmap_focus_screen_position.packed, 0xF, 2, 0);
-    timer = D_801B3064 - 1;
-    D_801B3064 = timer;
+    wmap_step_actor_animation(&g_wmap_sprite_actors[5], &g_wmap_actor_animations[5]);
+    wmap_draw_actor_sprite(&g_wmap_sprite_actors[5], g_wmap_focus_screen_position.packed, 0xF, 2, 0);
+    timer = g_wmap_land_effect_31_sequence_2_timer - 1;
+    g_wmap_land_effect_31_sequence_2_timer = timer;
     if (timer == 0)
     {
-        D_801B3060++;
+        g_wmap_land_effect_31_sequence_2_step++;
     }
 }
 
-void func_800B8214(void)
+WMAP_STEP_ADVANCE(wmap_land_effect_31_sequence_2_end, g_wmap_land_effect_31_sequence_2_step)
+
+WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_3, D_800D7564, 6, g_wmap_land_effect_31_sequence_3_step, g_wmap_land_effect_31_sequence_3_timer)
+
+WMAP_STEP_RESET(wmap_land_effect_31_sequence_3_reset, g_wmap_land_effect_31_sequence_3_step, g_wmap_land_effect_31_sequence_3_timer)
+
+void wmap_land_effect_31_sequence_3_step_01(void)
 {
-    D_801B3060++;
+    WmapSpriteActor* actor = &g_wmap_sprite_actors[6];
+
+    g_wmap_actor_animations[6].data = &g_wmap_animation_bank_0;
+    actor->previous_sequence = -1;
+    actor->shade_step = 2;
+    actor->target_shade = 0x81;
+    actor->resource_index = 0;
+    actor->scale_index = 0;
+    actor->sequence = 0;
+    actor->shade = 1;
+    g_wmap_land_effect_31_sequence_3_timer = 0x10E;
+    g_wmap_land_effect_31_sequence_3_step++;
+    wmap_land_effect_31_sequence_3_step_02();
 }
 
-s32 func_800B822C(s32 reset)
+void wmap_land_effect_31_sequence_3_step_02(void)
 {
-    if (reset != 0)
-    {
-        D_801B3068 = 1;
-        D_801B306C = 1;
-        return 1;
-    }
-
-    if ((u32)D_801B3068 >= 6)
-    {
-        return 0;
-    }
-
-    D_800D7564[D_801B3068]();
-    return 1;
-}
-
-void func_800B82A4(void)
-{
-    D_801B3068 = 1;
-    D_801B306C = 1;
-}
-
-void func_800B82BC(void)
-{
-    D_801399BC = &D_8011D538;
-    D_800D9370.previous_sequence = -1;
-    D_800D9370.shade_step = 2;
-    D_800D9370.target_shade = 0x81;
-    D_800D9370.resource_index = 0;
-    D_800D9370.scale_index = 0;
-    D_800D9370.sequence = 0;
-    D_800D9370.shade = 1;
-    D_801B306C = 0x10E;
-    D_801B3068++;
-    func_800B8338();
-}
-
-void func_800B8338(void)
-{
-void func_800B8338(void);
-
     s32 timer;
 
-    wmap_step_actor_animation(&D_800D9370, &D_801399B8);
-    wmap_draw_actor_sprite(&D_800D9370, g_wmap_focus_screen_position.packed, 0x10, 8, 1);
-    timer = D_801B306C - 1;
-    D_801B306C = timer;
+    wmap_step_actor_animation(&g_wmap_sprite_actors[6], &g_wmap_actor_animations[6]);
+    wmap_draw_actor_sprite(&g_wmap_sprite_actors[6], g_wmap_focus_screen_position.packed, 0x10, 8, 1);
+    timer = g_wmap_land_effect_31_sequence_3_timer - 1;
+    g_wmap_land_effect_31_sequence_3_timer = timer;
     if (timer == 0)
     {
-        D_801B3068++;
+        g_wmap_land_effect_31_sequence_3_step++;
     }
 }
 
-void func_800B83B8(void)
+void wmap_land_effect_31_sequence_3_step_03(void)
 {
-    D_800D9370.shade_step = 2;
-    D_800D9370.target_shade = 0;
+    WmapSpriteActor* actor = &g_wmap_sprite_actors[6];
+
+    actor->shade_step = 2;
+    actor->target_shade = 0;
     D_80139268 = 0;
-    D_801B306C = 0x40;
-    D_801B3068++;
-    func_800B840C();
+    g_wmap_land_effect_31_sequence_3_timer = 0x40;
+    g_wmap_land_effect_31_sequence_3_step++;
+    wmap_land_effect_31_sequence_3_step_04();
 }
 
-void func_800B840C(void)
+void wmap_land_effect_31_sequence_3_step_04(void)
 {
-void func_800B840C(void);
-
     s32 timer;
 
-    wmap_step_actor_animation(&D_800D9370, &D_801399B8);
-    wmap_draw_actor_sprite(&D_800D9370, g_wmap_focus_screen_position.packed, 0x10, 8, 1);
-    D_800D9370.scale_index = D_80139268 >> 4;
+    wmap_step_actor_animation(&g_wmap_sprite_actors[6], &g_wmap_actor_animations[6]);
+    wmap_draw_actor_sprite(&g_wmap_sprite_actors[6], g_wmap_focus_screen_position.packed, 0x10, 8, 1);
+    g_wmap_sprite_actors[6].scale_index = D_80139268 >> 4;
     D_80139268 += 0x10;
     if (D_80139268 >= 0xF1)
     {
         D_80139268 = 0xF0;
     }
-    timer = D_801B306C - 1;
-    D_801B306C = timer;
+    timer = g_wmap_land_effect_31_sequence_3_timer - 1;
+    g_wmap_land_effect_31_sequence_3_timer = timer;
     if (timer == 0)
     {
-        D_801B3068++;
+        g_wmap_land_effect_31_sequence_3_step++;
     }
 }
 
-void func_800B84B8(void)
-{
-    D_801B3068++;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_31_sequence_3_end, g_wmap_land_effect_31_sequence_3_step)
 
-s32 func_800B84D0(s32 reset)
-{
-    if (reset != 0)
-    {
-        D_801B3070 = 1;
-        D_801B3074 = 1;
-        return 1;
-    }
+WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_4, D_800D757C, 6, g_wmap_land_effect_31_sequence_4_step, g_wmap_land_effect_31_sequence_4_timer)
 
-    if ((u32)D_801B3070 >= 6)
-    {
-        return 0;
-    }
+WMAP_STEP_RESET(wmap_land_effect_31_sequence_4_reset, g_wmap_land_effect_31_sequence_4_step, g_wmap_land_effect_31_sequence_4_timer)
 
-    D_800D757C[D_801B3070]();
-    return 1;
-}
-
-void func_800B8548(void)
-{
-    D_801B3070 = 1;
-    D_801B3074 = 1;
-}
-
-void func_800B8560(void)
+void wmap_land_effect_31_sequence_4_step_01(void)
 {
     D_801B24B4 = 1;
-    D_801B2490 = D_80139258;
+    D_801B2490 = g_wmap_zero_rotation;
     D_80139234 = 0;
-    D_801B3074 = 0x92;
-    D_801B3070++;
-    func_800B619C();
+    g_wmap_land_effect_31_sequence_4_timer = 0x92;
+    g_wmap_land_effect_31_sequence_4_step++;
+    wmap_land_effect_31_sequence_4_step_02();
 }
 
-void func_800B85DC(void)
-{
-    D_801B3074 = 0x40;
-    D_801B3070++;
-    func_800B6284();
-}
+WMAP_STEP_ARM_TIMER(wmap_land_effect_31_sequence_4_step_03, g_wmap_land_effect_31_sequence_4_step, g_wmap_land_effect_31_sequence_4_timer, 0x40,
+                    wmap_land_effect_31_sequence_4_step_04)
 
-void func_800B8614(void)
-{
-    D_801B3070++;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_31_sequence_4_end, g_wmap_land_effect_31_sequence_4_step)
 
-s32 func_800B862C(s32 reset)
-{
-    if (reset != 0)
-    {
-        D_801B3078 = 1;
-        D_801B307C = 1;
-        return 1;
-    }
+WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_5, D_800D7594, 6, g_wmap_land_effect_31_sequence_5_step, g_wmap_land_effect_31_sequence_5_timer)
 
-    if ((u32)D_801B3078 >= 6)
-    {
-        return 0;
-    }
+WMAP_STEP_RESET(wmap_land_effect_31_sequence_5_reset, g_wmap_land_effect_31_sequence_5_step, g_wmap_land_effect_31_sequence_5_timer)
 
-    D_800D7594[D_801B3078]();
-    return 1;
-}
-
-void func_800B86A4(void)
-{
-    D_801B3078 = 1;
-    D_801B307C = 1;
-}
-
-void func_800B86BC(void)
+void wmap_land_effect_31_sequence_5_step_02(void)
 {
     s32 timer;
 
     func_8006ADD0(&g_wmap_camera_translation, &D_801B3120);
-    func_8006C448((WmapState*)D_80139280);
+    func_8006C448((WmapState*)g_wmap_effect_params);
     D_801B3120.vz += 0x18;
-    timer = D_801B307C - 1;
-    D_801B307C = timer;
+    timer = g_wmap_land_effect_31_sequence_5_timer - 1;
+    g_wmap_land_effect_31_sequence_5_timer = timer;
     if (timer == 0)
     {
-        D_801B3078++;
+        g_wmap_land_effect_31_sequence_5_step++;
     }
 }
 
-void func_800B8734(void)
+void wmap_land_effect_31_sequence_5_step_03(void)
 {
     s32 i;
     WmapConfigA* configs;
@@ -1806,479 +1350,205 @@ void func_800B8734(void)
         configs[i].field_22 = 0;
         configs[i].field_26 = 8;
     }
-    D_801B307C = 0x10;
-    D_801B3078++;
-    func_800B8794();
+    g_wmap_land_effect_31_sequence_5_timer = 0x10;
+    g_wmap_land_effect_31_sequence_5_step++;
+    wmap_land_effect_31_sequence_5_step_04();
 }
 
-void func_800B8794(void)
+void wmap_land_effect_31_sequence_5_step_04(void)
 {
     s32 timer;
 
     func_8006ADD0(&g_wmap_camera_translation, &D_801B3120);
-    func_8006C448((WmapState*)D_80139280);
+    func_8006C448((WmapState*)g_wmap_effect_params);
     D_801B3120.vz += 0x18;
-    timer = D_801B307C - 1;
-    D_801B307C = timer;
+    timer = g_wmap_land_effect_31_sequence_5_timer - 1;
+    g_wmap_land_effect_31_sequence_5_timer = timer;
     if (timer == 0)
     {
-        D_801B3078++;
+        g_wmap_land_effect_31_sequence_5_step++;
     }
 }
 
-void func_800B880C(void)
-{
-    D_801B3078++;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_31_sequence_5_end, g_wmap_land_effect_31_sequence_5_step)
 
-s32 func_800B8824(s32 reset)
-{
-    if (reset != 0)
-    {
-        D_801B3080 = 1;
-        D_801B3084 = 1;
-        return 1;
-    }
+WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_6, D_800D75AC, 6, g_wmap_land_effect_31_sequence_6_step, g_wmap_land_effect_31_sequence_6_timer)
 
-    if ((u32)D_801B3080 >= 6)
-    {
-        return 0;
-    }
+WMAP_STEP_RESET(wmap_land_effect_31_sequence_6_reset, g_wmap_land_effect_31_sequence_6_step, g_wmap_land_effect_31_sequence_6_timer)
 
-    D_800D75AC[D_801B3080]();
-    return 1;
-}
-
-void func_800B889C(void)
-{
-    D_801B3080 = 1;
-    D_801B3084 = 1;
-}
-
-void func_800B88B4(void)
+void wmap_land_effect_31_sequence_6_step_02(void)
 {
     s32 timer;
 
     func_8006AEE0();
-    func_8006A2FC(D_800D9D68, D_80139B88, 0x20, 0, 0x7F, 2, 0, (WmapState*)D_80139280 + 1);
-    timer = D_801B3084 - 1;
-    D_801B3084 = timer;
+    func_8006A2FC(D_800D9D68, D_80139B88, 0x20, 0, 0x7F, 2, 0, (WmapState*)g_wmap_effect_params + 1);
+    timer = g_wmap_land_effect_31_sequence_6_timer - 1;
+    g_wmap_land_effect_31_sequence_6_timer = timer;
     if (timer == 0)
     {
-        D_801B3080++;
+        g_wmap_land_effect_31_sequence_6_step++;
     }
 }
 
-void func_800B8940(void)
+void wmap_land_effect_31_sequence_6_step_03(void)
 {
-    D_801B3084 = 0x20;
-    D_80139280[25] = -1;
-    D_801B3080++;
-    func_800B8988();
+    g_wmap_land_effect_31_sequence_6_timer = 0x20;
+    g_wmap_effect_params[25] = -1;
+    g_wmap_land_effect_31_sequence_6_step++;
+    wmap_land_effect_31_sequence_6_step_04();
 }
 
-void func_800B8988(void)
+void wmap_land_effect_31_sequence_6_step_04(void)
 {
     s32 timer;
 
     func_8006AEE0();
-    func_8006A2FC(D_800D9D68, D_80139B88, 0x20, 0, 0x7F, 2, 0, (WmapState*)D_80139280 + 1);
-    timer = D_801B3084 - 1;
-    D_801B3084 = timer;
+    func_8006A2FC(D_800D9D68, D_80139B88, 0x20, 0, 0x7F, 2, 0, (WmapState*)g_wmap_effect_params + 1);
+    timer = g_wmap_land_effect_31_sequence_6_timer - 1;
+    g_wmap_land_effect_31_sequence_6_timer = timer;
     if (timer == 0)
     {
-        D_801B3080++;
+        g_wmap_land_effect_31_sequence_6_step++;
     }
 }
 
-void func_800B8A14(void)
-{
-    D_801B3080++;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_31_sequence_6_end, g_wmap_land_effect_31_sequence_6_step)
 
-s32 func_800B8A2C(s32 reset)
-{
-    if (reset != 0)
-    {
-        D_801B3088 = 1;
-        D_801B308C = 1;
-        return 1;
-    }
+WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_7, D_800D75C4, 4, g_wmap_land_effect_31_sequence_7_step, g_wmap_land_effect_31_sequence_7_timer)
 
-    if ((u32)D_801B3088 >= 4)
-    {
-        return 0;
-    }
+WMAP_STEP_RESET(wmap_land_effect_31_sequence_7_reset, g_wmap_land_effect_31_sequence_7_step, g_wmap_land_effect_31_sequence_7_timer)
 
-    D_800D75C4[D_801B3088]();
-    return 1;
-}
+WMAP_STEP_DROP_START(wmap_land_effect_31_sequence_7_step_01, g_wmap_land_effect_31_sequence_7_step, g_wmap_land_effect_31_sequence_7_timer, g_wmap_effect_model_a_rotation,
+                     g_wmap_zero_rotation, g_wmap_effect_model_a_position, g_wmap_effect_fade_a, 0x80, 0xAFC8, 0x80, wmap_land_effect_31_sequence_7_step_02)
 
-void func_800B8AA4(void)
-{
-    D_801B3088 = 1;
-    D_801B308C = 1;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_31_sequence_7_end, g_wmap_land_effect_31_sequence_7_step)
 
-void func_800B8ABC(void)
-{
-    D_801B24A0 = D_80139258;
-    D_801B2650 = g_wmap_camera_translation;
-    D_80182DE8 = 0x80;
-    D_801B2650.vz = 0xAFC8;
-    D_801B308C = 0x80;
-    D_801B3088++;
-    func_800B6558();
-}
+WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_8, D_800D75D4, 4, g_wmap_land_effect_31_sequence_8_step, g_wmap_land_effect_31_sequence_8_timer)
 
-void func_800B8B68(void)
-{
-    D_801B3088++;
-}
+WMAP_STEP_RESET(wmap_land_effect_31_sequence_8_reset, g_wmap_land_effect_31_sequence_8_step, g_wmap_land_effect_31_sequence_8_timer)
 
-s32 func_800B8B80(s32 reset)
-{
-    if (reset != 0)
-    {
-        D_801B3090 = 1;
-        D_801B3094 = 1;
-        return 1;
-    }
+WMAP_STEP_DROP_START(wmap_land_effect_31_sequence_8_step_01, g_wmap_land_effect_31_sequence_8_step, g_wmap_land_effect_31_sequence_8_timer, g_wmap_effect_model_b_rotation,
+                     g_wmap_zero_rotation, g_wmap_effect_model_b_position, g_wmap_effect_fade_b, 0x80, 0xAFC8, 0x20, wmap_land_effect_31_sequence_8_step_02)
 
-    if ((u32)D_801B3090 >= 4)
-    {
-        return 0;
-    }
+WMAP_STEP_ADVANCE(wmap_land_effect_31_sequence_8_end, g_wmap_land_effect_31_sequence_8_step)
 
-    D_800D75D4[D_801B3090]();
-    return 1;
-}
+WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_9, D_800D75E4, 4, g_wmap_land_effect_31_sequence_9_step, g_wmap_land_effect_31_sequence_9_timer)
 
-void func_800B8BF8(void)
-{
-    D_801B3090 = 1;
-    D_801B3094 = 1;
-}
+WMAP_STEP_RESET(wmap_land_effect_31_sequence_9_reset, g_wmap_land_effect_31_sequence_9_step, g_wmap_land_effect_31_sequence_9_timer)
 
-void func_800B8C10(void)
-{
-    D_801B24A8 = D_80139258;
-    D_801B2478 = g_wmap_camera_translation;
-    D_80182DEC = 0x80;
-    D_801B2478.vz = 0xAFC8;
-    D_801B3094 = 0x20;
-    D_801B3090++;
-    func_800B6644();
-}
+WMAP_STEP_DROP_START(wmap_land_effect_31_sequence_9_step_01, g_wmap_land_effect_31_sequence_9_step, g_wmap_land_effect_31_sequence_9_timer, g_wmap_effect_model_c_rotation,
+                     g_wmap_zero_rotation, g_wmap_effect_model_c_position, g_wmap_effect_fade_c, 0x80, 0xAFC8, 0x40, wmap_land_effect_31_sequence_9_step_02)
 
-void func_800B8CC0(void)
-{
-    D_801B3090++;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_31_sequence_9_end, g_wmap_land_effect_31_sequence_9_step)
 
-s32 func_800B8CD8(s32 reset)
-{
-    if (reset != 0)
-    {
-        D_801B3098 = 1;
-        D_801B309C = 1;
-        return 1;
-    }
+WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_10, D_800D75F4, 6, g_wmap_land_effect_31_sequence_10_step, g_wmap_land_effect_31_sequence_10_timer)
 
-    if ((u32)D_801B3098 >= 4)
-    {
-        return 0;
-    }
+WMAP_STEP_RESET(wmap_land_effect_31_sequence_10_reset, g_wmap_land_effect_31_sequence_10_step, g_wmap_land_effect_31_sequence_10_timer)
 
-    D_800D75E4[D_801B3098]();
-    return 1;
-}
-
-void func_800B8D50(void)
-{
-    D_801B3098 = 1;
-    D_801B309C = 1;
-}
-
-void func_800B8D68(void)
-{
-    D_8013B238 = D_80139258;
-    D_80139870 = g_wmap_camera_translation;
-    D_80182DF0 = 0x80;
-    D_80139870.vz = 0xAFC8;
-    D_801B309C = 0x40;
-    D_801B3098++;
-    func_800B6730();
-}
-
-void func_800B8E18(void)
-{
-    D_801B3098++;
-}
-
-s32 func_800B8E30(s32 reset)
-{
-    if (reset != 0)
-    {
-        D_801B30A0 = 1;
-        D_801B30A4 = 1;
-        return 1;
-    }
-
-    if ((u32)D_801B30A0 >= 6)
-    {
-        return 0;
-    }
-
-    D_800D75F4[D_801B30A0]();
-    return 1;
-}
-
-void func_800B8EA8(void)
-{
-    D_801B30A0 = 1;
-    D_801B30A4 = 1;
-}
-
-void func_800B8EC0(void)
+void wmap_land_effect_31_sequence_10_step_01(void)
 {
     D_80182DE4 = 1;
-    D_801B2498 = D_80139258;
+    D_801B2498 = g_wmap_zero_rotation;
     D_8013923C = 0;
-    D_801B30A4 = 0x5A;
-    D_801B30A0++;
-    func_800B681C();
+    g_wmap_land_effect_31_sequence_10_timer = 0x5A;
+    g_wmap_land_effect_31_sequence_10_step++;
+    wmap_land_effect_31_sequence_10_step_02();
 }
 
-void func_800B8F3C(void)
-{
-    D_801B30A4 = 8;
-    D_801B30A0++;
-    func_800B6918();
-}
+WMAP_STEP_ARM_TIMER(wmap_land_effect_31_sequence_10_step_03, g_wmap_land_effect_31_sequence_10_step, g_wmap_land_effect_31_sequence_10_timer, 8,
+                    wmap_land_effect_31_sequence_10_step_04)
 
-void func_800B8F74(void)
-{
-    D_801B30A0++;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_31_sequence_10_end, g_wmap_land_effect_31_sequence_10_step)
 
-s32 func_800B8F8C(s32 reset)
-{
-    if (reset != 0)
-    {
-        D_801B30A8 = 1;
-        D_801B30AC = 1;
-        return 1;
-    }
+WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_11, D_800D760C, 6, g_wmap_land_effect_31_sequence_11_step, g_wmap_land_effect_31_sequence_11_timer)
 
-    if ((u32)D_801B30A8 >= 6)
-    {
-        return 0;
-    }
+WMAP_STEP_RESET(wmap_land_effect_31_sequence_11_reset, g_wmap_land_effect_31_sequence_11_step, g_wmap_land_effect_31_sequence_11_timer)
 
-    D_800D760C[D_801B30A8]();
-    return 1;
-}
-
-void func_800B9004(void)
-{
-    D_801B30A8 = 1;
-    D_801B30AC = 1;
-}
-
-void func_800B901C(void)
+void wmap_land_effect_31_sequence_11_step_01(void)
 {
     D_801B25E0 = 1;
-    D_801B3118 = *(WmapPair*)&D_80139258;
+    D_801B3118 = *(WmapPair*)&g_wmap_zero_rotation;
     D_8013926C = 0;
-    D_801B30AC = 0xB6;
-    D_801B30A8++;
-    func_800B6A10();
+    g_wmap_land_effect_31_sequence_11_timer = 0xB6;
+    g_wmap_land_effect_31_sequence_11_step++;
+    wmap_land_effect_31_sequence_11_step_02();
 }
 
-void func_800B9098(void)
+WMAP_STEP_ARM_TIMER(wmap_land_effect_31_sequence_11_step_03, g_wmap_land_effect_31_sequence_11_step, g_wmap_land_effect_31_sequence_11_timer, 1,
+                    wmap_land_effect_31_sequence_11_step_04)
+
+WMAP_STEP_ADVANCE(wmap_land_effect_31_sequence_11_end, g_wmap_land_effect_31_sequence_11_step)
+
+WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_12, D_800D7624, 6, g_wmap_land_effect_31_sequence_12_step, g_wmap_land_effect_31_sequence_12_timer)
+
+WMAP_STEP_RESET(wmap_land_effect_31_sequence_12_reset, g_wmap_land_effect_31_sequence_12_step, g_wmap_land_effect_31_sequence_12_timer)
+
+void wmap_land_effect_31_sequence_12_step_01(void)
 {
-    D_801B30AC = 1;
-    D_801B30A8++;
-    func_800B6B0C();
-}
-
-void func_800B90D0(void)
-{
-    D_801B30A8++;
-}
-
-s32 func_800B90E8(s32 reset)
-{
-    if (reset != 0)
-    {
-        D_801B30B0 = 1;
-        D_801B30B4 = 1;
-        return 1;
-    }
-
-    if ((u32)D_801B30B0 >= 6)
-    {
-        return 0;
-    }
-
-    D_800D7624[D_801B30B0]();
-    return 1;
-}
-
-void func_800B9160(void)
-{
-    D_801B30B0 = 1;
-    D_801B30B4 = 1;
-}
-
-void func_800B9178(void)
-{
-    D_80182DF4 = 0x81;
-    D_8013B240 = D_80139258;
+    g_wmap_effect_fade_d = 0x81;
+    g_wmap_effect_model_d_rotation = g_wmap_zero_rotation;
     D_80139260 = 0;
-    D_801B30B4 = 0x68;
-    D_801B30B0++;
-    func_800B6C04();
+    g_wmap_land_effect_31_sequence_12_timer = 0x68;
+    g_wmap_land_effect_31_sequence_12_step++;
+    wmap_land_effect_31_sequence_12_step_02();
 }
 
-void func_800B91F4(void)
-{
-    D_801B30B4 = 0x10;
-    D_801B30B0++;
-    func_800B6D00();
-}
+WMAP_STEP_ARM_TIMER(wmap_land_effect_31_sequence_12_step_03, g_wmap_land_effect_31_sequence_12_step, g_wmap_land_effect_31_sequence_12_timer, 0x10,
+                    wmap_land_effect_31_sequence_12_step_04)
 
-void func_800B922C(void)
-{
-    D_801B30B0++;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_31_sequence_12_end, g_wmap_land_effect_31_sequence_12_step)
 
-s32 func_800B9244(s32 reset)
-{
-    if (reset != 0)
-    {
-        D_801B30B8 = 1;
-        D_801B30BC = 1;
-        return 1;
-    }
+WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_13, D_800D763C, 6, g_wmap_land_effect_31_sequence_13_step, g_wmap_land_effect_31_sequence_13_timer)
 
-    if ((u32)D_801B30B8 >= 6)
-    {
-        return 0;
-    }
+WMAP_STEP_RESET(wmap_land_effect_31_sequence_13_reset, g_wmap_land_effect_31_sequence_13_step, g_wmap_land_effect_31_sequence_13_timer)
 
-    D_800D763C[D_801B30B8]();
-    return 1;
-}
-
-void func_800B92BC(void)
-{
-    D_801B30B8 = 1;
-    D_801B30BC = 1;
-}
-
-void func_800B92D4(void)
+void wmap_land_effect_31_sequence_13_step_01(void)
 {
     D_801B25D8 = 1;
-    D_801B2670 = D_80139258;
+    D_801B2670 = g_wmap_zero_rotation;
     D_80139264 = 0;
-    D_801B30BC = 0x87;
-    D_801B30B8++;
-    func_800B6DF8();
+    g_wmap_land_effect_31_sequence_13_timer = 0x87;
+    g_wmap_land_effect_31_sequence_13_step++;
+    wmap_land_effect_31_sequence_13_step_02();
 }
 
-void func_800B9350(void)
-{
-    D_801B30BC = 8;
-    D_801B30B8++;
-    func_800B6EF4();
-}
+WMAP_STEP_ARM_TIMER(wmap_land_effect_31_sequence_13_step_03, g_wmap_land_effect_31_sequence_13_step, g_wmap_land_effect_31_sequence_13_timer, 8,
+                    wmap_land_effect_31_sequence_13_step_04)
 
-void func_800B9388(void)
-{
-    D_801B30B8++;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_31_sequence_13_end, g_wmap_land_effect_31_sequence_13_step)
 
-s32 func_800B93A0(s32 reset)
-{
-    if (reset != 0)
-    {
-        D_801B30C0 = 1;
-        D_801B30C4 = 1;
-        return 1;
-    }
+WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_14, D_800D7654, 6, g_wmap_land_effect_31_sequence_14_step, g_wmap_land_effect_31_sequence_14_timer)
 
-    if ((u32)D_801B30C0 >= 6)
-    {
-        return 0;
-    }
+WMAP_STEP_RESET(wmap_land_effect_31_sequence_14_reset, g_wmap_land_effect_31_sequence_14_step, g_wmap_land_effect_31_sequence_14_timer)
 
-    D_800D7654[D_801B30C0]();
-    return 1;
-}
-
-void func_800B9418(void)
-{
-    D_801B30C0 = 1;
-    D_801B30C4 = 1;
-}
-
-void func_800B9430(void)
+void wmap_land_effect_31_sequence_14_step_01(void)
 {
     D_801B25DC = 1;
-    D_801B2678 = D_80139258;
+    D_801B2678 = g_wmap_zero_rotation;
     D_80139268 = 0;
-    D_801B30C4 = 0xF0;
-    D_801B30C0++;
-    func_800B6FEC();
+    g_wmap_land_effect_31_sequence_14_timer = 0xF0;
+    g_wmap_land_effect_31_sequence_14_step++;
+    wmap_land_effect_31_sequence_14_step_02();
 }
 
-void func_800B94AC(void)
-{
-    D_801B30C4 = 0x20;
-    D_801B30C0++;
-    func_800B70CC();
-}
+WMAP_STEP_ARM_TIMER(wmap_land_effect_31_sequence_14_step_03, g_wmap_land_effect_31_sequence_14_step, g_wmap_land_effect_31_sequence_14_timer, 0x20,
+                    wmap_land_effect_31_sequence_14_step_04)
 
-void func_800B94E4(void)
-{
-    D_801B30C0++;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_31_sequence_14_end, g_wmap_land_effect_31_sequence_14_step)
 
-s32 func_800B94FC(s32 reset)
-{
-    if (reset != 0)
-    {
-        D_801B30C8 = 1;
-        D_801B30CC = 1;
-        return 1;
-    }
+WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_15, D_800D766C, 6, g_wmap_land_effect_31_sequence_15_step, g_wmap_land_effect_31_sequence_15_timer)
 
-    if ((u32)D_801B30C8 >= 6)
-    {
-        return 0;
-    }
+WMAP_STEP_RESET(wmap_land_effect_31_sequence_15_reset, g_wmap_land_effect_31_sequence_15_step, g_wmap_land_effect_31_sequence_15_timer)
 
-    D_800D766C[D_801B30C8]();
-    return 1;
-}
-
-void func_800B9574(void)
-{
-    D_801B30C8 = 1;
-    D_801B30CC = 1;
-}
-
-void func_800B958C(void)
+void wmap_land_effect_31_sequence_15_step_01(void)
 {
     D_80139240 = 0;
-    D_801B30CC = 0xF8;
-    D_801B30C8++;
-    func_800B95CC();
+    g_wmap_land_effect_31_sequence_15_timer = 0xF8;
+    g_wmap_land_effect_31_sequence_15_step++;
+    wmap_land_effect_31_sequence_15_step_02();
 }
 
-void func_800B95CC(void)
+void wmap_land_effect_31_sequence_15_step_02(void)
 {
     s32 timer;
 
@@ -2290,22 +1560,18 @@ void func_800B95CC(void)
         D_80139240 = 0x80;
     }
 
-    timer = D_801B30CC - 1;
-    D_801B30CC = timer;
+    timer = g_wmap_land_effect_31_sequence_15_timer - 1;
+    g_wmap_land_effect_31_sequence_15_timer = timer;
     if (timer == 0)
     {
-        D_801B30C8++;
+        g_wmap_land_effect_31_sequence_15_step++;
     }
 }
 
-void func_800B9680(void)
-{
-    D_801B30CC = 0x10;
-    D_801B30C8++;
-    func_800B96B8();
-}
+WMAP_STEP_ARM_TIMER(wmap_land_effect_31_sequence_15_step_03, g_wmap_land_effect_31_sequence_15_step, g_wmap_land_effect_31_sequence_15_timer, 0x10,
+                    wmap_land_effect_31_sequence_15_step_04)
 
-void func_800B96B8(void)
+void wmap_land_effect_31_sequence_15_step_04(void)
 {
     s32 timer;
 
@@ -2317,130 +1583,80 @@ void func_800B96B8(void)
         D_80139240 = 0;
     }
 
-    timer = D_801B30CC - 1;
-    D_801B30CC = timer;
+    timer = g_wmap_land_effect_31_sequence_15_timer - 1;
+    g_wmap_land_effect_31_sequence_15_timer = timer;
     if (timer == 0)
     {
-        D_801B30C8++;
+        g_wmap_land_effect_31_sequence_15_step++;
     }
 }
 
-void func_800B9764(void)
-{
-    D_801B30C8++;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_31_sequence_15_end, g_wmap_land_effect_31_sequence_15_step)
 
-s32 func_800B977C(s32 reset)
-{
-    if (reset != 0)
-    {
-        D_801B30D0 = 1;
-        D_801B30D4 = 1;
-        return 1;
-    }
+WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_16, D_800D7684, 6, g_wmap_land_effect_31_sequence_16_step, g_wmap_land_effect_31_sequence_16_timer)
 
-    if ((u32)D_801B30D0 >= 6)
-    {
-        return 0;
-    }
+WMAP_STEP_RESET(wmap_land_effect_31_sequence_16_reset, g_wmap_land_effect_31_sequence_16_step, g_wmap_land_effect_31_sequence_16_timer)
 
-    D_800D7684[D_801B30D0]();
-    return 1;
-}
-
-void func_800B97F4(void)
-{
-    D_801B30D0 = 1;
-    D_801B30D4 = 1;
-}
-
-void func_800B980C(void)
+void wmap_land_effect_31_sequence_16_step_01(void)
 {
     D_8013924C = 1;
-    D_801B30D4 = 0x70;
-    D_801B30D0++;
-    func_800B9850();
+    g_wmap_land_effect_31_sequence_16_timer = 0x70;
+    g_wmap_land_effect_31_sequence_16_step++;
+    wmap_land_effect_31_sequence_16_step_02();
 }
 
-void func_800B9850(void)
+void wmap_land_effect_31_sequence_16_step_02(void)
 {
     s32 timer;
 
     func_8006AEE0();
-    wmap_draw_model(D_8011CF24, 0, 0xA, 0x35, 0x7840, 1, D_8013924C, 0, 0, -1);
+    wmap_draw_model(g_wmap_effect_model_pack_2, 0, 0xA, 0x35, 0x7840, 1, D_8013924C, 0, 0, -1);
     D_8013924C += 8;
     if (D_8013924C >= 0x82)
     {
         D_8013924C = 0x81;
     }
 
-    timer = D_801B30D4 - 1;
-    D_801B30D4 = timer;
+    timer = g_wmap_land_effect_31_sequence_16_timer - 1;
+    g_wmap_land_effect_31_sequence_16_timer = timer;
     if (timer == 0)
     {
-        D_801B30D0++;
+        g_wmap_land_effect_31_sequence_16_step++;
     }
 }
 
-void func_800B9900(void)
-{
-    D_801B30D4 = 0x20;
-    D_801B30D0++;
-    func_800B9938();
-}
+WMAP_STEP_ARM_TIMER(wmap_land_effect_31_sequence_16_step_03, g_wmap_land_effect_31_sequence_16_step, g_wmap_land_effect_31_sequence_16_timer, 0x20,
+                    wmap_land_effect_31_sequence_16_step_04)
 
-void func_800B9938(void)
+void wmap_land_effect_31_sequence_16_step_04(void)
 {
     s32 timer;
 
     func_8006AEE0();
-    wmap_draw_model(D_8011CF24, 0, 0xA, 0x35, 0x7840, 1, D_8013924C, 0, 0, -1);
+    wmap_draw_model(g_wmap_effect_model_pack_2, 0, 0xA, 0x35, 0x7840, 1, D_8013924C, 0, 0, -1);
     D_8013924C -= 4;
     if (D_8013924C < 0)
     {
         D_8013924C = 0;
     }
 
-    timer = D_801B30D4 - 1;
-    D_801B30D4 = timer;
+    timer = g_wmap_land_effect_31_sequence_16_timer - 1;
+    g_wmap_land_effect_31_sequence_16_timer = timer;
     if (timer == 0)
     {
-        D_801B30D0++;
+        g_wmap_land_effect_31_sequence_16_step++;
     }
 }
 
-void func_800B99E0(void)
+WMAP_STEP_ADVANCE(wmap_land_effect_31_sequence_16_end, g_wmap_land_effect_31_sequence_16_step)
+
+WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_17, D_800D769C, 4, g_wmap_land_effect_31_sequence_17_step, g_wmap_land_effect_31_sequence_17_timer)
+
+WMAP_STEP_RESET(wmap_land_effect_31_sequence_17_reset, g_wmap_land_effect_31_sequence_17_step, g_wmap_land_effect_31_sequence_17_timer)
+
+void wmap_land_effect_31_sequence_17_step_01(void)
 {
-    D_801B30D0++;
-}
-
-s32 func_800B99F8(s32 reset)
-{
-    if (reset != 0)
-    {
-        D_801B30D8 = 1;
-        D_801B30DC = 1;
-        return 1;
-    }
-
-    if ((u32)D_801B30D8 >= 4)
-    {
-        return 0;
-    }
-
-    D_800D769C[D_801B30D8]();
-    return 1;
-}
-
-void func_800B9A70(void)
-{
-    D_801B30D8 = 1;
-    D_801B30DC = 1;
-}
-
-void func_800B9A88(void)
-{
-    D_801399C4 = &D_8011D538;
+    g_wmap_actor_animations[7].data = &g_wmap_animation_bank_0;
     D_800D939C.scale_index = 0xF;
     D_800D939C.sequence = 1;
     D_800D939C.previous_sequence = -1;
@@ -2448,12 +1664,12 @@ void func_800B9A88(void)
     D_800D939C.resource_index = 0;
     D_800D939C.target_shade = 0x61;
     D_800D939C.shade = 1;
-    D_801B30DC = 0x64;
-    D_801B30D8++;
-    func_800B9B08();
+    g_wmap_land_effect_31_sequence_17_timer = 0x64;
+    g_wmap_land_effect_31_sequence_17_step++;
+    wmap_land_effect_31_sequence_17_step_02();
 }
 
-void func_800B9B08(void)
+void wmap_land_effect_31_sequence_17_step_02(void)
 {
     s32 timer;
     WmapConfigA* config;
@@ -2461,46 +1677,23 @@ void func_800B9B08(void)
     config = &D_800D939C;
     wmap_step_actor_animation(config, &D_801399C0);
     wmap_draw_actor_sprite(config, g_wmap_focus_screen_position.packed, 0x2B, 8, 0);
-    timer = D_801B30DC - 1;
-    D_801B30DC = timer;
+    timer = g_wmap_land_effect_31_sequence_17_timer - 1;
+    g_wmap_land_effect_31_sequence_17_timer = timer;
     if (timer == 0)
     {
-        D_801B30D8++;
+        g_wmap_land_effect_31_sequence_17_step++;
     }
 }
 
-void func_800B9B84(void)
+WMAP_STEP_ADVANCE(wmap_land_effect_31_sequence_17_end, g_wmap_land_effect_31_sequence_17_step)
+
+WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_18, D_800D76AC, 6, g_wmap_land_effect_31_sequence_18_step, g_wmap_land_effect_31_sequence_18_timer)
+
+WMAP_STEP_RESET(wmap_land_effect_31_sequence_18_reset, g_wmap_land_effect_31_sequence_18_step, g_wmap_land_effect_31_sequence_18_timer)
+
+void wmap_land_effect_31_sequence_18_step_01(void)
 {
-    D_801B30D8++;
-}
-
-s32 func_800B9B9C(s32 reset)
-{
-    if (reset != 0)
-    {
-        D_801B30E0 = 1;
-        D_801B30E4 = 1;
-        return 1;
-    }
-
-    if ((u32)D_801B30E0 >= 6)
-    {
-        return 0;
-    }
-
-    D_800D76AC[D_801B30E0]();
-    return 1;
-}
-
-void func_800B9C14(void)
-{
-    D_801B30E0 = 1;
-    D_801B30E4 = 1;
-}
-
-void func_800B9C2C(void)
-{
-    D_801399CC = &D_8011D538;
+    g_wmap_actor_animations[8].data = &g_wmap_animation_bank_0;
     D_800D93C8.scale_index = 0xF;
     D_800D93C8.sequence = 2;
     D_800D93C8.previous_sequence = -1;
@@ -2508,12 +1701,12 @@ void func_800B9C2C(void)
     D_800D93C8.resource_index = 0;
     D_800D93C8.target_shade = 0x81;
     D_800D93C8.shade = 1;
-    D_801B30E4 = 0x6B;
-    D_801B30E0++;
-    func_800B9CAC();
+    g_wmap_land_effect_31_sequence_18_timer = 0x6B;
+    g_wmap_land_effect_31_sequence_18_step++;
+    wmap_land_effect_31_sequence_18_step_02();
 }
 
-void func_800B9CAC(void)
+void wmap_land_effect_31_sequence_18_step_02(void)
 {
     s32 timer;
     WmapConfigA* config;
@@ -2521,24 +1714,24 @@ void func_800B9CAC(void)
     config = &D_800D93C8;
     wmap_step_actor_animation(config, &D_801399C8);
     wmap_draw_actor_sprite(config, g_wmap_focus_screen_position.packed, 0x10, 8, 0);
-    timer = D_801B30E4 - 1;
-    D_801B30E4 = timer;
+    timer = g_wmap_land_effect_31_sequence_18_timer - 1;
+    g_wmap_land_effect_31_sequence_18_timer = timer;
     if (timer == 0)
     {
-        D_801B30E0++;
+        g_wmap_land_effect_31_sequence_18_step++;
     }
 }
 
-void func_800B9D28(void)
+void wmap_land_effect_31_sequence_18_step_03(void)
 {
     D_800D93C8.shade_step = 8;
     D_800D93C8.target_shade = 0;
-    D_801B30E4 = 0x10;
-    D_801B30E0++;
-    func_800B9D74();
+    g_wmap_land_effect_31_sequence_18_timer = 0x10;
+    g_wmap_land_effect_31_sequence_18_step++;
+    wmap_land_effect_31_sequence_18_step_04();
 }
 
-void func_800B9D74(void)
+void wmap_land_effect_31_sequence_18_step_04(void)
 {
     s32 timer;
     WmapConfigA* config;
@@ -2546,46 +1739,23 @@ void func_800B9D74(void)
     config = &D_800D93C8;
     wmap_step_actor_animation(config, &D_801399C8);
     wmap_draw_actor_sprite(config, g_wmap_focus_screen_position.packed, 0x10, 8, 0);
-    timer = D_801B30E4 - 1;
-    D_801B30E4 = timer;
+    timer = g_wmap_land_effect_31_sequence_18_timer - 1;
+    g_wmap_land_effect_31_sequence_18_timer = timer;
     if (timer == 0)
     {
-        D_801B30E0++;
+        g_wmap_land_effect_31_sequence_18_step++;
     }
 }
 
-void func_800B9DF0(void)
+WMAP_STEP_ADVANCE(wmap_land_effect_31_sequence_18_end, g_wmap_land_effect_31_sequence_18_step)
+
+WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_19, D_800D76C4, 6, g_wmap_land_effect_31_sequence_19_step, g_wmap_land_effect_31_sequence_19_timer)
+
+WMAP_STEP_RESET(wmap_land_effect_31_sequence_19_reset, g_wmap_land_effect_31_sequence_19_step, g_wmap_land_effect_31_sequence_19_timer)
+
+void wmap_land_effect_31_sequence_19_step_01(void)
 {
-    D_801B30E0++;
-}
-
-s32 func_800B9E08(s32 reset)
-{
-    if (reset != 0)
-    {
-        D_801B30E8 = 1;
-        D_801B30EC = 1;
-        return 1;
-    }
-
-    if ((u32)D_801B30E8 >= 6)
-    {
-        return 0;
-    }
-
-    D_800D76C4[D_801B30E8]();
-    return 1;
-}
-
-void func_800B9E80(void)
-{
-    D_801B30E8 = 1;
-    D_801B30EC = 1;
-}
-
-void func_800B9E98(void)
-{
-    D_801399D4 = &D_8011D538;
+    g_wmap_actor_animations[9].data = &g_wmap_animation_bank_0;
     D_800D93F4.scale_index = 0xF;
     D_800D93F4.sequence = 3;
     D_800D93F4.previous_sequence = -1;
@@ -2593,12 +1763,12 @@ void func_800B9E98(void)
     D_800D93F4.target_shade = 0x81;
     D_800D93F4.resource_index = 0;
     D_800D93F4.shade = 1;
-    D_801B30EC = 0xB4;
-    D_801B30E8++;
-    func_800B9F1C();
+    g_wmap_land_effect_31_sequence_19_timer = 0xB4;
+    g_wmap_land_effect_31_sequence_19_step++;
+    wmap_land_effect_31_sequence_19_step_02();
 }
 
-void func_800B9F1C(void)
+void wmap_land_effect_31_sequence_19_step_02(void)
 {
     s32 timer;
     WmapConfigA* config;
@@ -2606,24 +1776,24 @@ void func_800B9F1C(void)
     config = &D_800D93F4;
     wmap_step_actor_animation(config, &D_801399D0);
     wmap_draw_actor_sprite(config, g_wmap_focus_screen_position.packed, 0x10, 8, 0);
-    timer = D_801B30EC - 1;
-    D_801B30EC = timer;
+    timer = g_wmap_land_effect_31_sequence_19_timer - 1;
+    g_wmap_land_effect_31_sequence_19_timer = timer;
     if (timer == 0)
     {
-        D_801B30E8++;
+        g_wmap_land_effect_31_sequence_19_step++;
     }
 }
 
-void func_800B9F98(void)
+void wmap_land_effect_31_sequence_19_step_03(void)
 {
     D_800D93F4.shade_step = 4;
     D_800D93F4.target_shade = 0;
-    D_801B30EC = 0x20;
-    D_801B30E8++;
-    func_800B9FE4();
+    g_wmap_land_effect_31_sequence_19_timer = 0x20;
+    g_wmap_land_effect_31_sequence_19_step++;
+    wmap_land_effect_31_sequence_19_step_04();
 }
 
-void func_800B9FE4(void)
+void wmap_land_effect_31_sequence_19_step_04(void)
 {
     s32 timer;
     WmapConfigA* config;
@@ -2631,57 +1801,34 @@ void func_800B9FE4(void)
     config = &D_800D93F4;
     wmap_step_actor_animation(config, &D_801399D0);
     wmap_draw_actor_sprite(config, g_wmap_focus_screen_position.packed, 0x10, 8, 0);
-    timer = D_801B30EC - 1;
-    D_801B30EC = timer;
+    timer = g_wmap_land_effect_31_sequence_19_timer - 1;
+    g_wmap_land_effect_31_sequence_19_timer = timer;
     if (timer == 0)
     {
-        D_801B30E8++;
+        g_wmap_land_effect_31_sequence_19_step++;
     }
 }
 
-void func_800BA060(void)
-{
-    D_801B30E8++;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_31_sequence_19_end, g_wmap_land_effect_31_sequence_19_step)
 
-s32 func_800BA078(s32 reset)
-{
-    if (reset != 0)
-    {
-        D_801B30F0 = 1;
-        D_801B30F4 = 1;
-        return 1;
-    }
+WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_20, D_800D76DC, 6, g_wmap_land_effect_31_sequence_20_step, g_wmap_land_effect_31_sequence_20_timer)
 
-    if ((u32)D_801B30F0 >= 6)
-    {
-        return 0;
-    }
+WMAP_STEP_RESET(wmap_land_effect_31_sequence_20_reset, g_wmap_land_effect_31_sequence_20_step, g_wmap_land_effect_31_sequence_20_timer)
 
-    D_800D76DC[D_801B30F0]();
-    return 1;
-}
-
-void func_800BA0F0(void)
-{
-    D_801B30F0 = 1;
-    D_801B30F4 = 1;
-}
-
-void func_800BA108(void)
+void wmap_land_effect_31_sequence_20_step_02(void)
 {
     s32 timer;
 
-    func_8006C448(&D_80139280[40]);
-    timer = D_801B30F4 - 1;
-    D_801B30F4 = timer;
+    func_8006C448(&g_wmap_effect_params[40]);
+    timer = g_wmap_land_effect_31_sequence_20_timer - 1;
+    g_wmap_land_effect_31_sequence_20_timer = timer;
     if (timer == 0)
     {
-        D_801B30F0++;
+        g_wmap_land_effect_31_sequence_20_step++;
     }
 }
 
-void func_800BA15C(void)
+void wmap_land_effect_31_sequence_20_step_03(void)
 {
     s32 i;
 
@@ -2690,25 +1837,22 @@ void func_800BA15C(void)
         D_800DB4C8[i].field_22 = 0;
         D_800DB4C8[i].field_26 = 0x20;
     }
-    D_801B30F4 = 4;
-    D_801B30F0++;
-    func_800BA1BC();
+    g_wmap_land_effect_31_sequence_20_timer = 4;
+    g_wmap_land_effect_31_sequence_20_step++;
+    wmap_land_effect_31_sequence_20_step_04();
 }
 
-void func_800BA1BC(void)
+void wmap_land_effect_31_sequence_20_step_04(void)
 {
     s32 timer;
 
-    func_8006C448(&D_80139280[40]);
-    timer = D_801B30F4 - 1;
-    D_801B30F4 = timer;
+    func_8006C448(&g_wmap_effect_params[40]);
+    timer = g_wmap_land_effect_31_sequence_20_timer - 1;
+    g_wmap_land_effect_31_sequence_20_timer = timer;
     if (timer == 0)
     {
-        D_801B30F0++;
+        g_wmap_land_effect_31_sequence_20_step++;
     }
 }
 
-void func_800BA210(void)
-{
-    D_801B30F0++;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_31_sequence_20_end, g_wmap_land_effect_31_sequence_20_step)
