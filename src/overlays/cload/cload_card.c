@@ -1,4 +1,11 @@
 #include "cload_internal.h"
+#include "sdk/memory.h"
+#include "sdk/strings.h"
+#include "sdk/libetc.h"
+#include "controller.h"
+
+void *bcopy(const unsigned char *src, unsigned char *dst, int count);
+void field_reset_input_repeat(void);
 
 /**
  * @brief Load-sequence step opcodes stored in the g_cload_steps_* byte tables.

@@ -3,6 +3,7 @@
 #include "sdk/libgpu.h"
 #include "cdrom.h"
 #include "wmap_sprite_render.h"
+#include "akao_cmd.h"
 
 /** @brief Unaligned eight-byte rectangle in a texture block. */
 typedef struct

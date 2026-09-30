@@ -12,6 +12,9 @@
 #include "sdk/libetc.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
+#include "menu.h"
+
+void field_update_input_repeat(void);
 
 #define GOLEM_ORDERING_TABLE_SIZE 16
 #define GOLEM_PACKET_BUFFER_SIZE 0x4000

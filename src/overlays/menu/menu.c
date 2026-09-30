@@ -1,5 +1,16 @@
 #include "field_text.h"
 #include "menu_internal.h"
+#include "cdrom.h"
+
+s32 menu_layout_node(s32 node_index, s32 base_pos);
+s32 menu_handle_input(s32 process_actions);
+s32 menu_find_nav_node_index(s32 node_id);
+s32 menu_find_active_content_item(void);
+s32 menu_draw_active_node_cursor(s32 packet_cursor, s32* ot_entry, s32 draw_label);
+s32 menu_count_inventory_items(void);
+void field_update_input_repeat(void);
+void* field_draw_sprite_number(u_long* ordering_table, void* packet_cursor, s32 value, s32 digit_count, u16* position, s32 flags);
+SPRT* field_draw_sprite_glyph(SPRT* sprite, u_long* ordering_table, s32 glyph, u16* position, s32 flags);
 
 /* ----- Initialization and Core Frame Processing ----- */
 

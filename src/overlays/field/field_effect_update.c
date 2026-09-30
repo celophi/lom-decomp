@@ -22,6 +22,30 @@
 #include "field_actor_sequence_runtime.h"
 #include "field_path_interpolation.h"
 #include "field_actor_records.h"
+#include "sdk/abs.h"
+#include "field_calls.h"
+#include "field_contact_geometry.h"
+#include "field_actor_runtime.h"
+#include "field_sound.h"
+#include "field_actor_behavior.h"
+
+void field_play_set_sfx(s32 sfx_index, s32 pan, s32 unused, s32 channel_group);
+s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action);
+void field_command_history_clear(s32 player);
+s32 field_resolve_contact_hit(s32 source_index, s32 target_index);
+s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* effect, FieldContactResult* contact);
+void field_start_actor_animation(s32 slot_index, s32 target_count, u8* targets);
+s32 field_start_builtin_animation(s32 object_index, s32 slot_index, s32 animation_id);
+s32 field_find_free_actor_slot(s32 binding_index, s32 require_idle);
+POLY_FT4* field_render_actor_ground_shadow();
+u8* field_advance_actor_part_animation_frame();
+void field_play_object_animation();
+void field_grant_reward(s32 recipient, s32 owner, u32 kind);
+s32 field_collision_hit_markers(FieldCollisionQuery* query);
+void field_interpolate_palette_track(FieldActorSlot* slot, s32 palette_sequence, s32 palette_table, s16* output);
+void field_dispatch_actor_audio_event();
+void field_restart_actor_animation();
+u8* field_begin_actor_animation_forward();
 
 #define FIELD_EFFECT_ORIGIN_ADDRESS SCRATCHPAD_ADDRESS
 #define FIELD_EFFECT_VECTOR_ADDRESS SCRATCHPAD_AT(0x10)

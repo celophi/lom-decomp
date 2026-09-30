@@ -1,6 +1,26 @@
 #include "saved_game.h"
 #include "title_internal.h"
 #include "screen_transition.h"
+#include "akao_cmd.h"
+#include "sdk/memory.h"
+#include "cdrom.h"
+#include "sdk/rand.h"
+#include "controller.h"
+
+void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y);
+void stop_title_music(void);
+void start_title_music(void);
+void set_fade_target(s32 red, s32 green, s32 blue, s32 steps);
+void reset_fade_state(void);
+void render_title_menu_items(void* ctx);
+void render_title_backdrop(TitleMenuContext* ctx);
+void render_fade_overlay(TitleMenuContext* ctx);
+void menu_cursor_up(void);
+void menu_cursor_down(void);
+void load_title_seq(s32 seq_variant);
+void load_title_audio_bank(void);
+void init_title_menu_state(void);
+void handle_title_menu_input(void);
 
 /* Title-menu selection values dispatched by run_title. */
 #define TITLE_MENU_ITEM_NEW_GAME 0

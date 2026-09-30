@@ -4,6 +4,7 @@
 
 #include "sdk/libapi.h"
 #include "sdk/strings.h"
+#include "sdk/libgpu.h"
 
 #define CHECKPS_KANJI_LINE_HEIGHT 18
 #define CHECKPS_KANJI_ADVANCE 17

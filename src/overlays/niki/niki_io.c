@@ -1,4 +1,7 @@
 #include "niki_internal.h"
+#include "menu.h"
+
+s32 niki_has_known_entry_type(void);
 
 /** @brief Remove placeholder save files before starting the card operation. */
 static inline void niki_erase_placeholder_paths(void)

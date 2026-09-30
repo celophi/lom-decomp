@@ -1,5 +1,6 @@
 #include "movie_internal.h"
 #include "field_scene.h"
+#include "sdk/libetc.h"
 
 /** @brief Fixed configuration used by @ref movie_play. */
 #define MOVIE_DISPLAY_WIDTH 320

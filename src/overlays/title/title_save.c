@@ -1,5 +1,10 @@
 #include "saved_game.h"
 #include "title_internal.h"
+#include "sdk/rand.h"
+
+void reset_save_slot_panel(void);
+void handle_save_slot_input(void);
+void AnimateSaveSlotPanel(void);
 
 /* Width in pixels of a single save-slot panel; one horizontal slide moves the
  * stage by exactly this much. */

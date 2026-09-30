@@ -14,6 +14,7 @@
 #include "sdk/libgpu.h"
 #include "sdk/libgte.h"
 #include "sdk/memory.h"
+#include "sdk/rand.h"
 
 /* Ordering-table slots, from frontmost overlay to background. */
 enum

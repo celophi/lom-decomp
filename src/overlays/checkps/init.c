@@ -3,8 +3,8 @@
 
 #include "checkps_internal.h"
 
-#if defined(VERSION_JP)
 #include <cdrom.h>
+#if defined(VERSION_JP)
 #include "cdrom.h"
 #endif
 
@@ -21,6 +21,9 @@
 #include "sdk/libgpu.h"
 #include "sdk/memory.h"
 #include "sdk/rand.h"
+#include "sdk/libetc.h"
+#include "akao_cmd.h"
+#include "controller.h"
 
 #define CHECKPS_ORDERING_TABLE_LENGTH 4096
 #define CHECKPS_PRIMITIVE_BUFFER_SIZE 16384

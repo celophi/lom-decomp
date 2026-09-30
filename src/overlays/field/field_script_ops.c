@@ -15,6 +15,11 @@
 #include "field_records.h"
 #include "shop.h"
 
+void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s32 y, s32 z);
+void field_play_song_section();
+s32 field_start_actor_private_script(s32 key, u8* script);
+s32 field_set_actor_animation();
+
 /** @brief SavedGameLayout.lands viewed as FieldLandWords. */
 #define FIELD_LAND_WORDS ((FieldLandWords*)g_field_game_state->lands)
 

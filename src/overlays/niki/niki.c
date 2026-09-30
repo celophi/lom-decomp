@@ -1,5 +1,12 @@
 #include "field_text.h"
 #include "niki_internal.h"
+#include "menu.h"
+
+void niki_init_card_events(void);
+s32 niki_draw_progress_bar(s32 prim, s32* ot);
+s32 niki_draw_choice_prompt(s32 prim, s32* ot, s32 x, s32 y);
+u8* func_800AE76C(u8* prim, u32* ot, s32 x, s32 y, s32 direction);
+u8* func_800AD850(u8* prim, u32* ot, s32 x, s32 y, s32 width, s32 height, s32 display_buffer_index, s32 is_popup);
 
 /**
  * @brief Card slot label layout: window and dimming-tile width, label text X,

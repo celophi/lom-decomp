@@ -8,6 +8,7 @@
 #include "sdk/libgpu.h"
 #include "tim.h"
 #include "render_context.h"
+#include "menu.h"
 
 /*
  * Encyclopedia overlay UI, entry navigation, resource loading and rendering.

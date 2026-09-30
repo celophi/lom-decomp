@@ -1,5 +1,10 @@
 #include "cload_internal.h"
 #include "display.h"
+#include "sdk/memory.h"
+#include "sdk/libetc.h"
+
+void play_menu_sfx(s32 sfx_id, s32 volume);
+void field_reset_input_repeat(void);
 
 /** @brief CD resource index of the save-icon set. */
 #define CLOAD_ICON_SET_RESOURCE 0x5E4

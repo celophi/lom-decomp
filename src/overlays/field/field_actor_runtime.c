@@ -22,6 +22,29 @@
 #include "field_modal_runtime.h"
 #include "field_scene_transition.h"
 #include "field_text.h"
+#include "sdk/rand.h"
+#include "field_contact_geometry.h"
+#include "sdk/memory.h"
+#include "field_actor_behavior.h"
+
+s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start);
+void field_copy_portrait_palette(void* dest, s32 index);
+void field_retire_effect(FieldMotionRecord* effect, FieldObjectPart* part);
+void field_record_actor_position(FieldActor* record);
+s32 field_update_actor_command(FieldActor* actor);
+void field_update_spawned_actor(FieldActor* actor);
+void field_follow_leader_route();
+void field_step_actor_script(FieldActor* actor);
+void field_update_object_tints(void);
+void field_check_marker_contact(Vec3i* position);
+void field_refresh_party_routes(void);
+void field_set_color_scale();
+void field_advance_actor_effects(FieldActorSlot *actor_state);
+void field_handle_return_to_title_prompt(void);
+void field_restore_default_action_animation_mappings();
+void field_restart_actor_animation();
+/* K&R: one call passes a fourth argument that the function does not read. */
+void field_load_resource_package();
 
 /** @brief Fade level of the normal field view. */
 #define FIELD_FADE_NORMAL_LEVEL 0xC0
@@ -3366,17 +3389,17 @@ u8* field_advance_actor_part_animation_frame(FieldActor* actor, u8* resource_bas
 
 /**
  * @brief Read an actor resource package from the CD and unpack it.
- * @param resource_id CD resource id to read.
+ * @param resource_id CD resource id to read; only the low 16 bits are used.
  * @param slot_index Texture slot of the package.
  * @param resource_entry_index Resource entry receiving the package (also the palette row).
  */
-void field_load_resource_package(u16 resource_id, s32 slot_index, s32 resource_entry_index)
+void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_entry_index)
 {
     FieldCdBuffer* buf;
     s32 size;
 
     buf = g_field_cd_buffer;
-    size = cdrom_queue_read(resource_id, buf);
+    size = cdrom_queue_read((u16)resource_id, buf);
     cdrom_wait_queue_empty();
     field_unpack_resource_package(buf, size, slot_index, resource_entry_index);
 }

@@ -9,6 +9,10 @@
 #include "sdk/libapi.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
+#include "sdk/libetc.h"
+
+/** @brief BIOS exit: ends the program (a K&R declaration, as the original call site requires). */
+void exit();
 
 #define CHECKPS_GPU_TWO_COMMAND_PACKET_TAG 0x02000000
 #define CHECKPS_GPU_MASK_BIT_COMMAND 0xE6000002
