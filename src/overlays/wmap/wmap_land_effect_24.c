@@ -390,7 +390,7 @@ void func_800B7420(void);
 void func_800BA408(void)
 {
     s32 index;
-    s32 config_offset;
+    u8* config_offset;
     u16 value;
     u8* config_base;
     WmapConfigA* config;
@@ -422,7 +422,7 @@ void func_800BA408(void)
     {
         void* entry;
         u8* copy_end;
-        s32 config_offset;
+        u8* config_offset;
         s32 screen_offset;
         u8* scan_base;
         u8* screen_base;

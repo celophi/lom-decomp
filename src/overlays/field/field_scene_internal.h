@@ -139,7 +139,7 @@ typedef struct
     /** 0x00 null-terminated list of the object's part definitions. */
     FieldPartDef** part_defs;
     /** 0x04 shared-source handle; two defs with the same one are compatible. */
-    s32 shared_source;
+    u8* shared_source;
     u8 _pad1[0xC - 8];
     /**
      * 0x0C bit 0 starts the object visible, bit 1 fixes it to the screen, bit 2
@@ -1086,9 +1086,9 @@ typedef struct
 /** @brief Top of the allocated region (FieldMemState.top). */
 extern s32 g_field_mem_top;
 /** @brief Base of the allocated region (FieldMemState.base). */
-extern s32 g_field_mem_base;
+extern u8* g_field_mem_base;
 /** @brief End of the first half of the region (FieldMemState.midpoint). */
-extern s32 g_field_mem_midpoint;
+extern u8* g_field_mem_midpoint;
 /** @brief Scene fade state (FieldMemState.fade_mode). */
 extern s32 g_field_scene_fade_mode;
 

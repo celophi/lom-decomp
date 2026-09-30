@@ -289,15 +289,15 @@ $(OBJS_ASM): $(STAGING)/$(BUILD_DIR)/$(ASM_DIR)/%.o: $(ASM_DIR)/%.s $(COPY_SENTI
 ifeq ($(DATA_AS_C),1)
 	@# DATA_AS_C=1: the executable's .data (initialized.data, sdata.data) comes
 	@# from C generated at build time, as for overlays in mk/overlays.mk.
-	@mkdir -p $(STAGING)/$(BUILD_DIR)/datac/$(dir $*)
+	@mkdir -p $(STAGING)/datac/$(BUILD_DIR)/$(dir $*)
 	if case '$*' in data/*) true;; *) false;; esac && grep -q '^\.section \.data' $(ASM_DIR)/$*.s; then \
 		(cd $(STAGING) && cat $(ASM_DIR)/$*.s | \
 			$(MASPSX) $(MASPSX_PP_FLAGS) | \
-			$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o $(BUILD_DIR)/datac/$*.asm.o) && \
+			$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o datac/$(BUILD_DIR)/$*.asm.o) && \
 		python3 tools/data2c/data2c.py --quiet --version $(VERSION) --image slus \
-			--asm $(ASM_DIR)/$*.s --object $(STAGING)/$(BUILD_DIR)/datac/$*.asm.o \
-			-o $(STAGING)/$(BUILD_DIR)/datac/$*.c && \
-		cd $(STAGING) && $(CC) $(CFLAGS_G0) -c $(BUILD_DIR)/datac/$*.c -S -o - | \
+			--asm $(ASM_DIR)/$*.s --object $(STAGING)/datac/$(BUILD_DIR)/$*.asm.o \
+			-o $(STAGING)/datac/$(BUILD_DIR)/$*.c && \
+		cd $(STAGING) && $(CC) $(CFLAGS_G0) -c datac/$(BUILD_DIR)/$*.c -S -o - | \
 			$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o $(BUILD_DIR)/$(ASM_DIR)/$*.o; \
 	else \
 		cd $(STAGING) && cat $(ASM_DIR)/$*.s | \

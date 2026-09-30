@@ -61,7 +61,7 @@ void akao_driver_init(void)
  * @param base Address of the bank payload after its AKAO header.
  * @see decomp.me (100%) https://decomp.me/scratch/z36q3
  */
-void akao_set_bank_data_ptrs(s32 base)
+void akao_set_bank_data_ptrs(u8* base)
 {
     g_akao_bank_prog_base = base;
     base += 0x600;

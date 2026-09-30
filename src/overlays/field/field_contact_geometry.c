@@ -986,7 +986,7 @@ static s32 field_is_outside_group_bounds(FieldActor* actor, s32* position)
 s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
 {
     FieldContactScanWorkspace scratch;
-    s32 base_or_index;
+    u8* base_or_index;
     u8* bindings;
     s32 actor_center_offset;
     FieldObjectState* target_state;
@@ -1086,7 +1086,7 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
                         if (!(((u32)g_field_object_states[index].contact.word >> FIELD_CONTACT_IGNORE_BINDING_BIT) & 1))
                         {
                             /* One local holds the binding table address and then the object index. */
-                            base_or_index = (s32)g_field_actor_bindings;
+                            base_or_index = (u8*)g_field_actor_bindings;
                             if ((u32)index < FIELD_PLAYER_COUNT)
                             {
                                 binding_offset = index * sizeof(FieldSequenceBinding);

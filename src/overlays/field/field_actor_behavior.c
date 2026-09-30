@@ -1383,7 +1383,7 @@ void field_update_actor_movement_animation(FieldActor* record, s32 delta_x, s32 
     s32 heading_or_animation;
     s32 heading;
     s32 old_animation;
-    s32 direction_table_address;
+    u8* direction_table_address;
     s32 sector_or_running;
     s32 direction_offset;
     u8 resource_index;
@@ -1497,7 +1497,7 @@ void field_update_actor_movement_animation(FieldActor* record, s32 delta_x, s32 
                 heading -= FIELD_HEADING_STEPS;
             }
             direction_offset = heading >> FIELD_HEADING_SECTOR_SHIFT;
-            direction_table_address = (s32)g_field_direction_animation_modes;
+            direction_table_address = (u8*)g_field_direction_animation_modes;
             direction_offset *= 4;
             direction_entry = (s32*)(direction_table_address + direction_offset);
             if (record->animation != (*direction_entry + ((record->running & 1) * FIELD_ANIMATION_DIRECTIONS) + FIELD_ANIMATION_WALK))

@@ -270,7 +270,7 @@ void menu_tick(RenderContext* render_ctx)
  *
  * @see field_text_build_sprites
  */
-void* menu_build_text_run(SPRT* sprite_cursor, s32* ot, s32 src, s32 text_color, s32 x, s32 y, s32 len, MenuTextAlignment alignment)
+void* menu_build_text_run(SPRT* sprite_cursor, s32* ot, u8* src, s32 text_color, s32 x, s32 y, s32 len, MenuTextAlignment alignment)
 {
     char buf[0x80];
     s32 count, i, acc;

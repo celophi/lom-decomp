@@ -1456,7 +1456,7 @@ void field_update_sequence_actor_binding(FieldActor* actor, s32 release_actor)
                     active_binding_offset = (FIELD_SEQUENCE_SHARED_BINDING) * sizeof(*base);
                 }
                 {
-                    u32 actor_address = (u32)anim_slots;
+                    u8* actor_address = (u8*)anim_slots;
                     actor_address += ((FieldSequenceBinding*)((u8*)lookup + active_binding_offset))->actor_index * sizeof(*anim_slots);
                     ((FieldActorSlot*)actor_address)->sequence_active = 1;
                 }
@@ -1493,7 +1493,7 @@ void field_update_sequence_actor_binding(FieldActor* actor, s32 release_actor)
                         release_binding_offset = (FIELD_SEQUENCE_SHARED_BINDING) * sizeof(*base);
                     }
                     {
-                        u32 actor_address = (u32)anim_slots;
+                        u8* actor_address = (u8*)anim_slots;
                         actor_address += ((FieldSequenceBinding*)((u8*)lookup + release_binding_offset))->actor_index * sizeof(*anim_slots);
                         ((FieldActorSlot*)actor_address)->active = 0;
                     }

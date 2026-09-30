@@ -429,7 +429,7 @@ s32 menu_handle_input(s32 process_actions)
 
                             equipped_item = (u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((content_type << 6) + 0x90);
                             *active_equipped_item = (s32)equipped_item;
-                            g_menu_item_ptr = (s32)equipped_item;
+                            g_menu_item_ptr = (u8*)equipped_item;
                             g_menu_saved_category0_item = g_menu_item_ptr;
                             g_menu_category0_item = g_menu_item_ptr;
                             g_menu_saved_category1_item = g_menu_item_ptr;
@@ -458,9 +458,9 @@ s32 menu_handle_input(s32 process_actions)
 
                             equipped_item = (u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((content_type << 6) - 0x170);
                             *active_equipped_item = (s32)equipped_item;
-                            g_menu_saved_category0_item = (s32)equipped_item;
-                            g_menu_saved_category1_item = (s32)equipped_item;
-                            g_menu_saved_equipment_item = (s32)equipped_item;
+                            g_menu_saved_category0_item = (u8*)equipped_item;
+                            g_menu_saved_category1_item = (u8*)equipped_item;
+                            g_menu_saved_equipment_item = (u8*)equipped_item;
                             menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
                         }
                     }
@@ -708,10 +708,10 @@ s32 menu_handle_input(s32 process_actions)
                     {
                         if (g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx < 0x11)
                         {
-                            g_menu_item_ptr = (s32)NULL;
-                            g_menu_category0_item = (s32)NULL;
-                            g_menu_category2_item = (s32)NULL;
-                            g_menu_category1_item = (s32)NULL;
+                            g_menu_item_ptr = (u8*)NULL;
+                            g_menu_category0_item = (u8*)NULL;
+                            g_menu_category2_item = (u8*)NULL;
+                            g_menu_category1_item = (u8*)NULL;
                         }
                     }
                 }
@@ -1207,9 +1207,9 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
             if (g_menu_scene_type == 0x10)
             {
                 MenuItemEntry* second_equipped_item;
-                g_menu_category0_item = (u32)equipped_items;
-                g_menu_category1_item = (u32)(second_equipped_item = &equipped_items[1]);
-                g_menu_category2_item = (u32)second_equipped_item;
+                g_menu_category0_item = (u8*)equipped_items;
+                g_menu_category1_item = (u8*)(second_equipped_item = &equipped_items[1]);
+                g_menu_category2_item = (u8*)second_equipped_item;
             }
 
             if (remaining_count != 0)

@@ -131,20 +131,20 @@ ifeq ($(DATA_AS_C),1)
 	@#   databin (one .incbin): data2c reads the blob itself.
 	@#   data assembly:         assembled first, so data2c gets its relocations.
 	@#   anything else (.rodata): assembled as usual.
-	@mkdir -p $(STAGING)/$$($(1)_BUILD_DIR)/datac/$$(dir $$*)
+	@mkdir -p $(STAGING)/datac/$$($(1)_BUILD_DIR)/$$(dir $$*)
 	if grep -q '^\.section \.data' $$($(1)_ASM_DIR)/$$*.s && grep -q '^\.incbin' $$($(1)_ASM_DIR)/$$*.s; then \
 		python3 tools/data2c/data2c.py --quiet --version $(VERSION) --image $(1) \
-			--asm $$($(1)_ASM_DIR)/$$*.s -o $(STAGING)/$$($(1)_BUILD_DIR)/datac/$$*.c && \
-		cd $(STAGING) && $(CC) $(CFLAGS_G0) -c $$($(1)_BUILD_DIR)/datac/$$*.c -S -o - | \
+			--asm $$($(1)_ASM_DIR)/$$*.s -o $(STAGING)/datac/$$($(1)_BUILD_DIR)/$$*.c && \
+		cd $(STAGING) && $(CC) $(CFLAGS_G0) -c datac/$$($(1)_BUILD_DIR)/$$*.c -S -o - | \
 			$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/$$*.o; \
 	elif grep -q '^\.section \.data' $$($(1)_ASM_DIR)/$$*.s; then \
 		(cd $(STAGING) && cat $$($(1)_ASM_DIR)/$$*.s | \
 			$(MASPSX) $(MASPSX_PP_FLAGS) | \
-			$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) -o $$($(1)_BUILD_DIR)/datac/$$*.asm.o) && \
+			$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) -o datac/$$($(1)_BUILD_DIR)/$$*.asm.o) && \
 		python3 tools/data2c/data2c.py --quiet --version $(VERSION) --image $(1) \
-			--asm $$($(1)_ASM_DIR)/$$*.s --object $(STAGING)/$$($(1)_BUILD_DIR)/datac/$$*.asm.o \
-			-o $(STAGING)/$$($(1)_BUILD_DIR)/datac/$$*.c && \
-		cd $(STAGING) && $(CC) $(CFLAGS_G0) -c $$($(1)_BUILD_DIR)/datac/$$*.c -S -o - | \
+			--asm $$($(1)_ASM_DIR)/$$*.s --object $(STAGING)/datac/$$($(1)_BUILD_DIR)/$$*.asm.o \
+			-o $(STAGING)/datac/$$($(1)_BUILD_DIR)/$$*.c && \
+		cd $(STAGING) && $(CC) $(CFLAGS_G0) -c datac/$$($(1)_BUILD_DIR)/$$*.c -S -o - | \
 			$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/$$*.o; \
 	else \
 		cd $(STAGING) && cat $$($(1)_ASM_DIR)/$$*.s | \

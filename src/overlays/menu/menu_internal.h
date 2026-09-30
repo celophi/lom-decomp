@@ -630,15 +630,15 @@ s32 menu_handle_node_input(void);
 u32 menu_step_item_selection(s32 step);
 
 void menu_upload_tim(const MenuTimVramLayout* layout);
-s32 menu_draw_clamped_number(s32* ot_entry, s32 packet_cursor, s32 value, s32 format, Vec2s* origin, s32 style);
+s32 menu_draw_clamped_number(s32* ot_entry, u8* packet_cursor, s32 value, s32 format, Vec2s* origin, s32 style);
 
 s32 menu_spell_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
-s32 menu_equipment_grid_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
+s32 menu_equipment_grid_callback(s32* ot, ScrollListState* state, u8* prim_buf, Vec2s* view_origin, int active);
 s32 menu_key_item_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
 s32 menu_ability_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
 s32 menu_message_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
 s32 menu_two_line_message_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
-void* menu_inventory_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, s32 active);
+void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf, Vec2s* view_origin, s32 active);
 s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
 s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
 
@@ -702,7 +702,7 @@ extern u8* D_80168C24;
 extern u8* D_80168C30;
 
 /** @brief Optional help/description string drawn below the active menu content. */
-extern s32 g_menu_help_text;
+extern u8* g_menu_help_text;
 /** @brief Selects node-tree, content, or content-exit cursor handling. */
 extern s32 g_menu_cursor_enable;
 /** @brief Set non-zero by a content callback to abort @ref menu_draw_window early. */
@@ -726,13 +726,13 @@ extern u32 g_item_slot_data[MENU_EQUIPMENT_SLOT_COUNT];
 extern u8 g_item_slot_flags[MENU_EQUIPMENT_SLOT_COUNT];
 
 /** @brief Pointer into g_saved_game_ctx item data for the current category; null = no items. */
-extern s32 g_menu_item_ptr;
-extern s32 g_menu_category0_item;
-extern s32 g_menu_category1_item;
-extern s32 g_menu_category2_item;
-extern s32 g_menu_active_equipped_item;
-extern s32 g_menu_saved_category0_item;
-extern s32 g_menu_saved_category1_item;
+extern u8* g_menu_item_ptr;
+extern u8* g_menu_category0_item;
+extern u8* g_menu_category1_item;
+extern u8* g_menu_category2_item;
+extern u8* g_menu_active_equipped_item;
+extern u8* g_menu_saved_category0_item;
+extern u8* g_menu_saved_category1_item;
 /** @brief Packed circular navigation entries for item sub-pages. */
 extern s32 g_menu_item_nav_entries[];
 extern void* g_menu_equipment_base;
@@ -742,7 +742,7 @@ extern s32 g_menu_scroll_pos;
 extern s32 g_menu_redraw_state;
 extern s32 g_menu_active_node;
 /** @brief Equipped-item address saved when opening an item-action submenu. */
-extern s32 g_menu_saved_equipment_item;
+extern u8* g_menu_saved_equipment_item;
 extern u8 g_menu_init_content_id;
 
 extern Struct_D_800FD818 g_field_player_records;

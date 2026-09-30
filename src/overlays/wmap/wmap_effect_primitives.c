@@ -333,7 +333,7 @@ void func_8006A9C4(s32 actor_address, s32 resource_address, s32 first, s32 end, 
     SVECTOR position;
     s32 screen_position;
     s32 sequence_offset;
-    s32 animation_address;
+    u8* animation_address;
     s32 lifetime_product;
     s32 scaled_size;
     s32 i;

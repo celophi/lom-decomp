@@ -196,7 +196,7 @@ s32 menu_emit_cursor(s32 prim_buf, s32* ot, s32 x, s32 y, s32 active)
  */
 
 
-void* menu_inventory_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, s32 active)
+void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf, Vec2s* view_origin, s32 active)
 {
     ScrollListState* list;
     void* packet_cursor;
@@ -408,7 +408,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, s32 prim_buf
             if ((y >> 4) == list->navigation.fields.selected_index)
             {
                 g_menu_inventory_index = item_index;
-                g_menu_item_ptr = (s32)(&((MenuItemEntry*)((u8*)g_saved_game_ctx + MENU_ITEM_TABLE_OFFSET))[item_index]);
+                g_menu_item_ptr = (u8*)(&((MenuItemEntry*)((u8*)g_saved_game_ctx + MENU_ITEM_TABLE_OFFSET))[item_index]);
                 switch (g_menu_active_item_category)
                 {
                 case 0:
@@ -527,7 +527,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, s32 prim_buf
                         break;
                     }
                     }
-                    g_menu_help_text = (s32)g_menu_item_description_buffer;
+                    g_menu_help_text = (u8*)g_menu_item_description_buffer;
                 }
             }
         }
@@ -697,7 +697,7 @@ u32 menu_step_item_selection(s32 step)
             if (kind == g_menu_active_item_category)
             {
                 g_menu_inventory_index = index;
-                g_menu_item_ptr = (s32)((u8*)g_saved_game_ctx + ((index << 6) + MENU_ITEM_TABLE_OFFSET));
+                g_menu_item_ptr = (u8*)((u8*)g_saved_game_ctx + ((index << 6) + MENU_ITEM_TABLE_OFFSET));
                 switch (kind)
                 {
                 case 0:
@@ -812,7 +812,7 @@ s32 menu_spell_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2
     if (selected_index != -1)
     {
         help_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_SPELL_HELP]);
-        g_menu_help_text = (s32)((u8*)help_table + ((u16*)help_table)[selected_index]);
+        g_menu_help_text = (u8*)((u8*)help_table + ((u16*)help_table)[selected_index]);
     }
 
     return prim_buf;
@@ -827,7 +827,7 @@ s32 menu_spell_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
  */
-s32 menu_equipment_grid_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+s32 menu_equipment_grid_callback(s32* ot, ScrollListState* state, u8* prim_buf, Vec2s* view_origin, int active)
 {
     ScrollListState* list;
     u32 scroll_y;
@@ -877,17 +877,17 @@ s32 menu_equipment_grid_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
                     {
                         if (entry_kind >= 0xF)
                         {
-                            prim_buf = (s32)menu_emit_icon_sprite((void*)prim_buf, ot, 0x70, 0x10 - view_origin->x, relative_y - view_origin->y, 0, 0, 0, 0);
+                            prim_buf = (u8*)menu_emit_icon_sprite((void*)prim_buf, ot, 0x70, 0x10 - view_origin->x, relative_y - view_origin->y, 0, 0, 0, 0);
                         }
                         else
                         {
-                            prim_buf = (s32)menu_emit_icon_sprite((void*)prim_buf, ot, 0x69, 0x10 - view_origin->x, relative_y - view_origin->y, 0, 0, 0, 0);
+                            prim_buf = (u8*)menu_emit_icon_sprite((void*)prim_buf, ot, 0x69, 0x10 - view_origin->x, relative_y - view_origin->y, 0, 0, 0, 0);
                         }
 
                         draw_mode = (DR_TPAGE*)prim_buf;
                         setDrawTPage(draw_mode, 0, 0, MENU_GRID_TPAGE);
                         addPrim(ot, draw_mode);
-                        prim_buf = (s32)(draw_mode + 1);
+                        prim_buf = (u8*)(draw_mode + 1);
                     }
                 }
                 if (list->navigation.fields.selected_index == (y >> 4))
@@ -905,7 +905,7 @@ s32 menu_equipment_grid_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
     if ((active != 0) && (selected_index != -1))
     {
         help_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_EQUIPMENT_HELP]);
-        g_menu_help_text = (s32)((u8*)help_table + ((u16*)help_table)[selected_index]);
+        g_menu_help_text = (u8*)((u8*)help_table + ((u16*)help_table)[selected_index]);
     }
 
     return prim_buf;
@@ -980,7 +980,7 @@ s32 menu_key_item_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, V
         if (active != 0)
         {
             help_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_KEY_ITEM_HELP]);
-            g_menu_help_text = (s32)((u8*)help_table + ((u16*)help_table)[selected_index]);
+            g_menu_help_text = (u8*)((u8*)help_table + ((u16*)help_table)[selected_index]);
         }
     }
 
@@ -1061,7 +1061,7 @@ s32 menu_ability_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Ve
         if (active != 0)
         {
             help_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ABILITY_HELP]);
-            g_menu_help_text = (s32)((u8*)help_table + ((u16*)help_table)[selected_index]);
+            g_menu_help_text = (u8*)((u8*)help_table + ((u16*)help_table)[selected_index]);
         }
     }
 

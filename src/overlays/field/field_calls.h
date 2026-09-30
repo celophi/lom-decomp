@@ -260,7 +260,7 @@ void field_pair_indicators_reset(void);
 u8 *field_pair_indicators_get_list(void);
 
 /* field_coordinate_icon.c */
-s32 field_draw_coordinate_panel(void *ot, s32 prim, s32 x_offset, s32 y_offset);
+s32 field_draw_coordinate_panel(void *ot, u8* prim, s32 x_offset, s32 y_offset);
 void field_upload_player_icons(void);
 
 /* field_dialog_screens.c */

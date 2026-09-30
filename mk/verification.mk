@@ -161,8 +161,11 @@ verify-bins: verify-main $(foreach name,$(VERIFIED_OVERLAYS) $(RAW_VERIFIED_OVER
 # generated C (DATA_AS_C=1). The data objects are removed before and after, so
 # neither this build nor the normal one reuses the other's objects. That
 # includes the copies the overlay targets make in the project's own build
-# directory, and the generated data C (datac/), which holds game data.
+# directory. The generated data C, which holds game data, is written to
+# $(STAGING)/datac/ (outside the build tree, so it is never copied back) and
+# removed too.
 DATA_AS_C_LEFTOVERS = find $(STAGING)/$(BUILD_DIR) $(BUILD_DIR) -path '*/data/*.o' -delete 2>/dev/null; \
+	rm -rf $(STAGING)/datac/$(BUILD_DIR); \
 	find $(STAGING)/$(BUILD_DIR) $(BUILD_DIR) -type d -name datac -prune -exec rm -rf {} + 2>/dev/null; true
 
 # Check the host build of the data (data2c --host): every .data region's

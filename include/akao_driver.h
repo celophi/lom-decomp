@@ -179,14 +179,14 @@ extern AkaoSongState g_akao_seq_master_state;
 extern char g_akao_spu_malloc_table[];
 extern char g_akao_spu_zero_primer[];
 extern s32 g_akao_rcnt2_event;
-extern s32 g_akao_bank_prog_base;
-extern s32 g_akao_bank_region_b;
+extern u8* g_akao_bank_prog_base;
+extern u8* g_akao_bank_region_b;
 extern s32 g_akao_bank_region_c;
 
 void akao_driver_init(void);
 void akao_driver_shutdown(void);
 void akao_driver_init_state(void);
-void akao_set_bank_data_ptrs(s32 base);
+void akao_set_bank_data_ptrs(u8* base);
 void akao_relocate_articulations(AkaoArticulation* src, AkaoArticulation* dst, s32 spu_base, s32 count);
 void akao_spu_wait(void);
 extern s32 akao_check_magic(AkaoHeader* header);

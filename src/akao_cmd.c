@@ -101,7 +101,7 @@ s32 akao_register_bank(AkaoHeader* bank)
     result = akao_check_magic(bank);
     if (result == 0)
     {
-        akao_set_bank_data_ptrs((s32)(bank + 1));
+        akao_set_bank_data_ptrs((u8*)(bank + 1));
     }
     return result;
 }
