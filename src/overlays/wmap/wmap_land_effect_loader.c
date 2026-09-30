@@ -4,10 +4,6 @@
 #include "wmap_sequence_runtime.h"
 #include "cdrom.h"
 
-/** @brief Upload the selected effect resources and register its callback. */
-void func_800591A8(u32 selection)
-{
-
 extern WmapLandDisplay D_80182508;
 extern s32 D_801ADAF8;
 extern u8 D_80182E40[];
@@ -43,6 +39,9 @@ extern s32 func_800B7290(s32);
 extern s32 func_800BAE24(s32);
 extern s32 func_800BD83C(s32);
 
+/** @brief Upload the selected effect resources and register its callback. */
+void func_800591A8(u32 selection)
+{
     D_801ADAF8 = 0;
     cdrom_wait_queue_empty();
     func_800651B4(D_80182E40);

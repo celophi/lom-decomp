@@ -21,9 +21,27 @@ typedef struct
     s16 remaining;
     s16 target_shade;
     s16 shade;
-    u16 shade_step;
+    s16 shade_step;
     u8 unknown_28[4];
 } WmapSpriteActor;
+
+/** @brief Animation resource slot of a sprite actor. */
+typedef struct
+{
+    s32 unknown_00;
+    u8* data;
+} WmapAnimationSlot;
+
+/** @brief GTE screen coordinate, read as one packed word or as two halves. */
+typedef union
+{
+    s32 packed;
+    struct
+    {
+        s16 x;
+        s16 y;
+    } point;
+} WmapScreenPosition;
 
 void wmap_draw_actor_sprite(WmapSpriteActor* actor, s32 screen_position, s32 texture_index, s32 ot_index, s32 variant);
 

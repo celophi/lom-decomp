@@ -2,12 +2,12 @@
 #include "wmap_land_transition.h"
 #include "wmap_land_selection.h"
 
-/** @brief Clear the candidate list and search for an available map entry. */
-void func_8005909C(void)
-{
 extern s32 D_80139270;
 extern s32 D_80139838[];
 
+/** @brief Clear the candidate list and search for an available map entry. */
+void func_8005909C(void)
+{
     s32 i;
 
     D_80139270 = wmap_build_artifact_list(g_wmap_carousel_frame / 4);
