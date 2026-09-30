@@ -86,7 +86,7 @@ void akao_flush_voice_key_offs(void);
 extern u32 g_akao_pitch_table[];
 
 /** @brief 16-entry table of pitch, volume, and pan LFO waveform streams. */
-extern s32 g_akao_lfo_waveforms[];
+extern s16* g_akao_lfo_waveforms[];
 
 /** @brief Operand-length table for extended (0xFE-prefixed) opcodes; 0 = needs special handling. */
 extern u8 g_akao_opcode_len_table_ext[];

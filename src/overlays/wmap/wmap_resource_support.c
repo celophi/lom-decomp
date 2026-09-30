@@ -42,8 +42,6 @@ typedef struct
 
 extern u8 D_800DCF18[];
 extern s32 D_801ADAFC;
-extern void akao_play_sfx_from_buffer(s32, s32, s32, s32);
-extern s32 D_800CB1FC[];
 extern RECT D_80051A88;
 
 
@@ -225,7 +223,7 @@ void wmap_play_sound(s32 sound_index, s32 pan)
     {
         sound_index = 1;
     }
-    akao_play_sfx_from_buffer(D_800CB1FC[sound_index - 1], 0, pan, 0x7F);
+    akao_play_sfx_from_buffer(g_wmap_sfx_buffers[sound_index - 1], 0, pan, 0x7F);
 }
 
 /** @brief Clear the configured image rectangle to black. */

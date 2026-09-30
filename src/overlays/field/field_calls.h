@@ -19,6 +19,8 @@
 #include "field_effect_dispatch.h"
 #include "vector.h"
 
+struct AkaoHeader;
+
 struct FieldActionDescriptor;
 struct FieldActor;
 struct FieldActorSlot;
@@ -219,7 +221,7 @@ void field_play_weapon_sfx(s32 sfx_index, s32 pan, s32 table_index);
 void field_release_sfx_group(s32 channel_group);
 void field_load_sfx_tables(s32 set_id);
 void field_load_weapon_sfx_table(s32 slot, s32 weapon_type);
-s32 field_play_sfx_buffer(u8* buffer, s32 pan, s32 channel_group);
+s32 field_play_sfx_buffer(struct AkaoHeader* buffer, s32 pan, s32 channel_group);
 void field_reset_music_stream(void);
 void field_start_music_stream(s32 music_index);
 void field_update_music_stream(void);

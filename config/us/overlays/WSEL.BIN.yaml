@@ -49,5 +49,7 @@ segments:
       - [0x1, .rodata, overlay_header]
       - [0x5, .rodata, wsel]
       - [0x1D, c, wsel]  # gcc272_cdk, original WSEL translation unit
-      - [0x2999, data, data]
+      # The eight TIM images (g_wsel_tims_0..7); a databin keeps splat from reading their pixels as pointers.
+      - [0x2999, databin, wsel_tims]
+      - [0x73681, data, data]
   - [0x7AC75]

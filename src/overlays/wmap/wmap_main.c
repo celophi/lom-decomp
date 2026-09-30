@@ -117,7 +117,6 @@ s32 akao_stop_all_songs();
 s32 akao_release_all_sfx();
 extern void func_8005909C(void);
 s32 func_8005B548();
-s32 akao_play_sfx_from_buffer(s32, s32, s32, s32);
 void cdrom_queue_read();
 s32 cdrom_wait_queue_empty();
 extern s32 func_800BFD18(s32 initialize);
@@ -225,17 +224,12 @@ extern WmapColor3 D_80182D8C;
 extern WmapColor3 D_80182D94;
 extern POLY_FT4 D_800D0694;
 extern u8 D_800D0698;
-extern s32 D_800CB204;
-extern s32 D_800CB224;
-extern s32 D_800CB23C;
-extern s32 D_800CB254;
 extern SPRT D_800D06E4;
 extern WmapMenuTriangle g_wmap_menu_triangles[WMAP_MENU_TRIANGLE_COUNT];
 extern u8 D_8019D6E0;
 extern s32 D_80182DE0;
 extern s16* g_wmap_input_scripts[];
 extern WmapTile D_80139290[6][6];
-extern s32 D_800CB248;
 extern u8 D_800D0A08[];
 extern s32 D_800D9228;
 extern s32 D_800D9238;
@@ -859,17 +853,17 @@ void wmap_update_menu(s32 buttons)
             g_wmap_map_controls_active = map_controls_active;
             if (map_controls_active != 0)
             {
-                akao_play_sfx_from_buffer(D_800CB224, 0, 0x80, 0x7F);
+                akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_BACK - 1], 0, 0x80, 0x7F);
             }
             else
             {
-                akao_play_sfx_from_buffer(D_800CB23C, 0, 0x80, 0x7F);
+                akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_OPEN_MENU - 1], 0, 0x80, 0x7F);
             }
         }
         else
         {
             g_wmap_menu_page = 0;
-            akao_play_sfx_from_buffer(D_800CB224, 0, 0x80, 0x7F);
+            akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_BACK - 1], 0, 0x80, 0x7F);
         }
         g_wmap_buttons_held = 0;
         g_wmap_buttons_repeat = 0;
@@ -900,7 +894,7 @@ void wmap_update_menu(s32 buttons)
                     {
                         g_wmap_menu_selection = WMAP_MENU_ITEM_COUNT;
                     }
-                    akao_play_sfx_from_buffer(D_800CB204, 0, 0x80, 0x7F);
+                    akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_CURSOR - 1], 0, 0x80, 0x7F);
                 }
                 if (g_wmap_buttons_repeat & PADLdown)
                 {
@@ -910,7 +904,7 @@ void wmap_update_menu(s32 buttons)
                     {
                         g_wmap_menu_selection = 1;
                     }
-                    akao_play_sfx_from_buffer(D_800CB204, 0, 0x80, 0x7F);
+                    akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_CURSOR - 1], 0, 0x80, 0x7F);
                 }
             }
             if (g_wmap_buttons_repeat & WMAP_PAD_CONFIRM)
@@ -918,7 +912,7 @@ void wmap_update_menu(s32 buttons)
                 if (g_wmap_menu_page == 0)
                 {
                     g_wmap_menu_page = g_wmap_menu_selection;
-                    akao_play_sfx_from_buffer(D_800CB254, 0, 0x80, 0x7F);
+                    akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_CONFIRM - 1], 0, 0x80, 0x7F);
                 }
             }
             if (g_wmap_buttons_repeat & WMAP_PAD_CANCEL)
@@ -926,13 +920,13 @@ void wmap_update_menu(s32 buttons)
                 if (g_wmap_menu_page == 0)
                 {
                     g_wmap_map_controls_active = g_wmap_map_controls_active == 0;
-                    akao_play_sfx_from_buffer(D_800CB224, 0, 0x80, 0x7F);
+                    akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_BACK - 1], 0, 0x80, 0x7F);
                     g_wmap_buttons_held = 0;
                     g_wmap_buttons_repeat = 0;
                     return;
                 }
                 g_wmap_menu_page = 0;
-                akao_play_sfx_from_buffer(D_800CB224, 0, 0x80, 0x7F);
+                akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_BACK - 1], 0, 0x80, 0x7F);
             }
         }
         if (g_wmap_loaded_menu_page != g_wmap_menu_page)
@@ -1954,7 +1948,7 @@ s32 wmap_run_loop(void)
                     akao_fade_song_volume_from(0, 0x5A, 0x7F, 0);
                     if (D_80139228 == 0)
                     {
-                        akao_play_sfx_from_buffer(D_800CB248, 0, 0x80, 0x7F);
+                        akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_EXIT - 1], 0, 0x80, 0x7F);
                     }
                     func_8005DF50(g_wmap_travelers[0].cell_x, g_wmap_travelers[0].cell_y);
                     DrawSync(0);

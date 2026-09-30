@@ -637,7 +637,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
             else
             {
                 /* The first sound of shared table 0. */
-                actor->sound_data[i] = sound_tables + ((s32*)sound_tables)[1];
+                actor->sound_data[i] = (struct AkaoHeader*)(sound_tables + ((s32*)sound_tables)[1]);
             }
             cursor += 4;
             if (sound_bytes < FIELD_SOUND_SHARED_SIZE)

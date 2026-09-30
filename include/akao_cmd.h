@@ -37,7 +37,7 @@ s32 akao_stop_all_songs(void);
 
 /* Sound effects */
 void akao_play_sfx(s32 sound_id, s32 tag, s32 pan, s32 volume);
-s32 akao_play_sfx_from_buffer(s32 buffer_address, s32 tag, s32 pan, s32 volume);
+s32 akao_play_sfx_from_buffer(AkaoHeader* buffer, s32 tag, s32 pan, s32 volume);
 void akao_play_sound(s32 sound_id);
 void akao_stop_sfx(s32 sound_id, s32 tag_mask);
 s32 akao_get_active_sfx_ids(void);

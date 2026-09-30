@@ -180,6 +180,22 @@ extern u8* g_field_cd_buffer;
 /** @brief Handler entries below this value are animation resources, larger ones functions. */
 #define FIELD_OBJECT_HANDLER_FUNCTION_MIN 0x100
 
+/**
+ * @brief Function run when an object flag bit changes.
+ * @param actor Actor of the object.
+ * @param flag The flag bit if it is now set, 0 if it was cleared.
+ */
+typedef void (*FieldObjectFlagFunction)(FieldActor* actor, s32 flag);
+
+/** @brief Handler of one object flag bit: a built-in animation below FIELD_OBJECT_HANDLER_FUNCTION_MIN (FIELD_OBJECT_HANDLER_NONE for none), otherwise a function. */
+typedef union
+{
+    u32 animation;
+    FieldObjectFlagFunction function;
+} FieldObjectFlagHandler;
+
+extern FieldObjectFlagHandler g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_COUNT];
+
 /** @brief FieldObjectState.flags bits with a handler in g_field_object_flag_handlers; meanings mostly unknown. */
 #define FIELD_OBJECT_FLAG_0004 0x0004
 #define FIELD_OBJECT_FLAG_0020 0x0020
@@ -271,7 +287,6 @@ typedef struct
     u16 y;
 } FieldScreenMotion;
 
-extern u32 g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_COUNT];
 extern FieldScreenMotion g_field_screen_scroll;
 extern POLY_FT4 g_field_fade_prims[FIELD_FADE_PRIM_COUNT];
 extern u16 g_field_fade_prim_depths[FIELD_FADE_PRIM_COUNT];
@@ -1324,9 +1339,9 @@ void field_update_object_effects(s32 index)
     s32 highest_bit;
     s32 bit_mask;
     u16 animation_kind;
-    u32* handler;
-    u32* handlers;
-    u32 handler_value;
+    FieldObjectFlagHandler* handler;
+    FieldObjectFlagHandler* handlers;
+    FieldObjectFlagHandler handler_value;
     FieldActorSlot* slot;
     FieldActor* actor;
     FieldObjectState* state;
@@ -1357,19 +1372,19 @@ void field_update_object_effects(s32 index)
                 handlers = g_field_object_flag_handlers;
                 handler = handlers + bit_index;
             find_handler:
-                if ((changed_or_current & bit_mask) && (handler_value = *handler, (handler_value != FIELD_OBJECT_HANDLER_NONE)))
+                if ((changed_or_current & bit_mask) && (handler_value = *handler, (handler_value.animation != FIELD_OBJECT_HANDLER_NONE)))
                 {
-                    if (handler_value < FIELD_OBJECT_HANDLER_FUNCTION_MIN)
+                    if (handler_value.animation < FIELD_OBJECT_HANDLER_FUNCTION_MIN)
                     {
                         if (state->flags & bit_mask)
                         {
-                            field_start_builtin_animation(index, animation_slot, handler_value);
+                            field_start_builtin_animation(index, animation_slot, handler_value.animation);
                             field_start_actor_animation(animation_slot, 0, 0);
                         }
                     }
                     else
                     {
-                        ((void (*)(FieldActor*, s32))handler_value)((FieldActor*)(record_offset + (u8*)g_field_actors), state->flags & bit_mask);
+                        handler_value.function((FieldActor*)(record_offset + (u8*)g_field_actors), state->flags & bit_mask);
                     }
                     clear_mask = ~bit_mask;
                     state->previous_flags = (s32)((state->previous_flags & clear_mask) | (state->flags & bit_mask));

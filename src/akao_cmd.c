@@ -226,29 +226,29 @@ void akao_play_sfx(s32 sound_id, s32 tag, s32 pan, s32 volume)
 
 /**
  * @brief Queue command 0x24: play the sound effect list in an AKAO buffer.
- * @param buffer_address Address of an AKAO-tagged sound buffer.
+ * @param buffer AKAO-tagged sound buffer.
  * @param tag Caller tag stored with the channels; only the low 24 bits are used.
  * @param pan Pan; only the low 8 bits are used.
  * @param volume Volume; only the low 7 bits are used.
- * @return @p buffer_address, or the akao_check_magic result for a bad header.
+ * @return The address of @p buffer, or the akao_check_magic result for a bad header.
  * @see decomp.me (100%) https://decomp.me/scratch/FFGei
  */
-s32 akao_play_sfx_from_buffer(s32 buffer_address, s32 tag, s32 pan, s32 volume)
+s32 akao_play_sfx_from_buffer(AkaoHeader* buffer, s32 tag, s32 pan, s32 volume)
 {
-    s32 result = akao_check_magic((AkaoHeader*)buffer_address);
+    s32 result = akao_check_magic(buffer);
 
     if (result != 0)
     {
         return result;
     }
 
-    g_akao_cmd_params[0].buffer = (void*)buffer_address;
+    g_akao_cmd_params[0].buffer = buffer;
     g_akao_cmd_params[1].value = tag & 0xFFFFFF;
     g_akao_cmd_params[2].value = pan & 0xFF;
     g_akao_cmd_params[3].value = volume & 0x7F;
     akao_send_command(AKAO_CMD_PLAY_SFX_LIST);
 
-    return buffer_address;
+    return (s32)buffer;
 }
 
 /**

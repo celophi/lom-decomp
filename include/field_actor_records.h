@@ -9,6 +9,8 @@
 #include "common.h"
 #include "vector.h"
 
+struct AkaoHeader;
+
 /** @brief Resource table entry selected by an actor's resource index (0x14 bytes). */
 typedef struct
 {
@@ -503,8 +505,8 @@ typedef struct FieldActorSlot
     FieldAnimationDef* animations;
     u8* track_data;
     u8* mesh_data;
-    /** @brief Sound-effect sections of the resource, played by kind 2 sound commands. */
-    u8* sound_data[2];
+    /** @brief Sound-effect buffers of the resource, played by kind 2 sound commands. */
+    struct AkaoHeader* sound_data[2];
     u8 active;
     /** @brief Number of entries in parts[]. */
     u8 part_count;

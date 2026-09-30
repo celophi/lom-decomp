@@ -52,10 +52,7 @@
 #define WMAP_TILE_CODE 0x2C
 #define WMAP_TILE_CODE_BLENDED 0x2E
 
-/** @brief World-map sound ids and the pan position of the screen center. */
-#define WMAP_SOUND_ZOOM_OUT 1
-#define WMAP_SOUND_ZOOM_IN 2
-#define WMAP_SOUND_CURSOR 3
+/** @brief Pan position of the screen center. */
 #define WMAP_PAN_CENTER 128
 #define WMAP_PAN_PER_COLUMN 24
 
