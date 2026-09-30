@@ -46,7 +46,7 @@ has-tu-layout = $(or $(filter all,$(TU_LAYOUT_$(VERSION))),$(filter $(1),$(TU_LA
 
 # C files that this version builds from splat assembly instead, because their
 # code or data differs from the US release (one path per line; `#` comments).
-# mk/main.mk and mk/overlays.mk leave them out of the C build.
+# mk/main.mk and mk/overlay-inputs.mk leave them out of the C build.
 ASM_UNITS_FILE := config/$(VERSION)/asm_units.txt
 ASM_UNITS := $(if $(wildcard $(ASM_UNITS_FILE)),$(filter-out #%,$(shell grep -v '^[[:space:]]*#' $(ASM_UNITS_FILE))))
 

@@ -1,6 +1,7 @@
 # Overlay registry and per-source toolchain routing
 
-# Register an overlay by adding its lowercase directory name to OVERLAYS.
+# To add an overlay, create config/<version>/overlays/<NAME>.BIN.yaml and
+# run splat split on it. Then add its lowercase directory name to OVERLAYS.
 # Every direct .c file under src/overlays/<name>/ must appear in exactly one
 # toolchain configuration:
 #
@@ -11,7 +12,7 @@
 #   overlay_<name>_gcc_280_g4_srcs
 #   overlay_<name>_gcc_280_g4_noexpand_srcs
 #
-# overlays.mk rejects missing, unknown, or multiply routed sources. If a linker
+# overlay-inputs.mk rejects missing, unknown, or multiply routed sources. If a linker
 # script expects a standalone assets/<name>.o, define (path under the version's
 # assets tree):
 #

@@ -35,7 +35,9 @@ include mk/assets.mk
 include mk/tools.mk
 include mk/toolchains.mk
 include mk/main.mk
+# Load overlay assignments and inputs before expanding build and objdiff rules.
 include mk/overlay-registry.mk
+include mk/overlay-inputs.mk
 include mk/overlays.mk
 include mk/analysis.mk
 include mk/verification.mk

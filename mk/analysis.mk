@@ -58,6 +58,42 @@ base-objects: $(COPY_SENTINEL) $(OBJDIFF_BASE_OBJS)
 	$(call copy-staged-objects,$(OBJDIFF_BASE_OBJS))
 	@echo "Base objects built."
 
+# Overlay comparisons use the paths and C objects from overlay-inputs.mk.
+# $(1) is the overlay name; $$ keeps variables for eval's second pass.
+define overlay-objdiff-rules
+
+# Objdiff rules for this overlay
+$(1)_ALL_ASM    := $$(call rwildcard,$$($(1)_ASM_DIR),*.s)
+$(1)_TGT_ASM   := $$(filter-out $$($(1)_ASM_DIR)/nonmatchings/% $$($(1)_ASM_DIR)/data/%,$$($(1)_ALL_ASM))
+$(1)_TGT_OBJS  := $$(patsubst $$($(1)_ASM_DIR)/%.s,$(STAGING)/$$($(1)_BUILD_DIR)/target/%.o,$$($(1)_TGT_ASM))
+
+$$($(1)_TGT_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/target/%.o: $$($(1)_ASM_DIR)/%.s $(COPY_SENTINEL) | $(1)-validate
+	@mkdir -p $$(@D)
+	cd $(STAGING) && cat $$($(1)_ASM_DIR)/$$*.s | \
+		$(MASPSX) $(MASPSX_PP_FLAGS) | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) $$(overlay_$(1)_target_as_extra_flags_$$*) -o $$($(1)_BUILD_DIR)/target/$$*.o
+
+$(1)-target-objects: $(1)-validate $(COPY_SENTINEL) $$($(1)_TGT_OBJS)
+	@mkdir -p $$($(1)_BUILD_DIR)/target
+	@if [ -n "$$(firstword $$($(1)_TGT_OBJS))" ]; then \
+		cp -a "$(STAGING)/$$($(1)_BUILD_DIR)/target/." "$$($(1)_BUILD_DIR)/target/"; \
+	fi
+
+$(1)-base-objects: $(1)-validate $(COPY_SENTINEL) $$($(1)_C_OBJS)
+	@mkdir -p $$($(1)_C_OBJ_DIR)
+	@if [ -n "$$(firstword $$($(1)_C_OBJS))" ]; then \
+		cp -a "$(STAGING)/$$($(1)_C_OBJ_DIR)/." \
+			"$$($(1)_C_OBJ_DIR)/"; \
+	fi
+
+$(1)-objdiff: $(1)-target-objects $(1)-base-objects
+
+.PHONY: $(1)-target-objects $(1)-base-objects $(1)-objdiff
+
+endef
+
+$(foreach ov,$(OVERLAYS),$(eval $(call overlay-objdiff-rules,$(ov))))
+
 OBJDIFF_CLI ?= tools/objdiff/objdiff-cli-linux-x86_64
 OBJDIFF_CONFIG_GENERATOR ?= tools/objdiff/generate_objdiff_config.py
 PROGRESS_REPORT ?= $(BUILD_DIR)/progress.json
