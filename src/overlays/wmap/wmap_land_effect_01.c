@@ -432,27 +432,13 @@ void wmap_land_effect_01_timeline_step_03(void)
 
 WMAP_STEP_WAIT(wmap_land_effect_01_timeline_wait_04, g_wmap_land_effect_01_timeline_step, g_wmap_land_effect_01_timeline_timer)
 
-/**
- * @brief Register the next sequence step, arm its frame timer, and advance the counter.
- */
-void wmap_land_effect_01_timeline_step_05(void)
-{
-    wmap_start_sequence(wmap_land_effect_01_run_sequence_4);
-    g_wmap_land_effect_01_timeline_timer = 0x2;
-    g_wmap_land_effect_01_timeline_step += 1;
-}
+WMAP_STEP_START_AND_WAIT(wmap_land_effect_01_timeline_step_05, g_wmap_land_effect_01_timeline_step, g_wmap_land_effect_01_timeline_timer,
+                         wmap_land_effect_01_run_sequence_4, 0x2)
 
 WMAP_STEP_WAIT(wmap_land_effect_01_timeline_wait_06, g_wmap_land_effect_01_timeline_step, g_wmap_land_effect_01_timeline_timer)
 
-/**
- * @brief Register the next sequence step, arm its frame timer, and advance the counter.
- */
-void wmap_land_effect_01_timeline_step_07(void)
-{
-    wmap_start_sequence(wmap_land_effect_01_run_sequence_5);
-    g_wmap_land_effect_01_timeline_timer = 0x2;
-    g_wmap_land_effect_01_timeline_step += 1;
-}
+WMAP_STEP_START_AND_WAIT(wmap_land_effect_01_timeline_step_07, g_wmap_land_effect_01_timeline_step, g_wmap_land_effect_01_timeline_timer,
+                         wmap_land_effect_01_run_sequence_5, 0x2)
 
 WMAP_STEP_WAIT(wmap_land_effect_01_timeline_wait_08, g_wmap_land_effect_01_timeline_step, g_wmap_land_effect_01_timeline_timer)
 
@@ -480,13 +466,7 @@ void wmap_land_effect_01_timeline_step_11(void)
 
 WMAP_STEP_WAIT(wmap_land_effect_01_timeline_wait_12, g_wmap_land_effect_01_timeline_step, g_wmap_land_effect_01_timeline_timer)
 
-/** @brief Update the selected world-map cell value, clear the gate flag, and advance the sequence. */
-void wmap_land_effect_01_timeline_finish(void)
-{
-    g_wmap_sequence_busy = 0;
-    D_80139290[D_8011D510][D_8011D530].value = D_8011D4FC | 0x100;
-    g_wmap_land_effect_01_timeline_step += 1;
-}
+WMAP_STEP_FINISH_MARK_CELL(wmap_land_effect_01_timeline_finish, g_wmap_land_effect_01_timeline_step, D_80139290, D_8011D510, D_8011D530, D_8011D4FC)
 
 WMAP_STEP_RUNNER_RESET_AND_RUN(wmap_land_effect_01_run_sequence_2, D_800D4F38, 0x6, g_wmap_land_effect_01_sequence_2_step,
                                g_wmap_land_effect_01_sequence_2_timer)
@@ -686,15 +666,8 @@ void wmap_land_effect_01_sequence_5_step_02(void)
     }
 }
 
-/**
- * @brief Set the sequence parameter, advance the counter, and run the handler.
- */
-void wmap_land_effect_01_sequence_5_step_03(void)
-{
-    g_wmap_land_effect_01_sequence_5_timer = 0x20;
-    g_wmap_land_effect_01_sequence_5_step += 1;
-    wmap_land_effect_01_sequence_5_step_04();
-}
+WMAP_STEP_ARM_TIMER(wmap_land_effect_01_sequence_5_step_03, g_wmap_land_effect_01_sequence_5_step, g_wmap_land_effect_01_sequence_5_timer, 0x20,
+                    wmap_land_effect_01_sequence_5_step_04)
 
 /** @brief Reduce the effect value toward zero, update it, and advance when the countdown expires. */
 void wmap_land_effect_01_sequence_5_step_04(void)
@@ -777,18 +750,8 @@ void wmap_land_effect_01_sequence_7_step_01(void)
     wmap_land_effect_01_sequence_7_step_02();
 }
 
-/**
- * @brief Draw the world-map sprite this frame, then advance after the wait expires.
- */
-void wmap_land_effect_01_sequence_7_step_02(void)
-{
-    wmap_step_actor_animation(&g_wmap_vehicle_actor, &g_wmap_vehicle_animation);
-    wmap_draw_actor_sprite(&g_wmap_vehicle_actor, g_wmap_focus_screen_position.packed, 0xD, 0xA, 0);
-    if (--g_wmap_land_effect_01_sequence_7_timer == 0)
-    {
-        g_wmap_land_effect_01_sequence_7_step += 1;
-    }
-}
+WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_01_sequence_7_step_02, g_wmap_land_effect_01_sequence_7_step, g_wmap_land_effect_01_sequence_7_timer,
+                              g_wmap_vehicle_actor, g_wmap_vehicle_animation, g_wmap_focus_screen_position, 0xD, 0xA, 0)
 
 /**
  * @brief Reset a world-map animation flag and schedule the next step.
@@ -801,18 +764,8 @@ void wmap_land_effect_01_sequence_7_step_03(void)
     wmap_land_effect_01_sequence_7_step_04();
 }
 
-/**
- * @brief Draw the world-map sprite this frame, then advance after the wait expires.
- */
-void wmap_land_effect_01_sequence_7_step_04(void)
-{
-    wmap_step_actor_animation(&g_wmap_vehicle_actor, &g_wmap_vehicle_animation);
-    wmap_draw_actor_sprite(&g_wmap_vehicle_actor, g_wmap_focus_screen_position.packed, 0xD, 0xA, 0);
-    if (--g_wmap_land_effect_01_sequence_7_timer == 0)
-    {
-        g_wmap_land_effect_01_sequence_7_step += 1;
-    }
-}
+WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_01_sequence_7_step_04, g_wmap_land_effect_01_sequence_7_step, g_wmap_land_effect_01_sequence_7_timer,
+                              g_wmap_vehicle_actor, g_wmap_vehicle_animation, g_wmap_focus_screen_position, 0xD, 0xA, 0)
 
 WMAP_STEP_ADVANCE(wmap_land_effect_01_sequence_7_end, g_wmap_land_effect_01_sequence_7_step)
 
@@ -835,15 +788,8 @@ void wmap_land_effect_01_sequence_8_step_02(void)
     }
 }
 
-/**
- * @brief Set the sequence parameter, advance the counter, and run the handler.
- */
-void wmap_land_effect_01_sequence_8_step_03(void)
-{
-    g_wmap_land_effect_01_sequence_8_timer = 0x20;
-    g_wmap_land_effect_01_sequence_8_step += 1;
-    wmap_land_effect_01_sequence_8_step_04();
-}
+WMAP_STEP_ARM_TIMER(wmap_land_effect_01_sequence_8_step_03, g_wmap_land_effect_01_sequence_8_step, g_wmap_land_effect_01_sequence_8_timer, 0x20,
+                    wmap_land_effect_01_sequence_8_step_04)
 
 /** @brief Draw the effect, reduce its value toward zero, and update the countdown. */
 void wmap_land_effect_01_sequence_8_step_04(void)
