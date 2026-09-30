@@ -286,10 +286,36 @@ $(OBJS_GCC_260_G0): $(STAGING)/$(BUILD_DIR)/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COP
 # The pipeline: cat .s | maspsx (preprocess) | maspsx --run-assembler (assemble)
 $(OBJS_ASM): $(STAGING)/$(BUILD_DIR)/$(ASM_DIR)/%.o: $(ASM_DIR)/%.s $(COPY_SENTINEL)
 	@mkdir -p $(@D)
+ifeq ($(DATA_AS_C),1)
+	@# DATA_AS_C=1: the executable's .data (initialized.data, sdata.data) comes
+	@# from C generated at build time, as for overlays in mk/overlays.mk.
+	@mkdir -p $(STAGING)/$(BUILD_DIR)/datac/$(dir $*)
+	if case '$*' in data/*) true;; *) false;; esac && grep -q '^\.section \.data' $(ASM_DIR)/$*.s; then \
+		(cd $(STAGING) && cat $(ASM_DIR)/$*.s | \
+			$(MASPSX) $(MASPSX_PP_FLAGS) | \
+			$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o $(BUILD_DIR)/datac/$*.asm.o) && \
+		python3 tools/data2c/data2c.py --quiet --version $(VERSION) --image slus \
+			--asm $(ASM_DIR)/$*.s --object $(STAGING)/$(BUILD_DIR)/datac/$*.asm.o \
+			-o $(STAGING)/$(BUILD_DIR)/datac/$*.c && \
+		cd $(STAGING) && $(CC) $(CFLAGS_G0) -c $(BUILD_DIR)/datac/$*.c -S -o - | \
+			$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o $(BUILD_DIR)/$(ASM_DIR)/$*.o; \
+	else \
+		cd $(STAGING) && cat $(ASM_DIR)/$*.s | \
+			$(MASPSX) $(MASPSX_PP_FLAGS) | \
+			$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o $(BUILD_DIR)/$(ASM_DIR)/$*.o; \
+	fi
+else
 	cd $(STAGING) && cat $(ASM_DIR)/$*.s | \
 		$(MASPSX) $(MASPSX_PP_FLAGS) | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o $(BUILD_DIR)/$(ASM_DIR)/$*.o
+endif
 
+
+# DATA_AS_C=1: the executable's generated data is typed by its C and headers.
+ifeq ($(DATA_AS_C),1)
+$(filter $(STAGING)/$(BUILD_DIR)/$(ASM_DIR)/data/%,$(OBJS_ASM)): \
+	$(wildcard src/*.c src/psyq/*/*.c) $(DATA_AS_C_HEADERS)
+endif
 
 # ============================================================================
 #  Linking — Main SLUS

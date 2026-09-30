@@ -125,9 +125,43 @@ $$($(1)_LINK_ASM_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/%.o: $$($
 
 $$($(1)_DATA_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/%.o: $$($(1)_ASM_DIR)/%.s $(COPY_SENTINEL) | $(1)-validate
 	@mkdir -p $$(@D)
+ifeq ($(DATA_AS_C),1)
+	@# DATA_AS_C=1: .data comes from C that tools/data2c generates at build time,
+	@# typed by this overlay's own declarations (see tools/data2c/README.md).
+	@#   databin (one .incbin): data2c reads the blob itself.
+	@#   data assembly:         assembled first, so data2c gets its relocations.
+	@#   anything else (.rodata): assembled as usual.
+	@mkdir -p $(STAGING)/$$($(1)_BUILD_DIR)/datac/$$(dir $$*)
+	if grep -q '^\.section \.data' $$($(1)_ASM_DIR)/$$*.s && grep -q '^\.incbin' $$($(1)_ASM_DIR)/$$*.s; then \
+		python3 tools/data2c/data2c.py --quiet --version $(VERSION) --image $(1) \
+			--asm $$($(1)_ASM_DIR)/$$*.s -o $(STAGING)/$$($(1)_BUILD_DIR)/datac/$$*.c && \
+		cd $(STAGING) && $(CC) $(CFLAGS_G0) -c $$($(1)_BUILD_DIR)/datac/$$*.c -S -o - | \
+			$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/$$*.o; \
+	elif grep -q '^\.section \.data' $$($(1)_ASM_DIR)/$$*.s; then \
+		(cd $(STAGING) && cat $$($(1)_ASM_DIR)/$$*.s | \
+			$(MASPSX) $(MASPSX_PP_FLAGS) | \
+			$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) -o $$($(1)_BUILD_DIR)/datac/$$*.asm.o) && \
+		python3 tools/data2c/data2c.py --quiet --version $(VERSION) --image $(1) \
+			--asm $$($(1)_ASM_DIR)/$$*.s --object $(STAGING)/$$($(1)_BUILD_DIR)/datac/$$*.asm.o \
+			-o $(STAGING)/$$($(1)_BUILD_DIR)/datac/$$*.c && \
+		cd $(STAGING) && $(CC) $(CFLAGS_G0) -c $$($(1)_BUILD_DIR)/datac/$$*.c -S -o - | \
+			$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/$$*.o; \
+	else \
+		cd $(STAGING) && cat $$($(1)_ASM_DIR)/$$*.s | \
+			$(MASPSX) $(MASPSX_PP_FLAGS) | \
+			$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) -o $$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/$$*.o; \
+	fi
+else
 	cd $(STAGING) && cat $$($(1)_ASM_DIR)/$$*.s | \
 		$(MASPSX) $(MASPSX_PP_FLAGS) | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) -o $$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/$$*.o
+endif
+
+# The generated data takes its types from the overlay's C declarations and the
+# headers they include, so it is rebuilt when any of them change.
+ifeq ($(DATA_AS_C),1)
+$$($(1)_DATA_OBJS): $$($(1)_C_SRCS) $$(wildcard $$($(1)_SRC_DIR)/*.h) $$(DATA_AS_C_HEADERS)
+endif
 
 # Rule: compile C files with GCC 2.7.2 CDK G0 + maspsx.
 $$($(1)_GCC_272_CDK_G0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL) | $(1)-validate

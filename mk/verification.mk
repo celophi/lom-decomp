@@ -157,6 +157,15 @@ verify-main: $(BUILD_DIR)/$(GAME).raw
 verify-bins: verify-main $(foreach name,$(VERIFIED_OVERLAYS) $(RAW_VERIFIED_OVERLAYS),verify-$(name))
 	@echo "Verified compressed overlays: $$(cat $(COMPLETE_MANIFEST) 2>/dev/null | tr '\n' ' ')"
 
+# Check that the binaries still match when every .data region comes from
+# generated C (DATA_AS_C=1). The data objects are removed before and after, so
+# neither this build nor the normal one reuses the other's objects.
+.PHONY: verify-data-as-c
+verify-data-as-c:
+	find $(STAGING)/$(BUILD_DIR) -path '*/data/*.o' -delete
+	$(MAKE) DATA_AS_C=1 verify-bins
+	find $(STAGING)/$(BUILD_DIR) -path '*/data/*.o' -delete
+
 # Check the compressor itself against all 17 original overlays, without needing
 # a build. Run this after any change to tools/compressor/compressor.py.
 .PHONY: verify-compressor

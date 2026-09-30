@@ -15,3 +15,6 @@ toml==0.10.2
 # m2c MIPS-to-C decompiler
 -e tools/m2c
 graphviz>=0.20.1
+
+# tools/data2c (optional DATA_AS_C=1 build): C declarations are read with libclang
+libclang==18.1.1

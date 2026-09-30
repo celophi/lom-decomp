@@ -53,3 +53,9 @@ MASPSX_FLAGS_260     := -no-pad-sections --aspsx-version=2.34 --expand-div
 # Recursive assignment keeps that target-specific value visible here.
 MASPSX_DIV_FLAG_G4 := --expand-div
 MASPSX_FLAGS_G4 = -no-pad-sections --aspsx-version=2.77 $(MASPSX_DIV_FLAG_G4)
+
+# DATA_AS_C=1 builds every .data region from C that tools/data2c generates at
+# build time (see tools/data2c/README.md). The generated data is typed by the
+# C, so it depends on these headers as well as each image's own sources.
+DATA_AS_C ?=
+DATA_AS_C_HEADERS := $(wildcard include/*.h include/sdk/*.h)
