@@ -11,6 +11,7 @@
 #include "wmap_map_labels.h"
 #include "wmap_effect_resources.h"
 #include "cdrom.h"
+#include "wmap_cells.h"
 
 /** @brief Land the special travel starts from and the land the return trip ends on. */
 #define WMAP_TRAVEL_START_LAND 2
@@ -91,13 +92,6 @@ typedef struct
     s32 unknown_0c;
 } WmapView;
 
-/** @brief First word of a map cell: the land placed there. */
-typedef struct
-{
-    s32 land_id;
-    u8 unknown_04[36];
-} WmapLandCell;
-
 extern WmapSpriteActor g_wmap_vehicle_actor;
 extern WmapVehicleMotion g_wmap_actor_motions;
 extern WmapAnimationSlot g_wmap_vehicle_animation;
@@ -117,7 +111,6 @@ extern s32 g_wmap_vehicle_cell_x;
 extern s32 g_wmap_vehicle_cell_y;
 extern s32 g_wmap_vehicle_target_x;
 extern s32 g_wmap_vehicle_target_y;
-extern WmapLandCell g_wmap_cells[][6];
 
 extern s32 g_wmap_view_scroll_mode;
 extern s32 g_wmap_scroll_remaining_x;

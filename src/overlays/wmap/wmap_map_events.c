@@ -14,13 +14,8 @@
 #include "wmap_effect_primitives.h"
 #include "wmap_map_labels.h"
 #include "akao_cmd.h"
+#include "wmap_cells.h"
 
-typedef struct
-{
-    s32 tile;
-    u8 pad_04[36];
-} WmapTile;
-extern WmapTile g_wmap_cells[6][6];
 
 void func_800A76F8(void);
 void func_800A7738(void);
@@ -76,13 +71,6 @@ typedef struct
     WmapScreenPosition screen;
 } WmapMotion;
 
-/** @brief Animation resource slot. */
-typedef struct
-{
-    s32 field_00;
-    void *resource;
-} WmapResource;
-
 typedef struct { s32 w[4]; } WmapBlk16;
 
 extern s32 D_800D9224;
@@ -111,7 +99,6 @@ extern s32 g_wmap_view_scroll_mode;
 extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
 extern s32 D_801B2E44;
-extern WmapAnimationSlot D_80139A28[];
 extern u8 D_800DCA98[];
 extern s32 D_800DBE70;
 extern s32 D_80139224;
@@ -127,8 +114,6 @@ extern void (*D_800D6C14[])(void);
 extern s32 D_800DCEC0;
 extern s32 D_801B2E4C;
 extern void (*D_800D6C54[])(void);
-extern u8 D_800D92EC[];
-extern s16 D_800D930E;
 extern s32 D_801B2E54;
 extern void (*D_800D6C94[])(void);
 extern s32 D_801B2E5C;
@@ -138,29 +123,11 @@ extern void (*D_800D6D14[])(void);
 extern s32 D_801B2E6C;
 extern void (*D_800D6D24[])(void);
 
-/** @brief World-map actor configuration. */
-typedef struct
-{
-    s16 field_00;
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[4];
-} __attribute__((aligned(4))) WmapConfigA;
-
 extern s32 g_wmap_vehicle_cell_x;
 extern s32 g_wmap_vehicle_cell_y;
 extern u8 g_wmap_animation_bank_0[];
 extern u8 g_wmap_animation_bank_3[];
 extern u32 D_801B2E40;
-extern WmapConfigA D_800D95D8[];
 extern u32 D_801B2E50;
 extern u32 D_801B2E58;
 extern u32 D_801B2E60;
@@ -201,7 +168,7 @@ static inline s32 tile_exists(s32 x, s32 y)
     {
         return 0;
     }
-    return g_wmap_cells[x][y].tile != 255;
+    return g_wmap_cells[x][y].land_id != 255;
 }
 
 /** @brief Dispatch the first pending map event and consume one event tick. */
@@ -392,7 +359,7 @@ void func_800A643C(void)
 void func_800A6540(void)
 {
     s32 i;
-    WmapConfigA *actor;
+    WmapSpriteActor *actor;
 
     for (i = 40; i < 120; i++)
     {
@@ -401,17 +368,17 @@ void func_800A6540(void)
     }
     for (i = 0; i < 4; i++)
     {
-        actor = &D_800D95D8[i];
+        actor = &g_wmap_sprite_actors[20 + i];
         if (D_800DCEF4[i] != 0)
         {
             g_wmap_actor_animations[i + 20].data = g_wmap_animation_bank_3;
-            actor->field_06 = 15;
-            actor->field_0E = i + 1;
-            actor->field_10 = -1;
-            actor->field_22 = 128;
-            actor->field_26 = 2;
-            actor->field_02 = 0;
-            actor->field_24 = 0;
+            actor->scale_index = 15;
+            actor->sequence = i + 1;
+            actor->previous_sequence = -1;
+            actor->target_shade = 128;
+            actor->shade_step = 2;
+            actor->resource_index = 0;
+            actor->shade = 0;
             D_801AFD60[i].state = 1;
             D_801AFD60[i].angle = i << 10;
             D_801AFD60[i].z = 90000;
@@ -440,19 +407,19 @@ void func_800A66C0(void)
     s32 depth;
     s32 draw_depth;
     s32 i;
-    WmapConfigA *actor;
+    WmapSpriteActor *actor;
     WmapMotion *motion;
 
     for (i = 0; i < 4; i++)
     {
         motion = &D_801AFD60[i];
-        actor = &D_800D95D8[i];
+        actor = &g_wmap_sprite_actors[20 + i];
         position.vx = ((motion->z >> 3) * (ccos(motion->angle) >> 6)) >> 12;
         position.vy = ((motion->z >> 3) * (csin(motion->angle) >> 6)) >> 12;
         position.vz = motion->field_0E;
         gte_ldv0(&position);
         gte_rtps();
-        wmap_step_actor_animation(actor, &D_80139A28[i]);
+        wmap_step_actor_animation(actor, &g_wmap_actor_animations[20 + i]);
         gte_stsxy(&motion->screen);
         gte_stszotz(&depth);
         draw_depth = (7057 - depth) / 4 + 42;
@@ -466,7 +433,7 @@ void func_800A6800(void)
 {
     s32 i;
     s32 destination;
-    WmapConfigA *actor;
+    WmapSpriteActor *actor;
     WmapMotion *motion;
 
     if (D_8018222C != 0)
@@ -775,7 +742,7 @@ void func_800A7400(void)
 /** @brief Initialize the actor, register its callback, and start the sequence delay. */
 void func_800A7440(void)
 {
-    g_wmap_actor_animations[255].data = g_wmap_animation_bank_0;
+    g_wmap_vehicle_animation.data = g_wmap_animation_bank_0;
     g_wmap_vehicle_actor.previous_sequence = -1;
     g_wmap_vehicle_actor.resource_index = 0;
     g_wmap_vehicle_actor.scale_index = 0;
@@ -1124,13 +1091,15 @@ void func_800A7C78(void)
 /** @brief Reset a world-map HUD sprite record, then bump its shared refcount. */
 void func_800A7CB8(void)
 {
-    D_800D92EC[0x6] = 0xF;
-    *(s16*)&D_800D92EC[0x10] = -1;
-    *(s16*)&D_800D92EC[0x22] = 0x80;
-    *(s16*)&D_800D92EC[0x2] = 0;
-    *(s16*)&D_800D92EC[0xE] = 0;
-    *(s16*)&D_800D92EC[0x24] = 0;
-    *(s16*)&D_800D92EC[0x26] = 8;
+    WmapSpriteActor* actor = &g_wmap_sprite_actors[3];
+
+    actor->scale_index = 0xF;
+    actor->previous_sequence = -1;
+    actor->target_shade = 0x80;
+    actor->resource_index = 0;
+    actor->sequence = 0;
+    actor->shade = 0;
+    actor->shade_step = 8;
     D_801B2E4C = 0x10;
     D_801B2E48 += 1;
 }
@@ -1206,7 +1175,7 @@ void func_800A7E6C(void)
 /** @brief World-map step handler: clear a flag and advance the step. */
 void func_800A7EA0(void)
 {
-    D_800D930E = 0;
+    g_wmap_sprite_actors[3].target_shade = 0;
     D_801B2E4C = 0x1E;
     D_801B2E48 += 1;
 }
@@ -1307,13 +1276,15 @@ void func_800A8060(void)
 /** @brief Reset a world-map HUD sprite record, then bump its shared refcount. */
 void func_800A80A0(void)
 {
-    D_800D92EC[0x6] = 0xF;
-    *(s16*)&D_800D92EC[0x10] = -1;
-    *(s16*)&D_800D92EC[0x22] = 0x80;
-    *(s16*)&D_800D92EC[0x2] = 0;
-    *(s16*)&D_800D92EC[0xE] = 0;
-    *(s16*)&D_800D92EC[0x24] = 0;
-    *(s16*)&D_800D92EC[0x26] = 8;
+    WmapSpriteActor* actor = &g_wmap_sprite_actors[3];
+
+    actor->scale_index = 0xF;
+    actor->previous_sequence = -1;
+    actor->target_shade = 0x80;
+    actor->resource_index = 0;
+    actor->sequence = 0;
+    actor->shade = 0;
+    actor->shade_step = 8;
     D_801B2E54 = 0x10;
     D_801B2E50 += 1;
 }
@@ -1389,7 +1360,7 @@ void func_800A8254(void)
 /** @brief World-map step handler: clear a flag and advance the step. */
 void func_800A8288(void)
 {
-    D_800D930E = 0;
+    g_wmap_sprite_actors[3].target_shade = 0;
     D_801B2E54 = 0x1E;
     D_801B2E50 += 1;
 }
@@ -1490,13 +1461,15 @@ void func_800A8448(void)
 /** @brief Reset a world-map HUD sprite record, then bump its shared refcount. */
 void func_800A8488(void)
 {
-    D_800D92EC[0x6] = 0xF;
-    *(s16*)&D_800D92EC[0x10] = -1;
-    *(s16*)&D_800D92EC[0x22] = 0x80;
-    *(s16*)&D_800D92EC[0x2] = 0;
-    *(s16*)&D_800D92EC[0xE] = 0;
-    *(s16*)&D_800D92EC[0x24] = 0;
-    *(s16*)&D_800D92EC[0x26] = 8;
+    WmapSpriteActor* actor = &g_wmap_sprite_actors[3];
+
+    actor->scale_index = 0xF;
+    actor->previous_sequence = -1;
+    actor->target_shade = 0x80;
+    actor->resource_index = 0;
+    actor->sequence = 0;
+    actor->shade = 0;
+    actor->shade_step = 8;
     D_801B2E5C = 0x10;
     D_801B2E58 += 1;
 }
@@ -1572,7 +1545,7 @@ void func_800A8654(void)
 void func_800A8688(void)
 {
     wmap_play_sound(0x39, 0x80);
-    D_800D930E = 0;
+    g_wmap_sprite_actors[3].target_shade = 0;
     D_801B2E5C = 0x1E;
     D_801B2E58 += 1;
 }

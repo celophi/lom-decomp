@@ -10,6 +10,7 @@
 #include "sdk/libgpu.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
+#include "wmap_cells.h"
 
 #define WMAP_VIEW_ROWS 3
 #define WMAP_PREVIEW_BOB_MASK 0xFF
@@ -45,13 +46,6 @@ typedef struct
     s32 unknown_0c;
     s32 unknown_10;
 } WmapProjection;
-
-/** @brief Land identifier in a world-map cell. */
-typedef struct
-{
-    s32 land_id;
-    u8 pad_04[0x24];
-} WmapCell;
 
 /** @brief Screen position on the path between the map and artifact carousel. */
 typedef struct
@@ -130,7 +124,6 @@ extern s32 D_8011D504;
 extern s32 D_8011D508;
 extern s32 D_8011D52C;
 extern SVECTOR g_wmap_camera_rotation;
-extern WmapCell g_wmap_cells[][6];
 extern s32 D_80139838[];
 extern s32 g_wmap_view_mode;
 extern s32 g_wmap_view_scroll_mode;

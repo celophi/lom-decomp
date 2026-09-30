@@ -7,6 +7,7 @@
 #include "wmap_sprite_render.h"
 #include "wmap_effect_primitives.h"
 #include "wmap_step_sequence.h"
+#include "wmap_cells.h"
 
 void wmap_land_effect_09_sequence_5_step_02(void);
 void wmap_land_effect_09_sequence_6_step_02(void);
@@ -52,23 +53,6 @@ typedef struct
     u8 unk28[4];
 } WmapD94Entry;
 
-/** @brief World-map actor configuration. */
-typedef struct
-{
-    s16 field_00;
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[4];
-} WmapConfigA;
-
 /** @brief Per-actor motion and animation parameters. */
 typedef struct
 {
@@ -81,13 +65,6 @@ typedef struct
     s16 field_10;
     s16 pad_12;
 } WmapMotion;
-
-/** @brief First word of a 40-byte world-map cell. */
-typedef struct
-{
-    s32 value;
-    u8 unknown_04[36];
-} WmapValueRecord;
 
 extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_09_sequence_3_timer;
@@ -107,7 +84,6 @@ extern void wmap_land_effect_09_step_03(void);
 extern void wmap_land_effect_09_end(void);
 extern s32 g_wmap_land_effect_09_timeline_timer;
 extern void (*D_800D62B8[])(void);
-extern WmapValueRecord g_wmap_cells[][6];
 extern u32 g_wmap_selected_artifact;
 extern s32 g_wmap_land_effect_09_sequence_1_timer;
 extern void (*D_800D62F8[])(void);
@@ -119,17 +95,11 @@ extern void wmap_land_effect_09_sequence_2_step_02(void);
 extern void (*D_800D6318[])(void);
 extern void (*D_800D6328[])(void);
 extern void (*D_800D6338[])(void);
-extern u8 D_800DB578[];
-extern WmapAnimationSlot D_80139FE8[];
 extern void (*D_800D6350[])(void);
 extern void (*D_800D6370[])(void);
 extern void (*D_800D6388[])(void);
-extern u8 D_800D9688[];
-extern u8 D_80139A48[];
 extern void wmap_land_effect_09_sequence_8_step_04(void);
 extern void (*D_800D63A0[])(void);
-extern u8 D_800DA448[];
-extern u8 D_80139CC8[];
 extern u32 g_wmap_land_effect_09_sequence_3_step;
 extern u32 g_wmap_land_effect_09_sequence_4_step;
 extern u32 g_wmap_land_effect_09_sequence_5_step;
@@ -291,20 +261,20 @@ void wmap_land_effect_09_sequence_6_step_01(void)
 void wmap_land_effect_09_sequence_7_step_01(void)
 {
     s32 i;
-    WmapConfigA* config;
+    WmapSpriteActor* config;
 
     g_wmap_particle_intensity = 4;
     for (i = 140; i < 144; i++)
     {
         config = &g_wmap_sprite_actors[i];
         g_wmap_actor_animations[i].data = g_wmap_animation_bank_3;
-        config->field_02 = 0;
-        config->field_06 = 15;
-        config->field_0E = 1;
-        config->field_10 = -1;
-        config->field_22 = 129;
-        config->field_24 = 129;
-        config->field_26 = 8;
+        config->resource_index = 0;
+        config->scale_index = 15;
+        config->sequence = 1;
+        config->previous_sequence = -1;
+        config->target_shade = 129;
+        config->shade = 129;
+        config->shade_step = 8;
         g_wmap_actor_motions[i].field_00 = 1;
         g_wmap_actor_motions[i].angle = i << 10;
         g_wmap_actor_motions[i].field_04 = -20000;
@@ -541,7 +511,7 @@ WMAP_STEP_RESET(wmap_land_effect_09_sequence_5_reset, g_wmap_land_effect_09_sequ
 /** @brief Draw the world-map sprite via func_8006A2FC, then advance after the wait expires. */
 void wmap_land_effect_09_sequence_5_step_02(void)
 {
-    func_8006A2FC(D_800DB578, D_80139FE8, 0x32, 0x7F, 1, 4, 5, g_wmap_effect_params);
+    func_8006A2FC(&g_wmap_sprite_actors[204], &g_wmap_actor_animations[204], 0x32, 0x7F, 1, 4, 5, g_wmap_effect_params);
     if (--g_wmap_land_effect_09_sequence_5_timer == 0)
     {
         g_wmap_land_effect_09_sequence_5_step += 1;
@@ -562,7 +532,7 @@ void wmap_land_effect_09_sequence_5_step_03(void)
 /** @brief Draw the world-map sprite via func_8006A2FC, then advance after the wait expires. */
 void wmap_land_effect_09_sequence_5_step_04(void)
 {
-    func_8006A2FC(D_800DB578, D_80139FE8, 0x32, 0x7F, 1, 4, 5, g_wmap_effect_params);
+    func_8006A2FC(&g_wmap_sprite_actors[204], &g_wmap_actor_animations[204], 0x32, 0x7F, 1, 4, 5, g_wmap_effect_params);
     if (--g_wmap_land_effect_09_sequence_5_timer == 0)
     {
         g_wmap_land_effect_09_sequence_5_step += 1;
@@ -678,7 +648,7 @@ WMAP_STEP_RESET(wmap_land_effect_09_sequence_8_reset, g_wmap_land_effect_09_sequ
  */
 void wmap_land_effect_09_sequence_8_step_02(void)
 {
-    func_8006A2FC(D_800D9688, D_80139A48, 0xC, 0, 0x7F, 0x2, 0, (s32)((u8*)g_wmap_effect_params + 0x78));
+    func_8006A2FC(&g_wmap_sprite_actors[24], &g_wmap_actor_animations[24], 0xC, 0, 0x7F, 0x2, 0, (s32)((u8*)g_wmap_effect_params + 0x78));
     if (--g_wmap_land_effect_09_sequence_8_timer == 0)
     {
         g_wmap_land_effect_09_sequence_8_step += 1;
@@ -701,7 +671,7 @@ void wmap_land_effect_09_sequence_8_step_03(void)
  */
 void wmap_land_effect_09_sequence_8_step_04(void)
 {
-    func_8006A2FC(D_800D9688, D_80139A48, 0xC, 0, 0x7F, 0x2, 0, (s32)((u8*)g_wmap_effect_params + 0x78));
+    func_8006A2FC(&g_wmap_sprite_actors[24], &g_wmap_actor_animations[24], 0xC, 0, 0x7F, 0x2, 0, (s32)((u8*)g_wmap_effect_params + 0x78));
     if (--g_wmap_land_effect_09_sequence_8_timer == 0)
     {
         g_wmap_land_effect_09_sequence_8_step += 1;
@@ -720,7 +690,7 @@ WMAP_STEP_RESET(wmap_land_effect_09_sequence_9_reset, g_wmap_land_effect_09_sequ
  */
 void wmap_land_effect_09_sequence_9_step_02(void)
 {
-    func_8006A2FC(D_800DA448, D_80139CC8, 0x14, 0x7F, 0x7F, 0x4, 0, (s32)((u8*)g_wmap_effect_params + 0x28));
+    func_8006A2FC(&g_wmap_sprite_actors[104], &g_wmap_actor_animations[104], 0x14, 0x7F, 0x7F, 0x4, 0, (s32)((u8*)g_wmap_effect_params + 0x28));
     if (--g_wmap_land_effect_09_sequence_9_timer == 0)
     {
         g_wmap_land_effect_09_sequence_9_step += 1;
@@ -744,7 +714,7 @@ void wmap_land_effect_09_sequence_9_step_03(void)
  */
 void wmap_land_effect_09_sequence_9_step_04(void)
 {
-    func_8006A2FC(D_800DA448, D_80139CC8, 0x14, 0x7F, 0x7F, 0x4, 0, (s32)((u8*)g_wmap_effect_params + 0x28));
+    func_8006A2FC(&g_wmap_sprite_actors[104], &g_wmap_actor_animations[104], 0x14, 0x7F, 0x7F, 0x4, 0, (s32)((u8*)g_wmap_effect_params + 0x28));
     if (--g_wmap_land_effect_09_sequence_9_timer == 0)
     {
         g_wmap_land_effect_09_sequence_9_step += 1;

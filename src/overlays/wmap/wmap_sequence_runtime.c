@@ -7,6 +7,7 @@
 #include "wmap_sprite_render.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
+#include "wmap_cells.h"
 
 /** @brief Sequence and callback slot counts, and the number of sprite actors. */
 #define WMAP_SEQUENCE_SLOTS 14
@@ -48,13 +49,6 @@ typedef struct
     s32 unknown_0c;
 } WmapView;
 
-/** @brief First word of a map cell: the land placed there. */
-typedef struct
-{
-    s32 land_id;
-    u8 unknown_04[36];
-} WmapLandCell;
-
 /** @brief Two signed coordinates stored consecutively. */
 typedef struct
 {
@@ -90,7 +84,6 @@ extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
 extern s32 D_80139284;
-extern WmapLandCell g_wmap_cells[][6];
 extern WmapCoordinatePair g_wmap_focus_screen_position;
 extern SVECTOR g_wmap_camera_rotation;
 extern s32 g_wmap_land_entry_timer;

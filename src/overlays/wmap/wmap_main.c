@@ -26,13 +26,13 @@
 #include "wmap_pathfinding.h"
 #include "sdk/rand.h"
 #include "wmap_map_events.h"
+#include "wmap_cells.h"
 
 s32 cdrom_get_error_status(void);
 u32 cdrom_process_state(void);
 void set_controller_vsync_interval(u32 interval);
 s32 cdrom_stream(s32 resource_index, u8* destination);
 
-#define WMAP_GRID_SIZE 6
 #define WMAP_MAP_CELL_SIZE 48
 #define WMAP_TRAVEL_CELL_SIZE 160
 #define WMAP_ACTOR_COUNT 256
@@ -97,15 +97,6 @@ typedef enum
     WMAP_FADE_DECREASE = 2,
     WMAP_FADE_DISABLED = 3
 } WmapFadeMode;
-
-/** @brief World-map tile and its cached neighboring layout data. */
-typedef struct
-{
-    s32 land_id;
-    s16 placement_allowed;
-    s16 other_land;
-    s32 spirit_sprites[8];
-} WmapTile;
 
 /** @brief Per-tile display state. */
 typedef struct
@@ -232,7 +223,6 @@ extern WmapMenuTriangle g_wmap_menu_triangles[WMAP_MENU_TRIANGLE_COUNT];
 extern u8 D_8019D6E0;
 extern s32 D_80182DE0;
 extern s16* g_wmap_input_scripts[];
-extern WmapTile g_wmap_cells[6][6];
 extern u8 D_800D0A08[];
 extern s32 D_800D9228;
 extern s32 D_800D9238;
@@ -2311,7 +2301,7 @@ void wmap_refresh_cells(void)
                 }
             }
             g_wmap_cells[x][y].land_id = land_id;
-            g_wmap_cells[x][y].other_land = wmap_is_other_land_cell(x, y);
+            g_wmap_cells[x][y].travel_allowed = wmap_is_other_land_cell(x, y);
             wmap_get_cell_spirit_sprites(x, y, g_wmap_cells[x][y].spirit_sprites);
             g_wmap_cells[x][y].placement_allowed = wmap_can_place_land(x, y, g_wmap_selected_artifact);
             D_8011D108[x][y].frame = 0;

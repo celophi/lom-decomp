@@ -15,8 +15,8 @@
 #include "sdk/gte_dmpsx_compat.h"
 #include "wmap_sequence_runtime.h"
 #include "wmap_land_layout.h"
+#include "wmap_cells.h"
 
-#define WMAP_GRID_SIZE 6
 #define WMAP_CELL_SPACING 48
 #define WMAP_CACHE_SLOTS 16
 #define WMAP_SPIRIT_COUNT 8
@@ -62,14 +62,6 @@ typedef enum
     WMAP_GAME_COUNTING_DOWN = 1,
     WMAP_GAME_PLAYING = 2
 } WmapGamePhase;
-
-/** @brief Map cell's land identifier and effect availability. */
-typedef struct
-{
-    s32 object_id;
-    s16 effect_enabled;
-    u8 pad06[34];
-} WmapDisplayCell;
 
 /** @brief Map scroll position and perspective scale. */
 typedef struct
@@ -213,7 +205,6 @@ extern s32 D_800DCEC0;
 extern s32 D_8011CF18;
 extern s32 g_wmap_view_scroll_enabled;
 extern s32 g_wmap_selected_artifact;
-extern WmapDisplayCell g_wmap_cells[6][6];
 extern s32 g_wmap_view_mode;
 extern s32 g_wmap_game_phase;
 
@@ -316,7 +307,7 @@ void wmap_update_map_game(void)
                 {
                     for (scan_x = g_wmap_game_origin_x; scan_x < g_wmap_game_origin_x + WMAP_GAME_AREA_SIZE; scan_x++)
                     {
-                        if (g_wmap_cells[scan_x][scan_y].object_id == WMAP_EMPTY_LAND)
+                        if (g_wmap_cells[scan_x][scan_y].land_id == WMAP_EMPTY_LAND)
                         {
                             valid = 0;
                         }
@@ -374,7 +365,7 @@ void wmap_update_map_game(void)
     {
         for (render_x = g_wmap_game_origin_x; render_x < g_wmap_game_origin_x + WMAP_GAME_AREA_SIZE; render_x++)
         {
-            wmap_draw_land(render_x, render_y, g_wmap_cells[render_x][render_y].object_id);
+            wmap_draw_land(render_x, render_y, g_wmap_cells[render_x][render_y].land_id);
         }
     }
 
@@ -558,7 +549,7 @@ void wmap_update_map_game_countdown(void)
         {
             for (j = g_wmap_game_origin_x; j < g_wmap_game_origin_x + WMAP_GAME_AREA_SIZE; j++)
             {
-                object_id = g_wmap_cells[j][i].object_id;
+                object_id = g_wmap_cells[j][i].land_id;
                 wmap_set_land_display_mode(object_id, 1);
                 g_wmap_land_display[object_id].game_timer = 0;
             }
@@ -598,7 +589,7 @@ void wmap_update_map_game_round(void)
 
     y = g_wmap_game_origin_y + g_wmap_cursor_row;
     x = g_wmap_game_origin_x + g_wmap_cursor_column;
-    object_id = g_wmap_cells[x][y].object_id;
+    object_id = g_wmap_cells[x][y].land_id;
     object = &g_wmap_land_display[object_id];
 
     if (g_wmap_buttons_repeat & WMAP_PAD_CONFIRM)
@@ -633,14 +624,14 @@ void wmap_update_map_game_round(void)
     {
         for (x = g_wmap_game_origin_x; x < g_wmap_game_origin_x + WMAP_GAME_AREA_SIZE; x++)
         {
-            object_id = g_wmap_cells[x][y].object_id;
+            object_id = g_wmap_cells[x][y].land_id;
             object = &g_wmap_land_display[object_id];
             if (object->game_timer != 0)
             {
                 object->game_timer--;
                 if ((object->game_timer == 0) && (object->transition != 1))
                 {
-                    wmap_set_land_display_mode(g_wmap_cells[x][y].object_id, 1);
+                    wmap_set_land_display_mode(g_wmap_cells[x][y].land_id, 1);
                     object->scale_frame = 4;
                     wmap_play_sound(2, 0x80);
                 }
@@ -672,7 +663,7 @@ void wmap_spawn_map_game_lands(s32 delay_min, s32 delay_range, s32 timer_min, s3
     g_wmap_game_spawn_timer = ((rand() * delay_range) >> 15) + delay_min;
     column = (rand() % 3) + g_wmap_game_origin_x;
     row = (rand() % 3) + g_wmap_game_origin_y;
-    object_id = g_wmap_cells[column][row].object_id;
+    object_id = g_wmap_cells[column][row].land_id;
 
     if (rand() & 0xFF)
     {
@@ -695,7 +686,7 @@ void wmap_spawn_map_game_lands(s32 delay_min, s32 delay_range, s32 timer_min, s3
         {
             for (column = g_wmap_game_origin_x; column < g_wmap_game_origin_x + WMAP_GAME_AREA_SIZE; column++)
             {
-                object_id = g_wmap_cells[column][row].object_id;
+                object_id = g_wmap_cells[column][row].land_id;
                 if (g_wmap_game_spawn_patterns[g_wmap_game_round][pattern_index])
                 {
                     WmapLandDisplay* object_base;
@@ -1223,7 +1214,7 @@ void wmap_draw_lands(void)
     {
         for (x = 0; x < WMAP_GRID_SIZE; x++)
         {
-            object_id = g_wmap_cells[x][y].object_id;
+            object_id = g_wmap_cells[x][y].land_id;
 
             if (g_wmap_view_mode == 1)
             {
@@ -1347,7 +1338,7 @@ void wmap_draw_lands(void)
             }
             wmap_set_cell_effect_mode(x, y, state);
 
-            if ((g_wmap_cells[x][y].effect_enabled != 0) && (g_wmap_view_mode == 0))
+            if ((g_wmap_cells[x][y].placement_allowed != 0) && (g_wmap_view_mode == 0))
             {
                 wmap_draw_cell_effect(x, y);
             }
@@ -1682,7 +1673,7 @@ void wmap_draw_spirit_grid(s32 spirit_index)
         spirits = &cell_spirits;
         do
         {
-            if (D_80129550 == 1 && g_wmap_cells[target_x][target_y].effect_enabled != 0)
+            if (D_80129550 == 1 && g_wmap_cells[target_x][target_y].placement_allowed != 0)
             {
                 wmap_get_proposed_spirit_sprites(cur_x, cur_y, g_wmap_selected_artifact, target_x, target_y, cell_spirits.sprite_indices);
             }

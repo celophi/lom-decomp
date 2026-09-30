@@ -128,8 +128,9 @@ in the source. Those names are the US addresses; JP uses the same names.
 A null entry is a zero word. The last US table,
 `g_wmap_effect35_emitter_b_steps`, has one extra null word before the
 runtime variables start; JP doesn't. One entry of `D_800D4DB4` in land effect
-18 points into WMAP's own data (`D_800D9478`) instead of code. It's kept as
-`{data: D_800D9478}` rather than hidden.
+18 points into WMAP's own data instead of code: sprite actor 12. It's kept as
+`{data: g_wmap_sprite_actors+0x210}` rather than hidden. An address inside a
+symbol with a known size is named as that symbol plus an offset.
 
 ## What stays in the byte map
 

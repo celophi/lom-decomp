@@ -36,22 +36,6 @@ void wmap_special_effect_34_sequence_3_step_04(void);
 void wmap_special_effect_34_sequence_4_step_02(void);
 void wmap_special_effect_34_sequence_4_step_04(void);
 
-typedef struct
-{
-    s16 field_00;
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[4];
-} WmapConfigA;
-
 typedef void (*WmapHandler)(void);
 
 extern WmapAnimationSlot g_wmap_actor_animations[];
@@ -267,7 +251,7 @@ void wmap_special_effect_34_sequence_3_step_02(void)
 {
     s32 x;
     s32 y;
-    WmapConfigA* config = &g_wmap_sprite_actors[5];
+    WmapSpriteActor* config = &g_wmap_sprite_actors[5];
 
     if (D_80182D58.point.y < 0x78)
     {
