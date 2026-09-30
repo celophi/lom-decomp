@@ -88,6 +88,12 @@ jobs:
         # generator reads to stamp metadata.complete = true on those units.
         run: make verify-bins VERSION=${{ env.VERSION }}
 
+      - name: Native compile check
+        # Compiles every C file this version builds with the image's gcc, so a
+        # 64-bit build stays possible: a file that compiles must keep
+        # compiling (tools/native_check/baseline_<version>_gcc.txt).
+        run: make native-check VERSION=${{ env.VERSION }}
+
       - name: Generate objdiff configuration
         run: python3 ${{ env.OBJDIFF_CONFIG_GENERATOR }} --version ${{ env.VERSION }}
 

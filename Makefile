@@ -73,6 +73,7 @@ include mk/overlay-registry.mk
 include mk/overlays.mk
 include mk/analysis.mk
 include mk/verification.mk
+include mk/native.mk
 
 .PHONY: clean
 
