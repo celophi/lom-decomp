@@ -145,11 +145,9 @@ extern s32 g_wmap_selected_artifact;
 extern WmapValueRecord g_wmap_cells[][6];
 extern s32 g_wmap_land_effect_25_sequence_1_timer;
 extern void (*D_800D7074[])(void);
-extern u8* D_801399AC;
 extern void wmap_land_effect_25_sequence_1_step_04(void);
 extern s32 g_wmap_land_effect_25_sequence_2_timer;
 extern void (*D_800D708C[])(void);
-extern u8* D_801399B4;
 extern void wmap_land_effect_25_sequence_2_step_02(void);
 extern void (*D_800D709C[])(void);
 extern void (*D_800D70AC[])(void);
@@ -160,11 +158,9 @@ extern void (*D_800D70FC[])(void);
 extern void (*D_800D7114[])(void);
 extern s32 g_wmap_land_effect_25_sequence_10_timer;
 extern void (*D_800D712C[])(void);
-extern u8* D_801399C4;
 extern void wmap_land_effect_25_sequence_10_step_02(void);
 extern s32 g_wmap_land_effect_25_sequence_11_timer;
 extern void (*D_800D713C[])(void);
-extern void *D_801399BC;
 extern void wmap_land_effect_25_sequence_11_step_04(void);
 extern void (*D_800D7154[])(void);
 extern WmapAnimationSlot D_80139A28[];
@@ -178,14 +174,12 @@ extern u8 D_80139ED8[];
 extern s32 g_wmap_land_effect_25_sequence_16_timer;
 extern void (*D_800D71B4[])(void);
 extern u8 g_wmap_animation_bank_2[];
-extern u8* D_801399D4;
 extern void wmap_land_effect_25_sequence_16_step_02(void);
 extern void wmap_land_effect_25_sequence_16_step_04(void);
 extern void (*D_800D71CC[])(void);
 extern s32 g_wmap_land_effect_25_sequence_18_timer;
 extern void (*D_800D71EC[])(void);
 extern u8 g_wmap_animation_bank_1[];
-extern u8* D_801399CC;
 extern void wmap_land_effect_25_sequence_18_step_02(void);
 extern void wmap_land_effect_25_sequence_18_step_04(void);
 
@@ -237,17 +231,11 @@ extern SVECTOR D_801B2498;
 extern SVECTOR D_801B2670;
 extern SVECTOR D_801B2678;
 
-extern WmapSpriteActor D_800D9318;
-extern WmapSpriteActor D_800D9344;
-extern WmapSpriteActor D_800D9370;
 extern WmapSpriteActor D_800D939C;
 extern WmapSpriteActor D_800D93C8;
 extern WmapSpriteActor D_800D93F4;
 
 extern WmapAnimationSlot g_wmap_actor_animations[];
-extern WmapAnimationSlot D_801399A8;
-extern WmapAnimationSlot D_801399B0;
-extern WmapAnimationSlot D_801399B8;
 extern WmapAnimationSlot D_801399C0;
 extern WmapAnimationSlot D_801399C8;
 extern WmapAnimationSlot D_801399D0;
@@ -961,36 +949,40 @@ WMAP_STEP_RESET(wmap_land_effect_25_sequence_1_reset, g_wmap_land_effect_25_sequ
  */
 void wmap_land_effect_25_sequence_1_step_01(void)
 {
-    D_801399AC = g_wmap_animation_bank_0;
-    D_800D9318.scale_index = 0xF;
-    D_800D9318.sequence = 3;
-    D_800D9318.previous_sequence = -1;
-    D_800D9318.shade_step = 8;
-    D_800D9318.target_shade = 0x81;
-    D_800D9318.resource_index = 0;
-    D_800D9318.shade = 1;
+    WmapSpriteActor* actor = &g_wmap_sprite_actors[4];
+
+    g_wmap_actor_animations[4].data = g_wmap_animation_bank_0;
+    actor->scale_index = 0xF;
+    actor->sequence = 3;
+    actor->previous_sequence = -1;
+    actor->shade_step = 8;
+    actor->target_shade = 0x81;
+    actor->resource_index = 0;
+    actor->shade = 1;
     g_wmap_land_effect_25_sequence_1_timer = 0x80;
     g_wmap_land_effect_25_sequence_1_step += 1;
     wmap_land_effect_25_sequence_1_step_02();
 }
 
-WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_25_sequence_1_step_02, g_wmap_land_effect_25_sequence_1_step, g_wmap_land_effect_25_sequence_1_timer, D_800D9318,
-                              D_801399A8, g_wmap_focus_screen_position, 0x10, 0x5, 0)
+WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_25_sequence_1_step_02, g_wmap_land_effect_25_sequence_1_step, g_wmap_land_effect_25_sequence_1_timer, g_wmap_sprite_actors[4],
+                              g_wmap_actor_animations[4], g_wmap_focus_screen_position, 0x10, 0x5, 0)
 
 /**
  * @brief Initialise two object half-word fields, arm the timer, advance, and run the handler.
  */
 void wmap_land_effect_25_sequence_1_step_03(void)
 {
-    D_800D9318.shade_step = 4;
-    D_800D9318.target_shade = 0;
+    WmapSpriteActor* actor = &g_wmap_sprite_actors[4];
+
+    actor->shade_step = 4;
+    actor->target_shade = 0;
     g_wmap_land_effect_25_sequence_1_timer = 0x20;
     g_wmap_land_effect_25_sequence_1_step += 1;
     wmap_land_effect_25_sequence_1_step_04();
 }
 
-WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_25_sequence_1_step_04, g_wmap_land_effect_25_sequence_1_step, g_wmap_land_effect_25_sequence_1_timer, D_800D9318,
-                              D_801399A8, g_wmap_focus_screen_position, 0x10, 0x5, 0)
+WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_25_sequence_1_step_04, g_wmap_land_effect_25_sequence_1_step, g_wmap_land_effect_25_sequence_1_timer, g_wmap_sprite_actors[4],
+                              g_wmap_actor_animations[4], g_wmap_focus_screen_position, 0x10, 0x5, 0)
 
 WMAP_STEP_ADVANCE(wmap_land_effect_25_sequence_1_end, g_wmap_land_effect_25_sequence_1_step)
 
@@ -1003,21 +995,23 @@ WMAP_STEP_RESET(wmap_land_effect_25_sequence_2_reset, g_wmap_land_effect_25_sequ
  */
 void wmap_land_effect_25_sequence_2_step_01(void)
 {
-    D_801399B4 = g_wmap_animation_bank_0;
-    D_800D9344.scale_index = 0xF;
-    D_800D9344.previous_sequence = -1;
-    D_800D9344.shade_step = 2;
-    D_800D9344.resource_index = 0;
-    D_800D9344.sequence = 0;
-    D_800D9344.target_shade = 0x80;
-    D_800D9344.shade = 0x80;
+    WmapSpriteActor* actor = &g_wmap_sprite_actors[5];
+
+    g_wmap_actor_animations[5].data = g_wmap_animation_bank_0;
+    actor->scale_index = 0xF;
+    actor->previous_sequence = -1;
+    actor->shade_step = 2;
+    actor->resource_index = 0;
+    actor->sequence = 0;
+    actor->target_shade = 0x80;
+    actor->shade = 0x80;
     g_wmap_land_effect_25_sequence_2_timer = 0xA0;
     g_wmap_land_effect_25_sequence_2_step += 1;
     wmap_land_effect_25_sequence_2_step_02();
 }
 
-WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_25_sequence_2_step_02, g_wmap_land_effect_25_sequence_2_step, g_wmap_land_effect_25_sequence_2_timer, D_800D9344,
-                              D_801399B0, g_wmap_focus_screen_position, 0x10, 0x8, 0)
+WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_25_sequence_2_step_02, g_wmap_land_effect_25_sequence_2_step, g_wmap_land_effect_25_sequence_2_timer, g_wmap_sprite_actors[5],
+                              g_wmap_actor_animations[5], g_wmap_focus_screen_position, 0x10, 0x8, 0)
 
 WMAP_STEP_ADVANCE(wmap_land_effect_25_sequence_2_end, g_wmap_land_effect_25_sequence_2_step)
 
@@ -1139,7 +1133,7 @@ WMAP_STEP_RESET(wmap_land_effect_25_sequence_10_reset, g_wmap_land_effect_25_seq
  */
 void wmap_land_effect_25_sequence_10_step_01(void)
 {
-    D_801399C4 = g_wmap_animation_bank_0;
+    g_wmap_actor_animations[7].data = g_wmap_animation_bank_0;
     D_800D939C.scale_index = 0xF;
     D_800D939C.sequence = 2;
     D_800D939C.previous_sequence = -1;
@@ -1164,36 +1158,40 @@ WMAP_STEP_RESET(wmap_land_effect_25_sequence_11_reset, g_wmap_land_effect_25_seq
 /** @brief Initialize the world-map actor and advance the timed sequence. */
 void wmap_land_effect_25_sequence_11_step_01(void)
 {
-    D_801399BC = &g_wmap_animation_bank_0;
-    D_800D9370.scale_index = 0xF;
-    D_800D9370.resource_index = 0;
-    D_800D9370.sequence = 1;
-    D_800D9370.previous_sequence = -1;
-    D_800D9370.shade_step = 4;
-    D_800D9370.target_shade = 0x81;
-    D_800D9370.shade = 1;
+    WmapSpriteActor* actor = &g_wmap_sprite_actors[6];
+
+    g_wmap_actor_animations[6].data = g_wmap_animation_bank_0;
+    actor->scale_index = 0xF;
+    actor->resource_index = 0;
+    actor->sequence = 1;
+    actor->previous_sequence = -1;
+    actor->shade_step = 4;
+    actor->target_shade = 0x81;
+    actor->shade = 1;
     g_wmap_land_effect_25_sequence_11_timer = 0x50;
     g_wmap_land_effect_25_sequence_11_step += 1;
     wmap_land_effect_25_sequence_11_step_02();
 }
 
 WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_25_sequence_11_step_02, g_wmap_land_effect_25_sequence_11_step, g_wmap_land_effect_25_sequence_11_timer,
-                              D_800D9370, D_801399B8, g_wmap_focus_screen_position, 0x10, 0x7, 0)
+                              g_wmap_sprite_actors[6], g_wmap_actor_animations[6], g_wmap_focus_screen_position, 0x10, 0x7, 0)
 
 /**
  * @brief Initialise two object half-word fields, arm the timer, advance, and run the handler.
  */
 void wmap_land_effect_25_sequence_11_step_03(void)
 {
-    D_800D9370.shade_step = 2;
-    D_800D9370.target_shade = 0;
+    WmapSpriteActor* actor = &g_wmap_sprite_actors[6];
+
+    actor->shade_step = 2;
+    actor->target_shade = 0;
     g_wmap_land_effect_25_sequence_11_timer = 0x40;
     g_wmap_land_effect_25_sequence_11_step += 1;
     wmap_land_effect_25_sequence_11_step_04();
 }
 
 WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_25_sequence_11_step_04, g_wmap_land_effect_25_sequence_11_step, g_wmap_land_effect_25_sequence_11_timer,
-                              D_800D9370, D_801399B8, g_wmap_focus_screen_position, 0x10, 0x7, 0)
+                              g_wmap_sprite_actors[6], g_wmap_actor_animations[6], g_wmap_focus_screen_position, 0x10, 0x7, 0)
 
 WMAP_STEP_ADVANCE(wmap_land_effect_25_sequence_11_end, g_wmap_land_effect_25_sequence_11_step)
 
@@ -1373,7 +1371,7 @@ WMAP_STEP_RESET(wmap_land_effect_25_sequence_16_reset, g_wmap_land_effect_25_seq
  */
 void wmap_land_effect_25_sequence_16_step_01(void)
 {
-    D_801399D4 = g_wmap_animation_bank_2;
+    g_wmap_actor_animations[9].data = g_wmap_animation_bank_2;
     D_800D93F4.scale_index = 0xF;
     D_800D93F4.previous_sequence = -1;
     D_800D93F4.shade_step = 4;
@@ -1471,7 +1469,7 @@ WMAP_STEP_RESET(wmap_land_effect_25_sequence_18_reset, g_wmap_land_effect_25_seq
  */
 void wmap_land_effect_25_sequence_18_step_01(void)
 {
-    D_801399CC = g_wmap_animation_bank_1;
+    g_wmap_actor_animations[8].data = g_wmap_animation_bank_1;
     D_800D93C8.scale_index = 0xF;
     D_800D93C8.previous_sequence = -1;
     D_800D93C8.shade_step = 4;

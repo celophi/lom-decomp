@@ -118,7 +118,6 @@ extern s32 D_80139224;
 extern s32 D_80139978;
 extern s32 D_801B2E74;
 extern void (*D_800D6D34[])(void);
-extern u8 *D_8013A184;
 extern void wmap_draw_vehicle(void);
 extern void wmap_finish_vehicle_turn(void);
 extern s32 g_wmap_vehicle_phase;
@@ -776,7 +775,7 @@ void func_800A7400(void)
 /** @brief Initialize the actor, register its callback, and start the sequence delay. */
 void func_800A7440(void)
 {
-    D_8013A184 = g_wmap_animation_bank_0;
+    g_wmap_actor_animations[255].data = g_wmap_animation_bank_0;
     g_wmap_vehicle_actor.previous_sequence = -1;
     g_wmap_vehicle_actor.resource_index = 0;
     g_wmap_vehicle_actor.scale_index = 0;

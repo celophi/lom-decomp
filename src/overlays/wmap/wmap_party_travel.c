@@ -86,7 +86,6 @@ extern const WmapTravelScreen D_8004FD04[];
 extern u8 D_800DBE98[];
 extern u8 D_800DC298[];
 extern u8 D_800DC698[];
-extern s16 D_800D926A;
 extern s16 D_800D9296;
 extern s16 D_800D92C2;
 extern s32 D_800D9224;
@@ -408,7 +407,7 @@ void wmap_init_party_travel(void)
         D_80182E34 = 3;
         D_800DBE78 = 3;
         D_8011CF20 = 1;
-        D_800D926A = -1;
+        g_wmap_sprite_actors[0].resource_index = -1;
         D_800D9224++;
     }
     resource_id = WMAP_TRAVEL_SPRITE_RESOURCE;
