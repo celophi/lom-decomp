@@ -22,6 +22,7 @@
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 #include "sdk/rand.h"
+#include "field_actor_runtime.h"
 
 /** @brief Screen center, added to camera-relative positions. */
 #define FIELD_SCREEN_CENTER_X (SCREEN_WIDTH / 2)

@@ -10,6 +10,7 @@
 #include "wmap_resource_support.h"
 #include "wmap_effect_resources.h"
 #include "cdrom.h"
+#include "sdk/rand.h"
 
 /** @brief Step counts of the effect's sequences. */
 #define WMAP_EFFECT35_MAIN_STEPS 4

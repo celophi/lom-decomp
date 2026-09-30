@@ -17,6 +17,7 @@
 #include "field_actor_sequence_runtime.h"
 #include "field_contact_geometry.h"
 #include "field_actor_records.h"
+#include "field_actor_behavior.h"
 
 /** @brief Scratchpad vector that receives an actor displacement. */
 #define FIELD_SCRATCH_DISPLACEMENT ((Vec3i*)SCRATCHPAD_ADDRESS)

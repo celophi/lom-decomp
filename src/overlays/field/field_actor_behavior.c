@@ -25,6 +25,21 @@
 #include "sdk/libgte.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
+#include "field_contact_geometry.h"
+#include "sdk/abs.h"
+
+s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index);
+void field_start_actor_text(s32 index, s32 text_id);
+void field_draw_object_ground_effect(FieldMotionRecord* actor, u32 kind);
+s32 field_collect_action_targets();
+void field_restart_sequence_animation(FieldActor* actor);
+void field_apply_sequence_displacement(FieldActor* actor, s32 direction_x, s32 vertical_step, s32 direction_z);
+s32 field_collapse_defeated_actor(FieldActor* actor);
+s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound);
+void field_update_hit_reaction(FieldMotionRecord* actor);
+void field_idle_actor_after_animation(FieldMotionRecord* actor);
+void field_idle_actor_after_reload(FieldMotionRecord* actor);
+void field_release_object_link(FieldActor* actor);
 
 /** @brief Route history entries between the leader and each follower. */
 #define FIELD_ROUTE_FOLLOWER_SAMPLES (FIELD_ROUTE_HISTORY_LENGTH / 2)

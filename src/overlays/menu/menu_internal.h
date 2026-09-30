@@ -7,6 +7,10 @@
 #include "controller.h"
 #include "vector.h"
 
+/* Encoded-name functions of FIELD, called while FIELD is resident. */
+void field_copy_name(u8* destination, u8* source);
+s32 field_name_byte_length(u8* name);
+
 /* ----- Macros ----- */
 
 /* Menu chrome CLUT ids produced by getClut for the rows uploaded in menu_upload_tim. */

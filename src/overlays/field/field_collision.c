@@ -1,5 +1,6 @@
 #include "field_scene_internal.h"
 #include "field_calls.h"
+#include "sdk/abs.h"
 
 /** field_collision_trace_line mode: stop with success when the stamped tile is goal_tile. */
 #define FIELD_COLLISION_TRACE_STOP_AT_GOAL 2

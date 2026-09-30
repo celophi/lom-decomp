@@ -8,6 +8,7 @@
 #include "field_animation.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
+#include "akao_cmd.h"
 
 #define FIELD_TEXT_STATE_MASK 7
 #define FIELD_TEXT_PORTRAIT_SLOT 0x08

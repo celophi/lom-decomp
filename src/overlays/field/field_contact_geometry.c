@@ -18,6 +18,7 @@
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
 #include "field_actor_records.h"
+#include "sdk/abs.h"
 
 /** @brief Object state @p index of @p base. */
 #define FIELD_OBJECT_STATE_AT(base, index) ((FieldObjectState*)((index) * sizeof(FieldObjectState) + (s32)(base)))

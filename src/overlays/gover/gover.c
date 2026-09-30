@@ -9,6 +9,10 @@
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 #include "sdk/libetc.h"
+#include "menu.h"
+#include "controller.h"
+
+void field_update_input_repeat(void);
 
 /** @brief VRAM destinations for a TIM's pixel and palette blocks. */
 typedef struct

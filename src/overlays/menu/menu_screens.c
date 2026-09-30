@@ -1,4 +1,14 @@
 #include "menu_internal.h"
+#include "sdk/abs.h"
+#include "akao_cmd.h"
+
+s32 menu_find_active_content_item(void);
+s32 menu_count_inventory_items(void);
+void menu_concat_encoded_text(u8* dst, u8* src1, u8* src2);
+s32 menu_build_spell_nav_entries(void);
+u8* func_800A8A78(u32* ot, u8* prim, s32 value, s32 color, Vec2s* position, s32 mode);
+void* field_draw_sprite_number(u_long* ordering_table, void* packet_cursor, s32 value, s32 digit_count, u16* position, s32 flags);
+SPRT* field_draw_sprite_glyph(SPRT* sprite, u_long* ordering_table, s32 glyph, u16* position, s32 flags);
 
 s32 menu_lookup_item_nibble(const MenuItemEntry* item, u32 index);
 

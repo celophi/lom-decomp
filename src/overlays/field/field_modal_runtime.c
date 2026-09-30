@@ -32,6 +32,9 @@
 #include "field_runtime.h"
 #include "display.h"
 #include "game_state.h"
+#include "sdk/memory.h"
+
+void field_set_cd_error_fade_target(void);
 
 #define NAME_GLYPH_SIZE_SINGLE 1
 #define NAME_GLYPH_SIZE_DOUBLE 2

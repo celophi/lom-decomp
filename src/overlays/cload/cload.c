@@ -1,5 +1,18 @@
 #include "cload_internal.h"
 #include "display.h"
+#include "sdk/libetc.h"
+#include "controller.h"
+#include "cdrom.h"
+
+void play_menu_sfx(s32 sfx_id, s32 volume);
+void field_set_fade_target(s16 red, s16 green, s16 blue, s16 duration);
+void field_reset_fade_state(void);
+void reset_controller_vsync_state(void);
+void set_controller_vsync_interval(u32 interval);
+void field_update_and_render_fade();
+void field_update_input_repeat(void);
+void field_reset_input_repeat(void);
+void cload_init_card_events(void);
 
 /**
  * @brief Card slot label layout: window width, label text X and the two window Xs.

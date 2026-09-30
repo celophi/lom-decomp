@@ -8,6 +8,8 @@
 #include "field_calls.h"
 #include "field_records.h"
 
+void field_battle_run_party_event();
+
 /** @brief Record kind bits (FieldStatusRecordMeta bits.kind) within the packed word. */
 #define STATUS_KIND_MASK 0xFC00
 

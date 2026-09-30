@@ -22,6 +22,15 @@
 #include "controller_internal.h"
 #include "akao_cmd.h"
 #include "wmap_sprite_render.h"
+#include "controller.h"
+#include "wmap_pathfinding.h"
+#include "sdk/rand.h"
+#include "wmap_map_events.h"
+
+s32 cdrom_get_error_status(void);
+u32 cdrom_process_state(void);
+void set_controller_vsync_interval(u32 interval);
+s32 cdrom_stream(s32 resource_index, u8* destination);
 
 #define WMAP_GRID_SIZE 6
 #define WMAP_MAP_CELL_SIZE 48

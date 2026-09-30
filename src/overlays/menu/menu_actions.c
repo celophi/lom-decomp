@@ -1,5 +1,10 @@
 #include "menu_internal.h"
 
+s32 menu_find_active_content_item(void);
+s32 menu_clear_pending_status(void);
+u8* func_800A8A78(u32* ot, u8* prim, s32 value, s32 color, Vec2s* position, s32 mode);
+void func_800A3938();
+
 extern inline s32 menu_get_equipment_ability_mask(s32 excluded_slot)
 {
     s32 equipment_index;

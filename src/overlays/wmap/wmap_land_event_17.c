@@ -10,6 +10,7 @@
 #include "wmap_resource_support.h"
 #include "wmap_sprite_render.h"
 #include "wmap_effect_primitives.h"
+#include "sdk/rand.h"
 
 void func_800AB8E0(void);
 void func_800AC9AC(void);
