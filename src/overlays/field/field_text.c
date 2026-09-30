@@ -117,25 +117,25 @@
 #define FIELD_TEXT_QUAD_SHADOW 0x2E000000
 
 /* Fixed RAM blocks shared with the main executable and the field resource loader. */
-#define FIELD_TEXT_SYSTEM ((FieldTextSystem*)0x801ED000)
+#define FIELD_TEXT_SYSTEM ((FieldTextSystem*)FIELD_WORKSPACE_ADDRESS)
 #define FIELD_TEXT_WINDOWS (FIELD_TEXT_SYSTEM->windows)
 #define FIELD_TEXT_IMMEDIATE_STATE (&FIELD_TEXT_SYSTEM->windows[1])
-#define FIELD_TEXT_PENDING_CONFIG ((FieldTextConfig*)0x801ED408)
-#define FIELD_TEXT_INPUT ((FieldInputState*)0x801ED600)
-#define FIELD_TEXT_SCRATCH ((u16*)0x1F800000)
+#define FIELD_TEXT_PENDING_CONFIG ((FieldTextConfig*)TEXT_CONFIG_ADDRESS)
+#define FIELD_TEXT_INPUT ((FieldInputState*)CONTROLLER_STATE_ADDRESS)
+#define FIELD_TEXT_SCRATCH ((u16*)SCRATCHPAD_ADDRESS)
 /** Transition mesh vertices, built in the same scratchpad area. */
-#define FIELD_TEXT_MESH ((FieldTextVertex*)0x1F800000)
+#define FIELD_TEXT_MESH ((FieldTextVertex*)SCRATCHPAD_ADDRESS)
 /** @brief Number of 64-pixel frame tiles across a window of @p width. */
 #define FIELD_TEXT_MESH_COLUMNS(width) (((width) + 0x3F) >> 6)
 /** @brief Number of 32-pixel frame tiles down a window of @p height. */
 #define FIELD_TEXT_MESH_ROWS(height) (((height) + 0x1F) >> 5)
 /** 4bpp text cache (256 by 96 pixels), preloaded with the window textures. */
-#define FIELD_TEXT_CACHE ((u16*)0x801DE000)
+#define FIELD_TEXT_CACHE ((u16*)TEXT_CACHE_ADDRESS)
 /** 12-row, 16-pixel-wide glyph bitmaps, starting at the space character. */
-#define FIELD_TEXT_FONT ((u16*)0x801E1200)
-#define FIELD_TEXT_GLYPH_WIDTHS ((u8*)0x801E26E0)
-#define FIELD_TEXT_GLYPH_RUN_OFFSETS ((u16*)0x801E2758)
-#define FIELD_TEXT_GLYPH_RUNS ((u8*)0x801E2780)
+#define FIELD_TEXT_FONT ((u16*)FONT_ADDRESS)
+#define FIELD_TEXT_GLYPH_WIDTHS ((u8*)FONT_AT(0x14E0))
+#define FIELD_TEXT_GLYPH_RUN_OFFSETS ((u16*)FONT_AT(0x1558))
+#define FIELD_TEXT_GLYPH_RUNS ((u8*)FONT_AT(0x1580))
 /**
  * @brief Address of the cache word at @p byte_offset within a cache @p row.
  */

@@ -23,14 +23,14 @@
 #include "field_path_interpolation.h"
 #include "field_actor_records.h"
 
-#define FIELD_EFFECT_ORIGIN_ADDRESS 0x1F800000
-#define FIELD_EFFECT_VECTOR_ADDRESS 0x1F800010
-#define FIELD_EFFECT_TARGET_ADDRESS 0x1F800020
-#define FIELD_EFFECT_LOCAL_VECTOR_ADDRESS 0x1F800030
-#define FIELD_EFFECT_ROTATED_VECTOR_ADDRESS 0x1F800038
-#define FIELD_EFFECT_MATRIX_ADDRESS 0x1F800040
-#define FIELD_EFFECT_MOVER_ADDRESS 0x1F800080
-#define FIELD_EFFECT_QUERY_ADDRESS 0x1F8000C0
+#define FIELD_EFFECT_ORIGIN_ADDRESS SCRATCHPAD_ADDRESS
+#define FIELD_EFFECT_VECTOR_ADDRESS SCRATCHPAD_AT(0x10)
+#define FIELD_EFFECT_TARGET_ADDRESS SCRATCHPAD_AT(0x20)
+#define FIELD_EFFECT_LOCAL_VECTOR_ADDRESS SCRATCHPAD_AT(0x30)
+#define FIELD_EFFECT_ROTATED_VECTOR_ADDRESS SCRATCHPAD_AT(0x38)
+#define FIELD_EFFECT_MATRIX_ADDRESS SCRATCHPAD_AT(0x40)
+#define FIELD_EFFECT_MOVER_ADDRESS SCRATCHPAD_AT(0x80)
+#define FIELD_EFFECT_QUERY_ADDRESS SCRATCHPAD_AT(0xC0)
 
 /**
  * @brief Address of element @p index in an array of @p type starting at @p base.
@@ -1507,8 +1507,6 @@ typedef struct
 #define FIELD_EFFECT_CAMERA_X_MIN 0x500
 #define FIELD_EFFECT_CAMERA_X_MAX 0x13B00
 #define FIELD_EFFECT_CAMERA_Z_SPAN 0x1E800
-#define FIELD_EFFECT_MAP_BOUNDS_ADDRESS 0x801ED400
-#define FIELD_EFFECT_CAMERA_ADDRESS 0x801ED480
 
 extern s32 g_field_active_group;
 /** @brief Suppress repeated pickup audio until the next frame-command build. */
@@ -1982,8 +1980,8 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldObjectPar
     u8 reference_state;
     u8 retired_state;
 
-    camera = (FieldEffectCamera *) FIELD_EFFECT_CAMERA_ADDRESS;
-    map_bounds = (FieldEffectMapBounds *) FIELD_EFFECT_MAP_BOUNDS_ADDRESS;
+    camera = (FieldEffectCamera *) SCENE_STATE_ADDRESS;
+    map_bounds = (FieldEffectMapBounds *) MAP_BOUNDS_ADDRESS;
     mover = (FieldEffectCollisionMover *) FIELD_EFFECT_MOVER_ADDRESS;
     query = (FieldEffectCollisionQuery *) FIELD_EFFECT_QUERY_ADDRESS;
     work_vector = (VECTOR *) FIELD_EFFECT_VECTOR_ADDRESS;
@@ -3178,9 +3176,9 @@ void field_resolve_effect_position(FieldMotionRecord *effect, FieldObjectPart *p
 }
 
 /* Effect render dispatch and sprite-frame rendering. */
-#define FIELD_EFFECT_SCRATCH_MATRIX ((void *) 0x1F800000)
-#define FIELD_EFFECT_SCRATCH_SCREEN_ORIGIN ((Vec2s *) 0x1F800040)
-#define FIELD_EFFECT_SCRATCH_FOOTPRINT ((s16 *) 0x1F800064)
+#define FIELD_EFFECT_SCRATCH_MATRIX ((void *) SCRATCHPAD_ADDRESS)
+#define FIELD_EFFECT_SCRATCH_SCREEN_ORIGIN ((Vec2s *) SCRATCHPAD_AT(0x40))
+#define FIELD_EFFECT_SCRATCH_FOOTPRINT ((s16 *) SCRATCHPAD_AT(0x64))
 #define FIELD_EFFECT_SCREEN_CENTER_X 160
 #define FIELD_EFFECT_SCREEN_CENTER_Y 112
 #define FIELD_EFFECT_OT_MAX_DEPTH 0xFFF
@@ -3698,12 +3696,12 @@ static inline FieldSequenceBinding *field_get_object_binding(s32 object_index)
 s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32 flag, FieldObjectPart *part)
 {
     extern int abs(int);
-    MATRIX *mtx = (MATRIX *) 0x1F800000;
-    Vec2s *sxy = (Vec2s *) 0x1F800040;
+    MATRIX *mtx = (MATRIX *) SCRATCHPAD_ADDRESS;
+    Vec2s *sxy = (Vec2s *) SCRATCHPAD_AT(0x40);
     s32 item_count;
-    VECTOR *gte_out = (VECTOR *) 0x1F800044;
-    SVECTOR *dir = (SVECTOR *) 0x1F800054;
-    s16 *quad_bounds = (s16 *) 0x1F800064;
+    VECTOR *gte_out = (VECTOR *) SCRATCHPAD_AT(0x44);
+    SVECTOR *dir = (SVECTOR *) SCRATCHPAD_AT(0x54);
+    s16 *quad_bounds = (s16 *) SCRATCHPAD_AT(0x64);
     Vec2s *contact_quad;
     Vec2s *target_screen;
     FieldActorSlot *actor;
@@ -3755,8 +3753,8 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
     FieldObjectState *target_state;
 
     shadow_count = 0;
-    contact_quad = (Vec2s *) 0x1F800080;
-    target_screen = (Vec2s *) 0x1F800094;
+    contact_quad = (Vec2s *) SCRATCHPAD_AT(0x80);
+    target_screen = (Vec2s *) SCRATCHPAD_AT(0x94);
     slot = &g_field_object_states[rec->source_object_index];
     slot->collision.word = 0;
     if (flag == 0)
@@ -4699,12 +4697,12 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
  */
 s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32 flag, FieldObjectPart *part)
 {
-    MATRIX *mtx = (MATRIX *) 0x1F800000;
-    Vec2s *sxy = (Vec2s *) 0x1F800040;
+    MATRIX *mtx = (MATRIX *) SCRATCHPAD_ADDRESS;
+    Vec2s *sxy = (Vec2s *) SCRATCHPAD_AT(0x40);
     s32 frame_count;
-    VECTOR *gte_out = (VECTOR *) 0x1F800044;
-    SVECTOR *dir = (SVECTOR *) 0x1F800054;
-    s16 *corners = (s16 *) 0x1F800064;
+    VECTOR *gte_out = (VECTOR *) SCRATCHPAD_AT(0x44);
+    SVECTOR *dir = (SVECTOR *) SCRATCHPAD_AT(0x54);
+    s16 *corners = (s16 *) SCRATCHPAD_AT(0x64);
     Vec2s *contact_quad;
     Vec2s *target_screen;
     FieldActorSlot *actor;
@@ -4757,8 +4755,8 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
     FieldObjectState *target_state;
 
     shadow_count = 0;
-    contact_quad = (Vec2s *) 0x1F800080;
-    target_screen = (Vec2s *) 0x1F800094;
+    contact_quad = (Vec2s *) SCRATCHPAD_AT(0x80);
+    target_screen = (Vec2s *) SCRATCHPAD_AT(0x94);
     slot = &g_field_object_states[rec->source_object_index];
     actor = &g_field_actor_slots[rec->actor_index];
     slot->collision.word = 0;
@@ -5466,7 +5464,7 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
 #define FIELD_PART_ORIENTED_MARKER_SHIFT 3
 #define FIELD_GPU_ADDRESS_MASK 0x00FFFFFF
 #define FIELD_GPU_LENGTH_MASK 0xFF000000
-#define FIELD_RADIAL_SCRATCH ((FieldRadialScratch*)0x1F800000)
+#define FIELD_RADIAL_SCRATCH ((FieldRadialScratch*)SCRATCHPAD_ADDRESS)
 
 /**
  * @brief addPrim with the GPU address and length masks passed in, so callers can keep them in locals.
@@ -6674,9 +6672,9 @@ u8* field_render_effect_radial_lines(FieldMotionRecord* effect, u8* packet_curso
 #define FIELD_PART_SCALE_DISTANCE_BY_OWNER 0x01000000
 #define FIELD_PART_SCALE_Z_BY_OWNER 0x02000000
 #define FIELD_PART_SCALE_X_BY_OWNER 0x04000000
-#define FIELD_RIBBON_SCRATCH ((FieldRibbonScratch*)0x1F800000)
-#define FIELD_MATRIX_SCRATCH ((FieldMatrixScratch*)0x1F8000C0)
-#define FIELD_SPRITE_SCRATCH ((FieldSpriteScratch*)0x1F800100)
+#define FIELD_RIBBON_SCRATCH ((FieldRibbonScratch*)SCRATCHPAD_ADDRESS)
+#define FIELD_MATRIX_SCRATCH ((FieldMatrixScratch*)SCRATCHPAD_AT(0xC0))
+#define FIELD_SPRITE_SCRATCH ((FieldSpriteScratch*)SCRATCHPAD_AT(0x100))
 
 #define FIELD_TRACK_COUNT 16
 #define FIELD_EFFECT_TARGET_PITCH (ONE / 12)

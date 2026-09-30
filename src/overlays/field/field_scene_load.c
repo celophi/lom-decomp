@@ -17,9 +17,9 @@
 /** @brief Maps below this id are read with a blocking queued read instead of a stream. */
 #define FIELD_MAP_QUEUED_READ_LIMIT 15
 /** @brief Where MOVIE.BIN is streamed to. */
-#define FIELD_MOVIE_LOAD_ADDRESS ((u8*)0x80140000)
+#define FIELD_MOVIE_LOAD_ADDRESS ((u8*)SECONDARY_OVERLAY_ADDRESS)
 /** @brief Where a field map resource is read to. */
-#define FIELD_MAP_LOAD_ADDRESS ((u8*)0x80180000)
+#define FIELD_MAP_LOAD_ADDRESS ((u8*)LOAD_BUFFER_ADDRESS)
 /** @brief First ordering-table entry the scene draws into; the entries in front of it belong to the text windows. */
 #define FIELD_SCENE_OT_OFFSET 16
 /** @brief Bytes reserved for the text configuration save area. */
@@ -68,7 +68,7 @@ typedef struct
     u8 audio_enabled;
 } FieldCdSystem;
 
-#define FIELD_CD_SYSTEM ((FieldCdSystem*)0x801ED800)
+#define FIELD_CD_SYSTEM ((FieldCdSystem*)CD_SYSTEM_ADDRESS)
 
 extern u8 g_cd_audio_enabled;
 /** @brief SCENE_STATE->map_id as a plain global. */

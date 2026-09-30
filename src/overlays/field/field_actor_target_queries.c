@@ -12,9 +12,9 @@
 #include "sdk/gte_dmpsx_compat.h"
 
 /** @brief Scratchpad vector holding the scaled actor delta. */
-#define FIELD_TARGET_DELTA ((VECTOR*)0x1F800000)
+#define FIELD_TARGET_DELTA ((VECTOR*)SCRATCHPAD_ADDRESS)
 /** @brief Scratchpad vector receiving the squared delta components. */
-#define FIELD_TARGET_SQUARE ((VECTOR*)0x1F800010)
+#define FIELD_TARGET_SQUARE ((VECTOR*)SCRATCHPAD_AT(0x10))
 
 /** @brief Inner radius of the ring predicate, in whole units. */
 #define FIELD_TARGET_RING_INNER 64

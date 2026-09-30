@@ -80,7 +80,7 @@
 #define FIELD_TILE_REC_SHARED_TPAGE 2
 
 /* Scratchpad table containing complete RGB/primitive-code words. */
-#define FIELD_TILE_COLOR_WORDS ((s32*)0x1F800000)
+#define FIELD_TILE_COLOR_WORDS ((s32*)SCRATCHPAD_ADDRESS)
 
 /**
  * @brief Packed 4-byte per-tile source descriptor consumed by field_build_sprite_tile_record.
@@ -1046,10 +1046,10 @@ typedef struct
 } FieldResource;
 
 /** The scene resource block; the scene's runtime records follow it. */
-#define FIELD_RESOURCE ((FieldResource*)0x80180000)
+#define FIELD_RESOURCE ((FieldResource*)LOAD_BUFFER_ADDRESS)
 
 /** Field allocator state block. */
-#define FIELD_MEM_STATE ((FieldMemState*)0x801ED000)
+#define FIELD_MEM_STATE ((FieldMemState*)FIELD_WORKSPACE_ADDRESS)
 
 /**
  * @brief Field memory-allocator state block at 0x801ED000.

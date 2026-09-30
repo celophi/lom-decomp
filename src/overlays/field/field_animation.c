@@ -30,9 +30,9 @@
 #define FIELD_MOVIE_STREAM_RESOURCE(def) ((def)->head.b.unk1 * 2 + FIELD_MOVIE_RESOURCE_FIRST)
 #define FIELD_MOVIE_STILL_RESOURCE(def) ((def)->head.b.unk1 * 2 + (FIELD_MOVIE_RESOURCE_FIRST + 1))
 /** MOVIE.BIN is streamed here and started in place; the still image reuses the buffer. */
-#define FIELD_MOVIE_BUFFER ((void*)0x80140000)
+#define FIELD_MOVIE_BUFFER ((void*)SECONDARY_OVERLAY_ADDRESS)
 /** Pixels of a full-screen still image, after its size word. */
-#define FIELD_MOVIE_STILL_PIXELS ((u_long*)0x80140004)
+#define FIELD_MOVIE_STILL_PIXELS ((u_long*)SECONDARY_OVERLAY_AT(0x4))
 /** movie_init frame count of a full-screen movie. */
 #define FIELD_MOVIE_FULL_SCREEN_FRAMES 302
 
@@ -52,8 +52,6 @@ enum
     FIELD_MOVIE_END_STILL_SHOWN = 4   /**< the still image has been uploaded */
 };
 
-/** Base of the CD system block of the main executable (CdSystem). */
-#define FIELD_CD_SYSTEM_ADDRESS 0x801ED800U
 /** CdSystem status flag that blocks new queue commands (CD_STATUS_QUEUE_LOCK). */
 #define FIELD_CD_STATUS_QUEUE_LOCK 0x40
 
@@ -63,7 +61,7 @@ typedef struct
     u32 word;
 } FieldCdStatus;
 
-#define FIELD_CD_STATUS ((FieldCdStatus*)FIELD_CD_SYSTEM_ADDRESS)
+#define FIELD_CD_STATUS ((FieldCdStatus*)CD_SYSTEM_ADDRESS)
 
 /** FieldTweenKey::visibility bit copied to the target's visibility. */
 #define FIELD_TWEEN_VISIBLE_SHIFT 15

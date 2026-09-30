@@ -85,7 +85,7 @@
 #define FIELD_HUD_DELTA_OT_INDEX 2
 
 /** @brief Scratchpad word holding the screen position passed to the portrait and percentage emitters. */
-#define FIELD_HUD_SCRATCH_POSITION ((Vec2s*)0x1F800000)
+#define FIELD_HUD_SCRATCH_POSITION ((Vec2s*)SCRATCHPAD_ADDRESS)
 
 /** @brief Texture page coordinates packed as a u0/v0 halfword. */
 #define FIELD_HUD_UV(u, v) (((v) << 8) | (u))
@@ -272,8 +272,8 @@ typedef struct
     s32 z;
 } ShadowWorldPosition;
 
-#define SHADOW_SCREEN_POSITION ((ShadowScreenPosition*)0x1F8000C0)
-#define SHADOW_WORLD_POSITION ((ShadowWorldPosition*)0x1F8000C4)
+#define SHADOW_SCREEN_POSITION ((ShadowScreenPosition*)SCRATCHPAD_AT(0xC0))
+#define SHADOW_WORLD_POSITION ((ShadowWorldPosition*)SCRATCHPAD_AT(0xC4))
 #define SHADOW_OT_SIZE 4096
 #define SHADOW_DEPTH_SHIFT 7
 

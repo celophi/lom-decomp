@@ -31,7 +31,7 @@ typedef struct
     u8* primitive_buffers[2];
 } FieldWorkspace;
 
-#define FIELD_WORKSPACE ((FieldWorkspace*)0x801ED000)
+#define FIELD_WORKSPACE ((FieldWorkspace*)FIELD_WORKSPACE_ADDRESS)
 
 extern void field_set_fade_target(s16, s16, s16, s16);
 

@@ -35,7 +35,7 @@ typedef struct
 } FieldStatePage;
 
 /** @brief Fixed address of the data page that holds g_field_object_states. */
-#define FIELD_STATE_PAGE ((FieldStatePage*)0x80100000)
+#define FIELD_STATE_PAGE ((FieldStatePage*)PRIMARY_OVERLAY_UPPER_ADDRESS)
 
 extern s32 g_field_active_group;
 extern s32 g_field_text_session_active;

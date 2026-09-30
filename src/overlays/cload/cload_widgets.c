@@ -5,7 +5,7 @@
 #define CLOAD_ICON_SET_RESOURCE 0x5E4
 
 /** @brief Fixed scratch buffer the icon set is read into. */
-#define CLOAD_ICON_SET_BUFFER ((CloadIconSetHeader *)0x80180000)
+#define CLOAD_ICON_SET_BUFFER ((CloadIconSetHeader *)LOAD_BUFFER_ADDRESS)
 
 /** @brief Header of the save-icon set resource; all offsets are bytes from its start. */
 typedef struct

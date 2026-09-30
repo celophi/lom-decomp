@@ -28,7 +28,7 @@
 /** @brief Scene resource selector bits holding the scene id. */
 #define FIELD_SCENE_ID_MASK 0x7FFF
 /** @brief Where a scene file is read to. */
-#define FIELD_SCENE_FILE ((u8*)0x80190000)
+#define FIELD_SCENE_FILE ((u8*)LOAD_BUFFER_AT(0x10000))
 /** @brief Map word of a scene: map id, and in bit 15 the timer mode for field_initialize_actor_parts. */
 #define FIELD_SCENE_MAP_ID_MASK 0x7FFF
 #define FIELD_SCENE_PARTS_TIMER_SHIFT 15
@@ -112,7 +112,7 @@
 #define FIELD_MAP_Z_LIMIT(bounds) ((s16)(bounds)->depth << (FIELD_POSITION_SHIFT + 1))
 
 /** @brief Scratchpad copy of the mover used by the collision code. */
-#define FIELD_COLLISION_MOVER ((struct FieldCollisionMover*)0x1F800000)
+#define FIELD_COLLISION_MOVER ((struct FieldCollisionMover*)SCRATCHPAD_ADDRESS)
 
 /** @brief Address @p p rounded up to a word boundary, as an integer. */
 #define FIELD_ALIGN4(p) (((s32)(p) + 3) & ~3)

@@ -59,7 +59,7 @@ typedef struct
 
 /* Merged-controller register block lives at a fixed RAM address.
  * Token-equivalent to the cast so codegen is unchanged. */
-#define SCD_REGS ((SCDRegs*)0x801ED600)
+#define SCD_REGS ((SCDRegs*)CONTROLLER_STATE_ADDRESS)
 
 /** @brief First byte of SCD_REGS (device_type), addressed as its own symbol by some overlays. */
 extern u8 g_controller_device_type;

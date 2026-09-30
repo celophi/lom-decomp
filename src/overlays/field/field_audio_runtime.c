@@ -36,14 +36,10 @@ s32 akao_reset_xfer_state(void);
 s32 akao_load_bank_slot(void *bank, s32 slot, s32 wait_for_completion);
 s32 akao_load_upper_bank_slot(void *bank, s32 slot, s32 wait_for_completion);
 
-/** @brief Scratch buffer the CD layer loads song containers into. */
-#define FIELD_AUDIO_LOAD_BUFFER 0x80180000
 
-/** @brief Section offset table of the container in FIELD_AUDIO_LOAD_BUFFER. */
-#define FIELD_AUDIO_LOAD_OFFSETS 0x80180004
+/** @brief Section offset table of the container in LOAD_BUFFER_ADDRESS. */
+#define FIELD_AUDIO_LOAD_OFFSETS LOAD_BUFFER_AT(0x4)
 
-/** @brief Resident address of the registered AKAO instrument bank. */
-#define FIELD_INSTRUMENT_BANK_ADDRESS 0x8013C000
 
 /** @brief Largest music-file index field_load_song accepts. */
 #define FIELD_SONG_INDEX_MAX 256
@@ -88,14 +84,14 @@ s32 akao_load_upper_bank_slot(void *bank, s32 slot, s32 wait_for_completion);
 #define FIELD_STREAM_SECTOR_SIZE 0x800
 
 /** @brief The two alternating sector buffers of the music stream. */
-#define FIELD_STREAM_SECTOR_BUFFER 0x801DC000
-#define FIELD_STREAM_SECTOR_BUFFER_UPPER 0x801DC800
+#define FIELD_STREAM_SECTOR_BUFFER CD_STREAM_BUFFER_ADDRESS
+#define FIELD_STREAM_SECTOR_BUFFER_UPPER CD_STREAM_BUFFER_AT(0x800)
 
 /** @brief Staging buffer for the streamed instrument bank data. */
-#define FIELD_STREAM_BANK_BUFFER 0x801DD000
+#define FIELD_STREAM_BANK_BUFFER CD_STREAM_BUFFER_AT(0x1000)
 
 /** @brief Bank data past this point is moved back to the buffer start after an upload tick. */
-#define FIELD_STREAM_BANK_OVERFLOW 0x801DD800
+#define FIELD_STREAM_BANK_OVERFLOW CD_STREAM_BUFFER_AT(0x1800)
 
 /** @brief Number of saved ring selections cleared by field_reset_ring_selections. */
 #define FIELD_RING_SELECTION_COUNT 30
@@ -200,11 +196,11 @@ void field_restore_entry_music(void)
         (g_previous_game_state != FIELD_AUDIO_BANK_RESIDENT_STATE) && (g_previous_game_state != GAME_STATE_MENU_LOAD) &&
         (g_previous_game_state != GAME_STATE_WORLD_SELECT))
     {
-        g_field_instrument_bank = (AkaoHeader *)FIELD_INSTRUMENT_BANK_ADDRESS;
-        cdrom_queue_read(CD_RES_SOUND_EFFECT_SET, (void *)FIELD_AUDIO_LOAD_BUFFER);
+        g_field_instrument_bank = (AkaoHeader *)SOUND_BANK_ADDRESS;
+        cdrom_queue_read(CD_RES_SOUND_EFFECT_SET, (void *)LOAD_BUFFER_ADDRESS);
         cdrom_wait_queue_empty();
 
-        container = (AkaoContainerHeader *)FIELD_AUDIO_LOAD_BUFFER;
+        container = (AkaoContainerHeader *)LOAD_BUFFER_ADDRESS;
         off = container->section_offsets;
         bcopy(AKAO_CONTAINER_DATA_AT(container, off[0]), (u8 *)g_field_instrument_bank, (s32)(off[1] - off[0]));
         akao_register_bank(g_field_instrument_bank);
@@ -220,8 +216,8 @@ void field_restore_entry_music(void)
 s32 field_load_instrument_bank(s32 bank_index)
 {
     akao_release_all_sfx();
-    g_field_instrument_bank = (AkaoHeader *)FIELD_INSTRUMENT_BANK_ADDRESS;
-    cdrom_queue_read((bank_index + FIELD_INSTRUMENT_BANK_RESOURCE_BASE) & 0xFFFF, (void *)FIELD_INSTRUMENT_BANK_ADDRESS);
+    g_field_instrument_bank = (AkaoHeader *)SOUND_BANK_ADDRESS;
+    cdrom_queue_read((bank_index + FIELD_INSTRUMENT_BANK_RESOURCE_BASE) & 0xFFFF, (void *)SOUND_BANK_ADDRESS);
     cdrom_wait_queue_empty();
     return akao_register_bank(g_field_instrument_bank);
 }
@@ -231,9 +227,9 @@ s32 field_load_instrument_bank(s32 bank_index)
  */
 void field_upload_resource_22_bank(void)
 {
-    cdrom_queue_read(FIELD_UPLOAD_BANK_RESOURCE, (void *)FIELD_AUDIO_LOAD_BUFFER);
+    cdrom_queue_read(FIELD_UPLOAD_BANK_RESOURCE, (void *)LOAD_BUFFER_ADDRESS);
     cdrom_wait_queue_empty();
-    akao_upload_bank_blocking((AkaoBankHeader *)FIELD_AUDIO_LOAD_BUFFER, 1);
+    akao_upload_bank_blocking((AkaoBankHeader *)LOAD_BUFFER_ADDRESS, 1);
 }
 
 /**
@@ -251,13 +247,13 @@ void field_load_song(s32 music_index, s32 second_song)
 
     if (music_index < FIELD_SONG_INDEX_MAX + 1)
     {
-        cdrom_queue_read(CD_RES_MUSIC_FILE(music_index), (void *)FIELD_AUDIO_LOAD_BUFFER);
+        cdrom_queue_read(CD_RES_MUSIC_FILE(music_index), (void *)LOAD_BUFFER_ADDRESS);
         cdrom_wait_queue_empty();
 
         off = (u32 *)FIELD_AUDIO_LOAD_OFFSETS;
 
         count = off[1] - off[0];
-        src = (u8 *)(off[0] + FIELD_AUDIO_LOAD_BUFFER);
+        src = (u8 *)(off[0] + LOAD_BUFFER_ADDRESS);
 
         if (second_song != 0)
         {
@@ -268,7 +264,7 @@ void field_load_song(s32 music_index, s32 second_song)
             bcopy(src, D_8003ECA0, count);
         }
 
-        akao_upload_bank_blocking((AkaoBankHeader *)(off[1] + FIELD_AUDIO_LOAD_BUFFER), 1);
+        akao_upload_bank_blocking((AkaoBankHeader *)(off[1] + LOAD_BUFFER_ADDRESS), 1);
     }
 }
 
@@ -283,16 +279,16 @@ void field_load_fixed_song(void)
     u32 *off_end;
     u32 count;
 
-    cdrom_queue_read(FIELD_FIXED_SONG_RESOURCE, (void *)FIELD_AUDIO_LOAD_BUFFER);
+    cdrom_queue_read(FIELD_FIXED_SONG_RESOURCE, (void *)LOAD_BUFFER_ADDRESS);
     cdrom_wait_queue_empty();
 
     dst = D_8003ECA0;
-    count = FIELD_AUDIO_LOAD_BUFFER;
+    count = LOAD_BUFFER_ADDRESS;
     count = *(u32 *)count;
     off_end = (u32 *)FIELD_AUDIO_LOAD_OFFSETS + count;
 
-    bcopy((u8 *)FIELD_AUDIO_LOAD_BUFFER, dst, off_end[-1]);
-    akao_upload_bank_blocking((AkaoBankHeader *)(off_end[-1] + FIELD_AUDIO_LOAD_BUFFER), 1);
+    bcopy((u8 *)LOAD_BUFFER_ADDRESS, dst, off_end[-1]);
+    akao_upload_bank_blocking((AkaoBankHeader *)(off_end[-1] + LOAD_BUFFER_ADDRESS), 1);
 }
 
 /**

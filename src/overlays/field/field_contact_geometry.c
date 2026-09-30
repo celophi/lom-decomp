@@ -111,14 +111,13 @@
 /** @brief Scale of the depth distance tested against an effect hit radius. */
 #define FIELD_PROJECTED_DEPTH_SCALE 384
 
-#define FIELD_MAP_BOUNDS_ADDRESS 0x801ED400
-#define FIELD_MOVE_REQUEST_ADDRESS 0x1F800010
-#define FIELD_MOVE_QUERY_ADDRESS 0x1F800080
-#define FIELD_ATTACK_SPHERE_0_ADDRESS 0x1F8000A0
-#define FIELD_ATTACK_SPHERE_1_ADDRESS 0x1F8000B0
-#define FIELD_ATTACK_SPHERE_2_ADDRESS 0x1F8000C0
-#define FIELD_GTE_DELTA_ADDRESS 0x1F800080
-#define FIELD_GTE_SQUARE_ADDRESS 0x1F800090
+#define FIELD_MOVE_REQUEST_ADDRESS SCRATCHPAD_AT(0x10)
+#define FIELD_MOVE_QUERY_ADDRESS SCRATCHPAD_AT(0x80)
+#define FIELD_ATTACK_SPHERE_0_ADDRESS SCRATCHPAD_AT(0xA0)
+#define FIELD_ATTACK_SPHERE_1_ADDRESS SCRATCHPAD_AT(0xB0)
+#define FIELD_ATTACK_SPHERE_2_ADDRESS SCRATCHPAD_AT(0xC0)
+#define FIELD_GTE_DELTA_ADDRESS SCRATCHPAD_AT(0x80)
+#define FIELD_GTE_SQUARE_ADDRESS SCRATCHPAD_AT(0x90)
 
 /** @brief View of g_field_object_parts (FieldObjectPart in field_actor_tables.h, which this file cannot include). */
 typedef struct
@@ -783,7 +782,7 @@ s32 field_resolve_actor_movement(FieldActor* actor, s32* position, s32 mode)
 {
     Vec3i delta;
     s32 hit;
-    FieldMoveBounds* bounds = (FieldMoveBounds*)FIELD_MAP_BOUNDS_ADDRESS;
+    FieldMoveBounds* bounds = (FieldMoveBounds*)MAP_BOUNDS_ADDRESS;
     struct FieldCollisionMover* mover = (struct FieldCollisionMover*)FIELD_MOVE_REQUEST_ADDRESS;
     FieldCollisionQuery* query = (FieldCollisionQuery*)FIELD_MOVE_QUERY_ADDRESS;
     s32 requested_x;

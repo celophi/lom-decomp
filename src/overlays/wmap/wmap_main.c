@@ -42,7 +42,7 @@
 #define WMAP_PIXEL_MASK_BIT 0x8000
 
 /** @brief Scratchpad word holding the world-map caller's saved stack pointer. */
-#define WMAP_SCRATCH_STACK_SAVE_SLOT 0x1F8003F0
+#define WMAP_SCRATCH_STACK_SAVE_SLOT SCRATCHPAD_AT(0x3F0)
 
 /** @brief Backdrop color: three channels. */
 typedef struct

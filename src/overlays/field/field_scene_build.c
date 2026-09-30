@@ -196,7 +196,7 @@ typedef struct
 } FieldColStep;
 
 /** Scratchpad table of FieldColStep entries. */
-#define FIELD_ROT_COL_STEPS ((FieldColStep*)0x1F800000)
+#define FIELD_ROT_COL_STEPS ((FieldColStep*)SCRATCHPAD_ADDRESS)
 
 /**
  * @brief A screen point in one of the rotated emitter's row buffers.
@@ -216,8 +216,8 @@ typedef union
 } FieldPoint;
 
 /** The two scratchpad row buffers of rotated FieldPoint corners. */
-#define FIELD_ROT_ROW_A ((FieldPoint*)0x1F800200)
-#define FIELD_ROT_ROW_B ((FieldPoint*)0x1F800300)
+#define FIELD_ROT_ROW_A ((FieldPoint*)SCRATCHPAD_AT(0x200))
+#define FIELD_ROT_ROW_B ((FieldPoint*)SCRATCHPAD_AT(0x300))
 
 /**
  * @brief Generic view of a scene list element: every list links through offset 0.

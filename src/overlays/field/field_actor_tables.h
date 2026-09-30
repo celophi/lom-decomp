@@ -72,7 +72,7 @@ typedef struct
 } FieldMapBounds;
 
 /** @brief Fixed address of the field map header block. */
-#define FIELD_MAP_BOUNDS ((FieldMapBounds*)0x801ED400)
+#define FIELD_MAP_BOUNDS ((FieldMapBounds*)MAP_BOUNDS_ADDRESS)
 
 
 

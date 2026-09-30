@@ -104,7 +104,7 @@ extern SfxTableBuffer g_sfx_table_buffer;
 #define AKAO_PAN_CENTER 0x80
 
 /** RAM staging buffer used to load an SFX resource from CD. */
-#define GOVER_SFX_LOAD_BUFFER ((u8*)0x80180000)
+#define GOVER_SFX_LOAD_BUFFER ((u8*)LOAD_BUFFER_ADDRESS)
 
 /** Offset from the SFX table-buffer header to its copied table data. */
 #define GOVER_SFX_TABLE_DATA_OFFSET 0xC
@@ -125,7 +125,7 @@ extern SfxTableBuffer g_sfx_table_buffer;
 #define GOVER_DISMISS_BUTTON_MASK (PAD_BTN_CROSS | PAD_BTN_CIRCLE | PAD_BTN_L3)
 
 /** Locates the first nested offset table within the staged resource. */
-#define GOVER_SFX_TABLE_OFFSET (*(u32*)0x80180004)
+#define GOVER_SFX_TABLE_OFFSET (*(u32*)LOAD_BUFFER_AT(0x4))
 
 s32 D_80140704;
 

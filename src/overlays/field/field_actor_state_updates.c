@@ -19,7 +19,7 @@
 #include "field_actor_records.h"
 
 /** @brief Scratchpad vector that receives an actor displacement. */
-#define FIELD_SCRATCH_DISPLACEMENT ((Vec3i*)0x1F800000)
+#define FIELD_SCRATCH_DISPLACEMENT ((Vec3i*)SCRATCHPAD_ADDRESS)
 
 /** @brief Per-player metadata; the kind byte also selects the bank of sequence rows. */
 typedef struct
@@ -114,7 +114,7 @@ void field_update_actor_movement_animation(FieldActor* actor, s32 delta_x, s32 d
 #define FIELD_STEP_OFFSET(actor)                                                                                                                              \
     (((actor)->height + ((s8)(actor)->next_height - (actor)->height) * (actor)->frame_ticks / (actor)->frame_length) << 8)
 
-#define FIELD_SEQUENCE_DISPLACEMENT_SCRATCH 0x1F800000
+#define FIELD_SEQUENCE_DISPLACEMENT_SCRATCH SCRATCHPAD_ADDRESS
 #define FIELD_SEQUENCE_BINDING_COUNT 3
 #define FIELD_SEQUENCE_SHARED_BINDING (FIELD_SEQUENCE_BINDING_COUNT - 1)
 #define FIELD_SEQUENCE_ACTOR_LIMIT 80
@@ -948,8 +948,8 @@ void field_update_timed_slide(FieldActor* actor, s32 x, s32 z)
  */
 void field_follow_leader(FieldActor* actor)
 {
-    VECTOR* delta = (VECTOR*)0x1F800010;
-    VECTOR* squares = (VECTOR*)0x1F800000;
+    VECTOR* delta = (VECTOR*)SCRATCHPAD_AT(0x10);
+    VECTOR* squares = (VECTOR*)SCRATCHPAD_ADDRESS;
     FieldObjectState* states;
     FieldObjectState* state;
     s32 distance;
@@ -1172,8 +1172,8 @@ typedef struct
  */
 void field_update_timed_walk(FieldActor* actor, s32 dx, s32 dz)
 {
-    FieldActorCollisionBounds* bounds = (FieldActorCollisionBounds*)0x801ED400;
-    FieldActorCollisionMover* mover = (FieldActorCollisionMover*)0x1F800000;
+    FieldActorCollisionBounds* bounds = (FieldActorCollisionBounds*)MAP_BOUNDS_ADDRESS;
+    FieldActorCollisionMover* mover = (FieldActorCollisionMover*)SCRATCHPAD_ADDRESS;
     s32 x, z;
     u8 speed;
 
