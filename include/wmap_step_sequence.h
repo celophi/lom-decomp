@@ -244,6 +244,64 @@
         next();                                                                                                                                                \
     }
 
+#define WMAP_DROP_MIN_Z 10000
+#define WMAP_DROP_OT_INDEX 4
+#define WMAP_DROP_TPAGE 0x35
+#define WMAP_DROP_CLUT 0x7800
+#define WMAP_DROP_BLEND_MODE 1
+
+/**
+ * @brief Define a model drop update: move along Z, draw, fade and count down.
+ * @param name Step function name.
+ * @param step The sequence's step global.
+ * @param timer Frames left before advancing the step.
+ * @param rotation The model's rotation.
+ * @param position The model's position, clamped to WMAP_DROP_MIN_Z.
+ * @param shade The model's shade global, clamped to zero after drawing.
+ * @param resource Resource table containing the model at index zero.
+ * @param z_delta Signed Z movement per frame; effect 07 also uses a positive value.
+ * @param shade_step Amount subtracted from the shade each frame.
+ * @note The timer keeps running after the model has faded out.
+ */
+#define WMAP_STEP_DROP_UPDATE(name, step, timer, rotation, position, shade, resource,\
+                              z_delta, shade_step)                                  \
+    void name(void)                                                                 \
+    {                                                                               \
+        MATRIX transform;                                                           \
+        s32 depth;                                                                  \
+                                                                                    \
+        depth = (position).vz + (z_delta);                                          \
+        (position).vz = depth;                                                      \
+        if (depth < WMAP_DROP_MIN_Z)                                                \
+        {                                                                           \
+            (position).vz = WMAP_DROP_MIN_Z;                                        \
+        }                                                                           \
+                                                                                    \
+        PushMatrix();                                                               \
+        RotMatrix(&(rotation), &transform);                                         \
+        TransMatrix(&transform, &g_wmap_zero_translation);                          \
+        SetRotMatrix(&transform);                                                   \
+        SetTransMatrix(&transform);                                                 \
+                                                                                    \
+        if ((shade) != 0)                                                           \
+        {                                                                           \
+            wmap_draw_model_default((resource), 0, WMAP_DROP_OT_INDEX,              \
+                                    WMAP_DROP_TPAGE, WMAP_DROP_CLUT,                \
+                                    WMAP_DROP_BLEND_MODE, (shade));                 \
+            (shade) -= (shade_step);                                                \
+            if ((shade) < 0)                                                        \
+            {                                                                       \
+                (shade) = 0;                                                        \
+            }                                                                       \
+        }                                                                           \
+                                                                                    \
+        PopMatrix();                                                                \
+        if (--(timer) == 0)                                                         \
+        {                                                                           \
+            (step) += 1;                                                            \
+        }                                                                           \
+    }
+
 /**
  * @brief Define a timeline's last step: clear g_wmap_sequence_busy, mark the focus cell and end.
  * @param name Step function name.

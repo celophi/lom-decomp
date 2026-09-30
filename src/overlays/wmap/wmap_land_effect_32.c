@@ -386,43 +386,11 @@ void wmap_land_effect_32_sequence_5_step_04(void)
     }
 }
 
-/**
- * @brief Advance a world-map model's spin, draw it while active, then countdown-advance the step.
- */
-void wmap_land_effect_32_sequence_6_step_02(void)
-{
-    MATRIX m;
-    s32 x;
-
-    x = g_wmap_effect_model_c_position.vz - 0xDAC;
-    g_wmap_effect_model_c_position.vz = x;
-    if (x < 0x2710)
-    {
-        g_wmap_effect_model_c_position.vz = 0x2710;
-    }
-
-    PushMatrix();
-    RotMatrix(&g_wmap_effect_model_c_rotation, &m);
-    TransMatrix(&m, &g_wmap_zero_translation);
-    SetRotMatrix(&m);
-    SetTransMatrix(&m);
-
-    if (g_wmap_effect_fade_c != 0)
-    {
-        wmap_draw_model_default((s32)g_wmap_load_buffer, 0, 0x4, 0x35, 0x7800, 0x1, g_wmap_effect_fade_c);
-        g_wmap_effect_fade_c -= 0x5;
-        if (g_wmap_effect_fade_c < 0)
-        {
-            g_wmap_effect_fade_c = 0;
-        }
-    }
-
-    PopMatrix();
-    if (--g_wmap_land_effect_32_sequence_6_timer == 0)
-    {
-        g_wmap_land_effect_32_sequence_6_step += 1;
-    }
-}
+/** @brief Move the model closer and fade it until the timer expires. */
+WMAP_STEP_DROP_UPDATE(wmap_land_effect_32_sequence_6_step_02,
+    g_wmap_land_effect_32_sequence_6_step, g_wmap_land_effect_32_sequence_6_timer,
+    g_wmap_effect_model_c_rotation, g_wmap_effect_model_c_position,
+    g_wmap_effect_fade_c, g_wmap_load_buffer, -3500, 5)
 
 /** @brief Draw and fade the transformed effect, then advance its countdown. */
 void wmap_land_effect_32_sequence_7_step_02(void)
