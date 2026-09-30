@@ -86,6 +86,10 @@ def load_assembled(repo: pathlib.Path, obj: str, asm: str, symbols: SymbolTable)
     # links against those.
     labels = [s for s in elf.symbols
               if s.section == index and s.name and s.kind != STT_SECTION and not s.name.endswith(MARKER)]
+    generated = [s.name for s in labels if s.name.startswith(("d2c_gap_", "d2c_cluster_"))]
+    if generated:
+        raise SystemExit(f"{obj}: built from data2c's own output (DATA_AS_C=1, e.g. {generated[0]}); "
+                         "rebuild it from the assembly with a normal make")
     start = region_start(repo, asm, labels, symbols)
 
     # The object's own labels are authoritative for names inside the region.

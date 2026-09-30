@@ -159,12 +159,26 @@ verify-bins: verify-main $(foreach name,$(VERIFIED_OVERLAYS) $(RAW_VERIFIED_OVER
 
 # Check that the binaries still match when every .data region comes from
 # generated C (DATA_AS_C=1). The data objects are removed before and after, so
-# neither this build nor the normal one reuses the other's objects.
+# neither this build nor the normal one reuses the other's objects. That
+# includes the copies the overlay targets make in the project's own build
+# directory, and the generated data C (datac/), which holds game data.
+DATA_AS_C_LEFTOVERS = find $(STAGING)/$(BUILD_DIR) $(BUILD_DIR) -path '*/data/*.o' -delete 2>/dev/null; \
+	find $(STAGING)/$(BUILD_DIR) $(BUILD_DIR) -type d -name datac -prune -exec rm -rf {} + 2>/dev/null; true
+
+# Check the host build of the data (data2c --host): every .data region's
+# generated C, compiled for x86-64 and read back through the decomp's own
+# types, holds the PS1 values field by field. The overlays are built first so
+# their data objects exist; the generated C (game data) is removed afterwards.
+.PHONY: verify-data-host
+verify-data-host: all $(OVERLAYS)
+	python3 tools/data2c/report_all.py --version $(VERSION) --host --verify --strict --out $(BUILD_DIR)/data-host
+	find $(BUILD_DIR)/data-host \( -name '*.c' -o -name '*.o' \) -delete
+
 .PHONY: verify-data-as-c
 verify-data-as-c:
-	find $(STAGING)/$(BUILD_DIR) -path '*/data/*.o' -delete
+	$(DATA_AS_C_LEFTOVERS)
 	$(MAKE) DATA_AS_C=1 verify-bins
-	find $(STAGING)/$(BUILD_DIR) -path '*/data/*.o' -delete
+	$(DATA_AS_C_LEFTOVERS)
 
 # Check the compressor itself against all 17 original overlays, without needing
 # a build. Run this after any change to tools/compressor/compressor.py.

@@ -3,7 +3,8 @@
 
 Each case declares a type in a scratch C file, pairs it with bytes and
 symbols, generates C, and checks the C round-trips through verify.py (Clang
-for mipsel). The GCC 2.8 side is covered by `make verify-data-as-c`.
+for mipsel). The GCC 2.8 side is covered by `make verify-data-as-c`. Host
+output (--host) is checked field by field with hostcheck.py (the host cc).
 
 Run: python3 -m unittest discover -s tools/data2c/tests
 Needs clang and the libclang Python bindings.
@@ -23,6 +24,7 @@ import unittest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 from declarations import Declarations, clang_args  # noqa: E402
+from hostcheck import hostcheck  # noqa: E402
 from region import DataRegion, load_assembled, load_databin  # noqa: E402
 from report import Report  # noqa: E402
 from symbols import SymbolTable  # noqa: E402
@@ -30,6 +32,7 @@ from verify import verify  # noqa: E402
 from writer import RegionWriter  # noqa: E402
 
 HAVE_CLANG = shutil.which("clang") is not None
+HAVE_CC = shutil.which("cc") is not None
 BASE = 0x80100000
 TYPES = ("typedef signed char s8; typedef unsigned char u8; typedef short s16; typedef unsigned short u16;\n"
          "typedef int s32; typedef unsigned int u32;\n")
@@ -43,7 +46,7 @@ class Case:
     """One generated region: its C text, report and round-trip result."""
 
     def __init__(self, c_decls: str, data: bytes, names: dict, relocations: dict | None = None,
-                 functions=(), start: int = BASE):
+                 functions=(), start: int = BASE, host: bool = False):
         self.tmp = tempfile.TemporaryDirectory()
         tmp = pathlib.Path(self.tmp.name)
         src = tmp / "decls.c"
@@ -65,9 +68,20 @@ class Case:
         decls = Declarations([src], wanted, clang_args("us", []))
         self.symbols.add_function_names(decls.function_names)
         self.report = Report("test")
-        self.text = RegionWriter(self.region, self.symbols, decls, self.report).generate()
+        self.writer = RegionWriter(self.region, self.symbols, decls, self.report, host=host)
+        self.text = self.writer.generate()
+        self.src = src
         self.out = tmp / "out.c"
         self.out.write_text(self.text)
+
+    def host_matches(self, text: str | None = None) -> bool:
+        """hostcheck.py on the host output, or on `text` in its place."""
+        if text is not None:
+            self.out.write_text(text)
+        with contextlib.redirect_stdout(io.StringIO()) as log:
+            ok = hostcheck(self.out, self.region, self.symbols, self.writer, [self.src], "us", [])
+        self.log = log.getvalue()
+        return ok
 
     def round_trips(self) -> bool:
         with contextlib.redirect_stdout(io.StringIO()) as log:
@@ -160,6 +174,59 @@ class GenerationTests(unittest.TestCase):
         self.addCleanup(first.close)
         self.addCleanup(second.close)
         self.assertEqual(first.text, second.text)
+
+
+@unittest.skipUnless(HAVE_CC, "needs a host cc")
+class HostOutputTests(unittest.TestCase):
+    """--host output: laid out by the host compiler, checked value by value."""
+
+    DECLS = ("typedef struct { s32 a; void *p; long l; union { u8 small; s32 big; } u; u32 bits : 5; } T;\n"
+             "extern T g_t[2]; extern s32 g_target;")
+
+    def host_case(self) -> Case:
+        # Two 20-byte PS1 records; on a 64-bit host each grows (pointer and long are 8 bytes).
+        data = words(1, 0, -2, 0x12345, 17) + words(3, 0, 4, 0x6789A, 30) + words(99)
+        case = Case(self.DECLS, data, {"g_t": BASE, "g_target": BASE + 40},
+                    relocations={BASE + 4: ("g_target", 0), BASE + 24: ("g_t", 0)}, host=True)
+        self.addCleanup(case.close)
+        return case
+
+    def test_host_output_matches_field_by_field(self):
+        case = self.host_case()
+        self.assertTrue(case.host_matches(), case.log + case.text)
+        self.assertIn("HOSTCHECK: 2 symbols", case.log)
+
+    def test_long_stays_long_and_padding_is_the_hosts(self):
+        case = self.host_case()
+        self.assertIn(" long l;", case.text)
+        self.assertNotIn("d2c_pad_", case.text)
+
+    def test_changed_value_is_caught(self):
+        case = self.host_case()
+        self.assertIn("0x12345", case.text)
+        self.assertFalse(case.host_matches(case.text.replace("0x12345", "0x12346", 1)))
+        self.assertIn("differ", case.log)
+
+    def test_layout_that_differs_from_the_real_type_is_caught(self):
+        case = self.host_case()
+        # A mirror type the host lays out differently from the decomp's own type.
+        broken = case.text.replace("    s32 a;", "    s32 a;\n    s32 extra;", 1)
+        self.assertNotEqual(broken, case.text)
+        self.assertFalse(case.host_matches(broken))
+
+    def test_no_clusters_on_the_host(self):
+        case = Case("extern u8 g_a[2]; extern u8 g_b[2];", bytes([1, 2, 3, 4]),
+                    {"g_a": BASE, "g_b": BASE + 2}, host=True)
+        self.addCleanup(case.close)
+        self.assertNotIn("d2c_cluster", case.text)
+        self.assertIn("u8 g_b[2] = { 3, 4 };", case.text)
+        self.assertTrue(case.host_matches(), case.log + case.text)
+
+    def test_second_name_is_a_host_alias(self):
+        case = Case("extern s32 g_value;", words(4), {"g_value": BASE, "D_80100000": BASE}, host=True)
+        self.addCleanup(case.close)
+        self.assertIn(".set D_80100000, g_value", case.text)
+        self.assertTrue(case.host_matches(), case.log + case.text)
 
 
 class SymbolTableTests(unittest.TestCase):

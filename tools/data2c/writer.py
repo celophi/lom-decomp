@@ -1,11 +1,18 @@
 """Write a data region as C.
 
-The output has to satisfy two builds at once:
+There are two outputs:
 
-- The PS1 build compiles it with GCC 2.8 and must reproduce the original
-  bytes and relocations exactly (checked by `make DATA_AS_C=1 verify-bins`).
-- A native build compiles the same C with wider pointers, so every stored
-  pointer has to be a real C pointer initializer, not a number.
+- For the PS1 build (the default), GCC 2.8 must reproduce the original bytes
+  and relocations exactly (checked by `make DATA_AS_C=1 verify-bins`). Runs of
+  symbols GCC would misalign become packed clusters, and PS1 padding bytes are
+  written out.
+- For a host build (`host=True`), the same values are written for a compiler
+  with wider pointers: every symbol is its own object, the host compiler does
+  its own padding, and each integer keeps its declared C type (a `long` stays
+  a `long`), so the data lays out the way host-compiled game code expects.
+  hostcheck.py proves the values survive.
+
+In both, every stored pointer is a real C pointer initializer, not a number.
 
 Types are written structurally (D2C_S000, D2C_U001, ...) instead of reusing the
 decomp's names, because the decomp's types are often private to one .c file.
@@ -50,10 +57,37 @@ def byte_list(data: bytes) -> list[str]:
 
 # ----------------------------------------------------------------------------- types
 
+# Host integer spelling by declared kind, so the host lays each one out as the
+# game's own headers do.
+HOST_INTEGERS = {
+    TypeKind.CHAR_S: "s8", TypeKind.SCHAR: "s8", TypeKind.CHAR_U: "u8", TypeKind.UCHAR: "u8",
+    TypeKind.SHORT: "s16", TypeKind.USHORT: "u16", TypeKind.INT: "s32", TypeKind.UINT: "u32",
+    TypeKind.LONG: "long", TypeKind.ULONG: "unsigned long",
+    TypeKind.LONGLONG: "s64", TypeKind.ULONGLONG: "u64", TypeKind.BOOL: "u8",
+}
+
+
+def host_key(t) -> str:
+    """Like layout_key, but integers keep their declared kind: on a host a
+    `long` and an `int` of the same PS1 size lay out differently."""
+    t = t.get_canonical()
+    k = t.kind
+    if is_integer(t):
+        return HOST_INTEGERS.get(k, "s32")
+    if k in (TypeKind.CONSTANTARRAY, TypeKind.INCOMPLETEARRAY):
+        n = t.element_count if k == TypeKind.CONSTANTARRAY else ""
+        return f"[{n}]{host_key(t.element_type)}"
+    if k == TypeKind.RECORD:
+        fields = [host_key(f.type) + (f":{f.get_bitfield_width()}" if f.is_bitfield() else "") for f in t.get_fields()]
+        return ("U" if is_union(t) else "S") + "{" + ",".join(fields) + "}" + layout_key(t)
+    return layout_key(t)
+
+
 class TypeWriter:
     """C text for libclang types, with records written out structurally."""
 
-    def __init__(self):
+    def __init__(self, host: bool = False):
+        self.host = host
         self.names = {}            # layout key -> generated record name
         self.definitions = []      # record typedefs, each after the records it uses
 
@@ -62,6 +96,8 @@ class TypeWriter:
         t = t.get_canonical()
         k = t.kind
         if is_integer(t):
+            if self.host:
+                return f"{HOST_INTEGERS.get(k, 's32')} {name}"
             return f"{self.integer(t)} {name}"
         if k == TypeKind.POINTER:
             # Every data pointer is void * and every code pointer void (*)(): only
@@ -84,7 +120,7 @@ class TypeWriter:
                 4: "s32" if signed else "u32", 8: "s64" if signed else "u64"}[t.get_size()]
 
     def record(self, t) -> str:
-        key = layout_key(t)
+        key = host_key(t) if self.host else layout_key(t)
         if key in self.names:
             return self.names[key]
         name = f"D2C_{'U' if is_union(t) else 'S'}{len(self.names):03d}"
@@ -92,7 +128,8 @@ class TypeWriter:
         members = []
         for i, m in enumerate(record_members(t)):
             if m[0] == "pad":
-                members.append(f"    u8 d2c_pad_{m[1]:02X}[{m[2]}];")
+                if not self.host:   # a host pads by its own rules
+                    members.append(f"    u8 d2c_pad_{m[1]:02X}[{m[2]}];")
                 continue
             f = m[1]
             decl = self.declarator(f.type, f.spelling or f"unnamed_{i}")
@@ -112,10 +149,11 @@ class TypeWriter:
 class InitWriter:
     """C initializers for a region's bytes, typed by a declaration."""
 
-    def __init__(self, region, symbols, report):
+    def __init__(self, region, symbols, report, host: bool = False):
         self.region = region
         self.symbols = symbols
         self.report = report
+        self.host = host
         self.externs = {}          # referenced name -> "func" | "data"
         self.pointer_words = set() # addresses written as symbolic pointers
 
@@ -194,6 +232,10 @@ class InitWriter:
                 self.report.note("union tail bytes lost", where)
         items = []
         for m in members:
+            if m[0] == "pad" and self.host:
+                if any(self.region.bytes_at(addr + m[1], m[2])):
+                    self.report.note("nonzero padding dropped for the host", f"{where}+{m[1]:#x}")
+                continue
             if m[0] == "pad":
                 _, offset, size = m
                 if any(addr + offset <= a < addr + offset + size for a in self.region.relocations):
@@ -225,6 +267,16 @@ class InitWriter:
             return f"u8 {name}[{size}]", wrap(byte_list(self.region.bytes_at(addr, size)))
         if addr % 4 or size % 4 or any(a % 4 for a in inside):
             raise ValueError(f"relocation in unaligned bytes at {addr:#x}")
+        if self.host:
+            # An address does not fit a 32-bit word on the host: keep pointer-sized entries.
+            items = []
+            for a in range(addr, addr + size, 4):
+                if a in self.region.relocations:
+                    items.append(self.pointer_to(*self.region.relocations[a], False))
+                else:
+                    items.append(f"(void *){self.region.word(a):#x}")
+            self.report.note("untyped words with addresses kept as pointers", name)
+            return f"void *{name}[{size // 4}]", wrap(items)
         items = []
         for a in range(addr, addr + size, 4):
             if a in self.region.relocations:
@@ -241,16 +293,18 @@ class InitWriter:
 class RegionWriter:
     """Walk a region symbol by symbol and collect one definition per piece."""
 
-    def __init__(self, region, symbols, declarations, report):
+    def __init__(self, region, symbols, declarations, report, host: bool = False):
         self.region = region
         self.symbols = symbols
         self.decls = declarations
         self.report = report
-        self.types = TypeWriter()
-        self.inits = InitWriter(region, symbols, report)
+        self.host = host
+        self.types = TypeWriter(host)
+        self.inits = InitWriter(region, symbols, report, host)
         self.entries = []          # {"addr", "name", "decl", "init"} in address order
         self.aliases = []          # (name, target, offset) the C cannot define itself
         self.defined = set()
+        self.chosen = {}           # symbol -> (declaration index, element count) for hostcheck.py
 
     def generate(self) -> str:
         starts = self.symbols.in_range(self.region.start, self.region.end)
@@ -294,6 +348,7 @@ class RegionWriter:
             return addr + extent
 
         t = choose(candidates, extent, self.report, name).get_canonical()
+        position = next(i for i, (ct, _) in enumerate(candidates) if ct.get_canonical() == t)
         count = None
         if t.kind == TypeKind.INCOMPLETEARRAY:
             # `T name[]`: the symbol's extent says how many elements there are.
@@ -318,6 +373,7 @@ class RegionWriter:
             self.add_untyped(addr, name, extent)
             return addr + extent
         self.add(addr, name, decl, init, gcc_alignment(t))
+        self.chosen[name] = (position, count)
         self.report.count("typed symbols")
         self.report.count("alias needs a #define or code change", len(names) - 1)
         return addr + size
@@ -331,6 +387,13 @@ class RegionWriter:
     # -- output
 
     def text(self) -> str:
+        if self.host:
+            forward = [f"extern {e['decl']};" for e in self.entries]
+            body = [f"{e['decl']} = {e['init']};\n" for e in self.entries]
+            externs = [f"extern void {n}();" if kind == "func" else f"extern u8 {n}[];"
+                       for n, kind in sorted(self.inits.externs.items()) if n not in self.defined]
+            return (HEADER + "\n".join(self.types.definitions) + "\n" + "\n".join(externs) + "\n\n"
+                    + "\n".join(forward) + "\n\n" + "\n".join(body) + "\n" + host_alias_block(self.aliases))
         forward, body, cluster_aliases = place_for_gcc(self.entries, self.report)
         externs = [f"extern void {n}();" if kind == "func" else f"extern u8 {n}[];"
                    for n, kind in sorted(self.inits.externs.items()) if n not in self.defined]
@@ -419,4 +482,18 @@ def alias_block(aliases) -> str:
         expr = f"{target} + {offset:#x}" if offset else target
         lines.append(f'    "\\t.globl {alias}\\n\\t{alias} = {expr}\\n"')
     lines += [");", "#endif", ""]
+    return "\n".join(lines)
+
+
+def host_alias_block(aliases) -> str:
+    """Second names at one address, for a host assembler. On a host every
+    symbol is its own object, so only aliases at offset 0 remain."""
+    if not aliases:
+        return ""
+    lines = ["__asm__("]
+    for alias, target, offset in aliases:
+        if offset:
+            raise ValueError(f"alias {alias} at {target} + {offset:#x} on a host")
+        lines.append(f'    "\\t.globl {alias}\\n\\t.set {alias}, {target}\\n"')
+    lines += [");", ""]
     return "\n".join(lines)

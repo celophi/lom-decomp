@@ -102,6 +102,14 @@ jobs:
           chmod +x ${{ env.OBJDIFF_CLI }}
           ${{ env.OBJDIFF_CLI }} report generate -o ${{ env.PROGRESS_REPORT }}
 
+      - name: Verify the host build of the data
+        if: ${{ matrix.verify }}
+        # Compiles every .data region's generated C for x86-64 (data2c --host)
+        # and checks that each field, read through the decomp's own types,
+        # holds the PS1 value. Runs before verify-data-as-c, which removes the
+        # data objects this reads.
+        run: make verify-data-host VERSION=${{ env.VERSION }}
+
       - name: Verify binaries with data built from generated C
         if: ${{ matrix.verify }}
         # Rebuilds every .data region from C that tools/data2c generates at

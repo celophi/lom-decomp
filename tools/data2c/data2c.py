@@ -20,6 +20,7 @@ Steps (see the modules for details):
   declarations.py  each symbol's type, from the image's own C with libclang
   writer.py        the C: structural types, initializers, GCC 2.8 placement
   verify.py        --verify: compile for mipsel and compare with the original
+  hostcheck.py     --host --verify: compile for x86-64, compare every field's value
 
 Usage:
   data2c.py --version us --image field --asm asm/us/overlays/field/data/field_data.s -o out.c
@@ -41,6 +42,7 @@ from declarations import Declarations, clang_args  # noqa: E402
 from region import load_assembled, load_databin  # noqa: E402
 from report import Report  # noqa: E402
 from symbols import SymbolTable  # noqa: E402
+from hostcheck import hostcheck  # noqa: E402
 from verify import verify  # noqa: E402
 from writer import RegionWriter  # noqa: E402
 
@@ -53,6 +55,8 @@ def parse_args():
     ap.add_argument("--object", help="the .s assembled (data assembly only): gives exact relocations")
     ap.add_argument("-o", "--out", required=True, help="C file to write")
     ap.add_argument("--verify", action="store_true", help="check the output reproduces the region")
+    ap.add_argument("--host", action="store_true",
+                    help="write the data for a host compiler (no PS1 padding or clusters; see writer.py)")
     ap.add_argument("--report", help="write what was found as JSON to this file")
     ap.add_argument("--quiet", action="store_true", help="do not print the report")
     return ap.parse_args()
@@ -91,7 +95,7 @@ def main():
     symbols.add_function_names(decls.function_names)
 
     report = Report(args.asm)
-    writer = RegionWriter(region, symbols, decls, report)
+    writer = RegionWriter(region, symbols, decls, report, host=args.host)
     out = repo / args.out
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(writer.generate())
@@ -107,7 +111,10 @@ def main():
     if args.report:
         report.save(repo / args.report, image=args.image, version=args.version,
                     start=region.start, size=len(region.data))
-    if args.verify and not verify(out, region, symbols):
+    if args.verify and args.host:
+        if not hostcheck(out, region, symbols, writer, sources, args.version, project.include_dirs(args.image)):
+            sys.exit(1)
+    elif args.verify and not verify(out, region, symbols):
         sys.exit(1)
 
 
