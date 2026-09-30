@@ -1,8 +1,10 @@
-"""Minimal reader for the little-endian ELF32 objects the PS1 toolchain writes.
+"""Minimal reader for little-endian ELF objects.
 
 data2c needs three things from an object file: a section's bytes, the symbols
-defined in it, and its R_MIPS_32 relocations. That is small enough to read
-directly, so the tool needs no ELF library.
+defined in it, and its relocations. It reads the ELF32 objects the PS1
+toolchain writes (R_MIPS_32, addends in place) and, for the host check,
+ELF64 objects (R_X86_64_64, addends in RELA entries). That is small enough to
+read directly, so the tool needs no ELF library.
 """
 from __future__ import annotations
 
@@ -10,10 +12,12 @@ import pathlib
 import struct
 from dataclasses import dataclass
 
+SHT_RELA = 4            # relocations with explicit addends (x86-64)
 SHT_NOBITS = 8          # .bss-style section with no bytes in the file
 SHT_REL = 9             # relocations without addends (MIPS keeps addends in place)
 STT_SECTION = 3         # symbol that stands for a whole section
 R_MIPS_32 = 2           # a full 32-bit address
+R_X86_64_64 = 1         # a full 64-bit address
 
 
 @dataclass
@@ -40,15 +44,26 @@ class Relocation:
     offset: int          # offset within the relocated section
     type: int
     symbol: Symbol
+    addend: int | None = None   # RELA only; REL addends sit in the section bytes
 
 
 class ElfObject:
     def __init__(self, path: pathlib.Path | str):
         self.path = pathlib.Path(path)
         self.data = self.path.read_bytes()
-        shoff, = struct.unpack_from("<I", self.data, 0x20)
-        shentsize, shnum, shstrndx = struct.unpack_from("<HHH", self.data, 0x2E)
-        raw = [struct.unpack_from("<IIIIIIIIII", self.data, shoff + i * shentsize) for i in range(shnum)]
+        self.is64 = self.data[4] == 2
+        if self.is64:
+            shoff, = struct.unpack_from("<Q", self.data, 0x28)
+            shentsize, shnum, shstrndx = struct.unpack_from("<HHH", self.data, 0x3A)
+            raw = []
+            for i in range(shnum):
+                name, typ, _flags, _addr, off, size, link, info, _align, _entsize = struct.unpack_from(
+                    "<IIQQQQIIQQ", self.data, shoff + i * shentsize)
+                raw.append((name, typ, 0, 0, off, size, link, info))
+        else:
+            shoff, = struct.unpack_from("<I", self.data, 0x20)
+            shentsize, shnum, shstrndx = struct.unpack_from("<HHH", self.data, 0x2E)
+            raw = [struct.unpack_from("<IIIIIIIIII", self.data, shoff + i * shentsize) for i in range(shnum)]
         names_offset = raw[shstrndx][4]
         self.sections = [Section(self._cstr(names_offset + r[0]), r[1], r[4], r[5], r[6], r[7]) for r in raw]
         self.symbols = self._read_symbols()
@@ -60,8 +75,12 @@ class ElfObject:
         symtab = next(s for s in self.sections if s.name == ".symtab")
         strtab = self.sections[symtab.link]
         out = []
-        for i in range(symtab.size // 16):
-            name, value, size, info, _other, shndx = struct.unpack_from("<IIIBBH", self.data, symtab.offset + i * 16)
+        entry = 24 if self.is64 else 16
+        for i in range(symtab.size // entry):
+            if self.is64:
+                name, info, _other, shndx, value, size = struct.unpack_from("<IBBHQQ", self.data, symtab.offset + i * entry)
+            else:
+                name, value, size, info, _other, shndx = struct.unpack_from("<IIIBBH", self.data, symtab.offset + i * entry)
             out.append(Symbol(self._cstr(strtab.offset + name), value, size, info & 0xF, shndx))
         return out
 
@@ -78,9 +97,14 @@ class ElfObject:
         """Relocations that apply to section `index`."""
         out = []
         for s in self.sections:
-            if s.type != SHT_REL or s.info != index:
+            if s.info != index or s.type not in (SHT_REL, SHT_RELA):
                 continue
-            for j in range(s.size // 8):
-                offset, info = struct.unpack_from("<II", self.data, s.offset + j * 8)
-                out.append(Relocation(offset, info & 0xFF, self.symbols[info >> 8]))
+            if self.is64:
+                for j in range(s.size // 24):
+                    offset, info, addend = struct.unpack_from("<QQq", self.data, s.offset + j * 24)
+                    out.append(Relocation(offset, info & 0xFFFFFFFF, self.symbols[info >> 32], addend))
+            elif s.type == SHT_REL:
+                for j in range(s.size // 8):
+                    offset, info = struct.unpack_from("<II", self.data, s.offset + j * 8)
+                    out.append(Relocation(offset, info & 0xFF, self.symbols[info >> 8]))
         return out

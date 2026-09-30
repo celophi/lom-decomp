@@ -15,6 +15,7 @@ the C at build time keeps game data out of the repository.
 
 ```sh
 make verify-data-as-c                 # the check CI runs: every binary from generated .data
+make verify-data-host                 # CI too: the host build of the data holds the PS1 values
 make DATA_AS_C=1 verify-bins          # the same build, keeping its objects
 python3 tools/data2c/report_all.py    # survey all regions (needs a normal build first)
 python3 tools/data2c/data2c.py --help # one region
@@ -23,16 +24,42 @@ python3 -m unittest discover -s tools/data2c/tests
 
 `DATA_AS_C=1` must still reproduce the original images byte for byte, and CI
 checks that for both versions. `verify-data-as-c` removes the data objects
-before and after, so a normal build never picks up generated ones. The
+before and after, including the copies the overlay targets make in the
+project's own `build/`, so a normal build never picks up generated ones.
+data2c also refuses an object that was built from its own output. The
 generated C goes to `build/<version>/**/datac/`. It needs libclang (`libclang`
-in requirements.txt); the unit tests also need `clang`.
+in requirements.txt); the unit tests also need `clang` and a host `cc`.
+
+## Host output
+
+A port that builds its data from C (the sotn/sm64 model) compiles the same
+values with its host compiler. `data2c.py --host` writes them for that:
+
+- every symbol is its own object: no packed clusters, which exist only for
+  GCC 2.8's placement rules;
+- no PS1 padding members: the host compiler pads by its own rules;
+- each integer keeps its declared C type, so a `long` stays a `long` and the
+  data lays out as host-compiled game code expects;
+- a second name at an address becomes a host assembler alias;
+- undeclared words that hold addresses become pointer-sized entries.
+
+`--host --verify` runs `hostcheck.py`: it compiles the output for x86-64 and
+reads every symbol back through the host layout of the decomp's own
+declaration, comparing each field with the PS1 data read through the PS1
+layout (integers by value, pointers by target symbol). `make verify-data-host`
+does that for every region of a version, and CI runs it for US and JP.
+
+What it cannot see: whether code relies on two adjacent symbols being one
+object (indexing past the end of one into the next). On the PS1 they are
+contiguous; on a host they are separate objects.
 
 ## Tests
 
 `tests/test_data2c.py` covers each rule below on small made-up types and
-bytes (never game data), round-tripping every case through `verify.py`. The
-GCC 2.8 half of the rules (alignment, clusters) can only be checked by
-`make verify-data-as-c`.
+bytes (never game data), round-tripping every case through `verify.py`, and
+host output through `hostcheck.py`, including a changed value and a
+mismatched layout that it must catch. The GCC 2.8 half of the rules
+(alignment, clusters) can only be checked by `make verify-data-as-c`.
 
 ## How a region becomes C
 
@@ -43,9 +70,10 @@ GCC 2.8 half of the rules (alignment, clusters) can only be checked by
 | Types | `declarations.py` | Each symbol's type from the image's own C, parsed with libclang for mipsel so layouts are the PS1 ones |
 | C text | `writer.py` | Structural types, initializers, and placement GCC 2.8 reproduces |
 | Check | `verify.py` | `--verify`: compile for mipsel, relocate, compare with the original bytes |
+| Host check | `hostcheck.py` | `--host --verify`: compile for x86-64, compare every field's value through the decomp's own types |
 
 `project.py` says where each image keeps these inputs; `elf.py` reads the
-object files.
+object files (ELF32 for the PS1, ELF64 for the host check).
 
 ## Decisions a maintainer needs to know
 
