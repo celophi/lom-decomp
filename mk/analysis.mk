@@ -1,15 +1,8 @@
-# ============================================================================
 # Object analysis and diffing
-# ============================================================================
 
 .PHONY: dump-objs target-objects base-objects objdiff-objects objdiff-config
 
-# Disassemble every compiled .o in build/<version>/ and write a matching .s
-# alongside it. Run this after a build to get compiler output for
-# assembly comparisons.
-#   make dump-objs
-# The .s files end up at e.g. build/us/src/cdrom.s,
-# build/us/overlays/gname/gname.s etc.
+# Write disassembly beside each built object, e.g. build/us/src/cdrom.s.
 dump-objs:
 	@set -eu; \
 		if [ ! -d $(BUILD_DIR) ]; then \
@@ -28,20 +21,15 @@ dump-objs:
 		done
 	@echo "dump-objs complete."
 
-# ============================================================================
-#  Objdiff — Main SLUS  (progress tracking / function matching)
-# ============================================================================
-#
-# "Target objects" = assembled from splat's original .s disassembly (the goal).
-# "Base objects"   = compiled from your decompiled .c source (your progress).
-# objdiff compares them function-by-function to show what matches.
+# Objdiff compares original assembly (target objects) with rebuilt C (base
+# objects). Keep those names here because they are also used by objdiff.
 
 # Gather all .s files, then exclude non-matchings, data, overlays, and
 # hand-written asm that already has its own build rule (ASM_SRCS).
 ALL_ASM_SRCS    := $(call rwildcard,$(ASM_DIR),*.s)
 TARGET_ASM_SRCS := $(filter-out $(ASM_DIR)/nonmatchings/% $(ASM_DIR)/data/% $(ASM_DIR)/overlays/% $(ASM_SRCS),$(ALL_ASM_SRCS))
 TARGET_OBJS     := $(patsubst $(ASM_DIR)/%.s,$(STAGING)/$(BUILD_DIR)/$(ASM_DIR)/%.o,$(TARGET_ASM_SRCS))
-OBJDIFF_BASE_OBJS := $(OBJS_G0) $(OBJS_G4) $(OBJS_CDK_G0) $(OBJS_GCC_260_G0)
+OBJDIFF_BASE_OBJS := $(OBJS_G0) $(OBJS_G4) $(OBJS_GCC_260_G0)
 
 $(TARGET_OBJS): $(STAGING)/$(BUILD_DIR)/$(ASM_DIR)/%.o: $(ASM_DIR)/%.s $(COPY_SENTINEL)
 	@mkdir -p $(@D)
@@ -70,6 +58,42 @@ base-objects: $(COPY_SENTINEL) $(OBJDIFF_BASE_OBJS)
 	$(call copy-staged-objects,$(OBJDIFF_BASE_OBJS))
 	@echo "Base objects built."
 
+# Overlay comparisons use the paths and C objects from overlay-inputs.mk.
+# $(1) is the overlay name; $$ keeps variables for eval's second pass.
+define overlay-objdiff-rules
+
+# Objdiff rules for this overlay
+$(1)_ALL_ASM    := $$(call rwildcard,$$($(1)_ASM_DIR),*.s)
+$(1)_TGT_ASM   := $$(filter-out $$($(1)_ASM_DIR)/nonmatchings/% $$($(1)_ASM_DIR)/data/%,$$($(1)_ALL_ASM))
+$(1)_TGT_OBJS  := $$(patsubst $$($(1)_ASM_DIR)/%.s,$(STAGING)/$$($(1)_BUILD_DIR)/target/%.o,$$($(1)_TGT_ASM))
+
+$$($(1)_TGT_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/target/%.o: $$($(1)_ASM_DIR)/%.s $(COPY_SENTINEL) | $(1)-validate
+	@mkdir -p $$(@D)
+	cd $(STAGING) && cat $$($(1)_ASM_DIR)/$$*.s | \
+		$(MASPSX) $(MASPSX_PP_FLAGS) | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) $$(overlay_$(1)_target_as_extra_flags_$$*) -o $$($(1)_BUILD_DIR)/target/$$*.o
+
+$(1)-target-objects: $(1)-validate $(COPY_SENTINEL) $$($(1)_TGT_OBJS)
+	@mkdir -p $$($(1)_BUILD_DIR)/target
+	@if [ -n "$$(firstword $$($(1)_TGT_OBJS))" ]; then \
+		cp -a "$(STAGING)/$$($(1)_BUILD_DIR)/target/." "$$($(1)_BUILD_DIR)/target/"; \
+	fi
+
+$(1)-base-objects: $(1)-validate $(COPY_SENTINEL) $$($(1)_C_OBJS)
+	@mkdir -p $$($(1)_C_OBJ_DIR)
+	@if [ -n "$$(firstword $$($(1)_C_OBJS))" ]; then \
+		cp -a "$(STAGING)/$$($(1)_C_OBJ_DIR)/." \
+			"$$($(1)_C_OBJ_DIR)/"; \
+	fi
+
+$(1)-objdiff: $(1)-target-objects $(1)-base-objects
+
+.PHONY: $(1)-target-objects $(1)-base-objects $(1)-objdiff
+
+endef
+
+$(foreach ov,$(OVERLAYS),$(eval $(call overlay-objdiff-rules,$(ov))))
+
 OBJDIFF_CLI ?= tools/objdiff/objdiff-cli-linux-x86_64
 OBJDIFF_CONFIG_GENERATOR ?= tools/objdiff/generate_objdiff_config.py
 PROGRESS_REPORT ?= $(BUILD_DIR)/progress.json
@@ -81,20 +105,18 @@ objdiff-objects: target-objects base-objects $(addsuffix -objdiff,$(OVERLAYS))
 objdiff-config: objdiff-objects
 	python3 $(OBJDIFF_CONFIG_GENERATOR) --version $(VERSION)
 
-# Generate the objdiff progress report (build/<version>/progress.json). Mirrors the CI
-# "Generate progress report" step.
+# Write the progress report used by CI.
 .PHONY: progress
-progress: objdiff-objects objdiff-config
+progress: objdiff-config
 	@chmod +x $(OBJDIFF_CLI)
 	$(OBJDIFF_CLI) report generate -o $(PROGRESS_REPORT)
 	@echo "Wrote $(PROGRESS_REPORT)"
 
 # Run objdiff diff on every unit in objdiff.json and write JSON results under
 # build/<version>/diffs/, mirroring the unit name as a path (e.g. main/cdrom.json).
-# Depends on objdiff-objects and objdiff-config so .o files and config are
-# up to date before diffing.
+# objdiff-config builds the objects before generating the config.
 .PHONY: diff-all diff-text
-diff-all: objdiff-objects objdiff-config
+diff-all: objdiff-config
 	python3 tools/objdiff/run_diffs.py --cli $(OBJDIFF_CLI) --output-dir $(BUILD_DIR)/diffs
 
 # Convert every build/<version>/diffs/**/*.json into a compact side-by-side

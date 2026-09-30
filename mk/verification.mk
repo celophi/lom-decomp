@@ -1,40 +1,17 @@
-# ============================================================================
-# ROM verification: main executable and compressed overlays
-# ============================================================================
+# Compare rebuilt files with the originals on disc.
 #
-# To prove a compressed overlay is byte-perfect, reproduce the file stored in
-# disc/<version>/BIN/ and compare its SHA1:
-#
-#   1. Link the overlay ELF.
-#   2. Convert the ELF to its raw decompressed binary.
-#   3. Compress the raw binary with tools/compressor/compressor.py.
-#   4. Prepend the 0x01 compression-format byte skipped by the splat configs.
-#   5. SHA1-compare the result with the original overlay BIN.
-#
-# On a match, the overlay name is added to build/<version>/complete_overlays.txt.
-# generate_objdiff_config.py uses that manifest to mark its objdiff units as
-# complete.
-#
-# The compressor reproduces the original 1999 encoder byte for byte on all 17
-# disc overlays of both the US and JP releases, so any overlay that links to an
-# exact raw image can be verified this way. See tools/compressor/README.md.
+# An objdiff score of 100% can hide section shifts because it normalizes
+# relocations. Add an overlay here only after `make verify-<name>` passes.
+# We convert its ELF to a raw binary, compress it, and restore the 0x01 format
+# byte before comparing SHA1s. Successful checks go in COMPLETE_MANIFEST for
+# the objdiff config generator.
 
-# Overlays whose linked ELF reproduces the original decompressed image, and so
-# can be compressed back into an exact replica of the disc file.
-#
-# Note that objdiff reporting 100% on every function is NOT sufficient: it pairs
-# symbols by name and normalizes relocations, so a whole-TU section shift is
-# invisible to it. Add a name here only once `make verify-<name>` actually
-# passes.
 VERIFIED_OVERLAYS_us := gover movie gname checkps title gosub golem niki addhero menu cload zukan carda shop wsel field wmap
 VERIFIED_OVERLAYS_jp := gover movie gname checkps title gosub golem niki addhero menu cload zukan carda shop wsel field wmap
 VERIFIED_OVERLAYS := $(VERIFIED_OVERLAYS_$(VERSION))
 
-# Overlays whose linked ELF reproduces the original decompressed image, but
-# whose disc stream the compressor cannot reproduce yet (its selection rules
-# were recovered from the US overlays). These are checked at the raw-image
-# level only: the linked ELF against the decompressed disc file. Move a name to
-# VERIFIED_OVERLAYS_<version> once `make verify-compressor` passes for it.
+# Use these lists when the raw image matches but the compressor cannot yet
+# reproduce the disc stream. Raw checks do not mark an overlay complete.
 RAW_VERIFIED_OVERLAYS_us :=
 RAW_VERIFIED_OVERLAYS_jp :=
 RAW_VERIFIED_OVERLAYS := $(RAW_VERIFIED_OVERLAYS_$(VERSION))
@@ -44,7 +21,7 @@ upper-case = $(shell echo '$(1)' | tr '[:lower:]' '[:upper:]')
 
 .PHONY: verify-bins
 
-# ── Per-overlay verification rules ───────────────────────────────────────────
+# Per-overlay verification rules
 #
 #   $(1) = overlay name, lower case (e.g. "gover")
 #   $(2) = overlay BIN basename, upper case (e.g. "GOVER")
@@ -71,19 +48,8 @@ $(BUILD_DIR)/overlays/$(1)/$(2).BIN: $(BUILD_DIR)/overlays/$(1)/$(1).raw
 	rm -f $$@.payload
 
 verify-$(1): $(BUILD_DIR)/overlays/$(1)/$(2).BIN
-	@mkdir -p $(BUILD_DIR)
-	@set -eu; \
-		expected=$$$$(sha1sum $(ROM_BIN_DIR)/$(2).BIN | awk '{print $$$$1}'); \
-		actual=$$$$(sha1sum $$< | awk '{print $$$$1}'); \
-		echo "$(2).BIN expected: $$$$expected"; \
-		echo "$(2).BIN actual:   $$$$actual"; \
-		if [ "$$$$expected" = "$$$$actual" ]; then \
-			echo "[OK] $(2).BIN matches original ROM"; \
-			grep -qxF $(1) $(COMPLETE_MANIFEST) 2>/dev/null || echo $(1) >> $(COMPLETE_MANIFEST); \
-		else \
-			echo "[FAIL] $(2).BIN sha1 mismatch"; \
-			exit 1; \
-		fi
+	python3 tools/verification/verify_file.py $(ROM_BIN_DIR)/$(2).BIN $$< \
+		--manifest $(COMPLETE_MANIFEST) --name $(1)
 
 endef
 
@@ -104,24 +70,15 @@ $(BUILD_DIR)/overlays/$(1)/$(2).orig.raw: $(ROM_BIN_DIR)/$(2).BIN
 	python3 tools/splat_ext/decompress.py $$< 1 $$$$(($$$$(stat -c%s $$<) - 1)) $$@
 
 verify-$(1): $(BUILD_DIR)/overlays/$(1)/$(1).raw $(BUILD_DIR)/overlays/$(1)/$(2).orig.raw
-	@set -eu; \
-		expected=$$$$(sha1sum $(BUILD_DIR)/overlays/$(1)/$(2).orig.raw | awk '{print $$$$1}'); \
-		actual=$$$$(sha1sum $(BUILD_DIR)/overlays/$(1)/$(1).raw | awk '{print $$$$1}'); \
-		echo "$(2).BIN raw expected: $$$$expected"; \
-		echo "$(2).BIN raw actual:   $$$$actual"; \
-		if [ "$$$$expected" = "$$$$actual" ]; then \
-			echo "[OK] $(2).BIN raw image matches original ROM (compressed stream not yet reproducible)"; \
-		else \
-			echo "[FAIL] $(2).BIN raw image sha1 mismatch"; \
-			exit 1; \
-		fi
+	python3 tools/verification/verify_file.py $(BUILD_DIR)/overlays/$(1)/$(2).orig.raw \
+		$(BUILD_DIR)/overlays/$(1)/$(1).raw --raw
 
 endef
 
 $(foreach name,$(RAW_VERIFIED_OVERLAYS),\
 	$(eval $(call raw-overlay-rules,$(name),$(call upper-case,$(name)))))
 
-# ── Main executable ──────────────────────────────────────────────────────────
+# Main executable
 #
 # The main executable (SLUS_010.13, SLPS_021.70) is not compressed: its linked
 # ELF, converted to a raw binary (which includes the 0x800-byte PS-X EXE
@@ -137,36 +94,28 @@ $(BUILD_DIR)/$(GAME).raw: all
 verify-slus: verify-main
 
 verify-main: $(BUILD_DIR)/$(GAME).raw
-	@mkdir -p $(BUILD_DIR)
-	@set -eu; \
-		expected=$$(sha1sum $(DISC_DIR)/$(GAME) | awk '{print $$1}'); \
-		actual=$$(sha1sum $< | awk '{print $$1}'); \
-		echo "$(GAME) expected: $$expected"; \
-		echo "$(GAME) actual:   $$actual"; \
-		if [ "$$expected" = "$$actual" ]; then \
-			echo "[OK] $(GAME) matches original ROM"; \
-			grep -qxF main $(COMPLETE_MANIFEST) 2>/dev/null || echo main >> $(COMPLETE_MANIFEST); \
-		else \
-			echo "[FAIL] $(GAME) sha1 mismatch"; \
-			exit 1; \
-		fi
+	python3 tools/verification/verify_file.py $(DISC_DIR)/$(GAME) $< \
+		--manifest $(COMPLETE_MANIFEST) --name main
 
-# ── Aggregate ────────────────────────────────────────────────────────────────
+# Aggregate
 #
 # Register a new overlay by adding it to VERIFIED_OVERLAYS_<version> above.
 verify-bins: verify-main $(foreach name,$(VERIFIED_OVERLAYS) $(RAW_VERIFIED_OVERLAYS),verify-$(name))
-	@echo "Verified compressed overlays: $$(cat $(COMPLETE_MANIFEST) 2>/dev/null | tr '\n' ' ')"
+	@echo "Verified disc files: $$(cat $(COMPLETE_MANIFEST) 2>/dev/null | tr '\n' ' ')"
 
-# Check that the binaries still match when every .data region comes from
-# generated C (DATA_AS_C=1). The data objects are removed before and after, so
-# neither this build nor the normal one reuses the other's objects. That
-# includes the copies the overlay targets make in the project's own build
-# directory. The generated data C, which holds game data, is written to
-# $(STAGING)/datac/ (outside the build tree, so it is never copied back) and
-# removed too.
-DATA_AS_C_LEFTOVERS = find $(STAGING)/$(BUILD_DIR) $(BUILD_DIR) -path '*/data/*.o' -delete 2>/dev/null; \
-	rm -rf $(STAGING)/datac/$(BUILD_DIR); \
-	find $(STAGING)/$(BUILD_DIR) $(BUILD_DIR) -type d -name datac -prune -exec rm -rf {} + 2>/dev/null; true
+# The normal and DATA_AS_C builds share object paths. Remove data objects
+# before and after the check, including when it fails, so neither build can
+# reuse the other's output. Generated C contains game data and stays in staging.
+.PHONY: clean-data-as-c
+clean-data-as-c:
+	@set -eu; \
+		for root in $(STAGING)/$(BUILD_DIR) $(BUILD_DIR); do \
+			if [ -d "$$root" ]; then \
+				find "$$root" -path '*/data/*.o' -delete; \
+				find "$$root" -type d -name datac -prune -exec rm -rf {} +; \
+			fi; \
+		done
+	rm -rf $(STAGING)/datac/$(BUILD_DIR)
 
 # Check the host build of the data (data2c --host): every .data region's
 # generated C, compiled for x86-64 and read back through the decomp's own
@@ -174,14 +123,20 @@ DATA_AS_C_LEFTOVERS = find $(STAGING)/$(BUILD_DIR) $(BUILD_DIR) -path '*/data/*.
 # their data objects exist; the generated C (game data) is removed afterwards.
 .PHONY: verify-data-host
 verify-data-host: all $(OVERLAYS)
-	python3 tools/data2c/report_all.py --version $(VERSION) --host --verify --strict --out $(BUILD_DIR)/data-host
-	find $(BUILD_DIR)/data-host \( -name '*.c' -o -name '*.o' \) -delete
+	@set -eu; \
+		cleanup() { \
+			if [ -d "$(BUILD_DIR)/data-host" ]; then \
+				find "$(BUILD_DIR)/data-host" \( -name '*.c' -o -name '*.o' \) -delete; \
+			fi; \
+		}; \
+		trap cleanup EXIT; \
+		python3 tools/data2c/report_all.py --version $(VERSION) --host --verify --strict --out $(BUILD_DIR)/data-host
 
 .PHONY: verify-data-as-c
 verify-data-as-c:
-	$(DATA_AS_C_LEFTOVERS)
-	$(MAKE) DATA_AS_C=1 verify-bins
-	$(DATA_AS_C_LEFTOVERS)
+	$(MAKE) clean-data-as-c
+	$(MAKE) DATA_AS_C=1 verify-bins || { $(MAKE) clean-data-as-c; exit 1; }
+	$(MAKE) clean-data-as-c
 
 # Check the compressor itself against all 17 original overlays, without needing
 # a build. Run this after any change to tools/compressor/compressor.py.

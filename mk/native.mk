@@ -1,6 +1,4 @@
-# ============================================================================
-#  Native compile check
-# ============================================================================
+# Native compile check
 # Compiles every C file this version builds with the host's C compiler, to
 # keep a 64-bit build possible (see tools/native_check/native_check.py). The
 # PS1 build is not involved. The Psy-Q SDK sources are left out: a port

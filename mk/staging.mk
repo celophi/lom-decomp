@@ -1,23 +1,12 @@
-# ============================================================================
 # Linux staging
-# ============================================================================
 #
-# Staging solves two independent compatibility problems:
-#   1. The legacy 32-bit PSX compiler/preprocessor cannot stat Docker Desktop's
-#      Windows bind-mount inodes and fails with EOVERFLOW ("Value too large for
-#      defined data type"). Mirroring inputs to native Linux storage gives the
-#      toolchain compatible filesystem metadata.
-#   2. Checked-out or generated text inputs may use CRLF line endings. dos2unix
-#      normalizes the staged copies to LF without modifying the host files.
-
-# A sentinel tracks the last successful staging operation. Its prerequisites
-# include every staged input, so host edits/additions/deletions automatically
-# refresh /staging. Run `make recopy` to force a refresh.
+# The old 32-bit tools can fail with EOVERFLOW on Docker Desktop bind mounts.
+# Copying to native Linux storage gives them inode values they can read. We
+# also convert staged text to LF because checked-out files may contain CRLF.
 #
-# Each version has its own sentinel because each stages a different asm/,
-# linker/, and assets/ tree. The unversioned .sources_copied marker is also
-# touched so external tooling that only checks "has staging ever run" keeps
-# working.
+# Each version gets a marker because its asm, linker and assets trees differ.
+# The unversioned marker is still used by tools that check whether staging ran.
+# `make recopy` forces a refresh; normal edits are tracked by STAGE_INPUTS.
 COPY_SENTINEL := $(STAGING)/.sources_copied.$(VERSION)
 LEGACY_COPY_SENTINEL := $(STAGING)/.sources_copied
 
@@ -30,11 +19,7 @@ STAGE_PATHS_REQUIRED := \
 	$(LINKER_DIR) \
 	tools/maspsx
 
-# Optional inputs are staged only when present. The version's assets/ tree
-# holds gitignored binary data (splat databin / asset_src) and is absent when
-# no overlay embeds such data. Guarding with $(wildcard) keeps it out of the
-# prerequisite list, so a missing tree does not abort staging with "No rule to
-# make target".
+# Some overlays have no extracted assets. Don't require a missing asset tree.
 STAGE_PATHS_OPTIONAL := $(ASSETS_DIR)
 
 # Project inputs needed by the Make build (required plus any present optional).

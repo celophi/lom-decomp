@@ -1,8 +1,7 @@
-# ============================================================================
 # Overlay registry and per-source toolchain routing
-# ============================================================================
 
-# Register an overlay by adding its lowercase directory name to OVERLAYS.
+# To add an overlay, create config/<version>/overlays/<NAME>.BIN.yaml and
+# run splat split on it. Then add its lowercase directory name to OVERLAYS.
 # Every direct .c file under src/overlays/<name>/ must appear in exactly one
 # toolchain configuration:
 #
@@ -13,7 +12,7 @@
 #   overlay_<name>_gcc_280_g4_srcs
 #   overlay_<name>_gcc_280_g4_noexpand_srcs
 #
-# overlays.mk rejects missing, unknown, or multiply routed sources. If a linker
+# overlay-inputs.mk rejects missing, unknown, or multiply routed sources. If a linker
 # script expects a standalone assets/<name>.o, define (path under the version's
 # assets tree):
 #
@@ -52,7 +51,12 @@ overlay_checkps_gcc_272_gnu_g0_srcs := \
 # object's empty .data section without contributing any linked bytes.  -G0 keeps
 # cdrom.c's static CD-state variables in .bss (GNU as would otherwise use .sbss).
 overlay_checkps_gcc_272_gnu_as_extra_flags_cdrom := -L -G0
-overlay_checkps_gcc_272_gnu_objcopy_flags_cdrom := --remove-section=.data --remove-section=.text --rename-section=.text.cdrom=.text --add-section=.data=/dev/null --set-section-flags=.data=alloc,data
+overlay_checkps_gcc_272_gnu_objcopy_flags_cdrom := \
+	--remove-section=.data \
+	--remove-section=.text \
+	--rename-section=.text.cdrom=.text \
+	--add-section=.data=/dev/null \
+	--set-section-flags=.data=alloc,data
 overlay_checkps_target_as_extra_flags_cdrom := -L
 
 OVERLAYS += cload
@@ -293,13 +297,3 @@ overlay_zukan_gcc_272_cdk_g0_srcs := \
 	src/overlays/zukan/zukan.c
 overlay_zukan_gcc_280_g0_o0_srcs := \
 	src/overlays/zukan/zukan_category.c
-
-# The routing above is the translation-unit layout of each overlay. An overlay
-# that does not use it yet for this version (see TU_LAYOUT_<version> in
-# mk/version.mk) routes no sources; it contributes target assembly objects only.
-$(foreach ov,$(OVERLAYS),$(if $(call has-tu-layout,$(ov)),,\
-	$(foreach var,$(filter overlay_$(ov)_%_srcs,$(.VARIABLES)),$(eval $(var) :=))))
-
-# Units this version takes from assembly (ASM_UNITS in mk/version.mk) are not
-# compiled either.
-$(foreach var,$(filter overlay_%_srcs,$(.VARIABLES)),$(eval $(var) := $(filter-out $(ASM_UNITS),$($(var)))))

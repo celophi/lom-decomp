@@ -1,13 +1,8 @@
-# ============================================================================
 # Toolchains
-# ============================================================================
 
-# Naming convention:
-#   - Standard, unqualified Make names select the default GCC 2.8.0 toolchain.
-#   - Alternate toolchains use a <version>_<flavor> suffix.
-#   - Flag variables begin with the tool that consumes them.
-#
-# Compiler commands include -B so each GCC finds its matching internal tools.
+# CC and the unqualified flags use GCC 2.8.0. Other compilers have their
+# version and flavor in the variable name. -B tells each GCC where to find
+# its own internal tools; mixing these breaks the original code generation.
 CC             := /opt/psx-gcc-2.8.0/gcc -B/opt/psx-gcc-2.8.0/
 CC_272_CDK     := /opt/psx-gcc-2.7.2-cdk/gcc -B/opt/psx-gcc-2.7.2-cdk/
 CC_272_GNU     := /opt/psx-gcc-2.7.2-gnuas/gcc -B/opt/psx-gcc-2.7.2-gnuas/
@@ -43,7 +38,8 @@ MASPSX_AS       := $(MASPSX) --run-assembler
 # Inject include/macro.inc for splat-generated assembly directives.
 MASPSX_PP_FLAGS := --macro-inc
 
-# Each maspsx-backed compiler family must emulate its original ASPSX version.
+# These ASPSX versions affect instruction expansion and must match the
+# assembler originally used with each compiler.
 MASPSX_FLAGS         := -no-pad-sections --aspsx-version=2.77 --expand-div
 MASPSX_FLAGS_272_CDK := -no-pad-sections --aspsx-version=2.67 --expand-div
 MASPSX_FLAGS_260     := -no-pad-sections --aspsx-version=2.34 --expand-div
