@@ -48,9 +48,6 @@ segments:
       - [auto, c, overlay_header]
       - [0x1, .rodata, overlay_header]
       - [0x5, .rodata, wsel]
-      - [0x1D, c, wsel]  # gcc272_cdk, original WSEL translation unit
-      # Initialized data: the eight TIM images, the land-map grid tables, sprite
-      # layers and hero poses, then zero-filled runtime state. See
-      # tools/overlays/wsel.py.
+      - [0x1D, c, wsel]
       - [0x2999, databin, wsel_data]
   - [0x7AC75]
