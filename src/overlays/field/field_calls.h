@@ -23,7 +23,7 @@ struct FieldActionDescriptor;
 struct FieldActor;
 struct FieldActorSlot;
 struct FieldPlayerRecord;
-struct FieldActorState;
+struct FieldActorSlot;
 struct FieldCardClock;
 struct FieldCdBuffer;
 struct FieldCharacterRecord;
@@ -144,7 +144,7 @@ void field_clear_resource_queue(void);
 s32 field_get_loading_resource(void);
 void field_issue_next_resource_read(void);
 void field_free_owner_resources(s32 tag);
-void field_unpack_actor_resource(s32 owner, struct FieldActorState *actor);
+void field_unpack_actor_resource(s32 owner, struct FieldActorSlot *actor);
 
 /* field_actor_runtime.c */
 s32 field_get_actor_resource_id(s32 unused_slot_index, struct FieldPlayerRecord* player, s32 weapon_set);
@@ -219,7 +219,7 @@ void field_play_weapon_sfx(s32 sfx_index, s32 pan, s32 table_index);
 void field_release_sfx_group(s32 channel_group);
 void field_load_sfx_tables(s32 set_id);
 void field_load_weapon_sfx_table(s32 slot, s32 weapon_type);
-s32 field_play_sfx_buffer(s32 buffer, s32 pan, s32 channel_group);
+s32 field_play_sfx_buffer(u8* buffer, s32 pan, s32 channel_group);
 void field_reset_music_stream(void);
 void field_start_music_stream(s32 music_index);
 void field_update_music_stream(void);

@@ -7,7 +7,8 @@
 typedef struct
 {
     s16 unknown_00;
-    s16 unknown_02;
+    /** @brief Resource the actor draws from; -1 for none. */
+    s16 resource_index;
     u8 unknown_04[2];
     s8 scale_index;
     u8 unknown_07[7];

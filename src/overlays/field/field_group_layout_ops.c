@@ -12,6 +12,7 @@
 #include "common.h"
 #include "field_calls.h"
 #include "field_golem_layout.h"
+#include "field_records.h"
 
 /** @brief field_golem_commit_group_edit command: move the joined group to the order slot in D_80122C00. */
 #define GOLEM_COMMAND_REORDER 0x92BC
@@ -20,7 +21,6 @@
 /** @brief D_80122C06 value when the joined group kept its order slot. */
 #define GOLEM_SLOT_STATUS_UNCHANGED 3
 
-extern s32 D_80122C00;
 extern s16 D_80122C06;
 extern s16 D_80122C1A;
 extern s8 D_800459AF;
@@ -48,7 +48,7 @@ void field_golem_commit_group_edit(s32 command)
     i = 0;
     if (command == GOLEM_COMMAND_REORDER)
     {
-        target = D_80122C00;
+        target = D_80122C00.locals.golem.slot;
         if ((u32)target < GOLEM_RECORD_COUNT)
         {
             layout = GOLEM_LAYOUT;

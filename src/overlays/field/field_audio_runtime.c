@@ -617,12 +617,12 @@ void field_load_weapon_sfx_table(s32 slot, s32 weapon_type)
 
 /**
  * @brief Play an effect buffer on a free voice of a channel group.
- * @param buffer Effect buffer address.
+ * @param buffer Effect buffer.
  * @param pan Pan position.
  * @param channel_group Channel group; groups past the last one are ignored.
  * @return Nothing meaningful; the original declares an int return and never sets it.
  */
-s32 field_play_sfx_buffer(s32 buffer, s32 pan, s32 channel_group)
+s32 field_play_sfx_buffer(u8* buffer, s32 pan, s32 channel_group)
 {
     s32 base;
     s32 i;
@@ -637,7 +637,7 @@ s32 field_play_sfx_buffer(s32 buffer, s32 pan, s32 channel_group)
             mask = 1 << (base + i);
             if (!akao_is_sfx_playing(mask))
             {
-                akao_play_sfx_from_buffer(buffer, mask, pan, AKAO_VOLUME_MAX);
+                akao_play_sfx_from_buffer((s32)buffer, mask, pan, AKAO_VOLUME_MAX);
                 break;
             }
         }

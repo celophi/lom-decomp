@@ -2,6 +2,7 @@
 #include "wmap_resource_support.h"
 #include "sdk/libgpu.h"
 #include "cdrom.h"
+#include "wmap_sprite_render.h"
 
 /** @brief Unaligned eight-byte rectangle in a texture block. */
 typedef struct
@@ -25,14 +26,6 @@ typedef struct
     u16 pad;
 } WmapTexturedTriangle;
 
-/** @brief World-map resource record with its initialization field at offset 0x26. */
-typedef struct
-{
-    u8 unknown_0[0x26];
-    s16 initial_value;
-    u8 unknown_28[4];
-} WmapInitResource;
-
 /** @brief World-map display record with a leading state field. */
 typedef struct
 {
@@ -54,7 +47,7 @@ extern s32 D_800CB1FC[];
 extern RECT D_80051A88;
 
 
-extern WmapInitResource D_800D9268[];
+extern WmapSpriteActor D_800D9268[];
 extern WmapInitDisplay D_801AFBD0[];
 extern WmapValueHeader* D_800D0454;
 
@@ -275,7 +268,7 @@ void func_800653EC(void)
     s32 index;
     for (index = 0; index < 256; index++)
     {
-        D_800D9268[index].initial_value = 16;
+        D_800D9268[index].shade_step = 16;
         D_801AFBD0[index].state = 0;
     }
 }

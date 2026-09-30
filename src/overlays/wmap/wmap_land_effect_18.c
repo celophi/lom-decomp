@@ -131,7 +131,7 @@ extern u8 D_800DA448[];
 extern u8 D_80139CC8[];
 extern void (*D_800D4DA4[])(void);
 extern u8 D_800DB578[];
-extern u8 D_80139FE8[];
+extern WmapAnimationSlot D_80139FE8[];
 extern void (*D_800D4DB4[])(void);
 extern s32 D_801B240C;
 extern void (*D_800D4CAC[])(void);
@@ -644,7 +644,7 @@ void func_8006E8BC(void)
     D_801399AC = D_8011D538;
     D_800D9268[4].scale_index = 15;
     D_800D9268[4].previous_sequence = -1;
-    D_800D9268[4].unknown_02 = 0;
+    D_800D9268[4].resource_index = 0;
     D_800D9268[4].sequence = 0;
     D_800D9268[4].target_shade = 128;
     D_800D9268[4].shade = 128;

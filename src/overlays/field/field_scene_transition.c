@@ -85,7 +85,7 @@
 #define FIELD_FOOTPRINT_WIDTH 9
 #define FIELD_FOOTPRINT_DEPTH 6
 #define FIELD_FOOTPRINT_STEP 16
-/** @brief Full model scale of an object part (FieldObjectPart::scale_z). */
+/** @brief Full model scale of an object part (FieldObjectPart::appearance scale_xz). */
 #define FIELD_PART_FULL_SCALE 0x40
 /** @brief Transition tile image size and VRAM positions. */
 #define FIELD_TRANSITION_TILE_SIZE 32
@@ -601,7 +601,7 @@ void field_update_scene(void)
                 {
                     resource_base = resource_table;
                     resource_fields = OFFSET_FIRST_PTR(FieldResourceEntry, resource_offset, resource_base);
-                    resource_fields->palette = description->palette;
+                    resource_fields->attribute.palette = description->palette;
                     resource_fields->slot_index = top_image_slot;
                     if (D_80115890 != 0)
                     {
@@ -620,7 +620,7 @@ void field_update_scene(void)
                     resource->end = g_field_resource_cursor;
                     resource->flags |= FIELD_RESOURCE_LOADED;
                     action_ids = description->actions;
-                    resource->unkE = description->unkA;
+                    resource->bound_animation_flags = description->unkA;
                     /* image_index holds the action count until the image upload below. */
                     image_index = description->action_count;
                     action_index = 0;
@@ -654,7 +654,7 @@ void field_update_scene(void)
                     previous_resource = (FieldResourceEntry*)((u8*)g_field_resource_entries + (i + FIELD_PARTY_COUNT - 1) * sizeof(FieldResourceEntry));
                     resource_base = (u8*)g_field_resource_entries;
                     inherited_resource = OFFSET_FIRST_PTR(FieldResourceEntry, resource_offset, resource_base);
-                    inherited_resource->palette = previous_resource->palette;
+                    inherited_resource->attribute.palette = previous_resource->attribute.palette;
                     inherited_resource->slot_index = previous_resource->slot_index;
                     inherited_resource->unk8 = 0;
                     inherited_resource->start = g_field_resource_cursor;
@@ -663,7 +663,7 @@ void field_update_scene(void)
                     inherited_resource->end = g_field_resource_cursor;
                     inherited_resource->flags |= FIELD_RESOURCE_LOADED;
                     action_ids = description->actions;
-                    inherited_resource->unkE = description->unkA;
+                    inherited_resource->bound_animation_flags = description->unkA;
                     image_index = description->action_count;
                     action_index = 0;
                     if (image_count < image_index)
@@ -841,9 +841,9 @@ static void field_setup_chest_resource(void)
     g_field_resource_entries[FIELD_CHEST_RESOURCE].start = g_field_chest_geometry;
     g_field_resource_entries[FIELD_CHEST_RESOURCE].end = g_field_chest_geometry + sizeof(g_field_chest_geometry);
     g_field_resource_entries[FIELD_CHEST_RESOURCE].flags &= ~FIELD_RESOURCE_HAS_ACTIONS;
-    g_field_resource_entries[FIELD_CHEST_RESOURCE].palette = 0;
+    g_field_resource_entries[FIELD_CHEST_RESOURCE].attribute.palette = 0;
     g_field_resource_entries[FIELD_CHEST_RESOURCE].unk8 = 0;
-    g_field_resource_entries[FIELD_CHEST_RESOURCE].unkE = 0;
+    g_field_resource_entries[FIELD_CHEST_RESOURCE].bound_animation_flags = 0;
     g_field_resource_entries[FIELD_CHEST_RESOURCE].flags |= FIELD_RESOURCE_LOADED;
 }
 
@@ -926,7 +926,7 @@ static void field_load_scene_actors(FieldSceneLayout* layout)
     g_field_loaded_actor_count = FIELD_PARTY_COUNT;
     for (; index < count; index++, layout_record++)
     {
-        state->unk8.word &= 0x7FFFFFFF;
+        state->hp_display.word &= 0x7FFFFFFF;
         field_install_actor_action(layout_record, index);
         if (layout_record->control.bits.active)
         {
@@ -959,9 +959,9 @@ static void field_load_scene_actors(FieldSceneLayout* layout)
             state->tint_timer = 0;
             state->interaction_kind = 0;
             state->contact.bits.flag5 = 0;
-            state->unk8.bits.unk24 = 0;
-            state->unk8.bits.value = state->unk0;
-            state->unk4.word = state->unk0 & 0xFFFFFF;
+            state->hp_display.bits.unk24 = 0;
+            state->hp_display.bits.value = state->maximum_hp;
+            state->current_hp.word = state->maximum_hp & 0xFFFFFF;
             state->key = index + FIELD_PARTY_COUNT;
             state->enabled_events = layout_record->enabled_events;
             state->group_flags = layout_record->control.flags;
@@ -1014,14 +1014,14 @@ static void field_refresh_actor_collisions(void)
                 field_collision_move_mover(mover);
                 state->collision_node = mover->collision_node;
                 state->collision_flags = mover->flags;
-                state->movement.half.hi = mover->resolved_height >> 8;
+                state->movement.half.height = mover->resolved_height >> 8;
                 actor->x = mover->x;
                 actor->z = mover->z;
                 actor->y = mover->height;
             }
             else
             {
-                state->movement.half.hi = 0;
+                state->movement.half.height = 0;
                 state->collision_node = -1;
                 state->collision_flags = 0;
             }
@@ -1068,7 +1068,7 @@ void field_move_actor_position(FieldActor* actor, s32* motion)
     mover->move_height = motion[1];
     mover->move_z = motion[2];
 
-    if (g_field_object_parts[0].scale_z >= FIELD_PART_FULL_SCALE)
+    if (g_field_object_parts[0].appearance.fields.scale_xz >= FIELD_PART_FULL_SCALE)
     {
         mover->footprint_width = FIELD_FOOTPRINT_LARGE_WIDTH;
         mover->mode.bits.footprint_depth = FIELD_FOOTPRINT_LARGE_DEPTH;
@@ -1107,11 +1107,11 @@ void field_set_party_palettes(void)
     {
         if (g_field_player_records[i].character_kind == FIELD_PLAYER_KIND_HERO)
         {
-            g_field_resource_entries[i].palette = g_field_party_palettes[g_field_party_palette_index];
+            g_field_resource_entries[i].attribute.palette = g_field_party_palettes[g_field_party_palette_index];
         }
         else
         {
-            g_field_resource_entries[i].palette = 0;
+            g_field_resource_entries[i].attribute.palette = 0;
         }
     }
 }

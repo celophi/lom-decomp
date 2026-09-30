@@ -438,7 +438,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
                 group = g_field_object_states[i].group_flags & 0xF;
                 if (group == g_field_active_group && group != 0)
                 {
-                    hp_display = g_field_object_states[i].unk8.word;
+                    hp_display = g_field_object_states[i].hp_display.word;
                     if (hp_display < 0)
                     {
                         if (g_field_actors[i].presence != FIELD_ACTOR_UNUSED && (hp_display & FIELD_HUD_HP_MASK) && boss_drawn == 0)
@@ -449,19 +449,19 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
                     }
                     else if (g_field_actors[i].presence != FIELD_ACTOR_UNUSED)
                     {
-                        current_hp = g_field_object_states[i].unk4.word;
+                        current_hp = g_field_object_states[i].current_hp.word;
                         displayed_hp = hp_display & FIELD_HUD_HP_MASK;
                         if (current_hp < displayed_hp)
                         {
-                            g_field_object_states[i].unk8.word =
+                            g_field_object_states[i].hp_display.word =
                                 (hp_display & ~(FIELD_HUD_TIMER_MASK << FIELD_HUD_TIMER_SHIFT)) | (FIELD_HUD_PANEL_FRAMES << FIELD_HUD_TIMER_SHIFT);
                         }
                         else if (displayed_hp != current_hp)
                         {
-                            g_field_object_states[i].unk8.word =
+                            g_field_object_states[i].hp_display.word =
                                 (hp_display & ~(FIELD_HUD_TIMER_MASK << FIELD_HUD_TIMER_SHIFT)) | (FIELD_HUD_PANEL_FRAMES << FIELD_HUD_TIMER_SHIFT);
                         }
-                        if (g_field_object_states[i].unk8.bytes[3] & FIELD_HUD_TIMER_MASK)
+                        if (g_field_object_states[i].hp_display.bytes[3] & FIELD_HUD_TIMER_MASK)
                         {
                             if (!(g_field_object_states[i].flags & FIELD_OBJECT_FLAG_0100) && (g_field_object_states[i].contact.bytes.flags & 1) &&
                                 (g_field_effect_records[g_field_object_states[i].linked_effect_index].animation & 0x7F) != FIELD_HUD_ANCHOR_IGNORED_ANIMATION)
@@ -539,11 +539,11 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
                                 }
                             }
                             field_draw_actor_hud_panel(position.x - FIELD_HUD_ENEMY_OFFSET_X, position.y, i, render_half, FIELD_HUD_HP_PER_BAR);
-                            updated_hp_display = g_field_object_states[i].unk8.word;
+                            updated_hp_display = g_field_object_states[i].hp_display.word;
                             timer = ((u32)updated_hp_display >> FIELD_HUD_TIMER_SHIFT) & FIELD_HUD_TIMER_MASK;
                             if (timer != 0)
                             {
-                                g_field_object_states[i].unk8.word = (updated_hp_display & ~(FIELD_HUD_TIMER_MASK << FIELD_HUD_TIMER_SHIFT)) |
+                                g_field_object_states[i].hp_display.word = (updated_hp_display & ~(FIELD_HUD_TIMER_MASK << FIELD_HUD_TIMER_SHIFT)) |
                                                                      (((timer - 1) & FIELD_HUD_TIMER_MASK) << FIELD_HUD_TIMER_SHIFT);
                             }
                         }
@@ -1532,13 +1532,13 @@ void field_set_actor_horizontal_scale(FieldActor* actor, s32 half_scale)
 {
     if (half_scale != 0)
     {
-        g_field_object_parts[actor->object_index].scale_z = FIELD_PART_SCALE_HALF;
-        g_field_object_parts[actor->object_index].scale_x = FIELD_PART_SCALE_HALF;
+        g_field_object_parts[actor->object_index].appearance.fields.scale_xz = FIELD_PART_SCALE_HALF;
+        g_field_object_parts[actor->object_index].scale_y = FIELD_PART_SCALE_HALF;
     }
     else
     {
-        g_field_object_parts[actor->object_index].scale_z = FIELD_PART_SCALE_FULL;
-        g_field_object_parts[actor->object_index].scale_x = FIELD_PART_SCALE_FULL;
+        g_field_object_parts[actor->object_index].appearance.fields.scale_xz = FIELD_PART_SCALE_FULL;
+        g_field_object_parts[actor->object_index].scale_y = FIELD_PART_SCALE_FULL;
     }
 }
 
@@ -1813,7 +1813,7 @@ POLY_FT4* field_render_actor_ground_shadow(FieldActor* actor, POLY_FT4* prim, s3
     screen->y = g_field_view_offset_y / 256 + (world->y / 256 + FIELD_SCREEN_CENTER_Y) - world->z / 512 - g_field_view_offset_z / 512;
 
     size = actor->height;
-    height = g_field_object_states[actor->object_index].movement.half.hi;
+    height = g_field_object_states[actor->object_index].movement.half.height;
     if (g_field_resource_entries[actor->object_index].unk8 != 0)
     {
         /* The resource profile widens the height-dependent inset by 5/4. */

@@ -2000,7 +2000,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             break;
                             case 0x4:
                             {
-                                packet_cursor = func_800A8A78(ot_entry, packet_cursor, g_field_object_states[g_menu_char_slot].current_hp, 1, &pos,
+                                packet_cursor = func_800A8A78(ot_entry, packet_cursor, g_field_object_states[g_menu_char_slot].current_hp.word, 1, &pos,
                                                               ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                             }
                             break;

@@ -93,6 +93,13 @@ def layout_key(t) -> str:
     return f"?{k}"
 
 
+def element_key(key: str) -> str:
+    """A layout key without its outer array dimensions: the layout of one element."""
+    while key.startswith("["):
+        key = key[key.index("]") + 1:]
+    return key
+
+
 def choose(decls, extent: int, report, name: str):
     """One type for a symbol from all its declarations.
 
@@ -103,9 +110,12 @@ def choose(decls, extent: int, report, name: str):
     variants = collections.OrderedDict()
     for t, f in decls:
         variants.setdefault(layout_key(t), (t, f))
-    if len(variants) > 1:
+    # `T x`, `T x[]` and `T x[4]` differ only in how many records are declared,
+    # not in their layout; they are not a conflict.
+    elements = {element_key(k) for k in variants}
+    if len(elements) > 1:
         report.note("symbol with conflicting declarations", f"{name}: {len(variants)} layouts")
-        if any("p" in k for k in variants):
+        if any("p" in k for k in elements):
             files = sorted({f.split('.')[0] for _, f in variants.values()})[:3]
             report.note("conflicting declarations that disagree about pointers", f"{name}: " + " vs ".join(files))
 

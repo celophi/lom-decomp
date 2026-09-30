@@ -826,7 +826,7 @@ void func_800B2888(void)
     D_800D9318.previous_sequence = -1;
     D_800D9318.shade_step = 0x10;
     D_800D9318.target_shade = 1;
-    D_800D9318.unknown_02 = 0;
+    D_800D9318.resource_index = 0;
     D_800D9318.sequence = 0;
     D_800D9318.shade = 0x81;
     D_801B2FA4 = 0x10;
@@ -901,7 +901,7 @@ void func_800B2A2C(void)
     D_800D9344.sequence = one;
     D_800D9344.previous_sequence = -one;
     D_800D9344.shade_step = 4;
-    D_800D9344.unknown_02 = 0;
+    D_800D9344.resource_index = 0;
     D_800D9344.target_shade = one;
     D_800D9344.shade = 0x81;
     D_801B2FAC = 0x10;
@@ -978,7 +978,7 @@ void func_800B2BD0(void)
     D_800D9370.previous_sequence = -1;
     D_800D9370.shade_step = 0x10;
     D_800D9370.target_shade = 1;
-    D_800D9370.unknown_02 = 0;
+    D_800D9370.resource_index = 0;
     D_800D9370.shade = 0x81;
     D_801B2FB4 = 0x10;
     D_801B2FB0 += 1;

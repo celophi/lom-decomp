@@ -187,7 +187,7 @@
 #define FIELD_SCREEN_CENTRE_Y 112
 /** @brief Collision result bits of a fully blocked move. */
 #define FIELD_COLLISION_BLOCKED 3
-/** @brief FieldObjectPart::scale_z of a full-size object; full-size objects use the large footprint. */
+/** @brief FieldObjectPart::appearance scale_xz of a full-size object; full-size objects use the large footprint. */
 #define FIELD_PART_FULL_SCALE 0x40
 /** @brief Collision footprint of large and normal actors (width, depth), and the step height. */
 #define FIELD_FOOTPRINT_LARGE_WIDTH 12
@@ -854,7 +854,7 @@ void field_follow_leader_route(FieldActor* actor, s32 follower_index)
             mover->move_x = dx;
             mover->move_height = 0;
             mover->move_z = dz;
-            if (g_field_object_parts[actor->object_index].scale_z == FIELD_PART_FULL_SCALE)
+            if (g_field_object_parts[actor->object_index].appearance.fields.scale_xz == FIELD_PART_FULL_SCALE)
             {
                 mover->footprint_width = FIELD_FOOTPRINT_LARGE_WIDTH;
                 mover->mode.footprint_depth = FIELD_FOOTPRINT_LARGE_DEPTH;
@@ -873,13 +873,13 @@ void field_follow_leader_route(FieldActor* actor, s32 follower_index)
             g_field_object_states[actor->object_index].collision_node = mover->collision_node;
             g_field_object_states[actor->object_index].collision_flags = mover->flags;
             actor->y = mover->height;
-            g_field_object_states[actor->object_index].movement.half.hi = mover->resolved_height / 256;
+            g_field_object_states[actor->object_index].movement.half.height = mover->resolved_height / 256;
         }
         else
         {
             g_field_object_states[actor->object_index].collision_node = -1;
             g_field_object_states[actor->object_index].collision_flags = 0;
-            g_field_object_states[actor->object_index].movement.half.hi = 0;
+            g_field_object_states[actor->object_index].movement.half.height = 0;
         }
     }
     if ((dx | dz) != 0)
@@ -1109,7 +1109,7 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
                 probe->height_tolerance = FIELD_FOOTPRINT_STEP;
                 mover->move_x = work.motion.vx;
                 mover->move_z = work.motion.vz;
-                if (g_field_object_parts[movement_actor->object_index].scale_z == FIELD_PART_FULL_SCALE)
+                if (g_field_object_parts[movement_actor->object_index].appearance.fields.scale_xz == FIELD_PART_FULL_SCALE)
                 {
                     mover->footprint_width = FIELD_FOOTPRINT_LARGE_WIDTH;
                     probe->width = FIELD_FOOTPRINT_LARGE_WIDTH;
@@ -1135,13 +1135,13 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
                 g_field_object_states[movement_actor->object_index].collision_node = mover->collision_node;
                 g_field_object_states[movement_actor->object_index].collision_flags = mover->flags;
                 movement_actor->y = mover->height;
-                g_field_object_states[movement_actor->object_index].movement.half.hi = mover->resolved_height / 256;
+                g_field_object_states[movement_actor->object_index].movement.half.height = mover->resolved_height / 256;
             }
             else
             {
                 g_field_object_states[movement_actor->object_index].collision_node = -1;
                 g_field_object_states[movement_actor->object_index].collision_flags = 0;
-                g_field_object_states[movement_actor->object_index].movement.half.hi = 0;
+                g_field_object_states[movement_actor->object_index].movement.half.height = 0;
             }
             mover_x = mover->x;
             mover_z = mover->z;
@@ -1826,7 +1826,7 @@ s32 field_update_actor_command(FieldActor* actor)
             field_start_defeat_bound_animation(actor);
             return;
         }
-        field_start_streamed_animation(actor->object_index, g_field_resource_entries[actor->resource_index].unkE & FIELD_REQUEST_ANIMATION_MASK);
+        field_start_streamed_animation(actor->object_index, g_field_resource_entries[actor->resource_index].bound_animation_flags & FIELD_REQUEST_ANIMATION_MASK);
         return;
     case FIELD_ACTOR_COMMAND_DEFEAT_WAIT:
         if ((g_field_actor_bindings[FIELD_OBJECT_BINDING(actor->object_index)].state != 0) &&
@@ -1836,7 +1836,7 @@ s32 field_update_actor_command(FieldActor* actor)
             return;
         }
 
-        field_start_streamed_animation(actor->object_index, g_field_resource_entries[actor->resource_index].unkE & FIELD_REQUEST_ANIMATION_MASK);
+        field_start_streamed_animation(actor->object_index, g_field_resource_entries[actor->resource_index].bound_animation_flags & FIELD_REQUEST_ANIMATION_MASK);
         return;
     case FIELD_ACTOR_COMMAND_DEFEAT_END:
         field_update_defeat_end(actor);
@@ -2173,7 +2173,7 @@ s32 field_update_actor_command(FieldActor* actor)
         {
             s32 action_pending;
             target_count_or_slot = field_collect_action_targets(actor->object_index, action, (action->flags >> FIELD_ACTION_TARGET_MODE_SHIFT) & FIELD_ACTION_TARGET_MODE_MASK,
-                                                 state->movement.half.lo & FIELD_MOVEMENT_SCALE_MASK, scratch.targets);
+                                                 state->movement.half.flags & FIELD_MOVEMENT_SCALE_MASK, scratch.targets);
             action_pending = 0;
             if (g_field_actions_limited == 0)
             {
@@ -2420,7 +2420,7 @@ static s32 field_filter_action_targets(s32 count, s32* indices)
                 /* Index-first sums: the target adds the scaled index before the table base. */
                 actor = (FieldActor*)(candidate_index * sizeof(FieldActor) + (s32)actor_base);
                 state = (FieldObjectState*)(candidate_index * sizeof(FieldObjectState) + (s32)state_base);
-                if ((actor->presence != sentinel) && (state->unk4.word != 0))
+                if ((actor->presence != sentinel) && (state->current_hp.word != 0))
                 {
                     contact = state->contact.word;
                     if (!(contact & FIELD_CONTACT_ANIMATION_HIDDEN) && ((i < FIELD_PARTY_COUNT) || ((state->group_flags & FIELD_OBJECT_GROUP_MASK) == group)))
@@ -2645,16 +2645,16 @@ s32 field_start_bound_action_animation(s32 object_index, s32 target_count, u8* t
         {
             g_field_actor_slots[binding->slot].animation_index = (request >> FIELD_REQUEST_LAYER_SHIFT) & FIELD_REQUEST_LAYER_MASK;
             layer_slot = &g_field_actor_slots[binding->slot];
-            layer_slot->duration = layer_slot->default_animation[layer_slot->animation_index].duration;
+            layer_slot->duration = layer_slot->animations[layer_slot->animation_index].duration;
         }
         else
         {
             g_field_actor_slots[binding->slot].animation_index = 0;
             base_slot = &g_field_actor_slots[binding->slot];
             remaining_layers = (request >> FIELD_REQUEST_LAYER_SHIFT) & FIELD_REQUEST_LAYER_MASK;
-            base_slot->duration = base_slot->default_animation->duration;
+            base_slot->duration = base_slot->animations->duration;
             layer_index = 1;
-            g_field_actor_slots[binding->slot].unk2A = 1;
+            g_field_actor_slots[binding->slot].sequence_active = 1;
             if (remaining_layers != 0)
             {
                 do
@@ -2664,14 +2664,14 @@ s32 field_start_bound_action_animation(s32 object_index, s32 target_count, u8* t
                     {
                         slot = &g_field_actor_slots[new_slot];
                         bcopy((u8*)&g_field_actor_slots[binding->slot], (u8*)slot, sizeof(FieldActorSlot));
-                        animations = slot->default_animation;
+                        animations = slot->animations;
                         slot->slot_index = new_slot;
                         slot->animation_index = layer_index;
                         layer_value = animations->duration;
                         slot->track_interval = 0;
                         slot->animation = &animations[layer_index];
                         result = 1;
-                        slot->unk2A = result;
+                        slot->sequence_active = result;
                         slot->active = result;
                         slot->duration = layer_value;
                         field_start_actor_animation(new_slot, target_count, targets);
@@ -2685,13 +2685,13 @@ s32 field_start_bound_action_animation(s32 object_index, s32 target_count, u8* t
     else
     {
         default_slot = &g_field_actor_slots[binding->slot];
-        default_slot->duration = default_slot->default_animation->duration;
+        default_slot->duration = default_slot->animations->duration;
         g_field_actor_slots[binding->slot].animation_index = 0;
     }
     initialized_slot = &g_field_actor_slots[binding->slot];
-    initialized_slot->track_interval = initialized_slot->default_animation[initialized_slot->animation_index].unk16;
+    initialized_slot->track_interval = initialized_slot->animations[initialized_slot->animation_index].track_interval;
     selected_slot = &g_field_actor_slots[binding->slot];
-    selected_slot->animation = selected_slot->default_animation + selected_slot->animation_index;
+    selected_slot->animation = selected_slot->animations + selected_slot->animation_index;
     g_field_actor_slots[binding->slot].active = 1;
     field_start_actor_animation(binding->slot, target_count, targets);
     g_field_object_states[object_index].contact.bytes.animation_actor_index = binding->slot;

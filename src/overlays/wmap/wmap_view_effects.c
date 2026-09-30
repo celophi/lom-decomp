@@ -972,7 +972,7 @@ s32 wmap_update_burst_particles(void)
             actor = &D_800D9268[actor_index];
             if (g_wmap_burst_spawning != 0)
             {
-                actor->unknown_02 = 0;
+                actor->resource_index = 0;
                 actor->scale_index = WMAP_BURST_ACTOR_SCALE;
                 actor->sequence = ((rand() * D_801B0FD0) >> 15) + 1;
                 actor->previous_sequence = -1;

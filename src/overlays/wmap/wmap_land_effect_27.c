@@ -57,7 +57,7 @@ typedef struct
 
 extern VECTOR D_8011CF60;
 extern s32 D_80182DEC;
-extern s32 D_8011CF1C;
+extern u8* D_8011CF1C;
 extern s32 D_801B2C8C;
 extern s32 D_80182DE8;
 extern u8 D_800DCF18[];
@@ -112,7 +112,7 @@ extern void func_8009CB08(void);
 extern void func_8009CBD0(void);
 extern void (*D_800D66BC[])(void);
 extern u8 D_800D95D8[];
-extern u8 D_80139A28[];
+extern WmapAnimationSlot D_80139A28[];
 extern void (*D_800D66D4[])(void);
 extern u8 D_800D9CB8[];
 extern u8 D_80139B68[];
@@ -871,7 +871,7 @@ void func_8009C12C(void)
     D_800D9318.sequence = 1;
     D_800D9318.previous_sequence = -1;
     D_800D9318.shade_step = 8;
-    D_800D9318.unknown_02 = 0;
+    D_800D9318.resource_index = 0;
     D_800D9318.target_shade = 0x81;
     D_800D9318.shade = 1;
     D_801B2C74 = 0x24;
@@ -947,7 +947,7 @@ void func_8009C2D0(void)
     D_800D9344.sequence = 1;
     D_800D9344.previous_sequence = -1;
     D_800D9344.shade_step = 2;
-    D_800D9344.unknown_02 = 0;
+    D_800D9344.resource_index = 0;
     D_800D9344.target_shade = 0x80;
     D_800D9344.shade = 0;
     D_801B2C7C = 0xEE;
@@ -1291,7 +1291,7 @@ void func_8009CA88(void)
     D_800D9370.previous_sequence = -1;
     D_800D9370.shade_step = 4;
     D_800D9370.target_shade = 0x81;
-    D_800D9370.unknown_02 = 0;
+    D_800D9370.resource_index = 0;
     D_800D9370.sequence = 0;
     D_800D9370.shade = 1;
     D_801B2CA4 = 0x80;
@@ -1720,7 +1720,7 @@ void func_8009D50C(void)
     D_800D93C8.previous_sequence = -1;
     D_800D93C8.shade_step = 2;
     D_800D93C8.target_shade = 0x81;
-    D_800D93C8.unknown_02 = 0;
+    D_800D93C8.resource_index = 0;
     D_800D93C8.sequence = 0;
     D_800D93C8.shade = 1;
     D_801B2CCC = 0x5A;

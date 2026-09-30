@@ -169,7 +169,7 @@ void field_camera_track_party(void)
         {
             target_x -= g_field_actors[index].x;
             target_z -= g_field_actors[index].z;
-            target_z += g_field_object_states[index].movement.half.hi << 9;
+            target_z += g_field_object_states[index].movement.half.height << 9;
             if (count != 0)
             {
                 divisor = count + 1;

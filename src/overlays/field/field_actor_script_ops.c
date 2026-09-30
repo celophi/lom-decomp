@@ -85,7 +85,7 @@
 #define FIELD_CONTROL_MOVING 0x200
 #define FIELD_CONTROL_MOVEMENT_UNK400 0x400
 
-/** @brief FieldObjectPart::flags bit toggled by script opcodes 0xA5 and 0xA6. */
+/** @brief FieldObjectPart::spawn_flags bit toggled by script opcodes 0xA5 and 0xA6. */
 #define FIELD_PART_FLAG_800000 0x800000
 
 /** @brief FieldActionSlot command bit marking a technique; the low bits index the weapon's techniques. */
@@ -625,7 +625,7 @@ static void field_run_actor_script_command(FieldActor* actor)
             {
                 animation_binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
             }
-            animation_slots[((FieldActorBinding*)&animation_bindings[animation_binding_offset])->slot].actor_type = g_field_object_states[actor->object_index].action;
+            animation_slots[((FieldActorBinding*)&animation_bindings[animation_binding_offset])->slot].hit_reaction = g_field_object_states[actor->object_index].action;
         }
         else
         {
@@ -648,7 +648,7 @@ static void field_run_actor_script_command(FieldActor* actor)
                     animation_binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
                 }
                 animation_slot_offset = ((FieldActorBinding*)&animation_bindings[animation_binding_offset])->slot * sizeof(FieldActorSlot);
-                ((FieldActorSlot*)((u8*)animation_slots + animation_slot_offset))->actor_type = g_field_object_states[actor->object_index].action;
+                ((FieldActorSlot*)((u8*)animation_slots + animation_slot_offset))->hit_reaction = g_field_object_states[actor->object_index].action;
             }
         }
         if (action_slot->flags.instrument)
@@ -672,7 +672,7 @@ static void field_run_actor_script_command(FieldActor* actor)
                 if ((key_or_index != -1) && (field_start_builtin_animation(actor->object_index, key_or_index, action_slot->animation) != 0))
                 {
                     slot_owner = actor->object_index;
-                    g_field_actor_slots[key_or_index].actor_type = g_field_object_states[slot_owner].action;
+                    g_field_actor_slots[key_or_index].hit_reaction = g_field_object_states[slot_owner].action;
                     field_start_actor_animation(key_or_index, 0, 0);
                 }
             }
@@ -752,7 +752,7 @@ static void field_run_actor_script_command(FieldActor* actor)
             query_start.x = actor_x;
             query_start.y = actor->y;
             query_start.z = actor->z;
-            if (g_field_object_parts[actor->object_index].scale_z == FIELD_PART_FULL_SCALE)
+            if (g_field_object_parts[actor->object_index].appearance.fields.scale_xz == FIELD_PART_FULL_SCALE)
             {
                 query_start.width = FIELD_FOOTPRINT_LARGE_WIDTH;
                 query_start.depth = FIELD_FOOTPRINT_LARGE_DEPTH;
@@ -906,7 +906,7 @@ static void field_run_actor_script_command(FieldActor* actor)
                 load_binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
             }
             load_slot_offset = ((FieldActorBinding*)&load_bindings[load_binding_offset])->slot * sizeof(FieldActorSlot);
-            ((FieldActorSlot*)((u8*)load_slots + load_slot_offset))->actor_type = action_or_index;
+            ((FieldActorSlot*)((u8*)load_slots + load_slot_offset))->hit_reaction = action_or_index;
             load_state->action = action_or_index;
             g_field_object_states[actor->object_index].movement.word |= FIELD_MOVEMENT_TECHNIQUE;
             return;
@@ -930,11 +930,11 @@ static void field_run_actor_script_command(FieldActor* actor)
                 bound_slot = &bound_slots[((FieldActorBinding*)bound_binding)->slot];
                 if (bound_slot->track_mask == 0)
                 {
-                    bound_slot->animation = bound_slot->default_animation;
+                    bound_slot->animation = bound_slot->animations;
                     g_field_object_states[actor->object_index].contact.bytes.target_count = 0;
                     field_start_actor_animation(((FieldActorBinding*)bound_binding)->slot, 0, 0);
                     g_field_object_states[key_or_index].contact.bytes.animation_actor_index = ((FieldActorBinding*)bound_binding)->slot;
-                    g_field_actor_slots[((FieldActorBinding*)bound_binding)->slot].unk2A = 1;
+                    g_field_actor_slots[((FieldActorBinding*)bound_binding)->slot].sequence_active = 1;
                     actor->command = FIELD_ACTOR_COMMAND_WAIT_BOUND_ACTOR;
                 }
                 actor->script_offset++;
@@ -967,7 +967,7 @@ static void field_run_actor_script_command(FieldActor* actor)
             if (slot->track_mask == 0)
             {
                 index_or_count = 0;
-                if (slot->default_animation->flags & FIELD_ANIMATION_DEF_LAYERED)
+                if (slot->animations->flags & FIELD_ANIMATION_DEF_LAYERED)
                 {
                     for (action_or_index = 0; action_or_index < FIELD_ACTOR_TRACK_COUNT; action_or_index++)
                     {
@@ -1085,11 +1085,11 @@ static void field_run_actor_script_command(FieldActor* actor)
         actor->script_offset += 2;
         return;
     case FIELD_SCRIPT_OP_SET_PART_FLAG:
-        g_field_object_parts[actor->object_index].flags |= FIELD_PART_FLAG_800000;
+        g_field_object_parts[actor->object_index].spawn_flags.word |= FIELD_PART_FLAG_800000;
         actor->script_offset++;
         return;
     case FIELD_SCRIPT_OP_CLEAR_PART_FLAG:
-        g_field_object_parts[actor->object_index].flags &= ~FIELD_PART_FLAG_800000;
+        g_field_object_parts[actor->object_index].spawn_flags.word &= ~FIELD_PART_FLAG_800000;
         actor->script_offset++;
         return;
     case FIELD_SCRIPT_OP_WAIT_ANIMATION:
@@ -1366,8 +1366,8 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound)
     g_field_object_states[actor->object_index].contact.bits.flag5 = 0;
     /* unk0 holds the maximum HP; unk4 and the low 24 bits of unk8 the current HP. */
     hp_state = &g_field_object_states[actor->object_index];
-    hp_state->unk8.word = (hp_state->unk8.word & 0xFF000000) | (hp_state->unk0 & 0xFFFFFF);
-    hp_state->unk4.word = hp_state->unk0 & 0xFFFFFF;
+    hp_state->hp_display.word = (hp_state->hp_display.word & 0xFF000000) | (hp_state->maximum_hp & 0xFFFFFF);
+    hp_state->current_hp.word = hp_state->maximum_hp & 0xFFFFFF;
     g_field_object_states[actor->object_index].tint_timer = FIELD_REVIVE_TINT_FRAMES;
     g_field_object_states[actor->object_index].movement.bits.flag15 = 1;
     if (actor->object_index < (u32)FIELD_PARTY_COUNT &&
@@ -1377,7 +1377,7 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound)
         /* Walk towards the first other party member that is present and alive. */
         for (companion_index = 0; companion_index < FIELD_PARTY_COUNT; companion_index++)
         {
-            if (g_field_actors[companion_index].presence != FIELD_ACTOR_UNUSED && g_field_object_states[companion_index].unk4.word != 0 &&
+            if (g_field_actors[companion_index].presence != FIELD_ACTOR_UNUSED && g_field_object_states[companion_index].current_hp.word != 0 &&
                 actor->object_index != companion_index)
             {
                 break;
@@ -1428,7 +1428,7 @@ void field_route_actor_to_object(FieldActor* actor, s32 target_index, s32 restar
         start.x = x;
         start.y = actor->y;
         start.z = actor->z;
-        if (g_field_object_parts[actor->object_index].scale_z == FIELD_PART_FULL_SCALE)
+        if (g_field_object_parts[actor->object_index].appearance.fields.scale_xz == FIELD_PART_FULL_SCALE)
         {
             start.width = FIELD_FOOTPRINT_LARGE_WIDTH;
             start.depth = FIELD_FOOTPRINT_LARGE_DEPTH;
@@ -1582,7 +1582,7 @@ void field_resolve_collected_hits(s32 object_index)
         {
             current = FIELD_OBJECT_STATE_BY_INDEX8(loop_states, index8, object_index);
             loop_states[current->targets[i]].contact.bits.flag7 = 0;
-            if (!loop_states[current->targets[i]].contact.bits.flag5 && loop_states[current->targets[i]].unk4.word != 0)
+            if (!loop_states[current->targets[i]].contact.bits.flag5 && loop_states[current->targets[i]].current_hp.word != 0)
             {
                 request.attacker_id = current->key;
                 if (current->action <= FIELD_ACTION_BATTLE_LAST)
@@ -1628,7 +1628,7 @@ s32 field_resolve_contact_hit(s32 source_index, s32 target_index)
     states = g_field_object_states;
     target = &states[target_index];
     target->contact.bits.flag7 = 0;
-    if (target->unk4.word == 0)
+    if (target->current_hp.word == 0)
     {
         return 0;
     }
@@ -1681,7 +1681,7 @@ s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action)
         states = g_field_object_states;
         target = &states[target_index];
         target->contact.bits.flag7 = 0;
-        if (target->unk4.word != 0)
+        if (target->current_hp.word != 0)
         {
             request.attacker_id = states[source_index].key;
             request.action_id = action;
@@ -1745,7 +1745,7 @@ s32 field_register_actor_hit(s32 key, s32 guard)
     {
         g_field_player_records[actor->object_index].hit_state = FIELD_HUD_SHAKE_START;
     }
-    else if (g_field_object_states[actor->object_index].unk8.word < 0)
+    else if (g_field_object_states[actor->object_index].hp_display.word < 0)
     {
         /* Bit 31 of unk8 marks a boss. */
         g_field_boss_hud_shake_frame = FIELD_HUD_SHAKE_START;
@@ -2242,7 +2242,7 @@ void field_restart_pending_bindings(void)
     {
         if (g_field_binding_restart_pending[i] != 0 && g_field_actor_bindings[i].state == FIELD_BINDING_READY)
         {
-            g_field_actor_slots[g_field_actor_bindings[i].slot].animation = g_field_actor_slots[g_field_actor_bindings[i].slot].default_animation;
+            g_field_actor_slots[g_field_actor_bindings[i].slot].animation = g_field_actor_slots[g_field_actor_bindings[i].slot].animations;
             field_start_actor_animation(g_field_actor_bindings[i].slot, 0, 0);
             owner = g_field_actor_bindings[i].owner;
             if (owner >= FIELD_PARTY_COUNT)
@@ -2251,7 +2251,7 @@ void field_restart_pending_bindings(void)
             }
             g_field_object_states[owner].contact.bytes.animation_actor_index = g_field_actor_bindings[i].slot;
             g_field_binding_restart_pending[i] = 0;
-            g_field_actor_slots[g_field_actor_bindings[i].slot].unk2A = 1;
+            g_field_actor_slots[g_field_actor_bindings[i].slot].sequence_active = 1;
         }
     }
 }

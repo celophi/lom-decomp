@@ -17,9 +17,10 @@
 #include "sdk/libgte.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
+#include "field_actor_records.h"
 
 /** @brief Object state @p index of @p base. */
-#define FIELD_OBJECT_STATE_AT(base, index) ((FieldObjectRuntime*)((index) * sizeof(FieldObjectRuntime) + (s32)(base)))
+#define FIELD_OBJECT_STATE_AT(base, index) ((FieldObjectState*)((index) * sizeof(FieldObjectState) + (s32)(base)))
 
 /** @brief CD resource holding the actor sequence bytecode banks. */
 #define FIELD_SEQUENCE_RESOURCE_ID 0x5DD
@@ -28,7 +29,7 @@
 #define FIELD_SEQUENCE_ROW_SIZE 32
 
 #define FIELD_QUAD_VERTEX_COUNT 4
-/** @brief Most targets one object can collect (FieldObjectRuntime::targets). */
+/** @brief Most targets one object can collect (FieldObjectState::targets). */
 #define FIELD_MAX_CONTACT_TARGETS 9
 /** @brief field_intersect_screen_segments result when the segments do not meet. */
 #define FIELD_NO_SEGMENT_INTERSECTION 0x80008000
@@ -48,12 +49,12 @@
 #define FIELD_MOVE_LARGE_STEP 8
 #define FIELD_MOVE_HEIGHT_TOLERANCE 16
 
-/** @brief FieldActorAnimationDef::sync_flags bit: the animation hits its own group, not the opposing one. */
+/** @brief FieldAnimationDef::sync_flags bit: the animation hits its own group, not the opposing one. */
 #define FIELD_ANIMATION_SAME_GROUP 0x01
 /** @brief FieldResourceEntry::flags bit: the resource has an action table and eight-direction animations. */
 #define FIELD_RESOURCE_HAS_ACTIONS 0x01
 
-/** @brief FieldActorState::action_flags bits holding the action kind; kind 8 swings three attack spheres. */
+/** @brief FieldActorSlot::status bits holding the action kind; kind 8 swings three attack spheres. */
 #define FIELD_ACTOR_ACTION_KIND_MASK 0x1E
 #define FIELD_ACTOR_ACTION_KIND_ATTACK 8
 
@@ -65,7 +66,7 @@
 #define FIELD_ANIMATION_3F 0x3F /**< A player in this animation answers an effect quad with action 2. */
 #define FIELD_ANIMATION_40 0x40 /**< A player in this animation answers an effect quad with action 3. */
 
-/** @brief FieldActorState::hit_reaction values below this are passed on as the hit action; higher ones are mapped. */
+/** @brief FieldActorSlot::hit_reaction values below this are passed on as the hit action; higher ones are mapped. */
 #define FIELD_HIT_REACTION_DIRECT_COUNT 12
 /** @brief Actors this high (FieldActor::height) or higher overlap nothing. */
 #define FIELD_OVERLAP_MAX_HEIGHT 9
@@ -118,17 +119,6 @@
 #define FIELD_ATTACK_SPHERE_2_ADDRESS 0x1F8000C0
 #define FIELD_GTE_DELTA_ADDRESS 0x1F800080
 #define FIELD_GTE_SQUARE_ADDRESS 0x1F800090
-
-/** @brief Loaded field resource metadata used by contact reactions. */
-typedef struct
-{
-    u8* start;
-    u8* end;
-    u8 state;
-    u8 slot_index;
-    u8 pad_0xa[6];
-    u32 flags;
-} FieldResourceEntry;
 
 /** @brief View of g_field_object_parts (FieldObjectPart in field_actor_tables.h, which this file cannot include). */
 typedef struct
@@ -206,13 +196,11 @@ extern u8* g_field_cd_buffer;
 extern FieldMoveObject g_field_object_parts[];
 extern s32 g_field_active_group;
 extern FieldGroupBounds g_field_group_bounds[];
-extern FieldActorState g_field_actor_slots[];
-extern FieldResourceEntry g_field_resource_entries[];
 extern s32 g_field_duel_mode;
 /** @brief Last field_find_actor_overlap result: zero, or the object index plus FIELD_CONTACT_RESULT_PRESENT. */
 extern s32 g_field_last_actor_contact;
 
-void field_start_interaction(s32 value, u16 entry, FieldObjectRuntime* states);
+void field_start_interaction(s32 value, u16 entry, FieldObjectState* states);
 s32 field_resolve_contact_hit(s32 source_index, s32 target_index);
 s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action);
 void field_release_object_link(FieldActor* actor);
@@ -267,8 +255,8 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
     FieldContactPoint* input_quad;
     FieldActor* target;
     FieldActor* owner;
-    FieldObjectRuntime* target_state;
-    FieldObjectRuntime* owner_state;
+    FieldObjectState* target_state;
+    FieldObjectState* owner_state;
     union
     {
         FieldContactPoint center;
@@ -294,13 +282,13 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
     u8 owner_index;
     u8 target_count;
     FieldContactPoint* target_quad;
-    FieldObjectRuntime* list_state;
-    FieldObjectRuntime* object_states;
+    FieldObjectState* list_state;
+    FieldObjectState* object_states;
     FieldSequenceBinding* bindings;
     FieldSequenceBinding* binding;
-    FieldActorState* slots;
+    FieldActorSlot* slots;
     FieldContactPoint* input_vertex;
-    FieldObjectRuntime* target_list;
+    FieldObjectState* target_list;
 
     owner_index = effect->source_object_index;
     owner = &g_field_actors[owner_index];
@@ -317,16 +305,16 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
     slots = g_field_actor_slots;
     for (; target_index < FIELD_ACTOR_COUNT; target_index++, target++, target_state++)
     {
-        if ((target->presence == FIELD_ACTOR_UNUSED) || (target_state->object_flags & FIELD_OBJECT_UNTARGETABLE_FLAGS) ||
+        if ((target->presence == FIELD_ACTOR_UNUSED) || (target_state->flags & FIELD_OBJECT_UNTARGETABLE_FLAGS) ||
             ((target_index >= FIELD_PARTY_COUNT) && ((target_state->group_flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)) ||
-            (target_state->current_hp == 0) ||
+            (target_state->current_hp.word == 0) ||
             ((target->animation & FIELD_ANIMATION_INDEX_MASK) >= FIELD_ANIMATION_38 &&
              (target->animation & FIELD_ANIMATION_INDEX_MASK) <= FIELD_ANIMATION_39) ||
             (target->object_index == effect->source_object_index))
         {
             continue;
         }
-        if (target_state->contact.flags & FIELD_CONTACT_TARGETED)
+        if (target_state->contact.word & FIELD_CONTACT_TARGETED)
         {
             /* An object already targeted is only touched again by its owner's technique. */
             eligible = 0;
@@ -358,7 +346,7 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
         {
             continue;
         }
-        flags_or_extent = target_state->contact.flags;
+        flags_or_extent = target_state->contact.word;
         if ((flags_or_extent & FIELD_CONTACT_NO_HIT_TEST) ||
             ((flags_or_extent & FIELD_CONTACT_ANIMATION_HIDDEN) &&
              (slots[target_state->contact.bytes.controller_index].owner_object_index != effect->source_object_index)) ||
@@ -455,16 +443,16 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
                                 {
                                     target->command = FIELD_ACTION_COMMAND(2);
                                     field_prepare_actor_action(target);
-                                    g_field_object_states[target->object_index].contact.flags =
-                                        (g_field_object_states[target->object_index].contact.flags & ~FIELD_CONTACT_QUAD_ANSWER_MASK) | FIELD_CONTACT_QUAD_ANSWER_2;
+                                    g_field_object_states[target->object_index].contact.word =
+                                        (g_field_object_states[target->object_index].contact.word & ~FIELD_CONTACT_QUAD_ANSWER_MASK) | FIELD_CONTACT_QUAD_ANSWER_2;
                                     return 3;
                                 }
                                 if (animation == FIELD_ANIMATION_40)
                                 {
                                     target->command = FIELD_ACTION_COMMAND(3);
                                     field_prepare_actor_action(target);
-                                    g_field_object_states[target->object_index].contact.flags =
-                                        (g_field_object_states[target->object_index].contact.flags & ~FIELD_CONTACT_QUAD_ANSWER_MASK) | FIELD_CONTACT_QUAD_ANSWER_3;
+                                    g_field_object_states[target->object_index].contact.word =
+                                        (g_field_object_states[target->object_index].contact.word & ~FIELD_CONTACT_QUAD_ANSWER_MASK) | FIELD_CONTACT_QUAD_ANSWER_3;
                                     return 3;
                                 }
                             }
@@ -852,11 +840,11 @@ s32 field_resolve_actor_movement(FieldActor* actor, s32* position, s32 mode)
         mover->height_bias = FIELD_MOVE_HEIGHT_TOLERANCE;
         mover->mode.bits.airborne_high = 0;
         mover->mode.bits.airborne_low = 0;
-        mover->collision_node = g_field_object_states[actor->object_index].contact_index;
-        mover->flags = g_field_object_states[actor->object_index].surface;
+        mover->collision_node = g_field_object_states[actor->object_index].collision_node;
+        mover->flags = g_field_object_states[actor->object_index].collision_flags;
         field_collision_move_mover(mover);
-        g_field_object_states[actor->object_index].contact_index = mover->collision_node;
-        g_field_object_states[actor->object_index].surface = mover->flags;
+        g_field_object_states[actor->object_index].collision_node = mover->collision_node;
+        g_field_object_states[actor->object_index].collision_flags = mover->flags;
         resolved_command = actor->command;
         if (((resolved_command >= FIELD_ACTOR_COMMAND_WALK_PATH) && (resolved_command <= FIELD_ACTOR_COMMAND_RUN_PATH)) ||
             ((s16)resolved_command == FIELD_ACTOR_COMMAND_LEAVE_PATH))
@@ -901,8 +889,8 @@ s32 field_resolve_actor_movement(FieldActor* actor, s32* position, s32 mode)
     else
     {
         g_field_object_states[actor->object_index].movement.half.height = 0;
-        g_field_object_states[actor->object_index].contact_index = -1;
-        g_field_object_states[actor->object_index].surface = 0;
+        g_field_object_states[actor->object_index].collision_node = -1;
+        g_field_object_states[actor->object_index].collision_flags = 0;
         position[0] = actor->x;
         position[1] = actor->y;
         position[2] = actor->z;
@@ -1001,7 +989,7 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
     s32 base_or_index;
     u8* bindings;
     s32 actor_center_offset;
-    FieldObjectRuntime* target_state;
+    FieldObjectState* target_state;
     FieldActor* target;
     s32 position_y;
     s32 animation_slot;
@@ -1014,7 +1002,7 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
     FieldSequenceBinding* binding;
     s8 actor_height;
     s8 target_height;
-    FieldObjectRuntime* actor_state;
+    FieldObjectState* actor_state;
 
     if (filter_group != 0 && g_field_duel_mode == 0)
     {
@@ -1050,9 +1038,9 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
     for (; target_index < target_end; target_index++, target++, target_state++)
     {
         if ((target->presence == FIELD_ACTOR_UNUSED) ||
-            (target_state->object_flags & FIELD_OBJECT_NO_OVERLAP_FLAGS) ||
+            (target_state->flags & FIELD_OBJECT_NO_OVERLAP_FLAGS) ||
             (target == actor) ||
-            (contact_flags = target_state->contact.flags, ((contact_flags & FIELD_CONTACT_NO_HIT_TEST) != 0)) ||
+            (contact_flags = target_state->contact.word, ((contact_flags & FIELD_CONTACT_NO_HIT_TEST) != 0)) ||
             (contact_flags & FIELD_CONTACT_ANIMATION_HIDDEN) || (target_state->collision.word == 0))
         {
             continue;
@@ -1074,7 +1062,7 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
         gte_sqr0();
         gte_stlvnl(&scratch.squared);
         if (SquareRoot0(scratch.squared.vx + scratch.squared.vy) <
-            (((s32)(actor_state->collision.half.diameter << 16) >> 17) + ((s32)(target_state->collision.half.diameter << 16) >> 17)))
+            (((s32)(actor_state->collision.half.extent << 16) >> 17) + ((s32)(target_state->collision.half.extent << 16) >> 17)))
         {
             break;
         }
@@ -1084,18 +1072,18 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
         g_field_last_actor_contact = 0;
         return 0;
     }
-    if (g_field_resource_entries[actor->resource_index].state != 0)
+    if (g_field_resource_entries[actor->resource_index].unk8 != 0)
     {
         if (g_field_resource_entries[target->resource_index].flags & FIELD_RESOURCE_HAS_ACTIONS)
         {
-            if (target_state->current_hp != 0)
+            if (target_state->current_hp.word != 0)
             {
-                if (!(target_state->object_flags & (FIELD_OBJECT_FLAG_0080 | FIELD_OBJECT_FLAG_KNOCKED_OUT)))
+                if (!(target_state->flags & (FIELD_OBJECT_FLAG_0080 | FIELD_OBJECT_FLAG_KNOCKED_OUT)))
                 {
-                    if (!(target_state->contact.flags & FIELD_CONTACT_ANIMATION_HIDDEN))
+                    if (!(target_state->contact.word & FIELD_CONTACT_ANIMATION_HIDDEN))
                     {
                         index = target->object_index;
-                        if (!(((u32)g_field_object_states[index].contact.flags >> FIELD_CONTACT_IGNORE_BINDING_BIT) & 1))
+                        if (!(((u32)g_field_object_states[index].contact.word >> FIELD_CONTACT_IGNORE_BINDING_BIT) & 1))
                         {
                             /* One local holds the binding table address and then the object index. */
                             base_or_index = (s32)g_field_actor_bindings;
@@ -1165,8 +1153,8 @@ void field_start_actor_contact_interaction(FieldActor* actor, s32 object_index)
 {
     u8* resource_data;
     s32 object_index_x8;
-    FieldObjectRuntime* states;
-    FieldObjectRuntime* state;
+    FieldObjectState* states;
+    FieldObjectState* state;
 
     if (actor->object_index != 0)
     {
@@ -1178,8 +1166,8 @@ void field_start_actor_contact_interaction(FieldActor* actor, s32 object_index)
         return;
     }
     states = g_field_object_states;
-    /* object_index * sizeof(FieldObjectRuntime), spelled as shifts: the target starts it before the command test. */
-    state = (FieldObjectRuntime*)((u8*)states + ((((object_index_x8 + object_index) << 4) - object_index) << 2));
+    /* object_index * sizeof(FieldObjectState), spelled as shifts: the target starts it before the command test. */
+    state = (FieldObjectState*)((u8*)states + ((((object_index_x8 + object_index) << 4) - object_index) << 2));
     if ((state->enabled_events & FIELD_INTERACTION_FLAG_ENABLED) == 0)
     {
         return;
@@ -1216,8 +1204,8 @@ void field_probe_actor_interaction(FieldActor* actor)
     s32 result_or_state;
     u8 animation;
     s32 animation_index;
-    FieldObjectRuntime* state;
-    FieldObjectRuntime* states;
+    FieldObjectState* state;
+    FieldObjectState* states;
 
     if (actor->command != FIELD_ACTOR_COMMAND_NONE)
     {
@@ -1234,7 +1222,7 @@ void field_probe_actor_interaction(FieldActor* actor)
     {
         states = g_field_object_states;
         result_or_state = (s32)&states[object_index];
-        state = (FieldObjectRuntime*)result_or_state;
+        state = (FieldObjectState*)result_or_state;
         if (state->interaction_kind != 0)
         {
             field_play_sound(FIELD_SOUND_INTERACT, FIELD_SOUND_PAN_CENTER);
@@ -1265,14 +1253,14 @@ void field_probe_actor_interaction(FieldActor* actor)
 /**
  * @brief Run one of an object's state entries through the object script dispatcher.
  * @param actor Object whose state entry runs.
- * @param entry_index Entry of FieldObjectRuntime::scripts to run.
+ * @param entry_index Entry of FieldObjectState::scripts to run.
  */
 static void field_dispatch_object_state_entry(FieldActor* actor, s32 entry_index)
 {
-    FieldObjectRuntime* state;
+    FieldObjectState* state;
 
     state = &g_field_object_states[actor->object_index];
-    field_start_interaction(state->record_id, state->scripts[entry_index], g_field_object_states);
+    field_start_interaction(state->key, state->scripts[entry_index], g_field_object_states);
 }
 /**
  * @brief Hit every new object whose projected bounds contain an effect's position.
@@ -1281,10 +1269,10 @@ static void field_dispatch_object_state_entry(FieldActor* actor, s32 entry_index
  * @param actor Animation actor of the attack; each hit object becomes one of its tracks.
  * @note Objects already tracked by @p actor are not hit again; a hit object is also added to the owner's targets.
  */
-void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActorState* actor)
+void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActorSlot* actor)
 {
     FieldActor* actors;
-    FieldObjectRuntime* states;
+    FieldObjectState* states;
     FieldSequenceBinding* bindings;
     FieldSequenceBinding* binding;
     s32 bound_x_a;
@@ -1318,9 +1306,9 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
     u8 owner_index;
     u8 track_count;
     u8 previous_state;
-    FieldObjectRuntime* source_state;
-    FieldObjectRuntime* candidate_state;
-    FieldObjectRuntime* prior_list;
+    FieldObjectState* source_state;
+    FieldObjectState* candidate_state;
+    FieldObjectState* prior_list;
 
     if (g_field_duel_mode != 0)
     {
@@ -1359,7 +1347,7 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
         bindings = g_field_actor_bindings;
         for (; candidate_index < candidate_end; candidate_index++, candidate++, candidate_state++)
         {
-            if (candidate_state->contact.flags & FIELD_CONTACT_TARGETED)
+            if (candidate_state->contact.word & FIELD_CONTACT_TARGETED)
             {
                 source_index = effect->source_object_index;
                 eligible = 0;
@@ -1395,11 +1383,11 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
             }
             command = candidate->command;
             if ((command == FIELD_ACTOR_COMMAND_TECHNIQUE) || (command == FIELD_ACTOR_COMMAND_DEFEAT_DELAY) || (command == FIELD_ACTOR_COMMAND_INSTRUMENT) || (candidate->presence == FIELD_ACTOR_UNUSED) ||
-                (owner_index == candidate_index) || (candidate_state->current_hp == 0))
+                (owner_index == candidate_index) || (candidate_state->current_hp.word == 0))
             {
                 continue;
             }
-            contact_flags = candidate_state->contact.flags;
+            contact_flags = candidate_state->contact.word;
             if ((contact_flags & FIELD_CONTACT_ANIMATION_HIDDEN) ||
                 ((candidate_index >= FIELD_PARTY_COUNT) && ((candidate_state->group_flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)) ||
                 (contact_flags & FIELD_CONTACT_NO_HIT_TEST) || (eligible == 0) ||
@@ -1439,18 +1427,18 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
                     }
                 }
             }
-            if (candidate_state->object_flags &
+            if (candidate_state->flags &
                 FIELD_OBJECT_UNTARGETABLE_FLAGS)
             {
                 continue;
             }
-            track_count = actor->track_count;
+            track_count = actor->target_count;
             track_index = 0;
-            while (track_index < (s32)track_count && candidate_index != actor->track_object_indices[track_index])
+            while (track_index < (s32)track_count && candidate_index != actor->targets[track_index])
             {
                 track_index += 1;
             }
-            if (track_index != actor->track_count)
+            if (track_index != actor->target_count)
             {
                 continue;
             }
@@ -1459,7 +1447,7 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
             origin_z = effect->z;
             delta_z = candidate_z - origin_z;
             depth_distance = (candidate_z - origin_z) / FIELD_PROJECTED_DEPTH_SCALE;
-            diameter = candidate_state->collision.half.diameter;
+            diameter = candidate_state->collision.half.extent;
             if (depth_distance < 0)
             {
                 depth_distance = -depth_distance;
@@ -1514,22 +1502,22 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
             {
                 continue;
             }
-            candidate_state->contact.flags |= FIELD_CONTACT_TARGETED;
-            candidate_state->object_flags &= ~FIELD_OBJECT_FLAG_CLEAR_ON_HIT;
+            candidate_state->contact.word |= FIELD_CONTACT_TARGETED;
+            candidate_state->flags &= ~FIELD_OBJECT_FLAG_CLEAR_ON_HIT;
             states[actor->owner_object_index].targets[states[actor->owner_object_index].contact.bytes.target_count] = candidate_index;
             states[actor->owner_object_index].contact.bytes.target_count++;
-            actor->active_track_mask |= 1 << actor->track_count;
-            actor->track_object_indices[actor->track_count] = candidate_index;
+            actor->track_mask |= 1 << actor->target_count;
+            actor->targets[actor->target_count] = candidate_index;
             if (candidate->animation & FIELD_ANIMATION_FACING)
             {
-                actor->track_offsets[actor->track_count].x = (candidate->x - effect->x) >> 8;
+                actor->track_offsets[actor->target_count].x = (candidate->x - effect->x) >> 8;
             }
             else
             {
-                actor->track_offsets[actor->track_count].x = (effect->x - candidate->x) >> 8;
+                actor->track_offsets[actor->target_count].x = (effect->x - candidate->x) >> 8;
             }
 
-            actor->track_offsets[actor->track_count].y = ((effect->y - candidate->y) >> 8) - ((effect->z - candidate->z) >> 9);
+            actor->track_offsets[actor->target_count].y = ((effect->y - candidate->y) >> 8) - ((effect->z - candidate->z) >> 9);
 
             if (effect->flags & FIELD_EFFECT_RETIRE_ON_HIT)
             {
@@ -1537,7 +1525,7 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
                 effect->state = FIELD_EFFECT_RETIRED;
                 effect->height_or_retired_state = previous_state;
             }
-            actor->track_count++;
+            actor->target_count++;
             field_release_object_link(&actors[candidate_index]);
             if ((candidate_index < FIELD_PLAYER_COUNT) && !(actors[candidate_index].control.half[0] & FIELD_CONTROL_MODE_MASK))
             {
@@ -1588,12 +1576,12 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
  * @param opposing_group 0 to search the party; nonzero to search the group the actor hits, without its owner.
  * @return The object index, or -1 when no object is close enough.
  */
-s32 field_find_actor_in_range(s32* reference_position, s32 distance_limit, FieldActorState* source_actor, s32 opposing_group)
+s32 field_find_actor_in_range(s32* reference_position, s32 distance_limit, FieldActorSlot* source_actor, s32 opposing_group)
 {
     VECTOR* delta = (VECTOR*)FIELD_GTE_DELTA_ADDRESS;
     VECTOR* squared = (VECTOR*)FIELD_GTE_SQUARE_ADDRESS;
     FieldActor* candidate;
-    FieldObjectRuntime* candidate_state;
+    FieldObjectState* candidate_state;
     s32 candidate_index;
     s32 candidate_end;
     u8 presence;
@@ -1631,7 +1619,7 @@ s32 field_find_actor_in_range(s32* reference_position, s32 distance_limit, Field
     for (; candidate_index < candidate_end; candidate_index++, candidate++, candidate_state++)
     {
         presence = candidate->presence;
-        if (presence == FIELD_ACTOR_UNUSED || candidate_state->current_hp == 0 || presence == FIELD_ACTOR_HIDDEN ||
+        if (presence == FIELD_ACTOR_UNUSED || candidate_state->current_hp.word == 0 || presence == FIELD_ACTOR_HIDDEN ||
             (opposing_group != 0 && source_actor->owner_object_index == candidate_index))
         {
             continue;
@@ -1642,7 +1630,7 @@ s32 field_find_actor_in_range(s32* reference_position, s32 distance_limit, Field
         gte_ldlvl(delta);
         gte_sqr0();
         gte_stlvnl(squared);
-        if (SquareRoot0(squared->vx + squared->vy + squared->vz) < distance_limit + ((s32)(candidate_state->collision.half.diameter << 16) >> 17))
+        if (SquareRoot0(squared->vx + squared->vy + squared->vz) < distance_limit + ((s32)(candidate_state->collision.half.extent << 16) >> 17))
         {
             return candidate_index;
         }
@@ -1654,11 +1642,11 @@ s32 field_find_actor_in_range(s32* reference_position, s32 distance_limit, Field
  * @param actor Animation actor of the attack; each hit object becomes one of its tracks.
  * @param part Attacking part; it gives the sphere radius and centres (three for a swing, else one).
  */
-void field_collect_attack_sphere_hits(FieldActorState* actor, FieldActorPartDef* part)
+void field_collect_attack_sphere_hits(FieldActorSlot* actor, FieldObjectPart* part)
 {
     u8* bindings;
     FieldActor* actors;
-    FieldObjectRuntime* states;
+    FieldObjectState* states;
     VECTOR* delta = (VECTOR*)FIELD_GTE_DELTA_ADDRESS;
     VECTOR* squares = (VECTOR*)FIELD_GTE_SQUARE_ADDRESS;
     s32 target_end;
@@ -1680,14 +1668,14 @@ void field_collect_attack_sphere_hits(FieldActorState* actor, FieldActorPartDef*
     u8 owner_index;
     u8 prior_count;
     u8 track_count;
-    FieldObjectRuntime* owner_state;
-    FieldObjectRuntime* prior_list;
-    FieldObjectRuntime* target_state;
+    FieldObjectState* owner_state;
+    FieldObjectState* prior_list;
+    FieldObjectState* target_state;
 
     spheres = (VECTOR*)FIELD_ATTACK_SPHERE_0_ADDRESS;
     attack_radius = field_resolve_effect_extent(actor, part);
     field_resolve_actor_part_anchor(actor, part, (Vec3i*)FIELD_ATTACK_SPHERE_0_ADDRESS, 0);
-    if ((actor->action_flags & FIELD_ACTOR_ACTION_KIND_MASK) == FIELD_ACTOR_ACTION_KIND_ATTACK)
+    if ((actor->status.word & FIELD_ACTOR_ACTION_KIND_MASK) == FIELD_ACTOR_ACTION_KIND_ATTACK)
     {
         field_resolve_actor_part_anchor(actor, part, (Vec3i*)FIELD_ATTACK_SPHERE_1_ADDRESS, 1);
         field_resolve_actor_part_anchor(actor, part, (Vec3i*)FIELD_ATTACK_SPHERE_2_ADDRESS, 2);
@@ -1734,7 +1722,7 @@ void field_collect_attack_sphere_hits(FieldActorState* actor, FieldActorPartDef*
         states = g_field_object_states;
         for (; target_index < target_end; target_index++, target++, target_state++)
         {
-            if (target_state->contact.flags & FIELD_CONTACT_TARGETED)
+            if (target_state->contact.word & FIELD_CONTACT_TARGETED)
             {
                 owner_index = actor->owner_object_index;
                 eligible = 0;
@@ -1770,11 +1758,11 @@ void field_collect_attack_sphere_hits(FieldActorState* actor, FieldActorPartDef*
             if ((command == FIELD_ACTOR_COMMAND_TECHNIQUE) || (command == FIELD_ACTOR_COMMAND_DEFEAT_DELAY) || (command == FIELD_ACTOR_COMMAND_INSTRUMENT) ||
                 ((target_index < FIELD_PLAYER_COUNT) && ((target->animation & FIELD_ANIMATION_INDEX_MASK) == FIELD_ANIMATION_3C)) ||
                 (target->presence == FIELD_ACTOR_UNUSED) || (actor->owner_object_index == target_index) ||
-                (target_state->current_hp == 0))
+                (target_state->current_hp.word == 0))
             {
                 continue;
             }
-            contact_flags = target_state->contact.flags;
+            contact_flags = target_state->contact.word;
             if ((contact_flags & FIELD_CONTACT_ANIMATION_HIDDEN) ||
                 ((target_index >= FIELD_PARTY_COUNT) && ((target_state->group_flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)) ||
                 (contact_flags & FIELD_CONTACT_NO_HIT_TEST) || (eligible == 0) ||
@@ -1810,18 +1798,18 @@ void field_collect_attack_sphere_hits(FieldActorState* actor, FieldActorPartDef*
                     }
                 }
             }
-            if (target_state->object_flags &
+            if (target_state->flags &
                 FIELD_OBJECT_UNTARGETABLE_FLAGS)
             {
                 continue;
             }
-            track_count = actor->track_count;
+            track_count = actor->target_count;
             track_index = 0;
-            while (track_index < (s32)track_count && target_index != actor->track_object_indices[track_index])
+            while (track_index < (s32)track_count && target_index != actor->targets[track_index])
             {
                 track_index += 1;
             }
-            if (track_index != actor->track_count)
+            if (track_index != actor->target_count)
             {
                 continue;
             }
@@ -1835,16 +1823,16 @@ void field_collect_attack_sphere_hits(FieldActorState* actor, FieldActorPartDef*
                 gte_sqr0();
                 gte_stlvnl(squares);
                 if ((SquareRoot0(squares->vx + squares->vy + squares->vz) <
-                     (attack_radius + ((s16)target_state->collision.half.diameter >> 1))) &&
+                     (attack_radius + ((s16)target_state->collision.half.extent >> 1))) &&
                     ((u8)g_field_object_states[actor->owner_object_index].contact.bytes.target_count < FIELD_MAX_CONTACT_TARGETS))
                 {
-                    target_state->contact.flags |= FIELD_CONTACT_TARGETED;
-                    target_state->object_flags &= ~FIELD_OBJECT_FLAG_CLEAR_ON_HIT;
+                    target_state->contact.word |= FIELD_CONTACT_TARGETED;
+                    target_state->flags &= ~FIELD_OBJECT_FLAG_CLEAR_ON_HIT;
                     g_field_object_states[actor->owner_object_index].targets[g_field_object_states[actor->owner_object_index].contact.bytes.target_count] = target_index;
                     g_field_object_states[actor->owner_object_index].contact.bytes.target_count++;
-                    actor->active_track_mask |= 1 << actor->track_count;
-                    actor->track_object_indices[actor->track_count] = target_index;
-                    actor->track_count++;
+                    actor->track_mask |= 1 << actor->target_count;
+                    actor->targets[actor->target_count] = target_index;
+                    actor->target_count++;
                     if ((target_index < FIELD_PLAYER_COUNT) && !(actors[target_index].control.half[0] & FIELD_CONTROL_MODE_MASK))
                     {
                         field_command_history_clear(target_index);

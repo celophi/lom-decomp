@@ -21,6 +21,7 @@
 #include "field_mesh_render.h"
 #include "field_actor_sequence_runtime.h"
 #include "field_path_interpolation.h"
+#include "field_actor_records.h"
 
 #define FIELD_EFFECT_ORIGIN_ADDRESS 0x1F800000
 #define FIELD_EFFECT_VECTOR_ADDRESS 0x1F800010
@@ -53,20 +54,6 @@
 #define FIELD_PLACEMENT_TRACK_FIRST 10
 #define FIELD_PLACEMENT_TRACK_END 0x26
 
-/** @brief Loaded field resource slot used while spawning effects. */
-typedef struct
-{
-    u8 *start;
-    u8 *end;
-    u8 unknown_0x08;
-    u8 slot_index;
-    u16 sound_cue; /* high nibble: cue kind; low 12 bits: sound id */
-    u8 padC[2];
-    s16 unknown_0x0e;
-    u32 flags;
-} FieldResourceEntry;
-
-extern FieldResourceEntry g_field_resource_entries[];
 
 /**
  * @brief Bit layout of FieldMotionRecord.flags, with a halfword view.
@@ -109,11 +96,7 @@ typedef struct
  */
 #define FIELD_EFFECT_FLAGS(record) (((FieldEffectFlagsView *) (record))->flags)
 
-/** @brief Reward counters at 0x60 of a FieldObjectRuntime; the header leaves them as padding. */
-#define FIELD_OBJECT_REWARD_COUNTERS(state) ((state)->pad_0x60)
-
-extern FieldActorPartDef g_field_object_parts[];
-extern FieldActorState g_field_actor_slots[80];
+extern FieldObjectPart g_field_object_parts[];
 extern FieldMotionRecord g_field_actors[];
 extern FieldMotionRecord g_field_effect_records[FIELD_EFFECT_ACTIVE_RECORD_COUNT];
 extern VECTOR D_80105778;
@@ -129,16 +112,16 @@ extern s32 D_80105770;
 extern u8 *g_field_builtin_track_data;
 extern s32 g_field_track_index;
 
-s32 field_evaluate_parameter_track(FieldActorState* actor, s32 track);
-u32 field_evaluate_parameter_track_at_time(FieldActorState* actor, s32 track, s32 time);
+s32 field_evaluate_parameter_track(FieldActorSlot* actor, s32 track);
+u32 field_evaluate_parameter_track_at_time(FieldActorSlot* actor, s32 track, s32 time);
 
-static s32 field_roll_effect_rotation(FieldActorState *actor, FieldActorPartDef *part, FieldMotionRecord *effect);
-static void field_face_effect_target(FieldMotionRecord *effect, FieldActorPartDef *part);
-static void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *part, FieldActorState *actor);
+static s32 field_roll_effect_rotation(FieldActorSlot *actor, FieldObjectPart *part, FieldMotionRecord *effect);
+static void field_face_effect_target(FieldMotionRecord *effect, FieldObjectPart *part);
+static void field_update_effect_record(FieldMotionRecord *record, FieldObjectPart *part, FieldActorSlot *actor);
 static void field_set_action_context(s32 recipient_id, s32 source_id, s32 action);
-void field_retire_effect(FieldMotionRecord *effect, FieldActorPartDef *part);
-s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32 flag, FieldActorPartDef *part);
-s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32 flag, FieldActorPartDef *part);
+void field_retire_effect(FieldMotionRecord *effect, FieldObjectPart *part);
+s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32 flag, FieldObjectPart *part);
+s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32 flag, FieldObjectPart *part);
 
 /**
  * @brief Look up the track binding that serves an object slot.
@@ -160,7 +143,7 @@ static inline FieldSequenceBinding *field_get_track_binding(s32 object_index)
  * @param start First effect slot to inspect when searching for a related effect.
  * @return Spawned effect index, or -1 when the effect cannot be created.
  */
-s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
+s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 {
     s32 half_turn_8bit;
     VECTOR* direction_vector = (VECTOR*) FIELD_EFFECT_ORIGIN_ADDRESS;
@@ -170,21 +153,21 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
     FieldMotionRecord* effect;
     FieldMotionRecord* sibling_effect;
     FieldMotionRecord* free_effect;
-    FieldObjectRuntime* placement_object;
-    FieldObjectRuntime* owner_object;
-    FieldObjectRuntime* object_table_init;
-    FieldObjectRuntime* owner_source_object;
-    FieldObjectRuntime* owner_placement_state;
-    FieldObjectRuntime* track_source_object;
-    FieldObjectRuntime* owner_placement_guard;
-    FieldObjectRuntime* attached_source_object;
-    FieldObjectRuntime* object_table;
-    FieldObjectRuntime* source_owner_object;
+    FieldObjectState* placement_object;
+    FieldObjectState* owner_object;
+    FieldObjectState* object_table_init;
+    FieldObjectState* owner_source_object;
+    FieldObjectState* owner_placement_state;
+    FieldObjectState* track_source_object;
+    FieldObjectState* owner_placement_guard;
+    FieldObjectState* attached_source_object;
+    FieldObjectState* object_table;
+    FieldObjectState* source_owner_object;
     FieldMotionRecord* source_record;
     FieldMotionRecord* record_base;
-    FieldObjectRuntime* owner_object_state;
-    FieldObjectRuntime* track_object_state;
-    FieldActorPartDef* part;
+    FieldObjectState* owner_object_state;
+    FieldObjectState* track_object_state;
+    FieldObjectPart* part;
     s32 rotated_x;
     s32 work_value;
     s32 extent;
@@ -220,7 +203,7 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
 
     effect = FIELD_ELEMENT_AT(FieldMotionRecord, record_base, effect_index);
     part = &actor->parts[part_index];
-    if (part->effect_flags < 0)
+    if (part->effect_flags.word < 0)
     {
         effect->previous_effect_index = work_value;
     }
@@ -243,7 +226,7 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
 
     if (part->orientation_flags.word & 0xF0)
     {
-        s32 parameter = (u16) ((u32) part->effect_flags >> 16);
+        s32 parameter = (u16) ((u32) part->effect_flags.word >> 16);
         effect->color_position.fields.position_source = parameter & 0xF;
     }
     else
@@ -252,9 +235,9 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
     }
     FIELD_EFFECT_FLAGS(effect).bits.motion_kind = part->behavior_flags.word >> 13;
     FIELD_EFFECT_FLAGS(effect).bits.distance_mode = part->rotation_extent.fields.extent_value_mode >> 6;
-    effect->lifetime = part->unknown_0xd;
+    effect->lifetime = part->unkD;
     effect->motion_parameter = part->orientation_flags.halves.high;
-    effect->motion_scale = part->unknown_0x18;
+    effect->motion_scale = part->unk18;
     effect->track_index = g_field_track_index;
     FIELD_EFFECT_FLAGS(effect).bits.parameter_mode = part->orientation_flags.bytes.low;
     FIELD_EFFECT_FLAGS(effect).bits.screen_space = 0;
@@ -265,9 +248,9 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
 
     half_turn_8bit = 128;
     FIELD_EFFECT_FLAGS(effect).bits.kind = 0;
-    if (part->effect_flags & 0x800000)
+    if (part->effect_flags.word & 0x800000)
     {
-        s32 eval = field_evaluate_parameter_track_at_time(actor, ((u32) part->effect_flags >> 25) & 0xF, 0) != 0;
+        s32 eval = field_evaluate_parameter_track_at_time(actor, ((u32) part->effect_flags.word >> 25) & 0xF, 0) != 0;
         FIELD_EFFECT_FLAGS(effect).bits.semitransparent = eval;
     }
     else
@@ -284,7 +267,7 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
         work_value = actor->active_counts[g_field_track_index][part_index];
         for (; work_index < 0x100; work_index++)
         {
-            if (g_field_effect_records[work_index].state != scan_ff && g_field_effect_records[work_index].part_index == part->unknown_0x46 && g_field_effect_records[work_index].actor_index == actor->actor_index)
+            if (g_field_effect_records[work_index].state != scan_ff && g_field_effect_records[work_index].part_index == part->unk46 && g_field_effect_records[work_index].actor_index == actor->slot_index)
             {
                 work_limit = 1;
                 if (work_value == 0)
@@ -309,9 +292,9 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
         effect->unknown_0x34 = 0;
         effect->state = record_type;
     }
-    effect->work_x = part->unknown_0x40 << 8;
-    effect->work_y = part->unknown_0x42 << 8;
-    effect->work_z = part->unknown_0x44 << 8;
+    effect->work_x = part->unk40 << 8;
+    effect->work_y = part->unk42 << 8;
+    effect->work_z = part->unk44 << 8;
     if (((part->placement_flags.word >> 8) & 1) && (part->appearance.word & 0x0F000000))
     {
         if (part->spawn_flags.word & 0x10000)
@@ -325,14 +308,14 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
                 do
                 {
                     owner_object = &object_table_init[actor->owner_object_index];
-                    if (FIELD_OBJECT_REWARD_COUNTERS(owner_object)[work_index] == 0)
+                    if (owner_object->reward_counters[work_index] == 0)
                     {
                         work_index++;
                     }
                     else
                     {
-                        FIELD_OBJECT_REWARD_COUNTERS(owner_object)[work_index] = FIELD_OBJECT_REWARD_COUNTERS(owner_object)[work_index] - 1;
-                        effect->facing_or_reward_kind = part->unknown_0x1a + work_index;
+                        owner_object->reward_counters[work_index] = owner_object->reward_counters[work_index] - 1;
+                        effect->facing_or_reward_kind = part->unk1A + work_index;
                         break;
                     }
                 } while (work_index < work_limit);
@@ -345,12 +328,12 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
         }
         else
         {
-            effect->facing_or_reward_kind = part->unknown_0x1a + (((part->appearance.fields.spawn_flags & 0xF) * rand()) >> 15);
+            effect->facing_or_reward_kind = part->unk1A + (((part->appearance.fields.spawn_flags & 0xF) * rand()) >> 15);
         }
     }
     else
     {
-        effect->facing_or_reward_kind = part->unknown_0x1a;
+        effect->facing_or_reward_kind = part->unk1A;
     }
 
     switch ((s32)((part->placement_flags.word >> 26) & 3))
@@ -399,7 +382,7 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
     actor->active_counts[g_field_track_index][part_index]++;
     effect->saved_state = 0;
     effect->part_index = part_index;
-    effect->actor_index = actor->actor_index;
+    effect->actor_index = actor->slot_index;
     if ((part->placement_flags.word >> 25) & 1)
     {
         if ((part->behavior_flags.word >> 12) & 1)
@@ -447,7 +430,7 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
     effect->x = (work_index * direction_vector->vx) >> 4;
     effect->y = (work_index * direction_vector->vy) >> 4;
     effect->z = (work_index * direction_vector->vz) >> 4;
-    effect->animation_active = part->unknown_0x8;
+    effect->animation_active = part->unk8;
     effect->source_object_index = actor->owner_object_index;
     if (effect->state == 0)
     {
@@ -460,11 +443,11 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
     else if (effect->state == 2)
     {
         {
-            FieldObjectRuntime *owner_slots = g_field_object_states;
+            FieldObjectState *owner_slots = g_field_object_states;
             u8 owner_index = actor->owner_object_index;
             owner_object_state = &owner_slots[owner_index];
         }
-        if ((owner_object_state->contact.bytes.flags_low & 1) && owner_object_state->contact.bytes.controller_index != actor->actor_index)
+        if ((owner_object_state->contact.bytes.flags & 1) && owner_object_state->contact.bytes.controller_index != actor->slot_index)
         {
             effect->state = 0xFF;
         }
@@ -472,14 +455,14 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
         {
             record_base = &g_field_actors[actor->owner_object_index];
             if (!((part->behavior_flags.word >> 11) & 1) && !((part->placement_flags.word >> 25) & 1) && (part->appearance.fields.color_track_flags >> 5) == 0 &&
-                (*(u32*)&part->unknown_0xc & 0xFFFF0000) == 0x80800000 && part->blue_or_track == 0x80)
+                (*(u32*)&part->unkC & 0xFFFF0000) == 0x80800000 && part->tint_blue == 0x80)
             {
                 FIELD_EFFECT_FLAGS(effect).bits.unknown_15 = 1;
                 FIELD_EFFECT_FLAGS(effect).bits.unknown_28 = 1;
 
-                effect->color_position.fields.red = g_field_object_parts[record_base->source_object_index].red_or_track;
-                effect->color_position.fields.green = g_field_object_parts[record_base->source_object_index].green_or_track;
-                effect->color_position.fields.blue = g_field_object_parts[record_base->source_object_index].blue_or_track;
+                effect->color_position.fields.red = g_field_object_parts[record_base->source_object_index].tint_red;
+                effect->color_position.fields.green = g_field_object_parts[record_base->source_object_index].tint_green;
+                effect->color_position.fields.blue = g_field_object_parts[record_base->source_object_index].tint_blue;
             }
             effect->source_object_index = g_field_actors[actor->owner_object_index].source_object_index;
             effect->resource_index = g_field_actors[actor->owner_object_index].resource_index;
@@ -496,7 +479,7 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
     }
     else if (effect->state == 3)
     {
-        track_object_index = actor->track_object_indices[g_field_track_index];
+        track_object_index = actor->targets[g_field_track_index];
         if (track_object_index == 0xFF)
         {
             effect->state = track_object_index;
@@ -504,34 +487,34 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
             actor->track_counters[g_field_track_index][part_index]--;
             return -1;
         }
-        if ((!((g_field_object_states[actor->track_object_indices[g_field_track_index]].contact.flags >> 6) & 1) &&
-             (binding_index = field_get_track_binding(actor->track_object_indices[g_field_track_index])->owner_object_index) == actor->track_object_indices[g_field_track_index] &&
+        if ((!((g_field_object_states[actor->targets[g_field_track_index]].contact.word >> 6) & 1) &&
+             (binding_index = field_get_track_binding(actor->targets[g_field_track_index])->owner_object_index) == actor->targets[g_field_track_index] &&
              field_get_track_binding(binding_index)->state != 0) ||
-            ((g_field_object_states[actor->track_object_indices[g_field_track_index]].contact.bytes.flags_low & 1) &&
-             g_field_object_states[actor->track_object_indices[g_field_track_index]].contact.bytes.controller_index != actor->actor_index))
+            ((g_field_object_states[actor->targets[g_field_track_index]].contact.bytes.flags & 1) &&
+             g_field_object_states[actor->targets[g_field_track_index]].contact.bytes.controller_index != actor->slot_index))
         {
             effect->state = 0xFF;
         }
         else
         {
-            record_base = &g_field_actors[actor->track_object_indices[g_field_track_index]];
+            record_base = &g_field_actors[actor->targets[g_field_track_index]];
             if (!((part->behavior_flags.word >> 11) & 1) && !((part->placement_flags.word >> 25) & 1) && (part->appearance.fields.color_track_flags >> 5) == 0 &&
-                (*(u32*)&part->unknown_0xc & 0xFFFF0000) == 0x80800000 && part->blue_or_track == 0x80)
+                (*(u32*)&part->unkC & 0xFFFF0000) == 0x80800000 && part->tint_blue == 0x80)
             {
                 FIELD_EFFECT_FLAGS(effect).bits.unknown_15 = 1;
                 FIELD_EFFECT_FLAGS(effect).bits.unknown_28 = 1;
 
-                effect->color_position.fields.red = g_field_object_parts[record_base->source_object_index].red_or_track;
-                effect->color_position.fields.green = g_field_object_parts[record_base->source_object_index].green_or_track;
-                effect->color_position.fields.blue = g_field_object_parts[record_base->source_object_index].blue_or_track;
+                effect->color_position.fields.red = g_field_object_parts[record_base->source_object_index].tint_red;
+                effect->color_position.fields.green = g_field_object_parts[record_base->source_object_index].tint_green;
+                effect->color_position.fields.blue = g_field_object_parts[record_base->source_object_index].tint_blue;
             }
-            effect->source_object_index = g_field_actors[actor->track_object_indices[g_field_track_index]].source_object_index;
-            effect->resource_index = g_field_actors[actor->track_object_indices[g_field_track_index]].resource_index;
-            effect->unknown_0xc = g_field_actors[actor->track_object_indices[g_field_track_index]].unknown_0xc;
-            effect->facing_or_reward_kind |= g_field_actors[actor->track_object_indices[g_field_track_index]].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED;
-            FIELD_EFFECT_FLAGS(effect).bits.group = FIELD_EFFECT_FLAGS(&g_field_actors[actor->track_object_indices[g_field_track_index]]).half[1];
-            FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(&g_field_actors[actor->track_object_indices[g_field_track_index]]).bits.kind;
-            resource = g_field_resource_entries[g_field_actors[actor->track_object_indices[g_field_track_index]].resource_index].start;
+            effect->source_object_index = g_field_actors[actor->targets[g_field_track_index]].source_object_index;
+            effect->resource_index = g_field_actors[actor->targets[g_field_track_index]].resource_index;
+            effect->unknown_0xc = g_field_actors[actor->targets[g_field_track_index]].unknown_0xc;
+            effect->facing_or_reward_kind |= g_field_actors[actor->targets[g_field_track_index]].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED;
+            FIELD_EFFECT_FLAGS(effect).bits.group = FIELD_EFFECT_FLAGS(&g_field_actors[actor->targets[g_field_track_index]]).half[1];
+            FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(&g_field_actors[actor->targets[g_field_track_index]]).bits.kind;
+            resource = g_field_resource_entries[g_field_actors[actor->targets[g_field_track_index]].resource_index].start;
             if (resource != 0)
             {
                 field_restart_actor_animation(effect, resource);
@@ -541,7 +524,7 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
 
     if ((part->track_flags.word >> 13) & 1)
     {
-        effect->motion_scale = field_evaluate_parameter_track(actor, part->unknown_0x18 & 0xF);
+        effect->motion_scale = field_evaluate_parameter_track(actor, part->unk18 & 0xF);
     }
     if ((((part->placement_flags.word >> FIELD_PART_MIRROR_X_WITH_FACING_SHIFT) & 1) || (part->spawn_flags.word & FIELD_PART_MIRROR_X_WITH_OWNER)) && effect->color_position.fields.position_source != 0 &&
         !(g_field_actors[actor->owner_object_index].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
@@ -555,7 +538,7 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
         effect->y = 0;
         effect->z = 0;
     }
-    if (part->effect_flags & 0x60000000)
+    if (part->effect_flags.word & 0x60000000)
     {
         effect->x = 0;
         effect->y = 0;
@@ -588,7 +571,7 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
     case 0x13:
         if (placement_kind >= FIELD_PLACEMENT_TRACK_FIRST)
         {
-            track_object_index = actor->track_object_indices[g_field_track_index];
+            track_object_index = actor->targets[g_field_track_index];
             if (track_object_index == 0xFF)
             {
                 effect->state = track_object_index;
@@ -596,7 +579,7 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
                 actor->track_counters[g_field_track_index][part_index]--;
                 return -1;
             }
-            object_index = actor->track_object_indices[g_field_track_index];
+            object_index = actor->targets[g_field_track_index];
             placement_kind -= FIELD_PLACEMENT_TRACK_FIRST;
             source_record = &g_field_actors[object_index];
             placement_object = &g_field_object_states[object_index];
@@ -604,11 +587,11 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
         else
         {
             {
-                FieldObjectRuntime *table_base = g_field_object_states;
+                FieldObjectState *table_base = g_field_object_states;
                 owner_placement_guard = &table_base[actor->owner_object_index];
             }
-            if ((owner_placement_guard->contact.bytes.flags_low & 1) && actor->actor_index >= 0x40U &&
-                !((owner_placement_guard->contact.flags >> 5) & 1) && owner_placement_guard->contact.bytes.controller_index != actor->actor_index)
+            if ((owner_placement_guard->contact.bytes.flags & 1) && actor->slot_index >= 0x40U &&
+                !((owner_placement_guard->contact.word >> 5) & 1) && owner_placement_guard->contact.bytes.controller_index != actor->slot_index)
             {
                 effect->state = 0xFF;
                 actor->active_counts[g_field_track_index][part_index]--;
@@ -623,13 +606,13 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
         if ((part->placement_flags.word >> 9) & 1)
         {
             extent = abs(placement_object->bounds.half.right - placement_object->bounds.half.left);
-            part->appearance.fields.footprint_scale_x = extent * 2;
+            part->appearance.fields.scale_xz = extent * 2;
         }
         if ((part->placement_flags.word >> 1) & 1)
         {
             work_a = 0;
             extent = abs(placement_object->bounds.half.bottom - placement_object->bounds.half.top);
-            part->footprint_scale_y = extent * 2;
+            part->scale_y = extent * 2;
         }
         else
         {
@@ -687,28 +670,28 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
             object_table = g_field_object_states;
             effect->source_object_index = source_record->source_object_index;
             attached_source_object = &object_table[source_record->source_object_index];
-            if (!(attached_source_object->contact.bytes.flags_low & 1) || attached_source_object->contact.bytes.controller_index == actor->actor_index)
+            if (!(attached_source_object->contact.bytes.flags & 1) || attached_source_object->contact.bytes.controller_index == actor->slot_index)
             {
                 effect->unknown_0xc = source_record->unknown_0xc;
                 effect->resource_index = source_record->resource_index;
                 FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(source_record).bits.kind;
                 FIELD_EFFECT_FLAGS(effect).bits.group = FIELD_EFFECT_FLAGS(source_record).half[1];
                 if (!((part->behavior_flags.word >> 11) & 1) && !((part->placement_flags.word >> 25) & 1) && (part->appearance.fields.color_track_flags >> 5) == 0 &&
-                    (*(u32*)&part->unknown_0xc & 0xFFFF0000) == 0x80800000 && part->blue_or_track == 0x80)
+                    (*(u32*)&part->unkC & 0xFFFF0000) == 0x80800000 && part->tint_blue == 0x80)
                 {
                     FIELD_EFFECT_FLAGS(effect).bits.unknown_15 = 1;
                     FIELD_EFFECT_FLAGS(effect).bits.unknown_28 = 1;
 
-                    effect->color_position.fields.red = g_field_object_parts[source_record->source_object_index].red_or_track;
-                    effect->color_position.fields.green = g_field_object_parts[source_record->source_object_index].green_or_track;
-                    effect->color_position.fields.blue = g_field_object_parts[source_record->source_object_index].blue_or_track;
+                    effect->color_position.fields.red = g_field_object_parts[source_record->source_object_index].tint_red;
+                    effect->color_position.fields.green = g_field_object_parts[source_record->source_object_index].tint_green;
+                    effect->color_position.fields.blue = g_field_object_parts[source_record->source_object_index].tint_blue;
                 }
                 if (effect->facing_or_reward_kind == 0xFF)
                 {
                     effect->facing_or_reward_kind = source_record->facing_or_reward_kind;
                     effect->saved_state = source_record->saved_state;
-                    part->appearance.fields.footprint_scale_x = g_field_object_parts[source_record->source_object_index].appearance.fields.footprint_scale_x;
-                    part->footprint_scale_y = g_field_object_parts[source_record->source_object_index].footprint_scale_y;
+                    part->appearance.fields.scale_xz = g_field_object_parts[source_record->source_object_index].appearance.fields.scale_xz;
+                    part->scale_y = g_field_object_parts[source_record->source_object_index].scale_y;
                     effect->unknown_0x34 = source_record->unknown_0x34;
                     effect->unknown_0x35 = source_record->unknown_0x35;
                     effect->track_index = source_record->track_index;
@@ -760,7 +743,7 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
         }
         for (work_a = start; work_a < 0x100; work_a++)
         {
-            if (g_field_effect_records[work_a].state != 0xFF && g_field_effect_records[work_a].part_index == sibling_part_index && g_field_effect_records[work_a].actor_index == actor->actor_index &&
+            if (g_field_effect_records[work_a].state != 0xFF && g_field_effect_records[work_a].part_index == sibling_part_index && g_field_effect_records[work_a].actor_index == actor->slot_index &&
                 ((actor->parts[sibling_part_index].orientation_flags.word & 4) || g_field_effect_records[work_a].track_index == g_field_track_index))
             {
                 effect->x += g_field_effect_records[work_a].x;
@@ -908,11 +891,11 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
 
     case 0x27:
         {
-            FieldObjectRuntime *table_base = g_field_object_states;
+            FieldObjectState *table_base = g_field_object_states;
             owner_placement_state = &table_base[actor->owner_object_index];
         }
-        if ((owner_placement_state->contact.bytes.flags_low & 1) && owner_placement_state->contact.bytes.controller_index != actor->actor_index &&
-            actor->actor_index >= 0x40U && !((owner_placement_state->contact.flags >> 5) & 1))
+        if ((owner_placement_state->contact.bytes.flags & 1) && owner_placement_state->contact.bytes.controller_index != actor->slot_index &&
+            actor->slot_index >= 0x40U && !((owner_placement_state->contact.word >> 5) & 1))
         {
             effect->state = 0xFF;
             actor->active_counts[g_field_track_index][part_index]--;
@@ -934,12 +917,12 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
         {
             effect->source_object_index = source_record->source_object_index;
             {
-                FieldObjectRuntime *table_base = g_field_object_states;
+                FieldObjectState *table_base = g_field_object_states;
                 owner_source_object = &table_base[source_record->source_object_index];
             }
-            if (owner_source_object->contact.bytes.flags_low & 1)
+            if (owner_source_object->contact.bytes.flags & 1)
             {
-                if (owner_source_object->contact.bytes.controller_index != actor->actor_index)
+                if (owner_source_object->contact.bytes.controller_index != actor->slot_index)
                 {
                     effect->state = 0xFE;
                     break;
@@ -961,14 +944,14 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
         break;
 
     case 0x28:
-        if (actor->track_object_indices[g_field_track_index] == 0xFF)
+        if (actor->targets[g_field_track_index] == 0xFF)
         {
             effect->state = 0xFF;
             actor->active_counts[g_field_track_index][part_index]--;
             actor->track_counters[g_field_track_index][part_index]--;
             return -1;
         }
-        source_record = &g_field_actors[actor->track_object_indices[g_field_track_index]];
+        source_record = &g_field_actors[actor->targets[g_field_track_index]];
         if ((part->spawn_flags.word & FIELD_PART_MIRROR_X_WITH_OWNER) && !(g_field_actors[actor->owner_object_index].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
         {
             effect->x += source_record->x - (part->offset_x << 8);
@@ -987,12 +970,12 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
         {
             effect->source_object_index = source_record->source_object_index;
             {
-                FieldObjectRuntime *table_base = g_field_object_states;
+                FieldObjectState *table_base = g_field_object_states;
                 track_source_object = &table_base[source_record->source_object_index];
             }
-            if (track_source_object->contact.bytes.flags_low & 1)
+            if (track_source_object->contact.bytes.flags & 1)
             {
-                if (track_source_object->contact.bytes.controller_index != actor->actor_index)
+                if (track_source_object->contact.bytes.controller_index != actor->slot_index)
                 {
                     effect->state = 0xFE;
                     break;
@@ -1016,8 +999,8 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
     case 0x29:
         placement_object = &g_field_object_states[actor->owner_object_index];
         source_record = &g_field_actors[actor->owner_object_index];
-        effect->x += source_record->x + (placement_object->attachment_points[((u32) part->effect_flags >> 21) & 3].x << 8);
-        effect->y += source_record->y + (placement_object->attachment_points[((u32) part->effect_flags >> 21) & 3].y << 8);
+        effect->x += source_record->x + (placement_object->attachment_points[((u32) part->effect_flags.word >> 21) & 3].x << 8);
+        effect->y += source_record->y + (placement_object->attachment_points[((u32) part->effect_flags.word >> 21) & 3].y << 8);
         effect->z += source_record->z;
         if (effect->state == 0xFD)
         {
@@ -1025,10 +1008,10 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
             FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(source_record).bits.kind;
             FIELD_EFFECT_FLAGS(effect).bits.group = FIELD_EFFECT_FLAGS(source_record).half[1];
             {
-                FieldObjectRuntime *table_base = g_field_object_states;
+                FieldObjectState *table_base = g_field_object_states;
                 source_owner_object = &table_base[source_record->source_object_index];
             }
-            if (!(source_owner_object->contact.bytes.flags_low & 1) || source_owner_object->contact.bytes.controller_index == actor->actor_index)
+            if (!(source_owner_object->contact.bytes.flags & 1) || source_owner_object->contact.bytes.controller_index == actor->slot_index)
             {
                 effect->state = 2;
                 if (effect->facing_or_reward_kind == 0xFF)
@@ -1053,7 +1036,7 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
     case 0x32:
         placement_object = &g_field_object_states[actor->owner_object_index];
         source_record = &g_field_actors[actor->owner_object_index];
-        effect->x += source_record->x + (placement_object->attachment_points[((u32) part->effect_flags >> 21) & 3].x << 8);
+        effect->x += source_record->x + (placement_object->attachment_points[((u32) part->effect_flags.word >> 21) & 3].x << 8);
         effect->y += source_record->y;
         effect->z += source_record->z + (part->offset_z << 8);
         if (((part->placement_flags.word >> FIELD_PART_MIRROR_X_WITH_FACING_SHIFT) & 1) && !(source_record->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
@@ -1070,10 +1053,10 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
             FIELD_EFFECT_FLAGS(effect).bits.group = FIELD_EFFECT_FLAGS(source_record).half[1];
             effect->source_object_index = source_record->source_object_index;
             {
-                FieldObjectRuntime *table_base = g_field_object_states;
+                FieldObjectState *table_base = g_field_object_states;
                 source_owner_object = &table_base[source_record->source_object_index];
             }
-            if (!(source_owner_object->contact.bytes.flags_low & 1) || source_owner_object->contact.bytes.controller_index == actor->actor_index)
+            if (!(source_owner_object->contact.bytes.flags & 1) || source_owner_object->contact.bytes.controller_index == actor->slot_index)
             {
                 effect->state = 2;
                 if (effect->facing_or_reward_kind == 0xFF)
@@ -1105,14 +1088,14 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
         break;
 
     case 0x34:
-        if (actor->track_object_indices[g_field_track_index] == 0xFF)
+        if (actor->targets[g_field_track_index] == 0xFF)
         {
             effect->state = 0xFF;
             actor->active_counts[g_field_track_index][part_index]--;
             actor->track_counters[g_field_track_index][part_index]--;
             return -1;
         }
-        source_record = &g_field_actors[actor->track_object_indices[g_field_track_index]];
+        source_record = &g_field_actors[actor->targets[g_field_track_index]];
         if (!(source_record->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
         {
             effect->x += source_record->x + (actor->track_offsets[g_field_track_index].x << 8);
@@ -1152,7 +1135,7 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
         work_value = placement_kind - 0x37;
         for (sibling_index = start; sibling_index < 0x100; sibling_index++)
         {
-            if (g_field_effect_records[sibling_index].state != 0xFF && g_field_effect_records[sibling_index].part_index == work_value && g_field_effect_records[sibling_index].actor_index == actor->actor_index &&
+            if (g_field_effect_records[sibling_index].state != 0xFF && g_field_effect_records[sibling_index].part_index == work_value && g_field_effect_records[sibling_index].actor_index == actor->slot_index &&
                 ((actor->parts[work_value].orientation_flags.word & 4) || g_field_effect_records[sibling_index].track_index == g_field_track_index))
             {
                 effect->x += g_field_effect_records[sibling_index].x;
@@ -1228,7 +1211,7 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
         break;
     }
 
-    switch (((u32) part->effect_flags >> 29) & 3)
+    switch (((u32) part->effect_flags.word >> 29) & 3)
     {
     case 1:
         direction_vector->vx = (g_field_actors[actor->owner_object_index].x - effect->x) >> 8;
@@ -1245,9 +1228,9 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
         effect->z = g_field_actors[actor->owner_object_index].z;
         break;
     case 2:
-        direction_vector->vx = (g_field_actors[actor->track_object_indices[g_field_track_index]].x - effect->x) >> 8;
-        direction_vector->vy = (g_field_actors[actor->track_object_indices[g_field_track_index]].y - effect->y) >> 8;
-        direction_z = (g_field_actors[actor->track_object_indices[g_field_track_index]].z - effect->z) >> 8;
+        direction_vector->vx = (g_field_actors[actor->targets[g_field_track_index]].x - effect->x) >> 8;
+        direction_vector->vy = (g_field_actors[actor->targets[g_field_track_index]].y - effect->y) >> 8;
+        direction_z = (g_field_actors[actor->targets[g_field_track_index]].z - effect->z) >> 8;
         direction_vector->vz = direction_z;
         effect->heading = ratan2(-direction_z, direction_vector->vx);
         gte_ldlvl(direction_vector);
@@ -1255,9 +1238,9 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
         gte_stlvnl(squared_vector);
         effect->pitch = ratan2(SquareRoot0(squared_vector->vx + squared_vector->vz), -direction_vector->vy);
         effect->rotation_x = 0;
-        effect->x = g_field_actors[actor->track_object_indices[g_field_track_index]].x;
-        effect->y = g_field_actors[actor->track_object_indices[g_field_track_index]].y;
-        effect->z = g_field_actors[actor->track_object_indices[g_field_track_index]].z;
+        effect->x = g_field_actors[actor->targets[g_field_track_index]].x;
+        effect->y = g_field_actors[actor->targets[g_field_track_index]].y;
+        effect->z = g_field_actors[actor->targets[g_field_track_index]].z;
         break;
     }
     if ((effect->flags & 0x07000000) == 0x05000000)
@@ -1343,7 +1326,7 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
         {
             effect->facing_or_reward_kind ^= 0x80;
         }
-        if (part->unknown_0x9 == 0)
+        if (part->unk9 == 0)
         {
             effect->facing_or_reward_kind = (effect->facing_or_reward_kind & 0x7F) | (g_field_actors[actor->owner_object_index].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED);
         }
@@ -1352,7 +1335,7 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
     {
         effect->facing_or_reward_kind ^= 0x80;
     }
-    if ((actor->action_flags & 0x1E) == 8 && FIELD_PART_PLACEMENT_KIND(part) == 0x33)
+    if ((actor->status.word & 0x1E) == 8 && FIELD_PART_PLACEMENT_KIND(part) == 0x33)
     {
         D_80105760 = D_80105760 + 1;
         if (D_80105760 < 3)
@@ -1368,14 +1351,14 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
     }
     if (effect->state != 0xFE && effect->state != 0xFF)
     {
-        if (actor->track_object_indices[g_field_track_index] != 0xFF)
+        if (actor->targets[g_field_track_index] != 0xFF)
         {
             if ((actor->animation->sync_flags & 0x14) == 0x14 && (actor->animation->sync_flags >> 12) == part_index)
             {
-                g_field_actors[actor->track_object_indices[g_field_track_index]].state = 0xFE;
-                g_field_object_states[actor->track_object_indices[g_field_track_index]].contact.flags |= 1;
-                g_field_object_states[actor->track_object_indices[g_field_track_index]].contact.bytes.controller_index = actor->actor_index;
-                ((u8*)&actor->action_flags)[1] = 1;
+                g_field_actors[actor->targets[g_field_track_index]].state = 0xFE;
+                g_field_object_states[actor->targets[g_field_track_index]].contact.word |= 1;
+                g_field_object_states[actor->targets[g_field_track_index]].contact.bytes.controller_index = actor->slot_index;
+                ((u8*)&actor->status.word)[1] = 1;
             }
         }
         if ((actor->animation->sync_flags & 0xA) == 0xA)
@@ -1383,8 +1366,8 @@ s32 field_spawn_actor_effect(FieldActorState* actor, s32 part_index, s32 start)
             if (((actor->animation->sync_flags >> 8) & 0xF) == part_index)
             {
                 g_field_actors[actor->owner_object_index].state = 0xFE;
-                g_field_object_states[actor->owner_object_index].contact.flags |= 1;
-                g_field_object_states[actor->owner_object_index].contact.bytes.controller_index = actor->actor_index;
+                g_field_object_states[actor->owner_object_index].contact.word |= 1;
+                g_field_object_states[actor->owner_object_index].contact.bytes.controller_index = actor->slot_index;
             }
         }
     }
@@ -1541,7 +1524,7 @@ extern FieldPlayerRecordView g_field_player_records[];
  * @param effect Spawned effect whose rotation fields are written.
  * @return Scaled pitch contribution added to @p effect.
  */
-static s32 field_roll_effect_rotation(FieldActorState *actor, FieldActorPartDef *part, FieldMotionRecord *effect)
+static s32 field_roll_effect_rotation(FieldActorSlot *actor, FieldObjectPart *part, FieldMotionRecord *effect)
 {
     s16 angle;
     s32 random_product;
@@ -1551,7 +1534,7 @@ static s32 field_roll_effect_rotation(FieldActorState *actor, FieldActorPartDef 
     effect->rotation_x = 0;
     if (part->palette_extent.fields.angular_divisions != 0)
     {
-        angle = ((0x1000 / part->palette_extent.fields.angular_divisions) * actor->track_counters[g_field_track_index][part->unknown_0x32] + 0x400) & 0xFFF;
+        angle = ((0x1000 / part->palette_extent.fields.angular_divisions) * actor->track_counters[g_field_track_index][part->unk32] + 0x400) & 0xFFF;
         effect->heading = angle;
     }
     else
@@ -1559,26 +1542,26 @@ static s32 field_roll_effect_rotation(FieldActorState *actor, FieldActorPartDef 
         angle = (u32) rand() >> 3;
         effect->heading = angle;
     }
-    actor->track_counters[g_field_track_index][part->unknown_0x32]++;
+    actor->track_counters[g_field_track_index][part->unk32]++;
 
     if ((part->track_flags.word >> 0xB) & 1)
     {
-        track_scale = field_evaluate_parameter_track(actor, part->unknown_0x9 & 0xF);
+        track_scale = field_evaluate_parameter_track(actor, part->unk9 & 0xF);
         random_product = track_scale * (rand() << 3);
     }
     else
     {
-        random_product = part->unknown_0x9 * (rand() << 3);
+        random_product = part->unk9 * (rand() << 3);
     }
     effect->pitch = random_product >> 0xF;
 
     if ((part->track_flags.word >> 0xC) & 1)
     {
-        track_value = field_evaluate_parameter_track(actor, part->unknown_0xa & 0xF);
+        track_value = field_evaluate_parameter_track(actor, part->unkA & 0xF);
     }
     else
     {
-        track_value = part->unknown_0xa;
+        track_value = part->unkA;
     }
     track_value *= 8;
     effect->pitch += track_value;
@@ -1590,7 +1573,7 @@ static s32 field_roll_effect_rotation(FieldActorState *actor, FieldActorPartDef 
  * @param effect Record whose position and position-source selection are exchanged.
  * @param part Part definition controlling the selected position source.
  */
-void field_swap_effect_position_source(FieldMotionRecord *effect, FieldActorPartDef *part)
+void field_swap_effect_position_source(FieldMotionRecord *effect, FieldObjectPart *part)
 {
     VECTOR source_position;
     s32 unused[2];
@@ -1615,7 +1598,7 @@ void field_swap_effect_position_source(FieldMotionRecord *effect, FieldActorPart
  * @param effect Record whose heading and pitch are updated.
  * @param part Part definition used to resolve the position source.
  */
-static void field_face_effect_target(FieldMotionRecord *effect, FieldActorPartDef *part)
+static void field_face_effect_target(FieldMotionRecord *effect, FieldObjectPart *part)
 {
     VECTOR target_position;
     VECTOR direction;
@@ -1657,12 +1640,12 @@ static void field_face_effect_target(FieldMotionRecord *effect, FieldActorPartDe
  *        expiry), then refreshes the actor's palette-track texture pages.
  * @param actor_state Actor being ticked.
  */
-void field_advance_actor_effects(FieldActorState *actor_state)
+void field_advance_actor_effects(FieldActorSlot *actor_state)
 {
-    FieldActorState *actor;
+    FieldActorSlot *actor;
     FieldMotionRecord *effect;
-    FieldActorPartDef *part;
-    FieldActorPartDef *palette_part;
+    FieldObjectPart *part;
+    FieldObjectPart *palette_part;
     void *palette_buffer;
     s32 part_index;
     s32 new_effect_index;
@@ -1677,7 +1660,7 @@ void field_advance_actor_effects(FieldActorState *actor_state)
     actor = actor_state;
     for (effect = g_field_effect_records; effect != &g_field_effect_records[FIELD_EFFECT_ACTIVE_RECORD_COUNT]; effect++)
     {
-        if (effect->actor_index == actor->actor_index && effect->state != FIELD_EFFECT_RETIRED)
+        if (effect->actor_index == actor->slot_index && effect->state != FIELD_EFFECT_RETIRED)
         {
             part = &actor->parts[effect->part_index];
             g_field_track_index = effect->track_index;
@@ -1704,9 +1687,9 @@ void field_advance_actor_effects(FieldActorState *actor_state)
             {
                 field_retire_effect(effect, part);
             }
-            if (part->effect_flags < 0 && effect->state != FIELD_EFFECT_RETIRED)
+            if (part->effect_flags.word < 0 && effect->state != FIELD_EFFECT_RETIRED)
             {
-                new_effect_index = field_spawn_actor_effect(actor, part->rotation_extent.fields.unknown_0x23 & 0xF, 0);
+                new_effect_index = field_spawn_actor_effect(actor, part->rotation_extent.fields.unk23 & 0xF, 0);
                 if (new_effect_index != -1)
                 {
                     new_effect = &g_field_effect_records[new_effect_index];
@@ -1747,7 +1730,7 @@ void field_advance_actor_effects(FieldActorState *actor_state)
     palette_changed = 0;
     for (part_index = 0; part_index < actor->part_count; part_index++)
     {
-        palette_part = FIELD_ELEMENT_AT(FieldActorPartDef, actor->parts, part_index);
+        palette_part = FIELD_ELEMENT_AT(FieldObjectPart, actor->parts, part_index);
         if ((palette_part->track_flags.word >> 0x15) & 1)
         {
             field_interpolate_palette_track(actor, palette_part->palette_extent.fields.palette_track, palette_buffer, (u8 *) palette_buffer + 0x200);
@@ -1781,15 +1764,15 @@ void field_advance_actor_effects(FieldActorState *actor_state)
  * @param effect Effect record being retired.
  * @param part Part definition controlling follow-up effects and synchronization.
  */
-void field_retire_effect(FieldMotionRecord* effect, FieldActorPartDef* part)
+void field_retire_effect(FieldMotionRecord* effect, FieldObjectPart* part)
 {
-    FieldActorState* actor;
-    FieldActorPartDef* spawn_part;
+    FieldActorSlot* actor;
+    FieldObjectPart* spawn_part;
     FieldMotionRecord* new_effect;
     FieldMotionRecord* spawned_effect;
     FieldMotionRecord* effect_pool;
-    FieldObjectRuntime* object;
-    FieldObjectRuntime* object_table;
+    FieldObjectState* object;
+    FieldObjectState* object_table;
     VECTOR target_position;
     VECTOR direction;
     VECTOR squared_direction;
@@ -1800,7 +1783,7 @@ void field_retire_effect(FieldMotionRecord* effect, FieldActorPartDef* part)
     s16 animation_state;
     u8 next_effect_index;
 
-    g_field_actor_slots[effect->actor_index].active_counts[effect->track_index][part->unknown_0x32]--;
+    g_field_actor_slots[effect->actor_index].active_counts[effect->track_index][part->unk32]--;
 
     actor = &g_field_actor_slots[effect->actor_index];
     field_dispatch_actor_audio_event(actor, 3, effect->part_index);
@@ -1832,9 +1815,9 @@ void field_retire_effect(FieldMotionRecord* effect, FieldActorPartDef* part)
                 placement_kind = 0x35;
                 if (FIELD_PART_PLACEMENT_KIND(spawn_part) == placement_kind)
                 {
-                    if (spawn_part->unknown_0xc != 0)
+                    if (spawn_part->unkC != 0)
                     {
-                        spawn_count = spawn_part->unknown_0xc;
+                        spawn_count = spawn_part->unkC;
                     }
                 }
 
@@ -1890,22 +1873,22 @@ void field_retire_effect(FieldMotionRecord* effect, FieldActorPartDef* part)
 
     if (((actor->animation->sync_flags & 0x14) == 0x14) && ((actor->animation->sync_parts >> 0xD) == effect->part_index))
     {
-        if (actor->track_object_indices[effect->track_index] != 0xFF)
+        if (actor->targets[effect->track_index] != 0xFF)
         {
             object_table = g_field_object_states;
-            object = &object_table[actor->track_object_indices[effect->track_index]];
-            if (object->contact.bytes.controller_index == actor->actor_index)
+            object = &object_table[actor->targets[effect->track_index]];
+            if (object->contact.bytes.controller_index == actor->slot_index)
             {
-                animation_state = g_field_actors[actor->track_object_indices[effect->track_index]].motion_parameter;
-                if ((animation_state != 0x90 && animation_state != 0x94) || (object->object_flags & 0x200))
+                animation_state = g_field_actors[actor->targets[effect->track_index]].motion_parameter;
+                if ((animation_state != 0x90 && animation_state != 0x94) || (object->flags & 0x200))
                 {
-                    g_field_actors[actor->track_object_indices[effect->track_index]].state = 0;
+                    g_field_actors[actor->targets[effect->track_index]].state = 0;
                 }
                 else
                 {
-                    g_field_actors[actor->track_object_indices[effect->track_index]].state = 0xFE;
+                    g_field_actors[actor->targets[effect->track_index]].state = 0xFE;
                 }
-                g_field_object_states[actor->track_object_indices[effect->track_index]].contact.flags &= ~1;
+                g_field_object_states[actor->targets[effect->track_index]].contact.word &= ~1;
             }
         }
     }
@@ -1914,10 +1897,10 @@ void field_retire_effect(FieldMotionRecord* effect, FieldActorPartDef* part)
         (((actor->animation->sync_parts >> 0xA) & 7) == effect->part_index))
     {
         object = &g_field_object_states[actor->owner_object_index];
-        if (object->contact.bytes.controller_index == actor->actor_index)
+        if (object->contact.bytes.controller_index == actor->slot_index)
         {
             animation_state = g_field_actors[actor->owner_object_index].motion_parameter;
-            if ((animation_state != 0x90 && animation_state != 0x94) || (object->object_flags & 0x200))
+            if ((animation_state != 0x90 && animation_state != 0x94) || (object->flags & 0x200))
             {
                 g_field_actors[actor->owner_object_index].state = 0;
             }
@@ -1925,7 +1908,7 @@ void field_retire_effect(FieldMotionRecord* effect, FieldActorPartDef* part)
             {
                 g_field_actors[actor->owner_object_index].state = 0xFE;
             }
-            g_field_object_states[actor->owner_object_index].contact.flags &= ~1;
+            g_field_object_states[actor->owner_object_index].contact.word &= ~1;
         }
     }
 
@@ -1941,14 +1924,14 @@ void field_retire_effect(FieldMotionRecord* effect, FieldActorPartDef* part)
 
     if (effect->part_index == (((actor->animation->sync_parts >> 5) & 0x1F) - 1))
     {
-        if (actor->track_object_indices[effect->track_index] != 0xFF)
+        if (actor->targets[effect->track_index] != 0xFF)
         {
-            g_field_actors[actor->track_object_indices[effect->track_index]].x = effect->x;
-            g_field_actors[actor->track_object_indices[effect->track_index]].y = effect->y;
-            g_field_actors[actor->track_object_indices[effect->track_index]].z = effect->z;
-            g_field_actors[actor->track_object_indices[effect->track_index]].y = 0;
-            g_field_actors[actor->track_object_indices[effect->track_index]].facing_or_reward_kind =
-                (g_field_actors[actor->track_object_indices[effect->track_index]].facing_or_reward_kind & 0x7F) |
+            g_field_actors[actor->targets[effect->track_index]].x = effect->x;
+            g_field_actors[actor->targets[effect->track_index]].y = effect->y;
+            g_field_actors[actor->targets[effect->track_index]].z = effect->z;
+            g_field_actors[actor->targets[effect->track_index]].y = 0;
+            g_field_actors[actor->targets[effect->track_index]].facing_or_reward_kind =
+                (g_field_actors[actor->targets[effect->track_index]].facing_or_reward_kind & 0x7F) |
                 (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED);
         }
     }
@@ -1970,7 +1953,7 @@ void field_retire_effect(FieldMotionRecord* effect, FieldActorPartDef* part)
  * @param actor Actor that owns the effect.
  * @see decomp.me (100%) https://decomp.me/scratch/i1ZHZ
  */
-static void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *part, FieldActorState *actor)
+static void field_update_effect_record(FieldMotionRecord *record, FieldObjectPart *part, FieldActorSlot *actor)
 {
     VECTOR *target_position;
     FieldEffectCamera *camera;
@@ -1983,7 +1966,7 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
     MATRIX *rotation;
     VECTOR *placement_origin;
     FieldMotionRecord *reference_record;
-    FieldObjectRuntime *reference_object;
+    FieldObjectState *reference_object;
     u32 flags;
     u32 record_flags;
     s32 selector;
@@ -2011,7 +1994,7 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
     placement_origin = (VECTOR *) FIELD_EFFECT_ORIGIN_ADDRESS;
 
     /* Sample transparency and motion tracks; the caller advances age afterward. */
-    flags = part->effect_flags;
+    flags = part->effect_flags.word;
     if (flags & FIELD_EFFECT_SEMITRANSPARENT)
     {
         s32 semitransparent = field_evaluate_parameter_track_at_time(actor, (flags >> 0x19) & 0xF, (u16) record->age) != 0;
@@ -2089,7 +2072,7 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
                     }
                     else
                     {
-                        dy = (g_field_object_states[actor->track_object_indices[g_field_track_index]].bounds.half.right - g_field_object_states[actor->track_object_indices[g_field_track_index]].bounds.half.left) >> 1;
+                        dy = (g_field_object_states[actor->targets[g_field_track_index]].bounds.half.right - g_field_object_states[actor->targets[g_field_track_index]].bounds.half.left) >> 1;
                     }
                     dy = abs(dy);
                     local_vector->y = previous_distance - dy;
@@ -2104,7 +2087,7 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
                     }
                     else
                     {
-                        dy = (g_field_object_states[actor->track_object_indices[g_field_track_index]].bounds.half.bottom - g_field_object_states[actor->track_object_indices[g_field_track_index]].bounds.half.top) >> 1;
+                        dy = (g_field_object_states[actor->targets[g_field_track_index]].bounds.half.bottom - g_field_object_states[actor->targets[g_field_track_index]].bounds.half.top) >> 1;
                     }
                     dy = abs(dy);
                     local_vector->y = previous_distance - dy;
@@ -2132,12 +2115,12 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
             case 0xF: case 0x10: case 0x11: case 0x12: case 0x13:
             {
                 s32 offset_y;
-                FieldObjectRuntime *owner;
-                FieldObjectRuntime *owner_base;
+                FieldObjectState *owner;
+                FieldObjectState *owner_base;
 
                 if ((s32) selector >= FIELD_PLACEMENT_TRACK_FIRST)
                 {
-                    slot = actor->track_object_indices[g_field_track_index];
+                    slot = actor->targets[g_field_track_index];
                     selector -= FIELD_PLACEMENT_TRACK_FIRST;
                     reference_record = &g_field_actors[slot];
                     reference_object = &g_field_object_states[slot];
@@ -2150,10 +2133,10 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
                 }
                 owner_base = g_field_object_states;
                 owner = &owner_base[actor->owner_object_index];
-                flags_byte = owner->contact.bytes.flags_low;
-                if ((flags_byte & 1) && ((u8) actor->actor_index >= 0x40U))
+                flags_byte = owner->contact.bytes.flags;
+                if ((flags_byte & 1) && ((u8) actor->slot_index >= 0x40U))
                 {
-                    if (!(((u32) owner->contact.flags >> 5) & 1))
+                    if (!(((u32) owner->contact.word >> 5) & 1))
                     {
                         offset_y = 0x800000;
                         offset_or_angle = offset_y;
@@ -2306,7 +2289,7 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
                 placement_origin->vz = reference_record->z + (part->offset_z << 8);
                 break;
             case 0x28:
-                reference_record = &g_field_actors[actor->track_object_indices[g_field_track_index]];
+                reference_record = &g_field_actors[actor->targets[g_field_track_index]];
                 if ((part->spawn_flags.word & FIELD_PART_MIRROR_X_WITH_OWNER) && !(g_field_actors[actor->owner_object_index].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
                 {
                     placement_origin->vx = reference_record->x - (part->offset_x << 8);
@@ -2326,14 +2309,14 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
                 reference_record = &g_field_actors[actor->owner_object_index];
                 reference_object = &g_field_object_states[actor->owner_object_index];
                 placement_origin->vx = reference_record->x;
-                placement_origin->vy = reference_record->y + (reference_object->attachment_points[((u32) part->effect_flags >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].y << 8);
+                placement_origin->vy = reference_record->y + (reference_object->attachment_points[((u32) part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].y << 8);
                 placement_origin->vz = reference_record->z;
-                placement_origin->vx += reference_object->attachment_points[((u32) part->effect_flags >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8;
+                placement_origin->vx += reference_object->attachment_points[((u32) part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8;
                 break;
             case 0x32:
                 reference_record = &g_field_actors[actor->owner_object_index];
                 reference_object = &g_field_object_states[actor->owner_object_index];
-                placement_origin->vx = reference_record->x + (reference_object->attachment_points[((u32) part->effect_flags >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
+                placement_origin->vx = reference_record->x + (reference_object->attachment_points[((u32) part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
                 placement_origin->vy = reference_record->y;
                 placement_origin->vz = reference_record->z + (part->offset_z << 8);
                 if (((part->placement_flags.word >> FIELD_PART_MIRROR_X_WITH_FACING_SHIFT) & 1) && !(reference_record->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
@@ -2353,7 +2336,7 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
                 placement_origin->vz = reference_record->z + (reference_object->ground_attachment_points[((u32) record->flags >> 0xD) & 3].y << 8);
                 break;
             case 0x34:
-                reference_record = &g_field_actors[actor->track_object_indices[g_field_track_index]];
+                reference_record = &g_field_actors[actor->targets[g_field_track_index]];
                 if (!(reference_record->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
                 {
                     placement_origin->vx = reference_record->x + (actor->track_offsets[g_field_track_index].x << 8);
@@ -2501,7 +2484,7 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
             }
         }
 
-        if ((part->effect_flags & FIELD_PART_MAP_COLLISION) && !(part->spawn_flags.word & FIELD_PART_SKIP_MAP_COLLISION))
+        if ((part->effect_flags.word & FIELD_PART_MAP_COLLISION) && !(part->spawn_flags.word & FIELD_PART_SKIP_MAP_COLLISION))
         {
             if (record->x < 0 || record->x >= (map_bounds->width << 8) || record->z < 0 || record->z >= (map_bounds->height << 9))
             {
@@ -2787,19 +2770,19 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
         }
     }
     /* After the pickup delay, find a nearby recipient and consume the reward effect. */
-    if (!(actor->action_flags & 1))
+    if (!(actor->status.word & 1))
     {
-        state_or_delta = ((u16 *) &actor->action_flags)[1];
+        state_or_delta = ((u16 *) &actor->status.word)[1];
         switch (state_or_delta)
         {
             case FIELD_PICKUP_EXPERIENCE_OR_CURRENCY:
-                if ((u16) actor->track_ages[0] >= FIELD_PICKUP_DELAY)
+                if ((u16) actor->track_frames[0] >= FIELD_PICKUP_DELAY)
                 {
                     recipient_index = field_find_actor_in_range(record, FIELD_PICKUP_DISTANCE, actor, 0);
                     if (recipient_index != -1)
                     {
-                        FieldObjectRuntime *recipient_object;
-                        FieldObjectRuntime *object_base;
+                        FieldObjectState *recipient_object;
+                        FieldObjectState *object_base;
                         s32 counter_slot;
                         FieldPlayerRecordView *counter_base;
                         u32 counter_index;
@@ -2812,25 +2795,25 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
                         record->state = FIELD_EFFECT_RETIRED;
                         object_base = g_field_object_states;
                         recipient_object = &object_base[recipient_index];
-                        field_set_action_context(recipient_object->record_id, object_base[actor->owner_object_index].record_id, record->facing_or_reward_kind - 0x16);
+                        field_set_action_context(recipient_object->key, object_base[actor->owner_object_index].key, record->facing_or_reward_kind - 0x16);
                         counter_base = g_field_player_records;
                         counter_index = record->facing_or_reward_kind;
                         counter_slot = recipient_index < 3 ? recipient_index : 2;
                         counter_base[counter_slot].status.counters[counter_index] = counter_base[recipient_index < 3 ? recipient_index : 2].status.counters[counter_index] + 1;
-                        field_grant_reward(recipient_object->record_id, object_base[actor->owner_object_index].record_id, record->facing_or_reward_kind - 0x16);
+                        field_grant_reward(recipient_object->key, object_base[actor->owner_object_index].key, record->facing_or_reward_kind - 0x16);
                         field_release_actor_if_no_effects(record);
                         return;
                     }
                 }
                 break;
             case FIELD_PICKUP_ITEM:
-                if ((u16) actor->track_ages[0] >= FIELD_PICKUP_DELAY)
+                if ((u16) actor->track_frames[0] >= FIELD_PICKUP_DELAY)
                 {
                     recipient_index = field_find_actor_in_range(record, FIELD_PICKUP_DISTANCE, actor, 0);
                     if (recipient_index != -1)
                     {
-                        FieldObjectRuntime *recipient_object;
-                        FieldObjectRuntime *object_base;
+                        FieldObjectState *recipient_object;
+                        FieldObjectState *object_base;
 
                         if (g_field_pickup_sound_played == 0)
                         {
@@ -2840,8 +2823,8 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
                         record->state = FIELD_EFFECT_RETIRED;
                         object_base = g_field_object_states;
                         recipient_object = &object_base[recipient_index];
-                        field_set_action_context(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 4);
-                        field_grant_reward(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 4);
+                        field_set_action_context(recipient_object->key, object_base[actor->owner_object_index].key, 4);
+                        field_grant_reward(recipient_object->key, object_base[actor->owner_object_index].key, 4);
                         field_release_actor_if_no_effects(record);
                         return;
                     }
@@ -2849,13 +2832,13 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
                 break;
             /* Restore 64/256 of maximum capacity, then play the quarter-restore animation. */
             case FIELD_PICKUP_RESTORE_QUARTER:
-                if ((u16) actor->track_ages[0] >= FIELD_PICKUP_DELAY)
+                if ((u16) actor->track_frames[0] >= FIELD_PICKUP_DELAY)
                 {
                     recipient_index = field_find_actor_in_range(record, FIELD_PICKUP_DISTANCE, actor, 0);
                     if (recipient_index != -1)
                     {
-                        FieldObjectRuntime *recipient_object;
-                        FieldObjectRuntime *object_base;
+                        FieldObjectState *recipient_object;
+                        FieldObjectState *object_base;
 
                         if (g_field_pickup_sound_played == 0)
                         {
@@ -2865,8 +2848,8 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
                         record->state = FIELD_EFFECT_RETIRED;
                         object_base = g_field_object_states;
                         recipient_object = &object_base[recipient_index];
-                        field_set_action_context(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 5);
-                        field_grant_reward(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 5);
+                        field_set_action_context(recipient_object->key, object_base[actor->owner_object_index].key, 5);
+                        field_grant_reward(recipient_object->key, object_base[actor->owner_object_index].key, 5);
                         field_play_object_animation(&g_field_actors[recipient_index], 0x2C);
                         field_release_actor_if_no_effects(record);
                         return;
@@ -2875,13 +2858,13 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
                 break;
             /* Restore 128/256 of maximum capacity. */
             case FIELD_PICKUP_RESTORE_HALF:
-                if ((u16) actor->track_ages[0] >= FIELD_PICKUP_DELAY)
+                if ((u16) actor->track_frames[0] >= FIELD_PICKUP_DELAY)
                 {
                     recipient_index = field_find_actor_in_range(record, FIELD_PICKUP_DISTANCE, actor, 0);
                     if (recipient_index != -1)
                     {
-                        FieldObjectRuntime *recipient_object;
-                        FieldObjectRuntime *object_base;
+                        FieldObjectState *recipient_object;
+                        FieldObjectState *object_base;
 
                         if (g_field_pickup_sound_played == 0)
                         {
@@ -2891,8 +2874,8 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
                         record->state = FIELD_EFFECT_RETIRED;
                         object_base = g_field_object_states;
                         recipient_object = &object_base[recipient_index];
-                        field_set_action_context(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 6);
-                        field_grant_reward(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 6);
+                        field_set_action_context(recipient_object->key, object_base[actor->owner_object_index].key, 6);
+                        field_grant_reward(recipient_object->key, object_base[actor->owner_object_index].key, 6);
                         field_play_object_animation(&g_field_actors[recipient_index], 0x2D);
                         field_release_actor_if_no_effects(record);
                         return;
@@ -2905,7 +2888,7 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
     }
     /* Collect effect-centered hits, reflect below-ground motion, then scale speed. */
     {
-        FieldActorAnimationDef *anim = actor->animation;
+        FieldAnimationDef *anim = actor->animation;
         if ((anim->hit_test_mode == FIELD_HIT_TEST_EFFECT_BOUNDS) && (anim->hit_test_part == record->part_index))
         {
             field_collect_effect_hits(record, anim->hit_radius, actor);
@@ -2938,16 +2921,16 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldActorPart
  */
 void field_release_actor_if_no_effects(FieldMotionRecord *effect)
 {
-    FieldActorState *actor_slots;
-    FieldActorState *actor_slot;
+    FieldActorSlot *actor_slots;
+    FieldActorSlot *actor_slot;
 
     if (field_actor_has_live_effects(effect->actor_index) == 0)
     {
         actor_slots = g_field_actor_slots;
         actor_slot = &actor_slots[effect->actor_index];
-        actor_slot->is_active = 0;
-        actor_slot->unknown_0x23b = 0;
-        actor_slot->active_track_mask = 0;
+        actor_slot->active = 0;
+        actor_slot->pending_track_mask = 0;
+        actor_slot->track_mask = 0;
     }
 }
 
@@ -2995,7 +2978,7 @@ static void field_set_action_context(s32 recipient_id, s32 source_id, s32 action
  */
 static inline FieldMotionRecord *field_effect_track_object(FieldMotionRecord *effect)
 {
-    return &g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]];
+    return &g_field_actors[g_field_actor_slots[effect->actor_index].targets[g_field_track_index]];
 }
 
 /**
@@ -3016,12 +2999,12 @@ static inline FieldMotionRecord *field_effect_owner_object(FieldMotionRecord *ef
  * @note Sources 0 and values above 15 leave @p position unchanged. Source 9 can update
  * the record's facing bit. References at +0x30 use an unsigned halfword read.
  */
-void field_resolve_effect_position(FieldMotionRecord *effect, FieldActorPartDef *part, VECTOR *position)
+void field_resolve_effect_position(FieldMotionRecord *effect, FieldObjectPart *part, VECTOR *position)
 {
     FieldMotionRecord *source_record;
     FieldMotionRecord *opposite_record;
     FieldMotionRecord *linked_record;
-    FieldObjectRuntime *source_object;
+    FieldObjectState *source_object;
     s32 object_index;
     s32 source_index;
     s32 placement;
@@ -3062,8 +3045,8 @@ void field_resolve_effect_position(FieldMotionRecord *effect, FieldActorPartDef 
     case FIELD_POSITION_OWNER_ATTACHMENT:
         source_record = &g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index];
         source_object = &g_field_object_states[g_field_actor_slots[effect->actor_index].owner_object_index];
-        position->vx = source_record->x + (source_object->attachment_points[((u32) part->effect_flags >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
-        position->vy = source_record->y + (source_object->attachment_points[((u32) part->effect_flags >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].y << 8);
+        position->vx = source_record->x + (source_object->attachment_points[((u32) part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
+        position->vy = source_record->y + (source_object->attachment_points[((u32) part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].y << 8);
         position->vz = source_record->z;
         return;
     case FIELD_POSITION_FACING_OFFSET:
@@ -3072,7 +3055,7 @@ void field_resolve_effect_position(FieldMotionRecord *effect, FieldActorPartDef 
         {
             if (placement < FIELD_PLACEMENT_TRACK_END)
             {
-                source_index = g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index];
+                source_index = g_field_actor_slots[effect->actor_index].targets[g_field_track_index];
             }
             else
             {
@@ -3101,8 +3084,8 @@ void field_resolve_effect_position(FieldMotionRecord *effect, FieldActorPartDef 
         position->vz = effect->work_z + source_record->z;
         return;
     case FIELD_POSITION_TRACK_STORED_XZ:
-        position->vx = g_field_object_states[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].position_history[0].x << 8;
-        position->vz = g_field_object_states[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].position_history[0].z << 8;
+        position->vx = g_field_object_states[g_field_actor_slots[effect->actor_index].targets[g_field_track_index]].route_history[0].x << 8;
+        position->vz = g_field_object_states[g_field_actor_slots[effect->actor_index].targets[g_field_track_index]].route_history[0].z << 8;
         position->vy = 0;
         return;
     case FIELD_POSITION_LINKED_EFFECT:
@@ -3116,13 +3099,13 @@ void field_resolve_effect_position(FieldMotionRecord *effect, FieldActorPartDef 
         if (placement < FIELD_PLACEMENT_TRACK_FIRST)
         {
             source_record = &g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index];
-            opposite_record = &g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]];
+            opposite_record = &g_field_actors[g_field_actor_slots[effect->actor_index].targets[g_field_track_index]];
         }
         else
         {
             if (placement < FIELD_PLACEMENT_TRACK_END)
             {
-                object_index = g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index];
+                object_index = g_field_actor_slots[effect->actor_index].targets[g_field_track_index];
                 source_record = &g_field_actors[object_index];
             }
             else
@@ -3162,34 +3145,34 @@ void field_resolve_effect_position(FieldMotionRecord *effect, FieldActorPartDef 
         position->vz = field_effect_owner_object(effect)->z;
         return;
     case FIELD_POSITION_TRACK_BOUNDS_CENTER:
-        source_object = &g_field_object_states[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]];
+        source_object = &g_field_object_states[g_field_actor_slots[effect->actor_index].targets[g_field_track_index]];
         position->vx = field_effect_track_object(effect)->x + ((source_object->bounds.half.right + source_object->bounds.half.left) << 7);
         position->vy = field_effect_track_object(effect)->y + ((source_object->bounds.half.bottom + source_object->bounds.half.top) << 7);
         position->vz = field_effect_track_object(effect)->z;
         return;
     case FIELD_POSITION_REFLECT_TRACK_X:
     case FIELD_POSITION_EXTEND_TRACK_X:
-        delta_x = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x - g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].x;
+        delta_x = g_field_actors[g_field_actor_slots[effect->actor_index].targets[g_field_track_index]].x - g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].x;
         if (effect->color_position.fields.position_source == FIELD_POSITION_REFLECT_TRACK_X)
         {
             position->vx = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].x - delta_x;
         }
         else
         {
-            position->vx = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x + delta_x;
+            position->vx = g_field_actors[g_field_actor_slots[effect->actor_index].targets[g_field_track_index]].x + delta_x;
         }
         position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].y;
         position->vz = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].z;
         return;
     case FIELD_POSITION_EXTEND_TRACK_XZ:
-        position->vx = (g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x * 2) - g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].x;
-        position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].y;
-        position->vz = (g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].z * 2) - g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].z;
+        position->vx = (g_field_actors[g_field_actor_slots[effect->actor_index].targets[g_field_track_index]].x * 2) - g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].x;
+        position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].targets[g_field_track_index]].y;
+        position->vz = (g_field_actors[g_field_actor_slots[effect->actor_index].targets[g_field_track_index]].z * 2) - g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].z;
         return;
     case FIELD_POSITION_EXTEND_LINK_XZ:
-        position->vx = (g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x * 2) - g_field_effect_records[effect->position_data.linked_effect_index].x;
-        position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].y;
-        position->vz = (g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].z * 2) - g_field_effect_records[effect->position_data.linked_effect_index].z;
+        position->vx = (g_field_actors[g_field_actor_slots[effect->actor_index].targets[g_field_track_index]].x * 2) - g_field_effect_records[effect->position_data.linked_effect_index].x;
+        position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].targets[g_field_track_index]].y;
+        position->vz = (g_field_actors[g_field_actor_slots[effect->actor_index].targets[g_field_track_index]].z * 2) - g_field_effect_records[effect->position_data.linked_effect_index].z;
         return;
     }
 }
@@ -3240,8 +3223,8 @@ static s32 *field_render_effect_sprite_frames(FieldMotionRecord *effect, s32 *pa
 void field_render_effects(FieldRenderContext *render_context)
 {
     FieldMotionRecord *effect;
-    FieldObjectRuntime *object_state;
-    FieldActorPartDef *part;
+    FieldObjectState *object_state;
+    FieldObjectPart *part;
     u32 *ordering_table;
     FieldResourceEntry *resources;
     s32 *packet_cursor;
@@ -3249,7 +3232,7 @@ void field_render_effects(FieldRenderContext *render_context)
     s32 object_index;
     s32 actor_or_object_index;
     s32 actor_address;
-    FieldActorState *actor;
+    FieldActorSlot *actor;
     s32 part_offset;
     s32 value;
 
@@ -3274,7 +3257,7 @@ void field_render_effects(FieldRenderContext *render_context)
                 case FIELD_EFFECT_RENDER_MESH_2:
                 case FIELD_EFFECT_RENDER_MESH_1:
                 case FIELD_EFFECT_RENDER_MESH_0:
-                    if (g_field_actor_slots[effect->actor_index].parts[effect->part_index].rotation_extent.fields.unknown_0x23 < 8)
+                    if (g_field_actor_slots[effect->actor_index].parts[effect->part_index].rotation_extent.fields.unk23 < 8)
                     {
                         packet_cursor = field_render_lit_effect_mesh(effect, FIELD_EFFECT_RENDER_MESH_0 - effect->state, packet_cursor, ordering_table);
                     }
@@ -3301,7 +3284,7 @@ void field_render_effects(FieldRenderContext *render_context)
                     value = FIELD_PART_PLACEMENT_KIND(part);
                     if ((value >= 0xA && value < 0x14) || value == 0x28)
                     {
-                        actor_or_object_index = g_field_actor_slots[effect->actor_index].track_object_indices[effect->track_index];
+                        actor_or_object_index = g_field_actor_slots[effect->actor_index].targets[effect->track_index];
                         frame_result = (s32) resources[g_field_actors[actor_or_object_index].resource_index].start;
                         object_state = &g_field_object_states[actor_or_object_index];
                     }
@@ -3319,11 +3302,11 @@ void field_render_effects(FieldRenderContext *render_context)
                         {
                             if (frame_result >= 0)
                             {
-                                packet_cursor = field_render_effect_frame16(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags_low & 1) ^ 1, part);
+                                packet_cursor = field_render_effect_frame16(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags & 1) ^ 1, part);
                             }
                             else
                             {
-                                packet_cursor = field_render_effect_frame8(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags_low & 1) ^ 1, part);
+                                packet_cursor = field_render_effect_frame8(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags & 1) ^ 1, part);
                             }
                         }
                     }
@@ -3352,10 +3335,10 @@ void field_render_effects(FieldRenderContext *render_context)
                 case FIELD_EFFECT_RENDER_OWNER_SPRITE:
                     actor = &g_field_actor_slots[effect->actor_index];
                     actor_or_object_index = effect->part_index;
-                    part_offset = actor_or_object_index * sizeof(FieldActorPartDef);
+                    part_offset = actor_or_object_index * sizeof(FieldObjectPart);
                     actor_or_object_index = (s32) actor->parts;
                     object_index = actor->owner_object_index;
-                    part = (FieldActorPartDef *) (actor_or_object_index + part_offset);
+                    part = (FieldObjectPart *) (actor_or_object_index + part_offset);
                     frame_result = (s32) resources[g_field_actors[object_index].resource_index].start;
                     object_state = &g_field_object_states[object_index];
                     object_state->linked_effect_index = (s8) (effect - g_field_effect_records);
@@ -3366,11 +3349,11 @@ void field_render_effects(FieldRenderContext *render_context)
                         {
                             if (frame_result >= 0)
                             {
-                                packet_cursor = field_render_effect_frame16(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags_low & 1) ^ 1, part);
+                                packet_cursor = field_render_effect_frame16(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags & 1) ^ 1, part);
                             }
                             else
                             {
-                                packet_cursor = field_render_effect_frame8(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags_low & 1) ^ 1, part);
+                                packet_cursor = field_render_effect_frame8(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags & 1) ^ 1, part);
                             }
                         }
                     }
@@ -3380,9 +3363,9 @@ void field_render_effects(FieldRenderContext *render_context)
                     value = effect->actor_index;
                     actor_address = (s32) &g_field_actor_slots[value];
                     value = effect->part_index;
-                    part = &((FieldActorState *) actor_address)->parts[value];
+                    part = &((FieldActorSlot *) actor_address)->parts[value];
                     value = effect->track_index;
-                    object_index = ((FieldActorState *) actor_address)->track_object_indices[value];
+                    object_index = ((FieldActorSlot *) actor_address)->targets[value];
                     frame_result = (s32) resources[g_field_actors[object_index].resource_index].start;
                     object_state = &g_field_object_states[object_index];
                     object_state->linked_effect_index = (s8) (effect - g_field_effect_records);
@@ -3393,11 +3376,11 @@ void field_render_effects(FieldRenderContext *render_context)
                         {
                             if (frame_result >= 0)
                             {
-                                packet_cursor = field_render_effect_frame16(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags_low & 1) ^ 1, part);
+                                packet_cursor = field_render_effect_frame16(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags & 1) ^ 1, part);
                             }
                             else
                             {
-                                packet_cursor = field_render_effect_frame8(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags_low & 1) ^ 1, part);
+                                packet_cursor = field_render_effect_frame8(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags & 1) ^ 1, part);
                             }
                         }
                     }
@@ -3440,9 +3423,9 @@ static s32 *field_render_effect_sprite_frames(FieldMotionRecord *effect, s32 *pa
     s32 shadow_count;
     s32 texture_slot;
     FieldPrimitiveColor packed_color;
-    FieldActorState *actor;
-    FieldActorPartDef *part;
-    FieldActorState *actors;
+    FieldActorSlot *actor;
+    FieldObjectPart *part;
+    FieldActorSlot *actors;
     s32 height_minus_one;
     s32 width_or_mode;
     s32 frame_x;
@@ -3636,17 +3619,17 @@ static s32 *field_render_effect_sprite_frames(FieldMotionRecord *effect, s32 *pa
                     packet_cursor = (s32 *) ((u8 *) packet_cursor + sizeof(POLY_FT4));
                 }
             }
-            else if (((flags & 0xF) == 2) && (part->effect_flags & FIELD_PART_EFFECT_FOOTPRINT))
+            else if (((flags & 0xF) == 2) && (part->effect_flags.word & FIELD_PART_EFFECT_FOOTPRINT))
             {
-                shadow_footprint[0] = ((s8) frame_data[0] * part->appearance.fields.footprint_scale_x) >> 6;
-                shadow_footprint[1] = ((s8) frame_data[1] * part->footprint_scale_y) >> 6;
-                shadow_footprint[2] = ((s8) frame_data[2] * part->appearance.fields.footprint_scale_x) >> 6;
-                shadow_footprint[3] = ((s8) frame_data[3] * part->footprint_scale_y) >> 6;
-                shadow_footprint[4] = ((s8) frame_data[4] * part->appearance.fields.footprint_scale_x) >> 6;
-                shadow_footprint[5] = ((s8) frame_data[5] * part->footprint_scale_y) >> 6;
-                shadow_footprint[6] = ((s8) frame_data[6] * part->appearance.fields.footprint_scale_x) >> 6;
+                shadow_footprint[0] = ((s8) frame_data[0] * part->appearance.fields.scale_xz) >> 6;
+                shadow_footprint[1] = ((s8) frame_data[1] * part->scale_y) >> 6;
+                shadow_footprint[2] = ((s8) frame_data[2] * part->appearance.fields.scale_xz) >> 6;
+                shadow_footprint[3] = ((s8) frame_data[3] * part->scale_y) >> 6;
+                shadow_footprint[4] = ((s8) frame_data[4] * part->appearance.fields.scale_xz) >> 6;
+                shadow_footprint[5] = ((s8) frame_data[5] * part->scale_y) >> 6;
+                shadow_footprint[6] = ((s8) frame_data[6] * part->appearance.fields.scale_xz) >> 6;
                 shadow_count += 1;
-                shadow_footprint[7] = ((s8) frame_data[8] * part->footprint_scale_y) >> 6;
+                shadow_footprint[7] = ((s8) frame_data[8] * part->scale_y) >> 6;
             }
             frame_data += 9;
             frame_count -= 1;
@@ -3676,8 +3659,7 @@ typedef struct
 /** @brief Word view of FieldMotionRecord bytes 0x3C-0x3F; bit 24 is a flag in the 0x3F byte. */
 #define FIELD_MOTION_WORD_3C(rec) (*(u32 *) &(rec)->sprite_height_minus_one)
 
-/** @brief Object linked by a 0x24 contact command; FieldObjectRuntime leaves 0x170 as padding. */
-#define FIELD_OBJECT_LINKED_OBJECT(state) ((state)->pad_0x16f[1])
+/** @brief Object linked by a 0x24 contact command; FieldObjectState leaves 0x170 as padding. */
 
 /**
  * @brief Look up the actor binding that serves an object slot.
@@ -3713,7 +3695,7 @@ static inline FieldSequenceBinding *field_get_object_binding(s32 object_index)
  *       points and start the bound animation, 5 plays the resource's sound cue.
  * @note Sibling of field_render_effect_frame16, which handles 11/17-byte records with 16-bit deltas.
  */
-s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32 flag, FieldActorPartDef *part)
+s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32 flag, FieldObjectPart *part)
 {
     extern int abs(int);
     MATRIX *mtx = (MATRIX *) 0x1F800000;
@@ -3724,7 +3706,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
     s16 *quad_bounds = (s16 *) 0x1F800064;
     Vec2s *contact_quad;
     Vec2s *target_screen;
-    FieldActorState *actor;
+    FieldActorSlot *actor;
     s32 vertical_lift;
     s32 shadow_count;
     TrackPlacement contact;
@@ -3769,8 +3751,8 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
     u8 u_right_flat;
     u8 v_top_end;
     u8 v_bottom_end;
-    FieldObjectRuntime *slot;
-    FieldObjectRuntime *target_state;
+    FieldObjectState *slot;
+    FieldObjectState *target_state;
 
     shadow_count = 0;
     contact_quad = (Vec2s *) 0x1F800080;
@@ -4148,7 +4130,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
             else
             {
                 frame_kind = frame_flags & 0xF;
-                if ((flag == 0) || (frame_kind == 2) || ((slot->contact.flags & 1) && (frame_kind == 0)))
+                if ((flag == 0) || (frame_kind == 2) || ((slot->contact.word & 1) && (frame_kind == 0)))
                 {
                     switch (item[7] & 0xF)
                     {
@@ -4159,14 +4141,14 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                         field_transform_effect_quad_vertices8(rec, slot, item, 4, sxy, dir, gte_out);
                         break;
                     case 6:
-                        if (!(slot->sequence_command & 0x8000) && !(slot->movement.word & 0x1800) && (slot->sequence_command != 0xFFFF) &&
+                        if (!(slot->action_parameter & 0x8000) && !(slot->movement.word & 0x1800) && (slot->action_parameter != 0xFFFF) &&
                             (((rec->motion_parameter == 0x91) && ((rec->facing_or_reward_kind & 0x7F) == 0x2E)) || (rec->motion_parameter == 0x85) || (rec->motion_parameter == 0x98)) &&
                             !(FIELD_MOTION_WORD_3C(rec) & 0x01000000))
                         {
                             x_offset = field_find_free_actor_slot(rec->source_object_index, 0);
                             if (x_offset != -1)
                             {
-                                if (field_start_builtin_animation(rec->source_object_index, x_offset, slot->sequence_command) != 0)
+                                if (field_start_builtin_animation(rec->source_object_index, x_offset, slot->action_parameter) != 0)
                                 {
                                     slot->contact.bytes.animation_actor_index = x_offset;
                                     field_start_actor_animation(x_offset, 0, NULL);
@@ -4240,13 +4222,13 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                     slot->attachment_points[3].y = gte_out->vy;
                                 }
                             }
-                            slot->sequence_command = 0xFFFF;
+                            slot->action_parameter = 0xFFFF;
                             slot->movement.word = (slot->movement.word & ~0x1800) | 0x1000;
                         }
                         break;
                     case 1:
-                        if ((part->effect_flags & 0x100000) && !(slot->movement.word & 0x1800) && ((slot->contact.bytes.target_count == 0) || (rec->motion_parameter == 0x91)) &&
-                            (((slot->sequence_command != 0xFFFF) && (slot->sequence_command != 0)) || (actor->animation->hit_test_mode == 3)))
+                        if ((part->effect_flags.word & 0x100000) && !(slot->movement.word & 0x1800) && ((slot->contact.bytes.target_count == 0) || (rec->motion_parameter == 0x91)) &&
+                            (((slot->action_parameter != 0xFFFF) && (slot->action_parameter != 0)) || (actor->animation->hit_test_mode == 3)))
                         {
                             if (rec->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
                             {
@@ -4319,7 +4301,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                             contact_result = field_test_quad_actor_contacts(contact_quad, rec, &contact);
                             if (contact_result == 1)
                             {
-                                g_field_object_states[contact.index].object_flags &= ~0x400;
+                                g_field_object_states[contact.index].flags &= ~0x400;
                                 slot->targets[slot->contact.bytes.target_count] = contact.index;
                                 target_count = slot->contact.bytes.target_count;
                                 if (target_count < 9U)
@@ -4328,21 +4310,21 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                 }
                                 if (actor->animation->hit_test_mode == 3)
                                 {
-                                    actor->active_track_mask |= 1 << actor->track_count;
-                                    actor->track_object_indices[actor->track_count] = contact.index;
+                                    actor->track_mask |= 1 << actor->target_count;
+                                    actor->targets[actor->target_count] = contact.index;
                                     target_screen->x = 0xA0 + g_field_view_offset_x / 256 + g_field_actors[contact.index].x / 256;
                                     target_screen->y = 0x70 + g_field_view_offset_y / 256 + g_field_actors[contact.index].y / 256 - g_field_actors[contact.index].z / 512 - g_field_view_offset_z / 512;
                                     if (g_field_actors[contact.index].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
                                     {
-                                        actor->track_offsets[actor->track_count].x = target_screen->x - contact.x;
+                                        actor->track_offsets[actor->target_count].x = target_screen->x - contact.x;
                                     }
                                     else
                                     {
-                                        actor->track_offsets[actor->track_count].x = contact.x - target_screen->x;
+                                        actor->track_offsets[actor->target_count].x = contact.x - target_screen->x;
                                     }
-                                    actor->track_offsets[actor->track_count].y = contact.y - target_screen->y;
-                                    actor->track_count++;
-                                    g_field_object_states[contact.index].contact.flags |= 0x80;
+                                    actor->track_offsets[actor->target_count].y = contact.y - target_screen->y;
+                                    actor->target_count++;
+                                    g_field_object_states[contact.index].contact.word |= 0x80;
 
                                     field_resolve_contact_hit(actor->owner_object_index, contact.index);
                                     attach_x = contact.x - sxy->x;
@@ -4362,26 +4344,26 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                 }
                                 else
                                 {
-                                    if (slot->sequence_command == 0x24)
+                                    if (slot->action_parameter == 0x24)
                                     {
                                         if (g_field_actors[contact.index].state != 0)
                                         {
                                             break;
                                         }
-                                        slot->contact.flags |= 2;
-                                        FIELD_OBJECT_LINKED_OBJECT(slot) = contact.index;
-                                        g_field_object_states[contact.index].object_flags |= 0x2000;
+                                        slot->contact.word |= 2;
+                                        slot->linked_object_index = contact.index;
+                                        g_field_object_states[contact.index].flags |= 0x2000;
                                     }
                                     else
                                     {
-                                        if ((slot->sequence_command == 0x59) || (slot->sequence_command == 0x66) || (slot->sequence_command == 0x2B))
+                                        if ((slot->action_parameter == 0x59) || (slot->action_parameter == 0x66) || (slot->action_parameter == 0x2B))
                                         {
-                                            if ((!((g_field_object_states[contact.index].contact.flags >> 6) & 1) &&
+                                            if ((!((g_field_object_states[contact.index].contact.word >> 6) & 1) &&
                                                  (bound_index = field_get_object_binding(contact.index)->owner_object_index) == contact.index &&
                                                  field_get_object_binding(bound_index)->state != 0) ||
-                                                (g_field_object_states[contact.index].contact.bytes.flags_low & 1))
+                                                (g_field_object_states[contact.index].contact.bytes.flags & 1))
                                             {
-                                                slot->sequence_command = 0;
+                                                slot->action_parameter = 0;
                                             }
                                             else
                                             {
@@ -4398,8 +4380,8 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                         {
                                             target_state = &g_field_object_states[contact.index];
                                             y_offset = 1;
-                                            if (!(target_state->contact.bytes.flags_low & 1) ||
-                                                ((g_field_actor_slots[target_state->contact.bytes.controller_index].is_active != 0) &&
+                                            if (!(target_state->contact.bytes.flags & 1) ||
+                                                ((g_field_actor_slots[target_state->contact.bytes.controller_index].active != 0) &&
                                              (g_field_actor_slots[target_state->contact.bytes.controller_index].owner_object_index == rec->source_object_index)))
                                             {
                                                 switch (rec->facing_or_reward_kind & 0x7F)
@@ -4430,25 +4412,25 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                             }
                                             if (y_offset == 1)
                                             {
-                                                if ((slot->sequence_command == 1) || (slot->sequence_command == 3) || (slot->sequence_command == 0x10))
+                                                if ((slot->action_parameter == 1) || (slot->action_parameter == 3) || (slot->action_parameter == 0x10))
                                                 {
-                                                    slot->sequence_command = 0x1E;
+                                                    slot->action_parameter = 0x1E;
                                                 }
                                             }
                                             }
                                     }
-                                    if (slot->sequence_command & 0x8000)
+                                    if (slot->action_parameter & 0x8000)
                                     {
                                         scratch.target_index = contact.index;
                                         if (rec->motion_parameter == 0x91)
                                         {
                                             if (slot->contact.bytes.animation_actor_index != 0xFF)
                                             {
-                                                g_field_object_states[contact.index].contact.flags |= 0x80;
+                                                g_field_object_states[contact.index].contact.word |= 0x80;
                                                 field_start_actor_animation(slot->contact.bytes.animation_actor_index, 1, &scratch.target_index);
                                             }
                                         }
-                                        else if (field_start_bound_action_animation(rec->source_object_index, 1, &scratch.target_index, slot->sequence_command) != 0)
+                                        else if (field_start_bound_action_animation(rec->source_object_index, 1, &scratch.target_index, slot->action_parameter) != 0)
                                         {
                                             slot->movement.word = (slot->movement.word & ~0x1800) | 0x1000;
                                         }
@@ -4463,24 +4445,24 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                         slot->attachment_points[1].y = attach_y;
                                         slot->attachment_points[0].y = attach_y;
                                     }
-                                    else if (slot->sequence_command != 0)
+                                    else if (slot->action_parameter != 0)
                                     {
                                         x_offset = field_find_free_actor_slot(rec->source_object_index, 0);
                                         if (x_offset != -1)
                                         {
-                                            switch ((slot->contact.flags >> 2) & 7)
+                                            switch ((slot->contact.word >> 2) & 7)
                                             {
                                             case 2:
-                                                slot->sequence_command = 0x74;
+                                                slot->action_parameter = 0x74;
                                                 break;
                                             case 4:
-                                                slot->sequence_command = 0x75;
+                                                slot->action_parameter = 0x75;
                                                 break;
                                             default:
-                                                slot->sequence_command = slot->sequence_command;
+                                                slot->action_parameter = slot->action_parameter;
                                                 break;
                                             }
-                                            if (field_start_builtin_animation(rec->source_object_index, x_offset, slot->sequence_command) != 0)
+                                            if (field_start_builtin_animation(rec->source_object_index, x_offset, slot->action_parameter) != 0)
                                             {
                                                 slot->contact.bytes.animation_actor_index = x_offset;
                                                 scratch.target_index = contact.index;
@@ -4498,18 +4480,18 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                             }
                                         }
                                     }
-                                    slot->sequence_command = 0xFFFF;
+                                    slot->action_parameter = 0xFFFF;
                                     slot->movement.word = (slot->movement.word & ~0x1800) | 0x1000;
                                     break;
                                 }
                             }
                             else if (contact_result == 2)
                             {
-                                slot->sequence_command = 0x1E;
+                                slot->action_parameter = 0x1E;
                                 x_offset = field_find_free_actor_slot(rec->source_object_index, 0);
                                 if (x_offset != -1)
                                 {
-                                    if (field_start_builtin_animation(rec->source_object_index, x_offset, slot->sequence_command) != 0)
+                                    if (field_start_builtin_animation(rec->source_object_index, x_offset, slot->action_parameter) != 0)
                                     {
                                         slot->contact.bytes.animation_actor_index = x_offset;
                                         scratch.target_index = contact.index;
@@ -4526,12 +4508,12 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                         slot->attachment_points[0].y = attach_y;
                                     }
                                 }
-                                slot->sequence_command = 0xFFFF;
+                                slot->action_parameter = 0xFFFF;
                                 slot->movement.word = (slot->movement.word & ~0x1800) | 0x1000;
                             }
                             else if (contact_result == 3)
                             {
-                                slot->sequence_command = 0xFFFF;
+                                slot->action_parameter = 0xFFFF;
                                 slot->movement.word = (slot->movement.word & ~0x1800) | 0x1000;
                             }
                         }
@@ -4539,7 +4521,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                     case 5:
                         if ((rec->unknown_0x34 == 0) && !(FIELD_MOTION_WORD_3C(rec) & 0x01000000))
                         {
-                            sound_kind = g_field_resource_entries[rec->resource_index].sound_cue >> 0xC;
+                            sound_kind = g_field_resource_entries[rec->resource_index].attribute.sound_cue >> 0xC;
                             if (sound_kind != 1)
                             {
                                 if (sound_kind < 2)
@@ -4547,19 +4529,19 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                     if (sound_kind == 0)
                                     {
 
-                                        field_play_sound(g_field_resource_entries[rec->resource_index].sound_cue & 0xFFF, field_get_actor_sound_pan(rec->source_object_index));
+                                        field_play_sound(g_field_resource_entries[rec->resource_index].attribute.sound_cue & 0xFFF, field_get_actor_sound_pan(rec->source_object_index));
                                     }
                                 }
                             }
                             else
                             {
 
-                                field_play_set_sfx(g_field_resource_entries[rec->resource_index].sound_cue & 0xFFF, field_get_actor_sound_pan(rec->source_object_index), rec->resource_index - 3, rec->source_object_index);
+                                field_play_set_sfx(g_field_resource_entries[rec->resource_index].attribute.sound_cue & 0xFFF, field_get_actor_sound_pan(rec->source_object_index), rec->resource_index - 3, rec->source_object_index);
                             }
                         }
                         break;
                     case 2:
-                        if (part->effect_flags & 0x100000)
+                        if (part->effect_flags.word & 0x100000)
                         {
                             field_unpack_effect_quad_corners8(quad_bounds, rec->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED, (s8*)item);
                             shadow_count += 1;
@@ -4568,7 +4550,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                     case 4:
                         if ((slot->movement.word & 0x1800) != 0x800)
                         {
-                            if ((slot->sequence_command != 0xFFFF) && (slot->sequence_command != 0))
+                            if ((slot->action_parameter != 0xFFFF) && (slot->action_parameter != 0))
                             {
                                 if (rec->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
                                 {
@@ -4638,9 +4620,9 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                 gte_stlvnl(gte_out);
                                 slot->attachment_points[3].x = gte_out->vx;
                                 slot->attachment_points[3].y = gte_out->vy - vertical_lift;
-                                if (slot->sequence_command & 0x8000)
+                                if (slot->action_parameter & 0x8000)
                                 {
-                                    if (field_start_bound_action_animation(rec->source_object_index, 0, NULL, slot->sequence_command) != 0)
+                                    if (field_start_bound_action_animation(rec->source_object_index, 0, NULL, slot->action_parameter) != 0)
                                     {
                                         slot->movement.word = (slot->movement.word & ~0x1800) | 0x1000;
                                     }
@@ -4650,14 +4632,14 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                     x_offset = field_find_free_actor_slot(rec->source_object_index, 0);
                                     if (x_offset != -1)
                                     {
-                                        if (field_start_builtin_animation(rec->source_object_index, x_offset, slot->sequence_command) != 0)
+                                        if (field_start_builtin_animation(rec->source_object_index, x_offset, slot->action_parameter) != 0)
                                         {
                                             slot->contact.bytes.animation_actor_index = x_offset;
                                             field_start_actor_animation(x_offset, 0, NULL);
                                         }
                                     }
                                 }
-                                slot->sequence_command = 0xFFFF;
+                                slot->action_parameter = 0xFFFF;
                                 slot->movement.word = (slot->movement.word & ~0x1800) | 0x800;
                             }
                         }
@@ -4677,8 +4659,8 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
         /* Pointer walk: an indexed loop loses 4 instructions. */
         for (corner = quad_bounds; corner != quad_bounds + 8; corner += 2)
         {
-            corner[0] = ((corner[0] * part->appearance.fields.footprint_scale_x >> 6) * g_field_effect_track_scale.x) >> 12;
-            corner[1] = ((corner[1] * part->footprint_scale_y >> 6) * g_field_effect_track_scale.z) >> 12;
+            corner[0] = ((corner[0] * part->appearance.fields.scale_xz >> 6) * g_field_effect_track_scale.x) >> 12;
+            corner[1] = ((corner[1] * part->scale_y >> 6) * g_field_effect_track_scale.z) >> 12;
         }
         slot->collision.signed_half.center_offset = (quad_bounds[2] + quad_bounds[0]) >> 1;
         slot->collision.signed_half.extent = abs(quad_bounds[2] - quad_bounds[0]);
@@ -4715,7 +4697,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
  *       points and start the bound animation, 5 plays the resource's sound cue.
  * @note Sibling of field_render_effect_frame8, which handles 9-byte records with 8-bit deltas.
  */
-s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32 flag, FieldActorPartDef *part)
+s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32 flag, FieldObjectPart *part)
 {
     MATRIX *mtx = (MATRIX *) 0x1F800000;
     Vec2s *sxy = (Vec2s *) 0x1F800040;
@@ -4725,7 +4707,7 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
     s16 *corners = (s16 *) 0x1F800064;
     Vec2s *contact_quad;
     Vec2s *target_screen;
-    FieldActorState *actor;
+    FieldActorSlot *actor;
     s32 vertical_lift;
     s32 shadow_count;
     TrackPlacement contact;
@@ -4771,8 +4753,8 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
     u8 u_end;
     u8 v_end_flip;
     u8 v_end;
-    FieldObjectRuntime *slot;
-    FieldObjectRuntime *target_state;
+    FieldObjectState *slot;
+    FieldObjectState *target_state;
 
     shadow_count = 0;
     contact_quad = (Vec2s *) 0x1F800080;
@@ -5037,7 +5019,7 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
             else
             {
                 opcode = frame_flags & 0xF;
-                if ((flag == 0) || (opcode == 2) || ((slot->contact.flags & 1) && (opcode == 0)))
+                if ((flag == 0) || (opcode == 2) || ((slot->contact.word & 1) && (opcode == 0)))
                 {
                     opcode_b = item[7] & 0xF;
                     switch (opcode_b)
@@ -5049,7 +5031,7 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
                         field_transform_effect_quad_vertices16(rec, slot, item, 4, sxy, dir, gte_out);
                         break;
                     case 1:
-                        if (part->effect_flags & 0x100000)
+                        if (part->effect_flags.word & 0x100000)
                         {
                             if (rec->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
                             {
@@ -5119,16 +5101,16 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
                             gte_stlvnl(gte_out);
                             contact_quad[3].x = (s16) (sxy->x + gte_out->vx);
                             contact_quad[3].y = (s16) (sxy->y + gte_out->vy);
-                            if (!(slot->movement.word & 0x1800) && (((slot->sequence_command != 0xFFFF) && (slot->sequence_command != 0)) || (actor->animation->hit_test_mode == 3)))
+                            if (!(slot->movement.word & 0x1800) && (((slot->action_parameter != 0xFFFF) && (slot->action_parameter != 0)) || (actor->animation->hit_test_mode == 3)))
                             {
                                 contact_result = field_test_quad_actor_contacts(contact_quad, rec, &contact);
                                 if (contact_result == 1)
                                 {
                                     {
-                                        FieldObjectRuntime *states = g_field_object_states;
+                                        FieldObjectState *states = g_field_object_states;
                                         target_state = &states[contact.index];
                                     }
-                                    target_state->object_flags &= ~0x400;
+                                    target_state->flags &= ~0x400;
                                     slot->targets[slot->contact.bytes.target_count] = contact.index;
                                     target_count = slot->contact.bytes.target_count;
                                     if (target_count < 9U)
@@ -5137,20 +5119,20 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
                                     }
                                     if (actor->animation->hit_test_mode == 3)
                                     {
-                                        actor->active_track_mask = (u8) (actor->active_track_mask | (1 << actor->track_count));
-                                        actor->track_object_indices[actor->track_count] = (u8) contact.index;
+                                        actor->track_mask = (u8) (actor->track_mask | (1 << actor->target_count));
+                                        actor->targets[actor->target_count] = (u8) contact.index;
                                         target_screen->x = 0xA0 + g_field_view_offset_x / 256 + g_field_actors[contact.index].x / 256;
                                         target_screen->y = 0x70 + g_field_view_offset_y / 256 + g_field_actors[contact.index].y / 256 - g_field_actors[contact.index].z / 512 - g_field_view_offset_z / 512;
                                         if (g_field_actors[contact.index].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
                                         {
-                                            actor->track_offsets[actor->track_count].x = target_screen->x - contact.x;
+                                            actor->track_offsets[actor->target_count].x = target_screen->x - contact.x;
                                         }
                                         else
                                         {
-                                            actor->track_offsets[actor->track_count].x = contact.x - target_screen->x;
+                                            actor->track_offsets[actor->target_count].x = contact.x - target_screen->x;
                                         }
-                                        actor->track_offsets[actor->track_count].y = (s16) (contact.y - target_screen->y);
-                                        actor->track_count = (u8) (actor->track_count + 1);
+                                        actor->track_offsets[actor->target_count].y = (s16) (contact.y - target_screen->y);
+                                        actor->target_count = (u8) (actor->target_count + 1);
                                         field_resolve_contact_hit(actor->owner_object_index, contact.index);
                                         do
                                         {
@@ -5176,14 +5158,14 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
                                     }
                                     else
                                     {
-                                        if ((field_resolve_contact_hit(rec->source_object_index, contact.index) == 1) && ((slot->sequence_command == 1) || (slot->sequence_command == 3) || (slot->sequence_command == 0x10)))
+                                        if ((field_resolve_contact_hit(rec->source_object_index, contact.index) == 1) && ((slot->action_parameter == 1) || (slot->action_parameter == 3) || (slot->action_parameter == 0x10)))
                                         {
-                                            slot->sequence_command = 0x1E;
+                                            slot->action_parameter = 0x1E;
                                         }
-                                        if (slot->sequence_command & 0x8000)
+                                        if (slot->action_parameter & 0x8000)
                                         {
                                             scratch.target_index = contact.index;
-                                            if (field_start_bound_action_animation(rec->source_object_index, 1, &scratch.target_index, slot->sequence_command) != 0)
+                                            if (field_start_bound_action_animation(rec->source_object_index, 1, &scratch.target_index, slot->action_parameter) != 0)
                                             {
                                                 slot->movement.word = (slot->movement.word & ~0x1800) | 0x1000;
                                             }
@@ -5193,7 +5175,7 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
                                             offset_x = field_find_free_actor_slot(rec->source_object_index, 0);
                                             if (offset_x != -1)
                                             {
-                                                if (field_start_builtin_animation(rec->source_object_index, offset_x, slot->sequence_command) != 0)
+                                                if (field_start_builtin_animation(rec->source_object_index, offset_x, slot->action_parameter) != 0)
                                                 {
                                                     slot->contact.bytes.animation_actor_index = offset_x;
                                                     scratch.target_index = contact.index;
@@ -5215,11 +5197,11 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
                                 }
                                 else if (contact_result == 2)
                                 {
-                                    slot->sequence_command = 0x1E;
+                                    slot->action_parameter = 0x1E;
                                     offset_x = field_find_free_actor_slot(rec->source_object_index, 0);
                                     if (offset_x != -1)
                                     {
-                                        if (field_start_builtin_animation(rec->source_object_index, offset_x, slot->sequence_command) != 0)
+                                        if (field_start_builtin_animation(rec->source_object_index, offset_x, slot->action_parameter) != 0)
                                         {
                                             slot->contact.bytes.animation_actor_index = offset_x;
                                             scratch.target_index = contact.index;
@@ -5241,16 +5223,16 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
                                 {
                                     break;
                                 }
-                                slot->sequence_command = 0xFFFF;
+                                slot->action_parameter = 0xFFFF;
                                 slot->movement.word = (slot->movement.word & ~0x1800) | 0x1000;
                             }
                         }
                         break;
                     case 6:
-                        if (!(slot->sequence_command & 0x8000) && (slot->sequence_command != 0xFFFF) && ((rec->motion_parameter == 0x91) || (rec->motion_parameter == 0x85) || (rec->motion_parameter == 0x86) || (rec->motion_parameter == 0x98)) && !(FIELD_MOTION_WORD_3C(rec) & 0x01000000))
+                        if (!(slot->action_parameter & 0x8000) && (slot->action_parameter != 0xFFFF) && ((rec->motion_parameter == 0x91) || (rec->motion_parameter == 0x85) || (rec->motion_parameter == 0x86) || (rec->motion_parameter == 0x98)) && !(FIELD_MOTION_WORD_3C(rec) & 0x01000000))
                         {
                             offset_x = field_find_free_actor_slot(rec->source_object_index, 0);
-                            if ((offset_x != -1) && (field_start_builtin_animation(rec->source_object_index, offset_x, slot->sequence_command) != 0))
+                            if ((offset_x != -1) && (field_start_builtin_animation(rec->source_object_index, offset_x, slot->action_parameter) != 0))
                             {
                                 slot->contact.bytes.animation_actor_index = offset_x;
                                 field_start_actor_animation(offset_x, 0, NULL);
@@ -5331,32 +5313,32 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
                         {
                             FieldResourceEntry *resources = g_field_resource_entries;
                             u8 idx = rec->resource_index;
-                            sound_kind = (u16) resources[idx].sound_cue >> 0xC;
+                            sound_kind = (u16) resources[idx].attribute.sound_cue >> 0xC;
                             if (sound_kind != 1)
                             {
                                 if ((s32) sound_kind < 2)
                                 {
                                     if (sound_kind == 0)
                                     {
-                                        field_play_sound(resources[rec->resource_index].sound_cue & 0xFFF, field_get_actor_sound_pan(rec->source_object_index));
+                                        field_play_sound(resources[rec->resource_index].attribute.sound_cue & 0xFFF, field_get_actor_sound_pan(rec->source_object_index));
                                     }
                                 }
                             }
                             else
                             {
-                                field_play_set_sfx(resources[rec->resource_index].sound_cue & 0xFFF, field_get_actor_sound_pan(rec->source_object_index), rec->resource_index - 3, rec->source_object_index);
+                                field_play_set_sfx(resources[rec->resource_index].attribute.sound_cue & 0xFFF, field_get_actor_sound_pan(rec->source_object_index), rec->resource_index - 3, rec->source_object_index);
                             }
                         }
                         break;
                     case 2:
-                        if (part->effect_flags & 0x100000)
+                        if (part->effect_flags.word & 0x100000)
                         {
                             field_unpack_effect_quad_corners16(corners, rec->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED, item);
                             shadow_count += 1;
                         }
                         break;
                     case 4:
-                        if ((slot->sequence_command != 0xFFFF) && !(slot->movement.word & 0x1800))
+                        if ((slot->action_parameter != 0xFFFF) && !(slot->movement.word & 0x1800))
                         {
                             if (rec->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
                             {
@@ -5426,9 +5408,9 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
                             gte_stlvnl(gte_out);
                             slot->attachment_points[3].x = (u16) gte_out->vx;
                             slot->attachment_points[3].y = (u16) (gte_out->vy - vertical_lift);
-                            if (slot->sequence_command & 0x8000)
+                            if (slot->action_parameter & 0x8000)
                             {
-                                if (field_start_bound_action_animation(rec->source_object_index, 0, NULL, slot->sequence_command) != 0)
+                                if (field_start_bound_action_animation(rec->source_object_index, 0, NULL, slot->action_parameter) != 0)
                                 {
                                     slot->movement.word = (slot->movement.word & ~0x1800) | 0x1000;
                                 }
@@ -5438,14 +5420,14 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
                                 offset_x = field_find_free_actor_slot(rec->source_object_index, 0);
                                 if (offset_x != -1)
                                 {
-                                    if (field_start_builtin_animation(rec->source_object_index, offset_x, slot->sequence_command) != 0)
+                                    if (field_start_builtin_animation(rec->source_object_index, offset_x, slot->action_parameter) != 0)
                                     {
                                         slot->contact.bytes.animation_actor_index = offset_x;
                                         field_start_actor_animation(offset_x, 0, NULL);
                                     }
                                 }
                             }
-                            slot->sequence_command = 0xFFFF;
+                            slot->action_parameter = 0xFFFF;
                             slot->movement.word = (slot->movement.word & ~0x1800) | 0x1000;
                         }
                         break;
@@ -5461,8 +5443,8 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
         s16 *p = corners;
         while (p != corners + 8)
         {
-            p[0] = ((p[0] * part->appearance.fields.footprint_scale_x >> 6) * g_field_effect_track_scale.x) >> 12;
-            p[1] = ((p[1] * part->footprint_scale_y >> 6) * g_field_effect_track_scale.z) >> 12;
+            p[0] = ((p[0] * part->appearance.fields.scale_xz >> 6) * g_field_effect_track_scale.x) >> 12;
+            p[1] = ((p[1] * part->scale_y >> 6) * g_field_effect_track_scale.z) >> 12;
             p += 2;
         }
         corner_span = abs(corners[2] - corners[0]);
@@ -5587,7 +5569,7 @@ u8* field_render_effect_ring(FieldMotionRecord* effect, u8* packet_cursor, s32* 
     SVECTOR direction;
     VECTOR transformed;
     MATRIX matrix;
-    FieldActorPartDef* part;
+    FieldObjectPart* part;
     SVECTOR* direction_ptr;
     VECTOR* transformed_ptr;
     s32 next_angle;
@@ -5598,7 +5580,7 @@ u8* field_render_effect_ring(FieldMotionRecord* effect, u8* packet_cursor, s32* 
     s16 outer_start_x;
     s16 outer_y;
     FieldGouraudTriangle* next_packet;
-    FieldActorState* actor;
+    FieldActorSlot* actor;
     s32 scaled_cosine;
     s32 address_mask;
     s32 length_mask;
@@ -5807,7 +5789,7 @@ u8* field_render_effect_fan(FieldMotionRecord* effect, u8* packet_cursor, s32* o
     SVECTOR direction;
     VECTOR transformed;
     MATRIX matrix;
-    FieldActorPartDef* part;
+    FieldObjectPart* part;
     s32 first_half_angle;
     SVECTOR* direction_ptr;
     VECTOR* transformed_ptr;
@@ -5818,8 +5800,8 @@ u8* field_render_effect_fan(FieldMotionRecord* effect, u8* packet_cursor, s32* o
     s16 middle_end_x;
     s16 inner_end_x;
     FieldGouraudTriangle* next_packet;
-    FieldActorState* actor;
-    FieldActorState* slots;
+    FieldActorSlot* actor;
+    FieldActorSlot* slots;
     s32* first_entry;
     s32* second_entry;
     s32* third_entry;
@@ -5855,7 +5837,7 @@ u8* field_render_effect_fan(FieldMotionRecord* effect, u8* packet_cursor, s32* o
     FieldGouraudTriangle* fourth_triangle;
     FieldGouraudTriangle* second_triangle;
     FieldGouraudTriangle* packets;
-    FieldActorPartDef* selected_part;
+    FieldObjectPart* selected_part;
 
     packets = (FieldGouraudTriangle*)packet_cursor;
     slots = g_field_actor_slots;
@@ -5873,9 +5855,9 @@ u8* field_render_effect_fan(FieldMotionRecord* effect, u8* packet_cursor, s32* o
     setSemiTrans(packets, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
     segment_count = 2;
     /* This part byte selects the fan segment count; other uses are unresolved. */
-    if ((part->unknown_0x8 >= 2) && (part->unknown_0x8 <= FIELD_RING_SEGMENTS))
+    if ((part->unk8 >= 2) && (part->unk8 <= FIELD_RING_SEGMENTS))
     {
-        segment_count = part->unknown_0x8;
+        segment_count = part->unk8;
     }
     angle_quotient = ONE / segment_count;
     angle_short = angle_quotient;
@@ -6147,8 +6129,8 @@ u8* field_render_effect_marker(FieldMotionRecord* effect, u8* packet_cursor, s32
     VECTOR transformed;
     VECTOR target_position;
     MATRIX matrix;
-    FieldActorState* actor;
-    FieldActorPartDef* part;
+    FieldActorSlot* actor;
+    FieldObjectPart* part;
     s32 depth;
 
     part = &g_field_actor_slots[effect->actor_index].parts[effect->part_index];
@@ -6223,8 +6205,8 @@ u8* field_render_effect_marker(FieldMotionRecord* effect, u8* packet_cursor, s32
  */
 u8* field_render_effect_trail(FieldMotionRecord* effect, u8* packet_cursor, s32* ordering_table)
 {
-    FieldActorState* actor;
-    FieldActorPartDef* part;
+    FieldActorSlot* actor;
+    FieldObjectPart* part;
     s32 depth;
     s32 camera_x;
     s32 effect_x;
@@ -6305,11 +6287,11 @@ u8* field_render_effect_radial_fan(FieldMotionRecord* effect, u8* packet_cursor,
 {
     MATRIX* matrix;
     SVECTOR* direction;
-    FieldActorPartDef* part;
+    FieldObjectPart* part;
     VECTOR* transformed;
     s32 radius;
     Vec2s* screen_origin;
-    FieldActorState* actor;
+    FieldActorSlot* actor;
     FieldFlatLine* next_line;
     s32 angle;
     s32 segment_count;
@@ -6353,7 +6335,7 @@ u8* field_render_effect_radial_fan(FieldMotionRecord* effect, u8* packet_cursor,
     }
 
     /* This mode interprets the shared selector byte as an outer-radius scale. */
-    radius = (u32)((part->rotation_extent.fields.unknown_0x23 + 1) * 5) >> 4;
+    radius = (u32)((part->rotation_extent.fields.unk23 + 1) * 5) >> 4;
 
     direction->vx = (s16)((u32)(rsin(0) * 5) >> 8);
     direction->vy = 0;
@@ -6455,8 +6437,8 @@ u8* field_render_effect_radial_fan(FieldMotionRecord* effect, u8* packet_cursor,
  */
 u8* field_render_effect_radial_lines(FieldMotionRecord* effect, u8* packet_cursor, s32* ordering_table)
 {
-    FieldActorPartDef* part;
-    FieldActorState* actor;
+    FieldObjectPart* part;
+    FieldActorSlot* actor;
     VECTOR* position;
     VECTOR* center;
     VECTOR* delta;
@@ -6830,8 +6812,8 @@ typedef struct
 u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32* ordering_table)
 {
     FieldRibbonQuad* quad = (FieldRibbonQuad*)packet_cursor;
-    FieldActorPartDef* part;
-    FieldActorState* state;
+    FieldObjectPart* part;
+    FieldActorSlot* state;
     VECTOR* position;
     VECTOR* midpoint;
     VECTOR* half_delta;
@@ -6972,8 +6954,8 @@ u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32
     }
 
     angle = ratan2(delta->vx, delta->vy + (delta->vz >> 1));
-    edge_x = (rcos(angle) * part->footprint_scale_y) >> 12;
-    angle = (rsin(angle) * part->footprint_scale_y) >> 12;
+    edge_x = (rcos(angle) * part->scale_y) >> 12;
+    angle = (rsin(angle) * part->scale_y) >> 12;
     if (uv_flags & FIELD_RIBBON_UV_VARIANT)
     {
         angle *= 2;
@@ -7130,7 +7112,7 @@ u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32
  * @param actor Owner supplying parameter tracks and object bindings.
  * @return Unspecified; callers use only the matrix output.
  */
-s32 field_build_effect_part_matrix(FieldMotionRecord* effect, FieldActorPartDef* part, MATRIX* matrix, FieldActorState* actor)
+s32 field_build_effect_part_matrix(FieldMotionRecord* effect, FieldObjectPart* part, MATRIX* matrix, FieldActorSlot* actor)
 {
     FieldMatrixStorage* storage = (FieldMatrixStorage*)matrix;
     SVECTOR* direction = &FIELD_MATRIX_SCRATCH->direction;
@@ -7310,27 +7292,27 @@ s32 field_build_effect_part_matrix(FieldMotionRecord* effect, FieldActorPartDef*
     /* Stat-derived strength reduces the footprint in ten-percent steps. */
     if (part->palette_extent.word & FIELD_PART_SCALE_Z_BY_OWNER)
     {
-        scale->vz = (part->appearance.fields.footprint_scale_x -
-                     ((part->appearance.fields.footprint_scale_x *
+        scale->vz = (part->appearance.fields.scale_xz -
+                     ((part->appearance.fields.scale_xz *
                        ((s32)(FIELD_OBJECT_FOOTPRINT_STRENGTH_RANGE - g_field_object_states[actor->owner_object_index].effect_footprint_strength) >> 6)) /
                       10))
                     << 6;
     }
     else
     {
-        scale->vz = part->appearance.fields.footprint_scale_x << 6;
+        scale->vz = part->appearance.fields.scale_xz << 6;
     }
     if (part->palette_extent.word & FIELD_PART_SCALE_X_BY_OWNER)
     {
-        scale->vx = (part->footprint_scale_y -
-                     ((part->footprint_scale_y *
+        scale->vx = (part->scale_y -
+                     ((part->scale_y *
                        ((s32)(FIELD_OBJECT_FOOTPRINT_STRENGTH_RANGE - g_field_object_states[actor->owner_object_index].effect_footprint_strength) >> 6)) /
                       10))
                     << 6;
     }
     else
     {
-        scale->vx = part->footprint_scale_y << 6;
+        scale->vx = part->scale_y << 6;
     }
     ScaleMatrix(matrix, scale);
 
@@ -7381,7 +7363,7 @@ s32 field_build_effect_part_matrix(FieldMotionRecord* effect, FieldActorPartDef*
  * @param part Literal channel values and track selectors.
  * @param out Four-byte color storage; the literal path also copies its fourth byte.
  */
-void field_resolve_effect_part_color(FieldActorState* actor, FieldMotionRecord* effect, FieldActorPartDef* part, FieldPrimitiveColor* out)
+void field_resolve_effect_part_color(FieldActorSlot* actor, FieldMotionRecord* effect, FieldObjectPart* part, FieldPrimitiveColor* out)
 {
     s32 flags;
     u8 value;
@@ -7390,14 +7372,14 @@ void field_resolve_effect_part_color(FieldActorState* actor, FieldMotionRecord* 
     if (!(flags & FIELD_EFFECT_TRACK_COLOR))
     {
         out->channels.r = ((part->appearance.word >> FIELD_PART_COLOR_TRACK_SHIFT) & FIELD_PART_RED_TRACK)
-                              ? field_evaluate_parameter_track_at_time(actor, part->red_or_track & FIELD_TRACK_INDEX_MASK, (u16)effect->age)
-                              : part->red_or_track;
+                              ? field_evaluate_parameter_track_at_time(actor, part->tint_red & FIELD_TRACK_INDEX_MASK, (u16)effect->age)
+                              : part->tint_red;
         out->channels.g = ((part->appearance.word >> FIELD_PART_COLOR_TRACK_SHIFT) & FIELD_PART_GREEN_TRACK)
-                              ? field_evaluate_parameter_track_at_time(actor, part->green_or_track & FIELD_TRACK_INDEX_MASK, (u16)effect->age)
-                              : part->green_or_track;
+                              ? field_evaluate_parameter_track_at_time(actor, part->tint_green & FIELD_TRACK_INDEX_MASK, (u16)effect->age)
+                              : part->tint_green;
         out->channels.b = ((part->appearance.word >> FIELD_PART_COLOR_TRACK_SHIFT) & FIELD_PART_BLUE_TRACK)
-                              ? field_evaluate_parameter_track_at_time(actor, part->blue_or_track & FIELD_TRACK_INDEX_MASK, (u16)effect->age)
-                              : part->blue_or_track;
+                              ? field_evaluate_parameter_track_at_time(actor, part->tint_blue & FIELD_TRACK_INDEX_MASK, (u16)effect->age)
+                              : part->tint_blue;
         return;
     }
 
@@ -7432,7 +7414,7 @@ void field_resolve_effect_part_color(FieldActorState* actor, FieldMotionRecord* 
  * @param ordering_table Depth-indexed GPU ordering table.
  * @return Cursor immediately after the texture-page packet.
  */
-u8* field_emit_effect_texture_page(FieldMotionRecord* effect, FieldActorPartDef* part, u8* packet_cursor, s32* ordering_table)
+u8* field_emit_effect_texture_page(FieldMotionRecord* effect, FieldObjectPart* part, u8* packet_cursor, s32* ordering_table)
 {
     s32 index;
 
@@ -7736,7 +7718,7 @@ void field_unpack_effect_quad_corners16(s16* out, s32 mirror, u8* item)
  * @return Extent after scaling and optional bounding-box half-extents.
  * @note TODO: categories 55-62 do not initialize the part index on this path.
  */
-s32 field_resolve_effect_extent(FieldActorState* actor, FieldActorPartDef* part)
+s32 field_resolve_effect_extent(FieldActorSlot* actor, FieldObjectPart* part)
 {
     VECTOR delta;
     VECTOR squared_delta;
@@ -7744,7 +7726,7 @@ s32 field_resolve_effect_extent(FieldActorState* actor, FieldActorPartDef* part)
     s32 part_index;
     s32 half_extent;
     u32 flags;
-    FieldActorState* owner;
+    FieldActorSlot* owner;
 
     {
         u32 value_flags = part->rotation_extent.word;
@@ -7773,11 +7755,11 @@ s32 field_resolve_effect_extent(FieldActorState* actor, FieldActorPartDef* part)
         }
     }
 
-    if (part->effect_flags & FIELD_PART_SCALE_DISTANCE_BY_TARGET)
+    if (part->effect_flags.word & FIELD_PART_SCALE_DISTANCE_BY_TARGET)
     {
-        delta.vx = (g_field_actors[owner->track_object_indices[g_field_track_index]].x - g_field_actors[owner->owner_object_index].x) >> 8;
-        delta.vy = (g_field_actors[owner->track_object_indices[g_field_track_index]].y - g_field_actors[owner->owner_object_index].y) >> 8;
-        delta.vz = (g_field_actors[owner->track_object_indices[g_field_track_index]].z - g_field_actors[owner->owner_object_index].z) >> 8;
+        delta.vx = (g_field_actors[owner->targets[g_field_track_index]].x - g_field_actors[owner->owner_object_index].x) >> 8;
+        delta.vy = (g_field_actors[owner->targets[g_field_track_index]].y - g_field_actors[owner->owner_object_index].y) >> 8;
+        delta.vz = (g_field_actors[owner->targets[g_field_track_index]].z - g_field_actors[owner->owner_object_index].z) >> 8;
         gte_ldlvl(&delta);
         gte_sqr0();
         gte_stlvnl(&squared_delta);
@@ -7809,8 +7791,8 @@ s32 field_resolve_effect_extent(FieldActorState* actor, FieldActorPartDef* part)
                 }
                 else
                 {
-                    half_extent = (g_field_object_states[owner->track_object_indices[g_field_track_index]].bounds.half.right -
-                                   g_field_object_states[owner->track_object_indices[g_field_track_index]].bounds.half.left) >>
+                    half_extent = (g_field_object_states[owner->targets[g_field_track_index]].bounds.half.right -
+                                   g_field_object_states[owner->targets[g_field_track_index]].bounds.half.left) >>
                                   1;
                 }
                 if (half_extent < 0)
@@ -7830,8 +7812,8 @@ s32 field_resolve_effect_extent(FieldActorState* actor, FieldActorPartDef* part)
                 }
                 else
                 {
-                    half_extent = (g_field_object_states[owner->track_object_indices[g_field_track_index]].bounds.half.bottom -
-                                   g_field_object_states[owner->track_object_indices[g_field_track_index]].bounds.half.top) >>
+                    half_extent = (g_field_object_states[owner->targets[g_field_track_index]].bounds.half.bottom -
+                                   g_field_object_states[owner->targets[g_field_track_index]].bounds.half.top) >>
                                   1;
                 }
                 if (half_extent < 0)
@@ -7869,8 +7851,8 @@ s32 field_resolve_effect_extent(FieldActorState* actor, FieldActorPartDef* part)
                 }
                 else
                 {
-                    half_extent = (g_field_object_states[owner->track_object_indices[g_field_track_index]].bounds.half.right -
-                                   g_field_object_states[owner->track_object_indices[g_field_track_index]].bounds.half.left) >>
+                    half_extent = (g_field_object_states[owner->targets[g_field_track_index]].bounds.half.right -
+                                   g_field_object_states[owner->targets[g_field_track_index]].bounds.half.left) >>
                                   1;
                 }
                 if (half_extent < 0)
@@ -7890,8 +7872,8 @@ s32 field_resolve_effect_extent(FieldActorState* actor, FieldActorPartDef* part)
                 }
                 else
                 {
-                    half_extent = (g_field_object_states[owner->track_object_indices[g_field_track_index]].bounds.half.bottom -
-                                   g_field_object_states[owner->track_object_indices[g_field_track_index]].bounds.half.top) >>
+                    half_extent = (g_field_object_states[owner->targets[g_field_track_index]].bounds.half.bottom -
+                                   g_field_object_states[owner->targets[g_field_track_index]].bounds.half.top) >>
                                   1;
                 }
                 if (half_extent < 0)
@@ -7916,12 +7898,12 @@ s32 field_resolve_effect_extent(FieldActorState* actor, FieldActorPartDef* part)
  * @param out Receives the resolved x/y/z anchor.
  * @param attachment_index Attachment point index used by ground-relative anchor modes.
  */
-void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *part, Vec3i *out, s32 attachment_index)
+void field_resolve_actor_part_anchor(FieldActorSlot *actor, FieldObjectPart *part, Vec3i *out, s32 attachment_index)
 {
     s32 anchor_mode;
     s32 object_index;
     FieldMotionRecord *object_record;
-    FieldObjectRuntime *object;
+    FieldObjectState *object;
     s32 value;
     s32 index;
 
@@ -7936,7 +7918,7 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
     {
         if (anchor_mode >= FIELD_PLACEMENT_TRACK_FIRST)
         {
-            object_index = actor->track_object_indices[g_field_track_index];
+            object_index = actor->targets[g_field_track_index];
             anchor_mode -= FIELD_PLACEMENT_TRACK_FIRST;
             object_record = &g_field_actors[object_index];
             object = &g_field_object_states[object_index];
@@ -7949,12 +7931,12 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
         }
         if ((part->placement_flags.word >> FIELD_PART_SCALE_X_FROM_BOUNDS_SHIFT) & 1)
         {
-            part->appearance.fields.footprint_scale_x = (*(u8 *)&object->bounds.half.right - *(u8 *)&object->bounds.half.left) * 2;
+            part->appearance.fields.scale_xz = (*(u8 *)&object->bounds.half.right - *(u8 *)&object->bounds.half.left) * 2;
         }
         if ((part->placement_flags.word >> FIELD_PART_SCALE_Y_FROM_BOUNDS_SHIFT) & 1)
         {
             index = 0;
-            part->footprint_scale_y = (*(u8 *)&object->bounds.half.bottom - *(u8 *)&object->bounds.half.top) * 2;
+            part->scale_y = (*(u8 *)&object->bounds.half.bottom - *(u8 *)&object->bounds.half.top) * 2;
         }
         else
         {
@@ -8021,7 +8003,7 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
         do
         {
             if (g_field_effect_records[index].state != FIELD_EFFECT_RETIRED && g_field_effect_records[index].part_index == value &&
-                g_field_effect_records[index].actor_index == actor->actor_index && g_field_effect_records[index].track_index == 0)
+                g_field_effect_records[index].actor_index == actor->slot_index && g_field_effect_records[index].track_index == 0)
             {
                 out->x = g_field_effect_records[index].x;
                 out->y = g_field_effect_records[index].y;
@@ -8114,7 +8096,7 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
         return;
 
     case 0x28:
-        object_record = &g_field_actors[actor->track_object_indices[g_field_track_index]];
+        object_record = &g_field_actors[actor->targets[g_field_track_index]];
         if ((part->spawn_flags.word & FIELD_PART_MIRROR_X_WITH_OWNER) &&
             !(g_field_actors[actor->owner_object_index].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
         {
@@ -8138,9 +8120,9 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
         object_record = &g_field_actors[object_index];
         object = &g_field_object_states[object_index];
         out->x = object_record->x +
-                 (object->attachment_points[((u32)part->effect_flags >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
+                 (object->attachment_points[((u32)part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
         out->y = object_record->y +
-                 (object->attachment_points[((u32)part->effect_flags >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].y << 8);
+                 (object->attachment_points[((u32)part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].y << 8);
         out->z = object_record->z;
         return;
 
@@ -8149,7 +8131,7 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
         object_record = &g_field_actors[object_index];
         object = &g_field_object_states[object_index];
         out->x = object_record->x +
-                 (object->attachment_points[((u32)part->effect_flags >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
+                 (object->attachment_points[((u32)part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
         out->y = object_record->y;
         out->z = object_record->z + (part->offset_z << 8);
         if (((part->placement_flags.word >> FIELD_PART_MIRROR_X_WITH_FACING_SHIFT) & 1) && !(object_record->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
@@ -8184,7 +8166,7 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
         do
         {
             if (g_field_effect_records[index].state != FIELD_EFFECT_RETIRED && g_field_effect_records[index].part_index == value &&
-                g_field_effect_records[index].actor_index == actor->actor_index && g_field_effect_records[index].track_index == 0)
+                g_field_effect_records[index].actor_index == actor->slot_index && g_field_effect_records[index].track_index == 0)
             {
                 out->x = g_field_effect_records[index].x;
                 out->y = g_field_effect_records[index].y;
@@ -8343,7 +8325,7 @@ void field_apply_effect_quad_center_offset(FieldMotionRecord *effect, DVECTOR *s
  * @param direction Scratch direction vector fed to the GTE.
  * @param gte_out Scratch GTE output vector.
  */
-void field_transform_effect_quad_vertices8(FieldMotionRecord *effect, FieldObjectRuntime *object, u8 *quad_data, s32 vertex_index,
+void field_transform_effect_quad_vertices8(FieldMotionRecord *effect, FieldObjectState *object, u8 *quad_data, s32 vertex_index,
                                            Vec2s *screen_origin, SVECTOR *direction, VECTOR *gte_out)
 {
     s16 depth_component;
@@ -8445,7 +8427,7 @@ void field_transform_effect_quad_vertices8(FieldMotionRecord *effect, FieldObjec
  * @param direction Scratch direction vector fed to the GTE.
  * @param gte_out Scratch GTE output vector.
  */
-void field_transform_effect_quad_vertices16(FieldMotionRecord *effect, FieldObjectRuntime *object, u8 *quad_data, s32 vertex_index,
+void field_transform_effect_quad_vertices16(FieldMotionRecord *effect, FieldObjectState *object, u8 *quad_data, s32 vertex_index,
                                             Vec2s *screen_origin, SVECTOR *direction, VECTOR *gte_out)
 {
     if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)

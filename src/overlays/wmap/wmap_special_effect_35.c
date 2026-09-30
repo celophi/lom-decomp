@@ -422,7 +422,7 @@ static void wmap_effect35_update_emitter(WmapEffectEmitter* emitter)
                     D_801AFBD0[index].active = 1;
                     D_800D9268[index].scale_index = 0xF;
                     D_800D9268[index].sequence = 2;
-                    D_800D9268[index].unknown_02 = 0;
+                    D_800D9268[index].resource_index = 0;
                     D_800D9268[index].previous_sequence = -1;
                     D_800D9268[index].shade_step = emitter->shade_step;
                     D_800D9268[index].target_shade = emitter->target_shade;
@@ -1000,7 +1000,7 @@ void wmap_effect35_emitter_b_start(void)
         D_800D9268[i].previous_sequence = -1;
         D_800D9268[i].shade_step = 0x10;
         D_800D9268[i].target_shade = 0x81;
-        D_800D9268[i].unknown_02 = 0;
+        D_800D9268[i].resource_index = 0;
         D_800D9268[i].shade = 1;
         D_801AFBD0[i].radius = 0x2710;
         D_801AFBD0[i].angle = rand() & 0xFFF;
@@ -1656,7 +1656,7 @@ void wmap_effect35_sprite_a_start(void)
     actor->previous_sequence = -1;
     actor->shade_step = 2;
     actor->target_shade = 0x81;
-    actor->unknown_02 = 0;
+    actor->resource_index = 0;
     actor->sequence = 0;
     actor->shade = 1;
     g_wmap_effect35_sprite_a_timer = 502;
@@ -1758,7 +1758,7 @@ void wmap_effect35_sprite_b_start(void)
     actor->previous_sequence = -value;
     actor->shade_step = 0x80;
     actor->shade = value;
-    actor->unknown_02 = 0;
+    actor->resource_index = 0;
     actor->target_shade = 0x81;
     g_wmap_effect35_sprite_b_timer = 280;
     g_wmap_effect35_sprite_b_step++;
@@ -1857,7 +1857,7 @@ void wmap_effect35_sprite_c_start(void)
     actor->previous_sequence = -1;
     actor->shade_step = 2;
     actor->target_shade = 0x81;
-    actor->unknown_02 = 0;
+    actor->resource_index = 0;
     actor->sequence = 0;
     actor->shade = 1;
     g_wmap_effect35_sprite_c_timer = 240;
@@ -2083,7 +2083,7 @@ void wmap_effect35_orbiter_1_start(void)
     actor->scale_index = 0xF;
     actor->previous_sequence = -1;
     actor->shade_step = 0x10;
-    actor->unknown_02 = 0;
+    actor->resource_index = 0;
     actor->sequence = 0;
     actor->target_shade = 0x80;
     actor->shade = 0;
@@ -2150,7 +2150,7 @@ void wmap_effect35_orbiter_2_start(void)
     actor->sequence = 1;
     actor->previous_sequence = -1;
     actor->shade_step = 0x10;
-    actor->unknown_02 = 0;
+    actor->resource_index = 0;
     actor->target_shade = 0x80;
     actor->shade = 0;
     motion->radius = 0x2710;
@@ -2216,7 +2216,7 @@ void wmap_effect35_orbiter_3_start(void)
     actor->sequence = 1;
     actor->previous_sequence = -1;
     actor->shade_step = 0x10;
-    actor->unknown_02 = 0;
+    actor->resource_index = 0;
     actor->target_shade = 0x80;
     actor->shade = 0;
     motion->radius = 0x2710;
@@ -2282,7 +2282,7 @@ void wmap_effect35_orbiter_4_start(void)
     actor->sequence = 2;
     actor->previous_sequence = -1;
     actor->shade_step = 0x10;
-    actor->unknown_02 = 0;
+    actor->resource_index = 0;
     actor->target_shade = 0x80;
     actor->shade = 0;
     motion->radius = 0x2710;
@@ -2348,7 +2348,7 @@ void wmap_effect35_orbiter_5_start(void)
     actor->sequence = 2;
     actor->previous_sequence = -1;
     actor->shade_step = 0x10;
-    actor->unknown_02 = 0;
+    actor->resource_index = 0;
     actor->target_shade = 0x80;
     actor->shade = 0;
     motion->radius = 0x1388;
@@ -2414,7 +2414,7 @@ void wmap_effect35_orbiter_6_start(void)
     actor->sequence = 2;
     actor->previous_sequence = -1;
     actor->shade_step = 0x10;
-    actor->unknown_02 = 0;
+    actor->resource_index = 0;
     actor->target_shade = 0x80;
     actor->shade = 0;
     motion->radius = 0x2710;
@@ -2480,7 +2480,7 @@ void wmap_effect35_orbiter_7_start(void)
     actor->sequence = 2;
     actor->previous_sequence = -1;
     actor->shade_step = 0x10;
-    actor->unknown_02 = 0;
+    actor->resource_index = 0;
     actor->target_shade = 0x80;
     actor->shade = 0;
     motion->radius = 0x2710;

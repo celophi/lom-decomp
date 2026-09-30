@@ -44,23 +44,6 @@ enum WmapTravelSequence
     WMAP_TRAVEL_UP
 };
 
-/** @brief Sprite resource, animation selection, and shading for a map actor. */
-typedef struct
-{
-    s16 unknown_00;
-    s16 resource_index;
-    u8 pad_04[2];
-    u8 scale_index;
-    u8 pad_07[7];
-    s16 sequence;
-    s16 previous_sequence;
-    u8 pad_12[16];
-    s16 target_shade;
-    s16 shade;
-    s16 shade_step;
-    u8 pad_28[4];
-} WmapTravelSprite;
-
 /** @brief Animation resource slot shared with the sequence interpreter. */
 typedef struct
 {
@@ -96,7 +79,7 @@ typedef union
     } point;
 } WmapTravelScreen;
 
-extern WmapTravelSprite D_800D9268[];
+extern WmapSpriteActor D_800D9268[];
 extern WmapTravelAnimation D_80139988[];
 extern WmapTravelCell D_80139290[WMAP_GRID_SIZE][WMAP_GRID_SIZE];
 extern WmapTravelProjection g_wmap_view;
@@ -278,7 +261,7 @@ void wmap_update_party_travel(void)
     s32 packed_position;
     s32 flat_y;
     s32 flat_x_bits;
-    WmapTravelSprite* sprite;
+    WmapSpriteActor* sprite;
     s32 i;
     s32 ot_index;
     s32 depth_index;
@@ -389,7 +372,7 @@ void wmap_init_party_travel(void)
     s32 resource_id;
     u8* resource;
     WmapTraveler* traveler;
-    WmapTravelSprite* sprite;
+    WmapSpriteActor* sprite;
 
     cdrom_queue_read(WMAP_TRAVEL_ANIMATION_RESOURCE, D_800DBE98);
     cdrom_wait_queue_empty();

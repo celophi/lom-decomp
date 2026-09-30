@@ -45,7 +45,7 @@ typedef struct
     u8 unknown_04[36];
 } WmapValueRecord;
 
-extern s32 D_8011CF1C;
+extern u8* D_8011CF1C;
 extern s32 D_80182DF0;
 extern s32 D_801B292C;
 extern VECTOR D_8011CF60;
@@ -642,7 +642,7 @@ void func_80087C20(void)
     D_800D9318.scale_index = 0xF;
     D_800D9318.previous_sequence = -1;
     D_800D9318.shade_step = 2;
-    D_800D9318.unknown_02 = 0;
+    D_800D9318.resource_index = 0;
     D_800D9318.sequence = 0;
     D_800D9318.target_shade = 0x80;
     D_800D9318.shade = 0;
@@ -718,7 +718,7 @@ void func_80087DC0(void)
     D_800D9344.scale_index = 0xF;
     D_800D9344.previous_sequence = -1;
     D_800D9344.shade_step = 8;
-    D_800D9344.unknown_02 = 0;
+    D_800D9344.resource_index = 0;
     D_800D9344.sequence = 0;
     D_800D9344.target_shade = 0x80;
     D_800D9344.shade = 0;

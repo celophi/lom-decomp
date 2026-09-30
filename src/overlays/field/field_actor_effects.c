@@ -25,7 +25,7 @@
 #include "sdk/gte_dmpsx_compat.h"
 #include "sdk/rand.h"
 
-/** @brief Number of scattered-dome points (FieldObjectRuntime::ground_attachment_points). */
+/** @brief Number of scattered-dome points (FieldObjectState::ground_attachment_points). */
 #define SCATTER_POINT_COUNT 3
 
 /** @brief Minimum distance between two scattered-dome points, in whole units. */
@@ -346,12 +346,12 @@ void field_draw_object_ground_effect(FieldMotionRecord* actor, u32 kind)
     radius = EFFECT_RADIUS(actor);
     intensity = ((radius - min_radius) << 8) / (max_radius - min_radius);
     facing = actor->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED;
-    OBJECT_STATE(actor).effect_intensity = intensity;
+    OBJECT_STATE(actor).action_charge = intensity;
     /* x, y, z and the following word read as one VECTOR. */
     position = (VECTOR*)&actor->x;
-    if (OBJECT_STATE(actor).effect_intensity >= 256)
+    if (OBJECT_STATE(actor).action_charge >= 256)
     {
-        OBJECT_STATE(actor).effect_intensity = 255;
+        OBJECT_STATE(actor).action_charge = 255;
     }
     draw = 1;
     if (actor->source_object_index == COMPANION_OBJECT_INDEX)

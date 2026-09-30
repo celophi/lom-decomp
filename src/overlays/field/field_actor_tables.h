@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "field_actor.h"
+#include "field_actor_records.h"
 
 /**
  * @file field_actor_tables.h
@@ -30,12 +31,6 @@
 
 /** @brief Total number of animation actor slots (general, per-object and per-object effect slots). */
 #define FIELD_ACTOR_SLOT_TOTAL 80
-
-/** @brief Number of animation tracks (one per target) an animation actor slot can run. */
-#define FIELD_ACTOR_TRACK_COUNT 9
-
-/** @brief Number of model parts an animation actor slot can drive. */
-#define FIELD_ACTOR_PART_COUNT 16
 
 /** @brief Target entry of an animation track without a target object. */
 #define FIELD_TARGET_NONE 0xFF
@@ -89,255 +84,13 @@ typedef struct
 #define FIELD_PLAYER_KIND_PARTNER 1
 #define FIELD_PLAYER_KIND_COMPANION 2
 
-/** @brief A 24-bit value word whose top byte holds flags. */
-typedef union
-{
-    s32 word;
-    struct
-    {
-        u32 value : 24;
-        u32 unk24 : 7;
-        u32 flag31 : 1;
-    } bits;
-    u8 bytes[4];
-} FieldValueWord;
-
-/** @brief Packed movement word: low ten bits are the effect scale, bit 15 a flag, the top half a height. */
-typedef union
-{
-    u32 word;
-    struct
-    {
-        u32 scale : 10;
-        u32 unk10 : 5;
-        u32 flag15 : 1;
-        u32 unk16 : 16;
-    } bits;
-    struct
-    {
-        u16 lo;
-        s16 hi;
-    } half;
-} FieldMovementWord;
-
-/** @brief Packed contact word: flag bits, the bound animation actor and the collected target count. */
-typedef union
-{
-    u32 word;
-    struct
-    {
-        u32 flag0 : 1;
-        /** @brief The object is linked to linked_object_index, which carries a link flag meanwhile. */
-        u32 linked : 1;
-        /** @brief Damage scale of the object's hits (0 counts as 1); cleared when an action starts. */
-        u32 damage_scale : 3;
-        u32 flag5 : 1;
-        u32 flag6 : 1;
-        u32 flag7 : 1;
-        u32 unk8 : 24;
-    } bits;
-    struct
-    {
-        u8 flags;
-        u8 animation_actor_index;
-        u8 controller_index;
-        u8 target_count;
-    } bytes;
-} FieldContactWord;
-
-/** @brief Number of recorded positions in an object's route history. */
-#define FIELD_ROUTE_HISTORY_LENGTH 48
-
-/** @brief Number of waypoints the path finder can store for an object. */
-#define FIELD_PATH_MAX_POINTS 18
-
-/** @brief One recorded X/Z position (whole units) of an object's route history. */
-typedef struct FieldRoutePoint
-{
-    s16 x;
-    s16 z;
-} FieldRoutePoint;
-
-/** @brief One fixed-point X/Z waypoint written by the path finder. */
-typedef struct
-{
-    s32 x;
-    s32 z;
-} FieldPathPoint;
-
-/** @brief Collision footprint word with a halfword view of the extent. */
-typedef union
-{
-    u32 word;
-    struct
-    {
-        s16 center_offset;
-        u16 extent;
-    } half;
-} FieldCollisionWord;
-
 /** @brief FieldObjectState::hud flag (FieldStatusState::level byte) showing the technique gauge. */
 #define FIELD_HUD_SHOW_TECHNIQUE_GAUGE 0x01
-
-/** @brief Runtime state of one field object (0x23C bytes). */
-typedef struct
-{
-    s32 unk0;
-    FieldValueWord unk4;
-    FieldValueWord unk8;
-    u32 flags;
-    s32 group_flags;
-    s32 key;
-    /** @brief Event bits the object's scripts react to (FieldLayoutRecord::enabled_events). */
-    u16 enabled_events;
-    /** @brief Event scripts and actor parameters copied from FieldLayoutRecord::scripts. */
-    u16 scripts[16];
-    u8 unk3A[2];
-    s32 action_parameter;
-    s32 sequence_id;
-    s32 sequence_position;
-    /** @brief Special attack gauge, 0xFF when full. */
-    u16 technique_gauge;
-    u16 action_charge;
-    /** @brief Bit 0 selects the special attack gauge on the HUD; the second byte is the object's own index. */
-    union
-    {
-        s32 word;
-        struct
-        {
-            u8 flags;
-            u8 object_index;
-            u8 unk4E;
-            u8 unk4F;
-        } bytes;
-    } hud;
-    s32 target_x;
-    s32 target_y;
-    s32 target_z;
-    u8 unk5C[0x64 - 0x5C];
-    /** @brief Display name of the object, NULL when it has no label. */
-    u8* name;
-    s32 unk68;
-    FieldRoutePoint route_history[FIELD_ROUTE_HISTORY_LENGTH];
-    FieldCollisionWord collision;
-    u8 unk130[0x140 - 0x130];
-    s16 unk140;
-    s16 unk142;
-    s16 unk144;
-    s16 unk146;
-    u8 unk148[0x168 - 0x148];
-    u8* script;
-    s8 unk16C;
-    /** @brief Effect record the object's HUD panel follows while it is bound to an animation actor. */
-    u8 linked_effect_index;
-    /** @brief Entry of the leader's route history this follower walks towards. */
-    u8 route_index;
-    u8 action;
-    u8 linked_object_index;
-    u8 command_timer;
-    u16 sequence;
-    FieldMovementWord movement;
-    FieldContactWord contact;
-    /** @brief Flags as of the last handler run, compared with flags to find changes. */
-    s32 previous_flags;
-    u8 targets[13];
-    u8 retry_count;
-    /** @brief Non-zero when the player can interact with the object; FIELD_INTERACTION_ITEM for an item to pick up. */
-    u8 interaction_kind;
-    u8 unk18F[0x19C - 0x18F];
-    /** @brief Floor node cached between collision passes (-1 asks for a fresh search). */
-    s32 collision_node;
-    s32 collision_flags;
-    u16 path_length;
-    u16 path_index;
-    u8 tint_red;
-    u8 tint_green;
-    u8 tint_blue;
-    u8 tint_timer;
-    FieldPathPoint path[FIELD_PATH_MAX_POINTS];
-} FieldObjectState;
 
 /** @brief Sentinel returned by field_find_object_state when no object matches. */
 #define FIELD_OBJECT_STATE_NONE ((FieldObjectState*)-1)
 
-/** @brief Model part data of one field object or animation actor part (0x48 bytes). */
-typedef struct
-{
-    union
-    {
-        u32 word;
-        struct
-        {
-            u32 unk0 : 24;
-            u32 mode : 2;
-            u32 unk26 : 6;
-        } bits;
-    } unk0;
-    union
-    {
-        u32 word;
-        struct
-        {
-            u32 unk0 : 11;
-            u32 flag11 : 1;
-            u32 unk12 : 10;
-            u32 render_mode : 2;
-            u32 unk24 : 8;
-        } bits;
-        u8 bytes[4];
-    } unk4;
-    u8 unk8;
-    u8 unk9;
-    u8 unkA;
-    u8 unkB;
-    u8 unkC;
-    u8 unkD;
-    u8 tint_red;
-    u8 tint_green;
-    u8 tint_blue;
-    u8 unk11;
-    u8 unk12[2];
-    union
-    {
-        u32 word;
-        struct
-        {
-            u32 unk0 : 4;
-            u32 mode : 4;
-            u32 unk8 : 24;
-        } bits;
-        struct
-        {
-            u16 lo;
-            s16 hi;
-        } half;
-    } unk14;
-    s16 unk18;
-    u8 unk1A[0x23 - 0x1A];
-    u8 unk23;
-    union
-    {
-        u32 word;
-        u8 bytes[4];
-    } unk24;
-    union
-    {
-        u32 word;
-        u8 bytes[4];
-    } unk28;
-    u8 unk2C;
-    u8 unk2D;
-    /** @brief Z and X model scale, 0x40 for full size. */
-    u8 scale_z;
-    u8 unk2F[2];
-    u8 unk31;
-    u8 unk32;
-    u8 scale_x;
-    u32 flags;
-    u8 unk38[0x48 - 0x38];
-} FieldObjectPart;
-
-/** @brief FieldObjectPart::flags bit 23: the object ignores map collision. */
+/** @brief FieldObjectPart::spawn_flags bit 23: the object ignores map collision. */
 #define FIELD_PART_IGNORE_MAP_COLLISION 0x800000
 
 /** @brief Flag byte and weapon type of a party member, also updated as one halfword. */
@@ -415,36 +168,6 @@ typedef struct
     FieldActionSlot slots[FIELD_RESOURCE_ACTION_COUNT];
 } FieldActionRow;
 
-/** @brief Vibration tracks of an animation: 0 drives the small motor, 1 the large motor. */
-#define FIELD_VIBRATION_TRACK_COUNT 2
-
-/** @brief Animation definition referenced by an animation actor slot. */
-typedef struct
-{
-    /** @brief Parameter curves driving the small and large vibration motors, FIELD_CURVE_NONE for none. */
-    u8 vibration_curves[FIELD_VIBRATION_TRACK_COUNT];
-    /** @brief Two sound events: value compared by non-start events, event type, sound command. */
-    u8 sound_subtypes[2];
-    u16 sound_events[2];
-    u16 sound_commands[2];
-    u16 flags;
-    /** @brief Bit 15 plays sound bits 8-14 when track 0 reaches the frame in the low byte. */
-    union
-    {
-        u16 word;
-        u8 bytes[2];
-    } frame_sound;
-    u16 unk10;
-    /** @brief Length in frames when FIELD_ANIM_OWN_DURATION is set. */
-    u16 duration;
-    u8 unk14;
-    u8 unk15;
-    u8 unk16;
-    u8 unk17;
-    u16 unk18;
-    u8 unk1A[2];
-} FieldAnimationDef;
-
 /** @brief Parameter curve count of an animation (curve selectors are four bits). */
 #define FIELD_CURVE_COUNT 16
 /** @brief Curve selector of an unused render-state track. */
@@ -462,14 +185,14 @@ typedef struct
 #define FIELD_ANIM_CAMERA_MODE_SHIFT 13
 /** @brief FieldAnimationDef::flags bit 15: the definition carries its own duration. */
 #define FIELD_ANIM_OWN_DURATION 0x8000
-/** @brief FieldAnimationDef::unkE: bit 15 fires a sound at a frame; bits 8-14 are the sound, the low byte the frame. */
+/** @brief FieldAnimationDef::frame_sound: bit 15 fires a sound at a frame; bits 8-14 are the sound, the low byte the frame. */
 #define FIELD_ANIM_FRAME_SOUND 0x8000
-/** @brief FieldAnimationDef::unk10 bits 12-15: curve of the camera offset track. */
+/** @brief FieldAnimationDef::palette_animation bits 12-15: curve of the camera offset track. */
 #define FIELD_ANIM_CAMERA_CURVE_SHIFT 12
-/** @brief FieldAnimationDef::unk14 values and bits. */
+/** @brief FieldAnimationDef::hit_test_mode values and bits. */
 #define FIELD_ANIM_ATTACK 2
 #define FIELD_ANIM_STARTED 0x80
-/** @brief FieldAnimationDef::unk18 bits. */
+/** @brief FieldAnimationDef::sync_flags bits. */
 #define FIELD_ANIM_OWNER_VISIBILITY 0x2
 #define FIELD_ANIM_TARGET_VISIBILITY 0x4
 #define FIELD_ANIM_OWNER_TRACK_OFF 0x8
@@ -477,39 +200,6 @@ typedef struct
 #define FIELD_ANIM_RESTART_AT_END 0x20
 #define FIELD_ANIM_OWNER_CURVE_SHIFT 8
 #define FIELD_ANIM_TARGET_CURVE_SHIFT 12
-
-/** @brief Parameter curve of an animation: segment count, random flag and first segment, then the value range. */
-typedef struct
-{
-    union
-    {
-        u16 word;
-        struct
-        {
-            u8 segment_count;
-            u8 segment_offset;
-        } bytes;
-    } head;
-    s16 end_value;
-    s16 start_value;
-} FieldParameterCurve;
-
-/** @brief Status word of an animation actor slot. */
-typedef union
-{
-    u32 word;
-    u16 half[2];
-    u8 bytes[4];
-    struct
-    {
-        /** @brief Bit 0: FIELD_SLOT_OWNER_LINKED; bits 1-4: the action element (FIELD_SLOT_ELEMENT_BITS). */
-        u8 flags;
-        /** @brief Non-zero while the animation hides its owner or targets. */
-        u8 hiding_objects;
-        /** @brief Animation resource the slot plays. */
-        u16 animation_id;
-    } parts;
-} FieldActorSlotStatus;
 
 
 /** @brief FieldActorSlot::status bit 0: the slot plays a streamed animation bound to its owner. */
@@ -532,78 +222,13 @@ typedef struct
     s32 slot;
 } FieldActorBinding;
 
-/** @brief Animation actor slot (0x244 bytes). */
-typedef struct FieldActorSlot
-{
-    FieldObjectPart* parts;
-    FieldParameterCurve* curves;
-    /** @brief Curve segments: ten-bit length in frames, six-bit value. */
-    u16* curve_segments;
-    FieldAnimationDef* animation;
-    FieldAnimationDef* default_animation;
-    u8 unk14[0x1C - 0x14];
-    /** @brief Values played by kind 2 sound commands. */
-    s32 sound_params[2];
-    u8 active;
-    /** @brief Number of entries in parts[]. */
-    u8 part_count;
-    u8 actor_type;
-    /** @brief Per sound event: bit 0 once it has played, bit 7 for a type 5 event. */
-    u8 sound_flags[2];
-    /** @brief Entry of default_animation[] that is playing. */
-    u8 animation_index;
-    u8 unk2A;
-    u8 unk2B[FIELD_ACTOR_PART_COUNT];
-    /** @brief Effects spawned per track and part (the spawner increments it). */
-    u8 effect_counts[FIELD_ACTOR_TRACK_COUNT][FIELD_ACTOR_PART_COUNT];
-    u8 unkCB;
-    u16 effect_totals[FIELD_ACTOR_TRACK_COUNT][FIELD_ACTOR_PART_COUNT];
-    /** @brief Frame counter of each track. */
-    u16 track_frames[FIELD_ACTOR_TRACK_COUNT];
-    u8 unk1FE[0x222 - 0x1FE];
-    /** @brief Length of the animation in frames. */
-    u16 duration;
-    FieldActorSlotStatus status;
-    u8 owner_object_index;
-    u8 targets[FIELD_ACTOR_TRACK_COUNT];
-    u8 target_count;
-    u8 slot_index;
-    u16 unk234;
-    /** @brief Frames since the animation started. */
-    u16 frame_counter;
-    /** @brief Frames between the starts of consecutive tracks, 0 to start them all at once. */
-    u16 track_interval;
-    u8 track_mask;
-    u8 pending_track_mask;
-    u8 unk23C[4];
-    /** @brief Per animation, the mask of parts it drives. */
-    u16* part_masks;
-} FieldActorSlot;
-
-/** @brief Resource table entry selected by an actor's resource index (0x14 bytes). */
-typedef struct
-{
-    u8* start;
-    u8* end;
-    u8 unk8;
-    u8 slot_index;
-    /** @brief CLUT row of the resource's images (field_set_party_palettes, field_update_scene). */
-    u16 palette;
-    u16 unkC;
-    u16 unkE;
-    u32 flags;
-} FieldResourceEntry;
-
 /** @brief FieldResourceEntry::flags bit: the resource has an action table and eight-direction animations. */
 #define FIELD_RESOURCE_HAS_ACTIONS 1
 /** @brief FieldResourceEntry::flags bit: the entry holds loaded data. */
 #define FIELD_RESOURCE_LOADED 2
 
-extern FieldObjectState g_field_object_states[];
 extern FieldObjectState g_field_scene_object_states[];
 extern FieldActorBinding g_field_actor_bindings[];
-extern FieldActorSlot g_field_actor_slots[];
-extern FieldResourceEntry g_field_resource_entries[];
 extern FieldObjectPart g_field_object_parts[];
 extern FieldPlayerRecord g_field_player_records[];
 

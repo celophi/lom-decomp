@@ -130,10 +130,10 @@ void field_update_pair_indicators(FieldRenderHalf* render_half)
             if (active_count == 2)
             {
                 distance = FIELD_PAIR_RANGE;
-                if (!(g_field_object_states[active[0]].object_flags & FIELD_PAIR_EXCLUDED_FLAGS))
+                if (!(g_field_object_states[active[0]].flags & FIELD_PAIR_EXCLUDED_FLAGS))
                 {
                     distance = active[1];
-                    if (g_field_object_states[distance].object_flags & FIELD_PAIR_EXCLUDED_FLAGS)
+                    if (g_field_object_states[distance].flags & FIELD_PAIR_EXCLUDED_FLAGS)
                     {
                         distance = FIELD_PAIR_RANGE;
                     }
@@ -168,10 +168,10 @@ void field_update_pair_indicators(FieldRenderHalf* render_half)
                 for (pair = 0; pair < FIELD_PARTY_COUNT; pair++)
                 {
                     distance = FIELD_PAIR_RANGE;
-                    if (!(g_field_object_states[g_field_party_hud_order[pair]].object_flags & FIELD_PAIR_EXCLUDED_FLAGS))
+                    if (!(g_field_object_states[g_field_party_hud_order[pair]].flags & FIELD_PAIR_EXCLUDED_FLAGS))
                     {
                         distance = g_field_party_hud_order[(pair + 1) % FIELD_PARTY_COUNT];
-                        if (g_field_object_states[distance].object_flags & FIELD_PAIR_EXCLUDED_FLAGS)
+                        if (g_field_object_states[distance].flags & FIELD_PAIR_EXCLUDED_FLAGS)
                         {
                             distance = FIELD_PAIR_RANGE;
                         }

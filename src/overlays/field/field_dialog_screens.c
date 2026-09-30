@@ -1309,8 +1309,8 @@ void field_handle_return_to_title_prompt(void)
             {
                 actor = &g_field_object_states[actor_index];
                 player = &g_field_player_records[actor_index];
-                actor->unk8.word = (actor->unk8.word & status_mask) | (actor->unk0 & hp_mask);
-                actor->unk4.word = actor->unk0 & hp_mask;
+                actor->hp_display.word = (actor->hp_display.word & status_mask) | (actor->maximum_hp & hp_mask);
+                actor->current_hp.word = actor->maximum_hp & hp_mask;
                 if (player->head.bytes.flags & FIELD_PLAYER_ACTIVE)
                 {
                     actor->technique_gauge = full_gauge;

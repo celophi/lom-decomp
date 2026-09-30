@@ -12,20 +12,6 @@ typedef s8 M2C_UNK8;
 typedef s16 M2C_UNK16;
 typedef s32 M2C_UNK32;
 
-/** @brief Actor animation fields in a 44-byte effect slot. */
-typedef struct
-{
-    u8 pad_00[14];
-    s16 sequence;
-    s16 previous_sequence;
-    u8 pad_12[2];
-    u8* cursor;
-    u8* sequence_start;
-    u8* frame_data;
-    s16 remaining;
-    u8 pad_22[10];
-} WmapActor;
-
 /** @brief Radial particle motion and lifetime. */
 typedef struct
 {
@@ -62,7 +48,7 @@ extern SVECTOR D_801398C8;
 extern VECTOR g_wmap_camera_translation;
 extern VECTOR D_80182D48;
 extern MATRIX D_8011D0E8;
-extern WmapActor D_800D9268[];
+extern WmapSpriteActor D_800D9268[];
 extern u16 D_80139980;
 extern WmapResource D_80139988[];
 extern u8 D_800D9150;
@@ -538,11 +524,11 @@ void func_8006AFAC(s32 first, s32 end, s32 frame, s32 depth,
     s32 i;
     s32 active;
     s32 actor_offset;
-    WmapActor *actor;
+    WmapSpriteActor *actor;
     WmapMotion *spawn_motion;
     WmapMotion *motion;
     WmapMotion *motion_base;
-    WmapActor *spawn_actor;
+    WmapSpriteActor *spawn_actor;
 
     active = 0;
     for (i = first; i < end; i++)
@@ -552,7 +538,7 @@ void func_8006AFAC(s32 first, s32 end, s32 frame, s32 depth,
         motion = &motion_base[i];
         if (motion->state != 0)
         {
-            actor = (WmapActor *)((u8 *)D_800D9268 + actor_offset);
+            actor = (WmapSpriteActor *)((u8 *)D_800D9268 + actor_offset);
             position.vx = (s16) ((s32) (((s32) motion->radius >> 6) * (ccos(motion->angle) >> 6)) >> 0xC);
             y_product = ((s32) motion->radius >> 6) * (csin(motion->angle) >> 6);
             position.vz = 0;
@@ -787,7 +773,7 @@ void func_8006B6EC(s32 first, s32 end, s32 frame, s32 z_step, s32 depth)
     s32 screen_position;
     s32 i;
     WmapMotion *motion;
-    WmapActor *actor, *actor_base;
+    WmapSpriteActor *actor, *actor_base;
     u8 *data;
     u8 *cursor;
     s16 *offsets;
@@ -874,8 +860,8 @@ void func_8006B998(s32 first, s32 end, void *point_data, s32 frame, s32 depth)
     s32 i;
     WmapMovingPoint *point;
     WmapMovingPoint *bounds;
-    WmapActor *actor;
-    WmapActor *actor_base;
+    WmapSpriteActor *actor;
+    WmapSpriteActor *actor_base;
     u8 *data;
     s16 *offsets;
     u8 *cursor;
@@ -962,7 +948,7 @@ void func_8006BC44(s32 first, s32 count, void *config, s32 expire_by_size)
     void *copy_motion;
     void *copy_resource;
     void *actor;
-    WmapActor *draw_actor;
+    WmapSpriteActor *draw_actor;
     s32 resource_offset;
     s32 animation_frame;
     s32 offset;
@@ -994,7 +980,7 @@ void func_8006BC44(s32 first, s32 count, void *config, s32 expire_by_size)
             if (M2C_FIELD(config, s32 *, 0) != -1)
             {
                 copy_actor = ((i + M2C_FIELD(config, s32 *, 4)) * 0x2C) + (u8 *)&D_800D9268;
-                *(WmapActor *)copy_actor = *(WmapActor *)actor;
+                *(WmapSpriteActor *)copy_actor = *(WmapSpriteActor *)actor;
                 copy_motion = ((i + M2C_FIELD(config, s32 *, 4)) * 0x14) + (u8 *)&D_801AFBD0;
                 *(WmapMotion *)copy_motion = *(WmapMotion *)source_motion;
                 copy_resource = ((i + M2C_FIELD(config, s32 *, 4)) * 8) + (u8 *)&D_80139988;
@@ -1171,7 +1157,7 @@ void func_8006C448(void *config)
     s32 draw_index;
     s32 spawn_index;
     s32 i;
-    WmapActor *actor;
+    WmapSpriteActor *actor;
     s32 resource_offset;
     s32 animation_frame;
     s32 offset;

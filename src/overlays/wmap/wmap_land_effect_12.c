@@ -65,7 +65,7 @@ typedef struct
     u8 unknown_04[36];
 } WmapValueRecord;
 
-extern s32 D_8011CF1C;
+extern u8* D_8011CF1C;
 extern s32 D_801B2468;
 extern s32 D_801B288C;
 extern VECTOR D_8011CF60;
@@ -108,7 +108,7 @@ extern u8 D_800DA398[];
 extern u8 D_80139CA8[];
 extern void (*D_800D5930[])(void);
 extern u8 D_800D95D8[];
-extern u8 D_80139A28[];
+extern WmapAnimationSlot D_80139A28[];
 extern void func_800851D4(void);
 extern void (*D_800D5948[])(void);
 extern u32 D_801B2888;
@@ -608,7 +608,7 @@ void func_8008492C(void)
     D_800D9318.scale_index = 0xF;
     D_800D9318.previous_sequence = -1;
     D_800D9318.shade_step = 8;
-    D_800D9318.unknown_02 = 0;
+    D_800D9318.resource_index = 0;
     D_800D9318.sequence = 0;
     D_800D9318.target_shade = 0x80;
     D_800D9318.shade = 0;
@@ -684,7 +684,7 @@ void func_80084ACC(void)
     D_800D9344.scale_index = 0xF;
     D_800D9344.previous_sequence = -1;
     D_800D9344.shade_step = 8;
-    D_800D9344.unknown_02 = 0;
+    D_800D9344.resource_index = 0;
     D_800D9344.sequence = 0;
     D_800D9344.target_shade = 0x80;
     D_800D9344.shade = 0x80;

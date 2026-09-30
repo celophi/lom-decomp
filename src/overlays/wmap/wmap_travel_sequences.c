@@ -206,7 +206,7 @@ static inline void wmap_place_vehicle(void)
     actor->previous_sequence = -1;
     actor->target_shade = WMAP_VEHICLE_SHADE_NEUTRAL;
     actor->shade = WMAP_VEHICLE_SHADE_NEUTRAL;
-    actor->unknown_02 = 0;
+    actor->resource_index = 0;
     actor->scale_index = 0;
     actor->sequence = 0;
     actor->shade_step = 0;
@@ -744,7 +744,7 @@ void wmap_special_travel_turn(void)
     wmap_turn_vehicle(1);
     if (D_801AFBD0.heading == WMAP_HEADING_DEPARTURE)
     {
-        D_800D9268[0].unknown_02 = -1;
+        D_800D9268[0].resource_index = -1;
         g_wmap_special_travel_timer = 0;
         g_wmap_special_travel_step += 1;
     }
@@ -791,7 +791,7 @@ void wmap_special_travel_cruise(void)
     wmap_turn_vehicle(1);
     if (D_801AFBD0.heading == WMAP_HEADING_CRUISE)
     {
-        D_800D9268[0].unknown_02 = 0;
+        D_800D9268[0].resource_index = 0;
     }
     if (--g_wmap_special_travel_timer == 0)
     {
@@ -929,7 +929,7 @@ void wmap_special_return_cruise(void)
     wmap_turn_vehicle(1);
     if (D_801AFBD0.heading == WMAP_HEADING_CRUISE)
     {
-        D_800D9268[0].unknown_02 = 0;
+        D_800D9268[0].resource_index = 0;
     }
     if (--g_wmap_special_return_timer == 0)
     {

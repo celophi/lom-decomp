@@ -18,6 +18,8 @@ typedef union
 {
     u8 bytes[0x20];
     s32 words[8];
+    /** @brief While scripts are being set up: the first free local variable slot. */
+    s32 local_variable_base;
     /** @brief Golem slot menus. */
     struct
     {
@@ -49,7 +51,5 @@ typedef union
         s16 selected_item; /**< Chosen action item, 0-7. */
     } actions;
 } FieldMenuVars;
-
-extern FieldMenuVars D_80122C00;
 
 #endif /* FIELD_MENU_VARS_H */

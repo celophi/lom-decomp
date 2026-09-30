@@ -42,7 +42,7 @@ typedef struct
 FieldStatusState* field_find_object_state(s32 actor_id);
 u32* field_get_scene_record_table(void);
 u8* field_find_free_inventory_record(void);
-void field_append_dialog_item(s32 text, u8 quantity);
+void field_append_dialog_item(u8* text, u8 quantity);
 FieldActorRecord* field_find_actor_record_or_default(s32 id);
 FieldActorRecord* field_find_actor_record(s32 id);
 
@@ -88,11 +88,11 @@ void field_grant_actor_pickup(void* unused, s32 owner_id)
             return;
         }
         field_copy_inventory_record(handle, found);
-        field_append_dialog_item((s32)handle, 0);
+        field_append_dialog_item((u8*)handle, 0);
         return;
     }
     ((void (*)(s32, FieldActorRecord*))field_receive_item)(index, actor);
-    field_append_dialog_item((s32)(g_field_item_name_table.bytes + g_field_item_name_table.offsets[index]), 1);
+    field_append_dialog_item(g_field_item_name_table.bytes + g_field_item_name_table.offsets[index], 1);
 }
 #else
 void field_grant_actor_pickup(void* unused, s32 owner_id)
@@ -167,11 +167,11 @@ void field_grant_actor_pickup(void* unused, s32 owner_id)
             return;
         }
         field_copy_inventory_record(handle, found);
-        field_append_dialog_item((s32)handle, 0);
+        field_append_dialog_item((u8*)handle, 0);
         return;
     }
     ((void (*)(s32, FieldActorRecord*))field_receive_item)(index, actor);
-    field_append_dialog_item((s32)(g_field_item_name_table.bytes + g_field_item_name_table.offsets[index]), 1);
+    field_append_dialog_item(g_field_item_name_table.bytes + g_field_item_name_table.offsets[index], 1);
 }
 #endif
 

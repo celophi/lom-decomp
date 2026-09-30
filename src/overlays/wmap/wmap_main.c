@@ -21,6 +21,7 @@
 #include "tim.h"
 #include "controller_internal.h"
 #include "akao_cmd.h"
+#include "wmap_sprite_render.h"
 
 #define WMAP_GRID_SIZE 6
 #define WMAP_MAP_CELL_SIZE 48
@@ -104,14 +105,6 @@ typedef struct
     s16 frame;
     u8 pad_04[24];
 } WmapTileDisplay;
-
-/** @brief Actor storage containing the map display mode. */
-typedef struct
-{
-    u8 pad_00[0x26];
-    s16 display_mode;
-    u8 pad_28[4];
-} WmapActor;
 
 /** @brief Motion state for a world-map actor. */
 typedef struct
@@ -280,7 +273,7 @@ extern RECT D_80051A88;
 extern WmapTileDisplay D_8011D108[6][6];
 extern s32 D_80139830;
 extern s32 D_80182E20;
-extern WmapActor D_800D9268[];
+extern WmapSpriteActor D_800D9268[];
 extern WmapMotion D_801AFBD0[];
 extern s32 D_8011D52C;
 extern s32 D_80129550;
@@ -2346,7 +2339,7 @@ void wmap_reset_after_transition(void)
     D_80139978 = -1;
     for (actor_index = 0; actor_index < WMAP_ACTOR_COUNT; actor_index++)
     {
-        D_800D9268[actor_index].display_mode = 16;
+        D_800D9268[actor_index].shade_step = 16;
         D_801AFBD0[actor_index].state = 0;
     }
     wmap_refresh_cells();

@@ -221,7 +221,7 @@ extern s32 g_active_script;
 extern s32 g_script_repeat_count;
 
 /* Dialog item list shown by the result screens. */
-extern s32 g_field_dialog_item_texts[];
+extern u8* g_field_dialog_item_texts[];
 extern s32 g_field_dialog_item_count;
 extern u8 g_field_dialog_item_quantities[];
 
@@ -581,7 +581,7 @@ void field_store_entry_settings(s16 scene_id, s8 object_id, s8 music_id, s32 spa
  * @param text Address of the encoded item text.
  * @param quantity Quantity displayed alongside the text.
  */
-void field_append_dialog_item(s32 text, u8 quantity)
+void field_append_dialog_item(u8* text, u8 quantity)
 {
     s32 index = g_field_dialog_item_count;
 
@@ -831,8 +831,8 @@ inline void field_restore_label_actor_parts(void)
     for (index = 0; index < g_field_label_actor_count; index++)
     {
         part = &g_field_object_parts[g_field_label_actor_indices[index]];
-        part->scale_z = g_field_label_saved_scale_x[index];
-        part->scale_x = g_field_label_saved_scale_y[index];
+        part->appearance.fields.scale_xz = g_field_label_saved_scale_x[index];
+        part->scale_y = g_field_label_saved_scale_y[index];
     }
 }
 
@@ -856,12 +856,12 @@ static void field_init_actor_labels(void)
     g_field_selected_actor_label = 0;
     do
     {
-        if (actor->presence != FIELD_ACTOR_UNUSED && state->unk4.word != 0 && g_field_active_group == (state->group_flags & FIELD_OBJECT_GROUP_MASK) &&
+        if (actor->presence != FIELD_ACTOR_UNUSED && state->current_hp.word != 0 && g_field_active_group == (state->group_flags & FIELD_OBJECT_GROUP_MASK) &&
             state->name != NULL)
         {
             g_field_label_actor_indices[g_field_label_actor_count] = actor_index;
-            g_field_label_saved_scale_x[g_field_label_actor_count] = g_field_object_parts[actor_index].scale_z;
-            g_field_label_saved_scale_y[g_field_label_actor_count] = g_field_object_parts[actor_index].scale_x;
+            g_field_label_saved_scale_x[g_field_label_actor_count] = g_field_object_parts[actor_index].appearance.fields.scale_xz;
+            g_field_label_saved_scale_y[g_field_label_actor_count] = g_field_object_parts[actor_index].scale_y;
             g_field_label_actor_count += 1;
         }
         actor_index += 1;
@@ -1146,17 +1146,17 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
             }
             cursor = (s32)field_draw_sprite_number((s32*)number_ot, (void*)cursor, ((FieldObjectState*)text_or_state)->hud.bytes.flags >> 1, 2, (u16*)&point,
                                         g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
-            if ((g_field_selected_actor_label == index) && (((FieldObjectState*)text_or_state)->unk8.word >= 0))
+            if ((g_field_selected_actor_label == index) && (((FieldObjectState*)text_or_state)->hp_display.word >= 0))
             {
                 highlight_part = &g_field_object_parts[bit_or_actor];
-                highlight_part->scale_z = FIELD_LABEL_SELECTED_SCALE;
-                highlight_part->scale_x = FIELD_LABEL_SELECTED_SCALE;
+                highlight_part->appearance.fields.scale_xz = FIELD_LABEL_SELECTED_SCALE;
+                highlight_part->scale_y = FIELD_LABEL_SELECTED_SCALE;
             }
             else
             {
                 normal_part = &g_field_object_parts[bit_or_actor];
-                normal_part->scale_z = (u8)g_field_label_saved_scale_x[index];
-                normal_part->scale_x = (u8)g_field_label_saved_scale_y[index];
+                normal_part->appearance.fields.scale_xz = (u8)g_field_label_saved_scale_x[index];
+                normal_part->scale_y = (u8)g_field_label_saved_scale_y[index];
             }
             index += 1;
         } while (index < (s32)g_field_label_actor_count);
@@ -1528,14 +1528,14 @@ static s32 field_play_low_hp_warning(void)
     {
         if (!(g_frame_counter & 0x1F))
         {
-            if ((g_field_object_states[0].unk4.word != 0) && ((u32)(g_field_object_states[0].unk4.word * 4) < (u32)g_field_object_states[0].unk0))
+            if ((g_field_object_states[0].current_hp.word != 0) && ((u32)(g_field_object_states[0].current_hp.word * 4) < (u32)g_field_object_states[0].maximum_hp))
             {
                 field_play_sound(FIELD_SOUND_LOW_HP, FIELD_SOUND_PAN_CENTRE);
             }
         }
 
-        if (!((g_frame_counter + 0x10) & 0x1F) && !(g_field_actors[1].control.word & FIELD_CONTROL_MODE_MASK) && (g_field_object_states[1].unk4.word != 0) &&
-            ((u32)(g_field_object_states[1].unk4.word * 4) < (u32)g_field_object_states[1].unk0))
+        if (!((g_frame_counter + 0x10) & 0x1F) && !(g_field_actors[1].control.word & FIELD_CONTROL_MODE_MASK) && (g_field_object_states[1].current_hp.word != 0) &&
+            ((u32)(g_field_object_states[1].current_hp.word * 4) < (u32)g_field_object_states[1].maximum_hp))
         {
             field_play_sound(FIELD_SOUND_LOW_HP, FIELD_SOUND_PAN_CENTRE);
         }
@@ -1814,9 +1814,9 @@ void field_rebuild_party_actions(s32 refresh_only)
                 {
                     health = &g_field_object_states[player_index];
                     hp = ((SavedGameLayout*)((u8*)g_saved_game_ctx + character_offset))->characters[0].hp;
-                    health->unk8.word = (health->unk8.word & 0xFF000000) | hp;
-                    health->unk0 = hp;
-                    health->unk4.word = hp;
+                    health->hp_display.word = (health->hp_display.word & 0xFF000000) | hp;
+                    health->maximum_hp = hp;
+                    health->current_hp.word = hp;
                 }
                 if ((g_field_scene_mode_bit != 0) && (refresh_only != 0) && (controllers_or_is_player != 0))
                 {

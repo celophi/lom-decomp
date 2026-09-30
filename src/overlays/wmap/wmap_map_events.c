@@ -112,7 +112,7 @@ extern s32 D_8013B208;
 extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
 extern s32 D_801B2E44;
-extern WmapResource D_80139A28[];
+extern WmapAnimationSlot D_80139A28[];
 extern s32 D_8011CF74;
 extern u8 D_800DCA98[];
 extern s32 D_8011D510;
@@ -127,7 +127,7 @@ extern void wmap_draw_vehicle(void);
 extern void wmap_finish_vehicle_turn(void);
 extern s32 g_wmap_vehicle_phase;
 extern s32 g_wmap_vehicle_screen_position;
-extern u8 g_wmap_vehicle_animation[];
+extern WmapAnimationSlot g_wmap_vehicle_animation;
 extern void (*D_800D6C14[])(void);
 extern s32 D_800DCEC0;
 extern s32 D_801B2E4C;
@@ -784,7 +784,7 @@ void func_800A7440(void)
 {
     D_8013A184 = D_8011D538;
     g_wmap_vehicle_actor.previous_sequence = -1;
-    g_wmap_vehicle_actor.unknown_02 = 0;
+    g_wmap_vehicle_actor.resource_index = 0;
     g_wmap_vehicle_actor.scale_index = 0;
     g_wmap_vehicle_actor.sequence = 0;
     g_wmap_vehicle_actor.shade_step = 0;

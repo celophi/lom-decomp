@@ -50,7 +50,7 @@ extern s32 D_80182DE8;
 extern u8 D_800DCF18[];
 extern s32 D_801B297C;
 extern s32 D_80182DEC;
-extern s32 D_8011CF1C;
+extern u8* D_8011CF1C;
 extern s32 D_801B2984;
 extern s32 D_80139234;
 extern s32 D_8013923C;
@@ -97,7 +97,7 @@ extern u8 D_800D9688[];
 extern u8 D_80139A48[];
 extern void func_8008A69C(void);
 extern void (*D_800D5C68[])(void);
-extern u8 D_80139A28[];
+extern WmapAnimationSlot D_80139A28[];
 
 /** @brief World-map actor configuration. */
 typedef struct
@@ -724,7 +724,7 @@ void func_800897BC(void)
     D_800D9318.previous_sequence = -1;
     D_800D9318.shade_step = 8;
     D_800D9318.target_shade = 0x81;
-    D_800D9318.unknown_02 = 0;
+    D_800D9318.resource_index = 0;
     D_800D9318.sequence = 0;
     D_800D9318.shade = 1;
     D_801B296C = 0x14;
@@ -872,7 +872,7 @@ void func_80089BA8(void)
     D_800D9344.scale_index = 0xF;
     D_800D9344.previous_sequence = -1;
     D_800D9344.shade_step = 8;
-    D_800D9344.unknown_02 = 0;
+    D_800D9344.resource_index = 0;
     D_800D9344.sequence = 0;
     D_800D9344.target_shade = 0x80;
     D_800D9344.shade = 0;
@@ -1174,7 +1174,7 @@ void func_8008A2A0(void)
     D_800D9370.previous_sequence = -1;
     D_800D9370.shade_step = 2;
     D_800D9370.target_shade = 0x81;
-    D_800D9370.unknown_02 = 0;
+    D_800D9370.resource_index = 0;
     D_800D9370.shade = 1;
     D_801B2994 = 0x10;
     D_801B2990 += 1;
