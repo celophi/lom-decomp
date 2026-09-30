@@ -36,4 +36,6 @@ ownership, timing, and known limitations. Source links accompany the details.
   text is encoded.
 - [Overlay ID prefix](technical/reference/overlay-id-prefix.md) - overlay identification and
   binary layout.
+- [PS1 storage types](technical/reference/ps1-storage-types.md) - how stored pointers, code
+  addresses and longs are declared so a 64-bit build can keep PS1 memory layouts.
 - [Compressor](../../tools/compressor/README.md) - compression format and tools.

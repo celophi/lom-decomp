@@ -430,6 +430,7 @@ typedef struct
     u8 action_type; /**< Content/action selector interpreted by the active scene. */
     u8 params[4];   /**< Remaining content-specific parameter bytes. */
 } MenuContentItem;
+typedef PS1_PTR(MenuContentItem) MenuContentItemPtr;
 
 typedef struct
 {
@@ -693,9 +694,9 @@ extern MenuContentItem g_menu_default_content_items;
 extern u8 D_80168659[];
 extern u8 D_80168696[];
 extern u8 D_801686B8[];
-extern u8* D_80168C20;
-extern u8* D_80168C24;
-extern u8* D_80168C30;
+extern u8_ptr D_80168C20;
+extern u8_ptr D_80168C24;
+extern u8_ptr D_80168C30;
 
 /** @brief Optional help/description string drawn below the active menu content. */
 extern s32 g_menu_help_text;
@@ -704,7 +705,7 @@ extern s32 g_menu_cursor_enable;
 /** @brief Set non-zero by a content callback to abort @ref menu_draw_window early. */
 extern s32 g_menu_draw_early_out;
 /** @brief Base address of the menu double-buffered DRAWENV array. */
-extern RenderContext* g_menu_draw_buf_base;
+extern RenderContextPtr g_menu_draw_buf_base;
 extern s32 D_80168C08;
 /** @brief When non-zero, suppresses cursor highlight even on the active slot. */
 extern s32 g_menu_suppress_cursor;
@@ -731,7 +732,7 @@ extern s32 g_menu_saved_category0_item;
 extern s32 g_menu_saved_category1_item;
 /** @brief Packed circular navigation entries for item sub-pages. */
 extern s32 g_menu_item_nav_entries[];
-extern void* g_menu_equipment_base;
+extern void_ptr g_menu_equipment_base;
 /** @brief Current interpolated vertical scroll position of the node tree. */
 extern s32 g_menu_content_height;
 extern s32 g_menu_scroll_pos;
@@ -779,7 +780,7 @@ extern struct
     s16 y;
 } g_menu_default_view_pos;
 /** @brief Per-node table of MenuContentItem arrays, indexed by node.idx_nav.s.self_idx; NULL = no cursor data. */
-extern MenuContentItem* g_menu_content_table[];
+extern MenuContentItemPtr g_menu_content_table[];
 extern s32 g_menu_layout_end;
 
 /* Content and action state. */
@@ -804,10 +805,10 @@ extern u8 g_menu_content_group_ids[];
 /** @brief Action code for each content group and one of its eight encoded item slots. */
 extern u8 g_menu_content_action_codes[][8];
 /** @brief First glyph/string pointer used by confirmation and status messages. */
-extern void* g_menu_message_line1;
+extern void_ptr g_menu_message_line1;
 /** @brief Optional second glyph/string pointer used by two-line messages. */
-extern void* g_menu_message_line2;
-extern void* D_801227D4;
+extern void_ptr g_menu_message_line2;
+extern void_ptr D_801227D4;
 
 extern u8 D_800F0BE0[];
 extern u8 D_800F0BEC[];

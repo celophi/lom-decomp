@@ -4,12 +4,13 @@
 #include "common.h"
 
 typedef void (*VSyncCallbackFn)(void);
+typedef PS1_STORED(VSyncCallbackFn) VSyncCallbackPtr;
 
 /** @brief Saved VSync callback as an SDK return value or callable handler. */
 typedef union
 {
     s32 address;
-    VSyncCallbackFn handler;
+    VSyncCallbackPtr handler;
 } ControllerVSyncCallback;
 
 /*
@@ -190,6 +191,7 @@ typedef struct ControllerPortState
     u8 large_motor_current;
     u8 port_id;
 } ControllerPortState;
+typedef PS1_PTR(ControllerPortState) ControllerPortStatePtr;
 
 /**
  * @brief State for both controller ports and their LIBPAD receive buffers.

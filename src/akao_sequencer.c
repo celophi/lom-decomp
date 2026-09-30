@@ -86,16 +86,19 @@ void akao_flush_voice_key_offs(void);
 extern u32 g_akao_pitch_table[];
 
 /** @brief 16-entry table of pitch, volume, and pan LFO waveform streams. */
-extern s16* g_akao_lfo_waveforms[];
+extern s16_ptr g_akao_lfo_waveforms[];
 
 /** @brief Operand-length table for extended (0xFE-prefixed) opcodes; 0 = needs special handling. */
 extern u8 g_akao_opcode_len_table_ext[];
 /** @brief Operand-length table for primary opcodes 0xA0..0xFF; 0 = needs special handling. */
 extern u8 g_akao_opcode_len_table[];
 /** @brief Primary opcode dispatch table indexed by (opcode - 0xA0). */
-extern void (*g_akao_opcode_handlers[])(AkaoChannelState*, s32);
+/** @brief Handler of one sequence opcode on a channel. */
+typedef void (*AkaoOpcodeHandler)(AkaoChannelState* channel, s32 channel_mask);
+typedef PS1_CODE(AkaoOpcodeHandler) AkaoOpcodeHandlerSlot;
+extern AkaoOpcodeHandlerSlot g_akao_opcode_handlers[];
 /** @brief Extended (0xFE-prefixed) opcode dispatch table indexed by the following byte. */
-extern void (*g_akao_opcode_handlers_ext[])(AkaoChannelState*, s32);
+extern AkaoOpcodeHandlerSlot g_akao_opcode_handlers_ext[];
 /** @brief Default note-duration (gate-time) table indexed by opcode % 11. */
 extern u16 g_akao_note_duration_table[];
 /** @brief 256-entry pitch jitter table indexed by g_akao_cdvol_tick. */
@@ -1005,7 +1008,7 @@ void akao_seq_step_opcode(AkaoChannelState* channel, s32 channel_mask)
             if (opcode == 0xFE)
             {
                 value = *channel->seq_cursor++;
-                g_akao_opcode_handlers_ext[value](channel, channel_mask);
+                PS1_CALL(g_akao_opcode_handlers_ext[value])(channel, channel_mask);
             }
             else if ((opcode >= 0xF0) && (opcode < 0xFE))
             {
@@ -1023,7 +1026,7 @@ void akao_seq_step_opcode(AkaoChannelState* channel, s32 channel_mask)
                     opcode = 0xA0;
                     g_akao_sfx_control.key_off_mask |= channel_mask;
                 }
-                g_akao_opcode_handlers[opcode - 0xA0](channel, channel_mask);
+                PS1_CALL(g_akao_opcode_handlers[opcode - 0xA0])(channel, channel_mask);
             }
         }
         channel->opcode_count++;

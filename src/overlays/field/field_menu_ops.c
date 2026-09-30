@@ -478,7 +478,10 @@ extern FieldMenuItemRecord g_field_shared_items[4];
 extern FieldGosubSequence D_80051EB4;
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
-extern void (*g_field_menu_ops[])(s32 arg0);
+/** @brief One menu operation, passed its own index. */
+typedef void (*FieldMenuOp)(s32 op);
+typedef PS1_CODE(FieldMenuOp) FieldMenuOpSlot;
+extern FieldMenuOpSlot g_field_menu_ops[];
 extern s32 g_field_gosub_state;
 extern FieldGosubSequence D_800F19AC;
 extern FieldGosubSequence D_800F19B8;
@@ -508,7 +511,7 @@ void field_run_menu_op(s32 op)
 {
     if (op < FIELD_MENU_OP_COUNT)
     {
-        g_field_menu_ops[op](op);
+        PS1_CALL(g_field_menu_ops[op])(op);
         return;
     }
     record_game_diagnostic(FIELD_DIAG_MENU_OP, op, 0, 0);

@@ -154,8 +154,8 @@ extern u8 D_800EC3E0[];
 #define FIELD_UI_TEXT_AT(entry, index) ((entry) - (index) * 2 + (entry)[0] + ((entry)[1] << 8))
 
 extern u8 g_zukan_resource_archive[];
-extern u8* g_zukan_resource_buffer;
-extern u8* g_zukan_work_buffer;
+extern u8_ptr g_zukan_resource_buffer;
+extern u8_ptr g_zukan_work_buffer;
 extern s32 g_zukan_exit_requested;
 extern ZukanUiSpriteRecord g_zukan_ui_sprites[];
 extern ZukanListEntry g_zukan_list_entries[];

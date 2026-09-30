@@ -22,6 +22,7 @@ typedef struct FieldMenuElement FieldMenuElement;
  */
 typedef void *(*FieldMenuDrawFn)(u_long *ot, void *packet, s32 scroll_x, s32 scroll_y, s32 height,
                                  FieldMenuElement *element);
+typedef PS1_STORED(FieldMenuDrawFn) FieldMenuDrawPtr;
 
 /** @brief Element word 0: lifecycle state, open/close step, position and width low byte. */
 typedef union FieldMenuAttr
@@ -110,7 +111,7 @@ struct FieldMenuElement
     s16 scroll_target;    /**< 0x0A: scroll the element eases towards. */
     s16 scroll_ticks;     /**< 0x0C: frames left in the scroll ease. */
     u16 padE;             /**< 0x0E: unused. */
-    FieldMenuDrawFn draw; /**< 0x10: content draw callback. */
+    FieldMenuDrawPtr draw; /**< 0x10: content draw callback. */
 };
 
 /** @brief The eight menu elements. */

@@ -62,7 +62,7 @@ extern s32 D_8013924C;
 extern s32 D_80182DEC;
 extern s32 D_801B2FDC;
 extern s32 D_801B2F94;
-extern void (*D_800D7204[])(void);
+extern WmapStepHandlerSlot D_800D7204[];
 extern s32 D_800D9228;
 extern s32 D_8011D500;
 extern s32 D_8013B20C;
@@ -71,26 +71,26 @@ extern s32 D_80182E38;
 extern s32 D_8013B294;
 extern s32 D_80139228;
 extern s32 D_801B2F9C;
-extern void (*D_800D721C[])(void);
+extern WmapStepHandlerSlot D_800D721C[];
 extern s32 D_8013B208;
 extern s32 D_801B2FA4;
-extern void (*D_800D7274[])(void);
+extern WmapStepHandlerSlot D_800D7274[];
 extern void func_800B2908(void);
 extern s32 D_801B2FAC;
-extern void (*D_800D7284[])(void);
+extern WmapStepHandlerSlot D_800D7284[];
 extern void func_800B2AAC(void);
 extern s32 D_801B2FB4;
-extern void (*D_800D7294[])(void);
-extern void (*D_800D72A4[])(void);
-extern void (*D_800D72BC[])(void);
-extern void (*D_800D72CC[])(void);
-extern void (*D_800D72E4[])(void);
-extern void (*D_800D72FC[])(void);
+extern WmapStepHandlerSlot D_800D7294[];
+extern WmapStepHandlerSlot D_800D72A4[];
+extern WmapStepHandlerSlot D_800D72BC[];
+extern WmapStepHandlerSlot D_800D72CC[];
+extern WmapStepHandlerSlot D_800D72E4[];
+extern WmapStepHandlerSlot D_800D72FC[];
 extern u8 D_8011D538[];
-extern u8 *D_8011CF1C;
-extern u8 *D_8011CF24;
-extern s32* D_8011CF28;
-extern s32* D_8011CF2C;
+extern u8_ptr D_8011CF1C;
+extern u8_ptr D_8011CF24;
+extern s32_ptr D_8011CF28;
+extern s32_ptr D_8011CF2C;
 extern u32 D_801B2F90;
 extern u8 D_80121538;
 extern u8 D_801AFBD0[];
@@ -106,11 +106,11 @@ extern WmapColor D_80182D80;
 extern WmapColor D_80182D8C;
 extern WmapColor D_80182D94;
 extern u32 D_801B2FA0;
-extern u8* D_801399AC;
+extern u8_ptr D_801399AC;
 extern u32 D_801B2FA8;
-extern void* D_801399B4;
+extern void_ptr D_801399B4;
 extern u32 D_801B2FB0;
-extern void* D_801399BC;
+extern void_ptr D_801399BC;
 extern void func_8008ECF8(s32, s32, s32*, void*);
 
 extern VECTOR g_wmap_camera_translation;
@@ -144,7 +144,7 @@ extern WmapAnimationSlot D_801399B8;
 
 extern WmapScreenPosition g_wmap_focus_screen_position;
 
-extern s32* D_80139280;
+extern s32_ptr D_80139280;
 
 /** @brief Queue effect resources and establish the map-relative effect position. */
 void func_800B1744(void)
@@ -442,7 +442,7 @@ s32 func_800B2080(s32 arg0)
 
     if (D_801B2F90 < 0x6)
     {
-        D_800D7204[D_801B2F90]();
+        PS1_CALL(D_800D7204[D_801B2F90])();
         result = 1;
     }
     else
@@ -529,7 +529,7 @@ s32 func_800B2244(s32 arg0)
 
     if (D_801B2F98 < 0x16)
     {
-        D_800D721C[D_801B2F98]();
+        PS1_CALL(D_800D721C[D_801B2F98])();
         result = 1;
     }
     else
@@ -797,7 +797,7 @@ s32 func_800B27F8(s32 arg0)
 
     if (D_801B2FA0 < 0x4)
     {
-        D_800D7274[D_801B2FA0]();
+        PS1_CALL(D_800D7274[D_801B2FA0])();
         result = 1;
     }
     else
@@ -873,7 +873,7 @@ s32 func_800B299C(s32 arg0)
 
     if (D_801B2FA8 < 0x4)
     {
-        D_800D7284[D_801B2FA8]();
+        PS1_CALL(D_800D7284[D_801B2FA8])();
         result = 1;
     }
     else
@@ -948,7 +948,7 @@ s32 func_800B2B40(s32 arg0)
 
     if (D_801B2FB0 < 0x4)
     {
-        D_800D7294[D_801B2FB0]();
+        PS1_CALL(D_800D7294[D_801B2FB0])();
         result = 1;
     }
     else
@@ -1024,7 +1024,7 @@ s32 func_800B2CE8(s32 arg0)
 
     if (D_801B2FB8 < 0x6)
     {
-        D_800D72A4[D_801B2FB8]();
+        PS1_CALL(D_800D72A4[D_801B2FB8])();
         result = 1;
     }
     else
@@ -1104,7 +1104,7 @@ s32 func_800B2EC8(s32 arg0)
 
     if (D_801B2FC0 < 0x4)
     {
-        D_800D72BC[D_801B2FC0]();
+        PS1_CALL(D_800D72BC[D_801B2FC0])();
         result = 1;
     }
     else
@@ -1163,7 +1163,7 @@ s32 func_800B3020(s32 arg0)
 
     if (D_801B2FC8 < 0x6)
     {
-        D_800D72CC[D_801B2FC8]();
+        PS1_CALL(D_800D72CC[D_801B2FC8])();
         result = 1;
     }
     else
@@ -1231,7 +1231,7 @@ s32 func_800B317C(s32 arg0)
 
     if (D_801B2FD0 < 0x6)
     {
-        D_800D72E4[D_801B2FD0]();
+        PS1_CALL(D_800D72E4[D_801B2FD0])();
         result = 1;
     }
     else
@@ -1299,7 +1299,7 @@ s32 func_800B32D8(s32 arg0)
 
     if (D_801B2FD8 < 0x6)
     {
-        D_800D72FC[D_801B2FD8]();
+        PS1_CALL(D_800D72FC[D_801B2FD8])();
         result = 1;
     }
     else

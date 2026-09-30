@@ -87,7 +87,7 @@ typedef struct
 
 extern GlyphCacheEntry g_glyph_cache[GLYPH_CACHE_SLOTS];
 extern u8 g_glyph_raster_buffer[GLYPH_RASTER_BUFFER_BYTES];
-extern u8* g_glyph_raster_cursor;
+extern u8_ptr g_glyph_raster_cursor;
 extern s32 g_glyph_cursor_x;
 extern s32 g_glyph_cursor_y;
 extern s32 g_glyph_line_start_x;

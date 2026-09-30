@@ -205,7 +205,7 @@ extern CheckPSExitReason g_checkps_exit_reason;
 extern CheckPSFadeState g_fade_target;
 extern CheckPSFadeState g_fade_current;
 extern u8 g_checkps_song_buffer[CHECKPS_SONG_BUFFER_SIZE];
-extern AkaoHeader* g_checkps_akao_bank;
+extern AkaoHeaderPtr g_checkps_akao_bank;
 extern s32 g_checkps_startup_step;
 extern CheckPSImage g_checkps_images[CHECKPS_IMAGE_COUNT];
 extern s32 g_checkps_image_burst_active;
@@ -224,7 +224,7 @@ CheckPSFadeState g_fade_current;
 u8 g_checkps_song_buffer[CHECKPS_SONG_BUFFER_SIZE];
 
 /* Destination address used when registering the embedded AKAO bank. */
-AkaoHeader* g_checkps_akao_bank;
+AkaoHeaderPtr g_checkps_akao_bank;
 
 /* Reserved word with no recovered CHECKPS references. */
 s32 g_checkps_unused_word1;

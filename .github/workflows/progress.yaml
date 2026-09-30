@@ -94,6 +94,12 @@ jobs:
         # compiling (tools/native_check/baseline_<version>_gcc.txt).
         run: make native-check VERSION=${{ env.VERSION }}
 
+      - name: Storage layout check
+        # Every type the game keeps in PS1 memory must keep its layout in a
+        # 64-bit build that keeps PS1 storage (include/ps1_storage.h); the
+        # differences left may only shrink (tools/storage_check/baseline_<version>.txt).
+        run: make storage-check VERSION=${{ env.VERSION }}
+
       - name: Generate objdiff configuration
         run: python3 ${{ env.OBJDIFF_CONFIG_GENERATOR }} --version ${{ env.VERSION }}
 

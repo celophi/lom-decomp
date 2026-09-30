@@ -8,6 +8,7 @@
  * @note NULL retries an ordinary data sector but ends an XA/movie transfer.
  */
 typedef u8* (*CdCommandCallback)(s32 bytes_transferred, u32 bytes_remaining);
+typedef PS1_STORED(CdCommandCallback) CdCommandCallbackPtr;
 /** @brief Supplies an output chunk and its capacity; -1 selects direct output. */
 typedef u8* (*CdStreamGetBufferCallback)(s32 bytes_delivered, s32* capacity);
 /** @brief Receives each completed output chunk index, including the final chunk. */

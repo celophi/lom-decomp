@@ -147,7 +147,7 @@ typedef struct
 extern u8 D_8003ECA0[];
 extern s32 D_8003ECA4[];
 
-extern u8 *g_field_cd_buffer;
+extern u8_ptr g_field_cd_buffer;
 extern s32 g_field_song_volume;
 
 /** @brief Second song area (FIELD-resident), played through AKAO command 0x19. */
@@ -160,7 +160,7 @@ extern FieldSfxTableBuffer g_field_sfx_tables;
 extern u8 g_field_sound_tables[];
 
 /** @brief Registered AKAO instrument bank. */
-extern AkaoHeader *g_field_instrument_bank;
+extern AkaoHeaderPtr g_field_instrument_bank;
 
 /** @brief Song handles, indexed by FIELD_SONG_MAIN / FIELD_SONG_SECOND. */
 extern s32 g_field_song_handles[2];
@@ -171,7 +171,7 @@ extern u8 g_field_ring_saved_selections[];
 extern s32 g_field_stream_sector_ready;
 extern s32 g_field_stream_resource;
 extern s32 g_field_stream_song_bytes;
-extern u8 *g_field_stream_sector;
+extern u8_ptr g_field_stream_sector;
 extern s32 g_field_stream_read_handle;
 extern s32 g_field_stream_song_remaining;
 extern s32 g_field_stream_bank_pending;

@@ -67,8 +67,8 @@ extern AkaoXaTrackerView g_akao_xa_tracker;
 extern u32 g_akao_effect_voice_masks[3];
 extern u8 g_akao_seq_channels;
 extern u8 g_sfx_channels[];
-extern AkaoChannelState* g_akao_pending_channels;
-extern AkaoSongState* g_akao_seq_channel1;
+extern AkaoChannelStatePtr g_akao_pending_channels;
+extern AkaoSongStatePtr g_akao_seq_channel1;
 extern s16 g_akao_mastervol_fade_ticks;
 extern s16 g_akao_masterpan_fade_ticks;
 extern s32 g_akao_seq_pending_ticks;
@@ -79,8 +79,8 @@ extern s32 g_akao_cdvol_tick;
 extern s32 g_akao_mastervol_acc;
 extern s32 g_akao_masterpan_acc;
 extern s32 g_akao_driver_mode_flags;
-extern void* D_8003EC58;
-extern AkaoSongState* g_akao_seq_channel0;
+extern void_ptr D_8003EC58;
+extern AkaoSongStatePtr g_akao_seq_channel0;
 
 /**
  * @brief Initializes song, sequence-channel, SFX and SPU mixer state.

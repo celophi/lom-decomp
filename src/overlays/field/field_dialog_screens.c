@@ -31,7 +31,7 @@
 #include "game_state.h"
 #include "sdk/memory.h"
 
-extern u8* g_field_cd_buffer;
+extern u8_ptr g_field_cd_buffer;
 
 /* ---- Timed panels (0x800A5638 .. 0x800A6204) ---- */
 
@@ -665,7 +665,7 @@ typedef union
 /** @brief One actor text slot: a string shown over an actor for a few frames. */
 typedef struct FieldActorText
 {
-    u8* text;
+    u8_ptr text;
     FieldActorTextState state;
 } FieldActorText;
 
@@ -1216,7 +1216,7 @@ extern u8 D_800EC3D6[];
 extern u8 D_800EC3C6[], D_800EC3DA[];
 extern u8 g_field_dialog_item_quantities[];
 extern u8 D_800EC3C4[];
-extern u8* g_field_dialog_item_texts[];
+extern u8_ptr g_field_dialog_item_texts[];
 extern s32 g_field_experience_snapshot[];
 extern PackedOffset D_800EC3D8;
 extern PackedOffset D_800EC3CC;

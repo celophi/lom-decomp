@@ -40,7 +40,7 @@ typedef struct
     s16 volume_right;      /**< Computed right volume. */
 } SpuVoiceParams;
 
-extern AkaoSongState* g_akao_voice_owners[];
+extern AkaoSongStatePtr g_akao_voice_owners[];
 
 
 /* ---- Common (non-voice) SPU register writers ---- */

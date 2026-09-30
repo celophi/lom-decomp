@@ -58,6 +58,7 @@ enum ShopWindowState
 
 /** @brief Draw callback installed on a shop window. */
 typedef u8* (*ShopDrawFunc)(u32* ot, u8* prim, s32 x_inset, s32 y_inset);
+typedef PS1_STORED(ShopDrawFunc) ShopDrawPtr;
 
 /** @brief Value of ShopWindow.extent.bits.width_high for a window @p width pixels wide. */
 #define SHOP_WINDOW_WIDTH_HIGH(width) ((width) >> 8)
@@ -93,7 +94,7 @@ typedef struct
             unsigned unused : 23;
         } bits;
     } extent;
-    ShopDrawFunc draw;
+    ShopDrawPtr draw;
 } ShopWindow;
 
 /** @brief Header of the overlay's text archive; each section is a table of u16 string offsets. */
@@ -114,20 +115,20 @@ extern u16 g_shop_item_sell_prices[FIELD_ITEM_KIND_COUNT];
 
 extern s32 g_shop_title_text_id;
 extern s32 g_shop_frame_index;
-extern u8* g_shop_work_end;
+extern u8_ptr g_shop_work_end;
 extern s32 g_shop_is_buying;
 extern s32 g_shop_finished;
-extern ShopPacketBuffer* g_shop_work_buffer;
+extern ShopPacketBufferPtr g_shop_work_buffer;
 extern s32 g_shop_confirm_choice;
 extern s32 g_shop_prompt_active;
 extern ShopWindow g_shop_windows[SHOP_WINDOW_COUNT];
 extern s32 g_shop_notice_active;
 extern s32 g_shop_notice_id;
 extern s32 g_shop_quantity;
-extern FieldItemRecord* g_shop_item_records;
+extern FieldItemRecordPtr g_shop_item_records;
 extern s32 g_shop_scroll_y;
 extern s32 g_shop_scroll_target;
-extern ShopEntry* g_shop_entries;
+extern ShopEntryPtr g_shop_entries;
 extern ShopEntry g_shop_entry_buffer[];
 extern s32 g_shop_entry_count;
 extern s32 g_shop_cursor;

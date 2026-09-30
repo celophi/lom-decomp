@@ -1,0 +1,3 @@
+# Types and globals whose 64-bit layout still differs from the PS1 layout (make storage-check).
+# This list may only shrink; see tools/storage_check/storage_check.py.
+

@@ -14,7 +14,7 @@ typedef struct
 } FieldRenderContext;
 
 /** @brief Render half being built this frame. */
-extern FieldRenderHalf* g_field_render_half;
+extern FieldRenderHalfPtr g_field_render_half;
 
 void field_render_effects(FieldRenderContext *render_context);
 

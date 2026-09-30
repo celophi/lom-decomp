@@ -48,7 +48,7 @@ enum WmapTravelSequence
 typedef struct
 {
     s32 unknown_00;
-    u8* data;
+    u8_ptr data;
 } WmapTravelAnimation;
 
 /** @brief Map-cell identity and the flags used to select a destination. */

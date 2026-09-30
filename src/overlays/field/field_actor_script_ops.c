@@ -248,7 +248,7 @@ typedef struct
 extern s32 g_field_direction_animation_modes[];
 extern s32 g_field_actor_walk_animations[];
 extern s32 g_field_binding_restart_pending[FIELD_ACTOR_BINDING_COUNT];
-extern u16* g_field_actor_scripts;
+extern u16_ptr g_field_actor_scripts;
 extern FieldActionRow g_field_resource_actions[];
 extern s32 g_field_actions_limited;
 extern s32 D_8010AE58;

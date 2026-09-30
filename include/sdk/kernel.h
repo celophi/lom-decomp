@@ -23,29 +23,30 @@
 #endif
 
 struct EXEC {
-    unsigned long pc0;
-    unsigned long gp0;
-    unsigned long t_addr;
-    unsigned long t_size;
-    unsigned long d_addr;
-    unsigned long d_size;
-    unsigned long b_addr;
-    unsigned long b_size;
-    unsigned long s_addr;
-    unsigned long s_size;
-    unsigned long sp;
-    unsigned long fp;
-    unsigned long gp;
-    unsigned long ret;
-    unsigned long base;
+    u_long pc0;
+    u_long gp0;
+    u_long t_addr;
+    u_long t_size;
+    u_long d_addr;
+    u_long d_size;
+    u_long b_addr;
+    u_long b_size;
+    u_long s_addr;
+    u_long s_size;
+    u_long sp;
+    u_long fp;
+    u_long gp;
+    u_long ret;
+    u_long base;
 };
 
+typedef PS1_PTR(struct DIRENTRY) DIRENTRYPtr;
 struct DIRENTRY {
     char name[20];
-    long attr;
-    long size;
-    struct DIRENTRY *next;
-    long head;
+    Ps1Long attr;
+    Ps1Long size;
+    DIRENTRYPtr next;
+    Ps1Long head;
     char system[4];
 };
 

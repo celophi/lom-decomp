@@ -17,7 +17,7 @@ s32 g_gosub_dialog_choice;
 s32 g_gosub_block_level;
 s32 g_gosub_allow_duplicate_selection;
 /** @brief Encoded text currently displayed by the modal message dialog. */
-u8* g_gosub_dialog_text;
+u8_ptr g_gosub_dialog_text;
 s32 (*g_gosub_finish_handler)(void);
 u8 g_gosub_selection_mode;
 /** @brief Required selection count stored in a three-byte BSS slot. */
@@ -46,7 +46,7 @@ s32 g_gosub_scroll_y;
 /** @brief Whether the next confirmed sort uses ascending order. */
 s32 g_gosub_sort_ascending;
 s32 g_gosub_scroll_target_y;
-u8* g_gosub_title_text;
+u8_ptr g_gosub_title_text;
 GosubElement g_gosub_elements[GOSUB_ELEMENT_COUNT];
 GosubListRow g_gosub_rows[512];
 s32 (*g_gosub_dialog_handler)(s32);

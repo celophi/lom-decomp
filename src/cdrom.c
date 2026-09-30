@@ -68,6 +68,7 @@ typedef struct CdResourceEntry
     CdLocation location;
     s32 data_size;
 } CdResourceEntry;
+typedef PS1_PTR(CdResourceEntry) CdResourceEntryPtr;
 
 /** @brief One queued CD command and its transfer destination. */
 typedef struct CdCommandQueueItem
@@ -75,9 +76,9 @@ typedef struct CdCommandQueueItem
     u8 command;
     u8 _pad01;
     u16 resource_index;
-    CdResourceEntry* entry;
-    void* dst_buffer;
-    CdCommandCallback callback;
+    CdResourceEntryPtr entry;
+    void_ptr dst_buffer;
+    CdCommandCallbackPtr callback;
 } CdCommandQueueItem;
 
 /** @brief Pending commands in the CD request ring. */
@@ -233,12 +234,12 @@ typedef struct CdSystem
     u8 _pad1B;
     u16 resource_index;
     u16 _pad1E;
-    void* dst_buffer;
-    CdCommandCallback callback;
+    void_ptr dst_buffer;
+    CdCommandCallbackPtr callback;
     u32 read_remaining_bytes;
     u32 total_data_size;
-    u8* current_write_ptr;
-    CdCommandCallback transfer_callback;
+    u8_ptr current_write_ptr;
+    CdCommandCallbackPtr transfer_callback;
     s32 queue_read_index;
     s32 queue_write_index;
     CdCommandQueue command_queue;
@@ -251,8 +252,8 @@ typedef struct CdSystem
     u8 status_byte;
     /** @brief Command-dependent reply data; the first byte is an error code when status reports an error. */
     u8 response_data[7];
-    CdlCB previous_sync_callback;
-    CdlCB previous_ready_callback;
+    CdlCBPtr previous_sync_callback;
+    CdlCBPtr previous_ready_callback;
     u8 disc_validation_id[32];
     CdResourceEntry default_cd_resource;
 } CdSystem;
@@ -261,8 +262,8 @@ typedef struct CdSystem
  * Linker-placed names for single CdSystem fields and one resource-table entry.
  * Some functions address these by symbol rather than through CD_SYSTEM.
  */
-extern CdlCB g_cd_previous_sync_callback;
-extern CdlCB g_cd_previous_ready_callback;
+extern CdlCBPtr g_cd_previous_sync_callback;
+extern CdlCBPtr g_cd_previous_ready_callback;
 extern s32 g_cd_vsync_timestamp;
 extern u8 g_cd_audio_enabled;
 extern u8 g_cd_playback_state;

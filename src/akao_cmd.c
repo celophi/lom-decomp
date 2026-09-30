@@ -13,7 +13,7 @@
  */
 typedef struct
 {
-    u8* articulation_dst;       /**< Current destination in the articulation table. */
+    u8_ptr articulation_dst;       /**< Current destination in the articulation table. */
     u32 spu_addr;               /**< Next SPU write address; zero marks the first tick. */
     u32 sample_remaining;       /**< Sample bytes still to upload. */
     u32 articulation_remaining; /**< Articulation bytes still to copy. */

@@ -51,10 +51,8 @@ typedef struct
     u8 pad_28[4];
 } WmapConfigA;
 
-typedef void (*WmapHandler)(void);
-
-extern WmapHandler D_800D7A0C[];
-extern WmapHandler D_800D7A2C[];
+extern WmapStepHandlerSlot D_800D7A0C[];
+extern WmapStepHandlerSlot D_800D7A2C[];
 extern s32 g_wmap_cursor_column;
 extern s32 g_wmap_cursor_row;
 extern s32 g_wmap_vehicle_cell_x;
@@ -66,8 +64,8 @@ extern s32 D_8013923C;
 extern s32 D_80139240;
 extern s32 D_8013924C;
 extern s32 g_wmap_view_scroll_mode;
-extern void* D_801399B4;
-extern void* D_801399BC;
+extern void_ptr D_801399B4;
+extern void_ptr D_801399BC;
 extern s32 D_8013B20C;
 extern s32 D_8013B208;
 extern s32 D_8013B294;
@@ -95,10 +93,10 @@ extern void func_800BFF98(void);
 extern void func_800BFFD8(void);
 extern s32 func_800C0034(s32);
 extern void func_800C0150(void);
-extern WmapHandler D_800D7A64[];
-extern WmapHandler D_800D7A84[];
-extern WmapHandler D_800D7AAC[];
-extern WmapHandler D_800D7AC4[];
+extern WmapStepHandlerSlot D_800D7A64[];
+extern WmapStepHandlerSlot D_800D7A84[];
+extern WmapStepHandlerSlot D_800D7AAC[];
+extern WmapStepHandlerSlot D_800D7AC4[];
 extern s32 D_801B3234;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
@@ -401,7 +399,7 @@ void func_800B7420(void);
         return 0;
     }
 
-    D_800D7A0C[D_801B3218]();
+    PS1_CALL(D_800D7A0C[D_801B3218])();
     return 1;
 }
 
@@ -599,7 +597,7 @@ void func_800B7420(void);
         return 0;
     }
 
-    D_800D7A2C[D_801B3220]();
+    PS1_CALL(D_800D7A2C[D_801B3220])();
     return 1;
 }
 
@@ -751,7 +749,7 @@ s32 func_800C0474(s32 reset)
         return 0;
     }
 
-    D_800D7A64[D_801B3228]();
+    PS1_CALL(D_800D7A64[D_801B3228])();
     return 1;
 }
 
@@ -808,7 +806,7 @@ s32 func_800C064C(s32 reset)
         return 0;
     }
 
-    D_800D7A84[D_801B3230]();
+    PS1_CALL(D_800D7A84[D_801B3230])();
     return 1;
 }
 
@@ -874,7 +872,7 @@ s32 func_800C07F8(s32 reset)
         return 0;
     }
 
-    D_800D7AAC[D_801B3238]();
+    PS1_CALL(D_800D7AAC[D_801B3238])();
     return 1;
 }
 
@@ -939,7 +937,7 @@ s32 func_800C09F4(s32 reset)
         return 0;
     }
 
-    D_800D7AC4[D_801B3240]();
+    PS1_CALL(D_800D7AC4[D_801B3240])();
     return 1;
 }
 

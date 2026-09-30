@@ -109,7 +109,7 @@ extern s32 g_field_action_context;
 
 extern s32 D_80105760;
 extern s32 D_80105770;
-extern u8 *g_field_builtin_track_data;
+extern u8_ptr g_field_builtin_track_data;
 extern s32 g_field_track_index;
 
 s32 field_evaluate_parameter_track(FieldActorSlot* actor, s32 track);

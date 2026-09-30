@@ -133,10 +133,10 @@ extern s32 D_8013B294;
 
 extern u32 g_wmap_special_travel_step;
 extern s32 g_wmap_special_travel_timer;
-extern void (*g_wmap_special_travel_steps[])(void);
+extern WmapStepHandlerSlot g_wmap_special_travel_steps[];
 extern u32 g_wmap_special_return_step;
 extern s32 g_wmap_special_return_timer;
-extern void (*g_wmap_special_return_steps[])(void);
+extern WmapStepHandlerSlot g_wmap_special_return_steps[];
 
 static s32 wmap_start_vehicle_flight(s32 initialize);
 static s32 wmap_fly_vehicle(s32 initialize);
@@ -643,7 +643,7 @@ s32 wmap_run_special_travel(s32 initialize)
 
     if (g_wmap_special_travel_step < WMAP_SPECIAL_TRAVEL_STEPS)
     {
-        g_wmap_special_travel_steps[g_wmap_special_travel_step]();
+        PS1_CALL(g_wmap_special_travel_steps[g_wmap_special_travel_step])();
         result = 1;
     }
     else
@@ -867,7 +867,7 @@ s32 wmap_run_special_return(s32 initialize)
 
     if (g_wmap_special_return_step < WMAP_SPECIAL_RETURN_STEPS)
     {
-        g_wmap_special_return_steps[g_wmap_special_return_step]();
+        PS1_CALL(g_wmap_special_return_steps[g_wmap_special_return_step])();
         result = 1;
     }
     else

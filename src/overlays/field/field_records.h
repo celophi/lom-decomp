@@ -21,7 +21,7 @@
 #include "field_state_ops.h"
 
 /** @brief g_saved_game.layout, bound by field_bind_runtime_pointers. */
-extern SavedGameLayout* g_field_game_state;
+extern SavedGameLayoutPtr g_field_game_state;
 
 #define FIELD_ACTOR_RECORD_COUNT 16
 #define FIELD_EVENT_RECORD_COUNT 2
@@ -115,7 +115,7 @@ typedef struct FieldStagingStats
  */
 typedef struct FieldItemStaging
 {
-    FieldItemRecord* record;
+    FieldItemRecordPtr record;
     /** @brief Item category (FieldItemRecord::info bits 8-9). */
     u8 category;
     /** @brief Item type (FieldItemRecord::info bits 10-15). */
@@ -175,6 +175,7 @@ typedef struct FieldItemStaging
     } flags;
     u8 pad5C[4];
 } FieldItemStaging;
+typedef PS1_PTR(FieldItemStaging) FieldItemStagingPtr;
 
 /**
  * @brief View of a staging block shifted by @p bytes bytes.
@@ -252,12 +253,13 @@ typedef union FieldItemTables
     FieldItemTable item;
     FieldItemGridTable grid;
 } FieldItemTables;
+typedef PS1_PTR(FieldItemTables) FieldItemTablesPtr;
 
 /** @brief Staging block of the item being created or tempered. */
-extern FieldItemStaging* g_field_item_staging;
+extern FieldItemStagingPtr g_field_item_staging;
 
 /** @brief Generation table currently loaded by field_find_resource. */
-extern FieldItemTables* g_field_item_tables;
+extern FieldItemTablesPtr g_field_item_tables;
 
 /* ------------------------------------------------------------------------ */
 /* Field runtime context (g_field_runtime)                                       */
@@ -266,7 +268,7 @@ extern FieldItemTables* g_field_item_tables;
 /** @brief One nested script frame (0xC bytes). */
 typedef struct FieldScriptFrame
 {
-    u8* pc;
+    u8_ptr pc;
     /** @brief Bit 0 holds the result of the last comparison. */
     u32 flags;
     /** @brief Remaining wait frames; bit 0 lets the frame resume after a return. */
@@ -373,6 +375,7 @@ typedef struct FieldTriggerTable
     u16 count;
     FieldTriggerRegion regions[1];
 } FieldTriggerTable;
+typedef PS1_PTR(FieldTriggerTable) FieldTriggerTablePtr;
 
 /** @brief Runtime state flag: party actors take event scripts from their resource pages. */
 #define FIELD_STATE_PARTY_PAGE_SCRIPTS 0x10000
@@ -499,8 +502,9 @@ typedef struct FieldRuntimeContext
     FieldActorRecord actors[FIELD_ACTOR_RECORD_COUNT];
     FieldActorRecord events[FIELD_EVENT_RECORD_COUNT];
     FieldScriptState script;
-    FieldTriggerTable* trigger_table;
+    FieldTriggerTablePtr trigger_table;
 } FieldRuntimeContext;
+typedef PS1_PTR(FieldRuntimeContext) FieldRuntimeContextPtr;
 
 /** @brief The context itself, which g_field_runtime points at. */
 extern FieldRuntimeContext D_80122C00;
@@ -525,6 +529,7 @@ typedef struct FieldBattleAction
     /** @brief Multiplier applied to the damage by field_apply_damage. */
     s32 damage_scale;
 } FieldBattleAction;
+typedef PS1_PTR(FieldBattleAction) FieldBattleActionPtr;
 
 /**
  * @brief Handler parameters of an action descriptor, one view per handler.
@@ -607,6 +612,7 @@ typedef struct FieldActionDescriptor
     } info;
     FieldActionParams params;
 } FieldActionDescriptor;
+typedef PS1_PTR(FieldActionDescriptor) FieldActionDescriptorPtr;
 
 /**
  * @brief Action descriptor bank (g_field_default_action_bank, reached through g_field_action_bank).
@@ -616,6 +622,7 @@ typedef struct FieldActionBank
 {
     s32 table_offsets[4];
 } FieldActionBank;
+typedef PS1_PTR(FieldActionBank) FieldActionBankPtr;
 
 /** @brief Size of one party member's script page. */
 #define FIELD_PARTY_SCRIPT_PAGE_SIZE 0x1000
@@ -646,8 +653,8 @@ typedef struct FieldBattleContext
         s32 flags;
         u8 level;
     } state;
-    FieldActorTemplateTable* templates;
-    u8* resources;
+    FieldActorTemplateTablePtr templates;
+    u8_ptr resources;
     u8 element_levels[8];
     /** @brief Flags of the action being resolved; cleared by field_battle_bind_action. */
     union
@@ -664,15 +671,16 @@ typedef struct FieldBattleContext
             u32 unk3 : 29;
         } bits;
     } action_flags;
-    FieldBattleAction* action;
-    FieldActionDescriptor* descriptor;
-    FieldStatusRecord* attacker;
-    FieldStatusRecord* target;
+    FieldBattleActionPtr action;
+    FieldActionDescriptorPtr descriptor;
+    FieldStatusRecordPtr attacker;
+    FieldStatusRecordPtr target;
     FieldStatusRecord records[FIELD_BATTLE_RECORD_COUNT];
     u16 power;
     u8 power_flags;
     u8 pad4A3;
 } FieldBattleContext;
+typedef PS1_PTR(FieldBattleContext) FieldBattleContextPtr;
 
 /** @brief FIELD diagnostic codes passed to record_game_diagnostic. */
 #define DIAG_SCRIPT_FRAME_OVERFLOW 2 /**< A script pushed past its last frame. */

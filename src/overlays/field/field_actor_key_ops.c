@@ -58,7 +58,7 @@ enum
 };
 
 /** @brief Event script table: u16 offsets from the table start, then the scripts. */
-extern u16* g_field_event_scripts;
+extern u16_ptr g_field_event_scripts;
 
 FieldActor* field_lookup_actor(s32 key);
 int abs(int value);

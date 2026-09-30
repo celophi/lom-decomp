@@ -38,8 +38,8 @@
 #define FIELD_DIAGNOSTIC_ERROR 0x8001
 #define FIELD_DIAGNOSTIC_NO_TEMPLATE 0x67
 
-extern FieldRuntimeContext* g_field_runtime;
-extern FieldBattleContext* g_field_battle;
+extern FieldRuntimeContextPtr g_field_runtime;
+extern FieldBattleContextPtr g_field_battle;
 extern s32 g_field_duel_mode;
 
 extern FieldStatusState* field_find_object_state(s32 actor_id);

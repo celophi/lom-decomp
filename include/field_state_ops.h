@@ -96,6 +96,7 @@ typedef struct FieldActorTemplate
     s32 action_count;
     u8 actions[1][8];
 } FieldActorTemplate;
+typedef PS1_PTR(FieldActorTemplate) FieldActorTemplatePtr;
 
 /** @brief Monster template table: a count, then one offset per template from the table base. */
 typedef struct FieldActorTemplateTable
@@ -103,6 +104,7 @@ typedef struct FieldActorTemplateTable
     u32 count;
     u32 offsets[1];
 } FieldActorTemplateTable;
+typedef PS1_PTR(FieldActorTemplateTable) FieldActorTemplateTablePtr;
 
 /** @brief Displayed HP gauge (low 24 bits) and HUD bits. */
 typedef union
@@ -172,6 +174,7 @@ typedef struct FieldStatusState
     /** @brief Stat-derived footprint strength, saturated to 255 during setup. */
     u16 effect_footprint_strength;
 } FieldStatusState;
+typedef PS1_PTR(FieldStatusState) FieldStatusStatePtr;
 
 /** @brief FieldStatusRecord::unk0 bits: record on the monsters' side (also the duel leader), or on the party's side. */
 #define FIELD_RECORD_MONSTER_SIDE 0x40
@@ -190,8 +193,8 @@ typedef struct FieldStatusRecord
     u8 counter_reset;
     u16 status_flags;
     u32 unkC;
-    FieldStatusState *state;
-    FieldActorTemplate *template;
+    FieldStatusStatePtr state;
+    FieldActorTemplatePtr template;
     u16 unk18;
     u8 unk1A;
     u8 pad1B;
@@ -213,6 +216,7 @@ typedef struct FieldStatusRecord
     u8 status_slots[FIELD_STATUS_SLOT_COUNT];
     u16 status_timers[FIELD_STATUS_TIMER_COUNT];
 } FieldStatusRecord;
+typedef PS1_PTR(FieldStatusRecord) FieldStatusRecordPtr;
 
 /** @brief Fields of FieldStatusRecord::unkC. */
 #define FIELD_RECORD_ACTION_MODIFIERS 0xFF    /**< Cleared after every action. */

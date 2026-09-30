@@ -20,6 +20,7 @@
  *        the given transition offsets and returns the advanced primitive cursor.
  */
 typedef void *(*CloadElementDrawFunc)(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
+typedef PS1_STORED(CloadElementDrawFunc) CloadElementDrawPtr;
 
 /**
  * @brief One animated CLOAD UI element (a framed window plus its content).
@@ -55,7 +56,7 @@ struct CloadElement
             u32 framed : 1;
         } f;
     } size;
-    CloadElementDrawFunc draw;
+    CloadElementDrawPtr draw;
 };
 
 /** @brief CloadElement.attr.f.state values. */
@@ -210,6 +211,7 @@ typedef struct
     /* 0xC */ s16 unkC;
     /* 0xE */ u16 unkE;
 } CloadGpuPacket;
+typedef PS1_PTR(CloadGpuPacket) CloadGpuPacketPtr;
 
 /**
  * @brief One half of CLOAD's double-buffered GPU render state.
@@ -225,7 +227,7 @@ typedef struct
     /* 0x4040 */ DISPENV disp_env;
     /* 0x4054 */ DRAWENV draw_env;
     /* 0x40B0 */ RECT clear_rect;
-    /* 0x40B8 */ CloadGpuPacket *prim_cursor;
+    /* 0x40B8 */ CloadGpuPacketPtr prim_cursor;
     /* 0x40BC */ u8 trailing[0x3C08];
 } CloadRenderBuffer;
 
@@ -234,7 +236,7 @@ extern s32 g_cload_exit_requested;
 extern CloadElement g_cload_element_pool[CLOAD_ELEMENT_COUNT];
 extern CloadRenderBuffer g_cload_render_buffers[CLOAD_CARD_COUNT];
 extern s32 g_cload_io_busy;
-extern u8 *g_cload_icon_resource;
+extern u8_ptr g_cload_icon_resource;
 extern s32 g_cload_scroll_y;
 extern s32 g_cload_icon_palette;
 extern s32 g_cload_progress_active;
@@ -259,7 +261,7 @@ extern u8 g_cload_steps_refresh_entries[];
 extern u8 g_cload_steps_card_reset[];
 extern u8 g_cload_steps_load_selected_save[];
 extern s32 g_cload_choice_toggle;
-extern u8 *g_cload_load_step;
+extern u8_ptr g_cload_load_step;
 extern s32 g_save_compatibility_tag;
 extern s32 g_cload_entry_scan_active;
 extern char g_lom_pocketstation_filename_prefix[];

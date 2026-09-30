@@ -105,8 +105,8 @@ typedef struct
  */
 typedef struct
 {
-    u8* data_cursor;       /**< Next block of RAM data to upload. */
-    u8* loop_cursor;       /**< Data restart point of a looping program, or 0. */
+    u8_ptr data_cursor;       /**< Next block of RAM data to upload. */
+    u8_ptr loop_cursor;       /**< Data restart point of a looping program, or 0. */
     u32 flags;             /**< XA_FLAG_* bits. */
     s32 voice_mask;        /**< Voice mask of the stream's voice pair; 0 when idle. */
     s32 first_voice;       /**< First voice of the pair. */
@@ -119,7 +119,7 @@ typedef struct
     union
     {
         s32 spu_addr;      /**< One-shot programs: SPU base address. */
-        u8* ring_base;     /**< CD ring streams: first ring block. */
+        u8_ptr ring_base;     /**< CD ring streams: first ring block. */
     } source;
     u32 ring_size;         /**< Ring size in bytes. */
     u32 upload_block;      /**< Index of the next ring block to upload. */
@@ -149,10 +149,10 @@ extern s16 g_akao_mastervol_fade_ticks;
 extern s32 g_akao_cdvol_tick;
 extern s32 g_akao_cdvol_acc;
 /** @brief Channel table of the secondary song (g_akao_seq_channel1). */
-extern AkaoChannelState* g_akao_pending_channels;
-extern AkaoSongState* g_akao_seq_channel1;
-extern AkaoSongState *g_akao_seq_channel0;
-extern void *D_8003EC58;
+extern AkaoChannelStatePtr g_akao_pending_channels;
+extern AkaoSongStatePtr g_akao_seq_channel1;
+extern AkaoSongStatePtr g_akao_seq_channel0;
+extern void_ptr D_8003EC58;
 /** @brief Song state saved by akao_seq_suspend_song (the first 0x70 bytes are used). */
 extern AkaoSongState g_akao_suspended_song;
 /** @brief Channel table saved with g_akao_suspended_song. */

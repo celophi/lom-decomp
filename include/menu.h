@@ -28,7 +28,7 @@ extern s32 g_script_repeat_last;
 extern u8 g_menu_tim[];
 extern u32 g_menu_initial_clut_pair;
 extern u16 g_menu_glyph_src[];
-extern u8* g_menu_state_ptr;
+extern u8_ptr g_menu_state_ptr;
 /** Base of the menu state/string data blob referenced through g_menu_state_ptr. */
 extern u8 g_menu_state_data;
 
@@ -52,6 +52,14 @@ typedef union
     } fields;
 } MenuListNavigation;
 
+struct MenuSlot_s;
+/** @brief Draws a menu window's contents (a K&R declaration, as the original call sites require). */
+typedef s32* (*MenuSlotContentFunc)();
+/** @brief Runs every frame while a menu window is active. */
+typedef void (*MenuSlotTickFunc)(struct MenuSlot_s* self);
+typedef PS1_STORED(MenuSlotContentFunc) MenuSlotContentPtr;
+typedef PS1_STORED(MenuSlotTickFunc) MenuSlotTickPtr;
+
 /** @brief One 0x24-byte menu window slot. */
 typedef struct MenuSlot_s
 {
@@ -70,9 +78,8 @@ typedef struct MenuSlot_s
     u16 lerp_target_b; /* 0x16 - target value B for interpolation */
     u8 lerp_steps;     /* 0x18 - remaining interpolation steps (countdown divisor); 0 = snap to target */
     u8 _pad[3];
-    /* K&R callback signature is required by the original call sites. */
-    s32* (*content_cb)();                            /* 0x1C */
-    void (*tick_cb)(struct MenuSlot_s* /* self */);  /* 0x20 - per-frame callback while slot is active */
+    MenuSlotContentPtr content_cb; /* 0x1C */
+    MenuSlotTickPtr tick_cb;       /* 0x20 - per-frame callback while slot is active */
 } MenuSlot;
 
 MenuSlot* menu_slot_alloc(s32 ot_index, const MenuSlotRect* rect);

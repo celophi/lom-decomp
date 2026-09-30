@@ -126,8 +126,8 @@ void* memcpy(void* dst, const void* src, s32 size);
 extern s16 g_field_player_command;
 extern s32 g_field_scene_contact_latched;
 extern s32 g_field_scene_request_pending;
-extern u8* g_field_actor_heap;
-extern u8* g_field_cd_buffer;
+extern u8_ptr g_field_actor_heap;
+extern u8_ptr g_field_cd_buffer;
 extern s32 g_field_resource_queue_count;
 extern s32 g_field_resource_queue[FIELD_RESOURCE_QUEUE_CAPACITY];
 extern s32 g_field_loading_resource;
@@ -357,8 +357,8 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
     u8 face_byte;
     u8 texture_count;
     u8* track_source;
-    u8** heap;
-    u8** sound_heap;
+    u8_ptr* heap;
+    u8_ptr* sound_heap;
     u8* sound_tables;
 
     block = g_field_cd_buffer;

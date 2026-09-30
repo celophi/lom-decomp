@@ -8,14 +8,13 @@
 
 #include "common.h"
 #include "vector.h"
-
-struct AkaoHeader;
+#include "akao.h"
 
 /** @brief Resource table entry selected by an actor's resource index (0x14 bytes). */
 typedef struct
 {
-    u8* start;
-    u8* end;
+    u8_ptr start;
+    u8_ptr end;
     u8 unk8;
     u8 slot_index;
     /** @brief Depends on the resource: a character's palette or an effect's sound cue. */
@@ -174,7 +173,7 @@ typedef struct FieldObjectState
     /** @brief Drops left per reward kind; each drop effect takes one, idle animation 0x1F plays only while any is left. */
     u8 reward_counters[4];
     /** @brief Display name of the object, NULL when it has no label. */
-    u8* name;
+    u8_ptr name;
     /** @brief Stat-derived footprint strength, saturated to 255 during setup. */
     u16 effect_footprint_strength;
     u8 unk6A[2];
@@ -199,7 +198,7 @@ typedef struct FieldObjectState
         Vec2s points[8];
         s32 words[8];
     } effect_vertices;
-    u8* script;
+    u8_ptr script;
     /** @brief Built-in animation restarted when the actor goes idle; 0xFF for none. */
     u8 idle_animation;
     /** @brief Effect record the object's HUD panel follows while it is bound to an animation actor. */
@@ -420,6 +419,7 @@ typedef struct FieldObjectPart
     s16 unk44;
     s16 unk46;
 } FieldObjectPart;
+typedef PS1_PTR(FieldObjectPart) FieldObjectPartPtr;
 
 /**
  * @brief Animation definition played by an animation actor slot (0x1C bytes).
@@ -456,6 +456,7 @@ typedef struct FieldAnimationDef
     u16 sync_flags;
     u16 sync_parts;
 } FieldAnimationDef;
+typedef PS1_PTR(FieldAnimationDef) FieldAnimationDefPtr;
 
 /** @brief Parameter curve of an animation: segment count, random flag and first segment, then the value range. */
 typedef struct
@@ -472,6 +473,7 @@ typedef struct
     s16 end_value;
     s16 start_value;
 } FieldParameterCurve;
+typedef PS1_PTR(FieldParameterCurve) FieldParameterCurvePtr;
 
 /** @brief Status word of an animation actor slot. */
 typedef union
@@ -496,17 +498,17 @@ typedef union
  */
 typedef struct FieldActorSlot
 {
-    FieldObjectPart* parts;
-    FieldParameterCurve* curves;
+    FieldObjectPartPtr parts;
+    FieldParameterCurvePtr curves;
     /** @brief Curve segments: ten-bit length in frames, six-bit value. */
-    u16* curve_segments;
-    FieldAnimationDef* animation;
+    u16_ptr curve_segments;
+    FieldAnimationDefPtr animation;
     /** @brief The actor's animation definitions; animation_index selects the one playing. */
-    FieldAnimationDef* animations;
-    u8* track_data;
-    u8* mesh_data;
+    FieldAnimationDefPtr animations;
+    u8_ptr track_data;
+    u8_ptr mesh_data;
     /** @brief Sound-effect buffers of the resource, played by kind 2 sound commands. */
-    struct AkaoHeader* sound_data[2];
+    AkaoHeaderPtr sound_data[2];
     u8 active;
     /** @brief Number of entries in parts[]. */
     u8 part_count;
@@ -545,7 +547,7 @@ typedef struct FieldActorSlot
     u8 pending_track_mask;
     u8 unk23C[4];
     /** @brief Per animation, the mask of parts it drives. */
-    u16* part_masks;
+    u16_ptr part_masks;
 } FieldActorSlot;
 
 extern FieldActorSlot g_field_actor_slots[];

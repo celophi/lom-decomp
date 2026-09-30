@@ -167,8 +167,8 @@ typedef struct
     u16 z;
 } FieldMapPoint;
 
-extern FieldRuntimeContext* g_field_runtime;
-extern SceneState* g_field_scene_state;
+extern FieldRuntimeContextPtr g_field_runtime;
+extern SceneStatePtr g_field_scene_state;
 extern u8 g_field_weekday_names[];
 extern u8 g_field_element_level_by_land_level[];
 extern u8 g_field_talk_plane_masks[];

@@ -20,6 +20,7 @@ typedef struct
     u_long* prim_cursor;
     u8 unknown_0x80bc[0x10];
 } WselRenderBuffer;
+typedef PS1_PTR(WselRenderBuffer) WselRenderBufferPtr;
 
 /**
  * @brief Run world selection until the player chooses an exit state.

@@ -243,7 +243,7 @@ u8* shop_draw_list_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
         empty_text = D_800EC3E0;
         do
         {
-            ShopEntry** entries = &g_shop_entries;
+            ShopEntryPtr* entries = &g_shop_entries;
 
             name_x = 80 - x;
             text_base = (u8*)&g_shop_text_archive;

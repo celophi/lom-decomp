@@ -166,7 +166,7 @@ extern s32 D_80122B20;
 extern u8 g_field_pair_indicator_list[];
 extern u8 D_800FDCEA;
 extern u16 D_800FE01E;
-extern u8* g_field_cd_buffer;
+extern u8_ptr g_field_cd_buffer;
 
 /* ---- Object flag handlers and fading primitives ---------------------------- */
 
@@ -186,12 +186,13 @@ extern u8* g_field_cd_buffer;
  * @param flag The flag bit if it is now set, 0 if it was cleared.
  */
 typedef void (*FieldObjectFlagFunction)(FieldActor* actor, s32 flag);
+typedef PS1_CODE(FieldObjectFlagFunction) FieldObjectFlagFunctionSlot;
 
 /** @brief Handler of one object flag bit: a built-in animation below FIELD_OBJECT_HANDLER_FUNCTION_MIN (FIELD_OBJECT_HANDLER_NONE for none), otherwise a function. */
 typedef union
 {
     u32 animation;
-    FieldObjectFlagFunction function;
+    FieldObjectFlagFunctionSlot function;
 } FieldObjectFlagHandler;
 
 extern FieldObjectFlagHandler g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_COUNT];
@@ -290,8 +291,8 @@ typedef struct
 extern FieldScreenMotion g_field_screen_scroll;
 extern POLY_FT4 g_field_fade_prims[FIELD_FADE_PRIM_COUNT];
 extern u16 g_field_fade_prim_depths[FIELD_FADE_PRIM_COUNT];
-extern FieldActor* g_field_updating_actor;
-extern u32* g_field_scene_record_table;
+extern FieldActorPtr g_field_updating_actor;
+extern u32_ptr g_field_scene_record_table;
 
 static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* render_half, u32 hp_per_bar);
 static u8* field_emit_hud_status_line(u8* packet, FieldRenderHalf* render_half, CVECTOR* colors, s32 intensity, s32 x, s32 y);
@@ -1384,7 +1385,7 @@ void field_update_object_effects(s32 index)
                     }
                     else
                     {
-                        handler_value.function((FieldActor*)(record_offset + (u8*)g_field_actors), state->flags & bit_mask);
+                        PS1_CALL(handler_value.function)((FieldActor*)(record_offset + (u8*)g_field_actors), state->flags & bit_mask);
                     }
                     clear_mask = ~bit_mask;
                     state->previous_flags = (s32)((state->previous_flags & clear_mask) | (state->flags & bit_mask));

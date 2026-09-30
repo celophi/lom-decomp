@@ -50,10 +50,10 @@ typedef struct
 
 extern VECTOR D_8011CF60;
 extern s32 D_80182DE8;
-extern u8* D_8011CF1C;
+extern u8_ptr D_8011CF1C;
 extern s32 D_801B2AFC;
 extern s32 D_80182DEC;
-extern u8* D_8011CF24;
+extern u8_ptr D_8011CF24;
 extern s32 D_801B2B04;
 extern u8 D_800DCF18[];
 extern s32 D_801B2B0C;
@@ -66,11 +66,11 @@ extern s32 D_801B2B14;
 extern s32 D_801B0FD0;
 extern s32 D_801B2B1C;
 extern s32 D_801B2AD4;
-extern void (*D_800D6028[])(void);
+extern WmapStepHandlerSlot D_800D6028[];
 extern s32 D_8013B20C;
 extern void func_80091D1C(void);
 extern s32 D_801B2ADC;
-extern void (*D_800D6048[])(void);
+extern WmapStepHandlerSlot D_800D6048[];
 extern s32 D_8013B208;
 extern s32 D_801ADAE0;
 extern WmapValueRecord D_80139290[][6];
@@ -78,31 +78,31 @@ extern s32 D_8011D530;
 extern s32 D_8011D510;
 extern u32 D_8011D4FC;
 extern s32 D_801B2AE4;
-extern void (*D_800D6090[])(void);
-extern u8* D_801399AC;
+extern WmapStepHandlerSlot D_800D6090[];
+extern u8_ptr D_801399AC;
 extern u8 D_8011F538[];
 extern s32 D_801B2AEC;
-extern void (*D_800D60A0[])(void);
-extern u8* D_801399CC;
+extern WmapStepHandlerSlot D_800D60A0[];
+extern u8_ptr D_801399CC;
 extern void func_8009259C(void);
 extern void func_80092664(void);
 extern s32 D_801B2AF4;
-extern void (*D_800D60B8[])(void);
+extern WmapStepHandlerSlot D_800D60B8[];
 extern u8 D_8011D538[];
-extern u8* D_801399B4;
+extern u8_ptr D_801399B4;
 extern void func_80092804(void);
-extern void (*D_800D60C8[])(void);
-extern void (*D_800D60D8[])(void);
-extern void (*D_800D60E8[])(void);
-extern void (*D_800D6100[])(void);
-extern void (*D_800D6120[])(void);
+extern WmapStepHandlerSlot D_800D60C8[];
+extern WmapStepHandlerSlot D_800D60D8[];
+extern WmapStepHandlerSlot D_800D60E8[];
+extern WmapStepHandlerSlot D_800D6100[];
+extern WmapStepHandlerSlot D_800D6120[];
 extern u8 D_800D9688[];
 extern u8 D_80139A48[];
 extern void func_80093140(void);
 extern s32 D_801B2B24;
-extern void (*D_800D6138[])(void);
+extern WmapStepHandlerSlot D_800D6138[];
 extern u8 D_80123538[];
-extern u8* D_801399D4;
+extern u8_ptr D_801399D4;
 extern void func_800932EC(void);
 extern void func_800933B4(void);
 
@@ -143,7 +143,7 @@ extern WmapAnimationSlot D_801399D0;
 
 extern WmapScreenPosition g_wmap_focus_screen_position;
 
-extern s32* D_80139280;
+extern s32_ptr D_80139280;
 
 extern WmapSlot14 D_801AFBD0[];
 
@@ -357,7 +357,7 @@ s32 func_80091C0C(s32 arg0)
 
     if (D_801B2AD0 < 0x8)
     {
-        D_800D6028[D_801B2AD0]();
+        PS1_CALL(D_800D6028[D_801B2AD0])();
         result = 1;
     }
     else
@@ -468,7 +468,7 @@ s32 func_80091E08(s32 arg0)
 
     if (D_801B2AD8 < 0x12)
     {
-        D_800D6048[D_801B2AD8]();
+        PS1_CALL(D_800D6048[D_801B2AD8])();
         result = 1;
     }
     else
@@ -687,7 +687,7 @@ s32 func_800922F4(s32 arg0)
 
     if (D_801B2AE0 < 0x4)
     {
-        D_800D6090[D_801B2AE0]();
+        PS1_CALL(D_800D6090[D_801B2AE0])();
         result = 1;
     }
     else
@@ -763,7 +763,7 @@ s32 func_80092490(s32 arg0)
 
     if (D_801B2AE8 < 0x6)
     {
-        D_800D60A0[D_801B2AE8]();
+        PS1_CALL(D_800D60A0[D_801B2AE8])();
         result = 1;
     }
     else
@@ -864,7 +864,7 @@ s32 func_800926F8(s32 arg0)
 
     if (D_801B2AF0 < 0x4)
     {
-        D_800D60B8[D_801B2AF0]();
+        PS1_CALL(D_800D60B8[D_801B2AF0])();
         result = 1;
     }
     else
@@ -940,7 +940,7 @@ s32 func_80092898(s32 arg0)
 
     if (D_801B2AF8 < 0x4)
     {
-        D_800D60C8[D_801B2AF8]();
+        PS1_CALL(D_800D60C8[D_801B2AF8])();
         result = 1;
     }
     else
@@ -999,7 +999,7 @@ s32 func_800929F0(s32 arg0)
 
     if (D_801B2B00 < 0x4)
     {
-        D_800D60D8[D_801B2B00]();
+        PS1_CALL(D_800D60D8[D_801B2B00])();
         result = 1;
     }
     else
@@ -1058,7 +1058,7 @@ s32 func_80092B48(s32 arg0)
 
     if (D_801B2B08 < 0x6)
     {
-        D_800D60E8[D_801B2B08]();
+        PS1_CALL(D_800D60E8[D_801B2B08])();
         result = 1;
     }
     else
@@ -1124,7 +1124,7 @@ s32 func_80092CA8(s32 arg0)
 
     if (D_801B2B10 < 0x8)
     {
-        D_800D6100[D_801B2B10]();
+        PS1_CALL(D_800D6100[D_801B2B10])();
         result = 1;
     }
     else
@@ -1235,7 +1235,7 @@ s32 func_80092FE4(s32 arg0)
 
     if (D_801B2B18 < 0x6)
     {
-        D_800D6120[D_801B2B18]();
+        PS1_CALL(D_800D6120[D_801B2B18])();
         result = 1;
     }
     else
@@ -1315,7 +1315,7 @@ s32 func_800931DC(s32 arg0)
 
     if (D_801B2B20 < 0x6)
     {
-        D_800D6138[D_801B2B20]();
+        PS1_CALL(D_800D6138[D_801B2B20])();
         result = 1;
     }
     else

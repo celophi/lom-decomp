@@ -45,7 +45,7 @@ typedef struct
     u8 unknown_04[36];
 } WmapValueRecord;
 
-extern u8* D_8011CF1C;
+extern u8_ptr D_8011CF1C;
 extern s32 D_80182DF0;
 extern s32 D_801B292C;
 extern VECTOR D_8011CF60;
@@ -58,12 +58,12 @@ extern s32 D_801B2944;
 extern s32 D_801B294C;
 extern s32 D_801B2954;
 extern s32 D_801B290C;
-extern void (*D_800D5A60[])(void);
+extern WmapStepHandlerSlot D_800D5A60[];
 extern s32 D_8013B20C;
 extern void func_800876AC(void);
 extern void func_8008772C(void);
 extern s32 D_801B2914;
-extern void (*D_800D5A78[])(void);
+extern WmapStepHandlerSlot D_800D5A78[];
 extern s32 D_8013B208;
 extern s32 D_801ADAE0;
 extern WmapValueRecord D_80139290[][6];
@@ -71,29 +71,29 @@ extern s32 D_8011D530;
 extern s32 D_8011D510;
 extern u32 D_8011D4FC;
 extern s32 D_801B291C;
-extern void (*D_800D5AB8[])(void);
+extern WmapStepHandlerSlot D_800D5AB8[];
 extern u8 D_8011D538[];
-extern u8* D_801399AC;
+extern u8_ptr D_801399AC;
 extern void func_80087C9C(void);
 extern s32 D_801B2924;
-extern void (*D_800D5AC8[])(void);
+extern WmapStepHandlerSlot D_800D5AC8[];
 extern u8 D_8011F538[];
-extern u8* D_801399B4;
+extern u8_ptr D_801399B4;
 extern void func_80087E3C(void);
-extern void (*D_800D5AD8[])(void);
-extern void (*D_800D5AF0[])(void);
-extern void (*D_800D5B00[])(void);
+extern WmapStepHandlerSlot D_800D5AD8[];
+extern WmapStepHandlerSlot D_800D5AF0[];
+extern WmapStepHandlerSlot D_800D5B00[];
 extern u8 D_800D9688[];
 extern u8 D_80139A48[];
-extern void (*D_800D5B18[])(void);
+extern WmapStepHandlerSlot D_800D5B18[];
 extern u8 D_800D9F20[];
 extern u8 D_80139BD8[];
 extern void func_800884AC(void);
-extern void (*D_800D5B30[])(void);
+extern WmapStepHandlerSlot D_800D5B30[];
 extern u8 D_800DA7B8[];
 extern u8 D_80139D68[];
 extern void func_800886A4(void);
-extern void (*D_800D5B48[])(void);
+extern WmapStepHandlerSlot D_800D5B48[];
 extern u8 D_800DB050[];
 extern u8 D_80139EF8[];
 extern void func_8008889C(void);
@@ -126,7 +126,7 @@ extern WmapAnimationSlot D_801399B0;
 
 extern WmapScreenPosition g_wmap_focus_screen_position;
 
-extern s32* D_80139280;
+extern s32_ptr D_80139280;
 
 extern WmapSlot14 D_801AFBD0[];
 
@@ -328,7 +328,7 @@ s32 func_8008759C(s32 arg0)
 
     if (D_801B2908 < 0x6)
     {
-        D_800D5A60[D_801B2908]();
+        PS1_CALL(D_800D5A60[D_801B2908])();
         result = 1;
     }
     else
@@ -419,7 +419,7 @@ s32 func_80087744(s32 arg0)
 
     if (D_801B2910 < 0x10)
     {
-        D_800D5A78[D_801B2910]();
+        PS1_CALL(D_800D5A78[D_801B2910])();
         result = 1;
     }
     else
@@ -614,7 +614,7 @@ s32 func_80087B90(s32 arg0)
 
     if (D_801B2918 < 0x4)
     {
-        D_800D5AB8[D_801B2918]();
+        PS1_CALL(D_800D5AB8[D_801B2918])();
         result = 1;
     }
     else
@@ -690,7 +690,7 @@ s32 func_80087D30(s32 arg0)
 
     if (D_801B2920 < 0x4)
     {
-        D_800D5AC8[D_801B2920]();
+        PS1_CALL(D_800D5AC8[D_801B2920])();
         result = 1;
     }
     else
@@ -766,7 +766,7 @@ s32 func_80087ED0(s32 arg0)
 
     if (D_801B2928 < 0x6)
     {
-        D_800D5AD8[D_801B2928]();
+        PS1_CALL(D_800D5AD8[D_801B2928])();
         result = 1;
     }
     else
@@ -833,7 +833,7 @@ s32 func_80088008(s32 arg0)
 
     if (D_801B2930 < 0x4)
     {
-        D_800D5AF0[D_801B2930]();
+        PS1_CALL(D_800D5AF0[D_801B2930])();
         result = 1;
     }
     else
@@ -892,7 +892,7 @@ s32 func_80088160(s32 arg0)
 
     if (D_801B2938 < 0x6)
     {
-        D_800D5B00[D_801B2938]();
+        PS1_CALL(D_800D5B00[D_801B2938])();
         result = 1;
     }
     else
@@ -972,7 +972,7 @@ s32 func_80088350(s32 arg0)
 
     if (D_801B2940 < 0x6)
     {
-        D_800D5B18[D_801B2940]();
+        PS1_CALL(D_800D5B18[D_801B2940])();
         result = 1;
     }
     else
@@ -1052,7 +1052,7 @@ s32 func_80088548(s32 arg0)
 
     if (D_801B2948 < 0x6)
     {
-        D_800D5B30[D_801B2948]();
+        PS1_CALL(D_800D5B30[D_801B2948])();
         result = 1;
     }
     else
@@ -1132,7 +1132,7 @@ s32 func_80088740(s32 arg0)
 
     if (D_801B2950 < 0x6)
     {
-        D_800D5B48[D_801B2950]();
+        PS1_CALL(D_800D5B48[D_801B2950])();
         result = 1;
     }
     else

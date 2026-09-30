@@ -65,7 +65,7 @@ s32 field_draw_player_icon(POLY_FT4* prim, u_long* ordering_table, s32 selector,
 s32 field_draw_text(void* prim, void* ot, void* text, s32 color, s32 x, s32 y, s32 align);
 
 extern s32 g_field_party_has_guest;
-extern u8* g_field_coordinate_labels[];
+extern u8_ptr g_field_coordinate_labels[];
 
 /**
  * @brief Draw the coordinate panel: the second player's icon and the label rows present.

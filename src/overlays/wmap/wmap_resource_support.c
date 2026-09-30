@@ -39,6 +39,7 @@ typedef struct
     u8 unknown_0[6];
     u16 value;
 } WmapValueHeader;
+typedef PS1_PTR(WmapValueHeader) WmapValueHeaderPtr;
 
 extern u8 D_800DCF18[];
 extern s32 D_801ADAFC;
@@ -47,7 +48,7 @@ extern RECT D_80051A88;
 
 extern WmapSpriteActor D_800D9268[];
 extern WmapInitDisplay D_801AFBD0[];
-extern WmapValueHeader* D_800D0454;
+extern WmapValueHeaderPtr D_800D0454;
 
 /**
  * @brief Empty world-map handler (no operation).

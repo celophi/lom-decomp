@@ -26,7 +26,7 @@ enum WmapSound
 };
 
 /** @brief Sound-effect buffer of each world-map sound; entry n - 1 plays sound n. */
-extern AkaoHeader* g_wmap_sfx_buffers[];
+extern AkaoHeaderPtr g_wmap_sfx_buffers[];
 
 void func_80064F14();
 void func_80064F1C(s32* source, s32* destination, s32 byte_count);

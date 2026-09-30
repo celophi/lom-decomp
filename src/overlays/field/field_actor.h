@@ -137,6 +137,7 @@ typedef struct FieldActor
     u32 unk4C;
     u8 unk50[4];
 } FieldActor;
+typedef PS1_PTR(FieldActor) FieldActorPtr;
 
 /** @brief Presence value of an unused actor record. */
 #define FIELD_ACTOR_UNUSED 0xFF

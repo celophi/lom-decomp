@@ -7,7 +7,7 @@
 typedef union
 {
     s32 value;
-    void* buffer;
+    void_ptr buffer;
 } AkaoCommandParam;
 
 extern AkaoCommandParam g_akao_cmd_params[];
@@ -133,6 +133,7 @@ typedef struct AkaoHeader
     u16 reverb_type;
     AkaoTimeStamp timestamp;
 } AkaoHeader;
+typedef PS1_PTR(AkaoHeader) AkaoHeaderPtr;
 
 /**
  * @brief Header of an AKAO instrument bank (e.g. the EFFECT.SET fragments).
@@ -287,6 +288,7 @@ typedef struct AkaoSongState
     u16 measure;                       /**< Measure counter (ext op FE 16). */
     u8 _pad6E[2];
 } AkaoSongState;
+typedef PS1_PTR(AkaoSongState) AkaoSongStatePtr;
 
 /**
  * @brief State of one sequencer channel (a song track or an SFX channel).
@@ -298,13 +300,13 @@ typedef struct AkaoSongState
  */
 typedef struct AkaoChannelState
 {
-    u8* seq_cursor;             /**< Next bytecode byte. */
-    u8* loop_cursor[4];         /**< Loop start of each loop-stack level. */
-    u8* return_cursor;          /**< Return address of a subroutine call (ext ops FE 0E/0F). */
+    u8_ptr seq_cursor;             /**< Next bytecode byte. */
+    u8_ptr loop_cursor[4];         /**< Loop start of each loop-stack level. */
+    u8_ptr return_cursor;          /**< Return address of a subroutine call (ext ops FE 0E/0F). */
     u32 key_map;                /**< Selected key-to-articulation map (ext op FE 14). */
-    s16* pitch_lfo_cursor;      /**< Pitch LFO waveform position. */
-    s16* volume_lfo_cursor;     /**< Volume LFO waveform position. */
-    s16* pan_lfo_cursor;        /**< Pan LFO waveform position. */
+    s16_ptr pitch_lfo_cursor;      /**< Pitch LFO waveform position. */
+    s16_ptr volume_lfo_cursor;     /**< Volume LFO waveform position. */
+    s16_ptr pan_lfo_cursor;        /**< Pan LFO waveform position. */
     u32 sfx_tag;                /**< SFX: caller tag given to akao_play_sfx; also holds AKAO_SFX_FLAG_SUPPRESS. */
     s32 pitch;                  /**< Current SPU pitch (akao_compute_pitch result). */
     s32 pitch_slide_acc;        /**< Fractional part of the pitch slide. */
@@ -402,5 +404,6 @@ typedef struct AkaoChannelState
     s16 spu_volume_left;
     s16 spu_volume_right;
 } AkaoChannelState;
+typedef PS1_PTR(AkaoChannelState) AkaoChannelStatePtr;
 
 #endif

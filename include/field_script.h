@@ -83,6 +83,7 @@ typedef struct
     s32 active_record;
     u8* pc;
 } FieldScriptContext;
+typedef PS1_PTR(FieldScriptContext) FieldScriptContextPtr;
 
 /** @brief Packed 16-bit reference used by field-script variable helpers. */
 typedef struct
@@ -90,10 +91,13 @@ typedef struct
     u16 value;
 } FieldScriptVariableRef;
 
-extern FieldScriptContext* g_field_script;
+extern FieldScriptContextPtr g_field_script;
 
 /* Opcodes 0x80 and above dispatch through this table, indexed by opcode - 0x80. */
-extern void (*g_field_script_ext_op_table[16])();
+/** @brief Extended script operation (a K&R declaration: handlers take different operands). */
+typedef void (*FieldScriptExtOp)();
+typedef PS1_CODE(FieldScriptExtOp) FieldScriptExtOpSlot;
+extern FieldScriptExtOpSlot g_field_script_ext_op_table[16];
 
 #define FIELD_SCRIPT_RECORD(index) ((FieldScriptRecord*)((u8*)g_field_script + ((index) * 3 << 2)))
 #define FIELD_SCRIPT_RECORD_STATE(index) ((FieldScriptRecordState*)((u8*)g_field_script + ((index) * 3 << 2)))

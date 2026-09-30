@@ -1,4 +1,5 @@
 #include "wmap_resource_support.h"
+#include "wmap_sequence_runtime.h"
 #include "wmap_effect_resources.h"
 #include "cdrom.h"
 
@@ -51,17 +52,17 @@ extern u8 D_80127538[];
 extern u8 D_80182E40[];
 extern u8 D_8018B240[];
 extern u8 D_80193640[];
-extern u8* D_8011CF1C;
-extern u8* D_8011CF24;
-extern u8* D_8011CF28;
-extern u8* D_8011CF2C;
-extern u8* D_8011CF30;
-extern u8* D_8011CF34;
-extern u8* D_8011CF38;
-extern u8* D_8011CF3C;
-extern u8* D_8011CF40;
-extern u8* D_8011CF84;
-extern void (*D_800D6D5C[])(void);
+extern u8_ptr D_8011CF1C;
+extern u8_ptr D_8011CF24;
+extern u8_ptr D_8011CF28;
+extern u8_ptr D_8011CF2C;
+extern u8_ptr D_8011CF30;
+extern u8_ptr D_8011CF34;
+extern u8_ptr D_8011CF38;
+extern u8_ptr D_8011CF3C;
+extern u8_ptr D_8011CF40;
+extern u8_ptr D_8011CF84;
+extern WmapStepHandlerSlot D_800D6D5C[];
 
 static void func_800A8B38(s32 resource_index);
 
@@ -82,7 +83,7 @@ void func_800A89DC(s32 index)
         index = 0;
         D_8013B294 = 1;
     }
-    D_800D6D5C[index]();
+    PS1_CALL(D_800D6D5C[index])();
 }
 
 /**

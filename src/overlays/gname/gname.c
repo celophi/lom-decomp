@@ -390,13 +390,13 @@ s32 g_allow_empty_cancel;
 /** Index into the saved-name history list (used when g_name_source_mode == 3). */
 s32 g_history_name_idx;
 /** Base of the two frame render buffers. */
-RenderContext* g_render_buf_base;
+RenderContextPtr g_render_buf_base;
 /** Active name buffer the UI edits in place. */
-u8* g_active_name;
+u8_ptr g_active_name;
 /** Active standard or kanji character panel. */
 s32 g_char_panel;
 /** Current kanji category display data. */
-void* g_kanji_cat_name;
+void_ptr g_kanji_cat_name;
 /** Undo clipboard; removed glyphs are prepended here. */
 u8 g_name_clipboard[GNAME_NAME_BUFFER_SIZE];
 /** Frames remaining before name-entry input is accepted at startup. */
@@ -1245,7 +1245,7 @@ static void gname_process_input(void)
     u16* category_name_offset_entry;
     u16 category_name_offset;
     s32 volume_or_nav_mask;
-    void** category_name_ptr;
+    void_ptr* category_name_ptr;
     s32 remaining_scroll_steps;
 
     g_activated_entry = GNAME_ENTRY_NONE;

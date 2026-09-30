@@ -35,6 +35,7 @@
  *        the given transition offsets and returns the advanced primitive cursor.
  */
 typedef void* (*CardaElementDrawFunc)(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+typedef PS1_STORED(CardaElementDrawFunc) CardaElementDrawPtr;
 
 /**
  * @brief One animated CARDA UI element (a framed window plus its content).
@@ -69,7 +70,7 @@ typedef struct CardaElement
             u32 unk9 : 23;
         } bits;
     } size;
-    CardaElementDrawFunc draw;
+    CardaElementDrawPtr draw;
 } CardaElement;
 
 /** @brief CardaElement.attr.bits.state values. */
@@ -542,7 +543,7 @@ extern CardaElement g_carda_element1_state;
 extern s32 g_carda_exit_requested;
 extern s32 g_carda_dialog_state;
 extern s32 g_carda_received_item_count;
-extern u8* g_carda_save_blob;
+extern u8_ptr g_carda_save_blob;
 extern s32 g_carda_selected_row;
 extern s32 g_carda_choice_toggle;
 extern s32 g_carda_scroll_frames;
@@ -558,7 +559,7 @@ extern u_long g_carda_icon_context[];
 extern s32 g_carda_format_declined;
 extern s32 g_carda_selection_status;
 /** @brief The saved game's item records (g_saved_game_ctx->items). */
-extern FieldItemRecord* g_carda_items;
+extern FieldItemRecordPtr g_carda_items;
 extern s32 g_carda_scroll_y;
 extern s32 g_carda_save_in_progress;
 /**

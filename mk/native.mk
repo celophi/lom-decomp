@@ -19,3 +19,19 @@ NATIVE_SRCS = $(filter-out src/psyq/%,$(SRCS_G0) $(SRCS_G4) $(SRCS_GCC_260_G0)) 
 native-check:
 	python3 tools/native_check/native_check.py --version $(VERSION) --cc '$(NATIVE_CC)' \
 		$(NATIVE_CHECK_FLAGS) $(NATIVE_SRCS)
+
+# ============================================================================
+#  Storage layout check
+# ============================================================================
+# Checks that every type the game keeps in PS1 memory has the same layout on a
+# 64-bit host that keeps PS1 storage (see tools/storage_check/storage_check.py
+# and include/ps1_storage.h). Needs only the libclang Python package.
+#
+#   make storage-check                         check against the baseline
+#   make storage-check STORAGE_CHECK_FLAGS=--verbose
+
+STORAGE_CHECK_FLAGS ?=
+
+.PHONY: storage-check
+storage-check:
+	python3 tools/storage_check/storage_check.py --version $(VERSION) $(STORAGE_CHECK_FLAGS) $(NATIVE_SRCS)

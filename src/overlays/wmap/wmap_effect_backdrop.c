@@ -51,12 +51,13 @@ typedef struct
     WmapFixed x;
     WmapFixed y;
 } WmapFixedPoint;
+typedef PS1_PTR(WmapFixedPoint) WmapFixedPointPtr;
 
 extern WmapPoint D_800D0FD4[];
 extern WmapTriangle D_800D1814[];
 extern WmapTriangle D_801B10B8[];
 extern WmapFixedPoint D_8013A188[];
-extern WmapFixedPoint* D_801B23F8;
+extern WmapFixedPointPtr D_801B23F8;
 
 extern s32 D_8011CF70;
 extern s32 D_8011CF74;

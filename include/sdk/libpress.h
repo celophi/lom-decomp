@@ -14,8 +14,8 @@ typedef struct {
     short *src;
     short *dest;
     short *work;
-    long size;
-    long loop_start;
+    Ps1Long size;
+    Ps1Long loop_start;
     char loop;
     char byte_swap;
     char proceed;

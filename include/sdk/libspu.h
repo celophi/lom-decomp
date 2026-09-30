@@ -18,8 +18,8 @@ typedef struct {
 } SpuVolume;
 
 typedef struct {
-    unsigned long voice;
-    unsigned long mask;
+    u_long voice;
+    u_long mask;
     SpuVolume volume;
     SpuVolume volmode;
     SpuVolume volumex;
@@ -27,11 +27,11 @@ typedef struct {
     unsigned short note;
     unsigned short sample_note;
     short envx;
-    unsigned long addr;
-    unsigned long loop_addr;
-    long a_mode;
-    long s_mode;
-    long r_mode;
+    u_long addr;
+    u_long loop_addr;
+    Ps1Long a_mode;
+    Ps1Long s_mode;
+    Ps1Long r_mode;
     unsigned short ar;
     unsigned short dr;
     unsigned short sr;

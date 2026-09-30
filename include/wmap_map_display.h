@@ -15,9 +15,9 @@ typedef struct
     s16 animation_index;
     s16 previous_animation_index;
     u8 pad12[2];
-    u8* animation_cursor;
-    u8* animation_start;
-    s8* quad_data;
+    u8_ptr animation_cursor;
+    u8_ptr animation_start;
+    s8_ptr quad_data;
     s16 frame_timer;
     u8 pad22[6];
     s16 game_timer;
@@ -31,7 +31,7 @@ typedef struct
     s32 resource_id;
     u32 loaded_frame;
     s32 busy;
-    u8* animation_data;
+    u8_ptr animation_data;
 } WmapCacheEntry;
 
 /** @brief Per-corner scale factors for a land transition. */

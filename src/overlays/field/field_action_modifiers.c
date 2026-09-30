@@ -142,6 +142,7 @@
 
 /** @brief Handler for one action descriptor kind; returns the damage dealt. */
 typedef s32 (*FieldActionHandler)(void);
+typedef PS1_CODE(FieldActionHandler) FieldActionHandlerSlot;
 
 /** @brief Chance and duration of one on-hit status, indexed from FIELD_STATUS_ID_ON_HIT_FIRST. */
 typedef struct FieldOnHitStatus
@@ -150,16 +151,16 @@ typedef struct FieldOnHitStatus
     u8 duration;
 } FieldOnHitStatus;
 
-extern FieldBattleContext* g_field_battle;
+extern FieldBattleContextPtr g_field_battle;
 
 /** @brief Nonzero while a guest is in the party; selects the coordinate panel icon. */
 extern s32 g_field_party_has_guest;
 
 /** @brief Label strings drawn on the coordinate panel, NULL when missing. */
-extern u8* g_field_coordinate_labels[FIELD_COORDINATE_LABEL_COUNT];
+extern u8_ptr g_field_coordinate_labels[FIELD_COORDINATE_LABEL_COUNT];
 
 /** @brief Action handlers indexed by FieldActionDescriptor::info.bytes.handler. */
-extern FieldActionHandler g_field_action_handlers[FIELD_ACTION_HANDLER_COUNT];
+extern FieldActionHandlerSlot g_field_action_handlers[FIELD_ACTION_HANDLER_COUNT];
 
 /** @brief element_defense slot matched against each element bit. */
 extern u8 g_field_element_resist_slots[FIELD_ELEMENT_COUNT];
@@ -464,7 +465,7 @@ s32 field_run_action_handler(void)
     {
         if (descriptor->info.bytes.handler < FIELD_ACTION_HANDLER_COUNT)
         {
-            return g_field_action_handlers[descriptor->info.bytes.handler]();
+            return PS1_CALL(g_field_action_handlers[descriptor->info.bytes.handler])();
         }
         record_game_diagnostic(0x8001, 0x65, descriptor->info.bytes.handler, g_field_battle->action->action_id);
         return 0;

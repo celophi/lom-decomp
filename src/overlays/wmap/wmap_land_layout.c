@@ -72,6 +72,7 @@ typedef struct
     u16 scenes[256];
     u8 entry_flags[256];
 } WmapLayout;
+typedef PS1_PTR(WmapLayout) WmapLayoutPtr;
 
 /** @brief Saved land state; coordinates share a byte and flags share a word. */
 typedef union
@@ -195,7 +196,7 @@ extern WmapLandAttributes g_wmap_land_attributes[WMAP_LAND_COUNT];
 extern s32 g_wmap_spirit_sprites[];
 extern s32 g_wmap_proposed_spirits[WMAP_LAND_COUNT][WMAP_SPIRIT_COUNT];
 extern u8 g_wmap_land_lookup[WMAP_GRID_SIZE * WMAP_GRID_SIZE];
-extern WmapLayout* g_wmap_layout;
+extern WmapLayoutPtr g_wmap_layout;
 extern WmapLayout g_wmap_layout_buffer;
 extern WmapValueTable g_wmap_land_count_tiers;
 extern s32 g_wmap_event_cursor;

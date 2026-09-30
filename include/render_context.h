@@ -35,6 +35,7 @@ typedef struct
     DISPENV disp_env;     /* 0x4050 - display environment for this buffer */
     DRAWENV draw_env;     /* 0x4064 - drawing environment for this buffer */
 } RenderContext;          /* 0x40C0 bytes == DRAW_BUF_STRIDE */
+typedef PS1_PTR(RenderContext) RenderContextPtr;
 
 /**
  * @brief Stride in bytes between the two double-buffered draw buffers.

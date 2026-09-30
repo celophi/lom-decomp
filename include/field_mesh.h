@@ -11,7 +11,7 @@ typedef struct FieldMeshTexturePart
     u8 y;
     u8 width;
     u8 height;
-    u16 *pixels;
+    u16_ptr pixels;
 } FieldMeshTexturePart;
 
 /** @brief 16-byte triangle record of a mesh. */
@@ -48,8 +48,8 @@ typedef struct FieldMeshResource
 /** @brief Vertices a mesh can transform at once (size of the shared mesh work buffers). */
 #define FIELD_MESH_VERTEX_MAX 768
 
-extern s16 *g_field_mesh_screen_vertices;
-extern SVECTOR *g_field_mesh_transformed_normals;
-extern s32 *g_field_mesh_depth_offsets;
+extern s16_ptr g_field_mesh_screen_vertices;
+extern SVECTORPtr g_field_mesh_transformed_normals;
+extern s32_ptr g_field_mesh_depth_offsets;
 
 #endif

@@ -1021,8 +1021,11 @@ typedef struct
     u16 width;
     u16 depth;
 } FieldMapObject;
+typedef PS1_PTR(FieldMapObject) FieldMapObjectPtr;
+/** @brief Stored pointer to a table of stored FieldMapObject pointers. */
+typedef PS1_PTR(FieldMapObjectPtr) FieldMapObjectTablePtr;
 
-extern FieldMapObject** g_field_objects;
+extern FieldMapObjectTablePtr g_field_objects;
 
 void field_build_render_records(FieldMapObject* object, u16 object_index);
 void field_collision_rebuild_spans(void);
@@ -1101,7 +1104,7 @@ extern s32 g_field_camera_y;
 extern s32 g_field_camera_z;
 /** @brief Pixel lookup table field_load_map applies to the next map, plus one; 0 for none. */
 extern s32 g_field_pixel_lookup_selector;
-extern s16* g_field_node_angle_table;
+extern s16_ptr g_field_node_angle_table;
 
 s32 rcos(s32);
 s32 rsin(s32);

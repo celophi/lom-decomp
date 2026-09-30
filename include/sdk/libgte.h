@@ -5,14 +5,14 @@
 
 typedef struct {
     short m[3][3];
-    long t[3];
+    Ps1Long t[3];
 } MATRIX;
 
 typedef struct {
-    long vx;
-    long vy;
-    long vz;
-    long pad;
+    Ps1Long vx;
+    Ps1Long vy;
+    Ps1Long vz;
+    Ps1Long pad;
 } VECTOR;
 
 typedef struct {
@@ -21,6 +21,7 @@ typedef struct {
     short vz;
     short pad;
 } SVECTOR;
+typedef PS1_PTR(SVECTOR) SVECTORPtr;
 
 typedef struct {
     short vx;

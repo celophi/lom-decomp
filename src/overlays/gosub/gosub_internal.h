@@ -268,7 +268,7 @@ typedef struct
             u32 reserved_9 : 23;
         } f;
     } geometry;
-    void* draw_handler;
+    void_ptr draw_handler;
 } GosubElement;
 
 /**
@@ -281,8 +281,8 @@ typedef struct
  */
 typedef struct
 {
-    u8* name;
-    u8* desc;
+    u8_ptr name;
+    u8_ptr desc;
     /** @brief Count shown at the right of the row, or GOSUB_ROW_NO_COUNT / a special row layout. */
     s16 value;
     /** @brief Item kind, inventory index, block index or record index the row stands for. */
@@ -756,7 +756,7 @@ extern s32 g_gosub_block_shape;
 extern s32 g_gosub_dialog_choice;
 extern s32 g_gosub_block_level;
 extern s32 g_gosub_allow_duplicate_selection;
-extern u8* g_gosub_dialog_text;
+extern u8_ptr g_gosub_dialog_text;
 extern s32 (*g_gosub_finish_handler)(void);
 extern u8 g_gosub_selection_mode;
 extern u8 g_gosub_required_selection_count;
@@ -780,7 +780,7 @@ extern s32 D_80170984;
 extern s32 g_gosub_scroll_y;
 extern s32 g_gosub_sort_ascending;
 extern s32 g_gosub_scroll_target_y;
-extern u8* g_gosub_title_text;
+extern u8_ptr g_gosub_title_text;
 extern GosubElement g_gosub_elements[GOSUB_ELEMENT_COUNT];
 extern GosubListRow g_gosub_rows[512];
 extern s32 (*g_gosub_dialog_handler)(s32);

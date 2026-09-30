@@ -326,6 +326,7 @@ typedef enum
 
 /** @brief Draw an element at its current animation offset and return the packet cursor. */
 typedef void* (*AddheroElementDrawFunc)(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+typedef PS1_STORED(AddheroElementDrawFunc) AddheroElementDrawPtr;
 
 /**
  * @brief Animated panel or list element used by the ADDHERO interface.
@@ -359,7 +360,7 @@ typedef struct AddheroElement
             u32 scrollable : 1;
         } bits;
     } size;
-    AddheroElementDrawFunc draw_handler;
+    AddheroElementDrawPtr draw_handler;
 } AddheroElement;
 
 /**
@@ -391,7 +392,7 @@ extern s32 g_menu_element_counter;
 extern u8 g_addhero_loadseq_done[];
 extern s32 g_addhero_icon_phase;
 /** @brief The saved game's item records (g_saved_game_ctx->items). */
-extern FieldItemRecord* g_addhero_items;
+extern FieldItemRecordPtr g_addhero_items;
 extern s32 g_addhero_result;
 extern s32 g_addhero_work_ram_base;
 extern s32 g_addhero_exit_requested;

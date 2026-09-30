@@ -7,7 +7,6 @@
 typedef unsigned char   u_char;
 typedef unsigned short  u_short;
 typedef unsigned int    u_int;
-typedef unsigned long   u_long;
 
 typedef unsigned char   undefined;
 typedef unsigned char   undefined1;
@@ -20,6 +19,8 @@ typedef unsigned char   u8;
 typedef signed char     s8;
 typedef unsigned short  u16;
 typedef signed short    s16;
+
+#include "ps1_storage.h"
 
 /* Boolean / null macros */
 #define TRUE    1

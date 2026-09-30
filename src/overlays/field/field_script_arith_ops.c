@@ -14,8 +14,9 @@
 #define FIELD_SCRIPT_CALC_OP_COUNT 12
 
 typedef s32 (*FieldScriptCalcOp)(s32 left, s32 right);
+typedef PS1_CODE(FieldScriptCalcOp) FieldScriptCalcOpSlot;
 
-extern FieldScriptCalcOp g_field_script_calc_ops[FIELD_SCRIPT_CALC_OP_COUNT];
+extern FieldScriptCalcOpSlot g_field_script_calc_ops[FIELD_SCRIPT_CALC_OP_COUNT];
 
 /**
  * @brief Apply one of the script calculation operators.
@@ -26,7 +27,7 @@ extern FieldScriptCalcOp g_field_script_calc_ops[FIELD_SCRIPT_CALC_OP_COUNT];
  */
 s32 field_script_calc(s32 op, s32 left, s32 right)
 {
-    return g_field_script_calc_ops[op](left, right);
+    return PS1_CALL(g_field_script_calc_ops[op])(left, right);
 }
 
 /**

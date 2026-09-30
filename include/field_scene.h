@@ -47,11 +47,12 @@ typedef struct
     /** per-group counters, zeroed alongside group_ids. */
     s16 group_counters[10];
 } FieldScene;
+typedef PS1_PTR(FieldScene) FieldScenePtr;
 
 /** @brief Active scene pointer in the loaded FIELD resource. */
 typedef struct
 {
-    FieldScene* scene;
+    FieldScenePtr scene;
 } FieldSceneGlobals;
 
 /** @brief Active FIELD scene. */

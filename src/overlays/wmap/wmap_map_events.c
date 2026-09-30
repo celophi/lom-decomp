@@ -121,27 +121,27 @@ extern s32 D_800DBE70;
 extern s32 D_80139224;
 extern s32 D_80139978;
 extern s32 D_801B2E74;
-extern void (*D_800D6D34[])(void);
-extern u8 *D_8013A184;
+extern WmapStepHandlerSlot D_800D6D34[];
+extern u8_ptr D_8013A184;
 extern void wmap_draw_vehicle(void);
 extern void wmap_finish_vehicle_turn(void);
 extern s32 g_wmap_vehicle_phase;
 extern s32 g_wmap_vehicle_screen_position;
 extern WmapAnimationSlot g_wmap_vehicle_animation;
-extern void (*D_800D6C14[])(void);
+extern WmapStepHandlerSlot D_800D6C14[];
 extern s32 D_800DCEC0;
 extern s32 D_801B2E4C;
-extern void (*D_800D6C54[])(void);
+extern WmapStepHandlerSlot D_800D6C54[];
 extern u8 D_800D92EC[];
 extern s16 D_800D930E;
 extern s32 D_801B2E54;
-extern void (*D_800D6C94[])(void);
+extern WmapStepHandlerSlot D_800D6C94[];
 extern s32 D_801B2E5C;
-extern void (*D_800D6CD4[])(void);
+extern WmapStepHandlerSlot D_800D6CD4[];
 extern s32 D_801B2E64;
-extern void (*D_800D6D14[])(void);
+extern WmapStepHandlerSlot D_800D6D14[];
 extern s32 D_801B2E6C;
-extern void (*D_800D6D24[])(void);
+extern WmapStepHandlerSlot D_800D6D24[];
 
 /** @brief World-map actor configuration. */
 typedef struct
@@ -748,7 +748,7 @@ s32 func_800A7370(s32 arg0)
 
     if (D_801B2E70 < 0xA)
     {
-        D_800D6D34[D_801B2E70]();
+        PS1_CALL(D_800D6D34[D_801B2E70])();
         result = 1;
     }
     else
@@ -879,7 +879,7 @@ s32 func_800A7668(s32 arg0)
 
     if (D_801B2E40 < 0x10)
     {
-        D_800D6C14[D_801B2E40]();
+        PS1_CALL(D_800D6C14[D_801B2E40])();
         result = 1;
     }
     else
@@ -1097,7 +1097,7 @@ s32 func_800A7BE8(s32 arg0)
 
     if (D_801B2E48 < 0x10)
     {
-        D_800D6C54[D_801B2E48]();
+        PS1_CALL(D_800D6C54[D_801B2E48])();
         result = 1;
     }
     else
@@ -1280,7 +1280,7 @@ s32 func_800A7FD0(s32 arg0)
 
     if (D_801B2E50 < 0x10)
     {
-        D_800D6C94[D_801B2E50]();
+        PS1_CALL(D_800D6C94[D_801B2E50])();
         result = 1;
     }
     else
@@ -1463,7 +1463,7 @@ s32 func_800A83B8(s32 arg0)
 
     if (D_801B2E58 < 0x10)
     {
-        D_800D6CD4[D_801B2E58]();
+        PS1_CALL(D_800D6CD4[D_801B2E58])();
         result = 1;
     }
     else
@@ -1646,7 +1646,7 @@ s32 func_800A87D4(s32 arg0)
 
     if (D_801B2E60 < 0x4)
     {
-        D_800D6D14[D_801B2E60]();
+        PS1_CALL(D_800D6D14[D_801B2E60])();
         result = 1;
     }
     else
@@ -1703,7 +1703,7 @@ s32 func_800A88D8(s32 arg0)
 
     if (D_801B2E68 < 0x4)
     {
-        D_800D6D24[D_801B2E68]();
+        PS1_CALL(D_800D6D24[D_801B2E68])();
         result = 1;
     }
     else

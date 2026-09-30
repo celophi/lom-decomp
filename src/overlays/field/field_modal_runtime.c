@@ -221,7 +221,7 @@ extern s32 g_active_script;
 extern s32 g_script_repeat_count;
 
 /* Dialog item list shown by the result screens. */
-extern u8* g_field_dialog_item_texts[];
+extern u8_ptr g_field_dialog_item_texts[];
 extern s32 g_field_dialog_item_count;
 extern u8 g_field_dialog_item_quantities[];
 
@@ -275,7 +275,7 @@ extern s32 g_field_duel_winner;
 extern u8 g_field_rename_custom_name[];
 extern u8 g_field_rename_initial_name[];
 extern s32 g_field_rename_item_category;
-extern u8* g_field_rename_target;
+extern u8_ptr g_field_rename_target;
 extern s32 g_field_rename_source;
 
 void akao_play_sound(s32 id);

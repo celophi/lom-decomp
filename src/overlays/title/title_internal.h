@@ -168,7 +168,7 @@ typedef struct
     s16 tex_y;   /**< +0x02: pixel-block destination VRAM Y */
     s16 clut_x;  /**< +0x04: CLUT destination VRAM X */
     s16 clut_y;  /**< +0x06: CLUT destination VRAM Y */
-    u8* src;     /**< +0x08: source TIM-style blob */
+    u8_ptr src;     /**< +0x08: source TIM-style blob */
     u32 control; /**< +0x0C: packed bits0-2=mode, bits3-12=width, bits13-22=height */
 } SaveLayoutTex; /* sizeof == 0x10 */
 

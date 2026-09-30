@@ -25,7 +25,7 @@ typedef struct
 typedef struct
 {
     s32 field_00;
-    u8* data;
+    u8_ptr data;
 } WmapResource;
 
 /** @brief Position and velocity records, also used for particle bounds. */

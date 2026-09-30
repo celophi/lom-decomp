@@ -39,6 +39,7 @@
 #define CdlDiskError      0x05
 
 typedef void (*CdlCB)(u_char status, u_char *result);
+typedef PS1_STORED(CdlCB) CdlCBPtr;
 
 typedef struct {
     u_char minute;

@@ -91,6 +91,7 @@ typedef struct
     DISPENV display_env;
     DRAWENV draw_env;
 } GolemRenderContext;
+typedef PS1_PTR(GolemRenderContext) GolemRenderContextPtr;
 
 /** @brief Availability and palette data for one logic block. */
 typedef struct
@@ -217,10 +218,10 @@ typedef struct
 extern s32 D_80122C00;
 /** @brief Two-byte little-endian offset of "+" in the shared text directory. */
 extern u8 D_800EC3DA[];
-extern GolemRenderContext* g_golem_render_buffers;
+extern GolemRenderContextPtr g_golem_render_buffers;
 extern s32 g_golem_exit_requested;
 /** @brief Word-aligned scratch memory after the render contexts. */
-extern u8* g_golem_work_buffer;
+extern u8_ptr g_golem_work_buffer;
 extern GolemFadeState g_golem_fade_target;
 extern s32 g_golem_scroll_steps;
 extern s32 g_golem_logic_block_count;

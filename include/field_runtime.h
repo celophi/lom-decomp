@@ -18,6 +18,7 @@ typedef struct FieldRenderHalf
     u8 primitive_arena[FIELD_PRIMITIVE_ARENA_SIZE];
     DR_TPAGE draw_mode;
 } FieldRenderHalf;
+typedef PS1_PTR(FieldRenderHalf) FieldRenderHalfPtr;
 
 s32 run_field_scene(void);
 void field_init_text_renderer(FieldRenderHalf* render_buffers);

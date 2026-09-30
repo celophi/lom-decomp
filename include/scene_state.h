@@ -13,6 +13,7 @@ typedef struct
     s32 camera_z;
     u32 pixel_lookup_selector;
 } SceneState;
+typedef PS1_PTR(SceneState) SceneStatePtr;
 
 /** @brief Scene state block kept at a fixed RAM address across overlays. */
 #define SCENE_STATE ((SceneState*)SCENE_STATE_ADDRESS)

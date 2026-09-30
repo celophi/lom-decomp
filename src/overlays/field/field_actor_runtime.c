@@ -260,6 +260,7 @@ typedef struct FieldCdBuffer
     u16 height;
     u16 data;
 } FieldCdBuffer;
+typedef PS1_PTR(FieldCdBuffer) FieldCdBufferPtr;
 
 /** @brief Action command map of one controller: command words and disable flags. */
 typedef struct
@@ -327,7 +328,7 @@ extern s32 g_field_camera_offset_z;
 extern u8 g_field_resource_buffer[];
 extern FieldAnimationDef g_field_object_default_animation;
 extern s32 g_field_loaded_actor_count;
-extern void* g_field_resource_cursor;
+extern void_ptr g_field_resource_cursor;
 extern s32 g_field_scene_mode_bit;
 extern FieldDirectionOffset g_field_direction_offsets[];
 extern s32 g_field_active_group;
@@ -339,7 +340,7 @@ extern s32 D_80105770;
 extern s32 D_800F2298;
 extern s32 g_field_modal_state;
 extern s32 D_80105760;
-extern FieldCdBuffer* g_field_cd_buffer;
+extern FieldCdBufferPtr g_field_cd_buffer;
 extern s32 g_field_dialog_screen_mode;
 extern s32 g_field_duel_mode[];
 extern FieldActionCommandMap g_field_action_command_maps[];
@@ -1915,7 +1916,7 @@ static void field_relocate_resource_buffer(s32 resource_index)
     u32 resource_size;
     FieldActor* actor;
     u8* old_start;
-    void** cursor_ref;
+    void_ptr* cursor_ref;
     u8* source_base;
     u8* buffer_base;
 

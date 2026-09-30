@@ -49,8 +49,8 @@ extern s32 g_field_sound_bank_id;
 extern s32 g_field_secondary_music_id;
 extern s32 g_pending_game_state;
 extern s32 g_field_scene_request_pending;
-extern FieldRenderHalf* g_field_current_render_half;
-extern void* g_field_primitive_cursor;
+extern FieldRenderHalfPtr g_field_current_render_half;
+extern void_ptr g_field_primitive_cursor;
 extern s32 g_field_force_two_primitives;
 extern s32 g_field_draw_count;
 extern s32 g_text_clut_base;
@@ -58,7 +58,7 @@ extern s32 g_text_cursor_x;
 extern s32 g_text_cursor_y;
 extern u8 g_overlay_load_base;
 
-void* const g_overlay_load_address = &g_overlay_load_base;
+const void_ptr g_overlay_load_address = &g_overlay_load_base;
 
 void field_run_frame_loop(FieldRenderHalf* render_buffers);
 void field_init_display(FieldRenderHalf* render_buffers);

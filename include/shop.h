@@ -18,6 +18,7 @@ typedef struct
     u8 packets[0x4000];
     u8* prim_cursor;
 } ShopPacketBuffer;
+typedef PS1_PTR(ShopPacketBuffer) ShopPacketBufferPtr;
 
 /** @brief Entry id bit marking an entry that refers to an inventory record. */
 #define SHOP_ENTRY_RECORD_FLAG 0x8000
@@ -30,6 +31,7 @@ typedef struct ShopEntry
     u16 count; /**< Remaining stock; zero means unlimited. */
     s32 price;
 } ShopEntry;
+typedef PS1_PTR(ShopEntry) ShopEntryPtr;
 
 void shop_init(u8* work, s32 is_buying, s32 entry_count, ShopEntry* entries, FieldItemRecord* item_records, s32 title_text_id);
 s32 shop_update(ShopFrameContext* ctx);

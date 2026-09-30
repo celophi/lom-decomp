@@ -110,6 +110,10 @@ typedef struct
  * @brief Packed window position, dimensions, animation state, and draw callback.
  * @note Width is split between attr.word bits 24..31 and dimensions.f.width_high.
  */
+/** @brief Draws an element's primitives. */
+typedef s32 (*NikiElementDrawFunc)(s32* ot, s32 prim, s32 x_offset, s32 y_offset);
+typedef PS1_STORED(NikiElementDrawFunc) NikiElementDrawPtr;
+
 typedef struct NikiElement
 {
     union
@@ -140,7 +144,7 @@ typedef struct NikiElement
             u32 reserved : 23;
         } f;
     } dimensions;
-    s32 (*draw)(s32* ot, s32 prim, s32 x_offset, s32 y_offset);
+    NikiElementDrawPtr draw;
 } NikiElement;
 
 /** @brief Bytes read to show an entry: the card header and the first 0x100 bytes of the saved game. */
@@ -340,7 +344,7 @@ extern s32 g_niki_selection_status;
 extern s32 g_niki_frame_parity;
 extern s32 g_niki_progress_active;
 /** @brief The saved game's item records (g_saved_game_ctx->items). */
-extern FieldItemRecord* g_niki_items;
+extern FieldItemRecordPtr g_niki_items;
 extern s32 g_niki_selected_row;
 extern s32 g_pad_input;
 extern s32 g_niki_scroll_frames;

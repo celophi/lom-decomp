@@ -32,7 +32,7 @@ typedef enum
 extern s32 g_card_slot;
 
 /** @brief Current command in the overlay's card sequence bytecode. */
-extern u8* g_card_step;
+extern u8_ptr g_card_step;
 
 /** @brief Step table the sequence waits on after a restart. */
 extern u8 g_card_steps_idle[];

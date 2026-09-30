@@ -97,8 +97,8 @@ struct FieldTextConfig
     u8* text;
 };
 
-extern u8* g_field_scene_portraits;
-extern u8* g_field_scene_strings;
+extern u8_ptr g_field_scene_portraits;
+extern u8_ptr g_field_scene_strings;
 extern FieldTextWindowRect g_field_text_window_layouts[][FIELD_TEXT_WINDOW_SLOTS];
 
 /**

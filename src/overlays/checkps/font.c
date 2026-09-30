@@ -103,7 +103,7 @@ s32 g_glyph_cursor_x;
 s32 g_glyph_cursor_y;
 
 /** Next free 4bpp glyph block in the CPU-side staging buffer. */
-u8* g_glyph_raster_cursor;
+u8_ptr g_glyph_raster_cursor;
 
 /** Screen-space X coordinate restored when text wraps. */
 s32 g_text_line_start_x;

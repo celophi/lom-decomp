@@ -6,6 +6,12 @@
 
 /** @brief Sequence callback: nonzero initializes; zero advances one update. */
 typedef s32 (*WmapSequenceCallback)(s32 initialize);
+/** @brief Stored sequence callback, installed at run time. */
+typedef PS1_STORED(WmapSequenceCallback) WmapSequenceCallbackPtr;
+
+/** @brief One step of a world-map state machine; step tables hold them by step index. */
+typedef void (*WmapStepHandler)(void);
+typedef PS1_CODE(WmapStepHandler) WmapStepHandlerSlot;
 
 s32 wmap_run_land_focus(s32 reset);
 void wmap_update_sequences(void);

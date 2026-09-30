@@ -6,8 +6,9 @@ struct SPRT;
 
 typedef struct FieldOrderingTags FieldOrderingTags;
 typedef struct FieldTextConfig FieldTextConfig;
+typedef PS1_PTR(FieldTextConfig) FieldTextConfigPtr;
 
-extern FieldTextConfig* g_field_text_saved_configs;
+extern FieldTextConfigPtr g_field_text_saved_configs;
 
 /** @brief field_draw_text / field_draw_number alignment, in the FIELD_TEXT_ALIGN_MASK bits of their flags. */
 #define FIELD_TEXT_ALIGN_LEFT 0   /**< x is the left edge. */
@@ -30,7 +31,7 @@ typedef struct
 {
     u8 character_limit;
     u8 _pad1[3];
-    u8* text;
+    u8_ptr text;
 } FieldTextMacro;
 
 extern FieldTextMacro g_field_text_macros[];

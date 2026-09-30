@@ -141,10 +141,10 @@ extern CheckPSCdResponseBuffer g_cd_response;
 extern s32 g_cd_irq_code_sum;
 extern u8 g_cd_response_byte2;
 extern u8 g_cd_response_payload[CHECKPS_CD_RESPONSE_PAYLOAD_SIZE];
-extern volatile u8* g_cd_status_register;
-extern volatile u8* g_cd_response_register;
-extern volatile u8* g_cd_data_register;
-extern volatile u8* g_cd_irq_register;
+extern CheckPSCdRegisterPtr g_cd_status_register;
+extern CheckPSCdRegisterPtr g_cd_response_register;
+extern CheckPSCdRegisterPtr g_cd_data_register;
+extern CheckPSCdRegisterPtr g_cd_irq_register;
 
 /*
  * This unit's own .bss. It is linked between init.o(.bss) and font.o(.bss),

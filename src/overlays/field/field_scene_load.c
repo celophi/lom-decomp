@@ -296,7 +296,7 @@ void field_load_map(u16 map_id)
     u8* texture;
     FieldMapObject* object;
     u_long* image;
-    FieldMapObject** objects;
+    FieldMapObjectPtr* objects;
 
     DrawSync(0);
     if (map_id < FIELD_MAP_QUEUED_READ_LIMIT)
@@ -367,7 +367,7 @@ void field_load_map(u16 map_id)
  */
 static void field_select_object(u16 object_index, FieldRenderHalf* buffers)
 {
-    FieldMapObject** objects = g_field_objects;
+    FieldMapObjectPtr* objects = g_field_objects;
     FieldMapBounds* bounds = FIELD_MAP_BOUNDS;
     u16 remaining = object_index;
     FieldMapObject* object;
