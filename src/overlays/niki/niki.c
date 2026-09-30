@@ -518,8 +518,8 @@ static inline s32 niki_draw_scan_message(s32* ot, s32 prim, s32 x_offset, s32 y_
     u8* glyph_table;
 
     x = -x_offset + 0x84;
-    glyph_table = (u8*)&D_801470F8;
-    prim = func_800A88A0(prim, ot, glyph_table + D_801470F8, 4, x, -y_offset, 2);
+    glyph_table = (u8*)&g_niki_text_table;
+    prim = func_800A88A0(prim, ot, glyph_table + g_niki_text_table, 4, x, -y_offset, 2);
     prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_table, 0x1E), 4, x, 0xE - y_offset, 2);
     prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_table, 0xB2), 4, x, 0x1C - y_offset, 2);
     return prim;
@@ -541,22 +541,22 @@ s32 niki_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     switch (state)
     {
     case 0xF8:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014712C, 0x34), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_no_game_save_data, 0x34), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xF9:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014712C, 0x34), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_no_game_save_data, 0x34), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFA:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_801470FA, 2), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_not_enough_blocks, 2), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFD:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_801470FC, 4), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_no_card, 4), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFB:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147108, 0x10), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_card_access_failed, 0x10), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFC:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014710A, 0x12), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_no_save_data, 0x12), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFE:
         break;
@@ -583,7 +583,7 @@ s32 niki_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             s32 row_top;
             u8* glyph_table;
 
-            glyph_table = (u8*)&D_801470F8;
+            glyph_table = (u8*)&g_niki_text_table;
             base_x = -x_offset;
             do
             {
@@ -597,7 +597,7 @@ s32 niki_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                         pos.x = base_x + NIKI_ENTRY_VALUE_X;
                         pos.y = row_y;
                         prim = func_800A8A78(ot, prim, g_card_entry_suffix_values[entry_index], 4, &pos, 0);
-                        prim = func_800A88A0(prim, ot, (void*)((s32)D_80147126 + (s32)glyph_table), 4, base_x + 0x70, row_y, 0);
+                        prim = func_800A88A0(prim, ot, (void*)((s32)g_niki_text_number_label + (s32)glyph_table), 4, base_x + 0x70, row_y, 0);
                         if ((g_niki_rank_count - 1) == *rank)
                         {
                             marker_offset = *(u16*)(glyph_table + 0x36);
@@ -610,24 +610,24 @@ s32 niki_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                         }
                         if (*skip_hex_digits(&g_card_entries[g_card_slot][entry_index].name[12]) == '+')
                         {
-                            prim = func_800A88A0(prim, ot, (void*)((s32)D_801471A8 + (s32)glyph_table), 4, 0xF2 - x_offset, row_y, 1);
+                            prim = func_800A88A0(prim, ot, (void*)((s32)g_niki_text_plus_marker + (s32)glyph_table), 4, 0xF2 - x_offset, row_y, 1);
                         }
                     }
                     if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][entry_index].name, 0xC) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, glyph_table + D_801470FE, 4, 1 - x_offset, row_y, 0);
+                        prim = func_800A88A0(prim, ot, glyph_table + g_niki_text_mana_label, 4, 1 - x_offset, row_y, 0);
                     }
                     else if (strncmp(D_800ECF8C, g_card_entries[g_card_slot][entry_index].name, 0xC) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, (void*)((s32)D_80147132 + (s32)glyph_table), 4, 1 - x_offset, row_y, 0);
+                        prim = func_800A88A0(prim, ot, (void*)((s32)g_niki_text_ring_ring_land_label + (s32)glyph_table), 4, 1 - x_offset, row_y, 0);
                     }
                     else if (strncmp(D_800ECFC4, g_card_entries[g_card_slot][entry_index].name, 8) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, glyph_table + D_8014710C, 4, 1 - x_offset, row_y, 0);
+                        prim = func_800A88A0(prim, ot, glyph_table + g_niki_text_new_save_label, 4, 1 - x_offset, row_y, 0);
                     }
                     else
                     {
-                        prim = func_800A88A0(prim, ot, (void*)((s32)D_80147100 + (s32)glyph_table), 4, 1 - x_offset, row_y, 0);
+                        prim = func_800A88A0(prim, ot, (void*)((s32)g_niki_text_other_game_label + (s32)glyph_table), 4, 1 - x_offset, row_y, 0);
                     }
                 }
                 entry_index++;
@@ -670,11 +670,11 @@ s32 niki_draw_header_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 
     if (g_niki_mode == 1)
     {
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014713E, 0x46), 4, -x_offset + 0x78, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_select_item, 0x46), 4, -x_offset + 0x78, -y_offset, 2);
     }
     else
     {
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014713C, 0x44), 4, -x_offset + 0x78, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_select_save_data, 0x44), 4, -x_offset + 0x78, -y_offset, 2);
     }
     return prim;
 }
@@ -706,7 +706,7 @@ s32 niki_draw_card_slot0_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         *ot = (*ot & GPU_TAG_HIGH_MASK) | ((s32)tile & GPU_ADDR_MASK);
         prim += sizeof(NikiTile);
     }
-    return func_800A88A0(prim, ot, GLYPH_SYM(D_80147104, 0xC), 4, -x_offset + NIKI_CARD_LABEL_TEXT_X, -y_offset, 2);
+    return func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_card_slot0_label, 0xC), 4, -x_offset + NIKI_CARD_LABEL_TEXT_X, -y_offset, 2);
 }
 
 /**
@@ -737,7 +737,7 @@ s32 niki_draw_card_slot1_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         prim += sizeof(NikiTile);
     }
 
-    return func_800A88A0(prim, ot, GLYPH_SYM(D_80147106, 0xE), 4, -x_offset + NIKI_CARD_LABEL_TEXT_X, -y_offset, 2);
+    return func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_card_slot1_label, 0xE), 4, -x_offset + NIKI_CARD_LABEL_TEXT_X, -y_offset, 2);
 }
 
 /**
@@ -780,8 +780,8 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
             s32 x = -x_offset;
             u8* base;
 
-            result = func_800A88A0(prim, ot, GLYPH_SYM(D_80147120, 0x28), 4, x, -y_offset, 0);
-            base = (u8*)&D_80147120 - 0x28;
+            result = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_new_save_title, 0x28), 4, x, -y_offset, 0);
+            base = (u8*)&g_niki_text_new_save_title - 0x28;
             return func_800A88A0(result, ot, GLYPH_OFF(base, 0x2A), 4, x, 0x10 - y_offset, 0);
         }
         else
@@ -904,11 +904,11 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
 
                         if (preview->identity.ids.game_id == g_saved_game_ctx->identity.ids.game_id)
                         {
-                            result = func_800A88A0(result, ot, GLYPH_SYM(D_80147148, 0x50), 4, x + NIKI_DETAILS_TEXT_X, y + 0x20, 0);
+                            result = func_800A88A0(result, ot, GLYPH_SYM(g_niki_text_same_hero_data, 0x50), 4, x + NIKI_DETAILS_TEXT_X, y + 0x20, 0);
                         }
                         else if (preview->summary_slot_count == 0)
                         {
-                            result = func_800A88A0(result, ot, GLYPH_SYM(D_80147146, 0x4E), 4, x + NIKI_DETAILS_TEXT_X, y + 0x20, 0);
+                            result = func_800A88A0(result, ot, GLYPH_SYM(g_niki_text_no_items, 0x4E), 4, x + NIKI_DETAILS_TEXT_X, y + 0x20, 0);
                         }
                         else
                         {
@@ -919,7 +919,7 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
                 }
                 else
                 {
-                    result = func_800A88A0(result, ot, GLYPH_SYM(D_8014714C, 0x54), 4, -x_offset, -y_offset, 0);
+                    result = func_800A88A0(result, ot, GLYPH_SYM(g_niki_text_wrong_version, 0x54), 4, -x_offset, -y_offset, 0);
                 }
             }
             else
@@ -1182,7 +1182,8 @@ s32 niki_draw_confirm_prompt(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     NikiElement* element;
 
     x = -x_offset + 0x90;
-    result = niki_draw_choice_prompt(func_800A88A0(prim, ot, (u8*)&D_80147128 + D_80147128 - 0x30, 4, x, -y_offset, 2), ot, x, 0xE - y_offset);
+    result = niki_draw_choice_prompt(func_800A88A0(prim, ot, (u8*)&g_niki_text_load_prompt + g_niki_text_load_prompt - 0x30, 4, x, -y_offset, 2), ot, x,
+                                     0xE - y_offset);
 
     if ((u32)(poll_and_retry_card_info() - 1) < 2U)
     {
@@ -1257,8 +1258,8 @@ s32 niki_draw_save_confirm_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     s32 element_index;
 
     x = -x_offset + 0x90;
-    result = func_800A88A0(prim, ot, (void*)((s32)&D_8014712A - 0x32 + D_8014712A), 4, x, -y_offset, 2);
-    base = (u8*)&D_8014712A - 0x32;
+    result = func_800A88A0(prim, ot, (void*)((s32)&g_niki_text_loading - 0x32 + g_niki_text_loading), 4, x, -y_offset, 2);
+    base = (u8*)&g_niki_text_loading - 0x32;
     result = func_800A88A0(result, ot, base + *(u16*)(base + 0x1E), 4, x, 0xE - y_offset, 2);
     result = func_800A88A0(result, ot, base + *(u16*)(base + 0xB2), 4, x, 0x1C - y_offset, 2);
     result = niki_draw_progress_bar(result, ot);
@@ -1416,17 +1417,17 @@ s32 niki_draw_status_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     switch (g_niki_dialog_state)
     {
     case 0:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147134, 0x3C), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_save_failed, 0x3C), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 2:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147138, 0x40), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_card_not_inserted, 0x40), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 3:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014713A, 0x42), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_not_pocketstation, 0x42), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 1:
     case 4:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147136, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_load_failed, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     }
     if (g_pad_input & NIKI_CONFIRM_INPUT_MASK)
@@ -1454,17 +1455,17 @@ s32 niki_draw_secondary_status_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_off
     switch (g_niki_dialog_state)
     {
     case 0:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147134, 0x3C), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_save_failed, 0x3C), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 2:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147138, 0x40), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_card_not_inserted, 0x40), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 3:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014713A, 0x42), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_not_pocketstation, 0x42), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 1:
     case 4:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147136, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_load_failed, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     }
     if (g_pad_input & NIKI_CONFIRM_INPUT_MASK)
@@ -1637,36 +1638,36 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     switch (dispatch)
     {
     case 0xf8:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014712C, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_no_game_save_data, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xf9:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014712C, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_no_game_save_data, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xff:
     {
         s32 x;
         u8* base;
         x = -x_offset + 0x90;
-        base = (u8*)&D_801470F8;
-        prim = func_800A88A0(prim, ot, base + D_801470F8, 4, x, -y_offset, 2);
+        base = (u8*)&g_niki_text_table;
+        prim = func_800A88A0(prim, ot, base + g_niki_text_table, 4, x, -y_offset, 2);
         prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
         prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
     }
     break;
     case 0xfa:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014712C, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_no_game_save_data, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xfd:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_801470FC, 4), 4, -x_offset + 0x90, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_no_card, 4), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xfb:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147108, 0x10), 4, -x_offset + 0x90, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_card_access_failed, 0x10), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xfc:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014710A, 0x12), 4, -x_offset + 0x90, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_no_save_data, 0x12), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xf7:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147160, 0x68), 4, -x_offset + 0x90, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_no_load_file, 0x68), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xf6:
     {
@@ -1680,8 +1681,8 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         s32 dialog_state;
 
         x = -x_offset + 0x90;
-        prim = func_800A88A0(prim, ot, (void*)((s32)&D_8014712A - 0x32 + D_8014712A), 4, x, -y_offset, 2);
-        base = (u8*)&D_8014712A - 0x32;
+        prim = func_800A88A0(prim, ot, (void*)((s32)&g_niki_text_loading - 0x32 + g_niki_text_loading), 4, x, -y_offset, 2);
+        base = (u8*)&g_niki_text_loading - 0x32;
         prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
         prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
 
@@ -1767,7 +1768,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         s32 i;
 
         x = -x_offset;
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014716A, 0x72), 4, x + 0x90, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_trade_data_not_saved, 0x72), 4, x + 0x90, -y_offset, 2);
         y = 0xE - y_offset;
         p = (u8*)&D_800EC3FA;
         offset_high = p[1] << 8;
@@ -1846,8 +1847,8 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         s32 checksum;
 
         x = -x_offset;
-        prim = func_800A88A0(prim, ot, (void*)((s32)&D_80147162 - 0x6A + D_80147162), 4, x + 0x90, -y_offset, 2);
-        caption_table = (u8*)&D_80147162 - 0x6A;
+        prim = func_800A88A0(prim, ot, (void*)((s32)&g_niki_text_found_load_file - 0x6A + g_niki_text_found_load_file), 4, x + 0x90, -y_offset, 2);
+        caption_table = (u8*)&g_niki_text_found_load_file - 0x6A;
         prim = func_800A88A0(prim, ot, GLYPH_OFF(caption_table, 0x70), 4, x + 0x90, 0xE - y_offset, 2);
 
         y = 0x1C - y_offset;
@@ -1921,8 +1922,8 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         s32 i;
 
         x = -x_offset + 0x90;
-        prim = func_800A88A0(prim, ot, (void*)((s32)&D_80147114 - 0x1C + D_80147114), 4, x, -y_offset, 2);
-        base = (u8*)&D_80147114 - 0x1C;
+        prim = func_800A88A0(prim, ot, (void*)((s32)&g_niki_text_saving - 0x1C + g_niki_text_saving), 4, x, -y_offset, 2);
+        base = (u8*)&g_niki_text_saving - 0x1C;
         prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
         prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
 
@@ -1983,8 +1984,8 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         s32 diff;
 
         x = -x_offset + 0x90;
-        base = (u8*)&D_801470F8;
-        prim = func_800A88A0(prim, ot, base + D_801470F8, 4, x, -y_offset, 2);
+        base = (u8*)&g_niki_text_table;
+        prim = func_800A88A0(prim, ot, base + g_niki_text_table, 4, x, -y_offset, 2);
         prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
         prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
 

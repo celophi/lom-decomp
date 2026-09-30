@@ -59,11 +59,11 @@ s32 func_801405B0(RenderContext* render_buffers)
         DrawSync(0);
         VSync(0);
         SetDispMask(1);
-        D_80168C08 = 0;
+        g_menu_display_delay = 0;
     }
     else
     {
-        D_80168C08 = 2;
+        g_menu_display_delay = 2;
     }
     while (1)
     {
@@ -98,10 +98,10 @@ s32 func_801405B0(RenderContext* render_buffers)
         cdrom_process_state();
         if (g_active_script == 0)
         {
-            if (D_80168C08 != 0)
+            if (g_menu_display_delay != 0)
             {
-                D_80168C08--;
-                if (D_80168C08 != 0)
+                g_menu_display_delay--;
+                if (g_menu_display_delay != 0)
                 {
                     DrawSync(0);
                     VSync(0);

@@ -709,7 +709,8 @@ extern s32 g_menu_cursor_enable;
 extern s32 g_menu_draw_early_out;
 /** @brief Base address of the menu double-buffered DRAWENV array. */
 extern RenderContext* g_menu_draw_buf_base;
-extern s32 D_80168C08;
+/** @brief Display-enable countdown: set to 2 when the menu opens during a script, counted down once the script ends. */
+extern s32 g_menu_display_delay;
 /** @brief When non-zero, suppresses cursor highlight even on the active slot. */
 extern s32 g_menu_suppress_cursor;
 /** @brief Scene/language selector used in window title decoration layout switches. */

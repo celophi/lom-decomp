@@ -166,6 +166,7 @@ g_menu_scroll_nav_entries = 0x80168C70;
 g_menu_message_line1   = 0x801690A8;
 g_menu_cursor_enable   = 0x80169130;
 g_menu_draw_early_out  = 0x80168C18;
+g_menu_display_delay        = 0x80168C08;
 g_menu_draw_buf_base        = 0x80168C0C;
 g_menu_suppress_cursor = 0x80168C28;
 g_menu_scene_type      = 0x80169548;
@@ -200,6 +201,18 @@ g_menu_active_subtype  = 0x80169118;
 g_menu_char_slot       = 0x80169550;
 g_menu_page_count      = 0x801690FC;
 g_menu_companion_node  = 0x80169324;
+
+// Data inside menu_data that the C sources reference by address name.
+D_80168659    = 0x80168659;
+D_80168696    = 0x80168696;
+D_8016869B    = 0x8016869B;
+D_8016869F    = 0x8016869F;
+D_801686A0    = 0x801686A0;
+D_801686B8    = 0x801686B8;
+D_80168C20    = 0x80168C20;
+D_80168C24    = 0x80168C24;
+D_80168C30    = 0x80168C30;
+D_80168C6C    = 0x80168C6C;
 
 // Field dialogue/text renderer exports used by this overlay.
 field_text_build_sprites             = 0x800644FC;

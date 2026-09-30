@@ -14,6 +14,13 @@
 ## 関連資料
 
 - [シーン抽出ツール](technical/reference/scene-extractor.md) - シーンIMGの抽出方法、YAMLの項目、元のバイト列の保持について。
+- [ZUKANのリソース](technical/reference/zukan-resources.md) - 図鑑画面のテクスチャ、UIスプライト、項目名、分類テーブルの抽出。
+- [WSELのリソース](technical/reference/wsel-resources.md) - プレイエリア選択画面の画像、スプライトレイヤー、主人公のポーズ、土地マップのグリッド表の抽出。
+- [WMAPのリソース](technical/reference/wmap-resources.md) - ワールドマップのテーブル、効果音、自動入力スクリプト、ステップテーブルの抽出。
+- [TITLEのリソース](technical/reference/title-resources.md) - タイトルメニューの画像、キャラクターと武器の選択画面、初期武器、ニューゲームの状態の抽出。
+- [SHOPのリソース](technical/reference/shop-resources.md) - 店のアイテムテキスト、装備の種別名、楽器の魔法名、売値テーブルの抽出。
+- [NIKIのリソース](technical/reference/niki-resources.md) - 日記のセーブ画面のテキスト、パーティーアイコン、カード処理シーケンス、文字表の抽出。
+- [MENUのリソース](technical/reference/menu-resources.md) - ゲーム内メニューのテクスチャ、アイコン、テキストテーブル、ページ配置、入力スクリプトの抽出。
 - [GOSUBのリソース](technical/reference/gosub-resources.md) - 作成・育成画面のテキスト、ポートレート、UIグリフ、装備分類テーブルの抽出。
 - [GOLEMのリソース](technical/reference/golem-resources.md) - ロジックグリッドの画像、ブロック名と説明、グリフ、パネルレコードの抽出。
 - [GNAMEのリソース](technical/reference/gname-resources.md) - 名前入力画面の画像、文字パネル、名前リスト、配置テーブルの抽出。

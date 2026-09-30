@@ -62,5 +62,5 @@ segments:
       - [0x9E05, c, menu_lists]
       - [0xCBFD, c, menu_actions]
       - [0xF2A5, c, menu_card]
-      - [0xFBE9, data, data]
+      - [0xFBE9, databin, menu_data]
   - [0x2B0BD]

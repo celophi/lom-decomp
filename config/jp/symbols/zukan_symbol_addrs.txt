@@ -9,6 +9,7 @@ g_zukan_category_ranges = 0x8014001C;
 g_zukan_group_ranges = 0x80140050;
 g_zukan_entry_values = 0x8014006C;
 g_zukan_display_order = 0x80140860;
+zukan_run = 0x80140E00;
 zukan_initialize_state = 0x80141094;
 zukan_upload_ui_images = 0x80141144;
 zukan_upload_tim = 0x801411C4;

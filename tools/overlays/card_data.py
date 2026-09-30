@@ -169,6 +169,39 @@ def read_text_list(blob: Blob, chart: Chart, table: int, prefix: str) -> tuple[T
     return TextList(table, tuple(entries), TEXT_NOTES[blob.version]), start + parsed.size
 
 
+def read_card_titles(blob: Blob, start: int, end: int, note: str) -> list[Part]:
+    """The Shift-JIS card title templates between blob offsets @p start and @p end.
+
+    Zero bytes between them are padding. Every range becomes a Part, but only
+    the first carries the content, because all titles go into one file.
+    """
+    ranges = []
+    position = start
+    while position < end:
+        if blob.data[position] == 0:
+            position += 1
+            continue
+        terminator = blob.data.find(b"\x00", position, end)
+        if terminator < 0:
+            raise ValueError(f"card title at offset 0x{position:X} has no terminator")
+        ranges.append((position, terminator + 1))
+        position = terminator + 1
+    if len(ranges) != len(CARD_TITLE_NOTES):
+        raise ValueError(
+            f"expected {len(CARD_TITLE_NOTES)} card titles before the location table, "
+            f"found {len(ranges)}"
+        )
+    titles = tuple(
+        CardTitle(blob.address + first, blob.data[first : last - 1].decode("shift_jis"), title_note)
+        for (first, last), title_note in zip(ranges, CARD_TITLE_NOTES)
+    )
+    parts = []
+    for index, (first, last) in enumerate(ranges):
+        content = CardTitles(titles, note) if index == 0 else None
+        parts.append(Part("card title template", first, last, "text/card_titles.yaml", content))
+    return parts
+
+
 def read_icons(blob: Blob) -> list[Part]:
     """The party icon set, plus the repeated last word that follows it."""
     start = blob.offset(blob.symbols.icon_offsets) - 4  # the icon count

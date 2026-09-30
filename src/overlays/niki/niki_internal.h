@@ -364,16 +364,47 @@ extern s32 g_niki_dialog_state;
  *        first 0x100 bytes of the saved game are read (NIKI_ENTRY_READ_BYTES).
  */
 extern SaveFile g_niki_entry_file;
-extern u16 D_80147120;
-extern u16 D_80147146;
-extern u16 D_80147148;
-extern u16 D_8014714C;
+/**
+ * @brief Card-screen message table: u16 offsets from its start, then the strings.
+ * @note Each g_niki_text_* symbol is one slot of this table; the draw code adds
+ *       the slot's value to the table address to find the string.
+ */
+extern u16 g_niki_text_table;
+extern u16 g_niki_text_not_enough_blocks;
+extern u16 g_niki_text_no_card;
+extern u16 g_niki_text_mana_label;
+extern u16 g_niki_text_other_game_label;
+extern u16 g_niki_text_card_slot0_label;
+extern u16 g_niki_text_card_slot1_label;
+extern u16 g_niki_text_card_access_failed;
+extern u16 g_niki_text_no_save_data;
+extern u16 g_niki_text_new_save_label;
+extern u16 g_niki_text_saving;
+extern u16 g_niki_text_new_save_title;
+extern u16 g_niki_text_number_label;
+extern u16 g_niki_text_load_prompt;
+extern u16 g_niki_text_loading;
+extern u16 g_niki_text_no_game_save_data;
+extern u16 g_niki_text_ring_ring_land_label;
+extern u16 g_niki_text_save_failed;
+extern u16 g_niki_text_load_failed;
+extern u16 g_niki_text_card_not_inserted;
+extern u16 g_niki_text_not_pocketstation;
+extern u16 g_niki_text_select_save_data;
+extern u16 g_niki_text_select_item;
+extern u16 g_niki_text_no_items;
+extern u16 g_niki_text_same_hero_data;
+extern u16 g_niki_text_wrong_version;
+extern u16 g_niki_text_no_load_file;
+extern u16 g_niki_text_found_load_file;
+extern u16 g_niki_text_trade_data_not_saved;
+extern u16 g_niki_text_plus_marker;
+/** @brief Location names, picked by the music track stored in a save. */
 extern u16 g_niki_location_names[];
 extern u8 D_800EC3F6[2];
 extern u8 D_800EC3FA[];
 extern u8 g_field_ui_text_cant_hold_more[];
 extern s32 g_menu_element_counter;
-extern u16 D_80147128;
 extern s32 g_niki_choice_toggle;
 
 /** @brief g_niki_choice_toggle values: the selected choice of a confirmation prompt. */
@@ -391,7 +422,6 @@ extern s32 g_niki_choice_toggle;
 #endif
 /** @brief Reset retries and read the selected save into the transfer buffer. */
 extern u8 g_niki_load_save_sequence[];
-extern u16 D_8014712A;
 extern NikiSaveBuffer g_niki_save_blob;
 extern u8 D_8011F3D8[];
 /** @brief Path selected for loading or replacing a save file. */
@@ -405,34 +435,11 @@ extern s32 g_niki_progress_bar_active;
 extern s32 g_niki_progress_start_tick;
 extern char D_800ECF8C[];
 extern char D_800ECFC4[];
-extern u16 D_801470F8;
-extern u16 D_801470FA;
-extern u16 D_801470FC;
-extern u16 D_801470FE;
-extern u16 D_80147100;
-extern u16 D_80147108;
-extern u16 D_8014710A;
-extern u16 D_8014710C;
-extern u16 D_80147126;
-extern u16 D_8014712C;
-extern u16 D_80147132;
-extern u16 D_80147134;
-extern u16 D_80147136;
-extern u16 D_80147138;
-extern u16 D_8014713A;
-extern u16 D_801471A8;
 extern s32 g_niki_entry_ranks[];
 extern s32 g_niki_rank_count;
+/** @brief Party icon offsets, counted from the icon count word just before them. */
 extern s32 g_niki_icon_offsets[];
 extern u8 g_niki_icon_context[];
-extern u16 D_8014713C;
-extern u16 D_8014713E;
-extern u16 D_80147104;
-extern u16 D_80147106;
-extern u16 D_80147114;
-extern u16 D_80147160;
-extern u16 D_80147162;
-extern u16 D_8014716A;
 /** @brief Read the existing save before modifying and writing it back. */
 extern u8 g_niki_read_saved_copy_sequence[];
 /** @brief Reset retries and write the replacement save. */
@@ -450,7 +457,7 @@ extern s32 g_niki_secondary_poll_countdown;
 extern s32 g_niki_preserve_old_save;
 /** @brief Path written before renaming the replacement to the selected save path. */
 extern u8 g_niki_temporary_save_path[];
-/** @brief Hold at unhandled command 14 until the menu chooses another sequence. */
+/** @brief Directory search path matching every file on the card ("bu00:*"). */
 extern const char g_niki_entry_header_template[7] __attribute__((aligned(4)));
 /** @brief Read and poll the selected entry's preview header. */
 extern u8 g_niki_preview_sequence[];

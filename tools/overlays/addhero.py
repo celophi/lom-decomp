@@ -32,13 +32,10 @@ import shutil
 import sys
 import tempfile
 
-from tools.overlays import splat_config, symbols, text_table
+from tools.overlays import card_data, splat_config, symbols, text_table
 from tools.overlays.card_data import (
-    CARD_TITLE_NOTES,
     CardSteps,
     CardSymbols,
-    CardTitle,
-    CardTitles,
     Chart,
     StepSequence,
     read_digit_glyphs,
@@ -175,31 +172,7 @@ def read_locations(blob: Blob[AddheroSymbols], chart: Chart) -> Part:
 
 def read_card_titles(blob: Blob[AddheroSymbols], start: int) -> list[Part]:
     """The two Shift-JIS card title templates between the message and location tables."""
-    end = blob.offset(blob.symbols.locations)
-    ranges = []
-    position = start
-    while position < end:
-        if blob.data[position] == 0:
-            position += 1
-            continue
-        terminator = blob.data.index(b"\x00", position)
-        ranges.append((position, terminator + 1))
-        position = terminator + 1
-    if len(ranges) != len(CARD_TITLE_NOTES):
-        raise ValueError(
-            f"expected {len(CARD_TITLE_NOTES)} card titles before the location table, "
-            f"found {len(ranges)}"
-        )
-    titles = tuple(
-        CardTitle(blob.address + first, blob.data[first : last - 1].decode("shift_jis"), note)
-        for (first, last), note in zip(ranges, CARD_TITLE_NOTES)
-    )
-    # Both ranges go into one file, so only the first part carries the content.
-    parts = []
-    for index, (first, last) in enumerate(ranges):
-        content = CardTitles(titles, CARD_TITLES_NOTE) if index == 0 else None
-        parts.append(Part("card title template", first, last, "text/card_titles.yaml", content))
-    return parts
+    return card_data.read_card_titles(blob, start, blob.offset(blob.symbols.locations), CARD_TITLES_NOTE)
 
 
 def read_card_steps(blob: Blob[AddheroSymbols]) -> Part:

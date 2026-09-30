@@ -96,12 +96,22 @@ typedef struct
     ShopDrawFunc draw;
 } ShopWindow;
 
+/** @brief Sections of the overlay text archive (g_shop_text_archive). */
+typedef enum
+{
+    SHOP_TEXT_ITEM_DESCRIPTIONS = 0, /**< Class and ingredient role of each item kind; the detail title of a plain item. */
+    SHOP_TEXT_ITEM_NAMES = 1,        /**< Name of each item kind; the first 64 double as equipment materials. */
+    SHOP_TEXT_EQUIPMENT_TYPES = 2,   /**< Weapon, armor and instrument type names. */
+    SHOP_TEXT_INSTRUMENT_SPELLS = 3, /**< Instrument spell names, one row per spirit. */
+    SHOP_TEXT_SECTION_COUNT = 4
+} ShopTextSection;
+
 /** @brief Header of the overlay's text archive; each section is a table of u16 string offsets. */
 typedef struct
 {
     u16 section_count;
     u16 unused;
-    u32 section_offsets[4];
+    u32 section_offsets[SHOP_TEXT_SECTION_COUNT];
 } ShopTextArchive;
 
 /**

@@ -52,5 +52,5 @@ segments:
       - [0xE01, c, shop_render]
       - [0x2125, c, shop_text]
       - [0x2279, c, shop_trade]
-      - [0x2CF9, data, data]
+      - [0x2CF9, databin, shop_data]
   - [0x586D]
