@@ -10,8 +10,12 @@ writes out files you can look at.
 The extractors handle ADDHERO, the 2P hero screen; CARDA, the save and load
 screen; CHECKPS, the startup screen and CD check; CLOAD, the load screen;
 FIELD, the resident field runtime; GNAME, the name-entry screen; GOLEM, the
-logic-grid editor; and GOSUB, the workshop and companion-list screens. Extract
-the version's assets with `make splat` or `make splat VERSION=jp` first, then run:
+logic-grid editor; GOSUB, the workshop and companion-list screens; MENU, the
+in-game menu; NIKI, the diary save screen; SHOP, the shop screen; TITLE, the
+title menu and character selection; WMAP, the world map; WSEL, the play-area
+selection screen; and ZUKAN, the encyclopedia. GOVER and MOVIE have no data
+blob to export. Extract the version's assets with `make splat` or
+`make splat VERSION=jp` first, then run:
 
 ```sh
 make extract-addhero
@@ -30,6 +34,20 @@ make extract-golem
 make extract-golem VERSION=jp
 make extract-gosub
 make extract-gosub VERSION=jp
+make extract-menu
+make extract-menu VERSION=jp
+make extract-niki
+make extract-niki VERSION=jp
+make extract-shop
+make extract-shop VERSION=jp
+make extract-title
+make extract-title VERSION=jp
+make extract-wmap
+make extract-wmap VERSION=jp
+make extract-wsel
+make extract-wsel VERSION=jp
+make extract-zukan
+make extract-zukan VERSION=jp
 ```
 
 `assets/` keeps two kinds of data apart. `assets/us/` and `assets/jp/` hold what
@@ -37,7 +55,9 @@ splat extracts for the build. `assets/exports/` holds data converted into
 formats people can read. The output goes to
 `assets/exports/<version>/overlays/<overlay>/`. Set `ADDHERO_OUTPUT`,
 `CARDA_OUTPUT`, `CHECKPS_OUTPUT`, `CLOAD_OUTPUT`, `FIELD_OUTPUT`, `GNAME_OUTPUT`,
-`GOLEM_OUTPUT` or `GOSUB_OUTPUT` to pick another folder. The destination must be
+`GOLEM_OUTPUT`, `GOSUB_OUTPUT`, `MENU_OUTPUT`, `NIKI_OUTPUT`, `SHOP_OUTPUT`,
+`TITLE_OUTPUT`, `WMAP_OUTPUT`, `WSEL_OUTPUT` or `ZUKAN_OUTPUT` to pick another
+folder. The destination must be
 new; the tool won't overwrite an existing folder.
 
 ## What you get
@@ -319,10 +339,275 @@ See [GOSUB resources](../../docs/en/technical/reference/gosub-resources.md)
 ([Japanese](../../docs/jp/technical/reference/gosub-resources.md)) for the text
 counts, resource boundaries and texture placement.
 
+MENU writes:
+
+```text
+menu/
+    byte-map.yaml          every data range, plus the source of the JP character chart
+    image/
+        asset.bin          the texture resource as stored: header, TIM and second palette row
+        image.tim          original 256 x 256, 4-bit texture
+        image.yaml         header values, stored layout and all 32 palettes
+        palette_00.png ... whole texture through each palette, named by palette code
+        grid.png           the background grid assembled from its 29 sprites
+        grid.yaml          the grid sprite records
+    icons/
+        icons.yaml         113 icon rectangles and palette codes
+        001.png ...        106 icons, each cropped with its own palette
+    text/
+        resource.bin       original 34-table text resource
+        resource.yaml      table offsets, sizes and names
+        00_general.yaml ...  one file per table, with codes and raw bytes
+    content/
+        nodes.yaml         the 44 tree nodes and the item set each opens
+        group_ids.yaml     the content group of each node
+        item_counts.yaml   item counts for the 37 content groups
+        groups.yaml        each group's action codes
+        item_sets.yaml     24 item sets, 1,000 items, with decoded fields
+    tables/                label ids, input scripts and cursor icon ids
+```
+
+The texture has 32 palettes: the TIM's own 256 colors and a second 256-color
+row stored after it. Icons and grid sprites pick one with a one-byte code,
+row in the high nibble and palette in the low one, so the previews are named
+by that code. Icon PNGs use the icon's own palette; color zero is
+transparent. The grid preview draws the background at its screen positions
+without the game's tinting.
+
+Text table names come from the `MenuTextTable` enum; the other tables are
+numbered. Some US entries in table 3 point past the table's end and read the
+next table; they're marked `outside_table`. JP text decodes through the same
+version's CLOAD blob, like FIELD and GOLEM. US dictionary and control codes
+stay in braces.
+
+A few MENU symbols are index bases, not object starts. The label-id bases are
+read at an offset, so the byte map starts that table where the lowest index
+lands, and the YAML lists each base with the index of its first byte. The
+input-script table's row 0 is never played; its bytes are the last twelve
+content-table entries and are exported there. Every item set starts with an
+all-zero item, and a set runs to the next address the content table uses.
+
+The final 11,732 bytes are zero-filled menu variables and memory card
+buffers, listed in the byte map without another file. The gaps are zero
+padding, 11 bytes in US and 15 in JP; neither export needs an `unknown/`
+folder. See [MENU resources](../../docs/en/technical/reference/menu-resources.md)
+([Japanese](../../docs/jp/technical/reference/menu-resources.md)) for the
+layout and item fields.
+
+NIKI writes:
+
+```text
+niki/
+    byte-map.yaml          every range in the data blob, including padding and variables
+    text/
+        messages.yaml      the card-screen messages, with slot symbols and raw bytes
+        card_titles.yaml   the two memory card title templates, in Shift-JIS
+        locations.yaml     the 63 location names picked by music track
+    icons/
+        icons.yaml         icon ids, character groups, offsets and stored palettes
+        icon_00.png ...    the 86 party icons, 48 x 48 each
+    tables/
+        card_steps.yaml    eight card sequences, named from NikiLoadCommand
+        digit_glyphs.yaml  full-width decimal and hexadecimal digits
+        text_conversion.yaml   the character chart and its Shift-JIS mappings
+```
+
+NIKI is the diary screen. It carries the same card-screen resources as
+ADDHERO: 91 messages in US and 90 in JP, the location table, the party icons,
+the card title templates, the chart and the digits. About 30 messages have a
+`g_niki_text_*` symbol, and the export shows it next to the entry. JP text is
+decoded through NIKI's own chart, so CLOAD isn't needed.
+
+The step export follows each named sequence to `NIKI_COMMAND_STOP`. One byte
+just before `g_niki_write_save_sequence` is never run, since the code starts
+one byte later. It's listed under `unreached`, and the table's raw bytes are
+kept too. Command 14, the idle wait, has no name in the enum and shows as
+`0x0E`.
+
+The blob runs to the end of the overlay. Its final 53,264 bytes are NIKI's
+variables and buffers, all zero on disc, recorded in the byte map without
+another file. The other gaps are zero padding in both versions, so neither
+export has an `unknown/` folder. The `bu00:` paths and the full-width MAX text
+stay with the C code that defines them. See [NIKI resources](../../docs/en/technical/reference/niki-resources.md)
+([Japanese](../../docs/jp/technical/reference/niki-resources.md)) for the layout.
+
+SHOP writes:
+
+```text
+shop/
+    byte-map.yaml          every data range, plus the source of the JP character chart
+    text/
+        archive.bin        original four-section text archive
+        archive.yaml       section offsets
+        item_descriptions.yaml  256 item class lines, one per item kind
+        item_names.yaml    256 item names; the first 64 are also equipment materials
+        equipment_types.yaml    32 weapon, armor and instrument type names
+        instrument_spells.yaml  112 spell names, 14 for each of 8 spirits
+    tables/
+        sell_prices.yaml   the sell price of every item kind, with its name
+```
+
+SHOP has no images. Its text archive holds what the list and detail windows
+show, and each entry keeps its index, so item names and descriptions line up
+with item kinds. Equipment type entries note their category and type number,
+and spell entries note their spirit and spell number, which is how the shop
+looks them up. JP text uses CLOAD's character chart; US dictionary and control
+codes stay in braces. Buy prices don't live in SHOP: the field script that
+opens a shop passes the stock and its prices.
+
+The last 2,860 bytes of both blobs are the shop's zero-filled variables and
+list buffer, listed in the byte map without another output file. Neither
+version has unknown gaps. See [SHOP resources](../../docs/en/technical/reference/shop-resources.md)
+([Japanese](../../docs/jp/technical/reference/shop-resources.md)) for the
+archive layout and the spacing codes in the item descriptions.
+
+TITLE writes:
+
+```text
+title/
+    byte-map.yaml          every data range, plus the source of the JP character chart
+    title_menu/
+        offsets.yaml       count and self-relative offsets of the two menu TIMs
+        menu_items/        256 x 256 4-bit menu text: image.tim, image.yaml, 16 palette PNGs
+        backdrop/          320 x 240 16-bit title backdrop: image.tim, image.yaml, image.png
+        cursor_blink.yaml  the cursor's texture U for its four blink frames
+    save_slot_menu/
+        textures.yaml      VRAM position of each of the 11 selection-screen TIMs
+        textures/00 ... 10 each TIM with its image.yaml and palette preview
+        panel_uvs.yaml     12 pose rectangles for the right side, in pixels
+        sprite_uvs.yaml    12 pose rectangles for the left side, in pixels
+        layout.yaml        the 27 screen primitives with their starting values
+        starting_weapons.yaml  11 item records, one per weapon type
+    game_state/
+        new_game.yaml/.bin     the New Game state (SavedGameLayout plus 0x1E5C more bytes)
+        alternate.yaml/.bin    a second complete SavedGameLayout
+        hero_default.yaml/.bin, hero_continue.yaml/.bin  the two hero records
+```
+
+The extractor reads the TIMs, offset table, blink sequence, upload table, UV
+tables and layout with the parsers in `tools/assets/`. The selection screen keeps the code's save-slot-menu name. Its TIMs
+are found through the upload table's pointers, which must match the
+`g_save_layout_tim_NN` symbols. Previews cover 4-bit and 8-bit images through
+each stored palette and 16-bit images directly; color zero is transparent.
+
+Starting weapons, hero records and game states are decoded by `saved_game.py`
+from the layouts in `include/saved_game.h`, with the original bytes beside
+them. JP names use CLOAD's character chart; the US records still hold some
+Japanese-coded names, which stay as codes in braces. The last 140 bytes are
+zero-filled menu state, listed without an output file. Neither version has
+unknown gaps. See [TITLE resources](../../docs/en/technical/reference/title-resources.md)
+([Japanese](../../docs/jp/technical/reference/title-resources.md)) for offsets and what each table drives.
+
+WMAP writes:
+
+```text
+wmap/
+    byte-map.yaml          every data range, including the zero-filled runtime state
+    tables/                56 fixed tables: primitive templates, map game rounds, information panel,
+                           land texture slots, artifact images and paths, land attributes, labels, backdrop
+    sounds/
+        sound_01.akao ...  the 63 original AKAO sound-effect buffers, numbered by sound id
+        sounds.yaml        sizes, entry counts, bank keys and channel sequence offsets
+    scripts/
+        input_scripts.yaml the three scripted-input sequences, decoded, with their bytes
+    handlers/              453 step tables, one file per C source, entries named by function
+    unknown/               one 136-byte gap no code names, preserved by RAM address
+```
+
+Most of the 978 KB blob is runtime state: only the first 79,672 bytes in US
+(79,668 in JP) hold data, and the rest is all zero on disc. The byte map lists
+that area once without writing it out. Table layouts come from the C types in
+`wmap_tables.py`. Step tables are found by their declarations in
+`src/overlays/wmap`, so a new declaration there shows up in the export without
+touching the tool. Entries print function names; one entry in land effect 18
+points into WMAP's data and is kept as a data reference.
+
+The sound buffers are AKAO sound-effect lists. The export decodes their entry
+tables and leaves the sequence bytes in the `.akao` files. US and JP share the
+same sounds; the input scripts differ only in the confirm button they press.
+See [WMAP resources](../../docs/en/technical/reference/wmap-resources.md)
+([Japanese](../../docs/jp/technical/reference/wmap-resources.md)) for offsets,
+the script format and what's still unknown.
+
+WSEL writes:
+
+```text
+wsel/
+    byte-map.yaml          every data range, including repeated TIM words and screen state
+    images/
+        land_map/          416 x 416 8-bit land map: image.tim, image.yaml, palette_00.png
+        world_map/         320 x 224 8-bit world map screen
+        cursor/            120 x 118 4-bit cursor frame
+        world_overlay/     320 x 224 4-bit vignette, drawn subtractively
+        hero_default/      256 x 256 8-bit pose sheet, plus poses/00.png ... 11.png
+        hero_alternate/    the other hero's sheet and poses
+        hero_shadow/       256 x 256 4-bit sheet holding the hero's drop shadow
+        prompt/            184 x 88 4-bit "Select play area." prompt
+    tables/
+        sprite_layers.yaml eight layer records: texture page, palette, source and screen rectangles
+        hero_poses_default.yaml, hero_poses_alternate.yaml  12 pose cells per hero sheet
+        cell_occupied.yaml 19 x 19 flags for cells that can't be chosen
+        cell_tile_masks.yaml 6 x 6 tile masks for all 361 cells
+```
+
+`wsel_load_resources` uploads TIM n to sprite layer n, and the game uploads
+pixels and palette to the layer record's VRAM coordinates, not the TIM's own.
+Each `image.yaml` lists both. Layer names come from the `WSEL_SPRITE_*`
+defines in `wsel.c`. Each TIM has one palette; previews show value zero as
+transparent and don't apply the game's blending or brightness. Only pose 0 of
+each hero sheet is drawn, but all twelve are cropped.
+
+US and JP differ only in the prompt image. The final 16,500 bytes of both
+blobs are zero-filled screen state and the music sequence buffer, listed
+without another output file. The only gap is three padding bytes after the
+cell flags, so neither version has unknown data. See
+[WSEL resources](../../docs/en/technical/reference/wsel-resources.md)
+([Japanese](../../docs/jp/technical/reference/wsel-resources.md)) for the
+record layouts, hero placement and grid indexing.
+
+ZUKAN writes:
+
+```text
+zukan/
+    byte-map.yaml          every data and entry-table range, plus the source of the JP character chart
+    archive/archive.yaml   the four archive sections and their offsets
+    images/
+        page/              original page TIM and previews through its six used palettes
+        border/            original border TIM and previews through the same palettes
+        sprites/
+            sprites.yaml   21 UI sprite records, decoded next to their words
+            00.png ...     each sprite cropped from its texture
+    text/
+        entry_names.yaml   1,014 entry names
+        category_names.yaml    the 12 category titles
+    tables/
+        categories.yaml    where each category starts and ends, with the screen's overrides
+        history_groups.yaml    the six World History groups and their unlock bits
+        entries.yaml       1,018 entries with name, category and page resource
+        display_order.yaml the 718-position list order
+```
+
+Both textures upload their palettes to the same CLUT row, and the page texture
+goes second. So every sprite is drawn through the page texture's palettes, and
+the previews use those colors; the border TIM still keeps its own stored
+palette words. Palettes without any colors get no PNG. JP text uses CLOAD's
+character chart; US dictionary and control codes stay in braces.
+
+The entry tables sit in a `zukan_entry_tables` rodatabin before the code. The
+overlay's entry function, `zukan_run`, follows them in its own
+`zukan_run_code` rodatabin; it's code, so the extractor leaves it alone. The
+data blob's last 2,140 bytes are zero-filled screen state, listed in the byte
+map without another file. JP has no unknown gaps; US has six bytes after the
+category titles, saved in `unknown/`. See
+[ZUKAN resources](../../docs/en/technical/reference/zukan-resources.md)
+([Japanese](../../docs/jp/technical/reference/zukan-resources.md)) for the
+sprite fields, category overrides and unlock bits.
+
 ## How it's put together
 
 `addhero.py`, `carda.py`, `checkps.py`, `cload.py`, `field.py`, `gname.py`,
-`golem.py` and `gosub.py` use one reader per resource format. Each reader parses its bytes
+`golem.py`, `gosub.py`, `menu.py`, `niki.py`, `shop.py`, `title.py`,
+`wmap.py`, `wsel.py` and `zukan.py` use one reader per resource format. Each reader parses its bytes
 into a small dataclass and returns a `Part` that says where the bytes are and what they hold. `read_blob`
 collects the parts in address order, and `cover_gaps` fills whatever lies
 between them. A `write_part` function for each kind of content writes its file.
@@ -347,7 +632,7 @@ Common changes:
 
 `card_data.py` holds the character chart, decoded-content dataclasses, common
 readers and writers used by the card overlays. `resources.py` supplies the
-blob, part, byte-map and output helpers all eight extractors share. The smaller
+blob, part, byte-map and output code all fifteen extractors share. The smaller
 modules (`text_table.py`, `icon_set.py`, `png.py`, `symbols.py` and
 `splat_config.py`) handle the underlying file formats.
 `field_tables.py` lists FIELD's small array layouts; its larger resources have
@@ -355,6 +640,10 @@ separate readers in `field.py`. GNAME reuses the typed format readers in
 `tools/assets/` for its tables, name-record archive and TIM. `glyph_texture.py`
 holds the eight-byte glyph format and palette-grid writer shared by GOLEM and
 GOSUB.
+`wmap_tables.py` lists WMAP's fixed table layouts, the way `field_tables.py`
+does for FIELD. `tim_preview.py` writes PNG previews of 4-, 8- and 16-bit TIMs
+for TITLE, and `saved_game.py` decodes the saved-game records TITLE stores,
+with offsets from `include/saved_game.h`.
 
 ## Tests
 
@@ -404,3 +693,51 @@ font pixels that cross into the color-table prefix, active color indices and
 complete byte coverage of both inputs. They check PNG pixels, JP decoding,
 invalid offsets and cleanup after a failed write. Source tests keep both
 regional layouts and copied C constants in step with the extractor.
+
+The MENU tests cover both palette rows, icon crops, the grid preview, text
+tables with entries past their end, JP decoding through CLOAD, content nodes
+and item sets, label bases and input scripts, and complete byte coverage.
+Bad offsets, invalid rectangles, missing symbols and failed writes leave no
+partial output. Source tests check both regional layouts and the C record
+layouts and constants.
+
+The NIKI tests check both regional layouts, the slot and step symbols, and the
+chart and icon sizes against `niki_internal.h`. The synthetic overlay covers
+Japanese chart decoding, icon PNG pixels, unreached step bytes, complete byte
+coverage and unknown gaps. Bad text or icon offsets, a sequence without a stop
+byte, missing inputs and failed writes must leave no partial output.
+
+The SHOP tests cover all four text sections, the category and spirit indices
+the renderer uses, section padding, sell prices named from the item table, JP
+decoding through CLOAD and complete byte coverage. Bad section offsets, short
+tables, missing inputs and failed writes leave no partial output. Source tests
+check both regional maps, the archive header struct and the counts copied from C.
+
+The TITLE tests cover 4-, 8- and 16-bit TIM previews, the texture table's
+pointers, UV scaling, layout primitives, starting weapons, the saved-game
+records, JP decoding through CLOAD and complete byte coverage. Bad offsets,
+broken trailing words, symbols out of order and failed writes leave no partial
+output. Source tests check both regional maps, the C counts, and every
+saved-game offset against `include/saved_game.h` through libclang.
+
+The WMAP tests cover every table layout, AKAO entry offsets with empty
+channels, repeated sound pointers, input-script commands, step tables with
+null and data entries, and complete byte coverage. Unknown step targets, bad
+sound headers, scripts without an end code, missing inputs and failed writes
+must leave no partial export. Source tests check both regional configs, the
+C record sizes and counts, and the script enum.
+
+The WSEL tests cover 4- and 8-bit palette previews, TIM upload destinations
+from the layer records, hero pose crops, the grid rows and tile masks, and
+complete byte coverage with padding and runtime state. Bad offsets, poses
+outside their sheet, a TIM whose depth differs from its layer and failed
+writes leave no partial output. Source tests check both regional maps, the C
+record layouts and counts, and that each TIM symbol is uploaded to the layer
+named after it.
+
+The ZUKAN tests cover the archive header, the shared runtime palette on both
+textures, sprite crops, category overrides, the display-order terminator, JP
+decoding through CLOAD and complete byte coverage of both inputs. Bad archive
+offsets, sprites outside their texture, a missing terminator and failed writes
+leave no partial output. Source tests check both regional layouts, the table
+lengths from the C structs and the constants copied from the C code.

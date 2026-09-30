@@ -9,7 +9,7 @@ project's Python dependencies).
 | --- | --- |
 | [assets/](assets/README.md) | Byte-exact asset parsers, builders and validators used by the build |
 | [scenes/](scenes/README.md) | IMG scene extraction and asset byte maps |
-| [overlays/](overlays/README.md) | Viewable exports of overlay data blobs (ADDHERO, CARDA, CHECKPS, CLOAD, FIELD, GNAME, GOLEM and GOSUB resources) |
+| [overlays/](overlays/README.md) | Viewable exports of overlay data blobs (ADDHERO, CARDA, CHECKPS, CLOAD, FIELD, GNAME, GOLEM, GOSUB, MENU, NIKI, SHOP, TITLE, WMAP, WSEL and ZUKAN resources) |
 | [compressor/](compressor/README.md) | Original overlay compression and whole-file verification |
 | `splat_ext/` | Project-specific splat segments and reference compression routines |
 | `objdiff/` | Generate objdiff configuration, run comparisons and format reports |
@@ -39,6 +39,13 @@ make extract-field
 make extract-gname
 make extract-golem
 make extract-gosub
+make extract-menu
+make extract-niki
+make extract-shop
+make extract-title
+make extract-wmap
+make extract-wsel
+make extract-zukan
 
 # Choose an exact output directory.
 python3 -m tools.scenes.field_scene /path/to/scene.IMG output/scenes/example

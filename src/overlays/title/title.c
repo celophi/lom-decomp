@@ -76,9 +76,10 @@ typedef union
     DR_TPAGE draw_mode;
 } TitleFadePrimitive;
 
-/* The complete .data payload is extracted by Splat as named databins.
- * Symbols used by the code are declared in title_internal.h and assigned
- * fixed overlay addresses by config/symbols/title_symbol_addrs.txt. */
+/* The complete .data payload is one databin (title_data), linked unchanged
+ * and exported by tools/overlays/title.py. Symbols used by the code are
+ * declared in title_internal.h and assigned fixed overlay addresses by
+ * config/<version>/symbols/title_symbol_addrs.txt. */
 
 /** Advance a fade packet cursor by the concrete packet just emitted. */
 #define TITLE_NEXT_FADE_PRIMITIVE(primitive, type) ((TitleFadePrimitive*)((u8*)(primitive) + sizeof(type)))

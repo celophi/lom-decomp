@@ -53,12 +53,12 @@
  */
 #define SHOP_ARCHIVE_TEXT(archive, offset, index) ((u8*)((offset) + (*(u16*)((index) + (offset) + (u32)(archive)) + (u32)(archive))))
 
-/** @brief First category name of each kind in text archive section 2. */
+/** @brief First type name of each item category in text archive section SHOP_TEXT_EQUIPMENT_TYPES. */
 #define WEAPON_CATEGORY_FIRST 0
 #define ARMOR_CATEGORY_FIRST 11
-#define OTHER_CATEGORY_FIRST 23
-/** @brief Strings per row of the two-dimensional detail table in text archive section 3. */
-#define DETAIL_TEXT_ROW_LENGTH 14
+#define INSTRUMENT_CATEGORY_FIRST 23
+/** @brief Spell names per spirit row of text archive section SHOP_TEXT_INSTRUMENT_SPELLS. */
+#define SPELLS_PER_SPIRIT 14
 
 /**
  * @brief Draw every active window and advance its open or close animation.
@@ -286,6 +286,7 @@ u8* shop_draw_list_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
                     {
                         do
                         {
+                            /* Header word 2 is section_offsets[SHOP_TEXT_ITEM_NAMES]. */
                             s32 section = ((u32*)&g_shop_text_archive)[2];
                             s32 name_index = *(u16*)entry;
                             u16 name_offset;
@@ -378,7 +379,7 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
         if (id & SHOP_ENTRY_RECORD_FLAG)
         {
             u8* dst = name_text;
-            u32* material_offsets = &g_shop_text_archive.section_offsets[1];
+            u32* material_offsets = &g_shop_text_archive.section_offsets[SHOP_TEXT_ITEM_NAMES];
             ShopTextArchive* archive;
             FieldItemRecord* record = SHOP_ENTRY_RECORD(id);
             u8* ui_entry;
@@ -403,7 +404,7 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
             {
             case FIELD_ITEM_CATEGORY_WEAPON:
             {
-                u32 category_offset = archive->section_offsets[2];
+                u32 category_offset = archive->section_offsets[SHOP_TEXT_EQUIPMENT_TYPES];
                 s32 x;
                 s32 y;
                 s32 difference;
@@ -435,7 +436,7 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
             }
             case FIELD_ITEM_CATEGORY_ARMOR:
             {
-                u32 category_offset = archive->section_offsets[2];
+                u32 category_offset = archive->section_offsets[SHOP_TEXT_EQUIPMENT_TYPES];
                 s32 y;
                 FieldItemRecord* selected;
                 u16 offset;
@@ -461,9 +462,9 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
                 u8* detail_offset;
                 u16 offset;
 
-                category_offsets = &g_shop_text_archive.section_offsets[2];
+                category_offsets = &g_shop_text_archive.section_offsets[SHOP_TEXT_EQUIPMENT_TYPES];
                 offset = *(u16*)((u8*)&g_shop_text_archive + (FIELD_ITEM_TYPE(SHOP_SELECTED_RECORD()->info.word) * 2 + *category_offsets) +
-                                 OTHER_CATEGORY_FIRST * 2);
+                                 INSTRUMENT_CATEGORY_FIRST * 2);
                 text_archive = &g_shop_text_archive;
                 text = (u8*)(*category_offsets + (offset + (u32)text_archive));
                 encoded_text_append(name_text, text);
@@ -471,10 +472,10 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
                 position.x = SHOP_OTHER_VALUE_X - x_inset;
                 position.y = 18 - y_inset;
                 prim = func_800A8A78(ot, prim, SHOP_SELECTED_RECORD()->derived.bytes[2], SHOP_TEXT_COLOR_NORMAL, &position, 0);
-                detail_offset = text_archive->section_offsets[3];
+                detail_offset = text_archive->section_offsets[SHOP_TEXT_INSTRUMENT_SPELLS];
                 selected = SHOP_SELECTED_RECORD();
                 offset =
-                    *(u16*)((selected->derived.bytes[1] * 2) + ((selected->derived.bytes[0] * DETAIL_TEXT_ROW_LENGTH * 2) + detail_offset) + (u32)text_archive);
+                    *(u16*)((selected->derived.bytes[1] * 2) + ((selected->derived.bytes[0] * SPELLS_PER_SPIRIT * 2) + detail_offset) + (u32)text_archive);
                 text = (u8*)(detail_offset + (offset + (u32)text_archive));
                 prim = func_800A88A0(prim, ot, text, SHOP_TEXT_COLOR_NORMAL, 284 - x_inset, 18 - y_inset, 1);
                 break;
@@ -484,10 +485,10 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
         }
         else
         {
-            u32* item_offsets = &g_shop_text_archive.section_offsets[0];
+            u32* description_offsets = &g_shop_text_archive.section_offsets[SHOP_TEXT_ITEM_DESCRIPTIONS];
             ShopTextArchive* archive = &g_shop_text_archive;
 
-            prim = func_800A88A0(prim, ot, SHOP_ARCHIVE_TEXT(archive, *item_offsets, entry->id * 2), SHOP_TEXT_COLOR_NORMAL, 150 - x_inset, 2 - y_inset, 2);
+            prim = func_800A88A0(prim, ot, SHOP_ARCHIVE_TEXT(archive, *description_offsets, entry->id * 2), SHOP_TEXT_COLOR_NORMAL, 150 - x_inset, 2 - y_inset, 2);
             prim = func_800A88A0(prim, ot, FIELD_UI_TEXT_AT(D_800EC3F4, 24), SHOP_TEXT_COLOR_NORMAL, 16 - x_inset, 18 - y_inset, 0);
             position.x = 112 - x_inset;
             position.y = 18 - y_inset;

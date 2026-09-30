@@ -24,13 +24,13 @@
 /** Offset table at the head of a staged music file: [0] sequence, [1] instrument bank. */
 #define WSEL_LOAD_BUFFER_OFFSETS ((u32*)LOAD_BUFFER_AT(0x4))
 #define WSEL_PAD_UNAVAILABLE 0xFE
-#define WSEL_INDICATOR_ANCHOR_X 32
-#define WSEL_INDICATOR_ANCHOR_Y 40
-#define WSEL_INDICATOR_LABEL_Y 32
-#define WSEL_INDICATOR_LABEL_U 184
-#define WSEL_INDICATOR_LABEL_V 6
-#define WSEL_INDICATOR_LABEL_WIDTH 32
-#define WSEL_INDICATOR_LABEL_HEIGHT 10
+#define WSEL_HERO_ANCHOR_X 32
+#define WSEL_HERO_ANCHOR_Y 40
+#define WSEL_HERO_SHADOW_Y 32
+#define WSEL_HERO_SHADOW_U 184
+#define WSEL_HERO_SHADOW_V 6
+#define WSEL_HERO_SHADOW_WIDTH 32
+#define WSEL_HERO_SHADOW_HEIGHT 10
 #define WSEL_REPEAT_DELAY 2
 #define WSEL_INITIAL_REPEAT_DELAY 15
 #define WSEL_NON_REPEAT_BUTTON_MASK                                                                                                                            \
@@ -42,6 +42,8 @@
 #define WSEL_MASK_MAX_SHADE 64
 #define WSEL_MASK_FADE_STEP 4
 #define WSEL_SPRITE_COUNT 8
+/** Poses in each hero pose table: a standing pose, then one per weapon; only pose 0 is drawn. */
+#define WSEL_HERO_POSE_COUNT 12
 #define WSEL_SHADOWED_SPRITE 2
 #define WSEL_SPRITE_STRIP_WIDTH 128
 #define WSEL_SPRITE_BAND_HEIGHT 256
@@ -57,12 +59,15 @@
 #define WSEL_SFX_CANCEL 0x7F
 #define WSEL_SFX_PAN_CENTER 0x80
 
-/* Sprite layers in g_wsel_sprites. */
+/* Sprite layers in g_wsel_sprites; wsel_load_resources uploads TIM n to layer n. */
 #define WSEL_SPRITE_LAND_MAP 0
 #define WSEL_SPRITE_WORLD_MAP 1
 #define WSEL_SPRITE_CURSOR 2
 #define WSEL_SPRITE_WORLD_OVERLAY 3
-#define WSEL_SPRITE_ZOOM_OVERLAY 7
+#define WSEL_SPRITE_HERO_DEFAULT 4
+#define WSEL_SPRITE_HERO_ALTERNATE 5
+#define WSEL_SPRITE_HERO_SHADOW 6
+#define WSEL_SPRITE_PROMPT 7
 
 /* Land map grid: 19x19 cells of 16 pixels, one cell of border before the first. */
 #define WSEL_MAP_CELLS 19
@@ -176,7 +181,7 @@ typedef struct
     u16 y;
 } WselSprite;
 
-/** @brief Source cell and screen offset of an indicator frame, all in 8-pixel units. */
+/** @brief Source cell and screen offset of one hero pose, all in 8-pixel units. */
 typedef struct
 {
     u8 u;
@@ -185,7 +190,7 @@ typedef struct
     u8 height;
     u8 x_offset;
     u8 y_offset;
-} WselIndicatorFrame;
+} WselHeroPose;
 
 typedef struct
 {
@@ -211,19 +216,19 @@ typedef union
 extern s32 D_80042FB4;
 extern u32 D_80043000;
 extern u8 D_800435E0;
-extern u8 g_wsel_tims_0[];
-extern u8 g_wsel_tims_1[];
-extern u8 g_wsel_tims_2[];
-extern u8 g_wsel_tims_3[];
-extern u8 g_wsel_tims_4[];
-extern u8 g_wsel_tims_5[];
-extern u8 g_wsel_tims_6[];
-extern u8 g_wsel_tims_7[];
+extern u8 g_wsel_land_map_tim[];
+extern u8 g_wsel_world_map_tim[];
+extern u8 g_wsel_cursor_tim[];
+extern u8 g_wsel_world_overlay_tim[];
+extern u8 g_wsel_hero_tim_default[];
+extern u8 g_wsel_hero_tim_alternate[];
+extern u8 g_wsel_hero_shadow_tim[];
+extern u8 g_wsel_prompt_tim[];
 extern u8 g_wsel_cell_occupied[];
 extern u8 g_wsel_cell_edges[WSEL_MAP_CELLS * WSEL_MAP_CELLS][WSEL_SUBCELLS * WSEL_SUBCELLS];
 extern WselSprite g_wsel_sprites[WSEL_SPRITE_COUNT];
-extern WselIndicatorFrame g_wsel_indicator_frame_default;
-extern WselIndicatorFrame g_wsel_indicator_frame_alternate;
+extern WselHeroPose g_wsel_hero_poses_default[WSEL_HERO_POSE_COUNT];
+extern WselHeroPose g_wsel_hero_poses_alternate[WSEL_HERO_POSE_COUNT];
 extern WselRenderBuffer* g_wsel_render_context;
 extern u8 g_wsel_sound_bank;
 extern WselFadeTarget g_wsel_fade_target;
@@ -263,7 +268,7 @@ static void* wsel_draw_cell_shading(void* prim, u_long* ot);
 static void* wsel_draw_shade_tile(TILE* tile, u_long* ot, s32 x, s32 y, s32 intensity);
 static void* wsel_draw_sprite(SPRT* prim, u_long* ot, s32 index);
 static void wsel_update_input(void);
-static POLY_FT4* wsel_draw_indicator(POLY_FT4* poly, u_long* ot, s32 which);
+static POLY_FT4* wsel_draw_hero(POLY_FT4* poly, u_long* ot, s32 alternate);
 static void wsel_load_resources(void);
 static void wsel_reset_scroll(void);
 static void wsel_upload_tim(u8* tim_data, s32 index);
@@ -618,7 +623,7 @@ static void wsel_draw_frame(WselRenderBuffer* buffer)
             g_wsel_transition_timer = WSEL_LAND_FADE_FRAMES;
         }
         prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_OVERLAY);
-        prim = (u8*)wsel_draw_indicator((POLY_FT4*)prim, ot, D_800435E0 & 0x7F);
+        prim = (u8*)wsel_draw_hero((POLY_FT4*)prim, ot, D_800435E0 & 0x7F);
         prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_MAP);
         break;
 
@@ -644,7 +649,7 @@ static void wsel_draw_frame(WselRenderBuffer* buffer)
             g_wsel_transition_timer = 0;
         }
         prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_OVERLAY);
-        prim = (u8*)wsel_draw_indicator((POLY_FT4*)prim, ot, D_800435E0 & 0x7F);
+        prim = (u8*)wsel_draw_hero((POLY_FT4*)prim, ot, D_800435E0 & 0x7F);
         prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_MAP);
         break;
 
@@ -655,7 +660,7 @@ static void wsel_draw_frame(WselRenderBuffer* buffer)
             g_wsel_zoom_rect.corners[i].y = g_wsel_zoom_target.corners[i].y;
         }
         WSEL_QUAD_FROM_RECT(quad, g_wsel_zoom_rect);
-        prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_ZOOM_OVERLAY);
+        prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_PROMPT);
         prim = wsel_draw_zoom_quad((POLY_FT4*)prim, ot, &quad, 0, WSEL_ZOOM_QUAD_COLOR);
         if (g_wsel_buttons_held & WSEL_CONFIRM_BUTTONS)
         {
@@ -666,7 +671,7 @@ static void wsel_draw_frame(WselRenderBuffer* buffer)
         /* fall through */
     case WSEL_STATE_WORLD_MAP:
         prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_OVERLAY);
-        prim = (u8*)wsel_draw_indicator((POLY_FT4*)prim, ot, D_800435E0 & 0x7F);
+        prim = (u8*)wsel_draw_hero((POLY_FT4*)prim, ot, D_800435E0 & 0x7F);
         prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_MAP);
         break;
     }
@@ -742,14 +747,14 @@ static void* wsel_draw_selection_mask(TILE* tile, u_long* ot)
     tile->r0 = tile->g0 = tile->b0 = g_wsel_mask_shade;
     setSemiTrans(tile, 1);
     setXY0(tile, 0, 0);
-    setWH(tile, SCREEN_WIDTH, g_wsel_sprites[2].y + WSEL_MASK_MARGIN);
+    setWH(tile, SCREEN_WIDTH, g_wsel_sprites[WSEL_SPRITE_CURSOR].y + WSEL_MASK_MARGIN);
     addPrim(ot, tile);
     tile++;
 
     setTile(tile);
     tile->r0 = tile->g0 = tile->b0 = g_wsel_mask_shade;
     setSemiTrans(tile, 1);
-    setXY0(tile, 0, g_wsel_sprites[2].y + WSEL_MASK_END);
+    setXY0(tile, 0, g_wsel_sprites[WSEL_SPRITE_CURSOR].y + WSEL_MASK_END);
     setWH(tile, SCREEN_WIDTH, VRAM_DRAW_HEIGHT - tile->y0);
     addPrim(ot, tile);
     tile++;
@@ -757,15 +762,15 @@ static void* wsel_draw_selection_mask(TILE* tile, u_long* ot)
     setTile(tile);
     tile->r0 = tile->g0 = tile->b0 = g_wsel_mask_shade;
     setSemiTrans(tile, 1);
-    setXY0(tile, 0, g_wsel_sprites[2].y + WSEL_MASK_MARGIN);
-    setWH(tile, g_wsel_sprites[2].x + WSEL_MASK_MARGIN, WSEL_MASK_SIZE);
+    setXY0(tile, 0, g_wsel_sprites[WSEL_SPRITE_CURSOR].y + WSEL_MASK_MARGIN);
+    setWH(tile, g_wsel_sprites[WSEL_SPRITE_CURSOR].x + WSEL_MASK_MARGIN, WSEL_MASK_SIZE);
     addPrim(ot, tile);
     tile++;
 
     setTile(tile);
     tile->r0 = tile->g0 = tile->b0 = g_wsel_mask_shade;
     setSemiTrans(tile, 1);
-    setXY0(tile, g_wsel_sprites[2].x + WSEL_MASK_END, g_wsel_sprites[2].y + WSEL_MASK_MARGIN);
+    setXY0(tile, g_wsel_sprites[WSEL_SPRITE_CURSOR].x + WSEL_MASK_END, g_wsel_sprites[WSEL_SPRITE_CURSOR].y + WSEL_MASK_MARGIN);
     setWH(tile, SCREEN_WIDTH - tile->x0, WSEL_MASK_SIZE);
     addPrim(ot, tile);
     tile++;
@@ -804,8 +809,8 @@ static void* wsel_draw_zoom_quad(POLY_FT4* poly, u_long* ot, WselQuadCoords* coo
     poly->u1 = poly->u3 = WSEL_ZOOM_U1;
     poly->v0 = poly->v1 = WSEL_ZOOM_V0;
     poly->v2 = poly->v3 = WSEL_ZOOM_V1;
-    setClut(poly, g_wsel_sprites[1].clut_x, g_wsel_sprites[1].clut_y);
-    setTPage(poly, 1, 1, g_wsel_sprites[1].tpage_x, g_wsel_sprites[1].tpage_y);
+    setClut(poly, g_wsel_sprites[WSEL_SPRITE_WORLD_MAP].clut_x, g_wsel_sprites[WSEL_SPRITE_WORLD_MAP].clut_y);
+    setTPage(poly, 1, 1, g_wsel_sprites[WSEL_SPRITE_WORLD_MAP].tpage_x, g_wsel_sprites[WSEL_SPRITE_WORLD_MAP].tpage_y);
     addPrim(ot, poly);
     return poly + 1;
 }
@@ -842,8 +847,8 @@ static void* wsel_draw_cell_shading(void* prim, u_long* ot)
         {
             for (col = 0; col < WSEL_SUBCELLS; col++)
             {
-                p = wsel_draw_shade_tile((TILE*)p, ot, g_wsel_sprites[2].x + col * WSEL_CELL_SIZE + WSEL_MASK_MARGIN,
-                                         g_wsel_sprites[2].y + row * WSEL_CELL_SIZE + WSEL_MASK_MARGIN, WSEL_SHADE_DARKEN);
+                p = wsel_draw_shade_tile((TILE*)p, ot, g_wsel_sprites[WSEL_SPRITE_CURSOR].x + col * WSEL_CELL_SIZE + WSEL_MASK_MARGIN,
+                                         g_wsel_sprites[WSEL_SPRITE_CURSOR].y + row * WSEL_CELL_SIZE + WSEL_MASK_MARGIN, WSEL_SHADE_DARKEN);
             }
         }
     }
@@ -891,11 +896,11 @@ static void* wsel_draw_cell_shading(void* prim, u_long* ot)
             }
         }
 
-        draw_x = g_wsel_sprites[2].x + WSEL_CLIP_INSET;
-        draw_y = g_wsel_sprites[2].y + WSEL_CLIP_INSET + VRAM_BACK_DRAW_Y;
+        draw_x = g_wsel_sprites[WSEL_SPRITE_CURSOR].x + WSEL_CLIP_INSET;
+        draw_y = g_wsel_sprites[WSEL_SPRITE_CURSOR].y + WSEL_CLIP_INSET + VRAM_BACK_DRAW_Y;
         if (g_wsel_buffer_index != 0)
         {
-            draw_y = g_wsel_sprites[2].y + WSEL_CLIP_INSET + SCREEN_HEIGHT;
+            draw_y = g_wsel_sprites[WSEL_SPRITE_CURSOR].y + WSEL_CLIP_INSET + SCREEN_HEIGHT;
         }
         SetDefDrawEnv(&draw_env, draw_x, draw_y, WSEL_MASK_SIZE, WSEL_MASK_SIZE);
         SetDrawEnv((DR_ENV*)p, &draw_env);
@@ -1231,35 +1236,35 @@ static void wsel_update_input(void)
 }
 
 /**
- * @brief Queue the selection indicator frame and its label as two textured quads.
+ * @brief Queue the hero's standing pose and its drop shadow as two textured quads.
  * @param poly Next free POLY_FT4 in the packet buffer.
  * @param ot Ordering-table entry the quads are linked into.
- * @param which Nonzero selects the alternate frame (sprite 5), zero the default (sprite 4).
+ * @param alternate Nonzero selects the alternate hero sheet (layer 5), zero the default (layer 4).
  * @return The POLY_FT4 following the two queued quads.
  */
-static POLY_FT4* wsel_draw_indicator(POLY_FT4* poly, u_long* ot, s32 which)
+static POLY_FT4* wsel_draw_hero(POLY_FT4* poly, u_long* ot, s32 alternate)
 {
-    WselIndicatorFrame* frame;
+    WselHeroPose* frame;
     WselSprite* sprite;
 
-    if (which)
+    if (alternate)
     {
-        frame = &g_wsel_indicator_frame_alternate;
-        sprite = &g_wsel_sprites[5];
+        frame = &g_wsel_hero_poses_alternate[0];
+        sprite = &g_wsel_sprites[WSEL_SPRITE_HERO_ALTERNATE];
     }
     else
     {
-        frame = &g_wsel_indicator_frame_default;
-        sprite = &g_wsel_sprites[4];
+        frame = &g_wsel_hero_poses_default[0];
+        sprite = &g_wsel_sprites[WSEL_SPRITE_HERO_DEFAULT];
     }
 
-    /* Indicator frame: source cell and offset are in 8-pixel units. */
+    /* Standing pose: source cell and offset are in 8-pixel units. */
     SET_BGR0_PACKED(poly, GPU_TINT_NEUTRAL);
     setPolyFT4(poly);
     setSemiTrans(poly, sprite->semi_trans);
 
-    poly->x2 = poly->x0 = sprite->x + WSEL_INDICATOR_ANCHOR_X - frame->x_offset * 8;
-    poly->y1 = poly->y0 = sprite->y + WSEL_INDICATOR_ANCHOR_Y - frame->y_offset * 8;
+    poly->x2 = poly->x0 = sprite->x + WSEL_HERO_ANCHOR_X - frame->x_offset * 8;
+    poly->y1 = poly->y0 = sprite->y + WSEL_HERO_ANCHOR_Y - frame->y_offset * 8;
     poly->x1 = poly->x3 = poly->x0 + frame->width * 8 - 1;
     poly->y2 = poly->y3 = poly->y0 + frame->height * 8 - 1;
 
@@ -1273,20 +1278,20 @@ static POLY_FT4* wsel_draw_indicator(POLY_FT4* poly, u_long* ot, s32 which)
     addPrim(ot, poly);
     poly++;
 
-    /* Label: a fixed 32x10 cell of sprite 6, placed 32 pixels below the frame sprite. */
+    /* Shadow: a fixed 32x10 cell of layer 6, placed 32 pixels below the hero layer's position. */
     poly->x2 = poly->x0 = sprite->x;
-    poly->y1 = poly->y0 = sprite->y + WSEL_INDICATOR_LABEL_Y;
-    sprite = &g_wsel_sprites[6];
+    poly->y1 = poly->y0 = sprite->y + WSEL_HERO_SHADOW_Y;
+    sprite = &g_wsel_sprites[WSEL_SPRITE_HERO_SHADOW];
     setlen(poly, 9);
     SET_BGR0_PACKED(poly, GPU_TINT_NEUTRAL);
     setcode(poly, 0x2C);
     setSemiTrans(poly, sprite->semi_trans);
-    poly->u0 = poly->u2 = WSEL_INDICATOR_LABEL_U;
-    poly->v1 = poly->v0 = WSEL_INDICATOR_LABEL_V;
-    poly->x1 = poly->x3 = poly->x0 + WSEL_INDICATOR_LABEL_WIDTH;
-    poly->y2 = poly->y3 = poly->y0 + WSEL_INDICATOR_LABEL_HEIGHT;
-    poly->u1 = poly->u3 = poly->u0 + WSEL_INDICATOR_LABEL_WIDTH;
-    poly->v2 = poly->v3 = poly->v0 + WSEL_INDICATOR_LABEL_HEIGHT;
+    poly->u0 = poly->u2 = WSEL_HERO_SHADOW_U;
+    poly->v1 = poly->v0 = WSEL_HERO_SHADOW_V;
+    poly->x1 = poly->x3 = poly->x0 + WSEL_HERO_SHADOW_WIDTH;
+    poly->y2 = poly->y3 = poly->y0 + WSEL_HERO_SHADOW_HEIGHT;
+    poly->u1 = poly->u3 = poly->u0 + WSEL_HERO_SHADOW_WIDTH;
+    poly->v2 = poly->v3 = poly->v0 + WSEL_HERO_SHADOW_HEIGHT;
     setClut(poly, sprite->clut_x, sprite->clut_y);
     setTPage(poly, sprite->tpage_mode, sprite->blend_mode, sprite->tpage_x, sprite->tpage_y);
     addPrim(ot, poly);
@@ -1301,14 +1306,14 @@ static void wsel_load_resources(void)
     g_wsel_state = 0;
     wsel_reset_scroll();
     wsel_init_pad_repeat();
-    wsel_upload_tim(g_wsel_tims_0, 0);
-    wsel_upload_tim(g_wsel_tims_1, 1);
-    wsel_upload_tim(g_wsel_tims_2, 2);
-    wsel_upload_tim(g_wsel_tims_3, 3);
-    wsel_upload_tim(g_wsel_tims_4, 4);
-    wsel_upload_tim(g_wsel_tims_5, 5);
-    wsel_upload_tim(g_wsel_tims_6, 6);
-    wsel_upload_tim(g_wsel_tims_7, 7);
+    wsel_upload_tim(g_wsel_land_map_tim, WSEL_SPRITE_LAND_MAP);
+    wsel_upload_tim(g_wsel_world_map_tim, WSEL_SPRITE_WORLD_MAP);
+    wsel_upload_tim(g_wsel_cursor_tim, WSEL_SPRITE_CURSOR);
+    wsel_upload_tim(g_wsel_world_overlay_tim, WSEL_SPRITE_WORLD_OVERLAY);
+    wsel_upload_tim(g_wsel_hero_tim_default, WSEL_SPRITE_HERO_DEFAULT);
+    wsel_upload_tim(g_wsel_hero_tim_alternate, WSEL_SPRITE_HERO_ALTERNATE);
+    wsel_upload_tim(g_wsel_hero_shadow_tim, WSEL_SPRITE_HERO_SHADOW);
+    wsel_upload_tim(g_wsel_prompt_tim, WSEL_SPRITE_PROMPT);
 }
 
 /**

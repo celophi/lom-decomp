@@ -1,5 +1,5 @@
 # Host-side Python tests; no disc files or historical toolchain required.
-.PHONY: test-tools test-assets test-overlay-tools extract-scene extract-scenes extract-addhero extract-carda extract-checkps extract-cload extract-field extract-gname extract-golem extract-gosub
+.PHONY: test-tools test-assets test-overlay-tools extract-scene extract-scenes extract-addhero extract-carda extract-checkps extract-cload extract-field extract-gname extract-golem extract-gosub extract-menu extract-niki extract-shop extract-title extract-wmap extract-wsel extract-zukan
 
 test-tools: test-assets test-overlay-tools
 
@@ -76,3 +76,52 @@ GOSUB_OUTPUT ?= assets/exports/$(VERSION)/overlays/gosub
 extract-gosub:
 	@test -f "$(ASSETS_DIR)/gosub_data.databin.bin" || { echo 'Run make splat first to extract $(ASSETS_DIR)/gosub_data.databin.bin'; exit 1; }
 	python3 -m tools.overlays.gosub --version $(VERSION) "$(GOSUB_OUTPUT)"
+
+# MENU exports the in-game menu's texture, icons, text tables and page layouts.
+MENU_OUTPUT ?= assets/exports/$(VERSION)/overlays/menu
+
+extract-menu:
+	@test -f "$(ASSETS_DIR)/menu_data.databin.bin" || { echo 'Run make splat first to extract $(ASSETS_DIR)/menu_data.databin.bin'; exit 1; }
+	python3 -m tools.overlays.menu --version $(VERSION) "$(MENU_OUTPUT)"
+
+# NIKI carries the card-screen text, party icons and tables in one blob; its variables follow them.
+NIKI_OUTPUT ?= assets/exports/$(VERSION)/overlays/niki
+
+extract-niki:
+	@test -f "$(ASSETS_DIR)/niki_data.databin.bin" || { echo 'Run make splat first to extract $(ASSETS_DIR)/niki_data.databin.bin'; exit 1; }
+	python3 -m tools.overlays.niki --version $(VERSION) "$(NIKI_OUTPUT)"
+
+# SHOP exports the shop screen's item text and sell prices.
+SHOP_OUTPUT ?= assets/exports/$(VERSION)/overlays/shop
+
+extract-shop:
+	@test -f "$(ASSETS_DIR)/shop_data.databin.bin" || { echo 'Run make splat first to extract $(ASSETS_DIR)/shop_data.databin.bin'; exit 1; }
+	python3 -m tools.overlays.shop --version $(VERSION) "$(SHOP_OUTPUT)"
+
+# TITLE exports the menu artwork, character-selection screen and new-game states.
+TITLE_OUTPUT ?= assets/exports/$(VERSION)/overlays/title
+
+extract-title:
+	@test -f "$(ASSETS_DIR)/title_data.databin.bin" || { echo 'Run make splat first to extract $(ASSETS_DIR)/title_data.databin.bin'; exit 1; }
+	python3 -m tools.overlays.title --version $(VERSION) "$(TITLE_OUTPUT)"
+
+# WMAP exports its world-map tables, sound effects, input scripts and step tables.
+WMAP_OUTPUT ?= assets/exports/$(VERSION)/overlays/wmap
+
+extract-wmap:
+	@test -f "$(ASSETS_DIR)/wmap_data.databin.bin" || { echo 'Run make splat first to extract $(ASSETS_DIR)/wmap_data.databin.bin'; exit 1; }
+	python3 -m tools.overlays.wmap --version $(VERSION) "$(WMAP_OUTPUT)"
+
+# WSEL exports the play-area screen's eight TIMs, sprite layers and land-map grid tables.
+WSEL_OUTPUT ?= assets/exports/$(VERSION)/overlays/wsel
+
+extract-wsel:
+	@test -f "$(ASSETS_DIR)/wsel_data.databin.bin" || { echo 'Run make splat first to extract $(ASSETS_DIR)/wsel_data.databin.bin'; exit 1; }
+	python3 -m tools.overlays.wsel --version $(VERSION) "$(WSEL_OUTPUT)"
+
+# ZUKAN's data blob and entry-table rodata sit on either side of its code.
+ZUKAN_OUTPUT ?= assets/exports/$(VERSION)/overlays/zukan
+
+extract-zukan:
+	@test -f "$(ASSETS_DIR)/zukan_data.databin.bin" || { echo 'Run make splat first to extract $(ASSETS_DIR)/zukan_data.databin.bin'; exit 1; }
+	python3 -m tools.overlays.zukan --version $(VERSION) "$(ZUKAN_OUTPUT)"

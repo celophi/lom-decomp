@@ -49,7 +49,8 @@ segments:
       - [0x1, .rodata, overlay_header]
       - [0x5, .rodata, wsel]
       - [0x1D, c, wsel]  # gcc272_cdk, original WSEL translation unit
-      # The eight TIM images (g_wsel_tims_0..7); a databin keeps splat from reading their pixels as pointers.
-      - [0x28F1, databin, wsel_tims]
-      - [0x735D9, data, data]
+      # Initialized data: the eight TIM images, the land-map grid tables, sprite
+      # layers and hero poses, then zero-filled runtime state. See
+      # tools/overlays/wsel.py.
+      - [0x28F1, databin, wsel_data]
   - [0x7ABCD]

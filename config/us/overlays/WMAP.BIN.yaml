@@ -121,5 +121,5 @@ segments:
       - [0x6D7AD, c, wmap_land_effect_33]
       - [0x6F851, c, wmap_special_effect_34]
       - [0x71035, c, wmap_special_effect_35]
-      - [0x74919, data, data]
+      - [0x74919, databin, wmap_data]
   - [0x163669]
