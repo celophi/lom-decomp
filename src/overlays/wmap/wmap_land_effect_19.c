@@ -8,6 +8,7 @@
 #include "wmap_sprite_render.h"
 #include "wmap_effect_primitives.h"
 #include "wmap_step_sequence.h"
+#include "wmap_cells.h"
 
 void wmap_land_effect_19_sequence_7_step_02(void);
 void wmap_land_effect_19_sequence_8_step_02(void);
@@ -67,13 +68,6 @@ typedef struct
     u8 unk28[4];
 } WmapD94Entry;
 
-/** @brief First word of a 40-byte world-map cell. */
-typedef struct
-{
-    s32 value;
-    u8 unknown_04[36];
-} WmapValueRecord;
-
 extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_19_sequence_3_timer;
 extern u8* g_wmap_effect_model_pack_1;
@@ -105,7 +99,6 @@ extern void wmap_land_effect_19_step_03(void);
 extern void wmap_land_effect_19_end(void);
 extern s32 g_wmap_land_effect_19_timeline_timer;
 extern void (*D_800D6A9C[])(void);
-extern WmapValueRecord g_wmap_cells[][6];
 extern u32 g_wmap_selected_artifact;
 extern s32 g_wmap_land_effect_19_sequence_1_timer;
 extern void (*D_800D6AFC[])(void);
@@ -119,8 +112,6 @@ extern void (*D_800D6B3C[])(void);
 extern void (*D_800D6B54[])(void);
 extern void (*D_800D6B6C[])(void);
 extern void (*D_800D6B8C[])(void);
-extern u8 D_800D95D8[];
-extern WmapAnimationSlot D_80139A28[];
 extern void (*D_800D6BA4[])(void);
 extern void (*D_800D6BC4[])(void);
 extern void (*D_800D6BE4[])(void);
@@ -760,7 +751,7 @@ WMAP_STEP_RESET(wmap_land_effect_19_sequence_8_reset, g_wmap_land_effect_19_sequ
 void wmap_land_effect_19_sequence_8_step_02(void)
 {
     func_8006AEE0();
-    func_8006A2FC(D_800D95D8, D_80139A28, 0xC, 0xFF, 0x1, 0x8, 0, (s32)g_wmap_effect_params);
+    func_8006A2FC(&g_wmap_sprite_actors[20], &g_wmap_actor_animations[20], 0xC, 0xFF, 0x1, 0x8, 0, (s32)g_wmap_effect_params);
     if (--g_wmap_land_effect_19_sequence_8_timer == 0)
     {
         g_wmap_land_effect_19_sequence_8_step += 1;
@@ -784,7 +775,7 @@ void wmap_land_effect_19_sequence_8_step_03(void)
 void wmap_land_effect_19_sequence_8_step_04(void)
 {
     func_8006AEE0();
-    func_8006A2FC(D_800D95D8, D_80139A28, 0xC, 0xFF, 0x1, 0x8, 0, (s32)g_wmap_effect_params);
+    func_8006A2FC(&g_wmap_sprite_actors[20], &g_wmap_actor_animations[20], 0xC, 0xFF, 0x1, 0x8, 0, (s32)g_wmap_effect_params);
     if (--g_wmap_land_effect_19_sequence_8_timer == 0)
     {
         g_wmap_land_effect_19_sequence_8_step += 1;

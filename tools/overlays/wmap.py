@@ -18,7 +18,7 @@ Example:
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 import re
 import shutil
@@ -67,6 +67,7 @@ class WmapSymbols:
     input_scripts: int
     variables: int
     named: dict[str, int]
+    sizes: dict[str, int] = field(default_factory=dict)
 
     @classmethod
     def load(cls, path: Path) -> WmapSymbols:
@@ -78,7 +79,7 @@ class WmapSymbols:
                 f"{path} has no {', '.join(missing)}. If a symbol was renamed, "
                 "update SYMBOL_NAMES in tools/overlays/wmap.py or TABLES in wmap_tables.py."
             )
-        return cls(**{key: named[name] for key, name in SYMBOL_NAMES.items()}, named=named)
+        return cls(**{key: named[name] for key, name in SYMBOL_NAMES.items()}, named=named, sizes=symbols.load_sizes(path))
 
 
 SYMBOL_NAMES = {
@@ -307,7 +308,11 @@ def read_handlers(blob: Blob[WmapSymbols], declared: dict[str, str]) -> list[Par
         steps: list[str | dict[str, str] | None] = []
         for index, (value,) in enumerate(struct.iter_unpack("<I", raw)):
             if value and value not in targets:
-                raise ValueError(f"{symbol}[{index}] (0x{value:08X}) is not a known symbol")
+                inside = [(name, value - start) for name, start in blob.symbols.named.items()
+                          if start < value < start + blob.symbols.sizes.get(name, 0)]
+                if not inside:
+                    raise ValueError(f"{symbol}[{index}] (0x{value:08X}) is not a known symbol")
+                targets[value] = f"{inside[0][0]}+0x{inside[0][1]:X}"
             if not value:
                 steps.append(None)
             elif value < blob.address:

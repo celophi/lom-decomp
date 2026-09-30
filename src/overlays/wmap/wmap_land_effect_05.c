@@ -7,6 +7,7 @@
 #include "wmap_sprite_render.h"
 #include "wmap_effect_primitives.h"
 #include "wmap_step_sequence.h"
+#include "wmap_cells.h"
 
 void wmap_land_effect_05_sequence_3_step_02(void);
 void wmap_land_effect_05_sequence_10_step_02(void);
@@ -30,23 +31,6 @@ void wmap_land_effect_05_sequence_2_step_02(void);
 void wmap_land_effect_05_sequence_3_step_04(void);
 void wmap_land_effect_05_sequence_10_step_04(void);
 void wmap_land_effect_05_sequence_10_step_06(void);
-
-/** @brief World-map actor configuration. */
-typedef struct
-{
-    s16 field_00;
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[4];
-} WmapConfigA;
 
 /** @brief Per-actor motion and animation parameters. */
 typedef struct
@@ -77,13 +61,6 @@ typedef struct
     u8 unk28[4];
 } WmapD94Entry;
 
-/** @brief First word of a 40-byte world-map cell. */
-typedef struct
-{
-    s32 value;
-    u8 unknown_04[36];
-} WmapValueRecord;
-
 extern s32 g_wmap_land_effect_05_sequence_3_timer;
 extern s8 D_80051B4C[];
 extern void *g_wmap_effect_model_pack_2;
@@ -111,7 +88,6 @@ extern void wmap_land_effect_05_step_03(void);
 extern void wmap_land_effect_05_end(void);
 extern s32 g_wmap_land_effect_05_timeline_timer;
 extern void (*D_800D5DB0[])(void);
-extern WmapValueRecord g_wmap_cells[][6];
 extern u32 g_wmap_selected_artifact;
 extern s32 g_wmap_land_effect_05_sequence_1_timer;
 extern void (*D_800D5E08[])(void);
@@ -164,20 +140,20 @@ extern WmapMotion g_wmap_actor_motions[];
 void wmap_land_effect_05_sequence_3_step_01(void)
 {
     s32 i;
-    WmapConfigA* config;
+    WmapSpriteActor* config;
 
     g_wmap_particle_intensity = 5;
     for (i = 200; i < 205; i++)
     {
         config = &g_wmap_sprite_actors[i];
         g_wmap_actor_animations[i].data = g_wmap_animation_bank_2;
-        config->field_02 = 0;
-        config->field_06 = 15;
-        config->field_0E = 0;
-        config->field_10 = -1;
-        config->field_22 = 63;
-        config->field_24 = 2;
-        config->field_26 = 2;
+        config->resource_index = 0;
+        config->scale_index = 15;
+        config->sequence = 0;
+        config->previous_sequence = -1;
+        config->target_shade = 63;
+        config->shade = 2;
+        config->shade_step = 2;
         g_wmap_actor_motions[i].field_00 = 1;
         g_wmap_actor_motions[i].angle = i * 0x333;
         g_wmap_actor_motions[i].field_08 = 340000;

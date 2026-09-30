@@ -9,6 +9,7 @@
 #include "wmap_view_effects.h"
 #include "wmap_resource_support.h"
 #include "wmap_step_sequence.h"
+#include "wmap_cells.h"
 
 /** @brief Spark state used by the radial world-map particle effect. */
 typedef struct
@@ -38,13 +39,6 @@ typedef struct
     s16 unk24;
     u8 pad26[6];
 } WmapEffect18Draw;
-
-/** @brief World-map cell record with a 40-byte stride. */
-typedef struct
-{
-    s32 value;
-    u8 unknown04[36];
-} WmapEffect18Cell;
 
 void wmap_land_effect_18_sequence_6_step_02(void);
 void wmap_land_effect_18_sequence_9_step_02(void);
@@ -108,18 +102,13 @@ extern s32 g_wmap_land_effect_18_sequence_7_timer;
 extern void (*D_800D4D6C[])(void);
 extern s32 g_wmap_land_effect_18_timeline_timer;
 extern void (*D_800D4C54[])(void);
-extern WmapEffect18Cell g_wmap_cells[][6];
 extern u32 g_wmap_selected_artifact;
 extern s32 g_wmap_land_effect_18_sequence_8_timer;
 extern void (*D_800D4D7C[])(void);
 extern SVECTOR D_801398C8;
 extern s16 D_801398CC;
 extern void (*D_800D4D94[])(void);
-extern u8 D_800DA448[];
-extern u8 D_80139CC8[];
 extern void (*D_800D4DA4[])(void);
-extern u8 D_800DB578[];
-extern WmapAnimationSlot D_80139FE8[];
 extern void (*D_800D4DB4[])(void);
 extern s32 g_wmap_land_effect_18_timer;
 extern void (*D_800D4CAC[])(void);
@@ -1161,7 +1150,7 @@ void wmap_land_effect_18_sequence_9_step_02(void)
 
     if (g_wmap_effect_fade_b > 0)
     {
-        func_8006CFE4(D_800DA448, D_80139CC8, 0x10, 0, g_wmap_effect_fade_b, 3);
+        func_8006CFE4(&g_wmap_sprite_actors[104], &g_wmap_actor_animations[104], 0x10, 0, g_wmap_effect_fade_b, 3);
     }
     g_wmap_effect_fade_b -= 4;
     c = g_wmap_land_effect_18_sequence_9_timer - 1;
@@ -1186,7 +1175,7 @@ void wmap_land_effect_18_sequence_10_step_02(void)
 
     if (g_wmap_effect_fade_d > 0)
     {
-        func_8006CFE4(D_800DB578, D_80139FE8, 0x28, 0, g_wmap_effect_fade_d, 3);
+        func_8006CFE4(&g_wmap_sprite_actors[204], &g_wmap_actor_animations[204], 0x28, 0, g_wmap_effect_fade_d, 3);
     }
     g_wmap_effect_fade_d -= 4;
     c = g_wmap_land_effect_18_sequence_10_timer - 1;

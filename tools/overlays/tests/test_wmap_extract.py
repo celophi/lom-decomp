@@ -32,6 +32,7 @@ class FakeOverlay:
 
     def __init__(self):
         self.symbols = {"wmap_test_step_a": STEP_A, "wmap_test_step_b": STEP_B}
+        self.sizes = {}
         self.data = bytearray()
         specs = list(TABLES)
 
@@ -82,7 +83,8 @@ class FakeOverlay:
         (assets / "wmap_data.databin.bin").write_bytes(self.data)
         segment = {"start": 1, "vram": ADDRESS, "subsegments": [[1, "databin", "wmap_data"]]}
         (config / wmap.OVERLAY_CONFIG).write_text(yaml.safe_dump({"segments": [segment, [1 + len(self.data)]]}))
-        lines = [f"{name} = 0x{address:08X};" for name, address in self.symbols.items() if name != skip_symbol]
+        lines = [f"{name} = 0x{address:08X};" + (f" // size:0x{self.sizes[name]:X}" if name in self.sizes else "")
+                 for name, address in self.symbols.items() if name != skip_symbol]
         (config / wmap.SYMBOL_FILE).write_text("\n".join(lines) + "\n")
         return wmap.Inputs("us", config, assets)
 
@@ -171,6 +173,13 @@ class ExtractTest(unittest.TestCase):
             "symbol": "test_steps", "address": f"0x{self.overlay.symbols['test_steps']:08X}", "count": 3,
             "steps": ["wmap_test_step_a", None, {"data": "g_wmap_game_displayed_score"}],
         }])
+
+    def test_step_target_inside_a_sized_symbol_is_named_by_offset(self):
+        self.overlay.sizes["g_wmap_game_displayed_score"] = 0x10
+        struct.pack_into("<I", self.overlay.data, self.overlay.steps_offset + 4, self.overlay.symbols["g_wmap_game_displayed_score"] + 8)
+        self.extract()
+        steps = self.load("handlers/wmap_test_effect.yaml")["tables"][0]["steps"]
+        self.assertEqual(steps[1], {"data": "g_wmap_game_displayed_score+0x8"})
 
     def test_unknown_step_target_writes_nothing(self):
         struct.pack_into("<I", self.overlay.data, self.overlay.steps_offset + 4, 0x80012345)

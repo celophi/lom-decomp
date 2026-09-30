@@ -257,7 +257,7 @@
     void name(void)                                                                                                                                            \
     {                                                                                                                                                          \
         g_wmap_sequence_busy = 0;                                                                                                                              \
-        cells[cell_x][cell_y].value = cell_value | 0x100;                                                                                                      \
+        cells[cell_x][cell_y].land_id = cell_value | 0x100;                                                                                                    \
         step += 1;                                                                                                                                             \
     }
 

@@ -21,13 +21,6 @@ typedef struct
     s32 angular_velocity;
 } WmapMotion;
 
-/** @brief Resource slot containing an animation-data pointer. */
-typedef struct
-{
-    s32 field_00;
-    u8* data;
-} WmapResource;
-
 /** @brief Position and velocity records, also used for particle bounds. */
 typedef struct
 {
@@ -49,7 +42,7 @@ extern VECTOR g_wmap_camera_translation;
 extern VECTOR D_80182D48;
 extern MATRIX D_8011D0E8;
 extern u16 D_80139980;
-extern WmapResource g_wmap_actor_animations[];
+extern WmapAnimationSlot g_wmap_actor_animations[];
 extern u8 D_800D9150;
 extern u8 D_800DCEA8;
 extern u8 D_800DCEB8;
@@ -549,7 +542,7 @@ void func_8006AFAC(s32 first, s32 end, s32 frame, s32 depth,
             M2C_FIELD(actor, u16 *, 0x24) = (u16) D_80139980;
             gte_stsxy(&screen_position);
             resource_offset = i * 8;
-            offsets = (s16 *)((WmapResource *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
+            offsets = (s16 *)((WmapAnimationSlot *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
             data = (u8 *)offsets;
             if (actor->previous_sequence != actor->sequence)
             {
@@ -670,8 +663,8 @@ void func_8006B328(s32 first, s32 end, s32 spawn_interval, s32 scale_override, s
                 position.vz = M2C_FIELD(motion, u16 *, 0xE);
                 gte_ldv0(&position);
                 gte_rtps();
-                resource_offset = i * sizeof(WmapResource);
-                address = (s32)((WmapResource *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
+                resource_offset = i * sizeof(WmapAnimationSlot);
+                address = (s32)((WmapAnimationSlot *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
                 if (M2C_FIELD(actor, s16 *, 0x10) != M2C_FIELD(actor, s16 *, 0xE))
                 {
                     M2C_FIELD(actor, s16 *, 0x10) = (s16) (u16) M2C_FIELD(actor, s16 *, 0xE);
@@ -796,7 +789,7 @@ void func_8006B6EC(s32 first, s32 end, s32 frame, s32 z_step, s32 depth)
             motion->angle = (motion->angle + motion->angular_velocity) & 4095;
             gte_stsxy(&screen_position);
             resource_offset = i * 8;
-            offsets = (s16 *)((WmapResource *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
+            offsets = (s16 *)((WmapAnimationSlot *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
             data = (u8 *)offsets;
             if (actor->previous_sequence != actor->sequence)
             {
@@ -876,8 +869,8 @@ void func_8006B998(s32 first, s32 end, void *point_data, s32 frame, s32 depth)
         actor = &actor_base[i];
         gte_ldv0(&point->position);
         gte_rtps();
-        resource_offset = i * sizeof(WmapResource);
-        offsets = (s16 *)((WmapResource *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
+        resource_offset = i * sizeof(WmapAnimationSlot);
+        offsets = (s16 *)((WmapAnimationSlot *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
         data = (u8 *)offsets;
         if (actor->previous_sequence != actor->sequence)
         {
@@ -983,7 +976,7 @@ void func_8006BC44(s32 first, s32 count, void *config, s32 expire_by_size)
                 copy_motion = ((i + M2C_FIELD(config, s32 *, 4)) * 0x14) + (u8 *)&g_wmap_actor_motions;
                 *(WmapMotion *)copy_motion = *(WmapMotion *)source_motion;
                 copy_resource = ((i + M2C_FIELD(config, s32 *, 4)) * 8) + (u8 *)&g_wmap_actor_animations;
-                *(WmapResource *)copy_resource = *(WmapResource *)resource;
+                *(WmapAnimationSlot *)copy_resource = *(WmapAnimationSlot *)resource;
                 M2C_FIELD(copy_actor, u16 *, 0x26) = (u16) M2C_FIELD(config, u16 *, 0x18);
                 M2C_FIELD(copy_actor, u16 *, 0x22) = (u16) M2C_FIELD(config, u16 *, 0x1C);
                 if (expire_by_size == 0)
@@ -1010,7 +1003,7 @@ void func_8006BC44(s32 first, s32 count, void *config, s32 expire_by_size)
         if (M2C_FIELD(motion, s16 *, 0) != 0)
         {
             resource_offset = i * 8;
-            offsets = (s16 *)((WmapResource *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
+            offsets = (s16 *)((WmapAnimationSlot *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
             data = (u8 *)offsets;
             if (draw_actor->previous_sequence != draw_actor->sequence)
             {
@@ -1201,7 +1194,7 @@ void func_8006C448(void *config)
             gte_ldv0(&position);
             gte_rtps();
             resource_offset = (i + M2C_FIELD(config, s32 *, 4)) * 8;
-            offsets = (s16 *)((WmapResource *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
+            offsets = (s16 *)((WmapAnimationSlot *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
             data = (u8 *)offsets;
             if (actor->previous_sequence != actor->sequence)
             {

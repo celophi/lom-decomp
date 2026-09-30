@@ -13,8 +13,8 @@
 #include "sdk/gte_dmpsx_compat.h"
 #include "cdrom.h"
 #include "akao_cmd.h"
+#include "wmap_cells.h"
 
-#define WMAP_GRID_SIZE 6
 #define WMAP_CELL_SPACING 48
 #define WMAP_TRAVEL_CELL_UNITS 160
 #define WMAP_TRAVEL_STEP 4
@@ -51,15 +51,6 @@ typedef struct
     u8* data;
 } WmapTravelAnimation;
 
-/** @brief Map-cell identity and the flags used to select a destination. */
-typedef struct
-{
-    s32 land_id;
-    s16 effect_enabled;
-    s16 traversable;
-    u8 pad_08[32];
-} WmapTravelCell;
-
 /** @brief Map translation and projection scale. */
 typedef struct
 {
@@ -80,14 +71,11 @@ typedef union
 } WmapTravelScreen;
 
 extern WmapTravelAnimation g_wmap_actor_animations[];
-extern WmapTravelCell g_wmap_cells[WMAP_GRID_SIZE][WMAP_GRID_SIZE];
 extern WmapTravelProjection g_wmap_view;
 extern const WmapTravelScreen D_8004FD04[];
 extern u8 D_800DBE98[];
 extern u8 D_800DC298[];
 extern u8 D_800DC698[];
-extern s16 D_800D9296;
-extern s16 D_800D92C2;
 extern s32 D_800D9224;
 extern s32 D_800DBE78;
 extern s32 g_wmap_cursor_column;
@@ -322,7 +310,7 @@ void wmap_update_party_travel(void)
     {
         selected_x = g_wmap_view.x / WMAP_CELL_SPACING + g_wmap_cursor_column;
         selected_y = g_wmap_view.y / WMAP_CELL_SPACING + g_wmap_cursor_row;
-        if (g_wmap_cells[selected_x][selected_y].traversable != 0 && g_wmap_view_mode == 0 && D_8011CF18 == 0)
+        if (g_wmap_cells[selected_x][selected_y].travel_allowed != 0 && g_wmap_view_mode == 0 && D_8011CF18 == 0)
         {
             if (selected_x != g_wmap_travelers[0].cell_x || (at_destination = 1, selected_y != g_wmap_travelers[0].cell_y))
             {
@@ -419,7 +407,7 @@ void wmap_init_party_travel(void)
     if (D_801398B8 != 0)
     {
         cdrom_queue_read(WMAP_TRAVEL_SECOND_ANIMATION_RESOURCE, D_800DC298);
-        D_800D9296 = 1;
+        g_wmap_sprite_actors[1].resource_index = 1;
         wmap_find_land_cell(27, &first_x, &first_y);
         wmap_set_traveler_position(1, first_x, first_y);
         cdrom_wait_queue_empty();
@@ -427,7 +415,7 @@ void wmap_init_party_travel(void)
     if (D_80182E1C != 0)
     {
         cdrom_queue_read(WMAP_TRAVEL_THIRD_ANIMATION_RESOURCE, D_800DC698);
-        D_800D92C2 = 2;
+        g_wmap_sprite_actors[2].resource_index = 2;
         wmap_find_land_cell(3, &second_x, &second_y);
         wmap_set_traveler_position(2, second_x, second_y);
         cdrom_wait_queue_empty();

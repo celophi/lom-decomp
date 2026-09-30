@@ -19,8 +19,9 @@
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
 #include "akao_cmd.h"
+#include "wmap_cells.h"
+#include "wmap_sprite_render.h"
 
-#define WMAP_GRID_SIZE 6
 #define WMAP_PLACEMENT_DELAY 30
 #define WMAP_PLACEMENT_DELAY_END 31
 #define WMAP_CAROUSEL_TRIANGLES 168
@@ -62,14 +63,6 @@ typedef struct
     s32 scale;
 } WmapProjectionState;
 
-/** @brief Placement eligibility within a map cell. */
-typedef struct
-{
-    u8 pad_00[4];
-    s16 placement_allowed;
-    u8 pad_06[0x22];
-} WmapCell;
-
 /** @brief Route state reset when selecting an artifact. */
 typedef struct
 {
@@ -91,19 +84,7 @@ enum WmapCarouselTextureWord
     WMAP_TEXTURE_WORDS
 };
 
-/** @brief GTE screen position available as a packed word or coordinate pair. */
-typedef union
-{
-    u32 packed;
-    struct
-    {
-        u16 x;
-        u16 y;
-    } point;
-} WmapScreenPosition;
-
 extern const WmapPoint g_wmap_cell_focus_offsets[];
-extern s16 D_800D928A;
 extern s32 D_800DBE70;
 extern s32 D_800DBE78;
 extern s32 g_wmap_cursor_column;
@@ -122,7 +103,6 @@ extern WmapRouteCell D_8011D108[6][6];
 extern s32 g_wmap_selected_artifact;
 extern s32 D_8011D52C;
 extern s32 D_80129550;
-extern WmapCell g_wmap_cells[6][6];
 extern s32 D_801398F4;
 extern WmapProjectionState g_wmap_view;
 extern s32 D_80182DE0;
@@ -169,7 +149,7 @@ s32 wmap_begin_land_placement(s32 initialize)
     g_wmap_view_scroll_mode = 2;
     g_wmap_view_mode = 0;
     g_wmap_event_active = 0;
-    D_800D928A = 0x80;
+    g_wmap_sprite_actors[0].target_shade = 0x80;
     points = g_wmap_cell_focus_offsets;
     y = g_wmap_cursor_row;
     x = g_wmap_cursor_column;
