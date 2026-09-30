@@ -6,6 +6,7 @@
 #include "wmap_view_effects.h"
 #include "wmap_sprite_render.h"
 #include "wmap_effect_primitives.h"
+#include "wmap_step_sequence.h"
 
 /** @brief First word of a 40-byte world-map cell. */
 typedef struct
@@ -21,7 +22,7 @@ void wmap_land_effect_11_step_03(void);
 s32 wmap_land_effect_11_run_timeline(s32 arg0);
 void wmap_land_effect_11_wait_idle_04(void);
 void wmap_land_effect_11_end(void);
-s32 wmap_land_effect_11_run_sequence_3(s32 reset);
+s32 wmap_land_effect_11_run_sequence_3(s32 arg0);
 s32 wmap_land_effect_11_run_sequence_4(s32 arg0);
 s32 wmap_land_effect_11_run_sequence_6(s32 arg0);
 s32 wmap_land_effect_11_run_sequence_1(s32 arg0);
@@ -100,7 +101,7 @@ extern void wmap_land_effect_11_sequence_9_step_02(void);
 extern void wmap_land_effect_11_sequence_9_step_04(void);
 
 extern u8 D_8011D538[];
-extern s32 g_wmap_land_effect_11_sequence_3_step;
+extern u32 g_wmap_land_effect_11_sequence_3_step;
 extern u32 g_wmap_land_effect_11_sequence_5_step;
 extern u32 g_wmap_land_effect_11_sequence_7_step;
 extern u32 g_wmap_land_effect_11_sequence_6_step;
@@ -318,42 +319,9 @@ void wmap_land_effect_11_sequence_8_step_04(void)
     }
 }
 
-/**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or reset, 0 if the step index was out of range.
- */
-s32 wmap_land_effect_11_run(s32 arg0)
-{
-    s32 result;
+WMAP_STEP_RUNNER(wmap_land_effect_11_run, D_800D5960, 0x6, g_wmap_land_effect_11_step, g_wmap_land_effect_11_timer)
 
-    if (arg0 != 0)
-    {
-        g_wmap_land_effect_11_step = 1;
-        g_wmap_land_effect_11_timer = 1;
-        return 1;
-    }
-
-    if (g_wmap_land_effect_11_step < 0x6)
-    {
-        D_800D5960[g_wmap_land_effect_11_step]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
-
-/**
- * @brief Set two adjacent world-map state flags.
- */
-void wmap_land_effect_11_reset(void)
-{
-    g_wmap_land_effect_11_step = 1;
-    g_wmap_land_effect_11_timer = 1;
-}
+WMAP_STEP_RESET(wmap_land_effect_11_reset, g_wmap_land_effect_11_step, g_wmap_land_effect_11_timer)
 
 /**
  * @brief Register the dispatch step, raise the run flag, advance the counter, and continue.
@@ -366,17 +334,7 @@ void wmap_land_effect_11_step_01(void)
     wmap_land_effect_11_wait_idle_02();
 }
 
-/**
- * @brief Advance this sequence one step while its gate flag is clear.
- */
-void wmap_land_effect_11_wait_idle_02(void)
-{
-    if (g_wmap_sequence_busy == 0)
-    {
-        g_wmap_land_effect_11_step += 1;
-        wmap_land_effect_11_step_03();
-    }
-}
+WMAP_STEP_WAIT_IDLE(wmap_land_effect_11_wait_idle_02, g_wmap_land_effect_11_step, wmap_land_effect_11_step_03)
 
 /**
  * @brief Register the dispatch step, raise the run flag, advance the counter, and continue.
@@ -389,62 +347,13 @@ void wmap_land_effect_11_step_03(void)
     wmap_land_effect_11_wait_idle_04();
 }
 
-/**
- * @brief Advance this sequence one step while its gate flag is clear.
- */
-void wmap_land_effect_11_wait_idle_04(void)
-{
-    if (g_wmap_sequence_busy == 0)
-    {
-        g_wmap_land_effect_11_step += 1;
-        wmap_land_effect_11_end();
-    }
-}
+WMAP_STEP_WAIT_IDLE(wmap_land_effect_11_wait_idle_04, g_wmap_land_effect_11_step, wmap_land_effect_11_end)
 
-/**
- * @brief Increment a world-map state counter.
- */
-void wmap_land_effect_11_end(void)
-{
-    g_wmap_land_effect_11_step += 1;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_11_end, g_wmap_land_effect_11_step)
 
-/**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or reset, 0 if the step index was out of range.
- */
-s32 wmap_land_effect_11_run_timeline(s32 arg0)
-{
-    s32 result;
+WMAP_STEP_RUNNER(wmap_land_effect_11_run_timeline, D_800D5978, 0xE, g_wmap_land_effect_11_timeline_step, g_wmap_land_effect_11_timeline_timer)
 
-    if (arg0 != 0)
-    {
-        g_wmap_land_effect_11_timeline_step = 1;
-        g_wmap_land_effect_11_timeline_timer = 1;
-        return 1;
-    }
-
-    if (g_wmap_land_effect_11_timeline_step < 0xE)
-    {
-        D_800D5978[g_wmap_land_effect_11_timeline_step]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
-
-/**
- * @brief Set two adjacent world-map state flags.
- */
-void wmap_land_effect_11_timeline_reset(void)
-{
-    g_wmap_land_effect_11_timeline_step = 1;
-    g_wmap_land_effect_11_timeline_timer = 1;
-}
+WMAP_STEP_RESET(wmap_land_effect_11_timeline_reset, g_wmap_land_effect_11_timeline_step, g_wmap_land_effect_11_timeline_timer)
 
 /**
  * @brief Set up a world-map sub-scene: request assets and register its handler.
@@ -458,16 +367,7 @@ void wmap_land_effect_11_timeline_step_01(void)
     g_wmap_land_effect_11_timeline_step += 1;
 }
 
-/**
- * @brief Tick the sequence wait timer; advance the step counter when it expires.
- */
-void wmap_land_effect_11_timeline_wait_02(void)
-{
-    if (--g_wmap_land_effect_11_timeline_timer == 0)
-    {
-        g_wmap_land_effect_11_timeline_step += 1;
-    }
-}
+WMAP_STEP_WAIT(wmap_land_effect_11_timeline_wait_02, g_wmap_land_effect_11_timeline_step, g_wmap_land_effect_11_timeline_timer)
 
 /**
  * @brief Register the next sequence step, arm its frame timer, and advance the counter.
@@ -479,16 +379,7 @@ void wmap_land_effect_11_timeline_step_03(void)
     g_wmap_land_effect_11_timeline_step += 1;
 }
 
-/**
- * @brief Tick the sequence wait timer; advance the step counter when it expires.
- */
-void wmap_land_effect_11_timeline_wait_04(void)
-{
-    if (--g_wmap_land_effect_11_timeline_timer == 0)
-    {
-        g_wmap_land_effect_11_timeline_step += 1;
-    }
-}
+WMAP_STEP_WAIT(wmap_land_effect_11_timeline_wait_04, g_wmap_land_effect_11_timeline_step, g_wmap_land_effect_11_timeline_timer)
 
 /** @brief Register world-map callbacks, seed a mode value, and advance step counters. */
 void wmap_land_effect_11_timeline_step_05(void)
@@ -501,16 +392,7 @@ void wmap_land_effect_11_timeline_step_05(void)
     g_wmap_land_effect_11_timeline_step += 1;
 }
 
-/**
- * @brief Tick the sequence wait timer; advance the step counter when it expires.
- */
-void wmap_land_effect_11_timeline_wait_06(void)
-{
-    if (--g_wmap_land_effect_11_timeline_timer == 0)
-    {
-        g_wmap_land_effect_11_timeline_step += 1;
-    }
-}
+WMAP_STEP_WAIT(wmap_land_effect_11_timeline_wait_06, g_wmap_land_effect_11_timeline_step, g_wmap_land_effect_11_timeline_timer)
 
 /**
  * @brief Register a world-map step callback and schedule its wait timer.
@@ -523,16 +405,7 @@ void wmap_land_effect_11_timeline_step_07(void)
     g_wmap_land_effect_11_timeline_step += 1;
 }
 
-/**
- * @brief Tick the sequence wait timer; advance the step counter when it expires.
- */
-void wmap_land_effect_11_timeline_wait_08(void)
-{
-    if (--g_wmap_land_effect_11_timeline_timer == 0)
-    {
-        g_wmap_land_effect_11_timeline_step += 1;
-    }
-}
+WMAP_STEP_WAIT(wmap_land_effect_11_timeline_wait_08, g_wmap_land_effect_11_timeline_step, g_wmap_land_effect_11_timeline_timer)
 
 /**
  * @brief Register two sequence steps, arm the frame timer, and advance the counter.
@@ -545,16 +418,7 @@ void wmap_land_effect_11_timeline_step_09(void)
     g_wmap_land_effect_11_timeline_step += 1;
 }
 
-/**
- * @brief Tick the sequence wait timer; advance the step counter when it expires.
- */
-void wmap_land_effect_11_timeline_wait_10(void)
-{
-    if (--g_wmap_land_effect_11_timeline_timer == 0)
-    {
-        g_wmap_land_effect_11_timeline_step += 1;
-    }
-}
+WMAP_STEP_WAIT(wmap_land_effect_11_timeline_wait_10, g_wmap_land_effect_11_timeline_step, g_wmap_land_effect_11_timeline_timer)
 
 /**
  * @brief Register two sequence steps, arm the frame timer, and advance the counter.
@@ -567,16 +431,7 @@ void wmap_land_effect_11_timeline_step_11(void)
     g_wmap_land_effect_11_timeline_step += 1;
 }
 
-/**
- * @brief Tick the sequence wait timer; advance the step counter when it expires.
- */
-void wmap_land_effect_11_timeline_wait_12(void)
-{
-    if (--g_wmap_land_effect_11_timeline_timer == 0)
-    {
-        g_wmap_land_effect_11_timeline_step += 1;
-    }
-}
+WMAP_STEP_WAIT(wmap_land_effect_11_timeline_wait_12, g_wmap_land_effect_11_timeline_step, g_wmap_land_effect_11_timeline_timer)
 
 /** @brief Clear the sequence gate, update the active map cell, and advance the step. */
 void wmap_land_effect_11_timeline_finish(void)
@@ -586,42 +441,9 @@ void wmap_land_effect_11_timeline_finish(void)
     g_wmap_land_effect_11_timeline_step += 1;
 }
 
-/**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or reset, 0 if the step index was out of range.
- */
-s32 wmap_land_effect_11_run_sequence_1(s32 arg0)
-{
-    s32 result;
+WMAP_STEP_RUNNER(wmap_land_effect_11_run_sequence_1, D_800D59B0, 0x4, g_wmap_land_effect_11_sequence_1_step, g_wmap_land_effect_11_sequence_1_timer)
 
-    if (arg0 != 0)
-    {
-        g_wmap_land_effect_11_sequence_1_step = 1;
-        g_wmap_land_effect_11_sequence_1_timer = 1;
-        return 1;
-    }
-
-    if (g_wmap_land_effect_11_sequence_1_step < 0x4)
-    {
-        D_800D59B0[g_wmap_land_effect_11_sequence_1_step]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
-
-/**
- * @brief Set two adjacent world-map state flags.
- */
-void wmap_land_effect_11_sequence_1_reset(void)
-{
-    g_wmap_land_effect_11_sequence_1_step = 1;
-    g_wmap_land_effect_11_sequence_1_timer = 1;
-}
+WMAP_STEP_RESET(wmap_land_effect_11_sequence_1_reset, g_wmap_land_effect_11_sequence_1_step, g_wmap_land_effect_11_sequence_1_timer)
 
 /**
  * @brief Populate a world-map actor control block and schedule its spawn step.
@@ -654,50 +476,11 @@ void wmap_land_effect_11_sequence_1_step_02(void)
     }
 }
 
-/**
- * @brief Increment a world-map state counter.
- */
-void wmap_land_effect_11_sequence_1_end(void)
-{
-    g_wmap_land_effect_11_sequence_1_step += 1;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_11_sequence_1_end, g_wmap_land_effect_11_sequence_1_step)
 
-/**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or reset, 0 if the step index was out of range.
- */
-s32 wmap_land_effect_11_run_sequence_2(s32 arg0)
-{
-    s32 result;
+WMAP_STEP_RUNNER(wmap_land_effect_11_run_sequence_2, D_800D59C0, 0x4, g_wmap_land_effect_11_sequence_2_step, g_wmap_land_effect_11_sequence_2_timer)
 
-    if (arg0 != 0)
-    {
-        g_wmap_land_effect_11_sequence_2_step = 1;
-        g_wmap_land_effect_11_sequence_2_timer = 1;
-        return 1;
-    }
-
-    if (g_wmap_land_effect_11_sequence_2_step < 0x4)
-    {
-        D_800D59C0[g_wmap_land_effect_11_sequence_2_step]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
-
-/**
- * @brief Set two adjacent world-map state flags.
- */
-void wmap_land_effect_11_sequence_2_reset(void)
-{
-    g_wmap_land_effect_11_sequence_2_step = 1;
-    g_wmap_land_effect_11_sequence_2_timer = 1;
-}
+WMAP_STEP_RESET(wmap_land_effect_11_sequence_2_reset, g_wmap_land_effect_11_sequence_2_step, g_wmap_land_effect_11_sequence_2_timer)
 
 /**
  * @brief Populate a world-map actor control block and schedule its spawn step.
@@ -730,47 +513,11 @@ void wmap_land_effect_11_sequence_2_step_02(void)
     }
 }
 
-/**
- * @brief Increment a world-map state counter.
- */
-void wmap_land_effect_11_sequence_2_end(void)
-{
-    g_wmap_land_effect_11_sequence_2_step += 1;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_11_sequence_2_end, g_wmap_land_effect_11_sequence_2_step)
 
-/** @brief Reset or dispatch the current effect phase.
- * @param reset Nonzero to restart the effect.
- * @return One while active, otherwise zero.
- */
-s32 wmap_land_effect_11_run_sequence_3(s32 reset)
-{
-    s32 active;
-    if (reset != 0)
-    {
-        g_wmap_land_effect_11_sequence_3_step = 1;
-        g_wmap_land_effect_11_sequence_3_timer = 1;
-        return 1;
-    }
-    if (g_wmap_land_effect_11_sequence_3_step < 6U)
-    {
-        D_800D59D0[g_wmap_land_effect_11_sequence_3_step]();
-        active = 1;
-    }
-    else
-    {
-        active = 0;
-    }
-    return active;
-}
+WMAP_STEP_RUNNER(wmap_land_effect_11_run_sequence_3, D_800D59D0, 6, g_wmap_land_effect_11_sequence_3_step, g_wmap_land_effect_11_sequence_3_timer)
 
-/**
- * @brief Set two adjacent world-map state flags.
- */
-void wmap_land_effect_11_sequence_3_reset(void)
-{
-    g_wmap_land_effect_11_sequence_3_step = 1;
-    g_wmap_land_effect_11_sequence_3_timer = 1;
-}
+WMAP_STEP_RESET(wmap_land_effect_11_sequence_3_reset, g_wmap_land_effect_11_sequence_3_step, g_wmap_land_effect_11_sequence_3_timer)
 
 /**
  * @brief Draw the world-map sprite via func_8006A2FC, then advance after the wait expires.
@@ -807,50 +554,11 @@ void wmap_land_effect_11_sequence_3_step_04(void)
     }
 }
 
-/**
- * @brief Increment a world-map state counter.
- */
-void wmap_land_effect_11_sequence_3_end(void)
-{
-    g_wmap_land_effect_11_sequence_3_step += 1;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_11_sequence_3_end, g_wmap_land_effect_11_sequence_3_step)
 
-/**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or reset, 0 if the step index was out of range.
- */
-s32 wmap_land_effect_11_run_sequence_4(s32 arg0)
-{
-    s32 result;
+WMAP_STEP_RUNNER(wmap_land_effect_11_run_sequence_4, D_800D59E8, 0x4, g_wmap_land_effect_11_sequence_4_step, g_wmap_land_effect_11_sequence_4_timer)
 
-    if (arg0 != 0)
-    {
-        g_wmap_land_effect_11_sequence_4_step = 1;
-        g_wmap_land_effect_11_sequence_4_timer = 1;
-        return 1;
-    }
-
-    if (g_wmap_land_effect_11_sequence_4_step < 0x4)
-    {
-        D_800D59E8[g_wmap_land_effect_11_sequence_4_step]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
-
-/**
- * @brief Set two adjacent world-map state flags.
- */
-void wmap_land_effect_11_sequence_4_reset(void)
-{
-    g_wmap_land_effect_11_sequence_4_step = 1;
-    g_wmap_land_effect_11_sequence_4_timer = 1;
-}
+WMAP_STEP_RESET(wmap_land_effect_11_sequence_4_reset, g_wmap_land_effect_11_sequence_4_step, g_wmap_land_effect_11_sequence_4_timer)
 
 /** @brief Configure the world-map actor and advance to its draw step. */
 void wmap_land_effect_11_sequence_4_step_01(void)
@@ -881,50 +589,11 @@ void wmap_land_effect_11_sequence_4_step_02(void)
     }
 }
 
-/**
- * @brief Increment a world-map state counter.
- */
-void wmap_land_effect_11_sequence_4_end(void)
-{
-    g_wmap_land_effect_11_sequence_4_step += 1;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_11_sequence_4_end, g_wmap_land_effect_11_sequence_4_step)
 
-/**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or reset, 0 if the step index was out of range.
- */
-s32 wmap_land_effect_11_run_sequence_5(s32 arg0)
-{
-    s32 result;
+WMAP_STEP_RUNNER(wmap_land_effect_11_run_sequence_5, D_800D59F8, 0x6, g_wmap_land_effect_11_sequence_5_step, g_wmap_land_effect_11_sequence_5_timer)
 
-    if (arg0 != 0)
-    {
-        g_wmap_land_effect_11_sequence_5_step = 1;
-        g_wmap_land_effect_11_sequence_5_timer = 1;
-        return 1;
-    }
-
-    if (g_wmap_land_effect_11_sequence_5_step < 0x6)
-    {
-        D_800D59F8[g_wmap_land_effect_11_sequence_5_step]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
-
-/**
- * @brief Set two adjacent world-map state flags.
- */
-void wmap_land_effect_11_sequence_5_reset(void)
-{
-    g_wmap_land_effect_11_sequence_5_step = 1;
-    g_wmap_land_effect_11_sequence_5_timer = 1;
-}
+WMAP_STEP_RESET(wmap_land_effect_11_sequence_5_reset, g_wmap_land_effect_11_sequence_5_step, g_wmap_land_effect_11_sequence_5_timer)
 
 /**
  * @brief Draw the world-map sprite via func_8006A2FC, then advance after the wait expires.
@@ -961,50 +630,11 @@ void wmap_land_effect_11_sequence_5_step_04(void)
     }
 }
 
-/**
- * @brief Increment a world-map state counter.
- */
-void wmap_land_effect_11_sequence_5_end(void)
-{
-    g_wmap_land_effect_11_sequence_5_step += 1;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_11_sequence_5_end, g_wmap_land_effect_11_sequence_5_step)
 
-/**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or reset, 0 if the step index was out of range.
- */
-s32 wmap_land_effect_11_run_sequence_6(s32 arg0)
-{
-    s32 result;
+WMAP_STEP_RUNNER(wmap_land_effect_11_run_sequence_6, D_800D5A10, 0x4, g_wmap_land_effect_11_sequence_6_step, g_wmap_land_effect_11_sequence_6_timer)
 
-    if (arg0 != 0)
-    {
-        g_wmap_land_effect_11_sequence_6_step = 1;
-        g_wmap_land_effect_11_sequence_6_timer = 1;
-        return 1;
-    }
-
-    if (g_wmap_land_effect_11_sequence_6_step < 0x4)
-    {
-        D_800D5A10[g_wmap_land_effect_11_sequence_6_step]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
-
-/**
- * @brief Set two adjacent world-map state flags.
- */
-void wmap_land_effect_11_sequence_6_reset(void)
-{
-    g_wmap_land_effect_11_sequence_6_step = 1;
-    g_wmap_land_effect_11_sequence_6_timer = 1;
-}
+WMAP_STEP_RESET(wmap_land_effect_11_sequence_6_reset, g_wmap_land_effect_11_sequence_6_step, g_wmap_land_effect_11_sequence_6_timer)
 
 /**
  * @brief Seed two sequence data blocks and one field, arm the timer, advance, and run the handler.
@@ -1020,50 +650,11 @@ void wmap_land_effect_11_sequence_6_step_01(void)
     wmap_land_effect_11_sequence_6_step_02();
 }
 
-/**
- * @brief Increment a world-map state counter.
- */
-void wmap_land_effect_11_sequence_6_end(void)
-{
-    g_wmap_land_effect_11_sequence_6_step += 1;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_11_sequence_6_end, g_wmap_land_effect_11_sequence_6_step)
 
-/**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or reset, 0 if the step index was out of range.
- */
-s32 wmap_land_effect_11_run_sequence_7(s32 arg0)
-{
-    s32 result;
+WMAP_STEP_RUNNER(wmap_land_effect_11_run_sequence_7, D_800D5A20, 0x4, g_wmap_land_effect_11_sequence_7_step, g_wmap_land_effect_11_sequence_7_timer)
 
-    if (arg0 != 0)
-    {
-        g_wmap_land_effect_11_sequence_7_step = 1;
-        g_wmap_land_effect_11_sequence_7_timer = 1;
-        return 1;
-    }
-
-    if (g_wmap_land_effect_11_sequence_7_step < 0x4)
-    {
-        D_800D5A20[g_wmap_land_effect_11_sequence_7_step]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
-
-/**
- * @brief Set two adjacent world-map state flags.
- */
-void wmap_land_effect_11_sequence_7_reset(void)
-{
-    g_wmap_land_effect_11_sequence_7_step = 1;
-    g_wmap_land_effect_11_sequence_7_timer = 1;
-}
+WMAP_STEP_RESET(wmap_land_effect_11_sequence_7_reset, g_wmap_land_effect_11_sequence_7_step, g_wmap_land_effect_11_sequence_7_timer)
 
 /**
  * @brief Seed two sequence data blocks and one field, arm the timer, advance, and run the handler.
@@ -1079,50 +670,11 @@ void wmap_land_effect_11_sequence_7_step_01(void)
     wmap_land_effect_11_sequence_7_step_02();
 }
 
-/**
- * @brief Increment a world-map state counter.
- */
-void wmap_land_effect_11_sequence_7_end(void)
-{
-    g_wmap_land_effect_11_sequence_7_step += 1;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_11_sequence_7_end, g_wmap_land_effect_11_sequence_7_step)
 
-/**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or reset, 0 if the step index was out of range.
- */
-s32 wmap_land_effect_11_run_sequence_8(s32 arg0)
-{
-    s32 result;
+WMAP_STEP_RUNNER(wmap_land_effect_11_run_sequence_8, D_800D5A30, 0x6, g_wmap_land_effect_11_sequence_8_step, g_wmap_land_effect_11_sequence_8_timer)
 
-    if (arg0 != 0)
-    {
-        g_wmap_land_effect_11_sequence_8_step = 1;
-        g_wmap_land_effect_11_sequence_8_timer = 1;
-        return 1;
-    }
-
-    if (g_wmap_land_effect_11_sequence_8_step < 0x6)
-    {
-        D_800D5A30[g_wmap_land_effect_11_sequence_8_step]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
-
-/**
- * @brief Set two adjacent world-map state flags.
- */
-void wmap_land_effect_11_sequence_8_reset(void)
-{
-    g_wmap_land_effect_11_sequence_8_step = 1;
-    g_wmap_land_effect_11_sequence_8_timer = 1;
-}
+WMAP_STEP_RESET(wmap_land_effect_11_sequence_8_reset, g_wmap_land_effect_11_sequence_8_step, g_wmap_land_effect_11_sequence_8_timer)
 
 /** @brief Clear two rotation vectors, set the flag, and start a 128-tick sequence step. */
 void wmap_land_effect_11_sequence_8_step_01(void)
@@ -1149,50 +701,11 @@ void wmap_land_effect_11_sequence_8_step_03(void)
     wmap_land_effect_11_sequence_8_step_04();
 }
 
-/**
- * @brief Increment a world-map state counter.
- */
-void wmap_land_effect_11_sequence_8_end(void)
-{
-    g_wmap_land_effect_11_sequence_8_step += 1;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_11_sequence_8_end, g_wmap_land_effect_11_sequence_8_step)
 
-/**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or reset, 0 if the step index was out of range.
- */
-s32 wmap_land_effect_11_run_sequence_9(s32 arg0)
-{
-    s32 result;
+WMAP_STEP_RUNNER(wmap_land_effect_11_run_sequence_9, D_800D5A48, 0x6, g_wmap_land_effect_11_sequence_9_step, g_wmap_land_effect_11_sequence_9_timer)
 
-    if (arg0 != 0)
-    {
-        g_wmap_land_effect_11_sequence_9_step = 1;
-        g_wmap_land_effect_11_sequence_9_timer = 1;
-        return 1;
-    }
-
-    if (g_wmap_land_effect_11_sequence_9_step < 0x6)
-    {
-        D_800D5A48[g_wmap_land_effect_11_sequence_9_step]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
-
-/**
- * @brief Set two adjacent world-map state flags.
- */
-void wmap_land_effect_11_sequence_9_reset(void)
-{
-    g_wmap_land_effect_11_sequence_9_step = 1;
-    g_wmap_land_effect_11_sequence_9_timer = 1;
-}
+WMAP_STEP_RESET(wmap_land_effect_11_sequence_9_reset, g_wmap_land_effect_11_sequence_9_step, g_wmap_land_effect_11_sequence_9_timer)
 
 /**
  * @brief Populate a world-map actor control block and schedule its spawn step.
@@ -1250,10 +763,4 @@ void wmap_land_effect_11_sequence_9_step_04(void)
     }
 }
 
-/**
- * @brief Increment a world-map state counter.
- */
-void wmap_land_effect_11_sequence_9_end(void)
-{
-    g_wmap_land_effect_11_sequence_9_step += 1;
-}
+WMAP_STEP_ADVANCE(wmap_land_effect_11_sequence_9_end, g_wmap_land_effect_11_sequence_9_step)

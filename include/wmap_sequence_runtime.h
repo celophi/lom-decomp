@@ -19,6 +19,8 @@
  * - `_end` (last entry) advances past the table, which stops the runner.
  * - `_step_NN` is any other step; NN is its index in the step table.
  * The timeline is the sequence that clears g_wmap_sequence_busy when it finishes.
+ * @see wmap_step_sequence.h for the macros that define the runners and the
+ *      reset, wait, wait_idle and end steps.
  */
 typedef s32 (*WmapSequenceCallback)(s32 initialize);
 

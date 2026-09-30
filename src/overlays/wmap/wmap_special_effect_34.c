@@ -10,6 +10,7 @@
 #include "wmap_effect_resources.h"
 #include "cdrom.h"
 #include "sdk/libgte.h"
+#include "wmap_step_sequence.h"
 
 void wmap_special_effect_34_step_04(void);
 void wmap_special_effect_34_step_05(void);
@@ -79,14 +80,14 @@ extern VECTOR D_8011CF60;
 extern u8 D_8018B240;
 extern s32 D_801B3210;
 extern s32 D_801B3214;
-extern s32 g_wmap_special_effect_34_step;
+extern u32 g_wmap_special_effect_34_step;
 extern s32 g_wmap_special_effect_34_timer;
-extern s32 g_wmap_special_effect_34_timeline_step;
+extern u32 g_wmap_special_effect_34_timeline_step;
 extern s32 g_wmap_special_effect_34_timeline_timer;
-extern s32 g_wmap_special_effect_34_sequence_1_step;
+extern u32 g_wmap_special_effect_34_sequence_1_step;
 extern s32 g_wmap_special_effect_34_sequence_1_timer;
-extern s32 g_wmap_special_effect_34_sequence_2_step;
-extern s32 g_wmap_special_effect_34_sequence_3_step;
+extern u32 g_wmap_special_effect_34_sequence_2_step;
+extern u32 g_wmap_special_effect_34_sequence_3_step;
 extern s32 g_wmap_special_effect_34_sequence_3_timer;
 extern void wmap_special_effect_34_step_04(void);
 extern void wmap_special_effect_34_step_05(void);
@@ -99,7 +100,7 @@ extern WmapHandler D_800D7A84[];
 extern WmapHandler D_800D7AAC[];
 extern WmapHandler D_800D7AC4[];
 extern s32 g_wmap_special_effect_34_sequence_2_timer;
-extern s32 g_wmap_special_effect_34_sequence_4_step;
+extern u32 g_wmap_special_effect_34_sequence_4_step;
 extern s32 g_wmap_special_effect_34_sequence_4_timer;
 extern void wmap_special_effect_34_timeline_step_07(void);
 extern void wmap_special_effect_34_sequence_2_step_09(void);
@@ -377,32 +378,7 @@ void wmap_land_effect_31_step_05(void);
     }
 }
 
-s32 wmap_special_effect_34_run(s32 reset)
-{
-void wmap_land_effect_31_sequence_1_step_04(void);
-void wmap_land_effect_31_sequence_2_step_02(void);
-void wmap_land_effect_31_sequence_3_step_02(void);
-void wmap_land_effect_31_sequence_3_step_04(void);
-void wmap_land_effect_31_step_02(void);
-void wmap_land_effect_31_step_03(void);
-void wmap_land_effect_31_step_04(void);
-void wmap_land_effect_31_step_05(void);
-
-    if (reset != 0)
-    {
-        g_wmap_special_effect_34_step = 1;
-        g_wmap_special_effect_34_timer = 1;
-        return 1;
-    }
-
-    if ((u32)g_wmap_special_effect_34_step >= 8)
-    {
-        return 0;
-    }
-
-    D_800D7A0C[g_wmap_special_effect_34_step]();
-    return 1;
-}
+WMAP_STEP_RUNNER(wmap_special_effect_34_run, D_800D7A0C, 8, g_wmap_special_effect_34_step, g_wmap_special_effect_34_timer)
 
 void wmap_special_effect_34_step_00(void)
 {
@@ -575,32 +551,7 @@ void wmap_land_effect_31_step_05(void);
     g_wmap_special_effect_34_step++;
 }
 
-s32 wmap_special_effect_34_run_timeline(s32 reset)
-{
-void wmap_land_effect_31_sequence_1_step_04(void);
-void wmap_land_effect_31_sequence_2_step_02(void);
-void wmap_land_effect_31_sequence_3_step_02(void);
-void wmap_land_effect_31_sequence_3_step_04(void);
-void wmap_land_effect_31_step_02(void);
-void wmap_land_effect_31_step_03(void);
-void wmap_land_effect_31_step_04(void);
-void wmap_land_effect_31_step_05(void);
-
-    if (reset != 0)
-    {
-        g_wmap_special_effect_34_timeline_step = 1;
-        g_wmap_special_effect_34_timeline_timer = 1;
-        return 1;
-    }
-
-    if ((u32)g_wmap_special_effect_34_timeline_step >= 0xE)
-    {
-        return 0;
-    }
-
-    D_800D7A2C[g_wmap_special_effect_34_timeline_step]();
-    return 1;
-}
+WMAP_STEP_RUNNER(wmap_special_effect_34_run_timeline, D_800D7A2C, 0xE, g_wmap_special_effect_34_timeline_step, g_wmap_special_effect_34_timeline_timer)
 
 void wmap_special_effect_34_timeline_step_00(void)
 {
@@ -736,29 +687,9 @@ void wmap_special_effect_34_timeline_finish(void)
     g_wmap_special_effect_34_timeline_step++;
 }
 
-s32 wmap_special_effect_34_run_sequence_1(s32 reset)
-{
-    if (reset != 0)
-    {
-        g_wmap_special_effect_34_sequence_1_step = 1;
-        g_wmap_special_effect_34_sequence_1_timer = 1;
-        return 1;
-    }
+WMAP_STEP_RUNNER(wmap_special_effect_34_run_sequence_1, D_800D7A64, 8, g_wmap_special_effect_34_sequence_1_step, g_wmap_special_effect_34_sequence_1_timer)
 
-    if ((u32)g_wmap_special_effect_34_sequence_1_step >= 8)
-    {
-        return 0;
-    }
-
-    D_800D7A64[g_wmap_special_effect_34_sequence_1_step]();
-    return 1;
-}
-
-void wmap_special_effect_34_sequence_1_reset(void)
-{
-    g_wmap_special_effect_34_sequence_1_step = 1;
-    g_wmap_special_effect_34_sequence_1_timer = 1;
-}
+WMAP_STEP_RESET(wmap_special_effect_34_sequence_1_reset, g_wmap_special_effect_34_sequence_1_step, g_wmap_special_effect_34_sequence_1_timer)
 
 void wmap_special_effect_34_sequence_1_step_01(void)
 {
@@ -793,29 +724,9 @@ void wmap_special_effect_34_sequence_1_step_07(void)
     g_wmap_special_effect_34_sequence_1_step++;
 }
 
-s32 wmap_special_effect_34_run_sequence_2(s32 reset)
-{
-    if (reset != 0)
-    {
-        g_wmap_special_effect_34_sequence_2_step = 1;
-        g_wmap_special_effect_34_sequence_2_timer = 1;
-        return 1;
-    }
+WMAP_STEP_RUNNER(wmap_special_effect_34_run_sequence_2, D_800D7A84, 0xA, g_wmap_special_effect_34_sequence_2_step, g_wmap_special_effect_34_sequence_2_timer)
 
-    if ((u32)g_wmap_special_effect_34_sequence_2_step >= 0xA)
-    {
-        return 0;
-    }
-
-    D_800D7A84[g_wmap_special_effect_34_sequence_2_step]();
-    return 1;
-}
-
-void wmap_special_effect_34_sequence_2_reset(void)
-{
-    g_wmap_special_effect_34_sequence_2_step = 1;
-    g_wmap_special_effect_34_sequence_2_timer = 1;
-}
+WMAP_STEP_RESET(wmap_special_effect_34_sequence_2_reset, g_wmap_special_effect_34_sequence_2_step, g_wmap_special_effect_34_sequence_2_timer)
 
 void wmap_special_effect_34_sequence_2_step_02(void)
 {
@@ -859,29 +770,9 @@ void wmap_special_effect_34_sequence_2_step_09(void)
     g_wmap_special_effect_34_sequence_2_step++;
 }
 
-s32 wmap_special_effect_34_run_sequence_3(s32 reset)
-{
-    if (reset != 0)
-    {
-        g_wmap_special_effect_34_sequence_3_step = 1;
-        g_wmap_special_effect_34_sequence_3_timer = 1;
-        return 1;
-    }
+WMAP_STEP_RUNNER(wmap_special_effect_34_run_sequence_3, D_800D7AAC, 6, g_wmap_special_effect_34_sequence_3_step, g_wmap_special_effect_34_sequence_3_timer)
 
-    if ((u32)g_wmap_special_effect_34_sequence_3_step >= 6)
-    {
-        return 0;
-    }
-
-    D_800D7AAC[g_wmap_special_effect_34_sequence_3_step]();
-    return 1;
-}
-
-void wmap_special_effect_34_sequence_3_reset(void)
-{
-    g_wmap_special_effect_34_sequence_3_step = 1;
-    g_wmap_special_effect_34_sequence_3_timer = 1;
-}
+WMAP_STEP_RESET(wmap_special_effect_34_sequence_3_reset, g_wmap_special_effect_34_sequence_3_step, g_wmap_special_effect_34_sequence_3_timer)
 
 void wmap_special_effect_34_sequence_3_step_01(void)
 {
@@ -919,34 +810,11 @@ void wmap_special_effect_34_sequence_3_step_04(void)
     }
 }
 
-void wmap_special_effect_34_sequence_3_end(void)
-{
-    g_wmap_special_effect_34_sequence_3_step++;
-}
+WMAP_STEP_ADVANCE(wmap_special_effect_34_sequence_3_end, g_wmap_special_effect_34_sequence_3_step)
 
-s32 wmap_special_effect_34_run_sequence_4(s32 reset)
-{
-    if (reset != 0)
-    {
-        g_wmap_special_effect_34_sequence_4_step = 1;
-        g_wmap_special_effect_34_sequence_4_timer = 1;
-        return 1;
-    }
+WMAP_STEP_RUNNER(wmap_special_effect_34_run_sequence_4, D_800D7AC4, 6, g_wmap_special_effect_34_sequence_4_step, g_wmap_special_effect_34_sequence_4_timer)
 
-    if ((u32)g_wmap_special_effect_34_sequence_4_step >= 6)
-    {
-        return 0;
-    }
-
-    D_800D7AC4[g_wmap_special_effect_34_sequence_4_step]();
-    return 1;
-}
-
-void wmap_special_effect_34_sequence_4_reset(void)
-{
-    g_wmap_special_effect_34_sequence_4_step = 1;
-    g_wmap_special_effect_34_sequence_4_timer = 1;
-}
+WMAP_STEP_RESET(wmap_special_effect_34_sequence_4_reset, g_wmap_special_effect_34_sequence_4_step, g_wmap_special_effect_34_sequence_4_timer)
 
 void wmap_special_effect_34_sequence_4_step_01(void)
 {
@@ -992,10 +860,7 @@ void wmap_special_effect_34_sequence_4_step_04(void)
     }
 }
 
-void wmap_special_effect_34_sequence_4_end(void)
-{
-    g_wmap_special_effect_34_sequence_4_step++;
-}
+WMAP_STEP_ADVANCE(wmap_special_effect_34_sequence_4_end, g_wmap_special_effect_34_sequence_4_step)
 
 void func_800C0C5C(VECTOR* translation, SVECTOR* rotation)
 {
