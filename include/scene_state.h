@@ -15,6 +15,6 @@ typedef struct
 } SceneState;
 
 /** @brief Scene state block kept at a fixed RAM address across overlays. */
-#define SCENE_STATE ((SceneState*)0x801ED480)
+#define SCENE_STATE ((SceneState*)SCENE_STATE_ADDRESS)
 
 #endif

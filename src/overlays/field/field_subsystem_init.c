@@ -15,8 +15,8 @@
 #include "menu.h"
 
 /** @brief Fixed work areas of the field overlay: CD read buffer and actor resource heap. */
-#define FIELD_CD_BUFFER_AREA ((u8*)0x80140000)
-#define FIELD_ACTOR_HEAP_AREA ((u8*)0x80158000)
+#define FIELD_CD_BUFFER_AREA ((u8*)SECONDARY_OVERLAY_ADDRESS)
+#define FIELD_ACTOR_HEAP_AREA ((u8*)SECONDARY_OVERLAY_AT(0x18000))
 
 /** @brief g_music_track_table entry of a track index that has no music. */
 #define FIELD_MUSIC_TRACK_NONE 0xFF

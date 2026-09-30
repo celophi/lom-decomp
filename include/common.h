@@ -2,6 +2,7 @@
 #define _COMMON_H
 
 #include "include_asm.h"
+#include "memory_map.h"
 
 typedef unsigned char   u_char;
 typedef unsigned short  u_short;

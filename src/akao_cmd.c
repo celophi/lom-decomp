@@ -35,11 +35,7 @@ extern AkaoBankHeader g_akao_bank_staging;
 #define AKAO_BANK_SLOT_COUNT 6
 
 /* g_akao_seq_channel0, read through its fixed address. */
-#if defined(VERSION_JP)
-#define AKAO_PRIMARY_SONG (*(AkaoSongState**)0x8003EDCC)
-#else
-#define AKAO_PRIMARY_SONG (*(AkaoSongState**)0x8003EC5C)
-#endif
+#define AKAO_PRIMARY_SONG (*(AkaoSongState**)AKAO_PRIMARY_SONG_ADDRESS)
 
 /**
  * Central dispatcher for the AKAO sound driver. Each high-level wrapper

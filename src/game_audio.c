@@ -7,7 +7,7 @@
 #define SONG_FADE_OUT_TICKS 300
 #define SONG_INDEX_NONE 0xFF
 #define SONG_SEQUENCE_BUFFER_SIZE 1024
-#define SONG_LOAD_BUFFER ((void*)0x80180000)
+#define SONG_LOAD_BUFFER ((void*)LOAD_BUFFER_ADDRESS)
 
 /** @brief Resident song sequence with its AKAO header. */
 typedef union

@@ -20,11 +20,9 @@
 #endif
 
 /** @brief Fixed RAM buffer that CD resources are staged into before being unpacked. */
-#define TITLE_LOAD_BUFFER ((u8*)0x80180000)
+#define TITLE_LOAD_BUFFER ((u8*)LOAD_BUFFER_ADDRESS)
 /** @brief Offset table at the head of a staged file: [0] first block, [1] instrument bank. */
-#define TITLE_LOAD_BUFFER_OFFSETS ((u32*)0x80180004)
-/** @brief Fixed RAM address the title's AKAO sound-effect bank is copied to. */
-#define TITLE_AUDIO_BANK_ADDRESS 0x8013C000
+#define TITLE_LOAD_BUFFER_OFFSETS ((u32*)LOAD_BUFFER_AT(0x4))
 
 /* run_save_slot_menu result that returns from the picker to the title menu. */
 #define SAVE_SLOT_MENU_EXIT_CANCEL 2
@@ -362,7 +360,7 @@ void load_title_audio_bank(void)
     if (((u32)(g_previous_game_state - 2) >= 2U) && (g_previous_game_state != 6) && (g_previous_game_state != 7) && (g_previous_game_state != 5))
     {
 
-        g_titleAudioBankBase = TITLE_AUDIO_BANK_ADDRESS;
+        g_titleAudioBankBase = SOUND_BANK_ADDRESS;
         cdrom_queue_read(CD_RES_SOUND_EFFECT_SET, TITLE_LOAD_BUFFER);
         cdrom_wait_queue_empty();
 

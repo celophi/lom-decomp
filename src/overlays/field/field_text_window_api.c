@@ -8,7 +8,7 @@
 #include "main.h"
 
 /** @brief Pending text-window configuration block (fixed RAM) consumed by field_text_apply_config. */
-#define FIELD_TEXT_PENDING_CONFIG ((FieldTextConfig*)0x801ED408)
+#define FIELD_TEXT_PENDING_CONFIG ((FieldTextConfig*)TEXT_CONFIG_ADDRESS)
 
 /** @brief Window layouts in g_field_text_window_layouts. */
 #define FIELD_TEXT_LAYOUT_NO_PORTRAIT 2 /**< First layout that never shows a portrait. */

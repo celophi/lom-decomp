@@ -122,13 +122,13 @@
 #define FIELD_TECHNIQUE_ANIMATION 2
 
 /** @brief Load address of the sub-overlays (MENU, GOLEM, GNAME, ZUKAN, GOSUB, SHOP). */
-#define FIELD_SUBOVERLAY_ADDRESS ((void*)0x80140000)
+#define FIELD_SUBOVERLAY_ADDRESS ((void*)SECONDARY_OVERLAY_ADDRESS)
 /** @brief Work buffers handed to the sub-overlays. */
-#define FIELD_MENU_RENDER_BUFFERS ((void*)0x80170000)
-#define FIELD_GOLEM_WORK_BUFFER 0x80150000
-#define FIELD_SHOP_WORK_BUFFER ((void*)0x80150000)
-#define FIELD_GNAME_WORK_BUFFER ((void*)0x80160000)
-#define FIELD_GOSUB_WORK_BUFFER ((void*)0x80175000)
+#define FIELD_MENU_RENDER_BUFFERS ((void*)SECONDARY_OVERLAY_AT(0x30000))
+#define FIELD_GOLEM_WORK_BUFFER SECONDARY_OVERLAY_AT(0x10000)
+#define FIELD_SHOP_WORK_BUFFER ((void*)SECONDARY_OVERLAY_AT(0x10000))
+#define FIELD_GNAME_WORK_BUFFER ((void*)SECONDARY_OVERLAY_AT(0x20000))
+#define FIELD_GOSUB_WORK_BUFFER ((void*)SECONDARY_OVERLAY_AT(0x35000))
 
 /** @brief Screens the MENU overlay returns: 0 closes the menu, others open GNAME with that mode. */
 #define FIELD_MENU_CLOSED 0

@@ -77,10 +77,10 @@
 #define SPIRAL_RADIUS_LIMIT 320
 
 /** @brief Scratchpad word pair holding the GTE distance input vector. */
-#define DISTANCE_DELTA ((VECTOR*)0x1F800000)
+#define DISTANCE_DELTA ((VECTOR*)SCRATCHPAD_ADDRESS)
 
 /** @brief Scratchpad words receiving the squared distance components. */
-#define DISTANCE_SQUARES ((VECTOR*)0x1F800010)
+#define DISTANCE_SQUARES ((VECTOR*)SCRATCHPAD_AT(0x10))
 
 /** @brief Runtime state of @p actor's object. */
 #define OBJECT_STATE(actor) g_field_object_states[(actor)->source_object_index]

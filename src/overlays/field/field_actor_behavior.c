@@ -231,8 +231,8 @@
 #define FIELD_OBJECT_BINDING(i) ((u32)(i) < FIELD_PLAYER_COUNT ? (i) : FIELD_PLAYER_COUNT)
 
 /** @brief Scratchpad collision mover and probe. */
-#define FIELD_COLLISION_MOVER ((struct FieldCollisionMover*)0x1F800000)
-#define FIELD_COLLISION_PROBE ((struct FieldCollisionQuery*)0x1F800040)
+#define FIELD_COLLISION_MOVER ((struct FieldCollisionMover*)SCRATCHPAD_ADDRESS)
+#define FIELD_COLLISION_PROBE ((struct FieldCollisionQuery*)SCRATCHPAD_AT(0x40))
 
 /**
  * @brief Collision mover handed to field_collision_move_mover (same layout as in field_collision.c).

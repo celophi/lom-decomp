@@ -99,13 +99,13 @@
     }
 
 /** PSX scratchpad RAM, used as row work buffers by the rasterisers. */
-#define FIELD_COLLISION_SCRATCH 0x1F800000
+#define FIELD_COLLISION_SCRATCH SCRATCHPAD_ADDRESS
 
 /** Fixed RAM list of the nodes that block a probe, filled by field_collision_classify_nodes. */
-#define FIELD_COLLISION_HIT_LIST ((FieldCollisionNode**)0x801E1000)
+#define FIELD_COLLISION_HIT_LIST ((FieldCollisionNode**)COLLISION_LISTS_ADDRESS)
 
 /** Fixed RAM list of the nodes a probe touches without being blocked. */
-#define FIELD_COLLISION_TOUCH_LIST ((FieldCollisionNode**)0x801E1100)
+#define FIELD_COLLISION_TOUCH_LIST ((FieldCollisionNode**)COLLISION_LISTS_AT(0x100))
 
 /**
  * @brief Convert a 24.8 fixed-point coordinate to whole collision cells.

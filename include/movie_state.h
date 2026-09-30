@@ -84,7 +84,7 @@ typedef struct
     volatile u8 end_state;
 } MovieState;
 
-#define MOVIE_STATE ((MovieState*)0x801ED500)
+#define MOVIE_STATE ((MovieState*)MOVIE_STATE_ADDRESS)
 
 extern u8 g_gpu_mode;
 extern u8 g_movie_use_cd_audio;

@@ -9,13 +9,13 @@
 #include "field_modal_runtime.h"
 
 /** @brief Load address of the modal sub-overlays. */
-#define FIELD_SUBOVERLAY_ADDRESS ((void*)0x80140000)
+#define FIELD_SUBOVERLAY_ADDRESS ((void*)SECONDARY_OVERLAY_ADDRESS)
 
 /** @brief Render buffers handed to the GOLEM entry point. */
-#define FIELD_GOLEM_RENDER_BUFFERS ((void*)0x80150000)
+#define FIELD_GOLEM_RENDER_BUFFERS ((void*)SECONDARY_OVERLAY_AT(0x10000))
 
 /** @brief Work buffer handed to the CARDA, NIKI and ADDHERO entry points. */
-#define FIELD_MODAL_WORK_BUFFER ((void*)0x80170000)
+#define FIELD_MODAL_WORK_BUFFER ((void*)SECONDARY_OVERLAY_AT(0x30000))
 
 extern s32 g_field_modal_state;
 extern s32 g_field_card_overlay_mode;

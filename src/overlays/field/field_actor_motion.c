@@ -14,7 +14,7 @@
 #include "vector.h"
 
 /** @brief Scratchpad vector that receives the actor displacement. */
-#define FIELD_SCRATCH_DISPLACEMENT ((Vec3i*)0x1F800000)
+#define FIELD_SCRATCH_DISPLACEMENT ((Vec3i*)SCRATCHPAD_ADDRESS)
 
 /** @brief Action animation whose handler also runs after the animation has finished. */
 #define FIELD_ANIMATION_35 0x35

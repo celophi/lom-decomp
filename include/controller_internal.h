@@ -208,6 +208,6 @@ typedef struct ControllerState
     u8 sample_unavailable;
 } ControllerState;
 
-#define CONTROLLER_STATE ((ControllerState*)0x801ED600)
+#define CONTROLLER_STATE ((ControllerState*)CONTROLLER_STATE_ADDRESS)
 
 #endif

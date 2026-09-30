@@ -240,7 +240,7 @@
 #define MENU_ABILITY_FLAG_SHOW_ICON 0x02
 
 /* Type-view and fixed-address helpers. */
-#define MENU_CONTROLLER_ACTUATORS ((MenuControllerActuatorState*)0x801ED600)
+#define MENU_CONTROLLER_ACTUATORS ((MenuControllerActuatorState*)CONTROLLER_STATE_ADDRESS)
 
 /* ----- Types ----- */
 

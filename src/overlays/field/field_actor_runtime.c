@@ -35,12 +35,12 @@
 #define FIELD_GOVER_MUSIC_FADE 120
 
 /** @brief Load address of the sub-overlays (GOVER.BIN here). */
-#define FIELD_SUBOVERLAY_ADDRESS ((void*)0x80140000)
+#define FIELD_SUBOVERLAY_ADDRESS ((void*)SECONDARY_OVERLAY_ADDRESS)
 /** @brief Work area handed to the game-over overlay. */
-#define FIELD_GOVER_WORK_ADDRESS 0x80160000
+#define FIELD_GOVER_WORK_ADDRESS SECONDARY_OVERLAY_AT(0x20000)
 
 /** @brief Backup of g_field_resource_buffer that party resources are relocated from. */
-#define FIELD_RESOURCE_BACKUP ((u8*)0x80180000)
+#define FIELD_RESOURCE_BACKUP ((u8*)LOAD_BUFFER_ADDRESS)
 /** @brief Size of the resource buffer backup. */
 #define FIELD_RESOURCE_BACKUP_SIZE 0x10000
 /** @brief Number of resource entries in g_field_resource_entries. */

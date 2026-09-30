@@ -20,9 +20,9 @@
 #define WSEL_FADE_ADDITIVE_DRAW_MODE 0x25
 #define WSEL_FADE_SUBTRACTIVE_DRAW_MODE 0x45
 /** Fixed RAM buffer that CD resources are staged into before being unpacked. */
-#define WSEL_LOAD_BUFFER ((u8*)0x80180000)
+#define WSEL_LOAD_BUFFER ((u8*)LOAD_BUFFER_ADDRESS)
 /** Offset table at the head of a staged music file: [0] sequence, [1] instrument bank. */
-#define WSEL_LOAD_BUFFER_OFFSETS ((u32*)0x80180004)
+#define WSEL_LOAD_BUFFER_OFFSETS ((u32*)LOAD_BUFFER_AT(0x4))
 #define WSEL_PAD_UNAVAILABLE 0xFE
 #define WSEL_INDICATOR_ANCHOR_X 32
 #define WSEL_INDICATOR_ANCHOR_Y 40
