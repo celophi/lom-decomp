@@ -65,7 +65,6 @@ typedef struct
 extern s32 g_wmap_sequence_count;
 extern s32 g_wmap_sequence_active[];
 extern WmapSequenceCallback g_wmap_sequences[];
-extern s32 D_8013B20C;
 extern u32 g_wmap_land_entry_step;
 extern u32 g_wmap_land_focus_step;
 extern s32 g_wmap_land_focus_timer;
@@ -163,7 +162,7 @@ static inline void wmap_start_sequence_slot(WmapSequenceCallback callback)
 void wmap_land_entry_start_focus(void)
 {
     wmap_start_sequence_slot(wmap_run_land_focus);
-    D_8013B20C = 1;
+    g_wmap_sequence_busy = 1;
     g_wmap_land_entry_step++;
     wmap_land_entry_wait();
 }
@@ -630,11 +629,11 @@ void wmap_land_entry_reset(void)
 }
 
 /**
- * @brief Land entry step 2: wait until the land effect clears D_8013B20C.
+ * @brief Land entry step 2: wait until the land effect clears g_wmap_sequence_busy.
  */
 void wmap_land_entry_wait(void)
 {
-    if (D_8013B20C == 0)
+    if (g_wmap_sequence_busy == 0)
     {
         g_wmap_land_entry_step += 1;
         wmap_land_entry_finish();

@@ -141,7 +141,6 @@ extern s32 g_wmap_view_scroll_mode;
 extern WmapView g_wmap_view;
 extern s32 D_80139978;
 extern s32 D_8013B208;
-extern s32 D_8013B20C;
 extern s32 D_8013B294;
 extern SVECTOR D_8013B238;
 extern SVECTOR D_8013B240;
@@ -1067,7 +1066,7 @@ void wmap_effect35_load(void)
     func_800651B4(&D_80193640);
     wmap_reset_focus_screen_position();
     wmap_start_sequence(wmap_effect35_run_timeline);
-    D_8013B20C = 1;
+    g_wmap_sequence_busy = 1;
     g_wmap_effect35_step++;
     wmap_effect35_wait_timeline();
 }
@@ -1077,7 +1076,7 @@ void wmap_effect35_load(void)
  */
 void wmap_effect35_wait_timeline(void)
 {
-    if (D_8013B20C == 0)
+    if (g_wmap_sequence_busy == 0)
     {
         g_wmap_effect35_step++;
         wmap_effect35_finish();
@@ -1503,7 +1502,7 @@ void wmap_effect35_timeline_wait_36(void)
  */
 void wmap_effect35_timeline_finish(void)
 {
-    D_8013B20C = 0;
+    g_wmap_sequence_busy = 0;
     g_wmap_effect35_timeline_step++;
 }
 

@@ -173,7 +173,6 @@ extern u8 D_8011D538[];
 extern WmapPoint g_wmap_cell_focus_offsets[][3];
 extern SVECTOR g_wmap_camera_rotation;
 extern VECTOR g_wmap_camera_translation;
-extern s32 D_8013B20C;
 extern s32 g_wmap_focus_origin_x;
 extern s32 g_wmap_focus_origin_y;
 extern s32 g_wmap_land_focus_step;
@@ -1039,7 +1038,7 @@ void wmap_begin_cell_focus(void)
     MATRIX matrix;
     WmapScreenPosition screen;
 
-    D_8013B20C = 1;
+    g_wmap_sequence_busy = 1;
     func_8006D8F0(1);
     func_8006D870(1);
     g_wmap_view_scroll_mode = 2;
@@ -1080,6 +1079,6 @@ void wmap_project_focus_position(void)
     gte_ldv0(&position);
     gte_rtps();
     gte_stsxy(&g_wmap_focus_screen_position);
-    D_8013B20C = 0;
+    g_wmap_sequence_busy = 0;
     g_wmap_land_focus_step++;
 }
