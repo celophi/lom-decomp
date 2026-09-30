@@ -685,7 +685,8 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
                             {
                                 source_word = *(u32*)source_ptr;
                                 source_ptr += CD_STREAM_COPY_WORD_SIZE;
-                                *((u32*)destination)++ = source_word;
+                                /* Store a word and step destination (a u8 *) by one word. */
+                                *(*(u32**)&destination)++ = source_word;
                             }
                         }
 

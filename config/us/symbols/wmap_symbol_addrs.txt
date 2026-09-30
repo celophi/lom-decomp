@@ -101,6 +101,7 @@ g_wmap_land_scale_steps = 0x800500B4;
 g_wmap_cell_effect_steps = 0x800500C8;
 g_wmap_land_quad_scales = 0x800CBDC4;
 g_wmap_cell_effect_quads = 0x800CB8E8;
+g_wmap_sfx_buffers = 0x800CB1FC; // size:0xFC allow_addend:True
 g_wmap_information_glyphs = 0x800CB2F8;
 g_wmap_information_placements = 0x800CB3D8;
 g_wmap_information_group_starts = 0x800CB8BC;

@@ -78,7 +78,7 @@ extern s32 D_80182DE8;
 extern u8 D_800DCF18[];
 extern s32 D_801B2DF4;
 extern s32 D_80182DEC;
-extern s32 D_8011CF1C;
+extern u8* D_8011CF1C;
 extern s32 D_801B2DFC;
 extern s32* D_8011CF24;
 extern s32 D_80182DF0;
@@ -132,7 +132,7 @@ extern void (*D_800D6B54[])(void);
 extern void (*D_800D6B6C[])(void);
 extern void (*D_800D6B8C[])(void);
 extern u8 D_800D95D8[];
-extern u8 D_80139A28[];
+extern WmapAnimationSlot D_80139A28[];
 extern void (*D_800D6BA4[])(void);
 extern void (*D_800D6BC4[])(void);
 extern void (*D_800D6BE4[])(void);
@@ -440,7 +440,7 @@ void func_800A3A2C(void)
     {
         D_801AFBD0[i].field_00 = 0;
         D_80139988[i].data = D_8011F538;
-        D_800D9268[i].unknown_02 = 0;
+        D_800D9268[i].resource_index = 0;
         D_800D9268[i].scale_index = 15;
         D_800D9268[i].sequence = rand() % 3 + 2;
         D_800D9268[i].previous_sequence = -1;
@@ -463,7 +463,7 @@ void func_800A3B3C(void)
         D_801AFBD0[i].field_00 = 0;
         D_80139988[i].data = D_80121538;
         D_800D9268[i].sequence = i & 1;
-        D_800D9268[i].unknown_02 = 0;
+        D_800D9268[i].resource_index = 0;
         D_800D9268[i].scale_index = 15;
         D_800D9268[i].previous_sequence = -1;
     }
@@ -925,7 +925,7 @@ void func_800A455C(void)
     D_800D9318.sequence = 1;
     D_800D9318.previous_sequence = -1;
     D_800D9318.shade_step = 8;
-    D_800D9318.unknown_02 = 0;
+    D_800D9318.resource_index = 0;
     D_800D9318.target_shade = 0x81;
     D_800D9318.shade = 1;
     D_801B2DE4 = 0x80;
@@ -1000,7 +1000,7 @@ void func_800A4700(void)
     D_800D9344.scale_index = 0xF;
     D_800D9344.previous_sequence = -1;
     D_800D9344.shade_step = 4;
-    D_800D9344.unknown_02 = 0;
+    D_800D9344.resource_index = 0;
     D_800D9344.sequence = 0;
     D_800D9344.target_shade = 0x80;
     D_800D9344.shade = 0;
@@ -1812,7 +1812,7 @@ void func_800A5CF0(void)
     D_801399BC = D_80125538;
     D_800D9370.scale_index = 0xF;
     D_800D9370.previous_sequence = -1;
-    D_800D9370.unknown_02 = 0;
+    D_800D9370.resource_index = 0;
     D_800D9370.sequence = 0;
     D_800D9370.shade_step = 0;
     D_800D9370.target_shade = 0x80;

@@ -25,14 +25,12 @@
  * (include/akao_cmd.h is used by every overlay, some with other local
  * declarations of these commands).
  */
-s32 akao_start_song_channels(u8 *sequence, s32 param1, s32 param2);
 s32 akao_switch_song(s32 value0, s32 value1);
 void akao_stop_sfx(s32 value0, s32 value1);
 s32 akao_fade_song_volume(s32 song_handle, s32 frames, s32 volume);
 s32 akao_set_master_pan(s32 value0);
 s32 akao_set_master_volume(s32 value0);
 s32 akao_is_sfx_playing(s32 voice_mask);
-s32 akao_play_sfx_from_buffer(s32 buffer_address, s32 voice_mask, s32 pan, s32 volume);
 s32 akao_get_xfer_state(void);
 s32 akao_reset_xfer_state(void);
 s32 akao_load_bank_slot(void *bank, s32 slot, s32 wait_for_completion);
@@ -428,7 +426,7 @@ void field_play_set_sfx(s32 sfx_index, s32 pan, s32 unused, s32 channel_group)
     s32 base;
     s32 i;
     s32 mask;
-    s32 buf;
+    u8 *buf;
 
     if (g_field_sfx_tables.active_table_offset != 0)
     {
@@ -439,7 +437,7 @@ void field_play_set_sfx(s32 sfx_index, s32 pan, s32 unused, s32 channel_group)
         table = (s32 *)((u8 *)&g_field_sfx_tables + g_field_sfx_tables.active_table_offset);
         if ((u32)sfx_index < (u32)(table[0] - 1))
         {
-            buf = (s32)table;
+            buf = (u8 *)table;
             i = 0;
             base = channel_group * FIELD_SFX_GROUP_VOICES;
             buf += table[sfx_index + 1];
@@ -448,7 +446,7 @@ void field_play_set_sfx(s32 sfx_index, s32 pan, s32 unused, s32 channel_group)
                 mask = 1 << (base + i);
                 if (!akao_is_sfx_playing(mask))
                 {
-                    akao_play_sfx_from_buffer(buf, mask, pan, AKAO_VOLUME_MAX);
+                    akao_play_sfx_from_buffer((AkaoHeader *)buf, mask, pan, AKAO_VOLUME_MAX);
                     break;
                 }
             }
@@ -468,7 +466,7 @@ void field_play_weapon_sfx(s32 sfx_index, s32 pan, s32 table_index)
     s32 base;
     s32 i;
     s32 mask;
-    s32 buf;
+    u8 *buf;
     u8 *p;
 
     if (table_index < FIELD_WEAPON_SFX_TABLE_COUNT)
@@ -481,13 +479,13 @@ void field_play_weapon_sfx(s32 sfx_index, s32 pan, s32 table_index)
             {
                 i = 0;
                 base = table_index * FIELD_SFX_GROUP_VOICES;
-                buf = (s32)table + table[sfx_index + 1];
+                buf = (u8 *)table + table[sfx_index + 1];
                 for (; i < FIELD_SFX_GROUP_VOICES; i++)
                 {
                     mask = 1 << (base + i);
                     if (!akao_is_sfx_playing(mask))
                     {
-                        akao_play_sfx_from_buffer(buf, mask, pan, AKAO_VOLUME_MAX);
+                        akao_play_sfx_from_buffer((AkaoHeader *)buf, mask, pan, AKAO_VOLUME_MAX);
                         break;
                     }
                 }
@@ -618,12 +616,12 @@ void field_load_weapon_sfx_table(s32 slot, s32 weapon_type)
 
 /**
  * @brief Play an effect buffer on a free voice of a channel group.
- * @param buffer Effect buffer address.
+ * @param buffer Effect buffer.
  * @param pan Pan position.
  * @param channel_group Channel group; groups past the last one are ignored.
  * @return Nothing meaningful; the original declares an int return and never sets it.
  */
-s32 field_play_sfx_buffer(s32 buffer, s32 pan, s32 channel_group)
+s32 field_play_sfx_buffer(AkaoHeader* buffer, s32 pan, s32 channel_group)
 {
     s32 base;
     s32 i;

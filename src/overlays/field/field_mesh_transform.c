@@ -15,15 +15,15 @@
 extern s32 g_field_track_index;
 
 /* Local view: the definition in field_actor_runtime.c takes the animation data it reads. */
-u32 field_evaluate_parameter_track_at_time(FieldActorState *actor, s32 track, s32 time);
+u32 field_evaluate_parameter_track_at_time(FieldActorSlot *actor, s32 track, s32 time);
 
-/** @brief FieldActorPartDef track_flags fields of mesh morphing. */
+/** @brief FieldObjectPart track_flags fields of mesh morphing. */
 #define FIELD_PART_MESH_MORPH(flags) (((flags) >> 18) & 1)
 #define FIELD_PART_MESH_MORPH_TRACK(flags) (((flags) >> 2) & 15)
 #define FIELD_PART_MESH_MORPH_TARGET(flags) (((flags) >> 19) & 3)
 /** @brief Morph target value that selects per-face offsets instead of another mesh. */
 #define FIELD_MESH_MORPH_OFFSETS 3
-/** @brief FieldActorPartDef palette_extent bits: scale the part by the owner's footprint strength. */
+/** @brief FieldObjectPart palette_extent bits: scale the part by the owner's footprint strength. */
 #define FIELD_PART_FOOTPRINT_SCALES_XZ 0x02000000
 #define FIELD_PART_FOOTPRINT_SCALES_Y 0x04000000
 
@@ -39,7 +39,7 @@ u32 field_evaluate_parameter_track_at_time(FieldActorState *actor, s32 track, s3
  * @param part Flags selecting the interpolation or offset mode.
  * @param index Mesh entry to transform.
  */
-void field_transform_mesh_vertices(FieldActorState *actor, FieldMotionRecord *record, FieldActorPartDef *part,
+void field_transform_mesh_vertices(FieldActorSlot *actor, FieldMotionRecord *record, FieldObjectPart *part,
                    s32 index)
 {
     s32 flags; /* GTE FLAG register, stored after every transform and never read */
@@ -188,7 +188,7 @@ void field_transform_mesh_vertices(FieldActorState *actor, FieldMotionRecord *re
  * @param matrix Rotation matrix applied through the GTE.
  * @note The interpolation branch writes output slots from count down through one.
  */
-void field_transform_mesh_normals(FieldActorState *actor, FieldMotionRecord *record, FieldActorPartDef *part, s32 index, MATRIX *matrix)
+void field_transform_mesh_normals(FieldActorSlot *actor, FieldMotionRecord *record, FieldObjectPart *part, s32 index, MATRIX *matrix)
 {
     SVECTOR *output;
     SVECTOR *source;
@@ -268,7 +268,7 @@ void field_transform_mesh_normals(FieldActorState *actor, FieldMotionRecord *rec
  * @param base_matrix Matrix passed to the base-transform composition helper.
  * @return Nothing meaningful; callers ignore it.
  */
-s32 field_build_part_matrix(FieldActorState *actor, FieldMotionRecord *record, FieldActorPartDef *part,
+s32 field_build_part_matrix(FieldActorSlot *actor, FieldMotionRecord *record, FieldObjectPart *part,
                    MATRIX *matrix, MATRIX *base_matrix)
 {
     VECTOR *scale;
@@ -407,7 +407,7 @@ s32 field_build_part_matrix(FieldActorState *actor, FieldMotionRecord *record, F
     }
     if (part->palette_extent.word & FIELD_PART_FOOTPRINT_SCALES_XZ)
     {
-        scale_xz = part->appearance.fields.footprint_scale_x;
+        scale_xz = part->appearance.fields.scale_xz;
         horizontal_scale =
             (scale_xz - ((scale_xz * ((s32)(FIELD_OBJECT_FOOTPRINT_STRENGTH_RANGE - g_field_object_states[actor->owner_object_index].effect_footprint_strength) >> 6)) / 10))
             << 6;
@@ -416,20 +416,20 @@ s32 field_build_part_matrix(FieldActorState *actor, FieldMotionRecord *record, F
     }
     else
     {
-        base_scale = part->appearance.fields.footprint_scale_x << 6;
+        base_scale = part->appearance.fields.scale_xz << 6;
         scale->vz = base_scale;
         scale->vx = base_scale;
     }
     if (part->palette_extent.word & FIELD_PART_FOOTPRINT_SCALES_Y)
     {
-        scale_y = part->footprint_scale_y;
+        scale_y = part->scale_y;
         scale->vy =
             (scale_y - ((scale_y * ((s32)(FIELD_OBJECT_FOOTPRINT_STRENGTH_RANGE - g_field_object_states[actor->owner_object_index].effect_footprint_strength) >> 6)) / 10))
             << 6;
     }
     else
     {
-        scale->vy = part->footprint_scale_y << 6;
+        scale->vy = part->scale_y << 6;
     }
     ScaleMatrix(matrix, scale);
     if ((part->behavior_flags.bytes.low >> 7) != 0)

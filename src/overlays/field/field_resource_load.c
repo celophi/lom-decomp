@@ -218,7 +218,7 @@ void field_update_battle_entry(void)
                     {
                         for (i = 0; i < FIELD_PARTY_COUNT; i++)
                         {
-                            g_field_object_parts[i].flags &= ~FIELD_PART_IGNORE_MAP_COLLISION;
+                            g_field_object_parts[i].spawn_flags.word &= ~FIELD_PART_IGNORE_MAP_COLLISION;
                             g_field_actors[i].command = FIELD_ACTOR_COMMAND_NONE;
                         }
                         field_play_sound(FIELD_SOUND_BATTLE_ENTRY, FIELD_SOUND_PAN_CENTRE);
@@ -378,7 +378,7 @@ void field_install_party_reload(s32 alternate_layout, s32 slot)
         entry->slot_index = slot;
         entry->unk8 = 0;
         field_set_party_palettes();
-        entry->unkE = 0x2F;
+        entry->bound_animation_flags = 0x2F;
         flags = entry->flags;
         flags &= ~FIELD_RESOURCE_HAS_ACTIONS;
         flags |= alternate_layout & 1;

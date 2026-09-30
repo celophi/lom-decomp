@@ -68,6 +68,7 @@ typedef union
 void init_title_display(TitleMenuContext* context);
 void render_menu(TitleMenuContext* context);
 s32 run_save_slot_menu(TitleMenuContext* context);
+void* emit_menu_item_quad(s32* ot_head, void* prim, s32 tex_row, s32 x, s32 y, s32 u0_base, s32 width, s32 clut_index);
 
 /**
  * @brief Run the title menu and choose the next game state.
@@ -842,7 +843,7 @@ void render_title_menu_items(void* ctx)
  *
  * @see decomp.me (100%) https://decomp.me/scratch/FcuOZ
  */
-void* emit_menu_item_quad(s32* ot_head, void* prim, s32 tex_row, s16 x, s32 y, s32 u0_base, s32 width, s32 clut_index)
+void* emit_menu_item_quad(s32* ot_head, void* prim, s32 tex_row, s32 x, s32 y, s32 u0_base, s32 width, s32 clut_index)
 {
     u8* ptr;
     u8 v_top;

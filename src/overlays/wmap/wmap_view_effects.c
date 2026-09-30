@@ -52,10 +52,7 @@
 #define WMAP_TILE_CODE 0x2C
 #define WMAP_TILE_CODE_BLENDED 0x2E
 
-/** @brief World-map sound ids and the pan position of the screen center. */
-#define WMAP_SOUND_ZOOM_OUT 1
-#define WMAP_SOUND_ZOOM_IN 2
-#define WMAP_SOUND_CURSOR 3
+/** @brief Pan position of the screen center. */
 #define WMAP_PAN_CENTER 128
 #define WMAP_PAN_PER_COLUMN 24
 
@@ -972,7 +969,7 @@ s32 wmap_update_burst_particles(void)
             actor = &D_800D9268[actor_index];
             if (g_wmap_burst_spawning != 0)
             {
-                actor->unknown_02 = 0;
+                actor->resource_index = 0;
                 actor->scale_index = WMAP_BURST_ACTOR_SCALE;
                 actor->sequence = ((rand() * D_801B0FD0) >> 15) + 1;
                 actor->previous_sequence = -1;

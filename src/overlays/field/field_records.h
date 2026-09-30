@@ -16,6 +16,7 @@
  */
 
 #include "common.h"
+#include "field_menu_vars.h"
 #include "saved_game.h"
 #include "field_state_ops.h"
 
@@ -405,8 +406,9 @@ typedef struct FieldTriggerTable
  */
 typedef struct FieldRuntimeContext
 {
-    s32 local_variable_base;
-    u8 pad004[0x24 - 0x4];
+    /** @brief The script locals at the start of the context; the menus read them too. */
+    FieldMenuVars locals;
+    u8 pad020[0x24 - 0x20];
     /** @brief Parameter block of the script commands (opcode 0x03): runtime script variable words 9 to 16. */
     s32 command_params[8];
     s32 actor_positions[FIELD_PARTY_SIZE];
@@ -499,6 +501,9 @@ typedef struct FieldRuntimeContext
     FieldScriptState script;
     FieldTriggerTable* trigger_table;
 } FieldRuntimeContext;
+
+/** @brief The context itself, which g_field_runtime points at. */
+extern FieldRuntimeContext D_80122C00;
 
 /* ------------------------------------------------------------------------ */
 /* Field battle context (g_field_battle)                                        */

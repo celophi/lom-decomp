@@ -412,7 +412,7 @@ void wmap_init_sequences(void)
     {
         D_800D9268[i].unknown_00 = i;
         D_80139988[i].unknown_00 = i;
-        D_800D9268[i].unknown_02 = -1;
+        D_800D9268[i].resource_index = -1;
     }
     for (i = WMAP_SEQUENCE_SLOTS - 1; i >= 0; i--)
     {

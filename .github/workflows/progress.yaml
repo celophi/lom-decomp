@@ -88,6 +88,12 @@ jobs:
         # generator reads to stamp metadata.complete = true on those units.
         run: make verify-bins VERSION=${{ env.VERSION }}
 
+      - name: Native compile check
+        # Compiles every C file this version builds with the image's gcc, so a
+        # 64-bit build stays possible: a file that compiles must keep
+        # compiling (tools/native_check/baseline_<version>_gcc.txt).
+        run: make native-check VERSION=${{ env.VERSION }}
+
       - name: Generate objdiff configuration
         run: python3 ${{ env.OBJDIFF_CONFIG_GENERATOR }} --version ${{ env.VERSION }}
 
@@ -95,6 +101,19 @@ jobs:
         run: |
           chmod +x ${{ env.OBJDIFF_CLI }}
           ${{ env.OBJDIFF_CLI }} report generate -o ${{ env.PROGRESS_REPORT }}
+
+      - name: Verify binaries with data built from generated C
+        if: ${{ matrix.verify }}
+        # Rebuilds every .data region from C that tools/data2c generates at
+        # build time (DATA_AS_C=1) and checks the binaries still match. Runs
+        # after the report so the report comes from the normal build.
+        run: make verify-data-as-c VERSION=${{ env.VERSION }}
+
+      - name: Unit tests for tools/data2c
+        # The round-trip tests compile for mipsel with clang.
+        run: |
+          apt-get update && apt-get install -y --no-install-recommends clang
+          python3 -m unittest discover -s tools/data2c/tests
 
       - name: Upload progress report
         uses: actions/upload-artifact@v4

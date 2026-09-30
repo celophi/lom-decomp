@@ -29,7 +29,7 @@ typedef struct FieldMeshFace
 /** @brief Primitive kind of a mesh face (FieldMeshFace kind). */
 #define FIELD_MESH_FACE_KIND(face) (((face)->kind >> 1) & 0xF)
 
-/** @brief 0x18-byte mesh record in an actor's mesh table (FieldActorState.mesh_data). */
+/** @brief 0x18-byte mesh record in an actor's mesh table (FieldActorSlot.mesh_data). */
 typedef struct FieldMeshResource
 {
     u16 face_count;

@@ -890,7 +890,7 @@ void func_800C0888(void)
     D_800D9344.scale_index = 0xF;
     D_800D9344.sequence = 1;
     D_800D9344.previous_sequence = -1;
-    D_800D9344.unknown_02 = 0;
+    D_800D9344.resource_index = 0;
     D_800D9344.shade_step = 0;
     D_800D9344.target_shade = 0x80;
     D_800D9344.shade = 0x80;
@@ -955,7 +955,7 @@ void func_800C0A84(void)
     D_800D9370.scale_index = 0xF;
     D_800D9370.previous_sequence = -1;
     D_800D9370.shade_step = 0x10;
-    D_800D9370.unknown_02 = 0;
+    D_800D9370.resource_index = 0;
     D_800D9370.sequence = 0;
     D_800D9370.target_shade = 0x80;
     D_800D9370.shade = 0;

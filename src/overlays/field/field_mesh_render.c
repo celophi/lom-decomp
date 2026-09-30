@@ -25,8 +25,7 @@
 #include "sdk/gte_dmpsx_compat.h"
 
 extern FieldMotionRecord g_field_effect_records[];
-/* FieldActorState view of the slots field_actor_tables.h declares as FieldActorSlot. */
-extern FieldActorState g_field_actor_slots[80];
+/* FieldActorSlot view of the slots field_actor_tables.h declares as FieldActorSlot. */
 
 /** @brief Frame period bits of an animation's palette_animation word. */
 #define FIELD_PALETTE_ANIMATION_PERIOD_MASK 0xF
@@ -73,7 +72,7 @@ extern FieldActorState g_field_actor_slots[80];
  * @brief Part index of light source @p i (0..2) of an actor part.
  * @note The three selector bytes start at rotation_extent's last byte and run into effect_flags.
  */
-#define FIELD_PART_LIGHT_SOURCE(part, i) ((&(part)->rotation_extent.fields.unknown_0x23)[i])
+#define FIELD_PART_LIGHT_SOURCE(part, i) ((&(part)->rotation_extent.fields.unk23)[i])
 
 /**
  * @brief CLUT buffer of actor palette owner @p owner (0 or 1).
@@ -89,7 +88,7 @@ static void field_rotate_palette_row(u16 *row, s32 count, s32 rotate_right);
  * @param actor Actor whose current animation carries the palette animation word.
  * @return Nothing meaningful; callers ignore it.
  */
-s32 field_update_actor_palette_animation(FieldActorState *actor)
+s32 field_update_actor_palette_animation(FieldActorSlot *actor)
 {
     RECT rect;
     u8 *buf;
@@ -100,7 +99,7 @@ s32 field_update_actor_palette_animation(FieldActorState *actor)
     {
         return;
     }
-    if (((u32)actor->track_ages[0] % (u32)((u8)actor->animation->palette_animation & FIELD_PALETTE_ANIMATION_PERIOD_MASK)) != 0)
+    if (((u32)actor->track_frames[0] % (u32)((u8)actor->animation->palette_animation & FIELD_PALETTE_ANIMATION_PERIOD_MASK)) != 0)
     {
         return;
     }
@@ -311,8 +310,8 @@ s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *pa
     MATRIX base_matrix;
     CVECTOR base_color;
     s32 triangle_area;
-    FieldActorState *actor;
-    FieldActorPartDef *part;
+    FieldActorSlot *actor;
+    FieldObjectPart *part;
     FieldMeshFace *face;
     s32 *screen_vertices;
     s32 *depth_offsets;
@@ -548,8 +547,8 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
     SVECTOR light_direction;
     SVECTOR transformed_light;
     s32 triangle_area;
-    FieldActorState *actor;
-    FieldActorPartDef *part;
+    FieldActorSlot *actor;
+    FieldObjectPart *part;
     FieldMotionRecord *light_effect;
     s32 light_index;
     s32 *screen_vertices;
@@ -597,9 +596,9 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
                     light_matrix.m[light_index][0] = transformed_light.vx;
                     light_matrix.m[light_index][1] = transformed_light.vy;
                     light_matrix.m[light_index][2] = transformed_light.vz;
-                    color_matrix.m[0][light_index] = g_field_actor_slots[effect->actor_index].parts[light_effect->part_index].red_or_track * 16;
-                    color_matrix.m[1][light_index] = g_field_actor_slots[effect->actor_index].parts[light_effect->part_index].green_or_track * 16;
-                    color_matrix.m[2][light_index] = g_field_actor_slots[effect->actor_index].parts[light_effect->part_index].blue_or_track * 16;
+                    color_matrix.m[0][light_index] = g_field_actor_slots[effect->actor_index].parts[light_effect->part_index].tint_red * 16;
+                    color_matrix.m[1][light_index] = g_field_actor_slots[effect->actor_index].parts[light_effect->part_index].tint_green * 16;
+                    color_matrix.m[2][light_index] = g_field_actor_slots[effect->actor_index].parts[light_effect->part_index].tint_blue * 16;
                     break;
                 }
             }

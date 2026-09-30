@@ -67,7 +67,7 @@ extern AkaoXaTrackerView g_akao_xa_tracker;
 extern u32 g_akao_effect_voice_masks[3];
 extern u8 g_akao_seq_channels;
 extern u8 g_sfx_channels[];
-extern s32 g_akao_pending_channels;
+extern AkaoChannelState* g_akao_pending_channels;
 extern AkaoSongState* g_akao_seq_channel1;
 extern s16 g_akao_mastervol_fade_ticks;
 extern s16 g_akao_masterpan_fade_ticks;

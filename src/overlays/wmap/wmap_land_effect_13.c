@@ -104,7 +104,7 @@ extern void *D_801399AC;
 extern s32 D_801B24B4;
 extern s32 D_801B258C;
 extern void (*D_800D5060[])(void);
-extern WmapResource D_80139FE8[];
+extern WmapAnimationSlot D_80139FE8[];
 extern s32 D_801B2594;
 extern void (*D_800D5070[])(void);
 extern u8* D_801399BC;
@@ -1176,7 +1176,7 @@ void func_80075BBC(void)
     D_800D9268[6].sequence = 2;
     D_800D9268[6].previous_sequence = -1;
     D_80182DE4 = 0;
-    D_800D9268[6].unknown_02 = 0;
+    D_800D9268[6].resource_index = 0;
     D_801B2594 = 0x28;
     D_801B2590 += 1;
     func_80075C30();
@@ -1796,7 +1796,7 @@ void func_800768D8(void)
     D_800D9420.sequence = 1;
     D_800D9420.previous_sequence = -1;
     D_80182DF4 = 0;
-    D_800D9420.unknown_02 = 0;
+    D_800D9420.resource_index = 0;
     D_801B25CC = 0x59;
     D_801B25C8 += 1;
     func_8007694C();

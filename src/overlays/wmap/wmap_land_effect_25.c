@@ -178,7 +178,7 @@ extern void (*D_800D713C[])(void);
 extern void *D_801399BC;
 extern void func_800B06A8(void);
 extern void (*D_800D7154[])(void);
-extern u8 D_80139A28[];
+extern WmapAnimationSlot D_80139A28[];
 extern void (*D_800D716C[])(void);
 extern u8 D_80139B18[];
 extern void (*D_800D7184[])(void);
@@ -1300,7 +1300,7 @@ void func_800AF644(void)
     D_800D9318.previous_sequence = -1;
     D_800D9318.shade_step = 8;
     D_800D9318.target_shade = 0x81;
-    D_800D9318.unknown_02 = 0;
+    D_800D9318.resource_index = 0;
     D_800D9318.shade = 1;
     D_801B2F04 = 0x80;
     D_801B2F00 += 1;
@@ -1399,7 +1399,7 @@ void func_800AF8B4(void)
     D_800D9344.scale_index = 0xF;
     D_800D9344.previous_sequence = -1;
     D_800D9344.shade_step = 2;
-    D_800D9344.unknown_02 = 0;
+    D_800D9344.resource_index = 0;
     D_800D9344.sequence = 0;
     D_800D9344.target_shade = 0x80;
     D_800D9344.shade = 0x80;
@@ -1919,7 +1919,7 @@ void func_800B03BC(void)
     D_800D939C.sequence = 2;
     D_800D939C.previous_sequence = -1;
     D_800D939C.shade_step = 8;
-    D_800D939C.unknown_02 = 0;
+    D_800D939C.resource_index = 0;
     D_800D939C.target_shade = 0x81;
     D_800D939C.shade = 0x81;
     D_801B2F4C = 0x24;
@@ -1990,7 +1990,7 @@ void func_800B0560(void)
 {
     D_801399BC = &D_8011D538;
     D_800D9370.scale_index = 0xF;
-    D_800D9370.unknown_02 = 0;
+    D_800D9370.resource_index = 0;
     D_800D9370.sequence = 1;
     D_800D9370.previous_sequence = -1;
     D_800D9370.shade_step = 4;
@@ -2417,7 +2417,7 @@ void func_800B0FB4(void)
     D_800D93F4.previous_sequence = -1;
     D_800D93F4.shade_step = 4;
     D_800D93F4.target_shade = 0x81;
-    D_800D93F4.unknown_02 = 0;
+    D_800D93F4.resource_index = 0;
     D_800D93F4.sequence = 0;
     D_800D93F4.shade = 1;
     D_801B2F7C = 0x78;
@@ -2620,7 +2620,7 @@ void func_800B1568(void)
     D_800D93C8.previous_sequence = -1;
     D_800D93C8.shade_step = 4;
     D_800D93C8.target_shade = 0x81;
-    D_800D93C8.unknown_02 = 0;
+    D_800D93C8.resource_index = 0;
     D_800D93C8.sequence = 0;
     D_800D93C8.shade = 1;
     D_801B2F8C = 0x96;

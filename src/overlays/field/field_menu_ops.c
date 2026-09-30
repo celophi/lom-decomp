@@ -526,22 +526,22 @@ void field_menu_classify_golem_slot(void)
     SavedGameLayout* ctx;
 
     ctx = &g_saved_game.layout;
-    if (ctx->golem_order[D_80122C00.golem.slot] == FIELD_GOLEM_NO_RECORD)
+    if (ctx->golem_order[D_80122C00.locals.golem.slot] == FIELD_GOLEM_NO_RECORD)
     {
         if ((u8)ctx->joined_golem >= GOLEM_RECORD_COUNT)
         {
-            D_80122C00.golem.state = 1;
+            D_80122C00.locals.golem.state = 1;
             return;
         }
-        D_80122C00.golem.state = 2;
+        D_80122C00.locals.golem.state = 2;
         return;
     }
-    if (ctx->golem_order[D_80122C00.golem.slot] == ctx->joined_golem)
+    if (ctx->golem_order[D_80122C00.locals.golem.slot] == ctx->joined_golem)
     {
-        D_80122C00.golem.state = 3;
+        D_80122C00.locals.golem.state = 3;
         return;
     }
-    D_80122C00.golem.state = 4;
+    D_80122C00.locals.golem.state = 4;
 }
 
 /**
@@ -605,7 +605,7 @@ void field_menu_create_golem(void)
             g_saved_game.layout.golems_created = FIELD_GOLEMS_CREATED_MAX;
         }
         /* A golem already in the slot moves to the first empty slot. */
-        previous = g_saved_game.layout.golem_order[D_80122C00.golem.slot];
+        previous = g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot];
         if (previous != FIELD_GOLEM_NO_RECORD)
         {
             if (g_saved_game.layout.golem_order[0] == FIELD_GOLEM_NO_RECORD)
@@ -621,7 +621,7 @@ void field_menu_create_golem(void)
                 g_saved_game.layout.golem_order[2] = previous;
             }
         }
-        g_saved_game.layout.golem_order[D_80122C00.golem.slot] = free_record;
+        g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot] = free_record;
         /* The count nibble is updated with word read-modify-writes. */
         packed_counts =
             (*(s32*)&g_saved_game.layout.golem_count & ~GOLEM_COUNT_MASK) | (((g_saved_game.layout.golem_count & GOLEM_COUNT_MASK) + 1) & GOLEM_COUNT_MASK);
@@ -632,14 +632,14 @@ void field_menu_create_golem(void)
         }
         for (i = 0; i < g_gosub_result_count; i++)
         {
-            field_copy_inventory_record(g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.golem.slot]].source_items[i].name,
+            field_copy_inventory_record(g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name,
                                         (u8*)&g_saved_game.layout.items[g_gosub_result_values[i]]);
             g_saved_game.layout.items[g_gosub_result_values[i]].name[0] = 0;
         }
         field_compact_inventory();
         for (i = g_gosub_result_count; i < GOLEM_SOURCE_ITEM_COUNT; i++)
         {
-            g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.golem.slot]].source_items[i].name[0] = 0;
+            g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name[0] = 0;
         }
         field_upload_golem_palettes();
     }
@@ -679,9 +679,9 @@ void field_menu_load_golem_class(void)
     s32 record_index;
 
     ctx = &g_saved_game.layout;
-    record_index = ctx->golem_order[D_80122C00.golem.slot];
-    D_80122C00.golem.slot_status[0] = record_index;
-    D_80122C00.golem.detail = ctx->golem_records[record_index].logic_layout & GOLEM_LOGIC_CLASS_MASK;
+    record_index = ctx->golem_order[D_80122C00.locals.golem.slot];
+    D_80122C00.locals.golem.slot_status[0] = record_index;
+    D_80122C00.locals.golem.detail = ctx->golem_records[record_index].logic_layout & GOLEM_LOGIC_CLASS_MASK;
 }
 
 /**
@@ -699,15 +699,15 @@ void field_menu_check_golem_creation(void)
     }
     if ((g_saved_game.layout.characters[FIELD_PARTY_COMPANION].info.word & FIELD_CHARACTER_TYPE_MASK) == 3)
     {
-        D_80122C00.golem.result = 2;
+        D_80122C00.locals.golem.result = 2;
     }
     else if (g_saved_game.layout.joined_golem == FIELD_GOLEM_NO_RECORD)
     {
-        D_80122C00.golem.result = 0;
+        D_80122C00.locals.golem.result = 0;
     }
     else
     {
-        D_80122C00.golem.result = 1;
+        D_80122C00.locals.golem.result = 1;
     }
 }
 
@@ -725,7 +725,7 @@ void field_menu_dismiss_golem(void)
 
     for (i = 0; i < g_saved_game.layout.logic_block_count; i++)
     {
-        if (g_saved_game.layout.logic_blocks[i].f.logic_type == g_saved_game.layout.golem_order[D_80122C00.golem.slot])
+        if (g_saved_game.layout.logic_blocks[i].f.logic_type == g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot])
         {
             g_saved_game.layout.logic_blocks[i].f.logic_type = LOGIC_BLOCK_UNASSIGNED;
             g_saved_game.layout.logic_blocks[i].f.placed = 0;
@@ -733,17 +733,17 @@ void field_menu_dismiss_golem(void)
     }
     for (i = 0; i < GOLEM_SOURCE_ITEM_COUNT; i++)
     {
-        if (g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.golem.slot]].source_items[i].name[0] != 0)
+        if (g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name[0] != 0)
         {
             if (field_find_free_inventory_record() != 0)
             {
                 field_copy_inventory_record(field_find_free_inventory_record(),
-                                            g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.golem.slot]].source_items[i].name);
+                                            g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name);
             }
         }
     }
-    g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.golem.slot]].name[0] = 0;
-    g_saved_game.layout.golem_order[D_80122C00.golem.slot] = FIELD_GOLEM_NO_RECORD;
+    g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].name[0] = 0;
+    g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot] = FIELD_GOLEM_NO_RECORD;
     word = *(u32*)&g_saved_game.layout.golem_count;
     if ((word & GOLEM_COUNT_MASK) != 0)
     {
@@ -756,7 +756,7 @@ void field_menu_dismiss_golem(void)
  */
 void field_menu_publish_golem_name(void)
 {
-    u8 record_index = g_saved_game.layout.golem_order[D_80122C00.golem.slot];
+    u8 record_index = g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot];
 
     field_set_text_macro(0, g_saved_game.layout.golem_records[record_index].name, 0xFF);
 }
@@ -768,7 +768,7 @@ void field_menu_clear_golem_result(void)
 {
     if (g_gosub_result_count == 0)
     {
-        D_80122C00.golem.result = 0;
+        D_80122C00.locals.golem.result = 0;
     }
 }
 
@@ -906,7 +906,7 @@ void field_menu_refresh_golem_order(void)
             FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS + 2) = FIELD_GOLEM_SLOT_EMPTY;
         }
     }
-    active_index = D_80122C00.golem.slot;
+    active_index = D_80122C00.locals.golem.slot;
     for (i = 0; i < GOLEM_RECORD_COUNT; i++)
     {
         if (order[i] == active_index)
@@ -952,9 +952,9 @@ void field_menu_publish_golem_items(void)
     count = 0;
     for (i = 0; i < 4; i++)
     {
-        if (g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.golem.slot]].source_items[i].name[0] != 0)
+        if (g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name[0] != 0)
         {
-            field_set_text_macro(count, g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.golem.slot]].source_items[i].name, 0xFF);
+            field_set_text_macro(count, g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name, 0xFF);
             count += 1;
         }
     }
@@ -1145,7 +1145,7 @@ void field_menu_set_golem_palette(void)
     {
         clamped = 0;
     }
-    record_index = g_saved_game.layout.golem_order[D_80122C00.golem.slot];
+    record_index = g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot];
     g_saved_game.layout.golem_records[record_index].palette = clamped;
     field_upload_golem_palettes();
 }
@@ -1212,7 +1212,7 @@ void field_menu_swap_golem_order(void)
     order[1] = (packed_order >> 2) & 3;
     order[2] = (packed_order >> 4) & 3;
     active_record = g_saved_game.layout.joined_golem;
-    selected_slot = D_80122C00.golem.slot;
+    selected_slot = D_80122C00.locals.golem.slot;
     if (g_saved_game.layout.golem_order[selected_slot] != active_record)
     {
         s32 i;
@@ -1455,22 +1455,22 @@ void field_menu_remove_record_cards(void)
     third = g_saved_game.layout.items[index].special_ids[2];
     for (i = 0; i < 3; i++)
     {
-        card = D_80122C00.cards.card_ids[i];
+        card = D_80122C00.locals.cards.card_ids[i];
         if (card != FIELD_NO_CARD)
         {
             if (card == first)
             {
-                D_80122C00.cards.card_ids[i] = FIELD_NO_CARD;
+                D_80122C00.locals.cards.card_ids[i] = FIELD_NO_CARD;
                 first = FIELD_NO_CARD;
             }
             else if (card == second)
             {
-                D_80122C00.cards.card_ids[i] = FIELD_NO_CARD;
+                D_80122C00.locals.cards.card_ids[i] = FIELD_NO_CARD;
                 second = FIELD_NO_CARD;
             }
             else if (card == third)
             {
-                D_80122C00.cards.card_ids[i] = FIELD_NO_CARD;
+                D_80122C00.locals.cards.card_ids[i] = FIELD_NO_CARD;
                 third = FIELD_NO_CARD;
             }
         }
@@ -1488,9 +1488,9 @@ void field_menu_load_record_cards(void)
     s32 index;
 
     index = g_gosub_result_values[0];
-    D_80122C00.cards.card_ids[0] = g_saved_game.layout.items[index].special_ids[0];
-    D_80122C00.cards.card_ids[1] = g_saved_game.layout.items[index].special_ids[1];
-    D_80122C00.cards.card_ids[2] = g_saved_game.layout.items[index].special_ids[2];
+    D_80122C00.locals.cards.card_ids[0] = g_saved_game.layout.items[index].special_ids[0];
+    D_80122C00.locals.cards.card_ids[1] = g_saved_game.layout.items[index].special_ids[1];
+    D_80122C00.locals.cards.card_ids[2] = g_saved_game.layout.items[index].special_ids[2];
 }
 
 /**
@@ -1799,7 +1799,7 @@ void field_menu_recall_selected_pet(void)
 }
 
 /**
- * @brief Load the gosub-selected pet's 0x5A halfword into D_80122C00.
+ * @brief Load the gosub-selected pet's 0x5A halfword into D_80122C00.locals.
  * @note Does nothing when the gosub returned no selection.
  */
 void field_menu_load_pet_value(void)
@@ -1809,7 +1809,7 @@ void field_menu_load_pet_value(void)
     if (g_gosub_result_count != 0)
     {
         index = g_gosub_result_values[0];
-        D_80122C00.words[0] = FIELD_MENU_PETS->pet_records[index].unknown_0x5A;
+        D_80122C00.locals.words[0] = FIELD_MENU_PETS->pet_records[index].unknown_0x5A;
     }
 }
 
@@ -1846,7 +1846,7 @@ void field_menu_prepare_action_items(void)
 
     for (i = 0; i < 8; i++)
     {
-        D_80122C00.bytes[i] = counts[i];
+        D_80122C00.locals.bytes[i] = counts[i];
     }
 
     mask = 0x1FFF;
@@ -1885,7 +1885,7 @@ void field_menu_prepare_action_items(void)
 
     for (i = 0; i < 8; i++)
     {
-        if (D_80122C00.bytes[i] != 0)
+        if (D_80122C00.locals.bytes[i] != 0)
         {
             break;
         }
@@ -2708,7 +2708,7 @@ void field_menu_restore_pending_item(void)
         }
     }
 
-    D_80122C00.words[2] = result;
+    D_80122C00.locals.words[2] = result;
     if (result == 0)
     {
         field_menu_compact_pending_items();
@@ -2880,8 +2880,8 @@ void field_menu_open_addhero(void)
  */
 void field_menu_publish_guest_name(void)
 {
-    D_80122C00.bytes[0] = g_saved_game.layout.characters[FIELD_PARTY_GUEST].name[0];
-    if (D_80122C00.bytes[0] != 0)
+    D_80122C00.locals.bytes[0] = g_saved_game.layout.characters[FIELD_PARTY_GUEST].name[0];
+    if (D_80122C00.locals.bytes[0] != 0)
     {
         field_set_text_macro(0, g_saved_game.layout.characters[FIELD_PARTY_GUEST].name, 0xFF);
     }
@@ -3045,7 +3045,7 @@ void field_menu_draw_land_element(void)
     total = 0;
     i = total;
     work.view = (FieldElementLevelView*)g_saved_game.bytes;
-    mode = D_80122C00.bytes[0];
+    mode = D_80122C00.locals.bytes[0];
     land = g_music_track_index;
     favored = D_80051ED8;
     row = land * FIELD_LAND_RECORD_SIZE;
@@ -3293,7 +3293,7 @@ void field_menu_copy_resource_item(void)
     u8* free_record;
     s32 offset;
 
-    index = D_80122C00.bytes[0];
+    index = D_80122C00.locals.bytes[0];
     if (field_find_free_inventory_record() != 0)
     {
         free_record = field_find_free_inventory_record();

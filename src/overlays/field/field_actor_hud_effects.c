@@ -180,6 +180,22 @@ extern u8* g_field_cd_buffer;
 /** @brief Handler entries below this value are animation resources, larger ones functions. */
 #define FIELD_OBJECT_HANDLER_FUNCTION_MIN 0x100
 
+/**
+ * @brief Function run when an object flag bit changes.
+ * @param actor Actor of the object.
+ * @param flag The flag bit if it is now set, 0 if it was cleared.
+ */
+typedef void (*FieldObjectFlagFunction)(FieldActor* actor, s32 flag);
+
+/** @brief Handler of one object flag bit: a built-in animation below FIELD_OBJECT_HANDLER_FUNCTION_MIN (FIELD_OBJECT_HANDLER_NONE for none), otherwise a function. */
+typedef union
+{
+    u32 animation;
+    FieldObjectFlagFunction function;
+} FieldObjectFlagHandler;
+
+extern FieldObjectFlagHandler g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_COUNT];
+
 /** @brief FieldObjectState.flags bits with a handler in g_field_object_flag_handlers; meanings mostly unknown. */
 #define FIELD_OBJECT_FLAG_0004 0x0004
 #define FIELD_OBJECT_FLAG_0020 0x0020
@@ -271,7 +287,6 @@ typedef struct
     u16 y;
 } FieldScreenMotion;
 
-extern u32 g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_COUNT];
 extern FieldScreenMotion g_field_screen_scroll;
 extern POLY_FT4 g_field_fade_prims[FIELD_FADE_PRIM_COUNT];
 extern u16 g_field_fade_prim_depths[FIELD_FADE_PRIM_COUNT];
@@ -438,7 +453,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
                 group = g_field_object_states[i].group_flags & 0xF;
                 if (group == g_field_active_group && group != 0)
                 {
-                    hp_display = g_field_object_states[i].unk8.word;
+                    hp_display = g_field_object_states[i].hp_display.word;
                     if (hp_display < 0)
                     {
                         if (g_field_actors[i].presence != FIELD_ACTOR_UNUSED && (hp_display & FIELD_HUD_HP_MASK) && boss_drawn == 0)
@@ -449,19 +464,19 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
                     }
                     else if (g_field_actors[i].presence != FIELD_ACTOR_UNUSED)
                     {
-                        current_hp = g_field_object_states[i].unk4.word;
+                        current_hp = g_field_object_states[i].current_hp.word;
                         displayed_hp = hp_display & FIELD_HUD_HP_MASK;
                         if (current_hp < displayed_hp)
                         {
-                            g_field_object_states[i].unk8.word =
+                            g_field_object_states[i].hp_display.word =
                                 (hp_display & ~(FIELD_HUD_TIMER_MASK << FIELD_HUD_TIMER_SHIFT)) | (FIELD_HUD_PANEL_FRAMES << FIELD_HUD_TIMER_SHIFT);
                         }
                         else if (displayed_hp != current_hp)
                         {
-                            g_field_object_states[i].unk8.word =
+                            g_field_object_states[i].hp_display.word =
                                 (hp_display & ~(FIELD_HUD_TIMER_MASK << FIELD_HUD_TIMER_SHIFT)) | (FIELD_HUD_PANEL_FRAMES << FIELD_HUD_TIMER_SHIFT);
                         }
-                        if (g_field_object_states[i].unk8.bytes[3] & FIELD_HUD_TIMER_MASK)
+                        if (g_field_object_states[i].hp_display.bytes[3] & FIELD_HUD_TIMER_MASK)
                         {
                             if (!(g_field_object_states[i].flags & FIELD_OBJECT_FLAG_0100) && (g_field_object_states[i].contact.bytes.flags & 1) &&
                                 (g_field_effect_records[g_field_object_states[i].linked_effect_index].animation & 0x7F) != FIELD_HUD_ANCHOR_IGNORED_ANIMATION)
@@ -539,11 +554,11 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
                                 }
                             }
                             field_draw_actor_hud_panel(position.x - FIELD_HUD_ENEMY_OFFSET_X, position.y, i, render_half, FIELD_HUD_HP_PER_BAR);
-                            updated_hp_display = g_field_object_states[i].unk8.word;
+                            updated_hp_display = g_field_object_states[i].hp_display.word;
                             timer = ((u32)updated_hp_display >> FIELD_HUD_TIMER_SHIFT) & FIELD_HUD_TIMER_MASK;
                             if (timer != 0)
                             {
-                                g_field_object_states[i].unk8.word = (updated_hp_display & ~(FIELD_HUD_TIMER_MASK << FIELD_HUD_TIMER_SHIFT)) |
+                                g_field_object_states[i].hp_display.word = (updated_hp_display & ~(FIELD_HUD_TIMER_MASK << FIELD_HUD_TIMER_SHIFT)) |
                                                                      (((timer - 1) & FIELD_HUD_TIMER_MASK) << FIELD_HUD_TIMER_SHIFT);
                             }
                         }
@@ -1324,9 +1339,9 @@ void field_update_object_effects(s32 index)
     s32 highest_bit;
     s32 bit_mask;
     u16 animation_kind;
-    u32* handler;
-    u32* handlers;
-    u32 handler_value;
+    FieldObjectFlagHandler* handler;
+    FieldObjectFlagHandler* handlers;
+    FieldObjectFlagHandler handler_value;
     FieldActorSlot* slot;
     FieldActor* actor;
     FieldObjectState* state;
@@ -1357,19 +1372,19 @@ void field_update_object_effects(s32 index)
                 handlers = g_field_object_flag_handlers;
                 handler = handlers + bit_index;
             find_handler:
-                if ((changed_or_current & bit_mask) && (handler_value = *handler, (handler_value != FIELD_OBJECT_HANDLER_NONE)))
+                if ((changed_or_current & bit_mask) && (handler_value = *handler, (handler_value.animation != FIELD_OBJECT_HANDLER_NONE)))
                 {
-                    if (handler_value < FIELD_OBJECT_HANDLER_FUNCTION_MIN)
+                    if (handler_value.animation < FIELD_OBJECT_HANDLER_FUNCTION_MIN)
                     {
                         if (state->flags & bit_mask)
                         {
-                            field_start_builtin_animation(index, animation_slot, handler_value);
+                            field_start_builtin_animation(index, animation_slot, handler_value.animation);
                             field_start_actor_animation(animation_slot, 0, 0);
                         }
                     }
                     else
                     {
-                        ((void (*)(FieldActor*, s32))handler_value)((FieldActor*)(record_offset + (u8*)g_field_actors), state->flags & bit_mask);
+                        handler_value.function((FieldActor*)(record_offset + (u8*)g_field_actors), state->flags & bit_mask);
                     }
                     clear_mask = ~bit_mask;
                     state->previous_flags = (s32)((state->previous_flags & clear_mask) | (state->flags & bit_mask));
@@ -1532,13 +1547,13 @@ void field_set_actor_horizontal_scale(FieldActor* actor, s32 half_scale)
 {
     if (half_scale != 0)
     {
-        g_field_object_parts[actor->object_index].scale_z = FIELD_PART_SCALE_HALF;
-        g_field_object_parts[actor->object_index].scale_x = FIELD_PART_SCALE_HALF;
+        g_field_object_parts[actor->object_index].appearance.fields.scale_xz = FIELD_PART_SCALE_HALF;
+        g_field_object_parts[actor->object_index].scale_y = FIELD_PART_SCALE_HALF;
     }
     else
     {
-        g_field_object_parts[actor->object_index].scale_z = FIELD_PART_SCALE_FULL;
-        g_field_object_parts[actor->object_index].scale_x = FIELD_PART_SCALE_FULL;
+        g_field_object_parts[actor->object_index].appearance.fields.scale_xz = FIELD_PART_SCALE_FULL;
+        g_field_object_parts[actor->object_index].scale_y = FIELD_PART_SCALE_FULL;
     }
 }
 
@@ -1813,7 +1828,7 @@ POLY_FT4* field_render_actor_ground_shadow(FieldActor* actor, POLY_FT4* prim, s3
     screen->y = g_field_view_offset_y / 256 + (world->y / 256 + FIELD_SCREEN_CENTER_Y) - world->z / 512 - g_field_view_offset_z / 512;
 
     size = actor->height;
-    height = g_field_object_states[actor->object_index].movement.half.hi;
+    height = g_field_object_states[actor->object_index].movement.half.height;
     if (g_field_resource_entries[actor->object_index].unk8 != 0)
     {
         /* The resource profile widens the height-dependent inset by 5/4. */

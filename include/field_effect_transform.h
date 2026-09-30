@@ -28,17 +28,17 @@ typedef struct
 } FieldSpriteFrame;
 
 struct FieldMotionRecord;
-struct FieldActorPartDef;
-struct FieldActorState;
+struct FieldObjectPart;
+struct FieldActorSlot;
 
 u8* field_render_effect_ribbon(struct FieldMotionRecord* effect, u8* packet_cursor, s32* ordering_table);
-s32 field_build_effect_part_matrix(struct FieldMotionRecord* effect, struct FieldActorPartDef* part, MATRIX* matrix, struct FieldActorState* actor);
-void field_resolve_effect_part_color(struct FieldActorState* actor, struct FieldMotionRecord* effect, struct FieldActorPartDef* part, FieldPrimitiveColor* out);
-u8* field_emit_effect_texture_page(struct FieldMotionRecord* effect, struct FieldActorPartDef* part, u8* packet_cursor, s32* ordering_table);
+s32 field_build_effect_part_matrix(struct FieldMotionRecord* effect, struct FieldObjectPart* part, MATRIX* matrix, struct FieldActorSlot* actor);
+void field_resolve_effect_part_color(struct FieldActorSlot* actor, struct FieldMotionRecord* effect, struct FieldObjectPart* part, FieldPrimitiveColor* out);
+u8* field_emit_effect_texture_page(struct FieldMotionRecord* effect, struct FieldObjectPart* part, u8* packet_cursor, s32* ordering_table);
 void field_project_effect_sprite_quad(struct FieldMotionRecord* effect, Vec2s* origin, POLY_FT4* quad, s32 width, s32 height, s32 x, s32 y,
                                       FieldSpriteFrame* frame, MATRIX* matrix);
 void field_unpack_effect_quad_corners8(s16* out, s32 flip, s8* item);
 void field_unpack_effect_quad_corners16(s16* out, s32 mirror, u8* item);
-s32 field_resolve_effect_extent(struct FieldActorState* actor, struct FieldActorPartDef* part);
+s32 field_resolve_effect_extent(struct FieldActorSlot* actor, struct FieldObjectPart* part);
 
 #endif

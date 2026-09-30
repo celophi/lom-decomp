@@ -169,7 +169,6 @@ typedef struct
 
 extern FieldRuntimeContext* g_field_runtime;
 extern SceneState* g_field_scene_state;
-extern FieldRuntimeContext D_80122C00;
 extern u8 g_field_weekday_names[];
 extern u8 g_field_element_level_by_land_level[];
 extern u8 g_field_talk_plane_masks[];
@@ -323,7 +322,7 @@ static void field_init_party_actors(void)
     {
         g_field_runtime->actors[i].script.status.bits.local_base = j;
     }
-    g_field_runtime->local_variable_base = FIELD_LOCAL_BASE_FIRST_FREE;
+    g_field_runtime->locals.local_variable_base = FIELD_LOCAL_BASE_FIRST_FREE;
 }
 
 /** @brief Initialize the two event records. */
@@ -517,8 +516,8 @@ void field_install_actor_action(FieldLayoutRecord* layout_record, s32 record_ind
             {
                 entry->scripts[script_index] = layout_record->scripts[script_index];
             }
-            entry->script.status.bits.local_base = g_field_runtime->local_variable_base;
-            g_field_runtime->local_variable_base += layout_record->control.bits.local_variable_count;
+            entry->script.status.bits.local_base = g_field_runtime->locals.local_variable_base;
+            g_field_runtime->locals.local_variable_base += layout_record->control.bits.local_variable_count;
             field_queue_actor_event(entry->id, FIELD_EVENT_START, (u8)action_index);
         }
     }

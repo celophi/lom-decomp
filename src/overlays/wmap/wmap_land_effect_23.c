@@ -77,7 +77,7 @@ extern s32 D_80182DE8;
 extern u8 D_800DCF18[];
 extern s32 D_801B2CEC;
 extern s32 D_80182DEC;
-extern s32 D_8011CF1C;
+extern u8* D_8011CF1C;
 extern s32 D_801B2CF4;
 extern s32 D_80182DF0;
 extern s32 D_801B2CFC;
@@ -1094,7 +1094,7 @@ void func_8009ED0C(void)
     D_800D9344.scale_index = 0xF;
     D_800D9344.previous_sequence = -1;
     D_800D9344.shade_step = 8;
-    D_800D9344.unknown_02 = 0;
+    D_800D9344.resource_index = 0;
     D_800D9344.sequence = 0;
     D_800D9344.target_shade = 0x81;
     D_800D9344.shade = 0x81;
@@ -1648,7 +1648,7 @@ void func_8009F970(void)
     D_800D9370.shade_step = 4;
     D_800D9370.target_shade = 0x81;
     D_800D9370.shade = 1;
-    D_800D9370.unknown_02 = 0;
+    D_800D9370.resource_index = 0;
     D_800D9370.sequence = 0;
     D_801B2D24 = 0x9C;
     D_80182D64.packed = g_wmap_focus_screen_position.packed;
@@ -1842,7 +1842,7 @@ void func_8009FE68(void)
     D_800D939C.previous_sequence = -1;
     D_800D939C.shade_step = 1;
     D_800D939C.target_shade = 0x7F;
-    D_800D939C.unknown_02 = 0;
+    D_800D939C.resource_index = 0;
     D_800D939C.sequence = 0;
     D_800D939C.shade = 0;
     D_801B2D34 = 0x8E;
@@ -1946,7 +1946,7 @@ void func_800A0154(void)
     D_801399CC = D_80123538;
     D_80139260 = 0x320;
     D_800D93C8.scale_index = 0xF;
-    D_800D93C8.unknown_02 = 0;
+    D_800D93C8.resource_index = 0;
     D_800D93C8.sequence = 1;
     D_800D93C8.previous_sequence = -1;
     D_800D93C8.shade_step = 4;

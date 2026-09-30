@@ -79,7 +79,7 @@ void field_start_actor_hit_reaction(FieldActor* actor, s32 guard)
     {
         g_field_player_records[actor->object_index].hit_state = FIELD_HUD_SHAKE_START;
     }
-    else if (g_field_object_states[actor->object_index].unk8.word < 0)
+    else if (g_field_object_states[actor->object_index].hp_display.word < 0)
     {
         g_field_boss_hud_shake_frame = FIELD_HUD_SHAKE_START;
     }
@@ -280,7 +280,7 @@ void field_start_actor_jump(FieldActor* actor, s8 direction, s32 animation, s8 c
 /**
  * @brief Start an actor's defeat: drop its flags and collapse it after a short delay.
  * @param actor Actor that was defeated.
- * @param value Value stored in the object state's unk16C.
+ * @param value Idle animation to keep for the object (FieldObjectState::idle_animation).
  */
 void field_start_actor_defeat(FieldActor* actor, s8 value)
 {
@@ -291,7 +291,7 @@ void field_start_actor_defeat(FieldActor* actor, s8 value)
 
     g_field_object_states[actor->object_index].flags &= FIELD_OBJECT_FLAG_KNOCKED_OUT;
     g_field_object_states[actor->object_index].contact.word |= FIELD_CONTACT_NO_HIT_TEST;
-    g_field_object_states[actor->object_index].unk16C = value;
+    g_field_object_states[actor->object_index].idle_animation = value;
     actor->command = FIELD_ACTOR_COMMAND_DEFEAT_DELAY;
     actor->command_param = FIELD_DEFEAT_DELAY;
 }
@@ -332,13 +332,13 @@ s32 field_collapse_defeated_actor(FieldActor* actor)
     {
         resources = g_field_resource_entries;
         resource = &resources[actor->resource_index];
-        if (resource->unkE & FIELD_REQUEST_BOUND)
+        if (resource->bound_animation_flags & FIELD_REQUEST_BOUND)
         {
             actor->command = FIELD_ACTOR_COMMAND_DEFEAT_BOUND;
         }
         else
         {
-            field_start_builtin_animation(object_index, object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, resource->unkE);
+            field_start_builtin_animation(object_index, object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, resource->bound_animation_flags);
             field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
         }
     }
@@ -394,7 +394,7 @@ s32 field_test_actor_depth_overlap(s32 first_key, s32 second_key)
     {
         return 0;
     }
-    if (second_state->unk4.word == 0)
+    if (second_state->current_hp.word == 0)
     {
         return 0;
     }

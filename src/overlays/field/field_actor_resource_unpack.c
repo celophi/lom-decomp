@@ -65,13 +65,13 @@
  * aligned, so these are copied as unaligned structs.
  */
 
-/** @brief First 18 bytes of an animation definition (up to unknown_0x12). */
+/** @brief First 18 bytes of an animation definition (up to duration). */
 typedef struct
 {
     s8 bytes[18];
 } FieldAnimationBaseBytes;
 
-/** @brief Extension fields of an animation definition (unknown_0x12 onward). */
+/** @brief Extension fields of an animation definition (duration onward). */
 typedef struct
 {
     s8 bytes[10];
@@ -80,10 +80,10 @@ typedef struct
 /** @brief A whole alternate animation definition. */
 typedef struct
 {
-    s8 bytes[sizeof(FieldActorAnimationDef)];
+    s8 bytes[sizeof(FieldAnimationDef)];
 } FieldAnimationDefBytes;
 
-/** @brief Three-halfword tail after the alternate definitions (FieldActorState::unknown_0x240). */
+/** @brief Three-halfword tail after the alternate definitions (FieldActorSlot::part_masks). */
 typedef struct
 {
     s8 bytes[6];
@@ -93,7 +93,7 @@ typedef struct
 #define FIELD_ANIMATION_BLOCK_SIZE \
     (sizeof(FieldAnimationBaseBytes) + sizeof(FieldAnimationExtensionBytes) + 2 * sizeof(FieldAnimationDefBytes) + sizeof(FieldAnimationTailBytes))
 
-/** @brief Six-byte link record in FieldActorState::link_records. */
+/** @brief Six-byte curve record as stored in the resource, before it is repacked into FieldActorSlot::curves. */
 typedef union
 {
     /** @brief Byte and halfword fields of the record. */
@@ -108,9 +108,9 @@ typedef union
 } FieldActorLinkRecord;
 
 /**
- * @brief Link record at byte offset @p offset of @p actor's link records.
+ * @brief Stored curve record at byte offset @p offset of @p actor's curves.
  */
-#define FIELD_ACTOR_LINK_RECORD(actor, offset) ((FieldActorLinkRecord*)((offset) + (u32)(actor)->link_records))
+#define FIELD_ACTOR_LINK_RECORD(actor, offset) ((FieldActorLinkRecord*)((offset) + (u32)(actor)->curves))
 
 /**
  * @brief memcpy with a signed byte count.
@@ -281,7 +281,7 @@ void field_free_owner_resources(s32 tag)
  * @param owner Owner object index; selects the heap tag, texture slot and texture part table.
  * @param actor Actor receiving the unpacked tracks, meshes, records, parts and animations.
  */
-void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
+void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
 {
     s32 mesh_count;
     u8* resource;
@@ -333,7 +333,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
     s32 column;
     u8* indices;
     u8* parts;
-    FieldActorAnimationDef* animation;
+    FieldAnimationDef* animation;
     u8* records;
     /** @brief Output cursor shared by the vector tables and the face bytes. */
     union
@@ -541,20 +541,20 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
         } while (i < mesh_count);
     }
     heap = &g_field_actor_heap;
-    fallback_value = *(u16*)cursor; /* unknown_0x12 unless the extension overrides it */
+    fallback_value = *(u16*)cursor; /* duration unless the extension overrides it */
     cursor += 2;
     record_count = *cursor++;
     record_bytes = record_count * sizeof(FieldActorLinkRecord);
     record_tag = field_owner_tag(owner);
     records = field_block_alloc(*heap, record_bytes, record_tag);
-    actor->link_records = records;
+    actor->curves = (FieldParameterCurve*)records;
     memcpy(records, cursor, record_bytes);
     cursor += record_bytes;
     j = *cursor++;
     index_bytes = j * sizeof(u16);
     index_tag = field_owner_tag(owner);
     indices = field_block_alloc(*heap, index_bytes, index_tag);
-    actor->link_record_indices = indices;
+    actor->curve_segments = (u16*)indices;
     memcpy(indices, cursor, index_bytes);
     cursor += index_bytes;
     j = *cursor;
@@ -566,19 +566,19 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
     j = j & FIELD_PART_COUNT_MASK;
     cursor++;
     actor->part_count = j;
-    part_bytes = j * sizeof(FieldActorPartDef);
+    part_bytes = j * sizeof(FieldObjectPart);
     part_tag = field_owner_tag(owner);
     parts = field_block_alloc(*heap, part_bytes, part_tag);
-    actor->parts = (FieldActorPartDef*)parts;
+    actor->parts = (FieldObjectPart*)parts;
     memcpy(parts, cursor, part_bytes);
     cursor += part_bytes;
     actor->animation_index = 0;
     animation_tag = field_owner_tag(owner);
     animation = field_block_alloc(*heap, FIELD_ANIMATION_BLOCK_SIZE, animation_tag);
     actor->animation = animation;
-    animation->unknown_0x12 = fallback_value;
+    animation->duration = fallback_value;
     block = (u8*)actor->animation;
-    actor->animations = (FieldActorAnimationDef*)block;
+    actor->animations = (FieldAnimationDef*)block;
     *(FieldAnimationBaseBytes*)block = *(FieldAnimationBaseBytes*)cursor;
     block += sizeof(FieldAnimationBaseBytes);
     cursor += sizeof(FieldAnimationBaseBytes);
@@ -602,13 +602,13 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
                 packed.h.b1 = (FIELD_ACTOR_LINK_RECORD(actor, record_offset)->head >> 8) & 0x7F;
                 packed.h.h4 = FIELD_ACTOR_LINK_RECORD(actor, record_offset)->bytes.h4;
                 packed.h.h2 = FIELD_ACTOR_LINK_RECORD(actor, record_offset)->bytes.h2;
-                bcopy((u8*)&packed, actor->link_records + record_offset, sizeof(FieldActorLinkRecord));
+                bcopy((u8*)&packed, (u8*)actor->curves + record_offset, sizeof(FieldActorLinkRecord));
                 i += 1;
                 record_offset += sizeof(FieldActorLinkRecord);
             } while (i < (s32)record_count);
         }
     }
-    actor->unknown_0x222 = actor->animation->unknown_0x12;
+    actor->duration = actor->animation->duration;
     if (actor->animations->flags & FIELD_ANIMATION_HAS_ALTERNATES)
     {
         *(FieldAnimationDefBytes*)block = *(FieldAnimationDefBytes*)cursor;
@@ -617,7 +617,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
         *(FieldAnimationDefBytes*)block = *(FieldAnimationDefBytes*)cursor;
         cursor += sizeof(FieldAnimationDefBytes);
         block = (u8*)((u32)(block + sizeof(FieldAnimationDefBytes) + 1) & ~1);
-        actor->unknown_0x240 = (u16*)block;
+        actor->part_masks = (u16*)block;
         actor->animation_index = 0;
         actor->sequence_active = 0;
         *(FieldAnimationTailBytes*)block = *(FieldAnimationTailBytes*)cursor;
@@ -637,7 +637,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorState* actor)
             else
             {
                 /* The first sound of shared table 0. */
-                actor->sound_data[i] = sound_tables + ((s32*)sound_tables)[1];
+                actor->sound_data[i] = (struct AkaoHeader*)(sound_tables + ((s32*)sound_tables)[1]);
             }
             cursor += 4;
             if (sound_bytes < FIELD_SOUND_SHARED_SIZE)

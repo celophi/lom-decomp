@@ -38,16 +38,6 @@
 #define WMAP_SELECTION_VOLUME 128
 #define WMAP_CAROUSEL_VOLUME 143
 
-/** @brief Sounds used by artifact selection and placement. */
-enum WmapSelectionSound
-{
-    WMAP_SOUND_OPEN_ARTIFACTS = 4,
-    WMAP_SOUND_TURN_RIGHT = 8,
-    WMAP_SOUND_TURN_LEFT = 9,
-    WMAP_SOUND_PLACE_ARTIFACT = 22,
-    WMAP_SOUND_CLOSE_ARTIFACTS = 24
-};
-
 /** @brief Carousel slide and visibility modes. */
 enum WmapCarouselMode
 {

@@ -156,12 +156,12 @@ void field_set_battle_group(s32 mode, void* actor_data)
                 {
                     g_field_actors[index].command = FIELD_ACTOR_COMMAND_FOLLOW_LEADER;
                     g_field_actors[index].animation_state = 0xFFFF;
-                    g_field_object_parts[index].flags = g_field_object_parts[index].flags | FIELD_PART_IGNORE_MAP_COLLISION;
+                    g_field_object_parts[index].spawn_flags.word = g_field_object_parts[index].spawn_flags.word | FIELD_PART_IGNORE_MAP_COLLISION;
                 }
                 else
                 {
                     field_route_actor_to_object(&g_field_actors[index], 0, 1);
-                    g_field_object_parts[index].flags = g_field_object_parts[index].flags | FIELD_PART_IGNORE_MAP_COLLISION;
+                    g_field_object_parts[index].spawn_flags.word = g_field_object_parts[index].spawn_flags.word | FIELD_PART_IGNORE_MAP_COLLISION;
                     if (g_field_actors[index].command == FIELD_ACTOR_COMMAND_LEAVE_PATH)
                     {
                         g_field_actors[index].command = FIELD_ACTOR_COMMAND_RUN_PATH;

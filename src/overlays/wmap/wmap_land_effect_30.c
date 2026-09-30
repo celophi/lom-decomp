@@ -90,7 +90,7 @@ extern VECTOR D_8011CF60;
 extern s32 D_80182DE8;
 extern u8 D_800DCF18[];
 extern s32 D_801B280C;
-extern s32 D_8011CF1C;
+extern u8* D_8011CF1C;
 extern s32 D_801B2814;
 extern s32 D_8011CF74;
 extern s32 D_80139980;
@@ -982,7 +982,7 @@ void func_800823F0(void)
     D_800D9318.scale_index = 0xF;
     D_800D9318.previous_sequence = -1;
     D_800D9318.shade_step = 8;
-    D_800D9318.unknown_02 = 0;
+    D_800D9318.resource_index = 0;
     D_800D9318.sequence = 0;
     D_800D9318.target_shade = 0x80;
     D_800D9318.shade = 0;
@@ -1058,7 +1058,7 @@ void func_80082590(void)
     D_800D9344.scale_index = 0xF;
     D_800D9344.previous_sequence = -1;
     D_800D9344.shade_step = 8;
-    D_800D9344.unknown_02 = 0;
+    D_800D9344.resource_index = 0;
     D_800D9344.sequence = 0;
     D_800D9344.target_shade = 0x80;
     D_800D9344.shade = 0x80;
@@ -1253,7 +1253,7 @@ void func_800829E0(void)
     D_800D9370.shade_step = 8;
     D_800D9370.target_shade = 0x80;
     D_800D9370.shade = 0x80;
-    D_800D9370.unknown_02 = 0;
+    D_800D9370.resource_index = 0;
     D_801B281C = 0x2C;
     D_80182D58.packed = g_wmap_focus_screen_position.packed;
     D_801B2818 += 1;
@@ -1328,7 +1328,7 @@ void func_80082B94(void)
     D_800D939C.previous_sequence = -1;
     D_800D939C.shade_step = 2;
     D_800D939C.target_shade = 0x81;
-    D_800D939C.unknown_02 = 0;
+    D_800D939C.resource_index = 0;
     D_800D939C.sequence = 0;
     D_800D939C.shade = 1;
     D_801B2824 = 0x30;
@@ -1429,7 +1429,7 @@ void func_80082E00(void)
     D_800D93C8.previous_sequence = -1;
     D_800D93C8.shade_step = 8;
     D_800D93C8.target_shade = 0x81;
-    D_800D93C8.unknown_02 = 0;
+    D_800D93C8.resource_index = 0;
     D_800D93C8.sequence = 0;
     D_800D93C8.shade = 1;
     D_801B282C = 0x20;
@@ -1528,7 +1528,7 @@ void func_8008306C(void)
     D_800D93F4.sequence = 1;
     D_800D93F4.previous_sequence = -1;
     D_800D93F4.shade_step = 8;
-    D_800D93F4.unknown_02 = 0;
+    D_800D93F4.resource_index = 0;
     D_800D93F4.target_shade = 0x81;
     D_800D93F4.shade = 1;
     D_801B2834 = 0x1C;
@@ -1630,7 +1630,7 @@ void func_800832D8(void)
     D_800D9420.previous_sequence = -1;
     D_800D9420.shade_step = 8;
     D_800D9420.target_shade = 0x81;
-    D_800D9420.unknown_02 = 0;
+    D_800D9420.resource_index = 0;
     D_800D9420.shade = 1;
     D_801B283C = 0x18;
     D_801B2838 += 1;

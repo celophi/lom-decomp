@@ -21,9 +21,9 @@
 /** @brief Part effect kind that renders mesh 0. */
 #define FIELD_PART_MESH_LAST 0xF9
 
-/** @brief FieldActorPartDef behavior_flags bit: the mesh texture scrolls. */
+/** @brief FieldObjectPart behavior_flags bit: the mesh texture scrolls. */
 #define FIELD_PART_TEXTURE_SCROLLS 0x1
-/** @brief FieldActorPartDef track_flags fields of the texture animation. */
+/** @brief FieldObjectPart track_flags fields of the texture animation. */
 #define FIELD_PART_SCROLL_DIRECTION(flags) ((flags) & 3)
 #define FIELD_PART_SCROLL_SPEED(flags) ((((flags) >> 8) & 7) + 1)
 #define FIELD_PART_TEXTURE_FRAMES(flags) (((flags) >> 22) & 1)
@@ -43,8 +43,8 @@ typedef struct
     s32 words[5];
 } MatrixRotationWords;
 
-static s32 field_scroll_mesh_texture(s32 mesh_index, s32 direction, FieldActorState* actor, s32 shift);
-static void field_show_mesh_texture_frame(s32 mesh_index, s32 frame, FieldActorState* actor);
+static s32 field_scroll_mesh_texture(s32 mesh_index, s32 direction, FieldActorSlot* actor, s32 shift);
+static void field_show_mesh_texture_frame(s32 mesh_index, s32 frame, FieldActorSlot* actor);
 
 /**
  * @brief Copy the rotation terms of one matrix into another.
@@ -69,7 +69,7 @@ void field_copy_matrix_rotation(MATRIX* dst, MATRIX* src)
  * @param parts Part definitions of @p actor.
  * @param part_count Number of entries in @p parts.
  */
-void field_animate_mesh_textures(FieldActorState* actor, FieldActorPartDef* parts, s32 part_count)
+void field_animate_mesh_textures(FieldActorSlot* actor, FieldObjectPart* parts, s32 part_count)
 {
     s32 i;
 
@@ -107,7 +107,7 @@ void field_animate_mesh_textures(FieldActorState* actor, FieldActorPartDef* part
  * @param shift Number of rows or columns moved to the opposite edge.
  * @return Nothing meaningful; callers ignore it.
  */
-static s32 field_scroll_mesh_texture(s32 mesh_index, s32 direction, FieldActorState* actor, s32 shift)
+static s32 field_scroll_mesh_texture(s32 mesh_index, s32 direction, FieldActorSlot* actor, s32 shift)
 {
     RECT rect;
     FieldMeshTexturePart* part;
@@ -248,7 +248,7 @@ static s32 field_scroll_mesh_texture(s32 mesh_index, s32 direction, FieldActorSt
  * @param actor Actor that owns the mesh; its owner slot selects the VRAM page.
  * @note Every frame is uploaded into the rectangle of the first texture part.
  */
-static void field_show_mesh_texture_frame(s32 mesh_index, s32 frame, FieldActorState* actor)
+static void field_show_mesh_texture_frame(s32 mesh_index, s32 frame, FieldActorSlot* actor)
 {
     RECT rect;
     FieldMeshTexturePart* base;

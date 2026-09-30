@@ -155,26 +155,26 @@
 #define FIELD_PART_DISABLED 0xFE
 #define FIELD_PART_ALWAYS 0xFF
 #define FIELD_PART_NO_EFFECT 0xFF
-/** @brief FieldObjectPart::flags bit: the part is an attack sphere. */
+/** @brief FieldObjectPart::spawn_flags bit: the part is an attack sphere. */
 #define FIELD_PART_ATTACK_SPHERE 0x04000000
-/** @brief FieldObjectPart::unk14 bit: the part only runs on track 0. */
+/** @brief FieldObjectPart::orientation_flags bit: the part only runs on track 0. */
 #define FIELD_PART_FIRST_TRACK_ONLY 0x4
-/** @brief FieldObjectPart::unk28 bits: fixed effect count, spawn only when none is live, owner colour off, spawn cap. */
+/** @brief FieldObjectPart::placement_flags bits: fixed effect count, spawn only when none is live, owner colour off, spawn cap. */
 #define FIELD_PART_FIXED_COUNT_SHIFT 24
 #define FIELD_PART_UNK25_SHIFT 25
 #define FIELD_PART_SPAWN_CAP_SHIFT 30
-/** @brief FieldObjectPart::unk0 bit 15: spawn effects one at a time until the count is reached. */
+/** @brief FieldObjectPart::track_flags bit 15: spawn effects one at a time until the count is reached. */
 #define FIELD_PART_SPAWN_SINGLE_SHIFT 15
-/** @brief FieldObjectPart::unk2C low five bits: effects per burst minus one; bits 5-7 must be clear for owner colour. */
+/** @brief FieldObjectPart::appearance color_track_flags low five bits: effects per burst minus one; bits 5-7 must be clear for owner colour. */
 #define FIELD_PART_BURST_MASK 0x1F
 #define FIELD_PART_BURST_SHIFT 5
-/** @brief FieldObjectPart::unk4 byte 3 low four bits: spawn period minus one. */
+/** @brief FieldObjectPart::behavior_flags byte 3 low four bits: spawn period minus one. */
 #define FIELD_PART_PERIOD_MASK 0xF
-/** @brief FieldObjectPart::unk4 bits 4-5: the part animation loops (zero ends it). */
+/** @brief FieldObjectPart::behavior_flags bits 4-5: the part animation loops (zero ends it). */
 #define FIELD_PART_LOOP_SHIFT 4
-/** @brief FieldObjectPart::unk4 bit 11: the part keeps its own colour. */
+/** @brief FieldObjectPart::behavior_flags bit 11: the part keeps its own colour. */
 #define FIELD_PART_OWN_COLOR_SHIFT 11
-/** @brief FieldObjectPart::unk4 bits 22-23: render mode. */
+/** @brief FieldObjectPart::behavior_flags bits 22-23: render mode. */
 #define FIELD_PART_RENDER_MODE_SHIFT 22
 #define FIELD_PART_RENDER_MODE_MASK 0xC00000
 /** @brief Z/X scale of a part initialized with and without the timer mode. */
@@ -768,7 +768,7 @@ static s32 field_finalize_actor_animation(FieldActorSlot* slot)
 
     if (slot->duration == slot->track_frames[0])
     {
-        if (slot->animation->unk18 & FIELD_ANIM_RESTART_AT_END)
+        if (slot->animation->sync_flags & FIELD_ANIM_RESTART_AT_END)
         {
             for (i = FIELD_ACTOR_TRACK_COUNT - 1; i >= 0; i--)
             {
@@ -782,7 +782,7 @@ static s32 field_finalize_actor_animation(FieldActorSlot* slot)
     if (slot->track_mask == 0)
     {
         slot->pending_track_mask = 0;
-        if (slot->animation->unk18 & FIELD_ANIM_OWNER_VISIBILITY)
+        if (slot->animation->sync_flags & FIELD_ANIM_OWNER_VISIBILITY)
         {
             if (g_field_object_states[slot->owner_object_index].contact.bytes.controller_index == slot->slot_index)
             {
@@ -795,7 +795,7 @@ static s32 field_finalize_actor_animation(FieldActorSlot* slot)
                 g_field_object_states[slot->owner_object_index].contact.word &= ~FIELD_CONTACT_ANIMATION_HIDDEN;
             }
         }
-        if (slot->animation->unk18 & FIELD_ANIM_TARGET_VISIBILITY)
+        if (slot->animation->sync_flags & FIELD_ANIM_TARGET_VISIBILITY)
         {
             for (found = 0; found < ((s32)slot->target_count); found++)
             {
@@ -851,7 +851,7 @@ static s32 field_finalize_actor_animation(FieldActorSlot* slot)
             }
             return 1;
         }
-        state_value = slot->unk2A;
+        state_value = slot->sequence_active;
         if (state_value != 0)
         {
             slot->duration = 0;
@@ -867,7 +867,7 @@ static s32 field_finalize_actor_animation(FieldActorSlot* slot)
                 }
             }
 
-            slot->unk2A = 0;
+            slot->sequence_active = 0;
         }
         else
         {
@@ -981,7 +981,7 @@ static void field_reset_actor_track_state(FieldActorSlot* slot)
         slot->parts[i].unk32 = i;
         for (j = 0; j < FIELD_ACTOR_TRACK_COUNT; j++)
         {
-            slot->unk2B[i] = (slot->effect_totals[j][i] = (slot->effect_counts[j][i] = 0));
+            slot->mesh_texture_frames[i] = (slot->track_counters[j][i] = (slot->active_counts[j][i] = 0));
         }
     }
 }
@@ -1093,7 +1093,7 @@ void field_start_actor_animation(s32 slot_index, s32 target_count, u8* targets)
     {
         return;
     }
-    slot->animation->unk14 &= ~FIELD_ANIM_STARTED;
+    slot->animation->hit_test_mode &= ~FIELD_ANIM_STARTED;
     slot->track_mask = 0;
     slot->pending_track_mask = 1;
     slot->targets[0] = 0;
@@ -1142,7 +1142,7 @@ void field_start_actor_animation(s32 slot_index, s32 target_count, u8* targets)
         slot->parts[k].unk32 = k;
         for (m = 0; m < FIELD_ACTOR_TRACK_COUNT; m++)
         {
-            slot->unk2B[k] = (slot->effect_totals[m][k] = (slot->effect_counts[m][k] = 0));
+            slot->mesh_texture_frames[k] = (slot->track_counters[m][k] = (slot->active_counts[m][k] = 0));
         }
     }
 
@@ -1152,7 +1152,7 @@ void field_start_actor_animation(s32 slot_index, s32 target_count, u8* targets)
         slot->parts[i].unk32 = i;
         for (j = 0; j < FIELD_ACTOR_TRACK_COUNT; j++)
         {
-            slot->unk2B[i] = (slot->effect_totals[j][i] = (slot->effect_counts[j][i] = 0));
+            slot->mesh_texture_frames[i] = (slot->track_counters[j][i] = (slot->active_counts[j][i] = 0));
         }
     }
 }
@@ -1221,7 +1221,7 @@ void field_dispatch_actor_audio_event(FieldActorSlot* slot, s32 event_type, s32 
                 case 2:
                     if ((sound_command & FIELD_SOUND_ID_MASK) < 2)
                     {
-                        field_play_sfx_buffer(slot->sound_params[sound_command & FIELD_SOUND_ID_MASK], pan, slot->owner_object_index);
+                        field_play_sfx_buffer(slot->sound_data[sound_command & FIELD_SOUND_ID_MASK], pan, slot->owner_object_index);
                     }
                     break;
                 }
@@ -1319,39 +1319,39 @@ void field_update_actor_animations(void)
             if (slot->track_mask != 0)
             {
                 field_advance_actor_effects(slot);
-                if (slot->animation->unk14 == FIELD_ANIM_ATTACK)
+                if (slot->animation->hit_test_mode == FIELD_ANIM_ATTACK)
                 {
-                    if ((&slot->parts[slot->animation->unk15])->flags & FIELD_PART_ATTACK_SPHERE)
+                    if ((&slot->parts[slot->animation->hit_test_part])->spawn_flags.word & FIELD_PART_ATTACK_SPHERE)
                     {
                         for (track_index = 0; track_index < slot->target_count; track_index++)
                         {
                             u16 track_frame = slot->track_frames[track_index];
 
-                            if (((&slot->parts[slot->animation->unk15])->unk31 < track_frame) &&
+                            if (((&slot->parts[slot->animation->hit_test_part])->unk31 < track_frame) &&
                                 (slot->track_frames[track_index] <
-                                 ((&slot->parts[slot->animation->unk15])->unk31 + (&slot->parts[slot->animation->unk15])->unkD)))
+                                 ((&slot->parts[slot->animation->hit_test_part])->unk31 + (&slot->parts[slot->animation->hit_test_part])->unkD)))
                             {
                                 g_field_track_index = track_index;
-                                field_collect_attack_sphere_hits(slot, &slot->parts[slot->animation->unk15]);
+                                field_collect_attack_sphere_hits(slot, &slot->parts[slot->animation->hit_test_part]);
                             }
                         }
                     }
-                    else if ((&slot->parts[slot->animation->unk15])->unk31 == FIELD_PART_ALWAYS)
+                    else if ((&slot->parts[slot->animation->hit_test_part])->unk31 == FIELD_PART_ALWAYS)
                     {
                         for (track_index = 0; track_index < slot->target_count; track_index++)
                         {
-                            if ((&slot->parts[slot->animation->unk15])->unkD > slot->track_frames[track_index])
+                            if ((&slot->parts[slot->animation->hit_test_part])->unkD > slot->track_frames[track_index])
                             {
                                 g_field_track_index = track_index;
-                                field_collect_attack_sphere_hits(slot, &slot->parts[slot->animation->unk15]);
+                                field_collect_attack_sphere_hits(slot, &slot->parts[slot->animation->hit_test_part]);
                             }
                         }
                     }
-                    else if (((&slot->parts[slot->animation->unk15])->unk31 < slot->track_frames[0]) &&
-                             (slot->track_frames[0] < ((&slot->parts[slot->animation->unk15])->unk31 + (&slot->parts[slot->animation->unk15])->unkD)))
+                    else if (((&slot->parts[slot->animation->hit_test_part])->unk31 < slot->track_frames[0]) &&
+                             (slot->track_frames[0] < ((&slot->parts[slot->animation->hit_test_part])->unk31 + (&slot->parts[slot->animation->hit_test_part])->unkD)))
                     {
                         g_field_track_index = 0;
-                        field_collect_attack_sphere_hits(slot, &slot->parts[slot->animation->unk15]);
+                        field_collect_attack_sphere_hits(slot, &slot->parts[slot->animation->hit_test_part]);
                     }
                 }
                 animation = slot->animation;
@@ -1481,15 +1481,15 @@ static void field_build_actor_render_commands(FieldRenderContext* render_ctx, s3
     {
         if (slot->track_mask != 0)
         {
-            u16 animation_flags = slot->animation->unk18;
+            u16 animation_flags = slot->animation->sync_flags;
 
-            if ((animation_flags & FIELD_ANIM_OWNER_VISIBILITY) && !(slot->animation->unk18 & FIELD_ANIM_OWNER_TRACK_OFF))
+            if ((animation_flags & FIELD_ANIM_OWNER_VISIBILITY) && !(slot->animation->sync_flags & FIELD_ANIM_OWNER_TRACK_OFF))
             {
                 u8 visibility;
                 s32 track_value;
 
                 g_field_track_index = 0;
-                track_value = field_evaluate_parameter_track(slot, (slot->animation->unk18 >> FIELD_ANIM_OWNER_CURVE_SHIFT) & 0xF);
+                track_value = field_evaluate_parameter_track(slot, (slot->animation->sync_flags >> FIELD_ANIM_OWNER_CURVE_SHIFT) & 0xF);
                 visibility = 0;
                 if (track_value != 0)
                 {
@@ -1513,8 +1513,8 @@ static void field_build_actor_render_commands(FieldRenderContext* render_ctx, s3
                     }
                 }
             }
-            has_target_track = slot->animation->unk18 & FIELD_ANIM_TARGET_VISIBILITY;
-            if (has_target_track && !(slot->animation->unk18 & FIELD_ANIM_TARGET_TRACK_OFF))
+            has_target_track = slot->animation->sync_flags & FIELD_ANIM_TARGET_VISIBILITY;
+            if (has_target_track && !(slot->animation->sync_flags & FIELD_ANIM_TARGET_TRACK_OFF))
             {
                 s32 target_index;
 
@@ -1524,7 +1524,7 @@ static void field_build_actor_render_commands(FieldRenderContext* render_ctx, s3
                     s32 track_value;
 
                     g_field_track_index = target_index;
-                    track_value = field_evaluate_parameter_track(slot, slot->animation->unk18 >> FIELD_ANIM_TARGET_CURVE_SHIFT);
+                    track_value = field_evaluate_parameter_track(slot, slot->animation->sync_flags >> FIELD_ANIM_TARGET_CURVE_SHIFT);
                     visibility = 0;
                     if (track_value != 0)
                     {
@@ -1565,20 +1565,20 @@ static void field_build_actor_render_commands(FieldRenderContext* render_ctx, s3
                 switch (offset_mode & 3)
                 {
                 case 0:
-                    g_field_camera_offset_x = field_evaluate_parameter_track(slot, animation->unk10 >> FIELD_ANIM_CAMERA_CURVE_SHIFT);
+                    g_field_camera_offset_x = field_evaluate_parameter_track(slot, animation->palette_animation >> FIELD_ANIM_CAMERA_CURVE_SHIFT);
                     break;
 
                 case 1:
-                    g_field_camera_offset_y = field_evaluate_parameter_track(slot, animation->unk10 >> FIELD_ANIM_CAMERA_CURVE_SHIFT);
+                    g_field_camera_offset_y = field_evaluate_parameter_track(slot, animation->palette_animation >> FIELD_ANIM_CAMERA_CURVE_SHIFT);
                     break;
 
                 case 2:
-                    g_field_camera_offset_y = g_field_camera_offset_x = field_evaluate_parameter_track(slot, animation->unk10 >> FIELD_ANIM_CAMERA_CURVE_SHIFT);
+                    g_field_camera_offset_y = g_field_camera_offset_x = field_evaluate_parameter_track(slot, animation->palette_animation >> FIELD_ANIM_CAMERA_CURVE_SHIFT);
                     break;
 
                 case 3:
-                    g_field_camera_offset_x = field_evaluate_parameter_track(slot, animation->unk10 >> FIELD_ANIM_CAMERA_CURVE_SHIFT);
-                    g_field_camera_offset_y = field_evaluate_parameter_track(slot, ((slot->animation->unk10 >> FIELD_ANIM_CAMERA_CURVE_SHIFT) + 1) & 0xF);
+                    g_field_camera_offset_x = field_evaluate_parameter_track(slot, animation->palette_animation >> FIELD_ANIM_CAMERA_CURVE_SHIFT);
+                    g_field_camera_offset_y = field_evaluate_parameter_track(slot, ((slot->animation->palette_animation >> FIELD_ANIM_CAMERA_CURVE_SHIFT) + 1) & 0xF);
                     break;
                 }
             }
@@ -1854,7 +1854,7 @@ void field_initialize_actor_system(void)
         field_apply_weapon_action_params(1);
     }
 
-    g_field_object_default_animation.unk14 = 0;
+    g_field_object_default_animation.hit_test_mode = 0;
     i = 0;
     slot_base = (u8*)g_field_actor_slots;
     default_animation = &g_field_object_default_animation;
@@ -2024,7 +2024,7 @@ void field_initialize_actor_parts(s32 timer_mode)
  */
 static void field_load_actor_resource_slot(s32 resource_index, s32 slot_index, s32 resource_id, s32 alternate_layout)
 {
-    g_field_resource_entries[resource_index].unkE = 0x2F;
+    g_field_resource_entries[resource_index].bound_animation_flags = 0x2F;
     g_field_resource_entries[resource_index].slot_index = slot_index;
     g_field_resource_entries[resource_index].unk8 = 0;
     g_field_resource_entries[resource_index].flags = (g_field_resource_entries[resource_index].flags & ~FIELD_RESOURCE_HAS_ACTIONS) | (alternate_layout & 1);
@@ -2352,7 +2352,7 @@ void field_load_resource_entry(s32 resource_slot_id, u8* resource_base, s32 entr
     entry->slot_index = resource_slot_id;
     entry->unk8 = 0;
     field_set_party_palettes();
-    entry->unkE = 0;
+    entry->bound_animation_flags = 0;
     entry->flags &= ~FIELD_RESOURCE_HAS_ACTIONS;
     entry->start = g_field_resource_cursor;
     field_load_resource_package(resource_base + FIELD_RES_ENTRY_PACKAGES, resource_slot_id, entry_index);
@@ -2543,30 +2543,30 @@ void field_initialize_actor_part(s32 part_index, s32 timer_mode)
     g_field_object_parts[part_index].unk8 = 1;
     g_field_object_parts[part_index].unk9 = 0xFF;
     g_field_object_parts[part_index].unkD = 8;
-    g_field_object_parts[part_index].unk14.half.hi = 20;
-    g_field_object_parts[part_index].unk24.bytes[1] = 8;
-    g_field_object_parts[part_index].unk24.bytes[0] = 8;
-    g_field_object_parts[part_index].unk23 = 8;
+    g_field_object_parts[part_index].orientation_flags.halves.high = 20;
+    g_field_object_parts[part_index].effect_flags.bytes[1] = 8;
+    g_field_object_parts[part_index].effect_flags.bytes[0] = 8;
+    g_field_object_parts[part_index].rotation_extent.fields.unk23 = 8;
     g_field_object_parts[part_index].unk18 = 0x100;
-    g_field_object_parts[part_index].unk4.bits.flag11 = 1;
-    g_field_object_parts[part_index].unk4.bits.render_mode = 1;
-    g_field_object_parts[part_index].unk0.bits.mode = 2;
+    g_field_object_parts[part_index].behavior_flags.bits.flag11 = 1;
+    g_field_object_parts[part_index].behavior_flags.bits.render_mode = 1;
+    g_field_object_parts[part_index].track_flags.bits.mode = 2;
 
     if (timer_mode != 0)
     {
-        g_field_object_parts[part_index].scale_z = FIELD_PART_SCALE_SMALL;
-        g_field_object_parts[part_index].scale_x = FIELD_PART_SCALE_SMALL;
+        g_field_object_parts[part_index].appearance.fields.scale_xz = FIELD_PART_SCALE_SMALL;
+        g_field_object_parts[part_index].scale_y = FIELD_PART_SCALE_SMALL;
     }
     else
     {
-        g_field_object_parts[part_index].scale_z = FIELD_PART_SCALE_FULL;
-        g_field_object_parts[part_index].scale_x = FIELD_PART_SCALE_FULL;
+        g_field_object_parts[part_index].appearance.fields.scale_xz = FIELD_PART_SCALE_FULL;
+        g_field_object_parts[part_index].scale_y = FIELD_PART_SCALE_FULL;
     }
 
-    g_field_object_parts[part_index].unk11 = 0xFF;
-    g_field_object_parts[part_index].unk28.word |= 0x2000000;
-    g_field_object_parts[part_index].unk14.bits.mode = 2;
-    g_field_object_parts[part_index].unk24.word |= 0x100000;
+    g_field_object_parts[part_index].turn_end_age = 0xFF;
+    g_field_object_parts[part_index].placement_flags.word |= 0x2000000;
+    g_field_object_parts[part_index].orientation_flags.bits.mode = 2;
+    g_field_object_parts[part_index].effect_flags.word |= 0x100000;
 }
 
 /**
@@ -2592,7 +2592,7 @@ void field_set_all_actor_render_state(s32 red, s32 green, s32 blue, s32 color_fl
         g_field_object_parts[i].tint_red = red;
         g_field_object_parts[i].tint_green = green;
         g_field_object_parts[i].tint_blue = blue;
-        g_field_object_parts[i].unk4.word = (g_field_object_parts[i].unk4.word & ~FIELD_PART_RENDER_MODE_MASK) | mode_bits;
+        g_field_object_parts[i].behavior_flags.word = (g_field_object_parts[i].behavior_flags.word & ~FIELD_PART_RENDER_MODE_MASK) | mode_bits;
     }
 
     for (i = 0; i < FIELD_ACTOR_COUNT; i++)
@@ -2628,8 +2628,8 @@ s32 field_set_actor_render_state(s32 red, s32 green, s32 blue, s32 color_flag, s
     g_field_object_parts[actor->object_index].tint_red = red;
     g_field_object_parts[actor->object_index].tint_green = green;
     g_field_object_parts[actor->object_index].tint_blue = blue;
-    g_field_object_parts[actor->object_index].unk4.word =
-        (g_field_object_parts[actor->object_index].unk4.word & ~FIELD_PART_RENDER_MODE_MASK) | ((render_mode & 3) << FIELD_PART_RENDER_MODE_SHIFT);
+    g_field_object_parts[actor->object_index].behavior_flags.word =
+        (g_field_object_parts[actor->object_index].behavior_flags.word & ~FIELD_PART_RENDER_MODE_MASK) | ((render_mode & 3) << FIELD_PART_RENDER_MODE_SHIFT);
     actor->control.word = (actor->control.word & ~FIELD_CONTROL_TINTED) | ((color_flag & 1) << FIELD_CONTROL_TINTED_SHIFT);
     return 0;
 }
@@ -2881,10 +2881,10 @@ void field_render_actor_objects(FieldRenderContext* render_context)
         else if (actor->presence == FIELD_ACTOR_HIDDEN)
         {
             state->collision.word = 0x100000;
-            state->unk140 = -8;
-            state->unk142 = -0xF;
-            state->unk144 = 8;
-            state->unk146 = 0;
+            state->bounds.half.left = -8;
+            state->bounds.half.top = -0xF;
+            state->bounds.half.right = 8;
+            state->bounds.half.bottom = 0;
         }
         else
         {
@@ -3315,7 +3315,7 @@ u8* field_advance_actor_part_animation_frame(FieldActor* actor, u8* resource_bas
         if (next_frame >= entry[0])
         {
             part = &g_field_actor_slots[actor->owner_slot].parts[actor->owner_part];
-            if (!((part->unk4.word >> FIELD_PART_LOOP_SHIFT) & 3))
+            if (!((part->behavior_flags.word >> FIELD_PART_LOOP_SHIFT) & 3))
             {
                 field_retire_effect(actor, part);
                 return 0;
@@ -3693,11 +3693,11 @@ static void field_update_actor_part_effects(FieldActorSlot* slot)
         start_frame = part->unk31;
         if (start_frame != FIELD_PART_DISABLED &&
             (!(slot->animation->flags & FIELD_ANIM_KEEP_ALIVE) || ((slot->part_masks[slot->animation_index] >> i) & 1)) &&
-            part->unkB != FIELD_PART_NO_EFFECT && (!(part->unk14.word & FIELD_PART_FIRST_TRACK_ONLY) || g_field_track_index == 0))
+            part->effect_kind != FIELD_PART_NO_EFFECT && (!(part->orientation_flags.word & FIELD_PART_FIRST_TRACK_ONLY) || g_field_track_index == 0))
         {
             if (slot->targets[g_field_track_index] == FIELD_TARGET_NONE)
             {
-                if (start_frame == FIELD_PART_ALWAYS || (part->flags & FIELD_PART_ATTACK_SPHERE))
+                if (start_frame == FIELD_PART_ALWAYS || (part->spawn_flags.word & FIELD_PART_ATTACK_SPHERE))
                 {
                     continue;
                 }
@@ -3714,7 +3714,7 @@ static void field_update_actor_part_effects(FieldActorSlot* slot)
                 }
             }
 
-            if (part->unk28.bytes[3] & 1)
+            if (part->placement_flags.bytes.high & 1)
             {
                 target_count = part->unkC;
             }
@@ -3723,49 +3723,49 @@ static void field_update_actor_part_effects(FieldActorSlot* slot)
                 target_count = field_evaluate_parameter_track(slot, part->unkC);
             }
 
-            flags = part->unk28.word;
-            if (((flags >> FIELD_PART_SPAWN_CAP_SHIFT) & 1) && slot->effect_totals[g_field_track_index][i] >= target_count)
+            flags = part->placement_flags.word;
+            if (((flags >> FIELD_PART_SPAWN_CAP_SHIFT) & 1) && slot->track_counters[g_field_track_index][i] >= target_count)
             {
                 continue;
             }
 
-            if ((part->unk0.word >> FIELD_PART_SPAWN_SINGLE_SHIFT) & 1)
+            if ((part->track_flags.word >> FIELD_PART_SPAWN_SINGLE_SHIFT) & 1)
             {
-                if (((flags >> FIELD_PART_FIXED_COUNT_SHIFT) & 1) && slot->effect_counts[g_field_track_index][i] != 0)
+                if (((flags >> FIELD_PART_FIXED_COUNT_SHIFT) & 1) && slot->active_counts[g_field_track_index][i] != 0)
                 {
                     continue;
                 }
-                if (field_get_track_counter_modulo(slot, (part->unk4.bytes[3] & FIELD_PART_PERIOD_MASK) + 1) != 0)
+                if (field_get_track_counter_modulo(slot, (part->behavior_flags.bytes.high & FIELD_PART_PERIOD_MASK) + 1) != 0)
                 {
                     continue;
                 }
-                if (slot->effect_counts[g_field_track_index][i] >= target_count)
+                if (slot->active_counts[g_field_track_index][i] >= target_count)
                 {
                     continue;
                 }
                 do
                 {
-                    previous_count = slot->effect_counts[g_field_track_index][i];
+                    previous_count = slot->active_counts[g_field_track_index][i];
                     D_80105760 = 0;
                     if (field_spawn_actor_effect(slot, i, 0) == -1)
                     {
                         break;
                     }
-                    if (slot->effect_counts[g_field_track_index][i] == previous_count)
+                    if (slot->active_counts[g_field_track_index][i] == previous_count)
                     {
                         break;
                     }
-                } while (slot->effect_counts[g_field_track_index][i] < target_count);
+                } while (slot->active_counts[g_field_track_index][i] < target_count);
             }
             else
             {
-                if (slot->effect_counts[g_field_track_index][i] < target_count &&
-                    field_get_track_counter_modulo(slot, (part->unk4.bytes[3] & FIELD_PART_PERIOD_MASK) + 1) == 0)
+                if (slot->active_counts[g_field_track_index][i] < target_count &&
+                    field_get_track_counter_modulo(slot, (part->behavior_flags.bytes.high & FIELD_PART_PERIOD_MASK) + 1) == 0)
                 {
-                    spawn_count = (part->unk2C & FIELD_PART_BURST_MASK) + 1;
+                    spawn_count = (part->appearance.fields.color_track_flags & FIELD_PART_BURST_MASK) + 1;
                     while (spawn_count != 0)
                     {
-                        if (slot->effect_counts[g_field_track_index][i] >= target_count)
+                        if (slot->active_counts[g_field_track_index][i] >= target_count)
                         {
                             break;
                         }
@@ -3790,8 +3790,8 @@ static void field_update_actor_part_effects(FieldActorSlot* slot)
  */
 static void field_apply_actor_part_color(FieldActor* effect, FieldObjectPart* part, FieldActor* owner)
 {
-    if (!((part->unk4.word >> FIELD_PART_OWN_COLOR_SHIFT) & 1) && !((part->unk28.word >> FIELD_PART_UNK25_SHIFT) & 1) &&
-        (part->unk2C >> FIELD_PART_BURST_SHIFT) == 0 && (*(u32*)&part->unkC & 0xFFFF0000) == 0x80800000 &&
+    if (!((part->behavior_flags.word >> FIELD_PART_OWN_COLOR_SHIFT) & 1) && !((part->placement_flags.word >> FIELD_PART_UNK25_SHIFT) & 1) &&
+        (part->appearance.fields.color_track_flags >> FIELD_PART_BURST_SHIFT) == 0 && (*(u32*)&part->unkC & 0xFFFF0000) == 0x80800000 &&
         part->tint_blue == FIELD_TINT_NEUTRAL)
     {
         effect->control.word |= FIELD_CONTROL_OWNER_TINT;

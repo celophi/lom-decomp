@@ -290,7 +290,7 @@ s32 field_collect_action_targets(s32 source_index, FieldTargetSpec* spec, s32 gr
     s32 prior;
     s16 command;
     FieldActor* actor;
-    FieldObjectRuntime* state;
+    FieldObjectState* state;
 
     if (g_field_duel_mode != 0)
     {
@@ -333,11 +333,11 @@ s32 field_collect_action_targets(s32 source_index, FieldTargetSpec* spec, s32 gr
     state = &g_field_object_states[index];
     for (; index < end; index++, actor++, state++)
     {
-        if (index == source_index || actor->presence == FIELD_ACTOR_UNUSED || state->current_hp == 0)
+        if (index == source_index || actor->presence == FIELD_ACTOR_UNUSED || state->current_hp.word == 0)
         {
             continue;
         }
-        flags = state->contact.flags;
+        flags = state->contact.word;
         if (flags & FIELD_CONTACT_ANIMATION_HIDDEN)
         {
             continue;
@@ -362,8 +362,8 @@ s32 field_collect_action_targets(s32 source_index, FieldTargetSpec* spec, s32 gr
                 continue;
             }
         }
-        if ((state->object_flags & FIELD_OBJECT_UNTARGETABLE_FLAGS) || state->collision.word == 0 || (state->movement.word & FIELD_MOVEMENT_TINT_FLASH) ||
-            (state->contact.flags & FIELD_CONTACT_TARGETED))
+        if ((state->flags & FIELD_OBJECT_UNTARGETABLE_FLAGS) || state->collision.word == 0 || (state->movement.word & FIELD_MOVEMENT_TINT_FLASH) ||
+            (state->contact.word & FIELD_CONTACT_TARGETED))
         {
             continue;
         }

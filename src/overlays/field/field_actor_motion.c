@@ -37,7 +37,7 @@
 /** @brief FieldObjectState::movement bit: the object overlaps another one. */
 #define FIELD_MOVEMENT_OVERLAPPING 0x4000
 
-/** @brief The slide displacement is scaled by FieldObjectPart::scale_z / 64 (0x40 = full size). */
+/** @brief The slide displacement is scaled by FieldObjectPart::appearance scale_xz / 64 (0x40 = full size). */
 #define FIELD_PART_SCALE_SHIFT 6
 
 /** @brief Screen margins a moving actor may not cross. */
@@ -138,11 +138,11 @@ s32 field_update_actor_action(FieldActor* actor, s32 update_action)
         part = &g_field_object_parts[actor->object_index];
         if (actor->animation & FIELD_ANIMATION_FACING)
         {
-            displacement->x = ((step << 8) * part->scale_z) >> FIELD_PART_SCALE_SHIFT;
+            displacement->x = ((step << 8) * part->appearance.fields.scale_xz) >> FIELD_PART_SCALE_SHIFT;
         }
         else
         {
-            displacement->x = (-(step << 8) * part->scale_z) >> FIELD_PART_SCALE_SHIFT;
+            displacement->x = (-(step << 8) * part->appearance.fields.scale_xz) >> FIELD_PART_SCALE_SHIFT;
         }
         displacement->y = 0;
         displacement->z = 0;

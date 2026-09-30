@@ -92,10 +92,10 @@ extern s32 D_801B2468;
 extern s32 D_801B24F4;
 extern VECTOR D_8011CF60;
 extern s32 D_80182DE8;
-extern s32 D_8011CF1C;
+extern u8* D_8011CF1C;
 extern s32 D_801B24FC;
 extern s32 D_80182DEC;
-extern s32 D_8011CF24;
+extern u8* D_8011CF24;
 extern s32 D_801B2504;
 extern s32 D_801B250C;
 extern s32 rand(void);
@@ -833,7 +833,7 @@ void func_80071A38(void)
     D_800D9318.scale_index = 0xF;
     D_800D9318.previous_sequence = -1;
     D_800D9318.shade_step = 8;
-    D_800D9318.unknown_02 = 0;
+    D_800D9318.resource_index = 0;
     D_800D9318.sequence = 0;
     D_800D9318.target_shade = 0x80;
     D_800D9318.shade = 0;
@@ -912,7 +912,7 @@ void func_80071BD8(void)
     D_800D9370.sequence = 1;
     D_800D9370.previous_sequence = -one;
     D_800D9370.shade_step = 2;
-    D_800D9370.unknown_02 = 0;
+    D_800D9370.resource_index = 0;
     D_800D9370.target_shade = 0x81;
     D_800D9370.shade = 1;
     D_801B24D4 = 0x7C;
@@ -989,7 +989,7 @@ void func_80071D7C(void)
     D_800D939C.previous_sequence = -1;
     D_800D939C.shade_step = 0x10;
     D_800D939C.target_shade = 0x81;
-    D_800D939C.unknown_02 = 0;
+    D_800D939C.resource_index = 0;
     D_800D939C.shade = 1;
     D_801B24DC = 0x28;
     D_801B24D8 += 1;
@@ -1063,7 +1063,7 @@ void func_80071F24(void)
     D_800D9344.scale_index = 0xF;
     D_800D9344.previous_sequence = -1;
     D_800D9344.shade_step = 8;
-    D_800D9344.unknown_02 = 0;
+    D_800D9344.resource_index = 0;
     D_800D9344.sequence = 0;
     D_800D9344.target_shade = 0x80;
     D_800D9344.shade = 0;
