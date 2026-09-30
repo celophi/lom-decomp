@@ -9,34 +9,34 @@
 #include "wmap_view_effects.h"
 #include "wmap_resource_support.h"
 
-void func_80074F20(void);
-void func_80075094(void);
-void func_800750D0(void);
-s32 func_80075168(s32 arg0);
-void func_80075114(void);
-void func_80075150(void);
-s32 func_80075704(s32 arg0);
-s32 func_80075B34(s32 arg0);
-s32 func_800759B4(s32 arg0);
-s32 func_80076AE8(s32 arg0);
-s32 func_800765A4(s32 arg0);
-s32 func_80076848(s32 arg0);
-s32 func_80075DD8(s32 arg0);
-s32 func_80076074(s32 arg0);
-s32 func_800761C0(s32 arg0);
-s32 func_8007630C(s32 arg0);
-s32 func_80076458(s32 arg0);
-void func_800757FC(void);
-void func_800758EC(void);
-void func_80075AC0(void);
-void func_80075C30(void);
-void func_80075D1C(void);
-void func_80075ED0(void);
-void func_80075FBC(void);
-void func_800766A4(void);
-void func_80076790(void);
-void func_8007694C(void);
-void func_80076A38(void);
+void wmap_land_effect_13_sequence_2_step_02(void);
+void wmap_land_effect_13_wait_idle_02(void);
+void wmap_land_effect_13_step_03(void);
+s32 wmap_land_effect_13_run_timeline(s32 arg0);
+void wmap_land_effect_13_wait_idle_04(void);
+void wmap_land_effect_13_end(void);
+s32 wmap_land_effect_13_run_sequence_1(s32 arg0);
+s32 wmap_land_effect_13_run_sequence_4(s32 arg0);
+s32 wmap_land_effect_13_run_sequence_3(s32 arg0);
+s32 wmap_land_effect_13_run_sequence_12(s32 arg0);
+s32 wmap_land_effect_13_run_sequence_10(s32 arg0);
+s32 wmap_land_effect_13_run_sequence_11(s32 arg0);
+s32 wmap_land_effect_13_run_sequence_5(s32 arg0);
+s32 wmap_land_effect_13_run_sequence_6(s32 arg0);
+s32 wmap_land_effect_13_run_sequence_7(s32 arg0);
+s32 wmap_land_effect_13_run_sequence_8(s32 arg0);
+s32 wmap_land_effect_13_run_sequence_9(s32 arg0);
+void wmap_land_effect_13_sequence_1_step_02(void);
+void wmap_land_effect_13_sequence_1_step_04(void);
+void wmap_land_effect_13_sequence_3_step_02(void);
+void wmap_land_effect_13_sequence_4_step_02(void);
+void wmap_land_effect_13_sequence_4_step_04(void);
+void wmap_land_effect_13_sequence_5_step_02(void);
+void wmap_land_effect_13_sequence_5_step_04(void);
+void wmap_land_effect_13_sequence_10_step_02(void);
+void wmap_land_effect_13_sequence_10_step_04(void);
+void wmap_land_effect_13_sequence_11_step_02(void);
+void wmap_land_effect_13_sequence_11_step_04(void);
 
 /** @brief Per-actor motion and animation parameters. */
 typedef struct
@@ -88,8 +88,8 @@ extern void *D_801399B4;
 extern s32 D_801B256C;
 extern void (*D_800D4FC8[])(void);
 extern s32 D_8013B20C;
-extern void func_800750D0(void);
-extern void func_80075150(void);
+extern void wmap_land_effect_13_step_03(void);
+extern void wmap_land_effect_13_end(void);
 extern s32 D_801B2574;
 extern void (*D_800D4FE0[])(void);
 extern s32 D_8013B208;
@@ -247,7 +247,7 @@ void func_80074368(WmapConfigA *actors, WmapResource *resources, s32 count)
  * @brief Fade a world-map actor in at a cursor-relative offset, then advance when its timer expires.
  * @note Copies the fade level into two object fields before drawing and clamps it at 0x81.
  */
-void func_800745A4(void)
+void wmap_land_effect_13_sequence_6_step_02(void)
 {
     union
     {
@@ -276,7 +276,7 @@ void func_800745A4(void)
  * @brief Draw a world-map actor at a cursor-relative offset, then fade it out and advance when its timer expires.
  * @note Copies the fade level into two object fields after drawing and clamps it at 0.
  */
-void func_80074680(void)
+void wmap_land_effect_13_sequence_6_step_04(void)
 {
     union
     {
@@ -302,7 +302,7 @@ void func_80074680(void)
 }
 
 /** @brief Draw the actor, increase its scale, and advance when its timer expires. */
-void func_80074748(void)
+void wmap_land_effect_13_sequence_7_step_02(void)
 {
     union
     {
@@ -328,7 +328,7 @@ void func_80074748(void)
 }
 
 /** @brief Draw the actor, reduce its scale, and advance when its timer expires. */
-void func_80074820(void)
+void wmap_land_effect_13_sequence_7_step_04(void)
 {
     union
     {
@@ -354,7 +354,7 @@ void func_80074820(void)
 }
 
 /** @brief Draw the actor, increase its scale, and advance when its timer expires. */
-void func_800748E4(void)
+void wmap_land_effect_13_sequence_8_step_02(void)
 {
     union
     {
@@ -383,7 +383,7 @@ void func_800748E4(void)
  * @brief Draw a world-map actor at a cursor-relative offset, then fade it out and advance when its timer expires.
  * @note Copies the fade level into two object fields after drawing and clamps it at 0.
  */
-void func_800749C0(void)
+void wmap_land_effect_13_sequence_8_step_04(void)
 {
     union
     {
@@ -412,7 +412,7 @@ void func_800749C0(void)
  * @brief Fade a world-map actor in at a cursor-relative offset, then advance when its timer expires.
  * @note Copies the fade level into two object fields before drawing and clamps it at 0x81.
  */
-void func_80074A88(void)
+void wmap_land_effect_13_sequence_9_step_02(void)
 {
     union
     {
@@ -441,7 +441,7 @@ void func_80074A88(void)
  * @brief Draw a world-map actor at a cursor-relative offset, then fade it out and advance when its timer expires.
  * @note Copies the fade level into two object fields after drawing and clamps it at 0.
  */
-void func_80074B64(void)
+void wmap_land_effect_13_sequence_9_step_04(void)
 {
     union
     {
@@ -467,7 +467,7 @@ void func_80074B64(void)
 }
 
 /** @brief Draw the rotating effect, raise its intensity, and advance its countdown. */
-void func_80074C2C(void)
+void wmap_land_effect_13_sequence_12_step_02(void)
 {
     MATRIX matrix;
     s32 intensity;
@@ -494,7 +494,7 @@ void func_80074C2C(void)
 }
 
 /** @brief Draw and fade the rotating effect, then advance its countdown. */
-void func_80074D28(void)
+void wmap_land_effect_13_sequence_12_step_04(void)
 {
     MATRIX matrix;
     s32 intensity;
@@ -530,7 +530,7 @@ void func_80074D28(void)
  * @param arg0 Non-zero seeds the step counters before dispatching.
  * @return 1 if a step ran, 0 if the step index was out of range.
  */
-s32 func_80074E20(s32 arg0)
+s32 wmap_land_effect_13_run_sequence_2(s32 arg0)
 {
     s32 result;
 
@@ -555,14 +555,14 @@ s32 func_80074E20(s32 arg0)
 /**
  * @brief Set two adjacent world-map state flags.
  */
-void func_80074E90(void)
+void wmap_land_effect_13_sequence_2_reset(void)
 {
     D_801B2580 = 1;
     D_801B2584 = 1;
 }
 
 /** @brief World-map step handler: init a UI descriptor block, set the timer, advance the step. */
-void func_80074EA8(void)
+void wmap_land_effect_13_sequence_2_step_01(void)
 {
     u8 *base = &D_800D9268;
 
@@ -575,13 +575,13 @@ void func_80074EA8(void)
     *(s16 *)(base + 0x100) = 0x80;
     D_801B2584 = 0x36;
     D_801B2580 += 1;
-    func_80074F20();
+    wmap_land_effect_13_sequence_2_step_02();
 }
 
 /**
  * @brief Draw the world-map sprite this frame, then advance after the wait expires.
  */
-void func_80074F20(void)
+void wmap_land_effect_13_sequence_2_step_02(void)
 {
     wmap_step_actor_animation(&D_800D9344, &D_801399B0);
     wmap_draw_actor_sprite(&D_800D9344, g_wmap_focus_screen_position.packed, 0xF, 0xB, 0);
@@ -594,7 +594,7 @@ void func_80074F20(void)
 /**
  * @brief Increment a world-map state counter.
  */
-void func_80074F9C(void)
+void wmap_land_effect_13_sequence_2_end(void)
 {
     D_801B2580 += 1;
 }
@@ -604,7 +604,7 @@ void func_80074F9C(void)
  * @param arg0 Non-zero forces a reset of the step counters.
  * @return 1 if a step ran or reset, 0 if the step index was out of range.
  */
-s32 func_80074FB4(s32 arg0)
+s32 wmap_land_effect_13_run(s32 arg0)
 {
     s32 result;
 
@@ -630,7 +630,7 @@ s32 func_80074FB4(s32 arg0)
 /**
  * @brief Set two adjacent world-map state flags.
  */
-void func_8007502C(void)
+void wmap_land_effect_13_reset(void)
 {
     D_801B2568 = 1;
     D_801B256C = 1;
@@ -639,54 +639,54 @@ void func_8007502C(void)
 /**
  * @brief Register a world-map callback and advance to the next step.
  */
-void func_80075044(void)
+void wmap_land_effect_13_step_01(void)
 {
     g_wmap_input_locked = 1;
     wmap_start_sequence(wmap_run_land_focus);
     D_8013B20C = 1;
     D_801B2568 += 1;
-    func_80075094();
+    wmap_land_effect_13_wait_idle_02();
 }
 
 /**
  * @brief Advance this sequence one step while its gate flag is clear.
  */
-void func_80075094(void)
+void wmap_land_effect_13_wait_idle_02(void)
 {
     if (D_8013B20C == 0)
     {
         D_801B2568 += 1;
-        func_800750D0();
+        wmap_land_effect_13_step_03();
     }
 }
 
 /**
  * @brief Register the dispatch step, raise the run flag, advance the counter, and continue.
  */
-void func_800750D0(void)
+void wmap_land_effect_13_step_03(void)
 {
-    wmap_start_sequence(func_80075168);
+    wmap_start_sequence(wmap_land_effect_13_run_timeline);
     D_8013B20C = 1;
     D_801B2568 += 1;
-    func_80075114();
+    wmap_land_effect_13_wait_idle_04();
 }
 
 /**
  * @brief Advance this sequence one step while its gate flag is clear.
  */
-void func_80075114(void)
+void wmap_land_effect_13_wait_idle_04(void)
 {
     if (D_8013B20C == 0)
     {
         D_801B2568 += 1;
-        func_80075150();
+        wmap_land_effect_13_end();
     }
 }
 
 /**
  * @brief Increment a world-map state counter.
  */
-void func_80075150(void)
+void wmap_land_effect_13_end(void)
 {
     D_801B2568 += 1;
 }
@@ -696,7 +696,7 @@ void func_80075150(void)
  * @param arg0 Non-zero forces a reset of the step counters.
  * @return 1 if a step ran or reset, 0 if the step index was out of range.
  */
-s32 func_80075168(s32 arg0)
+s32 wmap_land_effect_13_run_timeline(s32 arg0)
 {
     s32 result;
 
@@ -722,14 +722,14 @@ s32 func_80075168(s32 arg0)
 /**
  * @brief Set two adjacent world-map state flags.
  */
-void func_800751E0(void)
+void wmap_land_effect_13_timeline_reset(void)
 {
     D_801B2570 = 1;
     D_801B2574 = 1;
 }
 
 /** @brief Enable the world-map flag, set the drawing color, and start a two-tick delay. */
-void func_800751F8(void)
+void wmap_land_effect_13_timeline_step_01(void)
 {
     D_8013B208 = 1;
     wmap_start_map_tint(0x404040);
@@ -740,7 +740,7 @@ void func_800751F8(void)
 /**
  * @brief Tick the sequence wait timer; advance the step counter when it expires.
  */
-void func_80075240(void)
+void wmap_land_effect_13_timeline_wait_02(void)
 {
     if (--D_801B2574 == 0)
     {
@@ -749,10 +749,10 @@ void func_80075240(void)
 }
 
 /** @brief World-map step handler: register a callback and advance the step counter. */
-void func_80075274(void)
+void wmap_land_effect_13_timeline_step_03(void)
 {
     wmap_play_sound(0x10, 0x80);
-    wmap_start_sequence(func_80075704);
+    wmap_start_sequence(wmap_land_effect_13_run_sequence_1);
     D_801B2574 = 8;
     D_801B2570 += 1;
 }
@@ -760,7 +760,7 @@ void func_80075274(void)
 /**
  * @brief Tick the sequence wait timer; advance the step counter when it expires.
  */
-void func_800752BC(void)
+void wmap_land_effect_13_timeline_wait_04(void)
 {
     if (--D_801B2574 == 0)
     {
@@ -771,10 +771,10 @@ void func_800752BC(void)
 /**
  * @brief Register a world-map step callback and schedule its wait timer.
  */
-void func_800752F0(void)
+void wmap_land_effect_13_timeline_step_05(void)
 {
     D_801ADAE0 = 1;
-    wmap_start_sequence(func_80074E20);
+    wmap_start_sequence(wmap_land_effect_13_run_sequence_2);
     D_801B2574 = 0x24;
     D_801B2570 += 1;
 }
@@ -782,7 +782,7 @@ void func_800752F0(void)
 /**
  * @brief Tick the sequence wait timer; advance the step counter when it expires.
  */
-void func_80075338(void)
+void wmap_land_effect_13_timeline_wait_06(void)
 {
     if (--D_801B2574 == 0)
     {
@@ -793,10 +793,10 @@ void func_80075338(void)
 /**
  * @brief Register two sequence steps, arm the frame timer, and advance the counter.
  */
-void func_8007536C(void)
+void wmap_land_effect_13_timeline_step_07(void)
 {
-    wmap_start_sequence(func_80075B34);
-    wmap_start_sequence(func_800759B4);
+    wmap_start_sequence(wmap_land_effect_13_run_sequence_4);
+    wmap_start_sequence(wmap_land_effect_13_run_sequence_3);
     D_801B2574 = 0x20;
     D_801B2570 += 1;
 }
@@ -804,7 +804,7 @@ void func_8007536C(void)
 /**
  * @brief Tick the sequence wait timer; advance the step counter when it expires.
  */
-void func_800753B4(void)
+void wmap_land_effect_13_timeline_wait_08(void)
 {
     if (--D_801B2574 == 0)
     {
@@ -815,9 +815,9 @@ void func_800753B4(void)
 /**
  * @brief Register the next sequence step, arm its frame timer, and advance the counter.
  */
-void func_800753E8(void)
+void wmap_land_effect_13_timeline_step_09(void)
 {
-    wmap_start_sequence(func_80076AE8);
+    wmap_start_sequence(wmap_land_effect_13_run_sequence_12);
     D_801B2574 = 0xE;
     D_801B2570 += 1;
 }
@@ -825,7 +825,7 @@ void func_800753E8(void)
 /**
  * @brief Tick the sequence wait timer; advance the step counter when it expires.
  */
-void func_80075424(void)
+void wmap_land_effect_13_timeline_wait_10(void)
 {
     if (--D_801B2574 == 0)
     {
@@ -836,9 +836,9 @@ void func_80075424(void)
 /**
  * @brief Register the next sequence step, arm its frame timer, and advance the counter.
  */
-void func_80075458(void)
+void wmap_land_effect_13_timeline_step_11(void)
 {
-    wmap_start_sequence(func_800765A4);
+    wmap_start_sequence(wmap_land_effect_13_run_sequence_10);
     D_801B2574 = 0x4;
     D_801B2570 += 1;
 }
@@ -846,7 +846,7 @@ void func_80075458(void)
 /**
  * @brief Tick the sequence wait timer; advance the step counter when it expires.
  */
-void func_80075494(void)
+void wmap_land_effect_13_timeline_wait_12(void)
 {
     if (--D_801B2574 == 0)
     {
@@ -857,9 +857,9 @@ void func_80075494(void)
 /**
  * @brief Register the next sequence step, arm its frame timer, and advance the counter.
  */
-void func_800754C8(void)
+void wmap_land_effect_13_timeline_step_13(void)
 {
-    wmap_start_sequence(func_80076848);
+    wmap_start_sequence(wmap_land_effect_13_run_sequence_11);
     D_801B2574 = 0x26;
     D_801B2570 += 1;
 }
@@ -867,7 +867,7 @@ void func_800754C8(void)
 /**
  * @brief Tick the sequence wait timer; advance the step counter when it expires.
  */
-void func_80075504(void)
+void wmap_land_effect_13_timeline_wait_14(void)
 {
     if (--D_801B2574 == 0)
     {
@@ -876,9 +876,9 @@ void func_80075504(void)
 }
 
 /** @brief World-map step handler: register a callback and advance the step. */
-void func_80075538(void)
+void wmap_land_effect_13_timeline_step_15(void)
 {
-    wmap_start_sequence(func_80075DD8);
+    wmap_start_sequence(wmap_land_effect_13_run_sequence_5);
     D_801B2574 = 1;
     D_801B2570 += 1;
 }
@@ -886,7 +886,7 @@ void func_80075538(void)
 /**
  * @brief Tick the sequence wait timer; advance the step counter when it expires.
  */
-void func_80075574(void)
+void wmap_land_effect_13_timeline_wait_16(void)
 {
     if (--D_801B2574 == 0)
     {
@@ -895,10 +895,10 @@ void func_80075574(void)
 }
 
 /** @brief Register two sequence callbacks and advance to a one-tick delay. */
-void func_800755A8(void)
+void wmap_land_effect_13_timeline_step_17(void)
 {
-    wmap_start_sequence(&func_80076074);
-    wmap_start_sequence(&func_800761C0);
+    wmap_start_sequence(&wmap_land_effect_13_run_sequence_6);
+    wmap_start_sequence(&wmap_land_effect_13_run_sequence_7);
     D_801B2574 = 1;
     D_801B2570 += 1;
 }
@@ -906,7 +906,7 @@ void func_800755A8(void)
 /**
  * @brief Tick the sequence wait timer; advance the step counter when it expires.
  */
-void func_800755F0(void)
+void wmap_land_effect_13_timeline_wait_18(void)
 {
     if (--D_801B2574 == 0)
     {
@@ -917,10 +917,10 @@ void func_800755F0(void)
 /**
  * @brief Register two sequence steps, arm the frame timer, and advance the counter.
  */
-void func_80075624(void)
+void wmap_land_effect_13_timeline_step_19(void)
 {
-    wmap_start_sequence(func_8007630C);
-    wmap_start_sequence(func_80076458);
+    wmap_start_sequence(wmap_land_effect_13_run_sequence_8);
+    wmap_start_sequence(wmap_land_effect_13_run_sequence_9);
     D_801B2574 = 0x3B;
     D_801B2570 += 1;
 }
@@ -928,7 +928,7 @@ void func_80075624(void)
 /**
  * @brief Tick the sequence wait timer; advance the step counter when it expires.
  */
-void func_8007566C(void)
+void wmap_land_effect_13_timeline_wait_20(void)
 {
     if (--D_801B2574 == 0)
     {
@@ -936,7 +936,7 @@ void func_8007566C(void)
     }
 }
 
-void func_800756A0(void)
+void wmap_land_effect_13_timeline_finish(void)
 {
     D_8013B20C = 0;
     D_80139290[D_8011D510][D_8011D530].value = D_8011D4FC | 0x100;
@@ -948,7 +948,7 @@ void func_800756A0(void)
  * @param arg0 Non-zero seeds the step counters before dispatching.
  * @return 1 if a step ran, 0 if the step index was out of range.
  */
-s32 func_80075704(s32 arg0)
+s32 wmap_land_effect_13_run_sequence_1(s32 arg0)
 {
     s32 result;
 
@@ -973,14 +973,14 @@ s32 func_80075704(s32 arg0)
 /**
  * @brief Set two adjacent world-map state flags.
  */
-void func_80075774(void)
+void wmap_land_effect_13_sequence_1_reset(void)
 {
     D_801B2578 = 1;
     D_801B257C = 1;
 }
 
 /** @brief World-map step handler: prime a sub-object and advance the step counter. */
-void func_8007578C(void)
+void wmap_land_effect_13_sequence_1_step_01(void)
 {
     u8 *base;
 
@@ -993,11 +993,11 @@ void func_8007578C(void)
     D_801B24B4 = 0;
     D_801B257C = 8;
     D_801B2578 += 1;
-    func_800757FC();
+    wmap_land_effect_13_sequence_1_step_02();
 }
 
 /** @brief Draw the actor, increase its scale, and advance when its timer expires. */
-void func_800757FC(void)
+void wmap_land_effect_13_sequence_1_step_02(void)
 {
     WmapConfigA *obj;
     WmapConfigA *actors;
@@ -1022,15 +1022,15 @@ void func_800757FC(void)
 /**
  * @brief Set the sequence parameter, advance the counter, and run the handler.
  */
-void func_800758B4(void)
+void wmap_land_effect_13_sequence_1_step_03(void)
 {
     D_801B257C = 0x20;
     D_801B2578 += 1;
-    func_800758EC();
+    wmap_land_effect_13_sequence_1_step_04();
 }
 
 /** @brief Draw the actor, reduce its scale, and advance when its timer expires. */
-void func_800758EC(void)
+void wmap_land_effect_13_sequence_1_step_04(void)
 {
     WmapConfigA *obj;
     WmapConfigA *actors;
@@ -1055,7 +1055,7 @@ void func_800758EC(void)
 /**
  * @brief Increment a world-map state counter.
  */
-void func_8007599C(void)
+void wmap_land_effect_13_sequence_1_end(void)
 {
     D_801B2578 += 1;
 }
@@ -1065,7 +1065,7 @@ void func_8007599C(void)
  * @param arg0 Non-zero seeds the step counters before dispatching.
  * @return 1 if a step ran, 0 if the step index was out of range.
  */
-s32 func_800759B4(s32 arg0)
+s32 wmap_land_effect_13_run_sequence_3(s32 arg0)
 {
     s32 result;
 
@@ -1090,14 +1090,14 @@ s32 func_800759B4(s32 arg0)
 /**
  * @brief Set two adjacent world-map state flags.
  */
-void func_80075A24(void)
+void wmap_land_effect_13_sequence_3_reset(void)
 {
     D_801B2588 = 1;
     D_801B258C = 1;
 }
 
 /** @brief World-map step: reset a run of slot tables then advance the sub-counter. */
-void func_80075A3C(void)
+void wmap_land_effect_13_sequence_3_step_01(void)
 {
     s32 i;
 
@@ -1109,11 +1109,11 @@ void func_80075A3C(void)
     }
     D_801B258C = 0x30;
     D_801B2588 += 1;
-    func_80075AC0();
+    wmap_land_effect_13_sequence_3_step_02();
 }
 
 /** @brief World-map step handler: run the sub-step, then advance after the timer. */
-void func_80075AC0(void)
+void wmap_land_effect_13_sequence_3_step_02(void)
 {
     func_80074368(D_800DB578, D_80139FE8, 0x18);
     if (--D_801B258C == 0)
@@ -1125,7 +1125,7 @@ void func_80075AC0(void)
 /**
  * @brief Increment a world-map state counter.
  */
-void func_80075B1C(void)
+void wmap_land_effect_13_sequence_3_end(void)
 {
     D_801B2588 += 1;
 }
@@ -1135,7 +1135,7 @@ void func_80075B1C(void)
  * @param arg0 Non-zero seeds the step counters before dispatching.
  * @return 1 if a step ran, 0 if the step index was out of range.
  */
-s32 func_80075B34(s32 arg0)
+s32 wmap_land_effect_13_run_sequence_4(s32 arg0)
 {
     s32 result;
 
@@ -1160,7 +1160,7 @@ s32 func_80075B34(s32 arg0)
 /**
  * @brief Set two adjacent world-map state flags.
  */
-void func_80075BA4(void)
+void wmap_land_effect_13_sequence_4_reset(void)
 {
     D_801B2590 = 1;
     D_801B2594 = 1;
@@ -1169,7 +1169,7 @@ void func_80075BA4(void)
 /**
  * @brief Populate a world-map actor control block and schedule its spawn step.
  */
-void func_80075BBC(void)
+void wmap_land_effect_13_sequence_4_step_01(void)
 {
     D_801399BC = D_8011D538;
     D_800D9268[6].scale_index = 0xF;
@@ -1179,13 +1179,13 @@ void func_80075BBC(void)
     D_800D9268[6].resource_index = 0;
     D_801B2594 = 0x28;
     D_801B2590 += 1;
-    func_80075C30();
+    wmap_land_effect_13_sequence_4_step_02();
 }
 
 /**
  * @brief Draw a scrolling world-map element and advance its slide/hold state.
  */
-void func_80075C30(void)
+void wmap_land_effect_13_sequence_4_step_02(void)
 {
     u8* obj = (u8*)&D_800D9370;
     u16 pos = *(u16*)&D_80182DE4;
@@ -1208,15 +1208,15 @@ void func_80075C30(void)
 /**
  * @brief Set the sequence parameter, advance the counter, and run the handler.
  */
-void func_80075CE4(void)
+void wmap_land_effect_13_sequence_4_step_03(void)
 {
     D_801B2594 = 0x20;
     D_801B2590 += 1;
-    func_80075D1C();
+    wmap_land_effect_13_sequence_4_step_04();
 }
 
 /** @brief Draw the actor, reduce its scale, and advance when its timer expires. */
-void func_80075D1C(void)
+void wmap_land_effect_13_sequence_4_step_04(void)
 {
     WmapConfigA *actors;
 
@@ -1239,7 +1239,7 @@ void func_80075D1C(void)
 /**
  * @brief Increment a world-map state counter.
  */
-void func_80075DC0(void)
+void wmap_land_effect_13_sequence_4_end(void)
 {
     D_801B2590 += 1;
 }
@@ -1249,7 +1249,7 @@ void func_80075DC0(void)
  * @param arg0 Non-zero seeds the step counters before dispatching.
  * @return 1 if a step ran, 0 if the step index was out of range.
  */
-s32 func_80075DD8(s32 arg0)
+s32 wmap_land_effect_13_run_sequence_5(s32 arg0)
 {
     s32 result;
 
@@ -1274,14 +1274,14 @@ s32 func_80075DD8(s32 arg0)
 /**
  * @brief Set two adjacent world-map state flags.
  */
-void func_80075E48(void)
+void wmap_land_effect_13_sequence_5_reset(void)
 {
     D_801B2598 = 1;
     D_801B259C = 1;
 }
 
 /** @brief World-map step handler: prime a sub-object and advance the step counter. */
-void func_80075E60(void)
+void wmap_land_effect_13_sequence_5_step_01(void)
 {
     u8 *base;
 
@@ -1294,13 +1294,13 @@ void func_80075E60(void)
     D_80182DE8 = 0;
     D_801B259C = 0xC;
     D_801B2598 += 1;
-    func_80075ED0();
+    wmap_land_effect_13_sequence_5_step_02();
 }
 
 /**
  * @brief Draw a scrolling world-map element and advance its slide/hold state.
  */
-void func_80075ED0(void)
+void wmap_land_effect_13_sequence_5_step_02(void)
 {
     u8* obj = (u8*)&D_800D939C;
     u16 pos = *(u16*)&D_80182DE8;
@@ -1323,15 +1323,15 @@ void func_80075ED0(void)
 /**
  * @brief Set the sequence parameter, advance the counter, and run the handler.
  */
-void func_80075F84(void)
+void wmap_land_effect_13_sequence_5_step_03(void)
 {
     D_801B259C = 0x24;
     D_801B2598 += 1;
-    func_80075FBC();
+    wmap_land_effect_13_sequence_5_step_04();
 }
 
 /** @brief World-map step: build a sprite, decrement a shared budget, expire the timer. */
-void func_80075FBC(void)
+void wmap_land_effect_13_sequence_5_step_04(void)
 {
     wmap_step_actor_animation(&D_800D939C, &D_801399C0);
     wmap_draw_actor_sprite(&D_800D939C, g_wmap_focus_screen_position.packed, 4, 0xB, 0);
@@ -1351,7 +1351,7 @@ void func_80075FBC(void)
 /**
  * @brief Increment a world-map state counter.
  */
-void func_8007605C(void)
+void wmap_land_effect_13_sequence_5_end(void)
 {
     D_801B2598 += 1;
 }
@@ -1361,7 +1361,7 @@ void func_8007605C(void)
  * @param arg0 Non-zero seeds the step counters before dispatching.
  * @return 1 if a step ran, 0 if the step index was out of range.
  */
-s32 func_80076074(s32 arg0)
+s32 wmap_land_effect_13_run_sequence_6(s32 arg0)
 {
     s32 result;
 
@@ -1386,7 +1386,7 @@ s32 func_80076074(s32 arg0)
 /**
  * @brief Set two adjacent world-map state flags.
  */
-void func_800760E4(void)
+void wmap_land_effect_13_sequence_6_reset(void)
 {
     D_801B25A0 = 1;
     D_801B25A4 = 1;
@@ -1395,7 +1395,7 @@ void func_800760E4(void)
 /**
  * @brief Populate a world-map actor control block and schedule its spawn step.
  */
-void func_800760FC(void)
+void wmap_land_effect_13_sequence_6_step_01(void)
 {
     D_80139A0C = D_8011F538;
     D_800D9528.field_06 = 0xF;
@@ -1405,23 +1405,23 @@ void func_800760FC(void)
     D_800D9528.field_02 = 0;
     D_801B25A4 = 0x18;
     D_801B25A0 += 1;
-    func_800745A4();
+    wmap_land_effect_13_sequence_6_step_02();
 }
 
 /**
  * @brief Set the sequence parameter, advance the counter, and run the handler.
  */
-void func_80076170(void)
+void wmap_land_effect_13_sequence_6_step_03(void)
 {
     D_801B25A4 = 0x28;
     D_801B25A0 += 1;
-    func_80074680();
+    wmap_land_effect_13_sequence_6_step_04();
 }
 
 /**
  * @brief Increment a world-map state counter.
  */
-void func_800761A8(void)
+void wmap_land_effect_13_sequence_6_end(void)
 {
     D_801B25A0 += 1;
 }
@@ -1431,7 +1431,7 @@ void func_800761A8(void)
  * @param arg0 Non-zero seeds the step counters before dispatching.
  * @return 1 if a step ran, 0 if the step index was out of range.
  */
-s32 func_800761C0(s32 arg0)
+s32 wmap_land_effect_13_run_sequence_7(s32 arg0)
 {
     s32 result;
 
@@ -1456,7 +1456,7 @@ s32 func_800761C0(s32 arg0)
 /**
  * @brief Set two adjacent world-map state flags.
  */
-void func_80076230(void)
+void wmap_land_effect_13_sequence_7_reset(void)
 {
     D_801B25A8 = 1;
     D_801B25AC = 1;
@@ -1465,7 +1465,7 @@ void func_80076230(void)
 /**
  * @brief Populate a world-map actor control block and schedule its spawn step.
  */
-void func_80076248(void)
+void wmap_land_effect_13_sequence_7_step_01(void)
 {
     D_80139A14 = D_8011F538;
     D_800D9554.field_06 = 0xF;
@@ -1475,23 +1475,23 @@ void func_80076248(void)
     D_800D9554.field_02 = 0;
     D_801B25AC = 0x18;
     D_801B25A8 += 1;
-    func_80074748();
+    wmap_land_effect_13_sequence_7_step_02();
 }
 
 /**
  * @brief Set the sequence parameter, advance the counter, and run the handler.
  */
-void func_800762BC(void)
+void wmap_land_effect_13_sequence_7_step_03(void)
 {
     D_801B25AC = 0x20;
     D_801B25A8 += 1;
-    func_80074820();
+    wmap_land_effect_13_sequence_7_step_04();
 }
 
 /**
  * @brief Increment a world-map state counter.
  */
-void func_800762F4(void)
+void wmap_land_effect_13_sequence_7_end(void)
 {
     D_801B25A8 += 1;
 }
@@ -1501,7 +1501,7 @@ void func_800762F4(void)
  * @param arg0 Non-zero seeds the step counters before dispatching.
  * @return 1 if a step ran, 0 if the step index was out of range.
  */
-s32 func_8007630C(s32 arg0)
+s32 wmap_land_effect_13_run_sequence_8(s32 arg0)
 {
     s32 result;
 
@@ -1526,7 +1526,7 @@ s32 func_8007630C(s32 arg0)
 /**
  * @brief Set two adjacent world-map state flags.
  */
-void func_8007637C(void)
+void wmap_land_effect_13_sequence_8_reset(void)
 {
     D_801B25B0 = 1;
     D_801B25B4 = 1;
@@ -1535,7 +1535,7 @@ void func_8007637C(void)
 /**
  * @brief Populate a world-map actor control block and schedule its spawn step.
  */
-void func_80076394(void)
+void wmap_land_effect_13_sequence_8_step_01(void)
 {
     D_80139A1C = D_8011F538;
     D_800D9580.field_06 = 0xF;
@@ -1545,23 +1545,23 @@ void func_80076394(void)
     D_800D9580.field_02 = 0;
     D_801B25B4 = 0x20;
     D_801B25B0 += 1;
-    func_800748E4();
+    wmap_land_effect_13_sequence_8_step_02();
 }
 
 /**
  * @brief Set the sequence parameter, advance the counter, and run the handler.
  */
-void func_80076408(void)
+void wmap_land_effect_13_sequence_8_step_03(void)
 {
     D_801B25B4 = 0x20;
     D_801B25B0 += 1;
-    func_800749C0();
+    wmap_land_effect_13_sequence_8_step_04();
 }
 
 /**
  * @brief Increment a world-map state counter.
  */
-void func_80076440(void)
+void wmap_land_effect_13_sequence_8_end(void)
 {
     D_801B25B0 += 1;
 }
@@ -1571,7 +1571,7 @@ void func_80076440(void)
  * @param arg0 Non-zero seeds the step counters before dispatching.
  * @return 1 if a step ran, 0 if the step index was out of range.
  */
-s32 func_80076458(s32 arg0)
+s32 wmap_land_effect_13_run_sequence_9(s32 arg0)
 {
     s32 result;
 
@@ -1596,7 +1596,7 @@ s32 func_80076458(s32 arg0)
 /**
  * @brief Set two adjacent world-map state flags.
  */
-void func_800764C8(void)
+void wmap_land_effect_13_sequence_9_reset(void)
 {
     D_801B25B8 = 1;
     D_801B25BC = 1;
@@ -1605,7 +1605,7 @@ void func_800764C8(void)
 /**
  * @brief Populate a world-map actor control block and schedule its spawn step.
  */
-void func_800764E0(void)
+void wmap_land_effect_13_sequence_9_step_01(void)
 {
     D_80139A24 = D_8011F538;
     D_800D95AC.field_06 = 0xF;
@@ -1615,23 +1615,23 @@ void func_800764E0(void)
     D_800D95AC.field_02 = 0;
     D_801B25BC = 0xC;
     D_801B25B8 += 1;
-    func_80074A88();
+    wmap_land_effect_13_sequence_9_step_02();
 }
 
 /**
  * @brief Set the sequence parameter, advance the counter, and run the handler.
  */
-void func_80076554(void)
+void wmap_land_effect_13_sequence_9_step_03(void)
 {
     D_801B25BC = 0x28;
     D_801B25B8 += 1;
-    func_80074B64();
+    wmap_land_effect_13_sequence_9_step_04();
 }
 
 /**
  * @brief Increment a world-map state counter.
  */
-void func_8007658C(void)
+void wmap_land_effect_13_sequence_9_end(void)
 {
     D_801B25B8 += 1;
 }
@@ -1641,7 +1641,7 @@ void func_8007658C(void)
  * @param arg0 Non-zero forces a reset of the step counters.
  * @return 1 if a step ran or reset, 0 if the step index was out of range.
  */
-s32 func_800765A4(s32 arg0)
+s32 wmap_land_effect_13_run_sequence_10(s32 arg0)
 {
     s32 result;
 
@@ -1667,14 +1667,14 @@ s32 func_800765A4(s32 arg0)
 /**
  * @brief Set two adjacent world-map state flags.
  */
-void func_8007661C(void)
+void wmap_land_effect_13_sequence_10_reset(void)
 {
     D_801B25C0 = 1;
     D_801B25C4 = 1;
 }
 
 /** @brief World-map step handler: prime a sub-object and advance the step counter. */
-void func_80076634(void)
+void wmap_land_effect_13_sequence_10_step_01(void)
 {
     u8 *base;
 
@@ -1687,13 +1687,13 @@ void func_80076634(void)
     D_80182DF0 = 0;
     D_801B25C4 = 0x10;
     D_801B25C0 += 1;
-    func_800766A4();
+    wmap_land_effect_13_sequence_10_step_02();
 }
 
 /**
  * @brief Draw a scrolling world-map element and advance its slide/hold state.
  */
-void func_800766A4(void)
+void wmap_land_effect_13_sequence_10_step_02(void)
 {
     u8* obj = (u8*)&D_800D93F4;
     u16 pos = *(u16*)&D_80182DF0;
@@ -1716,15 +1716,15 @@ void func_800766A4(void)
 /**
  * @brief Set the sequence parameter, advance the counter, and run the handler.
  */
-void func_80076758(void)
+void wmap_land_effect_13_sequence_10_step_03(void)
 {
     D_801B25C4 = 0x10;
     D_801B25C0 += 1;
-    func_80076790();
+    wmap_land_effect_13_sequence_10_step_04();
 }
 
 /** @brief World-map step: build a sprite, decrement a shared budget, expire the timer. */
-void func_80076790(void)
+void wmap_land_effect_13_sequence_10_step_04(void)
 {
     wmap_step_actor_animation(&D_800D93F4, &D_801399D0);
     wmap_draw_actor_sprite(&D_800D93F4, g_wmap_focus_screen_position.packed, 0x10, 0xB, 0);
@@ -1744,7 +1744,7 @@ void func_80076790(void)
 /**
  * @brief Increment a world-map state counter.
  */
-void func_80076830(void)
+void wmap_land_effect_13_sequence_10_end(void)
 {
     D_801B25C0 += 1;
 }
@@ -1754,7 +1754,7 @@ void func_80076830(void)
  * @param arg0 Non-zero forces a reset of the step counters.
  * @return 1 if a step ran or reset, 0 if the step index was out of range.
  */
-s32 func_80076848(s32 arg0)
+s32 wmap_land_effect_13_run_sequence_11(s32 arg0)
 {
     s32 result;
 
@@ -1780,7 +1780,7 @@ s32 func_80076848(s32 arg0)
 /**
  * @brief Set two adjacent world-map state flags.
  */
-void func_800768C0(void)
+void wmap_land_effect_13_sequence_11_reset(void)
 {
     D_801B25C8 = 1;
     D_801B25CC = 1;
@@ -1789,7 +1789,7 @@ void func_800768C0(void)
 /**
  * @brief Populate a world-map actor control block and schedule its spawn step.
  */
-void func_800768D8(void)
+void wmap_land_effect_13_sequence_11_step_01(void)
 {
     D_801399DC = D_80121538;
     D_800D9420.scale_index = 0xF;
@@ -1799,13 +1799,13 @@ void func_800768D8(void)
     D_800D9420.resource_index = 0;
     D_801B25CC = 0x59;
     D_801B25C8 += 1;
-    func_8007694C();
+    wmap_land_effect_13_sequence_11_step_02();
 }
 
 /**
  * @brief Draw a scrolling world-map element and advance its slide/hold state.
  */
-void func_8007694C(void)
+void wmap_land_effect_13_sequence_11_step_02(void)
 {
     u8* obj = (u8*)&D_800D9420;
     u16 pos = *(u16*)&D_80182DF4;
@@ -1828,15 +1828,15 @@ void func_8007694C(void)
 /**
  * @brief Set the sequence parameter, advance the counter, and run the handler.
  */
-void func_80076A00(void)
+void wmap_land_effect_13_sequence_11_step_03(void)
 {
     D_801B25CC = 0x10;
     D_801B25C8 += 1;
-    func_80076A38();
+    wmap_land_effect_13_sequence_11_step_04();
 }
 
 /** @brief Draw the actor, update two effect fields, and advance when the countdown expires. */
-void func_80076A38(void)
+void wmap_land_effect_13_sequence_11_step_04(void)
 {
     s32 remaining_ticks;
 
@@ -1859,7 +1859,7 @@ void func_80076A38(void)
 /**
  * @brief Increment a world-map state counter.
  */
-void func_80076AD0(void)
+void wmap_land_effect_13_sequence_11_end(void)
 {
     D_801B25C8 += 1;
 }
@@ -1869,7 +1869,7 @@ void func_80076AD0(void)
  * @param arg0 Non-zero seeds the step counters before dispatching.
  * @return 1 if a step ran, 0 if the step index was out of range.
  */
-s32 func_80076AE8(s32 arg0)
+s32 wmap_land_effect_13_run_sequence_12(s32 arg0)
 {
     s32 result;
 
@@ -1894,14 +1894,14 @@ s32 func_80076AE8(s32 arg0)
 /**
  * @brief Set two adjacent world-map state flags.
  */
-void func_80076B58(void)
+void wmap_land_effect_13_sequence_12_reset(void)
 {
     D_801B25D0 = 1;
     D_801B25D4 = 1;
 }
 
 /** @brief Restore the default transform and advance the sequence. */
-void func_80076B70(void)
+void wmap_land_effect_13_sequence_12_step_01(void)
 {
     D_801B25D8 = 0;
     D_801B24A0 = D_80139258;
@@ -1909,23 +1909,23 @@ void func_80076B70(void)
     D_80139888.vz = 0xC350;
     D_801B25D4 = 10;
     D_801B25D0++;
-    func_80074C2C();
+    wmap_land_effect_13_sequence_12_step_02();
 }
 
 /**
  * @brief Set the sequence parameter, advance the counter, and run the handler.
  */
-void func_80076C1C(void)
+void wmap_land_effect_13_sequence_12_step_03(void)
 {
     D_801B25D4 = 0x60;
     D_801B25D0 += 1;
-    func_80074D28();
+    wmap_land_effect_13_sequence_12_step_04();
 }
 
 /**
  * @brief Increment a world-map state counter.
  */
-void func_80076C54(void)
+void wmap_land_effect_13_sequence_12_end(void)
 {
     D_801B25D0 += 1;
 }

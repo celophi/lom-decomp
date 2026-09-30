@@ -216,9 +216,9 @@ void func_800A5DFC(void)
 {
     s32 wmap_run_special_travel(s32 initialize);
     s32 wmap_run_special_return(s32 initialize);
-    s32 func_800AB850(s32 initialize);
-    s32 func_800B2080(s32 initialize);
-    s32 func_800B45B8(s32 initialize);
+    s32 wmap_land_event_17_run(s32 initialize);
+    s32 wmap_land_event_00_a_run(s32 initialize);
+    s32 wmap_land_event_00_b_run_sequence_1(s32 initialize);
     s32 wmap_effect35_run(s32 initialize);
 
     s32 event_index;
@@ -255,17 +255,17 @@ void func_800A5DFC(void)
         else if (D_801ADAF0 != 0)
         {
             D_8012954C = 0;
-            wmap_start_sequence(&func_800B45B8);
+            wmap_start_sequence(&wmap_land_event_00_b_run_sequence_1);
         }
         else if (D_8012954C != 0)
         {
             D_8012954C = 0;
-            wmap_start_sequence(&func_800B2080);
+            wmap_start_sequence(&wmap_land_event_00_a_run);
         }
         else if (D_8011D4F8 != 0)
         {
             D_8011D4F8 = 0;
-            wmap_start_sequence(&func_800AB850);
+            wmap_start_sequence(&wmap_land_event_17_run);
         }
         else if (D_80139248 != 0)
         {

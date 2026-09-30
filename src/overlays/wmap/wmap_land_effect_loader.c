@@ -9,35 +9,35 @@ extern s32 D_801ADAF8;
 extern u8 D_80182E40[];
 extern u8 D_8018B240[];
 extern u8 D_80193640[];
-extern s32 func_800706B0(s32);
-extern s32 func_800712C0(s32);
-extern s32 func_8007369C(s32);
-extern s32 func_80074FB4(s32);
-extern s32 func_80077560(s32);
-extern s32 func_8007998C(s32);
-extern s32 func_8007B910(s32);
-extern s32 func_8007DC14(s32);
-extern s32 func_8007F398(s32);
-extern s32 func_80081BA0(s32);
-extern s32 func_8008437C(s32);
-extern s32 func_80085A70(s32);
-extern s32 func_8008759C(s32);
-extern s32 func_80089134(s32);
-extern s32 func_8008B25C(s32);
-extern s32 func_8008D4B4(s32);
-extern s32 func_8008FD1C(s32);
-extern s32 func_80091C0C(s32);
-extern s32 func_80093E98(s32);
-extern s32 func_80095F34(s32);
-extern s32 func_80097C50(s32);
-extern s32 func_8009B8E4(s32);
-extern s32 func_8009E250(s32);
-extern s32 func_800A1604(s32);
-extern s32 func_800A3CC8(s32);
-extern s32 func_800AEAB8(s32);
-extern s32 func_800B7290(s32);
-extern s32 func_800BAE24(s32);
-extern s32 func_800BD83C(s32);
+extern s32 wmap_land_effect_18_run(s32);
+extern s32 wmap_land_effect_04_run(s32);
+extern s32 wmap_land_effect_01_run(s32);
+extern s32 wmap_land_effect_13_run(s32);
+extern s32 wmap_land_effect_26_run(s32);
+extern s32 wmap_land_effect_32_run(s32);
+extern s32 wmap_land_effect_15_run(s32);
+extern s32 wmap_land_effect_02_run(s32);
+extern s32 wmap_land_effect_07_run(s32);
+extern s32 wmap_land_effect_30_run(s32);
+extern s32 wmap_land_effect_12_run(s32);
+extern s32 wmap_land_effect_11_run(s32);
+extern s32 wmap_land_effect_03_run(s32);
+extern s32 wmap_land_effect_21_run(s32);
+extern s32 wmap_land_effect_17_run(s32);
+extern s32 wmap_land_effect_05_run(s32);
+extern s32 wmap_land_effect_10_run(s32);
+extern s32 wmap_land_effect_00_run(s32);
+extern s32 wmap_land_effect_08_run(s32);
+extern s32 wmap_land_effect_09_run(s32);
+extern s32 wmap_land_effect_16_run(s32);
+extern s32 wmap_land_effect_27_run(s32);
+extern s32 wmap_land_effect_23_run(s32);
+extern s32 wmap_land_effect_22_run(s32);
+extern s32 wmap_land_effect_19_run(s32);
+extern s32 wmap_land_effect_25_run(s32);
+extern s32 wmap_land_effect_31_run(s32);
+extern s32 wmap_land_effect_24_run(s32);
+extern s32 wmap_land_effect_33_run(s32);
 
 /** @brief Upload the selected effect resources and register its callback. */
 void func_800591A8(u32 selection)
@@ -61,91 +61,91 @@ void func_800591A8(u32 selection)
     switch (selection)
     {
     case 33:
-        wmap_start_sequence(func_800BD83C);
+        wmap_start_sequence(wmap_land_effect_33_run);
         break;
     case 24:
-        wmap_start_sequence(func_800BAE24);
+        wmap_start_sequence(wmap_land_effect_24_run);
         break;
     case 31:
-        wmap_start_sequence(func_800B7290);
+        wmap_start_sequence(wmap_land_effect_31_run);
         break;
     case 25:
-        wmap_start_sequence(func_800AEAB8);
+        wmap_start_sequence(wmap_land_effect_25_run);
         break;
     case 22:
-        wmap_start_sequence(func_800A1604);
+        wmap_start_sequence(wmap_land_effect_22_run);
         break;
     case 19:
-        wmap_start_sequence(func_800A3CC8);
+        wmap_start_sequence(wmap_land_effect_19_run);
         break;
     case 23:
-        wmap_start_sequence(func_8009E250);
+        wmap_start_sequence(wmap_land_effect_23_run);
         break;
     case 27:
-        wmap_start_sequence(func_8009B8E4);
+        wmap_start_sequence(wmap_land_effect_27_run);
         break;
     case 16:
-        wmap_start_sequence(func_80097C50);
+        wmap_start_sequence(wmap_land_effect_16_run);
         break;
     case 0:
-        wmap_start_sequence(func_80091C0C);
+        wmap_start_sequence(wmap_land_effect_00_run);
         break;
     case 9:
-        wmap_start_sequence(func_80095F34);
+        wmap_start_sequence(wmap_land_effect_09_run);
         break;
     case 8:
-        wmap_start_sequence(func_80093E98);
+        wmap_start_sequence(wmap_land_effect_08_run);
         break;
     case 10:
-        wmap_start_sequence(func_8008FD1C);
+        wmap_start_sequence(wmap_land_effect_10_run);
         break;
     case 5:
-        wmap_start_sequence(func_8008D4B4);
+        wmap_start_sequence(wmap_land_effect_05_run);
         break;
     case 17:
-        wmap_start_sequence(func_8008B25C);
+        wmap_start_sequence(wmap_land_effect_17_run);
         break;
     case 21:
-        wmap_start_sequence(func_80089134);
+        wmap_start_sequence(wmap_land_effect_21_run);
         break;
     case 3:
-        wmap_start_sequence(func_8008759C);
+        wmap_start_sequence(wmap_land_effect_03_run);
         break;
     case 11:
-        wmap_start_sequence(func_80085A70);
+        wmap_start_sequence(wmap_land_effect_11_run);
         break;
     case 12:
-        wmap_start_sequence(func_8008437C);
+        wmap_start_sequence(wmap_land_effect_12_run);
         break;
     case 30:
-        wmap_start_sequence(func_80081BA0);
+        wmap_start_sequence(wmap_land_effect_30_run);
         break;
     case 7:
-        wmap_start_sequence(func_8007F398);
+        wmap_start_sequence(wmap_land_effect_07_run);
         break;
     case 2:
-        wmap_start_sequence(func_8007DC14);
+        wmap_start_sequence(wmap_land_effect_02_run);
         break;
     case 15:
-        wmap_start_sequence(func_8007B910);
+        wmap_start_sequence(wmap_land_effect_15_run);
         break;
     case 32:
-        wmap_start_sequence(func_8007998C);
+        wmap_start_sequence(wmap_land_effect_32_run);
         break;
     case 26:
-        wmap_start_sequence(func_80077560);
+        wmap_start_sequence(wmap_land_effect_26_run);
         break;
     case 1:
-        wmap_start_sequence(func_8007369C);
+        wmap_start_sequence(wmap_land_effect_01_run);
         break;
     case 18:
-        wmap_start_sequence(func_800706B0);
+        wmap_start_sequence(wmap_land_effect_18_run);
         break;
     case 4:
-        wmap_start_sequence(func_800712C0);
+        wmap_start_sequence(wmap_land_effect_04_run);
         break;
     case 13:
-        wmap_start_sequence(func_80074FB4);
+        wmap_start_sequence(wmap_land_effect_13_run);
         break;
     default:
         wmap_start_sequence(wmap_run_land_entry);

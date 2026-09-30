@@ -128,7 +128,7 @@ extern void func_8005909C(void);
 s32 func_8005B548();
 void cdrom_queue_read();
 s32 cdrom_wait_queue_empty();
-extern s32 func_800BFD18(s32 initialize);
+extern s32 wmap_special_effect_34_run(s32 initialize);
 
 extern s32 g_wmap_script_button_mask;
 extern s32 g_wmap_script_word;
@@ -1343,7 +1343,7 @@ s32 wmap_run_loop(void)
                     drain_event = wmap_next_land_event();
                 } while (drain_event != -1);
             }
-            wmap_install_callback(&func_800BFD18);
+            wmap_install_callback(&wmap_special_effect_34_run);
             break;
         }
 #endif
@@ -1489,7 +1489,7 @@ s32 wmap_run_loop(void)
             g_wmap_buttons_held = 0;
             g_wmap_buttons_repeat = 0;
             D_80182DD8 = D_801398F8;
-            wmap_install_callback(&func_800BFD18);
+            wmap_install_callback(&wmap_special_effect_34_run);
             break;
 #endif
         case 27:
