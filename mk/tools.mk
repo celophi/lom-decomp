@@ -1,13 +1,34 @@
 # Host-side Python tests; no disc files or historical toolchain required.
-.PHONY: test-tools test-assets test-overlay-tools extract-scene extract-scenes extract-addhero extract-carda extract-checkps extract-cload extract-field extract-gname extract-golem extract-gosub extract-menu extract-niki extract-shop extract-title extract-wmap extract-wsel extract-zukan
+.PHONY: test-tools test-assets test-overlay-tools \
+	extract-scene \
+	extract-scenes \
+	extract-addhero \
+	extract-carda \
+	extract-checkps \
+	extract-cload \
+	extract-field \
+	extract-gname \
+	extract-golem \
+	extract-gosub \
+	extract-menu \
+	extract-niki \
+	extract-shop \
+	extract-title \
+	extract-wmap \
+	extract-wsel \
+	extract-zukan
 
-test-tools: test-assets test-overlay-tools
+test-tools: test-assets test-overlay-tools test-verification-tools
 
 test-assets:
 	python3 -m unittest discover -s tools/assets/tests -t . -v
 
 test-overlay-tools:
 	python3 -m unittest discover -s tools/overlays/tests -t . -v
+
+.PHONY: test-verification-tools
+test-verification-tools:
+	python3 -m unittest discover -s tools/verification/tests -v
 
 # SCENE is an extracted ANA/INFO_*/*.IMG file; VERSION selects the output folder.
 SCENE_OUTPUT ?= assets/exports/$(VERSION)/scenes

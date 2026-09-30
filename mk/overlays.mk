@@ -1,6 +1,4 @@
-# ============================================================================
-#  Overlay System
-# ============================================================================
+# Overlay System
 #
 # Overlays are small executables loaded on top of the main SLUS at runtime.
 # Each overlay follows the same directory convention:
@@ -11,24 +9,21 @@
 #   build/<version>/overlays/<name>/       — compiled objects and output ELF
 #   assets/<version>/                      — gitignored binary data from splat
 #
-# ── How to add a new overlay ─────────────────────────────────────────────────
+# How to add a new overlay
 #
 #   1. Create config/<version>/overlays/<NAME>.BIN.yaml.
 #   2. Run: splat split config/<version>/overlays/<NAME>.BIN.yaml
 #   3. In mk/overlay-registry.mk, register the overlay and explicitly route
 #      every direct C source to one toolchain configuration.
 #
-# ─────────────────────────────────────────────────────────────────────────────
+# One template defines the same rules for each registered overlay.
+# $(1) is its name. Use $$ for values Make should expand after eval.
+# Compiler choices and exceptions belong in mk/overlay-registry.mk.
 
-
-# ── Overlay rule template ────────────────────────────────────────────────────
-#
-# This define block is a "macro" that generates all Make rules for one overlay.
-# It's called once per entry in OVERLAYS via $(eval $(call ...)) at the bottom.
-#
-# Inside the template:
-#   $(1)  = overlay name (e.g. "checkps")
-#   $$    = escaped $ (needed because eval expands variables twice)
+# A version can use assembly for an entire overlay or just specific C files.
+# Keep that selection here so the registry only needs to list the sources.
+overlay-sources = $(if $(call has-tu-layout,$(1)),\
+	$(filter-out $(ASM_UNITS),$(overlay_$(1)_$(2)_srcs)))
 
 # Return every word that occurs more than once in a list.
 duplicate-words = $(sort $(foreach item,$(1),$(if $(word 2,$(filter $(item),$(1))),$(item))))
@@ -48,7 +43,7 @@ validate-overlay-registry:
 
 define overlay-rules
 
-# ── Derived paths for overlay '$(1)' ──
+# Derived paths for overlay '$(1)'
 $(1)_SRC_DIR   := src/overlays/$(1)
 $(1)_ASM_DIR   := $(ASM_DIR)/overlays/$(1)
 $(1)_LINK_DIR  := $(LINKER_DIR)/overlays/$(1)
@@ -59,20 +54,31 @@ $(1)_LINKER_SCRIPTS := \
 	$(STAGING)/$$($(1)_LINK_DIR)/undefined_funcs_auto.txt \
 	$(STAGING)/$$($(1)_LINK_DIR)/undefined_syms_auto.txt
 
-# ── Discover and validate source routing ──
-$(1)_GCC_272_CDK_G0_SRCS := $$(overlay_$(1)_gcc_272_cdk_g0_srcs)
-$(1)_GCC_272_GNU_G0_SRCS := $$(overlay_$(1)_gcc_272_gnu_g0_srcs)
-$(1)_GCC_280_G0_SRCS := $$(overlay_$(1)_gcc_280_g0_srcs)
-$(1)_GCC_280_G0_O0_SRCS := $$(overlay_$(1)_gcc_280_g0_o0_srcs)
-$(1)_GCC_280_G4_SRCS := $$(overlay_$(1)_gcc_280_g4_srcs)
-$(1)_GCC_280_G4_NOEXPAND_SRCS := $$(overlay_$(1)_gcc_280_g4_noexpand_srcs)
-$(1)_ROUTED_SRCS = $$($(1)_GCC_272_CDK_G0_SRCS) $$($(1)_GCC_272_GNU_G0_SRCS) $$($(1)_GCC_280_G0_SRCS) $$($(1)_GCC_280_G0_O0_SRCS) $$($(1)_GCC_280_G4_SRCS) $$($(1)_GCC_280_G4_NOEXPAND_SRCS)
+# Discover and validate source routing
+$(1)_GCC_272_CDK_G0_SRCS := $$(call overlay-sources,$(1),gcc_272_cdk_g0)
+$(1)_GCC_272_GNU_G0_SRCS := $$(call overlay-sources,$(1),gcc_272_gnu_g0)
+$(1)_GCC_280_G0_SRCS := $$(call overlay-sources,$(1),gcc_280_g0)
+$(1)_GCC_280_G0_O0_SRCS := $$(call overlay-sources,$(1),gcc_280_g0_o0)
+$(1)_GCC_280_G4_SRCS := $$(call overlay-sources,$(1),gcc_280_g4)
+$(1)_GCC_280_G4_NOEXPAND_SRCS := $$(call overlay-sources,$(1),gcc_280_g4_noexpand)
+$(1)_ROUTED_SRCS = \
+	$$($(1)_GCC_272_CDK_G0_SRCS) \
+	$$($(1)_GCC_272_GNU_G0_SRCS) \
+	$$($(1)_GCC_280_G0_SRCS) \
+	$$($(1)_GCC_280_G0_O0_SRCS) \
+	$$($(1)_GCC_280_G4_SRCS) \
+	$$($(1)_GCC_280_G4_NOEXPAND_SRCS)
 # Generated unk*.c files are gitignored and splat does not remove outputs from
 # older configurations. Treat tracked C files and explicitly routed generated
 # files as build inputs so stale ignored files cannot enter the build by accident.
 # An overlay without a C layout for this version does not build the C sources.
-$(1)_TRACKED_C_SRCS := $$(filter-out $(ASM_UNITS),$$(if $$(call has-tu-layout,$(1)),$$(filter $$(wildcard $$($(1)_SRC_DIR)/*.c),$$(shell git ls-files -- '$$($(1)_SRC_DIR)/*.c' 2>/dev/null))))
-$(1)_C_SRCS = $$(sort $$($(1)_TRACKED_C_SRCS) $$(filter $$($(1)_ROUTED_SRCS),$$(wildcard $$($(1)_SRC_DIR)/*.c)))
+$(1)_EXISTING_C_SRCS := $$(wildcard $$($(1)_SRC_DIR)/*.c)
+$(1)_TRACKED_C_SRCS := $$(if $$(call has-tu-layout,$(1)),\
+	$$(shell git ls-files -- '$$($(1)_SRC_DIR)/*.c' 2>/dev/null))
+$(1)_TRACKED_C_SRCS := $$(filter-out $(ASM_UNITS),\
+	$$(filter $$($(1)_EXISTING_C_SRCS),$$($(1)_TRACKED_C_SRCS)))
+$(1)_C_SRCS = $$(sort $$($(1)_TRACKED_C_SRCS) \
+	$$(filter $$($(1)_ROUTED_SRCS),$$($(1)_EXISTING_C_SRCS)))
 $(1)_UNROUTED_SRCS = $$(filter-out $$($(1)_ROUTED_SRCS),$$($(1)_C_SRCS))
 $(1)_UNKNOWN_ROUTED_SRCS = $$(filter-out $$($(1)_C_SRCS),$$($(1)_ROUTED_SRCS))
 $(1)_DUPLICATE_ROUTED_SRCS = $$(call duplicate-words,$$($(1)_ROUTED_SRCS))
@@ -86,7 +92,7 @@ $(1)-validate: validate-overlay-registry
 
 $(1)_GCC_280_G4_ALL_SRCS := $$($(1)_GCC_280_G4_SRCS) $$($(1)_GCC_280_G4_NOEXPAND_SRCS)
 
-# ── Derive object paths ──
+# Derive object paths
 $(1)_GCC_280_G0_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_280_G0_SRCS))
 $(1)_GCC_280_G0_O0_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_280_G0_O0_SRCS))
 $(1)_GCC_280_G4_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_280_G4_ALL_SRCS))
@@ -95,15 +101,20 @@ $(1)_GCC_272_GNU_G0_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_
 $(1)_GCC_272_CDK_G0_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_272_CDK_G0_SRCS))
 # Clear the div-expansion flag for the G4 no-expand subset (target-specific var).
 $$($(1)_GCC_280_G4_NOEXPAND_OBJS): MASPSX_DIV_FLAG_G4 :=
-$(1)_C_OBJS := $$($(1)_GCC_272_CDK_G0_OBJS) $$($(1)_GCC_280_G0_OBJS) $$($(1)_GCC_280_G0_O0_OBJS) $$($(1)_GCC_272_GNU_G0_OBJS) $$($(1)_GCC_280_G4_OBJS)
+$(1)_C_OBJS := \
+	$$($(1)_GCC_272_CDK_G0_OBJS) \
+	$$($(1)_GCC_280_G0_OBJS) \
+	$$($(1)_GCC_280_G0_O0_OBJS) \
+	$$($(1)_GCC_272_GNU_G0_OBJS) \
+	$$($(1)_GCC_280_G4_OBJS)
 
-# ── Optional standalone binary object ──
+# Optional standalone binary object
 # Use asset_src only when the linker script expects assets/<name>.o. This is
 # separate from splat databin assets included by generated assembly below.
 $(1)_ASSET_SRC := $$(overlay_$(1)_asset_src)
 $(1)_ASSET_OBJ := $(STAGING)/$$($(1)_BUILD_DIR)/assets/$(1).o
 
-# ── Splat-generated data assembly ──
+# Splat-generated data assembly
 # These files may use .incbin to include gitignored data from assets/.
 # The splat-generated linker script pulls these .o files in directly by path
 # (e.g. build/us/overlays/<name>/asm/us/overlays/<name>/data/rodata.rodata.o), so
@@ -114,8 +125,10 @@ $(1)_DATA_OBJS := $$(patsubst $$($(1)_ASM_DIR)/%.s,$(STAGING)/$$($(1)_BUILD_DIR)
 
 # Splat's dependency file identifies the standalone assembly segments still
 # used by the linker. Do not glob all assembly: old splits remain on disk.
-$(1)_LINK_ASM_OBJS := $$(addprefix $(STAGING)/,$$(sort $$(filter-out $$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/data/%,\
-	$$(filter $$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/%.o,$$(file <$$($(1)_LINK_DIR)/$(1).d)))))
+$(1)_LINK_INPUTS := $$(file <$$($(1)_LINK_DIR)/$(1).d)
+$(1)_LINK_ASM_OBJS := $$(filter $$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/%.o,$$($(1)_LINK_INPUTS))
+$(1)_LINK_ASM_OBJS := $$(filter-out $$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/data/%,$$($(1)_LINK_ASM_OBJS))
+$(1)_LINK_ASM_OBJS := $$(addprefix $(STAGING)/,$$(sort $$($(1)_LINK_ASM_OBJS)))
 
 $$($(1)_LINK_ASM_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/%.o: $$($(1)_ASM_DIR)/%.s $(COPY_SENTINEL) | $(1)-validate
 	@mkdir -p $$(@D)
@@ -163,31 +176,31 @@ ifeq ($(DATA_AS_C),1)
 $$($(1)_DATA_OBJS): $$($(1)_C_SRCS) $$(wildcard $$($(1)_SRC_DIR)/*.h) $$(DATA_AS_C_HEADERS)
 endif
 
-# Rule: compile C files with GCC 2.7.2 CDK G0 + maspsx.
+# GCC 2.7.2 CDK G0 + maspsx.
 $$($(1)_GCC_272_CDK_G0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL) | $(1)-validate
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC_272_CDK) $(CFLAGS_272_CDK_G0) $(VERSION_CPP_FLAGS) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
-# Rule: compile C files with GCC 2.8.0 G0 + maspsx.
+# GCC 2.8.0 G0 + maspsx.
 $$($(1)_GCC_280_G0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL) | $(1)-validate
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC) $(CFLAGS_G0) $(VERSION_CPP_FLAGS) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
-# Rule: compile C files with GCC 2.8.0 G0 at -O0 + maspsx.
+# GCC 2.8.0 G0 at -O0 + maspsx.
 $$($(1)_GCC_280_G0_O0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL) | $(1)-validate
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC) $(CFLAGS_G0_O0) $(VERSION_CPP_FLAGS) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
-# Rule: compile C files with GCC 2.8.0 G4 + maspsx.
+# GCC 2.8.0 G4 + maspsx.
 $$($(1)_GCC_280_G4_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL) | $(1)-validate
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC) $(CFLAGS_G4) $(VERSION_CPP_FLAGS) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $$(MASPSX_FLAGS_G4) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
-# Rule: compile C files with GCC 2.7.2 GNU G0 + its own assembler.
+# GCC 2.7.2 GNU G0 + its own assembler.
 $$($(1)_GCC_272_GNU_G0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL) | $(1)-validate
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC_272_GNU) $(CFLAGS_272_GNU_G0) $(VERSION_CPP_FLAGS) $(INCLUDE_FLAGS) -S $$($(1)_SRC_DIR)/$$*.c -o - | \
@@ -197,7 +210,7 @@ $$($(1)_GCC_272_GNU_G0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o
 		$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.normalized.o
 	mv $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.normalized.o $$@
 
-# Rule: convert binary asset → linkable .o  (only if asset is defined)
+# A standalone asset needs an object only when the registry requests one.
 ifneq ($$($(1)_ASSET_SRC),)
 $$($(1)_ASSET_OBJ): $(STAGING)/$$($(1)_ASSET_SRC) | $(1)-validate
 	@mkdir -p $$(@D)
@@ -205,7 +218,7 @@ $$($(1)_ASSET_OBJ): $(STAGING)/$$($(1)_ASSET_SRC) | $(1)-validate
 		$$($(1)_ASSET_SRC) $$($(1)_BUILD_DIR)/assets/$(1).o
 endif
 
-# Rule: link the overlay ELF
+# Link the overlay.
 # Track every object and linker script consumed by the link command.
 # The standalone asset object is included only when asset_src is configured.
 $$($(1)_TARGET): $(COPY_SENTINEL) $$($(1)_C_OBJS) $$($(1)_DATA_OBJS) $$($(1)_LINK_ASM_OBJS) $$(if $$($(1)_ASSET_SRC),$$($(1)_ASSET_OBJ)) $$($(1)_LINKER_SCRIPTS) | $(1)-validate validate-assets
@@ -218,7 +231,7 @@ $$($(1)_TARGET): $(COPY_SENTINEL) $$($(1)_C_OBJS) $$($(1)_DATA_OBJS) $$($(1)_LIN
 		-Map $$($(1)_BUILD_DIR)/$(1).map
 	@echo "Linked overlay: $(1)"
 
-# ── Objdiff rules for this overlay ──
+# Objdiff rules for this overlay
 $(1)_ALL_ASM    := $$(call rwildcard,$$($(1)_ASM_DIR),*.s)
 $(1)_TGT_ASM   := $$(filter-out $$($(1)_ASM_DIR)/nonmatchings/% $$($(1)_ASM_DIR)/data/%,$$($(1)_ALL_ASM))
 $(1)_TGT_OBJS  := $$(patsubst $$($(1)_ASM_DIR)/%.s,$(STAGING)/$$($(1)_BUILD_DIR)/target/%.o,$$($(1)_TGT_ASM))
@@ -229,7 +242,7 @@ $$($(1)_TGT_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/target/%.o: $$($(1)_ASM_DIR)/%.
 		$(MASPSX) $(MASPSX_PP_FLAGS) | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) $$(overlay_$(1)_target_as_extra_flags_$$*) -o $$($(1)_BUILD_DIR)/target/$$*.o
 
-# ── Phony convenience targets ──
+# Phony convenience targets
 .PHONY: $(1) $(1)-target-objects $(1)-base-objects $(1)-objdiff
 
 $(1): $(1)-validate $$($(1)_TARGET)
@@ -254,12 +267,10 @@ $(1)-objdiff: $(1)-target-objects $(1)-base-objects
 
 endef
 
-# ── Instantiate rules for every registered overlay ──
-# This line loops over OVERLAYS and calls the template above for each one.
-# $(eval) tells Make to treat the output as real Makefile syntax.
+# Instantiate rules for every registered overlay
 $(foreach ov,$(OVERLAYS),$(eval $(call overlay-rules,$(ov))))
 
-# ── Aggregate overlay targets ──
+# Aggregate overlay targets
 .PHONY: validate-overlays overlays everything
 
 validate-overlays: $(addsuffix -validate,$(OVERLAYS))
