@@ -50,7 +50,7 @@ segments:
       - [0x1, .rodata, overlay_header]
       - [0x5, .rodata, zukan]
       - [0x1D, rodatabin, zukan_entry_tables]
-      - [0xE01, rodatabin, zukan_run_code] # zukan_run, not yet decompiled
+      - [0xE01, rodatabin, zukan_run_code]
       - [0x1095, c, zukan] # gcc272_cdk
       - [0x2D09, c, zukan_category] # gcc280_g0_o0
       - [0x471D, databin, zukan_data]
