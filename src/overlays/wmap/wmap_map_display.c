@@ -212,8 +212,8 @@ extern s32 D_800DBE78;
 extern s32 D_800DCEC0;
 extern s32 D_8011CF18;
 extern s32 g_wmap_view_scroll_enabled;
-extern s32 D_8011D4FC;
-extern WmapDisplayCell D_80139290[6][6];
+extern s32 g_wmap_selected_artifact;
+extern WmapDisplayCell g_wmap_cells[6][6];
 extern s32 g_wmap_view_mode;
 extern s32 g_wmap_game_phase;
 
@@ -234,7 +234,6 @@ extern u8 g_wmap_game_spawn_patterns[][9];
 extern s32 D_800500DC[];
 extern WmapTextureInfo D_800CBBE8[];
 extern s32 D_800DBE74;
-extern s32 D_8011CF74;
 extern s32 D_8013C628[];
 extern s32 D_8019D6D8;
 extern s32 D_801ADAF8;
@@ -248,7 +247,6 @@ extern s32 D_80139958;
 extern s32 D_80139978;
 extern VECTOR D_80182D48;
 extern VECTOR g_wmap_camera_translation;
-extern s32 D_801ADAE0;
 extern s32 g_wmap_cell_effect_steps[];
 extern WmapQuadTemplate g_wmap_cell_effect_quads[16];
 extern WmapEffectCell D_8011D108[6][6];
@@ -318,14 +316,14 @@ void wmap_update_map_game(void)
                 {
                     for (scan_x = g_wmap_game_origin_x; scan_x < g_wmap_game_origin_x + WMAP_GAME_AREA_SIZE; scan_x++)
                     {
-                        if (D_80139290[scan_x][scan_y].object_id == WMAP_EMPTY_LAND)
+                        if (g_wmap_cells[scan_x][scan_y].object_id == WMAP_EMPTY_LAND)
                         {
                             valid = 0;
                         }
                     }
                 }
 
-                if ((D_800DBE78 != 0) || (g_wmap_view_mode != 0) || (D_8011CF18 != 0) || (g_wmap_party_moving != 0) || (D_8011D4FC != -1))
+                if ((D_800DBE78 != 0) || (g_wmap_view_mode != 0) || (D_8011CF18 != 0) || (g_wmap_party_moving != 0) || (g_wmap_selected_artifact != -1))
                 {
                     valid = 0;
                 }
@@ -376,7 +374,7 @@ void wmap_update_map_game(void)
     {
         for (render_x = g_wmap_game_origin_x; render_x < g_wmap_game_origin_x + WMAP_GAME_AREA_SIZE; render_x++)
         {
-            wmap_draw_land(render_x, render_y, D_80139290[render_x][render_y].object_id);
+            wmap_draw_land(render_x, render_y, g_wmap_cells[render_x][render_y].object_id);
         }
     }
 
@@ -560,7 +558,7 @@ void wmap_update_map_game_countdown(void)
         {
             for (j = g_wmap_game_origin_x; j < g_wmap_game_origin_x + WMAP_GAME_AREA_SIZE; j++)
             {
-                object_id = D_80139290[j][i].object_id;
+                object_id = g_wmap_cells[j][i].object_id;
                 wmap_set_land_display_mode(object_id, 1);
                 g_wmap_land_display[object_id].game_timer = 0;
             }
@@ -600,7 +598,7 @@ void wmap_update_map_game_round(void)
 
     y = g_wmap_game_origin_y + g_wmap_cursor_row;
     x = g_wmap_game_origin_x + g_wmap_cursor_column;
-    object_id = D_80139290[x][y].object_id;
+    object_id = g_wmap_cells[x][y].object_id;
     object = &g_wmap_land_display[object_id];
 
     if (g_wmap_buttons_repeat & WMAP_PAD_CONFIRM)
@@ -635,14 +633,14 @@ void wmap_update_map_game_round(void)
     {
         for (x = g_wmap_game_origin_x; x < g_wmap_game_origin_x + WMAP_GAME_AREA_SIZE; x++)
         {
-            object_id = D_80139290[x][y].object_id;
+            object_id = g_wmap_cells[x][y].object_id;
             object = &g_wmap_land_display[object_id];
             if (object->game_timer != 0)
             {
                 object->game_timer--;
                 if ((object->game_timer == 0) && (object->transition != 1))
                 {
-                    wmap_set_land_display_mode(D_80139290[x][y].object_id, 1);
+                    wmap_set_land_display_mode(g_wmap_cells[x][y].object_id, 1);
                     object->scale_frame = 4;
                     wmap_play_sound(2, 0x80);
                 }
@@ -674,7 +672,7 @@ void wmap_spawn_map_game_lands(s32 delay_min, s32 delay_range, s32 timer_min, s3
     g_wmap_game_spawn_timer = ((rand() * delay_range) >> 15) + delay_min;
     column = (rand() % 3) + g_wmap_game_origin_x;
     row = (rand() % 3) + g_wmap_game_origin_y;
-    object_id = D_80139290[column][row].object_id;
+    object_id = g_wmap_cells[column][row].object_id;
 
     if (rand() & 0xFF)
     {
@@ -697,7 +695,7 @@ void wmap_spawn_map_game_lands(s32 delay_min, s32 delay_range, s32 timer_min, s3
         {
             for (column = g_wmap_game_origin_x; column < g_wmap_game_origin_x + WMAP_GAME_AREA_SIZE; column++)
             {
-                object_id = D_80139290[column][row].object_id;
+                object_id = g_wmap_cells[column][row].object_id;
                 if (g_wmap_game_spawn_patterns[g_wmap_game_round][pattern_index])
                 {
                     WmapLandDisplay* object_base;
@@ -845,7 +843,7 @@ s32 wmap_resolve_land_image(WmapLandDisplay* resource)
             image = (u8*)D_8013C628 + D_8013C628[resource_id];
             LoadImage(&D_800CBBE8[slot].upload.rect, (u_long*)image);
             free_entry->animation_data = image + 0x2004;
-            free_entry->loaded_frame = D_8011CF74;
+            free_entry->loaded_frame = g_wmap_frame_count;
         }
     }
 
@@ -895,7 +893,7 @@ replace_oldest:
         LoadImage(&D_800CBBE8[oldest_slot].upload.rect, (u_long*)image);
         image += 0x2004;
         oldest_entry->animation_data = image;
-        oldest_entry->loaded_frame = D_8011CF74;
+        oldest_entry->loaded_frame = g_wmap_frame_count;
         resource->animation_cursor = 0;
         resource->previous_animation_index = i;
         return oldest_slot;
@@ -1225,7 +1223,7 @@ void wmap_draw_lands(void)
     {
         for (x = 0; x < WMAP_GRID_SIZE; x++)
         {
-            object_id = D_80139290[x][y].object_id;
+            object_id = g_wmap_cells[x][y].object_id;
 
             if (g_wmap_view_mode == 1)
             {
@@ -1343,13 +1341,13 @@ void wmap_draw_lands(void)
                 }
             }
 
-            if ((D_8011D4FC == -1) || (D_801ADAE0 != 0))
+            if ((g_wmap_selected_artifact == -1) || (g_wmap_placement_overlay_hidden != 0))
             {
                 state = 0;
             }
             wmap_set_cell_effect_mode(x, y, state);
 
-            if ((D_80139290[x][y].effect_enabled != 0) && (g_wmap_view_mode == 0))
+            if ((g_wmap_cells[x][y].effect_enabled != 0) && (g_wmap_view_mode == 0))
             {
                 wmap_draw_cell_effect(x, y);
             }
@@ -1437,7 +1435,7 @@ void wmap_draw_cell_effect(s32 x, s32 y)
         *(u32*)&poly->r2 = wmap_scale_color(source->colors[2], color_frame);
         *(u32*)&poly->r3 = wmap_scale_color(source->colors[3], color_frame);
 
-        if ((D_8011D4FC == 3) || (D_8011D4FC == 7) || (D_8011D4FC == 0x1B))
+        if ((g_wmap_selected_artifact == 3) || (g_wmap_selected_artifact == 7) || (g_wmap_selected_artifact == 0x1B))
         {
             poly->r0 = poly->r1 = poly->r2 = poly->r3 = 0;
         }
@@ -1591,7 +1589,7 @@ void wmap_draw_spirit_levels(void)
         y = 5;
     }
 
-    color = g_wmap_spirit_brightness + (D_8011CF74 & 8);
+    color = g_wmap_spirit_brightness + (g_wmap_frame_count & 8);
     if (color < 0)
     {
         color = 0;
@@ -1603,7 +1601,7 @@ void wmap_draw_spirit_levels(void)
     }
     else if (D_80129550 == 1)
     {
-        wmap_get_proposed_spirit_sprites(x, y, D_8011D4FC, x, y, sprite_indices);
+        wmap_get_proposed_spirit_sprites(x, y, g_wmap_selected_artifact, x, y, sprite_indices);
     }
     else
     {
@@ -1684,16 +1682,16 @@ void wmap_draw_spirit_grid(s32 spirit_index)
         spirits = &cell_spirits;
         do
         {
-            if (D_80129550 == 1 && D_80139290[target_x][target_y].effect_enabled != 0)
+            if (D_80129550 == 1 && g_wmap_cells[target_x][target_y].effect_enabled != 0)
             {
-                wmap_get_proposed_spirit_sprites(cur_x, cur_y, D_8011D4FC, target_x, target_y, cell_spirits.sprite_indices);
+                wmap_get_proposed_spirit_sprites(cur_x, cur_y, g_wmap_selected_artifact, target_x, target_y, cell_spirits.sprite_indices);
             }
             else
             {
                 wmap_get_cell_spirit_sprites(cur_x, cur_y, cell_spirits.sprite_indices);
             }
 
-            if (cur_x == target_x && cur_y == target_y && (D_8011CF74 & 4))
+            if (cur_x == target_x && cur_y == target_y && (g_wmap_frame_count & 4))
             {
                 sprite = g_wmap_current_frame->packet_cursor;
                 *sprite = g_wmap_spirit_level_sprites[spirits->sprite_indices[spirit_index]];
@@ -1760,7 +1758,7 @@ void wmap_update_map_display(void)
             break;
         }
     }
-    if (D_8011CF74 & 1)
+    if (g_wmap_frame_count & 1)
     {
         D_80139218 = (D_80139218 + 1) & 7;
     }
@@ -1799,7 +1797,7 @@ void wmap_draw_information_labels(void)
     {
         g_wmap_information_groups = 0;
     }
-    if (!(g_wmap_buttons_held & PADRup) || D_8011D4FC == -1)
+    if (!(g_wmap_buttons_held & PADRup) || g_wmap_selected_artifact == -1)
     {
         g_wmap_information_groups = 0;
         return;
@@ -1807,7 +1805,7 @@ void wmap_draw_information_labels(void)
     if (g_wmap_information_groups == 0)
     {
         wmap_build_placement_labels(g_wmap_cursor_column + g_wmap_cursor_row * 3, g_wmap_view.x / WMAP_CELL_SPACING + g_wmap_cursor_column, g_wmap_view.y / WMAP_CELL_SPACING + g_wmap_cursor_row,
-                      &g_wmap_information_groups, g_wmap_information_values, D_8011D4FC);
+                      &g_wmap_information_groups, g_wmap_information_values, g_wmap_selected_artifact);
     }
     dynamic_index = 0;
     for (group = 0; group < 10; group++)
@@ -1938,7 +1936,7 @@ void wmap_upload_land_image(WmapLandDisplay* resource, s32 slot)
     image = (u8*)D_8013C628 + D_8013C628[resource_id];
     LoadImage(&D_800CBBE8[slot].upload.rect, (u_long*)image);
     cache->animation_data = image + 0x2004;
-    cache->loaded_frame = D_8011CF74;
+    cache->loaded_frame = g_wmap_frame_count;
 }
 
 /**

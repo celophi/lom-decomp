@@ -41,13 +41,12 @@ typedef struct
     u16 value;
 } WmapValueHeader;
 
-extern u8 D_800DCF18[];
+extern u8 g_wmap_load_buffer[];
 extern s32 D_801ADAFC;
 extern RECT D_80051A88;
 
 
-extern WmapSpriteActor D_800D9268[];
-extern WmapInitDisplay D_801AFBD0[];
+extern WmapInitDisplay g_wmap_actor_motions[];
 extern WmapValueHeader* D_800D0454;
 
 /**
@@ -99,11 +98,11 @@ void func_80064F64(s32 resource_index)
     u8* data;
     u8* header;
 
-    data = D_800DCF18;
+    data = g_wmap_load_buffer;
     cdrom_queue_read(resource_index & 0xFFFF, data);
     cdrom_wait_queue_empty();
     data += 8;
-    header = D_800DCF18;
+    header = g_wmap_load_buffer;
     if (header[4] & 8)
     {
         header = (u8*)&rectangle;
@@ -140,11 +139,11 @@ void func_80065078(s32 resource_index)
     u8* data;
     u8* header;
 
-    data = D_800DCF18;
+    data = g_wmap_load_buffer;
     cdrom_stream(resource_index & 0xFFFF, data);
     cdrom_wait_queue_empty();
     data += 8;
-    header = D_800DCF18;
+    header = g_wmap_load_buffer;
     if (header[4] & 8)
     {
         header = (u8*)&rectangle;
@@ -177,7 +176,7 @@ void func_80065078(s32 resource_index)
  */
 void func_8006518C(s32 resource_index)
 {
-    cdrom_queue_read(resource_index & 0xFFFF, D_800DCF18);
+    cdrom_queue_read(resource_index & 0xFFFF, g_wmap_load_buffer);
 }
 
 /**
@@ -267,8 +266,8 @@ void func_800653EC(void)
     s32 index;
     for (index = 0; index < 256; index++)
     {
-        D_800D9268[index].shade_step = 16;
-        D_801AFBD0[index].state = 0;
+        g_wmap_sprite_actors[index].shade_step = 16;
+        g_wmap_actor_motions[index].state = 0;
     }
 }
 

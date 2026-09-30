@@ -59,8 +59,8 @@ extern WmapFixedPoint D_8013A188[];
 extern WmapFixedPoint* D_801B23F8;
 
 extern s32 D_8011CF70;
-extern s32 D_8011CF74;
-extern s32 D_80139244;
+extern s32 g_wmap_frame_count;
+extern s32 g_wmap_transition_mesh_hidden;
 extern s32 D_80139960;
 extern s32 D_8011CF58;
 extern s32 D_80182D70;
@@ -97,11 +97,11 @@ void func_8006D674(void)
     s32 i;
     s32 remaining;
 
-    if (D_80139244 != 1)
+    if (g_wmap_transition_mesh_hidden != 1)
     {
         if (D_80139960 != 0)
         {
-            if (D_8011CF74 & 1)
+            if (g_wmap_frame_count & 1)
             {
                 triangles = D_800D1814;
             }
@@ -134,7 +134,7 @@ void func_8006D674(void)
                 D_80139960 = 0;
             }
         }
-        if (D_8011CF74 & 1)
+        if (g_wmap_frame_count & 1)
         {
             triangles = D_800D1814;
         }

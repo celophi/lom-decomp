@@ -46,7 +46,7 @@
 #define WMAP_VEHICLE_RADIUS_STEP 4
 #define WMAP_VEHICLE_LOW_HEIGHT 40
 
-/** @brief Size of one vehicle animation bank in D_8011D538 and the CD files that fill it. */
+/** @brief Size of one vehicle animation bank in g_wmap_animation_bank_0 and the CD files that fill it. */
 #define WMAP_VEHICLE_BANK_SIZE 0x2000
 #define WMAP_VEHICLE_BANK_FILE 0x1145
 #define WMAP_VEHICLE_BANK_FILE_2 0x1146
@@ -69,7 +69,7 @@
 #define WMAP_ROUTE_RIGHT 5
 #define WMAP_ROUTE_DOWN 7
 
-/** @brief Element 0 of the D_801AFBD0 motion table while it drives the travel vehicle. */
+/** @brief Element 0 of the g_wmap_actor_motions motion table while it drives the travel vehicle. */
 typedef struct
 {
     s16 active;
@@ -99,17 +99,15 @@ typedef struct
 } WmapLandCell;
 
 extern WmapSpriteActor g_wmap_vehicle_actor;
-extern WmapVehicleMotion D_801AFBD0;
+extern WmapVehicleMotion g_wmap_actor_motions;
 extern WmapAnimationSlot g_wmap_vehicle_animation;
-extern u8 D_8011D538[];
+extern u8 g_wmap_animation_bank_0[];
 extern s32 g_wmap_vehicle_bank_flipped;
 extern MATRIX D_8011D0E8;
 extern s32 D_80139224;
 extern WmapScreenPosition g_wmap_vehicle_screen_position;
-extern s32 D_8011CF74;
 extern u8 D_80182E40[];
 extern u8 D_8018B240[];
-extern WmapSpriteActor D_800D9268[];
 
 extern s16 g_wmap_route_headings[];
 extern s32 g_wmap_vehicle_route;
@@ -119,7 +117,7 @@ extern s32 g_wmap_vehicle_cell_x;
 extern s32 g_wmap_vehicle_cell_y;
 extern s32 g_wmap_vehicle_target_x;
 extern s32 g_wmap_vehicle_target_y;
-extern WmapLandCell D_80139290[][6];
+extern WmapLandCell g_wmap_cells[][6];
 
 extern s32 g_wmap_view_scroll_mode;
 extern s32 g_wmap_scroll_remaining_x;
@@ -127,7 +125,6 @@ extern s32 g_wmap_scroll_remaining_y;
 extern WmapView g_wmap_view;
 extern WmapView g_wmap_saved_view;
 extern s32 D_800DCEC0;
-extern s32 D_8013B208;
 extern s32 D_8013B288;
 extern s32 D_8013B294;
 
@@ -184,12 +181,12 @@ static inline void wmap_load_vehicle(void)
     D_8013B288 = 0;
     g_wmap_input_locked = 1;
     g_wmap_vehicle_bank_flipped = 0;
-    D_8013B208 = 1;
+    g_wmap_event_active = 1;
     func_8005FF88(-1);
     D_800DCEC0 = 0;
     g_wmap_saved_view = g_wmap_view;
-    cdrom_queue_read(WMAP_VEHICLE_BANK_FILE, D_8011D538);
-    cdrom_queue_read(WMAP_VEHICLE_BANK_FILE_2, D_8011D538 + WMAP_VEHICLE_BANK_SIZE);
+    cdrom_queue_read(WMAP_VEHICLE_BANK_FILE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_VEHICLE_BANK_FILE_2, g_wmap_animation_bank_0 + WMAP_VEHICLE_BANK_SIZE);
     func_800A8AA8(WMAP_VEHICLE_TEXTURE_FILE);
     func_800A8AF0(WMAP_VEHICLE_PALETTE_FILE);
 }
@@ -202,7 +199,7 @@ static inline void wmap_place_vehicle(void)
     cdrom_wait_queue_empty();
     func_800651B4(D_80182E40);
     func_800651B4(D_8018B240);
-    g_wmap_vehicle_animation.data = D_8011D538;
+    g_wmap_vehicle_animation.data = g_wmap_animation_bank_0;
     actor->previous_sequence = -1;
     actor->target_shade = WMAP_VEHICLE_SHADE_NEUTRAL;
     actor->shade = WMAP_VEHICLE_SHADE_NEUTRAL;
@@ -210,12 +207,12 @@ static inline void wmap_place_vehicle(void)
     actor->scale_index = 0;
     actor->sequence = 0;
     actor->shade_step = 0;
-    D_801AFBD0.active = 1;
-    D_801AFBD0.radius = WMAP_VEHICLE_START_RADIUS;
-    D_801AFBD0.height = WMAP_VEHICLE_START_HEIGHT;
-    D_801AFBD0.heading = 0;
-    D_801AFBD0.ot_index = WMAP_VEHICLE_OT_START;
-    D_801AFBD0.ot_override = 0;
+    g_wmap_actor_motions.active = 1;
+    g_wmap_actor_motions.radius = WMAP_VEHICLE_START_RADIUS;
+    g_wmap_actor_motions.height = WMAP_VEHICLE_START_HEIGHT;
+    g_wmap_actor_motions.heading = 0;
+    g_wmap_actor_motions.ot_index = WMAP_VEHICLE_OT_START;
+    g_wmap_actor_motions.ot_override = 0;
     wmap_install_callback(wmap_draw_vehicle);
 }
 
@@ -225,15 +222,15 @@ static inline void wmap_climb_vehicle(void)
     WmapSpriteActor* actor;
 
     actor = wmap_turn_vehicle(1);
-    if (D_801AFBD0.height < WMAP_VEHICLE_MAX_HEIGHT)
+    if (g_wmap_actor_motions.height < WMAP_VEHICLE_MAX_HEIGHT)
     {
-        D_801AFBD0.height += 1;
+        g_wmap_actor_motions.height += 1;
     }
-    if (D_801AFBD0.radius < WMAP_VEHICLE_MAX_RADIUS)
+    if (g_wmap_actor_motions.radius < WMAP_VEHICLE_MAX_RADIUS)
     {
-        D_801AFBD0.radius += WMAP_VEHICLE_RADIUS_STEP;
+        g_wmap_actor_motions.radius += WMAP_VEHICLE_RADIUS_STEP;
     }
-    if ((D_8011CF74 & 3) == 0)
+    if ((g_wmap_frame_count & 3) == 0)
     {
         if (actor->scale_index < WMAP_VEHICLE_SCALE_MAX)
         {
@@ -258,7 +255,7 @@ WmapSpriteActor* wmap_turn_vehicle(s32 advance)
     /* The heading is read unsigned here (lhu); the other users read it signed. */
     if (advance != 0)
     {
-        WmapVehicleMotion* motion = &D_801AFBD0;
+        WmapVehicleMotion* motion = &g_wmap_actor_motions;
         s32 angle = (u16)motion->heading + WMAP_HEADING_TURN_SPEED;
 
         angle &= WMAP_HEADING_MASK;
@@ -266,7 +263,7 @@ WmapSpriteActor* wmap_turn_vehicle(s32 advance)
     }
     else
     {
-        WmapVehicleMotion* motion = &D_801AFBD0;
+        WmapVehicleMotion* motion = &g_wmap_actor_motions;
         s32 angle = (u16)motion->heading;
 
         angle &= WMAP_HEADING_MASK;
@@ -280,7 +277,7 @@ WmapSpriteActor* wmap_turn_vehicle(s32 advance)
         {
             actor->previous_sequence = -1;
         }
-        g_wmap_vehicle_animation.data = &D_8011D538[WMAP_VEHICLE_BANK_SIZE];
+        g_wmap_vehicle_animation.data = &g_wmap_animation_bank_0[WMAP_VEHICLE_BANK_SIZE];
         g_wmap_vehicle_bank_flipped = 1;
     }
     else
@@ -289,10 +286,10 @@ WmapSpriteActor* wmap_turn_vehicle(s32 advance)
         {
             actor->previous_sequence = -1;
         }
-        g_wmap_vehicle_animation.data = D_8011D538;
+        g_wmap_vehicle_animation.data = g_wmap_animation_bank_0;
         g_wmap_vehicle_bank_flipped = 0;
     }
-    if ((u32)(heading - 0x401) < 0x7FFU && D_801AFBD0.height < WMAP_VEHICLE_LOW_HEIGHT)
+    if ((u32)(heading - 0x401) < 0x7FFU && g_wmap_actor_motions.height < WMAP_VEHICLE_LOW_HEIGHT)
     {
         heading = WMAP_VEHICLE_OT_BEHIND;
     }
@@ -300,7 +297,7 @@ WmapSpriteActor* wmap_turn_vehicle(s32 advance)
     {
         heading = WMAP_VEHICLE_OT_FRONT;
     }
-    D_801AFBD0.ot_index = heading;
+    g_wmap_actor_motions.ot_index = heading;
     return actor;
 }
 
@@ -335,13 +332,13 @@ s32 wmap_draw_vehicle(s32 initialize)
     WmapSpriteActor* actor = &g_wmap_vehicle_actor;
     s32 animation_frame;
 
-    angle = D_801AFBD0.heading;
+    angle = g_wmap_actor_motions.heading;
     PushMatrix();
     SetRotMatrix(&D_8011D0E8);
     SetTransMatrix(&D_8011D0E8);
-    position.vx = ((D_801AFBD0.radius >> 4) * (ccos(angle) >> 4)) >> 6;
-    position.vy = ((D_801AFBD0.radius >> 4) * (csin(angle) >> 4)) >> 6;
-    position.vz = D_801AFBD0.height;
+    position.vx = ((g_wmap_actor_motions.radius >> 4) * (ccos(angle) >> 4)) >> 6;
+    position.vy = ((g_wmap_actor_motions.radius >> 4) * (csin(angle) >> 4)) >> 6;
+    position.vz = g_wmap_actor_motions.height;
     gte_ldv0(&position);
     gte_rtps();
     animation_frame = wmap_step_actor_animation(actor, &g_wmap_vehicle_animation);
@@ -353,16 +350,16 @@ s32 wmap_draw_vehicle(s32 initialize)
         }
     }
     gte_stsxy(&g_wmap_vehicle_screen_position);
-    if (D_801AFBD0.ot_override != 0)
+    if (g_wmap_actor_motions.ot_override != 0)
     {
-        wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, D_801AFBD0.ot_override, WMAP_VEHICLE_VARIANT);
+        wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, g_wmap_actor_motions.ot_override, WMAP_VEHICLE_VARIANT);
     }
     else
     {
-        wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, D_801AFBD0.ot_index, WMAP_VEHICLE_VARIANT);
+        wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, g_wmap_actor_motions.ot_index, WMAP_VEHICLE_VARIANT);
     }
     PopMatrix();
-    return D_801AFBD0.active;
+    return g_wmap_actor_motions.active;
 }
 
 /**
@@ -511,7 +508,7 @@ static s32 wmap_fly_vehicle(s32 initialize)
     if (g_wmap_vehicle_phase == 0)
     {
         wmap_turn_vehicle(1);
-        if (D_801AFBD0.heading == g_wmap_route_headings[g_wmap_vehicle_route])
+        if (g_wmap_actor_motions.heading == g_wmap_route_headings[g_wmap_vehicle_route])
         {
             g_wmap_view_scroll_mode = 2;
             g_wmap_scroll_remaining_x = (g_wmap_vehicle_target_x - g_wmap_vehicle_cell_x) * WMAP_CELL_SPACING;
@@ -543,7 +540,7 @@ static s32 wmap_fly_vehicle_first_leg(s32 initialize)
     if (g_wmap_vehicle_phase == 0)
     {
         wmap_turn_vehicle(1);
-        if (D_801AFBD0.heading == g_wmap_route_headings[g_wmap_vehicle_route])
+        if (g_wmap_actor_motions.heading == g_wmap_route_headings[g_wmap_vehicle_route])
         {
             g_wmap_view_scroll_mode = 2;
             g_wmap_vehicle_phase++;
@@ -617,7 +614,7 @@ void wmap_special_return_climb_vehicle(void)
 s32 wmap_finish_vehicle_turn(s32 initialize)
 {
     wmap_turn_vehicle(1);
-    if (D_801AFBD0.heading == WMAP_HEADING_LANDING)
+    if (g_wmap_actor_motions.heading == WMAP_HEADING_LANDING)
     {
         g_wmap_vehicle_phase = 0;
         return 0;
@@ -702,8 +699,8 @@ void wmap_special_travel_wait_scroll(void)
 /** @brief Special travel step 7: fly the vehicle to the party unless the party is at the start land. */
 void wmap_special_travel_fly_to_party(void)
 {
-    D_801AFBD0.ot_index = WMAP_VEHICLE_OT_FLIGHT;
-    if (D_80139290[g_wmap_travelers[0].cell_x][g_wmap_travelers[0].cell_y].land_id == WMAP_TRAVEL_START_LAND)
+    g_wmap_actor_motions.ot_index = WMAP_VEHICLE_OT_FLIGHT;
+    if (g_wmap_cells[g_wmap_travelers[0].cell_x][g_wmap_travelers[0].cell_y].land_id == WMAP_TRAVEL_START_LAND)
     {
         g_wmap_vehicle_flying = 0;
     }
@@ -742,9 +739,9 @@ void wmap_special_travel_turn(void)
     s32 remaining_ticks;
 
     wmap_turn_vehicle(1);
-    if (D_801AFBD0.heading == WMAP_HEADING_DEPARTURE)
+    if (g_wmap_actor_motions.heading == WMAP_HEADING_DEPARTURE)
     {
-        D_800D9268[0].resource_index = -1;
+        g_wmap_sprite_actors[0].resource_index = -1;
         g_wmap_special_travel_timer = 0;
         g_wmap_special_travel_step += 1;
     }
@@ -789,9 +786,9 @@ void wmap_special_travel_start_cruise(void)
 void wmap_special_travel_cruise(void)
 {
     wmap_turn_vehicle(1);
-    if (D_801AFBD0.heading == WMAP_HEADING_CRUISE)
+    if (g_wmap_actor_motions.heading == WMAP_HEADING_CRUISE)
     {
-        D_800D9268[0].resource_index = 0;
+        g_wmap_sprite_actors[0].resource_index = 0;
     }
     if (--g_wmap_special_travel_timer == 0)
     {
@@ -821,7 +818,7 @@ void wmap_special_travel_wait_landing(void)
 /** @brief Special travel step 17: stop drawing the vehicle on its orbit. */
 void wmap_special_travel_stop_vehicle(void)
 {
-    D_801AFBD0.active = 0;
+    g_wmap_actor_motions.active = 0;
     g_wmap_special_travel_timer = WMAP_VEHICLE_WAIT_FRAMES;
     g_wmap_special_travel_step += 1;
     wmap_special_travel_fly_away();
@@ -834,7 +831,7 @@ void wmap_special_travel_fly_away(void)
 
     wmap_turn_vehicle(0);
     wmap_step_actor_animation(actor, &g_wmap_vehicle_animation);
-    wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, D_801AFBD0.ot_index, WMAP_VEHICLE_VARIANT);
+    wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, g_wmap_actor_motions.ot_index, WMAP_VEHICLE_VARIANT);
     g_wmap_vehicle_screen_position.point.x -= 6;
     if (--g_wmap_special_travel_timer == 0)
     {
@@ -927,9 +924,9 @@ void wmap_special_return_start_cruise(void)
 void wmap_special_return_cruise(void)
 {
     wmap_turn_vehicle(1);
-    if (D_801AFBD0.heading == WMAP_HEADING_CRUISE)
+    if (g_wmap_actor_motions.heading == WMAP_HEADING_CRUISE)
     {
-        D_800D9268[0].resource_index = 0;
+        g_wmap_sprite_actors[0].resource_index = 0;
     }
     if (--g_wmap_special_return_timer == 0)
     {
@@ -959,7 +956,7 @@ void wmap_special_return_wait_landing(void)
 /** @brief Special return step 11: stop drawing the vehicle on its orbit. */
 void wmap_special_return_stop_vehicle(void)
 {
-    D_801AFBD0.active = 0;
+    g_wmap_actor_motions.active = 0;
     g_wmap_special_return_timer = WMAP_VEHICLE_WAIT_FRAMES;
     g_wmap_special_return_step += 1;
     wmap_special_return_fly_away();
@@ -972,7 +969,7 @@ void wmap_special_return_fly_away(void)
 
     wmap_turn_vehicle(0);
     wmap_step_actor_animation(actor, &g_wmap_vehicle_animation);
-    wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, D_801AFBD0.ot_index, WMAP_VEHICLE_VARIANT);
+    wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, g_wmap_actor_motions.ot_index, WMAP_VEHICLE_VARIANT);
     g_wmap_vehicle_screen_position.point.x -= 4;
     if (--g_wmap_special_return_timer == 0)
     {

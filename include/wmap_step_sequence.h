@@ -249,15 +249,15 @@
  * @param name Step function name.
  * @param step The timeline's step global.
  * @param cells Land cell grid.
- * @param row Row of the focus cell.
- * @param column Column of the focus cell.
+ * @param cell_x Cell x (first index into @p cells).
+ * @param cell_y Cell y (second index into @p cells).
  * @param cell_value Value stored in the cell, with bit 0x100 set.
  */
-#define WMAP_STEP_FINISH_MARK_CELL(name, step, cells, row, column, cell_value)                                                                                 \
+#define WMAP_STEP_FINISH_MARK_CELL(name, step, cells, cell_x, cell_y, cell_value)                                                                              \
     void name(void)                                                                                                                                            \
     {                                                                                                                                                          \
         g_wmap_sequence_busy = 0;                                                                                                                              \
-        cells[row][column].value = cell_value | 0x100;                                                                                                         \
+        cells[cell_x][cell_y].value = cell_value | 0x100;                                                                                                      \
         step += 1;                                                                                                                                             \
     }
 

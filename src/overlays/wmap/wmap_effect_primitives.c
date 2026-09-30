@@ -35,30 +35,29 @@ typedef struct
     SVECTOR velocity;
 } WmapMovingPoint;
 
-extern s32 D_8011CF74;
+extern s32 g_wmap_frame_count;
 extern s32 D_8013B264;
 extern s32 D_8013B270;
 extern s32 D_8013B278;
 extern s32 D_8013B280;
 extern s32 D_8013B284;
-extern WmapMotion D_801AFBD0[];
-extern s32 D_801B0FD0;
+extern WmapMotion g_wmap_actor_motions[];
+extern s32 g_wmap_particle_intensity;
 extern SVECTOR g_wmap_camera_rotation;
 extern SVECTOR D_801398C8;
 extern VECTOR g_wmap_camera_translation;
 extern VECTOR D_80182D48;
 extern MATRIX D_8011D0E8;
-extern WmapSpriteActor D_800D9268[];
 extern u16 D_80139980;
-extern WmapResource D_80139988[];
+extern WmapResource g_wmap_actor_animations[];
 extern u8 D_800D9150;
 extern u8 D_800DCEA8;
 extern u8 D_800DCEB8;
 extern s16 D_800DCEBA;
 extern s16 D_800DCEBC;
 extern u8 g_wmap_focus_screen_position;
-extern s32 D_8011D510;
-extern s32 D_8011D530;
+extern s32 g_wmap_focus_cell_x;
+extern s32 g_wmap_focus_cell_y;
 extern u8 D_80139200;
 extern s32 D_80139204;
 extern u16 D_80139210;
@@ -139,7 +138,7 @@ void func_8006A2FC(void* arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4_value, s32
         do
         {
             actor = &((WmapParticleActor*)arg0)[i];
-            motion = &D_801AFBD0[i + config->first_motion];
+            motion = &g_wmap_actor_motions[i + config->first_motion];
             if (motion->state != 0)
             {
                 position.vx = ((motion->radius >> 3) * (ccos(motion->angle) >> 6)) >> 12;
@@ -271,11 +270,11 @@ void func_8006A2FC(void* arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4_value, s32
         } while (i < arg2);
     }
     spawn_interval = config->spawn_interval;
-    if ((spawn_interval != -1) && (((s32)D_8011CF74 % spawn_interval) == 0) && (i = 0, (arg2 > 0)))
+    if ((spawn_interval != -1) && (((s32)g_wmap_frame_count % spawn_interval) == 0) && (i = 0, (arg2 > 0)))
     {
         do
         {
-            motion = &D_801AFBD0[i + config->first_motion];
+            motion = &g_wmap_actor_motions[i + config->first_motion];
             if (motion->state == 0)
             {
                 WmapParticleActor* spawn_actor = &((WmapParticleActor*)arg0)[i];
@@ -360,7 +359,7 @@ void func_8006A9C4(s32 actor_address, s32 resource_address, s32 first, s32 end, 
         {
             resource = (i * 8) + resource_address;
             actor = (i * 0x2C) + actor_address;
-            motion_base = D_801AFBD0;
+            motion_base = g_wmap_actor_motions;
             motion = &motion_base[i];
             if (M2C_FIELD(motion, s16 *, 0) != 0)
             {
@@ -419,15 +418,15 @@ void func_8006A9C4(s32 actor_address, s32 resource_address, s32 first, s32 end, 
             }
         }
     }
-    if (D_8011CF74 % spawn_interval == 0)
+    if (g_wmap_frame_count % spawn_interval == 0)
     {
         for (i = first; i < end; i++)
         {
             spawn_actor = (i * 0x2C) + actor_address;
-            spawn_motion = (i * 0x14) + (u8 *)&D_801AFBD0;
+            spawn_motion = (i * 0x14) + (u8 *)&g_wmap_actor_motions;
             if (M2C_FIELD(spawn_motion, s16 *, 0) == 0)
             {
-                if (D_801B0FD0 >= active)
+                if (g_wmap_particle_intensity >= active)
                 {
                     M2C_FIELD(spawn_actor, s8 *, 6) = 0xF;
                     M2C_FIELD(spawn_actor, s16 *, 2) = 0;
@@ -534,11 +533,11 @@ void func_8006AFAC(s32 first, s32 end, s32 frame, s32 depth,
     for (i = first; i < end; i++)
     {
         actor_offset = i * 44;
-        motion_base = D_801AFBD0;
+        motion_base = g_wmap_actor_motions;
         motion = &motion_base[i];
         if (motion->state != 0)
         {
-            actor = (WmapSpriteActor *)((u8 *)D_800D9268 + actor_offset);
+            actor = (WmapSpriteActor *)((u8 *)g_wmap_sprite_actors + actor_offset);
             position.vx = (s16) ((s32) (((s32) motion->radius >> 6) * (ccos(motion->angle) >> 6)) >> 0xC);
             y_product = ((s32) motion->radius >> 6) * (csin(motion->angle) >> 6);
             position.vz = 0;
@@ -550,7 +549,7 @@ void func_8006AFAC(s32 first, s32 end, s32 frame, s32 depth,
             M2C_FIELD(actor, u16 *, 0x24) = (u16) D_80139980;
             gte_stsxy(&screen_position);
             resource_offset = i * 8;
-            offsets = (s16 *)((WmapResource *)((u8 *)D_80139988 + resource_offset))->data;
+            offsets = (s16 *)((WmapResource *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
             data = (u8 *)offsets;
             if (actor->previous_sequence != actor->sequence)
             {
@@ -592,11 +591,11 @@ void func_8006AFAC(s32 first, s32 end, s32 frame, s32 depth,
     }
     for (i = first; i < end; i++)
     {
-        spawn_actor = &D_800D9268[i];
-        spawn_motion = &D_801AFBD0[i];
+        spawn_actor = &g_wmap_sprite_actors[i];
+        spawn_motion = &g_wmap_actor_motions[i];
         if (spawn_motion->state == 0)
         {
-            if (active++ > D_801B0FD0)
+            if (active++ > g_wmap_particle_intensity)
             {
                 break;
             }
@@ -657,8 +656,8 @@ void func_8006B328(s32 first, s32 end, s32 spawn_interval, s32 scale_override, s
         motion_offset = i * 0x14;
         do
         {
-            motion = motion_offset + (u8 *)&D_801AFBD0;
-            actor = actor_offset + (u8 *)&D_800D9268;
+            motion = motion_offset + (u8 *)&g_wmap_actor_motions;
+            actor = actor_offset + (u8 *)&g_wmap_sprite_actors;
             if (M2C_FIELD(motion, s16 *, 0) != 0)
             {
                 if (scale_override != -1)
@@ -672,7 +671,7 @@ void func_8006B328(s32 first, s32 end, s32 spawn_interval, s32 scale_override, s
                 gte_ldv0(&position);
                 gte_rtps();
                 resource_offset = i * sizeof(WmapResource);
-                address = (s32)((WmapResource *)((u8 *)D_80139988 + resource_offset))->data;
+                address = (s32)((WmapResource *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
                 if (M2C_FIELD(actor, s16 *, 0x10) != M2C_FIELD(actor, s16 *, 0xE))
                 {
                     M2C_FIELD(actor, s16 *, 0x10) = (s16) (u16) M2C_FIELD(actor, s16 *, 0xE);
@@ -782,8 +781,8 @@ void func_8006B6EC(s32 first, s32 end, s32 frame, s32 z_step, s32 depth)
 
     for (i = first; i < end; i++)
     {
-        motion = &D_801AFBD0[i];
-        actor_base = D_800D9268;
+        motion = &g_wmap_actor_motions[i];
+        actor_base = g_wmap_sprite_actors;
         actor = &actor_base[i];
         if (motion->state != 0)
         {
@@ -797,7 +796,7 @@ void func_8006B6EC(s32 first, s32 end, s32 frame, s32 z_step, s32 depth)
             motion->angle = (motion->angle + motion->angular_velocity) & 4095;
             gte_stsxy(&screen_position);
             resource_offset = i * 8;
-            offsets = (s16 *)((WmapResource *)((u8 *)D_80139988 + resource_offset))->data;
+            offsets = (s16 *)((WmapResource *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
             data = (u8 *)offsets;
             if (actor->previous_sequence != actor->sequence)
             {
@@ -873,12 +872,12 @@ void func_8006B998(s32 first, s32 end, void *point_data, s32 frame, s32 depth)
     bounds = &points[end];
     for (i = first; i < end; point++, i++)
     {
-        actor_base = D_800D9268;
+        actor_base = g_wmap_sprite_actors;
         actor = &actor_base[i];
         gte_ldv0(&point->position);
         gte_rtps();
         resource_offset = i * sizeof(WmapResource);
-        offsets = (s16 *)((WmapResource *)((u8 *)D_80139988 + resource_offset))->data;
+        offsets = (s16 *)((WmapResource *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
         data = (u8 *)offsets;
         if (actor->previous_sequence != actor->sequence)
         {
@@ -961,9 +960,9 @@ void func_8006BC44(s32 first, s32 count, void *config, s32 expire_by_size)
     M2C_FIELD(config, s32 *, 8) = (s32) (M2C_FIELD(config, s32 *, 8) - 1);
     for (i = first; i < first + count; i += 15)
     {
-        actor = &D_800D9268[i];
-        source_motion = &D_801AFBD0[i];
-        resource = &D_80139988[i];
+        actor = &g_wmap_sprite_actors[i];
+        source_motion = &g_wmap_actor_motions[i];
+        resource = &g_wmap_actor_animations[i];
         motion = source_motion;
         position.vx = (s16) ((s32) (((s32) M2C_FIELD(motion, s32 *, 8) >> 3) * (ccos(M2C_FIELD(motion, s16 *, 2)) >> 6)) >> 0xC);
         position.vy = (s16) ((s32) (((s32) M2C_FIELD(motion, s32 *, 8) >> 3) * (csin(M2C_FIELD(motion, s16 *, 2)) >> 6)) >> 0xC);
@@ -979,11 +978,11 @@ void func_8006BC44(s32 first, s32 count, void *config, s32 expire_by_size)
         {
             if (M2C_FIELD(config, s32 *, 0) != -1)
             {
-                copy_actor = ((i + M2C_FIELD(config, s32 *, 4)) * 0x2C) + (u8 *)&D_800D9268;
+                copy_actor = ((i + M2C_FIELD(config, s32 *, 4)) * 0x2C) + (u8 *)&g_wmap_sprite_actors;
                 *(WmapSpriteActor *)copy_actor = *(WmapSpriteActor *)actor;
-                copy_motion = ((i + M2C_FIELD(config, s32 *, 4)) * 0x14) + (u8 *)&D_801AFBD0;
+                copy_motion = ((i + M2C_FIELD(config, s32 *, 4)) * 0x14) + (u8 *)&g_wmap_actor_motions;
                 *(WmapMotion *)copy_motion = *(WmapMotion *)source_motion;
-                copy_resource = ((i + M2C_FIELD(config, s32 *, 4)) * 8) + (u8 *)&D_80139988;
+                copy_resource = ((i + M2C_FIELD(config, s32 *, 4)) * 8) + (u8 *)&g_wmap_actor_animations;
                 *(WmapResource *)copy_resource = *(WmapResource *)resource;
                 M2C_FIELD(copy_actor, u16 *, 0x26) = (u16) M2C_FIELD(config, u16 *, 0x18);
                 M2C_FIELD(copy_actor, u16 *, 0x22) = (u16) M2C_FIELD(config, u16 *, 0x1C);
@@ -1006,12 +1005,12 @@ void func_8006BC44(s32 first, s32 count, void *config, s32 expire_by_size)
     }
     for (i = first; i < first + count; i++)
     {
-        draw_actor = &D_800D9268[i];
-        motion = (i * 0x14) + (u8 *)&D_801AFBD0;
+        draw_actor = &g_wmap_sprite_actors[i];
+        motion = (i * 0x14) + (u8 *)&g_wmap_actor_motions;
         if (M2C_FIELD(motion, s16 *, 0) != 0)
         {
             resource_offset = i * 8;
-            offsets = (s16 *)((WmapResource *)((u8 *)D_80139988 + resource_offset))->data;
+            offsets = (s16 *)((WmapResource *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
             data = (u8 *)offsets;
             if (draw_actor->previous_sequence != draw_actor->sequence)
             {
@@ -1062,10 +1061,10 @@ s32 func_8006C0EC(void)
     func_8006AEE0();
     position.vz = 0;
     position.vx =
-        (s16)((s32)((((D_8011D510 - 1) * 0xA0) - ((s32)(M2C_FIELD(&g_wmap_view, s32*, 0) * 0x14000) / (s32)M2C_FIELD(&g_wmap_view, s32*, 8))) * 0x6000) /
+        (s16)((s32)((((g_wmap_focus_cell_x - 1) * 0xA0) - ((s32)(M2C_FIELD(&g_wmap_view, s32*, 0) * 0x14000) / (s32)M2C_FIELD(&g_wmap_view, s32*, 8))) * 0x6000) /
               (s32)M2C_FIELD(&g_wmap_view, s32*, 8));
     position.vy =
-        (s16)((s32)((((D_8011D530 - 1) * 0xA0) - ((s32)(M2C_FIELD(&g_wmap_view, s32*, 4) * 0x14000) / (s32)M2C_FIELD(&g_wmap_view, s32*, 8))) * 0x6000) /
+        (s16)((s32)((((g_wmap_focus_cell_y - 1) * 0xA0) - ((s32)(M2C_FIELD(&g_wmap_view, s32*, 4) * 0x14000) / (s32)M2C_FIELD(&g_wmap_view, s32*, 8))) * 0x6000) /
               (s32)M2C_FIELD(&g_wmap_view, s32*, 8));
     gte_ldv0(&position);
     gte_rtps();
@@ -1171,8 +1170,8 @@ void func_8006C448(void *config)
     for (i = 0; i < M2C_FIELD(config, s32 *, 0); i++)
     {
         spawn_index = M2C_FIELD(config, s32 *, 4) + i;
-        spawn_actor = &D_800D9268[spawn_index];
-        spawn_motion = (spawn_index * 0x14) + (u8 *)&D_801AFBD0;
+        spawn_actor = &g_wmap_sprite_actors[spawn_index];
+        spawn_motion = (spawn_index * 0x14) + (u8 *)&g_wmap_actor_motions;
         if (M2C_FIELD(spawn_motion, s16 *, 0) == 0)
         {
             M2C_FIELD(spawn_motion, s16 *, 0) = 1;
@@ -1192,8 +1191,8 @@ void func_8006C448(void *config)
     for (i = 0; i < M2C_FIELD(config, s32 *, 0); i++)
     {
         draw_index = M2C_FIELD(config, s32 *, 4) + i;
-        actor = &D_800D9268[draw_index];
-        motion = (draw_index * 0x14) + (u8 *)&D_801AFBD0;
+        actor = &g_wmap_sprite_actors[draw_index];
+        motion = (draw_index * 0x14) + (u8 *)&g_wmap_actor_motions;
         if (M2C_FIELD(motion, s16 *, 0) != 0)
         {
             position.vx = M2C_FIELD(motion, u16 *, 0x10);
@@ -1202,7 +1201,7 @@ void func_8006C448(void *config)
             gte_ldv0(&position);
             gte_rtps();
             resource_offset = (i + M2C_FIELD(config, s32 *, 4)) * 8;
-            offsets = (s16 *)((WmapResource *)((u8 *)D_80139988 + resource_offset))->data;
+            offsets = (s16 *)((WmapResource *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
             data = (u8 *)offsets;
             if (actor->previous_sequence != actor->sequence)
             {

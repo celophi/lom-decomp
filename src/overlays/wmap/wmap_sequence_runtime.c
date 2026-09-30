@@ -69,21 +69,17 @@ extern u32 g_wmap_land_entry_step;
 extern u32 g_wmap_land_focus_step;
 extern s32 g_wmap_land_focus_timer;
 extern void (*g_wmap_land_focus_steps[WMAP_LAND_FOCUS_STEPS])(void);
-extern s32 D_8011D4FC;
+extern s32 g_wmap_selected_artifact;
 extern s32 D_80182E34;
 extern s32 D_800DBE70;
 extern s32 D_800DBE78;
-extern s32 D_8013B208;
 extern s32 g_wmap_callback_active[];
 extern WmapSequenceCallback g_wmap_callbacks[];
-extern WmapSpriteActor D_800D9268[];
-extern WmapAnimationSlot D_80139988[];
+extern WmapAnimationSlot g_wmap_actor_animations[];
 
-extern s32 D_8011D510;
-extern s32 D_8011D530;
 extern WmapView g_wmap_view;
 extern s32 D_800D923C;
-extern s32* D_80139280;
+extern s32* g_wmap_effect_params;
 extern s32 D_80139234;
 extern s32 D_8013923C;
 extern s32 D_80139240;
@@ -94,8 +90,7 @@ extern s32 D_80139264;
 extern s32 D_80139268;
 extern s32 D_8013926C;
 extern s32 D_80139284;
-extern WmapLandCell D_80139290[][6];
-extern VECTOR D_8011CF60;
+extern WmapLandCell g_wmap_cells[][6];
 extern WmapCoordinatePair g_wmap_focus_screen_position;
 extern SVECTOR g_wmap_camera_rotation;
 extern s32 g_wmap_land_entry_timer;
@@ -220,7 +215,7 @@ void wmap_land_focus_wait_2(void)
  */
 void wmap_land_focus_fade_out(void)
 {
-    if (D_8011D4FC != WMAP_NO_FADE_LAND)
+    if (g_wmap_selected_artifact != WMAP_NO_FADE_LAND)
     {
         g_wmap_screen_fade_mode = 2;
     }
@@ -267,7 +262,7 @@ void wmap_land_focus_wait_6(void)
 void wmap_land_focus_lock(void)
 {
     D_800DBE70 = 0;
-    D_8013B208 = 1;
+    g_wmap_event_active = 1;
     D_800DBE78 = 1;
     g_wmap_land_focus_timer = 8;
     g_wmap_land_focus_step += 1;
@@ -409,9 +404,9 @@ void wmap_init_sequences(void)
 
     for (i = 0; i < WMAP_ACTOR_COUNT; i++)
     {
-        D_800D9268[i].unknown_00 = i;
-        D_80139988[i].unknown_00 = i;
-        D_800D9268[i].resource_index = -1;
+        g_wmap_sprite_actors[i].unknown_00 = i;
+        g_wmap_actor_animations[i].unknown_00 = i;
+        g_wmap_sprite_actors[i].resource_index = -1;
     }
     for (i = WMAP_SEQUENCE_SLOTS - 1; i >= 0; i--)
     {
@@ -439,8 +434,8 @@ void wmap_project_focus_cell(void)
     SVECTOR position;
 
     position.vz = 0;
-    position.vx = (((D_8011D510 - 1) * WMAP_CELL_SIZE - g_wmap_view.x * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale;
-    position.vy = (((D_8011D530 - 1) * WMAP_CELL_SIZE - g_wmap_view.y * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale;
+    position.vx = (((g_wmap_focus_cell_x - 1) * WMAP_CELL_SIZE - g_wmap_view.x * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale;
+    position.vy = (((g_wmap_focus_cell_y - 1) * WMAP_CELL_SIZE - g_wmap_view.y * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale;
     gte_ldv0(&position);
     gte_rtps();
 }
@@ -513,23 +508,23 @@ void func_8006CFE4(void* actor, void* resource, s32 arg2, s32 arg3, s32 arg4, s3
  */
 void func_8006D014(void* actor, void* resource, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6)
 {
-    D_80139280[1] = D_80139234;
-    D_80139280[2] = D_8013923C;
-    D_80139280[3] = D_80139240;
-    D_80139280[4] = D_8013924C;
-    D_80139280[5] = D_80139250;
-    D_80139280[6] = D_80139260;
-    D_80139280[7] = D_80139264;
-    D_80139280[8] = D_80139268;
-    D_80139280[9] = D_8013926C;
-    D_80139280[10] = D_80139284;
-    func_8006A2FC(actor, resource, arg2, arg3, arg4, arg5, arg6, D_80139280);
+    g_wmap_effect_params[1] = D_80139234;
+    g_wmap_effect_params[2] = D_8013923C;
+    g_wmap_effect_params[3] = D_80139240;
+    g_wmap_effect_params[4] = D_8013924C;
+    g_wmap_effect_params[5] = D_80139250;
+    g_wmap_effect_params[6] = D_80139260;
+    g_wmap_effect_params[7] = D_80139264;
+    g_wmap_effect_params[8] = D_80139268;
+    g_wmap_effect_params[9] = D_8013926C;
+    g_wmap_effect_params[10] = D_80139284;
+    func_8006A2FC(actor, resource, arg2, arg3, arg4, arg5, arg6, g_wmap_effect_params);
 }
 
 /**
  * @brief Find the map cell that holds a land.
  * @param value Land id to find.
- * @param row_out Receives the cell x (first index of D_80139290).
+ * @param row_out Receives the cell x (first index of g_wmap_cells).
  * @param column_out Receives the cell y.
  * @return One if found, otherwise zero; outputs are unchanged on failure.
  */
@@ -541,7 +536,7 @@ s32 wmap_find_land_cell(s32 value, s32* row_out, s32* column_out)
     {
         for (row = 0; row < 6; row++)
         {
-            if (D_80139290[row][column].land_id == value)
+            if (g_wmap_cells[row][column].land_id == value)
             {
                 *row_out = row;
                 *column_out = column;
@@ -553,13 +548,14 @@ s32 wmap_find_land_cell(s32 value, s32* row_out, s32* column_out)
 }
 
 /**
- * @brief Install a rotation matrix with the map translation.
+ * @brief Install @p rotation as the GTE rotation, with zero translation.
+ * @param rotation Rotation to install.
  */
 void wmap_set_map_rotation(SVECTOR* rotation)
 {
     MATRIX matrix;
     RotMatrix(rotation, &matrix);
-    TransMatrix(&matrix, &D_8011CF60);
+    TransMatrix(&matrix, &g_wmap_zero_translation);
     SetRotMatrix(&matrix);
     SetTransMatrix(&matrix);
 }
@@ -585,7 +581,7 @@ static void wmap_set_camera_model_transform(VECTOR* translation, SVECTOR* rotati
     SetRotMatrix(&matrices[0]);
     SetTransMatrix(&matrices[0]);
     RotMatrix(rotation, &matrices[1]);
-    TransMatrix(&matrices[1], &D_8011CF60);
+    TransMatrix(&matrices[1], &g_wmap_zero_translation);
     CompMatrix(&matrices[0], &matrices[1], &matrices[1]);
     SetRotMatrix(&matrices[1]);
     SetTransMatrix(&matrices[1]);
@@ -735,7 +731,7 @@ void wmap_land_return_wait_scroll(void)
  */
 void wmap_land_return_finish(void)
 {
-    D_8013B208 = 0;
+    g_wmap_event_active = 0;
     wmap_reset_after_transition();
     g_wmap_land_return_step += 1;
 }

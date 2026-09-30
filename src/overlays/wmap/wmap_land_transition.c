@@ -109,10 +109,8 @@ extern s32 D_800DBE78;
 extern s32 g_wmap_cursor_column;
 extern s32 g_wmap_cursor_row;
 extern s32 g_wmap_sequence_count;
-extern s32 D_80139244;
 extern s32 g_wmap_view_mode;
 extern s32 g_wmap_view_scroll_mode;
-extern s32 D_8013B208;
 extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
 extern s32 D_80182E34;
@@ -121,12 +119,10 @@ extern u16 D_800CC776;
 extern s32 D_800CCBF4[];
 extern s32 D_8011CF18;
 extern WmapRouteCell D_8011D108[6][6];
-extern s32 D_8011D4FC;
-extern s32 D_8011D510;
+extern s32 g_wmap_selected_artifact;
 extern s32 D_8011D52C;
-extern s32 D_8011D530;
 extern s32 D_80129550;
-extern WmapCell D_80139290[6][6];
+extern WmapCell g_wmap_cells[6][6];
 extern s32 D_801398F4;
 extern WmapProjectionState g_wmap_view;
 extern s32 D_80182DE0;
@@ -166,13 +162,13 @@ s32 wmap_begin_land_placement(s32 initialize)
     D_800DBE70 = 2;
     g_wmap_screen_fade_mode = 1;
     D_800DBE78 = WMAP_CAROUSEL_SLIDE_IN;
-    D_80139244 = 0;
+    g_wmap_transition_mesh_hidden = 0;
     D_80182E34 = 2;
     g_wmap_backdrop_target_level = 0x10;
     func_8006D870(0);
     g_wmap_view_scroll_mode = 2;
     g_wmap_view_mode = 0;
-    D_8013B208 = 0;
+    g_wmap_event_active = 0;
     D_800D928A = 0x80;
     points = g_wmap_cell_focus_offsets;
     y = g_wmap_cursor_row;
@@ -224,7 +220,7 @@ void wmap_update_artifact_selection(void)
 
         no_artifact = -1;
         input_mask = PADRleft;
-        if (D_8011D4FC != no_artifact)
+        if (g_wmap_selected_artifact != no_artifact)
         {
             input_mask = WMAP_PAD_CANCEL;
         }
@@ -254,7 +250,7 @@ void wmap_update_artifact_selection(void)
             }
         }
 
-        if (D_80129550 == 1 && (g_wmap_buttons_repeat & WMAP_PAD_CONFIRM) != 0 && D_8011D4FC != -1 && D_80139290[map_x][map_y].placement_allowed != 0 && D_80182DE0 == 0)
+        if (D_80129550 == 1 && (g_wmap_buttons_repeat & WMAP_PAD_CONFIRM) != 0 && g_wmap_selected_artifact != -1 && g_wmap_cells[map_x][map_y].placement_allowed != 0 && D_80182DE0 == 0)
         {
             D_80182DE0 = D_80129550;
             wmap_play_sound(WMAP_SOUND_PLACE_ARTIFACT, WMAP_SELECTION_VOLUME);
@@ -272,7 +268,7 @@ void wmap_update_artifact_selection(void)
             cdrom_wait_queue_empty();
         }
 
-        if (D_80139290[map_x][map_y].placement_allowed != 0 && D_80182DE0 != 0)
+        if (g_wmap_cells[map_x][map_y].placement_allowed != 0 && D_80182DE0 != 0)
         {
             if (D_80182DE0 < WMAP_PLACEMENT_DELAY_END)
             {
@@ -283,23 +279,23 @@ void wmap_update_artifact_selection(void)
             {
                 s32 artifact_id;
 
-                D_8011D510 = map_x;
-                D_8011D530 = map_y;
+                g_wmap_focus_cell_x = map_x;
+                g_wmap_focus_cell_y = map_y;
                 g_wmap_input_locked = 1;
                 g_wmap_buttons_held = 0;
                 D_8011D52C = 1;
                 g_wmap_buttons_repeat = 0;
-                D_8013B208 = 1;
+                g_wmap_event_active = 1;
                 akao_fade_song_volume_from(0, 60, 127, 1);
-                func_800591A8(D_8011D4FC);
-                artifact_id = D_8011D4FC;
+                func_800591A8(g_wmap_selected_artifact);
+                artifact_id = g_wmap_selected_artifact;
                 if (artifact_id == 22)
                 {
-                    wmap_place_land(D_8011D510, D_8011D530, 16);
+                    wmap_place_land(g_wmap_focus_cell_x, g_wmap_focus_cell_y, 16);
                 }
                 else
                 {
-                    wmap_place_land(D_8011D510, D_8011D530, artifact_id);
+                    wmap_place_land(g_wmap_focus_cell_x, g_wmap_focus_cell_y, artifact_id);
                 }
                 wmap_install_callback(wmap_begin_land_placement);
             }
@@ -315,7 +311,7 @@ void wmap_update_artifact_selection(void)
             g_wmap_preview_travel_frame = D_8005135C[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS + 1] - 1;
             g_wmap_preview_travel_end = D_8005135C[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS];
             func_8006D870(0);
-            D_8011D4FC = -1;
+            g_wmap_selected_artifact = -1;
             g_wmap_preview_artifact_visible = 0;
             wmap_play_sound(WMAP_SOUND_CLOSE_ARTIFACTS, WMAP_SELECTION_VOLUME);
             g_wmap_input_locked = 1;
@@ -350,7 +346,7 @@ void wmap_update_artifact_selection(void)
             s32 artifact_id;
 
             artifact_id = wmap_get_selected_artifact();
-            D_8011D4FC = artifact_id;
+            g_wmap_selected_artifact = artifact_id;
             g_wmap_preview_bob_frame = 0;
             if (artifact_id != -1)
             {
@@ -359,7 +355,7 @@ void wmap_update_artifact_selection(void)
                 {
                     for (map_x = 0; map_x < WMAP_GRID_SIZE; map_x++)
                     {
-                        D_80139290[map_x][map_y].placement_allowed = wmap_can_place_land(map_x, map_y, D_8011D4FC);
+                        g_wmap_cells[map_x][map_y].placement_allowed = wmap_can_place_land(map_x, map_y, g_wmap_selected_artifact);
                         D_8011D108[map_x][map_y].state = 0;
                     }
                 }
@@ -368,12 +364,12 @@ void wmap_update_artifact_selection(void)
                 g_wmap_input_locked = 1;
                 g_wmap_buttons_held = 0;
                 g_wmap_buttons_repeat = 0;
-                g_wmap_artifact_transfer_frame = D_800CCBF4[D_8011D4FC];
-                g_wmap_artifact_transfer_end = D_800CCBF4[D_8011D4FC + 1] - 1;
+                g_wmap_artifact_transfer_frame = D_800CCBF4[g_wmap_selected_artifact];
+                g_wmap_artifact_transfer_end = D_800CCBF4[g_wmap_selected_artifact + 1] - 1;
                 g_wmap_preview_travel_frame = D_8005135C[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS + 1] - 1;
                 g_wmap_preview_travel_end = D_8005135C[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS];
                 func_8006D870(0);
-                func_800A89DC(D_8011D4FC);
+                func_800A89DC(g_wmap_selected_artifact);
             }
         }
 
