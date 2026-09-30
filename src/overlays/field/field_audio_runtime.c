@@ -25,7 +25,6 @@
  * (include/akao_cmd.h is used by every overlay, some with other local
  * declarations of these commands).
  */
-s32 akao_start_song_channels(u8 *sequence, s32 param1, s32 param2);
 s32 akao_switch_song(s32 value0, s32 value1);
 void akao_stop_sfx(s32 value0, s32 value1);
 s32 akao_fade_song_volume(s32 song_handle, s32 frames, s32 volume);

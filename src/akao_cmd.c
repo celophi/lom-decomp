@@ -160,14 +160,16 @@ void akao_suspend_song(void)
  * @brief Queue command 0x14: start a sequence on a subset of its channels.
  * @param sequence AKAO sequence to start.
  * @param channel_mask Channels to start; 0 starts every channel.
+ * @param unused Passed by the only caller (FIELD) and ignored.
+ * @return The command's result; FIELD treats -1 as failure.
  * @see decomp.me (100%) https://decomp.me/scratch/c2C3m
  */
-void akao_start_song_channels(s32 sequence, s32 channel_mask)
+s32 akao_start_song_channels(void* sequence, s32 channel_mask, s32 unused)
 {
-    g_akao_cmd_params[0].value = sequence;
+    g_akao_cmd_params[0].buffer = sequence;
     g_akao_cmd_params[1].value = channel_mask;
     g_akao_cmd_params[2].value = 0;
-    akao_send_command(AKAO_CMD_START_SONG_CHANNELS);
+    return akao_send_command(AKAO_CMD_START_SONG_CHANNELS);
 }
 
 /**

@@ -1,5 +1,7 @@
 #include "menu_internal.h"
 
+s32 menu_lookup_item_nibble(const MenuItemEntry* item, u32 index);
+
 /**
  * @brief Play-time display: hours/minutes separator text and the pen advances after
  *        the separator and before the minutes.
@@ -2788,14 +2790,14 @@ void menu_concat_encoded_text(u8* dst, u8* src1, u8* src2)
  * @brief Extract a 4-bit nibble from a packed u32 field in the item struct and look it up in a byte table.
  * @param item Item record containing the packed nibble field.
  * @param index Nibble selector (0-7), selecting four bits at a time.
- * @param fallback Default table index used when @p index is out of range.
  * @return Signed byte from D_800F0C38 at the selected nibble index.
+ * @note An index of 8 or more reads the table at an undefined position, as
+ *       the original does; no caller passes one.
  */
-s8 menu_lookup_item_nibble(const MenuItemEntry* item, u32 index, u32 fallback)
+s32 menu_lookup_item_nibble(const MenuItemEntry* item, u32 index)
 {
     u32 nibble;
 
-    nibble = fallback;
     if (index < 8U)
     {
         switch (index)
