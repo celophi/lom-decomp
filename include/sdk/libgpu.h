@@ -21,6 +21,9 @@
     ((prim)->r0 = (red), (prim)->g0 = (green), (prim)->b0 = (blue))
 #define setXY0(prim, x, y) \
     ((prim)->x0 = (x), (prim)->y0 = (y))
+#define setXY2(prim, x0v, y0v, x1v, y1v) \
+    ((prim)->x0 = (x0v), (prim)->y0 = (y0v), \
+     (prim)->x1 = (x1v), (prim)->y1 = (y1v))
 #define setXY4(prim, x0v, y0v, x1v, y1v, x2v, y2v, x3v, y3v) \
     ((prim)->x0 = (x0v), (prim)->y0 = (y0v), \
      (prim)->x1 = (x1v), (prim)->y1 = (y1v), \

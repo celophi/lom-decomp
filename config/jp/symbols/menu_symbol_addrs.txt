@@ -210,7 +210,7 @@ g_menu_companion_node  = 0x80168A04;
 field_text_build_sprites             = 0x800641C8;
 
 // US ELF names not listed above (splat placeholders shared with the C sources).
-D_80042FB4    = 0x80043124;
+g_playtime_vsync_origin = 0x80043124;
 func_800643E0 = 0x800640B0;
 func_8006441C = 0x800640EC;
 func_80068440 = 0x800680F8;
