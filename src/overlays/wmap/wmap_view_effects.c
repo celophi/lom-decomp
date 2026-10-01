@@ -1,4 +1,5 @@
 #include "wmap_frame_render.h"
+#include "wmap_step_sequence.h"
 #include "wmap_main.h"
 #include "wmap_sprite_render.h"
 #include "wmap_view_effects.h"
@@ -211,17 +212,10 @@ s32 wmap_run_view_sequence(s32 initialize)
 }
 
 /** @brief Map view sequence step 0: restart the sequence. */
-void wmap_reset_view_sequence(void)
-{
-    g_wmap_view_sequence_step = 1;
-    g_wmap_view_sequence_timer = 1;
-}
+WMAP_STEP_RESET(wmap_reset_view_sequence, g_wmap_view_sequence_step, g_wmap_view_sequence_timer)
 
 /** @brief Map view sequence step 1: advance to the next step. */
-void wmap_advance_view_sequence(void)
-{
-    g_wmap_view_sequence_step += 1;
-}
+WMAP_STEP_ADVANCE(wmap_advance_view_sequence, g_wmap_view_sequence_step)
 
 /** @brief Clear the world-map state value at D_80182D88. */
 void func_800654EC(void)
@@ -1017,11 +1011,9 @@ void wmap_init_burst_particles(void)
 {
     s32 i;
 
-    for (i = 0; i < WMAP_BURST_PARTICLES; i++)
-    {
-        g_wmap_actor_motions[i].active = 0;
-        g_wmap_actor_animations[WMAP_BURST_ACTOR_FIRST + i].data = g_wmap_animation_bank_0;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, WMAP_BURST_PARTICLES,
+                              g_wmap_actor_motions[i].active,
+                              WMAP_BURST_ACTOR_FIRST, g_wmap_animation_bank_0);
     g_wmap_particle_intensity = 1;
     g_wmap_burst_spawning = 1;
 }

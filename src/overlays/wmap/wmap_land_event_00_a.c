@@ -195,44 +195,16 @@ void wmap_land_event_00_a_sequence_4_step_01(void)
 }
 
 /**
- * @brief World-map step handler: advance the model's spin toward a floor, draw it
- *        while active, then countdown-advance the step.
+ * @brief Move the model along Z, draw it, and fade it until the timer expires.
  */
-void wmap_land_event_00_a_sequence_5_step_02(void)
-{
-    MATRIX m;
-    s32 x;
-
-    x = g_wmap_effect_model_d_position.vz - 0xDAC;
-    g_wmap_effect_model_d_position.vz = x;
-    if (x < 0x2710)
-    {
-        g_wmap_effect_model_d_position.vz = 0x2710;
-    }
-    PushMatrix();
-    RotMatrix(&g_wmap_effect_model_d_rotation, &m);
-    TransMatrix(&m, &g_wmap_zero_translation);
-    SetRotMatrix(&m);
-    SetTransMatrix(&m);
-    if (g_wmap_effect_fade_d != 0)
-    {
-        wmap_draw_model(g_wmap_load_buffer, 0, 0x4, 0x35, 0x7800, 1, g_wmap_effect_fade_d, 0, 0, -1);
-        g_wmap_effect_fade_d -= 0x20;
-        if (g_wmap_effect_fade_d < 0)
-        {
-            g_wmap_effect_fade_d = 0;
-        }
-    }
-    PopMatrix();
-    if (--g_wmap_land_event_00_a_sequence_5_timer == 0)
-    {
-        g_wmap_land_event_00_a_sequence_5_step += 1;
-    }
-}
+WMAP_STEP_DROP_UPDATE_WITH_DRAW(wmap_land_event_00_a_sequence_5_step_02,
+    g_wmap_land_event_00_a_sequence_5_step, g_wmap_land_event_00_a_sequence_5_timer,
+    g_wmap_effect_model_d_rotation, g_wmap_effect_model_d_position, g_wmap_effect_fade_d,
+    -0xDAC, 0x20,
+    wmap_draw_model(g_wmap_load_buffer, 0, 0x4, 0x35, 0x7800, 1, g_wmap_effect_fade_d, 0, 0, -1))
 
 /**
- * @brief World-map step handler: render the animated actor, ramp its size up to a
- *        cap, scroll the shadow field, then advance when the frame counter expires.
+ * @brief Draw and spin the model while fading it in.
  */
 void wmap_land_event_00_a_sequence_6_step_02(void)
 {
@@ -243,12 +215,7 @@ void wmap_land_event_00_a_sequence_6_step_02(void)
     wmap_set_model_transform(&g_wmap_camera_translation, &D_801B2498);
     wmap_draw_model(g_wmap_effect_model_pack_1, (D_8013923C / 0x10) & 3, 0xA, 0x35, 0x7800, 0x1, D_80182DE4, 0, -0xA, -1);
     D_8013923C += 0x8;
-    value = D_80182DE4 + 0x2;
-    D_80182DE4 = value;
-    if (value >= 0x82)
-    {
-        D_80182DE4 = 0x81;
-    }
+    WMAP_MODEL_FADE_IN(D_80182DE4, 0x2, 0x81, value);
     timer = g_wmap_land_event_00_a_sequence_6_timer;
     D_801B2498.vz += 0x4;
     next_timer = timer - 1;
@@ -260,8 +227,7 @@ void wmap_land_event_00_a_sequence_6_step_02(void)
 }
 
 /**
- * @brief World-map step handler: render the animated actor, ramp its size down to a
- *        floor, scroll the shadow field, then advance when the frame counter expires.
+ * @brief Draw and spin the model while fading it out.
  */
 void wmap_land_event_00_a_sequence_6_step_04(void)
 {
@@ -271,12 +237,7 @@ void wmap_land_event_00_a_sequence_6_step_04(void)
 
     wmap_set_model_transform(&g_wmap_camera_translation, &D_801B2498);
     wmap_draw_model(g_wmap_effect_model_pack_1, (D_8013923C / 0x10) & 3, 0xA, 0x35, 0x7800, 0x1, D_80182DE4, 0, -0xA, -1);
-    value = D_80182DE4 - 0x10;
-    D_80182DE4 = value;
-    if (value < 0)
-    {
-        D_80182DE4 = 0;
-    }
+    WMAP_MODEL_FADE_OUT(D_80182DE4, 0x10, value);
     D_8013923C += 0x8;
     timer = g_wmap_land_event_00_a_sequence_6_timer;
     D_801B2498.vz += 0x4;
@@ -289,8 +250,7 @@ void wmap_land_event_00_a_sequence_6_step_04(void)
 }
 
 /**
- * @brief World-map step handler: render the animated actor, ramp its size up to a
- *        cap, scroll the shadow field, then advance when the frame counter expires.
+ * @brief Draw and spin the model while fading it in.
  */
 void wmap_land_event_00_a_sequence_7_step_02(void)
 {
@@ -301,12 +261,7 @@ void wmap_land_event_00_a_sequence_7_step_02(void)
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_a_rotation);
     wmap_draw_model(g_wmap_effect_model_pack_2, (D_80139240 / 0x10) & 3, 0xA, 0x35, 0x7840, 0x1, g_wmap_effect_fade_a, 0, -0xA, -1);
     D_80139240 += 0x10;
-    value = g_wmap_effect_fade_a + 0x8;
-    g_wmap_effect_fade_a = value;
-    if (value >= 0x82)
-    {
-        g_wmap_effect_fade_a = 0x81;
-    }
+    WMAP_MODEL_FADE_IN(g_wmap_effect_fade_a, 0x8, 0x81, value);
     timer = g_wmap_land_event_00_a_sequence_7_timer;
     g_wmap_effect_model_a_rotation.vz += 0x20;
     next_timer = timer - 1;
@@ -318,8 +273,7 @@ void wmap_land_event_00_a_sequence_7_step_02(void)
 }
 
 /**
- * @brief World-map step handler: render the animated actor, ramp its size down to a
- *        floor, scroll the shadow field, then advance when the frame counter expires.
+ * @brief Draw and spin the model while fading it out.
  */
 void wmap_land_event_00_a_sequence_7_step_04(void)
 {
@@ -329,12 +283,7 @@ void wmap_land_event_00_a_sequence_7_step_04(void)
 
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_a_rotation);
     wmap_draw_model(g_wmap_effect_model_pack_2, (D_80139240 / 0x10) & 3, 0xA, 0x35, 0x7840, 0x1, g_wmap_effect_fade_a, 0, -0xA, -1);
-    value = g_wmap_effect_fade_a - 0x10;
-    g_wmap_effect_fade_a = value;
-    if (value < 0)
-    {
-        g_wmap_effect_fade_a = 0;
-    }
+    WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_a, 0x10, value);
     D_80139240 += 0x10;
     timer = g_wmap_land_event_00_a_sequence_7_timer;
     g_wmap_effect_model_a_rotation.vz += 0x20;
@@ -347,8 +296,7 @@ void wmap_land_event_00_a_sequence_7_step_04(void)
 }
 
 /**
- * @brief World-map step handler: render the animated actor, ramp its size up to a
- *        cap, scroll the shadow field, then advance when the frame counter expires.
+ * @brief Draw and spin the model while fading it in.
  */
 void wmap_land_event_00_a_sequence_8_step_02(void)
 {
@@ -359,12 +307,7 @@ void wmap_land_event_00_a_sequence_8_step_02(void)
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_b_rotation);
     wmap_draw_model(g_wmap_effect_model_pack_3, (D_8013924C / 0x10) & 7, 0xA, 0x36, 0x7880, 0x1, g_wmap_effect_fade_b, 0, -0xA, -1);
     D_8013924C += 0x10;
-    value = g_wmap_effect_fade_b + 0x8;
-    g_wmap_effect_fade_b = value;
-    if (value >= 0x82)
-    {
-        g_wmap_effect_fade_b = 0x81;
-    }
+    WMAP_MODEL_FADE_IN(g_wmap_effect_fade_b, 0x8, 0x81, value);
     timer = g_wmap_land_event_00_a_sequence_8_timer;
     g_wmap_effect_model_b_rotation.vz += 0x8;
     next_timer = timer - 1;
@@ -376,8 +319,7 @@ void wmap_land_event_00_a_sequence_8_step_02(void)
 }
 
 /**
- * @brief World-map step handler: render the animated actor, ramp its size down to a
- *        floor, scroll the shadow field, then advance when the frame counter expires.
+ * @brief Draw and spin the model while fading it out.
  */
 void wmap_land_event_00_a_sequence_8_step_04(void)
 {
@@ -387,12 +329,7 @@ void wmap_land_event_00_a_sequence_8_step_04(void)
 
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_b_rotation);
     wmap_draw_model(g_wmap_effect_model_pack_3, (D_8013924C / 0x10) & 7, 0xA, 0x36, 0x7880, 0x1, g_wmap_effect_fade_b, 0, -0xA, -1);
-    value = g_wmap_effect_fade_b - 0x10;
-    g_wmap_effect_fade_b = value;
-    if (value < 0)
-    {
-        g_wmap_effect_fade_b = 0;
-    }
+    WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_b, 0x10, value);
     D_8013924C += 0x10;
     timer = g_wmap_land_event_00_a_sequence_8_timer;
     g_wmap_effect_model_b_rotation.vz += 0x8;
@@ -409,16 +346,10 @@ WMAP_STEP_RUNNER(wmap_land_event_00_a_run, D_800D7204, 0x6, g_wmap_land_event_00
 WMAP_STEP_RESET(wmap_land_event_00_a_reset, g_wmap_land_event_00_a_step, g_wmap_land_event_00_a_timer)
 
 /**
- * @brief Advance this sequence one step unless its gate flag hit the stop value.
+ * @brief Wait for scripted map scrolling, then run the next step.
  */
-void wmap_land_event_00_a_step_02(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        g_wmap_land_event_00_a_step += 1;
-        wmap_land_event_00_a_step_03();
-    }
-}
+WMAP_STEP_WAIT_SCROLL(wmap_land_event_00_a_step_02,
+    g_wmap_land_event_00_a_step, wmap_land_event_00_a_step_03)
 
 /** @brief Wait for CD work, initialize sequence state, and register its callback. */
 void wmap_land_event_00_a_step_03(void)
@@ -439,14 +370,9 @@ void wmap_land_event_00_a_step_03(void)
 WMAP_STEP_WAIT_IDLE(wmap_land_event_00_a_wait_idle, g_wmap_land_event_00_a_step, wmap_land_event_00_a_step_05)
 
 /**
- * @brief World-map step handler: set flags and advance the step counter.
+ * @brief Start the world-map exit and advance the sequence.
  */
-void wmap_land_event_00_a_step_05(void)
-{
-    D_8013B294 = 1;
-    D_80139228 = 0x2;
-    g_wmap_land_event_00_a_step += 1;
-}
+WMAP_STEP_BEGIN_EXIT(wmap_land_event_00_a_step_05, g_wmap_land_event_00_a_step, 0x2)
 
 WMAP_STEP_RUNNER(wmap_land_event_00_a_run_timeline, D_800D721C, 0x16, g_wmap_land_event_00_a_timeline_step, g_wmap_land_event_00_a_timeline_timer)
 
@@ -548,37 +474,23 @@ void wmap_land_event_00_a_timeline_step_19(void)
 WMAP_STEP_WAIT(wmap_land_event_00_a_timeline_wait_20, g_wmap_land_event_00_a_timeline_step, g_wmap_land_event_00_a_timeline_timer)
 
 /**
- * @brief World-map step handler: clear the shared flag and advance the step counter.
+ * @brief Clear the blocking flag and finish the timeline.
  */
-void wmap_land_event_00_a_timeline_finish(void)
-{
-    g_wmap_sequence_busy = 0;
-    g_wmap_land_event_00_a_timeline_step += 1;
-}
+WMAP_STEP_FINISH_BLOCKING(wmap_land_event_00_a_timeline_finish,
+    g_wmap_land_event_00_a_timeline_step)
 
 WMAP_STEP_RUNNER(wmap_land_event_00_a_run_sequence_1, D_800D7274, 0x4, g_wmap_land_event_00_a_sequence_1_step, g_wmap_land_event_00_a_sequence_1_timer)
 
 WMAP_STEP_RESET(wmap_land_event_00_a_sequence_1_reset, g_wmap_land_event_00_a_sequence_1_step, g_wmap_land_event_00_a_sequence_1_timer)
 
 /**
- * @brief Populate a world-map actor control block and schedule its spawn step.
+ * @brief Start the sprite animation and run its first update.
  */
-void wmap_land_event_00_a_sequence_1_step_01(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[4];
-
-    g_wmap_actor_animations[4].data = g_wmap_animation_bank_0;
-    actor->scale_index = 0xF;
-    actor->previous_sequence = -1;
-    actor->shade_step = 0x10;
-    actor->target_shade = 1;
-    actor->resource_index = 0;
-    actor->sequence = 0;
-    actor->shade = 0x81;
-    g_wmap_land_event_00_a_sequence_1_timer = 0x10;
-    g_wmap_land_event_00_a_sequence_1_step += 1;
-    wmap_land_event_00_a_sequence_1_step_02();
-}
+WMAP_STEP_START_ACTOR(wmap_land_event_00_a_sequence_1_step_01,
+    g_wmap_land_event_00_a_sequence_1_step, g_wmap_land_event_00_a_sequence_1_timer,
+    4, g_wmap_animation_bank_0, 0,
+    0x81, 1, 0x10,
+    0x10, wmap_land_event_00_a_sequence_1_step_02)
 
 WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_event_00_a_sequence_1_step_02, g_wmap_land_event_00_a_sequence_1_step, g_wmap_land_event_00_a_sequence_1_timer,
                               g_wmap_sprite_actors[4], g_wmap_actor_animations[4], g_wmap_focus_screen_position, 0x2A, 0x2, 0)
@@ -617,24 +529,13 @@ WMAP_STEP_RUNNER(wmap_land_event_00_a_run_sequence_3, D_800D7294, 0x4, g_wmap_la
 WMAP_STEP_RESET(wmap_land_event_00_a_sequence_3_reset, g_wmap_land_event_00_a_sequence_3_step, g_wmap_land_event_00_a_sequence_3_timer)
 
 /**
- * @brief Populate a world-map actor control block and schedule its spawn step.
+ * @brief Start the sprite animation and run its first update.
  */
-void wmap_land_event_00_a_sequence_3_step_01(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[6];
-
-    g_wmap_actor_animations[6].data = g_wmap_animation_bank_0;
-    actor->scale_index = 0xF;
-    actor->sequence = 2;
-    actor->previous_sequence = -1;
-    actor->shade_step = 0x10;
-    actor->target_shade = 1;
-    actor->resource_index = 0;
-    actor->shade = 0x81;
-    g_wmap_land_event_00_a_sequence_3_timer = 0x10;
-    g_wmap_land_event_00_a_sequence_3_step += 1;
-    wmap_land_event_00_a_sequence_3_step_02();
-}
+WMAP_STEP_START_ACTOR(wmap_land_event_00_a_sequence_3_step_01,
+    g_wmap_land_event_00_a_sequence_3_step, g_wmap_land_event_00_a_sequence_3_timer,
+    6, g_wmap_animation_bank_0, 2,
+    0x81, 1, 0x10,
+    0x10, wmap_land_event_00_a_sequence_3_step_02)
 
 WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_event_00_a_sequence_3_step_02, g_wmap_land_event_00_a_sequence_3_step, g_wmap_land_event_00_a_sequence_3_timer,
                               g_wmap_sprite_actors[6], g_wmap_actor_animations[6], g_wmap_focus_screen_position, 0x2A, 0x2, 0)
@@ -696,17 +597,13 @@ WMAP_STEP_RUNNER(wmap_land_event_00_a_run_sequence_6, D_800D72CC, 0x6, g_wmap_la
 WMAP_STEP_RESET(wmap_land_event_00_a_sequence_6_reset, g_wmap_land_event_00_a_sequence_6_step, g_wmap_land_event_00_a_sequence_6_timer)
 
 /**
- * @brief Arm the world-map sequence, seed its data block, and schedule the next step.
+ * @brief Set the model shade, reset its animation and rotation, and run the first update.
  */
-void wmap_land_event_00_a_sequence_6_step_01(void)
-{
-    D_80182DE4 = 1;
-    D_801B2498 = g_wmap_zero_rotation;
-    D_8013923C = 0;
-    g_wmap_land_event_00_a_sequence_6_timer = 0x159;
-    g_wmap_land_event_00_a_sequence_6_step += 1;
-    wmap_land_event_00_a_sequence_6_step_02();
-}
+WMAP_STEP_START_MODEL(wmap_land_event_00_a_sequence_6_step_01,
+    g_wmap_land_event_00_a_sequence_6_step, g_wmap_land_event_00_a_sequence_6_timer,
+    D_801B2498, g_wmap_zero_rotation,
+    D_80182DE4, 1, D_8013923C,
+    0x159, wmap_land_event_00_a_sequence_6_step_02)
 
 WMAP_STEP_ARM_TIMER(wmap_land_event_00_a_sequence_6_step_03, g_wmap_land_event_00_a_sequence_6_step, g_wmap_land_event_00_a_sequence_6_timer, 0x8,
                     wmap_land_event_00_a_sequence_6_step_04)
@@ -718,17 +615,13 @@ WMAP_STEP_RUNNER(wmap_land_event_00_a_run_sequence_7, D_800D72E4, 0x6, g_wmap_la
 WMAP_STEP_RESET(wmap_land_event_00_a_sequence_7_reset, g_wmap_land_event_00_a_sequence_7_step, g_wmap_land_event_00_a_sequence_7_timer)
 
 /**
- * @brief Arm the world-map sequence, seed its data block, and schedule the next step.
+ * @brief Set the model shade, reset its animation and rotation, and run the first update.
  */
-void wmap_land_event_00_a_sequence_7_step_01(void)
-{
-    g_wmap_effect_fade_a = 1;
-    g_wmap_effect_model_a_rotation = g_wmap_zero_rotation;
-    D_80139240 = 0;
-    g_wmap_land_event_00_a_sequence_7_timer = 0xE9;
-    g_wmap_land_event_00_a_sequence_7_step += 1;
-    wmap_land_event_00_a_sequence_7_step_02();
-}
+WMAP_STEP_START_MODEL(wmap_land_event_00_a_sequence_7_step_01,
+    g_wmap_land_event_00_a_sequence_7_step, g_wmap_land_event_00_a_sequence_7_timer,
+    g_wmap_effect_model_a_rotation, g_wmap_zero_rotation,
+    g_wmap_effect_fade_a, 1, D_80139240,
+    0xE9, wmap_land_event_00_a_sequence_7_step_02)
 
 WMAP_STEP_ARM_TIMER(wmap_land_event_00_a_sequence_7_step_03, g_wmap_land_event_00_a_sequence_7_step, g_wmap_land_event_00_a_sequence_7_timer, 0x8,
                     wmap_land_event_00_a_sequence_7_step_04)
@@ -739,15 +632,14 @@ WMAP_STEP_RUNNER(wmap_land_event_00_a_run_sequence_8, D_800D72FC, 0x6, g_wmap_la
 
 WMAP_STEP_RESET(wmap_land_event_00_a_sequence_8_reset, g_wmap_land_event_00_a_sequence_8_step, g_wmap_land_event_00_a_sequence_8_timer)
 
-void wmap_land_event_00_a_sequence_8_step_01(void)
-{
-    g_wmap_effect_fade_b = 1;
-    g_wmap_effect_model_b_rotation = g_wmap_zero_rotation;
-    D_8013924C = 0;
-    g_wmap_land_event_00_a_sequence_8_timer = 0xA7;
-    g_wmap_land_event_00_a_sequence_8_step++;
-    wmap_land_event_00_a_sequence_8_step_02();
-}
+/**
+ * @brief Set the model shade, reset its animation and rotation, and run the first update.
+ */
+WMAP_STEP_START_MODEL(wmap_land_event_00_a_sequence_8_step_01,
+    g_wmap_land_event_00_a_sequence_8_step, g_wmap_land_event_00_a_sequence_8_timer,
+    g_wmap_effect_model_b_rotation, g_wmap_zero_rotation,
+    g_wmap_effect_fade_b, 1, D_8013924C,
+    0xA7, wmap_land_event_00_a_sequence_8_step_02)
 
 WMAP_STEP_ARM_TIMER(wmap_land_event_00_a_sequence_8_step_03, g_wmap_land_event_00_a_sequence_8_step, g_wmap_land_event_00_a_sequence_8_timer, 8,
                     wmap_land_event_00_a_sequence_8_step_04)

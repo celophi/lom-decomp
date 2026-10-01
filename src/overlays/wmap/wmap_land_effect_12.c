@@ -99,8 +99,7 @@ extern s32* g_wmap_effect_params;
 extern WmapMotion g_wmap_actor_motions[];
 
 /**
- * @brief World-map step handler: draw two overlaid actor sprites within a matrix push,
- *        ramp the shared size up to a cap, then countdown-advance the step.
+ * @brief Draw and brighten two rotating model layers, then advance their countdown.
  */
 void wmap_land_effect_12_sequence_3_step_02(void)
 {
@@ -114,12 +113,7 @@ void wmap_land_effect_12_sequence_3_step_02(void)
     wmap_draw_model_default(g_wmap_effect_model_pack_1, 0, 0x10, 0x36, 0x7880, 1, D_801B2468);
     D_801B2498.vz += 0x4;
     PopMatrix();
-    value = D_801B2468 + 2;
-    D_801B2468 = value;
-    if (value >= 0x82)
-    {
-        D_801B2468 = 0x81;
-    }
+    WMAP_MODEL_FADE_IN(D_801B2468, 2, 0x81, value);
     if (--g_wmap_land_effect_12_sequence_3_timer == 0)
     {
         g_wmap_land_effect_12_sequence_3_step += 1;
@@ -151,43 +145,11 @@ void wmap_land_effect_12_sequence_3_step_04(void)
     }
 }
 
-/**
- * @brief Advance a world-map model's spin, draw it while active, then countdown-advance the step.
- */
-void wmap_land_effect_12_sequence_4_step_02(void)
-{
-    MATRIX m;
-    s32 x;
-
-    x = g_wmap_effect_model_a_position.vz - 0xDAC;
-    g_wmap_effect_model_a_position.vz = x;
-    if (x < 0x2710)
-    {
-        g_wmap_effect_model_a_position.vz = 0x2710;
-    }
-
-    PushMatrix();
-    RotMatrix(&g_wmap_effect_model_a_rotation, &m);
-    TransMatrix(&m, &g_wmap_zero_translation);
-    SetRotMatrix(&m);
-    SetTransMatrix(&m);
-
-    if (g_wmap_effect_fade_a != 0)
-    {
-        wmap_draw_model_default((s32)g_wmap_load_buffer, 0, 0x4, 0x35, 0x7800, 0x1, g_wmap_effect_fade_a);
-        g_wmap_effect_fade_a -= 0x4;
-        if (g_wmap_effect_fade_a < 0)
-        {
-            g_wmap_effect_fade_a = 0;
-        }
-    }
-
-    PopMatrix();
-    if (--g_wmap_land_effect_12_sequence_4_timer == 0)
-    {
-        g_wmap_land_effect_12_sequence_4_step += 1;
-    }
-}
+/** @brief Move the model closer and fade it until the timer expires. */
+WMAP_STEP_DROP_UPDATE(wmap_land_effect_12_sequence_4_step_02,
+    g_wmap_land_effect_12_sequence_4_step, g_wmap_land_effect_12_sequence_4_timer,
+    g_wmap_effect_model_a_rotation, g_wmap_effect_model_a_position,
+    g_wmap_effect_fade_a, g_wmap_load_buffer, -3500, 4)
 
 /** @brief Configure the effect, reset its resource slots, and advance the sequence. */
 void wmap_land_effect_12_sequence_5_step_01(void)
@@ -205,11 +167,9 @@ void wmap_land_effect_12_sequence_5_step_01(void)
     g_wmap_effect_params[0x8] = 8;
     g_wmap_effect_params[0x9] = 2;
     g_wmap_effect_params[0xA] = 0xFA0;
-    for (i = 0; i < 100; i++)
-    {
-        g_wmap_actor_motions[i + 100].field_00 = 0;
-        g_wmap_actor_animations[i + 100].data = g_wmap_animation_bank_2;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, 100,
+                              g_wmap_actor_motions[i + 100].field_00,
+                              100, g_wmap_animation_bank_2);
     g_wmap_land_effect_12_sequence_5_timer = 144;
     g_wmap_land_effect_12_sequence_5_step++;
     wmap_land_effect_12_sequence_5_step_02();
@@ -231,11 +191,9 @@ void wmap_land_effect_12_sequence_6_step_01(void)
     g_wmap_effect_params[0x12] = 8;
     g_wmap_effect_params[0x13] = 1;
     g_wmap_effect_params[0x14] = 1000;
-    for (i = 0; i < 5; i++)
-    {
-        g_wmap_actor_motions[i + 20].field_00 = 0;
-        g_wmap_actor_animations[i + 20].data = g_wmap_animation_bank_2;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, 5,
+                              g_wmap_actor_motions[i + 20].field_00,
+                              20, g_wmap_animation_bank_2);
     g_wmap_land_effect_12_sequence_6_timer = 10;
     g_wmap_land_effect_12_sequence_6_step++;
     wmap_land_effect_12_sequence_6_step_02();
@@ -306,15 +264,11 @@ void wmap_land_effect_12_timeline_step_01(void)
 WMAP_STEP_WAIT(wmap_land_effect_12_timeline_wait_02, g_wmap_land_effect_12_timeline_step, g_wmap_land_effect_12_timeline_timer)
 
 /**
- * @brief Register a world-map step callback and schedule its wait timer.
+ * @brief Hide the placement overlay, start the sequence, and set the wait timer.
  */
-void wmap_land_effect_12_timeline_step_03(void)
-{
-    g_wmap_placement_overlay_hidden = 1;
-    wmap_start_sequence(wmap_land_effect_12_run_sequence_5);
-    g_wmap_land_effect_12_timeline_timer = 0x18;
-    g_wmap_land_effect_12_timeline_step += 1;
-}
+WMAP_STEP_HIDE_AND_START(wmap_land_effect_12_timeline_step_03,
+    g_wmap_land_effect_12_timeline_step, g_wmap_land_effect_12_timeline_timer,
+    g_wmap_placement_overlay_hidden, wmap_land_effect_12_run_sequence_5, 0x18)
 
 WMAP_STEP_WAIT(wmap_land_effect_12_timeline_wait_04, g_wmap_land_effect_12_timeline_step, g_wmap_land_effect_12_timeline_timer)
 
@@ -340,24 +294,13 @@ WMAP_STEP_RUNNER(wmap_land_effect_12_run_sequence_1, D_800D58D0, 0x4, g_wmap_lan
 WMAP_STEP_RESET(wmap_land_effect_12_sequence_1_reset, g_wmap_land_effect_12_sequence_1_step, g_wmap_land_effect_12_sequence_1_timer)
 
 /**
- * @brief Populate a world-map actor control block and schedule its spawn step.
+ * @brief Start the sprite animation and run its first update.
  */
-void wmap_land_effect_12_sequence_1_step_01(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[4];
-
-    g_wmap_actor_animations[4].data = g_wmap_animation_bank_1;
-    actor->scale_index = 0xF;
-    actor->previous_sequence = -1;
-    actor->shade_step = 8;
-    actor->resource_index = 0;
-    actor->sequence = 0;
-    actor->target_shade = 0x80;
-    actor->shade = 0;
-    g_wmap_land_effect_12_sequence_1_timer = 0x7E;
-    g_wmap_land_effect_12_sequence_1_step += 1;
-    wmap_land_effect_12_sequence_1_step_02();
-}
+WMAP_STEP_START_ACTOR(wmap_land_effect_12_sequence_1_step_01,
+    g_wmap_land_effect_12_sequence_1_step, g_wmap_land_effect_12_sequence_1_timer,
+    4, g_wmap_animation_bank_1, 0,
+    0, 0x80, 8,
+    0x7E, wmap_land_effect_12_sequence_1_step_02)
 
 WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_12_sequence_1_step_02, g_wmap_land_effect_12_sequence_1_step, g_wmap_land_effect_12_sequence_1_timer, g_wmap_sprite_actors[4],
                               g_wmap_actor_animations[4], g_wmap_focus_screen_position, 0x19, 0xE, 0)
@@ -369,24 +312,13 @@ WMAP_STEP_RUNNER(wmap_land_effect_12_run_sequence_2, D_800D58E0, 0x4, g_wmap_lan
 WMAP_STEP_RESET(wmap_land_effect_12_sequence_2_reset, g_wmap_land_effect_12_sequence_2_step, g_wmap_land_effect_12_sequence_2_timer)
 
 /**
- * @brief Populate a world-map actor control block and schedule its spawn step.
+ * @brief Start the sprite animation and run its first update.
  */
-void wmap_land_effect_12_sequence_2_step_01(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[5];
-
-    g_wmap_actor_animations[5].data = g_wmap_animation_bank_0;
-    actor->scale_index = 0xF;
-    actor->previous_sequence = -1;
-    actor->shade_step = 8;
-    actor->resource_index = 0;
-    actor->sequence = 0;
-    actor->target_shade = 0x80;
-    actor->shade = 0x80;
-    g_wmap_land_effect_12_sequence_2_timer = 0x79;
-    g_wmap_land_effect_12_sequence_2_step += 1;
-    wmap_land_effect_12_sequence_2_step_02();
-}
+WMAP_STEP_START_ACTOR(wmap_land_effect_12_sequence_2_step_01,
+    g_wmap_land_effect_12_sequence_2_step, g_wmap_land_effect_12_sequence_2_timer,
+    5, g_wmap_animation_bank_0, 0,
+    0x80, 0x80, 8,
+    0x79, wmap_land_effect_12_sequence_2_step_02)
 
 WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_12_sequence_2_step_02, g_wmap_land_effect_12_sequence_2_step, g_wmap_land_effect_12_sequence_2_timer, g_wmap_sprite_actors[5],
                               g_wmap_actor_animations[5], g_wmap_focus_screen_position, 0x1A, 0xF, 0)
@@ -432,36 +364,25 @@ WMAP_STEP_RUNNER(wmap_land_effect_12_run_sequence_5, D_800D5918, 0x6, g_wmap_lan
 WMAP_STEP_RESET(wmap_land_effect_12_sequence_5_reset, g_wmap_land_effect_12_sequence_5_step, g_wmap_land_effect_12_sequence_5_timer)
 
 /**
- * @brief Draw the world-map sprite via func_8006A2FC, then advance after the wait expires.
+ * @brief Update the effect until the step timer expires.
  */
-void wmap_land_effect_12_sequence_5_step_02(void)
-{
-    func_8006A2FC(&g_wmap_sprite_actors[100], &g_wmap_actor_animations[100], 0x64, 0, 0x7F, 0x4, 0, (s32)g_wmap_effect_params);
-    if (--g_wmap_land_effect_12_sequence_5_timer == 0)
-    {
-        g_wmap_land_effect_12_sequence_5_step += 1;
-    }
-}
-
-void wmap_land_effect_12_sequence_5_step_03(void)
-{
-    g_wmap_land_effect_12_sequence_5_timer = 0x20;
-    g_wmap_effect_params[5] = -1;
-    g_wmap_land_effect_12_sequence_5_step += 1;
-    wmap_land_effect_12_sequence_5_step_04();
-}
+WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_12_sequence_5_step_02,
+    g_wmap_land_effect_12_sequence_5_step, g_wmap_land_effect_12_sequence_5_timer,
+    func_8006A2FC(&g_wmap_sprite_actors[100], &g_wmap_actor_animations[100], 0x64, 0, 0x7F, 0x4, 0, (s32)g_wmap_effect_params))
 
 /**
- * @brief Draw the world-map sprite via func_8006A2FC, then advance after the wait expires.
+ * @brief Stop spawning particles and run the next update.
  */
-void wmap_land_effect_12_sequence_5_step_04(void)
-{
-    func_8006A2FC(&g_wmap_sprite_actors[100], &g_wmap_actor_animations[100], 0x64, 0, 0x7F, 0x4, 0, (s32)g_wmap_effect_params);
-    if (--g_wmap_land_effect_12_sequence_5_timer == 0)
-    {
-        g_wmap_land_effect_12_sequence_5_step += 1;
-    }
-}
+WMAP_STEP_STOP_EMITTER(wmap_land_effect_12_sequence_5_step_03,
+    g_wmap_land_effect_12_sequence_5_step, g_wmap_land_effect_12_sequence_5_timer,
+    g_wmap_effect_params[5], 0x20, wmap_land_effect_12_sequence_5_step_04)
+
+/**
+ * @brief Update the effect until the step timer expires.
+ */
+WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_12_sequence_5_step_04,
+    g_wmap_land_effect_12_sequence_5_step, g_wmap_land_effect_12_sequence_5_timer,
+    func_8006A2FC(&g_wmap_sprite_actors[100], &g_wmap_actor_animations[100], 0x64, 0, 0x7F, 0x4, 0, (s32)g_wmap_effect_params))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_12_sequence_5_end, g_wmap_land_effect_12_sequence_5_step)
 
@@ -470,39 +391,25 @@ WMAP_STEP_RUNNER(wmap_land_effect_12_run_sequence_6, D_800D5930, 0x6, g_wmap_lan
 WMAP_STEP_RESET(wmap_land_effect_12_sequence_6_reset, g_wmap_land_effect_12_sequence_6_step, g_wmap_land_effect_12_sequence_6_timer)
 
 /**
- * @brief Draw the world-map sprite via func_8006A2FC, then advance after the wait expires.
+ * @brief Update the effect until the step timer expires.
  */
-void wmap_land_effect_12_sequence_6_step_02(void)
-{
-    func_8006A2FC(&g_wmap_sprite_actors[20], &g_wmap_actor_animations[20], 0x5, 0, 0x7F, 0x4, 0, (s32)((u8*)g_wmap_effect_params + 0x28));
-    if (--g_wmap_land_effect_12_sequence_6_timer == 0)
-    {
-        g_wmap_land_effect_12_sequence_6_step += 1;
-    }
-}
+WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_12_sequence_6_step_02,
+    g_wmap_land_effect_12_sequence_6_step, g_wmap_land_effect_12_sequence_6_timer,
+    func_8006A2FC(&g_wmap_sprite_actors[20], &g_wmap_actor_animations[20], 0x5, 0, 0x7F, 0x4, 0, (s32)((u8*)g_wmap_effect_params + 0x28)))
 
 /**
- * @brief Set a sequence parameter, initialise one object field, advance, and run the handler.
+ * @brief Stop spawning particles and run the next update.
  */
-void wmap_land_effect_12_sequence_6_step_03(void)
-{
-    g_wmap_land_effect_12_sequence_6_timer = 0x20;
-    g_wmap_effect_params[15] = -1;
-    g_wmap_land_effect_12_sequence_6_step += 1;
-    wmap_land_effect_12_sequence_6_step_04();
-}
+WMAP_STEP_STOP_EMITTER(wmap_land_effect_12_sequence_6_step_03,
+    g_wmap_land_effect_12_sequence_6_step, g_wmap_land_effect_12_sequence_6_timer,
+    g_wmap_effect_params[15], 0x20, wmap_land_effect_12_sequence_6_step_04)
 
 /**
- * @brief Draw the world-map sprite via func_8006A2FC, then advance after the wait expires.
+ * @brief Update the effect until the step timer expires.
  */
-void wmap_land_effect_12_sequence_6_step_04(void)
-{
-    func_8006A2FC(&g_wmap_sprite_actors[20], &g_wmap_actor_animations[20], 0x5, 0, 0x7F, 0x4, 0, (s32)((u8*)g_wmap_effect_params + 0x28));
-    if (--g_wmap_land_effect_12_sequence_6_timer == 0)
-    {
-        g_wmap_land_effect_12_sequence_6_step += 1;
-    }
-}
+WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_12_sequence_6_step_04,
+    g_wmap_land_effect_12_sequence_6_step, g_wmap_land_effect_12_sequence_6_timer,
+    func_8006A2FC(&g_wmap_sprite_actors[20], &g_wmap_actor_animations[20], 0x5, 0, 0x7F, 0x4, 0, (s32)((u8*)g_wmap_effect_params + 0x28)))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_12_sequence_6_end, g_wmap_land_effect_12_sequence_6_step)
 
@@ -511,44 +418,24 @@ WMAP_STEP_RUNNER(wmap_land_effect_12_run_sequence_7, D_800D5948, 0x6, g_wmap_lan
 WMAP_STEP_RESET(wmap_land_effect_12_sequence_7_reset, g_wmap_land_effect_12_sequence_7_step, g_wmap_land_effect_12_sequence_7_timer)
 
 /**
- * @brief Draw the world-map cursor via func_8006B6EC, then advance after the wait expires.
+ * @brief Update the effect until the step timer expires.
  */
-void wmap_land_effect_12_sequence_7_step_02(void)
-{
-    func_8006B6EC(0xC8, 0xCD, 0x8, 0, 0xE);
-    if (--g_wmap_land_effect_12_sequence_7_timer == 0)
-    {
-        g_wmap_land_effect_12_sequence_7_step += 1;
-    }
-}
+WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_12_sequence_7_step_02,
+    g_wmap_land_effect_12_sequence_7_step, g_wmap_land_effect_12_sequence_7_timer,
+    func_8006B6EC(0xC8, 0xCD, 0x8, 0, 0xE))
 
 /**
- * @brief Reset a range of world-map actor configs, arm the timer, and advance the step.
+ * @brief Start fading the sprite range and run its first update.
  */
-void wmap_land_effect_12_sequence_7_step_03(void)
-{
-    s32 i;
-
-    for (i = 0xC8; i < 0xCD; i++)
-    {
-        g_wmap_sprite_actors[i].target_shade = 0;
-        g_wmap_sprite_actors[i].shade_step = 8;
-    }
-    g_wmap_land_effect_12_sequence_7_timer = 0x10;
-    g_wmap_land_effect_12_sequence_7_step += 1;
-    wmap_land_effect_12_sequence_7_step_04();
-}
+WMAP_STEP_FADE_ACTOR_RANGE(wmap_land_effect_12_sequence_7_step_03,
+    g_wmap_land_effect_12_sequence_7_step, g_wmap_land_effect_12_sequence_7_timer,
+    0xC8, 0xCD, 8, 0x10, wmap_land_effect_12_sequence_7_step_04)
 
 /**
- * @brief Draw the world-map cursor via func_8006B6EC, then advance after the wait expires.
+ * @brief Update the effect until the step timer expires.
  */
-void wmap_land_effect_12_sequence_7_step_04(void)
-{
-    func_8006B6EC(0xC8, 0xCD, 0x8, 0, 0xE);
-    if (--g_wmap_land_effect_12_sequence_7_timer == 0)
-    {
-        g_wmap_land_effect_12_sequence_7_step += 1;
-    }
-}
+WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_12_sequence_7_step_04,
+    g_wmap_land_effect_12_sequence_7_step, g_wmap_land_effect_12_sequence_7_timer,
+    func_8006B6EC(0xC8, 0xCD, 0x8, 0, 0xE))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_12_sequence_7_end, g_wmap_land_effect_12_sequence_7_step)

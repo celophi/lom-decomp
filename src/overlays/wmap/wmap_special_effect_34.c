@@ -337,14 +337,11 @@ void wmap_special_effect_34_step_05(void)
     wmap_special_effect_34_step_06();
 }
 
-void wmap_special_effect_34_step_06(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        g_wmap_special_effect_34_step++;
-        wmap_special_effect_34_step_07();
-    }
-}
+/**
+ * @brief Wait for scripted map scrolling, then run the next step.
+ */
+WMAP_STEP_WAIT_SCROLL(wmap_special_effect_34_step_06,
+    g_wmap_special_effect_34_step, wmap_special_effect_34_step_07)
 
 /**
  * @brief Effect 34 step: reset after the transition, restore the saved
@@ -407,16 +404,10 @@ void wmap_special_effect_34_timeline_step_03(void)
 }
 
 /**
- * @brief Advance this sequence one step unless its gate flag hit the stop value.
+ * @brief Wait for scripted map scrolling, then run the next step.
  */
-void wmap_special_effect_34_timeline_step_04(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        g_wmap_special_effect_34_timeline_step += 1;
-        wmap_special_effect_34_timeline_step_05();
-    }
-}
+WMAP_STEP_WAIT_SCROLL(wmap_special_effect_34_timeline_step_04,
+    g_wmap_special_effect_34_timeline_step, wmap_special_effect_34_timeline_step_05)
 
 /** @brief World-map step handler: bump the step counter and run the next step. */
 void wmap_special_effect_34_timeline_step_05(void)
@@ -454,11 +445,11 @@ void wmap_special_effect_34_timeline_step_11(void)
 
 WMAP_STEP_WAIT(wmap_special_effect_34_timeline_step_12, g_wmap_special_effect_34_timeline_step, g_wmap_special_effect_34_timeline_timer)
 
-void wmap_special_effect_34_timeline_finish(void)
-{
-    g_wmap_sequence_busy = 0;
-    g_wmap_special_effect_34_timeline_step++;
-}
+/**
+ * @brief Clear the blocking flag and finish the timeline.
+ */
+WMAP_STEP_FINISH_BLOCKING(wmap_special_effect_34_timeline_finish,
+    g_wmap_special_effect_34_timeline_step)
 
 WMAP_STEP_RUNNER(wmap_special_effect_34_run_sequence_1, D_800D7A64, 8, g_wmap_special_effect_34_sequence_1_step, g_wmap_special_effect_34_sequence_1_timer)
 
@@ -493,41 +484,29 @@ WMAP_STEP_RUNNER(wmap_special_effect_34_run_sequence_2, D_800D7A84, 0xA, g_wmap_
 
 WMAP_STEP_RESET(wmap_special_effect_34_sequence_2_reset, g_wmap_special_effect_34_sequence_2_step, g_wmap_special_effect_34_sequence_2_timer)
 
-void wmap_special_effect_34_sequence_2_step_02(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        g_wmap_special_effect_34_sequence_2_step++;
-        wmap_special_effect_34_sequence_2_step_03();
-    }
-}
+/**
+ * @brief Wait for scripted map scrolling, then run the next step.
+ */
+WMAP_STEP_WAIT_SCROLL(wmap_special_effect_34_sequence_2_step_02,
+    g_wmap_special_effect_34_sequence_2_step, wmap_special_effect_34_sequence_2_step_03)
 
-void wmap_special_effect_34_sequence_2_step_04(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        g_wmap_special_effect_34_sequence_2_step++;
-        wmap_special_effect_34_sequence_2_step_05();
-    }
-}
+/**
+ * @brief Wait for scripted map scrolling, then run the next step.
+ */
+WMAP_STEP_WAIT_SCROLL(wmap_special_effect_34_sequence_2_step_04,
+    g_wmap_special_effect_34_sequence_2_step, wmap_special_effect_34_sequence_2_step_05)
 
-void wmap_special_effect_34_sequence_2_step_06(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        g_wmap_special_effect_34_sequence_2_step++;
-        wmap_special_effect_34_sequence_2_step_07();
-    }
-}
+/**
+ * @brief Wait for scripted map scrolling, then run the next step.
+ */
+WMAP_STEP_WAIT_SCROLL(wmap_special_effect_34_sequence_2_step_06,
+    g_wmap_special_effect_34_sequence_2_step, wmap_special_effect_34_sequence_2_step_07)
 
-void wmap_special_effect_34_sequence_2_step_08(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        g_wmap_special_effect_34_sequence_2_step++;
-        wmap_special_effect_34_sequence_2_step_09();
-    }
-}
+/**
+ * @brief Wait for scripted map scrolling, then run the next step.
+ */
+WMAP_STEP_WAIT_SCROLL(wmap_special_effect_34_sequence_2_step_08,
+    g_wmap_special_effect_34_sequence_2_step, wmap_special_effect_34_sequence_2_step_09)
 
 void wmap_special_effect_34_sequence_2_step_09(void)
 {
@@ -558,16 +537,10 @@ void wmap_special_effect_34_sequence_3_step_01(void)
     wmap_special_effect_34_sequence_3_step_02();
 }
 
-void wmap_special_effect_34_sequence_3_step_03(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[5];
-
-    actor->shade_step = 4;
-    actor->target_shade = 0;
-    g_wmap_special_effect_34_sequence_3_timer = 0x20;
-    g_wmap_special_effect_34_sequence_3_step++;
-    wmap_special_effect_34_sequence_3_step_04();
-}
+/** @brief Start the sprite fade and run its first update. */
+WMAP_STEP_FADE_ACTOR(wmap_special_effect_34_sequence_3_step_03,
+    g_wmap_special_effect_34_sequence_3_step, g_wmap_special_effect_34_sequence_3_timer,
+    g_wmap_sprite_actors[5], 4, 0x20, wmap_special_effect_34_sequence_3_step_04)
 
 WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_special_effect_34_sequence_3_step_04, g_wmap_special_effect_34_sequence_3_step, g_wmap_special_effect_34_sequence_3_timer,
                               g_wmap_sprite_actors[5], g_wmap_actor_animations[5], D_80182D58, 8, 8, 0)
@@ -578,36 +551,22 @@ WMAP_STEP_RUNNER(wmap_special_effect_34_run_sequence_4, D_800D7AC4, 6, g_wmap_sp
 
 WMAP_STEP_RESET(wmap_special_effect_34_sequence_4_reset, g_wmap_special_effect_34_sequence_4_step, g_wmap_special_effect_34_sequence_4_timer)
 
-void wmap_special_effect_34_sequence_4_step_01(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[6];
-
-    g_wmap_actor_animations[6].data = &g_wmap_animation_bank_1;
-    actor->scale_index = 0xF;
-    actor->previous_sequence = -1;
-    actor->shade_step = 0x10;
-    actor->resource_index = 0;
-    actor->sequence = 0;
-    actor->target_shade = 0x80;
-    actor->shade = 0;
-    g_wmap_special_effect_34_sequence_4_timer = 0x3E;
-    g_wmap_special_effect_34_sequence_4_step++;
-    wmap_special_effect_34_sequence_4_step_02();
-}
+/**
+ * @brief Start the sprite animation and run its first update.
+ */
+WMAP_STEP_START_ACTOR(wmap_special_effect_34_sequence_4_step_01,
+    g_wmap_special_effect_34_sequence_4_step, g_wmap_special_effect_34_sequence_4_timer,
+    6, &g_wmap_animation_bank_1, 0,
+    0, 0x80, 0x10,
+    0x3E, wmap_special_effect_34_sequence_4_step_02)
 
 WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_special_effect_34_sequence_4_step_02, g_wmap_special_effect_34_sequence_4_step, g_wmap_special_effect_34_sequence_4_timer,
                               g_wmap_sprite_actors[6], g_wmap_actor_animations[6], g_wmap_focus_screen_position, 8, 8, 0)
 
-void wmap_special_effect_34_sequence_4_step_03(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[6];
-
-    actor->shade_step = 2;
-    actor->target_shade = 0;
-    g_wmap_special_effect_34_sequence_4_timer = 0x40;
-    g_wmap_special_effect_34_sequence_4_step++;
-    wmap_special_effect_34_sequence_4_step_04();
-}
+/** @brief Start the sprite fade and run its first update. */
+WMAP_STEP_FADE_ACTOR(wmap_special_effect_34_sequence_4_step_03,
+    g_wmap_special_effect_34_sequence_4_step, g_wmap_special_effect_34_sequence_4_timer,
+    g_wmap_sprite_actors[6], 2, 0x40, wmap_special_effect_34_sequence_4_step_04)
 
 WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_special_effect_34_sequence_4_step_04, g_wmap_special_effect_34_sequence_4_step, g_wmap_special_effect_34_sequence_4_timer,
                               g_wmap_sprite_actors[6], g_wmap_actor_animations[6], g_wmap_focus_screen_position, 8, 8, 0)

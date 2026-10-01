@@ -7,7 +7,7 @@ void func_8007B0D8();
 void wmap_land_effect_15_sequence_4_step_02();
 void wmap_land_effect_15_sequence_5_step_02();
 void wmap_land_effect_15_sequence_7_step_01();
-void func_8007B70C();
+void wmap_land_effect_15_update_sparks(void);
 s32 wmap_land_effect_15_run();
 void wmap_land_effect_15_reset();
 void wmap_land_effect_15_step_01();
