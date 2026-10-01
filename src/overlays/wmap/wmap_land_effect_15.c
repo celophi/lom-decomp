@@ -4,6 +4,7 @@
 #include "wmap_sequence_runtime.h"
 #include "sdk/libgte.h"
 #include "wmap_sprite_render.h"
+#include "wmap_spark_effect.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
 #include "sdk/rand.h"
@@ -55,26 +56,6 @@ typedef struct
     s16 field_0E;
     s32 field_10;
 } WmapMotion;
-
-/** @brief World-map spark particle: spin angle, radial velocity, and lifetime. */
-typedef struct
-{
-    s16 active;   /* 0x0 */
-    s16 angle;    /* 0x2 */
-    s32 delta;    /* 0x4 */
-    s32 radius;   /* 0x8 */
-    s16 timer;    /* 0xC */
-    s16 unk0E;    /* 0xE */
-    s16 unk10;    /* 0x10 */
-    s16 unk12;    /* 0x12 */
-} WmapSpark;
-
-/** @brief Particle slot used by the effect setup table. */
-typedef struct
-{
-    s16 state;
-    u8 pad02[0x12];
-} WmapParticleSlot;
 
 extern u8 g_wmap_load_buffer[];
 extern u8 *g_wmap_effect_model_pack_1;
@@ -151,11 +132,9 @@ extern u32 g_wmap_land_effect_15_sequence_10_step;
 extern VECTOR g_wmap_camera_translation;
 
 
-extern WmapAnimationSlot g_wmap_actor_animations[];
 
 extern WmapScreenPosition g_wmap_focus_screen_position;
 
-extern WmapParticleSlot g_wmap_actor_motions[];
 
 /** @brief Draw nine map effect sprites with fixed positions and ordering depths. */
 
@@ -227,68 +206,14 @@ void wmap_land_effect_15_sequence_7_step_01(void)
     wmap_land_effect_15_sequence_7_step_02();
 }
 
-/**
- * @brief Project and draw active world-map sparks, then respawn empty slots.
- * @note First pass projects each live spark through the GTE and advances its
- *       radius; second pass seeds fresh sparks up to the shared population cap.
- */
-void func_8007B70C(void)
-{
-    SVECTOR position;
-    s32 screen;
-    WmapSpark* spark;
-    WmapSpriteActor* draw;
-    s32 count;
-    s32 i;
-
-    count = 0;
-    for (i = 0; i < 8; i++)
-    {
-        spark = &g_wmap_actor_motions[i];
-        if (spark->active != 0)
-        {
-            draw = &g_wmap_sprite_actors[104 + i];
-            position.vx = ((spark->radius >> 6) * (ccos(spark->angle) >> 6)) >> 0xC;
-            position.vy = ((spark->radius >> 6) * (csin(spark->angle) >> 6)) >> 0xC;
-            position.vz = 0;
-            gte_ldv0(&position);
-            gte_rtps();
-            spark->radius += spark->delta;
-            draw->target_shade = *(u16*)&D_80139980;
-            draw->shade = *(u16*)&D_80139980;
-            gte_stsxy(&screen);
-            wmap_step_actor_animation(draw, &g_wmap_actor_animations[104 + i]);
-            wmap_draw_actor_sprite(draw, screen, 0xD, 0x20, 0);
-            if (--spark->timer == 0)
-            {
-                spark->active = 0;
-            }
-            count++;
-        }
-    }
-
-    for (i = 0; i < 8; i++)
-    {
-        spark = &g_wmap_actor_motions[i];
-        if (spark->active == 0)
-        {
-            if (g_wmap_particle_intensity < count++)
-            {
-                break;
-            }
-            draw = &g_wmap_sprite_actors[104 + i];
-            draw->scale_index = 15;
-            draw->previous_sequence = -1;
-            draw->resource_index = 0;
-            draw->sequence = 0;
-            spark->active = 1;
-            spark->angle = (u32)rand() >> 3;
-            spark->radius = 0;
-            spark->delta = rand() / 2 + 0x1000;
-            spark->timer = (rand() & 0x3C) + 0x20;
-        }
-    }
-}
+/** @brief Draw and respawn the radial sparks for land effect 15. */
+WMAP_DEFINE_RADIAL_SPARK_UPDATE(wmap_land_effect_15_update_sparks,
+    8,   /* Motion slots. */
+    104,   /* First sprite actor. */
+    13,   /* Texture index. */
+    32,   /* Draw order. */
+    32,   /* Minimum lifetime in frames. */
+    D_80139980)
 
 WMAP_STEP_RUNNER(wmap_land_effect_15_run, D_800D53B0, 0x6, g_wmap_land_effect_15_step, g_wmap_land_effect_15_timer)
 
@@ -688,7 +613,7 @@ void wmap_land_effect_15_sequence_9_step_01(void)
     D_80139980 = 0x7F;
     for (i = 0; i < 8; i++)
     {
-        g_wmap_actor_motions[i].state = 0;
+        g_wmap_actor_motions[i].active = 0;
         g_wmap_actor_animations[i + 104].data = g_wmap_animation_bank_2;
     }
     g_wmap_land_effect_15_sequence_9_timer = 0x20;
@@ -703,7 +628,7 @@ void wmap_land_effect_15_sequence_9_step_02(void)
     {
         g_wmap_particle_intensity += 1;
     }
-    func_8007B70C();
+    wmap_land_effect_15_update_sparks();
     if (--g_wmap_land_effect_15_sequence_9_timer == 0)
     {
         g_wmap_land_effect_15_sequence_9_step += 1;
@@ -732,7 +657,7 @@ void wmap_land_effect_15_sequence_9_step_04(void)
     {
         g_wmap_particle_intensity = 0;
     }
-    func_8007B70C();
+    wmap_land_effect_15_update_sparks();
     if (--g_wmap_land_effect_15_sequence_9_timer == 0)
     {
         g_wmap_land_effect_15_sequence_9_step += 1;

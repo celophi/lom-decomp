@@ -5665,3 +5665,7 @@ wmap_special_effect_34_run_sequence_1 = 0x800C0474; // type:func
 wmap_special_effect_34_run_sequence_2 = 0x800C064C; // type:func
 wmap_special_effect_34_run_sequence_3 = 0x800C07F8; // type:func
 wmap_special_effect_34_run_sequence_4 = 0x800C09F4; // type:func
+
+wmap_land_effect_15_update_sparks = 0x8007B70C; // type:func size:0x204
+
+wmap_land_effect_18_update_sparks = 0x8006E6B8; // type:func size:0x204

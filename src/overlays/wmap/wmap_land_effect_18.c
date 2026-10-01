@@ -3,6 +3,7 @@
 #include "wmap_sequence_runtime.h"
 #include "sdk/libgte.h"
 #include "wmap_sprite_render.h"
+#include "wmap_spark_effect.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
 #include "sdk/rand.h"
@@ -10,35 +11,6 @@
 #include "wmap_resource_support.h"
 #include "wmap_step_sequence.h"
 #include "wmap_cells.h"
-
-/** @brief Spark state used by the radial world-map particle effect. */
-typedef struct
-{
-    s16 active;
-    s16 angle;
-    s32 delta;
-    s32 radius;
-    s16 timer;
-    s16 unk0E;
-    s16 unk10;
-    s16 unk12;
-} WmapEffect18Spark;
-
-/** @brief Draw record fields touched by the radial particle effect. */
-typedef struct
-{
-    u8 pad00[2];
-    s16 unk02;
-    u8 pad04[2];
-    s8 unk06;
-    u8 pad07[7];
-    s16 unk0E;
-    s16 unk10;
-    u8 pad12[0x10];
-    s16 unk22;
-    s16 unk24;
-    u8 pad26[6];
-} WmapEffect18Draw;
 
 void wmap_land_effect_18_sequence_6_step_02(void);
 void wmap_land_effect_18_sequence_9_step_02(void);
@@ -147,11 +119,9 @@ extern SVECTOR D_801B2498;
 extern SVECTOR D_801B2490;
 
 
-extern WmapAnimationSlot g_wmap_actor_animations[];
 
 extern WmapScreenPosition g_wmap_focus_screen_position;
 
-extern WmapEffect18Spark g_wmap_actor_motions[];
 
 /** @brief Compose the effect transform, draw it, and advance its rotation and countdown. */
 void wmap_land_effect_18_sequence_1_step_02(void)
@@ -537,66 +507,14 @@ void wmap_land_effect_18_sequence_4_step_04(void)
     }
 }
 
-/**
- * @brief Project and draw active world-map sparks, then respawn empty slots.
- */
-void func_8006E6B8(void)
-{
-    SVECTOR position;
-    s32 screen;
-    WmapEffect18Spark* spark;
-    WmapEffect18Draw* draw;
-    s32 count;
-    s32 i;
-
-    count = 0;
-    for (i = 0; i < 30; i++)
-    {
-        spark = &g_wmap_actor_motions[i];
-        if (spark->active != 0)
-        {
-            draw = &g_wmap_sprite_actors[6 + i];
-            position.vx = ((spark->radius >> 6) * (ccos(spark->angle) >> 6)) >> 0xC;
-            position.vy = ((spark->radius >> 6) * (csin(spark->angle) >> 6)) >> 0xC;
-            position.vz = 0;
-            gte_ldv0(&position);
-            gte_rtps();
-            spark->radius += spark->delta;
-            draw->unk22 = *(u16*)&D_80139980;
-            draw->unk24 = *(u16*)&D_80139980;
-            gte_stsxy(&screen);
-            wmap_step_actor_animation(draw, &g_wmap_actor_animations[6 + i]);
-            wmap_draw_actor_sprite(draw, screen, 9, 0x1F, 0);
-            if (--spark->timer == 0)
-            {
-                spark->active = 0;
-            }
-            count++;
-        }
-    }
-
-    for (i = 0; i < 30; i++)
-    {
-        spark = &g_wmap_actor_motions[i];
-        if (spark->active == 0)
-        {
-            if (g_wmap_particle_intensity < count++)
-            {
-                break;
-            }
-            draw = &g_wmap_sprite_actors[6 + i];
-            draw->unk06 = 15;
-            draw->unk10 = -1;
-            draw->unk02 = 0;
-            draw->unk0E = 0;
-            spark->active = 1;
-            spark->angle = (u32)rand() >> 3;
-            spark->radius = 0;
-            spark->delta = rand() / 2 + 0x1000;
-            spark->timer = (rand() & 0x3C) + 0x4B;
-        }
-    }
-}
+/** @brief Draw and respawn the radial sparks for land effect 18. */
+WMAP_DEFINE_RADIAL_SPARK_UPDATE(wmap_land_effect_18_update_sparks,
+    30,   /* Motion slots. */
+    6,   /* First sprite actor. */
+    9,   /* Texture index. */
+    31,   /* Draw order. */
+    75,   /* Minimum lifetime in frames. */
+    D_80139980)
 
 /** @brief Initialize and project the map effect before its first draw. */
 void wmap_land_effect_18_sequence_6_step_01(void)
@@ -884,7 +802,7 @@ void wmap_land_effect_18_sequence_5_step_02(void)
     {
         g_wmap_particle_intensity += 1;
     }
-    func_8006E6B8();
+    wmap_land_effect_18_update_sparks();
     if (--g_wmap_land_effect_18_sequence_5_timer == 0)
     {
         g_wmap_land_effect_18_sequence_5_step += 1;
@@ -913,7 +831,7 @@ void wmap_land_effect_18_sequence_5_step_04(void)
     {
         g_wmap_particle_intensity = 0;
     }
-    func_8006E6B8();
+    wmap_land_effect_18_update_sparks();
     if (--g_wmap_land_effect_18_sequence_5_timer == 0)
     {
         g_wmap_land_effect_18_sequence_5_step += 1;

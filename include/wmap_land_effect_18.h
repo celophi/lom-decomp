@@ -14,7 +14,7 @@ void wmap_land_effect_18_sequence_3_step_04();
 void wmap_land_effect_18_sequence_3_step_06();
 void wmap_land_effect_18_sequence_4_step_02();
 void wmap_land_effect_18_sequence_4_step_04();
-void func_8006E6B8();
+void wmap_land_effect_18_update_sparks(void);
 void wmap_land_effect_18_sequence_6_step_01();
 void wmap_land_effect_18_sequence_9_step_01();
 void wmap_land_effect_18_sequence_10_step_01();
