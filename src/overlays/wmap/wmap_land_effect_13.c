@@ -697,11 +697,9 @@ void wmap_land_effect_13_sequence_3_step_01(void)
     s32 i;
 
     g_wmap_particle_intensity = 0x18;
-    for (i = 0; i < 0x18; i++)
-    {
-        g_wmap_actor_motions[i].field_00 = 0;
-        g_wmap_actor_animations[i + 0xCC].data = g_wmap_animation_bank_0;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, 0x18,
+                              g_wmap_actor_motions[i].field_00,
+                              0xCC, g_wmap_animation_bank_0);
     g_wmap_land_effect_13_sequence_3_timer = 0x30;
     g_wmap_land_effect_13_sequence_3_step += 1;
     wmap_land_effect_13_sequence_3_step_02();

@@ -310,18 +310,8 @@ void wmap_land_effect_15_sequence_1_step_01(void)
 }
 
 /** @brief Update the sequence effect and advance when its countdown reaches zero. */
-void wmap_land_effect_15_sequence_1_step_02(void)
-{
-    s32 remaining_ticks;
-
-    func_8007B0D8(0x10000);
-    remaining_ticks = g_wmap_land_effect_15_sequence_1_timer - 1;
-    g_wmap_land_effect_15_sequence_1_timer = remaining_ticks;
-    if (remaining_ticks == 0)
-    {
-        g_wmap_land_effect_15_sequence_1_step += 1;
-    }
-}
+WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_15_sequence_1_step_02, g_wmap_land_effect_15_sequence_1_step, g_wmap_land_effect_15_sequence_1_timer,
+                          func_8007B0D8(0x10000))
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_15_sequence_1_step_03, g_wmap_land_effect_15_sequence_1_step, g_wmap_land_effect_15_sequence_1_timer, 0x28,
                     wmap_land_effect_15_sequence_1_step_04)
@@ -525,7 +515,7 @@ WMAP_STEP_RUNNER(wmap_land_effect_15_run_sequence_9, D_800D54C0, 0x6, g_wmap_lan
 WMAP_STEP_RESET(wmap_land_effect_15_sequence_9_reset, g_wmap_land_effect_15_sequence_9_step, g_wmap_land_effect_15_sequence_9_timer)
 
 /**
- * @brief World-map step handler: seed an 8-entry table and advance the step.
+ * @brief Initialize the particle slots and run their first update.
  */
 void wmap_land_effect_15_sequence_9_step_01(void)
 {
@@ -533,11 +523,9 @@ void wmap_land_effect_15_sequence_9_step_01(void)
 
     g_wmap_particle_intensity = 0;
     D_80139980 = 0x7F;
-    for (i = 0; i < 8; i++)
-    {
-        g_wmap_actor_motions[i].active = 0;
-        g_wmap_actor_animations[i + 104].data = g_wmap_animation_bank_2;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, 8,
+                              g_wmap_actor_motions[i].active,
+                              104, g_wmap_animation_bank_2);
     g_wmap_land_effect_15_sequence_9_timer = 0x20;
     g_wmap_land_effect_15_sequence_9_step += 1;
     wmap_land_effect_15_sequence_9_step_02();

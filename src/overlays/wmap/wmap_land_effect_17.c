@@ -624,18 +624,8 @@ WMAP_STEP_RUNNER(wmap_land_effect_17_run_sequence_10, D_800D5D80, 0x6, g_wmap_la
 WMAP_STEP_RESET(wmap_land_effect_17_sequence_10_reset, g_wmap_land_effect_17_sequence_10_step, g_wmap_land_effect_17_sequence_10_timer)
 
 /** @brief Draw the sequence effect and advance when its countdown expires. */
-void wmap_land_effect_17_sequence_10_step_02(void)
-{
-    s32 remaining_ticks;
-
-    func_8006B998(0x64, 0x7C, D_800E4F18, 8, 0xA);
-    remaining_ticks = g_wmap_land_effect_17_sequence_10_timer - 1;
-    g_wmap_land_effect_17_sequence_10_timer = remaining_ticks;
-    if (remaining_ticks == 0)
-    {
-        g_wmap_land_effect_17_sequence_10_step += 1;
-    }
-}
+WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_17_sequence_10_step_02, g_wmap_land_effect_17_sequence_10_step, g_wmap_land_effect_17_sequence_10_timer,
+                          func_8006B998(0x64, 0x7C, D_800E4F18, 8, 0xA))
 
 /** @brief Set particle display parameters and begin their countdown. */
 void wmap_land_effect_17_sequence_10_step_03(void)
@@ -653,17 +643,7 @@ void wmap_land_effect_17_sequence_10_step_03(void)
 }
 
 /** @brief Draw the particle range and advance when its countdown expires. */
-void wmap_land_effect_17_sequence_10_step_04(void)
-{
-    s32 remaining;
-
-    func_8006B998(100, 124, D_800E4F18, 8, 10);
-    remaining = g_wmap_land_effect_17_sequence_10_timer - 1;
-    g_wmap_land_effect_17_sequence_10_timer = remaining;
-    if (remaining == 0)
-    {
-        g_wmap_land_effect_17_sequence_10_step++;
-    }
-}
+WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_17_sequence_10_step_04, g_wmap_land_effect_17_sequence_10_step, g_wmap_land_effect_17_sequence_10_timer,
+                          func_8006B998(100, 124, D_800E4F18, 8, 10))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_17_sequence_10_end, g_wmap_land_effect_17_sequence_10_step)

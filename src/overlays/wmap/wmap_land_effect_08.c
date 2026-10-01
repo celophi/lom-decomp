@@ -9,6 +9,7 @@
 #include "wmap_resource_support.h"
 #include "wmap_effect_primitives.h"
 #include "wmap_step_sequence.h"
+#include "wmap_star_effect.h"
 #include "wmap_cells.h"
 
 void wmap_land_effect_08_sequence_6_step_02(void);
@@ -50,20 +51,6 @@ typedef struct
     s16 field_0E;
     s32 field_10;
 } WmapMotion;
-
-/** @brief World-map orbiting star: polar position, spin angle, and radius. */
-typedef struct
-{
-    s16 unk00;
-    s16 angle;
-    u16 delta;
-    s16 unk06;
-    s32 radius;
-    s16 unk0C;
-    u16 unk0E;
-    s16 unk10;
-    s16 unk12;
-} WmapStar;
 
 extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_08_sequence_3_timer;
@@ -135,7 +122,7 @@ extern WmapScreenPosition g_wmap_focus_screen_position;
 
 extern s32* g_wmap_effect_params;
 
-extern WmapStar g_wmap_actor_motions[];
+extern WmapOrbitingStar g_wmap_actor_motions[];
 
 /** @brief Move the model closer and fade it until the timer expires. */
 WMAP_STEP_DROP_UPDATE(wmap_land_effect_08_sequence_3_step_02,
@@ -204,21 +191,13 @@ void wmap_land_effect_08_sequence_5_step_04(void)
 void wmap_land_effect_08_sequence_6_step_01(void)
 {
     s32 i;
-    u8* pa;
-    u8* pb;
 
     g_wmap_effect_fade_c = 1;
     D_800DCEA8 = 1;
     for (i = 0x64; i < 0x6C; i++)
     {
         *(s16*)((u8*)g_wmap_actor_motions + i * 0x14) = 0;
-        pb = (u8*)g_wmap_actor_animations + i * 0x8;
-        *(s32*)(pb + 0x4) = (s32)&g_wmap_animation_bank_2;
-        pa = (u8*)g_wmap_sprite_actors + i * 0x2C;
-        *(s16*)(pa + 0x2) = 0;
-        *(s8*)(pa + 0x6) = 0xF;
-        *(s16*)(pa + 0xE) = 0;
-        *(s16*)(pa + 0x10) = -1;
+        WMAP_INIT_PARTICLE_ACTOR(i, (u8*)&g_wmap_animation_bank_2, 0);
     }
     D_800D9150 = 4;
     g_wmap_land_effect_08_sequence_6_timer = 0x10;
@@ -259,68 +238,14 @@ void wmap_land_effect_08_sequence_8_step_01(void)
 }
 
 /** @brief Project and draw the world-map star field, spinning each entry each frame. */
-void wmap_land_effect_08_sequence_8_step_02(void)
-{
-    SVECTOR position;
-    s32 screen;
-    s32 i;
-
-    for (i = 0x96; i < 0xB4; i++)
-    {
-        position.vx = ((g_wmap_actor_motions[i].radius >> 6) * (ccos(g_wmap_actor_motions[i].angle) >> 6)) >> 0xC;
-        position.vy = ((g_wmap_actor_motions[i].radius >> 6) * (csin(g_wmap_actor_motions[i].angle) >> 6)) >> 0xC;
-        position.vz = g_wmap_actor_motions[i].unk0E;
-        gte_ldv0(&position);
-        gte_rtps();
-        wmap_step_actor_animation(&g_wmap_sprite_actors[i], &g_wmap_actor_animations[i]);
-        gte_stsxy(&screen);
-        if (g_wmap_actor_motions[i].angle != 0)
-        {
-            wmap_draw_actor_sprite(&g_wmap_sprite_actors[i], screen, 0xF, 4, 0);
-        }
-        else
-        {
-            wmap_draw_actor_sprite(&g_wmap_sprite_actors[i], screen, 0xF, 0, 0);
-        }
-        g_wmap_actor_motions[i].angle = ((u16)g_wmap_actor_motions[i].angle + g_wmap_actor_motions[i].delta) & 0xFFF;
-    }
-    if (--g_wmap_land_effect_08_sequence_8_timer == 0)
-    {
-        g_wmap_land_effect_08_sequence_8_step += 1;
-    }
-}
+WMAP_DEFINE_STAR_UPDATE(wmap_land_effect_08_sequence_8_step_02,
+                        g_wmap_land_effect_08_sequence_8_step, g_wmap_land_effect_08_sequence_8_timer,
+                        150, 180, 15)
 
 /** @brief Project and draw the world-map star field, spinning each entry each frame. */
-void wmap_land_effect_08_sequence_8_step_04(void)
-{
-    SVECTOR position;
-    s32 screen;
-    s32 i;
-
-    for (i = 0x96; i < 0xB4; i++)
-    {
-        position.vx = ((g_wmap_actor_motions[i].radius >> 6) * (ccos(g_wmap_actor_motions[i].angle) >> 6)) >> 0xC;
-        position.vy = ((g_wmap_actor_motions[i].radius >> 6) * (csin(g_wmap_actor_motions[i].angle) >> 6)) >> 0xC;
-        position.vz = g_wmap_actor_motions[i].unk0E;
-        gte_ldv0(&position);
-        gte_rtps();
-        wmap_step_actor_animation(&g_wmap_sprite_actors[i], &g_wmap_actor_animations[i]);
-        gte_stsxy(&screen);
-        if (g_wmap_actor_motions[i].angle != 0)
-        {
-            wmap_draw_actor_sprite(&g_wmap_sprite_actors[i], screen, 0xF, 4, 0);
-        }
-        else
-        {
-            wmap_draw_actor_sprite(&g_wmap_sprite_actors[i], screen, 0xF, 0, 0);
-        }
-        g_wmap_actor_motions[i].angle = ((u16)g_wmap_actor_motions[i].angle + g_wmap_actor_motions[i].delta) & 0xFFF;
-    }
-    if (--g_wmap_land_effect_08_sequence_8_timer == 0)
-    {
-        g_wmap_land_effect_08_sequence_8_step += 1;
-    }
-}
+WMAP_DEFINE_STAR_UPDATE(wmap_land_effect_08_sequence_8_step_04,
+                        g_wmap_land_effect_08_sequence_8_step, g_wmap_land_effect_08_sequence_8_timer,
+                        150, 180, 15)
 
 /** @brief Configure the effect, reset its resource slots, and advance the sequence. */
 void wmap_land_effect_08_sequence_9_step_01(void)
@@ -338,11 +263,9 @@ void wmap_land_effect_08_sequence_9_step_01(void)
     g_wmap_effect_params[0x12] = 15;
     g_wmap_effect_params[0x13] = 0;
     g_wmap_effect_params[0x14] = 12000;
-    for (i = 0; i < 10; i++)
-    {
-        g_wmap_actor_motions[i + g_wmap_effect_params[0x11]].unk00 = 0;
-        g_wmap_actor_animations[i + 204].data = g_wmap_animation_bank_0;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, 10,
+                              g_wmap_actor_motions[i + g_wmap_effect_params[0x11]].state,
+                              204, g_wmap_animation_bank_0);
     g_wmap_land_effect_08_sequence_9_timer = 20;
     g_wmap_land_effect_08_sequence_9_step++;
     wmap_land_effect_08_sequence_9_step_02();

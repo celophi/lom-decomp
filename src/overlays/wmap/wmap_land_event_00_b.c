@@ -626,12 +626,8 @@ void wmap_land_event_00_b_sequence_1_step_03(void)
 
 WMAP_STEP_WAIT_IDLE(wmap_land_event_00_b_sequence_1_step_04, g_wmap_land_event_00_b_sequence_1_step, wmap_land_event_00_b_sequence_1_step_05)
 
-void wmap_land_event_00_b_sequence_1_step_05(void)
-{
-    D_8013B294 = 1;
-    D_80139228 = 2;
-    g_wmap_land_event_00_b_sequence_1_step++;
-}
+/** @brief Start the world-map exit and advance the sequence. */
+WMAP_STEP_BEGIN_EXIT(wmap_land_event_00_b_sequence_1_step_05, g_wmap_land_event_00_b_sequence_1_step, 2)
 
 WMAP_STEP_RUNNER(wmap_land_event_00_b_run_timeline, D_800D732C, 0x16, g_wmap_land_event_00_b_timeline_step, g_wmap_land_event_00_b_timeline_timer)
 

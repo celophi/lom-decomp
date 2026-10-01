@@ -811,15 +811,9 @@ WMAP_STEP_WAIT_SCROLL(func_800A76F8,
     D_801B2E40, func_800A6540)
 
 /** @brief World-map step: run the two sub-steps, then advance after the timer. */
-void func_800A7738(void)
-{
-    func_8006AEE0();
-    func_800A66C0();
-    if (--D_801B2E44 == 0)
-    {
-        D_801B2E40 += 1;
-    }
-}
+WMAP_STEP_UPDATE_TWO_AND_WAIT(func_800A7738, D_801B2E40, D_801B2E44,
+                          func_8006AEE0(),
+                          func_800A66C0())
 
 /**
  * @brief Clear the sub-flag, set the sequence parameter, advance the counter, and run the handler.
@@ -937,15 +931,9 @@ void func_800A7A40(void)
 }
 
 /** @brief World-map step: run the two sub-steps, then advance after the timer. */
-void func_800A7AA0(void)
-{
-    func_8006AEE0();
-    func_800A66C0();
-    if (--D_801B2E44 == 0)
-    {
-        D_801B2E40 += 1;
-    }
-}
+WMAP_STEP_UPDATE_TWO_AND_WAIT(func_800A7AA0, D_801B2E40, D_801B2E44,
+                          func_8006AEE0(),
+                          func_800A66C0())
 
 /** @brief Start audio, compute the coordinate delta, and advance the sequence. */
 void func_800A7AF4(void)

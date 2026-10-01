@@ -182,11 +182,9 @@ void wmap_land_effect_33_sequence_6_step_01(void)
     g_wmap_effect_params[9] = 3;
     g_wmap_effect_params[10] = 0x32C8;
 
-    for (i = 0; i < 50; i++)
-    {
-        g_wmap_actor_motions[i + 20].active = 0;
-        g_wmap_actor_animations[i + 20].data = g_wmap_animation_bank_2;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, 50,
+                              g_wmap_actor_motions[i + 20].active,
+                              20, g_wmap_animation_bank_2);
 
     g_wmap_land_effect_33_sequence_6_timer = 100;
     g_wmap_land_effect_33_sequence_6_step++;
@@ -209,11 +207,9 @@ void wmap_land_effect_33_sequence_7_step_01(void)
     g_wmap_effect_params[19] = 4;
     g_wmap_effect_params[20] = 0x4650;
 
-    for (i = 0; i < 40; i++)
-    {
-        g_wmap_actor_motions[i + 80].active = 0;
-        g_wmap_actor_animations[i + 80].data = g_wmap_animation_bank_2;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, 40,
+                              g_wmap_actor_motions[i + 80].active,
+                              80, g_wmap_animation_bank_2);
 
     g_wmap_land_effect_33_sequence_7_timer = 40;
     g_wmap_land_effect_33_sequence_7_step++;
@@ -335,12 +331,8 @@ void wmap_land_effect_33_step_01(void)
 
 WMAP_STEP_WAIT_IDLE(wmap_land_effect_33_step_02, g_wmap_land_effect_33_step, wmap_land_effect_33_step_03)
 
-void wmap_land_effect_33_step_03(void)
-{
-    D_8013B294 = 1;
-    D_80139228 = 1;
-    g_wmap_land_effect_33_step++;
-}
+/** @brief Start the world-map exit and advance the sequence. */
+WMAP_STEP_BEGIN_EXIT(wmap_land_effect_33_step_03, g_wmap_land_effect_33_step, 1)
 
 WMAP_STEP_RUNNER(wmap_land_effect_33_run_timeline, D_800D78CC, 0x16, g_wmap_land_effect_33_timeline_step, g_wmap_land_effect_33_timeline_timer)
 

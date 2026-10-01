@@ -48,22 +48,6 @@ typedef struct
 {
     s16 unk0;
     s16 unk2;
-    u8 unk4[2];
-    u8 unk6;
-    u8 unk7[7];
-    s16 unkE;
-    s16 unk10;
-    u8 unk12[0x10];
-    s16 unk22;
-    s16 unk24;
-    s16 unk26;
-    u8 unk28[4];
-} WmapD94Entry;
-
-typedef struct
-{
-    s16 unk0;
-    s16 unk2;
     s32 unk4;
     s32 unk8;
     s16 unkC;
@@ -373,7 +357,6 @@ WMAP_STEP_DROP_UPDATE_WITH_DRAW(wmap_land_event_17_sequence_12_step_02,
 void wmap_land_event_17_sequence_13_step_01(void)
 {
     s32 i;
-    WmapD94Entry *entry;
 
     i = 80;
     D_801B25D8 = 1;
@@ -382,12 +365,7 @@ void wmap_land_event_17_sequence_13_step_01(void)
     do
     {
         g_wmap_actor_motions[i].unk0 = 0;
-        g_wmap_actor_animations[i].data = g_wmap_animation_bank_0;
-        entry = &g_wmap_sprite_actors[i];
-        entry->unk2 = 0;
-        entry->unk6 = 0xF;
-        entry->unkE = 1;
-        entry->unk10 = -1;
+        WMAP_INIT_PARTICLE_ACTOR(i, g_wmap_animation_bank_0, 1);
         i++;
     } while (i < 124);
 
@@ -411,13 +389,8 @@ WMAP_STEP_START_BLOCKING(wmap_land_event_17_step_03, g_wmap_land_event_17_step, 
 
 WMAP_STEP_WAIT_IDLE(wmap_land_event_17_wait_idle, g_wmap_land_event_17_step, wmap_land_event_17_step_05)
 
-/** @brief World-map trigger: set two flags and bump a counter. */
-void wmap_land_event_17_step_05(void)
-{
-    D_8013B294 = 1;
-    D_80139228 = 1;
-    g_wmap_land_event_17_step += 1;
-}
+/** @brief Start the world-map exit and advance the sequence. */
+WMAP_STEP_BEGIN_EXIT(wmap_land_event_17_step_05, g_wmap_land_event_17_step, 1)
 
 WMAP_STEP_RUNNER(wmap_land_event_17_run_timeline, D_800D6E04, 0x3E, g_wmap_land_event_17_timeline_step, g_wmap_land_event_17_timeline_timer)
 

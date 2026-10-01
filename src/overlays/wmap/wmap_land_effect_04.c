@@ -9,6 +9,7 @@
 #include "wmap_resource_support.h"
 #include "wmap_effect_primitives.h"
 #include "wmap_step_sequence.h"
+#include "wmap_star_effect.h"
 #include "wmap_cells.h"
 
 void wmap_land_effect_04_sequence_5_step_02(void);
@@ -42,20 +43,6 @@ typedef struct
     s16 field_0E;
     s32 field_10;
 } WmapMotion;
-
-/** @brief World-map orbiting star: polar position, spin angle, and radius. */
-typedef struct
-{
-    s16 unk00;
-    s16 angle;
-    u16 delta;
-    s16 unk06;
-    s32 radius;
-    s16 unk0C;
-    u16 unk0E;
-    s16 unk10;
-    s16 unk12;
-} WmapStar;
 
 extern u8 g_wmap_animation_bank_2[];
 extern s32 g_wmap_land_effect_04_sequence_5_timer;
@@ -260,78 +247,16 @@ void wmap_land_effect_04_sequence_9_step_01(void)
 /**
  * @brief Project and draw the world-map star field, spinning each entry each frame.
  */
-void wmap_land_effect_04_sequence_9_step_02(void)
-{
-    SVECTOR position;
-    s32 screen;
-    WmapStar* star;
-    WmapSpriteActor* draw;
-    s32 i;
-
-    for (i = 0x64; i < 0x82; i++)
-    {
-        draw = &g_wmap_sprite_actors[i];
-        star = &g_wmap_actor_motions[i];
-        position.vx = ((star->radius >> 6) * (ccos(star->angle) >> 6)) >> 0xC;
-        position.vy = ((star->radius >> 6) * (csin(star->angle) >> 6)) >> 0xC;
-        position.vz = star->unk0E;
-        gte_ldv0(&position);
-        gte_rtps();
-        wmap_step_actor_animation(draw, &g_wmap_actor_animations[i]);
-        gte_stsxy(&screen);
-        if (star->angle != 0)
-        {
-            wmap_draw_actor_sprite(draw, screen, 8, 4, 0);
-        }
-        else
-        {
-            wmap_draw_actor_sprite(draw, screen, 8, 0, 0);
-        }
-        star->angle = ((u16)star->angle + star->delta) & 0xFFF;
-    }
-    if (--g_wmap_land_effect_04_sequence_9_timer == 0)
-    {
-        g_wmap_land_effect_04_sequence_9_step += 1;
-    }
-}
+WMAP_DEFINE_STAR_UPDATE(wmap_land_effect_04_sequence_9_step_02,
+                        g_wmap_land_effect_04_sequence_9_step, g_wmap_land_effect_04_sequence_9_timer,
+                        100, 130, 8)
 
 /**
  * @brief Project and draw the world-map star field, spinning each entry each frame.
  */
-void wmap_land_effect_04_sequence_9_step_04(void)
-{
-    SVECTOR position;
-    s32 screen;
-    WmapStar* star;
-    WmapSpriteActor* draw;
-    s32 i;
-
-    for (i = 0x64; i < 0x82; i++)
-    {
-        draw = &g_wmap_sprite_actors[i];
-        star = &g_wmap_actor_motions[i];
-        position.vx = ((star->radius >> 6) * (ccos(star->angle) >> 6)) >> 0xC;
-        position.vy = ((star->radius >> 6) * (csin(star->angle) >> 6)) >> 0xC;
-        position.vz = star->unk0E;
-        gte_ldv0(&position);
-        gte_rtps();
-        wmap_step_actor_animation(draw, &g_wmap_actor_animations[i]);
-        gte_stsxy(&screen);
-        if (star->angle != 0)
-        {
-            wmap_draw_actor_sprite(draw, screen, 8, 4, 0);
-        }
-        else
-        {
-            wmap_draw_actor_sprite(draw, screen, 8, 0, 0);
-        }
-        star->angle = ((u16)star->angle + star->delta) & 0xFFF;
-    }
-    if (--g_wmap_land_effect_04_sequence_9_timer == 0)
-    {
-        g_wmap_land_effect_04_sequence_9_step += 1;
-    }
-}
+WMAP_DEFINE_STAR_UPDATE(wmap_land_effect_04_sequence_9_step_04,
+                        g_wmap_land_effect_04_sequence_9_step, g_wmap_land_effect_04_sequence_9_timer,
+                        100, 130, 8)
 
 WMAP_STEP_RUNNER(wmap_land_effect_04_run, D_800D4DD0, 0x6, g_wmap_land_effect_04_step, g_wmap_land_effect_04_timer)
 
@@ -520,18 +445,8 @@ WMAP_STEP_RUNNER(wmap_land_effect_04_run_sequence_5, D_800D4E78, 0x4, g_wmap_lan
 WMAP_STEP_RESET(wmap_land_effect_04_sequence_5_reset, g_wmap_land_effect_04_sequence_5_step, g_wmap_land_effect_04_sequence_5_timer)
 
 /** @brief Draw the sequence effect and advance when its countdown expires. */
-void wmap_land_effect_04_sequence_5_step_02(void)
-{
-    s32 remaining_ticks;
-
-    func_8006BC44(0x14, 0x3C, g_wmap_effect_params, 0);
-    remaining_ticks = g_wmap_land_effect_04_sequence_5_timer - 1;
-    g_wmap_land_effect_04_sequence_5_timer = remaining_ticks;
-    if (remaining_ticks == 0)
-    {
-        g_wmap_land_effect_04_sequence_5_step += 1;
-    }
-}
+WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_04_sequence_5_step_02, g_wmap_land_effect_04_sequence_5_step, g_wmap_land_effect_04_sequence_5_timer,
+                          func_8006BC44(0x14, 0x3C, g_wmap_effect_params, 0))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_04_sequence_5_end, g_wmap_land_effect_04_sequence_5_step)
 

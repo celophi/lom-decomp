@@ -828,14 +828,9 @@ WMAP_STEP_WAIT_IDLE(wmap_effect35_wait_timeline,
     g_wmap_effect35_step, wmap_effect35_finish)
 
 /**
- * @brief Effect step 3: flag the arrival.
+ * @brief Start the world-map exit and advance the sequence.
  */
-void wmap_effect35_finish(void)
-{
-    D_8013B294 = 1;
-    D_80139228 = 2;
-    g_wmap_effect35_step++;
-}
+WMAP_STEP_BEGIN_EXIT(wmap_effect35_finish, g_wmap_effect35_step, 2)
 
 /**
  * @brief Run the current step of the timeline sequence.

@@ -157,11 +157,9 @@ void wmap_land_effect_32_sequence_2_step_01(void)
     D_80139268 = 19;
     D_8013926C = 0;
     D_80139284 = 1000;
-    for (i = 0; i < 24; i++)
-    {
-        g_wmap_actor_motions[i + D_80139264].field_00 = 0;
-        g_wmap_actor_animations[i + 104].data = g_wmap_animation_bank_0;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, 24,
+                              g_wmap_actor_motions[i + D_80139264].field_00,
+                              104, g_wmap_animation_bank_0);
     g_wmap_land_effect_32_sequence_2_timer = 40;
     g_wmap_land_effect_32_sequence_2_step++;
     wmap_land_effect_32_sequence_2_step_02();
@@ -695,18 +693,8 @@ WMAP_STEP_RUNNER(wmap_land_effect_32_run_sequence_10, D_800D5398, 0x6, g_wmap_la
 WMAP_STEP_RESET(wmap_land_effect_32_sequence_10_reset, g_wmap_land_effect_32_sequence_10_step, g_wmap_land_effect_32_sequence_10_timer)
 
 /** @brief Draw the sequence effect and advance when its countdown expires. */
-void wmap_land_effect_32_sequence_10_step_02(void)
-{
-    s32 value;
-
-    func_8006D014((s32)&g_wmap_sprite_actors[204], (s32)&g_wmap_actor_animations[204], 0x28, 0, D_801B25D8, 8, 1);
-    value = g_wmap_land_effect_32_sequence_10_timer - 1;
-    g_wmap_land_effect_32_sequence_10_timer = value;
-    if (value == 0)
-    {
-        g_wmap_land_effect_32_sequence_10_step += 1;
-    }
-}
+WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_32_sequence_10_step_02, g_wmap_land_effect_32_sequence_10_step, g_wmap_land_effect_32_sequence_10_timer,
+                          func_8006D014((s32)&g_wmap_sprite_actors[204], (s32)&g_wmap_actor_animations[204], 0x28, 0, D_801B25D8, 8, 1))
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_32_sequence_10_step_03, g_wmap_land_effect_32_sequence_10_step, g_wmap_land_effect_32_sequence_10_timer, 0x10,
                     wmap_land_effect_32_sequence_10_step_04)

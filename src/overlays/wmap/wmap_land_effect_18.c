@@ -541,11 +541,9 @@ void wmap_land_effect_18_sequence_9_step_01(void)
     D_8013926C = 1;
     D_80139284 = 0;
     g_wmap_effect_fade_b = 127;
-    for (i = 0; i < 16; i++)
-    {
-        g_wmap_actor_motions[i + D_80139264].active = 0;
-        g_wmap_actor_animations[i + 104].data = g_wmap_animation_bank_1;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, 16,
+                              g_wmap_actor_motions[i + D_80139264].active,
+                              104, g_wmap_animation_bank_1);
     g_wmap_land_effect_18_sequence_9_timer = 32;
     g_wmap_land_effect_18_sequence_9_step++;
     wmap_land_effect_18_sequence_9_step_02();
@@ -568,11 +566,9 @@ void wmap_land_effect_18_sequence_10_step_01(void)
     D_8013926C = 2;
     D_80139284 = 0;
     g_wmap_effect_fade_d = 127;
-    for (i = 0; i < 40; i++)
-    {
-        g_wmap_actor_motions[i + D_80139264].active = 0;
-        g_wmap_actor_animations[i + 204].data = g_wmap_animation_bank_1;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, 40,
+                              g_wmap_actor_motions[i + D_80139264].active,
+                              204, g_wmap_animation_bank_1);
     g_wmap_land_effect_18_sequence_10_timer = 48;
     g_wmap_land_effect_18_sequence_10_step++;
     wmap_land_effect_18_sequence_10_step_02();
@@ -747,7 +743,7 @@ WMAP_STEP_RUNNER_RESET_AND_RUN(wmap_land_effect_18_run_sequence_5, D_800D4D3C, 0
 WMAP_STEP_RESET(wmap_land_effect_18_sequence_5_reset, g_wmap_land_effect_18_sequence_5_step, g_wmap_land_effect_18_sequence_5_timer)
 
 /**
- * @brief World-map step handler: seed a 30-entry table and advance the step.
+ * @brief Initialize the particle slots and run their first update.
  */
 void wmap_land_effect_18_sequence_5_step_01(void)
 {
@@ -755,11 +751,9 @@ void wmap_land_effect_18_sequence_5_step_01(void)
 
     g_wmap_particle_intensity = 0;
     D_80139980 = 0x80;
-    for (i = 0; i < 30; i++)
-    {
-        g_wmap_actor_motions[i].active = 0;
-        g_wmap_actor_animations[i + 6].data = g_wmap_animation_bank_1;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, 30,
+                              g_wmap_actor_motions[i].active,
+                              6, g_wmap_animation_bank_1);
     g_wmap_land_effect_18_sequence_5_timer = 0xC;
     g_wmap_land_effect_18_sequence_5_step += 1;
     wmap_land_effect_18_sequence_5_step_02();

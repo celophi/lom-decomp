@@ -333,7 +333,6 @@ void wmap_land_effect_02_sequence_5_step_02(void)
 void wmap_land_effect_02_sequence_6_step_01(void)
 {
     s32 i;
-    WmapD94Entry *entry;
 
     i = 100;
     D_801B25D8 = 1;
@@ -342,12 +341,7 @@ void wmap_land_effect_02_sequence_6_step_01(void)
     do
     {
         g_wmap_actor_motions[i].state = 0;
-        g_wmap_actor_animations[i].data = g_wmap_animation_bank_0;
-        entry = &g_wmap_sprite_actors[i];
-        entry->unk2 = 0;
-        entry->unk6 = 0xF;
-        entry->unkE = 2;
-        entry->unk10 = -1;
+        WMAP_INIT_PARTICLE_ACTOR(i, g_wmap_animation_bank_0, 2);
         i++;
     } while (i < 200);
 

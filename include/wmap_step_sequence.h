@@ -261,6 +261,39 @@
     }
 
 /**
+ * @brief Assign animation data and restart a particle actor's animation.
+ * @param slot Shared actor and animation slot.
+ * @param animation_data Animation resource assigned to the slot.
+ * @param sequence_id Animation sequence to start.
+ */
+#define WMAP_INIT_PARTICLE_ACTOR(slot, animation_data, sequence_id)                      \
+    {                                                                                    \
+        WmapSpriteActor* actor;                                                          \
+                                                                                         \
+        g_wmap_actor_animations[(slot)].data = (animation_data);                         \
+        actor = &g_wmap_sprite_actors[(slot)];                                           \
+        actor->resource_index = 0;                                                       \
+        actor->scale_index = WMAP_STEP_ACTOR_SCALE_INDEX;                                \
+        actor->sequence = (sequence_id);                                                 \
+        actor->previous_sequence = -1;                                                   \
+    }
+
+/**
+ * @brief Clear particle motion states and assign animation data to a range of slots.
+ * @param index s32 loop variable, counted from zero to count.
+ * @param count Number of slots to initialize.
+ * @param motion_state Motion state expression for the current index.
+ * @param animation_first First animation slot; it can differ from the motion slot.
+ * @param animation_data Animation resource assigned to each slot.
+ */
+#define WMAP_RESET_PARTICLE_SLOTS(index, count, motion_state, animation_first, animation_data) \
+    for ((index) = 0; (index) < (count); (index)++)                                      \
+    {                                                                                    \
+        (motion_state) = 0;                                                              \
+        g_wmap_actor_animations[(index) + (animation_first)].data = (animation_data);    \
+    }
+
+/**
  * @brief Define a step that stops spawning particles and keeps updating them.
  * @param name Step function name.
  * @param step The sequence's step global.
@@ -696,6 +729,20 @@
     void name(void)                                                                      \
     {                                                                                    \
         g_wmap_sequence_busy = 0;                                                        \
+        (step) += 1;                                                                     \
+    }
+
+/**
+ * @brief Define a step that starts the world-map exit with the selected mode.
+ * @param name Step function name.
+ * @param step The sequence's step global.
+ * @param mode Exit mode consumed by the main WMAP loop.
+ */
+#define WMAP_STEP_BEGIN_EXIT(name, step, mode)                                           \
+    void name(void)                                                                      \
+    {                                                                                    \
+        D_8013B294 = 1;                                                                  \
+        D_80139228 = (mode);                                                             \
         (step) += 1;                                                                     \
     }
 

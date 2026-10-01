@@ -331,11 +331,9 @@ void wmap_land_effect_10_sequence_4_step_01(void)
     g_wmap_effect_params[0x12] = 29;
     g_wmap_effect_params[0x13] = 2;
     g_wmap_effect_params[0x14] = 12000;
-    for (i = 0; i < 10; i++)
-    {
-        g_wmap_actor_motions[i + g_wmap_effect_params[0x11]].state = 0;
-        g_wmap_actor_animations[i + 44].data = g_wmap_animation_bank_0;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, 10,
+                              g_wmap_actor_motions[i + g_wmap_effect_params[0x11]].state,
+                              44, g_wmap_animation_bank_0);
     g_wmap_land_effect_10_sequence_4_timer = 40;
     g_wmap_land_effect_10_sequence_4_step++;
     wmap_land_effect_10_sequence_4_step_02();
@@ -866,19 +864,8 @@ WMAP_STEP_RUNNER(wmap_land_effect_10_run_sequence_11, D_800D6018, 0x4, g_wmap_la
 WMAP_STEP_RESET(wmap_land_effect_10_sequence_11_reset, g_wmap_land_effect_10_sequence_11_step, g_wmap_land_effect_10_sequence_11_timer)
 
 /** @brief Draw the effect, select texture page 37, and update the sequence countdown. */
-void wmap_land_effect_10_sequence_11_step_02(void)
-{
-    s32 value;
-
-    /* The spark config lives 30 words into the shared effect parameter block. */
-    func_8008ECF8(100, 150, g_wmap_effect_model_pack_3, (WmapSparkConfig*)&g_wmap_effect_params[30]);
-    func_8006534C(0x25, 2);
-    value = g_wmap_land_effect_10_sequence_11_timer - 1;
-    g_wmap_land_effect_10_sequence_11_timer = value;
-    if (value == 0)
-    {
-        g_wmap_land_effect_10_sequence_11_step += 1;
-    }
-}
+WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_land_effect_10_sequence_11_step_02, g_wmap_land_effect_10_sequence_11_step, g_wmap_land_effect_10_sequence_11_timer,
+                          func_8008ECF8(100, 150, g_wmap_effect_model_pack_3, (WmapSparkConfig*)&g_wmap_effect_params[30]),
+                          func_8006534C(0x25, 2))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_10_sequence_11_end, g_wmap_land_effect_10_sequence_11_step)

@@ -370,14 +370,9 @@ void wmap_land_event_00_a_step_03(void)
 WMAP_STEP_WAIT_IDLE(wmap_land_event_00_a_wait_idle, g_wmap_land_event_00_a_step, wmap_land_event_00_a_step_05)
 
 /**
- * @brief World-map step handler: set flags and advance the step counter.
+ * @brief Start the world-map exit and advance the sequence.
  */
-void wmap_land_event_00_a_step_05(void)
-{
-    D_8013B294 = 1;
-    D_80139228 = 0x2;
-    g_wmap_land_event_00_a_step += 1;
-}
+WMAP_STEP_BEGIN_EXIT(wmap_land_event_00_a_step_05, g_wmap_land_event_00_a_step, 0x2)
 
 WMAP_STEP_RUNNER(wmap_land_event_00_a_run_timeline, D_800D721C, 0x16, g_wmap_land_event_00_a_timeline_step, g_wmap_land_event_00_a_timeline_timer)
 

@@ -241,11 +241,9 @@ void wmap_land_effect_16_sequence_11_step_01(void)
     g_wmap_effect_params[0x26] = 0x13;
     g_wmap_effect_params[0x27] = 2;
     g_wmap_effect_params[0x28] = 0x1F40;
-    for (i = 0; i < 40; i++)
-    {
-        g_wmap_actor_motions[i + 200].state = 0;
-        g_wmap_actor_animations[i + 204].data = g_wmap_animation_bank_1;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, 40,
+                              g_wmap_actor_motions[i + 200].state,
+                              204, g_wmap_animation_bank_1);
     g_wmap_land_effect_16_sequence_11_timer = 80;
     g_wmap_land_effect_16_sequence_11_step++;
     wmap_land_effect_16_sequence_11_step_02();

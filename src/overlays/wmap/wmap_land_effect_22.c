@@ -361,11 +361,9 @@ void wmap_land_effect_22_sequence_12_step_01(void)
     g_wmap_effect_params[0x12] = 21;
     g_wmap_effect_params[0x13] = 0;
     g_wmap_effect_params[0x14] = 12000;
-    for (i = 0; i < 46; i++)
-    {
-        g_wmap_actor_motions[i + g_wmap_effect_params[0x11]].field_00 = 0;
-        g_wmap_actor_animations[i + 24].data = g_wmap_animation_bank_0;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, 46,
+                              g_wmap_actor_motions[i + g_wmap_effect_params[0x11]].field_00,
+                              24, g_wmap_animation_bank_0);
     g_wmap_land_effect_22_sequence_12_timer = 276;
     g_wmap_land_effect_22_sequence_12_step++;
     wmap_land_effect_22_sequence_12_step_02();
@@ -386,11 +384,9 @@ void wmap_land_effect_22_sequence_13_step_01(void)
     g_wmap_effect_params[0x1C] = 0x15;
     g_wmap_effect_params[0x1D] = 2;
     g_wmap_effect_params[0x1E] = 0x1F40;
-    for (i = 0; i < 40; i++)
-    {
-        g_wmap_actor_motions[i + 100].field_00 = 0;
-        g_wmap_actor_animations[i + 104].data = g_wmap_animation_bank_0;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, 40,
+                              g_wmap_actor_motions[i + 100].field_00,
+                              104, g_wmap_animation_bank_0);
     g_wmap_land_effect_22_sequence_13_timer = 80;
     g_wmap_land_effect_22_sequence_13_step++;
     wmap_land_effect_22_sequence_13_step_02();
@@ -411,11 +407,9 @@ void wmap_land_effect_22_sequence_14_step_01(void)
     g_wmap_effect_params[0x26] = 0x15;
     g_wmap_effect_params[0x27] = 1;
     g_wmap_effect_params[0x28] = 0x1F40;
-    for (i = 0; i < 10; i++)
-    {
-        g_wmap_actor_motions[i + 140].field_00 = 0;
-        g_wmap_actor_animations[i + 144].data = g_wmap_animation_bank_0;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, 10,
+                              g_wmap_actor_motions[i + 140].field_00,
+                              144, g_wmap_animation_bank_0);
     g_wmap_land_effect_22_sequence_14_timer = 80;
     g_wmap_land_effect_22_sequence_14_step++;
     wmap_land_effect_22_sequence_14_step_02();
@@ -439,13 +433,8 @@ void wmap_land_effect_22_step_01(void)
 
 WMAP_STEP_WAIT_IDLE(wmap_land_effect_22_wait_idle, g_wmap_land_effect_22_step, wmap_land_effect_22_step_03)
 
-/** @brief World-map trigger: set two flags and bump a counter. */
-void wmap_land_effect_22_step_03(void)
-{
-    D_8013B294 = 1;
-    D_80139228 = 1;
-    g_wmap_land_effect_22_step += 1;
-}
+/** @brief Start the world-map exit and advance the sequence. */
+WMAP_STEP_BEGIN_EXIT(wmap_land_effect_22_step_03, g_wmap_land_effect_22_step, 1)
 
 WMAP_STEP_RUNNER(wmap_land_effect_22_run_timeline, D_800D6914, 0x16, g_wmap_land_effect_22_timeline_step, g_wmap_land_effect_22_timeline_timer)
 

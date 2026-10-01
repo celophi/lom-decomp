@@ -1011,11 +1011,9 @@ void wmap_init_burst_particles(void)
 {
     s32 i;
 
-    for (i = 0; i < WMAP_BURST_PARTICLES; i++)
-    {
-        g_wmap_actor_motions[i].active = 0;
-        g_wmap_actor_animations[WMAP_BURST_ACTOR_FIRST + i].data = g_wmap_animation_bank_0;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, WMAP_BURST_PARTICLES,
+                              g_wmap_actor_motions[i].active,
+                              WMAP_BURST_ACTOR_FIRST, g_wmap_animation_bank_0);
     g_wmap_particle_intensity = 1;
     g_wmap_burst_spawning = 1;
 }

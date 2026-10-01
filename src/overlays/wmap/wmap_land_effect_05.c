@@ -45,22 +45,6 @@ typedef struct
     s16 pad_12;
 } WmapMotion;
 
-typedef struct
-{
-    s16 unk0;
-    s16 unk2;
-    u8 unk4[2];
-    u8 unk6;
-    u8 unk7[7];
-    s16 unkE;
-    s16 unk10;
-    u8 unk12[0x10];
-    s16 unk22;
-    s16 unk24;
-    s16 unk26;
-    u8 unk28[4];
-} WmapD94Entry;
-
 extern s32 g_wmap_land_effect_05_sequence_3_timer;
 extern s8 D_80051B4C[];
 extern void *g_wmap_effect_model_pack_2;
@@ -425,7 +409,6 @@ WMAP_STEP_DROP_UPDATE(wmap_land_effect_05_sequence_9_step_02,
 void wmap_land_effect_05_sequence_10_step_01(void)
 {
     s32 i;
-    WmapD94Entry *entry;
 
     i = 100;
     g_wmap_effect_fade_c = 1;
@@ -434,12 +417,7 @@ void wmap_land_effect_05_sequence_10_step_01(void)
     do
     {
         g_wmap_actor_motions[i].field_00 = 0;
-        g_wmap_actor_animations[i].data = g_wmap_animation_bank_2;
-        entry = &g_wmap_sprite_actors[i];
-        entry->unk2 = 0;
-        entry->unk6 = 0xF;
-        entry->unkE = 1;
-        entry->unk10 = -1;
+        WMAP_INIT_PARTICLE_ACTOR(i, g_wmap_animation_bank_2, 1);
         i++;
     } while (i < 200);
 

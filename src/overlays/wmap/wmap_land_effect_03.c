@@ -158,11 +158,9 @@ void wmap_land_effect_03_sequence_5_step_01(void)
     g_wmap_effect_params[0x8] = 19;
     g_wmap_effect_params[0x9] = 0;
     g_wmap_effect_params[0xA] = 10000;
-    for (i = 0; i < 50; i++)
-    {
-        g_wmap_actor_motions[i + g_wmap_effect_params[0x7]].field_00 = 0;
-        g_wmap_actor_animations[i + 24].data = g_wmap_animation_bank_2;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, 50,
+                              g_wmap_actor_motions[i + g_wmap_effect_params[0x7]].field_00,
+                              24, g_wmap_animation_bank_2);
     g_wmap_land_effect_03_sequence_5_timer = 144;
     g_wmap_land_effect_03_sequence_5_step++;
     wmap_land_effect_03_sequence_5_step_02();
@@ -184,11 +182,9 @@ void wmap_land_effect_03_sequence_6_step_01(void)
     g_wmap_effect_params[0x12] = 19;
     g_wmap_effect_params[0x13] = 1;
     g_wmap_effect_params[0x14] = 10000;
-    for (i = 0; i < 50; i++)
-    {
-        g_wmap_actor_motions[i + g_wmap_effect_params[0x11]].field_00 = 0;
-        g_wmap_actor_animations[i + 74].data = g_wmap_animation_bank_2;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, 50,
+                              g_wmap_actor_motions[i + g_wmap_effect_params[0x11]].field_00,
+                              74, g_wmap_animation_bank_2);
     g_wmap_land_effect_03_sequence_6_timer = 144;
     g_wmap_land_effect_03_sequence_6_step++;
     wmap_land_effect_03_sequence_6_step_02();
@@ -210,11 +206,9 @@ void wmap_land_effect_03_sequence_7_step_01(void)
     g_wmap_effect_params[28] = 0x13;
     g_wmap_effect_params[29] = 2;
     g_wmap_effect_params[30] = 0x2710;
-    for (i = 0; i < 0x32; i++)
-    {
-        g_wmap_actor_motions[i + g_wmap_effect_params[27]].field_00 = 0;
-        g_wmap_actor_animations[i + 0x7C].data = g_wmap_animation_bank_2;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, 0x32,
+                              g_wmap_actor_motions[i + g_wmap_effect_params[27]].field_00,
+                              0x7C, g_wmap_animation_bank_2);
     g_wmap_land_effect_03_sequence_7_timer = 0x90;
     g_wmap_land_effect_03_sequence_7_step += 1;
     wmap_land_effect_03_sequence_7_step_02();
@@ -236,11 +230,9 @@ void wmap_land_effect_03_sequence_8_step_01(void)
     g_wmap_effect_params[0x26] = 19;
     g_wmap_effect_params[0x27] = 3;
     g_wmap_effect_params[0x28] = 10000;
-    for (i = 0; i < 50; i++)
-    {
-        g_wmap_actor_motions[i + g_wmap_effect_params[0x25]].field_00 = 0;
-        g_wmap_actor_animations[i + 174].data = g_wmap_animation_bank_2;
-    }
+    WMAP_RESET_PARTICLE_SLOTS(i, 50,
+                              g_wmap_actor_motions[i + g_wmap_effect_params[0x25]].field_00,
+                              174, g_wmap_animation_bank_2);
     g_wmap_land_effect_03_sequence_8_timer = 144;
     g_wmap_land_effect_03_sequence_8_step++;
     wmap_land_effect_03_sequence_8_step_02();

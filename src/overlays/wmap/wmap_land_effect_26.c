@@ -702,18 +702,8 @@ WMAP_STEP_ARM_TIMER(wmap_land_effect_26_sequence_11_step_03, g_wmap_land_effect_
                     wmap_land_effect_26_sequence_11_step_04)
 
 /** @brief Update the sequence effect and advance when its countdown expires. */
-void wmap_land_effect_26_sequence_11_step_04(void)
-{
-    s32 remaining_ticks;
-
-    func_800773B8(0x7C, 0xAA, 0xD);
-    remaining_ticks = g_wmap_land_effect_26_sequence_11_timer - 1;
-    g_wmap_land_effect_26_sequence_11_timer = remaining_ticks;
-    if (remaining_ticks == 0)
-    {
-        g_wmap_land_effect_26_sequence_11_step += 1;
-    }
-}
+WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_26_sequence_11_step_04, g_wmap_land_effect_26_sequence_11_step, g_wmap_land_effect_26_sequence_11_timer,
+                          func_800773B8(0x7C, 0xAA, 0xD))
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_26_sequence_11_step_05, g_wmap_land_effect_26_sequence_11_step, g_wmap_land_effect_26_sequence_11_timer, 0x10,
                     wmap_land_effect_26_sequence_11_step_06)
