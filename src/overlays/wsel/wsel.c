@@ -23,7 +23,10 @@
 #define WSEL_LOAD_BUFFER ((u8*)LOAD_BUFFER_ADDRESS)
 /** Offset table at the head of a staged music file: [0] sequence, [1] instrument bank. */
 #define WSEL_LOAD_BUFFER_OFFSETS ((u32*)LOAD_BUFFER_AT(0x4))
+#define WSEL_SEQUENCE_BUFFER_SIZE 0x4000
 #define WSEL_PAD_UNAVAILABLE 0xFE
+#define WSEL_ANALOG_NEGATIVE_LIMIT -1
+#define WSEL_ANALOG_POSITIVE_LIMIT 2
 #define WSEL_HERO_ANCHOR_X 32
 #define WSEL_HERO_ANCHOR_Y 40
 #define WSEL_HERO_SHADOW_Y 32
@@ -44,7 +47,6 @@
 #define WSEL_SPRITE_COUNT 8
 /** Poses in each hero pose table: a standing pose, then one per weapon; only pose 0 is drawn. */
 #define WSEL_HERO_POSE_COUNT 12
-#define WSEL_SHADOWED_SPRITE 2
 #define WSEL_SPRITE_STRIP_WIDTH 128
 #define WSEL_SPRITE_BAND_HEIGHT 256
 
@@ -110,9 +112,6 @@
 #define WSEL_FULL_BRIGHTNESS 128
 #define WSEL_LAND_FADE_STEP (WSEL_FULL_BRIGHTNESS / WSEL_LAND_FADE_FRAMES)
 
-/** @brief Bit number of SAVED_OPTION_FLAG_3; the cancel test shifts rather than masks. */
-#define WSEL_OPTION_FLAG_3_BIT 3
-
 /** @brief Build an axis-aligned quad from the two corners of a rectangle. */
 #define WSEL_QUAD_FROM_RECT(quad, rect)                                                                                                                        \
     ((quad).x0 = (quad).x2 = (rect).corners[0].x, (quad).x1 = (quad).x3 = (rect).corners[1].x, (quad).y0 = (quad).y1 = (rect).corners[0].y,                    \
@@ -142,6 +141,7 @@ typedef enum
     WSEL_EXIT_CANCELLED = 3
 } WselExit;
 
+/** @brief Position or scroll offset in screen pixels. */
 typedef struct
 {
     s16 x;
@@ -154,6 +154,7 @@ typedef struct
     WselPoint corners[2];
 } WselRect;
 
+/** @brief Four corners of a screen-space quadrilateral. */
 typedef struct
 {
     s16 x0, y0;
@@ -192,6 +193,7 @@ typedef struct
     u8 y_offset;
 } WselHeroPose;
 
+/** @brief Current red, green, and blue fade levels. */
 typedef struct
 {
     s32 red;
@@ -199,6 +201,7 @@ typedef struct
     s32 blue;
 } WselFadeCurrent;
 
+/** @brief Target fade levels and the number of interpolation frames left. */
 typedef struct
 {
     s32 red;
@@ -207,6 +210,7 @@ typedef struct
     s32 steps;
 } WselFadeTarget;
 
+/** @brief Shared packet cursor for a fade tile or draw-mode command. */
 typedef union
 {
     TILE tile;
@@ -214,8 +218,6 @@ typedef union
 } WselFadePrimitive;
 
 extern s32 D_80042FB4;
-extern u32 D_80043000;
-extern u8 D_800435E0;
 extern u8 g_wsel_land_map_tim[];
 extern u8 g_wsel_world_map_tim[];
 extern u8 g_wsel_cursor_tim[];
@@ -230,7 +232,8 @@ extern WselSprite g_wsel_sprites[WSEL_SPRITE_COUNT];
 extern WselHeroPose g_wsel_hero_poses_default[WSEL_HERO_POSE_COUNT];
 extern WselHeroPose g_wsel_hero_poses_alternate[WSEL_HERO_POSE_COUNT];
 extern WselRenderBuffer* g_wsel_render_context;
-extern u8 g_wsel_sound_bank;
+/** @brief Sequence copied from the staged music file; the instrument bank uploads separately. */
+extern u8 g_wsel_sequence_buffer[WSEL_SEQUENCE_BUFFER_SIZE];
 extern WselFadeTarget g_wsel_fade_target;
 extern WselFadeCurrent g_wsel_fade_current;
 extern s32 g_wsel_buffer_index;
@@ -407,7 +410,7 @@ static void wsel_load_sound_bank(s32 seq_variant)
     offsets = WSEL_LOAD_BUFFER_OFFSETS;
     base = WSEL_LOAD_BUFFER;
 
-    bcopy(base + offsets[0], (u8*)&g_wsel_sound_bank, (s32)(offsets[1] - offsets[0]));
+    bcopy(base + offsets[0], g_wsel_sequence_buffer, (s32)(offsets[1] - offsets[0]));
     akao_upload_bank_blocking((AkaoBankHeader*)(base + offsets[1]), 1);
 }
 
@@ -426,7 +429,7 @@ static void wsel_stop_music(void)
  */
 static void wsel_start_music(void)
 {
-    akao_play_song((AkaoHeader*)&g_wsel_sound_bank);
+    akao_play_song((AkaoHeader*)g_wsel_sequence_buffer);
     akao_set_song_volume(0, AKAO_VOLUME_MAX);
 }
 
@@ -623,7 +626,7 @@ static void wsel_draw_frame(WselRenderBuffer* buffer)
             g_wsel_transition_timer = WSEL_LAND_FADE_FRAMES;
         }
         prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_OVERLAY);
-        prim = (u8*)wsel_draw_hero((POLY_FT4*)prim, ot, D_800435E0 & 0x7F);
+        prim = (u8*)wsel_draw_hero((POLY_FT4*)prim, ot, g_saved_game.layout.characters[FIELD_PARTY_HERO].info.bits.type);
         prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_MAP);
         break;
 
@@ -649,7 +652,7 @@ static void wsel_draw_frame(WselRenderBuffer* buffer)
             g_wsel_transition_timer = 0;
         }
         prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_OVERLAY);
-        prim = (u8*)wsel_draw_hero((POLY_FT4*)prim, ot, D_800435E0 & 0x7F);
+        prim = (u8*)wsel_draw_hero((POLY_FT4*)prim, ot, g_saved_game.layout.characters[FIELD_PARTY_HERO].info.bits.type);
         prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_MAP);
         break;
 
@@ -671,7 +674,7 @@ static void wsel_draw_frame(WselRenderBuffer* buffer)
         /* fall through */
     case WSEL_STATE_WORLD_MAP:
         prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_OVERLAY);
-        prim = (u8*)wsel_draw_hero((POLY_FT4*)prim, ot, D_800435E0 & 0x7F);
+        prim = (u8*)wsel_draw_hero((POLY_FT4*)prim, ot, g_saved_game.layout.characters[FIELD_PARTY_HERO].info.bits.type);
         prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_MAP);
         break;
     }
@@ -822,7 +825,7 @@ static void* wsel_draw_zoom_quad(POLY_FT4* poly, u_long* ot, WselQuadCoords* coo
  * @return Next free packet address.
  * @note An occupied cell is darkened as a whole. Otherwise the shading is clipped to
  *       the selection square by a pair of draw-environment packets, and with button
- *       bit 0x10 held the sub-cells without an edge (plus the neighbouring cells'
+ *       Square held the sub-cells without an edge (plus the neighbouring cells'
  *       shared border sub-cells) are brightened.
  */
 static void* wsel_draw_cell_shading(void* prim, u_long* ot)
@@ -861,7 +864,7 @@ static void* wsel_draw_cell_shading(void* prim, u_long* ot)
         scroll_x = (-g_wsel_map_scroll.x + g_wsel_cursor.x - WSEL_CELL_SIZE) % WSEL_CELL_SIZE;
         scroll_y = (-g_wsel_map_scroll.y + g_wsel_cursor.y - WSEL_CELL_SIZE) % WSEL_CELL_SIZE;
 
-        if (g_wsel_buttons_held & 0x10)
+        if (g_wsel_buttons_held & PAD_BTN_SQUARE)
         {
             for (row = 0; row < WSEL_SUBCELLS; row++)
             {
@@ -979,7 +982,7 @@ static void* wsel_draw_sprite(SPRT* prim, u_long* ot, s32 index)
     s32 v;
 
     sprite = &g_wsel_sprites[index];
-    if (index == WSEL_SHADOWED_SPRITE)
+    if (index == WSEL_SPRITE_CURSOR)
     {
         passes = 2;
         x = sprite->x - 1;
@@ -1030,7 +1033,7 @@ static void* wsel_draw_sprite(SPRT* prim, u_long* ot, s32 index)
                 draw_mode = (DR_TPAGE*)prim;
                 /* The shadow (second) pass of the shadowed layer is not blended. */
                 setDrawTPage(draw_mode, 0, 0,
-                             getTPage(sprite->tpage_mode, (index == WSEL_SHADOWED_SPRITE && passes == 1) ? 0 : sprite->blend_mode, tpage_x, tpage_y));
+                             getTPage(sprite->tpage_mode, (index == WSEL_SPRITE_CURSOR && passes == 1) ? 0 : sprite->blend_mode, tpage_x, tpage_y));
                 prim = (SPRT*)(draw_mode + 1);
                 width_left -= strip_width;
                 addPrim(ot, draw_mode);
@@ -1108,8 +1111,7 @@ static void wsel_update_input(void)
             g_wsel_state = WSEL_STATE_ZOOM_IN;
             return;
         }
-        /* D_80043000 is g_saved_game.layout.options.word, which the original addresses directly. */
-        if ((g_wsel_buttons_pressed & WSEL_CANCEL_BUTTONS) && !((D_80043000 >> WSEL_OPTION_FLAG_3_BIT) & 1))
+        if ((g_wsel_buttons_pressed & WSEL_CANCEL_BUTTONS) && !g_saved_game.layout.options.bits.flag_3)
         {
             wsel_play_sfx(WSEL_SFX_CANCEL, WSEL_SFX_PAN_CENTER);
             g_wsel_exit_state = WSEL_EXIT_CANCELLED;
@@ -1358,8 +1360,7 @@ static void wsel_upload_tim(u8* tim_data, s32 index)
     header_size = TIM_HEADER_SIZE;
     if ((u8)tim->flags & TIM_FLAG_HAS_CLUT)
     {
-        /* The CLUT block address is formed from a runtime header size so it is
-         * computed once and shared by the bnum read and the pixel-block advance. */
+        /* The CLUT block length locates the pixel block that follows it. */
         clut_block_size = ((TimBlock*)(tim_data + header_size))->bnum;
         rect.w = tim->clut_block.dimensions.width * tim->clut_block.dimensions.height;
         rect.x = clut_x;
@@ -1408,21 +1409,21 @@ s32 wsel_read_pad(void)
     {
         /* Convert signed analog-axis thresholds to digital directions. */
         axis_x = regs->axis_x.signed_value;
-        if (axis_x < -1)
+        if (axis_x < WSEL_ANALOG_NEGATIVE_LIMIT)
         {
             buttons |= PAD_BTN_LEFT;
         }
-        else if (axis_x >= 2)
+        else if (axis_x >= WSEL_ANALOG_POSITIVE_LIMIT)
         {
             buttons |= PAD_BTN_RIGHT;
         }
 
         axis_y = regs->axis_y.signed_value;
-        if (axis_y < -1)
+        if (axis_y < WSEL_ANALOG_NEGATIVE_LIMIT)
         {
             buttons |= PAD_BTN_UP;
         }
-        else if (axis_y >= 2)
+        else if (axis_y >= WSEL_ANALOG_POSITIVE_LIMIT)
         {
             buttons |= PAD_BTN_DOWN;
         }
@@ -1455,21 +1456,21 @@ static void wsel_update_pad_repeat(void)
         if (regs->device_type != 0)
         {
             axis = regs->axis_x.signed_value;
-            if (axis < -1)
+            if (axis < WSEL_ANALOG_NEGATIVE_LIMIT)
             {
                 buttons |= PAD_BTN_LEFT;
             }
-            else if (axis >= 2)
+            else if (axis >= WSEL_ANALOG_POSITIVE_LIMIT)
             {
                 buttons |= PAD_BTN_RIGHT;
             }
 
             axis = regs->axis_y.signed_value;
-            if (axis < -1)
+            if (axis < WSEL_ANALOG_NEGATIVE_LIMIT)
             {
                 buttons |= PAD_BTN_UP;
             }
-            else if (axis >= 2)
+            else if (axis >= WSEL_ANALOG_POSITIVE_LIMIT)
             {
                 buttons |= PAD_BTN_DOWN;
             }
@@ -1537,21 +1538,21 @@ static void wsel_init_pad_repeat(void)
         if (regs->device_type != 0)
         {
             axis = regs->axis_x.signed_value;
-            if (axis < -1)
+            if (axis < WSEL_ANALOG_NEGATIVE_LIMIT)
             {
                 buttons |= PAD_BTN_LEFT;
             }
-            else if (axis >= 2)
+            else if (axis >= WSEL_ANALOG_POSITIVE_LIMIT)
             {
                 buttons |= PAD_BTN_RIGHT;
             }
 
             axis = regs->axis_y.signed_value;
-            if (axis < -1)
+            if (axis < WSEL_ANALOG_NEGATIVE_LIMIT)
             {
                 buttons |= PAD_BTN_UP;
             }
-            else if (axis >= 2)
+            else if (axis >= WSEL_ANALOG_POSITIVE_LIMIT)
             {
                 buttons |= PAD_BTN_DOWN;
             }

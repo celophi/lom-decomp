@@ -16,6 +16,7 @@
 
 /* Overlay data types. */
 
+/** @brief VRAM locations for a TIM image and its color lookup table. */
 typedef struct
 {
     s16 x;
@@ -24,24 +25,34 @@ typedef struct
     s16 clut_y;
 } ZukanImageDestination;
 
+/** @brief Offsets of the images and text tables in the UI archive. */
+typedef struct
+{
+    s32 section_count;
+    s32 page_image_offset;
+    s32 border_image_offset;
+    s32 entry_names_offset;
+    s32 category_names_offset;
+} ZukanArchiveHeader;
+
 /**
- * @brief One encyclopedia list entry: glyph index and a discovered flag in the
- *        top bit of @c resource_flags.
+ * @brief One visible entry's name index and page resource ID. The high bit of
+ *        @c resource_id_and_available marks an unlocked page.
  */
 typedef struct
 {
-    u16 glyph_index;
-    u16 resource_flags;
+    u16 name_index;
+    u16 resource_id_and_available;
 } ZukanListEntry;
 
 /**
- * @brief One per-entry glyph record. @c attributes and @c texture pack the sprite fields;
- *        @c x and @c y are the on-screen X/Y used when building primitives.
+ * @brief One fixed UI sprite's texture selection, UV, palette, dimensions,
+ *        and screen position.
  */
 typedef struct
 {
-    u32 attributes;
-    u32 texture;
+    u32 source_and_u;
+    u32 v_clut_and_size;
     u16 x;
     u16 y;
 } ZukanUiSpriteRecord;
@@ -67,6 +78,7 @@ typedef struct
     s16 y;
 } ZukanPos;
 
+/** @brief Packed GPU line packet used for the four sides of a detail panel. */
 typedef struct
 {
     s32 tag;
@@ -77,12 +89,14 @@ typedef struct
     u16 y1;
 } ZukanLinePacket;
 
+/** @brief Shared packet location for a fade tile or texture-page command. */
 typedef union
 {
     TILE tile;
     DR_TPAGE draw_mode;
 } ZukanFadePrimitive;
 
+/** @brief Fade color and the number of interpolation steps left. */
 typedef struct
 {
     s16 red;
@@ -91,6 +105,7 @@ typedef struct
     s16 steps_remaining;
 } ZukanFadeState;
 
+/** @brief Entry resource size and offset of its related-entry identifiers. */
 typedef struct
 {
     u8 pad[0xC];
@@ -145,11 +160,10 @@ typedef struct
 
 extern u8 D_800EC3E0[];
 
-/**
- * @brief Address of string @p index in the archive text table whose offset word is at @p table_word.
- */
-#define ZUKAN_ARCHIVE_TEXT(archive, table_word, index)                                                                                                         \
-    ((u8*)(*(s32*)((archive) + (table_word)) + (*(u16*)((index) * 2 + *(s32*)((archive) + (table_word)) + (archive)) + (s32)(archive))))
+/** @brief String @p index in an archive text section selected by @p field. */
+#define ZUKAN_ARCHIVE_TEXT(archive, field, index) \
+    ((u8*)(((ZukanArchiveHeader*)(archive))->field + \
+           (*(u16*)((index) * 2 + ((ZukanArchiveHeader*)(archive))->field + (archive)) + (s32)(archive))))
 
 /** @brief Address of the FIELD UI string whose offset pair is @p entry, the @p index-th table entry. */
 #define FIELD_UI_TEXT_AT(entry, index) ((entry) - (index) * 2 + (entry)[0] + ((entry)[1] << 8))
@@ -258,13 +272,13 @@ void zukan_upload_ui_images(s32 work_buffer)
     destinations.y = 0x100;
     destinations.clut_x = 0;
     destinations.clut_y = 0x1F2;
-    zukan_upload_tim(&destinations, (TimPrefix*)(archive + *(s32*)(archive + 8)));
+    zukan_upload_tim(&destinations, (TimPrefix*)(archive + ((ZukanArchiveHeader*)archive)->border_image_offset));
 
     destinations.x = 0x140;
     destinations.y = 0;
     destinations.clut_x = 0;
     destinations.clut_y = 0x1F2;
-    zukan_upload_tim(&destinations, (TimPrefix*)(archive + *(s32*)(archive + 4)));
+    zukan_upload_tim(&destinations, (TimPrefix*)(archive + ((ZukanArchiveHeader*)archive)->page_image_offset));
 }
 
 /**
@@ -363,7 +377,7 @@ s32 zukan_handle_input(void)
         selection_moved = 0;
         if (g_pad_input & 0x220)
         {
-            if (g_zukan_list_entries[g_zukan_selected_entry].resource_flags >> 15)
+            if (g_zukan_list_entries[g_zukan_selected_entry].resource_id_and_available >> 15)
             {
                 play_menu_sfx(0x7E, 0x80);
                 zukan_set_fade_target(0, 0, 0, ZUKAN_FADE_STEPS);
@@ -457,7 +471,7 @@ s32 zukan_handle_input(void)
         {
             g_zukan_selected_entry = 0;
         }
-        while ((g_zukan_list_entries[g_zukan_selected_entry].resource_flags >> 15) == 0)
+        while ((g_zukan_list_entries[g_zukan_selected_entry].resource_id_and_available >> 15) == 0)
         {
             g_zukan_selected_entry++;
             if (g_zukan_selected_entry >= g_zukan_entry_count)
@@ -486,7 +500,7 @@ s32 zukan_handle_input(void)
         {
             g_zukan_selected_entry = g_zukan_entry_count - 1;
         }
-        while ((g_zukan_list_entries[g_zukan_selected_entry].resource_flags >> 15) == 0)
+        while ((g_zukan_list_entries[g_zukan_selected_entry].resource_id_and_available >> 15) == 0)
         {
             g_zukan_selected_entry--;
             if (g_zukan_selected_entry < 0)
@@ -650,15 +664,15 @@ u8* zukan_emit_ui_sprite(u8* packet_cursor, u_long* ordering_table, u32 sprite_i
     setXY0((SPRT*)packet_cursor, x + 8, y);
 
     sprite_record = &g_zukan_ui_sprites[sprite_index];
-    setWH((SPRT*)packet_cursor, (sprite_record->texture >> 14) & 0x1FF, sprite_record->texture >> 23);
-    setUV0((SPRT*)packet_cursor, sprite_record->attributes >> 8, sprite_record->texture);
-    ((SPRT*)packet_cursor)->clut = ((sprite_record->texture >> 8) & 0x3F) | 0x7C80;
+    setWH((SPRT*)packet_cursor, (sprite_record->v_clut_and_size >> 14) & 0x1FF, sprite_record->v_clut_and_size >> 23);
+    setUV0((SPRT*)packet_cursor, sprite_record->source_and_u >> 8, sprite_record->v_clut_and_size);
+    ((SPRT*)packet_cursor)->clut = ((sprite_record->v_clut_and_size >> 8) & 0x3F) | 0x7C80;
 
     addPrim(ordering_table, ((SPRT*)packet_cursor));
 
     packet_cursor += sizeof(SPRT);
     draw_mode = (DR_TPAGE*)packet_cursor;
-    switch ((u8)sprite_record->attributes)
+    switch ((u8)sprite_record->source_and_u)
     {
     case 0:
         setDrawTPage(draw_mode, 0, 0, 5);
@@ -801,7 +815,7 @@ void zukan_render_content(RenderContext* render_ctx)
 
         {
             u8* archive = g_zukan_resource_archive;
-            packet_cursor = func_800A88A0(packet_cursor, ordering_table, ZUKAN_ARCHIVE_TEXT(archive, 0x10, g_zukan_category), 0xA, 0xA0, 0x22, 2);
+            packet_cursor = func_800A88A0(packet_cursor, ordering_table, ZUKAN_ARCHIVE_TEXT(archive, category_names_offset, g_zukan_category), 0xA, 0xA0, 0x22, 2);
         }
 
         if (g_zukan_scroll_y != 0)
@@ -857,10 +871,10 @@ void zukan_render_content(RenderContext* render_ctx)
             pos.x = 0;
             pos.y = row_y;
             packet_cursor = func_800A8B04(ordering_table, packet_cursor, entry_index + 1, 0, &pos, 0);
-            if (g_zukan_list_entries[entry_index].resource_flags >> 15)
+            if (g_zukan_list_entries[entry_index].resource_id_and_available >> 15)
             {
                 u8* archive = g_zukan_resource_archive;
-                packet_cursor = func_800A88A0(packet_cursor, ordering_table, ZUKAN_ARCHIVE_TEXT(archive, 0xC, g_zukan_list_entries[entry_index].glyph_index), 0,
+                packet_cursor = func_800A88A0(packet_cursor, ordering_table, ZUKAN_ARCHIVE_TEXT(archive, entry_names_offset, g_zukan_list_entries[entry_index].name_index), 0,
                                               0x66, row_y, 2);
             }
             else
@@ -1084,12 +1098,12 @@ ZukanFadePrimitive* zukan_render_fade(ZukanFadePrimitive* primitive, u_long* ord
 void zukan_build_entry_list(s32 category)
 {
     s32 resource_ids[0x200];
-    s32 glyph_indices[0x200];
+    s32 name_indices[0x200];
     s32 count;
     s32 i;
     s32 entry_count;
 
-    count = zukan_build_category_entries(category, resource_ids, glyph_indices);
+    count = zukan_build_category_entries(category, resource_ids, name_indices);
     g_zukan_entry_count = count;
     i = 0;
     if (count > 0)
@@ -1099,15 +1113,15 @@ void zukan_build_entry_list(s32 category)
         {
             if (resource_ids[i] != 0)
             {
-                g_zukan_list_entries[i].resource_flags |= ZUKAN_ENTRY_AVAILABLE_FLAG;
-                g_zukan_list_entries[i].resource_flags =
-                    (g_zukan_list_entries[i].resource_flags & ZUKAN_ENTRY_AVAILABLE_FLAG) | ((u16)resource_ids[i] & ZUKAN_RESOURCE_ID_MASK);
-                g_zukan_list_entries[i].glyph_index = glyph_indices[i];
+                g_zukan_list_entries[i].resource_id_and_available |= ZUKAN_ENTRY_AVAILABLE_FLAG;
+                g_zukan_list_entries[i].resource_id_and_available =
+                    (g_zukan_list_entries[i].resource_id_and_available & ZUKAN_ENTRY_AVAILABLE_FLAG) | ((u16)resource_ids[i] & ZUKAN_RESOURCE_ID_MASK);
+                g_zukan_list_entries[i].name_index = name_indices[i];
             }
             else
             {
-                g_zukan_list_entries[i].resource_flags = 0;
-                g_zukan_list_entries[i].glyph_index = 0;
+                g_zukan_list_entries[i].resource_id_and_available = 0;
+                g_zukan_list_entries[i].name_index = 0;
             }
             i++;
         } while (i < entry_count);
@@ -1120,7 +1134,7 @@ void zukan_build_entry_list(s32 category)
  */
 void zukan_load_entry(s32 index)
 {
-    cdrom_queue_read((g_zukan_list_entries[index].resource_flags & ZUKAN_RESOURCE_ID_MASK) + ZUKAN_ENTRY_RESOURCE_BASE, g_zukan_resource_buffer);
+    cdrom_queue_read((g_zukan_list_entries[index].resource_id_and_available & ZUKAN_RESOURCE_ID_MASK) + ZUKAN_ENTRY_RESOURCE_BASE, g_zukan_resource_buffer);
 }
 
 /**

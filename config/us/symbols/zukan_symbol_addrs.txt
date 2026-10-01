@@ -1,4 +1,8 @@
 // ZUKAN.BIN
+g_saved_technique_bits = 0x8004300C;
+g_saved_ability_bits = 0x80043038;
+g_saved_lands = 0x800432C8;
+g_saved_encyclopedia_bits = 0x800460AC;
 play_menu_sfx = 0x800A3938;
 g_zukan_overlay_id = 0x80140000;
 g_zukan_category_ranges = 0x8014001C;

@@ -1,13 +1,16 @@
 #include "saved_game.h"
 #include "title_internal.h"
+#include "title_save.h"
 #include "sdk/rand.h"
 
 void reset_save_slot_panel(void);
 void handle_save_slot_input(void);
-void AnimateSaveSlotPanel(void);
+void animate_save_slot_panel(void);
 
 /* Width in pixels of a single save-slot panel; one horizontal slide moves the
  * stage by exactly this much. */
+#define TITLE_TECHNIQUE_BITS_OFFSET ((u32)&((SavedGameLayout*)0)->technique_bits)
+
 #define SLOT_PANEL_WIDTH 160
 
 /* Number of frames the slide-lerper takes to animate a full panel scroll. */
@@ -25,12 +28,11 @@ static void scroll_slots_right(void);
 static void scroll_slots_left(void);
 void load_sub_menu_layout(s32 is_continue);
 unsigned short upload_save_layout_textures(void);
-void* RenderSaveLayoutPrims(u8* ptr, u_long* ot);
+void* render_save_layout_prims(u8* ptr, u_long* ot);
 
 /**
- * Counterpart of CHECKPS update_controller_input.
- *
- * decomp.me (100%) https://decomp.me/scratch/1dQbp
+ * @brief Read the controller state before opening the save-slot picker.
+ * @see decomp.me (100%) https://decomp.me/scratch/1dQbp
  * @note JP reports the face buttons as read (no PAD_REMAP_FACE_BITS swap).
  */
 static void read_pad_input(void)
@@ -54,20 +56,20 @@ static void read_pad_input(void)
         if (base->device_type != 0)
         {
             axis = base->axis_x.signed_value;
-            if (axis < (-1))
+            if (axis < TITLE_ANALOG_LOW_THRESHOLD)
             {
                 buttons |= PAD_BTN_LEFT;
             }
-            else if (axis >= 2)
+            else if (axis >= TITLE_ANALOG_HIGH_THRESHOLD)
             {
                 buttons |= PAD_BTN_RIGHT;
             }
             axis = base->axis_y.signed_value;
-            if (axis < (-1))
+            if (axis < TITLE_ANALOG_LOW_THRESHOLD)
             {
                 buttons |= PAD_BTN_UP;
             }
-            else if (axis >= 2)
+            else if (axis >= TITLE_ANALOG_HIGH_THRESHOLD)
             {
                 buttons |= PAD_BTN_DOWN;
             }
@@ -75,15 +77,14 @@ static void read_pad_input(void)
         state = buttons;
     }
     g_lastInputState = state;
-    g_inputRepeatTimer = 15;
+    g_inputRepeatTimer = TITLE_INITIAL_REPEAT_DELAY;
 }
 
 /**
- * Initialises the save-slot sub-menu state and uploads its sprite atlases.
- *
- * decomp.me (100%) https://decomp.me/scratch/t2lHt
+ * @brief Initialize the save-slot picker state and upload its sprite atlases.
+ * @see decomp.me (100%) https://decomp.me/scratch/t2lHt
  */
-void InitSaveSlotMenu(void)
+void init_save_slot_menu(void)
 {
     read_pad_input();
     g_slotSlideFrames = 0;
@@ -99,11 +100,13 @@ void InitSaveSlotMenu(void)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/so5cY
+ * @brief Render the save-slot picker and process its input for one frame.
+ * @param context Active title display and primitive buffers.
+ * @see decomp.me (100%) https://decomp.me/scratch/so5cY
  */
-void RenderSaveSlotMenu(TitleMenuContext* arg0)
+void render_save_slot_menu(TitleMenuContext* context)
 {
-    arg0->next_prim_ptr = (u_long*)RenderSaveLayoutPrims(arg0->next_prim_ptr, (u_long*)((char*)arg0 + 0x40));
+    context->next_prim_ptr = (u_long*)render_save_layout_prims((u8*)context->next_prim_ptr, context->otag_buffer);
     handle_save_slot_input();
 }
 
@@ -128,7 +131,6 @@ void RenderSaveSlotMenu(TitleMenuContext* arg0)
 void handle_save_slot_input(void)
 {
     s32 slide_x_step;
-    u8* unused_ptr;
     s32* slide_x_lerped_ptr;
     s32 prev_index;
     s32 next_index;
@@ -154,7 +156,7 @@ void handle_save_slot_input(void)
         {
             SaveLayoutEntry* entry;
             play_title_sfx(0x7D, 0x80);
-            entry = ((SaveLayoutEntry*)g_saveLayoutTable);
+            entry = g_saveLayoutTable;
             if (entry[18].type != 0)
             {
                 entry[18].type = 0;
@@ -162,13 +164,13 @@ void handle_save_slot_input(void)
                 return;
             }
             entry[18].type = 1;
-            entry[19].type = g_slotSlideYLerped * 0;
+            entry[19].type = 0;
             return;
         }
         if (g_debouncedInput & (PAD_BTN_START | PAD_BTN_L3 | PAD_BTN_CROSS))
         {
             play_title_sfx(0x7E, 0x80);
-            if (D_800F9AED != 0)
+            if (g_saveLayoutTable[18].type != 0)
             {
                 scroll_slots_right();
                 reset_save_slot_panel();
@@ -192,37 +194,33 @@ void handle_save_slot_input(void)
             {
                 s32 rng_lo;
                 int rng_hi;
-                u8* layout;
 
                 load_sub_menu_layout(0);
                 flag_mask = ~0x7F;
-                layout = g_saved_game.bytes;
-                new_flags = *(s32*)(layout + 0x608) & flag_mask;
-                *(s32*)(layout + 0x608) = new_flags;
+                new_flags = g_saved_game.layout.characters[0].info.word & flag_mask;
+                g_saved_game.layout.characters[0].info.word = new_flags;
                 rng_lo = rand();
                 rng_hi = rand();
                 rng_lo |= rng_hi << 0xF;
-                *(s16*)(layout + 0xD4) = (s16)rng_lo;
+                g_saved_game.layout.identity.ids.game_id = (s16)rng_lo;
             }
             else
             {
                 s32 rng_lo;
                 int rng_hi;
-                u8* layout;
 
                 load_sub_menu_layout(1);
                 flag_mask = ~0x7F;
-                layout = g_saved_game.bytes;
-                new_flags = (*(s32*)(layout + 0x608) & flag_mask) | 1;
-                *(s32*)(layout + 0x608) = new_flags;
+                new_flags = (g_saved_game.layout.characters[0].info.word & flag_mask) | 1;
+                g_saved_game.layout.characters[0].info.word = new_flags;
                 rng_lo = rand();
                 rng_hi = rand();
                 rng_lo |= rng_hi << 0xF;
-                *(s16*)(layout + 0xD4) = (s16)rng_lo;
+                g_saved_game.layout.identity.ids.game_id = (s16)rng_lo;
             }
             {
-                s32 selected_slot;
                 s32 slot_idx;
+                s32 selected_slot;
                 u32 copy_count;
                 u8 byte;
                 u8* src_ptr;
@@ -248,11 +246,11 @@ void handle_save_slot_input(void)
                 {
                     if (selected_slot != slot_idx)
                     {
-                        *((s32*)(src_ptr + 0x34)) = 0;
+                        *(u32*)(src_ptr + TITLE_TECHNIQUE_BITS_OFFSET) = 0;
                     }
                     slot_idx += 1;
-                    src_ptr += 4;
-                } while (slot_idx < 0xB);
+                    src_ptr += sizeof(u32);
+                } while (slot_idx < FIELD_WEAPON_CATEGORY_COUNT);
                 play_title_sfx(0x7E, 0x80);
             }
             g_titleMenuExitState = 1;
@@ -294,26 +292,28 @@ void handle_save_slot_input(void)
                 }
             }
         }
-        AnimateSaveSlotPanel();
+        animate_save_slot_panel();
     }
 }
 
 /**
+ * @brief Animate the save-slot highlight and scroll window.
+ *
  * Lerps g_slotHighlightX toward g_slotHighlightTargetX over
  * g_slotHighlightFrames frames, pans the scroll window so the selected
  * slot is always visible, then writes the updated V-coordinate and
  * visibility flags for the highlight-bar layout entries in g_saveLayoutTable.
  *
- * decomp.me (100%) https://decomp.me/scratch/d3s3Q
+ * @see decomp.me (100%) https://decomp.me/scratch/d3s3Q
  */
-void AnimateSaveSlotPanel(void)
+void animate_save_slot_panel(void)
 {
-    u8* layout;
+    SaveLayoutEntry* layout;
     s16 scroll_width;
-    s32* new_var2;
+    s32* selected_index_ptr;
     s32 target_adjusted;
     s32 scroll_offset;
-    s32 new_var;
+    s32 highlight_position;
     SaveLayoutEntry* ptr;
     if (g_slotHighlightFrames != 0)
     {
@@ -324,32 +324,32 @@ void AnimateSaveSlotPanel(void)
     {
         g_slotHighlightX = g_slotHighlightTargetX;
     }
-    new_var = g_slotHighlightTargetX;
-    target_adjusted = new_var;
-    if (new_var < 0)
+    highlight_position = g_slotHighlightTargetX;
+    target_adjusted = highlight_position;
+    if (highlight_position < 0)
     {
-        target_adjusted = new_var + 0xF;
+        target_adjusted = highlight_position + 0xF;
     }
     target_adjusted >>= 4;
-    scroll_offset = *(new_var2 = &g_slotSelectedIndex);
+    scroll_offset = *(selected_index_ptr = &g_slotSelectedIndex);
     if (g_slotSelectedIndex < target_adjusted)
     {
         g_slotHighlightTargetX = scroll_offset * 0x10;
         g_slotHighlightFrames = 4;
     }
-    else if ((target_adjusted + 6) < (*new_var2))
+    else if ((target_adjusted + 6) < (*selected_index_ptr))
     {
         g_slotHighlightTargetX = (g_slotSelectedIndex - 6) * 0x10;
         g_slotHighlightFrames = 4;
     }
-    ptr = (SaveLayoutEntry*)g_saveLayoutTable;
+    ptr = g_saveLayoutTable;
     (ptr + 2)->v0 = (u16)g_slotHighlightX;
     ptr[3].v0 = ((u16)g_slotHighlightX) + 0x20;
     ptr[9].v0 = (u16)g_slotHighlightX;
     ptr[10].v0 = ((u16)g_slotHighlightX) + 0x20;
     if (g_slotHighlightX != 0)
     {
-        SaveLayoutEntry* ptr4 = (SaveLayoutEntry*)g_saveLayoutTable;
+        SaveLayoutEntry* ptr4 = g_saveLayoutTable;
         ptr4[7].type = 1;
         ptr4[8].type = 1;
         ptr4[14].type = 1;
@@ -357,7 +357,7 @@ void AnimateSaveSlotPanel(void)
     }
     else
     {
-        SaveLayoutEntry* ptr5 = (SaveLayoutEntry*)g_saveLayoutTable;
+        SaveLayoutEntry* ptr5 = g_saveLayoutTable;
         ptr5[7].type = 0;
         ptr5[8].type = 0;
         ptr5[14].type = 0;
@@ -365,7 +365,7 @@ void AnimateSaveSlotPanel(void)
     }
     if (g_slotHighlightX != 0x40)
     {
-        SaveLayoutEntry* ptr3 = (SaveLayoutEntry*)g_saveLayoutTable;
+        SaveLayoutEntry* ptr3 = g_saveLayoutTable;
         ptr3[4].type = 1;
         ptr3[5].type = 1;
         ptr3[11].type = 1;
@@ -373,13 +373,13 @@ void AnimateSaveSlotPanel(void)
     }
     else
     {
-        SaveLayoutEntry* ptr2 = (SaveLayoutEntry*)g_saveLayoutTable;
+        SaveLayoutEntry* ptr2 = g_saveLayoutTable;
         ptr2[4].type = 0;
         ptr2[5].type = 0;
         ptr2[11].type = 0;
         ptr2[12].type = 0;
     }
-    scroll_offset = (g_slotSelectedIndex * 0x10) - (new_var = g_slotHighlightX);
+    scroll_offset = (g_slotSelectedIndex * 0x10) - (highlight_position = g_slotHighlightX);
     if (scroll_offset < 0)
     {
         scroll_offset = 0;
@@ -390,10 +390,10 @@ void AnimateSaveSlotPanel(void)
     }
     layout = g_saveLayoutTable;
     scroll_width = scroll_offset + 0x40;
-    *((u16*)(layout + 0x96)) = scroll_width;
-    *((u16*)(layout + 0x9A)) = scroll_width;
-    *((u16*)(layout + 0x13E)) = scroll_width;
-    *((u16*)(layout + 0x142)) = scroll_width;
+    layout[6].y = scroll_width;
+    layout[6].tile_y = scroll_width;
+    layout[13].y = scroll_width;
+    layout[13].tile_y = scroll_width;
 }
 
 /**
@@ -409,11 +409,6 @@ void AnimateSaveSlotPanel(void)
  * globals are all cleared. When no slide is active it only resets entry 0's
  * U/V to their home values.
  *
- * @note When a slide is active the entries are reached through a
- *       @ref SaveLayoutEntry pointer, matching AnimateSaveSlotPanel. The
- *       inactive-slide branch indexes the table by g_slotSlideX (always 0
- *       here) added to its base, so it stays raw pointer arithmetic.
- *
  * @see decomp.me (100%) https://decomp.me/scratch/0YgmZ
  */
 void reset_save_slot_panel(void)
@@ -421,7 +416,7 @@ void reset_save_slot_panel(void)
     s16 highlight_bottom_v;
     if (g_slotSlideX != 0)
     {
-        SaveLayoutEntry* entry = (SaveLayoutEntry*)g_saveLayoutTable;
+        SaveLayoutEntry* entry = g_saveLayoutTable;
         entry[0].v0 = SAVE_SLOT_HOME_V;
         g_slotSelectedIndex = 0;
         g_slotHighlightX = 0;
@@ -449,10 +444,9 @@ void reset_save_slot_panel(void)
         return;
     }
     {
-        u32 low_addr = (u32)(&g_saveLayoutTable);
-        u8* ptr = g_slotSlideX + low_addr;
-        *((u16*)(ptr + 0xC)) = SAVE_SLOT_HOME_V;
-        *((u16*)(ptr + 0xE)) = 0;
+        SaveLayoutEntry* entry = g_saveLayoutTable;
+        entry[0].u0 = SAVE_SLOT_HOME_V;
+        entry[0].v0 = 0;
     }
 }
 
@@ -463,10 +457,6 @@ void reset_save_slot_panel(void)
  * with SLOT_SLIDE_FRAMES frames of remaining travel. If the lerper is
  * already showing the right-hand panel (g_slotSlideXLerped == SLOT_PANEL_WIDTH),
  * the call is a no-op so we don't accumulate further offset off the edge.
- *
- * @param void No parameters.
- * @return void No return value.
- *
  * @see decomp.me (100%) https://decomp.me/scratch/SRP9z
  */
 static void scroll_slots_right(void)
@@ -485,10 +475,6 @@ static void scroll_slots_right(void)
  * -SLOT_PANEL_WIDTH and re-arms the lerper with SLOT_SLIDE_FRAMES of
  * travel. No-ops when the lerper is already at the left-hand limit so
  * the offset cannot run away off-stage.
- *
- * @param void No parameters.
- * @return void No return value.
- *
  * @see decomp.me (100%) https://decomp.me/scratch/W1iA5
  */
 static void scroll_slots_left(void)
@@ -545,9 +531,9 @@ static inline u32 get_save_layout_base_tpage(SaveLayoutTex* tex, u32 flags)
  * @return Pointer to the byte just past the last primitive emitted.
  *
  */
-void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
+void* render_save_layout_prims(u8* ptr, u_long* ot)
 {
-    SaveLayoutEntry* entry = (SaveLayoutEntry*)g_saveLayoutTable;
+    SaveLayoutEntry* entry = g_saveLayoutTable;
     s32 i = 0;
     s32 tile_len = SAVE_LAYOUT_PRIM_POLY_FT4;
     s32 idx;

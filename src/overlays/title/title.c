@@ -1,5 +1,6 @@
 #include "saved_game.h"
 #include "title_internal.h"
+#include "title_save.h"
 #include "screen_transition.h"
 #include "akao_cmd.h"
 #include "sdk/memory.h"
@@ -12,7 +13,7 @@ void stop_title_music(void);
 void start_title_music(void);
 void set_fade_target(s32 red, s32 green, s32 blue, s32 steps);
 void reset_fade_state(void);
-void render_title_menu_items(void* ctx);
+void render_title_menu_items(TitleMenuContext* ctx);
 void render_title_backdrop(TitleMenuContext* ctx);
 void render_fade_overlay(TitleMenuContext* ctx);
 void menu_cursor_up(void);
@@ -41,6 +42,7 @@ void handle_title_menu_input(void);
 
 /** @brief Fixed RAM buffer that CD resources are staged into before being unpacked. */
 #define TITLE_LOAD_BUFFER ((u8*)LOAD_BUFFER_ADDRESS)
+#define TITLE_AUDIO_BANK ((u8*)SOUND_BANK_ADDRESS)
 /** @brief Offset table at the head of a staged file: [0] first block, [1] instrument bank. */
 #define TITLE_LOAD_BUFFER_OFFSETS ((u32*)LOAD_BUFFER_AT(0x4))
 
@@ -87,7 +89,7 @@ typedef union
 void init_title_display(TitleMenuContext* context);
 void render_menu(TitleMenuContext* context);
 s32 run_save_slot_menu(TitleMenuContext* context);
-void* emit_menu_item_quad(s32* ot_head, void* prim, s32 tex_row, s32 x, s32 y, s32 u0_base, s32 width, s32 clut_index);
+void* emit_menu_item_quad(u_long* ot_head, void* prim, s32 tex_row, s32 x, s32 y, s32 u0_base, s32 width, s32 clut_index);
 
 /**
  * @brief Run the title menu and choose the next game state.
@@ -160,38 +162,40 @@ s32 run_title(TitleMenuContext* menu_context)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/bMLDn
+ * @brief Render the main title menu until a selection or idle timeout occurs.
+ * @param context Display and primitive buffers for both title frames.
+ * @see decomp.me (100%) https://decomp.me/scratch/bMLDn
  */
 void render_menu(TitleMenuContext* context)
 {
     RECT rect;
     TitleMenuContext* base = context;
-    TitleMenuContext* s0;
-    u_long* s1;
-    void* tmp;
+    TitleMenuContext* current;
+    u_long* ot_head;
+    void* next_context;
 
     DrawSync(0);
     VSync(0);
     setRECT(&rect, 0, 0, 320, 472);
     ClearImage(&rect, 0, 0, 0);
 
-    s0 = base;
-    ClearOTagR(s0->otag_buffer, 0x1000);
-    ClearOTagR(s0->otag_buffer2, 0x1000);
-    PutDispEnv(&s0->disp_env);
+    current = base;
+    ClearOTagR(current->otag_buffer, 0x1000);
+    ClearOTagR(current->otag_buffer2, 0x1000);
+    PutDispEnv(&current->disp_env);
     update_controllers();
     SetDispMask(1);
 
     while (1)
     {
-        s1 = s0->otag_buffer;
-        ClearOTagR(s1, 0x1000);
-        s0->next_prim_ptr = s0->prim_buffer;
+        ot_head = current->otag_buffer;
+        ClearOTagR(ot_head, 0x1000);
+        current->next_prim_ptr = current->prim_buffer;
         rand();
         VSync(1);
-        render_fade_overlay(s0);
-        render_title_backdrop(s0);
-        render_title_menu_items(s0);
+        render_fade_overlay(current);
+        render_title_backdrop(current);
+        render_title_menu_items(current);
         handle_title_menu_input();
 
         if (g_titleMenuExitState == 0)
@@ -200,15 +204,15 @@ void render_menu(TitleMenuContext* context)
             set_controller_vsync_interval(2);
             VSync(2);
 
-            tmp = base;
-            if (s0 == base)
+            next_context = base;
+            if (current == base)
             {
-                tmp = s0->_pad4;
+                next_context = current->second_buffer_header;
             }
-            s0 = tmp;
-            PutDispEnv(&s0->disp_env);
-            PutDrawEnv(&s0->draw_env);
-            DrawOTag((u_long*)(s1 + 4095));
+            current = next_context;
+            PutDispEnv(&current->disp_env);
+            PutDrawEnv(&current->draw_env);
+            DrawOTag((u_long*)(ot_head + 4095));
             update_controllers();
             cdrom_process_state();
             if (g_titleMenuExitState == 0)
@@ -245,12 +249,12 @@ s32 run_save_slot_menu(TitleMenuContext* ctx_base)
     RECT rect;
     TitleMenuContext* base;
     TitleMenuContext* current;
-    void* tmp;
+    void* next_context;
     u_long* ot;
 
     base = ctx_base;
 
-    InitSaveSlotMenu();
+    init_save_slot_menu();
     screen_transition(0);
     set_fade_target(0x100, 0x100, 0x100, 0x14);
     DrawSync(0);
@@ -271,16 +275,16 @@ s32 run_save_slot_menu(TitleMenuContext* ctx_base)
         current->next_prim_ptr = current->prim_buffer;
         VSync(1);
         render_fade_overlay(current);
-        RenderSaveSlotMenu(current);
+        render_save_slot_menu(current);
         DrawSync(0);
         set_controller_vsync_interval(2);
         VSync(2);
-        tmp = base;
+        next_context = base;
         if (current == base)
         {
-            tmp = current->_pad4;
+            next_context = current->second_buffer_header;
         }
-        current = tmp;
+        current = next_context;
         PutDispEnv(&current->disp_env);
         PutDrawEnv(&current->draw_env);
         DrawOTag(ot + 4095); /* last entry of the 4096-word otag_buffer */
@@ -309,7 +313,6 @@ s32 run_save_slot_menu(TitleMenuContext* ctx_base)
 void init_title_display(TitleMenuContext* ctx_base)
 {
     RECT rect;
-    u8* base = (u8*)ctx_base;
     u8* hw = (u8*)SCD_REGS; /* bytes of the controller block past the SCDRegs fields */
 
     /* Clear hardware register bytes */
@@ -322,17 +325,15 @@ void init_title_display(TitleMenuContext* ctx_base)
     SetGeomScreen(0x5DC);
     SetGeomOffset(0xA0, 0x78);
 
-    /* Write shorts at offsets 0x40B0..0x40B6 */
-    *(short*)(base + 0x40B0) = 0;
-    *(short*)(base + 0x40B2) = 0;
-    *(short*)(base + 0x40B4) = SCREEN_WIDTH;
-    *(short*)(base + 0x40B6) = SCREEN_HEIGHT;
+    ctx_base->front_screen.x = 0;
+    ctx_base->front_screen.y = 0;
+    ctx_base->front_screen.w = SCREEN_WIDTH;
+    ctx_base->front_screen.h = SCREEN_HEIGHT;
 
-    /* _pad5 (mirrors _pad2, but past the back-buffer disp/draw env pair) */
-    *(short*)&ctx_base->_pad5[0] = 0;
-    *(short*)&ctx_base->_pad5[2] = VRAM_BACK_DISP_Y;
-    *(short*)&ctx_base->_pad5[4] = SCREEN_WIDTH;
-    *(short*)&ctx_base->_pad5[6] = SCREEN_HEIGHT;
+    ctx_base->back_screen.x = 0;
+    ctx_base->back_screen.y = VRAM_BACK_DISP_Y;
+    ctx_base->back_screen.w = SCREEN_WIDTH;
+    ctx_base->back_screen.h = SCREEN_HEIGHT;
 
     DrawSync(0);
     VSync(0);
@@ -381,7 +382,7 @@ void load_title_audio_bank(void)
     if (((u32)(g_previous_game_state - 2) >= 2U) && (g_previous_game_state != 6) && (g_previous_game_state != 7) && (g_previous_game_state != 5))
     {
 
-        g_titleAudioBankBase = SOUND_BANK_ADDRESS;
+        g_titleAudioBankBase = TITLE_AUDIO_BANK;
         cdrom_queue_read(CD_RES_SOUND_EFFECT_SET, TITLE_LOAD_BUFFER);
         cdrom_wait_queue_empty();
 
@@ -456,8 +457,8 @@ void start_title_music(void)
  * folded away to a constant 0). sound_id values observed: 0x3C (selection
  * chime), 0x7C..0x7F (cursor / cancel / confirm beeps).
  *
- * @param sound_id Sound id forwarded to akao_play_sfx's arg0 (lower 10 bits used).
- * @param pan Forwarded to akao_play_sfx's arg2 (8-bit, possibly pan); every
+ * @param sound_id Sound id forwarded to akao_play_sfx's sound_id (lower 10 bits used).
+ * @param pan Forwarded to akao_play_sfx's pan (8-bit, possibly pan); every
  *        call site in this file passes the constant 0x80.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/ZuKeL
@@ -612,25 +613,25 @@ void render_title_backdrop(TitleMenuContext* ctx)
 {
     u_long* ot;
     POLY_FT4* prim;
-    s32 t0;
-    s32 t1;
-    s32 a3;
+    s32 strip_index;
+    s32 texture_x;
+    s32 right_x;
     s32 temp_v0;
     s32 temp_v1;
 
     prim = (POLY_FT4*)ctx->next_prim_ptr;
     ot = ctx->otag_buffer;
-    t0 = 0;
+    strip_index = 0;
 
-    while (t0 < 5)
+    while (strip_index < 5)
     {
-        a3 = 0x40 + (t0 << 6);
-        prim->x3 = (short)a3;
-        prim->x1 = (short)a3;
-        t1 = 0x140 + (t0 << 6);
-        temp_v1 = t1 & 0x3FF;
-        temp_v0 = t0 << 6;
-        t0++;
+        right_x = 0x40 + (strip_index << 6);
+        prim->x3 = (short)right_x;
+        prim->x1 = (short)right_x;
+        texture_x = 0x140 + (strip_index << 6);
+        temp_v1 = texture_x & 0x3FF;
+        temp_v0 = strip_index << 6;
+        strip_index++;
         prim->x2 = (short)temp_v0;
         prim->x0 = (short)temp_v0;
         setPolyFT4(prim);
@@ -796,22 +797,22 @@ void menu_cursor_up(void)
  *
  * @see decomp.me (100%) https://decomp.me/scratch/qegw7
  */
-void render_title_menu_items(void* ctx)
+void render_title_menu_items(TitleMenuContext* ctx)
 {
-    u8* ot_head;
+    u_long* ot_head;
     u8* prim;
     s32 slot;
     s32 visible_index;
     s32 item_y;
     s32 item_x;
     u8* flag_ptr;
-    s32 first_prim;
+    void* first_prim;
     s32 item_visible;
-    s32 result;
+    void* result;
     u8 anim;
 
-    ot_head = (u8*)(((u8*)ctx) + 0x40);
-    first_prim = *((s32*)(((u8*)ctx) + 0x80B8));
+    ot_head = ctx->otag_buffer;
+    first_prim = ctx->next_prim_ptr;
     prim = emit_menu_item_quad(ot_head, first_prim, 0, TITLE_MENU_HEADER_X, 0xC8, 0, 0x80, 1);
     item_x = 0x88;
     item_y = 0xA0;
@@ -831,11 +832,11 @@ void render_title_menu_items(void* ctx)
         slot++;
         flag_ptr += 2;
     } while (slot < 0x10);
-    result = (s32)emit_menu_item_quad(ot_head, prim, 7, 0x78, (6 * (2 * ((s32)g_titleVisibleItemRank))) + 0x9D,
+    result = emit_menu_item_quad(ot_head, prim, 7, 0x78, (6 * (2 * ((s32)g_titleVisibleItemRank))) + 0x9D,
                                       (s32)g_cursorBlinkUOffsets[(g_titleAnimFrame >> 2) & 3], 0x10, 0);
 
     anim = g_titleAnimFrame;
-    *((s32*)(((u8*)ctx) + 0x80B8)) = result;
+    ctx->next_prim_ptr = result;
     g_titleAnimFrame = anim + 1;
 }
 
@@ -862,57 +863,56 @@ void render_title_menu_items(void* ctx)
  *
  * @see decomp.me (100%) https://decomp.me/scratch/FcuOZ
  */
-void* emit_menu_item_quad(s32* ot_head, void* prim, s32 tex_row, s32 x, s32 y, s32 u0_base, s32 width, s32 clut_index)
+void* emit_menu_item_quad(u_long* ot_head, void* prim, s32 tex_row, s32 x, s32 y, s32 u0_base, s32 width, s32 clut_index)
 {
-    u8* ptr;
+    POLY_FT4* quad;
     u8 v_top;
     u8 v_bottom;
     u16 x_right;
     u16 y_bottom;
     u8 u_right;
-    u8* y1_ptr;
     u16 clut_word;
     u32 old_word;
     u32 new_word;
     u32 addr_mask;
     u32 tag_mask;
-    ptr = (u8*)prim;
+
+    quad = prim;
     addr_mask = 0x00FFFFFF;
-    setPolyFT4(ptr); /* len = 9, code = 0x2C */
+    setPolyFT4(quad);
     v_top = (u8)(tex_row << 4);
-    ptr[0x06] = 0x80;  /* b0 */
-    ptr[0x15] = v_top; /* v1 */
-    ptr[0x0D] = v_top; /* v0 */
+    quad->b0 = 0x80;
+    quad->v1 = v_top;
+    quad->v0 = v_top;
     v_bottom = (u8)((tex_row << 4) + 0x10);
-    ptr[0x05] = 0x80;               /* g0 */
-    ptr[0x04] = 0x80;               /* r0 */
-    ptr[0x25] = v_bottom;           /* v3 */
-    ptr[0x1D] = v_bottom;           /* v2 */
-    *((u16*)(ptr + 0x18)) = (u16)x; /* x2 */
-    *((u16*)(ptr + 0x08)) = (u16)x; /* x0 */
-    *((u16*)(ptr + 0x16)) = 5;      /* tpage */
+    quad->g0 = 0x80;
+    quad->r0 = 0x80;
+    quad->v3 = v_bottom;
+    quad->v2 = v_bottom;
+    quad->x2 = (u16)x;
+    quad->x0 = (u16)x;
+    quad->tpage = 5;
     tag_mask = 0xFF000000;
     x_right = (u16)(x + width);
-    *((u16*)(ptr + 0x20)) = x_right; /* x3 */
-    *((u16*)(ptr + 0x10)) = x_right; /* x1 */
-    y1_ptr = ptr + 0x12;
-    *((u16*)y1_ptr) = (u16)y;       /* y1 */
-    *((u16*)(ptr + 0x0A)) = (u16)y; /* y0 */
+    quad->x3 = x_right;
+    quad->x1 = x_right;
+    quad->y1 = (u16)y;
+    quad->y0 = (u16)y;
     y_bottom = (u16)(y + 0x10);
-    ptr[0x1C] = (u8)u0_base; /* u2 */
-    ptr[0x0C] = (u8)u0_base; /* u0 */
+    quad->u2 = (u8)u0_base;
+    quad->u0 = (u8)u0_base;
     u_right = (u8)(u0_base + width);
     clut_word = (u16)((clut_index & 0x3F) | 0x7800);
-    *((u16*)(ptr + 0x22)) = y_bottom; /* y3 */
-    *((u16*)(ptr + 0x1A)) = y_bottom; /* y2 */
-    old_word = *((u32*)ptr);
-    ptr[0x24] = u_right;               /* u3 */
-    ptr[0x14] = u_right;               /* u1 */
-    *((u16*)(ptr + 0x0E)) = clut_word; /* clut */
-    new_word = (old_word & tag_mask) | (((u32)(*ot_head)) & addr_mask);
-    *((u32*)ptr) = new_word;
-    *ot_head = (s32)((((u32)(*ot_head)) & tag_mask) | (((u32)ptr) & addr_mask));
-    return (void*)(ptr + 0x28);
+    quad->y3 = y_bottom;
+    quad->y2 = y_bottom;
+    old_word = quad->tag;
+    quad->u3 = u_right;
+    quad->u1 = u_right;
+    quad->clut = clut_word;
+    new_word = (old_word & tag_mask) | (*ot_head & addr_mask);
+    quad->tag = new_word;
+    *ot_head = (*ot_head & tag_mask) | ((u32)quad & addr_mask);
+    return quad + 1;
 }
 
 /**
@@ -932,7 +932,6 @@ void init_title_menu_state(void)
     u8* flag_ptr;
     s32 i;
     s32 next_item;
-    u8* item_ptr;
     i = 0;
     flag_ptr = g_titleMenuItemFlags;
     for (i = 0; i < TITLE_MENU_SLOT_COUNT; i++)
@@ -962,19 +961,13 @@ void init_title_menu_state(void)
         next_item = g_titleSelectedItem + 1;
         if (next_item < TITLE_MENU_SLOT_COUNT)
         {
-            item_ptr = g_titleMenuItemFlags + (next_item << 1);
-            do
+            for (; next_item < TITLE_MENU_SLOT_COUNT; next_item++)
             {
-                if ((g_titleMenuTimTable && g_titleMenuTimTable) && g_titleMenuTimTable)
-                {
-                }
-                if ((*item_ptr) != 0)
+                if (g_titleMenuItemFlags[next_item * 2] != 0)
                 {
                     break;
                 }
-                next_item++;
-                item_ptr += 2;
-            } while (next_item < TITLE_MENU_SLOT_COUNT);
+            }
         }
         if (next_item == TITLE_MENU_SLOT_COUNT)
         {
@@ -1050,7 +1043,6 @@ void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y)
  * computed bitmap directly instead of writing it into @p g_lastInputState
  * and resetting @p g_inputRepeatTimer.
  *
- * @note No callers exist in the linked binary.
  *
  * @return Remapped button bitmap, or 0 if the pad is not present
  *         (g_controller_device_type >= TITLE_PAD_UNAVAILABLE).
@@ -1083,21 +1075,21 @@ s32 read_pad_state(void)
     {
         /* Convert signed analog-axis thresholds to digital directions. */
         axis_x = regs->axis_x.signed_value;
-        if (axis_x < -1)
+        if (axis_x < TITLE_ANALOG_LOW_THRESHOLD)
         {
             buttons |= PAD_BTN_LEFT;
         }
-        else if (axis_x >= 2)
+        else if (axis_x >= TITLE_ANALOG_HIGH_THRESHOLD)
         {
             buttons |= PAD_BTN_RIGHT;
         }
 
         axis_y = regs->axis_y.signed_value;
-        if (axis_y < -1)
+        if (axis_y < TITLE_ANALOG_LOW_THRESHOLD)
         {
             buttons |= PAD_BTN_UP;
         }
-        else if (axis_y >= 2)
+        else if (axis_y >= TITLE_ANALOG_HIGH_THRESHOLD)
         {
             buttons |= PAD_BTN_DOWN;
         }
@@ -1142,21 +1134,21 @@ void update_menu_input(void)
         if (regs->device_type != 0)
         {
             axis = regs->axis_x.signed_value;
-            if (axis < -1)
+            if (axis < TITLE_ANALOG_LOW_THRESHOLD)
             {
                 buttons |= PAD_BTN_LEFT;
             }
-            else if (axis >= 2)
+            else if (axis >= TITLE_ANALOG_HIGH_THRESHOLD)
             {
                 buttons |= PAD_BTN_RIGHT;
             }
 
             axis = regs->axis_y.signed_value;
-            if (axis < -1)
+            if (axis < TITLE_ANALOG_LOW_THRESHOLD)
             {
                 buttons |= PAD_BTN_UP;
             }
-            else if (axis >= 2)
+            else if (axis >= TITLE_ANALOG_HIGH_THRESHOLD)
             {
                 buttons |= PAD_BTN_DOWN;
             }

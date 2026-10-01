@@ -13,7 +13,7 @@
 #include "scene_state.h"
 
 /**
- * Current screen-fade colour. RGB only; the fade-target struct carries the
+ * @brief Current screen-fade colour. RGB only; the fade-target struct carries the
  * step counter. Counterpart to g_fadeCurrent in the CHECKPS overlay.
  */
 typedef struct
@@ -24,7 +24,7 @@ typedef struct
 } FadeCurrent;
 
 /**
- * Target colour and remaining frames for the screen-fade interpolation.
+ * @brief Target colour and remaining frames for the screen-fade interpolation.
  * Counterpart to g_fadeTarget in the CHECKPS overlay (which uses a single
  * FadeColor struct for both; here current/target have distinct sizes
  * because g_fadeCurrent is followed immediately by another global).
@@ -40,20 +40,20 @@ typedef struct
 /** @brief Display environments and GPU command buffers used by TITLE. */
 struct TitleMenuContext
 {
-    char _pad[0x40];
+    char first_buffer_header[0x40];
     u_long otag_buffer[0x1000]; /* 0x0040 */
     DISPENV disp_env;           /* 0x4040 */
     DRAWENV draw_env;           /* 0x4054 */
-    char _pad2[8];              /* 0x40B0 */
+    RECT front_screen;          /* 0x40B0 */
     u_long prim_buffer[0x1000]; /* 0x40B8 */
     u_long* next_prim_ptr;      /* 0x80B8 */
-    char _pad3[0x3C10];         /* 0x80BC */
+    char unknown_0x80BC[0x3C10];         /* 0x80BC */
 
-    char _pad4[0x40];
+    char second_buffer_header[0x40];
     u_long otag_buffer2[0x1000]; /* 0xBD0C */
     DISPENV disp_env2;           /* 0xFD0C */
     DRAWENV draw_env2;           /* 0xFD20 */
-    char _pad5[8];               /* 0xFD7C */
+    RECT back_screen;            /* 0xFD7C */
 
 }; /* 0xFD84 total */
 
@@ -73,6 +73,8 @@ extern s32 g_titleIdleCountdown;
 #define TITLE_PAD_UNAVAILABLE 0xFE
 #define TITLE_REPEAT_DELAY 2
 #define TITLE_INITIAL_REPEAT_DELAY 15
+#define TITLE_ANALOG_LOW_THRESHOLD -1
+#define TITLE_ANALOG_HIGH_THRESHOLD 2
 #define TITLE_DPAD_BUTTONS (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT)
 /** @brief Buttons other than the face buttons that still count as the same held input for repeat. */
 #define TITLE_NON_REPEAT_BUTTON_MASK                                                                                                                           \
@@ -118,7 +120,6 @@ extern u8 D_80043618[0x40];
  * the selected weapon preset into the new-game equipment buffer at D_80043618.
  */
 extern u8 g_startingWeaponRecords[];
-extern u8 D_800F9AED;
 /**
  * @brief One entry in the 27-element save-slot UI layout table (g_saveLayoutTable).
  *
@@ -138,7 +139,7 @@ typedef struct
     s16 tile_x;    /**< +0x08: screen X for TILE (slideX always added) */
     s16 tile_y;    /**< +0x0A: screen Y for TILE */
     u16 u0;        /**< +0x0C: initial U texture coordinate (glyph strip) */
-    u16 v0;        /**< +0x0E: initial V; animated by AnimateSaveSlotPanel for highlight entries */
+    u16 v0;        /**< +0x0E: initial V; animated by animate_save_slot_panel for highlight entries */
     u16 width;     /**< +0x10: TILE.w / glyph total pixel width (chunked at 128 px) */
     u16 height;    /**< +0x12: TILE.h / glyph per-chunk sprite height */
     u32 reserved;  /**< +0x14: zero in every initial table entry; not read at runtime */
@@ -150,11 +151,11 @@ typedef struct
  * the bottom V coordinate). */
 #define SAVE_HIGHLIGHT_SPAN 0x20
 /* Scroll-window width when the panel is re-homed (minimum value; see
- * AnimateSaveSlotPanel which adds the pan offset to this base). */
+ * animate_save_slot_panel which adds the pan offset to this base). */
 #define SAVE_SCROLL_WIDTH_HOME 0x40
 
-/* 0x1B (27) entries; kept as u8[] to preserve byte-granular pointer arithmetic. */
-extern u8 g_saveLayoutTable[0x288];
+/** @brief Save-slot picker entries, including the mode selector at index 18. */
+extern SaveLayoutEntry g_saveLayoutTable[27];
 /**
  * @brief One texture-descriptor entry in g_saveLayoutTexTable (stride 0x10).
  *
@@ -196,12 +197,7 @@ extern s32 g_subMenuLayoutContinue[0x94];
 extern FadeCurrent g_fadeCurrent;
 extern FadeTarget g_fadeTarget;
 
-extern void akao_play_sfx(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-
 /* Private calls that cross the title/title_save translation-unit boundary. */
-void InitSaveSlotMenu(void);
-void RenderSaveSlotMenu(TitleMenuContext* context);
-void load_menu_layout(s32 use_alt);
 void play_title_sfx(s32 sound_id, s32 pan);
 void update_menu_input(void);
 

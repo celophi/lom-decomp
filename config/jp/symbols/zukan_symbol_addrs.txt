@@ -3,6 +3,10 @@
 // regenerate, or hand-edit here once the JP layout is maintained by hand.
 
 // ZUKAN.BIN
+g_saved_technique_bits = 0x80043174;
+g_saved_ability_bits = 0x800431A0;
+g_saved_lands = 0x80043430;
+g_saved_encyclopedia_bits = 0x80046214;
 play_menu_sfx = 0x800A37E8;
 g_zukan_overlay_id = 0x80140000;
 g_zukan_category_ranges = 0x8014001C;
@@ -60,11 +64,7 @@ g_zukan_scroll_target_y = 0x801574EC;
 g_zukan_next_resource_id = 0x801574F0;
 
 // US ELF names not listed above (splat placeholders shared with the C sources).
-D_8004300C    = 0x80043174;
-D_80043038    = 0x800431A0;
-D_800432C8    = 0x80043430;
 D_80043454    = 0x800435BC;
-D_800460AC    = 0x80046214;
 D_800460EC    = 0x80046254;
 D_800460FC    = 0x80046264;
 D_80046124    = 0x8004628C;
