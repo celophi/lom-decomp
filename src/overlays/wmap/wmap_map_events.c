@@ -1,4 +1,5 @@
 #include "wmap_main.h"
+#include "wmap_step_sequence.h"
 #include "wmap_party_travel.h"
 #include "wmap_pathfinding.h"
 #include "wmap_map_events.h"
@@ -719,13 +720,9 @@ s32 func_800A7370(s32 arg0)
 }
 
 /**
- * @brief Set two adjacent world-map state flags.
+ * @brief Restart the sequence at step 1 with a one-frame timer.
  */
-void func_800A73E8(void)
-{
-    D_801B2E70 = 1;
-    D_801B2E74 = 1;
-}
+WMAP_STEP_RESET(func_800A73E8, D_801B2E70, D_801B2E74)
 
 /**
  * @brief Advance this sequence one step unless its gate flag hit the stop value.
@@ -814,12 +811,9 @@ void func_800A75C0(void)
 }
 
 /**
- * @brief Increment a world-map state counter.
+ * @brief Advance past the last sequence step.
  */
-void func_800A7650(void)
-{
-    D_801B2E70 += 1;
-}
+WMAP_STEP_ADVANCE(func_800A7650, D_801B2E70)
 
 /**
  * @brief Dispatch the current world-map sequence step, or reset it.
@@ -850,13 +844,9 @@ s32 func_800A7668(s32 arg0)
 }
 
 /**
- * @brief Set two adjacent world-map state flags.
+ * @brief Restart the sequence at step 1 with a one-frame timer.
  */
-void func_800A76E0(void)
-{
-    D_801B2E40 = 1;
-    D_801B2E44 = 1;
-}
+WMAP_STEP_RESET(func_800A76E0, D_801B2E40, D_801B2E44)
 
 /**
  * @brief Advance this sequence one step unless its gate flag hit the stop value.
@@ -1068,13 +1058,9 @@ s32 func_800A7BE8(s32 arg0)
 }
 
 /**
- * @brief Set two adjacent world-map state flags.
+ * @brief Restart the sequence at step 1 with a one-frame timer.
  */
-void func_800A7C60(void)
-{
-    D_801B2E48 = 1;
-    D_801B2E4C = 1;
-}
+WMAP_STEP_RESET(func_800A7C60, D_801B2E48, D_801B2E4C)
 
 /**
  * @brief Advance this sequence one step unless its gate flag hit the stop value.
@@ -1107,13 +1093,7 @@ void func_800A7CB8(void)
 /**
  * @brief Tick the sequence wait timer; advance the step counter when it expires.
  */
-void func_800A7D0C(void)
-{
-    if (--D_801B2E4C == 0)
-    {
-        D_801B2E48 += 1;
-    }
-}
+WMAP_STEP_WAIT(func_800A7D0C, D_801B2E48, D_801B2E4C)
 
 /**
  * @brief Advance this sequence one step while its gate flag is clear.
@@ -1164,13 +1144,7 @@ void func_800A7E4C(void)
 /**
  * @brief Tick the sequence wait timer; advance the step counter when it expires.
  */
-void func_800A7E6C(void)
-{
-    if (--D_801B2E4C == 0)
-    {
-        D_801B2E48 += 1;
-    }
-}
+WMAP_STEP_WAIT(func_800A7E6C, D_801B2E48, D_801B2E4C)
 
 /** @brief World-map step handler: clear a flag and advance the step. */
 void func_800A7EA0(void)
@@ -1183,13 +1157,7 @@ void func_800A7EA0(void)
 /**
  * @brief Tick the sequence wait timer; advance the step counter when it expires.
  */
-void func_800A7EC8(void)
-{
-    if (--D_801B2E4C == 0)
-    {
-        D_801B2E48 += 1;
-    }
-}
+WMAP_STEP_WAIT(func_800A7EC8, D_801B2E48, D_801B2E4C)
 
 /**
  * @brief World-map step handler: cache the relative scroll delta, bump the frame
@@ -1253,13 +1221,9 @@ s32 func_800A7FD0(s32 arg0)
 }
 
 /**
- * @brief Set two adjacent world-map state flags.
+ * @brief Restart the sequence at step 1 with a one-frame timer.
  */
-void func_800A8048(void)
-{
-    D_801B2E50 = 1;
-    D_801B2E54 = 1;
-}
+WMAP_STEP_RESET(func_800A8048, D_801B2E50, D_801B2E54)
 
 /**
  * @brief Advance this sequence one step unless its gate flag hit the stop value.
@@ -1292,13 +1256,7 @@ void func_800A80A0(void)
 /**
  * @brief Tick the sequence wait timer; advance the step counter when it expires.
  */
-void func_800A80F4(void)
-{
-    if (--D_801B2E54 == 0)
-    {
-        D_801B2E50 += 1;
-    }
-}
+WMAP_STEP_WAIT(func_800A80F4, D_801B2E50, D_801B2E54)
 
 /**
  * @brief Advance this sequence one step while its gate flag is clear.
@@ -1349,13 +1307,7 @@ void func_800A8234(void)
 /**
  * @brief Tick the sequence wait timer; advance the step counter when it expires.
  */
-void func_800A8254(void)
-{
-    if (--D_801B2E54 == 0)
-    {
-        D_801B2E50 += 1;
-    }
-}
+WMAP_STEP_WAIT(func_800A8254, D_801B2E50, D_801B2E54)
 
 /** @brief World-map step handler: clear a flag and advance the step. */
 void func_800A8288(void)
@@ -1368,13 +1320,7 @@ void func_800A8288(void)
 /**
  * @brief Tick the sequence wait timer; advance the step counter when it expires.
  */
-void func_800A82B0(void)
-{
-    if (--D_801B2E54 == 0)
-    {
-        D_801B2E50 += 1;
-    }
-}
+WMAP_STEP_WAIT(func_800A82B0, D_801B2E50, D_801B2E54)
 
 /**
  * @brief World-map step handler: cache the relative scroll delta, bump the frame
@@ -1438,13 +1384,9 @@ s32 func_800A83B8(s32 arg0)
 }
 
 /**
- * @brief Set two adjacent world-map state flags.
+ * @brief Restart the sequence at step 1 with a one-frame timer.
  */
-void func_800A8430(void)
-{
-    D_801B2E58 = 1;
-    D_801B2E5C = 1;
-}
+WMAP_STEP_RESET(func_800A8430, D_801B2E58, D_801B2E5C)
 
 /**
  * @brief Advance this sequence one step unless its gate flag hit the stop value.
@@ -1477,13 +1419,7 @@ void func_800A8488(void)
 /**
  * @brief Tick the sequence wait timer; advance the step counter when it expires.
  */
-void func_800A84DC(void)
-{
-    if (--D_801B2E5C == 0)
-    {
-        D_801B2E58 += 1;
-    }
-}
+WMAP_STEP_WAIT(func_800A84DC, D_801B2E58, D_801B2E5C)
 
 /**
  * @brief Advance this sequence one step while its gate flag is clear.
@@ -1533,13 +1469,7 @@ void func_800A861C(void)
 /**
  * @brief Tick the sequence wait timer; advance the step counter when it expires.
  */
-void func_800A8654(void)
-{
-    if (--D_801B2E5C == 0)
-    {
-        D_801B2E58 += 1;
-    }
-}
+WMAP_STEP_WAIT(func_800A8654, D_801B2E58, D_801B2E5C)
 
 /** @brief Play sound 57, clear its field, and start a 30-tick delay. */
 void func_800A8688(void)
@@ -1553,13 +1483,7 @@ void func_800A8688(void)
 /**
  * @brief Tick the sequence wait timer; advance the step counter when it expires.
  */
-void func_800A86CC(void)
-{
-    if (--D_801B2E5C == 0)
-    {
-        D_801B2E58 += 1;
-    }
-}
+WMAP_STEP_WAIT(func_800A86CC, D_801B2E58, D_801B2E5C)
 
 /**
  * @brief World-map step handler: cache the relative scroll delta, bump the frame
@@ -1623,13 +1547,9 @@ s32 func_800A87D4(s32 arg0)
 }
 
 /**
- * @brief Set two adjacent world-map state flags.
+ * @brief Restart the sequence at step 1 with a one-frame timer.
  */
-void func_800A884C(void)
-{
-    D_801B2E60 = 1;
-    D_801B2E64 = 1;
-}
+WMAP_STEP_RESET(func_800A884C, D_801B2E60, D_801B2E64)
 
 /**
  * @brief Advance this sequence one step unless its gate flag hit the stop value.
@@ -1680,13 +1600,9 @@ s32 func_800A88D8(s32 arg0)
 }
 
 /**
- * @brief Set two adjacent world-map state flags.
+ * @brief Restart the sequence at step 1 with a one-frame timer.
  */
-void func_800A8950(void)
-{
-    D_801B2E68 = 1;
-    D_801B2E6C = 1;
-}
+WMAP_STEP_RESET(func_800A8950, D_801B2E68, D_801B2E6C)
 
 /**
  * @brief Advance this sequence one step unless its gate flag hit the stop value.

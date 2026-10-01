@@ -558,15 +558,10 @@ void wmap_land_effect_01_sequence_1_step_01(void)
     wmap_land_effect_01_sequence_1_step_02();
 }
 
-/** @brief World-map step handler: run the sub-step, then advance after the timer. */
-void wmap_land_effect_01_sequence_1_step_02(void)
-{
-    func_80072644(&g_wmap_sprite_actors[204], &g_wmap_actor_animations[204], 0x18);
-    if (--g_wmap_land_effect_01_sequence_1_timer == 0)
-    {
-        g_wmap_land_effect_01_sequence_1_step += 1;
-    }
-}
+/** @brief Update the effect until the step timer expires. */
+WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_01_sequence_1_step_02,
+    g_wmap_land_effect_01_sequence_1_step, g_wmap_land_effect_01_sequence_1_timer,
+    func_80072644(&g_wmap_sprite_actors[204], &g_wmap_actor_animations[204], 0x18))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_01_sequence_1_end, g_wmap_land_effect_01_sequence_1_step)
 

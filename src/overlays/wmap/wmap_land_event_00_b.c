@@ -798,22 +798,14 @@ WMAP_STEP_RUNNER(wmap_land_event_00_b_run_sequence_2, D_800D7384, 4, g_wmap_land
 
 WMAP_STEP_RESET(wmap_land_event_00_b_sequence_2_step_00, g_wmap_land_event_00_b_sequence_2_step, g_wmap_land_event_00_b_sequence_2_timer)
 
-void wmap_land_event_00_b_sequence_2_step_01(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[4];
-
-    g_wmap_actor_animations[4].data = &g_wmap_animation_bank_0;
-    actor->scale_index = 0xF;
-    actor->previous_sequence = -1;
-    actor->shade_step = 0x10;
-    actor->target_shade = 1;
-    actor->resource_index = 0;
-    actor->sequence = 0;
-    actor->shade = 0x81;
-    g_wmap_land_event_00_b_sequence_2_timer = 0x10;
-    g_wmap_land_event_00_b_sequence_2_step++;
-    wmap_land_event_00_b_sequence_2_step_02();
-}
+/**
+ * @brief Start the sprite animation and run its first update.
+ */
+WMAP_STEP_START_ACTOR(wmap_land_event_00_b_sequence_2_step_01,
+    g_wmap_land_event_00_b_sequence_2_step, g_wmap_land_event_00_b_sequence_2_timer,
+    4, &g_wmap_animation_bank_0, 0,
+    0x81, 1, 0x10,
+    0x10, wmap_land_event_00_b_sequence_2_step_02)
 
 void wmap_land_event_00_b_sequence_2_step_02(void)
 {

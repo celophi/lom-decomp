@@ -103,6 +103,132 @@
     }
 
 /**
+ * @brief Define a step that updates an effect each frame until its timer expires.
+ * @param name Step function name.
+ * @param step The sequence's step global.
+ * @param timer The sequence's timer global.
+ * @param update_call Function call to run once before counting down.
+ */
+#define WMAP_STEP_UPDATE_AND_WAIT(name, step, timer, update_call)                        \
+    void name(void)                                                                      \
+    {                                                                                    \
+        update_call;                                                                     \
+        if (--(timer) == 0)                                                              \
+        {                                                                                \
+            (step) += 1;                                                                 \
+        }                                                                                \
+    }
+
+/**
+ * @brief Define a step that runs two updates in order, then counts down.
+ * @param name Step function name.
+ * @param step The sequence's step global.
+ * @param timer The sequence's timer global.
+ * @param first_call Function call to run first each frame.
+ * @param second_call Function call to run second each frame.
+ */
+#define WMAP_STEP_UPDATE_TWO_AND_WAIT(name, step, timer, first_call, second_call)        \
+    void name(void)                                                                      \
+    {                                                                                    \
+        first_call;                                                                      \
+        second_call;                                                                     \
+        if (--(timer) == 0)                                                              \
+        {                                                                                \
+            (step) += 1;                                                                 \
+        }                                                                                \
+    }
+
+/** Sprite scale-table entry used when a sequence starts an actor. */
+#define WMAP_STEP_ACTOR_SCALE_INDEX 15
+
+/**
+ * @brief Define a step that starts a sprite animation and runs its first update.
+ * @param name Step function name.
+ * @param step The sequence's step global.
+ * @param timer The sequence's timer global.
+ * @param slot Shared index of the sprite actor and its animation state.
+ * @param animation Animation data assigned to the slot.
+ * @param sequence_id Constant animation sequence to start.
+ * @param initial_shade Starting shade.
+ * @param shade_target Shade the animation update moves toward.
+ * @param shade_delta Constant amount the animation update changes the shade each frame.
+ * @param frames Frames the following update step runs.
+ * @param next Update step, called immediately after advancing.
+ * @note The constant conditions preserve store order without runtime branches.
+ */
+#define WMAP_STEP_START_ACTOR(name, step, timer, slot, animation, sequence_id, initial_shade, shade_target, shade_delta, frames, next) \
+    void name(void)                                                                      \
+    {                                                                                    \
+        WmapSpriteActor* actor = &g_wmap_sprite_actors[(slot)];                          \
+                                                                                         \
+        g_wmap_actor_animations[(slot)].data = (animation);                              \
+        actor->scale_index = WMAP_STEP_ACTOR_SCALE_INDEX;                                \
+        if ((sequence_id) != 0)                                                          \
+        {                                                                                \
+            actor->sequence = (sequence_id);                                             \
+        }                                                                                \
+        actor->previous_sequence = -1;                                                   \
+        if ((shade_delta) != 0)                                                          \
+        {                                                                                \
+            actor->shade_step = (shade_delta);                                           \
+        }                                                                                \
+        actor->resource_index = 0;                                                       \
+        if ((sequence_id) == 0)                                                          \
+        {                                                                                \
+            actor->sequence = 0;                                                         \
+        }                                                                                \
+        if ((shade_delta) == 0)                                                          \
+        {                                                                                \
+            actor->shade_step = 0;                                                       \
+        }                                                                                \
+        actor->target_shade = (shade_target);                                            \
+        actor->shade = (initial_shade);                                                  \
+        (timer) = (frames);                                                              \
+        (step) += 1;                                                                     \
+        next();                                                                          \
+    }
+
+/**
+ * @brief Define a step that starts a sprite fade and runs its first update.
+ * @param name Step function name.
+ * @param step The sequence's step global.
+ * @param timer The sequence's timer global.
+ * @param actor_state Sprite actor to fade to zero.
+ * @param shade_delta Amount the animation update subtracts from its shade.
+ * @param frames Frames the following update step runs.
+ * @param next Update step, called immediately after advancing.
+ */
+#define WMAP_STEP_FADE_ACTOR(name, step, timer, actor_state, shade_delta, frames, next)  \
+    void name(void)                                                                      \
+    {                                                                                    \
+        WmapSpriteActor* actor = &(actor_state);                                         \
+                                                                                         \
+        actor->shade_step = (shade_delta);                                               \
+        actor->target_shade = 0;                                                         \
+        (timer) = (frames);                                                              \
+        (step) += 1;                                                                     \
+        next();                                                                          \
+    }
+
+/**
+ * @brief Define a step that stops spawning particles and keeps updating them.
+ * @param name Step function name.
+ * @param step The sequence's step global.
+ * @param timer The sequence's timer global.
+ * @param spawn_interval Emitter interval field; -1 disables new particles.
+ * @param frames Frames to keep updating the existing particles.
+ * @param next Update step, called immediately after advancing.
+ */
+#define WMAP_STEP_STOP_EMITTER(name, step, timer, spawn_interval, frames, next)          \
+    void name(void)                                                                      \
+    {                                                                                    \
+        (timer) = (frames);                                                              \
+        (spawn_interval) = -1;                                                           \
+        (step) += 1;                                                                     \
+        next();                                                                          \
+    }
+
+/**
  * @brief Define a step that advances unconditionally; as the last entry it ends the sequence.
  * @param name Step function name.
  * @param step The sequence's step global.

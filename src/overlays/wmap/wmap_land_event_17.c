@@ -968,15 +968,10 @@ void wmap_land_event_17_sequence_13_step_02(void)
 WMAP_STEP_ARM_TIMER(wmap_land_event_17_sequence_13_step_03, g_wmap_land_event_17_sequence_13_step, g_wmap_land_event_17_sequence_13_timer, 0x58,
                     wmap_land_event_17_sequence_13_step_04)
 
-/** @brief World-map step: emit a UI primitive then tick the shared frame counter. */
-void wmap_land_event_17_sequence_13_step_04(void)
-{
-    func_8006B328(0x50, 0x7C, 2, -1, 1, 2, 0x78, 8, -0x32, 0x64, -0x28, 0x50, 0x64, 0, 0x81, 2, 1);
-    if (--g_wmap_land_event_17_sequence_13_timer == 0)
-    {
-        g_wmap_land_event_17_sequence_13_step += 1;
-    }
-}
+/** @brief Update the effect until the step timer expires. */
+WMAP_STEP_UPDATE_AND_WAIT(wmap_land_event_17_sequence_13_step_04,
+    g_wmap_land_event_17_sequence_13_step, g_wmap_land_event_17_sequence_13_timer,
+    func_8006B328(0x50, 0x7C, 2, -1, 1, 2, 0x78, 8, -0x32, 0x64, -0x28, 0x50, 0x64, 0, 0x81, 2, 1))
 
 /**
  * @brief Clear the sub-flag, set the sequence parameter, advance the counter, and run the handler.
@@ -989,14 +984,9 @@ void wmap_land_event_17_sequence_13_step_05(void)
     wmap_land_event_17_sequence_13_step_06();
 }
 
-/** @brief World-map step: emit a UI primitive then tick the shared frame counter. */
-void wmap_land_event_17_sequence_13_step_06(void)
-{
-    func_8006B328(0x50, 0x7C, 2, -1, 1, 2, 0x78, 8, -0x32, 0x64, -0x28, 0x50, 0x64, 0, 0x81, 2, 1);
-    if (--g_wmap_land_event_17_sequence_13_timer == 0)
-    {
-        g_wmap_land_event_17_sequence_13_step += 1;
-    }
-}
+/** @brief Update the effect until the step timer expires. */
+WMAP_STEP_UPDATE_AND_WAIT(wmap_land_event_17_sequence_13_step_06,
+    g_wmap_land_event_17_sequence_13_step, g_wmap_land_event_17_sequence_13_timer,
+    func_8006B328(0x50, 0x7C, 2, -1, 1, 2, 0x78, 8, -0x32, 0x64, -0x28, 0x50, 0x64, 0, 0x81, 2, 1))
 
 WMAP_STEP_ADVANCE(wmap_land_event_17_sequence_13_end, g_wmap_land_event_17_sequence_13_step)

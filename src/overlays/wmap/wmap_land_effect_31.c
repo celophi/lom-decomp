@@ -1139,13 +1139,12 @@ void wmap_land_effect_31_sequence_1_step_02(void)
     }
 }
 
-void wmap_land_effect_31_sequence_1_step_03(void)
-{
-    g_wmap_land_effect_31_sequence_1_timer = 0x20;
-    g_wmap_effect_params[35] = -1;
-    g_wmap_land_effect_31_sequence_1_step++;
-    wmap_land_effect_31_sequence_1_step_04();
-}
+/**
+ * @brief Stop spawning particles and run the next update.
+ */
+WMAP_STEP_STOP_EMITTER(wmap_land_effect_31_sequence_1_step_03,
+    g_wmap_land_effect_31_sequence_1_step, g_wmap_land_effect_31_sequence_1_timer,
+    g_wmap_effect_params[35], 0x20, wmap_land_effect_31_sequence_1_step_04)
 
 void wmap_land_effect_31_sequence_1_step_04(void)
 {
@@ -1167,22 +1166,14 @@ WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_2, D_800D7554, 4, g_wmap_land_
 
 WMAP_STEP_RESET(wmap_land_effect_31_sequence_2_reset, g_wmap_land_effect_31_sequence_2_step, g_wmap_land_effect_31_sequence_2_timer)
 
-void wmap_land_effect_31_sequence_2_step_01(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[5];
-
-    g_wmap_actor_animations[5].data = g_wmap_animation_bank_1;
-    actor->scale_index = 0xF;
-    actor->sequence = 3;
-    actor->previous_sequence = -1;
-    actor->shade_step = 8;
-    actor->target_shade = 0x81;
-    actor->resource_index = 0;
-    actor->shade = 1;
-    g_wmap_land_effect_31_sequence_2_timer = 0x64;
-    g_wmap_land_effect_31_sequence_2_step++;
-    wmap_land_effect_31_sequence_2_step_02();
-}
+/**
+ * @brief Start the sprite animation and run its first update.
+ */
+WMAP_STEP_START_ACTOR(wmap_land_effect_31_sequence_2_step_01,
+    g_wmap_land_effect_31_sequence_2_step, g_wmap_land_effect_31_sequence_2_timer,
+    5, g_wmap_animation_bank_1, 3,
+    1, 0x81, 8,
+    0x64, wmap_land_effect_31_sequence_2_step_02)
 
 void wmap_land_effect_31_sequence_2_step_02(void)
 {
@@ -1358,13 +1349,12 @@ void wmap_land_effect_31_sequence_6_step_02(void)
     }
 }
 
-void wmap_land_effect_31_sequence_6_step_03(void)
-{
-    g_wmap_land_effect_31_sequence_6_timer = 0x20;
-    g_wmap_effect_params[25] = -1;
-    g_wmap_land_effect_31_sequence_6_step++;
-    wmap_land_effect_31_sequence_6_step_04();
-}
+/**
+ * @brief Stop spawning particles and run the next update.
+ */
+WMAP_STEP_STOP_EMITTER(wmap_land_effect_31_sequence_6_step_03,
+    g_wmap_land_effect_31_sequence_6_step, g_wmap_land_effect_31_sequence_6_timer,
+    g_wmap_effect_params[25], 0x20, wmap_land_effect_31_sequence_6_step_04)
 
 void wmap_land_effect_31_sequence_6_step_04(void)
 {
@@ -1622,22 +1612,14 @@ WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_17, D_800D769C, 4, g_wmap_land
 
 WMAP_STEP_RESET(wmap_land_effect_31_sequence_17_reset, g_wmap_land_effect_31_sequence_17_step, g_wmap_land_effect_31_sequence_17_timer)
 
-void wmap_land_effect_31_sequence_17_step_01(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[7];
-
-    g_wmap_actor_animations[7].data = &g_wmap_animation_bank_0;
-    actor->scale_index = 0xF;
-    actor->sequence = 1;
-    actor->previous_sequence = -1;
-    actor->shade_step = 4;
-    actor->resource_index = 0;
-    actor->target_shade = 0x61;
-    actor->shade = 1;
-    g_wmap_land_effect_31_sequence_17_timer = 0x64;
-    g_wmap_land_effect_31_sequence_17_step++;
-    wmap_land_effect_31_sequence_17_step_02();
-}
+/**
+ * @brief Start the sprite animation and run its first update.
+ */
+WMAP_STEP_START_ACTOR(wmap_land_effect_31_sequence_17_step_01,
+    g_wmap_land_effect_31_sequence_17_step, g_wmap_land_effect_31_sequence_17_timer,
+    7, &g_wmap_animation_bank_0, 1,
+    1, 0x61, 4,
+    0x64, wmap_land_effect_31_sequence_17_step_02)
 
 void wmap_land_effect_31_sequence_17_step_02(void)
 {
@@ -1661,22 +1643,14 @@ WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_18, D_800D76AC, 6, g_wmap_land
 
 WMAP_STEP_RESET(wmap_land_effect_31_sequence_18_reset, g_wmap_land_effect_31_sequence_18_step, g_wmap_land_effect_31_sequence_18_timer)
 
-void wmap_land_effect_31_sequence_18_step_01(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[8];
-
-    g_wmap_actor_animations[8].data = &g_wmap_animation_bank_0;
-    actor->scale_index = 0xF;
-    actor->sequence = 2;
-    actor->previous_sequence = -1;
-    actor->shade_step = 2;
-    actor->resource_index = 0;
-    actor->target_shade = 0x81;
-    actor->shade = 1;
-    g_wmap_land_effect_31_sequence_18_timer = 0x6B;
-    g_wmap_land_effect_31_sequence_18_step++;
-    wmap_land_effect_31_sequence_18_step_02();
-}
+/**
+ * @brief Start the sprite animation and run its first update.
+ */
+WMAP_STEP_START_ACTOR(wmap_land_effect_31_sequence_18_step_01,
+    g_wmap_land_effect_31_sequence_18_step, g_wmap_land_effect_31_sequence_18_timer,
+    8, &g_wmap_animation_bank_0, 2,
+    1, 0x81, 2,
+    0x6B, wmap_land_effect_31_sequence_18_step_02)
 
 void wmap_land_effect_31_sequence_18_step_02(void)
 {
@@ -1694,16 +1668,10 @@ void wmap_land_effect_31_sequence_18_step_02(void)
     }
 }
 
-void wmap_land_effect_31_sequence_18_step_03(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[8];
-
-    actor->shade_step = 8;
-    actor->target_shade = 0;
-    g_wmap_land_effect_31_sequence_18_timer = 0x10;
-    g_wmap_land_effect_31_sequence_18_step++;
-    wmap_land_effect_31_sequence_18_step_04();
-}
+/** @brief Start the sprite fade and run its first update. */
+WMAP_STEP_FADE_ACTOR(wmap_land_effect_31_sequence_18_step_03,
+    g_wmap_land_effect_31_sequence_18_step, g_wmap_land_effect_31_sequence_18_timer,
+    g_wmap_sprite_actors[8], 8, 0x10, wmap_land_effect_31_sequence_18_step_04)
 
 void wmap_land_effect_31_sequence_18_step_04(void)
 {
@@ -1727,22 +1695,14 @@ WMAP_STEP_RUNNER(wmap_land_effect_31_run_sequence_19, D_800D76C4, 6, g_wmap_land
 
 WMAP_STEP_RESET(wmap_land_effect_31_sequence_19_reset, g_wmap_land_effect_31_sequence_19_step, g_wmap_land_effect_31_sequence_19_timer)
 
-void wmap_land_effect_31_sequence_19_step_01(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[9];
-
-    g_wmap_actor_animations[9].data = &g_wmap_animation_bank_0;
-    actor->scale_index = 0xF;
-    actor->sequence = 3;
-    actor->previous_sequence = -1;
-    actor->shade_step = 2;
-    actor->target_shade = 0x81;
-    actor->resource_index = 0;
-    actor->shade = 1;
-    g_wmap_land_effect_31_sequence_19_timer = 0xB4;
-    g_wmap_land_effect_31_sequence_19_step++;
-    wmap_land_effect_31_sequence_19_step_02();
-}
+/**
+ * @brief Start the sprite animation and run its first update.
+ */
+WMAP_STEP_START_ACTOR(wmap_land_effect_31_sequence_19_step_01,
+    g_wmap_land_effect_31_sequence_19_step, g_wmap_land_effect_31_sequence_19_timer,
+    9, &g_wmap_animation_bank_0, 3,
+    1, 0x81, 2,
+    0xB4, wmap_land_effect_31_sequence_19_step_02)
 
 void wmap_land_effect_31_sequence_19_step_02(void)
 {
@@ -1760,16 +1720,10 @@ void wmap_land_effect_31_sequence_19_step_02(void)
     }
 }
 
-void wmap_land_effect_31_sequence_19_step_03(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[9];
-
-    actor->shade_step = 4;
-    actor->target_shade = 0;
-    g_wmap_land_effect_31_sequence_19_timer = 0x20;
-    g_wmap_land_effect_31_sequence_19_step++;
-    wmap_land_effect_31_sequence_19_step_04();
-}
+/** @brief Start the sprite fade and run its first update. */
+WMAP_STEP_FADE_ACTOR(wmap_land_effect_31_sequence_19_step_03,
+    g_wmap_land_effect_31_sequence_19_step, g_wmap_land_effect_31_sequence_19_timer,
+    g_wmap_sprite_actors[9], 4, 0x20, wmap_land_effect_31_sequence_19_step_04)
 
 void wmap_land_effect_31_sequence_19_step_04(void)
 {

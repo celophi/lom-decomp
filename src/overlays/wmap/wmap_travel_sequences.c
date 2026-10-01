@@ -12,6 +12,7 @@
 #include "wmap_effect_resources.h"
 #include "cdrom.h"
 #include "wmap_cells.h"
+#include "wmap_step_sequence.h"
 
 /** @brief Land the special travel starts from and the land the return trip ends on. */
 #define WMAP_TRAVEL_START_LAND 2
@@ -304,14 +305,9 @@ void wmap_special_travel_spawn_vehicle(void)
 }
 
 /** @brief Special travel step 6: turn the vehicle while it climbs and grows, until the timer ends. */
-void wmap_special_travel_climb_vehicle(void)
-{
-    wmap_climb_vehicle();
-    if (--g_wmap_special_travel_timer == 0)
-    {
-        g_wmap_special_travel_step += 1;
-    }
-}
+WMAP_STEP_UPDATE_AND_WAIT(wmap_special_travel_climb_vehicle,
+    g_wmap_special_travel_step, g_wmap_special_travel_timer,
+    wmap_climb_vehicle())
 
 /**
  * @brief Project and draw the vehicle on its orbit, playing the flap sound on wing frames.
@@ -590,14 +586,9 @@ void wmap_special_return_spawn_vehicle(void)
 }
 
 /** @brief Special return step 4: as wmap_special_travel_climb_vehicle, on the return sequence. */
-void wmap_special_return_climb_vehicle(void)
-{
-    wmap_climb_vehicle();
-    if (--g_wmap_special_return_timer == 0)
-    {
-        g_wmap_special_return_step += 1;
-    }
-}
+WMAP_STEP_UPDATE_AND_WAIT(wmap_special_return_climb_vehicle,
+    g_wmap_special_return_step, g_wmap_special_return_timer,
+    wmap_climb_vehicle())
 
 /**
  * @brief Turn the vehicle until it faces the landing heading.
@@ -644,11 +635,7 @@ s32 wmap_run_special_travel(s32 initialize)
 }
 
 /** @brief Special travel step 0: restart the sequence. */
-void wmap_special_travel_reset(void)
-{
-    g_wmap_special_travel_step = 1;
-    g_wmap_special_travel_timer = 1;
-}
+WMAP_STEP_RESET(wmap_special_travel_reset, g_wmap_special_travel_step, g_wmap_special_travel_timer)
 
 /** @brief Special travel step 1: lock input, save the view and load the vehicle. */
 void wmap_special_travel_prepare(void)
@@ -660,13 +647,7 @@ void wmap_special_travel_prepare(void)
 }
 
 /** @brief Special travel step 2: wait for the step timer. */
-void wmap_special_travel_wait(void)
-{
-    if (--g_wmap_special_travel_timer == 0)
-    {
-        g_wmap_special_travel_step += 1;
-    }
-}
+WMAP_STEP_WAIT(wmap_special_travel_wait, g_wmap_special_travel_step, g_wmap_special_travel_timer)
 
 /** @brief Special travel step 3: scroll the map to the vehicle's start land. */
 void wmap_special_travel_scroll_to_start(void)
@@ -868,11 +849,7 @@ s32 wmap_run_special_return(s32 initialize)
 }
 
 /** @brief Special return step 0: restart the sequence. */
-void wmap_special_return_reset(void)
-{
-    g_wmap_special_return_step = 1;
-    g_wmap_special_return_timer = 1;
-}
+WMAP_STEP_RESET(wmap_special_return_reset, g_wmap_special_return_step, g_wmap_special_return_timer)
 
 /** @brief Special return step 2: wait for the map scroll, then spawn the vehicle. */
 void wmap_special_return_wait_scroll(void)

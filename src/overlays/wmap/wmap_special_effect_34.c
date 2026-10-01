@@ -558,16 +558,10 @@ void wmap_special_effect_34_sequence_3_step_01(void)
     wmap_special_effect_34_sequence_3_step_02();
 }
 
-void wmap_special_effect_34_sequence_3_step_03(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[5];
-
-    actor->shade_step = 4;
-    actor->target_shade = 0;
-    g_wmap_special_effect_34_sequence_3_timer = 0x20;
-    g_wmap_special_effect_34_sequence_3_step++;
-    wmap_special_effect_34_sequence_3_step_04();
-}
+/** @brief Start the sprite fade and run its first update. */
+WMAP_STEP_FADE_ACTOR(wmap_special_effect_34_sequence_3_step_03,
+    g_wmap_special_effect_34_sequence_3_step, g_wmap_special_effect_34_sequence_3_timer,
+    g_wmap_sprite_actors[5], 4, 0x20, wmap_special_effect_34_sequence_3_step_04)
 
 WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_special_effect_34_sequence_3_step_04, g_wmap_special_effect_34_sequence_3_step, g_wmap_special_effect_34_sequence_3_timer,
                               g_wmap_sprite_actors[5], g_wmap_actor_animations[5], D_80182D58, 8, 8, 0)
@@ -578,36 +572,22 @@ WMAP_STEP_RUNNER(wmap_special_effect_34_run_sequence_4, D_800D7AC4, 6, g_wmap_sp
 
 WMAP_STEP_RESET(wmap_special_effect_34_sequence_4_reset, g_wmap_special_effect_34_sequence_4_step, g_wmap_special_effect_34_sequence_4_timer)
 
-void wmap_special_effect_34_sequence_4_step_01(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[6];
-
-    g_wmap_actor_animations[6].data = &g_wmap_animation_bank_1;
-    actor->scale_index = 0xF;
-    actor->previous_sequence = -1;
-    actor->shade_step = 0x10;
-    actor->resource_index = 0;
-    actor->sequence = 0;
-    actor->target_shade = 0x80;
-    actor->shade = 0;
-    g_wmap_special_effect_34_sequence_4_timer = 0x3E;
-    g_wmap_special_effect_34_sequence_4_step++;
-    wmap_special_effect_34_sequence_4_step_02();
-}
+/**
+ * @brief Start the sprite animation and run its first update.
+ */
+WMAP_STEP_START_ACTOR(wmap_special_effect_34_sequence_4_step_01,
+    g_wmap_special_effect_34_sequence_4_step, g_wmap_special_effect_34_sequence_4_timer,
+    6, &g_wmap_animation_bank_1, 0,
+    0, 0x80, 0x10,
+    0x3E, wmap_special_effect_34_sequence_4_step_02)
 
 WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_special_effect_34_sequence_4_step_02, g_wmap_special_effect_34_sequence_4_step, g_wmap_special_effect_34_sequence_4_timer,
                               g_wmap_sprite_actors[6], g_wmap_actor_animations[6], g_wmap_focus_screen_position, 8, 8, 0)
 
-void wmap_special_effect_34_sequence_4_step_03(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[6];
-
-    actor->shade_step = 2;
-    actor->target_shade = 0;
-    g_wmap_special_effect_34_sequence_4_timer = 0x40;
-    g_wmap_special_effect_34_sequence_4_step++;
-    wmap_special_effect_34_sequence_4_step_04();
-}
+/** @brief Start the sprite fade and run its first update. */
+WMAP_STEP_FADE_ACTOR(wmap_special_effect_34_sequence_4_step_03,
+    g_wmap_special_effect_34_sequence_4_step, g_wmap_special_effect_34_sequence_4_timer,
+    g_wmap_sprite_actors[6], 2, 0x40, wmap_special_effect_34_sequence_4_step_04)
 
 WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_special_effect_34_sequence_4_step_04, g_wmap_special_effect_34_sequence_4_step, g_wmap_special_effect_34_sequence_4_timer,
                               g_wmap_sprite_actors[6], g_wmap_actor_animations[6], g_wmap_focus_screen_position, 8, 8, 0)

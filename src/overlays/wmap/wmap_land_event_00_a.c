@@ -561,24 +561,13 @@ WMAP_STEP_RUNNER(wmap_land_event_00_a_run_sequence_1, D_800D7274, 0x4, g_wmap_la
 WMAP_STEP_RESET(wmap_land_event_00_a_sequence_1_reset, g_wmap_land_event_00_a_sequence_1_step, g_wmap_land_event_00_a_sequence_1_timer)
 
 /**
- * @brief Populate a world-map actor control block and schedule its spawn step.
+ * @brief Start the sprite animation and run its first update.
  */
-void wmap_land_event_00_a_sequence_1_step_01(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[4];
-
-    g_wmap_actor_animations[4].data = g_wmap_animation_bank_0;
-    actor->scale_index = 0xF;
-    actor->previous_sequence = -1;
-    actor->shade_step = 0x10;
-    actor->target_shade = 1;
-    actor->resource_index = 0;
-    actor->sequence = 0;
-    actor->shade = 0x81;
-    g_wmap_land_event_00_a_sequence_1_timer = 0x10;
-    g_wmap_land_event_00_a_sequence_1_step += 1;
-    wmap_land_event_00_a_sequence_1_step_02();
-}
+WMAP_STEP_START_ACTOR(wmap_land_event_00_a_sequence_1_step_01,
+    g_wmap_land_event_00_a_sequence_1_step, g_wmap_land_event_00_a_sequence_1_timer,
+    4, g_wmap_animation_bank_0, 0,
+    0x81, 1, 0x10,
+    0x10, wmap_land_event_00_a_sequence_1_step_02)
 
 WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_event_00_a_sequence_1_step_02, g_wmap_land_event_00_a_sequence_1_step, g_wmap_land_event_00_a_sequence_1_timer,
                               g_wmap_sprite_actors[4], g_wmap_actor_animations[4], g_wmap_focus_screen_position, 0x2A, 0x2, 0)
@@ -617,24 +606,13 @@ WMAP_STEP_RUNNER(wmap_land_event_00_a_run_sequence_3, D_800D7294, 0x4, g_wmap_la
 WMAP_STEP_RESET(wmap_land_event_00_a_sequence_3_reset, g_wmap_land_event_00_a_sequence_3_step, g_wmap_land_event_00_a_sequence_3_timer)
 
 /**
- * @brief Populate a world-map actor control block and schedule its spawn step.
+ * @brief Start the sprite animation and run its first update.
  */
-void wmap_land_event_00_a_sequence_3_step_01(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[6];
-
-    g_wmap_actor_animations[6].data = g_wmap_animation_bank_0;
-    actor->scale_index = 0xF;
-    actor->sequence = 2;
-    actor->previous_sequence = -1;
-    actor->shade_step = 0x10;
-    actor->target_shade = 1;
-    actor->resource_index = 0;
-    actor->shade = 0x81;
-    g_wmap_land_event_00_a_sequence_3_timer = 0x10;
-    g_wmap_land_event_00_a_sequence_3_step += 1;
-    wmap_land_event_00_a_sequence_3_step_02();
-}
+WMAP_STEP_START_ACTOR(wmap_land_event_00_a_sequence_3_step_01,
+    g_wmap_land_event_00_a_sequence_3_step, g_wmap_land_event_00_a_sequence_3_timer,
+    6, g_wmap_animation_bank_0, 2,
+    0x81, 1, 0x10,
+    0x10, wmap_land_event_00_a_sequence_3_step_02)
 
 WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_event_00_a_sequence_3_step_02, g_wmap_land_event_00_a_sequence_3_step, g_wmap_land_event_00_a_sequence_3_timer,
                               g_wmap_sprite_actors[6], g_wmap_actor_animations[6], g_wmap_focus_screen_position, 0x2A, 0x2, 0)

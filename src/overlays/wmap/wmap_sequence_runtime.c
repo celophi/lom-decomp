@@ -1,4 +1,5 @@
 #include "wmap_model_render.h"
+#include "wmap_step_sequence.h"
 #include "wmap_map_display.h"
 #include "wmap_resource_support.h"
 #include "wmap_main.h"
@@ -186,22 +187,12 @@ s32 wmap_run_land_focus(s32 reset)
 /**
  * @brief Land focus step 0: restart the sequence.
  */
-void wmap_land_focus_reset(void)
-{
-    g_wmap_land_focus_step = 1;
-    g_wmap_land_focus_timer = 1;
-}
+WMAP_STEP_RESET(wmap_land_focus_reset, g_wmap_land_focus_step, g_wmap_land_focus_timer)
 
 /**
  * @brief Land focus step 2: wait for the step timer.
  */
-void wmap_land_focus_wait_2(void)
-{
-    if (--g_wmap_land_focus_timer == 0)
-    {
-        g_wmap_land_focus_step += 1;
-    }
-}
+WMAP_STEP_WAIT(wmap_land_focus_wait_2, g_wmap_land_focus_step, g_wmap_land_focus_timer)
 
 /**
  * @brief Land focus step 3: start the screen fade (not for WMAP_NO_FADE_LAND) and dim the spirit panel.
@@ -221,13 +212,7 @@ void wmap_land_focus_fade_out(void)
 /**
  * @brief Land focus step 4: wait for the step timer.
  */
-void wmap_land_focus_wait_4(void)
-{
-    if (--g_wmap_land_focus_timer == 0)
-    {
-        g_wmap_land_focus_step += 1;
-    }
-}
+WMAP_STEP_WAIT(wmap_land_focus_wait_4, g_wmap_land_focus_step, g_wmap_land_focus_timer)
 
 /**
  * @brief Land focus step 5: wait four frames.
@@ -241,13 +226,7 @@ void wmap_land_focus_hold(void)
 /**
  * @brief Land focus step 6: wait for the step timer.
  */
-void wmap_land_focus_wait_6(void)
-{
-    if (--g_wmap_land_focus_timer == 0)
-    {
-        g_wmap_land_focus_step += 1;
-    }
-}
+WMAP_STEP_WAIT(wmap_land_focus_wait_6, g_wmap_land_focus_step, g_wmap_land_focus_timer)
 
 /**
  * @brief Land focus step 7: set the transition flags and wait eight frames.
@@ -264,13 +243,7 @@ void wmap_land_focus_lock(void)
 /**
  * @brief Land focus step 8: wait for the step timer.
  */
-void wmap_land_focus_wait_8(void)
-{
-    if (--g_wmap_land_focus_timer == 0)
-    {
-        g_wmap_land_focus_step += 1;
-    }
-}
+WMAP_STEP_WAIT(wmap_land_focus_wait_8, g_wmap_land_focus_step, g_wmap_land_focus_timer)
 
 /**
  * @brief Update every running counted sequence; a sequence that returns 0 is freed and uncounted.
@@ -611,11 +584,7 @@ s32 wmap_run_land_entry(s32 reset)
 /**
  * @brief Land entry step 0: restart the sequence.
  */
-void wmap_land_entry_reset(void)
-{
-    g_wmap_land_entry_step = 1;
-    g_wmap_land_entry_timer = 1;
-}
+WMAP_STEP_RESET(wmap_land_entry_reset, g_wmap_land_entry_step, g_wmap_land_entry_timer)
 
 /**
  * @brief Land entry step 2: wait until the land effect clears g_wmap_sequence_busy.
@@ -632,10 +601,7 @@ void wmap_land_entry_wait(void)
 /**
  * @brief Land entry step 3: finish the sequence.
  */
-void wmap_land_entry_finish(void)
-{
-    g_wmap_land_entry_step += 1;
-}
+WMAP_STEP_ADVANCE(wmap_land_entry_finish, g_wmap_land_entry_step)
 
 /**
  * @brief Run the current step of the land return sequence (scroll back to the vehicle cell).
@@ -668,11 +634,7 @@ static s32 wmap_run_land_return(s32 reset)
 /**
  * @brief Land return step 0: restart the sequence.
  */
-void wmap_land_return_reset(void)
-{
-    g_wmap_land_return_step = 1;
-    g_wmap_land_return_timer = 1;
-}
+WMAP_STEP_RESET(wmap_land_return_reset, g_wmap_land_return_step, g_wmap_land_return_timer)
 
 /**
  * @brief Land return step 1: start the return.
