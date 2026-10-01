@@ -46,6 +46,12 @@ extern u32 g_saved_ability_bits[FIELD_ABILITY_WORD_COUNT];
 extern FieldLandWords g_saved_lands[FIELD_LAND_COUNT];
 extern u32 g_saved_encyclopedia_bits[FIELD_ENCYCLOPEDIA_BIT_WORDS];
 
+/** @brief Nonzero when encyclopedia entry bit @p bit is set in the saved game. */
+#define ZUKAN_ENTRY_UNLOCKED(bit) (g_saved_encyclopedia_bits[(bit) / 32] & (1 << ((bit) % 32)))
+
+/** @brief Set encyclopedia entry bit @p bit in the saved game. */
+#define ZUKAN_UNLOCK_ENTRY(bit) (g_saved_encyclopedia_bits[(bit) / 32] = g_saved_encyclopedia_bits[(bit) / 32] | (1 << ((bit) % 32)))
+
 /**
  * @brief Build and filter the ZUKAN entry list for the requested category.
  * @param category Category index to process.
@@ -99,7 +105,7 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
         i = count;
         while (i < count + ZUKAN_EXTRA_TECHNIQUE_COUNT)
         {
-            entry_indices[i] = i - ({ count - ZUKAN_CHARACTER_END; });
+            entry_indices[i] = i + ZUKAN_CHARACTER_END - count;
             i++;
         }
         count += ZUKAN_EXTRA_TECHNIQUE_COUNT;
@@ -131,20 +137,20 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
         i = 0;
         while (i < ZUKAN_LAND_UNLOCK_COUNT)
         {
-            if (((g_saved_lands[i].record.flags >> 1) & 1) & 0xFF)
+            if ((g_saved_lands[i].record.flags >> 1) & 1)
             {
-                g_saved_encyclopedia_bits[(i + 0x200) / 32] = g_saved_encyclopedia_bits[(i + 0x200) / 32] | (1 << ((i + 0x200) % 32));
+                ZUKAN_UNLOCK_ENTRY(i + 0x200);
             }
             i++;
         }
         if (g_saved_lands[33].word & FIELD_LAND_FLAG_04)
         {
-            g_saved_encyclopedia_bits[16] |= 0x01000000;
+            ZUKAN_UNLOCK_ENTRY(0x218);
         }
         i = 0;
         while (i < count)
         {
-            if (!(g_saved_encyclopedia_bits[(entry_indices[i] + 0x1FF) / 32] & (1 << ((entry_indices[i] + 0x1FF) % 32))))
+            if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] + 0x1FF))
             {
                 entry_values[i] = 0;
                 entry_indices[i] = 0;
@@ -157,32 +163,32 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
         i = 0;
         while (i < ZUKAN_LAND_UNLOCK_COUNT)
         {
-            if ((g_saved_lands[i].record.flags & 1) & 0xFF)
+            if (g_saved_lands[i].record.flags & 1)
             {
-                g_saved_encyclopedia_bits[(i + 0x240) / 32] = g_saved_encyclopedia_bits[(i + 0x240) / 32] | (1 << ((i + 0x240) % 32));
+                ZUKAN_UNLOCK_ENTRY(i + 0x240);
             }
-            if (((g_saved_lands[i].record.flags >> 1) & 1) & 0xFF)
+            if ((g_saved_lands[i].record.flags >> 1) & 1)
             {
-                g_saved_encyclopedia_bits[(i + 0x280) / 32] = g_saved_encyclopedia_bits[(i + 0x280) / 32] | (1 << ((i + 0x280) % 32));
+                ZUKAN_UNLOCK_ENTRY(i + 0x280);
             }
             i++;
         }
         if (g_saved_lands[33].word & FIELD_LAND_FLAG_04)
         {
-            g_saved_encyclopedia_bits[20] |= 0x01000000;
+            ZUKAN_UNLOCK_ENTRY(0x298);
         }
         i = 0;
         while (i < count)
         {
-            if (!(g_saved_encyclopedia_bits[(entry_indices[i] + 0x1FF) / 32] & (1 << ((entry_indices[i] + 0x1FF) % 32))))
+            if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] + 0x1FF))
             {
-                if (!(g_saved_encyclopedia_bits[(entry_indices[i] + 0x23F) / 32] & (1 << ((entry_indices[i] + 0x23F) % 32))))
+                if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] + 0x23F))
                 {
                     entry_values[i] = 0;
                     entry_indices[i] = 0;
                 }
             }
-            if (g_saved_encyclopedia_bits[(entry_indices[i] + 0x23F) / 32] & (1 << ((entry_indices[i] + 0x23F) % 32)))
+            if (ZUKAN_ENTRY_UNLOCKED(entry_indices[i] + 0x23F))
             {
                 entry_values[i] = resource_values[entry_indices[i] + 0x1FF];
             }
@@ -207,7 +213,7 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
             {
                 if (entry_indices[i] < 0x136)
                 {
-                    if (!(g_saved_encyclopedia_bits[(entry_indices[i] - 0xE6) / 32] & (1 << ((entry_indices[i] - 0xE6) % 32))))
+                    if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] - 0xE6))
                     {
                         entry_values[i] = 0;
                         entry_indices[i] = 0;
@@ -215,7 +221,7 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
                 }
                 else
                 {
-                    if (!(g_saved_encyclopedia_bits[(entry_indices[i] - 0xA) / 32] & (1 << ((entry_indices[i] - 0xA) % 32))))
+                    if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] - 0xA))
                     {
                         entry_values[i] = 0;
                         entry_indices[i] = 0;
@@ -230,7 +236,7 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
         i = 0;
         while (i < count)
         {
-            if (!(g_saved_encyclopedia_bits[(entry_indices[i] - 0xFA) / 32] & (1 << ((entry_indices[i] - 0xFA) % 32))))
+            if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] - 0xFA))
             {
                 entry_values[i] = 0;
                 entry_indices[i] = 0;
@@ -243,7 +249,7 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
         j = 0;
         while (j < 6)
         {
-            if (!(g_saved_encyclopedia_bits[(j + 0x122) / 32] & (1 << ((j + 0x122) % 32))))
+            if (!ZUKAN_ENTRY_UNLOCKED(j + 0x122))
             {
                 i = 0;
                 while (i < count)
@@ -264,7 +270,7 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
         i = 0;
         while (i < count)
         {
-            if (!(g_saved_encyclopedia_bits[(entry_indices[i] - 0x1B8) / 32] & (1 << ((entry_indices[i] - 0x1B8) % 32))))
+            if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] - 0x1B8))
             {
                 entry_values[i] = 0;
                 entry_indices[i] = 0;
@@ -284,19 +290,19 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
             {
                 if (i == 8)
                 {
-                    g_saved_encyclopedia_bits[30] |= 0x100;
+                    ZUKAN_UNLOCK_ENTRY(0x3C8);
                 }
                 if (i == 0xA)
                 {
-                    g_saved_encyclopedia_bits[30] |= 0x200;
+                    ZUKAN_UNLOCK_ENTRY(0x3C9);
                 }
                 if ((i >= 0x2F) && (i < 0x46))
                 {
-                    g_saved_encyclopedia_bits[(i + 0x39B) / 32] = g_saved_encyclopedia_bits[(i + 0x39B) / 32] | (1 << ((i + 0x39B) % 32));
+                    ZUKAN_UNLOCK_ENTRY(i + 0x39B);
                 }
                 if (i == 0x4F)
                 {
-                    g_saved_encyclopedia_bits[31] |= 2;
+                    ZUKAN_UNLOCK_ENTRY(0x3E1);
                 }
             }
             i++;
@@ -310,7 +316,7 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
                 if ((g_saved_technique_bits[i / 32] >> (i % 32)) & 1)
                 {
                     j = i - ((i / 32) * 8);
-                    g_saved_encyclopedia_bits[(j + 0x2C0) / 32] = g_saved_encyclopedia_bits[(j + 0x2C0) / 32] | (1 << ((j + 0x2C0) % 32));
+                    ZUKAN_UNLOCK_ENTRY(j + 0x2C0);
                 }
             }
             i++;
@@ -321,7 +327,7 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
         {
             if ((entry_indices[i] >= 0x1C6) && (entry_indices[i] < 0x2EE))
             {
-                if (!(g_saved_encyclopedia_bits[(entry_indices[i] + 0x202) / 32] & (1 << ((entry_indices[i] + 0x202) % 32))))
+                if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] + 0x202))
                 {
                     entry_values[i] = 0;
                     entry_indices[i] = 0;
@@ -329,7 +335,7 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
             }
             else
             {
-                if (!(g_saved_encyclopedia_bits[(entry_indices[i] - 0x2E) / 32] & (1 << ((entry_indices[i] - 0x2E) % 32))))
+                if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] - 0x2E))
                 {
                     entry_values[i] = 0;
                     entry_indices[i] = 0;
