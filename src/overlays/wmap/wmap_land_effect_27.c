@@ -519,17 +519,13 @@ WMAP_STEP_RUNNER(wmap_land_effect_27_run_sequence_5, D_800D6674, 0x6, g_wmap_lan
 WMAP_STEP_RESET(wmap_land_effect_27_sequence_5_reset, g_wmap_land_effect_27_sequence_5_step, g_wmap_land_effect_27_sequence_5_timer)
 
 /**
- * @brief Arm the world-map sequence, seed its data block, and schedule the next step.
+ * @brief Set the model shade, reset its animation and rotation, and run the first update.
  */
-void wmap_land_effect_27_sequence_5_step_01(void)
-{
-    g_wmap_effect_fade_c = 1;
-    g_wmap_effect_model_c_rotation = g_wmap_zero_rotation;
-    D_80139234 = 0;
-    g_wmap_land_effect_27_sequence_5_timer = 0x60;
-    g_wmap_land_effect_27_sequence_5_step += 1;
-    wmap_land_effect_27_sequence_5_step_02();
-}
+WMAP_STEP_START_MODEL(wmap_land_effect_27_sequence_5_step_01,
+    g_wmap_land_effect_27_sequence_5_step, g_wmap_land_effect_27_sequence_5_timer,
+    g_wmap_effect_model_c_rotation, g_wmap_zero_rotation,
+    g_wmap_effect_fade_c, 1, D_80139234,
+    0x60, wmap_land_effect_27_sequence_5_step_02)
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_27_sequence_5_step_03, g_wmap_land_effect_27_sequence_5_step, g_wmap_land_effect_27_sequence_5_timer, 0x20,
                     wmap_land_effect_27_sequence_5_step_04)

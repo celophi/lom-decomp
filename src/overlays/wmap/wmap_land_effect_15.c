@@ -607,15 +607,10 @@ WMAP_STEP_START_ACTOR(wmap_land_effect_15_sequence_10_step_01,
 /**
  * @brief Draw the world-map sprite this frame, then advance after the wait expires.
  */
-void wmap_land_effect_15_sequence_10_step_02(void)
-{
-    wmap_step_actor_animation(&g_wmap_sprite_actors[54], &g_wmap_actor_animations[54]);
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[54], g_wmap_focus_screen_position.packed, 0x15, 0x28, 0);
-    if (--g_wmap_land_effect_15_sequence_10_timer == 0)
-    {
-        g_wmap_land_effect_15_sequence_10_step += 1;
-    }
-}
+WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_15_sequence_10_step_02,
+    g_wmap_land_effect_15_sequence_10_step, g_wmap_land_effect_15_sequence_10_timer,
+    g_wmap_sprite_actors[54], g_wmap_actor_animations[54],
+    g_wmap_focus_screen_position, 0x15, 0x28, 0)
 
 /**
  * @brief Start the sprite fade and run its first update.
@@ -627,14 +622,9 @@ WMAP_STEP_FADE_ACTOR(wmap_land_effect_15_sequence_10_step_03,
 /**
  * @brief Draw the world-map sprite this frame, then advance after the wait expires.
  */
-void wmap_land_effect_15_sequence_10_step_04(void)
-{
-    wmap_step_actor_animation(&g_wmap_sprite_actors[54], &g_wmap_actor_animations[54]);
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[54], g_wmap_focus_screen_position.packed, 0x15, 0x28, 0);
-    if (--g_wmap_land_effect_15_sequence_10_timer == 0)
-    {
-        g_wmap_land_effect_15_sequence_10_step += 1;
-    }
-}
+WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_15_sequence_10_step_04,
+    g_wmap_land_effect_15_sequence_10_step, g_wmap_land_effect_15_sequence_10_timer,
+    g_wmap_sprite_actors[54], g_wmap_actor_animations[54],
+    g_wmap_focus_screen_position, 0x15, 0x28, 0)
 
 WMAP_STEP_ADVANCE(wmap_land_effect_15_sequence_10_end, g_wmap_land_effect_15_sequence_10_step)

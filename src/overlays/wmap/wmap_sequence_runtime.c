@@ -158,31 +158,12 @@ void wmap_land_entry_start_focus(void)
 
 /**
  * @brief Run the current step of the land focus sequence (scroll to the land, fade, project it).
- * @param reset Nonzero restarts the sequence instead of running a step.
+ * @param arg0 Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once it has finished.
  */
-s32 wmap_run_land_focus(s32 reset)
-{
-    s32 result;
-
-    if (reset != 0)
-    {
-        g_wmap_land_focus_step = 1;
-        g_wmap_land_focus_timer = 1;
-        return 1;
-    }
-
-    if (g_wmap_land_focus_step < WMAP_LAND_FOCUS_STEPS)
-    {
-        g_wmap_land_focus_steps[g_wmap_land_focus_step]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
+WMAP_STEP_RUNNER(wmap_run_land_focus,
+    g_wmap_land_focus_steps, WMAP_LAND_FOCUS_STEPS,
+    g_wmap_land_focus_step, g_wmap_land_focus_timer)
 
 /**
  * @brief Land focus step 0: restart the sequence.
@@ -555,31 +536,12 @@ static void wmap_set_camera_model_transform(VECTOR* translation, SVECTOR* rotati
 
 /**
  * @brief Run the current step of the land entry sequence (land focus, then wait for the land effect).
- * @param reset Nonzero restarts the sequence instead of running a step.
+ * @param arg0 Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once it has finished.
  */
-s32 wmap_run_land_entry(s32 reset)
-{
-    s32 result;
-
-    if (reset != 0)
-    {
-        g_wmap_land_entry_step = 1;
-        g_wmap_land_entry_timer = 1;
-        return 1;
-    }
-
-    if (g_wmap_land_entry_step < WMAP_LAND_ENTRY_STEPS)
-    {
-        g_wmap_land_entry_steps[g_wmap_land_entry_step]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
+WMAP_STEP_RUNNER(wmap_run_land_entry,
+    g_wmap_land_entry_steps, WMAP_LAND_ENTRY_STEPS,
+    g_wmap_land_entry_step, g_wmap_land_entry_timer)
 
 /**
  * @brief Land entry step 0: restart the sequence.
@@ -589,14 +551,8 @@ WMAP_STEP_RESET(wmap_land_entry_reset, g_wmap_land_entry_step, g_wmap_land_entry
 /**
  * @brief Land entry step 2: wait until the land effect clears g_wmap_sequence_busy.
  */
-void wmap_land_entry_wait(void)
-{
-    if (g_wmap_sequence_busy == 0)
-    {
-        g_wmap_land_entry_step += 1;
-        wmap_land_entry_finish();
-    }
-}
+WMAP_STEP_WAIT_IDLE(wmap_land_entry_wait,
+    g_wmap_land_entry_step, wmap_land_entry_finish)
 
 /**
  * @brief Land entry step 3: finish the sequence.
@@ -605,31 +561,12 @@ WMAP_STEP_ADVANCE(wmap_land_entry_finish, g_wmap_land_entry_step)
 
 /**
  * @brief Run the current step of the land return sequence (scroll back to the vehicle cell).
- * @param reset Nonzero restarts the sequence instead of running a step.
+ * @param arg0 Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once it has finished.
  */
-static s32 wmap_run_land_return(s32 reset)
-{
-    s32 result;
-
-    if (reset != 0)
-    {
-        g_wmap_land_return_step = 1;
-        g_wmap_land_return_timer = 1;
-        return 1;
-    }
-
-    if (g_wmap_land_return_step < WMAP_LAND_RETURN_STEPS)
-    {
-        g_wmap_land_return_steps[g_wmap_land_return_step]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
+static WMAP_STEP_RUNNER(wmap_run_land_return,
+    g_wmap_land_return_steps, WMAP_LAND_RETURN_STEPS,
+    g_wmap_land_return_step, g_wmap_land_return_timer)
 
 /**
  * @brief Land return step 0: restart the sequence.

@@ -696,28 +696,9 @@ void func_800A72B8(void)
  * @param arg0 Non-zero forces a reset of the step counters.
  * @return 1 if a step ran or reset, 0 if the step index was out of range.
  */
-s32 func_800A7370(s32 arg0)
-{
-    s32 result;
-
-    if (arg0 != 0)
-    {
-        D_801B2E70 = 1;
-        D_801B2E74 = 1;
-        return 1;
-    }
-
-    if (D_801B2E70 < 0xA)
-    {
-        D_800D6D34[D_801B2E70]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
+WMAP_STEP_RUNNER(func_800A7370,
+    D_800D6D34, 0xA,
+    D_801B2E70, D_801B2E74)
 
 /**
  * @brief Restart the sequence at step 1 with a one-frame timer.
@@ -820,28 +801,9 @@ WMAP_STEP_ADVANCE(func_800A7650, D_801B2E70)
  * @param arg0 Non-zero forces a reset of the step counters.
  * @return 1 if a step ran or reset, 0 if the step index was out of range.
  */
-s32 func_800A7668(s32 arg0)
-{
-    s32 result;
-
-    if (arg0 != 0)
-    {
-        D_801B2E40 = 1;
-        D_801B2E44 = 1;
-        return 1;
-    }
-
-    if (D_801B2E40 < 0x10)
-    {
-        D_800D6C14[D_801B2E40]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
+WMAP_STEP_RUNNER(func_800A7668,
+    D_800D6C14, 0x10,
+    D_801B2E40, D_801B2E44)
 
 /**
  * @brief Restart the sequence at step 1 with a one-frame timer.
@@ -1034,28 +996,9 @@ void func_800A7BB8(void)
  * @param arg0 Non-zero forces a reset of the step counters.
  * @return 1 if a step ran or reset, 0 if the step index was out of range.
  */
-s32 func_800A7BE8(s32 arg0)
-{
-    s32 result;
-
-    if (arg0 != 0)
-    {
-        D_801B2E48 = 1;
-        D_801B2E4C = 1;
-        return 1;
-    }
-
-    if (D_801B2E48 < 0x10)
-    {
-        D_800D6C54[D_801B2E48]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
+WMAP_STEP_RUNNER(func_800A7BE8,
+    D_800D6C54, 0x10,
+    D_801B2E48, D_801B2E4C)
 
 /**
  * @brief Restart the sequence at step 1 with a one-frame timer.
@@ -1197,28 +1140,9 @@ void func_800A7FAC(void)
  * @param arg0 Non-zero forces a reset of the step counters.
  * @return 1 if a step ran or reset, 0 if the step index was out of range.
  */
-s32 func_800A7FD0(s32 arg0)
-{
-    s32 result;
-
-    if (arg0 != 0)
-    {
-        D_801B2E50 = 1;
-        D_801B2E54 = 1;
-        return 1;
-    }
-
-    if (D_801B2E50 < 0x10)
-    {
-        D_800D6C94[D_801B2E50]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
+WMAP_STEP_RUNNER(func_800A7FD0,
+    D_800D6C94, 0x10,
+    D_801B2E50, D_801B2E54)
 
 /**
  * @brief Restart the sequence at step 1 with a one-frame timer.
@@ -1360,28 +1284,9 @@ void func_800A8394(void)
  * @param arg0 Non-zero forces a reset of the step counters.
  * @return 1 if a step ran or reset, 0 if the step index was out of range.
  */
-s32 func_800A83B8(s32 arg0)
-{
-    s32 result;
-
-    if (arg0 != 0)
-    {
-        D_801B2E58 = 1;
-        D_801B2E5C = 1;
-        return 1;
-    }
-
-    if (D_801B2E58 < 0x10)
-    {
-        D_800D6CD4[D_801B2E58]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
+WMAP_STEP_RUNNER(func_800A83B8,
+    D_800D6CD4, 0x10,
+    D_801B2E58, D_801B2E5C)
 
 /**
  * @brief Restart the sequence at step 1 with a one-frame timer.
@@ -1523,28 +1428,9 @@ void func_800A87B0(void)
  * @param arg0 Non-zero forces a reset of the step counters.
  * @return 1 if a step ran or reset, 0 if the step index was out of range.
  */
-s32 func_800A87D4(s32 arg0)
-{
-    s32 result;
-
-    if (arg0 != 0)
-    {
-        D_801B2E60 = 1;
-        D_801B2E64 = 1;
-        return 1;
-    }
-
-    if (D_801B2E60 < 0x4)
-    {
-        D_800D6D14[D_801B2E60]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
+WMAP_STEP_RUNNER(func_800A87D4,
+    D_800D6D14, 0x4,
+    D_801B2E60, D_801B2E64)
 
 /**
  * @brief Restart the sequence at step 1 with a one-frame timer.
@@ -1576,28 +1462,9 @@ void func_800A88A4(void)
  * @param arg0 Non-zero forces a reset of the step counters.
  * @return 1 if a step ran or reset, 0 if the step index was out of range.
  */
-s32 func_800A88D8(s32 arg0)
-{
-    s32 result;
-
-    if (arg0 != 0)
-    {
-        D_801B2E68 = 1;
-        D_801B2E6C = 1;
-        return 1;
-    }
-
-    if (D_801B2E68 < 0x4)
-    {
-        D_800D6D24[D_801B2E68]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
+WMAP_STEP_RUNNER(func_800A88D8,
+    D_800D6D24, 0x4,
+    D_801B2E68, D_801B2E6C)
 
 /**
  * @brief Restart the sequence at step 1 with a one-frame timer.

@@ -714,17 +714,13 @@ WMAP_STEP_RUNNER(wmap_land_effect_22_run_sequence_9, D_800D69F4, 0x6, g_wmap_lan
 WMAP_STEP_RESET(wmap_land_effect_22_sequence_9_reset, g_wmap_land_effect_22_sequence_9_step, g_wmap_land_effect_22_sequence_9_timer)
 
 /**
- * @brief Arm the world-map sequence, seed its data block, and schedule the next step.
+ * @brief Set the model shade, reset its animation and rotation, and run the first update.
  */
-void wmap_land_effect_22_sequence_9_step_01(void)
-{
-    D_80182DE4 = 1;
-    D_801B2498 = g_wmap_zero_rotation;
-    D_8013923C = 0;
-    g_wmap_land_effect_22_sequence_9_timer = 0x7C;
-    g_wmap_land_effect_22_sequence_9_step += 1;
-    wmap_land_effect_22_sequence_9_step_02();
-}
+WMAP_STEP_START_MODEL(wmap_land_effect_22_sequence_9_step_01,
+    g_wmap_land_effect_22_sequence_9_step, g_wmap_land_effect_22_sequence_9_timer,
+    D_801B2498, g_wmap_zero_rotation,
+    D_80182DE4, 1, D_8013923C,
+    0x7C, wmap_land_effect_22_sequence_9_step_02)
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_22_sequence_9_step_03, g_wmap_land_effect_22_sequence_9_step, g_wmap_land_effect_22_sequence_9_timer, 0x40,
                     wmap_land_effect_22_sequence_9_step_04)
@@ -757,17 +753,13 @@ WMAP_STEP_RUNNER(wmap_land_effect_22_run_sequence_11, D_800D6A24, 0x6, g_wmap_la
 WMAP_STEP_RESET(wmap_land_effect_22_sequence_11_reset, g_wmap_land_effect_22_sequence_11_step, g_wmap_land_effect_22_sequence_11_timer)
 
 /**
- * @brief Arm the world-map sequence, seed its data block, and schedule the next step.
+ * @brief Set the model shade, reset its animation and rotation, and run the first update.
  */
-void wmap_land_effect_22_sequence_11_step_01(void)
-{
-    g_wmap_effect_fade_d = 1;
-    g_wmap_effect_model_d_rotation = g_wmap_zero_rotation;
-    D_80139260 = 0;
-    g_wmap_land_effect_22_sequence_11_timer = 0x6C;
-    g_wmap_land_effect_22_sequence_11_step += 1;
-    wmap_land_effect_22_sequence_11_step_02();
-}
+WMAP_STEP_START_MODEL(wmap_land_effect_22_sequence_11_step_01,
+    g_wmap_land_effect_22_sequence_11_step, g_wmap_land_effect_22_sequence_11_timer,
+    g_wmap_effect_model_d_rotation, g_wmap_zero_rotation,
+    g_wmap_effect_fade_d, 1, D_80139260,
+    0x6C, wmap_land_effect_22_sequence_11_step_02)
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_22_sequence_11_step_03, g_wmap_land_effect_22_sequence_11_step, g_wmap_land_effect_22_sequence_11_timer, 0x20,
                     wmap_land_effect_22_sequence_11_step_04)

@@ -345,6 +345,30 @@
     }
 
 /**
+ * @brief Define a step that initializes an animated model and runs its first update.
+ * @param name Step function name.
+ * @param step The sequence's step global.
+ * @param timer The sequence's timer global.
+ * @param rotation_copy Rotation used by the model update.
+ * @param rotation Initial rotation, including any required type cast.
+ * @param shade The model's shade global.
+ * @param initial_shade Starting shade.
+ * @param frame_counter Animation counter, reset to zero.
+ * @param frames Frames the following update step runs.
+ * @param next Update step, called immediately after advancing.
+ */
+#define WMAP_STEP_START_MODEL(name, step, timer, rotation_copy, rotation, shade, initial_shade, frame_counter, frames, next) \
+    void name(void)                                                                      \
+    {                                                                                    \
+        (shade) = (initial_shade);                                                       \
+        (rotation_copy) = (rotation);                                                    \
+        (frame_counter) = 0;                                                             \
+        (timer) = (frames);                                                              \
+        (step) += 1;                                                                     \
+        next();                                                                          \
+    }
+
+/**
  * @brief Define the first step of a model drop: place the model above the camera and start the drop.
  * @param name Step function name.
  * @param step The sequence's step global.

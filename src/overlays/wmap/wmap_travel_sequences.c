@@ -608,31 +608,12 @@ s32 wmap_finish_vehicle_turn(s32 initialize)
 
 /**
  * @brief Run the current step of the special travel sequence (flight to the special land).
- * @param initialize Nonzero restarts the sequence instead of running a step.
+ * @param arg0 Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once every step has run.
  */
-s32 wmap_run_special_travel(s32 initialize)
-{
-    s32 result;
-
-    if (initialize != 0)
-    {
-        g_wmap_special_travel_step = 1;
-        g_wmap_special_travel_timer = 1;
-        return 1;
-    }
-
-    if (g_wmap_special_travel_step < WMAP_SPECIAL_TRAVEL_STEPS)
-    {
-        g_wmap_special_travel_steps[g_wmap_special_travel_step]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
+WMAP_STEP_RUNNER(wmap_run_special_travel,
+    g_wmap_special_travel_steps, WMAP_SPECIAL_TRAVEL_STEPS,
+    g_wmap_special_travel_step, g_wmap_special_travel_timer)
 
 /** @brief Special travel step 0: restart the sequence. */
 WMAP_STEP_RESET(wmap_special_travel_reset, g_wmap_special_travel_step, g_wmap_special_travel_timer)
@@ -700,12 +681,8 @@ void wmap_special_travel_wait_party(void)
 }
 
 /** @brief Special travel step 9: start the turn to the departure heading. */
-void wmap_special_travel_start_turn(void)
-{
-    g_wmap_special_travel_timer = WMAP_VEHICLE_TURN_FRAMES;
-    g_wmap_special_travel_step += 1;
-    wmap_special_travel_turn();
-}
+WMAP_STEP_ARM_TIMER(wmap_special_travel_start_turn,
+    g_wmap_special_travel_step, g_wmap_special_travel_timer, WMAP_VEHICLE_TURN_FRAMES, wmap_special_travel_turn)
 
 /** @brief Special travel step 10: turn to the departure heading (sets actor 0 unknown_02 to -1 there). */
 void wmap_special_travel_turn(void)
@@ -749,12 +726,8 @@ void wmap_special_travel_wait_land(void)
 }
 
 /** @brief Special travel step 13: start circling over the special land. */
-void wmap_special_travel_start_cruise(void)
-{
-    g_wmap_special_travel_timer = WMAP_VEHICLE_WAIT_FRAMES;
-    g_wmap_special_travel_step += 1;
-    wmap_special_travel_cruise();
-}
+WMAP_STEP_ARM_TIMER(wmap_special_travel_start_cruise,
+    g_wmap_special_travel_step, g_wmap_special_travel_timer, WMAP_VEHICLE_WAIT_FRAMES, wmap_special_travel_cruise)
 
 /** @brief Special travel step 14: circle over the land (clears actor 0 unknown_02 at the cruise heading). */
 void wmap_special_travel_cruise(void)
@@ -822,31 +795,12 @@ void wmap_special_travel_finish(void)
 
 /**
  * @brief Run the current step of the special return sequence (flight back from the special land).
- * @param initialize Nonzero restarts the sequence instead of running a step.
+ * @param arg0 Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once every step has run.
  */
-s32 wmap_run_special_return(s32 initialize)
-{
-    s32 result;
-
-    if (initialize != 0)
-    {
-        g_wmap_special_return_step = 1;
-        g_wmap_special_return_timer = 1;
-        return 1;
-    }
-
-    if (g_wmap_special_return_step < WMAP_SPECIAL_RETURN_STEPS)
-    {
-        g_wmap_special_return_steps[g_wmap_special_return_step]();
-        result = 1;
-    }
-    else
-    {
-        result = 0;
-    }
-    return result;
-}
+WMAP_STEP_RUNNER(wmap_run_special_return,
+    g_wmap_special_return_steps, WMAP_SPECIAL_RETURN_STEPS,
+    g_wmap_special_return_step, g_wmap_special_return_timer)
 
 /** @brief Special return step 0: restart the sequence. */
 WMAP_STEP_RESET(wmap_special_return_reset, g_wmap_special_return_step, g_wmap_special_return_timer)
@@ -883,12 +837,8 @@ void wmap_special_return_wait_home(void)
 }
 
 /** @brief Special return step 7: start circling over the return land. */
-void wmap_special_return_start_cruise(void)
-{
-    g_wmap_special_return_timer = WMAP_VEHICLE_WAIT_FRAMES;
-    g_wmap_special_return_step += 1;
-    wmap_special_return_cruise();
-}
+WMAP_STEP_ARM_TIMER(wmap_special_return_start_cruise,
+    g_wmap_special_return_step, g_wmap_special_return_timer, WMAP_VEHICLE_WAIT_FRAMES, wmap_special_return_cruise)
 
 /** @brief Special return step 8: circle over the land (clears actor 0 unknown_02 at the cruise heading). */
 void wmap_special_return_cruise(void)

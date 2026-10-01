@@ -675,15 +675,10 @@ void wmap_land_effect_01_sequence_6_step_01(void)
 /**
  * @brief Draw the world-map sprite this frame, then advance after the wait expires.
  */
-void wmap_land_effect_01_sequence_6_step_02(void)
-{
-    wmap_step_actor_animation(&g_wmap_sprite_actors[254], &g_wmap_actor_animations[254]);
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[254], g_wmap_focus_screen_position.packed, 0xE, 0xA, 0);
-    if (--g_wmap_land_effect_01_sequence_6_timer == 0)
-    {
-        g_wmap_land_effect_01_sequence_6_step += 1;
-    }
-}
+WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_01_sequence_6_step_02,
+    g_wmap_land_effect_01_sequence_6_step, g_wmap_land_effect_01_sequence_6_timer,
+    g_wmap_sprite_actors[254], g_wmap_actor_animations[254],
+    g_wmap_focus_screen_position, 0xE, 0xA, 0)
 
 WMAP_STEP_ADVANCE(wmap_land_effect_01_sequence_6_end, g_wmap_land_effect_01_sequence_6_step)
 
