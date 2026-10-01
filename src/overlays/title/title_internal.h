@@ -162,7 +162,6 @@ typedef struct
     u32 mode : 3;
     u32 width : 10;
     u32 height : 10;
-    u32 : 9;
 } SaveLayoutTexControl;
 
 /**
