@@ -687,7 +687,7 @@ extern s32 menu_stage_stack_shape(s32, s32, s32, s32, s32, s32) __attribute__((c
 
 /* Core menu state and shared assets. */
 
-extern s32 D_80042FB4;
+extern s32 g_playtime_vsync_origin;
 extern u16 D_800F0C1C;
 /** @brief Default scene content count encoded as count - 1 (value 3). */
 extern u8 g_menu_default_content_count_minus_one;

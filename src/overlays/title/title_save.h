@@ -13,9 +13,9 @@ void init_save_slot_menu(void);
 void render_save_slot_menu(TitleMenuContext* context);
 
 /**
- * @brief Copy a new-game or alternate state template into the active save data.
- * @param use_alt Zero for a new game, nonzero for the alternate template.
+ * @brief Replace the saved game with the new-game or the field-start template.
+ * @param field_start Zero for a new game, nonzero to start directly in FIELD.
  */
-void load_menu_layout(s32 use_alt);
+void load_saved_game_template(s32 field_start);
 
 #endif

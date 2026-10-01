@@ -175,7 +175,7 @@ terminator.
 
 - **The rest of the new-game state.** Bytes `0x3260` to `0x50BB` of
   `new_game.bin` are outside the saved-game layout and aren't copied by
-  `load_menu_layout`. Nothing in TITLE reads them. They look like more item
+  `load_saved_game_template`. Nothing in TITLE reads them. They look like more item
   and slot records, but we haven't found an owner.
 - **The alternate state.** TITLE never switches on the menu slots that lead
   to it, and we haven't found anything else that does.

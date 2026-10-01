@@ -93,6 +93,13 @@ typedef struct
     s32 related_ids_offset;
 } ZukanEntryResourceHeader;
 
+/** @brief Resource ids of the entries linked from a detail page. */
+typedef struct
+{
+    u16 previous;
+    u16 next;
+} ZukanRelatedEntries;
+
 /* Rendering constants. */
 
 #define ZUKAN_FADE_NEUTRAL 0x100
@@ -1141,7 +1148,7 @@ void* zukan_render_detail_sprites(SPRT* sprite, u_long* ordering_table)
     DR_TPAGE* mode;
     u8* resource_data = g_zukan_work_buffer;
     u8* sprite_data = resource_data + ((ZukanEntryResourceHeader*)resource_data)->sprites_offset;
-    s32 count = *(u16*)sprite_data + (*(u16*)(sprite_data + 2) << 8);
+    s32 count = ((u16*)sprite_data)[0] + (((u16*)sprite_data)[1] << 8);
 
     sprite_data += 4;
     while (count != 0)
@@ -1213,8 +1220,8 @@ void zukan_commit_loaded_entry(void)
         zukan_upload_tim(&destinations, (TimPrefix*)(g_zukan_resource_buffer + ((ZukanEntryResourceHeader*)g_zukan_resource_buffer)->image_offset));
 
     loaded = (ZukanEntryResourceHeader*)g_zukan_resource_buffer;
-    g_zukan_previous_resource_id = *(u16*)((u8*)loaded + loaded->related_ids_offset);
-    g_zukan_next_resource_id = *(u16*)((u8*)loaded + loaded->related_ids_offset + 2);
+    g_zukan_previous_resource_id = ((ZukanRelatedEntries*)((u8*)loaded + loaded->related_ids_offset))->previous;
+    g_zukan_next_resource_id = ((ZukanRelatedEntries*)((u8*)loaded + loaded->related_ids_offset))->next;
 }
 
 /**

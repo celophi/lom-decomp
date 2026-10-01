@@ -7,6 +7,7 @@
 #include "cdrom.h"
 #include "sdk/rand.h"
 #include "controller.h"
+#include "field_sound.h"
 
 void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y);
 void stop_title_music(void);
@@ -27,8 +28,13 @@ void handle_title_menu_input(void);
 #define TITLE_MENU_ITEM_NEW_GAME 0
 #define TITLE_MENU_ITEM_CONTINUE 1
 
-/* Value g_titleSelectedItem holds when the idle countdown expires. */
+/* Value g_title_selected_item holds when the idle countdown expires. */
 #define TITLE_SELECTION_SENTINEL 0xFF
+
+/* Title backdrop: five 64-pixel strips textured from VRAM x 0x140 onwards. */
+#define TITLE_BACKDROP_STRIPS 5
+#define TITLE_BACKDROP_STRIP_WIDTH 0x40
+#define TITLE_BACKDROP_TEXTURE_X 0x140
 
 /**
  * @brief Screen X of the title menu's header quad (texture row 0).
@@ -49,16 +55,11 @@ void handle_title_menu_input(void);
 /* run_save_slot_menu result that returns from the picker to the title menu. */
 #define SAVE_SLOT_MENU_EXIT_CANCEL 2
 
-/* Fixed-address accesses used by run_title. */
-
-/* High rand() value placement in SavedGameLayout::identity.ids.game_id. */
-#define TITLE_RNG_HIGH_SHIFT 15
-
 /* AKAO sound command used before the fallback field-entry path. */
 #define TITLE_SELECTION_SFX_ID 0x3C
 
 /* Number of selectable slots in the title menu item-flag table
- * (g_titleMenuItemFlags), each occupying 2 bytes. */
+ * (g_title_menu_item_flags), each occupying 2 bytes. */
 #define TITLE_MENU_SLOT_COUNT 16
 
 /* Idle countdown loaded by init_title_menu_state: 0xE10 == 3600 frames (~60 s at
@@ -123,15 +124,15 @@ s32 run_title(TitleMenuContext* menu_context)
         do
         {
             render_menu(context);
-        } while (g_titleMenuExitState == 0);
+        } while (g_title_menu_exit_state == 0);
 
-        D_80042FB4 = VSync(-1);
-        selection = g_titleSelectedItem;
+        g_playtime_vsync_origin = VSync(-1);
+        selection = g_title_selected_item;
 
         if (selection == TITLE_MENU_ITEM_NEW_GAME)
         {
-            load_menu_layout(0);
-            g_titleMenuExitState = 0;
+            load_saved_game_template(0);
+            g_title_menu_exit_state = 0;
             if (run_save_slot_menu(context) == SAVE_SLOT_MENU_EXIT_CANCEL)
             {
                 screen_transition(0);
@@ -151,7 +152,7 @@ s32 run_title(TitleMenuContext* menu_context)
         else
         {
             akao_fade_song_volume(0, TITLE_SELECTION_SFX_ID, 0);
-            load_menu_layout(-1);
+            load_saved_game_template(-1);
             g_save_compatibility_tag = SAVE_TAG_ANY;
             random_low = rand();
             random_high = rand();
@@ -169,19 +170,18 @@ s32 run_title(TitleMenuContext* menu_context)
 void render_menu(TitleMenuContext* context)
 {
     RECT rect;
-    TitleMenuContext* base = context;
     TitleMenuContext* current;
     u_long* ot_head;
     void* next_context;
 
     DrawSync(0);
     VSync(0);
-    setRECT(&rect, 0, 0, 320, 472);
+    setRECT(&rect, 0, 0, SCREEN_WIDTH, VRAM_BACK_DISP_Y + SCREEN_HEIGHT);
     ClearImage(&rect, 0, 0, 0);
 
-    current = base;
-    ClearOTagR(current->otag_buffer, 0x1000);
-    ClearOTagR(current->otag_buffer2, 0x1000);
+    current = context;
+    ClearOTagR(current->otag_buffer, TITLE_OT_LENGTH);
+    ClearOTagR(current->otag_buffer2, TITLE_OT_LENGTH);
     PutDispEnv(&current->disp_env);
     update_controllers();
     SetDispMask(1);
@@ -189,7 +189,7 @@ void render_menu(TitleMenuContext* context)
     while (1)
     {
         ot_head = current->otag_buffer;
-        ClearOTagR(ot_head, 0x1000);
+        ClearOTagR(ot_head, TITLE_OT_LENGTH);
         current->next_prim_ptr = current->prim_buffer;
         rand();
         VSync(1);
@@ -198,24 +198,24 @@ void render_menu(TitleMenuContext* context)
         render_title_menu_items(current);
         handle_title_menu_input();
 
-        if (g_titleMenuExitState == 0)
+        if (g_title_menu_exit_state == 0)
         {
             DrawSync(0);
             set_controller_vsync_interval(2);
             VSync(2);
 
-            next_context = base;
-            if (current == base)
+            next_context = context;
+            if (current == context)
             {
                 next_context = current->second_buffer_header;
             }
             current = next_context;
             PutDispEnv(&current->disp_env);
             PutDrawEnv(&current->draw_env);
-            DrawOTag((u_long*)(ot_head + 4095));
+            DrawOTag(ot_head + TITLE_OT_LENGTH - 1);
             update_controllers();
             cdrom_process_state();
-            if (g_titleMenuExitState == 0)
+            if (g_title_menu_exit_state == 0)
             {
                 continue;
             }
@@ -234,12 +234,12 @@ void render_menu(TitleMenuContext* context)
  * @details Same double-buffered render loop shape as @ref render_menu, but
  * drives the save-slot layout/highlight instead of the main title menu.
  * Loops rendering and swapping the two display buffers until
- * g_titleMenuExitState becomes non-zero (set by handle_save_slot_input),
+ * g_title_menu_exit_state becomes non-zero (set by handle_save_slot_input),
  * then resets the frame-queue state and returns.
  *
  * @param ctx_base Base address of the double-buffered TitleMenuContext render
  *        buffer, forwarded as-is from run_title.
- * @return The final value of g_titleMenuExitState: 1 after confirmation or
+ * @return The final value of g_title_menu_exit_state: 1 after confirmation or
  *         SAVE_SLOT_MENU_EXIT_CANCEL when returning to the title menu.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/AKk7x
@@ -247,23 +247,20 @@ void render_menu(TitleMenuContext* context)
 s32 run_save_slot_menu(TitleMenuContext* ctx_base)
 {
     RECT rect;
-    TitleMenuContext* base;
     TitleMenuContext* current;
     void* next_context;
     u_long* ot;
 
-    base = ctx_base;
-
     init_save_slot_menu();
     screen_transition(0);
-    set_fade_target(0x100, 0x100, 0x100, 0x14);
+    set_fade_target(TITLE_FADE_NEUTRAL, TITLE_FADE_NEUTRAL, TITLE_FADE_NEUTRAL, TITLE_FADE_FRAMES);
     DrawSync(0);
     VSync(0);
-    setRECT(&rect, 0, 0, SCREEN_WIDTH, 0x1D8);
+    setRECT(&rect, 0, 0, SCREEN_WIDTH, VRAM_BACK_DISP_Y + SCREEN_HEIGHT);
     ClearImage(&rect, 0, 0, 0);
-    current = base;
-    ClearOTagR(current->otag_buffer, 0x1000);
-    ClearOTagR(current->otag_buffer2, 0x1000);
+    current = ctx_base;
+    ClearOTagR(current->otag_buffer, TITLE_OT_LENGTH);
+    ClearOTagR(current->otag_buffer2, TITLE_OT_LENGTH);
     VSync(0);
     PutDispEnv(&current->disp_env);
     update_controllers();
@@ -271,7 +268,7 @@ s32 run_save_slot_menu(TitleMenuContext* ctx_base)
     do
     {
         ot = current->otag_buffer;
-        ClearOTagR(ot, 0x1000);
+        ClearOTagR(ot, TITLE_OT_LENGTH);
         current->next_prim_ptr = current->prim_buffer;
         VSync(1);
         render_fade_overlay(current);
@@ -279,21 +276,21 @@ s32 run_save_slot_menu(TitleMenuContext* ctx_base)
         DrawSync(0);
         set_controller_vsync_interval(2);
         VSync(2);
-        next_context = base;
-        if (current == base)
+        next_context = ctx_base;
+        if (current == ctx_base)
         {
             next_context = current->second_buffer_header;
         }
         current = next_context;
         PutDispEnv(&current->disp_env);
         PutDrawEnv(&current->draw_env);
-        DrawOTag(ot + 4095); /* last entry of the 4096-word otag_buffer */
+        DrawOTag(ot + TITLE_OT_LENGTH - 1);
         update_controllers();
         cdrom_process_state();
-    } while (g_titleMenuExitState == 0);
+    } while (g_title_menu_exit_state == 0);
     reset_controller_vsync_state();
     VSync(0);
-    return g_titleMenuExitState;
+    return g_title_menu_exit_state;
 }
 
 /**
@@ -323,7 +320,7 @@ void init_title_display(TitleMenuContext* ctx_base)
 
     akao_set_mono_output(0);
     SetGeomScreen(0x5DC);
-    SetGeomOffset(0xA0, 0x78);
+    SetGeomOffset(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 
     ctx_base->front_screen.x = 0;
     ctx_base->front_screen.y = 0;
@@ -355,20 +352,20 @@ void init_title_display(TitleMenuContext* ctx_base)
     ctx_base->draw_env.dtd = 0;
 
     reset_fade_state();
-    set_fade_target(0x100, 0x100, 0x100, 0x14);
+    set_fade_target(TITLE_FADE_NEUTRAL, TITLE_FADE_NEUTRAL, TITLE_FADE_NEUTRAL, TITLE_FADE_FRAMES);
     init_title_menu_state();
 
-    g_titleMenuExitState = 0;
+    g_title_menu_exit_state = 0;
 }
 
 /**
  * @brief Load and register the title overlay's AKAO instrument/sample bank.
  *
- * @details Counterpart of CHECKPS func_800500FC. Skipped if g_previous_game_state
+ * @details Counterpart of CHECKPS load_embedded_checkps_audio. Skipped if g_previous_game_state
  * indicates the bank is already resident (values 2, 3, 5, 6, 7). Otherwise
  * loads SOUND/EFFECT.SET from CD-ROM into the 0x80180000 scratch buffer,
  * splits the blob via its self-referential offset table, copies the
- * instrument/sample sub-block to g_titleAudioBankBase (0x8013C000) and
+ * instrument/sample sub-block to g_title_audio_bank_base (0x8013C000) and
  * registers it as the active AKAO bank, then uploads the trailing instrument
  * bank to the SPU.
  *
@@ -379,19 +376,20 @@ void load_title_audio_bank(void)
     u8* base;
     u32* off;
 
-    if (((u32)(g_previous_game_state - 2) >= 2U) && (g_previous_game_state != 6) && (g_previous_game_state != 7) && (g_previous_game_state != 5))
+    if ((g_previous_game_state != GAME_STATE_TITLE) && (g_previous_game_state != GAME_STATE_GNAME) && (g_previous_game_state != GAME_STATE_CHECKPS) &&
+        (g_previous_game_state != GAME_STATE_MENU_LOAD) && (g_previous_game_state != GAME_STATE_WORLD_SELECT))
     {
 
-        g_titleAudioBankBase = TITLE_AUDIO_BANK;
+        g_title_audio_bank_base = TITLE_AUDIO_BANK;
         cdrom_queue_read(CD_RES_SOUND_EFFECT_SET, TITLE_LOAD_BUFFER);
         cdrom_wait_queue_empty();
 
         base = TITLE_LOAD_BUFFER;
         off = TITLE_LOAD_BUFFER_OFFSETS;
 
-        bcopy(base + off[0], (u8*)g_titleAudioBankBase, (int)(off[1] - off[0]));
+        bcopy(base + off[0], (u8*)g_title_audio_bank_base, (int)(off[1] - off[0]));
 
-        akao_register_bank((AkaoHeader*)g_titleAudioBankBase);
+        akao_register_bank((AkaoHeader*)g_title_audio_bank_base);
         akao_upload_bank_blocking((AkaoBankHeader*)(base + off[1]), 1);
     }
 }
@@ -399,7 +397,7 @@ void load_title_audio_bank(void)
 /**
  * @brief Load a title-screen sequence and its instrument bank from CD-ROM.
  *
- * @details Counterpart of CHECKPS func_80050138. Reads CD resource
+ * @details Counterpart of CHECKPS load_checkps_song_from_disc. Reads CD resource
  * @c CD_RES_MUSIC_FILE(seq_variant) into the 0x80180000 scratch
  * buffer, splits it via its self-referential offset table, copies the
  * sequence sub-block to D_8003ECA0, then uploads the trailing instrument bank.
@@ -426,7 +424,7 @@ void load_title_seq(s32 seq_variant)
 /**
  * @brief Stop the title-screen background music.
  *
- * @details Counterpart of CHECKPS func_800501AC.
+ * @details Counterpart of CHECKPS stop_checkps_song.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/1cta3
  */
@@ -438,7 +436,7 @@ void stop_title_music(void)
 /**
  * @brief Start playback of the title-screen background music.
  *
- * @details Counterpart of CHECKPS func_800501CC. Plays the SEQ loaded into
+ * @details Counterpart of CHECKPS play_loaded_checkps_song. Plays the SEQ loaded into
  * D_8003ECA0 (by load_title_seq) and sets the song volume to maximum via
  * akao_set_song_volume.
  *
@@ -453,7 +451,7 @@ void start_title_music(void)
 /**
  * @brief Play a title-screen UI sound effect at maximum volume.
  *
- * @details Counterpart of CHECKPS func_800501FC (with the first parameter
+ * @details Counterpart of CHECKPS play_checkps_sfx (with the first parameter
  * folded away to a constant 0). sound_id values observed: 0x3C (selection
  * chime), 0x7C..0x7F (cursor / cancel / confirm beeps).
  *
@@ -477,21 +475,21 @@ void play_title_sfx(s32 sound_id, s32 pan)
  */
 void reset_fade_state(void)
 {
-    g_fadeCurrent.red = 0;
-    g_fadeCurrent.green = 0;
-    g_fadeCurrent.blue = 0;
+    g_fade_current.red = 0;
+    g_fade_current.green = 0;
+    g_fade_current.blue = 0;
 
-    g_fadeTarget.red = 0;
-    g_fadeTarget.green = 0;
-    g_fadeTarget.blue = 0;
-    g_fadeTarget.steps = 0;
+    g_fade_target.red = 0;
+    g_fade_target.green = 0;
+    g_fade_target.blue = 0;
+    g_fade_target.steps = 0;
 }
 
 /**
  * @brief Interpolate the screen fade and emit its overlay primitive.
  *
- * @details Counterpart of CHECKPS func_80050258: interpolates g_fadeCurrent
- * toward g_fadeTarget and emits the fade-overlay primitive into the active
+ * @details Counterpart of CHECKPS update_and_draw_fade: interpolates g_fade_current
+ * toward g_fade_target and emits the fade-overlay primitive into the active
  * prim buffer.
  *
  * @param ctx Active TitleMenuContext render buffer.
@@ -508,53 +506,53 @@ void render_fade_overlay(TitleMenuContext* ctx)
     s32 blue_step;
     s32 draw_mode;
 
-    if (g_fadeTarget.steps != 0)
+    if (g_fade_target.steps != 0)
     {
-        red_step = (g_fadeTarget.red - g_fadeCurrent.red) / g_fadeTarget.steps;
-        green_step = (g_fadeTarget.green - g_fadeCurrent.green) / g_fadeTarget.steps;
-        blue_step = (g_fadeTarget.blue - g_fadeCurrent.blue) / g_fadeTarget.steps;
-        g_fadeTarget.steps = g_fadeTarget.steps - 1;
-        g_fadeCurrent.red = g_fadeCurrent.red + red_step;
-        g_fadeCurrent.green = g_fadeCurrent.green + green_step;
-        g_fadeCurrent.blue = g_fadeCurrent.blue + blue_step;
+        red_step = (g_fade_target.red - g_fade_current.red) / g_fade_target.steps;
+        green_step = (g_fade_target.green - g_fade_current.green) / g_fade_target.steps;
+        blue_step = (g_fade_target.blue - g_fade_current.blue) / g_fade_target.steps;
+        g_fade_target.steps = g_fade_target.steps - 1;
+        g_fade_current.red = g_fade_current.red + red_step;
+        g_fade_current.green = g_fade_current.green + green_step;
+        g_fade_current.blue = g_fade_current.blue + blue_step;
     }
     else
     {
-        g_fadeCurrent.red = g_fadeTarget.red;
-        g_fadeCurrent.green = g_fadeTarget.green;
-        g_fadeCurrent.blue = g_fadeTarget.blue;
+        g_fade_current.red = g_fade_target.red;
+        g_fade_current.green = g_fade_target.green;
+        g_fade_current.blue = g_fade_target.blue;
     }
-    if (!(((g_fadeCurrent.red == TITLE_FADE_NEUTRAL) && (g_fadeCurrent.green == TITLE_FADE_NEUTRAL)) && (g_fadeCurrent.blue == TITLE_FADE_NEUTRAL)))
+    if (!(((g_fade_current.red == TITLE_FADE_NEUTRAL) && (g_fade_current.green == TITLE_FADE_NEUTRAL)) && (g_fade_current.blue == TITLE_FADE_NEUTRAL)))
     {
-        if (g_fadeCurrent.red >= TITLE_FADE_ADDITIVE_THRESHOLD)
+        if (g_fade_current.red >= TITLE_FADE_ADDITIVE_THRESHOLD)
         {
-            setRGB0(&primitive->tile, g_fadeCurrent.red - 1, g_fadeCurrent.green - 1, g_fadeCurrent.blue - 1);
+            setRGB0(&primitive->tile, g_fade_current.red - 1, g_fade_current.green - 1, g_fade_current.blue - 1);
         }
         else
         {
-            if (g_fadeCurrent.red == TITLE_FADE_NEUTRAL)
+            if (g_fade_current.red == TITLE_FADE_NEUTRAL)
             {
                 primitive->tile.r0 = 0;
             }
             else
             {
-                primitive->tile.r0 = ~g_fadeCurrent.red;
+                primitive->tile.r0 = ~g_fade_current.red;
             }
-            if (g_fadeCurrent.green == TITLE_FADE_NEUTRAL)
+            if (g_fade_current.green == TITLE_FADE_NEUTRAL)
             {
                 primitive->tile.g0 = 0;
             }
             else
             {
-                primitive->tile.g0 = ~g_fadeCurrent.green;
+                primitive->tile.g0 = ~g_fade_current.green;
             }
-            if (g_fadeCurrent.blue == TITLE_FADE_NEUTRAL)
+            if (g_fade_current.blue == TITLE_FADE_NEUTRAL)
             {
                 primitive->tile.b0 = 0;
             }
             else
             {
-                primitive->tile.b0 = ~g_fadeCurrent.blue;
+                primitive->tile.b0 = ~g_fade_current.blue;
             }
         }
 
@@ -566,7 +564,7 @@ void render_fade_overlay(TitleMenuContext* ctx)
 
         draw_mode = TITLE_FADE_ADDITIVE_DRAW_MODE;
         primitive = TITLE_NEXT_FADE_PRIMITIVE(primitive, TILE);
-        if (g_fadeCurrent.red < TITLE_FADE_ADDITIVE_THRESHOLD)
+        if (g_fade_current.red < TITLE_FADE_ADDITIVE_THRESHOLD)
         {
             draw_mode = TITLE_FADE_SUBTRACTIVE_DRAW_MODE;
         }
@@ -582,7 +580,7 @@ void render_fade_overlay(TitleMenuContext* ctx)
  * @brief Set the target fade color and step count for the title-screen fade.
  *
  * @details Counterpart of CHECKPS set_fade_target. render_fade_overlay
- * interpolates g_fadeCurrent toward this target over the given number of steps.
+ * interpolates g_fade_current toward this target over the given number of steps.
  *
  * @param red Target red channel value.
  * @param green Target green channel value.
@@ -593,17 +591,17 @@ void render_fade_overlay(TitleMenuContext* ctx)
  */
 void set_fade_target(s32 red, s32 green, s32 blue, s32 steps)
 {
-    g_fadeTarget.red = red;
-    g_fadeTarget.green = green;
-    g_fadeTarget.blue = blue;
-    g_fadeTarget.steps = steps;
+    g_fade_target.red = red;
+    g_fade_target.green = green;
+    g_fade_target.blue = blue;
+    g_fade_target.steps = steps;
 }
 
 /**
  * @brief Emit the title screen's tiled backdrop strip.
  *
- * @details Emits 5 POLY_FT4 quads stepping 0x40 px, each linked into the
- * active OT's tail entry.
+ * @details Emits TITLE_BACKDROP_STRIPS POLY_FT4 quads, each linked into the
+ * active OT's last entry.
  *
  * @param ctx Active TitleMenuContext render buffer.
  *
@@ -616,46 +614,34 @@ void render_title_backdrop(TitleMenuContext* ctx)
     s32 strip_index;
     s32 texture_x;
     s32 right_x;
-    s32 temp_v0;
-    s32 temp_v1;
+    s32 left_x;
+    s32 page_x;
 
     prim = (POLY_FT4*)ctx->next_prim_ptr;
     ot = ctx->otag_buffer;
     strip_index = 0;
 
-    while (strip_index < 5)
+    while (strip_index < TITLE_BACKDROP_STRIPS)
     {
-        right_x = 0x40 + (strip_index << 6);
-        prim->x3 = (short)right_x;
-        prim->x1 = (short)right_x;
-        texture_x = 0x140 + (strip_index << 6);
-        temp_v1 = texture_x & 0x3FF;
-        temp_v0 = strip_index << 6;
+        right_x = TITLE_BACKDROP_STRIP_WIDTH + (strip_index << 6);
+        prim->x1 = prim->x3 = right_x;
+        texture_x = TITLE_BACKDROP_TEXTURE_X + (strip_index << 6);
+        page_x = texture_x & 0x3FF;
+        left_x = strip_index << 6;
         strip_index++;
-        prim->x2 = (short)temp_v0;
-        prim->x0 = (short)temp_v0;
+        prim->x0 = prim->x2 = left_x;
         setPolyFT4(prim);
-        prim->b0 = 0x80;
-        prim->g0 = 0x80;
-        prim->r0 = 0x80;
-        prim->y1 = 0;
-        prim->y0 = 0;
-        prim->y3 = 0xE0;
-        prim->y2 = 0xE0;
-        prim->u2 = 0;
-        prim->u0 = 0;
-        prim->u3 = 0x40;
-        prim->u1 = 0x40;
-        prim->v1 = 8;
-        prim->v0 = 8;
-        prim->v3 = 0xE8;
-        prim->v2 = 0xE8;
-        prim->tpage = (u_short)((temp_v1 >> 6) | 0x110);
+        prim->r0 = prim->g0 = prim->b0 = 0x80;
+        prim->y0 = prim->y1 = 0;
+        prim->y2 = prim->y3 = VRAM_DRAW_HEIGHT;
+        prim->u0 = prim->u2 = 0;
+        prim->u1 = prim->u3 = TITLE_BACKDROP_STRIP_WIDTH;
+        prim->v0 = prim->v1 = 8;
+        prim->v2 = prim->v3 = 8 + VRAM_DRAW_HEIGHT;
+        prim->tpage = getTPage(2, 0, page_x, 0x100);
         prim->clut = getClut(0, 481);
-        /* addPrim((P_TAG *)(ot + 4095), prim) */
-        ((P_TAG*)prim)->addr = (u_long)(((P_TAG*)(ot + 4095))->addr);
-        ((P_TAG*)(ot + 4095))->addr = (u_long)prim;
-        prim = (POLY_FT4*)(((u8*)prim) + 0x28);
+        addPrim(ot + TITLE_OT_LENGTH - 1, prim);
+        prim++;
     }
 
     ctx->next_prim_ptr = (u_long*)prim;
@@ -666,36 +652,35 @@ void render_title_backdrop(TitleMenuContext* ctx)
  *
  * @details Ticks the idle countdown (dispatching the idle-quit item once it
  * expires), then debounces the confirm/cancel and cursor up/down button
- * combos and moves the cursor or arms g_titleMenuExitState accordingly.
+ * combos and moves the cursor or arms g_title_menu_exit_state accordingly.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/vmcmD
  */
 void handle_title_menu_input(void)
 {
-    s32 op = 0x7C;
     update_menu_input();
-    if (g_titleIdleCountdown == 0)
+    if (g_title_idle_countdown == 0)
     {
-        g_titleMenuExitState = 1;
-        g_titleSelectedItem = 0xFF;
+        g_title_menu_exit_state = 1;
+        g_title_selected_item = TITLE_SELECTION_SENTINEL;
         return;
     }
-    g_titleIdleCountdown -= 1;
-    if (g_debouncedInput & (PADh | PADi | PADRright))
+    g_title_idle_countdown -= 1;
+    if (g_debounced_input & (PADh | PADi | PADRright))
     {
-        play_title_sfx(op, 0x80);
-        g_titleMenuExitState = 1;
+        play_title_sfx(0x7C, FIELD_SOUND_PAN_CENTRE);
+        g_title_menu_exit_state = 1;
         return;
     }
-    if (g_debouncedInput & (PADLup | PADLleft))
+    if (g_debounced_input & (PADLup | PADLleft))
     {
         menu_cursor_up();
-        play_title_sfx(0x7D, 0x80);
+        play_title_sfx(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
     }
-    else if (g_debouncedInput & (PADLdown | PADLright | PADselect))
+    else if (g_debounced_input & (PADLdown | PADLright | PADselect))
     {
         menu_cursor_down();
-        play_title_sfx(0x7D, 0x80);
+        play_title_sfx(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
     }
 }
 
@@ -703,7 +688,7 @@ void handle_title_menu_input(void)
  * @brief Move the menu cursor to the next enabled slot, wrapping to slot 0
  *        if none remain.
  *
- * @details Linear-search g_titleMenuItemFlags forward for the next enabled
+ * @details Linear-search g_title_menu_item_flags forward for the next enabled
  * menu slot. If none remain, the cursor is reset to slot 0 with rank 0.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/6k8uV
@@ -712,22 +697,22 @@ void menu_cursor_down(void)
 {
     s32 item;
 
-    for (item = g_titleSelectedItem + 1; item < TITLE_MENU_SLOT_COUNT; item++)
+    for (item = g_title_selected_item + 1; item < TITLE_MENU_SLOT_COUNT; item++)
     {
-        if (g_titleMenuItemFlags[item * 2] != 0)
+        if (g_title_menu_item_flags[item * 2] != 0)
         {
             break;
         }
     }
     if (item == TITLE_MENU_SLOT_COUNT)
     {
-        g_titleVisibleItemRank = 0;
-        g_titleSelectedItem = 0;
+        g_title_visible_item_rank = 0;
+        g_title_selected_item = 0;
     }
     else
     {
-        g_titleSelectedItem = (u8)item;
-        g_titleVisibleItemRank++;
+        g_title_selected_item = (u8)item;
+        g_title_visible_item_rank++;
     }
 }
 
@@ -736,7 +721,7 @@ void menu_cursor_down(void)
  *        last enabled slot if already at the top.
  *
  * @details Mirror of menu_cursor_down searching backward. Scans
- * g_titleMenuItemFlags from the slot before the current selection toward 0
+ * g_title_menu_item_flags from the slot before the current selection toward 0
  * for the next enabled slot, decrementing the visible rank. If the search
  * runs past slot 0, it wraps: a forward pass over all TITLE_MENU_SLOT_COUNT
  * slots counts the enabled ones and records the last enabled index, then the
@@ -749,11 +734,10 @@ void menu_cursor_up(void)
     s32 item;
     s32 last_enabled;
     s32 enabled_count;
-    u8 rank;
 
-    for (item = g_titleSelectedItem - 1; item >= 0; item--)
+    for (item = g_title_selected_item - 1; item >= 0; item--)
     {
-        if (g_titleMenuItemFlags[item * 2] != 0)
+        if (g_title_menu_item_flags[item * 2] != 0)
         {
             break;
         }
@@ -764,32 +748,30 @@ void menu_cursor_up(void)
         enabled_count = 0;
         for (item = 0; item < TITLE_MENU_SLOT_COUNT; item++)
         {
-            if (g_titleMenuItemFlags[item * 2] != 0)
+            if (g_title_menu_item_flags[item * 2] != 0)
             {
                 enabled_count++;
                 last_enabled = item;
             }
         }
 
-        g_titleVisibleItemRank = enabled_count - 1;
-        g_titleSelectedItem = (u8)last_enabled;
+        g_title_visible_item_rank = enabled_count - 1;
+        g_title_selected_item = (u8)last_enabled;
         return;
     }
-    rank = g_titleVisibleItemRank;
-    g_titleSelectedItem = (u8)item;
-    g_titleVisibleItemRank = rank - 1;
-    return;
+    g_title_selected_item = item;
+    g_title_visible_item_rank--;
 }
 
 /**
  * @brief Emit the title-menu header, each enabled item, and the cursor.
  *
- * @details Walks the 16-slot g_titleMenuItemFlags table and emits one
+ * @details Walks the 16-slot g_title_menu_item_flags table and emits one
  * emit_menu_item_quad per enabled slot, stacking them vertically (item_y += 0xC
- * each). The currently selected item (visible_index == g_titleVisibleItemRank)
+ * each). The currently selected item (visible_index == g_title_visible_item_rank)
  * uses CLUT 1, the rest CLUT 2. A fixed header quad is emitted first, and the
  * cursor quad last; the cursor's U coordinate cycles through
- * g_cursorBlinkUOffsets[(g_titleAnimFrame >> 2) & 3] for a 4-frame blink, and
+ * g_cursor_blink_u_offsets[(g_title_anim_frame >> 2) & 3] for a 4-frame blink, and
  * its Y tracks the selected rank. The advanced prim cursor is written back to
  * TitleMenuContext::next_prim_ptr.
  *
@@ -809,7 +791,6 @@ void render_title_menu_items(TitleMenuContext* ctx)
     void* first_prim;
     s32 item_visible;
     void* result;
-    u8 anim;
 
     ot_head = ctx->otag_buffer;
     first_prim = ctx->next_prim_ptr;
@@ -817,38 +798,33 @@ void render_title_menu_items(TitleMenuContext* ctx)
     item_x = 0x88;
     item_y = 0xA0;
     visible_index = 0;
-    slot = 0;
-    flag_ptr = &g_titleMenuItemFlags[0];
-    do
+    flag_ptr = &g_title_menu_item_flags[0];
+    for (slot = 0; slot < TITLE_MENU_SLOT_COUNT; slot++)
     {
         item_visible = (*flag_ptr) != 0;
         if (item_visible)
         {
-            prim = (u8*)emit_menu_item_quad(ot_head, prim, slot + 1, item_x, item_y, 0, 0x80, (g_titleVisibleItemRank == visible_index) ? 1 : 2);
+            prim = (u8*)emit_menu_item_quad(ot_head, prim, slot + 1, item_x, item_y, 0, 0x80, (g_title_visible_item_rank == visible_index) ? 1 : 2);
             item_y += 0xC;
             visible_index++;
             prim += 0x28;
         }
-        slot++;
         flag_ptr += 2;
-    } while (slot < 0x10);
-    result = emit_menu_item_quad(ot_head, prim, 7, 0x78, (6 * (2 * ((s32)g_titleVisibleItemRank))) + 0x9D,
-                                      (s32)g_cursorBlinkUOffsets[(g_titleAnimFrame >> 2) & 3], 0x10, 0);
+    }
+    result =
+        emit_menu_item_quad(ot_head, prim, 7, 0x78, g_title_visible_item_rank * 12 + 0x9D, g_cursor_blink_u_offsets[(g_title_anim_frame >> 2) & 3], 0x10, 0);
 
-    anim = g_titleAnimFrame;
     ctx->next_prim_ptr = result;
-    g_titleAnimFrame = anim + 1;
+    g_title_anim_frame++;
 }
 
 /**
  * @brief Build one menu-item POLY_FT4 (textured quad) and link it into the OT.
  *
- * @details Hand-writes a libgpu POLY_FT4 (code 0x2C, len 9, equivalent to
- * setPolyFT4) at screen (x, y) with size @p width, samples a 16-px-tall
- * texture row selected by @p tex_row (V = tex_row*16 .. +0x10), and links it
- * at the head of @p ot_head. The four corners are neutral-grey (0x80) flat
- * shaded; the texture page is fixed at 5 and the CLUT y is fixed at 480
- * (the packed 0x7800), with @p clut_index choosing the CLUT x.
+ * @details Builds a POLY_FT4 at screen (x, y) with size @p width, samples a
+ * 16-pixel-tall texture row selected by @p tex_row (V = tex_row * 16 .. +16),
+ * and links it at the head of @p ot_head. The quad is neutral-grey (0x80) flat
+ * shaded, textured from page (0x140, 0) with a CLUT from row 480.
  *
  * @param ot_head    OT entry to link this primitive in front of.
  * @param prim       Destination primitive buffer (>= 0x28 bytes).
@@ -872,13 +848,8 @@ void* emit_menu_item_quad(u_long* ot_head, void* prim, s32 tex_row, s32 x, s32 y
     u16 y_bottom;
     u8 u_right;
     u16 clut_word;
-    u32 old_word;
-    u32 new_word;
-    u32 addr_mask;
-    u32 tag_mask;
 
     quad = prim;
-    addr_mask = 0x00FFFFFF;
     setPolyFT4(quad);
     v_top = (u8)(tex_row << 4);
     quad->b0 = 0x80;
@@ -891,8 +862,7 @@ void* emit_menu_item_quad(u_long* ot_head, void* prim, s32 tex_row, s32 x, s32 y
     quad->v2 = v_bottom;
     quad->x2 = (u16)x;
     quad->x0 = (u16)x;
-    quad->tpage = 5;
-    tag_mask = 0xFF000000;
+    quad->tpage = getTPage(0, 0, 0x140, 0);
     x_right = (u16)(x + width);
     quad->x3 = x_right;
     quad->x1 = x_right;
@@ -902,16 +872,13 @@ void* emit_menu_item_quad(u_long* ot_head, void* prim, s32 tex_row, s32 x, s32 y
     quad->u2 = (u8)u0_base;
     quad->u0 = (u8)u0_base;
     u_right = (u8)(u0_base + width);
-    clut_word = (u16)((clut_index & 0x3F) | 0x7800);
+    clut_word = (u16)((clut_index & 0x3F) | getClut(0, 480));
     quad->y3 = y_bottom;
     quad->y2 = y_bottom;
-    old_word = quad->tag;
     quad->u3 = u_right;
     quad->u1 = u_right;
     quad->clut = clut_word;
-    new_word = (old_word & tag_mask) | (*ot_head & addr_mask);
-    quad->tag = new_word;
-    *ot_head = (*ot_head & tag_mask) | ((u32)quad & addr_mask);
+    addPrim(ot_head, quad);
     return quad + 1;
 }
 
@@ -919,9 +886,9 @@ void* emit_menu_item_quad(u_long* ot_head, void* prim, s32 tex_row, s32 x, s32 y
  * @brief Initialise the title-menu state globals and upload its TIMs.
  *
  * @details Zeros the per-slot flag table (TITLE_MENU_SLOT_COUNT entries),
- * enables the first 4 slots, resets cursor/input/animation globals, arms the
+ * enables the first two slots (two flag bytes each), resets cursor/input/animation globals, arms the
  * idle countdown to TITLE_IDLE_COUNTDOWN_FRAMES, and uploads the two menu TIMs
- * from g_titleMenuTimTable[1..2] to VRAM. When re-entering from the attract
+ * from g_title_menu_tim_table[1..2] to VRAM. When re-entering from the attract
  * loop (g_previous_game_state == 0) it advances the cursor to the first enabled
  * slot (same forward scan as menu_cursor_down).
  *
@@ -932,52 +899,49 @@ void init_title_menu_state(void)
     u8* flag_ptr;
     s32 i;
     s32 next_item;
+
     i = 0;
-    flag_ptr = g_titleMenuItemFlags;
-    for (i = 0; i < TITLE_MENU_SLOT_COUNT; i++)
+    flag_ptr = g_title_menu_item_flags;
+    for (; i < TITLE_MENU_SLOT_COUNT; i++)
     {
         flag_ptr[0] = 0;
         flag_ptr[1] = 0;
         flag_ptr += 2;
     }
 
-    g_titleMenuItemFlags[0] = 1;
-    g_titleMenuItemFlags[1] = 1;
-    g_titleMenuItemFlags[2] = 1;
-    g_titleMenuItemFlags[3] = 1;
+    g_title_menu_item_flags[0] = 1;
+    g_title_menu_item_flags[1] = 1;
+    g_title_menu_item_flags[2] = 1;
+    g_title_menu_item_flags[3] = 1;
 
-    g_titleVisibleItemRank = 0;
+    g_title_visible_item_rank = 0;
 
-    g_titleSelectedItem = 0;
-    g_titleAnimFrame = 0;
-    g_inputRepeatTimer = 0;
-    g_lastInputState = 0;
-    g_debouncedInput = 0;
-    g_titleIdleCountdown = TITLE_IDLE_COUNTDOWN_FRAMES;
-    upload_tim((void*)(((u8*)&g_titleMenuTimTable) + g_titleMenuTimTable[1]), 0x140, 0, 0, 0x1E0);
-    upload_tim((void*)(((u8*)&g_titleMenuTimTable) + g_titleMenuTimTable[2]), 0x140, 0x100, 0, 0x1E1);
-    if (g_previous_game_state == 0)
+    g_title_selected_item = 0;
+    g_title_anim_frame = 0;
+    g_input_repeat_timer = 0;
+    g_last_input_state = 0;
+    g_debounced_input = 0;
+    g_title_idle_countdown = TITLE_IDLE_COUNTDOWN_FRAMES;
+    upload_tim((void*)(((u8*)&g_title_menu_tim_table) + g_title_menu_tim_table[1]), 0x140, 0, 0, 0x1E0);
+    upload_tim((void*)(((u8*)&g_title_menu_tim_table) + g_title_menu_tim_table[2]), 0x140, 0x100, 0, 0x1E1);
+    if (g_previous_game_state == GAME_STATE_FIELD)
     {
-        next_item = g_titleSelectedItem + 1;
-        if (next_item < TITLE_MENU_SLOT_COUNT)
+        for (next_item = g_title_selected_item + 1; next_item < TITLE_MENU_SLOT_COUNT; next_item++)
         {
-            for (; next_item < TITLE_MENU_SLOT_COUNT; next_item++)
+            if (g_title_menu_item_flags[next_item * 2] != 0)
             {
-                if (g_titleMenuItemFlags[next_item * 2] != 0)
-                {
-                    break;
-                }
+                break;
             }
         }
         if (next_item == TITLE_MENU_SLOT_COUNT)
         {
-            g_titleVisibleItemRank = 0;
-            g_titleSelectedItem = 0;
+            g_title_visible_item_rank = 0;
+            g_title_selected_item = 0;
         }
         else
         {
-            g_titleSelectedItem = (u8)next_item;
-            g_titleVisibleItemRank++;
+            g_title_selected_item = (u8)next_item;
+            g_title_visible_item_rank++;
         }
     }
 }
@@ -1040,8 +1004,8 @@ void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y)
  * @brief Reads the SCD pad state and returns the remapped button bitmap.
  *
  * Same byte-swap and button-remap as @p read_pad_input, but returns the
- * computed bitmap directly instead of writing it into @p g_lastInputState
- * and resetting @p g_inputRepeatTimer.
+ * computed bitmap directly instead of writing it into @p g_last_input_state
+ * and resetting @p g_input_repeat_timer.
  *
  *
  * @return Remapped button bitmap, or 0 if the pad is not present
@@ -1098,14 +1062,14 @@ s32 read_pad_state(void)
 }
 
 /**
- * @brief Read the SCD pad, debounce it, and publish the result in g_debouncedInput.
+ * @brief Read the SCD pad, debounce it, and publish the result in g_debounced_input.
  *
- * @details Counterpart of CHECKPS UpdateInputDebounced. Builds the remapped
+ * @details Counterpart of CHECKPS update_controller_input. Builds the remapped
  * button bitmap (byte-swap + face-bit remap + analog-stick to d-pad
  * thresholding) exactly like read_pad_input, then runs an auto-repeat state
- * machine over g_lastInputState / g_inputRepeatTimer:
+ * machine over g_last_input_state / g_input_repeat_timer:
  *  - If this frame matches the previous state (or shares any repeat-eligible
- *    bit with it), only the d-pad directions auto-repeat: g_debouncedInput
+ *    bit with it), only the d-pad directions auto-repeat: g_debounced_input
  *    fires every (2 + 1) frames while held, otherwise it is suppressed.
  *  - A fresh, different press is published immediately and arms the longer
  *    initial-repeat delay (15 frames).
@@ -1155,8 +1119,8 @@ void update_menu_input(void)
         }
         input_state = buttons;
     }
-    g_debouncedInput = 0;
-    if (((input_state == g_lastInputState) || ((g_lastInputState != 0) && (input_state & (g_lastInputState | TITLE_NON_REPEAT_BUTTON_MASK)))) &&
+    g_debounced_input = 0;
+    if (((input_state == g_last_input_state) || ((g_last_input_state != 0) && (input_state & (g_last_input_state | TITLE_NON_REPEAT_BUTTON_MASK)))) &&
         (input_state != 0))
     {
         /* Held input repeats directional buttons only. */
@@ -1164,26 +1128,26 @@ void update_menu_input(void)
         {
             input_state &= TITLE_DPAD_BUTTONS;
         }
-        if (g_inputRepeatTimer == 0)
+        if (g_input_repeat_timer == 0)
         {
-            g_debouncedInput = input_state;
-            g_inputRepeatTimer = TITLE_REPEAT_DELAY;
+            g_debounced_input = input_state;
+            g_input_repeat_timer = TITLE_REPEAT_DELAY;
         }
         else
         {
-            g_inputRepeatTimer--;
-            g_debouncedInput = 0;
+            g_input_repeat_timer--;
+            g_debounced_input = 0;
         }
     }
     else if (input_state == 0)
     {
-        g_inputRepeatTimer = 0;
-        g_lastInputState = 0;
+        g_input_repeat_timer = 0;
+        g_last_input_state = 0;
     }
     else
     {
-        g_debouncedInput = input_state;
-        g_lastInputState = input_state;
-        g_inputRepeatTimer = TITLE_INITIAL_REPEAT_DELAY;
+        g_debounced_input = input_state;
+        g_last_input_state = input_state;
+        g_input_repeat_timer = TITLE_INITIAL_REPEAT_DELAY;
     }
 }

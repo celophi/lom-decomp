@@ -10,7 +10,7 @@ from tools.overlays import cload, saved_game, splat_config, title
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TITLE_SOURCE = REPO_ROOT / "src/overlays/title/title.c"
-MENU_STATE_SIZE = 0x8C  # g_titleMenuExitState through g_slotHighlightFrames
+MENU_STATE_SIZE = 0x8C  # g_title_menu_exit_state through g_slot_highlight_frames
 
 
 def define(path: Path, name: str) -> int:
@@ -60,8 +60,8 @@ class SourceTest(unittest.TestCase):
     def test_counts_follow_the_c_sources(self):
         header = saved_game.HEADER
         self.assertEqual(title.LAYOUT_ENTRY_COUNT, define(title.SAVE_SOURCE, "SAVE_LAYOUT_ENTRIES"))
-        self.assertEqual(title.COPIED_WORDS, define(title.SAVE_SOURCE, "MENU_LAYOUT_WORDS"))
-        self.assertEqual(title.HERO_WORDS, define(title.SAVE_SOURCE, "SUB_MENU_LAYOUT_WORDS"))
+        self.assertEqual(title.COPIED_WORDS, define(title.SAVE_SOURCE, "SAVED_GAME_TEMPLATE_WORDS"))
+        self.assertEqual(title.HERO_WORDS, define(title.SAVE_SOURCE, "HERO_TEMPLATE_WORDS"))
         self.assertEqual(title.HERO_WORDS * 4, define(header, "SAVED_CHARACTER_SIZE"))
         self.assertEqual(title.COPIED_WORDS * 4, define(header, "SAVED_GAME_DATA_SIZE"))
         self.assertEqual(saved_game.CHARACTER_SIZE, define(header, "SAVED_CHARACTER_SIZE"))
@@ -86,12 +86,12 @@ class SourceTest(unittest.TestCase):
 
     def test_loop_bounds_and_uploads_follow_the_code(self):
         save = title.SAVE_SOURCE.read_text(encoding="ascii")
-        self.assertIn(f"counter < {title.TEXTURE_COUNT}; counter++", save)
+        self.assertEqual(title.TEXTURE_COUNT, define(title.SAVE_SOURCE, "SAVE_LAYOUT_TEX_COUNT"))
         self.assertIn(f"next_index >= 0x{title.WEAPON_SLOT_COUNT:X}", save)
         self.assertIn(f"uv->u * {title.UV_UNIT_PIXELS}", save)
         menu = TITLE_SOURCE.read_text(encoding="ascii")
-        self.assertIn(f"g_cursorBlinkUOffsets[(g_titleAnimFrame >> 2) & {title.CURSOR_FRAME_COUNT - 1}]", menu)
-        calls = re.findall(r"upload_tim\(\(void\*\)\(\(\(u8\*\)&g_titleMenuTimTable\) \+ g_titleMenuTimTable\[(\d)\]\), "
+        self.assertIn(f"g_cursor_blink_u_offsets[(g_title_anim_frame >> 2) & {title.CURSOR_FRAME_COUNT - 1}]", menu)
+        calls = re.findall(r"upload_tim\(\(void\*\)\(\(\(u8\*\)&g_title_menu_tim_table\) \+ g_title_menu_tim_table\[(\d)\]\), "
                            r"(0x[0-9A-F]+|\d+), (0x[0-9A-F]+|\d+), (0x[0-9A-F]+|\d+), (0x[0-9A-F]+|\d+)\);", menu)
         found = {title.MENU_TIM_NAMES[int(index) - 1]: tuple(int(value, 0) for value in values)
                  for index, *values in calls}

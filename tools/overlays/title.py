@@ -45,8 +45,8 @@ WEAPON_SLOT_COUNT = 11  # handle_save_slot_input wraps the cursor at 11
 UV_UNIT_PIXELS = 8  # SlotUvRect fields are in 8-pixel units
 LAYOUT_ENTRY_COUNT = 27  # SAVE_LAYOUT_ENTRIES
 NEW_GAME_SIZE = 0x50BC
-COPIED_WORDS = 0xC9A  # MENU_LAYOUT_WORDS
-HERO_WORDS = 0x94  # SUB_MENU_LAYOUT_WORDS
+COPIED_WORDS = 0xC9A  # SAVED_GAME_TEMPLATE_WORDS
+HERO_WORDS = 0x94  # HERO_TEMPLATE_WORDS
 
 # upload_tim(table + offset, x, y, clut_x, clut_y) in init_title_menu_state.
 MENU_UPLOADS = {
@@ -103,20 +103,20 @@ class TitleSymbols:
 
 
 SYMBOL_NAMES = {
-    "menu_offsets": "g_titleMenuTimTable",
+    "menu_offsets": "g_title_menu_tim_table",
     "menu_items": "g_title_menu_tim_0",
     "backdrop": "g_title_menu_tim_1",
-    "cursor_blink": "g_cursorBlinkUOffsets",
-    "texture_table": "g_saveLayoutTexTable",
-    "panel_uvs": "g_saveSlotPanelUvTable",
-    "sprite_uvs": "g_saveSlotSpriteUvTable",
-    "layout": "g_saveLayoutTable",
-    "weapons": "g_startingWeaponRecords",
-    "new_game": "g_newGameStateTemplate",
-    "alternate": "g_menuLayoutTemplateAlt",
-    "hero_default": "g_subMenuLayoutDefault",
-    "hero_continue": "g_subMenuLayoutContinue",
-    "variables": "g_titleMenuExitState",
+    "cursor_blink": "g_cursor_blink_u_offsets",
+    "texture_table": "g_save_layout_tex_table",
+    "panel_uvs": "g_save_slot_panel_uv_table",
+    "sprite_uvs": "g_save_slot_sprite_uv_table",
+    "layout": "g_save_layout_table",
+    "weapons": "g_starting_weapon_records",
+    "new_game": "g_new_game_template",
+    "alternate": "g_field_start_template",
+    "hero_default": "g_hero_template_type_0",
+    "hero_continue": "g_hero_template_type_1",
+    "variables": "g_title_menu_exit_state",
 }
 
 
@@ -265,8 +265,8 @@ def read_uv_tables(blob: Blob[TitleSymbols]) -> list[Part]:
     names = blob.symbols
     parts = []
     for name, address, end, file, side in (
-        ("panel UV table", names.panel_uvs, names.sprite_uvs, "panel_uvs.yaml", "right (g_slotSlideX > 0)"),
-        ("sprite UV table", names.sprite_uvs, names.layout, "sprite_uvs.yaml", "left (g_slotSlideX < 0)"),
+        ("panel UV table", names.panel_uvs, names.sprite_uvs, "panel_uvs.yaml", "right (g_slot_slide_x > 0)"),
+        ("sprite UV table", names.sprite_uvs, names.layout, "sprite_uvs.yaml", "left (g_slot_slide_x < 0)"),
     ):
         raw = read_bytes(blob, address, end, name)
         table = UvRectTable.parse_binary(raw, UV_UNIT_PIXELS, WEAPON_SLOT_COUNT + 1)
@@ -319,10 +319,10 @@ def read_game_states(blob: Blob[TitleSymbols], text: Text) -> list[Part]:
     parts = []
     for name, address, end, size, file, note in (
         ("new-game state", names.new_game, names.alternate, NEW_GAME_SIZE, "new_game",
-         "load_menu_layout(0) copies the first copied_size bytes over g_saved_game. "
+         "load_saved_game_template(0) copies the first copied_size bytes over g_saved_game. "
          "Bytes from layout_size on are outside SavedGameLayout."),
         ("alternate game state", names.alternate, names.hero_default, saved_game.LAYOUT_SIZE, "alternate",
-         "load_menu_layout with a nonzero argument copies copied_size bytes, which runs "
+         "load_saved_game_template with a nonzero argument copies copied_size bytes, which runs "
          "into the first bytes of hero_default."),
     ):
         raw = read_bytes(blob, address, end, name)
@@ -334,9 +334,9 @@ def read_game_states(blob: Blob[TitleSymbols], text: Text) -> list[Part]:
         parts.append(part(blob, name, address, size, f"game_state/{file}.yaml", Record(address, raw, document)))
     for name, address, end, file, note in (
         ("default hero record", names.hero_default, names.hero_continue, "hero_default",
-         "load_sub_menu_layout(0) copies this over characters[0]."),
+         "load_hero_template(0) copies this over characters[0]."),
         ("continue hero record", names.hero_continue, names.variables, "hero_continue",
-         "load_sub_menu_layout(1) copies this over characters[0] and sets bit 0 of the mode flags word."),
+         "load_hero_template(1) copies this over characters[0] and sets bit 0 of the mode flags word."),
     ):
         raw = read_bytes(blob, address, end, name)
         if len(raw) != HERO_WORDS * 4:

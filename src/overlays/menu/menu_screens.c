@@ -2596,7 +2596,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     break;
                                 }
                                 v1 = *(s32*)((void*)g_saved_game_ctx + 0x30) + VSync(-1);
-                                shared_s0 = v1 - D_80042FB4;
+                                shared_s0 = v1 - g_playtime_vsync_origin;
                                 pos.x += 0x14;
                                 s2 = shared_s0 / 216000;
                                 one = 1;

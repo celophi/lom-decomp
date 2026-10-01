@@ -93,3 +93,4 @@ akao_set_song_volume = 0x8002279C;
 akao_upload_bank_blocking = 0x80022AE8;
 g_saved_game = 0x80042FD8;
 g_controller_device_type = 0x801ED600;
+g_playtime_vsync_origin = 0x80042FB4;

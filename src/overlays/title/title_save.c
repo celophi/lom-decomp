@@ -1,7 +1,9 @@
 #include "saved_game.h"
 #include "title_internal.h"
 #include "title_save.h"
+#include "field_sound.h"
 #include "sdk/rand.h"
+#include "tim.h"
 
 void reset_save_slot_panel(void);
 void handle_save_slot_input(void);
@@ -9,25 +11,24 @@ void animate_save_slot_panel(void);
 
 /* Width in pixels of a single save-slot panel; one horizontal slide moves the
  * stage by exactly this much. */
-#define TITLE_TECHNIQUE_BITS_OFFSET ((u32)&((SavedGameLayout*)0)->technique_bits)
-
 #define SLOT_PANEL_WIDTH 160
 
 /* Number of frames the slide-lerper takes to animate a full panel scroll. */
 #define SLOT_SLIDE_FRAMES 8
 
-/* Length, in 32-bit words, of each sub-menu layout table copied by
- * load_sub_menu_layout (0x94 words == 0x250 bytes). */
-#define SUB_MENU_LAYOUT_WORDS 0x94U
+/* Words in a hero template (SAVED_CHARACTER_SIZE bytes). */
+#define HERO_TEMPLATE_WORDS 0x94U
 
-/* Length, in 32-bit words, of a full menu-layout template copied by
- * load_menu_layout (0xC9A words). */
-#define MENU_LAYOUT_WORDS 0xC9AU
+/* Words in a saved-game template (SAVED_GAME_DATA_SIZE bytes). */
+#define SAVED_GAME_TEMPLATE_WORDS 0xC9AU
+
+/* Entries in g_save_layout_tex_table. */
+#define SAVE_LAYOUT_TEX_COUNT 11
 
 static void scroll_slots_right(void);
 static void scroll_slots_left(void);
-void load_sub_menu_layout(s32 is_continue);
-unsigned short upload_save_layout_textures(void);
+void load_hero_template(s32 hero_type);
+void upload_save_layout_textures(void);
 void* render_save_layout_prims(u8* ptr, u_long* ot);
 
 /**
@@ -42,7 +43,7 @@ static void read_pad_input(void)
     u32 buttons;
     s32 axis;
 
-    g_debouncedInput = 0;
+    g_debounced_input = 0;
     if (g_controller_device_type >= TITLE_PAD_UNAVAILABLE)
     {
         state = 0;
@@ -76,8 +77,8 @@ static void read_pad_input(void)
         }
         state = buttons;
     }
-    g_lastInputState = state;
-    g_inputRepeatTimer = TITLE_INITIAL_REPEAT_DELAY;
+    g_last_input_state = state;
+    g_input_repeat_timer = TITLE_INITIAL_REPEAT_DELAY;
 }
 
 /**
@@ -87,15 +88,15 @@ static void read_pad_input(void)
 void init_save_slot_menu(void)
 {
     read_pad_input();
-    g_slotSlideFrames = 0;
-    g_slotSlideYLerped = 0;
-    g_slotSlideY = 0;
-    g_slotSlideXLerped = 0;
-    g_slotSlideX = 0;
-    g_slotSelectedIndex = 0;
-    g_slotHighlightX = 0;
-    g_slotHighlightTargetX = 0;
-    g_slotHighlightFrames = 0;
+    g_slot_slide_frames = 0;
+    g_slot_slide_y_lerped = 0;
+    g_slot_slide_y = 0;
+    g_slot_slide_x_lerped = 0;
+    g_slot_slide_x = 0;
+    g_slot_selected_index = 0;
+    g_slot_highlight_x = 0;
+    g_slot_highlight_target_x = 0;
+    g_slot_highlight_frames = 0;
     upload_save_layout_textures();
 }
 
@@ -113,16 +114,16 @@ void render_save_slot_menu(TitleMenuContext* context)
 /**
  * @brief Per-frame input dispatcher for the save-slot sub-menu.
  *
- * @details While a slide is in flight (g_slotSlideFrames != 0) it only steps
+ * @details While a slide is in flight (g_slot_slide_frames != 0) it only steps
  * the X/Y slide lerpers and returns. Once settled it snaps the lerpers to
  * their targets, reads input, and branches on whether the stage is at its
- * home column (g_slotSlideX == 0) or scrolled to a side panel:
+ * home column (g_slot_slide_x == 0) or scrolled to a side panel:
  *  - Home column: confirm toggles the new-game expand entries (18/19), a
  *    left/right press scrolls to a side panel, and cancel quits the sub-menu
- *    (g_titleMenuExitState = 2).
- *  - Side panel: confirm loads the matching sub-menu layout, seeds its RNG,
- *    copies the selected starting-weapon record into D_80043618, clears the per-slot
- *    field of every other menu-layout slot, and confirms (exit state 1);
+ *    (g_title_menu_exit_state = 2).
+ *  - Side panel: confirm loads the hero of that side, seeds the game id,
+ *    copies the selected starting weapon into the hero's weapon slot, clears the
+ *    technique bits of every other weapon category, and confirms (exit state 1);
  *    cancel scrolls back home; up/down move the slot cursor (wrapping over
  *    the 11 slots). Always re-runs the highlight-panel animation.
  *
@@ -135,28 +136,26 @@ void handle_save_slot_input(void)
     s32 prev_index;
     s32 next_index;
     s32 slide_y_step;
-    s32 new_flags;
-    s32 flag_mask;
-    if (g_slotSlideFrames != 0)
+    if (g_slot_slide_frames != 0)
     {
-        slide_x_lerped_ptr = &g_slotSlideXLerped;
-        slide_x_step = ((s32)(g_slotSlideX - (*slide_x_lerped_ptr))) / ((s32)g_slotSlideFrames);
-        slide_y_step = ((s32)(g_slotSlideY - g_slotSlideYLerped)) / ((s32)g_slotSlideFrames);
-        g_slotSlideFrames -= 1;
-        g_slotSlideXLerped += slide_x_step;
-        g_slotSlideYLerped += slide_y_step;
+        slide_x_lerped_ptr = &g_slot_slide_x_lerped;
+        slide_x_step = (g_slot_slide_x - *slide_x_lerped_ptr) / g_slot_slide_frames;
+        slide_y_step = (g_slot_slide_y - g_slot_slide_y_lerped) / g_slot_slide_frames;
+        g_slot_slide_frames -= 1;
+        g_slot_slide_x_lerped += slide_x_step;
+        g_slot_slide_y_lerped += slide_y_step;
         return;
     }
-    g_slotSlideXLerped = g_slotSlideX;
-    g_slotSlideYLerped = g_slotSlideY;
+    g_slot_slide_x_lerped = g_slot_slide_x;
+    g_slot_slide_y_lerped = g_slot_slide_y;
     update_menu_input();
-    if (g_slotSlideX == 0)
+    if (g_slot_slide_x == 0)
     {
-        if (g_debouncedInput & (PAD_BTN_LEFT | PAD_BTN_RIGHT))
+        if (g_debounced_input & (PAD_BTN_LEFT | PAD_BTN_RIGHT))
         {
             SaveLayoutEntry* entry;
-            play_title_sfx(0x7D, 0x80);
-            entry = g_saveLayoutTable;
+            play_title_sfx(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+            entry = g_save_layout_table;
             if (entry[18].type != 0)
             {
                 entry[18].type = 0;
@@ -167,10 +166,10 @@ void handle_save_slot_input(void)
             entry[19].type = 0;
             return;
         }
-        if (g_debouncedInput & (PAD_BTN_START | PAD_BTN_L3 | PAD_BTN_CROSS))
+        if (g_debounced_input & (PAD_BTN_START | PAD_BTN_L3 | PAD_BTN_CROSS))
         {
-            play_title_sfx(0x7E, 0x80);
-            if (g_saveLayoutTable[18].type != 0)
+            play_title_sfx(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
+            if (g_save_layout_table[18].type != 0)
             {
                 scroll_slots_right();
                 reset_save_slot_panel();
@@ -180,85 +179,69 @@ void handle_save_slot_input(void)
             reset_save_slot_panel();
             return;
         }
-        if (g_debouncedInput & PAD_BTN_CIRCLE)
+        if (g_debounced_input & PAD_BTN_CIRCLE)
         {
-            play_title_sfx(0x7F, 0x80);
-            g_titleMenuExitState = 2;
+            play_title_sfx(FIELD_SOUND_CANCEL, FIELD_SOUND_PAN_CENTRE);
+            g_title_menu_exit_state = 2;
         }
     }
     else
     {
-        if (g_debouncedInput & (PAD_BTN_START | PAD_BTN_L3 | PAD_BTN_CROSS))
+        if (g_debounced_input & (PAD_BTN_START | PAD_BTN_L3 | PAD_BTN_CROSS))
         {
-            if (g_slotSlideX > 0)
+            if (g_slot_slide_x > 0)
             {
                 s32 rng_lo;
                 int rng_hi;
 
-                load_sub_menu_layout(0);
-                flag_mask = ~0x7F;
-                new_flags = g_saved_game.layout.characters[0].info.word & flag_mask;
-                g_saved_game.layout.characters[0].info.word = new_flags;
+                load_hero_template(0);
+                g_saved_game.layout.characters[0].info.word &= ~FIELD_CHARACTER_TYPE_MASK;
                 rng_lo = rand();
                 rng_hi = rand();
-                rng_lo |= rng_hi << 0xF;
-                g_saved_game.layout.identity.ids.game_id = (s16)rng_lo;
+                rng_lo |= rng_hi << TITLE_RNG_HIGH_SHIFT;
+                g_saved_game.layout.identity.ids.game_id = rng_lo;
             }
             else
             {
                 s32 rng_lo;
                 int rng_hi;
 
-                load_sub_menu_layout(1);
-                flag_mask = ~0x7F;
-                new_flags = (g_saved_game.layout.characters[0].info.word & flag_mask) | 1;
-                g_saved_game.layout.characters[0].info.word = new_flags;
+                load_hero_template(1);
+                g_saved_game.layout.characters[0].info.word = (g_saved_game.layout.characters[0].info.word & ~FIELD_CHARACTER_TYPE_MASK) | 1;
                 rng_lo = rand();
                 rng_hi = rand();
-                rng_lo |= rng_hi << 0xF;
-                g_saved_game.layout.identity.ids.game_id = (s16)rng_lo;
+                rng_lo |= rng_hi << TITLE_RNG_HIGH_SHIFT;
+                g_saved_game.layout.identity.ids.game_id = rng_lo;
             }
             {
-                s32 slot_idx;
-                s32 selected_slot;
-                u32 copy_count;
-                u8 byte;
-                u8* src_ptr;
-                u8* dest_ptr;
+                s32 i;
+                u8* src;
+                u8* dst;
 
-                dest_ptr = D_80043618;
-                src_ptr = g_startingWeaponRecords + (g_slotSelectedIndex << 6);
-                copy_count = 0;
-                while (copy_count < 0x40U)
+                dst = (u8*)&g_saved_game.layout.characters[0].equipment[FIELD_WEAPON_SLOT];
+                src = (u8*)&g_starting_weapon_records[g_slot_selected_index];
+                i = 0;
+                while (i < sizeof(FieldItemRecord))
                 {
-                    copy_count += 1;
-                    byte = *src_ptr;
-                    src_ptr += 1;
-                    *dest_ptr = byte;
-                    dest_ptr += 1;
+                    i++;
+                    *dst++ = *src++;
                 }
 
-                slot_idx = 0;
-                selected_slot = g_slotSelectedIndex;
-                src_ptr = g_saved_game.bytes;
-                slot_idx = 0;
-                do
+                for (i = 0; i < FIELD_WEAPON_CATEGORY_COUNT; i++)
                 {
-                    if (selected_slot != slot_idx)
+                    if (g_slot_selected_index != i)
                     {
-                        *(u32*)(src_ptr + TITLE_TECHNIQUE_BITS_OFFSET) = 0;
+                        g_saved_game.layout.technique_bits[i] = 0;
                     }
-                    slot_idx += 1;
-                    src_ptr += sizeof(u32);
-                } while (slot_idx < FIELD_WEAPON_CATEGORY_COUNT);
-                play_title_sfx(0x7E, 0x80);
+                }
+                play_title_sfx(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
             }
-            g_titleMenuExitState = 1;
+            g_title_menu_exit_state = 1;
         }
-        else if (g_debouncedInput & PAD_BTN_CIRCLE)
+        else if (g_debounced_input & PAD_BTN_CIRCLE)
         {
-            play_title_sfx(0x7F, 0x80);
-            if (g_slotSlideX > 0)
+            play_title_sfx(FIELD_SOUND_CANCEL, FIELD_SOUND_PAN_CENTRE);
+            if (g_slot_slide_x > 0)
             {
                 scroll_slots_left();
                 reset_save_slot_panel();
@@ -269,26 +252,26 @@ void handle_save_slot_input(void)
                 reset_save_slot_panel();
             }
         }
-        else if (g_slotHighlightFrames == 0)
+        else if (g_slot_highlight_frames == 0)
         {
-            if ((g_debouncedInput & PAD_BTN_UP) != 0U)
+            if ((g_debounced_input & PAD_BTN_UP) != 0U)
             {
-                play_title_sfx(0x7D, 0x80);
-                prev_index = g_slotSelectedIndex - 1;
-                g_slotSelectedIndex = prev_index;
+                play_title_sfx(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+                prev_index = g_slot_selected_index - 1;
+                g_slot_selected_index = prev_index;
                 if (prev_index < 0)
                 {
-                    g_slotSelectedIndex = 0xA;
+                    g_slot_selected_index = 0xA;
                 }
             }
-            if (g_debouncedInput & PAD_BTN_DOWN)
+            if (g_debounced_input & PAD_BTN_DOWN)
             {
-                play_title_sfx(0x7D, 0x80);
-                next_index = g_slotSelectedIndex + 1;
-                g_slotSelectedIndex = next_index;
+                play_title_sfx(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+                next_index = g_slot_selected_index + 1;
+                g_slot_selected_index = next_index;
                 if (next_index >= 0xB)
                 {
-                    g_slotSelectedIndex = 0;
+                    g_slot_selected_index = 0;
                 }
             }
         }
@@ -299,10 +282,10 @@ void handle_save_slot_input(void)
 /**
  * @brief Animate the save-slot highlight and scroll window.
  *
- * Lerps g_slotHighlightX toward g_slotHighlightTargetX over
- * g_slotHighlightFrames frames, pans the scroll window so the selected
+ * Lerps g_slot_highlight_x toward g_slot_highlight_target_x over
+ * g_slot_highlight_frames frames, pans the scroll window so the selected
  * slot is always visible, then writes the updated V-coordinate and
- * visibility flags for the highlight-bar layout entries in g_saveLayoutTable.
+ * visibility flags for the highlight-bar layout entries in g_save_layout_table.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/d3s3Q
  */
@@ -310,76 +293,71 @@ void animate_save_slot_panel(void)
 {
     SaveLayoutEntry* layout;
     s16 scroll_width;
-    s32* selected_index_ptr;
     s32 target_adjusted;
     s32 scroll_offset;
     s32 highlight_position;
     SaveLayoutEntry* ptr;
-    if (g_slotHighlightFrames != 0)
+    if (g_slot_highlight_frames != 0)
     {
-        g_slotHighlightX += (g_slotHighlightTargetX - g_slotHighlightX) / g_slotHighlightFrames;
-        g_slotHighlightFrames -= 1;
+        g_slot_highlight_x += (g_slot_highlight_target_x - g_slot_highlight_x) / g_slot_highlight_frames;
+        g_slot_highlight_frames -= 1;
     }
     else
     {
-        g_slotHighlightX = g_slotHighlightTargetX;
+        g_slot_highlight_x = g_slot_highlight_target_x;
     }
-    highlight_position = g_slotHighlightTargetX;
+    highlight_position = g_slot_highlight_target_x;
     target_adjusted = highlight_position;
     if (highlight_position < 0)
     {
         target_adjusted = highlight_position + 0xF;
     }
     target_adjusted >>= 4;
-    scroll_offset = *(selected_index_ptr = &g_slotSelectedIndex);
-    if (g_slotSelectedIndex < target_adjusted)
+    scroll_offset = g_slot_selected_index;
+    if (g_slot_selected_index < target_adjusted)
     {
-        g_slotHighlightTargetX = scroll_offset * 0x10;
-        g_slotHighlightFrames = 4;
+        g_slot_highlight_target_x = scroll_offset * 0x10;
+        g_slot_highlight_frames = 4;
     }
-    else if ((target_adjusted + 6) < (*selected_index_ptr))
+    else if ((target_adjusted + 6) < g_slot_selected_index)
     {
-        g_slotHighlightTargetX = (g_slotSelectedIndex - 6) * 0x10;
-        g_slotHighlightFrames = 4;
+        g_slot_highlight_target_x = (g_slot_selected_index - 6) * 0x10;
+        g_slot_highlight_frames = 4;
     }
-    ptr = g_saveLayoutTable;
-    (ptr + 2)->v0 = (u16)g_slotHighlightX;
-    ptr[3].v0 = ((u16)g_slotHighlightX) + 0x20;
-    ptr[9].v0 = (u16)g_slotHighlightX;
-    ptr[10].v0 = ((u16)g_slotHighlightX) + 0x20;
-    if (g_slotHighlightX != 0)
+    ptr = g_save_layout_table;
+    ptr[2].v0 = (u16)g_slot_highlight_x;
+    ptr[3].v0 = ((u16)g_slot_highlight_x) + SAVE_HIGHLIGHT_SPAN;
+    ptr[9].v0 = (u16)g_slot_highlight_x;
+    ptr[10].v0 = ((u16)g_slot_highlight_x) + SAVE_HIGHLIGHT_SPAN;
+    if (g_slot_highlight_x != 0)
     {
-        SaveLayoutEntry* ptr4 = g_saveLayoutTable;
-        ptr4[7].type = 1;
-        ptr4[8].type = 1;
-        ptr4[14].type = 1;
-        ptr4[15].type = 1;
-    }
-    else
-    {
-        SaveLayoutEntry* ptr5 = g_saveLayoutTable;
-        ptr5[7].type = 0;
-        ptr5[8].type = 0;
-        ptr5[14].type = 0;
-        ptr5[15].type = 0;
-    }
-    if (g_slotHighlightX != 0x40)
-    {
-        SaveLayoutEntry* ptr3 = g_saveLayoutTable;
-        ptr3[4].type = 1;
-        ptr3[5].type = 1;
-        ptr3[11].type = 1;
-        ptr3[12].type = 1;
+        g_save_layout_table[7].type = 1;
+        g_save_layout_table[8].type = 1;
+        g_save_layout_table[14].type = 1;
+        g_save_layout_table[15].type = 1;
     }
     else
     {
-        SaveLayoutEntry* ptr2 = g_saveLayoutTable;
-        ptr2[4].type = 0;
-        ptr2[5].type = 0;
-        ptr2[11].type = 0;
-        ptr2[12].type = 0;
+        g_save_layout_table[7].type = 0;
+        g_save_layout_table[8].type = 0;
+        g_save_layout_table[14].type = 0;
+        g_save_layout_table[15].type = 0;
     }
-    scroll_offset = (g_slotSelectedIndex * 0x10) - (highlight_position = g_slotHighlightX);
+    if (g_slot_highlight_x != 0x40)
+    {
+        g_save_layout_table[4].type = 1;
+        g_save_layout_table[5].type = 1;
+        g_save_layout_table[11].type = 1;
+        g_save_layout_table[12].type = 1;
+    }
+    else
+    {
+        g_save_layout_table[4].type = 0;
+        g_save_layout_table[5].type = 0;
+        g_save_layout_table[11].type = 0;
+        g_save_layout_table[12].type = 0;
+    }
+    scroll_offset = (g_slot_selected_index * 0x10) - (highlight_position = g_slot_highlight_x);
     if (scroll_offset < 0)
     {
         scroll_offset = 0;
@@ -388,8 +366,8 @@ void animate_save_slot_panel(void)
     {
         scroll_offset = 0x60;
     }
-    layout = g_saveLayoutTable;
-    scroll_width = scroll_offset + 0x40;
+    layout = g_save_layout_table;
+    scroll_width = scroll_offset + SAVE_SCROLL_WIDTH_HOME;
     layout[6].y = scroll_width;
     layout[6].tile_y = scroll_width;
     layout[13].y = scroll_width;
@@ -400,12 +378,12 @@ void animate_save_slot_panel(void)
  * @brief Snap the save-slot panel back to its home position and clear its
  *        highlight/selection state.
  *
- * @details When a horizontal slide is in progress (g_slotSlideX != 0) this
- * rebuilds the panel's layout entries in g_saveLayoutTable: it re-homes the
+ * @details When a horizontal slide is in progress (g_slot_slide_x != 0) this
+ * rebuilds the panel's layout entries in g_save_layout_table: it re-homes the
  * scroll window (entries 6 and 13 reset to SAVE_SCROLL_WIDTH_HOME), shows the
  * right highlight halves (entries 4/5/11/12) while hiding the left halves
  * (entries 7/8/14/15), and rewrites the highlight-bar V coordinates (entries
- * 2/3/9/10) from the now-zeroed g_slotHighlightX. The selection/highlight
+ * 2/3/9/10) from the now-zeroed g_slot_highlight_x. The selection/highlight
  * globals are all cleared. When no slide is active it only resets entry 0's
  * U/V to their home values.
  *
@@ -414,19 +392,19 @@ void animate_save_slot_panel(void)
 void reset_save_slot_panel(void)
 {
     s16 highlight_bottom_v;
-    if (g_slotSlideX != 0)
+    if (g_slot_slide_x != 0)
     {
-        SaveLayoutEntry* entry = g_saveLayoutTable;
+        SaveLayoutEntry* entry = g_save_layout_table;
         entry[0].v0 = SAVE_SLOT_HOME_V;
-        g_slotSelectedIndex = 0;
-        g_slotHighlightX = 0;
-        g_slotHighlightTargetX = 0;
-        g_slotHighlightFrames = 0;
+        g_slot_selected_index = 0;
+        g_slot_highlight_x = 0;
+        g_slot_highlight_target_x = 0;
+        g_slot_highlight_frames = 0;
         entry[7].type = 0;
         entry[8].type = 0;
         entry[14].type = 0;
         entry[15].type = 0;
-        highlight_bottom_v = ((u16)g_slotHighlightX) + SAVE_HIGHLIGHT_SPAN;
+        highlight_bottom_v = ((u16)g_slot_highlight_x) + SAVE_HIGHLIGHT_SPAN;
         entry[6].y = SAVE_SCROLL_WIDTH_HOME;
         entry[6].tile_y = SAVE_SCROLL_WIDTH_HOME;
         entry[13].y = SAVE_SCROLL_WIDTH_HOME;
@@ -437,14 +415,14 @@ void reset_save_slot_panel(void)
         entry[11].type = 1;
         entry[12].type = 1;
 
-        entry[2].v0 = (u16)g_slotHighlightX;
+        entry[2].v0 = (u16)g_slot_highlight_x;
         entry[3].v0 = highlight_bottom_v;
-        entry[9].v0 = (u16)g_slotHighlightX;
+        entry[9].v0 = (u16)g_slot_highlight_x;
         entry[10].v0 = highlight_bottom_v;
         return;
     }
     {
-        SaveLayoutEntry* entry = g_saveLayoutTable;
+        SaveLayoutEntry* entry = g_save_layout_table;
         entry[0].u0 = SAVE_SLOT_HOME_V;
         entry[0].v0 = 0;
     }
@@ -455,16 +433,16 @@ void reset_save_slot_panel(void)
  *
  * @details Sets the slide target to +SLOT_PANEL_WIDTH and seeds the lerper
  * with SLOT_SLIDE_FRAMES frames of remaining travel. If the lerper is
- * already showing the right-hand panel (g_slotSlideXLerped == SLOT_PANEL_WIDTH),
+ * already showing the right-hand panel (g_slot_slide_x_lerped == SLOT_PANEL_WIDTH),
  * the call is a no-op so we don't accumulate further offset off the edge.
  * @see decomp.me (100%) https://decomp.me/scratch/SRP9z
  */
 static void scroll_slots_right(void)
 {
-    if (g_slotSlideXLerped != SLOT_PANEL_WIDTH)
+    if (g_slot_slide_x_lerped != SLOT_PANEL_WIDTH)
     {
-        g_slotSlideX += SLOT_PANEL_WIDTH;
-        g_slotSlideFrames = SLOT_SLIDE_FRAMES;
+        g_slot_slide_x += SLOT_PANEL_WIDTH;
+        g_slot_slide_frames = SLOT_SLIDE_FRAMES;
     }
 }
 
@@ -479,10 +457,10 @@ static void scroll_slots_right(void)
  */
 static void scroll_slots_left(void)
 {
-    if (g_slotSlideXLerped != -SLOT_PANEL_WIDTH)
+    if (g_slot_slide_x_lerped != -SLOT_PANEL_WIDTH)
     {
-        g_slotSlideX -= SLOT_PANEL_WIDTH;
-        g_slotSlideFrames = SLOT_SLIDE_FRAMES;
+        g_slot_slide_x -= SLOT_PANEL_WIDTH;
+        g_slot_slide_frames = SLOT_SLIDE_FRAMES;
     }
 }
 
@@ -493,15 +471,20 @@ static void scroll_slots_left(void)
  */
 typedef struct
 {
-    u8 u;     /**< +0x00: source U, in 8-pixel units */
-    u8 v;     /**< +0x01: source V, in 8-pixel units */
-    u8 w;     /**< +0x02: width, in 8-pixel units */
-    u8 h;     /**< +0x03: height, in 8-pixel units */
-    u8 ox;    /**< +0x04: X origin offset, in 8-pixel units */
-    u8 oy;    /**< +0x05: Y origin offset, in 8-pixel units */
-} SlotUvRect; /* sizeof == 6 */
+    u8 u;  /**< source U, in 8-pixel units */
+    u8 v;  /**< source V, in 8-pixel units */
+    u8 w;  /**< width, in 8-pixel units */
+    u8 h;  /**< height, in 8-pixel units */
+    u8 ox; /**< X origin offset, in 8-pixel units */
+    u8 oy; /**< Y origin offset, in 8-pixel units */
+} SlotUvRect;
 
-/** Number of entries in g_saveLayoutTable. */
+/** @brief UV rectangles of the save-slot background panel quads. */
+extern SlotUvRect g_save_slot_panel_uv_table[];
+/** @brief UV rectangles of the save-slot free-size sprites. */
+extern SlotUvRect g_save_slot_sprite_uv_table[];
+
+/** Number of entries in g_save_layout_table. */
 #define SAVE_LAYOUT_ENTRIES 0x1B
 
 /** A glyph strip wider than this is split into chunks of this many pixels. */
@@ -515,12 +498,12 @@ typedef struct
 
 static inline u32 get_save_layout_tpage(SaveLayoutTex* tex, u32 flags, s32 x)
 {
-    return getTPage(tex->control & 3, flags >> 2, x, *(u16*)&tex->tex_y);
+    return getTPage(tex->control.mode & 3, flags >> 2, x, *(u16*)&tex->tex_y);
 }
 
 static inline u32 get_save_layout_base_tpage(SaveLayoutTex* tex, u32 flags)
 {
-    return getTPage(tex->control & 3, flags >> 2, *(u16*)&tex->tex_x, *(u16*)&tex->tex_y);
+    return getTPage(tex->control.mode & 3, flags >> 2, *(u16*)&tex->tex_x, *(u16*)&tex->tex_y);
 }
 
 /**
@@ -533,9 +516,8 @@ static inline u32 get_save_layout_base_tpage(SaveLayoutTex* tex, u32 flags)
  */
 void* render_save_layout_prims(u8* ptr, u_long* ot)
 {
-    SaveLayoutEntry* entry = g_saveLayoutTable;
+    SaveLayoutEntry* entry = g_save_layout_table;
     s32 i = 0;
-    s32 tile_len = SAVE_LAYOUT_PRIM_POLY_FT4;
     s32 idx;
     u32 tint;
     SlotUvRect* uv;
@@ -544,7 +526,7 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
     {
         s32 type = entry->type;
 
-        if (type == tile_len)
+        if (type == SAVE_LAYOUT_PRIM_POLY_FT4)
         {
             /* Slot panel background: a single textured quad. */
             POLY_FT4* poly;
@@ -556,16 +538,16 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
             SaveLayoutTex* tex2;
             u32 tpw;
 
-            if (g_slotSlideX > 0)
+            if (g_slot_slide_x > 0)
             {
-                idx = g_slotSelectedIndex + 1;
+                idx = g_slot_selected_index + 1;
             }
             else
             {
                 idx = 0;
             }
 
-            uv = (SlotUvRect*)((idx * 6) + (u32)g_saveSlotPanelUvTable);
+            uv = &g_save_slot_panel_uv_table[idx];
 
             poly = (POLY_FT4*)ptr;
             tint = GPU_TINT_NEUTRAL;
@@ -575,10 +557,10 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
             setSemiTrans(poly, *(u32*)entry & 2);
 
             /* Share each truncated base coordinate across its two corners. */
-            vx = *(u16*)&entry->x + g_slotSlideXLerped;
+            vx = entry->x + g_slot_slide_x_lerped;
             offx = uv->ox * 8 - 0x20;
             poly->x2 = poly->x0 = vx - offx;
-            vy = *(u16*)&entry->y + g_slotSlideYLerped;
+            vy = entry->y + g_slot_slide_y_lerped;
             offy = uv->oy * 8 - 0x28;
             poly->y1 = poly->y0 = vy - offy;
 
@@ -593,10 +575,10 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
 
             ptr = (u8*)poly + sizeof(POLY_FT4);
 
-            tex = &((SaveLayoutTex*)g_saveLayoutTexTable)[entry->tex_slot];
+            tex = &(g_save_layout_tex_table)[entry->tex_slot];
             setClut(poly, *(u16*)&tex->clut_x, *(u16*)&tex->clut_y);
 
-            tex2 = &((SaveLayoutTex*)g_saveLayoutTexTable)[entry->tex_slot];
+            tex2 = &(g_save_layout_tex_table)[entry->tex_slot];
             /* Form the texture-page value from the complete layout flags word. */
             tpw = getTPage(*(u8*)&tex2->control & 3, *(u32*)entry >> 2, *(u16*)&tex2->tex_x, *(u16*)&tex2->tex_y);
             poly->tpage = tpw;
@@ -615,9 +597,9 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
                 SaveLayoutTex* tex;
                 DR_TPAGE* tp;
 
-                if (g_slotSlideX < 0)
+                if (g_slot_slide_x < 0)
                 {
-                    idx = g_slotSelectedIndex + 1;
+                    idx = g_slot_selected_index + 1;
                 }
                 else
                 {
@@ -628,26 +610,26 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
                 SET_BGR0_PACKED((SPRT*)ptr, tint);
                 setSprt((SPRT*)ptr);
 
-                uv = (SlotUvRect*)((idx * 6) + (u32)g_saveSlotSpriteUvTable);
+                uv = &g_save_slot_sprite_uv_table[idx];
                 setSemiTrans((SPRT*)ptr, *(u32*)entry & 2);
 
-                vx = *(u16*)&entry->x + g_slotSlideXLerped;
+                vx = entry->x + g_slot_slide_x_lerped;
                 offx = uv->ox * 8 - 0x20;
                 ((SPRT*)ptr)->x0 = vx - offx;
-                vy = *(u16*)&entry->y + g_slotSlideYLerped;
+                vy = entry->y + g_slot_slide_y_lerped;
                 offy = uv->oy * 8 - 0x28;
                 ((SPRT*)ptr)->y0 = vy - offy;
                 setUV0((SPRT*)ptr, uv->u * 8, uv->v * 8);
                 setWH((SPRT*)ptr, uv->w * 8, uv->h * 8);
 
-                tex = &((SaveLayoutTex*)g_saveLayoutTexTable)[entry->tex_slot];
+                tex = &(g_save_layout_tex_table)[entry->tex_slot];
                 setClut((SPRT*)ptr, *(u16*)&tex->clut_x, *(u16*)&tex->clut_y);
 
                 addPrim(ot, ptr);
                 ptr += sizeof(SPRT);
 
                 tp = (DR_TPAGE*)ptr;
-                setDrawTPage(tp, 0, 0, get_save_layout_base_tpage(&((SaveLayoutTex*)g_saveLayoutTexTable)[entry->tex_slot], *(u32*)entry));
+                setDrawTPage(tp, 0, 0, get_save_layout_base_tpage(&(g_save_layout_tex_table)[entry->tex_slot], *(u32*)entry));
 
                 addPrim(ot, tp);
                 ptr += sizeof(DR_TPAGE);
@@ -660,17 +642,17 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
                     TILE* tile = (TILE*)ptr;
                     DR_TPAGE* tp;
 
-                    *(u32*)(ptr + 4) = 0x40; /* solid dark-blue fill; code byte set below */
-                    setlen(tile, tile_len);
-                    setcode(tile, 0x62);
+                    SET_BGR0_PACKED(tile, GPU_COLOR_WORD(0x40, 0, 0));
+                    setTile(tile);
+                    setSemiTrans(tile, 1);
 
-                    setXY0(tile, *(u16*)&entry->tile_x + g_slotSlideXLerped, *(u16*)&entry->tile_y + g_slotSlideYLerped);
+                    setXY0(tile, entry->tile_x + g_slot_slide_x_lerped, entry->tile_y + g_slot_slide_y_lerped);
                     setWH(tile, entry->width, entry->height);
 
                     addPrim(ot, tile);
 
                     tp = (DR_TPAGE*)(ptr + sizeof(TILE));
-                    setDrawTPage(tp, 0, 0, 0x25);
+                    setDrawTPage(tp, 0, 0, getTPage(0, 1, 0x140, 0));
                     addPrim(ot, tp);
 
                     ptr += sizeof(TILE) + sizeof(DR_TPAGE);
@@ -681,7 +663,7 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
                     s32 remaining = entry->width;
                     u16 u0 = entry->u0;
                     SaveLayoutTex* tex;
-                    SaveLayoutTex* tex0 = &((SaveLayoutTex*)g_saveLayoutTexTable)[entry->tex_slot];
+                    SaveLayoutTex* tex0 = &(g_save_layout_tex_table)[entry->tex_slot];
                     s32 x;
                     s32 y;
                     s32 chunk;
@@ -690,8 +672,8 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
 
                     if (*(u32*)entry & 1)
                     {
-                        x = entry->x + g_slotSlideXLerped;
-                        y = entry->y + g_slotSlideYLerped;
+                        x = entry->x + g_slot_slide_x_lerped;
+                        y = entry->y + g_slot_slide_y_lerped;
                     }
                     else
                     {
@@ -700,7 +682,7 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
                     }
 
                     chunk = GLYPH_CHUNK_WIDTH;
-                    if (remaining < GLYPH_CHUNK_WIDTH + 1)
+                    if (remaining <= GLYPH_CHUNK_WIDTH)
                     {
                         chunk = remaining;
                     }
@@ -716,19 +698,19 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
                         setSemiTrans(sprt, *(u32*)entry & 2);
 
                         setXY0(sprt, x, y);
-                        setUV0(sprt, u0, *(u8*)&entry->v0);
+                        setUV0(sprt, u0, entry->v0);
                         setWH(sprt, chunk, entry->height);
 
                         remaining -= chunk;
 
-                        tex = &((SaveLayoutTex*)g_saveLayoutTexTable)[entry->tex_slot];
+                        tex = &(g_save_layout_tex_table)[entry->tex_slot];
                         setClut(sprt, *(u16*)&tex->clut_x, *(u16*)&tex->clut_y);
 
                         addPrim(ot, ptr);
                         ptr += sizeof(SPRT);
 
                         tp = (DR_TPAGE*)ptr;
-                        setDrawTPage(tp, 0, 0, get_save_layout_tpage(&((SaveLayoutTex*)g_saveLayoutTexTable)[entry->tex_slot], *(u32*)entry, idx));
+                        setDrawTPage(tp, 0, 0, get_save_layout_tpage(&(g_save_layout_tex_table)[entry->tex_slot], *(u32*)entry, idx));
 
                         addPrim(ot, ptr);
                         ptr += sizeof(DR_TPAGE);
@@ -742,9 +724,9 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
                            step the page origin on when the mode bits say the strip
                            spans pages. */
                         u0 ^= 0x80;
-                        tex = &((SaveLayoutTex*)g_saveLayoutTexTable)[entry->tex_slot];
+                        tex = &(g_save_layout_tex_table)[entry->tex_slot];
 
-                        if (!(tex->control & 7))
+                        if (tex->control.mode == 0)
                         {
                             idx += 0x20;
                         }
@@ -755,7 +737,7 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
                         }
 
                         chunk = GLYPH_CHUNK_WIDTH;
-                        if (remaining < GLYPH_CHUNK_WIDTH + 1)
+                        if (remaining <= GLYPH_CHUNK_WIDTH)
                         {
                             chunk = remaining;
                         }
@@ -774,105 +756,74 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
 }
 
 /**
- * @brief Upload every g_saveLayoutTexTable entry's CLUT and pixel data to VRAM.
+ * @brief Upload every g_save_layout_tex_table entry's CLUT and pixel data to VRAM.
  *
- * @details For each of the 11 entries in g_saveLayoutTexTable (stride 0x10),
- * reads an on-disk-TIM-style source blob via the entry's data pointer
- * (+0x8), uploads its CLUT block and then its pixel block with LoadImage,
- * and bit-packs the uploaded image's dimensions back into the entry's control
- * word (SaveLayoutTex::control). The destination entry is typed as
- * SaveLayoutTex; the source blob's internal TIM-style block layout is only
- * partially understood, so it is still walked with raw byte offsets.
- *
- * @return Not explicitly set on any path; callers
- *         should not rely on the return value.
+ * @details For each of the SAVE_LAYOUT_TEX_COUNT entries, uploads the CLUT and pixel blocks of the
+ * entry's source TIM with LoadImage and records the TIM pixel mode and the
+ * image size in SaveLayoutTex::control.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/lzJHa
  */
-/* Bit layout of SaveLayoutTex::control: bits 0-2 = TIM pixel mode, bits 3-12 =
- * texture width, bits 13-22 = texture height (widths/heights are 10-bit). */
-#define SAVE_TEX_MODE_MASK 0x7
-#define SAVE_TEX_WIDTH_SHIFT 3
-#define SAVE_TEX_HEIGHT_SHIFT 13
-#define SAVE_TEX_DIM_MASK 0x3ff
-
-unsigned short upload_save_layout_textures(void)
+void upload_save_layout_textures(void)
 {
-    SaveLayoutTex* tex_entry;
-    u32 orig_control;
-    SaveLayoutTex* entry_ctrl_ptr;
-    u8* data_ptr;
-    u32 pixel_block_offset;
-    u8* block_ptr;
-    u16 clut_w;
-    u16 clut_h;
-    int shift;
-    u32 reload_control;
-    u32 control;
+    SaveLayoutTex* tex;
+    u8* tim;
+    TimBlock* clut_block;
+    TimBlock* pixel_block;
+    u32 clut_size;
     RECT rect;
-    int counter;
-    u8* clut_h_ptr;
-    tex_entry = (SaveLayoutTex*)g_saveLayoutTexTable;
+    s32 i;
+    u16 clut_width;
+    u16 clut_height;
 
-    for (counter = 0; counter < 11; counter++)
+    tex = g_save_layout_tex_table;
+    for (i = 0; i < SAVE_LAYOUT_TEX_COUNT; i++)
     {
-        entry_ctrl_ptr = tex_entry;
-        block_ptr = entry_ctrl_ptr->src;
-        orig_control = entry_ctrl_ptr->control;
-        control = orig_control;
-        data_ptr = block_ptr;
-        clut_h_ptr = data_ptr + 0x12;
-        control = (control & ~SAVE_TEX_MODE_MASK) | (data_ptr[4] & SAVE_TEX_MODE_MASK);
-        entry_ctrl_ptr->control = control;
-        clut_w = *((u16*)(data_ptr + 0x10));
-        clut_h = *((u16*)clut_h_ptr);
-        pixel_block_offset = *((u32*)(data_ptr + 8));
-        setRECT(&rect, tex_entry->clut_x, tex_entry->clut_y, clut_w * clut_h, 1);
-        data_ptr += 8;
-        LoadImage(&rect, (u_long*)(data_ptr + 0xc));
-        block_ptr = data_ptr + pixel_block_offset;
-        shift = SAVE_TEX_WIDTH_SHIFT;
-        control = (reload_control = entry_ctrl_ptr->control);
-        control = (control & ~(SAVE_TEX_DIM_MASK << SAVE_TEX_WIDTH_SHIFT)) | (((*((u16*)(block_ptr + 8))) & SAVE_TEX_DIM_MASK) << shift);
-        tex_entry->control = control;
-        control = control & ~(SAVE_TEX_DIM_MASK << SAVE_TEX_HEIGHT_SHIFT);
-        control = control | (((*((u16*)(block_ptr + 0xa))) & SAVE_TEX_DIM_MASK) << SAVE_TEX_HEIGHT_SHIFT);
-        tex_entry->control = control;
-        setRECT(&rect, tex_entry->tex_x, tex_entry->tex_y, (tex_entry->control >> SAVE_TEX_WIDTH_SHIFT) & SAVE_TEX_DIM_MASK,
-                (tex_entry->control >> SAVE_TEX_HEIGHT_SHIFT) & SAVE_TEX_DIM_MASK);
-        LoadImage(&rect, (u_long*)(block_ptr + 0xc));
-        tex_entry++;
-        entry_ctrl_ptr++;
+        tim = tex->src;
+        tex->control.mode = tim[4];
+        clut_width = ((TimPrefix*)tim)->clut_block.dimensions.width;
+        clut_height = ((TimPrefix*)tim)->clut_block.dimensions.height;
+        clut_size = ((TimPrefix*)tim)->clut_block.bnum;
+        setRECT(&rect, tex->clut_x, tex->clut_y, clut_width * clut_height, 1);
+        clut_block = &((TimPrefix*)tim)->clut_block;
+        LoadImage(&rect, (u_long*)(clut_block + 1));
+        tim = (u8*)clut_block + clut_size;
+        pixel_block = (TimBlock*)tim;
+        tex->control.width = pixel_block->dimensions.width;
+        tex->control.height = pixel_block->dimensions.height;
+        setRECT(&rect, tex->tex_x, tex->tex_y, tex->control.width, tex->control.height);
+        LoadImage(&rect, (u_long*)(pixel_block + 1));
+        tex++;
     }
 }
 
 /**
- * @brief Load one of the two full game-state templates into g_saved_game.bytes.
+ * @brief Replace the saved game with one of TITLE's two saved-game templates.
  *
- * Copies a MENU_LAYOUT_WORDS-word (~13 KB) game-state template over the working
- * g_saved_game.bytes and sets the companion mode field g_field_scene_id.
+ * Copies SAVED_GAME_DATA_SIZE bytes over g_saved_game and selects the first
+ * field scene; the music state is cleared either way.
  *
- * @param use_alt Zero selects the new-game template (g_newGameStateTemplate,
- *                g_field_scene_id = 0xD); non-zero selects the alternate template
- *                (g_menuLayoutTemplateAlt, g_field_scene_id = 0).
+ * @param field_start Zero loads the new-game template (scene 0xD); non-zero
+ *                    loads the template TITLE uses to start directly in FIELD
+ *                    (scene 0).
  *
  * @see decomp.me (100%) https://decomp.me/scratch/aPcbW
  */
-void load_menu_layout(s32 use_alt)
+void load_saved_game_template(s32 field_start)
 {
     s32* src;
     s32* dst;
     u32 i;
-    if (use_alt == 0)
+    if (field_start == 0)
     {
-        src = (s32*)&g_newGameStateTemplate;
+        src = (s32*)&g_new_game_template;
         g_field_scene_id = 0xD;
         g_music_track_index = 0;
         g_field_music_id = 0;
     }
     else
     {
-        src = (s32*)&g_menuLayoutTemplateAlt;
+        src = (s32*)&g_field_start_template;
         g_field_scene_id = 0;
         g_music_track_index = 0;
         g_field_music_id = 0;
@@ -880,7 +831,7 @@ void load_menu_layout(s32 use_alt)
     i = 0;
     dst = g_saved_game.words;
 
-    while (i < MENU_LAYOUT_WORDS)
+    while (i < SAVED_GAME_TEMPLATE_WORDS)
     {
         *dst++ = *src++;
         i++;
@@ -888,39 +839,34 @@ void load_menu_layout(s32 use_alt)
 }
 
 /**
- * @brief Load one of the two sub-menu layout tables for the save-slot screen.
+ * @brief Copy the starting record of the chosen hero into the first party slot.
  *
- * Copies a SUB_MENU_LAYOUT_WORDS-word (0x250-byte) layout table into the
- * game-data buffer at g_saved_game.layout.player. The default table is used when
- * starting a new game; the continue table is used when resuming a saved game,
- * in which case bit 0 of SavedGameLayout::mode_flags is also set to flag the slot
- * as "continue mode".
+ * The two hero templates are full FieldCharacterRecords whose character type
+ * is 0 and 1; picking the second also sets bit 0 of the saved game's mode flags.
  *
- * @param is_continue Zero selects the default layout (g_subMenuLayoutDefault);
- *                     non-zero selects the continue layout
- *                     (g_subMenuLayoutContinue) and sets the continue-mode bit.
+ * @param hero_type Character type of the chosen hero (0 or 1).
  *
  * @see decomp.me (100%) https://decomp.me/scratch/CU7Ml
  */
-void load_sub_menu_layout(s32 is_continue)
+void load_hero_template(s32 hero_type)
 {
     s32* src;
     s32* dst;
     u32 i;
 
-    if (is_continue != 0)
+    if (hero_type != 0)
     {
-        src = g_subMenuLayoutContinue;
+        src = g_hero_template_type_1;
         g_saved_game.layout.words[SAVED_GAME_WORD_MODE_FLAGS] |= 1;
     }
     else
     {
-        src = g_subMenuLayoutDefault;
+        src = g_hero_template_type_0;
     }
 
     dst = (s32*)&g_saved_game.layout.characters[0];
 
-    for (i = 0; i < SUB_MENU_LAYOUT_WORDS; i++)
+    for (i = 0; i < HERO_TEMPLATE_WORDS; i++)
     {
         dst[i] = src[i];
     }

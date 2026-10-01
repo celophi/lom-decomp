@@ -218,3 +218,4 @@ D_80168C6C    = 0x80168C6C;
 field_text_build_sprites             = 0x800644FC;
 field_draw_sprite_number = 0x800AD208;
 field_draw_sprite_glyph = 0x800AD524;
+g_playtime_vsync_origin = 0x80042FB4;

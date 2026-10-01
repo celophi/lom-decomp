@@ -99,6 +99,6 @@ g_saved_game = 0x80043140;
 g_controller_device_type = 0x801ED600;
 
 // US ELF names not listed above (splat placeholders shared with the C sources).
-D_80042FB4 = 0x80043124;
+g_playtime_vsync_origin = 0x80043124;
 D_80043000 = 0x80043168;
 D_800435E0 = 0x80043748;
