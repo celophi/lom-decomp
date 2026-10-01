@@ -239,12 +239,7 @@ void wmap_land_effect_23_sequence_7_step_02(void)
 
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_c_rotation);
     wmap_draw_model(D_8011CF2C, D_80139234 & 3, 0xA, 0x36, 0x7900, 0x1001, D_801B25D8, 0, 0xF, -1);
-    value = D_801B25D8 + 2;
-    D_801B25D8 = value;
-    if (value >= 0x82)
-    {
-        D_801B25D8 = 0x81;
-    }
+    WMAP_MODEL_FADE_IN(D_801B25D8, 2, 0x81, value);
     timer = g_wmap_land_effect_23_sequence_7_timer;
     g_wmap_effect_model_c_rotation.vz += 0x14;
     next_timer = timer - 1;
@@ -267,12 +262,7 @@ void wmap_land_effect_23_sequence_7_step_04(void)
 
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_c_rotation);
     wmap_draw_model(D_8011CF2C, D_80139234 & 3, 0xA, 0x36, 0x7900, 0x1001, D_801B25D8, 0, 0xF, -1);
-    value = D_801B25D8 - 4;
-    D_801B25D8 = value;
-    if (value < 0)
-    {
-        D_801B25D8 = 0;
-    }
+    WMAP_MODEL_FADE_OUT(D_801B25D8, 4, value);
     timer = g_wmap_land_effect_23_sequence_7_timer;
     g_wmap_effect_model_c_rotation.vz += 0x14;
     next_timer = timer - 1;
@@ -295,12 +285,7 @@ void wmap_land_effect_23_sequence_8_step_02(void)
 
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_b_rotation);
     wmap_draw_model(g_wmap_effect_model_pack_3, D_8013923C & 3, 0x4, 0x35, 0x7800, 0x1001, g_wmap_effect_fade_b, 0, 0xA, -1);
-    value = g_wmap_effect_fade_b + 8;
-    g_wmap_effect_fade_b = value;
-    if (value >= 0x82)
-    {
-        g_wmap_effect_fade_b = 0x81;
-    }
+    WMAP_MODEL_FADE_IN(g_wmap_effect_fade_b, 8, 0x81, value);
     timer = g_wmap_land_effect_23_sequence_8_timer;
     g_wmap_effect_model_b_rotation.vz += 0x38;
     next_timer = timer - 1;
@@ -323,12 +308,7 @@ void wmap_land_effect_23_sequence_8_step_04(void)
 
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_b_rotation);
     wmap_draw_model(g_wmap_effect_model_pack_3, D_8013923C & 3, 0x4, 0x35, 0x7800, 0x1001, g_wmap_effect_fade_b, 0, 0xA, -1);
-    value = g_wmap_effect_fade_b - 8;
-    g_wmap_effect_fade_b = value;
-    if (value < 0)
-    {
-        g_wmap_effect_fade_b = 0;
-    }
+    WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_b, 8, value);
     timer = g_wmap_land_effect_23_sequence_8_timer;
     g_wmap_effect_model_b_rotation.vz += 0x38;
     next_timer = timer - 1;
@@ -494,16 +474,11 @@ WMAP_STEP_START_AND_WAIT(wmap_land_effect_23_timeline_step_05, g_wmap_land_effec
 WMAP_STEP_WAIT(wmap_land_effect_23_timeline_wait_06, g_wmap_land_effect_23_timeline_step, g_wmap_land_effect_23_timeline_timer)
 
 /**
- * @brief Register three sequence steps, arm the frame timer, and advance the counter.
+ * @brief Start three sequences and set the wait timer.
  */
-void wmap_land_effect_23_timeline_step_07(void)
-{
-    wmap_start_sequence(wmap_land_effect_23_run_sequence_10);
-    wmap_start_sequence(wmap_land_effect_23_run_sequence_6);
-    wmap_start_sequence(wmap_land_effect_23_run_sequence_2);
-    g_wmap_land_effect_23_timeline_timer = 0x2;
-    g_wmap_land_effect_23_timeline_step += 1;
-}
+WMAP_STEP_START_THREE_AND_WAIT(wmap_land_effect_23_timeline_step_07,
+    g_wmap_land_effect_23_timeline_step, g_wmap_land_effect_23_timeline_timer,
+    wmap_land_effect_23_run_sequence_10, wmap_land_effect_23_run_sequence_6, wmap_land_effect_23_run_sequence_2, 0x2)
 
 WMAP_STEP_WAIT(wmap_land_effect_23_timeline_wait_08, g_wmap_land_effect_23_timeline_step, g_wmap_land_effect_23_timeline_timer)
 
@@ -610,13 +585,10 @@ void wmap_land_effect_23_timeline_step_33(void)
 WMAP_STEP_WAIT(wmap_land_effect_23_timeline_wait_34, g_wmap_land_effect_23_timeline_step, g_wmap_land_effect_23_timeline_timer)
 
 /**
- * @brief World-map step handler: clear the shared flag and advance the step counter.
+ * @brief Clear the blocking flag and finish the timeline.
  */
-void wmap_land_effect_23_timeline_finish(void)
-{
-    g_wmap_sequence_busy = 0;
-    g_wmap_land_effect_23_timeline_step += 1;
-}
+WMAP_STEP_FINISH_BLOCKING(wmap_land_effect_23_timeline_finish,
+    g_wmap_land_effect_23_timeline_step)
 
 WMAP_STEP_RUNNER(wmap_land_effect_23_run_sequence_1, D_800D67CC, 0x4, g_wmap_land_effect_23_sequence_1_step, g_wmap_land_effect_23_sequence_1_timer)
 
@@ -997,20 +969,12 @@ WMAP_STEP_RUNNER(wmap_land_effect_23_run_sequence_13, D_800D68CC, 0x8, g_wmap_la
 
 WMAP_STEP_RESET(wmap_land_effect_23_sequence_13_reset, g_wmap_land_effect_23_sequence_13_step, g_wmap_land_effect_23_sequence_13_timer)
 
-/** @brief Draw the sequence effect, grow its scale, and update the countdown. */
-void wmap_land_effect_23_sequence_13_step_02(void)
-{
-    s32 remaining;
-
-    func_8006B328(0xB4, 0xF0, 1, -1, -1, -4, 0, 0xB, -0xFA, 0xFA, -0xDC, 0x8C, 1, 0x81, 1, 8, 1);
-    g_wmap_effect_fade_d += 8;
-    remaining = g_wmap_land_effect_23_sequence_13_timer - 1;
-    g_wmap_land_effect_23_sequence_13_timer = remaining;
-    if (remaining == 0)
-    {
-        g_wmap_land_effect_23_sequence_13_step += 1;
-    }
-}
+/**
+ * @brief Update the particles and increase the shared fade value until the timer expires.
+ */
+WMAP_STEP_UPDATE_AND_RAMP(wmap_land_effect_23_sequence_13_step_02, g_wmap_land_effect_23_sequence_13_step, g_wmap_land_effect_23_sequence_13_timer,
+                          g_wmap_effect_fade_d, 8,
+                          func_8006B328(0xB4, 0xF0, 1, -1, -1, -4, 0, 0xB, -0xFA, 0xFA, -0xDC, 0x8C, 1, 0x81, 1, 8, 1))
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_23_sequence_13_step_03, g_wmap_land_effect_23_sequence_13_step, g_wmap_land_effect_23_sequence_13_timer, 0x28,
                     wmap_land_effect_23_sequence_13_step_04)
@@ -1022,15 +986,10 @@ WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_23_sequence_13_step_04,
                   0x8C, 1, 0x81, 1, 8, 1))
 
 /**
- * @brief Clear the sub-flag, set the sequence parameter, advance the counter, and run the handler.
+ * @brief Stop spawning particles and keep updating those already active.
  */
-void wmap_land_effect_23_sequence_13_step_05(void)
-{
-    D_800DCEAC = 0;
-    g_wmap_land_effect_23_sequence_13_timer = 0x40;
-    g_wmap_land_effect_23_sequence_13_step += 1;
-    wmap_land_effect_23_sequence_13_step_06();
-}
+WMAP_STEP_STOP_PARTICLE_SPAWNS(wmap_land_effect_23_sequence_13_step_05, g_wmap_land_effect_23_sequence_13_step, g_wmap_land_effect_23_sequence_13_timer,
+                              D_800DCEAC, 0x40, wmap_land_effect_23_sequence_13_step_06)
 
 /** @brief Update the effect until the step timer expires. */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_23_sequence_13_step_06,

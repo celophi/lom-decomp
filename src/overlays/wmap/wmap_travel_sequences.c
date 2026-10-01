@@ -642,14 +642,8 @@ void wmap_special_travel_scroll_to_start(void)
 }
 
 /** @brief Special travel step 4: wait for the map scroll, then spawn the vehicle. */
-void wmap_special_travel_wait_scroll(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        g_wmap_special_travel_step += 1;
-        wmap_special_travel_spawn_vehicle();
-    }
-}
+WMAP_STEP_WAIT_SCROLL(wmap_special_travel_wait_scroll,
+    g_wmap_special_travel_step, wmap_special_travel_spawn_vehicle)
 
 /** @brief Special travel step 7: fly the vehicle to the party unless the party is at the start land. */
 void wmap_special_travel_fly_to_party(void)
@@ -806,14 +800,8 @@ WMAP_STEP_RUNNER(wmap_run_special_return,
 WMAP_STEP_RESET(wmap_special_return_reset, g_wmap_special_return_step, g_wmap_special_return_timer)
 
 /** @brief Special return step 2: wait for the map scroll, then spawn the vehicle. */
-void wmap_special_return_wait_scroll(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        g_wmap_special_return_step += 1;
-        wmap_special_return_spawn_vehicle();
-    }
-}
+WMAP_STEP_WAIT_SCROLL(wmap_special_return_wait_scroll,
+    g_wmap_special_return_step, wmap_special_return_spawn_vehicle)
 
 /** @brief Special return step 5: move the party to the return land and fly the vehicle there. */
 void wmap_special_return_fly_home(void)

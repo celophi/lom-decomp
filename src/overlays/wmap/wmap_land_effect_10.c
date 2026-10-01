@@ -413,12 +413,7 @@ void wmap_land_effect_10_sequence_9_step_02(void)
     PopMatrix();
     D_801B24B4 = (D_801B24B4 + 6) & 0xFF;
     D_80182DE4 = (D_80182DE4 + 3) & 0xFF;
-    intensity = D_801B2468 + 1;
-    D_801B2468 = intensity;
-    if (intensity >= 0x81)
-    {
-        D_801B2468 = 0x80;
-    }
+    WMAP_MODEL_FADE_IN(D_801B2468, 1, 0x80, intensity);
     remaining = g_wmap_land_effect_10_sequence_9_timer - 1;
     g_wmap_land_effect_10_sequence_9_timer = remaining;
     if (remaining == 0)
@@ -446,12 +441,7 @@ void wmap_land_effect_10_sequence_9_step_04(void)
     PopMatrix();
     D_801B24B4 = (D_801B24B4 + 6) & 0xFF;
     D_80182DE4 = (D_80182DE4 + 3) & 0xFF;
-    intensity = D_801B2468 - 2;
-    D_801B2468 = intensity;
-    if (intensity < 0)
-    {
-        D_801B2468 = 0;
-    }
+    WMAP_MODEL_FADE_OUT(D_801B2468, 2, intensity);
     remaining = g_wmap_land_effect_10_sequence_9_timer - 1;
     g_wmap_land_effect_10_sequence_9_timer = remaining;
     if (remaining == 0)
@@ -634,15 +624,11 @@ void wmap_land_effect_10_timeline_step_07(void)
 WMAP_STEP_WAIT(wmap_land_effect_10_timeline_wait_08, g_wmap_land_effect_10_timeline_step, g_wmap_land_effect_10_timeline_timer)
 
 /**
- * @brief Register a world-map step callback and schedule its wait timer.
+ * @brief Hide the placement overlay, start the sequence, and set the wait timer.
  */
-void wmap_land_effect_10_timeline_step_09(void)
-{
-    g_wmap_placement_overlay_hidden = 1;
-    wmap_start_sequence(wmap_land_effect_10_run_sequence_11);
-    g_wmap_land_effect_10_timeline_timer = 0x3C;
-    g_wmap_land_effect_10_timeline_step += 1;
-}
+WMAP_STEP_HIDE_AND_START(wmap_land_effect_10_timeline_step_09,
+    g_wmap_land_effect_10_timeline_step, g_wmap_land_effect_10_timeline_timer,
+    g_wmap_placement_overlay_hidden, wmap_land_effect_10_run_sequence_11, 0x3C)
 
 WMAP_STEP_WAIT(wmap_land_effect_10_timeline_wait_10, g_wmap_land_effect_10_timeline_step, g_wmap_land_effect_10_timeline_timer)
 

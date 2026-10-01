@@ -609,14 +609,8 @@ void wmap_land_return_scroll_back(void)
 /**
  * @brief Land return step 4: wait for the map scroll.
  */
-void wmap_land_return_wait_scroll(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        g_wmap_land_return_step += 1;
-        wmap_land_return_finish();
-    }
-}
+WMAP_STEP_WAIT_SCROLL(wmap_land_return_wait_scroll,
+    g_wmap_land_return_step, wmap_land_return_finish)
 
 /**
  * @brief Land return step 5: clear the transition flag and restore the map state.

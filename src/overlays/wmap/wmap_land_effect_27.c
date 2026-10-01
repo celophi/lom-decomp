@@ -155,12 +155,7 @@ void wmap_land_effect_27_sequence_5_step_02(void)
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_c_rotation);
     wmap_draw_model(D_8011CF2C, D_800D665C[D_80139234], 10, 54, 0x78C0, 0x1001, g_wmap_effect_fade_c, 0, -70, -1);
     PopMatrix();
-    intensity = g_wmap_effect_fade_c + 2;
-    g_wmap_effect_fade_c = intensity;
-    if (intensity >= 130)
-    {
-        g_wmap_effect_fade_c = 129;
-    }
+    WMAP_MODEL_FADE_IN(g_wmap_effect_fade_c, 2, 129, intensity);
     angle = g_wmap_effect_model_c_rotation.vz;
     g_wmap_effect_model_c_rotation.vz = angle + 330;
     g_wmap_effect_model_b_rotation.vz += 10;
@@ -195,12 +190,7 @@ void wmap_land_effect_27_sequence_5_step_04(void)
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_c_rotation);
     wmap_draw_model(D_8011CF2C, D_800D665C[D_80139234], 10, 54, 0x78C0, 0x1001, g_wmap_effect_fade_c, 0, -70, -1);
     PopMatrix();
-    intensity = g_wmap_effect_fade_c - 4;
-    g_wmap_effect_fade_c = intensity;
-    if (intensity < 0)
-    {
-        g_wmap_effect_fade_c = 0;
-    }
+    WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_c, 4, intensity);
     angle = g_wmap_effect_model_c_rotation.vz;
     g_wmap_effect_model_c_rotation.vz = angle + 330;
     g_wmap_effect_model_b_rotation.vz += 10;
@@ -404,14 +394,11 @@ void wmap_land_effect_27_timeline_step_07(void)
 WMAP_STEP_WAIT(wmap_land_effect_27_timeline_wait_08, g_wmap_land_effect_27_timeline_step, g_wmap_land_effect_27_timeline_timer)
 
 /**
- * @brief World-map step handler: set flags and advance the step counter.
+ * @brief Hide the transition mesh and set the wait timer.
  */
-void wmap_land_effect_27_timeline_step_09(void)
-{
-    g_wmap_transition_mesh_hidden = 1;
-    g_wmap_land_effect_27_timeline_timer = 0x14;
-    g_wmap_land_effect_27_timeline_step += 1;
-}
+WMAP_STEP_HIDE_AND_WAIT(wmap_land_effect_27_timeline_step_09,
+    g_wmap_land_effect_27_timeline_step, g_wmap_land_effect_27_timeline_timer,
+    g_wmap_transition_mesh_hidden, 0x14)
 
 WMAP_STEP_WAIT(wmap_land_effect_27_timeline_wait_10, g_wmap_land_effect_27_timeline_step, g_wmap_land_effect_27_timeline_timer)
 

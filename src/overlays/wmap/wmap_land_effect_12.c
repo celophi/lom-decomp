@@ -99,8 +99,7 @@ extern s32* g_wmap_effect_params;
 extern WmapMotion g_wmap_actor_motions[];
 
 /**
- * @brief World-map step handler: draw two overlaid actor sprites within a matrix push,
- *        ramp the shared size up to a cap, then countdown-advance the step.
+ * @brief Draw and brighten two rotating model layers, then advance their countdown.
  */
 void wmap_land_effect_12_sequence_3_step_02(void)
 {
@@ -114,12 +113,7 @@ void wmap_land_effect_12_sequence_3_step_02(void)
     wmap_draw_model_default(g_wmap_effect_model_pack_1, 0, 0x10, 0x36, 0x7880, 1, D_801B2468);
     D_801B2498.vz += 0x4;
     PopMatrix();
-    value = D_801B2468 + 2;
-    D_801B2468 = value;
-    if (value >= 0x82)
-    {
-        D_801B2468 = 0x81;
-    }
+    WMAP_MODEL_FADE_IN(D_801B2468, 2, 0x81, value);
     if (--g_wmap_land_effect_12_sequence_3_timer == 0)
     {
         g_wmap_land_effect_12_sequence_3_step += 1;
@@ -274,15 +268,11 @@ void wmap_land_effect_12_timeline_step_01(void)
 WMAP_STEP_WAIT(wmap_land_effect_12_timeline_wait_02, g_wmap_land_effect_12_timeline_step, g_wmap_land_effect_12_timeline_timer)
 
 /**
- * @brief Register a world-map step callback and schedule its wait timer.
+ * @brief Hide the placement overlay, start the sequence, and set the wait timer.
  */
-void wmap_land_effect_12_timeline_step_03(void)
-{
-    g_wmap_placement_overlay_hidden = 1;
-    wmap_start_sequence(wmap_land_effect_12_run_sequence_5);
-    g_wmap_land_effect_12_timeline_timer = 0x18;
-    g_wmap_land_effect_12_timeline_step += 1;
-}
+WMAP_STEP_HIDE_AND_START(wmap_land_effect_12_timeline_step_03,
+    g_wmap_land_effect_12_timeline_step, g_wmap_land_effect_12_timeline_timer,
+    g_wmap_placement_overlay_hidden, wmap_land_effect_12_run_sequence_5, 0x18)
 
 WMAP_STEP_WAIT(wmap_land_effect_12_timeline_wait_04, g_wmap_land_effect_12_timeline_step, g_wmap_land_effect_12_timeline_timer)
 
@@ -439,21 +429,11 @@ WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_12_sequence_7_step_02,
     func_8006B6EC(0xC8, 0xCD, 0x8, 0, 0xE))
 
 /**
- * @brief Reset a range of world-map actor configs, arm the timer, and advance the step.
+ * @brief Start fading the sprite range and run its first update.
  */
-void wmap_land_effect_12_sequence_7_step_03(void)
-{
-    s32 i;
-
-    for (i = 0xC8; i < 0xCD; i++)
-    {
-        g_wmap_sprite_actors[i].target_shade = 0;
-        g_wmap_sprite_actors[i].shade_step = 8;
-    }
-    g_wmap_land_effect_12_sequence_7_timer = 0x10;
-    g_wmap_land_effect_12_sequence_7_step += 1;
-    wmap_land_effect_12_sequence_7_step_04();
-}
+WMAP_STEP_FADE_ACTOR_RANGE(wmap_land_effect_12_sequence_7_step_03,
+    g_wmap_land_effect_12_sequence_7_step, g_wmap_land_effect_12_sequence_7_timer,
+    0xC8, 0xCD, 8, 0x10, wmap_land_effect_12_sequence_7_step_04)
 
 /**
  * @brief Update the effect until the step timer expires.

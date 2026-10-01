@@ -523,20 +523,12 @@ WMAP_STEP_RUNNER(wmap_land_effect_02_run_sequence_6, D_800D5598, 0x8, g_wmap_lan
 
 WMAP_STEP_RESET(wmap_land_effect_02_sequence_6_reset, g_wmap_land_effect_02_sequence_6_step, g_wmap_land_effect_02_sequence_6_timer)
 
-/** @brief Draw the sequence effect, grow its scale, and update the countdown. */
-void wmap_land_effect_02_sequence_6_step_02(void)
-{
-    s32 remaining;
-
-    func_8006B328(0x64, 0xC8, 2, -1, 5, 5, 0x15E, 8, -0xC8, 0x190, -0xFA, 0x1F4, 0x32, 0x81, 0x81, 8, 0);
-    D_801B25D8 += 8;
-    remaining = g_wmap_land_effect_02_sequence_6_timer - 1;
-    g_wmap_land_effect_02_sequence_6_timer = remaining;
-    if (remaining == 0)
-    {
-        g_wmap_land_effect_02_sequence_6_step += 1;
-    }
-}
+/**
+ * @brief Update the particles and increase the shared fade value until the timer expires.
+ */
+WMAP_STEP_UPDATE_AND_RAMP(wmap_land_effect_02_sequence_6_step_02, g_wmap_land_effect_02_sequence_6_step, g_wmap_land_effect_02_sequence_6_timer,
+                          D_801B25D8, 8,
+                          func_8006B328(0x64, 0xC8, 2, -1, 5, 5, 0x15E, 8, -0xC8, 0x190, -0xFA, 0x1F4, 0x32, 0x81, 0x81, 8, 0))
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_02_sequence_6_step_03, g_wmap_land_effect_02_sequence_6_step, g_wmap_land_effect_02_sequence_6_timer, 0x40,
                     wmap_land_effect_02_sequence_6_step_04)
@@ -548,15 +540,10 @@ WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_02_sequence_6_step_04,
                   0x1F4, 0x32, 0x81, 0x81, 8, 0))
 
 /**
- * @brief Clear the sub-flag, set the sequence parameter, advance the counter, and run the handler.
+ * @brief Stop spawning particles and keep updating those already active.
  */
-void wmap_land_effect_02_sequence_6_step_05(void)
-{
-    D_800DCEA8 = 0;
-    g_wmap_land_effect_02_sequence_6_timer = 0x40;
-    g_wmap_land_effect_02_sequence_6_step += 1;
-    wmap_land_effect_02_sequence_6_step_06();
-}
+WMAP_STEP_STOP_PARTICLE_SPAWNS(wmap_land_effect_02_sequence_6_step_05, g_wmap_land_effect_02_sequence_6_step, g_wmap_land_effect_02_sequence_6_timer,
+                              D_800DCEA8, 0x40, wmap_land_effect_02_sequence_6_step_06)
 
 /** @brief Update the effect until the step timer expires. */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_02_sequence_6_step_06,

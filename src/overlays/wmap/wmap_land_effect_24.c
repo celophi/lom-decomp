@@ -385,104 +385,32 @@ void func_800BA408(void)
     }
 }
 
-void wmap_land_effect_24_sequence_7_step_02(void)
-{
-    s32 value;
-    s32 fade;
-    s32 timer;
+/**
+ * @brief Move the model along Z, draw it, and fade it until the timer expires.
+ */
+WMAP_STEP_MAP_DROP_UPDATE(wmap_land_effect_24_sequence_7_step_02,
+    g_wmap_land_effect_24_sequence_7_step, g_wmap_land_effect_24_sequence_7_timer,
+    g_wmap_effect_model_a_rotation, g_wmap_effect_model_a_position, g_wmap_effect_fade_a,
+    g_wmap_load_buffer, -0xDAC,
+    2)
 
-    value = g_wmap_effect_model_a_position.vz - 0xDAC;
-    g_wmap_effect_model_a_position.vz = value;
-    if (value < 0x2710)
-    {
-        g_wmap_effect_model_a_position.vz = 0x2710;
-    }
-    PushMatrix();
-    wmap_set_map_rotation(&g_wmap_effect_model_a_rotation);
-    if (g_wmap_effect_fade_a != 0)
-    {
-        wmap_draw_model(g_wmap_load_buffer, 0, 4, 0x35, 0x7800, 1, g_wmap_effect_fade_a, 0, 0, -1);
-        fade = g_wmap_effect_fade_a - 2;
-        g_wmap_effect_fade_a = fade;
-        if (fade < 0)
-        {
-            g_wmap_effect_fade_a = 0;
-        }
-    }
-    PopMatrix();
-    timer = g_wmap_land_effect_24_sequence_7_timer - 1;
-    g_wmap_land_effect_24_sequence_7_timer = timer;
-    if (timer == 0)
-    {
-        g_wmap_land_effect_24_sequence_7_step++;
-    }
-}
+/**
+ * @brief Move the model along Z, draw it, and fade it until the timer expires.
+ */
+WMAP_STEP_MAP_DROP_UPDATE(wmap_land_effect_24_sequence_8_step_02,
+    g_wmap_land_effect_24_sequence_8_step, g_wmap_land_effect_24_sequence_8_timer,
+    g_wmap_effect_model_b_rotation, g_wmap_effect_model_b_position, g_wmap_effect_fade_b,
+    g_wmap_effect_model_pack_1, -0xDAC,
+    1)
 
-void wmap_land_effect_24_sequence_8_step_02(void)
-{
-    s32 value;
-    s32 fade;
-    s32 timer;
-
-    value = g_wmap_effect_model_b_position.vz - 0xDAC;
-    g_wmap_effect_model_b_position.vz = value;
-    if (value < 0x2710)
-    {
-        g_wmap_effect_model_b_position.vz = 0x2710;
-    }
-    PushMatrix();
-    wmap_set_map_rotation(&g_wmap_effect_model_b_rotation);
-    if (g_wmap_effect_fade_b != 0)
-    {
-        wmap_draw_model(g_wmap_effect_model_pack_1, 0, 4, 0x35, 0x7800, 1, g_wmap_effect_fade_b, 0, 0, -1);
-        fade = g_wmap_effect_fade_b - 1;
-        g_wmap_effect_fade_b = fade;
-        if (fade < 0)
-        {
-            g_wmap_effect_fade_b = 0;
-        }
-    }
-    PopMatrix();
-    timer = g_wmap_land_effect_24_sequence_8_timer - 1;
-    g_wmap_land_effect_24_sequence_8_timer = timer;
-    if (timer == 0)
-    {
-        g_wmap_land_effect_24_sequence_8_step++;
-    }
-}
-
-void wmap_land_effect_24_sequence_9_step_02(void)
-{
-    s32 value;
-    s32 fade;
-    s32 timer;
-
-    value = g_wmap_effect_model_c_position.vz - 0xDAC;
-    g_wmap_effect_model_c_position.vz = value;
-    if (value < 0x2710)
-    {
-        g_wmap_effect_model_c_position.vz = 0x2710;
-    }
-    PushMatrix();
-    wmap_set_map_rotation(&g_wmap_effect_model_c_rotation);
-    if (g_wmap_effect_fade_c != 0)
-    {
-        wmap_draw_model(g_wmap_effect_model_pack_2, 0, 4, 0x35, 0x7800, 1, g_wmap_effect_fade_c, 0, 0, -1);
-        fade = g_wmap_effect_fade_c - 8;
-        g_wmap_effect_fade_c = fade;
-        if (fade < 0)
-        {
-            g_wmap_effect_fade_c = 0;
-        }
-    }
-    PopMatrix();
-    timer = g_wmap_land_effect_24_sequence_9_timer - 1;
-    g_wmap_land_effect_24_sequence_9_timer = timer;
-    if (timer == 0)
-    {
-        g_wmap_land_effect_24_sequence_9_step++;
-    }
-}
+/**
+ * @brief Move the model along Z, draw it, and fade it until the timer expires.
+ */
+WMAP_STEP_MAP_DROP_UPDATE(wmap_land_effect_24_sequence_9_step_02,
+    g_wmap_land_effect_24_sequence_9_step, g_wmap_land_effect_24_sequence_9_timer,
+    g_wmap_effect_model_c_rotation, g_wmap_effect_model_c_position, g_wmap_effect_fade_c,
+    g_wmap_effect_model_pack_2, -0xDAC,
+    8)
 
 void wmap_land_effect_24_sequence_10_step_01(void)
 {
@@ -574,6 +502,9 @@ void wmap_land_effect_24_sequence_12_step_01(void)
     wmap_land_effect_24_sequence_12_step_02();
 }
 
+/**
+ * @brief Update and draw the model while fading its color in.
+ */
 void wmap_land_effect_24_sequence_13_step_02(void)
 {
     s32 value;
@@ -581,12 +512,7 @@ void wmap_land_effect_24_sequence_13_step_02(void)
 
     func_8006AEE0();
     wmap_draw_model(g_wmap_effect_model_pack_3, (D_80139240 >> 4) & 7, 0xA, 0x35, 0x7800, 1, g_wmap_effect_fade_d, 0, 0, -1);
-    value = g_wmap_effect_fade_d + 8;
-    g_wmap_effect_fade_d = value;
-    if (value >= 0x82)
-    {
-        g_wmap_effect_fade_d = 0x81;
-    }
+    WMAP_MODEL_FADE_IN(g_wmap_effect_fade_d, 8, 0x81, value);
     D_80139240 += 0x10;
     timer = g_wmap_land_effect_24_sequence_13_timer - 1;
     g_wmap_land_effect_24_sequence_13_timer = timer;
@@ -596,6 +522,9 @@ void wmap_land_effect_24_sequence_13_step_02(void)
     }
 }
 
+/**
+ * @brief Update and draw the model while fading its color out.
+ */
 void wmap_land_effect_24_sequence_13_step_04(void)
 {
     s32 value;
@@ -603,12 +532,7 @@ void wmap_land_effect_24_sequence_13_step_04(void)
 
     func_8006AEE0();
     wmap_draw_model(g_wmap_effect_model_pack_3, (D_80139240 >> 4) & 7, 0xA, 0x35, 0x7800, 1, g_wmap_effect_fade_d, 0, 0, -1);
-    value = g_wmap_effect_fade_d - 4;
-    g_wmap_effect_fade_d = value;
-    if (value < 0)
-    {
-        g_wmap_effect_fade_d = 0;
-    }
+    WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_d, 4, value);
     D_80139240 += 0x10;
     timer = g_wmap_land_effect_24_sequence_13_timer - 1;
     g_wmap_land_effect_24_sequence_13_timer = timer;
@@ -618,6 +542,9 @@ void wmap_land_effect_24_sequence_13_step_04(void)
     }
 }
 
+/**
+ * @brief Draw and spin the model while fading it in.
+ */
 void wmap_land_effect_24_sequence_14_step_02(void)
 {
     s32 value;
@@ -625,12 +552,7 @@ void wmap_land_effect_24_sequence_14_step_02(void)
 
     wmap_set_map_rotation(&D_801B2670);
     wmap_draw_model(D_8011CF2C, (D_8013924C >> 4) & 7, 0xB0, 0x35, 0x7800, 1, D_801B25D8, 4, -0x44, -1);
-    value = D_801B25D8 + 2;
-    D_801B25D8 = value;
-    if (value >= 0x81)
-    {
-        D_801B25D8 = 0x80;
-    }
+    WMAP_MODEL_FADE_IN(D_801B25D8, 2, 0x80, value);
     D_8013924C += 0x18;
     timer = g_wmap_land_effect_24_sequence_14_timer - 1;
     g_wmap_land_effect_24_sequence_14_timer = timer;
@@ -641,6 +563,9 @@ void wmap_land_effect_24_sequence_14_step_02(void)
     }
 }
 
+/**
+ * @brief Draw and spin the model while fading it out.
+ */
 void wmap_land_effect_24_sequence_14_step_04(void)
 {
     s32 value;
@@ -648,12 +573,7 @@ void wmap_land_effect_24_sequence_14_step_04(void)
 
     wmap_set_map_rotation(&D_801B2670);
     wmap_draw_model(D_8011CF2C, (D_8013924C >> 4) & 7, 0xB0, 0x35, 0x7800, 1, D_801B25D8, 4, -0x44, -1);
-    value = D_801B25D8 - 0x10;
-    D_801B25D8 = value;
-    if (value < 0)
-    {
-        D_801B25D8 = 0;
-    }
+    WMAP_MODEL_FADE_OUT(D_801B25D8, 0x10, value);
     D_8013924C += 0x18;
     timer = g_wmap_land_effect_24_sequence_14_timer - 1;
     g_wmap_land_effect_24_sequence_14_timer = timer;
@@ -788,11 +708,11 @@ void wmap_land_effect_24_timeline_step_23(void)
 
 WMAP_STEP_WAIT(wmap_land_effect_24_timeline_step_24, g_wmap_land_effect_24_timeline_step, g_wmap_land_effect_24_timeline_timer)
 
-void wmap_land_effect_24_timeline_finish(void)
-{
-    g_wmap_sequence_busy = 0;
-    g_wmap_land_effect_24_timeline_step++;
-}
+/**
+ * @brief Clear the blocking flag and finish the timeline.
+ */
+WMAP_STEP_FINISH_BLOCKING(wmap_land_effect_24_timeline_finish,
+    g_wmap_land_effect_24_timeline_step)
 
 WMAP_STEP_RUNNER(wmap_land_effect_24_run_sequence_1, D_800D7774, 6, g_wmap_land_effect_24_sequence_1_step, g_wmap_land_effect_24_sequence_1_timer)
 
@@ -1129,56 +1049,33 @@ WMAP_STEP_RUNNER(wmap_land_effect_24_run_sequence_12, D_800D7854, 8, g_wmap_land
 
 WMAP_STEP_RESET(wmap_land_effect_24_sequence_12_step_00, g_wmap_land_effect_24_sequence_12_step, g_wmap_land_effect_24_sequence_12_timer)
 
-void wmap_land_effect_24_sequence_12_step_02(void)
-{
-    s32 timer;
-
-    func_8006B328(0x78, 0x9C, 2, -1, -3, -8, 0, 0x1F, -0xB4, 0x190, -0xA0, 0x190, 0, 0x80, 0, 8, 2);
-    D_801B25DC += 8;
-    timer = g_wmap_land_effect_24_sequence_12_timer - 1;
-    g_wmap_land_effect_24_sequence_12_timer = timer;
-    if (timer == 0)
-    {
-        g_wmap_land_effect_24_sequence_12_step++;
-    }
-}
+/**
+ * @brief Update the particles and increase the shared fade value until the timer expires.
+ */
+WMAP_STEP_UPDATE_AND_RAMP(wmap_land_effect_24_sequence_12_step_02, g_wmap_land_effect_24_sequence_12_step, g_wmap_land_effect_24_sequence_12_timer,
+                          D_801B25DC, 8,
+                          func_8006B328(0x78, 0x9C, 2, -1, -3, -8, 0, 0x1F, -0xB4, 0x190, -0xA0, 0x190, 0, 0x80, 0, 8, 2))
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_24_sequence_12_step_03, g_wmap_land_effect_24_sequence_12_step, g_wmap_land_effect_24_sequence_12_timer, 0x12,
                     wmap_land_effect_24_sequence_12_step_04)
 
-void wmap_land_effect_24_sequence_12_step_04(void)
-{
-    s32 timer;
+/**
+ * @brief Update the particles until the timer expires.
+ */
+WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_24_sequence_12_step_04, g_wmap_land_effect_24_sequence_12_step, g_wmap_land_effect_24_sequence_12_timer,
+                          func_8006B328(0x78, 0x9C, 2, -1, -3, -8, 0, 0x1F, -0xB4, 0x190, -0xA0, 0x190, 0, 0x80, 0, 8, 2))
 
-    func_8006B328(0x78, 0x9C, 2, -1, -3, -8, 0, 0x1F, -0xB4, 0x190, -0xA0, 0x190, 0, 0x80, 0, 8, 2);
-    timer = g_wmap_land_effect_24_sequence_12_timer - 1;
-    g_wmap_land_effect_24_sequence_12_timer = timer;
-    if (timer == 0)
-    {
-        g_wmap_land_effect_24_sequence_12_step++;
-    }
-}
+/**
+ * @brief Stop spawning particles and keep updating those already active.
+ */
+WMAP_STEP_STOP_PARTICLE_SPAWNS(wmap_land_effect_24_sequence_12_step_05, g_wmap_land_effect_24_sequence_12_step, g_wmap_land_effect_24_sequence_12_timer,
+                              D_800DCEB0, 0x64, wmap_land_effect_24_sequence_12_step_06)
 
-void wmap_land_effect_24_sequence_12_step_05(void)
-{
-    D_800DCEB0 = 0;
-    g_wmap_land_effect_24_sequence_12_timer = 0x64;
-    g_wmap_land_effect_24_sequence_12_step++;
-    wmap_land_effect_24_sequence_12_step_06();
-}
-
-void wmap_land_effect_24_sequence_12_step_06(void)
-{
-    s32 timer;
-
-    func_8006B328(0x78, 0x9C, 2, -1, -3, -8, 0, 0x1F, -0xB4, 0x190, -0xA0, 0x190, 0, 0x80, 0, 8, 2);
-    timer = g_wmap_land_effect_24_sequence_12_timer - 1;
-    g_wmap_land_effect_24_sequence_12_timer = timer;
-    if (timer == 0)
-    {
-        g_wmap_land_effect_24_sequence_12_step++;
-    }
-}
+/**
+ * @brief Update the particles until the timer expires.
+ */
+WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_24_sequence_12_step_06, g_wmap_land_effect_24_sequence_12_step, g_wmap_land_effect_24_sequence_12_timer,
+                          func_8006B328(0x78, 0x9C, 2, -1, -3, -8, 0, 0x1F, -0xB4, 0x190, -0xA0, 0x190, 0, 0x80, 0, 8, 2))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_24_sequence_12_step_07, g_wmap_land_effect_24_sequence_12_step)
 

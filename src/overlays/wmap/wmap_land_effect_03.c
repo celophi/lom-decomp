@@ -278,16 +278,11 @@ void wmap_land_effect_03_timeline_step_01(void)
 WMAP_STEP_WAIT(wmap_land_effect_03_timeline_wait_02, g_wmap_land_effect_03_timeline_step, g_wmap_land_effect_03_timeline_timer)
 
 /**
- * @brief Register three sequence steps, arm the frame timer, and advance the counter.
+ * @brief Start three sequences and set the wait timer.
  */
-void wmap_land_effect_03_timeline_step_03(void)
-{
-    wmap_start_sequence(wmap_land_effect_03_run_sequence_8);
-    wmap_start_sequence(wmap_land_effect_03_run_sequence_7);
-    wmap_start_sequence(wmap_land_effect_03_run_sequence_1);
-    g_wmap_land_effect_03_timeline_timer = 0x18;
-    g_wmap_land_effect_03_timeline_step += 1;
-}
+WMAP_STEP_START_THREE_AND_WAIT(wmap_land_effect_03_timeline_step_03,
+    g_wmap_land_effect_03_timeline_step, g_wmap_land_effect_03_timeline_timer,
+    wmap_land_effect_03_run_sequence_8, wmap_land_effect_03_run_sequence_7, wmap_land_effect_03_run_sequence_1, 0x18)
 
 WMAP_STEP_WAIT(wmap_land_effect_03_timeline_wait_04, g_wmap_land_effect_03_timeline_step, g_wmap_land_effect_03_timeline_timer)
 
@@ -302,15 +297,11 @@ WMAP_STEP_START_AND_WAIT(wmap_land_effect_03_timeline_step_07, g_wmap_land_effec
 WMAP_STEP_WAIT(wmap_land_effect_03_timeline_wait_08, g_wmap_land_effect_03_timeline_step, g_wmap_land_effect_03_timeline_timer)
 
 /**
- * @brief Register a world-map step callback and schedule its wait timer.
+ * @brief Hide the placement overlay, start the sequence, and set the wait timer.
  */
-void wmap_land_effect_03_timeline_step_09(void)
-{
-    g_wmap_placement_overlay_hidden = 1;
-    wmap_start_sequence(wmap_land_effect_03_run_sequence_3);
-    g_wmap_land_effect_03_timeline_timer = 0x3C;
-    g_wmap_land_effect_03_timeline_step += 1;
-}
+WMAP_STEP_HIDE_AND_START(wmap_land_effect_03_timeline_step_09,
+    g_wmap_land_effect_03_timeline_step, g_wmap_land_effect_03_timeline_timer,
+    g_wmap_placement_overlay_hidden, wmap_land_effect_03_run_sequence_3, 0x3C)
 
 WMAP_STEP_WAIT(wmap_land_effect_03_timeline_wait_10, g_wmap_land_effect_03_timeline_step, g_wmap_land_effect_03_timeline_timer)
 

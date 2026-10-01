@@ -308,40 +308,14 @@ void wmap_land_effect_33_sequence_9_step_01(void)
     wmap_land_effect_33_sequence_9_step_02();
 }
 
-void wmap_land_effect_33_sequence_10_step_02(void)
-{
-    s32 value;
-    s32 fade;
-    s32 timer;
-
-    value = g_wmap_effect_model_a_position.vz - 0xDAC;
-    g_wmap_effect_model_a_position.vz = value;
-    if (value < 0x2710)
-    {
-        g_wmap_effect_model_a_position.vz = 0x2710;
-    }
-
-    PushMatrix();
-    wmap_set_map_rotation(&g_wmap_effect_model_a_rotation);
-    if (g_wmap_effect_fade_a != 0)
-    {
-        wmap_draw_model(g_wmap_load_buffer, 0, 4, 0x35, 0x7800, 1, g_wmap_effect_fade_a, 0, 0, -1);
-        fade = g_wmap_effect_fade_a - 2;
-        g_wmap_effect_fade_a = fade;
-        if (fade < 0)
-        {
-            g_wmap_effect_fade_a = 0;
-        }
-    }
-    PopMatrix();
-
-    timer = g_wmap_land_effect_33_sequence_10_timer - 1;
-    g_wmap_land_effect_33_sequence_10_timer = timer;
-    if (timer == 0)
-    {
-        g_wmap_land_effect_33_sequence_10_step++;
-    }
-}
+/**
+ * @brief Move the model along Z, draw it, and fade it until the timer expires.
+ */
+WMAP_STEP_MAP_DROP_UPDATE(wmap_land_effect_33_sequence_10_step_02,
+    g_wmap_land_effect_33_sequence_10_step, g_wmap_land_effect_33_sequence_10_timer,
+    g_wmap_effect_model_a_rotation, g_wmap_effect_model_a_position, g_wmap_effect_fade_a,
+    g_wmap_load_buffer, -0xDAC,
+    2)
 
 WMAP_STEP_RUNNER(wmap_land_effect_33_run, D_800D78BC, 4, g_wmap_land_effect_33_step, g_wmap_land_effect_33_timer)
 
@@ -429,14 +403,12 @@ WMAP_STEP_START_AND_WAIT(wmap_land_effect_33_timeline_step_15, g_wmap_land_effec
 
 WMAP_STEP_WAIT(wmap_land_effect_33_timeline_step_16, g_wmap_land_effect_33_timeline_step, g_wmap_land_effect_33_timeline_timer)
 
-void wmap_land_effect_33_timeline_step_17(void)
-{
-    wmap_start_sequence(wmap_land_effect_33_run_sequence_5);
-    wmap_start_sequence(wmap_land_effect_33_run_sequence_4);
-    wmap_start_sequence(wmap_land_effect_33_run_sequence_10);
-    g_wmap_land_effect_33_timeline_timer = 0x64;
-    g_wmap_land_effect_33_timeline_step++;
-}
+/**
+ * @brief Start three sequences and set the wait timer.
+ */
+WMAP_STEP_START_THREE_AND_WAIT(wmap_land_effect_33_timeline_step_17,
+    g_wmap_land_effect_33_timeline_step, g_wmap_land_effect_33_timeline_timer,
+    wmap_land_effect_33_run_sequence_5, wmap_land_effect_33_run_sequence_4, wmap_land_effect_33_run_sequence_10, 0x64)
 
 WMAP_STEP_WAIT(wmap_land_effect_33_timeline_step_18, g_wmap_land_effect_33_timeline_step, g_wmap_land_effect_33_timeline_timer)
 
@@ -450,11 +422,11 @@ void wmap_land_effect_33_timeline_step_19(void)
 
 WMAP_STEP_WAIT(wmap_land_effect_33_timeline_step_20, g_wmap_land_effect_33_timeline_step, g_wmap_land_effect_33_timeline_timer)
 
-void wmap_land_effect_33_timeline_finish(void)
-{
-    g_wmap_sequence_busy = 0;
-    g_wmap_land_effect_33_timeline_step++;
-}
+/**
+ * @brief Clear the blocking flag and finish the timeline.
+ */
+WMAP_STEP_FINISH_BLOCKING(wmap_land_effect_33_timeline_finish,
+    g_wmap_land_effect_33_timeline_step)
 
 WMAP_STEP_RUNNER(wmap_land_effect_33_run_sequence_1, D_800D7924, 6, g_wmap_land_effect_33_sequence_1_step, g_wmap_land_effect_33_sequence_1_timer)
 

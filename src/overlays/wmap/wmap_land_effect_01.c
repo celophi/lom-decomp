@@ -237,12 +237,7 @@ void wmap_land_effect_01_sequence_4_step_02(void)
         wmap_draw_model_default(g_wmap_load_buffer, 0, 4, -1, -1, 1, D_801B2470);
     }
     PopMatrix();
-    intensity = D_801B2470 - 9;
-    D_801B2470 = intensity;
-    if (intensity < 0)
-    {
-        D_801B2470 = 0;
-    }
+    WMAP_MODEL_FADE_OUT(D_801B2470, 9, intensity);
     remaining = g_wmap_land_effect_01_sequence_4_timer - 1;
     g_wmap_land_effect_01_sequence_4_timer = remaining;
     if (remaining == 0)
@@ -407,16 +402,11 @@ WMAP_STEP_START_AND_WAIT(wmap_land_effect_01_timeline_step_07, g_wmap_land_effec
 WMAP_STEP_WAIT(wmap_land_effect_01_timeline_wait_08, g_wmap_land_effect_01_timeline_step, g_wmap_land_effect_01_timeline_timer)
 
 /**
- * @brief Register three sequence steps, arm the frame timer, and advance the counter.
+ * @brief Start three sequences and set the wait timer.
  */
-void wmap_land_effect_01_timeline_step_09(void)
-{
-    wmap_start_sequence(wmap_land_effect_01_run_sequence_7);
-    wmap_start_sequence(wmap_land_effect_01_run_sequence_8);
-    wmap_start_sequence(wmap_land_effect_01_run_sequence_6);
-    g_wmap_land_effect_01_timeline_timer = 0x60;
-    g_wmap_land_effect_01_timeline_step += 1;
-}
+WMAP_STEP_START_THREE_AND_WAIT(wmap_land_effect_01_timeline_step_09,
+    g_wmap_land_effect_01_timeline_step, g_wmap_land_effect_01_timeline_timer,
+    wmap_land_effect_01_run_sequence_7, wmap_land_effect_01_run_sequence_8, wmap_land_effect_01_run_sequence_6, 0x60)
 
 WMAP_STEP_WAIT(wmap_land_effect_01_timeline_wait_10, g_wmap_land_effect_01_timeline_step, g_wmap_land_effect_01_timeline_timer)
 

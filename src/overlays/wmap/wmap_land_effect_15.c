@@ -270,14 +270,11 @@ WMAP_STEP_START_TWO_AND_WAIT(wmap_land_effect_15_timeline_step_07, g_wmap_land_e
 WMAP_STEP_WAIT(wmap_land_effect_15_timeline_wait_08, g_wmap_land_effect_15_timeline_step, g_wmap_land_effect_15_timeline_timer)
 
 /**
- * @brief World-map step handler: set flags and advance the step counter.
+ * @brief Hide the placement overlay and set the wait timer.
  */
-void wmap_land_effect_15_timeline_step_09(void)
-{
-    g_wmap_placement_overlay_hidden = 1;
-    g_wmap_land_effect_15_timeline_timer = 0x46;
-    g_wmap_land_effect_15_timeline_step += 1;
-}
+WMAP_STEP_HIDE_AND_WAIT(wmap_land_effect_15_timeline_step_09,
+    g_wmap_land_effect_15_timeline_step, g_wmap_land_effect_15_timeline_timer,
+    g_wmap_placement_overlay_hidden, 0x46)
 
 WMAP_STEP_WAIT(wmap_land_effect_15_timeline_wait_10, g_wmap_land_effect_15_timeline_step, g_wmap_land_effect_15_timeline_timer)
 

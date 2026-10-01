@@ -337,14 +337,11 @@ void wmap_special_effect_34_step_05(void)
     wmap_special_effect_34_step_06();
 }
 
-void wmap_special_effect_34_step_06(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        g_wmap_special_effect_34_step++;
-        wmap_special_effect_34_step_07();
-    }
-}
+/**
+ * @brief Wait for scripted map scrolling, then run the next step.
+ */
+WMAP_STEP_WAIT_SCROLL(wmap_special_effect_34_step_06,
+    g_wmap_special_effect_34_step, wmap_special_effect_34_step_07)
 
 /**
  * @brief Effect 34 step: reset after the transition, restore the saved
@@ -407,16 +404,10 @@ void wmap_special_effect_34_timeline_step_03(void)
 }
 
 /**
- * @brief Advance this sequence one step unless its gate flag hit the stop value.
+ * @brief Wait for scripted map scrolling, then run the next step.
  */
-void wmap_special_effect_34_timeline_step_04(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        g_wmap_special_effect_34_timeline_step += 1;
-        wmap_special_effect_34_timeline_step_05();
-    }
-}
+WMAP_STEP_WAIT_SCROLL(wmap_special_effect_34_timeline_step_04,
+    g_wmap_special_effect_34_timeline_step, wmap_special_effect_34_timeline_step_05)
 
 /** @brief World-map step handler: bump the step counter and run the next step. */
 void wmap_special_effect_34_timeline_step_05(void)
@@ -454,11 +445,11 @@ void wmap_special_effect_34_timeline_step_11(void)
 
 WMAP_STEP_WAIT(wmap_special_effect_34_timeline_step_12, g_wmap_special_effect_34_timeline_step, g_wmap_special_effect_34_timeline_timer)
 
-void wmap_special_effect_34_timeline_finish(void)
-{
-    g_wmap_sequence_busy = 0;
-    g_wmap_special_effect_34_timeline_step++;
-}
+/**
+ * @brief Clear the blocking flag and finish the timeline.
+ */
+WMAP_STEP_FINISH_BLOCKING(wmap_special_effect_34_timeline_finish,
+    g_wmap_special_effect_34_timeline_step)
 
 WMAP_STEP_RUNNER(wmap_special_effect_34_run_sequence_1, D_800D7A64, 8, g_wmap_special_effect_34_sequence_1_step, g_wmap_special_effect_34_sequence_1_timer)
 
@@ -493,41 +484,29 @@ WMAP_STEP_RUNNER(wmap_special_effect_34_run_sequence_2, D_800D7A84, 0xA, g_wmap_
 
 WMAP_STEP_RESET(wmap_special_effect_34_sequence_2_reset, g_wmap_special_effect_34_sequence_2_step, g_wmap_special_effect_34_sequence_2_timer)
 
-void wmap_special_effect_34_sequence_2_step_02(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        g_wmap_special_effect_34_sequence_2_step++;
-        wmap_special_effect_34_sequence_2_step_03();
-    }
-}
+/**
+ * @brief Wait for scripted map scrolling, then run the next step.
+ */
+WMAP_STEP_WAIT_SCROLL(wmap_special_effect_34_sequence_2_step_02,
+    g_wmap_special_effect_34_sequence_2_step, wmap_special_effect_34_sequence_2_step_03)
 
-void wmap_special_effect_34_sequence_2_step_04(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        g_wmap_special_effect_34_sequence_2_step++;
-        wmap_special_effect_34_sequence_2_step_05();
-    }
-}
+/**
+ * @brief Wait for scripted map scrolling, then run the next step.
+ */
+WMAP_STEP_WAIT_SCROLL(wmap_special_effect_34_sequence_2_step_04,
+    g_wmap_special_effect_34_sequence_2_step, wmap_special_effect_34_sequence_2_step_05)
 
-void wmap_special_effect_34_sequence_2_step_06(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        g_wmap_special_effect_34_sequence_2_step++;
-        wmap_special_effect_34_sequence_2_step_07();
-    }
-}
+/**
+ * @brief Wait for scripted map scrolling, then run the next step.
+ */
+WMAP_STEP_WAIT_SCROLL(wmap_special_effect_34_sequence_2_step_06,
+    g_wmap_special_effect_34_sequence_2_step, wmap_special_effect_34_sequence_2_step_07)
 
-void wmap_special_effect_34_sequence_2_step_08(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        g_wmap_special_effect_34_sequence_2_step++;
-        wmap_special_effect_34_sequence_2_step_09();
-    }
-}
+/**
+ * @brief Wait for scripted map scrolling, then run the next step.
+ */
+WMAP_STEP_WAIT_SCROLL(wmap_special_effect_34_sequence_2_step_08,
+    g_wmap_special_effect_34_sequence_2_step, wmap_special_effect_34_sequence_2_step_09)
 
 void wmap_special_effect_34_sequence_2_step_09(void)
 {

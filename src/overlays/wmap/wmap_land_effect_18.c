@@ -172,12 +172,7 @@ void wmap_land_effect_18_sequence_1_step_04(void)
         SetRotMatrix(&effect);
         SetTransMatrix(&effect);
         wmap_draw_model_default(g_wmap_effect_model_pack_2, 0, 0x24, 0xB7, 0x7A40, 1, D_801B24B4);
-        intensity = D_801B24B4 - 2;
-        D_801B24B4 = intensity;
-        if (intensity < 0)
-        {
-            D_801B24B4 = 0;
-        }
+        WMAP_MODEL_FADE_OUT(D_801B24B4, 2, intensity);
         PopMatrix();
         g_wmap_effect_model_a_rotation.vz = (u16) (g_wmap_effect_model_a_rotation.vz + 0x12C);
     }
@@ -203,12 +198,7 @@ void wmap_land_effect_18_sequence_2_step_02(void)
     wmap_draw_model_default(g_wmap_effect_model_pack_1, 0, 4, 183, 0x7A80, 0, D_801B2468);
     D_801B2498.vz = (u16)(D_801B2498.vz + 16);
     PopMatrix();
-    intensity = D_801B2468 + 2;
-    D_801B2468 = intensity;
-    if (intensity >= 129)
-    {
-        D_801B2468 = 128;
-    }
+    WMAP_MODEL_FADE_IN(D_801B2468, 2, 128, intensity);
     remaining = g_wmap_land_effect_18_sequence_2_timer - 1;
     g_wmap_land_effect_18_sequence_2_timer = remaining;
     if (remaining == 0)
@@ -284,12 +274,7 @@ void wmap_land_effect_18_sequence_2_step_08(void)
     wmap_draw_model_default(g_wmap_effect_model_pack_1, 7, 4, 183, 0x7A80, 0, D_801B2468);
     D_801B2498.vz = (u16)(D_801B2498.vz + 16);
     PopMatrix();
-    intensity = D_801B2468 - 2;
-    D_801B2468 = intensity;
-    if (intensity < 0)
-    {
-        D_801B2468 = 0;
-    }
+    WMAP_MODEL_FADE_OUT(D_801B2468, 2, intensity);
     remaining = g_wmap_land_effect_18_sequence_2_timer - 1;
     g_wmap_land_effect_18_sequence_2_timer = remaining;
     if (remaining == 0)
@@ -441,12 +426,7 @@ void wmap_land_effect_18_sequence_4_step_02(void)
         wmap_draw_model_default(g_wmap_effect_model_pack_2 + 0x5000, 0, 4, -1, -1, 1, D_801B2474);
     }
     PopMatrix();
-    intensity = D_801B2474 - 9;
-    D_801B2474 = intensity;
-    if (intensity < 0)
-    {
-        D_801B2474 = 0;
-    }
+    WMAP_MODEL_FADE_OUT(D_801B2474, 9, intensity);
     remaining = g_wmap_land_effect_18_sequence_4_timer - 1;
     g_wmap_land_effect_18_sequence_4_timer = remaining;
     if (remaining == 0)
@@ -622,12 +602,7 @@ void wmap_land_effect_18_sequence_11_step_02(void)
         wmap_draw_model_default(g_wmap_effect_model_pack_2 + 0x6000, 0, 4, -1, -1, 1, D_80182DE4);
     }
     PopMatrix();
-    intensity = D_80182DE4 + 10;
-    D_80182DE4 = intensity;
-    if (intensity >= 256)
-    {
-        D_80182DE4 = 255;
-    }
+    WMAP_MODEL_FADE_IN(D_80182DE4, 10, 255, intensity);
     remaining = g_wmap_land_effect_18_sequence_11_timer - 1;
     g_wmap_land_effect_18_sequence_11_timer = remaining;
     if (remaining == 0)
@@ -660,12 +635,7 @@ void wmap_land_effect_18_sequence_11_step_04(void)
         wmap_draw_model_default(g_wmap_effect_model_pack_2 + 0x6000, 0, 4, -1, -1, 1, D_80182DE4);
     }
     PopMatrix();
-    intensity = D_80182DE4 - 10;
-    D_80182DE4 = intensity;
-    if (intensity < 0)
-    {
-        D_80182DE4 = 0;
-    }
+    WMAP_MODEL_FADE_OUT(D_80182DE4, 10, intensity);
     remaining = g_wmap_land_effect_18_sequence_11_timer - 1;
     g_wmap_land_effect_18_sequence_11_timer = remaining;
     if (remaining == 0)
@@ -944,16 +914,11 @@ WMAP_STEP_START_AND_WAIT(wmap_land_effect_18_timeline_step_07, g_wmap_land_effec
 WMAP_STEP_WAIT(wmap_land_effect_18_timeline_wait_08, g_wmap_land_effect_18_timeline_step, g_wmap_land_effect_18_timeline_timer)
 
 /**
- * @brief Register three sequence steps, arm the frame timer, and advance the counter.
+ * @brief Start three sequences and set the wait timer.
  */
-void wmap_land_effect_18_timeline_step_09(void)
-{
-    wmap_start_sequence(wmap_land_effect_18_run_sequence_3);
-    wmap_start_sequence(wmap_land_effect_18_run_sequence_1);
-    wmap_start_sequence(wmap_land_effect_18_run_sequence_10);
-    g_wmap_land_effect_18_timeline_timer = 0x10;
-    g_wmap_land_effect_18_timeline_step += 1;
-}
+WMAP_STEP_START_THREE_AND_WAIT(wmap_land_effect_18_timeline_step_09,
+    g_wmap_land_effect_18_timeline_step, g_wmap_land_effect_18_timeline_timer,
+    wmap_land_effect_18_run_sequence_3, wmap_land_effect_18_run_sequence_1, wmap_land_effect_18_run_sequence_10, 0x10)
 
 WMAP_STEP_WAIT(wmap_land_effect_18_timeline_wait_10, g_wmap_land_effect_18_timeline_step, g_wmap_land_effect_18_timeline_timer)
 

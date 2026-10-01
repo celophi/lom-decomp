@@ -178,7 +178,7 @@ void wmap_land_effect_16_sequence_6_step_01(void)
     wmap_land_effect_16_sequence_6_step_02();
 }
 
-/** @brief Advance the world-map effect and its sequence state. */
+/** @brief Draw and brighten the rotating model, then advance its countdown. */
 void wmap_land_effect_16_sequence_8_step_02(void)
 {
     s32 remaining;
@@ -188,12 +188,7 @@ void wmap_land_effect_16_sequence_8_step_02(void)
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_c_rotation);
     wmap_draw_model_default(g_wmap_effect_model_pack_2, D_8013923C, 4, 0x35, 0x7800, 0x1001, g_wmap_effect_fade_c);
     g_wmap_effect_model_c_rotation.vz = (u16) (g_wmap_effect_model_c_rotation.vz + 0x10);
-    intensity = g_wmap_effect_fade_c + 2;
-    g_wmap_effect_fade_c = intensity;
-    if (intensity >= 0x82)
-    {
-        g_wmap_effect_fade_c = 0x81;
-    }
+    WMAP_MODEL_FADE_IN(g_wmap_effect_fade_c, 2, 0x81, intensity);
     D_8013923C = (D_8013923C + 1) & 7;
     PopMatrix();
     remaining = g_wmap_land_effect_16_sequence_8_timer - 1;
@@ -303,14 +298,11 @@ WMAP_STEP_START_AND_WAIT(wmap_land_effect_16_timeline_step_05, g_wmap_land_effec
 WMAP_STEP_WAIT(wmap_land_effect_16_timeline_wait_06, g_wmap_land_effect_16_timeline_step, g_wmap_land_effect_16_timeline_timer)
 
 /**
- * @brief World-map step handler: set flags and advance the step counter.
+ * @brief Hide the placement overlay and set the wait timer.
  */
-void wmap_land_effect_16_timeline_step_07(void)
-{
-    g_wmap_placement_overlay_hidden = 1;
-    g_wmap_land_effect_16_timeline_timer = 0x28;
-    g_wmap_land_effect_16_timeline_step += 1;
-}
+WMAP_STEP_HIDE_AND_WAIT(wmap_land_effect_16_timeline_step_07,
+    g_wmap_land_effect_16_timeline_step, g_wmap_land_effect_16_timeline_timer,
+    g_wmap_placement_overlay_hidden, 0x28)
 
 WMAP_STEP_WAIT(wmap_land_effect_16_timeline_wait_08, g_wmap_land_effect_16_timeline_step, g_wmap_land_effect_16_timeline_timer)
 

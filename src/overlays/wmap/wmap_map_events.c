@@ -706,16 +706,10 @@ WMAP_STEP_RUNNER(func_800A7370,
 WMAP_STEP_RESET(func_800A73E8, D_801B2E70, D_801B2E74)
 
 /**
- * @brief Advance this sequence one step unless its gate flag hit the stop value.
+ * @brief Wait for scripted map scrolling, then run the next step.
  */
-void func_800A7400(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        D_801B2E70 += 1;
-        func_800A7440();
-    }
-}
+WMAP_STEP_WAIT_SCROLL(func_800A7400,
+    D_801B2E70, func_800A7440)
 
 /** @brief Initialize the actor, register its callback, and start the sequence delay. */
 void func_800A7440(void)
@@ -811,16 +805,10 @@ WMAP_STEP_RUNNER(func_800A7668,
 WMAP_STEP_RESET(func_800A76E0, D_801B2E40, D_801B2E44)
 
 /**
- * @brief Advance this sequence one step unless its gate flag hit the stop value.
+ * @brief Wait for scripted map scrolling, then run the next step.
  */
-void func_800A76F8(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        D_801B2E40 += 1;
-        func_800A6540();
-    }
-}
+WMAP_STEP_WAIT_SCROLL(func_800A76F8,
+    D_801B2E40, func_800A6540)
 
 /** @brief World-map step: run the two sub-steps, then advance after the timer. */
 void func_800A7738(void)
@@ -971,16 +959,10 @@ void func_800A7AF4(void)
 }
 
 /**
- * @brief Advance this sequence one step unless its gate flag hit the stop value.
+ * @brief Wait for scripted map scrolling, then run the next step.
  */
-void func_800A7B78(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        D_801B2E40 += 1;
-        func_800A7BB8();
-    }
-}
+WMAP_STEP_WAIT_SCROLL(func_800A7B78,
+    D_801B2E40, func_800A7BB8)
 
 /** @brief Reset two world-map values, set the enable flag, and advance the state. */
 void func_800A7BB8(void)
@@ -1006,16 +988,10 @@ WMAP_STEP_RUNNER(func_800A7BE8,
 WMAP_STEP_RESET(func_800A7C60, D_801B2E48, D_801B2E4C)
 
 /**
- * @brief Advance this sequence one step unless its gate flag hit the stop value.
+ * @brief Wait for scripted map scrolling, then run the next step.
  */
-void func_800A7C78(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        D_801B2E48 += 1;
-        func_800A7CB8();
-    }
-}
+WMAP_STEP_WAIT_SCROLL(func_800A7C78,
+    D_801B2E48, func_800A7CB8)
 
 /** @brief Reset a world-map HUD sprite record, then bump its shared refcount. */
 void func_800A7CB8(void)
@@ -1064,16 +1040,10 @@ void func_800A7D7C(void)
 }
 
 /**
- * @brief Advance this sequence one step unless its gate flag hit the stop value.
+ * @brief Wait for scripted map scrolling, then run the next step.
  */
-void func_800A7E0C(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        D_801B2E48 += 1;
-        func_800A7E4C();
-    }
-}
+WMAP_STEP_WAIT_SCROLL(func_800A7E0C,
+    D_801B2E48, func_800A7E4C)
 
 /**
  * @brief Reset a world-map step slot: arm its wait and advance the step index.
@@ -1116,16 +1086,10 @@ void func_800A7EFC(void)
 }
 
 /**
- * @brief Advance this sequence one step unless its gate flag hit the stop value.
+ * @brief Wait for scripted map scrolling, then run the next step.
  */
-void func_800A7F6C(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        D_801B2E48 += 1;
-        func_800A7FAC();
-    }
-}
+WMAP_STEP_WAIT_SCROLL(func_800A7F6C,
+    D_801B2E48, func_800A7FAC)
 
 /** @brief World-map step handler: clear two flags and advance the step counter. */
 void func_800A7FAC(void)
@@ -1150,16 +1114,10 @@ WMAP_STEP_RUNNER(func_800A7FD0,
 WMAP_STEP_RESET(func_800A8048, D_801B2E50, D_801B2E54)
 
 /**
- * @brief Advance this sequence one step unless its gate flag hit the stop value.
+ * @brief Wait for scripted map scrolling, then run the next step.
  */
-void func_800A8060(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        D_801B2E50 += 1;
-        func_800A80A0();
-    }
-}
+WMAP_STEP_WAIT_SCROLL(func_800A8060,
+    D_801B2E50, func_800A80A0)
 
 /** @brief Reset a world-map HUD sprite record, then bump its shared refcount. */
 void func_800A80A0(void)
@@ -1208,16 +1166,10 @@ void func_800A8164(void)
 }
 
 /**
- * @brief Advance this sequence one step unless its gate flag hit the stop value.
+ * @brief Wait for scripted map scrolling, then run the next step.
  */
-void func_800A81F4(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        D_801B2E50 += 1;
-        func_800A8234();
-    }
-}
+WMAP_STEP_WAIT_SCROLL(func_800A81F4,
+    D_801B2E50, func_800A8234)
 
 /**
  * @brief Reset a world-map step slot: arm its wait and advance the step index.
@@ -1260,16 +1212,10 @@ void func_800A82E4(void)
 }
 
 /**
- * @brief Advance this sequence one step unless its gate flag hit the stop value.
+ * @brief Wait for scripted map scrolling, then run the next step.
  */
-void func_800A8354(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        D_801B2E50 += 1;
-        func_800A8394();
-    }
-}
+WMAP_STEP_WAIT_SCROLL(func_800A8354,
+    D_801B2E50, func_800A8394)
 
 /** @brief World-map step handler: clear two flags and advance the step counter. */
 void func_800A8394(void)
@@ -1294,16 +1240,10 @@ WMAP_STEP_RUNNER(func_800A83B8,
 WMAP_STEP_RESET(func_800A8430, D_801B2E58, D_801B2E5C)
 
 /**
- * @brief Advance this sequence one step unless its gate flag hit the stop value.
+ * @brief Wait for scripted map scrolling, then run the next step.
  */
-void func_800A8448(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        D_801B2E58 += 1;
-        func_800A8488();
-    }
-}
+WMAP_STEP_WAIT_SCROLL(func_800A8448,
+    D_801B2E58, func_800A8488)
 
 /** @brief Reset a world-map HUD sprite record, then bump its shared refcount. */
 void func_800A8488(void)
@@ -1352,16 +1292,10 @@ void func_800A854C(void)
 }
 
 /**
- * @brief Advance this sequence one step unless its gate flag hit the stop value.
+ * @brief Wait for scripted map scrolling, then run the next step.
  */
-void func_800A85DC(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        D_801B2E58 += 1;
-        func_800A861C();
-    }
-}
+WMAP_STEP_WAIT_SCROLL(func_800A85DC,
+    D_801B2E58, func_800A861C)
 
 /** @brief Issue audio command F1, start a 60-tick delay, and advance the state. */
 void func_800A861C(void)
@@ -1404,16 +1338,10 @@ void func_800A8700(void)
 }
 
 /**
- * @brief Advance this sequence one step unless its gate flag hit the stop value.
+ * @brief Wait for scripted map scrolling, then run the next step.
  */
-void func_800A8770(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        D_801B2E58 += 1;
-        func_800A87B0();
-    }
-}
+WMAP_STEP_WAIT_SCROLL(func_800A8770,
+    D_801B2E58, func_800A87B0)
 
 /** @brief World-map step handler: clear two flags and advance the step counter. */
 void func_800A87B0(void)
@@ -1438,16 +1366,10 @@ WMAP_STEP_RUNNER(func_800A87D4,
 WMAP_STEP_RESET(func_800A884C, D_801B2E60, D_801B2E64)
 
 /**
- * @brief Advance this sequence one step unless its gate flag hit the stop value.
+ * @brief Wait for scripted map scrolling, then run the next step.
  */
-void func_800A8864(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        D_801B2E60 += 1;
-        func_800A88A4();
-    }
-}
+WMAP_STEP_WAIT_SCROLL(func_800A8864,
+    D_801B2E60, func_800A88A4)
 
 /** @brief World-map step handler: kick two sub-tasks and expire the step counter. */
 void func_800A88A4(void)
@@ -1472,16 +1394,10 @@ WMAP_STEP_RUNNER(func_800A88D8,
 WMAP_STEP_RESET(func_800A8950, D_801B2E68, D_801B2E6C)
 
 /**
- * @brief Advance this sequence one step unless its gate flag hit the stop value.
+ * @brief Wait for scripted map scrolling, then run the next step.
  */
-void func_800A8968(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        D_801B2E68 += 1;
-        func_800A89A8();
-    }
-}
+WMAP_STEP_WAIT_SCROLL(func_800A8968,
+    D_801B2E68, func_800A89A8)
 
 /** @brief World-map step handler: kick two sub-tasks and expire the step counter. */
 void func_800A89A8(void)

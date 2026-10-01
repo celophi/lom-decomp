@@ -338,12 +338,7 @@ void wmap_land_event_17_sequence_10_step_02(void)
     if (g_wmap_effect_fade_a != 0)
     {
         wmap_draw_model(g_wmap_load_buffer, 0, 4, 53, 0x7800, 1, g_wmap_effect_fade_a, 50, -20, -1);
-        intensity = g_wmap_effect_fade_a - 4;
-        g_wmap_effect_fade_a = intensity;
-        if (intensity < 0)
-        {
-            g_wmap_effect_fade_a = 0;
-        }
+        WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_a, 4, intensity);
     }
     PopMatrix();
     remaining = g_wmap_land_event_17_sequence_10_timer - 1;
@@ -355,86 +350,22 @@ void wmap_land_event_17_sequence_10_step_02(void)
 }
 
 /**
- * @brief Advance a world-map model's spin, draw it while active, then countdown-advance the step.
+ * @brief Move the model along Z, draw it, and fade it until the timer expires.
  */
-void wmap_land_event_17_sequence_11_step_02(void)
-{
-    MATRIX m;
-    s32 x;
-    s32 timer;
-
-    x = g_wmap_effect_model_b_position.vz - 0xDAC;
-    g_wmap_effect_model_b_position.vz = x;
-    if (x < 0x2710)
-    {
-        g_wmap_effect_model_b_position.vz = 0x2710;
-    }
-
-    PushMatrix();
-    RotMatrix(&g_wmap_effect_model_b_rotation, &m);
-    TransMatrix(&m, &g_wmap_zero_translation);
-    SetRotMatrix(&m);
-    SetTransMatrix(&m);
-
-    if (g_wmap_effect_fade_b != 0)
-    {
-        wmap_draw_model(g_wmap_effect_model_pack_1, 0, 4, 0x35, 0x7800, 1, g_wmap_effect_fade_b, -0x19, -0x32, -1);
-        g_wmap_effect_fade_b -= 8;
-        if (g_wmap_effect_fade_b < 0)
-        {
-            g_wmap_effect_fade_b = 0;
-        }
-    }
-
-    PopMatrix();
-    timer = g_wmap_land_event_17_sequence_11_timer - 1;
-    g_wmap_land_event_17_sequence_11_timer = timer;
-    if (timer == 0)
-    {
-        g_wmap_land_event_17_sequence_11_step += 1;
-    }
-}
+WMAP_STEP_DROP_UPDATE_WITH_DRAW(wmap_land_event_17_sequence_11_step_02,
+    g_wmap_land_event_17_sequence_11_step, g_wmap_land_event_17_sequence_11_timer,
+    g_wmap_effect_model_b_rotation, g_wmap_effect_model_b_position, g_wmap_effect_fade_b,
+    -0xDAC, 8,
+    wmap_draw_model(g_wmap_effect_model_pack_1, 0, 4, 0x35, 0x7800, 1, g_wmap_effect_fade_b, -0x19, -0x32, -1))
 
 /**
- * @brief Advance a world-map model's spin, draw it while active, then countdown-advance the step.
+ * @brief Move the model along Z, draw it, and fade it until the timer expires.
  */
-void wmap_land_event_17_sequence_12_step_02(void)
-{
-    MATRIX m;
-    s32 x;
-    s32 timer;
-
-    x = g_wmap_effect_model_c_position.vz - 0xDAC;
-    g_wmap_effect_model_c_position.vz = x;
-    if (x < 0x2710)
-    {
-        g_wmap_effect_model_c_position.vz = 0x2710;
-    }
-
-    PushMatrix();
-    RotMatrix(&g_wmap_effect_model_c_rotation, &m);
-    TransMatrix(&m, &g_wmap_zero_translation);
-    SetRotMatrix(&m);
-    SetTransMatrix(&m);
-
-    if (g_wmap_effect_fade_c != 0)
-    {
-        wmap_draw_model(g_wmap_effect_model_pack_2, 0, 4, 0x35, 0x7800, 1, g_wmap_effect_fade_c, 0xF, -0x37, -1);
-        g_wmap_effect_fade_c -= 8;
-        if (g_wmap_effect_fade_c < 0)
-        {
-            g_wmap_effect_fade_c = 0;
-        }
-    }
-
-    PopMatrix();
-    timer = g_wmap_land_event_17_sequence_12_timer - 1;
-    g_wmap_land_event_17_sequence_12_timer = timer;
-    if (timer == 0)
-    {
-        g_wmap_land_event_17_sequence_12_step += 1;
-    }
-}
+WMAP_STEP_DROP_UPDATE_WITH_DRAW(wmap_land_event_17_sequence_12_step_02,
+    g_wmap_land_event_17_sequence_12_step, g_wmap_land_event_17_sequence_12_timer,
+    g_wmap_effect_model_c_rotation, g_wmap_effect_model_c_position, g_wmap_effect_fade_c,
+    -0xDAC, 8,
+    wmap_draw_model(g_wmap_effect_model_pack_2, 0, 4, 0x35, 0x7800, 1, g_wmap_effect_fade_c, 0xF, -0x37, -1))
 
 /**
  * @brief Initialize a range of world-map per-entry records and schedule the next step.
@@ -471,16 +402,10 @@ WMAP_STEP_RUNNER(wmap_land_event_17_run, D_800D6DEC, 0x6, g_wmap_land_event_17_s
 WMAP_STEP_RESET(wmap_land_event_17_reset, g_wmap_land_event_17_step, g_wmap_land_event_17_timer)
 
 /**
- * @brief Advance this sequence one step unless its gate flag hit the stop value.
+ * @brief Wait for scripted map scrolling, then run the next step.
  */
-void wmap_land_event_17_step_02(void)
-{
-    if (g_wmap_view_scroll_mode != 2)
-    {
-        g_wmap_land_event_17_step += 1;
-        wmap_land_event_17_step_03();
-    }
-}
+WMAP_STEP_WAIT_SCROLL(wmap_land_event_17_step_02,
+    g_wmap_land_event_17_step, wmap_land_event_17_step_03)
 
 WMAP_STEP_START_BLOCKING(wmap_land_event_17_step_03, g_wmap_land_event_17_step, wmap_land_event_17_run_timeline, wmap_land_event_17_wait_idle)
 
@@ -559,16 +484,11 @@ WMAP_STEP_START_TWO_AND_WAIT(wmap_land_event_17_timeline_step_17, g_wmap_land_ev
 WMAP_STEP_WAIT(wmap_land_event_17_timeline_wait_18, g_wmap_land_event_17_timeline_step, g_wmap_land_event_17_timeline_timer)
 
 /**
- * @brief Register three sequence steps, arm the frame timer, and advance the counter.
+ * @brief Start three sequences and set the wait timer.
  */
-void wmap_land_event_17_timeline_step_19(void)
-{
-    wmap_start_sequence(wmap_land_event_17_run_sequence_12);
-    wmap_start_sequence(wmap_land_event_17_run_sequence_8);
-    wmap_start_sequence(wmap_land_event_17_run_sequence_4);
-    g_wmap_land_event_17_timeline_timer = 0x18;
-    g_wmap_land_event_17_timeline_step += 1;
-}
+WMAP_STEP_START_THREE_AND_WAIT(wmap_land_event_17_timeline_step_19,
+    g_wmap_land_event_17_timeline_step, g_wmap_land_event_17_timeline_timer,
+    wmap_land_event_17_run_sequence_12, wmap_land_event_17_run_sequence_8, wmap_land_event_17_run_sequence_4, 0x18)
 
 WMAP_STEP_WAIT(wmap_land_event_17_timeline_wait_20, g_wmap_land_event_17_timeline_step, g_wmap_land_event_17_timeline_timer)
 
@@ -583,16 +503,11 @@ WMAP_STEP_START_TWO_AND_WAIT(wmap_land_event_17_timeline_step_23, g_wmap_land_ev
 WMAP_STEP_WAIT(wmap_land_event_17_timeline_wait_24, g_wmap_land_event_17_timeline_step, g_wmap_land_event_17_timeline_timer)
 
 /**
- * @brief Register three sequence steps, arm the frame timer, and advance the counter.
+ * @brief Start three sequences and set the wait timer.
  */
-void wmap_land_event_17_timeline_step_25(void)
-{
-    wmap_start_sequence(wmap_land_event_17_run_sequence_1);
-    wmap_start_sequence(wmap_land_event_17_run_sequence_6);
-    wmap_start_sequence(wmap_land_event_17_run_sequence_12);
-    g_wmap_land_event_17_timeline_timer = 0x4;
-    g_wmap_land_event_17_timeline_step += 1;
-}
+WMAP_STEP_START_THREE_AND_WAIT(wmap_land_event_17_timeline_step_25,
+    g_wmap_land_event_17_timeline_step, g_wmap_land_event_17_timeline_timer,
+    wmap_land_event_17_run_sequence_1, wmap_land_event_17_run_sequence_6, wmap_land_event_17_run_sequence_12, 0x4)
 
 WMAP_STEP_WAIT(wmap_land_event_17_timeline_wait_26, g_wmap_land_event_17_timeline_step, g_wmap_land_event_17_timeline_timer)
 
@@ -628,16 +543,11 @@ WMAP_STEP_START_TWO_AND_WAIT(wmap_land_event_17_timeline_step_35, g_wmap_land_ev
 WMAP_STEP_WAIT(wmap_land_event_17_timeline_wait_36, g_wmap_land_event_17_timeline_step, g_wmap_land_event_17_timeline_timer)
 
 /**
- * @brief Register three sequence steps, arm the frame timer, and advance the counter.
+ * @brief Start three sequences and set the wait timer.
  */
-void wmap_land_event_17_timeline_step_37(void)
-{
-    wmap_start_sequence(wmap_land_event_17_run_sequence_12);
-    wmap_start_sequence(wmap_land_event_17_run_sequence_8);
-    wmap_start_sequence(wmap_land_event_17_run_sequence_4);
-    g_wmap_land_event_17_timeline_timer = 0x18;
-    g_wmap_land_event_17_timeline_step += 1;
-}
+WMAP_STEP_START_THREE_AND_WAIT(wmap_land_event_17_timeline_step_37,
+    g_wmap_land_event_17_timeline_step, g_wmap_land_event_17_timeline_timer,
+    wmap_land_event_17_run_sequence_12, wmap_land_event_17_run_sequence_8, wmap_land_event_17_run_sequence_4, 0x18)
 
 WMAP_STEP_WAIT(wmap_land_event_17_timeline_wait_38, g_wmap_land_event_17_timeline_step, g_wmap_land_event_17_timeline_timer)
 
@@ -697,30 +607,20 @@ WMAP_STEP_START_TWO_AND_WAIT(wmap_land_event_17_timeline_step_53, g_wmap_land_ev
 WMAP_STEP_WAIT(wmap_land_event_17_timeline_wait_54, g_wmap_land_event_17_timeline_step, g_wmap_land_event_17_timeline_timer)
 
 /**
- * @brief Register three sequence steps, arm the frame timer, and advance the counter.
+ * @brief Start three sequences and set the wait timer.
  */
-void wmap_land_event_17_timeline_step_55(void)
-{
-    wmap_start_sequence(wmap_land_event_17_run_sequence_12);
-    wmap_start_sequence(wmap_land_event_17_run_sequence_8);
-    wmap_start_sequence(wmap_land_event_17_run_sequence_4);
-    g_wmap_land_event_17_timeline_timer = 0x18;
-    g_wmap_land_event_17_timeline_step += 1;
-}
+WMAP_STEP_START_THREE_AND_WAIT(wmap_land_event_17_timeline_step_55,
+    g_wmap_land_event_17_timeline_step, g_wmap_land_event_17_timeline_timer,
+    wmap_land_event_17_run_sequence_12, wmap_land_event_17_run_sequence_8, wmap_land_event_17_run_sequence_4, 0x18)
 
 WMAP_STEP_WAIT(wmap_land_event_17_timeline_wait_56, g_wmap_land_event_17_timeline_step, g_wmap_land_event_17_timeline_timer)
 
 /**
- * @brief Register three sequence steps, arm the frame timer, and advance the counter.
+ * @brief Start three sequences and set the wait timer.
  */
-void wmap_land_event_17_timeline_step_57(void)
-{
-    wmap_start_sequence(wmap_land_event_17_run_sequence_9);
-    wmap_start_sequence(wmap_land_event_17_run_sequence_10);
-    wmap_start_sequence(wmap_land_event_17_run_sequence_3);
-    g_wmap_land_event_17_timeline_timer = 0x8;
-    g_wmap_land_event_17_timeline_step += 1;
-}
+WMAP_STEP_START_THREE_AND_WAIT(wmap_land_event_17_timeline_step_57,
+    g_wmap_land_event_17_timeline_step, g_wmap_land_event_17_timeline_timer,
+    wmap_land_event_17_run_sequence_9, wmap_land_event_17_run_sequence_10, wmap_land_event_17_run_sequence_3, 0x8)
 
 WMAP_STEP_WAIT(wmap_land_event_17_timeline_wait_58, g_wmap_land_event_17_timeline_step, g_wmap_land_event_17_timeline_timer)
 
@@ -730,13 +630,10 @@ WMAP_STEP_START_TWO_AND_WAIT(wmap_land_event_17_timeline_step_59, g_wmap_land_ev
 WMAP_STEP_WAIT(wmap_land_event_17_timeline_wait_60, g_wmap_land_event_17_timeline_step, g_wmap_land_event_17_timeline_timer)
 
 /**
- * @brief World-map step handler: clear the shared flag and advance the step counter.
+ * @brief Clear the blocking flag and finish the timeline.
  */
-void wmap_land_event_17_timeline_finish(void)
-{
-    g_wmap_sequence_busy = 0;
-    g_wmap_land_event_17_timeline_step += 1;
-}
+WMAP_STEP_FINISH_BLOCKING(wmap_land_event_17_timeline_finish,
+    g_wmap_land_event_17_timeline_step)
 
 WMAP_STEP_RUNNER(wmap_land_event_17_run_sequence_1, D_800D6EFC, 0x4, g_wmap_land_event_17_sequence_1_step, g_wmap_land_event_17_sequence_1_timer)
 
@@ -855,20 +752,12 @@ WMAP_STEP_RUNNER(wmap_land_event_17_run_sequence_13, D_800D6FBC, 0x8, g_wmap_lan
 
 WMAP_STEP_RESET(wmap_land_event_17_sequence_13_reset, g_wmap_land_event_17_sequence_13_step, g_wmap_land_event_17_sequence_13_timer)
 
-/** @brief Draw the sequence effect, grow its scale, and update the countdown. */
-void wmap_land_event_17_sequence_13_step_02(void)
-{
-    s32 remaining;
-
-    func_8006B328(0x50, 0x7C, 2, -1, 1, 2, 0x78, 8, -0x32, 0x64, -0x28, 0x50, 0x64, 0, 0x81, 2, 1);
-    D_801B25D8 += 8;
-    remaining = g_wmap_land_event_17_sequence_13_timer - 1;
-    g_wmap_land_event_17_sequence_13_timer = remaining;
-    if (remaining == 0)
-    {
-        g_wmap_land_event_17_sequence_13_step += 1;
-    }
-}
+/**
+ * @brief Update the particles and increase the shared fade value until the timer expires.
+ */
+WMAP_STEP_UPDATE_AND_RAMP(wmap_land_event_17_sequence_13_step_02, g_wmap_land_event_17_sequence_13_step, g_wmap_land_event_17_sequence_13_timer,
+                          D_801B25D8, 8,
+                          func_8006B328(0x50, 0x7C, 2, -1, 1, 2, 0x78, 8, -0x32, 0x64, -0x28, 0x50, 0x64, 0, 0x81, 2, 1))
 
 WMAP_STEP_ARM_TIMER(wmap_land_event_17_sequence_13_step_03, g_wmap_land_event_17_sequence_13_step, g_wmap_land_event_17_sequence_13_timer, 0x58,
                     wmap_land_event_17_sequence_13_step_04)
@@ -879,15 +768,10 @@ WMAP_STEP_UPDATE_AND_WAIT(wmap_land_event_17_sequence_13_step_04,
     func_8006B328(0x50, 0x7C, 2, -1, 1, 2, 0x78, 8, -0x32, 0x64, -0x28, 0x50, 0x64, 0, 0x81, 2, 1))
 
 /**
- * @brief Clear the sub-flag, set the sequence parameter, advance the counter, and run the handler.
+ * @brief Stop spawning particles and keep updating those already active.
  */
-void wmap_land_event_17_sequence_13_step_05(void)
-{
-    D_800DCEAC = 0;
-    g_wmap_land_event_17_sequence_13_timer = 0x64;
-    g_wmap_land_event_17_sequence_13_step += 1;
-    wmap_land_event_17_sequence_13_step_06();
-}
+WMAP_STEP_STOP_PARTICLE_SPAWNS(wmap_land_event_17_sequence_13_step_05, g_wmap_land_event_17_sequence_13_step, g_wmap_land_event_17_sequence_13_timer,
+                              D_800DCEAC, 0x64, wmap_land_event_17_sequence_13_step_06)
 
 /** @brief Update the effect until the step timer expires. */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_event_17_sequence_13_step_06,

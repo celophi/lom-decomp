@@ -182,12 +182,7 @@ void wmap_land_effect_04_sequence_6_step_02(void)
     wmap_draw_model_default(g_wmap_load_buffer, 0, 16, 53, 0x7800, 1, D_801B2468);
     D_801B2498.vz = (u16)(D_801B2498.vz - 4);
     PopMatrix();
-    intensity = D_801B2468 + 8;
-    D_801B2468 = intensity;
-    if (intensity >= 130)
-    {
-        D_801B2468 = 129;
-    }
+    WMAP_MODEL_FADE_IN(D_801B2468, 8, 129, intensity);
     remaining = g_wmap_land_effect_04_sequence_6_timer - 1;
     g_wmap_land_effect_04_sequence_6_timer = remaining;
     if (remaining == 0)
@@ -210,12 +205,7 @@ void wmap_land_effect_04_sequence_6_step_04(void)
     wmap_draw_model_default(g_wmap_load_buffer, 0, 16, 53, 0x7800, 1, D_801B2468);
     D_801B2498.vz = (u16)(D_801B2498.vz - 4);
     PopMatrix();
-    intensity = D_801B2468 - 4;
-    D_801B2468 = intensity;
-    if (intensity < 0)
-    {
-        D_801B2468 = 0;
-    }
+    WMAP_MODEL_FADE_OUT(D_801B2468, 4, intensity);
     remaining = g_wmap_land_effect_04_sequence_6_timer - 1;
     g_wmap_land_effect_04_sequence_6_timer = remaining;
     if (remaining == 0)
@@ -436,13 +426,10 @@ void wmap_land_effect_04_timeline_step_17(void)
 WMAP_STEP_WAIT(wmap_land_effect_04_timeline_wait_18, g_wmap_land_effect_04_timeline_step, g_wmap_land_effect_04_timeline_timer)
 
 /**
- * @brief World-map step handler: clear the shared flag and advance the step counter.
+ * @brief Clear the blocking flag and finish the timeline.
  */
-void wmap_land_effect_04_timeline_finish(void)
-{
-    g_wmap_sequence_busy = 0;
-    g_wmap_land_effect_04_timeline_step += 1;
-}
+WMAP_STEP_FINISH_BLOCKING(wmap_land_effect_04_timeline_finish,
+    g_wmap_land_effect_04_timeline_step)
 
 WMAP_STEP_RUNNER(wmap_land_effect_04_run_sequence_1, D_800D4E38, 0x4, g_wmap_land_effect_04_sequence_1_step, g_wmap_land_effect_04_sequence_1_timer)
 
@@ -596,20 +583,10 @@ WMAP_STEP_RUNNER(wmap_land_effect_04_run_sequence_9, D_800D4EC0, 0x6, g_wmap_lan
 WMAP_STEP_RESET(wmap_land_effect_04_sequence_9_reset, g_wmap_land_effect_04_sequence_9_step, g_wmap_land_effect_04_sequence_9_timer)
 
 /**
- * @brief Reset a range of world-map actor configs, arm the timer, and advance the step.
+ * @brief Start fading the sprite range and run its first update.
  */
-void wmap_land_effect_04_sequence_9_step_03(void)
-{
-    s32 i;
-
-    for (i = 0x64; i < 0x82; i++)
-    {
-        g_wmap_sprite_actors[i].target_shade = 0;
-        g_wmap_sprite_actors[i].shade_step = 2;
-    }
-    g_wmap_land_effect_04_sequence_9_timer = 0x40;
-    g_wmap_land_effect_04_sequence_9_step += 1;
-    wmap_land_effect_04_sequence_9_step_04();
-}
+WMAP_STEP_FADE_ACTOR_RANGE(wmap_land_effect_04_sequence_9_step_03,
+    g_wmap_land_effect_04_sequence_9_step, g_wmap_land_effect_04_sequence_9_timer,
+    0x64, 0x82, 2, 0x40, wmap_land_effect_04_sequence_9_step_04)
 
 WMAP_STEP_ADVANCE(wmap_land_effect_04_sequence_9_end, g_wmap_land_effect_04_sequence_9_step)

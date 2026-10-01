@@ -313,15 +313,11 @@ WMAP_STEP_START_AND_WAIT(wmap_land_effect_21_timeline_step_03, g_wmap_land_effec
 WMAP_STEP_WAIT(wmap_land_effect_21_timeline_wait_04, g_wmap_land_effect_21_timeline_step, g_wmap_land_effect_21_timeline_timer)
 
 /**
- * @brief Register a world-map step callback and schedule its wait timer.
+ * @brief Hide the placement overlay, start the sequence, and set the wait timer.
  */
-void wmap_land_effect_21_timeline_step_05(void)
-{
-    g_wmap_placement_overlay_hidden = 1;
-    wmap_start_sequence(wmap_land_effect_21_run_sequence_1);
-    g_wmap_land_effect_21_timeline_timer = 0x34;
-    g_wmap_land_effect_21_timeline_step += 1;
-}
+WMAP_STEP_HIDE_AND_START(wmap_land_effect_21_timeline_step_05,
+    g_wmap_land_effect_21_timeline_step, g_wmap_land_effect_21_timeline_timer,
+    g_wmap_placement_overlay_hidden, wmap_land_effect_21_run_sequence_1, 0x34)
 
 WMAP_STEP_WAIT(wmap_land_effect_21_timeline_wait_06, g_wmap_land_effect_21_timeline_step, g_wmap_land_effect_21_timeline_timer)
 

@@ -167,7 +167,7 @@ void wmap_land_effect_32_sequence_2_step_01(void)
     wmap_land_effect_32_sequence_2_step_02();
 }
 
-/** @brief World-map animated element: advance phase, draw, and tick refcount. */
+/** @brief Move the model closer, draw its fade-in, and advance its countdown. */
 void wmap_land_effect_32_sequence_3_step_02(void)
 {
     s32 *p = &g_wmap_effect_model_d_position;
@@ -186,12 +186,7 @@ void wmap_land_effect_32_sequence_3_step_02(void)
     q = &g_wmap_effect_model_d_rotation;
     wmap_set_model_transform(p, q);
     wmap_draw_model_default(g_wmap_effect_model_pack_3, 0, 0xC, 0x35, 0x7800, 1, D_80182DE4);
-    t = D_80182DE4 + 0x10;
-    D_80182DE4 = t;
-    if (t >= 0x82)
-    {
-        D_80182DE4 = 0x81;
-    }
+    WMAP_MODEL_FADE_IN(D_80182DE4, 0x10, 0x81, t);
     *(u16 *)((u8 *)q + 4) += 2;
     PopMatrix();
     c = g_wmap_land_effect_32_sequence_3_timer - 1;
@@ -202,7 +197,7 @@ void wmap_land_effect_32_sequence_3_step_02(void)
     }
 }
 
-/** @brief World-map animated element: advance phase, draw while active, then tick refcount. */
+/** @brief Move the model closer, draw its fade-out, and advance its countdown. */
 void wmap_land_effect_32_sequence_3_step_04(void)
 {
     s32 *p = &g_wmap_effect_model_d_position;
@@ -223,12 +218,7 @@ void wmap_land_effect_32_sequence_3_step_04(void)
     if (D_80182DE4 != 0)
     {
         wmap_draw_model_default(g_wmap_effect_model_pack_3, 0, 0xC, 0x35, 0x7800, 1, D_80182DE4);
-        t = D_80182DE4 - 2;
-        D_80182DE4 = t;
-        if (t < 0)
-        {
-            D_80182DE4 = 0;
-        }
+        WMAP_MODEL_FADE_OUT(D_80182DE4, 2, t);
         *(u16 *)((u8 *)q + 4) += 2;
     }
     PopMatrix();
@@ -240,7 +230,7 @@ void wmap_land_effect_32_sequence_3_step_04(void)
     }
 }
 
-/** @brief World-map animated element: advance phase, draw, and tick refcount. */
+/** @brief Move the model closer, draw its fade-in, and advance its countdown. */
 void wmap_land_effect_32_sequence_4_step_02(void)
 {
     s32 *p = &D_80139898;
@@ -259,12 +249,7 @@ void wmap_land_effect_32_sequence_4_step_02(void)
     q = &D_801B2670;
     wmap_set_model_transform(p, q);
     wmap_draw_model_default(D_8011CF2C, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_a);
-    t = g_wmap_effect_fade_a + 0x10;
-    g_wmap_effect_fade_a = t;
-    if (t >= 0x82)
-    {
-        g_wmap_effect_fade_a = 0x81;
-    }
+    WMAP_MODEL_FADE_IN(g_wmap_effect_fade_a, 0x10, 0x81, t);
     *(u16 *)((u8 *)q + 4) -= 3;
     PopMatrix();
     c = g_wmap_land_effect_32_sequence_4_timer - 1;
@@ -275,7 +260,7 @@ void wmap_land_effect_32_sequence_4_step_02(void)
     }
 }
 
-/** @brief World-map animated element: advance phase, draw while active, then tick refcount. */
+/** @brief Move the model closer, draw its fade-out, and advance its countdown. */
 void wmap_land_effect_32_sequence_4_step_04(void)
 {
     s32 *p = &D_80139898;
@@ -296,12 +281,7 @@ void wmap_land_effect_32_sequence_4_step_04(void)
     if (g_wmap_effect_fade_a != 0)
     {
         wmap_draw_model_default(D_8011CF2C, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_a);
-        t = g_wmap_effect_fade_a - 2;
-        g_wmap_effect_fade_a = t;
-        if (t < 0)
-        {
-            g_wmap_effect_fade_a = 0;
-        }
+        WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_a, 2, t);
         *(u16 *)((u8 *)q + 4) -= 3;
     }
     PopMatrix();
@@ -313,7 +293,7 @@ void wmap_land_effect_32_sequence_4_step_04(void)
     }
 }
 
-/** @brief World-map animated element: advance phase, draw, and tick refcount. */
+/** @brief Move the model closer, draw its fade-in, and advance its countdown. */
 void wmap_land_effect_32_sequence_5_step_02(void)
 {
     s32 *p = &D_801B2660;
@@ -332,12 +312,7 @@ void wmap_land_effect_32_sequence_5_step_02(void)
     q = &D_801B2678;
     wmap_set_model_transform(p, q);
     wmap_draw_model_default(D_8011CF30, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_b);
-    t = g_wmap_effect_fade_b + 0x10;
-    g_wmap_effect_fade_b = t;
-    if (t >= 0x82)
-    {
-        g_wmap_effect_fade_b = 0x81;
-    }
+    WMAP_MODEL_FADE_IN(g_wmap_effect_fade_b, 0x10, 0x81, t);
     *(u16 *)((u8 *)q + 4) += 4;
     PopMatrix();
     c = g_wmap_land_effect_32_sequence_5_timer - 1;
@@ -348,7 +323,7 @@ void wmap_land_effect_32_sequence_5_step_02(void)
     }
 }
 
-/** @brief World-map animated element: advance phase, draw while active, then tick refcount. */
+/** @brief Move the model closer, draw its fade-out, and advance its countdown. */
 void wmap_land_effect_32_sequence_5_step_04(void)
 {
     s32 *p = &D_801B2660;
@@ -369,12 +344,7 @@ void wmap_land_effect_32_sequence_5_step_04(void)
     if (g_wmap_effect_fade_b != 0)
     {
         wmap_draw_model_default(D_8011CF30, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_b);
-        t = g_wmap_effect_fade_b - 2;
-        g_wmap_effect_fade_b = t;
-        if (t < 0)
-        {
-            g_wmap_effect_fade_b = 0;
-        }
+        WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_b, 2, t);
         *(u16 *)((u8 *)q + 4) += 4;
     }
     PopMatrix();
@@ -420,12 +390,7 @@ void wmap_land_effect_32_sequence_7_step_02(void)
     if (g_wmap_effect_fade_d != 0)
     {
         wmap_draw_model_default(g_wmap_effect_model_pack_1, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_d);
-        intensity = g_wmap_effect_fade_d - 6;
-        g_wmap_effect_fade_d = intensity;
-        if (intensity < 0)
-        {
-            g_wmap_effect_fade_d = 0;
-        }
+        WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_d, 6, intensity);
     }
     PopMatrix();
     remaining = g_wmap_land_effect_32_sequence_7_timer - 1;

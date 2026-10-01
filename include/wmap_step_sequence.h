@@ -2,10 +2,10 @@
 #define WMAP_STEP_SEQUENCE_H
 
 /*
- * Definitions of the step functions every WMAP effect sequence repeats. Each
- * macro defines one function; the model and naming are described with
- * WmapSequenceCallback in wmap_sequence_runtime.h. Steps that do more than
- * these patterns are written out in their own files.
+ * Shared source for repeated WMAP sequence steps and model fade calculations.
+ * The runner model and naming are described with WmapSequenceCallback in
+ * wmap_sequence_runtime.h. Steps with different drawing or update behavior
+ * keep that code in their own files.
  */
 
 #include "wmap_sequence_runtime.h"
@@ -120,6 +120,30 @@
     }
 
 /**
+ * @brief Define a step that updates an effect and increases a value each frame.
+ * @param name Step function name.
+ * @param step The sequence's step global.
+ * @param timer The sequence's timer global.
+ * @param value Shared value to increase after the update.
+ * @param amount Amount added each frame.
+ * @param update_call Function call to run before increasing the value.
+ */
+#define WMAP_STEP_UPDATE_AND_RAMP(name, step, timer, value, amount, update_call)         \
+    void name(void)                                                                      \
+    {                                                                                    \
+        s32 remaining;                                                                   \
+                                                                                         \
+        update_call;                                                                     \
+        (value) += (amount);                                                             \
+        remaining = (timer) - 1;                                                         \
+        (timer) = remaining;                                                             \
+        if (remaining == 0)                                                              \
+        {                                                                                \
+            (step) += 1;                                                                 \
+        }                                                                                \
+    }
+
+/**
  * @brief Define a step that runs two updates in order, then counts down.
  * @param name Step function name.
  * @param step The sequence's step global.
@@ -211,6 +235,32 @@
     }
 
 /**
+ * @brief Define a step that fades a range of sprite actors to zero.
+ * @param name Step function name.
+ * @param step The sequence's step global.
+ * @param timer The sequence's timer global.
+ * @param first First actor slot to fade.
+ * @param end First actor slot after the range.
+ * @param shade_delta Amount the animation update subtracts from each actor's shade.
+ * @param frames Frames the following update step runs.
+ * @param next Update step, called immediately after advancing.
+ */
+#define WMAP_STEP_FADE_ACTOR_RANGE(name, step, timer, first, end, shade_delta, frames, next) \
+    void name(void)                                                                      \
+    {                                                                                    \
+        s32 i;                                                                           \
+                                                                                         \
+        for (i = (first); i < (end); i++)                                                \
+        {                                                                                \
+            g_wmap_sprite_actors[i].target_shade = 0;                                    \
+            g_wmap_sprite_actors[i].shade_step = (shade_delta);                          \
+        }                                                                                \
+        (timer) = (frames);                                                              \
+        (step) += 1;                                                                     \
+        next();                                                                          \
+    }
+
+/**
  * @brief Define a step that stops spawning particles and keeps updating them.
  * @param name Step function name.
  * @param step The sequence's step global.
@@ -224,6 +274,24 @@
     {                                                                                    \
         (timer) = (frames);                                                              \
         (spawn_interval) = -1;                                                           \
+        (step) += 1;                                                                     \
+        next();                                                                          \
+    }
+
+/**
+ * @brief Define a step that clears a particle group's remaining spawn count.
+ * @param name Step function name.
+ * @param step The sequence's step global.
+ * @param timer The sequence's timer global.
+ * @param spawn_count Remaining spawn count; zero disables new particles.
+ * @param frames Frames to keep updating the existing particles.
+ * @param next Update step, called immediately after advancing.
+ */
+#define WMAP_STEP_STOP_PARTICLE_SPAWNS(name, step, timer, spawn_count, frames, next)     \
+    void name(void)                                                                      \
+    {                                                                                    \
+        (spawn_count) = 0;                                                               \
+        (timer) = (frames);                                                              \
         (step) += 1;                                                                     \
         next();                                                                          \
     }
@@ -253,6 +321,25 @@
             step += 1;                                                                                                                                         \
             next();                                                                                                                                            \
         }                                                                                                                                                      \
+    }
+
+/** @brief Scroll mode used while a sequence moves the map to a target. */
+#define WMAP_STEP_SCRIPTED_SCROLL_MODE 2
+
+/**
+ * @brief Define a step that waits for scripted map scrolling, then runs the next step.
+ * @param name Step function name.
+ * @param step The sequence's step global.
+ * @param next Step to run once the scroll mode clears.
+ */
+#define WMAP_STEP_WAIT_SCROLL(name, step, next)                                          \
+    void name(void)                                                                      \
+    {                                                                                    \
+        if (g_wmap_view_scroll_mode != WMAP_STEP_SCRIPTED_SCROLL_MODE)                   \
+        {                                                                                \
+            (step) += 1;                                                                 \
+            next();                                                                      \
+        }                                                                                \
     }
 
 /**
@@ -287,6 +374,60 @@
         wmap_start_sequence(second);                                                                                                                           \
         timer = frames;                                                                                                                                        \
         step += 1;                                                                                                                                             \
+    }
+
+/**
+ * @brief Define a step that starts three sequences in order and sets the wait timer.
+ * @param name Step function name.
+ * @param step The sequence's step global.
+ * @param timer The sequence's timer global.
+ * @param first Runner of the first sequence to start.
+ * @param second Runner of the second sequence to start.
+ * @param third Runner of the third sequence to start.
+ * @param frames Frames the next step waits.
+ */
+#define WMAP_STEP_START_THREE_AND_WAIT(name, step, timer, first, second, third, frames)  \
+    void name(void)                                                                      \
+    {                                                                                    \
+        wmap_start_sequence(first);                                                      \
+        wmap_start_sequence(second);                                                     \
+        wmap_start_sequence(third);                                                      \
+        (timer) = (frames);                                                              \
+        (step) += 1;                                                                     \
+    }
+
+/**
+ * @brief Define a step that hides an overlay or transition mesh and sets the wait timer.
+ * @param name Step function name.
+ * @param step The sequence's step global.
+ * @param timer The sequence's timer global.
+ * @param hidden Visibility flag to set; 1 hides the overlay or mesh.
+ * @param frames Frames the next step waits.
+ */
+#define WMAP_STEP_HIDE_AND_WAIT(name, step, timer, hidden, frames)                       \
+    void name(void)                                                                      \
+    {                                                                                    \
+        (hidden) = 1;                                                                    \
+        (timer) = (frames);                                                              \
+        (step) += 1;                                                                     \
+    }
+
+/**
+ * @brief Define a step that hides an overlay, starts a sequence, and sets the wait timer.
+ * @param name Step function name.
+ * @param step The sequence's step global.
+ * @param timer The sequence's timer global.
+ * @param hidden Visibility flag to set before starting the sequence.
+ * @param runner Runner of the sequence to start.
+ * @param frames Frames the next step waits.
+ */
+#define WMAP_STEP_HIDE_AND_START(name, step, timer, hidden, runner, frames)              \
+    void name(void)                                                                      \
+    {                                                                                    \
+        (hidden) = 1;                                                                    \
+        wmap_start_sequence(runner);                                                     \
+        (timer) = (frames);                                                              \
+        (step) += 1;                                                                     \
     }
 
 /**
@@ -342,6 +483,40 @@
         {                                                                                                                                                      \
             step += 1;                                                                                                                                         \
         }                                                                                                                                                      \
+    }
+
+/**
+ * @brief Increase a model's shade and clamp it to the maximum.
+ * @param shade Model's RGB multiplier, in units of 1/128.
+ * @param amount Amount added before drawing the next frame.
+ * @param maximum Highest shade allowed.
+ * @param result s32 scratch variable receiving the shade before clamping.
+ * @note A do/while wrapper changes how the old compiler schedules the fade.
+ */
+#define WMAP_MODEL_FADE_IN(shade, amount, maximum, result)                               \
+    {                                                                                    \
+        (result) = (shade) + (amount);                                                   \
+        (shade) = (result);                                                              \
+        if ((result) > (maximum))                                                        \
+        {                                                                                \
+            (shade) = (maximum);                                                         \
+        }                                                                                \
+    }
+
+/**
+ * @brief Decrease a model's shade and clamp it to zero.
+ * @param shade Model's RGB multiplier, in units of 1/128.
+ * @param amount Amount subtracted before drawing the next frame.
+ * @param result s32 scratch variable receiving the shade before clamping.
+ */
+#define WMAP_MODEL_FADE_OUT(shade, amount, result)                                       \
+    {                                                                                    \
+        (result) = (shade) - (amount);                                                   \
+        (shade) = (result);                                                              \
+        if ((result) < 0)                                                                \
+        {                                                                                \
+            (shade) = 0;                                                                 \
+        }                                                                                \
     }
 
 /**
@@ -401,6 +576,54 @@
 #define WMAP_DROP_BLEND_MODE 1
 
 /**
+ * @brief Define a model drop update with an explicit draw call.
+ * @param name Step function name.
+ * @param step The sequence's step global.
+ * @param timer Frames left before advancing the step.
+ * @param rotation The model's rotation.
+ * @param position The model's position, clamped to WMAP_DROP_MIN_Z.
+ * @param shade The model's shade global, clamped to zero after drawing.
+ * @param z_delta Signed Z movement per frame.
+ * @param shade_step Amount subtracted from the shade each frame.
+ * @param draw_call Model draw call, including its screen offsets and render settings.
+ */
+#define WMAP_STEP_DROP_UPDATE_WITH_DRAW(name, step, timer, rotation, position, shade, z_delta, shade_step, draw_call) \
+    void name(void)                                                                      \
+    {                                                                                    \
+        MATRIX transform;                                                                \
+        s32 depth;                                                                       \
+                                                                                         \
+        depth = (position).vz + (z_delta);                                               \
+        (position).vz = depth;                                                           \
+        if (depth < WMAP_DROP_MIN_Z)                                                     \
+        {                                                                                \
+            (position).vz = WMAP_DROP_MIN_Z;                                             \
+        }                                                                                \
+                                                                                         \
+        PushMatrix();                                                                    \
+        RotMatrix(&(rotation), &transform);                                              \
+        TransMatrix(&transform, &g_wmap_zero_translation);                               \
+        SetRotMatrix(&transform);                                                        \
+        SetTransMatrix(&transform);                                                      \
+                                                                                         \
+        if ((shade) != 0)                                                                \
+        {                                                                                \
+            draw_call;                                                                   \
+            (shade) -= (shade_step);                                                     \
+            if ((shade) < 0)                                                             \
+            {                                                                            \
+                (shade) = 0;                                                             \
+            }                                                                            \
+        }                                                                                \
+                                                                                         \
+        PopMatrix();                                                                     \
+        if (--(timer) == 0)                                                              \
+        {                                                                                \
+            (step) += 1;                                                                 \
+        }                                                                                \
+    }
+
+/**
  * @brief Define a model drop update: move along Z, draw, fade and count down.
  * @param name Step function name.
  * @param step The sequence's step global.
@@ -413,43 +636,67 @@
  * @param shade_step Amount subtracted from the shade each frame.
  * @note The timer keeps running after the model has faded out.
  */
-#define WMAP_STEP_DROP_UPDATE(name, step, timer, rotation, position, shade, resource,\
-                              z_delta, shade_step)                                  \
-    void name(void)                                                                 \
-    {                                                                               \
-        MATRIX transform;                                                           \
-        s32 depth;                                                                  \
-                                                                                    \
-        depth = (position).vz + (z_delta);                                          \
-        (position).vz = depth;                                                      \
-        if (depth < WMAP_DROP_MIN_Z)                                                \
-        {                                                                           \
-            (position).vz = WMAP_DROP_MIN_Z;                                        \
-        }                                                                           \
-                                                                                    \
-        PushMatrix();                                                               \
-        RotMatrix(&(rotation), &transform);                                         \
-        TransMatrix(&transform, &g_wmap_zero_translation);                          \
-        SetRotMatrix(&transform);                                                   \
-        SetTransMatrix(&transform);                                                 \
-                                                                                    \
-        if ((shade) != 0)                                                           \
-        {                                                                           \
-            wmap_draw_model_default((resource), 0, WMAP_DROP_OT_INDEX,              \
-                                    WMAP_DROP_TPAGE, WMAP_DROP_CLUT,                \
-                                    WMAP_DROP_BLEND_MODE, (shade));                 \
-            (shade) -= (shade_step);                                                \
-            if ((shade) < 0)                                                        \
-            {                                                                       \
-                (shade) = 0;                                                        \
-            }                                                                       \
-        }                                                                           \
-                                                                                    \
-        PopMatrix();                                                                \
-        if (--(timer) == 0)                                                         \
-        {                                                                           \
-            (step) += 1;                                                            \
-        }                                                                           \
+#define WMAP_STEP_DROP_UPDATE(name, step, timer, rotation, position, shade, resource, z_delta, shade_step) \
+    WMAP_STEP_DROP_UPDATE_WITH_DRAW(name, step, timer, rotation, position, shade,        \
+        z_delta, shade_step,                                                             \
+        wmap_draw_model_default((resource), 0, WMAP_DROP_OT_INDEX, WMAP_DROP_TPAGE,      \
+            WMAP_DROP_CLUT, WMAP_DROP_BLEND_MODE, (shade)))
+
+/**
+ * @brief Define a model drop update using map rotation and the standard draw settings.
+ * @param name Step function name.
+ * @param step The sequence's step global.
+ * @param timer Frames left before advancing the step.
+ * @param rotation Rotation passed to the map renderer.
+ * @param position The model's position, clamped to WMAP_DROP_MIN_Z.
+ * @param shade The model's shade global, clamped to zero after drawing.
+ * @param resource Resource table containing the model at index zero.
+ * @param z_delta Signed Z movement per frame.
+ * @param shade_step Amount subtracted from the shade each frame.
+ */
+#define WMAP_STEP_MAP_DROP_UPDATE(name, step, timer, rotation, position, shade, resource, z_delta, shade_step) \
+    void name(void)                                                                      \
+    {                                                                                    \
+        s32 depth;                                                                       \
+                                                                                         \
+        depth = (position).vz + (z_delta);                                               \
+        (position).vz = depth;                                                           \
+        if (depth < WMAP_DROP_MIN_Z)                                                     \
+        {                                                                                \
+            (position).vz = WMAP_DROP_MIN_Z;                                             \
+        }                                                                                \
+                                                                                         \
+        PushMatrix();                                                                    \
+        wmap_set_map_rotation(&(rotation));                                              \
+                                                                                         \
+        if ((shade) != 0)                                                                \
+        {                                                                                \
+            wmap_draw_model((resource), 0, WMAP_DROP_OT_INDEX, WMAP_DROP_TPAGE,          \
+                WMAP_DROP_CLUT, WMAP_DROP_BLEND_MODE, (shade), 0, 0, -1);                \
+            (shade) -= (shade_step);                                                     \
+            if ((shade) < 0)                                                             \
+            {                                                                            \
+                (shade) = 0;                                                             \
+            }                                                                            \
+        }                                                                                \
+                                                                                         \
+        PopMatrix();                                                                     \
+        if (--(timer) == 0)                                                              \
+        {                                                                                \
+            (step) += 1;                                                                 \
+        }                                                                                \
+    }
+
+/**
+ * @brief Define the last step of a blocking sequence: clear the flag and finish.
+ * @param name Step function name.
+ * @param step The sequence's step global.
+ */
+#define WMAP_STEP_FINISH_BLOCKING(name, step)                                            \
+    void name(void)                                                                      \
+    {                                                                                    \
+        g_wmap_sequence_busy = 0;                                                        \
+        (step) += 1;                                                                     \
     }
 
 /**
