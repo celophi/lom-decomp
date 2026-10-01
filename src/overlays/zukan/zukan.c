@@ -1222,23 +1222,16 @@ void zukan_commit_loaded_entry(void)
 void zukan_load_ui_resource(void)
 {
     RECT rect;
-    s32 packed_dimensions;
-    s32 dimension;
-    s16 width;
-    u8* archive = g_zukan_resource_archive;
+    s32 size;
 
-    cdrom_queue_read(ZUKAN_UI_RESOURCE_ID, archive);
-
-    packed_dimensions = *(volatile s32*)archive;
-    width = packed_dimensions;
-    dimension = width;
-
-    *(volatile s16*)&rect.x = ZUKAN_BORDER_IMAGE_X;
+    cdrom_queue_read(ZUKAN_UI_RESOURCE_ID, g_zukan_resource_archive);
+    size = *(s32*)g_zukan_resource_archive;
+    size++;
+    size--;
+    rect.x = ZUKAN_BORDER_IMAGE_X;
     rect.y = ZUKAN_BORDER_IMAGE_Y;
-    rect.w = dimension;
-
-    dimension = packed_dimensions >> 16;
-    rect.h = dimension;
-
-    LoadImage(&rect, (u_long*)(archive + 4));
+    rect.w = size;
+    size >>= 16;
+    rect.h = size;
+    LoadImage(&rect, (u_long*)(g_zukan_resource_archive + 4));
 }
