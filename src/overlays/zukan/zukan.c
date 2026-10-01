@@ -11,6 +11,8 @@
 #include "menu.h"
 #include "sdk/libetc.h"
 #include "field_sound.h"
+#include "field_text.h"
+#include "field_ui_text.h"
 
 /*
  * Encyclopedia overlay UI, entry navigation, resource loading and rendering.
@@ -106,6 +108,18 @@ typedef struct
 #define ZUKAN_NAV_SPRITE_COUNT 6
 #define ZUKAN_UI_SPRITE_COUNT 21
 
+/* UI sprites tinted during entry transitions. Sprites below ZUKAN_UI_SPRITE_PAGE_CONTROLS
+ * are dimmed in the list view, where paging is unavailable. */
+#define ZUKAN_UI_SPRITE_PREVIOUS 0
+#define ZUKAN_UI_SPRITE_NEXT 3
+#define ZUKAN_UI_SPRITE_PAGE_CONTROLS 4
+#define ZUKAN_UI_SPRITE_RETURN 5
+#define ZUKAN_TINT_DIM GPU_COLOR_WORD(0x30, 0x30, 0x30)
+#define ZUKAN_TINT_HIGHLIGHT GPU_COLOR_WORD(0xFF, 0xE0, 0xE0)
+
+/** @brief field_draw_sprite_glyph symbol drawn between the page number and the page count. */
+#define ZUKAN_PAGE_COUNT_SEPARATOR_GLYPH 11
+
 /* Scrolling list viewport, relative to the active draw buffer. */
 #define ZUKAN_LIST_VIEW_X 0x48
 #define ZUKAN_LIST_VIEW_Y 0x36
@@ -133,6 +147,7 @@ typedef struct
 #define ZUKAN_UI_CLUT_Y 0x1F2
 #define ZUKAN_ENTRY_CLUT_Y 0x1EE
 
+#define ZUKAN_LIST_CAPACITY 0x200
 #define ZUKAN_LIST_ROW_HEIGHT 16
 #define ZUKAN_LIST_VISIBLE_ROWS 8
 #define ZUKAN_FADE_STEPS 6
@@ -146,21 +161,19 @@ typedef struct
 
 /* Overlay state. */
 
-extern u8 D_800EC3E0[];
+extern u8 g_field_ui_text_dashes[];
 
-/** @brief String @p index in an archive text section selected by @p field. */
-#define ZUKAN_ARCHIVE_TEXT(archive, field, index)                                                                                                              \
-    ((u8*)(((ZukanArchiveHeader*)(archive))->field + (*(u16*)((index) * 2 + ((ZukanArchiveHeader*)(archive))->field + (archive)) + (s32)(archive))))
-
-/** @brief Address of the FIELD UI string whose offset pair is @p entry, the @p index-th table entry. */
-#define FIELD_UI_TEXT_AT(entry, index) ((entry) - (index) * 2 + (entry)[0] + ((entry)[1] << 8))
+/** @brief String @p index in the UI archive text section selected by @p field. */
+#define ZUKAN_ARCHIVE_TEXT(field, index)                                                                                                                       \
+    ((u8*)(g_zukan_resource_archive + ((ZukanArchiveHeader*)g_zukan_resource_archive)->field +                                                                 \
+           ((u16*)(g_zukan_resource_archive + ((ZukanArchiveHeader*)g_zukan_resource_archive)->field))[index]))
 
 extern u8 g_zukan_resource_archive[];
 extern u8* g_zukan_resource_buffer;
 extern u8* g_zukan_work_buffer;
 extern s32 g_zukan_exit_requested;
-extern ZukanUiSpriteRecord g_zukan_ui_sprites[];
-extern ZukanListEntry g_zukan_list_entries[];
+extern ZukanUiSpriteRecord g_zukan_ui_sprites[ZUKAN_UI_SPRITE_COUNT];
+extern ZukanListEntry g_zukan_list_entries[ZUKAN_LIST_CAPACITY];
 extern ZukanFadeState g_zukan_fade_target;
 extern s16 g_zukan_input_blocked;
 extern s32 g_zukan_category;
@@ -184,8 +197,8 @@ extern s32 g_zukan_next_resource_id;
  */
 
 /* FIELD routines that stay resident while this overlay is loaded. */
-void* func_800A88A0(void* packet_cursor, u_long* ordering_table, u8* text, s32 color, s32 x, s32 y, s32 flags);
-void* func_800A8B04(u_long* ordering_table, void* packet_cursor, s32 value, s32 color, ZukanPos* position, s32 flags);
+void* field_draw_text(void* packet_cursor, u_long* ordering_table, u8* text, s32 color, s32 x, s32 y, s32 flags);
+void* field_draw_number_wide(u_long* ordering_table, void* packet_cursor, s32 value, s32 color, ZukanPos* position, s32 flags);
 void* field_draw_sprite_number(u_long* ordering_table, void* packet_cursor, s32 value, s32 digit_count, ZukanPos* position, s32 flags);
 void* field_draw_sprite_glyph(void* packet_cursor, u_long* ordering_table, s32 glyph, ZukanPos* position, s32 flags);
 
@@ -386,7 +399,7 @@ s32 zukan_handle_input(void)
             g_pad_input = PADLup;
         }
 
-        while (repeat_count != 0)
+        for (; repeat_count != 0; repeat_count--)
         {
             if (g_pad_input & (PADLdown | PADLright))
             {
@@ -410,7 +423,6 @@ s32 zukan_handle_input(void)
             {
                 repeat_count = 1;
             }
-            repeat_count--;
         }
 
         if (selection_moved != 0)
@@ -593,31 +605,31 @@ void* zukan_emit_ui_sprite(SPRT* sprite, u_long* ordering_table, u32 sprite_inde
 
     if (g_zukan_view_mode != ZUKAN_VIEW_DETAIL)
     {
-        if (sprite_index < 4)
+        if (sprite_index < ZUKAN_UI_SPRITE_PAGE_CONTROLS)
         {
-            SET_BGR0_PACKED(sprite, GPU_COLOR_WORD(0x30, 0x30, 0x30));
+            SET_BGR0_PACKED(sprite, ZUKAN_TINT_DIM);
         }
     }
-    else if ((sprite_index == 0) || (sprite_index == 3) || (sprite_index == 5))
+    else if ((sprite_index == ZUKAN_UI_SPRITE_PREVIOUS) || (sprite_index == ZUKAN_UI_SPRITE_NEXT) || (sprite_index == ZUKAN_UI_SPRITE_RETURN))
     {
         switch (g_zukan_transition_state)
         {
         case ZUKAN_TRANSITION_NEXT_FADE_OUT:
-            if (sprite_index == 3)
+            if (sprite_index == ZUKAN_UI_SPRITE_NEXT)
             {
-                SET_BGR0_PACKED(sprite, GPU_COLOR_WORD(0xFF, 0xE0, 0xE0));
+                SET_BGR0_PACKED(sprite, ZUKAN_TINT_HIGHLIGHT);
             }
             break;
         case ZUKAN_TRANSITION_PREVIOUS_FADE_OUT:
-            if (sprite_index == 0)
+            if (sprite_index == ZUKAN_UI_SPRITE_PREVIOUS)
             {
-                SET_BGR0_PACKED(sprite, GPU_COLOR_WORD(0xFF, 0xE0, 0xE0));
+                SET_BGR0_PACKED(sprite, ZUKAN_TINT_HIGHLIGHT);
             }
             break;
         case ZUKAN_TRANSITION_RETURN_TO_LIST:
-            if (sprite_index == 5)
+            if (sprite_index == ZUKAN_UI_SPRITE_RETURN)
             {
-                SET_BGR0_PACKED(sprite, GPU_COLOR_WORD(0xFF, 0xE0, 0xE0));
+                SET_BGR0_PACKED(sprite, ZUKAN_TINT_HIGHLIGHT);
             }
             break;
         }
@@ -757,22 +769,18 @@ void zukan_render_content(RenderContext* render_ctx)
     u_long* ordering_table;
     s32 entry_index;
     s32 row_y;
+    POLY_F3* tri;
+    TILE* tile;
+    u8* env_prim;
 
     packet_cursor = render_ctx->prim_cursor;
 
     if (g_zukan_view_mode != ZUKAN_VIEW_DETAIL)
     {
-        POLY_F3* tri;
-        TILE* tile;
-        u8* env_prim;
-
         ordering_table = &render_ctx->ot[ZUKAN_LAYER_LIST];
 
-        {
-            u8* archive = g_zukan_resource_archive;
-            packet_cursor =
-                func_800A88A0(packet_cursor, ordering_table, ZUKAN_ARCHIVE_TEXT(archive, category_names_offset, g_zukan_category), 0xA, 0xA0, 0x22, 2);
-        }
+        packet_cursor = field_draw_text(packet_cursor, ordering_table, ZUKAN_ARCHIVE_TEXT(category_names_offset, g_zukan_category), 0xA, 0xA0, 0x22,
+                                        FIELD_TEXT_ALIGN_CENTER);
 
         if (g_zukan_scroll_y != 0)
         {
@@ -826,16 +834,17 @@ void zukan_render_content(RenderContext* render_ctx)
 
             pos.x = 0;
             pos.y = row_y;
-            packet_cursor = func_800A8B04(ordering_table, packet_cursor, entry_index + 1, 0, &pos, 0);
+            packet_cursor = field_draw_number_wide(ordering_table, packet_cursor, entry_index + 1, 0, &pos, 0);
             if (g_zukan_list_entries[entry_index].resource_id_and_available >> 15)
             {
-                u8* archive = g_zukan_resource_archive;
-                packet_cursor = func_800A88A0(packet_cursor, ordering_table,
-                                              ZUKAN_ARCHIVE_TEXT(archive, entry_names_offset, g_zukan_list_entries[entry_index].name_index), 0, 0x66, row_y, 2);
+                packet_cursor =
+                    field_draw_text(packet_cursor, ordering_table, ZUKAN_ARCHIVE_TEXT(entry_names_offset, g_zukan_list_entries[entry_index].name_index), 0,
+                                    0x66, row_y, FIELD_TEXT_ALIGN_CENTER);
             }
             else
             {
-                packet_cursor = func_800A88A0(packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3E0, 14), 0, 0x66, row_y, 2);
+                packet_cursor = field_draw_text(packet_cursor, ordering_table, FIELD_UI_TEXT_AT(g_field_ui_text_dashes, FIELD_UI_TEXT_DASHES), 0, 0x66, row_y,
+                                                FIELD_TEXT_ALIGN_CENTER);
             }
         }
 
@@ -879,7 +888,7 @@ void zukan_render_content(RenderContext* render_ctx)
 
         pos.x = 0x106;
         pos.y = 0xBD;
-        packet_cursor = field_draw_sprite_glyph(packet_cursor, ordering_table, 0xB, &pos, 1);
+        packet_cursor = field_draw_sprite_glyph(packet_cursor, ordering_table, ZUKAN_PAGE_COUNT_SEPARATOR_GLYPH, &pos, 1);
 
         pos.x = 0xEE;
         pos.y = 0xBD;
@@ -1043,8 +1052,8 @@ TILE* zukan_render_fade(TILE* tile, u_long* ordering_table)
  */
 void zukan_build_entry_list(s32 category)
 {
-    s32 resource_ids[0x200];
-    s32 name_indices[0x200];
+    s32 resource_ids[ZUKAN_LIST_CAPACITY];
+    s32 name_indices[ZUKAN_LIST_CAPACITY];
     s32 i;
 
     g_zukan_entry_count = zukan_build_category_entries(category, resource_ids, name_indices);
@@ -1099,14 +1108,13 @@ u8* zukan_render_detail_text(u8* packet_cursor, u_long* ordering_table)
     u16* line_offsets;
     u8* text;
     u8 unused[0x100];
+    s32 x;
 
     line_offsets = (u16*)(g_zukan_work_buffer + ((ZukanEntryResourceHeader*)g_zukan_work_buffer)->text_offset);
     offsets = line_offsets;
     line_y = 26;
     for (i = 0; i < ZUKAN_DETAIL_TEXT_LINES; i++)
     {
-        s32 x;
-
         text = (u8*)line_offsets + *offsets;
         x = 48;
         while (*text == ' ')
@@ -1114,7 +1122,7 @@ u8* zukan_render_detail_text(u8* packet_cursor, u_long* ordering_table)
             text++;
             x += 12;
         }
-        packet_cursor = func_800A88A0(packet_cursor, ordering_table, text, 0, x, line_y, 0);
+        packet_cursor = field_draw_text(packet_cursor, ordering_table, text, 0, x, line_y, FIELD_TEXT_ALIGN_LEFT);
         offsets++;
         line_y += 13;
     }
@@ -1130,53 +1138,49 @@ u8* zukan_render_detail_text(u8* packet_cursor, u_long* ordering_table)
 void* zukan_render_detail_sprites(SPRT* sprite, u_long* ordering_table)
 {
     s32 command;
+    DR_TPAGE* mode;
     u8* resource_data = g_zukan_work_buffer;
     u8* sprite_data = resource_data + ((ZukanEntryResourceHeader*)resource_data)->sprites_offset;
     s32 count = *(u16*)sprite_data + (*(u16*)(sprite_data + 2) << 8);
 
     sprite_data += 4;
-    if (count != 0)
+    while (count != 0)
     {
-        do
+        SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+        setlen(sprite, 4);
+        command = 0x64;
+        sprite->code = command;
+        sprite->x0 = *(u16*)sprite_data;
+        sprite_data += 2;
+        sprite->y0 = *(u16*)sprite_data;
+        sprite_data += 2;
+        sprite->u0 = *sprite_data;
+        sprite_data += 2;
+        sprite->v0 = *sprite_data;
+        sprite_data += 2;
+        sprite->w = *(u16*)sprite_data;
+        sprite_data += 2;
+        sprite->h = *(u16*)sprite_data;
+        sprite_data += 2;
+        if (g_zukan_image_mode != 0)
         {
-            SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
-            setlen(sprite, 4);
-            command = 0x64;
-            sprite->code = command;
-            sprite->x0 = *(u16*)sprite_data;
-            sprite_data += 2;
-            sprite->y0 = *(u16*)sprite_data;
-            sprite_data += 2;
-            sprite->u0 = *sprite_data;
-            sprite_data += 2;
-            sprite->v0 = *sprite_data;
-            sprite_data += 2;
-            sprite->w = *(u16*)sprite_data;
-            sprite_data += 2;
-            sprite->h = *(u16*)sprite_data;
-            sprite_data += 2;
-            if (g_zukan_image_mode != 0)
-            {
-                sprite->clut = getClut(0, ZUKAN_ENTRY_CLUT_Y);
-            }
-            else
-            {
-                sprite->clut = (*(u16*)sprite_data & 0x3F) | getClut(0, ZUKAN_ENTRY_CLUT_Y);
-            }
-            sprite_data += 4;
-            addPrim(ordering_table, sprite);
-            sprite++;
-            command = count - 1;
-            count = command;
-        } while (count != 0);
+            sprite->clut = getClut(0, ZUKAN_ENTRY_CLUT_Y);
+        }
+        else
+        {
+            sprite->clut = (*(u16*)sprite_data & 0x3F) | getClut(0, ZUKAN_ENTRY_CLUT_Y);
+        }
+        sprite_data += 4;
+        addPrim(ordering_table, sprite);
+        sprite++;
+        command = count - 1;
+        count = command;
     }
 
-    {
-        DR_TPAGE* mode = (DR_TPAGE*)sprite;
-        setDrawTPage(mode, 0, 0, getTPage(g_zukan_image_mode, 0, ZUKAN_ENTRY_IMAGE_X, ZUKAN_ENTRY_IMAGE_Y));
-        addPrim(ordering_table, mode);
-        return mode + 1;
-    }
+    mode = (DR_TPAGE*)sprite;
+    setDrawTPage(mode, 0, 0, getTPage(g_zukan_image_mode, 0, ZUKAN_ENTRY_IMAGE_X, ZUKAN_ENTRY_IMAGE_Y));
+    addPrim(ordering_table, mode);
+    return mode + 1;
 }
 
 /**
@@ -1189,16 +1193,16 @@ void zukan_commit_loaded_entry(void)
     u8* src;
     u8* dst;
     u8* end;
+    ZukanEntryResourceHeader* loaded;
 
     cdrom_wait_queue_empty();
 
     resource = (ZukanEntryResourceHeader*)g_zukan_resource_buffer;
     dst = g_zukan_work_buffer;
     end = (u8*)resource + resource->image_offset;
-    src = (u8*)resource;
-    while (src != end)
+    for (src = (u8*)resource; src != end; src++)
     {
-        *dst++ = *src++;
+        *dst++ = *src;
     }
 
     destinations.x = ZUKAN_ENTRY_IMAGE_X;
@@ -1208,12 +1212,9 @@ void zukan_commit_loaded_entry(void)
     g_zukan_image_mode =
         zukan_upload_tim(&destinations, (TimPrefix*)(g_zukan_resource_buffer + ((ZukanEntryResourceHeader*)g_zukan_resource_buffer)->image_offset));
 
-    {
-        ZukanEntryResourceHeader* loaded = (ZukanEntryResourceHeader*)g_zukan_resource_buffer;
-
-        g_zukan_previous_resource_id = *(u16*)((u8*)loaded + loaded->related_ids_offset);
-        g_zukan_next_resource_id = *(u16*)((u8*)loaded + loaded->related_ids_offset + 2);
-    }
+    loaded = (ZukanEntryResourceHeader*)g_zukan_resource_buffer;
+    g_zukan_previous_resource_id = *(u16*)((u8*)loaded + loaded->related_ids_offset);
+    g_zukan_next_resource_id = *(u16*)((u8*)loaded + loaded->related_ids_offset + 2);
 }
 
 /**

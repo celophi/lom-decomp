@@ -2,13 +2,19 @@
 #include "saved_game.h"
 
 #define ZUKAN_CATEGORY_RANGE_COUNT 13
-#define ZUKAN_HISTORY_GROUP_RANGE_COUNT 7
+#define ZUKAN_HISTORY_GROUP_COUNT 6
+#define ZUKAN_HISTORY_GROUP_RANGE_COUNT (ZUKAN_HISTORY_GROUP_COUNT + 1)
 #define ZUKAN_ENTRY_VALUE_COUNT 1018
 #define ZUKAN_DISPLAY_ORDER_COUNT 719
 #define ZUKAN_DISPLAY_ORDER_END 0x400
 #define ZUKAN_LAND_UNLOCK_COUNT 33
 #define ZUKAN_CHARACTER_END 454
+#define ZUKAN_WORLD_HISTORY_START 480
 #define ZUKAN_WORLD_HISTORY_END 576
+/** @brief Unlock bit of the first World History group; the other groups follow it. */
+#define ZUKAN_HISTORY_GROUP_UNLOCK_BIT 0x122
+/** @brief Techniques per weapon category in the saved technique bits. */
+#define ZUKAN_TECHNIQUES_PER_WEAPON 24
 #define ZUKAN_EXTRA_TECHNIQUE_COUNT 26
 
 /** @brief Start index of each category and the final end index. */
@@ -83,40 +89,34 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
     __builtin_memcpy(display_order, display_order, 0);
     *(ZukanDisplayOrderTable*)display_order = g_zukan_display_order;
 
-    if (category == 8)
+    if (category == ZUKAN_CATEGORY_WORLD_HISTORY)
     {
         category_ranges[category + 1] = ZUKAN_WORLD_HISTORY_END;
     }
-    if (category == 7)
+    if (category == ZUKAN_CATEGORY_CHARACTERS)
     {
         category_ranges[category + 1] = ZUKAN_CHARACTER_END;
     }
 
     count = category_ranges[category + 1] - category_ranges[category];
-    i = 0;
-    while (i < count)
+    for (i = 0; i < count; i++)
     {
         entry_indices[i] = i + category_ranges[category];
-        i++;
     }
 
-    if (category == 0xB)
+    if (category == ZUKAN_CATEGORY_TECHNIQUES)
     {
-        i = count;
-        while (i < count + ZUKAN_EXTRA_TECHNIQUE_COUNT)
+        for (i = count; i < count + ZUKAN_EXTRA_TECHNIQUE_COUNT; i++)
         {
             entry_indices[i] = i + ZUKAN_CHARACTER_END - count;
-            i++;
         }
         count += ZUKAN_EXTRA_TECHNIQUE_COUNT;
     }
 
     visible_count = 0;
-    i = 0;
-    while (display_order[i] != ZUKAN_DISPLAY_ORDER_END)
+    for (i = 0; display_order[i] != ZUKAN_DISPLAY_ORDER_END; i++)
     {
-        j = visible_count;
-        while (j < count)
+        for (j = visible_count; j < count; j++)
         {
             if (display_order[i] == entry_indices[j])
             {
@@ -126,42 +126,35 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
                 entry_values[visible_count] = resource_values[entry_indices[visible_count]];
                 visible_count++;
             }
-            j++;
         }
-        i++;
     }
     count = visible_count;
 
-    if (category == 1)
+    if (category == ZUKAN_CATEGORY_LANDS)
     {
-        i = 0;
-        while (i < ZUKAN_LAND_UNLOCK_COUNT)
+        for (i = 0; i < ZUKAN_LAND_UNLOCK_COUNT; i++)
         {
             if ((g_saved_lands[i].record.flags >> 1) & 1)
             {
                 ZUKAN_UNLOCK_ENTRY(i + 0x200);
             }
-            i++;
         }
         if (g_saved_lands[33].word & FIELD_LAND_FLAG_04)
         {
             ZUKAN_UNLOCK_ENTRY(0x218);
         }
-        i = 0;
-        while (i < count)
+        for (i = 0; i < count; i++)
         {
             if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] + 0x1FF))
             {
                 entry_values[i] = 0;
                 entry_indices[i] = 0;
             }
-            i++;
         }
     }
-    else if (category == 2)
+    else if (category == ZUKAN_CATEGORY_ARTIFACTS)
     {
-        i = 0;
-        while (i < ZUKAN_LAND_UNLOCK_COUNT)
+        for (i = 0; i < ZUKAN_LAND_UNLOCK_COUNT; i++)
         {
             if (g_saved_lands[i].record.flags & 1)
             {
@@ -171,14 +164,12 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
             {
                 ZUKAN_UNLOCK_ENTRY(i + 0x280);
             }
-            i++;
         }
         if (g_saved_lands[33].word & FIELD_LAND_FLAG_04)
         {
             ZUKAN_UNLOCK_ENTRY(0x298);
         }
-        i = 0;
-        while (i < count)
+        for (i = 0; i < count; i++)
         {
             if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] + 0x1FF))
             {
@@ -192,22 +183,20 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
             {
                 entry_values[i] = resource_values[entry_indices[i] + 0x1FF];
             }
-            i++;
         }
     }
-    else if (category == 3)
+    else if (category == ZUKAN_CATEGORY_EQUIPMENT)
     {
     }
-    else if (category == 4)
+    else if (category == ZUKAN_CATEGORY_ITEMS)
     {
     }
-    else if (category == 5)
+    else if (category == ZUKAN_CATEGORY_PRODUCE)
     {
     }
-    else if (category == 6)
+    else if (category == ZUKAN_CATEGORY_MONSTERS)
     {
-        i = 0;
-        while (i < count)
+        for (i = 0; i < count; i++)
         {
             if (entry_indices[i] != 0x135)
             {
@@ -228,63 +217,54 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
                     }
                 }
             }
-            i++;
         }
     }
-    else if (category == 7)
+    else if (category == ZUKAN_CATEGORY_CHARACTERS)
     {
-        i = 0;
-        while (i < count)
+        for (i = 0; i < count; i++)
         {
             if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] - 0xFA))
             {
                 entry_values[i] = 0;
                 entry_indices[i] = 0;
             }
-            i++;
         }
     }
-    else if (category == 8)
+    else if (category == ZUKAN_CATEGORY_WORLD_HISTORY)
     {
-        j = 0;
-        while (j < 6)
+        for (j = 0; j < ZUKAN_HISTORY_GROUP_COUNT; j++)
         {
-            if (!ZUKAN_ENTRY_UNLOCKED(j + 0x122))
+            if (!ZUKAN_ENTRY_UNLOCKED(j + ZUKAN_HISTORY_GROUP_UNLOCK_BIT))
             {
-                i = 0;
-                while (i < count)
+                for (i = 0; i < count; i++)
                 {
-                    if ((entry_indices[i] >= group_ranges[j] + 0x1E0) && (entry_indices[i] < group_ranges[j + 1] + 0x1E0))
+                    if ((entry_indices[i] >= group_ranges[j] + ZUKAN_WORLD_HISTORY_START) &&
+                        (entry_indices[i] < group_ranges[j + 1] + ZUKAN_WORLD_HISTORY_START))
                     {
                         entry_values[i] = 0;
                         entry_indices[i] = 0;
                     }
-                    i++;
                 }
             }
-            j++;
         }
     }
-    else if (category == 9)
+    else if (category == ZUKAN_CATEGORY_CACTUS_DIARIES)
     {
-        i = 0;
-        while (i < count)
+        for (i = 0; i < count; i++)
         {
             if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] - 0x1B8))
             {
                 entry_values[i] = 0;
                 entry_indices[i] = 0;
             }
-            i++;
         }
     }
-    else if (category == 0xA)
+    else if (category == ZUKAN_CATEGORY_GOLEMOLOGY)
     {
     }
-    else if (category == 0xB)
+    else if (category == ZUKAN_CATEGORY_TECHNIQUES)
     {
-        i = 0;
-        while (i < 0x60)
+        for (i = 0; i < FIELD_ABILITY_WORD_COUNT * 32; i++)
         {
             if ((g_saved_ability_bits[i / 32] >> (i % 32)) & 1)
             {
@@ -305,13 +285,11 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
                     ZUKAN_UNLOCK_ENTRY(0x3E1);
                 }
             }
-            i++;
         }
 
-        i = 0;
-        while (i < 0x160)
+        for (i = 0; i < FIELD_WEAPON_CATEGORY_COUNT * 32; i++)
         {
-            if ((i % 32) < 0x18)
+            if ((i % 32) < ZUKAN_TECHNIQUES_PER_WEAPON)
             {
                 if ((g_saved_technique_bits[i / 32] >> (i % 32)) & 1)
                 {
@@ -319,11 +297,9 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
                     ZUKAN_UNLOCK_ENTRY(j + 0x2C0);
                 }
             }
-            i++;
         }
 
-        i = 0;
-        while (i < count)
+        for (i = 0; i < count; i++)
         {
             if ((entry_indices[i] >= 0x1C6) && (entry_indices[i] < 0x2EE))
             {
@@ -341,7 +317,6 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
                     entry_indices[i] = 0;
                 }
             }
-            i++;
         }
     }
 
