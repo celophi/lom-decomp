@@ -1,5 +1,7 @@
 # Host-side Python tests; no disc files or historical toolchain required.
-.PHONY: test-tools test-assets test-overlay-tools \
+.PHONY: test-tools test-assets test-overlay-tools test-scene-tools \
+	identify-img inspect-scene-strings inspect-scene-geometry inspect-scene-resources \
+	inspect-scene-actors inspect-scene-actor-scripts inspect-scene-event-scripts inspect-scene-objects \
 	extract-scene \
 	extract-scenes \
 	extract-addhero \
@@ -18,7 +20,7 @@
 	extract-wsel \
 	extract-zukan
 
-test-tools: test-assets test-overlay-tools test-verification-tools
+test-tools: test-assets test-overlay-tools test-verification-tools test-scene-tools
 
 test-assets:
 	python3 -m unittest discover -s tools/assets/tests -t . -v
@@ -26,21 +28,67 @@ test-assets:
 test-overlay-tools:
 	python3 -m unittest discover -s tools/overlays/tests -t . -v
 
+test-scene-tools:
+	python3 -m unittest discover -s tools/scenes/tests -t . -v
+
+
+# IMG may be a single file or a directory; directory scans include subdirectories.
+identify-img:
+	@test -n "$(IMG)" || { echo 'Usage: make identify-img IMG=/path/to/file-or-directory'; exit 1; }
+	python3 -m tools.scenes.identify_img --recursive "$(IMG)"
+
 .PHONY: test-verification-tools
 test-verification-tools:
 	python3 -m unittest discover -s tools/verification/tests -v
 
-# SCENE is an extracted ANA/INFO_*/*.IMG file; VERSION selects the output folder.
+# SCENE is an extracted scene IMG file; VERSION selects the output folder.
 SCENE_OUTPUT ?= assets/exports/$(VERSION)/scenes
+SCENE_SCRIPT_FORMAT ?= yaml
+SCENE_EVENT_FORMAT ?= yaml
+SCENE_REPORT_FORMAT ?= text
+SCENE_DATA_FORMAT ?= text
+SCENE_TEXT_ENCODING ?= $(VERSION)
+# External FIELD annotations are optional; VERSION alone selects the output folder.
+SCENE_REFERENCE_VERSION ?=
+SCENE_FIELD_BIN ?= disc/$(SCENE_REFERENCE_VERSION)/BIN/FIELD.BIN
+SCENE_REFERENCE_ARGS = $(if $(SCENE_REFERENCE_VERSION),--version "$(SCENE_REFERENCE_VERSION)" --field-bin "$(SCENE_FIELD_BIN)")
 
 extract-scene:
 	@test -n "$(SCENE)" || { echo 'Usage: make extract-scene SCENE=/path/to/scene.IMG'; exit 1; }
 	scene_name=$$(basename -- "$(SCENE)" .IMG); \
-	python3 -m tools.scenes.field_scene "$(SCENE)" "$(SCENE_OUTPUT)/$$scene_name"
+	python3 -m tools.scenes.field_scene "$(SCENE)" "$(SCENE_OUTPUT)/$$scene_name" --text-encoding "$(SCENE_TEXT_ENCODING)" $(SCENE_REFERENCE_ARGS)
 
 extract-scenes:
 	@test -n "$(ANA)" || { echo 'Usage: make extract-scenes ANA=/path/to/ANA'; exit 1; }
-	python3 -m tools.scenes.field_scene --all "$(ANA)" "$(SCENE_OUTPUT)"
+	python3 -m tools.scenes.field_scene --all "$(ANA)" "$(SCENE_OUTPUT)" --text-encoding "$(SCENE_TEXT_ENCODING)" $(SCENE_REFERENCE_ARGS)
+
+inspect-scene-strings:
+	@test -n "$(SCENE)" || { echo 'Usage: make inspect-scene-strings SCENE=/path/to/scene.IMG'; exit 1; }
+	python3 -m tools.scenes.strings "$(SCENE)" --format "$(SCENE_DATA_FORMAT)" --text-encoding "$(SCENE_TEXT_ENCODING)"
+
+inspect-scene-geometry:
+	@test -n "$(SCENE)" || { echo 'Usage: make inspect-scene-geometry SCENE=/path/to/scene.IMG'; exit 1; }
+	python3 -m tools.scenes.geometry "$(SCENE)" --format "$(SCENE_DATA_FORMAT)"
+
+inspect-scene-resources:
+	@test -n "$(SCENE)" || { echo 'Usage: make inspect-scene-resources SCENE=/path/to/scene.IMG'; exit 1; }
+	python3 -m tools.scenes.scene_resources "$(SCENE)" --format "$(SCENE_DATA_FORMAT)" --text-encoding "$(SCENE_TEXT_ENCODING)"
+
+inspect-scene-actors:
+	@test -n "$(SCENE)" || { echo 'Usage: make inspect-scene-actors SCENE=/path/to/scene.IMG'; exit 1; }
+	python3 -m tools.scenes.actors "$(SCENE)"
+
+inspect-scene-actor-scripts:
+	@test -n "$(SCENE)" || { echo 'Usage: make inspect-scene-actor-scripts SCENE=/path/to/scene.IMG'; exit 1; }
+	python3 -m tools.scenes.actor_scripts "$(SCENE)" --format "$(SCENE_SCRIPT_FORMAT)"
+
+inspect-scene-event-scripts:
+	@test -n "$(SCENE)" || { echo 'Usage: make inspect-scene-event-scripts SCENE=/path/to/scene.IMG'; exit 1; }
+	python3 -m tools.scenes.event_scripts "$(SCENE)" --format "$(SCENE_EVENT_FORMAT)"
+
+inspect-scene-objects:
+	@test -n "$(SCENE)" || { echo 'Usage: make inspect-scene-objects SCENE=/path/to/scene.IMG'; exit 1; }
+	python3 -m tools.scenes.scene_report "$(SCENE)" --format "$(SCENE_REPORT_FORMAT)" $(SCENE_REFERENCE_ARGS)
 
 # ADDHERO's data blob comes from `make splat`; VERSION selects the blob and the output folder.
 ADDHERO_OUTPUT ?= assets/exports/$(VERSION)/overlays/addhero

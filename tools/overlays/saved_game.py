@@ -99,11 +99,12 @@ def text_field(raw: bytes, read_text: TextReader, two_byte_codes: frozenset[int]
     return {"text": read_text(raw[:end]), "bytes": raw.hex(" ")}
 
 
-def item_record(raw: bytes, read_text: TextReader, two_byte_codes: frozenset[int]) -> dict[str, object] | None:
-    """Decode a FieldItemRecord, or None when its empty name marks a free record."""
+def item_record(raw: bytes, read_text: TextReader, two_byte_codes: frozenset[int],
+                *, include_empty: bool = False) -> dict[str, object] | None:
+    """Decode a FieldItemRecord; optionally include records marked free by an empty name."""
     if len(raw) != ITEM_SIZE:
         raise ValueError(f"item record is 0x{len(raw):X} bytes, not 0x{ITEM_SIZE:X}")
-    if raw[0] == 0:
+    if raw[0] == 0 and not include_empty:
         return None
     info, bonus, stat = struct.unpack_from("<3I", raw, ITEM_OFFSETS["info"])
     category = (info >> 8) & 3
