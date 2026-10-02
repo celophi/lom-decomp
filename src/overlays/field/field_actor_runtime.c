@@ -356,7 +356,8 @@ extern FieldDirectionOffset g_field_direction_offsets[];
 extern s32 g_field_active_group;
 extern s32 g_field_party_routes_stale;
 extern s32 g_field_item_drop_menu_open;
-extern s32 D_80122B20;
+/** @brief Battle entry sequence state (FIELD_BATTLE_ENTRY_*); nonzero locks player input and enemy HUD while a battle starts. */
+extern s32 g_field_battle_entry_state;
 extern FieldActor g_field_effect_records[];
 extern s32 D_80105770;
 extern s32 g_field_timed_panel_active;
@@ -2817,7 +2818,7 @@ void field_update_actor_objects(void)
                     }
                     else if (mode == FIELD_CONTROL_SCRIPTED)
                     {
-                        if (g_field_return_to_title_prompt_state == 0 && g_field_dialog_screen_mode == 0 && D_80122B20 == 0)
+                        if (g_field_return_to_title_prompt_state == 0 && g_field_dialog_screen_mode == 0 && g_field_battle_entry_state == 0)
                         {
                             if (actor->command != FIELD_ACTOR_COMMAND_DEFEAT_WAIT && actor->command != FIELD_ACTOR_COMMAND_DEFEAT_END && actor->command != FIELD_ACTOR_COMMAND_DEFEATED &&
                                 actor->command != FIELD_ACTOR_COMMAND_DEFEAT_DELAY && actor->command != FIELD_ACTOR_COMMAND_KNOCKED_DOWN &&

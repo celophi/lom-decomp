@@ -28,7 +28,7 @@
 /** @brief Field of a FieldBattleEntryChange left unchanged. */
 #define FIELD_BATTLE_ENTRY_KEEP (-1)
 
-/** @brief Battle entry states (D_80122B20). */
+/** @brief Values of g_field_battle_entry_state. */
 enum
 {
     FIELD_BATTLE_ENTRY_IDLE = 0,
@@ -75,7 +75,8 @@ void field_restore_default_action_animation_mappings(s32);
 
 extern s32 g_field_battle_entry_change_count;
 extern s32 g_field_party_reload_sizes[FIELD_PLAYER_COUNT];
-extern s32 D_80122B20;
+/** @brief Battle entry sequence state (FIELD_BATTLE_ENTRY_*); nonzero locks player input and enemy HUD while a battle starts. */
+extern s32 g_field_battle_entry_state;
 extern FieldBattleEntryChange g_field_battle_entry_changes[FIELD_BATTLE_ENTRY_CHANGE_COUNT];
 extern s32 g_field_party_reload_resource_ids[FIELD_PLAYER_COUNT];
 extern s32 g_field_active_group;
@@ -88,7 +89,7 @@ void field_reset_battle_entry(void)
     s32 i;
 
     g_field_battle_entry_change_count = 0;
-    D_80122B20 = FIELD_BATTLE_ENTRY_IDLE;
+    g_field_battle_entry_state = FIELD_BATTLE_ENTRY_IDLE;
 
     for (i = FIELD_PLAYER_COUNT - 1; i >= 0; i--)
     {
@@ -102,7 +103,7 @@ void field_reset_battle_entry(void)
  */
 s32 field_begin_battle_entry(void)
 {
-    return D_80122B20 = FIELD_BATTLE_ENTRY_WAIT_BINDINGS;
+    return g_field_battle_entry_state = FIELD_BATTLE_ENTRY_WAIT_BINDINGS;
 }
 
 /** @brief Advance the battle entry sequence by one step. */
@@ -111,7 +112,7 @@ void field_update_battle_entry(void)
     s32 state;
     s32 i;
 
-    state = D_80122B20;
+    state = g_field_battle_entry_state;
     if (state == FIELD_BATTLE_ENTRY_IDLE)
     {
         return;
@@ -121,13 +122,13 @@ void field_update_battle_entry(void)
     case FIELD_BATTLE_ENTRY_WAIT_BINDINGS:
         if ((g_field_actor_bindings[0].state | g_field_actor_bindings[1].state | g_field_actor_bindings[2].state) == FIELD_BINDING_IDLE)
         {
-            D_80122B20 = FIELD_BATTLE_ENTRY_REQUEST_RESOURCES;
+            g_field_battle_entry_state = FIELD_BATTLE_ENTRY_REQUEST_RESOURCES;
         }
         break;
 
     case FIELD_BATTLE_ENTRY_REQUEST_RESOURCES:
         field_request_party_reload(FIELD_WEAPON_SET_BATTLE);
-        D_80122B20 = FIELD_BATTLE_ENTRY_APPLY_CHANGES;
+        g_field_battle_entry_state = FIELD_BATTLE_ENTRY_APPLY_CHANGES;
         break;
 
     case FIELD_BATTLE_ENTRY_APPLY_CHANGES:
@@ -175,7 +176,7 @@ void field_update_battle_entry(void)
                 VSync(0);
             }
         }
-        D_80122B20 = FIELD_BATTLE_ENTRY_WAIT_SETTLED;
+        g_field_battle_entry_state = FIELD_BATTLE_ENTRY_WAIT_SETTLED;
         break;
     }
 
@@ -249,7 +250,7 @@ void field_update_battle_entry(void)
                         field_reset_actor_resources();
                         field_restore_default_action_animation_mappings(1);
                         field_battle_setup(g_field_active_group);
-                        D_80122B20 = FIELD_BATTLE_ENTRY_IDLE;
+                        g_field_battle_entry_state = FIELD_BATTLE_ENTRY_IDLE;
                     }
                 }
             }

@@ -163,7 +163,8 @@ extern s32 g_field_hud_bar_offset_y;
 extern s32 g_field_active_group;
 extern s32 g_field_scene_mode_bit;
 extern s32 g_frame_counter;
-extern s32 D_80122B20;
+/** @brief Battle entry sequence state (FIELD_BATTLE_ENTRY_*); nonzero locks player input and enemy HUD while a battle starts. */
+extern s32 g_field_battle_entry_state;
 extern u8 g_field_pair_indicator_list[];
 extern u8 D_800FDCEA;
 extern u16 D_800FE01E;
@@ -447,7 +448,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
     /* Enemy panels are transient; the boss uses a fixed panel at the bottom. */
     if (g_field_scene_mode_bit != 0)
     {
-        if (D_80122B20 == 0)
+        if (g_field_battle_entry_state == 0)
         {
             for (i = FIELD_PARTY_COUNT; i < FIELD_ACTOR_COUNT; i++)
             {

@@ -142,7 +142,11 @@ extern s32 g_field_ring_target_radius;
 extern u8 g_field_ring_saved_selections[];
 extern s32 g_field_ring_cursor;
 extern s32 g_field_ring_cancel_index;
-extern s32 D_8011F380;
+/**
+ * @brief Ring menu word that field_open_ring_menu clears and nothing reads.
+ * @note TODO: original purpose unknown; no code in either version reads it.
+ */
+extern s32 g_field_ring_unused;
 extern u8 g_field_ring_entries[];
 extern s32 g_field_ring_step;
 extern s32 g_field_ring_menu_state;
@@ -220,7 +224,7 @@ void field_open_ring_menu(s32 position_mode, s32 menu_id, u16 excluded_mask, s32
         }
         angle = -(ONE / g_field_ring_entry_count) * g_field_ring_cursor;
         g_field_ring_menu_id = menu_id;
-        D_8011F380 = 0;
+        g_field_ring_unused = 0;
         g_field_ring_angle = angle;
         g_field_ring_target_angle = angle;
         switch (position_mode)
