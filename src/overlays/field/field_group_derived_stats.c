@@ -64,7 +64,8 @@ typedef struct
 #define GOLEM_NAME_TEXT ((GolemNameText*)field_find_resource(FIELD_RESOURCE_GOLEM_NAME_TEXT))
 
 extern GolemWeaponClassTable D_80051C50;
-extern s8 D_800F0C38[];
+/** @brief Signed stat modifier for each four-bit modifier index (index 4 is 0; range -10 to +20). */
+extern s8 g_field_stat_modifier_values[];
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
 
@@ -291,14 +292,14 @@ void field_golem_build_group_record(s32 group)
     for (i = 0; i < g_gosub_result_count; i++)
     {
         index = g_gosub_result_values[i];
-        work[0] += D_800F0C38[GAME_STATE->items[index].stat_nibbles.bits.n0];
-        work[1] += D_800F0C38[GAME_STATE->items[index].stat_nibbles.bits.n1];
-        work[2] += D_800F0C38[GAME_STATE->items[index].stat_nibbles.bits.n2];
-        work[3] += D_800F0C38[GAME_STATE->items[index].stat_nibbles.bits.n3];
-        work[4] += D_800F0C38[GAME_STATE->items[index].stat_nibbles.bits.n4];
-        work[5] += D_800F0C38[GAME_STATE->items[index].stat_nibbles.bits.n5];
-        work[6] += D_800F0C38[GAME_STATE->items[index].stat_nibbles.bits.n6];
-        work[7] += D_800F0C38[GAME_STATE->items[index].stat_nibbles.bits.n7];
+        work[0] += g_field_stat_modifier_values[GAME_STATE->items[index].stat_nibbles.bits.n0];
+        work[1] += g_field_stat_modifier_values[GAME_STATE->items[index].stat_nibbles.bits.n1];
+        work[2] += g_field_stat_modifier_values[GAME_STATE->items[index].stat_nibbles.bits.n2];
+        work[3] += g_field_stat_modifier_values[GAME_STATE->items[index].stat_nibbles.bits.n3];
+        work[4] += g_field_stat_modifier_values[GAME_STATE->items[index].stat_nibbles.bits.n4];
+        work[5] += g_field_stat_modifier_values[GAME_STATE->items[index].stat_nibbles.bits.n5];
+        work[6] += g_field_stat_modifier_values[GAME_STATE->items[index].stat_nibbles.bits.n6];
+        work[7] += g_field_stat_modifier_values[GAME_STATE->items[index].stat_nibbles.bits.n7];
     }
     for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
     {

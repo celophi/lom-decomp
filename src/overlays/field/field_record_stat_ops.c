@@ -35,7 +35,7 @@ typedef struct FieldStatPair
 #define STAT_PAIRS(character) ((FieldStatPair*)(character)->stats)
 
 /** @brief Signed stat modifier for a four-bit modifier index. */
-#define STAT_MODIFIER(nibble) (D_800F0C38[nibble])
+#define STAT_MODIFIER(nibble) (g_field_stat_modifier_values[nibble])
 
 /** @brief Conflict bits of each weapon type, indexed by FIELD_ITEM_TYPE. */
 extern u8 g_field_weapon_type_conflicts[];
@@ -44,7 +44,7 @@ extern u8 g_field_weapon_type_conflicts[];
 extern u8 g_field_armor_type_conflicts[];
 
 /** @brief Signed stat modifiers indexed by an item's four-bit modifier values. */
-extern s8 D_800F0C38[];
+extern s8 g_field_stat_modifier_values[];
 
 FieldStatusState* field_find_object_state(s32 index);
 
