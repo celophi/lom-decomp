@@ -23,7 +23,7 @@ help:
 		'  clean-data-as-c       Remove data objects and temporary generated C' \
 		'  verify-data-host      Check generated data values with the host compiler' \
 		'  native-check          Compile game C with the host compiler' \
-		'  test-tools            Run asset, overlay-tool and verification-helper tests' \
+		'  test-tools            Run asset, scene, overlay and verification-helper tests' \
 		'' \
 		'Object comparison:' \
 		'  target-objects        Assemble original main-executable code for objdiff' \
@@ -36,6 +36,14 @@ help:
 		'  dump-objs             Disassemble existing build objects' \
 		'' \
 		'Asset exports (host Python):' \
+		'  identify-img IMG=path/to/file-or-directory' \
+		'  inspect-scene-strings SCENE=path/to/scene.IMG [SCENE_DATA_FORMAT=yaml]' \
+		'  inspect-scene-geometry SCENE=path/to/scene.IMG [SCENE_DATA_FORMAT=yaml]' \
+		'  inspect-scene-resources SCENE=path/to/scene.IMG [SCENE_DATA_FORMAT=yaml]' \
+		'  inspect-scene-actors SCENE=path/to/scene.IMG' \
+		'  inspect-scene-objects SCENE=path/to/scene.IMG [SCENE_REPORT_FORMAT=yaml] [SCENE_REFERENCE_VERSION=us|jp]' \
+		'  inspect-scene-event-scripts SCENE=path/to/scene.IMG [SCENE_EVENT_FORMAT=text]' \
+		'  inspect-scene-actor-scripts SCENE=path/to/scene.IMG [SCENE_SCRIPT_FORMAT=text]' \
 		'  extract-scene SCENE=path/to/scene.IMG' \
 		'  extract-scenes ANA=path/to/ANA' \
 		'  extract-<overlay>     Export resources; see mk/tools.mk for supported overlays' \
