@@ -32,6 +32,22 @@ The batch target reads `INFO_*/*.IMG` and `MAPINFO/*.IMG` (extensions are case-i
 for example `assets/exports/us/scenes/INFO_PRT/WAL_B020/`. Use `VERSION=jp` with a
 Japanese ANA directory. `SCENE_OUTPUT` also applies to batch extraction.
 
+Batch extraction prints progress as each scene starts, followed by `done` only
+when its export has been reconstructed, checked and published. Each line shows
+the current scene number, total count, group/filename, time for that scene and
+elapsed batch time:
+
+```text
+[  1/930] Extracting INFO_BON/BON_B000.IMG ... done (1.2s; elapsed 0:00:01)
+[  2/930] Extracting INFO_BON/BON_B001.IMG ...
+```
+
+Progress is flushed immediately to standard error, so the current scene stays
+visible while extraction runs. A failing scene ends its progress line with
+`failed` and reports the error. The final summary uses standard output. The
+Python command accepts `--no-progress` to hide batch updates; calls to
+`extract_all()` remain silent unless `progress=True` is passed.
+
 Every scene destination must be new. The tool checks for existing destinations
 before starting. Invalid scenes stop the batch with a filename; files already
 extracted remain in place. Other IMG families aren't included. Each scene is

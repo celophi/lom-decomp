@@ -9,10 +9,13 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
+from datetime import timedelta
 import json
 from pathlib import Path
 import struct
+import sys
 import tempfile
+import time
 
 import yaml
 
@@ -322,8 +325,9 @@ def extract(source: Path, output: Path, reference: ReferenceData | None = None, 
         staging.rename(output)
 
 
-def extract_all(ana_directory: Path, output: Path, reference: ReferenceData | None = None, *, text_encoding: str = "us") -> int:
-    """Extract INFO_* and MAPINFO scenes, keeping group and scene directories."""
+def extract_all(ana_directory: Path, output: Path, reference: ReferenceData | None = None, *,
+                text_encoding: str = "us", progress: bool = False) -> int:
+    """Extract INFO_* and MAPINFO scenes; optionally report progress to stderr."""
     if not ana_directory.is_dir():
         raise ValueError(f"ANA directory not found: {ana_directory}")
     groups = sorted(path for path in ana_directory.iterdir()
@@ -338,13 +342,29 @@ def extract_all(ana_directory: Path, output: Path, reference: ReferenceData | No
         destination = output / scene.parent.name / scene.stem
         if destination.exists():
             raise FileExistsError(f"Output already exists: {destination}")
-    for scene in scenes:
+    total = len(scenes)
+    started = time.monotonic()
+    if progress:
+        print(f"Extracting {total} scenes to {output}", file=sys.stderr, flush=True)
+    for index, scene in enumerate(scenes, 1):
         destination = output / scene.parent.name / scene.stem
+        scene_started = time.monotonic()
+        if progress:
+            name = scene.relative_to(ana_directory)
+            print(f"[{index:>{len(str(total))}}/{total}] Extracting {name} ... ",
+                  end="", file=sys.stderr, flush=True)
         try:
             extract(scene, destination, reference, text_encoding=text_encoding)
         except (OSError, ValueError) as error:
+            if progress:
+                print("failed", file=sys.stderr, flush=True)
             raise ValueError(f"{scene}: {error}") from error
-    return len(scenes)
+        if progress:
+            now = time.monotonic()
+            elapsed = timedelta(seconds=int(now - started))
+            print(f"done ({now - scene_started:.1f}s; elapsed {elapsed})",
+                  file=sys.stderr, flush=True)
+    return total
 
 
 def main() -> None:
@@ -352,6 +372,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("source", type=Path, help="scene IMG, or ANA directory with --all")
     parser.add_argument("--all", action="store_true", help="extract every INFO_* and MAPINFO scene")
+    parser.add_argument("--no-progress", action="store_true", help="hide per-scene batch progress")
     parser.add_argument("output", type=Path)
     parser.add_argument("--text-encoding", choices=("us", "jp"), default="us",
                         help="text control/glyph dialect; no external files (default: us)")
@@ -360,7 +381,8 @@ def main() -> None:
     try:
         reference = reference_from_arguments(args)
         if args.all:
-            count = extract_all(args.source, args.output, reference, text_encoding=args.text_encoding)
+            count = extract_all(args.source, args.output, reference,
+                                text_encoding=args.text_encoding, progress=not args.no_progress)
             print(f"Extracted {count} scenes to {args.output}")
         else:
             extract(args.source, args.output, reference, text_encoding=args.text_encoding)
