@@ -1538,6 +1538,7 @@ field_script_op_82                    = 0x800BCBD0;
 field_script_op_83                    = 0x800BCC6C;
 field_script_op_84                    = 0x800BCC74;
 field_script_op_85                    = 0x800BCCE0;
+g_field_stat_modifier_values          = 0x800F0C38;
 g_field_stat_modifier_limits          = 0x800F0E88;
 g_field_equipment_status_flags        = 0x800F0B58;
 

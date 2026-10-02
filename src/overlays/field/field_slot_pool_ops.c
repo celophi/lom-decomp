@@ -33,7 +33,8 @@
 #define STAGED_STAT_LIMITS_MASK 0xF0
 #define STAGED_STAT_LIMITS_SHIFT 4
 
-extern s8 D_800F0C38[];
+/** @brief Signed stat modifier for each four-bit modifier index (index 4 is 0; range -10 to +20). */
+extern s8 g_field_stat_modifier_values[];
 /** @brief Lowest and highest modifier index a stat may have, per limits row. */
 extern u8 g_field_stat_modifier_limits[][2];
 
@@ -193,9 +194,10 @@ void field_finish_staged_item(void)
 /**
  * @brief Pick each stat's stronger modifier and clamp it to the stat's limits.
  *
- * Of the stat's own modifier and its base modifier, the one whose D_800F0C38
- * value has the larger magnitude wins (the own modifier on a tie); the winner
- * is then clamped to the stat's row of g_field_stat_modifier_limits.
+ * Of the stat's own modifier and its base modifier, the one whose
+ * g_field_stat_modifier_values entry has the larger magnitude wins (the own
+ * modifier on a tie); the winner is then clamped to the stat's row of
+ * g_field_stat_modifier_limits.
  */
 static void field_clamp_staged_stats(void)
 {
@@ -203,7 +205,7 @@ static void field_clamp_staged_stats(void)
 
     for (i = 0; i < FIELD_STAGING_STAT_COUNT; i++)
     {
-        s8* modifier_values = D_800F0C38;
+        s8* modifier_values = g_field_stat_modifier_values;
         s32 base_modifier = g_field_item_staging->base_stats[i];
         s32 own_modifier = g_field_item_staging->stats.bytes[i] & STAGED_STAT_MODIFIER_MASK;
         s32 modifier;

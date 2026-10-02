@@ -817,7 +817,8 @@ extern void* D_801227D4;
 extern u8 D_800F0BE0[];
 extern u8 D_800F0BEC[];
 
-extern s8 D_800F0C38[];
+/** @brief Signed stat modifier for each four-bit modifier index (index 4 is 0; range -10 to +20). */
+extern s8 g_field_stat_modifier_values[];
 
 extern s32 D_80168C6C;
 

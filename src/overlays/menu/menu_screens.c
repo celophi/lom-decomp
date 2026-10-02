@@ -2800,7 +2800,7 @@ void menu_concat_encoded_text(u8* dst, u8* src1, u8* src2)
  * @brief Extract a 4-bit nibble from a packed u32 field in the item struct and look it up in a byte table.
  * @param item Item record containing the packed nibble field.
  * @param index Nibble selector (0-7), selecting four bits at a time.
- * @return Signed byte from D_800F0C38 at the selected nibble index.
+ * @return Signed byte from g_field_stat_modifier_values at the selected nibble index.
  * @note An index of 8 or more reads the table at an undefined position, as
  *       the original does; no caller passes one.
  */
@@ -2844,7 +2844,7 @@ s32 menu_lookup_item_nibble(const MenuItemEntry* item, u32 index)
             break;
         }
     }
-    return D_800F0C38[nibble];
+    return g_field_stat_modifier_values[nibble];
 }
 
 /**

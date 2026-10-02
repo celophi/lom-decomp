@@ -140,6 +140,7 @@ g_card_test_payload     = 0x801405A8;
 
 g_menu_label_key_a     = 0x800EC3DA;
 g_menu_label_key_b     = 0x800EC3E4;
+g_field_stat_modifier_values = 0x800F0C38;
 
 // Unnamed globals (named during decomp)
 g_menu_item_description_buffer  = 0x80168C38;

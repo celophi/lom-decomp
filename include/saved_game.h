@@ -150,7 +150,7 @@ typedef union FieldStat
     } bits;
 } FieldStat;
 
-/** @brief Eight four-bit stat modifiers, one per character stat; indexes into D_800F0C38. */
+/** @brief Eight four-bit stat modifiers, one per character stat; indexes into g_field_stat_modifier_values. */
 typedef struct FieldItemModifiers
 {
     u32 stat0 : 4;
@@ -217,7 +217,7 @@ typedef struct FieldItemRecord
         u32 word;
         FieldNibbles bits;
     } bonus_nibbles;
-    /** @brief Eight four-bit stat modifiers, indexes into D_800F0C38. */
+    /** @brief Eight four-bit stat modifiers, indexes into g_field_stat_modifier_values. */
     union
     {
         u32 word;
