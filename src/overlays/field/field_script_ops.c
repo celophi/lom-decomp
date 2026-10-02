@@ -140,7 +140,7 @@ enum
     FIELD_SCRIPT_CMD_GET_COMPANION_STATUS = 0x2D,
     FIELD_SCRIPT_CMD_RENAME_COMPANION = 0x2E,
     FIELD_SCRIPT_CMD_PIXEL_LOOKUP_2F = 0x2F,
-    FIELD_SCRIPT_CMD_UNKNOWN_32 = 0x32,
+    FIELD_SCRIPT_CMD_SET_ITEM_DROP_ENABLED = 0x32,
     FIELD_SCRIPT_CMD_DISABLE_PAIR_INDICATORS = 0x33,
     FIELD_SCRIPT_CMD_FIND_FACED_ITEM = 0x34,
     FIELD_SCRIPT_CMD_SEQUENCE_0 = 0x35,
@@ -271,7 +271,7 @@ extern FieldBattleContext* g_field_battle;
 extern s32 D_8011F428;
 extern s32 g_field_gosub_state;
 extern s32 g_field_interaction_active;
-extern s32 g_field_hide_actor_panels, g_field_duel_mode, g_field_pair_indicators_disabled, D_80122980;
+extern s32 g_field_hide_actor_panels, g_field_duel_mode, g_field_pair_indicators_disabled, g_field_item_drop_enabled;
 extern s32 g_gosub_result_count, g_gosub_result_values;
 
 void field_script_op_00(void);
@@ -2062,8 +2062,8 @@ void field_script_misc_command(u32 command, s32 operand)
     case FIELD_SCRIPT_CMD_RENAME_COMPANION:
         field_rename_stored_companion(operand);
         return;
-    case FIELD_SCRIPT_CMD_UNKNOWN_32:
-        D_80122980 = operand;
+    case FIELD_SCRIPT_CMD_SET_ITEM_DROP_ENABLED:
+        g_field_item_drop_enabled = operand;
         return;
     case FIELD_SCRIPT_CMD_DISABLE_PAIR_INDICATORS:
         g_field_pair_indicators_disabled = operand;
