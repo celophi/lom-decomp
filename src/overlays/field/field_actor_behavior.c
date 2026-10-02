@@ -299,7 +299,8 @@ extern u8 g_field_collision_disabled;
 extern s32 g_field_pad_buttons;
 extern s32 g_field_actions_limited;
 extern s32 D_8010AE58;
-extern s32 D_80122B20;
+/** @brief Battle entry sequence state (FIELD_BATTLE_ENTRY_*); nonzero locks player input and enemy HUD while a battle starts. */
+extern s32 g_field_battle_entry_state;
 
 s32 func_8001CDAC(s32* in, s32* out);
 void field_route_actor_to_object(FieldActor* actor, s32 target_index, s32 mode);
@@ -1002,7 +1003,7 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
         record_input = command != FIELD_ACTOR_COMMAND_96;
     }
     field_command_history_record(pad_index, record_input);
-    if (D_80122B20 != 0)
+    if (g_field_battle_entry_state != 0)
     {
         g_field_pad_buttons = 0;
     }
@@ -1019,7 +1020,7 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
     work.input.vy = 0;
     work.input.vz = 0;
     actor->control.word = actor->control.word & ~FIELD_CONTROL_MOVEMENT_MASK;
-    if ((D_80122B20 == 0) && (g_field_resource_entries[actor->resource_index].flags & FIELD_RESOURCE_HAS_ACTIONS))
+    if ((g_field_battle_entry_state == 0) && (g_field_resource_entries[actor->resource_index].flags & FIELD_RESOURCE_HAS_ACTIONS))
     {
         actor->command = field_resolve_action_command(actor, pad_index);
     }
@@ -1041,7 +1042,7 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
     pad = &ports[stick_port].published_sample;
     device_type = ports[stick_port].published_sample.device_type;
     input_x = input_z;
-    if (device_type != CONTROLLER_DEVICE_DIGITAL && D_80122B20 == 0)
+    if (device_type != CONTROLLER_DEVICE_DIGITAL && g_field_battle_entry_state == 0)
     {
         if (device_type >= CONTROLLER_DEVICE_CONFIGURING)
         {
