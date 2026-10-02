@@ -355,7 +355,7 @@ extern s32 g_field_scene_mode_bit;
 extern FieldDirectionOffset g_field_direction_offsets[];
 extern s32 g_field_active_group;
 extern s32 D_80122710;
-extern s32 D_80122714;
+extern s32 g_field_item_drop_menu_open;
 extern s32 D_80122B20;
 extern FieldActor g_field_effect_records[];
 extern s32 D_80105770;
@@ -2741,10 +2741,10 @@ void field_update_actor_objects(void)
     actor = &g_field_actors[0];
     state = &g_field_object_states[0];
 
-    if (D_80122714 == 0)
+    if (g_field_item_drop_menu_open == 0)
     {
         field_poll_leader_interaction();
-        if (D_80122714 == 0 && g_field_active_group == 0)
+        if (g_field_item_drop_menu_open == 0 && g_field_active_group == 0)
         {
             field_check_marker_contact(g_field_actors);
         }
@@ -2787,7 +2787,7 @@ void field_update_actor_objects(void)
                     mode = actor->control.word & FIELD_CONTROL_MODE_MASK;
                     if (mode == FIELD_CONTROL_PAD)
                     {
-                        if (D_80122714 == 0 && D_80122710 == 0 && g_field_dialog_screen_mode == 0)
+                        if (g_field_item_drop_menu_open == 0 && D_80122710 == 0 && g_field_dialog_screen_mode == 0)
                         {
                             if (!(state->flags & FIELD_OBJECT_CONTROL_BLOCKED))
                             {

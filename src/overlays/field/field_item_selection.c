@@ -123,7 +123,7 @@ extern u16 g_field_item_names[];
 extern FieldItemListEntry g_field_item_list[];
 extern s32 g_field_item_list_count;
 extern s32 g_field_item_list_cursor;
-extern s32 D_80122714;
+extern s32 g_field_item_drop_menu_open;
 extern s32 g_field_primary_held_buttons, g_field_primary_repeat_delay;
 extern s32 g_field_secondary_held_buttons, g_field_secondary_repeat_delay, g_field_buffered_input;
 
@@ -243,7 +243,7 @@ void field_open_item_drop_menu(void)
         return;
     }
 
-    D_80122714 = 1;
+    g_field_item_drop_menu_open = 1;
     field_play_sound(FIELD_SOUND_WINDOW_OPEN, FIELD_SOUND_PAN_CENTRE);
     window = claim_menu_element();
     window->draw = (FieldMenuDrawFn)field_draw_item_drop_list;
@@ -307,7 +307,7 @@ static u8 *field_draw_item_drop_list(u32 *ot, u8 *cursor, s32 scroll_x, s32 scro
 
     window = element;
     field_update_item_drop_menu(window);
-    if (D_80122714 == 0)
+    if (g_field_item_drop_menu_open == 0)
     {
         return cursor;
     }
@@ -425,7 +425,7 @@ static s32 field_update_item_drop_menu(FieldMenuElement *window)
         flush_input();
         field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
         reset_menu_elements();
-        D_80122714 = 0;
+        g_field_item_drop_menu_open = 0;
         g_saved_game_ctx->item_counts[g_field_item_list[g_field_item_list_cursor].item_id]--;
         drop_selected_item();
         return;
@@ -435,7 +435,7 @@ static s32 field_update_item_drop_menu(FieldMenuElement *window)
         flush_input();
         reset_menu_elements();
         field_play_sound(FIELD_SOUND_CANCEL, FIELD_SOUND_PAN_CENTRE);
-        D_80122714 = 0;
+        g_field_item_drop_menu_open = 0;
         return;
     }
     if (!(g_field_buffered_input & FIELD_ITEM_MENU_MOVE))

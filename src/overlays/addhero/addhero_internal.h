@@ -382,7 +382,7 @@ extern AddheroElement g_addhero_element1;
 extern s32 g_save_compatibility_tag;
 
 /**
- * @brief FIELD data word next to D_80122714; ADDHERO stores 3 into it when Circle cancels the browser.
+ * @brief FIELD data word next to g_field_item_drop_menu_open; ADDHERO stores 3 into it when Circle cancels the browser.
  * @note TODO: purpose unknown; no code in the main executable or any overlay reads it.
  */
 extern s32 D_80122718;
