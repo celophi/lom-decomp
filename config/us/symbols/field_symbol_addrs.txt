@@ -1594,3 +1594,6 @@ g_field_duel_wins_text_offset = 0x800EC408;
 g_field_duel_losses_text_offset = 0x800EC40A;
 g_field_duel_winner_text_offset = 0x800EC40C;
 g_field_duel_versus_text_offset = 0x800EC406;
+g_field_timed_panel_active = 0x800F2298;
+g_field_party_routes_stale = 0x80122710;
+g_field_niki_state = 0x8011F428;

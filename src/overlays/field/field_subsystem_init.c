@@ -29,16 +29,27 @@ extern u8* g_field_actor_heap;
 extern u8* g_field_cd_buffer;
 extern s32 g_field_preserve_entry_music;
 extern s32 g_field_scene_mode_bit;
+/**
+ * @brief Scene word between the pending sound bank and the portrait count.
+ * @note TODO: purpose unknown; it is only ever cleared here, and no code in the
+ *       main executable or any overlay reads it.
+ */
 extern s32 D_801178C8;
-extern s32 D_8011F428;
-extern s32 D_80122710;
+/**
+ * @brief Outcome of the last NIKI run: 0 none or written back, 1 save loaded, 2 failed or declined.
+ * @note Field scripts wait on it through opcode 0x14 selectors 3 and 4.
+ */
+extern s32 g_field_niki_state;
+/** @brief Set while an interaction runs; pad input waits until the follower routes are rebuilt. */
+extern s32 g_field_party_routes_stale;
 extern s32 g_field_actor_text_count;
 extern s32 g_field_ring_menu_state;
 extern s32 g_field_gover_load_countdown;
 extern s32 g_field_gosub_state;
 extern s32 g_field_return_to_title_prompt_delay;
 extern s32 g_field_return_to_title_prompt_state;
-extern s32 D_800F2298;
+/** @brief Nonzero while a timed panel image is shown; pauses the field runtime, actor animation and the field menu. */
+extern s32 g_field_timed_panel_active;
 extern s32 g_field_hide_actor_panels;
 extern s32 g_field_modal_state;
 
@@ -68,7 +79,7 @@ void field_initialize_subsystems(FieldRenderHalf* render_context)
     field_upload_common_texture();
     field_initialize_actor_slots();
     g_field_interaction_active = 0;
-    D_80122710 = 0;
+    g_field_party_routes_stale = 0;
     field_rebuild_party_actions(0);
     field_clear_actor_slots();
     field_reset_draw_state();
@@ -90,8 +101,8 @@ void field_initialize_subsystems(FieldRenderHalf* render_context)
     g_field_hide_actor_panels = 0;
     g_field_actions_limited = 0;
     g_field_modal_state = 0;
-    D_800F2298 = 0;
-    D_8011F428 = 0;
+    g_field_timed_panel_active = 0;
+    g_field_niki_state = 0;
     g_field_gosub_state = 0;
     g_field_audio_timer = 0;
     previous_state = g_previous_game_state;

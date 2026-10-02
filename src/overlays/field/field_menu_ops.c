@@ -494,7 +494,7 @@ extern FieldGosubSequence D_80051ECC;
 extern void field_menu_clear_item_slots(void);
 extern s32 rand(void);
 s32 field_get_actor_facing(s32 arg0);
-extern s32 D_8011F428;
+extern s32 g_field_niki_state;
 extern void field_menu_compact_pending_items(void);
 extern FieldFavoredElementTable D_80051ED8;
 extern u16 g_music_track_index;
@@ -2463,7 +2463,7 @@ void field_reset_default_lands(void)
 /** @brief Restore the saved field mode through the mode dispatcher. */
 void field_menu_restore_field_mode(void)
 {
-    D_8011F428 = D_80122C1E;
+    g_field_niki_state = D_80122C1E;
     field_open_niki(D_80122C1E);
 }
 
@@ -2939,7 +2939,7 @@ void field_menu_clear_shared_items(void)
 /**
  * @brief Update the four shared item records for the mode NIKI finished in.
  *
- * D_80122C1E holds the mode the script requested and D_8011F428 the mode NIKI
+ * D_80122C1E holds the mode the script requested and g_field_niki_state the mode NIKI
  * left. Going from 1 to 0 moves every set-aside record with a value back into
  * the inventory; going from 0 to 1 gives every active record a value of at
  * least 1. D_80122C1E then takes NIKI's mode.
@@ -2952,7 +2952,7 @@ void field_menu_sync_shared_items(void)
     s32 result;
 
     mode = D_80122C1E;
-    if (mode == 1 && D_8011F428 == 0)
+    if (mode == 1 && g_field_niki_state == 0)
     {
         for (i = 0; i < 4; i++)
         {
@@ -2971,7 +2971,7 @@ void field_menu_sync_shared_items(void)
             }
         }
     }
-    if (mode == 0 && D_8011F428 == 1)
+    if (mode == 0 && g_field_niki_state == 1)
     {
         for (i = 0; i < 4; i++)
         {
@@ -2986,7 +2986,7 @@ void field_menu_sync_shared_items(void)
             }
         }
     }
-    D_80122C1E = D_8011F428;
+    D_80122C1E = g_field_niki_state;
 }
 
 /** @brief Set FIELD_VARIABLE_GUEST_VARIANT to FIELD_GUEST_PRESENT when a guest hero is loaded, else FIELD_NO_VARIANT. */

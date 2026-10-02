@@ -268,7 +268,7 @@ extern FieldDispatchFn g_field_script_pair_op_table[];
 
 extern FieldRuntimeContext* g_field_runtime;
 extern FieldBattleContext* g_field_battle;
-extern s32 D_8011F428;
+extern s32 g_field_niki_state;
 extern s32 g_field_gosub_state;
 extern s32 g_field_interaction_active;
 extern s32 g_field_hide_actor_panels, g_field_duel_mode, g_field_pair_indicators_disabled, g_field_item_drop_enabled;
@@ -993,7 +993,7 @@ void field_script_op_13(void)
 
 /**
  * @brief Opcode 0x14: end the step loop while a field condition selected by the byte operand holds.
- * @note Selectors 3 and 4 also copy D_8011F428 into FIELD_VAR_RESULT once the wait ends.
+ * @note Selectors 3 and 4 also copy g_field_niki_state into FIELD_VAR_RESULT once the wait ends.
  *       An unknown selector tests an uninitialized value.
  */
 void field_script_op_14(void)
@@ -1011,10 +1011,10 @@ void field_script_op_14(void)
         wait = g_field_gosub_state != 2;
         break;
     case 3:
-        wait = D_8011F428 == 1;
+        wait = g_field_niki_state == 1;
         break;
     case 4:
-        wait = D_8011F428 == 0;
+        wait = g_field_niki_state == 0;
         break;
     }
     if (wait != 0)
@@ -1025,7 +1025,7 @@ void field_script_op_14(void)
     FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
     if (selector == 3 || selector == 4)
     {
-        field_set_script_var(0, FIELD_VAR_RESULT, D_8011F428);
+        field_set_script_var(0, FIELD_VAR_RESULT, g_field_niki_state);
     }
 }
 

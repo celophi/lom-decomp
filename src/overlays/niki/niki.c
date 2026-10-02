@@ -1276,7 +1276,7 @@ s32 niki_draw_save_confirm_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         }
 
         func_800A3938(0x7B, 0x80);
-        D_8011F428 = 1;
+        g_field_niki_state = 1;
         D_801227CC = resource->loaded.unknown_0x254;
         D_801227F4 = resource->loaded.unknown_0x256;
         D_8011F418 = g_card_slot;
@@ -1392,7 +1392,7 @@ void niki_open_secondary_status_dialog(s32 dialog_state)
     element->dimensions.f.height = 0x14;
     NIKI_SET_ELEMENT_WIDTH_LOW(element, 0);
     field_reset_input_repeat();
-    D_8011F428 = 2;
+    g_field_niki_state = 2;
     g_niki_progress_active = 0;
     g_niki_confirm_latch = 0;
     g_niki_selection_status = 0;
@@ -1816,7 +1816,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             {
                 func_800A3938(0x7D, 0x80);
                 packet = g_niki_element_pool;
-                D_8011F428 = 2;
+                g_field_niki_state = 2;
                 g_menu_element_counter = 0x20;
                 for (i = 0; i < NIKI_ELEMENT_COUNT; i++, packet++)
                 {
@@ -1972,7 +1972,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                 packet->attr.f.state = 0;
             }
             func_80067F5C(8);
-            D_8011F428 = 0;
+            g_field_niki_state = 0;
         }
     }
     break;

@@ -95,7 +95,7 @@ extern FieldPortraitPalette g_field_portrait_palettes[];
 extern FieldTransitionQuad g_field_timed_panel_quads[][4];
 extern u8 g_field_timed_panel_modes[];
 /** @brief Nonzero while a timed panel is shown. */
-extern s32 D_800F2298;
+extern s32 g_field_timed_panel_active;
 extern Vec2s g_field_screen_scroll;
 extern u16 g_field_timed_panel_width;
 extern u16 g_field_timed_panel_height;
@@ -130,7 +130,7 @@ void field_start_timed_panel(s32 index)
     u8 mode;
     s32 sound_id;
 
-    if (D_800F2298 != 0)
+    if (g_field_timed_panel_active != 0)
     {
         return;
     }
@@ -145,7 +145,7 @@ void field_start_timed_panel(s32 index)
     field_set_fade_target_only(0x80, 0x80, 0x80, FIELD_TIMED_PANEL_FADE_FRAMES);
     g_field_timed_panel_timer = FIELD_TIMED_PANEL_FRAMES;
     g_field_timed_panel_brightness = 0;
-    D_800F2298 = 1;
+    g_field_timed_panel_active = 1;
 
     mode = g_field_timed_panel_modes[g_field_timed_panel_index];
     if (mode & FIELD_TIMED_PANEL_EFFECT)
@@ -185,7 +185,7 @@ void field_update_timed_panel(FieldRenderHalf* render)
     u8 event_selector;
     u8 render_selector;
 
-    if (D_800F2298 != 0)
+    if (g_field_timed_panel_active != 0)
     {
         if (--g_field_timed_panel_timer == FIELD_TIMED_PANEL_FADE_FRAMES)
         {
@@ -194,7 +194,7 @@ void field_update_timed_panel(FieldRenderHalf* render)
         timer = g_field_timed_panel_timer;
         if (timer == 0)
         {
-            D_800F2298 = 0;
+            g_field_timed_panel_active = 0;
             return;
         }
         if (timer < FIELD_TIMED_PANEL_FADE_OUT_START)
