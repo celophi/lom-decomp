@@ -63,6 +63,8 @@
 
 /** Bytes reserved for the MDEC VLC table (DecDCTvlcBuild). */
 #define FIELD_VLC_TABLE_BYTES 0x14C00
+/** FieldScene::vlc_table marker left by a movie animation: allocate a VLC table after the build. */
+#define FIELD_VLC_TABLE_REQUESTED ((u8*)1)
 
 /** field_draw_scene_objects update modes. */
 #define FIELD_DRAW_ADVANCE 0
@@ -80,7 +82,7 @@
  * GPU packet tag: the address of the next packet in the chain and the
  * packet's length in words after the tag. The emitters write it as one word.
  */
-#define FIELD_PRIM_TAG(next, words) (((u32)(next) & 0xFFFFFF) | ((words) << 24))
+#define FIELD_PRIM_TAG(next, words) (((uintptr_t)(next) & 0xFFFFFF) | ((words) << 24))
 #define FIELD_DR_TPAGE_WORDS 1
 #define FIELD_SPRT_WORDS 3
 #define FIELD_POLY_FT4_WORDS 9
@@ -920,7 +922,7 @@ void field_build_render_records(FieldMapObject* map, u16 object_index)
             obj = obj->next;
         } while (obj != NULL);
     }
-    scene->vlc_table = 0;
+    scene->vlc_table = NULL;
     scene->unk3C = 0;
     field_build_animation_list(map->anim_defs[0], &arena.cur, &scene->anims);
     field_build_animation_list(map->anim_defs[1], &arena.cur, &scene->strips);
@@ -952,15 +954,15 @@ void field_build_render_records(FieldMapObject* map, u16 object_index)
         count++;
     }
     scene->uploads = NULL;
-    if (scene->vlc_table != 0)
+    if (scene->vlc_table != NULL)
     {
         vlc_table = arena.cur;
-        scene->vlc_table = (u8*)vlc_table;
+        scene->vlc_table = vlc_table;
         arena.cur = vlc_table + FIELD_VLC_TABLE_BYTES;
         DecDCTReset(0);
         DecDCTvlcBuild((u_short*)scene->vlc_table);
     }
-    mem->top = (u32)arena.cur;
+    mem->top = arena.cur;
     map->built = 1;
 }
 
@@ -1310,7 +1312,7 @@ static void field_build_animation_list(FieldAnimDef* def, u8** arena, FieldAnim*
                 grid = tile_def->u.tile.grid;
                 cel = field_find_grid_part(grid, &tint_src);
                 anim->cels = cel;
-                scene->vlc_table = 1;
+                scene->vlc_table = FIELD_VLC_TABLE_REQUESTED;
                 break;
             case FIELD_TILE_ANIM_TWEEN_PART:
                 grid = tile_def->u.tile.grid;
@@ -1745,7 +1747,7 @@ void field_size_work_buffer(void)
     FieldPart* part;
     s32 copies;
     u32 total;
-    u32 base;
+    u8* base;
     u32 min_size;
 
     total = 0;

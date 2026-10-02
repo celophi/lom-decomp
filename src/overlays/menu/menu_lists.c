@@ -15,7 +15,7 @@ s32 menu_build_special_technique_nav_entries(void);
  * @param active Nonzero to process input and animate the cursor.
  * @return Primitive-buffer cursor after drawing.
  */
-s32 scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entries, Vec2s* view_origin, int active)
+void* scroll_list_draw(void* prim_buf, s32* ot, ScrollListState* state, u32* entries, Vec2s* view_origin, int active)
 {
     int steps_remaining;
     if (active)
@@ -117,9 +117,9 @@ void scroll_list_update_target(ScrollListState* state, u32* entries)
  * @param active Nonzero to animate the cursor and draw its semitransparent shadow.
  * @return Primitive-buffer cursor after the sprites and draw-mode packet.
  */
-s32 menu_emit_cursor(s32 prim_buf, s32* ot, s32 x, s32 y, s32 active)
+void* menu_emit_cursor(void* prim_buf, s32* ot, s32 x, s32 y, s32 active)
 {
-    SPRT* sprite = (SPRT*)prim_buf;
+    SPRT* sprite = prim_buf;
     DR_TPAGE* draw_mode;
     u8* icon_id;
     MenuIconSpriteInfo* sprite_defs;
@@ -180,7 +180,7 @@ s32 menu_emit_cursor(s32 prim_buf, s32* ot, s32 x, s32 y, s32 active)
     draw_mode = (DR_TPAGE*)sprite;
     setDrawTPage(draw_mode, 0, 0, MENU_GRID_TPAGE);
     addPrim(ot, draw_mode);
-    return (s32)(draw_mode + 1);
+    return draw_mode + 1;
 }
 
 /* ----- Content List Callbacks ----- */
@@ -196,7 +196,7 @@ s32 menu_emit_cursor(s32 prim_buf, s32* ot, s32 x, s32 y, s32 active)
  */
 
 
-void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf, Vec2s* view_origin, s32 active)
+void* menu_inventory_list_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, s32 active)
 {
     ScrollListState* list;
     void* packet_cursor;
@@ -210,7 +210,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf
     u8 item_name_buffer[0x40];
 
     list = state;
-    packet_cursor = (void*)prim_buf;
+    packet_cursor = prim_buf;
 
     if ((g_pad_input & 0x10) && (active != 0))
     {
@@ -271,7 +271,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf
         }
     }
 
-    packet_cursor = scroll_list_draw((s32)packet_cursor, ot, list, g_menu_scroll_nav_entries, view_origin, active);
+    packet_cursor = scroll_list_draw(packet_cursor, ot, list, g_menu_scroll_nav_entries, view_origin, active);
 
     if (g_menu_scene_type < 0x13 && (g_pad_input & 0x8000))
     {
@@ -358,7 +358,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf
                 s32 text_palette;
                 u8 ability_flags;
 
-                packet_cursor = (void*)menu_emit_icon_sprite(packet_cursor, ot, icon_id, 0x10 - view_origin->x, (y - scroll_y) - view_origin->y, 0, 0, 0, 0);
+                packet_cursor = menu_emit_icon_sprite(packet_cursor, ot, icon_id, 0x10 - view_origin->x, (y - scroll_y) - view_origin->y, 0, 0, 0, 0);
                 setDrawTPage((DR_TPAGE*)packet_cursor, 0, 0, MENU_GRID_TPAGE);
                 addPrim(ot, (DR_TPAGE*)packet_cursor);
                 packet_cursor = (DR_TPAGE*)packet_cursor + 1;
@@ -377,7 +377,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf
                 {
                     text_palette = 3;
                 }
-                packet_cursor = (void*)func_800A88A0(packet_cursor, ot, item_record, text_palette, 0x22 - view_origin->x, (y - scroll_y) - view_origin->y, 0);
+                packet_cursor = func_800A88A0(packet_cursor, ot, item_record, text_palette, 0x22 - view_origin->x, (y - scroll_y) - view_origin->y, 0);
 
                 if (g_menu_pending_item_row != MENU_NONE)
                 {
@@ -408,7 +408,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf
             if ((y >> 4) == list->navigation.fields.selected_index)
             {
                 g_menu_inventory_index = item_index;
-                g_menu_item_ptr = (u8*)(&((MenuItemEntry*)((u8*)g_saved_game_ctx + MENU_ITEM_TABLE_OFFSET))[item_index]);
+                g_menu_item_ptr = &((MenuItemEntry*)((u8*)g_saved_game_ctx + MENU_ITEM_TABLE_OFFSET))[item_index];
                 switch (g_menu_active_item_category)
                 {
                 case 0:
@@ -467,15 +467,15 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf
         {
             if (active != 0)
             {
-                if (menu_item_is_nondefault((const MenuItemEntry*)g_menu_item_ptr) != 0)
+                if (menu_item_is_nondefault(g_menu_item_ptr) != 0)
                 {
                     u8* resources = g_menu_state_ptr;
-                    u16 name_attributes = ((MenuItemEntry*)g_menu_item_ptr)->attributes.halves.high;
+                    u16 name_attributes = g_menu_item_ptr->attributes.halves.high;
                     s32 name_offset = (name_attributes & 0x3F) * 2;
                     s32 names_offset = ((MenuTextResources*)resources)->table_offsets[MENU_TEXT_KEY_ITEM_NAMES];
                     s32 general_offset = ((MenuTextResources*)resources)->table_offsets[MENU_TEXT_GENERAL];
-                    u8* name_table = resources + names_offset;
-                    u8* name = name_table + *(u16*)(u8*)((s32)name_offset + (u32)name_table);
+                    uintptr_t name_table = (uintptr_t)resources + names_offset;
+                    u8* name = (u8*)(name_table + *(u16*)(name_offset + name_table));
                     u8* general_table = resources + general_offset;
                     u8* suffix = menu_text_entry(general_table, 109);
                     u8* text_cursor = item_name_buffer;
@@ -487,15 +487,15 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf
                 }
 
                 {
-                    u32 item_attributes = ((MenuItemEntry*)g_menu_item_ptr)->attributes.packed;
+                    u32 item_attributes = g_menu_item_ptr->attributes.packed;
                     u32 item_kind = (item_attributes >> MENU_ITEM_KIND_SHIFT) & 3;
                     switch (item_kind)
                     {
                     case 0:
                     {
                         u32 category_offset = (item_attributes >> 9) & 0x7E;
-                        u8* description_table = menu_text_table_base(MENU_TEXT_ITEM_CATEGORY_HELP);
-                        u8* description = description_table + *(u16*)((u8*)((s32)category_offset + (u32)description_table) + 0);
+                        uintptr_t description_table = (uintptr_t)menu_text_table_base(MENU_TEXT_ITEM_CATEGORY_HELP);
+                        u8* description = (u8*)(description_table + *(u16*)(category_offset + description_table));
 
                         u8* text_cursor = g_menu_item_description_buffer;
                         u8* name_prefix = item_name_buffer;
@@ -505,8 +505,8 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf
                     case 1:
                     {
                         u32 category_offset = (item_attributes >> 9) & 0x7E;
-                        u8* description_table = menu_text_table_base(MENU_TEXT_ITEM_CATEGORY_HELP);
-                        u8* description = description_table + *(u16*)((u8*)((s32)category_offset + (u32)description_table) + 0x16);
+                        uintptr_t description_table = (uintptr_t)menu_text_table_base(MENU_TEXT_ITEM_CATEGORY_HELP);
+                        u8* description = (u8*)(description_table + *(u16*)(category_offset + description_table + 11 * sizeof(u16)));
 
                         u8* text_cursor = g_menu_item_description_buffer;
                         u8* name_prefix = item_name_buffer;
@@ -516,10 +516,10 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf
                     default:
                     {
                         s32* description_offset = &((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_CATEGORY_HELP];
-                        u32 item_attributes = ((MenuItemEntry*)g_menu_item_ptr)->attributes.packed;
+                        u32 item_attributes = g_menu_item_ptr->attributes.packed;
                         u32 category_offset = (item_attributes >> 9) & 0x7E;
-                        u8* description_table = g_menu_state_ptr + *description_offset;
-                        u8* description = description_table + *(u16*)((u8*)((s32)category_offset + (u32)description_table) + 0x2E);
+                        uintptr_t description_table = (uintptr_t)g_menu_state_ptr + *description_offset;
+                        u8* description = (u8*)(description_table + *(u16*)(category_offset + description_table + 23 * sizeof(u16)));
 
                         u8* text_cursor = g_menu_item_description_buffer;
                         u8* name_prefix = item_name_buffer;
@@ -542,7 +542,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf
 
                     if (sub == 2)
                     {
-                        menu_swap_item_records((MenuItemEntry*)g_menu_item_ptr, (MenuItemEntry*)g_menu_active_equipped_item);
+                        menu_swap_item_records(g_menu_item_ptr, g_menu_active_equipped_item);
                         field_compact_inventory();
                         {
                             s32 char_slot = g_menu_char_slot;
@@ -558,7 +558,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf
                     }
                     else
                     {
-                        u32 w = ((MenuItemEntry*)g_menu_item_ptr)->attributes.packed;
+                        u32 w = g_menu_item_ptr->attributes.packed;
                         u8 ability_flags;
                         if (w & MENU_ITEM_KIND_MASK)
                         {
@@ -575,16 +575,16 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf
                         }
                         menu_play_se(MENU_SE_SELECT, MENU_SE_VOLUME);
                         menu_clear_slots();
-                        if (menu_item_is_nondefault((const MenuItemEntry*)g_menu_active_equipped_item) != 0)
+                        if (menu_item_is_nondefault(g_menu_active_equipped_item) != 0)
                         {
-                            menu_swap_item_records((MenuItemEntry*)g_menu_item_ptr, (MenuItemEntry*)g_menu_active_equipped_item);
+                            menu_swap_item_records(g_menu_item_ptr, g_menu_active_equipped_item);
                             g_item_slot_data[g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE] = g_menu_item_ptr;
                             g_item_slot_flags[g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE] = 1;
                         }
                         else
                         {
                             field_copy_inventory_record(g_menu_active_equipped_item, g_menu_item_ptr);
-                            ((MenuItemEntry*)g_menu_item_ptr)->active = 0;
+                            g_menu_item_ptr->active = 0;
                             g_item_slot_data[g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE] = 0;
                             g_item_slot_flags[g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE] = 1;
                         }
@@ -594,7 +594,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf
                         rect.w = 0x70;
                         rect.h = 0x30;
                         list = (ScrollListState*)menu_slot_alloc(0, &rect);
-                        ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_equipment_compare_callback;
+                        ((MenuSlot*)list)->content_cb = &menu_equipment_compare_callback;
                         g_menu_compare_window_active = 1;
                         ((MenuSlot*)list)->navigation.packed = (((MenuSlot*)list)->navigation.packed & 0xFE00FFFF) | 0x20000;
                         menu_relink_pair();
@@ -617,7 +617,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf
                     {
                         if (g_menu_pending_item_row != MENU_NONE)
                         {
-                            menu_swap_item_records(pending_item_record, (MenuItemEntry*)g_menu_item_ptr);
+                            menu_swap_item_records(pending_item_record, g_menu_item_ptr);
                             g_menu_pending_item_row = MENU_NONE;
                         }
                         else
@@ -632,7 +632,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf
                         rect.w = 0x70;
                         rect.h = 0x30;
                         list = (ScrollListState*)menu_slot_alloc(0, &rect);
-                        ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_item_followup_callback;
+                        ((MenuSlot*)list)->content_cb = &menu_item_followup_callback;
                         ((MenuSlot*)list)->navigation.packed = (((MenuSlot*)list)->navigation.packed & 0xFE00FFFF) | 0x20000;
                         menu_relink_pair();
                     }
@@ -697,7 +697,7 @@ u32 menu_step_item_selection(s32 step)
             if (kind == g_menu_active_item_category)
             {
                 g_menu_inventory_index = index;
-                g_menu_item_ptr = (u8*)((u8*)g_saved_game_ctx + ((index << 6) + MENU_ITEM_TABLE_OFFSET));
+                g_menu_item_ptr = (MenuItemEntry*)((u8*)g_saved_game_ctx + ((index << 6) + MENU_ITEM_TABLE_OFFSET));
                 switch (kind)
                 {
                 case 0:
@@ -717,7 +717,7 @@ u32 menu_step_item_selection(s32 step)
         item += step;
     }
 
-    result = g_menu_item_ptr;
+    result = (uintptr_t)g_menu_item_ptr;
     if (result == 0)
     {
         if (step == 1)
@@ -743,7 +743,7 @@ u32 menu_step_item_selection(s32 step)
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
  */
-s32 menu_spell_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+void* menu_spell_list_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
 {
     s32 selected_index;
     s32 row;
@@ -827,7 +827,7 @@ s32 menu_spell_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
  */
-s32 menu_equipment_grid_callback(s32* ot, ScrollListState* state, u8* prim_buf, Vec2s* view_origin, int active)
+void* menu_equipment_grid_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
 {
     ScrollListState* list;
     u32 scroll_y;
@@ -877,17 +877,17 @@ s32 menu_equipment_grid_callback(s32* ot, ScrollListState* state, u8* prim_buf, 
                     {
                         if (entry_kind >= 0xF)
                         {
-                            prim_buf = (u8*)menu_emit_icon_sprite((void*)prim_buf, ot, 0x70, 0x10 - view_origin->x, relative_y - view_origin->y, 0, 0, 0, 0);
+                            prim_buf = menu_emit_icon_sprite(prim_buf, ot, 0x70, 0x10 - view_origin->x, relative_y - view_origin->y, 0, 0, 0, 0);
                         }
                         else
                         {
-                            prim_buf = (u8*)menu_emit_icon_sprite((void*)prim_buf, ot, 0x69, 0x10 - view_origin->x, relative_y - view_origin->y, 0, 0, 0, 0);
+                            prim_buf = menu_emit_icon_sprite(prim_buf, ot, 0x69, 0x10 - view_origin->x, relative_y - view_origin->y, 0, 0, 0, 0);
                         }
 
-                        draw_mode = (DR_TPAGE*)prim_buf;
+                        draw_mode = prim_buf;
                         setDrawTPage(draw_mode, 0, 0, MENU_GRID_TPAGE);
                         addPrim(ot, draw_mode);
-                        prim_buf = (u8*)(draw_mode + 1);
+                        prim_buf = draw_mode + 1;
                     }
                 }
                 if (list->navigation.fields.selected_index == (y >> 4))
@@ -920,7 +920,7 @@ s32 menu_equipment_grid_callback(s32* ot, ScrollListState* state, u8* prim_buf, 
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
  */
-s32 menu_key_item_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+void* menu_key_item_list_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
 {
     Vec2s pos;
     s32 item_index;
@@ -996,7 +996,7 @@ s32 menu_key_item_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, V
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
  */
-s32 menu_ability_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+void* menu_ability_list_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
 {
     u32 scroll_y;
     s32 selected_index;
@@ -1038,12 +1038,12 @@ s32 menu_ability_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Ve
                                          relative_y - view_origin->y, 0);
                 if (ability->flags & MENU_ABILITY_FLAG_SHOW_ICON)
                 {
-                    prim_buf = (s32)menu_emit_icon_sprite((void*)prim_buf, ot, 0x2C, 0x10 - view_origin->x, relative_y - view_origin->y, 0, 0, 0, 0);
+                    prim_buf = menu_emit_icon_sprite(prim_buf, ot, 0x2C, 0x10 - view_origin->x, relative_y - view_origin->y, 0, 0, 0, 0);
 
-                    draw_mode = (DR_TPAGE*)prim_buf;
+                    draw_mode = prim_buf;
                     setDrawTPage(draw_mode, 0, 0, MENU_GRID_TPAGE);
                     addPrim(ot, draw_mode);
-                    prim_buf = (s32)(draw_mode + 1);
+                    prim_buf = draw_mode + 1;
                 }
             }
             if (list->navigation.fields.selected_index == (list_y >> 4))
@@ -1077,12 +1077,12 @@ s32 menu_ability_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Ve
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor (unchanged on the early-return paths).
  */
-s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+void* menu_subtype_action_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
 {
     MenuSlotRect rect;
     s32 packed;
     s32 hi;
-    s32 handle;
+    MenuItemEntry* handle;
     s32 off;
     s32 i;
     s32 i1;
@@ -1090,7 +1090,7 @@ s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
     u8 flag;
     MenuContentItem* items;
     ScrollListState* list;
-    s32 buf;
+    void* buf;
 
     list = state;
     buf = prim_buf;
@@ -1113,7 +1113,7 @@ s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
             rect.w = 0xF0;
             rect.h = 0x60;
             list = (ScrollListState*)menu_slot_alloc(3, &rect);
-            ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_special_technique_list_callback;
+            ((MenuSlot*)list)->content_cb = &menu_special_technique_list_callback;
             packed = menu_build_special_technique_nav_entries();
             hi = packed >> 0x10;
             ((MenuSlot*)list)->lerp_target_b = hi * 0x10;
@@ -1156,11 +1156,11 @@ s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
             }
             if (flag & 0x80)
             {
-                handle = field_find_free_inventory_record(g_menu_active_subtype);
+                handle = field_find_free_inventory_record();
                 if (handle != 0)
                 {
                     field_copy_inventory_record(handle,
-                                                (s32)(((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((g_menu_active_subtype << 6) + 0x90)));
+                                                (((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((g_menu_active_subtype << 6) + 0x90)));
                     off = ((g_menu_active_subtype + 1) << 6) + (g_menu_char_slot * 0x250);
                     flag_ptr = (u8*)g_saved_game_ctx + off;
                     flag_ptr[0x640] = 0;
@@ -1230,10 +1230,10 @@ s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
  */
-s32 menu_message_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+void* menu_message_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
 {
     Vec2s pos;
-    s32 buf;
+    void* buf;
 
     buf = prim_buf;
 
@@ -1257,10 +1257,10 @@ s32 menu_message_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* 
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
  */
-s32 menu_two_line_message_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+void* menu_two_line_message_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
 {
     Vec2s pos;
-    s32 buf;
+    void* buf;
 
     buf = prim_buf;
 
@@ -1285,14 +1285,14 @@ s32 menu_two_line_message_callback(s32* ot, ScrollListState* state, s32 prim_buf
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
  */
-s32 menu_item_followup_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+void* menu_item_followup_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
 {
     MenuContentItem* item;
-    MenuContentItem* tbl;
+    uintptr_t tbl;
     ScrollListState* list;
     Vec2s pos;
     s32 i;
-    s32 buf;
+    void* buf;
     s32 idx;
 
     list = state;
@@ -1325,8 +1325,8 @@ s32 menu_item_followup_callback(s32* ot, ScrollListState* state, s32 prim_buf, V
             g_menu_hit_item_idx = idx;
             if (idx != -1)
             {
-                tbl = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
-                item = (MenuContentItem*)((idx * 8) + (u32)tbl);
+                tbl = (uintptr_t)g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
+                item = (MenuContentItem*)((idx * sizeof(MenuContentItem)) + tbl);
                 g_content_view_x = item->packed_x & 0x1FF;
                 g_content_view_y = item->y - 8;
                 g_menu_suppress_cursor = 5;

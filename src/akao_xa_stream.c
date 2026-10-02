@@ -485,9 +485,9 @@ void akao_xa_refill_stereo_b(void)
  * @brief Command 0xE0: play an XA program from a RAM buffer.
  * @param params Queued command parameters: buffer, Q8 pan, noise flag.
  */
-void akao_xa_cmd_play_buffer(s32* params)
+void akao_xa_cmd_play_buffer(AkaoCommandParam* params)
 {
-    akao_xa_start_buffer((void*)params[0], params[1], params[2]);
+    akao_xa_start_buffer(params[0].buffer, params[1].value, params[2].value);
     g_akao_sfx_control.active_mask &= ~g_akao_xa_tracker.voice_mask;
 }
 
@@ -503,10 +503,10 @@ void akao_xa_cmd_stop(void)
  * @brief Command 0xE4: set the streamed voice volume immediately.
  * @param params Queued command parameters: Q8 volume.
  */
-void akao_xa_cmd_set_volume(s32* params)
+void akao_xa_cmd_set_volume(AkaoCommandParam* params)
 {
     AkaoXaTracker* xa = &g_akao_xa_tracker;
-    s32 val = params[0];
+    s32 val = params[0].value;
 
     xa->volume_fade_ticks = 0;
     xa->volume = val;
@@ -521,17 +521,17 @@ void akao_xa_cmd_set_volume(s32* params)
  * @brief Command 0xE5: fade the streamed voice volume.
  * @param params Queued command parameters: fade ticks (0 means 1), Q8 target volume.
  */
-void akao_xa_cmd_fade_volume(s32* params)
+void akao_xa_cmd_fade_volume(AkaoCommandParam* params)
 {
     s16 ticks;
     s16 delta;
 
     ticks = 1;
-    if (params[0] != 0)
+    if (params[0].value != 0)
     {
-        ticks = params[0];
+        ticks = params[0].value;
     }
-    delta = (u16)params[1] - (u16)g_akao_xa_tracker.volume;
+    delta = (u16)params[1].value - (u16)g_akao_xa_tracker.volume;
     g_akao_xa_tracker.volume_step = (s16)(delta / ticks);
     g_akao_xa_tracker.volume_fade_ticks = ticks;
 }
@@ -540,7 +540,7 @@ void akao_xa_cmd_fade_volume(s32* params)
  * @brief Command 0xE6: set the streamed voice pan.
  * @param params Queued command parameters: Q8 pan.
  */
-void akao_xa_cmd_set_pan(s32* params)
+void akao_xa_cmd_set_pan(AkaoCommandParam* params)
 {
     AkaoXaTracker* xa;
     s32 pan_word;
@@ -550,7 +550,7 @@ void akao_xa_cmd_set_pan(s32* params)
     s32 volume;
 
     xa = &g_akao_xa_tracker;
-    pan_word = params[0];
+    pan_word = params[0].value;
     xa->pan = pan_word;
     if (xa->voice_mask != 0)
     {
@@ -752,9 +752,9 @@ void akao_xa_start_staged(s32 pan, s32 use_reverb)
  * @brief Command 0xEC: upload an XA program to SPU RAM and play it once.
  * @param params Queued command parameters: buffer, Q8 pan, SPU address, noise flag.
  */
-void akao_xa_cmd_play_one_shot(s32* params)
+void akao_xa_cmd_play_one_shot(AkaoCommandParam* params)
 {
-    akao_xa_start_one_shot((AkaoXaProgramHeader*)params[0], params[1], params[2], params[3]);
+    akao_xa_start_one_shot(params[0].buffer, params[1].value, params[2].value, params[3].value);
     g_akao_sfx_control.active_mask &= ~g_akao_xa_tracker.voice_mask;
 }
 
@@ -762,9 +762,9 @@ void akao_xa_cmd_play_one_shot(s32* params)
  * @brief Command 0xED: play the program staged in SPU RAM.
  * @param params Queued command parameters: Q8 pan, noise flag.
  */
-void akao_xa_cmd_play_staged(s32* params)
+void akao_xa_cmd_play_staged(AkaoCommandParam* params)
 {
-    akao_xa_start_staged(params[0], params[1]);
+    akao_xa_start_staged(params[0].value, params[1].value);
     g_akao_sfx_control.active_mask &= ~g_akao_xa_tracker.voice_mask;
 }
 
@@ -942,10 +942,10 @@ void akao_xa_refill_ring_b(void)
  * @brief Command 0xE8: prepare a CD ring stream.
  * @param params Queued command parameters: first ring block, ring size.
  */
-void akao_xa_cmd_prepare_ring(s32* params)
+void akao_xa_cmd_prepare_ring(AkaoCommandParam* params)
 {
     akao_xa_stop();
     g_akao_xa_tracker.flags = XA_FLAG_RING_STREAM;
-    g_akao_xa_tracker.source.ring_base = (u8*)params[0];
-    g_akao_xa_tracker.ring_size = params[1];
+    g_akao_xa_tracker.source.ring_base = params[0].buffer;
+    g_akao_xa_tracker.ring_size = params[1].value;
 }

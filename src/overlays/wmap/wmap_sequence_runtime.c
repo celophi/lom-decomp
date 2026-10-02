@@ -432,13 +432,13 @@ void wmap_set_model_transform(VECTOR* translation, SVECTOR* rotation)
 /**
  * @brief Call func_8006D014 with its last drawing parameter cleared.
  * @param actor Actor configuration passed to the drawing helper.
- * @param resource Resource slot passed to the drawing helper.
+ * @param resource Animation resource slots, one per actor record.
  * @param arg2 TODO: drawing parameter meaning unknown.
  * @param arg3 TODO: drawing parameter meaning unknown.
  * @param arg4 TODO: drawing parameter meaning unknown.
  * @param arg5 TODO: drawing parameter meaning unknown.
  */
-void func_8006CFE4(void* actor, void* resource, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
+void func_8006CFE4(void* actor, WmapAnimationSlot* resource, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
 {
     func_8006D014(actor, resource, arg2, arg3, arg4, arg5, 0);
 }
@@ -446,14 +446,14 @@ void func_8006CFE4(void* actor, void* resource, s32 arg2, s32 arg3, s32 arg4, s3
 /**
  * @brief Copy the global effect parameters into the descriptor and draw it.
  * @param actor Actor configuration passed to the drawing helper.
- * @param resource Resource slot passed to the drawing helper.
+ * @param resource Animation resource slots, one per actor record.
  * @param arg2 TODO: drawing parameter meaning unknown.
  * @param arg3 TODO: drawing parameter meaning unknown.
  * @param arg4 TODO: drawing parameter meaning unknown.
  * @param arg5 TODO: drawing parameter meaning unknown.
  * @param arg6 TODO: drawing parameter meaning unknown.
  */
-void func_8006D014(void* actor, void* resource, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6)
+void func_8006D014(void* actor, WmapAnimationSlot* resource, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6)
 {
     g_wmap_effect_params[1] = D_80139234;
     g_wmap_effect_params[2] = D_8013923C;

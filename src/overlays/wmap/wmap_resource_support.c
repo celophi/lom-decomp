@@ -250,9 +250,9 @@ void func_8006534C(s32 texture_page, s32 depth)
     *(s32*)&primitive->x2 = 400;
     *(s32*)&primitive->x1 = 400;
     *(s32*)&primitive->x0 = 400;
-    table_base = (WmapFrame*)(depth * 4 + (s32)g_wmap_current_frame);
+    table_base = (WmapFrame*)(depth * sizeof(u_long) + (uintptr_t)g_wmap_current_frame);
     primitive->tag = (primitive->tag & 0xFF000000) | (table_base->ordering_table[0] & 0xFFFFFF);
-    table_base->ordering_table[0] = (table_base->ordering_table[0] & 0xFF000000) | ((u32)primitive & 0xFFFFFF);
+    table_base->ordering_table[0] = (table_base->ordering_table[0] & 0xFF000000) | ((uintptr_t)primitive & 0xFFFFFF);
     if (g_wmap_packet_bytes < 0x7D00)
     {
         g_wmap_packet_bytes += 32;

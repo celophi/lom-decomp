@@ -22,9 +22,9 @@ typedef struct
         code); field_set_node_enabled gates its field_collision_rasterize_groups call on this. */
     u8* group_work;
     /** base of the per-group byte tile maps. */
-    s32 group_tiles;
+    u8* group_tiles;
     /** end of the per-group work area. */
-    s32 group_work_end;
+    u8* group_work_end;
     struct FieldImageReq* uploads; /* head of the pending upload list */
     /** set by a movie animation while the scene builds, then the MDEC VLC table it gets. */
     u8* vlc_table;

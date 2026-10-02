@@ -33,7 +33,7 @@
  * @brief Word-aligned upload source at byte @p offset of @p base.
  * @note Summed as integers: the target adds the scaled offset before the base.
  */
-#define PRIM_UPLOAD_PTR(base, offset) ((u_long*)((((offset) >> 2) << 2) + (u32)(base)))
+#define PRIM_UPLOAD_PTR(base, offset) ((u_long*)((((offset) >> 2) << 2) + (uintptr_t)(base)))
 
 /** @brief Player icon selectors (the palette row and the texture cell). */
 #define FIELD_PLAYER_ICON_FIRST 0
@@ -62,8 +62,8 @@
 #define FIELD_COORDINATE_LABEL_ROW_HEIGHT 16
 #define FIELD_COORDINATE_LABEL_COLOR 4
 
-s32 field_draw_player_icon(POLY_FT4* prim, u_long* ordering_table, s32 selector, s32 x, s32 y, s32 flip);
-s32 field_draw_text(void* prim, void* ot, void* text, s32 color, s32 x, s32 y, s32 align);
+void* field_draw_player_icon(POLY_FT4* prim, u_long* ordering_table, s32 selector, s32 x, s32 y, s32 flip);
+void* field_draw_text(void* prim, void* ot, void* text, s32 color, s32 x, s32 y, s32 align);
 
 extern s32 g_field_party_has_guest;
 extern u8* g_field_coordinate_labels[];
@@ -76,25 +76,25 @@ extern u8* g_field_coordinate_labels[];
  * @param y_offset Vertical offset subtracted from the panel position.
  * @return Primitive-buffer cursor after all enabled rows.
  */
-s32 field_draw_coordinate_panel(void* ot, u8* prim, s32 x_offset, s32 y_offset)
+void* field_draw_coordinate_panel(void* ot, u8* prim, s32 x_offset, s32 y_offset)
 {
-    s32 cursor;
+    void* cursor;
     s32 unused[2];
 
     cursor = field_draw_player_icon((POLY_FT4*)prim, ot, g_field_party_has_guest, FIELD_COORDINATE_ICON_X - x_offset, -y_offset, 1);
     if (g_field_coordinate_labels[0] != NULL)
     {
-        cursor = field_draw_text((void*)cursor, ot, g_field_coordinate_labels[0], FIELD_COORDINATE_LABEL_COLOR, FIELD_COORDINATE_LABEL_X - x_offset,
+        cursor = field_draw_text(cursor, ot, g_field_coordinate_labels[0], FIELD_COORDINATE_LABEL_COLOR, FIELD_COORDINATE_LABEL_X - x_offset,
                                FIELD_COORDINATE_LABEL_Y - y_offset, 0);
     }
     if (g_field_coordinate_labels[1] != NULL)
     {
-        cursor = field_draw_text((void*)cursor, ot, g_field_coordinate_labels[1], FIELD_COORDINATE_LABEL_COLOR, FIELD_COORDINATE_LABEL_X - x_offset,
+        cursor = field_draw_text(cursor, ot, g_field_coordinate_labels[1], FIELD_COORDINATE_LABEL_COLOR, FIELD_COORDINATE_LABEL_X - x_offset,
                                FIELD_COORDINATE_LABEL_Y + FIELD_COORDINATE_LABEL_ROW_HEIGHT - y_offset, 0);
     }
     if (g_field_coordinate_labels[2] != NULL)
     {
-        cursor = field_draw_text((void*)cursor, ot, g_field_coordinate_labels[2], FIELD_COORDINATE_LABEL_COLOR, FIELD_COORDINATE_LABEL_X - x_offset,
+        cursor = field_draw_text(cursor, ot, g_field_coordinate_labels[2], FIELD_COORDINATE_LABEL_COLOR, FIELD_COORDINATE_LABEL_X - x_offset,
                                FIELD_COORDINATE_LABEL_Y + 2 * FIELD_COORDINATE_LABEL_ROW_HEIGHT - y_offset, 0);
     }
     return cursor;
@@ -138,7 +138,7 @@ void field_upload_player_icons(void)
  * @param flip Nonzero to mirror the texture horizontally.
  * @return Primitive-buffer cursor after the draw-mode packet.
  */
-s32 field_draw_player_icon(POLY_FT4* handle, u_long* ordering_table, s32 selector, s32 x, s32 y, s32 flip)
+void* field_draw_player_icon(POLY_FT4* handle, u_long* ordering_table, s32 selector, s32 x, s32 y, s32 flip)
 {
     POLY_FT4* icon;
     POLY_FT4* prim;
@@ -200,5 +200,5 @@ s32 field_draw_player_icon(POLY_FT4* handle, u_long* ordering_table, s32 selecto
     draw_mode = (DR_TPAGE*)prim;
     setDrawTPage(draw_mode, 0, 0, FIELD_PLAYER_ICON_TPAGE);
     addPrim(ordering_table, draw_mode);
-    return (s32)(draw_mode + 1);
+    return draw_mode + 1;
 }

@@ -263,8 +263,8 @@ typedef struct AkaoSongState
     u32 tempo;                         /**< Q16 tick rate; the high half is added to tempo_acc per driver tick. */
     s32 tempo_step;                    /**< Tempo slide step per tick. */
     u32 tempo_acc;                     /**< Tick accumulator; a carry out of the low half advances one tick. */
-    s32 song_data;                     /**< Address of the song descriptor in RAM. */
-    s32 key_map_base;                  /**< Key-to-articulation map table of the song (ext op FE 14). */
+    u8* song_data;                     /**< Address of the song descriptor in RAM. */
+    u8* key_map_base;                  /**< Key-to-articulation map table of the song (ext op FE 14). */
     u8* note_table;                    /**< Note/articulation table used by drum-mode channels. */
     s32 voice_alloc_base;              /**< First voice the sequencer may allocate. */
     u32 noise_mask;                    /**< Channels enabled in the SPU noise bitmap. */

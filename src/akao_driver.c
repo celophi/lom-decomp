@@ -198,12 +198,12 @@ s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_b
     AkaoBankHeader* header;
     AkaoArticulation* articulations;
     s32 result;
-    u8* header_address;
+    uintptr_t header_address;
 
     akao_spu_wait();
     if ((header_address = akao_check_magic(bank)) == 0)
     {
-        header_address = (u8*)bank;
+        header_address = (uintptr_t)bank;
         header = (AkaoBankHeader*)header_address;
         SpuSetTransferStartAddr(spu_base);
         bank = header + 1;

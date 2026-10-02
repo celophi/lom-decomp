@@ -181,7 +181,7 @@ extern char g_akao_spu_zero_primer[];
 extern s32 g_akao_rcnt2_event;
 extern u8* g_akao_bank_prog_base;
 extern u8* g_akao_bank_region_b;
-extern s32 g_akao_bank_region_c;
+extern u8* g_akao_bank_region_c;
 
 void akao_driver_init(void);
 void akao_driver_shutdown(void);

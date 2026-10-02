@@ -210,7 +210,7 @@ void* field_draw_sprite_number(u_long* ordering_table, void* packet_cursor, s32 
 void* field_draw_sprite_glyph(void* packet_cursor, u_long* ordering_table, s32 glyph, ZukanPos* position, s32 flags);
 
 /* Helper routines. */
-void zukan_upload_ui_images(s32 work_buffer);
+void zukan_upload_ui_images(u8* work_buffer);
 inline s32 zukan_upload_tim(ZukanImageDestination* destinations, TimPrefix* tim);
 s32 zukan_handle_input(void);
 void zukan_scroll_to_selection(void);
@@ -239,13 +239,13 @@ void zukan_commit_loaded_entry(void);
  * @param category Encyclopedia category to display.
  * @return First address after the encyclopedia's reserved work area.
  */
-s32 zukan_initialize_state(s32 work_buffer, s32 category)
+u8* zukan_initialize_state(u8* work_buffer, s32 category)
 {
-    s32 next_buffer;
+    u8* next_buffer;
     s32 unused[2];
 
     g_zukan_category = category;
-    g_zukan_work_buffer = (u8*)((work_buffer + 3) & ~3);
+    g_zukan_work_buffer = (u8*)(((uintptr_t)work_buffer + 3) & ~3);
     zukan_upload_ui_images((next_buffer = work_buffer + 0x8000, work_buffer));
     field_reset_input_repeat();
     zukan_set_fade_target(ZUKAN_FADE_NEUTRAL, ZUKAN_FADE_NEUTRAL, ZUKAN_FADE_NEUTRAL, ZUKAN_FADE_STEPS);
@@ -269,7 +269,7 @@ s32 zukan_initialize_state(s32 work_buffer, s32 category)
  * @brief Upload the two UI image blocks used by the encyclopedia screen.
  * @param work_buffer Overlay work-buffer address retained by the caller.
  */
-void zukan_upload_ui_images(s32 work_buffer)
+void zukan_upload_ui_images(u8* work_buffer)
 {
     ZukanImageDestination destinations;
     u8* archive = g_zukan_resource_archive;

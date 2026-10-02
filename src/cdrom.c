@@ -665,7 +665,7 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
                         total_bytes_delivered += staging_bytes_produced;
                         chunk_bytes_remaining -= staging_bytes_produced;
 
-                        loop_count = (u32)destination & CD_STREAM_COPY_WORD_MASK;
+                        loop_count = (uintptr_t)destination & CD_STREAM_COPY_WORD_MASK;
                         if ((loop_count != 0) && (loop_count < staging_bytes_produced))
                         {
                             staging_bytes_produced -= loop_count;
@@ -675,7 +675,7 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
                             }
                         }
 
-                        alignment_check = (u32)source_ptr & CD_STREAM_COPY_WORD_MASK;
+                        alignment_check = (uintptr_t)source_ptr & CD_STREAM_COPY_WORD_MASK;
                         if (alignment_check == 0)
                         {
                             loop_count = staging_bytes_produced >> CD_BYTES_PER_WORD_SHIFT;

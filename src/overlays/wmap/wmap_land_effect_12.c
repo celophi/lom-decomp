@@ -368,7 +368,7 @@ WMAP_STEP_RESET(wmap_land_effect_12_sequence_5_reset, g_wmap_land_effect_12_sequ
  */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_12_sequence_5_step_02,
     g_wmap_land_effect_12_sequence_5_step, g_wmap_land_effect_12_sequence_5_timer,
-    func_8006A2FC(&g_wmap_sprite_actors[100], &g_wmap_actor_animations[100], 0x64, 0, 0x7F, 0x4, 0, (s32)g_wmap_effect_params))
+    func_8006A2FC(&g_wmap_sprite_actors[100], &g_wmap_actor_animations[100], 0x64, 0, 0x7F, 0x4, 0, g_wmap_effect_params))
 
 /**
  * @brief Stop spawning particles and run the next update.
@@ -382,7 +382,7 @@ WMAP_STEP_STOP_EMITTER(wmap_land_effect_12_sequence_5_step_03,
  */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_12_sequence_5_step_04,
     g_wmap_land_effect_12_sequence_5_step, g_wmap_land_effect_12_sequence_5_timer,
-    func_8006A2FC(&g_wmap_sprite_actors[100], &g_wmap_actor_animations[100], 0x64, 0, 0x7F, 0x4, 0, (s32)g_wmap_effect_params))
+    func_8006A2FC(&g_wmap_sprite_actors[100], &g_wmap_actor_animations[100], 0x64, 0, 0x7F, 0x4, 0, g_wmap_effect_params))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_12_sequence_5_end, g_wmap_land_effect_12_sequence_5_step)
 
@@ -395,7 +395,7 @@ WMAP_STEP_RESET(wmap_land_effect_12_sequence_6_reset, g_wmap_land_effect_12_sequ
  */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_12_sequence_6_step_02,
     g_wmap_land_effect_12_sequence_6_step, g_wmap_land_effect_12_sequence_6_timer,
-    func_8006A2FC(&g_wmap_sprite_actors[20], &g_wmap_actor_animations[20], 0x5, 0, 0x7F, 0x4, 0, (s32)((u8*)g_wmap_effect_params + 0x28)))
+    func_8006A2FC(&g_wmap_sprite_actors[20], &g_wmap_actor_animations[20], 0x5, 0, 0x7F, 0x4, 0, &g_wmap_effect_params[10]))
 
 /**
  * @brief Stop spawning particles and run the next update.
@@ -409,7 +409,7 @@ WMAP_STEP_STOP_EMITTER(wmap_land_effect_12_sequence_6_step_03,
  */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_12_sequence_6_step_04,
     g_wmap_land_effect_12_sequence_6_step, g_wmap_land_effect_12_sequence_6_timer,
-    func_8006A2FC(&g_wmap_sprite_actors[20], &g_wmap_actor_animations[20], 0x5, 0, 0x7F, 0x4, 0, (s32)((u8*)g_wmap_effect_params + 0x28)))
+    func_8006A2FC(&g_wmap_sprite_actors[20], &g_wmap_actor_animations[20], 0x5, 0, 0x7F, 0x4, 0, &g_wmap_effect_params[10]))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_12_sequence_6_end, g_wmap_land_effect_12_sequence_6_step)
 

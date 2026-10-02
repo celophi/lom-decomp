@@ -32,14 +32,10 @@
 #define NIKI_SET_ELEMENT_WIDTH_LOW(e, c) ((e)->attr.word = ((e)->attr.word & 0x00FFFFFF) | ((u32)(c) << 24))
 #define GLYPH_SYM(sym, off) ((void*)(((u8*)&(sym) - (off)) + (sym)))
 #define GLYPH_OFF(base, off) ((void*)((base) + *(u16*)((base) + (off))))
-#define GLYPH_CACHE_SLOTS 0x100
-#define GLYPH_CACHE_COLUMNS 16
-#define GLYPH_CACHE_ROW_MASK 0xF0
-#define GLYPH_RASTER_BYTES 0x80
 #define GPU_ADDR_MASK 0xFFFFFF
 #define GPU_TAG_HIGH_MASK 0xFF000000
 #define NIKI_SET_PACKET_LENGTH(prim, length) (((NikiPrimTag*)(prim))->len = (u8)(length))
-#define NIKI_SET_PACKET_ADDRESS(prim, address) (((NikiPrimTag*)(prim))->addr = (u32)(address))
+#define NIKI_SET_PACKET_ADDRESS(prim, address) (((NikiPrimTag*)(prim))->addr = (uintptr_t)(address))
 #define NIKI_SET_PACKET_CODE(prim, command) (((NikiPrimTag*)(prim))->code = (u8)(command))
 #define NIKI_GET_PACKET_ADDRESS(prim) ((u32)(((NikiPrimTag*)(prim))->addr))
 #define NIKI_ADD_PRIMITIVE(ordering_table, prim)                                                                                                               \
@@ -140,7 +136,7 @@ typedef struct NikiElement
             u32 reserved : 23;
         } f;
     } dimensions;
-    s32 (*draw)(s32* ot, s32 prim, s32 x_offset, s32 y_offset);
+    u8* (*draw)(s32* ot, u8* prim, s32 x_offset, s32 y_offset);
 } NikiElement;
 
 /** @brief Bytes read to show an entry: the card header and the first 0x100 bytes of the saved game. */
@@ -467,29 +463,29 @@ void niki_update_elements(NikiFrameState* frame);
 void niki_update_and_draw_elements(NikiFrameState* frame);
 s32 niki_update_load_sequence(void);
 s32 niki_handle_input(void);
-s32 niki_draw_entry_list(s32* ot, s32 prim, s32 arg2, s32 arg3);
-s32 niki_draw_header_label(s32* ot, s32 prim, s32 arg2, s32 arg3);
-s32 niki_draw_card_slot0_label(s32* ot, s32 prim, s32 arg2, s32 arg3);
-s32 niki_draw_card_slot1_label(s32* ot, s32 prim, s32 arg2, s32 arg3);
-s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 arg2, s32 arg3);
-s32 niki_draw_icon_highlight(s32 prim, s32* ot, s32 x, s32 y, s32 width, s32 icon_index, s32 texture_slot, s32 palette_mode);
-s32 niki_draw_footer_label(s32* ot, s32 prim, s32 arg2, s32 arg3);
-s32 niki_draw_state_page(s32* ot, s32 prim, s32 arg2, s32 arg3);
+u8* niki_draw_entry_list(s32* ot, u8* prim, s32 arg2, s32 arg3);
+u8* niki_draw_header_label(s32* ot, u8* prim, s32 arg2, s32 arg3);
+u8* niki_draw_card_slot0_label(s32* ot, u8* prim, s32 arg2, s32 arg3);
+u8* niki_draw_card_slot1_label(s32* ot, u8* prim, s32 arg2, s32 arg3);
+u8* niki_draw_selected_entry_details(s32* ot, u8* prim, s32 arg2, s32 arg3);
+u8* niki_draw_icon_highlight(u8* prim, s32* ot, s32 x, s32 y, s32 width, s32 icon_index, s32 texture_slot, s32 palette_mode);
+u8* niki_draw_footer_label(s32* ot, u8* prim, s32 arg2, s32 arg3);
+u8* niki_draw_state_page(s32* ot, u8* prim, s32 arg2, s32 arg3);
 void niki_clear_elements();
 s32 niki_advance_load_sequence(void);
 void func_800A3938();
-s32 niki_draw_status_dialog(s32* ot, s32 prim, s32 arg2, s32 arg3);
-s32 niki_draw_secondary_status_dialog(s32* ot, s32 prim, s32 arg2, s32 arg3);
+u8* niki_draw_status_dialog(s32* ot, u8* prim, s32 arg2, s32 arg3);
+u8* niki_draw_secondary_status_dialog(s32* ot, u8* prim, s32 arg2, s32 arg3);
 void niki_close_all_elements();
 void niki_switch_card_slot();
 void niki_commit_selected_entry(void);
 void niki_scroll_to_selection();
 NikiElement* niki_alloc_element();
 void niki_enable_choice_toggle();
-s32 niki_draw_save_confirm_dialog(s32* ot, s32 prim, s32 arg2, s32 arg3);
-s32 niki_draw_confirm_prompt(s32* ot, s32 prim, s32 arg2, s32 arg3);
-s32 func_800A88A0(s32 prim, s32* ot, void* glyph, s32 a3, s32 x, s32 y, s32 mode);
-s32 func_800A8A78(s32* ot, s32 prim, s32 ch, s32 a3, Vec2s* pos, s32 mode);
+u8* niki_draw_save_confirm_dialog(s32* ot, u8* prim, s32 arg2, s32 arg3);
+u8* niki_draw_confirm_prompt(s32* ot, u8* prim, s32 arg2, s32 arg3);
+u8* func_800A88A0(u8* prim, s32* ot, void* glyph, s32 a3, s32 x, s32 y, s32 mode);
+u8* func_800A8A78(s32* ot, u8* prim, s32 ch, s32 a3, Vec2s* pos, s32 mode);
 void func_800A55E4(void* buf, s32 arg1);
 void func_800A5638(void* buf, s32 arg1);
 void niki_sort_entries_by_type();

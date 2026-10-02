@@ -10,7 +10,7 @@
  * @param category Encyclopedia category to display.
  * @return First address after the encyclopedia's reserved work area.
  */
-s32 zukan_initialize_state(s32 work_buffer, s32 category);
+u8* zukan_initialize_state(u8* work_buffer, s32 category);
 
 /**
  * @brief Build and render one encyclopedia frame.

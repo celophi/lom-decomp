@@ -56,7 +56,7 @@ void gosub_upload_image_archive(GosubImageVramLayout* destinations, TimPrefix* t
  * @param shape Index into g_golem_shape_table; rotation 0 is drawn.
  * @return Packet cursor after closing the glyph run.
  */
-s32 gosub_draw_composite_icon(s32 packet, s32* ot, s32 x, s32 y, s32 block_id, s32 shape)
+u8* gosub_draw_composite_icon(u8* packet, s32* ot, s32 x, s32 y, s32 block_id, s32 shape)
 {
     s32 clut;
     GolemShape* shapes;
@@ -89,7 +89,7 @@ s32 gosub_draw_composite_icon(s32 packet, s32* ot, s32 x, s32 y, s32 block_id, s
  * @param ordering_table Ordering-table tag to link the packet into.
  * @return Packet cursor past the 8-byte draw-mode packet.
  */
-s32 gosub_finish_glyph_run(s32 packet_cursor, s32* ordering_table)
+u8* gosub_finish_glyph_run(u8* packet_cursor, s32* ordering_table)
 {
     DR_TPAGE* draw_tpage;
 
@@ -110,7 +110,7 @@ s32 gosub_finish_glyph_run(s32 packet_cursor, s32* ordering_table)
  * @param clut_index CLUT slot on the glyph palette row.
  * @return Packet cursor past the 0x14-byte sprite.
  */
-s32 gosub_emit_glyph(s32 packet_cursor, s32* ordering_table, s32 glyph_id, s32 x, s32 y, s32 clut_index)
+u8* gosub_emit_glyph(u8* packet_cursor, s32* ordering_table, s32 glyph_id, s32 x, s32 y, s32 clut_index)
 {
     SPRT* sprite;
 

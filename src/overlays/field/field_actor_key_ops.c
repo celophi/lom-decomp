@@ -204,7 +204,7 @@ s32 field_get_actor_binding_state(s32 key)
  * @param key Object key to look up; also written back as the object's key.
  * @param resource_entry_index Resource entry to load and initialize from.
  * @param resource_slot_id Resource slot passed to the loader.
- * @param resource_base Resource base passed to the loader.
+ * @param package Package number passed to the loader.
  * @param group New group.
  * @param x New X position in whole units; FIELD_KEEP_POSITION in all three keeps the old one.
  * @param y New Y position in whole units.
@@ -214,7 +214,7 @@ s32 field_get_actor_binding_state(s32 key)
  * @return -1 when no actor has @p key; the success path returns nothing.
  * @note Callers never use the result of a successful reload.
  */
-s32 field_reload_actor(s32 key, s32 resource_entry_index, s32 resource_slot_id, u8* resource_base, s32 group, s32 x, s32 y, s32 z, s32 animation, s32 has_actions)
+s32 field_reload_actor(s32 key, s32 resource_entry_index, s32 resource_slot_id, s32 package, s32 group, s32 x, s32 y, s32 z, s32 animation, s32 has_actions)
 {
     Vec3i old_position;
     s32 control_mode;
@@ -231,7 +231,7 @@ s32 field_reload_actor(s32 key, s32 resource_entry_index, s32 resource_slot_id, 
     old_position.y = actor->y;
     old_position.z = actor->z;
     control_mode = actor->control.half[0] & FIELD_CONTROL_MODE_MASK;
-    field_load_resource_entry(resource_slot_id, resource_base, resource_entry_index);
+    field_load_resource_entry(resource_slot_id, package, resource_entry_index);
     field_initialize_actor_record(actor->object_index, resource_entry_index);
     field_initialize_actor_part(actor->object_index, 0);
     resources = g_field_resource_entries;

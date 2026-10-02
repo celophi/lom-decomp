@@ -47,7 +47,7 @@ void field_update_input_repeat(void);
 /**
  * @brief Address of string @p index in the archive section @p offset bytes into @p archive.
  */
-#define GOLEM_ARCHIVE_TEXT(archive, offset, index) ((u8*)((offset) + (*(u16*)((index) * 2 + (offset) + (u32)(archive)) + (u32)(archive))))
+#define GOLEM_ARCHIVE_TEXT(archive, offset, index) ((u8*)((offset) + (*(u16*)((index) * 2 + (offset) + (uintptr_t)(archive)) + (uintptr_t)(archive))))
 /** @brief Address of the FIELD UI string whose offset pair is @p entry, the @p index-th table entry. */
 #define FIELD_UI_TEXT_AT(entry, index) ((entry) - (index) * 2 + (entry)[0] + ((entry)[1] << 8))
 
@@ -323,7 +323,7 @@ void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel)
     g_golem_render_buffers[0].buffer_index = 0;
     g_golem_render_buffers[1].buffer_index = 1;
 
-    g_golem_work_buffer = (u8*)(((u32)golem_initialize_state((u8*)render_buffers, restore_slot_on_cancel) + 3) & ~3);
+    g_golem_work_buffer = (u8*)(((uintptr_t)golem_initialize_state((u8*)render_buffers, restore_slot_on_cancel) + 3) & ~3);
 
     next_buffer = g_golem_render_buffers;
     ClearOTagR(next_buffer->ordering_table, GOLEM_ORDERING_TABLE_SIZE);

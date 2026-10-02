@@ -444,7 +444,7 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
     /* Configure audio for streamed or non-streamed playback. */
     if (state->use_cd_audio != 0)
     {
-        akao_start_xa_stream((s32)state->audio_data_base, state->audio_ring_capacity * sizeof(AudioSector));
+        akao_start_xa_stream(state->audio_data_base, state->audio_ring_capacity * sizeof(AudioSector));
         akao_set_xa_volume(AKAO_CD_VOLUME_MAX);
     }
     else

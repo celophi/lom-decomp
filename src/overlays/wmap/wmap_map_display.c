@@ -1165,7 +1165,7 @@ void wmap_draw_land_animation(s32 x, s32 y, WmapLandDisplay* state, s32 resource
         setPolyFT4(packet);
         setSemiTrans(packet, 1);
         packet->tag = (packet->tag & tag_mask) | (ot_depth[g_wmap_current_frame->ordering_table] & address_mask);
-        ot_depth[g_wmap_current_frame->ordering_table] = (ot_depth[g_wmap_current_frame->ordering_table] & tag_mask) | ((u32)packet & address_mask);
+        ot_depth[g_wmap_current_frame->ordering_table] = (ot_depth[g_wmap_current_frame->ordering_table] & tag_mask) | ((uintptr_t)packet & address_mask);
 
         if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
         {

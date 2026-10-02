@@ -234,13 +234,13 @@ void field_release_object_link(FieldActor* actor);
  * @note The target adds the waypoint offset before the state base; indexing path[] adds it last.
  */
 #define FIELD_WAYPOINT_STATE(states, object_index, offset) \
-    ((FieldObjectState*)((offset) + (((object_index) * (s32)(sizeof(FieldObjectState) / sizeof(s32))) << 2) + (s32)(states)))
+    ((FieldObjectState*)((offset) + (((object_index) * (s32)(sizeof(FieldObjectState) / sizeof(s32))) << 2) + (uintptr_t)(states)))
 
 /**
  * @brief Action @p index of resource @p resource in g_field_resource_actions.
  */
 #define FIELD_RESOURCE_ACTION(resource, index) \
-    ((FieldResourceAction*)((resource) * (s32)sizeof(g_field_resource_actions[0]) - -(s32)&g_field_resource_actions[0][(index)]))
+    ((FieldResourceAction*)((resource) * (s32)sizeof(g_field_resource_actions[0]) - -(uintptr_t)&g_field_resource_actions[0][(index)]))
 
 /** @brief Binding of a party object: members 0 and 1 own one each, everyone else shares the third. */
 #define FIELD_OBJECT_BINDING(i) ((u32)(i) < FIELD_PLAYER_COUNT ? (i) : FIELD_PLAYER_COUNT)
@@ -778,7 +778,7 @@ void field_follow_leader_route(FieldActor* actor, s32 follower_index)
         FieldObjectState* state = &states[actor->object_index];
 
         /* The leader's history entry at this follower's route index. */
-        sample_state = (FieldObjectState*)((s32)g_field_object_states + (leader->object_index * (s32)(sizeof(FieldObjectState) / sizeof(s32)) + state->route_index) * 4);
+        sample_state = (FieldObjectState*)((uintptr_t)g_field_object_states + (leader->object_index * (s32)(sizeof(FieldObjectState) / sizeof(s32)) + state->route_index) * 4);
     }
     if (sample_state->route_history[0].x != actor_x / 256 || sample_state->route_history[0].z != actor->z / 256)
     {
@@ -1284,7 +1284,7 @@ void field_prepare_actor_action(FieldActor* actor)
     state = &g_field_object_states[actor->object_index];
     action_slot = state->action;
     {
-        s32 action_address = (s32)&g_field_resource_actions[0][action_slot];
+        uintptr_t action_address = (uintptr_t)&g_field_resource_actions[0][action_slot];
         action = (FieldResourceAction*)(row_offset + action_address);
     }
     if (action_slot == FIELD_RESOURCE_ACTION_REDIRECT)
@@ -2434,8 +2434,8 @@ static s32 field_filter_action_targets(s32 count, s32* indices)
             if (candidate_index != sentinel)
             {
                 /* Index-first sums: the target adds the scaled index before the table base. */
-                actor = (FieldActor*)(candidate_index * sizeof(FieldActor) + (s32)actor_base);
-                state = (FieldObjectState*)(candidate_index * sizeof(FieldObjectState) + (s32)state_base);
+                actor = (FieldActor*)(candidate_index * sizeof(FieldActor) + (uintptr_t)actor_base);
+                state = (FieldObjectState*)(candidate_index * sizeof(FieldObjectState) + (uintptr_t)state_base);
                 if ((actor->presence != sentinel) && (state->current_hp.word != 0))
                 {
                     contact = state->contact.word;
@@ -2456,8 +2456,7 @@ static s32 field_filter_action_targets(s32 count, s32* indices)
                                     binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
                                 }
                                 object_index = actor->object_index;
-                                actor = (FieldActor*)((FieldActorBinding*)(binding_base + binding_offset))->owner;
-                                owner_index = (s32)actor;
+                                owner_index = ((FieldActorBinding*)(binding_base + binding_offset))->owner;
                                 if (owner_index == object_index)
                                 {
                                     if ((u32)(owner_index & 0xFF) < FIELD_PLAYER_COUNT)

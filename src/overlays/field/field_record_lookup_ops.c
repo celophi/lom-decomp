@@ -51,13 +51,13 @@ extern FieldBattleContext* g_field_battle;
 
 /**
  * @brief Hand an actor's pickup to the party: an item from the reward table or a counter.
- * @param unused Unused.
+ * @param recipient Unused (the reward recipient the caller passes through).
  * @param owner_id Actor whose pickup code is resolved.
  * @note JP takes the entry the search stopped at without checking for a miss, so an
  *       unknown key hands over the item past the last entry.
  */
 #if defined(VERSION_JP)
-void field_grant_actor_pickup(void* unused, s32 owner_id)
+void field_grant_actor_pickup(s32 recipient, s32 owner_id)
 {
     FieldActorRecord* actor;
     u16 code;
@@ -81,7 +81,7 @@ void field_grant_actor_pickup(void* unused, s32 owner_id)
             }
         }
         battle = g_field_battle;
-        found = ((FieldRewardEntry*)(index * sizeof(FieldRewardEntry) + (u32)battle->resources))->item;
+        found = ((FieldRewardEntry*)(index * sizeof(FieldRewardEntry) + (uintptr_t)battle->resources))->item;
         handle = field_find_free_inventory_record();
         if (handle == NULL)
         {
@@ -95,7 +95,7 @@ void field_grant_actor_pickup(void* unused, s32 owner_id)
     field_append_dialog_item(g_field_item_name_table.bytes + g_field_item_name_table.offsets[index], 1);
 }
 #else
-void field_grant_actor_pickup(void* unused, s32 owner_id)
+void field_grant_actor_pickup(s32 recipient, s32 owner_id)
 {
     FieldActorRecord* actor;
     u16 code;
@@ -145,7 +145,7 @@ void field_grant_actor_pickup(void* unused, s32 owner_id)
                     } while (0);
                     if (cursor->key == key)
                     {
-                        found = (u8*)(old_offset + (s32)base + 8);
+                        found = (u8*)(old_offset + (uintptr_t)base + 8);
                         break;
                     }
                     do

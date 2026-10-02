@@ -3,9 +3,10 @@
 
 #include "common.h"
 #include "sdk/libgte.h"
+#include "wmap_sprite_render.h"
 
-void func_8006A2FC(void* arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4_value, s32 arg5_value, u32 arg6, void* arg7);
-void func_8006A9C4(s32 actor_address, s32 resource_address, s32 first, s32 end, s32 scale,
+void func_8006A2FC(void* arg0, WmapAnimationSlot* animations, s32 arg2, s32 arg3, s32 arg4_value, s32 arg5_value, u32 arg6, void* arg7);
+void func_8006A9C4(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 first, s32 end, s32 scale,
                    s32 velocity_min, s32 velocity_range, s32 lifetime_min, s32 lifetime_range, s32 initial_z,
                    s32 frame, s32 spawn_interval);
 void func_8006ADD0(VECTOR* translation, SVECTOR* rotation);

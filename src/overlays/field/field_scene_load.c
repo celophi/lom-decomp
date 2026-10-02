@@ -101,8 +101,8 @@ void field_init_ctx(FieldRenderHalf* buffers, u16 object_index)
     mem->text_configs = mem->top;
     mem->top = mem->top + FIELD_TEXT_SAVED_CONFIG_SIZE;
     field_size_work_buffer();
-    buffers[0].primitive_cursor = (u8*)mem->base;
-    buffers[1].primitive_cursor = (u8*)mem->midpoint;
+    buffers[0].primitive_cursor = mem->base;
+    buffers[1].primitive_cursor = mem->midpoint;
 }
 
 /**

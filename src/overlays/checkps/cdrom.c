@@ -328,7 +328,7 @@ s32 run_cd_integrity_check(s32 single_step)
                                 u32 encoded_minute_tens;
 
                                 address_mixer = ((u32)CHECKPS_POINTER_IDENTITY_MAGIC + (u32)single_step) - (u32)single_step;
-                                toc_time_bcd = (u8*)((u32)g_cd_response_payload + (address_mixer ^ (u32)CHECKPS_POINTER_IDENTITY_MAGIC));
+                                toc_time_bcd = (u8*)((uintptr_t)g_cd_response_payload + (address_mixer ^ (u32)CHECKPS_POINTER_IDENTITY_MAGIC));
                                 toc_minutes_bcd = toc_time_bcd[0];
                                 toc_seconds_bcd = toc_time_bcd[1];
 
@@ -385,9 +385,9 @@ s32 run_cd_integrity_check(s32 single_step)
                         u8 seek_minute_bcd = g_cd_seek_position_bcd[0];
                         u8 seek_second_bcd = g_cd_seek_position_bcd[1];
                         u8* command_params;
-                        u32 command_params_address;
+                        uintptr_t command_params_address;
                         step_result = CHECKPS_STATE_WAIT_READ_TOC;
-                        command_params_address = ((u32)g_cd_command_parameters + (u32)single_step) - (u32)single_step;
+                        command_params_address = ((uintptr_t)g_cd_command_parameters + (u32)single_step) - (u32)single_step;
                         command_params = (u8*)command_params_address;
                         command_params[2] = 0;
                         *command_params++ = seek_minute_bcd;
@@ -443,12 +443,12 @@ s32 run_cd_integrity_check(s32 single_step)
                 u8 seek_minute_bcd;
                 u8 seek_second_bcd;
                 u8* command_params;
-                u32 command_params_address;
+                uintptr_t command_params_address;
                 step_result = CHECKPS_STATE_WAIT_GET_ID;
             get_id_apply_seek_position:
                 seek_minute_bcd = g_cd_seek_position_bcd[0];
                 seek_second_bcd = g_cd_seek_position_bcd[1];
-                command_params_address = ((u32)g_cd_command_parameters + (u32)single_step) - (u32)single_step;
+                command_params_address = ((uintptr_t)g_cd_command_parameters + (u32)single_step) - (u32)single_step;
                 command_params = (u8*)command_params_address;
                 command_params[2] = 0;
                 *command_params++ = seek_minute_bcd;

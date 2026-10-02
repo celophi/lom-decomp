@@ -56,21 +56,21 @@ s32 equipment_combination_quantity(s32* record_indices);
  */
 s32 equipment_combination_quantity(s32* record_indices)
 {
-    s32 entry;
+    intptr_t entry;
     s32 total_quantity;
-    s32 saved_base;
-    s32 items_base;
-    s32 end;
-    u8* item_offset;
+    uintptr_t saved_base;
+    uintptr_t items_base;
+    intptr_t end;
+    u32 item_offset;
     s16 category;
     s32 value;
     s32 j;
     s32 result;
     s32 armor;
 
-    entry = (s32)record_indices;
+    entry = (intptr_t)record_indices;
     total_quantity = 0;
-    saved_base = (s32)g_saved_game.bytes;
+    saved_base = (uintptr_t)g_saved_game.bytes;
     items_base = saved_base + 0xCE0;
     armor = FIELD_ITEM_CATEGORY_ARMOR;
     end = entry + EQUIPMENT_PAIR_SIZE * sizeof(s32);

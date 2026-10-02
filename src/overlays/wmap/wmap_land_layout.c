@@ -244,7 +244,7 @@ static inline s32 wmap_get_artifact_flag(s32 land, s32 shift)
 static inline void wmap_adjust_neighbor_spirits(s32 table_row, s32 output_row, s32 (*output)[8])
 {
     s32* entry;
-    u8* table;
+    uintptr_t table;
     s32 row_offset;
     s32 adjustment;
     s32 value;
@@ -256,12 +256,12 @@ static inline void wmap_adjust_neighbor_spirits(s32 table_row, s32 output_row, s
         index = 0;
         if (table_row != WMAP_NO_LAND)
         {
-            table = (u8*)g_wmap_land_attributes;
+            table = (uintptr_t)g_wmap_land_attributes;
             row_offset = table_row * (s32)sizeof(WmapLandAttributes);
-            entry = (s32*)((output_row * (s32)sizeof(g_wmap_proposed_spirits[0])) + (s32)output);
+            entry = (s32*)((output_row * (s32)sizeof(g_wmap_proposed_spirits[0])) + (uintptr_t)output);
             for (; index < WMAP_SPIRIT_COUNT; index++, entry++)
             {
-                adjustment = *(u8*)(index + row_offset + (s32)table) - WMAP_SPIRIT_NEUTRAL;
+                adjustment = *(u8*)(index + row_offset + table) - WMAP_SPIRIT_NEUTRAL;
                 value = *entry + adjustment;
                 *entry = value;
                 if (value >= 0)
@@ -645,7 +645,7 @@ void wmap_apply_land_influence(s32 land, u32 x, s32 y, s32 (*spirits)[8])
         spirit = 0;
         terrain = g_wmap_layout;
         cell_offset = (x + y * WMAP_GRID_SIZE) * (s32)sizeof(WmapTerrainCell);
-        terrain_spirit = (s32*)(land * (s32)sizeof(spirits[0]) + (s32)spirits);
+        terrain_spirit = (s32*)(land * (s32)sizeof(spirits[0]) + (uintptr_t)spirits);
         do
         {
             terrain_bonus = ((WmapLayout*)((u8*)terrain + (spirit + cell_offset)))->cells[0].spirits[0];
@@ -671,7 +671,7 @@ void wmap_apply_land_influence(s32 land, u32 x, s32 y, s32 (*spirits)[8])
         wmap_accumulate_terrain_spirits(x, y - 1, neighbor_influence);
         wmap_accumulate_terrain_spirits(x, y + 1, neighbor_influence);
         spirit = 0;
-        land_spirit = (s32*)(land * (s32)sizeof(spirits[0]) + (s32)spirits);
+        land_spirit = (s32*)(land * (s32)sizeof(spirits[0]) + (uintptr_t)spirits);
         influence = neighbor_influence;
         do
         {

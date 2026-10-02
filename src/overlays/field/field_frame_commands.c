@@ -80,12 +80,12 @@ void field_build_frame_commands(FieldRenderHalf* render_half, s32 alternate)
     field_poll_streamed_animations();
     g_frame_counter++;
     field_restart_pending_bindings();
-    field_update_dialog_runtime((s32)render_half);
-    field_update_return_to_title_prompt((s32)render_half);
+    field_update_dialog_runtime(render_half);
+    field_update_return_to_title_prompt(render_half);
     field_update_battle_end();
     field_update_actor_texts(render_half);
     field_update_modal(render_half);
-    field_modal_frame_stub((s32)render_half);
+    field_modal_frame_stub(render_half);
     field_update_timed_panel(render_half);
     field_update_item_menu(render_half);
     field_update_music_stream();

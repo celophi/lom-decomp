@@ -229,7 +229,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                 animated_height = entering_scaled_height >> 3;
                 entering_remaining_height = (s32)(entering_full_height - animated_height);
 
-                packet_cursor = ((GosubElementDrawHandler)element->draw_handler)(ordering_table, packet_cursor, (s32)(element_width - animated_width) / 2,
+                packet_cursor = (GosubTilePacket*)((GosubElementDrawHandler)element->draw_handler)(ordering_table, (u8*)packet_cursor, (s32)(element_width - animated_width) / 2,
                                                                                  entering_remaining_height / 2);
                 {
                     s32 x = element->attr.f.x;
@@ -247,7 +247,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                 break;
 
             case GOSUB_ELEMENT_STATE_ACTIVE:
-                packet_cursor = ((GosubElementDrawHandler)element->draw_handler)(ordering_table, packet_cursor, 0, 0);
+                packet_cursor = (GosubTilePacket*)((GosubElementDrawHandler)element->draw_handler)(ordering_table, (u8*)packet_cursor, 0, 0);
                 packet_cursor = gosub_emit_panel(packet_cursor, ordering_table, element->attr.f.x, element->attr.f.y, gosub_element_width(element),
                                                  element->geometry.f.height, render_context->display_buffer_index);
                 break;
@@ -271,7 +271,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                 animated_height = exiting_scaled_height >> 3;
                 exiting_remaining_height = (s32)(exiting_full_height - animated_height);
 
-                packet_cursor = ((GosubElementDrawHandler)element->draw_handler)(ordering_table, packet_cursor, (s32)(element_width - animated_width) / 2,
+                packet_cursor = (GosubTilePacket*)((GosubElementDrawHandler)element->draw_handler)(ordering_table, (u8*)packet_cursor, (s32)(element_width - animated_width) / 2,
                                                                                  exiting_remaining_height / 2);
                 {
                     s32 x = element->attr.f.x;
@@ -366,7 +366,7 @@ void* gosub_emit_scroll_marker(GosubScrollMarkerPacket* prim, s32* ot, s32 x, s3
     prim = (GosubScrollMarkerPacket*)fill_packet;
     setaddr(source_bytes, getaddr(ot) & addr_mask);
     i = 0;
-    setaddr(ot, (u32)source_bytes & addr_mask);
+    setaddr(ot, (uintptr_t)source_bytes & addr_mask);
     do
     {
         i += 1;
@@ -400,7 +400,7 @@ GosubTilePacket* gosub_emit_panel(GosubTilePacket* prim, s32* ot, s32 x, s32 y, 
     TILE* fill;
     DR_TPAGE* draw_mode_packet;
     DRAWENV draw_env;
-    s32 working_value;
+    uintptr_t working_value;
 
     draw_env_packet = (DR_ENV*)prim;
     if (flag != 0)
@@ -423,7 +423,7 @@ GosubTilePacket* gosub_emit_panel(GosubTilePacket* prim, s32* ot, s32 x, s32 y, 
     outline = gosub_emit_panel_outline(outline, ot, x - 1, y - 1, w + 2, h + 2, 0);
     do
     {
-        working_value = (s32)outline;
+        working_value = (uintptr_t)outline;
     } while (0);
     fill = (TILE*)working_value;
 
@@ -499,9 +499,9 @@ GosubLinePacket* gosub_emit_panel_outline(GosubLinePacket* line, s32* ot, s32 x,
  * @param y_off Vertical element animation offset.
  * @return Packet cursor after the last highlight.
  */
-GosubTilePacket* gosub_draw_item_list(s32* ot, s32 initial_prim, s32 x_off, s32 y_off)
+u8* gosub_draw_item_list(s32* ot, u8* initial_prim, s32 x_off, s32 y_off)
 {
-    s32 prim;
+    u8* prim;
     s32 drawn_count;
     GosubTextPosition* pos_p;
     GosubTextPosition pos;
@@ -659,7 +659,7 @@ GosubTilePacket* gosub_draw_item_list(s32* ot, s32 initial_prim, s32 x_off, s32 
         addPrim(ot, mark);
         mark += 1;
     }
-    return mark;
+    return (u8*)mark;
 }
 
 /**
@@ -678,7 +678,7 @@ GosubTilePacket* gosub_draw_item_list(s32* ot, s32 initial_prim, s32 x_off, s32 
  * @return Packet cursor past the sprite (gosub_finish_glyph_run's return), or prim
  *         when count is 5 or more.
  */
-s32 gosub_draw_portrait(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
+u8* gosub_draw_portrait(u8* prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
 {
     SPRT* sprite;
     RECT rect;
@@ -720,7 +720,7 @@ s32 gosub_draw_portrait(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
     setWH(sprite, GOSUB_PORTRAIT_SIZE, GOSUB_PORTRAIT_SIZE);
     setClut(sprite, count * GOSUB_PORTRAIT_CLUT_SIZE + g_gosub_frame_parity * (GOSUB_PORTRAIT_SLOTS * GOSUB_PORTRAIT_CLUT_SIZE), GOSUB_GLYPH_CLUT_Y);
     addPrim(ot, sprite);
-    return gosub_finish_glyph_run((s32)(sprite + 1), ot);
+    return gosub_finish_glyph_run((u8*)(sprite + 1), ot);
 }
 
 /**
@@ -735,14 +735,14 @@ s32 gosub_draw_portrait(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
  * @param y_off Vertical element animation offset.
  * @return Packet cursor after the preview.
  */
-s32 gosub_draw_block_preview(s32* ot, s32 initial_prim, s32 x_off, s32 y_off)
+u8* gosub_draw_block_preview(s32* ot, u8* initial_prim, s32 x_off, s32 y_off)
 {
     s32 unused[2];
     u8 result_name[0x50];
     u8 number_text[0x50];
     s32 pair[3];
     u8* name_cursor;
-    s32 prim;
+    u8* prim;
 
     g_gosub_block_id = 0;
     prim = initial_prim;

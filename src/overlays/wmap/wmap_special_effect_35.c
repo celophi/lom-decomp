@@ -343,31 +343,31 @@ static void wmap_effect35_update_emitter(WmapEffectEmitter* emitter)
 
     if (index < emitter->end)
     {
-        u8* motion_base;
+        uintptr_t motion_base;
 
-        motion_base = (u8*)g_wmap_actor_motions;
-        walker = (WmapEffectMotion*)((index * sizeof(WmapEffectMotion)) + (s32)motion_base);
+        motion_base = (uintptr_t)g_wmap_actor_motions;
+        walker = (WmapEffectMotion*)((index * sizeof(WmapEffectMotion)) + motion_base);
         for (; index < emitter->end; index++)
         {
-            motion = (WmapEffectMotion*)((u32)walker + index);
-            motion = (WmapEffectMotion*)((u32)motion - index);
+            motion = (WmapEffectMotion*)((uintptr_t)walker + index);
+            motion = (WmapEffectMotion*)((uintptr_t)motion - index);
             if (motion->active != 0)
             {
-                u8* data_base;
-                u8* resource_base;
+                uintptr_t data_base;
+                uintptr_t resource_base;
                 s32 resource_offset;
-                data_base = (u8*)g_wmap_sprite_actors;
-                actor = (WmapSpriteActor*)(index * sizeof(WmapSpriteActor) + (u32)data_base);
+                data_base = (uintptr_t)g_wmap_sprite_actors;
+                actor = (WmapSpriteActor*)(index * sizeof(WmapSpriteActor) + data_base);
                 position.vx = (motion->radius * (ccos(motion->angle) >> 5)) >> 0xC;
                 position.vy = (motion->radius * (csin(motion->angle) >> 5)) >> 0xC;
                 position.vz = motion->height;
                 gte_ldv0(&position);
                 gte_rtps();
                 resource_offset = index * sizeof(WmapAnimationSlot);
-                data_base = (u8*)g_wmap_actor_animations;
+                data_base = (uintptr_t)g_wmap_actor_animations;
                 resource_base = data_base;
                 data_base = 0;
-                wmap_step_actor_animation(actor, (void*)(resource_offset + (u32)resource_base));
+                wmap_step_actor_animation(actor, (void*)(resource_offset + resource_base));
                 gte_stsxy(&screen_position);
                 if (index < WMAP_EFFECT35_EMITTER_B_FIRST)
                 {

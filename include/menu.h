@@ -71,7 +71,7 @@ typedef struct MenuSlot_s
     u8 lerp_steps;     /* 0x18 - remaining interpolation steps (countdown divisor); 0 = snap to target */
     u8 _pad[3];
     /* K&R callback signature is required by the original call sites. */
-    s32* (*content_cb)();                            /* 0x1C */
+    void* (*content_cb)();                            /* 0x1C */
     void (*tick_cb)(struct MenuSlot_s* /* self */);  /* 0x20 - per-frame callback while slot is active */
 } MenuSlot;
 

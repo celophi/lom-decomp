@@ -45,7 +45,7 @@
 /**
  * @brief Address of element @p index of @p base, summed as integers.
  */
-#define FIELD_ELEMENT_AT(base, index) ((void*)((index) * sizeof(*(base)) + (u32)(base)))
+#define FIELD_ELEMENT_AT(base, index) ((void*)((index) * sizeof(*(base)) + (uintptr_t)(base)))
 
 /** @brief Texture coordinate pair, addressable whole or by coordinate. */
 typedef union

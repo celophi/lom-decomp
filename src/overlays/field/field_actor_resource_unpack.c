@@ -110,7 +110,7 @@ typedef union
 /**
  * @brief Stored curve record at byte offset @p offset of @p actor's curves.
  */
-#define FIELD_ACTOR_LINK_RECORD(actor, offset) ((FieldActorLinkRecord*)((offset) + (u32)(actor)->curves))
+#define FIELD_ACTOR_LINK_RECORD(actor, offset) ((FieldActorLinkRecord*)((offset) + (uintptr_t)(actor)->curves))
 
 /**
  * @brief memcpy with a signed byte count.
@@ -370,7 +370,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
     }
     cursor = block + 2;
     has_tracks = *(u16*)cursor;
-    cursor = (u8*)((u32)(cursor + 5) & ~3);
+    cursor = (u8*)((uintptr_t)(cursor + 5) & ~3);
     if (has_tracks != 0)
     {
         do
@@ -616,7 +616,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
         cursor += sizeof(FieldAnimationDefBytes);
         *(FieldAnimationDefBytes*)block = *(FieldAnimationDefBytes*)cursor;
         cursor += sizeof(FieldAnimationDefBytes);
-        block = (u8*)((u32)(block + sizeof(FieldAnimationDefBytes) + 1) & ~1);
+        block = (u8*)((uintptr_t)(block + sizeof(FieldAnimationDefBytes) + 1) & ~1);
         actor->part_masks = (u16*)block;
         actor->animation_index = 0;
         actor->sequence_active = 0;
@@ -626,7 +626,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
     {
         for (i = 0; i < sound_count; i++)
         {
-            cursor = (u8*)((u32)(cursor + 3) & ~3);
+            cursor = (u8*)((uintptr_t)(cursor + 3) & ~3);
             sound_heap = &g_field_actor_heap;
             sound_tables = g_field_sound_tables;
             sound_bytes = *(s32*)cursor;

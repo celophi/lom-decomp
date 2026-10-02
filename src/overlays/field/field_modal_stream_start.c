@@ -66,7 +66,7 @@ void field_run_golem(void)
  * @brief Empty per-frame hook, called with the render half after field_update_modal.
  * @param render_half Render half being drawn (unused).
  */
-void field_modal_frame_stub(s32 render_half)
+void field_modal_frame_stub(FieldRenderHalf* render_half)
 {
 }
 

@@ -25,7 +25,7 @@
  * (include/akao_cmd.h is used by every overlay, some with other local
  * declarations of these commands).
  */
-s32 akao_switch_song(s32 value0, s32 value1);
+s32 akao_switch_song(void* sequence, s32 volume);
 void akao_stop_sfx(s32 value0, s32 value1);
 s32 akao_fade_song_volume(s32 song_handle, s32 frames, s32 volume);
 s32 akao_set_master_pan(s32 value0);
@@ -253,7 +253,7 @@ void field_load_song(s32 music_index, s32 second_song)
         off = (u32 *)FIELD_AUDIO_LOAD_OFFSETS;
 
         count = off[1] - off[0];
-        src = (u8 *)(off[0] + LOAD_BUFFER_ADDRESS);
+        src = (u8 *)LOAD_BUFFER_ADDRESS + off[0];
 
         if (second_song != 0)
         {
@@ -264,7 +264,7 @@ void field_load_song(s32 music_index, s32 second_song)
             bcopy(src, D_8003ECA0, count);
         }
 
-        akao_upload_bank_blocking((AkaoBankHeader *)(off[1] + LOAD_BUFFER_ADDRESS), 1);
+        akao_upload_bank_blocking((AkaoBankHeader *)((u8 *)LOAD_BUFFER_ADDRESS + off[1]), 1);
     }
 }
 
@@ -277,7 +277,7 @@ void field_load_fixed_song(void)
 {
     u8 *dst;
     u32 *off_end;
-    u32 count;
+    uintptr_t count;
 
     cdrom_queue_read(FIELD_FIXED_SONG_RESOURCE, (void *)LOAD_BUFFER_ADDRESS);
     cdrom_wait_queue_empty();
@@ -288,7 +288,7 @@ void field_load_fixed_song(void)
     off_end = (u32 *)FIELD_AUDIO_LOAD_OFFSETS + count;
 
     bcopy((u8 *)LOAD_BUFFER_ADDRESS, dst, off_end[-1]);
-    akao_upload_bank_blocking((AkaoBankHeader *)(off_end[-1] + LOAD_BUFFER_ADDRESS), 1);
+    akao_upload_bank_blocking((AkaoBankHeader *)((u8 *)LOAD_BUFFER_ADDRESS + off_end[-1]), 1);
 }
 
 /**
@@ -364,7 +364,7 @@ void field_play_song_section(s32 section_index, s32 param1)
  */
 void field_play_second_song(void)
 {
-    g_field_song_handles[FIELD_SONG_SECOND] = akao_switch_song((s32)g_field_second_song, g_field_song_volume);
+    g_field_song_handles[FIELD_SONG_SECOND] = akao_switch_song(g_field_second_song, g_field_song_volume);
 }
 
 /**
@@ -720,7 +720,7 @@ void field_update_music_stream(void)
             if (g_field_stream_bank_pending != 0)
             {
                 /* First bank sector: restart the upload. */
-                bcopy(g_field_stream_sector, (void *)(g_field_stream_bank_bytes + FIELD_STREAM_BANK_BUFFER),
+                bcopy(g_field_stream_sector, (u8 *)FIELD_STREAM_BANK_BUFFER + g_field_stream_bank_bytes,
                       FIELD_STREAM_SECTOR_SIZE);
                 g_field_stream_bank_bytes += FIELD_STREAM_SECTOR_SIZE;
                 akao_reset_xfer_state();
@@ -732,7 +732,7 @@ void field_update_music_stream(void)
             }
             else
             {
-                bcopy(g_field_stream_sector, (void *)(g_field_stream_bank_bytes + FIELD_STREAM_BANK_BUFFER),
+                bcopy(g_field_stream_sector, (u8 *)FIELD_STREAM_BANK_BUFFER + g_field_stream_bank_bytes,
                       FIELD_STREAM_SECTOR_SIZE);
                 if (g_field_stream_bytes_left < (u32)FIELD_STREAM_SECTOR_SIZE)
                 {

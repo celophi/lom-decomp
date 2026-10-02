@@ -178,11 +178,11 @@ s32 akao_start_song_channels(void* sequence, s32 channel_mask, s32 unused)
  * @return Id of the new sequence, 0 if it was already playing, or -1 for a bad header.
  * @see decomp.me (100%) https://decomp.me/scratch/d6xXt
  */
-s32 akao_switch_song(s32 sequence, s32 volume)
+s32 akao_switch_song(void* sequence, s32 volume)
 {
     s32 result;
 
-    g_akao_cmd_params[0].value = sequence;
+    g_akao_cmd_params[0].buffer = sequence;
     result = akao_send_command(AKAO_CMD_SWITCH_SONG);
     g_akao_cmd_params[0].value = (volume & 0x7F);
     g_akao_cmd_params[3].value = 0;
@@ -229,7 +229,7 @@ void akao_play_sfx(s32 sound_id, s32 tag, s32 pan, s32 volume)
  * @return The address of @p buffer, or the akao_check_magic result for a bad header.
  * @see decomp.me (100%) https://decomp.me/scratch/FFGei
  */
-s32 akao_play_sfx_from_buffer(AkaoHeader* buffer, s32 tag, s32 pan, s32 volume)
+uintptr_t akao_play_sfx_from_buffer(AkaoHeader* buffer, s32 tag, s32 pan, s32 volume)
 {
     s32 result = akao_check_magic(buffer);
 
@@ -244,7 +244,7 @@ s32 akao_play_sfx_from_buffer(AkaoHeader* buffer, s32 tag, s32 pan, s32 volume)
     g_akao_cmd_params[3].value = volume & 0x7F;
     akao_send_command(AKAO_CMD_PLAY_SFX_LIST);
 
-    return (s32)buffer;
+    return (uintptr_t)buffer;
 }
 
 /**
@@ -1356,7 +1356,7 @@ void akao_play_xa_one_shot(void* buf, s32 pan, s32 upper_slot, s32 use_reverb)
  * @return 0 on success, -1 if @p byte_count is 0.
  * @see decomp.me (100%) https://decomp.me/scratch/bRIJX
  */
-s32 akao_start_xa_stream(s32 ring_base, u32 byte_count)
+s32 akao_start_xa_stream(void* ring_base, u32 byte_count)
 {
     if (byte_count == 0)
     {
@@ -1364,7 +1364,7 @@ s32 akao_start_xa_stream(s32 ring_base, u32 byte_count)
     }
     SpuSetIRQ(SPU_OFF);
     SpuSetIRQAddr(0);
-    g_akao_cmd_params[0].value = ring_base;
+    g_akao_cmd_params[0].buffer = ring_base;
     g_akao_cmd_params[1].value = byte_count;
     g_akao_xa_tracker.upload_block = -1;
     g_akao_xa_tracker.unk20 = 0;

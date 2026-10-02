@@ -672,7 +672,7 @@ void wmap_land_effect_07_sequence_10_step_04(void)
     g_wmap_effect_params[5] = -1;
     if (D_801B24B4 != 0)
     {
-        func_8006CFE4((s32)&g_wmap_sprite_actors[104], (s32)&g_wmap_actor_animations[104], 0xC, D_801B24B4, D_801B24B4, 0);
+        func_8006CFE4(&g_wmap_sprite_actors[104], &g_wmap_actor_animations[104], 0xC, D_801B24B4, D_801B24B4, 0);
     }
     remaining_ticks = g_wmap_land_effect_07_sequence_10_timer - 1;
     g_wmap_land_effect_07_sequence_10_timer = remaining_ticks;

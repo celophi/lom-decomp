@@ -3,7 +3,7 @@
 /**
  * @brief Inventory record @p index.
  */
-#define GOSUB_INVENTORY_RECORD(index) ((FieldItemRecord*)((index) * sizeof(FieldItemRecord) + (u32)g_saved_game_ctx->items))
+#define GOSUB_INVENTORY_RECORD(index) ((FieldItemRecord*)((index) * sizeof(FieldItemRecord) + (uintptr_t)g_saved_game_ctx->items))
 
 /**
  * @brief Select the pet or golem under the cursor to take along; eggs and grazing pets are refused.

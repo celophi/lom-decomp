@@ -115,7 +115,7 @@ void field_apply_weapon_action_params(s32 player_index);
 void field_set_actor_group(s32 key, s32 group);
 s32 field_actor_faces_actor(s32 first_key, s32 second_key);
 s32 field_get_actor_binding_state(s32 key);
-s32 field_reload_actor(s32 key, s32 resource_entry_index, s32 resource_slot_id, u8 *resource_base, s32 group, s32 x, s32 y, s32 z, s32 animation, s32 resource_flag);
+s32 field_reload_actor(s32 key, s32 resource_entry_index, s32 resource_slot_id, s32 package, s32 group, s32 x, s32 y, s32 z, s32 animation, s32 resource_flag);
 
 /* field_actor_lifecycle.c */
 struct FieldActorTemplate;
@@ -152,7 +152,7 @@ void field_unpack_actor_resource(s32 owner, struct FieldActorSlot *actor);
 s32 field_get_actor_resource_id(s32 unused_slot_index, struct FieldPlayerRecord* player, s32 weapon_set);
 void field_initialize_actor_part(s32 part_index, s32 timer_mode);
 void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index);
-void field_load_resource_entry(s32 resource_slot_id, u8 *resource_base, s32 entry_index);
+void field_load_resource_entry(s32 resource_slot_id, s32 package, s32 entry_index);
 void field_release_resource_entry(s32 entry_index);
 void field_render_actor_objects(FieldRenderContext *render_context);
 void field_set_global_color_scale(s16 red, s16 green, s16 blue);
@@ -260,7 +260,7 @@ void field_pair_indicators_reset(void);
 u8 *field_pair_indicators_get_list(void);
 
 /* field_coordinate_icon.c */
-s32 field_draw_coordinate_panel(void *ot, u8* prim, s32 x_offset, s32 y_offset);
+void* field_draw_coordinate_panel(void* ot, u8* prim, s32 x_offset, s32 y_offset);
 void field_upload_player_icons(void);
 
 /* field_dialog_screens.c */
@@ -334,7 +334,7 @@ void field_run_zukan(s32 context);
 /* field_modal_stream_start.c */
 void field_open_carda(s32 mode);
 void field_run_golem(void);
-void field_modal_frame_stub(s32 render_half);
+void field_modal_frame_stub(struct FieldRenderHalf* render_half);
 void field_open_niki(s32 mode);
 void field_open_addhero(s32 mode);
 
@@ -356,7 +356,7 @@ s32 field_add_stat_increase(s32 value, s32 increase, s32 flags);
 
 /* field_record_lookup_ops.c */
 void field_restore_actor_capacity_fraction(s32 record_id, s32 fraction_256);
-void field_grant_actor_pickup(void *unused, s32 owner_id);
+void field_grant_actor_pickup(s32 recipient, s32 owner_id);
 
 /* field_record_position_queries.c */
 s32 field_is_actor_near_stored_position(s32 actor_id, s32 half_width, s32 half_depth);

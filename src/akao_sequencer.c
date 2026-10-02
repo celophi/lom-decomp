@@ -1816,7 +1816,7 @@ void akao_seq_op_set_articulation(AkaoChannelState* channel)
  */
 void akao_seq_op_select_articulation_map(AkaoChannelState* channel)
 {
-    s32 base;
+    uintptr_t base;
     u16* entry;
     u8* cursor;
     u8 map_index;
@@ -1824,7 +1824,7 @@ void akao_seq_op_select_articulation_map(AkaoChannelState* channel)
     cursor = channel->seq_cursor;
     map_index = *cursor;
     channel->seq_cursor = cursor + 1;
-    base = g_akao_seq_channel0->key_map_base;
+    base = (uintptr_t)g_akao_seq_channel0->key_map_base;
     if (base != 0)
     {
         entry = (u16*)(map_index * 2 + base);
@@ -1834,7 +1834,7 @@ void akao_seq_op_select_articulation_map(AkaoChannelState* channel)
             channel->flags &= ~AKAO_CH_KEY_MAP;
             return;
         }
-        channel->key_map = base + *entry + 0x20;
+        channel->key_map = (u8*)(base + *entry + 0x20);
         channel->note_key = 0xFF;
         channel->flags = (channel->flags & ~AKAO_CH_ARTICULATION_MASK) | AKAO_CH_KEY_MAP;
     }

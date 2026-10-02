@@ -221,15 +221,15 @@ void wmap_land_effect_33_sequence_8_step_01(void)
     s32 index;
     s32 screen_offset;
     s32 config_offset;
-    u8* config_base;
-    u8* screen_base;
+    uintptr_t config_base;
+    uintptr_t screen_base;
     u8* resource;
     u8* screen_entry;
     s16* config_entry;
 
     index = 0;
-    config_base = g_wmap_actor_motions;
-    screen_base = g_wmap_actor_animations;
+    config_base = (uintptr_t)g_wmap_actor_motions;
+    screen_base = (uintptr_t)g_wmap_actor_animations;
     resource = &g_wmap_animation_bank_4;
     screen_offset = 0x460;
     config_offset = 0xAF0;
@@ -246,9 +246,9 @@ void wmap_land_effect_33_sequence_8_step_01(void)
 
     do
     {
-        screen_entry = (u8*)(screen_offset + (s32)screen_base);
+        screen_entry = (u8*)(screen_offset + screen_base);
         screen_offset += 8;
-        config_entry = (s16*)(config_offset + (s32)config_base);
+        config_entry = (s16*)(config_offset + config_base);
         config_offset += 0x14;
         index++;
         *config_entry = 0;
@@ -265,15 +265,15 @@ void wmap_land_effect_33_sequence_9_step_01(void)
     s32 index;
     s32 screen_offset;
     s32 config_offset;
-    u8* config_base;
-    u8* screen_base;
+    uintptr_t config_base;
+    uintptr_t screen_base;
     u8* resource;
     u8* screen_entry;
     s16* config_entry;
 
     index = 0;
-    config_base = g_wmap_actor_motions;
-    screen_base = g_wmap_actor_animations;
+    config_base = (uintptr_t)g_wmap_actor_motions;
+    screen_base = (uintptr_t)g_wmap_actor_animations;
     resource = &g_wmap_animation_bank_2;
     screen_offset = 0x5F0;
     config_offset = 0xED8;
@@ -290,9 +290,9 @@ void wmap_land_effect_33_sequence_9_step_01(void)
 
     do
     {
-        screen_entry = (u8*)(screen_offset + (s32)screen_base);
+        screen_entry = (u8*)(screen_offset + screen_base);
         screen_offset += 8;
-        config_entry = (s16*)(config_offset + (s32)config_base);
+        config_entry = (s16*)(config_offset + config_base);
         config_offset += 0x14;
         index++;
         *config_entry = 0;

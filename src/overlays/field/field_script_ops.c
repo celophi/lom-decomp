@@ -1865,11 +1865,11 @@ void field_script_op_41(s32 index, s32 keyframe)
 /**
  * @brief Opcode 0x42: find or load a scene resource entry.
  * @param resource_slot_id Passed through to field_find_or_load_resource_entry.
- * @param resource_base Passed through to field_find_or_load_resource_entry.
+ * @param package Package number passed through to field_find_or_load_resource_entry.
  */
-void field_script_op_42(s32 resource_slot_id, s32 resource_base)
+void field_script_op_42(s32 resource_slot_id, s32 package)
 {
-    field_find_or_load_resource_entry(resource_slot_id, resource_base);
+    field_find_or_load_resource_entry(resource_slot_id, package);
 }
 
 /**
@@ -2702,9 +2702,9 @@ void field_script_op_81(s32 mode, s32 red, s32 green, s32 blue)
  * @param key Actor id; bit 7 sets the resource flag of field_reload_actor.
  * @param resource_entry_index Forwarded to field_reload_actor.
  * @param resource_slot_id Forwarded to field_reload_actor.
- * @param resource_base Forwarded to field_reload_actor.
+ * @param package Package number forwarded to field_reload_actor.
  */
-void field_script_op_82(s32 key, s32 resource_entry_index, s32 resource_slot_id, u8* resource_base)
+void field_script_op_82(s32 key, s32 resource_entry_index, s32 resource_slot_id, s32 package)
 {
     s32 actor;
     s32 resource_flag;
@@ -2720,7 +2720,7 @@ void field_script_op_82(s32 key, s32 resource_entry_index, s32 resource_slot_id,
         actor = key;
     }
     field_clear_actor_record_script_only(actor);
-    field_reload_actor(actor, resource_entry_index, resource_slot_id, (u8*)resource_base, 0, -1, -1, -1, 0, resource_flag);
+    field_reload_actor(actor, resource_entry_index, resource_slot_id, package, 0, -1, -1, -1, 0, resource_flag);
 }
 
 /**

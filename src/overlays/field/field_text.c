@@ -110,7 +110,7 @@
 #define FIELD_TEXT_FRAME_TILE_HEIGHT 32
 #define FIELD_TEXT_BORDER_WIDTH 8
 /** @brief P_TAG word that links a packet of type @p type to the packet at @p next. */
-#define FIELD_TEXT_TAG(next, type) (((u32)(next) & 0xFFFFFF) | ((sizeof(type) / 4 - 1) << 24))
+#define FIELD_TEXT_TAG(next, type) (((uintptr_t)(next) & 0xFFFFFF) | ((sizeof(type) / 4 - 1) << 24))
 #define FIELD_TEXT_SPRITE_COLOR (0x65000000 | GPU_TINT_NEUTRAL)
 #define FIELD_TEXT_QUAD_COLOR (0x2D000000 | GPU_TINT_NEUTRAL)
 #define FIELD_TEXT_CHOICE_COLOR (0x7D000000 | GPU_TINT_NEUTRAL)
@@ -140,7 +140,7 @@
 /**
  * @brief Address of the cache word at @p byte_offset within a cache @p row.
  */
-#define FIELD_TEXT_CACHE_WORD(row, byte_offset) ((u16*)((byte_offset) + (u32)(row)))
+#define FIELD_TEXT_CACHE_WORD(row, byte_offset) ((u16*)((byte_offset) + (uintptr_t)(row)))
 
 /** @brief Modes in the low three bits of a runtime window's flags. */
 typedef enum
