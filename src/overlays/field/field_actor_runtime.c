@@ -354,12 +354,12 @@ extern void* g_field_resource_cursor;
 extern s32 g_field_scene_mode_bit;
 extern FieldDirectionOffset g_field_direction_offsets[];
 extern s32 g_field_active_group;
-extern s32 D_80122710;
+extern s32 g_field_party_routes_stale;
 extern s32 g_field_item_drop_menu_open;
 extern s32 D_80122B20;
 extern FieldActor g_field_effect_records[];
 extern s32 D_80105770;
-extern s32 D_800F2298;
+extern s32 g_field_timed_panel_active;
 extern s32 g_field_modal_state;
 extern s32 D_80105760;
 extern FieldCdBuffer* g_field_cd_buffer;
@@ -2787,7 +2787,7 @@ void field_update_actor_objects(void)
                     mode = actor->control.word & FIELD_CONTROL_MODE_MASK;
                     if (mode == FIELD_CONTROL_PAD)
                     {
-                        if (g_field_item_drop_menu_open == 0 && D_80122710 == 0 && g_field_dialog_screen_mode == 0)
+                        if (g_field_item_drop_menu_open == 0 && g_field_party_routes_stale == 0 && g_field_dialog_screen_mode == 0)
                         {
                             if (!(state->flags & FIELD_OBJECT_CONTROL_BLOCKED))
                             {
@@ -3325,7 +3325,7 @@ u8* field_advance_actor_part_animation_frame(FieldActor* actor, u8* resource_bas
     FIELD_ACTOR_FRAME_WORD(actor) |= FIELD_FRAME_UNCHANGED;
     entry_shift = (offset_high >> 7) + 1;
 
-    if (D_800F2298 == 0 && g_field_modal_state == 0 && g_field_text_session_active == 0 && actor->animation_active != 0)
+    if (g_field_timed_panel_active == 0 && g_field_modal_state == 0 && g_field_text_session_active == 0 && actor->animation_active != 0)
     {
         actor->frame_timer--;
         actor->frame_ticks++;

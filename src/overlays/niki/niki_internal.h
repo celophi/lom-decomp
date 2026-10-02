@@ -426,7 +426,8 @@ extern NikiSaveBuffer g_niki_save_blob;
 extern u8 D_8011F3D8[];
 /** @brief Path selected for loading or replacing a save file. */
 extern u8 g_niki_selected_save_path[];
-extern s32 D_8011F428;
+/** @brief FIELD's NIKI outcome: 0 none or written back, 1 save loaded, 2 failed or declined. */
+extern s32 g_field_niki_state;
 extern s32 D_801227CC;
 extern s32 D_801227F4;
 extern s32 D_8011F418;

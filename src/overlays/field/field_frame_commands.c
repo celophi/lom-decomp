@@ -16,7 +16,7 @@ void field_update_actor_texts(FieldRenderHalf* render);
 void field_update_input_repeat(void);
 extern s32 g_field_action_context;
 /** @brief Nonzero while a picture screen is shown (set by func_800A5670). */
-extern s32 D_800F2298;
+extern s32 g_field_timed_panel_active;
 extern s32 g_field_gover_load_countdown;
 extern s32 g_field_active_group;
 extern s32 g_field_pickup_sound_played;
@@ -54,7 +54,7 @@ void field_build_frame_commands(s32 render_half, s32 alternate)
             field_draw_actor_hud((FieldRenderHalf*)render_half);
         }
     }
-    if ((D_800F2298 == 0) && (g_field_gover_load_countdown == 0) && (g_field_modal_state == 0) && (g_field_text_session_active == 0))
+    if ((g_field_timed_panel_active == 0) && (g_field_gover_load_countdown == 0) && (g_field_modal_state == 0) && (g_field_text_session_active == 0))
     {
         field_runtime_update();
         if (g_field_scene_request_pending != 0)
@@ -68,7 +68,7 @@ void field_build_frame_commands(s32 render_half, s32 alternate)
     }
     field_update_ring_menu((FieldRenderHalf*)render_half);
     field_cancel_animation_bindings();
-    if ((D_800F2298 == 0) && (g_field_gover_load_countdown == 0) && (g_field_modal_state == 0) && (g_field_ring_menu_state == 0) && (g_field_text_session_active == 0))
+    if ((g_field_timed_panel_active == 0) && (g_field_gover_load_countdown == 0) && (g_field_modal_state == 0) && (g_field_ring_menu_state == 0) && (g_field_text_session_active == 0))
     {
         field_update_actor_animations();
     }
