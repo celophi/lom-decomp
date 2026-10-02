@@ -3250,7 +3250,7 @@ void field_render_effects(FieldRenderContext *render_context)
     u32 *ordering_table;
     FieldResourceEntry *resources;
     s32 *packet_cursor;
-    s32 frame_result;
+    u32 frame_result;
     s32 object_index;
     s32 actor_or_object_index;
     u8* actor_address;
@@ -3322,7 +3322,7 @@ void field_render_effects(FieldRenderContext *render_context)
                         frame_result = field_advance_actor_part_animation_frame(effect, (u8 *) frame_result);
                         if (frame_result != 0)
                         {
-                            if (frame_result >= 0)
+                            if ((s32) frame_result >= 0)
                             {
                                 packet_cursor = field_render_effect_frame16(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags & 1) ^ 1, part);
                             }
@@ -3369,7 +3369,7 @@ void field_render_effects(FieldRenderContext *render_context)
                         frame_result = field_advance_actor_part_animation_frame(effect, (u8 *) frame_result);
                         if (frame_result != 0)
                         {
-                            if (frame_result >= 0)
+                            if ((s32) frame_result >= 0)
                             {
                                 packet_cursor = field_render_effect_frame16(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags & 1) ^ 1, part);
                             }
@@ -3396,7 +3396,7 @@ void field_render_effects(FieldRenderContext *render_context)
                         frame_result = field_advance_actor_part_animation_frame(effect, (u8 *) frame_result);
                         if (frame_result != 0)
                         {
-                            if (frame_result >= 0)
+                            if ((s32) frame_result >= 0)
                             {
                                 packet_cursor = field_render_effect_frame16(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags & 1) ^ 1, part);
                             }

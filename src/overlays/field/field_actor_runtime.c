@@ -42,9 +42,8 @@ void field_set_color_scale();
 void field_advance_actor_effects(FieldActorSlot *actor_state);
 void field_handle_return_to_title_prompt(void);
 void field_restore_default_action_animation_mappings();
-void field_restart_actor_animation();
-/* K&R: one call passes a fourth argument that the function does not read. */
-void field_load_resource_package();
+void field_restart_actor_animation(FieldActor* actor);
+void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_entry_index);
 
 /** @brief Fade level of the normal field view. */
 #define FIELD_FADE_NORMAL_LEVEL 0xC0
@@ -326,8 +325,8 @@ void field_unpack_resource_package(FieldCdBuffer* buf, s32 size, s32 slot_index,
 static void field_upload_resource_texture(FieldCdBuffer* buf, s32 slot_index, s32 texture_index, s32 palette_row);
 static void field_append_resource_data(u32* src, s32 length, s32 slot_index);
 static void field_refresh_actor_portraits();
-s32* field_render_effect_frame16(FieldActor* actor, s32* packet, u32* ordering_table, s32 frame_data, s32 unused, FieldObjectPart* part);
-s32* field_render_effect_frame8(FieldActor* actor, s32* packet, u32* ordering_table, s32 frame_data, s32 unused, FieldObjectPart* part);
+s32* field_render_effect_frame16(FieldActor* actor, s32* packet, u32* ordering_table, u8* frame_data, s32 unused, FieldObjectPart* part);
+s32* field_render_effect_frame8(FieldActor* actor, s32* packet, u32* ordering_table, u8* frame_data, s32 unused, FieldObjectPart* part);
 
 extern FieldColorScale g_field_color_scale;
 extern s8 g_field_color_scale_active;
@@ -448,7 +447,7 @@ void field_close_dialog_screen(void)
             g_field_actors[i].control.word &= ~FIELD_CONTROL_MODE_MASK;
             g_field_actors[i].animation = (g_field_actors[i].animation & FIELD_ANIMATION_FACING) + 0x12;
             g_field_object_states[i].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
-            field_restart_actor_animation(&g_field_actors[i], (void*)~FIELD_CONTROL_MODE_MASK);
+            field_restart_actor_animation(&g_field_actors[i]);
         }
     }
 
@@ -1961,7 +1960,7 @@ static void field_relocate_resource_buffer(s32 resource_index)
     g_field_resource_entries[resource_index].flags |= FIELD_RESOURCE_LOADED;
     g_field_resource_cursor = g_field_resource_entries[resource_index].end;
     actor = &g_field_actors[resource_index];
-    field_restart_actor_animation(actor, old_start);
+    field_restart_actor_animation(actor);
 }
 
 /**
@@ -2053,7 +2052,7 @@ static void field_load_actor_resource_slot(s32 resource_index, s32 slot_index, s
     g_field_resource_entries[resource_index].unk8 = 0;
     g_field_resource_entries[resource_index].flags = (g_field_resource_entries[resource_index].flags & ~FIELD_RESOURCE_HAS_ACTIONS) | (alternate_layout & 1);
     g_field_resource_entries[resource_index].start = g_field_resource_cursor;
-    field_load_resource_package(resource_id, slot_index, resource_index, alternate_layout & 1);
+    field_load_resource_package(resource_id, slot_index, resource_index);
     g_field_actors[slot_index].animation &= FIELD_ANIMATION_FACING;
     field_restart_actor_animation(&g_field_actors[slot_index]);
     g_field_resource_entries[resource_index].end = g_field_resource_cursor;
@@ -2893,13 +2892,13 @@ void field_render_actor_objects(FieldRenderContext* render_context)
     {
         if (actor->presence != FIELD_ACTOR_HIDDEN && actor->presence != FIELD_ACTOR_UNUSED)
         {
-            if (actor->frame_data >= 0)
+            if ((s32)actor->frame_data >= 0)
             {
-                packet_cursor = field_render_effect_frame16(actor, packet_cursor, ordering_table, actor->frame_data, 0, &g_field_object_parts[i]);
+                packet_cursor = field_render_effect_frame16(actor, packet_cursor, ordering_table, (u8*)actor->frame_data, 0, &g_field_object_parts[i]);
             }
             else
             {
-                packet_cursor = field_render_effect_frame8(actor, packet_cursor, ordering_table, actor->frame_data, 0, &g_field_object_parts[i]);
+                packet_cursor = field_render_effect_frame8(actor, packet_cursor, ordering_table, (u8*)actor->frame_data, 0, &g_field_object_parts[i]);
             }
         }
         else if (actor->presence == FIELD_ACTOR_HIDDEN)

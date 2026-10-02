@@ -947,7 +947,8 @@ struct FieldNode
         FIELD_NODE_DEF_ROWS(def) pairs of (x0, x1) shorts. Walked by
         field_collision_rasterize_groups. */
     u16* spans;
-    s32 unk14; /* 0x14 */
+    /** 0x14 per-row edge attribute bytes, two per span (FieldCollisionNode::span_flags). */
+    u8* span_flags;
     /** 0x18 when zero the node is skipped by the group scan in field_collision_collect_groups. */
     u8 unk18;
     u8 _pad2[0x1C - 0x19];

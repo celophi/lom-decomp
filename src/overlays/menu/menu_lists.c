@@ -475,7 +475,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf
                     s32 names_offset = ((MenuTextResources*)resources)->table_offsets[MENU_TEXT_KEY_ITEM_NAMES];
                     s32 general_offset = ((MenuTextResources*)resources)->table_offsets[MENU_TEXT_GENERAL];
                     u8* name_table = resources + names_offset;
-                    u8* name = name_table + *(u16*)(u8*)((s32)name_offset + (s32)name_table);
+                    u8* name = name_table + *(u16*)(u8*)((s32)name_offset + (u32)name_table);
                     u8* general_table = resources + general_offset;
                     u8* suffix = menu_text_entry(general_table, 109);
                     u8* text_cursor = item_name_buffer;
@@ -495,7 +495,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf
                     {
                         u32 category_offset = (item_attributes >> 9) & 0x7E;
                         u8* description_table = menu_text_table_base(MENU_TEXT_ITEM_CATEGORY_HELP);
-                        u8* description = description_table + *(u16*)((u8*)((s32)category_offset + (s32)description_table) + 0);
+                        u8* description = description_table + *(u16*)((u8*)((s32)category_offset + (u32)description_table) + 0);
 
                         u8* text_cursor = g_menu_item_description_buffer;
                         u8* name_prefix = item_name_buffer;
@@ -506,7 +506,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf
                     {
                         u32 category_offset = (item_attributes >> 9) & 0x7E;
                         u8* description_table = menu_text_table_base(MENU_TEXT_ITEM_CATEGORY_HELP);
-                        u8* description = description_table + *(u16*)((u8*)((s32)category_offset + (s32)description_table) + 0x16);
+                        u8* description = description_table + *(u16*)((u8*)((s32)category_offset + (u32)description_table) + 0x16);
 
                         u8* text_cursor = g_menu_item_description_buffer;
                         u8* name_prefix = item_name_buffer;
@@ -519,7 +519,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf
                         u32 item_attributes = ((MenuItemEntry*)g_menu_item_ptr)->attributes.packed;
                         u32 category_offset = (item_attributes >> 9) & 0x7E;
                         u8* description_table = g_menu_state_ptr + *description_offset;
-                        u8* description = description_table + *(u16*)((u8*)((s32)category_offset + (s32)description_table) + 0x2E);
+                        u8* description = description_table + *(u16*)((u8*)((s32)category_offset + (u32)description_table) + 0x2E);
 
                         u8* text_cursor = g_menu_item_description_buffer;
                         u8* name_prefix = item_name_buffer;
@@ -1326,7 +1326,7 @@ s32 menu_item_followup_callback(s32* ot, ScrollListState* state, s32 prim_buf, V
             if (idx != -1)
             {
                 tbl = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
-                item = (MenuContentItem*)((idx * 8) + (s32)tbl);
+                item = (MenuContentItem*)((idx * 8) + (u32)tbl);
                 g_content_view_x = item->packed_x & 0x1FF;
                 g_content_view_y = item->y - 8;
                 g_menu_suppress_cursor = 5;

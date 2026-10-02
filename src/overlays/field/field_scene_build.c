@@ -373,7 +373,7 @@ void field_build_render_records(FieldMapObject* map, u16 object_index)
             tail = (FieldLink*)node;
             node->def = node_def;
             node->spans = 0;
-            node->unk14 = 0;
+            node->span_flags = NULL;
             node->unk18 = *(u8*)&(node_def)->flags >> FIELD_NODE_DEF_ENABLE_SHIFT;
             node->x_min = FIELD_BOUNDS_EMPTY;
             node->x_max = 0;

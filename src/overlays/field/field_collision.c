@@ -335,7 +335,7 @@
 /**
  * Length slot `ring` of the bucket length array, seen through a u32 pointer.
  */
-#define FIELD_COLLISION_PATH_LEN_SLOT(lens, ring) (*(u32*)((u32)(lens) + ((ring) << 2)))
+#define FIELD_COLLISION_PATH_LEN_SLOT(lens, ring) (*(u32*)((u8*)(lens) + ((ring) << 2)))
 /**
  * Path column entry `n` places after `p`.
  */
@@ -451,7 +451,9 @@ typedef struct FieldCollisionNode
 {
     struct FieldCollisionNode* next;
     FieldCollisionSurfaceDef* surface;
-    u8 pad8[8];
+    /** Owning object and part (FieldNode::obj, FieldNode::part); unused by collision. */
+    void* owner_object;
+    void* owner_part;
     /** Per-row span table: (min_x, max_x) pairs, FIELD_COLLISION_SURFACE_SPANS per row. */
     void* spans;
     /** Per-row edge attribute bytes, two per span (left end, right end). */
@@ -3942,7 +3944,7 @@ void field_collision_rasterize_groups(s32 unused, FieldNode* clip)
                                 runs_base[run_count].step = FIELD_NODE_DEF_ROWS(node->def);
                                 run_count++;
                             }
-                            list_offset += 8;
+                            list_offset += sizeof(FieldCollisionRasterNode);
                             j++;
                             if (j < node_count)
                             {

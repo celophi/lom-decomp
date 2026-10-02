@@ -271,7 +271,7 @@ s32 field_get_ring_result(void)
  * @brief Return the icon index of the ring entry under the cursor.
  * @return The icon index of the cursor entry.
  */
-u8 field_get_ring_cursor_entry(void)
+s32 field_get_ring_cursor_entry(void)
 {
     return g_field_ring_entries[g_field_ring_cursor];
 }

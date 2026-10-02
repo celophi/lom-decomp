@@ -408,7 +408,7 @@ void field_grant_reward(s32 recipient, s32 owner, u32 kind);
 /* field_ring_selection.c */
 void field_open_ring_menu(s32 position_mode, s32 menu_id, u16 excluded_mask, s32 cancel_index);
 s32 field_get_ring_result(void);
-u8 field_get_ring_cursor_entry(void);
+s32 field_get_ring_cursor_entry(void);
 s32 field_update_ring_menu(struct FieldRenderHalf *render_half);
 void field_load_party_script_page(s32 party_slot, s32 resource_id);
 void field_upload_golem_palettes(void);
