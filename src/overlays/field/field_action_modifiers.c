@@ -384,7 +384,7 @@ void field_select_coordinate_labels(void)
     if (resource != NULL)
     {
         /* Integer sum: the target adds the index before the pointer. */
-        offsets = (u16*)((first * 2) + (s32)resource);
+        offsets = (u16*)((first * 2) + (uintptr_t)resource);
         for (; i < FIELD_COORDINATE_LABEL_COUNT; i++)
         {
             g_field_coordinate_labels[i] = resource + (offsets[i + 2] + 4);
@@ -844,7 +844,7 @@ s32 field_apply_damage(u32 attack, u32 defense)
     s32 clamped;
     u32 half_attack;
     s32 bonus;
-    u32 value;
+    uintptr_t value;
     FieldStatusRecord* attacker;
     s32 quarter;
 
@@ -894,12 +894,12 @@ s32 field_apply_damage(u32 attack, u32 defense)
         if ((s32)attack < 0)
         {
             quarter = attack + 3;
-            value = (u32)attacker->state;
+            value = (uintptr_t)attacker->state;
         }
         else
         {
             quarter = attack;
-            value = (u32)attacker->state;
+            value = (uintptr_t)attacker->state;
         }
         field_heal_status((FieldStatusState*)value, quarter >> 2);
     }

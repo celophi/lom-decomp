@@ -33,7 +33,7 @@
  * @note Summed as integers, offsets first, like the original code.
  */
 #define CARD_ENTRY_SERIAL_TEXT(card, index)                                                                                                                    \
-    ((u8*)((card) * CARD_DIRECTORY_BYTES + (index) * CARD_DIRECTORY_ENTRY_BYTES + (s32)g_card_entries + CARD_SAVE_FILENAME_PREFIX_LENGTH))
+    ((u8*)((card) * CARD_DIRECTORY_BYTES + (index) * CARD_DIRECTORY_ENTRY_BYTES + (uintptr_t)g_card_entries + CARD_SAVE_FILENAME_PREFIX_LENGTH))
 
 /** @brief Directory listing of both cards. */
 extern struct DIRENTRY g_card_entries[CARD_SLOT_COUNT][CARD_DIRECTORY_ENTRY_COUNT];

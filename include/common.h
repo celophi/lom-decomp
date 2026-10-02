@@ -21,6 +21,18 @@ typedef signed char     s8;
 typedef unsigned short  u16;
 typedef signed short    s16;
 
+/*
+ * Integers wide enough to hold an address (uintptr_t, and intptr_t for signed address
+ * compares). The PS1 toolchains (GCC 2.x for the R3000) predate C99 and have no
+ * <stdint.h>, so they are defined here for them.
+ */
+#if defined(__mips__) && defined(__GNUC__) && __GNUC__ < 3
+typedef u32 uintptr_t;
+typedef s32 intptr_t;
+#else
+#include <stdint.h>
+#endif
+
 /* Boolean / null macros */
 #define TRUE    1
 #define FALSE   0
@@ -37,5 +49,8 @@ typedef signed short    s16;
 
 /* Round x up to the nearest multiple of 64 (PSX texture page width alignment) */
 #define ALIGN64(x) (((x) + 0x3F) & 0xFFC0)
+
+/** @brief Byte offset of @p member within @p type, as a u32 (the PS1 toolchain has no stddef.h). */
+#define OFFSETOF(type, member) ((u32)((u8*)&((type*)0)->member - (u8*)0))
 
 #endif

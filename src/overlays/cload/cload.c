@@ -59,7 +59,7 @@ void cload_init_card_events(void);
 /**
  * @brief Address of the CLOAD text whose table offset is @p offset.
  */
-#define CLOAD_TEXT_BY_OFFSET(table, offset) ((u8 *)((s32)(offset) + (s32)(table)))
+#define CLOAD_TEXT_BY_OFFSET(table, offset) ((u8 *)((uintptr_t)(offset) + (uintptr_t)(table)))
 
 /**
  * @brief Initialize and run the CLOAD save/continue menu.
@@ -592,14 +592,14 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
             s32 base_x;
             s32 *flag_ptr;
             u16 marker_offset;
-            char *entry;
+            uintptr_t entry;
             DVECTOR pos;
             u16 *text_table;
 
             off = i;
             base_x = -x_offset;
             text_table = &g_cload_text_check_memory_card;
-            entry = (char*)g_card_entries;
+            entry = (uintptr_t)g_card_entries;
             off = i;
             do
             {
@@ -623,20 +623,20 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
                             marker_offset = text_table[28];
                             prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, marker_offset), 1, base_x + CLOAD_ENTRY_MARKER_X, row_y, 0);
                         }
-                        if (*skip_hex_digits((u8*)((g_card_slot * CARD_DIRECTORY_BYTES) + (s32)entry + 0xC)) == 0x2B)
+                        if (*skip_hex_digits((u8*)((g_card_slot * CARD_DIRECTORY_BYTES) + entry + 0xC)) == 0x2B)
                         {
                             prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_plus_marker), 1, 0xF8 - x_offset, row_y, 1);
                         }
                     }
-                    if (strncmp(g_lom_save_filename_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
+                    if (strncmp(g_lom_save_filename_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + entry), 0xC) == 0)
                     {
                         prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_mana), 1, base_x, row_y, 0);
                     }
-                    else if (strncmp(g_lom_pocketstation_filename_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
+                    else if (strncmp(g_lom_pocketstation_filename_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + entry), 0xC) == 0)
                     {
                         prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_alt_save), 1, base_x, row_y, 0);
                     }
-                    else if (strncmp(g_new_save_entry_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + (s32)entry), 8) == 0)
+                    else if (strncmp(g_new_save_entry_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + entry), 8) == 0)
                     {
                         prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_new_save), 1, base_x, row_y, 0);
                     }

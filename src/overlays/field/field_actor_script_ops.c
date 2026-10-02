@@ -243,7 +243,7 @@ typedef struct
  * @param index Object index.
  */
 #define FIELD_OBJECT_STATE_BY_INDEX8(states, index8, index) \
-    ((FieldObjectState*)((((index8) + (index)) * 16 - (index)) * 4 + (u32)(states)))
+    ((FieldObjectState*)((((index8) + (index)) * 16 - (index)) * 4 + (uintptr_t)(states)))
 
 extern s32 g_field_direction_animation_modes[];
 extern s32 g_field_actor_walk_animations[];

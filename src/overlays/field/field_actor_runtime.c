@@ -42,9 +42,8 @@ void field_set_color_scale();
 void field_advance_actor_effects(FieldActorSlot *actor_state);
 void field_handle_return_to_title_prompt(void);
 void field_restore_default_action_animation_mappings();
-void field_restart_actor_animation();
-/* K&R: one call passes a fourth argument that the function does not read. */
-void field_load_resource_package();
+void field_restart_actor_animation(FieldActor* actor);
+void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_entry_index);
 
 /** @brief Fade level of the normal field view. */
 #define FIELD_FADE_NORMAL_LEVEL 0xC0
@@ -296,7 +295,7 @@ typedef struct
 
 void func_80140004(s32 work_address, s32 image_resource_index, s32 music_resource_index, s32 audio_clip_index);
 void field_reset_input_repeat();
-void field_draw_dialog_windows(s32);
+void field_draw_dialog_windows(FieldRenderHalf* render_half);
 void field_merge_dialog_items(void);
 void akao_fade_song_volume(s32, s32, s32);
 void akao_fade_all_sfx_volume(s32, s32);
@@ -320,14 +319,14 @@ static u8* field_advance_actor_animation_frame(FieldActor* actor);
 u8* field_begin_actor_animation_forward(FieldActor* actor, u8* resource_base);
 static u8* field_begin_actor_animation_reverse(FieldActor* actor, u8* resource_base);
 static void field_settle_actor_vertical_offset(FieldActor* actor);
-void field_load_resource_entry(s32 resource_slot_id, u8* resource_base, s32 entry_index);
+void field_load_resource_entry(s32 resource_slot_id, s32 package, s32 entry_index);
 void field_release_resource_entry(s32 entry_index);
 void field_unpack_resource_package(FieldCdBuffer* buf, s32 size, s32 slot_index, s32 palette_row);
 static void field_upload_resource_texture(FieldCdBuffer* buf, s32 slot_index, s32 texture_index, s32 palette_row);
 static void field_append_resource_data(u32* src, s32 length, s32 slot_index);
 static void field_refresh_actor_portraits();
-s32* field_render_effect_frame16(FieldActor* actor, s32* packet, u32* ordering_table, s32 frame_data, s32 unused, FieldObjectPart* part);
-s32* field_render_effect_frame8(FieldActor* actor, s32* packet, u32* ordering_table, s32 frame_data, s32 unused, FieldObjectPart* part);
+s32* field_render_effect_frame16(FieldActor* actor, s32* packet, u32* ordering_table, u8* frame_data, s32 unused, FieldObjectPart* part);
+s32* field_render_effect_frame8(FieldActor* actor, s32* packet, u32* ordering_table, u8* frame_data, s32 unused, FieldObjectPart* part);
 
 extern FieldColorScale g_field_color_scale;
 extern s8 g_field_color_scale_active;
@@ -380,9 +379,9 @@ extern u8 D_800FDCEA;
 
 /**
  * @brief Advance the active field dialog runtime and finish any pending text work.
- * @param update_mode Mode forwarded to the active dialog update helper.
+ * @param render_half Render half the dialog windows are drawn into.
  */
-void field_update_dialog_runtime(s32 update_mode)
+void field_update_dialog_runtime(FieldRenderHalf* render_half)
 {
     if (g_field_dialog_screen_mode != 0)
     {
@@ -392,7 +391,7 @@ void field_update_dialog_runtime(s32 update_mode)
             field_text_reset_scratch();
             if (g_field_dialog_screen_mode != 0)
             {
-                field_draw_dialog_windows(update_mode);
+                field_draw_dialog_windows(render_half);
             }
             field_text_upload_immediate_cache();
         }
@@ -448,7 +447,7 @@ void field_close_dialog_screen(void)
             g_field_actors[i].control.word &= ~FIELD_CONTROL_MODE_MASK;
             g_field_actors[i].animation = (g_field_actors[i].animation & FIELD_ANIMATION_FACING) + 0x12;
             g_field_object_states[i].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
-            field_restart_actor_animation(&g_field_actors[i], (void*)~FIELD_CONTROL_MODE_MASK);
+            field_restart_actor_animation(&g_field_actors[i]);
         }
     }
 
@@ -528,10 +527,10 @@ void field_update_gover_load(void)
 
 /**
  * @brief Update and render the modal return-to-title confirmation prompt.
- * @param render_ctx Current field render context passed to the prompt renderer.
+ * @param render_half Render half the prompt is drawn into.
  * @see decomp.me (100%) https://decomp.me/scratch/Kws0l
  */
-void field_update_return_to_title_prompt(s32 render_ctx)
+void field_update_return_to_title_prompt(FieldRenderHalf* render_half)
 {
     if (g_field_return_to_title_prompt_state != 0)
     {
@@ -554,7 +553,7 @@ void field_update_return_to_title_prompt(s32 render_ctx)
                 field_text_reset_scratch();
                 if (g_field_return_to_title_prompt_state != 0)
                 {
-                    field_draw_dialog_windows(render_ctx);
+                    field_draw_dialog_windows(render_half);
                 }
                 field_text_upload_immediate_cache();
             }
@@ -1772,7 +1771,7 @@ void field_initialize_actor_system(void)
     s32 control_flags_alt;
     u8* player_block;
     u8* slot_base_alias;
-    u32 dest_addr;
+    uintptr_t dest_addr;
 
     g_field_text_session_active = 0;
     D_8012291C = 0;
@@ -1887,7 +1886,7 @@ void field_initialize_actor_system(void)
 
     for (; i < FIELD_ACTOR_COUNT; i++)
     {
-        slot = (FieldActorSlot*)(((u32)j) + ((u32)slot_base));
+        slot = (FieldActorSlot*)((u32)j + (uintptr_t)slot_base);
         slot->parts = part;
         slot->animation = default_animation;
         field_initialize_actor_part(i, 0);
@@ -1919,7 +1918,7 @@ void field_initialize_actor_system(void)
         {
             scratch_base = row_cursor + 0xB337;
             dest_addr = column_offset;
-            dest_addr += (u32)(table_cursor + work_value);
+            dest_addr += (uintptr_t)(table_cursor + work_value);
             *((u16*)dest_addr) = (*(i + scratch_base) = 0);
             row_cursor += FIELD_ACTOR_PART_COUNT;
             table_cursor += FIELD_ACTOR_PART_COUNT * sizeof(u16);
@@ -1949,11 +1948,11 @@ static void field_relocate_resource_buffer(s32 resource_index)
     source_base = FIELD_RESOURCE_BACKUP;
     cursor_ref = &g_field_resource_cursor;
     *(u32*)&g_field_resource_entries[resource_index].start += 0;
-    bcopy((void*)(source_base - (u32)buffer_base + (u32)g_field_resource_entries[resource_index].start), *cursor_ref,
+    bcopy((void*)(source_base - (uintptr_t)buffer_base + (uintptr_t)g_field_resource_entries[resource_index].start), *cursor_ref,
           g_field_resource_entries[resource_index].end - g_field_resource_entries[resource_index].start);
-    resource_size = (u32)g_field_resource_entries[resource_index].end;
+    resource_size = (uintptr_t)g_field_resource_entries[resource_index].end;
     old_start = g_field_resource_entries[resource_index].start;
-    resource_size -= (u32)old_start;
+    resource_size -= (uintptr_t)old_start;
     g_field_resource_entries[resource_index].start = (u8*)g_field_resource_cursor;
     g_field_resource_entries[resource_index].end = ((u8*)g_field_resource_cursor) + resource_size;
     g_field_resource_entries[resource_index].flags &= ~FIELD_RESOURCE_HAS_ACTIONS;
@@ -1961,7 +1960,7 @@ static void field_relocate_resource_buffer(s32 resource_index)
     g_field_resource_entries[resource_index].flags |= FIELD_RESOURCE_LOADED;
     g_field_resource_cursor = g_field_resource_entries[resource_index].end;
     actor = &g_field_actors[resource_index];
-    field_restart_actor_animation(actor, old_start);
+    field_restart_actor_animation(actor);
 }
 
 /**
@@ -2053,7 +2052,7 @@ static void field_load_actor_resource_slot(s32 resource_index, s32 slot_index, s
     g_field_resource_entries[resource_index].unk8 = 0;
     g_field_resource_entries[resource_index].flags = (g_field_resource_entries[resource_index].flags & ~FIELD_RESOURCE_HAS_ACTIONS) | (alternate_layout & 1);
     g_field_resource_entries[resource_index].start = g_field_resource_cursor;
-    field_load_resource_package(resource_id, slot_index, resource_index, alternate_layout & 1);
+    field_load_resource_package(resource_id, slot_index, resource_index);
     g_field_actors[slot_index].animation &= FIELD_ANIMATION_FACING;
     field_restart_actor_animation(&g_field_actors[slot_index]);
     g_field_resource_entries[resource_index].end = g_field_resource_cursor;
@@ -2161,7 +2160,7 @@ void field_release_actor_resource_slot(s32 slot_index_minus_one)
         {
             if ((actor->presence != FIELD_ACTOR_UNUSED) && (actor->resource_index != FIELD_RESOURCE_FIXED))
             {
-                if ((actor->frame_data | 0x80000000) > (((u32)g_field_resource_entries[slot_index].start) | 0x80000000))
+                if ((actor->frame_data | FIELD_FRAME_DATA_8BIT) > ((uintptr_t)g_field_resource_entries[slot_index].start | FIELD_FRAME_DATA_8BIT))
                 {
                     actor->frame_data -= size;
                 }
@@ -2329,9 +2328,9 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
 /**
  * @brief Reuse the resource entry that already holds @p resource_slot_id, or the first free one, and load it.
  * @param resource_slot_id Resource slot identifier to find.
- * @param resource_base Package number forwarded to the entry loader.
+ * @param package Package number forwarded to the entry loader.
  */
-void field_find_or_load_resource_entry(s32 resource_slot_id, s32 resource_base)
+void field_find_or_load_resource_entry(s32 resource_slot_id, s32 package)
 {
     s32 i;
 
@@ -2354,16 +2353,16 @@ void field_find_or_load_resource_entry(s32 resource_slot_id, s32 resource_base)
         }
     }
 
-    field_load_resource_entry(resource_slot_id, (u8*)resource_base, i);
+    field_load_resource_entry(resource_slot_id, package, i);
 }
 
 /**
  * @brief Replace a resource entry with a new package and restart the actors that use it.
  * @param resource_slot_id Resource slot identifier stored in the entry.
- * @param resource_base Package number; the CD resource id is FIELD_RES_ENTRY_PACKAGES plus this value.
+ * @param package Package number; the CD resource id is FIELD_RES_ENTRY_PACKAGES plus this value.
  * @param entry_index Resource entry to replace.
  */
-void field_load_resource_entry(s32 resource_slot_id, u8* resource_base, s32 entry_index)
+void field_load_resource_entry(s32 resource_slot_id, s32 package, s32 entry_index)
 {
     s32 i;
     FieldResourceEntry* entry;
@@ -2379,7 +2378,7 @@ void field_load_resource_entry(s32 resource_slot_id, u8* resource_base, s32 entr
     entry->bound_animation_flags = 0;
     entry->flags &= ~FIELD_RESOURCE_HAS_ACTIONS;
     entry->start = g_field_resource_cursor;
-    field_load_resource_package(resource_base + FIELD_RES_ENTRY_PACKAGES, resource_slot_id, entry_index);
+    field_load_resource_package(package + FIELD_RES_ENTRY_PACKAGES, resource_slot_id, entry_index);
     entry->end = g_field_resource_cursor;
     entry->flags |= FIELD_RESOURCE_LOADED;
 
@@ -2435,7 +2434,7 @@ void field_release_resource_entry(s32 entry_index)
         {
             if ((actor->presence != FIELD_ACTOR_UNUSED) && (actor->resource_index != FIELD_RESOURCE_FIXED))
             {
-                if ((actor->frame_data | 0x80000000) > (((u32)g_field_resource_entries[entry_index].start) | 0x80000000))
+                if ((actor->frame_data | FIELD_FRAME_DATA_8BIT) > ((uintptr_t)g_field_resource_entries[entry_index].start | FIELD_FRAME_DATA_8BIT))
                 {
                     actor->frame_data -= size;
                 }
@@ -2723,7 +2722,7 @@ static void field_load_actor_texture_set(s32 resource_id, s32 slot_index, s32 te
         rect.h = 0x100;
     }
 
-    LoadImage(&rect, (u_long*)(image_offset + (s32)buf + 0x14));
+    LoadImage(&rect, (u_long*)(image_offset + (uintptr_t)buf + 0x14));
     DrawSync(0);
 }
 
@@ -2767,7 +2766,7 @@ void field_update_actor_objects(void)
 
             if (!(state->flags & FIELD_OBJECT_ANIMATION_FROZEN))
             {
-                actor->frame_data = (s32)field_advance_actor_animation_frame(actor);
+                actor->frame_data = (uintptr_t)field_advance_actor_animation_frame(actor);
             }
             else
             {
@@ -2893,13 +2892,13 @@ void field_render_actor_objects(FieldRenderContext* render_context)
     {
         if (actor->presence != FIELD_ACTOR_HIDDEN && actor->presence != FIELD_ACTOR_UNUSED)
         {
-            if (actor->frame_data >= 0)
+            if (!(actor->frame_data & FIELD_FRAME_DATA_8BIT))
             {
-                packet_cursor = field_render_effect_frame16(actor, packet_cursor, ordering_table, actor->frame_data, 0, &g_field_object_parts[i]);
+                packet_cursor = field_render_effect_frame16(actor, packet_cursor, ordering_table, (u8*)actor->frame_data, 0, &g_field_object_parts[i]);
             }
             else
             {
-                packet_cursor = field_render_effect_frame8(actor, packet_cursor, ordering_table, actor->frame_data, 0, &g_field_object_parts[i]);
+                packet_cursor = field_render_effect_frame8(actor, packet_cursor, ordering_table, (u8*)actor->frame_data, 0, &g_field_object_parts[i]);
             }
         }
         else if (actor->presence == FIELD_ACTOR_HIDDEN)
@@ -3059,7 +3058,7 @@ static u8* field_advance_actor_animation_frame(FieldActor* actor)
     frame_offsets = resource_base + resource_base[2] + (resource_base[3] << 8) + (entry[0] * 2 + 2);
     if (wrap)
     {
-        return (u8*)((s32)(resource_base + frame_offsets[0] + (frame_offsets[1] << 8)) & 0x7FFFFFFF);
+        return (u8*)((uintptr_t)(resource_base + frame_offsets[0] + (frame_offsets[1] << 8)) & ~FIELD_FRAME_DATA_8BIT);
     }
     return resource_base + frame_offsets[0] + (frame_offsets[1] << 8);
 }
@@ -3072,7 +3071,7 @@ void field_restart_actor_animation(FieldActor* actor)
 {
     actor->animation_frame = 0;
     actor->control.word &= ~FIELD_CONTROL_PLAY_ONCE;
-    actor->frame_data = (s32)field_begin_actor_animation_forward(actor, g_field_resource_entries[actor->resource_index].start);
+    actor->frame_data = (uintptr_t)field_begin_actor_animation_forward(actor, g_field_resource_entries[actor->resource_index].start);
 }
 
 /**
@@ -3160,7 +3159,7 @@ u8* field_begin_actor_animation_forward(FieldActor* actor, u8* resource_base)
     frame_offsets = resource_base + resource_base[2] + (resource_base[3] << 8) + (entry[0] * 2 + 2);
     if (wrap)
     {
-        return (u8*)((s32)(resource_base + frame_offsets[0] + (frame_offsets[1] << 8)) & 0x7FFFFFFF);
+        return (u8*)((uintptr_t)(resource_base + frame_offsets[0] + (frame_offsets[1] << 8)) & ~FIELD_FRAME_DATA_8BIT);
     }
     return resource_base + frame_offsets[0] + (frame_offsets[1] << 8);
 }
@@ -3172,7 +3171,7 @@ u8* field_begin_actor_animation_forward(FieldActor* actor, u8* resource_base)
 void field_restart_actor_animation_reverse(FieldActor* actor)
 {
     actor->control.word |= FIELD_CONTROL_PLAY_ONCE;
-    actor->frame_data = (s32)field_begin_actor_animation_reverse(actor, g_field_resource_entries[actor->resource_index].start);
+    actor->frame_data = (uintptr_t)field_begin_actor_animation_reverse(actor, g_field_resource_entries[actor->resource_index].start);
 }
 
 /**
@@ -3248,7 +3247,7 @@ static u8* field_begin_actor_animation_reverse(FieldActor* actor, u8* resource_b
     frame_offsets = resource_base + resource_base[2] + (resource_base[3] << 8) + (entry[0] * 2 + 2);
     if (wrap)
     {
-        return (u8*)((s32)(resource_base + frame_offsets[0] + (frame_offsets[1] << 8)) & 0x7FFFFFFF);
+        return (u8*)((uintptr_t)(resource_base + frame_offsets[0] + (frame_offsets[1] << 8)) & ~FIELD_FRAME_DATA_8BIT);
     }
     return resource_base + frame_offsets[0] + (frame_offsets[1] << 8);
 }
@@ -3383,7 +3382,7 @@ u8* field_advance_actor_part_animation_frame(FieldActor* actor, u8* resource_bas
     frame_offsets = resource_base + resource_base[2] + (resource_base[3] << 8) + (entry[0] * 2 + 2);
     if (wrap)
     {
-        return (u8*)((s32)(resource_base + frame_offsets[0] + (frame_offsets[1] << 8)) & 0x7FFFFFFF);
+        return (u8*)((uintptr_t)(resource_base + frame_offsets[0] + (frame_offsets[1] << 8)) & ~FIELD_FRAME_DATA_8BIT);
     }
     return resource_base + frame_offsets[0] + (frame_offsets[1] << 8);
 }
@@ -3444,7 +3443,7 @@ void field_unpack_resource_package(FieldCdBuffer* buf, s32 size, s32 slot_index,
 static void field_upload_resource_texture(FieldCdBuffer* buf, s32 slot_index, s32 texture_index, s32 palette_row)
 {
     RECT rect;
-    u8* image_offset;
+    u32 image_offset;
 
     image_offset = buf->offsets[2];
 
@@ -3477,7 +3476,7 @@ static void field_upload_resource_texture(FieldCdBuffer* buf, s32 slot_index, s3
     }
     else
     {
-        FieldCdBuffer* image = (FieldCdBuffer*)(image_offset + (s32)buf);
+        FieldCdBuffer* image = (FieldCdBuffer*)(image_offset + (uintptr_t)buf);
         s32 w = image->width;
         s32 h = image->height;
 
@@ -3501,7 +3500,7 @@ static void field_upload_resource_texture(FieldCdBuffer* buf, s32 slot_index, s3
         }
     }
 
-    LoadImage(&rect, (u_long*)(image_offset + (s32)buf + 0x14));
+    LoadImage(&rect, (u_long*)(image_offset + (uintptr_t)buf + 0x14));
 }
 
 /**

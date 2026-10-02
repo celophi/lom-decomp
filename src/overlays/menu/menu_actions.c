@@ -2,7 +2,6 @@
 
 s32 menu_find_active_content_item(void);
 s32 menu_clear_pending_status(void);
-u8* func_800A8A78(u32* ot, u8* prim, s32 value, s32 color, Vec2s* position, s32 mode);
 void func_800A3938();
 
 extern inline s32 menu_get_equipment_ability_mask(s32 excluded_slot)
@@ -13,7 +12,7 @@ extern inline s32 menu_get_equipment_ability_mask(s32 excluded_slot)
     u32 item_attributes;
 
     category_mask = 0;
-    equipment = (MenuItemEntry*)g_menu_equipment_base;
+    equipment = g_menu_equipment_base;
     equipment_index = 0;
     do
     {
@@ -46,12 +45,12 @@ extern inline s32 menu_get_equipment_ability_mask(s32 excluded_slot)
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
  */
-s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+void* menu_equipment_action_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
 {
     MenuSlotRect rect;
     ScrollListState* list;
     MenuContentItem* item;
-    MenuContentItem* tbl;
+    uintptr_t tbl;
     u8* pad_item;
     u8* cmp_tbl;
     u8* ctx;
@@ -61,9 +60,9 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
     u32 cmp_shift;
     s32 mask;
     s32 hit;
-    s32 buf;
-    s32 handle;
-    s32 handle2;
+    void* buf;
+    MenuItemEntry* handle;
+    MenuItemEntry* handle2;
     s32 off;
     s32 equipment_offset;
     s32 i9;
@@ -139,7 +138,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                 rect.w = 0x70;
                 rect.h = 0x30;
                 list = (ScrollListState*)menu_slot_alloc(0, &rect);
-                ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_equipment_compare_callback;
+                ((MenuSlot*)list)->content_cb = &menu_equipment_compare_callback;
                 g_menu_compare_window_active = 1;
                 ((MenuSlot*)list)->navigation.packed = (((MenuSlot*)list)->navigation.packed & 0xFE00FFFF) | 0x20000;
 
@@ -159,7 +158,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
             rect.w = 0x70;
             rect.h = 0x30;
             list = (ScrollListState*)menu_slot_alloc(0, &rect);
-            ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_equipment_compare_callback;
+            ((MenuSlot*)list)->content_cb = &menu_equipment_compare_callback;
             g_menu_compare_window_active = 1;
             ((MenuSlot*)list)->navigation.packed = (((MenuSlot*)list)->navigation.packed & 0xFE00FFFF) | 0x20000;
 
@@ -184,7 +183,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
             rect.w = 0x70;
             rect.h = 0x30;
             list = (ScrollListState*)menu_slot_alloc(0, &rect);
-            ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_equipment_compare_callback;
+            ((MenuSlot*)list)->content_cb = &menu_equipment_compare_callback;
             g_menu_compare_window_active = 1;
             ((MenuSlot*)list)->navigation.packed = (((MenuSlot*)list)->navigation.packed & 0xFE00FFFF) | 0x20000;
 
@@ -218,8 +217,8 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
             g_menu_hit_item_idx = hit;
             if (hit != -1)
             {
-                tbl = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
-                item = (MenuContentItem*)((hit * 8) + (s32)tbl);
+                tbl = (uintptr_t)g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
+                item = (MenuContentItem*)((hit * sizeof(MenuContentItem)) + tbl);
                 g_content_view_x = item->packed_x & 0x1FF;
                 g_content_view_y = item->y - 8;
                 g_menu_suppress_cursor = 5;
@@ -237,10 +236,10 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
             if (handle != 0)
             {
                 if (menu_item_is_nondefault(
-                        (const MenuItemEntry*)(((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((g_menu_active_subtype << 6) - 0x170))) != 0)
+                        (const MenuItemEntry*)(((u8*)g_saved_game_ctx + ((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + MENU_CHARACTER_RECORD_OFFSET)) + ((g_menu_active_subtype << 6) + (MENU_CHARACTER_ITEMS_OFFSET - MENU_EQUIPMENT_SUBTYPE_BASE * MENU_ITEM_RECORD_SIZE)))) != 0)
                 {
                     field_copy_inventory_record(handle,
-                                                (s32)(((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((g_menu_active_subtype << 6) - 0x170)));
+                                                (((u8*)g_saved_game_ctx + ((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + MENU_CHARACTER_RECORD_OFFSET)) + ((g_menu_active_subtype << 6) + (MENU_CHARACTER_ITEMS_OFFSET - MENU_EQUIPMENT_SUBTYPE_BASE * MENU_ITEM_RECORD_SIZE))));
                     switch (g_menu_active_subtype)
                     {
                     case 7:
@@ -261,22 +260,22 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                         do
                         {
                             off = i9 << 6;
-                            pad_item = (u8*)g_saved_game_ctx + (off + (g_menu_char_slot * 0x250));
-                            if (pad_item[0x640] != 0)
+                            pad_item = (u8*)g_saved_game_ctx + (off + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE));
+                            if (pad_item[MENU_FIRST_EQUIPMENT_OFFSET] != 0)
                             {
-                                if ((((*(u32*)(pad_item + 0x654)) >> 10) & 0x3F) == 0)
+                                if ((((*(u32*)(pad_item + MENU_FIRST_EQUIPMENT_OFFSET + OFFSETOF(MenuItemEntry, attributes))) >> 10) & 0x3F) == 0)
                                 {
                                     handle2 = field_find_free_inventory_record();
                                     if (handle2 != 0)
                                     {
                                         field_copy_inventory_record(handle2,
-                                                                    (s32)(((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + (off + 0x50)));
+                                                                    (((u8*)g_saved_game_ctx + ((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + MENU_CHARACTER_RECORD_OFFSET)) + (off + MENU_CHARACTER_ITEMS_OFFSET)));
                                         menu_equipped_item(g_saved_game_ctx, i9)->active = 0;
                                         field_compact_inventory();
                                         break;
                                     }
-                                    field_copy_inventory_record(((g_menu_char_slot * 0x250) + (s32)g_saved_game_ctx) + 0x640, handle);
-                                    *(u8*)handle = 0;
+                                    field_copy_inventory_record((MenuItemEntry*)(((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + (uintptr_t)g_saved_game_ctx) + MENU_FIRST_EQUIPMENT_OFFSET), handle);
+                                    handle->active = 0;
                                     g_menu_message_line1 = (void*)menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 86);
                                     menu_clear_slots();
                                     menu_open_content_page(6);
@@ -305,7 +304,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                             equipment_subtype = g_menu_active_subtype;
                             equipment_ctx = (u8*)g_saved_game_ctx;
                             equipment_offset = ((equipment_subtype - MENU_EQUIPMENT_SUBTYPE_BASE) << 6) + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
-                            *(equipment_ctx + equipment_offset + 0x640) = 0;
+                            *(equipment_ctx + equipment_offset + MENU_FIRST_EQUIPMENT_OFFSET) = 0;
                             field_compact_inventory();
                         }
                         break;
@@ -340,14 +339,14 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
  * @param active Non-zero when this window owns input.
  * @return Updated primitive write cursor; the unchanged @p prim_buf on the close path.
  */
-s32 menu_equipment_compare_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+void* menu_equipment_compare_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
 {
     u16 rect[4];
     ScrollListState* list;
     s32 i;
-    s32 item;
+    MenuItemEntry* item;
     s32 slot_off;
-    s32 buf;
+    void* buf;
 
     list = state;
     buf = prim_buf;
@@ -365,23 +364,23 @@ s32 menu_equipment_compare_callback(s32* ot, ScrollListState* state, s32 prim_bu
             {
                 if (g_item_slot_flags[i] != 0)
                 {
-                    item = (s32)g_item_slot_data[i];
+                    item = g_item_slot_data[i];
                     if (item != 0)
                     {
-                        menu_swap_item_records((MenuItemEntry*)item,
-                                               (MenuItemEntry*)(((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((i << 6) + 0x50)));
+                        menu_swap_item_records(item,
+                                               (MenuItemEntry*)(((u8*)g_saved_game_ctx + ((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + MENU_CHARACTER_RECORD_OFFSET)) + ((i << 6) + MENU_CHARACTER_ITEMS_OFFSET)));
                     }
                     else if (i == 0)
                     {
-                        field_copy_inventory_record(field_find_free_inventory_record(), (s32)((g_menu_char_slot * 0x250) + (s32)g_saved_game_ctx + 0x640));
-                        field_copy_inventory_record((s32)((g_menu_char_slot * 0x250) + (s32)g_saved_game_ctx + 0x640), D_800F0BF8);
+                        field_copy_inventory_record(field_find_free_inventory_record(), (MenuItemEntry*)((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + (uintptr_t)g_saved_game_ctx + MENU_FIRST_EQUIPMENT_OFFSET));
+                        field_copy_inventory_record((MenuItemEntry*)((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + (uintptr_t)g_saved_game_ctx + MENU_FIRST_EQUIPMENT_OFFSET), D_800F0BF8);
                     }
                     else
                     {
                         field_copy_inventory_record(field_find_free_inventory_record(),
-                                                    (s32)(((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((i << 6) + 0x50)));
-                        slot_off = g_menu_char_slot * 0x250;
-                        *((u8*)g_saved_game_ctx + ((i << 6) + slot_off) + 0x640) = 0;
+                                                    (((u8*)g_saved_game_ctx + ((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + MENU_CHARACTER_RECORD_OFFSET)) + ((i << 6) + MENU_CHARACTER_ITEMS_OFFSET)));
+                        slot_off = g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
+                        *((u8*)g_saved_game_ctx + ((i << 6) + slot_off) + MENU_FIRST_EQUIPMENT_OFFSET) = 0;
                     }
                 }
                 i += 1;
@@ -395,9 +394,9 @@ s32 menu_equipment_compare_callback(s32* ot, ScrollListState* state, s32 prim_bu
             if (g_item_slot_flags[0] != 0)
             {
                 if (((g_item_slot_data[0] != 0) &&
-                     ((((MenuItemEntry*)g_item_slot_data[0])->attributes.packed & 0xFC00) != (((MenuItemEntry*)g_menu_equipment_base)->attributes.packed & 0xFC00))) ||
+                     ((g_item_slot_data[0]->attributes.packed & 0xFC00) != (g_menu_equipment_base->attributes.packed & 0xFC00))) ||
                     ((g_item_slot_data[0] == 0) &&
-                     ((D_800F0C0C & 0xFC00) != (((MenuItemEntry*)g_menu_equipment_base)->attributes.packed & 0xFC00))))
+                     ((D_800F0C0C & 0xFC00) != (g_menu_equipment_base->attributes.packed & 0xFC00))))
                 {
                     if (menu_clear_pending_status() != 0)
                     {
@@ -495,10 +494,10 @@ void menu_update_active_slot(void)
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
  */
-s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s32 prim_arg, Vec2s* view_origin, s32 active)
+void* menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, void* prim_arg, Vec2s* view_origin, s32 active)
 {
     ScrollListState* state = state_arg;
-    s32 prim = prim_arg;
+    void* prim = prim_arg;
     s32 selected_technique;
     s32 list_y;
     s32 group_index;
@@ -509,7 +508,7 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s3
     s32 relative_y;
     s32 scroll_y;
     u8 assignment_flag;
-    s32 item_handle;
+    MenuItemEntry* item_handle;
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
@@ -547,9 +546,9 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s3
     if ((g_pad_input & 0x220) && (active != 0))
     {
         if ((selected_technique / MENU_SPECIAL_TECHNIQUES_PER_GROUP) ==
-            (s32)(((u32)(((MenuItemEntry*)g_menu_equipment_base)->attributes.packed) >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK))
+            (s32)(((u32)(g_menu_equipment_base->attributes.packed) >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK))
         {
-            u8* assignment_ptr = (u8*)g_saved_game_ctx + (g_menu_char_slot * 0x250);
+            u8* assignment_ptr = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
             u8* character_ctx;
 
             assignment_ptr += g_menu_active_subtype;
@@ -564,9 +563,9 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s3
                         s32 slot_offset;
 
                         field_copy_inventory_record(item_handle,
-                                                    (u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) + 0x90));
-                        slot_offset = ((g_menu_active_subtype + 1) << 6) + (g_menu_char_slot * 0x250);
-                        *((u8*)g_saved_game_ctx + slot_offset + 0x640) = 0;
+                                                    (u8*)g_saved_game_ctx + ((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + MENU_CHARACTER_RECORD_OFFSET) + ((g_menu_active_subtype << 6) + (MENU_CHARACTER_ITEMS_OFFSET + MENU_ITEM_RECORD_SIZE)));
+                        slot_offset = ((g_menu_active_subtype + 1) << 6) + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
+                        *((u8*)g_saved_game_ctx + slot_offset + MENU_FIRST_EQUIPMENT_OFFSET) = 0;
                         field_compact_inventory();
                     }
                     else
@@ -586,7 +585,7 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s3
                     }
                 }
             }
-            character_ctx = (u8*)g_saved_game_ctx + (g_menu_char_slot * 0x250);
+            character_ctx = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
             character_ctx += g_menu_active_subtype;
             *(character_ctx + 0x609) = selected_technique % MENU_SPECIAL_TECHNIQUES_PER_GROUP;
             menu_play_se(MENU_SE_SELECT, MENU_SE_VOLUME);
@@ -629,7 +628,7 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s3
                         glyph_offset = *(u16*)((u8*)name_table + (technique_index * 2) + (group_index * (MENU_SPECIAL_TECHNIQUES_PER_GROUP * 2)));
                         glyph = name_table + glyph_offset;
                         if (group_index ==
-                            (s32)(((u32)(((MenuItemEntry*)g_menu_equipment_base)->attributes.packed) >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK))
+                            (s32)(((u32)(g_menu_equipment_base->attributes.packed) >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK))
                         {
                             glyph_color = 1;
                         }
@@ -686,7 +685,7 @@ void menu_open_content_page(u32 content_id)
         rect.w = 0xF0;
         rect.h = 0x60;
         slot = menu_slot_alloc(3, &rect);
-        slot->content_cb = (s32 * (*)()) & menu_inventory_list_callback;
+        slot->content_cb = &menu_inventory_list_callback;
         slot->has_title = 1;
         slot->anim_frame = 5;
         slot->active = 2;
@@ -701,7 +700,7 @@ void menu_open_content_page(u32 content_id)
         rect.w = 0xF0;
         rect.h = 0x60;
         slot = menu_slot_alloc(3, &rect);
-        slot->content_cb = (s32 * (*)()) & menu_inventory_list_callback;
+        slot->content_cb = &menu_inventory_list_callback;
         slot->has_title = 1;
         slot->anim_frame = 5;
         slot->active = 2;
@@ -716,7 +715,7 @@ void menu_open_content_page(u32 content_id)
         rect.w = 0xF0;
         rect.h = 0x60;
         slot = menu_slot_alloc(3, &rect);
-        slot->content_cb = (s32 * (*)()) & menu_inventory_list_callback;
+        slot->content_cb = &menu_inventory_list_callback;
         slot->has_title = 1;
         slot->anim_frame = 5;
         slot->active = 2;
@@ -731,7 +730,7 @@ void menu_open_content_page(u32 content_id)
         rect.w = 0xE8;
         rect.h = 0x90;
         slot = menu_slot_alloc(3, &rect);
-        slot->content_cb = (s32 * (*)()) & menu_equipment_grid_callback;
+        slot->content_cb = &menu_equipment_grid_callback;
         slot->has_title = 1;
         slot->anim_frame = 5;
         slot->active = 2;
@@ -746,7 +745,7 @@ void menu_open_content_page(u32 content_id)
         rect.w = 0xE8;
         rect.h = 0x80;
         slot = menu_slot_alloc(3, &rect);
-        slot->content_cb = (s32 * (*)()) & menu_key_item_list_callback;
+        slot->content_cb = &menu_key_item_list_callback;
         slot->has_title = 1;
         slot->anim_frame = 5;
         slot->active = 2;
@@ -761,7 +760,7 @@ void menu_open_content_page(u32 content_id)
         rect.w = 0xE8;
         rect.h = 0x90;
         slot = menu_slot_alloc(3, &rect);
-        slot->content_cb = (s32 * (*)()) & menu_ability_list_callback;
+        slot->content_cb = &menu_ability_list_callback;
         slot->has_title = 1;
         slot->anim_frame = 5;
         slot->active = 2;
@@ -776,7 +775,7 @@ void menu_open_content_page(u32 content_id)
         rect.w = 0x120;
         rect.h = 0x20;
         slot = menu_slot_alloc(3, &rect);
-        slot->content_cb = (s32 * (*)()) & menu_message_callback;
+        slot->content_cb = &menu_message_callback;
         slot->anim_frame = 5;
         slot->active = 2;
         slot->navigation.packed = (slot->navigation.packed & 0xFE00FFFF) | 0x10000;
@@ -817,7 +816,7 @@ void menu_open_content_page(u32 content_id)
         rect.w = 0x120;
         rect.h = 0x30;
         slot = menu_slot_alloc(3, &rect);
-        slot->content_cb = (s32 * (*)()) & menu_two_line_message_callback;
+        slot->content_cb = &menu_two_line_message_callback;
         slot->anim_frame = 5;
         slot->active = 2;
         slot->navigation.packed = (slot->navigation.packed & 0xFE00FFFF) | 0x10000;
@@ -1066,7 +1065,7 @@ s32 menu_stage_best_equipment_for_slot0(void)
     candidate = menu_find_best_equipment_for_slot0();
     if (candidate != 0)
     {
-        slot_record = (MenuItemEntry*)((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + (s32)g_saved_game_ctx + 0x640);
+        slot_record = (MenuItemEntry*)((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + (uintptr_t)g_saved_game_ctx + MENU_FIRST_EQUIPMENT_OFFSET);
         records_differ = menu_item_is_nondefault(slot_record);
         if (records_differ == 0)
         {
@@ -1076,9 +1075,9 @@ s32 menu_stage_best_equipment_for_slot0(void)
         }
         else
         {
-            slot_buffer = (MenuItemEntry*)((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + (s32)g_saved_game_ctx + 0x640);
+            slot_buffer = (MenuItemEntry*)((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + (uintptr_t)g_saved_game_ctx + MENU_FIRST_EQUIPMENT_OFFSET);
             menu_swap_item_records(slot_buffer, candidate);
-            g_item_slot_data[0] = (u32)candidate;
+            g_item_slot_data[0] = candidate;
         }
         g_item_slot_flags[0] = 1;
         return 1;
@@ -1136,7 +1135,7 @@ MenuItemEntry* menu_find_best_equipment_for_slot0(void)
 s32 menu_stage_best_equipment_for_active_slot(void)
 {
     MenuItemEntry* candidate;
-    u32* slot_data;
+    MenuItemEntry** slot_data;
     SavedGameLayout* pad_context;
     s32 subtype_index;
     s32 slot_index;
@@ -1155,13 +1154,13 @@ s32 menu_stage_best_equipment_for_active_slot(void)
             slot_data = &g_item_slot_data[0];
             for (; slot_index < MENU_EQUIPMENT_SLOT_COUNT; slot_index += 1)
             {
-                if ((u32)candidate == slot_data[slot_index])
+                if (candidate == slot_data[slot_index])
                 {
-                    slot_data[slot_index] = (u32)((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170));
+                    slot_data[slot_index] = (MenuItemEntry*)((u8*)g_saved_game_ctx + ((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + MENU_CHARACTER_RECORD_OFFSET) + ((g_menu_active_subtype << 6) + (MENU_CHARACTER_ITEMS_OFFSET - MENU_EQUIPMENT_SUBTYPE_BASE * MENU_ITEM_RECORD_SIZE)));
                     break;
                 }
             }
-            field_copy_inventory_record((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170), candidate);
+            field_copy_inventory_record((u8*)g_saved_game_ctx + ((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + MENU_CHARACTER_RECORD_OFFSET) + ((g_menu_active_subtype << 6) + (MENU_CHARACTER_ITEMS_OFFSET - MENU_EQUIPMENT_SUBTYPE_BASE * MENU_ITEM_RECORD_SIZE)), candidate);
             candidate->active = 0;
             g_item_slot_data[g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE] = 0;
         }
@@ -1170,15 +1169,15 @@ s32 menu_stage_best_equipment_for_active_slot(void)
             slot_data = &g_item_slot_data[0];
             for (; slot_index < MENU_EQUIPMENT_SLOT_COUNT; slot_index += 1)
             {
-                if ((u32)candidate == slot_data[slot_index])
+                if (candidate == slot_data[slot_index])
                 {
-                    slot_data[slot_index] = (u32)((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170));
+                    slot_data[slot_index] = (MenuItemEntry*)((u8*)g_saved_game_ctx + ((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + MENU_CHARACTER_RECORD_OFFSET) + ((g_menu_active_subtype << 6) + (MENU_CHARACTER_ITEMS_OFFSET - MENU_EQUIPMENT_SUBTYPE_BASE * MENU_ITEM_RECORD_SIZE)));
                     break;
                 }
             }
             menu_swap_item_records(
-                (MenuItemEntry*)((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + (s32)g_saved_game_ctx + (g_menu_active_subtype << 6) + 0x480), candidate);
-            g_item_slot_data[g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE] = (u32)candidate;
+                (MenuItemEntry*)((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + (uintptr_t)g_saved_game_ctx + (g_menu_active_subtype << 6) + (MENU_FIRST_EQUIPMENT_OFFSET - MENU_EQUIPMENT_SUBTYPE_BASE * MENU_ITEM_RECORD_SIZE)), candidate);
+            g_item_slot_data[g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE] = candidate;
         }
         g_item_slot_flags[g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE] = 1;
         return 1;
@@ -1278,7 +1277,7 @@ s32 menu_count_inventory_items(void)
  * @param style Renderer style, passed through unchanged.
  * @return Updated primitive write cursor.
  */
-s32 menu_draw_clamped_number(s32* ot_entry, u8* packet_cursor, s32 value, s32 format, Vec2s* origin, s32 style)
+void* menu_draw_clamped_number(s32* ot_entry, void* packet_cursor, s32 value, s32 format, Vec2s* origin, s32 style)
 {
     if (value >= 100)
     {

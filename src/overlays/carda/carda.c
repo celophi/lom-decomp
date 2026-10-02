@@ -86,7 +86,7 @@
 /**
  * @brief Address of the CARDA text whose table offset is @p offset.
  */
-#define CARDA_TEXT_BY_OFFSET(table, offset) ((u8*)((s32)(offset) + (s32)(table)))
+#define CARDA_TEXT_BY_OFFSET(table, offset) ((u8*)((uintptr_t)(offset) + (uintptr_t)(table)))
 
 static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 static void carda_build_ui_elements(void);
@@ -139,7 +139,7 @@ void carda_init(void* work, s32 mode)
     field_reset_input_repeat();
     carda_build_ui_elements();
 
-    g_carda_save_blob = (u8*)(((u32)work + 3) & ~3);
+    g_carda_save_blob = (u8*)(((uintptr_t)work + 3) & ~3);
 }
 
 /**

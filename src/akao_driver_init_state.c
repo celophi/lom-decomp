@@ -101,8 +101,8 @@ void akao_driver_init_state(void)
     u32 value;
 
     song = (AkaoSongState*)&g_akao_seq_master_state;
-    song = (AkaoSongState*)((u32)song ^ 1);
-    song = (AkaoSongState*)((u32)song ^ 1);
+    song = (AkaoSongState*)((uintptr_t)song ^ 1);
+    song = (AkaoSongState*)((uintptr_t)song ^ 1);
 
     sequence_tick = &g_akao_seq_channels;
 
@@ -128,8 +128,8 @@ void akao_driver_init_state(void)
     song->volume = (AKAO_VOLUME_MAX << 16);
 
     D_8003EC58 = sequence_tick;
-    sequence_tick = (u8*)((u32)sequence_tick ^ 1);
-    sequence_tick = (u8*)((u32)sequence_tick ^ 1);
+    sequence_tick = (u8*)((uintptr_t)sequence_tick ^ 1);
+    sequence_tick = (u8*)((uintptr_t)sequence_tick ^ 1);
     sequence_tick = (u8*)&((AkaoChannelState*)sequence_tick)->sfx_age;
     g_akao_seq_channel0 = song;
     g_akao_seq_channel1 = 0;

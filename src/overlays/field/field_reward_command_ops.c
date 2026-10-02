@@ -132,7 +132,7 @@ void field_grant_reward(s32 recipient, s32 owner, u32 kind)
         field_add_money(recipient, FIELD_REWARD_MONEY_SMALL_AMOUNT);
         return;
     case FIELD_REWARD_ITEM:
-        field_grant_actor_pickup((void*)recipient, owner);
+        field_grant_actor_pickup(recipient, owner);
         return;
     case FIELD_REWARD_RESTORE_QUARTER:
         field_restore_actor_capacity_fraction(recipient, FIELD_REWARD_RESTORE_QUARTER_SHARE);

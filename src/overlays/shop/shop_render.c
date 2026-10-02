@@ -43,7 +43,7 @@
 #endif
 
 /** @brief Inventory record named by record entry id @p id, summed as integers, index first. */
-#define SHOP_ENTRY_RECORD(id) ((FieldItemRecord*)(((id) & SHOP_ENTRY_RECORD_INDEX_MASK) * sizeof(FieldItemRecord) + (u32)g_shop_item_records))
+#define SHOP_ENTRY_RECORD(id) ((FieldItemRecord*)(((id) & SHOP_ENTRY_RECORD_INDEX_MASK) * sizeof(FieldItemRecord) + (uintptr_t)g_shop_item_records))
 /** @brief Inventory record of the list entry under the cursor. */
 #define SHOP_SELECTED_RECORD() SHOP_ENTRY_RECORD(SHOP_SELECTED_ENTRY()->id)
 
@@ -51,7 +51,7 @@
  * @brief Address of the string whose offset sits @p index bytes into the archive section @p offset bytes into @p archive.
  * @note Summed as integers, index first.
  */
-#define SHOP_ARCHIVE_TEXT(archive, offset, index) ((u8*)((offset) + (*(u16*)((index) + (offset) + (u32)(archive)) + (u32)(archive))))
+#define SHOP_ARCHIVE_TEXT(archive, offset, index) ((u8*)((offset) + (*(u16*)((index) + (offset) + (uintptr_t)(archive)) + (uintptr_t)(archive))))
 
 /** @brief First type name of each item category in text archive section SHOP_TEXT_EQUIPMENT_TYPES. */
 #define WEAPON_CATEGORY_FIRST 0
@@ -238,7 +238,7 @@ u8* shop_draw_list_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
     if (g_shop_entry_count > 0)
     {
         s32 name_x;
-        u8* text_base;
+        uintptr_t text_base;
 
         empty_text = D_800EC3E0;
         do
@@ -246,7 +246,7 @@ u8* shop_draw_list_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
             ShopEntry** entries = &g_shop_entries;
 
             name_x = 80 - x;
-            text_base = (u8*)&g_shop_text_archive;
+            text_base = (uintptr_t)&g_shop_text_archive;
             position_ptr = &position;
             ot++;
             ot--;
@@ -260,19 +260,19 @@ u8* shop_draw_list_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
             {
                 do
                 {
-                    entry = (ShopEntry*)(i * sizeof(ShopEntry) + (u32)*entries);
+                    entry = (ShopEntry*)(i * sizeof(ShopEntry) + (uintptr_t)*entries);
                 } while (0);
                 id = entry->id;
                 if (id == SHOP_ENTRY_EMPTY)
                 {
                     s32 low;
                     s32 high;
-                    s32 base_addr;
-                    s32 based;
+                    uintptr_t base_addr;
+                    uintptr_t based;
 
                     low = D_800EC3E0[0];
                     high = empty_text[1];
-                    base_addr = (s32)D_800EC3C4;
+                    base_addr = (uintptr_t)D_800EC3C4;
                     based = (high << 8) + base_addr;
                     prim = func_800A88A0(prim, ot, (u8*)(low + based), SHOP_TEXT_COLOR_NORMAL, name_x, y, 2);
                 }
@@ -293,8 +293,8 @@ u8* shop_draw_list_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
                             u8* text;
 
                             name_index *= 2;
-                            name_offset = *(u16*)((name_index + section) + (s32)text_base);
-                            text = (u8*)(section + (name_offset + (s32)text_base));
+                            name_offset = *(u16*)((name_index + section) + text_base);
+                            text = (u8*)(section + (name_offset + text_base));
                             prim = func_800A88A0(prim, ot, text, SHOP_TEXT_COLOR_NORMAL, name_x, y, 2);
                         } while (0);
                     }
@@ -317,7 +317,7 @@ u8* shop_draw_list_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
                     }
                     else
                     {
-                        ShopEntry* price_entry = (ShopEntry*)(i * sizeof(ShopEntry) + (u32)g_shop_entries);
+                        ShopEntry* price_entry = (ShopEntry*)(i * sizeof(ShopEntry) + (uintptr_t)g_shop_entries);
 
                         if ((u32)price_entry->price <= g_saved_game_ctx->money || g_shop_is_buying == 0)
                         {
@@ -397,7 +397,7 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
             ui_text_table = ui_entry - 15 * 2;
             low = *ui_entry++;
             high = *ui_entry;
-            encoded_text_append(name_text, (u8*)(low + ((high << 8) + (s32)ui_text_table)));
+            encoded_text_append(name_text, (u8*)(low + ((high << 8) + (uintptr_t)ui_text_table)));
 
             attributes = SHOP_SELECTED_RECORD()->info.word;
             switch (FIELD_ITEM_CATEGORY(attributes))
@@ -442,7 +442,7 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
                 u16 offset;
 
                 offset = *(u16*)((u8*)&g_shop_text_archive + (FIELD_ITEM_TYPE(attributes) * 2 + category_offset) + ARMOR_CATEGORY_FIRST * 2);
-                encoded_text_append(name_text, (u8*)(category_offset + (offset + (u32)archive)));
+                encoded_text_append(name_text, (u8*)(category_offset + (offset + (uintptr_t)archive)));
                 y = 18 - y_inset;
                 prim = func_800A88A0(prim, ot, FIELD_UI_TEXT(ui_text_table, 22), SHOP_TEXT_COLOR_NORMAL, 16 - x_inset, y, 0);
                 position.x = SHOP_ARMOR_VALUE_X - x_inset;
@@ -459,14 +459,14 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
                 ShopTextArchive* text_archive;
                 FieldItemRecord* selected;
                 u8* text;
-                u8* detail_offset;
+                u32 detail_offset;
                 u16 offset;
 
                 category_offsets = &g_shop_text_archive.section_offsets[SHOP_TEXT_EQUIPMENT_TYPES];
                 offset = *(u16*)((u8*)&g_shop_text_archive + (FIELD_ITEM_TYPE(SHOP_SELECTED_RECORD()->info.word) * 2 + *category_offsets) +
                                  INSTRUMENT_CATEGORY_FIRST * 2);
                 text_archive = &g_shop_text_archive;
-                text = (u8*)(*category_offsets + (offset + (u32)text_archive));
+                text = (u8*)(*category_offsets + (offset + (uintptr_t)text_archive));
                 encoded_text_append(name_text, text);
                 prim = func_800A88A0(prim, ot, FIELD_UI_TEXT_AT(D_800EC3F2, 23), SHOP_TEXT_COLOR_NORMAL, 16 - x_inset, 18 - y_inset, 0);
                 position.x = SHOP_OTHER_VALUE_X - x_inset;
@@ -475,8 +475,8 @@ u8* shop_draw_detail_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset)
                 detail_offset = text_archive->section_offsets[SHOP_TEXT_INSTRUMENT_SPELLS];
                 selected = SHOP_SELECTED_RECORD();
                 offset =
-                    *(u16*)((selected->derived.bytes[1] * 2) + ((selected->derived.bytes[0] * SPELLS_PER_SPIRIT * 2) + detail_offset) + (u32)text_archive);
-                text = (u8*)(detail_offset + (offset + (u32)text_archive));
+                    *(u16*)((selected->derived.bytes[1] * 2) + ((selected->derived.bytes[0] * SPELLS_PER_SPIRIT * 2) + detail_offset) + (uintptr_t)text_archive);
+                text = (u8*)(detail_offset + (offset + (uintptr_t)text_archive));
                 prim = func_800A88A0(prim, ot, text, SHOP_TEXT_COLOR_NORMAL, 284 - x_inset, 18 - y_inset, 1);
                 break;
             }

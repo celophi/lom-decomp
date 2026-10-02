@@ -556,7 +556,7 @@ WMAP_STEP_RESET(wmap_land_effect_08_sequence_9_reset, g_wmap_land_effect_08_sequ
  */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_08_sequence_9_step_02,
     g_wmap_land_effect_08_sequence_9_step, g_wmap_land_effect_08_sequence_9_timer,
-    func_8006A2FC(&g_wmap_sprite_actors[204], &g_wmap_actor_animations[204], 0xA, 0, 0x7F, 0x2, 0, (s32)((u8*)g_wmap_effect_params + 0x28)))
+    func_8006A2FC(&g_wmap_sprite_actors[204], &g_wmap_actor_animations[204], 0xA, 0, 0x7F, 0x2, 0, &g_wmap_effect_params[10]))
 
 /**
  * @brief Stop spawning particles and run the next update.
@@ -570,7 +570,7 @@ WMAP_STEP_STOP_EMITTER(wmap_land_effect_08_sequence_9_step_03,
  */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_08_sequence_9_step_04,
     g_wmap_land_effect_08_sequence_9_step, g_wmap_land_effect_08_sequence_9_timer,
-    func_8006A2FC(&g_wmap_sprite_actors[204], &g_wmap_actor_animations[204], 0xA, 0, 0x7F, 0x2, 0, (s32)((u8*)g_wmap_effect_params + 0x28)))
+    func_8006A2FC(&g_wmap_sprite_actors[204], &g_wmap_actor_animations[204], 0xA, 0, 0x7F, 0x2, 0, &g_wmap_effect_params[10]))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_08_sequence_9_end, g_wmap_land_effect_08_sequence_9_step)
 

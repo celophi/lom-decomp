@@ -6,9 +6,6 @@ s32 menu_find_active_content_item(void);
 s32 menu_count_inventory_items(void);
 void menu_concat_encoded_text(u8* dst, u8* src1, u8* src2);
 s32 menu_build_spell_nav_entries(void);
-u8* func_800A8A78(u32* ot, u8* prim, s32 value, s32 color, Vec2s* position, s32 mode);
-void* field_draw_sprite_number(u_long* ordering_table, void* packet_cursor, s32 value, s32 digit_count, u16* position, s32 flags);
-SPRT* field_draw_sprite_glyph(SPRT* sprite, u_long* ordering_table, s32 glyph, u16* position, s32 flags);
 
 s32 menu_lookup_item_nibble(const MenuItemEntry* item, u32 index);
 
@@ -86,10 +83,10 @@ s32 menu_handle_input(s32 process_actions)
     u32* inject_flags;
     u32 item_word;
     s32 text_variant;
-    u8* name_table;
+    uintptr_t name_table;
     u8* label_table;
-    u8* description_table;
-    u8* detail_table;
+    uintptr_t description_table;
+    uintptr_t detail_table;
     MenuSlotRect rect;
     s8 text_buffer[0x40];
     s8* text_cursor;
@@ -101,7 +98,7 @@ s32 menu_handle_input(s32 process_actions)
             menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
             if (g_pad_input & (PAD_BTN_L2 | PAD_BTN_R2))
             {
-                if ((void*)g_menu_item_ptr != NULL)
+                if (g_menu_item_ptr != NULL)
                 {
                     if (g_pad_input & PAD_BTN_L2)
                     {
@@ -379,7 +376,7 @@ s32 menu_handle_input(s32 process_actions)
                     {
                         setRECT(&rect, 0x40, 0x60, 0xF0, 0x60);
                         submenu_slot = menu_slot_alloc(3, &rect);
-                        submenu_slot->content_cb = (s32 * (*)()) & menu_spell_list_callback;
+                        submenu_slot->content_cb = &menu_spell_list_callback;
                         submenu_slot->navigation.packed =
                             (submenu_slot->navigation.packed & 0xFE00FFFF) | ((menu_build_spell_nav_entries() & MENU_ITEM_NAV_INDEX_MASK) << 16);
                         submenu_slot->has_title = 1;
@@ -406,7 +403,7 @@ s32 menu_handle_input(s32 process_actions)
                             setRECT(&rect, 0xB0, 0x60, 0x70, 0x40);
                         }
                         submenu_slot = menu_slot_alloc(3, &rect);
-                        submenu_slot->content_cb = (s32 * (*)()) & menu_subtype_action_callback;
+                        submenu_slot->content_cb = &menu_subtype_action_callback;
                         {
                             u8* pad_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * 0x250);
                             item_flag = *(pad_base + content_type + 0x609);
@@ -424,12 +421,12 @@ s32 menu_handle_input(s32 process_actions)
                         scroll_list_update_target((ScrollListState*)submenu_slot, g_menu_scroll_nav_entries);
 
                         {
-                            u8* equipped_item;
-                            s32* active_equipped_item = &g_menu_active_equipped_item;
+                            MenuItemEntry* equipped_item;
+                            MenuItemEntry** active_equipped_item = &g_menu_active_equipped_item;
 
-                            equipped_item = (u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((content_type << 6) + 0x90);
-                            *active_equipped_item = (s32)equipped_item;
-                            g_menu_item_ptr = (u8*)equipped_item;
+                            equipped_item = (MenuItemEntry*)((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((content_type << 6) + 0x90));
+                            *active_equipped_item = equipped_item;
+                            g_menu_item_ptr = equipped_item;
                             g_menu_saved_category0_item = g_menu_item_ptr;
                             g_menu_category0_item = g_menu_item_ptr;
                             g_menu_saved_category1_item = g_menu_item_ptr;
@@ -449,18 +446,18 @@ s32 menu_handle_input(s32 process_actions)
                     {
                         setRECT(&rect, 0xB0, 0x30, 0x70, 0x60);
                         submenu_slot = menu_slot_alloc(3, &rect);
-                        submenu_slot->content_cb = (s32 * (*)()) & menu_equipment_action_callback;
+                        submenu_slot->content_cb = &menu_equipment_action_callback;
                         submenu_slot->navigation.packed = (submenu_slot->navigation.packed & 0xFE00FFFF) | 0x50000;
                         menu_init_item_nav_entries(5);
                         {
-                            u8* equipped_item;
-                            s32* active_equipped_item = &g_menu_active_equipped_item;
+                            MenuItemEntry* equipped_item;
+                            MenuItemEntry** active_equipped_item = &g_menu_active_equipped_item;
 
-                            equipped_item = (u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((content_type << 6) - 0x170);
-                            *active_equipped_item = (s32)equipped_item;
-                            g_menu_saved_category0_item = (u8*)equipped_item;
-                            g_menu_saved_category1_item = (u8*)equipped_item;
-                            g_menu_saved_equipment_item = (u8*)equipped_item;
+                            equipped_item = (MenuItemEntry*)((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((content_type << 6) - 0x170));
+                            *active_equipped_item = equipped_item;
+                            g_menu_saved_category0_item = equipped_item;
+                            g_menu_saved_category1_item = equipped_item;
+                            g_menu_saved_equipment_item = equipped_item;
                             menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
                         }
                     }
@@ -469,43 +466,43 @@ s32 menu_handle_input(s32 process_actions)
                 case 15:
                     if ((g_menu_scene_type >= 0x12) || (g_menu_scene_type == 1) || (g_menu_scene_type == 2))
                     {
-                        if (((void*)g_menu_item_ptr != NULL) && (*((u8*)g_menu_item_ptr) != 0))
+                        if ((g_menu_item_ptr != NULL) && (*((u8*)g_menu_item_ptr) != 0))
                         {
-                            D_8011F424 = (((u32)((MenuItemEntry*)g_menu_item_ptr)->attributes.packed) >> 8) & 3;
-                            field_copy_name(&D_801226F0, g_menu_item_ptr);
+                            D_8011F424 = (((u32)g_menu_item_ptr->attributes.packed) >> 8) & 3;
+                            field_copy_name(&D_801226F0, (u8*)g_menu_item_ptr);
                             text_buffer[0] = 0;
                             D_801226B8 = 0;
                             D_801227D4 = (void*)g_menu_item_ptr;
-                            if (menu_item_is_nondefault((const MenuItemEntry*)g_menu_item_ptr) != 0)
+                            if (menu_item_is_nondefault(g_menu_item_ptr) != 0)
                             {
                                 text_cursor = text_buffer;
-                                label_table = (u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 0x88)));
+                                label_table = (u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[33];
                                 field_copy_name(
                                     text_cursor,
                                     (s8*)(label_table +
-                                          (*((u16*)(label_table + (((((MenuItemEntry*)g_menu_item_ptr)->attributes.halves.high) & 0x3F) * 2) + 0x48)))));
-                                item_word = ((MenuItemEntry*)g_menu_item_ptr)->attributes.packed;
+                                          (*((u16*)(label_table + (((g_menu_item_ptr->attributes.halves.high) & 0x3F) * 2) + 0x48)))));
+                                item_word = g_menu_item_ptr->attributes.packed;
                                 text_variant = (item_word >> 8) & 3;
                                 switch (text_variant)
                                 {
                                 case 0:
-                                    name_table = (u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 0x88)));
+                                    name_table = (uintptr_t)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[33];
                                     menu_concat_encoded_text(&D_801226B8, text_buffer,
-                                                             (s8*)(name_table + (*((u16*)(((item_word >> 9) & 0x7E) + (s32)name_table)))));
+                                                             (s8*)(name_table + (*((u16*)(((item_word >> 9) & 0x7E) + name_table)))));
                                     break;
 
                                 case 1:
-                                    description_table = (u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 0x88)));
+                                    description_table = (uintptr_t)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[33];
                                     menu_concat_encoded_text(&D_801226B8, text_buffer,
-                                                             (s8*)(description_table + (*((u16*)(((item_word >> 9) & 0x7E) + (s32)description_table + 0x20)))));
+                                                             (s8*)(description_table + (*((u16*)(((item_word >> 9) & 0x7E) + description_table + 16 * sizeof(u16))))));
                                     break;
 
                                 default:
-                                    detail_table = (u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 0x88)));
+                                    detail_table = (uintptr_t)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[33];
                                     menu_concat_encoded_text(
                                         &D_801226B8, text_buffer,
-                                        (s8*)(detail_table + (*((u16*)((((((u32)((MenuItemEntry*)g_menu_item_ptr)->attributes.packed) >> 9) & 0x7E)) +
-                                                                       (s32)detail_table + 0x40)))));
+                                        (s8*)(detail_table + (*((u16*)((((((u32)g_menu_item_ptr->attributes.packed) >> 9) & 0x7E)) +
+                                                                       detail_table + 32 * sizeof(u16))))));
                                     break;
                                 }
                                 g_menu_load_request = 1;
@@ -708,10 +705,10 @@ s32 menu_handle_input(s32 process_actions)
                     {
                         if (g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx < 0x11)
                         {
-                            g_menu_item_ptr = (u8*)NULL;
-                            g_menu_category0_item = (u8*)NULL;
-                            g_menu_category2_item = (u8*)NULL;
-                            g_menu_category1_item = (u8*)NULL;
+                            g_menu_item_ptr = NULL;
+                            g_menu_category0_item = NULL;
+                            g_menu_category2_item = NULL;
+                            g_menu_category1_item = NULL;
                         }
                     }
                 }
@@ -750,13 +747,13 @@ void menu_snap_view_to_cursor(void)
  */
 s32 menu_item_has_action(void)
 {
-    MenuContentItem* items;
+    uintptr_t items;
     MenuContentItem* item;
     u16 item_type;
     s16 item_subtype;
     s32 action_code;
 
-    items = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
+    items = (uintptr_t)g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
     if ((g_menu_scene_type == 0x1F) || (g_menu_scene_type == 0x2B))
     {
         if (((int)g_menu_hit_item_idx) >= 0x11)
@@ -768,7 +765,7 @@ s32 menu_item_has_action(void)
         }
     }
 
-    item = (MenuContentItem*)((g_menu_hit_item_idx * sizeof(MenuContentItem)) + (u32)items);
+    item = (MenuContentItem*)((g_menu_hit_item_idx * sizeof(MenuContentItem)) + items);
     item_type = item->packed_x & MENU_CONTENT_ITEM_TYPE_MASK;
 
     if (item_type == MENU_CONTENT_ITEM_TYPE_SUBMENU)
@@ -999,7 +996,7 @@ s32 menu_build_special_technique_nav_entries(void)
             if ((group_flags & bit_mask) != 0)
             {
                 if ((group_index ==
-                     (s32)(((u32)(((MenuItemEntry*)g_menu_equipment_base)->attributes.packed) >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK)) &&
+                     (s32)(((u32)(g_menu_equipment_base->attributes.packed) >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK)) &&
                     (selected_index == none_index))
                 {
                     selected_index = item_count;
@@ -1166,7 +1163,9 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
     MenuContentItem* content_item;
     u8* draw_source;
     void* draw_packet_cursor;
-    void *base_a2_0, *base_a2_1, *base_a2_2, *base_a2_3, *base_a2_4, *base_a2_5, *base_a2_6, *base_a2_7, *base_a2_8, *base_a2_9, *base_a2_10, *base_a2_11,
+    void *base_a2_0, *base_a2_1, *base_a2_2, *base_a2_3, *base_a2_4, *base_a2_5, *base_a2_6;
+    uintptr_t base_a2_7;
+    void *base_a2_8, *base_a2_9, *base_a2_10, *base_a2_11,
         *base_a2_12;
     s32 k;
     u32 shared_s0;
@@ -1191,25 +1190,25 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
     {
         if (content_item == (MenuContentItem*)1)
         {
-            g_menu_load_request = (s32)content_item;
+            g_menu_load_request = 1;
         }
         else
         {
             u8* character_equipment_area;
             MenuItemEntry* equipped_items;
             g_menu_equipment_base =
-                (u32)(equipped_items = (MenuItemEntry*)((character_equipment_area = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE +
+                (equipped_items = (MenuItemEntry*)((character_equipment_area = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE +
                                                                                                              MENU_CHARACTER_RECORD_OFFSET)) +
                                                         MENU_CHARACTER_ITEMS_OFFSET));
-            D_80168C30 = (u8*)equipped_items;
-            D_80168C20 = (u8*)equipped_items;
-            D_80168C24 = (u8*)equipped_items;
+            D_80168C30 = equipped_items;
+            D_80168C20 = equipped_items;
+            D_80168C24 = equipped_items;
             if (g_menu_scene_type == 0x10)
             {
                 MenuItemEntry* second_equipped_item;
-                g_menu_category0_item = (u8*)equipped_items;
-                g_menu_category1_item = (u8*)(second_equipped_item = &equipped_items[1]);
-                g_menu_category2_item = (u8*)second_equipped_item;
+                g_menu_category0_item = equipped_items;
+                g_menu_category1_item = second_equipped_item = &equipped_items[1];
+                g_menu_category2_item = second_equipped_item;
             }
 
             if (remaining_count != 0)
@@ -1260,7 +1259,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 val = 0;
                                 if (*(u8*)g_menu_category1_item != 0 && g_menu_category1_item != 0)
                                 {
-                                    val = ((MenuItemEntry*)g_menu_category1_item)->effect_flags[0];
+                                    val = g_menu_category1_item->effect_flags[0];
                                 }
                                 s = content_item->action_type;
                                 if (((val >> (s - 2)) & 1) != 0)
@@ -1278,7 +1277,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 val = 0;
                                 if (*(u8*)g_menu_category1_item != 0 && g_menu_category1_item != 0)
                                 {
-                                    val = ((MenuItemEntry*)g_menu_category1_item)->effect_flags[1];
+                                    val = g_menu_category1_item->effect_flags[1];
                                 }
                                 t0 = 0x21;
                                 s = content_item->action_type;
@@ -1291,17 +1290,17 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             {
                                 s32 s;
                                 val = 0;
-                                if (((MenuItemEntry*)D_80168C20)[1].active != 0)
+                                if (D_80168C20[1].active != 0)
                                 {
-                                    val = ((MenuItemEntry*)D_80168C20)[1].effect_flags[0];
+                                    val = D_80168C20[1].effect_flags[0];
                                 }
-                                if (((MenuItemEntry*)D_80168C20)[2].active != 0)
+                                if (D_80168C20[2].active != 0)
                                 {
-                                    val |= ((MenuItemEntry*)D_80168C20)[2].effect_flags[0];
+                                    val |= D_80168C20[2].effect_flags[0];
                                 }
-                                if (((MenuItemEntry*)D_80168C20)[3].active != 0)
+                                if (D_80168C20[3].active != 0)
                                 {
-                                    val |= ((MenuItemEntry*)D_80168C20)[3].effect_flags[0];
+                                    val |= D_80168C20[3].effect_flags[0];
                                 }
                                 t0 = 0x21;
                                 s = content_item->action_type;
@@ -1314,17 +1313,17 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             {
                                 s32 s;
                                 val = 0;
-                                if (((MenuItemEntry*)D_80168C20)[1].active != 0)
+                                if (D_80168C20[1].active != 0)
                                 {
-                                    val = ((MenuItemEntry*)D_80168C20)[1].effect_flags[1];
+                                    val = D_80168C20[1].effect_flags[1];
                                 }
-                                if (((MenuItemEntry*)D_80168C20)[2].active != 0)
+                                if (D_80168C20[2].active != 0)
                                 {
-                                    val |= ((MenuItemEntry*)D_80168C20)[2].effect_flags[1];
+                                    val |= D_80168C20[2].effect_flags[1];
                                 }
-                                if (((MenuItemEntry*)D_80168C20)[3].active != 0)
+                                if (D_80168C20[3].active != 0)
                                 {
-                                    val |= ((MenuItemEntry*)D_80168C20)[3].effect_flags[1];
+                                    val |= D_80168C20[3].effect_flags[1];
                                 }
                                 s = content_item->action_type;
                                 if (((val >> (s - 0x1A)) & 1) != 0)
@@ -1341,7 +1340,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
 #if defined(VERSION_JP)
                                 s32 s;
                                 s = content_item->action_type;
-                                if (((((MenuItemEntry*)g_menu_category0_item)->effect_flags[0] >> (s - 0x22)) & 1) != 0)
+                                if (((g_menu_category0_item->effect_flags[0] >> (s - 0x22)) & 1) != 0)
                                 {
                                     t0 = s + 0x13;
                                 }
@@ -1355,7 +1354,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 {
                                     s32 s;
                                     s = content_item->action_type;
-                                    if (((((MenuItemEntry*)g_menu_category0_item)->effect_flags[0] >> (s - 0x22)) & 1) != 0)
+                                    if (((g_menu_category0_item->effect_flags[0] >> (s - 0x22)) & 1) != 0)
                                     {
                                         t0 = s + 0x13;
                                     }
@@ -1382,7 +1381,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             {
                                 if (g_menu_char_slot != 2)
                                 {
-                                    MenuItemEntry* equipment = (MenuItemEntry*)((content_item->action_type << 6) + (s32)g_menu_equipment_base - 0xC80);
+                                    MenuItemEntry* equipment = (MenuItemEntry*)((content_item->action_type * sizeof(MenuItemEntry)) + (uintptr_t)g_menu_equipment_base - 0x32 * sizeof(MenuItemEntry));
                                     t0 = 0x21;
                                     if (equipment->active != 0)
                                     {
@@ -1408,9 +1407,9 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 t0 = 0xFF;
                                 if (g_menu_item_ptr != 0)
                                 {
-                                    if (((MenuItemEntry*)g_menu_item_ptr)->active != 0)
+                                    if (g_menu_item_ptr->active != 0)
                                     {
-                                        u32 attributes = ((MenuItemEntry*)g_menu_item_ptr)->attributes.packed;
+                                        u32 attributes = g_menu_item_ptr->attributes.packed;
                                         s32 item_kind = (attributes >> MENU_ITEM_KIND_SHIFT) & 3;
                                         switch (item_kind)
                                         {
@@ -1518,13 +1517,13 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     u32 v;
                                     u32 v1;
 
-                                    if (menu_item_is_nondefault((const MenuItemEntry*)g_menu_item_ptr) != 0)
+                                    if (menu_item_is_nondefault(g_menu_item_ptr) != 0)
                                     {
                                         void* a3 =
                                             (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_KEY_ITEM_NAMES]);
                                         menu_concat_encoded_text(
                                             &prefix_buffer,
-                                            (void*)((u8*)a3 + *(u16*)((u8*)a3 + (((MenuItemEntry*)g_menu_item_ptr)->attributes.halves.high & 0x3F) * 2)),
+                                            (void*)((u8*)a3 + *(u16*)((u8*)a3 + (g_menu_item_ptr->attributes.halves.high & 0x3F) * 2)),
                                             (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES] +
                                                     *(u16*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES] +
                                                             0xB4)));
@@ -1533,34 +1532,34 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     {
                                         prefix_buffer[0] = 0;
                                     }
-                                    v = ((MenuItemEntry*)g_menu_item_ptr)->attributes.packed;
+                                    v = g_menu_item_ptr->attributes.packed;
                                     v1 = (v >> 8) & 3;
                                     switch (v1)
                                     {
                                     case 0:
                                     {
-                                        void* base0 = (void*)((u8*)g_menu_state_ptr +
+                                        uintptr_t base0 = ((uintptr_t)g_menu_state_ptr +
                                                               ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_CATEGORY_HELP]);
                                         menu_concat_encoded_text(&text_buffer, &prefix_buffer,
-                                                                 (void*)((u8*)base0 + *(u16*)((s32)((v >> 9) & 0x7E) + (s32)base0)));
+                                                                 (void*)(base0 + *(u16*)(((v >> 9) & 0x7E) + base0)));
                                         break;
                                     }
                                     case 1:
                                     {
-                                        void* base1 = (void*)((u8*)g_menu_state_ptr +
+                                        uintptr_t base1 = ((uintptr_t)g_menu_state_ptr +
                                                               ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_CATEGORY_HELP]);
                                         menu_concat_encoded_text(&text_buffer, &prefix_buffer,
-                                                                 (void*)((u8*)base1 + *(u16*)((s32)((v >> 9) & 0x7E) + (s32)base1 + 0x16)));
+                                                                 (void*)(base1 + *(u16*)(((v >> 9) & 0x7E) + base1 + 11 * sizeof(u16))));
                                         break;
                                     }
                                     default:
                                     {
-                                        void* base2 = (void*)((u8*)g_menu_state_ptr +
+                                        uintptr_t base2 = ((uintptr_t)g_menu_state_ptr +
                                                               ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_CATEGORY_HELP]);
                                         menu_concat_encoded_text(
                                             &text_buffer, &prefix_buffer,
-                                            (void*)((u8*)base2 +
-                                                    *(u16*)((s32)((((MenuItemEntry*)g_menu_item_ptr)->attributes.packed >> 9) & 0x7E) + (s32)base2 + 0x2E)));
+                                            (void*)(base2 +
+                                                    *(u16*)(((g_menu_item_ptr->attributes.packed >> 9) & 0x7E) + base2 + 23 * sizeof(u16))));
                                         break;
                                     }
                                     }
@@ -1573,7 +1572,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 if (g_menu_item_ptr != 0)
                                 {
                                     packet_cursor =
-                                        menu_draw_clamped_number(ot_entry, packet_cursor, ((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.packed & 0xF, 1,
+                                        menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_item_ptr->display_nibbles.packed & 0xF, 1,
                                                                  &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
@@ -1581,7 +1580,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 if (g_menu_item_ptr != 0)
                                 {
                                     packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
-                                                                             (((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.packed >> 4) & 0xF, 1, &pos,
+                                                                             (g_menu_item_ptr->display_nibbles.packed >> 4) & 0xF, 1, &pos,
                                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
@@ -1589,7 +1588,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 if (g_menu_item_ptr != 0)
                                 {
                                     packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
-                                                                             (((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.packed >> 8) & 0xF, 1, &pos,
+                                                                             (g_menu_item_ptr->display_nibbles.packed >> 8) & 0xF, 1, &pos,
                                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
@@ -1597,7 +1596,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 if (g_menu_item_ptr != 0)
                                 {
                                     packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
-                                                                             (((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.packed >> 12) & 0xF, 1, &pos,
+                                                                             (g_menu_item_ptr->display_nibbles.packed >> 12) & 0xF, 1, &pos,
                                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
@@ -1605,7 +1604,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 if (g_menu_item_ptr != 0)
                                 {
                                     packet_cursor =
-                                        menu_draw_clamped_number(ot_entry, packet_cursor, ((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.halfwords[1] & 0xF,
+                                        menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_item_ptr->display_nibbles.halfwords[1] & 0xF,
                                                                  1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
@@ -1613,7 +1612,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 if (g_menu_item_ptr != 0)
                                 {
                                     packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
-                                                                             (((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.packed >> 20) & 0xF, 1, &pos,
+                                                                             (g_menu_item_ptr->display_nibbles.packed >> 20) & 0xF, 1, &pos,
                                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
@@ -1621,7 +1620,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 if (g_menu_item_ptr != 0)
                                 {
                                     packet_cursor =
-                                        menu_draw_clamped_number(ot_entry, packet_cursor, ((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.bytes[3] & 0xF, 1,
+                                        menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_item_ptr->display_nibbles.bytes[3] & 0xF, 1,
                                                                  &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
@@ -1629,7 +1628,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 if (g_menu_item_ptr != 0)
                                 {
                                     packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
-                                                                             (((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.packed >> 28) & 0xF, 1, &pos,
+                                                                             (g_menu_item_ptr->display_nibbles.packed >> 28) & 0xF, 1, &pos,
                                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
@@ -1642,7 +1641,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     base_a2_1 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x5C));
                                     {
                                         s32 a3 = 1;
-                                        void* a2_2 = (void*)((u8*)base_a2_1 + *(u16*)((u8*)base_a2_1 + (*(u8*)(g_menu_item_ptr + content_index + 0x15) * 2)));
+                                        void* a2_2 = (void*)((u8*)base_a2_1 + *(u16*)((u8*)base_a2_1 + (*((u8*)g_menu_item_ptr + content_index + 0x15) * 2)));
                                         packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK,
                                                                       content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                       (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
@@ -1659,7 +1658,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     {
                                         s32 a3 = 1;
                                         void* a2_2 =
-                                            (void*)((u8*)base_a2_2 + *(u16*)((u8*)base_a2_2 + (*(u8*)(g_menu_category0_item + content_index + 0x1A) * 2)));
+                                            (void*)((u8*)base_a2_2 + *(u16*)((u8*)base_a2_2 + (*((u8*)g_menu_category0_item + content_index + 0x1A) * 2)));
                                         packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK,
                                                                       content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                       (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
@@ -1669,7 +1668,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             case 0x11:
                                 if (g_menu_category0_item != 0)
                                 {
-                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, ((MenuItemEntry*)g_menu_category0_item)->stat_values[0], 1, &pos,
+                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, g_menu_category0_item->stat_values[0], 1, &pos,
                                                                   ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
@@ -1677,22 +1676,22 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 if (g_menu_category1_item != 0)
                                 {
                                     packet_cursor =
-                                        menu_draw_clamped_number(ot_entry, packet_cursor, ((MenuItemEntry*)g_menu_category1_item)->stat_values[0], 1, &pos,
+                                        menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_category1_item->stat_values[0], 1, &pos,
                                                                  ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
                             case 0x13:
                                 if (g_menu_item_ptr != 0)
                                 {
-                                    void* a2;
+                                    uintptr_t a2;
                                     u8* a3ptr;
                                     s32 idx;
                                     void* a2_2;
                                     draw_packet_cursor = packet_cursor;
-                                    a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x44));
+                                    a2 = (uintptr_t)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x44);
                                     a3ptr = (u8*)g_menu_category2_item;
                                     idx = (a3ptr[0x24] * 0xE + a3ptr[0x25]) * 2;
-                                    a2_2 = (void*)((u8*)a2 + *(u16*)(idx + (u32)a2));
+                                    a2_2 = (void*)(a2 + *(u16*)(idx + a2));
                                     packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
                                                                   content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                   (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
@@ -1704,7 +1703,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     draw_packet_cursor = packet_cursor;
                                     base_a2_3 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x28));
                                     {
-                                        void* a2_2 = (void*)((u8*)base_a2_3 + *(u16*)((u8*)base_a2_3 + (*(u8*)(g_menu_category2_item + 0x24) * 2)));
+                                        void* a2_2 = (void*)((u8*)base_a2_3 + *(u16*)((u8*)base_a2_3 + (*((u8*)g_menu_category2_item + 0x24) * 2)));
                                         packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
                                                                       content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                       (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
@@ -1717,7 +1716,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     draw_packet_cursor = packet_cursor;
                                     base_a2_4 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x38));
                                     {
-                                        void* a2_2 = (void*)((u8*)base_a2_4 + *(u16*)((u8*)base_a2_4 + (*(u8*)(g_menu_category2_item + 0x25) * 2)));
+                                        void* a2_2 = (void*)((u8*)base_a2_4 + *(u16*)((u8*)base_a2_4 + (*((u8*)g_menu_category2_item + 0x25) * 2)));
                                         packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
                                                                       content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                       (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
@@ -1727,7 +1726,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             case 0x16:
                                 if (g_menu_item_ptr != 0)
                                 {
-                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, *(u8*)(g_menu_category2_item + 0x26), 1, &pos,
+                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, *((u8*)g_menu_category2_item + 0x26), 1, &pos,
                                                                   ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
@@ -1739,13 +1738,13 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 val = 0;
                                 if (g_item_slot_flags[content_index - 0x17] != 0)
                                 {
-                                    MenuItemEntry* equipment = (MenuItemEntry*)((content_index << 6) + (s32)D_80168C30 - 0x5C0);
+                                    MenuItemEntry* equipment = (MenuItemEntry*)((content_index * sizeof(MenuItemEntry)) + (uintptr_t)D_80168C30 - 0x17 * sizeof(MenuItemEntry));
                                     MenuItemEntry* comparison_item;
                                     if (equipment->active != 0)
                                     {
                                         val = equipment->stat_values[0];
                                     }
-                                    comparison_item = (MenuItemEntry*)g_item_slot_data[content_index - 0x17];
+                                    comparison_item = g_item_slot_data[content_index - 0x17];
                                     if (comparison_item != 0 && comparison_item->active != 0)
                                     {
                                         val -= comparison_item->stat_values[0];
@@ -1767,13 +1766,13 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 val = 0;
                                 if (g_item_slot_flags[content_index - 0x1B] != 0)
                                 {
-                                    MenuItemEntry* equipment = (MenuItemEntry*)((content_index << 6) + (s32)D_80168C30 - 0x6C0);
+                                    MenuItemEntry* equipment = (MenuItemEntry*)((content_index * sizeof(MenuItemEntry)) + (uintptr_t)D_80168C30 - 0x1B * sizeof(MenuItemEntry));
                                     MenuItemEntry* comparison_item;
                                     if (equipment->active != 0)
                                     {
                                         val = equipment->stat_values[0];
                                     }
-                                    comparison_item = (MenuItemEntry*)g_item_slot_data[content_index - 0x1B];
+                                    comparison_item = g_item_slot_data[content_index - 0x1B];
                                     if (comparison_item != 0 && comparison_item->active != 0)
                                     {
                                         val -= comparison_item->stat_values[0];
@@ -1864,7 +1863,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 if (g_menu_category1_item != 0)
                                 {
                                     packet_cursor = menu_draw_clamped_number(
-                                        ot_entry, packet_cursor, ((MenuItemEntry*)g_menu_category1_item)->stat_values[content_index - 0x3F], 1, &pos,
+                                        ot_entry, packet_cursor, g_menu_category1_item->stat_values[content_index - 0x3F], 1, &pos,
                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
@@ -1873,19 +1872,19 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             case 0x45:
                             case 0x46:
                             {
-                                s32 has = 0;
+                                uintptr_t has = 0;
 
                                 val = has;
                                 for (k = 1; k < 4; k++)
                                 {
-                                    u8* slot = D_80168C20 + (k * 0x40);
+                                    MenuItemEntry* slot = &D_80168C20[k];
                                     if (g_item_slot_flags[k] != 0)
                                     {
-                                        if (((MenuItemEntry*)slot)->active != 0)
+                                        if (slot->active != 0)
                                         {
-                                            val += ((MenuItemEntry*)slot)->stat_values[content_index - 0x43];
+                                            val += slot->stat_values[content_index - 0x43];
                                         }
-                                        has = g_item_slot_data[k];
+                                        has = (uintptr_t)g_item_slot_data[k];
                                         if (has != 0 && ((MenuItemEntry*)has)->active != 0)
                                         {
                                             val -= ((MenuItemEntry*)has)->stat_values[content_index - 0x43];
@@ -1905,19 +1904,19 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             case 0x49:
                             case 0x4A:
                             {
-                                s32 has = 0;
+                                uintptr_t has = 0;
                                 s32 total = has;
 
                                 for (k = 1; k < 4; k++)
                                 {
-                                    u8* slot = D_80168C20 + (k * 0x40);
+                                    MenuItemEntry* slot = &D_80168C20[k];
                                     if (g_item_slot_flags[k] != 0)
                                     {
-                                        if (((MenuItemEntry*)slot)->active != 0)
+                                        if (slot->active != 0)
                                         {
-                                            total += ((MenuItemEntry*)slot)->stat_values[content_index - 0x47];
+                                            total += slot->stat_values[content_index - 0x47];
                                         }
-                                        has = g_item_slot_data[k];
+                                        has = (uintptr_t)g_item_slot_data[k];
                                         if (has != 0 && ((MenuItemEntry*)has)->active != 0)
                                         {
                                             total -= ((MenuItemEntry*)has)->stat_values[content_index - 0x47];
@@ -2048,7 +2047,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             break;
                             case 0xF:
                             {
-                                void* a2_2 = (void*)g_menu_equipment_base;
+                                void* a2_2 = g_menu_equipment_base;
                                 if (*(u8*)a2_2 != 0)
                                 {
                                     s32 a3 = 1;
@@ -2065,12 +2064,12 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             case 0x10:
                             case 0x11:
                             case 0x12:
-                                if (((MenuItemEntry*)D_80168C30)->active != 0)
+                                if (D_80168C30->active != 0)
                                 {
                                     draw_packet_cursor = packet_cursor;
                                     base_a2_5 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x64));
                                     {
-                                        void* a2_2 = (void*)((u8*)base_a2_5 + *(u16*)((u8*)base_a2_5 + (*(u8*)(D_80168C30 + content_index + 0x18) * 2)));
+                                        void* a2_2 = (void*)((u8*)base_a2_5 + *(u16*)((u8*)base_a2_5 + (*((u8*)D_80168C30 + content_index + 0x18) * 2)));
                                         packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
                                                                       content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                       (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
@@ -2082,7 +2081,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 s32 displayed_stat = zero;
                                 if (g_item_slot_flags[0] != 0)
                                 {
-                                    MenuItemEntry* comparison_item = (MenuItemEntry*)g_item_slot_data[0];
+                                    MenuItemEntry* comparison_item = g_item_slot_data[0];
                                     if (comparison_item == 0 || comparison_item->active == 0)
                                     {
                                         displayed_stat += D_800F0C1C;
@@ -2094,9 +2093,9 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 }
                                 else
                                 {
-                                    if (((MenuItemEntry*)D_80168C30)->active != 0)
+                                    if (D_80168C30->active != 0)
                                     {
-                                        displayed_stat = ((MenuItemEntry*)D_80168C30)->stat_values[0];
+                                        displayed_stat = D_80168C30->stat_values[0];
                                     }
                                 }
                                 packet_cursor = func_800A8A78(ot_entry, packet_cursor, displayed_stat, 1, &pos,
@@ -2107,7 +2106,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             case 0x15:
                             case 0x16:
                             {
-                                u32 base = g_menu_equipment_base;
+                                uintptr_t base = (uintptr_t)g_menu_equipment_base;
                                 s32 shl = content_index << 6;
                                 if (*(u8*)(shl + base - 0x4C0) != 0)
                                 {
@@ -2182,13 +2181,13 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                         u32 tmpv;
                                         u8 idx;
                                         u16 off2;
-                                        base_a2_7 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x20));
-                                        tmpv = ((((MenuItemEntry*)g_menu_equipment_base)->attributes.packed >> 10) & 0x3F);
+                                        base_a2_7 = (uintptr_t)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x20);
+                                        tmpv = ((g_menu_equipment_base->attributes.packed >> 10) & 0x3F);
 
                                         idx = ((MenuNameSelection*)(ptr + 0x5F1))->fields.index;
                                         off2 = idx * 2;
                                         {
-                                            void* a2_2 = (void*)((u8*)base_a2_7 + *(u16*)(off2 + (tmpv * 0x30 + (s32)base_a2_7)));
+                                            void* a2_2 = (void*)(base_a2_7 + *(u16*)(off2 + (tmpv * 0x30 + base_a2_7)));
                                             packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
                                                                           content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                           (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
@@ -2223,18 +2222,18 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 {
                                     if (g_item_slot_flags[k] != 0)
                                     {
-                                        u32 ptr = g_item_slot_data[k];
-                                        if (ptr != 0 && ((MenuItemEntry*)ptr)->active != 0)
+                                        MenuItemEntry* ptr = g_item_slot_data[k];
+                                        if (ptr != 0 && ptr->active != 0)
                                         {
-                                            total += ((MenuItemEntry*)ptr)->stat_values[0];
+                                            total += ptr->stat_values[0];
                                         }
                                     }
                                     else
                                     {
-                                        u8* v = D_80168C20 + 0x40 + (k - 1) * 0x40;
-                                        if (((MenuItemEntry*)v)->active != 0)
+                                        MenuItemEntry* v = (MenuItemEntry*)((u8*)D_80168C20 + 0x40 + (k - 1) * 0x40);
+                                        if (v->active != 0)
                                         {
-                                            total += ((MenuItemEntry*)v)->stat_values[0];
+                                            total += v->stat_values[0];
                                         }
                                     }
                                 }
@@ -2249,18 +2248,18 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 {
                                     if (g_item_slot_flags[k] != 0)
                                     {
-                                        u32 ptr = g_item_slot_data[k];
-                                        if (ptr != 0 && ((MenuItemEntry*)ptr)->active != 0)
+                                        MenuItemEntry* ptr = g_item_slot_data[k];
+                                        if (ptr != 0 && ptr->active != 0)
                                         {
-                                            total += ((MenuItemEntry*)ptr)->stat_values[1];
+                                            total += ptr->stat_values[1];
                                         }
                                     }
                                     else
                                     {
-                                        u8* v = D_80168C20 + 0x40 + (k - 1) * 0x40;
-                                        if (((MenuItemEntry*)v)->active != 0)
+                                        MenuItemEntry* v = (MenuItemEntry*)((u8*)D_80168C20 + 0x40 + (k - 1) * 0x40);
+                                        if (v->active != 0)
                                         {
-                                            total += ((MenuItemEntry*)v)->stat_values[1];
+                                            total += v->stat_values[1];
                                         }
                                     }
                                 }
@@ -2275,18 +2274,18 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 {
                                     if (g_item_slot_flags[k] != 0)
                                     {
-                                        u32 ptr = g_item_slot_data[k];
-                                        if (ptr != 0 && ((MenuItemEntry*)ptr)->active != 0)
+                                        MenuItemEntry* ptr = g_item_slot_data[k];
+                                        if (ptr != 0 && ptr->active != 0)
                                         {
-                                            total += ((MenuItemEntry*)ptr)->stat_values[2];
+                                            total += ptr->stat_values[2];
                                         }
                                     }
                                     else
                                     {
-                                        u8* v = D_80168C20 + 0x40 + (k - 1) * 0x40;
-                                        if (((MenuItemEntry*)v)->active != 0)
+                                        MenuItemEntry* v = (MenuItemEntry*)((u8*)D_80168C20 + 0x40 + (k - 1) * 0x40);
+                                        if (v->active != 0)
                                         {
-                                            total += ((MenuItemEntry*)v)->stat_values[2];
+                                            total += v->stat_values[2];
                                         }
                                     }
                                 }
@@ -2301,18 +2300,18 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 {
                                     if (g_item_slot_flags[k] != 0)
                                     {
-                                        u32 ptr = g_item_slot_data[k];
-                                        if (ptr != 0 && ((MenuItemEntry*)ptr)->active != 0)
+                                        MenuItemEntry* ptr = g_item_slot_data[k];
+                                        if (ptr != 0 && ptr->active != 0)
                                         {
-                                            total += ((MenuItemEntry*)ptr)->stat_values[3];
+                                            total += ptr->stat_values[3];
                                         }
                                     }
                                     else
                                     {
-                                        u8* v = D_80168C20 + 0x40 + (k - 1) * 0x40;
-                                        if (((MenuItemEntry*)v)->active != 0)
+                                        MenuItemEntry* v = (MenuItemEntry*)((u8*)D_80168C20 + 0x40 + (k - 1) * 0x40);
+                                        if (v->active != 0)
                                         {
-                                            total += ((MenuItemEntry*)v)->stat_values[3];
+                                            total += v->stat_values[3];
                                         }
                                     }
                                 }
@@ -2325,13 +2324,13 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 val = 0;
                                 if (g_item_slot_flags[0] != 0)
                                 {
-                                    if (((MenuItemEntry*)D_80168C20)->active != 0)
+                                    if (D_80168C20->active != 0)
                                     {
-                                        val = ((MenuItemEntry*)D_80168C30)->stat_values[0];
+                                        val = D_80168C30->stat_values[0];
                                     }
-                                    if (g_item_slot_data[0] != 0 && *(u8*)g_item_slot_data[0] != 0)
+                                    if (g_item_slot_data[0] != 0 && g_item_slot_data[0]->active != 0)
                                     {
-                                        val = val - ((MenuItemEntry*)g_item_slot_data[0])->stat_values[0];
+                                        val = val - (g_item_slot_data[0])->stat_values[0];
                                     }
                                     else
                                     {
@@ -2347,19 +2346,19 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             case 0x42:
                             case 0x43:
                             {
-                                s32 has = 0;
+                                uintptr_t has = 0;
 
                                 val = has;
                                 for (k = 1; k < 4; k++)
                                 {
-                                    u8* slot = D_80168C20 + (k * 0x40);
+                                    MenuItemEntry* slot = &D_80168C20[k];
                                     if (g_item_slot_flags[k] != 0)
                                     {
-                                        if (((MenuItemEntry*)slot)->active != 0)
+                                        if (slot->active != 0)
                                         {
-                                            val += ((MenuItemEntry*)slot)->stat_values[content_index - 0x40];
+                                            val += slot->stat_values[content_index - 0x40];
                                         }
-                                        has = g_item_slot_data[k];
+                                        has = (uintptr_t)g_item_slot_data[k];
                                         if (has != 0 && ((MenuItemEntry*)has)->active != 0)
                                         {
                                             val -= ((MenuItemEntry*)has)->stat_values[content_index - 0x40];
@@ -2380,13 +2379,13 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 if (g_item_slot_flags[0] != 0)
                                 {
                                     s32 diff;
-                                    if (((MenuItemEntry*)D_80168C20)->active != 0)
+                                    if (D_80168C20->active != 0)
                                     {
-                                        a2_23 = ((MenuItemEntry*)D_80168C30)->stat_values[0];
+                                        a2_23 = D_80168C30->stat_values[0];
                                     }
-                                    if (g_item_slot_data[0] != 0 && *(u8*)g_item_slot_data[0] != 0)
+                                    if (g_item_slot_data[0] != 0 && g_item_slot_data[0]->active != 0)
                                     {
-                                        diff = a2_23 - ((MenuItemEntry*)g_item_slot_data[0])->stat_values[0];
+                                        diff = a2_23 - (g_item_slot_data[0])->stat_values[0];
                                     }
                                     else
                                     {
@@ -2402,19 +2401,19 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             case 0x47:
                             case 0x48:
                             {
-                                s32 has = 0;
+                                uintptr_t has = 0;
                                 s32 total = has;
 
                                 for (k = 1; k < 4; k++)
                                 {
-                                    u8* slot = D_80168C20 + (k * 0x40);
+                                    MenuItemEntry* slot = &D_80168C20[k];
                                     if (g_item_slot_flags[k] != 0)
                                     {
-                                        if (((MenuItemEntry*)slot)->active != 0)
+                                        if (slot->active != 0)
                                         {
-                                            total += ((MenuItemEntry*)slot)->stat_values[content_index - 0x45];
+                                            total += slot->stat_values[content_index - 0x45];
                                         }
-                                        has = g_item_slot_data[k];
+                                        has = (uintptr_t)g_item_slot_data[k];
                                         if (has != 0 && ((MenuItemEntry*)has)->active != 0)
                                         {
                                             total -= ((MenuItemEntry*)has)->stat_values[content_index - 0x45];
@@ -2600,7 +2599,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 pos.x += 0x14;
                                 s2 = shared_s0 / 216000;
                                 one = 1;
-                                packet_cursor = (void*)func_800A8A78(ot_entry, packet_cursor, s2, one, &pos, one);
+                                packet_cursor = func_800A8A78(ot_entry, packet_cursor, s2, one, &pos, one);
                                 if ((g_frame_counter / 15) & 1)
                                 {
                                     packet_cursor = func_800A88A0(packet_cursor, ot_entry, MENU_PLAYTIME_SEPARATOR, one, pos.x, pos.y, 0);
@@ -2610,10 +2609,10 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 shared_s0 = (shared_s0 / 3600) - split_tmp;
                                 if (shared_s0 < 0xA)
                                 {
-                                    packet_cursor = (void*)func_800A8A78(ot_entry, packet_cursor, 0U, 1, &pos, 0);
+                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, 0U, 1, &pos, 0);
                                 }
                                 pos.x += MENU_PLAYTIME_MINUTES_ADVANCE;
-                                packet_cursor = (void*)func_800A8A78(ot_entry, packet_cursor, shared_s0, 1, &pos, one);
+                                packet_cursor = func_800A8A78(ot_entry, packet_cursor, shared_s0, 1, &pos, one);
                             }
                             break;
                             }
@@ -2748,7 +2747,7 @@ inline s32 menu_get_equipment_ability_mask(s32 excluded_slot)
     u32 item_attributes;
 
     category_mask = 0;
-    equipment = (MenuItemEntry*)g_menu_equipment_base;
+    equipment = g_menu_equipment_base;
     equipment_index = 0;
     do
     {
@@ -3018,7 +3017,7 @@ void* menu_emit_tree_scroll_arrows(SPRT* sprite, s32* ot_entry)
  * @param draw_label Non-zero to also draw the node's label.
  * @return Updated primitive write cursor.
  */
-s32 menu_draw_active_node_cursor(s32 packet_cursor, s32* ot_entry, s32 draw_label)
+void* menu_draw_active_node_cursor(void* packet_cursor, s32* ot_entry, s32 draw_label)
 {
     u16 nav_x_packed;
     u8 nav_y_high;
@@ -3261,9 +3260,9 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
                             case 0:
                             {
                                 u32 idx = (item_attributes >> 9) & 0x7E;
-                                u8* category_help_table =
-                                    (u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_CATEGORY_HELP];
-                                u8* str2 = category_help_table + *(u16*)((u8*)((s32)idx + (s32)category_help_table) + 0);
+                                uintptr_t category_help_table =
+                                    (uintptr_t)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_CATEGORY_HELP];
+                                u8* str2 = (u8*)(category_help_table + *(u16*)(idx + category_help_table));
 
                                 u8* out = label_buffer;
                                 u8* first = item_name_buffer;
@@ -3273,9 +3272,9 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
                             case 1:
                             {
                                 u32 idx = (item_attributes >> 9) & 0x7E;
-                                u8* category_help_table =
-                                    (u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_CATEGORY_HELP];
-                                u8* str2 = category_help_table + *(u16*)((u8*)((s32)idx + (s32)category_help_table) + 0x16);
+                                uintptr_t category_help_table =
+                                    (uintptr_t)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_CATEGORY_HELP];
+                                u8* str2 = (u8*)(category_help_table + *(u16*)(idx + category_help_table + 11 * sizeof(u16)));
 
                                 u8* out = label_buffer;
                                 u8* first = item_name_buffer;
@@ -3288,8 +3287,8 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
                                 SavedGameLayout* context = g_saved_game_ctx;
                                 u32 reloaded_item_attributes = menu_equipped_item(context, action_type - MENU_EQUIPMENT_SUBTYPE_BASE)->attributes.packed;
                                 u32 idx = (reloaded_item_attributes >> 9) & 0x7E;
-                                u8* category_help_table = (u8*)g_menu_state_ptr + *category_help_offset;
-                                u8* str2 = category_help_table + *(u16*)((u8*)((s32)idx + (s32)category_help_table) + 0x2E);
+                                uintptr_t category_help_table = (uintptr_t)g_menu_state_ptr + *category_help_offset;
+                                u8* str2 = (u8*)(category_help_table + *(u16*)(idx + category_help_table + 23 * sizeof(u16)));
 
                                 u8* out = label_buffer;
                                 u8* first = item_name_buffer;
@@ -3324,7 +3323,7 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
                 break;
             }
             case 15:
-                if ((u8*)g_menu_item_ptr != NULL)
+                if (g_menu_item_ptr != NULL)
                 {
                     prim_buf = menu_emit_content_label(prim_buf, ot, (u8*)g_menu_item_ptr);
                 }

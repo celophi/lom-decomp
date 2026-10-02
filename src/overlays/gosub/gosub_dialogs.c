@@ -197,13 +197,13 @@ void gosub_open_sort_dialog(void)
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after both actions.
  */
-s32 gosub_draw_block_action_dialog(s32* ordering_table, s32 initial_packet, s32 x_offset, s32 y_offset)
+u8* gosub_draw_block_action_dialog(s32* ordering_table, u8* initial_packet, s32 x_offset, s32 y_offset)
 {
     void* sort_text;
     void* delete_text;
     s32 delete_color;
     s32 sort_color;
-    s32 packet_cursor;
+    u8* packet_cursor;
     s32 unused[14];
 
     packet_cursor = initial_packet;
@@ -236,14 +236,14 @@ s32 gosub_draw_block_action_dialog(s32* ordering_table, s32 initial_packet, s32 
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after all three choices.
  */
-s32 gosub_draw_sort_dialog(s32* ordering_table, s32 initial_packet, s32 x_offset, s32 y_offset)
+u8* gosub_draw_sort_dialog(s32* ordering_table, u8* initial_packet, s32 x_offset, s32 y_offset)
 {
     void* type_text;
     void* power_text;
     void* shape_text;
     s32 text_color;
     s32 type_color;
-    s32 packet_cursor;
+    u8* packet_cursor;
     s32 selected_sort_key;
     s32 unused[14];
 
@@ -313,7 +313,7 @@ void gosub_open_message_dialog(u8* message_text)
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the dialog text.
  */
-s32 gosub_draw_message_dialog(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
+u8* gosub_draw_message_dialog(s32* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset)
 {
     s32 unused[14];
 
@@ -330,7 +330,7 @@ s32 gosub_draw_message_dialog(s32* ordering_table, s32 packet_cursor, s32 x_offs
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the header and optional details.
  */
-s32 gosub_draw_block_components_header(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
+u8* gosub_draw_block_components_header(s32* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset)
 {
     void* text;
     s32 unused[14];
@@ -353,7 +353,7 @@ s32 gosub_draw_block_components_header(s32* ordering_table, s32 packet_cursor, s
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after both lines.
  */
-s32 gosub_draw_golem_parts_header(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
+u8* gosub_draw_golem_parts_header(s32* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset)
 {
     void* text;
     s32 unused[14];
@@ -377,7 +377,7 @@ s32 gosub_draw_golem_parts_header(s32* ordering_table, s32 packet_cursor, s32 x_
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the title and both choices.
  */
-s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
+u8* gosub_draw_confirmation_prompt(s32* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset)
 {
     void* text;
     s32 text_color;
@@ -416,7 +416,7 @@ s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the description and optional details.
  */
-s32 gosub_draw_row_description(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
+u8* gosub_draw_row_description(s32* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset)
 {
     s32 unused[12];
 
@@ -437,7 +437,7 @@ s32 gosub_draw_row_description(s32* ordering_table, s32 packet_cursor, s32 x_off
  * @param y_offset Vertical dialog animation offset.
  * @return Packet cursor after the equipment detail line.
  */
-s32 gosub_draw_equipment_details(s32 packet_cursor, s32* ordering_table, s32 x_offset, s32 y_offset)
+u8* gosub_draw_equipment_details(u8* packet_cursor, s32* ordering_table, s32 x_offset, s32 y_offset)
 {
     s32 equipment_kind;
     GosubTextPosition number_position;
@@ -490,7 +490,7 @@ s32 gosub_draw_equipment_details(s32 packet_cursor, s32* ordering_table, s32 x_o
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the title.
  */
-s32 gosub_draw_title(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
+u8* gosub_draw_title(s32* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset)
 {
     s32 unused[14];
 

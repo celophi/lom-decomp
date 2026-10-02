@@ -117,7 +117,7 @@ typedef struct
 /**
  * @brief The list entry under the cursor.
  */
-#define SHOP_SELECTED_ENTRY() ((ShopEntry*)(g_shop_cursor * sizeof(ShopEntry) + (u32)g_shop_entries))
+#define SHOP_SELECTED_ENTRY() ((ShopEntry*)(g_shop_cursor * sizeof(ShopEntry) + (uintptr_t)g_shop_entries))
 
 extern ShopTextArchive g_shop_text_archive;
 extern u16 g_shop_item_sell_prices[FIELD_ITEM_KIND_COUNT];
@@ -169,7 +169,7 @@ extern u8 D_800EC3FE[];
  * @brief Address of FIELD UI string @p index, given the start of the offset table in @p table.
  * @note Summed as integers, offset bytes first, like FIELD's own string lookups.
  */
-#define FIELD_UI_TEXT(table, index) ((u8*)((table)[(index) * 2] + (((table)[(index) * 2 + 1] << 8) + (s32)(table))))
+#define FIELD_UI_TEXT(table, index) ((u8*)((table)[(index) * 2] + (((table)[(index) * 2 + 1] << 8) + (uintptr_t)(table))))
 
 extern s32 g_menu_element_counter;
 

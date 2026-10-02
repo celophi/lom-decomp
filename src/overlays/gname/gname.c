@@ -322,14 +322,14 @@ typedef struct
 } GnameRecordTable;
 
 /* Typed views over the serialized name-entry resource. */
-#define GNAME_HEADER_OFFSET(member) ((u32) & ((GnameDataHeader*)0)->member)
+#define GNAME_HEADER_OFFSET(member) OFFSETOF(GnameDataHeader, member)
 #define GNAME_HEADER_FROM_FIELD(symbol, member) ((const GnameDataHeader*)((u8*)&(symbol) - GNAME_HEADER_OFFSET(member)))
 #define GNAME_RANDOM_NAMES_FIELD_OFFSET GNAME_HEADER_OFFSET(random_names_offset)
 #define NAME_DATA_HEADER GNAME_HEADER_FROM_FIELD(g_random_names_off, random_names_offset)
 #define PANEL_DATA_HEADER GNAME_HEADER_FROM_FIELD(g_panel_tbl_off, panel_records_offset)
 #define KANJI_DATA_HEADER GNAME_HEADER_FROM_FIELD(g_kanji_panel_offset, kanji_records_offset)
 #define PANEL_RECORD_TABLE ((const GnameRecordTable*)((u8*)PANEL_DATA_HEADER + g_panel_tbl_off))
-#define KANJI_RECORD_TABLE ((const GnameRecordTable*)((u32)KANJI_DATA_HEADER + g_kanji_panel_offset))
+#define KANJI_RECORD_TABLE ((const GnameRecordTable*)((u8*)KANJI_DATA_HEADER + g_kanji_panel_offset))
 #define PANEL_CHARACTER_TABLE ((GnameRecordTable*)((u8*)NAME_DATA_HEADER + g_panel_tbl_off))
 #define KANJI_CHARACTER_TABLE ((GnameRecordTable*)((u8*)NAME_DATA_HEADER + g_kanji_panel_offset))
 #define RANDOM_NAME_TABLE ((GnameRecordTable*)((u8*)NAME_DATA_HEADER + g_random_names_off))
@@ -1833,7 +1833,7 @@ static void render_layout_sprite_batch(RenderContext* render_ctx)
 
         packed_xy = sequence_entry->packed_xy;
         /* Integer sum so the scaled index is the first addend. */
-        glyph_info = (const GlyphInfo*)((glyph_id * sizeof(GlyphInfo)) + (u32)glyph_table);
+        glyph_info = (const GlyphInfo*)((glyph_id * sizeof(GlyphInfo)) + (uintptr_t)glyph_table);
         SET_SPRT_XY0_WORD(sprite, packed_xy);
 
         setUV0(sprite, glyph_info->u, glyph_info->v);

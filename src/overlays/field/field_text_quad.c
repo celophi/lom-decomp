@@ -41,7 +41,7 @@
 /** @brief Scale factors are fixed point with this unit (1.0). */
 #define FIELD_TEXT_QUAD_SCALE_ONE 256
 
-static POLY_FT4* field_text_add_quad_outline(u32* ot, POLY_FT4* output);
+static POLY_FT4* field_text_add_quad_outline(u_long* ot, POLY_FT4* output);
 
 /**
  * @brief Render text through a scratch texture as a scaled, optionally outlined quad.
@@ -61,7 +61,7 @@ static POLY_FT4* field_text_add_quad_outline(u32* ot, POLY_FT4* output);
  * @note Only text that fits in one sprite is drawn; longer text draws nothing.
  * @note JP uses the sprite width for the VRAM copy height.
  */
-POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* output, u32* ot, u8* text, s32 style, s32 x, s32 y, s32 flags, s32 scratch_row, s32 x_scale, s32 y_scale,
+POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* output, u_long* ot, u8* text, s32 style, s32 x, s32 y, s32 flags, s32 scratch_row, s32 x_scale, s32 y_scale,
                                       s32 lower_x_offset, s32 add_fade_copy)
 {
     SPRT sprites[10];
@@ -138,7 +138,7 @@ POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* output, u32* ot, u8* text, s32 s
  * @param output First free primitive slot, immediately after the quad to copy.
  * @return First free primitive slot after the four outline copies.
  */
-static POLY_FT4* field_text_add_quad_outline(u32* ot, POLY_FT4* output)
+static POLY_FT4* field_text_add_quad_outline(u_long* ot, POLY_FT4* output)
 {
     POLY_FT4* poly;
     s32 i;

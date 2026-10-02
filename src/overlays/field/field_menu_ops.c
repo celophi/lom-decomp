@@ -1175,7 +1175,7 @@ void field_menu_read_ring_selection(void)
     if (result < 0)
     {
         FIELD_LOCAL_HALF(FIELD_RING_BUSY) = 1;
-        FIELD_LOCAL_HALF(FIELD_RING_ENTRY) = ((s32 (*)(void))field_get_ring_cursor_entry)();
+        FIELD_LOCAL_HALF(FIELD_RING_ENTRY) = field_get_ring_cursor_entry();
     }
     else
     {

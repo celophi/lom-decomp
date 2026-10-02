@@ -231,7 +231,7 @@
  */
 #define FIELD_COLLISION_FILL_BLOCKED(out, count, remaining) \
     {                                                       \
-        count = (4 - (s32)(out)) & 3;                       \
+        count = (4 - (uintptr_t)(out)) & 3;                 \
         while (((count) != 0) && ((remaining) != 0))        \
         {                                                   \
             *(out) = -1;                                    \
@@ -335,11 +335,11 @@
 /**
  * Length slot `ring` of the bucket length array, seen through a u32 pointer.
  */
-#define FIELD_COLLISION_PATH_LEN_SLOT(lens, ring) (*(u32*)((u32)(lens) + ((ring) << 2)))
+#define FIELD_COLLISION_PATH_LEN_SLOT(lens, ring) (*(u32*)((u8*)(lens) + ((ring) << 2)))
 /**
  * Path column entry `n` places after `p`.
  */
-#define FIELD_COLLISION_PATH_AHEAD(p, n) ((s32*)((n) * (s32)sizeof(s32) + (s32)(p)))
+#define FIELD_COLLISION_PATH_AHEAD(p, n) ((s32*)((n) * sizeof(s32) + (uintptr_t)(p)))
 /**
  * A neighbour value the current wave may claim: below the wave limit, and
  * unvisited floor when the entry itself is slow.
@@ -451,7 +451,9 @@ typedef struct FieldCollisionNode
 {
     struct FieldCollisionNode* next;
     FieldCollisionSurfaceDef* surface;
-    u8 pad8[8];
+    /** Owning object and part (FieldNode::obj, FieldNode::part); unused by collision. */
+    void* owner_object;
+    void* owner_part;
     /** Per-row span table: (min_x, max_x) pairs, FIELD_COLLISION_SURFACE_SPANS per row. */
     void* spans;
     /** Per-row edge attribute bytes, two per span (left end, right end). */
@@ -628,7 +630,7 @@ typedef struct
 typedef struct
 {
     u8* tile_base;
-    s32 goal_tile;
+    u8* goal_tile;
     s32 start_x;
     s32 start_z;
     s32 end_x;
@@ -646,7 +648,7 @@ typedef struct
 static void field_collision_classify_nodes(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32* out_hit, s32* out_touch);
 static s16 field_collision_slope_height(FieldCollisionNode* node, s32* position);
 static s32 field_collision_slide_angle(FieldCollisionSurfaceDef* surface, s32 edge_index, s32 move_angle, s32 best_angle);
-static void field_collision_rasterize_node(FieldCollisionNode* node, s32* alloc);
+static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc);
 static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_depth);
 static s32 field_collision_mark_footprint(FieldCollisionQuery* margins, FieldCollisionQuery* query);
 static s32 field_collision_trace_line(FieldCollisionTraceRequest* request);
@@ -2757,7 +2759,7 @@ static s32 field_collision_slide_angle(FieldCollisionSurfaceDef* surface, s32 ed
  *
  * @param node Collision node being prepared; rows run from @c min_z to
  *             @c max_z, and @c spans / @c span_flags receive the tables.
- * @param alloc In/out field allocator cursor (a byte address, the same cursor
+ * @param alloc In/out field allocator cursor (a byte pointer, the same cursor
  *              field_collision_collect_groups takes). On entry it points at the free block
  *              used for both tables; on exit it is advanced past them,
  *              rounded up to a multiple of 4.
@@ -2768,7 +2770,7 @@ static s32 field_collision_slide_angle(FieldCollisionSurfaceDef* surface, s32 ed
  * @note @c last_dir / @c first_dir hold 0 (none yet), 2 (horizontal edge) or
  *       2 + ystep * sgn for a sloped edge.
  */
-static void field_collision_rasterize_node(FieldCollisionNode* node, s32* alloc)
+static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
 {
     FieldCollisionSurfaceDef* def;
     s16* table;
@@ -2825,10 +2827,10 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, s32* alloc)
     capacity *= 2;
     counts = (u8*)FIELD_COLLISION_SCRATCH;
     spans = (FieldCollisionRasterSpan*)*alloc;
-    node->spans = (void*)*alloc;
+    node->spans = *alloc;
     count = rows + 1;
     span_bytes = count * (capacity << 1);
-    node->span_flags = (void*)(*alloc + span_bytes);
+    node->span_flags = *alloc + span_bytes;
     flags = (FieldCollisionRasterSpanFlags*)(*alloc + (count * (capacity << 2)));
     *alloc = *alloc + (((count * ((capacity << 1) + capacity)) + 2) & ~3);
 
@@ -3369,7 +3371,7 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, s32* alloc)
  *       survive. The empty-scene path leaves @c group_count = 0 instead, which is
  *       how callers tell "no nodes" from "too many groups".
  */
-void field_collision_collect_groups(s32* alloc)
+void field_collision_collect_groups(u8** alloc)
 {
     FieldGroupEntry list[FIELD_COLLISION_GROUP_SCAN_MAX];
     FieldScene* scene;
@@ -3601,7 +3603,7 @@ void field_collision_collect_groups(s32* alloc)
     j = i * count4;
     *alloc += j;
     scene->group_work_end = *alloc;
-    ((void (*)(s32 *, s32, s32))field_collision_rasterize_groups)(alloc, 0, i);
+    ((void (*)(u8**, s32, s32))field_collision_rasterize_groups)(alloc, 0, i);
     return;
 
 overflow:
@@ -3942,7 +3944,7 @@ void field_collision_rasterize_groups(s32 unused, FieldNode* clip)
                                 runs_base[run_count].step = FIELD_NODE_DEF_ROWS(node->def);
                                 run_count++;
                             }
-                            list_offset += 8;
+                            list_offset += sizeof(FieldCollisionRasterNode);
                             j++;
                             if (j < node_count)
                             {
@@ -4409,9 +4411,9 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
     u32* src_word;
     s32 word_bits;
     u8* out;
-    u32 ring_write;
-    u32 ring_read;
-    u32 ring_end;
+    uintptr_t ring_write;
+    uintptr_t ring_read;
+    uintptr_t ring_end;
     s32 count;
     s32 remaining;
     s32 row;
@@ -4425,6 +4427,7 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
     u32 spread;
     u32 shift_solid;
     u32 shift_touch;
+    uintptr_t ring_scan;
     u32 carry_touch;
     u32 carry_solid;
     s32 bits_left;
@@ -4463,7 +4466,7 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
     src_row = (u32*)scene->group_work;
     group_count = scene->group_count;
     groups_left = (s32)group_count;
-    out = (u8*)scene->group_tiles;
+    out = scene->group_tiles;
     last_group = group_count - 1;
     groups_left = last_group;
     if (last_group != -1)
@@ -4590,7 +4593,7 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
                     }
                     if (remaining != 0)
                     {
-                        ring_inner = ring_write + 8;
+                        ring_inner = (u8*)(ring_write + 8);
                     loop_38:
                         if (bits_left < remaining)
                         {
@@ -4670,26 +4673,26 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
                             {
                                 do
                                 {
-                                    shift_touch = ring_read + ring_row_bytes;
+                                    ring_scan = ring_read + ring_row_bytes;
                                     acc_touch = acc_touch | *(u32*)(ring_read + 4);
                                     acc_solid |= *(u32*)(ring_read + 0);
-                                    if (shift_touch >= ring_end)
+                                    if (ring_scan >= ring_end)
                                     {
-                                        shift_touch -= ring_bytes;
+                                        ring_scan -= ring_bytes;
                                     }
                                 } while (0);
                                 count = footprint_depth - 2;
                                 do
                                 {
-                                    entry_touch = *(u32*)(shift_touch + 4);
-                                    entry_solid = *(u32*)(shift_touch + 0);
-                                    entry_inner = *(u32*)(shift_touch + 8);
-                                    shift_touch = shift_touch + ring_row_bytes;
+                                    entry_touch = *(u32*)(ring_scan + 4);
+                                    entry_solid = *(u32*)(ring_scan + 0);
+                                    entry_inner = *(u32*)(ring_scan + 8);
+                                    ring_scan = ring_scan + ring_row_bytes;
                                     acc_solid |= entry_solid | entry_inner;
                                     acc_touch |= entry_touch;
-                                    if (shift_touch >= ring_end)
+                                    if (ring_scan >= ring_end)
                                     {
-                                        shift_touch -= ring_bytes;
+                                        ring_scan -= ring_bytes;
                                     }
                                     count -= 1;
                                 } while (count != 0);
@@ -5063,9 +5066,8 @@ static s32 field_collision_mark_footprint(FieldCollisionQuery* margins, FieldCol
         return -2;
     }
 
-    /* top doubles as the group's tile-map offset (a separate local reallocates). */
     top = scene->group_tile_count * group;
-    row_base = (u8*)(scene->group_tiles + top + (cols * row_start) + col_start);
+    row_base = scene->group_tiles + top + (cols * row_start) + col_start;
     for (nrow -= 1; nrow != -1; nrow--)
     {
         p = row_base;
@@ -5196,7 +5198,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
     /* Ring cursors; the smoothing also parks quarter-point ints in them. */
     s32* deferred_out;
     s32* next_out;
-    u32 entry;
+    uintptr_t entry;
     u32 tile_size;
     u32 dirs;
     /* Directions claimed from the entry (BFS) or ruled out (walk back). */
@@ -5231,9 +5233,9 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
     s32 prev_ring;
     /* Loop counter; also the quarter-point dz scratch. */
     s32 step;
-    s32 mark_entry;
+    uintptr_t mark_entry;
     u32 plane_size;
-    s32 tile_map;
+    uintptr_t tile_map;
     u32 route_offset;
     /* Walk-back step code, 3x3 neighbourhood numbered 1..8 row by row (no centre). */
     s32 dir;
@@ -5335,7 +5337,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                 break;
             }
         }
-        near_tile = (u8*)(scene->group_tiles + (scene->group_tile_count * goal_group) + (columns * goal_row) + goal_col);
+        near_tile = scene->group_tiles + (scene->group_tile_count * goal_group) + (columns * goal_row) + goal_col;
         *near_tile = FIELD_COLLISION_TILE_GOAL;
         start_height = FIELD_COLLISION_CELL(start_query->y);
         start_groups = scene->group_count;
@@ -5358,14 +5360,14 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                 break;
             }
         }
-        tile = (u8*)(scene->group_tiles + (scene->group_tile_count * start_group) + (columns * start_row) + start_col);
+        tile = scene->group_tiles + (scene->group_tile_count * start_group) + (columns * start_row) + start_col;
         if (*tile != FIELD_COLLISION_TILE_GOAL)
         {
             *tile = FIELD_COLLISION_TILE_START;
             rec.start_x = goal_x;
             rec.start_z = goal_z;
             rec.end_x = start_x;
-            path[0][0] = (s32)tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIRS_ALL);
+            path[0][0] = (uintptr_t)tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIRS_ALL);
             rec.tile_base = (u8*)near_tile;
             rec.end_z = start_z;
             rec.footprint_width = (s16)start_query->width;
@@ -5437,7 +5439,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                                 {
                                     if (up_val != FIELD_COLLISION_TILE_TOUCHED)
                                     {
-                                        *next_out = (s32)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIRS_TOP | FIELD_COLLISION_DIR_LEFT | FIELD_COLLISION_DIR_RIGHT);
+                                        *next_out = (uintptr_t)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIRS_TOP | FIELD_COLLISION_DIR_LEFT | FIELD_COLLISION_DIR_RIGHT);
                                         next_out += 1;
                                         queue_len += 1;
                                         taken = FIELD_COLLISION_DIR_UP;
@@ -5445,7 +5447,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                                     }
                                     else
                                     {
-                                        *deferred_out = (s32)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIR_DEFERRED | FIELD_COLLISION_DIR_SLOW | FIELD_COLLISION_DIRS_TOP | FIELD_COLLISION_DIR_LEFT | FIELD_COLLISION_DIR_RIGHT);
+                                        *deferred_out = (uintptr_t)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIR_DEFERRED | FIELD_COLLISION_DIR_SLOW | FIELD_COLLISION_DIRS_TOP | FIELD_COLLISION_DIR_LEFT | FIELD_COLLISION_DIR_RIGHT);
                                         deferred_out += 1;
                                         deferred_len += 1;
                                         taken = FIELD_COLLISION_DIR_UP | FIELD_COLLISION_DIR_TOUCHED(FIELD_COLLISION_DIR_UP);
@@ -5454,7 +5456,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                                 }
                                 else if (up_raw == goal_mark)
                                 {
-                                    route_value = (s32)near_tile;
+                                    route_value = (uintptr_t)near_tile;
                                     if (dirs & FIELD_COLLISION_DIR_SLOW)
                                     {
                                         taken = FIELD_COLLISION_DIR_UP;
@@ -5470,7 +5472,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                                 {
                                     if (down_val != FIELD_COLLISION_TILE_TOUCHED)
                                     {
-                                        *next_out = (s32)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIRS_BOTTOM | FIELD_COLLISION_DIR_LEFT | FIELD_COLLISION_DIR_RIGHT);
+                                        *next_out = (uintptr_t)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIRS_BOTTOM | FIELD_COLLISION_DIR_LEFT | FIELD_COLLISION_DIR_RIGHT);
                                         next_out += 1;
                                         queue_len += 1;
                                         taken |= FIELD_COLLISION_DIR_DOWN;
@@ -5478,7 +5480,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                                     }
                                     else
                                     {
-                                        *deferred_out = (s32)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIR_DEFERRED | FIELD_COLLISION_DIR_SLOW | FIELD_COLLISION_DIRS_BOTTOM | FIELD_COLLISION_DIR_LEFT | FIELD_COLLISION_DIR_RIGHT);
+                                        *deferred_out = (uintptr_t)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIR_DEFERRED | FIELD_COLLISION_DIR_SLOW | FIELD_COLLISION_DIRS_BOTTOM | FIELD_COLLISION_DIR_LEFT | FIELD_COLLISION_DIR_RIGHT);
                                         deferred_out += 1;
                                         deferred_len += 1;
                                         taken |= FIELD_COLLISION_DIR_DOWN | FIELD_COLLISION_DIR_TOUCHED(FIELD_COLLISION_DIR_DOWN);
@@ -5487,7 +5489,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                                 }
                                 else if (down_raw == goal_mark)
                                 {
-                                    route_value = (s32)near_tile;
+                                    route_value = (uintptr_t)near_tile;
                                     if (dirs & FIELD_COLLISION_DIR_SLOW)
                                     {
                                         taken |= FIELD_COLLISION_DIR_DOWN;
@@ -5503,7 +5505,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                                 {
                                     if (left_val != FIELD_COLLISION_TILE_TOUCHED)
                                     {
-                                        *next_out = (s32)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIRS_LEFT | FIELD_COLLISION_DIR_UP | FIELD_COLLISION_DIR_DOWN);
+                                        *next_out = (uintptr_t)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIRS_LEFT | FIELD_COLLISION_DIR_UP | FIELD_COLLISION_DIR_DOWN);
                                         next_out += 1;
                                         queue_len += 1;
                                         taken |= FIELD_COLLISION_DIR_LEFT;
@@ -5511,7 +5513,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                                     }
                                     else
                                     {
-                                        *deferred_out = (s32)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIR_DEFERRED | FIELD_COLLISION_DIR_SLOW | FIELD_COLLISION_DIRS_LEFT | FIELD_COLLISION_DIR_UP | FIELD_COLLISION_DIR_DOWN);
+                                        *deferred_out = (uintptr_t)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIR_DEFERRED | FIELD_COLLISION_DIR_SLOW | FIELD_COLLISION_DIRS_LEFT | FIELD_COLLISION_DIR_UP | FIELD_COLLISION_DIR_DOWN);
                                         deferred_out += 1;
                                         deferred_len += 1;
                                         taken |= FIELD_COLLISION_DIR_LEFT | FIELD_COLLISION_DIR_TOUCHED(FIELD_COLLISION_DIR_LEFT);
@@ -5520,7 +5522,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                                 }
                                 else if (left_raw == goal_mark)
                                 {
-                                    route_value = (s32)near_tile;
+                                    route_value = (uintptr_t)near_tile;
                                     if (dirs & FIELD_COLLISION_DIR_SLOW)
                                     {
                                         taken |= FIELD_COLLISION_DIR_LEFT;
@@ -5536,7 +5538,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                                 {
                                     if (right_val != FIELD_COLLISION_TILE_TOUCHED)
                                     {
-                                        *next_out = (s32)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIRS_RIGHT | FIELD_COLLISION_DIR_UP | FIELD_COLLISION_DIR_DOWN);
+                                        *next_out = (uintptr_t)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIRS_RIGHT | FIELD_COLLISION_DIR_UP | FIELD_COLLISION_DIR_DOWN);
                                         next_out += 1;
                                         queue_len += 1;
                                         taken |= FIELD_COLLISION_DIR_RIGHT;
@@ -5544,7 +5546,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                                     }
                                     else
                                     {
-                                        *deferred_out = (s32)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIR_DEFERRED | FIELD_COLLISION_DIR_SLOW | FIELD_COLLISION_DIRS_RIGHT | FIELD_COLLISION_DIR_UP | FIELD_COLLISION_DIR_DOWN);
+                                        *deferred_out = (uintptr_t)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIR_DEFERRED | FIELD_COLLISION_DIR_SLOW | FIELD_COLLISION_DIRS_RIGHT | FIELD_COLLISION_DIR_UP | FIELD_COLLISION_DIR_DOWN);
                                         deferred_out += 1;
                                         deferred_len += 1;
                                         taken |= FIELD_COLLISION_DIR_RIGHT | FIELD_COLLISION_DIR_TOUCHED(FIELD_COLLISION_DIR_RIGHT);
@@ -5553,7 +5555,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                                 }
                                 else if (right_raw == goal_mark)
                                 {
-                                    route_value = (s32)near_tile;
+                                    route_value = (uintptr_t)near_tile;
                                     if (dirs & FIELD_COLLISION_DIR_SLOW)
                                     {
                                         taken |= FIELD_COLLISION_DIR_RIGHT;
@@ -5572,7 +5574,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                                     FIELD_COLLISION_CORNER_TEST(ok, side_val, near_tile[1], tile[-1]);
                                     if (ok != 0)
                                     {
-                                        ul_entry = (s32)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIR_UL | FIELD_COLLISION_DIR_UP | FIELD_COLLISION_DIR_LEFT);
+                                        ul_entry = (uintptr_t)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIR_UL | FIELD_COLLISION_DIR_UP | FIELD_COLLISION_DIR_LEFT);
                                         if (!(taken & FIELD_COLLISION_DIR_UP))
                                         {
                                             ul_entry |= FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIR_UP | FIELD_COLLISION_DIR_UR);
@@ -5600,7 +5602,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                                 }
                                 else if (ul_raw == goal_mark)
                                 {
-                                    route_value = (s32)near_tile;
+                                    route_value = (uintptr_t)near_tile;
                                     if (dirs & FIELD_COLLISION_DIR_SLOW)
                                     {
                                         taken |= FIELD_COLLISION_DIR_UL;
@@ -5619,7 +5621,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                                     FIELD_COLLISION_CORNER_TEST(ok, side_val, near_tile[-1], tile[1]);
                                     if (ok != 0)
                                     {
-                                        ur_entry = (s32)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIR_UP | FIELD_COLLISION_DIR_UR | FIELD_COLLISION_DIR_RIGHT);
+                                        ur_entry = (uintptr_t)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIR_UP | FIELD_COLLISION_DIR_UR | FIELD_COLLISION_DIR_RIGHT);
                                         if (!(taken & FIELD_COLLISION_DIR_UP))
                                         {
                                             ur_entry |= FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIR_UL | FIELD_COLLISION_DIR_UP);
@@ -5647,7 +5649,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                                 }
                                 else if (ur_raw == goal_mark)
                                 {
-                                    route_value = (s32)near_tile;
+                                    route_value = (uintptr_t)near_tile;
                                     if (dirs & FIELD_COLLISION_DIR_SLOW)
                                     {
                                         taken |= FIELD_COLLISION_DIR_UR;
@@ -5666,7 +5668,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                                     FIELD_COLLISION_CORNER_TEST(ok, side_val, near_tile[1], tile[-1]);
                                     if (ok != 0)
                                     {
-                                        dl_entry = (s32)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIR_LEFT | FIELD_COLLISION_DIR_DL | FIELD_COLLISION_DIR_DOWN);
+                                        dl_entry = (uintptr_t)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIR_LEFT | FIELD_COLLISION_DIR_DL | FIELD_COLLISION_DIR_DOWN);
                                         if (!(taken & FIELD_COLLISION_DIR_DOWN))
                                         {
                                             dl_entry |= FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIR_DOWN | FIELD_COLLISION_DIR_DR);
@@ -5694,7 +5696,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                                 }
                                 else if (dl_raw == goal_mark)
                                 {
-                                    route_value = (s32)near_tile;
+                                    route_value = (uintptr_t)near_tile;
                                     if (dirs & FIELD_COLLISION_DIR_SLOW)
                                     {
                                         taken |= FIELD_COLLISION_DIR_DL;
@@ -5713,7 +5715,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                                     FIELD_COLLISION_CORNER_TEST(ok, side_val, near_tile[-1], tile[1]);
                                     if (ok != 0)
                                     {
-                                        dr_entry = (s32)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIR_RIGHT | FIELD_COLLISION_DIR_DOWN | FIELD_COLLISION_DIR_DR);
+                                        dr_entry = (uintptr_t)near_tile | FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIR_RIGHT | FIELD_COLLISION_DIR_DOWN | FIELD_COLLISION_DIR_DR);
                                         if (!(taken & FIELD_COLLISION_DIR_DOWN))
                                         {
                                             dr_entry |= FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIR_DL | FIELD_COLLISION_DIR_DOWN);
@@ -5741,7 +5743,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                                 }
                                 else if (dr_raw == goal_mark)
                                 {
-                                    route_value = (s32)near_tile;
+                                    route_value = (uintptr_t)near_tile;
                                     if (dirs & FIELD_COLLISION_DIR_SLOW)
                                     {
                                         taken |= FIELD_COLLISION_DIR_DR;
@@ -5800,7 +5802,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                 /* Link the goal to the route tile, then walk the stamps back to the start. */
                 path_base = &path[0][0];
                 plane_size = scene->group_tile_count;
-                tile_map = scene->group_tiles;
+                tile_map = (uintptr_t)scene->group_tiles;
                 tile = (u8*)(tile_map + (plane_size * goal_group) + (columns * goal_row) + goal_col);
                 read = path_base;
                 if (tile != (u8*)route_value)
@@ -5819,14 +5821,14 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                     if (field_collision_trace_line(&rec) != 0)
                     {
                         queue_len = 1;
-                        *read = (s32)tile;
+                        *read = (uintptr_t)tile;
                         read += 1;
                         *tile = FIELD_COLLISION_TILE_GOAL;
                         tile = (u8*)route_value;
                     }
                     else
                     {
-                        rec.goal_tile = route_value;
+                        rec.goal_tile = (u8*)route_value;
                         rec.stamp = 4;
                         rec.mode = FIELD_COLLISION_TRACE_STOP_AT_GOAL;
                         rec.end_x = start_x;
@@ -5834,7 +5836,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                         if (field_collision_trace_line(&rec) != 0)
                         {
                             queue_len = 1;
-                            *read = (s32)tile;
+                            *read = (uintptr_t)tile;
                             read += 1;
                             *tile = FIELD_COLLISION_TILE_GOAL;
                             tile = (u8*)route_value;
@@ -5974,7 +5976,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                     if (dir != last_dir)
                     {
                         last_dir = dir;
-                        *read = (s32)tile;
+                        *read = (uintptr_t)tile;
                         queue_len += 1;
                         read += 1;
                         if (queue_len >= FIELD_COLLISION_PATH_BUCKET_LEN)
@@ -5994,8 +5996,8 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                 next_out = &path[1][1];
                 deferred_out = &path[2][1];
                 step = count - 2;
-                tile = (u8*)(scene->group_tiles + (scene->group_tile_count * start_group) + (columns * start_row) + start_col);
-                *read = (s32)tile;
+                tile = scene->group_tiles + (scene->group_tile_count * start_group) + (columns * start_row) + start_col;
+                *read = (uintptr_t)tile;
                 read = &path[0][0];
                 rec.stamp = 0;
                 path[1][0] = goal_x;
@@ -6007,7 +6009,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                         read += 1;
                         plane_len = scene->group_tile_count;
                         tile = (u8*)*read;
-                        cell_offset = (s32)tile - scene->group_tiles;
+                        cell_offset = tile - scene->group_tiles;
                         while (cell_offset >= plane_len)
                         {
                             cell_offset -= plane_len;
@@ -6038,7 +6040,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                         out_point = &path[0][queue_len++];
                         start_z = *deferred_out;
                         deferred_out += 1;
-                        out_point[0] = (s32)tile;
+                        out_point[0] = (uintptr_t)tile;
                         out_point[FIELD_COLLISION_PATH_BUCKET_LEN] = start_x;
                         out_point[2 * FIELD_COLLISION_PATH_BUCKET_LEN] = start_z;
                         if (count != 0)
@@ -6348,7 +6350,7 @@ static s32 field_collision_trace_line(FieldCollisionTraceRequest* request)
     mask_x = tile_size - 1;
     x_cell &= mask_x;
     footprint_width = request->footprint_width;
-    goal_tile = (u8*)request->goal_tile;
+    goal_tile = request->goal_tile;
     width_minus_one = footprint_width - 1;
     x_end = x_cell + width_minus_one;
     col_hi = x_end & mask_x;
@@ -6729,7 +6731,7 @@ void* field_header_record_at(s32 index)
 void field_collision_rebuild_spans(void)
 {
     FieldNode* node;
-    s32 allocator_cursor;
+    u8* allocator_cursor;
 
     node = g_field_scene.scene->nodes;
     allocator_cursor = g_field_mem_top;

@@ -310,9 +310,9 @@ void wmap_land_effect_24_timeline_step_15(void)
 void func_800BA408(void)
 {
     s32 index;
-    u8* config_offset;
+    uintptr_t config_offset;
     u16 value;
-    u8* config_base;
+    uintptr_t config_base;
     WmapSpriteActor* config;
     void* entry;
 
@@ -321,8 +321,8 @@ void func_800BA408(void)
     do
     {
         config_offset = index * 0x2C + 0xB0;
-        config_base = (u8*)g_wmap_sprite_actors;
-        entry = (void*)(config_offset + (u32)config_base);
+        config_base = (uintptr_t)g_wmap_sprite_actors;
+        entry = (void*)(config_offset + config_base);
         config = &g_wmap_sprite_actors[index + 4];
         if (*(s16*)(entry + 2) == 0)
         {
@@ -342,7 +342,7 @@ void func_800BA408(void)
     {
         void* entry;
         u8* copy_end;
-        u8* config_offset;
+        uintptr_t config_offset;
         s32 screen_offset;
         u8* scan_base;
         u8* screen_base;
@@ -354,7 +354,7 @@ void func_800BA408(void)
         screen_offset = 0x570;
         do
         {
-            entry = (void*)(config_offset + (u32)scan_base);
+            entry = (void*)(config_offset + (uintptr_t)scan_base);
             if (((WmapSpriteActor*)entry)->resource_index != 0)
             {
                 typedef struct
@@ -374,8 +374,8 @@ void func_800BA408(void)
                     entry += 16;
                 } while (source != copy_end);
                 *(Tail*)entry = *(Tail*)source;
-                *(WmapAlignedPair*)(screen_offset + (u32)screen_base) = *(WmapAlignedPair*)(screen_base + 0x38);
-                ((WmapSpriteActor*)(config_offset + (u32)scan_base))->target_shade = 0;
+                *(WmapAlignedPair*)(screen_offset + (uintptr_t)screen_base) = *(WmapAlignedPair*)(screen_base + 0x38);
+                ((WmapSpriteActor*)(config_offset + (uintptr_t)scan_base))->target_shade = 0;
                 return;
             }
             config_offset += 0x2C;
@@ -442,15 +442,15 @@ void wmap_land_effect_24_sequence_11_step_01(void)
     s32 index;
     s32 screen_offset;
     s32 config_offset;
-    u8* config_base;
-    u8* screen_base;
+    uintptr_t config_base;
+    uintptr_t screen_base;
     u8* resource;
     u8* screen_entry;
     s16* config_entry;
 
     index = 0;
-    config_base = g_wmap_actor_motions;
-    screen_base = g_wmap_actor_animations;
+    config_base = (uintptr_t)g_wmap_actor_motions;
+    screen_base = (uintptr_t)g_wmap_actor_animations;
     resource = &g_wmap_animation_bank_2;
     screen_offset = 0x280;
     config_offset = 0x640;
@@ -467,9 +467,9 @@ void wmap_land_effect_24_sequence_11_step_01(void)
 
     do
     {
-        screen_entry = (u8*)(screen_offset + (s32)screen_base);
+        screen_entry = (u8*)(screen_offset + screen_base);
         screen_offset += 8;
-        config_entry = (s16*)(config_offset + (s32)config_base);
+        config_entry = (s16*)(config_offset + config_base);
         config_offset += 0x14;
         index++;
         *config_entry = 0;

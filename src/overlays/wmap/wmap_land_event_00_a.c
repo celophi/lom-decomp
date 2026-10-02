@@ -550,7 +550,7 @@ WMAP_STEP_RESET(wmap_land_event_00_a_sequence_4_reset, g_wmap_land_event_00_a_se
 void wmap_land_event_00_a_sequence_4_step_02(void)
 {
     func_8006AEE0();
-    func_8008ECF8(0x14, 0x78, D_8011CF2C, (s32)g_wmap_effect_params + 0x78);
+    func_8008ECF8(0x14, 0x78, D_8011CF2C, &g_wmap_effect_params[30]);
     func_8006534C(0x25, 5);
     if (--g_wmap_land_event_00_a_sequence_4_timer == 0)
     {
@@ -573,7 +573,7 @@ void wmap_land_event_00_a_sequence_4_step_03(void)
 void wmap_land_event_00_a_sequence_4_step_04(void)
 {
     func_8006AEE0();
-    func_8008ECF8(0x14, 0x78, D_8011CF2C, (s32)g_wmap_effect_params + 0x78);
+    func_8008ECF8(0x14, 0x78, D_8011CF2C, &g_wmap_effect_params[30]);
     func_8006534C(0x25, 5);
     if (--g_wmap_land_event_00_a_sequence_4_timer == 0)
     {

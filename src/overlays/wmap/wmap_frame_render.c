@@ -78,7 +78,7 @@ void func_800641DC(void)
     quad->header.packet.length = 5;
     quad->code = 0x2A;
     quad->header.tag = ((quad->header.tag & 0xFF000000) | (g_wmap_current_frame->ordering_table[1] & 0xFFFFFF));
-    g_wmap_current_frame->ordering_table[1] = ((g_wmap_current_frame->ordering_table[1] & 0xFF000000) | ((u32)quad & 0xFFFFFF));
+    g_wmap_current_frame->ordering_table[1] = ((g_wmap_current_frame->ordering_table[1] & 0xFF000000) | ((uintptr_t)quad & 0xFFFFFF));
     if (g_wmap_packet_bytes < 0x7D00)
     {
         g_wmap_packet_bytes += 0x18;
@@ -92,7 +92,7 @@ void func_800641DC(void)
     *(s32*)&triangle->x0 = 0x190;
     triangle->tpage = 0x40;
     triangle->header.tag = ((triangle->header.tag & 0xFF000000) | (g_wmap_current_frame->ordering_table[1] & 0xFFFFFF));
-    g_wmap_current_frame->ordering_table[1] = ((g_wmap_current_frame->ordering_table[1] & 0xFF000000) | ((u32)triangle & 0xFFFFFF));
+    g_wmap_current_frame->ordering_table[1] = ((g_wmap_current_frame->ordering_table[1] & 0xFF000000) | ((uintptr_t)triangle & 0xFFFFFF));
     if (g_wmap_packet_bytes < 0x7D00)
     {
         g_wmap_packet_bytes += 0x20;
@@ -325,7 +325,7 @@ void func_80064BF8(void)
         quad->header.packet.length = 5;
         quad->code = 0x2A;
         quad->header.tag = ((quad->header.tag & 0xFF000000) | (g_wmap_current_frame->ordering_table[1] & 0xFFFFFF));
-        g_wmap_current_frame->ordering_table[1] = ((g_wmap_current_frame->ordering_table[1] & 0xFF000000) | ((u32)quad & 0xFFFFFF));
+        g_wmap_current_frame->ordering_table[1] = ((g_wmap_current_frame->ordering_table[1] & 0xFF000000) | ((uintptr_t)quad & 0xFFFFFF));
         if (g_wmap_packet_bytes < 0x7D00)
         {
             g_wmap_packet_bytes += 0x18;
@@ -339,7 +339,7 @@ void func_80064BF8(void)
         *(s32*)&triangle->x0 = 0x190;
         triangle->tpage = 0x40;
         triangle->header.tag = ((triangle->header.tag & 0xFF000000) | (g_wmap_current_frame->ordering_table[1] & 0xFFFFFF));
-        g_wmap_current_frame->ordering_table[1] = ((g_wmap_current_frame->ordering_table[1] & 0xFF000000) | ((u32)triangle & 0xFFFFFF));
+        g_wmap_current_frame->ordering_table[1] = ((g_wmap_current_frame->ordering_table[1] & 0xFF000000) | ((uintptr_t)triangle & 0xFFFFFF));
         if (g_wmap_packet_bytes < 0x7D00)
         {
             g_wmap_packet_bytes += 0x20;

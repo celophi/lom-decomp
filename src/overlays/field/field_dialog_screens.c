@@ -712,7 +712,7 @@ void field_start_actor_text(s32 index, s32 text_id)
             }
             else
             {
-                g_field_actor_texts[index].text = (u8 *)(((u16 *)g_field_technique_names)[text_id] + (s32)g_field_technique_names);
+                g_field_actor_texts[index].text = (u8 *)(((u16 *)g_field_technique_names)[text_id] + (uintptr_t)g_field_technique_names);
             }
             g_field_actor_texts[index].state.bits.countdown = FIELD_ACTOR_TEXT_FRAMES;
             point[0] = g_field_view_offset_x / 256 + (s16)(g_field_actors[index].x / 256 + 160);
@@ -1064,7 +1064,7 @@ void field_advance_ability_progression(void)
             }
         }
         ability_index++;
-    } while ((s32)&ability_base[ability_index] < (s32)&ability_base[FIELD_ABILITY_UNLOCK_RULE_COUNT]);
+    } while ((intptr_t)&ability_base[ability_index] < (intptr_t)&ability_base[FIELD_ABILITY_UNLOCK_RULE_COUNT]);
     context = g_saved_game_ctx;
     /* Techniques additionally require an active player with the matching weapon. */
     technique_index = 0;
@@ -1134,7 +1134,7 @@ void field_advance_ability_progression(void)
             }
         }
         technique_index++;
-    } while ((s32)&technique_base[technique_index] < (s32)&technique_base[FIELD_TECHNIQUE_UNLOCK_RULE_COUNT]);
+    } while ((intptr_t)&technique_base[technique_index] < (intptr_t)&technique_base[FIELD_TECHNIQUE_UNLOCK_RULE_COUNT]);
 }
 
 /* ---- Dialog screens (0x800A6EEC .. 0x800A88A0) ---- */
@@ -1180,7 +1180,7 @@ typedef struct
 /**
  * @brief Address of a string in a text bank that starts with little-endian u16 offsets.
  */
-#define FIELD_TEXT_AT(bank, low, high) ((u8 *)((low) + (((high) << 8) + (s32)(bank))))
+#define FIELD_TEXT_AT(bank, low, high) ((u8 *)((low) + (((high) << 8) + (uintptr_t)(bank))))
 
 /** @brief Experience a party member gained since g_field_experience_snapshot was sampled. */
 #define FIELD_EXPERIENCE_GAIN(index) ((s32)((g_saved_game_ctx->characters[index].progress.word >> 8) - g_field_experience_snapshot[index]))
@@ -1783,11 +1783,11 @@ static void* field_draw_item_list(void* ot, void* prim, s32 x_offset, s32 y_offs
     u8 pad[0x84];
     s32 row;
     s32 low;
-    s32 offset;
+    uintptr_t offset;
     u8* tex;
 
     low = D_800EC3D8.low;
-    offset = (D_800EC3D8.high << 8) + (s32)((u8*)&D_800EC3D8 - 0x14);
+    offset = (D_800EC3D8.high << 8) + (uintptr_t)((u8*)&D_800EC3D8 - 0x14);
     tex = (u8*)(low + offset);
     prim = field_draw_text(prim, ot, tex, 4, 0x20 - x_offset, -y_offset, 0);
     for (i = 0; i < g_field_dialog_item_count; i++)
@@ -1857,12 +1857,12 @@ static void* field_draw_unlock_list(void* ordering_table, void* cursor, s32 scro
                     if ((technique_header_y > -FIELD_RESULTS_ROW_HEIGHT) && (technique_header_y < viewport_height))
                     {
                         s32 low;
-                        s32 offset;
+                        uintptr_t offset;
                         u8* base;
 
                         low = D_800EC3CE.low;
                         base = D_800EC3C4;
-                        offset = (D_800EC3CE.high << 8) + (s32)base;
+                        offset = (D_800EC3CE.high << 8) + (uintptr_t)base;
                         next_cursor = field_draw_text(next_cursor, ordering_table, (void *)(low + offset), 4, header_x, technique_header_y, 0);
                     }
                     technique_header_drawn = 1;

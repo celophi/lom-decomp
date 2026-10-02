@@ -145,7 +145,7 @@
  * @param table Table base; entry @p index holds the text offset.
  * @param index Text index.
  */
-#define FIELD_OFFSET_TABLE_TEXT(table, index) ((u8*)(table) + *(s16*)((index) * 2 + (s32)(table)))
+#define FIELD_OFFSET_TABLE_TEXT(table, index) ((u8*)(table) + *(s16*)((index) * 2 + (uintptr_t)(table)))
 
 /** @brief Destination and activation policy encoded in a layout record. */
 typedef enum

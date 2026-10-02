@@ -115,12 +115,12 @@
 #define FIELD_COLLISION_MOVER ((struct FieldCollisionMover*)SCRATCHPAD_ADDRESS)
 
 /** @brief Address @p p rounded up to a word boundary, as an integer. */
-#define FIELD_ALIGN4(p) (((s32)(p) + 3) & ~3)
+#define FIELD_ALIGN4(p) (((uintptr_t)(p) + 3) & ~3)
 
 /**
  * @brief Form a typed pointer from a byte offset plus a base address.
  */
-#define OFFSET_FIRST_PTR(type, offset, base) ((type*)((offset) + (s32)(base)))
+#define OFFSET_FIRST_PTR(type, offset, base) ((type*)((offset) + (uintptr_t)(base)))
 
 /**
  * @brief Header words of a scene file: byte offsets of its sections from the start of the file.

@@ -706,7 +706,7 @@ WMAP_STEP_RESET(wmap_land_effect_01_sequence_8_reset, g_wmap_land_effect_01_sequ
 
 /** @brief Draw the sequence effect and advance when the countdown expires. */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_01_sequence_8_step_02, g_wmap_land_effect_01_sequence_8_step, g_wmap_land_effect_01_sequence_8_timer,
-                          func_8006CFE4((s32)&g_wmap_sprite_actors[204], (s32)&g_wmap_actor_animations[204], 0x18, 0x81, 0x81, 0x10))
+                          func_8006CFE4(&g_wmap_sprite_actors[204], &g_wmap_actor_animations[204], 0x18, 0x81, 0x81, 0x10))
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_01_sequence_8_step_03, g_wmap_land_effect_01_sequence_8_step, g_wmap_land_effect_01_sequence_8_timer, 0x20,
                     wmap_land_effect_01_sequence_8_step_04)
@@ -717,7 +717,7 @@ void wmap_land_effect_01_sequence_8_step_04(void)
     s32 value;
     s32 remaining_ticks;
 
-    func_8006CFE4((s32)&g_wmap_sprite_actors[204], (s32)&g_wmap_actor_animations[204], 0x18, 0x81, 0x81, 0x10);
+    func_8006CFE4(&g_wmap_sprite_actors[204], &g_wmap_actor_animations[204], 0x18, 0x81, 0x81, 0x10);
     value = g_wmap_effect_fade_b - 0xA;
     g_wmap_effect_fade_b = value;
     if (value < 0)

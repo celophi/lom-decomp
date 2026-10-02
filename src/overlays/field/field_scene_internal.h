@@ -947,7 +947,8 @@ struct FieldNode
         FIELD_NODE_DEF_ROWS(def) pairs of (x0, x1) shorts. Walked by
         field_collision_rasterize_groups. */
     u16* spans;
-    s32 unk14; /* 0x14 */
+    /** 0x14 per-row edge attribute bytes, two per span (FieldCollisionNode::span_flags). */
+    u8* span_flags;
     /** 0x18 when zero the node is skipped by the group scan in field_collision_collect_groups. */
     u8 unk18;
     u8 _pad2[0x1C - 0x19];
@@ -1061,14 +1062,14 @@ typedef struct
 typedef struct
 {
     /** 0x00 top of the allocated region. */
-    u32 top;
+    u8* top;
     /** 0x04 text configuration save area (g_field_text_saved_configs). */
-    u32 text_configs;
+    u8* text_configs;
     u8 _pad0[0xC - 8];
     /** 0x0C base of the allocated region. */
-    u32 base;
+    u8* base;
     /** 0x10 end of the first half of the region. */
-    u32 midpoint;
+    u8* midpoint;
     u8 _pad1[0x2C - 0x14];
     /**
      * 0x2C fade state: 1 fading out, 2 held out, 3 fading in, 0 idle. Also
@@ -1084,7 +1085,7 @@ typedef struct
  * Words of the allocator block that the code also reaches as plain globals.
  */
 /** @brief Top of the allocated region (FieldMemState.top). */
-extern s32 g_field_mem_top;
+extern u8* g_field_mem_top;
 /** @brief Base of the allocated region (FieldMemState.base). */
 extern u8* g_field_mem_base;
 /** @brief End of the first half of the region (FieldMemState.midpoint). */

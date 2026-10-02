@@ -302,7 +302,7 @@ static void* field_emit_hud_glyph(void* packet, FieldRenderHalf* render_half, s3
 static POLY_F4* field_emit_hud_damage_quad(POLY_F4* prim, s32 y, u_long* ot);
 static POLY_F4* field_emit_hud_healing_quad(POLY_F4* prim, s32 y, u_long* ot);
 void* field_emit_actor_portrait(SPRT* sprt, u_long* ot, s32 index, Vec2s* position);
-static s32 field_upload_image_resource(RECT* rect, Tim* resource, s32 mode);
+s32 field_upload_image_resource(RECT* rect, Tim* resource, s32 mode);
 int abs(int value);
 void bcopy(const void* src, void* dst, int size);
 void field_restart_actor_animation(FieldActor* actor);
@@ -1280,8 +1280,9 @@ s32 field_load_vram_resource(s32 id, RECT* rect, s32 mode)
  * @param resource TIM file with a CLUT block followed by a pixel block.
  * @param mode Nonzero uploads the CLUT as one row of width * height entries; zero keeps its shape.
  * @return CLUT entries 240 and 241 as one packed word.
+ * @note CLOAD calls it too, for its icon resources.
  */
-static s32 field_upload_image_resource(RECT* rect, Tim* resource, s32 mode)
+s32 field_upload_image_resource(RECT* rect, Tim* resource, s32 mode)
 {
     RECT load_rect;
     s32 offset;

@@ -4,7 +4,7 @@
 /**
  * @brief Address of the ADDHERO text whose table offset is @p offset.
  */
-#define ADDHERO_TEXT_BY_OFFSET(table, offset) ((u8*)((s32)(offset) + (s32)(table)))
+#define ADDHERO_TEXT_BY_OFFSET(table, offset) ((u8*)((uintptr_t)(offset) + (uintptr_t)(table)))
 
 /**
  * @brief Card slot label layout: window and dimming-tile width, label text X,

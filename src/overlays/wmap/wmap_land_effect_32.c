@@ -573,7 +573,7 @@ void wmap_land_effect_32_sequence_2_step_04(void)
 
     if (D_801B24B4 != 0)
     {
-        func_8006CFE4((s32)&g_wmap_sprite_actors[104], (s32)&g_wmap_actor_animations[104], 0x18, D_801B24B4, D_801B24B4, 0);
+        func_8006CFE4(&g_wmap_sprite_actors[104], &g_wmap_actor_animations[104], 0x18, D_801B24B4, D_801B24B4, 0);
         value = D_801B24B4 - 8;
         D_801B24B4 = value;
         if (value < 0)
@@ -694,7 +694,7 @@ WMAP_STEP_RESET(wmap_land_effect_32_sequence_10_reset, g_wmap_land_effect_32_seq
 
 /** @brief Draw the sequence effect and advance when its countdown expires. */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_32_sequence_10_step_02, g_wmap_land_effect_32_sequence_10_step, g_wmap_land_effect_32_sequence_10_timer,
-                          func_8006D014((s32)&g_wmap_sprite_actors[204], (s32)&g_wmap_actor_animations[204], 0x28, 0, D_801B25D8, 8, 1))
+                          func_8006D014(&g_wmap_sprite_actors[204], &g_wmap_actor_animations[204], 0x28, 0, D_801B25D8, 8, 1))
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_32_sequence_10_step_03, g_wmap_land_effect_32_sequence_10_step, g_wmap_land_effect_32_sequence_10_timer, 0x10,
                     wmap_land_effect_32_sequence_10_step_04)
@@ -707,7 +707,7 @@ void wmap_land_effect_32_sequence_10_step_04(void)
 
     if (D_801B25D8 != 0)
     {
-        func_8006D014((s32)&g_wmap_sprite_actors[204], (s32)&g_wmap_actor_animations[204], 0x28, 1, D_801B25D8, 8, 1);
+        func_8006D014(&g_wmap_sprite_actors[204], &g_wmap_actor_animations[204], 0x28, 1, D_801B25D8, 8, 1);
         value = D_801B25D8 - 8;
         D_801B25D8 = value;
         if (value < 0)

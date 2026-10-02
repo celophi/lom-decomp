@@ -87,14 +87,14 @@
  * @param table Offset table (one halfword per item id) followed by the names.
  * @param item Item id.
  */
-#define FIELD_ITEM_NAME(table, item) ((u8 *)((table)[item] + (u32)(table)))
+#define FIELD_ITEM_NAME(table, item) ((u8 *)((table)[item] + (uintptr_t)(table)))
 
 /**
  * @brief Facing offset of one of the eight facings.
  * @param table Facing offset table.
  * @param facing Facing index, 0 to 7.
  */
-#define FIELD_FACING_OFFSET(table, facing) ((FieldFacingOffset *)((facing) * sizeof(FieldFacingOffset) + (u32)(table)))
+#define FIELD_FACING_OFFSET(table, facing) ((FieldFacingOffset *)((facing) * sizeof(FieldFacingOffset) + (uintptr_t)(table)))
 
 /** @brief One row of the item-drop list. */
 typedef struct FieldItemListEntry

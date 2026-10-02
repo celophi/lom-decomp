@@ -192,7 +192,7 @@ typedef union
  * @brief Address of FIELD UI string @p index, given the start of the offset table in @p table.
  * @note Summed as integers, offset bytes first, like FIELD's own string lookups.
  */
-#define FIELD_UI_TEXT(table, index) ((u8 *)((table)[(index) * 2] + (((table)[(index) * 2 + 1] << 8) + (s32)(table))))
+#define FIELD_UI_TEXT(table, index) ((u8 *)((table)[(index) * 2] + (((table)[(index) * 2 + 1] << 8) + (uintptr_t)(table))))
 
 /** @brief Start of the CLOAD text offset table, derived from entry @p entry at @p index. */
 #define CLOAD_TEXT_TABLE(entry, index) (&(entry) - (index))

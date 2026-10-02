@@ -701,7 +701,7 @@ static void draw_checkps_image(CheckPSFrame* frame)
                 image->animation.bits.frame = (image->animation.bytes[0] & 0xF) + 1;
                 if ((image->animation.bytes[0] & 0xF) == CHECKPS_IMAGE_ANIMATION_FRAMES)
                 {
-                    if ((s32)image < (s32)&images[CHECKPS_IMAGE_SOUND_COUNT])
+                    if ((intptr_t)image < (intptr_t)&images[CHECKPS_IMAGE_SOUND_COUNT])
                     {
                         volume = 0x7F;
                         if (g_checkps_image_burst_active != 0)
@@ -737,7 +737,7 @@ static void draw_checkps_image(CheckPSFrame* frame)
             primitive++;
         }
         i++;
-    } while ((s32)&images[i] < (s32)&images[CHECKPS_IMAGE_COUNT]);
+    } while ((intptr_t)&images[i] < (intptr_t)&images[CHECKPS_IMAGE_COUNT]);
     frame->primitive_cursor = primitive;
 }
 #else

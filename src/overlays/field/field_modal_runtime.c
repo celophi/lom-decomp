@@ -33,6 +33,7 @@
 #include "display.h"
 #include "game_state.h"
 #include "sdk/memory.h"
+#include "render_context.h"
 
 void field_set_cd_error_fade_target(void);
 
@@ -81,8 +82,6 @@ void field_set_cd_error_fade_target(void);
 #define FIELD_HINT_PORTRAIT_Y 60
 #define FIELD_HINT_TEXT_X 128
 #define FIELD_HINT_TEXT_Y 64
-/** @brief Byte offset of a member (the classic offsetof). */
-#define FIELD_OFFSET_OF(type, member) ((s32) & ((type*)0)->member)
 
 #define FIELD_SOUND_ACTION_REFUSED 0x78
 #define FIELD_SOUND_CURSOR 0x7D
@@ -293,7 +292,7 @@ s32 shop_update(FieldRenderHalf* render);
 s32 niki_update_frame(FieldRenderHalf* render);
 s32 addhero_state_step(FieldRenderHalf* render);
 s32 carda_update_frame(FieldRenderHalf* render);
-s32 func_801405B0(s32 render_buffers);
+s32 func_801405B0(RenderContext* render_buffers);
 void gosub_open_screen_sequence(void* work, void* screen_sequence);
 void zukan_run(void* work, s32 context);
 
@@ -302,8 +301,8 @@ void* field_emit_actor_portrait(SPRT* cursor, u32* ot, s32 index, u32* position)
 void* field_draw_sprite_number(s32* ot, void* cursor, s32 value, s32 digits, u16* position, s32 flags);
 void* field_draw_sprite_glyph(u8* cursor, s32* ot, s32 glyph, s32* position, s32 flags);
 SPRT* field_add_sprite_outline(s32* ot, SPRT* sprite_cursor, s32 count);
-s32 field_draw_player_icon(s32 packet_cursor, u_long* ot, s32 player, s32 x, s32 y, s32 flip);
-s32 field_text_draw_scaled_quad(s32 packet_cursor, u_long* ot, u8* text, s32 color, s32 x, s32 y, s32 align, s32 slot, s32 scale_x, s32 scale_y, s32 arg10, s32 visible);
+void* field_draw_player_icon(POLY_FT4* packet_cursor, u_long* ot, s32 player, s32 x, s32 y, s32 flip);
+POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* packet_cursor, u_long* ot, u8* text, s32 color, s32 x, s32 y, s32 align, s32 slot, s32 scale_x, s32 scale_y, s32 arg10, s32 visible);
 
 void* field_draw_text(SPRT* sprite_cursor, s32* ot, u8* text, s32 text_color, s32 x, s32 y, s32 flags);
 void field_format_number(u8* text, s32 number, s32 wide_request);
@@ -332,7 +331,7 @@ static s32 field_draw_duel_result(FieldRenderHalf* render);
  */
 static inline u8* field_dialog_text(FieldTextOffset* entry, s32 index)
 {
-    return (u8*)(entry->low + ((entry->high << 8) + (s32)((u8*)entry - index * sizeof(FieldTextOffset))));
+    return (u8*)(entry->low + ((entry->high << 8) + (uintptr_t)(entry - index)));
 }
 
 /**
@@ -723,11 +722,11 @@ inline void field_append_name(u8* destination, const u8* source)
  */
 static inline void field_append_dialog_text(u8* destination, FieldTextOffset* entry, s32 index)
 {
-    u8* text;
+    uintptr_t text;
 
-    text = (u8*)((entry->high << 8) + entry->low);
-    text += (s32)((u8*)entry - index * sizeof(FieldTextOffset));
-    field_append_name(destination, text);
+    text = (entry->high << 8) + entry->low;
+    text += (uintptr_t)(entry - index);
+    field_append_name(destination, (u8*)text);
 }
 
 /**
@@ -912,19 +911,19 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
     s32 text_color;
     u16 text_offset;
     s32 work; /* Text index or skill; in JP also the character info byte of case 0. */
-    s32 text_or_state; /* Hint text in the first loop, the label actor's object state in the second. */
-    s32 bank;
+    uintptr_t text_or_state; /* Hint text in the first loop, the label actor's object state in the second. */
+    uintptr_t bank;
     s32 record_offset;
     s32 screen_y;
     s32 screen_x;
-    s32 ot;
+    u_long* ot;
     s32 label_half_width;
-    s32 number_ot;
+    u_long* number_ot;
     s32 camera_x;
     s32 camera_y;
-    s32 text_ot;
-    s32 left_glyph_ot;
-    s32 right_glyph_ot;
+    u_long* text_ot;
+    u_long* left_glyph_ot;
+    u_long* right_glyph_ot;
     s32 button_or_x; /* Hint button index in the first loop; camera x in pixels, then the label x, in the second. */
     s32 index;
     u8* cursor;
@@ -935,19 +934,19 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
     s32 action;
     s32 secondary_action;
     s32 secondary_action_alt;
-    s32 text_value;
+    uintptr_t text_value;
     FieldObjectPart* highlight_part;
     FieldActor* actor;
     FieldObjectPart* normal_part;
     ControllerPortState* port;
-    s32 text_part;
+    uintptr_t text_part;
     ControllerPortState* ports;
     s32 record_base_offset;
     s32 held_buttons;      /* The player's held buttons, bytes swapped. */
     SavedGameLayout* save; /* The player's save record base. */
 
     cursor = (u8*)render->primitive_cursor;
-    ot = (s32)&render->ordering_table[FIELD_TEXT_OT_INDEX];
+    ot = &render->ordering_table[FIELD_TEXT_OT_INDEX];
     index = 0;
     ports = CONTROLLER_STATE->ports;
     do
@@ -958,10 +957,10 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
         {
             bit_or_actor = 1;
             button_or_x = 0;
-            bank = (s32)D_800EC3C4;
+            bank = (uintptr_t)D_800EC3C4;
             record_offset = index * sizeof(FieldCharacterRecord);
             raw_buttons = port->published_sample.held_buttons;
-            record_base_offset = index * sizeof(FieldCharacterRecord) + FIELD_OFFSET_OF(SavedGameLayout, characters);
+            record_base_offset = index * sizeof(FieldCharacterRecord) + OFFSETOF(SavedGameLayout, characters);
             held_buttons = ((raw_buttons << 8) & 0xFF00) | (raw_buttons >> 8);
 #if !defined(VERSION_JP)
             held_buttons = (((u32)(held_buttons & 0x40) >> 1) | ((held_buttons & 0x20) * 2) | ((u32)(held_buttons & 0x80) >> 3) | ((held_buttons & 0x10) * 8) |
@@ -977,10 +976,10 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
                     {
                     case FIELD_COMMAND_BUTTON_ACTION: /* The two commands: resource action slots 0 and 1. */
                     case FIELD_COMMAND_BUTTON_ACTION + 1:
-                        text_part = (s32)&g_field_resource_actions->slots[-FIELD_COMMAND_BUTTON_ACTION] + action_offset;
+                        text_part = (uintptr_t)&g_field_resource_actions->slots[-FIELD_COMMAND_BUTTON_ACTION] + action_offset;
                         action *= sizeof(FieldActionSlot);
                         work = ((FieldActionSlot*)(text_part + action))->command & FIELD_ACTION_TECHNIQUE_MASK;
-                        text_value = (s32)g_field_command_names;
+                        text_value = (uintptr_t)g_field_command_names;
                         text_part = ((u16*)text_value)[work];
                         text_or_state = text_part + text_value;
                         break;
@@ -1030,7 +1029,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
                         }
                         break;
                     default:
-                        text_value = (s32)g_field_technique_names;
+                        text_value = (uintptr_t)g_field_technique_names;
                         work = ((SavedGameLayout*)((u8*)g_saved_game_ctx + record_offset))->characters[0].info.bytes[action];
                         if (work == FIELD_SKILL_NONE)
                         {
@@ -1044,17 +1043,17 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
                             if (work & FIELD_SKILL_INSTRUMENT)
                             {
                                 text_offset = work & ~FIELD_SKILL_INSTRUMENT;
-                                text_or_state = (s32) & ((FieldCharacterRecord*)((u8*)g_saved_game_ctx + record_base_offset))->unk150[text_offset];
+                                text_or_state = (uintptr_t)&((FieldCharacterRecord*)((u8*)g_saved_game_ctx + record_base_offset))->unk150[text_offset];
                             }
                             else
                             {
-                                action = (s32)&g_field_resource_actions->slots[action];
+                                action = (uintptr_t)&g_field_resource_actions->slots[action];
                                 work = ((FieldActionSlot*)(index * sizeof(FieldActionRow) + action))->command;
                                 work &= FIELD_ACTION_TECHNIQUE_MASK;
                                 text_value = g_field_player_records[index].head.bytes.weapon_type;
                                 work += text_value * FIELD_TECHNIQUES_PER_WEAPON;
 
-                                text_value = (s32)g_field_technique_names;
+                                text_value = (uintptr_t)g_field_technique_names;
                                 text_part = ((u16*)text_value)[work];
                                 text_or_state = text_part + text_value;
                             }
@@ -1087,7 +1086,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
         {
             bit_or_actor = g_field_label_actor_indices[index];
             camera_x = g_field_view_offset_x;
-            text_or_state = (s32)&g_field_object_states[bit_or_actor];
+            text_or_state = (uintptr_t)&g_field_object_states[bit_or_actor];
             actor = &g_field_actors[bit_or_actor];
             button_or_x = camera_x / 256;
             screen_x = actor->x / 256 + SCREEN_WIDTH / 2;
@@ -1116,7 +1115,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
             text_ot = ot;
             if (g_field_selected_actor_label == index)
             {
-                text_ot = ot - sizeof(u_long);
+                text_ot = ot - 1;
             }
             text_color = FIELD_TEXT_COLOR_DIM;
             if (g_field_selected_actor_label == index)
@@ -1129,7 +1128,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
             point.vy = (u16)point.vy - 8;
             if (g_field_selected_actor_label == index)
             {
-                left_glyph_ot = ot - sizeof(u_long);
+                left_glyph_ot = ot - 1;
             }
             cursor = (u8*)field_draw_sprite_glyph((u8*)cursor, (s32*)left_glyph_ot, FIELD_LABEL_LEFT_BRACKET, (s32*)&point,
                                         g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
@@ -1137,7 +1136,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
             point.vx = (u16)point.vx + 8;
             if (g_field_selected_actor_label == index)
             {
-                right_glyph_ot = ot - sizeof(u_long);
+                right_glyph_ot = ot - 1;
             }
             cursor = (u8*)field_draw_sprite_glyph((u8*)cursor, (s32*)right_glyph_ot, FIELD_LABEL_RIGHT_BRACKET, (s32*)&point,
                                         g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
@@ -1145,7 +1144,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
             point.vx = (u16)point.vx + 8;
             if (g_field_selected_actor_label == index)
             {
-                number_ot -= sizeof(u_long);
+                number_ot -= 1;
             }
             cursor = (u8*)field_draw_sprite_number((s32*)number_ot, (void*)cursor, ((FieldObjectState*)text_or_state)->hud.bytes.flags >> 1, 2, (u16*)&point,
                                         g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
@@ -1579,7 +1578,7 @@ static void field_run_menu(void* render_buffers, s32 controller)
     {
         cdrom_stream(CD_RES_MENU_BIN, FIELD_SUBOVERLAY_ADDRESS);
         cdrom_wait_queue_empty();
-        screen_id = func_801405B0((s32)render_buffers);
+        screen_id = func_801405B0(render_buffers);
         if (screen_id == FIELD_MENU_CLOSED)
         {
             field_rebuild_party_actions(1);
@@ -1695,7 +1694,7 @@ void field_rebuild_party_actions(s32 refresh_only)
     u8* parameter_params;
     SavedGameLayout* command_save;
     s32 character_kind;
-    u8* controllers_or_is_player;
+    uintptr_t controllers_or_is_player;
     s32 equipment_offset;
     s32 equipment_index;
     s32 slot_or_type;
@@ -1729,7 +1728,7 @@ void field_rebuild_party_actions(s32 refresh_only)
 
     akao_set_mono_output(g_saved_game_ctx->options.bits.mono_sound ^ 1);
     cdrom_set_audio_volume(0x7F, g_saved_game_ctx->options.bits.mono_sound);
-    controllers_or_is_player = (u8*)CONTROLLER_STATE;
+    controllers_or_is_player = (uintptr_t)CONTROLLER_STATE;
     ((ControllerState*)controllers_or_is_player)->ports[0].actuators_enabled = g_saved_game_ctx->options.bits.vibration;
     if ((g_saved_game_ctx->characters[1].info.word & FIELD_CHARACTER_PAD_CONTROLLED) && (g_saved_game_ctx->characters[1].name[0] != 0))
     {
@@ -1862,7 +1861,7 @@ void field_rebuild_party_actions(s32 refresh_only)
                 do
                 {
                     command_view = (SavedGameLayout*)((u8*)command_save + slot_or_type);
-                    command_action = (FieldActionSlot*)(command_action_offset + (u32)g_field_resource_actions);
+                    command_action = (FieldActionSlot*)(command_action_offset + (uintptr_t)g_field_resource_actions);
                     command_action->command = command_view->characters[0].info.actions.commands[0];
                     command_action->animation = animation_params[command_view->characters[0].info.actions.commands[0] * 2];
                     command_action->parameter = parameter_params[command_view->characters[0].info.actions.commands[0] * 2];
@@ -1886,16 +1885,16 @@ void field_rebuild_party_actions(s32 refresh_only)
                     skill_row_offset = (~(u32)skill_row_offset);
                     skill_none = (~(u32)skill_none);
                     skill_none = (~(u32)skill_none);
-                    skills_start = (SavedGameLayout*)(~(u32)skills_start);
-                    skills_start = (SavedGameLayout*)(~(u32)skills_start);
-                    save_base = (u8*)(~(u32)save_base);
-                    save_base = (u8*)(~(u32)save_base);
-                    skill_cursor = (SavedGameLayout*)(~(u32)skill_cursor);
-                    skill_cursor = (SavedGameLayout*)(~(u32)skill_cursor);
+                    skills_start = (SavedGameLayout*)(~(uintptr_t)skills_start);
+                    skills_start = (SavedGameLayout*)(~(uintptr_t)skills_start);
+                    save_base = (u8*)(~(uintptr_t)save_base);
+                    save_base = (u8*)(~(uintptr_t)save_base);
+                    skill_cursor = (SavedGameLayout*)(~(uintptr_t)skill_cursor);
+                    skill_cursor = (SavedGameLayout*)(~(uintptr_t)skill_cursor);
                     skill_empty = skill_cursor->characters[0].info.actions.skills[0] == skill_none;
                     if (skill_empty)
                     {
-                        empty_action = (FieldActionSlot*)(skill_action_offset + skill_row_offset + (u32)g_field_resource_actions);
+                        empty_action = (FieldActionSlot*)(skill_action_offset + skill_row_offset + (uintptr_t)g_field_resource_actions);
                         empty_action->flags.instrument = 0;
                         empty_action->flags.target_filter = skill_none;
                         empty_action->command = 0;
@@ -1908,11 +1907,11 @@ void field_rebuild_party_actions(s32 refresh_only)
                         skill = skill_cursor->characters[0].info.actions.skills[0];
                         if (skill & FIELD_SKILL_INSTRUMENT)
                         {
-                            instrument_action = (FieldActionSlot*)(skill_action_offset + skill_row_offset + (u32)g_field_resource_actions);
+                            instrument_action = (FieldActionSlot*)(skill_action_offset + skill_row_offset + (uintptr_t)g_field_resource_actions);
                             instrument_action->command = 0;
                             instrument_action->flags.instrument = 1;
-                            instrument = (FieldItemRecord*)(save_base + (skill_character_offset + FIELD_OFFSET_OF(SavedGameLayout, characters)) +
-                                                            (((skill & ~FIELD_SKILL_INSTRUMENT) << 6) + FIELD_OFFSET_OF(FieldCharacterRecord, unk150)));
+                            instrument = (FieldItemRecord*)(save_base + (skill_character_offset + OFFSETOF(SavedGameLayout, characters)) +
+                                                            (((skill & ~FIELD_SKILL_INSTRUMENT) << 6) + OFFSETOF(FieldCharacterRecord, unk150)));
                             instrument_action->flags.target_filter = instrument->derived.bytes[1] >> 1;
                             instrument_icons = g_field_instrument_icons;
                             instrument_action->animation = instrument_icons[instrument->derived.bytes[0]];
@@ -1930,7 +1929,7 @@ void field_rebuild_party_actions(s32 refresh_only)
                         }
                         else
                         {
-                            technique_action = (FieldActionSlot*)(skill_action_offset + skill_row_offset + (u32)g_field_resource_actions);
+                            technique_action = (FieldActionSlot*)(skill_action_offset + skill_row_offset + (uintptr_t)g_field_resource_actions);
                             technique_action->flags.instrument = 0;
                             skill = skill_cursor->characters[0].info.actions.skills[0];
                             technique_action_id = skill | FIELD_ACTION_TECHNIQUE;
@@ -1946,7 +1945,7 @@ void field_rebuild_party_actions(s32 refresh_only)
                     }
                     skill_cursor = (SavedGameLayout*)((u8*)skill_cursor + 1);
                     skill_action_offset += sizeof(FieldActionSlot);
-                } while ((s32)skill_cursor < (s32)((u8*)skills_start + FIELD_SKILL_SLOT_COUNT));
+                } while ((intptr_t)skill_cursor < (intptr_t)((u8*)skills_start + FIELD_SKILL_SLOT_COUNT));
             }
         }
         player_index += 1;
@@ -2327,10 +2326,10 @@ static s32 field_draw_duel_intro(FieldRenderHalf* render)
 {
     u8 record_text[56];
     u8 loss_text[56];
-    s32 packet_cursor;
+    void* packet_cursor;
     u_long* ot;
 
-    packet_cursor = (s32)render->primitive_cursor;
+    packet_cursor = render->primitive_cursor;
     ot = render->ordering_table;
     switch (g_field_duel_panel_phase)
     {
@@ -2392,7 +2391,7 @@ static s32 field_draw_duel_intro(FieldRenderHalf* render)
                                                     FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
     }
 
-    render->primitive_cursor = (u8*)packet_cursor;
+    render->primitive_cursor = packet_cursor;
     return 0;
 }
 
@@ -2405,10 +2404,10 @@ static s32 field_draw_duel_result(FieldRenderHalf* render)
 {
     u8 record_text[56];
     u8 loss_text[56];
-    s32 packet_cursor;
+    void* packet_cursor;
     u_long* ot;
 
-    packet_cursor = (s32)render->primitive_cursor;
+    packet_cursor = render->primitive_cursor;
     ot = render->ordering_table;
     switch (g_field_duel_panel_phase)
     {
@@ -2458,6 +2457,6 @@ static s32 field_draw_duel_result(FieldRenderHalf* render)
                                                     FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
     }
 
-    render->primitive_cursor = (u8*)packet_cursor;
+    render->primitive_cursor = packet_cursor;
     return 0;
 }

@@ -255,7 +255,7 @@ static void field_battle_bind_action(FieldBattleAction* action, s32 resolve_desc
     g_field_battle->action = action;
     if (action == NULL)
     {
-        record_game_diagnostic(0x8001, (s32)field_battle_bind_action, 0, 0);
+        record_game_diagnostic(0x8001, (uintptr_t)field_battle_bind_action, 0, 0);
         return;
     }
     g_field_battle->attacker = field_find_status_record(action->attacker_id);

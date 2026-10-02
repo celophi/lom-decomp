@@ -90,7 +90,7 @@ typedef struct
 /**
  * @brief Update, project, and replenish a configured particle effect.
  * @param arg0 Actor records to update.
- * @param arg1 Address of the resource-slot bytes associated with the actors.
+ * @param animations Animation resource slots, one per actor record.
  * @param arg2 Number of actor records to process.
  * @param arg3 Effect parameter; semantics remain unresolved.
  * @param arg4_value Effect parameter stored in a halfword.
@@ -98,7 +98,7 @@ typedef struct
  * @param arg6 Particle behavior selector.
  * @param arg7 Particle effect configuration record.
  */
-void func_8006A2FC(void* arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4_value, s32 arg5_value, u32 arg6, void* arg7)
+void func_8006A2FC(void* arg0, WmapAnimationSlot* animations, s32 arg2, s32 arg3, s32 arg4_value, s32 arg5_value, u32 arg6, void* arg7)
 {
     SVECTOR position;
     s32 screen_position;
@@ -225,7 +225,7 @@ void func_8006A2FC(void* arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4_value, s32
                     break;
                 }
                 resource_offset = i * 8;
-                offsets = *(s16**)(resource_offset + arg1 + 4);
+                offsets = (s16*)((WmapAnimationSlot*)(resource_offset + (uintptr_t)animations))->data;
                 data = (u8*)offsets;
                 if (actor->previous_sequence != actor->sequence)
                 {
@@ -305,8 +305,8 @@ void func_8006A2FC(void* arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4_value, s32
 
 /**
  * @brief Project radial particles and periodically spawn one in a free slot.
- * @param actor_address Address of the 44-byte actor records.
- * @param resource_address Address of their animation resource records.
+ * @param actors Sprite actor records of the particles.
+ * @param animations Animation resource slots, one per actor record.
  * @param first First particle index.
  * @param end Exclusive last particle index.
  * @param scale Size used for the projected actor.
@@ -318,7 +318,7 @@ void func_8006A2FC(void* arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4_value, s32
  * @param frame Sprite frame passed to the renderer.
  * @param spawn_interval Number of updates between spawn attempts.
  */
-void func_8006A9C4(s32 actor_address, s32 resource_address, s32 first, s32 end, s32 scale,
+void func_8006A9C4(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 first, s32 end, s32 scale,
                    s32 velocity_min, s32 velocity_range, s32 lifetime_min, s32 lifetime_range, s32 initial_z,
                    s32 frame, s32 spawn_interval)
 {
@@ -350,8 +350,8 @@ void func_8006A9C4(s32 actor_address, s32 resource_address, s32 first, s32 end, 
         sequence_end = 255;
         for (; i < end; i++)
         {
-            resource = (i * 8) + resource_address;
-            actor = (i * 0x2C) + actor_address;
+            resource = (void *)((i * 8) + (uintptr_t)animations);
+            actor = (void *)((i * 0x2C) + (uintptr_t)actors);
             motion_base = g_wmap_actor_motions;
             motion = &motion_base[i];
             if (M2C_FIELD(motion, s16 *, 0) != 0)
@@ -371,7 +371,7 @@ void func_8006A9C4(s32 actor_address, s32 resource_address, s32 first, s32 end, 
                 }
                 M2C_FIELD(actor, s16 *, 0x24) = (s16) (scaled_size >> 8);
                 gte_stsxy(&screen_position);
-                animation_address = M2C_FIELD(resource, s32 *, 4);
+                animation_address = M2C_FIELD(resource, u8 **, 4);
                 if (M2C_FIELD(actor, s16 *, 0x10) != M2C_FIELD(actor, s16 *, 0xE))
                 {
                     M2C_FIELD(actor, s16 *, 0x10) = (s16) (u16) M2C_FIELD(actor, s16 *, 0xE);
@@ -398,7 +398,7 @@ void func_8006A9C4(s32 actor_address, s32 resource_address, s32 first, s32 end, 
                         M2C_FIELD(actor, s16 *, 0x20) = (s16) M2C_FIELD(sequence_start, u8 *, 1);
                     }
                     M2C_FIELD(actor, void **, 0x14) = (void *) (M2C_FIELD(actor, void **, 0x14) + 4);
-                    M2C_FIELD(actor, s32 *, 0x1C) = (s32) (animation_address + M2C_FIELD(((animation_frame * 2) + animation_address), s16 *, 0x40));
+                    M2C_FIELD(actor, u8 **, 0x1C) = (animation_address + M2C_FIELD(((animation_frame * 2) + animation_address), s16 *, 0x40));
                 }
                 wmap_draw_actor_sprite(actor, screen_position, frame, 0xA, 0);
                 remaining_lifetime = M2C_FIELD(motion, u16 *, 0xC) - 1;
@@ -415,7 +415,7 @@ void func_8006A9C4(s32 actor_address, s32 resource_address, s32 first, s32 end, 
     {
         for (i = first; i < end; i++)
         {
-            spawn_actor = (i * 0x2C) + actor_address;
+            spawn_actor = (void *)((i * 0x2C) + (uintptr_t)actors);
             spawn_motion = (i * 0x14) + (u8 *)&g_wmap_actor_motions;
             if (M2C_FIELD(spawn_motion, s16 *, 0) == 0)
             {
@@ -623,7 +623,7 @@ void func_8006B328(s32 first, s32 end, s32 spawn_interval, s32 scale_override, s
     s32 *final_timer;
     u8 *timer_base;
     s32 timer_offset;
-    s32 address;
+    uintptr_t address;
     s32 remaining_spawns;
     s32 i;
     s32 motion_offset;
@@ -664,13 +664,13 @@ void func_8006B328(s32 first, s32 end, s32 spawn_interval, s32 scale_override, s
                 gte_ldv0(&position);
                 gte_rtps();
                 resource_offset = i * sizeof(WmapAnimationSlot);
-                address = (s32)((WmapAnimationSlot *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
+                address = (uintptr_t)((WmapAnimationSlot *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
                 if (M2C_FIELD(actor, s16 *, 0x10) != M2C_FIELD(actor, s16 *, 0xE))
                 {
                     M2C_FIELD(actor, s16 *, 0x10) = (s16) (u16) M2C_FIELD(actor, s16 *, 0xE);
                     sequence_offset = *(s16 *)((M2C_FIELD(actor, s16 *, 0xE) * 2) + address);
                     M2C_FIELD(actor, s16 *, 0x20) = 1;
-                    sequence_cursor = address + sequence_offset;
+                    sequence_cursor = (void *)(address + sequence_offset);
                     M2C_FIELD(actor, void **, 0x18) = sequence_cursor;
                     M2C_FIELD(actor, void **, 0x14) = sequence_cursor;
                 }
@@ -691,7 +691,7 @@ void func_8006B328(s32 first, s32 end, s32 spawn_interval, s32 scale_override, s
                         M2C_FIELD(actor, s16 *, 0x20) = (s16) M2C_FIELD(sequence_start, u8 *, 1);
                     }
                     M2C_FIELD(actor, void **, 0x14) = (void *) (M2C_FIELD(actor, void **, 0x14) + 4);
-                    M2C_FIELD(actor, s32 *, 0x1C) = (s32) (address + M2C_FIELD(((animation_frame * 2) + address), s16 *, 0x40));
+                    M2C_FIELD(actor, u8 **, 0x1C) = (u8 *) (address + M2C_FIELD(((animation_frame * 2) + address), s16 *, 0x40));
                 }
                 gte_stsxy(&screen_position);
                 wmap_draw_actor_sprite(actor, screen_position, frame, 4, 0);

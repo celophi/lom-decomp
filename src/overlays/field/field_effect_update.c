@@ -59,7 +59,7 @@ u8* field_begin_actor_animation_forward();
 /**
  * @brief Address of element @p index in an array of @p type starting at @p base.
  */
-#define FIELD_ELEMENT_AT(type, base, index) ((type *) ((index) * (s32) sizeof(type) + (s32) (base)))
+#define FIELD_ELEMENT_AT(type, base, index) ((type *) ((index) * sizeof(type) + (uintptr_t) (base)))
 
 /** @brief Placement selector (bits 18-23) of a part definition's placement flags. */
 #define FIELD_PART_PLACEMENT_KIND(part) (((part)->placement_flags.word >> FIELD_PART_ANCHOR_MODE_SHIFT) & FIELD_PART_ANCHOR_MODE_MASK)
@@ -3250,9 +3250,9 @@ void field_render_effects(FieldRenderContext *render_context)
     u32 *ordering_table;
     FieldResourceEntry *resources;
     s32 *packet_cursor;
-    s32 frame_result;
+    u8* frame_data;
     s32 object_index;
-    s32 actor_or_object_index;
+    uintptr_t actor_or_object_index;
     u8* actor_address;
     FieldActorSlot *actor;
     s32 part_offset;
@@ -3307,49 +3307,49 @@ void field_render_effects(FieldRenderContext *render_context)
                     if ((value >= 0xA && value < 0x14) || value == 0x28)
                     {
                         actor_or_object_index = g_field_actor_slots[effect->actor_index].targets[effect->track_index];
-                        frame_result = (s32) resources[g_field_actors[actor_or_object_index].resource_index].start;
+                        frame_data = resources[g_field_actors[actor_or_object_index].resource_index].start;
                         object_state = &g_field_object_states[actor_or_object_index];
                     }
                     else
                     {
                         actor_or_object_index = g_field_actor_slots[effect->actor_index].owner_object_index;
-                        frame_result = (s32) resources[g_field_actors[actor_or_object_index].resource_index].start;
+                        frame_data = resources[g_field_actors[actor_or_object_index].resource_index].start;
                         object_state = &g_field_object_states[actor_or_object_index];
                     }
                     object_state->linked_effect_index = (s8) (effect - g_field_effect_records);
-                    if (frame_result != 0)
+                    if (frame_data != NULL)
                     {
-                        frame_result = field_advance_actor_part_animation_frame(effect, (u8 *) frame_result);
-                        if (frame_result != 0)
+                        frame_data = field_advance_actor_part_animation_frame(effect, frame_data);
+                        if (frame_data != NULL)
                         {
-                            if (frame_result >= 0)
+                            if (!((uintptr_t)frame_data & FIELD_FRAME_DATA_8BIT))
                             {
-                                packet_cursor = field_render_effect_frame16(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags & 1) ^ 1, part);
+                                packet_cursor = field_render_effect_frame16(effect, packet_cursor, ordering_table, frame_data, (object_state->contact.bytes.flags & 1) ^ 1, part);
                             }
                             else
                             {
-                                packet_cursor = field_render_effect_frame8(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags & 1) ^ 1, part);
+                                packet_cursor = field_render_effect_frame8(effect, packet_cursor, ordering_table, frame_data, (object_state->contact.bytes.flags & 1) ^ 1, part);
                             }
                         }
                     }
                     break;
 
                 case FIELD_EFFECT_RENDER_SPRITE:
-                    frame_result = field_advance_actor_part_animation_frame(effect, g_field_builtin_track_data);
-                    if (frame_result != 0)
+                    frame_data = field_advance_actor_part_animation_frame(effect, g_field_builtin_track_data);
+                    if (frame_data != NULL)
                     {
-                        packet_cursor = field_render_effect_sprite_frames(effect, packet_cursor, ordering_table, (u8 *) frame_result);
+                        packet_cursor = field_render_effect_sprite_frames(effect, packet_cursor, ordering_table, frame_data);
                     }
                     break;
 
                 case FIELD_EFFECT_RENDER_ACTOR_SPRITE:
-                    frame_result = (s32) g_field_actor_slots[effect->actor_index].track_data;
-                    if (frame_result != 0)
+                    frame_data = g_field_actor_slots[effect->actor_index].track_data;
+                    if (frame_data != NULL)
                     {
-                        frame_result = field_advance_actor_part_animation_frame(effect, (u8 *) frame_result);
-                        if (frame_result != 0)
+                        frame_data = field_advance_actor_part_animation_frame(effect, frame_data);
+                        if (frame_data != NULL)
                         {
-                            packet_cursor = field_render_effect_sprite_frames(effect, packet_cursor, ordering_table, (u8 *) frame_result);
+                            packet_cursor = field_render_effect_sprite_frames(effect, packet_cursor, ordering_table, frame_data);
                         }
                     }
                     break;
@@ -3358,24 +3358,24 @@ void field_render_effects(FieldRenderContext *render_context)
                     actor = &g_field_actor_slots[effect->actor_index];
                     actor_or_object_index = effect->part_index;
                     part_offset = actor_or_object_index * sizeof(FieldObjectPart);
-                    actor_or_object_index = (s32) actor->parts;
+                    actor_or_object_index = (uintptr_t)actor->parts;
                     object_index = actor->owner_object_index;
                     part = (FieldObjectPart *) (actor_or_object_index + part_offset);
-                    frame_result = (s32) resources[g_field_actors[object_index].resource_index].start;
+                    frame_data = resources[g_field_actors[object_index].resource_index].start;
                     object_state = &g_field_object_states[object_index];
                     object_state->linked_effect_index = (s8) (effect - g_field_effect_records);
-                    if (frame_result != 0)
+                    if (frame_data != NULL)
                     {
-                        frame_result = field_advance_actor_part_animation_frame(effect, (u8 *) frame_result);
-                        if (frame_result != 0)
+                        frame_data = field_advance_actor_part_animation_frame(effect, frame_data);
+                        if (frame_data != NULL)
                         {
-                            if (frame_result >= 0)
+                            if (!((uintptr_t)frame_data & FIELD_FRAME_DATA_8BIT))
                             {
-                                packet_cursor = field_render_effect_frame16(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags & 1) ^ 1, part);
+                                packet_cursor = field_render_effect_frame16(effect, packet_cursor, ordering_table, frame_data, (object_state->contact.bytes.flags & 1) ^ 1, part);
                             }
                             else
                             {
-                                packet_cursor = field_render_effect_frame8(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags & 1) ^ 1, part);
+                                packet_cursor = field_render_effect_frame8(effect, packet_cursor, ordering_table, frame_data, (object_state->contact.bytes.flags & 1) ^ 1, part);
                             }
                         }
                     }
@@ -3388,21 +3388,21 @@ void field_render_effects(FieldRenderContext *render_context)
                     part = &((FieldActorSlot *) actor_address)->parts[value];
                     value = effect->track_index;
                     object_index = ((FieldActorSlot *) actor_address)->targets[value];
-                    frame_result = (s32) resources[g_field_actors[object_index].resource_index].start;
+                    frame_data = resources[g_field_actors[object_index].resource_index].start;
                     object_state = &g_field_object_states[object_index];
                     object_state->linked_effect_index = (s8) (effect - g_field_effect_records);
-                    if (frame_result != 0)
+                    if (frame_data != NULL)
                     {
-                        frame_result = field_advance_actor_part_animation_frame(effect, (u8 *) frame_result);
-                        if (frame_result != 0)
+                        frame_data = field_advance_actor_part_animation_frame(effect, frame_data);
+                        if (frame_data != NULL)
                         {
-                            if (frame_result >= 0)
+                            if (!((uintptr_t)frame_data & FIELD_FRAME_DATA_8BIT))
                             {
-                                packet_cursor = field_render_effect_frame16(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags & 1) ^ 1, part);
+                                packet_cursor = field_render_effect_frame16(effect, packet_cursor, ordering_table, frame_data, (object_state->contact.bytes.flags & 1) ^ 1, part);
                             }
                             else
                             {
-                                packet_cursor = field_render_effect_frame8(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags & 1) ^ 1, part);
+                                packet_cursor = field_render_effect_frame8(effect, packet_cursor, ordering_table, frame_data, (object_state->contact.bytes.flags & 1) ^ 1, part);
                             }
                         }
                     }
@@ -3558,7 +3558,7 @@ static s32 *field_render_effect_sprite_frames(FieldMotionRecord *effect, s32 *pa
                     {
                         value0 = texture_slot;
                         value0 <<= 1;
-                        value0 += (s32) texture_slot_flags;
+                        value0 += (uintptr_t) texture_slot_flags;
                         value1 = ((*(u16 *) value0 & 3) << 7) | ((part->behavior_flags.word >> 0x11) & 0x60);
                         value1 |= 5;
                         ((POLY_FT4 *) packet_cursor)->tpage = value1;
@@ -3814,7 +3814,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
     spawn_flags = part->spawn_flags.word;
     if (spawn_flags & 0x100000)
     {
-        field_apply_effect_quad_center_offset(rec, sxy, quad_bounds, mtx, (spawn_flags >> 0x14) & 1);
+        field_apply_effect_quad_center_offset(rec, sxy, quad_bounds, (uintptr_t)mtx, (spawn_flags >> 0x14) & 1);
     }
     slot->bounds.half.left = quad_bounds[0];
     slot->bounds.half.top = quad_bounds[1];
@@ -4811,7 +4811,7 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
     spawn_flags = part->spawn_flags.word;
     if (spawn_flags & 0x100000)
     {
-        field_apply_effect_quad_center_offset(rec, sxy, corners, mtx, (spawn_flags >> 0x14) & 1);
+        field_apply_effect_quad_center_offset(rec, sxy, corners, (uintptr_t)mtx, (spawn_flags >> 0x14) & 1);
     }
     slot->bounds.half.left = corners[0];
     slot->bounds.half.top = corners[1];
@@ -5495,7 +5495,7 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
  */
 #define FIELD_LINK_PACKET(entry, packet, address_mask, length_mask)                          \
     ((packet)->tag = ((packet)->tag & (length_mask)) | (*(entry) & (address_mask)),          \
-     *(entry) = (*(entry) & (length_mask)) | ((s32)(packet) & (address_mask)))
+     *(entry) = (*(entry) & (length_mask)) | ((uintptr_t)(packet) & (address_mask)))
 
 /** @brief GPU coordinates accessed individually or as a packed XY word. */
 typedef union
@@ -6060,7 +6060,7 @@ next_segment:
         packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[depth_or_y] & mask_low);
         first_entry = FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT);
         ot_word = *first_entry;
-        *first_entry = (ot_word & mask_high) | ((s32)packets & mask_low);
+        *first_entry = (ot_word & mask_high) | ((uintptr_t)packets & mask_low);
         packets = next_packet;
     }
 
@@ -6080,7 +6080,7 @@ next_segment:
         packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[second_depth] & mask_low);
         second_entry = FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT);
         ot_word = *second_entry;
-        *second_entry = (ot_word & mask_high) | ((s32)packets & mask_low);
+        *second_entry = (ot_word & mask_high) | ((uintptr_t)packets & mask_low);
         packets++;
     }
 
@@ -6100,7 +6100,7 @@ next_segment:
         packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[third_depth] & mask_low);
         third_entry = FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT);
         ot_word = *third_entry;
-        *third_entry = (ot_word & mask_high) | ((s32)packets & mask_low);
+        *third_entry = (ot_word & mask_high) | ((uintptr_t)packets & mask_low);
         packets++;
     }
 
@@ -6120,7 +6120,7 @@ next_segment:
         packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[fourth_depth] & mask_low);
         fourth_entry = FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT);
         ot_word = *fourth_entry;
-        *fourth_entry = (ot_word & mask_high) | ((s32)packets & mask_low);
+        *fourth_entry = (ot_word & mask_high) | ((uintptr_t)packets & mask_low);
         packets++;
     }
     if (segment == (segment_count - 1))
@@ -7049,14 +7049,14 @@ u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32
             depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
             if (depth < 0)
             {
-                s32 addr = (s32)quad & addr_mask;
+                s32 addr = (uintptr_t)quad & addr_mask;
                 quad->packed.tag = (quad->packed.tag & tag_mask) | (ordering_table[0] & addr_mask);
                 quad++;
                 ordering_table[0] = (ordering_table[0] & tag_mask) | addr;
             }
             else if (depth >= FIELD_EFFECT_OT_SIZE)
             {
-                s32 addr = (s32)quad & addr_mask;
+                s32 addr = (uintptr_t)quad & addr_mask;
                 quad->packed.tag = (quad->packed.tag & tag_mask) | (ordering_table[FIELD_EFFECT_OT_SIZE - 1] & addr_mask);
                 quad++;
                 ordering_table[FIELD_EFFECT_OT_SIZE - 1] = (ordering_table[FIELD_EFFECT_OT_SIZE - 1] & tag_mask) | addr;
@@ -7065,9 +7065,9 @@ u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32
             {
                 s32 addr;
                 s32* entry;
-                addr = (s32)quad & addr_mask;
+                addr = (uintptr_t)quad & addr_mask;
                 quad->packed.tag = (quad->packed.tag & tag_mask) | (ordering_table[depth] & addr_mask);
-                entry = (s32*)(((s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (u32)ordering_table);
+                entry = (s32*)(((s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (uintptr_t)ordering_table);
                 quad++;
                 *entry = (*entry & tag_mask) | addr;
             }
@@ -7099,14 +7099,14 @@ u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32
     depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
     if (depth < 0)
     {
-        s32 addr = (s32)quad & FIELD_GPU_ADDRESS_MASK;
+        s32 addr = (uintptr_t)quad & FIELD_GPU_ADDRESS_MASK;
         setaddr(quad, getaddr(&ordering_table[0]));
         quad++;
         ordering_table[0] = (ordering_table[0] & FIELD_GPU_LENGTH_MASK) | addr;
     }
     else if (depth >= FIELD_EFFECT_OT_SIZE)
     {
-        s32 addr = (s32)quad & FIELD_GPU_ADDRESS_MASK;
+        s32 addr = (uintptr_t)quad & FIELD_GPU_ADDRESS_MASK;
         setaddr(quad, getaddr(&ordering_table[FIELD_EFFECT_OT_SIZE - 1]));
         quad++;
         ordering_table[FIELD_EFFECT_OT_SIZE - 1] = (ordering_table[FIELD_EFFECT_OT_SIZE - 1] & FIELD_GPU_LENGTH_MASK) | addr;
@@ -7116,10 +7116,10 @@ u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32
         s32 addr;
         s32* entry;
         s32 srcval;
-        addr = (s32)quad & FIELD_GPU_ADDRESS_MASK;
+        addr = (uintptr_t)quad & FIELD_GPU_ADDRESS_MASK;
         srcval = ordering_table[depth];
         setaddr(quad, srcval);
-        entry = (s32*)(((s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (u32)ordering_table);
+        entry = (s32*)(((s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (uintptr_t)ordering_table);
         quad++;
         *entry = (*entry & FIELD_GPU_LENGTH_MASK) | addr;
     }

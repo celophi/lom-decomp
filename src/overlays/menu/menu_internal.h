@@ -126,17 +126,19 @@ s32 field_name_byte_length(u8* name);
 /** @brief Number of 0x40-byte records in the inventory item table. */
 #define MENU_ITEM_TABLE_COUNT 100
 /** @brief Byte offset of the inventory item table within g_saved_game_ctx. */
-#define MENU_ITEM_TABLE_OFFSET 0xCE0
+#define MENU_ITEM_TABLE_OFFSET OFFSETOF(SavedGameLayout, items)
 /** @brief Size in bytes of one inventory/equipment item record. */
-#define MENU_ITEM_RECORD_SIZE 0x40
+#define MENU_ITEM_RECORD_SIZE sizeof(FieldItemRecord)
 /** @brief Size in bytes of one character's save/menu state block. */
-#define MENU_CHARACTER_BLOCK_SIZE 0x250
+#define MENU_CHARACTER_BLOCK_SIZE sizeof(FieldCharacterRecord)
 /** @brief Offset of the character equipment-area header within its state block. */
-#define MENU_CHARACTER_RECORD_OFFSET 0x5F0
+#define MENU_CHARACTER_RECORD_OFFSET OFFSETOF(SavedGameLayout, characters)
 /** Byte offset of the eight packed values displayed in the character panel. */
-#define MENU_CHARACTER_PACKED_VALUES_OFFSET 0x620
+#define MENU_CHARACTER_PACKED_VALUES_OFFSET OFFSETOF(SavedGameLayout, characters[0].stats)
 /** @brief Offset of the first equipped-item record within the equipment area. */
-#define MENU_CHARACTER_ITEMS_OFFSET 0x50
+#define MENU_CHARACTER_ITEMS_OFFSET OFFSETOF(FieldCharacterRecord, equipment)
+/** @brief Byte offset of the first character's first equipped-item record within g_saved_game_ctx. */
+#define MENU_FIRST_EQUIPMENT_OFFSET (MENU_CHARACTER_RECORD_OFFSET + MENU_CHARACTER_ITEMS_OFFSET)
 /** @brief Mask for the two-bit item-kind field in MenuItemEntry::attributes. */
 #define MENU_ITEM_KIND_MASK 0x300
 #define MENU_ITEM_KIND_SHIFT 8
@@ -625,24 +627,25 @@ u_long* menu_build_h_edge(u_long* packet_cursor, u_long* ot_entry, const MenuRec
 u_long* menu_build_v_edge(u_long* packet_cursor, u_long* ot_entry, const MenuRectU16* rect, s32 texture_origin);
 u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 allow_input);
 void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry);
+void* menu_draw_active_node_cursor(void* packet_cursor, s32* ot_entry, s32 draw_label);
 void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label);
 s32 menu_handle_node_input(void);
 u32 menu_step_item_selection(s32 step);
 
 void menu_upload_tim(const MenuTimVramLayout* layout);
-s32 menu_draw_clamped_number(s32* ot_entry, u8* packet_cursor, s32 value, s32 format, Vec2s* origin, s32 style);
+void* menu_draw_clamped_number(s32* ot_entry, void* packet_cursor, s32 value, s32 format, Vec2s* origin, s32 style);
 
-s32 menu_spell_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
-s32 menu_equipment_grid_callback(s32* ot, ScrollListState* state, u8* prim_buf, Vec2s* view_origin, int active);
-s32 menu_key_item_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
-s32 menu_ability_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
-s32 menu_message_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
-s32 menu_two_line_message_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
-void* menu_inventory_list_callback(s32* ot, ScrollListState* state, u8* prim_buf, Vec2s* view_origin, s32 active);
-s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
-s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
+void* menu_spell_list_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_equipment_grid_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_key_item_list_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_ability_list_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_message_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_two_line_message_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_inventory_list_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, s32 active);
+void* menu_equipment_action_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_subtype_action_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
 
-s32 menu_emit_cursor(s32, s32*, s32, s32, s32);
+void* menu_emit_cursor(void* prim_buf, s32* ot, s32 x, s32 y, s32 active);
 void* menu_emit_draw_mode_primitive(DR_TPAGE* draw_mode, s32* ot);
 void* menu_emit_slot_scroll_arrows(SPRT* sprite, u_long* ot_entry, MenuSlot* slot);
 void* menu_emit_tree_scroll_arrows(SPRT* sprite, s32* ot_entry);
@@ -657,21 +660,24 @@ void* menu_emit_icon_sprite(void*, s32*, s32, s32, s32, s32, s32, s32, s32);
 
 void scroll_list_update_target(ScrollListState*, u32*);
 
-s32 menu_item_followup_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
-s32 menu_equipment_compare_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
+void* menu_item_followup_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_equipment_compare_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
 void field_copy_inventory_record();
 void field_compact_inventory();
-s32 field_find_free_inventory_record();
-s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, s32 active);
+MenuItemEntry* field_find_free_inventory_record(void);
+void* menu_special_technique_list_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, s32 active);
 void menu_swap_item_records(MenuItemEntry*, MenuItemEntry*);
 
-s32 func_800A88A0(s32 prim, s32* ot, void* glyph, s32 a3, s32 x, s32 y, s32 mode);
+void* func_800A88A0(void* prim, s32* ot, void* text, s32 color, s32 x, s32 y, s32 mode);
+void* func_800A8A78(s32* ot, void* prim, s32 value, s32 color, Vec2s* position, s32 mode);
+void* field_draw_sprite_number(u_long* ordering_table, void* packet_cursor, s32 value, s32 digit_count, u16* position, s32 flags);
+void* field_draw_sprite_glyph(void* packet_cursor, u_long* ordering_table, s32 glyph, u16* position, s32 flags);
 void menu_play_se(s32 sound_id, s32 volume);
 
 s32 menu_stage_best_equipment_for_slot0(void);
 s32 menu_stage_best_equipment_for_active_slot(void);
 
-s32 scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entries, Vec2s* view_origin, int active);
+void* scroll_list_draw(void* prim_buf, s32* ot, ScrollListState* state, u32* entries, Vec2s* view_origin, int active);
 
 MenuItemEntry* menu_find_best_equipment_for_slot0(void);
 MenuItemEntry* menu_find_best_equipment_for_active_slot(void);
@@ -697,9 +703,9 @@ extern MenuContentItem g_menu_default_content_items;
 extern u8 D_80168659[];
 extern u8 D_80168696[];
 extern u8 D_801686B8[];
-extern u8* D_80168C20;
-extern u8* D_80168C24;
-extern u8* D_80168C30;
+extern MenuItemEntry* D_80168C20;
+extern MenuItemEntry* D_80168C24;
+extern MenuItemEntry* D_80168C30;
 
 /** @brief Optional help/description string drawn below the active menu content. */
 extern u8* g_menu_help_text;
@@ -722,28 +728,28 @@ extern u8 g_menu_prev_node;
 extern s32 g_menu_content_ready;
 
 /** @brief Comparison item addresses, or zero for an empty replacement. */
-extern u32 g_item_slot_data[MENU_EQUIPMENT_SLOT_COUNT];
+extern MenuItemEntry* g_item_slot_data[MENU_EQUIPMENT_SLOT_COUNT];
 /** @brief Nonzero for slots with a pending comparison change. */
 extern u8 g_item_slot_flags[MENU_EQUIPMENT_SLOT_COUNT];
 
 /** @brief Pointer into g_saved_game_ctx item data for the current category; null = no items. */
-extern u8* g_menu_item_ptr;
-extern u8* g_menu_category0_item;
-extern u8* g_menu_category1_item;
-extern u8* g_menu_category2_item;
-extern u8* g_menu_active_equipped_item;
-extern u8* g_menu_saved_category0_item;
-extern u8* g_menu_saved_category1_item;
+extern MenuItemEntry* g_menu_item_ptr;
+extern MenuItemEntry* g_menu_category0_item;
+extern MenuItemEntry* g_menu_category1_item;
+extern MenuItemEntry* g_menu_category2_item;
+extern MenuItemEntry* g_menu_active_equipped_item;
+extern MenuItemEntry* g_menu_saved_category0_item;
+extern MenuItemEntry* g_menu_saved_category1_item;
 /** @brief Packed circular navigation entries for item sub-pages. */
 extern s32 g_menu_item_nav_entries[];
-extern void* g_menu_equipment_base;
+extern MenuItemEntry* g_menu_equipment_base;
 /** @brief Current interpolated vertical scroll position of the node tree. */
 extern s32 g_menu_content_height;
 extern s32 g_menu_scroll_pos;
 extern s32 g_menu_redraw_state;
 extern s32 g_menu_active_node;
 /** @brief Equipped-item address saved when opening an item-action submenu. */
-extern u8* g_menu_saved_equipment_item;
+extern MenuItemEntry* g_menu_saved_equipment_item;
 extern u8 g_menu_init_content_id;
 
 extern Struct_D_800FD818 g_field_player_records;
@@ -925,7 +931,7 @@ static inline MenuCharacterRecord* menu_character_record(SavedGameLayout* contex
  */
 static inline void* menu_emit_content_label(void* packet_cursor, s32* ot, void* text)
 {
-    return (void*)func_800A88A0((s32)packet_cursor, ot, text, 1, 0xA0, 0xCA, 2);
+    return func_800A88A0(packet_cursor, ot, text, 1, 0xA0, 0xCA, 2);
 }
 
 /**
@@ -1008,7 +1014,7 @@ static inline u8* menu_text_entry(void* base, s32 index)
  */
 static inline u_long* menu_image_upload_source(void* buffer, s32 byte_offset)
 {
-    return (u_long*)(((byte_offset >> 2) << 2) + (u32)buffer);
+    return (u_long*)(((byte_offset >> 2) << 2) + (uintptr_t)buffer);
 }
 
 /** @brief Convert a packed menu icon palette code to a Psy-Q CLUT id. */
@@ -1035,7 +1041,7 @@ static inline s32 menu_nav_x(u16 packed)
  */
 static inline u8* menu_shared_text_entry(const StringTableOffset* entry, s32 index)
 {
-    s32 string_page_base = (entry->page << 8) + (s32)((u8*)entry - index * sizeof(StringTableOffset));
+    uintptr_t string_page_base = (entry->page << 8) + (uintptr_t)(entry - index);
     return (u8*)(entry->entry + string_page_base);
 }
 

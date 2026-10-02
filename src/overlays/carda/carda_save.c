@@ -315,7 +315,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         first_high = choice_entry[1] << CARDA_ELEMENT_COUNT;
         choice_table = choice_entry - FIELD_UI_TEXT_YES * 2;
         color = FIELD_TEXT_COLOR_NORMAL;
-        first_text = (u8*)(choice_entry[0] + (first_high + (s32)choice_table));
+        first_text = (u8*)(choice_entry[0] + (first_high + (uintptr_t)choice_table));
         if (g_carda_choice_toggle != 0)
         {
             color = FIELD_TEXT_COLOR_DIM;
@@ -487,7 +487,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
             choice_entry = &g_text_choice_glyph_offsets;
             first_high = choice_entry[1] << CARDA_ELEMENT_COUNT;
             choice_table = choice_entry - FIELD_UI_TEXT_YES * 2;
-            first_text = (u8*)(choice_entry[0] + (first_high + (s32)choice_table));
+            first_text = (u8*)(choice_entry[0] + (first_high + (uintptr_t)choice_table));
             if (g_carda_choice_toggle != 0)
             {
                 color = FIELD_TEXT_COLOR_DIM;
@@ -534,7 +534,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
             choice_entry = &g_text_choice_glyph_offsets;
             first_high = choice_entry[1] << CARDA_ELEMENT_COUNT;
             choice_table = choice_entry - FIELD_UI_TEXT_YES * 2;
-            first_text = (u8*)(choice_entry[0] + (first_high + (s32)choice_table));
+            first_text = (u8*)(choice_entry[0] + (first_high + (uintptr_t)choice_table));
             if (g_carda_choice_toggle != 0)
             {
                 color = FIELD_TEXT_COLOR_DIM;

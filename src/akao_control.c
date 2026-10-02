@@ -19,7 +19,7 @@
  *       distance from @p entry to that end. The offset is added to the entry
  *       address as an integer.
  */
-#define SFX_ENTRY_DATA(entry, skip) ((u8*)((u32)(*(u16*)(entry)) + (u32)(entry) + (skip)))
+#define SFX_ENTRY_DATA(entry, skip) ((u8*)((u32)(*(u16*)(entry)) + (uintptr_t)(entry) + (skip)))
 
 extern s32 D_8003EC34[];
 extern u8 g_akao_silent_sequence[];
@@ -132,7 +132,7 @@ void akao_seq_start_song(u8* song_data, s32 start_mask)
     AkaoSongState* song_tables;
     AkaoSongState* song;
 
-    g_akao_seq_channel0->song_data = (s32)song_data;
+    g_akao_seq_channel0->song_data = song_data;
     descriptor = (AkaoSongDescriptor*)song_data;
     channel_mask = descriptor->channel_mask;
 
@@ -187,7 +187,7 @@ void akao_seq_start_song(u8* song_data, s32 start_mask)
     {
         table = key_map;
     }
-    song_tables->key_map_base = (s32)table;
+    song_tables->key_map_base = table;
 
     table = NULL;
     rel = descriptor->note_table_offset;
@@ -687,9 +687,9 @@ void akao_sfx_play(AkaoCommandParam* params, u8* seq_data0, u8* seq_data1, s32 s
  * @param program_index Program id; masked to 0..0x3FF.
  *
  */
-void akao_resolve_program_data(s32* out0, s32* out1, s32 program_index)
+void akao_resolve_program_data(u8** out0, u8** out1, s32 program_index)
 {
-    s32 result;
+    u8* result;
 
     program_index &= 0x3FF;
     program_index <<= 1;
@@ -700,7 +700,7 @@ void akao_resolve_program_data(s32* out0, s32* out1, s32 program_index)
     }
     else
     {
-        result = 0;
+        result = NULL;
     }
     *out0 = result;
 
@@ -711,7 +711,7 @@ void akao_resolve_program_data(s32* out0, s32* out1, s32 program_index)
     }
     else
     {
-        result = 0;
+        result = NULL;
     }
     *out1 = result;
 }
@@ -816,13 +816,13 @@ void akao_seq_resume_song(AkaoSongDescriptor* descriptor)
         flags |= 0x20;
     }
     song->flags = flags;
-    g_akao_seq_channel0->song_data = (s32)descriptor;
+    g_akao_seq_channel0->song_data = (u8*)descriptor;
     g_akao_seq_channel0->masks.key_on_mask = 0;
 
     g_akao_driver_flags.update_flags |= (AKAO_REVERB_DEPTH_UPDATE_PENDING | AKAO_NOISE_CLOCK_UPDATE_PENDING);
 
     mask = g_akao_seq_channel0->masks.active_mask;
-    delta = (s32)descriptor - g_akao_suspended_song.song_data;
+    delta = (u8*)descriptor - g_akao_suspended_song.song_data;
     g_akao_seq_channel0->key_map_base += delta;
     g_akao_seq_channel0->note_table += delta;
     g_akao_seq_channel0->masks.key_on_mask = g_akao_seq_channel0->note_on_mask;
@@ -1078,8 +1078,8 @@ void akao_sfx_play_default(AkaoCommandParam* params)
  */
 void akao_sfx_play_program(AkaoCommandParam* params)
 {
-    s32 seq_data0;
-    s32 seq_data1;
+    u8* seq_data0;
+    u8* seq_data1;
     u16 program_key;
     s32 slot;
 
@@ -1090,7 +1090,7 @@ void akao_sfx_play_program(AkaoCommandParam* params)
     program_key = *(u16*)(g_akao_bank_region_b + params[0].value * 2);
     slot = akao_bank_find_slot(program_key);
     params[4].value = slot;
-    akao_sfx_play(params, (u8*)seq_data0, (u8*)seq_data1, 0);
+    akao_sfx_play(params, seq_data0, seq_data1, 0);
 }
 
 /**
@@ -1103,8 +1103,8 @@ void akao_sfx_play_program(AkaoCommandParam* params)
  */
 void akao_sfx_play_program_raw(AkaoCommandParam* params)
 {
-    s32 seq_data0;
-    s32 seq_data1;
+    u8* seq_data0;
+    u8* seq_data1;
     u16 program_key;
     s32 slot;
 
@@ -1112,7 +1112,7 @@ void akao_sfx_play_program_raw(AkaoCommandParam* params)
     program_key = *(u16*)(g_akao_bank_region_b + params[0].value * 2);
     slot = akao_bank_find_slot(program_key);
     params[4].value = slot;
-    akao_sfx_play(params, (u8*)seq_data0, (u8*)seq_data1, 0);
+    akao_sfx_play(params, seq_data0, seq_data1, 0);
 }
 
 /**

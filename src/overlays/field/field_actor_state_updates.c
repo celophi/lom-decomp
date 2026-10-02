@@ -138,7 +138,7 @@ void field_update_actor_movement_animation(FieldActor* actor, s32 delta_x, s32 d
 /**
  * @brief Runtime state of object @p index in @p states, addressed as index-first byte arithmetic.
  */
-#define FIELD_OBJECT_STATE_AT(states, index) ((FieldObjectState*)((index) * sizeof(FieldObjectState) + (u32)(states)))
+#define FIELD_OBJECT_STATE_AT(states, index) ((FieldObjectState*)((index) * sizeof(FieldObjectState) + (uintptr_t)(states)))
 
 /** @brief Control bytes following the frame values in a 32-byte sequence row. */
 typedef enum
@@ -717,7 +717,7 @@ static inline u8 field_sequence_byte(s32 sequence_index, s32 object_index, s32 c
     s32 row;
 
     row = (sequence_index << 5) + players[object_index].kind * FIELD_SEQUENCE_BANK_SIZE;
-    return *(u8*)(row + (s32)scripts + cursor);
+    return *(u8*)(row + (uintptr_t)scripts + cursor);
 }
 
 /**
@@ -743,7 +743,7 @@ void field_update_technique_command(FieldActor* actor, s32 sequence_index)
     s32 object_index;
     s32 cursor;
     s32 row_offset;
-    s32 row_address;
+    uintptr_t row_address;
     s32 row_sum;
     s32 amount;
     u8 delay;
@@ -788,7 +788,7 @@ void field_update_technique_command(FieldActor* actor, s32 sequence_index)
                 } while (0);
                 state = &states[object_index];
                 first_cursor = state->sequence_position;
-                row_address += (s32)scripts;
+                row_address += (uintptr_t)scripts;
                 row_address += first_cursor;
                 if (*(u8*)row_address == FIELD_SEQUENCE_WAIT_ANIMATION)
                 {
@@ -806,7 +806,7 @@ void field_update_technique_command(FieldActor* actor, s32 sequence_index)
                 } while (0);
                 state = &states[object_index];
                 cursor = state->sequence_position;
-                row_address += (s32)scripts;
+                row_address += (uintptr_t)scripts;
                 row_address += cursor;
                 if (*(u8*)row_address == FIELD_SEQUENCE_WAIT_REPEAT)
                 {
@@ -1532,9 +1532,9 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
     s32 target_index;
     s32 current_target_index;
     s32 animation_command;
-    u32 delay_operand;
-    u32 resource_operand;
-    u32 animation_operand;
+    uintptr_t delay_operand;
+    uintptr_t resource_operand;
+    uintptr_t animation_operand;
     s32 clear_slot;
     s32 movement_mask;
     s32 cursor;
@@ -1651,7 +1651,7 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
         }
         {
             s32 actor_offset = ((FieldSequenceBinding*)((u8*)bindings + release_binding_offset))->actor_index * sizeof(*anim_slots);
-            ((FieldActorSlot*)((s32)anim_slots + actor_offset))->active = 0;
+            ((FieldActorSlot*)((u8*)anim_slots + actor_offset))->active = 0;
         }
     }
     programs = g_field_actor_sequence_data;
@@ -1665,7 +1665,7 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
     /* Frame bytes stop dispatch; command bytes may consume additional operands. */
     for (; opcode >= FIELD_SEQUENCE_START_TARGETS_0; command_slot = actor->object_index,
                                                      bank_offset = script_offset + players[command_slot].kind * FIELD_SEQUENCE_BANK_SIZE,
-                                                     opcode_ptr = (u8*)(bank_offset + (s32)programs + cursor), opcode = *opcode_ptr)
+                                                     opcode_ptr = (u8*)(bank_offset + (uintptr_t)programs + cursor), opcode = *opcode_ptr)
     {
         switch (opcode)
         {
@@ -1749,9 +1749,9 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
                 delay_owner = actor->object_index;
                 pending_state = (FieldObjectState*)(delay_owner * sizeof(*slots));
                 delay_operand = script_offset + players[delay_owner].kind * FIELD_SEQUENCE_BANK_SIZE;
-                delay_operand += (u32)programs;
+                delay_operand += (uintptr_t)programs;
                 delay_operand += cursor;
-                pending_state = (FieldObjectState*)((u8*)pending_state + (s32)slots);
+                pending_state = (FieldObjectState*)((uintptr_t)pending_state + (uintptr_t)slots);
                 pending_state->command_timer = ((u8*)delay_operand)[1];
                 cursor += 2;
                 slots[actor->object_index].sequence_position = cursor;
@@ -1784,7 +1784,7 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
                 {
                     resource_owner = actor->object_index;
                     resource_operand = script_offset + players[resource_owner].kind * FIELD_SEQUENCE_BANK_SIZE;
-                    resource_operand += (u32)programs;
+                    resource_operand += (uintptr_t)programs;
                     resource_operand += cursor;
                     field_start_builtin_animation(resource_owner, actor_index, ((u8*)resource_operand)[1]);
                     field_start_actor_animation(actor_index, 0U, NULL);
@@ -1843,9 +1843,9 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
                 command_owner = actor->object_index;
                 target_state = (FieldObjectState*)(command_owner * sizeof(*slots));
                 animation_operand = script_offset + players[command_owner].kind * FIELD_SEQUENCE_BANK_SIZE;
-                animation_operand += (u32)programs;
+                animation_operand += (uintptr_t)programs;
                 animation_operand += cursor;
-                target_state = (FieldObjectState*)((s32)target_state + (s32)slots);
+                target_state = (FieldObjectState*)((uintptr_t)target_state + (uintptr_t)slots);
                 target_state->action_parameter = ((u8*)animation_operand)[1];
                 cursor += 2;
                 clear_slot = actor->object_index;
@@ -1905,13 +1905,13 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
         u8* frame_programs;
         FieldPlayerRecord* frame_players;
         FieldObjectState* frame_slots;
-        u32 frame_address;
+        uintptr_t frame_address;
         s32 frame_offset;
         frame_programs = g_field_actor_sequence_data;
         frame_players = g_field_player_records;
         frame_offset = (script_index * FIELD_SEQUENCE_ROW_SIZE) + frame_players[actor->object_index].kind * FIELD_SEQUENCE_BANK_SIZE;
         frame_address = frame_offset;
-        frame_address += (u32)frame_programs;
+        frame_address += (uintptr_t)frame_programs;
         frame_address += cursor;
         cursor++;
         frame_slots = g_field_object_states;

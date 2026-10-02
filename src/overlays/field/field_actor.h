@@ -130,8 +130,8 @@ typedef struct FieldActor
     u8 removal_delay;
     u8 unk3E;
     u8 unk3F;
-    /** @brief Decoded data of the displayed frame; negative values use the alternate renderer. */
-    s32 frame_data;
+    /** @brief Address of the displayed frame's data; bit 31 set selects the alternate (8-bit) renderer. */
+    u32 frame_data;
     u32 unk44;
     u32 unk48;
     u32 unk4C;
