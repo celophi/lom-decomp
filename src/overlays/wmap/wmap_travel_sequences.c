@@ -129,9 +129,9 @@ extern u32 g_wmap_special_return_step;
 extern s32 g_wmap_special_return_timer;
 extern void (*g_wmap_special_return_steps[])(void);
 
-static s32 wmap_start_vehicle_flight(s32 initialize);
-static s32 wmap_fly_vehicle(s32 initialize);
-static s32 wmap_fly_vehicle_first_leg(s32 initialize);
+s32 wmap_start_vehicle_flight(s32 initialize);
+s32 wmap_fly_vehicle(s32 initialize);
+s32 wmap_fly_vehicle_first_leg(s32 initialize);
 
 /* Sequence steps: called through the step tables and by the step before them. */
 void wmap_special_travel_spawn_vehicle(void);
@@ -358,7 +358,7 @@ s32 wmap_draw_vehicle(s32 initialize)
  * @note A straight or exactly diagonal route flies directly; any other route first flies
  *       the straight part that makes the rest diagonal.
  */
-static s32 wmap_start_vehicle_flight(s32 initialize)
+s32 wmap_start_vehicle_flight(s32 initialize)
 {
     s32 dx;
     s32 dy;
@@ -492,7 +492,7 @@ static s32 wmap_start_vehicle_flight(s32 initialize)
  * @param initialize Sequence callback flag; unused.
  * @return 1 while the flight is running, 0 once the vehicle has arrived.
  */
-static s32 wmap_fly_vehicle(s32 initialize)
+s32 wmap_fly_vehicle(s32 initialize)
 {
     if (g_wmap_vehicle_phase == 0)
     {
@@ -521,7 +521,7 @@ static s32 wmap_fly_vehicle(s32 initialize)
  * @param initialize Sequence callback flag; unused.
  * @return 1 while the leg is running, 0 once the diagonal leg is installed.
  */
-static s32 wmap_fly_vehicle_first_leg(s32 initialize)
+s32 wmap_fly_vehicle_first_leg(s32 initialize)
 {
     s32 delta_y;
     s32 delta_x;

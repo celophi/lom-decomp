@@ -117,7 +117,7 @@ void wmap_land_return_wait_sequences(void);
 void wmap_land_return_scroll_back(void);
 void wmap_land_return_wait_scroll(void);
 void wmap_land_return_finish(void);
-static void wmap_set_camera_model_transform(VECTOR* translation, SVECTOR* rotation);
+void wmap_set_camera_model_transform(VECTOR* translation, SVECTOR* rotation);
 static s32 wmap_run_land_return(s32 reset);
 
 /**
@@ -519,7 +519,7 @@ void wmap_reset_focus_screen_position(void)
 /**
  * @brief Compose the camera rotation with a model rotation and install the result.
  */
-static void wmap_set_camera_model_transform(VECTOR* translation, SVECTOR* rotation)
+void wmap_set_camera_model_transform(VECTOR* translation, SVECTOR* rotation)
 {
     MATRIX matrices[2];
 

@@ -71,7 +71,7 @@ typedef struct
 s32 field_party_reload_reading(void);
 FieldActor* field_lookup_actor(s32 key);
 void field_restart_actor_animation(FieldActor* actor);
-void field_restore_default_action_animation_mappings(s32);
+void field_restore_default_action_animation_mappings(s32 unused);
 
 extern s32 g_field_battle_entry_change_count;
 extern s32 g_field_party_reload_sizes[FIELD_PLAYER_COUNT];
