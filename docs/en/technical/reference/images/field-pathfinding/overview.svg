@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="425" viewBox="0 0 1040 425" role="img" aria-labelledby="title desc">
+<title id="title">From a destination to a usable route</title><desc id="desc">Six stages: prepare, try a direct walk, search, follow breadcrumbs, remove turns, adjust a bend and return points.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/></marker></defs>
+<rect width="1040" height="425" rx="16" fill="white"/>
+<text x="28" y="40" font-family="DejaVu Sans, sans-serif" font-size="27" fill="#223449" font-weight="bold" text-anchor="start">What this function does</text>
+<text x="28" y="72" font-family="DejaVu Sans, sans-serif" font-size="19" fill="#586c80" font-weight="normal" text-anchor="start">A route is a short list of places to walk toward.</text>
+<rect x="28" y="106" width="312" height="120" rx="12" fill="#f1f6fa" stroke="none"/>
+<circle cx="57" cy="136" r="15" fill="#087e83" stroke="white" stroke-width="2"/>
+<text x="57" y="142" font-family="DejaVu Sans, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle">1</text>
+<text x="83" y="143" font-family="DejaVu Sans, sans-serif" font-size="22" fill="#223449" font-weight="bold" text-anchor="start">Prepare the map</text>
+<text x="46" y="189" font-family="DejaVu Sans, sans-serif" font-size="17" fill="#586c80" font-weight="normal" text-anchor="start">Where are we? How big are we?</text>
+<polyline points="344,166 362,166" fill="none" stroke="#586c80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="368" y="106" width="312" height="120" rx="12" fill="#f1f6fa" stroke="none"/>
+<circle cx="397" cy="136" r="15" fill="#087e83" stroke="white" stroke-width="2"/>
+<text x="397" y="142" font-family="DejaVu Sans, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle">2</text>
+<text x="423" y="143" font-family="DejaVu Sans, sans-serif" font-size="22" fill="#223449" font-weight="bold" text-anchor="start">Try the straight walk</text>
+<text x="386" y="189" font-family="DejaVu Sans, sans-serif" font-size="17" fill="#586c80" font-weight="normal" text-anchor="start">Clear? Return the destination.</text>
+<polyline points="684,166 702,166" fill="none" stroke="#586c80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="708" y="106" width="312" height="120" rx="12" fill="#f1f6fa" stroke="none"/>
+<circle cx="737" cy="136" r="15" fill="#087e83" stroke="white" stroke-width="2"/>
+<text x="737" y="142" font-family="DejaVu Sans, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle">3</text>
+<text x="763" y="143" font-family="DejaVu Sans, sans-serif" font-size="22" fill="#223449" font-weight="bold" text-anchor="start">Search around the wall</text>
+<text x="726" y="189" font-family="DejaVu Sans, sans-serif" font-size="17" fill="#586c80" font-weight="normal" text-anchor="start">Prefer open space over edges.</text>
+<rect x="28" y="255" width="312" height="120" rx="12" fill="#f1f6fa" stroke="none"/>
+<circle cx="57" cy="285" r="15" fill="#087e83" stroke="white" stroke-width="2"/>
+<text x="57" y="291" font-family="DejaVu Sans, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle">4</text>
+<text x="83" y="292" font-family="DejaVu Sans, sans-serif" font-size="22" fill="#223449" font-weight="bold" text-anchor="start">Follow the breadcrumbs</text>
+<text x="46" y="338" font-family="DejaVu Sans, sans-serif" font-size="17" fill="#586c80" font-weight="normal" text-anchor="start">Work backward; keep the turns.</text>
+<polyline points="344,315 362,315" fill="none" stroke="#586c80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="368" y="255" width="312" height="120" rx="12" fill="#f1f6fa" stroke="none"/>
+<circle cx="397" cy="285" r="15" fill="#087e83" stroke="white" stroke-width="2"/>
+<text x="397" y="291" font-family="DejaVu Sans, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle">5</text>
+<text x="423" y="292" font-family="DejaVu Sans, sans-serif" font-size="22" fill="#223449" font-weight="bold" text-anchor="start">Remove extra turns</text>
+<text x="386" y="338" font-family="DejaVu Sans, sans-serif" font-size="17" fill="#586c80" font-weight="normal" text-anchor="start">Keep shortcuts that still fit.</text>
+<polyline points="684,315 702,315" fill="none" stroke="#586c80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="708" y="255" width="312" height="120" rx="12" fill="#f1f6fa" stroke="none"/>
+<circle cx="737" cy="285" r="15" fill="#087e83" stroke="white" stroke-width="2"/>
+<text x="737" y="291" font-family="DejaVu Sans, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle">6</text>
+<text x="763" y="292" font-family="DejaVu Sans, sans-serif" font-size="22" fill="#223449" font-weight="bold" text-anchor="start">Adjust and return</text>
+<text x="726" y="338" font-family="DejaVu Sans, sans-serif" font-size="17" fill="#586c80" font-weight="normal" text-anchor="start">Try one bend; order the points.</text>
+</svg>

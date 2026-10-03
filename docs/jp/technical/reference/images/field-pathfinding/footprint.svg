@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="420" viewBox="0 0 1040 420" role="img" aria-labelledby="title desc" lang="ja">
+<title id="title">当たり判定全体が通れる必要がある</title><desc id="desc">同じ狭い通路でも、小さい当たり判定の長方形は通れるが、大きい長方形は壁に重なる。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke" /></marker></defs>
+<rect width="1040" height="420" rx="16" fill="white" />
+<text x="28" y="40" font-family="Noto Sans CJK JP, sans-serif" font-size="27" fill="#223449" font-weight="bold" text-anchor="start">確認するのは、足元の当たり判定</text>
+<text x="28" y="72" font-family="Noto Sans CJK JP, sans-serif" font-size="19" fill="#586c80" font-weight="normal" text-anchor="start">経路には、当たり判定の長方形全体が通れる幅が必要です。</text>
+<text x="42" y="119" font-family="Noto Sans CJK JP, sans-serif" font-size="23" fill="#223449" font-weight="bold" text-anchor="start">小さい当たり判定</text>
+<rect x="68" y="145" width="150" height="170" rx="5" fill="#53657a" stroke="none" />
+<rect x="286" y="145" width="150" height="170" rx="5" fill="#53657a" stroke="none" />
+<polyline points="252,344 252,159" fill="none" stroke="#087e83" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8 7" marker-end="url(#arrow)" />
+<rect x="231.0" y="216" width="42" height="70" rx="4" fill="#c9ece4" stroke="#087e83" />
+<circle cx="252" cy="251" r="5" fill="#087e83" stroke="white" stroke-width="2" />
+<text x="252" y="257" font-family="Noto Sans CJK JP, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle" />
+<text x="252" y="382" font-family="Noto Sans CJK JP, sans-serif" font-size="19" fill="#087e83" font-weight="normal" text-anchor="middle">隙間を通れる</text>
+<text x="564" y="119" font-family="Noto Sans CJK JP, sans-serif" font-size="23" fill="#223449" font-weight="bold" text-anchor="start">大きい当たり判定</text>
+<rect x="590" y="145" width="150" height="170" rx="5" fill="#53657a" stroke="none" />
+<rect x="808" y="145" width="150" height="170" rx="5" fill="#53657a" stroke="none" />
+<polyline points="774,344 774,159" fill="none" stroke="#bf3f47" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8 7" marker-end="url(#arrow)" />
+<rect x="722.0" y="216" width="104" height="70" rx="4" fill="#f7d9dc" stroke="#bf3f47" />
+<circle cx="774" cy="251" r="5" fill="#bf3f47" stroke="white" stroke-width="2" />
+<text x="774" y="257" font-family="Noto Sans CJK JP, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle" />
+<text x="774" y="382" font-family="Noto Sans CJK JP, sans-serif" font-size="19" fill="#bf3f47" font-weight="normal" text-anchor="middle">中心は通れても、長方形は通れない。</text>
+</svg>

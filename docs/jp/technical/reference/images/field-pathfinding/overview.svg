@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="425" viewBox="0 0 1040 425" role="img" aria-labelledby="title desc" lang="ja">
+<title id="title">目的地から、実際に使える経路へ</title><desc id="desc">準備、直進の確認、探索、印をたどる処理、曲がり角の整理、調整と結果の返却という6段階。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke" /></marker></defs>
+<rect width="1040" height="425" rx="16" fill="white" />
+<text x="28" y="40" font-family="Noto Sans CJK JP, sans-serif" font-size="27" fill="#223449" font-weight="bold" text-anchor="start">この関数がすること</text>
+<text x="28" y="72" font-family="Noto Sans CJK JP, sans-serif" font-size="19" fill="#586c80" font-weight="normal" text-anchor="start">経路は、歩いて向かう地点を並べた短いリストです。</text>
+<rect x="28" y="106" width="312" height="120" rx="12" fill="#f1f6fa" stroke="none" />
+<circle cx="57" cy="136" r="15" fill="#087e83" stroke="white" stroke-width="2" />
+<text x="57" y="142" font-family="Noto Sans CJK JP, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle">1</text>
+<text x="83" y="143" font-family="Noto Sans CJK JP, sans-serif" font-size="22" fill="#223449" font-weight="bold" text-anchor="start">マップを準備する</text>
+<text x="46" y="189" font-family="Noto Sans CJK JP, sans-serif" font-size="17" fill="#586c80" font-weight="normal" text-anchor="start">位置と当たり判定の大きさを確認。</text>
+<polyline points="344,166 362,166" fill="none" stroke="#586c80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+<rect x="368" y="106" width="312" height="120" rx="12" fill="#f1f6fa" stroke="none" />
+<circle cx="397" cy="136" r="15" fill="#087e83" stroke="white" stroke-width="2" />
+<text x="397" y="142" font-family="Noto Sans CJK JP, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle">2</text>
+<text x="423" y="143" font-family="Noto Sans CJK JP, sans-serif" font-size="22" fill="#223449" font-weight="bold" text-anchor="start">直進を試す</text>
+<text x="386" y="189" font-family="Noto Sans CJK JP, sans-serif" font-size="17" fill="#586c80" font-weight="normal" text-anchor="start">通れるなら、目的地だけを返す。</text>
+<polyline points="684,166 702,166" fill="none" stroke="#586c80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+<rect x="708" y="106" width="312" height="120" rx="12" fill="#f1f6fa" stroke="none" />
+<circle cx="737" cy="136" r="15" fill="#087e83" stroke="white" stroke-width="2" />
+<text x="737" y="142" font-family="Noto Sans CJK JP, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle">3</text>
+<text x="763" y="143" font-family="Noto Sans CJK JP, sans-serif" font-size="22" fill="#223449" font-weight="bold" text-anchor="start">壁を回り込む経路を探す</text>
+<text x="726" y="189" font-family="Noto Sans CJK JP, sans-serif" font-size="17" fill="#586c80" font-weight="normal" text-anchor="start">壁際より、広い場所を優先する。</text>
+<rect x="28" y="255" width="312" height="120" rx="12" fill="#f1f6fa" stroke="none" />
+<circle cx="57" cy="285" r="15" fill="#087e83" stroke="white" stroke-width="2" />
+<text x="57" y="291" font-family="Noto Sans CJK JP, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle">4</text>
+<text x="83" y="292" font-family="Noto Sans CJK JP, sans-serif" font-size="22" fill="#223449" font-weight="bold" text-anchor="start">残した印をたどる</text>
+<text x="46" y="338" font-family="Noto Sans CJK JP, sans-serif" font-size="17" fill="#586c80" font-weight="normal" text-anchor="start">出発点へ戻り、曲がり角を残す。</text>
+<polyline points="344,315 362,315" fill="none" stroke="#586c80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+<rect x="368" y="255" width="312" height="120" rx="12" fill="#f1f6fa" stroke="none" />
+<circle cx="397" cy="285" r="15" fill="#087e83" stroke="white" stroke-width="2" />
+<text x="397" y="291" font-family="Noto Sans CJK JP, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle">5</text>
+<text x="423" y="292" font-family="Noto Sans CJK JP, sans-serif" font-size="22" fill="#223449" font-weight="bold" text-anchor="start">余分な曲がり角を減らす</text>
+<text x="386" y="338" font-family="Noto Sans CJK JP, sans-serif" font-size="17" fill="#586c80" font-weight="normal" text-anchor="start">キャラクターが通れる近道を残す。</text>
+<polyline points="684,315 702,315" fill="none" stroke="#586c80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+<rect x="708" y="255" width="312" height="120" rx="12" fill="#f1f6fa" stroke="none" />
+<circle cx="737" cy="285" r="15" fill="#087e83" stroke="white" stroke-width="2" />
+<text x="737" y="291" font-family="Noto Sans CJK JP, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle">6</text>
+<text x="763" y="292" font-family="Noto Sans CJK JP, sans-serif" font-size="22" fill="#223449" font-weight="bold" text-anchor="start">調整して結果を返す</text>
+<text x="726" y="338" font-family="Noto Sans CJK JP, sans-serif" font-size="17" fill="#586c80" font-weight="normal" text-anchor="start">曲がり角1つを試し、順番を戻す。</text>
+</svg>
