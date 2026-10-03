@@ -216,7 +216,6 @@
 #define FIELD_COLLISION_GROUP_TILE_PADDING 4
 /** Tile columns represented by one bitmask word. */
 #define FIELD_COLLISION_GROUP_WORD_BITS 32
-#define FIELD_COLLISION_GROUP_WORD_SHIFT 5
 
 /* FieldScene::group_count error codes, stored with group_work cleared. */
 /** Too many group ids (scan or pair filter). */
@@ -3410,7 +3409,6 @@ void field_collision_collect_groups(u8** allocator_cursor)
     FieldScene* scene;
     FieldNode* node;
     FieldNodeDef* def;
-    FieldSceneHeader* header;
     s32 work_count;
     s32 index;
     s32 tile_size;
@@ -3420,6 +3418,7 @@ void field_collision_collect_groups(u8** allocator_cursor)
     s32 second_kinds;
     s32 sort_index;
     s32 scratch;
+    u32 map_columns;
     s32 scene_depth;
     s32 tile_shift;
     s32 content_columns;
@@ -3586,52 +3585,50 @@ void field_collision_collect_groups(u8** allocator_cursor)
         scene->group_ids[sort_index] = sorted_height;
     }
 
-    work_count = group_count - 1;
     scene->group_ids[0] = groups[0].height;
-    for (; work_count != -1; work_count--)
+    for (work_count = group_count - 1; work_count != -1; work_count--)
     {
         scene->group_counters[work_count] = 0;
     }
 
     /* Coarser tiles keep large scenes within the collision-map budget. */
-    header = scene->header;
-    scratch = header->unk30;
-    scene_depth = header->unk32;
+    scratch = scene->header->unk30;
+    scene_depth = scene->header->unk32;
     tile_size = FIELD_COLLISION_GROUP_FINE_TILE_SIZE;
     tile_shift = FIELD_COLLISION_GROUP_FINE_TILE_SHIFT;
-    work_count = ((scratch + tile_size - 1) >> tile_shift) * ((scene_depth + tile_size * 2 - 1) >> (tile_shift + 1)) * (s32)group_count;
+    work_count = ((scratch + tile_size - 1) >> tile_shift) * ((scene_depth + tile_size * 2 - 1) >> (tile_shift + 1)) * group_count;
     if (work_count > FIELD_COLLISION_GROUP_TILE_BUDGET)
     {
         tile_size = FIELD_COLLISION_GROUP_COARSE_TILE_SIZE;
         tile_shift = FIELD_COLLISION_GROUP_COARSE_TILE_SHIFT;
     }
+    
     /* Include two border tiles on each edge of the byte maps. */
     content_columns = ((scratch + tile_size) - 1) >> tile_shift;
-    scratch = content_columns + FIELD_COLLISION_GROUP_TILE_PADDING;
+    map_columns = content_columns + FIELD_COLLISION_GROUP_TILE_PADDING;
     content_rows = ((scene_depth + (tile_size * 2)) - 1) >> (tile_shift + 1);
     map_rows = content_rows + FIELD_COLLISION_GROUP_TILE_PADDING;
-    work_count = scratch;
+    work_count = map_columns;
     work_count *= map_rows;
     scene->group_tile_count = work_count;
     work_count = work_count * group_count;
     scene->tile_size = tile_size;
     scene->group_count = group_count;
-    scene->tile_cols = scratch;
+    scene->tile_cols = map_columns;
     scene->tile_rows = map_rows;
+
     /* Reserve the byte maps, then the two bitmask planes for every group. */
     scene->group_tiles = *allocator_cursor;
     work_count = (work_count + sizeof(u32) - 1) & ~(sizeof(u32) - 1);
     *allocator_cursor += work_count;
-    work_count = (((u32)(content_columns + (FIELD_COLLISION_GROUP_TILE_PADDING + FIELD_COLLISION_GROUP_WORD_BITS - 1)) >> FIELD_COLLISION_GROUP_WORD_SHIFT) *
-                  content_rows) *
-                 2;
+    work_count = ((map_columns + FIELD_COLLISION_GROUP_WORD_BITS - 1) / FIELD_COLLISION_GROUP_WORD_BITS * content_rows) * 2;
     scene->group_stride = work_count;
     scene->group_work = *allocator_cursor;
     group_bytes = group_count * sizeof(u32);
     work_bytes = work_count * group_bytes;
     *allocator_cursor += work_bytes;
     scene->group_work_end = *allocator_cursor;
-    ((void (*)(u8**, s32, s32))field_collision_rasterize_groups)(allocator_cursor, 0, work_count);
+    field_collision_rasterize_groups(allocator_cursor, NULL);
     return;
 
 too_many_groups:
