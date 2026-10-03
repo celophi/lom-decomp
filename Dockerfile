@@ -24,6 +24,12 @@ RUN apt-get update && apt-get install -y -o APT::Immediate-Configure=false \
     dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
+# Install the pinned objdiff release independently of the checkout.
+COPY tools/objdiff/install_objdiff.sh /tmp/install_objdiff.sh
+RUN sh /tmp/install_objdiff.sh /usr/local/bin/objdiff-cli \
+    && objdiff-cli --version \
+    && rm /tmp/install_objdiff.sh
+
 # PSX gcc 2.8.0
 COPY --from=toolchain-psx /cpp     /opt/psx-gcc/cpp
 COPY --from=toolchain-psx /cc1     /opt/psx-gcc/cc1

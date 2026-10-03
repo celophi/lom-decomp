@@ -10,30 +10,32 @@ Usage:
 
 import argparse
 import json
-import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
-DEFAULT_CLI = PROJECT_ROOT / "tools" / "objdiff" / "objdiff-cli-linux-x86_64"
+DEFAULT_CLI = "objdiff-cli"
 CONFIG_PATH = PROJECT_ROOT / "objdiff.json"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "build" / "us" / "diffs"
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--cli", default=str(DEFAULT_CLI), help="Path to objdiff-cli binary")
+    parser.add_argument("--cli", default=DEFAULT_CLI,
+                        help="objdiff-cli command or path (default: objdiff-cli on PATH)")
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR),
                         help="Directory for per-unit JSON diffs (default: build/us/diffs)")
     args = parser.parse_args()
     output_dir = Path(args.output_dir)
 
-    cli = Path(args.cli)
-    if not cli.exists():
-        print(f"error: objdiff-cli not found at {cli}", file=sys.stderr)
+    cli = shutil.which(args.cli)
+    if cli is None:
+        print(f"error: objdiff-cli executable not found: {args.cli} -- "
+              "install it with tools/objdiff/install_objdiff.sh or pass --cli <path>",
+              file=sys.stderr)
         sys.exit(1)
-    cli.chmod(cli.stat().st_mode | 0o111)
 
     if not CONFIG_PATH.exists():
         print(f"error: {CONFIG_PATH} not found -- run 'make objdiff-config' first", file=sys.stderr)
