@@ -81,6 +81,8 @@ typedef struct
 
 extern int abs(int);
 
+extern void field_camera_release_scroll_limits(void);
+
 static void field_camera_step_scroll_limits(void);
 static void field_camera_step_scripted_scroll(void);
 

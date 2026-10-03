@@ -308,8 +308,11 @@ void* field_draw_text(SPRT* sprite_cursor, s32* ot, u8* text, s32 text_color, s3
 void field_format_number(u8* text, s32 number, s32 wide_request);
 s32 field_name_byte_length(u8* name);
 void field_copy_name(u8* destination, u8* source);
+void field_append_name(u8* destination, const u8* source);
 s32 field_read_controller_buttons(s32 index);
 void field_reset_input_repeat(void);
+void field_draw_text_session(FieldRenderHalf* render);
+void field_restore_label_actor_parts(void);
 static void field_init_actor_labels(void);
 static void field_draw_cd_error_text(FieldRenderHalf* render);
 static void field_draw_actor_labels(FieldRenderHalf* render);
