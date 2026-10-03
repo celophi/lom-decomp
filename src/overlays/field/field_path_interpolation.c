@@ -23,6 +23,12 @@
 /** @brief Spline degree field_init_path selects (cubic). */
 #define FIELD_PATH_DEGREE 3
 
+/** @brief Basis rows, including the zero tail used by the recurrence. */
+#define FIELD_PATH_BASIS_CAPACITY (FIELD_PATH_POINT_COUNT + FIELD_PATH_DEGREE + 1)
+
+/** @brief Folded weight slots per path evaluation. */
+#define FIELD_PATH_WEIGHT_CAPACITY 12
+
 /** @brief Path time steps between two control points. */
 #define FIELD_PATH_SEGMENT_STEPS 20
 
@@ -35,6 +41,23 @@ typedef struct
     s16 x[FIELD_PATH_POINT_CAPACITY];
     s16 z[FIELD_PATH_POINT_CAPACITY];
 } FieldPathGroup;
+
+/** @brief Basis prefix retained while the closed path's weights are folded. */
+typedef struct
+{
+    s32 basis[FIELD_PATH_POINT_COUNT + 1][2];
+    s32 weights[FIELD_PATH_WEIGHT_CAPACITY];
+} FieldPathFoldedWeights;
+
+/**
+ * @brief Shared storage for spline basis rows and folded control-point weights.
+ * @note Folding reads the tail basis rows before replacing them with weights.
+ */
+typedef union
+{
+    s32 basis[FIELD_PATH_BASIS_CAPACITY][2];
+    FieldPathFoldedWeights folded;
+} FieldPathWorkspace;
 
 extern s32 g_field_path_segment_steps;
 extern FieldPathGroup g_field_path_groups[FIELD_PATH_GROUP_COUNT];
@@ -125,13 +148,10 @@ void field_init_path(FieldMotionRecord* center, s32 radius, s32 randomize, s32 g
  * @param time Path time, 0 to g_field_path_length - 1.
  * @param record Effect whose x and z receive the point.
  * @param group Path group to evaluate.
- * @note basis holds 11 rows but the recurrence clears g_field_path_basis_count + 1 of
- *       them; the extra rows run into weights, which is only filled after they are read.
  */
 static void field_evaluate_path(s32 time, FieldMotionRecord* record, s32 group)
 {
-    s32 basis[11][2];
-    s32 weights[12];
+    FieldPathWorkspace workspace;
     s32 knots[34];
     s32 span;
     s32 first;
@@ -141,8 +161,8 @@ static void field_evaluate_path(s32 time, FieldMotionRecord* record, s32 group)
     s32 z;
 
     field_build_path_knots(knots);
-    field_compute_path_basis(g_field_path_order, (time << 12) / g_field_path_segment_steps, &span, knots, basis);
-    field_fold_path_weights(basis, weights);
+    field_compute_path_basis(g_field_path_order, (time << 12) / g_field_path_segment_steps, &span, knots, workspace.basis);
+    field_fold_path_weights(workspace.basis, workspace.folded.weights);
     last = span - g_field_path_half_order + 1;
     first = last - g_field_path_degree;
     if (first < 0 || last > g_field_path_point_count - 1)
@@ -154,8 +174,8 @@ static void field_evaluate_path(s32 time, FieldMotionRecord* record, s32 group)
     z = 0;
     for (i = first; i <= last; i++)
     {
-        x += (g_field_path_groups[group].x[i] * weights[i]) >> 12;
-        z += (g_field_path_groups[group].z[i] * weights[i]) >> 12;
+        x += (g_field_path_groups[group].x[i] * workspace.folded.weights[i]) >> 12;
+        z += (g_field_path_groups[group].z[i] * workspace.folded.weights[i]) >> 12;
     }
     record->x = x << 8;
     record->z = z << 8;
