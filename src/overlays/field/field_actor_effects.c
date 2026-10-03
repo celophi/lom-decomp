@@ -183,6 +183,8 @@ typedef struct
     MATRIX unused_matrices_after[2];
 } FieldStripWorkspace;
 
+void field_get_ground_effect_radius_limits(s32 kind, s32* min_radius, s32* max_radius);
+
 static u8* field_build_effect_dome(u_long* ordering_table, u8* packet, VECTOR* position, s32 radius);
 static u8* field_build_effect_strips(u_long* ordering_table, u8* packet, VECTOR* position, s32 radius);
 static u8* field_build_effect_curves(u_long* ordering_table, u8* packet, VECTOR* position, s32 extent, s32 forward);
