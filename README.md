@@ -430,6 +430,10 @@ This repository will **never** include leaked source code, private debug symbols
 
 ## Legal
 
+See [LICENSE](LICENSE) and [Third-Party Notices](THIRD_PARTY_NOTICES.md) for licensing details.
+
+The MIT License applies to original material authored for this project to the extent that the contributors hold the rights necessary to license that material. It does not grant rights to preexisting copyrighted material originating from the original game.
+
 This repository is an independent reverse-engineering and preservation project. It is not affiliated with or endorsed by Square, Square Enix, Sony, or any other rights holder.
 
 No original game executable, overlay binaries, artwork, audio, or other copyrighted game data should be committed to this repository. You must supply required data from your own legally obtained copy of the game.
