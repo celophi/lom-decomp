@@ -430,7 +430,7 @@ This repository will **never** include leaked source code, private debug symbols
 
 ## Legal
 
-See [LICENSE](LICENSE) and [Third-Party Notices](THIRD_PARTY_NOTICES.md) for licensing details.
+See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md) for licensing details.
 
 The MIT License applies to original material authored for this project to the extent that the contributors hold the rights necessary to license that material. It does not grant rights to preexisting copyrighted material originating from the original game.
 
