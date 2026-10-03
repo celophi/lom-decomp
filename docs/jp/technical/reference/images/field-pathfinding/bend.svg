@@ -21,7 +21,7 @@
 <circle cx="519.0" cy="211.5" r="15" fill="#087e83" stroke="white" stroke-width="2" />
 <text x="519.0" y="217.5" font-family="Noto Sans CJK JP, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle">Q</text>
 <text x="640" y="171" font-family="Noto Sans CJK JP, sans-serif" font-size="19" fill="#ba7913" font-weight="normal" text-anchor="start">元の曲がり角</text>
-<text x="405" y="284" font-family="Noto Sans CJK JP, sans-serif" font-size="19" fill="#bf3f47" font-weight="normal" text-anchor="end">半分：通れない</text>
+<text x="405" y="320" font-family="Noto Sans CJK JP, sans-serif" font-size="19" fill="#bf3f47" font-weight="normal" text-anchor="end">半分：通れない</text>
 <text x="507.0" y="187.5" font-family="Noto Sans CJK JP, sans-serif" font-size="19" fill="#087e83" font-weight="normal" text-anchor="end">4分の1：通れる</text>
 <text x="212" y="348" font-family="Noto Sans CJK JP, sans-serif" font-size="18" fill="#586c80" font-weight="normal" text-anchor="middle">隣の地点は固定</text>
 <text x="806" y="348" font-family="Noto Sans CJK JP, sans-serif" font-size="18" fill="#586c80" font-weight="normal" text-anchor="middle">目的地は固定</text>

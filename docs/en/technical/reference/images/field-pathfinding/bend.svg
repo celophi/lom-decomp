@@ -21,7 +21,7 @@
 <circle cx="519.0" cy="211.5" r="15" fill="#087e83" stroke="white" stroke-width="2"/>
 <text x="519.0" y="217.5" font-family="DejaVu Sans, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle">Q</text>
 <text x="640" y="171" font-family="DejaVu Sans, sans-serif" font-size="19" fill="#ba7913" font-weight="normal" text-anchor="start">Original bend</text>
-<text x="405" y="284" font-family="DejaVu Sans, sans-serif" font-size="19" fill="#bf3f47" font-weight="normal" text-anchor="end">Halfway: blocked</text>
+<text x="405" y="320" font-family="DejaVu Sans, sans-serif" font-size="19" fill="#bf3f47" font-weight="normal" text-anchor="end">Halfway: blocked</text>
 <text x="507.0" y="187.5" font-family="DejaVu Sans, sans-serif" font-size="19" fill="#087e83" font-weight="normal" text-anchor="end">Quarter-step: clear</text>
 <text x="212" y="348" font-family="DejaVu Sans, sans-serif" font-size="18" fill="#586c80" font-weight="normal" text-anchor="middle">Fixed neighbour</text>
 <text x="806" y="348" font-family="DejaVu Sans, sans-serif" font-size="18" fill="#586c80" font-weight="normal" text-anchor="middle">Goal stays fixed</text>
