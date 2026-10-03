@@ -41,7 +41,7 @@ void field_refresh_party_routes(void);
 void field_set_color_scale();
 void field_advance_actor_effects(FieldActorSlot *actor_state);
 void field_handle_return_to_title_prompt(void);
-void field_restore_default_action_animation_mappings();
+void field_restore_default_action_animation_mappings(s32 unused);
 void field_restart_actor_animation(FieldActor* actor);
 void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_entry_index);
 
@@ -303,7 +303,7 @@ FieldActor* field_lookup_actor(s32 key);
 
 static void field_relocate_resource_buffer(s32 resource_index);
 s32 field_get_actor_resource_id(s32 unused_slot_index, FieldPlayerRecord* player, s32 weapon_set);
-static void field_load_actor_resource_slot(s32 resource_index, s32 slot_index, s32 resource_id, s32 alternate_layout);
+void field_load_actor_resource_slot(s32 resource_index, s32 slot_index, s32 resource_id, s32 alternate_layout);
 void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index);
 void field_initialize_actor_part(s32 part_index, s32 timer_mode);
 static void field_build_actor_render_commands(FieldRenderContext* render_ctx, s32 unused);
@@ -315,7 +315,7 @@ void field_dispatch_actor_audio_event(FieldActorSlot* slot, s32 event_type, s32 
 static void field_reset_actor_track_mask(FieldActorSlot* slot);
 void field_set_global_color_scale(s16 red, s16 green, s16 blue);
 static void field_apply_global_color_scale(void);
-static u8* field_advance_actor_animation_frame(FieldActor* actor);
+u8* field_advance_actor_animation_frame(FieldActor* actor);
 u8* field_begin_actor_animation_forward(FieldActor* actor, u8* resource_base);
 static u8* field_begin_actor_animation_reverse(FieldActor* actor, u8* resource_base);
 static void field_settle_actor_vertical_offset(FieldActor* actor);
@@ -1965,9 +1965,10 @@ static void field_relocate_resource_buffer(s32 resource_index)
 
 /**
  * @brief Restore the default commands of actions 1 and 5 in both action command maps and enable them.
+ * @param unused Ignored; callers pass 0 or 1.
  * @see decomp.me (100%) https://decomp.me/scratch/oaoFZ
  */
-void field_restore_default_action_animation_mappings(void)
+void field_restore_default_action_animation_mappings(s32 unused)
 {
     g_field_action_command_maps[0].commands[1] = FIELD_ACTION_COMMAND(1);
     g_field_action_command_maps[1].commands[1] = FIELD_ACTION_COMMAND(1);
@@ -2045,7 +2046,7 @@ void field_initialize_actor_parts(s32 timer_mode)
  * @param resource_id CD resource id of the package.
  * @param alternate_layout Low bit selects the alternate texture layout.
  */
-static void field_load_actor_resource_slot(s32 resource_index, s32 slot_index, s32 resource_id, s32 alternate_layout)
+void field_load_actor_resource_slot(s32 resource_index, s32 slot_index, s32 resource_id, s32 alternate_layout)
 {
     g_field_resource_entries[resource_index].bound_animation_flags = 0x2F;
     g_field_resource_entries[resource_index].slot_index = slot_index;
@@ -2947,7 +2948,7 @@ static void field_stream_resource_to_buffer(u16 resource_id, void* destination)
  * @param actor Actor whose animation advances.
  * @return Frame data of the displayed frame.
  */
-static u8* field_advance_actor_animation_frame(FieldActor* actor)
+u8* field_advance_actor_animation_frame(FieldActor* actor)
 {
     u8* resource_base;
     u8* entry;

@@ -320,9 +320,9 @@ extern s32 g_field_sound_bank_id;
 extern s32 g_field_secondary_music_id;
 
 static void field_setup_chest_resource(void);
-static void field_upload_actor_image(FieldTimData* image, s32 image_slot, s32 actor_index, s32 upload_palette);
-static void field_copy_scene_geometry(s32* src, s32* end);
-static void field_load_scene_actors(FieldSceneLayout* layout);
+void field_upload_actor_image(FieldTimData* image, s32 image_slot, s32 actor_index, s32 upload_palette);
+void field_copy_scene_geometry(s32* src, s32* end);
+void field_load_scene_actors(FieldSceneLayout* layout);
 static void field_refresh_actor_collisions(void);
 static void field_upload_transition_tiles(void);
 static void field_prepare_transition_tiles(void);
@@ -854,7 +854,7 @@ static void field_setup_chest_resource(void)
  * @param actor_index Actor whose CLUT row receives the palette.
  * @param upload_palette Nonzero to upload the TIM palette before the image.
  */
-static void field_upload_actor_image(FieldTimData* image, s32 image_slot, s32 actor_index, s32 upload_palette)
+void field_upload_actor_image(FieldTimData* image, s32 image_slot, s32 actor_index, s32 upload_palette)
 {
     RECT rect;
     u16 width;
@@ -889,7 +889,7 @@ static void field_upload_actor_image(FieldTimData* image, s32 image_slot, s32 ac
  * @param src Start of the source range.
  * @param end End of the source range (exclusive, rounded up to a word).
  */
-static void field_copy_scene_geometry(s32* src, s32* end)
+void field_copy_scene_geometry(s32* src, s32* end)
 {
     s32 size;
     s32 words;
@@ -913,7 +913,7 @@ static void field_copy_scene_geometry(s32* src, s32* end)
  * @param layout Scene layout containing actor and action records.
  * @note Active layout records fill consecutive actor records from FIELD_PARTY_COUNT on.
  */
-static void field_load_scene_actors(FieldSceneLayout* layout)
+void field_load_scene_actors(FieldSceneLayout* layout)
 {
     FieldActor* actor = g_field_scene_actors;
     FieldObjectState* state = g_field_scene_object_states;

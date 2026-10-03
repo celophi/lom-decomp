@@ -179,10 +179,10 @@ extern s32 g_wmap_land_focus_timer;
 extern s32 g_wmap_focus_screen_position;
 
 static s32 wmap_update_map_tint(s32 initialize);
-static void wmap_project_map_grid(void);
-static void wmap_update_map_shadow(void);
-static void wmap_update_map_texcoords(void);
-static void wmap_set_map_color(s32 color);
+void wmap_project_map_grid(void);
+void wmap_update_map_shadow(void);
+void wmap_update_map_texcoords(void);
+void wmap_set_map_color(s32 color);
 
 /**
  * @brief Run the current step of the map view sequence.
@@ -561,7 +561,7 @@ s32 wmap_update_map_view(s32 initialize)
  * @brief Project the map grid vertices into the corners of the four tiles that share each one.
  * @note The next vertex index is computed while the GTE runs the perspective transform.
  */
-static void wmap_project_map_grid(void)
+void wmap_project_map_grid(void)
 {
     SVECTOR position;
     s32 screen_position;
@@ -604,7 +604,7 @@ static void wmap_project_map_grid(void)
 }
 
 /** @brief Copy the bottom rows and right columns of the map into the shadow polygons, shifted down. */
-static void wmap_update_map_shadow(void)
+void wmap_update_map_shadow(void)
 {
     s32 row;
     s32 column;
@@ -653,7 +653,7 @@ static void wmap_update_map_shadow(void)
  * @note The map texture spans two VRAM pages; each tile keeps the VRAM x and y of its
  *       page in the unused pad2 and pad1 fields until the last pass builds its tpage.
  */
-static void wmap_update_map_texcoords(void)
+void wmap_update_map_texcoords(void)
 {
     s32 row, column;
     s32 wrapped;
@@ -904,7 +904,7 @@ void wmap_update_view_zoom(void)
  * @brief Set the color word (color and command byte) of every visible map tile.
  * @param color Packed color word, see WmapColor.
  */
-static void wmap_set_map_color(s32 color)
+void wmap_set_map_color(s32 color)
 {
     s32 row;
     s32 column;
