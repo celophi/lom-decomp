@@ -14,6 +14,10 @@ linker/
 build/
 output/
 
+# Generated objdiff configuration and locally downloaded CLI binaries
+/objdiff.json
+/tools/objdiff/objdiff-cli*
+
 # Local generated files for matching purposes
 .matching/
 

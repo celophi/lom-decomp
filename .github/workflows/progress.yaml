@@ -43,7 +43,7 @@ jobs:
       WORKING_DIR: lom
 
       # Tool paths (relative to working directory)
-      OBJDIFF_CLI: ./tools/objdiff/objdiff-cli-linux-x86_64
+      OBJDIFF_CLI: objdiff-cli
       OBJDIFF_CONFIG_GENERATOR: tools/objdiff/generate_objdiff_config.py
 
       # Build artifacts
@@ -60,6 +60,9 @@ jobs:
           path: ${{ env.WORKING_DIR }}
           submodules: recursive
           ref: ${{ github.head_ref || github.ref_name }}
+
+      - name: Install pinned objdiff CLI
+        run: sh tools/objdiff/install_objdiff.sh /usr/local/bin/objdiff-cli
 
       - name: Copy ROM from container
         run: |
@@ -99,7 +102,6 @@ jobs:
 
       - name: Generate progress report
         run: |
-          chmod +x ${{ env.OBJDIFF_CLI }}
           ${{ env.OBJDIFF_CLI }} report generate -o ${{ env.PROGRESS_REPORT }}
 
       - name: Verify the host build of the data

@@ -94,7 +94,7 @@ endef
 
 $(foreach ov,$(OVERLAYS),$(eval $(call overlay-objdiff-rules,$(ov))))
 
-OBJDIFF_CLI ?= tools/objdiff/objdiff-cli-linux-x86_64
+OBJDIFF_CLI ?= objdiff-cli
 OBJDIFF_CONFIG_GENERATOR ?= tools/objdiff/generate_objdiff_config.py
 PROGRESS_REPORT ?= $(BUILD_DIR)/progress.json
 
@@ -108,7 +108,6 @@ objdiff-config: objdiff-objects
 # Write the progress report used by CI.
 .PHONY: progress
 progress: objdiff-config
-	@chmod +x $(OBJDIFF_CLI)
 	$(OBJDIFF_CLI) report generate -o $(PROGRESS_REPORT)
 	@echo "Wrote $(PROGRESS_REPORT)"
 
