@@ -5193,7 +5193,6 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
     s32 wave_queue;
     u32 entry_count;
     FieldCollisionPathEntry goal_value;
-    /* Larger stamps lead back towards the start tile. */
     u8 stamp;
     s32 result;
     u32 deferred_count;
@@ -5285,6 +5284,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
         {
             col_shift = 2;
         }
+
         /* Route cells refer to the footprint corner, rather than its centre. */
         goal_half_w = (s16)start_query->width >> 1;
         goal_x_raw = goal_query->x;
@@ -5306,6 +5306,8 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
         start_z = (start_z_raw >= 0 ? start_z_raw >> FIELD_COLLISION_PATH_WORLD_SHIFT
                                     : (start_z_raw + FIELD_COLLISION_PATH_WORLD_MASK) >> FIELD_COLLISION_PATH_WORLD_SHIFT) -
                   start_half_d;
+
+        /* Tiles are twice as deep as they are wide. */
         row_shift = col_shift + 1;
         goal_col = (goal_x >> col_shift) + FIELD_COLLISION_PATH_TILE_MARGIN;
         goal_row = (goal_z >> row_shift) + FIELD_COLLISION_PATH_TILE_MARGIN;
@@ -5313,12 +5315,15 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
         start_row = (start_z >> row_shift) + FIELD_COLLISION_PATH_TILE_MARGIN;
         columns = scene->tile_cols;
         rows = scene->tile_rows;
+
+        /* Keep endpoints inside the border so neighbour probes stay within the map. */
         if ((start_col <= 0) || (start_row <= 0) || (goal_col <= 0) || (goal_row <= 0) || (start_col >= (s32)columns - 1) || (start_row >= rows - 1) ||
             (goal_col >= (s32)columns - 1) || (goal_row >= rows - 1))
         {
             return FIELD_COLLISION_PATH_ERROR_BOUNDS;
         }
-        /* Use the highest floor group at or below each query height. */
+
+        /* Use the floor at or below each height, clamping heights below all floors to the lowest group. */
         goal_height = FIELD_COLLISION_CELL(goal_query->y);
         goal_groups = scene->group_count;
         goal_group = goal_groups - 1;
@@ -5367,6 +5372,8 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
         if (*tile != FIELD_COLLISION_TILE_GOAL)
         {
             *tile = FIELD_COLLISION_TILE_START;
+
+            /* A blocked trace from the goal leaves a marked corridor for the search to meet. */
             trace.start_x = goal_x;
             trace.start_z = goal_z;
             trace.end_x = start_x;
@@ -5379,6 +5386,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
             trace.col_shift = col_shift;
             trace.stamp = FIELD_COLLISION_TILE_GOAL;
             trace.mode = mode;
+
             /* Straight walk blocked: search. */
             if (field_collision_trace_line(&trace) == 0)
             {
@@ -5387,6 +5395,8 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                 goal_stamp = FIELD_COLLISION_TILE_GOAL;
                 entry_count = queue_counts[0] = 1;
                 goal_value.tile = NULL;
+
+                /* Decreasing wave stamps let backtracking find the start without parent pointers. */
                 stamp = FIELD_COLLISION_TILE_STAMP_FIRST;
                 queue_counts[3] = 0;
                 queue_counts[2] = 0;
@@ -5401,6 +5411,8 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                     cursor = &work.queues[wave_queue][entry_count - 1];
                     deferred_count = 0;
                     remaining -= 1;
+
+                    /* Normal steps join the next wave; wall-adjacent steps enter the deferred queue. */
                     next_queue = (wave_queue + 1) & 3;
                     entry_count = queue_counts[next_queue];
                     deferred.entry = work.queues[(wave_queue + 3) & 3];
@@ -5415,10 +5427,12 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                         tile = (u8*)(uintptr_t)(packed_tile & FIELD_COLLISION_PATH_TILE_MASK);
                         directions = packed_tile >> FIELD_COLLISION_PATH_DIR_SHIFT;
                         used_directions = 0;
-                        /* Wall-adjacent tiles wait for two extra search waves. */
+
+                        /* Delay waiting wall-adjacent entries again, favouring routes through open floor. */
                         if ((directions & (FIELD_COLLISION_DIR_DEFERRED | FIELD_COLLISION_DIR_SLOW)) ==
                             (FIELD_COLLISION_DIR_DEFERRED | FIELD_COLLISION_DIR_SLOW))
                         {
+                            /* The remaining queue prefix is deferred too; carry it to the next waiting wave. */
                             deferred_count += remaining + 1;
                             packed_tile = ~FIELD_COLLISION_PATH_DIRS(FIELD_COLLISION_DIR_DEFERRED);
                             do
@@ -5430,6 +5444,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                             } while (remaining != -1);
                             break;
                         }
+
                         /* Visit the sides first; diagonals must pass the corner test. */
                         if (directions & FIELD_COLLISION_DIR_UP)
                         {
@@ -5584,6 +5599,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                             }
                         }
 
+                        /* Diagonals must fit between the side tiles and retain branches the side steps did not cover. */
                         if (directions & FIELD_COLLISION_DIR_UL)
                         {
                             ul_row = tile - columns;
@@ -5781,6 +5797,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                         }
                         if ((directions & FIELD_COLLISION_DIR_SLOW) && (used_directions != 0))
                         {
+                            /* An expanded slow tile must stay above its children in the backtracking stamp order. */
                             tile[0] = stamp + 1;
                         }
                     }
@@ -5819,14 +5836,18 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                     wave_queue = (wave_queue + 1) & 3;
                     entry_count = queue_counts[wave_queue];
                 }
-                /* Link the goal to the route tile, then walk the stamps back to the start. */
+
+                /* The queues are finished; reuse their storage for route tiles, recorded goal first. */
                 route_tiles = &work.route.columns.tiles[0];
                 plane_size = scene->group_tile_count;
                 tile_map = scene->group_tiles;
                 tile = tile_map + (plane_size * goal_group) + (columns * goal_row) + goal_col;
                 cursor = route_tiles;
+                
+                /* The meeting tile may be in the traced corridor, rather than at the exact goal. */
                 if (tile != goal_value.tile)
                 {
+                    /* Strip the group-plane offset to recover local tile coordinates. */
                     route_offset = goal_value.tile - tile_map;
                     while (route_offset >= plane_size)
                     {
@@ -5838,6 +5859,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                     trace.start_z = goal_z;
                     trace.end_x = ((route_offset % columns) - FIELD_COLLISION_PATH_TILE_MARGIN) << col_shift;
                     trace.end_z = ((route_offset / columns) - FIELD_COLLISION_PATH_TILE_MARGIN) << (col_shift + 1);
+                    
                     if (field_collision_trace_line(&trace) != 0)
                     {
                         entry_count = 1;
@@ -5848,6 +5870,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                     }
                     else
                     {
+                        /* If the direct link fails, trace toward the start and stop at the meeting tile. */
                         trace.goal_tile = goal_value.tile;
                         trace.stamp = FIELD_COLLISION_TILE_STAMP_MIN;
                         trace.mode = FIELD_COLLISION_TRACE_STOP_AT_GOAL;
@@ -5878,6 +5901,8 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                 direction = FIELD_COLLISION_PATH_STEP_NONE;
                 previous_direction = FIELD_COLLISION_PATH_STEP_NONE;
                 current_stamp = 0;
+
+                /* Follow the largest valid neighbouring stamp back toward the start. */
                 do
                 {
                     stamp = 0;
@@ -5931,6 +5956,8 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                     {
                         used_directions |= FIELD_COLLISION_DIR_DOWN;
                     }
+                    
+                    /* Diagonals normally need both side candidates; allow a fallback if none was found. */
                     neighbor_stamp = (tile - columns)[-1];
                     if (!(used_directions & (FIELD_COLLISION_DIR_UP | FIELD_COLLISION_DIR_LEFT)) || (stamp == 0))
                     {
@@ -5992,6 +6019,8 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                             return result;
                         }
                     }
+
+                    /* Store direction changes only; straight runs need no intermediate waypoints. */
                     if (direction != previous_direction)
                     {
                         previous_direction = direction;
@@ -6010,6 +6039,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                     }
                     tile = near_tile;
                 } while (current_stamp != FIELD_COLLISION_TILE_START);
+
                 /* Recover cell coordinates from tile positions, goal first. */
                 remaining = entry_count;
                 next.entry = &work.route.columns.x[1];
@@ -6018,6 +6048,8 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                 tile = scene->group_tiles + (scene->group_tile_count * start_group) + (columns * start_row) + start_col;
                 cursor->tile = tile;
                 cursor = &work.route.columns.tiles[0];
+
+                /* Later traces only test visibility, leaving the search stamps intact. */
                 trace.stamp = 0;
                 work.route.columns.x[0].coordinate = goal_x;
                 work.route.columns.z[0].coordinate = goal_z;
@@ -6040,6 +6072,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                     }
                     cursor = &work.route.columns.tiles[0];
                 }
+
                 /* Keep the farthest visible point to remove unnecessary turns. */
                 entry_count = 0;
                 remaining -= 1;
@@ -6061,6 +6094,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                     kept_point[2 * FIELD_COLLISION_PATH_BUCKET_LEN].coordinate = start_z;
                     if (remaining != 0)
                     {
+                        /* Try the farthest remaining point first, then fall back toward the next turn. */
                         skip_count = remaining;
                         trace.tile_base = tile;
                         trace.start_x = start_x;
@@ -6081,7 +6115,8 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                         } while (skip_count != 0);
                     }
                 }
-                /* Move the first bend only when both neighbouring segments stay clear. */
+
+                /* Smooth the bend nearest the goal without moving its two neighbours. */
                 if ((can_connect != 0) && (entry_count >= 2U))
                 {
                     can_connect = 0;
@@ -6097,10 +6132,14 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                     final_point[2 * FIELD_COLLISION_PATH_BUCKET_LEN].coordinate = deferred.entry->coordinate;
                     deferred.entry = &work.route.columns.z[0];
                     near_tile = cursor[2].tile;
+
+                    /* Points 0 and 2 stay fixed; remaining holds point 1's z coordinate in this block. */
                     bend_x = next.entry[1].coordinate;
                     remaining = deferred.entry[1].coordinate;
                     goal_col = next.entry[2].coordinate;
                     goal_row = deferred.entry[2].coordinate;
+
+                    /* Pull halfway toward point 2, accepting the move only if both new segments are clear. */
                     trace.start_x = start_col;
                     trace.tile_base = tile;
                     trace.start_z = start_row;
@@ -6118,6 +6157,8 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                             can_connect = 1;
                             bend_x = mid_x;
                             remaining = mid_z;
+
+                            /* A successful midpoint allows one more halfway step toward the same neighbour. */
                             trace.start_x = start_col;
                             try_quarter = 0;
                             trace.tile_base = tile;
@@ -6139,6 +6180,8 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                             }
                         }
                     }
+
+                    /* If the halfway move fails, try a smaller quarter-step toward point 2. */
                     if (try_quarter != 0)
                     {
                         deferred.coordinate = goal_col - bend_x;
@@ -6164,6 +6207,8 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                             }
                         }
                     }
+
+                    /* Repeat toward point 0, keeping any improvement from the first direction. */
                     try_quarter = 1;
                     trace.start_x = goal_col;
                     trace.tile_base = near_tile;
@@ -6232,14 +6277,19 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                             }
                         }
                     }
+
+                    /* Commit only candidates that preserve both neighbouring connections. */
                     if (can_connect != 0)
                     {
                         work.route.columns.x[1].coordinate = bend_x;
                         work.route.columns.z[1].coordinate = remaining;
                     }
                 }
+
                 /* Reverse the route and restore the footprint centre in world units. */
                 remaining = entry_count;
+
+                /* Respect the caller's path capacity, keeping the points nearest the start. */
                 if ((u32)remaining > FIELD_COLLISION_PATH_OUT_MAX)
                 {
                     remaining = FIELD_COLLISION_PATH_OUT_MAX;
@@ -6270,6 +6320,8 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
             }
         }
     }
+    
+    /* With no floor groups, a shared endpoint tile, or a clear direct trace, only the goal is needed. */
     output_path->x = goal_query->x;
     output_path->z = goal_query->z;
     return 1;
