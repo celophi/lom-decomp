@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="385" viewBox="0 0 1040 385" role="img" aria-labelledby="title desc">
+<title id="title">Search stamps act as breadcrumbs</title><desc id="desc">The search writes decreasing stamps as it spreads. Reconstruction follows increasing stamps back toward the start and keeps direction changes.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/></marker></defs>
+<rect width="1040" height="385" rx="16" fill="white"/>
+<text x="28" y="40" font-family="DejaVu Sans, sans-serif" font-size="27" fill="#223449" font-weight="bold" text-anchor="start">The search leaves breadcrumbs</text>
+<text x="28" y="72" font-family="DejaVu Sans, sans-serif" font-size="19" fill="#586c80" font-weight="normal" text-anchor="start">Earlier waves have larger numbers. Follow those numbers back toward S.</text>
+<polyline points="80,280 230,280 380,280 380,166 530,166 680,166 830,166 960,166" fill="none" stroke="#c0d4df" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="44" y="255" width="72" height="50" rx="8" fill="#e9f3f8" stroke="none"/>
+<text x="80" y="287" font-family="DejaVu Sans, sans-serif" font-size="21" fill="#223449" font-weight="bold" text-anchor="middle">S</text>
+<rect x="194" y="255" width="72" height="50" rx="8" fill="#e9f3f8" stroke="none"/>
+<text x="230" y="287" font-family="DejaVu Sans, sans-serif" font-size="21" fill="#223449" font-weight="bold" text-anchor="middle">250</text>
+<polyline points="187.0,280.0 123.0,280.0" fill="none" stroke="#087e83" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="344" y="255" width="72" height="50" rx="8" fill="#e9f3f8" stroke="none"/>
+<text x="380" y="287" font-family="DejaVu Sans, sans-serif" font-size="21" fill="#223449" font-weight="bold" text-anchor="middle">249</text>
+<polyline points="337.0,280.0 273.0,280.0" fill="none" stroke="#087e83" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="344" y="141" width="72" height="50" rx="8" fill="#e9f3f8" stroke="none"/>
+<text x="380" y="173" font-family="DejaVu Sans, sans-serif" font-size="21" fill="#223449" font-weight="bold" text-anchor="middle">248</text>
+<polyline points="380.0,200.0 380.0,246.0" fill="none" stroke="#087e83" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="494" y="141" width="72" height="50" rx="8" fill="#e9f3f8" stroke="none"/>
+<text x="530" y="173" font-family="DejaVu Sans, sans-serif" font-size="21" fill="#223449" font-weight="bold" text-anchor="middle">247</text>
+<polyline points="487.0,166.0 423.0,166.0" fill="none" stroke="#087e83" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="644" y="141" width="72" height="50" rx="8" fill="#e9f3f8" stroke="none"/>
+<text x="680" y="173" font-family="DejaVu Sans, sans-serif" font-size="21" fill="#223449" font-weight="bold" text-anchor="middle">246</text>
+<polyline points="637.0,166.0 573.0,166.0" fill="none" stroke="#087e83" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="794" y="141" width="72" height="50" rx="8" fill="#e9f3f8" stroke="none"/>
+<text x="830" y="173" font-family="DejaVu Sans, sans-serif" font-size="21" fill="#223449" font-weight="bold" text-anchor="middle">245</text>
+<polyline points="787.0,166.0 723.0,166.0" fill="none" stroke="#087e83" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="924" y="141" width="72" height="50" rx="8" fill="#e9f3f8" stroke="none"/>
+<text x="960" y="173" font-family="DejaVu Sans, sans-serif" font-size="21" fill="#223449" font-weight="bold" text-anchor="middle">Meet</text>
+<polyline points="917.0,166.0 873.0,166.0" fill="none" stroke="#087e83" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<text x="80" y="326" font-family="DejaVu Sans, sans-serif" font-size="18" fill="#586c80" font-weight="normal" text-anchor="middle">Start marker</text>
+<text x="395" y="326" font-family="DejaVu Sans, sans-serif" font-size="18" fill="#087e83" font-weight="normal" text-anchor="start">Keep this turn</text>
+<text x="733" y="226" font-family="DejaVu Sans, sans-serif" font-size="18" fill="#087e83" font-weight="normal" text-anchor="start">Walk back from the meeting point</text>
+<text x="28" y="363" font-family="DejaVu Sans, sans-serif" font-size="17" fill="#586c80" font-weight="normal" text-anchor="start">Numbers illustrate the ordering; this is not a dump of a particular search.</text>
+</svg>

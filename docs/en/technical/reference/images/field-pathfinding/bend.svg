@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="595" viewBox="0 0 1040 595" role="img" aria-labelledby="title desc">
+<title id="title">Test smaller moves when adjusting a bend</title><desc id="desc">The bend nearest the goal is moved toward a fixed neighbour. A halfway move crosses the wall; a quarter-step leaves both connections clear.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/></marker></defs>
+<rect width="1040" height="595" rx="16" fill="white"/>
+<text x="28" y="40" font-family="DejaVu Sans, sans-serif" font-size="27" fill="#223449" font-weight="bold" text-anchor="start">Try moving the bend, but check both connections</text>
+<text x="28" y="72" font-family="DejaVu Sans, sans-serif" font-size="19" fill="#586c80" font-weight="normal" text-anchor="start">Here the halfway move fails. A smaller quarter-step can still work.</text>
+<rect x="90" y="120" width="858" height="370" rx="10" fill="#f7f9fc" stroke="none"/>
+<rect x="486" y="242" width="66" height="220" rx="3" fill="#53657a" stroke="none"/>
+<polyline points="222,303 618,181 816,303" fill="none" stroke="#a6b8c9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8 7"/>
+<polyline points="222,303 420,242 816,303" fill="none" stroke="#bf3f47" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8 7"/>
+<polyline points="222,303 519.0,211.5 816,303" fill="none" stroke="#087e83" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="618,181 420,242" fill="none" stroke="#ba7913" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8 7" marker-end="url(#arrow)"/>
+<circle cx="222" cy="303" r="15" fill="#087e83" stroke="white" stroke-width="2"/>
+<text x="222" y="309" font-family="DejaVu Sans, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle">S</text>
+<circle cx="816" cy="303" r="15" fill="#087e83" stroke="white" stroke-width="2"/>
+<text x="816" y="309" font-family="DejaVu Sans, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle">G</text>
+<circle cx="618" cy="181" r="15" fill="#ba7913" stroke="white" stroke-width="2"/>
+<text x="618" y="187" font-family="DejaVu Sans, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle">B</text>
+<circle cx="420" cy="242" r="15" fill="#bf3f47" stroke="white" stroke-width="2"/>
+<text x="420" y="248" font-family="DejaVu Sans, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle">M</text>
+<circle cx="519.0" cy="211.5" r="15" fill="#087e83" stroke="white" stroke-width="2"/>
+<text x="519.0" y="217.5" font-family="DejaVu Sans, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle">Q</text>
+<text x="640" y="171" font-family="DejaVu Sans, sans-serif" font-size="19" fill="#ba7913" font-weight="normal" text-anchor="start">Original bend</text>
+<text x="405" y="284" font-family="DejaVu Sans, sans-serif" font-size="19" fill="#bf3f47" font-weight="normal" text-anchor="end">Halfway: blocked</text>
+<text x="507.0" y="187.5" font-family="DejaVu Sans, sans-serif" font-size="19" fill="#087e83" font-weight="normal" text-anchor="end">Quarter-step: clear</text>
+<text x="212" y="348" font-family="DejaVu Sans, sans-serif" font-size="18" fill="#586c80" font-weight="normal" text-anchor="middle">Fixed neighbour</text>
+<text x="806" y="348" font-family="DejaVu Sans, sans-serif" font-size="18" fill="#586c80" font-weight="normal" text-anchor="middle">Goal stays fixed</text>
+<text x="28" y="530" font-family="DejaVu Sans, sans-serif" font-size="19" fill="#586c80" font-weight="normal" text-anchor="start">Grey = original route    Red = rejected route    Teal = accepted route</text>
+<text x="28" y="564" font-family="DejaVu Sans, sans-serif" font-size="18" fill="#586c80" font-weight="normal" text-anchor="start">Lines show route centres. Each test also checks the width and depth.</text>
+</svg>
