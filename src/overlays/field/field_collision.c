@@ -203,6 +203,20 @@
 /** Estimated 4-pixel tile total above which 8-pixel tiles are used. */
 #define FIELD_COLLISION_GROUP_TILE_BUDGET 0x4000
 
+/** Surface kinds contributing to a collected floor height. */
+#define FIELD_COLLISION_GROUP_SEEN_FLAT 0x1
+#define FIELD_COLLISION_GROUP_SEEN_SLOPE 0x2
+/** Fine collision tiles are 4 pixels wide and twice as deep. */
+#define FIELD_COLLISION_GROUP_FINE_TILE_SIZE 4
+#define FIELD_COLLISION_GROUP_FINE_TILE_SHIFT 2
+/** Coarse collision tiles halve the map dimensions. */
+#define FIELD_COLLISION_GROUP_COARSE_TILE_SIZE 8
+#define FIELD_COLLISION_GROUP_COARSE_TILE_SHIFT 3
+/** Extra tile columns and rows surrounding a collision map. */
+#define FIELD_COLLISION_GROUP_TILE_PADDING 4
+/** Tile columns represented by one bitmask word. */
+#define FIELD_COLLISION_GROUP_WORD_BITS 32
+
 /* FieldScene::group_count error codes, stored with group_work cleared. */
 /** Too many group ids (scan or pair filter). */
 #define FIELD_COLLISION_GROUP_ERROR_GROUPS 1
@@ -563,18 +577,13 @@ typedef union FieldCollisionRasterSpanFlags
 } FieldCollisionRasterSpanFlags;
 
 /**
- * @brief One entry of field_collision_collect_groups's group-collection scratch list.
- *
- * @note @c seen accumulates which surface kinds referenced the id: bit 0 from
- *       a flat node, bit 1 from a slope node. A scene with slopes keeps only
- *       the entries that ended up with both bits set.
+ * @brief A collected floor height and the surface kinds that use it.
+ * @note A new zero-height slope endpoint starts with both surface-kind bits set.
  */
 typedef struct
 {
-    /** Group id: a flat node's height0, or either end height of a slope. */
-    s16 id;
-    /** Bitmask of the kinds that referenced this id; 3 means both. */
-    s16 seen;
+    s16 height;
+    s16 kinds;
 } FieldGroupEntry;
 
 /**
@@ -3389,270 +3398,241 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
 }
 
 /**
- * @brief Collect the scene's distinct floor groups and size their tile budget.
- *
- * Walks the attached-node list and builds a list of the distinct group ids
- * (floor heights) carried by each node's definition, skipping inactive nodes
- * (@c unk18 == 0) and solid ones (FIELD_COLLISION_SURFACE_SOLID). A flat node
- * contributes @c base_x, a slope contributes @c base_x and @c base_y; an id
- * already present just gets its @c seen mask widened. A zero id from a slope
- * is recorded with @c seen = 3 so it survives the slope filter.
- *
- * If any slope was seen, the list is compacted down to the entries whose
- * @c seen is 3. The surviving ids are sorted into @c scene->group_ids and the
- * matching @c scene->group_counters counters are cleared.
- *
- * Finally the per-group tile budget is computed from the scene's pixel extent:
- * 4-pixel tiles normally, 8-pixel tiles once the estimated tile count exceeds
- * FIELD_COLLISION_GROUP_TILE_BUDGET. Two blocks are carved off @p alloc - the
- * tile area (@c group_tiles) and the work area (@c group_work .. @c group_work_end) - and
- * field_collision_rasterize_groups rasterises the groups into the work area.
- *
- * @param alloc In/out bump allocator; advanced past both blocks on success.
- *
- * @note Fails with @c group_work = 0 and @c group_count = FIELD_COLLISION_GROUP_ERROR_GROUPS
- *       when the scan overflows or more than FIELD_COLLISION_GROUP_MAX ids
- *       survive. The empty-scene path leaves @c group_count = 0 instead, which is
- *       how callers tell "no nodes" from "too many groups".
+ * @brief Collect floor heights and allocate the scene's collision maps.
+ * @param allocator_cursor Scene arena cursor, advanced past the tile and bitmask maps.
+ * @note Collection failures clear group_work and report FIELD_COLLISION_GROUP_ERROR_GROUPS;
+ *       a scene with no nodes reports zero groups. Rasterization may report other errors.
  */
-void field_collision_collect_groups(u8** alloc)
+void field_collision_collect_groups(u8** allocator_cursor)
 {
-    FieldGroupEntry list[FIELD_COLLISION_GROUP_SCAN_MAX];
+    FieldGroupEntry groups[FIELD_COLLISION_GROUP_SCAN_MAX];
     FieldScene* scene;
     FieldNode* node;
     FieldNodeDef* def;
-    FieldSceneHeader* header;
-    s32 i;
-    s32 j;
-    s32 has_pair;
-    s32 seen;
-    s32 seen2;
-    s32 k;
-    s32 width;
-    s32 height;
-    s32 shift;
-    s32 tw;
-    s32 th;
-    s32 rows;
-    s32 count4;
-    u16 key;
-    u16 tmp;
-    u32 count;
+    s32 work_count;
+    s32 index;
+    s32 tile_size;
+    s32 work_bytes;
+    s32 has_slopes;
+    s32 first_kinds;
+    s32 second_kinds;
+    s32 sort_index;
+    s32 scratch;
+    u32 map_columns;
+    s32 scene_depth;
+    s32 tile_shift;
+    s32 content_columns;
+    s32 content_rows;
+    s32 map_rows;
+    s32 group_bytes;
+    s16 sorted_height;
+    s16 swap_height;
+    u32 group_count;
 
     scene = g_field_scene.scene;
-    count = 0;
+    group_count = 0;
     node = scene->nodes;
     if (node == NULL)
     {
-        scene->group_work = 0;
+        scene->group_work = NULL;
         scene->group_count = 0;
         return;
     }
 
-    has_pair = 0;
-    do
+    /* Collect distinct floor heights from enabled, non-solid nodes. */
+    has_slopes = 0;
+    for (; node != NULL; node = node->next)
     {
         def = node->def;
         if ((node->unk18 != 0) && !(def->flags & FIELD_COLLISION_SURFACE_SOLID))
         {
-            i = count - 1;
-            switch ((u8)def->flags & 3)
+            work_count = group_count - 1;
+            switch ((u8)def->flags & FIELD_COLLISION_KIND_MASK)
             {
             case FIELD_COLLISION_KIND_FLAT:
-                width = 1;
-                for (; i != -1; i--)
+                scratch = 1;
+                for (; work_count != -1; work_count--)
                 {
-                    if (list[i].id == def->base_x)
+                    if (groups[work_count].height == def->base_x)
                     {
-                        width = 0;
-                        list[i].seen |= 1;
+                        scratch = 0;
+                        groups[work_count].kinds |= FIELD_COLLISION_GROUP_SEEN_FLAT;
                         break;
                     }
                 }
-                if (width != 0)
+                if (scratch != 0)
                 {
-                    list[count].id = def->base_x;
-                    list[count].seen = 1;
-                    if (count >= FIELD_COLLISION_GROUP_SCAN_MAX)
+                    groups[group_count].height = def->base_x;
+                    groups[group_count].kinds = FIELD_COLLISION_GROUP_SEEN_FLAT;
+                    if (group_count >= FIELD_COLLISION_GROUP_SCAN_MAX)
                     {
-                        goto overflow;
+                        goto too_many_groups;
                     }
-                    count++;
+                    group_count++;
                 }
                 break;
 
             case FIELD_COLLISION_KIND_SLOPE:
-                has_pair = 1;
-                width = 1;
-                for (; i != -1; i--)
+                has_slopes = 1;
+                scratch = 1;
+                for (; work_count != -1; work_count--)
                 {
-                    if (list[i].id == def->base_x)
+                    if (groups[work_count].height == def->base_x)
                     {
-                        width = 0;
-                        list[i].seen |= 2;
+                        scratch = 0;
+                        groups[work_count].kinds |= FIELD_COLLISION_GROUP_SEEN_SLOPE;
                         break;
                     }
                 }
-                if (width != 0)
+                if (scratch != 0)
                 {
+                    /* A newly seen zero height qualifies even without a flat node. */
                     if (def->base_x != 0)
                     {
-                        seen = 2;
-                        list[count].id = def->base_x;
+                        first_kinds = FIELD_COLLISION_GROUP_SEEN_SLOPE;
+                        groups[group_count].height = def->base_x;
                     }
                     else
                     {
-                        seen = 3;
-                        list[count].id = 0;
+                        first_kinds = FIELD_COLLISION_GROUP_SEEN_FLAT | FIELD_COLLISION_GROUP_SEEN_SLOPE;
+                        groups[group_count].height = 0;
                     }
-                    list[count].seen = seen;
-                    if (count >= FIELD_COLLISION_GROUP_SCAN_MAX)
+                    groups[group_count].kinds = first_kinds;
+                    if (group_count >= FIELD_COLLISION_GROUP_SCAN_MAX)
                     {
-                        goto overflow;
+                        goto too_many_groups;
                     }
-                    count++;
+                    group_count++;
                 }
 
-                width = 1;
-                for (i = count - 1; i != -1; i--)
+                scratch = 1;
+                for (work_count = group_count - 1; work_count != -1; work_count--)
                 {
-                    if (list[i].id == def->base_y)
+                    if (groups[work_count].height == def->base_y)
                     {
-                        width = 0;
-                        list[i].seen |= 2;
+                        scratch = 0;
+                        groups[work_count].kinds |= FIELD_COLLISION_GROUP_SEEN_SLOPE;
                         break;
                     }
                 }
-                if (width != 0)
+                if (scratch != 0)
                 {
                     if (def->base_y != 0)
                     {
-                        seen2 = 2;
-                        list[count].id = def->base_y;
+                        second_kinds = FIELD_COLLISION_GROUP_SEEN_SLOPE;
+                        groups[group_count].height = def->base_y;
                     }
                     else
                     {
-                        seen2 = 3;
-                        list[count].id = 0;
+                        second_kinds = FIELD_COLLISION_GROUP_SEEN_FLAT | FIELD_COLLISION_GROUP_SEEN_SLOPE;
+                        groups[group_count].height = 0;
                     }
-                    list[count].seen = seen2;
-                    if (count >= FIELD_COLLISION_GROUP_SCAN_MAX)
+                    groups[group_count].kinds = second_kinds;
+                    if (group_count >= FIELD_COLLISION_GROUP_SCAN_MAX)
                     {
-                        goto overflow;
+                        goto too_many_groups;
                     }
-                    count++;
+                    group_count++;
                 }
                 break;
             }
         }
-        node = node->next;
-    } while (node != NULL);
+    }
 
-    if (has_pair != 0)
+    /* Sloped scenes keep heights marked for both surface kinds. */
+    if (has_slopes != 0)
     {
-        i = count;
-        j = 0;
-        count = 0;
-        i--;
-        if (i != -1)
+        work_count = group_count;
+        index = 0;
+        group_count = 0;
+        for (work_count--; work_count != -1; index++, work_count--)
         {
-            do
+            if (groups[index].kinds == (FIELD_COLLISION_GROUP_SEEN_FLAT | FIELD_COLLISION_GROUP_SEEN_SLOPE))
             {
-                if (list[j].seen == 3)
+                if (index != group_count)
                 {
-                    if (j != count)
-                    {
-                        list[count].id = list[j].id;
-                    }
-                    count++;
+                    groups[group_count].height = groups[index].height;
                 }
-                j++;
-                i--;
-            } while (i != -1);
+                group_count++;
+            }
         }
     }
 
-    if (count == 0)
+    if (group_count == 0)
     {
-        list[0].id = 0;
-        count = 1;
+        groups[0].height = 0;
+        group_count = 1;
     }
-    else if (count > FIELD_COLLISION_GROUP_MAX)
+    else if (group_count > FIELD_COLLISION_GROUP_MAX)
     {
-        goto overflow;
+        goto too_many_groups;
     }
 
-    k = count - 1;
-    if (k != 0)
+    /* Place the largest remaining height at the end to sort in ascending order. */
+    for (sort_index = group_count - 1; sort_index != 0; sort_index--)
     {
-        do
+        sorted_height = groups[sort_index].height;
+        for (index = sort_index - 1; index != -1; index--)
         {
-            key = list[k].id;
-            for (j = k; --j != -1;)
+            if (sorted_height < groups[index].height)
             {
-                if ((s16)key < list[j].id)
-                {
-                    tmp = list[j].id;
-                    list[j].id = key;
-                    key = tmp;
-                    list[k].id = tmp;
-                }
+                swap_height = groups[index].height;
+                groups[index].height = sorted_height;
+                sorted_height = swap_height;
+                groups[sort_index].height = swap_height;
             }
-            scene->group_ids[k] = key;
-            k--;
-        } while (k != 0);
+        }
+        scene->group_ids[sort_index] = sorted_height;
     }
 
-    i = count - 1;
-    scene->group_ids[0] = list[0].id;
-    if (count != 0)
+    scene->group_ids[0] = groups[0].height;
+    for (work_count = group_count - 1; work_count != -1; work_count--)
     {
-        do
-        {
-            scene->group_counters[i] = 0;
-            i--;
-        } while (i != -1);
+        scene->group_counters[work_count] = 0;
     }
 
-    header = scene->header;
-    width = header->unk30;
-    height = header->unk32;
-    j = 4;
-    shift = 2;
-    i = ((width + j - 1) >> shift) * ((height + j * 2 - 1) >> (shift + 1)) * (s32)count;
-    if (i > FIELD_COLLISION_GROUP_TILE_BUDGET)
+    /* Coarser tiles keep large scenes within the collision-map budget. */
+    scratch = scene->header->unk30;
+    scene_depth = scene->header->unk32;
+    tile_size = FIELD_COLLISION_GROUP_FINE_TILE_SIZE;
+    tile_shift = FIELD_COLLISION_GROUP_FINE_TILE_SHIFT;
+    work_count = ((scratch + tile_size - 1) >> tile_shift) * ((scene_depth + tile_size * 2 - 1) >> (tile_shift + 1)) * group_count;
+    if (work_count > FIELD_COLLISION_GROUP_TILE_BUDGET)
     {
-        j = 8;
-        shift = 3;
+        tile_size = FIELD_COLLISION_GROUP_COARSE_TILE_SIZE;
+        tile_shift = FIELD_COLLISION_GROUP_COARSE_TILE_SHIFT;
     }
-    tw = ((width + j) - 1) >> shift;
-    width = tw + 4;
-    th = ((height + (j * 2)) - 1) >> (shift + 1);
-    rows = th + 4;
-    i = width;
-    i *= rows;
-    scene->group_tile_count = i;
-    i = i * count;
-    scene->tile_size = j;
-    scene->group_count = count;
-    scene->tile_cols = width;
-    scene->tile_rows = rows;
-    scene->group_tiles = *alloc;
-    i = (i + 3) & ~3;
-    *alloc += i;
-    i = (((u32)(tw + 0x23) >> 5) * th) * 2;
-    scene->group_stride = i;
-    scene->group_work = *alloc;
-    count4 = count * 4;
-    j = i * count4;
-    *alloc += j;
-    scene->group_work_end = *alloc;
-    ((void (*)(u8**, s32, s32))field_collision_rasterize_groups)(alloc, 0, i);
+    
+    /* Include two border tiles on each edge of the byte maps. */
+    content_columns = ((scratch + tile_size) - 1) >> tile_shift;
+    map_columns = content_columns + FIELD_COLLISION_GROUP_TILE_PADDING;
+    content_rows = ((scene_depth + (tile_size * 2)) - 1) >> (tile_shift + 1);
+    map_rows = content_rows + FIELD_COLLISION_GROUP_TILE_PADDING;
+    work_count = map_columns;
+    work_count *= map_rows;
+    scene->group_tile_count = work_count;
+    work_count = work_count * group_count;
+    scene->tile_size = tile_size;
+    scene->group_count = group_count;
+    scene->tile_cols = map_columns;
+    scene->tile_rows = map_rows;
+
+    /* Reserve the byte maps, then the two bitmask planes for every group. */
+    scene->group_tiles = *allocator_cursor;
+    work_count = (work_count + sizeof(u32) - 1) & ~(sizeof(u32) - 1);
+    *allocator_cursor += work_count;
+    work_count = ((map_columns + FIELD_COLLISION_GROUP_WORD_BITS - 1) / FIELD_COLLISION_GROUP_WORD_BITS * content_rows) * 2;
+    scene->group_stride = work_count;
+    scene->group_work = *allocator_cursor;
+    group_bytes = group_count * sizeof(u32);
+    work_bytes = work_count * group_bytes;
+    *allocator_cursor += work_bytes;
+    scene->group_work_end = *allocator_cursor;
+    field_collision_rasterize_groups(allocator_cursor, NULL);
     return;
 
-overflow:
-    /* Shared failure exit; per-site stores do not merge into this one block. */
-    scene->group_work = 0;
+too_many_groups:
+    scene->group_work = NULL;
     scene->group_count = FIELD_COLLISION_GROUP_ERROR_GROUPS;
 }
 
@@ -3675,7 +3655,7 @@ overflow:
  * when @c id lies below its floor (@c base_x, or the lower of @c base_x /
  * @c base_y for a slope) and at or above @c id_min.
  *
- * @param unused Unused; the target never reads the first argument.
+ * @param allocator_cursor Unused arena cursor; the maps are taken from the scene.
  * @param clip Optional clipping node. When NULL every tile row of the group is
  *             emitted; otherwise only the rows the node covers are, and its
  *             definition is tested against the group id first.
@@ -3683,7 +3663,7 @@ overflow:
  * @note Fails with @c group_work = 0 and a FIELD_COLLISION_GROUP_ERROR_* code in
  *       @c group_count when a node or span list overflows.
  */
-void field_collision_rasterize_groups(s32 unused, FieldNode* clip)
+void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
 {
     FieldCollisionTileSpan cur[FIELD_COLLISION_RASTER_SPAN_MAX];
     FieldCollisionTileSpan acc[FIELD_COLLISION_RASTER_SPAN_MAX];
