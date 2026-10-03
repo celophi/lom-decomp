@@ -145,9 +145,9 @@
 #define FIELD_COLLISION_SLIDE_NONE -2
 
 /** FieldCollisionMover::collision_node value asking for a fresh floor search. */
-#define FIELD_COLLISION_NODE_SEARCH ((FieldCollisionNode*)-1)
+#define FIELD_COLLISION_NODE_SEARCH ((FieldCollisionNode*)(uintptr_t)(u32)-1)
 /** FieldCollisionMover::collision_node value for a mover not tied to any floor node. */
-#define FIELD_COLLISION_NODE_DETACHED ((FieldCollisionNode*)-2)
+#define FIELD_COLLISION_NODE_DETACHED ((FieldCollisionNode*)(uintptr_t)(u32)-2)
 
 /** FieldCollisionMover::flags bit: the mover stands on the node its footprint centre is over. */
 #define FIELD_COLLISION_MOVER_SETTLED 0x1
