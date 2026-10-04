@@ -1,3 +1,4 @@
+#include "../internal/wmap_land_transition.h"
 #include "../internal/wmap_frame_render.h"
 #include "../internal/wmap_party_travel.h"
 /**
@@ -200,9 +201,7 @@ extern s32 g_wmap_game_origin_x;
 extern s32 g_wmap_game_origin_y;
 extern s32 g_wmap_game_hits;
 
-extern s32 D_800DBE78;
 extern s32 D_800DCEC0;
-extern s32 D_8011CF18;
 extern s32 g_wmap_view_scroll_enabled;
 extern s32 g_wmap_selected_artifact;
 extern s32 g_wmap_view_mode;
@@ -224,8 +223,6 @@ extern u8 g_wmap_game_spawn_patterns[][9];
 extern s32 D_800500DC[];
 extern WmapTextureInfo D_800CBBE8[];
 extern s32 D_800DBE74;
-extern s32 D_8013C628[];
-extern s32 D_801ADAF8;
 extern WmapMapPoint D_8004FD04[];
 extern s16 D_800D036C[];
 extern s32 g_wmap_land_scale_steps[];
@@ -309,7 +306,7 @@ void wmap_update_map_game(void)
                     }
                 }
 
-                if ((D_800DBE78 != 0) || (g_wmap_view_mode != 0) || (D_8011CF18 != 0) || (g_wmap_party_moving != 0) || (g_wmap_selected_artifact != -1))
+                if ((g_wmap_carousel_mode != 0) || (g_wmap_view_mode != 0) || (g_wmap_selection_phase != 0) || (g_wmap_party_moving != 0) || (g_wmap_selected_artifact != -1))
                 {
                     valid = 0;
                 }
@@ -327,7 +324,7 @@ void wmap_update_map_game(void)
                 g_wmap_view_scroll_enabled = 0;
                 g_wmap_game_phase = WMAP_GAME_PROMPT;
                 g_wmap_game_timer = 0x708;
-                D_800DBE78 = 1;
+                g_wmap_carousel_mode = 1;
                 g_wmap_spirit_target_brightness = 0;
                 g_wmap_spirit_brightness = 0;
                 g_wmap_auxiliary_labels_hidden = 1;
@@ -484,7 +481,7 @@ void wmap_update_map_game_prompt(void)
             g_wmap_game_phase = WMAP_GAME_PROMPT;
             g_wmap_view_scroll_enabled = 1;
             D_800DCEC0 = 1;
-            D_800DBE78 = 2;
+            g_wmap_carousel_mode = 2;
             wmap_reset_after_transition();
         }
     }
@@ -501,7 +498,7 @@ void wmap_update_map_game_prompt(void)
             g_wmap_game_phase = WMAP_GAME_PROMPT;
             g_wmap_view_scroll_enabled = 1;
             D_800DCEC0 = 1;
-            D_800DBE78 = 2;
+            g_wmap_carousel_mode = 2;
             wmap_reset_after_transition();
         }
     }
@@ -776,7 +773,7 @@ s32 wmap_resolve_land_image(WmapLandDisplay* resource)
 
     if (slot < 0)
     {
-        D_801ADAF8 = 1;
+        g_wmap_land_image_cache_missed = 1;
         if (g_wmap_land_image_load_locked != 0)
         {
             goto fail;
@@ -826,7 +823,7 @@ s32 wmap_resolve_land_image(WmapLandDisplay* resource)
             free_entry = &cache_base[slot];
             resource_id = resource->resource_id;
             free_entry->resource_id = resource_id;
-            image = (u8*)D_8013C628 + D_8013C628[resource_id];
+            image = (u8*)g_wmap_land_image_pack + g_wmap_land_image_pack[resource_id];
             LoadImage(&D_800CBBE8[slot].upload.rect, (u_long*)image);
             free_entry->animation_data = image + 0x2004;
             free_entry->loaded_frame = g_wmap_frame_count;
@@ -875,7 +872,7 @@ replace_oldest:
         oldest_entry->resource_id = i;
         resource_id = resource->resource_id;
         oldest_entry->resource_id = resource_id;
-        image = (u8*)D_8013C628 + D_8013C628[resource_id];
+        image = (u8*)g_wmap_land_image_pack + g_wmap_land_image_pack[resource_id];
         LoadImage(&D_800CBBE8[oldest_slot].upload.rect, (u_long*)image);
         image += 0x2004;
         oldest_entry->animation_data = image;
@@ -1581,7 +1578,7 @@ void wmap_draw_spirit_levels(void)
         color = 0;
     }
 
-    if (D_8011CF18 == 2)
+    if (g_wmap_selection_phase == 2)
     {
         wmap_get_artifact_spirit_sprites(wmap_get_selected_artifact(), sprite_indices);
     }
@@ -1919,7 +1916,7 @@ void wmap_upload_land_image(WmapLandDisplay* resource, s32 slot)
     cache = &base[slot];
     resource_id = resource->resource_id;
     cache->resource_id = resource_id;
-    image = (u8*)D_8013C628 + D_8013C628[resource_id];
+    image = (u8*)g_wmap_land_image_pack + g_wmap_land_image_pack[resource_id];
     LoadImage(&D_800CBBE8[slot].upload.rect, (u_long*)image);
     cache->animation_data = image + 0x2004;
     cache->loaded_frame = g_wmap_frame_count;

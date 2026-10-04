@@ -71,8 +71,6 @@ extern s32 g_wmap_land_effect_22_sequence_13_timer;
 extern s32 g_wmap_land_effect_22_sequence_14_timer;
 extern s32 g_wmap_land_effect_22_timer;
 extern void (*D_800D6904[])(void);
-extern s32 D_8013B294;
-extern s32 D_80139228;
 extern s32 g_wmap_land_effect_22_timeline_timer;
 extern void (*D_800D6914[])(void);
 extern s32 g_wmap_land_effect_22_sequence_1_timer;
@@ -432,7 +430,7 @@ void wmap_land_effect_22_step_01(void)
 WMAP_STEP_WAIT_IDLE(wmap_land_effect_22_wait_idle, g_wmap_land_effect_22_step, wmap_land_effect_22_step_03)
 
 /** @brief Start the world-map exit and advance the sequence. */
-WMAP_STEP_BEGIN_EXIT(wmap_land_effect_22_step_03, g_wmap_land_effect_22_step, 1)
+WMAP_STEP_BEGIN_EXIT(wmap_land_effect_22_step_03, g_wmap_land_effect_22_step, WMAP_EXIT_FADE_OVERLAY)
 
 WMAP_STEP_RUNNER(wmap_land_effect_22_run_timeline, D_800D6914, 0x16, g_wmap_land_effect_22_timeline_step, g_wmap_land_effect_22_timeline_timer)
 

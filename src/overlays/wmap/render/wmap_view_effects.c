@@ -1,3 +1,4 @@
+#include "../internal/wmap_land_transition.h"
 #include "../internal/wmap_frame_render.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_main.h"
@@ -148,7 +149,6 @@ extern s32 g_wmap_cursor_limits[];
 extern s32 g_wmap_cursor_column;
 extern s32 g_wmap_cursor_row;
 extern s32 g_wmap_spirit_selection;
-extern s32 D_8011CF18;
 extern s32 g_wmap_sequence_count;
 extern s32 g_wmap_view_scroll_enabled;
 extern s32 g_wmap_view_mode;
@@ -158,7 +158,6 @@ extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
 extern SVECTOR g_wmap_grid_vertices[];
 extern s16 g_wmap_grid_vertex_indices[];
-extern s32 D_800DBE78;
 extern WmapView g_wmap_saved_view;
 extern s32 g_wmap_selected_artifact;
 extern WmapView g_wmap_zoom_view;
@@ -358,7 +357,7 @@ s32 wmap_update_map_view(s32 initialize)
         func_8006AEE0();
         return 1;
     }
-    if ((g_wmap_view_mode == WMAP_VIEW_MODE_MAP) && (g_wmap_view_scroll_mode == 0) && (D_8011CF18 == 0))
+    if ((g_wmap_view_mode == WMAP_VIEW_MODE_MAP) && (g_wmap_view_scroll_mode == 0) && (g_wmap_selection_phase == 0))
     {
         if (g_wmap_buttons_repeat & PADLleft)
         {
@@ -822,7 +821,7 @@ void wmap_update_view_zoom(void)
     switch (mode)
     {
     case WMAP_VIEW_MODE_MAP:
-        if ((g_wmap_buttons_repeat & PADRup) && (D_8011CF18 == 0) && (g_wmap_selected_artifact == -1))
+        if ((g_wmap_buttons_repeat & PADRup) && (g_wmap_selection_phase == 0) && (g_wmap_selected_artifact == -1))
         {
             g_wmap_view_mode = WMAP_VIEW_MODE_ZOOM_OUT;
             func_8005FF88(-1);
@@ -865,7 +864,7 @@ void wmap_update_view_zoom(void)
         if (in_scale == WMAP_VIEW_SCALE * WMAP_ZOOM_ONE)
         {
             g_wmap_view = g_wmap_saved_view;
-            D_800DBE78 = 0;
+            g_wmap_carousel_mode = 0;
             g_wmap_view_mode = WMAP_VIEW_MODE_MAP;
             g_wmap_land_display_limit = mode;
             return;
@@ -889,7 +888,7 @@ void wmap_update_view_zoom(void)
         {
             g_wmap_view.x = 0;
             g_wmap_view.projection_scale = target_scale;
-            D_800DBE78 = 0;
+            g_wmap_carousel_mode = 0;
             g_wmap_view_mode = WMAP_VIEW_MODE_SPIRITS;
             g_wmap_view.y = 0;
             g_wmap_land_display_limit = 1;

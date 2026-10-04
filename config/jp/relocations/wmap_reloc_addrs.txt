@@ -38,48 +38,48 @@ rom:0x1A9A1 reloc:MIPS_LO16 symbol:D_8013B270
 // the event switch. Every annotated immediate is checked against retail WMAP.BIN.
 // JP not found: rom:0x127BD reloc:MIPS_HI16 symbol:g_wmap_input_script
 rom:0x127AD reloc:MIPS_HI16 symbol:g_wmap_party_visible
-rom:0x127BD reloc:MIPS_HI16 symbol:D_801ADB90
+rom:0x127BD reloc:MIPS_HI16 symbol:g_wmap_entry_music_enabled
 rom:0x127C9 reloc:MIPS_HI16 symbol:g_wmap_event_active
 // JP not found: rom:0x12889 reloc:MIPS_LO16 symbol:g_wmap_input_script
 // JP not found: rom:0x12895 reloc:MIPS_LO16 symbol:g_wmap_input_script
 // JP not found: rom:0x1289D reloc:MIPS_LO16 symbol:g_wmap_input_script
 rom:0x12851 reloc:MIPS_LO16 symbol:g_wmap_party_visible
-rom:0x128C1 reloc:MIPS_LO16 symbol:D_801ADB90
-rom:0x1290D reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x128C1 reloc:MIPS_LO16 symbol:g_wmap_entry_music_enabled
+rom:0x1290D reloc:MIPS_LO16 symbol:g_wmap_entry_music_enabled
 rom:0x12911 reloc:MIPS_LO16 symbol:g_wmap_party_visible
 rom:0x12921 reloc:MIPS_LO16 symbol:g_wmap_event_active
-rom:0x12929 reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x12929 reloc:MIPS_LO16 symbol:g_wmap_entry_music_enabled
 rom:0x12941 reloc:MIPS_LO16 symbol:g_wmap_event_active
-rom:0x12979 reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x12979 reloc:MIPS_LO16 symbol:g_wmap_entry_music_enabled
 rom:0x1297D reloc:MIPS_LO16 symbol:g_wmap_party_visible
 rom:0x12991 reloc:MIPS_LO16 symbol:g_wmap_event_active
 rom:0x129A9 reloc:MIPS_LO16 symbol:g_wmap_event_active
-rom:0x129E9 reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x129E9 reloc:MIPS_LO16 symbol:g_wmap_entry_music_enabled
 rom:0x12A19 reloc:MIPS_LO16 symbol:g_wmap_event_active
 rom:0x12A1D reloc:MIPS_LO16 symbol:g_wmap_party_visible
-rom:0x12A6D reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x12A6D reloc:MIPS_LO16 symbol:g_wmap_entry_music_enabled
 rom:0x12A71 reloc:MIPS_LO16 symbol:g_wmap_party_visible
 rom:0x12A75 reloc:MIPS_LO16 symbol:g_wmap_event_active
-rom:0x12AE5 reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x12AE5 reloc:MIPS_LO16 symbol:g_wmap_entry_music_enabled
 rom:0x12AE9 reloc:MIPS_LO16 symbol:g_wmap_party_visible
 rom:0x12AF5 reloc:MIPS_LO16 symbol:g_wmap_event_active
-rom:0x12B91 reloc:MIPS_LO16 symbol:D_801ADB90
+rom:0x12B91 reloc:MIPS_LO16 symbol:g_wmap_entry_music_enabled
 rom:0x12B95 reloc:MIPS_LO16 symbol:g_wmap_party_visible
 rom:0x12BA1 reloc:MIPS_LO16 symbol:g_wmap_event_active
 
-// wmap_run_loop hoists %hi(D_80182E34) into s7 and %hi(g_wmap_spirit_brightness)
+// wmap_run_loop hoists %hi(g_wmap_status_panel_mode) into s7 and %hi(g_wmap_spirit_brightness)
 // into s6 before its land-event loop; Splat loses both pairs across the switch.
-rom:0x127C1 reloc:MIPS_HI16 symbol:D_80182E34
+rom:0x127C1 reloc:MIPS_HI16 symbol:g_wmap_status_panel_mode
 rom:0x127C5 reloc:MIPS_HI16 symbol:g_wmap_spirit_brightness
-rom:0x12915 reloc:MIPS_LO16 symbol:D_80182E34
+rom:0x12915 reloc:MIPS_LO16 symbol:g_wmap_status_panel_mode
 rom:0x1291D reloc:MIPS_LO16 symbol:g_wmap_spirit_brightness
-rom:0x12981 reloc:MIPS_LO16 symbol:D_80182E34
+rom:0x12981 reloc:MIPS_LO16 symbol:g_wmap_status_panel_mode
 rom:0x12989 reloc:MIPS_LO16 symbol:g_wmap_spirit_brightness
-rom:0x12A21 reloc:MIPS_LO16 symbol:D_80182E34
+rom:0x12A21 reloc:MIPS_LO16 symbol:g_wmap_status_panel_mode
 rom:0x12A25 reloc:MIPS_LO16 symbol:g_wmap_spirit_brightness
-rom:0x12AA5 reloc:MIPS_LO16 symbol:D_80182E34
+rom:0x12AA5 reloc:MIPS_LO16 symbol:g_wmap_status_panel_mode
 rom:0x12AA9 reloc:MIPS_LO16 symbol:g_wmap_spirit_brightness
-rom:0x12AED reloc:MIPS_LO16 symbol:D_80182E34
+rom:0x12AED reloc:MIPS_LO16 symbol:g_wmap_status_panel_mode
 rom:0x12AF1 reloc:MIPS_LO16 symbol:g_wmap_spirit_brightness
-rom:0x12B99 reloc:MIPS_LO16 symbol:D_80182E34
+rom:0x12B99 reloc:MIPS_LO16 symbol:g_wmap_status_panel_mode
 rom:0x12B9D reloc:MIPS_LO16 symbol:g_wmap_spirit_brightness

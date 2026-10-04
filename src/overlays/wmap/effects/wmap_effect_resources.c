@@ -3,7 +3,6 @@
 #include "../internal/wmap_effect_resources.h"
 #include "main/cdrom.h"
 
-extern s32 D_8013B294;
 extern u8 g_wmap_load_buffer[];
 extern u8 D_800DD7B4[];
 extern u8 D_800DDE54[];
@@ -80,7 +79,7 @@ void func_800A89DC(s32 index)
     if (index >= 36 || index < 0)
     {
         index = 0;
-        D_8013B294 = 1;
+        g_wmap_exit_frame = 1;
     }
     D_800D6D5C[index]();
 }

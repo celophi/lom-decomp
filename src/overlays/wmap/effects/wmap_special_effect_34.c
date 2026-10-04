@@ -52,11 +52,9 @@ extern s32 D_8013923C;
 extern s32 D_80139240;
 extern s32 D_8013924C;
 extern s32 g_wmap_view_scroll_mode;
-extern s32 D_8013B294;
 extern u8 D_80182E40;
 extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
-extern s32 D_80182DD8;
 extern u8 D_8018B240;
 extern s32 D_801B3210;
 extern s32 D_801B3214;
@@ -198,7 +196,7 @@ void wmap_special_effect_34_sequence_1_step_06(void)
 void wmap_special_effect_34_sequence_2_step_01(void)
 {
     g_wmap_view_scroll_mode = 0;
-    if (wmap_find_land_cell(D_80054A18[(D_80182DD8 - 3) % 5], &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y) != 0)
+    if (wmap_find_land_cell(D_80054A18[(g_wmap_special_land_event - 3) % 5], &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y) != 0)
     {
         g_wmap_view_scroll_mode = 2;
         g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * 0x30) - g_wmap_view.x;
@@ -211,7 +209,7 @@ void wmap_special_effect_34_sequence_2_step_01(void)
 void wmap_special_effect_34_sequence_2_step_03(void)
 {
     g_wmap_view_scroll_mode = 0;
-    if (wmap_find_land_cell(D_80054A18[(D_80182DD8 - 2) % 5], &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y) != 0)
+    if (wmap_find_land_cell(D_80054A18[(g_wmap_special_land_event - 2) % 5], &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y) != 0)
     {
         g_wmap_view_scroll_mode = 2;
         g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * 0x30) - g_wmap_view.x;
@@ -224,7 +222,7 @@ void wmap_special_effect_34_sequence_2_step_03(void)
 void wmap_special_effect_34_sequence_2_step_05(void)
 {
     g_wmap_view_scroll_mode = 0;
-    if (wmap_find_land_cell(D_80054A18[(D_80182DD8 - 1) % 5], &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y) != 0)
+    if (wmap_find_land_cell(D_80054A18[(g_wmap_special_land_event - 1) % 5], &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y) != 0)
     {
         g_wmap_view_scroll_mode = 2;
         g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * 0x30) - g_wmap_view.x;
@@ -237,7 +235,7 @@ void wmap_special_effect_34_sequence_2_step_05(void)
 void wmap_special_effect_34_sequence_2_step_07(void)
 {
     g_wmap_view_scroll_mode = 0;
-    if (wmap_find_land_cell(D_80054A18[D_80182DD8 % 5], &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y) != 0)
+    if (wmap_find_land_cell(D_80054A18[g_wmap_special_land_event % 5], &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y) != 0)
     {
         g_wmap_view_scroll_mode = 2;
         g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * 0x30) - g_wmap_view.x;
@@ -346,14 +344,14 @@ WMAP_STEP_WAIT_SCROLL(wmap_special_effect_34_step_06,
 /**
  * @brief Effect 34 step: reset after the transition, restore the saved
  *        cursor and advance the step.
- * @note JP neither sets D_8013B294 nor restores the cursor.
+ * @note JP neither sets g_wmap_exit_frame nor restores the cursor.
  */
 void wmap_special_effect_34_step_07(void)
 {
     g_wmap_event_active = 0;
     wmap_reset_after_transition();
 #if !defined(VERSION_JP)
-    D_8013B294 = 1;
+    g_wmap_exit_frame = 1;
     g_wmap_cursor_column = D_801B3210;
     g_wmap_cursor_row = D_801B3214;
 #endif
@@ -395,7 +393,7 @@ void wmap_special_effect_34_timeline_step_02(void)
  */
 void wmap_special_effect_34_timeline_step_03(void)
 {
-    wmap_find_land_cell(D_80054A18[D_80182DD8 - 4], &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
+    wmap_find_land_cell(D_80054A18[g_wmap_special_land_event - 4], &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_view_scroll_mode = 2;
     g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * 0x30) - g_wmap_view.x;
     g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * 0x30) - g_wmap_view.y;

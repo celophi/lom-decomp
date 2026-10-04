@@ -120,7 +120,6 @@ extern WmapView g_wmap_view;
 extern WmapView g_wmap_saved_view;
 extern s32 D_800DCEC0;
 extern s32 D_8013B288;
-extern s32 D_8013B294;
 
 extern u32 g_wmap_special_travel_step;
 extern s32 g_wmap_special_travel_timer;
@@ -783,7 +782,7 @@ void wmap_special_travel_fly_away(void)
 /** @brief Special travel step 19: flag the arrival. */
 void wmap_special_travel_finish(void)
 {
-    D_8013B294 = 1;
+    g_wmap_exit_frame = 1;
     g_wmap_special_travel_step += 1;
 }
 
@@ -888,6 +887,6 @@ void wmap_special_return_fly_away(void)
 /** @brief Special return step 13: flag the arrival. */
 void wmap_special_return_finish(void)
 {
-    D_8013B294 = 1;
+    g_wmap_exit_frame = 1;
     g_wmap_special_return_step += 1;
 }

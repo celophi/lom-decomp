@@ -52,4 +52,12 @@ void wmap_update_party_travel(void);
 void wmap_init_party_travel(void);
 void wmap_set_traveler_position(s32 index, s32 x, s32 y);
 
+/** @brief Nonzero to load the second traveler at land 27. */
+extern s32 g_wmap_second_traveler_enabled;
+/** @brief Nonzero to load the third traveler at land 3. */
+extern s32 g_wmap_third_traveler_enabled;
+
+/** @brief Saved entry day; nonzero selects the alternate first-traveler sprite. */
+extern s32 g_wmap_entry_day;
+
 #endif

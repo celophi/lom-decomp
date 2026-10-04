@@ -1,3 +1,4 @@
+#include "../internal/wmap_frame_render.h"
 #include "../internal/wmap_model_render.h"
 #include "../internal/wmap_land_event_00_b.h"
 #include "../internal/wmap_resource_support.h"
@@ -99,9 +100,6 @@ extern WmapHandler D_800D7434[];
 extern WmapHandler D_800D744C[];
 extern WmapHandler D_800D745C[];
 extern s32 g_wmap_load_buffer[];
-extern s32 D_800D9228;
-extern s32 D_8011D500;
-extern s32 D_80139228;
 extern s32 D_80139234;
 extern s32 D_8013923C;
 extern s32 D_80139240;
@@ -109,9 +107,7 @@ extern s32 D_8013924C;
 extern s32 D_80139250;
 extern s32 D_80139260;
 extern s32 D_80139264;
-extern s32 D_8013B294;
 extern s32 D_80182DE4;
-extern s32 D_80182E38;
 extern s32 D_801B24B4;
 extern s32 D_801B25D8;
 extern s32 g_wmap_land_event_00_b_sequence_1_timer;
@@ -615,9 +611,9 @@ void wmap_land_event_00_b_sequence_1_step_03(void)
     cdrom_wait_queue_empty();
     g_wmap_focus_screen_position.point.x = 0x94;
     g_wmap_focus_screen_position.point.y = 0x31;
-    D_80182E38 = 4;
-    D_800D9228 = 0xFF;
-    D_8011D500 = 0xFF;
+    g_wmap_overlay_fade_depth = 4;
+    g_wmap_overlay_fade_level = 0xFF;
+    g_wmap_overlay_fade_target = 0xFF;
     wmap_start_sequence(wmap_land_event_00_b_run_timeline);
     g_wmap_sequence_busy = 1;
     g_wmap_land_event_00_b_sequence_1_step++;
@@ -627,7 +623,7 @@ void wmap_land_event_00_b_sequence_1_step_03(void)
 WMAP_STEP_WAIT_IDLE(wmap_land_event_00_b_sequence_1_step_04, g_wmap_land_event_00_b_sequence_1_step, wmap_land_event_00_b_sequence_1_step_05)
 
 /** @brief Start the world-map exit and advance the sequence. */
-WMAP_STEP_BEGIN_EXIT(wmap_land_event_00_b_sequence_1_step_05, g_wmap_land_event_00_b_sequence_1_step, 2)
+WMAP_STEP_BEGIN_EXIT(wmap_land_event_00_b_sequence_1_step_05, g_wmap_land_event_00_b_sequence_1_step, WMAP_EXIT_DIRECT)
 
 WMAP_STEP_RUNNER(wmap_land_event_00_b_run_timeline, D_800D732C, 0x16, g_wmap_land_event_00_b_timeline_step, g_wmap_land_event_00_b_timeline_timer)
 
@@ -637,7 +633,7 @@ void wmap_land_event_00_b_timeline_step_01(void)
 {
     g_wmap_event_active = 1;
     wmap_play_sound(0x38, 0x80);
-    D_8011D500 = 0x7F;
+    g_wmap_overlay_fade_target = 0x7F;
     wmap_start_sequence(wmap_land_event_00_b_run_sequence_10);
     wmap_start_sequence(wmap_land_event_00_b_run_sequence_8);
     wmap_start_map_tint(0x904060);
@@ -666,7 +662,7 @@ WMAP_STEP_WAIT(wmap_land_event_00_b_timeline_step_06, g_wmap_land_event_00_b_tim
 
 void wmap_land_event_00_b_timeline_step_07(void)
 {
-    D_8011D500 = 1;
+    g_wmap_overlay_fade_target = 1;
     wmap_start_sequence(wmap_land_event_00_b_run_sequence_9);
     g_wmap_land_event_00_b_timeline_timer = 0x14;
     g_wmap_land_event_00_b_timeline_step++;
@@ -683,7 +679,7 @@ void wmap_land_event_00_b_timeline_step_11(void)
 {
     g_wmap_backdrop_target_level = 0x11;
     wmap_start_map_tint(0x755085);
-    D_8011D500 = 0x23;
+    g_wmap_overlay_fade_target = 0x23;
     wmap_start_sequence(wmap_land_event_00_b_run_sequence_6);
     g_wmap_land_event_00_b_timeline_timer = 0x14;
     g_wmap_land_event_00_b_timeline_step++;
@@ -718,7 +714,7 @@ WMAP_STEP_WAIT(wmap_land_event_00_b_timeline_step_18, g_wmap_land_event_00_b_tim
 
 void wmap_land_event_00_b_timeline_step_19(void)
 {
-    D_8011D500 = 0xFF;
+    g_wmap_overlay_fade_target = 0xFF;
     g_wmap_land_event_00_b_timeline_timer = 0x70;
     g_wmap_land_event_00_b_timeline_step++;
 }

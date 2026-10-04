@@ -1,3 +1,4 @@
+#include "../internal/wmap_land_transition.h"
 #include "../internal/wmap_main.h"
 #include "../internal/wmap_party_travel.h"
 #include "../internal/wmap_pathfinding.h"
@@ -76,22 +77,14 @@ extern const WmapTravelScreen D_8004FD04[];
 extern u8 D_800DBE98[];
 extern u8 D_800DC298[];
 extern u8 D_800DC698[];
-extern s32 D_800D9224;
-extern s32 D_800DBE78;
 extern s32 g_wmap_cursor_column;
 extern s32 g_wmap_cursor_row;
-extern s32 D_8011CF18;
 extern s32 D_8011CF20;
 extern s32 g_wmap_sequence_count;
 extern s32 g_wmap_view_mode;
-extern s32 D_801398B8;
 extern s32 g_wmap_view_scroll_mode;
-extern s32 D_8013B294;
-extern s32 D_80182D5C;
 extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
-extern s32 D_80182E1C;
-extern s32 D_80182E34;
 extern s32 g_wmap_travel_sound_active;
 
 void wmap_update_travelers(void);
@@ -309,13 +302,13 @@ void wmap_update_party_travel(void)
     {
         selected_x = g_wmap_view.x / WMAP_CELL_SPACING + g_wmap_cursor_column;
         selected_y = g_wmap_view.y / WMAP_CELL_SPACING + g_wmap_cursor_row;
-        if (g_wmap_cells[selected_x][selected_y].travel_allowed != 0 && g_wmap_view_mode == 0 && D_8011CF18 == 0)
+        if (g_wmap_cells[selected_x][selected_y].travel_allowed != 0 && g_wmap_view_mode == 0 && g_wmap_selection_phase == 0)
         {
             if (selected_x != g_wmap_travelers[0].cell_x || (at_destination = 1, selected_y != g_wmap_travelers[0].cell_y))
             {
                 at_destination = 0;
             }
-            D_8013B294 = at_destination;
+            g_wmap_exit_frame = at_destination;
             if (at_destination == 0)
             {
                 if (g_wmap_cells[selected_x][selected_y].land_id == WMAP_SPECIAL_TRAVEL_LAND)
@@ -384,26 +377,26 @@ void wmap_init_party_travel(void)
         sprite->shade = WMAP_TRAVEL_SHADE;
         g_wmap_actor_animations[i].data = resource + i * WMAP_TRAVEL_ANIMATION_BYTES;
     }
-    D_80182D5C = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
+    g_wmap_entry_day = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
     wmap_set_traveler_position(0, g_wmap_travelers[0].cell_x, g_wmap_travelers[0].cell_y);
     if (g_wmap_cells[g_wmap_travelers[0].cell_x][g_wmap_travelers[0].cell_y].land_id == WMAP_SPECIAL_TRAVEL_LAND)
     {
         g_wmap_input_locked = 1;
         g_wmap_buttons_held = 0;
         g_wmap_buttons_repeat = 0;
-        D_80182E34 = 3;
-        D_800DBE78 = 3;
+        g_wmap_status_panel_mode = 3;
+        g_wmap_carousel_mode = 3;
         D_8011CF20 = 1;
         g_wmap_sprite_actors[0].resource_index = -1;
-        D_800D9224++;
+        g_wmap_pending_event_count++;
     }
     resource_id = WMAP_TRAVEL_SPRITE_RESOURCE;
-    if (D_80182D5C != 0)
+    if (g_wmap_entry_day != 0)
     {
         resource_id = WMAP_TRAVEL_ALTERNATE_SPRITE_RESOURCE;
     }
     func_80064F64(resource_id);
-    if (D_801398B8 != 0)
+    if (g_wmap_second_traveler_enabled != 0)
     {
         cdrom_queue_read(WMAP_TRAVEL_SECOND_ANIMATION_RESOURCE, D_800DC298);
         g_wmap_sprite_actors[1].resource_index = 1;
@@ -411,7 +404,7 @@ void wmap_init_party_travel(void)
         wmap_set_traveler_position(1, first_x, first_y);
         cdrom_wait_queue_empty();
     }
-    if (D_80182E1C != 0)
+    if (g_wmap_third_traveler_enabled != 0)
     {
         cdrom_queue_read(WMAP_TRAVEL_THIRD_ANIMATION_RESOURCE, D_800DC698);
         g_wmap_sprite_actors[2].resource_index = 2;

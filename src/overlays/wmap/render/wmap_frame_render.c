@@ -51,16 +51,9 @@ typedef struct
 
 extern WmapQuad D_800D043C;
 
-extern u32 D_800D9238;
 extern SVECTOR D_801B2490;
 extern s32 D_800DBE7C;
 extern s32 D_800DCEDC;
-extern u8 D_8010CF18[];
-extern u8 D_80114F18[];
-extern s32 D_80182E00;
-extern s32 D_800D9228;
-extern s32 D_8011D500;
-extern s32 D_80182E38;
 
 static void func_8006432C(VECTOR* left_top, VECTOR* center_top, VECTOR* left_bottom, VECTOR* center_bottom, VECTOR* right_top, VECTOR* right_bottom);
 
@@ -127,7 +120,7 @@ static void func_8006432C(VECTOR* left_top, VECTOR* center_top, VECTOR* left_bot
     quad->u0 = quad->u2 = 0;
     quad->u1 = quad->u3 = 248;
     quad->v2 = quad->v3 = 240;
-    *(u32*)&quad->r0 = D_800D9238;
+    *(u32*)&quad->r0 = g_wmap_exit_panel_color;
     quad->u0 = quad->v0 = 0;
     setClut(quad, 0, 0);
     setTPage(quad, 2, 1, 0x140, 0);
@@ -155,7 +148,7 @@ static void func_8006432C(VECTOR* left_top, VECTOR* center_top, VECTOR* left_bot
     quad->u0 = quad->u2 = 0;
     quad->u1 = quad->u3 = 63;
     quad->v2 = quad->v3 = 240;
-    *(u32*)&quad->r0 = D_800D9238;
+    *(u32*)&quad->r0 = g_wmap_exit_panel_color;
     quad->u0 = quad->v0 = 0;
     setClut(quad, 0, 0);
     setTPage(quad, 2, 1, 0x240, 0);
@@ -287,12 +280,12 @@ void func_80064AF8(void)
 {
     if (g_wmap_frame_count & 1)
     {
-        g_wmap_frames[0].packet_cursor = D_8010CF18;
+        g_wmap_frames[0].packet_cursor = g_wmap_packet_buffer_0;
         g_wmap_current_frame = &g_wmap_frames[0];
     }
     else
     {
-        g_wmap_frames[1].packet_cursor = D_80114F18;
+        g_wmap_frames[1].packet_cursor = g_wmap_packet_buffer_1;
         g_wmap_current_frame = &g_wmap_frames[1];
     }
     g_wmap_packet_bytes = 0;
@@ -317,11 +310,11 @@ void func_80064BF8(void)
     WmapTexturedTriangle* triangle;
 
     quad = (WmapQuad*)g_wmap_current_frame->packet_cursor;
-    if (D_80182E00 >= 4)
+    if (g_wmap_entry_fade_level >= 4)
     {
         *quad = D_800D043C;
-        quad->r0 = quad->g0 = quad->b0 = D_80182E00;
-        D_80182E00 -= 8;
+        quad->r0 = quad->g0 = quad->b0 = g_wmap_entry_fade_level;
+        g_wmap_entry_fade_level -= 8;
         quad->header.packet.length = 5;
         quad->code = 0x2A;
         quad->header.tag = ((quad->header.tag & 0xFF000000) | (g_wmap_current_frame->ordering_table[1] & 0xFFFFFF));
@@ -361,31 +354,31 @@ s32 func_80064D64(s32 initialize)
     WmapTexturedTriangle* triangle;
 
     quad = (WmapQuad*)g_wmap_current_frame->packet_cursor;
-    if (D_800D9228 > D_8011D500)
+    if (g_wmap_overlay_fade_level > g_wmap_overlay_fade_target)
     {
-        D_800D9228 -= 2;
+        g_wmap_overlay_fade_level -= 2;
     }
-    else if (D_800D9228 < D_8011D500)
+    else if (g_wmap_overlay_fade_level < g_wmap_overlay_fade_target)
     {
-        D_800D9228 += 2;
+        g_wmap_overlay_fade_level += 2;
     }
-    if (D_800D9228 == 0)
+    if (g_wmap_overlay_fade_level == 0)
     {
         return 1;
     }
-    intensity = D_800D9228;
+    intensity = g_wmap_overlay_fade_level;
     *quad = D_800D043C;
     quad->header.packet.length = 5;
     quad->code = 0x2A;
     quad->r0 = quad->g0 = quad->b0 = intensity;
-    addPrim(&D_80182E38[g_wmap_current_frame->ordering_table], quad);
+    addPrim(&g_wmap_overlay_fade_depth[g_wmap_current_frame->ordering_table], quad);
     if (g_wmap_packet_bytes < 0x7D00)
     {
         g_wmap_packet_bytes += 0x18;
         g_wmap_current_frame->packet_cursor += sizeof(WmapQuad);
     }
     triangle = (WmapTexturedTriangle*)g_wmap_current_frame->packet_cursor;
-    depth = D_80182E38;
+    depth = g_wmap_overlay_fade_depth;
     triangle->header.packet.length = 7;
     triangle->code = 0x24;
     *(s32*)&triangle->x2 = 0x190;

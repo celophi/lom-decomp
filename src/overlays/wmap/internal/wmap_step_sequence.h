@@ -738,8 +738,8 @@
 #define WMAP_STEP_BEGIN_EXIT(name, step, mode)                                           \
     void name(void)                                                                      \
     {                                                                                    \
-        D_8013B294 = 1;                                                                  \
-        D_80139228 = (mode);                                                             \
+        g_wmap_exit_frame = 1;                                                                  \
+        g_wmap_exit_mode = (mode);                                                             \
         (step) += 1;                                                                     \
     }
 

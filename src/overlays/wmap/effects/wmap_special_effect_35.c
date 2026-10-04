@@ -1,3 +1,4 @@
+#include "../internal/wmap_frame_render.h"
 #include "../internal/wmap_model_render.h"
 #include "../internal/wmap_main.h"
 #include "../internal/wmap_special_effect_35.h"
@@ -124,19 +125,16 @@ extern WmapHandler g_wmap_effect35_emitter_b_steps[WMAP_EFFECT35_EMITTER_STEPS];
 extern WmapHandler g_wmap_effect35_timeline_steps[WMAP_EFFECT35_TIMELINE_STEPS];
 extern WmapHandler g_wmap_effect35_steps[WMAP_EFFECT35_MAIN_STEPS];
 extern s32 g_wmap_focus_screen_position;
-extern s32 D_8011D500;
 extern u8* g_wmap_effect_model_pack_1;
 extern u8* g_wmap_effect_model_pack_2;
 extern u8* g_wmap_effect_model_pack_3;
 extern u8 g_wmap_animation_bank_0[];
-extern s32 D_80139228;
 extern s32 D_8013923C;
 extern s32 D_80139260;
 extern WmapEffectEmitter* g_wmap_effect_params;
 extern s32 g_wmap_view_mode;
 extern s32 g_wmap_view_scroll_mode;
 extern WmapView g_wmap_view;
-extern s32 D_8013B294;
 extern WmapColor3 D_80182D74;
 extern WmapColor3 D_80182D80;
 extern WmapColor3 D_80182D8C;
@@ -828,7 +826,7 @@ WMAP_STEP_WAIT_IDLE(wmap_effect35_wait_timeline,
 /**
  * @brief Start the world-map exit and advance the sequence.
  */
-WMAP_STEP_BEGIN_EXIT(wmap_effect35_finish, g_wmap_effect35_step, 2)
+WMAP_STEP_BEGIN_EXIT(wmap_effect35_finish, g_wmap_effect35_step, WMAP_EXIT_DIRECT)
 
 /**
  * @brief Run the current step of the timeline sequence.
@@ -1058,11 +1056,11 @@ WMAP_STEP_START_AND_WAIT(wmap_effect35_timeline_start_spin_b,
 WMAP_STEP_WAIT(wmap_effect35_timeline_wait_34, g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer)
 
 /**
- * @brief Timeline step 35: set D_8011D500.
+ * @brief Timeline step 35: set g_wmap_overlay_fade_target.
  */
 void wmap_effect35_timeline_step_35(void)
 {
-    D_8011D500 = 0xFE;
+    g_wmap_overlay_fade_target = 0xFE;
     g_wmap_effect35_timeline_timer = 128;
     g_wmap_effect35_timeline_step++;
 }

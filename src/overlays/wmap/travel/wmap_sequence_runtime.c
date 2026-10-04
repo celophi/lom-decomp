@@ -1,3 +1,4 @@
+#include "../internal/wmap_land_transition.h"
 #include "../internal/wmap_model_render.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_map_display.h"
@@ -65,8 +66,6 @@ extern u32 g_wmap_land_focus_step;
 extern s32 g_wmap_land_focus_timer;
 extern void (*g_wmap_land_focus_steps[WMAP_LAND_FOCUS_STEPS])(void);
 extern s32 g_wmap_selected_artifact;
-extern s32 D_80182E34;
-extern s32 D_800DBE78;
 extern s32 g_wmap_callback_active[];
 extern WmapSequenceCallback g_wmap_callbacks[];
 extern WmapAnimationSlot g_wmap_actor_animations[];
@@ -183,7 +182,7 @@ void wmap_land_focus_fade_out(void)
     {
         g_wmap_screen_fade_mode = 2;
     }
-    D_80182E34 = 3;
+    g_wmap_status_panel_mode = 3;
     g_wmap_spirit_target_brightness = 0;
     g_wmap_land_focus_timer = 2;
     g_wmap_land_focus_step += 1;
@@ -215,7 +214,7 @@ void wmap_land_focus_lock(void)
 {
     g_wmap_land_display_limit = 0;
     g_wmap_event_active = 1;
-    D_800DBE78 = 1;
+    g_wmap_carousel_mode = 1;
     g_wmap_land_focus_timer = 8;
     g_wmap_land_focus_step += 1;
 }

@@ -56,4 +56,45 @@ extern s32 g_wmap_last_effect_resource_set;
 
 void wmap_reset_after_transition(void);
 
+/** @brief Rendering applied after the world-map exit frame is captured. */
+enum WmapExitMode
+{
+    WMAP_EXIT_SCREEN_PANELS = 0,
+    WMAP_EXIT_FADE_OVERLAY = 1,
+    WMAP_EXIT_DIRECT = 2
+};
+
+/** @brief Frames since exit was requested; zero keeps the map running. */
+extern s32 g_wmap_exit_frame;
+/** @brief Rendering mode used after the exit frame has been captured. */
+extern s32 g_wmap_exit_mode;
+/** @brief Queued land-event ticks remaining for the event dispatcher. */
+extern s32 g_wmap_pending_event_count;
+/** @brief Pending vehicle events; the first five slots handle flags 25 and 17-20. */
+extern u8 g_wmap_pending_vehicle_events[8];
+/** @brief Land-event flag 4-8 selected for special effect 34. */
+extern s32 g_wmap_special_land_event;
+/** @brief Status-panel mode; value three hides the day and placement sprites. */
+extern s32 g_wmap_status_panel_mode;
+/** @brief Pending sequence requested by land-event flag 11. */
+extern s32 g_wmap_land_event_11_pending;
+/** @brief Pending sequence requested by land-event flag 9. */
+extern s32 g_wmap_land_event_09_pending;
+/** @brief Pending sequence requested by land-event flag 21. */
+extern s32 g_wmap_land_event_21_pending;
+/** @brief Pending sequence requested by land-event flag 16. */
+extern s32 g_wmap_land_event_16_pending;
+/** @brief Pending sequence requested by land-event flag 15. */
+extern s32 g_wmap_land_event_15_pending;
+/** @brief Pending sequence requested by land-event flag 13. */
+extern s32 g_wmap_land_event_13_pending;
+/** @brief Pending sequence requested by land-event flag 12. */
+extern s32 g_wmap_land_event_12_pending;
+/** @brief Pending sequence requested by land-event flag 27. */
+extern s32 g_wmap_land_event_27_pending;
+/** @brief Pending sequence requested by land-event flag 24. */
+extern s32 g_wmap_land_event_24_pending;
+/** @brief Land-event flag 10 selects the alternate event-00 sequence. */
+extern s32 g_wmap_land_event_10_active;
+
 #endif

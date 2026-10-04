@@ -6,6 +6,7 @@
 #include <libgte.h>
 
 #define WMAP_ARTIFACT_SLOTS 12
+#define WMAP_PLACEMENT_RESOURCE_BASE 0x10CE
 #define WMAP_CAROUSEL_STEP_FRAMES 4
 #define WMAP_CAROUSEL_FRAMES (WMAP_ARTIFACT_SLOTS * WMAP_CAROUSEL_STEP_FRAMES)
 
@@ -14,6 +15,16 @@
 #define WMAP_ARTIFACT_TPAGE 0xAE
 #define WMAP_ARTIFACT_CLUT 0x7FEC
 #define WMAP_NO_ARTIFACT (-1)
+
+/** @brief Carousel slide and visibility modes. */
+enum WmapCarouselMode
+{
+    WMAP_CAROUSEL_VISIBLE,
+    WMAP_CAROUSEL_SLIDE_OUT,
+    WMAP_CAROUSEL_SLIDE_IN,
+    WMAP_CAROUSEL_HIDDEN
+};
+
 
 /** @brief Map selection panel animation phases. */
 enum WmapSelectionPhase
@@ -58,5 +69,10 @@ extern WmapArtifactImage g_wmap_artifact_images[];
 
 void wmap_update_artifact_selection(void);
 void wmap_draw_artifact_carousel(void);
+
+/** @brief Map and artifact selection-panel animation phase. */
+extern s32 g_wmap_selection_phase;
+/** @brief Visibility and slide direction of the artifact carousel. */
+extern s32 g_wmap_carousel_mode;
 
 #endif

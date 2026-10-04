@@ -116,7 +116,6 @@ extern s32 g_wmap_preview_foreground;
 extern s32 D_800DCEC0;
 extern s32 g_wmap_cursor_column;
 extern s32 g_wmap_cursor_row;
-extern s32 D_8011CF18;
 extern s32 g_wmap_preview_bob_y;
 extern s32 g_wmap_frame_count;
 extern s32 g_wmap_selected_artifact;
@@ -194,7 +193,7 @@ void wmap_update_land_preview(void)
             }
         }
 
-        if (D_8011CF18 >= WMAP_SELECTION_ARTIFACTS)
+        if (g_wmap_selection_phase >= WMAP_SELECTION_ARTIFACTS)
         {
             g_wmap_preview_bob_y = 0;
         }
@@ -225,7 +224,7 @@ void wmap_update_land_preview(void)
         }
 
         /* Travel follows a shared path; selected artifacts have their own transfer frames. */
-        switch (D_8011CF18)
+        switch (g_wmap_selection_phase)
         {
         case WMAP_SELECTION_MAP:
             g_wmap_preview_x = g_wmap_preview_map_positions[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS].vx;
@@ -250,7 +249,7 @@ void wmap_update_land_preview(void)
 
                 if (g_wmap_selected_artifact == WMAP_NO_ARTIFACT)
                 {
-                    D_8011CF18 = WMAP_SELECTION_ARTIFACTS;
+                    g_wmap_selection_phase = WMAP_SELECTION_ARTIFACTS;
                     g_wmap_input_locked = 0;
                     g_wmap_artifact_transfer_frame = g_wmap_selected_artifact;
                     g_wmap_preview_texture = 0;
@@ -264,7 +263,7 @@ void wmap_update_land_preview(void)
                 else if (g_wmap_artifact_transfer_frame == g_wmap_artifact_transfer_end)
                 {
                     wmap_play_sound(g_wmap_artifact_return_frames[g_wmap_artifact_transfer_end].sound_id, WMAP_ARTIFACT_RETURN_VOLUME);
-                    D_8011CF18 = WMAP_SELECTION_ARTIFACTS;
+                    g_wmap_selection_phase = WMAP_SELECTION_ARTIFACTS;
                     g_wmap_input_locked = 0;
                     g_wmap_preview_texture = 0;
                     g_wmap_artifact_transfer_frame = -1;
@@ -327,7 +326,7 @@ void wmap_update_land_preview(void)
 
             if (g_wmap_preview_travel_end == travel_index)
             {
-                D_8011CF18 = WMAP_SELECTION_MAP;
+                g_wmap_selection_phase = WMAP_SELECTION_MAP;
                 g_wmap_input_locked = 0;
             }
             else if (g_wmap_artifact_transfer_frame == -1)
@@ -524,7 +523,7 @@ void wmap_update_land_preview(void)
 
             cell_x = (g_wmap_view.x / WMAP_CELL_SPACING) + g_wmap_cursor_column;
             cell_y = (g_wmap_view.y / WMAP_CELL_SPACING) + g_wmap_cursor_row;
-            if ((D_8011CF18 == WMAP_SELECTION_MAP) && (D_800DCEC0 != 0))
+            if ((g_wmap_selection_phase == WMAP_SELECTION_MAP) && (D_800DCEC0 != 0))
             {
                 land_id = g_wmap_cells[cell_x][cell_y].land_id;
                 if (land_id == WMAP_EMPTY_CELL)
@@ -534,7 +533,7 @@ void wmap_update_land_preview(void)
                 func_8005FF88(land_id);
             }
 
-            if ((g_wmap_cells[cell_x][cell_y].land_id == WMAP_EMPTY_CELL) && (D_8011CF18 == WMAP_SELECTION_MAP) && (g_wmap_view_scroll_mode != WMAP_PREVIEW_PROJECTED_MODE) &&
+            if ((g_wmap_cells[cell_x][cell_y].land_id == WMAP_EMPTY_CELL) && (g_wmap_selection_phase == WMAP_SELECTION_MAP) && (g_wmap_view_scroll_mode != WMAP_PREVIEW_PROJECTED_MODE) &&
                 (g_wmap_event_active == 0))
             {
                 POLY_FT4* packet;

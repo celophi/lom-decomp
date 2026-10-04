@@ -1,3 +1,4 @@
+#include "../internal/wmap_frame_render.h"
 #include "../internal/wmap_model_render.h"
 #include "../internal/wmap_land_event_00_a.h"
 #include "../internal/wmap_resource_support.h"
@@ -59,11 +60,6 @@ extern s32 D_8013924C;
 extern s32 g_wmap_land_event_00_a_sequence_8_timer;
 extern s32 g_wmap_land_event_00_a_timer;
 extern void (*D_800D7204[])(void);
-extern s32 D_800D9228;
-extern s32 D_8011D500;
-extern s32 D_80182E38;
-extern s32 D_8013B294;
-extern s32 D_80139228;
 extern s32 g_wmap_land_event_00_a_timeline_timer;
 extern void (*D_800D721C[])(void);
 extern s32 g_wmap_land_event_00_a_sequence_1_timer;
@@ -357,9 +353,9 @@ void wmap_land_event_00_a_step_03(void)
     g_wmap_focus_screen_position.point.x = 0x94;
     g_wmap_focus_screen_position.point.y = 0x31;
     g_wmap_auxiliary_labels_hidden = 1;
-    D_80182E38 = 4;
-    D_8011D500 = 0x35;
-    D_800D9228 = 0x35;
+    g_wmap_overlay_fade_depth = 4;
+    g_wmap_overlay_fade_target = 0x35;
+    g_wmap_overlay_fade_level = 0x35;
     wmap_start_sequence(&wmap_land_event_00_a_run_timeline);
     g_wmap_sequence_busy = 1;
     g_wmap_land_event_00_a_step += 1;
@@ -371,7 +367,7 @@ WMAP_STEP_WAIT_IDLE(wmap_land_event_00_a_wait_idle, g_wmap_land_event_00_a_step,
 /**
  * @brief Start the world-map exit and advance the sequence.
  */
-WMAP_STEP_BEGIN_EXIT(wmap_land_event_00_a_step_05, g_wmap_land_event_00_a_step, 0x2)
+WMAP_STEP_BEGIN_EXIT(wmap_land_event_00_a_step_05, g_wmap_land_event_00_a_step, WMAP_EXIT_DIRECT)
 
 WMAP_STEP_RUNNER(wmap_land_event_00_a_run_timeline, D_800D721C, 0x16, g_wmap_land_event_00_a_timeline_step, g_wmap_land_event_00_a_timeline_timer)
 
@@ -404,7 +400,7 @@ WMAP_STEP_WAIT(wmap_land_event_00_a_timeline_wait_02, g_wmap_land_event_00_a_tim
 void wmap_land_event_00_a_timeline_step_03(void)
 {
     wmap_start_sequence(wmap_land_event_00_a_run_sequence_6);
-    D_8011D500 = 0x71;
+    g_wmap_overlay_fade_target = 0x71;
     g_wmap_land_event_00_a_timeline_timer = 0x5A;
     g_wmap_land_event_00_a_timeline_step += 1;
 }
@@ -428,7 +424,7 @@ WMAP_STEP_WAIT(wmap_land_event_00_a_timeline_wait_06, g_wmap_land_event_00_a_tim
 void wmap_land_event_00_a_timeline_step_07(void)
 {
     wmap_start_sequence(wmap_land_event_00_a_run_sequence_1);
-    D_8011D500 = 0x87;
+    g_wmap_overlay_fade_target = 0x87;
     g_wmap_land_event_00_a_timeline_timer = 0xF;
     g_wmap_land_event_00_a_timeline_step += 1;
 }
@@ -465,7 +461,7 @@ WMAP_STEP_WAIT(wmap_land_event_00_a_timeline_wait_18, g_wmap_land_event_00_a_tim
  */
 void wmap_land_event_00_a_timeline_step_19(void)
 {
-    D_8011D500 = 0xFF;
+    g_wmap_overlay_fade_target = 0xFF;
     g_wmap_land_event_00_a_timeline_timer = 0x40;
     g_wmap_land_event_00_a_timeline_step += 1;
 }

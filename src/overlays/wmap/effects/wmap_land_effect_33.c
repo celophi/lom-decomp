@@ -97,8 +97,6 @@ extern s32 g_wmap_load_buffer[];
 extern u8 g_wmap_animation_bank_3;
 extern u8 g_wmap_animation_bank_4;
 extern u8 g_wmap_animation_bank_5;
-extern s32 D_80139228;
-extern s32 D_8013B294;
 extern u32 g_wmap_land_effect_33_step;
 extern s32 g_wmap_land_effect_33_timer;
 extern u32 g_wmap_land_effect_33_timeline_step;
@@ -330,7 +328,7 @@ void wmap_land_effect_33_step_01(void)
 WMAP_STEP_WAIT_IDLE(wmap_land_effect_33_step_02, g_wmap_land_effect_33_step, wmap_land_effect_33_step_03)
 
 /** @brief Start the world-map exit and advance the sequence. */
-WMAP_STEP_BEGIN_EXIT(wmap_land_effect_33_step_03, g_wmap_land_effect_33_step, 1)
+WMAP_STEP_BEGIN_EXIT(wmap_land_effect_33_step_03, g_wmap_land_effect_33_step, WMAP_EXIT_FADE_OVERLAY)
 
 WMAP_STEP_RUNNER(wmap_land_effect_33_run_timeline, D_800D78CC, 0x16, g_wmap_land_effect_33_timeline_step, g_wmap_land_effect_33_timeline_timer)
 

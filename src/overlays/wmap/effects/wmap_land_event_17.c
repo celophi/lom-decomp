@@ -87,8 +87,6 @@ extern s32 g_wmap_land_event_17_sequence_13_timer;
 extern s32 g_wmap_land_event_17_timer;
 extern void (*D_800D6DEC[])(void);
 extern void wmap_land_event_17_step_03(void);
-extern s32 D_8013B294;
-extern s32 D_80139228;
 extern void (*D_800D6E04[])(void);
 extern void (*D_800D6EFC[])(void);
 extern void (*D_800D6F0C[])(void);
@@ -389,7 +387,7 @@ WMAP_STEP_START_BLOCKING(wmap_land_event_17_step_03, g_wmap_land_event_17_step, 
 WMAP_STEP_WAIT_IDLE(wmap_land_event_17_wait_idle, g_wmap_land_event_17_step, wmap_land_event_17_step_05)
 
 /** @brief Start the world-map exit and advance the sequence. */
-WMAP_STEP_BEGIN_EXIT(wmap_land_event_17_step_05, g_wmap_land_event_17_step, 1)
+WMAP_STEP_BEGIN_EXIT(wmap_land_event_17_step_05, g_wmap_land_event_17_step, WMAP_EXIT_FADE_OVERLAY)
 
 WMAP_STEP_RUNNER(wmap_land_event_17_run_timeline, D_800D6E04, 0x3E, g_wmap_land_event_17_timeline_step, g_wmap_land_event_17_timeline_timer)
 
