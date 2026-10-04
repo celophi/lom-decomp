@@ -44,6 +44,8 @@ s32 cdrom_stream(s32 resource_index, u8* destination);
 #define WMAP_BACKDROP_QUAD_WIDTH 160
 #define WMAP_BACKDROP_COLOR_STEP 8
 #define WMAP_FADE_COLOR_STEP 4
+#define WMAP_ANALOG_REPEAT_BASE_FRAMES 512
+#define WMAP_ANALOG_REPEAT_MAX_SHIFT 7
 
 /** @brief Soft-reset chord (select, start and all four shoulder buttons) and the D-pad bits. */
 #define WMAP_RESET_CHORD (PADselect | PADstart | PADL1 | PADL2 | PADR1 | PADR2)
@@ -147,7 +149,6 @@ extern s32 g_wmap_backdrop_scroll;
 extern s32 g_wmap_small_motor;
 extern s32 g_wmap_large_motor;
 
-extern ControllerPortState* D_800D0454;
 extern s32 D_800DCEDC;
 
 extern RECT D_80051A80;
@@ -204,7 +205,6 @@ extern u32 D_80182DD8;
 extern s32 D_80182E00;
 extern s32 D_80182E1C;
 extern s32 D_80182E34;
-extern s32 D_8019D6D8;
 extern s32 g_wmap_map_shadow_level;
 extern s32 D_801ADAF0;
 extern CVECTOR D_801ADB04;
@@ -341,7 +341,7 @@ void wmap_init_state(void)
     D_800D923C = 0;
     D_800D9240 = D_800D06BC;
     D_80139228 = 0;
-    D_8019D6D8 = 0;
+    g_wmap_land_image_load_locked = 0;
     g_wmap_cd_error = 0;
     g_wmap_last_effect_resource_set = -1;
     D_8011D4F8 = 0;
@@ -1144,7 +1144,7 @@ void wmap_step_input_script(void)
     }
     if (script[0] == 0)
     {
-        button_result = func_80065428();
+        button_result = wmap_get_controller_repeat_buttons();
         if (button_result != 0)
         {
             g_wmap_script_word += 2;
@@ -1156,7 +1156,7 @@ void wmap_step_input_script(void)
     }
     if ((u16)script[0] & 0x800)
     {
-        button_result = func_80065428() & (s16)((u16)script[0] & 0xF7FF);
+        button_result = wmap_get_controller_repeat_buttons() & (s16)((u16)script[0] & 0xF7FF);
         if (button_result != 0)
         {
             g_wmap_script_word += 2;
@@ -1888,7 +1888,7 @@ s32 wmap_run_loop(void)
                     }
                 }
             }
-            controller_buttons = D_800D0454[1].published_sample.repeat_buttons;
+            controller_buttons = g_wmap_controller_ports[1].published_sample.repeat_buttons;
             if ((controller_buttons >> 8) & 1)
             {
                 D_8011D0E4 = 1;
@@ -1897,7 +1897,7 @@ s32 wmap_run_loop(void)
             {
                 D_8011D0E4 = 0;
             }
-            raw_buttons = D_800D0454->published_sample.held_buttons;
+            raw_buttons = g_wmap_controller_ports->published_sample.held_buttons;
             raw_buttons = (raw_buttons >> 8) | (raw_buttons << 8);
             if ((raw_buttons & WMAP_RESET_CHORD) == WMAP_RESET_CHORD)
             {
@@ -2148,7 +2148,7 @@ s32 wmap_run_loop(void)
 }
 
 /**
- * @brief Read controller buttons, generate analog repeats, and apply input masks.
+ * @brief Read and filter world-map input and publish vibration commands.
  * @note The controller words are byte-swapped but keep their hardware button order.
  */
 void wmap_read_controller(void)
@@ -2172,12 +2172,12 @@ void wmap_read_controller(void)
         g_wmap_buttons_held = 0;
         return;
     }
-    g_wmap_buttons_held = D_800D0454->published_sample.held_buttons;
-    g_wmap_buttons_repeat = D_800D0454->published_sample.repeat_buttons;
+    g_wmap_buttons_held = g_wmap_controller_ports->published_sample.held_buttons;
+    g_wmap_buttons_repeat = g_wmap_controller_ports->published_sample.repeat_buttons;
     g_wmap_buttons_held = ((u32)g_wmap_buttons_held >> 8) | (g_wmap_buttons_held << 8);
     repeat_buttons = ((u32)g_wmap_buttons_repeat >> 8) | (g_wmap_buttons_repeat << 8);
     g_wmap_buttons_repeat = repeat_buttons;
-    switch (D_800D0454->published_sample.device_type)
+    switch (g_wmap_controller_ports->published_sample.device_type)
     {
     case CONTROLLER_DEVICE_DIGITAL:
         g_wmap_large_motor = 0;
@@ -2185,59 +2185,60 @@ void wmap_read_controller(void)
         break;
     case CONTROLLER_DEVICE_ANALOG_JOYSTICK:
     case CONTROLLER_DEVICE_ANALOG:
-        stick_x = D_800D0454->published_sample.left_stick_x;
+        /* Stronger stick deflections shorten the directional repeat interval. */
+        stick_x = g_wmap_controller_ports->published_sample.left_stick_x;
         stick_negative = stick_x < 0;
         repeat_shift_x = stick_x;
         if (stick_negative)
         {
             repeat_shift_x = -repeat_shift_x;
         }
-        if (repeat_shift_x >= 8)
+        if (repeat_shift_x > WMAP_ANALOG_REPEAT_MAX_SHIFT)
         {
-            repeat_shift_x = 7;
+            repeat_shift_x = WMAP_ANALOG_REPEAT_MAX_SHIFT;
         }
         if (stick_x < 0)
         {
             left_repeat = repeat_buttons;
-            if (((s32)g_wmap_frame_count % (s32)(0x200 >> repeat_shift_x)) == 0)
+            if ((g_wmap_frame_count % (WMAP_ANALOG_REPEAT_BASE_FRAMES >> repeat_shift_x)) == 0)
             {
                 left_repeat |= PADLleft;
             }
             g_wmap_buttons_repeat = left_repeat;
         }
-        if (D_800D0454->published_sample.left_stick_x > 0)
+        if (g_wmap_controller_ports->published_sample.left_stick_x > 0)
         {
             right_repeat = g_wmap_buttons_repeat;
-            if (((s32)g_wmap_frame_count % (s32)(0x200 >> repeat_shift_x)) == 0)
+            if ((g_wmap_frame_count % (WMAP_ANALOG_REPEAT_BASE_FRAMES >> repeat_shift_x)) == 0)
             {
                 right_repeat |= PADLright;
             }
             g_wmap_buttons_repeat = right_repeat;
         }
-        stick_y = D_800D0454->published_sample.left_stick_y;
+        stick_y = g_wmap_controller_ports->published_sample.left_stick_y;
         stick_negative = stick_y < 0;
         repeat_shift_y = stick_y;
         if (stick_negative)
         {
             repeat_shift_y = -repeat_shift_y;
         }
-        if (repeat_shift_y >= 8)
+        if (repeat_shift_y > WMAP_ANALOG_REPEAT_MAX_SHIFT)
         {
-            repeat_shift_y = 7;
+            repeat_shift_y = WMAP_ANALOG_REPEAT_MAX_SHIFT;
         }
         if (stick_y < 0)
         {
             up_repeat = g_wmap_buttons_repeat;
-            if (((s32)g_wmap_frame_count % (s32)(0x200 >> repeat_shift_y)) == 0)
+            if ((g_wmap_frame_count % (WMAP_ANALOG_REPEAT_BASE_FRAMES >> repeat_shift_y)) == 0)
             {
                 up_repeat |= PADLup;
             }
             g_wmap_buttons_repeat = up_repeat;
         }
-        if (D_800D0454->published_sample.left_stick_y > 0)
+        if (g_wmap_controller_ports->published_sample.left_stick_y > 0)
         {
             down_repeat = g_wmap_buttons_repeat;
-            if (((s32)g_wmap_frame_count % (s32)(0x200 >> repeat_shift_y)) == 0)
+            if ((g_wmap_frame_count % (WMAP_ANALOG_REPEAT_BASE_FRAMES >> repeat_shift_y)) == 0)
             {
                 down_repeat |= PADLdown;
             }
@@ -2266,9 +2267,9 @@ void wmap_read_controller(void)
         g_wmap_buttons_held = masked_held & g_wmap_map_button_mask;
         g_wmap_buttons_repeat = masked_repeat & g_wmap_map_button_mask;
     }
-    D_800D0454->small_motor_command = (u8)g_wmap_small_motor;
-    D_800D0454->actuator_control.fields.large_motor_command = (u8)g_wmap_large_motor;
-    D_8019D6D8 = 0;
+    g_wmap_controller_ports->small_motor_command = g_wmap_small_motor;
+    g_wmap_controller_ports->actuator_control.fields.large_motor_command = g_wmap_large_motor;
+    g_wmap_land_image_load_locked = 0;
 }
 
 /**

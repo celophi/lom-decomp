@@ -225,7 +225,6 @@ extern s32 D_800500DC[];
 extern WmapTextureInfo D_800CBBE8[];
 extern s32 D_800DBE74;
 extern s32 D_8013C628[];
-extern s32 D_8019D6D8;
 extern s32 D_801ADAF8;
 extern WmapMapPoint D_8004FD04[];
 extern s16 D_800D036C[];
@@ -778,7 +777,7 @@ s32 wmap_resolve_land_image(WmapLandDisplay* resource)
     if (slot < 0)
     {
         D_801ADAF8 = 1;
-        if (D_8019D6D8 != 0)
+        if (g_wmap_land_image_load_locked != 0)
         {
             goto fail;
         }

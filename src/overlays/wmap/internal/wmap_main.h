@@ -2,6 +2,13 @@
 #define WMAP_MAIN_H
 
 #include "overlays/wmap/world_map.h"
+#include "main/controller_internal.h"
+
+/** @brief Controller ports used for world-map input and vibration commands. */
+extern ControllerPortState* g_wmap_controller_ports;
+
+/** @brief Nonzero to defer filling a missing land-image cache entry. */
+extern s32 g_wmap_land_image_load_locked;
 
 /** @brief Shared input, menu, and fade state managed by the world-map loop. */
 extern s32 g_wmap_buttons_repeat;

@@ -39,19 +39,11 @@ typedef struct
     u8 unknown_2[0x12];
 } WmapInitDisplay;
 
-/** @brief Header containing the world-map value read at offset six. */
-typedef struct
-{
-    u8 unknown_0[6];
-    u16 value;
-} WmapValueHeader;
-
 extern u8 g_wmap_load_buffer[];
 extern RECT D_80051A88;
 
 
 extern WmapInitDisplay g_wmap_actor_motions[];
-extern WmapValueHeader* D_800D0454;
 
 /**
  * @brief Empty world-map handler (no operation).
@@ -276,11 +268,11 @@ void func_800653EC(void)
 }
 
 /**
- * @brief Combine the header value shifted right and left by one byte.
- * @return The combined value, including the upper bits of the left shift.
+ * @brief Read the first controller's repeat buttons in hardware button order.
+ * @return Byte-swapped buttons, including the upper bits of the left shift.
  */
-s32 func_80065428(void)
+s32 wmap_get_controller_repeat_buttons(void)
 {
-    s32 value = D_800D0454->value;
-    return ((s32)value >> 8) | (value << 8);
+    s32 buttons = g_wmap_controller_ports->published_sample.repeat_buttons;
+    return (buttons >> 8) | (buttons << 8);
 }
