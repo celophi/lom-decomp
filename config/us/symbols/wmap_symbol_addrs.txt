@@ -264,6 +264,8 @@ g_wmap_backdrop_back_quads = 0x800D05F4;
 g_wmap_menu_triangles = 0x800D06F8;
 g_wmap_exit_capture_rect = 0x80051ACC;
 
+wmap_get_controller_repeat_buttons = 0x80065428; // type:func size:0x24
+
 // Model rendering and shared frame state.
 wmap_draw_model = 0x800675F0; // type:func
 g_wmap_packet_bytes = 0x800D921C;
@@ -720,7 +722,7 @@ D_800D036C = 0x800D036C;
 D_800D03EC = 0x800D03EC;
 D_800D040C = 0x800D040C;
 D_800D043C = 0x800D043C;
-D_800D0454 = 0x800D0454;
+g_wmap_controller_ports = 0x800D0454;
 D_800D0460 = 0x800D0460;
 D_800D04C4 = 0x800D04C4;
 D_800D04F8 = 0x800D04F8;
@@ -1406,7 +1408,7 @@ g_wmap_last_effect_resource_set = 0x80182E3C;
 D_80182E40 = 0x80182E40;
 D_8018B240 = 0x8018B240;
 D_80193640 = 0x80193640;
-D_8019D6D8 = 0x8019D6D8;
+g_wmap_land_image_load_locked = 0x8019D6D8;
 D_8019D6E0 = 0x8019D6E0;
 g_wmap_placement_overlay_hidden = 0x801ADAE0;
 D_801ADAE4 = 0x801ADAE4;

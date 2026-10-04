@@ -39,6 +39,6 @@ void wmap_play_sound(s32 sound_index, s32 pan);
 void func_800652F8(void);
 void func_8006534C();
 void func_800653EC(void);
-s32 func_80065428(void);
+s32 wmap_get_controller_repeat_buttons(void);
 
 #endif

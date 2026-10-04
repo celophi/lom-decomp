@@ -115,7 +115,7 @@ TABLES = (
     # Frame, input and backdrop templates (wmap_frame_render.c, wmap_main.c).
     TableSpec("D_800D043C", "I4B8h", 1, ("tag", "r0", "g0", "b0", "code", "x0", "y0", "x1", "y1", "x2", "y2", "x3", "y3"),
               "Flat quad template copied for full-screen fills."),
-    TableSpec("D_800D0454", "I", 1, note="Pointer to the controller state block the menu reads; a fixed RAM address.",
+    TableSpec("g_wmap_controller_ports", "I", 1, note="Pointer to the resident controller ports used for world-map input and vibration.",
               resolve_symbols=True),
     TableSpec("D_800D0550", "i", 1, note="Result of the last wmap_run_loop call."),
     spec("g_wmap_backdrop_front_quads", POLY_FT4, 4, "Front backdrop layer quads."),

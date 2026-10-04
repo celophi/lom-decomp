@@ -126,7 +126,7 @@ class ExtractTest(unittest.TestCase):
         struct.pack_into("<I4B2h2BH2h", self.overlay.data, 0, 0x04000000, 128, 64, 32, 0x66, -5, 60, 16, 8, 0x7E2C, 30, 12)
         attributes = self.overlay.offset("g_wmap_land_attributes") + 12
         struct.pack_into("<8BI", self.overlay.data, attributes, 1, 2, 3, 4, 5, 6, 7, 8, 0x80000001)
-        struct.pack_into("<I", self.overlay.data, self.overlay.offset("D_800D0454"), STEP_B)
+        struct.pack_into("<I", self.overlay.data, self.overlay.offset("g_wmap_controller_ports"), STEP_B)
         self.extract()
         sprite = self.load("tables/game_continue_prompt.yaml")
         self.assertEqual(sprite["entries"][0], {"tag": 0x04000000, "r0": 128, "g0": 64, "b0": 32, "code": 0x66,
@@ -135,7 +135,7 @@ class ExtractTest(unittest.TestCase):
         land = self.load("tables/land_attributes.yaml")["entries"][1]
         self.assertEqual([land[f"spirit_{index}"] for index in range(8)], [1, 2, 3, 4, 5, 6, 7, 8])
         self.assertEqual(land["flags"], 0x80000001)
-        pointer = self.load("tables/D_800D0454.yaml")["entries"][0]
+        pointer = self.load("tables/controller_ports.yaml")["entries"][0]
         self.assertEqual(pointer, {"value": "0x80010010", "symbols": ["wmap_test_step_b"]})
         self.assertEqual(len(self.load("tables/artifact_pickup_frames.yaml")["entries"]), 740)
 
