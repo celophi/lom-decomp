@@ -17,8 +17,8 @@ RUN cp /usr/share/automake-*/config.sub /binutils-2.7/config.sub && \
 
 # Build libiberty, bfd, opcodes, gas, binutils, and ld.
 # CFLAGS are set for compatibility with binutils-2.7 on modern GCC:
-#   -std=gnu89  – allow implicit function declarations / old C idioms
-#   -fcommon    – allow multiply-defined tentative definitions
+#   -std=gnu89  - allow implicit function declarations / old C idioms
+#   -fcommon    - allow multiply-defined tentative definitions
 RUN cd /binutils-2.7 && \
     mkdir build && \
     cd build && \

@@ -1,13 +1,13 @@
-# ── Stage 1: PSX gcc 2.8.0 ──────────────────────────────────────────────────
+# Stage 1: PSX gcc 2.8.0
 FROM old-gcc/gcc-2.8.0-psx AS toolchain-psx
 FROM old-gcc/gcc-2.6.0-psx AS toolchain-2.6.0-psx
 
-# ── Stage 2: Cygnus CDK gcc 2.7.2 ───────────────────────────────────────────
+# Stage 2: Cygnus CDK gcc 2.7.2
 FROM old-gcc/gcc-2.7.2-cdk AS toolchain-cdk
 
 FROM ghcr.io/celophi/gcc-2.7.2-psx-gnu:v1.1 AS toolchain-gnu
 
-# ── Stage 3: final runtime image ────────────────────────────────────────────
+# Stage 3: final runtime image
 FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive

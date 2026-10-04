@@ -47,7 +47,7 @@ def configure_version(version: str) -> None:
     OVERLAY_CONFIG_DIR = config_dir / "overlays"
     COMPLETE_MANIFEST = PROJECT_ROOT / "build" / version / "complete_overlays.txt"
 
-# SDK files are not our code — skip them in progress tracking
+# SDK files are not our code. Skip them in progress tracking.
 SKIP_PATHS = {"psyq"}
 
 def load_yaml(path: Path) -> dict:
@@ -257,14 +257,14 @@ def main():
 
     complete_overlays = load_complete_overlays()
 
-    # ── Main executable ──
+    # Main executable
     if MAIN_CONFIG.exists():
         main_cfg = load_yaml(MAIN_CONFIG)
         main_complete = "main" in complete_overlays
         units.extend(build_main_units(main_cfg, complete=main_complete))
         print(f"Main executable: {len(units)} units" + (" [complete]" if main_complete else ""))
 
-    # ── Overlays ──
+    # Overlays
     if complete_overlays:
         print(f"Complete overlays (BIN sha matches ROM): {sorted(complete_overlays)}")
 
@@ -278,7 +278,7 @@ def main():
         suffix = " [complete]" if is_complete else ""
         print(f"Overlay {name}: {len(overlay_units)} units{suffix}")
 
-    # ── Write objdiff.json ──
+    # Write objdiff.json
     objdiff_config = {
         "$schema": "https://raw.githubusercontent.com/encounter/objdiff/main/config.schema.json",
         "custom_make": "make",
@@ -296,7 +296,7 @@ def main():
         json.dump(objdiff_config, f, indent=2)
         f.write("\n")
 
-    print(f"\nWrote {OUTPUT_PATH} — {len(units)} total units, {len(categories)} categories")
+    print(f"\nWrote {OUTPUT_PATH}: {len(units)} total units, {len(categories)} categories")
 
 
 if __name__ == "__main__":
