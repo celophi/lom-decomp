@@ -704,14 +704,14 @@ static void field_update_part_sweep(FieldPart* part)
         {
         case 1:
         case 2:
-            sweep_origin = scene->header->unk30 / 2;
+            sweep_origin = scene->header->map_width / 2;
             break;
         case 3:
             sweep_origin = 0;
             break;
         case 4:
         default:
-            sweep_origin = scene->header->unk30;
+            sweep_origin = scene->header->map_width;
             break;
         }
         remaining_nodes = part->node_count;
