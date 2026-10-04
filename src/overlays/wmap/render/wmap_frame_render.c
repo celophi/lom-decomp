@@ -1,9 +1,9 @@
 #include "../internal/wmap_frame_render.h"
 #include "../internal/wmap_sequence_runtime.h"
-#include "sdk/libgpu.h"
-#include "sdk/libgte.h"
-#include "sdk/libetc.h"
-#include "sdk/inline_c.h"
+#include <libgpu.h>
+#include <libgte.h>
+#include <libetc.h>
+#include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 #include "main/cdrom.h"
 

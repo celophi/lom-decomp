@@ -6,7 +6,7 @@
 #include "../internal/wmap_effect_primitives.h"
 #include "../internal/wmap_sequence_runtime.h"
 #include "../internal/wmap_sprite_render.h"
-#include "sdk/inline_c.h"
+#include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 #include "../internal/wmap_cells.h"
 

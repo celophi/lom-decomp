@@ -2,8 +2,8 @@
 #define WSEL_H
 
 #include "common.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
+#include <libgte.h>
+#include <libgpu.h>
 
 #define WSEL_OT_LENGTH 0x1000
 #define WSEL_PACKET_WORDS 0x1000

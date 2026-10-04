@@ -5,7 +5,7 @@
 #include "main/main.h"
 #include "../internal/field_records.h"
 #include "overlays/field/field_types.h"
-#include "sdk/rand.h"
+#include <rand.h>
 
 /** @brief Number of status effects; effect n owns status timer n and effect flag bit n. */
 #define FIELD_STATUS_EFFECT_COUNT 15

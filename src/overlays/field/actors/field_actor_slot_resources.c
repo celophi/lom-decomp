@@ -5,8 +5,8 @@
 #include "../internal/field_actor_palette.h"
 #include "../internal/field_actor_tables.h"
 #include "../internal/field_mesh.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
+#include <libgte.h>
+#include <libgpu.h>
 #include "common/tim.h"
 
 /**

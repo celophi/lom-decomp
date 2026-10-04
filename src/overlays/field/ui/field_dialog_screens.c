@@ -12,8 +12,8 @@
 #include "../internal/field_actor_runtime.h"
 #include "../internal/field_calls.h"
 #include "common/vector.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
+#include <libgte.h>
+#include <libgpu.h>
 #include "overlays/field/field_text.h"
 #include "../internal/field_effect_render_state.h"
 #include "../internal/field_ability_progression.h"
@@ -29,7 +29,7 @@
 #include "common/pad.h"
 #include "common/gpu_packet.h"
 #include "main/game_state.h"
-#include "sdk/memory.h"
+#include <memory.h>
 
 extern u8* g_field_cd_buffer;
 

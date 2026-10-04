@@ -19,11 +19,11 @@
 #include "../internal/field_effect_types.h"
 #include "main/main.h"
 #include "common/pad.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
-#include "sdk/inline_c.h"
+#include <libgte.h>
+#include <libgpu.h>
+#include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
-#include "sdk/rand.h"
+#include <rand.h>
 
 /** @brief Number of scattered-dome points (FieldObjectState::ground_attachment_points). */
 #define SCATTER_POINT_COUNT 3

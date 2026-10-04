@@ -13,7 +13,7 @@
 #include "overlays/field/field_scene_transition.h"
 #include "../internal/field_actor_runtime.h"
 #include "../internal/field_calls.h"
-#include "sdk/libgpu.h"
+#include <libgpu.h>
 #include "../internal/field_actor_tables.h"
 #include "../internal/field_menu_element.h"
 

@@ -13,8 +13,8 @@
 #include "../internal/field_records.h"
 #include "main/main.h"
 #include "main/scene_state.h"
-#include "sdk/libgpu.h"
-#include "sdk/libgte.h"
+#include <libgpu.h>
+#include <libgte.h>
 
 /** @brief Control mode of an actor driven by its script. */
 #define FIELD_CONTROL_SCRIPTED 2

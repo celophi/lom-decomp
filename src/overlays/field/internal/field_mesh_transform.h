@@ -2,7 +2,7 @@
 #define FIELD_MESH_TRANSFORM_H
 
 #include "common.h"
-#include "sdk/libgte.h"
+#include <libgte.h>
 #include "field_effect_types.h"
 
 void field_transform_mesh_vertices(FieldActorSlot *actor, FieldMotionRecord *record, FieldObjectPart *part, s32 index);

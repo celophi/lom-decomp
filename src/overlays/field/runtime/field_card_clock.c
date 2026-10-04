@@ -4,9 +4,9 @@
 
 #include "common.h"
 #include "../internal/field_calls.h"
-#include "sdk/libetc.h"
-#include "sdk/memory.h"
-#include "sdk/libmcx.h"
+#include <libetc.h>
+#include <memory.h>
+#include <libmcx.h>
 
 /** @brief Frames per second of the field clock. */
 #define FRAMES_PER_SECOND 60

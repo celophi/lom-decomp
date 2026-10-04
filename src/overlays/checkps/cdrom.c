@@ -6,10 +6,10 @@
 #include "internal/pattern.h"
 
 #include "main/display.h"
-#include "sdk/libapi.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
-#include "sdk/libetc.h"
+#include <libapi.h>
+#include <libgte.h>
+#include <libgpu.h>
+#include <libetc.h>
 
 /** @brief BIOS exit: ends the program (a K&R declaration, as the original call site requires). */
 void exit();

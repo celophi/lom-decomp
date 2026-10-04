@@ -16,12 +16,12 @@
 #include "common/gpu_packet.h"
 #include "common/pad.h"
 #include "common/tim.h"
-#include "sdk/libapi.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
-#include "sdk/memory.h"
-#include "sdk/rand.h"
-#include "sdk/libetc.h"
+#include <libapi.h>
+#include <libgte.h>
+#include <libgpu.h>
+#include <memory.h>
+#include <rand.h>
+#include <libetc.h>
 #include "main/audio/akao_cmd.h"
 #include "main/controller.h"
 

@@ -9,7 +9,7 @@
  * share one state block, g_akao_xa_tracker.
  */
 #include "common.h"
-#include "sdk/libspu.h"
+#include <libspu.h>
 #include "internal/akao_driver.h"
 
 /* Voice mask of SPU voices 22 and 23, the highest pair the stream may use. */

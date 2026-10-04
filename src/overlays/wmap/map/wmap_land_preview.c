@@ -6,9 +6,9 @@
 #include "common/gpu_packet.h"
 #include "../internal/wmap_resource_support.h"
 #include "../internal/wmap_map_labels.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
-#include "sdk/inline_c.h"
+#include <libgte.h>
+#include <libgpu.h>
+#include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 #include "../internal/wmap_cells.h"
 

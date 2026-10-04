@@ -8,8 +8,8 @@
 #include "../internal/field_calls.h"
 #include "../internal/field_golem_layout.h"
 #include "common/vector.h"
-#include "sdk/abs.h"
-#include "sdk/rand.h"
+#include <abs.h>
+#include <rand.h>
 
 /** @brief Smallest and largest number of distance buckets (the grid bound is clamped to them). */
 #define DISTANCE_BUCKET_COUNT_MIN 4

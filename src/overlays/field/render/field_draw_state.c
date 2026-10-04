@@ -6,7 +6,7 @@
 #include "../internal/field_calls.h"
 #include "../internal/field_actor_runtime.h"
 #include "main/field_runtime.h"
-#include "sdk/libgpu.h"
+#include <libgpu.h>
 
 extern s32 g_field_camera_offset_x;
 extern s32 g_field_camera_offset_y;

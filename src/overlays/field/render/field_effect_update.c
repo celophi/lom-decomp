@@ -11,10 +11,10 @@
 #include "../internal/field_effect_dispatch.h"
 #include "../internal/field_actor_palette.h"
 #include "../internal/field_mesh_transform.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
-#include "sdk/rand.h"
-#include "sdk/inline_c.h"
+#include <libgte.h>
+#include <libgpu.h>
+#include <rand.h>
+#include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 #include "../internal/field_effect_types.h"
 #include "../internal/field_effect_primitives.h"
@@ -22,7 +22,7 @@
 #include "../internal/field_actor_sequence_runtime.h"
 #include "../internal/field_path_interpolation.h"
 #include "overlays/field/field_actor_records.h"
-#include "sdk/abs.h"
+#include <abs.h>
 #include "../internal/field_calls.h"
 #include "../internal/field_contact_geometry.h"
 #include "../internal/field_actor_runtime.h"

@@ -14,9 +14,9 @@
 #include "../internal/field_calls.h"
 #include "../internal/field_effect_render_state.h"
 #include "../internal/field_records.h"
-#include "sdk/libgpu.h"
-#include "sdk/libgte.h"
-#include "sdk/memory.h"
+#include <libgpu.h>
+#include <libgte.h>
+#include <memory.h>
 
 /** @brief Ring menu states (g_field_ring_menu_state). */
 enum

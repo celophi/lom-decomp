@@ -2,7 +2,7 @@
 #define FIELD_MESH_H
 
 #include "common.h"
-#include "sdk/libgte.h"
+#include <libgte.h>
 
 /** @brief Texture part of an actor mesh: a VRAM tile and its pixel data. */
 typedef struct FieldMeshTexturePart

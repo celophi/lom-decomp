@@ -2,7 +2,7 @@
 #include "main/audio/akao_cmd.h"
 #include "main/cdrom.h"
 #include "main/cd_resources.h"
-#include "sdk/memory.h"
+#include <memory.h>
 
 #define SONG_FADE_OUT_TICKS 300
 #define SONG_INDEX_NONE 0xFF

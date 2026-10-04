@@ -9,9 +9,9 @@
 #include "main/display.h"
 #include "common/gpu_packet.h"
 #include "common/tim.h"
-#include "sdk/libetc.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
+#include <libetc.h>
+#include <libgte.h>
+#include <libgpu.h>
 #include "overlays/menu/menu.h"
 
 void field_update_input_repeat(void);

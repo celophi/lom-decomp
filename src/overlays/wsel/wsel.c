@@ -9,10 +9,10 @@
 #include "common/gpu_packet.h"
 #include "common/pad.h"
 #include "main/scene_state.h"
-#include "sdk/libetc.h"
-#include "sdk/libgpu.h"
-#include "sdk/libgte.h"
-#include "sdk/memory.h"
+#include <libetc.h>
+#include <libgpu.h>
+#include <libgte.h>
+#include <memory.h>
 #include "common/tim.h"
 
 #define WSEL_FADE_NEUTRAL 0x100

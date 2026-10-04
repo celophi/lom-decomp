@@ -2,7 +2,7 @@
 #define WMAP_SEQUENCE_RUNTIME_H
 
 #include "common.h"
-#include "sdk/libgte.h"
+#include <libgte.h>
 #include "wmap_sprite_render.h"
 
 /**

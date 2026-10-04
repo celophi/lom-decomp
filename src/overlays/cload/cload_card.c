@@ -1,7 +1,7 @@
 #include "internal/cload_internal.h"
-#include "sdk/memory.h"
-#include "sdk/strings.h"
-#include "sdk/libetc.h"
+#include <memory.h>
+#include <strings.h>
+#include <libetc.h>
 #include "main/controller.h"
 
 void *bcopy(const unsigned char *src, unsigned char *dst, int count);

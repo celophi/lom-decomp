@@ -2,7 +2,7 @@
 #define FIELD_ANIMATION_H
 
 #include "common.h"
-#include "sdk/libgpu.h"
+#include <libgpu.h>
 
 struct FieldAnim;
 struct FieldAnimDef;

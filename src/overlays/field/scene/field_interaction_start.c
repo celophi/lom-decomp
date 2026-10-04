@@ -5,7 +5,7 @@
 #include "main/main.h"
 #include "common/saved_game.h"
 #include "main/scene_state.h"
-#include "sdk/rand.h"
+#include <rand.h>
 #include "common.h"
 #include "../internal/field_actor_key_ops.h"
 #include "../internal/field_calls.h"

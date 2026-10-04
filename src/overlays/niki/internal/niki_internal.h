@@ -5,17 +5,17 @@
 #include "common/saved_game.h"
 #include "common/vector.h"
 #include "main/display.h"
-#include "sdk/kernel.h"
-#include "sdk/libetc.h"
-#include "sdk/libmcx.h"
+#include <kernel.h>
+#include <libetc.h>
+#include <libmcx.h>
 #include "common/encoded_text.h"
 #include "common/save_file.h"
 #include "common/glyph_cache.h"
 #include "common/card_events.h"
 #include "common/card_directory.h"
-#include "sdk/strings.h"
+#include <strings.h>
 #include "main/controller.h"
-#include "sdk/libapi.h"
+#include <libapi.h>
 
 #define NIKI_SJIS_FULLWIDTH_ZERO 0x4F82
 #define NIKI_SJIS_MINUS 0x5B81

@@ -6,9 +6,9 @@
 #include "common/saved_game.h"
 #include "common.h"
 #include "common/gpu_packet.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
-#include "sdk/libmcx.h"
+#include <libgte.h>
+#include <libgpu.h>
+#include <libmcx.h>
 #include "common/encoded_text.h"
 #include "common/save_file.h"
 #include "common/glyph_cache.h"

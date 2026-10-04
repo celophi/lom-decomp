@@ -3,9 +3,9 @@
 #include "internal/checkps_internal.h"
 
 #include "main/display.h"
-#include "sdk/libapi.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
+#include <libapi.h>
+#include <libgte.h>
+#include <libgpu.h>
 
 #define CHECKPS_GLYPH_CACHE_ENTRY_COUNT 256
 #define CHECKPS_GLYPH_CACHE_USED_FLAG 0x10000

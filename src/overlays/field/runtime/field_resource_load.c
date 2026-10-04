@@ -15,8 +15,8 @@
 
 #include "common.h"
 #include "main/cdrom.h"
-#include "sdk/libetc.h"
-#include "sdk/libgpu.h"
+#include <libetc.h>
+#include <libgpu.h>
 #include "../internal/field_actor_runtime.h"
 #include "../internal/field_actor_tables.h"
 #include "../internal/field_calls.h"

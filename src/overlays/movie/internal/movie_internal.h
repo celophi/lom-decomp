@@ -7,10 +7,10 @@
 #include "overlays/movie/movie_state.h"
 #include "common/pad.h"
 #include "main/controller.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
-#include "sdk/libpress.h"
-#include "sdk/libcd.h"
+#include <libgte.h>
+#include <libgpu.h>
+#include <libpress.h>
+#include <libcd.h>
 
 /** @brief MovieState::end_state sentinel values. */
 typedef enum

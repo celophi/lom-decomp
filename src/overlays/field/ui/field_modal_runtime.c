@@ -16,14 +16,14 @@
 #include "../internal/field_calls.h"
 #include "../internal/field_menu_element.h"
 #include "common/gpu_packet.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
+#include <libgte.h>
+#include <libgpu.h>
 #include "../internal/field_modal_runtime.h"
 #include "../internal/field_effect_render_state.h"
 #include "main/cdrom.h"
 #include "common/saved_game.h"
 #include "common/vector.h"
-#include "sdk/libetc.h"
+#include <libetc.h>
 #include "overlays/field/field_scene_transition.h"
 #include "main/cd_resources.h"
 #include "main/controller_internal.h"
@@ -32,7 +32,7 @@
 #include "main/field_runtime.h"
 #include "main/display.h"
 #include "main/game_state.h"
-#include "sdk/memory.h"
+#include <memory.h>
 #include "common/render_context.h"
 
 void field_set_cd_error_fade_target(void);

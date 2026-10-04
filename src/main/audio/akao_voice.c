@@ -1,7 +1,7 @@
 #include "internal/akao_voice.h"
 #include "internal/akao_sequencer.h"
-#include "sdk/libspu.h"
-#include "sdk/libapi.h"
+#include <libspu.h>
+#include <libapi.h>
 
 /** @brief Fixed address of the SPU voice register blocks. */
 #define SPU_VOICE_REGS ((SpuVoiceRegisters*)0x1F801C00)

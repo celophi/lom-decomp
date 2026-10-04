@@ -1,5 +1,5 @@
 #include "internal/menu_internal.h"
-#include "sdk/abs.h"
+#include <abs.h>
 #include "main/audio/akao_cmd.h"
 
 s32 menu_find_active_content_item(void);

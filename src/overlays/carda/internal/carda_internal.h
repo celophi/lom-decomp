@@ -8,9 +8,9 @@
 #include "common/vector.h"
 #include "common/gpu_packet.h"
 #include "main/display.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
-#include "sdk/libmcx.h"
+#include <libgte.h>
+#include <libgpu.h>
+#include <libmcx.h>
 #include "overlays/field/field_menu_window.h"
 #include "main/field_runtime.h"
 #include "overlays/field/field_sound.h"
@@ -23,8 +23,8 @@
 #include "common/card_directory.h"
 #include "main/cdrom.h"
 #include "main/controller.h"
-#include "sdk/strings.h"
-#include "sdk/libetc.h"
+#include <strings.h>
+#include <libetc.h>
 #include "carda.h"
 #include "carda_widgets.h"
 #include "carda_save.h"

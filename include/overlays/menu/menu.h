@@ -7,9 +7,9 @@
 #include "common/pad.h"
 #include "common/render_context.h"
 #include "common/tim.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
-#include "sdk/strings.h"
+#include <libgte.h>
+#include <libgpu.h>
+#include <strings.h>
 
 extern void field_reset_input_repeat(void);
 extern void menu_init_prim_rects(void);

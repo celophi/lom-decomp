@@ -3,7 +3,7 @@
 
 #include "common.h"
 #include "main/field_runtime.h"
-#include "sdk/libgpu.h"
+#include <libgpu.h>
 
 void carda_build_save_file(void);
 s32 carda_test_option_flag_2(void);

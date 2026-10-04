@@ -3,7 +3,7 @@
 
 #include "common.h"
 #include "main/field_runtime.h"
-#include "sdk/libgpu.h"
+#include <libgpu.h>
 
 struct CardaElement;
 

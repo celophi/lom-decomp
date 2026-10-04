@@ -2,7 +2,7 @@
 #define WMAP_LAND_PREVIEW_H
 
 #include "common.h"
-#include "sdk/libgpu.h"
+#include <libgpu.h>
 
 #define WMAP_PREVIEW_QUADS_PER_BUFFER 2
 

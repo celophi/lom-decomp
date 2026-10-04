@@ -16,8 +16,8 @@
 #include "main/display.h"
 #include "common/gpu_packet.h"
 #include "../internal/field_calls.h"
-#include "sdk/libgpu.h"
-#include "sdk/libetc.h"
+#include <libgpu.h>
+#include <libetc.h>
 #include "../internal/field_menu_element.h"
 
 /** @brief VRAM position of the texture page, palettes and artwork of the frames. */

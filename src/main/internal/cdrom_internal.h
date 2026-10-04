@@ -2,7 +2,7 @@
 #define CDROM_INTERNAL_H
 
 #include "main/cdrom.h"
-#include "sdk/libetc.h"
+#include <libetc.h>
 
 #define CD_DATA_SECTOR_SIZE 2048
 

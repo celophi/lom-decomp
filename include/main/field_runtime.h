@@ -2,7 +2,7 @@
 #define _FIELD_RUNTIME_H
 
 #include "common.h"
-#include "sdk/libgpu.h"
+#include <libgpu.h>
 
 #define FIELD_ORDERING_TABLE_SIZE 4112
 #define FIELD_PRIMITIVE_ARENA_SIZE 15360

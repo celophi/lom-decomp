@@ -3,12 +3,12 @@
 #include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_resource_support.h"
 #include "common.h"
-#include "sdk/libgpu.h"
-#include "sdk/libgte.h"
-#include "sdk/inline_c.h"
+#include <libgpu.h>
+#include <libgte.h>
+#include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 
-#include "sdk/memory.h"
+#include <memory.h>
 #include "common/gpu_packet.h"
 
 /** @brief Parts per sprite frame. */

@@ -8,7 +8,7 @@
 #include "common.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
-#include "sdk/rand.h"
+#include <rand.h>
 
 /** @brief Event slot run on the attacker and the target when an action resolves. */
 #define FIELD_ACTION_EVENT 0xC

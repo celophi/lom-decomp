@@ -1,6 +1,6 @@
 #include "common.h"
 #include "../internal/field_calls.h"
-#include "sdk/rand.h"
+#include <rand.h>
 
 /*
  * Binary operators of the field script calculate opcode (0x1C). The opcode

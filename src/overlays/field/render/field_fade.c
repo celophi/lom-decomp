@@ -7,8 +7,8 @@
 #include "main/display.h"
 #include "main/field_runtime.h"
 #include "common/gpu_packet.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
+#include <libgte.h>
+#include <libgpu.h>
 
 /** @brief Ordering-table entry the fade packets are linked into. */
 #define FIELD_FADE_OT_INDEX 0x10

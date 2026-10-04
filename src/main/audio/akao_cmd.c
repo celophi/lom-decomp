@@ -1,7 +1,7 @@
 #include "main/audio/akao_cmd.h"
 #include "internal/akao_sequencer.h"
-#include "sdk/libcd.h"
-#include "sdk/libspu.h"
+#include <libcd.h>
+#include <libspu.h>
 
 /**
  * @brief Pending articulation and sample bytes for a streaming bank upload.

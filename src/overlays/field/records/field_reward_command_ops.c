@@ -10,7 +10,7 @@
 #include "../internal/field_calls.h"
 #include "../internal/field_effect_types.h"
 #include "../internal/field_records.h"
-#include "sdk/rand.h"
+#include <rand.h>
 
 /** @brief Drop handlers of field_roll_defeat_drop. */
 #define FIELD_DROP_HANDLER_COUNT 4

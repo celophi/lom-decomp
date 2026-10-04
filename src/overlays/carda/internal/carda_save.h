@@ -3,7 +3,7 @@
 
 #include "common.h"
 #include "main/field_runtime.h"
-#include "sdk/libgpu.h"
+#include <libgpu.h>
 
 void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void carda_store_active_record(void);

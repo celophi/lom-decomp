@@ -6,11 +6,11 @@
 #include "../internal/wmap_view_effects.h"
 #include "../internal/wmap_map_labels.h"
 #include "main/cdrom.h"
-#include "sdk/libgte.h"
+#include <libgte.h>
 #include "../internal/wmap_resource_support.h"
 #include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_effect_primitives.h"
-#include "sdk/rand.h"
+#include <rand.h>
 #include "../internal/wmap_step_sequence.h"
 
 void wmap_land_event_17_step_02(void);

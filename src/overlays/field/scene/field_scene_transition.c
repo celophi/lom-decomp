@@ -17,9 +17,9 @@
 #include "../internal/field_calls.h"
 #include "overlays/field/field_interaction_start.h"
 #include "../internal/field_state_ops.h"
-#include "sdk/libgpu.h"
-#include "sdk/libetc.h"
-#include "sdk/libgte.h"
+#include <libgpu.h>
+#include <libetc.h>
+#include <libgte.h>
 
 /** @brief World coordinates are 24.8 fixed point. */
 #define FIELD_POSITION_SHIFT 8

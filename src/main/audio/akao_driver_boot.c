@@ -1,8 +1,8 @@
 #include "internal/akao_driver.h"
 #include "main/audio/akao.h"
 #include "internal/akao_voice.h"
-#include "sdk/libspu.h"
-#include "sdk/libapi.h"
+#include <libspu.h>
+#include <libapi.h>
 
 /* SpuInitMalloc block count, and SPU address/size of the zeroed primer block. */
 #define AKAO_SPU_MALLOC_BLOCKS 4

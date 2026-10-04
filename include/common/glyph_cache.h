@@ -2,8 +2,8 @@
 #define GLYPH_CACHE_H
 
 #include "common.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
+#include <libgte.h>
+#include <libgpu.h>
 #include "common/sjis.h"
 #include "common/encoded_text.h"
 #include "overlays/field/field_text.h"

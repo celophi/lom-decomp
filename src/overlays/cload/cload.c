@@ -1,6 +1,6 @@
 #include "internal/cload_internal.h"
 #include "main/display.h"
-#include "sdk/libetc.h"
+#include <libetc.h>
 #include "main/controller.h"
 #include "main/cdrom.h"
 
